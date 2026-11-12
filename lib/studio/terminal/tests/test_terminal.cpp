@@ -307,6 +307,13 @@ struct Term {
         }
     }
 
+    // Focuses the view and runs frames until it has focus, so that the keys pushed after it reach the view. The view
+    // takes focus only in a frame after the request, and a frame routes each key press in a round of its own.
+    void focus() {
+        prTerminalFocus(terminal);
+        frameUntil([&] { return prTerminalHasFocus(terminal); });
+    }
+
     // Waits until the screen has only what the test writes to it (write). A Windows pseudoconsole clears the screen and
     // sets the title shortly after the launch, which would erase anything written before it, so this runs frames until
     // the title changes from the program's name. Elsewhere the screen is ready at once. The program must write nothing,
@@ -636,7 +643,7 @@ TEST_CASE("terminal: the screen fills its extent with whole cells, and the progr
 
 TEST_CASE("terminal: typed text reaches the program, whose terminal echoes it") {
     Term t("cat", {});
-    prTerminalFocus(t.terminal);
+    t.focus();
     t.f.frame();
     REQUIRE(prUiFocus(t.f.ui) == prTerminalNode(t.terminal));
     t.f.type("hi");
@@ -1004,10 +1011,7 @@ TEST_CASE("terminal: a notification posts unless the terminal has focus in the a
     CHECK(prTerminalAlerts(t.terminal) == 0);
 
     app.posted.clear();
-    prTerminalFocus(t.terminal);
-    t.f.frame();
-    t.f.frame();
-    REQUIRE(prTerminalHasFocus(t.terminal));
+    t.focus();
     t.write("\x1b]9;four\x07\x1b]99;o=always;five\x1b\\\x1b]777;notify;Six;six\x07");
     t.f.frame();
     CHECK(app.posted == std::vector<std::string>{"five||9"});
@@ -1140,7 +1144,7 @@ TEST_CASE("terminal: a terminal that does not show wakes the application for the
 TEST_CASE("terminal: the key that pastes drops only its own text, and text typed after it reaches the program") {
     FakeApp app;
     Term t("cat", {}, &app.app);
-    prTerminalFocus(t.terminal);
+    t.focus();
     t.f.frame();
     // The platform delivers no text for the chord.
     t.f.push(PrAppEvent{.kind = PrAppEventKind_KeyDown, .modifiers = clipboardModifiers(), .key = 'V', .text = "v"});
@@ -1156,7 +1160,7 @@ TEST_CASE("terminal: the clipboard's keys copy the selection and paste, in each 
     FakeLauncher fake;
     Term t("program", {}, &app.app, {}, fake.setup());
     REQUIRE(fake.receive != nullptr);
-    prTerminalFocus(t.terminal);
+    t.focus();
     t.f.frame();
     t.write("\x1b[5;1Halpha beta");
     t.f.frame();
@@ -1207,7 +1211,7 @@ TEST_CASE("terminal: the clipboard's keys copy the selection and paste, in each 
 TEST_CASE("terminal: a program that asks for key releases has them, but for the keys that the view takes") {
     FakeApp app;
     Term t("sh", {"-c", "stty raw -echo; printf '\\033[>2u'; echo ready; cat -v"}, &app.app);
-    prTerminalFocus(t.terminal);
+    t.focus();
     t.frameUntil([&] { return t.shows("ready"); });
     auto stroke = [&](PrAppKey key, PrAppModifierFlags modifiers, const char* text, PrAppKeyCode code) {
         t.f.push(PrAppEvent{
@@ -1244,7 +1248,7 @@ TEST_CASE("terminal: a terminal that has no title is named for its program, with
 
 TEST_CASE("terminal: a terminal of no program runs the user's shell") {
     Term t("", {});
-    prTerminalFocus(t.terminal);
+    t.focus();
     t.f.frame();
     // The echoed command does not contain the number that it computes. On Windows, the shell is cmd.
 #if defined(_WIN32)
@@ -1263,7 +1267,7 @@ TEST_CASE("terminal: Option with an arrow moves by a word, and Command with an a
     // cat -v shows each control character that it reads as ^ and a letter, and an escape as ^[. The keys are sent only
     // once the terminal is raw, because a terminal that edits lines handles ^U and ^? itself.
     Term t("sh", {"-c", "stty raw -echo; echo ready; cat -v"});
-    prTerminalFocus(t.terminal);
+    t.focus();
     t.frameUntil([&] { return t.shows("ready"); });
     t.f.key(PrAppKey_Left, PrAppModifierFlag_Alt);
     t.f.key(PrAppKey_Right, PrAppModifierFlag_Alt);
@@ -1278,7 +1282,7 @@ TEST_CASE("terminal: Option with an arrow moves by a word, and Command with an a
 TEST_CASE("terminal: Control with an arrow, Backspace or Delete, and Home and End, go as xterm encodes them") {
     // The keys are sent only once the terminal is raw, because a terminal that edits lines handles ^U and ^? itself.
     Term t("sh", {"-c", "stty raw -echo; echo ready; cat -v"});
-    prTerminalFocus(t.terminal);
+    t.focus();
     t.frameUntil([&] { return t.shows("ready"); });
     t.f.key(PrAppKey_Left, PrAppModifierFlag_Control);
     t.f.key(PrAppKey_Right, PrAppModifierFlag_Control);
@@ -1314,8 +1318,8 @@ TEST_CASE("terminal: a terminal that does not show parses all of its program's o
 
 TEST_CASE("terminal: a terminal that stops showing loses focus, which the program hears if it asked to") {
     Term t("sh", {"-c", "stty raw -echo; printf '\\033[?1004h'; echo ready; cat -v"});
-    prTerminalFocus(t.terminal);
-    t.frameUntil([&] { return t.shows("ready") && prTerminalHasFocus(t.terminal); });
+    t.focus();
+    t.frameUntil([&] { return t.shows("ready"); });
     t.f.build = [&](PrLayoutNode) { prTerminalUpdate(t.terminal); };
     t.f.frame();
     CHECK_FALSE(prTerminalHasFocus(t.terminal));
@@ -1368,7 +1372,7 @@ TEST_CASE("terminal: a new font remakes the cells, and the program hears of the 
     // terminal before the line is typed, so the report has the new size. A trap on SIGWINCH would depend on when the
     // signal arrives, which under a Windows pseudoconsole is late or never.
     Term t("sh", {"-c", "echo ready; read line; stty size; sleep 10"});
-    prTerminalFocus(t.terminal);
+    t.focus();
     t.frameUntil([&] { return t.shows("ready"); });
     PrVec2 cell = prTerminalCellExtent(t.terminal);
     PrUVec2 extent = prVtermExtent(Locked(t.terminal));
@@ -1521,7 +1525,7 @@ TEST_CASE("terminal: blinking text stays shown for a user who asks for less moti
 TEST_CASE("terminal: a paste of lines asks first, and Enter pastes them while Escape drops them") {
     FakeApp app;
     Term t("cat", {}, &app.app);
-    prTerminalFocus(t.terminal);
+    t.focus();
     t.f.frame();
     t.f.push(PrAppEvent{.kind = PrAppEventKind_Clipboard, .text = "one\ntwo\n"});
     for (uint32_t i = 0; i < 4; ++i)
@@ -1692,7 +1696,7 @@ TEST_CASE("terminal: the user's shell starts with the integration, after its own
             desc->environmentCount = uint32_t(countOf(environment));
         };
         Term t("", {}, nullptr, {}, setup);
-        prTerminalFocus(t.terminal);
+        t.focus();
         auto input = [&] { return prTerminalShellInfo(t.terminal).state == PrVtermShellState_Input; };
         t.frameUntil(input);
         t.f.type("echo rc-$PRAX_TEST_RC zdotdir-${ZDOTDIR#$HOME}");
@@ -1739,7 +1743,7 @@ TEST_CASE("terminal: a terminal whose caller turns the integration off runs the 
             desc->shellIntegration = PrTerminalShellIntegration_Off;
         };
         Term t("", {}, nullptr, {}, setup);
-        prTerminalFocus(t.terminal);
+        t.focus();
         t.f.frame();
         t.f.type("echo off-$((1 + 2))");
         t.f.key(PrAppKey_Enter);
@@ -1775,7 +1779,7 @@ TEST_CASE("terminal: the prompt keys scroll from prompt to prompt, and the jumpe
     std::vector<std::string> first = numbered("f", rows + 4);
     std::vector<std::string> second = numbered("s", rows + 4);
     t.write(command("first", first, "0") + command("second", second, "1") + kPrompt);
-    prTerminalFocus(t.terminal);
+    t.focus();
     t.f.frame();
 
     t.f.key(PrAppKey_Up, promptModifiers());

@@ -43,8 +43,8 @@ USAGE = {
     host's alone. Each build is its lean form, which fetches only what its tests read (./dev.sh build --lean), and
     builds past a compile error, so that it reports every error (./dev.sh build --keep-going). --configure configures
     each build and fetches what lint reads, and builds and runs nothing: everything that the run fetches, which CI
-    caches before it runs (.github/workflows/ci.yml). It reports what third_party then holds, and in CI, where that is
-    what the run fetched, fails past a budget (FETCH_BUDGET). --key prints a hash of what decides what the run fetches,
+    caches before it runs (.github/workflows/ci.yml). In CI, where third_party then holds what the run fetched and
+    nothing else, it fails past a budget (FETCH_BUDGET). --key prints a hash of what decides what the run fetches,
     which changes when that does, as CI's cache of third_party is keyed""",
     "example": """\
 ./dev.sh example [wasm] <name> [args...]
@@ -192,11 +192,10 @@ def ci(argv):
         print(fetch_key(any(builds.MODES[built].wasm for _, built, _ in steps)))
         return
     if configure_only:
-        before = sizes()
         lint.sources()
         for _, built, _ in steps:
             builds.build(built, lean=True, configure_only=True)
-        report_fetched(before, sizes())
+        check_budget()
         return
     linting = lint.Background()
     outcomes = []
@@ -215,13 +214,13 @@ def ci(argv):
 
 # The most that third_party may hold in CI, in megabytes, where it holds what ./dev.sh ci fetched and nothing else: what
 # its lean builds, their tests and lint read. A run that holds more fails, so that what a change adds to every run is a
-# deliberate act: the budget moves with it. A developer's third_party holds what every command fetched, and the report
-# of it does not fail. The toolchains that a build compiles with are fetched too, and are not what the budget bounds.
+# deliberate act: the budget moves with it. A developer's third_party holds what every command fetched, and is not
+# checked. The toolchains that a build compiles with are fetched too, and are not what the budget bounds.
 FETCH_BUDGET = 400
 TOOLCHAINS = ("emsdk",)
 
-# The number of the largest entries of third_party that the step's summary lists, beside those that the run fetched.
-SUMMARY_ENTRIES = 10
+# The number of the largest entries of third_party that a run past the budget lists.
+LISTED_ENTRIES = 10
 
 
 # The files that pin what a lean build fetches and choose which of it it fetches.
@@ -268,37 +267,22 @@ def sizes():
     return found
 
 
-def report_fetched(before, after):
-    """Prints what third_party holds (`after`), the largest first, with what the run fetched, which `before` lacked or
-    held at another size, marked. Under GitHub Actions, the step's summary has the largest entries and those that the
-    run fetched (SUMMARY_ENTRIES), and the run fails if third_party holds more than FETCH_BUDGET beside its
-    toolchains (TOOLCHAINS)."""
+def check_budget():
+    """Fails the run under GitHub Actions if third_party holds more than FETCH_BUDGET beside its toolchains
+    (TOOLCHAINS), listing its largest entries (LISTED_ENTRIES)."""
+    if os.environ.get("GITHUB_ACTIONS") != "true":
+        return
     megabytes = lambda size: size / 1e6
-    total = sum(after.values())
-    budgeted = sum(size for name, size in after.items() if name not in TOOLCHAINS)
-    new = {name for name, size in after.items() if size != before.get(name)}
-    lines = ["%d entries, %.0f MB, of which %.0f MB counts against a budget of %d MB; this run fetched %d, %.0f MB"
-             % (len(after), megabytes(total), megabytes(budgeted), FETCH_BUDGET, len(new),
-                megabytes(sum(after[n] for n in new)))]
-    for name, size in sorted(after.items(), key=lambda entry: -entry[1]):
-        lines.append("    %7.1f MB  %s%s" % (megabytes(size), name, "  (fetched)" if name in new else ""))
-    print("\nfetched: " + "\n".join(lines), flush=True)
-    summary = os.environ.get("GITHUB_STEP_SUMMARY")
-    if summary:
-        with open(summary, "a", encoding="utf-8") as f:
-            f.write("### What ./dev.sh ci fetches\n\n%s\n\n| | MB | |\n| --- | ---: | --- |\n" % lines[0])
-            largest = sorted(after.items(), key=lambda entry: -entry[1])
-            shown = [(name, size) for i, (name, size) in enumerate(largest) if i < SUMMARY_ENTRIES or name in new]
-            for name, size in shown:
-                f.write("| %s | %.1f | %s |\n" % (name, megabytes(size), "fetched" if name in new else ""))
-            rest = len(largest) - len(shown)
-            if rest:
-                f.write("\n%d more, %.0f MB, in the step's log\n"
-                        % (rest, megabytes(total - sum(size for _, size in shown))))
-    if os.environ.get("GITHUB_ACTIONS") == "true" and megabytes(budgeted) > FETCH_BUDGET:
-        dev.fail("third_party holds %.0f MB beside its toolchains (%s), past the budget of %d MB (FETCH_BUDGET in "
-                 "tools/build/commands.py); its entries are listed above, the largest first, with what this run fetched"
-                 % (megabytes(budgeted), ", ".join(TOOLCHAINS), FETCH_BUDGET))
+    held = {name: size for name, size in sizes().items() if name not in TOOLCHAINS}
+    budgeted = sum(held.values())
+    if megabytes(budgeted) <= FETCH_BUDGET:
+        return
+    largest = sorted(held.items(), key=lambda entry: -entry[1])[:LISTED_ENTRIES]
+    print("\nthird_party's largest entries beside its toolchains:", flush=True)
+    for name, size in largest:
+        print("    %7.1f MB  %s" % (megabytes(size), name), flush=True)
+    dev.fail("third_party holds %.0f MB beside its toolchains (%s), past the budget of %d MB (FETCH_BUDGET in "
+             "tools/build/commands.py)" % (megabytes(budgeted), ", ".join(TOOLCHAINS), FETCH_BUDGET))
 
 
 def application_names(folder):
