@@ -1,6 +1,7 @@
 
 #include "pr/array.h"
 #include "pr/checksum.h"
+#include "pr/compress_backend.h"
 #include "pr/mem.h"
 #include "pr/span.h"
 #include "pr/string.h"
@@ -720,8 +721,8 @@ TEST_CASE("an encoding filters and compresses its rows") {
 TEST_CASE("an image that a codec without an encoder stores encodes every block") {
     // The built-in codec without its encoder.
     PrCompressCodec decodeOnly = *prCompressBuiltinCreate();
-    decodeOnly.encodeBound = nullptr;
-    decodeOnly.encode = nullptr;
+    decodeOnly.encodeBoundFn = nullptr;
+    decodeOnly.encodeFn = nullptr;
     PrImageCodec* codec = prImageBuiltinCreate(&decodeOnly);
     Array<uint8_t> pixels(64 * 600 * 4);
     prMemFill(pixels.data(), 0x11, pixels.count());

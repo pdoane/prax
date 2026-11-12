@@ -4,6 +4,7 @@
 
 #include "pr/ascii.h"
 #include "pr/assert.h"
+#include "pr/fetch_backend.h"
 #include "pr/mime.h"
 #include "pr/string_ops.h"
 #include "pr/text_buffer.h"
@@ -141,11 +142,15 @@ PrFetchNetwork* PR_NULLABLE prFetchNetworkCreate(PrFetchNetworkBackend backend, 
 
 void prFetchNetworkDestroy(PrFetchNetwork* PR_NULLABLE fetcher) {
     if (fetcher != nullptr)
-        fetcher->destroy(fetcher);
+        fetcher->destroyFn(fetcher);
 }
 
 PrStringView prFetchNetworkUserAgent(const PrFetchNetwork* fetcher) {
-    return fetcher->userAgent;
+    return fetcher->userAgentFn(fetcher);
+}
+
+PrNet* prFetchNetworkNet(const PrFetchNetwork* fetcher) {
+    return fetcher->netFn(fetcher);
 }
 
 PrStatus prFetchCreate(PrFetchNetwork* fetcher, const PrFetchRequestDesc* desc, PrFetchFn PR_NULLABLE event,
@@ -156,37 +161,37 @@ PrStatus prFetchCreate(PrFetchNetwork* fetcher, const PrFetchRequestDesc* desc, 
     PR_ASSERT(desc->mode <= PrFetchMode_Navigate && desc->credentials <= PrFetchCredentials_Include);
     PR_ASSERT(desc->referrerPolicy <= PrFetchReferrerPolicy_UnsafeUrl);
     *out = nullptr;
-    PrStatus status = fetcher->fetchCreate(fetcher, desc, event, context, out);
-    PR_ASSERT(status != PrStatus_Ok || ((*out) != nullptr && (*out)->fetcher == fetcher));
+    PrStatus status = fetcher->fetchCreateFn(fetcher, desc, event, context, out);
+    PR_ASSERT(status != PrStatus_Ok || *out != nullptr);
     return status;
 }
 
 void prFetchDestroy(PrFetch* PR_NULLABLE fetch) {
     if (fetch != nullptr)
-        fetch->fetcher->fetchDestroy(fetch->fetcher, fetch);
+        fetch->destroyFn(fetch);
 }
 
 uint16_t prFetchStatus(const PrFetch* fetch) {
-    return fetch->fetcher->fetchStatus(fetch->fetcher, fetch);
+    return fetch->statusFn(fetch);
 }
 
 PrStringView prFetchUrl(const PrFetch* fetch) {
-    return fetch->fetcher->fetchUrl(fetch->fetcher, fetch);
+    return fetch->urlFn(fetch);
 }
 
 PrFetchResponseType prFetchResponseType(const PrFetch* fetch) {
-    if (fetch->fetcher->fetchResponseType == nullptr)
+    if (fetch->responseTypeFn == nullptr)
         return PrFetchResponseType_Basic;
-    return fetch->fetcher->fetchResponseType(fetch->fetcher, fetch);
+    return fetch->responseTypeFn(fetch);
 }
 
 uint32_t prFetchHeaderCount(const PrFetch* fetch) {
-    return fetch->fetcher->fetchHeaderCount(fetch->fetcher, fetch);
+    return fetch->headerCountFn(fetch);
 }
 
 PrFetchHeader prFetchHeader(const PrFetch* fetch, uint32_t index) {
     PR_ASSERT(index < prFetchHeaderCount(fetch));
-    return fetch->fetcher->fetchHeader(fetch->fetcher, fetch, index);
+    return fetch->headerFn(fetch, index);
 }
 
 PrStringView prFetchHeaderValue(const PrFetch* fetch, PrStringView name) {
@@ -203,23 +208,23 @@ size_t prFetchRead(PrFetch* fetch, uint8_t* PR_NULLABLE output, size_t capacity)
     PR_ASSERT(output != nullptr || capacity == 0);
     if (capacity == 0)
         return 0;
-    return fetch->fetcher->fetchRead(fetch->fetcher, fetch, output, capacity);
+    return fetch->readFn(fetch, output, capacity);
 }
 
 PrNetError prFetchError(const PrFetch* fetch) {
-    return fetch->fetcher->fetchError(fetch->fetcher, fetch);
+    return fetch->errorFn(fetch);
 }
 
 PrStringView prFetchSentReferrer(const PrFetch* fetch) {
-    if (fetch->fetcher->fetchSentReferrer == nullptr)
+    if (fetch->sentReferrerFn == nullptr)
         return PrStringView{nullptr, 0};
-    return fetch->fetcher->fetchSentReferrer(fetch->fetcher, fetch);
+    return fetch->sentReferrerFn(fetch);
 }
 
 PrFetchTiming prFetchTiming(const PrFetch* fetch) {
-    if (fetch->fetcher->fetchTiming == nullptr)
+    if (fetch->timingFn == nullptr)
         return PrFetchTiming{};
-    return fetch->fetcher->fetchTiming(fetch->fetcher, fetch);
+    return fetch->timingFn(fetch);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

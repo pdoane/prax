@@ -37,6 +37,7 @@
 #include "pr/search.h"
 #include "pr/thread.h"
 
+#include "gpu/backends/shared/src/gpu_shared_device.h"
 #include "gpu/backends/shared/src/gpu_shared_upload.h"
 
 #define NOMINMAX
@@ -49,6 +50,12 @@
 namespace pr_impl {
 
 namespace {
+
+// The functions of the device's objects, which their creation installs.
+extern const PrGpuCommands kCommandsFunctions;
+extern const PrGpuPass kPassFunctions;
+extern const PrGpuSwapChain kSwapChainFunctions;
+extern const PrGpuShaderLibrary kLibraryFunctions;
 
 // The handles that a device gives out, of resources and of samplers, and the pipelines that it holds. Slot zero of each
 // is never used, so that zero is none. D3D12 allows no more than 2048 samplers in a shader-visible heap.
@@ -234,12 +241,12 @@ struct D3d12Submission {
     uint32_t timestamp;
 };
 
-struct D3d12Library : PrGpuShaderLibrary {};
+struct D3d12Library : GpuSharedLibrary {};
 
 struct D3d12Pass;
 struct D3d12SwapChain;
 
-struct D3d12Commands : PrGpuCommands {
+struct D3d12Commands : GpuSharedCommands {
     uint64_t serial;                        // the order in which command buffers began
     D3d12Pass* PR_NULLABLE pass;            // the open pass
     D3d12List list;                         // a null allocator for the application's command list
@@ -262,7 +269,7 @@ struct D3d12Commands : PrGpuCommands {
     PrGpuTexture targetCopy;
 };
 
-struct D3d12Pass : PrGpuPass {
+struct D3d12Pass : GpuSharedPass {
     PrGpuAttachment color[kPrGpuMaxColorAttachments];
     PrGpuAttachment depthStencil;
     PrIRect scissor;                        // within the attachments
@@ -273,7 +280,7 @@ struct D3d12Pass : PrGpuPass {
 // the frames, which draw at their top left, and the window cuts them off at its edges. The buffers only grow, so that a
 // resize within them waits for no work and allocates nothing. Stretched, the buffers are the frame's extent, which DXGI
 // scales to the window, and each resize resizes them.
-struct D3d12SwapChain : PrGpuSwapChain {
+struct D3d12SwapChain : GpuSharedSwapChain {
     IDXGISwapChain3* swapChain;             // held
     HWND window;
     bool hdr;                               // PrGpuSwapChainIntent_Hdr
@@ -288,7 +295,7 @@ struct D3d12SwapChain : PrGpuSwapChain {
     PrGpuTexture current;                   // the buffer of the acquired frame
 };
 
-struct D3d12Device : PrGpuDevice {
+struct D3d12Device : GpuSharedDevice {
     ID3D12Device10* device;                 // held
     ID3D12CommandQueue* queue;              // held
     IDXGIFactory6* PR_NULLABLE factory;     // held
@@ -998,6 +1005,7 @@ bool supportsFormat(const PrGpuDevice* device, PrGpuFormat format, PrGpuTextureU
 
 void destroyDevice(PrGpuDevice* device) {
     D3d12Device* d = d3d12Of(device);
+    gpuSharedDeviceReset(d);
     prMutexLock(&d->doneMutex);
     d->stopping = true;
     prConditionSignal(&d->pendingSignal);
@@ -1522,6 +1530,7 @@ PrStatus textureCreateView(PrGpuDevice* device, PrGpuTexture texture, PrGpuTextu
 }
 
 void textureDestroy(PrGpuDevice* device, PrGpuTexture texture) {
+    gpuSharedTextureForget(d3d12Of(device), texture);
     retire(d3d12Of(device), D3d12RetiredKind_Resource, texture.id);
 }
 
@@ -1576,16 +1585,23 @@ PrStatus samplerCreate(PrGpuDevice* device, const PrGpuSamplerDesc* desc, PrGpuS
 // Shader libraries and pipelines
 
 // The entries hold each entry point's DXIL, which a pipeline compiles from as it is made.
-PrStatus shaderLibraryCreate(PrGpuDevice*, PrGpuShaderEntry*, uint32_t entryCount,
+PrStatus shaderLibraryCreate(PrGpuDevice* device, PrGpuShaderEntry* entries, uint32_t entryCount,
         PrGpuShaderLibrary* PR_NULLABLE* PR_NONNULL out) {
     if (entryCount == 0)
         return PrStatus_InvalidData;
-    *out = allocZeroed<D3d12Library>();
+    D3d12Library* library = allocZeroed<D3d12Library>();
+    static_cast<PrGpuShaderLibrary&>(*library) = kLibraryFunctions;
+    library->device = device;
+    library->entryCount = entryCount;
+    library->entries = entries;
+    *out = library;
     return PrStatus_Ok;
 }
 
-void shaderLibraryDestroy(PrGpuDevice*, PrGpuShaderLibrary* library) {
-    prMemoryFree(static_cast<D3d12Library*>(library));
+void shaderLibraryDestroy(PrGpuShaderLibrary* library) {
+    D3d12Library* l = static_cast<D3d12Library*>(library);
+    prMemoryFree(l->entries);
+    prMemoryFree(l);
 }
 
 // Puts a pipeline into a new id, or returns zero if none is left.
@@ -1783,6 +1799,7 @@ bool commandsBegin(PrGpuDevice* device, const PrGpuCommandsOptions* options, PrG
         return false;
     }
     D3d12Commands* c = allocZeroed<D3d12Commands>();
+    static_cast<PrGpuCommands&>(*c) = kCommandsFunctions;
     c->device = device;
     c->native = options->native != nullptr;
     c->list = list;
@@ -1831,14 +1848,15 @@ void* stream(D3d12Device* d, D3d12Commands* c, uint64_t size, uint32_t* slot, ui
     return last->mapped + at;
 }
 
-void* commandsStream(PrGpuDevice* device, PrGpuCommands* commands, uint64_t size, PrGpuBuffer* buffer, uint64_t* offset) {
+void* commandsStream(PrGpuCommands* commands, uint64_t size, PrGpuBuffer* buffer, uint64_t* offset) {
+    PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
     uint32_t slot = 0;
     void* bytes = stream(d3d12Of(device), commandsOf(commands), size, &slot, offset);
     buffer->id = slot;
     return bytes;
 }
 
-void commandsSetPush(PrGpuDevice*, PrGpuCommands* commands, const void* data, uint32_t size) {
+void commandsSetPush(PrGpuCommands* commands, const void* data, uint32_t size) {
     D3d12Commands* c = commandsOf(commands);
     prMemCopy(c->push, data, size);
     uint32_t words = (size + 3) / 4;
@@ -1848,7 +1866,8 @@ void commandsSetPush(PrGpuDevice*, PrGpuCommands* commands, const void* data, ui
     c->dirty |= D3d12DirtyFlag_GraphicsPush | D3d12DirtyFlag_ComputePush;
 }
 
-void commandsSetUniforms(PrGpuDevice* device, PrGpuCommands* commands, const void* data, uint32_t size) {
+void commandsSetUniforms(PrGpuCommands* commands, const void* data, uint32_t size) {
+    PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
     D3d12Device* d = d3d12Of(device);
     D3d12Commands* c = commandsOf(commands);
     uint32_t slot = 0;
@@ -1886,7 +1905,8 @@ void flushComputeRoot(D3d12Commands* c) {
     c->dirty &= ~(D3d12DirtyFlag_ComputePush | D3d12DirtyFlag_ComputeUniforms);
 }
 
-void commandsSetPipeline(PrGpuDevice* device, PrGpuCommands* commands, PrGpuPipeline pipeline) {
+void commandsSetPipeline(PrGpuCommands* commands, PrGpuPipeline pipeline) {
+    PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
     D3d12Commands* c = commandsOf(commands);
     c->pipeline = pipeline.id;
     const D3d12Pipeline& p = d3d12Of(device)->pipelines[pipeline.id];
@@ -1898,7 +1918,9 @@ void commandsSetPipeline(PrGpuDevice* device, PrGpuCommands* commands, PrGpuPipe
     }
 }
 
-void commandsDispatch(PrGpuDevice* device, PrGpuCommands* commands, PrGpuExtent groups) {
+void commandsDispatch(PrGpuCommands* commands, PrGpuExtent groups) {
+    gpuSharedCheckOutsidePass(commands);
+    PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
     D3d12Commands* c = commandsOf(commands);
     const D3d12Pipeline& p = d3d12Of(device)->pipelines[c->pipeline];
     PR_ASSERT(p.compute);
@@ -1908,7 +1930,9 @@ void commandsDispatch(PrGpuDevice* device, PrGpuCommands* commands, PrGpuExtent 
     c->list.list->Dispatch(groups.width, groups.height, groups.depth);
 }
 
-void commandsDispatchIndirect(PrGpuDevice* device, PrGpuCommands* commands, PrGpuBuffer buffer, uint64_t offset) {
+void commandsDispatchIndirect(PrGpuCommands* commands, PrGpuBuffer buffer, uint64_t offset) {
+    gpuSharedCheckOutsidePass(commands);
+    PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
     D3d12Device* d = d3d12Of(device);
     D3d12Commands* c = commandsOf(commands);
     const D3d12Pipeline& p = d->pipelines[c->pipeline];
@@ -1919,8 +1943,10 @@ void commandsDispatchIndirect(PrGpuDevice* device, PrGpuCommands* commands, PrGp
     c->list.list->ExecuteIndirect(d->dispatchSignature, 1, resourceOf(d, buffer.id), offset, nullptr, 0);
 }
 
-void commandsCopyBuffer(PrGpuDevice* device, PrGpuCommands* commands, PrGpuBuffer source, uint64_t sourceOffset,
+void commandsCopyBuffer(PrGpuCommands* commands, PrGpuBuffer source, uint64_t sourceOffset,
         PrGpuBuffer target, uint64_t targetOffset, uint64_t size) {
+    gpuSharedCheckOutsidePass(commands);
+    PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
     D3d12Device* d = d3d12Of(device);
     commandsOf(commands)->list.list->CopyBufferRegion(resourceOf(d, target.id), targetOffset,
         resourceOf(d, source.id), sourceOffset, size);
@@ -1958,8 +1984,10 @@ D3D12_BOX boxOf(const PrGpuTextureRegion* region, bool is3d) {
     return D3D12_BOX{region->x, region->y, z, region->x + region->extent.width, region->y + region->extent.height, z + depth};
 }
 
-void commandsCopyTexture(PrGpuDevice* device, PrGpuCommands* commands, PrGpuTexture source,
+void commandsCopyTexture(PrGpuCommands* commands, PrGpuTexture source,
         const PrGpuTextureRegion* sourceRegion, PrGpuTexture target, const PrGpuTextureRegion* targetRegion) {
+    gpuSharedCheckOutsidePass(commands);
+    PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
     D3d12Device* d = d3d12Of(device);
     const D3d12Resource& from = textureOf(d, source.id);
     const D3d12Resource& to = textureOf(d, target.id);
@@ -1974,9 +2002,11 @@ void commandsCopyTexture(PrGpuDevice* device, PrGpuCommands* commands, PrGpuText
     }
 }
 
-void commandsCopyBufferToTexture(PrGpuDevice* device, PrGpuCommands* commands, PrGpuBuffer source,
+void commandsCopyBufferToTexture(PrGpuCommands* commands, PrGpuBuffer source,
         uint64_t sourceOffset, uint32_t rowBytes, uint32_t layerBytes, PrGpuTexture target,
         const PrGpuTextureRegion* targetRegion) {
+    gpuSharedCheckOutsidePass(commands);
+    PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
     D3d12Device* d = d3d12Of(device);
     const D3d12Resource& to = textureOf(d, target.id);
     bool is3d = to.texture.kind == PrGpuTextureKind_3d;
@@ -1992,9 +2022,11 @@ void commandsCopyBufferToTexture(PrGpuDevice* device, PrGpuCommands* commands, P
     }
 }
 
-void commandsCopyTextureToBuffer(PrGpuDevice* device, PrGpuCommands* commands, PrGpuTexture source,
+void commandsCopyTextureToBuffer(PrGpuCommands* commands, PrGpuTexture source,
         const PrGpuTextureRegion* sourceRegion, PrGpuBuffer target, uint64_t targetOffset, uint32_t rowBytes,
         uint32_t layerBytes) {
+    gpuSharedCheckOutsidePass(commands);
+    PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
     D3d12Device* d = d3d12Of(device);
     const D3d12Resource& from = textureOf(d, source.id);
     bool is3d = from.texture.kind == PrGpuTextureKind_3d;
@@ -2010,12 +2042,12 @@ void commandsCopyTextureToBuffer(PrGpuDevice* device, PrGpuCommands* commands, P
     }
 }
 
-void commandsOnDone(PrGpuDevice*, PrGpuCommands* commands, PrGpuDoneFn done, void* PR_NULLABLE context) {
+void commandsOnDone(PrGpuCommands* commands, PrGpuDoneFn done, void* PR_NULLABLE context) {
     commandsOf(commands)->dones.push(D3d12Done{done, context});
 }
 
 // PIX reads an event's name as a string of 8-bit characters where its metadata is 1.
-void commandsPushGroup(PrGpuDevice*, PrGpuCommands* commands, PrStringView name) {
+void commandsPushGroup(PrGpuCommands* commands, PrStringView name) {
     char text[256];
     size_t size = name.size < sizeof(text) - 1 ? name.size : sizeof(text) - 1;
     prMemCopy(text, name.data, size);
@@ -2023,12 +2055,13 @@ void commandsPushGroup(PrGpuDevice*, PrGpuCommands* commands, PrStringView name)
     commandsOf(commands)->list.list->BeginEvent(1, text, UINT(size + 1));
 }
 
-void commandsPopGroup(PrGpuDevice*, PrGpuCommands* commands) {
+void commandsPopGroup(PrGpuCommands* commands) {
     commandsOf(commands)->list.list->EndEvent();
 }
 
-void commandsBufferBarrier(PrGpuDevice* device, PrGpuCommands* commands, PrGpuBuffer buffer, PrGpuAccessFlags before,
-        PrGpuAccessFlags after) {
+void commandsBufferBarrier(PrGpuCommands* commands, PrGpuBuffer buffer, PrGpuAccessFlags before, PrGpuAccessFlags after) {
+    gpuSharedCheckOutsidePass(commands);
+    PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
     // Only a buffer that shaders write takes unordered accesses.
     const D3d12Resource& r = d3d12Of(device)->resources[buffer.id];
     if (!(r.buffer.usage & PrGpuBufferUsageFlag_Storage)) {
@@ -2052,19 +2085,24 @@ void commandsBufferBarrier(PrGpuDevice* device, PrGpuCommands* commands, PrGpuBu
     commandsOf(commands)->list.list->Barrier(1, &group);
 }
 
-void commandsTextureBarrier(PrGpuDevice* device, PrGpuCommands* commands, PrGpuTexture texture,
+void commandsTextureBarrier(PrGpuCommands* commands, PrGpuTexture texture,
         PrGpuSubresources subresources, PrGpuAccessFlags before, PrGpuAccessFlags after) {
+    gpuSharedCheckOutsidePass(commands);
+    PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
     const D3d12Resource& r = textureOf(d3d12Of(device), texture.id);
     textureBarrier(commandsOf(commands)->list.list, r, rangeOf(r, subresources), before, after);
 }
 
-void commandsGlobalBarrier(PrGpuDevice*, PrGpuCommands* commands, PrGpuAccessFlags before, PrGpuAccessFlags after) {
+void commandsGlobalBarrier(PrGpuCommands* commands, PrGpuAccessFlags before, PrGpuAccessFlags after) {
+    gpuSharedCheckOutsidePass(commands);
     globalBarrier(commandsOf(commands)->list.list, before, after);
 }
 
-PrGpuFence commandsSubmit(PrGpuDevice* device, PrGpuCommands* commands) {
+PrGpuFence commandsSubmit(PrGpuCommands* commands) {
+    PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
     D3d12Device* d = d3d12Of(device);
     D3d12Commands* c = commandsOf(commands);
+    gpuSharedSubmitted(c);
     ID3D12GraphicsCommandList7* list = c->list.list;
     if (c->timestamp != kTimestampPairs) {
         list->EndQuery(d->timestamps, D3D12_QUERY_TYPE_TIMESTAMP, c->timestamp * 2 + 1);
@@ -2195,12 +2233,15 @@ void coverAttachments(D3d12Pass* pass, ID3D12GraphicsCommandList7* list) {
     commandsOf(pass->commands)->changed |= PrGpuNativeStateFlag_Viewport | PrGpuNativeStateFlag_Scissor;
 }
 
-PrGpuPass* passBegin(PrGpuDevice* device, PrGpuCommands* commands, const PrGpuPassDesc* desc) {
+PrGpuPass* passBegin(PrGpuCommands* commands, const PrGpuPassDesc* desc) {
+    PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
     D3d12Device* d = d3d12Of(device);
     D3d12Commands* c = commandsOf(commands);
+    gpuSharedPassBegan(c);
     ID3D12GraphicsCommandList7* list = c->list.list;
     D3d12Pass* pass = allocZeroed<D3d12Pass>();
-    pass->commands = commands;
+    static_cast<PrGpuPass&>(*pass) = kPassFunctions;
+    pass->commands = c;
     if (desc->native != nullptr) {
         // The application may have bound another root signature since the command buffer began.
         pass->native = true;
@@ -2258,7 +2299,7 @@ PrGpuPass* passBegin(PrGpuDevice* device, PrGpuCommands* commands, const PrGpuPa
         coverAttachments(pass, list);
         pass->named = desc->name.size != 0;
         if (pass->named)
-            commandsPushGroup(device, commands, desc->name);
+            commandsPushGroup(commands, desc->name);
     }
     c->pass = pass;
     c->pipeline = 0;
@@ -2305,10 +2346,12 @@ void resolve(D3d12Device* d, ID3D12GraphicsCommandList7* list, const PrGpuAttach
     list->Barrier(1, &group);
 }
 
-void passEnd(PrGpuDevice* device, PrGpuPass* handle) {
+void passEnd(PrGpuPass* handle) {
+    PrGpuDevice* device = static_cast<GpuSharedPass*>(handle)->commands->device;
     D3d12Device* d = d3d12Of(device);
     D3d12Pass* pass = static_cast<D3d12Pass*>(handle);
     D3d12Commands* c = commandsOf(pass->commands);
+    gpuSharedPassEnded(c);
     c->pass = nullptr;
     if (!pass->native) {
         for (uint8_t i = 0; i < pass->formats.colorCount; ++i) {
@@ -2316,7 +2359,7 @@ void passEnd(PrGpuDevice* device, PrGpuPass* handle) {
                 resolve(d, c->list.list, pass->color[i]);
         }
         if (pass->named)
-            commandsPopGroup(device, pass->commands);
+            commandsPopGroup(c);
     }
     prMemoryFree(pass);
 }
@@ -2324,7 +2367,8 @@ void passEnd(PrGpuDevice* device, PrGpuPass* handle) {
 // Hands the pass's command list to a native draw, then binds the device's heaps and root signature again, covers a pass
 // of the device's own with the viewport and the scissor, and leaves the pass's pipeline and root data unset. An
 // application's pass reports every state as changed, since the native draw may have changed any of it.
-void passNativeDraw(PrGpuDevice* device, PrGpuPass* handle, PrGpuNativeKind, PrGpuNativeDrawFn draw, void* PR_NULLABLE context) {
+void passNativeDraw(PrGpuPass* handle, PrGpuNativeKind, PrGpuNativeDrawFn draw, void* PR_NULLABLE context) {
+    PrGpuDevice* device = static_cast<GpuSharedPass*>(handle)->commands->device;
     D3d12Device* d = d3d12Of(device);
     D3d12Pass* pass = static_cast<D3d12Pass*>(handle);
     D3d12Commands* c = commandsOf(pass->commands);
@@ -2343,14 +2387,14 @@ bool textureNative(PrGpuDevice* device, PrGpuTexture texture, PrGpuNativeKind, v
     return true;
 }
 
-PrGpuNativeStateFlags nativeStateSync(PrGpuDevice*, PrGpuCommands* commands) {
+PrGpuNativeStateFlags nativeStateSync(PrGpuCommands* commands) {
     D3d12Commands* c = commandsOf(commands);
     PrGpuNativeStateFlags changed = c->changed;
     c->changed = 0;
     return changed;
 }
 
-void passSetViewport(PrGpuDevice*, PrGpuPass* handle, PrRect viewport, float minDepth, float maxDepth) {
+void passSetViewport(PrGpuPass* handle, PrRect viewport, float minDepth, float maxDepth) {
     D3d12Pass* pass = static_cast<D3d12Pass*>(handle);
     D3D12_VIEWPORT v{
         viewport.left, viewport.top, viewport.right - viewport.left, viewport.bottom - viewport.top,
@@ -2360,7 +2404,7 @@ void passSetViewport(PrGpuDevice*, PrGpuPass* handle, PrRect viewport, float min
     commandsOf(pass->commands)->changed |= PrGpuNativeStateFlag_Viewport;
 }
 
-void passSetScissor(PrGpuDevice*, PrGpuPass* handle, PrIRect scissor) {
+void passSetScissor(PrGpuPass* handle, PrIRect scissor) {
     D3d12Pass* pass = static_cast<D3d12Pass*>(handle);
     int32_t left = scissor.left > 0 ? scissor.left : 0;
     int32_t top = scissor.top > 0 ? scissor.top : 0;
@@ -2376,20 +2420,21 @@ void passSetScissor(PrGpuDevice*, PrGpuPass* handle, PrIRect scissor) {
     commandsOf(pass->commands)->changed |= PrGpuNativeStateFlag_Scissor;
 }
 
-void passSetBlendConstant(PrGpuDevice*, PrGpuPass* handle, PrColor constant) {
+void passSetBlendConstant(PrGpuPass* handle, PrColor constant) {
     D3d12Pass* pass = static_cast<D3d12Pass*>(handle);
     const float rgba[4] = {constant.r, constant.g, constant.b, constant.a};
     commandsOf(pass->commands)->list.list->OMSetBlendFactor(rgba);
     commandsOf(pass->commands)->changed |= PrGpuNativeStateFlag_BlendConstant;
 }
 
-void passSetStencilReference(PrGpuDevice*, PrGpuPass* handle, uint8_t reference) {
+void passSetStencilReference(PrGpuPass* handle, uint8_t reference) {
     D3d12Pass* pass = static_cast<D3d12Pass*>(handle);
     commandsOf(pass->commands)->list.list->OMSetStencilRef(reference);
     commandsOf(pass->commands)->changed |= PrGpuNativeStateFlag_StencilReference;
 }
 
-void passSetIndexBuffer(PrGpuDevice* device, PrGpuPass* handle, PrGpuBuffer buffer, uint64_t offset, bool wide) {
+void passSetIndexBuffer(PrGpuPass* handle, PrGpuBuffer buffer, uint64_t offset, bool wide) {
+    PrGpuDevice* device = static_cast<GpuSharedPass*>(handle)->commands->device;
     D3d12Device* d = d3d12Of(device);
     D3d12Pass* pass = static_cast<D3d12Pass*>(handle);
     const D3d12Resource& r = d->resources[buffer.id];
@@ -2451,15 +2496,17 @@ const D3d12Pipeline& prepareDraw(D3d12Device* d, D3d12Pass* pass) {
     return p;
 }
 
-void passDraw(PrGpuDevice* device, PrGpuPass* handle, uint32_t vertexCount, uint32_t instanceCount,
+void passDraw(PrGpuPass* handle, uint32_t vertexCount, uint32_t instanceCount,
         uint32_t firstVertex, uint32_t firstInstance) {
+    PrGpuDevice* device = static_cast<GpuSharedPass*>(handle)->commands->device;
     D3d12Pass* pass = static_cast<D3d12Pass*>(handle);
     prepareDraw(d3d12Of(device), pass);
     commandsOf(pass->commands)->list.list->DrawInstanced(vertexCount, instanceCount, firstVertex, firstInstance);
 }
 
-void passDrawIndexed(PrGpuDevice* device, PrGpuPass* handle, uint32_t indexCount, uint32_t instanceCount,
+void passDrawIndexed(PrGpuPass* handle, uint32_t indexCount, uint32_t instanceCount,
         uint32_t firstIndex, int32_t vertexOffset, uint32_t firstInstance) {
+    PrGpuDevice* device = static_cast<GpuSharedPass*>(handle)->commands->device;
     D3d12Pass* pass = static_cast<D3d12Pass*>(handle);
     prepareDraw(d3d12Of(device), pass);
     commandsOf(pass->commands)->list.list->DrawIndexedInstanced(indexCount, instanceCount, firstIndex, vertexOffset,
@@ -2481,14 +2528,14 @@ void drawIndirect(D3d12Device* d, D3d12Pass* pass, ID3D12CommandSignature* signa
         list->ExecuteIndirect(signature, 1, arguments, offset + uint64_t(i) * stride, nullptr, 0);
 }
 
-void passDrawIndirect(PrGpuDevice* device, PrGpuPass* handle, PrGpuBuffer buffer, uint64_t offset, uint32_t count,
-        uint32_t stride) {
+void passDrawIndirect(PrGpuPass* handle, PrGpuBuffer buffer, uint64_t offset, uint32_t count, uint32_t stride) {
+    PrGpuDevice* device = static_cast<GpuSharedPass*>(handle)->commands->device;
     D3d12Device* d = d3d12Of(device);
     drawIndirect(d, static_cast<D3d12Pass*>(handle), d->drawSignature, sizeof(PrGpuDrawIndirect), buffer, offset, count, stride);
 }
 
-void passDrawIndexedIndirect(PrGpuDevice* device, PrGpuPass* handle, PrGpuBuffer buffer, uint64_t offset,
-        uint32_t count, uint32_t stride) {
+void passDrawIndexedIndirect(PrGpuPass* handle, PrGpuBuffer buffer, uint64_t offset, uint32_t count, uint32_t stride) {
+    PrGpuDevice* device = static_cast<GpuSharedPass*>(handle)->commands->device;
     D3d12Device* d = d3d12Of(device);
     drawIndirect(d, static_cast<D3d12Pass*>(handle), d->drawIndexedSignature, sizeof(PrGpuDrawIndexedIndirect),
         buffer, offset, count, stride);
@@ -2653,6 +2700,7 @@ PrStatus swapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const
         return PrStatus_NotSupported;
     native->SetMaximumFrameLatency(2);
     D3d12SwapChain* sc = allocZeroed<D3d12SwapChain>();
+    static_cast<PrGpuSwapChain&>(*sc) = kSwapChainFunctions;
     sc->device = device;
     sc->info = info;
     sc->swapChain = native;
@@ -2687,7 +2735,8 @@ PrStatus swapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const
     return PrStatus_Ok;
 }
 
-void swapChainDestroy(PrGpuDevice* device, PrGpuSwapChain* handle) {
+void swapChainDestroy(PrGpuSwapChain* handle) {
+    PrGpuDevice* device = static_cast<GpuSharedSwapChain*>(handle)->device;
     D3d12Device* d = d3d12Of(device);
     D3d12SwapChain* sc = static_cast<D3d12SwapChain*>(handle);
     // DXGI lets a window have one swap chain at a time, so the swap chain is gone before this returns, and the window
@@ -2702,7 +2751,7 @@ void swapChainDestroy(PrGpuDevice* device, PrGpuSwapChain* handle) {
 }
 
 // The waitable object counts the frames that the swap chain can take, and each wait takes one, so a frame waits once.
-void swapChainWait(PrGpuDevice*, PrGpuSwapChain* handle) {
+void swapChainWait(PrGpuSwapChain* handle) {
     D3d12SwapChain* sc = static_cast<D3d12SwapChain*>(handle);
     if (sc->waited)
         return;
@@ -2711,10 +2760,11 @@ void swapChainWait(PrGpuDevice*, PrGpuSwapChain* handle) {
     sc->waited = true;
 }
 
-PrStatus swapChainAcquire(PrGpuDevice* device, PrGpuSwapChain* handle, PrUVec2 extent, PrGpuTexture* out) {
+PrStatus swapChainAcquire(PrGpuSwapChain* handle, PrUVec2 extent, PrGpuTexture* out) {
+    PrGpuDevice* device = static_cast<GpuSharedSwapChain*>(handle)->device;
     D3d12Device* d = d3d12Of(device);
     D3d12SwapChain* sc = static_cast<D3d12SwapChain*>(handle);
-    swapChainWait(device, sc);
+    swapChainWait(sc);
     sc->waited = false;
     // Stretched buffers are the frame's extent. Anchored buffers grow, to the extent of the window's monitor at least,
     // so that a window dragged larger resizes them once.
@@ -2748,7 +2798,7 @@ PrStatus swapChainAcquire(PrGpuDevice* device, PrGpuSwapChain* handle, PrUVec2 e
     return PrStatus_Ok;
 }
 
-void swapChainPresent(PrGpuDevice*, PrGpuSwapChain* handle, PrGpuCommands* commands) {
+void swapChainPresent(PrGpuSwapChain* handle, PrGpuCommands* commands) {
     D3d12SwapChain* sc = static_cast<D3d12SwapChain*>(handle);
     if (sc->current.id == 0)
         return;
@@ -2899,6 +2949,62 @@ void nameAdapter(D3d12Device* d) {
         prMemCopy(d->adapter, "Direct3D 12", sizeof("Direct3D 12"));
 }
 
+// The functions of the device's objects.
+constexpr PrGpuCommands kCommandsFunctions = {
+    .deviceFn = gpuSharedCommandsDevice,
+    .submitFn = commandsSubmit,
+    .streamFn = commandsStream,
+    .setPushFn = commandsSetPush,
+    .setUniformsFn = commandsSetUniforms,
+    .setPipelineFn = commandsSetPipeline,
+    .dispatchFn = commandsDispatch,
+    .dispatchIndirectFn = commandsDispatchIndirect,
+    .copyBufferFn = commandsCopyBuffer,
+    .copyTextureFn = commandsCopyTexture,
+    .copyBufferToTextureFn = commandsCopyBufferToTexture,
+    .copyTextureToBufferFn = commandsCopyTextureToBuffer,
+    .generateMipmapsFn = gpuSharedGenerateMipmaps,
+    .onDoneFn = commandsOnDone,
+    .pushGroupFn = commandsPushGroup,
+    .popGroupFn = commandsPopGroup,
+    .bufferBarrierFn = commandsBufferBarrier,
+    .textureBarrierFn = commandsTextureBarrier,
+    .globalBarrierFn = commandsGlobalBarrier,
+    .nativeStateSyncFn = nativeStateSync,
+    .passBeginFn = passBegin,
+};
+
+constexpr PrGpuPass kPassFunctions = {
+    .commandsFn = gpuSharedPassCommands,
+    .formatsFn = gpuSharedPassFormats,
+    .extentFn = gpuSharedPassExtent,
+    .endFn = passEnd,
+    .nativeDrawFn = passNativeDraw,
+    .setViewportFn = passSetViewport,
+    .setScissorFn = passSetScissor,
+    .setBlendConstantFn = passSetBlendConstant,
+    .setStencilReferenceFn = passSetStencilReference,
+    .setIndexBufferFn = passSetIndexBuffer,
+    .drawFn = passDraw,
+    .drawIndexedFn = passDrawIndexed,
+    .drawIndirectFn = passDrawIndirect,
+    .drawIndexedIndirectFn = passDrawIndexedIndirect,
+};
+
+constexpr PrGpuSwapChain kSwapChainFunctions = {
+    .deviceFn = gpuSharedSwapChainDevice,
+    .infoFn = gpuSharedSwapChainInfo,
+    .destroyFn = swapChainDestroy,
+    .waitFn = swapChainWait,
+    .acquireFn = swapChainAcquire,
+    .presentFn = swapChainPresent,
+};
+
+constexpr PrGpuShaderLibrary kLibraryFunctions = {
+    .destroyFn = shaderLibraryDestroy,
+    .entriesFn = gpuSharedLibraryEntries,
+};
+
 } // namespace
 
 } // namespace pr_impl
@@ -2959,6 +3065,7 @@ PrStatus prGpuD3d12Create(const PrGpuD3d12Options* PR_NULLABLE options, PrGpuDev
         }
     }
     D3d12Device* d = allocZeroed<D3d12Device>();
+    gpuSharedDeviceInit(d);
     d->device = device;
     d->queue = queue;
     d->factory = factory;
@@ -2980,69 +3087,34 @@ PrStatus prGpuD3d12Create(const PrGpuD3d12Options* PR_NULLABLE options, PrGpuDev
     }
     nameAdapter(d);
 
-    d->destroy = destroyDevice;
-    d->isLost = isLost;
-    d->simulateLoss = simulateLoss;
-    d->isComplete = isComplete;
-    d->wait = wait;
-    d->waitIdle = waitIdle;
-    d->supportsFormat = supportsFormat;
-    d->bufferCreate = bufferCreate;
-    d->bufferDestroy = bufferDestroy;
-    d->bufferDesc = bufferDesc;
-    d->bufferStorageHandle = bufferStorageHandle;
-    d->bufferMap = bufferMap;
-    d->bufferUpload = bufferUpload;
-    d->textureCreate = textureCreate;
-    d->textureCreateView = textureCreateView;
-    d->textureDestroy = textureDestroy;
-    d->textureDesc = textureDesc;
-    d->textureStorageHandle = textureStorageHandle;
-    d->textureUpload = textureUpload;
+    d->destroyFn = destroyDevice;
+    d->isLostFn = isLost;
+    d->simulateLossFn = simulateLoss;
+    d->isCompleteFn = isComplete;
+    d->waitFn = wait;
+    d->waitIdleFn = waitIdle;
+    d->supportsFormatFn = supportsFormat;
+    d->bufferCreateFn = bufferCreate;
+    d->bufferDestroyFn = bufferDestroy;
+    d->bufferDescFn = bufferDesc;
+    d->bufferStorageHandleFn = bufferStorageHandle;
+    d->bufferMapFn = bufferMap;
+    d->bufferUploadFn = bufferUpload;
+    d->textureCreateFn = textureCreate;
+    d->textureCreateViewFn = textureCreateView;
+    d->textureDestroyFn = textureDestroy;
+    d->textureDescFn = textureDesc;
+    d->textureStorageHandleFn = textureStorageHandle;
+    d->textureUploadFn = textureUpload;
     d->samplerCreate = samplerCreate;
-    d->shaderLibraryCreate = shaderLibraryCreate;
-    d->shaderLibraryDestroy = shaderLibraryDestroy;
-    d->graphicsPipelineCreate = graphicsPipelineCreate;
-    d->computePipelineCreate = computePipelineCreate;
-    d->pipelineDestroy = pipelineDestroy;
-    d->pipelineGroupSize = pipelineGroupSize;
-    d->commandsBegin = commandsBegin;
-    d->commandsSubmit = commandsSubmit;
-    d->commandsStream = commandsStream;
-    d->commandsSetPush = commandsSetPush;
-    d->commandsSetUniforms = commandsSetUniforms;
-    d->commandsSetPipeline = commandsSetPipeline;
-    d->commandsDispatch = commandsDispatch;
-    d->commandsDispatchIndirect = commandsDispatchIndirect;
-    d->commandsCopyBuffer = commandsCopyBuffer;
-    d->commandsCopyTexture = commandsCopyTexture;
-    d->commandsCopyBufferToTexture = commandsCopyBufferToTexture;
-    d->commandsCopyTextureToBuffer = commandsCopyTextureToBuffer;
-    d->commandsOnDone = commandsOnDone;
-    d->commandsPushGroup = commandsPushGroup;
-    d->commandsPopGroup = commandsPopGroup;
-    d->commandsBufferBarrier = commandsBufferBarrier;
-    d->commandsTextureBarrier = commandsTextureBarrier;
-    d->commandsGlobalBarrier = commandsGlobalBarrier;
-    d->nativeStateSync = nativeStateSync;
-    d->passBegin = passBegin;
-    d->passEnd = passEnd;
-    d->passNativeDraw = passNativeDraw;
-    d->textureNative = textureNative;
-    d->passSetViewport = passSetViewport;
-    d->passSetScissor = passSetScissor;
-    d->passSetBlendConstant = passSetBlendConstant;
-    d->passSetStencilReference = passSetStencilReference;
-    d->passSetIndexBuffer = passSetIndexBuffer;
-    d->passDraw = passDraw;
-    d->passDrawIndexed = passDrawIndexed;
-    d->passDrawIndirect = passDrawIndirect;
-    d->passDrawIndexedIndirect = passDrawIndexedIndirect;
-    d->swapChainCreate = swapChainCreate;
-    d->swapChainDestroy = swapChainDestroy;
-    d->swapChainWait = swapChainWait;
-    d->swapChainAcquire = swapChainAcquire;
-    d->swapChainPresent = swapChainPresent;
+    d->shaderLibraryCreateFn = shaderLibraryCreate;
+    d->graphicsPipelineCreateFn = graphicsPipelineCreate;
+    d->computePipelineCreateFn = computePipelineCreate;
+    d->pipelineDestroyFn = pipelineDestroy;
+    d->pipelineGroupSizeFn = pipelineGroupSize;
+    d->commandsBeginFn = commandsBegin;
+    d->textureNativeFn = textureNative;
+    d->swapChainCreateFn = swapChainCreate;
     d->shaderTarget = PrGpuShaderTarget_Dxil;
     d->info.adapter = PrStringView{d->adapter, strlen(d->adapter)};
     d->info.backend = "Direct3D 12";

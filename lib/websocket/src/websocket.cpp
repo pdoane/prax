@@ -4,6 +4,7 @@
 
 #include "pr/ascii.h"
 #include "pr/assert.h"
+#include "pr/websocket_backend.h"
 
 #if defined(PR_WEBSOCKET_HAS_BUILTIN)
 #include "pr/websocket_builtin.h"
@@ -86,7 +87,7 @@ PrWebSocketNetwork* PR_NULLABLE prWebSocketNetworkCreate(PrWebSocketNetworkBacke
 
 void prWebSocketNetworkDestroy(PrWebSocketNetwork* PR_NULLABLE network) {
     if (network != nullptr)
-        network->destroy(network);
+        network->destroyFn(network);
 }
 
 PrStatus prWebSocketCreate(PrWebSocketNetwork* network, const PrWebSocketDesc* desc,
@@ -95,43 +96,43 @@ PrStatus prWebSocketCreate(PrWebSocketNetwork* network, const PrWebSocketDesc* d
     *out = nullptr;
     if (!areProtocols(desc->protocols, desc->protocolCount))
         return PrStatus_InvalidData;
-    PrStatus status = network->socketCreate(network, desc, out);
-    PR_ASSERT(status != PrStatus_Ok || ((*out) != nullptr && (*out)->network == network));
+    PrStatus status = network->socketCreateFn(network, desc, out);
+    PR_ASSERT(status != PrStatus_Ok || *out != nullptr);
     return status;
 }
 
 void prWebSocketDestroy(PrWebSocket* PR_NULLABLE socket) {
     if (socket != nullptr)
-        socket->network->socketDestroy(socket->network, socket);
+        socket->destroyFn(socket);
 }
 
 PrWebSocketState prWebSocketState(const PrWebSocket* socket) {
-    return socket->network->socketState(socket->network, socket);
+    return socket->stateFn(socket);
 }
 
 PrStringView prWebSocketProtocol(const PrWebSocket* socket) {
-    return socket->network->socketProtocol(socket->network, socket);
+    return socket->protocolFn(socket);
 }
 
 size_t prWebSocketBufferedAmount(const PrWebSocket* socket) {
-    return socket->network->socketBufferedAmount(socket->network, socket);
+    return socket->bufferedAmountFn(socket);
 }
 
 PrStatus prWebSocketSend(PrWebSocket* socket, PrWebSocketMessageKind kind, PrByteView data) {
     PR_ASSERT(data.data != nullptr || data.size == 0);
-    return socket->network->socketSend(socket->network, socket, kind, data);
+    return socket->sendFn(socket, kind, data);
 }
 
 void prWebSocketClose(PrWebSocket* socket, uint16_t code, PrStringView reason) {
     PR_ASSERT(code == 1000 || (code >= 3000 && code <= 4999));
     PR_ASSERT(reason.size <= 123);
-    socket->network->socketClose(socket->network, socket, code, reason);
+    socket->closeFn(socket, code, reason);
 }
 
 PrWebSocketMessage prWebSocketMessage(const PrWebSocket* socket) {
-    return socket->network->socketMessage(socket->network, socket);
+    return socket->messageFn(socket);
 }
 
 PrWebSocketCloseInfo prWebSocketCloseInfo(const PrWebSocket* socket) {
-    return socket->network->socketCloseInfo(socket->network, socket);
+    return socket->closeInfoFn(socket);
 }

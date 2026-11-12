@@ -16,6 +16,9 @@ namespace pr_impl {
 
 namespace {
 
+// The functions of the device's objects, which their creation installs.
+extern const PrGpuShaderLibrary kLibraryFunctions;
+
 MTLTextureType textureType(PrGpuTextureKind kind, uint8_t samples) {
     switch (kind) {
         case PrGpuTextureKind_2dArray: return samples > 1 ? MTLTextureType2DMultisampleArray : MTLTextureType2DArray;
@@ -369,6 +372,7 @@ PrStatus textureCreateView(PrGpuDevice* device, PrGpuTexture texture, PrGpuTextu
 }
 
 void textureDestroy(PrGpuDevice* device, PrGpuTexture texture) {
+    gpuSharedTextureForget(gpuMetalDeviceFrom(device), texture);
     gpuMetalRetire(gpuMetalDeviceFrom(device), GpuMetalRetiredKind_Resource, texture.id);
 }
 
@@ -435,15 +439,20 @@ PrStatus shaderLibraryCreate(PrGpuDevice* device, PrGpuShaderEntry* entries, uin
             return PrStatus_InvalidData;
         }
         GpuMetalLibrary* m = allocZeroed<GpuMetalLibrary>();
+        static_cast<PrGpuShaderLibrary&>(*m) = kLibraryFunctions;
+        m->device = device;
+        m->entryCount = entryCount;
+        m->entries = entries;
         m->library = library;
         *out = m;
         return PrStatus_Ok;
     }
 }
 
-void shaderLibraryDestroy(PrGpuDevice*, PrGpuShaderLibrary* library) {
+void shaderLibraryDestroy(PrGpuShaderLibrary* library) {
     GpuMetalLibrary* m = static_cast<GpuMetalLibrary*>(library);
     [m->library release];
+    prMemoryFree(m->entries);
     prMemoryFree(m);
 }
 
@@ -454,60 +463,6 @@ void pipelineDestroy(PrGpuDevice* device, PrGpuPipeline pipeline) {
 PrGpuExtent pipelineGroupSize(const PrGpuDevice* device, PrGpuPipeline pipeline) {
     MTLSize size = gpuMetalDeviceFrom(device)->pipelines[pipeline.id].groupSize;
     return PrGpuExtent{uint32_t(size.width), uint32_t(size.height), uint32_t(size.depth)};
-}
-
-void* commandsStream(PrGpuDevice* device, PrGpuCommands* commands, uint64_t size, PrGpuBuffer* buffer, uint64_t* offset) {
-    uint32_t slot = 0;
-    void* bytes = gpuMetalStream(gpuMetalDeviceFrom(device), gpuMetalCommandsFrom(commands), size, &slot, offset);
-    buffer->id = slot;
-    return bytes;
-}
-
-void commandsOnDone(PrGpuDevice*, PrGpuCommands* commands, PrGpuDoneFn done, void* PR_NULLABLE context) {
-    gpuMetalCommandsFrom(commands)->dones.push(GpuMetalDone{done, context});
-}
-
-void passSetViewport(PrGpuDevice*, PrGpuPass* handle, PrRect viewport, float minDepth, float maxDepth) {
-    GpuMetalPass* pass = static_cast<GpuMetalPass*>(handle);
-    [pass->encoder setViewport:MTLViewport{double(viewport.left), double(viewport.top),
-        double(viewport.right - viewport.left),
-        double(viewport.bottom - viewport.top), double(minDepth), double(maxDepth)}];
-    gpuMetalPassChanged(pass, PrGpuNativeStateFlag_Viewport);
-}
-
-void passSetScissor(PrGpuDevice*, PrGpuPass* handle, PrIRect scissor) {
-    GpuMetalPass* pass = static_cast<GpuMetalPass*>(handle);
-    // Metal requires the scissor within the attachments.
-    int32_t left = scissor.left > 0 ? scissor.left : 0;
-    int32_t top = scissor.top > 0 ? scissor.top : 0;
-    int32_t right = scissor.right < int32_t(pass->extent.x) ? scissor.right : int32_t(pass->extent.x);
-    int32_t bottom = scissor.bottom < int32_t(pass->extent.y) ? scissor.bottom : int32_t(pass->extent.y);
-    if (right < left)
-        right = left;
-    if (bottom < top)
-        bottom = top;
-    [pass->encoder setScissorRect:MTLScissorRect{NSUInteger(left), NSUInteger(top), NSUInteger(right - left),
-        NSUInteger(bottom - top)}];
-    gpuMetalPassChanged(pass, PrGpuNativeStateFlag_Scissor);
-}
-
-void passSetBlendConstant(PrGpuDevice*, PrGpuPass* handle, PrColor constant) {
-    GpuMetalPass* pass = static_cast<GpuMetalPass*>(handle);
-    [pass->encoder setBlendColorRed:constant.r green:constant.g blue:constant.b alpha:constant.a];
-    gpuMetalPassChanged(pass, PrGpuNativeStateFlag_BlendConstant);
-}
-
-void passSetStencilReference(PrGpuDevice*, PrGpuPass* handle, uint8_t reference) {
-    GpuMetalPass* pass = static_cast<GpuMetalPass*>(handle);
-    [pass->encoder setStencilReferenceValue:reference];
-    gpuMetalPassChanged(pass, PrGpuNativeStateFlag_StencilReference);
-}
-
-void passSetIndexBuffer(PrGpuDevice*, PrGpuPass* handle, PrGpuBuffer buffer, uint64_t offset, bool wide) {
-    GpuMetalPass* pass = static_cast<GpuMetalPass*>(handle);
-    pass->indexBuffer = buffer;
-    pass->indexOffset = offset;
-    pass->indexType = wide ? MTLIndexTypeUInt32 : MTLIndexTypeUInt16;
 }
 
 // Returns the capabilities of the screen that shows most of the view's window, or of the main screen if the view is not
@@ -569,6 +524,7 @@ PrStatus swapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const
             layer.contentsGravity = kCAGravityTopLeft;
         [d->queue addResidencySet:layer.residencySet];
         GpuMetalSwapChain* sc = allocZeroed<GpuMetalSwapChain>();
+        static_cast<PrGpuSwapChain&>(*sc) = *d->swapChainFunctions;
         sc->device = device;
         sc->info = info;
         sc->intent = desc->intent;
@@ -589,7 +545,71 @@ void releaseDrawable(GpuMetalDevice* d, GpuMetalSwapChain* sc) {
     sc->drawable = nil;
 }
 
-void swapChainDestroy(PrGpuDevice* device, PrGpuSwapChain* handle) {
+// The functions of the device's objects.
+constexpr PrGpuShaderLibrary kLibraryFunctions = {
+    .destroyFn = shaderLibraryDestroy,
+    .entriesFn = gpuSharedLibraryEntries,
+};
+
+} // namespace
+
+void* gpuMetalCommandsStream(PrGpuCommands* commands, uint64_t size, PrGpuBuffer* buffer, uint64_t* offset) {
+    PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
+    uint32_t slot = 0;
+    void* bytes = gpuMetalStream(gpuMetalDeviceFrom(device), gpuMetalCommandsFrom(commands), size, &slot, offset);
+    buffer->id = slot;
+    return bytes;
+}
+
+void gpuMetalCommandsOnDone(PrGpuCommands* commands, PrGpuDoneFn done, void* PR_NULLABLE context) {
+    gpuMetalCommandsFrom(commands)->dones.push(GpuMetalDone{done, context});
+}
+
+void gpuMetalPassSetViewport(PrGpuPass* handle, PrRect viewport, float minDepth, float maxDepth) {
+    GpuMetalPass* pass = static_cast<GpuMetalPass*>(handle);
+    [pass->encoder setViewport:MTLViewport{double(viewport.left), double(viewport.top),
+        double(viewport.right - viewport.left),
+        double(viewport.bottom - viewport.top), double(minDepth), double(maxDepth)}];
+    gpuMetalPassChanged(pass, PrGpuNativeStateFlag_Viewport);
+}
+
+void gpuMetalPassSetScissor(PrGpuPass* handle, PrIRect scissor) {
+    GpuMetalPass* pass = static_cast<GpuMetalPass*>(handle);
+    // Metal requires the scissor within the attachments.
+    int32_t left = scissor.left > 0 ? scissor.left : 0;
+    int32_t top = scissor.top > 0 ? scissor.top : 0;
+    int32_t right = scissor.right < int32_t(pass->extent.x) ? scissor.right : int32_t(pass->extent.x);
+    int32_t bottom = scissor.bottom < int32_t(pass->extent.y) ? scissor.bottom : int32_t(pass->extent.y);
+    if (right < left)
+        right = left;
+    if (bottom < top)
+        bottom = top;
+    [pass->encoder setScissorRect:MTLScissorRect{NSUInteger(left), NSUInteger(top), NSUInteger(right - left),
+        NSUInteger(bottom - top)}];
+    gpuMetalPassChanged(pass, PrGpuNativeStateFlag_Scissor);
+}
+
+void gpuMetalPassSetBlendConstant(PrGpuPass* handle, PrColor constant) {
+    GpuMetalPass* pass = static_cast<GpuMetalPass*>(handle);
+    [pass->encoder setBlendColorRed:constant.r green:constant.g blue:constant.b alpha:constant.a];
+    gpuMetalPassChanged(pass, PrGpuNativeStateFlag_BlendConstant);
+}
+
+void gpuMetalPassSetStencilReference(PrGpuPass* handle, uint8_t reference) {
+    GpuMetalPass* pass = static_cast<GpuMetalPass*>(handle);
+    [pass->encoder setStencilReferenceValue:reference];
+    gpuMetalPassChanged(pass, PrGpuNativeStateFlag_StencilReference);
+}
+
+void gpuMetalPassSetIndexBuffer(PrGpuPass* handle, PrGpuBuffer buffer, uint64_t offset, bool wide) {
+    GpuMetalPass* pass = static_cast<GpuMetalPass*>(handle);
+    pass->indexBuffer = buffer;
+    pass->indexOffset = offset;
+    pass->indexType = wide ? MTLIndexTypeUInt32 : MTLIndexTypeUInt16;
+}
+
+void gpuMetalSwapChainDestroy(PrGpuSwapChain* handle) {
+    PrGpuDevice* device = static_cast<GpuSharedSwapChain*>(handle)->device;
     GpuMetalDevice* d = gpuMetalDeviceFrom(device);
     GpuMetalSwapChain* sc = static_cast<GpuMetalSwapChain*>(handle);
     gpuMetalWaitIdle(device);
@@ -600,17 +620,16 @@ void swapChainDestroy(PrGpuDevice* device, PrGpuSwapChain* handle) {
 }
 
 // A layer waits for a drawable only when asked for one, at its extent, which the frame gives.
-void swapChainWait(PrGpuDevice*, PrGpuSwapChain*) {}
+void gpuMetalSwapChainWait(PrGpuSwapChain*) {}
 
-void swapChainPresent(PrGpuDevice* device, PrGpuSwapChain* handle, PrGpuCommands* commands) {
+void gpuMetalSwapChainPresent(PrGpuSwapChain* handle, PrGpuCommands* commands) {
+    PrGpuDevice* device = static_cast<GpuSharedSwapChain*>(handle)->device;
     GpuMetalSwapChain* sc = static_cast<GpuMetalSwapChain*>(handle);
     if (sc->drawable == nil)
         return;
     gpuMetalCommandsFrom(commands)->drawables.push(GpuMetalDrawable{[sc->drawable retain], sc->transactional});
     releaseDrawable(gpuMetalDeviceFrom(device), sc);
 }
-
-} // namespace
 
 NSString* gpuMetalString(PrStringView view) {
     return [[[NSString alloc] initWithBytes:view.data length:view.size encoding:NSUTF8StringEncoding] autorelease];
@@ -916,8 +935,8 @@ void gpuMetalRenderPipelineSet(const GpuMetalPipeline& p, id encoder) {
     [encoder setDepthBias:p.depthBias slopeScale:p.depthBiasSlope clamp:p.depthBiasClamp];
 }
 
-PrStatus gpuMetalSwapChainAcquire(PrGpuDevice* device, PrGpuSwapChain* handle, PrUVec2 extent, PrGpuTexture* out) {
-    GpuMetalDevice* d = gpuMetalDeviceFrom(device);
+PrStatus gpuMetalSwapChainAcquire(PrGpuSwapChain* handle, PrUVec2 extent, PrGpuTexture* out) {
+    GpuMetalDevice* d = gpuMetalDeviceFrom(static_cast<GpuSharedSwapChain*>(handle)->device);
     GpuMetalSwapChain* sc = static_cast<GpuMetalSwapChain*>(handle);
     @autoreleasepool {
         releaseDrawable(d, sc);
@@ -1037,6 +1056,7 @@ GpuMetalDone* PR_NULLABLE gpuMetalDonesCopy(const GpuMetalCommands* c) {
 }
 
 void gpuMetalCommandsInit(GpuMetalDevice* d, GpuMetalCommands* c) {
+    static_cast<PrGpuCommands&>(*c) = *d->commandsFunctions;
     c->device = d;
     c->serial = d->serial++;
     d->inFlight.push(GpuMetalInFlight{c->serial, 0});
@@ -1089,10 +1109,10 @@ GpuMetalPipeline gpuMetalPipelineFromDesc(GpuMetalDevice* d, const PrGpuGraphics
     return p;
 }
 
-void gpuMetalCommandsSetPipeline(PrGpuDevice* device, PrGpuCommands* commands, PrGpuPipeline pipeline) {
+void gpuMetalCommandsSetPipeline(PrGpuCommands* commands, PrGpuPipeline pipeline) {
     GpuMetalCommands* c = gpuMetalCommandsFrom(commands);
     c->pipeline = pipeline.id;
-    const GpuMetalPipeline& p = gpuMetalDeviceFrom(device)->pipelines[pipeline.id];
+    const GpuMetalPipeline& p = gpuMetalDeviceFrom(c->device)->pipelines[pipeline.id];
     if (GpuMetalPass* pass = c->pass) {
         PR_ASSERT(!p.compute);
         gpuMetalRenderPipelineSet(p, pass->encoder);
@@ -1179,6 +1199,7 @@ void gpuMetalPassChanged(GpuMetalPass* pass, PrGpuNativeStateFlags flags) {
 }
 
 void gpuMetalDeviceInit(GpuMetalDevice* d, id<MTLDevice> device) {
+    gpuSharedDeviceInit(d);
     d->device = device;
     prMutexInit(&d->doneMutex);
     prConditionInit(&d->doneSignal);
@@ -1203,42 +1224,29 @@ void gpuMetalDeviceInit(GpuMetalDevice* d, id<MTLDevice> device) {
     d->nextPipeline = 1;
     d->serial = 1;
 
-    d->isLost = isLost;
-    d->simulateLoss = simulateLoss;
-    d->isComplete = isComplete;
-    d->wait = gpuMetalWait;
-    d->waitIdle = gpuMetalWaitIdle;
-    d->supportsFormat = supportsFormat;
-    d->bufferCreate = bufferCreate;
-    d->bufferDestroy = bufferDestroy;
-    d->bufferDesc = bufferDesc;
-    d->bufferStorageHandle = bufferStorageHandle;
-    d->bufferMap = bufferMap;
-    d->bufferUpload = bufferUpload;
-    d->textureCreate = textureCreate;
-    d->textureCreateView = textureCreateView;
-    d->textureDestroy = textureDestroy;
-    d->textureDesc = textureDesc;
-    d->textureStorageHandle = textureStorageHandle;
-    d->textureUpload = textureUpload;
+    d->isLostFn = isLost;
+    d->simulateLossFn = simulateLoss;
+    d->isCompleteFn = isComplete;
+    d->waitFn = gpuMetalWait;
+    d->waitIdleFn = gpuMetalWaitIdle;
+    d->supportsFormatFn = supportsFormat;
+    d->bufferCreateFn = bufferCreate;
+    d->bufferDestroyFn = bufferDestroy;
+    d->bufferDescFn = bufferDesc;
+    d->bufferStorageHandleFn = bufferStorageHandle;
+    d->bufferMapFn = bufferMap;
+    d->bufferUploadFn = bufferUpload;
+    d->textureCreateFn = textureCreate;
+    d->textureCreateViewFn = textureCreateView;
+    d->textureDestroyFn = textureDestroy;
+    d->textureDescFn = textureDesc;
+    d->textureStorageHandleFn = textureStorageHandle;
+    d->textureUploadFn = textureUpload;
     d->samplerCreate = samplerCreate;
-    d->shaderLibraryCreate = shaderLibraryCreate;
-    d->shaderLibraryDestroy = shaderLibraryDestroy;
-    d->pipelineDestroy = pipelineDestroy;
-    d->pipelineGroupSize = pipelineGroupSize;
-    d->commandsStream = commandsStream;
-    d->commandsSetPipeline = gpuMetalCommandsSetPipeline;
-    d->commandsOnDone = commandsOnDone;
-    d->passSetViewport = passSetViewport;
-    d->passSetScissor = passSetScissor;
-    d->passSetBlendConstant = passSetBlendConstant;
-    d->passSetStencilReference = passSetStencilReference;
-    d->passSetIndexBuffer = passSetIndexBuffer;
-    d->swapChainCreate = swapChainCreate;
-    d->swapChainDestroy = swapChainDestroy;
-    d->swapChainWait = swapChainWait;
-    d->swapChainAcquire = gpuMetalSwapChainAcquire;
-    d->swapChainPresent = swapChainPresent;
+    d->shaderLibraryCreateFn = shaderLibraryCreate;
+    d->pipelineDestroyFn = pipelineDestroy;
+    d->pipelineGroupSizeFn = pipelineGroupSize;
+    d->swapChainCreateFn = swapChainCreate;
     d->shaderTarget = PrGpuShaderTarget_Metal;
     // The name's UTF-8 lives no longer than the autorelease pool, so the device keeps a copy.
     if (![device.name getCString:d->adapter maxLength:sizeof(d->adapter) encoding:NSUTF8StringEncoding])
@@ -1249,7 +1257,7 @@ void gpuMetalDeviceInit(GpuMetalDevice* d, id<MTLDevice> device) {
         PrGpuFeatureFlag_OrderedTargetReads |
         (device.supportsBCTextureCompression ? PrGpuFeatureFlag_TextureCompressionBc : 0);
     d->inPlaceImports = 1u << PrGpuImportKind_CoreVideo;
-    d->textureImport = gpuMetalTextureImport;
+    d->textureImportInPlace = gpuMetalTextureImport;
     d->info.maxTextureSize = 16384;
     d->info.maxResourceHandles = kGpuMetalMaxResources - 1;
     d->info.maxSamplerHandles = kGpuMetalMaxSamplers - 1;
@@ -1261,6 +1269,7 @@ void gpuMetalDeviceAddQueue(GpuMetalDevice* d, id queue) {
 }
 
 void gpuMetalDeviceReset(GpuMetalDevice* d) {
+    gpuSharedDeviceReset(d);
     prMutexLock(&d->mutex);
     gpuMetalCollect(d);
     for (uint32_t i = 0; i < d->held.count; ++i)

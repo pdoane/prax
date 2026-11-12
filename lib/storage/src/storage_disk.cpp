@@ -5,6 +5,7 @@
 #include "pr/alloc.h"
 #include "pr/file.h"
 #include "pr/mem.h"
+#include "pr/storage_backend.h"
 #include "pr/string_ops.h"
 #include "pr/task.h"
 #include "pr/text_buffer.h"
@@ -378,15 +379,15 @@ PrStatus prStorageDiskCreate(const PrStorageDiskDesc* desc, PrStorage* PR_NULLAB
     if (!prFileCreateDirectory(desc->directory))
         return PrStatus_Io;
     DiskStorage* storage = allocZeroed<DiskStorage>();
-    storage->destroy = destroyStorage;
-    storage->read = readStorage;
-    storage->release = releaseRecord;
-    storage->write = writeStorage;
-    storage->remove = removeStorage;
-    storage->clear = clearStorage;
-    storage->size = sizeStorage;
-    storage->count = countStorage;
-    storage->key = keyStorage;
+    storage->destroyFn = destroyStorage;
+    storage->readFn = readStorage;
+    storage->releaseFn = releaseRecord;
+    storage->writeFn = writeStorage;
+    storage->removeFn = removeStorage;
+    storage->clearFn = clearStorage;
+    storage->sizeFn = sizeStorage;
+    storage->countFn = countStorage;
+    storage->keyFn = keyStorage;
     storage->directory = prRawStringCopy(desc->directory);
     storage->limit = desc->limitBytes;
     storage->eviction = desc->eviction;

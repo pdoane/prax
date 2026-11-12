@@ -9,6 +9,8 @@
 #include "pr/raw_array.h"
 #include "pr/vec.h"
 
+#include "text/backends/shared/src/text_shared_font_cache.h"
+
 #include "hb.h"
 
 namespace pr_impl {
@@ -59,6 +61,7 @@ void destroyFont(PrTextShaper*, void* state) {
 }
 
 struct HbBackend : PrTextShaper {
+    TextSharedFontCache fonts;
     hb_buffer_t* buffer;
     RawArray<hb_feature_t> features;
     RawArray<char> text;                   // the run, with its context on either side
@@ -92,6 +95,7 @@ PrStringView contextAfter(PrStringView after) {
 
 void destroyBackend(PrTextShaper* shaper) {
     HbBackend* h = static_cast<HbBackend*>(shaper);
+    textSharedFontCacheReset(shaper, &h->fonts);
     h->features.reset();
     h->text.reset();
     hb_buffer_destroy(h->buffer);
@@ -153,6 +157,20 @@ PrStatus shape(PrTextShaper* shaper, void*, void* fontState, const PrTextRun* ru
     return PrStatus_Ok;
 }
 
+constexpr TextSharedFontStates kStates = {
+    .faceSize = sizeof(HbFace),
+    .fontSize = sizeof(HbFont),
+    .createFace = createFace,
+    .destroyFace = destroyFace,
+    .createFont = createFont,
+    .destroyFont = destroyFont,
+    .shape = shape,
+};
+
+PrStatus shapeRun(PrTextShaper* shaper, const PrTextRun* run, PrTextGlyphBuffer* out) {
+    return textSharedFontCacheShape(shaper, &static_cast<HbBackend*>(shaper)->fonts, run, out);
+}
+
 } // namespace
 
 } // namespace pr_impl
@@ -161,14 +179,9 @@ using namespace pr_impl;
 
 PrTextShaper* prTextHarfBuzzCreate(void) {
     HbBackend* h = allocZeroed<HbBackend>();
-    h->destroy = destroyBackend;
-    h->shape = shape;
-    h->faceSize = sizeof(HbFace);
-    h->fontSize = sizeof(HbFont);
-    h->createFace = createFace;
-    h->destroyFace = destroyFace;
-    h->createFont = createFont;
-    h->destroyFont = destroyFont;
+    h->destroyFn = destroyBackend;
+    h->shapeFn = shapeRun;
+    h->fonts.states = &kStates;
     h->buffer = hb_buffer_create();
     return h;
 }

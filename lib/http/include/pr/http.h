@@ -60,27 +60,6 @@ typedef struct PrHttpRequestDesc {
     void* PR_NULLABLE context;
 } PrHttpRequestDesc;
 
-// The start of every exchange's state. `http` is the source that made the exchange.
-struct PrHttpExchange {
-    PrHttp* http;
-};
-
-// The start of every source's state: the function table of its backend, then its network. Each member of the table
-// implements the public function of the same name. Callers use the functions below, never these members.
-struct PrHttp {
-    void (*destroy)(PrHttp* http);
-    PrStatus (*exchangeCreate)(PrHttp* http, const PrHttpRequestDesc* desc, PrHttpExchange* PR_NULLABLE* PR_NONNULL out);
-    void (*exchangeDestroy)(PrHttp* http, PrHttpExchange* exchange);
-    uint16_t (*exchangeStatus)(const PrHttp* http, const PrHttpExchange* exchange);
-    uint32_t (*exchangeHeaderCount)(const PrHttp* http, const PrHttpExchange* exchange);
-    PrHttpHeader (*exchangeHeader)(const PrHttp* http, const PrHttpExchange* exchange, uint32_t index);
-    size_t (*exchangeRead)(PrHttp* http, PrHttpExchange* exchange, uint8_t* output, size_t capacity);
-    PrNetError (*exchangeError)(const PrHttp* http, const PrHttpExchange* exchange);
-    PrStringView (*exchangeProtocol)(const PrHttp* http, const PrHttpExchange* exchange);
-
-    PrNet* net;                 // the network whose loop runs the exchanges' callbacks
-};
-
 // The library's backends of sources, which the build turns on (README.md), and Default, the first that the build has.
 enum {
     PrHttpBackend_Default,

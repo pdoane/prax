@@ -14,6 +14,8 @@
 #include "pr/base.h"
 #include "pr/gpu_backend.h"
 
+#include "gpu/backends/shared/src/gpu_shared_device.h"
+
 PR_ASSUME_NONNULL_BEGIN
 
 namespace pr_impl {
@@ -43,7 +45,7 @@ struct GpuMemoryMirror {
 
 // Creates a memory device that reports `backend` as its backend's name. `backend` must live as long as the process. If
 // `mirror` is not null, the device keeps copies of its textures through it. The device's swap chains present to no
-// surface until the backend that created it sets swap chain functions of its own.
+// surface until the backend that created it sets a swap chain create of its own.
 PrGpuDevice* gpuMemoryCreate(PrStringView backend, const GpuMemoryMirror* PR_NULLABLE mirror);
 
 // Gives the texture `mirror`, a copy that the backend made itself, which holds what the texture holds. The copies must

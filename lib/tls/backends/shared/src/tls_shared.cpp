@@ -40,8 +40,8 @@ void tlsSharedRelease(TlsSharedSession* session) {
 }
 
 void tlsSharedDeliver(TlsSharedSession* session, PrNetStreamEvent event) {
-    if (!session->dead && session->stream.event != nullptr)
-        session->stream.event(session->stream.context, &session->stream, event);
+    if (!session->dead && session->event != nullptr)
+        session->event(session->context, &session->stream, event);
 }
 
 void tlsSharedFail(TlsSharedSession* session, PrNetError error, PrTlsFailure failure) {
@@ -60,7 +60,7 @@ void tlsSharedFailLater(TlsSharedSession* session, PrNetError error, PrTlsFailur
     session->error = error;
     session->failure = failure;
     tlsSharedHold(session);
-    prNetPost(session->stream.net, deliverFail, session);
+    prNetPost(session->net, deliverFail, session);
 }
 
 void tlsSharedTransportEvent(void* PR_NULLABLE context, PrNetStream* transport, PrNetStreamEvent event) {
@@ -102,7 +102,7 @@ size_t tlsSharedRead(PrNetStream* stream, uint8_t* output, size_t capacity) {
     if (session->stalled && session->received.count - session->receivedStart < kTlsSharedReceivedMaxBytes) {
         session->stalled = false;
         tlsSharedHold(session);
-        prNetPost(session->stream.net, resume, session);
+        prNetPost(session->net, resume, session);
     }
     return taken;
 }
@@ -115,6 +115,12 @@ PrStatus tlsSharedFinish(PrNetStream* stream) {
     if (session->state == TlsSharedState_Open)
         session->engine->sendCloseNotify(session);
     return PrStatus_Ok;
+}
+
+void tlsSharedSetEvent(PrNetStream* stream, PrNetStreamFn PR_NULLABLE event, void* PR_NULLABLE context) {
+    TlsSharedSession* session = tlsSharedSessionFromStream(stream);
+    session->event = event;
+    session->context = context;
 }
 
 size_t tlsSharedQueued(const PrNetStream* stream) {

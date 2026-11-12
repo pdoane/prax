@@ -55,6 +55,7 @@ struct VerifyJob {
 
 // `mutex` guards the fields after it, which the verifier's thread reaches.
 struct SchannelTls : PrTls {
+    PrNet* net;                 // the network that the sessions are streams of
     CredHandle credentials;
     PrThread verifier;
     PrMutex mutex;
@@ -67,7 +68,7 @@ struct SchannelTls : PrTls {
 // Its protocol points into `protocolBytes`.
 struct Session : TlsSharedSession {
     SchannelTls* tls;
-    CtxtHandle context;
+    CtxtHandle securityContext;     // SChannel's context of the connection, once hasContext is set
     bool hasContext;
     char protocolBytes[kProtocolMaxBytes];
     wchar_t name[kNameMaxBytes];    // the name that the certificate must name
@@ -83,7 +84,7 @@ struct Session : TlsSharedSession {
 
 void freeSession(Session* session) {
     if (session->hasContext)
-        DeleteSecurityContext(&session->context);
+        DeleteSecurityContext(&session->securityContext);
     if (session->certificate != nullptr)
         CertFreeCertificateContext(session->certificate);
     if (session->anchors != nullptr)
@@ -129,7 +130,7 @@ SECURITY_STATUS stepContext(Session* session, SecBufferDesc* PR_NULLABLE input) 
     SecBuffer output{0, SECBUFFER_TOKEN, nullptr};
     SecBufferDesc outputDesc{SECBUFFER_VERSION, 1, &output};
     ULONG attributes = 0;
-    SECURITY_STATUS status = InitializeSecurityContextW(&session->tls->credentials, &session->context,
+    SECURITY_STATUS status = InitializeSecurityContextW(&session->tls->credentials, &session->securityContext,
         session->name, kContextRequest, 0, 0, input, 0, nullptr, &outputDesc, &attributes, nullptr);
     sendToken(session, &output);
     return status;
@@ -150,7 +151,7 @@ void writePlain(Session* session, const uint8_t* bytes, size_t size) {
             {0, SECBUFFER_EMPTY, nullptr},
         };
         SecBufferDesc desc{SECBUFFER_VERSION, 4, buffers};
-        if (EncryptMessage(&session->context, 0, &desc, 0) != SEC_E_OK) {
+        if (EncryptMessage(&session->securityContext, 0, &desc, 0) != SEC_E_OK) {
             tlsSharedFailLater(session, PrNetError_Protocol, PrTlsFailure_Protocol);
             return;
         }
@@ -168,7 +169,7 @@ void sendCloseNotify(Session* session) {
     DWORD shutdown = SCHANNEL_SHUTDOWN;
     SecBuffer control{sizeof(shutdown), SECBUFFER_TOKEN, &shutdown};
     SecBufferDesc controlDesc{SECBUFFER_VERSION, 1, &control};
-    if (ApplyControlToken(&session->context, &controlDesc) == SEC_E_OK)
+    if (ApplyControlToken(&session->securityContext, &controlDesc) == SEC_E_OK)
         stepContext(session, nullptr);
     // A transport that cannot end its sending side ends when the session is destroyed.
     if (session->transport != nullptr)
@@ -184,25 +185,25 @@ bool isVerifiedCertificate(const Session* session, PCCERT_CONTEXT certificate) {
 // Reads what the handshake negotiated, and hands the server's certificate to the verifier.
 void completeHandshake(Session* session) {
     SecPkgContext_ConnectionInfo connection{};
-    QueryContextAttributesW(&session->context, SECPKG_ATTR_CONNECTION_INFO, &connection);
+    QueryContextAttributesW(&session->securityContext, SECPKG_ATTR_CONNECTION_INFO, &connection);
     session->version = (connection.dwProtocol & SP_PROT_TLS1_3_CLIENT) != 0 ? PrTlsVersion_Tls13 : PrTlsVersion_Tls12;
     SecPkgContext_ApplicationProtocol protocol{};
-    if (QueryContextAttributesW(&session->context, SECPKG_ATTR_APPLICATION_PROTOCOL, &protocol) == SEC_E_OK &&
+    if (QueryContextAttributesW(&session->securityContext, SECPKG_ATTR_APPLICATION_PROTOCOL, &protocol) == SEC_E_OK &&
             protocol.ProtoNegoStatus == SecApplicationProtocolNegotiationStatus_Success &&
             protocol.ProtoNegoExt == SecApplicationProtocolNegotiationExt_ALPN && protocol.ProtocolIdSize != 0) {
         prMemCopy(session->protocolBytes, protocol.ProtocolId, protocol.ProtocolIdSize);
         session->protocol = PrStringView{session->protocolBytes, protocol.ProtocolIdSize};
     }
     PCCERT_CONTEXT certificate = nullptr;
-    if (QueryContextAttributesW(&session->context, SECPKG_ATTR_STREAM_SIZES, &session->sizes) != SEC_E_OK ||
-            QueryContextAttributesW(&session->context, SECPKG_ATTR_REMOTE_CERT_CONTEXT, &certificate) != SEC_E_OK ||
-            certificate == nullptr) {
+    if (QueryContextAttributesW(&session->securityContext, SECPKG_ATTR_STREAM_SIZES, &session->sizes) != SEC_E_OK ||
+            QueryContextAttributesW(&session->securityContext, SECPKG_ATTR_REMOTE_CERT_CONTEXT, &certificate) !=
+            SEC_E_OK || certificate == nullptr) {
         tlsSharedFail(session, PrNetError_Protocol, PrTlsFailure_Handshake);
         return;
     }
     session->state = TlsSharedState_Verifying;
     VerifyJob* job = allocZeroed<VerifyJob>();
-    job->net = session->stream.net;
+    job->net = session->net;
     job->session = session;
     job->certificate = certificate;
     job->anchors = session->anchors != nullptr ? CertDuplicateStore(session->anchors) : nullptr;
@@ -218,7 +219,7 @@ void completeHandshake(Session* session) {
 // Checks the certificate that a renegotiation presented, which must be the one that the session verified.
 void completeRenegotiation(Session* session) {
     PCCERT_CONTEXT certificate = nullptr;
-    if (QueryContextAttributesW(&session->context, SECPKG_ATTR_REMOTE_CERT_CONTEXT, &certificate) == SEC_E_OK &&
+    if (QueryContextAttributesW(&session->securityContext, SECPKG_ATTR_REMOTE_CERT_CONTEXT, &certificate) == SEC_E_OK &&
             certificate != nullptr) {
         bool same = isVerifiedCertificate(session, certificate);
         CertFreeCertificateContext(certificate);
@@ -227,7 +228,7 @@ void completeRenegotiation(Session* session) {
             return;
         }
     }
-    QueryContextAttributesW(&session->context, SECPKG_ATTR_STREAM_SIZES, &session->sizes);
+    QueryContextAttributesW(&session->securityContext, SECPKG_ATTR_STREAM_SIZES, &session->sizes);
 }
 
 // Hands what arrived to InitializeSecurityContextW while the session negotiates: the handshake, or a message after it
@@ -293,7 +294,7 @@ void decrypt(Session* session) {
             {0, SECBUFFER_EMPTY, nullptr},
         };
         SecBufferDesc desc{SECBUFFER_VERSION, 4, buffers};
-        SECURITY_STATUS status = DecryptMessage(&session->context, &desc, 0, nullptr);
+        SECURITY_STATUS status = DecryptMessage(&session->securityContext, &desc, 0, nullptr);
         if (status == SEC_E_INCOMPLETE_MESSAGE)
             break;
         if (status == SEC_I_CONTEXT_EXPIRED) {
@@ -602,7 +603,7 @@ void startHandshake(Session* session, const PrTlsSessionDesc* desc) {
     ULONG attributes = 0;
     SECURITY_STATUS status = InitializeSecurityContextW(&session->tls->credentials, nullptr, session->name,
         kContextRequest, 0, 0, desc->protocolCount != 0 ? &inputDesc : nullptr, 0,
-        &session->context, &outputDesc, &attributes, nullptr);
+        &session->securityContext, &outputDesc, &attributes, nullptr);
     protocols.reset();
     if (status == SEC_I_CONTINUE_NEEDED) {
         session->hasContext = true;
@@ -633,16 +634,17 @@ PrStatus connectTls(PrTls* base, const PrTlsSessionDesc* desc, PrTlsSession* PR_
         return status;
     Session* session = allocZeroed<Session>();
     session->engine = &kEngine;
-    session->stream.net = tls->net;
-    session->stream.event = desc->event;
-    session->stream.context = desc->context;
-    session->stream.destroy = destroySession;
-    session->stream.read = tlsSharedRead;
-    session->stream.write = writeSession;
-    session->stream.finish = tlsSharedFinish;
-    session->stream.queued = tlsSharedQueued;
-    session->stream.error = tlsSharedError;
-    session->info = tlsSharedInfo;
+    session->net = tls->net;
+    session->event = desc->event;
+    session->context = desc->context;
+    session->stream.destroyFn = destroySession;
+    session->stream.setEventFn = tlsSharedSetEvent;
+    session->stream.readFn = tlsSharedRead;
+    session->stream.writeFn = writeSession;
+    session->stream.finishFn = tlsSharedFinish;
+    session->stream.queuedFn = tlsSharedQueued;
+    session->stream.errorFn = tlsSharedError;
+    session->infoFn = tlsSharedInfo;
     session->tls = tls;
     session->anchors = anchors;
     prMemCopy(session->name, name, sizeof(name));
@@ -676,8 +678,8 @@ using namespace pr_impl;
 PrTls* prTlsSchannelCreate(PrNet* net) {
     SchannelTls* tls = allocZeroed<SchannelTls>();
     tls->net = net;
-    tls->destroy = destroyTls;
-    tls->connect = connectTls;
+    tls->destroyFn = destroyTls;
+    tls->connectFn = connectTls;
     TLS_PARAMETERS parameters{};
     parameters.grbitDisabledProtocols = ~DWORD(SP_PROT_TLS1_2_CLIENT | SP_PROT_TLS1_3_CLIENT);
     SCH_CREDENTIALS credentials{};

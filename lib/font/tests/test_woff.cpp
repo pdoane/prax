@@ -1,4 +1,5 @@
 #include "pr/array.h"
+#include "pr/compress_backend.h"
 #include "pr/compress_builtin.h"
 #include "pr/font.h"
 #include "pr/font_math.h"
@@ -213,11 +214,6 @@ Array<uint8_t> woff2Of(PrByteView font, bool padded = true) {
 PrStatus refuseDecoder(PrCompressCodec*, PrCompressFormat, PrCompressDecoder* PR_NULLABLE* PR_NONNULL) {
     return PrStatus_NotSupported;
 }
-void destroyNothing(PrCompressCodec*, PrCompressDecoder*) {}
-PrStatus readNothing(PrCompressCodec*, PrCompressDecoder*, PrByteView, bool, uint8_t* PR_NULLABLE, size_t,
-        PrCompressRead*) {
-    return PrStatus_NotSupported;
-}
 
 } // namespace
 
@@ -352,11 +348,7 @@ TEST_CASE("a WOFF2 file that breaks the format's rules is not a font") {
     }
     // A codec that cannot decode Brotli cannot decode the file.
     Array<uint8_t> bytes = fontFile("valid-005.woff2");
-    PrCompressCodec refusing{
-        .decoderCreate = refuseDecoder,
-        .decoderDestroy = destroyNothing,
-        .decoderRead = readNothing,
-    };
+    PrCompressCodec refusing{.decoderCreateFn = refuseDecoder};
     const PrFont* font = nullptr;
     CHECK(prFontCreateWoff(bytes, 0, nullptr, &refusing, &font) == PrStatus_NotSupported);
 }
@@ -400,11 +392,7 @@ TEST_CASE("a WOFF2 file whose compressed data runs past its end is not a font, w
     bytes[20] = bytes[21] = bytes[22] = bytes[23] = 255;
     bytes[49] = 1;
     // The codec would say NotSupported if it were asked to decode anything.
-    PrCompressCodec refusing{
-        .decoderCreate = refuseDecoder,
-        .decoderDestroy = destroyNothing,
-        .decoderRead = readNothing,
-    };
+    PrCompressCodec refusing{.decoderCreateFn = refuseDecoder};
     const PrFont* font = nullptr;
     CHECK(prFontCreateWoff(bytes, 0, nullptr, &refusing, &font) == PrStatus_InvalidData);
     PrCompressCodec* codec = prCompressBuiltinCreate();

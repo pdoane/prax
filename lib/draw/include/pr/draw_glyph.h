@@ -63,14 +63,6 @@ float prDrawGlyphPixelsPerEm(const PrFontGlyphRun* run, uint32_t index, PrAffine
 // draws SVG documents (prSvgGlyphDecoderCreate). One thread uses a decoder at a time.
 typedef struct PrDrawGlyphDecoder PrDrawGlyphDecoder;
 
-// The functions of a glyph decoder, at the start of its backend's state. Each one carries out the function that it is
-// named for.
-struct PrDrawGlyphDecoder {
-    void (*PR_NULLABLE destroy)(PrDrawGlyphDecoder* decoder);
-    bool (*decode)(PrDrawGlyphDecoder* decoder, const PrFont* font, uint16_t glyph, float pixelsPerEm,
-        const PrFontPalette* PR_NULLABLE palette, PrColor foreground, PrDrawList* list);
-};
-
 // Frees the decoder.
 void prDrawGlyphDecoderDestroy(PrDrawGlyphDecoder* PR_NULLABLE decoder);
 

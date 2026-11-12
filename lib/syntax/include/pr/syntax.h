@@ -64,21 +64,6 @@ struct PrSyntaxLanguage {
     PrSyntaxTreeCreateFn create;
 };
 
-// The functions of a syntax tree, which a language's backend implements. The backend's state derives from this record.
-// Callers use the functions below, which handle a null member.
-struct PrSyntaxTree {
-    void (*destroy)(PrSyntaxTree* tree);
-
-    // As prSyntaxTreeUpdate.
-    bool (*update)(PrSyntaxTree* tree, double milliseconds);
-
-    // As prSyntaxTreeIsPending. May be null for a tree whose updates always finish.
-    bool (*PR_NULLABLE pending)(const PrSyntaxTree* tree);
-
-    // As prSyntaxTreeSpans.
-    uint32_t (*spans)(PrSyntaxTree* tree, uint32_t start, uint32_t end, PrSyntaxSpan* PR_NULLABLE out, uint32_t capacity);
-};
-
 // ---------------------------------------------------------------------------------------------------------------------
 // Registries
 

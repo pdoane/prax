@@ -4,6 +4,7 @@
 
 #include "pr/ascii.h"
 #include "pr/assert.h"
+#include "pr/draw_writer_backend.h"
 #include "pr/float.h"
 
 #if defined(PR_DRAW_HAS_PDF)
@@ -86,22 +87,22 @@ PrStatus prDrawWriterCreate(PrDrawWriterBackend backend, const PrDrawWriterOptio
 }
 
 void prDrawWriterDestroy(PrDrawWriter* PR_NULLABLE writer) {
-    if (writer != nullptr && writer->destroy != nullptr)
-        writer->destroy(writer);
+    if (writer != nullptr && writer->destroyFn != nullptr)
+        writer->destroyFn(writer);
 }
 
 void prDrawWriterBegin(PrDrawWriter* writer, const PrDrawDocumentDesc* desc) {
     PR_ASSERT(desc->write != nullptr);
-    writer->begin(writer, desc);
+    writer->beginFn(writer, desc);
 }
 
 void prDrawWriterAddPage(PrDrawWriter* writer, const PrDrawPage* page) {
     PR_ASSERT(prDrawListDepth(page->list) == 0);
-    writer->addPage(writer, page);
+    writer->addPageFn(writer, page);
 }
 
 void prDrawWriterEnd(PrDrawWriter* writer) {
-    writer->end(writer);
+    writer->endFn(writer);
 }
 
 void prDrawWriterWrite(PrDrawWriter* writer, const PrDrawDocumentDesc* desc, const PrDrawPage* PR_NULLABLE pages,

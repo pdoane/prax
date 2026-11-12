@@ -36,6 +36,7 @@ struct Slot {
     PrGpuDevice* PR_NULLABLE device = nullptr;     // the device of the texture
     PrGpuTexture texture{};
     PrDrawFrame* PR_NULLABLE drawn = nullptr;       // kept until the next prepare
+    PrDrawRenderer* PR_NULLABLE drawnBy = nullptr;  // the renderer that made `drawn`
     PrDrawList* PR_NULLABLE prepared = nullptr;     // the list that `drawn` prepared, unchanged while the frame lives
     std::string shown;                              // what the texture holds; empty for nothing
     Rendered rendered;

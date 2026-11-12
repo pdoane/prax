@@ -1,4 +1,5 @@
 #include "pr/image.h"
+#include "pr/image_backend.h"
 #include "pr/mem.h"
 
 #include "tools/harness/test.h"
@@ -45,10 +46,18 @@ struct Reader {
     }
 };
 
+struct FakeCodec;
+
+// The single reader of a fake codec.
+struct FakeReader : PrImageReader {
+    FakeCodec* fake;
+};
+
 // A codec whose record is its first member, and which hands out its single reader.
 struct FakeCodec {
     PrImageCodec record = {};
-    PrImageReader reader = {};
+    FakeReader reader = {};
+    uint32_t headerBytes = 0;
     bool matches = true;
     uint32_t classifications = 0;
     size_t prefixSize = 0;
@@ -61,6 +70,10 @@ struct FakeCodec {
 
     static FakeCodec& of(PrImageCodec* codec) {
         return *reinterpret_cast<FakeCodec*>(codec);
+    }
+
+    static uint32_t headerBytesOf(const PrImageCodec* codec) {
+        return reinterpret_cast<const FakeCodec*>(codec)->headerBytes;
     }
 
     static bool supportsType(PrImageCodec*, PrStringView type) {
@@ -87,24 +100,27 @@ struct FakeCodec {
             }
         }
         if (fake.openResult == PrStatus_Ok || fake.openResult == PrStatus_Truncated) {
-            fake.reader.codec = codec;
+            fake.reader.fake = &fake;
+            fake.reader.closeFn = close;
+            fake.reader.frameInfoFn = frameInfo;
+            fake.reader.readFn = decode;
             *out = &fake.reader;
             *info = fake.info;
         }
         return fake.openResult;
     }
 
-    static void close(PrImageCodec* codec, PrImageReader*) {
-        ++of(codec).closes;
+    static void close(PrImageReader* reader) {
+        ++static_cast<FakeReader*>(reader)->fake->closes;
     }
 
-    static PrStatus frameInfo(PrImageCodec*, PrImageReader*, uint32_t frame, PrImageFrameInfo* info) {
+    static PrStatus frameInfo(PrImageReader*, uint32_t frame, PrImageFrameInfo* info) {
         info->durationMs = frame;
         return PrStatus_Ok;
     }
 
-    static PrStatus decode(PrImageCodec* codec, PrImageReader*, uint32_t, PrPixels output) {
-        ++of(codec).decodes;
+    static PrStatus decode(PrImageReader* reader, uint32_t, PrPixels output) {
+        ++static_cast<FakeReader*>(reader)->fake->decodes;
         for (uint32_t y = 0; y < output.extent.y; ++y) {
             for (uint32_t x = 0; x < output.extent.x; ++x) {
                 uint8_t* pixel = output.data + y * output.stride + x * 4;
@@ -117,8 +133,14 @@ struct FakeCodec {
         return PrStatus_Ok;
     }
 
-    PrImageCodec* codec(uint32_t headerBytes = 4) {
-        record = PrImageCodec{nullptr, headerBytes, supportsType, recognize, open, close, frameInfo, decode, nullptr};
+    PrImageCodec* codec(uint32_t size = 4) {
+        headerBytes = size;
+        record = PrImageCodec{
+            .headerBytesFn = headerBytesOf,
+            .supportsTypeFn = supportsType,
+            .recognizeFn = recognize,
+            .decoderOpenFn = open,
+        };
         return &record;
     }
 };

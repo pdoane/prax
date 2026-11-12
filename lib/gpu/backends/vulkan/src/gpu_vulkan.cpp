@@ -553,8 +553,9 @@ void destroy(PrGpuDevice* device) {
         if (d->ownsDevice)
             d->vk.DeviceWaitIdle(d->device);
         else
-            d->waitIdle(d);
+            d->waitIdleFn(d);
     }
+    gpuSharedDeviceReset(d);
     if (d->running) {
         prMutexLock(&d->doneMutex);
         d->stopping = true;
@@ -616,6 +617,7 @@ PrStatus prGpuVulkanCreate(const PrGpuVulkanOptions* PR_NULLABLE options, PrGpuD
     PR_ASSERT((o.allocate == nullptr) == (o.free == nullptr));
 
     VulkanDevice* d = allocZeroed<VulkanDevice>();
+    gpuSharedDeviceInit(d);
     prMutexInit(&d->mutex);
     prMutexInit(&d->doneMutex);
     prConditionInit(&d->pendingSignal);
@@ -701,9 +703,9 @@ PrStatus prGpuVulkanCreate(const PrGpuVulkanOptions* PR_NULLABLE options, PrGpuD
     d->info.maxSamplerHandles = d->samplerCount - 1;
     d->shaderTarget = d->localRead ? PrGpuShaderTarget_SpirvLocalRead : PrGpuShaderTarget_Spirv;
 
-    d->destroy = destroy;
-    d->isLost = isLost;
-    d->simulateLoss = simulateLoss;
+    d->destroyFn = destroy;
+    d->isLostFn = isLost;
+    d->simulateLossFn = simulateLoss;
     vulkanResourceFunctions(d);
     vulkanPipelineFunctions(d);
     vulkanCommandsFunctions(d);

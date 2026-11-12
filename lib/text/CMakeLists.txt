@@ -9,9 +9,13 @@ pr_library(text INCLUDE include
     src/text_shaping.cpp
     src/text_transform.cpp
     src/text_itemize.cpp
-    src/font_cache.cpp
 )
 target_link_libraries(pr_text PUBLIC prax::font prax::geom prax::unicode prax::locale PRIVATE prax::core_cpp)
+
+# What the backends share: the face and font states that a shaper keeps.
+if (PR_TEXT_KB OR PR_TEXT_SIMPLE OR PR_TEXT_HARFBUZZ OR PR_TEXT_CORETEXT)
+    target_sources(pr_text PRIVATE backends/shared/src/text_shared_font_cache.cpp)
+endif()
 
 if (PR_TEXT_KB)
     pr_dependency_available(kb)

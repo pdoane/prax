@@ -11,6 +11,7 @@
 #include "pr/raw_string.h"
 #include "pr/regex.h"
 #include "pr/sort.h"
+#include "pr/syntax_backend.h"
 #include "pr/time.h"
 
 #include "tree_sitter/api.h"
@@ -932,10 +933,10 @@ uint32_t treeSpans(PrSyntaxTree* tree, uint32_t start, uint32_t end, PrSyntaxSpa
 
 PrSyntaxTree* treeCreate(const PrSyntaxLanguage* language, PrSyntaxRegistry* registry, PrTextEditBuffer* buffer) {
     TreeSitterTree* h = allocZeroed<TreeSitterTree>();
-    h->destroy = treeDestroy;
-    h->update = treeUpdate;
-    h->spans = treeSpans;
-    h->pending = treePending;
+    h->destroyFn = treeDestroy;
+    h->updateFn = treeUpdate;
+    h->spansFn = treeSpans;
+    h->pendingFn = treePending;
     h->language = static_cast<const TreeSitterLanguage*>(language);
     h->registry = registry;
     h->buffer = buffer;

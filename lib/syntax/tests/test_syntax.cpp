@@ -4,6 +4,7 @@
 #include "pr/float.h"
 #include "pr/memory.h"
 #include "pr/syntax.h"
+#include "pr/syntax_backend.h"
 
 #include "tools/harness/test.h"
 
@@ -52,9 +53,9 @@ uint32_t digitSpans(PrSyntaxTree* tree, uint32_t start, uint32_t end, PrSyntaxSp
 
 PrSyntaxTree* digitCreate(const PrSyntaxLanguage*, PrSyntaxRegistry* registry, PrTextEditBuffer* buffer) {
     DigitTree* h = allocZeroed<DigitTree>();
-    h->destroy = digitDestroy;
-    h->update = digitUpdate;
-    h->spans = digitSpans;
+    h->destroyFn = digitDestroy;
+    h->updateFn = digitUpdate;
+    h->spansFn = digitSpans;
     h->registry = registry;
     h->buffer = buffer;
     return h;

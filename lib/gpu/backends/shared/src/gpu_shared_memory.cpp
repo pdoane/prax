@@ -15,6 +15,10 @@ namespace pr_impl {
 
 namespace {
 
+// The functions of the device's command buffers and passes, which their creation installs.
+extern const PrGpuCommands kCommandsFunctions;
+extern const PrGpuPass kPassFunctions;
+
 constexpr uint32_t kMaxTextureSize = 16384;
 constexpr uint8_t kMaxLevels = 15;
 
@@ -95,14 +99,14 @@ struct Op {
     void* PR_NULLABLE context;                           // NativeDraw, Call and Done
 };
 
-struct Commands : PrGpuCommands {
+struct Commands : GpuSharedCommands {
     uint64_t serial;                   // the order in which the command buffers began
     RawArray<Op> ops;
     RawArray<PrGpuBuffer> streams;     // the stream's buffers, freed once the work has run
 };
 
 // A pass, and its first color attachment, which native draws draw into.
-struct Pass : PrGpuPass {
+struct Pass : GpuSharedPass {
     PrGpuTexture texture;
     uint8_t level;
     uint16_t layer;
@@ -118,7 +122,7 @@ struct Retired {
 
 // The device. Any thread may change the tables of buffers and textures, the open command buffers, and the list of what
 // waits to be freed, so `mutex` guards them.
-struct Device : PrGpuDevice {
+struct Device : GpuSharedDevice {
     PrMutex mutex;
     const GpuMemoryMirror* PR_NULLABLE mirror;
     RawArray<Buffer> buffers;          // at each buffer's id less one
@@ -442,6 +446,7 @@ void run(Device* d, const Op& op) {
 
 void destroy(PrGpuDevice* device) {
     Device* d = deviceOf(device);
+    gpuSharedDeviceReset(d);
     PR_ASSERT(d->open.count == 0 && d->retired.count == 0);
     PR_ASSERT(d->buffers.count == d->freeBuffers.count && d->textures.count == d->freeTextures.count);
     d->open.reset();
@@ -677,6 +682,7 @@ PrStatus textureCreateView(PrGpuDevice* device, PrGpuTexture texture, PrGpuTextu
 
 void textureDestroy(PrGpuDevice* device, PrGpuTexture texture) {
     Device* d = deviceOf(device);
+    gpuSharedTextureForget(d, texture);
     prMutexLock(&d->mutex);
     PR_ASSERT(textureAt(d, texture).memory != nullptr);
     retire(d, texture.id, true);
@@ -736,8 +742,6 @@ PrStatus shaderLibraryCreate(PrGpuDevice*, PrGpuShaderEntry*, uint32_t, PrGpuSha
     return PrStatus_NotSupported;
 }
 
-void shaderLibraryDestroy(PrGpuDevice*, PrGpuShaderLibrary*) {}
-
 PrStatus graphicsPipelineCreate(PrGpuDevice*, const PrGpuGraphicsPipelineDesc*, const PrGpuShaderEntry*,
         const PrGpuShaderEntry* PR_NULLABLE, PrGpuPipeline* out) {
     *out = PrGpuPipeline{};
@@ -773,6 +777,7 @@ bool commandsBegin(PrGpuDevice* device, const PrGpuCommandsOptions* options, PrG
     (void)options;
     Device* d = deviceOf(device);
     Commands* commands = allocZeroed<Commands>();
+    static_cast<PrGpuCommands&>(*commands) = kCommandsFunctions;
     commands->device = device;
     prMutexLock(&d->mutex);
     commands->serial = ++d->serial;
@@ -782,9 +787,10 @@ bool commandsBegin(PrGpuDevice* device, const PrGpuCommandsOptions* options, PrG
     return true;
 }
 
-PrGpuFence commandsSubmit(PrGpuDevice* device, PrGpuCommands* commands) {
-    Device* d = deviceOf(device);
+PrGpuFence commandsSubmit(PrGpuCommands* commands) {
     Commands* c = commandsOf(commands);
+    gpuSharedSubmitted(c);
+    Device* d = deviceOf(c->device);
     prMutexLock(&d->mutex);
     for (uint32_t i = 0; i < c->ops.count; ++i) {
         // A lost device runs no more work, though it still reports what is done.
@@ -803,7 +809,8 @@ PrGpuFence commandsSubmit(PrGpuDevice* device, PrGpuCommands* commands) {
     return fence;
 }
 
-void* commandsStream(PrGpuDevice* device, PrGpuCommands* commands, uint64_t size, PrGpuBuffer* buffer, uint64_t* offset) {
+void* commandsStream(PrGpuCommands* commands, uint64_t size, PrGpuBuffer* buffer, uint64_t* offset) {
+    PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
     PrGpuBufferDesc desc{.size = size, .memory = PrGpuMemory_Upload};
     bufferCreate(device, &desc, buffer);
     commandsOf(commands)->streams.push(*buffer);
@@ -812,24 +819,27 @@ void* commandsStream(PrGpuDevice* device, PrGpuCommands* commands, uint64_t size
 }
 
 // Root data and pipelines are for draws and dispatches, which the device does not record.
-void commandsSetPush(PrGpuDevice*, PrGpuCommands*, const void*, uint32_t) {}
+void commandsSetPush(PrGpuCommands*, const void*, uint32_t) {}
 
-void commandsSetUniforms(PrGpuDevice*, PrGpuCommands*, const void*, uint32_t) {}
+void commandsSetUniforms(PrGpuCommands*, const void*, uint32_t) {}
 
-void commandsSetPipeline(PrGpuDevice*, PrGpuCommands*, PrGpuPipeline) {
+void commandsSetPipeline(PrGpuCommands*, PrGpuPipeline) {
     PR_ASSERT(false && "a memory device has no pipelines");
 }
 
-void commandsDispatch(PrGpuDevice*, PrGpuCommands*, PrGpuExtent) {
+void commandsDispatch(PrGpuCommands* commands, PrGpuExtent) {
+    gpuSharedCheckOutsidePass(commands);
     PR_ASSERT(false && "a memory device runs no dispatches");
 }
 
-void commandsDispatchIndirect(PrGpuDevice*, PrGpuCommands*, PrGpuBuffer, uint64_t) {
+void commandsDispatchIndirect(PrGpuCommands* commands, PrGpuBuffer, uint64_t) {
+    gpuSharedCheckOutsidePass(commands);
     PR_ASSERT(false && "a memory device runs no dispatches");
 }
 
-void commandsCopyBuffer(PrGpuDevice*, PrGpuCommands* commands, PrGpuBuffer source, uint64_t sourceOffset,
+void commandsCopyBuffer(PrGpuCommands* commands, PrGpuBuffer source, uint64_t sourceOffset,
         PrGpuBuffer target, uint64_t targetOffset, uint64_t size) {
+    gpuSharedCheckOutsidePass(commands);
     record(commands, Op{
         .kind = OpKind_CopyBuffer,
         .buffer = source,
@@ -840,8 +850,9 @@ void commandsCopyBuffer(PrGpuDevice*, PrGpuCommands* commands, PrGpuBuffer sourc
     });
 }
 
-void commandsCopyTexture(PrGpuDevice*, PrGpuCommands* commands, PrGpuTexture source,
+void commandsCopyTexture(PrGpuCommands* commands, PrGpuTexture source,
         const PrGpuTextureRegion* sourceRegion, PrGpuTexture target, const PrGpuTextureRegion* targetRegion) {
+    gpuSharedCheckOutsidePass(commands);
     record(commands, Op{
         .kind = OpKind_CopyTexture,
         .texture = source,
@@ -851,8 +862,9 @@ void commandsCopyTexture(PrGpuDevice*, PrGpuCommands* commands, PrGpuTexture sou
     });
 }
 
-void commandsCopyBufferToTexture(PrGpuDevice*, PrGpuCommands* commands, PrGpuBuffer source, uint64_t sourceOffset,
+void commandsCopyBufferToTexture(PrGpuCommands* commands, PrGpuBuffer source, uint64_t sourceOffset,
         uint32_t rowBytes, uint32_t layerBytes, PrGpuTexture target, const PrGpuTextureRegion* targetRegion) {
+    gpuSharedCheckOutsidePass(commands);
     record(commands, Op{
         .kind = OpKind_CopyBufferToTexture,
         .buffer = source,
@@ -864,9 +876,10 @@ void commandsCopyBufferToTexture(PrGpuDevice*, PrGpuCommands* commands, PrGpuBuf
     });
 }
 
-void commandsCopyTextureToBuffer(PrGpuDevice*, PrGpuCommands* commands, PrGpuTexture source,
+void commandsCopyTextureToBuffer(PrGpuCommands* commands, PrGpuTexture source,
         const PrGpuTextureRegion* sourceRegion, PrGpuBuffer target, uint64_t targetOffset, uint32_t rowBytes,
         uint32_t layerBytes) {
+    gpuSharedCheckOutsidePass(commands);
     record(commands, Op{
         .kind = OpKind_CopyTextureToBuffer,
         .target = target,
@@ -878,35 +891,44 @@ void commandsCopyTextureToBuffer(PrGpuDevice*, PrGpuCommands* commands, PrGpuTex
     });
 }
 
-void commandsOnDone(PrGpuDevice*, PrGpuCommands* commands, PrGpuDoneFn done, void* PR_NULLABLE context) {
+void commandsOnDone(PrGpuCommands* commands, PrGpuDoneFn done, void* PR_NULLABLE context) {
     record(commands, Op{.kind = OpKind_Done, .done = done, .context = context});
 }
 
 // The work runs in the order that it was recorded, so groups and barriers have nothing to do.
-void commandsPushGroup(PrGpuDevice*, PrGpuCommands*, PrStringView) {}
+void commandsPushGroup(PrGpuCommands*, PrStringView) {}
 
-void commandsPopGroup(PrGpuDevice*, PrGpuCommands*) {}
+void commandsPopGroup(PrGpuCommands*) {}
 
-void commandsBufferBarrier(PrGpuDevice*, PrGpuCommands*, PrGpuBuffer, PrGpuAccessFlags, PrGpuAccessFlags) {}
+void commandsBufferBarrier(PrGpuCommands* commands, PrGpuBuffer, PrGpuAccessFlags, PrGpuAccessFlags) {
+    gpuSharedCheckOutsidePass(commands);
+}
 
-void commandsTextureBarrier(PrGpuDevice*, PrGpuCommands*, PrGpuTexture, PrGpuSubresources, PrGpuAccessFlags,
-        PrGpuAccessFlags) {}
+void commandsTextureBarrier(PrGpuCommands* commands, PrGpuTexture, PrGpuSubresources, PrGpuAccessFlags,
+        PrGpuAccessFlags) {
+    gpuSharedCheckOutsidePass(commands);
+}
 
-void commandsGlobalBarrier(PrGpuDevice*, PrGpuCommands*, PrGpuAccessFlags, PrGpuAccessFlags) {}
+void commandsGlobalBarrier(PrGpuCommands* commands, PrGpuAccessFlags, PrGpuAccessFlags) {
+    gpuSharedCheckOutsidePass(commands);
+}
 
-PrGpuNativeStateFlags nativeStateSync(PrGpuDevice*, PrGpuCommands*) {
+PrGpuNativeStateFlags nativeStateSync(PrGpuCommands*) {
     return 0;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Passes, which load, clear and run native draws
 
-PrGpuPass* passBegin(PrGpuDevice* device, PrGpuCommands* commands, const PrGpuPassDesc* desc) {
+PrGpuPass* passBegin(PrGpuCommands* commands, const PrGpuPassDesc* desc) {
+    Commands* c = commandsOf(commands);
+    gpuSharedPassBegan(c);
     // The device has no native passes for an application to open.
     PR_ASSERT(desc->native == nullptr);
-    Device* d = deviceOf(device);
+    Device* d = deviceOf(c->device);
     Pass* pass = allocZeroed<Pass>();
-    pass->commands = commands;
+    static_cast<PrGpuPass&>(*pass) = kPassFunctions;
+    pass->commands = c;
     pass->formats.colorCount = desc->colorCount;
     pass->formats.samples = 1;
     for (uint8_t i = 0; i < desc->colorCount; ++i) {
@@ -931,12 +953,13 @@ PrGpuPass* passBegin(PrGpuDevice* device, PrGpuCommands* commands, const PrGpuPa
     return pass;
 }
 
-void passEnd(PrGpuDevice*, PrGpuPass* pass) {
+void passEnd(PrGpuPass* pass) {
+    gpuSharedPassEnded(static_cast<GpuSharedPass*>(pass)->commands);
     prMemoryFree(pass);
 }
 
 // A copy holds only a texture's first level and layer, so a native draw through the copy draws only into those.
-void passNativeDraw(PrGpuDevice*, PrGpuPass* base, PrGpuNativeKind kind, PrGpuNativeDrawFn draw, void* PR_NULLABLE context) {
+void passNativeDraw(PrGpuPass* base, PrGpuNativeKind kind, PrGpuNativeDrawFn draw, void* PR_NULLABLE context) {
     Pass* pass = static_cast<Pass*>(base);
     PR_ASSERT(kind == PrGpuNativeKind_Pixels || (pass->level == 0 && pass->layer == 0));
     record(pass->commands, Op{
@@ -946,34 +969,34 @@ void passNativeDraw(PrGpuDevice*, PrGpuPass* base, PrGpuNativeKind kind, PrGpuNa
     });
 }
 
-void passSetViewport(PrGpuDevice*, PrGpuPass*, PrRect, float, float) {}
+void passSetViewport(PrGpuPass*, PrRect, float, float) {}
 
-void passSetScissor(PrGpuDevice*, PrGpuPass*, PrIRect) {}
+void passSetScissor(PrGpuPass*, PrIRect) {}
 
-void passSetBlendConstant(PrGpuDevice*, PrGpuPass*, PrColor) {}
+void passSetBlendConstant(PrGpuPass*, PrColor) {}
 
-void passSetStencilReference(PrGpuDevice*, PrGpuPass*, uint8_t) {}
+void passSetStencilReference(PrGpuPass*, uint8_t) {}
 
-void passSetIndexBuffer(PrGpuDevice*, PrGpuPass*, PrGpuBuffer, uint64_t, bool) {}
+void passSetIndexBuffer(PrGpuPass*, PrGpuBuffer, uint64_t, bool) {}
 
-void passDraw(PrGpuDevice*, PrGpuPass*, uint32_t, uint32_t, uint32_t, uint32_t) {
+void passDraw(PrGpuPass*, uint32_t, uint32_t, uint32_t, uint32_t) {
     PR_ASSERT(false && "a memory device runs no draws");
 }
 
-void passDrawIndexed(PrGpuDevice*, PrGpuPass*, uint32_t, uint32_t, uint32_t, int32_t, uint32_t) {
+void passDrawIndexed(PrGpuPass*, uint32_t, uint32_t, uint32_t, int32_t, uint32_t) {
     PR_ASSERT(false && "a memory device runs no draws");
 }
 
-void passDrawIndirect(PrGpuDevice*, PrGpuPass*, PrGpuBuffer, uint64_t, uint32_t, uint32_t) {
+void passDrawIndirect(PrGpuPass*, PrGpuBuffer, uint64_t, uint32_t, uint32_t) {
     PR_ASSERT(false && "a memory device runs no draws");
 }
 
-void passDrawIndexedIndirect(PrGpuDevice*, PrGpuPass*, PrGpuBuffer, uint64_t, uint32_t, uint32_t) {
+void passDrawIndexedIndirect(PrGpuPass*, PrGpuBuffer, uint64_t, uint32_t, uint32_t) {
     PR_ASSERT(false && "a memory device runs no draws");
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
-// Swap chains, which the device lacks until its backend sets swap chain functions of its own
+// Swap chains, which the device lacks until its backend creates its own
 
 PrStatus swapChainCreate(PrGpuDevice*, const PrAppSurface*, const PrGpuSwapChainDesc*,
         PrGpuSwapChain* PR_NULLABLE* PR_NONNULL out) {
@@ -981,87 +1004,84 @@ PrStatus swapChainCreate(PrGpuDevice*, const PrAppSurface*, const PrGpuSwapChain
     return PrStatus_NotSupported;
 }
 
-void swapChainDestroy(PrGpuDevice*, PrGpuSwapChain*) {}
+// The functions of the device's command buffers and passes.
+constexpr PrGpuCommands kCommandsFunctions = {
+    .deviceFn = gpuSharedCommandsDevice,
+    .submitFn = commandsSubmit,
+    .streamFn = commandsStream,
+    .setPushFn = commandsSetPush,
+    .setUniformsFn = commandsSetUniforms,
+    .setPipelineFn = commandsSetPipeline,
+    .dispatchFn = commandsDispatch,
+    .dispatchIndirectFn = commandsDispatchIndirect,
+    .copyBufferFn = commandsCopyBuffer,
+    .copyTextureFn = commandsCopyTexture,
+    .copyBufferToTextureFn = commandsCopyBufferToTexture,
+    .copyTextureToBufferFn = commandsCopyTextureToBuffer,
+    .generateMipmapsFn = gpuSharedGenerateMipmaps,
+    .onDoneFn = commandsOnDone,
+    .pushGroupFn = commandsPushGroup,
+    .popGroupFn = commandsPopGroup,
+    .bufferBarrierFn = commandsBufferBarrier,
+    .textureBarrierFn = commandsTextureBarrier,
+    .globalBarrierFn = commandsGlobalBarrier,
+    .nativeStateSyncFn = nativeStateSync,
+    .passBeginFn = passBegin,
+};
 
-void swapChainWait(PrGpuDevice*, PrGpuSwapChain*) {}
-
-PrStatus swapChainAcquire(PrGpuDevice*, PrGpuSwapChain*, PrUVec2, PrGpuTexture* out) {
-    *out = PrGpuTexture{};
-    return PrStatus_InvalidState;
-}
-
-void swapChainPresent(PrGpuDevice*, PrGpuSwapChain*, PrGpuCommands*) {}
+constexpr PrGpuPass kPassFunctions = {
+    .commandsFn = gpuSharedPassCommands,
+    .formatsFn = gpuSharedPassFormats,
+    .extentFn = gpuSharedPassExtent,
+    .endFn = passEnd,
+    .nativeDrawFn = passNativeDraw,
+    .setViewportFn = passSetViewport,
+    .setScissorFn = passSetScissor,
+    .setBlendConstantFn = passSetBlendConstant,
+    .setStencilReferenceFn = passSetStencilReference,
+    .setIndexBufferFn = passSetIndexBuffer,
+    .drawFn = passDraw,
+    .drawIndexedFn = passDrawIndexed,
+    .drawIndirectFn = passDrawIndirect,
+    .drawIndexedIndirectFn = passDrawIndexedIndirect,
+};
 
 } // namespace
 
 PrGpuDevice* gpuMemoryCreate(PrStringView backend, const GpuMemoryMirror* PR_NULLABLE mirror) {
     Device* d = allocZeroed<Device>();
+    gpuSharedDeviceInit(d);
     prMutexInit(&d->mutex);
     d->mirror = mirror;
-    d->destroy = destroy;
-    d->isLost = isLost;
-    d->simulateLoss = simulateLoss;
-    d->isComplete = isComplete;
-    d->wait = wait;
-    d->waitIdle = waitIdle;
-    d->supportsFormat = supportsFormat;
-    d->bufferCreate = bufferCreate;
-    d->bufferDestroy = bufferDestroy;
-    d->bufferDesc = bufferDesc;
-    d->bufferStorageHandle = bufferStorageHandle;
-    d->bufferMap = bufferMap;
-    d->bufferUpload = bufferUpload;
-    d->textureCreate = textureCreate;
-    d->textureCreateView = textureCreateView;
-    d->textureDestroy = textureDestroy;
-    d->textureDesc = textureDesc;
-    d->textureStorageHandle = textureStorageHandle;
-    d->textureUpload = textureUpload;
-    d->textureCreateOverPixels = textureCreateOverPixels;
-    d->textureNative = textureNative;
-    d->passNativeDraw = passNativeDraw;
+    d->destroyFn = destroy;
+    d->isLostFn = isLost;
+    d->simulateLossFn = simulateLoss;
+    d->isCompleteFn = isComplete;
+    d->waitFn = wait;
+    d->waitIdleFn = waitIdle;
+    d->supportsFormatFn = supportsFormat;
+    d->bufferCreateFn = bufferCreate;
+    d->bufferDestroyFn = bufferDestroy;
+    d->bufferDescFn = bufferDesc;
+    d->bufferStorageHandleFn = bufferStorageHandle;
+    d->bufferMapFn = bufferMap;
+    d->bufferUploadFn = bufferUpload;
+    d->textureCreateFn = textureCreate;
+    d->textureCreateViewFn = textureCreateView;
+    d->textureDestroyFn = textureDestroy;
+    d->textureDescFn = textureDesc;
+    d->textureStorageHandleFn = textureStorageHandle;
+    d->textureUploadFn = textureUpload;
+    d->textureCreateOverPixelsFn = textureCreateOverPixels;
+    d->textureNativeFn = textureNative;
     d->samplerCreate = samplerCreate;
-    d->shaderLibraryCreate = shaderLibraryCreate;
-    d->shaderLibraryDestroy = shaderLibraryDestroy;
-    d->graphicsPipelineCreate = graphicsPipelineCreate;
-    d->computePipelineCreate = computePipelineCreate;
-    d->pipelineDestroy = pipelineDestroy;
-    d->pipelineGroupSize = pipelineGroupSize;
-    d->commandsBegin = commandsBegin;
-    d->commandsSubmit = commandsSubmit;
-    d->commandsStream = commandsStream;
-    d->commandsSetPush = commandsSetPush;
-    d->commandsSetUniforms = commandsSetUniforms;
-    d->commandsSetPipeline = commandsSetPipeline;
-    d->commandsDispatch = commandsDispatch;
-    d->commandsDispatchIndirect = commandsDispatchIndirect;
-    d->commandsCopyBuffer = commandsCopyBuffer;
-    d->commandsCopyTexture = commandsCopyTexture;
-    d->commandsCopyBufferToTexture = commandsCopyBufferToTexture;
-    d->commandsCopyTextureToBuffer = commandsCopyTextureToBuffer;
-    d->commandsOnDone = commandsOnDone;
-    d->commandsPushGroup = commandsPushGroup;
-    d->commandsPopGroup = commandsPopGroup;
-    d->commandsBufferBarrier = commandsBufferBarrier;
-    d->commandsTextureBarrier = commandsTextureBarrier;
-    d->commandsGlobalBarrier = commandsGlobalBarrier;
-    d->nativeStateSync = nativeStateSync;
-    d->passBegin = passBegin;
-    d->passEnd = passEnd;
-    d->passSetViewport = passSetViewport;
-    d->passSetScissor = passSetScissor;
-    d->passSetBlendConstant = passSetBlendConstant;
-    d->passSetStencilReference = passSetStencilReference;
-    d->passSetIndexBuffer = passSetIndexBuffer;
-    d->passDraw = passDraw;
-    d->passDrawIndexed = passDrawIndexed;
-    d->passDrawIndirect = passDrawIndirect;
-    d->passDrawIndexedIndirect = passDrawIndexedIndirect;
-    d->swapChainCreate = swapChainCreate;
-    d->swapChainDestroy = swapChainDestroy;
-    d->swapChainWait = swapChainWait;
-    d->swapChainAcquire = swapChainAcquire;
-    d->swapChainPresent = swapChainPresent;
+    d->shaderLibraryCreateFn = shaderLibraryCreate;
+    d->graphicsPipelineCreateFn = graphicsPipelineCreate;
+    d->computePipelineCreateFn = computePipelineCreate;
+    d->pipelineDestroyFn = pipelineDestroy;
+    d->pipelineGroupSizeFn = pipelineGroupSize;
+    d->commandsBeginFn = commandsBegin;
+    d->swapChainCreateFn = swapChainCreate;
     d->info = PrGpuDeviceInfo{
         .adapter = "memory",
         .backend = backend,

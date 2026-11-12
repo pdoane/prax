@@ -12,6 +12,7 @@
 #include "pr/atomic.h"
 #include "pr/float.h"
 #include "pr/media_audio.h"
+#include "pr/media_backend.h"
 #include "pr/memory.h"
 #include "pr/mutex.h"
 #include "pr/raw_array.h"
@@ -80,7 +81,7 @@ void releaseImage(SourceDecoder* d, void* image) {
         d->shownDropped = true;
         return;
     }
-    d->backend->imageRelease(d->backend, image);
+    d->backend->imageReleaseFn(d->backend, image);
 }
 
 void releaseImages(SourceDecoder* d) {
@@ -125,7 +126,7 @@ void decodeVideo(SourceDecoder* d) {
             d->lastDecode = kPrF64Nan;
             d->through = -kPrF64Infinity;
             prMutexUnlock(&d->mutex);
-            d->backend->sampleDecoderFlush(d->backend, d->video);
+            d->video->flushFn(d->video);
             prMutexLock(&d->mutex);
         }
         uint32_t ahead = 0;
@@ -143,8 +144,8 @@ void decodeVideo(SourceDecoder* d) {
         if (found) {
             // A frame after a gap in decode order starts again at a random access point.
             if (!prF64IsNan(lastDecode) && !frame.key && frame.decode > lastDecode + kJumpAhead)
-                d->backend->sampleDecoderFlush(d->backend, d->video);
-            decoded = d->backend->sampleDecode(d->backend, d->video, &frame, &handlers);
+                d->video->flushFn(d->video);
+            decoded = d->video->decodeFn(d->video, &frame, &handlers);
         } else {
             prThreadSleep(kPollMilliseconds);
         }
@@ -204,7 +205,7 @@ void decodeAudio(SourceDecoder* d) {
         PrMediaAudioSeek request = prMediaAudioQueueRequest(queue);
         uint32_t seek = request.id;
         double seconds = request.seconds;
-        d->backend->sampleDecoderFlush(d->backend, d->audio);
+        d->audio->flushFn(d->audio);
         double lastDecode = kPrF64Nan;
         bool begun = false;
         bool finished = false;
@@ -222,7 +223,7 @@ void decodeAudio(SourceDecoder* d) {
             lastDecode = frame.decode;
             sink.samples.clear();
             sink.timed = false;
-            d->backend->sampleDecode(d->backend, d->audio, &frame, &handlers);
+            d->audio->decodeFn(d->audio, &frame, &handlers);
             prMediaBufferedFrameReset(&frame);
             uint32_t frames = sink.samples.count / channels;
             if (frames == 0 || !sink.timed)
@@ -250,7 +251,7 @@ void decodeAudio(SourceDecoder* d) {
     sink.samples.reset();
 }
 
-void decoderDestroy(PrMediaCodec*, PrMediaDecoder* decoder) {
+void decoderDestroy(PrMediaDecoder* decoder) {
     SourceDecoder* d = static_cast<SourceDecoder*>(decoder);
     if (d->audioStarted) {
         prMediaAudioQueueStop(d->queue);
@@ -267,17 +268,17 @@ void decoderDestroy(PrMediaCodec*, PrMediaDecoder* decoder) {
     releaseImages(d);
     d->images.reset();
     if (d->shown != nullptr)
-        d->backend->imageRelease(d->backend, d->shown);
+        d->backend->imageReleaseFn(d->backend, d->shown);
     if (d->video != nullptr)
-        d->backend->sampleDecoderDestroy(d->backend, d->video);
+        d->video->destroyFn(d->video);
     if (d->audio != nullptr)
-        d->backend->sampleDecoderDestroy(d->backend, d->audio);
+        d->audio->destroyFn(d->audio);
     prConditionReset(&d->wake);
     prMutexReset(&d->mutex);
     prMemoryFree(d);
 }
 
-bool decoderFrame(PrMediaCodec*, PrMediaDecoder* decoder, double seconds, PrMediaFrame* out) {
+bool decoderFrame(PrMediaDecoder* decoder, double seconds, PrMediaFrame* out) {
     SourceDecoder* d = static_cast<SourceDecoder*>(decoder);
     prMutexLock(&d->mutex);
     d->wanted = seconds;
@@ -318,19 +319,19 @@ bool decoderFrame(PrMediaCodec*, PrMediaDecoder* decoder, double seconds, PrMedi
         return false;
     }
     if (image.image != previous && previous != nullptr && previousDropped)
-        d->backend->imageRelease(d->backend, previous);
+        d->backend->imageReleaseFn(d->backend, previous);
     *out = PrMediaFrame{.time = image.presentation, .serial = image.serial, .current = current};
-    d->backend->imageImport(d->backend, image.image, &out->image);
+    d->backend->imageImportFn(d->backend, image.image, &out->image);
     return true;
 }
 
-bool decoderAudioStart(PrMediaCodec*, PrMediaDecoder* decoder, uint32_t sampleRate, uint32_t channels, double seconds) {
+bool decoderAudioStart(PrMediaDecoder* decoder, uint32_t sampleRate, uint32_t channels, double seconds) {
     SourceDecoder* d = static_cast<SourceDecoder*>(decoder);
     if (d->audioBuffer == nullptr || d->audioStarted)
         return false;
     PrMediaTrackInfo track = prMediaSourceBufferTrack(d->audioBuffer, d->audioTrack);
     PrMediaSampleDecoder* audio = nullptr;
-    if (d->backend->sampleDecoderCreate(d->backend, &track, sampleRate, channels, &audio) != PrStatus_Ok)
+    if (d->backend->sampleDecoderCreateFn(d->backend, &track, sampleRate, channels, &audio) != PrStatus_Ok)
         return false;
     d->audio = audio;
     d->queue = prMediaAudioQueueCreate(sampleRate, channels, seconds);
@@ -339,36 +340,13 @@ bool decoderAudioStart(PrMediaCodec*, PrMediaDecoder* decoder, uint32_t sampleRa
     return true;
 }
 
-void decoderAudioSeek(PrMediaCodec*, PrMediaDecoder* decoder, double seconds) {
+void decoderAudioSeek(PrMediaDecoder* decoder, double seconds) {
     prMediaAudioQueueSeek(static_cast<SourceDecoder*>(decoder)->queue, seconds);
 }
 
-PrMediaAudioChunk decoderAudioRead(PrMediaCodec*, PrMediaDecoder* decoder, float* samples, uint32_t frames) {
+PrMediaAudioChunk decoderAudioRead(PrMediaDecoder* decoder, float* samples, uint32_t frames) {
     return prMediaAudioQueueRead(static_cast<SourceDecoder*>(decoder)->queue, samples, frames);
 }
-
-// The table that dispatches the public functions of a source's decoders. Its codec functions are never called, since a
-// source's decoders are not created through it.
-constexpr PrMediaCodec kSourceCodec = {
-    .supportsType = [](PrMediaCodec*, PrStringView) -> PrMediaSupport { return PrMediaSupport_No; },
-    .decoderCreate = [](PrMediaCodec*, PrByteView, PrMediaDecoder* PR_NULLABLE* PR_NONNULL, PrMediaInfo*) -> PrStatus {
-        return PrStatus_NotSupported;
-    },
-    .decoderDestroy = decoderDestroy,
-    .decoderFrame = decoderFrame,
-    .decoderAudioStart = decoderAudioStart,
-    .decoderAudioSeek = decoderAudioSeek,
-    .decoderAudioRead = decoderAudioRead,
-};
-
-// The table of a source's decoder that decodes no frames, because its codec decodes no samples.
-constexpr PrMediaCodec kSourceCodecWithoutSamples = {
-    .supportsType = [](PrMediaCodec*, PrStringView) -> PrMediaSupport { return PrMediaSupport_No; },
-    .decoderCreate = [](PrMediaCodec*, PrByteView, PrMediaDecoder* PR_NULLABLE* PR_NONNULL, PrMediaInfo*) -> PrStatus {
-        return PrStatus_NotSupported;
-    },
-    .decoderDestroy = decoderDestroy,
-};
 
 } // namespace
 
@@ -398,12 +376,19 @@ PrStatus mediaSourceDecoderCreate(PrMediaCodec* codec, PrMediaSourceBuffer* PR_N
             }
         }
     }
-    bool samples = codec->sampleDecoderCreate != nullptr;
-    d->codec = const_cast<PrMediaCodec*>(samples ? &kSourceCodec : &kSourceCodecWithoutSamples);
+    d->destroyFn = decoderDestroy;
+    // A codec that decodes no samples gives a decoder that decodes no frames and no audio.
+    bool samples = codec->sampleDecoderCreateFn != nullptr;
+    if (samples) {
+        d->frameFn = decoderFrame;
+        d->audioStartFn = decoderAudioStart;
+        d->audioSeekFn = decoderAudioSeek;
+        d->audioReadFn = decoderAudioRead;
+    }
     if (samples && d->videoBuffer != nullptr) {
         PrMediaTrackInfo track = prMediaSourceBufferTrack(d->videoBuffer, d->videoTrack);
         PrMediaSampleDecoder* video = nullptr;
-        if (codec->sampleDecoderCreate(codec, &track, 0, 0, &video) == PrStatus_Ok) {
+        if (codec->sampleDecoderCreateFn(codec, &track, 0, 0, &video) == PrStatus_Ok) {
             d->video = video;
             prThreadStart(&d->videoThread, [](void* context) { decodeVideo(static_cast<SourceDecoder*>(context)); }, d);
         }
@@ -413,7 +398,7 @@ PrStatus mediaSourceDecoderCreate(PrMediaCodec* codec, PrMediaSourceBuffer* PR_N
 }
 
 void mediaSourceDecoderSetEnded(PrMediaDecoder* decoder, bool ended) {
-    if (decoder->codec != &kSourceCodec && decoder->codec != &kSourceCodecWithoutSamples)
+    if (decoder->destroyFn != decoderDestroy)
         return;
     static_cast<SourceDecoder*>(decoder)->sourceEnded.store(ended);
 }

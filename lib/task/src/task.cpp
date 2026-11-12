@@ -4,6 +4,7 @@
 
 #include "pr/ascii.h"
 #include "pr/assert.h"
+#include "pr/task_backend.h"
 
 #if defined(PR_TASK_HAS_BUILTIN)
 #include "pr/task_builtin.h"
@@ -60,12 +61,12 @@ PrTaskPool* PR_NULLABLE prTaskPoolCreate(PrTaskPoolBackend backend, uint32_t thr
 }
 
 void prTaskPoolDestroy(PrTaskPool* PR_NULLABLE pool) {
-    if (pool != nullptr && pool->destroy != nullptr)
-        pool->destroy(pool);
+    if (pool != nullptr && pool->destroyFn != nullptr)
+        pool->destroyFn(pool);
 }
 
 uint32_t prTaskPoolWidth(const PrTaskPool* pool) {
-    uint32_t width = pool->width(pool);
+    uint32_t width = pool->widthFn(pool);
     PR_ASSERT(width >= 1);
     return width;
 }
@@ -83,9 +84,9 @@ void prTaskPoolRun(PrTaskPool* pool, uint32_t count, uint32_t width, PrTaskFn fn
             fn(context, i, 0);
         return;
     }
-    pool->run(pool, count, width, fn, context);
+    pool->runFn(pool, count, width, fn, context);
 }
 
 void prTaskPoolPost(PrTaskPool* pool, PrTaskJobFn fn, void* PR_NULLABLE context) {
-    pool->post(pool, fn, context);
+    pool->postFn(pool, fn, context);
 }

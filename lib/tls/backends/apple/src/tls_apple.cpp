@@ -9,6 +9,7 @@
 #include "pr/raw_array.h"
 #include "pr/raw_string.h"
 #include "pr/thread.h"
+#include "pr/tls_backend.h"
 
 #include <Network/Network.h>
 #include <Security/Security.h>
@@ -31,6 +32,7 @@ constexpr uint32_t kNameMaxBytes = 254;
 // `mutex` guards `live`, the number of sessions whose memory remains. The source's destruction waits for it to reach
 // zero, because Network.framework calls a connection's handlers until it is cancelled.
 struct AppleTls : PrTls {
+    PrNet* net;                 // the network that the sessions are streams of
     dispatch_queue_t queue;
     PrMutex mutex;
     PrCondition idle;
@@ -51,6 +53,9 @@ typedef uint8_t SessionState;
 // `verifyFailure` is written on the queue during the handshake, and read on the loop after the delivery that follows
 // it.
 struct AppleSession : PrTlsSession {
+    PrNet* net;                 // the network whose loop runs the callback
+    PrNetStreamFn PR_NULLABLE event;
+    void* PR_NULLABLE context;
     AppleTls* tls;
     nw_connection_t connection;
     Atomic<uint32_t> references;
@@ -116,8 +121,8 @@ void release(AppleSession* session) {
 }
 
 void deliver(AppleSession* session, PrNetStreamEvent event) {
-    if (!session->dead && session->stream.event != nullptr)
-        session->stream.event(session->stream.context, &session->stream, event);
+    if (!session->dead && session->event != nullptr)
+        session->event(session->context, &session->stream, event);
 }
 
 PrNetError errorOfPosix(int code) {
@@ -181,7 +186,7 @@ void run(void* PR_NULLABLE context);
 
 // Posts `delivery` to the loop, which takes over the reference to the session that the delivery holds.
 void post(Delivery* delivery) {
-    prNetPost(delivery->session->stream.net, run, delivery);
+    prNetPost(delivery->session->net, run, delivery);
 }
 
 Delivery* deliveryOf(AppleSession* session, DeliveryKind kind) {
@@ -378,6 +383,12 @@ bool verify(AppleSession* session, sec_trust_t secure) {
 
 // AppleSession functions
 
+void setEventSession(PrNetStream* base, PrNetStreamFn PR_NULLABLE event, void* PR_NULLABLE context) {
+    AppleSession* session = static_cast<AppleSession*>(reinterpret_cast<PrTlsSession*>(base));
+    session->event = event;
+    session->context = context;
+}
+
 void destroySession(PrNetStream* base) {
     AppleSession* session = static_cast<AppleSession*>(reinterpret_cast<PrTlsSession*>(base));
     PR_ASSERT(!session->dead);
@@ -509,15 +520,16 @@ PrStatus connectTls(PrTls* base, const PrTlsSessionDesc* desc, PrTlsSession* PR_
     port[digits] = 0;
 
     AppleSession* session = allocZeroed<AppleSession>();
-    session->stream.net = tls->net;
-    session->stream.event = desc->event;
-    session->stream.context = desc->context;
-    session->stream.destroy = destroySession;
-    session->stream.read = readSession;
-    session->stream.write = writeSession;
-    session->stream.queued = queuedSession;
-    session->stream.error = errorSession;
-    session->info = infoSession;
+    session->net = tls->net;
+    session->event = desc->event;
+    session->context = desc->context;
+    session->stream.destroyFn = destroySession;
+    session->stream.setEventFn = setEventSession;
+    session->stream.readFn = readSession;
+    session->stream.writeFn = writeSession;
+    session->stream.queuedFn = queuedSession;
+    session->stream.errorFn = errorSession;
+    session->infoFn = infoSession;
     session->tls = tls;
     session->serverName = CFStringCreateWithCString(nullptr, serverName, kCFStringEncodingUTF8);
     session->anchors = anchors;
@@ -576,8 +588,8 @@ using namespace pr_impl;
 PrTls* prTlsAppleCreate(PrNet* net) {
     AppleTls* tls = allocZeroed<AppleTls>();
     tls->net = net;
-    tls->destroy = destroyTls;
-    tls->connect = connectTls;
+    tls->destroyFn = destroyTls;
+    tls->connectFn = connectTls;
     tls->queue = dispatch_queue_create("prax.tls", DISPATCH_QUEUE_SERIAL);
     prMutexInit(&tls->mutex);
     prConditionInit(&tls->idle);

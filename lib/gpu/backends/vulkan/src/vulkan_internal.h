@@ -21,6 +21,8 @@
 #include "pr/reserved_array.h"
 #include "pr/thread.h"
 
+#include "gpu/backends/shared/src/gpu_shared_device.h"
+
 // The backend calls Vulkan through the functions that it loads for each device, never through the loader's exports.
 #define VK_NO_PROTOTYPES
 #include <vulkan/vulkan_core.h>
@@ -313,7 +315,7 @@ struct VulkanCommandSlot {
 
 // A pass that a command buffer records, the device's own or one that the application has open. A pass of the device's
 // own keeps its attachments, so that it can end its rendering and begin it again when a draw reads its target.
-struct VulkanPass : PrGpuPass {
+struct VulkanPass : GpuSharedPass {
     VkRenderingAttachmentInfo colors[kPrGpuMaxColorAttachments];
     VkRenderingAttachmentInfo depth;
     VkRenderingAttachmentInfo stencil;
@@ -338,7 +340,7 @@ struct VulkanPresent {
 };
 
 // A command buffer: the state of its recording, and what it holds until it is done.
-struct VulkanCommands : PrGpuCommands {
+struct VulkanCommands : GpuSharedCommands {
     VulkanCommandSlot slot;         // the device's own, which ends a command buffer that records into the application's
     VkCommandBuffer buffer;
     uint64_t serial;
@@ -372,7 +374,7 @@ struct VulkanCommands : PrGpuCommands {
 };
 
 // A shader library: one SPIR-V module that holds every entry point.
-struct VulkanLibrary : PrGpuShaderLibrary {
+struct VulkanLibrary : GpuSharedLibrary {
     VkShaderModule module;
 };
 
@@ -384,7 +386,7 @@ struct VulkanSwapImage {
 };
 
 // A swap chain, and the frames in flight that use its images.
-struct VulkanSwapChain : PrGpuSwapChain {
+struct VulkanSwapChain : GpuSharedSwapChain {
     VkSurfaceKHR surface;
     VkSwapchainKHR swapChain;
     VkFormat format;
@@ -401,7 +403,7 @@ struct VulkanSwapChain : PrGpuSwapChain {
 };
 
 // A device: its Vulkan objects, its tables of resources and pipelines, and its timelines.
-struct VulkanDevice : PrGpuDevice {
+struct VulkanDevice : GpuSharedDevice {
     VulkanFunctions vk;
     void* PR_NULLABLE loader;
     bool ownsInstance;

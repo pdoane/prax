@@ -4,6 +4,7 @@
 
 #include "pr/alloc.h"
 #include "pr/atomic.h"
+#include "pr/audio_backend.h"
 #include "pr/memory.h"
 #include "pr/thread.h"
 
@@ -26,6 +27,8 @@ constexpr REFERENCE_TIME kBufferTicks = 200000;
 constexpr double kTicksPerSecond = 10000000;
 
 struct WindowsOutput : PrAudioOutput {
+    PrAudioFormat format;
+
     // Keeps the multithreaded apartment alive, so that the render thread can use the client without initializing COM.
     CO_MTA_USAGE_COOKIE apartment;
     IAudioClient* client;
@@ -135,6 +138,10 @@ bool openClient(WindowsOutput* output, PrAudioFormat format) {
         SUCCEEDED(output->client->GetService(IID_PPV_ARGS(&output->renderer)));
 }
 
+PrAudioFormat formatOf(const PrAudioOutput* output) {
+    return static_cast<const WindowsOutput*>(output)->format;
+}
+
 } // namespace
 
 } // namespace pr_impl
@@ -147,10 +154,11 @@ PrAudioOutput* PR_NULLABLE prAudioWindowsCreate(PrAudioFormat format) {
         return nullptr;
     WindowsOutput* output = allocZeroed<WindowsOutput>();
     output->format = format;
-    output->destroy = destroy;
-    output->start = start;
-    output->stop = stop;
-    output->latency = latency;
+    output->destroyFn = destroy;
+    output->formatFn = formatOf;
+    output->startFn = start;
+    output->stopFn = stop;
+    output->latencyFn = latency;
     output->apartment = apartment;
     if (!openClient(output, format)) {
         destroy(output);

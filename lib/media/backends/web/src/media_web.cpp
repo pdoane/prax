@@ -4,6 +4,7 @@
 
 #include "pr/alloc.h"
 #include "pr/float.h"
+#include "pr/media_backend.h"
 #include "pr/memory.h"
 
 #if defined(PR_MEDIA_HAS_BUILTIN)
@@ -52,34 +53,14 @@ const char* typeOf(PrByteView bytes) {
     return nullptr;
 }
 
-PrStatus decoderCreate(PrMediaCodec* codec, PrByteView bytes, PrMediaDecoder* PR_NULLABLE* PR_NONNULL out, PrMediaInfo* info) {
-    WebCodec* c = static_cast<WebCodec*>(codec);
-    *out = nullptr;
-    const char* type = typeOf(bytes);
-    if (type == nullptr)
-        return PrStatus_NotSupported;
-    // The built-in codec reads the resource's metadata. The page loads the video's own metadata later.
-    *info = PrMediaInfo{.duration = kPrF64Nan, .hasVideo = true};
-    PrMediaDecoder* metadata = nullptr;
-    if (c->metadata != nullptr && prMediaDecoderCreate(c->metadata, bytes, &metadata, info) == PrStatus_Ok)
-        prMediaDecoderDestroy(metadata);
-    uint32_t player = prMediaWebOpen(bytes.data, bytes.size, type);
-    if (player == 0)
-        return PrStatus_NotSupported;
-    WebDecoder* d = allocZeroed<WebDecoder>();
-    d->player = player;
-    *out = d;
-    return PrStatus_Ok;
-}
-
-void decoderDestroy(PrMediaCodec*, PrMediaDecoder* decoder) {
+void decoderDestroy(PrMediaDecoder* decoder) {
     WebDecoder* d = static_cast<WebDecoder*>(decoder);
     prMediaWebClose(d->player);
     prMemoryFree(d);
 }
 
 // The frame that the video shows, once it has one: an image of the page, with no pixels.
-bool decoderFrame(PrMediaCodec*, PrMediaDecoder* decoder, double seconds, PrMediaFrame* out) {
+bool decoderFrame(PrMediaDecoder* decoder, double seconds, PrMediaFrame* out) {
     WebDecoder* d = static_cast<WebDecoder*>(decoder);
     double time = 0;
     uint32_t serial = 0;
@@ -98,6 +79,28 @@ bool decoderFrame(PrMediaCodec*, PrMediaDecoder* decoder, double seconds, PrMedi
     return true;
 }
 
+PrStatus decoderCreate(PrMediaCodec* codec, PrByteView bytes, PrMediaDecoder* PR_NULLABLE* PR_NONNULL out, PrMediaInfo* info) {
+    WebCodec* c = static_cast<WebCodec*>(codec);
+    *out = nullptr;
+    const char* type = typeOf(bytes);
+    if (type == nullptr)
+        return PrStatus_NotSupported;
+    // The built-in codec reads the resource's metadata. The page loads the video's own metadata later.
+    *info = PrMediaInfo{.duration = kPrF64Nan, .hasVideo = true};
+    PrMediaDecoder* metadata = nullptr;
+    if (c->metadata != nullptr && prMediaDecoderCreate(c->metadata, bytes, &metadata, info) == PrStatus_Ok)
+        prMediaDecoderDestroy(metadata);
+    uint32_t player = prMediaWebOpen(bytes.data, bytes.size, type);
+    if (player == 0)
+        return PrStatus_NotSupported;
+    WebDecoder* d = allocZeroed<WebDecoder>();
+    d->destroyFn = decoderDestroy;
+    d->frameFn = decoderFrame;
+    d->player = player;
+    *out = d;
+    return PrStatus_Ok;
+}
+
 } // namespace
 
 } // namespace pr_impl
@@ -108,11 +111,9 @@ PrMediaCodec* PR_NULLABLE prMediaWebCreate(void) {
     if (!prMediaWebAvailable())
         return nullptr;
     WebCodec* codec = allocZeroed<WebCodec>();
-    codec->destroy = destroy;
-    codec->supportsType = supportsType;
-    codec->decoderCreate = decoderCreate;
-    codec->decoderDestroy = decoderDestroy;
-    codec->decoderFrame = decoderFrame;
+    codec->destroyFn = destroy;
+    codec->supportsTypeFn = supportsType;
+    codec->decoderCreateFn = decoderCreate;
 #if defined(PR_MEDIA_HAS_BUILTIN)
     codec->metadata = prMediaBuiltinCreate();
 #endif

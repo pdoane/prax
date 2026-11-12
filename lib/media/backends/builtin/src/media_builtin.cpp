@@ -5,6 +5,7 @@
 #include "pr/alloc.h"
 #include "pr/ascii.h"
 #include "pr/float.h"
+#include "pr/media_backend.h"
 #include "pr/mem.h"
 #include "pr/memory.h"
 #include "pr/mime.h"
@@ -98,23 +99,21 @@ PrMediaSupport supportsType(PrMediaCodec*, PrStringView type) {
     return PrMediaSupport_No;
 }
 
+void decoderDestroy(PrMediaDecoder* decoder) {
+    prMemoryFree(static_cast<BuiltinDecoder*>(decoder));
+}
+
 PrStatus decoderCreate(PrMediaCodec*, PrByteView bytes, PrMediaDecoder* PR_NULLABLE* PR_NONNULL out, PrMediaInfo* info) {
     info->duration = kPrF64Nan;
     if (!readMovie(bytes, info))
         return PrStatus_NotSupported;
-    *out = allocZeroed<BuiltinDecoder>();
+    BuiltinDecoder* d = allocZeroed<BuiltinDecoder>();
+    d->destroyFn = decoderDestroy;
+    *out = d;
     return PrStatus_Ok;
 }
 
-void decoderDestroy(PrMediaCodec*, PrMediaDecoder* decoder) {
-    prMemoryFree(static_cast<BuiltinDecoder*>(decoder));
-}
-
-constexpr PrMediaCodec kBuiltin = {
-    .supportsType = supportsType,
-    .decoderCreate = decoderCreate,
-    .decoderDestroy = decoderDestroy,
-};
+constexpr PrMediaCodec kBuiltin = {.supportsTypeFn = supportsType, .decoderCreateFn = decoderCreate};
 
 } // namespace
 

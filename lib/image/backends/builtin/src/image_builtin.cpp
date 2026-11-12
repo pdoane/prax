@@ -4,6 +4,7 @@
 
 #include "pr/alloc.h"
 #include "pr/assert.h"
+#include "pr/image_backend.h"
 #include "pr/mem.h"
 #include "pr/string_ops.h"
 
@@ -588,6 +589,68 @@ bool recognize(PrImageCodec*, PrByteView prefix) {
         isIcon(prefix.data, prefix.size);
 }
 
+void close(PrImageReader* reader) {
+    BuiltinDecoder* decoder = static_cast<BuiltinDecoder*>(reader);
+    gifAnimationClose(decoder->gif);
+    pngAnimationClose(decoder->png);
+    prMemoryFree(decoder->profile);
+    prMemoryFree(decoder->scratch);
+    prMemoryFree(decoder->bytes);
+    prMemoryFree(decoder);
+}
+
+PrStatus frameInfo(PrImageReader* reader, uint32_t frame, PrImageFrameInfo* info) {
+    BuiltinDecoder* decoder = static_cast<BuiltinDecoder*>(reader);
+    if (frame >= decoder->info.frameCount && !(frame == kPrImageFrameCover && decoder->info.hasCover)) {
+        return PrStatus_InvalidData;
+    }
+    if (decoder->kind == BuiltinKind_Gif && decoder->gif == nullptr) {
+        return PrStatus_InvalidData;
+    }
+    if (decoder->png != nullptr)
+        info->durationMs = pngAnimationDelay(*decoder->png, frame);
+    else if (decoder->gif == nullptr)
+        info->durationMs = 0;
+    else
+        info->durationMs = gifAnimationDelay(*decoder->gif, frame);
+    return PrStatus_Ok;
+}
+
+PrStatus decode(PrImageReader* reader, uint32_t frame, PrPixels output) {
+    BuiltinDecoder* decoder = static_cast<BuiltinDecoder*>(reader);
+    PR_ASSERT(frame < decoder->info.frameCount || (frame == kPrImageFrameCover && decoder->info.hasCover));
+    PR_ASSERT(output.extent.x == decoder->info.extent.x && output.extent.y == decoder->info.extent.y);
+    PR_ASSERT(output.stride >= decoder->rowBytes);
+    bool ok = false;
+    if (decoder->kind == BuiltinKind_Png) {
+        if (decoder->png == nullptr)
+            ok = pngDecode(decoder->compressCodec, {decoder->bytes, decoder->size}, decoder->scratch,
+                decoder->pixelsSize);
+        else
+            ok = pngAnimationFrame(*decoder->png, frame, decoder->scratch, decoder->pixelsSize);
+    } else if (decoder->kind == BuiltinKind_Jpeg) {
+        ok = jpegDecode({decoder->bytes, decoder->size}, decoder->scratch, decoder->pixelsSize);
+    } else if (decoder->kind == BuiltinKind_Tiff) {
+        ok = tiffDecode(decoder->tiff, decoder->scratch, decoder->pixelsSize);
+    } else if (decoder->kind == BuiltinKind_Ico) {
+        if (decoder->icon.png)
+            ok = pngDecode(decoder->compressCodec, {decoder->icon.bytes, decoder->icon.size}, decoder->scratch,
+                decoder->pixelsSize);
+        else
+            ok = icoDecodeBitmap(decoder->icon, decoder->scratch, decoder->pixelsSize);
+    } else if (decoder->gif != nullptr) {
+        ok = gifAnimationFrame(*decoder->gif, frame, decoder->scratch, decoder->pixelsSize);
+    }
+    if (!ok) {
+        return PrStatus_InvalidData;
+    }
+    for (uint32_t row = 0; row < output.extent.y; ++row) {
+        prMemCopy(output.data + size_t(row) * output.stride,
+            decoder->scratch + size_t(row) * decoder->rowBytes, decoder->rowBytes);
+    }
+    return decoder->openStatus;
+}
+
 PrStatus open(PrImageCodec* imageCodec, const PrImageSource* source, const PrImageLimits* limits,
         PrImageReader* PR_NULLABLE* PR_NONNULL outReader, PrImageInfo* outInfo) {
     *outReader = nullptr;
@@ -598,7 +661,9 @@ PrStatus open(PrImageCodec* imageCodec, const PrImageSource* source, const PrIma
     }
     BuiltinBackend* backend = static_cast<BuiltinBackend*>(imageCodec);
     BuiltinDecoder* decoder = allocZeroed<BuiltinDecoder>();
-    decoder->codec = imageCodec;
+    decoder->closeFn = close;
+    decoder->frameInfoFn = frameInfo;
+    decoder->readFn = decode;
     decoder->compressCodec = backend->compressCodec;
     decoder->size = size_t(prImageSourceSize(source));
     decoder->bytes = static_cast<uint8_t*>(prMemoryAlloc(decoder->size));
@@ -676,74 +741,16 @@ PrStatus open(PrImageCodec* imageCodec, const PrImageSource* source, const PrIma
     return status;
 }
 
-void close(PrImageCodec*, PrImageReader* reader) {
-    BuiltinDecoder* decoder = static_cast<BuiltinDecoder*>(reader);
-    gifAnimationClose(decoder->gif);
-    pngAnimationClose(decoder->png);
-    prMemoryFree(decoder->profile);
-    prMemoryFree(decoder->scratch);
-    prMemoryFree(decoder->bytes);
-    prMemoryFree(decoder);
-}
-
-PrStatus frameInfo(PrImageCodec*, PrImageReader* reader, uint32_t frame, PrImageFrameInfo* info) {
-    BuiltinDecoder* decoder = static_cast<BuiltinDecoder*>(reader);
-    if (frame >= decoder->info.frameCount && !(frame == kPrImageFrameCover && decoder->info.hasCover)) {
-        return PrStatus_InvalidData;
-    }
-    if (decoder->kind == BuiltinKind_Gif && decoder->gif == nullptr) {
-        return PrStatus_InvalidData;
-    }
-    if (decoder->png != nullptr)
-        info->durationMs = pngAnimationDelay(*decoder->png, frame);
-    else if (decoder->gif == nullptr)
-        info->durationMs = 0;
-    else
-        info->durationMs = gifAnimationDelay(*decoder->gif, frame);
-    return PrStatus_Ok;
-}
-
-PrStatus decode(PrImageCodec*, PrImageReader* reader, uint32_t frame, PrPixels output) {
-    BuiltinDecoder* decoder = static_cast<BuiltinDecoder*>(reader);
-    PR_ASSERT(frame < decoder->info.frameCount || (frame == kPrImageFrameCover && decoder->info.hasCover));
-    PR_ASSERT(output.extent.x == decoder->info.extent.x && output.extent.y == decoder->info.extent.y);
-    PR_ASSERT(output.stride >= decoder->rowBytes);
-    bool ok = false;
-    if (decoder->kind == BuiltinKind_Png) {
-        if (decoder->png == nullptr)
-            ok = pngDecode(decoder->compressCodec, {decoder->bytes, decoder->size}, decoder->scratch,
-                decoder->pixelsSize);
-        else
-            ok = pngAnimationFrame(*decoder->png, frame, decoder->scratch, decoder->pixelsSize);
-    } else if (decoder->kind == BuiltinKind_Jpeg) {
-        ok = jpegDecode({decoder->bytes, decoder->size}, decoder->scratch, decoder->pixelsSize);
-    } else if (decoder->kind == BuiltinKind_Tiff) {
-        ok = tiffDecode(decoder->tiff, decoder->scratch, decoder->pixelsSize);
-    } else if (decoder->kind == BuiltinKind_Ico) {
-        if (decoder->icon.png)
-            ok = pngDecode(decoder->compressCodec, {decoder->icon.bytes, decoder->icon.size}, decoder->scratch,
-                decoder->pixelsSize);
-        else
-            ok = icoDecodeBitmap(decoder->icon, decoder->scratch, decoder->pixelsSize);
-    } else if (decoder->gif != nullptr) {
-        ok = gifAnimationFrame(*decoder->gif, frame, decoder->scratch, decoder->pixelsSize);
-    }
-    if (!ok) {
-        return PrStatus_InvalidData;
-    }
-    for (uint32_t row = 0; row < output.extent.y; ++row) {
-        prMemCopy(output.data + size_t(row) * output.stride,
-            decoder->scratch + size_t(row) * decoder->rowBytes, decoder->rowBytes);
-    }
-    return decoder->openStatus;
-}
-
 PrStatus encode(PrImageCodec* imageCodec, PrStringView type, PrPixelView pixels, uint8_t* PR_NULLABLE out,
         size_t capacity, size_t* size) {
     if (type != "image/png")
         return PrStatus_NotSupported;
     *size = pngEncode(pixels, static_cast<BuiltinBackend*>(imageCodec)->compressCodec, out, capacity);
     return PrStatus_Ok;
+}
+
+uint32_t headerBytes(const PrImageCodec*) {
+    return 8;
 }
 
 void destroy(PrImageCodec* imageCodec) {
@@ -758,15 +765,12 @@ using namespace pr_impl;
 
 PrImageCodec* prImageBuiltinCreate(PrCompressCodec* compressCodec) {
     BuiltinBackend* backend = allocZeroed<BuiltinBackend>();
-    backend->destroy = destroy;
-    backend->headerBytes = 8;
-    backend->supportsType = supportsType;
-    backend->recognize = recognize;
-    backend->decoderOpen = open;
-    backend->decoderClose = close;
-    backend->decoderFrameInfo = frameInfo;
-    backend->decoderRead = decode;
-    backend->encode = encode;
+    backend->destroyFn = destroy;
+    backend->headerBytesFn = headerBytes;
+    backend->supportsTypeFn = supportsType;
+    backend->recognizeFn = recognize;
+    backend->decoderOpenFn = open;
+    backend->encodeFn = encode;
     backend->compressCodec = compressCodec;
     return backend;
 }

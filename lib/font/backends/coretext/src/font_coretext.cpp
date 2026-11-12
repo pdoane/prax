@@ -3,6 +3,7 @@
 #include "pr/font_coretext.h"
 
 #include "pr/ascii.h"
+#include "pr/font_system_backend.h"
 #include "pr/locale.h"
 #include "pr/memory.h"
 
@@ -199,7 +200,7 @@ PrRawString addFallback(PrFontSystem* system, PrFontSet* set, PrStringView text,
 }
 
 // The system, which has no state.
-PrFontSystem gSystem = {.addFamily = addFamily, .genericFamily = genericFamily, .addFallback = addFallback};
+PrFontSystem gSystem = {.addFamilyFn = addFamily, .genericFamilyFn = genericFamily, .addFallbackFn = addFallback};
 
 } // namespace
 

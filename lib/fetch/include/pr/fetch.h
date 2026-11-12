@@ -196,37 +196,6 @@ typedef struct PrFetchRequestDesc {
     PrFetchReferrerPolicy referrerPolicy;
 } PrFetchRequestDesc;
 
-// The start of every fetch's state. `fetcher` is the source that made the fetch.
-struct PrFetch {
-    PrFetchNetwork* fetcher;
-};
-
-// The start of every source's state: the function table of its backend, then its network and its default User-Agent.
-// Each member of the table implements the public function of the same name. A null `fetchResponseType` means that every
-// response is Basic, and a null `fetchTiming` that the fetcher measures nothing. Callers use the functions below, never
-// these members.
-struct PrFetchNetwork {
-    void (*destroy)(PrFetchNetwork* fetcher);
-    PrStatus (*fetchCreate)(PrFetchNetwork* fetcher, const PrFetchRequestDesc* desc, PrFetchFn PR_NULLABLE event,
-        void* PR_NULLABLE context, PrFetch* PR_NULLABLE* PR_NONNULL out);
-    void (*fetchDestroy)(PrFetchNetwork* fetcher, PrFetch* fetch);
-    uint16_t (*fetchStatus)(const PrFetchNetwork* fetcher, const PrFetch* fetch);
-    PrStringView (*fetchUrl)(const PrFetchNetwork* fetcher, const PrFetch* fetch);
-    PrFetchResponseType (*PR_NULLABLE fetchResponseType)(const PrFetchNetwork* fetcher, const PrFetch* fetch);
-    uint32_t (*fetchHeaderCount)(const PrFetchNetwork* fetcher, const PrFetch* fetch);
-    PrFetchHeader (*fetchHeader)(const PrFetchNetwork* fetcher, const PrFetch* fetch, uint32_t index);
-    size_t (*fetchRead)(PrFetchNetwork* fetcher, PrFetch* fetch, uint8_t* output, size_t capacity);
-    PrNetError (*fetchError)(const PrFetchNetwork* fetcher, const PrFetch* fetch);
-    PrFetchTiming (*PR_NULLABLE fetchTiming)(const PrFetchNetwork* fetcher, const PrFetch* fetch);
-    PrStringView (*PR_NULLABLE fetchSentReferrer)(const PrFetchNetwork* fetcher, const PrFetch* fetch);
-
-    PrNet* net;                              // the network whose loop runs the fetches' callbacks
-    PrFetchBlobStore* PR_NULLABLE blobStore; // the blob URLs that the source answers
-
-    // The default User-Agent value (fetch/#default-user-agent-value), which the source holds unchanged for its life.
-    PrStringView userAgent;
-};
-
 // The library's backends of fetchers, which the build turns on (README.md), and Default, the first that the build has.
 enum {
     PrFetchNetworkBackend_Default,
@@ -280,6 +249,9 @@ void prFetchNetworkDestroy(PrFetchNetwork* PR_NULLABLE fetcher);
 // User-Agent of its own sends, and what navigator.userAgent gives a page that the source fetches for. The source holds
 // it unchanged for its life, so any thread may read it. The view is valid while the source lives.
 PrStringView prFetchNetworkUserAgent(const PrFetchNetwork* fetcher);
+
+// Returns the network whose loop runs the source's fetches.
+PrNet* prFetchNetworkNet(const PrFetchNetwork* fetcher);
 
 // Starts fetching what `desc` requests, and writes the fetch to `*out`. The fetch delivers its events to `event`:
 // Response once the response arrives, then its body, or Fail. Its first event comes after this call. Returns

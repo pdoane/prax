@@ -7,6 +7,7 @@
 #include "pr/base.h"
 #include "pr/mutex.h"
 #include "pr/process.h"
+#include "pr/process_backend.h"
 #include "pr/raw_array.h"
 
 PR_ASSUME_NONNULL_BEGIN

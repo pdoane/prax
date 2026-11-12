@@ -2362,7 +2362,7 @@ def public_module(path):
 
 
 # Matches a record of functions, which a backend's state starts with. Its first member destroys the backend.
-RECORD = re.compile(r"^struct Pr(\w+) \{\s*void \(\*(?:PR_NULLABLE )?destroy\)\(Pr(\w+)\*", re.M)
+RECORD = re.compile(r"^struct Pr(\w+) \{\s*void \(\*(?:PR_NULLABLE )?destroyFn\)\(Pr(\w+)\*", re.M)
 
 
 def public_handles(paths, texts):

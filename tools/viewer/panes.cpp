@@ -22,6 +22,7 @@ double millisSince(std::chrono::steady_clock::time_point begin) {
 void releaseSlot(Slot& slot) {
     prDrawFrameDestroy(slot.drawn);
     slot.drawn = nullptr;
+    slot.drawnBy = nullptr;
     prDrawListRelease(slot.prepared);
     slot.prepared = nullptr;
     if (slot.device != nullptr)
@@ -170,7 +171,7 @@ Rendered renderSlot(Slot& slot, const std::vector<RendererConfig>& configs, uint
         .commands = commands,
         .beneath = &beneath,
     };
-    r.status = prDrawFramePrepare(frameFor(slot.drawn, configs[config].renderer), list, &prepared);
+    r.status = prDrawFramePrepare(frameFor(slot.drawn, slot.drawnBy, configs[config].renderer), list, &prepared);
     // The pass clears to the background and draws the render over it, or clears to white where the render failed, since
     // what the texture held is not a render.
     float a = std::clamp(background.a, 0.0f, 1.0f);

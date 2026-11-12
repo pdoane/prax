@@ -24,6 +24,7 @@ constexpr uint32_t kChunkBytes = 16 * 1024;
 constexpr uint32_t kNameMaxBytes = 254;
 
 struct OpensslTls : PrTls {
+    PrNet* net;                 // the network that the sessions are streams of
     SSL_CTX* context;
 };
 
@@ -297,16 +298,17 @@ PrStatus connectTls(PrTls* base, const PrTlsSessionDesc* desc, PrTlsSession* PR_
     }
     Session* session = allocZeroed<Session>();
     session->engine = &kEngine;
-    session->stream.net = tls->net;
-    session->stream.event = desc->event;
-    session->stream.context = desc->context;
-    session->stream.destroy = destroySession;
-    session->stream.read = tlsSharedRead;
-    session->stream.write = writeSession;
-    session->stream.finish = tlsSharedFinish;
-    session->stream.queued = tlsSharedQueued;
-    session->stream.error = tlsSharedError;
-    session->info = tlsSharedInfo;
+    session->net = tls->net;
+    session->event = desc->event;
+    session->context = desc->context;
+    session->stream.destroyFn = destroySession;
+    session->stream.setEventFn = tlsSharedSetEvent;
+    session->stream.readFn = tlsSharedRead;
+    session->stream.writeFn = writeSession;
+    session->stream.finishFn = tlsSharedFinish;
+    session->stream.queuedFn = tlsSharedQueued;
+    session->stream.errorFn = tlsSharedError;
+    session->infoFn = tlsSharedInfo;
     session->ssl = ssl;
     session->incoming = BIO_new(BIO_s_mem());
     session->outgoing = BIO_new(BIO_s_mem());
@@ -348,8 +350,8 @@ using namespace pr_impl;
 PrTls* prTlsOpensslCreate(PrNet* net) {
     OpensslTls* tls = allocZeroed<OpensslTls>();
     tls->net = net;
-    tls->destroy = destroyTls;
-    tls->connect = connectTls;
+    tls->destroyFn = destroyTls;
+    tls->connectFn = connectTls;
     tls->context = SSL_CTX_new(TLS_client_method());
     SSL_CTX_set_min_proto_version(tls->context, TLS1_2_VERSION);
     SSL_CTX_set_default_verify_paths(tls->context);

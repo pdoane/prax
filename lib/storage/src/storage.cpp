@@ -3,44 +3,45 @@
 #include "pr/storage.h"
 
 #include "pr/assert.h"
+#include "pr/storage_backend.h"
 
 void prStorageDestroy(PrStorage* PR_NULLABLE storage) {
     if (storage != nullptr)
-        storage->destroy(storage);
+        storage->destroyFn(storage);
 }
 
 bool prStorageRead(PrStorage* storage, PrStringView key, PrStorageRecord* out) {
     *out = PrStorageRecord{PrByteView{nullptr, 0}, nullptr};
-    return storage->read(storage, key, out);
+    return storage->readFn(storage, key, out);
 }
 
 void prStorageRecordRelease(PrStorage* storage, PrStorageRecord* record) {
     if (record->handle != nullptr)
-        storage->release(storage, record);
+        storage->releaseFn(storage, record);
     *record = PrStorageRecord{PrByteView{nullptr, 0}, nullptr};
 }
 
 bool prStorageWrite(PrStorage* storage, PrStringView key, PrByteView bytes) {
     PR_ASSERT(bytes.data != nullptr || bytes.size == 0);
-    return storage->write(storage, key, bytes);
+    return storage->writeFn(storage, key, bytes);
 }
 
 void prStorageRemove(PrStorage* storage, PrStringView key) {
-    storage->remove(storage, key);
+    storage->removeFn(storage, key);
 }
 
 void prStorageClear(PrStorage* storage) {
-    storage->clear(storage);
+    storage->clearFn(storage);
 }
 
 uint64_t prStorageSize(const PrStorage* storage) {
-    return storage->size(storage);
+    return storage->sizeFn(storage);
 }
 
 uint32_t prStorageCount(const PrStorage* storage) {
-    return storage->count(storage);
+    return storage->countFn(storage);
 }
 
 PrRawString prStorageKey(const PrStorage* storage, uint32_t position) {
-    return storage->key(storage, position);
+    return storage->keyFn(storage, position);
 }

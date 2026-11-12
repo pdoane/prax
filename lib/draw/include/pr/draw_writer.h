@@ -55,15 +55,6 @@ typedef struct PrDrawPage {
     PrRect trim;
 } PrDrawPage;
 
-// The functions of a writer, at the start of its backend's state. Each one carries out the function that it is named
-// for.
-struct PrDrawWriter {
-    void (*PR_NULLABLE destroy)(PrDrawWriter* writer);
-    void (*begin)(PrDrawWriter* writer, const PrDrawDocumentDesc* desc);
-    void (*addPage)(PrDrawWriter* writer, const PrDrawPage* page);
-    void (*end)(PrDrawWriter* writer);
-};
-
 // The library's backends of writers, which the build turns on (README.md), and Default, the first that the build has.
 enum {
     PrDrawWriterBackend_Default,

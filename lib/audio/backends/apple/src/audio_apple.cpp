@@ -3,6 +3,7 @@
 #include "pr/audio_apple.h"
 
 #include "pr/alloc.h"
+#include "pr/audio_backend.h"
 #include "pr/memory.h"
 
 #include <AudioToolbox/AudioToolbox.h>
@@ -16,6 +17,7 @@ namespace pr_impl {
 namespace {
 
 struct AppleOutput : PrAudioOutput {
+    PrAudioFormat format;
     AudioUnit unit;
     PrAudioRenderFn render;
     void* context;
@@ -90,6 +92,10 @@ void destroy(PrAudioOutput* base) {
     prMemoryFree(output);
 }
 
+PrAudioFormat formatOf(const PrAudioOutput* output) {
+    return static_cast<const AppleOutput*>(output)->format;
+}
+
 } // namespace
 
 } // namespace pr_impl
@@ -111,10 +117,11 @@ PrAudioOutput* PR_NULLABLE prAudioAppleCreate(PrAudioFormat format) {
         return nullptr;
     AppleOutput* output = allocZeroed<AppleOutput>();
     output->format = format;
-    output->destroy = destroy;
-    output->start = start;
-    output->stop = stop;
-    output->latency = latency;
+    output->destroyFn = destroy;
+    output->formatFn = formatOf;
+    output->startFn = start;
+    output->stopFn = stop;
+    output->latencyFn = latency;
     output->unit = unit;
     AudioStreamBasicDescription stream{};
     stream.mSampleRate = format.sampleRate;

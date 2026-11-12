@@ -265,9 +265,17 @@ says what they must contain.
   downcast is a `static_cast` after a check of the object's kind. Internal code passes the internal type. The
   exception is a library that allocates every object as its handle and hands objects out routinely, such as `lib/dom`.
   There, internal code passes the handle.
-- **Backends.** A backend's state derives from its interface's struct of function pointers, and the backend reaches
-  its state with a `static_cast`. Callers use the interface's functions, which check arguments and handle null
-  members, so a backend implements only the operations it supports. A backend's constructor is
+- **Backends.** An interface declares a struct of function pointers for each kind of object that a backend
+  implements, in its backend header, `pr/<tag>_backend.h`. Only backends include it, and the public header declares
+  the same types as opaque handles. The struct holds only function pointers, one for each operation, so a call loads
+  its function from the object itself. Each is named for the function that it implements, with an `Fn` suffix
+  (`readFn` implements `prNetStreamRead`), so that the backend's own fields keep their natural names. An object that
+  exists in large numbers may point to a shared table instead.
+  A backend's state derives from the struct and holds everything else, including what the interface's functions read,
+  such as a callback or the object's parent. The backend reaches its state with a `static_cast`. The interface keeps
+  no state of its own: its functions check arguments, handle null members and dispatch, so a backend implements only
+  the operations it supports. Code that several backends share, such as a cache, lives in `backends/shared`, and each
+  backend embeds its state. A backend's constructor is
   `pr<Interface><Backend>Create`, in the backend's own header, and takes whatever only that backend needs. An
   interface is replaced whole. A host that wants to combine implementations, such as one image codec for PNG and
   another for everything else, writes a backend that dispatches to them.
