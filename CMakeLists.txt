@@ -280,7 +280,6 @@ if (PR_DEVELOP)
         pr_dependency_available(doctest)
     endblock()
     pr_third_party_directory(${doctest_SOURCE_DIR})
-    include(${doctest_SOURCE_DIR}/scripts/cmake/doctest.cmake)
 endif()
 
 add_subdirectory(lib)

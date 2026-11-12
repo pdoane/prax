@@ -183,9 +183,19 @@ function(pr_embed target directory)
     target_include_directories(${target} PRIVATE ${PROJECT_BINARY_DIR}/embed)
 endfunction()
 
+# Registers the doctest binary `target` with CTest as one test that runs all of its cases, if the host runs it: a build
+# for iOS only builds it. The cases share a process, since starting one takes longer than most cases do. One case runs
+# alone through the binary's own filters, as in ./dev.sh test <module> -tc="<name>".
+#
+#   pr_add_tests(<target>)
+function(pr_add_tests target)
+    if (NOT PR_IOS)
+        add_test(NAME ${target} COMMAND ${target})
+    endif()
+endfunction()
+
 # One test binary per module, named after it, which links the module, the toolkit and the tests' main(). The module is
-# a library of the engine, or a library of test support. CTest runs the binaries that the host runs, and a build for
-# iOS only builds them.
+# a library of the engine, or a library of test support. CTest runs it as pr_add_tests registers it.
 #
 #   pr_module_tests(<module> <source>...)
 function(pr_module_tests module)
@@ -196,9 +206,7 @@ function(pr_module_tests module)
         set(tested ${module})
     endif()
     target_link_libraries(${module}_tests PRIVATE ${tested} prax::core_cpp test_main pr_warnings)
-    if (NOT PR_IOS)
-        doctest_discover_tests(${module}_tests)
-    endif()
+    pr_add_tests(${module}_tests)
 endfunction()
 
 # A module's tests that need a web page, such as those that draw through a page's canvases: on the web, a page,
