@@ -380,6 +380,8 @@ TEST_CASE("keys, text, pointers and wheels translate to events") {
     CHECK(e[11].button == 1);
     CHECK(e[12].kind == PrAppEventKind_PointerUp);
     CHECK(e[12].button == 1);
+    // WHEEL_PAGESCROLL, which winuser.h spells as UINT_MAX from <limits.h>, which this test does not include.
+    UINT const pageScroll = UINT32_MAX;
     UINT lines = 3;
     SystemParametersInfoW(SPI_GETWHEELSCROLLLINES, 0, &lines, 0);
     UINT chars = 3;
@@ -388,12 +390,12 @@ TEST_CASE("keys, text, pointers and wheels translate to events") {
     CHECK(e[13].kind == PrAppEventKind_Scroll);
     CHECK(e[13].scrollUnit == PrAppScrollUnit_Line);
     CHECK(e[13].delta.x == 0.0f);
-    if (lines != WHEEL_PAGESCROLL)
+    if (lines != pageScroll)
         CHECK(e[13].delta.y == doctest::Approx(float(lines)));
     CHECK(e[13].position.x == doctest::Approx(30.0f).epsilon(0.05));
     CHECK(e[14].kind == PrAppEventKind_Scroll);
     CHECK(e[14].delta.y == 0.0f);
-    if (chars != WHEEL_PAGESCROLL)
+    if (chars != pageScroll)
         CHECK(e[14].delta.x == doctest::Approx(float(chars) / 2));
 }
 
