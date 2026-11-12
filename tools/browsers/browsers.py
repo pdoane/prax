@@ -59,6 +59,11 @@ class Browser:
                                   text=True).stdout.strip()
         if self.host or not self.installed(None):
             return ""
+        # On Linux, the program prints its version, after its name.
+        if sys.platform == "linux":
+            printed = subprocess.run([self.path(None), "--version"], capture_output=True, text=True).stdout
+            found = re.search(r"[0-9]+(\.[0-9]+)+", printed)
+            return found.group(0) if found else ""
         # On Windows, Chrome keeps each version in a directory of its number beside its program, and Firefox writes
         # its version into application.ini.
         folder = os.path.dirname(self.path(None))
@@ -122,14 +127,16 @@ PROGRAM_FILES = os.environ.get("PROGRAMFILES", r"C:\Program Files")
 
 BROWSERS = {
     "chrome": Browser({"darwin": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-                       "win32": os.path.join(PROGRAM_FILES, "Google", "Chrome", "Application", "chrome.exe")},
+                       "win32": os.path.join(PROGRAM_FILES, "Google", "Chrome", "Application", "chrome.exe"),
+                       "linux": "/usr/bin/google-chrome"},
                       chrome_arguments),
     # The system's WebKit, which Safari uses, in a window of its own instead of in the developer's Safari.
     "webkit": Browser(host="webkit_host"),
     # Firefox installs a staged update the next time it launches, and macOS asks the terminal that launched it for
     # permission. A run leaves the update for the next time the developer launches Firefox.
     "firefox": Browser({"darwin": "/Applications/Firefox.app/Contents/MacOS/firefox",
-                        "win32": os.path.join(PROGRAM_FILES, "Mozilla Firefox", "firefox.exe")},
+                        "win32": os.path.join(PROGRAM_FILES, "Mozilla Firefox", "firefox.exe"),
+                        "linux": "/usr/bin/firefox"},
                        lambda profile: ["-no-remote", "-profile", profile, "-new-window"], firefox_profile,
                        environment={"MOZ_DISABLE_UPDATE_PROCESSING": "1"}),
 }

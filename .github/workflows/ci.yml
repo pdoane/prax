@@ -1,5 +1,6 @@
 # ./dev.sh ci of each configuration (`configuration`) of each platform (`platform`), in a job of its own on the runner
-# that builds it (`os`), so that they run at once. WebAssembly and iOS are checked on macOS, as ./dev.sh ci checks them.
+# that builds it (`os`), so that they run at once. WebAssembly is checked on Linux, whose runners are not bounded by the
+# account's limit of five macOS jobs at once, so that macOS and iOS fit within it.
 #
 # ./dev.sh ci --configure fetches everything the run reads, and the caches of what it fetched are saved then, before
 # anything builds. The compiler cache is saved after the run, passing or not. Each cache is saved even when the run
@@ -33,7 +34,7 @@ jobs:
         include:
           - {platform: windows, os: windows-latest}
           - {platform: macos, os: macos-latest}
-          - {platform: wasm, os: macos-latest}
+          - {platform: wasm, os: ubuntu-latest}
           - {platform: ios, os: macos-latest}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
@@ -71,11 +72,11 @@ jobs:
       - name: Install the build's tools
         run: |
           python -m pip install --disable-pip-version-check "cmake>=4.0" ninja
-          if [ "$RUNNER_OS" = macOS ]; then
-            brew install ccache
-          else
-            choco install ccache --no-progress -y
-          fi
+          case "$RUNNER_OS" in
+            macOS) brew install ccache ;;
+            Linux) sudo apt-get update -q && sudo apt-get install -y --no-install-recommends ccache ;;
+            Windows) choco install ccache --no-progress -y ;;
+          esac
           cmake --version
           ninja --version
           ccache --version
