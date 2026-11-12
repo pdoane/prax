@@ -36,7 +36,8 @@ USAGE = {
     past the failures of the others, and then a table of their outcomes. The targets are the host's build and its
     debug build, each with its unit tests and the tools' tests, and on macOS the WebAssembly build with its unit tests
     and page tests, and the iOS build, whose tests are built and not run. Each is the build's lean form, which fetches
-    only what its tests read (./dev.sh build --lean). The targets named narrow the run to them. `asan` checks the
+    only what its tests read (./dev.sh build --lean), and builds past a compile error, so that it reports every error
+    (./dev.sh build --keep-going). The targets named narrow the run to them. `asan` checks the
     host's sanitizer build in place of the targets. --configure configures each target's build and fetches what lint
     reads, and builds and runs nothing: everything that the run fetches, which CI caches before it runs
     (.github/workflows/ci.yml). It reports what third_party then holds, and in CI, where that is what the
@@ -91,10 +92,10 @@ def build(argv):
     builds.build(mode, targets, keep_going, lean, configure_only)
 
 
-def unit_tests(mode=None, lean=False):
+def unit_tests(mode=None, lean=False, keep_going=False):
     """Builds and runs every unit test of the build that `mode` names, or with `lean` its lean form, then the tools'
-    tests against its harnesses."""
-    chosen = builds.build(mode, lean=lean)
+    tests against its harnesses. With `keep_going`, the build reports every error (builds.build)."""
+    chosen = builds.build(mode, lean=lean, keep_going=keep_going)
     dev.run(["ctest", "--test-dir", chosen.directory, "--output-on-failure", "--parallel", os.cpu_count() or 4,
              "--timeout", TEST_TIMEOUT])
     if chosen.wasm:
@@ -152,16 +153,16 @@ def ci(argv):
     # Each step's name, its build, and its work.
     steps = []
     if "host" in chosen:
-        steps.append((host, mode, lambda: unit_tests(mode, lean=True)))
+        steps.append((host, mode, lambda: unit_tests(mode, lean=True, keep_going=True)))
     if mode is None:
         # The debug build checks the assertions, which the default build compiles out.
         if "debug" in chosen:
-            steps.append((host + " debug", "debug", lambda: unit_tests("debug", lean=True)))
+            steps.append((host + " debug", "debug", lambda: unit_tests("debug", lean=True, keep_going=True)))
         # Emscripten's SDK is two gigabytes, which a check of the web's build on one platform is enough to fetch.
         if "wasm" in chosen and dev.darwin():
-            steps.append(("wasm", "wasm", lambda: unit_tests("wasm", lean=True)))
+            steps.append(("wasm", "wasm", lambda: unit_tests("wasm", lean=True, keep_going=True)))
         if "ios" in chosen and dev.darwin():
-            steps.append(("iOS (build)", "ios", lambda: builds.build("ios", lean=True)))
+            steps.append(("iOS (build)", "ios", lambda: builds.build("ios", lean=True, keep_going=True)))
     if key:
         print(fetch_key(any(built == "wasm" for _, built, _ in steps)))
         return
