@@ -1459,10 +1459,19 @@ TEST_CASE("terminal: with the terminal app's fonts, what Noto Sans Mono lacks dr
         // cell.
         t.write("\xe6\xbc\xa2 \xf0\x9f\x98\x80 \xef\x85\x9b ");
         t.f.frame();
+        // Each draws across its cells. How much ink it leaves depends on the system's face, which differs between
+        // machines, so the bound is only that it is not blank.
         PrVec2 cell = prTerminalCellExtent(t.terminal);
-        for (uint32_t column : {0u, 3u, 6u}) {
-            CAPTURE(column);
-            CHECK(float(cellInk(t, column, 0).count) > cell.x * cell.y / 8);
+        struct Glyph {
+            uint32_t column;
+            uint32_t width;
+        };
+        for (Glyph glyph : {Glyph{0, 2}, Glyph{3, 2}, Glyph{6, 1}}) {
+            CAPTURE(glyph.column);
+            uint32_t ink = 0;
+            for (uint32_t i = 0; i < glyph.width; ++i)
+                ink += cellInk(t, glyph.column + i, 0).count;
+            CHECK(float(ink) > float(glyph.width) * cell.x * cell.y / 16);
         }
         // The ideograph and the emoji fall back to families that the system provides.
         CHECK(prFontSetFallbackCount(t.f.fonts) >= 3);
