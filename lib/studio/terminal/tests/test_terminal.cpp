@@ -618,6 +618,23 @@ uint32_t runWoken(Term& t, FakeApp& app) {
     return wakes;
 }
 
+// The column of the left edge of the input method's caret that the last frame reported, counted in cells from the
+// screen's first column, or a negative number if the frame reported none.
+float textInputColumn(Term& t) {
+    PrAppOutput output = prUiOutput(t.f.ui);
+    if (!output.hasTextInput)
+        return -1;
+    PrRect bounds = t.f.bounds(prTerminalNode(t.terminal));
+    float left = output.textInput.left - bounds.left - prTerminalScreenOrigin(t.terminal).x;
+    return left / prTerminalCellExtent(t.terminal).x;
+}
+
+// Queues an update of the input method's composition to `text`, with the input method's caret at its end.
+void compose(Term& t, PrStringView text) {
+    uint32_t size = uint32_t(text.size);
+    t.f.push(PrAppEvent{.kind = PrAppEventKind_CompositionUpdate, .text = text, .selection = {size, size}});
+}
+
 } // namespace
 
 } // namespace pr_impl
@@ -1246,6 +1263,66 @@ TEST_CASE("terminal: a program that asks for key releases has them, but for the 
     stroke('C', clipboardModifiers(), "c", PrAppKeyCode_KeyC);
     stroke('B', 0, "b", PrAppKeyCode_KeyB);
     t.frameUntil([&] { return t.shows("a^[[97;1:3ub^[[98;1:3u"); });
+}
+
+TEST_CASE("terminal: an input method composes at the cursor, and only the text that it commits reaches the program") {
+    FakeApp app;
+    Term t("cat", {}, &app.app);
+    prTerminalFocus(t.terminal);
+    t.f.frame();
+    t.f.type("ab");
+    t.frameUntil([&] { return t.shows("ab"); });
+    // The frame that saw the echo may have drawn before it arrived.
+    t.f.frame();
+    CHECK(textInputColumn(t) == doctest::Approx(2));
+    PrColor8 foreground = prVtermRoleColor(Locked(t.terminal), PrVtermColorRole_Foreground);
+    CHECK_FALSE(cellHasColor(t, 5, 0, foreground));
+
+    // Three wide characters cover six cells from the cursor, underlined, and the screen holds none of them. The keys
+    // that the input method takes, Enter among them, never reach the program.
+    t.f.push(PrAppEvent{.kind = PrAppEventKind_KeyDown, .composing = true, .key = 'N', .text = "n"});
+    compose(t, "\xe3\x81\xab\xe3\x81\xbb\xe3\x82\x93");
+    t.f.frame();
+    CHECK(cellHasColor(t, 5, 0, foreground));
+    CHECK_FALSE(cellHasColor(t, 9, 0, foreground));
+    CHECK_FALSE(t.shows("\xe3"));
+    t.f.push(PrAppEvent{.kind = PrAppEventKind_KeyDown, .composing = true, .key = PrAppKey_Enter});
+    t.f.push(PrAppEvent{.kind = PrAppEventKind_CompositionEnd, .text = "\xe6\x97\xa5\xe6\x9c\xac"});
+    t.f.type("\xe6\x97\xa5\xe6\x9c\xac");
+    t.f.push(PrAppEvent{.kind = PrAppEventKind_KeyUp, .key = PrAppKey_Enter});
+    t.f.key(PrAppKey_Enter);
+    t.frameUntil([&] { return t.shows("ab\xe6\x97\xa5\xe6\x9c\xac\nab\xe6\x97\xa5\xe6\x9c\xac\n"); });
+
+    // A canceled composition leaves nothing behind.
+    compose(t, "xyz");
+    t.f.frame();
+    CHECK(cellHasColor(t, 1, 2, foreground));
+    t.f.push(PrAppEvent{.kind = PrAppEventKind_CompositionEnd, .text = ""});
+    t.f.frame();
+    CHECK_FALSE(cellHasColor(t, 1, 2, foreground));
+}
+
+TEST_CASE("terminal: a composition that would pass the end of the row moves left to fit, and ends with focus") {
+    const PrStringView arguments[] = {"10"};
+    Term t("sleep", arguments);
+    prTerminalFocus(t.terminal);
+    t.f.frame();
+    uint32_t columns = prVtermExtent(Locked(t.terminal)).x;
+    t.write(format("\x1b[1;{}H", columns - 1));
+    t.f.frame();
+    CHECK(textInputColumn(t) == doctest::Approx(float(columns - 2)));
+    compose(t, "abcd");
+    t.f.frame();
+    CHECK(textInputColumn(t) == doctest::Approx(float(columns - 4)));
+    PrColor8 foreground = prVtermRoleColor(Locked(t.terminal), PrVtermColorRole_Foreground);
+    CHECK(cellHasColor(t, columns - 4, 0, foreground));
+
+    // Without focus, nothing would commit the composition, so it ends.
+    prUiSetFocus(t.f.ui, kPrLayoutNodeNone);
+    t.f.frame();
+    t.f.frame();
+    CHECK_FALSE(prUiOutput(t.f.ui).hasTextInput);
+    CHECK_FALSE(cellHasColor(t, columns - 4, 0, foreground));
 }
 
 TEST_CASE("terminal: a terminal that has no title is named for its program, without its directory") {

@@ -45,6 +45,8 @@
 // Notifications that wait for the user to answer the permission request, oldest first.
 @property(nonatomic, strong) NSMutableArray<UNNotificationRequest*>* waiting;
 - (void)deliver:(const PrAppEvent&)event;
+- (uint32_t)holdEvents;
+- (void)deliver:(const PrAppEvent&)event ahead:(uint32_t)mark;
 - (void)endCallback;
 - (void)forgetHeld;
 - (void)pointerAt:(PrVec2)position;
@@ -69,6 +71,21 @@ struct HeldEvent {
     PrAppEvent event;
     RawArray<char> text;
 };
+
+// Returns a held copy of `event`, with its own copy of its text or pixels.
+HeldEvent heldOf(const PrAppEvent& event) {
+    HeldEvent held{.event = event};
+    if (event.text.size != 0)
+        held.text.append(event.text.data, uint32_t(event.text.size));
+    if (event.kind == PrAppEventKind_ClipboardImage && event.pixels.extent.y != 0) {
+        held.text.append(reinterpret_cast<const char*>(event.pixels.data),
+            uint32_t(event.pixels.stride * event.pixels.extent.y));
+    }
+    return held;
+}
+
+// The mark of a key event that the host delivers at once, rather than ahead of held events.
+constexpr uint32_t kNoMark = UINT32_MAX;
 
 // What a key that is down reports, so that the window can release it when it stops being the key window.
 struct HeldKey {
@@ -673,7 +690,9 @@ using namespace pr_impl;
 - (void)scrollWheel:(NSEvent*)e {
     [self pointer:e kind:PrAppEventKind_Scroll];
 }
-- (void)key:(NSEvent*)source kind:(PrAppEventKind)kind {
+// Delivers the key event of `source`. If `mark` is not kNoMark, the host holds the events since `mark`, and the key
+// goes ahead of them.
+- (void)key:(NSEvent*)source kind:(PrAppEventKind)kind composing:(BOOL)composing mark:(uint32_t)mark {
     MacKey mac = macKeyOf(source);
     PrAppEvent event{};
     event.kind = kind;
@@ -681,6 +700,7 @@ using namespace pr_impl;
     event.code = mac.code;
     event.modifiers = modifiersOf(source.modifierFlags);
     event.repeat = kind == PrAppEventKind_KeyDown && source.isARepeat;
+    event.composing = composing;
     NSData* bytes = nil;
     if (mac.key != PrAppKey_Unknown) {
         event.key = mac.key;
@@ -693,14 +713,28 @@ using namespace pr_impl;
         event.key = PrAppKey_Dead;
     }
     [self.host key:event.code down:kind == PrAppEventKind_KeyDown key:event.key];
-    [self.host deliver:event];
+    if (mark == kNoMark)
+        [self.host deliver:event];
+    else
+        [self.host deliver:event ahead:mark];
+}
+- (void)key:(NSEvent*)source kind:(PrAppEventKind)kind {
+    [self key:source kind:kind composing:NO mark:kNoMark];
 }
 - (void)keyDown:(NSEvent*)e {
-    [self key:e kind:PrAppEventKind_KeyDown];
-    // The input method types the key's text, if any, through insertText: or composes it through setMarkedText:. A
-    // Command chord types nothing.
-    if ((e.modifierFlags & NSEventModifierFlagCommand) == 0)
-        [self interpretKeyEvents:@[ e ]];
+    // A Command chord types nothing.
+    if ((e.modifierFlags & NSEventModifierFlagCommand) != 0) {
+        [self key:e kind:PrAppEventKind_KeyDown];
+        return;
+    }
+    // The input method types the key's text, if any, through insertText:, or composes it through setMarkedText:. Only
+    // then is it known whether the input method took the key for a composition: one was open before the key, or the key
+    // opened one. The events of the input method wait, so that the key still comes first.
+    BOOL composing = self.marked != nil;
+    uint32_t mark = [self.host holdEvents];
+    [self interpretKeyEvents:@[ e ]];
+    composing = composing || self.marked != nil;
+    [self key:e kind:PrAppEventKind_KeyDown composing:composing mark:mark];
 }
 - (void)keyUp:(NSEvent*)e {
     [self key:e kind:PrAppEventKind_KeyUp];
@@ -804,6 +838,7 @@ using namespace pr_impl;
     // The events that arrived during the running callback, in order. A callback that runs a run loop of its own, as a
     // modal panel does, has events delivered within it, and they wait here, so that no callback nests in another.
     RawArray<HeldEvent> _held;
+    BOOL _holding;              // events wait in `_held` while a key's input method runs (holdEvents)
 
     // The pointer buttons that are down, by bit of PrAppEvent::button, where the pointer last was, and the keys that
     // are down, by their position. The window releases them when it stops being the key window, as the releases then go
@@ -840,23 +875,35 @@ using namespace pr_impl;
         _held.data[i].text.reset();
     _held.clear();
 }
-// Delivers an event, or holds it until the running callback returns.
+// Delivers an event, or holds it until the running callback returns, or while events are held (holdEvents).
 - (void)deliver:(const PrAppEvent&)event {
     if (!self.running)
         return;
-    if (self.inCallback) {
-        HeldEvent held{.event = event};
-        if (event.text.size != 0)
-            held.text.append(event.text.data, uint32_t(event.text.size));
-        if (event.kind == PrAppEventKind_ClipboardImage && event.pixels.extent.y != 0) {
-            held.text.append(reinterpret_cast<const char*>(event.pixels.data),
-                uint32_t(event.pixels.stride * event.pixels.extent.y));
-        }
-        _held.push(held);
+    if (self.inCallback || _holding) {
+        _held.push(heldOf(event));
         return;
     }
     [self callEvent:event];
     [self endCallback];
+}
+// Holds the events that arrive from now on, and returns the mark of the first of them, for deliver:ahead:.
+- (uint32_t)holdEvents {
+    PR_ASSERT(!_holding);
+    _holding = YES;
+    return _held.count;
+}
+// Ends holdEvents, and delivers `event` ahead of the events that arrived since `mark`, and then those events.
+- (void)deliver:(const PrAppEvent&)event ahead:(uint32_t)mark {
+    _holding = NO;
+    if (!self.running) {
+        for (uint32_t i = mark; i < _held.count; ++i)
+            _held.data[i].text.reset();
+        _held.resize(mark);
+        return;
+    }
+    _held.insert(mark, heldOf(event));
+    if (!self.inCallback)
+        [self endCallback];
 }
 - (void)pointerAt:(PrVec2)position {
     _pointer = position;
