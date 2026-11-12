@@ -369,7 +369,6 @@ class ChromePage:
 
     def __enter__(self):
         import json
-        import subprocess
         import tempfile
         import time
         import urllib.request
@@ -384,11 +383,10 @@ class ChromePage:
         self.serial = 0
         self.profile = tempfile.TemporaryDirectory()
         port = probe.free_port()
-        self.process = subprocess.Popen([chrome.path(None), "--headless=new", "--window-size=960,720",
-                                         "--hide-scrollbars", "--autoplay-policy=no-user-gesture-required",
-                                         "--remote-debugging-port=%d" % port] +
-                                        browsers.chrome_arguments(self.profile.name) + ["about:blank"],
-                                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        self.process = browsers.start([chrome.path(None), "--headless=new", "--window-size=960,720",
+                                       "--hide-scrollbars", "--autoplay-policy=no-user-gesture-required",
+                                       "--remote-debugging-port=%d" % port] +
+                                      browsers.chrome_arguments(self.profile.name) + ["about:blank"])
         try:
             target = None
             deadline = time.monotonic() + 30
@@ -414,11 +412,12 @@ class ChromePage:
         return self
 
     def __exit__(self, *_):
+        from tools.browsers import browsers
+
         connection = getattr(self, "connection", None)
         if connection is not None:
             connection.close()
-        self.process.terminate()
-        self.process.wait()
+        browsers.stop(self.process)
         self.profile.cleanup()
         self.server.shutdown()
 

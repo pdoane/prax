@@ -15,6 +15,7 @@ import http.server
 import json
 import os
 import re
+import signal
 import subprocess
 import sys
 import threading
@@ -81,10 +82,33 @@ class Browser:
         in (tools/browsers/webkit_host.cpp)."""
         if self.profile:
             self.profile(profile, preferences or {})
-        return subprocess.Popen([self.path(directory)] + self.arguments(profile) + list(extra) + [url], text=True,
-                                env=dict(os.environ, **self.environment),
-                                stdout=subprocess.PIPE if self.host else subprocess.DEVNULL,
-                                stderr=subprocess.DEVNULL)
+        return start([self.path(directory)] + self.arguments(profile) + list(extra) + [url], self.environment,
+                     subprocess.PIPE if self.host else subprocess.DEVNULL)
+
+
+def start(command, environment=None, stdout=subprocess.DEVNULL):
+    """Starts a browser's program, with `environment` added to its environment, in a process group of its own, so that
+    stop ends the processes that it starts as well."""
+    return subprocess.Popen(command, text=True, env=dict(os.environ, **(environment or {})), stdout=stdout,
+                            stderr=subprocess.DEVNULL, start_new_session=os.name != "nt")
+
+
+def stop(process):
+    """Ends `process`, which start started: it is asked to quit, and is killed if it has not within 10s. On POSIX, what
+    remains of its process group is killed then, since a browser's helpers can outlive it, and write to its profile
+    until they end. A killed process runs no more of its code, so the profile can be removed once this returns."""
+    if process.poll() is None:
+        process.terminate()
+        try:
+            process.wait(10)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait()
+    if os.name != "nt":
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except (ProcessLookupError, PermissionError):
+            pass
 
 
 def chrome_arguments(profile):

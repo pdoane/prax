@@ -12,7 +12,6 @@ Usage: python3 -m tools.suite.prax.suite_fit --build <directory> [directory-of-t
 import argparse
 import os
 import shutil
-import subprocess
 import sys
 import tempfile
 
@@ -46,11 +45,7 @@ def main():
             sys.exit("Chrome did not report within %ds" % options.timeout)
     finally:
         if process is not None:
-            process.terminate()
-            try:
-                process.wait(10)
-            except subprocess.TimeoutExpired:
-                process.kill()
+            browsers.stop(process)
         shutil.rmtree(profile, ignore_errors=True)
 
     over = 0
