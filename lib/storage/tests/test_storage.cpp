@@ -1,3 +1,4 @@
+#include "pr/array.h"
 #include "pr/file.h"
 #include "pr/storage_disk.h"
 #include "pr/storage_memory.h"
@@ -55,7 +56,19 @@ PrTaskPool* writer() {
     return pool.pool;
 }
 
-// Opens a disk store in a directory of its own, emptied first.
+// Removes the files in the directory of the store `name`, which an earlier run may have left, so that a test does not
+// depend on them.
+void emptyDirectory(const char* name) {
+    String directory = directoryOf(name);
+    Array<String> files;
+    prFileEachEntry(directory, [](void* context, const PrFileEntry* entry) {
+        static_cast<Array<String>*>(context)->push(String(entry->name));
+    }, &files);
+    for (const String& file : files)
+        REQUIRE(prFileRemove(format("{}/{}", directory, file)));
+}
+
+// Opens the disk store in the directory of its own that `name` names, as it was left.
 PrStorage* openDisk(const char* name, uint64_t limit, PrStorageEviction eviction = PrStorageEviction_LeastRecentlyUsed) {
     String directory = directoryOf(name);
     PrStorageDiskDesc desc{.directory = directory, .limitBytes = limit, .eviction = eviction, .pool = writer()};
@@ -64,11 +77,11 @@ PrStorage* openDisk(const char* name, uint64_t limit, PrStorageEviction eviction
     return storage;
 }
 
+// Opens the disk store `name` in a directory emptied first.
 PrStorage* openEmptyDisk(const char* name, uint64_t limit,
         PrStorageEviction eviction = PrStorageEviction_LeastRecentlyUsed) {
-    PrStorage* storage = openDisk(name, limit, eviction);
-    prStorageClear(storage);
-    return storage;
+    emptyDirectory(name);
+    return openDisk(name, limit, eviction);
 }
 
 // The behavior that every store that evicts shares, at a limit of ten bytes.
@@ -218,10 +231,10 @@ TEST_CASE("storage: stores on disk that share a pool each keep their records") {
         const char* names[] = {"shared-a", "shared-b", "shared-c"};
         PrStorage* stores[3];
         for (uint32_t i = 0; i < 3; ++i) {
+            emptyDirectory(names[i]);
             String directory = directoryOf(names[i]);
             PrStorageDiskDesc desc{.directory = directory, .limitBytes = 100, .pool = pool};
             REQUIRE(prStorageDiskCreate(&desc, &stores[i]) == PrStatus_Ok);
-            prStorageClear(stores[i]);
             for (uint32_t j = 0; j < 20; ++j)
                 prStorageWrite(stores[i], "key", bytesOf(format("{}{}", names[i], j)));
         }

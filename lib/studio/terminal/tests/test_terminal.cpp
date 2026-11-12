@@ -1594,7 +1594,9 @@ TEST_CASE("terminal: blinking text hides and shows on a steady period over its b
     t.settle();
     // A full block that blinks over a red background, and one that does not.
     t.write("\x1b[5;41m\xe2\x96\x88\x1b[0m \xe2\x96\x88");
-    t.f.frame();
+    // Phases of half a second count from time zero, and settling runs as many frames as the launch takes, so the first
+    // frame moves to the middle of a phase that shows blinking text.
+    t.f.frame(prF64Ceil(t.f.time) + 0.25 - t.f.time);
     PrVec2 blinking = t.cellCenter(0, 0);
     PrVec2 steady = t.cellCenter(2, 0);
     PrColor8 foreground = prVtermRoleColor(Locked(t.terminal), PrVtermColorRole_Foreground);

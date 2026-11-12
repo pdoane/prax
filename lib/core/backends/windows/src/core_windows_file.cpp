@@ -2,6 +2,8 @@
 
 #include "pr/core_windows_file.h"
 
+#include "pr/mem.h"
+
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -71,6 +73,29 @@ PrFileInfo infoOf(DWORD attributes, DWORD sizeHigh, DWORD sizeLow, FILETIME writ
     }
     info.modified = (double(ticks) - 116444736000000000.0) / 10000.0;
     return info;
+}
+
+// Gives the open `file` the NUL-terminated name `target`, in place of any file there. The file that was there goes as a
+// file that is removed does, so a handle open on it that shares deletion does not stop the rename. A file system that
+// does not offer that falls back to a rename that only a file without open handles yields to.
+bool renameOver(HANDLE file, const wchar_t* target) {
+    size_t length = wcslen(target);
+    size_t size = offsetof(FILE_RENAME_INFO, FileName) + (length + 1) * sizeof(wchar_t);
+    FILE_RENAME_INFO* info = static_cast<FILE_RENAME_INFO*>(calloc(1, size));
+    if (info == nullptr)
+        return false;
+    info->Flags = FILE_RENAME_FLAG_REPLACE_IF_EXISTS | FILE_RENAME_FLAG_POSIX_SEMANTICS;
+    info->FileNameLength = DWORD(length * sizeof(wchar_t));
+    prMemCopy(info->FileName, target, (length + 1) * sizeof(wchar_t));
+    bool renamed = SetFileInformationByHandle(file, FileRenameInfoEx, info, DWORD(size)) != 0;
+    DWORD error = renamed ? ERROR_SUCCESS : GetLastError();
+    if (!renamed && (error == ERROR_INVALID_PARAMETER || error == ERROR_NOT_SUPPORTED)) {
+        info->Flags = 0;
+        info->ReplaceIfExists = TRUE;
+        renamed = SetFileInformationByHandle(file, FileRenameInfo, info, DWORD(size)) != 0;
+    }
+    free(info);
+    return renamed;
 }
 
 } // namespace
@@ -203,7 +228,7 @@ bool prCoreWindowsFileWrite(PrStringView path, PrByteView bytes) {
     _snwprintf_s(temporary, capacity, _TRUNCATE, L"%s.%lu.%u.tmp", target, GetCurrentProcessId(),
         unsigned(InterlockedIncrement(&writes)));
     bool written = false;
-    HANDLE file = CreateFileW(temporary, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+    HANDLE file = CreateFileW(temporary, GENERIC_WRITE | DELETE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
     if (file != INVALID_HANDLE_VALUE) {
         written = true;
         size_t done = 0;
@@ -216,8 +241,8 @@ bool prCoreWindowsFileWrite(PrStringView path, PrByteView bytes) {
             }
             done += wrote;
         }
+        written = written && renameOver(file, target);
         written = CloseHandle(file) && written;
-        written = written && MoveFileExW(temporary, target, MOVEFILE_REPLACE_EXISTING);
         if (!written)
             DeleteFileW(temporary);
     }

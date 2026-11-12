@@ -215,6 +215,9 @@ if (PR_DEVELOP)
     )
     target_link_libraries(core_tests PRIVATE prax::core_libc prax::core_mimalloc)
     target_compile_definitions(core_tests PRIVATE PR_CORE_TEST_DIR="${CMAKE_CURRENT_BINARY_DIR}/core_tests_files")
+    if (WIN32)
+        target_sources(core_tests PRIVATE backends/windows/tests/test_core_windows_file.cpp)
+    endif()
 
     pr_module_tests(core_cpp
         cpp/tests/test_raw_array.cpp
