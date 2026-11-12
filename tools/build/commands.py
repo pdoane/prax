@@ -216,8 +216,9 @@ def ci(argv):
 # The most that third_party may hold in CI, in megabytes, where it holds what ./dev.sh ci fetched and nothing else: what
 # its lean builds, their tests and lint read. A run that holds more fails, so that what a change adds to every run is a
 # deliberate act: the budget moves with it. A developer's third_party holds what every command fetched, and the report
-# of it does not fail.
+# of it does not fail. The toolchains that a build compiles with are fetched too, and are not what the budget bounds.
 FETCH_BUDGET = 400
+TOOLCHAINS = ("emsdk",)
 
 # The number of the largest entries of third_party that the step's summary lists, beside those that the run fetched.
 SUMMARY_ENTRIES = 10
@@ -270,12 +271,15 @@ def sizes():
 def report_fetched(before, after):
     """Prints what third_party holds (`after`), the largest first, with what the run fetched, which `before` lacked or
     held at another size, marked. Under GitHub Actions, the step's summary has the largest entries and those that the
-    run fetched (SUMMARY_ENTRIES), and the run fails if third_party holds more than FETCH_BUDGET."""
+    run fetched (SUMMARY_ENTRIES), and the run fails if third_party holds more than FETCH_BUDGET beside its
+    toolchains (TOOLCHAINS)."""
     megabytes = lambda size: size / 1e6
     total = sum(after.values())
+    budgeted = sum(size for name, size in after.items() if name not in TOOLCHAINS)
     new = {name for name, size in after.items() if size != before.get(name)}
-    lines = ["%d entries, %.0f MB of a budget of %d MB; this run fetched %d, %.0f MB"
-             % (len(after), megabytes(total), FETCH_BUDGET, len(new), megabytes(sum(after[n] for n in new)))]
+    lines = ["%d entries, %.0f MB, of which %.0f MB counts against a budget of %d MB; this run fetched %d, %.0f MB"
+             % (len(after), megabytes(total), megabytes(budgeted), FETCH_BUDGET, len(new),
+                megabytes(sum(after[n] for n in new)))]
     for name, size in sorted(after.items(), key=lambda entry: -entry[1]):
         lines.append("    %7.1f MB  %s%s" % (megabytes(size), name, "  (fetched)" if name in new else ""))
     print("\nfetched: " + "\n".join(lines), flush=True)
@@ -291,9 +295,10 @@ def report_fetched(before, after):
             if rest:
                 f.write("\n%d more, %.0f MB, in the step's log\n"
                         % (rest, megabytes(total - sum(size for _, size in shown))))
-    if os.environ.get("GITHUB_ACTIONS") == "true" and megabytes(total) > FETCH_BUDGET:
-        dev.fail("third_party holds %.0f MB, past the budget of %d MB (FETCH_BUDGET in tools/build/commands.py)"
-                 % (megabytes(total), FETCH_BUDGET))
+    if os.environ.get("GITHUB_ACTIONS") == "true" and megabytes(budgeted) > FETCH_BUDGET:
+        dev.fail("third_party holds %.0f MB beside its toolchains (%s), past the budget of %d MB (FETCH_BUDGET in "
+                 "tools/build/commands.py); its entries are listed above, the largest first, with what this run fetched"
+                 % (megabytes(budgeted), ", ".join(TOOLCHAINS), FETCH_BUDGET))
 
 
 def application_names(folder):
