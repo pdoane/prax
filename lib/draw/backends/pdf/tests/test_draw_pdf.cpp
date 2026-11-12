@@ -207,7 +207,7 @@ bool contains(const std::string& text, const std::string& part) {
 
 const PrFont* notoSans() {
     const PrFont* font = nullptr;
-    REQUIRE(prFontCreateFromFile(PR_FONTS_DIR "/NotoSans.ttf", 0, nullptr, &font) == PrStatus_Ok);
+    REQUIRE(prFontCreateFromFile(PR_FONTS_DIR "/NotoSans[wdth,wght].ttf", 0, nullptr, &font) == PrStatus_Ok);
     return font;
 }
 

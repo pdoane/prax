@@ -111,7 +111,8 @@ target_link_libraries(pr_studio_terminal PUBLIC prax::app prax::color prax::layo
 # The version that the terminal sets in TERM_PROGRAM_VERSION.
 target_compile_definitions(pr_studio_terminal PRIVATE PR_TERMINAL_VERSION="${PROJECT_VERSION}")
 
-if (PR_DEVELOP)
+# Its tests run programs, so they build where lib/process starts them.
+if (PR_DEVELOP AND (PR_PROCESS_POSIX OR PR_PROCESS_WINDOWS))
     pr_module_tests(studio_terminal
         terminal/tests/test_terminal.cpp
         terminal/tests/test_terminal_c.c

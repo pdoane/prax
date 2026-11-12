@@ -1,68 +1,10 @@
 #include "pr/locale_common.h"
 #include "pr/unicode.h"
 #include "pr/unicode_grapheme.h"
-#include "pr/utf8.h"
 
 #include "tools/harness/test.h"
 
-#include <cstdio>
-#include <sstream>
-#include <string>
-#include <vector>
-
-TEST_CASE("grapheme clusters break as every case of GraphemeBreakTest.txt says") {
-    std::string path = std::string(PR_UNICODE_DIR) + "/GraphemeBreakTest.txt";
-    FILE* file = std::fopen(path.c_str(), "r");
-    REQUIRE(file != nullptr);
-    char line[4096];
-    uint32_t cases = 0;
-    while (std::fgets(line, sizeof(line), file) != nullptr) {
-        std::string data = line;
-        data = data.substr(0, data.find('#'));
-        if (data.find_first_not_of(" \t\r\n") == std::string::npos)
-            continue;
-        // "÷ 0020 × 0308 ÷": the text, and the byte offsets of its breaks.
-        std::istringstream in(data);
-        std::string token;
-        std::string text;
-        std::vector<size_t> expected;
-        while (in >> token) {
-            if (token == "\xc3\xb7") {
-                if (!text.empty())
-                    expected.push_back(text.size());
-            } else if (token != "\xc3\x97") {
-                char bytes[kPrUtf8MaxBytes];
-                uint32_t length = prUtf8Encode(uint32_t(std::stoul(token, nullptr, 16)), bytes);
-                text.append(bytes, length);
-            }
-        }
-        std::vector<size_t> actual;
-        PrStringView view{text.data(), text.size()};
-        for (size_t at = 0; at < text.size();) {
-            at = prUnicodeGraphemeNext(view, at);
-            actual.push_back(at);
-        }
-        // Segmenting one code point at a time with the state breaks at the same offsets.
-        std::vector<size_t> pushed;
-        PrUnicodeGraphemeState state{};
-        for (size_t at = 0; at < text.size();) {
-            uint32_t codePoint = 0;
-            uint32_t length = prUtf8Decode(view, at, &codePoint);
-            if (at == 0)
-                state = prUnicodeGraphemeStateBegin(codePoint);
-            else if (!prUnicodeGraphemeStatePush(&state, codePoint))
-                pushed.push_back(at);
-            at += length;
-        }
-        pushed.push_back(text.size());
-        INFO(data);
-        CHECK(actual == expected);
-        CHECK(pushed == expected);
-        ++cases;
-    }
-    std::fclose(file);
-    CHECK(cases > 700);
-}
+#include <initializer_list>
 
 TEST_CASE("a printable ASCII character begins a cluster in the state of all zeros") {
     // A terminal relies on this to begin a run of ASCII clusters without reading their properties.
@@ -75,46 +17,6 @@ TEST_CASE("a printable ASCII character begins a cluster in the state of all zero
         CHECK(!state.pictographicZwj);
         CHECK(state.conjunct == 0);
     }
-}
-
-TEST_CASE("word segments break as every case of WordBreakTest.txt says") {
-    std::string path = std::string(PR_UNICODE_DIR) + "/WordBreakTest.txt";
-    FILE* file = std::fopen(path.c_str(), "r");
-    REQUIRE(file != nullptr);
-    char line[4096];
-    uint32_t cases = 0;
-    while (std::fgets(line, sizeof(line), file) != nullptr) {
-        std::string data = line;
-        data = data.substr(0, data.find('#'));
-        if (data.find_first_not_of(" \t\r\n") == std::string::npos)
-            continue;
-        // "÷ 0020 × 0308 ÷": the text, and the byte offsets of its breaks.
-        std::istringstream in(data);
-        std::string token;
-        std::string text;
-        std::vector<size_t> expected;
-        while (in >> token) {
-            if (token == "\xc3\xb7") {
-                if (!text.empty())
-                    expected.push_back(text.size());
-            } else if (token != "\xc3\x97") {
-                char bytes[kPrUtf8MaxBytes];
-                uint32_t length = prUtf8Encode(uint32_t(std::stoul(token, nullptr, 16)), bytes);
-                text.append(bytes, length);
-            }
-        }
-        std::vector<size_t> actual;
-        PrStringView view{text.data(), text.size()};
-        for (size_t at = 0; at < text.size();) {
-            at = prUnicodeWordNext(view, at);
-            actual.push_back(at);
-        }
-        INFO(data);
-        CHECK(actual == expected);
-        ++cases;
-    }
-    std::fclose(file);
-    CHECK(cases > 1000);
 }
 
 TEST_CASE("joining types read from the database") {

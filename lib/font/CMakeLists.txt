@@ -61,8 +61,7 @@ if (PR_DEVELOP)
         tests/test_woff.cpp
     )
     target_link_libraries(font_tests PRIVATE prax::compress prax::path freetype)
-    target_compile_definitions(font_tests PRIVATE PR_FONTS_DIR="${PROJECT_SOURCE_DIR}/third_party/fonts"
-        PR_FONT_BUNDLE_DIR="${PR_FONT_BUNDLE_DIR}")
+    target_compile_definitions(font_tests PRIVATE PR_FONTS_DIR="${PR_TEST_FONTS_DIR}")
     if (PR_FONT_FREETYPE)
         target_sources(font_tests PRIVATE
             backends/freetype/tests/test_font_freetype.cpp

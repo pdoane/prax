@@ -4,7 +4,12 @@ The default build is optimized, with debug symbols and without link-time optimiz
 except the benchmarks, which read their numbers from Release. Debug keeps the assertions. The sanitizer builds are
 Debug as well. One catches reads past the end of a buffer that the others let through, and the other catches races
 between threads. The WebAssembly build compiles with Emscripten (emsdk.py), runs on one thread, and runs its tests under
-Node.js.
+Node.js. The iOS build is the default cross-compiled for iOS devices with Xcode's iOS SDK, on macOS, and only builds.
+Each of the two has a Debug form beside it, which keeps the assertions.
+
+Each build has a lean form, in a directory of its own, for a machine that only tests, as ./dev.sh ci and CI's runners
+do: PR_LEAN, which builds the tests and fetches only what they read (cmake/lean.cmake). It compiles through ccache where
+ccache is installed.
 """
 
 import json
@@ -29,6 +34,9 @@ RELEASE = os.path.join(dev.ROOT, "build-release")
 ASAN = os.path.join(dev.ROOT, "build-asan")
 TSAN = os.path.join(dev.ROOT, "build-tsan")
 WASM = os.path.join(dev.ROOT, "build-wasm")
+WASM_DEBUG = os.path.join(dev.ROOT, "build-wasm-debug")
+IOS = os.path.join(dev.ROOT, "build-ios")
+IOS_DEBUG = os.path.join(dev.ROOT, "build-ios-debug")
 # The base of an A/B comparison: its sources, its builds, and its harnesses by commit (ab.py).
 AB = os.path.join(dev.ROOT, "build-ab")
 # The libraries built and installed as a consumer takes them, and the consumers built against them.
@@ -45,15 +53,37 @@ ASAN_SLOWDOWN = 4
 
 class Mode:
     """A build: its directory, its CMake build type, its compiler and linker flags, how many times longer its
-    harnesses take than the default build's, and whether it compiles to WebAssembly."""
+    harnesses take than the default build's, whether it compiles to WebAssembly or for iOS, the cache entries that it
+    sets beyond the development build's, by name, and whether it compiles through a compiler cache where one is
+    installed."""
 
-    def __init__(self, name, directory, build_type, flags="", slowdown=1, wasm=False):
+    def __init__(self, name, directory, build_type, flags="", slowdown=1, wasm=False, ios=False, cache=None,
+                 compiler_cache=False):
         self.name = name
         self.directory = directory
         self.build_type = build_type
         self.flags = flags
         self.slowdown = slowdown
         self.wasm = wasm
+        self.ios = ios
+        self.cache = cache or {}
+        self.compiler_cache = compiler_cache
+
+    def lean(self):
+        """Returns the lean form of the build, in the build's directory with -lean after it."""
+        return Mode(self.name + " lean", self.directory + "-lean", self.build_type, self.flags, self.slowdown,
+                    self.wasm, self.ios, dict(self.cache, PR_LEAN="ON"), True)
+
+    def cache_entries(self):
+        """The cache entries that the build sets beyond the development build's: its own, and ccache as the compilers'
+        launcher if it compiles through a compiler cache and ccache is installed. MSVC then keeps the debug information
+        in each object, where ccache can keep it too."""
+        entries = dict(self.cache)
+        if self.compiler_cache and dev.has("ccache"):
+            entries.update({"CMAKE_C_COMPILER_LAUNCHER": "ccache", "CMAKE_CXX_COMPILER_LAUNCHER": "ccache"})
+            if dev.WINDOWS:
+                entries["CMAKE_MSVC_DEBUG_INFORMATION_FORMAT"] = "Embedded"
+        return entries
 
     def environment(self):
         """The environment that the runners read the build from (tools/suite/corpus.py)."""
@@ -67,15 +97,63 @@ MODES = {
     "asan": Mode("asan", ASAN, "Debug", SANITIZE, ASAN_SLOWDOWN),
     "tsan": Mode("tsan", TSAN, "Debug", THREAD_SANITIZE),
     "wasm": Mode("wasm", WASM, "RelWithDebInfo", wasm=True),
+    "wasm-debug": Mode("wasm-debug", WASM_DEBUG, "Debug", wasm=True),
+    "ios": Mode("ios", IOS, "RelWithDebInfo", ios=True),
+    "ios-debug": Mode("ios-debug", IOS_DEBUG, "Debug", ios=True),
 }
 
 
-def mode(name):
-    """Returns the build that `name` names: default, debug, release, asan, tsan or wasm."""
+# The configurations of a build, as the commands name them, and the platforms that it compiles for. The host's platform
+# is the default's. The others cross-compile, in the default and debug configurations.
+CONFIGURATIONS = ("default", "debug", "release", "asan", "tsan")
+PLATFORMS = ("macos", "windows", "linux", "wasm", "ios")
+CROSS_PLATFORMS = ("wasm", "ios")
+
+
+def host_platform():
+    """Returns the platform of this machine, one of PLATFORMS."""
+    return "macos" if dev.darwin() else "windows" if dev.WINDOWS else "linux"
+
+
+def mode_name(configuration=None, platform=None):
+    """Returns the name in MODES of the build of `configuration` for `platform`, or None if there is none. Either may
+    be None, for the default configuration and the host's platform."""
+    configuration = configuration or "default"
+    if platform is None or platform == host_platform():
+        return configuration
+    if platform in CROSS_PLATFORMS and configuration in ("default", "debug"):
+        return platform + ("-debug" if configuration == "debug" else "")
+    return None
+
+
+def take_mode(argv, configurations=CONFIGURATIONS, platforms=PLATFORMS):
+    """Removes a configuration of `configurations` from the front of `argv`, then a platform of `platforms`, and returns
+    the name in MODES of their build. Fails if there is none."""
+    configuration = argv.pop(0) if argv[:1] and argv[0] in configurations else None
+    platform = argv.pop(0) if argv[:1] and argv[0] in platforms else None
+    name = mode_name(configuration, platform)
+    if name is None:
+        dev.fail("there is no %s build for %s on %s" % (configuration or "default", platform, host_platform()))
+    return name
+
+
+def mode(name, lean=False):
+    """Returns the build that `name` names, a key of MODES, or the default build for None, or with `lean`, its lean
+    form."""
     found = MODES[name or "default"]
+    if lean:
+        found = found.lean()
     if found.flags is None:
         dev.fail("MSVC has no thread sanitizer")
+    if found.ios and not dev.darwin():
+        dev.fail("the iOS build needs macOS and Xcode")
     return found
+
+
+def ios_sdk():
+    """Fails unless Xcode has its iOS SDK, which the iOS build compiles against."""
+    if dev.output(["xcrun", "--sdk", "iphoneos", "--show-sdk-path"], check=False) is None:
+        dev.fail("the iOS build needs Xcode's iOS SDK (xcodebuild -downloadPlatform iOS)")
 
 
 # The file in a build directory that keeps what vcvars added to the environment, since vcvars takes a second to run.
@@ -179,19 +257,22 @@ def openssl_root():
     return dev.output(["brew", "--prefix", "openssl"], check=False)
 
 
-def configure(source, directory, build_type, flags="", out=None, wasm=False):
+def configure(source, directory, build_type, flags="", out=None, wasm=False, ios=False, entries=None):
     """Configures the build of the sources in `source` into `directory`, of `build_type`, with the compiler and linker
-    flags `flags`, with Ninja, for the host or, with `wasm`, for WebAssembly. CMake writes to `out`, or to the standard
-    output."""
+    flags `flags`, with Ninja, for the host or, with `wasm`, for WebAssembly, or with `ios`, for iOS devices, and with
+    the cache `entries` beyond the development build's, by name. CMake writes to `out`, or to the standard output."""
+    entries = entries or {}
     if wasm:
         emsdk.fetch()
         emsdk.environment()
+    elif ios:
+        ios_sdk()
     elif dev.WINDOWS:
         msvc_environment(directory)
     if not dev.has("ninja"):
         dev.fail("ninja is required (brew install ninja, or winget install Ninja-build.Ninja)")
     # lib/tls's OpenSSL backend builds where CMake finds OpenSSL: the system's, or Homebrew's on macOS.
-    openssl = None if wasm else openssl_root()
+    openssl = None if wasm or ios else openssl_root()
     # The WebAssembly build allocates through the C library, until mimalloc is tried there.
     mimalloc = "OFF" if wasm else "ON"
 
@@ -210,7 +291,12 @@ def configure(source, directory, build_type, flags="", out=None, wasm=False):
         # Emscripten's toolchain finds Node.js only on the path.
         if wasm:
             found.append("-DCMAKE_CROSSCOMPILING_EMULATOR=" + emsdk.node())
+        found += ["-D%s=%s" % entry for entry in entries.items()]
         return found
+
+    def cached(name, value):
+        """Returns true if the cache holds `value` for the entry `name`, of whatever type."""
+        return any(line.startswith(name + ":") and line.endswith("=" + value) for line in lines)
 
     # A tree that another generator configured, or that was configured from another checkout's sources, is configured
     # again, with Ninja.
@@ -222,6 +308,9 @@ def configure(source, directory, build_type, flags="", out=None, wasm=False):
     if lines is None and wasm:
         dev.run(["cmake", "-S", source, "-B", directory, "-G", "Ninja", "-DCMAKE_BUILD_TYPE=" + build_type,
                  "-DCMAKE_TOOLCHAIN_FILE=" + emsdk.toolchain(), *options()], stdout=out, stderr=out)
+    elif lines is None and ios:
+        dev.run(["cmake", "-S", source, "-B", directory, "-G", "Ninja", "-DCMAKE_BUILD_TYPE=" + build_type,
+                 "-DCMAKE_SYSTEM_NAME=iOS", *options()], stdout=out, stderr=out)
     elif lines is None and dev.WINDOWS:
         # MSVC's default flags, such as /EHsc, stay, and the build's flags add to them. The linker takes none.
         dev.run(["cmake", "-S", source, "-B", directory, "-G", "Ninja", "-DCMAKE_BUILD_TYPE=" + build_type,
@@ -236,10 +325,9 @@ def configure(source, directory, build_type, flags="", out=None, wasm=False):
           or "PR_DEVELOP:BOOL=ON" not in lines or "PR_APPS:BOOL=ON" not in lines
           or "PR_PLATFORM_MIMALLOC:BOOL=" + mimalloc not in lines
           or "CMAKE_BUILD_TYPE:STRING=" + build_type not in lines
-          or (wasm and not any(line.startswith("CMAKE_CROSSCOMPILING_EMULATOR:") and line.endswith("=" + emsdk.node())
-                               for line in lines))
-          or (openssl and not any(line.startswith("OPENSSL_ROOT_DIR:") and line.endswith("=" + openssl)
-                                  for line in lines))):
+          or (wasm and not cached("CMAKE_CROSSCOMPILING_EMULATOR", emsdk.node()))
+          or (openssl and not cached("OPENSSL_ROOT_DIR", openssl))
+          or not all(cached(name, value) for name, value in entries.items())):
         dev.run(["cmake", "-S", source, "-B", directory, "-DCMAKE_BUILD_TYPE=" + build_type, *options()], stdout=out,
                 stderr=out)
 
@@ -252,15 +340,19 @@ def build_targets(directory):
     return {line.split(":")[0] for line in listed.splitlines()}
 
 
-def build(name="default", targets=(), keep_going=False):
-    """Configures and builds the build that `name` names, or only `targets` and what they need, and returns it. With
-    `keep_going`, Ninja builds everything that does not depend on a failure, so one build reports every error."""
-    chosen = mode(name)
-    if chosen.wasm:
+def build(name="default", targets=(), keep_going=False, lean=False, configure_only=False):
+    """Configures and builds the build that `name` names, or with `lean` its lean form, or only `targets` and what they
+    need, and returns it. With `keep_going`, Ninja builds everything that does not depend on a failure, so one build
+    reports every error. With `configure_only`, it is configured and nothing is built."""
+    chosen = mode(name, lean)
+    if chosen.wasm and chosen.cache.get("PR_LEAN") != "ON":
         for example, names in EXAMPLE_CHECKOUTS.items():
             if not targets or example in targets:
                 checkouts.fetch(*names)
-    configure(dev.ROOT, chosen.directory, chosen.build_type, chosen.flags, wasm=chosen.wasm)
+    configure(dev.ROOT, chosen.directory, chosen.build_type, chosen.flags, wasm=chosen.wasm, ios=chosen.ios,
+              entries=chosen.cache_entries())
+    if configure_only:
+        return chosen
     command = ["cmake", "--build", chosen.directory]
     for target in targets:
         command += ["--target", target]

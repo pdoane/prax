@@ -32,7 +32,7 @@ std::vector<uint8_t> readPath(const std::string& path) {
 }
 
 std::vector<uint8_t> newCmBytes() {
-    return readPath(std::string(PR_FONT_BUNDLE_DIR) + "/NewCMMath-Regular.otf");
+    return readPath(std::string(PR_FONTS_DIR) + "/NewCMMath-Regular.otf");
 }
 
 const PrFont* fromBytes(const std::vector<uint8_t>& bytes) {
@@ -293,12 +293,12 @@ TEST_CASE("a horizontal assembly's ink is its parts' ink, which an overline's st
 }
 
 TEST_CASE("Noto Sans Math, a TrueType font, reads and stretches from its MATH table") {
-    const PrFont* font = fromBytes(readPath(std::string(PR_FONTS_DIR) + "/NotoSansMath.ttf"));
+    const PrFont* font = fromBytes(readPath(std::string(PR_FONTS_DIR) + "/NotoSansMath-Regular.ttf"));
     CHECK(prFontHasMath(font));
     CHECK(prFontMathConstants(font)->axisHeight == doctest::Approx(0.278));
     CHECK(prFontMathConstants(font)->scriptPercentScaleDown == doctest::Approx(0.6));
     uint16_t integral = prFontCodePointGlyph(font, 0x222B);
-    REQUIRE(integral == 2848);
+    REQUIRE(integral == 2847);
     CHECK(prFontMathGlyphItalicsCorrection(font, integral) == doctest::Approx(0.274));
     PrFontMathStretchInfo info{};
     // 6em takes five extenders after the 2.138em of the ends, and overlaps of 1.483 / 6em.
@@ -313,7 +313,7 @@ TEST_CASE("Noto Sans Math, a TrueType font, reads and stretches from its MATH ta
 }
 
 TEST_CASE("a font without constructions stretches by the assembly of Unicode's parts of stretched operators") {
-    std::vector<uint8_t> bytes = readPath(std::string(PR_FONTS_DIR) + "/NotoSansMath.ttf");
+    std::vector<uint8_t> bytes = readPath(std::string(PR_FONTS_DIR) + "/NotoSansMath-Regular.ttf");
     const PrFont* font = fromBytes(withTable(bytes, kMath, {}));
     REQUIRE_FALSE(prFontHasMath(font));
     uint16_t paren = prFontCodePointGlyph(font, '(');
@@ -346,7 +346,7 @@ TEST_CASE("a font without constructions stretches by the assembly of Unicode's p
 }
 
 TEST_CASE("a feature's single substitutions give a glyph's math forms: dotless and right-to-left mirrored") {
-    std::vector<uint8_t> bytes = readPath(std::string(PR_FONTS_DIR) + "/NotoSansMath.ttf");
+    std::vector<uint8_t> bytes = readPath(std::string(PR_FONTS_DIR) + "/NotoSansMath-Regular.ttf");
     const PrFont* font = fromBytes(bytes);
     uint16_t i = prFontCodePointGlyph(font, 'i');
     uint16_t partial = prFontCodePointGlyph(font, 0x2202);
@@ -540,7 +540,7 @@ TEST_CASE("an assembly of unequal connectors, from WPT's asymmetric stretchy fon
 }
 
 TEST_CASE("a font without MATH takes MathML Core's fallbacks, derived from its metrics") {
-    const PrFont* font = fromBytes(readPath(std::string(PR_FONTS_DIR) + "/NotoSans.ttf"));
+    const PrFont* font = fromBytes(readPath(std::string(PR_FONTS_DIR) + "/NotoSans[wdth,wght].ttf"));
     CHECK_FALSE(prFontHasMath(font));
     PrFontMetrics m = prFontMetrics(font);
     float rule = m.underlineThickness;

@@ -1,11 +1,12 @@
 # The consumer minimum (README.md, CMake versions). shader_library.cmake and tools/package state it too.
 cmake_minimum_required(VERSION 3.28)
-# Where Prax is built on its own, macOS builds target Apple Silicon and the oldest macOS that Prax runs on. A build that
-# includes Prax chooses its own, and Prax checks them below. These precede project(), which reads them.
+# Where Prax is built on its own, Apple builds target Apple Silicon and the oldest macOS or iOS that Prax runs on, which
+# share a version. A build that includes Prax chooses its own, and Prax checks them below. These precede project(), which
+# reads them.
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-    set(CMAKE_OSX_ARCHITECTURES arm64 CACHE STRING "The architectures that macOS builds target")
+    set(CMAKE_OSX_ARCHITECTURES arm64 CACHE STRING "The architectures that Apple builds target")
     if (NOT CMAKE_OSX_DEPLOYMENT_TARGET)
-        set(CMAKE_OSX_DEPLOYMENT_TARGET 26.0 CACHE STRING "The oldest macOS that the build runs on" FORCE)
+        set(CMAKE_OSX_DEPLOYMENT_TARGET 26.0 CACHE STRING "The oldest macOS or iOS that the build runs on" FORCE)
     endif()
 endif()
 project(prax
@@ -17,10 +18,15 @@ if (APPLE)
     enable_language(OBJCXX)
 endif()
 
-# The platforms that Prax runs on (README.md): macOS 26 or newer on Apple Silicon, and Windows 10 version 1809 or newer.
-# A build that targets an older system or another architecture fails here rather than in a library's sources. On
-# Windows, the system headers then declare only what 1809 has.
+# The platforms that Prax runs on (README.md): macOS 26 or newer on Apple Silicon, iOS 26 or newer, and Windows 10
+# version 1809 or newer. A build that targets an older system or another architecture fails here rather than in a
+# library's sources. On Windows, the system headers then declare only what 1809 has.
 if (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    set(PR_MACOS ON)
+elseif (CMAKE_SYSTEM_NAME STREQUAL "iOS")
+    set(PR_IOS ON)
+endif()
+if (APPLE)
     if (CMAKE_OSX_ARCHITECTURES)
         set(PR_OSX_ARCHITECTURES ${CMAKE_OSX_ARCHITECTURES})
     else()
@@ -30,20 +36,27 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
         message(FATAL_ERROR "Prax runs on Apple Silicon only, and this build targets ${PR_OSX_ARCHITECTURES}")
     endif()
     if (CMAKE_OSX_DEPLOYMENT_TARGET AND CMAKE_OSX_DEPLOYMENT_TARGET VERSION_LESS 26.0)
-        message(FATAL_ERROR "Prax runs on macOS 26 or newer, and this build targets ${CMAKE_OSX_DEPLOYMENT_TARGET}")
+        message(FATAL_ERROR "Prax runs on ${CMAKE_SYSTEM_NAME} 26 or newer, and this build targets ${CMAKE_OSX_DEPLOYMENT_TARGET}")
     endif()
 elseif (WIN32)
     add_compile_definitions(WINVER=0x0A00 _WIN32_WINNT=0x0A00 NTDDI_VERSION=0x0A000006)
 endif()
 
 # What the build makes. By default it makes the libraries, and installs them where Prax is built on its own. A
-# development build (./dev.sh) adds their tests, the tools that check and measure them, and the comparisons, with
-# warnings as errors.
-option(PR_DEVELOP "Build the tests, the tools and the comparisons, with warnings as errors" OFF)
+# development build (./dev.sh) adds their tests and what the tests drive, with warnings as errors, and by default the
+# tools that check and measure them with the comparisons (PR_TOOLS).
+option(PR_DEVELOP "Build the tests, and by default the tools and the comparisons, with warnings as errors" OFF)
 # The development minimum (README.md, CMake versions).
 if (PR_DEVELOP AND CMAKE_VERSION VERSION_LESS 4.0)
     message(FATAL_ERROR "A development build needs CMake 4.0 or newer, and this is CMake ${CMAKE_VERSION}")
 endif()
+# The tools of a development build that run beside the tests: the suites' harnesses, the viewer, the benchmarks, the
+# browsers' hosts and the pages' checks, with the implementations that they compare the engine with. Without them a
+# development build has the tests and what the tests drive, as the web's and iOS's builds do, and fetches none of
+# the comparisons.
+include(CMakeDependentOption)
+cmake_dependent_option(PR_TOOLS "Build the development tools and the comparisons" ON
+    "PR_DEVELOP;NOT EMSCRIPTEN;NOT PR_IOS" OFF)
 option(PR_EXAMPLES "Build the examples" OFF)
 option(PR_APPS "Build the apps" OFF)
 option(PR_INSTALL "Install the libraries, their headers and the CMake package" ${PROJECT_IS_TOP_LEVEL})
@@ -74,14 +87,21 @@ endif()
 option(PR_PLATFORM_THREADS "Start threads where the build leaves threads to the default backends"
     ${PR_PLATFORM_THREADS_DEFAULT})
 
-# The font bundles whose files the build fetches into font_bundle in the build directory, for the tests, the tools, the
-# examples and the apps (lib/font_bundle/font_bundle.cmake). It fetches every bundle, because the tests install them
-# all. A consumer fetches its own with pr_font_bundle_fetch.
+# The font bundles whose files the build fetches into font_bundle in the build directory, for the tools, the examples
+# and the apps (lib/font_bundle/font_bundle.cmake). Every bundle by default; a build that runs only the tests, such as
+# CI's, can fetch fewer. The tests read the fonts they need from the test data (cmake/test_data.cmake), the bundles'
+# among them. A consumer fetches its own with pr_font_bundle_fetch.
 if (PR_DEVELOP OR PR_EXAMPLES OR PR_APPS)
-    set(PR_FONT_BUNDLES Complete NotoMono Standard14 Plex NerdFontSymbols)
+    set(PR_FONT_BUNDLES_DEFAULT Complete NotoMono Standard14 Plex NerdFontSymbols)
 else()
-    set(PR_FONT_BUNDLES "")
+    set(PR_FONT_BUNDLES_DEFAULT "")
 endif()
+set(PR_FONT_BUNDLES "${PR_FONT_BUNDLES_DEFAULT}" CACHE STRING "The font bundles that the build fetches")
+
+# A lean build, which fetches only what its tests read, replaces the options above that decide what it fetches
+# (cmake/lean.cmake).
+option(PR_LEAN "Build the development build's tests and what they drive, and fetch only what they read" OFF)
+include(cmake/lean.cmake)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -124,6 +144,11 @@ endif()
 if (EMSCRIPTEN)
     add_compile_options(-msimd128)
     add_link_options(-sSTACK_SIZE=8388608 -sALLOW_MEMORY_GROWTH=1)
+    # Debug compiles with the optimizer's first level, and keeps its assertions. Without it, a function keeps each of its
+    # temporaries in a WebAssembly local, and the engine's frame for QuickJS's interpreter grows so large that a few
+    # nested calls of JavaScript exhaust the engine's own stack, which neither Node.js nor a browser lets a page raise,
+    # long before QuickJS's limit stops them.
+    add_compile_options($<$<CONFIG:Debug>:-O1>)
 endif()
 
 if (PR_DEVELOP)
@@ -159,6 +184,10 @@ endif()
 if (NOT EMSCRIPTEN)
     set(PR_SYSTEM ON)
 endif()
+# The targets whose Vulkan the Vulkan backend presents through: the desktop systems.
+if (PR_SYSTEM AND NOT PR_IOS)
+    set(PR_DESKTOP_VULKAN ON)
+endif()
 # The POSIX targets whose applications may start programs: the desktop systems, and not the mobile ones.
 if (CMAKE_SYSTEM_NAME MATCHES "^(Darwin|Linux)$")
     set(PR_POSIX_PROCESSES ON)
@@ -166,13 +195,13 @@ endif()
 if (PR_DEVELOP OR PR_EXAMPLES OR PR_APPS OR PR_UNIX_OTHER)
     find_package(OpenSSL 3...<4 QUIET)
 endif()
-pr_backend_option(PR_APP_COCOA "lib/app's Cocoa backend" "${APPLE}" "${APPLE}")
+pr_backend_option(PR_APP_COCOA "lib/app's Cocoa backend" "${PR_MACOS}" "${PR_MACOS}")
 pr_backend_option(PR_APP_WIN32 "lib/app's Win32 backend" "${WIN32}" "${WIN32}")
 pr_backend_option(PR_APP_WEB "lib/app's web backend" "${EMSCRIPTEN}" "${EMSCRIPTEN}")
-pr_backend_option(PR_GPU_METAL "lib/gpu's Metal backend, on Metal 3" "${APPLE}" "${APPLE}")
-pr_backend_option(PR_GPU_METAL4 "lib/gpu's Metal 4 backend, for experiments" "${APPLE}" "${APPLE}")
+pr_backend_option(PR_GPU_METAL "lib/gpu's Metal backend, on Metal 3" "${PR_MACOS}" "${PR_MACOS}")
+pr_backend_option(PR_GPU_METAL4 "lib/gpu's Metal 4 backend, for experiments" "${PR_MACOS}" "${PR_MACOS}")
 pr_backend_option(PR_GPU_D3D12 "lib/gpu's Direct3D 12 backend" "${WIN32}" "${WIN32}")
-pr_backend_option(PR_GPU_VULKAN "lib/gpu's Vulkan backend" "${PR_LINUX}" "${PR_SYSTEM}")
+pr_backend_option(PR_GPU_VULKAN "lib/gpu's Vulkan backend" "${PR_LINUX}" "${PR_DESKTOP_VULKAN}")
 pr_backend_option(PR_GPU_MEMORY "lib/gpu's memory backend" ON ON)
 pr_backend_option(PR_GPU_CANVAS2D "lib/gpu's Canvas 2D backend" "${EMSCRIPTEN}" "${EMSCRIPTEN}")
 pr_backend_option(PR_NET_SOCKETS "lib/net's backend over the system's sockets" "${PR_SYSTEM}" "${PR_SYSTEM}")
@@ -245,29 +274,33 @@ if (PR_FONT_BUNDLES)
 endif()
 
 if (PR_DEVELOP)
+    # The files that the tests read.
+    include(cmake/test_data.cmake)
     # The runners, the tests' servers and the tools' tests are Python.
     find_package(Python3 REQUIRED COMPONENTS Interpreter)
-    include(CTest)
     # Its build predates CMake's current policies.
     block(SCOPE_FOR VARIABLES)
         set(CMAKE_POLICY_VERSION_MINIMUM 3.10)
         pr_dependency_available(doctest)
     endblock()
     pr_third_party_directory(${doctest_SOURCE_DIR})
-    include(${doctest_SOURCE_DIR}/scripts/cmake/doctest.cmake)
 endif()
 
 add_subdirectory(lib)
 if (PR_DEVELOP)
     add_subdirectory(tools)
 endif()
-if (PR_EXAMPLES AND (APPLE OR WIN32 OR EMSCRIPTEN))
+# The examples run where lib/app has a backend.
+if (PR_EXAMPLES AND (PR_MACOS OR WIN32 OR EMSCRIPTEN))
     add_subdirectory(examples)
 endif()
 # The apps run on the desktop.
-if (PR_APPS AND (APPLE OR WIN32))
+if (PR_APPS AND (PR_MACOS OR WIN32))
     add_subdirectory(apps)
 endif()
 if (PR_INSTALL)
     include(cmake/install.cmake)
+endif()
+if (PR_DEVELOP)
+    pr_write_tests()
 endif()

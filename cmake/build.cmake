@@ -25,8 +25,8 @@ if (PR_DEVELOP)
     target_compile_options(pr_warnings INTERFACE $<IF:$<C_COMPILER_ID:MSVC>,/WX,-Werror>)
     target_link_options(pr_warnings INTERFACE
         $<$<C_COMPILER_ID:MSVC>:/WX>
-        $<$<AND:$<NOT:$<C_COMPILER_ID:MSVC>>,$<PLATFORM_ID:Darwin>>:LINKER:-fatal_warnings>
-        $<$<AND:$<NOT:$<C_COMPILER_ID:MSVC>>,$<NOT:$<PLATFORM_ID:Darwin>>>:LINKER:--fatal-warnings>
+        $<$<AND:$<NOT:$<C_COMPILER_ID:MSVC>>,$<PLATFORM_ID:Darwin,iOS>>:LINKER:-fatal_warnings>
+        $<$<AND:$<NOT:$<C_COMPILER_ID:MSVC>>,$<NOT:$<PLATFORM_ID:Darwin,iOS>>>:LINKER:--fatal-warnings>
     )
 endif()
 
@@ -183,8 +183,97 @@ function(pr_embed target directory)
     target_include_directories(${target} PRIVATE ${PROJECT_BINARY_DIR}/embed)
 endfunction()
 
+# Sets `out` to `text` as a JSON string.
+function(pr_json_string out text)
+    string(REPLACE "\\" "\\\\" text "${text}")
+    string(REPLACE "\"" "\\\"" text "${text}")
+    set(${out} "\"${text}\"" PARENT_SCOPE)
+endfunction()
+
+# Adds a test that ./dev.sh runs (tools/build/unit_tests.py), which the build lists in tests.json in its directory
+# (pr_write_tests). COMMAND runs in WORKING_DIRECTORY, the current binary directory by default, with the ENVIRONMENT
+# variables set, each as NAME=value. A command whose first word is a target runs the target's program, under the
+# build's emulator if it has one. The test passes if the command exits 0 and, with PASS, prints a match of that regular
+# expression. TIMEOUT, in seconds, ends a command that takes longer. A test of KIND doctest is a binary of doctest's
+# cases, which takes doctest's options and times each case (tools/harness/test_main.cpp).
+#
+#   pr_add_test(<name> COMMAND <word>... [WORKING_DIRECTORY <directory>] [ENVIRONMENT <NAME=value>...]
+#               [PASS <regex>] [TIMEOUT <seconds>] [KIND doctest])
+function(pr_add_test name)
+    cmake_parse_arguments(PARSE_ARGV 1 TEST "" "WORKING_DIRECTORY;PASS;TIMEOUT;KIND" "COMMAND;ENVIRONMENT")
+    if (NOT TEST_WORKING_DIRECTORY)
+        set(TEST_WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+    endif()
+    if (NOT TEST_KIND)
+        set(TEST_KIND command)
+    endif()
+    if (NOT TEST_TIMEOUT)
+        set(TEST_TIMEOUT 0)
+    endif()
+    # The test is written once every target exists (pr_write_tests), since its command may name a target that a later
+    # directory adds.
+    set_property(GLOBAL APPEND PROPERTY PR_TESTS ${name})
+    foreach (field COMMAND ENVIRONMENT WORKING_DIRECTORY PASS TIMEOUT KIND)
+        set_property(GLOBAL PROPERTY PR_TEST_${name}_${field} "${TEST_${field}}")
+    endforeach()
+endfunction()
+
+# Writes the tests that pr_add_test added to tests.json in the build directory. It runs once every directory has added
+# its targets and its tests.
+function(pr_write_tests)
+    get_property(names GLOBAL PROPERTY PR_TESTS)
+    set(entries "")
+    foreach (name IN LISTS names)
+        foreach (field COMMAND ENVIRONMENT WORKING_DIRECTORY PASS TIMEOUT KIND)
+            get_property(${field} GLOBAL PROPERTY PR_TEST_${name}_${field})
+        endforeach()
+        list(GET COMMAND 0 first)
+        if (TARGET ${first})
+            list(REMOVE_AT COMMAND 0)
+            list(PREPEND COMMAND "$<TARGET_FILE:${first}>")
+            if (CMAKE_CROSSCOMPILING_EMULATOR)
+                list(PREPEND COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR})
+            endif()
+        endif()
+        set(words "")
+        foreach (word IN LISTS COMMAND)
+            pr_json_string(quoted "${word}")
+            list(APPEND words "${quoted}")
+        endforeach()
+        list(JOIN words ", " words)
+        set(variables "")
+        foreach (variable IN LISTS ENVIRONMENT)
+            string(FIND "${variable}" "=" equals)
+            string(SUBSTRING "${variable}" 0 ${equals} key)
+            math(EXPR start "${equals} + 1")
+            string(SUBSTRING "${variable}" ${start} -1 value)
+            pr_json_string(key "${key}")
+            pr_json_string(value "${value}")
+            list(APPEND variables "${key}: ${value}")
+        endforeach()
+        list(JOIN variables ", " variables)
+        pr_json_string(quotedName "${name}")
+        pr_json_string(directory "${WORKING_DIRECTORY}")
+        pr_json_string(pass "${PASS}")
+        string(CONCAT entry "  {\"name\": ${quotedName}, \"kind\": \"${KIND}\", \"command\": [${words}], "
+            "\"directory\": ${directory}, \"environment\": {${variables}}, \"pass\": ${pass}, \"timeout\": ${TIMEOUT}}")
+        list(APPEND entries "${entry}")
+    endforeach()
+    list(JOIN entries ",\n" entries)
+    file(GENERATE OUTPUT ${PROJECT_BINARY_DIR}/tests.json CONTENT "[\n${entries}\n]\n")
+endfunction()
+
+# Adds the doctest binary `target` as a test (pr_add_test), if the host runs it: a build for iOS only builds it.
+#
+#   pr_add_tests(<target>)
+function(pr_add_tests target)
+    if (NOT PR_IOS)
+        pr_add_test(${target} KIND doctest COMMAND ${target})
+    endif()
+endfunction()
+
 # One test binary per module, named after it, which links the module, the toolkit and the tests' main(). The module is
-# a library of the engine, or a library of test support.
+# a library of the engine, or a library of test support. CTest runs it as pr_add_tests registers it.
 #
 #   pr_module_tests(<module> <source>...)
 function(pr_module_tests module)
@@ -195,7 +284,7 @@ function(pr_module_tests module)
         set(tested ${module})
     endif()
     target_link_libraries(${module}_tests PRIVATE ${tested} prax::core_cpp test_main pr_warnings)
-    doctest_discover_tests(${module}_tests)
+    pr_add_tests(${module}_tests)
 endfunction()
 
 # A module's tests that need a web page, such as those that draw through a page's canvases: on the web, a page,

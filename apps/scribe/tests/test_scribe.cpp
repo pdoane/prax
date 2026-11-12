@@ -195,9 +195,7 @@ TEST_CASE("the terminal panel paints the terminal's background beneath its view,
 }
 
 TEST_CASE("the first terminal starts in the document's workspace, and a new one where the shown one is") {
-    PrRawString cache = prFileUserDirectory(PrFileUserDirectory_Cache);
-    String folder = format("{}/prax-tests/scribe/workspace", prRawStringView(&cache));
-    prRawStringReset(&cache);
+    String folder = format("{}/workspace", PrStringView(harness::testFolder()));
     REQUIRE(prFileCreateDirectory(format("{}/.git", folder)));
     REQUIRE(prFileCreateDirectory(format("{}/sub", folder)));
     String path = format("{}/sub/notes.txt", folder);
@@ -224,7 +222,7 @@ TEST_CASE("the first terminal starts in the document's workspace, and a new one 
 
     e.run("terminal.new");
     REQUIRE(e.s.terminals.count() == 1);
-    CHECK(settleUntil([&] { return prStringEndsWith(directory(0), "/prax-tests/scribe/workspace"); }));
+    CHECK(settleUntil([&] { return prStringEndsWith(directory(0), "/workspace"); }));
 
     // The shell reports the workspace's sub directory.
     String sub = String::adopt(prFilePathAbsolute(format("{}/sub", folder), ""));
@@ -502,10 +500,7 @@ TEST_CASE("Save waits for the load to finish") {
     String program;
     while (program.count() < (1u << 20))
         program.append("int value = 1;\n");
-    PrRawString cache = prFileUserDirectory(PrFileUserDirectory_Cache);
-    String folder = format("{}/prax-tests/scribe", prRawStringView(&cache));
-    prRawStringReset(&cache);
-    REQUIRE(prFileCreateDirectory(folder));
+    String folder = String(PrStringView(harness::testFolder()));
     String path = format("{}/big.c", folder);
     REQUIRE(prFileWrite(path, PrByteView{prStringBytes(program), program.count()}));
     Editor e("");
@@ -523,10 +518,7 @@ TEST_CASE("Save waits for the load to finish") {
 }
 
 TEST_CASE("a click with the primary modifier on a terminal's reference to a file shows the file at its line") {
-    PrRawString cache = prFileUserDirectory(PrFileUserDirectory_Cache);
-    String folder = format("{}/prax-tests/scribe", prRawStringView(&cache));
-    prRawStringReset(&cache);
-    REQUIRE(prFileCreateDirectory(folder));
+    String folder = String(PrStringView(harness::testFolder()));
     String path = format("{}/linked.txt", folder);
     String text = document(5);
     REQUIRE(prFileWrite(path, PrByteView{prStringBytes(text), text.count()}));

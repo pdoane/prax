@@ -27,6 +27,5 @@ if (PR_DEVELOP)
     )
     target_link_libraries(mathml_tests PRIVATE prax::css prax::dom prax::html prax::unicode prax::font prax::text
                                                prax::layout)
-    target_compile_definitions(mathml_tests PRIVATE PR_FONTS_DIR="${PROJECT_SOURCE_DIR}/third_party/fonts"
-                                                    PR_FONT_BUNDLE_DIR="${PR_FONT_BUNDLE_DIR}")
+    target_compile_definitions(mathml_tests PRIVATE PR_FONTS_DIR="${PR_TEST_FONTS_DIR}")
 endif()

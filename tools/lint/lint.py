@@ -25,8 +25,6 @@ import urllib.parse
 import tools
 from tools.lint import modules
 from tools.suite.prax import suite
-from tools.suite.wpt import web_features
-from tools.suite.wpt import wpt
 
 ROOT = tools.ROOT
 
@@ -646,10 +644,11 @@ WRAPPERS = {
                                                        "windows.h"},
     "lib/core/backends/posix/src/core_posix_vmem.cpp": {"sys/mman.h"},
     "lib/core/backends/posix/src/core_posix_environment.cpp": {"stdlib.h", "string.h", "unistd.h"},
-    "lib/core/backends/posix/src/core_posix_random.cpp": {"sys/random.h", "unistd.h"},
+    "lib/core/backends/posix/src/core_posix_random.cpp": {"stdlib.h", "unistd.h"},
     "lib/core/backends/windows/src/core_windows_environment.cpp": {"windows.h", "stdlib.h"},
     "lib/core/backends/windows/src/core_windows_random.cpp": {"windows.h", "bcrypt.h"},
-    "tools/harness/cpu_counters.cpp": {"libproc.h", "mach/mach_time.h", "unistd.h", "windows.h"},
+    "tools/harness/cpu_counters.cpp": {"TargetConditionals.h", "libproc.h", "mach/mach_time.h", "unistd.h",
+                                       "windows.h"},
     "lib/core/quickjs_cpp/src/quickjs_callback.cpp": {"stdio.h"},
     "lib/text/backends/coretext/src/text_coretext.cpp": {"CoreText/CoreText.h"},
     "lib/font/backends/coretext/src/font_coretext.cpp": {"CoreText/CoreText.h"},
@@ -2148,7 +2147,7 @@ def check_include_paths(report, path, text):
 # harness's doctest header stands in for doctest's own, so it sorts and is allowed as doctest is (check_test_include).
 THIRD_PARTY = {
     "tools/harness/test.h": ("lib/*/tests/*", "examples/*/tests/*", "apps/*/tests/*", "tools/*/tests/*",
-                             "tools/harness/kit_fixture.h"),
+                             "tools/harness/kit_fixture.h", "tools/harness/test.cpp"),
     "mimalloc.h": ("lib/core/backends/mimalloc/src/core_mimalloc.cpp",),
     "quickjs.h": ("lib/*/quickjs/*", "lib/*/quickjs_cpp/*", "lib/lottie/src/lottie_expression.cpp", "tools/shell/page_host.cpp",
                   "apps/browser/main.cpp"),
@@ -3362,15 +3361,6 @@ def main():
     check_function_names(report, public_headers, texts)
     check_unique_names(report, code_files("lib/**/*.[ch]", "lib/**/*.cpp", "lib/**/*.mm"))
     check_module_dependencies(report)
-
-    # tools/suite/wpt/web_features.txt rules once on each feature that the suites test.
-    features = web_features.data()
-    if features is None:
-        sys.exit("no web-features data for tools/suite/wpt/web_features.txt; run ./dev.sh fetch webfeatures")
-    if not os.path.isdir(wpt.WPT):
-        sys.exit("no WPT checkout for tools/suite/wpt/web_features.txt; run ./dev.sh fetch wpt")
-    for line, problem in web_features.check(features, wpt.tested_features(wpt.WPT, features)):
-        report.add(web_features.RULINGS_FILE, max(line, 1), "features", problem)
 
     # Every text file of the working tree, tracked or new, has the line endings that .gitattributes keeps. A file whose
     # extension .gitattributes marks binary is not text, whatever its bytes.

@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Regression tests for the checks of our pages (suite.py), and for how their stills are captured (suite_stills.py).
+The checks of headings, citations and declarations read webref, which lint fetches, and which the tools' tests run
+beside.
 
 Usage: python3 -m tools.suite.prax.test_suite
 """

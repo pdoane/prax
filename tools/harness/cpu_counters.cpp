@@ -1,6 +1,11 @@
 #include "tools/harness/cpu_counters.h"
 
 #if defined(__APPLE__)
+#include <TargetConditionals.h>
+#endif
+
+// macOS reports the process's counters through libproc, which iOS does not have, so they stay zero there.
+#if defined(__APPLE__) && TARGET_OS_OSX
 #include <libproc.h>
 #include <mach/mach_time.h>
 #include <unistd.h>
@@ -15,7 +20,7 @@ namespace harness {
 
 CpuCounters cpuCounters() {
     CpuCounters counters{};
-#if defined(__APPLE__)
+#if defined(__APPLE__) && TARGET_OS_OSX
     rusage_info_v6 usage{};
     if (proc_pid_rusage(getpid(), RUSAGE_INFO_V6, reinterpret_cast<rusage_info_t*>(&usage)) == 0) {
         counters.instructions = double(usage.ri_instructions);

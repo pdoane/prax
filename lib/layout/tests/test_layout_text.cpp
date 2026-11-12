@@ -225,7 +225,7 @@ TEST_CASE("a space collapsed into another keeps the opportunity its own box give
 
 TEST_CASE("text is shaped in its font group's locale, and a new locale shapes it again") {
     Fixture f;
-    std::string path = std::string(PR_FONTS_DIR) + "/NotoSans.ttf";
+    std::string path = std::string(PR_FONTS_DIR) + "/NotoSans[wdth,wght].ttf";
     const PrFont* noto = nullptr;
     REQUIRE(prFontCreateFromFile(path, 0, nullptr, &noto) == PrStatus_Ok);
     PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
@@ -300,7 +300,8 @@ TEST_CASE("text in a fully hinted font advances as hinted at the tree's target p
         // The width that the font's advances give at a ratio: hinted to the target pixels of that ratio, or as
         // designed.
         const PrFont* file = nullptr;
-        REQUIRE(prFontCreateFromFile(std::string(PR_FONTS_DIR) + "/Arimo.ttf", 0, nullptr, &file) == PrStatus_Ok);
+        REQUIRE(prFontCreateFromFile(std::string(PR_FONTS_DIR) + "/Arimo-Regular.ttf", 0, nullptr, &file) ==
+            PrStatus_Ok);
         PrFontDerivation hinted = prFontDerivationDefault();
         hinted.hinting = PrFontHinting_Full;
         hinted.hinter = hinter;

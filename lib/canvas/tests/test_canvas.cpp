@@ -73,10 +73,11 @@ struct MemoryCanvas {
     }
 };
 
-// Returns true if the build has a renderer that draws on a device.
+// Returns true if the build has a renderer that draws on a device, and the run tests on the platform's GPU
+// (harness::gpuTests).
 bool deviceRenderers() {
-    return prDrawRendererBackendIsBuilt(PrDrawRendererBackend_Fragment) ||
-        prDrawRendererBackendIsBuilt(PrDrawRendererBackend_Triangles);
+    return harness::gpuTests() && (prDrawRendererBackendIsBuilt(PrDrawRendererBackend_Fragment) ||
+        prDrawRendererBackendIsBuilt(PrDrawRendererBackend_Triangles));
 }
 
 } // namespace

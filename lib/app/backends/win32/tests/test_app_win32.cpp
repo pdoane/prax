@@ -129,9 +129,14 @@ void runBrowser(Browse& b) {
         MESSAGE("no WebView2 runtime; skipped");
 }
 
-// Writes `contents` to `name` in the temporary folder, and returns its file URL.
+// The path of `name` in the binary's folder (harness::testFolder).
+std::filesystem::path tempPath(const char* name) {
+    return std::filesystem::path(harness::testFolder()) / name;
+}
+
+// Writes `contents` to `name` in the temporary folder (tempPath), and returns its file URL.
 std::string fileUrl(const char* name, const char* contents) {
-    std::filesystem::path path = std::filesystem::temp_directory_path() / name;
+    std::filesystem::path path = tempPath(name);
     FILE* file = std::fopen(path.string().c_str(), "wb");
     REQUIRE(file != nullptr);
     std::fputs(contents, file);
@@ -665,7 +670,7 @@ TEST_CASE("a browser prints its page to a PDF") {
         prAppBrowserLoad(b.browser, url, [](void* context, PrStatus status) {
             Browse& b = browseOf(context);
             b.loaded = status;
-            std::string path = (std::filesystem::temp_directory_path() / "pr-browser-print.pdf").string();
+            std::string path = tempPath("pr-browser-print.pdf").string();
             std::remove(path.c_str());
             PrStatus printing = prAppBrowserPrint(b.browser, path, PrVec2{384, 288}, [](void* context, PrStatus status) {
                 Browse& b = browseOf(context);
@@ -680,7 +685,7 @@ TEST_CASE("a browser prints its page to a PDF") {
         return;
     CHECK(browse.loaded == PrStatus_Ok);
     CHECK(browse.status == PrStatus_Ok);
-    std::string path = (std::filesystem::temp_directory_path() / "pr-browser-print.pdf").string();
+    std::string path = tempPath("pr-browser-print.pdf").string();
     FILE* file = std::fopen(path.c_str(), "rb");
     REQUIRE(file != nullptr);
     char head[5] = {};

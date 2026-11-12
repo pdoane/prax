@@ -55,10 +55,9 @@ struct Face {
     FT_Face face;
 };
 
-// Opens the font at `path`, or returns false if there is no such file.
-bool open(const std::string& path, Face& f) {
-    if (!readFile(path, f.bytes))
-        return false;
+// Opens the font at `path`.
+void open(const std::string& path, Face& f) {
+    REQUIRE_MESSAGE(readFile(path, f.bytes), path);
     REQUIRE(sfntOpen(f.bytes.data(), f.bytes.size(), 0, &f.sfnt));
     fontGlyphMetricsOpen(f.sfnt, &f.metrics);
     f.glyphCount = sfntTable(f.sfnt, kMaxp).uint16At(4);
@@ -70,7 +69,6 @@ bool open(const std::string& path, Face& f) {
     REQUIRE(FT_New_Memory_Face(f.library, f.bytes.data(), FT_Long(f.bytes.size()), 0, &f.face) == 0);
     // One pixel per unit, so that FreeType's 26.6 coordinates are 64ths of a unit.
     REQUIRE(FT_Set_Char_Size(f.face, 0, FT_F26Dot6(f.face->units_per_EM) << 6, 72, 72) == 0);
-    return true;
 }
 
 void close(Face& f) {
@@ -155,11 +153,10 @@ std::vector<std::vector<float>> instances(Face& f) {
     return out;
 }
 
-// Compares the font at `file`, relative to the fonts directory. A font that the checkout lacks is skipped.
+// Compares the font at `file`, relative to the fonts directory.
 void compareFont(const std::string& file) {
     Face f{};
-    if (!open(std::string(PR_FONTS_DIR) + "/" + file, f))
-        return;
+    open(std::string(PR_FONTS_DIR) + "/" + file, f);
     for (const std::vector<float>& design : instances(f)) {
         std::vector<float> coords(design.size());
         std::string name = file;
@@ -184,27 +181,29 @@ void compareFont(const std::string& file) {
 using namespace pr_impl;
 
 TEST_CASE("TrueType outlines load as FreeType loads them") {
-    for (const char* file : {"Ahem.ttf", "Tinos.ttf", "Tinos-Bold.ttf", "Cousine.ttf", "NotoSansMath.ttf",
-        "host/LastResort-Regular.ttf", "NotoSansSymbols2.ttf", "BungeeSpice.ttf", "Twemoji.ttf"})
+    for (const char* file :
+            {
+                "Ahem.ttf", "Arimo-Regular.ttf", "Tinos-Regular.ttf", "Tinos-Bold.ttf", "Cousine-Regular.ttf", "NotoSansMath-Regular.ttf",
+                "LastResort-Regular.ttf", "NotoSansSymbols2-Regular.ttf", "BungeeSpice.ttf", "Twemoji.ttf",
+            })
         compareFont(file);
 }
 
 TEST_CASE("TrueType outlines vary as FreeType varies them") {
-    for (const char* file : {"NotoSans.ttf", "NotoSans-Italic.ttf", "NotoSerif.ttf", "NotoSansMono.ttf", "Arimo.ttf",
-        "Literata.ttf", "RobotoFlex.ttf", "Nabla.ttf", "KalniaGlaze.ttf", "NotoSansArabic.ttf",
-                "NotoSansDevanagari.ttf", "NotoSansTaiTham.ttf"})
+    for (const char* file : {"NotoSans[wdth,wght].ttf", "NotoSans-Italic[wdth,wght].ttf", "NotoSerif[wdth,wght].ttf", "NotoSansMono[wdth,wght].ttf",
+        "Literata.ttf", "RobotoFlex.ttf", "Nabla.ttf", "KalniaGlaze.ttf", "NotoSansArabic[wdth,wght].ttf",
+                "NotoSansDevanagari[wdth,wght].ttf", "NotoSansTaiTham.ttf"})
         compareFont(file);
 }
 
 TEST_CASE("CFF outlines load as FreeType loads them") {
-    // The fonts of the web platform tests, if the checkout has them, hold CID-keyed CFF.
-    for (const char* file : {"woff2/SFNT-CFF-Reference.otf", "../wpt/fonts/adobe-fonts/CSSHWOrientationTest.otf",
-        "../wpt/fonts/adobe-fonts/CSSFWOrientationTest.otf",
-                "../wpt/fonts/noto/cjk-kr/NotoSansCJKkr-Regular-subset.otf"})
+    // The fonts of the web platform tests hold CID-keyed CFF.
+    for (const char* file : {"SFNT-CFF-Reference.otf", "CSSHWOrientationTest.otf", "CSSFWOrientationTest.otf",
+        "NotoSansCJKkr-Regular-subset.otf"})
         compareFont(file);
 }
 
 TEST_CASE("CFF2 outlines blend as FreeType blends them") {
-    for (const char* file : {"HandwritingCff2.otf", "host/NotoSansJP-VF.otf", "host/NotoSerifKR-VF.otf"})
+    for (const char* file : {"noto_handwriting-cff2_colr_1.otf", "TestCFF2VF.otf", "NotoSansJP-VF.otf"})
         compareFont(file);
 }

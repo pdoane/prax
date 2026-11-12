@@ -548,8 +548,10 @@ const VideoCodec* PR_NULLABLE videoCodecOf(PrStringView codec) {
 // Returns true if this system decodes the codec type, which VideoToolbox answers for the codecs that it decodes only on
 // some hardware.
 bool decodesVideo(CMVideoCodecType type) {
-    if (type == 'vp09')
-        VTRegisterSupplementalVideoDecoderIfAvailable(type);
+    if (type == 'vp09') {
+        if (@available(iOS 26.2, *))
+            VTRegisterSupplementalVideoDecoderIfAvailable(type);
+    }
     if (type == kCMVideoCodecType_H264 || type == kCMVideoCodecType_HEVC)
         return true;
     return VTIsHardwareDecodeSupported(type);

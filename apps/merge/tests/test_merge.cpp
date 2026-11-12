@@ -11,13 +11,9 @@ using namespace merge;
 
 namespace {
 
-// Writes `text` to a file of `name` in a folder of the tests' own, and returns its path.
+// Writes `text` to a file of `name` in the binary's folder (harness::testFolder), and returns its path.
 String writeFile(PrStringView name, PrStringView text) {
-    PrRawString cache = prFileUserDirectory(PrFileUserDirectory_Cache);
-    String folder = format("{}/prax-tests/merge", prRawStringView(&cache));
-    prRawStringReset(&cache);
-    REQUIRE(prFileCreateDirectory(folder));
-    String path = format("{}/{}", folder, name);
+    String path = format("{}/{}", PrStringView(harness::testFolder()), name);
     REQUIRE(prFileWrite(path, PrByteView{reinterpret_cast<const uint8_t*>(text.data), text.size}));
     return path;
 }

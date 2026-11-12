@@ -49,13 +49,13 @@ if (PR_DEVELOP)
     # pixels is rendered on the CPU.
     target_link_libraries(svg_tests PRIVATE prax::css prax::dom prax::draw prax::font prax::geom prax::path prax::text
                                             prax::compress prax::image)
-    target_compile_definitions(svg_tests PRIVATE PR_FONTS_DIR="${PROJECT_SOURCE_DIR}/third_party/fonts")
+    target_compile_definitions(svg_tests PRIVATE PR_FONTS_DIR="${PR_TEST_FONTS_DIR}")
     # lib/draw's SVG writer, read back.
     if (PR_DRAW_SVG)
         target_sources(svg_tests PRIVATE tests/test_svg_writer.cpp)
     endif()
     if (PR_JS)
-        add_test(NAME svg_js_dom COMMAND pr_shell --html ${CMAKE_CURRENT_SOURCE_DIR}/tests/svg_dom.html)
-        set_tests_properties(svg_js_dom PROPERTIES PASS_REGULAR_EXPRESSION "svg dom tests passed" TIMEOUT 10)
+        pr_add_test(svg_js_dom COMMAND pr_shell --html ${CMAKE_CURRENT_SOURCE_DIR}/tests/svg_dom.html
+                    PASS "svg dom tests passed" TIMEOUT 10)
     endif()
 endif()

@@ -63,7 +63,7 @@ struct Fixture {
     std::vector<Made> made;
 
     explicit Fixture(bool aliased = false) {
-        std::string path = std::string(PR_FONTS_DIR) + "/Arimo.ttf";
+        std::string path = std::string(PR_FONTS_DIR) + "/Arimo-Regular.ttf";
         const PrFont* PR_NULLABLE font = nullptr;
         PrFontDerivation derivation = prFontDerivationDefault();
         derivation.aliased = aliased;

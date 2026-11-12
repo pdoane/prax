@@ -104,9 +104,9 @@ using namespace pr_impl;
 TEST_CASE("a font set lists the families of its faces once each") {
     PrFontSet* set = prFontSetCreate(nullptr);
     PrFontFaceDescriptor auto_ = prFontFaceDescriptorDefault();
-    addFile(set, auto_, "NotoSans.ttf");
-    addFile(set, auto_, "NotoSerif.ttf");
-    addFile(set, auto_, "NotoSans.ttf");
+    addFile(set, auto_, "NotoSans[wdth,wght].ttf");
+    addFile(set, auto_, "NotoSerif[wdth,wght].ttf");
+    addFile(set, auto_, "NotoSans[wdth,wght].ttf");
     CHECK(prFontSetFaceCount(set) == 3);
     REQUIRE(prFontSetFamilyCount(set) == 2);
     PrStringView first = prFontSetFamily(set, 0);
@@ -120,8 +120,8 @@ TEST_CASE("a font set lists the families of its faces once each") {
 TEST_CASE("an alias matches its family's faces, and a family with faces matches itself") {
     PrFontSet* set = prFontSetCreate(nullptr);
     PrFontFaceDescriptor auto_ = prFontFaceDescriptorDefault();
-    addFile(set, auto_, "NotoSans.ttf");
-    addFile(set, auto_, "NotoSerif.ttf");
+    addFile(set, auto_, "NotoSans[wdth,wght].ttf");
+    addFile(set, auto_, "NotoSerif[wdth,wght].ttf");
     prFontSetAlias(set, "Times", "Noto Sans");
     prFontSetAlias(set, "times", "Noto Serif");
     prFontSetAlias(set, "noto sans", "Noto Serif");
@@ -135,8 +135,8 @@ TEST_CASE("an alias matches its family's faces, and a family with faces matches 
 TEST_CASE("a generic family matches the family bound to it, and is never a name") {
     PrFontSet* set = prFontSetCreate(nullptr);
     PrFontFaceDescriptor auto_ = prFontFaceDescriptorDefault();
-    addFile(set, auto_, "NotoSans.ttf");
-    addFile(set, auto_, "NotoSerif.ttf");
+    addFile(set, auto_, "NotoSans[wdth,wght].ttf");
+    addFile(set, auto_, "NotoSerif[wdth,wght].ttf");
     prFontSetSetGeneric(set, PrFontGeneric_Serif, "Noto Serif");
     CHECK(familyMatched(set, request(PrFontGeneric_Serif)) == "Noto Serif");
     // A family named "serif" is not the generic, and an unbound generic matches nothing.
@@ -165,8 +165,8 @@ TEST_CASE("a font set's default family is serif until it is set") {
 TEST_CASE("a set over a parent matches its own family before the parent's, and the parent's generics and fallback") {
     PrFontSet* host = prFontSetCreate(nullptr);
     PrFontFaceDescriptor auto_ = prFontFaceDescriptorDefault();
-    addFile(host, auto_, "NotoSans.ttf");
-    addFile(host, auto_, "NotoSerif.ttf");
+    addFile(host, auto_, "NotoSans[wdth,wght].ttf");
+    addFile(host, auto_, "NotoSerif[wdth,wght].ttf");
     prFontSetSetGeneric(host, PrFontGeneric_Serif, "Noto Serif");
     const PrFontFallbackFamily fallback[] = {{"Noto Sans", 0, PrFontGeneric_None}};
     prFontSetSetFallbackFamilies(host, fallback, 1);
@@ -190,7 +190,7 @@ TEST_CASE("a set over a parent matches its own family before the parent's, and t
 TEST_CASE("a pending face is matched without a font until it loads, and a failed family hides the parent's") {
     PrFontSet* host = prFontSetCreate(nullptr);
     PrFontFaceDescriptor auto_ = prFontFaceDescriptorDefault();
-    addFile(host, auto_, "NotoSans.ttf");
+    addFile(host, auto_, "NotoSans[wdth,wght].ttf");
     PrFontSet* document = prFontSetCreate(host);
     PrFontFaceDescriptor web = prFontFaceDescriptorDefault();
     web.family = "Web";
@@ -212,7 +212,7 @@ TEST_CASE("a pending face is matched without a font until it loads, and a failed
     CHECK(prFontSetTakeLoads(document, keys, 4) == 0);
 
     // Loaded: matched with its font, at a new version.
-    const PrFont* serif = loadFont("NotoSerif.ttf");
+    const PrFont* serif = loadFont("NotoSerif[wdth,wght].ttf");
     prFontSetLoaded(document, 7, serif);
     prFontRelease(serif);
     CHECK(prFontSetVersion(document) != version);
@@ -236,7 +236,7 @@ TEST_CASE("matching narrows weights as css-fonts-4 orders them") {
         PrFontFaceDescriptor d = prFontFaceDescriptorDefault();
         d.automatic = PrFontFaceAutoFlag_All & ~PrFontFaceAutoFlag_Weight;
         d.weightMin = d.weightMax = weight;
-        addFile(set, d, "NotoSans.ttf");
+        addFile(set, d, "NotoSans[wdth,wght].ttf");
     }
     struct WeightCase {
         float asked;
@@ -259,7 +259,7 @@ TEST_CASE("matching narrows weights as css-fonts-4 orders them") {
 TEST_CASE("matching sets a variable face's axes to the request") {
     PrFontSet* set = prFontSetCreate(nullptr);
     PrFontFaceDescriptor auto_ = prFontFaceDescriptorDefault();
-    addFile(set, auto_, "NotoSans.ttf");
+    addFile(set, auto_, "NotoSans[wdth,wght].ttf");
     addFile(set, auto_, "Literata.ttf");
     addFile(set, auto_, "RobotoFlex.ttf");
 
@@ -331,7 +331,7 @@ TEST_CASE("matching narrows width before slope before weight") {
         d.widthMin = d.widthMax = width;
         d.weightMin = d.weightMax = weight;
         d.slope = slope;
-        addFile(set, d, "NotoSans.ttf");
+        addFile(set, d, "NotoSans[wdth,wght].ttf");
     };
     add(100, PrFontSlope_Normal, 400);
     add(75, PrFontSlope_Normal, 700);
@@ -361,11 +361,11 @@ TEST_CASE("faces of one style dividing code points all match, the last added fir
     d.family = "Mixed";
     d.ranges = &latin;
     d.rangeCount = 1;
-    addFile(set, d, "NotoSans.ttf");
+    addFile(set, d, "NotoSans[wdth,wght].ttf");
     d.ranges = &arabic;
     d.automatic &= ~PrFontFaceAutoFlag_Emoji;
     d.flags = PrFontFaceFlag_Emoji;
-    addFile(set, d, "NotoSansArabic.ttf");
+    addFile(set, d, "NotoSansArabic[wdth,wght].ttf");
     PrFontMatch* match = prFontMatchCreate();
     Asked mixed = request("Mixed");
     prFontSetMatch(set, mixed.family, &mixed.style, match);
@@ -395,7 +395,7 @@ TEST_CASE("a face with a color glyph for an emoji is an emoji face, unless its d
     d.family = "Bitmaps";
     addFile(set, d, "TwemojiSmileySbix.ttf");
     d.family = "Text";
-    addFile(set, d, "NotoSans.ttf");
+    addFile(set, d, "NotoSans[wdth,wght].ttf");
     std::string path = fontPath("Twemoji.ttf");
     const PrFont* font = nullptr;
     REQUIRE(prFontCreateFromFile(path, 0, nullptr, &font) == PrStatus_Ok);
@@ -425,7 +425,7 @@ TEST_CASE("a descriptor's derivation applies over the axes matching sets") {
     d.derivation.variations = &heavy;
     d.derivation.variationCount = 1;
     d.derivation.sizeAdjust = 0.5f;
-    addFile(set, d, "NotoSans.ttf");
+    addFile(set, d, "NotoSans[wdth,wght].ttf");
     PrFontFace match = matchOne(set, request("Noto Sans"));
     CHECK(axisValue(match.font, kWght) == 900.0f);
     CHECK(prFontSizeAdjust(match.font) == 0.5f);
@@ -441,7 +441,7 @@ TEST_CASE("a failed face leaves no face of its style rather than moving the matc
     prFontSetAddPending(set, &d, 1);
     d.weightMin = d.weightMax = 300;
     prFontSetAddPending(set, &d, 2);
-    const PrFont* sans = loadFont("NotoSans.ttf");
+    const PrFont* sans = loadFont("NotoSans[wdth,wght].ttf");
     prFontSetLoaded(set, 2, sans);
     prFontSetFailed(set, 1);
     // The 400 face is still the best match, so no face matches, and the text moves to its next family.
@@ -468,8 +468,8 @@ TEST_CASE("a family's faces rank in the order the caller gives, the last checked
     d.family = "Web";
     prFontSetAddPending(set, &d, 1);
     prFontSetAddPending(set, &d, 2);
-    const PrFont* sans = loadFont("NotoSans.ttf");
-    const PrFont* serif = loadFont("NotoSerif.ttf");
+    const PrFont* sans = loadFont("NotoSans[wdth,wght].ttf");
+    const PrFont* serif = loadFont("NotoSerif[wdth,wght].ttf");
     prFontSetLoaded(set, 1, sans);
     prFontSetLoaded(set, 2, serif);
     // Faces rank by when they were added, until they are ordered.
@@ -491,7 +491,7 @@ TEST_CASE("a removed face leaves the set, which a repeated removal and addition 
     PrFontSet* set = prFontSetCreate(nullptr);
     PrFontFaceDescriptor d = prFontFaceDescriptorDefault();
     d.family = "Web";
-    const PrFont* sans = loadFont("NotoSans.ttf");
+    const PrFont* sans = loadFont("NotoSans[wdth,wght].ttf");
     for (uint64_t key = 1; key <= 20; ++key) {
         prFontSetAddPending(set, &d, key);
         prFontSetLoaded(set, key, sans);
@@ -513,7 +513,7 @@ TEST_CASE("faces of one font and one derivation give one instance, whichever fac
     PrFontFaceDescriptor d = prFontFaceDescriptorDefault();
     d.family = "Web";
     d.derivation.sizeAdjust = 0.5f;
-    const PrFont* sans = loadFont("NotoSans.ttf");
+    const PrFont* sans = loadFont("NotoSans[wdth,wght].ttf");
     prFontSetAddPending(set, &d, 1);
     prFontSetAddPending(set, &d, 2);
     prFontSetLoaded(set, 1, sans);
@@ -539,8 +539,8 @@ TEST_CASE("faces of one font and one derivation give one instance, whichever fac
 
 TEST_CASE("a family's stamp moves with what may change its match, and no other family's does") {
     PrFontSet* host = prFontSetCreate(nullptr);
-    addFile(host, prFontFaceDescriptorDefault(), "NotoSans.ttf");
-    addFile(host, prFontFaceDescriptorDefault(), "NotoSerif.ttf");
+    addFile(host, prFontFaceDescriptorDefault(), "NotoSans[wdth,wght].ttf");
+    addFile(host, prFontFaceDescriptorDefault(), "NotoSerif[wdth,wght].ttf");
     PrFontSet* document = prFontSetCreate(host);
     PrFontFamily web = prFontFamilyFromName("Web");
     PrFontFamily other = prFontFamilyFromName("Other");
@@ -576,7 +576,7 @@ TEST_CASE("a family's stamp moves with what may change its match, and no other f
         d.family = "Web";
         PrFontFamily generic = prFontFamilyGeneric(PrFontGeneric_SansSerif);
         CHECK(moves(generic, [&] { prFontSetAddPending(document, &d, 1); }));
-        const PrFont* font = loadFont("NotoSans.ttf");
+        const PrFont* font = loadFont("NotoSans[wdth,wght].ttf");
         CHECK(moves(generic, [&] { prFontSetLoaded(document, 1, font); }));
         prFontRelease(font);
         CHECK(familyMatched(document, Asked{generic, prFontStyleDefault()}) == "Noto Sans");
@@ -600,7 +600,7 @@ TEST_CASE("a family's stamp moves with what may change its match, and no other f
         d.family = "Web";
         prFontSetAddPending(document, &d, 1);
         prFontSetAddPending(document, &d, 2);
-        const PrFont* font = loadFont("NotoSans.ttf");
+        const PrFont* font = loadFont("NotoSans[wdth,wght].ttf");
         CHECK(moves(web, [&] { prFontSetLoaded(document, 1, font); }));
         CHECK(moves(web, [&] { prFontSetFailed(document, 2); }));
         CHECK_FALSE(moves(other, [&] { prFontSetFailed(document, 2); }));
@@ -612,14 +612,14 @@ TEST_CASE("a family's stamp moves with what may change its match, and no other f
 
 TEST_CASE("fallback families are matched among the outermost set's faces, never a document's") {
     PrFontSet* host = prFontSetCreate(nullptr);
-    addFile(host, prFontFaceDescriptorDefault(), "NotoSans.ttf");
+    addFile(host, prFontFaceDescriptorDefault(), "NotoSans[wdth,wght].ttf");
     PrFontFallbackFamily fallback{"Noto Sans", 0, PrFontGeneric_None};
     prFontSetSetFallbackFamilies(host, &fallback, 1);
     PrFontSet* document = prFontSetCreate(host);
     PrFontFaceDescriptor d = prFontFaceDescriptorDefault();
     d.family = "Noto Sans";
     prFontSetAddPending(document, &d, 1);
-    const PrFont* serif = loadFont("NotoSerif.ttf");
+    const PrFont* serif = loadFont("NotoSerif[wdth,wght].ttf");
     prFontSetLoaded(document, 1, serif);
     prFontRelease(serif);
     // The family of that name in the document serves the text that names it, and not the text that falls back.
@@ -641,7 +641,7 @@ TEST_CASE("fallback families are matched among the outermost set's faces, never 
 
 TEST_CASE("a file added by its family is read when a match first asks for the family, and only then") {
     PrFontSet* set = prFontSetCreate(nullptr);
-    std::string regular = fontPath("Arimo.ttf");
+    std::string regular = fontPath("Arimo-Regular.ttf");
     std::string italic = fontPath("Arimo-Italic.ttf");
     std::string missing = fontPath("Missing.ttf");
     prFontSetAddFileFamily(set, "Arimo", regular);
@@ -666,7 +666,7 @@ TEST_CASE("a file added by its family is read when a match first asks for the fa
 
 TEST_CASE("a file whose faces read as another family gives them the family it was added by, as automatic faces") {
     PrFontSet* set = prFontSetCreate(nullptr);
-    std::string sans = fontPath("NotoSans.ttf");
+    std::string sans = fontPath("NotoSans[wdth,wght].ttf");
     std::string emoji = fontPath("Twemoji.ttf");
     prFontSetAddFileFamily(set, "Platform Sans", sans);
     prFontSetAddFileFamily(set, "Platform Emoji", emoji);

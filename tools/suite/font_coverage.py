@@ -3,10 +3,10 @@
 pr/locale_common.h: those with 50 million users or more, and the most used language of each script that UAX #31's
 Table 5 recommends. Each of a language's main exemplar characters, as CLDR gives them, must have a glyph in some face
 of the bundles other than Last Resort, whose glyphs mark what is missing. The fonts are those that the build fetches
-into font_bundle in its directory, which is build by default or $PR_FONT_BUNDLE_DIR. Without them, or without CLDR in
-third_party/cldr, the check is skipped.
+into font_bundle in its directory, the build that the runners use (tools/suite/corpus.py), which fetches every bundle
+unless PR_FONT_BUNDLES names fewer. ./dev.sh suite font-coverage fetches CLDR and runs it.
 
-Usage: python3 -m tools.lint.test_font_bundle
+Usage: python3 -m tools.suite.font_coverage [unittest's arguments]
 """
 
 import os
@@ -15,9 +15,10 @@ import struct
 import unittest
 
 import tools
+from tools.suite import corpus
 
 ROOT = tools.ROOT
-BUNDLE = os.environ.get("PR_FONT_BUNDLE_DIR", os.path.join(ROOT, "build", "font_bundle"))
+BUNDLE = os.path.join(corpus.BUILD, "font_bundle")
 CLDR = os.path.join(ROOT, "third_party", "cldr", "common", "main")
 LANGUAGES = os.path.join(ROOT, "lib", "locale", "include", "pr", "locale_common.h")
 
@@ -89,10 +90,8 @@ def exemplars(language):
 
 class FontBundleTests(unittest.TestCase):
     def test_every_language_has_its_exemplar_characters_served(self):
-        if not os.path.isdir(BUNDLE):
-            self.skipTest("no font bundles; the build fetches them")
-        if not os.path.isdir(CLDR):
-            self.skipTest("no CLDR; ./dev.sh fetch cldr fetches it")
+        self.assertTrue(os.path.isdir(BUNDLE), "no font bundles in %s; the build fetches them" % BUNDLE)
+        self.assertTrue(os.path.isdir(CLDR), "no CLDR; ./dev.sh fetch cldr fetches it")
         served = set()
         for name in sorted(os.listdir(BUNDLE)):
             if name.endswith((".ttf", ".otf")) and not name.startswith("LastResort"):

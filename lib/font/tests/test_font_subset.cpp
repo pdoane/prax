@@ -94,7 +94,7 @@ TEST_CASE("the subset header compiles as C") {
 }
 
 TEST_CASE("a TrueType subset keeps the glyphs asked for under their ids") {
-    const PrFont* font = open(PR_FONTS_DIR "/NotoSans.ttf");
+    const PrFont* font = open(PR_FONTS_DIR "/NotoSans[wdth,wght].ttf");
     CHECK(prFontSubsetFormat(font) == PrFontSubsetFormat_TrueType);
     uint16_t a = prFontCodePointGlyph(font, 'a');
     uint16_t e = prFontCodePointGlyph(font, 'e');
@@ -121,7 +121,7 @@ TEST_CASE("a TrueType subset keeps the glyphs asked for under their ids") {
 }
 
 TEST_CASE("a CFF subset keeps the glyphs asked for under their ids") {
-    const PrFont* font = open(PR_FONTS_DIR "/woff2/SFNT-CFF-Reference.otf");
+    const PrFont* font = open(PR_FONTS_DIR "/SFNT-CFF-Reference.otf");
     CHECK(prFontSubsetFormat(font) == PrFontSubsetFormat_Cff);
     uint32_t count = prFontGlyphCount(font);
     REQUIRE(count > 3);
@@ -144,7 +144,7 @@ TEST_CASE("a CFF subset keeps the glyphs asked for under their ids") {
 TEST_CASE("a font whose file does not hold its outlines is subset as CFF, with the outlines that it draws") {
     // The subset is a bare CFF table, which opens in a CFF font's file in place of its own, with the glyph count of the
     // subset.
-    const PrFont* container = open(PR_FONTS_DIR "/woff2/SFNT-CFF-Reference.otf");
+    const PrFont* container = open(PR_FONTS_DIR "/SFNT-CFF-Reference.otf");
     PrByteView data = prFontData(container);
     std::vector<uint8_t> file(data.data, data.data + data.size);
     auto reopened = [&](const PrFont* font, uint16_t glyph) {
@@ -172,7 +172,7 @@ TEST_CASE("a font whose file does not hold its outlines is subset as CFF, with t
     };
 
     // CFF2 outlines, which are cubic as CFF's are.
-    const PrFont* cff2 = open(PR_FONTS_DIR "/HandwritingCff2.otf");
+    const PrFont* cff2 = open(PR_FONTS_DIR "/noto_handwriting-cff2_colr_1.otf");
     CHECK(prFontSubsetFormat(cff2) == PrFontSubsetFormat_Cff);
     uint16_t glyph = 1;
     while (glyph < prFontGlyphCount(cff2) && outline(cff2, glyph).empty())
@@ -183,7 +183,7 @@ TEST_CASE("a font whose file does not hold its outlines is subset as CFF, with t
     prFontRelease(cff2);
 
     // Synthetic bold: the subset holds the emboldened outline.
-    const PrFont* font = open(PR_FONTS_DIR "/NotoSans.ttf");
+    const PrFont* font = open(PR_FONTS_DIR "/NotoSans[wdth,wght].ttf");
     PrFontDerivation bold = prFontDerivationDefault();
     bold.embolden = 0.02f;
     const PrFont* derived = prFontCreateDerived(font, &bold);

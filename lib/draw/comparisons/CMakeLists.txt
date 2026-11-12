@@ -59,7 +59,7 @@ target_link_libraries(draw_blend2d PUBLIC prax::draw PRIVATE prax::core_cpp blen
 pr_module_tests(draw_imgui
     imgui/tests/test_draw_imgui.cpp
 )
-target_compile_definitions(draw_imgui_tests PRIVATE PR_FONTS_DIR="${PROJECT_SOURCE_DIR}/third_party/fonts")
+target_compile_definitions(draw_imgui_tests PRIVATE PR_FONTS_DIR="${PR_TEST_FONTS_DIR}")
 target_link_libraries(draw_imgui_tests PRIVATE prax::draw prax::gpu)
 
 pr_module_tests(draw_blend2d
@@ -72,5 +72,5 @@ if (APPLE)
         coregraphics/tests/test_draw_coregraphics.cpp
     )
     target_link_libraries(draw_coregraphics_tests PRIVATE prax::draw prax::text)
-    target_compile_definitions(draw_coregraphics_tests PRIVATE PR_FONTS_DIR="${PROJECT_SOURCE_DIR}/third_party/fonts")
+    target_compile_definitions(draw_coregraphics_tests PRIVATE PR_FONTS_DIR="${PR_TEST_FONTS_DIR}")
 endif()

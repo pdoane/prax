@@ -41,5 +41,5 @@ if ((APPLE OR WIN32) AND PR_JS)
     # The tests of the viewer's own logic.
     add_executable(viewer_tests tests/test_zoom.cpp)
     target_link_libraries(viewer_tests PRIVATE test_main prax::core prax::core_cpp pr_warnings)
-    doctest_discover_tests(viewer_tests)
+    pr_add_tests(viewer_tests)
 endif()

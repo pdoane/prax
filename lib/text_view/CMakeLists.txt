@@ -11,5 +11,5 @@ if (PR_DEVELOP)
         tests/test_text_view_c.c
     )
     target_link_libraries(text_view_tests PRIVATE prax::font prax::layout prax::text)
-    target_compile_definitions(text_view_tests PRIVATE PR_FONTS_DIR="${PROJECT_SOURCE_DIR}/third_party/fonts")
+    target_compile_definitions(text_view_tests PRIVATE PR_FONTS_DIR="${PR_TEST_FONTS_DIR}")
 endif()

@@ -1,4 +1,5 @@
-// Every tree-sitter language that the backend builds in.
+// Every tree-sitter language that the backend builds in (PR_SYNTAX_LANGUAGES), each as its grammar defines it
+// (PR_SYNTAX_HAS_<LANGUAGE>).
 
 #include "pr/syntax_treesitter_languages.h"
 
@@ -44,46 +45,118 @@
 using namespace pr_impl;
 
 void prSyntaxTreeSitterAddLanguages(PrSyntaxRegistry* registry) {
-    const PrSyntaxLanguage* const languages[] = {
-        prSyntaxTreeSitterBash(),
-        prSyntaxTreeSitterC(),
-        prSyntaxTreeSitterCSharp(),
-        prSyntaxTreeSitterCMake(),
-        prSyntaxTreeSitterCpp(),
-        prSyntaxTreeSitterCss(),
-        prSyntaxTreeSitterDart(),
-        prSyntaxTreeSitterDiff(),
-        prSyntaxTreeSitterDockerfile(),
-        prSyntaxTreeSitterGlsl(),
-        prSyntaxTreeSitterGo(),
-        prSyntaxTreeSitterHcl(),
-        prSyntaxTreeSitterHlsl(),
-        prSyntaxTreeSitterHtml(),
-        prSyntaxTreeSitterJava(),
-        prSyntaxTreeSitterJavaScript(),
-        prSyntaxTreeSitterJson(),
-        prSyntaxTreeSitterKotlin(),
-        prSyntaxTreeSitterLua(),
-        prSyntaxTreeSitterMake(),
-        prSyntaxTreeSitterMarkdown(),
-        prSyntaxTreeSitterMarkdownInline(),
-        prSyntaxTreeSitterObjC(),
-        prSyntaxTreeSitterPhp(),
-        prSyntaxTreeSitterPowerShell(),
-        prSyntaxTreeSitterPython(),
-        prSyntaxTreeSitterRuby(),
-        prSyntaxTreeSitterRust(),
-        prSyntaxTreeSitterSlang(),
-        prSyntaxTreeSitterSql(),
-        prSyntaxTreeSitterSwift(),
-        prSyntaxTreeSitterTerraform(),
-        prSyntaxTreeSitterToml(),
-        prSyntaxTreeSitterTsx(),
-        prSyntaxTreeSitterTypeScript(),
-        prSyntaxTreeSitterWgsl(),
-        prSyntaxTreeSitterXml(),
-        prSyntaxTreeSitterYaml(),
-    };
-    for (const PrSyntaxLanguage* language : languages)
-        prSyntaxRegistryAdd(registry, language);
+#if defined(PR_SYNTAX_HAS_BASH)
+    prSyntaxRegistryAdd(registry, prSyntaxTreeSitterBash());
+#endif
+#if defined(PR_SYNTAX_HAS_C)
+    prSyntaxRegistryAdd(registry, prSyntaxTreeSitterC());
+#endif
+#if defined(PR_SYNTAX_HAS_C_SHARP)
+    prSyntaxRegistryAdd(registry, prSyntaxTreeSitterCSharp());
+#endif
+#if defined(PR_SYNTAX_HAS_CMAKE)
+    prSyntaxRegistryAdd(registry, prSyntaxTreeSitterCMake());
+#endif
+#if defined(PR_SYNTAX_HAS_CPP)
+    prSyntaxRegistryAdd(registry, prSyntaxTreeSitterCpp());
+#endif
+#if defined(PR_SYNTAX_HAS_CSS)
+    prSyntaxRegistryAdd(registry, prSyntaxTreeSitterCss());
+#endif
+#if defined(PR_SYNTAX_HAS_DART)
+    prSyntaxRegistryAdd(registry, prSyntaxTreeSitterDart());
+#endif
+#if defined(PR_SYNTAX_HAS_DIFF)
+    prSyntaxRegistryAdd(registry, prSyntaxTreeSitterDiff());
+#endif
+#if defined(PR_SYNTAX_HAS_DOCKERFILE)
+    prSyntaxRegistryAdd(registry, prSyntaxTreeSitterDockerfile());
+#endif
+#if defined(PR_SYNTAX_HAS_GLSL)
+    prSyntaxRegistryAdd(registry, prSyntaxTreeSitterGlsl());
+#endif
+#if defined(PR_SYNTAX_HAS_GO)
+    prSyntaxRegistryAdd(registry, prSyntaxTreeSitterGo());
+#endif
+#if defined(PR_SYNTAX_HAS_HCL)
+    prSyntaxRegistryAdd(registry, prSyntaxTreeSitterHcl());
+#endif
+#if defined(PR_SYNTAX_HAS_HLSL)
+    prSyntaxRegistryAdd(registry, prSyntaxTreeSitterHlsl());
+#endif
+#if defined(PR_SYNTAX_HAS_HTML)
+    prSyntaxRegistryAdd(registry, prSyntaxTreeSitterHtml());
+#endif
+#if defined(PR_SYNTAX_HAS_JAVA)
+    prSyntaxRegistryAdd(registry, prSyntaxTreeSitterJava());
+#endif
+#if defined(PR_SYNTAX_HAS_JAVASCRIPT)
+    prSyntaxRegistryAdd(registry, prSyntaxTreeSitterJavaScript());
+#endif
+#if defined(PR_SYNTAX_HAS_JSON)
+    prSyntaxRegistryAdd(registry, prSyntaxTreeSitterJson());
+#endif
+#if defined(PR_SYNTAX_HAS_KOTLIN)
+    prSyntaxRegistryAdd(registry, prSyntaxTreeSitterKotlin());
+#endif
+#if defined(PR_SYNTAX_HAS_LUA)
+    prSyntaxRegistryAdd(registry, prSyntaxTreeSitterLua());
+#endif
+#if defined(PR_SYNTAX_HAS_MAKE)
+    prSyntaxRegistryAdd(registry, prSyntaxTreeSitterMake());
+#endif
+#if defined(PR_SYNTAX_HAS_MARKDOWN)
+    prSyntaxRegistryAdd(registry, prSyntaxTreeSitterMarkdown());
+#endif
+#if defined(PR_SYNTAX_HAS_MARKDOWN_INLINE)
+    prSyntaxRegistryAdd(registry, prSyntaxTreeSitterMarkdownInline());
+#endif
+#if defined(PR_SYNTAX_HAS_OBJC)
+    prSyntaxRegistryAdd(registry, prSyntaxTreeSitterObjC());
+#endif
+#if defined(PR_SYNTAX_HAS_PHP)
+    prSyntaxRegistryAdd(registry, prSyntaxTreeSitterPhp());
+#endif
+#if defined(PR_SYNTAX_HAS_POWERSHELL)
+    prSyntaxRegistryAdd(registry, prSyntaxTreeSitterPowerShell());
+#endif
+#if defined(PR_SYNTAX_HAS_PYTHON)
+    prSyntaxRegistryAdd(registry, prSyntaxTreeSitterPython());
+#endif
+#if defined(PR_SYNTAX_HAS_RUBY)
+    prSyntaxRegistryAdd(registry, prSyntaxTreeSitterRuby());
+#endif
+#if defined(PR_SYNTAX_HAS_RUST)
+    prSyntaxRegistryAdd(registry, prSyntaxTreeSitterRust());
+#endif
+#if defined(PR_SYNTAX_HAS_SLANG)
+    prSyntaxRegistryAdd(registry, prSyntaxTreeSitterSlang());
+#endif
+#if defined(PR_SYNTAX_HAS_SQL)
+    prSyntaxRegistryAdd(registry, prSyntaxTreeSitterSql());
+#endif
+#if defined(PR_SYNTAX_HAS_SWIFT)
+    prSyntaxRegistryAdd(registry, prSyntaxTreeSitterSwift());
+#endif
+#if defined(PR_SYNTAX_HAS_TERRAFORM)
+    prSyntaxRegistryAdd(registry, prSyntaxTreeSitterTerraform());
+#endif
+#if defined(PR_SYNTAX_HAS_TOML)
+    prSyntaxRegistryAdd(registry, prSyntaxTreeSitterToml());
+#endif
+#if defined(PR_SYNTAX_HAS_TSX)
+    prSyntaxRegistryAdd(registry, prSyntaxTreeSitterTsx());
+#endif
+#if defined(PR_SYNTAX_HAS_TYPESCRIPT)
+    prSyntaxRegistryAdd(registry, prSyntaxTreeSitterTypeScript());
+#endif
+#if defined(PR_SYNTAX_HAS_WGSL)
+    prSyntaxRegistryAdd(registry, prSyntaxTreeSitterWgsl());
+#endif
+#if defined(PR_SYNTAX_HAS_XML)
+    prSyntaxRegistryAdd(registry, prSyntaxTreeSitterXml());
+#endif
+#if defined(PR_SYNTAX_HAS_YAML)
+    prSyntaxRegistryAdd(registry, prSyntaxTreeSitterYaml());
+#endif
 }

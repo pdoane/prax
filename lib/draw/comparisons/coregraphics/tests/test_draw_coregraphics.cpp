@@ -79,7 +79,7 @@ using namespace pr_impl;
 
 // CoreText cannot paint a brush, so a glyph with a brush fills its outline.
 TEST_CASE("a glyph with a brush fills its outline as cpu does") {
-    const PrFont* font = load("NotoSans.ttf");
+    const PrFont* font = load("NotoSans[wdth,wght].ttf");
     PrDrawRenderer* cg = prDrawCoreGraphicsCreate(nullptr);
     PrDrawRenderer* cpu = prDrawCpuCreate(nullptr);
     PrDrawList* list = prDrawListCreate();
@@ -102,7 +102,7 @@ TEST_CASE("a glyph with a brush fills its outline as cpu does") {
 // A variable font at its default instance, beside a CoreText shaper that holds fonts created from the same bytes.
 // Quartz's copy of a font at its defaults draws some glyphs as nothing.
 TEST_CASE("native text draws each glyph of a font at its defaults") {
-    const PrFont* font = load("NotoSans.ttf");
+    const PrFont* font = load("NotoSans[wdth,wght].ttf");
     PrTextShaper* shaper = prTextCoreTextCreate();
     PrTextGlyphBuffer* shaped = prTextGlyphBufferCreate();
     PrTextRun text{};
@@ -134,7 +134,7 @@ TEST_CASE("native text draws each glyph of a font at its defaults") {
 
 // Quartz's copy of a font at a design point draws the glyphs of that point.
 TEST_CASE("native text draws each glyph of a variation") {
-    const PrFont* font = load("NotoSans.ttf");
+    const PrFont* font = load("NotoSans[wdth,wght].ttf");
     // Smoothing thickens glyphs, so the ink is comparable only without smoothing.
     PrDrawCoreGraphicsOptions options = prDrawCoreGraphicsOptionsDefault();
     options.fontSmoothing = false;

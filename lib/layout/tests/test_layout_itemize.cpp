@@ -34,8 +34,8 @@ PrLayoutNode span(Fixture& f, PrLayoutNode parent, const PrLayoutFontStyle& font
     return f.element(parent, box, nullptr, nullptr, &font);
 }
 
-constexpr const char* kDevanagari = "NotoSansDevanagari.ttf";
-constexpr const char* kArabic = "NotoSansArabic.ttf";
+constexpr const char* kDevanagari = "NotoSansDevanagari[wdth,wght].ttf";
+constexpr const char* kArabic = "NotoSansArabic[wdth,wght].ttf";
 
 } // namespace
 

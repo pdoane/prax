@@ -76,7 +76,7 @@ TEST_CASE("whitespace resolves to nothing") {
 }
 
 TEST_CASE("a path to a file that exists resolves to its file URL") {
-    String url = resolved(__FILE__);
+    String url = resolved(BROWSER_TESTS_DIR "/test_address.cpp");
     CHECK(prStringStartsWith(url, "file://"));
     CHECK(prStringContains(url, "apps/browser/tests/test_address.cpp"));
     CHECK(resolved("/no/such/file.html") == "https://html.duckduckgo.com/html/?q=%2Fno%2Fsuch%2Ffile.html");

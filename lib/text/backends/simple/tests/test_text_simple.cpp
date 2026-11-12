@@ -140,7 +140,7 @@ TEST_CASE("the public headers compile as C") {
 TEST_CASE("Latin, Greek and Cyrillic text kerns as HarfBuzz kerns it") {
     PrTextShaper* simple = prTextSimpleCreate();
     PrTextShaper* harfbuzz = prTextHarfBuzzCreate();
-    for (const char* file : {"NotoSans.ttf", "NotoSerif.ttf", "Tinos.ttf", "Arimo.ttf"}) {
+    for (const char* file : {"NotoSans[wdth,wght].ttf", "NotoSerif[wdth,wght].ttf", "Tinos-Regular.ttf", "Arimo-Regular.ttf"}) {
         CAPTURE(file);
         std::vector<uint8_t> bytes = readFile(file);
         const PrFont* font = load(bytes);
@@ -157,7 +157,7 @@ TEST_CASE("Latin, Greek and Cyrillic text kerns as HarfBuzz kerns it") {
 TEST_CASE("a variable font kerns at its instance, as HarfBuzz varies its kerning") {
     PrTextShaper* simple = prTextSimpleCreate();
     PrTextShaper* harfbuzz = prTextHarfBuzzCreate();
-    std::vector<uint8_t> bytes = readFile("NotoSans.ttf");
+    std::vector<uint8_t> bytes = readFile("NotoSans[wdth,wght].ttf");
     const PrFont* font = load(bytes);
     for (float weight : {100.0f, 900.0f}) {
         PrFontVariation variation{PR_FONT_TAG('w', 'g', 'h', 't'), weight};
@@ -175,7 +175,7 @@ TEST_CASE("a variable font kerns at its instance, as HarfBuzz varies its kerning
 
 TEST_CASE("a run without kerning advances by the font's advances alone") {
     PrTextShaper* simple = prTextSimpleCreate();
-    std::vector<uint8_t> bytes = readFile("NotoSans.ttf");
+    std::vector<uint8_t> bytes = readFile("NotoSans[wdth,wght].ttf");
     const PrFont* font = load(bytes);
     PrTextRun run = runOf(font, "AVATAR");
     float kerned = positionsOf(shape(simple, run)).back().x;
@@ -191,7 +191,7 @@ TEST_CASE("a run without kerning advances by the font's advances alone") {
 TEST_CASE("a right-to-left run comes out in visual order, its clusters descending") {
     PrTextShaper* simple = prTextSimpleCreate();
     PrTextShaper* harfbuzz = prTextHarfBuzzCreate();
-    std::vector<uint8_t> bytes = readFile("NotoSansHebrew.ttf");
+    std::vector<uint8_t> bytes = readFile("NotoSansHebrew[wdth,wght].ttf");
     const PrFont* font = load(bytes);
     PrTextRun run = runOf(font, "\xd7\xa9\xd7\x9c\xd7\x95\xd7\x9d");
     run.direction = PrTextDirection_Rtl;
@@ -224,7 +224,7 @@ TEST_CASE("a font whose GPOS does not kern kerns by its kern table") {
 
 TEST_CASE("a vertical run stands each glyph at its vertical origin") {
     PrTextShaper* simple = prTextSimpleCreate();
-    std::vector<uint8_t> bytes = readFile("NotoSansJP.ttf");
+    std::vector<uint8_t> bytes = readFile("NotoSansJP-VF.otf");
     const PrFont* font = load(bytes);
     PrTextRun run = runOf(font, "\xe6\xbc\xa2\xe5\xad\x97");
     run.axis = PrTextAxis_Vertical;

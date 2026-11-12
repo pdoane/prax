@@ -32,9 +32,8 @@ if (PR_DEVELOP)
     function(pr_net_tests name)
         add_executable(${name} ${ARGN})
         target_link_libraries(${name} PRIVATE net_peer prax::net prax::core_cpp test_main pr_warnings)
-        add_test(NAME ${name} COMMAND ${Python3_EXECUTABLE} -m tools.harness.net_peer $<TARGET_FILE:${name}>
-                 WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
-        set_tests_properties(${name} PROPERTIES TIMEOUT 60)
+        pr_add_test(${name} COMMAND ${Python3_EXECUTABLE} -m tools.harness.net_peer $<TARGET_FILE:${name}>
+                    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR} TIMEOUT 60)
     endfunction()
 
     if (PR_NET_SOCKETS)

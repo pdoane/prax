@@ -155,6 +155,13 @@ void addText(PrDrawList* list, const PrFont* font, float size, const char* text,
 
 using namespace pr_impl;
 
+TEST_CASE("the triangles header compiles as C") {
+    CHECK(prTestDrawTrianglesCApi() == 0);
+}
+
+// The tests that draw on the platform's GPU, which a run without one skips (harness::gpuTests).
+TEST_SUITE_BEGIN("gpu" * doctest::skip(!harness::gpuTests()));
+
 TEST_CASE("the triangles renderer draws a frame on the device") {
     Device device(64, 64);
     CHECK(prDrawRendererDevice(device.renderer) == device.gpuDevice);
@@ -181,7 +188,7 @@ TEST_CASE("the triangles renderer draws a frame on the device") {
 
 TEST_CASE("the triangles renderer draws glyphs from the atlas as the cpu backend covers them") {
     Device device(128, 64);
-    const PrFont* font = load("NotoSans.ttf");
+    const PrFont* font = load("NotoSans[wdth,wght].ttf");
     PrDrawList* list = prDrawListCreate();
     std::vector<PrFontGlyph> glyphs;
     PrVec2 pen{8, 44};
@@ -532,7 +539,7 @@ TEST_CASE("triangles uploads its atlas and images once") {
 
 TEST_CASE("triangles draws glyphs from its atlas, covering what the cpu backend covers") {
     Device h(128, 64);
-    const PrFont* font = load("NotoSans.ttf");
+    const PrFont* font = load("NotoSans[wdth,wght].ttf");
     PrDrawList* list = prDrawListCreate();
     addText(list, font, 32, "Hxg", PrVec2{8.3f, 44});
     std::vector<uint8_t> drawn = h.render(list);
@@ -594,6 +601,4 @@ TEST_CASE("triangles draws a drop shadow with about the cpu backend's coverage")
     prDrawListRelease(list);
 }
 
-TEST_CASE("the triangles header compiles as C") {
-    CHECK(prTestDrawTrianglesCApi() == 0);
-}
+TEST_SUITE_END();

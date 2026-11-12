@@ -46,7 +46,7 @@ std::string dump(const PrDrawList* list) {
 using namespace pr_impl;
 
 TEST_CASE("a glyph run is recorded with copies of its glyphs and a reference to its stack") {
-    const PrFont* font = load("NotoSans.ttf");
+    const PrFont* font = load("NotoSans[wdth,wght].ttf");
     PrDrawList* list = prDrawListCreate();
     std::vector<PrFontGlyph> glyphs = {
         {prFontCodePointGlyph(font, 'H'), {10, 20}},
@@ -79,7 +79,7 @@ TEST_CASE("a glyph run is recorded with copies of its glyphs and a reference to 
 }
 
 TEST_CASE("a glyph run is recorded with its glyphs placed from its origin") {
-    const PrFont* font = load("NotoSans.ttf");
+    const PrFont* font = load("NotoSans[wdth,wght].ttf");
     PrDrawList* list = prDrawListCreate();
     PrFontGlyph glyph{prFontCodePointGlyph(font, 'H'), {10, 20}};
     PrFontGlyphRun run{};
@@ -99,7 +99,7 @@ TEST_CASE("a glyph run is recorded with its glyphs placed from its origin") {
 }
 
 TEST_CASE("a glyph is placed by its size, shear, transform and position") {
-    const PrFont* font = load("NotoSans.ttf");
+    const PrFont* font = load("NotoSans[wdth,wght].ttf");
     PrFontGlyph glyph{prFontCodePointGlyph(font, 'H'), {100, 50}};
     PrAffine2 turn = prAffine2Rotate(3.14159265f / 2);
     PrFontDerivation leaning = prFontDerivationDefault();

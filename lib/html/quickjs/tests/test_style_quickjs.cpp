@@ -217,7 +217,7 @@ TEST_CASE("a face's object made while it loads is held until the load settles it
     prJsMathMlBind(ctx);
     jsHtmlBind(ctx);
     PrHtmlPage* page = prHtmlPageCreate(nullptr);
-    std::string path = std::string(PR_FONTS_DIR) + "/HandwritingCff2.otf";
+    std::string path = std::string(PR_FONTS_DIR) + "/noto_handwriting-cff2_colr_1.otf";
     std::string bytes;
     FILE* file = std::fopen(path.c_str(), "rb");
     REQUIRE(file != nullptr);

@@ -146,7 +146,7 @@ PrFontMetrics metricsOf(const char* file) {
 // Returns a baseline of Arimo below its alphabetic baseline at `size`, in pixels, as layout takes it: in units,
 // unrounded.
 double arimoBaseline(float PrFontMetrics::*name, float size) {
-    return double(prLayoutUnitToPx(prLayoutUnitFromPx(metricsOf("Arimo.ttf").*name * size)));
+    return double(prLayoutUnitToPx(prLayoutUnitFromPx(metricsOf("Arimo-Regular.ttf").*name * size)));
 }
 
 // Adds the test font `file` to the fixture's set as family `family`, serving the code points of `ranges` if given.
@@ -168,7 +168,7 @@ void addFace(Fixture& f, const char* file, const char* family, const PrFontCodeP
 // text.
 PrLayoutFontStyle upperAndFallback(Fixture& f, float size, float lineHeight) {
     static const PrFontCodePointRange kUpper[] = {{0x0000, 0x005f}};
-    addFace(f, "Arimo.ttf", "Upper", kUpper, 1);
+    addFace(f, "Arimo-Regular.ttf", "Upper", kUpper, 1);
     addFace(f, "Literata.ttf", "Fallback", nullptr, 0);
     PrFontFamily families[] = {prFontFamilyFromName("Upper"), prFontFamilyFromName("Fallback")};
     PrLayoutFontStyle text = font(size, lineHeight);

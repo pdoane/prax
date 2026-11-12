@@ -5,15 +5,20 @@
 
 #include "layout/tests/layout_fixture.h"
 
+#include <algorithm>
+#include <fstream>
+#include <iterator>
+#include <map>
+#include <string>
 #include <vector>
 
 namespace pr_impl {
 
 namespace {
 
-// Adds the font file `file` of the font bundles' directory to `f`'s set.
+// Adds the test font `file` to `f`'s set.
 void install(Fixture& f, const char* file) {
-    std::string path = std::string(PR_FONT_BUNDLE_DIR) + "/" + file;
+    std::string path = std::string(PR_FONTS_DIR) + "/" + file;
     const PrFont* PR_NULLABLE font = nullptr;
     REQUIRE(prFontCreateFromFile(path, 0, nullptr, &font) == PrStatus_Ok);
     PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
@@ -28,12 +33,94 @@ constexpr PrLocale kHantHongKong = prLocaleMake(PrLanguage_None, PrScript_Hant, 
 constexpr PrLocale kJapanese = prLocaleMake(PrLanguage_None, PrScript_Jpan, PrRegion_None);
 constexpr PrLocale kKorean = prLocaleMake(PrLanguage_None, PrScript_Kore, PrRegion_None);
 
+// Returns the font file `bytes` with a name table that names its family `family` and nothing else.
+std::vector<uint8_t> renamed(const std::vector<uint8_t>& bytes, const std::string& family) {
+    auto read16 = [&](size_t at) { return uint32_t(bytes[at] << 8 | bytes[at + 1]); };
+    auto read32 = [&](size_t at) { return read16(at) << 16 | read16(at + 2); };
+    auto put16 = [](std::vector<uint8_t>& out, uint32_t value) {
+        out.push_back(uint8_t(value >> 8));
+        out.push_back(uint8_t(value));
+    };
+    auto put32 = [&](std::vector<uint8_t>& out, uint32_t value) {
+        put16(out, value >> 16);
+        put16(out, value & 0xffff);
+    };
+    struct Table {
+        uint32_t tag;
+        std::vector<uint8_t> data;
+    };
+    std::vector<Table> tables;
+    constexpr uint32_t kName = PR_FONT_TAG('n', 'a', 'm', 'e');
+    for (uint32_t i = 0; i < read16(4); ++i) {
+        size_t record = 12 + 16 * size_t(i);
+        const uint8_t* data = bytes.data() + read32(record + 8);
+        if (read32(record) != kName)
+            tables.push_back({read32(record), {data, data + read32(record + 12)}});
+    }
+    // The family's name, in UTF-16BE, as Windows' platform names it: its family (1) and its typographic family (16).
+    std::vector<uint8_t> text;
+    for (char c : family)
+        put16(text, uint8_t(c));
+    Table name{kName, {}};
+    put16(name.data, 0);
+    put16(name.data, 2);
+    put16(name.data, 6 + 12 * 2);
+    for (uint32_t id : {1u, 16u}) {
+        for (uint32_t value : {3u, 1u, 0x409u, id, uint32_t(text.size()), 0u})
+            put16(name.data, value);
+    }
+    name.data.insert(name.data.end(), text.begin(), text.end());
+    tables.push_back(name);
+    std::sort(tables.begin(), tables.end(), [](const Table& a, const Table& b) { return a.tag < b.tag; });
+    std::vector<uint8_t> out;
+    put32(out, read32(0));
+    uint32_t count = uint32_t(tables.size());
+    uint32_t power = 1;
+    uint32_t log = 0;
+    while (power * 2 <= count) {
+        power *= 2;
+        ++log;
+    }
+    for (uint32_t value : {count, power * 16, log, count * 16 - power * 16})
+        put16(out, value);
+    uint32_t offset = 12 + 16 * count;
+    for (const Table& table : tables) {
+        for (uint32_t value : {table.tag, 0u, offset, uint32_t(table.data.size())})
+            put32(out, value);
+        offset += (uint32_t(table.data.size()) + 3) & ~3u;
+    }
+    for (const Table& table : tables) {
+        out.insert(out.end(), table.data.begin(), table.data.end());
+        out.resize((out.size() + 3) & ~size_t(3));
+    }
+    return out;
+}
+
+// Adds Noto Sans JP's outlines to `f`'s set as the family `family`, made once for each family and kept for the run.
+void installAs(Fixture& f, const char* family) {
+    static std::map<std::string, std::vector<uint8_t>> made;
+    std::vector<uint8_t>& bytes = made[family];
+    if (bytes.empty()) {
+        std::ifstream file(std::string(PR_FONTS_DIR) + "/NotoSansJP-VF.otf", std::ios::binary);
+        REQUIRE(file.good());
+        bytes = renamed({std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()}, family);
+    }
+    const PrFont* PR_NULLABLE font = nullptr;
+    REQUIRE(prFontCreate(bytes, 0, nullptr, &font) == PrStatus_Ok);
+    PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
+    prFontSetAdd(f.fonts, &descriptor, font);
+    prFontRelease(font);
+}
+
 // Installs the sans CJK families, then Noto Serif SC, and Last Resort to fall back to, in the bundles' order, each made
-// for its writing system and drawn in its generic family.
+// for its writing system and drawn in its generic family. The CJK families are one face of Noto Sans JP's outlines
+// under each family's name: what falls back to them is chosen by their names and their locales, which their glyphs do
+// not change.
 void installCjk(Fixture& f) {
-    for (const char* file : {"NotoSansSC-VF.otf", "NotoSansTC-VF.otf", "NotoSansHK-VF.otf", "NotoSansJP-VF.otf",
-        "NotoSansKR-VF.otf", "NotoSerifSC-VF.otf", "LastResort-Regular.ttf"})
-        install(f, file);
+    for (const char* family : {"Noto Sans SC", "Noto Sans TC", "Noto Sans HK", "Noto Sans JP", "Noto Sans KR",
+        "Noto Serif SC"})
+        installAs(f, family);
+    install(f, "LastResort-Regular.ttf");
     const PrFontFallbackFamily families[] = {
         {"Noto Sans SC", kHans, PrFontGeneric_SansSerif},
         {"Noto Sans TC", kHant, PrFontGeneric_SansSerif},
@@ -227,10 +314,10 @@ TEST_CASE("a page of text its named family serves falls back to nothing") {
 TEST_CASE("a cluster of emoji presentation falls back to a color font first, and of text presentation to text") {
     Fixture f;
     install(f, "NotoSansSymbols2-Regular.ttf");
-    install(f, "NotoColorEmoji.ttf");
+    install(f, "Twemoji.ttf");
     const PrFontFallbackFamily families[] = {
         {"Noto Sans Symbols 2", 0, PrFontGeneric_None},
-        {"Noto Color Emoji", 0, PrFontGeneric_None},
+        {"twemoji-glyf_colr_1", 0, PrFontGeneric_None},
     };
     prFontSetSetFallbackFamilies(f.fonts, families, 2);
     // U+2601 CLOUD, of text presentation by default, which both families serve and Arimo does not: with VS16 and with

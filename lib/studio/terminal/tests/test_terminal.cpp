@@ -90,6 +90,103 @@ struct FakeApp {
     bool woke() { return wakes.exchange(0) != 0; }
 };
 
+// A launcher whose process is the test: the program's output is what the test passes to `output`, at the speed of
+// memory, with no pseudoterminal or program between. The process runs until the terminal destroys it, and keeps what
+// the terminal writes to it, for `input`. A test that calls `output` from a thread of its own joins the thread before
+// the terminal is destroyed, as a backend stops its thread when its process is destroyed.
+struct FakeLauncher {
+    // The process, and the launcher that it belongs to.
+    struct FakeProcess {
+        PrProcess process;
+        FakeLauncher* launcher;
+    };
+
+    PrProcessLauncher launcher{};
+    FakeProcess process{{}, this};
+    PrProcessReceiveFn PR_NULLABLE receive = nullptr;
+    void* PR_NULLABLE receiveContext = nullptr;
+    PrMutex mutex;
+    std::string written;
+
+    FakeLauncher() {
+        prMutexInit(&mutex);
+        launcher.destroy = [](PrProcessLauncher*) {};
+        launcher.launch = [](PrProcessLauncher* l, const PrProcessDesc* desc, PrProcess* PR_NULLABLE* out) -> PrStatus {
+            FakeLauncher* fake = reinterpret_cast<FakeLauncher*>(l);
+            fake->receive = desc->receive;
+            fake->receiveContext = desc->receiveContext;
+            *out = &fake->process.process;
+            return PrStatus_Ok;
+        };
+        PrProcess& p = process.process;
+        p.destroy = [](PrProcess*) {};
+        // The terminal writes from the UI's thread and from the parser's.
+        p.write = [](PrProcess* written, PrByteView bytes) {
+            FakeLauncher* fake = reinterpret_cast<FakeProcess*>(written)->launcher;
+            prMutexLock(&fake->mutex);
+            fake->written.append(reinterpret_cast<const char*>(bytes.data), bytes.size);
+            prMutexUnlock(&fake->mutex);
+        };
+        p.closeInput = [](PrProcess*) {};
+        p.read = [](PrProcess*, PrProcessStream, uint8_t* PR_NULLABLE, size_t) { return size_t(0); };
+        p.info = [](const PrProcess*) { return PrProcessInfo{}; };
+        p.kill = [](PrProcess*) {};
+        p.terminalResize = [](PrProcess*, PrUVec2, PrUVec2) {};
+        p.terminalForegroundDirectory = [](const PrProcess*) { return prRawStringNull(); };
+    }
+
+    ~FakeLauncher() { prMutexReset(&mutex); }
+
+    FakeLauncher(const FakeLauncher&) = delete;
+    FakeLauncher& operator=(const FakeLauncher&) = delete;
+
+    // Gives `text` to the terminal as the program's output, on the calling thread, as a backend's thread gives it. The
+    // terminal must have launched its program through this launcher.
+    void output(const std::string& text) {
+        receive(receiveContext, &process.process, PrProcessStream_Output,
+            PrByteView{reinterpret_cast<const uint8_t*>(text.data()), text.size()});
+    }
+
+    // What the terminal has written to the program.
+    std::string input() {
+        prMutexLock(&mutex);
+        std::string text = written;
+        prMutexUnlock(&mutex);
+        return text;
+    }
+
+    // Sets `desc` to launch through this launcher (Term's setup).
+    std::function<void(PrTerminalDesc*)> setup() {
+        return [this](PrTerminalDesc* desc) { desc->launcher = &launcher; };
+    }
+};
+
+// Gives `text` to a terminal from a thread of its own, as a program's output, until stopped. Stopping joins the thread.
+struct Flood {
+    FakeLauncher* fake;
+    std::string text;
+    Atomic<uint32_t> stopping{};
+    PrThread thread{};
+
+    Flood(FakeLauncher* launcher, std::string flooded) : fake(launcher), text(std::move(flooded)) {
+        prThreadStart(&thread, [](void* context) {
+            Flood* flood = static_cast<Flood*>(context);
+            while (flood->stopping.load() == 0)
+                flood->fake->output(flood->text);
+        }, this);
+    }
+
+    ~Flood() { stop(); }
+
+    Flood(const Flood&) = delete;
+    Flood& operator=(const Flood&) = delete;
+
+    void stop() {
+        if (stopping.exchange(1) == 0)
+            prThreadJoin(&thread);
+    }
+};
+
 // The modifier of a click that opens a link.
 PrAppModifierFlags primaryModifier() {
 #if defined(__APPLE__)
@@ -210,6 +307,17 @@ struct Term {
         }
     }
 
+    // Waits until the screen has only what the test writes to it (write). A Windows pseudoconsole clears the screen and
+    // sets the title shortly after the launch, which would erase anything written before it, so this runs frames until
+    // the title changes from the program's name. Elsewhere the screen is ready at once. The program must write nothing,
+    // as sleep does.
+    void settle() {
+#if defined(_WIN32)
+        std::string name(prTerminalTitle(terminal).data, prTerminalTitle(terminal).size);
+        frameUntil([&] { return prTerminalTitle(terminal) != PrStringView(name); });
+#endif
+    }
+
     bool shows(const std::string& text) const { return screen().find(text) != std::string::npos; }
 
     // The center of the screen cell at `column` and `row`, in viewport coordinates.
@@ -255,16 +363,12 @@ struct Term {
     }
 };
 
-// Returns the tests' folder under the user's cache directory, after writing a file of three lines named `name` in it.
-// The path is normalized, as the terminal's paths are.
+// Returns the binary's folder (harness::testFolder), after writing a file of three lines named `name` in it. The path
+// is normalized, as the terminal's paths are.
 std::string folderWithFile(const std::string& name) {
-    PrRawString cache = prFileUserDirectory(PrFileUserDirectory_Cache);
-    PrRawString absolute = prFilePathAbsolute(prRawStringView(&cache), "");
+    PrRawString absolute = prFilePathAbsolute(harness::testFolder(), "");
     std::string folder(prRawStringView(&absolute).data, prRawStringView(&absolute).size);
     prRawStringReset(&absolute);
-    prRawStringReset(&cache);
-    folder += "/prax-tests/terminal";
-    REQUIRE(prFileCreateDirectory(folder));
     std::string text = "one\ntwo\nthree\n";
     REQUIRE(prFileWrite(folder + "/" + name, PrByteView{reinterpret_cast<const uint8_t*>(text.data()), text.size()}));
     return folder;
@@ -306,12 +410,9 @@ bool near(PrColor8 a, PrColor8 b) {
     return close(a.r, b.r) && close(a.g, b.g) && close(a.b, b.b);
 }
 
-// Creates and returns the tests' folder `name` under the user's cache directory.
-std::string testFolder(const std::string& name) {
-    PrRawString cache = prFileUserDirectory(PrFileUserDirectory_Cache);
-    std::string folder(prRawStringView(&cache).data, prRawStringView(&cache).size);
-    prRawStringReset(&cache);
-    folder += "/prax-tests/terminal/" + name;
+// Creates and returns the folder `name` in the binary's folder (harness::testFolder).
+std::string subfolder(const std::string& name) {
+    std::string folder = harness::testFolder() + "/" + name;
     REQUIRE(prFileCreateDirectory(folder));
     return folder;
 }
@@ -496,28 +597,19 @@ std::string cellImage(PrTerminal* terminal, uint32_t columns, uint32_t rows, con
 
 constexpr PrColor8 kImageRed = {0xff, 0x00, 0x00, 0xff};
 
-// The longest time, in milliseconds, that the UI thread may wait for the screen lock while the program floods the
-// terminal. The bound is one slice of parsing, plus room for the scheduler. A build without the optimizer, or with a
-// sanitizer, parses many times slower. The tests run more threads than the machine has cores, so the scheduler may
-// preempt the parser while it holds the lock. No lock can bound that delay, so the bound applies to all but a
-// thousandth of the waits.
-#if defined(NDEBUG)
-constexpr double kLockWaitBound = 5;
-#else
-constexpr double kLockWaitBound = 250;
-#endif
-
-// Returns an upper bound on the wait at the `share` quantile of `info`: the upper edge of the histogram bucket that
-// holds that quantile.
-double waitAtShare(const PrTerminalLockInfo& info, double share) {
-    uint64_t seen = 0;
-    double bound = 0.001;
-    for (uint32_t i = 0; i < kPrTerminalLockBuckets; ++i, bound *= 2) {
-        seen += info.buckets[i];
-        if (double(seen) >= share * double(info.count))
-            return bound;
+// Runs the frames that an application would run now: one for each wake of the program, and those that the terminal asks
+// for at once. Returns the number of wakes.
+uint32_t runWoken(Term& t, FakeApp& app) {
+    uint32_t wakes = 0;
+    for (uint32_t i = 0; i < 100; ++i) {
+        bool woke = app.woke();
+        wakes += woke ? 1 : 0;
+        if (!woke && !prUiOutput(t.f.ui).wantsFrame)
+            return wakes;
+        t.f.frame();
     }
-    return info.worstMilliseconds;
+    FAIL("the terminal asks for frames without end");
+    return wakes;
 }
 
 } // namespace
@@ -641,6 +733,7 @@ TEST_CASE("terminal: a click with the primary modifier opens the URL under it, a
 TEST_CASE("terminal: a hyperlink under the pointer with the primary modifier underlines all of its cells") {
     FakeApp app;
     Term t("sleep", {"10"}, &app.app);
+    t.settle();
     // One link in two parts, whose text differs from its URI, followed by a URL in plain text.
     t.write(hyperlink("https://example.com/real", "id=a") + "one" + kHyperlinkEnd + " gap " +
         hyperlink("https://example.com/real", "id=a") + "three" + kHyperlinkEnd + " https://example.com/text");
@@ -667,6 +760,7 @@ TEST_CASE("terminal: a hyperlink under the pointer with the primary modifier und
 
 TEST_CASE("terminal: a hyperlink at rest has a faint dotted underline, and text without a link has none") {
     Term t("sleep", {"10"});
+    t.settle();
     t.write("____\r\n" + hyperlink("https://example.com/") + "____" + kHyperlinkEnd);
     t.f.frame();
     std::vector<uint8_t> rgba;
@@ -698,6 +792,7 @@ TEST_CASE("terminal: a hyperlink to a file that exists opens through the handler
         desc->openFileContext = &opened;
     };
     Term t("sleep", {"10"}, &app.app, {}, setup);
+    t.settle();
     std::string uri = taken(prUrlFromFilePath(folder + "/linked.txt"));
     t.write(hyperlink(uri) + "here" + kHyperlinkEnd + " " + hyperlink("file:///nowhere/missing.txt") + "gone" +
         kHyperlinkEnd + " " + hyperlink("file://elsewhere.invalid/x") + "far" + kHyperlinkEnd);
@@ -714,6 +809,7 @@ TEST_CASE("terminal: a hyperlink to a file that exists opens through the handler
 
 TEST_CASE("terminal: a change of the palette, the roles or reverse video redraws the rows that it colors") {
     Term t("sleep", {"10"});
+    t.settle();
     // Two full blocks, which the terminal draws as shapes that fill their cells. One is in the default foreground, and
     // one is in the palette's red.
     t.write("\xe2\x96\x88\x1b[31m\xe2\x96\x88\x1b[0m");
@@ -737,6 +833,7 @@ TEST_CASE("terminal: a change of the palette, the roles or reverse video redraws
 
 TEST_CASE("terminal: the screen takes the colors of the kit's theme, and follows its changes") {
     Term t("sleep", {"10"});
+    t.settle();
     auto color8 = [](PrColor color) {
         return PrColor8{uint8_t(color.r * 255 + 0.5f), uint8_t(color.g * 255 + 0.5f), uint8_t(color.b * 255 + 0.5f), 255};
     };
@@ -757,6 +854,7 @@ TEST_CASE("terminal: the screen takes the colors of the kit's theme, and follows
 
 TEST_CASE("terminal: the view paints no background, and its owner's shows under the cells, the gutter and the edges") {
     Term t("sleep", {"10"});
+    t.settle();
     t.viewport = PrVec2{float(KitFixture::kRenderWidth), float(KitFixture::kRenderHeight)};
     t.f.frame();
     PrColor8 background = prVtermRoleColor(Locked(t.terminal), PrVtermColorRole_Background);
@@ -809,6 +907,7 @@ TEST_CASE("terminal: the view paints no background, and its owner's shows under 
 
 TEST_CASE("terminal: a terminal that paints its background in its view shows it within the view alone") {
     Term t("sleep", {"10"});
+    t.settle();
     // A panel in the window holds the terminal, which paints its own background, as in Scribe.
     t.f.build = [&t](PrLayoutNode root) {
         PrLayoutTree* tree = t.f.tree;
@@ -836,6 +935,7 @@ TEST_CASE("terminal: a terminal that paints its background in its view shows it 
 TEST_CASE("terminal: a bell flashes the screen and fades, and asks for attention once while the window is inactive") {
     FakeApp app;
     Term t("sleep", {"10"}, &app.app);
+    t.settle();
     PrVec2 blank = t.cellCenter(10, 5);
     PrColor8 background = prVtermRoleColor(Locked(t.terminal), PrVtermColorRole_Background);
     REQUIRE(near(t.pixel(blank), background));
@@ -873,6 +973,7 @@ TEST_CASE("terminal: a bell flashes the screen and fades, and asks for attention
 TEST_CASE("terminal: with reduced motion, the bell's flash holds still and ends at its time") {
     FakeApp app;
     Term t("sleep", {"10"}, &app.app);
+    t.settle();
     t.f.preferences.reducedMotion = true;
     t.f.frame();
     PrVec2 blank = t.cellCenter(10, 5);
@@ -892,6 +993,8 @@ TEST_CASE("terminal: with reduced motion, the bell's flash holds still and ends 
 
 TEST_CASE("terminal: a notification posts unless the terminal has focus in the active window, or as its condition says") {
     FakeApp app;
+    // The notifications take the program's name as their title, so the test does not settle (Term::settle), which waits
+    // for a Windows pseudoconsole's title. A notification acts on the screen's events, not its contents.
     Term t("sleep", {"10"}, &app.app);
     // The terminal shows in the active window without focus. The default and unfocused conditions post, and the
     // invisible condition does not.
@@ -931,98 +1034,104 @@ TEST_CASE("terminal: a notification posts unless the terminal has focus in the a
 
 TEST_CASE("terminal: a flood of output goes on showing in the frames that the terminal and its program ask for") {
     FakeApp app;
-    // Far more output than one frame parses, followed by a marker.
-    Term t("sh", {"-c", "head -c 60000000 /dev/zero | tr '\\0' a; echo; echo flood-done; sleep 10"}, &app.app);
+    FakeLauncher fake;
+    Term t("program", {}, &app.app, {}, fake.setup());
+    REQUIRE(fake.receive != nullptr);
+    // Far more output than one frame parses, from the program's thread, followed by a marker.
+    struct Output {
+        FakeLauncher* fake;
+        PrThread thread;
+    } output{&fake, {}};
+    prThreadStart(&output.thread, [](void* context) {
+        FakeLauncher* fake = static_cast<Output*>(context)->fake;
+        std::string chunk(4 * kPrTerminalParseSliceBytes, 'a');
+        for (uint32_t i = 0; i < 64; ++i)
+            fake->output(chunk);
+        fake->output("\r\nflood-done\r\n");
+    }, &output);
     // Frames run as an application runs them: only if the program woke it or the terminal asks for a frame.
-    double end = prTimeMonotonicMilliseconds() + 3 * kPatience;
+    double end = prTimeMonotonicMilliseconds() + kPatience;
     while (!t.shows("flood-done")) {
-        REQUIRE(prTimeMonotonicMilliseconds() < end);
-        PrAppOutput output = prUiOutput(t.f.ui);
-        if (app.woke() || output.wantsFrame)
+        if (prTimeMonotonicMilliseconds() >= end)
+            break;
+        if (app.woke() || prUiOutput(t.f.ui).wantsFrame)
             t.f.frame();
         else
             prThreadSleep(1);
     }
+    prThreadJoin(&output.thread);
+    REQUIRE(t.shows("flood-done"));
     // Once the output stops, the terminal asks for no more frames. So the frames above ran because of the flood.
     t.f.frame();
     CHECK_FALSE(prUiOutput(t.f.ui).wantsFrame);
 }
 
+// The wait's duration is not checked: the scheduler can preempt the parser while it holds the lock, for as long as the
+// machine's load keeps it off the processor. What the parser took during a wait is the bound that load cannot move.
 TEST_CASE("terminal: while the program floods the screen, the UI waits for it no longer than a slice of parsing") {
-    FakeApp app;
-    // Colored text, wide characters and scrolling lines, which parse slower than plain text, followed by a marker. A
-    // Windows pseudoconsole renders it slowly, so the flood is smaller there.
-#if defined(_WIN32)
-    std::string script = "head -c 1000000; echo; echo flood-done; sleep 10";
-#else
-    std::string script = "head -c 30000000; echo; echo flood-done; sleep 10";
-#endif
-    script = "yes '\033[31mred \033[1;4mbold\033[0m \xe6\xbc\xa2\xe5\xad\x97 caf\xc3\xa9 plain text' | " + script;
-    Term t("sh", {"-c", script}, &app.app);
-    double end = prTimeMonotonicMilliseconds() + 3 * kPatience;
-    uint32_t frames = 0;
-    while (!t.shows("flood-done")) {
-        REQUIRE(prTimeMonotonicMilliseconds() < end);
-        if (app.woke() || prUiOutput(t.f.ui).wantsFrame) {
+    FakeLauncher fake;
+    Term t("program", {}, nullptr, {}, fake.setup());
+    REQUIRE(fake.receive != nullptr);
+    // Colored text, wide characters and scrolling lines, which parse slower than plain text, in pieces of several
+    // slices.
+    std::string line = "\033[31mred \033[1;4mbold\033[0m \xe6\xbc\xa2\xe5\xad\x97 caf\xc3\xa9 plain text\r\n";
+    std::string text;
+    while (text.size() < 4 * kPrTerminalParseSliceBytes)
+        text += line;
+    // Frames until the UI has waited for the parser in the middle of its output, and many times over.
+    PrTerminalLockInfo info{};
+    {
+        Flood flood(&fake, text);
+        double end = prTimeMonotonicMilliseconds() + kPatience;
+        while ((info.worstBytes == 0 || info.count < 20) && prTimeMonotonicMilliseconds() < end) {
             t.f.frame();
-            ++frames;
-        } else {
-            prThreadSleep(1);
+            info = prTerminalLockInfo(t.terminal);
         }
     }
-    PrTerminalLockInfo info = prTerminalLockInfo(t.terminal);
-    MESSAGE("frames " << frames << ", waits " << info.count << ", median under " << waitAtShare(info, 0.5) * 1000 <<
-        " us, 99.9% under " << waitAtShare(info, 0.999) * 1000 << " us, mean " <<
-        info.totalMilliseconds / double(info.count) * 1000 << " us, worst " << info.worstMilliseconds * 1000 << " us");
-    CHECK(frames > 10);
-    CHECK(waitAtShare(info, 0.999) < kLockWaitBound);
+    REQUIRE(info.worstBytes != 0);
+    CHECK(info.count >= 20);
+    CHECK(info.worstBytes <= kPrTerminalParseSliceBytes);
 }
 
 TEST_CASE("terminal: a synchronized update wakes the application as it begins and as it ends, and not between") {
     FakeApp app;
-    Term t("sh", {
-        "-c", "printf before; sleep 0.3; printf '\033[?2026hduring'; i=0; while [ $i -lt 20 ]; do "
-            "printf .; sleep 0.01; i=$((i+1)); done; printf '\033[?2026l after'; sleep 10",
-    }, &app.app);
-    t.frameUntil([&] { return t.shows("before"); });
-    app.woke();
-    // Frames run as an application runs them: only if the program woke it or the terminal asks for a frame.
-    uint32_t wakes = 0;
-    double end = prTimeMonotonicMilliseconds() + kPatience;
-    while (!t.shows("after")) {
-        REQUIRE(prTimeMonotonicMilliseconds() < end);
-        bool woke = app.woke();
-        wakes += woke ? 1 : 0;
-        if (woke || prUiOutput(t.f.ui).wantsFrame)
-            t.f.frame();
-        else
-            prThreadSleep(1);
-    }
+    FakeLauncher fake;
+    Term t("program", {}, &app.app, {}, fake.setup());
+    REQUIRE(fake.receive != nullptr);
+    fake.output("before");
+    runWoken(t, app);
+    REQUIRE(t.shows("before"));
     // Outside a synchronized update, each of the 20 writes would wake the application.
-    CHECK(wakes <= 4);
+    uint32_t wakes = 0;
+    fake.output("\x1b[?2026hduring");
+    wakes += runWoken(t, app);
+    for (uint32_t i = 0; i < 20; ++i) {
+        fake.output(".");
+        wakes += runWoken(t, app);
+    }
+    fake.output("\x1b[?2026l after");
+    wakes += runWoken(t, app);
+    CHECK(t.shows("before"));
+    CHECK(t.shows("during.................... after"));
+    CHECK(wakes == 2);
 }
 
 TEST_CASE("terminal: a terminal that does not show wakes the application for the program's events, not its output") {
     FakeApp app;
-    // Wakes count from the program's own title, because a Windows pseudoconsole sets a title as it starts.
-    Term t("sh", {
-        "-c", "printf '\\033]0;started\\007'; sleep 0.3; i=0; while [ $i -lt 20 ]; do echo line $i; sleep 0.01; "
-            "i=$((i+1)); done; printf '\\a'; sleep 10",
-    }, &app.app);
+    FakeLauncher fake;
+    Term t("program", {}, &app.app, {}, fake.setup());
+    REQUIRE(fake.receive != nullptr);
     t.f.build = [&](PrLayoutNode) { prTerminalUpdate(t.terminal); };
-    t.frameUntil([&] { return prTerminalTitle(t.terminal) == "started"; });
-    app.woke();
+    t.f.frame();
+    runWoken(t, app);
     uint32_t wakes = 0;
-    double end = prTimeMonotonicMilliseconds() + kPatience;
-    while (prTerminalAlerts(t.terminal) == 0) {
-        REQUIRE(prTimeMonotonicMilliseconds() < end);
-        bool woke = app.woke();
-        wakes += woke ? 1 : 0;
-        if (woke || prUiOutput(t.f.ui).wantsFrame)
-            t.f.frame();
-        else
-            prThreadSleep(1);
+    for (uint32_t i = 0; i < 20; ++i) {
+        fake.output("line " + std::to_string(i) + "\r\n");
+        wakes += runWoken(t, app);
     }
+    CHECK(wakes == 0);
+    fake.output("\a");
+    wakes += runWoken(t, app);
     CHECK(prTerminalAlerts(t.terminal) == PrTerminalAlertFlag_Bell);
     CHECK(wakes == 1);
     CHECK(t.shows("line 19"));
@@ -1044,10 +1153,11 @@ TEST_CASE("terminal: the key that pastes drops only its own text, and text typed
 
 TEST_CASE("terminal: the clipboard's keys copy the selection and paste, in each platform's chords") {
     FakeApp app;
-    // The keys are pressed once the program reads input.
-    Term t("sh", {"-c", "echo ready; cat"}, &app.app);
+    FakeLauncher fake;
+    Term t("program", {}, &app.app, {}, fake.setup());
+    REQUIRE(fake.receive != nullptr);
     prTerminalFocus(t.terminal);
-    t.frameUntil([&] { return t.shows("ready"); });
+    t.f.frame();
     t.write("\x1b[5;1Halpha beta");
     t.f.frame();
     PrVec2 alpha = t.cellCenter(1, 4);
@@ -1079,14 +1189,18 @@ TEST_CASE("terminal: the clipboard's keys copy the selection and paste, in each 
     t.f.key('V', PrAppModifierFlag_Control);
     t.f.frame();
     CHECK(app.clipboardRequested);
-    // Control with C copies and clears the selection. Pressed again, it interrupts the program.
+    // Control with C copies and clears the selection. Pressed again, it goes to the program, as the interrupt.
     t.f.key('C', PrAppModifierFlag_Control);
     t.f.frame();
     CHECK(app.clipboard == "alpha");
     CHECK(t.selection().empty());
+    CHECK(fake.input().empty());
     t.f.key('C', PrAppModifierFlag_Control);
     t.f.frame();
-    t.frameUntil([&] { return prTerminalProcessInfo(t.terminal).exited; });
+    CHECK(fake.input() == "\x03");
+#else
+    // The clipboard's keys write nothing to the program.
+    CHECK(fake.input().empty());
 #endif
 }
 
@@ -1175,24 +1289,24 @@ TEST_CASE("terminal: Control with an arrow, Backspace or Delete, and Home and En
     t.frameUntil([&] { return t.shows("^[[1;5D^[[1;5C^H^[[3;5~^[[H^[[F"); });
 }
 
-TEST_CASE("terminal: a terminal that does not show reads past what its buffers hold, and keeps its extent") {
+TEST_CASE("terminal: a terminal that does not show parses all of its program's output, and keeps its extent") {
     FakeApp app;
-    // More output than the buffers of the process and the pseudoterminal hold, followed by a marker. The program waits
-    // first, so that the terminal has stopped showing when the output starts.
-    Term t("sh", {"-c", "sleep 0.2; head -c 8000000 /dev/zero | tr '\\0' a; echo; echo hidden-done; sleep 10"}, &app.app);
+    FakeLauncher fake;
+    Term t("program", {}, &app.app, {}, fake.setup());
+    REQUIRE(fake.receive != nullptr);
     PrUVec2 extent = prVtermExtent(Locked(t.terminal));
     t.f.build = [&](PrLayoutNode) { prTerminalUpdate(t.terminal); };
     t.f.frame();
     CHECK(prTerminalNode(t.terminal) == kPrLayoutNodeNone);
-    // Frames run as an application runs them: only if the program woke it or the terminal asks for a frame.
-    double end = prTimeMonotonicMilliseconds() + 3 * kPatience;
-    while (!t.shows("hidden-done")) {
-        REQUIRE(prTimeMonotonicMilliseconds() < end);
-        if (app.woke() || prUiOutput(t.f.ui).wantsFrame)
-            t.f.frame();
-        else
-            prThreadSleep(1);
+    // Many slices of output while the terminal does not show, followed by a marker.
+    std::string chunk(4 * kPrTerminalParseSliceBytes, 'a');
+    for (uint32_t i = 0; i < 16; ++i) {
+        fake.output(chunk);
+        runWoken(t, app);
     }
+    fake.output("\r\nhidden-done\r\n");
+    runWoken(t, app);
+    CHECK(t.shows("hidden-done"));
     PrUVec2 kept = prVtermExtent(Locked(t.terminal));
     CHECK(kept.x == extent.x);
     CHECK(kept.y == extent.y);
@@ -1210,6 +1324,7 @@ TEST_CASE("terminal: a terminal that stops showing loses focus, which the progra
 
 TEST_CASE("terminal: the working directory is the file URL of this machine that the program reports, decoded") {
     Term t("sleep", {"10"}, nullptr, "/");
+    t.settle();
     // Without a report, the directory is the one that the program started in.
     CHECK(t.directory() == "/");
     t.write("\x1b]7;file:///tmp/a%20b\x07");
@@ -1249,7 +1364,11 @@ TEST_CASE("terminal: without a report, the working directory is the foreground p
 #endif
 
 TEST_CASE("terminal: a new font remakes the cells, and the program hears of the new columns and rows") {
-    Term t("sh", {"-c", "trap 'stty size' WINCH; echo ready; while :; do sleep 0.02; done"});
+    // The program reports its size when it reads a line. The frame that takes the new font resizes the program's
+    // terminal before the line is typed, so the report has the new size. A trap on SIGWINCH would depend on when the
+    // signal arrives, which under a Windows pseudoconsole is late or never.
+    Term t("sh", {"-c", "echo ready; read line; stty size; sleep 10"});
+    prTerminalFocus(t.terminal);
     t.frameUntil([&] { return t.shows("ready"); });
     PrVec2 cell = prTerminalCellExtent(t.terminal);
     PrUVec2 extent = prVtermExtent(Locked(t.terminal));
@@ -1262,6 +1381,7 @@ TEST_CASE("terminal: a new font remakes the cells, and the program hears of the 
     PrUVec2 fewer = prVtermExtent(Locked(t.terminal));
     CHECK(fewer.x < extent.x);
     CHECK(fewer.y < extent.y);
+    t.f.key(PrAppKey_Enter);
     t.frameUntil([&] { return t.shows(std::to_string(fewer.y) + " " + std::to_string(fewer.x)); });
 }
 
@@ -1305,6 +1425,7 @@ TEST_CASE("terminal: arcs, braille patterns and Powerline separators are drawn a
 
 TEST_CASE("terminal: the icons of Nerd Fonts draw within their cells, centered in the line") {
     Term t("sleep", {"10"});
+    t.settle();
     // A file icon from the Private Use Area and a Material Design icon from the Supplementary Private Use Area, each
     // followed by a blank cell.
     t.write("\xef\x85\x9b \xf3\xb0\x80\x81 ");
@@ -1333,14 +1454,24 @@ TEST_CASE("terminal: with the terminal app's fonts, what Noto Sans Mono lacks dr
     {
         Term t("sleep", {"10"}, nullptr, {}, nullptr,
             KitFonts{.bundles = {PrFontBundle_NotoMono, PrFontBundle_NerdFontSymbols}, .system = system});
+        t.settle();
         // A Han ideograph and an emoji, each two columns wide, and a Nerd Fonts file icon. Each is followed by a blank
         // cell.
         t.write("\xe6\xbc\xa2 \xf0\x9f\x98\x80 \xef\x85\x9b ");
         t.f.frame();
+        // Each draws across its cells. How much ink it leaves depends on the system's face, which differs between
+        // machines, so the bound is only that it is not blank.
         PrVec2 cell = prTerminalCellExtent(t.terminal);
-        for (uint32_t column : {0u, 3u, 6u}) {
-            CAPTURE(column);
-            CHECK(float(cellInk(t, column, 0).count) > cell.x * cell.y / 8);
+        struct Glyph {
+            uint32_t column;
+            uint32_t width;
+        };
+        for (Glyph glyph : {Glyph{0, 2}, Glyph{3, 2}, Glyph{6, 1}}) {
+            CAPTURE(glyph.column);
+            uint32_t ink = 0;
+            for (uint32_t i = 0; i < glyph.width; ++i)
+                ink += cellInk(t, glyph.column + i, 0).count;
+            CHECK(float(ink) > float(glyph.width) * cell.x * cell.y / 16);
         }
         // The ideograph and the emoji fall back to families that the system provides.
         CHECK(prFontSetFallbackCount(t.f.fonts) >= 3);
@@ -1350,6 +1481,7 @@ TEST_CASE("terminal: with the terminal app's fonts, what Noto Sans Mono lacks dr
 
 TEST_CASE("terminal: blinking text hides and shows on a steady period over its background") {
     Term t("sleep", {"10"});
+    t.settle();
     // A full block that blinks over a red background, and one that does not.
     t.write("\x1b[5;41m\xe2\x96\x88\x1b[0m \xe2\x96\x88");
     t.f.frame();
@@ -1375,6 +1507,7 @@ TEST_CASE("terminal: blinking text hides and shows on a steady period over its b
 
 TEST_CASE("terminal: blinking text stays shown for a user who asks for less motion") {
     Term t("sleep", {"10"});
+    t.settle();
     t.f.preferences.reducedMotion = true;
     t.write("\x1b[5m\xe2\x96\x88\x1b[0m");
     PrColor8 foreground = prVtermRoleColor(Locked(t.terminal), PrVtermColorRole_Foreground);
@@ -1497,7 +1630,7 @@ TEST_CASE("terminal: a reference to a file opens as a file URL without a handler
 }
 
 TEST_CASE("terminal: the shell integration writes its scripts, and starts each shell that it knows to read them") {
-    std::string directory = testFolder("integration");
+    std::string directory = subfolder("integration");
     TerminalShellLaunch launch{};
     CHECK_FALSE(terminalShellIntegrate("/bin/sh", directory, nullptr, 0, &launch));
     CHECK(launch.arguments.count == 0);
@@ -1545,7 +1678,7 @@ TEST_CASE("terminal: the user's shell starts with the integration, after its own
         MESSAGE("no shell that the terminal has an integration for");
     for (const std::string& shell : shells) {
         CAPTURE(shell);
-        std::string home = testFolder("home-" + nameOf(shell));
+        std::string home = subfolder("home-" + nameOf(shell));
         writeFile(home + "/.zshrc", "export PRAX_TEST_RC=read\nPS1='ready$ '\n");
         writeFile(home + "/.bash_profile", "export PRAX_TEST_RC=read\nPS1='ready$ '\n");
         // The shell reads its startup files from the test home. For zsh, ZDOTDIR names that home, and it still does
@@ -1595,7 +1728,7 @@ TEST_CASE("terminal: a terminal whose caller turns the integration off runs the 
         MESSAGE("no shell that the terminal has an integration for");
     for (const std::string& shell : shells) {
         CAPTURE(shell);
-        std::string home = testFolder("home-" + nameOf(shell));
+        std::string home = subfolder("home-" + nameOf(shell));
         std::string shellVariable = "SHELL=" + shell;
         std::string homeVariable = "HOME=" + home;
         std::string zdotdirVariable = "ZDOTDIR=" + home;
@@ -1618,6 +1751,7 @@ TEST_CASE("terminal: a terminal whose caller turns the integration off runs the 
 TEST_CASE("terminal: the last command's output and exit code are the application's to read and copy") {
     FakeApp app;
     Term t("sleep", {"10"}, &app.app);
+    t.settle();
     CHECK(taken(prTerminalCommandOutput(t.terminal)).empty());
     t.write(command("one", {"a"}, "0") + command("two", {"b", "c  ", ""}, "4") + kPrompt);
     t.f.frame();
@@ -1636,6 +1770,7 @@ TEST_CASE("terminal: the last command's output and exit code are the application
 
 TEST_CASE("terminal: the prompt keys scroll from prompt to prompt, and the jumped-to command's output selects") {
     Term t("sleep", {"10"});
+    t.settle();
     uint32_t rows = prVtermExtent(Locked(t.terminal)).y;
     std::vector<std::string> first = numbered("f", rows + 4);
     std::vector<std::string> second = numbered("s", rows + 4);
@@ -1678,6 +1813,7 @@ TEST_CASE("terminal: the prompt keys scroll from prompt to prompt, and the jumpe
 TEST_CASE("terminal: the gutter marks a command that succeeded in the theme's success color, and one that failed in "
         "its danger color") {
     Term t("sleep", {"10"});
+    t.settle();
     t.write(command("ok", {}, "0") + command("bad", {}, "2") + kPrompt);
     t.f.frame();
     const PrKitPalette& palette = t.f.kit->theme.palette;
@@ -1689,6 +1825,7 @@ TEST_CASE("terminal: the gutter marks a command that succeeded in the theme's su
 
 TEST_CASE("terminal: the cell's pixel extent is the cell's in target pixels, which the screen reports to programs") {
     Term t("sleep", {"10"});
+    t.settle();
     PrVec2 cell = prTerminalCellExtent(t.terminal);
     PrUVec2 pixels = cellPixelExtent(t.terminal);
     CHECK(pixels.x == uint32_t(prF32Round(cell.x)));
@@ -1697,6 +1834,7 @@ TEST_CASE("terminal: the cell's pixel extent is the cell's in target pixels, whi
 
 TEST_CASE("terminal: images draw over the text, between the backgrounds and the text, or under the backgrounds") {
     Term t("sleep", {"10"});
+    t.settle();
     PrColor8 blue = prVtermPaletteColor(Locked(t.terminal), 4);
     PrColor8 foreground = prVtermRoleColor(Locked(t.terminal), PrVtermColorRole_Foreground);
     // Row 0: three cells with a blue background, each with an image in a different z-index band. Row 1: two full blocks
@@ -1723,6 +1861,7 @@ TEST_CASE("terminal: images draw over the text, between the backgrounds and the 
 
 TEST_CASE("terminal: an image scrolls with its text, into the scrollback that the view scrolls back to") {
     Term t("sleep", {"10"});
+    t.settle();
     PrColor8 background = prVtermRoleColor(Locked(t.terminal), PrVtermColorRole_Background);
     t.write("\x1b[3;5H" + graphics(cellImage(t.terminal, 2, 2, ""), cellPixels(t.terminal, 2, 2, kImageRed)));
     t.f.frame();
@@ -1750,6 +1889,7 @@ TEST_CASE("terminal: an image scrolls with its text, into the scrollback that th
 
 TEST_CASE("terminal: the placeholders of a virtual placement draw its image in their cells") {
     Term t("sleep", {"10"});
+    t.settle();
     PrColor8 background = prVtermRoleColor(Locked(t.terminal), PrVtermColorRole_Background);
     t.write(graphics(cellImage(t.terminal, 2, 1, ",U=1,i=7,c=2,r=1,q=2"), cellPixels(t.terminal, 2, 1, kImageRed)));
     t.f.frame();

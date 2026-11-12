@@ -27,7 +27,8 @@ struct Lines {
     }
 
     std::vector<std::string> slice(uint32_t start, uint32_t count) const {
-        return {lines.begin() + start, lines.begin() + start + count};
+        std::vector<std::string>::const_iterator first = lines.begin() + ptrdiff_t(start);
+        return {first, first + ptrdiff_t(count)};
     }
 };
 

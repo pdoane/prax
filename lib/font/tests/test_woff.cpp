@@ -247,7 +247,7 @@ TEST_CASE("a WOFF file's font has the tables it wraps, compressed or stored") {
 
 TEST_CASE("a WOFF2 file holds its font's tables, with their checksums and the font's") {
     // Tinos as WOFF2, each table stored as it is, so that the font decodes to the same tables.
-    std::vector<uint8_t> ttf = readFile("Tinos.ttf");
+    std::vector<uint8_t> ttf = readFile("Tinos-Regular.ttf");
     const std::vector<uint8_t> woff2 = woff2Of(ttf);
     PrCompressCodec* codec = prCompressBuiltinCreate();
     const PrFont* font = nullptr;
@@ -284,7 +284,7 @@ TEST_CASE("a WOFF2 file holds its font's tables, with their checksums and the fo
         CHECK(record.checksum == sum);
     }
 
-    const PrFont* reference = loadFont("Tinos.ttf");
+    const PrFont* reference = loadFont("Tinos-Regular.ttf");
     CHECK(prFontGlyphCount(font) == prFontGlyphCount(reference));
     for (uint16_t glyph = 0; glyph < prFontGlyphCount(reference); glyph += 7) {
         CAPTURE(glyph);
@@ -298,8 +298,8 @@ TEST_CASE("a WOFF2 file holds its font's tables, with their checksums and the fo
 TEST_CASE("a WOFF2 file's transformed glyf, loca and hmtx tables reconstruct its glyphs") {
     // The WOFF2 fonts of WPT draw the glyphs of the reference fonts: TrueType with glyf and loca transformed, TrueType
     // with hmtx transformed too, and CFF.
-    const PrFont* truetype = loadFont("woff2/SFNT-TTF-Reference.ttf");
-    for (const char* name : {"woff2/valid-005.woff2", "woff2/tabledata-transform-hmtx-001.woff2"}) {
+    const PrFont* truetype = loadFont("SFNT-TTF-Reference.ttf");
+    for (const char* name : {"valid-005.woff2", "tabledata-transform-hmtx-001.woff2"}) {
         CAPTURE(name);
         const PrFont* font = nullptr;
         REQUIRE(loadWoff(name, 0, &font) == PrStatus_Ok);
@@ -308,9 +308,9 @@ TEST_CASE("a WOFF2 file's transformed glyf, loca and hmtx tables reconstruct its
         prFontRelease(font);
     }
     prFontRelease(truetype);
-    const PrFont* cff = loadFont("woff2/SFNT-CFF-Reference.otf");
+    const PrFont* cff = loadFont("SFNT-CFF-Reference.otf");
     const PrFont* font = nullptr;
-    REQUIRE(loadWoff("woff2/valid-001.woff2", 0, &font) == PrStatus_Ok);
+    REQUIRE(loadWoff("valid-001.woff2", 0, &font) == PrStatus_Ok);
     checkSameOutlines(font, cff);
     prFontRelease(font);
     prFontRelease(cff);
@@ -319,7 +319,7 @@ TEST_CASE("a WOFF2 file's transformed glyf, loca and hmtx tables reconstruct its
 TEST_CASE("a WOFF2 collection holds each of its fonts") {
     const PrFont* fonts[2] = {};
     for (uint32_t index = 0; index < 2; ++index) {
-        REQUIRE(loadWoff("woff2/available-002.woff2", index, &fonts[index]) == PrStatus_Ok);
+        REQUIRE(loadWoff("available-002.woff2", index, &fonts[index]) == PrStatus_Ok);
         CHECK(prFontIndex(fonts[index]) == index);
         CHECK(prFontCount(prFontData(fonts[index])) == 2);
         CHECK(prFontCodePointGlyph(fonts[index], 'P') != 0);
@@ -333,21 +333,21 @@ TEST_CASE("a WOFF2 collection holds each of its fonts") {
     prFontRelease(fonts[0]);
     prFontRelease(fonts[1]);
     const PrFont* font = nullptr;
-    CHECK(loadWoff("woff2/available-002.woff2", 2, &font) == PrStatus_InvalidData);
+    CHECK(loadWoff("available-002.woff2", 2, &font) == PrStatus_InvalidData);
 }
 
 TEST_CASE("a WOFF2 file that breaks the format's rules is not a font") {
     // A composite glyph without a bounding box, table data in zlib instead of Brotli, a length field that is not the
     // length of the file, and a collection whose glyf and loca tables are not paired.
-    for (const char* name : {"woff2/tabledata-glyf-bbox-002.woff2", "woff2/tabledata-brotli-001.woff2",
-        "woff2/header-length-001.woff2", "woff2/directory-mismatched-tables-001.woff2"}) {
+    for (const char* name : {"tabledata-glyf-bbox-002.woff2", "tabledata-brotli-001.woff2",
+        "header-length-001.woff2", "directory-mismatched-tables-001.woff2"}) {
         CAPTURE(name);
         const PrFont* font = nullptr;
         CHECK(loadWoff(name, 0, &font) == PrStatus_InvalidData);
         CHECK(font == nullptr);
     }
     // A codec that cannot decode Brotli cannot decode the file.
-    std::vector<uint8_t> bytes = readFile("woff2/valid-005.woff2");
+    std::vector<uint8_t> bytes = readFile("valid-005.woff2");
     PrCompressCodec refusing{
         .decoderCreate = refuseDecoder,
         .decoderDestroy = destroyNothing,
@@ -358,7 +358,7 @@ TEST_CASE("a WOFF2 file that breaks the format's rules is not a font") {
 }
 
 TEST_CASE("a WOFF2 file ends with its compressed data, or with the padding after it") {
-    std::vector<uint8_t> ttf = readFile("Tinos.ttf");
+    std::vector<uint8_t> ttf = readFile("Tinos-Regular.ttf");
     const std::vector<uint8_t> padded = woff2Of(ttf);
     const std::vector<uint8_t> unpadded = woff2Of(ttf, false);
     REQUIRE(unpadded.size() % 4 != 0);
@@ -409,8 +409,8 @@ TEST_CASE("a WOFF2 file whose compressed data runs past its end is not a font, w
 }
 
 TEST_CASE("a WOFF2 file of a math font reads its MATH table as the font file does") {
-    const PrFont* reference = loadFont("NotoSansMath.ttf");
-    const std::vector<uint8_t> ttf = readFile("NotoSansMath.ttf");
+    const PrFont* reference = loadFont("NotoSansMath-Regular.ttf");
+    const std::vector<uint8_t> ttf = readFile("NotoSansMath-Regular.ttf");
     const std::vector<uint8_t> woff2 = woff2Of(ttf);
     PrCompressCodec* codec = prCompressBuiltinCreate();
     const PrFont* font = nullptr;

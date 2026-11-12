@@ -31,35 +31,59 @@ USAGE = {
 }
 
 
+# The checkouts that lint reads: the references to specifications are checked against the specifications themselves.
+SOURCES = ("webref", "commonmark", "cmark_gfm")
+
+
 def sources():
-    """Fetches what lint reads: the references to specifications are checked against the specifications themselves."""
-    checkouts.fetch("webref", "webfeatures", "commonmark", "cmark_gfm")
+    """Fetches what lint reads (SOURCES)."""
+    checkouts.fetch(*SOURCES)
+
+
+class Background:
+    """A run of lint beside other work, which `finish` waits for. Its report is kept until then."""
+
+    def __init__(self):
+        sources()
+        self.report = tempfile.TemporaryFile("w+")
+        self.process = subprocess.Popen([sys.executable, "-m", "tools.lint.lint"], cwd=dev.ROOT, stdout=self.report,
+                                        stderr=subprocess.STDOUT, text=True)
+
+    def finish(self):
+        """Waits for lint, prints its report, and returns its exit status."""
+        status = self.process.wait()
+        self.report.seek(0)
+        print("\nlint:")
+        print(self.report.read(), end="", flush=True)
+        return status
+
+
+def attempt(work):
+    """Runs `work` and returns its exit status, zero if it returned, so that a failure that exits is reported rather
+    than ending the run."""
+    try:
+        work()
+    except SystemExit as stopped:
+        return stopped.code if isinstance(stopped.code, int) else 1
+    return 0
 
 
 def beside(work):
     """Runs lint beside `work`, so that a failure of either never hides the other's. Lint's report is printed when the
     work ends, however it ends, and the run fails if either failed."""
-    sources()
-    report = tempfile.TemporaryFile("w+")
-    process = subprocess.Popen([sys.executable, "-m", "tools.lint.lint"], cwd=dev.ROOT, stdout=report,
-                               stderr=subprocess.STDOUT, text=True)
+    linting = Background()
     status = 0
     try:
-        work()
-    except SystemExit as stopped:
-        status = stopped.code if isinstance(stopped.code, int) else 1
+        status = attempt(work)
     finally:
-        linted = process.wait()
-        report.seek(0)
-        print("\nlint:")
-        print(report.read(), end="", flush=True)
+        linted = linting.finish()
     sys.exit(status or linted)
 
 
 def tools_tests(env=None):
-    """Runs the tools' tests, which drive the harnesses and catch what only a page can reach. They run pages with WPT's
-    harness, and check the font bundles against CLDR's exemplar characters."""
-    checkouts.fetch("wpt", "cldr")
+    """Runs the tools' tests, which drive the harnesses and catch what only a page can reach. They run beside lint, and
+    read what the build fetches and the specifications that lint fetches (sources). What checks the runners against a
+    corpus is a suite's (tools/suite/registry.py)."""
     dev.run([sys.executable, "-m", "unittest", "discover", "-q", "-s", "tools", "-t", ".", "-p", "test_*.py"], env=env)
 
 

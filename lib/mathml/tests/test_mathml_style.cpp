@@ -42,7 +42,7 @@ struct Page {
     PrCssPresentation* presentation = nullptr;
 
     explicit Page(const char* html, bool mathFont = true) {
-        const char* files[] = {"Tinos.ttf", "NotoSansMath.ttf"};
+        const char* files[] = {"Tinos-Regular.ttf", "NotoSansMath-Regular.ttf"};
         for (const char* file : files) {
             const PrFont* font = load(file);
             PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();

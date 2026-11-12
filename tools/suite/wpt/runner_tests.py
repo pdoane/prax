@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
-"""Integration tests for the WPT runner, which drive the pr_shell of the build that the runners use.
+"""The WPT runner's own suite (./dev.sh suite wpt-runner): integration tests that drive the pr_shell of the build that
+the runners use against the WPT checkout and its server, and the check of tools/suite/wpt/web_features.txt's rulings
+against the features that the checkout's pages test.
 
-Usage: python3 -m tools.suite.wpt.test_wpt
+Usage: python3 -m tools.suite.wpt.runner_tests [unittest's arguments]
 """
 
 import io
@@ -13,8 +15,10 @@ import time
 import unittest
 from unittest.mock import patch
 from contextlib import redirect_stdout
+from pathlib import Path
 
 from tools.suite import corpus
+from tools.suite.wpt import web_features
 from tools.suite.wpt import wpt
 
 # A run that the tests make writes its scoreboard here, not over the checkout's scoreboard.
@@ -633,6 +637,32 @@ class DiscoveryTests(unittest.TestCase):
         self.assertIn("css-a/parsing/a.html: FAIL: wrong value", errors)
         self.assertRegex(rows["total"], r"3/4\s+4/8\s+50.0%")
 
+
+
+class ServerTests(unittest.TestCase):
+    def test_a_page_of_the_wpt_checkout_loads_from_wpts_server_over_the_network(self):
+        with tempfile.TemporaryDirectory(dir=wpt.WPT) as directory:
+            root = Path(directory)
+            base = "/" + os.path.relpath(directory, wpt.WPT).replace(os.sep, "/")
+            (root / "fixtures").mkdir()
+            (root / "fixtures" / "values.sub.js").write_text("print('{{GET[name]}}', '{{host}}');")
+            page = root / "pages" / "test.html"
+            page.parent.mkdir()
+            page.write_text("<script>print(location.hostname);</script>"
+                            "<script src='" + base + "/fixtures/values.sub.js?name=value'></script>")
+            result = subprocess.run([wpt.SHELL, *wpt.network_options(), "--html", wpt.url_of(str(page))],
+                                    capture_output=True, encoding="utf-8", timeout=30)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout.splitlines(), ["web-platform.test", "value web-platform.test"])
+
+
+class RulingsTests(unittest.TestCase):
+    def test_the_rulings_rule_once_on_each_feature_that_the_suites_test(self):
+        features = web_features.data()
+        self.assertIsNotNone(features, "no web-features data; ./dev.sh fetch webfeatures fetches it")
+        problems = web_features.check(features, wpt.tested_features(wpt.WPT, features))
+        self.assertEqual([], ["%s:%d: %s" % (web_features.RULINGS_FILE, max(line, 1), problem)
+                              for line, problem in problems])
 
 
 class MatchTests(unittest.TestCase):

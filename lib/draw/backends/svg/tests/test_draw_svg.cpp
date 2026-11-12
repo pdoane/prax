@@ -143,7 +143,7 @@ TEST_CASE("each page is a document of its own, with its own definitions") {
 
 TEST_CASE("glyphs are outlines defined once, and the run's text labels them") {
     const PrFont* font = nullptr;
-    REQUIRE(prFontCreateFromFile(PR_FONTS_DIR "/NotoSans.ttf", 0, nullptr, &font) == PrStatus_Ok);
+    REQUIRE(prFontCreateFromFile(PR_FONTS_DIR "/NotoSans[wdth,wght].ttf", 0, nullptr, &font) == PrStatus_Ok);
     uint16_t a = prFontCodePointGlyph(font, 'a');
     PrFontGlyph glyphs[3] = {{a, PrVec2{0, 0}}, {a, PrVec2{10, 0}}, {a, PrVec2{20, 0}}};
     uint32_t clusters[3] = {0, 1, 2};

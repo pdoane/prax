@@ -15,7 +15,6 @@
 
 #include <cmath>
 #include <cstdio>
-#include <cstring>
 #include <string>
 #include <vector>
 
@@ -25,11 +24,9 @@ namespace pr_impl {
 
 namespace {
 
-// Loads a test font by its file name, or a font of the bundles by its file name after "bundle/".
+// Loads a test font by its file name.
 const PrFont* load(const char* name) {
     std::string path = std::string(PR_FONTS_DIR) + "/" + name;
-    if (std::strncmp(name, "bundle/", 7) == 0)
-        path = std::string(PR_FONT_BUNDLE_DIR) + "/" + (name + 7);
     std::vector<uint8_t> bytes;
     FILE* file = std::fopen(path.c_str(), "rb");
     REQUIRE(file != nullptr);
@@ -96,25 +93,25 @@ bool agree(const std::vector<PrTextGlyph>& a, const std::vector<PrTextGlyph>& b,
 }
 
 constexpr Case kCases[] = {
-    {"NotoSans.ttf", "office affine flow", PrTextDirection_Ltr, 0, nullptr},
-    {"NotoSans.ttf", "AVATAR Toyota WAVE", PrTextDirection_Ltr, PrScript_Latn, "en"},
-    {"NotoSans.ttf", "e\xcc\x81 n\xcc\x83 q\xcc\x87\xcc\xa3", PrTextDirection_Ltr, 0, nullptr},
+    {"NotoSans[wdth,wght].ttf", "office affine flow", PrTextDirection_Ltr, 0, nullptr},
+    {"NotoSans[wdth,wght].ttf", "AVATAR Toyota WAVE", PrTextDirection_Ltr, PrScript_Latn, "en"},
+    {"NotoSans[wdth,wght].ttf", "e\xcc\x81 n\xcc\x83 q\xcc\x87\xcc\xa3", PrTextDirection_Ltr, 0, nullptr},
     {
-        "NotoSans.ttf", "\xce\xb3\xcf\x85\xce\xb1\xce\xbb\xce\xb9\xce\xac \xcf\x87\xcf\x89\xcf\x81" "\xce\xaf\xcf\x82",
+        "NotoSans[wdth,wght].ttf", "\xce\xb3\xcf\x85\xce\xb1\xce\xbb\xce\xb9\xce\xac \xcf\x87\xcf\x89\xcf\x81" "\xce\xaf\xcf\x82",
         PrTextDirection_Ltr, 0, nullptr,
     },
     {
-        "NotoSansArabic.ttf", "\xd9\x85\xd8\xb1\xd8\xad\xd8\xa8\xd8\xa7 \xd8\xa8\xd8\xa7\xd9\x84"
+        "NotoSansArabic[wdth,wght].ttf", "\xd9\x85\xd8\xb1\xd8\xad\xd8\xa8\xd8\xa7 \xd8\xa8\xd8\xa7\xd9\x84"
             "\xd8\xb9\xd8\xa7\xd9\x84\xd9\x85",
         PrTextDirection_Rtl, PrScript_Arab, "ar",
     },
     {
-        "NotoSansArabic.ttf", "\xd8\xa8\xd9\x90\xd8\xb3\xd9\x92\xd9\x85\xd9\x90 \xd8\xa7\xd9\x84"
+        "NotoSansArabic[wdth,wght].ttf", "\xd8\xa8\xd9\x90\xd8\xb3\xd9\x92\xd9\x85\xd9\x90 \xd8\xa7\xd9\x84"
             "\xd9\x84\xd9\x91\xd9\x8e\xd9\x87\xd9\x90",
         PrTextDirection_Rtl, 0, nullptr,
     },
     {
-        "NotoSansDevanagari.ttf",
+        "NotoSansDevanagari[wdth,wght].ttf",
         "\xe0\xa4\xa8\xe0\xa4\xae\xe0\xa4\xb8\xe0\xa5\x8d\xe0\xa4\xa4\xe0\xa5\x87 "
             "\xe0\xa4\x95\xe0\xa5\x8d\xe0\xa4\xb7\xe0\xa4\xa4\xe0\xa5\x8d\xe0\xa4\xb0\xe0\xa4\xbf\xe0\xa4\xaf",
         PrTextDirection_Ltr, PrScript_Deva, "hi",
@@ -264,7 +261,7 @@ std::vector<std::string> familiesOf(PrTextFont* group, const std::vector<PrTextI
 // A set over a host set of Noto Sans and Noto Serif, with serif as its default family, in the way that the set of a
 // document is layered over the set of its host.
 struct Layered {
-    PrFontSet* host = setOf({{"NotoSans.ttf"}, {"NotoSerif.ttf"}});
+    PrFontSet* host = setOf({{"NotoSans[wdth,wght].ttf"}, {"NotoSerif[wdth,wght].ttf"}});
     PrFontSet* document = prFontSetCreate(host);
 
     Layered() {
@@ -309,7 +306,7 @@ std::string familyFor(PrTextFont* font, const char* cluster, PrScript script = P
 // roundhand script capitals after U+FE01 and a variant empty set after U+FE00. A selector that the font does not list
 // for its base, after an A, is ignored, and so is a second selector.
 void checkVariationSequences(PrTextShaperBackend backend) {
-    const PrFont* font = load("bundle/NewCMMath-Regular.otf");
+    const PrFont* font = load("NewCMMath-Regular.otf");
     uint16_t script = prFontCodePointGlyph(font, 0x1D49C);
     uint16_t roundhand = prFontVariationSequenceGlyph(font, 0x1D49C, 0xFE01).glyph;
     uint16_t emptySet = prFontVariationSequenceGlyph(font, 0x2205, 0xFE00).glyph;
@@ -374,7 +371,7 @@ TEST_CASE("kb shapes as HarfBuzz does") {
 TEST_CASE("kb shapes a variable font's instance as HarfBuzz does") {
     PrTextShaper* kb = prTextKbCreate();
     PrTextShaper* hb = prTextHarfBuzzCreate();
-    const PrFont* font = load("NotoSans.ttf");
+    const PrFont* font = load("NotoSans[wdth,wght].ttf");
     const PrFontVariation point[] = {{PR_FONT_TAG('w', 'g', 'h', 't'), 830}, {PR_FONT_TAG('w', 'd', 't', 'h'), 70}};
     PrFontDerivation derivation = prFontDerivationDefault();
     derivation.variations = point;
@@ -401,7 +398,7 @@ TEST_CASE("kb shapes a variable font's instance as HarfBuzz does") {
 TEST_CASE("kb composes a sequence of marks as HarfBuzz does") {
     PrTextShaper* kb = prTextKbCreate();
     PrTextShaper* hb = prTextHarfBuzzCreate();
-    const PrFont* font = load("NotoSans.ttf");
+    const PrFont* font = load("NotoSans[wdth,wght].ttf");
     PrTextRun run{};
     run.font = font;
     run.text = "a\xcc\x8a\xcc\x81";
@@ -469,7 +466,7 @@ TEST_CASE("CoreText shapes a variable font between its named instances in the fo
 #endif
 
 TEST_CASE("features turn on and off over ranges") {
-    const PrFont* font = load("NotoSans.ttf");
+    const PrFont* font = load("NotoSans[wdth,wght].ttf");
     const char* text = "fi fi";
     for (PrTextShaper* shaper : featureShapers()) {
         PrTextRun run{};
@@ -489,7 +486,7 @@ TEST_CASE("features turn on and off over ranges") {
 }
 
 TEST_CASE("a variation shapes with its own advances") {
-    const PrFont* font = load("NotoSans.ttf");
+    const PrFont* font = load("NotoSans[wdth,wght].ttf");
     PrFontVariation heavy{PR_FONT_TAG('w', 'g', 'h', 't'), 900};
     const PrFont* black = nullptr;
     PrFontDerivation derivation = prFontDerivationDefault();
@@ -522,7 +519,7 @@ TEST_CASE("a variation shapes with its own advances") {
 
 TEST_CASE("a run shaped with its context joins as the whole text does") {
     // An Arabic word split in two. Each half, shaped with the other as context, gets the forms the whole word gives it.
-    const PrFont* font = load("NotoSansArabic.ttf");
+    const PrFont* font = load("NotoSansArabic[wdth,wght].ttf");
     PrTextShaper* hb = prTextHarfBuzzCreate();
     const char* word = "\xd8\xa8\xd8\xb3\xd9\x85\xd9\x84\xd8\xa9";
     size_t split = 4;
@@ -551,7 +548,7 @@ TEST_CASE("a run shaped with its context joins as the whole text does") {
 
 TEST_CASE("kb joins a run with its context as HarfBuzz does" * doctest::should_fail()) {
     // The Arabic word above, split in two and each half shaped by kb with the other as context.
-    const PrFont* font = load("NotoSansArabic.ttf");
+    const PrFont* font = load("NotoSansArabic[wdth,wght].ttf");
     PrTextShaper* kb = prTextKbCreate();
     const char* word = "\xd8\xa8\xd8\xb3\xd9\x85\xd9\x84\xd8\xa9";
     size_t split = 4;
@@ -574,7 +571,7 @@ TEST_CASE("kb joins a run with its context as HarfBuzz does" * doctest::should_f
 }
 
 TEST_CASE("the first glyph of each grapheme cluster is marked") {
-    const PrFont* font = load("NotoSans.ttf");
+    const PrFont* font = load("NotoSans[wdth,wght].ttf");
     PrTextShaper* hb = prTextHarfBuzzCreate();
     // e and a combining acute, which NotoSans composes, then q with two marks it keeps separate.
     std::vector<PrTextGlyph> glyphs = shape(hb, runOf(font, "e\xcc\x81q\xcc\x87\xcc\xa3x"));
@@ -589,7 +586,7 @@ TEST_CASE("the first glyph of each grapheme cluster is marked") {
 }
 
 TEST_CASE("features over the same text all apply") {
-    const PrFont* font = load("NotoSans.ttf");
+    const PrFont* font = load("NotoSans[wdth,wght].ttf");
     for (PrTextShaper* shaper : featureShapers()) {
         PrTextRun run{};
         run.font = font;
@@ -611,7 +608,7 @@ TEST_CASE("features over the same text all apply") {
 }
 
 TEST_CASE("kerning is the font's, or on, or off") {
-    const PrFont* font = load("NotoSans.ttf");
+    const PrFont* font = load("NotoSans[wdth,wght].ttf");
     PrTextShaper* shapers[] = {prTextKbCreate(), prTextHarfBuzzCreate()};
     for (PrTextShaper* shaper : shapers) {
         PrTextRun run = runOf(font, "AVAWAY");
@@ -633,7 +630,7 @@ TEST_CASE("kerning is the font's, or on, or off") {
 TEST_CASE("small capitals come from the font, or are synthesized from its capitals") {
     PrTextShaper* hb = prTextHarfBuzzCreate();
     // Noto Sans has smcp: nothing is synthesized.
-    const PrFont* noto = load("NotoSans.ttf");
+    const PrFont* noto = load("NotoSans[wdth,wght].ttf");
     PrTextRun run = runOf(noto, "Caps");
     run.caps = PrTextCaps_Small;
     run.synthesis = PrTextSynthesisFlag_SmallCaps;
@@ -714,7 +711,7 @@ TEST_CASE("letter spacing follows each grapheme cluster as shaped, and word spac
     CHECK(spaced[1].advance.x == doctest::Approx(plain[1].advance.x + 0.25f));
 
     // Right to left, the space after a character is on its left, so its glyph moves right by it.
-    const PrFont* hebrew = load("NotoSansHebrew.ttf");
+    const PrFont* hebrew = load("NotoSansHebrew[wdth,wght].ttf");
     run = runOf(hebrew, "\xd7\xa9\xd7\x9c");
     run.direction = PrTextDirection_Rtl;
     plain = shape(hb, run);
@@ -728,7 +725,7 @@ TEST_CASE("letter spacing follows each grapheme cluster as shaped, and word spac
     prFontRelease(hebrew);
 
     // Letters that join their neighbors, as Arabic's do, take no letter spacing.
-    const PrFont* arabic = load("NotoSansArabic.ttf");
+    const PrFont* arabic = load("NotoSansArabic[wdth,wght].ttf");
     run = runOf(arabic, "\xd8\xb3\xd9\x84");
     run.direction = PrTextDirection_Rtl;
     plain = shape(hb, run);
@@ -744,7 +741,7 @@ TEST_CASE("letter spacing follows each grapheme cluster as shaped, and word spac
 
 TEST_CASE("spaced letters take no optional ligatures, unless the run asks for them") {
     PrTextShaper* hb = prTextHarfBuzzCreate();
-    const PrFont* noto = load("NotoSans.ttf");
+    const PrFont* noto = load("NotoSans[wdth,wght].ttf");
     PrTextRun run = runOf(noto, "ffi");
     CHECK(shape(hb, run).size() < 3);
     run.letterSpacing = 0.1f;
@@ -776,7 +773,7 @@ TEST_CASE("a superscript the font lacks is scaled and raised as its metrics say"
 }
 
 TEST_CASE("a vertical run goes down, with vertical forms") {
-    const PrFont* font = load("NotoSansJP.ttf");
+    const PrFont* font = load("NotoSansJP-VF.otf");
     PrTextShaper* hb = prTextHarfBuzzCreate();
     PrTextRun run = runOf(font, "\xe6\x97\xa5\xe6\x9c\xac\xef\xbc\x88");
     std::vector<PrTextGlyph> across = shape(hb, run);
@@ -820,7 +817,7 @@ TEST_CASE("vertical positioning applies in a vertical shaping, and not where a b
     // The proportional vertical metrics (vpal) of Noto Sans JP move kana up the line. HarfBuzz and CoreText shape down,
     // and place each glyph alike, though they divide the placement between advances and offsets differently. kb sets
     // each kana across, and leaves them on the em grid.
-    const PrFont* font = load("NotoSansJP.ttf");
+    const PrFont* font = load("NotoSansJP-VF.otf");
     PrTextRun run = runOf(font, "\xe3\x83\x81\xe3\x83\xa7\xe3\x82\xb3");
     run.axis = PrTextAxis_Vertical;
     PrTextFeature vpal{PR_FONT_TAG('v', 'p', 'a', 'l'), 1, 0, ~0u};
@@ -862,7 +859,7 @@ TEST_CASE("vertical positioning applies in a vertical shaping, and not where a b
 
 TEST_CASE("an upright run that a backend sets a unit at a time joins nothing across units, and keeps marks") {
     // Arabic letters that join across take their isolated forms one at a time, and a base keeps its mark.
-    const PrFont* font = load("NotoSansArabic.ttf");
+    const PrFont* font = load("NotoSansArabic[wdth,wght].ttf");
     PrTextShaper* kb = prTextKbCreate();
     PrTextRun alone = runOf(font, "\xd8\xb9");
     std::vector<PrTextGlyph> isolated = shape(kb, alone);
@@ -885,7 +882,7 @@ TEST_CASE("an upright cluster with a variation selector advances once in kb, as 
     // 葛 with an ideographic variation selector, then 日, in a font that lists the sequence, in fonts without the
     // ideographs, whose clusters are .notdef, and in a font whose .notdef has no vertical metrics. kb sets each cluster
     // across on its own, and must leave the selector drawing nothing and the cluster one advance down the line.
-    for (const char* name : {"NotoSansJP.ttf", "NotoSans.ttf", "Ahem.ttf", "NotoSansArabic.ttf"}) {
+    for (const char* name : {"NotoSansJP-VF.otf", "NotoSans[wdth,wght].ttf", "Ahem.ttf", "NotoSansArabic[wdth,wght].ttf"}) {
         CAPTURE(name);
         const PrFont* font = load(name);
         PrTextRun run = runOf(font, "\xe8\x91\x9b\xf3\xa0\x84\x80\xe6\x97\xa5");
@@ -910,7 +907,7 @@ TEST_CASE("an upright cluster with a variation selector advances once in kb, as 
 }
 
 TEST_CASE("a font's size-adjust scales what it shapes") {
-    const PrFont* font = load("NotoSans.ttf");
+    const PrFont* font = load("NotoSans[wdth,wght].ttf");
     PrFontDerivation d = prFontDerivationDefault();
     d.sizeAdjust = 0.5f;
     const PrFont* half = prFontCreateDerived(font, &d);
@@ -929,7 +926,7 @@ TEST_CASE("a font's size-adjust scales what it shapes") {
 }
 
 TEST_CASE("text divides into runs of the faces that set its grapheme clusters") {
-    PrFontSet* set = setOf({{"NotoSans.ttf"}, {"NotoSansJP.ttf"}, {"Twemoji.ttf"}});
+    PrFontSet* set = setOf({{"NotoSans[wdth,wght].ttf"}, {"NotoSansJP-VF.otf"}, {"Twemoji.ttf"}});
     PrTextFont* group = fontOf(set, {"Noto Sans", "Noto Sans JP", "twemoji-glyf_colr_1"});
     PrTextShaper* hb = prTextHarfBuzzCreate();
     // The exclamation mark goes back to the first family, which has it. The emoji, which Noto Sans JP lacks, falls
@@ -959,7 +956,7 @@ TEST_CASE("text divides into runs of the faces that set its grapheme clusters") 
 TEST_CASE("a family of more faces than a match keeps sets text, and holds the references it was given") {
     // Twelve faces of one family, of one style, each serving its own digit.
     PrFontSet* set = prFontSetCreate(nullptr);
-    const PrFont* sans = load("NotoSans.ttf");
+    const PrFont* sans = load("NotoSans[wdth,wght].ttf");
     PrFontCodePointRange digits[12];
     for (uint32_t i = 0; i < 12; ++i) {
         digits[i] = PrFontCodePointRange{0x30 + i % 10, 0x30 + i % 10};
@@ -979,7 +976,7 @@ TEST_CASE("a family of more faces than a match keeps sets text, and holds the re
 
 TEST_CASE("a unicode-range excludes a face from code points it has glyphs for") {
     PrFontCodePointRange kanji{0x4e00, 0x9fff};
-    PrFontSet* set = setOf({{"NotoSansJP.ttf", "Kanji", &kanji}, {"NotoSans.ttf"}});
+    PrFontSet* set = setOf({{"NotoSansJP-VF.otf", "Kanji", &kanji}, {"NotoSans[wdth,wght].ttf"}});
     PrTextFont* group = fontOf(set, {"Kanji", "Noto Sans"});
     CHECK(familiesOf(group, itemize(group, "A\xe6\xbc\xa2")) == std::vector<std::string>{"Noto Sans", "Noto Sans JP"});
     CHECK(itemize(group, "").empty());
@@ -988,7 +985,7 @@ TEST_CASE("a unicode-range excludes a face from code points it has glyphs for") 
 }
 
 TEST_CASE("a cluster of emoji presentation tries the emoji faces first") {
-    PrFontSet* set = setOf({{"NotoSansJP.ttf"}, {"Twemoji.ttf"}});
+    PrFontSet* set = setOf({{"NotoSansJP-VF.otf"}, {"Twemoji.ttf"}});
     PrTextFont* group = fontOf(set, {"Noto Sans JP", "twemoji-glyf_colr_1"});
     const PrFont* jp = prTextFontMatchedFont(group, prTextFontFirst(group));
     REQUIRE(prFontCodePointGlyph(jp, 0x2665) != 0);
@@ -1023,7 +1020,7 @@ TEST_CASE("kb shapes a variation sequence to the glyph that the font lists for i
 // after U+FE01. Each sequence is set in the face that lists it, wherever that face is in the order, and a sequence that
 // no face lists is set in the first face with its base.
 TEST_CASE("a cluster with a variation sequence prefers the face that lists the sequence") {
-    PrFontSet* set = setOf({{"NotoSansMath.ttf"}, {"bundle/NewCMMath-Regular.otf"}, {"NotoSans.ttf"}});
+    PrFontSet* set = setOf({{"NotoSansMath-Regular.ttf"}, {"NewCMMath-Regular.otf"}, {"NotoSans[wdth,wght].ttf"}});
     const char* chancery = "\xf0\x9d\x92\x9c\xef\xb8\x80";
     const char* roundhand = "\xf0\x9d\x92\x9c\xef\xb8\x81";
     const char* unlisted = "\xf0\x9d\x92\x9c\xef\xb8\x82";
@@ -1056,7 +1053,7 @@ TEST_CASE("a run shaped with the text around it as context keeps its joining for
     // The Arabic font also has Latin letters, which its range excludes. The space and the Latin letters fall to the
     // second family.
     PrFontCodePointRange range{0x600, 0x6ff};
-    PrFontSet* set = setOf({{"NotoSansArabic.ttf", "Arabic", &range}, {"NotoSans.ttf"}});
+    PrFontSet* set = setOf({{"NotoSansArabic[wdth,wght].ttf", "Arabic", &range}, {"NotoSans[wdth,wght].ttf"}});
     PrTextFont* group = fontOf(set, {"Arabic", "Noto Sans"});
     PrTextShaper* hb = prTextHarfBuzzCreate();
     const char* word = "\xd8\xa8\xd8\xb3\xd9\x85\xd9\x84\xd8\xa9";
@@ -1079,7 +1076,7 @@ TEST_CASE("a run shaped with the text around it as context keeps its joining for
 }
 
 TEST_CASE("a run of a font with full hinting takes the hinted advances") {
-    const PrFont* font = load("NotoSans.ttf");
+    const PrFont* font = load("NotoSans[wdth,wght].ttf");
     PrTextShaper* hb = prTextHarfBuzzCreate();
     PrFontHinter* hinter = prFontFreeTypeCreate();
     for (PrFontHinting hinting : {PrFontHinting_Full, PrFontHinting_Light}) {
@@ -1110,7 +1107,7 @@ TEST_CASE("a run of a font with full hinting takes the hinted advances") {
 }
 
 TEST_CASE("a text layout breaks lines where text may break, the spaces a line ends in hanging past its width") {
-    PrFontSet* set = setOf({{"NotoSans.ttf"}});
+    PrFontSet* set = setOf({{"NotoSans[wdth,wght].ttf"}});
     PrTextFont* font = fontOf(set, {"Noto Sans"});
     PrTextShaper* hb = prTextHarfBuzzCreate();
     PrTextLayout* layout = prTextLayoutCreate();
@@ -1163,7 +1160,7 @@ TEST_CASE("a text layout breaks lines where text may break, the spaces a line en
 }
 
 TEST_CASE("a text layout aligns each line in the width the lines take, its start and end by its direction") {
-    PrFontSet* set = setOf({{"NotoSans.ttf"}});
+    PrFontSet* set = setOf({{"NotoSans[wdth,wght].ttf"}});
     PrTextFont* font = fontOf(set, {"Noto Sans"});
     PrTextShaper* hb = prTextHarfBuzzCreate();
     PrTextLayout* layout = prTextLayoutCreate();
@@ -1189,7 +1186,7 @@ TEST_CASE("a text layout aligns each line in the width the lines take, its start
 }
 
 TEST_CASE("a text layout orders a line's runs for display, and puts carets at their clusters' leading edges") {
-    PrFontSet* set = setOf({{"NotoSans.ttf"}, {"NotoSansArabic.ttf"}});
+    PrFontSet* set = setOf({{"NotoSans[wdth,wght].ttf"}, {"NotoSansArabic[wdth,wght].ttf"}});
     PrTextFont* font = fontOf(set, {"Noto Sans", "Noto Sans Arabic"});
     PrTextShaper* hb = prTextHarfBuzzCreate();
     PrTextLayout* layout = prTextLayoutCreate();
@@ -1222,7 +1219,7 @@ TEST_CASE("a text layout orders a line's runs for display, and puts carets at th
 
 TEST_CASE("a text font keeps its answers where a change of its set changes none of them") {
     Layered sets;
-    const PrFont* sans = load("NotoSans.ttf");
+    const PrFont* sans = load("NotoSans[wdth,wght].ttf");
     PrFontFaceDescriptor d = prFontFaceDescriptorDefault();
     d.family = "Web";
     prFontSetAddPending(sets.document, &d, 1);
@@ -1261,7 +1258,7 @@ TEST_CASE("a load that changes an answer raises the revision") {
     PrTextFont* font = fontOf(sets.document, {"Web"});
     CHECK(familyFor(font, "a") == "Noto Serif");
     uint64_t revision = prTextFontRevision(font);
-    const PrFont* sans = load("NotoSans.ttf");
+    const PrFont* sans = load("NotoSans[wdth,wght].ttf");
     prFontSetLoaded(sets.document, 1, sans);
     prFontRelease(sans);
     CHECK(prTextFontUpdate(font));
@@ -1272,14 +1269,14 @@ TEST_CASE("a load that changes an answer raises the revision") {
 
 TEST_CASE("after a change that keeps its answers, a text font answers new questions from its set as it is") {
     Layered sets;
-    sets.add("Web", 1, "NotoSans.ttf");
+    sets.add("Web", 1, "NotoSans[wdth,wght].ttf");
     PrTextFont* font = fontOf(sets.document, {"Web"});
     CHECK(familyFor(font, "a") == "Noto Sans");
     uint64_t revision = prTextFontRevision(font);
 
     // A face for code points that no answer reached: the answers stay, and Cyrillic text takes the new face.
     PrFontCodePointRange cyrillic{0x400, 0x4ff};
-    sets.add("Web", 2, "NotoSerif.ttf", &cyrillic);
+    sets.add("Web", 2, "NotoSerif[wdth,wght].ttf", &cyrillic);
     CHECK_FALSE(prTextFontUpdate(font));
     CHECK(prTextFontRevision(font) == revision);
     CHECK(familyFor(font, "\xd0\x96", PrScript_Cyrl) == "Noto Serif");
@@ -1291,7 +1288,7 @@ TEST_CASE("after a change that keeps its answers, a text font answers new questi
     CHECK_FALSE(prTextFontUpdate(font));
     PrTextFont* other = fontOf(sets.document, {"Web"});
     CHECK(familyFor(other, "\xce\xb1", PrScript_Grek) == "Noto Sans");
-    const PrFont* serif = load("NotoSerif.ttf");
+    const PrFont* serif = load("NotoSerif[wdth,wght].ttf");
     prFontSetLoaded(sets.document, 3, serif);
     prFontRelease(serif);
     CHECK_FALSE(prTextFontUpdate(font));
@@ -1302,13 +1299,13 @@ TEST_CASE("after a change that keeps its answers, a text font answers new questi
 
 TEST_CASE("clusters of more than one code point are answered again with their scripts") {
     Layered sets;
-    sets.add("Web", 1, "NotoSans.ttf");
+    sets.add("Web", 1, "NotoSans[wdth,wght].ttf");
     PrTextFont* font = fontOf(sets.document, {"Web"});
     // An e with a combining acute is kept as one question, keyed by its bytes and script.
     uint32_t accented = prTextFontMatch(font, "e\xcc\x81", PrScript_Latn);
     REQUIRE(accented != kPrTextMatchNone);
     CHECK(prTextFontMatch(font, "e\xcc\x81", PrScript_Latn) == accented);
-    sets.add("Web", 2, "NotoSerif.ttf");
+    sets.add("Web", 2, "NotoSerif[wdth,wght].ttf");
     CHECK(prTextFontUpdate(font));
     CHECK(familyFor(font, "e\xcc\x81") == "Noto Serif");
     prTextFontRelease(font);
@@ -1316,7 +1313,7 @@ TEST_CASE("clusters of more than one code point are answered again with their sc
 
 TEST_CASE("a text font whose record passed its bound gives up its answers at the next change") {
     Layered sets;
-    sets.add("Web", 1, "NotoSans.ttf");
+    sets.add("Web", 1, "NotoSans[wdth,wght].ttf");
     PrTextFont* font = fontOf(sets.document, {"Web"});
     // One cluster of a base and more combining marks than the record can keep the bytes of.
     std::string cluster = "e";
@@ -1329,7 +1326,7 @@ TEST_CASE("a text font whose record passed its bound gives up its answers at the
     // the unrecorded question cannot be asked again.
     CHECK_FALSE(prTextFontUpdate(font));
     PrFontCodePointRange cyrillic{0x400, 0x4ff};
-    sets.add("Web", 2, "NotoSerif.ttf", &cyrillic);
+    sets.add("Web", 2, "NotoSerif[wdth,wght].ttf", &cyrillic);
     CHECK(prTextFontUpdate(font));
     CHECK(prTextFontRevision(font) > revision);
     prTextFontRelease(font);
@@ -1341,7 +1338,7 @@ TEST_CASE("a text font sets what its families and the fallback families lack in 
         MESSAGE("the build has no system's fonts");
         return;
     }
-    PrFontSet* set = setOf({{"NotoSans.ttf"}});
+    PrFontSet* set = setOf({{"NotoSans[wdth,wght].ttf"}});
     prFontSetSetSystem(set, system);
     PrTextFont* font = fontOf(set, {"Noto Sans"});
     CHECK(familyFor(font, "a") == "Noto Sans");
@@ -1370,7 +1367,7 @@ TEST_CASE("a text font falls back to the font that the system gives for its own 
     const char* character = "\xE5\xAD\x97";
     for (const char* first : {"ja", "zh-Hans"}) {
         CAPTURE(first);
-        PrFontSet* set = setOf({{"NotoSans.ttf"}});
+        PrFontSet* set = setOf({{"NotoSans[wdth,wght].ttf"}});
         prFontSetSetSystem(set, system);
         PrFontFamily noto = prFontFamilyFromName("Noto Sans");
         auto fontIn = [&](const char* tag) {
@@ -1414,7 +1411,7 @@ TEST_CASE("a text font takes the set's new default family") {
 
 TEST_CASE("a cluster that the list's faces lack falls back past the default family, which stands in for an empty list") {
     PrFontCodePointRange basicLatin{0x20, 0x7e};
-    PrFontSet* set = setOf({{"RobotoFlex.ttf", "Latin Only", &basicLatin}, {"NotoSans.ttf"}, {"NotoSerif.ttf"}});
+    PrFontSet* set = setOf({{"RobotoFlex.ttf", "Latin Only", &basicLatin}, {"NotoSans[wdth,wght].ttf"}, {"NotoSerif[wdth,wght].ttf"}});
     prFontSetSetGeneric(set, PrFontGeneric_Serif, "Noto Serif");
     prFontSetSetDefaultFamily(set, prFontFamilyGeneric(PrFontGeneric_Serif));
     PrFontFallbackFamily fallback{.family = "Noto Sans", .generic = PrFontGeneric_SansSerif};
@@ -1465,7 +1462,7 @@ TEST_CASE("a feature set gives a run its forms, kerning, synthesis and features,
 }
 
 TEST_CASE("a text font measures the advance of a code point in the face that sets it, along or down the line") {
-    PrFontSet* set = setOf({{"Ahem.ttf", "Ahem"}, {"NotoSans.ttf", "Sans"}});
+    PrFontSet* set = setOf({{"Ahem.ttf", "Ahem"}, {"NotoSans[wdth,wght].ttf", "Sans"}});
     PrTextFont* ahem = fontOf(set, {"Ahem"});
     float advance = 0;
     REQUIRE(prTextFontAdvance(ahem, '0', PrScript_Zyyy, PrTextAxis_Horizontal, &advance));

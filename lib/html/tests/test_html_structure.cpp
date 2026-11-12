@@ -28,7 +28,7 @@ struct Structured {
 
     explicit Structured(const char* html) {
         const PrFont* font = nullptr;
-        REQUIRE(prFontCreateFromFile(PR_FONTS_DIR "/Tinos.ttf", 0, nullptr, &font) == PrStatus_Ok);
+        REQUIRE(prFontCreateFromFile(PR_FONTS_DIR "/Tinos-Regular.ttf", 0, nullptr, &font) == PrStatus_Ok);
         PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
         prFontSetAdd(fonts, &descriptor, font);
         prFontRelease(font);

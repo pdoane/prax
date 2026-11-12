@@ -814,7 +814,7 @@ TEST_CASE("text-orientation upright sets Latin upright, advancing by the ascent 
 TEST_CASE("Japanese is set upright and Latin among it sideways, each centered on the central baseline") {
     Page p;
     PrLayoutFontStyle font = Page::font(kRl);
-    font.font = textFontOf(20, {p.f.family("NotoSansJP.ttf", "Noto Sans JP")});
+    font.font = textFontOf(20, {p.f.family("NotoSansJP-VF.otf", "Noto Sans JP")});
     PrLayoutNode stage = p.styled(p.root, sized(-1, 200), font);
     PrLayoutNode kanji = p.styled(stage, inlineBox(), font);
     p.f.text(kanji, "日本");
@@ -842,7 +842,7 @@ TEST_CASE("text in another face is centered on the line's central baseline by it
     Page p;
     PrLayoutNode stage = p.stage(-1, 200, kRl);
     PrLayoutFontStyle jp = Page::font(kRl);
-    jp.font = textFontOf(20, {p.f.family("NotoSansJP.ttf", "Noto Sans JP")});
+    jp.font = textFontOf(20, {p.f.family("NotoSansJP-VF.otf", "Noto Sans JP")});
     PrLayoutNode kanji = p.styled(stage, inlineBox(), jp);
     p.f.text(kanji, "日本");
     PrLayoutNode latin = p.add(stage, inlineBox(), kRl);
@@ -859,7 +859,7 @@ TEST_CASE("text in another face is centered on the line's central baseline by it
 TEST_CASE("text-orientation sideways turns Japanese, set on its alphabetic baseline") {
     Page p;
     PrLayoutFontStyle font = oriented(kRl, PrLayoutTextOrientation_Sideways);
-    font.font = textFontOf(20, {p.f.family("NotoSansJP.ttf", "Noto Sans JP")});
+    font.font = textFontOf(20, {p.f.family("NotoSansJP-VF.otf", "Noto Sans JP")});
     PrLayoutNode stage = p.styled(p.root, sized(-1, 200), font);
     PrLayoutNode span = p.styled(stage, inlineBox(), font);
     p.f.text(span, "日本語");
@@ -1007,7 +1007,7 @@ TEST_CASE("orientation alone splits a run: a digit among Han takes its script an
         CAPTURE(int(orientation));
         Page p;
         PrLayoutFontStyle font = oriented(kRl, orientation);
-        font.font = textFontOf(20, {p.f.family("NotoSansJP.ttf", "Noto Sans JP")});
+        font.font = textFontOf(20, {p.f.family("NotoSansJP-VF.otf", "Noto Sans JP")});
         PrLayoutNode stage = p.styled(p.root, sized(-1, 200), font);
         p.f.text(stage, "日1本");
         p.layout();

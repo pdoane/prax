@@ -91,8 +91,8 @@ if (PR_DRAW_TRIANGLES)
 endif()
 
 if (PR_DEVELOP)
-    # The native tools compare lib/draw with the comparisons, so the web's build has no comparisons.
-    if (NOT EMSCRIPTEN)
+    # The tools compare lib/draw with the comparisons, so a build without the tools has no comparisons.
+    if (PR_TOOLS)
         add_subdirectory(comparisons)
     endif()
 
@@ -105,7 +105,7 @@ if (PR_DEVELOP)
         tests/test_draw_text.cpp
         tests/test_draw_writer.cpp
     )
-    target_compile_definitions(draw_tests PRIVATE PR_FONTS_DIR="${PROJECT_SOURCE_DIR}/third_party/fonts")
+    target_compile_definitions(draw_tests PRIVATE PR_FONTS_DIR="${PR_TEST_FONTS_DIR}")
     target_link_libraries(draw_tests PRIVATE draw_compare prax::path prax::color prax::image prax::compress
                                              prax::font prax::gpu prax::task)
     if (PR_DRAW_CPU)
@@ -119,7 +119,7 @@ if (PR_DEVELOP)
     if (PR_DRAW_CANVAS)
         target_sources(draw_tests PRIVATE backends/canvas/tests/test_draw_canvas.cpp)
         pr_page_tests(draw backends/canvas/tests/test_draw_canvas_page.cpp
-            PRELOAD "${PROJECT_SOURCE_DIR}/third_party/fonts/NotoSans.ttf@/fonts/NotoSans.ttf")
+            PRELOAD "${PR_TEST_FONTS_DIR}/NotoSans[wdth,wght].ttf@/fonts/NotoSans[wdth,wght].ttf")
         target_link_libraries(draw_page_tests PRIVATE prax::font prax::path prax::gpu)
     endif()
     if (PR_DRAW_PDF)

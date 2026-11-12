@@ -54,7 +54,7 @@ void check(bool passed, const char* what) {
 int main() {
     PrFontSet* set = prFontSetCreate(nullptr);
     const PrFont* PR_NULLABLE face = nullptr;
-    std::string path = std::string(PR_FONTS_DIR) + "/Arimo.ttf";
+    std::string path = std::string(PR_FONTS_DIR) + "/Arimo-Regular.ttf";
     if (prFontCreateFromFile(path, 0, nullptr, &face) != PrStatus_Ok) {
         fprintf(stderr, "text_yoga_check: cannot open %s\n", path.c_str());
         return 1;

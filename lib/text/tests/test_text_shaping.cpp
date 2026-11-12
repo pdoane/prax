@@ -27,7 +27,7 @@ struct Shaped {
     PrTextObjectBreak objectBreak = PrTextObjectBreak_Unicode;
 
     Shaped() {
-        for (const char* name : {"NotoSans.ttf", "NotoSansArabic.ttf"}) {
+        for (const char* name : {"NotoSans[wdth,wght].ttf", "NotoSansArabic[wdth,wght].ttf"}) {
             std::string path = std::string(PR_FONTS_DIR) + "/" + name;
             const PrFont* PR_NULLABLE face = nullptr;
             REQUIRE(prFontCreateFromFile(path, 0, nullptr, &face) == PrStatus_Ok);

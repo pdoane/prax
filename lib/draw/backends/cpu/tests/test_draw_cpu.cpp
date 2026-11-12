@@ -1,5 +1,6 @@
 #include "pr/draw_cpu.h"
 #include "pr/draw_filter.h"
+#include "pr/gpu.h"
 #include "pr/vec.h"
 
 #include "tools/harness/test.h"
@@ -414,12 +415,14 @@ TEST_CASE("blend modes mix the colors before compositing") {
 TEST_CASE("a render larger than the limit is refused") {
     PrDrawRenderer* renderer = prDrawCpuCreate(nullptr);
     PrDrawList* list = prDrawListCreate();
-    PrDrawTarget huge{};
-    huge.extent.x = kPrDrawRenderMaxSize + 1;
-    huge.extent.y = 1;
+    PrGpuDevice* device = prDrawRendererDevice(renderer);
+    PrGpuCommands* commands = nullptr;
+    REQUIRE(prGpuCommandsBegin(device, nullptr, &commands));
+    PrDrawTarget huge{.extent = {kPrDrawRenderMaxSize + 1, 1}, .format = PrPixelFormat_Rgba8, .commands = commands};
     PrDrawFrame* frame = prDrawFrameCreate(renderer);
     CHECK(prDrawFramePrepare(frame, list, &huge) == PrStatus_Limit);
     CHECK(!frame->prepared);
+    prGpuDeviceWait(device, prGpuCommandsSubmit(commands));
     prDrawFrameDestroy(frame);
     prDrawListRelease(list);
     prDrawRendererDestroy(renderer);

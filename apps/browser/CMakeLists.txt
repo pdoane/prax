@@ -16,4 +16,7 @@ target_link_libraries(browser PRIVATE browser_model prax::app prax::html_quickjs
 
 if (PR_DEVELOP)
     pr_module_tests(browser_model tests/test_address.cpp tests/test_favorites.cpp tests/test_history.cpp)
+    # The tests' own directory, as an absolute path: __FILE__ is relative under a compiler cache with a base directory,
+    # as CI's is.
+    target_compile_definitions(browser_model_tests PRIVATE BROWSER_TESTS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests")
 endif()

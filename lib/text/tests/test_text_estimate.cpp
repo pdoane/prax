@@ -18,7 +18,7 @@ struct Estimated {
     PrTextEstimator* estimator = nullptr;
 
     Estimated() {
-        std::string path = std::string(PR_FONTS_DIR) + "/Arimo.ttf";
+        std::string path = std::string(PR_FONTS_DIR) + "/Arimo-Regular.ttf";
         const PrFont* PR_NULLABLE face = nullptr;
         REQUIRE(prFontCreateFromFile(path, 0, nullptr, &face) == PrStatus_Ok);
         PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();

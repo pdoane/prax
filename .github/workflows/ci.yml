@@ -1,0 +1,134 @@
+# ./dev.sh ci of each configuration (`configuration`) of each platform (`platform`), in a job of its own on the runner
+# that builds it (`os`), so that they run at once. WebAssembly is checked on Linux, whose runners are not bounded by the
+# account's limit of five macOS jobs at once, so that macOS and iOS fit within it.
+#
+# ./dev.sh ci --configure fetches everything the run reads, and the caches of what it fetched are saved then, before
+# anything builds. The compiler cache is saved after the run, passing or not. Each cache is saved even when the run
+# fails, because a run that fails is what the next push repeats. A run restores the newest compiler cache of its branch,
+# then of main's.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# A push to a pull request replaces the run of the push before it.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    name: ci (${{ matrix.platform }}, ${{ matrix.configuration }})
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [windows, macos, wasm, ios]
+        configuration: [default, debug]
+        include:
+          - {platform: windows, os: windows-latest}
+          - {platform: macos, os: macos-latest}
+          - {platform: wasm, os: ubuntu-latest}
+          - {platform: ios, os: macos-latest}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    defaults:
+      run:
+        # Git Bash on Windows, where dev.sh runs.
+        shell: bash
+    env:
+      # What the job checks, as ./dev.sh ci names it.
+      CONFIGURATION: ${{ matrix.configuration }}
+      PLATFORM: ${{ matrix.platform }}
+      CCACHE_BASEDIR: ${{ github.workspace }}
+      CCACHE_COMPILERCHECK: content
+      CCACHE_MAXSIZE: 2G
+      CCACHE_NOHASHDIR: "true"
+      # A hosted runner has no GPU, and the tests that need one skip (tools/harness/test.h).
+      PR_TEST_NO_GPU: "1"
+    steps:
+      - uses: actions/checkout@v5
+
+      # The runner context is not available to the job's env, so what depends on it is set here, for the steps after.
+      # CCACHE_KEY is the fallback of the compiler cache's restore: the branch's, then main's. Each job has its own
+      # cache, since its builds compile different objects.
+      - name: Set the compiler cache's environment
+        env:
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          echo "CCACHE_DIR=$RUNNER_TEMP/ccache" >> "$GITHUB_ENV"
+          echo "CCACHE_KEY=ccache-$RUNNER_OS-$PLATFORM-$CONFIGURATION-$BRANCH" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.x"
+
+      - name: Install the build's tools
+        run: |
+          python -m pip install --disable-pip-version-check "cmake>=4.0" ninja
+          case "$RUNNER_OS" in
+            macOS) brew install ccache ;;
+            Linux) sudo apt-get update -q && sudo apt-get install -y --no-install-recommends ccache ;;
+            Windows) choco install ccache --no-progress -y ;;
+          esac
+          cmake --version
+          ninja --version
+          ccache --version
+
+      # The key of what decides what the run fetches. Only its cache is restored: a cache of another would bring files
+      # that the run no longer reads, and third_party holds what the run fetched and nothing else.
+      - name: Key third_party
+        id: key
+        run: echo "key=third_party-${{ runner.os }}-$(./dev.sh ci --key "$CONFIGURATION" "$PLATFORM")" >> "$GITHUB_OUTPUT"
+
+      - name: Restore third_party
+        id: fetched
+        uses: actions/cache/restore@v4
+        with:
+          path: third_party
+          key: ${{ steps.key.outputs.key }}
+
+      - name: Restore the compiler cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ${{ env.CCACHE_KEY }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            ${{ env.CCACHE_KEY }}-
+            ccache-${{ runner.os }}-${{ matrix.platform }}-${{ matrix.configuration }}-main-
+
+      - name: Fetch
+        id: configure
+        run: ./dev.sh ci --configure "$CONFIGURATION" "$PLATFORM"
+
+      - name: Save third_party
+        if: always() && steps.configure.outcome == 'success' && steps.fetched.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: third_party
+          key: ${{ steps.fetched.outputs.cache-primary-key }}
+
+      - name: ./dev.sh ci
+        run: |
+          ccache --zero-stats
+          ./dev.sh ci "$CONFIGURATION" "$PLATFORM"
+
+      - name: Trim the compiler cache
+        if: always() && steps.configure.outcome == 'success'
+        run: |
+          ccache --show-stats
+          # What this run did not use is left behind, so that the cache holds this run's builds.
+          ccache --evict-older-than 1d
+
+      - name: Save the compiler cache
+        if: always() && steps.configure.outcome == 'success'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ${{ env.CCACHE_KEY }}-${{ github.run_id }}-${{ github.run_attempt }}

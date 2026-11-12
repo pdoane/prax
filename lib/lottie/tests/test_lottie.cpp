@@ -308,7 +308,7 @@ TEST_CASE("a trim that wraps past the end of several contours joins none of them
 TEST_CASE("text is shaped a paragraph at a time, and each letter is its cluster's glyphs") {
     // Arabic letters join their neighbors, so in context each takes a form other than the one it has alone.
     PrFontSet* fonts = prFontSetCreate(nullptr);
-    std::string path = std::string(PR_FONTS_DIR) + "/NotoSansArabic.ttf";
+    std::string path = std::string(PR_FONTS_DIR) + "/NotoSansArabic[wdth,wght].ttf";
     PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
     const PrFont* font = nullptr;
     REQUIRE(prFontCreateFromFile(path, 0, nullptr, &font) == PrStatus_Ok);

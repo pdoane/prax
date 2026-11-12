@@ -736,10 +736,13 @@ bool evaluate(void* context, PrHtmlPage*, PrStringView source, PrRawString* out)
     prTextBufferReset(&text);
     if (JS_IsException(result))
         jsReportException(ctx);
-    PrStringView value = {};
-    bool isString = JS_IsString(result) && jsReadString(ctx, result, &value);
-    if (isString)
-        *out = prRawStringCopy(value);
+    // No binding's call is running, so the string is read and freed here rather than held for a call.
+    JsString value = {};
+    bool isString = JS_IsString(result) && jsStringRead(ctx, result, &value);
+    if (isString) {
+        *out = prRawStringCopy(jsStringView(&value));
+        jsStringReset(ctx, &value);
+    }
     JS_FreeValue(ctx, result);
     engineCheckpoint(realm->engine);
     return isString;

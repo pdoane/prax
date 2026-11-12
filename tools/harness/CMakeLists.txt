@@ -1,10 +1,12 @@
 # What the harnesses, the tools and the tests of the libraries share.
 
-# The main() of every test binary, which installs the crash handler before doctest runs the tests. It takes core's
-# declarations only, so that each binary links the core that it tests.
-add_library(test_main STATIC test_main.cpp test.h)
+# The main() of every test binary, which installs the crash handler before doctest runs the tests, and what test.h
+# declares beyond doctest. It takes core's declarations only, and the C++ layer's headers, which are header-only, so
+# that each binary links the core that it tests.
+add_library(test_main STATIC test_main.cpp test.cpp test.h)
 # Every test includes doctest through test.h, by its path under the root.
-target_include_directories(test_main PUBLIC ${PROJECT_SOURCE_DIR} PRIVATE ${PROJECT_SOURCE_DIR}/lib/core/include)
+target_include_directories(test_main PUBLIC ${PROJECT_SOURCE_DIR}
+    PRIVATE ${PROJECT_SOURCE_DIR}/lib/core/include ${PROJECT_SOURCE_DIR}/lib/core/cpp/include)
 target_link_libraries(test_main PUBLIC doctest::doctest PRIVATE pr_warnings)
 
 # Reading files and framed cases, writing JSON, and the CPU's counters.
@@ -38,9 +40,9 @@ endif()
 target_include_directories(draw_compare PUBLIC ${PROJECT_SOURCE_DIR})
 target_link_libraries(draw_compare PUBLIC prax::core PRIVATE prax::core_cpp pr_warnings)
 
-# The renderers of lib/draw and its comparisons, in the configurations that the viewer and draw_bench render with. The
-# web's build has no comparisons, and neither of those tools.
-if (NOT EMSCRIPTEN)
+# The renderers of lib/draw and its comparisons, in the configurations that the viewer and draw_bench render with. A
+# build without the tools has no comparisons, and neither of those tools.
+if (PR_TOOLS)
     add_library(draw_renderers STATIC draw_renderers.cpp)
     target_include_directories(draw_renderers PUBLIC ${PROJECT_SOURCE_DIR})
     target_link_libraries(draw_renderers PUBLIC prax::draw prax::gpu
@@ -51,10 +53,11 @@ if (NOT EMSCRIPTEN)
     endif()
 endif()
 
-# The fixture of the tests of Studio Kit and of the libraries over it (kit_fixture.h): a kit that sets text in the font
-# bundles that the build fetched, and the frames that drive it.
+# The fixture of the tests of Studio Kit and of the libraries over it (kit_fixture.h): a kit that sets text in font
+# bundles, and the frames that drive it. It installs the bundles from the tests' fonts (cmake/test_data.cmake), which
+# hold the bundles' files that the tests set text in, so that what the tests see does not depend on PR_FONT_BUNDLES.
 add_library(kit_fixture INTERFACE kit_fixture.h)
 target_include_directories(kit_fixture INTERFACE ${PROJECT_SOURCE_DIR})
-target_compile_definitions(kit_fixture INTERFACE PR_FONT_BUNDLE_DIR="${PR_FONT_BUNDLE_DIR}")
+target_compile_definitions(kit_fixture INTERFACE PR_FONT_BUNDLE_DIR="${PR_TEST_FONTS_DIR}")
 target_link_libraries(kit_fixture INTERFACE prax::studio_kit prax::font_bundle prax::font prax::text prax::draw
                                             prax::layout prax::ui prax::compress prax::image harness_png doctest::doctest)

@@ -195,7 +195,7 @@ TEST_CASE("an SVG glyph draws as the same glyph's color layers do, in the same p
 }
 
 TEST_CASE("a glyph with no document is an image, and without an image codec nothing") {
-    const PrFont* sans = load("NotoSans.ttf");
+    const PrFont* sans = load("NotoSans[wdth,wght].ttf");
     PrDrawGlyphDecoder* decoder = prSvgGlyphDecoderCreate(nullptr, nullptr);
     PrDrawList* list = prDrawListCreate();
     CHECK_FALSE(prDrawGlyphDecoderDecode(decoder, sans, prFontCodePointGlyph(sans, 'A'), 70, nullptr,
