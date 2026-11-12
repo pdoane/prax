@@ -124,11 +124,7 @@ def run_browser(server, name, extra, url, timeout, directory, pixel_ratio=None):
         return server.report
     finally:
         if process is not None:
-            process.terminate()
-            try:
-                process.wait(10)
-            except subprocess.TimeoutExpired:
-                process.kill()
+            browsers.stop(process)
         shutil.rmtree(profile, ignore_errors=True)
 
 
@@ -233,8 +229,7 @@ def screenshot(column, name, extra, url, path, timeout, directory, viewport, pix
                        "--appearance", scheme] + extra + [url]
         # A headless browser may stay open after it writes its screenshot, so the run ends once the file has been
         # written and has stopped growing.
-        process = subprocess.Popen(command, env=dict(os.environ, **browser.environment), stdout=subprocess.DEVNULL,
-                                   stderr=subprocess.DEVNULL)
+        process = browsers.start(command, browser.environment)
         deadline = time.monotonic() + timeout
         size = -1
         while process.poll() is None and time.monotonic() < deadline:
@@ -242,9 +237,7 @@ def screenshot(column, name, extra, url, path, timeout, directory, viewport, pix
             if os.path.exists(path) and os.path.getsize(path) == size:
                 break
             size = os.path.getsize(path) if os.path.exists(path) else -1
-        if process.poll() is None:
-            process.kill()
-            process.wait()
+        browsers.stop(process)
         if not os.path.exists(path):
             print("  %s did not finish its screenshot within %ds" % (column, timeout), file=sys.stderr)
         return os.path.exists(path)
@@ -320,9 +313,8 @@ def firefox_screenshot(column, browser, url, path, timeout, directory, profile, 
                                                            "layout.css.prefers-color-scheme.content-override":
                                                                0 if dark else 1})
     browser.profile(profile, preferences)
-    process = subprocess.Popen([browser.path(directory), "--headless", "--marionette", "-no-remote", "-profile",
-                                profile], env=dict(os.environ, **browser.environment), stdout=subprocess.DEVNULL,
-                               stderr=subprocess.DEVNULL)
+    process = browsers.start([browser.path(directory), "--headless", "--marionette", "-no-remote", "-profile", profile],
+                             browser.environment)
     try:
         client = Marionette(port, timeout)
         client.call("WebDriver:NewSession", {"capabilities": {}})
@@ -353,11 +345,7 @@ def firefox_screenshot(column, browser, url, path, timeout, directory, profile, 
         print("  %s did not take its screenshot: %s" % (column, error), file=sys.stderr)
         return False
     finally:
-        process.terminate()
-        try:
-            process.wait(10)
-        except subprocess.TimeoutExpired:
-            process.kill()
+        browsers.stop(process)
 
 
 class SafariDriver:
@@ -471,10 +459,8 @@ class ChromeKeys:
         import urllib.request
         self.commands = commands
         port = free_port()
-        self.process = subprocess.Popen([browser.path(directory), "--headless", "--user-data-dir=" + profile,
-                                         "--remote-debugging-port=%d" % port, url],
-                                        env=dict(os.environ, **browser.environment), stdout=subprocess.DEVNULL,
-                                        stderr=subprocess.DEVNULL)
+        self.process = browsers.start([browser.path(directory), "--headless", "--user-data-dir=" + profile,
+                                       "--remote-debugging-port=%d" % port, url], browser.environment)
         deadline = time.monotonic() + timeout
         target = None
         while target is None:
@@ -518,8 +504,7 @@ class ChromeKeys:
 
     def close(self):
         self.connection.close()
-        self.process.terminate()
-        self.process.wait(10)
+        browsers.stop(self.process)
 
 
 class FirefoxKeys:
@@ -528,9 +513,8 @@ class FirefoxKeys:
     def __init__(self, browser, url, directory, profile, timeout):
         port = free_port()
         browser.profile(profile, dict(preferences_of("firefox", None), **{"marionette.port": port}))
-        self.process = subprocess.Popen([browser.path(directory), "--headless", "--marionette", "-no-remote", "-profile",
-                                         profile], env=dict(os.environ, **browser.environment),
-                                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        self.process = browsers.start([browser.path(directory), "--headless", "--marionette", "-no-remote", "-profile",
+                                       profile], browser.environment)
         self.client = Marionette(port, timeout)
         self.client.call("WebDriver:NewSession", {"capabilities": {}})
         self.client.call("WebDriver:Navigate", {"url": url})
@@ -543,8 +527,7 @@ class FirefoxKeys:
         self.client.call("WebDriver:ReleaseActions")
 
     def close(self):
-        self.process.terminate()
-        self.process.wait(10)
+        browsers.stop(self.process)
 
 
 class SafariKeys:

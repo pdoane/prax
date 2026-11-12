@@ -16,14 +16,13 @@ host names, which WebKit launches as a service.
 import math
 import os
 import shutil
-import subprocess
 import sys
 import tempfile
 import threading
 
 from tools.bench import common
 from tools.bench import scripted
-from tools.browsers.browsers import BROWSERS, Server, chosen, read_processes, url_of
+from tools.browsers.browsers import BROWSERS, Server, chosen, read_processes, stop, url_of
 
 def config(bench):
     """Returns the configuration that tools/bench/browser.html loads for `bench`."""
@@ -60,11 +59,7 @@ def run_browser(server, name, bench, timeout, directory):
         return report
     finally:
         if process is not None:
-            process.terminate()
-            try:
-                process.wait(10)
-            except subprocess.TimeoutExpired:
-                process.kill()
+            stop(process)
         shutil.rmtree(profile, ignore_errors=True)
 
 

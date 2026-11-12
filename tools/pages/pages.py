@@ -58,7 +58,6 @@ import queue
 import re
 import shutil
 import socket
-import subprocess
 import sys
 import tempfile
 import threading
@@ -493,12 +492,12 @@ class Chrome:
                                                                                     "a location known on this platform"))
         self.profile = tempfile.mkdtemp(prefix="pages-chrome-")
         self.port = free_port()
-        self.process = subprocess.Popen(
+        self.process = browsers.start(
             [browser.path(None), "--headless", "--remote-debugging-port=%d" % self.port,
              "--remote-allow-origins=*", "--mute-audio", "--hide-scrollbars",
              "--disable-features=IsolateOrigins,site-per-process,HttpsUpgrades",
              "--window-size=%d,%d" % WINDOW, "--user-agent=" + AGENT] + browser.arguments(self.profile)
-            + ["about:blank"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            + ["about:blank"])
 
     def endpoint(self, path, method="GET"):
         deadline = time.monotonic() + TIMEOUT
@@ -513,11 +512,7 @@ class Chrome:
                 time.sleep(0.2)
 
     def close(self):
-        self.process.terminate()
-        try:
-            self.process.wait(10)
-        except subprocess.TimeoutExpired:
-            self.process.kill()
+        browsers.stop(self.process)
         shutil.rmtree(self.profile, ignore_errors=True)
 
 
