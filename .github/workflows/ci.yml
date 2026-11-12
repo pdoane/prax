@@ -1,4 +1,5 @@
-# ./dev.sh ci on each platform of `os`.
+# ./dev.sh ci on each platform of `os`, with each of its targets (`target`) in a job of its own, so that they run at
+# once.
 #
 # ./dev.sh ci --configure fetches everything the run reads, and the caches of what it fetched are saved then, before
 # anything builds. The compiler cache is saved after the run, passing or not. Each cache is saved even when the run
@@ -23,13 +24,13 @@ permissions:
 
 jobs:
   ci:
-    name: ci (${{ matrix.os }})
+    name: ci (${{ matrix.os }}, ${{ matrix.target }})
     strategy:
       fail-fast: false
       matrix:
         os: [windows-latest]
+        target: [host, debug]
     runs-on: ${{ matrix.os }}
-    # A run without the compiler cache builds everything twice, in about half an hour.
     timeout-minutes: 60
     defaults:
       run:
@@ -40,17 +41,21 @@ jobs:
       CCACHE_COMPILERCHECK: content
       CCACHE_MAXSIZE: 2G
       CCACHE_NOHASHDIR: "true"
+      # A hosted runner has no GPU, and the tests that need one skip (tools/harness/test.h).
+      PR_TEST_NO_GPU: "1"
     steps:
       - uses: actions/checkout@v5
 
       # The runner context is not available to the job's env, so what depends on it is set here, for the steps after.
-      # CCACHE_KEY is the fallback of the compiler cache's restore: the branch's, then main's.
+      # CCACHE_KEY is the fallback of the compiler cache's restore: the branch's, then main's. Each target has its own
+      # cache, since its builds compile different objects.
       - name: Set the compiler cache's environment
         env:
           BRANCH: ${{ github.head_ref || github.ref_name }}
+          TARGET: ${{ matrix.target }}
         run: |
           echo "CCACHE_DIR=$RUNNER_TEMP/ccache" >> "$GITHUB_ENV"
-          echo "CCACHE_KEY=ccache-$RUNNER_OS-$BRANCH" >> "$GITHUB_ENV"
+          echo "CCACHE_KEY=ccache-$RUNNER_OS-$TARGET-$BRANCH" >> "$GITHUB_ENV"
 
       - uses: actions/setup-python@v6
         with:
@@ -72,7 +77,7 @@ jobs:
       # that the run no longer reads, and third_party holds what the run fetched and nothing else.
       - name: Key third_party
         id: key
-        run: echo "key=third_party-${{ runner.os }}-$(./dev.sh ci --key)" >> "$GITHUB_OUTPUT"
+        run: echo "key=third_party-${{ runner.os }}-$(./dev.sh ci --key ${{ matrix.target }})" >> "$GITHUB_OUTPUT"
 
       - name: Restore third_party
         id: fetched
@@ -88,11 +93,11 @@ jobs:
           key: ${{ env.CCACHE_KEY }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
             ${{ env.CCACHE_KEY }}-
-            ccache-${{ runner.os }}-main-
+            ccache-${{ runner.os }}-${{ matrix.target }}-main-
 
       - name: Fetch
         id: configure
-        run: ./dev.sh ci --configure
+        run: ./dev.sh ci --configure ${{ matrix.target }}
 
       - name: Save third_party
         if: always() && steps.configure.outcome == 'success' && steps.fetched.outputs.cache-hit != 'true'
@@ -104,7 +109,7 @@ jobs:
       - name: ./dev.sh ci
         run: |
           ccache --zero-stats
-          ./dev.sh ci
+          ./dev.sh ci ${{ matrix.target }}
 
       - name: Trim the compiler cache
         if: always() && steps.configure.outcome == 'success'

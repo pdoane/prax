@@ -133,10 +133,13 @@ bool near(const uint8_t* t, uint8_t r, uint8_t g, uint8_t b, uint8_t a, int tole
     return close(t[0], r) && close(t[1], g) && close(t[2], b) && close(t[3], a);
 }
 
-// Runs `test` on a fixture for each backend that the build has and the system has a device for.
+// Runs `test` on a fixture for each backend that the build has and the system has a device for. A run without the
+// platform's GPU (harness::gpuTests) tests the memory backend alone.
 template <typename Test>
 void onEachBackend(Test test) {
     for (PrGpuBackend backend = PrGpuBackend_Default + 1; backend < PrGpuBackend_Count; ++backend) {
+        if (!harness::gpuTests() && backend != PrGpuBackend_Memory)
+            continue;
         Fixture f(backend);
         if (f.device == nullptr)
             continue;

@@ -155,6 +155,13 @@ void addText(PrDrawList* list, const PrFont* font, float size, const char* text,
 
 using namespace pr_impl;
 
+TEST_CASE("the triangles header compiles as C") {
+    CHECK(prTestDrawTrianglesCApi() == 0);
+}
+
+// The tests that draw on the platform's GPU, which a run without one skips (harness::gpuTests).
+TEST_SUITE_BEGIN("gpu" * doctest::skip(!harness::gpuTests()));
+
 TEST_CASE("the triangles renderer draws a frame on the device") {
     Device device(64, 64);
     CHECK(prDrawRendererDevice(device.renderer) == device.gpuDevice);
@@ -594,6 +601,4 @@ TEST_CASE("triangles draws a drop shadow with about the cpu backend's coverage")
     prDrawListRelease(list);
 }
 
-TEST_CASE("the triangles header compiles as C") {
-    CHECK(prTestDrawTrianglesCApi() == 0);
-}
+TEST_SUITE_END();

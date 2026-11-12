@@ -10,7 +10,21 @@
 
 #include "doctest/doctest.h"
 
+#include <stdlib.h>
+
 PR_ASSUME_NONNULL_BEGIN
+
+namespace harness {
+
+// Whether the tests that need the platform's GPU run. A machine without one, such as a hosted runner of CI, sets the
+// environment variable PR_TEST_NO_GPU, and those tests skip: what stands in for the GPU there runs them too slowly to
+// be worth it, and the CPU renderer's tests check most of what they draw. A test skips with doctest::skip(!gpuTests()),
+// or a TEST_SUITE_BEGIN with that decorator for a file of them.
+inline bool gpuTests() {
+    return getenv("PR_TEST_NO_GPU") == nullptr;
+}
+
+} // namespace harness
 
 namespace doctest {
 

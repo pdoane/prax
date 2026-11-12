@@ -249,6 +249,13 @@ void planeContent(PrDrawList* list, PrRect r) {
 
 using namespace pr_impl;
 
+TEST_CASE("the fragment header compiles as C") {
+    CHECK(prTestDrawFragmentCApi() == 0);
+}
+
+// The tests that draw on the platform's GPU, which a run without one skips (harness::gpuTests).
+TEST_SUITE_BEGIN("gpu" * doctest::skip(!harness::gpuTests()));
+
 TEST_CASE("the fragment renderer evaluates superellipse corners as the cpu backend does, in fills and clips") {
     Device device(96, 64);
     PrDrawList* list = prDrawListCreate();
@@ -1887,10 +1894,6 @@ TEST_CASE("the fragment renderer draws a group into the host's texture, which ke
     prGpuTextureDestroy(device.gpuDevice, held);
 }
 
-TEST_CASE("the fragment header compiles as C") {
-    CHECK(prTestDrawFragmentCApi() == 0);
-}
-
 TEST_CASE("the fragment renderer draws a rounded rectangle as one instance, and tessellates a large path") {
     Device device(64, 64);
     PrDrawList* list = prDrawListCreate();
@@ -1994,3 +1997,5 @@ TEST_CASE("the fragment renderer uploads an image, glyphs and small paths' cover
     prDrawImageRelease(image);
     prFontRelease(font);
 }
+
+TEST_SUITE_END();
