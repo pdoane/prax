@@ -194,6 +194,9 @@ def ci(argv):
 # of it does not fail.
 FETCH_BUDGET = 400
 
+# The number of the largest entries of third_party that the step's summary lists, beside those that the run fetched.
+SUMMARY_ENTRIES = 10
+
 
 # The files that pin what a lean build fetches and choose which of it it fetches.
 FETCH_FILES = ("cmake/dependencies.cmake", "cmake/dependencies_tree_sitter.cmake", "cmake/test_data.cmake",
@@ -241,8 +244,8 @@ def sizes():
 
 def report_fetched(before, after):
     """Prints what third_party holds (`after`), the largest first, with what the run fetched, which `before` lacked or
-    held at another size, marked. Under GitHub Actions, the report is also the step's summary, and the run fails if
-    third_party holds more than FETCH_BUDGET."""
+    held at another size, marked. Under GitHub Actions, the step's summary has the largest entries and those that the
+    run fetched (SUMMARY_ENTRIES), and the run fails if third_party holds more than FETCH_BUDGET."""
     megabytes = lambda size: size / 1e6
     total = sum(after.values())
     new = {name for name, size in after.items() if size != before.get(name)}
@@ -255,8 +258,14 @@ def report_fetched(before, after):
     if summary:
         with open(summary, "a", encoding="utf-8") as f:
             f.write("### What ./dev.sh ci fetches\n\n%s\n\n| | MB | |\n| --- | ---: | --- |\n" % lines[0])
-            for name, size in sorted(after.items(), key=lambda entry: -entry[1]):
+            largest = sorted(after.items(), key=lambda entry: -entry[1])
+            shown = [(name, size) for i, (name, size) in enumerate(largest) if i < SUMMARY_ENTRIES or name in new]
+            for name, size in shown:
                 f.write("| %s | %.1f | %s |\n" % (name, megabytes(size), "fetched" if name in new else ""))
+            rest = len(largest) - len(shown)
+            if rest:
+                f.write("\n%d more, %.0f MB, in the step's log\n"
+                        % (rest, megabytes(total - sum(size for _, size in shown))))
     if os.environ.get("GITHUB_ACTIONS") == "true" and megabytes(total) > FETCH_BUDGET:
         dev.fail("third_party holds %.0f MB, past the budget of %d MB (FETCH_BUDGET in tools/build/commands.py)"
                  % (megabytes(total), FETCH_BUDGET))
