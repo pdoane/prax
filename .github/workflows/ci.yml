@@ -35,15 +35,21 @@ jobs:
         # Git Bash on Windows, where dev.sh runs.
         shell: bash
     env:
-      CCACHE_DIR: ${{ runner.temp }}/ccache
       CCACHE_BASEDIR: ${{ github.workspace }}
       CCACHE_COMPILERCHECK: content
       CCACHE_MAXSIZE: 2G
       CCACHE_NOHASHDIR: "true"
-      # The fallback of the compiler cache's restore: the branch's, then main's.
-      CCACHE_KEY: ccache-${{ runner.os }}-${{ github.head_ref || github.ref_name }}
     steps:
       - uses: actions/checkout@v5
+
+      # The runner context is not available to the job's env, so what depends on it is set here, for the steps after.
+      # CCACHE_KEY is the fallback of the compiler cache's restore: the branch's, then main's.
+      - name: Set the compiler cache's environment
+        env:
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          echo "CCACHE_DIR=$RUNNER_TEMP/ccache" >> "$GITHUB_ENV"
+          echo "CCACHE_KEY=ccache-$RUNNER_OS-$BRANCH" >> "$GITHUB_ENV"
 
       - uses: actions/setup-python@v6
         with:
