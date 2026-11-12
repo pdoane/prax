@@ -13,7 +13,7 @@
 #include "pr/alloc.h"
 #include "pr/base64.h"
 #include "pr/count_of.h"
-#include "pr/float_convert.h"
+#include "pr/float.h"
 #include "pr/json.h"
 #include "pr/raw_array.h"
 #include "pr/text_buffer.h"
@@ -239,20 +239,11 @@ void appendJsonString(PrTextBuffer* out, PrStringView text) {
 
 // Appends `value` to `out` as a JSON number, or zero if it is not finite.
 void appendJsonNumber(PrTextBuffer* out, double value) {
-    if (!(value > -1e308 && value < 1e308) || value == 0) {
-        prTextBufferAppendChar(out, '0');
-        return;
-    }
-    if (value < 0)
-        prTextBufferAppendChar(out, '-');
-    PrF64Decimal decimal = prF64ShortestDecimal(value < 0 ? -value : value);
-    prTextBufferAppendU64(out, decimal.digits, 10);
-    if (decimal.exponent != 0) {
-        prTextBufferAppendChar(out, 'e');
-        if (decimal.exponent < 0)
-            prTextBufferAppendChar(out, '-');
-        prTextBufferAppendU64(out, uint64_t(decimal.exponent < 0 ? -decimal.exponent : decimal.exponent), 10);
-    }
+    if (!prF64IsFinite(value))
+        value = 0;
+    // prF64Format's notation is JSON's for every finite value.
+    char text[kPrF64TextMaxBytes];
+    prTextBufferAppend(out, PrStringView{text, prF64Format(value, text)});
 }
 
 // The pixels per CSS pixel that the page renders at.

@@ -4,6 +4,14 @@
 pr_harness(image_bench prax::image image_bench.cpp)
 target_link_libraries(image_bench PRIVATE prax::compress prax::image)
 
+# What converting numbers to text and back costs in lib/core and in the standard library's <charconv>, which
+# ./dev.sh bench numbers runs.
+pr_harness(number_bench prax::core_cpp number_bench.cpp)
+
+# What formatting costs with pr/format.h's format strings and with the standard library's <format>, which ./dev.sh
+# bench format runs.
+pr_harness(format_bench prax::core_cpp format_bench.cpp)
+
 # What an immediate-mode frame costs, declared whole and laid out and painted, which ./dev.sh bench ui runs.
 pr_harness(ui_bench prax::layout ui_bench.cpp)
 target_link_libraries(ui_bench PRIVATE prax::text)

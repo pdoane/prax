@@ -3,7 +3,6 @@
 #include "pr/ascii.h"
 #include "pr/assert.h"
 #include "pr/bit_cast.h"
-#include "pr/count_of.h"
 #include "pr/integer.h"
 
 #include "core/src/float_convert_tables.h"
@@ -12,193 +11,323 @@ namespace pr_impl {
 namespace {
 
 constexpr uint64_t kU64Max = 0xffffffffffffffffull;
+constexpr uint32_t kU32Max = 0xffffffffu;
 
 // Returns the index of the highest set bit. `value` must be nonzero.
 uint32_t log2Floor(uint64_t value) {
     PR_ASSERT(value != 0);
-    uint32_t index = 0;
-    for (uint32_t shift = 32; shift != 0; shift >>= 1) {
-        if ((value >> shift) != 0) {
-            value >>= shift;
-            index += shift;
-        }
+    return prU64HighestBit(value);
+}
+
+// floor(e * log10(2)), floor(e * log2(10)) and floor(e * log10(2) - log10(4/3)), in fixed point, exact over the
+// exponents asserted. The shifts of negative products round toward negative infinity.
+int32_t floorLog10Pow2(int32_t e) {
+    PR_ASSERT(e >= -2620 && e <= 2620);
+    return (e * 315653) >> 20;
+}
+
+int32_t floorLog2Pow10(int32_t e) {
+    PR_ASSERT(e >= -1233 && e <= 1233);
+    return (e * 1741647) >> 19;
+}
+
+int32_t floorLog10Pow2MinusLog10FourThirds(int32_t e) {
+    PR_ASSERT(e >= -2985 && e <= 2936);
+    return (e * 631305 - 261663) >> 21;
+}
+
+// The table's entry for 5^q, which is exact for q in [0, 55] and truncated elsewhere.
+const Pow5& pow5(int32_t q) {
+    PR_ASSERT(q >= kPow5MinExp10 && q <= kPow5MaxExp10);
+    return kPow5[q - kPow5MinExp10];
+}
+
+bool pow5Exact(int32_t q) {
+    return q >= 0 && q <= 55;
+}
+
+uint32_t rotateRight(uint32_t value, uint32_t n) {
+    return value >> n | value << (32 - n);
+}
+
+uint64_t rotateRight(uint64_t value, uint32_t n) {
+    return value >> n | value << (64 - n);
+}
+
+// Remove the trailing zeros of `n`, which must not be zero, and return how many they removed. A multiplication by the
+// inverse of 25 is the quotient exactly when n is a multiple of 25, and the rotation leaves it at most max / 100 only
+// when n is also a multiple of four.
+int32_t removeTrailingZeros(uint32_t* n) {
+    PR_ASSERT(*n != 0);
+    constexpr uint32_t kInverse5 = 0xcccccccdu;
+    constexpr uint32_t kInverse25 = kInverse5 * kInverse5;
+    int32_t removed = 0;
+    for (;;) {
+        uint32_t q = rotateRight(*n * kInverse25, 2);
+        if (q > kU32Max / 100)
+            break;
+        *n = q;
+        removed += 2;
     }
-    return index;
-}
-
-uint64_t shiftRight128(uint64_t low, uint64_t high, uint32_t n) {
-    PR_ASSERT(n > 0 && n < 64);
-    return high << (64 - n) | low >> n;
-}
-
-// Returns the bit length of 5^e, which is exact for e in [0, 3528].
-int32_t pow5Bits(int32_t e) {
-    PR_ASSERT(e >= 0 && e <= 3528);
-    return int32_t((uint32_t(e) * 1217359u) >> 19) + 1;
-}
-
-int32_t log10Pow2(int32_t e) {
-    PR_ASSERT(e >= 0 && e <= 1650);
-    return int32_t((uint32_t(e) * 78913u) >> 18);
-}
-
-int32_t log10Pow5(int32_t e) {
-    PR_ASSERT(e >= 0 && e <= 2620);
-    return int32_t((uint32_t(e) * 732923u) >> 20);
-}
-
-uint32_t pow5Factor(uint64_t value) {
-    uint32_t count = 0;
-    while (value % 5 == 0) {
-        value /= 5;
-        ++count;
+    uint32_t q = rotateRight(*n * kInverse5, 1);
+    if (q <= kU32Max / 10) {
+        *n = q;
+        removed |= 1;
     }
-    return count;
+    return removed;
 }
 
-bool multipleOfPowerOf5(uint64_t value, uint32_t p) {
-    return pow5Factor(value) >= p;
-}
-
-bool multipleOfPowerOf2(uint64_t value, uint32_t p) {
-    PR_ASSERT(p < 64);
-    return (value & ((1ull << p) - 1)) == 0;
-}
-
-// Returns (m * factor) >> shift. The product takes 192 bits, and the shift discards the low 64.
-uint64_t mulShift(uint64_t m, const Pow5* factor, int32_t shift) {
-    PR_ASSERT(shift > 64 && shift < 128);
-    uint64_t loHigh = 0;
-    prU64Mul128(m, factor->lo, &loHigh);
-    uint64_t hiHigh = 0;
-    uint64_t hiLow = prU64Mul128(m, factor->hi, &hiHigh);
-    uint64_t sum = loHigh + hiLow;
-    uint64_t carry = sum < loHigh ? 1 : 0;
-    return shiftRight128(sum, hiHigh + carry, uint32_t(shift - 64));
+// `n` must be below 10^17. A multiple of 10^8 continues in 32 bits.
+int32_t removeTrailingZeros(uint64_t* n) {
+    PR_ASSERT(*n != 0);
+    constexpr uint64_t kMagic = 12379400392853802749ull;   // ceil(2^90 / 10^8)
+    uint64_t high = 0;
+    uint64_t low = prU64Mul128(*n, kMagic, &high);
+    if ((high & ((1ull << (90 - 64)) - 1)) == 0 && low < kMagic) {
+        uint32_t quotient = uint32_t(high >> (90 - 64));
+        int32_t removed = 8 + removeTrailingZeros(&quotient);
+        *n = quotient;
+        return removed;
+    }
+    constexpr uint64_t kInverse5 = 0xcccccccccccccccdull;
+    constexpr uint64_t kInverse25 = kInverse5 * kInverse5;
+    int32_t removed = 0;
+    for (;;) {
+        uint64_t q = rotateRight(*n * kInverse25, 2);
+        if (q > kU64Max / 100)
+            break;
+        *n = q;
+        removed += 2;
+    }
+    uint64_t q = rotateRight(*n * kInverse5, 1);
+    if (q <= kU64Max / 10) {
+        *n = q;
+        removed |= 1;
+    }
+    return removed;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
-// Binary to decimal (Ryu)
+// Binary to decimal, shortest (Dragonbox)
 //
-// Computes the shortest decimal that identifies a binary float, using the Ryu tables. Their precision covers every
-// binary format. `mantissaBits` and `bias` identify the format.
+// Junekey Jeon, "Dragonbox: A New Floating-Point Binary-to-Decimal Conversion Algorithm", 2020. The value's rounding
+// interval is scaled by a power of ten, chosen so that the scaled interval holds a multiple of 10^(kappa + 1) whenever
+// a decimal of the shortest length lies in it. One multiplication by the power of ten, rounded up, finds that multiple,
+// or rules it out and finds the decimal one digit longer, and the trailing zeros of the result are removed in steps of
+// eight and two digits. Ties in either direction round to even: a decimal parses to the even neighbor, so an even
+// value's interval includes its endpoints.
 
-PrF64Decimal shortestDecimal(uint32_t mantissaBits, int32_t bias, uint64_t ieeeMantissa, uint32_t ieeeExponent) {
-    int32_t e2;
-    uint64_t m2;
-    if (ieeeExponent == 0) {
-        e2 = 1 - bias - int32_t(mantissaBits) - 2;
-        m2 = ieeeMantissa;
-    } else {
-        e2 = int32_t(ieeeExponent) - bias - int32_t(mantissaBits) - 2;
-        m2 = 1ull << mantissaBits | ieeeMantissa;
-    }
-    bool acceptBounds = (m2 & 1) == 0;
+struct Mul {
+    uint64_t integer;
+    bool isInteger;
+};
 
-    // The half-ulp bounds, scaled by 4 to stay integral.
-    uint64_t mv = 4 * m2;
-    uint32_t mmShift = (ieeeMantissa != 0 || ieeeExponent <= 1) ? 1 : 0;
-    uint64_t mp = 4 * m2 + 2;
-    uint64_t mm = 4 * m2 - 1 - mmShift;
+struct MulParity {
+    bool parity;
+    bool isInteger;
+};
 
-    uint64_t vr;
-    uint64_t vp;
-    uint64_t vm;
-    int32_t e10;
-    bool vmIsTrailingZeros = false;
-    bool vrIsTrailingZeros = false;
-    uint8_t lastRemovedDigit = 0;
+struct U128 {
+    uint64_t hi;
+    uint64_t lo;
+};
 
-    if (e2 >= 0) {
-        uint32_t q = uint32_t(log10Pow2(e2));
-        e10 = int32_t(q);
-        int32_t k = kRyuPow5InvBitcount + pow5Bits(int32_t(q)) - 1;
-        int32_t i = -e2 + int32_t(q) + k;
-        PR_ASSERT(q < countOf(kRyuPow5InvSplit));
-        vr = mulShift(mv, &kRyuPow5InvSplit[q], i);
-        vp = mulShift(mp, &kRyuPow5InvSplit[q], i);
-        vm = mulShift(mm, &kRyuPow5InvSplit[q], i);
-        if (q != 0 && (vp - 1) / 10 <= vm / 10) {
-            // The loop below removes a digit even if it does not run. This computes that digit, using the power one
-            // lower.
-            int32_t l = kRyuPow5InvBitcount + pow5Bits(int32_t(q - 1)) - 1;
-            lastRemovedDigit = uint8_t(mulShift(mv, &kRyuPow5InvSplit[q - 1], -e2 + int32_t(q) - 1 + l) % 10);
-        }
-        // Above 24, 5^q exceeds mv and divides none of the three.
-        if (q <= 24) {
-            // mm, mv and mp span a range of 3, so at most one of them is a multiple of 5.
-            if (mv % 5 == 0)
-                vrIsTrailingZeros = multipleOfPowerOf5(mv, q);
-            else if (acceptBounds)
-                vmIsTrailingZeros = multipleOfPowerOf5(mm, q);
-            else
-                vp -= multipleOfPowerOf5(mp, q) ? 1 : 0;
-        }
-    } else {
-        uint32_t q = uint32_t(log10Pow5(-e2));
-        e10 = int32_t(q) + e2;
-        int32_t i = -e2 - int32_t(q);
-        int32_t k = pow5Bits(i) - kRyuPow5Bitcount;
-        int32_t j = int32_t(q) - k;
-        PR_ASSERT(size_t(i) < countOf(kRyuPow5Split));
-        vr = mulShift(mv, &kRyuPow5Split[i], j);
-        vp = mulShift(mp, &kRyuPow5Split[i], j);
-        vm = mulShift(mm, &kRyuPow5Split[i], j);
-        if (q != 0 && (vp - 1) / 10 <= vm / 10) {
-            j = int32_t(q) - 1 - (pow5Bits(i + 1) - kRyuPow5Bitcount);
-            PR_ASSERT(size_t(i + 1) < countOf(kRyuPow5Split));
-            lastRemovedDigit = uint8_t(mulShift(mv, &kRyuPow5Split[i + 1], j) % 10);
-        }
-        if (q <= 1) {
-            // mv is 4 * m2 and has two trailing zero bits. mm has one if mmShift is 1, and mp always has one.
-            vrIsTrailingZeros = true;
-            if (acceptBounds)
-                vmIsTrailingZeros = mmShift == 1;
-            else
-                --vp;
-        } else if (q < 63) {
-            vrIsTrailingZeros = multipleOfPowerOf2(mv, q - 1);
-        }
+// The binary formats, each with the arithmetic of its width. A cache entry is 10^k with its top bit set, rounded up to
+// the width of the format's multiplications. beta is the shift that the entry's implied exponent leaves.
+struct Binary64 {
+    using Carrier = uint64_t;
+    using Cache = U128;
+    static constexpr int32_t kSignificandBits = 52;
+    static constexpr int32_t kExponentBias = -1023;
+    static constexpr int32_t kMinExponent = -1022;
+    static constexpr int32_t kKappa = 2;
+
+    // The binary exponent at which the shorter interval's rounded-up center can be a tie.
+    static constexpr int32_t kShorterIntervalTie = -77;
+
+    static Cache cache(int32_t k) {
+        const Pow5& entry = pow5(k);
+        if (pow5Exact(k))
+            return {entry.hi, entry.lo};
+        uint64_t lo = entry.lo + 1;
+        return {entry.hi + (lo == 0 ? 1 : 0), lo};
     }
 
-    int32_t removed = 0;
-    uint64_t output;
-    if (vmIsTrailingZeros || vrIsTrailingZeros) {
-        while (vp / 10 > vm / 10) {
-            vmIsTrailingZeros &= vm % 10 == 0;
-            vrIsTrailingZeros &= lastRemovedDigit == 0;
-            lastRemovedDigit = uint8_t(vr % 10);
-            vr /= 10;
-            vp /= 10;
-            vm /= 10;
-            ++removed;
-        }
-        if (vmIsTrailingZeros) {
-            while (vm % 10 == 0) {
-                vrIsTrailingZeros &= lastRemovedDigit == 0;
-                lastRemovedDigit = uint8_t(vr % 10);
-                vr /= 10;
-                vp /= 10;
-                vm /= 10;
-                ++removed;
-            }
-        }
-        if (vrIsTrailingZeros && lastRemovedDigit == 5 && vr % 2 == 0)
-            lastRemovedDigit = 4;   // exactly halfway, which rounds to even
-        bool roundUp = (vr == vm && (!acceptBounds || !vmIsTrailingZeros)) || lastRemovedDigit >= 5;
-        output = vr + (roundUp ? 1 : 0);
-    } else {
-        while (vp / 10 > vm / 10) {
-            lastRemovedDigit = uint8_t(vr % 10);
-            vr /= 10;
-            vp /= 10;
-            vm /= 10;
-            ++removed;
-        }
-        output = vr + ((vr == vm || lastRemovedDigit >= 5) ? 1 : 0);
+    // The upper 128 bits of the 192-bit product u * cache: its integer part, and whether the rest is zero.
+    static Mul mul(Carrier u, const Cache& cache) {
+        uint64_t high = 0;
+        uint64_t low = prU64Mul128(u, cache.hi, &high);
+        uint64_t carry = 0;
+        prU64Mul128(u, cache.lo, &carry);
+        uint64_t sum = low + carry;
+        high += sum < low ? 1 : 0;
+        return {high, sum == 0};
     }
 
-    return {output, e10 + removed};
+    static uint32_t delta(const Cache& cache, int32_t beta) {
+        return uint32_t(cache.hi >> (63 - beta));
+    }
+
+    // The parity of the integer part of the lower 128 bits of twoF * cache, shifted by beta, and whether its fraction
+    // is zero.
+    static MulParity mulParity(Carrier twoF, const Cache& cache, int32_t beta) {
+        PR_ASSERT(beta >= 1 && beta < 64);
+        uint64_t carry = 0;
+        uint64_t low = prU64Mul128(twoF, cache.lo, &carry);
+        uint64_t high = twoF * cache.hi + carry;
+        return {((high >> (64 - beta)) & 1) != 0, ((high << beta) | (low >> (64 - beta))) == 0};
+    }
+
+    static Carrier leftEndpoint(const Cache& cache, int32_t beta) {
+        return (cache.hi - (cache.hi >> (kSignificandBits + 2))) >> (64 - kSignificandBits - 1 - beta);
+    }
+
+    static Carrier rightEndpoint(const Cache& cache, int32_t beta) {
+        return (cache.hi + (cache.hi >> (kSignificandBits + 1))) >> (64 - kSignificandBits - 1 - beta);
+    }
+
+    static Carrier roundUp(const Cache& cache, int32_t beta) {
+        return ((cache.hi >> (64 - kSignificandBits - 2 - beta)) + 1) / 2;
+    }
+};
+
+struct Binary32 {
+    using Carrier = uint32_t;
+    using Cache = uint64_t;
+    static constexpr int32_t kSignificandBits = 23;
+    static constexpr int32_t kExponentBias = -127;
+    static constexpr int32_t kMinExponent = -126;
+    static constexpr int32_t kKappa = 1;
+    static constexpr int32_t kShorterIntervalTie = -35;
+
+    static Cache cache(int32_t k) {
+        // The top 64 bits of 5^k are exact for k in [0, 27], whose power fits in them.
+        return pow5(k).hi + (k >= 0 && k <= 27 ? 0 : 1);
+    }
+
+    // The upper 64 bits of the 96-bit product u * cache: its integer part, and whether the rest is zero.
+    static Mul mul(Carrier u, Cache cache) {
+        uint64_t high = 0;
+        uint64_t low = prU64Mul128(u, cache, &high);
+        uint64_t upper = high << 32 | low >> 32;
+        return {upper >> 32, uint32_t(upper) == 0};
+    }
+
+    static uint32_t delta(Cache cache, int32_t beta) {
+        return uint32_t(cache >> (63 - beta));
+    }
+
+    static MulParity mulParity(Carrier twoF, Cache cache, int32_t beta) {
+        PR_ASSERT(beta >= 1 && beta < 32);
+        uint64_t low = uint64_t(twoF) * cache;
+        return {((low >> (64 - beta)) & 1) != 0, uint32_t(low >> (32 - beta)) == 0};
+    }
+
+    static Carrier leftEndpoint(Cache cache, int32_t beta) {
+        return Carrier((cache - (cache >> (kSignificandBits + 2))) >> (64 - kSignificandBits - 1 - beta));
+    }
+
+    static Carrier rightEndpoint(Cache cache, int32_t beta) {
+        return Carrier((cache + (cache >> (kSignificandBits + 1))) >> (64 - kSignificandBits - 1 - beta));
+    }
+
+    static Carrier roundUp(Cache cache, int32_t beta) {
+        return Carrier(((cache >> (64 - kSignificandBits - 2 - beta)) + 1) / 2);
+    }
+};
+
+// The value 2^e with no fraction bits, whose interval is shorter below than above.
+template <typename Format>
+PrF64Decimal shorterInterval(int32_t e) {
+    using Carrier = typename Format::Carrier;
+    int32_t minusK = floorLog10Pow2MinusLog10FourThirds(e);
+    int32_t beta = e + floorLog2Pow10(-minusK);
+    typename Format::Cache cache = Format::cache(-minusK);
+    Carrier left = Format::leftEndpoint(cache, beta);
+    Carrier right = Format::rightEndpoint(cache, beta);
+    // The interval is closed, since the significand is even. The left endpoint is an integer only for these exponents.
+    if (!(e >= 2 && e <= 3))
+        ++left;
+
+    Carrier digits = right / 10;
+    if (digits * 10 >= left) {
+        int32_t exponent = minusK + 1 + removeTrailingZeros(&digits);
+        return {digits, exponent};
+    }
+    // No shorter decimal lies in the interval, so the result is its center rounded up.
+    digits = Format::roundUp(cache, beta);
+    if ((digits & 1) != 0 && e == Format::kShorterIntervalTie)
+        --digits;
+    else if (digits < left)
+        ++digits;
+    return {digits, minusK};
+}
+
+template <typename Format>
+PrF64Decimal shortestDecimal(typename Format::Carrier significand, uint32_t biasedExponent) {
+    using Carrier = typename Format::Carrier;
+    constexpr uint32_t kSmallDivisor = Format::kKappa == 1 ? 10 : 100;
+    constexpr uint32_t kBigDivisor = kSmallDivisor * 10;
+
+    int32_t e = 0;
+    if (biasedExponent != 0) {
+        e = int32_t(biasedExponent) + Format::kExponentBias - Format::kSignificandBits;
+        if (significand == 0)
+            return shorterInterval<Format>(e);
+        significand |= Carrier(1) << Format::kSignificandBits;
+    } else {
+        e = Format::kMinExponent - Format::kSignificandBits;
+    }
+    bool closed = (significand & 1) == 0;
+    Carrier twoFc = significand << 1;
+
+    // The power of ten that scales the interval, and the scaled half-width (delta) and right endpoint (z).
+    int32_t minusK = floorLog10Pow2(e) - Format::kKappa;
+    typename Format::Cache cache = Format::cache(-minusK);
+    int32_t beta = e + floorLog2Pow10(-minusK);
+    uint32_t delta = Format::delta(cache, beta);
+    Mul z = Format::mul(Carrier((twoFc | 1) << beta), cache);
+
+    // A multiple of the big divisor within delta of z is in the interval, unless it is an excluded endpoint.
+    Carrier digits = Carrier(z.integer / kBigDivisor);
+    uint32_t r = uint32_t(z.integer - uint64_t(kBigDivisor) * digits);
+    bool longer = false;
+    if (r < delta) {
+        if (r == 0 && z.isInteger && !closed) {
+            --digits;
+            r = kBigDivisor;
+            longer = true;
+        }
+    } else if (r > delta) {
+        longer = true;
+    } else {
+        // r is delta, so the candidate is the left endpoint, which the fraction of its product places.
+        MulParity x = Format::mulParity(twoFc - 1, cache, beta);
+        if (!(x.parity || (x.isInteger && closed)))
+            longer = true;
+    }
+    if (!longer) {
+        int32_t exponent = minusK + Format::kKappa + 1 + removeTrailingZeros(&digits);
+        return {digits, exponent};
+    }
+
+    // One digit more: the value itself, rounded to the small divisor's place. A result here has no trailing zero, or
+    // the shorter decimal would have been found.
+    digits *= 10;
+    uint32_t distance = r - (delta / 2) + (kSmallDivisor / 2);
+    bool approximateParity = ((distance ^ (kSmallDivisor / 2)) & 1) != 0;
+    bool divisible = distance % kSmallDivisor == 0;
+    digits += Carrier(distance / kSmallDivisor);
+    if (divisible) {
+        // The approximation is the result or one above it, which their parities tell apart. An exact tie rounds to
+        // even.
+        MulParity y = Format::mulParity(twoFc, cache, beta);
+        if (y.parity != approximateParity)
+            --digits;
+        else if ((digits & 1) != 0 && y.isInteger)
+            --digits;
+    }
+    return {digits, minusK + Format::kKappa};
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -250,7 +379,7 @@ AdjustedMantissa eiselLemire(const BinaryFormat* format, int32_t q, uint64_t w) 
 
     uint32_t precision = format->mantissaBits + 3;
     uint64_t precisionMask = kU64Max >> precision;
-    const Pow5* factor = &kEiselLemirePow5[q - kEiselLemireMinExp10];
+    const Pow5* factor = &pow5(q);
 
     uint64_t high = 0;
     uint64_t low = prU64Mul128(w, factor->hi, &high);
@@ -920,6 +1049,158 @@ PrF64Digits generateDigits(DigitUint* num, DigitUint* den, int32_t exponent, uin
     return PrF64Digits{count, exponent};
 }
 
+// ---------------------------------------------------------------------------------------------------------------------
+// Binary to decimal, rounded to a place, by one multiplication
+//
+// m * 2^e / 10^s is the value counted in units of 10^s. Its product with the table's 5^-s has 192 bits, and the table's
+// truncation leaves the exact product between the truncated one and that plus m. Where both bounds have the same
+// integer part and round the same way, that is the correctly rounded count. Where the entry is exact, so is the
+// product, and a tie rounds to even. Otherwise the digits are generated exactly, as above.
+
+struct U192 {
+    uint64_t limbs[3];   // little-endian
+};
+
+U192 mul192(uint64_t m, const Pow5& factor) {
+    uint64_t lowHigh = 0;
+    uint64_t low = prU64Mul128(m, factor.lo, &lowHigh);
+    uint64_t highHigh = 0;
+    uint64_t highLow = prU64Mul128(m, factor.hi, &highHigh);
+    uint64_t middle = lowHigh + highLow;
+    return U192{{low, middle, highHigh + (middle < lowHigh ? 1 : 0)}};
+}
+
+U192 add192(U192 v, uint64_t addend) {
+    v.limbs[0] += addend;
+    if (v.limbs[0] < addend && ++v.limbs[1] == 0)
+        ++v.limbs[2];
+    return v;
+}
+
+// The bits of `v` from `bit` up, as 64 bits, and whether any bit above those is set.
+uint64_t bitsFrom(const U192& v, uint32_t bit, bool* overflow) {
+    uint32_t limb = bit / 64;
+    uint32_t shift = bit % 64;
+    uint64_t out = limb < 3 ? v.limbs[limb] >> shift : 0;
+    if (shift != 0 && limb + 1 < 3)
+        out |= v.limbs[limb + 1] << (64 - shift);
+    bool above = false;
+    for (uint32_t i = limb + 1; i < 3; ++i) {
+        uint64_t part = i == limb + 1 && shift != 0 ? v.limbs[i] >> shift : v.limbs[i];
+        above |= part != 0;
+    }
+    *overflow = above;
+    return out;
+}
+
+// Returns whether any bit of `v` below `bit` is set.
+bool anyBelow(const U192& v, uint32_t bit) {
+    for (uint32_t i = 0; i < 3; ++i) {
+        if (bit >= 64 * (i + 1)) {
+            if (v.limbs[i] != 0)
+                return true;
+        } else {
+            uint32_t within = bit - 64 * i;
+            return within != 0 && (v.limbs[i] & ((1ull << within) - 1)) != 0;
+        }
+    }
+    return false;
+}
+
+// Splits `v` / 2^shift into its integer part, which must fit in 64 bits, and the fraction's order against one half.
+bool splitAt(const U192& v, uint32_t shift, uint64_t* integer, int32_t* half) {
+    PR_ASSERT(shift >= 1 && shift < 192);
+    bool overflow = false;
+    *integer = bitsFrom(v, shift, &overflow);
+    if (overflow)
+        return false;
+    uint32_t halfBit = shift - 1;
+    bool set = ((v.limbs[halfBit / 64] >> (halfBit % 64)) & 1) != 0;
+    *half = !set ? -1 : anyBelow(v, halfBit) ? 1 : 0;
+    return true;
+}
+
+// Writes to `*truncated` and `*rounded` the integer part of m * 2^e / 10^s and that count rounded half to even, if one
+// multiplication decides them. Returns false if it does not, or if they do not fit in 64 bits.
+bool roundedUnits(uint64_t m, int32_t e, int32_t s, uint64_t* truncated, uint64_t* rounded) {
+    int32_t q = -s;
+    if (q < kPow5MinExp10 || q > kPow5MaxExp10)
+        return false;
+    const Pow5& factor = pow5(q);
+    // 10^q = factor * 2^(q + floor(log2(5^q)) - 127), so the count is m * factor / 2^shift.
+    int32_t shift = 127 - e - q - (floorLog2Pow10(q) - q);
+    U192 low = mul192(m, factor);
+
+    // The common case: the count's integer part and the top 64 bits of its fraction sit within the product, and m is
+    // below the fraction's lowest kept bit, so the exact product moves that fraction by at most one. Unless the
+    // fraction is at a half, or one below it, or about to carry, those bits decide the rounding.
+    if (shift >= 117 && shift < 192) {
+        uint32_t r = uint32_t(shift) - 64;
+        uint64_t fraction = 0;
+        uint64_t integer = 0;
+        bool overflow = false;
+        if (r < 64) {
+            fraction = low.limbs[0] >> r | low.limbs[1] << (64 - r);
+            integer = low.limbs[1] >> r | low.limbs[2] << (64 - r);
+            overflow = (low.limbs[2] >> r) != 0;
+        } else {
+            uint32_t within = r - 64;
+            fraction = within == 0 ? low.limbs[1] : (low.limbs[1] >> within | low.limbs[2] << (64 - within));
+            integer = within == 0 ? low.limbs[2] : low.limbs[2] >> within;
+        }
+        if (overflow)
+            return false;
+        constexpr uint64_t kHalf = 1ull << 63;
+        if (fraction != kHalf && fraction != kHalf - 1 && fraction != kU64Max) {
+            bool up = fraction > kHalf;
+            if (up && integer == kU64Max)
+                return false;
+            *truncated = integer;
+            *rounded = integer + (up ? 1 : 0);
+            return true;
+        }
+    }
+
+    uint64_t integer = 0;
+    int32_t half = 0;
+    if (shift >= 192) {
+        // The product is below 2^181, so the count is below 2^-11.
+        integer = 0;
+        half = -1;
+    } else if (shift < 1 || !splitAt(low, uint32_t(shift), &integer, &half)) {
+        return false;
+    }
+    bool up = false;
+    if (pow5Exact(q)) {
+        up = half > 0 || (half == 0 && (integer & 1) != 0);
+    } else {
+        // The exact product lies strictly between low and low + m.
+        uint64_t upperInteger = 0;
+        int32_t upperHalf = -1;
+        if (shift < 192 && !splitAt(add192(low, m), uint32_t(shift), &upperInteger, &upperHalf))
+            return false;
+        if (upperInteger != integer)
+            return false;
+        if (half >= 0)
+            up = true;
+        else if (upperHalf > 0)
+            return false;
+    }
+    if (up && integer == kU64Max)
+        return false;
+    *truncated = integer;
+    *rounded = integer + (up ? 1 : 0);
+    return true;
+}
+
+// Writes the digits of `units`, which has `count` of them, to `out`.
+void writeUnits(uint64_t units, uint32_t count, char* out) {
+    PR_ASSERT(count != 0 && count <= 20);
+    size_t written = prU64Format(units, out, 10);
+    PR_ASSERT(written == count);
+    (void)written;
+}
+
 } // namespace
 
 } // namespace pr_impl
@@ -928,22 +1209,31 @@ using namespace pr_impl;
 
 PrF64Decimal prF64ShortestDecimal(double value) {
     uint64_t bits = bitCast<uint64_t>(value);
-    uint64_t mantissa = bits & 0xfffffffffffffull;
-    uint32_t exponent = uint32_t((bits >> 52) & 0x7ffull);
-    return shortestDecimal(52, 1023, mantissa, exponent);
+    PR_ASSERT((bits & ~(1ull << 63)) != 0 && (bits >> 52 & 0x7ff) != 0x7ff);
+    return shortestDecimal<Binary64>(bits & 0xfffffffffffffull, uint32_t((bits >> 52) & 0x7ffull));
 }
 
 PrF64Decimal prF32ShortestDecimal(float value) {
     uint32_t bits = bitCast<uint32_t>(value);
-    uint32_t mantissa = bits & 0x7fffffu;
-    uint32_t exponent = (bits >> 23) & 0xffu;
-    return shortestDecimal(23, 127, mantissa, exponent);
+    PR_ASSERT((bits & 0x7fffffffu) != 0 && (bits >> 23 & 0xff) != 0xff);
+    return shortestDecimal<Binary32>(bits & 0x7fffffu, (bits >> 23) & 0xffu);
 }
 
 PrF64Digits prF64FixedDigits(double value, uint32_t decimals, char* out, size_t capacity) {
     uint64_t m = 0;
     int32_t e = 0;
     decompose(value, &m, &e);
+    uint64_t truncated = 0;
+    uint64_t units = 0;
+    if (decimals <= uint32_t(kPow5MaxExp10) && roundedUnits(m, e, -int32_t(decimals), &truncated, &units)) {
+        // Nothing is left at that place: the digits stop above it.
+        if (units == 0)
+            return PrF64Digits{0, -int32_t(decimals)};
+        uint32_t count = prU64DecimalDigits(units);
+        PR_ASSERT(count < capacity);
+        writeUnits(units, count, out);
+        return PrF64Digits{count, int32_t(count) - int32_t(decimals)};
+    }
     DigitUint num;
     DigitUint den;
     int32_t exponent = scaleToLeadingDigit(&num, &den, m, e);
@@ -964,6 +1254,28 @@ PrF64Digits prF64SignificantDigits(double value, uint32_t significant, char* out
     decompose(value, &m, &e);
     uint32_t wanted = significant < kPrF64MaxExactDigits ? significant : uint32_t(kPrF64MaxExactDigits);
     PR_ASSERT(wanted < capacity);
+    if (wanted >= 1 && wanted <= 19) {
+        // |value| = 0.d1d2... * 10^exponent. The estimate from the binary exponent is the exponent or one below it.
+        int32_t exponent = floorLog10Pow2(int32_t(log2Floor(m)) + e) + 1;
+        for (uint32_t attempt = 0; attempt < 2; ++attempt) {
+            uint64_t truncated = 0;
+            uint64_t units = 0;
+            if (!roundedUnits(m, e, exponent - int32_t(wanted), &truncated, &units))
+                break;
+            if (truncated >= prU64Pow10(wanted)) {
+                ++exponent;
+                continue;
+            }
+            PR_ASSERT(truncated >= prU64Pow10(wanted - 1));
+            if (units == prU64Pow10(wanted)) {
+                // Every digit carried, so the result is a one in the next place up.
+                units /= 10;
+                ++exponent;
+            }
+            writeUnits(units, wanted, out);
+            return PrF64Digits{wanted, exponent};
+        }
+    }
     DigitUint num;
     DigitUint den;
     int32_t exponent = scaleToLeadingDigit(&num, &den, m, e);

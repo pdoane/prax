@@ -415,6 +415,12 @@ double prF64Parse(const char* data, size_t size);
 // kPrF64TextMaxBytes bytes. The output is not terminated.
 size_t prF64Format(double value, char* out);
 
+// Writes to `out` the shortest decimal that parses back to `value` at a float's precision, in the notation of
+// prF64Format, and returns its length: the float nearest 1.57 writes as "1.57". A parse to a double that is then
+// rounded to a float gives `value` too. `out` must hold at least kPrF64TextMaxBytes bytes. The output is not
+// terminated.
+size_t prF32Format(float value, char* out);
+
 // Writes to `out` the shortest decimal of `value` rounded to `digits` significant digits, half away from zero, in the
 // notation of prF64Format. 73.33859777674978 to six digits is "73.3386". `digits` must be 1 through kPrF64MaxDigits.
 size_t prF64FormatSignificant(double value, uint32_t digits, char* out);

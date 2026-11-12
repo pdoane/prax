@@ -5,6 +5,7 @@
 #include "pr/ascii.h"
 #include "pr/assert.h"
 #include "pr/count_of.h"
+#include "pr/integer.h"
 #include "pr/raw_array.h"
 #include "pr/tex.h"
 #include "pr/text_buffer.h"
@@ -205,24 +206,16 @@ void end(Writer* w, PrStringView name) {
 }
 
 // Returns the decimal digits of `number`, written into `buffer`.
-PrStringView decimal(char (&buffer)[16], uint32_t number) {
-    size_t size = 0;
-    char digits[16];
-    do {
-        digits[size++] = char('0' + number % 10);
-        number /= 10;
-    } while (number != 0);
-    for (size_t i = 0; i < size; ++i)
-        buffer[i] = digits[size - 1 - i];
-    return PrStringView{buffer, size};
+PrStringView decimal(char (&buffer)[kPrU64TextMaxBytes], uint32_t number) {
+    return PrStringView{buffer, prU64Format(number, buffer, 10)};
 }
 
 // Writes the links from a footnote's definition back to each of its references.
 void writeBackReferences(Writer* w, const PrMarkdownStep* step) {
-    char numberText[16];
+    char numberText[kPrU64TextMaxBytes];
     PrStringView number = decimal(numberText, step->number);
     for (uint32_t i = 1; i <= step->referenceCount; ++i) {
-        char indexText[16];
+        char indexText[kPrU64TextMaxBytes];
         PrStringView index = decimal(indexText, i);
         if (i > 1)
             text(w, " ");
@@ -424,7 +417,7 @@ void writeStep(void* PR_NULLABLE context, const PrMarkdownStep* step) {
             }
             cr(w);
             Tag tag = startTag(w, name);
-            char startText[16];
+            char startText[kPrU64TextMaxBytes];
             if (step->list == PrMarkdownListKind_Ordered && step->start != 1)
                 attribute(w, &tag, "start", decimal(startText, step->start));
             writeTag(w, tag);
@@ -634,7 +627,7 @@ void writeStep(void* PR_NULLABLE context, const PrMarkdownStep* step) {
             writeTag(w, sup);
             Tag tag = startTag(w, "a");
             urlAttribute(w, &tag, "href", "#fn-", step->label);
-            char referenceText[16];
+            char referenceText[kPrU64TextMaxBytes];
             PrTextBuffer id = {};
             prTextBufferAppend(&id, "fnref-");
             encodeUrl(step->label, &id);
@@ -646,7 +639,7 @@ void writeStep(void* PR_NULLABLE context, const PrMarkdownStep* step) {
             attribute(w, &tag, "data-footnote-ref", PrStringView{});
             writeTag(w, tag);
             prTextBufferReset(&id);
-            char numberText[16];
+            char numberText[kPrU64TextMaxBytes];
             text(w, decimal(numberText, step->number));
             end(w, "a");
             end(w, "sup");

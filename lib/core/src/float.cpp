@@ -18,44 +18,41 @@ size_t copyLiteral(const char* text, char* out) {
     return size;
 }
 
-// Writes `decimal`, which must be positive, in the notation that prF64Format describes.
+// Writes `decimal`, which must be positive, in the notation that prF64Format describes. The digits are written in
+// place, and a point that falls among them is made room for by moving the digits after it.
 size_t formatDecimal(PrF64Decimal decimal, char* out) {
-    char digits[kPrU64TextMaxBytes];
-    int32_t count = int32_t(prU64Format(decimal.digits, digits, 10));
-
-    // Writes `count` digits with the decimal point after position `point`.
-    size_t length = 0;
+    int32_t count = int32_t(prU64DecimalDigits(decimal.digits));
     int32_t point = decimal.exponent + count;
     if (point >= count && point <= kPrF64PositionalMaxExponent) {
-        prMemCopy(out, digits, size_t(count));
-        length += size_t(count);
-        for (int32_t i = 0; i < point - count; ++i)
-            out[length++] = '0';
-    } else if (point > 0 && point <= kPrF64PositionalMaxExponent) {
-        prMemCopy(out, digits, size_t(point));
-        length += size_t(point);
-        out[length++] = '.';
-        prMemCopy(out + length, digits + point, size_t(count - point));
-        length += size_t(count - point);
-    } else if (point > kPrF64PositionalMinExponent && point <= 0) {
-        out[length++] = '0';
-        out[length++] = '.';
-        for (int32_t i = 0; i < -point; ++i)
-            out[length++] = '0';
-        prMemCopy(out + length, digits, size_t(count));
-        length += size_t(count);
-    } else {
-        out[length++] = digits[0];
-        if (count > 1) {
-            out[length++] = '.';
-            prMemCopy(out + length, digits + 1, size_t(count - 1));
-            length += size_t(count - 1);
-        }
-        out[length++] = 'e';
-        int32_t exponent = point - 1;
-        out[length++] = exponent < 0 ? '-' : '+';
-        length += prU64Format(uint64_t(exponent < 0 ? -exponent : exponent), out + length, 10);
+        prU64Format(decimal.digits, out, 10);
+        prMemFill(out + count, '0', size_t(point - count));
+        return size_t(point);
     }
+    if (point > 0 && point <= kPrF64PositionalMaxExponent) {
+        prU64Format(decimal.digits, out, 10);
+        prMemMove(out + point + 1, out + point, size_t(count - point));
+        out[point] = '.';
+        return size_t(count) + 1;
+    }
+    if (point > kPrF64PositionalMinExponent && point <= 0) {
+        out[0] = '0';
+        out[1] = '.';
+        prMemFill(out + 2, '0', size_t(-point));
+        prU64Format(decimal.digits, out + 2 - point, 10);
+        return size_t(2 - point + count);
+    }
+    // The digits after the first go one place to the right, past the point.
+    prU64Format(decimal.digits, out + 1, 10);
+    size_t length = 1;
+    out[0] = out[1];
+    if (count > 1) {
+        out[1] = '.';
+        length = size_t(count) + 1;
+    }
+    out[length++] = 'e';
+    int32_t exponent = point - 1;
+    out[length++] = exponent < 0 ? '-' : '+';
+    length += prU64Format(uint64_t(exponent < 0 ? -exponent : exponent), out + length, 10);
     return length;
 }
 
@@ -113,6 +110,24 @@ size_t prF64Format(double value, char* out) {
     return length;
 }
 
+size_t prF32Format(float value, char* out) {
+    double wide = double(value);
+    size_t length = 0;
+    if (!formatSpecial(&wide, out, &length))
+        return length;
+    // Widening is exact, so the magnitude narrows back to the same float. Of every float, one magnitude has a shortest
+    // decimal that a double holds past the midpoint to its neighbor, so that rounding the double to a float gives the
+    // neighbor: 7.038531e-26. It takes a digit more.
+    float magnitude = float(wide);
+    constexpr uint32_t kDoubleRounded = 0x15ae43fdu;
+    PrF64Decimal decimal = PrF64Decimal{70385307, -33};
+    if (bitCast<uint32_t>(magnitude) != kDoubleRounded)
+        decimal = prF32ShortestDecimal(magnitude);
+    length += formatDecimal(decimal, out + length);
+    PR_ASSERT(length <= kPrF64TextMaxBytes);
+    return length;
+}
+
 size_t prF64FormatSignificant(double value, uint32_t digits, char* out) {
     PR_ASSERT(digits >= 1 && digits <= kPrF64MaxDigits);
     size_t length = 0;
@@ -120,17 +135,13 @@ size_t prF64FormatSignificant(double value, uint32_t digits, char* out) {
         return length;
 
     PrF64Decimal decimal = prF64ShortestDecimal(value);
-    uint64_t limit = 1;
-    for (uint32_t i = 0; i < digits; ++i)
-        limit *= 10;
-    if (decimal.digits >= limit) {
-        uint64_t scale = 1;
-        while (decimal.digits / scale >= limit) {
-            scale *= 10;
-            ++decimal.exponent;
-        }
+    uint32_t count = prU64DecimalDigits(decimal.digits);
+    if (count > digits) {
+        uint32_t dropped = count - digits;
+        uint64_t scale = prU64Pow10(dropped);
         uint64_t rest = decimal.digits % scale;
         decimal.digits = decimal.digits / scale + (rest * 2 >= scale ? 1 : 0);
+        decimal.exponent += int32_t(dropped);
         while (decimal.digits % 10 == 0) {
             decimal.digits /= 10;
             ++decimal.exponent;

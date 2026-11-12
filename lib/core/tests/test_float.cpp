@@ -1,4 +1,5 @@
 #include "pr/float.h"
+#include "pr/float_convert.h"
 #include "pr/string.h"
 #include "pr/string_view.h"
 
@@ -20,6 +21,11 @@ String formatted(double value) {
 String significant(double value, uint32_t digits) {
     char text[kPrF64TextMaxBytes];
     return String(PrStringView(text, prF64FormatSignificant(value, digits, text)));
+}
+
+String shortestFloat(float value) {
+    char text[kPrF64TextMaxBytes];
+    return String(PrStringView(text, prF32Format(value, text)));
 }
 
 String fixed(double value, uint32_t decimals) {
@@ -92,6 +98,82 @@ TEST_CASE("what has no decimal text is named instead") {
     CHECK(formatted(huge) == "Infinity");
     CHECK(formatted(-huge) == "-Infinity");
     CHECK(formatted(huge - huge) == "NaN");
+}
+
+TEST_CASE("the shortest text holds at the ends of the range and at powers of two") {
+    // A power of two's interval is shorter below than above.
+    CHECK(formatted(1024.0) == "1024");
+    CHECK(formatted(0x1p-1022) == "2.2250738585072014e-308");
+    CHECK(formatted(0x1p-1074) == "5e-324");
+    CHECK(formatted(0x1p1023) == "8.98846567431158e+307");
+    CHECK(formatted(1.7976931348623157e308) == "1.7976931348623157e+308");
+    CHECK(formatted(2.2250738585072009e-308) == "2.225073858507201e-308");
+    // Trailing zeros are removed past a multiple of 10^8.
+    CHECK(formatted(1e15) == "1000000000000000");
+    CHECK(formatted(1234.5) == "1234.5");
+    CHECK(formatted(9007199254740993.0) == "9007199254740992");
+}
+
+TEST_CASE("a float formats as the shortest text that parses back to it") {
+    CHECK(shortestFloat(1.57f) == "1.57");
+    CHECK(shortestFloat(1.27f) == "1.27");
+    CHECK(shortestFloat(0.1f) == "0.1");
+    CHECK(shortestFloat(16777216.0f) == "16777216");
+    CHECK(shortestFloat(3.4028235e38f) == "3.4028235e+38");
+    CHECK(shortestFloat(1e-45f) == "1e-45");
+    CHECK(shortestFloat(-0.0f) == "0");
+    CHECK(shortestFloat(0x1p-126f) == "1.1754944e-38");
+}
+
+TEST_CASE("a float's text read as a double rounds back to it") {
+    // The one float whose shortest text, held as a double, lies past the midpoint to its neighbor.
+    float value = 7.0385307e-26f;
+    CHECK(shortestFloat(value) == "7.0385307e-26");
+    CHECK(shortestFloat(-value) == "-7.0385307e-26");
+    String text = shortestFloat(value);
+    CHECK(float(parse(text)) == value);
+}
+
+TEST_CASE("rounded digits are exact, and ties go to even") {
+    char digits[kPrF64MaxExactDigits + 1];
+    PrF64Digits d{};
+    auto text = [&] { return String(PrStringView(digits, d.count)); };
+
+    // 0.125, 0.375, 2.5 and 3.5 are exact, so they are ties, which go to the even digit.
+    d = prF64SignificantDigits(0.125, 2, digits, sizeof(digits));
+    CHECK(text() == "12");
+    CHECK(d.exponent == 0);
+    d = prF64SignificantDigits(0.375, 2, digits, sizeof(digits));
+    CHECK(text() == "38");
+    d = prF64FixedDigits(2.5, 0, digits, sizeof(digits));
+    CHECK(text() == "2");
+    CHECK(d.exponent == 1);
+    d = prF64FixedDigits(3.5, 0, digits, sizeof(digits));
+    CHECK(text() == "4");
+
+    // 0.15 is a little below its decimal, so it rounds down, which no tie rule decides.
+    d = prF64SignificantDigits(0.15, 1, digits, sizeof(digits));
+    CHECK(text() == "1");
+
+    // A carry out of every digit raises the exponent.
+    d = prF64SignificantDigits(9.96, 2, digits, sizeof(digits));
+    CHECK(text() == "10");
+    CHECK(d.exponent == 2);
+
+    // A value below half of the place rounds away.
+    d = prF64FixedDigits(0.0004, 3, digits, sizeof(digits));
+    CHECK(d.count == 0);
+
+    // Exact expansions, past the 17 digits that tell a double apart: one inside the table's exact range of powers, and
+    // others outside it.
+    d = prF64SignificantDigits(0.1, 25, digits, sizeof(digits));
+    CHECK(text() == "1000000000000000055511151");
+    CHECK(d.exponent == 0);
+    d = prF64SignificantDigits(1e300, 19, digits, sizeof(digits));
+    CHECK(text() == "1000000000000000053");
+    CHECK(d.exponent == 301);
+    d = prF64FixedDigits(0x1p-1074, 330, digits, sizeof(digits));
+    CHECK(text() == "4940656");
 }
 
 TEST_CASE("a value to a number of significant digits rounds half away from zero") {

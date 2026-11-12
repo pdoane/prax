@@ -3,6 +3,7 @@
 #pragma once
 
 #include "pr/base.h"
+#include "pr/mem.h"
 
 PR_ASSUME_NONNULL_BEGIN
 
@@ -10,10 +11,12 @@ PR_ASSUME_NONNULL_BEGIN
 extern "C" {
 #endif
 
-// MSVC's bit scan, and its 128-bit product, which x64 alone has.
+// MSVC's bit scans, and its 128-bit product, which x64 alone has.
 #if defined(_MSC_VER) && !defined(__clang__)
 unsigned char _BitScanForward64(unsigned long* index, unsigned __int64 mask);
+unsigned char _BitScanReverse64(unsigned long* index, unsigned __int64 mask);
 #pragma intrinsic(_BitScanForward64)
+#pragma intrinsic(_BitScanReverse64)
 #endif
 #if defined(_MSC_VER) && !defined(__clang__) && defined(_M_X64)
 unsigned __int64 _umul128(unsigned __int64 a, unsigned __int64 b, unsigned __int64* high);
@@ -24,12 +27,51 @@ unsigned __int64 _umul128(unsigned __int64 a, unsigned __int64 b, unsigned __int
 enum {
     kPrU64TextMaxBytes = 64,   // the most digits that a uint64_t needs in any radix, without a terminator
     kPrU64MaxRadix = 36,       // the largest radix, whose digits are 0 through 9 and a through z
+    kPrU64MaxPow10 = 19,       // the largest power of ten that a uint64_t holds
 };
 
+// Returns 10^`exponent`, which must be at most kPrU64MaxPow10.
+uint64_t prU64Pow10(uint32_t exponent);
+
+// Returns the number of decimal digits of `value`. Zero has one.
+uint32_t prU64DecimalDigits(uint64_t value);
+
+// Returns the two digits of `value`, which must be below 100.
+static PR_FORCE_INLINE const char* prU64DigitPair(uint32_t value) {
+    const char* pairs =
+        "00010203040506070809101112131415161718192021222324252627282930313233343536373839404142434445464748495051525354"
+        "555657585960616263646566676869707172737475767778798081828384858687888990919293949596979899";
+    return pairs + value * 2;
+}
+
+// Writes the decimal digits of `value`, which must be at least 100, as prU64FormatDecimal does.
+size_t prU64FormatDecimalWide(uint64_t value, char* out);
+
+// Writes the decimal digits of `value` to `out`, and returns the number of digits. `out` must hold at least
+// kPrU64TextMaxBytes bytes, and the bytes past the digits may be overwritten. The output is not terminated. One and two
+// digits are written inline, which takes a few instructions at each call, and wider values out of line, which keeps
+// each caller's code small.
+static PR_FORCE_INLINE size_t prU64FormatDecimal(uint64_t value, char* out) {
+    if (value >= 100)
+        return prU64FormatDecimalWide(value, out);
+    if (value < 10) {
+        out[0] = PR_VALUE_CAST(char, '0' + value);
+        return 1;
+    }
+    prMemCopy(out, prU64DigitPair(PR_VALUE_CAST(uint32_t, value)), 2);
+    return 2;
+}
+
+// Writes the digits of `value` in a radix other than ten, as prU64Format does.
+size_t prU64FormatRadix(uint64_t value, char* out, uint32_t radix);
+
 // Writes the digits of `value` in `radix` to `out`, and returns the number of digits. `radix` must be 2 through
-// kPrU64MaxRadix, and digits above nine are lowercase letters. `out` must hold at least kPrU64TextMaxBytes bytes. The
-// output is not terminated.
-size_t prU64Format(uint64_t value, char* out, uint32_t radix);
+// kPrU64MaxRadix, and digits above nine are lowercase letters. `out` must hold at least kPrU64TextMaxBytes bytes, and
+// the bytes past the digits may be overwritten. The output is not terminated. Decimal is written as prU64FormatDecimal
+// writes it.
+static PR_FORCE_INLINE size_t prU64Format(uint64_t value, char* out, uint32_t radix) {
+    return radix == 10 ? prU64FormatDecimal(value, out) : prU64FormatRadix(value, out, radix);
+}
 
 // Parses the `size` bytes at `data` as digits in `radix`, and writes the value to `*out`. `radix` must be 2 through
 // kPrU64MaxRadix, and digits above nine are letters of either case. Returns false if there are no digits or a byte is
@@ -48,6 +90,17 @@ static inline uint32_t prU64LowestBit(uint64_t word) {
     return PR_VALUE_CAST(uint32_t, index);
 #else
     return PR_VALUE_CAST(uint32_t, __builtin_ctzll(word));
+#endif
+}
+
+// Returns the index of the highest set bit of `word`, which is its bit length less one. `word` must not be zero.
+static inline uint32_t prU64HighestBit(uint64_t word) {
+#if defined(_MSC_VER) && !defined(__clang__)
+    unsigned long index = 0;
+    _BitScanReverse64(&index, word);
+    return PR_VALUE_CAST(uint32_t, index);
+#else
+    return PR_VALUE_CAST(uint32_t, 63 - __builtin_clzll(word));
 #endif
 }
 

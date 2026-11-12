@@ -22,7 +22,7 @@ void appendNumbers(PrRawString* out, const float* values, uint32_t count) {
     for (uint32_t i = 0; i < count; ++i) {
         char text[kPrF64TextMaxBytes + 1];
         text[0] = ' ';
-        size_t size = prF64Format(double(values[i]), text + 1);
+        size_t size = prF32Format(values[i], text + 1);
         prRawStringAppend(out, PrStringView{text, size + 1});
     }
 }

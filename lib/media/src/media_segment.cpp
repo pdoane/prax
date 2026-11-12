@@ -11,6 +11,7 @@
 #include "pr/ascii.h"
 #include "pr/assert.h"
 #include "pr/float.h"
+#include "pr/integer.h"
 #include "pr/mem.h"
 #include "pr/memory.h"
 #include "pr/mime.h"
@@ -186,14 +187,8 @@ void addHex(MediaSegmentParser* p, uint8_t value, bool upper) {
 }
 
 void addDecimal(MediaSegmentParser* p, uint32_t value) {
-    char digits[10];
-    uint32_t count = 0;
-    do {
-        digits[count++] = char('0' + value % 10);
-        value /= 10;
-    } while (value != 0);
-    while (count != 0)
-        p->text.push(digits[--count]);
+    char digits[kPrU64TextMaxBytes];
+    p->text.append(digits, uint32_t(prU64Format(value, digits, 10)));
 }
 
 // Reads the length of an MPEG-4 descriptor (ISO/IEC 14496-1, 8.3.3), in up to four bytes of seven bits each.

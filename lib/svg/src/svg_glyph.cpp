@@ -10,6 +10,7 @@
 #include "pr/dom.h"
 #include "pr/dom_xml.h"
 #include "pr/draw_commands.h"
+#include "pr/integer.h"
 #include "pr/raw_array.h"
 #include "pr/string_ops.h"
 #include "pr/svg.h"
@@ -110,14 +111,8 @@ void appendText(RawArray<char>& out, const char* text) {
 }
 
 void appendNumber(RawArray<char>& out, uint32_t value) {
-    char digits[10];
-    uint32_t count = 0;
-    do {
-        digits[count++] = char('0' + value % 10);
-        value /= 10;
-    } while (value != 0);
-    while (count > 0)
-        out.push(digits[--count]);
+    char digits[kPrU64TextMaxBytes];
+    out.append(digits, uint32_t(prU64Format(value, digits, 10)));
 }
 
 void appendHex(RawArray<char>& out, float channel) {

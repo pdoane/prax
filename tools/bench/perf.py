@@ -119,8 +119,9 @@ def engine_suffix(engine):
 
 
 # Other engines whose rows a benchmark may measure beside the engine's own rows, as the flex benchmark measures Yoga and
-# Taffy and the vterm benchmark measures libvterm. The show command compares the engine with them.
-OTHERS = ("yoga", "taffy", "libvterm")
+# Taffy, the vterm benchmark measures libvterm, and the numbers benchmark measures the C++ standard library. The show
+# command compares the engine with them.
+OTHERS = ("yoga", "taffy", "libvterm", "std")
 
 
 def throughput(row):
