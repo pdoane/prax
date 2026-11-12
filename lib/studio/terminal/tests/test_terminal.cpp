@@ -90,6 +90,77 @@ struct FakeApp {
     bool woke() { return wakes.exchange(0) != 0; }
 };
 
+// A launcher whose process is the test: the program's output is what the test passes to `output`, at the speed of
+// memory, with no pseudoterminal or program between. The process runs until the terminal destroys it, and takes and
+// drops what the terminal writes to it. A test that calls `output` from a thread of its own joins the thread before the
+// terminal is destroyed, as a backend stops its thread when its process is destroyed.
+struct FakeLauncher {
+    PrProcessLauncher launcher{};
+    PrProcess process{};
+    PrProcessReceiveFn PR_NULLABLE receive = nullptr;
+    void* PR_NULLABLE receiveContext = nullptr;
+
+    FakeLauncher() {
+        launcher.destroy = [](PrProcessLauncher*) {};
+        launcher.launch = [](PrProcessLauncher* l, const PrProcessDesc* desc, PrProcess* PR_NULLABLE* out) -> PrStatus {
+            FakeLauncher* fake = reinterpret_cast<FakeLauncher*>(l);
+            fake->receive = desc->receive;
+            fake->receiveContext = desc->receiveContext;
+            *out = &fake->process;
+            return PrStatus_Ok;
+        };
+        process.destroy = [](PrProcess*) {};
+        process.write = [](PrProcess*, PrByteView) {};
+        process.closeInput = [](PrProcess*) {};
+        process.read = [](PrProcess*, PrProcessStream, uint8_t* PR_NULLABLE, size_t) { return size_t(0); };
+        process.info = [](const PrProcess*) { return PrProcessInfo{}; };
+        process.kill = [](PrProcess*) {};
+        process.terminalResize = [](PrProcess*, PrUVec2, PrUVec2) {};
+        process.terminalForegroundDirectory = [](const PrProcess*) { return prRawStringNull(); };
+    }
+
+    FakeLauncher(const FakeLauncher&) = delete;
+    FakeLauncher& operator=(const FakeLauncher&) = delete;
+
+    // Gives `text` to the terminal as the program's output, on the calling thread, as a backend's thread gives it. The
+    // terminal must have launched its program through this launcher.
+    void output(const std::string& text) {
+        receive(receiveContext, &process, PrProcessStream_Output,
+            PrByteView{reinterpret_cast<const uint8_t*>(text.data()), text.size()});
+    }
+
+    // Sets `desc` to launch through this launcher (Term's setup).
+    std::function<void(PrTerminalDesc*)> setup() {
+        return [this](PrTerminalDesc* desc) { desc->launcher = &launcher; };
+    }
+};
+
+// Gives `text` to a terminal from a thread of its own, as a program's output, until stopped. Stopping joins the thread.
+struct Flood {
+    FakeLauncher* fake;
+    std::string text;
+    Atomic<uint32_t> stopping{};
+    PrThread thread{};
+
+    Flood(FakeLauncher* launcher, std::string flooded) : fake(launcher), text(std::move(flooded)) {
+        prThreadStart(&thread, [](void* context) {
+            Flood* flood = static_cast<Flood*>(context);
+            while (flood->stopping.load() == 0)
+                flood->fake->output(flood->text);
+        }, this);
+    }
+
+    ~Flood() { stop(); }
+
+    Flood(const Flood&) = delete;
+    Flood& operator=(const Flood&) = delete;
+
+    void stop() {
+        if (stopping.exchange(1) == 0)
+            prThreadJoin(&thread);
+    }
+};
+
 // The modifier of a click that opens a link.
 PrAppModifierFlags primaryModifier() {
 #if defined(__APPLE__)
@@ -520,6 +591,21 @@ double waitAtShare(const PrTerminalLockInfo& info, double share) {
     return info.worstMilliseconds;
 }
 
+// Runs the frames that an application would run now: one for each wake of the program, and those that the terminal asks
+// for at once. Returns the number of wakes.
+uint32_t runWoken(Term& t, FakeApp& app) {
+    uint32_t wakes = 0;
+    for (uint32_t i = 0; i < 100; ++i) {
+        bool woke = app.woke();
+        wakes += woke ? 1 : 0;
+        if (!woke && !prUiOutput(t.f.ui).wantsFrame)
+            return wakes;
+        t.f.frame();
+    }
+    FAIL("the terminal asks for frames without end");
+    return wakes;
+}
+
 } // namespace
 
 } // namespace pr_impl
@@ -942,18 +1028,33 @@ TEST_CASE("terminal: a notification posts unless the terminal has focus in the a
 
 TEST_CASE("terminal: a flood of output goes on showing in the frames that the terminal and its program ask for") {
     FakeApp app;
-    // Far more output than one frame parses, followed by a marker.
-    Term t("sh", {"-c", "head -c 60000000 /dev/zero | tr '\\0' a; echo; echo flood-done; sleep 10"}, &app.app);
+    FakeLauncher fake;
+    Term t("program", {}, &app.app, {}, fake.setup());
+    REQUIRE(fake.receive != nullptr);
+    // Far more output than one frame parses, from the program's thread, followed by a marker.
+    struct Output {
+        FakeLauncher* fake;
+        PrThread thread;
+    } output{&fake, {}};
+    prThreadStart(&output.thread, [](void* context) {
+        FakeLauncher* fake = static_cast<Output*>(context)->fake;
+        std::string chunk(4 * kPrTerminalParseSliceBytes, 'a');
+        for (uint32_t i = 0; i < 64; ++i)
+            fake->output(chunk);
+        fake->output("\r\nflood-done\r\n");
+    }, &output);
     // Frames run as an application runs them: only if the program woke it or the terminal asks for a frame.
-    double end = prTimeMonotonicMilliseconds() + 3 * kPatience;
+    double end = prTimeMonotonicMilliseconds() + kPatience;
     while (!t.shows("flood-done")) {
-        REQUIRE(prTimeMonotonicMilliseconds() < end);
-        PrAppOutput output = prUiOutput(t.f.ui);
-        if (app.woke() || output.wantsFrame)
+        if (prTimeMonotonicMilliseconds() >= end)
+            break;
+        if (app.woke() || prUiOutput(t.f.ui).wantsFrame)
             t.f.frame();
         else
             prThreadSleep(1);
     }
+    prThreadJoin(&output.thread);
+    REQUIRE(t.shows("flood-done"));
     // Once the output stops, the terminal asks for no more frames. So the frames above ran because of the flood.
     t.f.frame();
     CHECK_FALSE(prUiOutput(t.f.ui).wantsFrame);
@@ -963,82 +1064,72 @@ TEST_CASE("terminal: a flood of output goes on showing in the frames that the te
 // as long as the machine's load keeps it off the processor. What the parser took during a wait is the bound that load
 // cannot move.
 TEST_CASE("terminal: while the program floods the screen, the UI waits for it no longer than a slice of parsing") {
-    FakeApp app;
-    // Colored text, wide characters and scrolling lines, which parse slower than plain text, followed by a marker. A
-    // Windows pseudoconsole renders it slowly, so the flood is smaller there.
-#if defined(_WIN32)
-    std::string script = "head -c 1000000; echo; echo flood-done; sleep 10";
-#else
-    std::string script = "head -c 30000000; echo; echo flood-done; sleep 10";
-#endif
-    script = "yes '\033[31mred \033[1;4mbold\033[0m \xe6\xbc\xa2\xe5\xad\x97 caf\xc3\xa9 plain text' | " + script;
-    Term t("sh", {"-c", script}, &app.app);
-    double end = prTimeMonotonicMilliseconds() + 3 * kPatience;
-    uint32_t frames = 0;
-    while (!t.shows("flood-done")) {
-        REQUIRE(prTimeMonotonicMilliseconds() < end);
-        if (app.woke() || prUiOutput(t.f.ui).wantsFrame) {
+    FakeLauncher fake;
+    Term t("program", {}, nullptr, {}, fake.setup());
+    REQUIRE(fake.receive != nullptr);
+    // Colored text, wide characters and scrolling lines, which parse slower than plain text, in pieces of several
+    // slices.
+    std::string line = "\033[31mred \033[1;4mbold\033[0m \xe6\xbc\xa2\xe5\xad\x97 caf\xc3\xa9 plain text\r\n";
+    std::string text;
+    while (text.size() < 4 * kPrTerminalParseSliceBytes)
+        text += line;
+    // Frames until the UI has waited for the parser in the middle of its output, and many times over.
+    PrTerminalLockInfo info{};
+    {
+        Flood flood(&fake, text);
+        double end = prTimeMonotonicMilliseconds() + kPatience;
+        while ((info.worstBytes == 0 || info.count < 20) && prTimeMonotonicMilliseconds() < end) {
             t.f.frame();
-            ++frames;
-        } else {
-            prThreadSleep(1);
+            info = prTerminalLockInfo(t.terminal);
         }
     }
-    PrTerminalLockInfo info = prTerminalLockInfo(t.terminal);
-    MESSAGE("frames " << frames << ", waits " << info.count << ", median under " << waitAtShare(info, 0.5) * 1000 <<
-        " us, 99.9% under " << waitAtShare(info, 0.999) * 1000 << " us, mean " <<
-        info.totalMilliseconds / double(info.count) * 1000 << " us, worst " << info.worstMilliseconds * 1000 <<
-        " us, most parsed during a wait " << info.worstBytes << " bytes");
-    CHECK(frames > 10);
-    CHECK(info.count > 10);
+    MESSAGE("waits " << info.count << ", median under " << waitAtShare(info, 0.5) * 1000 << " us, 99.9% under " <<
+        waitAtShare(info, 0.999) * 1000 << " us, mean " << info.totalMilliseconds / double(info.count) * 1000 <<
+        " us, worst " << info.worstMilliseconds * 1000 << " us, most parsed during a wait " << info.worstBytes << " bytes");
+    REQUIRE(info.worstBytes != 0);
+    CHECK(info.count >= 20);
     CHECK(info.worstBytes <= kPrTerminalParseSliceBytes);
 }
 
 TEST_CASE("terminal: a synchronized update wakes the application as it begins and as it ends, and not between") {
     FakeApp app;
-    Term t("sh", {
-        "-c", "printf before; sleep 0.3; printf '\033[?2026hduring'; i=0; while [ $i -lt 20 ]; do "
-            "printf .; sleep 0.01; i=$((i+1)); done; printf '\033[?2026l after'; sleep 10",
-    }, &app.app);
-    t.frameUntil([&] { return t.shows("before"); });
-    app.woke();
-    // Frames run as an application runs them: only if the program woke it or the terminal asks for a frame.
-    uint32_t wakes = 0;
-    double end = prTimeMonotonicMilliseconds() + kPatience;
-    while (!t.shows("after")) {
-        REQUIRE(prTimeMonotonicMilliseconds() < end);
-        bool woke = app.woke();
-        wakes += woke ? 1 : 0;
-        if (woke || prUiOutput(t.f.ui).wantsFrame)
-            t.f.frame();
-        else
-            prThreadSleep(1);
-    }
+    FakeLauncher fake;
+    Term t("program", {}, &app.app, {}, fake.setup());
+    REQUIRE(fake.receive != nullptr);
+    fake.output("before");
+    runWoken(t, app);
+    REQUIRE(t.shows("before"));
     // Outside a synchronized update, each of the 20 writes would wake the application.
-    CHECK(wakes <= 4);
+    uint32_t wakes = 0;
+    fake.output("\x1b[?2026hduring");
+    wakes += runWoken(t, app);
+    for (uint32_t i = 0; i < 20; ++i) {
+        fake.output(".");
+        wakes += runWoken(t, app);
+    }
+    fake.output("\x1b[?2026l after");
+    wakes += runWoken(t, app);
+    CHECK(t.shows("before"));
+    CHECK(t.shows("during.................... after"));
+    CHECK(wakes == 2);
 }
 
 TEST_CASE("terminal: a terminal that does not show wakes the application for the program's events, not its output") {
     FakeApp app;
-    // Wakes count from the program's own title, because a Windows pseudoconsole sets a title as it starts.
-    Term t("sh", {
-        "-c", "printf '\\033]0;started\\007'; sleep 0.3; i=0; while [ $i -lt 20 ]; do echo line $i; sleep 0.01; "
-            "i=$((i+1)); done; printf '\\a'; sleep 10",
-    }, &app.app);
+    FakeLauncher fake;
+    Term t("program", {}, &app.app, {}, fake.setup());
+    REQUIRE(fake.receive != nullptr);
     t.f.build = [&](PrLayoutNode) { prTerminalUpdate(t.terminal); };
-    t.frameUntil([&] { return prTerminalTitle(t.terminal) == "started"; });
-    app.woke();
+    t.f.frame();
+    runWoken(t, app);
     uint32_t wakes = 0;
-    double end = prTimeMonotonicMilliseconds() + kPatience;
-    while (prTerminalAlerts(t.terminal) == 0) {
-        REQUIRE(prTimeMonotonicMilliseconds() < end);
-        bool woke = app.woke();
-        wakes += woke ? 1 : 0;
-        if (woke || prUiOutput(t.f.ui).wantsFrame)
-            t.f.frame();
-        else
-            prThreadSleep(1);
+    for (uint32_t i = 0; i < 20; ++i) {
+        fake.output("line " + std::to_string(i) + "\r\n");
+        wakes += runWoken(t, app);
     }
+    CHECK(wakes == 0);
+    fake.output("\a");
+    wakes += runWoken(t, app);
     CHECK(prTerminalAlerts(t.terminal) == PrTerminalAlertFlag_Bell);
     CHECK(wakes == 1);
     CHECK(t.shows("line 19"));
@@ -1191,24 +1282,24 @@ TEST_CASE("terminal: Control with an arrow, Backspace or Delete, and Home and En
     t.frameUntil([&] { return t.shows("^[[1;5D^[[1;5C^H^[[3;5~^[[H^[[F"); });
 }
 
-TEST_CASE("terminal: a terminal that does not show reads past what its buffers hold, and keeps its extent") {
+TEST_CASE("terminal: a terminal that does not show parses all of its program's output, and keeps its extent") {
     FakeApp app;
-    // More output than the buffers of the process and the pseudoterminal hold, followed by a marker. The program waits
-    // first, so that the terminal has stopped showing when the output starts.
-    Term t("sh", {"-c", "sleep 0.2; head -c 8000000 /dev/zero | tr '\\0' a; echo; echo hidden-done; sleep 10"}, &app.app);
+    FakeLauncher fake;
+    Term t("program", {}, &app.app, {}, fake.setup());
+    REQUIRE(fake.receive != nullptr);
     PrUVec2 extent = prVtermExtent(Locked(t.terminal));
     t.f.build = [&](PrLayoutNode) { prTerminalUpdate(t.terminal); };
     t.f.frame();
     CHECK(prTerminalNode(t.terminal) == kPrLayoutNodeNone);
-    // Frames run as an application runs them: only if the program woke it or the terminal asks for a frame.
-    double end = prTimeMonotonicMilliseconds() + 3 * kPatience;
-    while (!t.shows("hidden-done")) {
-        REQUIRE(prTimeMonotonicMilliseconds() < end);
-        if (app.woke() || prUiOutput(t.f.ui).wantsFrame)
-            t.f.frame();
-        else
-            prThreadSleep(1);
+    // Many slices of output while the terminal does not show, followed by a marker.
+    std::string chunk(4 * kPrTerminalParseSliceBytes, 'a');
+    for (uint32_t i = 0; i < 16; ++i) {
+        fake.output(chunk);
+        runWoken(t, app);
     }
+    fake.output("\r\nhidden-done\r\n");
+    runWoken(t, app);
+    CHECK(t.shows("hidden-done"));
     PrUVec2 kept = prVtermExtent(Locked(t.terminal));
     CHECK(kept.x == extent.x);
     CHECK(kept.y == extent.y);
