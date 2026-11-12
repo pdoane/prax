@@ -67,7 +67,8 @@ bool prFileEachEntry(PrStringView path, PrFileEntryFn fn, void* PR_NULLABLE cont
 
 // Writes `bytes` as the whole of the file at the UTF-8 `path`, in place of any file there. A reader sees the file that
 // was there or the new one, never part of either: the bytes go to a file beside it, which then takes its name. A
-// mapping of the file that was there stays valid. Returns false if the file cannot be written.
+// mapping of the file that was there stays valid, and a reader that has it open does not stop the write, unless the
+// reader refuses its removal, as a Windows reader can. Returns false if the file cannot be written.
 bool prFileWrite(PrStringView path, PrByteView bytes);
 
 // Removes the file or the empty directory at the UTF-8 `path`. A mapping of the file stays valid. Returns false if

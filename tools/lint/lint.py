@@ -683,6 +683,7 @@ WRAPPERS = {
                                                         "dlfcn.h", "stdio.h", "stdlib.h"},
     # The tests that check a backend against the facility that it wraps, which they reach directly.
     "lib/app/backends/win32/tests/test_app_win32.cpp": {"windows.h"},
+    "lib/core/backends/windows/tests/test_core_windows_file.cpp": {"windows.h"},
     "lib/gpu/backends/d3d12/tests/test_gpu_d3d12.cpp": {"windows.h", "d3d12.h"},
     "lib/gpu/backends/vulkan/tests/test_gpu_vulkan.cpp": {"windows.h", "vulkan/vulkan_core.h"},
     "lib/media/backends/windows/tests/test_media_windows.cpp": {"windows.h", "mfapi.h", "mfidl.h", "mfreadwrite.h",
