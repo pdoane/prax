@@ -1,79 +1,72 @@
+#include "pr/array.h"
 #include "pr/checksum.h"
 #include "pr/compress_builtin.h"
 #include "pr/draw_cpu.h"
+#include "pr/float.h"
 #include "pr/image_builtin.h"
+#include "pr/string.h"
 #include "pr/svg_glyph.h"
 #include "pr/vec.h"
 
 #include "tools/harness/test.h"
 
-#include <cmath>
-#include <cstdio>
-#include <string>
-#include <vector>
-
 extern "C" int prTestSvgGlyphCApi(void);
 
 namespace pr_impl {
 
+using namespace pr;
+
 namespace {
 
-std::vector<uint8_t> readFile(const char* name) {
-    std::string path = std::string(PR_FONTS_DIR) + "/" + name;
-    std::vector<uint8_t> bytes;
-    FILE* file = std::fopen(path.c_str(), "rb");
-    REQUIRE(file != nullptr);
-    uint8_t buffer[65536];
-    size_t read = 0;
-    while ((read = std::fread(buffer, 1, sizeof(buffer), file)) != 0)
-        bytes.insert(bytes.end(), buffer, buffer + read);
-    std::fclose(file);
-    return bytes;
+// Returns the bytes of the font file `name`, in the fonts directory.
+Array<uint8_t> fontFile(const char* name) {
+    return harness::readFile(format("{}/{}", PR_FONTS_DIR, name));
 }
 
 const PrFont* load(const char* name) {
-    std::vector<uint8_t> bytes = readFile(name);
+    Array<uint8_t> bytes = fontFile(name);
     const PrFont* font = nullptr;
     REQUIRE(prFontCreate(bytes, 0, nullptr, &font) == PrStatus_Ok);
     return font;
 }
 
-void put16(std::vector<uint8_t>& out, uint32_t value) {
-    out.push_back(uint8_t(value >> 8));
-    out.push_back(uint8_t(value));
+void put16(Array<uint8_t>& out, uint32_t value) {
+    out.push(uint8_t(value >> 8));
+    out.push(uint8_t(value));
 }
 
-void put32(std::vector<uint8_t>& out, uint32_t value) {
+void put32(Array<uint8_t>& out, uint32_t value) {
     put16(out, value >> 16);
     put16(out, value & 0xffff);
 }
 
 // Returns the bytes as a gzip member of stored deflate blocks, which needs no compressor.
-std::vector<uint8_t> gzipStored(const std::vector<uint8_t>& bytes) {
-    std::vector<uint8_t> out = {0x1f, 0x8b, 8, 0, 0, 0, 0, 0, 0, 0xff};
-    for (size_t at = 0; at < bytes.size() || at == 0; at += 65535) {
-        size_t length = bytes.size() - at < 65535 ? bytes.size() - at : 65535;
-        out.push_back(at + length >= bytes.size() ? 1 : 0);
-        out.push_back(uint8_t(length));
-        out.push_back(uint8_t(length >> 8));
-        out.push_back(uint8_t(~length));
-        out.push_back(uint8_t(~length >> 8));
-        out.insert(out.end(), bytes.begin() + ptrdiff_t(at), bytes.begin() + ptrdiff_t(at + length));
-        if (bytes.empty())
+Array<uint8_t> gzipStored(const Array<uint8_t>& bytes) {
+    Array<uint8_t> out({0x1f, 0x8b, 8, 0, 0, 0, 0, 0, 0, 0xff});
+    for (uint32_t at = 0; at < bytes.count() || at == 0; at += 65535) {
+        uint32_t length = bytes.count() - at < 65535 ? bytes.count() - at : 65535;
+        out.push(at + length >= bytes.count() ? 1 : 0);
+        out.push(uint8_t(length));
+        out.push(uint8_t(length >> 8));
+        out.push(uint8_t(~length));
+        out.push(uint8_t(~length >> 8));
+        out.append(bytes.data() + at, length);
+        if (bytes.isEmpty())
             break;
     }
     uint32_t crc = prCrc32Update(0, bytes);
-    uint32_t size = uint32_t(bytes.size());
-    for (uint32_t value : {crc, size}) {
+    uint32_t size = bytes.count();
+    const uint32_t trailer[] = {crc, size};
+    for (uint32_t value : trailer) {
         for (int k = 0; k < 4; ++k)
-            out.push_back(uint8_t(value >> (8 * k)));
+            out.push(uint8_t(value >> (8 * k)));
     }
     return out;
 }
 
 // Returns the font file with its SVG table replaced by a table that holds `document` for glyph `glyph` alone.
-std::vector<uint8_t> withSvgDocument(std::vector<uint8_t> font, uint16_t glyph, const std::vector<uint8_t>& document) {
-    std::vector<uint8_t> table;
+Array<uint8_t> withSvgDocument(Array<uint8_t> font, uint16_t glyph, const Array<uint8_t>& document) {
+    Array<uint8_t> table;
     put16(table, 0);
     put32(table, 10);
     put32(table, 0);
@@ -81,20 +74,20 @@ std::vector<uint8_t> withSvgDocument(std::vector<uint8_t> font, uint16_t glyph, 
     put16(table, glyph);
     put16(table, glyph);
     put32(table, 14);
-    put32(table, uint32_t(document.size()));
-    table.insert(table.end(), document.begin(), document.end());
-    while (font.size() % 4 != 0)
-        font.push_back(0);
-    uint32_t offset = uint32_t(font.size());
-    font.insert(font.end(), table.begin(), table.end());
+    put32(table, document.count());
+    table.append(document.span());
+    while (font.count() % 4 != 0)
+        font.push(0);
+    uint32_t offset = font.count();
+    font.append(table.span());
     uint32_t tables = uint32_t(font[4]) << 8 | font[5];
     for (uint32_t i = 0; i < tables; ++i) {
         uint8_t* record = font.data() + 12 + i * 16;
-        if (std::string(reinterpret_cast<const char*>(record), 4) != "SVG ")
+        if (PrStringView(reinterpret_cast<const char*>(record), 4) != "SVG ")
             continue;
         for (uint32_t k = 0; k < 4; ++k) {
             record[8 + k] = uint8_t(offset >> (24 - 8 * k));
-            record[12 + k] = uint8_t(table.size() >> (24 - 8 * k));
+            record[12 + k] = uint8_t(table.count() >> (24 - 8 * k));
         }
     }
     return font;
@@ -102,8 +95,8 @@ std::vector<uint8_t> withSvgDocument(std::vector<uint8_t> font, uint16_t glyph, 
 
 constexpr uint32_t kSize = 100;
 
-std::vector<uint8_t> render(const PrDrawList* list) {
-    std::vector<uint8_t> bytes(size_t(kSize) * kSize * 4, 0);
+Array<uint8_t> render(const PrDrawList* list) {
+    Array<uint8_t> bytes(kSize * kSize * 4);
     PrDrawRenderer* renderer = prDrawCpuCreate(nullptr);
     PrPixels into{bytes.data(), size_t(kSize) * 4, {kSize, kSize}};
     REQUIRE(prDrawRendererRenderPixels(renderer, list, into, PrPixelFormat_Rgba8) == PrStatus_Ok);
@@ -119,10 +112,10 @@ struct Ink {
     double b;
 };
 
-Ink inkOf(const std::vector<uint8_t>& pixels) {
+Ink inkOf(const Array<uint8_t>& pixels) {
     Ink ink{0, 0, 0, 0};
     double opaque = 0;
-    for (size_t i = 0; i < pixels.size(); i += 4) {
+    for (uint32_t i = 0; i < pixels.count(); i += 4) {
         ink.coverage += pixels[i + 3] / 255.0;
         if (pixels[i + 3] < 250)
             continue;
@@ -157,13 +150,14 @@ TEST_CASE("an SVG glyph draws as the same glyph's color layers do, in the same p
     uint16_t glyph = prFontCodePointGlyph(font, 'A');
     PrFontGlyphSvg svg{};
     REQUIRE(prFontGlyphSvg(font, glyph, &svg));
-    std::vector<PrFontPaletteColor> overrides;
+    Array<PrFontPaletteColor> overrides;
     for (uint32_t i = 0; i < prFontPaletteEntryCount(font); ++i)
-        overrides.push_back(PrFontPaletteColor{i, PrColor{0.1f, 0.3f + 0.6f * float(i % 2), 0.9f, 1}});
+        overrides.push(PrFontPaletteColor{i, PrColor{0.1f, 0.3f + 0.6f * float(i % 2), 0.9f, 1}});
     PrDrawGlyphDecoder* decoder = prSvgGlyphDecoderCreate(nullptr, nullptr);
-    for (bool recolored : {false, true}) {
+    const bool recolorings[] = {false, true};
+    for (bool recolored : recolorings) {
         CAPTURE(recolored);
-        PrFontPalette palette{0, recolored ? overrides.data() : nullptr, recolored ? uint32_t(overrides.size()) : 0};
+        PrFontPalette palette{0, recolored ? overrides.data() : nullptr, recolored ? overrides.count() : 0};
         PrFontGlyph placed{glyph, PrVec2{10, 85}};
         PrFontGlyphRun run{};
         run.font = font;
@@ -182,9 +176,9 @@ TEST_CASE("an SVG glyph draws as the same glyph's color layers do, in the same p
         prDrawListPopTransform(document);
         Ink drawn = inkOf(render(document));
         CHECK(drawn.coverage == doctest::Approx(expected.coverage).epsilon(0.05));
-        CHECK(std::fabs(drawn.r - expected.r) < 20);
-        CHECK(std::fabs(drawn.g - expected.g) < 20);
-        CHECK(std::fabs(drawn.b - expected.b) < 20);
+        CHECK(prF64Abs(drawn.r - expected.r) < 20);
+        CHECK(prF64Abs(drawn.g - expected.g) < 20);
+        CHECK(prF64Abs(drawn.b - expected.b) < 20);
         if (recolored)
             CHECK(drawn.b > 150);
         prDrawListRelease(document);
@@ -218,14 +212,15 @@ TEST_CASE("a glyph with no document is an image, and without an image codec noth
 }
 
 TEST_CASE("a gzip-compressed document draws as it does uncompressed, and not without a compress codec") {
-    std::vector<uint8_t> file = readFile("Nabla.ttf");
+    Array<uint8_t> file = fontFile("Nabla.ttf");
     const PrFont* font = load("Nabla.ttf");
     uint16_t glyph = prFontCodePointGlyph(font, 'A');
     PrFontGlyphSvg svg{};
     REQUIRE(prFontGlyphSvg(font, glyph, &svg));
-    std::vector<uint8_t> compressed =
-        gzipStored(std::vector<uint8_t>(svg.document.data, svg.document.data + svg.document.size));
-    std::vector<uint8_t> bytes = withSvgDocument(file, glyph, compressed);
+    Array<uint8_t> document;
+    document.append(svg.document.data, uint32_t(svg.document.size));
+    Array<uint8_t> compressed = gzipStored(document);
+    Array<uint8_t> bytes = withSvgDocument(file, glyph, compressed);
     const PrFont* gzipped = nullptr;
     REQUIRE(prFontCreate(bytes, 0, nullptr, &gzipped) == PrStatus_Ok);
     PrFontGlyphSvg packed{};

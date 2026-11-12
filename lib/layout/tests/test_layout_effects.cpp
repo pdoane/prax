@@ -3,6 +3,7 @@
 // it is hit.
 
 #include "pr/draw_list.h"
+#include "pr/float.h"
 #include "pr/layout_query.h"
 #include "pr/layout_scene.h"
 #include "pr/layout_style.h"
@@ -11,10 +12,6 @@
 #include "layout/tests/layout_fixture.h"
 
 #include "tools/harness/test.h"
-
-#include <cmath>
-#include <string>
-#include <vector>
 
 namespace pr_impl {
 
@@ -52,7 +49,7 @@ struct Stage {
         return prLayoutNodeCreateElement(f.tree, parent, prLayoutStyleIntern(f.tree, &record));
     }
 
-    std::vector<uint8_t> pixels() {
+    Array<uint8_t> pixels() {
         f.layout(px(200, 200));
         return render(f.tree, 200, 200);
     }
@@ -80,10 +77,10 @@ constexpr PrColor kGreen{0, 1, 0, 1};
 constexpr PrColor kRed{1, 0, 0, 1};
 constexpr PrColor kBlue{0, 0, 1, 1};
 
-const std::string kClear = "0 0 0 0";
-const std::string kGreenPixel = "0 255 0 255";
-const std::string kRedPixel = "255 0 0 255";
-const std::string kBluePixel = "0 0 255 255";
+const char* const kClear = "0 0 0 0";
+const char* const kGreenPixel = "0 255 0 255";
+const char* const kRedPixel = "255 0 0 255";
+const char* const kBluePixel = "0 0 255 255";
 
 // Returns the bounds of a shape's outline in `box`.
 PrRect outlineOf(const PrLayoutShape& shape, PrRect box) {
@@ -95,8 +92,8 @@ PrRect outlineOf(const PrLayoutShape& shape, PrRect box) {
 }
 
 bool near(PrRect a, PrRect b) {
-    bool same = std::fabs(a.left - b.left) < 0.05f && std::fabs(a.top - b.top) < 0.05f &&
-        std::fabs(a.right - b.right) < 0.05f && std::fabs(a.bottom - b.bottom) < 0.05f;
+    bool same = prF32Abs(a.left - b.left) < 0.05f && prF32Abs(a.top - b.top) < 0.05f &&
+        prF32Abs(a.right - b.right) < 0.05f && prF32Abs(a.bottom - b.bottom) < 0.05f;
     if (!same)
         MESSAGE("{" << a.left << ", " << a.top << ", " << a.right << ", " << a.bottom << "}");
     return same;
@@ -111,13 +108,14 @@ PrLayoutCompositingStyle clipShape(PrLayoutTree* tree, const PrLayoutShape& shap
 }
 
 // Returns the nodes of a filter list of one function.
-std::vector<PrDrawFilterNode> nodesOf(const PrLayoutFilter& filter) {
+Array<PrDrawFilterNode> nodesOf(const PrLayoutFilter& filter) {
     PrDrawFilterBuilder* builder = prDrawFilterBuilderCreate();
     prLayoutFilterAppend(&filter, PrDrawFilterInput_Source, PrImageEdgeMode_None, builder);
     const PrDrawFilter* made = prDrawFilterCreate(builder);
     prDrawFilterBuilderDestroy(builder);
     const PrDrawFilterNode* first = prDrawFilterNodes(made);
-    std::vector<PrDrawFilterNode> nodes(first, first + prDrawFilterNodeCount(made));
+    Array<PrDrawFilterNode> nodes;
+    nodes.append(first, prDrawFilterNodeCount(made));
     prDrawFilterRelease(made);
     return nodes;
 }
@@ -220,8 +218,8 @@ TEST_CASE("a polygon's round arcs each vertex, at most half of its shorter side"
 
 TEST_CASE("filter functions become nodes that compute in sRGB, as their filter-effects-1 equivalents do") {
     PrLayoutFilter gray{.kind = PrLayoutFilterKind_Grayscale, .amount = 1};
-    std::vector<PrDrawFilterNode> nodes = nodesOf(gray);
-    REQUIRE(nodes.size() == 1);
+    Array<PrDrawFilterNode> nodes = nodesOf(gray);
+    REQUIRE(nodes.count() == 1);
     CHECK(nodes[0].kind == PrDrawFilterKind_ColorMatrix);
     CHECK(nodes[0].space == PrColorSpace_Srgb);
     CHECK(nodes[0].matrix.m[0][0] == doctest::Approx(0.2126f));
@@ -255,7 +253,7 @@ TEST_CASE("a clip path of a basic shape clips the box and what it holds, without
     PrLayoutCompositingStyle c = clipShape(s.f.tree, inset);
     PrLayoutNode box = s.add(s.stage, sized(100, 100), kGreen, &c);
     PrLayoutNode child = s.add(box, sized(150, 20), kBlue);
-    std::vector<uint8_t> pixels = s.pixels();
+    Array<uint8_t> pixels = s.pixels();
     CHECK(pixel(pixels, 200, 5, 50) == kClear);
     CHECK(pixel(pixels, 200, 50, 50) == kGreenPixel);
     CHECK(pixel(pixels, 200, 50, 15) == kBluePixel);
@@ -271,7 +269,7 @@ TEST_CASE("a clip path of a reference box takes the box's corners, from the bord
     c.clipBox = PrLayoutGeometryBox_BorderBox;
     s.radius = 40;
     s.add(s.stage, sized(100, 100), kGreen, &c);
-    std::vector<uint8_t> pixels = s.pixels();
+    Array<uint8_t> pixels = s.pixels();
     CHECK(pixel(pixels, 200, 3, 3) == kClear);
     CHECK(pixel(pixels, 200, 50, 3) == kGreenPixel);
     // The padding box's corners are the border box's, less the border.
@@ -292,7 +290,7 @@ TEST_CASE("a box's background and border follow its corners, and it is hit only 
     Stage s;
     s.radius = 40;
     PrLayoutNode box = s.add(s.stage, sized(100, 100), kGreen);
-    std::vector<uint8_t> pixels = s.pixels();
+    Array<uint8_t> pixels = s.pixels();
     CHECK(pixel(pixels, 200, 3, 3) == kClear);
     CHECK(pixel(pixels, 200, 96, 96) == kClear);
     CHECK(pixel(pixels, 200, 50, 3) == kGreenPixel);
@@ -313,7 +311,7 @@ TEST_CASE("a container clips its content to the curves of its padding box") {
     PrLayoutNode container = s.add(s.stage, clip, PrColor{0, 0, 0, 0});
     s.radius = 0;
     PrLayoutNode child = s.add(container, sized(150, 150), kBlue);
-    std::vector<uint8_t> pixels = s.pixels();
+    Array<uint8_t> pixels = s.pixels();
     // The padding box's corners are the border box's less the border: 30px about (40, 40).
     CHECK(pixel(pixels, 200, 13, 13) == kClear);
     CHECK(pixel(pixels, 200, 50, 12) == kBluePixel);
@@ -330,7 +328,7 @@ TEST_CASE("a change of corners paints the box again, and its clip path of the bo
     c.clipBox = PrLayoutGeometryBox_BorderBox;
     PrLayoutNode box = s.add(s.stage, sized(100, 100), kGreen, &c);
     PrLayoutNode child = s.add(box, sized(100, 100), kBlue);
-    std::vector<uint8_t> pixels = s.pixels();
+    Array<uint8_t> pixels = s.pixels();
     CHECK(pixel(pixels, 200, 3, 3) == kBluePixel);
     PrLayoutDecorationStyle decoration = background(kGreen);
     for (PrLayoutLength& length : decoration.radii)
@@ -368,7 +366,7 @@ TEST_CASE("the clip rectangle clips a box and what it holds, as a container that
     PrLayoutEffectStyle two = prLayoutEffectStyleDefault();
     two.zIndex = 2;
     s.add(s.stage, middle, kRed, nullptr, &two);
-    std::vector<uint8_t> pixels = s.pixels();
+    Array<uint8_t> pixels = s.pixels();
     CHECK(pixel(pixels, 200, 30, 5) == kClear);
     CHECK(pixel(pixels, 200, 30, 95) == kBluePixel);
     CHECK(pixel(pixels, 200, 30, 50) == kBluePixel);
@@ -405,7 +403,7 @@ TEST_CASE("a clip path from a source clips the box to what the source draws, and
     c.clipKind = PrLayoutClipKind_Source;
     c.clipSource = PrLayoutSource{.functions = &kLeftHalf};
     PrLayoutNode box = s.add(s.stage, sized(100, 100), kGreen, &c);
-    std::vector<uint8_t> pixels = s.pixels();
+    Array<uint8_t> pixels = s.pixels();
     CHECK(pixel(pixels, 200, 25, 50) == kGreenPixel);
     CHECK(pixel(pixels, 200, 75, 50) == kClear);
     CHECK(s.f.hit(PrVec2{25, 50}) == box);
@@ -444,7 +442,7 @@ TEST_CASE("mask layers place their images as backgrounds do, and composite from 
     PrLayoutCompositingStyle c = prLayoutCompositingStyleDefault();
     c.mask = prLayoutMaskIntern(s.f.tree, &mask);
     s.add(s.stage, sized(100, 100), kGreen, &c);
-    std::vector<uint8_t> pixels = s.pixels();
+    Array<uint8_t> pixels = s.pixels();
     // Exclusion: the top layer alone at the top left, the bottom layer alone at the bottom right, and nearly neither
     // where both are nearly opaque. Pixels are premultiplied.
     CHECK(pixel(pixels, 200, 1, 25) == "0 247 0 247");
@@ -460,7 +458,8 @@ TEST_CASE("a mask border masks the border image area by its nine pieces, and the
     prDrawListRect(image, PrRect{0, 20, 30, 30}, PrDrawPaint{.color = PR_COLOR16(0, 0, 0, 1)});
     prDrawListRect(image, PrRect{0, 10, 10, 20}, PrDrawPaint{.color = PR_COLOR16(0, 0, 0, 1)});
     prDrawListRect(image, PrRect{20, 10, 30, 20}, PrDrawPaint{.color = PR_COLOR16(0, 0, 0, 1)});
-    for (bool fill : {false, true}) {
+    const bool fills[] = {false, true};
+    for (bool fill : fills) {
         Stage s;
         PrLayoutMask mask{.border = prLayoutMaskBorderDefault()};
         mask.border.image.kind = PrLayoutImageKind_List;
@@ -472,7 +471,7 @@ TEST_CASE("a mask border masks the border image area by its nine pieces, and the
         PrLayoutCompositingStyle c = prLayoutCompositingStyleDefault();
         c.mask = prLayoutMaskIntern(s.f.tree, &mask);
         s.add(s.stage, sized(100, 100), kGreen, &c);
-        std::vector<uint8_t> pixels = s.pixels();
+        Array<uint8_t> pixels = s.pixels();
         CHECK(pixel(pixels, 200, 5, 50) == kGreenPixel);
         CHECK(pixel(pixels, 200, 50, 50) == (fill ? kClear : kGreenPixel));
     }
@@ -489,7 +488,7 @@ TEST_CASE("a filter applies to the box and what it holds, and holds the boxes ou
     box.filtered = 1;
     PrLayoutNode filtered = s.add(s.stage, box, kRed, &c);
     PrLayoutNode fixed = s.add(filtered, absolute(10, 10, 20, 20, PrLayoutPosition_Fixed), kBlue);
-    std::vector<uint8_t> pixels = s.pixels();
+    Array<uint8_t> pixels = s.pixels();
     CHECK(pixel(pixels, 200, 80, 80) == "54 54 54 255");
     CHECK(near(s.f.bounds(fixed), PrRect{10, 60, 30, 80}));
     CHECK(pixel(pixels, 200, 20, 70) == "18 18 18 255");
@@ -505,7 +504,7 @@ TEST_CASE("a backdrop filter filters what lies beneath the box, within its borde
     box.filtered = 1;
     s.add(s.stage, box, PrColor{0, 0, 0, 0}, &c);
     (void)under;
-    std::vector<uint8_t> pixels = s.pixels();
+    Array<uint8_t> pixels = s.pixels();
     CHECK(pixel(pixels, 200, 75, 25) == "54 54 54 255");
     CHECK(pixel(pixels, 200, 25, 25) == kRedPixel);
     CHECK(pixel(pixels, 200, 75, 75) == kRedPixel);
@@ -524,7 +523,7 @@ TEST_CASE("a box that blends multiplies what lies beneath it, up to the group of
     faded.opacity = 0.999f;
     PrLayoutNode group = s.add(s.stage, sized(200, 50), PrColor{0, 0, 0, 0}, nullptr, &faded);
     s.add(group, sized(100, 50), PrColor{0, 1, 1, 1}, &multiply);
-    std::vector<uint8_t> pixels = s.pixels();
+    Array<uint8_t> pixels = s.pixels();
     CHECK(pixel(pixels, 200, 50, 25) == kGreenPixel);
     CHECK(pixel(pixels, 200, 150, 25) == "255 255 0 255");
     CHECK(pixel(pixels, 200, 50, 75) == "0 255 255 255");
@@ -540,7 +539,7 @@ TEST_CASE("every stacking context isolates what blends in it, and takes a layer 
     PrLayoutCompositingStyle multiply = prLayoutCompositingStyleDefault();
     multiply.blendMode = PrDrawBlendMode_Multiply;
     PrLayoutNode child = s.add(holder, sized(100, 50), PrColor{0, 1, 1, 1}, &multiply);
-    std::vector<uint8_t> pixels = s.pixels();
+    Array<uint8_t> pixels = s.pixels();
     // Cyan multiplies nothing in the context's group, so it stays cyan over the yellow.
     CHECK(pixel(pixels, 200, 50, 25) == "0 255 255 255");
     const PrLayoutScene* scene = prLayoutTreeScene(s.f.tree);
@@ -572,7 +571,7 @@ TEST_CASE("a compositing group makes a stacking context, and a change to it reco
     PrLayoutEffectStyle level = prLayoutEffectStyleDefault();
     level.zIndex = -1;
     s.add(box, under, kBlue, nullptr, &level);
-    std::vector<uint8_t> pixels = s.pixels();
+    Array<uint8_t> pixels = s.pixels();
     // The child at z-index -1 stacks in the box's context, over its background.
     CHECK(pixel(pixels, 200, 25, 25) == kBluePixel);
     const PrLayoutScene* scene = prLayoutTreeScene(s.f.tree);
@@ -582,7 +581,8 @@ TEST_CASE("a compositing group makes a stacking context, and a change to it reco
 }
 
 TEST_CASE("a backdrop root bounds what a backdrop filter in it reads, though it applies nothing itself") {
-    for (bool root : {false, true}) {
+    const bool roots[] = {false, true};
+    for (bool root : roots) {
         Stage s;
         s.add(s.stage, absolute(0, 0, 200, 50), kRed);
         PrLayoutCompositingStyle anticipated = prLayoutCompositingStyleDefault();
@@ -595,7 +595,7 @@ TEST_CASE("a backdrop root bounds what a backdrop filter in it reads, though it 
         PrLayoutBoxStyle box = absolute(100, 0, 50, 50);
         box.filtered = 1;
         s.add(holder, box, PrColor{0, 0, 0, 0}, &c);
-        std::vector<uint8_t> pixels = s.pixels();
+        Array<uint8_t> pixels = s.pixels();
         // Within the root, nothing lies beneath the box, so the red beneath it shows unfiltered.
         CHECK(pixel(pixels, 200, 125, 25) == (root ? kRedPixel : "54 54 54 255"));
     }
@@ -629,7 +629,7 @@ TEST_CASE("background layers that blend do so with the background color, in a gr
     addLayered(s, s.stage, sized(100, 50), kBlue, &layer, 1);
     PrLayoutNode under = s.add(s.stage, sized(100, 50), kGreen);
     addLayered(s, under, sized(100, 50), PrColor{0, 0, 0, 0}, &layer, 1);
-    std::vector<uint8_t> pixels = s.pixels();
+    Array<uint8_t> pixels = s.pixels();
     CHECK(pixel(pixels, 200, 25, 25) == "0 0 0 255");
     CHECK(pixel(pixels, 200, 75, 25) == kBluePixel);
     CHECK(pixel(pixels, 200, 25, 75) == kRedPixel);
@@ -646,7 +646,7 @@ TEST_CASE("a filtered image is filtered at its concrete object size, within that
     layer.filters = filters;
     layer.filterCount = 2;
     addLayered(s, s.stage, sized(100, 50), kGreen, &layer, 1);
-    std::vector<uint8_t> pixels = s.pixels();
+    Array<uint8_t> pixels = s.pixels();
     // The gray of red, and no shadow past the image's 50 by 50, which is the filter's region.
     CHECK(pixel(pixels, 200, 25, 25) == "54 54 54 255");
     CHECK(pixel(pixels, 200, 60, 25) == kGreenPixel);

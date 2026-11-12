@@ -1,5 +1,6 @@
 #include "tools/harness/harness.h"
 
+#include "pr/file.h"
 #include "pr/integer.h"
 #include "pr/memory.h"
 #include "pr/string_ops.h"
@@ -36,6 +37,13 @@ void writeEscape(PrTextBuffer* out, uint32_t unit) {
     char escape[8];
     int width = snprintf(escape, sizeof(escape), "\\u%04x", unit);
     prTextBufferAppend(out, PrStringView{escape, uint32_t(width)});
+}
+
+// Writes `text` to standard output as core's print does, directly to the stream, after what stdio holds for it: a
+// program may write through either, and its output keeps the order that it wrote in.
+void writeOutput(PrStringView text) {
+    fflush(stdout);
+    prFileStreamWrite(PrFileStream_Output, prStringBytes(text));
 }
 
 } // namespace
@@ -121,8 +129,11 @@ void harnessCaseReset(HarnessCase* test) {
 }
 
 void harnessWriteLine(PrStringView text) {
-    fwrite(text.data, 1, text.size, stdout);
-    fputc('\n', stdout);
+    PrTextBuffer line{};
+    prTextBufferAppend(&line, text);
+    prTextBufferAppend(&line, "\n");
+    writeOutput(prTextBufferView(&line));
+    prTextBufferReset(&line);
 }
 
 void harnessWriteString(PrTextBuffer* out, PrStringView text) {
@@ -177,7 +188,7 @@ void harnessAppendFormat(PrTextBuffer* out, const char* format, ...) {
 }
 
 uint8_t harnessReadBound(PrStringView text) {
-    const uint8_t* bytes = prStringBytes(text);
+    const uint8_t* bytes = prStringBytes(text).data;
     size_t i = 0;
 
 #if defined(__ARM_NEON)
@@ -264,7 +275,7 @@ void harnessWriteCase(bool first, const char* name, const HarnessCounters& cost)
     harnessCountsAdd(&counts, "time", cost);
     harnessCountsWrite(&counts, &row);
     prTextBufferAppend(&row, "}");
-    fwrite(row.data, 1, row.size, stdout);
+    writeOutput(prTextBufferView(&row));
     prTextBufferReset(&row);
 }
 

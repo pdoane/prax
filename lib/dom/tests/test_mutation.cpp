@@ -1,3 +1,4 @@
+#include "pr/array.h"
 #include "pr/string_ops.h"
 
 #include "dom/src/dom_mutation.h"
@@ -5,15 +6,18 @@
 
 #include "tools/harness/test.h"
 
-#include <vector>
-
 namespace pr_impl {
 
 namespace {
 
 // A document whose host runs microtasks when the test says, in the way that a browsing context's host would.
 struct Microtasks {
-    std::vector<std::pair<void (*)(void*), void*>> queued;
+    struct Task {
+        void (*run)(void*);
+        void* data;
+    };
+
+    Array<Task> queued;
     DomDocumentHost host = {
         .context = this,
         .fetch = [](void*, const DomFetchRequest*, DomFetchFn done, void* data, void (*)(void*)) {
@@ -24,7 +28,7 @@ struct Microtasks {
         .queueTask = [](void*, void (*)(void*), void*, void (*)(void*)) {},
         .queueDelayingTask = [](void*, void (*)(void*), void*, void (*)(void*)) {},
         .queueMicrotask = [](void* context, void (*run)(void*), void* data) {
-            static_cast<Microtasks*>(context)->queued.push_back({run, data});
+            static_cast<Microtasks*>(context)->queued.push(Task{run, data});
             return true;
         },
         .compile = [](void*, PrDomEventTarget*, PrDomElement*, PrDomEventHandler, PrStringView,
@@ -33,10 +37,10 @@ struct Microtasks {
     };
 
     void run() {
-        while (!queued.empty()) {
-            std::pair<void (*)(void*), void*> next = queued.front();
-            queued.erase(queued.begin());
-            next.first(next.second);
+        while (!queued.isEmpty()) {
+            Task next = queued[0];
+            queued.erase(0);
+            next.run(next.data);
         }
     }
 };
@@ -91,7 +95,7 @@ TEST_CASE("a mutation observer is told of the changes it observes in one microta
     REQUIRE(observer->records.count == 2);
     CHECK(prRawStringIsNull(&observer->records.data[0]->oldValue));
     CHECK(prRawStringView(&observer->records.data[1]->oldValue) == "a");
-    CHECK(microtasks.queued.size() == 1);
+    CHECK(microtasks.queued.count() == 1);
 
     // Replacing every child produces one record of the nodes that it removed and added.
     domInsert(parent, domTextCreate(document, "x"), nullptr);

@@ -272,6 +272,13 @@ class StandardLibrary(unittest.TestCase):
         self.assertEqual(self.rules('lib/core/backends/posix/src/core_posix_thread.cpp', '#include <pthread.h>\n'), [])
         self.assertEqual(self.rules('lib/core/src/vec.cpp', '#include <pthread.h>\n'), [(1, 'stdlib')])
 
+    def test_the_tests_and_the_harness_headers_are_held_to_it(self):
+        self.assertTrue(lint.is_on_core(os.path.join(lint.ROOT, 'tools/harness/test.h')))
+        self.assertFalse(lint.is_on_core(os.path.join(lint.ROOT, 'tools/harness/harness.cpp')))
+        self.assertFalse(lint.is_on_core(os.path.join(lint.ROOT, 'tools/viewer/viewer.cpp')))
+        self.assertEqual(self.rules('lib/core/tests/test_string_ops.cpp', '#include <string>\n'), [(1, 'stdlib')])
+        self.assertEqual(self.rules('lib/process/tests/test_process.cpp', '#include <sys/resource.h>\n'), [])
+
     def test_a_public_header_wraps_nothing(self):
         path = 'lib/core/include/pr/neon.h'
         with patch.dict(lint.WRAPPERS, {path: {'arm_neon.h'}}):

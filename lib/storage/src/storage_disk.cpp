@@ -5,6 +5,7 @@
 #include "pr/alloc.h"
 #include "pr/file.h"
 #include "pr/mem.h"
+#include "pr/string_ops.h"
 #include "pr/task.h"
 #include "pr/text_buffer.h"
 #include "pr/thread.h"
@@ -96,7 +97,7 @@ void writeIndex(DiskStorage* storage) {
     PrTextBuffer path{};
     appendPath(storage, 0, &path);
     PrStringView written = prTextBufferView(&bytes);
-    prFileWrite(prTextBufferView(&path), PrByteView{reinterpret_cast<const uint8_t*>(written.data), written.size});
+    prFileWrite(prTextBufferView(&path), prStringBytes(written));
     prTextBufferReset(&path);
     prTextBufferReset(&bytes);
 }

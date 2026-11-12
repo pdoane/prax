@@ -59,17 +59,14 @@ struct Page {
     }
 
     // Returns the node's boxes, each relative to `stage`'s top left, in the order that geometry lists them.
-    std::vector<PrRect> rects(PrLayoutNode node, PrLayoutNode stage) {
+    Array<PrRect> rects(PrLayoutNode node, PrLayoutNode stage) {
         PrLayoutRect out[16];
         uint32_t count = prLayoutNodeBoxes(f.tree, node, PrLayoutCoordinates_Viewport, out, 16);
         PrRect origin = f.bounds(stage);
-        std::vector<PrRect> rects;
+        Array<PrRect> rects;
         for (uint32_t i = 0; i < count && i < 16; ++i) {
             PrRect r = prLayoutRectToPx(out[i]);
-            rects.push_back(PrRect{
-                r.left - origin.left, r.top - origin.top, r.right - origin.left,
-                r.bottom - origin.top,
-            });
+            rects.push(PrRect{r.left - origin.left, r.top - origin.top, r.right - origin.left, r.bottom - origin.top});
         }
         return rects;
     }
@@ -98,7 +95,8 @@ TEST_CASE("English in an rtl block reads left to right, at the right, its final 
 }
 
 TEST_CASE("a Hebrew word among English reads right to left, in either paragraph direction") {
-    for (PrTextDirection direction : {kLtr, kRtl}) {
+    const PrTextDirection directions[] = {kLtr, kRtl};
+    for (PrTextDirection direction : directions) {
         CAPTURE(int(direction));
         Page p;
         PrLayoutNode stage = p.stage(Page::font(direction));
@@ -155,6 +153,10 @@ TEST_CASE("an inline box split by reordering has a part for each piece, the edge
     // The example of css-writing-modes-4: an em of Latin and Hebrew, which Hebrew outside it splits, bordered 2px on
     // its left and 6px on its right. Its start edge is on the left of its Latin, and its end edge on the right of its
     // Hebrew.
+    struct Built {
+        PrLayoutNode stage;
+        PrLayoutNode em;
+    };
     auto build = [](Page& p, float width, PrTextBidi bidi, PrTextDirection direction) {
         PrLayoutNode stage = p.stage(Page::font(), width);
         p.f.text(stage, "here is ");
@@ -165,14 +167,14 @@ TEST_CASE("an inline box split by reordering has a part for each piece, the edge
         PrLayoutNode em = p.add(stage, box, Page::font(direction));
         p.f.text(em, "some עברית");
         p.f.text(stage, " טקסט.");
-        return std::pair{stage, em};
+        return Built{stage, em};
     };
     SUBCASE("on one line") {
         Page p;
         auto [stage, em] = build(p, 400, PrTextBidi_Normal, PrTextDirection_Ltr);
         p.layout();
-        std::vector<PrRect> rects = p.rects(em, stage);
-        REQUIRE(rects.size() == 2);
+        Array<PrRect> rects = p.rects(em, stage);
+        REQUIRE(rects.count() == 2);
         CHECK(double(rects[0].left) == doctest::Approx(65.59).epsilon(0.001));
         CHECK(double(rects[0].right - rects[0].left) == doctest::Approx(56.47).epsilon(0.001));
         CHECK(double(rects[1].left) == doctest::Approx(178.66).epsilon(0.001));
@@ -182,8 +184,8 @@ TEST_CASE("an inline box split by reordering has a part for each piece, the edge
         Page p;
         auto [stage, em] = build(p, 200, PrTextBidi_Normal, PrTextDirection_Ltr);
         p.layout();
-        std::vector<PrRect> rects = p.rects(em, stage);
-        REQUIRE(rects.size() == 2);
+        Array<PrRect> rects = p.rects(em, stage);
+        REQUIRE(rects.count() == 2);
         CHECK(double(rects[0].left) == doctest::Approx(65.59).epsilon(0.001));
         CHECK(double(rects[1].left) == doctest::Approx(122.06).epsilon(0.001));
         CHECK(double(rects[0].right) == doctest::Approx(double(rects[1].left)).epsilon(0.001));
@@ -192,8 +194,8 @@ TEST_CASE("an inline box split by reordering has a part for each piece, the edge
         Page p;
         auto [stage, em] = build(p, 400, PrTextBidi_Isolate, kRtl);
         p.layout();
-        std::vector<PrRect> rects = p.rects(em, stage);
-        REQUIRE(rects.size() == 1);
+        Array<PrRect> rects = p.rects(em, stage);
+        REQUIRE(rects.count() == 1);
         CHECK(double(rects[0].left) == doctest::Approx(65.59).epsilon(0.001));
         CHECK(double(rects[0].right - rects[0].left) == doctest::Approx(115.36).epsilon(0.001));
     }
@@ -202,7 +204,8 @@ TEST_CASE("an inline box split by reordering has a part for each piece, the edge
 TEST_CASE("a box's edges go by its own direction across lines, whatever its parent's") {
     // An rtl span of English in an ltr block, and an ltr span in an rtl block, padded 10px on the left and 20px on the
     // right. An rtl box's start is its right side, on its first line, and an ltr box's start is its left side.
-    for (PrTextDirection outer : {kLtr, kRtl}) {
+    const PrTextDirection outers[] = {kLtr, kRtl};
+    for (PrTextDirection outer : outers) {
         CAPTURE(int(outer));
         Page p;
         PrLayoutNode stage = p.stage(Page::font(outer));
@@ -213,8 +216,8 @@ TEST_CASE("a box's edges go by its own direction across lines, whatever its pare
         PrLayoutNode first = p.span(span, "the", outer == kRtl ? PrTextDirection_Ltr : kRtl);
         p.f.text(span, " element runs on across two lines to end");
         p.layout();
-        std::vector<PrRect> rects = p.rects(span, stage);
-        REQUIRE(rects.size() == 3);
+        Array<PrRect> rects = p.rects(span, stage);
+        REQUIRE(rects.count() == 3);
         if (outer == PrTextDirection_Ltr) {
             CHECK(double(rects[0].right - rects[0].left) == doctest::Approx(196.8).epsilon(0.001));
             CHECK(p.left(first, stage) == 0);

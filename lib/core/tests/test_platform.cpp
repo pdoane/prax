@@ -6,8 +6,6 @@
 
 #include "tools/harness/test.h"
 
-#include <initializer_list>
-
 extern "C" int prTestCoreCApi(void);
 
 using namespace pr_impl;
@@ -31,7 +29,8 @@ TEST_CASE("random bytes fill the whole of a request longer than one read of the 
 
 TEST_CASE("the local time zone's offset from UTC is a whole number of minutes, less than a day, in any season") {
     // 2026-01-15 and 2026-07-15 at noon UTC, one of which is in daylight saving time where the zone has it.
-    for (double wall : {1768478400000.0, 1784116800000.0, prTimeWallMilliseconds()}) {
+    const double walls[] = {1768478400000.0, 1784116800000.0, prTimeWallMilliseconds()};
+    for (double wall : walls) {
         double offset = prTimeLocalOffsetMilliseconds(wall);
         CHECK(offset > -86400000.0);
         CHECK(offset < 86400000.0);

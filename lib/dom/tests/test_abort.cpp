@@ -1,8 +1,7 @@
 #include "pr/dom_abort.h"
+#include "pr/string.h"
 
 #include "tools/harness/test.h"
-
-#include <string>
 
 namespace pr_impl {
 
@@ -11,7 +10,7 @@ namespace {
 // What the listeners, algorithms and reason handlers of the signals saw, in the order they ran. Each is named by a
 // letter.
 struct Log {
-    std::string text;
+    String text;
 };
 
 // A reason handler that appends `mark` to a log and keeps the last reason that it was given.
@@ -24,7 +23,7 @@ struct Keeper {
 void keep(PrDomAbortSignal* signal, Keeper* keeper) {
     prDomAbortSignalSetReasonHandler(signal, [](void* context, PrDomAbortSignal*, const void* reason) {
         Keeper* k = static_cast<Keeper*>(context);
-        k->log->text += k->mark;
+        k->log->text.append(k->mark);
         k->reason = reason;
     }, keeper);
 }
@@ -39,7 +38,7 @@ struct Probe {
 };
 
 void record(Probe* probe) {
-    probe->log->text += probe->mark;
+    probe->log->text.append(probe->mark);
     for (int i = 0; i < probe->otherCount; ++i)
         probe->othersAborted &= prDomAbortSignalAborted(probe->others[i]);
 }
@@ -138,7 +137,8 @@ TEST_CASE("a dependent signal follows the signals at the root of the signals it 
     PrDomAbortSignal* aborted = prDomAbortSignalCreateDependent(signals, 2);
     CHECK(prDomAbortSignalAborted(aborted));
 
-    for (PrDomAbortSignal* signal : {root, other, first, second, third, aborted})
+    PrDomAbortSignal* made[] = {root, other, first, second, third, aborted};
+    for (PrDomAbortSignal* signal : made)
         prDomAbortSignalRelease(signal);
 }
 

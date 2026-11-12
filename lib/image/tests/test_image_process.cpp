@@ -1,17 +1,18 @@
+#include "pr/array.h"
 #include "pr/image_process.h"
 
 #include "tools/harness/test.h"
 
-#include <initializer_list>
-#include <vector>
+using namespace pr;
 
 TEST_CASE("a blur keeps a constant field, and reads transparent beyond the edges without an edge mode") {
-    std::vector<float> values(8 * 8, 1.0f);
+    Array<float> values(8 * 8, 1.0f);
     PrPixels pixels{reinterpret_cast<uint8_t*>(values.data()), 8 * sizeof(float), {8, 8}};
     prImageBlur(pixels, PrPixelFormat_RF32, PrVec2{3, 3}, PrImageEdgeMode_Duplicate);
     for (float v : values)
         CHECK(v == doctest::Approx(1.0f));
-    values.assign(8 * 8, 1.0f);
+    for (float& v : values)
+        v = 1.0f;
     prImageBlur(pixels, PrPixelFormat_RF32, PrVec2{1, 1}, PrImageEdgeMode_None);
     CHECK(values[0] < values[4 * 8 + 4]);
     CHECK(values[0] > 0.0f);
@@ -20,9 +21,9 @@ TEST_CASE("a blur keeps a constant field, and reads transparent beyond the edges
 TEST_CASE("a blur in mirror mode reads the pixels mirrored across the edge, the edge pixel first") {
     // A row of 1, 0, 0, 0 blurred by a narrow Gaussian. Mirror mode repeats the 1 beyond the left edge, wrap mode
     // brings in a 0 from the right edge, and no edge mode reads 0.
-    std::vector<float> mirrored{1, 0, 0, 0};
-    std::vector<float> wrapped{1, 0, 0, 0};
-    std::vector<float> none{1, 0, 0, 0};
+    Array<float> mirrored({1, 0, 0, 0});
+    Array<float> wrapped({1, 0, 0, 0});
+    Array<float> none({1, 0, 0, 0});
     PrPixels mirror{reinterpret_cast<uint8_t*>(mirrored.data()), 4 * sizeof(float), {4, 1}};
     PrPixels wrap{reinterpret_cast<uint8_t*>(wrapped.data()), 4 * sizeof(float), {4, 1}};
     PrPixels transparent{reinterpret_cast<uint8_t*>(none.data()), 4 * sizeof(float), {4, 1}};
@@ -34,7 +35,7 @@ TEST_CASE("a blur in mirror mode reads the pixels mirrored across the edge, the 
     // Beyond the right edge, mirror mode reads the 0s next to the edge, as no edge mode does.
     CHECK(mirrored[3] == doctest::Approx(none[3]).epsilon(0.05));
     // A constant field stays constant.
-    std::vector<float> field(5, 0.5f);
+    Array<float> field(5, 0.5f);
     PrPixels constant{reinterpret_cast<uint8_t*>(field.data()), 5 * sizeof(float), {5, 1}};
     prImageBlur(constant, PrPixelFormat_RF32, PrVec2{3, 0}, PrImageEdgeMode_Mirror);
     for (float v : field)
@@ -54,7 +55,8 @@ TEST_CASE("a mip level is the rounded mean of each block, repeating the last row
 
 TEST_CASE("turbulence noise takes any finite seed") {
     PrImageNoise noise{};
-    for (float seed : {1e30f, -1e30f, 3e9f, -3e9f})
+    const float seeds[] = {1e30f, -1e30f, 3e9f, -3e9f};
+    for (float seed : seeds)
         prImageNoise(seed, &noise);
     for (int32_t i = 0; i < kPrImageNoiseLattice; ++i) {
         CHECK(noise.lattice[i] >= 0);

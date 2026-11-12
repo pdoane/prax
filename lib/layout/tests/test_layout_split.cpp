@@ -1,13 +1,13 @@
+#include "pr/array.h"
 #include "pr/layout_query.h"
 #include "pr/layout_style.h"
 #include "pr/layout_tree.h"
+#include "pr/min_max.h"
+#include "pr/string.h"
 
 #include "layout/tests/layout_fixture.h"
 
 #include "tools/harness/test.h"
-
-#include <string>
-#include <vector>
 
 namespace pr_impl {
 
@@ -140,15 +140,15 @@ struct Stage {
     double height(PrLayoutNode node) { return double(f.bounds(node).bottom - f.bounds(node).top); }
 
     // Returns a node's boxes, in content order, relative to the stage's content box.
-    std::vector<Bounds> rects(PrLayoutNode node) {
+    Array<Bounds> rects(PrLayoutNode node) {
         uint32_t count = prLayoutNodeBoxes(f.tree, node, PrLayoutCoordinates_Viewport, nullptr, 0);
-        std::vector<PrLayoutRect> boxes(count);
+        Array<PrLayoutRect> boxes(count);
         prLayoutNodeBoxes(f.tree, node, PrLayoutCoordinates_Viewport, boxes.data(), count);
         PrRect origin = stageBounds();
-        std::vector<Bounds> out;
+        Array<Bounds> out;
         for (const PrLayoutRect& box : boxes) {
             PrRect r = prLayoutRectToPx(box);
-            out.push_back(Bounds{
+            out.push(Bounds{
                 double(r.left - origin.left), double(r.top - origin.top), double(r.right - r.left),
                 double(r.bottom - r.top),
             });
@@ -157,17 +157,17 @@ struct Stage {
     }
 
     // Returns the nodes at a point relative to the stage's top left, topmost first.
-    std::vector<PrLayoutNode> hits(float x, float y) {
+    Array<PrLayoutNode> hits(float x, float y) {
         PrRect origin = stageBounds();
         PrLayoutVec point = prLayoutVecFromPx(PrVec2{origin.left + x, origin.top + y});
         uint32_t count = prLayoutTreeHitTest(f.tree, point, nullptr, 0);
-        std::vector<PrLayoutNode> out(count);
+        Array<PrLayoutNode> out(count);
         prLayoutTreeHitTest(f.tree, point, out.data(), count);
         return out;
     }
     PrLayoutNode hit(float x, float y) {
-        std::vector<PrLayoutNode> all = hits(x, y);
-        return all.empty() ? kPrLayoutNodeNone : all[0];
+        Array<PrLayoutNode> all = hits(x, y);
+        return all.isEmpty() ? kPrLayoutNodeNone : all[0];
     }
 };
 
@@ -315,8 +315,8 @@ TEST_CASE("an empty block in an inline box keeps a zero-high row between the lin
     s.add(span, inlineBlock(30, 10));
     s.layout();
     CHECK(s.height(s.stage) == 80);
-    std::vector<Bounds> rects = s.rects(span);
-    REQUIRE(rects.size() == 3);
+    Array<Bounds> rects = s.rects(span);
+    REQUIRE(rects.count() == 3);
     checkBounds(rects[0], 0, 9, 30, 22);
     checkBounds(rects[1], 0, 40, 200, 0);
     checkBounds(rects[2], 0, 49, 30, 22);
@@ -541,12 +541,12 @@ TEST_CASE("an inline-block's baseline is its last line in flow, in a block in an
         else
             s.add(span, bordered(sized(block(), -1, 20), 2), &tight);
         s.layout();
-        return std::vector<double>{s.top(ib), s.top(marker)};
+        return Array<double>({s.top(ib), s.top(marker)});
     };
     // An empty block has no line, and the line before it is the last.
-    CHECK(baseline(false, true) == std::vector<double>{10, 27});
-    CHECK(baseline(true, true) == std::vector<double>{0, 37});
-    CHECK(baseline(true, false) == std::vector<double>{10, 27});
+    CHECK(baseline(false, true) == Array<double>({10, 27}));
+    CHECK(baseline(true, true) == Array<double>({0, 37}));
+    CHECK(baseline(true, false) == Array<double>({10, 27}));
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -561,8 +561,8 @@ TEST_CASE("an inline box's boxes are its parts and its rows, in content order") 
         s.div(span, block(), "c");
         s.text(span, "d");
         s.layout();
-        std::vector<Bounds> rects = s.rects(span);
-        REQUIRE(rects.size() == 3);
+        Array<Bounds> rects = s.rects(span);
+        REQUIRE(rects.count() == 3);
         checkBounds(rects[0], 16.6875, 9, 11.125, 22);
         checkBounds(rects[1], 0, 40, 200, 40);
         checkBounds(rects[2], 0, 89, 11.125, 22);
@@ -577,8 +577,8 @@ TEST_CASE("an inline box's boxes are its parts and its rows, in content order") 
         PrLayoutNode inner = s.div(span, narrow, "c");
         s.text(span, "d");
         s.layout();
-        std::vector<Bounds> rects = s.rects(span);
-        REQUIRE(rects.size() == 3);
+        Array<Bounds> rects = s.rects(span);
+        REQUIRE(rects.count() == 3);
         checkBounds(rects[1], 0, 50, 200, 40);
         CHECK(s.top(inner) == 50);
         CHECK(s.left(inner) == 30);
@@ -594,10 +594,10 @@ TEST_CASE("an inline box's boxes are its parts and its rows, in content order") 
         s.text(inner, "d");
         s.text(outer, "e");
         s.layout();
-        std::vector<Bounds> outerRects = s.rects(outer);
-        std::vector<Bounds> innerRects = s.rects(inner);
-        REQUIRE(outerRects.size() == 3);
-        REQUIRE(innerRects.size() == 3);
+        Array<Bounds> outerRects = s.rects(outer);
+        Array<Bounds> innerRects = s.rects(inner);
+        REQUIRE(outerRects.count() == 3);
+        REQUIRE(innerRects.count() == 3);
         checkBounds(outerRects[0], 0, 7, 26.25, 26);
         checkBounds(outerRects[1], 0, 40, 200, 40);
         checkBounds(outerRects[2], 0, 87, 26.25, 26);
@@ -618,8 +618,8 @@ TEST_CASE("an inline box's parts around a block have its edges on their own side
     s.layout();
     CHECK(s.left(inner) == 0);
     CHECK(s.width(inner) == 200);
-    std::vector<Bounds> rects = s.rects(span);
-    REQUIRE(rects.size() == 3);
+    Array<Bounds> rects = s.rects(span);
+    REQUIRE(rects.count() == 3);
     checkBounds(rects[0], 10, 4, 25, 32);
     checkBounds(rects[1], 0, 40, 200, 40);
     checkBounds(rects[2], 0, 84, 29.453125, 32);
@@ -654,8 +654,8 @@ TEST_CASE("a block's row is hit under the block, and the block's margins are not
         PrLayoutNode inner = s.span(outer);
         PrLayoutNode box = s.div(inner, sized(block(), -1, 20));
         s.layout();
-        std::vector<PrLayoutNode> hits = s.hits(100, 10);
-        REQUIRE(hits.size() >= 4);
+        Array<PrLayoutNode> hits = s.hits(100, 10);
+        REQUIRE(hits.count() >= 4);
         CHECK(hits[0] == box);
         CHECK(hits[1] == inner);
         CHECK(hits[2] == outer);
@@ -692,7 +692,8 @@ TEST_CASE("the lines and floats around a block in an inline box keep their overf
     // Where the oversized content is: before the block, after it, or a float in a segment with no text.
     enum { Where_Before, Where_After, Where_Float };
     typedef uint8_t Where;
-    for (Where where : {Where_Before, Where_After, Where_Float}) {
+    const Where wheres[] = {Where_Before, Where_After, Where_Float};
+    for (Where where : wheres) {
         CAPTURE(int(where));
         Stage s;
         PrLayoutNode scroller = s.div(s.stage, scrolling(sized(block(), 100, 100)));
@@ -719,7 +720,8 @@ TEST_CASE("the lines and floats around a block in an inline box keep their overf
 
 TEST_CASE("preserved white space that hangs at the end of a line adds no scrollable overflow") {
     // The spaces after "a" run far past the scrollport, at a soft wrap and at the end of the paragraph.
-    for (const char* value : {"a                                        b", "a                                        "}) {
+    const char* const values[] = {"a                                        b", "a                                        "};
+    for (const char* value : values) {
         CAPTURE(value);
         Stage s([](PrLayoutFontStyle& f) { f.whiteSpaceCollapse = PrLayoutWhiteSpaceCollapse_Preserve; });
         PrLayoutNode scroller = s.div(s.stage, scrolling(sized(block(), 100, 100)), value);
@@ -769,31 +771,28 @@ TEST_CASE("an inline box's border is open where a block splits it, on the sides 
         s.div(span, sized(block(), -1, 20));
         s.add(span, inlineBlock(30, 10));
         s.layout();
-        std::vector<Bounds> rects = s.rects(span);
-        REQUIRE(rects.size() == 3);
-        std::vector<uint8_t> pixels = render(s.f.tree, 400, 300);
+        Array<Bounds> rects = s.rects(span);
+        REQUIRE(rects.count() == 3);
+        Array<uint8_t> pixels = render(s.f.tree, 400, 300);
         PrRect origin = s.stageBounds();
         auto at = [&](const Bounds& r, bool right) {
             double x = double(origin.left) + (right ? r.left + r.width - 5 : r.left + 5);
             return pixel(pixels, 400, uint32_t(x), uint32_t(double(origin.top) + r.top + r.height / 2));
         };
-        return std::vector<std::string>{
-            at(rects[0], false), at(rects[0], true), at(rects[2], false),
-            at(rects[2], true),
-        };
+        return Array<String>({at(rects[0], false), at(rects[0], true), at(rects[2], false), at(rects[2], true)});
     };
-    std::string red = "255 0 0 255";
-    std::string blue = "0 0 255 255";
+    PrStringView red = "255 0 0 255";
+    PrStringView blue = "0 0 255 255";
     // Left to right: the first part opens at its left with the left border, and the second closes at its right with the
     // right border.
-    std::vector<std::string> ltr = edges(PrTextDirection_Ltr);
+    Array<String> ltr = edges(PrTextDirection_Ltr);
     CHECK(ltr[0] == red);
     CHECK(ltr[1] != blue);
     CHECK(ltr[2] != red);
     CHECK(ltr[3] == blue);
     // Right to left: the first part opens at its right with the right border, and the second closes at its left with
     // the left border.
-    std::vector<std::string> rtl = edges(PrTextDirection_Rtl);
+    Array<String> rtl = edges(PrTextDirection_Rtl);
     CHECK(rtl[0] != red);
     CHECK(rtl[1] == blue);
     CHECK(rtl[2] == red);
@@ -813,7 +812,7 @@ TEST_CASE("an inline box's edges at a block go with the content on their own sid
         PrLayoutNode span = s.span(parent, padded(inlineBox(), 20, 30));
         s.div(span, sized(block(), 0, 10));
         PrLayoutNode after = s.add(parent, inlineBlock(40, 10));
-        return std::vector<PrLayoutNode>{first, second, span, after};
+        return Array<PrLayoutNode>({first, second, span, after});
     };
     {
         Stage s;
@@ -827,11 +826,11 @@ TEST_CASE("an inline box's edges at a block go with the content on their own sid
     {
         // 65.56px fits a line 70px wide with the start edge, which it would not with an end edge of 30px.
         Stage s(70);
-        std::vector<PrLayoutNode> nodes = build(s, s.stage);
+        Array<PrLayoutNode> nodes = build(s, s.stage);
         s.layout();
         CHECK(s.top(nodes[1]) == 17);
-        std::vector<Bounds> rects = s.rects(nodes[2]);
-        REQUIRE(rects.size() == 3);
+        Array<Bounds> rects = s.rects(nodes[2]);
+        REQUIRE(rects.count() == 3);
         CHECK(rects[0].width == 20);
         CHECK(rects[2].width == 30);
         CHECK(s.left(nodes[3]) == 30);
@@ -846,8 +845,8 @@ TEST_CASE("an inline box's edges between two blocks make a line of their own") {
     PrLayoutNode last = s.div(span, sized(block(), -1, 20));
     s.layout();
     CHECK(s.top(last) == 60);
-    std::vector<Bounds> rects = s.rects(between);
-    REQUIRE(rects.size() == 1);
+    Array<Bounds> rects = s.rects(between);
+    REQUIRE(rects.count() == 1);
     CHECK(rects[0].width == 20);
     // Measured, the line is as wide as the edge.
     Stage m;
@@ -883,7 +882,7 @@ TEST_CASE("the text after a block breaks and measures as a context of its own") 
         s.text(span, "-B");
     });
     double letter = minContent([](Stage& s, PrLayoutNode parent) { s.text(parent, "A"); });
-    CHECK(split == std::max(alone, letter));
+    CHECK(split == max(alone, letter));
     // Regional indicators pair within a segment, not with one before a block.
     double pair = minContent([](Stage& s, PrLayoutNode parent) { s.text(parent, "\xF0\x9F\x87\xB8\xF0\x9F\x87\xAB"); });
     double cut = minContent([](Stage& s, PrLayoutNode parent) {
@@ -1067,7 +1066,7 @@ TEST_CASE("a change beside blocks in an inline box records what it would with th
         s.layout();
         render(s.f.tree, 400, 300);
         PrLayoutTreeStats stats = prLayoutTreeStats(s.f.tree);
-        return std::vector<uint32_t>{stats.subtreesRecorded, stats.subtreesReused, stats.commandsRecorded};
+        return Array<uint32_t>({stats.subtreesRecorded, stats.subtreesReused, stats.commandsRecorded});
     };
     CHECK(recorded(true) == recorded(false));
 }

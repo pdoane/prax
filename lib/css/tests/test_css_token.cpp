@@ -7,11 +7,11 @@ namespace pr_impl {
 namespace {
 
 // Returns the value of the token at `index`, with escapes resolved.
-std::string value(const CssTestSource& tokens, uint32_t index) {
+String value(const CssTestSource& tokens, uint32_t index) {
     PrStringView text = cssTokenValueText(&tokens.tokens, index);
-    std::string out(cssValue(text, nullptr, 0), '\0');
-    cssValue(text, out.data(), uint32_t(out.size()));
-    return out;
+    Array<char> out(cssValue(text, nullptr, 0));
+    cssValue(text, out.data(), out.count());
+    return String(PrStringView{out.data(), out.count()});
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -20,19 +20,22 @@ std::string value(const CssTestSource& tokens, uint32_t index) {
 // Returns the tokens of `text` alone, and then after a run of ident bytes and a semicolon, for every run length from 64
 // to 128 bytes. The semicolon therefore ends a run at every offset within a word. A semicolon is its own token whatever
 // follows it, so all the tokenizations agree from there on.
-std::vector<std::string> tokensAfterRuns(const std::string& text) {
+Array<String> tokensAfterRuns(PrStringView text) {
     CssTestSource plain{text};
-    std::vector<std::string> got = plain.all();
+    Array<String> got = plain.all();
 
     for (uint32_t pad = 0; pad <= 64; ++pad) {
-        std::string padding(64 + pad, 'a');
-        std::string input = padding + ";" + text;
+        String padding;
+        padding.append(64 + pad, 'a');
+        String input = format("{};{}", padding, text);
         CssTestSource shifted{input};
-        std::vector<std::string> both = shifted.all();
-        REQUIRE(both.size() == got.size() + 2);
+        Array<String> both = shifted.all();
+        REQUIRE(both.count() == got.count() + 2);
         CHECK(both[0] == padding);
         CHECK(both[1] == ";");
-        CHECK(std::vector<std::string>(both.begin() + 2, both.end()) == got);
+        Array<String> rest;
+        rest.append(both.span().slice(2, both.count() - 2));
+        CHECK(rest == got);
     }
     return got;
 }
@@ -51,30 +54,30 @@ TEST_CASE("an empty input has no tokens") {
 
 TEST_CASE("a declaration is its tokens") {
     CssTestSource tokens{"color: red;"};
-    CHECK(tokens.all() == std::vector<std::string>{"color", ":", " ", "red", ";"});
-    CHECK(tokens.kinds() == std::vector<CssTokenKind>{
+    CHECK(tokens.all() == Array<String>({"color", ":", " ", "red", ";"}));
+    CHECK(tokens.kinds() == Array<CssTokenKind>({
         CssTokenKind_Ident, CssTokenKind_Colon,
         CssTokenKind_Whitespace, CssTokenKind_Ident,
         CssTokenKind_Semicolon,
-    });
+    }));
 }
 
 TEST_CASE("a comment is not a token and the token after it is not contiguous") {
     CssTestSource tokens{"a/*x*/b"};
-    CHECK(tokens.all() == std::vector<std::string>{"a", "b"});
+    CHECK(tokens.all() == Array<String>({"a", "b"}));
     CHECK((tokens.flags(0) & CssTokenFlag_Contiguous) != 0);
     CHECK((tokens.flags(1) & CssTokenFlag_Contiguous) == 0);
 }
 
 TEST_CASE("a numeric token covers the bytes it read") {
-    CHECK(CssTestSource{"3.5px"}.all() == std::vector<std::string>{"3.5px"});
-    CHECK(CssTestSource{"3.x"}.all() == std::vector<std::string>{"3", ".", "x"});
-    CHECK(CssTestSource{"1e+5"}.all() == std::vector<std::string>{"1e+5"});
-    CHECK(CssTestSource{".5"}.all() == std::vector<std::string>{".5"});
-    CHECK(CssTestSource{"+1"}.all() == std::vector<std::string>{"+1"});
-    CHECK(CssTestSource{"50%"}.all() == std::vector<std::string>{"50%"});
-    CHECK(CssTestSource{"1-2"}.all() == std::vector<std::string>{"1", "-2"});
-    CHECK(CssTestSource{"1px+2px"}.all() == std::vector<std::string>{"1px", "+2px"});
+    CHECK(CssTestSource{"3.5px"}.all() == Array<String>({"3.5px"}));
+    CHECK(CssTestSource{"3.x"}.all() == Array<String>({"3", ".", "x"}));
+    CHECK(CssTestSource{"1e+5"}.all() == Array<String>({"1e+5"}));
+    CHECK(CssTestSource{".5"}.all() == Array<String>({".5"}));
+    CHECK(CssTestSource{"+1"}.all() == Array<String>({"+1"}));
+    CHECK(CssTestSource{"50%"}.all() == Array<String>({"50%"}));
+    CHECK(CssTestSource{"1-2"}.all() == Array<String>({"1", "-2"}));
+    CHECK(CssTestSource{"1px+2px"}.all() == Array<String>({"1px", "+2px"}));
 }
 
 TEST_CASE("a numeric token records how it was written") {
@@ -96,16 +99,16 @@ TEST_CASE("a dimension keeps its unit in its bytes") {
 
 TEST_CASE("an ident followed by a paren is a function") {
     CssTestSource tokens{"rgb(1)"};
-    CHECK(tokens.all() == std::vector<std::string>{"rgb(", "1", ")"});
+    CHECK(tokens.all() == Array<String>({"rgb(", "1", ")"}));
     CHECK(tokens.kind(0) == CssTokenKind_Function);
 }
 
 TEST_CASE("an unquoted url is one token and a quoted one is a function") {
-    CHECK(CssTestSource{"url(x)"}.kinds() == std::vector<CssTokenKind>{CssTokenKind_Url});
-    CHECK(CssTestSource{"url( x )"}.all() == std::vector<std::string>{"url( x )"});
+    CHECK(CssTestSource{"url(x)"}.kinds() == Array<CssTokenKind>({CssTokenKind_Url}));
+    CHECK(CssTestSource{"url( x )"}.all() == Array<String>({"url( x )"}));
     CHECK(CssTestSource{"url(\"x\")"}.kinds() ==
-        std::vector<CssTokenKind>{CssTokenKind_Function, CssTokenKind_String, CssTokenKind_CloseParen});
-    CHECK(CssTestSource{"url(a\"b)c"}.all() == std::vector<std::string>{"url(a\"b)", "c"});
+        Array<CssTokenKind>({CssTokenKind_Function, CssTokenKind_String, CssTokenKind_CloseParen}));
+    CHECK(CssTestSource{"url(a\"b)c"}.all() == Array<String>({"url(a\"b)", "c"}));
     CHECK(CssTestSource{"url(a\"b)c"}.kind(0) == CssTokenKind_BadUrl);
 }
 
@@ -118,10 +121,10 @@ TEST_CASE("a hash is an id when its name could open an ident") {
 }
 
 TEST_CASE("an at-keyword, a CDO and a CDC") {
-    CHECK(CssTestSource{"@media"}.kinds() == std::vector<CssTokenKind>{CssTokenKind_AtKeyword});
+    CHECK(CssTestSource{"@media"}.kinds() == Array<CssTokenKind>({CssTokenKind_AtKeyword}));
     CHECK(CssTestSource{"@ x"}.kind(0) == CssTokenKind_Delim);
-    CHECK(CssTestSource{"<!--"}.kinds() == std::vector<CssTokenKind>{CssTokenKind_Cdo});
-    CHECK(CssTestSource{"-->"}.kinds() == std::vector<CssTokenKind>{CssTokenKind_Cdc});
+    CHECK(CssTestSource{"<!--"}.kinds() == Array<CssTokenKind>({CssTokenKind_Cdo}));
+    CHECK(CssTestSource{"-->"}.kinds() == Array<CssTokenKind>({CssTokenKind_Cdc}));
 }
 
 TEST_CASE("a string that meets a newline is a bad string") {
@@ -141,11 +144,11 @@ TEST_CASE("an escape is resolved by the reader, not by the token") {
 }
 
 TEST_CASE("every code point above ASCII belongs to an ident") {
-    CHECK(CssTestSource{"caf\xc3\xa9"}.all() == std::vector<std::string>{"caf\xc3\xa9"});
-    CHECK(CssTestSource{"a\xc2\xa1" "b"}.all() == std::vector<std::string>{"a\xc2\xa1" "b"});    // U+00A1
-    CHECK(CssTestSource{"\xc2\x81"}.all() == std::vector<std::string>{"\xc2\x81"});              // U+0081
-    CHECK(CssTestSource{"\xe2\x80\xa3 \xe2\x97\xb0"}.all()                                       // U+2023, U+25F0
-        == std::vector<std::string>{"\xe2\x80\xa3", " ", "\xe2\x97\xb0"});
+    CHECK(CssTestSource{"caf\xc3\xa9"}.all() == Array<String>({"caf\xc3\xa9"}));
+    CHECK(CssTestSource{"a\xc2\xa1" "b"}.all() == Array<String>({"a\xc2\xa1" "b"}));    // U+00A1
+    CHECK(CssTestSource{"\xc2\x81"}.all() == Array<String>({"\xc2\x81"}));              // U+0081
+    CHECK(CssTestSource{"\xe2\x80\xa3 \xe2\x97\xb0"}.all()                              // U+2023, U+25F0
+        == Array<String>({"\xe2\x80\xa3", " ", "\xe2\x97\xb0"}));
     CHECK(CssTestSource{"--\xe2\x9c\xa8"}.kind(0) == CssTokenKind_Ident);                       // U+2728
 }
 
@@ -177,10 +180,10 @@ TEST_CASE("a run of verbatim tokens serializes as its source") {
 }
 
 TEST_CASE("a thousand bad urls tokenize as a thousand bad urls") {
-    std::string unit = "a{b:url(x\"y)}";
-    std::string text;
+    PrStringView unit = "a{b:url(x\"y)}";
+    String text;
     for (uint32_t i = 0; i < 1000; ++i)
-        text += unit;
+        text.append(unit);
 
     CssTestSource tokens{text};
     REQUIRE(tokens.count() == 6000);
@@ -191,7 +194,7 @@ TEST_CASE("a thousand bad urls tokenize as a thousand bad urls") {
 }
 
 TEST_CASE("a unicode range is a token only where the descriptor allows one") {
-    CHECK(CssTestSource{"U+0025"}.all() == std::vector<std::string>{"U", "+0025"});
+    CHECK(CssTestSource{"U+0025"}.all() == Array<String>({"U", "+0025"}));
 
     CssTestSource tokens{"U+0025", CssTokenizeFlag_UnicodeRanges};
     REQUIRE(tokens.count() == 1);
@@ -231,18 +234,18 @@ TEST_CASE("a range takes its end from the digits after a hyphen") {
 
 TEST_CASE("a range takes six digits at most") {
     CssTestSource tokens{"u+12345678", CssTokenizeFlag_UnicodeRanges};
-    CHECK(tokens.all() == std::vector<std::string>{"u+123456", "78"});
+    CHECK(tokens.all() == Array<String>({"u+123456", "78"}));
 }
 
 TEST_CASE("url( is not a range") {
     CssTestSource tokens{"url(x)", CssTokenizeFlag_UnicodeRanges};
-    CHECK(tokens.kinds() == std::vector<CssTokenKind>{CssTokenKind_Url});
+    CHECK(tokens.kinds() == Array<CssTokenKind>({CssTokenKind_Url}));
 }
 
 TEST_CASE("an escape joins the ident run around it") {
-    CHECK(CssTestSource{"a\\62"}.all() == std::vector<std::string>{"a\\62"});
+    CHECK(CssTestSource{"a\\62"}.all() == Array<String>({"a\\62"}));
     CHECK(CssTestSource{"a\\62"}.kind(0) == CssTokenKind_Ident);
-    CHECK(CssTestSource{"\\61 b"}.all() == std::vector<std::string>{"\\61 b"});
+    CHECK(CssTestSource{"\\61 b"}.all() == Array<String>({"\\61 b"}));
 }
 
 TEST_CASE("a unit opening with an e is not the number's exponent") {
@@ -298,7 +301,7 @@ TEST_CASE("a delim carries its code point") {
 
 TEST_CASE("a comment splits the whitespace around it") {
     CssTestSource tokens{"a /**/ b"};
-    CHECK(tokens.all() == std::vector<std::string>{"a", " ", " ", "b"});
+    CHECK(tokens.all() == Array<String>({"a", " ", " ", "b"}));
     CHECK((tokens.flags(2) & CssTokenFlag_Contiguous) == 0);
 }
 
@@ -323,44 +326,45 @@ TEST_CASE("a token says whether its bytes are its value and its serialization") 
 }
 
 TEST_CASE("a token is the same after a run of every length") {
-    CHECK(tokensAfterRuns("color") == std::vector<std::string>{"color"});
-    CHECK(tokensAfterRuns("  \t\n ") == std::vector<std::string>{"  \t\n "});
-    CHECK(tokensAfterRuns("a:b") == std::vector<std::string>{"a", ":", "b"});
-    CHECK(tokensAfterRuns("--main-color") == std::vector<std::string>{"--main-color"});
-    CHECK(tokensAfterRuns("1px+2px") == std::vector<std::string>{"1px", "+2px"});
-    CHECK(tokensAfterRuns("caf\xc3\xa9") == std::vector<std::string>{"caf\xc3\xa9"});
-    CHECK(tokensAfterRuns("\"a'b\"") == std::vector<std::string>{"\"a'b\""});
-    CHECK(tokensAfterRuns("\"a\\\"b\"") == std::vector<std::string>{"\"a\\\"b\""});
-    CHECK(tokensAfterRuns("\"ab\nc") == std::vector<std::string>{"\"ab", "\n", "c"});
-    CHECK(tokensAfterRuns("a/*x*/b") == std::vector<std::string>{"a", "b"});
-    CHECK(tokensAfterRuns("/*a*b*/x") == std::vector<std::string>{"x"});
-    CHECK(tokensAfterRuns("a/b") == std::vector<std::string>{"a", "/", "b"});
-    CHECK(tokensAfterRuns("url(a/b.png)") == std::vector<std::string>{"url(a/b.png)"});
-    CHECK(tokensAfterRuns("url( a )x") == std::vector<std::string>{"url( a )", "x"});
-    CHECK(tokensAfterRuns("myurl(a)") == std::vector<std::string>{"myurl(", "a", ")"});
-    CHECK(tokensAfterRuns("/*\"*/a") == std::vector<std::string>{"a"});
-    CHECK(tokensAfterRuns("\"/*\"a") == std::vector<std::string>{"\"/*\"", "a"});
-    CHECK(tokensAfterRuns("\\61 b") == std::vector<std::string>{"\\61 b"});
-    CHECK(tokensAfterRuns("a\\62") == std::vector<std::string>{"a\\62"});
-    CHECK(tokensAfterRuns("-->") == std::vector<std::string>{"-->"});
-    CHECK(tokensAfterRuns("a-->") == std::vector<std::string>{"a--", ">"});
-    CHECK(tokensAfterRuns("12px/1.5") == std::vector<std::string>{"12px", "/", "1.5"});
-    CHECK(tokensAfterRuns("\"a\\\\\"b") == std::vector<std::string>{"\"a\\\\\"", "b"});
+    CHECK(tokensAfterRuns("color") == Array<String>({"color"}));
+    CHECK(tokensAfterRuns("  \t\n ") == Array<String>({"  \t\n "}));
+    CHECK(tokensAfterRuns("a:b") == Array<String>({"a", ":", "b"}));
+    CHECK(tokensAfterRuns("--main-color") == Array<String>({"--main-color"}));
+    CHECK(tokensAfterRuns("1px+2px") == Array<String>({"1px", "+2px"}));
+    CHECK(tokensAfterRuns("caf\xc3\xa9") == Array<String>({"caf\xc3\xa9"}));
+    CHECK(tokensAfterRuns("\"a'b\"") == Array<String>({"\"a'b\""}));
+    CHECK(tokensAfterRuns("\"a\\\"b\"") == Array<String>({"\"a\\\"b\""}));
+    CHECK(tokensAfterRuns("\"ab\nc") == Array<String>({"\"ab", "\n", "c"}));
+    CHECK(tokensAfterRuns("a/*x*/b") == Array<String>({"a", "b"}));
+    CHECK(tokensAfterRuns("/*a*b*/x") == Array<String>({"x"}));
+    CHECK(tokensAfterRuns("a/b") == Array<String>({"a", "/", "b"}));
+    CHECK(tokensAfterRuns("url(a/b.png)") == Array<String>({"url(a/b.png)"}));
+    CHECK(tokensAfterRuns("url( a )x") == Array<String>({"url( a )", "x"}));
+    CHECK(tokensAfterRuns("myurl(a)") == Array<String>({"myurl(", "a", ")"}));
+    CHECK(tokensAfterRuns("/*\"*/a") == Array<String>({"a"}));
+    CHECK(tokensAfterRuns("\"/*\"a") == Array<String>({"\"/*\"", "a"}));
+    CHECK(tokensAfterRuns("\\61 b") == Array<String>({"\\61 b"}));
+    CHECK(tokensAfterRuns("a\\62") == Array<String>({"a\\62"}));
+    CHECK(tokensAfterRuns("-->") == Array<String>({"-->"}));
+    CHECK(tokensAfterRuns("a-->") == Array<String>({"a--", ">"}));
+    CHECK(tokensAfterRuns("12px/1.5") == Array<String>({"12px", "/", "1.5"}));
+    CHECK(tokensAfterRuns("\"a\\\\\"b") == Array<String>({"\"a\\\\\"", "b"}));
 }
 
 TEST_CASE("a long string, comment or name is still one token") {
-    std::string body(200, 'x');
-    CHECK(tokensAfterRuns("\"" + body + "\"y") == std::vector<std::string>{"\"" + body + "\"", "y"});
-    CHECK(tokensAfterRuns("a/*" + body + "*/b") == std::vector<std::string>{"a", "b"});
-    CHECK(tokensAfterRuns(body + "(") == std::vector<std::string>{body + "("});
+    String body;
+    body.append(200, 'x');
+    CHECK(tokensAfterRuns(format("\"{}\"y", body)) == Array<String>({format("\"{}\"", body), "y"}));
+    CHECK(tokensAfterRuns(format("a/*{}*/b", body)) == Array<String>({"a", "b"}));
+    CHECK(tokensAfterRuns(format("{}(", body)) == Array<String>({format("{}(", body)}));
 }
 
 TEST_CASE("the last byte of the input is read no further") {
-    CHECK(CssTestSource{"a*"}.all() == std::vector<std::string>{"a", "*"});
-    CHECK(CssTestSource{"a/"}.all() == std::vector<std::string>{"a", "/"});
+    CHECK(CssTestSource{"a*"}.all() == Array<String>({"a", "*"}));
+    CHECK(CssTestSource{"a/"}.all() == Array<String>({"a", "/"}));
     CHECK(CssTestSource{"/*"}.count() == 0);
-    CHECK(CssTestSource{"\\"}.all() == std::vector<std::string>{"\\"});
-    CHECK(CssTestSource{"u"}.all() == std::vector<std::string>{"u"});
+    CHECK(CssTestSource{"\\"}.all() == Array<String>({"\\"}));
+    CHECK(CssTestSource{"u"}.all() == Array<String>({"u"}));
 }
 
 TEST_CASE("a name is the same at every length and whatever ends it") {
@@ -380,9 +384,10 @@ TEST_CASE("a name is the same at every length and whatever ends it") {
         {"\xc2\xa0", true, CssTokenKind_Ident, false},    // U+00A0
     };
     for (uint32_t length = 1; length <= 40; ++length) {
-        std::string name(length, 'n');
+        String name;
+        name.append(length, 'n');
         for (const Stop& stop : stops) {
-            std::string input = name + stop.text;
+            String input = format("{}{}", name, stop.text);
             CAPTURE(input);
             CssTestSource tokens{input};
             CHECK(tokens.text(0) == (stop.joins ? input : name));
@@ -393,19 +398,19 @@ TEST_CASE("a name is the same at every length and whatever ends it") {
 }
 
 TEST_CASE("two hyphens are a CDC only before a '>'") {
-    CHECK(CssTestSource{"-->"}.kinds() == std::vector<CssTokenKind>{CssTokenKind_Cdc});
-    CHECK(CssTestSource{"--->"}.all() == std::vector<std::string>{"---", ">"});
-    CHECK(CssTestSource{"--a>"}.all() == std::vector<std::string>{"--a", ">"});
-    CHECK(CssTestSource{"-a>"}.all() == std::vector<std::string>{"-a", ">"});
-    CHECK(CssTestSource{"--"}.kinds() == std::vector<CssTokenKind>{CssTokenKind_Ident});
-    CHECK(CssTestSource{"--("}.kinds() == std::vector<CssTokenKind>{CssTokenKind_Function});
+    CHECK(CssTestSource{"-->"}.kinds() == Array<CssTokenKind>({CssTokenKind_Cdc}));
+    CHECK(CssTestSource{"--->"}.all() == Array<String>({"---", ">"}));
+    CHECK(CssTestSource{"--a>"}.all() == Array<String>({"--a", ">"}));
+    CHECK(CssTestSource{"-a>"}.all() == Array<String>({"-a", ">"}));
+    CHECK(CssTestSource{"--"}.kinds() == Array<CssTokenKind>({CssTokenKind_Ident}));
+    CHECK(CssTestSource{"--("}.kinds() == Array<CssTokenKind>({CssTokenKind_Function}));
 }
 
 TEST_CASE("a sheet decodes in the charset of its mark, its response, its @charset rule or its document") {
     auto decode = [](PrStringView bytes, PrCharset protocol, PrCharset environment) {
         PrRawString out = {};
         PrStringView text = cssDecodeBytes(bytes, protocol, environment, &out);
-        std::string result(text.data, text.size);
+        String result(text);
         prRawStringReset(&out);
         return result;
     };

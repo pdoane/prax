@@ -7,8 +7,6 @@
 
 #include "tools/harness/test.h"
 
-#include <vector>
-
 namespace pr_impl {
 
 namespace {
@@ -92,7 +90,8 @@ PrLayoutNode justifiedBlock(Fixture& f, PrLayoutNode parent, const PrLayoutFlexS
 using namespace pr_impl;
 
 TEST_CASE("a flow-root keeps its children's margins, which collapse through a block") {
-    for (PrLayoutDisplay display : {PrLayoutDisplay_Block, PrLayoutDisplay_FlowRoot}) {
+    const PrLayoutDisplay displays[] = {PrLayoutDisplay_Block, PrLayoutDisplay_FlowRoot};
+    for (PrLayoutDisplay display : displays) {
         CAPTURE(int(display));
         Fixture f;
         PrLayoutNode root = f.element(kPrLayoutNodeNone, block());
@@ -305,7 +304,8 @@ TEST_CASE("text flows on either side of an inline-block that holds text, and inl
         CHECK(f.bounds(two).right == f.bounds(one).right);
         CHECK(f.bounds(after).left == f.bounds(one).right);
         // Every line sits on one baseline, through the nesting.
-        for (PrLayoutNode text : {oneText, twoText, threeText, after})
+        const PrLayoutNode texts[] = {oneText, twoText, threeText, after};
+        for (PrLayoutNode text : texts)
             CHECK(f.bounds(text).top == f.bounds(before).top);
         CHECK(heightOf(f.bounds(paragraph)) == 20);
     };
@@ -439,7 +439,8 @@ TEST_CASE("a block's baseline is its last in-flow line's, through anonymous bloc
 }
 
 TEST_CASE("an inline-block contributes to its container's intrinsic sizes, and changes inside it reshape nothing around it") {
-    for (bool inSpan : {false, true}) {
+    const bool inSpans[] = {false, true};
+    for (bool inSpan : inSpans) {
         CAPTURE(inSpan);
         Fixture f;
         PrLayoutNode root = root20(f);
@@ -544,7 +545,8 @@ TEST_CASE("a relatively positioned inline-block moves alone, and nothing of its 
 TEST_CASE("an inline-block's descendants that paint late paint above its following siblings") {
     enum { Late_None, Late_Relative, Late_Layer, Late_Opacity };
     typedef uint8_t Late;
-    for (Late late : {Late_None, Late_Relative, Late_Layer, Late_Opacity}) {
+    const Late lates[] = {Late_None, Late_Relative, Late_Layer, Late_Opacity};
+    for (Late late : lates) {
         CAPTURE(int(late));
         Fixture f;
         PrLayoutNode root = f.element(kPrLayoutNodeNone, block());
@@ -566,7 +568,7 @@ TEST_CASE("an inline-block's descendants that paint late paint above its followi
         layout(f, 60, 40);
         checkRect(f.bounds(child), 0, 0, 30, 20);
         checkRect(f.bounds(second), 20, 0, 40, 20);
-        std::vector<uint8_t> pixels = render(f.tree, 60, 40);
+        Array<uint8_t> pixels = render(f.tree, 60, 40);
         if (late != Late_Opacity)
             CHECK(pixel(pixels, 60, 10, 10) == "255 0 0 255");
         CHECK(pixel(pixels, 60, 35, 10) == "0 255 0 255");
@@ -601,14 +603,15 @@ TEST_CASE("an inline-block with a transform paints whole, and holds its children
     CHECK(!prLayoutSceneHasLayer(scene, child));
     prLayoutSceneRelease(scene);
     checkRect(f.bounds(child), 5, 0, 35, 20);
-    std::vector<uint8_t> pixels = render(f.tree, 60, 40);
+    Array<uint8_t> pixels = render(f.tree, 60, 40);
     CHECK(pixel(pixels, 60, 2, 10) == "0 0 0 0");
     CHECK(pixel(pixels, 60, 32, 10) == "255 0 0 255");
     CHECK(f.hit(PrVec2{32, 10}) == child);
 }
 
 TEST_CASE("the root is laid out as a block box whatever its display") {
-    for (PrLayoutDisplay display : {PrLayoutDisplay_Inline, PrLayoutDisplay_InlineBlock}) {
+    const PrLayoutDisplay displays[] = {PrLayoutDisplay_Inline, PrLayoutDisplay_InlineBlock};
+    for (PrLayoutDisplay display : displays) {
         CAPTURE(int(display));
         Fixture f;
         PrLayoutBoxStyle box = withDisplay(block(), display);

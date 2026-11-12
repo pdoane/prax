@@ -1,10 +1,13 @@
 // Tests of the terminal app's interface, driven the way its window drives it: the tabs, their commands, and closing a
 // tab when its program exits.
 
+#include "pr/array.h"
 #include "pr/color.h"
 #include "pr/file.h"
 #include "pr/function.h"
 #include "pr/layout_tree.h"
+#include "pr/min_max.h"
+#include "pr/span.h"
 #include "pr/string.h"
 #include "pr/string_ops.h"
 #include "pr/thread.h"
@@ -30,7 +33,7 @@ struct Window {
     KitFixture f;
     TerminalApp t;
 
-    explicit Window(PrStringView program, std::initializer_list<PrStringView> arguments) {
+    Window(PrStringView program, Span<const PrStringView> arguments) {
         t.kit = f.kit;
         t.ui = f.ui;
         t.fonts = f.fonts;
@@ -76,26 +79,24 @@ struct Window {
 
     // Renders the last frame onto a canvas prepared as `canvas` says, and returns the color of the pixel at `at`.
     PrColor8 pixel(PrVec2 at, KitCanvas canvas = KitCanvas_Cleared) {
-        std::vector<uint8_t> rgba;
+        Array<uint8_t> rgba;
         REQUIRE(f.render(&rgba, canvas));
-        size_t i = (size_t(at.y) * KitFixture::kRenderWidth + size_t(at.x)) * 4;
+        uint32_t i = (uint32_t(at.y) * KitFixture::kRenderWidth + uint32_t(at.x)) * 4;
         return PrColor8{rgba[i], rgba[i + 1], rgba[i + 2], rgba[i + 3]};
     }
 };
 
 // Returns true if each color channel of `a` is within 2 of the same channel of `color`, in 8 bits. Alpha is ignored.
 bool near(PrColor8 a, PrColor color) {
-    auto close = [](uint8_t x, float y) {
-        int32_t value = int32_t(y * 255 + 0.5f);
-        return (int32_t(x) > value ? int32_t(x) - value : value - int32_t(x)) <= 2;
-    };
+    auto close = [](uint8_t x, float y) { return absDifference(int32_t(x), int32_t(y * 255 + 0.5f)) <= 2; };
     return close(a.r, color.r) && close(a.g, color.g) && close(a.b, color.b);
 }
 
 } // namespace
 
 TEST_CASE("terminal app: one terminal fills the window, with no tab strip") {
-    Window a("sh", {"-c", "sleep 5"});
+    const PrStringView arguments[] = {"-c", "sleep 5"};
+    Window a("sh", arguments);
     REQUIRE(a.t.terminals.count() == 1);
     CHECK(a.t.strip == kPrLayoutNodeNone);
     PrRect bounds = a.shownBounds();
@@ -105,7 +106,8 @@ TEST_CASE("terminal app: one terminal fills the window, with no tab strip") {
 }
 
 TEST_CASE("terminal app: a new tab shows the strip and takes focus, and the commands move between the tabs") {
-    Window a("sh", {"-c", "sleep 5"});
+    const PrStringView arguments[] = {"-c", "sleep 5"};
+    Window a("sh", arguments);
     a.run("tab.new");
     REQUIRE(a.t.terminals.count() == 2);
     CHECK(a.t.shown == 1);
@@ -128,14 +130,16 @@ TEST_CASE("terminal app: a new tab shows the strip and takes focus, and the comm
 }
 
 TEST_CASE("terminal app: the window clears to the shown terminal's background, which its view paints none of") {
-    Window a("sh", {"-c", "sleep 10"});
+    const PrStringView arguments[] = {"-c", "sleep 10"};
+    Window a("sh", arguments);
     a.run("tab.new");
     REQUIRE(a.t.terminals.count() == 2);
     // The first tab's program sets its own background color.
     PrStringView magenta = "\x1b]11;#ff00ff\x07";
-    prVtermWrite(prTerminalVtermLock(a.t.terminals[0]), PrByteView{prStringBytes(magenta), magenta.size});
+    prVtermWrite(prTerminalVtermLock(a.t.terminals[0]), prStringBytes(magenta));
     prTerminalVtermUnlock(a.t.terminals[0]);
-    for (uint32_t shown : {1u, 0u}) {
+    const uint32_t order[] = {1, 0};
+    for (uint32_t shown : order) {
         if (a.t.shown != shown)
             a.run("tab.next");
         REQUIRE(a.t.shown == shown);
@@ -169,7 +173,8 @@ TEST_CASE("terminal app: the window clears to the shown terminal's background, w
 }
 
 TEST_CASE("terminal app: a click on a tab's notification shows the tab and gives it focus") {
-    Window a("sh", {"-c", "sleep 5"});
+    const PrStringView arguments[] = {"-c", "sleep 5"};
+    Window a("sh", arguments);
     a.run("tab.new");
     a.run("tab.new");
     REQUIRE(a.t.terminals.count() == 3);
@@ -193,7 +198,8 @@ TEST_CASE("terminal app: a click on a tab's notification shows the tab and gives
 }
 
 TEST_CASE("terminal app: a tab closes once its program exits") {
-    Window a("sh", {"-c", "sleep 5"});
+    const PrStringView arguments[] = {"-c", "sleep 5"};
+    Window a("sh", arguments);
     a.t.program = "sh";
     a.t.arguments.clear();
     a.t.arguments.push(String("-c"));
@@ -205,7 +211,8 @@ TEST_CASE("terminal app: a tab closes once its program exits") {
 
 TEST_CASE("terminal app: a tab that does not show reads all that its program writes, and closes once it exits") {
     // The program writes more than the process and the pseudoterminal can buffer, after the second tab shows.
-    Window a("sh", {"-c", "sleep 0.3; head -c 8000000 /dev/zero; exit 0"});
+    const PrStringView arguments[] = {"-c", "sleep 0.3; head -c 8000000 /dev/zero; exit 0"};
+    Window a("sh", arguments);
     PrTerminal* writer = a.t.terminals[0];
     a.t.program = "sh";
     a.t.arguments.clear();
@@ -229,11 +236,12 @@ TEST_CASE("terminal app: a new tab starts in the working directory of the termin
     String directory("/usr/lib");
     PrStringView print = "pwd -P; sleep 10";
 #endif
-    Window a("sh", {"-c", "sleep 10"});
+    const PrStringView arguments[] = {"-c", "sleep 10"};
+    Window a("sh", arguments);
     PrRawString url = prUrlFromFilePath(directory);
     String report = format("\x1b]7;{}\x07", prRawStringView(&url));
     prRawStringReset(&url);
-    prVtermWrite(prTerminalVtermLock(a.t.terminals[0]), PrByteView{prStringBytes(report), report.count()});
+    prVtermWrite(prTerminalVtermLock(a.t.terminals[0]), prStringBytes(report));
     prTerminalVtermUnlock(a.t.terminals[0]);
     a.t.arguments.clear();
     a.t.arguments.push(String("-c"));
@@ -253,7 +261,8 @@ TEST_CASE("terminal app: a new tab starts in the working directory of the termin
 }
 
 TEST_CASE("terminal app: zoom sets every tab's font, and Actual Size restores it") {
-    Window a("sh", {"-c", "sleep 10"});
+    const PrStringView arguments[] = {"-c", "sleep 10"};
+    Window a("sh", arguments);
     a.run("tab.new");
     REQUIRE(a.t.terminals.count() == 2);
     PrVec2 cell = prTerminalCellExtent(a.t.terminals[1]);

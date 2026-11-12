@@ -681,6 +681,15 @@ WRAPPERS = {
     "lib/gpu/backends/vulkan/src/vulkan_internal.h": {"vulkan/vulkan_core.h"},
     "lib/gpu/backends/vulkan/src/vulkan_platform.cpp": {"windows.h", "vulkan/vulkan_win32.h", "vulkan/vulkan_metal.h",
                                                         "dlfcn.h", "stdio.h", "stdlib.h"},
+    # The tests that check a backend against the facility that it wraps, which they reach directly.
+    "lib/app/backends/win32/tests/test_app_win32.cpp": {"windows.h"},
+    "lib/gpu/backends/d3d12/tests/test_gpu_d3d12.cpp": {"windows.h", "d3d12.h"},
+    "lib/gpu/backends/vulkan/tests/test_gpu_vulkan.cpp": {"windows.h", "vulkan/vulkan_core.h"},
+    "lib/media/backends/windows/tests/test_media_windows.cpp": {"windows.h", "mfapi.h", "mfidl.h", "mfreadwrite.h",
+                                                                "objbase.h", "shlwapi.h"},
+    "lib/process/tests/test_process.cpp": {"sys/resource.h", "unistd.h"},
+    # The platform of a build configured with a fail handler of its own, which ends the process as core's backends do.
+    "lib/core/tests/test_platform_config.cpp": {"stdlib.h"},
 }
 
 
@@ -724,7 +733,9 @@ def check_builtins(report, path, text):
 
 def check_stdlib(report, path, text):
     """Only the three headers that the C API needs are used directly. Everything else goes behind a core header, so the
-    library's use of the standard library stays in one place."""
+    library's use of the standard library stays in one place. The tests and the harness headers that they include are
+    held to it as the library is: there are many tests, and a standard header such as <string> or <vector> costs more to
+    compile than most tests do."""
     allowed = {"stdbool.h", "stddef.h", "stdint.h"}
     relative = os.path.relpath(path, ROOT).replace(os.sep, "/")
     # A public header is included by every client of its library, so it wraps nothing: whatever it included would be
@@ -3026,10 +3037,20 @@ def is_application(path):
 # through it, as the library does, and lint checks their includes as it checks the library's.
 ON_CORE = ("examples/", "apps/")
 
+# The harness, whose headers the tests include, and so are compiled with every test that includes them. Its sources
+# compile once each, and the headers of TOOL_HARNESS serve only the tools' programs, which are written on the standard
+# library.
+HARNESS = "tools/harness/"
+TOOL_HARNESS = ("tools/harness/draw_renderers.h", "tools/harness/harness_streams.h")
+
 
 def is_on_core(path):
-    """Returns true for a file of an application that is written on core (ON_CORE)."""
-    return os.path.relpath(path, ROOT).replace(os.sep, "/").startswith(ON_CORE)
+    """Returns true for a file of an application that is written on core (ON_CORE), or a header of the harness that the
+    tests may include (HARNESS)."""
+    relative = os.path.relpath(path, ROOT).replace(os.sep, "/")
+    if relative.startswith(HARNESS):
+        return relative.endswith(".h") and relative not in TOOL_HARNESS
+    return relative.startswith(ON_CORE)
 
 
 # The C++ layers of a library, lib/<module>/<layer>, whose public headers are C++: core's toolkit, and the toolkits that
@@ -3114,7 +3135,7 @@ def check_module_dependencies(report):
 
 
 def is_test(path):
-    """Returns true for a unit test or its fixture, which may use the standard library directly."""
+    """Returns true for a unit test, its fixture, or a program beside them, such as a conformance runner."""
     return "/tests/" in posix(path)
 
 
@@ -3168,8 +3189,7 @@ def check_code_file(path):
         check_allocation(report, path, text)
         check_destructors(report, path, text)
         check_managed_includes(report, path, text)
-        if not is_test(path) and not is_program(text):
-            check_stdlib(report, path, text)
+        check_stdlib(report, path, text)
         if header:
             check_namespace(report, path, text, False, namespace)
         elif not is_program(text):

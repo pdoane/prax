@@ -1,8 +1,7 @@
 #include "pr/layout_animation.h"
+#include "pr/span.h"
 
 #include "tools/harness/test.h"
-
-#include <initializer_list>
 
 namespace pr_impl {
 
@@ -29,11 +28,14 @@ PrLayoutTransformFunction function(PrLayoutTransformKind kind, float x, float y 
     return f;
 }
 
-PrLayoutTransformList list(std::initializer_list<PrLayoutTransformFunction> functions) {
+PrLayoutTransformList list(Span<const PrLayoutTransformFunction> functions) {
     PrLayoutTransformList out{};
     for (const PrLayoutTransformFunction& f : functions)
         out.functions[out.count++] = f;
     return out;
+}
+PrLayoutTransformList list(const PrLayoutTransformFunction& only) {
+    return list(Span<const PrLayoutTransformFunction>(&only, 1));
 }
 
 PrLayoutTransformFunction matrixOf(const PrMatrix4& m) {
@@ -104,15 +106,15 @@ TEST_CASE("timing plays iterations in their direction, and fills where it says")
 
 TEST_CASE("transforms interpolate function by function, and by matrix where their kinds differ") {
     PrLayoutTransformList none{};
-    PrLayoutTransformList turn = list({function(PrLayoutTransformKind_Rotate, 0, 0, 1, 6.2831853f)});
+    PrLayoutTransformList turn = list(function(PrLayoutTransformKind_Rotate, 0, 0, 1, 6.2831853f));
     // A full turn interpolates through half of one, which a matrix could not tell from no turn at all.
     PrLayoutTransformList half = prLayoutTransformListInterpolate(&none, &turn, 0.5, PrVec2{0, 0});
     REQUIRE(half.count == 1);
     CHECK(half.functions[0].kind == PrLayoutTransformKind_Rotate);
     CHECK(double(half.functions[0].values[3]) == doctest::Approx(3.14159));
 
-    PrLayoutTransformList moved = list({function(PrLayoutTransformKind_Translate, 100, 0)});
-    PrLayoutTransformList scaled = list({function(PrLayoutTransformKind_Scale, 3, 3, 1)});
+    PrLayoutTransformList moved = list(function(PrLayoutTransformKind_Translate, 100, 0));
+    PrLayoutTransformList scaled = list(function(PrLayoutTransformKind_Scale, 3, 3, 1));
     PrLayoutTransformList between = prLayoutTransformListInterpolate(&moved, &scaled, 0.5, PrVec2{0, 0});
     PrMatrix4 m = prLayoutTransformListMatrix(&between, PrVec2{0, 0});
     CHECK(double(m.m[0][0]) == doctest::Approx(2));
@@ -121,8 +123,10 @@ TEST_CASE("transforms interpolate function by function, and by matrix where thei
     CHECK(double(m.m[1][0]) == doctest::Approx(0));
 
     // The functions before the first pair of different kinds interpolate one by one, and the rest as one matrix.
-    PrLayoutTransformList a = list({function(PrLayoutTransformKind_Translate, 10), moved.functions[0]});
-    PrLayoutTransformList b = list({function(PrLayoutTransformKind_Translate, 30), scaled.functions[0]});
+    const PrLayoutTransformFunction aFunctions[] = {function(PrLayoutTransformKind_Translate, 10), moved.functions[0]};
+    const PrLayoutTransformFunction bFunctions[] = {function(PrLayoutTransformKind_Translate, 30), scaled.functions[0]};
+    PrLayoutTransformList a = list(aFunctions);
+    PrLayoutTransformList b = list(bFunctions);
     between = prLayoutTransformListInterpolate(&a, &b, 0.5, PrVec2{0, 0});
     REQUIRE(between.count == 2);
     CHECK(between.functions[0].kind == PrLayoutTransformKind_Translate);
@@ -131,45 +135,49 @@ TEST_CASE("transforms interpolate function by function, and by matrix where thei
 }
 
 TEST_CASE("transforms that cannot be decomposed interpolate only discretely") {
-    PrLayoutTransformList moved = list({function(PrLayoutTransformKind_Translate, 100, 0)});
-    PrLayoutTransformList scaled = list({function(PrLayoutTransformKind_Scale, 3, 3, 1)});
+    PrLayoutTransformList moved = list(function(PrLayoutTransformKind_Translate, 100, 0));
+    PrLayoutTransformList scaled = list(function(PrLayoutTransformKind_Scale, 3, 3, 1));
     CHECK(prLayoutTransformListInterpolates(&moved, &scaled, PrVec2{0, 0}));
     // A matrix3d() whose fourth row is zero has no decomposition.
     PrLayoutTransformFunction flat{.kind = PrLayoutTransformKind_Matrix};
     flat.values[0] = flat.values[5] = 2;
     flat.values[15] = 1;
-    PrLayoutTransformList singular = list({flat});
-    PrLayoutTransformList twice = list({function(PrLayoutTransformKind_Scale, 2, 2, 2)});
+    PrLayoutTransformList singular = list(flat);
+    PrLayoutTransformList twice = list(function(PrLayoutTransformKind_Scale, 2, 2, 2));
     CHECK_FALSE(prLayoutTransformListInterpolates(&singular, &twice, PrVec2{0, 0}));
     CHECK_FALSE(prLayoutTransformListInterpolates(&twice, &singular, PrVec2{0, 0}));
 }
 
 TEST_CASE("a list with percentages is affine in its reference box") {
     // translate(50%, 10px) rotate(90deg) translate(10%, 20%)
-    PrLayoutTransformList functions = list({
+    const PrLayoutTransformFunction percentFunctions[] = {
         function(PrLayoutTransformKind_Translate, 0, 10, 0, 0.5f),
         function(PrLayoutTransformKind_Rotate, 0, 0, 1, kQuarter),
         function(PrLayoutTransformKind_Translate, 0, 0, 0, 0.1f, 0.2f),
-    });
+    };
+    PrLayoutTransformList functions = list(percentFunctions);
     PrLayoutTransform transform = prLayoutTransformListTransform(&functions);
-    for (PrVec2 extent : {PrVec2{200, 100}, PrVec2{30, 70}}) {
+    const PrVec2 extents[] = {PrVec2{200, 100}, PrVec2{30, 70}};
+    for (PrVec2 extent : extents) {
         PrMatrix4 resolved = prLayoutTransformResolve(&transform, extent);
         checkNear(resolved, prLayoutTransformListMatrix(&functions, extent));
     }
 
     // A percentage to the right of a perspective stays exact. One to its left, which applies after it, counts as zero.
-    PrLayoutTransformList right = list({
+    const PrLayoutTransformFunction rightFunctions[] = {
         function(PrLayoutTransformKind_Perspective, 100),
         function(PrLayoutTransformKind_Rotate, 0, 1, 0, 0.5f),
         function(PrLayoutTransformKind_Translate, 0, 0, 0, 0.5f),
-    });
+    };
+    PrLayoutTransformList right = list(rightFunctions);
     transform = prLayoutTransformListTransform(&right);
     PrMatrix4 resolved = prLayoutTransformResolve(&transform, PrVec2{80, 40});
     checkNear(resolved, prLayoutTransformListMatrix(&right, PrVec2{80, 40}));
-    PrLayoutTransformList left = list({
+    const PrLayoutTransformFunction leftFunctions[] = {
         function(PrLayoutTransformKind_Translate, 5, 0, 0, 0.5f),
         function(PrLayoutTransformKind_Perspective, 100),
-    });
+    };
+    PrLayoutTransformList left = list(leftFunctions);
     transform = prLayoutTransformListTransform(&left);
     resolved = prLayoutTransformResolve(&transform, PrVec2{80, 40});
     CHECK(double(resolved.m[0][3]) == doctest::Approx(5));
@@ -178,8 +186,8 @@ TEST_CASE("a list with percentages is affine in its reference box") {
 
 TEST_CASE("3D transforms interpolate as css-transforms-2 decomposes them") {
     // Rotations about different axes interpolate as matrices, halfway between the two.
-    PrLayoutTransformList x = list({function(PrLayoutTransformKind_Rotate, 1, 0, 0, kQuarter)});
-    PrLayoutTransformList y = list({function(PrLayoutTransformKind_Rotate, 0, 1, 0, kQuarter)});
+    PrLayoutTransformList x = list(function(PrLayoutTransformKind_Rotate, 1, 0, 0, kQuarter));
+    PrLayoutTransformList y = list(function(PrLayoutTransformKind_Rotate, 0, 1, 0, kQuarter));
     PrMatrix4 start = prLayoutTransformListMatrix(&x, PrVec2{0, 0});
     PrLayoutTransformList at = prLayoutTransformListInterpolate(&x, &y, 0, PrVec2{0, 0});
     checkNear(prLayoutTransformListMatrix(&at, PrVec2{0, 0}), start);
@@ -202,8 +210,8 @@ TEST_CASE("3D transforms interpolate as css-transforms-2 decomposes them") {
         PrMatrix4 r = prMatrix4Rotate(PrVec3{0, 1, 0}, radians);
         return prMatrix4Concat(&r, &shift);
     };
-    PrLayoutTransformList from = list({matrixOf(turned(kQuarter / 3))});
-    PrLayoutTransformList to = list({matrixOf(turned(kQuarter * 2 / 3))});
+    PrLayoutTransformList from = list(matrixOf(turned(kQuarter / 3)));
+    PrLayoutTransformList to = list(matrixOf(turned(kQuarter * 2 / 3)));
     at = prLayoutTransformListInterpolate(&from, &to, 0.5, PrVec2{0, 0});
     checkNear(prLayoutTransformListMatrix(&at, PrVec2{0, 0}), turned(kQuarter / 2));
 
@@ -222,13 +230,13 @@ TEST_CASE("3D transforms interpolate as css-transforms-2 decomposes them") {
         for (uint32_t column = 0; column < 4; ++column)
             general.m[row][column] /= w;
     }
-    from = list({matrixOf(general)});
+    from = list(matrixOf(general));
     at = prLayoutTransformListInterpolate(&from, &from, 0.3, PrVec2{0, 0});
     checkNear(prLayoutTransformListMatrix(&at, PrVec2{0, 0}), general);
 
     // A perspective interpolates its inverse distance, and none is an infinite distance.
-    PrLayoutTransformList near = list({function(PrLayoutTransformKind_Perspective, 100)});
-    PrLayoutTransformList flat = list({function(PrLayoutTransformKind_Perspective, 0)});
+    PrLayoutTransformList near = list(function(PrLayoutTransformKind_Perspective, 100));
+    PrLayoutTransformList flat = list(function(PrLayoutTransformKind_Perspective, 0));
     at = prLayoutTransformListInterpolate(&near, &flat, 0.5, PrVec2{0, 0});
     REQUIRE(at.count == 1);
     CHECK(double(at.functions[0].values[0]) == doctest::Approx(200));
@@ -262,8 +270,8 @@ TEST_CASE("a track samples its keyframes at a time") {
 
     // A transform's percentages resolve against the reference box that the sample gives, also where the keyframes
     // interpolate as matrices.
-    frames[0].transform = list({function(PrLayoutTransformKind_Translate, 0, 0, 0, 0.5f)});
-    frames[1].transform = list({function(PrLayoutTransformKind_Scale, 2, 2, 1)});
+    frames[0].transform = list(function(PrLayoutTransformKind_Translate, 0, 0, 0, 0.5f));
+    frames[1].transform = list(function(PrLayoutTransformKind_Scale, 2, 2, 1));
     frames[2].transform = frames[0].transform;
     track.effect = PrLayoutEffect_Transform;
     REQUIRE(prLayoutTrackSample(&track, 0, PrVec2{200, 100}, &opacity, &transform));

@@ -104,6 +104,26 @@ struct String {
     }
     String& append(char c) { return append(PrStringView{&c, 1}); }
 
+    // Appends `count` copies of the byte `c`.
+    String& append(uint32_t count, char c) {
+        char run[64];
+        for (char& slot : run)
+            slot = c;
+        while (count > 0) {
+            uint32_t step = count < sizeof(run) ? count : uint32_t(sizeof(run));
+            prRawStringAppend(&string, PrStringView{run, step});
+            count -= step;
+        }
+        return *this;
+    }
+
+    // Returns the last byte. The string must not be empty.
+    char last() const {
+        PrStringView held = view();
+        PR_ASSERT(held.size > 0);
+        return held.data[held.size - 1];
+    }
+
     // Replaces the `replacedCount` bytes from `start`, which must lie within the string, with `text`, which may be the
     // string's own.
     String& replace(uint32_t start, uint32_t replacedCount, PrStringView text) {
@@ -179,6 +199,15 @@ template <typename... Arguments>
 String format(PrStringView format, const Arguments&... arguments) {
     String out;
     formatTo(out, format, arguments...);
+    return out;
+}
+
+// Returns the texts of `parts` one after another, as `concat(directory, "/", name)`. Unlike format, it reads no fields,
+// so a part may hold braces.
+template <typename... Parts>
+String concat(const Parts&... parts) {
+    String out;
+    (out.append(PrStringView(parts)), ...);
     return out;
 }
 

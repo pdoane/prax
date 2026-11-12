@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "pr/array.h"
 #include "pr/callback.h"
 #include "pr/compress.h"
 #include "pr/count_of.h"
@@ -13,6 +14,7 @@
 #include "pr/draw_renderer.h"
 #include "pr/font_bundle.h"
 #include "pr/font_set.h"
+#include "pr/function.h"
 #include "pr/image.h"
 #include "pr/kit.h"
 #include "pr/kit_surface.h"
@@ -20,6 +22,7 @@
 #include "pr/layout_query.h"
 #include "pr/layout_scene.h"
 #include "pr/layout_tree.h"
+#include "pr/string.h"
 #include "pr/string_view.h"
 #include "pr/text_harfbuzz.h"
 #include "pr/ui.h"
@@ -27,10 +30,6 @@
 #include "tools/harness/harness_png.h"
 
 #include "tools/harness/test.h"
-
-#include <functional>
-#include <string>
-#include <vector>
 
 PR_ASSUME_NONNULL_BEGIN
 
@@ -44,7 +43,7 @@ inline bool kitVerified(PrLayoutTree* tree) {
     bool same = prLayoutTreeVerify(tree, &difference);
     if (!same) {
         PrStringView what = prRawStringView(&difference.what);
-        MESSAGE("node " << uint32_t(difference.node) << ": " << std::string(what.data, what.size));
+        MESSAGE("node " << uint32_t(difference.node) << ": " << String(what));
         prRawStringReset(&difference.what);
     }
     return same;
@@ -58,9 +57,11 @@ enum {
 };
 typedef uint8_t KitCanvas;
 
-// The fonts of a fixture's font set: the bundles that it installs, and the font system that it queries, if any.
+// The fonts of a fixture's font set: the first `bundleCount` of `bundles`, which it installs, and the font system that
+// it queries, if any.
 struct KitFonts {
-    std::vector<PrFontBundle> bundles{PrFontBundle_Complete, PrFontBundle_NerdFontSymbols};
+    PrFontBundle bundles[4] = {PrFontBundle_Complete, PrFontBundle_NerdFontSymbols};
+    uint32_t bundleCount = 2;
     PrFontSystem* PR_NULLABLE system = nullptr;
 };
 
@@ -82,7 +83,7 @@ struct KitFixture {
     double time = 0;
     PrAppDisplay display = prAppDisplayDefault();  // the display that each frame is shown on
     PrAppUserPreferences preferences{};
-    std::function<void(PrLayoutNode root)> build;
+    Function<void(PrLayoutNode root)> build;
 
     // The edit sink that each frame sets on the root, if `edit` is not null.
     PrUiEditFn PR_NULLABLE edit = nullptr;
@@ -90,7 +91,7 @@ struct KitFixture {
 
     explicit KitFixture(const KitFonts& kitFonts = KitFonts{}) {
         fonts = prFontSetCreate(nullptr);
-        prFontBundleInstall(fonts, kitFonts.bundles.data(), uint32_t(kitFonts.bundles.size()), PR_FONT_BUNDLE_DIR);
+        prFontBundleInstall(fonts, kitFonts.bundles, kitFonts.bundleCount, PR_FONT_BUNDLE_DIR);
         prFontSetSetSystem(fonts, kitFonts.system);
         shaper = prTextHarfBuzzCreate();
         PrLayoutTreeDesc desc{.shaper = shaper, .targetPixelRatio = 1};
@@ -194,7 +195,7 @@ struct KitFixture {
     // Paints the tree as the last frame laid it out and renders it on the CPU, at one target pixel per px. `*rgba`
     // receives kRenderWidth by kRenderHeight pixels of Rgba8, row by row. `canvas` sets the pixels beneath the content.
     // Returns false if rendering fails.
-    bool render(std::vector<uint8_t>* rgba, KitCanvas canvas = KitCanvas_Cleared) {
+    bool render(Array<uint8_t>* rgba, KitCanvas canvas = KitCanvas_Cleared) {
         PrDrawRenderer* renderer = nullptr;
         PrDrawRendererOptions rendererOptions = prDrawRendererOptionsDefault();
         rendererOptions.glyphDecoder = glyphs;
@@ -202,21 +203,22 @@ struct KitFixture {
             return false;
         PrDrawList* list = prDrawListCreate();
         const PrLayoutScene* scene = prLayoutTreeScene(tree);
-        std::vector<PrLayoutSceneScroll> scrolls(prLayoutSceneScrolls(tree, scene, nullptr, 0));
-        prLayoutSceneScrolls(tree, scene, scrolls.data(), uint32_t(scrolls.size()));
+        Array<PrLayoutSceneScroll> scrolls(prLayoutSceneScrolls(tree, scene, nullptr, 0));
+        prLayoutSceneScrolls(tree, scene, scrolls.data(), scrolls.count());
         PrLayoutScenePlayOptions options = prLayoutScenePlayOptionsDefault();
         options.scrolls = scrolls.data();
-        options.scrollCount = uint32_t(scrolls.size());
+        options.scrollCount = scrolls.count();
         options.canvasFilled = true;
         prLayoutScenePlay(scene, list, &options);
         prLayoutSceneRelease(scene);
-        rgba->assign(size_t(kRenderWidth) * kRenderHeight * 4, 0);
+        rgba->clear();
+        rgba->resize(kRenderWidth * kRenderHeight * 4);
         if (canvas == KitCanvas_Cleared) {
             // Rgba8 holds premultiplied values.
             PrColor fill = this->canvas();
             auto channel = [&](float value) { return uint8_t(value * fill.a * 255 + 0.5f); };
             uint8_t clear[4] = {channel(fill.r), channel(fill.g), channel(fill.b), uint8_t(fill.a * 255 + 0.5f)};
-            for (size_t i = 0; i < rgba->size(); ++i)
+            for (uint32_t i = 0; i < rgba->count(); ++i)
                 (*rgba)[i] = clear[i % 4];
         }
         PrPixels pixels{rgba->data(), size_t(kRenderWidth) * 4, {kRenderWidth, kRenderHeight}};
@@ -229,7 +231,7 @@ struct KitFixture {
     // Renders the tree (render) and writes it to `path` as a PNG, so that a person can see what a test drove. Returns
     // false if it cannot.
     bool screenshot(const char* path) {
-        std::vector<uint8_t> rgba;
+        Array<uint8_t> rgba;
         return render(&rgba) &&
             harnessWritePng(path, PrPixelView{rgba.data(), size_t(kRenderWidth) * 4, {kRenderWidth, kRenderHeight}});
     }

@@ -4,14 +4,15 @@
 #include "pr/css.h"
 #include "pr/dom_xml.h"
 #include "pr/draw_commands.h"
+#include "pr/float.h"
+#include "pr/string.h"
 #include "pr/string_ops.h"
 #include "pr/svg.h"
 #include "pr/svg_render.h"
 
 #include "tools/harness/test.h"
 
-#include <cmath>
-#include <string>
+using namespace pr;
 
 using namespace pr_impl;
 
@@ -68,15 +69,15 @@ TEST_CASE("a standalone SVG document has its style sheets, selectors and inline 
 
 TEST_CASE("use elements that multiply each other's content draw a bounded number of elements") {
     // Each level uses the one below it ten times, so the last level is a million rectangles.
-    std::string source = "<svg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'><defs>"
+    String source = "<svg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'><defs>"
         "<rect id='l0' width='1' height='1'/>";
     for (int level = 1; level <= 6; ++level) {
-        source += "<g id='l" + std::to_string(level) + "'>";
+        formatTo(source, "<g id='l{}'>", level);
         for (int i = 0; i < 10; ++i)
-            source += "<use href='#l" + std::to_string(level - 1) + "'/>";
-        source += "</g>";
+            formatTo(source, "<use href='#l{}'/>", level - 1);
+        source.append("</g>");
     }
-    source += "</defs><use href='#l6'/></svg>";
+    source.append("</defs><use href='#l6'/></svg>");
     PrDomDocument* document = prDomParseXml(source, "image/svg+xml", nullptr);
     PrSvgElement* root = prSvgElementQuery(prDomElementAsEventTarget(prDomDocumentElement(document)));
     PrDrawList* list = prDrawListCreate();
@@ -112,6 +113,6 @@ TEST_CASE("a fill resolves for the display's headroom, beyond the sRGB gamut") {
         return g;
     };
     CHECK(green(0) == doctest::Approx(1.0f).epsilon(0.01));
-    CHECK(green(2) == doctest::Approx(1.055f * std::pow(4.0f, 1 / 2.4f) - 0.055f).epsilon(0.01));
+    CHECK(green(2) == doctest::Approx(1.055f * prF32Pow(4.0f, 1 / 2.4f) - 0.055f).epsilon(0.01));
     prDomDocumentRelease(document);
 }

@@ -6,8 +6,6 @@
 
 #include "tools/harness/test.h"
 
-#include <initializer_list>
-
 namespace pr_impl {
 
 namespace {
@@ -162,7 +160,8 @@ TEST_CASE("a checked radio unchecks the rest of its group, and a group without o
     PrDomElement* a = input(p.document, "radio");
     PrDomElement* b = input(p.document, "radio");
     PrDomElement* outside = input(p.document, "radio");
-    for (PrDomElement* radio : {a, b, outside})
+    PrDomElement* radios[] = {a, b, outside};
+    for (PrDomElement* radio : radios)
         set(radio, "name", "g");
     domInsert(form, a, nullptr);
     domInsert(form, b, nullptr);

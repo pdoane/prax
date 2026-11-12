@@ -11,15 +11,18 @@ PR_ASSUME_NONNULL_BEGIN
 namespace pr {
 
 // A pointer and a count of the elements that follow it. A span owns nothing, and is valid while its elements are. A
-// span of `const T` reads them, and a span of `T` may change them. Every conversion to a span is explicit: a container
-// gives its elements with span(), and a span of `T` gives a span of `const T` with asConst().
+// span of `const T` reads them, and a span of `T` may change them. An array converts to a span implicitly, so that a
+// function that reads a list takes a span and its caller passes a local array, and so does a span of `T` to a span of
+// `const T`. A container gives its elements explicitly, with span().
 template <typename T>
 struct Span {
     constexpr Span() = default;
     constexpr Span(T* PR_NULLABLE data, uint32_t count) : elements(data), used(count) {}
 
     template <uint32_t N>
-    constexpr explicit Span(T (&items)[N]) : elements(items), used(N) {}
+    constexpr Span(T (&items)[N]) : elements(items), used(N) {}
+
+    constexpr operator Span<const T>() const requires(!isSame<T, const T>) { return Span<const T>(elements, used); }
 
     constexpr T* PR_NULLABLE data() const { return elements; }
     constexpr uint32_t count() const { return used; }

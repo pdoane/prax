@@ -1,11 +1,13 @@
 // lib/draw's SVG writer read back by lib/svg: a list written as SVG and drawn again renders as the list does.
 
+#include "pr/array.h"
 #include "pr/draw_svg.h"
 #include "pr/font.h"
+#include "pr/mem.h"
+#include "pr/min_max.h"
+#include "pr/string.h"
 
 #include "svg/tests/svg_fixture.h"
-
-#include <cstdlib>
 
 namespace pr_impl {
 
@@ -15,12 +17,12 @@ constexpr uint32_t kSide = 64;
 
 void collect(void* PR_NULLABLE context, uint32_t output, PrByteView bytes) {
     CHECK(output == 0);
-    static_cast<std::string*>(context)->append(reinterpret_cast<const char*>(bytes.data), bytes.size);
+    static_cast<String*>(context)->append(prStringFromBytes(bytes));
 }
 
-std::string writeSvg(const PrDrawList* list) {
+String writeSvg(const PrDrawList* list) {
     PrDrawWriter* writer = prDrawSvgCreate(nullptr);
-    std::string out;
+    String out;
     PrDrawDocumentDesc desc{.write = collect, .context = &out};
     PrDrawPage page{.list = list, .extent = PrVec2{float(kSide), float(kSide)}};
     prDrawWriterWrite(writer, &desc, &page, 1);
@@ -29,8 +31,9 @@ std::string writeSvg(const PrDrawList* list) {
 }
 
 // Renders the list on the CPU over white.
-std::vector<uint8_t> render(const PrDrawList* list) {
-    std::vector<uint8_t> bytes(size_t(kSide) * kSide * 4, 255);
+Array<uint8_t> render(const PrDrawList* list) {
+    Array<uint8_t> bytes(kSide * kSide * 4);
+    prMemFill(bytes.data(), 255, bytes.count());
     PrDrawRenderer* renderer = prDrawCpuCreate(nullptr);
     prDrawRendererRenderPixels(renderer, list, PrPixels{bytes.data(), size_t(kSide) * 4, {kSide, kSide}},
         PrPixelFormat_Rgba8);
@@ -40,13 +43,15 @@ std::vector<uint8_t> render(const PrDrawList* list) {
 
 // Returns the largest difference of a channel between the list and its SVG drawn again.
 int roundTrip(const PrDrawList* list) {
-    std::string svg = writeSvg(list);
+    String svg = writeSvg(list);
     Drawing drawing(svg, PrVec2{float(kSide), float(kSide)});
-    std::vector<uint8_t> direct = render(list);
-    std::vector<uint8_t> again = render(drawing.list);
+    Array<uint8_t> direct = render(list);
+    Array<uint8_t> again = render(drawing.list);
     int largest = 0;
-    for (size_t i = 0; i < direct.size(); ++i)
-        largest = std::max(largest, std::abs(int(direct[i]) - int(again[i])));
+    for (uint32_t i = 0; i < direct.count(); ++i) {
+        int difference = int(direct[i]) - int(again[i]);
+        largest = max(largest, difference < 0 ? -difference : difference);
+    }
     if (largest > 2)
         MESSAGE(svg);
     return largest;

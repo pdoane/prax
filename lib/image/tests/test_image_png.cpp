@@ -1,11 +1,12 @@
+#include "pr/array.h"
 #include "pr/checksum.h"
 #include "pr/compress.h"
 #include "pr/image_png.h"
+#include "pr/span.h"
+#include "pr/string.h"
+#include "pr/string_ops.h"
 
 #include "tools/harness/test.h"
-
-#include <string>
-#include <vector>
 
 namespace pr_impl {
 
@@ -13,71 +14,79 @@ namespace {
 
 // A text as a test records it.
 struct Text {
-    std::string keyword;
-    std::string text;
-    std::string language;
-    std::string translatedKeyword;
+    String keyword;
+    String text;
+    String language;
+    String translatedKeyword;
 };
 
-void appendU32(std::vector<uint8_t>* out, uint32_t value) {
+// A chunk that a test writes: its type and its data.
+struct ChunkData {
+    const char* type;
+    String data;
+};
+
+void appendU32(Array<uint8_t>* out, uint32_t value) {
     for (int shift = 24; shift >= 0; shift -= 8)
-        out->push_back(uint8_t(value >> shift));
+        out->push(uint8_t(value >> shift));
 }
 
 // Appends a chunk of `type` and `data`, with its CRC.
-void appendChunk(std::vector<uint8_t>* out, const char* type, const std::string& data) {
-    appendU32(out, uint32_t(data.size()));
-    size_t start = out->size();
-    out->insert(out->end(), type, type + 4);
-    out->insert(out->end(), data.begin(), data.end());
-    appendU32(out, prCrc32Update(0, PrByteView{out->data() + start, out->size() - start}));
+void appendChunk(Array<uint8_t>* out, const char* type, PrStringView data) {
+    appendU32(out, uint32_t(data.size));
+    uint32_t start = out->count();
+    out->append(reinterpret_cast<const uint8_t*>(type), 4);
+    out->append(prStringBytes(data));
+    appendU32(out, prCrc32Update(0, PrByteView{out->data() + start, out->count() - start}));
 }
 
 // Returns a PNG file of a header, the chunks of `before`, image data, the chunks of `after`, and an end. The chunks are
 // well formed, and the pixels are not.
-std::vector<uint8_t> pngWith(const std::vector<std::pair<const char*, std::string>>& before,
-        const std::vector<std::pair<const char*, std::string>>& after = {}) {
-    std::vector<uint8_t> png{0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A};
-    appendChunk(&png, "IHDR", std::string(13, '\1'));
-    for (const auto& [type, data] : before)
-        appendChunk(&png, type, data);
+Array<uint8_t> pngWith(Span<const ChunkData> before, Span<const ChunkData> after = {}) {
+    Array<uint8_t> png({0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A});
+    appendChunk(&png, "IHDR", "\1\1\1\1\1\1\1\1\1\1\1\1\1");
+    for (const ChunkData& chunk : before)
+        appendChunk(&png, chunk.type, chunk.data);
     appendChunk(&png, "IDAT", "pixels");
-    for (const auto& [type, data] : after)
-        appendChunk(&png, type, data);
+    for (const ChunkData& chunk : after)
+        appendChunk(&png, chunk.type, chunk.data);
     appendChunk(&png, "IEND", "");
     return png;
 }
 
-std::string stringOf(PrStringView view) {
-    return std::string(view.data, view.size);
-}
-
-PrStatus textsOf(const std::vector<uint8_t>& png, PrCompressCodec* compress, std::vector<Text>* out) {
+PrStatus textsOf(PrByteView png, PrCompressCodec* compress, Array<Text>* out) {
     auto collect = [](void* context, const PrImagePngText* text) {
-        static_cast<std::vector<Text>*>(context)->push_back({
-            stringOf(text->keyword), stringOf(text->text),
-            stringOf(text->language),
-            stringOf(text->translatedKeyword),
+        static_cast<Array<Text>*>(context)->push(Text{
+            .keyword = text->keyword,
+            .text = text->text,
+            .language = text->language,
+            .translatedKeyword = text->translatedKeyword,
         });
     };
     return prImagePngEachText(png, compress, collect, out);
 }
 
-std::string zlibOf(PrCompressCodec* codec, const std::string& text) {
-    std::vector<uint8_t> out(prCompressCodecEncodeBound(codec, PrCompressFormat_Zlib, text.size()));
+String zlibOf(PrCompressCodec* codec, PrStringView text) {
+    Array<uint8_t> out(prCompressCodecEncodeBound(codec, PrCompressFormat_Zlib, text.size));
     size_t written = 0;
-    PrByteView input{reinterpret_cast<const uint8_t*>(text.data()), text.size()};
-    REQUIRE(prCompressCodecEncode(codec, PrCompressFormat_Zlib, PrCompressLevel_Default, input, out.data(), &written) ==
-        PrStatus_Ok);
-    return std::string(reinterpret_cast<const char*>(out.data()), written);
+    REQUIRE(prCompressCodecEncode(codec, PrCompressFormat_Zlib, PrCompressLevel_Default, prStringBytes(text),
+        out.data(), &written) == PrStatus_Ok);
+    return String(PrStringView(reinterpret_cast<const char*>(out.data()), written));
 }
 
-std::vector<uint8_t> withText(const std::vector<uint8_t>& png, PrStringView keyword, PrStringView text) {
+// Returns `head`, which may hold U+0000, followed by `tail`.
+String joined(PrStringView head, PrStringView tail = "") {
+    String out(head);
+    out.append(tail);
+    return out;
+}
+
+Array<uint8_t> withText(PrByteView png, PrStringView keyword, PrStringView text) {
     size_t size = 0;
     REQUIRE(prImagePngSetText(png, keyword, text, nullptr, 0, &size) == PrStatus_Ok);
-    std::vector<uint8_t> out(size);
+    Array<uint8_t> out(size);
     size_t written = 0;
-    REQUIRE(prImagePngSetText(png, keyword, text, out.data(), out.size(), &written) == PrStatus_Ok);
+    REQUIRE(prImagePngSetText(png, keyword, text, out.data(), out.count(), &written) == PrStatus_Ok);
     CHECK(written == size);
     return out;
 }
@@ -91,16 +100,18 @@ using namespace pr_impl;
 TEST_CASE("each kind of text chunk reads as UTF-8, with Latin-1 converted") {
     PrCompressCodec* codec = prCompressCodecCreate(PrCompressCodecBackend_Default);
     REQUIRE(codec != nullptr);
-    std::string itxt = std::string("Title\0\0\0fr\0Titre\0", 17) + "caf\xC3\xA9";
-    std::string compressed = std::string("Note\0\1\0\0\0", 9) + zlibOf(codec, "long \xE2\x9C\x93");
-    std::vector<uint8_t> png = pngWith({
-        {"tEXt", std::string("Author\0Ren\xE9", 11)},
-        {"zTXt", std::string("Comment\0\0", 9) + zlibOf(codec, "squeezed")},
+    String itxt = joined(PrStringView("Title\0\0\0fr\0Titre\0", 17), "caf\xC3\xA9");
+    String compressed = joined(PrStringView("Note\0\1\0\0\0", 9), zlibOf(codec, "long \xE2\x9C\x93"));
+    const ChunkData before[] = {
+        {"tEXt", joined(PrStringView("Author\0Ren\xE9", 11))},
+        {"zTXt", joined(PrStringView("Comment\0\0", 9), zlibOf(codec, "squeezed"))},
         {"iTXt", itxt},
-    }, {{"iTXt", compressed}});
-    std::vector<Text> texts;
+    };
+    const ChunkData after[] = {{"iTXt", compressed}};
+    Array<uint8_t> png = pngWith(Span(before).asConst(), Span(after).asConst());
+    Array<Text> texts;
     REQUIRE(textsOf(png, codec, &texts) == PrStatus_Ok);
-    REQUIRE(texts.size() == 4);
+    REQUIRE(texts.count() == 4);
     CHECK(texts[0].keyword == "Author");
     CHECK(texts[0].text == "Ren\xC3\xA9");
     CHECK(texts[1].keyword == "Comment");
@@ -114,65 +125,71 @@ TEST_CASE("each kind of text chunk reads as UTF-8, with Latin-1 converted") {
     // Without a codec, the compressed texts are skipped.
     texts.clear();
     REQUIRE(textsOf(png, nullptr, &texts) == PrStatus_Ok);
-    REQUIRE(texts.size() == 2);
+    REQUIRE(texts.count() == 2);
     CHECK(texts[1].keyword == "Title");
     prCompressCodecDestroy(codec);
 }
 
 TEST_CASE("a malformed text chunk is skipped, and a file that is not a PNG fails") {
-    std::vector<uint8_t> png = pngWith({
-        {"tEXt", std::string("NoTerminator")},
-        {"iTXt", std::string("Bad\0\0\0\0\0\xFF", 9)},
-        {"tEXt", std::string("Good\0yes", 8)},
-    });
+    const ChunkData chunks[] = {
+        {"tEXt", "NoTerminator"},
+        {"iTXt", joined(PrStringView("Bad\0\0\0\0\0\xFF", 9))},
+        {"tEXt", joined(PrStringView("Good\0yes", 8))},
+    };
+    Array<uint8_t> png = pngWith(Span(chunks).asConst());
     // A chunk whose CRC does not match.
-    std::vector<uint8_t> corrupt = pngWith({{"tEXt", std::string("Flipped\0bits", 12)}});
+    const ChunkData flipped[] = {{"tEXt", joined(PrStringView("Flipped\0bits", 12))}};
+    Array<uint8_t> corrupt = pngWith(Span(flipped).asConst());
     corrupt[8 + 25 + 8 + 9] ^= 1;
-    std::vector<Text> texts;
+    Array<Text> texts;
     REQUIRE(textsOf(png, nullptr, &texts) == PrStatus_Ok);
-    REQUIRE(texts.size() == 1);
+    REQUIRE(texts.count() == 1);
     CHECK(texts[0].keyword == "Good");
     texts.clear();
     REQUIRE(textsOf(corrupt, nullptr, &texts) == PrStatus_Ok);
-    CHECK(texts.empty());
+    CHECK(texts.isEmpty());
 
-    std::vector<uint8_t> truncated(png.begin(), png.end() - 4);
+    Array<uint8_t> truncated;
+    truncated.append(png.data(), png.count() - 4);
     CHECK(textsOf(truncated, nullptr, &texts) == PrStatus_Truncated);
-    std::vector<uint8_t> notPng{'G', 'I', 'F', '8', '9', 'a'};
+    Array<uint8_t> notPng({'G', 'I', 'F', '8', '9', 'a'});
     CHECK(textsOf(notPng, nullptr, &texts) == PrStatus_InvalidData);
 }
 
 TEST_CASE("a set text replaces every chunk of its keyword, where the first was, and keeps the rest") {
-    std::vector<uint8_t> png = pngWith({
-        {"tEXt", std::string("Other\0kept", 10)},
-        {"tEXt", std::string("Record\0old", 10)},
-    }, {{"tEXt", std::string("Record\0older", 12)}});
-    std::vector<uint8_t> out = withText(png, "Record", "new \xE2\x9C\x93");
-    std::vector<Text> texts;
+    const ChunkData before[] = {
+        {"tEXt", joined(PrStringView("Other\0kept", 10))},
+        {"tEXt", joined(PrStringView("Record\0old", 10))},
+    };
+    const ChunkData after[] = {{"tEXt", joined(PrStringView("Record\0older", 12))}};
+    Array<uint8_t> png = pngWith(Span(before).asConst(), Span(after).asConst());
+    Array<uint8_t> out = withText(png, "Record", "new \xE2\x9C\x93");
+    Array<Text> texts;
     REQUIRE(textsOf(out, nullptr, &texts) == PrStatus_Ok);
-    REQUIRE(texts.size() == 2);
+    REQUIRE(texts.count() == 2);
     CHECK(texts[0].keyword == "Other");
     CHECK(texts[1].keyword == "Record");
     CHECK(texts[1].text == "new \xE2\x9C\x93");
 
     // With no chunk of the keyword, the text goes before the image data.
-    std::vector<uint8_t> plain = pngWith({});
-    std::vector<uint8_t> added = withText(plain, "Record", "first");
+    Array<uint8_t> plain = pngWith({});
+    Array<uint8_t> added = withText(plain, "Record", "first");
     texts.clear();
     REQUIRE(textsOf(added, nullptr, &texts) == PrStatus_Ok);
-    REQUIRE(texts.size() == 1);
+    REQUIRE(texts.count() == 1);
     CHECK(texts[0].text == "first");
-    std::string bytes(reinterpret_cast<const char*>(added.data()), added.size());
-    CHECK(bytes.find("iTXt") < bytes.find("IDAT"));
+    PrStringView bytes(reinterpret_cast<const char*>(added.data()), added.count());
+    CHECK(prStringFind(bytes, "iTXt") < prStringFind(bytes, "IDAT"));
 
     // A short buffer is filled as far as it goes, and the size is the whole file's.
-    std::vector<uint8_t> partial(10);
+    Array<uint8_t> partial(10);
     size_t size = 0;
-    CHECK(prImagePngSetText(plain, "Record", "first", partial.data(), partial.size(), &size) == PrStatus_Ok);
-    CHECK(size == added.size());
-    CHECK(std::vector<uint8_t>(added.begin(), added.begin() + 10) == partial);
+    CHECK(prImagePngSetText(plain, "Record", "first", partial.data(), partial.count(), &size) == PrStatus_Ok);
+    CHECK(size == added.count());
+    CHECK(PrByteView(added.data(), 10) == partial);
 
-    std::vector<uint8_t> headerOnly(plain.begin(), plain.begin() + 33);
+    Array<uint8_t> headerOnly;
+    headerOnly.append(plain.data(), 33);
     CHECK(prImagePngSetText(headerOnly, "Record", "x", nullptr, 0, &size) == PrStatus_InvalidData);
     CHECK(size == 0);
 }

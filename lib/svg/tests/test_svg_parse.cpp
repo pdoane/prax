@@ -13,8 +13,6 @@
 
 #include "tools/harness/test.h"
 
-#include <string>
-
 namespace pr_impl {
 
 namespace {

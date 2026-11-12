@@ -5,9 +5,6 @@
 
 #include "tools/harness/test.h"
 
-#include <cmath>
-#include <initializer_list>
-
 extern "C" int prTestColorCApi(void);
 
 namespace pr_impl {
@@ -101,8 +98,11 @@ TEST_CASE("the HDR spaces convert with SDR white at 203 cd/m2, and back") {
 
     // Each space converts back to the color it came from.
     const double color[3] = {0.8, 0.3, 1.6};
-    for (PrColorSpace space : {PrColorSpace_Rec2100Pq, PrColorSpace_Rec2100Hlg, PrColorSpace_Rec2100Linear,
-        PrColorSpace_Ictcp, PrColorSpace_Jzazbz, PrColorSpace_Jzczhz}) {
+    const PrColorSpace spaces[] = {
+        PrColorSpace_Rec2100Pq, PrColorSpace_Rec2100Hlg, PrColorSpace_Rec2100Linear,
+        PrColorSpace_Ictcp, PrColorSpace_Jzazbz, PrColorSpace_Jzczhz,
+    };
+    for (PrColorSpace space : spaces) {
         CAPTURE(space);
         double there[3];
         double back[3];
@@ -201,7 +201,7 @@ TEST_CASE("gamut mapping keeps a color within the gamut, and reduces the chroma 
         CHECK(after[1] < before[1]);
         double hue = after[2] - before[2];
         hue = hue > 180 ? hue - 360 : hue < -180 ? hue + 360 : hue;
-        CHECK(std::fabs(hue) < 5);
+        CHECK(prF64Abs(hue) < 5);
     }
 
     // A P3 color maps into P3, within its own channels' range.

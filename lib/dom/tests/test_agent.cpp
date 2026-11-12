@@ -1,10 +1,9 @@
+#include "pr/atomic.h"
 #include "pr/dom.h"
+#include "pr/string.h"
 #include "pr/thread.h"
 
 #include "tools/harness/test.h"
-
-#include <atomic>
-#include <string>
 
 namespace pr_impl {
 
@@ -12,20 +11,20 @@ namespace {
 
 struct Posts {
     PrDomAgent* agent;
-    std::string ran;
-    std::atomic<uint32_t> wakes{0};
+    String ran;
+    Atomic<uint32_t> wakes{};
 };
 
 void appendA(void* PR_NULLABLE context) {
-    static_cast<Posts*>(context)->ran += "a";
+    static_cast<Posts*>(context)->ran.append('a');
 }
 
 void appendB(void* PR_NULLABLE context) {
-    static_cast<Posts*>(context)->ran += "b";
+    static_cast<Posts*>(context)->ran.append('b');
 }
 
 void woken(void* PR_NULLABLE context) {
-    static_cast<Posts*>(context)->wakes.fetch_add(1);
+    static_cast<Posts*>(context)->wakes.fetchAdd(1);
 }
 
 void postFromThread(void* PR_NULLABLE context) {
@@ -35,11 +34,11 @@ void postFromThread(void* PR_NULLABLE context) {
 }
 
 void checkpoint(void* PR_NULLABLE context) {
-    static_cast<Posts*>(context)->ran += "c";
+    static_cast<Posts*>(context)->ran.append('c');
 }
 
 void update(void* PR_NULLABLE context) {
-    static_cast<Posts*>(context)->ran += "u";
+    static_cast<Posts*>(context)->ran.append('u');
 }
 
 void stopFromThread(void* PR_NULLABLE context) {
@@ -62,7 +61,7 @@ TEST_CASE("a task posted from another thread wakes the host and runs on the agen
     prThreadStart(&thread, postFromThread, &posts);
     prThreadJoin(&thread);
     CHECK(posts.wakes.load() == 2);
-    CHECK(posts.ran.empty());
+    CHECK(posts.ran.isEmpty());
     CHECK(!prDomAgentIsIdle(agent));
     CHECK(prDomAgentNextTaskDelay(agent) == 0);
     CHECK(prDomAgentRunTask(agent));

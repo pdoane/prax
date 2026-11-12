@@ -29,16 +29,16 @@ struct Parsed : CssTestSource {
 };
 
 // Returns the serialization of `value` as a value of `property`, or the empty string if it is not one.
-std::string specified(PrStringView property, PrStringView value) {
+String specified(PrStringView property, PrStringView value) {
     Parsed parsed(property, value);
     if (!parsed.valid)
-        return std::string();
+        return String();
     PrTextBuffer out = {};
     cssSerializeValues(&out, parsed.run());
     return take(&out);
 }
 
-std::string width(const char* value) {
+String width(const char* value) {
     return specified("width", value);
 }
 
@@ -76,24 +76,24 @@ TEST_CASE("a math function converts to a unit where it is one value of a compati
 
 TEST_CASE("a math function is accepted where its type fits the value it stands for") {
     CHECK(width("calc(10px + 5%)") == "calc(5% + 10px)");
-    CHECK(width("calc(10px + 5s)").empty());
-    CHECK(width("calc(0 + 5px)").empty());          // no unitless zero in a calculation
-    CHECK(width("calc(5)").empty());
-    CHECK(specified("opacity", "calc(0.25 + 25%)").empty());
+    CHECK(width("calc(10px + 5s)").isEmpty());
+    CHECK(width("calc(0 + 5px)").isEmpty());          // no unitless zero in a calculation
+    CHECK(width("calc(5)").isEmpty());
+    CHECK(specified("opacity", "calc(0.25 + 25%)").isEmpty());
     CHECK(specified("opacity", "calc(100% / 4)") == "calc(25%)");
     CHECK(specified("z-index", "calc(1 / 2)") == "calc(0.5)");
-    CHECK(specified("border-top-width", "calc(10% + 1px)").empty());
+    CHECK(specified("border-top-width", "calc(10% + 1px)").isEmpty());
     CHECK(width("calc(1px * 1px / 1px)") == "calc(1px)");
-    CHECK(width("calc(1px * 1px)").empty());
-    CHECK(width("min(1px * 1px, 2px)").empty());
+    CHECK(width("calc(1px * 1px)").isEmpty());
+    CHECK(width("min(1px * 1px, 2px)").isEmpty());
 }
 
 TEST_CASE("+ and - need whitespace on both sides") {
     CHECK(width("calc(1px + 2px)") == "calc(3px)");
-    CHECK(width("calc(1px +2px)").empty());
+    CHECK(width("calc(1px +2px)").isEmpty());
     CHECK(width("calc(1px*2)") == "calc(2px)");
     CHECK(width("calc((1px) - (2px))") == "calc(-1px)");
-    CHECK(width("calc((1px)-(2px))").empty());
+    CHECK(width("calc((1px)-(2px))").isEmpty());
 }
 
 TEST_CASE("a calculation is simplified as a specified value") {
@@ -106,7 +106,7 @@ TEST_CASE("a calculation is simplified as a specified value") {
     CHECK(width("calc(calc(2 + 3) * 4px)") == "calc(20px)");
     CHECK(width("calc(1px - -2px)") == "calc(3px)");
     CHECK(width("calc(1em / 2)") == "calc(0.5em)");
-    CHECK(width("calc(1em / 1px)").empty());
+    CHECK(width("calc(1em / 1px)").isEmpty());
     CHECK(specified("rotate", "calc(1turn)") == "calc(360deg)");
     CHECK(specified("transition-delay", "calc(100ms)") == "calc(0.1s)");
 }
@@ -135,7 +135,7 @@ TEST_CASE("the other math functions compute where their arguments are numbers in
     CHECK(width("round(down, 15px, 10px)") == "calc(10px)");
     CHECK(width("round(to-zero, -15px, 10px)") == "calc(-10px)");
     CHECK(width("round(1.5em, 1px)") == "round(1.5em, 1px)");
-    CHECK(width("round(15px)").empty());         // B may be left out for a number only
+    CHECK(width("round(15px)").isEmpty());         // B may be left out for a number only
     CHECK(specified("z-index", "round(2.5)") == "calc(3)");
     CHECK(width("mod(-18px, 5px)") == "calc(2px)");
     CHECK(width("rem(-18px, 5px)") == "calc(-3px)");
@@ -152,8 +152,8 @@ TEST_CASE("the other math functions compute where their arguments are numbers in
     CHECK(specified("rotate", "atan2(1px, -1px)") == "calc(135deg)");
     CHECK(specified("scale", "sin(90deg)") == "calc(1)");
     CHECK(specified("opacity", "progress(5px, 0px, 10px)") == "calc(0.5)");
-    CHECK(width("pow(2px, 2)").empty());
-    CHECK(specified("rotate", "asin(1deg)").empty());
+    CHECK(width("pow(2px, 2)").isEmpty());
+    CHECK(specified("rotate", "asin(1deg)").isEmpty());
 }
 
 TEST_CASE("an infinite or NaN value is its keyword times one of its unit") {
@@ -167,12 +167,12 @@ TEST_CASE("an infinite or NaN value is its keyword times one of its unit") {
 }
 
 TEST_CASE("a math function nests to the limit and no further") {
-    std::string deep = "calc(1px";
+    String deep("calc(1px");
     for (uint32_t i = 0; i < kCssMathMaxDepth + 1; ++i)
-        deep = "calc(" + deep + ")";
+        deep = format("calc({})", deep);
     for (uint32_t i = 0; i < kCssMathMaxDepth + 2; ++i)
-        deep += ")";
-    CHECK(specified("width", deep).empty());
+        deep.append(")");
+    CHECK(specified("width", deep).isEmpty());
     CHECK(width("calc(calc(calc(1px)))") == "calc(1px)");
 }
 
@@ -189,10 +189,10 @@ TEST_CASE("an anchor function writes its anchor name first") {
 TEST_CASE("an anchor function is valid only in the properties its spec names") {
     CHECK(specified("top", "anchor(--foo top)") == "anchor(--foo top)");
     CHECK(specified("inset-block-start", "anchor(top)") == "anchor(top)");
-    CHECK(width("anchor(--foo top)").empty());
+    CHECK(width("anchor(--foo top)").isEmpty());
     CHECK(specified("margin-left", "anchor-size(width)") == "anchor-size(width)");
-    CHECK(specified("padding-left", "anchor-size(width)").empty());
-    CHECK(specified("flex-basis", "anchor-size(width)").empty());
+    CHECK(specified("padding-left", "anchor-size(width)").isEmpty());
+    CHECK(specified("flex-basis", "anchor-size(width)").isEmpty());
 }
 
 TEST_CASE("an anchor function is a <length> inside a calculation") {
@@ -218,8 +218,8 @@ TEST_CASE("a random function's key is written as its canonical parts") {
     CHECK(width("random(--foo, 1em, 2em)") == "random(--foo, 1em, 2em)");
     CHECK(width("calc(random(1px, 2em) + random(1px, 2em))") ==
         "calc(random(element-scoped ua-width-1, 1px, 2em) + random(element-scoped ua-width-2, 1px, 2em))");
-    CHECK(width("random(foo, 1px, 2px)").empty());
-    CHECK(width("random(--foo --bar, 1px, 2px)").empty());
+    CHECK(width("random(foo, 1px, 2px)").isEmpty());
+    CHECK(width("random(--foo --bar, 1px, 2px)").isEmpty());
 }
 
 TEST_CASE("a random function with a fixed base is its value") {
@@ -233,6 +233,6 @@ TEST_CASE("a tree-counting function is an integer, and a leaf of a calculation")
     CHECK(specified("z-index", "calc(sibling-count( ))") == "sibling-count()");
     CHECK(specified("left", "calc(1px * sibling-index())") == "calc(1px * sibling-index())");
     CHECK(specified("rotate", "calc(sibling-index() * 2rad * pi)") == "calc(360deg * sibling-index())");
-    CHECK(specified("z-index", "sibling-index(1)").empty());
-    CHECK(specified("left", "calc(10 * sibling-index())").empty());
+    CHECK(specified("z-index", "sibling-index(1)").isEmpty());
+    CHECK(specified("left", "calc(10 * sibling-index())").isEmpty());
 }

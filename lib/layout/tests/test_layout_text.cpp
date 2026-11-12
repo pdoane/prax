@@ -169,7 +169,8 @@ TEST_CASE("preserved spaces at a line's end hang where the line may wrap, and br
 
 TEST_CASE("a preserved tab advances to the next tab stop, eight spaces apart from the block's start") {
     float stop = widthOf("        ");
-    for (const char* text : {"\t", "a\t"}) {
+    const char* const texts[] = {"\t", "a\t"};
+    for (const char* text : texts) {
         Fixture f;
         PrLayoutFontStyle font = textFont(PrLayoutWhiteSpaceCollapse_Preserve);
         PrLayoutNode root = f.element(kPrLayoutNodeNone, block(), nullptr, nullptr, &font);
@@ -225,7 +226,7 @@ TEST_CASE("a space collapsed into another keeps the opportunity its own box give
 
 TEST_CASE("text is shaped in its font group's locale, and a new locale shapes it again") {
     Fixture f;
-    std::string path = std::string(PR_FONTS_DIR) + "/NotoSans[wdth,wght].ttf";
+    PrStringView path = PR_FONTS_DIR "/NotoSans[wdth,wght].ttf";
     const PrFont* noto = nullptr;
     REQUIRE(prFontCreateFromFile(path, 0, nullptr, &noto) == PrStatus_Ok);
     PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
@@ -233,7 +234,7 @@ TEST_CASE("text is shaped in its font group's locale, and a new locale shapes it
     prFontRelease(noto);
     PrFontFamily family = prFontFamilyFromName("Noto Sans");
     PrLayoutFontStyle font = textFont(PrLayoutWhiteSpaceCollapse_Collapse, PrLayoutTextWrapMode_Nowrap);
-    font.font = f.textFont(16, {family});
+    font.font = f.textFont(16, Span<const PrFontFamily>(&family, 1));
     PrLayoutNode root = f.element(kPrLayoutNodeNone, block(), nullptr, nullptr, &font);
     PrLayoutNode span = f.element(root, inlineBox(), nullptr, nullptr, &font);
     // Catalan's l with a middle dot and an l, which Noto Sans sets as one glyph in Catalan.
@@ -244,7 +245,7 @@ TEST_CASE("text is shaped in its font group's locale, and a new locale shapes it
         return bounds.right - bounds.left;
     };
     float unknown = width();
-    font.font = f.textFont(16, {family}, prLocaleFromTag("ca"));
+    font.font = f.textFont(16, Span<const PrFontFamily>(&family, 1), prLocaleFromTag("ca"));
     prLayoutNodeSetStyle(f.tree, span, f.style(inlineBox(), nullptr, nullptr, &font));
     CHECK(width() < unknown);
     CHECK(verified(f.tree));
@@ -300,8 +301,7 @@ TEST_CASE("text in a fully hinted font advances as hinted at the tree's target p
         // The width that the font's advances give at a ratio: hinted to the target pixels of that ratio, or as
         // designed.
         const PrFont* file = nullptr;
-        REQUIRE(prFontCreateFromFile(std::string(PR_FONTS_DIR) + "/Arimo-Regular.ttf", 0, nullptr, &file) ==
-            PrStatus_Ok);
+        REQUIRE(prFontCreateFromFile(PR_FONTS_DIR "/Arimo-Regular.ttf", 0, nullptr, &file) == PrStatus_Ok);
         PrFontDerivation hinted = prFontDerivationDefault();
         hinted.hinting = PrFontHinting_Full;
         hinted.hinter = hinter;
@@ -312,7 +312,8 @@ TEST_CASE("text in a fully hinted font advances as hinted at the tree's target p
         auto expected = [&](float ratio) { return 8 * prFontGlyphAdvance(arimo, m, size * ratio) * size; };
         CHECK(expected(1) != doctest::Approx(8 * prFontGlyphAdvance(arimo, m, 0) * size));
         CHECK(expected(1) != doctest::Approx(expected(2)));
-        for (float ratio : {1.0f, 2.0f, 1.0f}) {
+        const float ratios[] = {1.0f, 2.0f, 1.0f};
+        for (float ratio : ratios) {
             CAPTURE(ratio);
             prLayoutTreeSetTargetPixelRatio(f.tree, ratio);
             f.layout(px(400, 600));
@@ -480,11 +481,11 @@ TEST_CASE("synthesized small capitals paint at the em that shaping scaled them t
     CHECK(verified(f.tree));
     PrDrawList* list = prDrawListCreate();
     prLayoutTreePaint(f.tree, list);
-    std::vector<DrawnGlyph> drawn;
+    Array<DrawnGlyph> drawn;
     appendGlyphs(list, prDrawTransformFromDAffine2(PrDAffine2{1, 0, 0, 1, 0, 0}), drawn);
     prDrawListRelease(list);
     // The capital keeps the em of the text, and the lowercase letters are capitals at a smaller em.
-    REQUIRE(drawn.size() == 3);
+    REQUIRE(drawn.count() == 3);
     CHECK(drawn[0].size == 16.0f);
     CHECK(drawn[1].size < 16.0f);
     CHECK(drawn[2].size == drawn[1].size);

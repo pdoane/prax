@@ -1,18 +1,18 @@
+#include "pr/array.h"
 #include "pr/draw_cpu.h"
 #include "pr/draw_imgui.h"
 #include "pr/draw_list.h"
 #include "pr/gpu.h"
+#include "pr/string.h"
 #include "pr/vec.h"
 
 #include "tools/harness/test.h"
 
-#include <cstdint>
-#include <string>
-#include <vector>
-
 namespace pr_impl {
 
 namespace {
+
+using namespace pr;
 
 struct Device {
     PrGpuDevice* gpuDevice = nullptr;
@@ -36,7 +36,7 @@ struct Device {
     }
 
     // Prepares and encodes the list in a pass over the texture, then reads the texture back.
-    std::vector<uint8_t> render(const PrDrawList* list) {
+    Array<uint8_t> render(const PrDrawList* list) {
         PrGpuCommands* commands = nullptr;
         REQUIRE(prGpuCommandsBegin(gpuDevice, nullptr, &commands));
         PrDrawTarget prepared{
@@ -59,7 +59,7 @@ struct Device {
         prGpuCommandsSubmitAndWait(commands);
         uint32_t width = prGpuTextureExtent(gpuDevice, texture).x;
         uint32_t height = prGpuTextureExtent(gpuDevice, texture).y;
-        std::vector<uint8_t> pixels(size_t(width) * height * 4);
+        Array<uint8_t> pixels(size_t(width) * height * 4);
         PrPixels out{pixels.data(), size_t(width) * 4, {width, height}};
         prGpuTextureRead(gpuDevice, texture, PrGpuAccessFlag_ShaderRead, PrIVec2{0, 0}, out);
         return pixels;
@@ -67,7 +67,7 @@ struct Device {
 };
 
 const PrFont* load(const char* name) {
-    std::string path = std::string(PR_FONTS_DIR) + "/" + name;
+    String path = format("{}/{}", PR_FONTS_DIR, name);
     const PrFont* font = nullptr;
     REQUIRE(prFontCreateFromFile(path, 0, nullptr, &font) == PrStatus_Ok);
     return font;
@@ -75,8 +75,8 @@ const PrFont* load(const char* name) {
 
 // Returns the list rendered by the cpu backend onto transparent pixels, which the test compares Dear ImGui's render
 // with.
-std::vector<uint8_t> cpuRender(const PrDrawList* list, uint32_t width, uint32_t height) {
-    std::vector<uint8_t> pixels(size_t(width) * height * 4, 0);
+Array<uint8_t> cpuRender(const PrDrawList* list, uint32_t width, uint32_t height) {
+    Array<uint8_t> pixels(size_t(width) * height * 4);
     PrDrawRenderer* renderer = prDrawCpuCreate(nullptr);
     PrPixels into{pixels.data(), size_t(width) * 4, {width, height}};
     REQUIRE(prDrawRendererRenderPixels(renderer, list, into, PrPixelFormat_Rgba8) == PrStatus_Ok);
@@ -85,9 +85,9 @@ std::vector<uint8_t> cpuRender(const PrDrawList* list, uint32_t width, uint32_t 
 }
 
 // Returns the total coverage of the pixels: the sum of their alphas, in whole pixels.
-double inked(const std::vector<uint8_t>& pixels) {
+double inked(const Array<uint8_t>& pixels) {
     double sum = 0;
-    for (size_t i = 3; i < pixels.size(); i += 4)
+    for (uint32_t i = 3; i < pixels.count(); i += 4)
         sum += pixels[i] / 255.0;
     return sum;
 }
@@ -95,21 +95,21 @@ double inked(const std::vector<uint8_t>& pixels) {
 // Records a run of the text's glyphs, one for each character, advanced by the font's advances.
 void addText(PrDrawList* list, const PrFont* font, float size, const char* text, PrVec2 at,
         const PrDrawStroke* stroke = nullptr) {
-    std::vector<PrFontGlyph> glyphs;
+    Array<PrFontGlyph> glyphs;
     for (const char* c = text; *c != 0; ++c) {
         uint16_t id = prFontCodePointGlyph(font, uint32_t(*c));
-        glyphs.push_back(PrFontGlyph{id, at});
+        glyphs.push(PrFontGlyph{id, at});
         at.x += prFontGlyphAdvance(font, id, 0) * size;
     }
     PrFontGlyphRun run{};
     run.font = font;
     run.size = size;
     run.glyphs = glyphs.data();
-    run.glyphCount = uint32_t(glyphs.size());
+    run.glyphCount = glyphs.count();
     prDrawListGlyphs(list, &run, PrVec2{}, {.color = PrColor{0, 0, 0, 1}, .stroke = stroke});
 }
 
-const uint8_t* at(const std::vector<uint8_t>& pixels, uint32_t width, uint32_t x, uint32_t y) {
+const uint8_t* at(const Array<uint8_t>& pixels, uint32_t width, uint32_t x, uint32_t y) {
     return pixels.data() + (size_t(y) * width + x) * 4;
 }
 
@@ -147,7 +147,7 @@ TEST_CASE("imgui fills a rect over a cleared texture, and blends a translucent o
     prDrawListClearRect(list, PrRect{0, 0, 64, 64}, PrColor{1, 1, 1, 1});
     prDrawListRect(list, PrRect{4, 4, 12, 12}, {.color = PrColor{1, 0, 0, 1}});
     prDrawListRect(list, PrRect{8, 0, 16, 16}, {.color = PrColor{0, 0, 0, 0.5f}});
-    std::vector<uint8_t> pixels = device.render(list);
+    Array<uint8_t> pixels = device.render(list);
     const uint8_t* paper = at(pixels, 16, 1, 1);
     CHECK(paper[0] == 255);
     CHECK(paper[1] == 255);
@@ -173,8 +173,8 @@ TEST_CASE("imgui draws shaped glyphs from its atlas, covering what the cpu backe
     const PrFont* font = load("NotoSans[wdth,wght].ttf");
     PrDrawList* list = prDrawListCreate();
     addText(list, font, 32, "Hxg", PrVec2{8, 44});
-    std::vector<uint8_t> drawn = device.render(list);
-    std::vector<uint8_t> expected = cpuRender(list, 128, 64);
+    Array<uint8_t> drawn = device.render(list);
+    Array<uint8_t> expected = cpuRender(list, 128, 64);
     double ink = inked(expected);
     CHECK(ink > 200);
     CHECK(inked(drawn) == doctest::Approx(ink).epsilon(0.03));
@@ -199,10 +199,12 @@ TEST_CASE("imgui draws shaped glyphs from its atlas, covering what the cpu backe
 }
 
 TEST_CASE("imgui strokes a closed contour centered, inside or outside, as the cpu backend does") {
-    for (PrDrawStrokeAlign align : {PrDrawStrokeAlign_Center, PrDrawStrokeAlign_Inside, PrDrawStrokeAlign_Outside}) {
+    const PrDrawStrokeAlign aligns[] = {PrDrawStrokeAlign_Center, PrDrawStrokeAlign_Inside, PrDrawStrokeAlign_Outside};
+    const bool reverses[] = {false, true};
+    for (PrDrawStrokeAlign align : aligns) {
         CAPTURE(int(align));
         // Clockwise and counter-clockwise contours have the same inside.
-        for (bool reversed : {false, true}) {
+        for (bool reversed : reverses) {
             CAPTURE(reversed);
             Device device(64, 64);
             PrDrawList* list = prDrawListCreate();
@@ -216,8 +218,8 @@ TEST_CASE("imgui strokes a closed contour centered, inside or outside, as the cp
             stroke.shape.width = 4;
             stroke.align = align;
             prDrawListPath(list, path, PrPathFillRule_NonZero, {.color = PrColor{0, 0, 0, 1}, .stroke = &stroke});
-            std::vector<uint8_t> drawn = device.render(list);
-            std::vector<uint8_t> expected = cpuRender(list, 64, 64);
+            Array<uint8_t> drawn = device.render(list);
+            Array<uint8_t> expected = cpuRender(list, 64, 64);
             // The tangent misses the projected near edge by most of a pixel, which loses that edge's last row of ink.
             CHECK(inked(drawn) == doctest::Approx(inked(expected)).epsilon(0.06));
             // A pixel of the stroke on the left side. Outside is to its left, and inside is to its right.
@@ -256,8 +258,8 @@ TEST_CASE("imgui draws a projected group's contents through its projection's tan
     PrDrawList* list = prDrawListCreate();
     // A light tilt, which the tangent approximates within a fraction of a pixel.
     recordTilted(list, 0.35f, 300);
-    std::vector<uint8_t> drawn = device.render(list);
-    std::vector<uint8_t> expected = cpuRender(list, 64, 64);
+    Array<uint8_t> drawn = device.render(list);
+    Array<uint8_t> expected = cpuRender(list, 64, 64);
     // The tangent misses the projected near edge by most of a pixel, which loses that edge's last row of ink.
     CHECK(inked(drawn) == doctest::Approx(inked(expected)).epsilon(0.06));
     CHECK(at(drawn, 64, 32, 32)[0] == at(expected, 64, 32, 32)[0]);

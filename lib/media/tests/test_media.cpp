@@ -1,12 +1,13 @@
+#include "pr/array.h"
 #include "pr/media.h"
 #include "pr/media_audio.h"
 #include "pr/thread.h"
 
 #include "tools/harness/test.h"
 
-#include <vector>
-
 extern "C" int prTestMediaCApi(void);
+
+using namespace pr_impl;
 
 TEST_CASE("the public header compiles as C") {
     CHECK(prTestMediaCApi() == 0);
@@ -33,7 +34,9 @@ TEST_CASE("a reader that waits for an audio queue's writer reads every frame tha
     PrThread writer;
     prThreadStart(&writer, [](void* context) {
         PrMediaAudioQueue* q = static_cast<PrMediaAudioQueue*>(context);
-        std::vector<float> samples(1000, 0.5f);
+        Array<float> samples(1000);
+        for (float& sample : samples)
+            sample = 0.5f;
         prThreadSleep(20);
         prMediaAudioQueueBegin(q, 1, 0);
         prMediaAudioQueueWrite(q, 1, samples.data(), 1000);
@@ -41,7 +44,7 @@ TEST_CASE("a reader that waits for an audio queue's writer reads every frame tha
         prMediaAudioQueueWrite(q, 1, samples.data(), 1000);
         prMediaAudioQueueFinish(q, 1);
     }, queue);
-    std::vector<float> read(1500);
+    Array<float> read(1500);
     prMediaAudioQueueWait(queue, 1500);
     CHECK(prMediaAudioQueueRead(queue, read.data(), 1500).frames == 1500);
     prMediaAudioQueueWait(queue, 1500);

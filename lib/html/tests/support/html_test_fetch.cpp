@@ -2,6 +2,7 @@
 
 #include "html/tests/support/html_test_fetch.h"
 
+#include "pr/string_ops.h"
 #include "pr/url.h"
 
 namespace pr_impl {
@@ -11,18 +12,13 @@ namespace {
 void receive(void* PR_NULLABLE context, PrFetchInterceptRequest* request) {
     TestFetcher* fetcher = static_cast<TestFetcher*>(context);
     // The request waits until it is answered, which takes it out of `held`.
-    fetcher->held.push_back(request);
+    fetcher->held.push(request);
     if (fetcher->answer)
         fetcher->answer(request);
 }
 
 void forget(TestFetcher* fetcher, PrFetchInterceptRequest* request) {
-    for (size_t i = 0; i < fetcher->held.size(); ++i) {
-        if (fetcher->held[i] == request) {
-            fetcher->held.erase(fetcher->held.begin() + ptrdiff_t(i));
-            return;
-        }
-    }
+    fetcher->held.removeFirst(request);
 }
 
 } // namespace
@@ -41,9 +37,9 @@ TestFetcher::~TestFetcher() {
     prNetDestroy(net);
 }
 
-size_t TestFetcher::waiting() {
+uint32_t TestFetcher::waiting() {
     prNetNullRun(net);
-    return held.size();
+    return held.count();
 }
 
 void TestFetcher::settle(PrDomAgent* agent) {
@@ -56,9 +52,9 @@ void TestFetcher::settle(PrDomAgent* agent) {
     }
 }
 
-bool TestFetcher::respond(const std::string& suffix, const std::string& body, uint16_t status, PrStringView contentType) {
+bool TestFetcher::respond(PrStringView suffix, PrStringView body, uint16_t status, PrStringView contentType) {
     for (PrFetchInterceptRequest* request : held) {
-        if (urlOf(request).ends_with(suffix)) {
+        if (prStringEndsWith(request->desc.url, suffix)) {
             respondTo(request, body, status, contentType);
             return true;
         }
@@ -66,14 +62,19 @@ bool TestFetcher::respond(const std::string& suffix, const std::string& body, ui
     return false;
 }
 
-void TestFetcher::respondTo(PrFetchInterceptRequest* request, const std::string& body, uint16_t status,
+void TestFetcher::respondTo(PrFetchInterceptRequest* request, PrStringView body, uint16_t status,
+        PrStringView contentType, PrStringView url) {
+    respondTo(request, prStringBytes(body), status, contentType, url);
+}
+
+void TestFetcher::respondTo(PrFetchInterceptRequest* request, PrByteView body, uint16_t status,
         PrStringView contentType, PrStringView url) {
     PrFetchHeader header{"Content-Type", contentType};
     PrFetchInterceptResponse response{
         .status = status,
         .headers = &header,
         .headerCount = contentType.data != nullptr ? 1u : 0u,
-        .body = PrByteView{reinterpret_cast<const uint8_t*>(body.data()), body.size()},
+        .body = body,
         .url = url,
     };
     forget(this, request);
@@ -90,22 +91,24 @@ void TestFetcher::failTo(PrFetchInterceptRequest* request) {
     prFetchInterceptRequestFail(request, PrNetError_Refused);
 }
 
-std::string TestFetcher::urlOf(const PrFetchInterceptRequest* request) {
-    PrStringView url = request->desc.url;
-    return std::string(url.data, url.size);
+String TestFetcher::urlOf(const PrFetchInterceptRequest* request) {
+    return String(request->desc.url);
 }
 
 uint32_t TestModules::parse(const PrHtmlScript* script, PrHtmlModuleRequestFn request, void* PR_NULLABLE requestContext) {
-    std::string source(script->source.data, script->source.size);
+    PrStringView source = script->source;
     PrUrl* base = nullptr;
     if (prUrlCreate(script->baseUrl, nullptr, PrCharset_Utf8, &base) == PrStatus_Ok) {
         size_t start = 0;
-        while (start < source.size()) {
-            size_t end = std::min(source.find('\n', start), source.size());
-            std::string line = source.substr(start, end - start);
+        while (start < source.size) {
+            PrStringView rest = prStringSlice(source, start, source.size - start);
+            size_t end = start + prStringFindByte(rest, '\n');
+            PrStringView line = prStringSlice(source, start, end - start);
             PrUrl* imported = nullptr;
-            if (line.starts_with("import ") &&
-                    prUrlCreate(line.substr(7), base, PrCharset_Utf8, &imported) == PrStatus_Ok) {
+            PrStringView keyword = "import ";
+            if (prStringStartsWith(line, keyword) &&
+                    prUrlCreate(prStringSlice(line, keyword.size, line.size - keyword.size), base, PrCharset_Utf8,
+                        &imported) == PrStatus_Ok) {
                 PrRawString url = prUrlSerialize(imported, PrUrlSerialization_Whole);
                 request(requestContext, prRawStringView(&url));
                 prRawStringReset(&url);
@@ -115,8 +118,8 @@ uint32_t TestModules::parse(const PrHtmlScript* script, PrHtmlModuleRequestFn re
         }
     }
     prUrlDestroy(base);
-    sources.push_back(source);
-    return uint32_t(sources.size() - 1);
+    sources.push(String(source));
+    return sources.count() - 1;
 }
 
 } // namespace pr_impl

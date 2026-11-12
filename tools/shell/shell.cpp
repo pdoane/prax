@@ -98,6 +98,7 @@
 #include "pr/image.h"
 #include "pr/layout_page.h"
 #include "pr/media.h"
+#include "pr/string_ops.h"
 #include "pr/text.h"
 #include "pr/time.h"
 
@@ -530,7 +531,7 @@ bool writeAudio(const PrAudioOutput* output, const std::string& path) {
     word(dataSize, 4);
     if (dataSize != 0)
         file.append(reinterpret_cast<const char*>(prAudioMemorySamples(output)), dataSize);
-    return prFileWrite(path, PrByteView{reinterpret_cast<const uint8_t*>(file.data()), file.size()});
+    return prFileWrite(path, prStringBytes(file));
 }
 
 // Applies the arguments of a run to the host, loading its pages and running its scripts in order.

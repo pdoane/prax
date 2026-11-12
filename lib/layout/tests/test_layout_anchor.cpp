@@ -7,8 +7,6 @@
 
 #include "tools/harness/test.h"
 
-#include <vector>
-
 namespace pr_impl {
 
 namespace {
@@ -20,17 +18,17 @@ float viewportY(Fixture& f) {
     return prLayoutUnitToPx(prLayoutNodeScroll(f.tree, kPrLayoutNodeNone).y);
 }
 
-std::vector<PrLayoutScrollAdjustment> taken(PrLayoutTree* tree) {
-    std::vector<PrLayoutScrollAdjustment> moves(8);
-    moves.resize(prLayoutTreeTakeScrollAdjustments(tree, moves.data(), uint32_t(moves.size())));
+Array<PrLayoutScrollAdjustment> taken(PrLayoutTree* tree) {
+    Array<PrLayoutScrollAdjustment> moves(8);
+    moves.resize(prLayoutTreeTakeScrollAdjustments(tree, moves.data(), moves.count()));
     return moves;
 }
 
 // A document of `count` blocks of 100px, whose blocks it writes to `out`.
-PrLayoutNode blocks(Fixture& f, uint32_t count, std::vector<PrLayoutNode>& out) {
+PrLayoutNode blocks(Fixture& f, uint32_t count, Array<PrLayoutNode>& out) {
     PrLayoutNode root = f.element(kPrLayoutNodeNone, block());
     for (uint32_t i = 0; i < count; ++i)
-        out.push_back(f.element(root, block(100)));
+        out.push(f.element(root, block(100)));
     return root;
 }
 
@@ -42,7 +40,7 @@ using namespace pr_impl;
 
 TEST_CASE("growth above what the viewport shows moves the offset by as much, and the move is reported") {
     Fixture f;
-    std::vector<PrLayoutNode> b;
+    Array<PrLayoutNode> b;
     blocks(f, 10, b);
     f.layout(px(100, 200));
     prLayoutNodeSetScroll(f.tree, kPrLayoutNodeNone, px(0, 250));
@@ -51,11 +49,11 @@ TEST_CASE("growth above what the viewport shows moves the offset by as much, and
     CHECK(viewportY(f) == 310);
     // The block at the top of what showed is still where it was on screen.
     CHECK(f.bounds(b[3]).top == doctest::Approx(50));
-    std::vector<PrLayoutScrollAdjustment> moves = taken(f.tree);
-    REQUIRE(moves.size() == 1);
+    Array<PrLayoutScrollAdjustment> moves = taken(f.tree);
+    REQUIRE(moves.count() == 1);
     CHECK(moves[0].node == kPrLayoutNodeNone);
     CHECK(prLayoutUnitToPx(moves[0].delta.y) == 60);
-    CHECK(taken(f.tree).empty());
+    CHECK(taken(f.tree).isEmpty());
     // The scene that follows carries the move, and the one after it carries none.
     const PrLayoutScene* scene = prLayoutTreeScene(f.tree);
     PrLayoutScrollAdjustment carried{};
@@ -76,9 +74,9 @@ TEST_CASE("the examination goes on past an empty box that holds children, to the
     PrLayoutNode empty = f.element(root, block(0));
     f.element(empty, block(0));
     PrLayoutNode content = f.element(root, block());
-    std::vector<PrLayoutNode> b;
+    Array<PrLayoutNode> b;
     for (uint32_t i = 0; i < 10; ++i)
-        b.push_back(f.element(content, block(100)));
+        b.push(f.element(content, block(100)));
     f.layout(px(100, 200));
     prLayoutNodeSetScroll(f.tree, kPrLayoutNodeNone, px(0, 250));
     prLayoutNodeSetStyle(f.tree, b[0], f.style(block(160)));
@@ -88,7 +86,7 @@ TEST_CASE("the examination goes on past an empty box that holds children, to the
 
 TEST_CASE("growth below, a document at its origin, and a layout with nothing to lay out move nothing") {
     Fixture f;
-    std::vector<PrLayoutNode> b;
+    Array<PrLayoutNode> b;
     blocks(f, 10, b);
     f.layout(px(100, 200));
     // At the origin, content grows beneath the reader.
@@ -101,12 +99,12 @@ TEST_CASE("growth below, a document at its origin, and a layout with nothing to 
     CHECK(viewportY(f) == 250);
     f.layout(px(100, 200));
     CHECK(viewportY(f) == 250);
-    CHECK(taken(f.tree).empty());
+    CHECK(taken(f.tree).isEmpty());
 }
 
 TEST_CASE("a replaced anchor keeps its place, and a new anchor is chosen once the old one is erased") {
     Fixture f;
-    std::vector<PrLayoutNode> b;
+    Array<PrLayoutNode> b;
     PrLayoutNode root = blocks(f, 10, b);
     f.layout(px(100, 200));
     prLayoutNodeSetScroll(f.tree, kPrLayoutNodeNone, px(0, 300));

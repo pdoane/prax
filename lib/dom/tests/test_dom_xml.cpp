@@ -2,6 +2,7 @@
 
 #include "pr/dom.h"
 #include "pr/dom_xml.h"
+#include "pr/string.h"
 #include "pr/string_ops.h"
 #include "pr/url.h"
 
@@ -10,22 +11,17 @@
 
 #include "tools/harness/test.h"
 
-#include <string>
-#include <vector>
-
 namespace pr_impl {
 namespace {
 
 // Returns the text of a view. The null view reads as the empty string.
-std::string textOf(PrStringView text) {
-    return std::string(text.size != 0 ? text.data : "", text.size);
+String textOf(PrStringView text) {
+    return String(text);
 }
 
-std::string take(PrRawString value) {
-    PrStringView view = prRawStringView(&value);
-    std::string text(view.data != nullptr ? view.data : "", view.size);
-    prRawStringReset(&value);
-    return text;
+// Returns the text of `value`, which the string then frees.
+String take(PrRawString value) {
+    return String::adopt(value);
 }
 
 } // namespace

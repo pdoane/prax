@@ -3,11 +3,10 @@
 #pragma once
 
 #include "pr/alloc.h"
+#include "pr/array.h"
 #include "pr/byte_view.h"
 #include "pr/compress_builtin.h"
 #include "pr/image_builtin.h"
-
-#include <vector>
 
 PR_ASSUME_NONNULL_BEGIN
 
@@ -25,6 +24,18 @@ struct Animation {
     PrImageDecoder* decoder;
     Orientation orientation;
 };
+
+// The bytes as an array of their own.
+inline Array<uint8_t> copyBytes(PrByteView bytes) {
+    Array<uint8_t> out;
+    out.append(bytes);
+    return out;
+}
+
+// The `count` bytes of `bytes` from `start`.
+inline PrByteView sliceBytes(PrByteView bytes, size_t start, size_t count) {
+    return PrByteView{bytes.data + start, count};
+}
 
 // The built-in codec that every test decodes through. It is created on first use and kept for the whole run.
 inline PrImageCodec* testCodec() {
@@ -123,7 +134,7 @@ inline bool decodeFrame(const uint8_t* PR_NULLABLE bytes, size_t size, Orientati
     if (info.format.sample == PrImageSample_U16 &&
             (orientation == Orientation_None || info.orientation == PrImageOrientation_Identity)) {
         const size_t row = size_t(info.extent.x) * prImageFormatSize(&info.format);
-        std::vector<uint16_t> native(row * info.extent.y / 2);
+        Array<uint16_t> native(row * info.extent.y / 2);
         const PrPixels output{reinterpret_cast<uint8_t*>(native.data()), row, info.extent};
         const PrStatus status = row != 0 ? prImageDecoderRead(decoder, frame, output) : PrStatus_InvalidData;
         const size_t pixelCount = size_t(info.extent.x) * info.extent.y;

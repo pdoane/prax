@@ -1,13 +1,15 @@
+#include "pr/array.h"
+#include "pr/string.h"
+#include "pr/string_ops.h"
 #include "pr/vterm.h"
 
 #include "tools/harness/test.h"
 
-#include <string>
-#include <vector>
-
 extern "C" int prTestVtermCApi(void);
 
 namespace pr_impl {
+
+using namespace pr;
 
 namespace {
 
@@ -23,46 +25,45 @@ struct Term {
     Term(const Term&) = delete;
     Term& operator=(const Term&) = delete;
 
-    void write(const std::string& text) {
-        prVtermWrite(vterm, PrByteView{reinterpret_cast<const uint8_t*>(text.data()), text.size()});
+    void write(PrStringView text) {
+        prVtermWrite(vterm, prStringBytes(text));
     }
 
     // The text of line `index`, without trailing spaces. Lines count from the oldest line of the scrollback.
-    std::string line(uint32_t index) const {
+    String line(uint32_t index) const {
         PrVtermLine line = prVtermLine(vterm, index);
         PrRawString text = prRawStringNull();
         prVtermLineAppendText(vterm, index, 0, line.cellCount, &text);
-        std::string out(prRawStringView(&text).data, prRawStringView(&text).size);
+        String out(prStringTrimEndByte(prRawStringView(&text), ' '));
         prRawStringReset(&text);
-        while (!out.empty() && out.back() == ' ')
-            out.pop_back();
         return out;
     }
 
     uint32_t scrollback() const { return prVtermScrollbackCount(vterm); }
 
     // The text of screen row `row`.
-    std::string row(uint32_t row) const { return line(scrollback() + row); }
+    String row(uint32_t row) const { return line(scrollback() + row); }
 
     // The screen's rows, each followed by a line break, up to the last row that is not empty.
-    std::string screen() const {
-        std::vector<std::string> rows;
+    String screen() const {
+        Array<String> rows;
         for (uint32_t i = 0; i < prVtermExtent(vterm).y; ++i)
-            rows.push_back(row(i));
-        while (!rows.empty() && rows.back().empty())
-            rows.pop_back();
-        std::string out;
-        for (const std::string& text : rows)
-            out += text + "\n";
+            rows.push(row(i));
+        while (!rows.isEmpty() && rows.last().isEmpty())
+            rows.pop();
+        String out;
+        for (PrStringView text : rows)
+            formatTo(out, "{}\n", text);
         return out;
     }
 
     // The scrollback and the screen, in the format of `screen`.
-    std::string all() const {
-        std::string out;
+    String all() const {
+        String out;
         for (uint32_t i = 0; i < scrollback(); ++i)
-            out += line(i) + "\n";
-        return out + screen();
+            formatTo(out, "{}\n", line(i));
+        out.append(screen());
+        return out;
     }
 
     const PrVtermCell& cell(uint32_t column, uint32_t row) const {
@@ -72,9 +73,9 @@ struct Term {
     PrUVec2 cursor() const { return prVtermCursor(vterm).position; }
 
     // Returns and consumes the output queued for the program.
-    std::string output() {
+    String output() {
         PrByteView bytes = prVtermOutput(vterm);
-        std::string out(reinterpret_cast<const char*>(bytes.data), bytes.size);
+        String out(prStringFromBytes(bytes));
         prVtermOutputConsume(vterm, bytes.size);
         return out;
     }
@@ -107,7 +108,7 @@ TEST_CASE("vterm: text past the last column wraps, and the line that it left is 
     Term term(4, 3);
     term.write("abcd");
     CHECK(cursorAt(term, 3, 0));
-    CHECK(term.row(1).empty());
+    CHECK(term.row(1).isEmpty());
     term.write("e");
     CHECK(term.screen() == "abcd\ne\n");
     CHECK((prVtermLine(term.vterm, 0).flags & PrVtermLineFlag_Wrapped) != 0);
@@ -161,7 +162,7 @@ TEST_CASE("vterm: cursor movement, erasing and editing in a line") {
     term.write("\x1b[3X");
     CHECK(term.row(2) == "a   efgh");
     term.write("\x1b[2J");
-    CHECK(term.screen().empty());
+    CHECK(term.screen().isEmpty());
     term.write("\x1b[5;9H");
     CHECK(cursorAt(term, 7, 2));
     term.write("\x1b[2A\x1b[3D");
@@ -275,7 +276,7 @@ TEST_CASE("vterm: the alternate screen keeps the primary screen and its cursor, 
     term.write("one\r\ntwo");
     term.write("\x1b[?1049h");
     CHECK((prVtermModes(term.vterm) & PrVtermModeFlag_AlternateScreen) != 0);
-    CHECK(term.screen().empty());
+    CHECK(term.screen().isEmpty());
     term.write("\x1b[1;1Halt\r\n\r\n\r\nx");
     CHECK(term.scrollback() == 0);
     term.write("\x1b[?1049l");
@@ -424,12 +425,12 @@ TEST_CASE("vterm: a line that a scroll reuses is blank in every column that a wr
         "\x1b[?69h\x1b[1;5s\x1b[2;1Hxyz\x1b[S\x1b[s\x1b[?69l", // a scroll within margins copies cells
     };
     for (const char* edit : edits) {
-        std::string text = edit;
+        String text = edit;
         CAPTURE(text);
         Term term(10, 2, 1);
         term.write(text);
         term.write("\x1b[2;1H\n\n\n\n");
-        CHECK(term.screen().empty());
+        CHECK(term.screen().isEmpty());
         constexpr PrVtermCell kZero{};
         for (uint32_t row = 0; row < 2; ++row) {
             for (uint32_t column = 0; column < 10; ++column)
@@ -443,7 +444,7 @@ TEST_CASE("vterm: a line that a scroll reuses is blank in every column that a wr
     prVtermResize(term.vterm, PrUVec2{6, 2});
     prVtermResize(term.vterm, PrUVec2{12, 2});
     term.write("\x1b[2;1H\n\n\n\n");
-    CHECK(term.screen().empty());
+    CHECK(term.screen().isEmpty());
 }
 
 TEST_CASE("vterm: a rewrap reads a line up to its last cell that shows something") {
@@ -457,7 +458,7 @@ TEST_CASE("vterm: a rewrap reads a line up to its last cell that shows something
 
 TEST_CASE("vterm: a line that enters the scrollback keeps its cells up to the last that shows something") {
     Term term(20, 2);
-    term.write("abc\r\n\x1b[41mred\x1b[K\x1b[m\r\nx  \r\n" + std::string(19, 'a') + "\xe4\xb8\xad\r\n\r\n\r\n");
+    term.write(format("abc\r\n\x1b[41mred\x1b[K\x1b[m\r\nx  \r\n{}\xe4\xb8\xad\r\n\r\n\r\n", String().append(19, 'a')));
     REQUIRE(term.scrollback() == 6);
     CHECK(prVtermLine(term.vterm, 0).cellCount == 3);
     CHECK(prVtermLine(term.vterm, 1).cellCount == 20);   // the erase fills to the end with the background color
@@ -467,7 +468,7 @@ TEST_CASE("vterm: a line that enters the scrollback keeps its cells up to the la
     CHECK(prVtermLine(term.vterm, 5).cellCount == 0);
     CHECK(prVtermLine(term.vterm, 6).cellCount == 20);   // screen rows keep every column
     CHECK(term.line(0) == "abc");
-    CHECK(term.line(3) == std::string(19, 'a'));
+    CHECK(term.line(3) == String().append(19, 'a'));
     CHECK(term.line(4) == "\xe4\xb8\xad");
     CHECK((prVtermLine(term.vterm, 3).cells[19].flags & PrVtermCellFlag_WideSpacer) != 0);
     CHECK(prVtermLine(term.vterm, 1).cells[19].background.kind == PrVtermColorKind_Palette);
@@ -481,9 +482,9 @@ TEST_CASE("vterm: a line that enters the scrollback keeps its cells up to the la
 
 TEST_CASE("vterm: the scrollback's lines hold little more than their text") {
     Term term(120, 10, 1000);
-    std::string lines;
+    String lines;
     for (uint32_t i = 0; i < 1100; ++i)
-        lines += "line " + std::to_string(i) + "\r\n";
+        formatTo(lines, "line {}\r\n", i);
     term.write(lines);
     REQUIRE(term.scrollback() == 1000);
     CHECK(term.line(999) == "line 1090");
@@ -546,9 +547,9 @@ TEST_CASE("vterm: a rewrap reads the columns past a wrapped line's cells as blan
 
 TEST_CASE("vterm: a line of the scrollback stays valid while the lines around it as many as the screen's rows are read") {
     Term term(10, 3, 100);
-    std::string lines;
+    String lines;
     for (uint32_t i = 0; i < 20; ++i)
-        lines += "line" + std::to_string(i) + "\r\n";
+        formatTo(lines, "line{}\r\n", i);
     term.write(lines);
     REQUIRE(term.scrollback() == 18);
     PrVtermLine first = prVtermLine(term.vterm, 5);
@@ -590,17 +591,17 @@ TEST_CASE("vterm: a row's cells are the same once it enters the scrollback, howe
     for (const char* text : kCases) {
         CAPTURE(text);
         Term term(20, 3);
-        term.write(std::string(text) + "\x1b[m");
-        std::vector<PrVtermCell> row;
+        term.write(format("{}\x1b[m", String(text)));
+        Array<PrVtermCell> row;
         PrVtermLine before = prVtermLine(term.vterm, 0);
         for (uint32_t i = 0; i < before.cellCount; ++i)
-            row.push_back(before.cells[i]);
-        std::string shown = term.row(0);
+            row.push(before.cells[i]);
+        String shown = term.row(0);
         term.write("\x1b[3;1H\r\n\r\n\r\n");
         REQUIRE(term.scrollback() == 3);
         CHECK(term.line(0) == shown);
         PrVtermLine after = prVtermLine(term.vterm, 0);
-        for (uint32_t i = 0; i < row.size(); ++i) {
+        for (uint32_t i = 0; i < row.count(); ++i) {
             PrVtermCell expected = row[i];
             PrVtermCell actual = i < after.cellCount ? after.cells[i] : PrVtermCell{};
             CAPTURE(i);
@@ -622,11 +623,12 @@ TEST_CASE("vterm: a row's cells are the same once it enters the scrollback, howe
 TEST_CASE("vterm: a rewrap of packed lines gives the lines that a rewrap of the same rows gives") {
     // The same lines rewrap in two terminals. In one, they are packed lines in the scrollback. In the other, they are
     // rows of cells on a taller screen.
-    std::string text = "plain\r\n\x1b[1mbold\x1b[m and \x1b[31mred\x1b[m\r\n" + std::string(23, 'w') +
-        "\x1b[42mgreen across\x1b[m the wrap\r\n\r\nabc\x1b[41m   \x1b[m\r\n\x1b[44mx\x1b[K\x1b[m\r\n" +
-        "\x1b[4munder\x1b[m line\x1b[38;2;1;2;3m rgb\x1b[m\r\nend";
+    String text = format("plain\r\n\x1b[1mbold\x1b[m and \x1b[31mred\x1b[m\r\n{}"
+        "\x1b[42mgreen across\x1b[m the wrap\r\n\r\nabc\x1b[41m   \x1b[m\r\n\x1b[44mx\x1b[K\x1b[m\r\n"
+        "\x1b[4munder\x1b[m line\x1b[38;2;1;2;3m rgb\x1b[m\r\nend",
+        String().append(23, 'w'));
     auto describe = [](const Term& term, uint32_t index) {
-        std::string out = term.line(index) + "|";
+        String out = format("{}|", term.line(index));
         PrVtermLine line = prVtermLine(term.vterm, index);
         uint32_t end = line.cellCount;
         while (end > 0 && line.cells[end - 1].codePoint == 0 && line.cells[end - 1].background.kind == 0 &&
@@ -634,16 +636,18 @@ TEST_CASE("vterm: a rewrap of packed lines gives the lines that a rewrap of the 
             --end;
         for (uint32_t i = 0; i < end; ++i) {
             const PrVtermCell& cell = line.cells[i];
-            out += std::to_string(cell.flags) + "," + std::to_string(uint32_t(cell.underline)) + "," +
-                std::to_string(cell.foreground.kind) + "." + std::to_string(prVtermColorIndex(cell.foreground)) + "," +
-                std::to_string(cell.background.kind) + "." + std::to_string(prVtermColorIndex(cell.background)) + ";";
+            formatTo(out, "{},{},{}.{},{}.{};", cell.flags, uint32_t(cell.underline), cell.foreground.kind,
+                prVtermColorIndex(cell.foreground), cell.background.kind, prVtermColorIndex(cell.background));
         }
-        return out + ((line.flags & PrVtermLineFlag_Wrapped) != 0 ? "+" : "");
+        if ((line.flags & PrVtermLineFlag_Wrapped) != 0)
+            out.append('+');
+        return out;
     };
-    for (uint32_t width : {7u, 13u, 40u}) {
+    const uint32_t widths[] = {7, 13, 40};
+    for (uint32_t width : widths) {
         CAPTURE(width);
         Term packed(10, 2);
-        packed.write(text + "\r\n\r\n");
+        packed.write(format("{}\r\n\r\n", text));
         Term rows(10, 30);
         rows.write(text);
         REQUIRE(rows.scrollback() == 0);
@@ -693,7 +697,7 @@ TEST_CASE("vterm: origin mode places the cursor in the scroll region") {
 TEST_CASE("vterm: a full reset empties the screen, the scrollback and the modes") {
     Term term(4, 2);
     term.write("1\r\n2\r\n3\x1b[?2004h\x1b[31m\x1b" "c");
-    CHECK(term.all().empty());
+    CHECK(term.all().isEmpty());
     CHECK(prVtermModes(term.vterm) == 0);
     CHECK(cursorAt(term, 0, 0));
     term.write("x");

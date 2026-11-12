@@ -1,12 +1,10 @@
 #include "pr/app_cocoa.h"
+#include "pr/array.h"
+#include "pr/string.h"
+#include "pr/thread.h"
 #include "pr/vec.h"
 
 #include "tools/harness/test.h"
-
-#include <cstring>
-#include <string>
-#include <thread>
-#include <vector>
 
 #import <AppKit/AppKit.h>
 
@@ -15,8 +13,8 @@ namespace pr_impl {
 namespace {
 
 struct Run {
-    std::vector<std::string> seen;
-    std::thread waker;
+    Array<String> seen;
+    PrThread waker{};
     uint32_t frames = 0;
 };
 
@@ -26,7 +24,7 @@ Run& runOf(void* context) {
 
 // A run's events in order, and whether one arrived while the start callback ran.
 struct Input {
-    std::vector<PrAppEvent> events;
+    Array<PrAppEvent> events;
     bool starting = false;
     bool nested = false;
 };
@@ -54,11 +52,11 @@ NSEvent* leftMouse(NSWindow* window, NSEventType type) {
 }
 
 // The events of a run, without Text, which the input method types as it will.
-std::vector<PrAppEventKind> kindsOf(const std::vector<PrAppEvent>& events) {
-    std::vector<PrAppEventKind> kinds;
+Array<PrAppEventKind> kindsOf(const Array<PrAppEvent>& events) {
+    Array<PrAppEventKind> kinds;
     for (const PrAppEvent& event : events) {
         if (event.kind != PrAppEventKind_Text)
-            kinds.push_back(event.kind);
+            kinds.push(event.kind);
     }
     return kinds;
 }
@@ -67,10 +65,10 @@ struct Browse {
     PrApp* app = nullptr;
     PrAppBrowser* browser = nullptr;
     PrStatus loaded = PrStatus_NotFound;
-    std::string result;
+    String result;
     uint32_t width = 0;
     uint32_t height = 0;
-    std::vector<uint8_t> center;    // BGRA
+    Array<uint8_t> center;    // BGRA
 };
 
 } // namespace
@@ -86,7 +84,7 @@ TEST_CASE("a headless run starts, frames, wakes from another thread and shuts do
     PrAppHandler handler{
         &run,
         [](void* context, PrApp* app, const PrAppFrame*) {
-            runOf(context).seen.push_back("start");
+            runOf(context).seen.push("start");
             PrAppSurface surface{};
             CHECK(prAppSurface(app, &surface) == PrStatus_Ok);
             CHECK(surface.kind == PrAppSurfaceKind_NsView);
@@ -97,25 +95,25 @@ TEST_CASE("a headless run starts, frames, wakes from another thread and shuts do
             Run& r = runOf(context);
             if (r.frames++ != 0)
                 return PrAppOutput{};
-            r.seen.push_back("frame");
+            r.seen.push("frame");
             CHECK(frame->extent.x == 64.0f);
             CHECK(frame->extent.y == 32.0f);
             CHECK(frame->delta == 0.0);
-            r.waker = std::thread([app] { prAppWake(app); });
+            prThreadStart(&r.waker, [](void* PR_NULLABLE app) { prAppWake(static_cast<PrApp*>(app)); }, app);
             return PrAppOutput{};
         },
         [](void* context, PrApp* app, const PrAppEvent* event) {
             if (event->kind != PrAppEventKind_Wake)
                 return;
-            runOf(context).seen.push_back("wake");
+            runOf(context).seen.push("wake");
             prAppStop(app);
         },
-        [](void* context, PrApp*) { runOf(context).seen.push_back("shutdown"); },
+        [](void* context, PrApp*) { runOf(context).seen.push("shutdown"); },
     };
     prAppRun(app, &handler);
-    run.waker.join();
+    prThreadJoin(&run.waker);
     prAppDestroy(app);
-    CHECK(run.seen == std::vector<std::string>{"start", "frame", "wake", "shutdown"});
+    CHECK(run.seen == Array<String>({"start", "frame", "wake", "shutdown"}));
 }
 
 TEST_CASE("a process outside an application bundle posts no notification, and does not crash trying") {
@@ -167,7 +165,7 @@ TEST_CASE("a browser loads a page, runs a script in it and captures it at two pi
                 prAppBrowserEvaluate(b.browser, "document.documentElement.getAttribute('width')",
                     [](void* context, PrStatus, PrStringView json) {
                         Browse& b = *static_cast<Browse*>(context);
-                        b.result.assign(json.data != nullptr ? json.data : "", json.size);
+                        b.result.assign(json);
                         prAppBrowserCapture(b.browser, PrRect{0, 0, 40, 20}, PrUVec2{80, 40},
                             [](void* context, PrStatus status, PrPixelView pixels) {
                                 Browse& b = *static_cast<Browse*>(context);
@@ -175,7 +173,8 @@ TEST_CASE("a browser loads a page, runs a script in it and captures it at two pi
                                     b.width = pixels.extent.x;
                                     b.height = pixels.extent.y;
                                     const uint8_t* at = pixels.data + pixels.stride * 20 + 40 * 4;
-                                    b.center.assign(at, at + 4);
+                                    b.center.clear();
+                                    b.center.append(at, 4);
                                 }
                                 prAppStop(b.app);
                             }, &b);
@@ -196,7 +195,7 @@ TEST_CASE("a browser loads a page, runs a script in it and captures it at two pi
     CHECK(browse.result == "\"40\"");
     CHECK(browse.width == 80);
     CHECK(browse.height == 40);
-    REQUIRE(browse.center.size() == 4);
+    REQUIRE(browse.center.count() == 4);
     CHECK(browse.center[2] > 240);      // red
     CHECK(browse.center[1] < 16);
     CHECK(browse.center[0] < 16);
@@ -227,7 +226,7 @@ TEST_CASE("a page from a file reads the files beside it, and a promise answers o
                         " request.send(); new Promise(resolve => setTimeout(() => resolve(request.responseText),"
                         " 10))", [](void* context, PrStatus, PrStringView json) {
                             Browse& b = *static_cast<Browse*>(context);
-                            b.result.assign(json.data != nullptr ? json.data : "", json.size);
+                            b.result.assign(json);
                             prAppStop(b.app);
                         }, &b);
             }, &b);
@@ -269,7 +268,7 @@ TEST_CASE("input that a callback's own run loop dispatches arrives after the cal
         [](void* context, PrApp* app, const PrAppEvent* event) {
             Input& in = inputOf(context);
             in.nested = in.nested || in.starting;
-            in.events.push_back(*event);
+            in.events.push(*event);
             if (event->kind == PrAppEventKind_Wake)
                 prAppStop(app);
         },
@@ -278,10 +277,10 @@ TEST_CASE("input that a callback's own run loop dispatches arrives after the cal
     prAppRun(app, &handler);
     prAppDestroy(app);
     CHECK(!input.nested);
-    CHECK(kindsOf(input.events) == std::vector<PrAppEventKind>{
+    CHECK(kindsOf(input.events) == Array<PrAppEventKind>({
         PrAppEventKind_KeyDown, PrAppEventKind_PointerDown,
         PrAppEventKind_PointerUp, PrAppEventKind_Wake,
-    });
+    }));
 }
 
 TEST_CASE("a window that stops being the key window releases the buttons and keys that are down") {
@@ -302,7 +301,7 @@ TEST_CASE("a window that stops being the key window releases the buttons and key
         },
         [](void*, PrApp*, const PrAppFrame*) { return PrAppOutput{}; },
         [](void* context, PrApp* app, const PrAppEvent* event) {
-            inputOf(context).events.push_back(*event);
+            inputOf(context).events.push(*event);
             if (event->kind == PrAppEventKind_Wake)
                 prAppStop(app);
         },
@@ -310,11 +309,11 @@ TEST_CASE("a window that stops being the key window releases the buttons and key
     };
     prAppRun(app, &handler);
     prAppDestroy(app);
-    CHECK(kindsOf(input.events) == std::vector<PrAppEventKind>{
+    CHECK(kindsOf(input.events) == Array<PrAppEventKind>({
         PrAppEventKind_KeyDown, PrAppEventKind_PointerDown,
         PrAppEventKind_PointerUp, PrAppEventKind_KeyUp,
         PrAppEventKind_Wake,
-    });
+    }));
     for (const PrAppEvent& event : input.events) {
         if (event.kind == PrAppEventKind_KeyUp)
             CHECK(event.code == PrAppKeyCode_KeyA);

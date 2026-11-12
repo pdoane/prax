@@ -10,9 +10,6 @@
 
 #include "tools/harness/test.h"
 
-#include <string>
-#include <vector>
-
 namespace pr_impl {
 
 namespace {
@@ -47,8 +44,8 @@ float topOf(Fixture& f, PrLayoutNode node, PrLayoutCoordinates coordinates) {
 }
 
 // Returns `list` drawn onto `width` by `height` RGBA pixels.
-std::vector<uint8_t> drawn(PrDrawList* list, uint32_t width, uint32_t height) {
-    std::vector<uint8_t> bytes(size_t(width) * height * 4, 0);
+Array<uint8_t> drawn(PrDrawList* list, uint32_t width, uint32_t height) {
+    Array<uint8_t> bytes(width * height * 4);
     PrDrawRenderer* renderer = prDrawCpuCreate(nullptr);
     PrPixels into{bytes.data(), width * 4, {width, height}};
     REQUIRE(prDrawRendererRenderPixels(renderer, list, into, PrPixelFormat_Rgba8) == PrStatus_Ok);
@@ -99,7 +96,7 @@ TEST_CASE("a sticky box stays at its inset in the scrollport as its scroll conta
     // Past it, it stays 10px below the scrollport's top. A scroll records nothing.
     prLayoutNodeSetScroll(f.tree, container, px(0, 100));
     CHECK(f.bounds(stuck).top == 10.0f);
-    std::vector<uint8_t> scrolled = render(f.tree, 200, 200);
+    Array<uint8_t> scrolled = render(f.tree, 200, 200);
     CHECK(prLayoutTreeStats(f.tree).layersRecorded == 0);
     CHECK(pixel(scrolled, 200, 5, 15) == "255 0 0 255");
     CHECK(pixel(scrolled, 200, 5, 5) == "0 0 0 0");
@@ -201,7 +198,7 @@ TEST_CASE("a sticky box with a layer of its own sticks with its effects, and rec
     f.layout(px(200, 200));
     CHECK(pixel(render(f.tree, 200, 200), 200, 5, 55) == "128 0 0 128");
     prLayoutNodeSetScroll(f.tree, container, px(0, 200));
-    std::vector<uint8_t> scrolled = render(f.tree, 200, 200);
+    Array<uint8_t> scrolled = render(f.tree, 200, 200);
     CHECK(prLayoutTreeStats(f.tree).layersRecorded == 0);
     CHECK(pixel(scrolled, 200, 5, 5) == "128 0 0 128");
     CHECK(verified(f.tree));
@@ -223,7 +220,7 @@ TEST_CASE("a scene moves a sticky box by the offsets a player gives, not the tre
     options.scrollCount = 1;
     PrDrawList* list = prDrawListCreate();
     prLayoutScenePlay(scene, list, &options);
-    std::vector<uint8_t> played = drawn(list, 200, 200);
+    Array<uint8_t> played = drawn(list, 200, 200);
     prDrawListRelease(list);
     prLayoutSceneRelease(scene);
     CHECK(pixel(played, 200, 5, 5) == "255 0 0 255");
@@ -295,7 +292,7 @@ TEST_CASE("a sticky row group paints the backgrounds of its tracks behind its ce
     // Scrolled past it, the head stays at the top over the body's cells, until the table's end holds it.
     prLayoutNodeSetScroll(f.tree, container, px(0, 80));
     CHECK(f.bounds(thead).top == 0.0f);
-    std::vector<uint8_t> scrolled = render(f.tree, 200, 200);
+    Array<uint8_t> scrolled = render(f.tree, 200, 200);
     CHECK(pixel(scrolled, 200, 5, 5) == "0 255 0 255");
     CHECK(pixel(scrolled, 200, 5, 25) == "255 0 0 255");
     prLayoutNodeSetScroll(f.tree, container, px(0, 200));

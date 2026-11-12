@@ -9,8 +9,6 @@
 
 #include "tools/harness/test.h"
 
-#include <string.h>
-
 extern "C" int prTestHtmlQuickJsCApi(void);
 
 namespace pr_impl {
@@ -50,7 +48,7 @@ struct Lifetime {
 
     // Calls the function that `source` evaluates to with `argument`, and returns its result.
     JSValue call(const char* source, JSValueConst argument) {
-        JSValue function = JS_Eval(ctx, source, strlen(source), "lifetime", JS_EVAL_TYPE_GLOBAL);
+        JSValue function = JS_Eval(ctx, source, PrStringView(source).size, "lifetime", JS_EVAL_TYPE_GLOBAL);
         REQUIRE(!JS_IsException(function));
         JSValue result = JS_Call(ctx, function, JS_UNDEFINED, 1, &argument);
         if (JS_IsException(result))

@@ -1,5 +1,7 @@
+#include "pr/array.h"
 #include "pr/css.h"
 #include "pr/dom_xml.h"
+#include "pr/string.h"
 #include "pr/string_ops.h"
 #include "pr/url.h"
 
@@ -13,9 +15,6 @@
 #include "dom/src/dom_xml.h"
 
 #include "tools/harness/test.h"
-
-#include <string>
-#include <vector>
 
 namespace pr_impl {
 
@@ -55,10 +54,10 @@ void setColor(PrCssRule* rule, PrStringView value) {
     prCssStyleDeclarationSetProperty((&rule->style), &color, value, false);
 }
 
-std::string ruleText(const CssRuleData* rule) {
+String ruleText(const CssRuleData* rule) {
     PrTextBuffer text = {};
     cssSerializeRule(&text, rule);
-    std::string out = textOf(prTextBufferView(&text));
+    String out = textOf(prTextBufferView(&text));
     prTextBufferReset(&text);
     return out;
 }
@@ -313,16 +312,15 @@ TEST_CASE("a flow-relative longhand maps to the physical one on its side, axis o
 
 TEST_CASE("an xml-stylesheet instruction in the prolog fetches its CSS sheet, which leaves with the instruction") {
     struct HeldFetch {
-        std::string url;
+        String url;
         DomFetchFn done;
         void* data;
     };
-    std::vector<HeldFetch> fetches;
+    Array<HeldFetch> fetches;
     DomDocumentHost host{};
     host.context = &fetches;
     host.fetch = [](void* context, const DomFetchRequest* request, DomFetchFn done, void* data, void (*)(void*)) {
-        static_cast<std::vector<HeldFetch>*>(context)->push_back(
-            HeldFetch{std::string(request->url.data, request->url.size), done, data});
+        static_cast<Array<HeldFetch>*>(context)->push(HeldFetch{String(request->url), done, data});
     };
     PrDomDocument* document = prDomDocumentCreate();
     prCssEnable(document);
@@ -335,7 +333,7 @@ TEST_CASE("an xml-stylesheet instruction in the prolog fetches its CSS sheet, wh
         "<?xml-stylesheet href='x.xsl' type='text/xsl'?><?xml-stylesheet href='alt.css' "
         "alternate='yes'?><svg xmlns='http://www.w3.org/2000/svg'/><?xml-stylesheet href='late.css'?>",
         {}, nullptr, nullptr) == PrStatus_Ok);
-    REQUIRE(fetches.size() == 1);
+    REQUIRE(fetches.count() == 1);
     CHECK(fetches[0].url == "https://example.test/dir/blue.css");
     DomFetchResult result{.status = PrStatus_Ok, .responseStatus = 200, .body = "rect { fill: blue }"};
     fetches[0].done(fetches[0].data, &result);

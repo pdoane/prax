@@ -1,12 +1,10 @@
 #include "pr/ascii.h"
+#include "pr/float.h"
 
 #include "css/src/css_style.h"
 #include "css/src/css_unit.h"
 
 #include "tools/harness/test.h"
-
-#include <cmath>
-#include <initializer_list>
 
 namespace pr_impl {
 
@@ -39,19 +37,21 @@ TEST_CASE("every unit is found however its case is written") {
     }
 
     struct Case { const char* text; PrCssUnit unit; };
-    for (const Case& test : {Case{"px", PrCssUnit_Px}, Case{"PX", PrCssUnit_Px},
-        Case{"Px", PrCssUnit_Px}, Case{"q", PrCssUnit_Q}, Case{"Q", PrCssUnit_Q}, Case{"hz", PrCssUnit_Hz},
-                Case{"Hz", PrCssUnit_Hz}, Case{"HZ", PrCssUnit_Hz}, Case{"khz", PrCssUnit_KHz},
-                Case{"kHz", PrCssUnit_KHz}, Case{"KHZ", PrCssUnit_KHz}, Case{"db", PrCssUnit_DB},
-                Case{"dB", PrCssUnit_DB}, Case{"dvmin", PrCssUnit_Dvmin},
-                Case{"s", PrCssUnit_S}, Case{"st", PrCssUnit_St}}) {
+    const Case cases[] = {
+        {"px", PrCssUnit_Px}, {"PX", PrCssUnit_Px}, {"Px", PrCssUnit_Px}, {"q", PrCssUnit_Q},
+        {"Q", PrCssUnit_Q}, {"hz", PrCssUnit_Hz}, {"Hz", PrCssUnit_Hz}, {"HZ", PrCssUnit_Hz}, {"khz", PrCssUnit_KHz},
+        {"kHz", PrCssUnit_KHz}, {"KHZ", PrCssUnit_KHz}, {"db", PrCssUnit_DB}, {"dB", PrCssUnit_DB},
+        {"dvmin", PrCssUnit_Dvmin}, {"s", PrCssUnit_S}, {"st", PrCssUnit_St},
+    };
+    for (const Case& test : cases) {
         INFO(test.text);
         CHECK(cssUnitFromText(test.text) == test.unit);
     }
 }
 
 TEST_CASE("text no unit matches is unknown") {
-    for (const char* text : {"", "p", "pxx", "zz", "font-size", "e", "\r", "1"}) {
+    const char* const texts[] = {"", "p", "pxx", "zz", "font-size", "e", "\r", "1"};
+    for (const char* text : texts) {
         INFO(text);
         CHECK(cssUnitFromText(text) == PrCssUnit_Unknown);
     }
@@ -65,13 +65,13 @@ TEST_CASE("a change of math-depth past a double's range scales by a finite facto
     CHECK(cssMathDepthScale(context, 0, 2) == doctest::Approx(0.5041));
     CHECK(cssMathDepthScale(context, 2, 0) == doctest::Approx(1 / 0.5041));
     double up = cssMathDepthScale(context, 5000, 0);
-    CHECK(std::isfinite(up));
+    CHECK(prF64IsFinite(up));
     CHECK(up > 1);
     double down = cssMathDepthScale(context, 0, 5000);
-    CHECK(std::isfinite(down));
+    CHECK(prF64IsFinite(down));
     CHECK(down >= 0);
-    CHECK(std::isfinite(cssMathDepthScale(context, -1000000000, 1000000000)));
-    CHECK(std::isfinite(cssMathDepthScale(context, 1000000000, -1000000000)));
+    CHECK(prF64IsFinite(cssMathDepthScale(context, -1000000000, 1000000000)));
+    CHECK(prF64IsFinite(cssMathDepthScale(context, 1000000000, -1000000000)));
 }
 
 TEST_CASE("a font metric is measured once in the bases' font, and takes its fallback where it cannot be") {

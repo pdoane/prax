@@ -10,8 +10,6 @@
 
 #include "tools/harness/test.h"
 
-#include <string>
-
 using namespace harness;
 
 extern "C" int prTestKitCApi(void);

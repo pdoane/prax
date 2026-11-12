@@ -1,20 +1,23 @@
+#include "pr/array.h"
+#include "pr/integer.h"
 #include "pr/lsp.h"
+#include "pr/string.h"
+#include "pr/string_ops.h"
 
 #include "tools/harness/test.h"
-
-#include <string>
-#include <vector>
 
 extern "C" int prTestLspCApi(void);
 
 namespace pr_impl {
 
+using namespace pr;
+
 namespace {
 
 // A server that a test plays: what the client wrote to it, as messages, and what the test sends back.
 struct Server {
-    std::string written;
-    std::vector<std::string> notified;  // the methods of the messages that the client passed to its host
+    String written;
+    Array<String> notified;  // the methods of the messages that the client passed to its host
     PrJson* json = prJsonCreate();
 
     ~Server() {
@@ -22,17 +25,20 @@ struct Server {
     }
 
     // Removes the messages that the client wrote, and returns their bodies.
-    std::vector<std::string> take() {
-        std::vector<std::string> bodies;
+    Array<String> take() {
+        Array<String> bodies;
+        PrStringView text = written;
         size_t at = 0;
-        while (at < written.size()) {
-            size_t headerEnd = written.find("\r\n\r\n", at);
-            REQUIRE(headerEnd != std::string::npos);
-            std::string header = written.substr(at, headerEnd - at);
-            REQUIRE(header.rfind("Content-Length: ", 0) == 0);
-            size_t length = std::stoul(header.substr(16));
-            bodies.push_back(written.substr(headerEnd + 4, length));
-            at = headerEnd + 4 + length;
+        while (at < text.size) {
+            PrStringView rest = prStringSlice(text, at, text.size - at);
+            size_t headerEnd = prStringFind(rest, "\r\n\r\n");
+            REQUIRE(headerEnd != rest.size);
+            PrStringView header = prStringSlice(rest, 0, headerEnd);
+            REQUIRE(prStringStartsWith(header, "Content-Length: "));
+            uint64_t length = 0;
+            REQUIRE(prU64Parse(header.data + 16, header.size - 16, &length, 10));
+            bodies.push(prStringSlice(rest, headerEnd + 4, size_t(length)));
+            at += headerEnd + 4 + size_t(length);
         }
         written.clear();
         return bodies;
@@ -40,46 +46,53 @@ struct Server {
 
     // Removes the messages that the client wrote, and returns the one message among them, parsed.
     PrJson* takeOne() {
-        std::vector<std::string> bodies = take();
-        REQUIRE(bodies.size() == 1);
+        Array<String> bodies = take();
+        REQUIRE(bodies.count() == 1);
         REQUIRE(prJsonParse(json, bodies[0], nullptr));
         return json;
     }
 };
 
 void writeToServer(void* PR_NULLABLE context, PrByteView bytes) {
-    static_cast<Server*>(context)->written.append(reinterpret_cast<const char*>(bytes.data), bytes.size);
+    static_cast<Server*>(context)->written.append(prStringFromBytes(bytes));
 }
 
 void noteMessage(void* PR_NULLABLE context, const PrLspMessage* message) {
-    static_cast<Server*>(context)->notified.emplace_back(message->method.data, message->method.size);
+    static_cast<Server*>(context)->notified.push(message->method);
 }
 
-std::string frame(const std::string& body) {
-    return "Content-Length: " + std::to_string(body.size()) + "\r\n\r\n" + body;
+String frame(PrStringView body) {
+    return format("Content-Length: {}\r\n\r\n{}", body.size, body);
 }
 
-void receive(PrLspClient* client, const std::string& body) {
-    std::string framed = frame(body);
-    prLspClientReceive(client, PrByteView{reinterpret_cast<const uint8_t*>(framed.data()), framed.size()});
+void receive(PrLspClient* client, PrStringView body) {
+    String framed = frame(body);
+    prLspClientReceive(client, prStringBytes(framed));
 }
 
-PrStringView stringAt(const PrJson* json, std::initializer_list<const char*> path) {
+// Returns the value at the end of `path`, the members' names from the root joined by dots, or kPrJsonMissing.
+PrJsonValueIndex valueAt(const PrJson* json, PrStringView path) {
     PrJsonValueIndex at = 0;
-    for (const char* key : path)
-        at = at != kPrJsonMissing ? prJsonMember(json, at, key) : kPrJsonMissing;
-    return prJsonString(json, at);
+    for (;;) {
+        size_t dot = prStringFindByte(path, '.');
+        at = prJsonMember(json, at, prStringHead(path, dot));
+        if (at == kPrJsonMissing || dot == path.size)
+            return at;
+        path = prStringFrom(path, dot + 1);
+    }
 }
 
-double numberAt(const PrJson* json, std::initializer_list<const char*> path) {
-    PrJsonValueIndex at = 0;
-    for (const char* key : path)
-        at = at != kPrJsonMissing ? prJsonMember(json, at, key) : kPrJsonMissing;
-    return prJsonNumber(json, at, -1);
+// Return the string, or the number, at the end of `path`, as valueAt finds it.
+PrStringView stringAt(const PrJson* json, PrStringView path) {
+    return prJsonString(json, valueAt(json, path));
+}
+
+double numberAt(const PrJson* json, PrStringView path) {
+    return prJsonNumber(json, valueAt(json, path), -1);
 }
 
 // A client that the server has initialized, with the capabilities that `capabilities` holds as JSON.
-PrLspClient* running(Server& server, const std::string& capabilities) {
+PrLspClient* running(Server& server, PrStringView capabilities) {
     PrLspClientDesc desc{
         .rootPath = "/work/project",
         .clientName = "tests",
@@ -90,12 +103,12 @@ PrLspClient* running(Server& server, const std::string& capabilities) {
     };
     PrLspClient* client = prLspClientCreate(&desc);
     PrJson* initialize = server.takeOne();
-    REQUIRE(stringAt(initialize, {"method"}) == "initialize");
-    receive(client, "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"capabilities\":" + capabilities +
-        ",\"serverInfo\":{\"name\":\"fake\"}}}");
-    std::vector<std::string> sent = server.take();
-    REQUIRE(sent.size() == 1);
-    CHECK(sent[0].find("\"method\":\"initialized\"") != std::string::npos);
+    REQUIRE(stringAt(initialize, "method") == "initialize");
+    receive(client, format("{{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{{\"capabilities\":{},"
+        "\"serverInfo\":{{\"name\":\"fake\"}}}}}}", capabilities));
+    Array<String> sent = server.take();
+    REQUIRE(sent.count() == 1);
+    CHECK(prStringContains(sent[0], "\"method\":\"initialized\""));
     REQUIRE(prLspClientState(client) == PrLspClientState_Running);
     return client;
 }
@@ -109,7 +122,7 @@ void edit(PrTextEditBuffer* buffer, uint32_t start, uint32_t end, PrStringView t
 // A response's text, for a test's callback to keep.
 struct Answer {
     bool called = false;
-    std::string text;
+    String text;
     int32_t errorCode = 0;
 };
 
@@ -119,7 +132,7 @@ void keepHover(void* PR_NULLABLE context, const PrLspResponse* response) {
     answer.errorCode = response->errorCode;
     PrRawString text = prLspHoverText(response->json, response->result);
     PrStringView view = prRawStringView(&text);
-    answer.text.assign(view.data, view.size);
+    answer.text.assign(view);
     prRawStringReset(&text);
 }
 
@@ -153,7 +166,7 @@ TEST_CASE("lsp: the initialize request names the workspace and asks for UTF-8 fi
     PrLspClientDesc desc{.rootPath = "/work/my project", .write = writeToServer, .writeContext = &server};
     PrLspClient* client = prLspClientCreate(&desc);
     PrJson* json = server.takeOne();
-    CHECK(stringAt(json, {"params", "rootUri"}) == "file:///work/my%20project");
+    CHECK(stringAt(json, "params.rootUri") == "file:///work/my%20project");
     PrJsonValueIndex encodings = prJsonMember(json, prJsonMember(json, prJsonMember(json, prJsonMember(json, 0,
         "params"), "capabilities"), "general"), "positionEncodings");
     CHECK(prJsonString(json, prJsonElement(json, encodings, 0)) == "utf-8");
@@ -166,17 +179,17 @@ TEST_CASE("lsp: a document opens with its text and sends its edits in ranges") {
     PrTextEditBuffer* buffer = prTextEditBufferCreate("int a;\nint b;\n");
     PrLspDocument* document = prLspDocumentCreate(client, buffer, "/work/project/a.cpp", "cpp");
     PrJson* open = server.takeOne();
-    CHECK(stringAt(open, {"method"}) == "textDocument/didOpen");
-    CHECK(stringAt(open, {"params", "textDocument", "uri"}) == "file:///work/project/a.cpp");
-    CHECK(stringAt(open, {"params", "textDocument", "languageId"}) == "cpp");
-    CHECK(stringAt(open, {"params", "textDocument", "text"}) == "int a;\nint b;\n");
+    CHECK(stringAt(open, "method") == "textDocument/didOpen");
+    CHECK(stringAt(open, "params.textDocument.uri") == "file:///work/project/a.cpp");
+    CHECK(stringAt(open, "params.textDocument.languageId") == "cpp");
+    CHECK(stringAt(open, "params.textDocument.text") == "int a;\nint b;\n");
 
     edit(buffer, 11, 11, "c");
     edit(buffer, 0, 3, "long");
     prLspDocumentSync(document);
     PrJson* change = server.takeOne();
-    CHECK(stringAt(change, {"method"}) == "textDocument/didChange");
-    CHECK(numberAt(change, {"params", "textDocument", "version"}) == 2);
+    CHECK(stringAt(change, "method") == "textDocument/didChange");
+    CHECK(numberAt(change, "params.textDocument.version") == 2);
     PrJsonValueIndex changes = prJsonMember(change, prJsonMember(change, 0, "params"), "contentChanges");
     REQUIRE(prJsonCount(change, changes) == 2);
     PrJsonValueIndex first = prJsonElement(change, changes, 0);
@@ -189,12 +202,12 @@ TEST_CASE("lsp: a document opens with its text and sends its edits in ranges") {
 
     // Nothing changed since, so nothing is sent.
     prLspDocumentSync(document);
-    CHECK(server.take().empty());
+    CHECK(server.take().isEmpty());
 
     prLspDocumentSave(document);
-    CHECK(stringAt(server.takeOne(), {"method"}) == "textDocument/didSave");
+    CHECK(stringAt(server.takeOne(), "method") == "textDocument/didSave");
     prLspDocumentDestroy(document);
-    CHECK(stringAt(server.takeOne(), {"method"}) == "textDocument/didClose");
+    CHECK(stringAt(server.takeOne(), "method") == "textDocument/didClose");
     prTextEditBufferDestroy(buffer);
     prLspClientDestroy(client);
 }
@@ -207,13 +220,13 @@ TEST_CASE("lsp: a document opened while the client initializes is opened with th
     PrTextEditBuffer* buffer = prTextEditBufferCreate("one");
     PrLspDocument* document = prLspDocumentCreate(client, buffer, "/a.txt", "plaintext");
     edit(buffer, 3, 3, " two");
-    CHECK(server.take().empty());
-    receive(client, std::string("{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"capabilities\":") + kIncremental + "}}");
-    std::vector<std::string> sent = server.take();
-    REQUIRE(sent.size() == 2);
-    CHECK(sent[1].find("\"text\":\"one two\"") != std::string::npos);
+    CHECK(server.take().isEmpty());
+    receive(client, format("{{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{{\"capabilities\":{}}}}}", kIncremental));
+    Array<String> sent = server.take();
+    REQUIRE(sent.count() == 2);
+    CHECK(prStringContains(sent[1], "\"text\":\"one two\""));
     prLspDocumentSync(document);
-    CHECK(server.take().empty());
+    CHECK(server.take().isEmpty());
     prLspDocumentDestroy(document);
     prTextEditBufferDestroy(buffer);
     prLspClientDestroy(client);
@@ -319,18 +332,18 @@ TEST_CASE("lsp: a hover request is answered through its callback") {
     PrLspRequest request = prLspDocumentHover(document, 4, keepHover, &answer);
     CHECK(request != kPrLspRequestNone);
     PrJson* json = server.takeOne();
-    CHECK(stringAt(json, {"method"}) == "textDocument/hover");
-    CHECK(numberAt(json, {"params", "position", "character"}) == 4);
-    std::string id = std::to_string(uint32_t(numberAt(json, {"id"})));
-    receive(client, "{\"jsonrpc\":\"2.0\",\"id\":" + id +
-        ",\"result\":{\"contents\":{\"kind\":\"markdown\",\"value\":\"`int a`\"}}}");
+    CHECK(stringAt(json, "method") == "textDocument/hover");
+    CHECK(numberAt(json, "params.position.character") == 4);
+    uint32_t id = uint32_t(numberAt(json, "id"));
+    receive(client, format("{{\"jsonrpc\":\"2.0\",\"id\":{},\"result\":{{\"contents\":{{\"kind\":\"markdown\","
+        "\"value\":\"`int a`\"}}}}}}", id));
     CHECK(answer.called);
     CHECK(answer.text == "`int a`");
 
     Answer failed;
     prLspDocumentHover(document, 0, keepHover, &failed);
-    id = std::to_string(uint32_t(numberAt(server.takeOne(), {"id"})));
-    receive(client, "{\"jsonrpc\":\"2.0\",\"id\":" + id + ",\"error\":{\"code\":-32603,\"message\":\"no\"}}");
+    id = uint32_t(numberAt(server.takeOne(), "id"));
+    receive(client, format("{{\"jsonrpc\":\"2.0\",\"id\":{},\"error\":{{\"code\":-32603,\"message\":\"no\"}}}}", id));
     CHECK(failed.called);
     CHECK(failed.errorCode == -32603);
     prLspDocumentDestroy(document);
@@ -344,12 +357,12 @@ TEST_CASE("lsp: a cancelled request's callback is not called") {
     Answer answer;
     PrLspRequest request = prLspClientRequest(client, "custom/thing", "{\"a\":1}", keepHover, &answer);
     PrJson* json = server.takeOne();
-    CHECK(numberAt(json, {"params", "a"}) == 1);
+    CHECK(numberAt(json, "params.a") == 1);
     prLspClientCancel(client, request);
     PrJson* cancel = server.takeOne();
-    CHECK(stringAt(cancel, {"method"}) == "$/cancelRequest");
-    CHECK(numberAt(cancel, {"params", "id"}) == double(request));
-    receive(client, "{\"jsonrpc\":\"2.0\",\"id\":" + std::to_string(request) + ",\"result\":null}");
+    CHECK(stringAt(cancel, "method") == "$/cancelRequest");
+    CHECK(numberAt(cancel, "params.id") == double(request));
+    receive(client, format("{{\"jsonrpc\":\"2.0\",\"id\":{},\"result\":null}}", request));
     CHECK(!answer.called);
     CHECK(prLspClientRequest(client, "custom/thing", "{not json", keepHover, &answer) == kPrLspRequestNone);
     prLspClientDestroy(client);
@@ -392,12 +405,12 @@ TEST_CASE("lsp: requests of the server are answered, and notifications reach the
     receive(client, "{\"jsonrpc\":\"2.0\",\"id\":\"c1\",\"method\":\"workspace/configuration\",\"params\":{"
         "\"items\":[{\"section\":\"a\"},{\"section\":\"b\"}]}}");
     PrJson* answer = server.takeOne();
-    CHECK(stringAt(answer, {"id"}) == "c1");
+    CHECK(stringAt(answer, "id") == "c1");
     CHECK(prJsonCount(answer, prJsonMember(answer, 0, "result")) == 2);
     receive(client, "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"something/unknown\"}");
-    CHECK(numberAt(server.takeOne(), {"error", "code"}) == -32601);
+    CHECK(numberAt(server.takeOne(), "error.code") == -32601);
     receive(client, "{\"jsonrpc\":\"2.0\",\"method\":\"window/logMessage\",\"params\":{\"type\":3,\"message\":\"hi\"}}");
-    REQUIRE(server.notified.size() == 1);
+    REQUIRE(server.notified.count() == 1);
     CHECK(server.notified[0] == "window/logMessage");
     prLspClientDestroy(client);
 }
@@ -412,12 +425,12 @@ TEST_CASE("lsp: messages split anywhere in the bytes are read whole") {
     };
     PrLspClient* client = prLspClientCreate(&desc);
     server.take();
-    std::string bytes = frame(std::string("{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"capabilities\":{}}}")) +
-        frame("{\"jsonrpc\":\"2.0\",\"method\":\"window/logMessage\",\"params\":{}}");
+    String bytes = frame("{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"capabilities\":{}}}");
+    bytes.append(frame("{\"jsonrpc\":\"2.0\",\"method\":\"window/logMessage\",\"params\":{}}"));
     for (char c : bytes)
         prLspClientReceive(client, PrByteView{reinterpret_cast<const uint8_t*>(&c), 1});
     CHECK(prLspClientState(client) == PrLspClientState_Running);
-    CHECK(server.notified.size() == 1);
+    CHECK(server.notified.count() == 1);
     prLspClientDestroy(client);
 }
 
@@ -425,8 +438,8 @@ TEST_CASE("lsp: what is not the protocol fails the client") {
     Server server;
     PrLspClientDesc desc{.write = writeToServer, .writeContext = &server};
     PrLspClient* client = prLspClientCreate(&desc);
-    std::string bytes = "Content-Type: nothing\r\n\r\n{}";
-    prLspClientReceive(client, PrByteView{reinterpret_cast<const uint8_t*>(bytes.data()), bytes.size()});
+    PrStringView bytes = "Content-Type: nothing\r\n\r\n{}";
+    prLspClientReceive(client, prStringBytes(bytes));
     CHECK(prLspClientState(client) == PrLspClientState_Failed);
     prLspClientDestroy(client);
 
@@ -442,10 +455,10 @@ TEST_CASE("lsp: shutting down asks the server to shut down, then to exit") {
     prLspClientShutdown(client);
     CHECK(prLspClientState(client) == PrLspClientState_ShuttingDown);
     PrJson* shutdown = server.takeOne();
-    CHECK(stringAt(shutdown, {"method"}) == "shutdown");
-    std::string id = std::to_string(uint32_t(numberAt(shutdown, {"id"})));
-    receive(client, "{\"jsonrpc\":\"2.0\",\"id\":" + id + ",\"result\":null}");
-    CHECK(stringAt(server.takeOne(), {"method"}) == "exit");
+    CHECK(stringAt(shutdown, "method") == "shutdown");
+    uint32_t id = uint32_t(numberAt(shutdown, "id"));
+    receive(client, format("{{\"jsonrpc\":\"2.0\",\"id\":{},\"result\":null}}", id));
+    CHECK(stringAt(server.takeOne(), "method") == "exit");
     CHECK(prLspClientState(client) == PrLspClientState_Stopped);
     prLspClientDestroy(client);
 }

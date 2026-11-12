@@ -5,8 +5,6 @@
 
 #include "tools/harness/test.h"
 
-#include <vector>
-
 extern "C" int prTestAudioCApi(void);
 
 namespace pr_impl {
@@ -16,8 +14,8 @@ namespace {
 // The renders of an output: the frames of each, and the output's clock as each began.
 struct Renders {
     PrAudioOutput* output;
-    std::vector<uint32_t> frames;
-    std::vector<double> times;
+    Array<uint32_t> frames;
+    Array<double> times;
 };
 
 } // namespace
@@ -68,16 +66,16 @@ TEST_CASE("a memory output that its host paces renders on the host's thread as i
     Renders renders{.output = output};
     PrAudioRenderFn render = [](void* context, float* samples, uint32_t frames) {
         Renders* r = static_cast<Renders*>(context);
-        r->frames.push_back(frames);
-        r->times.push_back(prAudioOutputNow(r->output));
+        r->frames.push(frames);
+        r->times.push(prAudioOutputNow(r->output));
         for (uint32_t i = 0; i < frames; ++i)
             samples[i] = 0.5f;
     };
     REQUIRE(prAudioOutputStart(output, render, &renders));
-    CHECK(renders.frames.empty());
+    CHECK(renders.frames.isEmpty());
     prAudioMemoryAdvance(output, 1100);
     uint64_t total = 0;
-    for (size_t i = 0; i < renders.frames.size(); ++i) {
+    for (uint32_t i = 0; i < renders.frames.count(); ++i) {
         // Each render begins where the frames before it end.
         CHECK(renders.times[i] == doctest::Approx(1000 + double(total) / 48));
         total += renders.frames[i];

@@ -11,6 +11,7 @@
 // --sections sets how many sections the document holds; 40 by default, about 60 pages. If a case is named, only that
 // case runs, repeatedly, for five minutes (harnessRepeat). This is for attaching a profiler.
 
+#include "pr/array.h"
 #include "pr/assert.h"
 #include "pr/compress.h"
 #include "pr/count_of.h"
@@ -21,17 +22,14 @@
 #include "pr/html_page.h"
 #include "pr/html_structure.h"
 #include "pr/html_view.h"
+#include "pr/integer.h"
 #include "pr/layout_page.h"
+#include "pr/print.h"
 #include "pr/string_ops.h"
 #include "pr/text_buffer.h"
 #include "pr/text_harfbuzz.h"
 
 #include "tools/harness/harness.h"
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <vector>
 
 using namespace harness;
 
@@ -90,12 +88,12 @@ void paragraph(PrTextBuffer* out, Words& words, uint32_t count) {
 // A whole document of `sections` sections.
 void document(PrTextBuffer* out, uint32_t sections) {
     Words words;
-    char number[16];
+    char digits[16];
     prTextBufferAppend(out, "<!doctype html><html lang=en><head><title>Printed</title><style>");
     prTextBufferAppend(out, kRules);
     prTextBufferAppend(out, "</style></head><body>");
     for (uint32_t s = 0; s < sections; ++s) {
-        snprintf(number, sizeof(number), "%u", s + 1);
+        PrStringView number = formatToBuffer(Span(digits), "{}", s + 1);
         prTextBufferAppend(out, "<h2 id=\"s");
         prTextBufferAppend(out, number);
         prTextBufferAppend(out, "\">Section ");
@@ -148,13 +146,20 @@ PrTextFont* makeFont(PrFontSet** fonts, PrTextShaper** shaper) {
     return prTextFontCreate(&defaultFontDesc);
 }
 
+// The number at the start of `text`, as the bench's options give it, or zero if it starts with no digit.
+uint32_t parseCount(PrStringView text) {
+    uint64_t value = 0;
+    prU64ParsePrefix(text.data, text.size, &value, 10);
+    return value > UINT32_MAX ? UINT32_MAX : uint32_t(value);
+}
+
 // The printed document: its pages' lists and extents, and its structure.
 struct Printed {
     PrHtmlPage* page;
     PrHtmlView* view;
     PrDrawStructure* structure;
-    std::vector<PrDrawList*> lists;
-    std::vector<PrDrawPage> pages;
+    Array<PrDrawList*> lists;
+    Array<PrDrawPage> pages;
 };
 
 // Releases the lists of the printed pages.
@@ -175,10 +180,10 @@ void paint(Printed* printed) {
     for (uint32_t i = 0; i < count; ++i) {
         PrDrawList* list = prDrawListCreate();
         prHtmlViewPaintPage(printed->view, i, list);
-        printed->lists.push_back(list);
+        printed->lists.push(list);
         PrLayoutPage page = prHtmlViewPage(printed->view, i);
         PrLayoutPageSheet sheet = prLayoutPageBoxSheet(&page.box);
-        printed->pages.push_back(PrDrawPage{
+        printed->pages.push(PrDrawPage{
             .list = list,
             .extent = prLayoutVecToPx(sheet.extent),
             .bleed = prLayoutRectToPx(sheet.bleed),
@@ -206,7 +211,7 @@ uint64_t write(const Printed* printed, PrDrawWriterBackend backend, PrCompressCo
         .title = "Printed",
         .language = "en",
     };
-    prDrawWriterWrite(writer, &desc, printed->pages.data(), uint32_t(printed->pages.size()));
+    prDrawWriterWrite(writer, &desc, printed->pages.data(), printed->pages.count());
     prDrawWriterDestroy(writer);
     return written;
 }
@@ -216,13 +221,13 @@ uint64_t write(const Printed* printed, PrDrawWriterBackend backend, PrCompressCo
 int main(int argc, char** argv) {
     prCrashHandler();
     uint32_t sections = kDefaultSections;
-    if (argc >= 3 && strcmp(argv[1], "--sections") == 0) {
-        sections = uint32_t(atoi(argv[2]));
+    if (argc >= 3 && PrStringView(argv[1]) == "--sections") {
+        sections = parseCount(argv[2]);
         argc -= 2;
         argv += 2;
     }
     if (argc > 2 || sections == 0) {
-        fprintf(stderr, "usage: print_bench [--sections N] [case], with N at least 1\n");
+        printError("usage: print_bench [--sections N] [case], with N at least 1\n");
         return 2;
     }
     PrFontSet* fonts = nullptr;
@@ -265,7 +270,9 @@ int main(int argc, char** argv) {
 
     PrStringView only = argc == 2 ? argv[1] : PrStringView{};
     bool first = true;
-    printf("[");
+    // The cases' rows go through the C library's buffered output, so the opening bracket is written before any of them,
+    // and the closing one after them through the same buffer.
+    print("[");
     for (const Case& c : kCases) {
         if (only.data != nullptr) {
             if (only != c.name)
@@ -276,9 +283,9 @@ int main(int argc, char** argv) {
         harnessWriteCase(first, c.name, cost);
         first = false;
     }
-    printf("\n]\n");
-    fprintf(stderr, "print_bench: %zu pages, %llu bytes of PDF\n", printed.pages.size(),
-        static_cast<unsigned long long>(write(&printed, PrDrawWriterBackend_Pdf, codec)));
+    harnessWriteLine("\n]");
+    printError("print_bench: {} pages, {} bytes of PDF\n", printed.pages.count(),
+        write(&printed, PrDrawWriterBackend_Pdf, codec));
 
     release(&printed);
     prDrawStructureDestroy(printed.structure);

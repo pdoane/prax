@@ -1,13 +1,13 @@
 // Studio Kit's timeline.
 
+#include "pr/array.h"
+#include "pr/count_of.h"
 #include "pr/kit_box.h"
 #include "pr/kit_timeline.h"
 
 #include "tools/harness/kit_fixture.h"
 
 #include "tools/harness/test.h"
-
-#include <vector>
 
 using namespace harness;
 
@@ -22,10 +22,10 @@ constexpr float kTrack = 26;
 
 // The phases that an edit sink saw.
 struct Phases {
-    std::vector<PrUiEditPhase> seen;
+    Array<PrUiEditPhase> seen;
 
     static void record(void* context, PrLayoutNode, PrUiEditPhase phase) {
-        static_cast<Phases*>(context)->seen.push_back(phase);
+        static_cast<Phases*>(context)->seen.push(phase);
     }
 };
 
@@ -35,12 +35,12 @@ struct TimelineScene {
     KitFixture& f;
     Phases phases;
     PrKitTimelineTrack tracks[2] = {{"Position"}, {"Rotation"}};
-    std::vector<PrKitTimelineBlock> blocks = {
+    PrKitTimelineBlock blocks[3] = {
         {.id = 1, .track = 0, .start = 1, .duration = 2, .color = {0.3f, 0.5f, 0.8f, 1}, .label = "Walk"},
         {.id = 2, .track = 0, .start = 4, .duration = 1, .color = {0.3f, 0.5f, 0.8f, 1}, .label = "Run"},
         {.id = 3, .track = 1, .start = 2, .duration = 2, .color = {0.8f, 0.5f, 0.3f, 1}, .label = "Turn"},
     };
-    std::vector<PrKitTimelineMarker> markers;
+    Array<PrKitTimelineMarker> markers;
     PrKitTimeSpan view{0, 8};
     float playhead = 0;
     PrKitTimelineSnap snap{.step = 0.25f};
@@ -58,10 +58,10 @@ struct TimelineScene {
             PrKitTimeline timeline{
                 .tracks = tracks,
                 .trackCount = 2,
-                .blocks = blocks.data(),
-                .blockCount = uint32_t(blocks.size()),
+                .blocks = blocks,
+                .blockCount = uint32_t(countOf(blocks)),
                 .markers = markers.data(),
-                .markerCount = uint32_t(markers.size()),
+                .markerCount = markers.count(),
                 .view = &view,
                 .playhead = &playhead,
                 .snap = snap,
@@ -245,7 +245,8 @@ TEST_CASE("a drag snaps to the edges of other blocks, to markers and to the play
         float expected;
     };
     // Block 2's start dragged from 4 s to 3.08 s, near block 1's end at 3 s.
-    for (Case c : {Case{{.edges = true}, 3.0f}, Case{{}, 3.08f}}) {
+    const Case edges[] = {{{.edges = true}, 3.0f}, {{}, 3.08f}};
+    for (Case c : edges) {
         KitFixture f;
         TimelineScene scene(f);
         scene.snap = c.snap;
@@ -255,18 +256,21 @@ TEST_CASE("a drag snaps to the edges of other blocks, to markers and to the play
         CHECK(scene.blocks[1].start == doctest::Approx(c.expected).epsilon(0.002));
     }
     // Block 2's end dragged from 5 s to 6.44 s, near a marker at 6.5 s.
-    for (Case c : {Case{{.markers = true}, 6.5f}, Case{{}, 6.44f}}) {
+    const Case markers[] = {{{.markers = true}, 6.5f}, {{}, 6.44f}};
+    for (Case c : markers) {
         KitFixture f;
         TimelineScene scene(f);
         scene.snap = c.snap;
-        scene.markers = {{.track = 1, .time = 6.5f, .color = {1, 0, 0, 1}}};
+        scene.markers.clear();
+        scene.markers.push(PrKitTimelineMarker{.track = 1, .time = 6.5f, .color = {1, 0, 0, 1}});
         f.frame();
         f.frame();
         scene.drag(scene.at(5 - 0.04f, 0), scene.at(6.44f, 0));
         CHECK(scene.blocks[1].start + scene.blocks[1].duration == doctest::Approx(c.expected).epsilon(0.002));
     }
     // Block 1's end dragged from 3 s to 2.5 s, near the playhead at 2.55 s.
-    for (Case c : {Case{{.playhead = true}, 2.55f}, Case{{}, 2.5f}}) {
+    const Case playheads[] = {{{.playhead = true}, 2.55f}, {{}, 2.5f}};
+    for (Case c : playheads) {
         KitFixture f;
         TimelineScene scene(f);
         scene.snap = c.snap;

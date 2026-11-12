@@ -1542,7 +1542,7 @@ void imageFetched(void* PR_NULLABLE data, const DomFetchResult* result) {
     image.state = CssPresentationImageState_Broken;
     const DomDocumentHost* host = r->document->host;
     DomDecodedImage decoded{};
-    PrByteView bytes{reinterpret_cast<const uint8_t*>(result->body.data), result->body.size};
+    PrByteView bytes = prStringBytes(result->body);
     if (result->status == PrStatus_Ok && host != nullptr && host->decodeImage != nullptr &&
             host->decodeImage(host->context, bytes, domUrlFragment(prRawStringView(&image.url)), &decoded)) {
         image.state = CssPresentationImageState_Loaded;

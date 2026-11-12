@@ -1,16 +1,16 @@
+#include "pr/array.h"
+#include "pr/float.h"
 #include "pr/kit_box.h"
 #include "pr/kit_button.h"
 #include "pr/kit_color.h"
 #include "pr/kit_input.h"
 #include "pr/kit_menu.h"
+#include "pr/span.h"
+#include "pr/string.h"
 
 #include "tools/harness/kit_fixture.h"
 
 #include "tools/harness/test.h"
-
-#include <cmath>
-#include <string>
-#include <vector>
 
 using namespace harness;
 
@@ -29,7 +29,7 @@ void up(KitFixture& f, PrVec2 at) {
 }
 
 // Drags from `from` by each of `steps` px horizontally, a frame each, and releases.
-void dragBy(KitFixture& f, PrVec2 from, std::initializer_list<float> steps, PrAppModifierFlags modifiers = 0) {
+void dragBy(KitFixture& f, PrVec2 from, Span<const float> steps, PrAppModifierFlags modifiers = 0) {
     down(f, from);
     f.frame();
     PrVec2 at = from;
@@ -42,15 +42,20 @@ void dragBy(KitFixture& f, PrVec2 from, std::initializer_list<float> steps, PrAp
     f.frame();
 }
 
+// Drags from `from` by `step` px horizontally in one frame, and releases.
+void dragBy(KitFixture& f, PrVec2 from, float step, PrAppModifierFlags modifiers = 0) {
+    dragBy(f, from, Span<const float>(&step, 1), modifiers);
+}
+
 // The phases that an edit sink saw, in order.
 struct Edits {
-    std::vector<PrUiEditPhase> phases;
-    std::vector<PrLayoutNode> controls;
+    Array<PrUiEditPhase> phases;
+    Array<PrLayoutNode> controls;
 
     static void record(void* context, PrLayoutNode control, PrUiEditPhase phase) {
         Edits* edits = static_cast<Edits*>(context);
-        edits->phases.push_back(phase);
-        edits->controls.push_back(control);
+        edits->phases.push(phase);
+        edits->controls.push(control);
     }
     uint32_t count(PrUiEditPhase phase) const {
         uint32_t n = 0;
@@ -98,20 +103,20 @@ PrVec2 landed(PrVec2 p, PrVec2 panel, PrVec2 stage, const PrMatrix4& turn, float
 }
 
 // Writes the text of the control `field` to `owned`, if it changed in the round, and returns the control.
-PrLayoutNode taken(PrKit* kit, PrLayoutNode field, std::string& owned) {
+PrLayoutNode taken(PrKit* kit, PrLayoutNode field, String& owned) {
     PrStringView text{};
     if (prKitTextChanged(kit, field, &text))
-        owned.assign(text.data, text.size);
+        owned.assign(text);
     return field;
 }
 
 // Returns the asset field's gutter buttons, in order: browse, then locate and clear unless the field is empty.
-std::vector<PrLayoutNode> gutterButtons(KitFixture& f, PrLayoutNode field) {
-    std::vector<PrLayoutNode> buttons;
+Array<PrLayoutNode> gutterButtons(KitFixture& f, PrLayoutNode field) {
+    Array<PrLayoutNode> buttons;
     PrLayoutNode gutter = prLayoutNodeLastChild(f.tree, field);
     for (PrLayoutNode n = prLayoutNodeFirstChild(f.tree, gutter); n != kPrLayoutNodeNone;
             n = prLayoutNodeNextSibling(f.tree, n))
-        buttons.push_back(n);
+        buttons.push(n);
     return buttons;
 }
 
@@ -132,9 +137,10 @@ TEST_CASE("dragging a number field changes its value by the step for each px, an
     };
     f.frame();
     PrVec2 at = f.center(field);
-    dragBy(f, at, {10, 10});
+    const float steps[] = {10, 10};
+    dragBy(f, at, steps);
     CHECK(value == doctest::Approx(3.0));
-    dragBy(f, at, {30});
+    dragBy(f, at, 30);
     CHECK(value == doctest::Approx(4.0));
     CHECK(kitVerified(f.tree));
 }
@@ -151,7 +157,8 @@ TEST_CASE("a scrub past a bound turns back as soon as the pointer does") {
         field = prKitNumberField(f.kit, root, number, {});
     };
     f.frame();
-    dragBy(f, f.center(field), {20, -3});
+    const float steps[] = {20, -3};
+    dragBy(f, f.center(field), steps);
     CHECK(value == 2.0);
 }
 
@@ -187,9 +194,10 @@ TEST_CASE("an integer field scrubs in whole values, and stops at its kind's boun
     };
     f.frame();
     PrVec2 at = f.center(field);
-    dragBy(f, at, {-4, -4});
+    const float steps[] = {-4, -4};
+    dragBy(f, at, steps);
     CHECK(value == 246);
-    dragBy(f, at, {40});
+    dragBy(f, at, 40);
     CHECK(value == 255);
 }
 
@@ -235,7 +243,7 @@ TEST_CASE("a disabled number field takes no scrub and no focus") {
             {.value = prKitScalarF32(&value)}, {});
     };
     f.frame();
-    dragBy(f, f.center(field), {20});
+    dragBy(f, f.center(field), 20);
     CHECK(value == 1.0f);
     CHECK(prUiFocus(f.ui) == kPrLayoutNodeNone);
 }
@@ -253,12 +261,13 @@ TEST_CASE("a vector edits each component through its own field, tagged in the ax
     CHECK(row.right - row.left == 800.0f);
     float third = (row.right - row.left) / 3;
     PrVec2 middle{row.left + third * 1.5f, (row.top + row.bottom) / 2};
-    dragBy(f, middle, {4, 4});
+    const float steps[] = {4, 4};
+    dragBy(f, middle, steps);
     CHECK(xyz[0] == 1.0f);
     CHECK(xyz[1] == 6.0f);
     CHECK(xyz[2] == 3.0f);
     PrVec2 last{row.left + third * 2.5f, middle.y};
-    dragBy(f, last, {-4});
+    dragBy(f, last, -4);
     CHECK(xyz[2] == 1.0f);
     CHECK(kitVerified(f.tree));
 }
@@ -279,9 +288,9 @@ TEST_CASE("a slider takes the fraction a press stands at, and follows the drag")
     f.click(PrVec2{box.left + pad + width / 4, y});
     f.frame();
     CHECK(value == doctest::Approx(2.5).epsilon(0.001));
-    dragBy(f, PrVec2{box.left + pad + width / 2, y}, {width / 4});
+    dragBy(f, PrVec2{box.left + pad + width / 2, y}, width / 4);
     CHECK(value == doctest::Approx(7.5).epsilon(0.001));
-    dragBy(f, PrVec2{box.left + pad + width / 2, y}, {width});
+    dragBy(f, PrVec2{box.left + pad + width / 2, y}, width);
     CHECK(value == 10.0f);
     CHECK(kitVerified(f.tree));
 }
@@ -329,7 +338,7 @@ TEST_CASE("controls on a plane turned in perspective take input where they are d
     // The button sits at the panel's left, which the turn moves: a click where it is drawn activates it.
     PrVec2 flat = middle(laidOut(f, button));
     PrVec2 drawn = at(flat);
-    CHECK(std::abs(drawn.x - flat.x) > 10.0f);
+    CHECK(prF32Abs(drawn.x - flat.x) > 10.0f);
     f.click(drawn);
     f.frame();
     CHECK(activated);
@@ -371,7 +380,8 @@ TEST_CASE("a plane that hides its back takes no input while it shows it, and a p
         PrLayoutNode layer = prKitLayer(f.kit, stage, {}, cover);
         prUiSetFlags(f.ui, layer, PrUiFlag_Transparent);
         front = prKitPlane(f.kit, layer, {.transform = hidden ? &flip : nullptr}, {.box = cover, .backfaceHidden = true});
-        for (PrLayoutNode node : {back, front}) {
+        const PrLayoutNode planes[] = {back, front};
+        for (PrLayoutNode node : planes) {
             prUiSetFlags(f.ui, node, PrUiFlag_Pressable);
             if (prUiClicked(f.ui, node, 0))
                 clicked = node;
@@ -444,21 +454,23 @@ TEST_CASE("a drag reports one begin and one commit, with its changes between") {
         slider = prKitSlider(f.kit, root, {.value = prKitScalarF32(&level), .min = 0, .max = 1}, {});
     };
     f.frame();
-    dragBy(f, f.center(field), {10, 10, 10});
-    REQUIRE(f.edits.phases.size() == 5);
-    CHECK(f.edits.phases.front() == PrUiEditPhase_Begin);
-    CHECK(f.edits.phases.back() == PrUiEditPhase_Commit);
+    const float fieldSteps[] = {10, 10, 10};
+    dragBy(f, f.center(field), fieldSteps);
+    REQUIRE(f.edits.phases.count() == 5);
+    CHECK(f.edits.phases[0] == PrUiEditPhase_Begin);
+    CHECK(f.edits.phases.last() == PrUiEditPhase_Commit);
     CHECK(f.edits.count(PrUiEditPhase_Change) == 3);
     for (PrLayoutNode control : f.edits.controls)
         CHECK(control == field);
 
     f.edits = Edits{};
     PrVec2 at = f.center(slider);
-    dragBy(f, PrVec2{at.x - 100, at.y}, {50, 50});
+    const float sliderSteps[] = {50, 50};
+    dragBy(f, PrVec2{at.x - 100, at.y}, sliderSteps);
     CHECK(f.edits.count(PrUiEditPhase_Begin) == 1);
     CHECK(f.edits.count(PrUiEditPhase_Commit) == 1);
     CHECK(f.edits.count(PrUiEditPhase_Change) == 3);
-    CHECK(f.edits.phases.back() == PrUiEditPhase_Commit);
+    CHECK(f.edits.phases.last() == PrUiEditPhase_Commit);
 }
 
 TEST_CASE("a press that does not scrub opens no gesture, and a key press is a gesture of its own") {
@@ -471,10 +483,10 @@ TEST_CASE("a press that does not scrub opens no gesture, and a key press is a ge
     f.frame();
     f.click(f.center(field));
     f.frame();
-    CHECK(f.edits.phases.empty());
+    CHECK(f.edits.phases.isEmpty());
     f.key(PrAppKey_Up);
     f.frame();
-    std::vector<PrUiEditPhase> expected{PrUiEditPhase_Begin, PrUiEditPhase_Change, PrUiEditPhase_Commit};
+    Array<PrUiEditPhase> expected({PrUiEditPhase_Begin, PrUiEditPhase_Change, PrUiEditPhase_Commit});
     CHECK(f.edits.phases == expected);
 }
 
@@ -571,7 +583,7 @@ TEST_CASE("an asset field takes a dropped payload of its kind, and passes others
         }
     };
     f.frame();
-    CHECK(gutterButtons(f, field).size() == 3);
+    CHECK(gutterButtons(f, field).count() == 3);
     auto carry = [&] {
         PrVec2 from = f.center(source);
         PrVec2 to = f.center(field);
@@ -604,8 +616,8 @@ TEST_CASE("an empty asset field offers browsing alone, and reports its gutter's 
         CHECK_FALSE(prKitCleared(f.kit, field));
     };
     f.frame();
-    std::vector<PrLayoutNode> buttons = gutterButtons(f, field);
-    REQUIRE(buttons.size() == 1);
+    Array<PrLayoutNode> buttons = gutterButtons(f, field);
+    REQUIRE(buttons.count() == 1);
     f.click(f.center(buttons[0]));
     f.frame();
     CHECK(browsed == 1);
@@ -653,7 +665,7 @@ TEST_CASE("a scrub changes the field's text alone, and leaves its siblings' layo
     f.frame();
     f.frame();
     PrVec2 at = f.center(field);
-    dragBy(f, at, {10});
+    dragBy(f, at, 10);
     CHECK(value != 0.0f);
     f.frame();
     CHECK(prLayoutTreeStats(f.tree).frameNodesMade == 0);
@@ -662,7 +674,7 @@ TEST_CASE("a scrub changes the field's text alone, and leaves its siblings' layo
 
 TEST_CASE("a text field's clear control empties its text as one gesture, and shows only while there is text") {
     KitFixture f;
-    std::string text = "level_01";
+    String text = "level_01";
     uint32_t commits = 0;
     f.edit = [](void* context, PrLayoutNode, PrUiEditPhase phase) {
         *static_cast<uint32_t*>(context) += phase == PrUiEditPhase_Commit ? 1 : 0;
@@ -678,7 +690,7 @@ TEST_CASE("a text field's clear control empties its text as one gesture, and sho
     PrRect box = f.bounds(field);
     f.click(PrVec2{box.right - 10, (box.top + box.bottom) / 2});
     f.frame();
-    CHECK(text.empty());
+    CHECK(text.isEmpty());
     CHECK(commits == 1);
     CHECK(prUiFocus(f.ui) == field);
     CHECK(kitVerified(f.tree));
@@ -686,7 +698,7 @@ TEST_CASE("a text field's clear control empties its text as one gesture, and sho
 
 TEST_CASE("Up and Down recall a text field's history while it has focus, and past the latest line is empty") {
     KitFixture f;
-    std::string text;
+    String text = "";
     const PrStringView history[] = {"build", "bench"};
     PrLayoutNode field = kPrLayoutNodeNone;
     f.build = [&](PrLayoutNode root) {
@@ -706,13 +718,13 @@ TEST_CASE("Up and Down recall a text field's history while it has focus, and pas
     f.frame();
     f.key(PrAppKey_Down);
     f.frame();
-    CHECK(text.empty());
+    CHECK(text.isEmpty());
     CHECK(kitVerified(f.tree));
 }
 
 TEST_CASE("a suggest field opens its list as it takes focus, and a suggestion replaces the text") {
     KitFixture f;
-    std::string text = "lib/g";
+    String text = "lib/g";
     const PrStringView suggestions[] = {"lib/gpu", "lib/geom"};
     PrLayoutNode field = kPrLayoutNodeNone;
     f.build = [&](PrLayoutNode root) {

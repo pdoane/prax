@@ -168,8 +168,7 @@ void writeFrame(Socket* socket, Opcode opcode, PrByteView first, PrByteView seco
 
 void writeClose(Socket* socket, uint16_t code, PrStringView reason) {
     uint8_t status[2] = {uint8_t(code >> 8), uint8_t(code)};
-    writeFrame(socket, Opcode_Close, PrByteView{status, 2},
-        PrByteView{reinterpret_cast<const uint8_t*>(reason.data), reason.size});
+    writeFrame(socket, Opcode_Close, PrByteView{status, 2}, prStringBytes(reason));
     socket->closeSent = true;
 }
 
@@ -339,8 +338,7 @@ void receiveData(Socket* socket, Opcode opcode, bool fin, PrByteView payload) {
         return;
     socket->inMessage = false;
     PrByteView data{socket->message.data, socket->message.count};
-    if (socket->messageKind == PrWebSocketMessageKind_Text &&
-            prUtf8Validate(PrStringView{reinterpret_cast<const char*>(data.data), data.size}) != data.size) {
+    if (socket->messageKind == PrWebSocketMessageKind_Text && prUtf8Validate(prStringFromBytes(data)) != data.size) {
         failSocket(socket, kCloseInvalidData, PrNetError_Protocol);
         return;
     }
@@ -497,7 +495,7 @@ void connect(void* PR_NULLABLE context) {
         }
         if (status == PrStatus_Ok) {
             PrStringView request = viewOf(socket->request);
-            prNetStreamWrite(socket->stream, PrByteView{reinterpret_cast<const uint8_t*>(request.data), request.size});
+            prNetStreamWrite(socket->stream, prStringBytes(request));
         } else {
             closeSocket(socket, false, kCloseAbnormal, "", socket->secure ? PrNetError_Protocol : PrNetError_Io);
         }
@@ -525,7 +523,7 @@ void writeRequest(Socket* socket, const PrUrl* url, const PrWebSocketDesc* desc)
     prTextBufferAppend(&keyed, kAcceptGuid);
     uint8_t digest[kPrSha1Bytes];
     PrStringView keyedView = prTextBufferView(&keyed);
-    prSha1Digest(PrByteView{reinterpret_cast<const uint8_t*>(keyedView.data), keyedView.size}, digest);
+    prSha1Digest(prStringBytes(keyedView), digest);
     prTextBufferReset(&keyed);
     char accept[28];
     prBase64Encode(PrStringView{reinterpret_cast<const char*>(digest), sizeof(digest)}, accept, sizeof(accept));

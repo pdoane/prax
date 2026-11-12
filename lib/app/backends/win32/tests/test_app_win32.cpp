@@ -1,14 +1,13 @@
 #include "pr/app_win32.h"
+#include "pr/array.h"
+#include "pr/file.h"
+#include "pr/function.h"
+#include "pr/string.h"
+#include "pr/string_ops.h"
+#include "pr/thread.h"
 #include "pr/vec.h"
 
 #include "tools/harness/test.h"
-
-#include <cstdio>
-#include <cstring>
-#include <filesystem>
-#include <string>
-#include <thread>
-#include <vector>
 
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
@@ -18,9 +17,23 @@ namespace pr_impl {
 
 namespace {
 
+// A thread that runs a function, which a test starts from a callback and joins once the run ends. It must not move
+// while the thread runs.
+struct Helper {
+    PrThread thread{};
+    Function<void()> run;
+
+    void start(Function<void()> fn) {
+        run = move(fn);
+        prThreadStart(&thread, [](void* PR_NULLABLE context) { static_cast<Helper*>(context)->run(); }, this);
+    }
+
+    void join() { prThreadJoin(&thread); }
+};
+
 struct Run {
-    std::vector<std::string> seen;
-    std::thread helper;
+    Array<String> seen;
+    Helper helper;
     uint32_t frames = 0;
     PrVec2 resized{};
     PrVec2 expected{};
@@ -47,13 +60,13 @@ struct Seen {
     PrAppScrollUnit scrollUnit;
     PrVec2 position;
     PrVec2 delta;
-    std::string text;
+    String text;
 };
 
 struct Input {
     PrApp* app = nullptr;
-    std::vector<Seen> events;
-    std::thread sender;
+    Array<Seen> events;
+    Helper sender;
     UINT dpi = 96;
 };
 
@@ -84,11 +97,11 @@ struct Browse {
     PrStatus status = PrStatus_InvalidState;
     PrStatus thrown = PrStatus_InvalidState;
     bool null = false;              // the last script's result was the null view
-    std::string result;
-    std::string message;
+    String result;
+    String message;
     uint32_t width = 0;
     uint32_t height = 0;
-    std::vector<uint8_t> center;    // BGRA
+    Array<uint8_t> center;    // BGRA
     uint32_t processes = 0;
     bool stale = false;             // a destroyed browser called back
 };
@@ -130,18 +143,14 @@ void runBrowser(Browse& b) {
 }
 
 // The path of `name` in the binary's folder (harness::testFolder).
-std::filesystem::path tempPath(const char* name) {
-    return std::filesystem::path(harness::testFolder()) / name;
+String tempPath(PrStringView name) {
+    return format("{}\\{}", harness::testFolder(), name);
 }
 
 // Writes `contents` to `name` in the temporary folder (tempPath), and returns its file URL.
-std::string fileUrl(const char* name, const char* contents) {
-    std::filesystem::path path = tempPath(name);
-    FILE* file = std::fopen(path.string().c_str(), "wb");
-    REQUIRE(file != nullptr);
-    std::fputs(contents, file);
-    std::fclose(file);
-    return "file:///" + path.generic_string();
+String fileUrl(PrStringView name, PrStringView contents) {
+    REQUIRE(prFileWrite(tempPath(name), prStringBytes(contents)));
+    return format("file:///{}/{}", harness::testFolder(), name);
 }
 
 // Evaluates `script`, records its answer, and stops the application.
@@ -150,17 +159,17 @@ void answerAndStop(Browse& b, const char* script) {
         Browse& b = browseOf(context);
         b.status = status;
         b.null = json.data == nullptr;
-        b.result.assign(json.data != nullptr ? json.data : "", json.size);
+        b.result.assign(json.isNull() ? PrStringView("") : json);
         prAppStop(b.app);
     }, &b);
 }
 
 // What a run saw: its events in order, and whether one arrived while the start callback ran.
 struct Nesting {
-    std::vector<Seen> events;
+    Array<Seen> events;
     bool starting = false;
     bool nested = false;
-    std::thread sender;
+    Helper sender;
 };
 
 Nesting& nestingOf(void* context) {
@@ -172,7 +181,7 @@ Seen seenOf(const PrAppEvent* event) {
         event->kind,     event->key,        event->code,
         event->repeat,   event->button,     event->scrollUnit,
         event->position, event->delta,
-        std::string(event->text.data != nullptr ? event->text.data : "", event->text.size),
+        String(event->text),
     };
 }
 
@@ -189,7 +198,7 @@ TEST_CASE("a headless run starts, frames, wakes from another thread and shuts do
     PrAppHandler handler{
         &run,
         [](void* context, PrApp* app, const PrAppFrame*) {
-            runOf(context).seen.push_back("start");
+            runOf(context).seen.push("start");
             HWND window = windowOf(app);
             CHECK(IsWindow(window));
             CHECK(!IsWindowVisible(window));
@@ -203,24 +212,24 @@ TEST_CASE("a headless run starts, frames, wakes from another thread and shuts do
             Run& r = runOf(context);
             if (r.frames++ != 0)
                 return PrAppOutput{};
-            r.seen.push_back("frame");
+            r.seen.push("frame");
             CHECK(frame->extent.x == doctest::Approx(64.0f).epsilon(0.02));
             CHECK(frame->extent.y == doctest::Approx(32.0f).epsilon(0.02));
             CHECK(frame->delta == 0.0);
             CHECK(frame->time > 0.0);
             CHECK(frame->display.pixelRatio >= 1.0f);
             CHECK(frame->display.headroom >= 1.0f);
-            r.helper = std::thread([app] { prAppWake(app); });
+            r.helper.start([app] { prAppWake(app); });
             return PrAppOutput{};
         },
         [](void* context, PrApp* app, const PrAppEvent* event) {
             if (event->kind != PrAppEventKind_Wake)
                 return;
-            runOf(context).seen.push_back("wake");
+            runOf(context).seen.push("wake");
             prAppStop(app);
         },
         [](void* context, PrApp* app) {
-            runOf(context).seen.push_back("shutdown");
+            runOf(context).seen.push("shutdown");
             PrAppSurface surface{};
             CHECK(prAppSurface(app, &surface) == PrStatus_Ok);
         },
@@ -230,7 +239,7 @@ TEST_CASE("a headless run starts, frames, wakes from another thread and shuts do
     PrAppSurface surface{};
     CHECK(prAppSurface(app, &surface) == PrStatus_InvalidState);
     prAppDestroy(app);
-    CHECK(run.seen == std::vector<std::string>{"start", "frame", "wake", "shutdown"});
+    CHECK(run.seen == Array<String>({"start", "frame", "wake", "shutdown"}));
 }
 
 TEST_CASE("a resize runs a frame at the new extent without a request") {
@@ -253,7 +262,7 @@ TEST_CASE("a resize runs a frame at the new extent without a request") {
                     float(MulDiv(100, int(dpi), 96)) * 96.0f / float(dpi),
                     float(MulDiv(50, int(dpi), 96)) * 96.0f / float(dpi),
                 };
-                r.helper = std::thread([window, outer] {
+                r.helper.start([window, outer] {
                     SetWindowPos(window, nullptr, 0, 0, outer.right - outer.left, outer.bottom - outer.top,
                         SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
                 });
@@ -293,7 +302,7 @@ TEST_CASE("keys, text, pointers and wheels translate to events") {
             ClientToScreen(window, &screen);
             // Messages sent from another thread reach the window procedure in order, past TranslateMessage, so each
             // character is sent as WM_CHAR would deliver it.
-            in.sender = std::thread([app, window, dpi, screen] {
+            in.sender.start([app, window, dpi, screen] {
                 SendMessageW(window, WM_KEYDOWN, 'A', keyFlags(0x1E, false, false, false));
                 SendMessageW(window, WM_CHAR, 'a', keyFlags(0x1E, false, false, false));
                 SendMessageW(window, WM_KEYDOWN, 'A', keyFlags(0x1E, false, true, false));
@@ -323,10 +332,9 @@ TEST_CASE("keys, text, pointers and wheels translate to events") {
             }
             Seen seen{
                 event->kind, event->key, event->code, event->repeat, event->button, event->scrollUnit,
-                event->position, event->delta, std::string(event->text.data != nullptr ? event->text.data : "",
-                    event->text.size),
+                event->position, event->delta, String(event->text),
             };
-            in.events.push_back(seen);
+            in.events.push(seen);
         },
         [](void*, PrApp*) {},
     };
@@ -334,8 +342,8 @@ TEST_CASE("keys, text, pointers and wheels translate to events") {
     input.sender.join();
     prAppDestroy(input.app);
 
-    const std::vector<Seen>& e = input.events;
-    REQUIRE(e.size() == 15);
+    const Array<Seen>& e = input.events;
+    REQUIRE(e.count() == 15);
     CHECK(e[0].kind == PrAppEventKind_KeyDown);
     CHECK(e[0].key == 'A');
     CHECK(e[0].code == PrAppKeyCode_KeyA);
@@ -351,7 +359,7 @@ TEST_CASE("keys, text, pointers and wheels translate to events") {
     CHECK(e[4].kind == PrAppEventKind_KeyDown);
     CHECK(e[4].key == PrAppKey_Left);
     CHECK(e[4].code == PrAppKeyCode_ArrowLeft);
-    CHECK(e[4].text.empty());
+    CHECK(e[4].text.isEmpty());
     // Enter types a carriage return, which is no Text.
     CHECK(e[5].key == PrAppKey_Enter);
     CHECK(e[5].code == PrAppKeyCode_Enter);
@@ -417,7 +425,7 @@ TEST_CASE("input that a callback's own message loop dispatches arrives after the
         [](void* context, PrApp* app, const PrAppEvent* event) {
             Nesting& n = nestingOf(context);
             n.nested = n.nested || n.starting;
-            n.events.push_back(seenOf(event));
+            n.events.push(seenOf(event));
             if (event->kind == PrAppEventKind_Wake)
                 prAppStop(app);
         },
@@ -426,8 +434,8 @@ TEST_CASE("input that a callback's own message loop dispatches arrives after the
     prAppRun(app, &handler);
     prAppDestroy(app);
     CHECK(!run.nested);
-    const std::vector<Seen>& e = run.events;
-    REQUIRE(e.size() == 4);
+    const Array<Seen>& e = run.events;
+    REQUIRE(e.count() == 4);
     CHECK(e[0].kind == PrAppEventKind_KeyDown);
     CHECK(e[0].text == "a");
     CHECK(e[1].kind == PrAppEventKind_PointerDown);
@@ -444,7 +452,7 @@ TEST_CASE("a window that loses the pointer's capture releases the buttons that a
         [](void* context, PrApp* app, const PrAppFrame*) {
             Nesting& n = nestingOf(context);
             HWND window = windowOf(app);
-            n.sender = std::thread([app, window] {
+            n.sender.start([app, window] {
                 SendMessageW(window, WM_RBUTTONDOWN, MK_RBUTTON, pointAt(6, 8));
                 prAppWake(app);
             });
@@ -452,7 +460,7 @@ TEST_CASE("a window that loses the pointer's capture releases the buttons that a
         [](void*, PrApp*, const PrAppFrame*) { return PrAppOutput{}; },
         [](void* context, PrApp* app, const PrAppEvent* event) {
             Nesting& n = nestingOf(context);
-            n.events.push_back(seenOf(event));
+            n.events.push(seenOf(event));
             // Another window takes the capture, as a system dialog would, and the button's release goes to it.
             if (event->kind == PrAppEventKind_PointerDown)
                 ReleaseCapture();
@@ -464,8 +472,8 @@ TEST_CASE("a window that loses the pointer's capture releases the buttons that a
     prAppRun(app, &handler);
     run.sender.join();
     prAppDestroy(app);
-    const std::vector<Seen>& e = run.events;
-    REQUIRE(e.size() == 3);
+    const Array<Seen>& e = run.events;
+    REQUIRE(e.count() == 3);
     CHECK(e[0].kind == PrAppEventKind_PointerDown);
     CHECK(e[1].kind == PrAppEventKind_PointerUp);
     CHECK(e[1].button == 1);
@@ -485,7 +493,7 @@ TEST_CASE("a window that loses the keyboard releases the keys that are down, onc
             BYTE state[256] = {};
             SetKeyboardState(state);
             HWND window = windowOf(app);
-            n.sender = std::thread([app, window] {
+            n.sender.start([app, window] {
                 SendMessageW(window, WM_KEYDOWN, VK_SHIFT, keyFlags(0x2A, false, false, false));
                 SendMessageW(window, WM_KEYDOWN, VK_SHIFT, keyFlags(0x36, false, false, false));
                 SendMessageW(window, WM_KEYUP, VK_SHIFT, keyFlags(0x2A, false, false, true));
@@ -497,7 +505,7 @@ TEST_CASE("a window that loses the keyboard releases the keys that are down, onc
         [](void*, PrApp*, const PrAppFrame*) { return PrAppOutput{}; },
         [](void* context, PrApp* app, const PrAppEvent* event) {
             Nesting& n = nestingOf(context);
-            n.events.push_back(seenOf(event));
+            n.events.push(seenOf(event));
             if (event->kind == PrAppEventKind_Wake)
                 prAppStop(app);
         },
@@ -506,9 +514,9 @@ TEST_CASE("a window that loses the keyboard releases the keys that are down, onc
     prAppRun(app, &handler);
     run.sender.join();
     prAppDestroy(app);
-    const std::vector<Seen>& e = run.events;
+    const Array<Seen>& e = run.events;
     // The left Shift was released by the keyboard, and the right Shift by the loss of focus.
-    REQUIRE(e.size() == 5);
+    REQUIRE(e.count() == 5);
     CHECK(e[2].kind == PrAppEventKind_KeyUp);
     CHECK(e[2].code == PrAppKeyCode_ShiftLeft);
     CHECK(e[3].kind == PrAppEventKind_KeyUp);
@@ -524,16 +532,16 @@ TEST_CASE("closing the window stops the run") {
     PrAppHandler handler{
         &run,
         [](void* context, PrApp* app, const PrAppFrame*) {
-            runOf(context).seen.push_back("start");
+            runOf(context).seen.push("start");
             PostMessageW(windowOf(app), WM_CLOSE, 0, 0);
         },
         [](void*, PrApp*, const PrAppFrame*) { return PrAppOutput{}; },
         [](void*, PrApp*, const PrAppEvent*) {},
-        [](void* context, PrApp*) { runOf(context).seen.push_back("shutdown"); },
+        [](void* context, PrApp*) { runOf(context).seen.push("shutdown"); },
     };
     prAppRun(app, &handler);
     prAppDestroy(app);
-    CHECK(run.seen == std::vector<std::string>{"start", "shutdown"});
+    CHECK(run.seen == Array<String>({"start", "shutdown"}));
 }
 
 TEST_CASE("text that is not a URL does not open") {
@@ -550,7 +558,7 @@ TEST_CASE("a browser loads a page, runs a script in it and captures it at two pi
     Browse browse;
     browse.desc.pixelRatio = 2;
     browse.begin = [](Browse& b) {
-        std::string url = fileUrl("pr-browser.svg", "<svg xmlns='http://www.w3.org/2000/svg' width='40' height='20'>"
+        String url = fileUrl("pr-browser.svg", "<svg xmlns='http://www.w3.org/2000/svg' width='40' height='20'>"
             "<rect width='40' height='20' fill='#ff0000'/></svg>");
         prAppBrowserLoad(b.browser, url, [](void* context, PrStatus status) {
             Browse& b = browseOf(context);
@@ -560,7 +568,7 @@ TEST_CASE("a browser loads a page, runs a script in it and captures it at two pi
                 [](void* context, PrStatus status, PrStringView json) {
                     Browse& b = browseOf(context);
                     b.status = status;
-                    b.result.assign(json.data != nullptr ? json.data : "", json.size);
+                    b.result.assign(json.isNull() ? PrStringView("") : json);
                     prAppBrowserCapture(b.browser, PrRect{0, 0, 40, 20}, PrUVec2{80, 40},
                         [](void* context, PrStatus status, PrPixelView pixels) {
                             Browse& b = browseOf(context);
@@ -568,7 +576,8 @@ TEST_CASE("a browser loads a page, runs a script in it and captures it at two pi
                                 b.width = pixels.extent.x;
                                 b.height = pixels.extent.y;
                                 const uint8_t* at = pixels.data + pixels.stride * 20 + 40 * 4;
-                                b.center.assign(at, at + 4);
+                                b.center.clear();
+                                b.center.append(at, 4);
                             }
                             prAppStop(b.app);
                         }, &b);
@@ -584,7 +593,7 @@ TEST_CASE("a browser loads a page, runs a script in it and captures it at two pi
     CHECK(browse.processes > 0);
     CHECK(browse.width == 80);
     CHECK(browse.height == 40);
-    REQUIRE(browse.center.size() == 4);
+    REQUIRE(browse.center.count() == 4);
     CHECK(browse.center[2] > 240);      // red
     CHECK(browse.center[1] < 16);
     CHECK(browse.center[0] < 16);
@@ -594,7 +603,7 @@ TEST_CASE("a browser loads a page, runs a script in it and captures it at two pi
 TEST_CASE("a page from a file reads the files beside it, and a promise answers once it settles") {
     Browse browse;
     browse.begin = [](Browse& b) {
-        std::string url = fileUrl("pr-browser-read.html", "<!doctype html><title>read</title>");
+        String url = fileUrl("pr-browser-read.html", "<!doctype html><title>read</title>");
         fileUrl("pr-browser-read.txt", "beside");
         prAppBrowserLoad(b.browser, url, [](void* context, PrStatus status) {
             Browse& b = browseOf(context);
@@ -617,7 +626,7 @@ TEST_CASE("a script's error gives its message, and a script with no result answe
             [](void* context, PrStatus status, PrStringView json) {
                 Browse& b = browseOf(context);
                 b.thrown = status;
-                b.message.assign(json.data != nullptr ? json.data : "", json.size);
+                b.message.assign(json.isNull() ? PrStringView("") : json);
                 answerAndStop(b, "var declared = 1;");
             }, &b);
     };
@@ -634,7 +643,7 @@ TEST_CASE("a browser renders at the pixel ratio that it is created with, and a c
     Browse browse;
     browse.desc.pixelRatio = 3;
     browse.begin = [](Browse& b) {
-        std::string url = fileUrl("pr-browser-ratio.html", "<!doctype html><style>body { margin: 0; background: #0000ff; }</style>");
+        String url = fileUrl("pr-browser-ratio.html", "<!doctype html><style>body { margin: 0; background: #0000ff; }</style>");
         prAppBrowserLoad(b.browser, url, [](void* context, PrStatus status) {
             Browse& b = browseOf(context);
             b.loaded = status;
@@ -645,7 +654,8 @@ TEST_CASE("a browser renders at the pixel ratio that it is created with, and a c
                         b.width = pixels.extent.x;
                         b.height = pixels.extent.y;
                         const uint8_t* at = pixels.data + pixels.stride * 2 + 5 * 4;
-                        b.center.assign(at, at + 4);
+                        b.center.clear();
+                        b.center.append(at, 4);
                     }
                     answerAndStop(b, "[devicePixelRatio, innerWidth, innerHeight]");
                 }, &b);
@@ -658,7 +668,7 @@ TEST_CASE("a browser renders at the pixel ratio that it is created with, and a c
     CHECK(browse.result == "[3,40,20]");
     CHECK(browse.width == 10);
     CHECK(browse.height == 5);
-    REQUIRE(browse.center.size() == 4);
+    REQUIRE(browse.center.count() == 4);
     CHECK(browse.center[0] > 240);      // blue
     CHECK(browse.center[2] < 16);
 }
@@ -666,12 +676,12 @@ TEST_CASE("a browser renders at the pixel ratio that it is created with, and a c
 TEST_CASE("a browser prints its page to a PDF") {
     Browse browse;
     browse.begin = [](Browse& b) {
-        std::string url = fileUrl("pr-browser-print.html", "<!doctype html><p>printed");
+        String url = fileUrl("pr-browser-print.html", "<!doctype html><p>printed");
         prAppBrowserLoad(b.browser, url, [](void* context, PrStatus status) {
             Browse& b = browseOf(context);
             b.loaded = status;
-            std::string path = tempPath("pr-browser-print.pdf").string();
-            std::remove(path.c_str());
+            String path = tempPath("pr-browser-print.pdf");
+            prFileRemove(path);
             PrStatus printing = prAppBrowserPrint(b.browser, path, PrVec2{384, 288}, [](void* context, PrStatus status) {
                 Browse& b = browseOf(context);
                 b.status = status;
@@ -685,32 +695,29 @@ TEST_CASE("a browser prints its page to a PDF") {
         return;
     CHECK(browse.loaded == PrStatus_Ok);
     CHECK(browse.status == PrStatus_Ok);
-    std::string path = tempPath("pr-browser-print.pdf").string();
-    FILE* file = std::fopen(path.c_str(), "rb");
-    REQUIRE(file != nullptr);
-    char head[5] = {};
-    CHECK(std::fread(head, 1, 4, file) == 4);
-    std::fclose(file);
-    CHECK(std::string(head) == "%PDF");
+    Array<uint8_t> pdf = harness::readFile(tempPath("pr-browser-print.pdf"));
+    REQUIRE(pdf.count() >= 4);
+    CHECK(PrStringView(reinterpret_cast<const char*>(pdf.data()), 4) == "%PDF");
 }
 
 TEST_CASE("a capture shows the viewport where the page has scrolled to") {
     Browse browse;
     browse.begin = [](Browse& b) {
-        std::string url = fileUrl("pr-browser-scroll.html", "<!doctype html><style>body { margin: 0; } div { height: 50px; }</style>"
+        String url = fileUrl("pr-browser-scroll.html", "<!doctype html><style>body { margin: 0; } div { height: 50px; }</style>"
             "<div style='background: #ff0000'></div><div style='background: #0000ff'></div>");
         prAppBrowserLoad(b.browser, url, [](void* context, PrStatus status) {
             Browse& b = browseOf(context);
             b.loaded = status;
             prAppBrowserEvaluate(b.browser, "scrollTo(0, 50); scrollY", [](void* context, PrStatus, PrStringView json) {
                 Browse& b = browseOf(context);
-                b.result.assign(json.data != nullptr ? json.data : "", json.size);
+                b.result.assign(json.isNull() ? PrStringView("") : json);
                 prAppBrowserCapture(b.browser, PrRect{0, 0, 40, 20}, PrUVec2{40, 20},
                     [](void* context, PrStatus status, PrPixelView pixels) {
                         Browse& b = browseOf(context);
                         if (status == PrStatus_Ok) {
                             const uint8_t* at = pixels.data + pixels.stride * 10 + 20 * 4;
-                            b.center.assign(at, at + 4);
+                            b.center.clear();
+                            b.center.append(at, 4);
                         }
                         prAppStop(b.app);
                     }, &b);
@@ -721,7 +728,7 @@ TEST_CASE("a capture shows the viewport where the page has scrolled to") {
     if (!browse.supported)
         return;
     CHECK(browse.result == "50");
-    REQUIRE(browse.center.size() == 4);
+    REQUIRE(browse.center.count() == 4);
     CHECK(browse.center[0] > 240);      // blue
     CHECK(browse.center[2] < 16);
 }
@@ -729,20 +736,21 @@ TEST_CASE("a capture shows the viewport where the page has scrolled to") {
 TEST_CASE("a page shown in the window keeps its viewport, captures as it does hidden, and hides again") {
     Browse browse;
     browse.begin = [](Browse& b) {
-        std::string url = fileUrl("pr-browser-shown.html", "<!doctype html><style>body { margin: 0; background: #00ff00; }</style>");
+        String url = fileUrl("pr-browser-shown.html", "<!doctype html><style>body { margin: 0; background: #00ff00; }</style>");
         prAppBrowserShow(b.browser, PrRect{8, 4, 48, 24}, PrRect{0, 0, 80, 40});
         prAppBrowserLoad(b.browser, url, [](void* context, PrStatus status) {
             Browse& b = browseOf(context);
             b.loaded = status;
             prAppBrowserEvaluate(b.browser, "[innerWidth, innerHeight]", [](void* context, PrStatus, PrStringView json) {
                 Browse& b = browseOf(context);
-                b.message.assign(json.data != nullptr ? json.data : "", json.size);
+                b.message.assign(json.isNull() ? PrStringView("") : json);
                 prAppBrowserCapture(b.browser, PrRect{0, 0, 40, 20}, PrUVec2{40, 20},
                     [](void* context, PrStatus status, PrPixelView pixels) {
                         Browse& b = browseOf(context);
                         if (status == PrStatus_Ok) {
                             const uint8_t* at = pixels.data + pixels.stride * 10 + 20 * 4;
-                            b.center.assign(at, at + 4);
+                            b.center.clear();
+                            b.center.append(at, 4);
                         }
                         prAppBrowserHide(b.browser);
                         answerAndStop(b, "[innerWidth, innerHeight]");
@@ -756,7 +764,7 @@ TEST_CASE("a page shown in the window keeps its viewport, captures as it does hi
     CHECK(browse.loaded == PrStatus_Ok);
     CHECK(browse.message == "[40,20]");
     CHECK(browse.result == "[40,20]");
-    REQUIRE(browse.center.size() == 4);
+    REQUIRE(browse.center.count() == 4);
     CHECK(browse.center[1] > 240);      // green
     CHECK(browse.center[0] < 16);
 }

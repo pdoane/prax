@@ -5,12 +5,11 @@
 #include "pr/layout_query.h"
 #include "pr/layout_style.h"
 #include "pr/layout_tree.h"
+#include "pr/span.h"
 
 #include "layout/tests/layout_fixture.h"
 
 #include "tools/harness/test.h"
-
-#include <vector>
 
 namespace pr_impl {
 
@@ -87,22 +86,26 @@ struct Stage {
     }
 
     // Interns a track list of `tracks`, with the names given, by line.
-    PrLayoutGridTracksIndex tracks(std::vector<PrLayoutGridTrack> list, std::vector<PrLayoutGridLineName> names = {}) {
+    PrLayoutGridTracksIndex tracks(Span<const PrLayoutGridTrack> list, Span<const PrLayoutGridLineName> names = {}) {
         PrLayoutGridTrackList desc{
             .tracks = list.data(),
-            .trackCount = uint32_t(list.size()),
+            .trackCount = list.count(),
             .names = names.data(),
-            .nameCount = uint32_t(names.size()),
+            .nameCount = names.count(),
         };
         return prLayoutGridTracksIntern(f.tree, &desc);
     }
+    // Interns a track list of the one track `only`.
+    PrLayoutGridTracksIndex track(const PrLayoutGridTrack& only) {
+        return tracks(Span<const PrLayoutGridTrack>(&only, 1));
+    }
 
     // Interns a track list whose tracks from `start`, `count` of them, repeat automatically by `repeat`.
-    PrLayoutGridTracksIndex repeating(std::vector<PrLayoutGridTrack> list, uint32_t start, uint32_t count,
+    PrLayoutGridTracksIndex repeating(Span<const PrLayoutGridTrack> list, uint32_t start, uint32_t count,
             PrLayoutGridRepeat repeat) {
         PrLayoutGridTrackList desc{
             .tracks = list.data(),
-            .trackCount = uint32_t(list.size()),
+            .trackCount = list.count(),
             .repeat = repeat,
             .repeatStart = start,
             .repeatCount = count,
@@ -133,14 +136,18 @@ struct Stage {
         return add(parent, box, placement, flex);
     }
 
+    // Creates a word `width` wide and 20px tall.
+    void word(PrLayoutNode parent, float width) {
+        PrLayoutBoxStyle box = block(20);
+        box.display = PrLayoutDisplay_InlineBlock;
+        box.width = prLayoutLengthPx(width);
+        add(parent, box);
+    }
+
     // Creates words of the widths given, each 20px tall.
-    void words(PrLayoutNode parent, std::vector<float> widths) {
-        for (float width : widths) {
-            PrLayoutBoxStyle box = block(20);
-            box.display = PrLayoutDisplay_InlineBlock;
-            box.width = prLayoutLengthPx(width);
-            add(parent, box);
-        }
+    void words(PrLayoutNode parent, Span<const float> widths) {
+        for (float width : widths)
+            word(parent, width);
     }
 
     void layout(float width = 600, float height = 400) {
@@ -193,8 +200,10 @@ using namespace pr_impl;
 TEST_CASE("grid items fill a fixed grid in rows, in document order") {
     Stage s;
     PrLayoutGridStyle style = prLayoutGridStyleDefault();
-    style.templateColumns = s.tracks({fixed(100), fixed(200)});
-    style.templateRows = s.tracks({fixed(50), fixed(60)});
+    const PrLayoutGridTrack columnTracks[] = {fixed(100), fixed(200)};
+    style.templateColumns = s.tracks(columnTracks);
+    const PrLayoutGridTrack rowTracks[] = {fixed(50), fixed(60)};
+    style.templateRows = s.tracks(rowTracks);
     PrLayoutNode g = s.grid(s.root, style);
     PrLayoutNode a = s.item(g);
     PrLayoutNode b = s.item(g);
@@ -213,7 +222,8 @@ TEST_CASE("grid items fill a fixed grid in rows, in document order") {
 TEST_CASE("flexible columns share the free space by their factors, and gaps come out first") {
     Stage s;
     PrLayoutGridStyle style = prLayoutGridStyleDefault();
-    style.templateColumns = s.tracks({fr(1), fr(2), fixed(40)});
+    const PrLayoutGridTrack columnTracks[] = {fr(1), fr(2), fixed(40)};
+    style.templateColumns = s.tracks(columnTracks);
     PrLayoutFlexStyle flex = prLayoutFlexStyleDefault();
     flex.columnGap = prLayoutLengthPx(10);
     PrLayoutNode g = s.grid(s.root, style, 360, flex);
@@ -230,12 +240,14 @@ TEST_CASE("flexible columns share the free space by their factors, and gaps come
 TEST_CASE("auto tracks fit their items' content and stretch over the free space") {
     Stage s;
     PrLayoutGridStyle style = prLayoutGridStyleDefault();
-    style.templateColumns = s.tracks({autoTrack(), autoTrack()});
+    const PrLayoutGridTrack columnTracks[] = {autoTrack(), autoTrack()};
+    style.templateColumns = s.tracks(columnTracks);
     PrLayoutNode g = s.grid(s.root, style, 300);
     PrLayoutNode a = s.item(g);
-    s.words(a, {30, 20});
+    const float aWords[] = {30, 20};
+    s.words(a, aWords);
     PrLayoutNode b = s.item(g);
-    s.words(b, {50});
+    s.word(b, 50);
     s.layout();
     // The tracks take their items' max-content sizes, 50 each, and share the 200px left equally.
     CHECK(s.width(a) == doctest::Approx(150));
@@ -247,14 +259,18 @@ TEST_CASE("auto tracks fit their items' content and stretch over the free space"
 TEST_CASE("content-sized tracks that do not stretch keep their content's sizes") {
     Stage s;
     PrLayoutGridStyle style = prLayoutGridStyleDefault();
-    style.templateColumns = s.tracks({minContent(), maxContent(), fitContent(40)});
+    const PrLayoutGridTrack columnTracks[] = {minContent(), maxContent(), fitContent(40)};
+    style.templateColumns = s.tracks(columnTracks);
     PrLayoutNode g = s.grid(s.root, style, 400);
     PrLayoutNode a = s.item(g);
-    s.words(a, {30, 20});
+    const float aWords[] = {30, 20};
+    s.words(a, aWords);
     PrLayoutNode b = s.item(g);
-    s.words(b, {30, 20});
+    const float bWords[] = {30, 20};
+    s.words(b, bWords);
     PrLayoutNode c = s.item(g);
-    s.words(c, {30, 20});
+    const float cWords[] = {30, 20};
+    s.words(c, cWords);
     s.layout();
     CHECK(s.width(a) == doctest::Approx(30));
     CHECK(s.height(a) == doctest::Approx(40));
@@ -266,19 +282,21 @@ TEST_CASE("content-sized tracks that do not stretch keep their content's sizes")
 TEST_CASE("an item spanning auto tracks grows the tracks that its content needs") {
     Stage s;
     PrLayoutGridStyle style = prLayoutGridStyleDefault();
-    style.templateColumns = s.tracks({
+    const PrLayoutGridTrack columnTracks[] = {
         minmax(prLayoutTrackBreadthMinContent(), prLayoutTrackBreadthMaxContent()),
         minmax(prLayoutTrackBreadthMinContent(), prLayoutTrackBreadthMaxContent()),
-    });
+    };
+    style.templateColumns = s.tracks(columnTracks);
     PrLayoutFlexStyle flex = prLayoutFlexStyleDefault();
     flex.justifyContent = PrLayoutAlignment_Start;
     PrLayoutNode g = s.grid(s.root, style, 400, flex);
     // The note's example (css-grid-1/#algo-spanning-items): an item of 10 in the first track, and one spanning both
     // whose min-content is 30 and max-content 100.
     PrLayoutNode first = s.item(g);
-    s.words(first, {10});
+    s.word(first, 10);
     PrLayoutNode spanning = s.item(g, area(line(2), line(1), PrLayoutGridLine{}, span(2)));
-    s.words(spanning, {30, 30, 40});
+    const float spanningWords[] = {30, 30, 40};
+    s.words(spanning, spanningWords);
     s.layout();
     // The first track stays at its item's size, and the second takes the rest of the spanning item's needs.
     CHECK(s.width(first) == doctest::Approx(10));
@@ -288,9 +306,10 @@ TEST_CASE("an item spanning auto tracks grows the tracks that its content needs"
 TEST_CASE("line placement counts from the end with negative lines and creates implicit tracks") {
     Stage s;
     PrLayoutGridStyle style = prLayoutGridStyleDefault();
-    style.templateColumns = s.tracks({fixed(100), fixed(100), fixed(100)});
-    style.autoColumns = s.tracks({fixed(30)});
-    style.autoRows = s.tracks({fixed(25)});
+    const PrLayoutGridTrack columnTracks[] = {fixed(100), fixed(100), fixed(100)};
+    style.templateColumns = s.tracks(columnTracks);
+    style.autoColumns = s.track(fixed(30));
+    style.autoRows = s.track(fixed(25));
     PrLayoutNode g = s.grid(s.root, style);
     PrLayoutNode last = s.item(g, columns(line(-2), line(-1)));
     PrLayoutNode before = s.item(g, columns(line(-6), span(1)));
@@ -310,8 +329,10 @@ TEST_CASE("line placement counts from the end with negative lines and creates im
 TEST_CASE("conflicting placements swap, collapse to one track, or drop the end's span") {
     Stage s;
     PrLayoutGridStyle style = prLayoutGridStyleDefault();
-    style.templateColumns = s.tracks({fixed(10), fixed(20), fixed(30), fixed(40)});
-    style.templateRows = s.tracks({fixed(10), fixed(10), fixed(10)});
+    const PrLayoutGridTrack columnTracks[] = {fixed(10), fixed(20), fixed(30), fixed(40)};
+    style.templateColumns = s.tracks(columnTracks);
+    const PrLayoutGridTrack rowTracks[] = {fixed(10), fixed(10), fixed(10)};
+    style.templateRows = s.tracks(rowTracks);
     PrLayoutNode g = s.grid(s.root, style);
     PrLayoutNode swapped = s.item(g, area(line(1), line(4), PrLayoutGridLine{}, line(2)));
     PrLayoutNode same = s.item(g, area(line(2), line(3), PrLayoutGridLine{}, line(3)));
@@ -332,12 +353,15 @@ TEST_CASE("named lines and areas place items, and a name alone finds an area's e
     PrLayoutName main = s.name("main");
     PrLayoutName side = s.name("side");
     PrLayoutName content = s.name("content");
-    std::vector<PrLayoutGridArea> areas = {{header, 0, 1, 0, 2}, {side, 1, 2, 0, 1}, {main, 1, 2, 1, 2}};
-    PrLayoutGridAreas template_{.rowCount = 2, .columnCount = 2, .areas = areas.data(), .areaCount = 3};
+    PrLayoutGridArea areas[] = {{header, 0, 1, 0, 2}, {side, 1, 2, 0, 1}, {main, 1, 2, 1, 2}};
+    PrLayoutGridAreas template_{.rowCount = 2, .columnCount = 2, .areas = areas, .areaCount = 3};
     PrLayoutGridStyle style = prLayoutGridStyleDefault();
     style.templateAreas = prLayoutGridAreasIntern(s.f.tree, &template_);
-    style.templateColumns = s.tracks({fixed(100), fixed(300)}, {{1, content}, {2, content}});
-    style.templateRows = s.tracks({fixed(40), fixed(200)});
+    const PrLayoutGridTrack columnTracks[] = {fixed(100), fixed(300)};
+    const PrLayoutGridLineName columnNames[] = {{1, content}, {2, content}};
+    style.templateColumns = s.tracks(columnTracks, columnNames);
+    const PrLayoutGridTrack rowTracks[] = {fixed(40), fixed(200)};
+    style.templateRows = s.tracks(rowTracks);
     PrLayoutNode g = s.grid(s.root, style);
     PrLayoutNode m = s.item(g, area(line(0, main), line(0, main), line(0, main), line(0, main)));
     PrLayoutNode h = s.item(g, area(line(0, header), line(0, header), line(0, header), line(0, header)));
@@ -349,11 +373,13 @@ TEST_CASE("named lines and areas place items, and a name alone finds an area's e
 }
 
 TEST_CASE("auto-placement fills rows past placed items, or holes too if dense") {
-    for (bool dense : {false, true}) {
+    const bool denses[] = {false, true};
+    for (bool dense : denses) {
         Stage s;
         PrLayoutGridStyle style = prLayoutGridStyleDefault();
-        style.templateColumns = s.tracks({fixed(10), fixed(10), fixed(10)});
-        style.autoRows = s.tracks({fixed(10)});
+        const PrLayoutGridTrack columnTracks[] = {fixed(10), fixed(10), fixed(10)};
+        style.templateColumns = s.tracks(columnTracks);
+        style.autoRows = s.track(fixed(10));
         style.autoFlow = dense ? PrLayoutGridAutoFlowFlag_Dense : 0;
         PrLayoutNode g = s.grid(s.root, style);
         PrLayoutNode a = s.item(g);
@@ -371,8 +397,9 @@ TEST_CASE("auto-placement fills rows past placed items, or holes too if dense") 
 TEST_CASE("a column flow fills each column in turn") {
     Stage s;
     PrLayoutGridStyle style = prLayoutGridStyleDefault();
-    style.templateRows = s.tracks({fixed(10), fixed(10)});
-    style.autoColumns = s.tracks({fixed(15)});
+    const PrLayoutGridTrack rowTracks[] = {fixed(10), fixed(10)};
+    style.templateRows = s.tracks(rowTracks);
+    style.autoColumns = s.track(fixed(15));
     style.autoFlow = PrLayoutGridAutoFlowFlag_Column;
     PrLayoutNode g = s.grid(s.root, style);
     PrLayoutNode a = s.item(g);
@@ -387,7 +414,8 @@ TEST_CASE("a column flow fills each column in turn") {
 TEST_CASE("order changes where items are placed automatically and the order they paint in") {
     Stage s;
     PrLayoutGridStyle style = prLayoutGridStyleDefault();
-    style.templateColumns = s.tracks({fixed(10), fixed(10)});
+    const PrLayoutGridTrack columnTracks[] = {fixed(10), fixed(10)};
+    style.templateColumns = s.tracks(columnTracks);
     PrLayoutNode g = s.grid(s.root, style);
     PrLayoutFlexStyle later = prLayoutFlexStyleDefault();
     later.order = 1;
@@ -399,10 +427,12 @@ TEST_CASE("order changes where items are placed automatically and the order they
 }
 
 TEST_CASE("auto-fill repeats as many tracks as fit, and auto-fit collapses the empty ones") {
-    for (PrLayoutGridRepeat repeat : {PrLayoutGridRepeat_AutoFill, PrLayoutGridRepeat_AutoFit}) {
+    const PrLayoutGridRepeat repeats[] = {PrLayoutGridRepeat_AutoFill, PrLayoutGridRepeat_AutoFit};
+    for (PrLayoutGridRepeat repeat : repeats) {
         Stage s;
         PrLayoutGridStyle style = prLayoutGridStyleDefault();
-        style.templateColumns = s.repeating({minmax(prLayoutTrackBreadthPx(100), prLayoutTrackBreadthFlex(1))}, 0, 1, repeat);
+        const PrLayoutGridTrack repeated[] = {minmax(prLayoutTrackBreadthPx(100), prLayoutTrackBreadthFlex(1))};
+        style.templateColumns = s.repeating(repeated, 0, 1, repeat);
         PrLayoutFlexStyle flex = prLayoutFlexStyleDefault();
         flex.columnGap = prLayoutLengthPx(10);
         PrLayoutNode g = s.grid(s.root, style, 450, flex);
@@ -424,8 +454,9 @@ TEST_CASE("auto-fill repeats as many tracks as fit, and auto-fit collapses the e
 TEST_CASE("items align in their areas, and auto margins take the free space first") {
     Stage s;
     PrLayoutGridStyle style = prLayoutGridStyleDefault();
-    style.templateColumns = s.tracks({fixed(100), fixed(100)});
-    style.templateRows = s.tracks({fixed(100)});
+    const PrLayoutGridTrack columnTracks[] = {fixed(100), fixed(100)};
+    style.templateColumns = s.tracks(columnTracks);
+    style.templateRows = s.track(fixed(100));
     PrLayoutNode g = s.grid(s.root, style);
     PrLayoutFlexStyle centered = prLayoutFlexStyleDefault();
     centered.justifySelf = PrLayoutAlignment_Center;
@@ -445,16 +476,17 @@ TEST_CASE("items align in their areas, and auto margins take the free space firs
 TEST_CASE("items stretch over their areas unless they have a size, and fit their content otherwise") {
     Stage s;
     PrLayoutGridStyle style = prLayoutGridStyleDefault();
-    style.templateColumns = s.tracks({fixed(100)});
-    style.templateRows = s.tracks({fixed(60), fixed(60)});
+    style.templateColumns = s.track(fixed(100));
+    const PrLayoutGridTrack rowTracks[] = {fixed(60), fixed(60)};
+    style.templateRows = s.tracks(rowTracks);
     PrLayoutNode g = s.grid(s.root, style);
     PrLayoutNode stretched = s.item(g);
-    s.words(stretched, {30});
+    s.word(stretched, 30);
     PrLayoutFlexStyle start = prLayoutFlexStyleDefault();
     start.justifySelf = PrLayoutAlignment_Start;
     start.alignSelf = PrLayoutAlignment_Start;
     PrLayoutNode fitted = s.item(g, prLayoutGridStyleDefault(), -1, -1, start);
-    s.words(fitted, {30});
+    s.word(fitted, 30);
     s.layout();
     checkRect(s.at(stretched), 0, 0, 100, 60);
     checkRect(s.at(fitted), 0, 60, 30, 80);
@@ -463,8 +495,9 @@ TEST_CASE("items stretch over their areas unless they have a size, and fit their
 TEST_CASE("justify-content and align-content place the tracks in the content box") {
     Stage s;
     PrLayoutGridStyle style = prLayoutGridStyleDefault();
-    style.templateColumns = s.tracks({fixed(100), fixed(100)});
-    style.templateRows = s.tracks({fixed(50)});
+    const PrLayoutGridTrack columnTracks[] = {fixed(100), fixed(100)};
+    style.templateColumns = s.tracks(columnTracks);
+    style.templateRows = s.track(fixed(50));
     PrLayoutFlexStyle flex = prLayoutFlexStyleDefault();
     flex.justifyContent = PrLayoutAlignment_SpaceBetween;
     flex.alignContent = PrLayoutAlignment_Center;
@@ -482,7 +515,8 @@ TEST_CASE("justify-content and align-content place the tracks in the content box
 TEST_CASE("percentage rows of an auto height resolve against the height that their content gives") {
     Stage s;
     PrLayoutGridStyle style = prLayoutGridStyleDefault();
-    style.templateRows = s.tracks({autoTrack(), percent(50)});
+    const PrLayoutGridTrack rowTracks[] = {autoTrack(), percent(50)};
+    style.templateRows = s.tracks(rowTracks);
     PrLayoutNode g = s.grid(s.root, style, 100);
     PrLayoutNode a = s.item(g, prLayoutGridStyleDefault(), -1, 80);
     PrLayoutNode b = s.item(g);
@@ -497,12 +531,14 @@ TEST_CASE("percentage rows of an auto height resolve against the height that the
 TEST_CASE("an inline grid shrinks to its columns' content") {
     Stage s;
     PrLayoutGridStyle style = prLayoutGridStyleDefault();
-    style.templateColumns = s.tracks({autoTrack(), fixed(40)});
+    const PrLayoutGridTrack columnTracks[] = {autoTrack(), fixed(40)};
+    style.templateColumns = s.tracks(columnTracks);
     PrLayoutBoxStyle box = block();
     box.display = PrLayoutDisplay_InlineGrid;
     PrLayoutNode g = s.add(s.root, box, style);
     PrLayoutNode a = s.item(g);
-    s.words(a, {30, 20});
+    const float aWords[] = {30, 20};
+    s.words(a, aWords);
     s.item(g, prLayoutGridStyleDefault(), -1, 10);
     s.layout();
     CHECK(s.width(g) == doctest::Approx(90));
@@ -512,8 +548,10 @@ TEST_CASE("an inline grid shrinks to its columns' content") {
 TEST_CASE("a positioned grid places a box out of flow in the area its placement names") {
     Stage s;
     PrLayoutGridStyle style = prLayoutGridStyleDefault();
-    style.templateColumns = s.tracks({fixed(100), fixed(100), fixed(100)});
-    style.templateRows = s.tracks({fixed(50), fixed(50)});
+    const PrLayoutGridTrack columnTracks[] = {fixed(100), fixed(100), fixed(100)};
+    style.templateColumns = s.tracks(columnTracks);
+    const PrLayoutGridTrack rowTracks[] = {fixed(50), fixed(50)};
+    style.templateRows = s.tracks(rowTracks);
     PrLayoutBoxStyle box = block();
     box.display = PrLayoutDisplay_Grid;
     box.position = PrLayoutPosition_Relative;
@@ -536,7 +574,7 @@ TEST_CASE("a positioned grid places a box out of flow in the area its placement 
 TEST_CASE("a child out of flow has its static position as the sole item of the content box") {
     Stage s;
     PrLayoutGridStyle style = prLayoutGridStyleDefault();
-    style.templateColumns = s.tracks({fixed(100)});
+    style.templateColumns = s.track(fixed(100));
     PrLayoutBoxStyle box = block(100);
     box.display = PrLayoutDisplay_Grid;
     box.width = prLayoutLengthPx(200);
@@ -555,17 +593,18 @@ TEST_CASE("a child out of flow has its static position as the sole item of the c
 TEST_CASE("items aligned by baseline share their row's baseline, which the row grows to fit") {
     Stage s;
     PrLayoutGridStyle style = prLayoutGridStyleDefault();
-    style.templateColumns = s.tracks({fixed(100), fixed(100)});
+    const PrLayoutGridTrack columnTracks[] = {fixed(100), fixed(100)};
+    style.templateColumns = s.tracks(columnTracks);
     PrLayoutFlexStyle flex = prLayoutFlexStyleDefault();
     flex.alignItems = PrLayoutAlignment_Baseline;
     PrLayoutNode g = s.grid(s.root, style, -1, flex);
     // Two items whose single lines of words end 20px down, one pushed down by 30px of padding.
     PrLayoutNode a = s.item(g);
-    s.words(a, {20});
+    s.word(a, 20);
     PrLayoutBoxStyle padded = block();
     padded.padding[PrRectSide_Top] = prLayoutLengthPx(30);
     PrLayoutNode b = s.add(g, padded);
-    s.words(b, {20});
+    s.word(b, 20);
     s.layout();
     CHECK(s.top(a) == doctest::Approx(30));
     CHECK(s.top(b) == doctest::Approx(0));
@@ -575,7 +614,8 @@ TEST_CASE("items aligned by baseline share their row's baseline, which the row g
 TEST_CASE("a change to an item's placement lays out its container, and the item only if its area changes") {
     Stage s;
     PrLayoutGridStyle style = prLayoutGridStyleDefault();
-    style.templateColumns = s.tracks({fixed(100), fixed(100)});
+    const PrLayoutGridTrack columnTracks[] = {fixed(100), fixed(100)};
+    style.templateColumns = s.tracks(columnTracks);
     PrLayoutNode g = s.grid(s.root, style);
     PrLayoutNode a = s.item(g, prLayoutGridStyleDefault(), -1, 10);
     PrLayoutNode b = s.item(g, prLayoutGridStyleDefault(), -1, 10);
@@ -595,10 +635,12 @@ TEST_CASE("a change to an item's placement lays out its container, and the item 
 TEST_CASE("a grid lays out nothing again when nothing changed") {
     Stage s;
     PrLayoutGridStyle style = prLayoutGridStyleDefault();
-    style.templateColumns = s.tracks({autoTrack(), fr(1)});
+    const PrLayoutGridTrack columnTracks[] = {autoTrack(), fr(1)};
+    style.templateColumns = s.tracks(columnTracks);
     PrLayoutNode g = s.grid(s.root, style);
     PrLayoutNode a = s.item(g);
-    s.words(a, {30, 20});
+    const float aWords[] = {30, 20};
+    s.words(a, aWords);
     s.item(g);
     s.layout();
     s.layout();
@@ -609,7 +651,8 @@ TEST_CASE("a grid lays out nothing again when nothing changed") {
 TEST_CASE("text in a grid container is an anonymous item, which contributes its content's sizes") {
     Stage s;
     PrLayoutGridStyle style = prLayoutGridStyleDefault();
-    style.templateColumns = s.tracks({maxContent(), fixed(100)});
+    const PrLayoutGridTrack columnTracks[] = {maxContent(), fixed(100)};
+    style.templateColumns = s.tracks(columnTracks);
     PrLayoutNode g = s.grid(s.root, style);
     s.f.text(g, "x");
     PrLayoutNode b = s.item(g, prLayoutGridStyleDefault(), -1, 10);
@@ -626,7 +669,8 @@ TEST_CASE("a grid that is measured is solved alone, without its items' final lay
     row.width = prLayoutLengthPx(300);
     PrLayoutNode r = s.add(s.root, row);
     PrLayoutGridStyle style = prLayoutGridStyleDefault();
-    style.templateColumns = s.tracks({fixed(50), fixed(50)});
+    const PrLayoutGridTrack columnTracks[] = {fixed(50), fixed(50)};
+    style.templateColumns = s.tracks(columnTracks);
     PrLayoutBoxStyle box = block();
     box.display = PrLayoutDisplay_Grid;
     PrLayoutNode g = s.add(r, box, style);
@@ -641,8 +685,8 @@ TEST_CASE("a grid that is measured is solved alone, without its items' final lay
 TEST_CASE("flexible rows of an indefinite height take their share of the height that their content gives the grid") {
     Stage s;
     PrLayoutGridStyle style = prLayoutGridStyleDefault();
-    style.templateColumns = s.tracks({fixed(100)});
-    style.templateRows = s.tracks({minmax(prLayoutTrackBreadthPx(0), prLayoutTrackBreadthFlex(0.5f))});
+    style.templateColumns = s.track(fixed(100));
+    style.templateRows = s.track(minmax(prLayoutTrackBreadthPx(0), prLayoutTrackBreadthFlex(0.5f)));
     PrLayoutNode g = s.grid(s.root, style, 100);
     s.item(g, prLayoutGridStyleDefault(), 200, 200);
     s.layout();
@@ -657,15 +701,17 @@ TEST_CASE("flexible rows of an indefinite height take their share of the height 
 TEST_CASE("a spanning item's max-content contribution grows only the tracks whose minimum is max-content") {
     Stage s;
     PrLayoutGridStyle style = prLayoutGridStyleDefault();
-    style.templateColumns = s.tracks({fitContent(40), maxContent()});
+    const PrLayoutGridTrack columnTracks[] = {fitContent(40), maxContent()};
+    style.templateColumns = s.tracks(columnTracks);
     PrLayoutFlexStyle flex = prLayoutFlexStyleDefault();
     flex.columnGap = prLayoutLengthPx(5);
     flex.justifyContent = PrLayoutAlignment_Start;
     PrLayoutNode g = s.grid(s.root, style, 100, flex);
     PrLayoutNode a = s.item(g, area(line(1), line(2), PrLayoutGridLine{}, PrLayoutGridLine{}));
-    s.words(a, {50});
+    s.word(a, 50);
     PrLayoutNode b = s.item(g, area(line(2), line(1), PrLayoutGridLine{}, line(-1)));
-    s.words(b, {30, 20, 30});
+    const float bWords[] = {30, 20, 30};
+    s.words(b, bWords);
     s.layout();
     // The second column fits the first item's 50px, and then takes all of the 25px more that the spanning item's 80px
     // needs past the gap. The fit-content column takes none of it.
@@ -693,7 +739,7 @@ TEST_CASE("a replaced item's percentage size does not floor its track at its nat
 TEST_CASE("tracks that overflow with space-evenly sit at the start, as safe center places them") {
     Stage s;
     PrLayoutGridStyle style = prLayoutGridStyleDefault();
-    style.templateColumns = s.tracks({fixed(100)});
+    style.templateColumns = s.track(fixed(100));
     PrLayoutFlexStyle flex = prLayoutFlexStyleDefault();
     flex.justifyContent = PrLayoutAlignment_SpaceEvenly;
     PrLayoutNode g = s.grid(s.root, style, 50, flex);
@@ -713,7 +759,8 @@ TEST_CASE("a grid of a fixed width has the intrinsic sizes of one automatic repe
     rigid.shrink = 0;
     s.item(container, prLayoutGridStyleDefault(), 50, -1, rigid);
     PrLayoutGridStyle style = prLayoutGridStyleDefault();
-    style.templateColumns = s.repeating({fixed(50)}, 0, 1, PrLayoutGridRepeat_AutoFill);
+    const PrLayoutGridTrack repeated[] = {fixed(50)};
+    style.templateColumns = s.repeating(repeated, 0, 1, PrLayoutGridRepeat_AutoFill);
     PrLayoutNode g = s.grid(container, style, 200);
     s.layout();
     // Its automatic minimum as a flex item is its min-content size, one 50px column, so it shrinks to the 50px left.

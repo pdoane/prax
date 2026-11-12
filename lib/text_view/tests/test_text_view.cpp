@@ -1,25 +1,32 @@
 // The windowed view over documents of many lines, through real layout: the window stays small, heights settle, and
 // motion and edits count in the whole document.
 
+#include "pr/array.h"
 #include "pr/font_set.h"
 #include "pr/layout_frame.h"
 #include "pr/layout_query.h"
 #include "pr/layout_style.h"
 #include "pr/layout_tree.h"
+#include "pr/string.h"
+#include "pr/string_ops.h"
 #include "pr/text_harfbuzz.h"
 #include "pr/text_view.h"
 
 #include "tools/harness/test.h"
 
-#include <string>
-#include <utility>
-#include <vector>
-
 extern "C" int prTestTextViewCApi(void);
 
 namespace pr_impl {
 
+using namespace pr;
+
 namespace {
+
+// The bytes from `from` to `to` of a text.
+struct TextRange {
+    uint32_t from;
+    uint32_t to;
+};
 
 // A view of a text in a tree over one font, Arimo unless a test names another, in a port of 800 by 400 px.
 struct Shown {
@@ -39,20 +46,20 @@ struct Shown {
     bool styled = false;
 
     // Spans that the test gives each frame, in red.
-    std::vector<std::pair<uint32_t, uint32_t>> spanned;
+    Array<TextRange> spanned;
     uint32_t spanCalls = 0;
 
     // Spans of a second layer, underlined in blue.
-    std::vector<std::pair<uint32_t, uint32_t>> underlined;
+    Array<TextRange> underlined;
 
     // A gutter of this size shows each line's number, and records the lines that it was declared for.
     float gutterSize = 0;
-    std::vector<uint32_t> gutterLines;
+    Array<uint32_t> gutterLines;
 
     bool colorLines = false;        // even lines are filled with green
 
-    explicit Shown(const std::string& text, const std::string& family = "Arimo") {
-        std::string path = std::string(PR_FONTS_DIR) + "/" + family + "-Regular.ttf";
+    explicit Shown(PrStringView text, PrStringView family = "Arimo") {
+        String path = format("{}/{}-Regular.ttf", PR_FONTS_DIR, family);
         const PrFont* PR_NULLABLE face = nullptr;
         REQUIRE(prFontCreateFromFile(path, 0, nullptr, &face) == PrStatus_Ok);
         PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
@@ -131,8 +138,8 @@ struct Shown {
             .rowStyle = style(true),
             .styles = styled ? styleRecords : nullptr,
             .styleCount = styled ? 2u : 0u,
-            .spanLayers = spanned.empty() && underlined.empty() ? nullptr : layers,
-            .spanLayerCount = spanned.empty() && underlined.empty() ? 0u : 2u,
+            .spanLayers = spanned.isEmpty() && underlined.isEmpty() ? nullptr : layers,
+            .spanLayerCount = spanned.isEmpty() && underlined.isEmpty() ? 0u : 2u,
             .gutter = gutterSize > 0 ? gutterOf : nullptr,
             .gutterContext = this,
             .gutterSize = gutterSize,
@@ -184,8 +191,8 @@ struct Shown {
 
     static void gutterOf(void* context, PrLayoutTree* tree, PrLayoutNode cell, uint32_t line) {
         Shown* shown = static_cast<Shown*>(context);
-        shown->gutterLines.push_back(line);
-        std::string number = std::to_string(line + 1);
+        shown->gutterLines.push(line);
+        String number = format("{}", line + 1);
         prLayoutTreeFrameText(tree, cell, 0, number);
     }
 
@@ -201,17 +208,14 @@ struct Shown {
 
     PrTextEditPoint caret() { return prTextViewInfo(view).caret; }
 
-    std::string text() {
-        PrStringView all = prTextEditBufferText(buffer);
-        return std::string(all.data, all.size);
-    }
+    String text() { return String(prTextEditBufferText(buffer)); }
 };
 
 // A document of `count` lines of different text.
-std::string document(uint32_t count) {
-    std::string text;
+String document(uint32_t count) {
+    String text;
     for (uint32_t i = 0; i < count; ++i)
-        text += "line " + std::to_string(i) + (i + 1 < count ? "\n" : "");
+        formatTo(text, "line {}{}", i, i + 1 < count ? "\n" : "");
     return text;
 }
 
@@ -253,8 +257,8 @@ TEST_CASE("scrolling far shows the lines there, and stops at the document's ends
 }
 
 TEST_CASE("the height of a wrapped line becomes exact once it is in the window, and the scroll position holds its text") {
-    std::string longLine(4000, 'x');
-    std::string text = document(50) + "\n" + longLine + "\n" + document(50);
+    String longLine = String().append(4000, 'x');
+    String text = format("{}\n{}\n{}", document(50), longLine, document(50));
     Shown s(text);
     s.settle();
     double before = prTextViewInfo(s.view).documentSize;
@@ -291,7 +295,7 @@ TEST_CASE("the arrows count in the document, across lines and past the window") 
 }
 
 TEST_CASE("a caret on a line taller than the viewport, far from the window, brings the line and the caret into view") {
-    std::string text = document(2000) + "\n" + std::string(20000, 'x') + "\n" + document(2000);
+    String text = format("{}\n{}\n{}", document(2000), String().append(20000, 'x'), document(2000));
     Shown s(text);
     s.settle();
     uint32_t tall = prTextEditBufferLineEnd(s.buffer, 2000);
@@ -327,7 +331,7 @@ TEST_CASE("edits count in the height index, and line breaks and deletions keep t
     prTextViewRun(s.view, PrTextEditCommand_EdgeRight, PrTextEditSelectionMove_Collapse);
     prTextViewInsert(s.view, "x", PrTextEditMerge_Typing);
     s.settle();
-    CHECK(s.text().substr(0, 7) == "line 0x");
+    CHECK(prStringHead(s.text(), 7) == "line 0x");
     prTextViewRun(s.view, PrTextEditCommand_InsertLineBreak, PrTextEditSelectionMove_Collapse);
     s.settle();
     CHECK(prTextViewInfo(s.view).lineCount == 1001);
@@ -368,7 +372,7 @@ TEST_CASE("a press lands on the line under it, and a selection shows as a highli
 }
 
 TEST_CASE("without wrap, a long line is one row, and the caret brings it across") {
-    std::string text = std::string(3000, 'x') + "\nend";
+    String text = format("{}\nend", String().append(3000, 'x'));
     Shown s(text);
     s.wrap = false;
     s.settle();
@@ -417,7 +421,7 @@ TEST_CASE("style runs show as inline boxes in their rows, and offsets count in t
     prTextEditViewSetSelections(prTextViewEdit(s.view), &inside, 1);
     prTextViewInsert(s.view, "x", PrTextEditMerge_Typing);
     s.settle();
-    CHECK(s.text().substr(0, 11) == "alphx" + std::string("a beta"));
+    CHECK(prStringHead(s.text(), 11) == "alphxa beta");
     CHECK(prTextEditBufferStyleAt(s.buffer, 4) == 1);
     PrRect after{};
     REQUIRE(prTextViewCaretRect(s.view, &after));
@@ -441,7 +445,7 @@ TEST_CASE("every selection moves, types and deletes, and carets that meet join")
 
     prTextViewInsert(s.view, "!", PrTextEditMerge_Typing);
     s.settle();
-    CHECK(s.text().substr(0, 9) == "one!\ntwo!");
+    CHECK(prStringHead(s.text(), 9) == "one!\ntwo!");
     prTextViewRun(s.view, PrTextEditCommand_DeleteBackward, PrTextEditSelectionMove_Collapse);
     s.settle();
     CHECK(s.text() == "one\ntwo\nthree\nfour");
@@ -449,7 +453,7 @@ TEST_CASE("every selection moves, types and deletes, and carets that meet join")
     prTextViewRun(s.view, PrTextEditCommand_Left, PrTextEditSelectionMove_Extend);
     s.settle();
     PrRawString selected = prTextViewSelectedText(s.view);
-    CHECK(std::string(prRawStringView(&selected).data, prRawStringView(&selected).size) == "e\no\nr");
+    CHECK(prRawStringView(&selected) == "e\no\nr");
     prRawStringReset(&selected);
     prTextViewEraseSelection(s.view);
     s.settle();
@@ -482,12 +486,12 @@ TEST_CASE("deletions at carets side by side remove one range") {
 
 TEST_CASE("refinement reads the lines outside the window, and the scroll position holds its text") {
     // Two thousand lines of a narrow letter, which take fewer lines of the port than their lengths suggest.
-    std::string line(1000, 'x');
-    std::string narrow(1000, 'i');
-    std::string text;
+    String line = String().append(1000, 'x');
+    String narrow = String().append(1000, 'i');
+    String text;
     for (uint32_t i = 0; i < 2000; ++i)
-        text += narrow + "\n";
-    text += line;
+        formatTo(text, "{}\n", narrow);
+    text.append(line);
     Shown s(text);
     s.width = 2000;
     s.settle();
@@ -518,10 +522,11 @@ TEST_CASE("refinement reads the lines outside the window, and the scroll positio
 
 TEST_CASE("a right-to-left view without wrap scrolls toward its line's start and keeps the caret in the port") {
     // A Hebrew line, whose first byte is at the right.
-    std::string text;
+    String text;
     for (uint32_t i = 0; i < 1500; ++i)
-        text += "\xd7\x90";
-    Shown s(text + "\nend");
+        text.append("\xd7\x90");
+    text.append("\nend");
+    Shown s(text);
     s.wrap = false;
     s.direction = PrTextDirection_Rtl;
     s.settle();
@@ -552,12 +557,13 @@ TEST_CASE("bidi text keeps its offsets through the view") {
     CHECK(s.caret().column == 6);
     prTextViewRun(s.view, PrTextEditCommand_DeleteBackward, PrTextEditSelectionMove_Collapse);
     s.settle();
-    CHECK(s.text().substr(0, 6) == "abc \xd7\x91");
+    CHECK(prStringHead(s.text(), 6) == "abc \xd7\x91");
     CHECK(s.caret().column == 4);
 }
 
 TEST_CASE("a vertical view stacks its rows along the block axis, and the arrows turn with it") {
-    for (PrLayoutWritingMode mode : {PrLayoutWritingMode_VerticalRl, PrLayoutWritingMode_VerticalLr}) {
+    const PrLayoutWritingMode modes[] = {PrLayoutWritingMode_VerticalRl, PrLayoutWritingMode_VerticalLr};
+    for (PrLayoutWritingMode mode : modes) {
         bool reversed = mode == PrLayoutWritingMode_VerticalRl;
         Shown s(document(10000));
         s.writingMode = mode;
@@ -607,7 +613,7 @@ TEST_CASE("a vertical view stacks its rows along the block axis, and the arrows 
 }
 
 TEST_CASE("a vertical view wraps at the port's height") {
-    Shown s(std::string(4000, 'x') + "\nend");
+    Shown s(format("{}\nend", String().append(4000, 'x')));
     s.writingMode = PrLayoutWritingMode_VerticalRl;
     s.settle();
     prTextViewRun(s.view, PrTextEditCommand_LineStart, PrTextEditSelectionMove_Collapse);
@@ -620,7 +626,7 @@ TEST_CASE("spans color their text as highlights under the selection's, across ru
     Shown s("int value = 42;\nplain line\nreturn value;");
     s.styled = true;
     // A span that crosses the run's end, and one that crosses a line.
-    s.spanned = {{0, 3}, {6, 14}, {20, 30}};
+    s.spanned = Array<TextRange>({{0, 3}, {6, 14}, {20, 30}});
     prTextEditBufferSetStyle(s.buffer, 2, 8, 1);
     PrTextEditSelection selection{.anchor = 12, .caret = 13};
     prTextEditViewSetSelections(prTextViewEdit(s.view), &selection, 1);
@@ -670,7 +676,7 @@ TEST_CASE("a jump far through a document whose rows hold spans lays out the rows
         while (i < all.size && all.data[i] != ' ' && all.data[i] != '\n')
             ++i;
         if (from < i)
-            s.spanned.push_back({from, i});
+            s.spanned.push(TextRange{from, i});
     }
     s.settle();
     for (uint32_t jump = 0; jump < 6; ++jump) {
@@ -686,8 +692,8 @@ TEST_CASE("a jump far through a document whose rows hold spans lays out the rows
 
 TEST_CASE("layers of spans paint over each other, and a layer's span may underline its text") {
     Shown s("int value = 42;");
-    s.spanned = {{0, 3}};
-    s.underlined = {{0, 9}};
+    s.spanned = Array<TextRange>({{0, 3}});
+    s.underlined = Array<TextRange>({{0, 9}});
     s.settle();
     PrLayoutNode text = prLayoutNodeFirstChild(s.tree, prLayoutNodeFirstChild(s.tree, s.port));
     PrLayoutHighlight marks[4] = {};
@@ -702,7 +708,7 @@ TEST_CASE("layers of spans paint over each other, and a layer's span may underli
 
 TEST_CASE("a gutter holds a cell for each row's line, and the text wraps in the room that it leaves") {
     // A line that fits the port, but not beside the gutter.
-    std::string text = document(3) + "\n" + std::string(95, 'x');
+    String text = format("{}\n{}", document(3), String().append(95, 'x'));
     Shown plain(text);
     plain.settle();
     CHECK(prTextViewInfo(plain.view).documentSize == doctest::Approx(4 * 20.0));
@@ -711,7 +717,7 @@ TEST_CASE("a gutter holds a cell for each row's line, and the text wraps in the 
     s.gutterSize = 100;
     s.settle();
     CHECK(prTextViewInfo(s.view).documentSize == doctest::Approx(5 * 20.0));
-    CHECK(s.gutterLines.size() >= 4);
+    CHECK(s.gutterLines.count() >= 4);
     // The row holds the cell, at the port's left, and then the text's block, past the gutter.
     PrLayoutNode row = prLayoutNodeFirstChild(s.tree, s.port);
     PrLayoutNode cell = prLayoutNodeFirstChild(s.tree, row);
@@ -745,7 +751,7 @@ TEST_CASE("a gutter holds a cell for each row's line, and the text wraps in the 
 
 TEST_CASE("a gutter stays at the port's edge while lines that do not wrap scroll, however far the wheel goes") {
     // The longest line passes the port by 300 px or so, beside the gutter.
-    Shown s(document(3) + "\n" + std::string(120, 'x'));
+    Shown s(format("{}\n{}", document(3), String().append(120, 'x')));
     s.wrap = false;
     s.gutterSize = 100;
     s.colorLines = true;

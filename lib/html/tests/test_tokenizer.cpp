@@ -1,11 +1,10 @@
+#include "pr/array.h"
+#include "pr/string.h"
 #include "pr/string_ops.h"
 
 #include "html/src/html_tokenizer.h"
 
 #include "tools/harness/test.h"
-
-#include <string>
-#include <vector>
 
 namespace pr_impl {
 
@@ -13,12 +12,12 @@ namespace {
 
 // A tokenizer over `text`, in the state that the tree builder would have set.
 struct Reader {
-    std::string source;
+    String source;
     HtmlTokenizer tokenizer = {};
     RawArray<HtmlError> errors;
 
-    explicit Reader(std::string text, HtmlState state = HtmlState_Data, PrStringView lastStartTag = PrStringView{}) :
-            source(std::move(text)) {
+    explicit Reader(PrStringView text, HtmlState state = HtmlState_Data, PrStringView lastStartTag = PrStringView{}) :
+            source(text) {
         htmlTokenizerStart(&tokenizer, source, &errors);
         htmlTokenizerSetState(&tokenizer, state, lastStartTag);
     }
@@ -34,61 +33,55 @@ struct Reader {
         return tokenizer.token.kind != HtmlTokenKind_Eof;
     }
 
-    std::string text(HtmlSpan span) const {
-        PrStringView bytes = htmlSpanText(&tokenizer, span);
-        return std::string(bytes.data, bytes.size);
-    }
+    String text(HtmlSpan span) const { return htmlSpanText(&tokenizer, span); }
 
     // Returns the current input, which is the stream that the tokenizer reads.
-    std::string input() const {
-        PrStringView bytes = htmlInputText(&tokenizer);
-        return std::string(bytes.data, bytes.size);
-    }
+    String input() const { return htmlInputText(&tokenizer); }
 };
 
 // Appends one token, with adjacent characters joined as both corpora write them.
-void append(std::vector<std::string>* out, const Reader& reader) {
+void append(Array<String>* out, const Reader& reader) {
     const HtmlToken& token = reader.tokenizer.token;
     switch (token.kind) {
         case HtmlTokenKind_Character:
-            if (!out->empty() && out->back().compare(0, 6, "chars ") == 0)
-                out->back() += reader.text(token.data);
+            if (!out->isEmpty() && prStringStartsWith(out->last(), "chars "))
+                out->last().append(reader.text(token.data));
             else
-                out->push_back("chars " + reader.text(token.data));
+                out->push(format("chars {}", reader.text(token.data)));
             return;
 
         case HtmlTokenKind_StartTag:
         case HtmlTokenKind_EndTag: {
-            std::string entry = token.kind == HtmlTokenKind_StartTag ? "start " : "end ";
-            entry += reader.text(token.name);
+            String entry(token.kind == HtmlTokenKind_StartTag ? "start " : "end ");
+            entry.append(reader.text(token.name));
             for (uint32_t i = 0; i < reader.tokenizer.attributes.count; ++i) {
                 const HtmlAttribute& attribute = reader.tokenizer.attributes.data[i];
-                entry += " " + reader.text(attribute.name) + "=" + reader.text(attribute.value);
+                formatTo(entry, " {}={}", reader.text(attribute.name), reader.text(attribute.value));
             }
             if ((token.flags & HtmlTokenFlag_SelfClosing) != 0)
-                entry += " /";
-            out->push_back(entry);
+                entry.append(" /");
+            out->push(move(entry));
             return;
         }
 
         case HtmlTokenKind_Comment:
-            out->push_back("comment " + reader.text(token.data));
+            out->push(format("comment {}", reader.text(token.data)));
             return;
 
         case HtmlTokenKind_ProcessingInstruction:
-            out->push_back("pi " + reader.text(token.name) + " " + reader.text(token.data));
+            out->push(format("pi {} {}", reader.text(token.name), reader.text(token.data)));
             return;
 
         case HtmlTokenKind_Doctype: {
-            std::string entry = "doctype ";
-            entry += (token.flags & HtmlTokenFlag_NoName) != 0 ? "-" : reader.text(token.name);
+            String entry("doctype ");
+            entry.append((token.flags & HtmlTokenFlag_NoName) != 0 ? String("-") : reader.text(token.name));
             if ((token.flags & HtmlTokenFlag_NoPublicId) == 0)
-                entry += " public=" + reader.text(token.publicId);
+                formatTo(entry, " public={}", reader.text(token.publicId));
             if ((token.flags & HtmlTokenFlag_NoSystemId) == 0)
-                entry += " system=" + reader.text(token.systemId);
+                formatTo(entry, " system={}", reader.text(token.systemId));
             if ((token.flags & HtmlTokenFlag_ForceQuirks) != 0)
-                entry += " quirks";
-            out->push_back(entry);
+                entry.append(" quirks");
+            out->push(move(entry));
             return;
         }
 
@@ -97,20 +90,20 @@ void append(std::vector<std::string>* out, const Reader& reader) {
     }
 }
 
-std::string join(const std::vector<std::string>& parts) {
-    std::string out;
-    for (const std::string& part : parts) {
-        if (!out.empty())
-            out += " | ";
-        out += part;
+String join(const Array<String>& parts) {
+    String out;
+    for (const String& part : parts) {
+        if (!out.isEmpty())
+            out.append(" | ");
+        out.append(part);
     }
     return out;
 }
 
 // Returns every token in `text`, read in `state` for an element named `lastStartTag`.
-std::string tokens(std::string text, HtmlState state = HtmlState_Data, PrStringView lastStartTag = PrStringView{}) {
-    Reader reader(std::move(text), state, lastStartTag);
-    std::vector<std::string> out;
+String tokens(PrStringView text, HtmlState state = HtmlState_Data, PrStringView lastStartTag = PrStringView{}) {
+    Reader reader(text, state, lastStartTag);
+    Array<String> out;
     while (reader.next())
         append(&out, reader);
     return join(out);
@@ -118,52 +111,52 @@ std::string tokens(std::string text, HtmlState state = HtmlState_Data, PrStringV
 
 // Returns every character token in `text`, one entry each, with the flags that it carries, which the tree builder
 // branches on.
-std::string runs(std::string text, HtmlState state = HtmlState_Data, PrStringView lastStartTag = PrStringView{}) {
-    Reader reader(std::move(text), state, lastStartTag);
-    std::vector<std::string> out;
+String runs(PrStringView text, HtmlState state = HtmlState_Data, PrStringView lastStartTag = PrStringView{}) {
+    Reader reader(text, state, lastStartTag);
+    Array<String> out;
     while (reader.next()) {
         const HtmlToken& token = reader.tokenizer.token;
         if (token.kind != HtmlTokenKind_Character)
             continue;
 
-        std::string entry = reader.text(token.data);
+        String entry = reader.text(token.data);
         if ((token.flags & HtmlTokenFlag_Whitespace) != 0)
-            entry += " space";
+            entry.append(" space");
         if ((token.flags & HtmlTokenFlag_Text) != 0)
-            entry += " text";
+            entry.append(" text");
         if ((token.flags & HtmlTokenFlag_Null) != 0)
-            entry += " null";
-        out.push_back(entry);
+            entry.append(" null");
+        out.push(move(entry));
     }
     return join(out);
 }
 
 // Returns the same as tokens, for a tokenizer whose adjusted current node is a foreign element.
-std::string foreignTokens(std::string text) {
-    Reader reader(std::move(text));
+String foreignTokens(PrStringView text) {
+    Reader reader(text);
     reader.tokenizer.foreign = true;
-    std::vector<std::string> out;
+    Array<String> out;
     while (reader.next())
         append(&out, reader);
     return join(out);
 }
 
 // Returns the parse errors that `text` reports, each as its name and the byte offset at which it was reported.
-std::string errorsOf(std::string text, HtmlState state = HtmlState_Data) {
-    Reader reader(std::move(text), state);
+String errorsOf(PrStringView text, HtmlState state = HtmlState_Data) {
+    Reader reader(text, state);
     while (reader.next()) {
     }
 
-    std::vector<std::string> out;
+    Array<String> out;
     for (uint32_t i = 0; i < reader.errors.count; ++i) {
         PrStringView name = kHtmlErrorName[reader.errors.data[i].code];
-        out.push_back(std::string(name.data, name.size) + "@" + std::to_string(reader.errors.data[i].at));
+        out.push(format("{}@{}", name, reader.errors.data[i].at));
     }
     return join(out);
 }
 
 // Returns the column of `to` on its line, counting from the start of `text`.
-uint32_t columnAt(const std::string& text, uint32_t to) {
+uint32_t columnAt(PrStringView text, uint32_t to) {
     uint32_t at = 0;
     uint32_t line = 1;
     uint32_t column = 1;
@@ -171,7 +164,7 @@ uint32_t columnAt(const std::string& text, uint32_t to) {
     return column;
 }
 
-uint32_t lineAt(const std::string& text, uint32_t to) {
+uint32_t lineAt(PrStringView text, uint32_t to) {
     uint32_t at = 0;
     uint32_t line = 1;
     uint32_t column = 1;
@@ -181,10 +174,10 @@ uint32_t lineAt(const std::string& text, uint32_t to) {
 
 // Returns the tokens of `text` written to an open input one byte at a time and then closed. The tokenizer reads a token
 // only once its current input determines it.
-std::string written(const std::string& text) {
+String written(PrStringView text) {
     Reader reader("");
     reader.tokenizer.open = true;
-    std::vector<std::string> out;
+    Array<String> out;
     auto drain = [&] {
         while (htmlTokenizerNext(&reader.tokenizer) && reader.tokenizer.token.kind != HtmlTokenKind_Eof)
             append(&out, reader);
@@ -214,8 +207,8 @@ TEST_CASE("text is characters, one token a code point") {
 }
 
 TEST_CASE("a null in text is kept and reported") {
-    CHECK(tokens(std::string("a\0b", 3)) == std::string("chars a\0b", 9));
-    CHECK(errorsOf(std::string("a\0b", 3)) == "unexpected-null-character@1");
+    CHECK(tokens(PrStringView("a\0b", 3)) == PrStringView("chars a\0b", 9));
+    CHECK(errorsOf(PrStringView("a\0b", 3)) == "unexpected-null-character@1");
 }
 
 TEST_CASE("PLAINTEXT reads everything as text") {
@@ -454,7 +447,7 @@ TEST_CASE("a character token is every character the state read in one run") {
     CHECK(runs("  \n\t") == "  \n\t space");
     CHECK(runs("a<p>b") == "a text | b text");
     CHECK(runs("a&amp;b") == "a text | & text | b text");
-    CHECK(runs(std::string("a\0\0b", 4)) == std::string("a text | \0\0 null | b text", 25));
+    CHECK(runs(PrStringView("a\0\0b", 4)) == PrStringView("a text | \0\0 null | b text", 25));
     CHECK(runs("a\xc3\xa9" "b") == "a\xc3\xa9" "b text");
 }
 
@@ -473,7 +466,7 @@ TEST_CASE("an insertion is read next") {
     htmlTokenizerInsert(&reader.tokenizer, "xy");
     CHECK(reader.input() == "axy<p>");
 
-    std::vector<std::string> out;
+    Array<String> out;
     while (reader.next())
         append(&out, reader);
     CHECK(join(out) == "chars xy | start p");
@@ -514,7 +507,8 @@ TEST_CASE("a span read before an insertion still names its own text") {
 
     // The insertion is at the read point, so it moves no byte that the name covers, however far the buffer must grow to
     // hold it.
-    std::string written(4096, 'x');
+    String written;
+    written.append(4096, 'x');
     htmlTokenizerInsert(&reader.tokenizer, written);
     CHECK(reader.text(name) == "tag");
 }

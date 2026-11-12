@@ -16,7 +16,7 @@ Array<uint8_t> framed(PrStringView header, uint64_t declared) {
     Array<uint8_t> bytes;
     for (int i = 0; i < 8; ++i)
         bytes.push(uint8_t(declared >> (8 * i)));
-    bytes.append(prStringBytes(header), uint32_t(header.size));
+    bytes.append(prStringBytes(header));
     return bytes;
 }
 

@@ -3,13 +3,13 @@
 
 #include "core/tests/test_platform_config.h"
 
+#include "pr/mem.h"
 #include "pr/memory.h"
 #include "pr/raw_string.h"
 
 #include "tools/harness/test.h"
 
 #include <stdlib.h>
-#include <string.h>
 
 namespace pr_impl {
 
@@ -23,7 +23,7 @@ size_t frees = 0;
 
 size_t blockSize(const void* memory) {
     size_t size;
-    memcpy(&size, static_cast<const uint8_t*>(memory) - 16, sizeof(size));
+    prMemCopy(&size, static_cast<const uint8_t*>(memory) - 16, sizeof(size));
     return size;
 }
 
@@ -35,8 +35,8 @@ void* PR_NULLABLE configAllocBytes(size_t size) {
         return nullptr;
     uint8_t* block = arena + arenaUsed;
     arenaUsed += total;
-    memcpy(block, &size, sizeof(size));
-    memset(block + 16, 0xAB, size);
+    prMemCopy(block, &size, sizeof(size));
+    prMemFill(block + 16, 0xAB, size);
     ++allocations;
     return block + 16;
 }
@@ -45,7 +45,7 @@ void* PR_NULLABLE configReallocBytes(void* memory, size_t size) {
     void* moved = configAllocBytes(size);
     if (moved != nullptr) {
         size_t old = blockSize(memory);
-        memcpy(moved, memory, old < size ? old : size);
+        prMemCopy(moved, memory, old < size ? old : size);
         --allocations;
     }
     return moved;

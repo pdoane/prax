@@ -1,10 +1,12 @@
+#include "pr/string.h"
+#include "pr/string_ops.h"
 #include "pr/vterm.h"
 
 #include "tools/harness/test.h"
 
-#include <string>
-
 namespace pr_impl {
+
+using namespace pr;
 
 namespace {
 
@@ -20,8 +22,8 @@ struct Term {
     Term(const Term&) = delete;
     Term& operator=(const Term&) = delete;
 
-    void write(const std::string& text) {
-        prVtermWrite(vterm, PrByteView{reinterpret_cast<const uint8_t*>(text.data()), text.size()});
+    void write(PrStringView text) {
+        prVtermWrite(vterm, prStringBytes(text));
     }
 
     uint32_t scrollback() const { return prVtermScrollbackCount(vterm); }
@@ -29,14 +31,15 @@ struct Term {
     PrVtermLine line(uint32_t row) const { return prVtermLine(vterm, scrollback() + row); }
 
     // The text of screen row `row`, without trailing spaces.
-    std::string row(uint32_t row) const {
+    String row(uint32_t row) const {
         PrVtermLine line = this->line(row);
         PrRawString text = prRawStringNull();
         prVtermLineAppendText(vterm, scrollback() + row, 0, line.cellCount, &text);
-        std::string out(prRawStringView(&text).data, prRawStringView(&text).size);
+        PrStringView view = prRawStringView(&text);
+        while (!view.isEmpty() && view.data[view.size - 1] == ' ')
+            --view.size;
+        String out(view);
         prRawStringReset(&text);
-        while (!out.empty() && out.back() == ' ')
-            out.pop_back();
         return out;
     }
 
@@ -46,9 +49,9 @@ struct Term {
 
     PrUVec2 cursor() const { return prVtermCursor(vterm).position; }
 
-    std::string output() {
+    String output() {
         PrByteView bytes = prVtermOutput(vterm);
-        std::string out(reinterpret_cast<const char*>(bytes.data), bytes.size);
+        String out(prStringFromBytes(bytes));
         prVtermOutputConsume(vterm, bytes.size);
         return out;
     }
@@ -77,19 +80,19 @@ bool cursorAt(const Term& term, uint32_t column, uint32_t row) {
 
 // Fills the first `rows` rows of a six-column terminal with consecutive letters, starting at `a`.
 void fillLetters(Term* term, uint32_t rows) {
-    std::string text;
+    String text;
     for (uint32_t row = 0; row < rows; ++row) {
-        text += "\x1b[" + std::to_string(row + 1) + ";1H";
+        formatTo(text, "\x1b[{};1H", row + 1);
         for (uint32_t column = 0; column < 6; ++column)
-            text += char('a' + (row * 6 + column) % 26);
+            text.append(char('a' + (row * 6 + column) % 26));
     }
     term->write(text);
 }
 
 // Returns the sequence that sets DECLRMM and then sets the margins from column `left` to column `right`. Columns count
 // from one, as in DECSLRM.
-std::string margins(uint32_t left, uint32_t right) {
-    return "\x1b[?69h\x1b[" + std::to_string(left) + ";" + std::to_string(right) + "s";
+String margins(uint32_t left, uint32_t right) {
+    return format("\x1b[?69h\x1b[{};{}s", left, right);
 }
 
 } // namespace
@@ -106,7 +109,7 @@ TEST_CASE("vterm margins: DECSLRM sets the margins while DECLRMM is set, and CSI
     CHECK(term.output() == "\x1b[?69;2$y");
 
     // DECSLRM homes the cursor, and text then wraps from the right margin to the left.
-    term.write("\x1b[2;2H" + margins(3, 6));
+    term.write(format("\x1b[2;2H{}", margins(3, 6)));
     CHECK(cursorAt(term, 0, 0));
     term.write("\x1b[?69$p");
     CHECK(term.output() == "\x1b[?69;1$y");
@@ -126,7 +129,7 @@ TEST_CASE("vterm margins: DECSLRM sets the margins while DECLRMM is set, and CSI
     CHECK(cursorAt(term, 2, 3));
 
     // Resetting DECLRMM resets the margins, and CSI s saves the cursor again.
-    term.write(margins(3, 6) + "\x1b[?69l\x1b[3;1Hxxxxxxxx\x1b[s\x1b[1;1H\x1b[u");
+    term.write(format("{}\x1b[?69l\x1b[3;1Hxxxxxxxx\x1b[s\x1b[1;1H\x1b[u", margins(3, 6)));
     CHECK(cursorAt(term, 8, 2));
     term.write("\x1b[?69h\x1b[1;1Habcdefghij");
     CHECK(term.row(0) == "abcdefghij");
@@ -134,7 +137,7 @@ TEST_CASE("vterm margins: DECSLRM sets the margins while DECLRMM is set, and CSI
 
 TEST_CASE("vterm margins: text wraps at the right margin, and only a wrap across the whole width marks the line") {
     Term term(10, 4);
-    term.write(margins(1, 5) + "abcdefg");
+    term.write(format("{}abcdefg", margins(1, 5)));
     CHECK(term.row(0) == "abcde");
     CHECK(term.row(1) == "fg");
     CHECK_FALSE(term.wrapped(0));
@@ -145,13 +148,13 @@ TEST_CASE("vterm margins: text wraps at the right margin, and only a wrap across
     CHECK(term.wrapped(2));
 
     // Without autowrap, the column at the right margin is overwritten.
-    term.write(margins(3, 6) + "\x1b[?7l\x1b[1;3Hvwxyz");
+    term.write(format("{}\x1b[?7l\x1b[1;3Hvwxyz", margins(3, 6)));
     CHECK(term.row(0) == "abvwxz");
 }
 
 TEST_CASE("vterm margins: text right of the right margin runs to the screen's edge, and wraps to the left margin") {
     Term term(10, 4);
-    term.write(margins(3, 6) + "\x1b[1;8Hxyz");
+    term.write(format("{}\x1b[1;8Hxyz", margins(3, 6)));
     CHECK(term.row(0) == "       xyz");
     CHECK(cursorAt(term, 9, 0));
     term.write("w");
@@ -166,7 +169,7 @@ TEST_CASE("vterm margins: text right of the right margin runs to the screen's ed
 
 TEST_CASE("vterm margins: a wide character that does not fit before the right margin wraps whole") {
     Term term(10, 3);
-    term.write(margins(3, 6) + "\x1b[1;3Habc\xe4\xb8\xad");
+    term.write(format("{}\x1b[1;3Habc\xe4\xb8\xad", margins(3, 6)));
     CHECK(term.row(0) == "  abc");
     CHECK(term.cell(5, 0).flags == 0);
     CHECK(term.row(1) == "  \xe4\xb8\xad");
@@ -186,7 +189,7 @@ TEST_CASE("vterm margins: a wide character that does not fit before the right ma
 
 TEST_CASE("vterm margins: a carriage return goes to the left margin, or to the first column from left of it") {
     Term term(10, 2);
-    term.write(margins(3, 6) + "\x1b[1;5H\r");
+    term.write(format("{}\x1b[1;5H\r", margins(3, 6)));
     CHECK(cursorAt(term, 2, 0));
     term.write("\x1b[1;9H\r");
     CHECK(cursorAt(term, 2, 0));
@@ -237,7 +240,7 @@ TEST_CASE("vterm margins: horizontal movements stop at the margins from inside t
 
 TEST_CASE("vterm margins: origin mode counts columns from the left margin, and keeps the cursor in the margins") {
     Term term(10, 5);
-    term.write(margins(3, 6) + "\x1b[2;4r\x1b[?6h");
+    term.write(format("{}\x1b[2;4r\x1b[?6h", margins(3, 6)));
     CHECK(cursorAt(term, 2, 1));
     term.write("x");
     CHECK(term.row(1) == "  x");
@@ -272,7 +275,7 @@ TEST_CASE("vterm margins: IND, RI and LF scroll the rectangle of the margins, an
     Term term(6, 4);
     fillLetters(&term, 4);
     uint64_t first = term.line(0).revision;
-    term.write("\x1b[2;4r" + margins(2, 4) + "\x1b[4;3H\n");
+    term.write(format("\x1b[2;4r{}\x1b[4;3H\n", margins(2, 4)));
     CHECK(term.row(0) == "abcdef");
     CHECK(term.row(1) == "gnopkl");
     CHECK(term.row(2) == "mtuvqr");
@@ -308,7 +311,7 @@ TEST_CASE("vterm margins: IND, RI and LF scroll the rectangle of the margins, an
 TEST_CASE("vterm margins: SU and SD scroll the rectangle of the margins, wherever the cursor is") {
     Term term(6, 3);
     fillLetters(&term, 3);
-    term.write(margins(2, 3) + "\x1b[1;6H\x1b[S");
+    term.write(format("{}\x1b[1;6H\x1b[S", margins(2, 3)));
     CHECK(term.row(0) == "ahidef");
     CHECK(term.row(1) == "gnojkl");
     CHECK(term.row(2) == "m  pqr");
@@ -321,7 +324,7 @@ TEST_CASE("vterm margins: SU and SD scroll the rectangle of the margins, whereve
 
 TEST_CASE("vterm margins: lines enter the scrollback only from a region that spans the width from the top") {
     Term term(6, 2);
-    term.write("abcdef" + margins(1, 3) + "\x1b[2;1H\n");
+    term.write(format("abcdef{}\x1b[2;1H\n", margins(1, 3)));
     CHECK(term.scrollback() == 0);
     CHECK(term.row(0) == "   def");
 
@@ -333,7 +336,7 @@ TEST_CASE("vterm margins: lines enter the scrollback only from a region that spa
 TEST_CASE("vterm margins: IL and DL move the rectangle below the cursor and return to the left margin") {
     Term term(6, 4);
     fillLetters(&term, 4);
-    term.write(margins(2, 4) + "\x1b[2;3H\x1b[L");
+    term.write(format("{}\x1b[2;3H\x1b[L", margins(2, 4)));
     CHECK(term.row(0) == "abcdef");
     CHECK(term.row(1) == "g   kl");
     CHECK(term.row(2) == "mhijqr");
@@ -355,7 +358,7 @@ TEST_CASE("vterm margins: IL and DL move the rectangle below the cursor and retu
 
 TEST_CASE("vterm margins: ICH and DCH move the cells up to the right margin, and do nothing outside the margins") {
     Term term(8, 1);
-    term.write("abcdefgh" + margins(3, 6) + "\x1b[1;4H\x1b[2@");
+    term.write(format("abcdefgh{}\x1b[1;4H\x1b[2@", margins(3, 6)));
     CHECK(term.row(0) == "abc  dgh");
     term.write("\x1b[1;4H\x1b[P");
     CHECK(term.row(0) == "abc d gh");
@@ -369,20 +372,20 @@ TEST_CASE("vterm margins: ICH and DCH move the cells up to the right margin, and
 
 TEST_CASE("vterm margins: ECH, EL and ED ignore the margins") {
     Term term(8, 2);
-    term.write("abcdefgh\r\nabcdefgh" + margins(3, 6) + "\x1b[1;4H\x1b[K");
+    term.write(format("abcdefgh\r\nabcdefgh{}\x1b[1;4H\x1b[K", margins(3, 6)));
     CHECK(term.row(0) == "abc");
     term.write("\x1b[2;4H\x1b[4X");
     CHECK(term.row(1) == "abc    h");
     term.write("\x1b[2;2H\x1b[1K");
     CHECK(term.row(1) == "  c    h");
     term.write("\x1b[1;1H\x1b[J");
-    CHECK(term.row(1).empty());
+    CHECK(term.row(1).isEmpty());
 }
 
 TEST_CASE("vterm margins: DECIC and DECDC insert and delete columns in the scroll region") {
     Term term(6, 3);
     fillLetters(&term, 3);
-    term.write("\x1b[1;2r" + margins(2, 5) + "\x1b[2;3H\x1b[2'}");
+    term.write(format("\x1b[1;2r{}\x1b[2;3H\x1b[2'}}", margins(2, 5)));
     CHECK(term.row(0) == "ab  cf");
     CHECK(term.row(1) == "gh  il");
     CHECK(term.row(2) == "mnopqr");
@@ -401,7 +404,7 @@ TEST_CASE("vterm margins: DECIC and DECDC insert and delete columns in the scrol
 TEST_CASE("vterm margins: DECBI and DECFI move the cursor, and scroll the columns at a margin") {
     Term term(6, 2);
     fillLetters(&term, 2);
-    term.write(margins(2, 5) + "\x1b[1;4H\x1b" "6");
+    term.write(format("{}\x1b[1;4H\x1b" "6", margins(2, 5)));
     CHECK(cursorAt(term, 2, 0));
     term.write("\x1b" "6\x1b" "6");
     CHECK(cursorAt(term, 1, 0));
@@ -424,7 +427,7 @@ TEST_CASE("vterm margins: DECBI and DECFI move the cursor, and scroll the column
 TEST_CASE("vterm margins: SL and SR scroll the columns of the margins") {
     Term term(6, 2);
     fillLetters(&term, 2);
-    term.write(margins(2, 5) + "\x1b[1;3H\x1b[2 @");
+    term.write(format("{}\x1b[1;3H\x1b[2 @", margins(2, 5)));
     CHECK(term.row(0) == "ade  f");
     CHECK(term.row(1) == "gjk  l");
     term.write("\x1b[ A");
@@ -435,7 +438,7 @@ TEST_CASE("vterm margins: SL and SR scroll the columns of the margins") {
 TEST_CASE("vterm margins: a scroll of the rectangle keeps clusters and wide characters whole") {
     Term term(6, 2);
     // e with a combining acute accent, and a wide character across the left margin.
-    term.write("ae\xcc\x81" "bcd\r\n\xe4\xb8\xad" "wxyz" + margins(2, 4) + "\x1b[1;1H\x1b[S");
+    term.write(format("ae\xcc\x81" "bcd\r\n\xe4\xb8\xad" "wxyz{}\x1b[1;1H\x1b[S", margins(2, 4)));
     CHECK(term.row(0) == "a wxd");
     CHECK(term.row(1) == "    yz");
     CHECK(term.widesWhole());
@@ -445,7 +448,7 @@ TEST_CASE("vterm margins: a scroll of the rectangle keeps clusters and wide char
 
     // A cluster that the scroll moves to another line keeps its code points, however often it moves.
     Term clusters(6, 2);
-    clusters.write("ae\xcc\x81" "cdef\r\nghijkl" + margins(2, 4) + "\x1b[T");
+    clusters.write(format("ae\xcc\x81" "cdef\r\nghijkl{}\x1b[T", margins(2, 4)));
     CHECK(clusters.row(0) == "a   ef");
     CHECK(clusters.row(1) == "ge\xcc\x81" "cdkl");
     clusters.write("\x1b[S");
@@ -460,7 +463,7 @@ TEST_CASE("vterm margins: a scroll of the rectangle keeps clusters and wide char
 TEST_CASE("vterm margins: ICH, DCH and DECIC keep wide characters whole at the margins") {
     Term term(8, 1);
     // The right margin splits a wide character, so ICH and DCH empty it.
-    term.write("a\xe4\xb8\xad" "b\xe5\x9b\xbd" "cd" + margins(1, 2) + "\x1b[@");
+    term.write(format("a\xe4\xb8\xad" "b\xe5\x9b\xbd" "cd{}\x1b[@", margins(1, 2)));
     CHECK(term.widesWhole());
     CHECK(term.row(0) == " a b\xe5\x9b\xbd" "cd");
     term.write("\x1b[P");
@@ -468,12 +471,12 @@ TEST_CASE("vterm margins: ICH, DCH and DECIC keep wide characters whole at the m
     CHECK(term.row(0) == "a  b\xe5\x9b\xbd" "cd");
 
     // An insertion pushes half of a wide character past the right margin.
-    term.write("\x1b[s\x1b[1;1Ha\xe4\xb8\xad" "b\xe5\x9b\xbd" "cd" + margins(2, 3) + "\x1b[1;2H\x1b[@");
+    term.write(format("\x1b[s\x1b[1;1Ha\xe4\xb8\xad" "b\xe5\x9b\xbd" "cd{}\x1b[1;2H\x1b[@", margins(2, 3)));
     CHECK(term.widesWhole());
     CHECK(term.row(0) == "a  b\xe5\x9b\xbd" "cd");
 
     // Both margins split wide characters.
-    term.write("\x1b[s\x1b[1;1Ha\xe4\xb8\xad" "b\xe5\x9b\xbd" "cd" + margins(3, 5) + "\x1b[1;3H\x1b['}");
+    term.write(format("\x1b[s\x1b[1;1Ha\xe4\xb8\xad" "b\xe5\x9b\xbd" "cd{}\x1b[1;3H\x1b['}}", margins(3, 5)));
     CHECK(term.widesWhole());
     CHECK(term.row(0) == "a   b cd");
 }
@@ -483,7 +486,7 @@ TEST_CASE("vterm margins: the lines that a scroll of the rectangle changes get n
     term.write("abcdefghijklmnop");
     REQUIRE(term.wrapped(0));
     uint64_t revisions[3] = {term.line(0).revision, term.line(1).revision, term.line(2).revision};
-    term.write("\x1b[2;3r" + margins(2, 4) + "\x1b[S");
+    term.write(format("\x1b[2;3r{}\x1b[S", margins(2, 4)));
     CHECK(term.line(0).revision == revisions[0]);
     CHECK(term.line(1).revision != revisions[1]);
     CHECK(term.line(2).revision != revisions[2]);
@@ -493,7 +496,7 @@ TEST_CASE("vterm margins: the lines that a scroll of the rectangle changes get n
 
 TEST_CASE("vterm margins: DECSC and DECRC leave the margins, and DECSTR, RIS and a resize reset them") {
     Term term(10, 3);
-    term.write(margins(3, 6) + "\x1b" "7" + margins(2, 4) + "\x1b" "8\x1b[1;2Habcd");
+    term.write(format("{}\x1b" "7{}\x1b" "8\x1b[1;2Habcd", margins(3, 6), margins(2, 4)));
     CHECK(term.row(0) == " abc");
     CHECK(term.row(1) == " d");
 
@@ -502,7 +505,7 @@ TEST_CASE("vterm margins: DECSC and DECRC leave the margins, and DECSTR, RIS and
     term.write("\x1b[3;1H0123456789");
     CHECK(term.row(2) == "0123456789");
 
-    term.write(margins(3, 6) + "\x1b" "c\x1b[?69$p");
+    term.write(format("{}\x1b" "c\x1b[?69$p", margins(3, 6)));
     CHECK(term.output() == "\x1b[?69;2$y");
     term.write("0123456789");
     CHECK(term.row(0) == "0123456789");
@@ -519,7 +522,7 @@ TEST_CASE("vterm margins: DECSC and DECRC leave the margins, and DECSTR, RIS and
 
 TEST_CASE("vterm margins: a resize rewraps only the lines that wrapped across the whole width") {
     Term term(6, 4);
-    term.write(margins(1, 3) + "abcdef\x1b[s\x1b[3;1Hghijklmn");
+    term.write(format("{}abcdef\x1b[s\x1b[3;1Hghijklmn", margins(1, 3)));
     prVtermResize(term.vterm, PrUVec2{12, 4});
     CHECK(term.row(0) == "abc");
     CHECK(term.row(1) == "def");

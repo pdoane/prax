@@ -1,60 +1,62 @@
 // Where CSS divides text: word-break, overflow-wrap and the first-letter text.
 
+#include "pr/array.h"
+#include "pr/string.h"
 #include "pr/text_break.h"
 #include "pr/utf8.h"
 
 #include "tools/harness/test.h"
 
-#include <cstring>
-#include <string>
-#include <vector>
-
 namespace pr_impl {
+
+using namespace pr;
 
 namespace {
 
 // Returns the first-letter text of `text`, or "none".
-std::string firstLetter(const char* text) {
-    PrStringView view{text, std::strlen(text)};
+String firstLetter(const char* text) {
+    PrStringView view(text);
     size_t start = 0;
     size_t end = 0;
     if (!prTextFirstLetter(view, &start, &end))
         return "none";
-    return std::string(text + start, end - start);
+    return String(PrStringView(text + start, end - start));
 }
 
 // The opportunities of `text` in `style`, as one character per code point, which marks the opportunity after it: '|' if
 // a line may break, '!' if it must, '~' for an emergency break that counts when the narrowest width is measured, '-'
 // for one that does not, and '.' for none.
-std::string breaksOf(const char* text, PrTextBreakStyle style) {
-    PrStringView view{text, std::strlen(text)};
-    std::vector<uint32_t> codePoints;
-    std::vector<uint32_t> ends;
+String breaksOf(const char* text, PrTextBreakStyle style) {
+    PrStringView view(text);
+    Array<uint32_t> codePoints;
+    Array<uint32_t> ends;
     for (size_t at = 0; at < view.size;) {
         uint32_t codePoint = 0;
         at += prUtf8Decode(view, at, &codePoint);
-        codePoints.push_back(codePoint);
-        ends.push_back(uint32_t(at));
+        codePoints.push(codePoint);
+        ends.push(uint32_t(at));
     }
-    uint32_t count = uint32_t(codePoints.size());
-    std::vector<PrUnicodeLineBreak> breaks(count);
-    std::vector<PrTextEmergency> emergency(count);
-    std::vector<PrTextBreakStyle> styles(count, style);
+    uint32_t count = codePoints.count();
+    Array<PrUnicodeLineBreak> breaks(count);
+    Array<PrTextEmergency> emergency(count);
+    Array<PrTextBreakStyle> styles(count);
+    for (PrTextBreakStyle& each : styles)
+        each = style;
     prUnicodeLineBreaks(codePoints.data(), count, breaks.data());
     PrTextBreakDesc desc{view, codePoints.data(), ends.data(), styles.data(), count};
     prTextBreaksTailor(&desc, breaks.data(), emergency.data());
-    std::string out;
+    String out;
     for (uint32_t i = 0; i < count; ++i) {
         if (breaks[i] == PrUnicodeLineBreak_Mandatory)
-            out += '!';
+            out.append('!');
         else if (breaks[i] == PrUnicodeLineBreak_Allowed)
-            out += '|';
+            out.append('|');
         else if (emergency[i] == PrTextEmergency_Anywhere)
-            out += '~';
+            out.append('~');
         else if (emergency[i] == PrTextEmergency_BreakWord)
-            out += '-';
+            out.append('-');
         else
-            out += '.';
+            out.append('.');
     }
     return out;
 }

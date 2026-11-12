@@ -181,7 +181,7 @@ bool openTask(MergeApp& m) {
         return false;
     }
     PrStringView text = merged.text;
-    if (!prFileWrite(task.result, PrByteView{reinterpret_cast<const uint8_t*>(text.data), text.size})) {
+    if (!prFileWrite(task.result, prStringBytes(text))) {
         printError("merge: cannot write {}\n", task.result);
         return false;
     }

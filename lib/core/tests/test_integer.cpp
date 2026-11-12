@@ -1,16 +1,15 @@
 #include "pr/integer.h"
+#include "pr/string.h"
 
 #include "tools/harness/test.h"
-
-#include <string>
 
 namespace pr_impl {
 
 namespace {
 
-std::string format(uint64_t value, uint32_t radix = 10) {
+String formatted(uint64_t value, uint32_t radix = 10) {
     char text[kPrU64TextMaxBytes];
-    return std::string(text, prU64Format(value, text, radix));
+    return String(PrStringView(text, prU64Format(value, text, radix)));
 }
 
 } // namespace
@@ -20,17 +19,17 @@ std::string format(uint64_t value, uint32_t radix = 10) {
 using namespace pr_impl;
 
 TEST_CASE("an unsigned integer is its digits, most significant first") {
-    CHECK(format(0) == "0");
-    CHECK(format(7) == "7");
-    CHECK(format(1234567890) == "1234567890");
-    CHECK(format(0xffffffffffffffffull) == "18446744073709551615");
+    CHECK(formatted(0) == "0");
+    CHECK(formatted(7) == "7");
+    CHECK(formatted(1234567890) == "1234567890");
+    CHECK(formatted(0xffffffffffffffffull) == "18446744073709551615");
 }
 
 TEST_CASE("a digit above nine is a lowercase letter") {
-    CHECK(format(255, 16) == "ff");
-    CHECK(format(0x2603, 16) == "2603");
-    CHECK(format(5, 2) == "101");
-    CHECK(format(35, 36) == "z");
+    CHECK(formatted(255, 16) == "ff");
+    CHECK(formatted(0x2603, 16) == "2603");
+    CHECK(formatted(5, 2) == "101");
+    CHECK(formatted(35, 36) == "z");
 }
 
 TEST_CASE("a prefix parse reads the digits a text starts with, and says how many") {

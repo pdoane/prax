@@ -1,27 +1,26 @@
 // The Canvas 2D renderer's rendering, in a browser: each scene renders through the browser's 2D context and through the
 // CPU renderer, on the same Canvas 2D device, and the two must agree within the differences of their rasterizers.
 
+#include "pr/array.h"
 #include "pr/draw_canvas.h"
 #include "pr/draw_cpu.h"
 #include "pr/draw_filter.h"
 #include "pr/draw_image.h"
 #include "pr/draw_list.h"
+#include "pr/float.h"
 #include "pr/font.h"
 #include "pr/gpu.h"
+#include "pr/min_max.h"
 #include "pr/path.h"
+#include "pr/string.h"
 
 #include "tools/harness/test.h"
-
-#include <algorithm>
-#include <cmath>
-#include <cstdint>
-#include <cstdlib>
-#include <string>
-#include <vector>
 
 namespace pr_impl {
 
 namespace {
+
+using namespace pr;
 
 // How a scene's two renders differ.
 struct Difference {
@@ -52,7 +51,7 @@ struct Renderers {
     }
 
     // Renders the list with `renderer` over a transparent texture of `extent`, and reads the texture back.
-    std::vector<uint8_t> render(PrDrawRenderer* renderer, const PrDrawList* list, PrUVec2 extent) {
+    Array<uint8_t> render(PrDrawRenderer* renderer, const PrDrawList* list, PrUVec2 extent) {
         PrGpuTextureDesc desc = prGpuTextureDesc2d(PrGpuFormat_Rgba8, extent,
             PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_RenderTarget);
         PrGpuTexture texture{};
@@ -72,7 +71,7 @@ struct Renderers {
         prGpuCommandsTextureBarrier(commands, texture, all, PrGpuAccessFlag_ColorAttachment,
             PrGpuAccessFlag_ShaderRead);
         prGpuCommandsSubmitAndWait(commands);
-        std::vector<uint8_t> pixels(size_t(extent.x) * extent.y * 4);
+        Array<uint8_t> pixels(size_t(extent.x) * extent.y * 4);
         prGpuTextureRead(device, texture, PrGpuAccessFlag_ShaderRead, PrIVec2{0, 0},
             PrPixels{pixels.data(), size_t(extent.x) * 4, extent});
         prDrawFrameDestroy(frame);
@@ -83,15 +82,16 @@ struct Renderers {
     // Renders the list with both renderers and measures how they differ, counting a pixel as different if a channel
     // differs by more than `tolerance`.
     Difference compare(const PrDrawList* list, PrUVec2 extent, int tolerance) {
-        std::vector<uint8_t> drawn = render(canvas, list, extent);
-        std::vector<uint8_t> expected = render(cpu, list, extent);
+        Array<uint8_t> drawn = render(canvas, list, extent);
+        Array<uint8_t> expected = render(cpu, list, extent);
         Difference d{};
         uint64_t differing = 0;
-        for (size_t i = 0; i < drawn.size(); i += 4) {
+        for (uint32_t i = 0; i < drawn.count(); i += 4) {
             d.canvasInk += drawn[i + 3] / 255.0;
             d.cpuInk += expected[i + 3] / 255.0;
-            for (size_t k = 0; k < 4; ++k) {
-                if (std::abs(int(drawn[i + k]) - int(expected[i + k])) > tolerance) {
+            for (uint32_t k = 0; k < 4; ++k) {
+                int difference = int(drawn[i + k]) - int(expected[i + k]);
+                if (max(difference, -difference) > tolerance) {
                     ++differing;
                     break;
                 }
@@ -111,7 +111,7 @@ void agree(const Difference& d, double inkEpsilon, double differing) {
 
 // The page packages the font under /fonts (pr_page_tests).
 const PrFont* load(const char* name) {
-    std::string path = std::string("/fonts/") + name;
+    String path = format("/fonts/{}", name);
     const PrFont* font = nullptr;
     REQUIRE(prFontCreateFromFile(path, 0, nullptr, &font) == PrStatus_Ok);
     return font;
@@ -125,9 +125,9 @@ void wheelStops(PrDrawColorStop (&out)[7]) {
         out[i] = PrDrawColorStop{
             .offset = float(i) / 6,
             .color = PrColor{
-                clamp(std::fabs(hue * 6 - 3) - 1),
-                clamp(2 - std::fabs(hue * 6 - 2)),
-                clamp(2 - std::fabs(hue * 6 - 4)), 1,
+                clamp(prF32Abs(hue * 6 - 3) - 1),
+                clamp(2 - prF32Abs(hue * 6 - 2)),
+                clamp(2 - prF32Abs(hue * 6 - 4)), 1,
             },
         };
     }
@@ -188,7 +188,8 @@ TEST_CASE("the canvas renderer fills a path by its rule") {
     prPathMoveTo(path, PrVec2{70, 10});
     prPathCubicTo(path, PrVec2{130, 0}, PrVec2{60, 70}, PrVec2{120, 56});
     prPathClose(path);
-    for (PrPathFillRule rule : {PrPathFillRule_EvenOdd, PrPathFillRule_NonZero}) {
+    const PrPathFillRule rules[] = {PrPathFillRule_EvenOdd, PrPathFillRule_NonZero};
+    for (PrPathFillRule rule : rules) {
         CAPTURE(int(rule));
         prDrawListClear(list);
         prDrawListPath(list, path, rule, {.color = PrColor{0, 0, 0, 1}});
@@ -291,7 +292,7 @@ TEST_CASE("the canvas renderer draws images, textures and lists as sources") {
     prDrawListEllipse(inner, PrVec2{8, 8}, PrVec2{7, 5}, 0.5f, {.color = PrColor{0, 0.6f, 0.2f, 1}});
     prDrawListFreeze(inner);
     // The texture holds the image's texels.
-    std::vector<uint8_t> texels(64);
+    Array<uint8_t> texels(64);
     for (uint32_t i = 0; i < 16; ++i) {
         bool red = ((i % 4) + (i / 4)) % 2 == 0;
         texels[i * 4] = red ? 255 : 0;
@@ -304,8 +305,9 @@ TEST_CASE("the canvas renderer draws images, textures and lists as sources") {
         prDrawSourceTexture(prDrawGpuTexture(texture), PrUVec2{4, 4}, PrRect{0, 0, 4, 4}, PrDrawAlpha_Premultiplied),
         prDrawSourceList(inner, PrRect{0, 0, 16, 16}),
     };
+    const PrDrawSampling samplings[] = {PrDrawSampling_Nearest, PrDrawSampling_Linear};
     for (uint32_t s = 0; s < 3; ++s) {
-        for (PrDrawSampling sampling : {PrDrawSampling_Nearest, PrDrawSampling_Linear}) {
+        for (PrDrawSampling sampling : samplings) {
             CAPTURE(s);
             CAPTURE(int(sampling));
             PrDrawList* list = prDrawListCreate();
@@ -379,7 +381,8 @@ TEST_CASE("the canvas renderer filters a group with blurs and drop shadows") {
     shadow.kind = PrDrawFilterKind_DropShadow;
     shadow.inputs[0] = PrDrawFilterInput_Source;
     shadow.shadow = PrDrawFilterShadow{.offset = PrVec2{4, 5}, .sigma = PrVec2{3, 3}, .color = PrColor{0, 0, 0, 0.6f}};
-    for (const PrDrawFilterNode* node : {&blur, &shadow}) {
+    const PrDrawFilterNode* nodes[] = {&blur, &shadow};
+    for (const PrDrawFilterNode* node : nodes) {
         CAPTURE(int(node->kind));
         const PrDrawFilter* filter = filterOf(*node);
         PrDrawList* list = prDrawListCreate();
@@ -420,8 +423,10 @@ TEST_CASE("the canvas renderer masks a group by alpha and by luminance") {
         {.offset = 0, .color = PrColor{1, 1, 1, 1}},
         {.offset = 1, .color = PrColor{0, 0, 0, 0}},
     };
-    for (PrDrawMaskMode mode : {PrDrawMaskMode_Alpha, PrDrawMaskMode_Luminance}) {
-        for (bool invert : {false, true}) {
+    const PrDrawMaskMode modes[] = {PrDrawMaskMode_Alpha, PrDrawMaskMode_Luminance};
+    const bool inverts[] = {false, true};
+    for (PrDrawMaskMode mode : modes) {
+        for (bool invert : inverts) {
             CAPTURE(int(mode));
             CAPTURE(invert);
             PrDrawList* masking = prDrawListCreate();
@@ -453,18 +458,18 @@ TEST_CASE("the canvas renderer draws glyphs, filled and stroked") {
     for (const PrDrawStroke* outline : outlines) {
         CAPTURE(outline != nullptr);
         PrDrawList* list = prDrawListCreate();
-        std::vector<PrFontGlyph> glyphs;
+        Array<PrFontGlyph> glyphs;
         PrVec2 pen{6, 46};
         for (const char* c = "Hxg&Q"; *c != 0; ++c) {
             uint16_t id = prFontCodePointGlyph(font, uint32_t(*c));
-            glyphs.push_back(PrFontGlyph{id, pen});
+            glyphs.push(PrFontGlyph{id, pen});
             pen.x += prFontGlyphAdvance(font, id, 0) * 32;
         }
         PrFontGlyphRun run{};
         run.font = font;
         run.size = 32;
         run.glyphs = glyphs.data();
-        run.glyphCount = uint32_t(glyphs.size());
+        run.glyphCount = glyphs.count();
         prDrawListGlyphs(list, &run, PrVec2{}, {.color = PrColor{0, 0, 0, 1}, .stroke = outline});
         agree(r.compare(list, PrUVec2{128, 64}, 64), 0.03, 0.04);
         prDrawListRelease(list);

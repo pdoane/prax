@@ -1,11 +1,9 @@
+#include "pr/string_ops.h"
 #include "pr/tex.h"
 
 #include "tex/src/tex_symbols.h"
 
 #include "tools/harness/test.h"
-
-#include <cstdio>
-#include <string>
 
 extern "C" int prTestTexCApi(void);
 
@@ -14,28 +12,26 @@ namespace pr_impl {
 namespace {
 
 // Returns the markup of `source` with `options`.
-std::string markup(PrStringView source, const PrTexOptions& options) {
+String markup(PrStringView source, const PrTexOptions& options) {
     PrRawString out = prRawStringEmpty();
     prTexAppendMathMl(source, &options, &out);
-    PrStringView view = prRawStringView(&out);
-    std::string text(view.data, view.size);
-    prRawStringReset(&out);
-    return text;
+    return String::adopt(out);
 }
 
 // Returns the presentation of `source`: its MathML without the <math> element and the annotation.
-std::string mathml(PrStringView source, PrTexDisplay display = PrTexDisplay_Inline) {
+String mathml(PrStringView source, PrTexDisplay display = PrTexDisplay_Inline) {
     PrTexOptions options = prTexOptionsDefault();
     options.display = display;
     options.annotate = false;
-    std::string text = markup(source, options);
-    std::string open = display == PrTexDisplay_Block ? "<math display=\"block\">" : "<math display=\"inline\">";
-    if (text.rfind(open, 0) == 0 && text.size() >= open.size() + 7)
-        text = text.substr(open.size(), text.size() - open.size() - 7);
+    String text = markup(source, options);
+    PrStringView whole = text;
+    PrStringView open = display == PrTexDisplay_Block ? "<math display=\"block\">" : "<math display=\"inline\">";
+    if (prStringStartsWith(whole, open) && whole.size >= open.size + 7)
+        return String(prStringSlice(whole, open.size, whole.size - open.size - 7));
     return text;
 }
 
-std::string display(PrStringView source) {
+String display(PrStringView source) {
     return mathml(source, PrTexDisplay_Block);
 }
 
@@ -373,8 +369,10 @@ TEST_CASE("spaces are mspaces in em") {
 TEST_CASE("a dimension is at most TeX's largest") {
     CHECK(mathml("\\kern{99999999999999999999999999em} \\kern{-99999999999999999999999999em}") ==
         "<mspace width=\"1638.4em\"></mspace><mspace width=\"-1638.4em\"></mspace>");
-    std::string digits(60, '9');
-    CHECK(mathml(PrStringView(("\\hspace{" + digits + "pt}").c_str())) == "<mspace width=\"1638.4em\"></mspace>");
+    String digits;
+    digits.append(60, '9');
+    String source = concat("\\hspace{", digits, "pt}");
+    CHECK(mathml(source) == "<mspace width=\"1638.4em\"></mspace>");
 }
 
 TEST_CASE("styles set displaystyle and scriptlevel") {
@@ -521,7 +519,7 @@ TEST_CASE("arrays follow their column specifications") {
 }
 
 TEST_CASE("a column specification makes at most 1024 columns, however its repetitions nest") {
-    std::string most = mathml("\\begin{array}{*{1024}{c}} a \\end{array}");
+    String most = mathml("\\begin{array}{*{1024}{c}} a \\end{array}");
     CHECK(mathml("\\begin{array}{*{2000}{c}} a \\end{array}") == most);
     CHECK(mathml("\\begin{array}{*{99999999999999999999}{c}} a \\end{array}") == most);
     CHECK(mathml("\\begin{array}{*{64}{*{64}{*{64}{*{64}{*{64}{c}}}}}} a \\end{array}") == most);
@@ -529,14 +527,13 @@ TEST_CASE("a column specification makes at most 1024 columns, however its repeti
     CHECK(mathml("\\begin{array}{*{1000}{*{1000}{*{1000}{*{1000}{|}}}}c} a \\end{array}") ==
         mathml("\\begin{array}{|c} a \\end{array}"));
     // Repetitions nested past the parser's depth make nothing.
-    std::string deep;
+    String deep("\\begin{array}{c");
     for (int i = 0; i < 10000; ++i)
-        deep += "*{1}{";
-    deep += "c";
-    for (int i = 0; i < 10000; ++i)
-        deep += "}";
-    CHECK(mathml(PrStringView(("\\begin{array}{c" + deep + "} a \\end{array}").c_str())) ==
-        mathml("\\begin{array}{c} a \\end{array}"));
+        deep.append("*{1}{");
+    deep.append("c");
+    deep.append(10000, '}');
+    deep.append("} a \\end{array}");
+    CHECK(mathml(deep) == mathml("\\begin{array}{c} a \\end{array}"));
 }
 
 TEST_CASE("alignments set right and left columns in turn, \\jot apart") {
@@ -655,9 +652,9 @@ TEST_CASE("a document numbers its formulas' equations in order, and its labels r
     CHECK(markup("\\begin{equation} a \\label{first} \\end{equation}", options) ==
         "<math display=\"block\"><mtable displaystyle=\"true\" columnspacing=\"0\" width=\"100%\"><mlabeledtr><mtd><mte"
         "xt>(1)</mtext></mtd><mtd><mi>a</mi></mtd></mlabeledtr></mtable></math>");
-    std::string second = markup("\\begin{gather} b \\\\ c \\label{third} \\end{gather}", options);
-    CHECK(second.find("<mtext>(2)</mtext>") != std::string::npos);
-    CHECK(second.find("<mtext>(3)</mtext>") != std::string::npos);
+    String second = markup("\\begin{gather} b \\\\ c \\label{third} \\end{gather}", options);
+    CHECK(prStringContains(second, "<mtext>(2)</mtext>"));
+    CHECK(prStringContains(second, "<mtext>(3)</mtext>"));
     CHECK(prTexDocumentEquationCount(document) == 3);
     CHECK(prTexDocumentLabel(document, "first") == "1");
     CHECK(prTexDocumentLabel(document, "third") == "3");
@@ -672,9 +669,9 @@ TEST_CASE("a document numbers its formulas' equations in order, and its labels r
     // A formula without a document is a document of its own.
     options.document = nullptr;
     options.display = PrTexDisplay_Block;
-    std::string alone = markup("\\begin{equation} a \\end{equation}", options);
+    String alone = markup("\\begin{equation} a \\end{equation}", options);
     CHECK(alone == markup("\\begin{equation} a \\end{equation}", options));
-    CHECK(alone.find("<mtext>(1)</mtext>") != std::string::npos);
+    CHECK(prStringContains(alone, "<mtext>(1)</mtext>"));
 }
 
 TEST_CASE("flalign spreads its pairs of columns across the line, flush with its edges") {
@@ -811,9 +808,10 @@ TEST_CASE("errors hold their source, and the rest of the formula is set around t
 }
 
 TEST_CASE("deep nesting is an error, not a crash") {
-    std::string deep(500, '{');
-    std::string out = mathml(deep);
-    CHECK(out.find("<merror>") != std::string::npos);
+    String deep;
+    deep.append(500, '{');
+    String out = mathml(deep);
+    CHECK(prStringContains(out, "<merror>"));
 }
 
 TEST_CASE("control sequences and symbols are looked up by name and by character") {
@@ -872,24 +870,17 @@ TEST_CASE("the operator dictionary gives MathML Core's properties, with its fall
 TEST_CASE("every formula of the sample of mathematics converts without an error") {
     // tests/mathematics.md is a sample of real mathematics, for a person to review as it renders. Its math is $...$ and
     // $$...$$, as lib/markdown reads it.
-    std::string path = std::string(TEX_TESTS_DIR) + "/mathematics.md";
-    FILE* file = std::fopen(path.c_str(), "rb");
-    REQUIRE(file != nullptr);
-    std::string text;
-    char buffer[4096];
-    size_t read = 0;
-    while ((read = std::fread(buffer, 1, sizeof(buffer), file)) != 0)
-        text.append(buffer, read);
-    std::fclose(file);
+    String file = harness::readText(format("{}/mathematics.md", TEX_TESTS_DIR));
+    PrStringView text = file;
     uint32_t formulas = 0;
-    for (size_t at = text.find('$'); at != std::string::npos; at = text.find('$', at)) {
-        bool block = text.compare(at, 2, "$$") == 0;
+    for (size_t at = prStringFind(text, "$"); at != text.size; at = prStringFindFrom(text, "$", at)) {
+        bool block = prStringStartsWith(prStringFrom(text, at), "$$");
         size_t start = at + (block ? 2 : 1);
-        size_t end = text.find(block ? "$$" : "$", start);
-        REQUIRE(end != std::string::npos);
-        std::string source = text.substr(start, end - start);
+        size_t end = prStringFindFrom(text, block ? "$$" : "$", start);
+        REQUIRE(end != text.size);
+        PrStringView source = prStringSlice(text, start, end - start);
         INFO(source);
-        CHECK(mathml(source, block ? PrTexDisplay_Block : PrTexDisplay_Inline) .find("<merror") == std::string::npos);
+        CHECK(!prStringContains(mathml(source, block ? PrTexDisplay_Block : PrTexDisplay_Inline), "<merror"));
         ++formulas;
         at = end + (block ? 2 : 1);
     }

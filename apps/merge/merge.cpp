@@ -3,6 +3,7 @@
 #include "apps/merge/merge.h"
 
 #include "pr/file.h"
+#include "pr/string_ops.h"
 #include "pr/text_diff.h"
 #include "pr/text_diff_merge.h"
 
@@ -32,7 +33,7 @@ struct FileLines {
 bool readLines(PrStringView path, FileLines* out) {
     if (!prFileMap(path, &out->mapping))
         return false;
-    PrStringView all{reinterpret_cast<const char*>(out->mapping.data), out->mapping.size};
+    PrStringView all = prStringFromBytes(out->mapping);
     size_t start = 0;
     for (size_t i = 0; i <= all.size; ++i) {
         if (i != all.size && all.data[i] != '\n')

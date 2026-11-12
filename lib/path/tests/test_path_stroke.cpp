@@ -1,11 +1,11 @@
+#include "pr/array.h"
+#include "pr/float.h"
 #include "pr/path_rasterizer.h"
 #include "pr/path_stroke.h"
+#include "pr/span.h"
 #include "pr/vec.h"
 
 #include "tools/harness/test.h"
-
-#include <cmath>
-#include <vector>
 
 namespace pr_impl {
 
@@ -29,7 +29,7 @@ double strokedArea(const PrPath* path, const PrPathStroke& stroke) {
     PrPathPolyline outline{};
     prPathStrokeOutline(path, &stroke, 0.001f, &outline);
     prPathPolylineTransform(&outline, prAffine2Scale(PrVec2{float(kScale), float(kScale)}));
-    std::vector<uint8_t> coverage(kSize * kSize);
+    Array<uint8_t> coverage(kSize * kSize);
     PrPixels mask{coverage.data(), kSize, {kSize, kSize}};
     PrPathRasterizer* rasterizer = prPathRasterizerCreate();
     prPathRasterizerFill(rasterizer, &outline, PrPathFillRule_NonZero, PrPathCoverage_Area, PrIVec2{0, 0}, mask);
@@ -53,7 +53,7 @@ PrPathStroke style(float width, PrPathJoin join = PrPathJoin_Miter, PrPathCap ca
     };
 }
 
-PrPath* polyline(std::initializer_list<PrVec2> points, bool closed = false) {
+PrPath* polyline(Span<const PrVec2> points, bool closed = false) {
     PrPath* path = prPathCreate();
     bool first = true;
     for (PrVec2 p : points) {
@@ -92,7 +92,8 @@ uint32_t strokedContours(const PrPath* path, const PrPathStroke& stroke) {
 using namespace pr_impl;
 
 TEST_CASE("caps extend a line by nothing, a half square or a half circle") {
-    PrPath* line = polyline({{10, 10}, {30, 10}});
+    const PrVec2 linePoints[] = {{10, 10}, {30, 10}};
+    PrPath* line = polyline(linePoints);
     CHECK(strokedArea(line, style(4)) == doctest::Approx(80).epsilon(0.001));
     CHECK(strokedArea(line, style(4, PrPathJoin_Miter, PrPathCap_Square)) == doctest::Approx(96).epsilon(0.001));
     CHECK(strokedArea(line, style(4, PrPathJoin_Miter, PrPathCap_Round)) ==
@@ -101,7 +102,8 @@ TEST_CASE("caps extend a line by nothing, a half square or a half circle") {
 }
 
 TEST_CASE("joins fill the outer corner with a point, a triangle or an arc") {
-    PrPath* corner = polyline({{10, 10}, {30, 10}, {30, 30}});
+    const PrVec2 cornerPoints[] = {{10, 10}, {30, 10}, {30, 30}};
+    PrPath* corner = polyline(cornerPoints);
     // The two segments cover 156 together, with the corner square overlapping.
     CHECK(strokedArea(corner, style(4, PrPathJoin_Miter)) == doctest::Approx(160).epsilon(0.001));
     CHECK(strokedArea(corner, style(4, PrPathJoin_Bevel)) == doctest::Approx(158).epsilon(0.001));
@@ -111,7 +113,8 @@ TEST_CASE("joins fill the outer corner with a point, a triangle or an arc") {
 
 TEST_CASE("a miter past the limit is beveled") {
     // Segments 10 degrees apart make a miter 11.5 widths long.
-    PrPath* sharp = polyline({{5, 30}, {35, 30}, {5, 35.3f}});
+    const PrVec2 sharpPoints[] = {{5, 30}, {35, 30}, {5, 35.3f}};
+    PrPath* sharp = polyline(sharpPoints);
     PrPathStroke limited = style(2, PrPathJoin_Miter);
     PrPathStroke beveled = style(2, PrPathJoin_Bevel);
     CHECK(strokedArea(sharp, limited) == doctest::Approx(strokedArea(sharp, beveled)));
@@ -121,14 +124,16 @@ TEST_CASE("a miter past the limit is beveled") {
 }
 
 TEST_CASE("a closed contour joins its ends and takes no caps") {
-    PrPath* square = polyline({{10, 10}, {30, 10}, {30, 30}, {10, 30}}, true);
+    const PrVec2 squarePoints[] = {{10, 10}, {30, 10}, {30, 30}, {10, 30}};
+    PrPath* square = polyline(squarePoints, true);
     CHECK(strokedArea(square, style(2, PrPathJoin_Miter, PrPathCap_Round)) ==
         doctest::Approx(22 * 22 - 18 * 18).epsilon(0.001));
     prPathDestroy(square);
 }
 
 TEST_CASE("dashes cut the line from the offset into the pattern") {
-    PrPath* line = polyline({{10, 10}, {27, 10}});
+    const PrVec2 linePoints[] = {{10, 10}, {27, 10}};
+    PrPath* line = polyline(linePoints);
     const float pattern[] = {4, 6};
     PrPathStroke dashed = style(2);
     dashed.dashes = pattern;
@@ -144,7 +149,8 @@ TEST_CASE("dashes cut the line from the offset into the pattern") {
 }
 
 TEST_CASE("an odd pattern repeats and a negative one strokes solid") {
-    PrPath* line = polyline({{10, 10}, {30, 10}});
+    const PrVec2 linePoints[] = {{10, 10}, {30, 10}};
+    PrPath* line = polyline(linePoints);
     const float odd[] = {5};
     PrPathStroke dashed = style(2);
     dashed.dashes = odd;
@@ -158,7 +164,8 @@ TEST_CASE("an odd pattern repeats and a negative one strokes solid") {
 }
 
 TEST_CASE("a segment of no length is a dot where its caps give it area") {
-    PrPath* dot = polyline({{20, 20}, {20, 20}});
+    const PrVec2 dotPoints[] = {{20, 20}, {20, 20}};
+    PrPath* dot = polyline(dotPoints);
     CHECK(strokedArea(dot, style(6)) == doctest::Approx(0));
     CHECK(strokedArea(dot, style(6, PrPathJoin_Miter, PrPathCap_Square)) == doctest::Approx(36).epsilon(0.001));
     CHECK(strokedArea(dot, style(6, PrPathJoin_Miter, PrPathCap_Round)) == doctest::Approx(kPi * 9).epsilon(0.002));
@@ -171,7 +178,8 @@ TEST_CASE("a segment of no length is a dot where its caps give it area") {
 }
 
 TEST_CASE("a contour that closes at once is a segment of no length") {
-    PrPath* path = polyline({{20, 20}}, true);
+    const PrVec2 pathPoints[] = {{20, 20}};
+    PrPath* path = polyline(pathPoints, true);
     CHECK(strokedArea(path, style(6)) == doctest::Approx(0));
     CHECK(strokedArea(path, style(6, PrPathJoin_Miter, PrPathCap_Square)) == doctest::Approx(36).epsilon(0.001));
     CHECK(strokedArea(path, style(6, PrPathJoin_Miter, PrPathCap_Round)) == doctest::Approx(kPi * 9).epsilon(0.002));
@@ -179,7 +187,8 @@ TEST_CASE("a contour that closes at once is a segment of no length") {
 }
 
 TEST_CASE("the caps of a contour of no length face the stroke's direction for it") {
-    PrPath* dot = polyline({{20, 20}, {20, 20}});
+    const PrVec2 dotPoints[] = {{20, 20}, {20, 20}};
+    PrPath* dot = polyline(dotPoints);
     PrPathStroke turned = style(6, PrPathJoin_Miter, PrPathCap_Square);
     PrPath* outline = prPathCreate();
     strokeTo(dot, &turned, 0.01f, outline);
@@ -200,7 +209,8 @@ TEST_CASE("the caps of a contour of no length face the stroke's direction for it
 }
 
 TEST_CASE("dashes of no length are dots, including one at the contour's start") {
-    PrPath* line = polyline({{10, 20}, {50, 20}});
+    const PrVec2 linePoints[] = {{10, 20}, {50, 20}};
+    PrPath* line = polyline(linePoints);
     const float dashes[2] = {0, 10};
     PrPathStroke dotted = style(4, PrPathJoin_Miter, PrPathCap_Square);
     dotted.dashes = dashes;
@@ -219,7 +229,8 @@ TEST_CASE("curves stroke to within the tolerance") {
 }
 
 TEST_CASE("a stroke with no width is nothing") {
-    PrPath* line = polyline({{10, 10}, {30, 10}});
+    const PrVec2 linePoints[] = {{10, 10}, {30, 10}};
+    PrPath* line = polyline(linePoints);
     PrPath* out = prPathCreate();
     prPathAddRect(out, PrRect{0, 0, 1, 1});
     PrPathStroke none = style(0);
@@ -230,22 +241,26 @@ TEST_CASE("a stroke with no width is nothing") {
 }
 
 TEST_CASE("an open contour strokes as one loop and a closed one as two") {
-    PrPath* open = polyline({{10, 10}, {30, 10}, {30, 30}, {12, 40}});
+    const PrVec2 openPoints[] = {{10, 10}, {30, 10}, {30, 30}, {12, 40}};
+    PrPath* open = polyline(openPoints);
     CHECK(strokedContours(open, style(4, PrPathJoin_Round, PrPathCap_Round)) == 1);
-    PrPath* closed = polyline({{10, 10}, {30, 10}, {30, 30}}, true);
+    const PrVec2 closedPoints[] = {{10, 10}, {30, 10}, {30, 30}};
+    PrPath* closed = polyline(closedPoints, true);
     CHECK(strokedContours(closed, style(4)) == 2);
     prPathDestroy(open);
     prPathDestroy(closed);
 }
 
 TEST_CASE("a triangle cap is a point half the width past the end") {
-    PrPath* line = polyline({{10, 10}, {30, 10}});
+    const PrVec2 linePoints[] = {{10, 10}, {30, 10}};
+    PrPath* line = polyline(linePoints);
     CHECK(strokedArea(line, style(4, PrPathJoin_Miter, PrPathCap_Triangle)) == doctest::Approx(88).epsilon(0.001));
     prPathDestroy(line);
 }
 
 TEST_CASE("a clipped miter lies between the bevel and the whole miter") {
-    PrPath* sharp = polyline({{5, 30}, {35, 30}, {5, 35.3f}});
+    const PrVec2 sharpPoints[] = {{5, 30}, {35, 30}, {5, 35.3f}};
+    PrPath* sharp = polyline(sharpPoints);
     double bevel = strokedArea(sharp, style(2, PrPathJoin_Bevel));
     PrPathStroke miter = style(2, PrPathJoin_Miter);
     miter.miterLimit = 20;
@@ -260,7 +275,8 @@ TEST_CASE("a clipped miter lies between the bevel and the whole miter") {
 }
 
 TEST_CASE("an arcs join between lines is a miter") {
-    PrPath* corner = polyline({{10, 10}, {30, 10}, {20, 30}});
+    const PrVec2 cornerPoints[] = {{10, 10}, {30, 10}, {20, 30}};
+    PrPath* corner = polyline(cornerPoints);
     CHECK(strokedArea(corner, style(4, PrPathJoin_Arcs)) ==
         doctest::Approx(strokedArea(corner, style(4, PrPathJoin_Miter))).epsilon(0.001));
     prPathDestroy(corner);
@@ -280,7 +296,8 @@ TEST_CASE("an arcs join between curves bending away falls between the bevel and 
 }
 
 TEST_CASE("a width profile varies each side's half width along the contour") {
-    PrPath* line = polyline({{10, 20}, {50, 20}});
+    const PrVec2 linePoints[] = {{10, 20}, {50, 20}};
+    PrPath* line = polyline(linePoints);
     const PrPathWidthPoint taper[] = {{0, 0, 0}, {1, 0.5f, 0.5f}};
     PrPathStroke tapered = style(4);
     tapered.profile = taper;
@@ -310,7 +327,8 @@ TEST_CASE("a width profile varies each side's half width along the contour") {
 }
 
 TEST_CASE("the last dash of a closed contour runs into the first") {
-    PrPath* square = polyline({{10, 10}, {30, 10}, {30, 30}, {10, 30}}, true);
+    const PrVec2 squarePoints[] = {{10, 10}, {30, 10}, {30, 30}, {10, 30}};
+    PrPath* square = polyline(squarePoints, true);
     const float pattern[] = {15, 5};
     PrPathStroke dashed = style(2);
     dashed.dashes = pattern;
@@ -332,7 +350,8 @@ TEST_CASE("a stroke that turns back on itself stays within its width of the path
     PrVec2 a{110.28155517578125f, 6.6706695556640625f};
     PrVec2 b{110.32177734375f, 6.6713409423828125f};
     PrVec2 c{110.36199951171875f, 6.672004699707031f};
-    for (PrPathJoin join : {PrPathJoin_Miter, PrPathJoin_MiterClip, PrPathJoin_Bevel, PrPathJoin_Round}) {
+    const PrPathJoin joins[] = {PrPathJoin_Miter, PrPathJoin_MiterClip, PrPathJoin_Bevel, PrPathJoin_Round};
+    for (PrPathJoin join : joins) {
         PrPath* path = prPathCreate();
         prPathMoveTo(path, a);
         prPathCubicTo(path, a, b, b);
@@ -364,7 +383,8 @@ TEST_CASE("a stroke that turns back on itself stays within its width of the path
 
 TEST_CASE("a stroke's outline lies within its reach of the path") {
     // The tip turns through a miter 1 / sin(atan(1 / 2)) = sqrt(5) widths long.
-    PrPath* path = polyline({{10, 50}, {30, 10}, {50, 50}});
+    const PrVec2 pathPoints[] = {{10, 50}, {30, 10}, {50, 50}};
+    PrPath* path = polyline(pathPoints);
     PrPath* outline = prPathCreate();
     PrPathJoin joins[] = {PrPathJoin_Miter, PrPathJoin_MiterClip, PrPathJoin_Arcs, PrPathJoin_Round, PrPathJoin_Bevel};
     PrPathCap caps[] = {PrPathCap_Butt, PrPathCap_Round, PrPathCap_Square, PrPathCap_Triangle};
@@ -386,7 +406,7 @@ TEST_CASE("a stroke's outline lies within its reach of the path") {
     miter.miterLimit = 2.25f;
     strokeTo(path, &miter, 0.01f, outline);
     CHECK(prPathStrokeReach(&miter) == doctest::Approx(4.5));
-    CHECK(prPathTightBounds(outline).top == doctest::Approx(10 - 2 * std::sqrt(5.0)).epsilon(0.001));
+    CHECK(prPathTightBounds(outline).top == doctest::Approx(10 - 2 * prF64Sqrt(5.0)).epsilon(0.001));
     PrPathStroke none = style(0);
     CHECK(prPathStrokeReach(&none) == 0.0f);
     prPathDestroy(outline);
@@ -394,7 +414,8 @@ TEST_CASE("a stroke's outline lies within its reach of the path") {
 }
 
 TEST_CASE("a path with points that are not finite strokes without failing") {
-    for (float bad : {INFINITY, -INFINITY, NAN}) {
+    const float bads[] = {kPrF32Infinity, -kPrF32Infinity, kPrF32Nan};
+    for (float bad : bads) {
         PrPath* path = prPathCreate();
         prPathMoveTo(path, PrVec2{0, 0});
         prPathLineTo(path, PrVec2{bad, 5});
@@ -403,7 +424,8 @@ TEST_CASE("a path with points that are not finite strokes without failing") {
         prPathClose(path);
         const float dashes[2] = {3, 2};
         const PrPathWidthPoint profile[2] = {{0, 0.5f, 0.5f}, {1, 1, 1}};
-        for (PrPathJoin join : {PrPathJoin_Miter, PrPathJoin_Round, PrPathJoin_Arcs}) {
+        const PrPathJoin joins[] = {PrPathJoin_Miter, PrPathJoin_Round, PrPathJoin_Arcs};
+        for (PrPathJoin join : joins) {
             PrPathStroke dashed = style(4, join, PrPathCap_Round);
             dashed.dashes = dashes;
             dashed.dashCount = 2;

@@ -1,3 +1,4 @@
+#include "pr/array.h"
 #include "pr/base64.h"
 #include "pr/css_quickjs.h"
 #include "pr/dom_geometry_quickjs.h"
@@ -9,15 +10,13 @@
 #include "pr/net.h"
 #include "pr/net_null.h"
 #include "pr/quickjs_binding.h"
+#include "pr/string.h"
 #include "pr/svg_quickjs.h"
 #include "pr/webidl_quickjs.h"
 
 #include "html/quickjs/src/html_bindings_quickjs.h"
 
 #include "tools/harness/test.h"
-
-#include <string>
-#include <vector>
 
 namespace pr_impl {
 
@@ -26,7 +25,7 @@ namespace {
 // Holds every request that an intercepting fetcher receives, unanswered, so that what a fetch loads is still loading
 // for as long as the test needs.
 void hold(void* PR_NULLABLE context, PrFetchInterceptRequest* request) {
-    static_cast<std::vector<PrFetchInterceptRequest*>*>(context)->push_back(request);
+    static_cast<Array<PrFetchInterceptRequest*>*>(context)->push(request);
 }
 
 } // namespace
@@ -155,7 +154,7 @@ TEST_CASE("devicePixelRatio is the display's pixel ratio, not a resolution a que
     CHECK(prHtmlPageLoad(page, "<p>", "about:blank", nullptr) == PrStatus_Ok);
     CHECK(jsHtmlSetGlobal(ctx, prHtmlPageWindow(page)));
     auto run = [&](const char* source) {
-        JSValue result = JS_Eval(ctx, source, strlen(source), "ratio", JS_EVAL_TYPE_GLOBAL);
+        JSValue result = JS_Eval(ctx, source, PrStringView(source).size, "ratio", JS_EVAL_TYPE_GLOBAL);
         CHECK(!JS_IsException(result));
         JS_FreeValue(ctx, result);
     };
@@ -185,7 +184,7 @@ TEST_CASE("the viewport that the host sets is the one that scripts measure, and 
         PrStatus_Ok);
     CHECK(jsHtmlSetGlobal(ctx, prHtmlPageWindow(page)));
     auto run = [&](const char* source) {
-        JSValue result = JS_Eval(ctx, source, strlen(source), "viewport", JS_EVAL_TYPE_GLOBAL);
+        JSValue result = JS_Eval(ctx, source, PrStringView(source).size, "viewport", JS_EVAL_TYPE_GLOBAL);
         CHECK(!JS_IsException(result));
         JS_FreeValue(ctx, result);
     };
@@ -217,18 +216,12 @@ TEST_CASE("a face's object made while it loads is held until the load settles it
     prJsMathMlBind(ctx);
     jsHtmlBind(ctx);
     PrHtmlPage* page = prHtmlPageCreate(nullptr);
-    std::string path = std::string(PR_FONTS_DIR) + "/noto_handwriting-cff2_colr_1.otf";
-    std::string bytes;
-    FILE* file = std::fopen(path.c_str(), "rb");
-    REQUIRE(file != nullptr);
-    char buffer[65536];
-    size_t read = 0;
-    while ((read = std::fread(buffer, 1, sizeof(buffer), file)) != 0)
-        bytes.append(buffer, read);
-    std::fclose(file);
-    std::string encoded(prBase64EncodedSize(bytes.size()), '\0');
-    prBase64Encode(bytes, encoded.data(), encoded.size());
-    std::string html = "<style>@font-face { font-family: A; src: url(data:font/otf;base64," + encoded + ") }</style>";
+    String bytes = harness::readText(format("{}/noto_handwriting-cff2_colr_1.otf", PR_FONTS_DIR));
+    REQUIRE(!bytes.isEmpty());
+    Array<char> encoded(uint32_t(prBase64EncodedSize(bytes.count())));
+    prBase64Encode(bytes, encoded.data(), encoded.count());
+    String html = concat("<style>@font-face { font-family: A; src: url(data:font/otf;base64,",
+        PrStringView(encoded.data(), encoded.count()), ") }</style>");
     // FontFaceSet.load starts loading the face, which settles only in a task.
     CHECK(prHtmlPageLoad(page, html, "about:blank", nullptr) == PrStatus_Ok);
     CHECK(jsHtmlSetGlobal(ctx, prHtmlPageWindow(page)));
@@ -264,7 +257,7 @@ TEST_CASE("the ready promise taken while the last loading face loads resolves wh
     jsHtmlBind(ctx);
     // The fetcher holds every fetch, so that the face is still loading when it is deleted.
     PrNet* net = prNetNullCreate();
-    std::vector<PrFetchInterceptRequest*> held;
+    Array<PrFetchInterceptRequest*> held;
     PrFetchInterceptDesc fetcherDesc{.net = net, .request = hold, .context = &held};
     PrFetchNetwork* fetcher = prFetchInterceptCreate(&fetcherDesc);
     PrHtmlHost host = prHtmlHostDefault();
@@ -283,13 +276,13 @@ TEST_CASE("the ready promise taken while the last loading face loads resolves wh
         }
     };
     auto run = [&](const char* source) {
-        JSValue result = JS_Eval(ctx, source, strlen(source), "fonts", JS_EVAL_TYPE_GLOBAL);
+        JSValue result = JS_Eval(ctx, source, PrStringView(source).size, "fonts", JS_EVAL_TYPE_GLOBAL);
         CHECK(!JS_IsException(result));
         JS_FreeValue(ctx, result);
     };
     run("globalThis.face = new FontFace('B', 'url(b.ttf)');document.fonts.add(face);face.load();");
     settle();
-    REQUIRE(held.size() == 1);
+    REQUIRE(held.count() == 1);
     run("if (document.fonts.status !== 'loading') throw new Error('loading');globalThis.ready = false;"
         "document.fonts.ready.then(() => { globalThis.ready = true; });document.fonts.delete(face);");
     settle();

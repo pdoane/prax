@@ -170,16 +170,16 @@ TEST_CASE("the terminal panel paints the terminal's background beneath its view,
     REQUIRE(e.s.terminals.count() == 1);
     PrTerminal* terminal = e.s.terminals[0];
     PrStringView magenta = "\x1b]11;#ff00ff\x07";
-    prVtermWrite(prTerminalVtermLock(terminal), PrByteView{prStringBytes(magenta), magenta.size});
+    prVtermWrite(prTerminalVtermLock(terminal), prStringBytes(magenta));
     prTerminalVtermUnlock(terminal);
     e.settle();
     PrColor background = prTerminalBackground(terminal);
     CHECK(background.r == 1.0f);
     CHECK(background.g == 0.0f);
-    std::vector<uint8_t> rgba;
+    Array<uint8_t> rgba;
     REQUIRE(e.f.render(&rgba));
     auto isMagenta = [&](PrVec2 at) {
-        size_t i = (size_t(at.y) * KitFixture::kRenderWidth + size_t(at.x)) * 4;
+        uint32_t i = (uint32_t(at.y) * KitFixture::kRenderWidth + uint32_t(at.x)) * 4;
         return rgba[i] > 250 && rgba[i + 1] < 5 && rgba[i + 2] > 250;
     };
     // A blank cell, the gutter, and the leftover space past the last whole cell, at the view's bottom right.
@@ -199,7 +199,7 @@ TEST_CASE("the first terminal starts in the document's workspace, and a new one 
     REQUIRE(prFileCreateDirectory(format("{}/.git", folder)));
     REQUIRE(prFileCreateDirectory(format("{}/sub", folder)));
     String path = format("{}/sub/notes.txt", folder);
-    REQUIRE(prFileWrite(path, PrByteView{prStringBytes("notes\n"), 6}));
+    REQUIRE(prFileWrite(path, prStringBytes("notes\n")));
     Editor e("");
     REQUIRE(openDocument(e.s, path));
     prTextEditorShow(e.s.editor, prTextEditorDocumentFromPath(e.s.editor, path));
@@ -229,7 +229,7 @@ TEST_CASE("the first terminal starts in the document's workspace, and a new one 
     PrRawString url = prUrlFromFilePath(sub);
     String report = format("\x1b]7;{}\x07", prRawStringView(&url));
     prRawStringReset(&url);
-    prVtermWrite(prTerminalVtermLock(e.s.terminals[0]), PrByteView{prStringBytes(report), report.count()});
+    prVtermWrite(prTerminalVtermLock(e.s.terminals[0]), prStringBytes(report));
     prTerminalVtermUnlock(e.s.terminals[0]);
     e.run("terminal.new");
     REQUIRE(e.s.terminals.count() == 2);
@@ -502,7 +502,7 @@ TEST_CASE("Save waits for the load to finish") {
         program.append("int value = 1;\n");
     String folder = String(PrStringView(harness::testFolder()));
     String path = format("{}/big.c", folder);
-    REQUIRE(prFileWrite(path, PrByteView{prStringBytes(program), program.count()}));
+    REQUIRE(prFileWrite(path, prStringBytes(program)));
     Editor e("");
     REQUIRE(openDocument(e.s, path));
     prTextEditorShow(e.s.editor, prTextEditorDocumentFromPath(e.s.editor, path));
@@ -521,7 +521,7 @@ TEST_CASE("a click with the primary modifier on a terminal's reference to a file
     String folder = String(PrStringView(harness::testFolder()));
     String path = format("{}/linked.txt", folder);
     String text = document(5);
-    REQUIRE(prFileWrite(path, PrByteView{prStringBytes(text), text.count()}));
+    REQUIRE(prFileWrite(path, prStringBytes(text)));
     Editor e("hello");
     e.run("terminal.toggle");
     e.settle();
@@ -529,7 +529,7 @@ TEST_CASE("a click with the primary modifier on a terminal's reference to a file
     PrTerminal* terminal = e.s.terminals[0];
     // The reference is printed on row 9, below the shell's prompt, in the form a compiler uses.
     String printed = format("\x1b[9;1H{}:3:4: note\r\n", path);
-    prVtermWrite(prTerminalVtermLock(terminal), PrByteView{prStringBytes(printed), printed.count()});
+    prVtermWrite(prTerminalVtermLock(terminal), prStringBytes(printed));
     prTerminalVtermUnlock(terminal);
     e.settle();
     PrRect box = e.f.bounds(prTerminalNode(terminal));

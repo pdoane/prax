@@ -563,8 +563,7 @@ void store(BuiltinFetch* fetch, PrByteView body) {
     PrTextBuffer record{};
     fetchCacheWrite(&response, &record);
     PrStringView bytes = prTextBufferView(&record);
-    prStorageWrite(fetcher->cache, prRawStringView(&fetch->url),
-        PrByteView{reinterpret_cast<const uint8_t*>(bytes.data), bytes.size});
+    prStorageWrite(fetcher->cache, prRawStringView(&fetch->url), prStringBytes(bytes));
     prTextBufferReset(&record);
     fetchCachedResponseReset(&response);
 }
@@ -827,7 +826,7 @@ void request(BuiltinFetch* fetch, const PrUrl* current) {
         .url = prRawStringView(&fetch->url),
         .headers = headers.data,
         .headerCount = headers.count,
-        .body = PrByteView{reinterpret_cast<const uint8_t*>(body.data), body.size},
+        .body = prStringBytes(body),
         .event = exchangeEvent,
         .context = fetch,
     };
@@ -892,8 +891,7 @@ void answerRevalidated(BuiltinFetch* fetch, PrHttpExchange* exchange) {
     fetch->timing.cacheState = PrFetchCacheState_Validated;
     answerFromCache(fetch, &entry);
     PrStringView bytes = prTextBufferView(&record);
-    prStorageWrite(fetcher->cache, prRawStringView(&fetch->url),
-        PrByteView{reinterpret_cast<const uint8_t*>(bytes.data), bytes.size});
+    prStorageWrite(fetcher->cache, prRawStringView(&fetch->url), prStringBytes(bytes));
     prTextBufferReset(&record);
     fetchCachedResponseReset(&entry);
     headersReset(&merged);
@@ -1313,7 +1311,7 @@ PrStatus createFetch(PrFetchNetwork* base, const PrFetchRequestDesc* desc, PrFet
     fetch->method = prRawStringCopy(desc->method.data != nullptr ? desc->method : PrStringView{"GET"});
     for (uint32_t i = 0; i < desc->headerCount; ++i)
         headersAdd(&fetch->requestHeaders, desc->headers[i].name, desc->headers[i].value);
-    fetch->body = prRawStringCopy(PrStringView{reinterpret_cast<const char*>(desc->body.data), desc->body.size});
+    fetch->body = prRawStringCopy(prStringFromBytes(desc->body));
     fetch->destination = desc->destination;
     fetch->redirect = desc->redirect;
     fetch->holds = 1;

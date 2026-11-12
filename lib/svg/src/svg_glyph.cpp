@@ -11,6 +11,7 @@
 #include "pr/dom_xml.h"
 #include "pr/draw_commands.h"
 #include "pr/raw_array.h"
+#include "pr/string_ops.h"
 #include "pr/svg.h"
 #include "pr/svg_render.h"
 
@@ -47,7 +48,7 @@ struct SvgDecoder : PrDrawGlyphDecoder {
 PrStringView documentText(SvgDecoder& d, PrByteView bytes) {
     bool gzip = bytes.size >= 2 && bytes.data[0] == 0x1f && bytes.data[1] == 0x8b;
     if (!gzip)
-        return PrStringView{reinterpret_cast<const char*>(bytes.data), bytes.size};
+        return prStringFromBytes(bytes);
     if (d.compressCodec == nullptr)
         return PrStringView{};
     for (size_t capacity = bytes.size * 4; capacity <= bytes.size * kMaxInflation; capacity *= 2) {

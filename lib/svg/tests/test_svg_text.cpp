@@ -1,8 +1,11 @@
 // SVG fonts, and text set in them and in the host's fonts.
 
+#include "pr/array.h"
 #include "pr/css.h"
 #include "pr/dom_xml.h"
 #include "pr/draw_commands.h"
+#include "pr/float.h"
+#include "pr/string.h"
 #include "pr/string_ops.h"
 #include "pr/svg.h"
 #include "pr/svg_render.h"
@@ -14,14 +17,13 @@
 
 #include "tools/harness/test.h"
 
-#include <string>
-#include <vector>
-
 namespace pr_impl {
+
+using namespace pr;
 
 namespace {
 
-PrDomDocument* parse(const char* source) {
+PrDomDocument* parse(PrStringView source) {
     PrDomDocument* document = prDomParseXml(source, "image/svg+xml", nullptr);
     prCssEnable(document);
     prSvgEnable(document);
@@ -42,13 +44,13 @@ constexpr const char* kFont = "<font horiz-adv-x='500'><font-face font-family='S
     "<glyph unicode='d' horiz-adv-x='300'><rect width='100' height='200' fill='blue'/></glyph>"
     "<hkern g1='first' u2='U+0062' k='100'/></font>";
 
-std::string svgOf(const char* text) {
-    return std::string("<svg xmlns='http://www.w3.org/2000/svg'><defs>") + kFont + "</defs>" + text + "</svg>";
+String svgOf(PrStringView text) {
+    return format("<svg xmlns='http://www.w3.org/2000/svg'><defs>{}</defs>{}</svg>", kFont, text);
 }
 
 // Renders the document and returns the bounds of the paths it draws, and their count.
-PrRect renderedPath(const std::string& source, uint32_t* paths) {
-    PrDomDocument* document = parse(source.c_str());
+PrRect renderedPath(PrStringView source, uint32_t* paths) {
+    PrDomDocument* document = parse(source);
     PrDrawList* list = prDrawListCreate();
     prSvgElementDraw(rootOf(document), PrVec2{100, 100}, nullptr, list);
     PrRect bounds{};
@@ -69,8 +71,8 @@ PrRect renderedPath(const std::string& source, uint32_t* paths) {
 // Returns the SVG element with the ID `id` of `document`.
 PrSvgElement* byId(PrDomDocument* document, const char* id) {
     PrDomElement* element = nullptr;
-    std::string selector = std::string("#") + id;
-    REQUIRE(prCssNodeQuerySelector(prDomDocumentAsNode(document), selector.c_str(), &element) == PrStatus_Ok);
+    String selector = format("#{}", id);
+    REQUIRE(prCssNodeQuerySelector(prDomDocumentAsNode(document), selector, &element) == PrStatus_Ok);
     REQUIRE(element != nullptr);
     return prSvgElementQuery(prDomElementAsEventTarget(element));
 }
@@ -85,8 +87,8 @@ struct SquaresText {
     PrDomDocument* document;
     PrSvgElement* text;
 
-    explicit SquaresText(const std::string& body) {
-        document = parse(svgOf(body.c_str()).c_str());
+    explicit SquaresText(PrStringView body) {
+        document = parse(svgOf(body));
         text = byId(document, "t");
     }
 
@@ -124,17 +126,17 @@ struct PaintedPath {
 };
 
 // Renders the document of `source` and returns the paths that it paints, in order.
-std::vector<PaintedPath> paintedPaths(const std::string& source) {
-    PrDomDocument* document = parse(source.c_str());
+Array<PaintedPath> paintedPaths(PrStringView source) {
+    PrDomDocument* document = parse(source);
     PrDrawList* list = prDrawListCreate();
     prSvgElementDraw(rootOf(document), PrVec2{200, 100}, nullptr, list);
-    std::vector<PaintedPath> paths;
+    Array<PaintedPath> paths;
     const PrDrawCommand* commands = prDrawListCommands(list);
     for (uint32_t i = 0; i < prDrawListCommandCount(list); ++i) {
         if (commands[i].kind != PrDrawCommandKind_Path)
             continue;
         bool red = prFloat16ToFloat(commands[i].color.r) > 0.5f && prFloat16ToFloat(commands[i].color.g) < 0.5f;
-        paths.push_back(PaintedPath{prPathTightBounds(commands[i].path), red});
+        paths.push(PaintedPath{prPathTightBounds(commands[i].path), red});
     }
     prDrawListRelease(list);
     prDomDocumentRelease(document);
@@ -142,14 +144,13 @@ std::vector<PaintedPath> paintedPaths(const std::string& source) {
 }
 
 // Returns the document of `text`, with the Squares font and the style sheet `css`.
-std::string styledSvg(const char* css, const char* text) {
-    return std::string("<svg xmlns='http://www.w3.org/2000/svg'><style>") + css + "</style><defs>" + kFont +
-        "</defs>" + text + "</svg>";
+String styledSvg(const char* css, const char* text) {
+    return format("<svg xmlns='http://www.w3.org/2000/svg'><style>{}</style><defs>{}</defs>{}</svg>", css, kFont, text);
 }
 
 // Returns the union of the paths' bounds.
-PrRect unionOf(const std::vector<PaintedPath>& paths) {
-    PrRect all = paths.front().bounds;
+PrRect unionOf(const Array<PaintedPath>& paths) {
+    PrRect all = paths[0].bounds;
     for (const PaintedPath& path : paths)
         all = prRectUnion(all, path.bounds);
     return all;
@@ -177,8 +178,8 @@ TEST_CASE("a unicode-range reads ranges, wildcards and a U+ on both ends") {
 }
 
 TEST_CASE("an SVG font matches the first glyph in document order, by language, and kerns") {
-    std::string source = svgOf("");
-    PrDomDocument* document = parse(source.c_str());
+    String source = svgOf("");
+    PrDomDocument* document = parse(source);
     const PrDomElement* font = nullptr;
     PrDomNode* root = reinterpret_cast<PrDomNode*>(document);
     for (PrDomNode* node = domNodeNext(root, root); node != nullptr; node = domNodeNext(root, node))
@@ -294,8 +295,8 @@ TEST_CASE("a textArea breaks its text into lines a font size apart that fit its 
 }
 
 TEST_CASE("a glyph's child elements draw it in font units with y up") {
-    std::string source = svgOf("<text font-family='Squares' font-size='10' x='5' y='20'>ad</text>");
-    PrDomDocument* document = parse(source.c_str());
+    String source = svgOf("<text font-family='Squares' font-size='10' x='5' y='20'>ad</text>");
+    PrDomDocument* document = parse(source);
     PrDrawList* list = prDrawListCreate();
     prSvgElementDraw(rootOf(document), PrVec2{100, 100}, nullptr, list);
     const PrDrawCommand* commands = prDrawListCommands(list);
@@ -369,7 +370,7 @@ TEST_CASE("a text content element counts its addressable characters and their ad
     // `a` is half an em, a space a quarter and `b` three tenths, at a font size of ten. Kerning moves `b` but is not
     // part of an advance. Collapsed white space is not addressable.
     PrDomDocument* document = parse(svgOf("<text id='t' font-family='Squares' font-size='10' x='5' y='20'>  a  "
-        "<tspan id='s'>b</tspan>ab</text>") .c_str());
+        "<tspan id='s'>b</tspan>ab</text>"));
     PrSvgElement* text = byId(document, "t");
     PrSvgElement* tspan = byId(document, "s");
     CHECK(prSvgElementInterface(text) == PrSvgInterface_TextContent);
@@ -386,8 +387,7 @@ TEST_CASE("a text content element counts its addressable characters and their ad
 
 TEST_CASE("a character's positions, extent and rotation are its glyph's") {
     // The font's em is its ascent and it has no descent.
-    PrDomDocument* document = parse(svgOf("<text id='t' font-family='Squares' font-size='10' x='5 20' y='20' rotate='0 90'>ab</text>")
-        .c_str());
+    PrDomDocument* document = parse(svgOf("<text id='t' font-family='Squares' font-size='10' x='5 20' y='20' rotate='0 90'>ab</text>"));
     PrSvgElement* text = byId(document, "t");
     PrDomPoint start{};
     PrDomPoint end{};
@@ -424,7 +424,7 @@ TEST_CASE("a character's positions, extent and rotation are its glyph's") {
 TEST_CASE("a character outside the basic multilingual plane is two code units") {
     // The missing glyph is 700 units wide.
     PrDomDocument* document =
-        parse(svgOf("<text id='t' font-family='Squares' font-size='10'>\xf0\x9f\x98\x80" "a</text>").c_str());
+        parse(svgOf("<text id='t' font-family='Squares' font-size='10'>\xf0\x9f\x98\x80" "a</text>"));
     PrSvgElement* text = byId(document, "t");
     CHECK(prSvgTextContentElementGetNumberOfChars(text) == 3);
     PrDomPoint start{};
@@ -563,7 +563,7 @@ TEST_CASE("side right reverses the path, and the text hangs from it") {
         "side='right'>a</textPath></text>");
     CHECK(text.at(0).x == doctest::Approx(100));
     CHECK(text.at(0).y == doctest::Approx(50));
-    CHECK(std::abs(rotationOf(text, 0)) == doctest::Approx(180));
+    CHECK(prF32Abs(rotationOf(text, 0)) == doctest::Approx(180));
 }
 
 TEST_CASE("in a textPath, x is a distance along the path, and y is ignored") {
@@ -654,7 +654,7 @@ TEST_CASE("vertical text wraps at an inline-size down the column") {
 
 TEST_CASE("an element outside text, or a text that does not render, has no characters") {
     PrDomDocument* document = parse(svgOf("<rect id='r' width='10' height='10'/><g style='display: none'>"
-        "<text id='t' font-family='Squares'>ab</text></g>") .c_str());
+        "<text id='t' font-family='Squares'>ab</text></g>"));
     CHECK(prSvgElementInterface(byId(document, "r")) == PrSvgInterface_Rect);
     CHECK(prSvgTextContentElementGetNumberOfChars(byId(document, "r")) == 0);
     CHECK(prSvgTextContentElementGetNumberOfChars(byId(document, "t")) == 0);
@@ -662,42 +662,42 @@ TEST_CASE("an element outside text, or a text that does not render, has no chara
 }
 
 TEST_CASE("::first-line styles the text on a text element's first line") {
-    std::vector<PaintedPath> one = paintedPaths(styledSvg(
+    Array<PaintedPath> one = paintedPaths(styledSvg(
         "text::first-line { fill: red }", "<text font-family='Squares' font-size='10' y='20'>aa</text>"));
-    REQUIRE(one.size() == 1);
+    REQUIRE(one.count() == 1);
     CHECK(one[0].red);
     // Only the first line of wrapped text is styled, and a tspan on that line inherits from it.
-    std::vector<PaintedPath> wrapped = paintedPaths(styledSvg("text::first-line { fill: red }",
+    Array<PaintedPath> wrapped = paintedPaths(styledSvg("text::first-line { fill: red }",
         "<text font-family='Squares' font-size='10' y='20' style='inline-size: 12px'><tspan>a</tspan> a</text>"));
-    REQUIRE(wrapped.size() == 2);
+    REQUIRE(wrapped.count() == 2);
     CHECK(wrapped[0].red);
     CHECK(!wrapped[1].red);
     CHECK(wrapped[1].bounds.top > wrapped[0].bounds.top);
 }
 
 TEST_CASE("::first-letter styles the first letter and the punctuation around it") {
-    std::vector<PaintedPath> paths = paintedPaths(styledSvg(
+    Array<PaintedPath> paths = paintedPaths(styledSvg(
         "text::first-letter { fill: red }", "<text font-family='Squares' font-size='10' y='20'>ab</text>"));
-    REQUIRE(paths.size() == 2);
+    REQUIRE(paths.count() == 2);
     CHECK(paths[0].red);
     CHECK(!paths[1].red);
     CHECK(paths[0].bounds.right <= paths[1].bounds.left);
     // The first letter inherits from ::first-line. A tspan's own ::first-letter styles nothing, since only a text
     // element is a block container.
-    std::vector<PaintedPath> lined = paintedPaths(styledSvg("text::first-line { fill: red } text::first-letter { stroke: blue }",
+    Array<PaintedPath> lined = paintedPaths(styledSvg("text::first-line { fill: red } text::first-letter { stroke: blue }",
         "<text font-family='Squares' font-size='10' y='20'>ab</text>"));
-    REQUIRE(lined.size() >= 2);
+    REQUIRE(lined.count() >= 2);
     CHECK(lined[0].red);
-    std::vector<PaintedPath> inner = paintedPaths(styledSvg("tspan::first-letter { fill: red }",
+    Array<PaintedPath> inner = paintedPaths(styledSvg("tspan::first-letter { fill: red }",
         "<text font-family='Squares' font-size='10' y='20'><tspan>ab</tspan></text>"));
-    REQUIRE(inner.size() == 1);
+    REQUIRE(inner.count() == 1);
     CHECK(!inner[0].red);
 }
 
 TEST_CASE("::before and ::after generate nothing in SVG text") {
-    std::vector<PaintedPath> paths = paintedPaths(styledSvg("text::before, tspan::after { content: 'a' }",
+    Array<PaintedPath> paths = paintedPaths(styledSvg("text::before, tspan::after { content: 'a' }",
         "<text font-family='Squares' font-size='10' y='20'><tspan>a</tspan></text>"));
-    REQUIRE(paths.size() == 1);
+    REQUIRE(paths.count() == 1);
     CHECK(paths[0].bounds.right - paths[0].bounds.left == doctest::Approx(1));
 }
 
@@ -706,10 +706,11 @@ TEST_CASE("overflow-wrap and word-break break a word that fits no line") {
     SquaresText normal("<text id='t' font-family='Squares' font-size='10' x='0' y='10' "
         "style='inline-size: 12px'>aaaa</text>");
     CHECK(normal.at(3).y == doctest::Approx(10));
-    for (const char* style : {"overflow-wrap: anywhere", "overflow-wrap: break-word", "word-break: break-word"}) {
+    const char* const styles[] = {"overflow-wrap: anywhere", "overflow-wrap: break-word", "word-break: break-word"};
+    for (const char* style : styles) {
         CAPTURE(style);
-        SquaresText broken(std::string("<text id='t' font-family='Squares' font-size='10' x='0' y='10' "
-            "style='inline-size: 12px; line-height: 20px; ") + style + "'>aaaa</text>");
+        SquaresText broken(format("<text id='t' font-family='Squares' font-size='10' x='0' y='10' "
+            "style='inline-size: 12px; line-height: 20px; {}'>aaaa</text>", style));
         CHECK(broken.at(2).x == doctest::Approx(0));
         CHECK(broken.at(2).y == doctest::Approx(30));
     }
@@ -723,14 +724,14 @@ TEST_CASE("overflow-wrap and word-break break a word that fits no line") {
 
 TEST_CASE("text-overflow clips or ends with an ellipsis the lines that overflow the wrapping area") {
     // "aaaa" is 20 long in a wrapping area of 12 from x 0, and white-space: pre keeps it on one line.
-    std::vector<PaintedPath> plain = paintedPaths(svgOf(
+    Array<PaintedPath> plain = paintedPaths(svgOf(
         "<text font-family='Squares' font-size='10' y='20' style='inline-size: 12px; white-space: pre'>aaaa</text>"));
-    REQUIRE(plain.size() == 1);
+    REQUIRE(plain.count() == 1);
     CHECK(plain[0].bounds.right > 15);
     // The ellipsis is the missing glyph, 7 wide, which leaves room for one a.
-    std::vector<PaintedPath> ellipsis = paintedPaths(svgOf("<text font-family='Squares' font-size='10' y='20' "
+    Array<PaintedPath> ellipsis = paintedPaths(svgOf("<text font-family='Squares' font-size='10' y='20' "
         "style='inline-size: 12px; white-space: pre; text-overflow: ellipsis'>aaaa</text>"));
-    REQUIRE(!ellipsis.empty());
+    REQUIRE(!ellipsis.isEmpty());
     CHECK(unionOf(ellipsis).right == doctest::Approx(12));
     // The characters measure as if nothing were hidden.
     SquaresText measured("<text id='t' font-family='Squares' font-size='10' y='20' "

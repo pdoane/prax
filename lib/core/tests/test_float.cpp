@@ -1,31 +1,30 @@
 #include "pr/float.h"
+#include "pr/string.h"
 #include "pr/string_view.h"
 
 #include "tools/harness/test.h"
-
-#include <string>
 
 namespace pr_impl {
 
 namespace {
 
-double parse(const char* text) {
-    return prF64Parse(text, PrStringView(text).size);
+double parse(PrStringView text) {
+    return prF64Parse(text.data, text.size);
 }
 
-std::string format(double value) {
+String formatted(double value) {
     char text[kPrF64TextMaxBytes];
-    return std::string(text, prF64Format(value, text));
+    return String(PrStringView(text, prF64Format(value, text)));
 }
 
-std::string significant(double value, uint32_t digits) {
+String significant(double value, uint32_t digits) {
     char text[kPrF64TextMaxBytes];
-    return std::string(text, prF64FormatSignificant(value, digits, text));
+    return String(PrStringView(text, prF64FormatSignificant(value, digits, text)));
 }
 
-std::string fixed(double value, uint32_t decimals) {
+String fixed(double value, uint32_t decimals) {
     char text[kPrF64FixedMaxBytes];
-    return std::string(text, prF64FormatFixed(value, decimals, text));
+    return String(PrStringView(text, prF64FormatFixed(value, decimals, text)));
 }
 
 } // namespace
@@ -70,29 +69,29 @@ TEST_CASE("the extremes saturate") {
 }
 
 TEST_CASE("a formatted value is the shortest text that parses back to it") {
-    CHECK(format(0.0) == "0");
-    CHECK(format(-0.0) == "0");
-    CHECK(format(1.0) == "1");
-    CHECK(format(-1.5) == "-1.5");
-    CHECK(format(0.1) == "0.1");
-    CHECK(format(1.0 / 3.0) == "0.3333333333333333");
-    CHECK(parse(format(0.1).c_str()) == 0.1);
-    CHECK(parse(format(1e100).c_str()) == 1e100);
+    CHECK(formatted(0.0) == "0");
+    CHECK(formatted(-0.0) == "0");
+    CHECK(formatted(1.0) == "1");
+    CHECK(formatted(-1.5) == "-1.5");
+    CHECK(formatted(0.1) == "0.1");
+    CHECK(formatted(1.0 / 3.0) == "0.3333333333333333");
+    CHECK(parse(formatted(0.1)) == 0.1);
+    CHECK(parse(formatted(1e100)) == 1e100);
 }
 
 TEST_CASE("an exponent appears outside the places positional notation covers") {
-    CHECK(format(1e-6) == "0.000001");
-    CHECK(format(1e-7) == "1e-7");
-    CHECK(format(1e20) == "100000000000000000000");
-    CHECK(format(1e21) == "1e+21");
-    CHECK(format(1.5e22) == "1.5e+22");
+    CHECK(formatted(1e-6) == "0.000001");
+    CHECK(formatted(1e-7) == "1e-7");
+    CHECK(formatted(1e20) == "100000000000000000000");
+    CHECK(formatted(1e21) == "1e+21");
+    CHECK(formatted(1.5e22) == "1.5e+22");
 }
 
 TEST_CASE("what has no decimal text is named instead") {
     double huge = 1e308 * 10.0;
-    CHECK(format(huge) == "Infinity");
-    CHECK(format(-huge) == "-Infinity");
-    CHECK(format(huge - huge) == "NaN");
+    CHECK(formatted(huge) == "Infinity");
+    CHECK(formatted(-huge) == "-Infinity");
+    CHECK(formatted(huge - huge) == "NaN");
 }
 
 TEST_CASE("a value to a number of significant digits rounds half away from zero") {
@@ -124,4 +123,12 @@ TEST_CASE("a value to a number of places is positional, rounds half away from ze
     CHECK(fixed(0.0, 3) == "0");
     CHECK(fixed(-0.0, 3) == "0");
     CHECK(fixed(-999999999999999999999.0 / 10, 0) == "-100000000000000000000");
+}
+
+TEST_CASE("the next value toward another, and the error function") {
+    CHECK(prF32NextAfter(0.5f, 0.0f) == 0x1.fffffep-2f);
+    CHECK(prF32NextAfter(1.0f, 1.0f) == 1.0f);
+    CHECK(prF64NextAfter(1.0, 2.0) == 0x1.0000000000001p0);
+    CHECK(prF64Erf(0.0) == 0.0);
+    CHECK(prF64Erf(1.0) == doctest::Approx(0.8427007929497149));
 }

@@ -16,9 +16,6 @@
 
 #include "tools/harness/test.h"
 
-#include <thread>
-#include <vector>
-
 namespace pr_impl {
 
 namespace {
@@ -73,6 +70,13 @@ bool runAgent(const PrCssSelectors* shared) {
     return ok;
 }
 
+// One agent's thread, and whether its work succeeded.
+struct Agent {
+    PrThread thread = {};
+    const PrCssSelectors* shared = nullptr;
+    bool ok = false;
+};
+
 } // namespace
 
 } // namespace pr_impl
@@ -82,13 +86,17 @@ using namespace pr_impl;
 TEST_CASE("agents run at once on threads of their own, sharing a selector list" * doctest::skip(!prThreadSupported())) {
     PrCssSelectors* shared = nullptr;
     REQUIRE(prCssSelectorsCreate("ul > li.a", &shared) == PrStatus_Ok);
-    std::vector<char> ok(kAgents, 0);
-    std::vector<std::thread> threads;
-    for (uint32_t i = 0; i < kAgents; ++i)
-        threads.emplace_back([&ok, shared, i] { ok[i] = runAgent(shared) ? 1 : 0; });
-    for (std::thread& thread : threads)
-        thread.join();
-    for (uint32_t i = 0; i < kAgents; ++i)
-        CHECK(ok[i] == 1);
+    Agent agents[kAgents];
+    for (Agent& agent : agents) {
+        agent.shared = shared;
+        prThreadStart(&agent.thread, [](void* context) {
+            Agent* running = static_cast<Agent*>(context);
+            running->ok = runAgent(running->shared);
+        }, &agent);
+    }
+    for (Agent& agent : agents)
+        prThreadJoin(&agent.thread);
+    for (const Agent& agent : agents)
+        CHECK(agent.ok);
     prCssSelectorsDestroy(shared);
 }

@@ -360,7 +360,7 @@ void answerResource(void* PR_NULLABLE context, PrFetchInterceptRequest* request)
         .status = 200,
         .headers = &header,
         .headerCount = type.empty() ? 0u : 1u,
-        .body = PrByteView{reinterpret_cast<const uint8_t*>(body.data), body.size},
+        .body = prStringBytes(body),
     };
     prFetchInterceptRequestRespond(request, &response);
     prTextBufferReset(&text);
@@ -556,7 +556,7 @@ void openNetwork(HostState& s) {
             rules.push_back({.host = host, .target = target});
         s.anchorViews.clear();
         for (const std::string& anchor : s.anchors)
-            s.anchorViews.push_back(PrByteView{reinterpret_cast<const uint8_t*>(anchor.data()), anchor.size()});
+            s.anchorViews.push_back(prStringBytes(anchor));
         PrHttpDesc http{
             .net = s.net,
             .tls = s.tls,
@@ -1519,7 +1519,7 @@ bool PageHost::writeDocument(Page* page, Media media, const PrLayoutPageBox& pag
         for (size_t i = 0; i < outputs.size() && ok; ++i) {
             std::filesystem::path file = outputs.size() > 1 ? pageFile(path, uint32_t(i + 1)) : path;
             const std::string& output = outputs[i];
-            ok = prFileWrite(file.string(), PrByteView{reinterpret_cast<const uint8_t*>(output.data()), output.size()});
+            ok = prFileWrite(file.string(), prStringBytes(output));
             bytes += output.size();
         }
         if (timings != nullptr) {

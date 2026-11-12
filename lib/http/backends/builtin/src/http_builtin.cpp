@@ -698,7 +698,7 @@ void assign(Connection* connection, Exchange* exchange) {
     exchange->connection = connection;
     exchange->state = ExchangeState_Head;
     PrStringView request = viewOf(exchange->request);
-    prNetStreamWrite(connection->stream, PrByteView{reinterpret_cast<const uint8_t*>(request.data), request.size});
+    prNetStreamWrite(connection->stream, prStringBytes(request));
 }
 
 // Returns true if the rule's host matches `host`: the same name, or a subdomain of a wildcard's name.

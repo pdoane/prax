@@ -13,17 +13,17 @@ constexpr const char* kWhite = "255 255 255";
 
 // Returns a drawing of a blue rectangle from 20 to 80 on each axis of a viewport of 100 by 100, with `attributes`,
 // after `defs`.
-std::string filtered(const std::string& defs, const std::string& attributes) {
-    return svgDocument(defs + "<rect x='20' y='20' width='60' height='60' fill='#0000ff' " + attributes + "/>");
+String filtered(PrStringView defs, PrStringView attributes) {
+    return svgDocument(format("{}<rect x='20' y='20' width='60' height='60' fill='#0000ff' {}/>", defs, attributes));
 }
 
 // Returns the groups of a drawing's list, in order.
-std::vector<const PrDrawGroup*> groupsOf(const Drawing& drawing) {
-    std::vector<const PrDrawGroup*> groups;
+Array<const PrDrawGroup*> groupsOf(const Drawing& drawing) {
+    Array<const PrDrawGroup*> groups;
     const PrDrawCommand* all = prDrawListCommands(drawing.list);
     for (uint32_t i = 0; i < prDrawListCommandCount(drawing.list); ++i) {
         if (all[i].kind == PrDrawCommandKind_PushGroup)
-            groups.push_back(all[i].group);
+            groups.push(all[i].group);
     }
     return groups;
 }
@@ -43,7 +43,7 @@ TEST_CASE("a filter region defaults to 10% of the bounding box past each side, a
     CHECK(drawing.pixel(15, 15) == kGreen);
     CHECK(drawing.pixel(11, 50) == kWhite);
     CHECK(drawing.pixel(88, 88) == kWhite);
-    REQUIRE(groupsOf(drawing).size() == 1);
+    REQUIRE(groupsOf(drawing).count() == 1);
     // The group's bounds are the filter region.
     CHECK(near(groupsOf(drawing)[0]->bounds, PrRect{14, 14, 86, 86}));
 }
@@ -63,15 +63,15 @@ TEST_CASE("a filter region in user space, and primitive subregions in fractions 
 
 TEST_CASE("a filter without primitives, or with a region of no area, hides the element") {
     Drawing empty(filtered("<filter id='f'/>", "filter='url(#f)'"));
-    CHECK(empty.commands.empty());
+    CHECK(empty.commands.isEmpty());
     Drawing flat(filtered("<filter id='f' width='0'><feFlood/></filter>", "filter='url(#f)'"));
-    CHECK(flat.commands.empty());
+    CHECK(flat.commands.isEmpty());
 }
 
 TEST_CASE("a URL that names no filter element ignores the whole filter list") {
     Drawing missing(filtered("", "filter='url(#missing)'"));
     CHECK(missing.pixel(50, 50) == kBlue);
-    CHECK(groupsOf(missing).empty());
+    CHECK(groupsOf(missing).isEmpty());
     Drawing other(filtered("<linearGradient id='g'/>", "style='filter: grayscale(1) url(#g)'"));
     CHECK(other.pixel(50, 50) == kBlue);
 }
@@ -86,8 +86,8 @@ TEST_CASE("a filter takes its templates' attributes and primitives through href"
 // Primitives
 
 TEST_CASE("an input names the closest preceding result, and a name of no preceding result is the implicit input") {
-    std::string floods = "<feFlood flood-color='#ff0000' result='a'/><feFlood flood-color='green' result='a'/>";
-    Drawing closest(filtered("<filter id='f'>" + floods + "<feOffset in='a'/></filter>", "filter='url(#f)'"));
+    const char* floods = "<feFlood flood-color='#ff0000' result='a'/><feFlood flood-color='green' result='a'/>";
+    Drawing closest(filtered(format("<filter id='f'>{}<feOffset in='a'/></filter>", floods), "filter='url(#f)'"));
     CHECK(closest.pixel(50, 50) == kGreen);
     // A forward reference is no reference: the offset reads the flood before it.
     Drawing forward(filtered("<filter id='f'><feFlood flood-color='green'/><feOffset in='later'/>"
@@ -123,13 +123,13 @@ TEST_CASE("flood-color resolves currentColor on the primitive, and inherits from
 }
 
 TEST_CASE("primitives compute in linearRGB unless color-interpolation-filters says sRGB") {
-    std::string half = "<feComponentTransfer><feFuncR type='linear' slope='0.5'/><feFuncG type='linear' slope='0.5'/>"
+    const char* half = "<feComponentTransfer><feFuncR type='linear' slope='0.5'/><feFuncG type='linear' slope='0.5'/>"
         "<feFuncB type='linear' slope='0.5'/></feComponentTransfer>";
-    Drawing linear(svgDocument("<filter id='f'>" + half +
-        "</filter><rect width='100' height='100' fill='white' filter='url(#f)'/>"));
+    Drawing linear(svgDocument(format("<filter id='f'>{}"
+        "</filter><rect width='100' height='100' fill='white' filter='url(#f)'/>", half)));
     CHECK(linear.pixel(50, 50) == "188 188 188");
-    Drawing srgb(svgDocument("<filter id='f' color-interpolation-filters='sRGB'>" + half +
-        "</filter><rect width='100' height='100' fill='white' filter='url(#f)'/>"));
+    Drawing srgb(svgDocument(format("<filter id='f' color-interpolation-filters='sRGB'>{}"
+        "</filter><rect width='100' height='100' fill='white' filter='url(#f)'/>", half)));
     CHECK(srgb.pixel(50, 50) == "128 128 128");
 }
 
@@ -199,38 +199,39 @@ TEST_CASE("a filter applies before the clip path, so a blur is cut sharply") {
 // Blending and isolation
 
 TEST_CASE("mix-blend-mode blends an element with what lies beneath it, up to an isolated group") {
-    std::string band = "<rect width='100' height='100' fill='#ff0000'/>";
-    std::string multiply = "<rect x='20' y='20' width='60' height='60' fill='#00ff00' style='mix-blend-mode: multiply'/>";
-    Drawing blended(svgDocument(band + multiply));
+    const char* band = "<rect width='100' height='100' fill='#ff0000'/>";
+    const char* multiply = "<rect x='20' y='20' width='60' height='60' fill='#00ff00' style='mix-blend-mode: multiply'/>";
+    Drawing blended(svgDocument(format("{}{}", band, multiply)));
     CHECK(blended.pixel(50, 50) == "0 0 0");
-    Drawing isolated(svgDocument(band + "<g style='isolation: isolate'>" + multiply + "</g>"));
+    Drawing isolated(svgDocument(format("{}<g style='isolation: isolate'>{}</g>", band, multiply)));
     CHECK(isolated.pixel(50, 50) == "0 255 0");
-    Drawing opacity(svgDocument(band + "<g opacity='0.999'>" + multiply + "</g>"));
+    Drawing opacity(svgDocument(format("{}<g opacity='0.999'>{}</g>", band, multiply)));
     CHECK(opacity.pixel(50, 50) == "0 255 0");
     // An inner svg that clips is a stacking context, and isolates; one whose overflow is visible does not.
-    Drawing inner(svgDocument(band + "<svg width='100' height='100'>" + multiply + "</svg>"));
+    Drawing inner(svgDocument(format("{}<svg width='100' height='100'>{}</svg>", band, multiply)));
     CHECK(inner.pixel(50, 50) == "0 255 0");
-    Drawing visible(svgDocument(band + "<svg width='100' height='100' overflow='visible'>" + multiply + "</svg>"));
+    Drawing visible(svgDocument(format("{}<svg width='100' height='100' overflow='visible'>{}</svg>", band, multiply)));
     CHECK(visible.pixel(50, 50) == "0 0 0");
 }
 
 TEST_CASE("a 3D transform function isolates its group, though its matrix is 2D, and a 2D transform does not") {
-    std::string band = "<rect width='100' height='100' fill='#ff0000'/>";
-    std::string multiply = "<rect x='20' y='20' width='60' height='60' fill='#00ff00' style='mix-blend-mode: multiply'/>";
-    for (const char* transform : {"translateZ(0)", "rotateZ(0deg)", "scale3d(1, 1, 1)", "perspective(100px)"}) {
-        Drawing isolated(svgDocument(band + "<g style='transform: " + transform + "'>" + multiply + "</g>"));
+    const char* band = "<rect width='100' height='100' fill='#ff0000'/>";
+    const char* multiply = "<rect x='20' y='20' width='60' height='60' fill='#00ff00' style='mix-blend-mode: multiply'/>";
+    const char* const transforms[] = {"translateZ(0)", "rotateZ(0deg)", "scale3d(1, 1, 1)", "perspective(100px)"};
+    for (const char* transform : transforms) {
+        Drawing isolated(svgDocument(format("{}<g style='transform: {}'>{}</g>", band, transform, multiply)));
         CHECK(isolated.pixel(50, 50) == "0 255 0");
     }
-    Drawing flat(svgDocument(band + "<g style='transform: translate(0)'>" + multiply + "</g>"));
+    Drawing flat(svgDocument(format("{}<g style='transform: translate(0)'>{}</g>", band, multiply)));
     CHECK(flat.pixel(50, 50) == "0 0 0");
 }
 
 TEST_CASE("the root is an isolated group only when something blends or reads the backdrop") {
     Drawing plain(filtered("", ""));
-    CHECK(groupsOf(plain).empty());
+    CHECK(groupsOf(plain).isEmpty());
     Drawing blended(filtered("", "style='mix-blend-mode: screen'"));
-    std::vector<const PrDrawGroup*> groups = groupsOf(blended);
-    REQUIRE(groups.size() == 2);
+    Array<const PrDrawGroup*> groups = groupsOf(blended);
+    REQUIRE(groups.count() == 2);
     CHECK(groups[0]->isolated);
     CHECK(groups[1]->blendMode == PrDrawBlendMode_Screen);
 }

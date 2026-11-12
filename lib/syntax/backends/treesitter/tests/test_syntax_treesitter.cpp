@@ -1,8 +1,12 @@
 // The tree-sitter languages: the spans of real grammars, their predicates, injections, and incremental updates that
 // agree with a parse from scratch.
 
+#include "pr/array.h"
 #include "pr/count_of.h"
 #include "pr/float.h"
+#include "pr/min_max.h"
+#include "pr/string.h"
+#include "pr/string_ops.h"
 #include "pr/syntax_treesitter.h"
 #include "pr/syntax_treesitter_c.h"
 #include "pr/syntax_treesitter_cpp.h"
@@ -18,9 +22,6 @@
 
 #include "tools/harness/test.h"
 
-#include <string>
-#include <vector>
-
 extern "C" int prTestSyntaxTreeSitterCApi(void);
 
 // The grammar of C, whose language a test makes again with queries of its own.
@@ -33,8 +34,8 @@ namespace {
 
 // Returns true if the build builds in `language`, as PR_SYNTAX_LANGUAGES names it. The other tests name only the
 // languages that every build of the tests builds in, which a lean build names (cmake/lean.cmake).
-bool built(const char* language) {
-    return std::string(PR_SYNTAX_LANGUAGES_BUILT).find("," + std::string(language) + ",") != std::string::npos;
+bool built(PrStringView language) {
+    return prStringContains(PR_SYNTAX_LANGUAGES_BUILT, format(",{},", language));
 }
 
 // A registry of the built-in languages, and the syntax tree of a buffer in one of them.
@@ -44,7 +45,7 @@ struct Parsed {
     PrTextEditView* view = nullptr;
     PrSyntaxTree* tree = nullptr;
 
-    Parsed(const PrSyntaxLanguage* language, const std::string& text) {
+    Parsed(const PrSyntaxLanguage* language, PrStringView text) {
         prSyntaxTreeSitterAddLanguages(registry);
         buffer = prTextEditBufferCreate(text);
         view = prTextEditViewCreate(buffer);
@@ -59,39 +60,39 @@ struct Parsed {
         prSyntaxRegistryDestroy(registry);
     }
 
-    std::vector<PrSyntaxSpan> spans(uint32_t start, uint32_t end) {
-        std::vector<PrSyntaxSpan> out(prSyntaxTreeSpans(tree, start, end, nullptr, 0));
-        uint32_t written = prSyntaxTreeSpans(tree, start, end, out.data(), uint32_t(out.size()));
-        CHECK(written == out.size());
+    Array<PrSyntaxSpan> spans(uint32_t start, uint32_t end) {
+        Array<PrSyntaxSpan> out(prSyntaxTreeSpans(tree, start, end, nullptr, 0));
+        uint32_t written = prSyntaxTreeSpans(tree, start, end, out.data(), out.count());
+        CHECK(written == out.count());
         return out;
     }
 
-    std::vector<PrSyntaxSpan> all() { return spans(0, prTextEditBufferSize(buffer)); }
+    Array<PrSyntaxSpan> all() { return spans(0, prTextEditBufferSize(buffer)); }
 
     // Returns the name of the category of the first byte of `needle` in the text, or empty.
-    std::string at(const std::string& needle) {
+    String at(PrStringView needle) {
         PrStringView text = prTextEditBufferText(buffer);
-        size_t found = std::string(text.data, text.size).find(needle);
-        REQUIRE(found != std::string::npos);
+        size_t found = prStringFind(text, needle);
+        REQUIRE(found != text.size);
         for (const PrSyntaxSpan& span : all()) {
             if (span.start <= found && found < span.end) {
                 PrStringView name = prSyntaxRegistryCategoryName(registry, span.category);
-                return std::string(name.data, name.size);
+                return String(name);
             }
         }
         return "";
     }
 
-    void replace(uint32_t start, uint32_t end, const std::string& text) {
+    void replace(uint32_t start, uint32_t end, PrStringView text) {
         PrTextEditChange change{.start = start, .end = end, .text = text};
         prTextEditBufferApply(buffer, &change, 1, PrTextEditOrigin_Local);
     }
 };
 
-bool sameSpans(const std::vector<PrSyntaxSpan>& a, const std::vector<PrSyntaxSpan>& b) {
-    if (a.size() != b.size())
+bool sameSpans(const Array<PrSyntaxSpan>& a, const Array<PrSyntaxSpan>& b) {
+    if (a.count() != b.count())
         return false;
-    for (size_t i = 0; i < a.size(); ++i) {
+    for (uint32_t i = 0; i < a.count(); ++i) {
         if (a[i].start != b[i].start || a[i].end != b[i].end || a[i].category != b[i].category)
             return false;
     }
@@ -135,16 +136,16 @@ TEST_CASE("a C tree names the parts of a program, and its predicates hold") {
 
 TEST_CASE("spans are in order, do not overlap, and the range of a call bounds what it reads") {
     Parsed h(prSyntaxTreeSitterC(), kProgram);
-    std::vector<PrSyntaxSpan> all = h.all();
-    REQUIRE(all.size() > 10);
-    for (size_t i = 0; i < all.size(); ++i) {
+    Array<PrSyntaxSpan> all = h.all();
+    REQUIRE(all.count() > 10);
+    for (uint32_t i = 0; i < all.count(); ++i) {
         CHECK(all[i].start < all[i].end);
         if (i > 0)
             CHECK(all[i - 1].end <= all[i].start);
     }
-    std::vector<PrSyntaxSpan> some = h.spans(70, 90);
-    CHECK(!some.empty());
-    CHECK(some.size() < all.size());
+    Array<PrSyntaxSpan> some = h.spans(70, 90);
+    CHECK(!some.isEmpty());
+    CHECK(some.count() < all.count());
     for (const PrSyntaxSpan& span : some) {
         CHECK(span.end > 70);
         CHECK(span.start < 90);
@@ -166,11 +167,11 @@ TEST_CASE("edits update the tree incrementally, and give the spans of a parse fr
         if (step % 7 == 0 || step == 299) {
             prSyntaxTreeUpdate(h.tree, kPrF64Infinity);
             PrStringView now = prTextEditBufferText(h.buffer);
-            Parsed fresh(prSyntaxTreeSitterC(), std::string(now.data, now.size));
+            Parsed fresh(prSyntaxTreeSitterC(), String(now));
             // Both registries were made the same way, but a category's number depends on the order of first use, so
             // spans compare by name.
-            std::vector<PrSyntaxSpan> kept = h.all();
-            std::vector<PrSyntaxSpan> scratch = fresh.all();
+            Array<PrSyntaxSpan> kept = h.all();
+            Array<PrSyntaxSpan> scratch = fresh.all();
             for (PrSyntaxSpan& span : scratch) {
                 PrStringView name = prSyntaxRegistryCategoryName(fresh.registry, span.category);
                 span.category = prSyntaxRegistryCategoryIntern(h.registry, name);
@@ -181,7 +182,7 @@ TEST_CASE("edits update the tree incrementally, and give the spans of a parse fr
 }
 
 TEST_CASE("an HTML tree hands its scripts and styles to their languages, within the range asked for") {
-    std::string page = "<!doctype html>\n<html><head>\n<style>\nbody { color: red; }\n</style>\n</head><body>\n"
+    PrStringView page = "<!doctype html>\n<html><head>\n<style>\nbody { color: red; }\n</style>\n</head><body>\n"
         "<p class=\"x\">hello</p>\n<script>\nconst value = 42;\nfunction run() { return value; }\n</script>\n"
         "</body></html>\n";
     Parsed h(prSyntaxTreeSitterHtml(), page);
@@ -195,8 +196,8 @@ TEST_CASE("an HTML tree hands its scripts and styles to their languages, within 
     CHECK(h.at("color:") == "property");
     CHECK(h.at("body {") == "tag");
     // A range that holds only the paragraph injects nothing.
-    size_t paragraph = page.find("<p ");
-    std::vector<PrSyntaxSpan> some = h.spans(uint32_t(paragraph), uint32_t(paragraph + 10));
+    size_t paragraph = prStringFind(page, "<p ");
+    Array<PrSyntaxSpan> some = h.spans(uint32_t(paragraph), uint32_t(paragraph + 10));
     for (const PrSyntaxSpan& span : some)
         CHECK(span.start < paragraph + 10);
 }
@@ -215,9 +216,9 @@ TEST_CASE("C++ joins C's highlights query with its own, and JSON and CSS name th
 }
 
 TEST_CASE("a parse that runs out of time resumes at the next update, and the spans wait for it to finish") {
-    std::string program;
-    while (program.size() < (2u << 20))
-        program += kProgram;
+    String program;
+    while (program.count() < (2u << 20))
+        program.append(kProgram);
     PrSyntaxRegistry* registry = prSyntaxRegistryCreate();
     PrTextEditBuffer* buffer = prTextEditBufferCreate(program);
     PrSyntaxTree* tree = prSyntaxTreeCreate(prSyntaxTreeSitterC(), registry, buffer);
@@ -242,9 +243,9 @@ TEST_CASE("a parse that runs out of time resumes at the next update, and the spa
 }
 
 TEST_CASE("an edit while a parse is halted starts the parse again from the edited text") {
-    std::string program;
-    while (program.size() < (2u << 20))
-        program += kProgram;
+    String program;
+    while (program.count() < (2u << 20))
+        program.append(kProgram);
     PrSyntaxRegistry* registry = prSyntaxRegistryCreate();
     PrTextEditBuffer* buffer = prTextEditBufferCreate(program);
     PrSyntaxTree* tree = prSyntaxTreeCreate(prSyntaxTreeSitterC(), registry, buffer);
@@ -268,19 +269,19 @@ TEST_CASE("an edit while a parse is halted starts the parse again from the edite
 }
 
 TEST_CASE("text appended in pieces parses to the tree of the whole") {
-    std::string program;
+    String program;
     for (uint32_t i = 0; i < 40; ++i)
-        program += kProgram;
+        program.append(kProgram);
     Parsed whole(prSyntaxTreeSitterC(), program);
     Parsed pieces(prSyntaxTreeSitterC(), "");
-    for (size_t at = 0; at < program.size(); at += 97) {
-        std::string piece = program.substr(at, 97);
+    for (uint32_t at = 0; at < program.count(); at += 97) {
+        PrStringView piece = prStringSlice(program, at, min(97u, program.count() - at));
         uint32_t size = prTextEditBufferSize(pieces.buffer);
         pieces.replace(size, size, piece);
         prSyntaxTreeUpdate(pieces.tree, kPrF64Infinity);
     }
-    std::vector<PrSyntaxSpan> a = whole.all();
-    std::vector<PrSyntaxSpan> b = pieces.all();
+    Array<PrSyntaxSpan> a = whole.all();
+    Array<PrSyntaxSpan> b = pieces.all();
     for (PrSyntaxSpan& span : b) {
         PrStringView name = prSyntaxRegistryCategoryName(pieces.registry, span.category);
         span.category = prSyntaxRegistryCategoryIntern(whole.registry, name);
@@ -296,12 +297,15 @@ TEST_CASE("a registry finds a language by the other names of its pattern, in any
     CHECK(prSyntaxRegistryFind(registry, "JavaScript") == prSyntaxTreeSitterJavaScript());
     CHECK(prSyntaxRegistryFind(registry, "c++") == prSyntaxTreeSitterCpp());
     CHECK(prSyntaxRegistryFind(registry, "jsx") == nullptr);
-    CHECK(prSyntaxRegistryFind(registry, std::string(100, 'j')) == nullptr);
+    String repeated;
+    for (uint32_t i = 0; i < 100; ++i)
+        repeated.append('j');
+    CHECK(prSyntaxRegistryFind(registry, repeated) == nullptr);
     prSyntaxRegistryDestroy(registry);
 }
 
 TEST_CASE("Markdown injects its inline text, the languages of its fences, and HTML, whose scripts inject in turn") {
-    std::string page = "# Title with `code`\n\n"
+    PrStringView page = "# Title with `code`\n\n"
         "Some *emphasis* and a [link](https://example.com).\n\n"
         "```js\nconst answer = 42;\n```\n\n"
         "<div>\n<script>\nlet nested = 7;\n</script>\n</div>\n\n"
@@ -322,7 +326,7 @@ TEST_CASE("Markdown injects its inline text, the languages of its fences, and HT
 }
 
 TEST_CASE("an injection leaves out the children of its content, as a block quote's markers") {
-    std::string quote = "> a quoted *line*\n> and `another` line\n";
+    PrStringView quote = "> a quoted *line*\n> and `another` line\n";
     Parsed h(prSyntaxTreeSitterMarkdown(), quote);
     CHECK(h.at("> and") == "punctuation.special");
     CHECK(h.at("*line*") == "punctuation.delimiter");
@@ -332,7 +336,7 @@ TEST_CASE("an injection leaves out the children of its content, as a block quote
 
 TEST_CASE("a combined injection parses all of its matches as one document") {
     // JavaScript's tagged templates inject the language that the tag names, across the template's parts.
-    std::string program = "const page = html`<p class=\"a\">${name}</p>`;\n";
+    PrStringView program = "const page = html`<p class=\"a\">${name}</p>`;\n";
     Parsed h(prSyntaxTreeSitterJavaScript(), program);
     CHECK(h.at("p class") == "tag");
     CHECK(h.at("class=") == "attribute");
@@ -403,12 +407,12 @@ TEST_CASE("each built-in language is found by its file, and its queries name a p
     for (const Case& c : cases) {
         if (!built(c.language))
             continue;
-        std::string path = c.path;
+        String path = c.path;
         CAPTURE(path);
         const PrSyntaxLanguage* language = prSyntaxRegistryFromPath(registry, c.path);
         REQUIRE(language != nullptr);
         Parsed h(language, c.text);
-        CHECK(h.at(c.needle) == std::string(c.category));
+        CHECK(h.at(c.needle) == c.category);
     }
     prSyntaxRegistryDestroy(registry);
 }

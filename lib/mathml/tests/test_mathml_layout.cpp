@@ -2,6 +2,7 @@
 // Ahem, whose glyphs are squares of one em, so that positions follow from the markup alone.
 
 #include "pr/css_presentation.h"
+#include "pr/float.h"
 #include "pr/font.h"
 #include "pr/font_set.h"
 #include "pr/html.h"
@@ -13,9 +14,6 @@
 #include "pr/text_harfbuzz.h"
 
 #include "tools/harness/test.h"
-
-#include <cmath>
-#include <string>
 
 namespace pr_impl {
 namespace {
@@ -30,11 +28,8 @@ struct MathPage {
     PrCssPresentation* presentation = nullptr;
 
     explicit MathPage(const char* html) {
-        const std::string paths[] = {
-            std::string(PR_FONTS_DIR) + "/Ahem.ttf",
-            std::string(PR_FONTS_DIR) + "/NewCMMath-Regular.otf",
-        };
-        for (const std::string& path : paths) {
+        const PrStringView paths[] = {PR_FONTS_DIR "/Ahem.ttf", PR_FONTS_DIR "/NewCMMath-Regular.otf"};
+        for (PrStringView path : paths) {
             const PrFont* font = nullptr;
             REQUIRE(prFontCreateFromFile(path, 0, nullptr, &font) == PrStatus_Ok);
             PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
@@ -77,7 +72,7 @@ struct MathPage {
         PrRawString report{};
         bool same = prCssPresentationVerify(presentation, &report);
         if (!same)
-            MESSAGE(std::string(prRawStringView(&report).data, prRawStringView(&report).size));
+            MESSAGE(report);
         CHECK(same);
         prRawStringReset(&report);
     }
@@ -153,7 +148,7 @@ TEST_CASE("an mpadded of no width with a negative lspace laps its content to the
     PrRect b = page.bounds("b");
     PrRect c = page.bounds("c");
     CHECK(c.left == doctest::Approx(a.right));
-    CHECK(std::abs(b.right - a.right) < 0.5f);
+    CHECK(prF32Abs(b.right - a.right) < 0.5f);
 }
 
 TEST_CASE("a table of full width in display math fills the line, and its labels go at its right edge") {

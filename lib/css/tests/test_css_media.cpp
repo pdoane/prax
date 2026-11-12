@@ -20,14 +20,14 @@ struct TestList {
     TestList(const TestList&) = delete;
     TestList& operator=(const TestList&) = delete;
 
-    std::string text() const {
+    String text() const {
         PrTextBuffer out = {};
         cssSerializeMediaList(&out, &list);
         return take(&out);
     }
 };
 
-std::string serialized(const char* text) {
+String serialized(const char* text) {
     return TestList(text).text();
 }
 

@@ -7,8 +7,6 @@
 
 #include "tools/harness/test.h"
 
-#include <string>
-
 namespace pr_impl {
 
 namespace {
@@ -135,7 +133,7 @@ PrLayoutBoxStyle sourced(PrLayoutBoxStyle box, PrLayoutBaselineSource source) {
 
 // Returns the metrics of one of the test fonts.
 PrFontMetrics metricsOf(const char* file) {
-    std::string path = std::string(PR_FONTS_DIR) + "/" + file;
+    String path = format("{}/{}", PR_FONTS_DIR, file);
     const PrFont* PR_NULLABLE loaded = nullptr;
     REQUIRE(prFontCreateFromFile(path, 0, nullptr, &loaded) == PrStatus_Ok);
     PrFontMetrics metrics = prFontMetrics(loaded);
@@ -151,7 +149,7 @@ double arimoBaseline(float PrFontMetrics::*name, float size) {
 
 // Adds the test font `file` to the fixture's set as family `family`, serving the code points of `ranges` if given.
 void addFace(Fixture& f, const char* file, const char* family, const PrFontCodePointRange* PR_NULLABLE ranges, uint32_t count) {
-    std::string path = std::string(PR_FONTS_DIR) + "/" + file;
+    String path = format("{}/{}", PR_FONTS_DIR, file);
     const PrFont* PR_NULLABLE loaded = nullptr;
     REQUIRE(prFontCreateFromFile(path, 0, nullptr, &loaded) == PrStatus_Ok);
     PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
@@ -170,9 +168,9 @@ PrLayoutFontStyle upperAndFallback(Fixture& f, float size, float lineHeight) {
     static const PrFontCodePointRange kUpper[] = {{0x0000, 0x005f}};
     addFace(f, "Arimo-Regular.ttf", "Upper", kUpper, 1);
     addFace(f, "Literata.ttf", "Fallback", nullptr, 0);
-    PrFontFamily families[] = {prFontFamilyFromName("Upper"), prFontFamilyFromName("Fallback")};
+    const PrFontFamily families[] = {prFontFamilyFromName("Upper"), prFontFamilyFromName("Fallback")};
     PrLayoutFontStyle text = font(size, lineHeight);
-    text.font = f.textFont(size, {families[0], families[1]});
+    text.font = f.textFont(size, families);
     return text;
 }
 
@@ -888,7 +886,8 @@ TEST_CASE("a box aligned by its leading box takes the faces its text uses on the
     auto normal = [](Fixture& f) { return upperAndFallback(f, 20, -1); };
     auto large = [](Stage& s) {
         PrLayoutFontStyle text = s.style;
-        text.font = s.f.textFont(40, {prFontFamilyFromName("Upper"), prFontFamilyFromName("Fallback")});
+        const PrFontFamily families[] = {prFontFamilyFromName("Upper"), prFontFamilyFromName("Fallback")};
+        text.font = s.f.textFont(40, families);
         return text;
     };
     SUBCASE("middle on a span of fallback text, holding a square") {
@@ -952,7 +951,8 @@ TEST_CASE("a box aligned by its leading box takes the faces its text uses on the
 
 TEST_CASE("font metrics and the half-leading snap to target pixels, half pixels at two per px") {
     // Half pixels at two target pixels per px, and whole pixels at one.
-    for (float ratio : {1.0f, 2.0f}) {
+    const float ratios[] = {1.0f, 2.0f};
+    for (float ratio : ratios) {
         CAPTURE(ratio);
         Stage s;
         prLayoutTreeSetTargetPixelRatio(s.f.tree, ratio);
@@ -998,7 +998,8 @@ TEST_CASE("a change of a tree's target pixel ratio lays it out again, once, and 
     PrLayoutTree* trees[2] = {f.tree, g.tree};
     for (Fixture* fixture : fixtures)
         fixture->layout(px(400, 300));
-    for (float ratio : {1.0f, 2.0f, 2.0f, 1.0f, 1.0f}) {
+    const float ratios[] = {1.0f, 2.0f, 2.0f, 1.0f, 1.0f};
+    for (float ratio : ratios) {
         CAPTURE(ratio);
         bool changed = ratio != prLayoutTreeTargetPixelRatio(f.tree);
         prLayoutTreeSetTargetPixelRatio(f.tree, ratio);
@@ -1031,11 +1032,14 @@ TEST_CASE("a phantom line is zero high: no text, atomic inline, forced break or 
         return box;
     };
     // Each edge on its own, including a non-zero percentage of a zero base.
-    for (Case c : {Case{"padding-top", edges(prLayoutLengthPx(0), prLayoutLengthPx(1), PrRectSide_Top), 0},
+    const Case cases[] = {
+        Case{"padding-top", edges(prLayoutLengthPx(0), prLayoutLengthPx(1), PrRectSide_Top), 0},
         Case{"padding-left", edges(prLayoutLengthPx(0), prLayoutLengthPx(1), PrRectSide_Left), 40},
-                Case{"padding-right", edges(prLayoutLengthPx(0), prLayoutLengthPx(1), PrRectSide_Right), 40},
-                Case{"edges that cancel", edges(prLayoutLengthPx(-1), prLayoutLengthPx(1), PrRectSide_Left), 40},
-                Case{"a percentage", edges(prLayoutLengthPx(0), prLayoutLengthPercent(10), PrRectSide_Left), 40}}) {
+        Case{"padding-right", edges(prLayoutLengthPx(0), prLayoutLengthPx(1), PrRectSide_Right), 40},
+        Case{"edges that cancel", edges(prLayoutLengthPx(-1), prLayoutLengthPx(1), PrRectSide_Left), 40},
+        Case{"a percentage", edges(prLayoutLengthPx(0), prLayoutLengthPercent(10), PrRectSide_Left), 40},
+    };
+    for (Case c : cases) {
         CAPTURE(c.what);
         Stage s(Width{200, false});
         s.add(s.stage, c.span);
@@ -1138,8 +1142,8 @@ TEST_CASE("lines may break before and after an atomic inline, but beside GL, WJ 
     };
     // Two 80px inline-blocks in 100px, with no marker, whose own opportunity would break first. Each case gives the
     // second's top.
-    for (Case c : {Case{" ", 57}, Case{"⁠", 17}, Case{" ", 17}, Case{"‍", 17}, Case{"", 57},
-        Case{",", 57}}) {
+    const Case cases[] = {Case{" ", 57}, Case{"⁠", 17}, Case{" ", 17}, Case{"‍", 17}, Case{"", 57}, Case{",", 57}};
+    for (Case c : cases) {
         CAPTURE(c.between);
         Stage s(Width{100, false});
         s.add(s.stage, inlineBlock(80, 10));
@@ -1170,10 +1174,12 @@ TEST_CASE("lines may break before and after an atomic inline, but beside GL, WJ 
     {
         // Not before a forced break, whether a line break node or a preserved newline, after a box that overflows its
         // line. The text after the break is on the second line, as after a box that fits.
-        for (bool preserved : {false, true}) {
+        const bool preservedOptions[] = {false, true};
+        for (bool preserved : preservedOptions) {
             CAPTURE(preserved);
             double tops[2] = {};
-            for (float width : {80.0f, 120.0f}) {
+            const float widths[] = {80.0f, 120.0f};
+            for (float width : widths) {
                 Stage s(Width{100, false});
                 PrLayoutFontStyle pre = s.style;
                 pre.whiteSpaceCollapse = PrLayoutWhiteSpaceCollapse_Preserve;

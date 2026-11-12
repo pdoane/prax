@@ -1,11 +1,10 @@
 #include "pr/float.h"
 #include "pr/media_source.h"
+#include "pr/string.h"
 
 #include "media/tests/media_test_stream.h"
 
 #include "tools/harness/test.h"
-
-#include <string>
 
 namespace pr_impl {
 
@@ -38,16 +37,14 @@ struct Fixture {
         return append(mediaSegment(second * kSecond, kFramesPerSecond, size, kAudioPerSecond));
     }
 
-    std::string buffered(bool ended = false) {
+    String buffered(bool ended = false) {
         PrMediaTimeRange ranges[8];
         uint32_t count = prMediaSourceBufferBuffered(buffer, ended, ranges, 8);
-        std::string out = "{";
-        char text[64];
-        for (uint32_t i = 0; i < count && i < 8; ++i) {
-            snprintf(text, sizeof text, " [%.3f, %.3f)", ranges[i].start, ranges[i].end);
-            out += text;
-        }
-        return out + " }";
+        String out = "{";
+        for (uint32_t i = 0; i < count && i < 8; ++i)
+            formatTo(out, " [{:.3f}, {:.3f})", ranges[i].start, ranges[i].end);
+        out.append(" }");
+        return out;
     }
 };
 
@@ -82,7 +79,7 @@ TEST_CASE("a later initialization segment must agree with the first") {
     CHECK(f.inits == 2);
     CHECK_FALSE(f.firstInit);
     // A stream whose first box is not a box is corrupt.
-    Bytes corrupt = {0, 0, 0, 2, 'x', 'x', 'x', 'x'};
+    Bytes corrupt({0, 0, 0, 2, 'x', 'x', 'x', 'x'});
     CHECK(f.append(corrupt) == PrStatus_InvalidData);
 }
 

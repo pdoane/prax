@@ -1,12 +1,19 @@
+#include "pr/array.h"
 #include "pr/span.h"
 
 #include "tools/harness/test.h"
 
 using namespace pr_impl;
 
-// A span converts from nothing implicitly, and a span of `T` gives a span of `const T` only when asked.
-static_assert(!isConvertible<int (&)[3], Span<int>>);
-static_assert(!isConvertible<Span<int>, Span<const int>>);
+// An array converts to a span implicitly, a span of `T` to a span of `const T`, and nothing takes the const away. A
+// container gives its elements only when asked.
+static_assert(isConvertible<int (&)[3], Span<int>>);
+static_assert(isConvertible<const int (&)[3], Span<const int>>);
+static_assert(isConvertible<int (&)[3], Span<const int>>);
+static_assert(isConvertible<Span<int>, Span<const int>>);
+static_assert(!isConvertible<Span<const int>, Span<int>>);
+static_assert(!isConvertible<const int (&)[3], Span<int>>);
+static_assert(!isConvertible<const Array<int>&, Span<const int>>);
 
 TEST_CASE("a span reads and changes the elements that it views") {
     int values[] = {1, 2, 3, 4, 5};

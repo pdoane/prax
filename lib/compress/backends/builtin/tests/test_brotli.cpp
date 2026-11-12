@@ -1,13 +1,15 @@
+#include "pr/array.h"
 #include "pr/checksum.h"
+#include "pr/mem.h"
+#include "pr/min_max.h"
+#include "pr/span.h"
+#include "pr/string.h"
+#include "pr/string_ops.h"
 
 #include "compress/backends/builtin/src/brotli.h"
 #include "compress/backends/builtin/src/brotli_tables.h"
 
 #include "tools/harness/test.h"
-
-#include <algorithm>
-#include <string>
-#include <vector>
 
 namespace pr_impl {
 
@@ -253,33 +255,31 @@ constexpr char kText[] =
     "Page</title></head><body class=\"main\">Welcome to the website, the information you need.</body></html>";
 
 // Four hundred numbered runs of a phrase: 201,600 bytes that the encoder splits into several meta-blocks.
-std::string repeated() {
-    std::string out;
-    char number[8];
+String repeated() {
+    String out;
     for (int i = 0; i < 400; ++i) {
-        snprintf(number, sizeof(number), "%04d", i);
-        out += number;
+        formatTo(out, "{:04}", i);
         for (int k = 0; k < 25; ++k)
-            out += "the quick brown fox ";
+            out.append("the quick brown fox ");
     }
     return out;
 }
 
 // Bytes of xorshift32 from a seed of one, which the encoder stores uncompressed.
-std::string noise(size_t size) {
-    std::string out;
+String noise(size_t size) {
+    String out;
     uint32_t x = 1;
     for (size_t i = 0; i < size; ++i) {
         x ^= x << 13;
         x ^= x >> 17;
         x ^= x << 5;
-        out += char(x & 0xff);
+        out.append(char(x & 0xff));
     }
     return out;
 }
 
 struct Decoded {
-    std::string text;
+    String text;
     BrotliResult result;
     size_t consumed;
 };
@@ -288,17 +288,17 @@ struct Decoded {
 Decoded decode(PrByteView input, size_t inputChunk, size_t outputChunk) {
     Brotli* decoder = brotliCreate();
     Decoded decoded{{}, BrotliResult_Input, 0};
-    std::vector<uint8_t> output(outputChunk);
+    Array<uint8_t> output(outputChunk);
     size_t at = 0;
     for (;;) {
-        const size_t size = std::min(inputChunk, input.size - at);
+        const size_t size = min(inputChunk, input.size - at);
         size_t consumed = 0;
         size_t written = 0;
         decoded.result = brotliRead(decoder, {input.data + at, size}, at + size == input.size, &consumed,
-            output.data(), output.size(), &written);
+            output.data(), output.count(), &written);
         REQUIRE(consumed <= size);
-        REQUIRE(written <= output.size());
-        decoded.text.append(reinterpret_cast<const char*>(output.data()), written);
+        REQUIRE(written <= output.count());
+        decoded.text.append(PrStringView{reinterpret_cast<const char*>(output.data()), written});
         at += consumed;
         if (decoded.result != BrotliResult_Input && decoded.result != BrotliResult_Output)
             break;
@@ -309,7 +309,7 @@ Decoded decode(PrByteView input, size_t inputChunk, size_t outputChunk) {
     return decoded;
 }
 
-std::string decodeAll(PrByteView input) {
+String decodeAll(PrByteView input) {
     Decoded decoded = decode(input, input.size, size_t(1) << 20);
     CHECK(decoded.result == BrotliResult_Done);
     return decoded.text;
@@ -317,8 +317,8 @@ std::string decodeAll(PrByteView input) {
 
 // Checks that `stream` decodes to `expected` whole, a byte of input at a time, a byte of output at a time, and in
 // pieces of each that do not divide the stream.
-void checkStream(PrByteView stream, const std::string& expected) {
-    const size_t whole = expected.size() + 1;
+void checkStream(PrByteView stream, PrStringView expected) {
+    const size_t whole = expected.size + 1;
     struct Chunk {
         size_t input, output;
     };
@@ -329,22 +329,22 @@ void checkStream(PrByteView stream, const std::string& expected) {
         const Decoded decoded = decode(stream, chunk.input, chunk.output);
         CHECK(decoded.result == BrotliResult_Done);
         CHECK(decoded.consumed == stream.size);
-        CHECK(decoded.text.size() == expected.size());
+        CHECK(decoded.text.count() == expected.size);
         CHECK(decoded.text == expected);
     }
 }
 
 // Writes a Brotli stream field by field, for tests that build their own streams.
 struct BrotliWriter {
-    std::vector<uint8_t> bytes;
+    Array<uint8_t> bytes;
     uint32_t bit = 0;
 
     // Writes a field of `count` bits, first bit lowest.
     void put(uint32_t value, uint32_t count) {
         for (uint32_t i = 0; i < count; ++i, ++bit) {
             if (bit % 8 == 0)
-                bytes.push_back(0);
-            bytes.back() |= uint8_t(((value >> i) & 1) << (bit % 8));
+                bytes.push(0);
+            bytes.last() |= uint8_t(((value >> i) & 1) << (bit % 8));
         }
     }
 
@@ -373,14 +373,17 @@ struct BrotliWriter {
     }
 
     // Writes a simple prefix code of `symbols`, each `bits` wide (rfc 7932 3.4).
-    void simple(std::vector<uint32_t> symbols, uint32_t bits, uint32_t select = 0) {
+    void simple(Span<const uint32_t> symbols, uint32_t bits, uint32_t select = 0) {
         put(1, 2);
-        put(uint32_t(symbols.size() - 1), 2);
+        put(symbols.count() - 1, 2);
         for (uint32_t symbol : symbols)
             put(symbol, bits);
-        if (symbols.size() == 4)
+        if (symbols.count() == 4)
             put(select, 1);
     }
+
+    // Writes a simple prefix code of the one symbol `symbol`, `bits` wide.
+    void simple(uint32_t symbol, uint32_t bits) { simple(Span<const uint32_t>(&symbol, 1), bits); }
 
     // Writes the header of a last meta-block of `length` bytes, up to 65536.
     void lastHeader(uint32_t length) {
@@ -390,7 +393,7 @@ struct BrotliWriter {
         put(length - 1, 16);
     }
 
-    std::vector<uint8_t> finish() { return bytes; }
+    Array<uint8_t> finish() { return bytes; }
 };
 
 // The copy lengths of the copy length codes and their extra bits (rfc 7932 5).
@@ -403,7 +406,7 @@ constexpr uint32_t kCopyExtra[24] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4
 // Returns a stream of one dictionary reference to the word with length `length` and index `index`, under `transform`.
 // The stream produces `size` bytes. Each code of the meta-block has one symbol, so the command consists only of extra
 // bits.
-std::vector<uint8_t> wordStream(uint32_t length, uint32_t index, uint32_t transform, uint32_t size) {
+Array<uint8_t> wordStream(uint32_t length, uint32_t index, uint32_t transform, uint32_t size) {
     BrotliWriter w;
     w.put(0, 1); // WBITS 16
     w.lastHeader(size);
@@ -415,13 +418,13 @@ std::vector<uint8_t> wordStream(uint32_t length, uint32_t index, uint32_t transf
     w.put(0, 2); // LSB6
     w.count(1);
     w.count(1);
-    w.simple({0}, 8);
+    w.simple(0, 8);
     // Insert nothing, and copy `length` with a distance code.
     uint32_t copy = 23;
     while (kCopyBase[copy] > length)
         --copy;
     const uint32_t command = copy < 8 ? 128 + copy : copy < 16 ? 192 + copy - 8 : 384 + copy - 16;
-    w.simple({command}, 10);
+    w.simple(command, 10);
     // At the start of the stream, no back-reference can reach, so distance 1 is the first dictionary word (rfc 7932 8).
     const uint32_t distance = 1 + index + (transform << kBrotliDictionaryBits[length]);
     uint32_t code = 16;
@@ -434,21 +437,22 @@ std::vector<uint8_t> wordStream(uint32_t length, uint32_t index, uint32_t transf
         if (distance <= offset + (1u << bits))
             break;
     }
-    w.simple({code}, 6);
+    w.simple(code, 6);
     w.put(length - kCopyBase[copy], kCopyExtra[copy]);
     w.put(distance - offset - 1, bits);
     return w.finish();
 }
 
-std::string word(uint32_t length, uint32_t index) {
-    return std::string(reinterpret_cast<const char*>(kBrotliDictionary + kBrotliDictionaryOffsets[length] +
-        index * length), length);
+PrStringView word(uint32_t length, uint32_t index) {
+    return PrStringView{
+        reinterpret_cast<const char*>(kBrotliDictionary + kBrotliDictionaryOffsets[length] + index * length), length,
+    };
 }
 
 // Returns the index of the first dictionary word of length `length` that starts with `lead`.
 uint32_t wordStarting(uint32_t length, uint8_t lead) {
     for (uint32_t index = 0; index < (1u << kBrotliDictionaryBits[length]); ++index)
-        if (uint8_t(word(length, index)[0]) == lead)
+        if (uint8_t(word(length, index).data[0]) == lead)
             return index;
     FAIL("no such word");
     return 0;
@@ -464,22 +468,22 @@ TEST_CASE("The Brotli tables are the RFC's") {
     // rfc 7932 appendix A gives the CRC-32 of the dictionary. Appendix B gives the serialization of the transforms and
     // its CRC-32.
     CHECK(prCrc32Update(0, {kBrotliDictionary, kBrotliDictionarySize}) == 0x5136cb04u);
-    std::string transforms;
+    String transforms;
     for (const BrotliTransform& transform : kBrotliTransforms) {
-        transforms.append(transform.prefix, transform.prefixSize);
-        transforms += '\0';
-        transforms += char(transform.elementary);
-        transforms.append(transform.suffix, transform.suffixSize);
-        transforms += '\0';
+        transforms.append(PrStringView{transform.prefix, transform.prefixSize});
+        transforms.append('\0');
+        transforms.append(char(transform.elementary));
+        transforms.append(PrStringView{transform.suffix, transform.suffixSize});
+        transforms.append('\0');
     }
-    CHECK(transforms.size() == 648);
-    CHECK(prCrc32Update(0, {reinterpret_cast<const uint8_t*>(transforms.data()), transforms.size()}) == 0x3d965f81u);
+    CHECK(transforms.count() == 648);
+    CHECK(prCrc32Update(0,prStringBytes(transforms)) == 0x3d965f81u);
     CHECK(word(4, 0) == "time");
 }
 
 TEST_CASE("Brotli decodes an encoder's streams whole and in pieces") {
-    const std::string text = kText;
-    const std::string runs = repeated();
+    const PrStringView text = kText;
+    const String runs = repeated();
     SUBCASE("text with dictionary words") {
         checkStream(kTextQ11, text);
         checkStream(kTextQ5, text);
@@ -507,21 +511,25 @@ TEST_CASE("Brotli transforms dictionary words") {
     CHECK(decodeAll(wordStream(4, 0, 49, 7)) == "timing ");
     CHECK(decodeAll(wordStream(4, 1, 73, 17)) == " the down of the ");
     CHECK(decodeAll(wordStream(4, 1, 15, 6)) == " Down ");
-    CHECK(decodeAll(wordStream(5, 3, 102, 7)) == "\xc2\xa0" + word(5, 3));
+    String spaced("\xc2\xa0");
+    spaced.append(word(5, 3));
+    CHECK(decodeAll(wordStream(5, 3, 102, 7)) == spaced);
     CHECK(decodeAll(wordStream(24, 2, 0, 24)) == word(24, 2));
 
     // FermentFirst and FermentAll change the second byte of a two-byte character, and the third of a three-byte one.
     const uint32_t cyrillic = wordStarting(4, 0xd0);
-    std::string upper = word(4, cyrillic);
+    char upper[4];
+    prMemCopy(upper, word(4, cyrillic).data, sizeof(upper));
     upper[1] = char(upper[1] ^ 32);
-    CHECK(decodeAll(wordStream(4, cyrillic, 9, 4)) == upper);
+    CHECK(decodeAll(wordStream(4, cyrillic, 9, 4)) == PrStringView{upper, sizeof(upper)});
     upper[3] = char(upper[3] ^ 32);
-    CHECK(decodeAll(wordStream(4, cyrillic, 44, 4)) == upper);
+    CHECK(decodeAll(wordStream(4, cyrillic, 44, 4)) == PrStringView{upper, sizeof(upper)});
     const uint32_t devanagari = wordStarting(6, 0xe0);
-    std::string shifted = word(6, devanagari);
+    char shifted[6];
+    prMemCopy(shifted, word(6, devanagari).data, sizeof(shifted));
     shifted[2] = char(shifted[2] ^ 5);
     shifted[5] = char(shifted[5] ^ 5);
-    CHECK(decodeAll(wordStream(6, devanagari, 44, 6)) == shifted);
+    CHECK(decodeAll(wordStream(6, devanagari, 44, 6)) == PrStringView{shifted, sizeof(shifted)});
 }
 
 TEST_CASE("Brotli switches block types and reads context maps with runs and move-to-front") {
@@ -531,9 +539,10 @@ TEST_CASE("Brotli switches block types and reads context maps with runs and move
     w.put(0, 1); // WBITS 16
     w.lastHeader(12);
     w.count(2);
-    w.simple({0, 1, 3}, 2); // codes 0, 10 and 11
-    w.simple({0}, 5);       // block counts 1 to 4
-    w.put(2, 2);            // the first block count, 3
+    const uint32_t blockTypeSymbols[] = {0, 1, 3};
+    w.simple(blockTypeSymbols, 2); // codes 0, 10 and 11
+    w.simple(0, 5);                // block counts 1 to 4
+    w.put(2, 2);                   // the first block count, 3
     w.count(1);
     w.count(1);
     w.put(0, 2); // NPOSTFIX
@@ -546,7 +555,8 @@ TEST_CASE("Brotli switches block types and reads context maps with runs and move
     w.count(2);
     w.put(1, 1);
     w.put(5, 4);
-    w.simple({6, 7, 5}, 3); // codes 0, 11 and 10
+    const uint32_t contextMapSymbols[] = {6, 7, 5};
+    w.simple(contextMapSymbols, 3); // codes 0, 11 and 10
     w.code(0, 1);
     w.put(0, 6); // 64 zeros
     w.code(3, 2);
@@ -554,10 +564,10 @@ TEST_CASE("Brotli switches block types and reads context maps with runs and move
     w.put(31, 5); // 63 zeros
     w.put(1, 1);  // IMTF
     w.count(1);
-    w.simple({'a'}, 8);
-    w.simple({'b'}, 8);
-    w.simple({256}, 10); // insert code 8 and copy code 0
-    w.simple({0}, 6);
+    w.simple('a', 8);
+    w.simple('b', 8);
+    w.simple(256, 10); // insert code 8 and copy code 0
+    w.simple(0, 6);
     // The command inserts 12 literals, the last of the meta-block.
     w.put(2, 2);
     // The literals are three a's, then two b's in type 1, four a's in the previous type, and three b's in the next
@@ -597,9 +607,10 @@ TEST_CASE("Brotli reports a truncated stream and leaves what follows a stream un
         CAPTURE(size);
         CHECK(decode({stream.data, size}, size, 4096).result == BrotliResult_Truncated);
     }
-    std::vector<uint8_t> followed(stream.data, stream.data + stream.size);
-    followed.push_back('!');
-    const Decoded decoded = decode(followed, followed.size(), 4096);
+    Array<uint8_t> followed;
+    followed.append(stream.data, uint32_t(stream.size));
+    followed.push('!');
+    const Decoded decoded = decode(followed, followed.count(), 4096);
     CHECK(decoded.result == BrotliResult_Done);
     CHECK(decoded.consumed == stream.size);
     CHECK(decoded.text == kText);
@@ -632,9 +643,11 @@ TEST_CASE("Brotli rejects corrupt streams") {
         // builds check.
         const PrByteView streams[] = {kTextQ11, kTextQ0, kRepeatedQ2Window10};
         for (PrByteView original : streams) {
-            std::vector<uint8_t> bytes(original.data, original.data + original.size);
-            for (size_t at = 0; at < bytes.size(); at += 3) {
-                for (uint8_t flip : {uint8_t(0x01), uint8_t(0x80), uint8_t(0xff)}) {
+            Array<uint8_t> bytes;
+            bytes.append(original.data, uint32_t(original.size));
+            const uint8_t flips[] = {0x01, 0x80, 0xff};
+            for (uint32_t at = 0; at < bytes.count(); at += 3) {
+                for (uint8_t flip : flips) {
                     bytes[at] ^= flip;
                     decode(bytes, 37, 1000);
                     bytes[at] ^= flip;

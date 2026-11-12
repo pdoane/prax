@@ -1,12 +1,11 @@
+#include "pr/array.h"
 #include "pr/markdown.h"
 #include "pr/markdown_html.h"
+#include "pr/string.h"
 #include "pr/string_ops.h"
 #include "pr/text_buffer.h"
 
 #include "tools/harness/test.h"
-
-#include <string>
-#include <vector>
 
 extern "C" int prTestMarkdownCApi(void);
 
@@ -14,24 +13,18 @@ namespace pr_impl {
 
 namespace {
 
-std::string viewString(PrStringView view) {
-    return std::string(view.data != nullptr ? view.data : "", view.size);
-}
-
-std::string blocksHtml(const PrMarkdown* document, uint32_t first, uint32_t count) {
+String blocksHtml(const PrMarkdown* document, uint32_t first, uint32_t count) {
     PrRawString out = prRawStringEmpty();
     prMarkdownAppendHtml(document, first, count, &out);
-    std::string html = viewString(prRawStringView(&out));
-    prRawStringReset(&out);
-    return html;
+    return String::adopt(out);
 }
 
 // Returns the HTML of the whole document: its blocks', then its footnotes'.
-std::string documentHtml(const PrMarkdown* document) {
-    std::string html = blocksHtml(document, 0, prMarkdownBlockCount(document));
+String documentHtml(const PrMarkdown* document) {
+    String html = blocksHtml(document, 0, prMarkdownBlockCount(document));
     PrRawString footnotes = prRawStringEmpty();
     prMarkdownAppendFootnotesHtml(document, &footnotes);
-    html += viewString(prRawStringView(&footnotes));
+    html.append(prRawStringView(&footnotes));
     prRawStringReset(&footnotes);
     return html;
 }
@@ -47,18 +40,18 @@ const PrMarkdownOptions* gfm() {
 }
 
 // Returns the HTML of `source` parsed whole with `options`, or with GFM's.
-std::string html(PrStringView source, const PrMarkdownOptions* options = nullptr) {
+String html(PrStringView source, const PrMarkdownOptions* options = nullptr) {
     PrMarkdown* document = prMarkdownCreate(options != nullptr ? options : gfm());
     prMarkdownParse(document, source);
-    std::string out = documentHtml(document);
+    String out = documentHtml(document);
     prMarkdownDestroy(document);
     return out;
 }
 
 // A client that keeps the HTML of each block and applies the document's changes to it.
 struct Client {
-    std::vector<std::string> blocks;
-    std::vector<PrMarkdownChange> changes;
+    Array<String> blocks;
+    Array<PrMarkdownChange> changes;
 
     void update(PrMarkdown* document) {
         changes.clear();
@@ -67,19 +60,18 @@ struct Client {
         while ((count = prMarkdownTakeChanges(document, taken, 2)) != 0) {
             for (uint32_t i = 0; i < count; ++i) {
                 const PrMarkdownChange& change = taken[i];
-                changes.push_back(change);
-                blocks.erase(blocks.begin() + ptrdiff_t(change.first),
-                    blocks.begin() + ptrdiff_t(change.first + change.removedCount));
+                changes.push(change);
+                blocks.erase(change.first, change.removedCount);
                 for (uint32_t b = 0; b < change.insertedCount; ++b)
-                    blocks.insert(blocks.begin() + ptrdiff_t(change.first + b), blocksHtml(document, change.first + b, 1));
+                    blocks.insert(change.first + b, blocksHtml(document, change.first + b, 1));
             }
         }
     }
 
-    std::string joined() const {
-        std::string out;
-        for (const std::string& block : blocks)
-            out += block;
+    String joined() const {
+        String out;
+        for (const String& block : blocks)
+            out.append(block);
         return out;
     }
 };
@@ -113,7 +105,8 @@ bool streams(PrStringView source, const PrMarkdownOptions& options) {
     client.update(document);
     PrRawString footnotes = prRawStringEmpty();
     prMarkdownAppendFootnotesHtml(document, &footnotes);
-    std::string streamed = client.joined() + viewString(prRawStringView(&footnotes));
+    String streamed = client.joined();
+    streamed.append(prRawStringView(&footnotes));
     prRawStringReset(&footnotes);
     bool same = streamed == html(source, &options) && documentHtml(document) == streamed;
     prMarkdownDestroy(document);
@@ -241,16 +234,16 @@ TEST_CASE("a late definition resolves the references of final blocks, which are 
 TEST_CASE("a client that waits for final blocks sees each block once") {
     const char* source = "Para one\nstill one.\n\n## Two\n\n- a\n- b\n\n***\n";
     PrMarkdown* document = prMarkdownCreate(gfm());
-    std::string written;
+    String written;
     uint32_t walked = 0;
     for (const char* c = source; *c != '\0'; ++c) {
         prMarkdownAppend(document, PrStringView{c, 1});
         uint32_t final = prMarkdownFinalCount(document);
-        written += blocksHtml(document, walked, final - walked);
+        written.append(blocksHtml(document, walked, final - walked));
         walked = final;
     }
     prMarkdownEnd(document);
-    written += blocksHtml(document, walked, prMarkdownFinalCount(document) - walked);
+    written.append(blocksHtml(document, walked, prMarkdownFinalCount(document) - walked));
     CHECK(written == html(source));
     prMarkdownDestroy(document);
 }
@@ -265,12 +258,12 @@ TEST_CASE("footnotes are numbered by their first reference, and their section re
     prMarkdownAppend(document, "\n[^b]: B\n");
     CHECK(prMarkdownTakeFootnotesChanged(document));
     prMarkdownEnd(document);
-    std::string out = documentHtml(document);
-    CHECK(out.find("href=\"#fn-b\" id=\"fnref-b\" data-footnote-ref>1</a>") != std::string::npos);
-    CHECK(out.find("href=\"#fn-a\" id=\"fnref-a\" data-footnote-ref>2</a>") != std::string::npos);
-    CHECK(out.find("id=\"fnref-b-2\" data-footnote-ref>1</a>") != std::string::npos);
-    CHECK(out.find("e[^none]") != std::string::npos);
-    CHECK(out.find("<li id=\"fn-b\">") < out.find("<li id=\"fn-a\">"));
+    String out = documentHtml(document);
+    CHECK(prStringContains(out, "href=\"#fn-b\" id=\"fnref-b\" data-footnote-ref>1</a>"));
+    CHECK(prStringContains(out, "href=\"#fn-a\" id=\"fnref-a\" data-footnote-ref>2</a>"));
+    CHECK(prStringContains(out, "id=\"fnref-b-2\" data-footnote-ref>1</a>"));
+    CHECK(prStringContains(out, "e[^none]"));
+    CHECK(prStringFind(out, "<li id=\"fn-b\">") < prStringFind(out, "<li id=\"fn-a\">"));
     prMarkdownDestroy(document);
 }
 
@@ -297,32 +290,35 @@ TEST_CASE("safe destinations drop the schemes that run code or read files") {
 TEST_CASE("HTML events carry tags, attributes and unescaped text") {
     PrMarkdown* document = prMarkdownCreate(gfm());
     prMarkdownParse(document, "[a & b](</x y> \"t\") <i>raw</i>\n\n---\n");
-    std::vector<std::string> events;
+    Array<String> events;
     prMarkdownWriteHtml(document, 0, prMarkdownBlockCount(document), [](void* context, const PrMarkdownHtmlEvent* event) {
-        std::string line;
+        String line;
         switch (event->kind) {
             case PrMarkdownHtmlEventKind_StartTag:
-                line = "<" + viewString(event->name);
+                line = format("<{}", event->name);
                 for (uint32_t i = 0; i < event->attributeCount; ++i)
-                    line += " " + viewString(event->attributes[i].name) + "=" + viewString(event->attributes[i].value);
-                line += event->selfClosing ? "/>" : ">";
+                    formatTo(line, " {}={}", event->attributes[i].name, event->attributes[i].value);
+                line.append(event->selfClosing ? "/>" : ">");
                 break;
             case PrMarkdownHtmlEventKind_EndTag:
-                line = "</" + viewString(event->name) + ">";
+                line = format("</{}>", event->name);
                 break;
             case PrMarkdownHtmlEventKind_Text:
-                line = "text:" + viewString(event->text);
+                line = format("text:{}", event->text);
                 break;
             case PrMarkdownHtmlEventKind_Html:
-                line = "html:" + viewString(event->text);
+                line = format("html:{}", event->text);
                 break;
         }
-        static_cast<std::vector<std::string>*>(context)->push_back(line);
+        static_cast<Array<String>*>(context)->push(move(line));
     }, &events);
-    std::vector<std::string> expected = {
+    const char* expectedLines[] = {
         "<p>", "<a href=/x%20y title=t>", "text:a & b", "</a>", "text: ", "html:<i>", "text:raw", "html:</i>", "</p>",
         "text:\n", "<hr/>", "text:\n",
     };
+    Array<String> expected;
+    for (const char* line : expectedLines)
+        expected.push(line);
     CHECK(events == expected);
     prMarkdownDestroy(document);
 }
@@ -392,15 +388,15 @@ TEST_CASE("a fenced code block of math is display math") {
     PrMarkdown* document = prMarkdownCreate(&options);
     prMarkdownAppend(document, "```math\n\\alpha\n```\n");
     prMarkdownEnd(document);
-    std::string walked;
+    String walked;
     prMarkdownWalk(document, 0, 1, [](void* context, const PrMarkdownStep* step) {
-        std::string* out = static_cast<std::string*>(context);
+        String* out = static_cast<String*>(context);
         if (step->kind == PrMarkdownStepKind_Enter && step->node == PrMarkdownNodeKind_MathBlock)
-            *out += step->display ? "[display " : "[";
+            out->append(step->display ? "[display " : "[");
         if (step->kind == PrMarkdownStepKind_Text)
-            *out += viewString(step->text);
+            out->append(step->text);
         if (step->kind == PrMarkdownStepKind_Leave)
-            *out += "]";
+            out->append("]");
     }, &walked);
     CHECK(walked == "[display \\alpha]");
     prMarkdownDestroy(document);
@@ -414,10 +410,10 @@ TEST_CASE("front matter is held as it is written, and keeps the blocks after its
     CHECK(prMarkdownFinalCount(document) == 0);
     prMarkdownAppend(document, "---\n# Body\n\nText\n");
     CHECK(prMarkdownFinalCount(document) == 2);
-    std::string fields;
+    String fields;
     prMarkdownWalk(document, 0, 1, [](void* context, const PrMarkdownStep* step) {
         if (step->kind == PrMarkdownStepKind_Text)
-            *static_cast<std::string*>(context) += viewString(step->text);
+            static_cast<String*>(context)->append(step->text);
     }, &fields);
     CHECK(fields == "title: x\n\n# Not yet\n\n");
     prMarkdownEnd(document);

@@ -2,6 +2,7 @@
 
 #include "pr/file.h"
 #include "pr/string.h"
+#include "pr/string_ops.h"
 
 #include "apps/merge/merge.h"
 
@@ -14,7 +15,7 @@ namespace {
 // Writes `text` to a file of `name` in the binary's folder (harness::testFolder), and returns its path.
 String writeFile(PrStringView name, PrStringView text) {
     String path = format("{}/{}", PrStringView(harness::testFolder()), name);
-    REQUIRE(prFileWrite(path, PrByteView{reinterpret_cast<const uint8_t*>(text.data), text.size}));
+    REQUIRE(prFileWrite(path, prStringBytes(text)));
     return path;
 }
 

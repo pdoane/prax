@@ -7,15 +7,13 @@
 #include "pr/mathml_quickjs.h"
 #include "pr/memory.h"
 #include "pr/quickjs_binding.h"
+#include "pr/string.h"
 #include "pr/svg_quickjs.h"
 #include "pr/webidl_quickjs.h"
 
 #include "html/quickjs/src/html_bindings_quickjs.h"
 
 #include "tools/harness/test.h"
-
-#include <string.h>
-#include <string>
 
 namespace pr_impl {
 
@@ -62,12 +60,12 @@ struct Page {
 
     // Runs `source`, and returns true if it ran without throwing.
     bool run(const char* source) {
-        JSValue result = JS_Eval(ctx, source, strlen(source), "test", JS_EVAL_TYPE_GLOBAL);
+        JSValue result = JS_Eval(ctx, source, PrStringView(source).size, "test", JS_EVAL_TYPE_GLOBAL);
         bool ok = !JS_IsException(result);
         if (!ok) {
             JSValue exception = JS_GetException(ctx);
             const char* text = JS_ToCString(ctx, exception);
-            MESSAGE(std::string(text != nullptr ? text : "an exception"));
+            MESSAGE(String(text != nullptr ? text : "an exception"));
             JS_FreeCString(ctx, text);
             JS_FreeValue(ctx, exception);
         }
@@ -148,9 +146,12 @@ TEST_CASE("nodes a script makes and lets go of are freed, however it mutated the
     };
     for (const char* source : kChurns) {
         // A block of its own, so that its declarations do not clash when it runs again.
-        std::string text = std::string("{ ") + source + " }";
-        const char* churn = text.c_str();
+        String text = format("{{ {} }}", source);
         CAPTURE(text);
+        // JS_Eval reads the text through its NUL terminator.
+        String terminated = text;
+        terminated.append('\0');
+        const char* churn = terminated.data();
         Page page("<body></body>");
         page.liveAfter(churn);
         size_t before = page.liveAfter(churn);
@@ -167,9 +168,12 @@ TEST_CASE("an aborted signal and its reason are freed once script lets go of the
         ("for (let i = 0; i < 200; ++i) { const c = new AbortController(); c.abort({ any: AbortSignal.any([c.signal]) }); }"),
     };
     for (const char* source : kChurns) {
-        std::string text = std::string("{ ") + source + " }";
-        const char* churn = text.c_str();
+        String text = format("{{ {} }}", source);
         CAPTURE(text);
+        // JS_Eval reads the text through its NUL terminator.
+        String terminated = text;
+        terminated.append('\0');
+        const char* churn = terminated.data();
         Page page("<body></body>");
         page.liveAfter(churn);
         size_t before = page.liveAfter(churn);
@@ -318,9 +322,12 @@ TEST_CASE("a tree whose objects hold no state is freed as script lets go of it, 
             " d.appendChild(document.createElement('p')).appendChild(kept); kept.remove(); }",
     };
     for (const char* source : kChurns) {
-        std::string text = std::string("{ ") + source + " }";
-        const char* churn = text.c_str();
+        String text = format("{{ {} }}", source);
         CAPTURE(text);
+        // JS_Eval reads the text through its NUL terminator.
+        String terminated = text;
+        terminated.append('\0');
+        const char* churn = terminated.data();
         Page page("<body></body>");
         JS_SetGCThreshold(page.runtime, SIZE_MAX);
         page.liveUncollected(churn);
@@ -330,11 +337,11 @@ TEST_CASE("a tree whose objects hold no state is freed as script lets go of it, 
 }
 
 TEST_CASE("the engine passes a hyperlink's request for a new browsing context to the host, with its context") {
-    std::string opened;
+    String opened;
     PrHtmlHost host = prHtmlHostDefault();
     host.context = &opened;
     host.openWindow = [](void* context, PrHtmlPage*, PrStringView url) {
-        static_cast<std::string*>(context)->assign(url.data, url.size);
+        static_cast<String*>(context)->assign(url);
     };
     PrJsHtmlEngineDesc desc{};
     PrJsHtmlEngine* engine = prJsHtmlEngineCreate(&desc);

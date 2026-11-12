@@ -3,21 +3,22 @@
 
 #include "pr/css.h"
 #include "pr/dom_xml.h"
+#include "pr/string.h"
 #include "pr/string_ops.h"
 #include "pr/svg.h"
 #include "pr/svg_length.h"
 
 #include "tools/harness/test.h"
 
-#include <string>
-
 namespace pr_impl {
+
+using namespace pr;
 
 namespace {
 
 // Returns the text of a view. The null view reads as the empty string.
-std::string textOf(PrStringView text) {
-    return std::string(text.size != 0 ? text.data : "", text.size);
+String textOf(PrStringView text) {
+    return String(text.size != 0 ? text : PrStringView(""));
 }
 
 // A document of `body` in an outermost svg element 200 by 100, which a document without a presentation draws at that
@@ -26,8 +27,8 @@ struct Document {
     PrDomDocument* document;
 
     explicit Document(const char* body) {
-        std::string source = std::string("<svg xmlns='http://www.w3.org/2000/svg' "
-            "xmlns:xlink='http://www.w3.org/1999/xlink' width='200' height='100'>") + body + "</svg>";
+        String source = format("<svg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' "
+            "width='200' height='100'>{}</svg>", body);
         document = prDomParseXml(source, "image/svg+xml", nullptr);
         prCssEnable(document);
         prSvgEnable(document);
@@ -42,7 +43,7 @@ struct Document {
         return prSvgElementQuery(prDomElementAsEventTarget(element));
     }
 
-    std::string attribute(const char* id, const char* name) {
+    String attribute(const char* id, const char* name) {
         return textOf(prDomElementGetAttribute(prSvgElementAsElement(byId(id)), name));
     }
 };
@@ -58,8 +59,8 @@ PrDomRect boxOf(PrSvgElement* element, PrSvgBoundingBoxOptions options) {
     return prSvgGraphicsElementGetBBox(element, &options);
 }
 
-std::string stringOf(PrRawString value) {
-    std::string text(prRawStringView(&value).data, prRawStringView(&value).size);
+String stringOf(PrRawString value) {
+    String text = textOf(prRawStringView(&value));
     prRawStringReset(&value);
     return text;
 }

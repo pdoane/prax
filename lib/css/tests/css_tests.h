@@ -1,10 +1,12 @@
 // CSS unit tests
 //
-// The helpers that the CSS unit tests share. Text is a std::string, which doctest can print and compare.
+// The helpers that the CSS unit tests share. Text is a String, which doctest can print and compare.
 
 #pragma once
 
+#include "pr/array.h"
 #include "pr/css.h"
+#include "pr/string.h"
 #include "pr/string_ops.h"
 #include "pr/string_view.h"
 #include "pr/text_buffer.h"
@@ -14,31 +16,30 @@
 
 #include "tools/harness/test.h"
 
-#include <string>
-#include <vector>
-
 PR_ASSUME_NONNULL_BEGIN
 
 namespace pr_impl {
 
+using namespace pr;
+
 // Returns the text of a view or a string. The null view reads as the empty string.
-inline std::string textOf(PrStringView text) {
-    return std::string(text.size != 0 ? text.data : "", text.size);
+inline String textOf(PrStringView text) {
+    return String(text.size != 0 ? text : PrStringView(""));
 }
-inline std::string textOf(const PrRawString& string) {
+inline String textOf(const PrRawString& string) {
     return textOf(prRawStringView(&string));
 }
 
 // Returns the text of a returned string, which is then released.
-inline std::string take(PrRawString string) {
-    std::string text = textOf(string);
+inline String take(PrRawString string) {
+    String text = textOf(string);
     prRawStringReset(&string);
     return text;
 }
 
 // Returns the text written to a buffer, which is then released.
-inline std::string take(PrTextBuffer* buffer) {
-    std::string text = textOf(prTextBufferView(buffer));
+inline String take(PrTextBuffer* buffer) {
+    String text = textOf(prTextBufferView(buffer));
     prTextBufferReset(buffer);
     return text;
 }
@@ -69,26 +70,26 @@ struct CssTestSource {
     CssTokenFlags flags(uint32_t index) const { return cssTokenFlags(&tokens, index); }
 
     // Returns the bytes that the token at `index` covers.
-    std::string text(uint32_t index) const { return textOf(cssTokenText(&tokens, index)); }
+    String text(uint32_t index) const { return textOf(cssTokenText(&tokens, index)); }
 
     // Returns the bytes that `span` covers.
-    std::string text(CssTokenSpan span) const {
-        return span.count != 0 ? textOf(cssSpanText(&tokens, span)) : std::string();
+    String text(CssTokenSpan span) const {
+        return span.count != 0 ? textOf(cssSpanText(&tokens, span)) : textOf(PrStringView());
     }
 
     // Returns the bytes that each token covers, in order.
-    std::vector<std::string> all() const {
-        std::vector<std::string> out;
+    Array<String> all() const {
+        Array<String> out;
         for (uint32_t i = 0; i < count(); ++i)
-            out.push_back(text(i));
+            out.push(text(i));
         return out;
     }
 
     // Returns the kind of each token, in order.
-    std::vector<CssTokenKind> kinds() const {
-        std::vector<CssTokenKind> out;
+    Array<CssTokenKind> kinds() const {
+        Array<CssTokenKind> out;
         for (uint32_t i = 0; i < count(); ++i)
-            out.push_back(kind(i));
+            out.push(kind(i));
         return out;
     }
 };

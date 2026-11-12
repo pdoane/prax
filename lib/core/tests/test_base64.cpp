@@ -1,28 +1,28 @@
+#include "pr/array.h"
 #include "pr/base64.h"
+#include "pr/string.h"
+#include "pr/string_ops.h"
 
 #include "tools/harness/test.h"
-
-#include <string>
 
 namespace pr_impl {
 
 namespace {
 
 // Returns the input decoded, or "!" if it is not base64.
-std::string decoded(const std::string& input) {
-    std::string out(prBase64DecodedCapacity(input.size()), '\0');
+String decoded(PrStringView input) {
+    Array<char> out(prBase64DecodedCapacity(input.size));
     size_t size = 0;
-    if (!prBase64Decode(input, out.data(), out.size(), &size))
+    if (!prBase64Decode(input, out.data(), out.count(), &size))
         return "!";
-    REQUIRE(size <= out.size());
-    out.resize(size);
-    return out;
+    REQUIRE(size <= out.count());
+    return String(PrStringView(out.data(), size));
 }
 
-std::string encoded(const std::string& input) {
-    std::string out(prBase64EncodedSize(input.size()), '\0');
-    prBase64Encode(input, out.data(), out.size());
-    return out;
+String encoded(PrStringView input) {
+    Array<char> out(prBase64EncodedSize(input.size));
+    prBase64Encode(input, out.data(), out.count());
+    return String(PrStringView(out.data(), out.count()));
 }
 
 } // namespace
@@ -32,10 +32,10 @@ std::string encoded(const std::string& input) {
 using namespace pr_impl;
 
 TEST_CASE("base64 decodes what it encodes") {
-    std::string bytes;
+    String bytes;
     for (int i = 0; i < 300; ++i) {
         CHECK(decoded(encoded(bytes)) == bytes);
-        bytes += char(i * 37 + 11);
+        bytes.append(char(i * 37 + 11));
     }
     CHECK(encoded("Man") == "TWFu");
     CHECK(decoded("TWFu") == "Man");
@@ -61,16 +61,18 @@ TEST_CASE("base64 refuses what is not the alphabet or padded wrongly") {
 }
 
 TEST_CASE("base64 decodes in place and stops at the capacity") {
-    std::string text = "SGVsbG8sIHdvcmxkIQ==";
+    const char kText[] = "SGVsbG8sIHdvcmxkIQ==";
+    Array<char> text;
+    text.append(kText, sizeof(kText) - 1);
     size_t size = 0;
-    REQUIRE(prBase64Decode(text, text.data(), text.size(), &size));
-    CHECK(text.substr(0, size) == "Hello, world!");
+    REQUIRE(prBase64Decode(PrStringView(text.data(), text.count()), text.data(), text.count(), &size));
+    CHECK(PrStringView(text.data(), size) == "Hello, world!");
 
     char out[4] = {};
-    std::string input = "SGVsbG8=";
+    PrStringView input = "SGVsbG8=";
     REQUIRE(prBase64Decode(input, out, 4, &size));
     CHECK(size == 5);
-    CHECK(std::string(out, 4) == "Hell");
+    CHECK(PrStringView(out, 4) == "Hell");
     REQUIRE(prBase64Decode(input, nullptr, 0, &size));
     CHECK(size == 5);
 }

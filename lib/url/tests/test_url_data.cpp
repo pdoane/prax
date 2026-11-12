@@ -2,8 +2,6 @@
 
 #include "tools/harness/test.h"
 
-#include <string>
-
 extern "C" bool prTestDataC(void);
 
 namespace pr_impl {
@@ -11,16 +9,15 @@ namespace pr_impl {
 namespace {
 
 // The body and the MIME type of a data: URL, or "error" for a URL that does not decode.
-std::string processed(PrStringView url) {
+String processed(PrStringView url) {
     PrRawString body{};
     PrRawString type{};
     PrStatus status = prUrlProcessData(url, &body, &type);
-    std::string result;
+    String result;
     if (status != PrStatus_Ok)
         result = "error";
     else
-        result = std::string(prRawStringView(&type).data, prRawStringView(&type).size) + "|" +
-            std::string(prRawStringView(&body).data, prRawStringView(&body).size);
+        result = format("{}|{}", prRawStringView(&type), prRawStringView(&body));
     prRawStringReset(&body);
     prRawStringReset(&type);
     return result;

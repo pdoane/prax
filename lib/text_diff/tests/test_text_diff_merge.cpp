@@ -1,44 +1,47 @@
 // Three-way merges: the chunks of two sides' changes to a base, sync points, and the conflict markers of a merge's
 // text, written and found again.
 
+#include "pr/array.h"
+#include "pr/string.h"
+#include "pr/string_ops.h"
 #include "pr/text_diff_merge.h"
 
 #include "tools/harness/test.h"
-
-#include <string>
-#include <vector>
 
 namespace pr_impl {
 
 namespace {
 
+using namespace pr;
+
 // A text of lines, which a merge reads one at a time.
 struct Lines {
-    std::vector<std::string> lines;
+    Array<String> lines;
 
     PrTextDiffText text() const {
         return PrTextDiffText{
-            .lineCount = uint32_t(lines.size()),
+            .lineCount = lines.count(),
             .line = [](void* context, uint32_t index) {
-                return PrStringView(static_cast<const Lines*>(context)->lines[index]);
+                return static_cast<const Lines*>(context)->lines[index].view();
             },
             .context = const_cast<Lines*>(this),
         };
     }
 
-    std::vector<std::string> slice(uint32_t start, uint32_t count) const {
-        std::vector<std::string>::const_iterator first = lines.begin() + ptrdiff_t(start);
-        return {first, first + ptrdiff_t(count)};
+    Array<String> slice(uint32_t start, uint32_t count) const {
+        Array<String> out;
+        out.append(lines.span().slice(start, count));
+        return out;
     }
 };
 
 // Splits `text` at its line feeds.
-Lines linesOf(const std::string& text) {
+Lines linesOf(PrStringView text) {
     Lines out;
     size_t at = 0;
-    for (size_t i = 0; i <= text.size(); ++i) {
-        if (i == text.size() || text[i] == '\n') {
-            out.lines.push_back(text.substr(at, i - at));
+    for (size_t i = 0; i <= text.size; ++i) {
+        if (i == text.size || text.data[i] == '\n') {
+            out.lines.push(String(prStringSlice(text, at, i - at)));
             at = i + 1;
         }
     }
@@ -47,30 +50,26 @@ Lines linesOf(const std::string& text) {
 
 // A merge of three texts, and its results.
 struct Merged {
-    std::vector<PrTextDiffMergeChunk> chunks;
+    Array<PrTextDiffMergeChunk> chunks;
     uint32_t conflicts = 0;
-    std::string text;
+    String text;
 };
 
-Merged merge(const Lines& base, const Lines& left, const Lines& right, const std::vector<PrTextDiffMergeSync>& syncs = {},
+Merged merge(const Lines& base, const Lines& left, const Lines& right, Span<const PrTextDiffMergeSync> syncs = {},
         const PrTextDiffMarkerOptions* options = nullptr) {
     PrTextDiffMerge* merge = prTextDiffMergeCreate(nullptr);
     PrTextDiffText texts[] = {base.text(), left.text(), right.text()};
-    prTextDiffMergeCompare(merge, &texts[0], &texts[1], &texts[2], syncs.data(), uint32_t(syncs.size()));
-    const PrTextDiffMergeChunk* chunks = prTextDiffMergeChunks(merge);
-    Merged merged{
-        .chunks = {chunks, chunks + prTextDiffMergeChunkCount(merge)},
-        .conflicts = prTextDiffMergeConflictCount(merge),
-    };
-    PrRawString text = prTextDiffMergeText(merge, &texts[0], &texts[1], &texts[2], options);
-    merged.text = std::string(prRawStringView(&text).data, prRawStringView(&text).size);
-    prRawStringReset(&text);
+    prTextDiffMergeCompare(merge, &texts[0], &texts[1], &texts[2], syncs.data(), syncs.count());
+    Merged merged;
+    merged.chunks.append(prTextDiffMergeChunks(merge), prTextDiffMergeChunkCount(merge));
+    merged.conflicts = prTextDiffMergeConflictCount(merge);
+    merged.text = String::adopt(prTextDiffMergeText(merge, &texts[0], &texts[1], &texts[2], options));
     prTextDiffMergeDestroy(merge);
     return merged;
 }
 
 // Checks that the chunks cover each text whole, in order, and that each kind holds what it says.
-void checkChunks(const Lines& base, const Lines& left, const Lines& right, const std::vector<PrTextDiffMergeChunk>& chunks) {
+void checkChunks(const Lines& base, const Lines& left, const Lines& right, const Array<PrTextDiffMergeChunk>& chunks) {
     uint32_t b = 0;
     uint32_t l = 0;
     uint32_t r = 0;
@@ -78,9 +77,9 @@ void checkChunks(const Lines& base, const Lines& left, const Lines& right, const
         REQUIRE(chunk.baseStart == b);
         REQUIRE(chunk.leftStart == l);
         REQUIRE(chunk.rightStart == r);
-        std::vector<std::string> baseLines = base.slice(chunk.baseStart, chunk.baseCount);
-        std::vector<std::string> leftLines = left.slice(chunk.leftStart, chunk.leftCount);
-        std::vector<std::string> rightLines = right.slice(chunk.rightStart, chunk.rightCount);
+        Array<String> baseLines = base.slice(chunk.baseStart, chunk.baseCount);
+        Array<String> leftLines = left.slice(chunk.leftStart, chunk.leftCount);
+        Array<String> rightLines = right.slice(chunk.rightStart, chunk.rightCount);
         switch (chunk.kind) {
             case PrTextDiffMergeKind_Unchanged:
                 CHECK(baseLines == leftLines);
@@ -105,23 +104,23 @@ void checkChunks(const Lines& base, const Lines& left, const Lines& right, const
         l += chunk.leftCount;
         r += chunk.rightCount;
     }
-    CHECK(b == base.lines.size());
-    CHECK(l == left.lines.size());
-    CHECK(r == right.lines.size());
+    CHECK(b == base.lines.count());
+    CHECK(l == left.lines.count());
+    CHECK(r == right.lines.count());
 }
 
-uint32_t countOfKind(const std::vector<PrTextDiffMergeChunk>& chunks, PrTextDiffMergeKind kind) {
+uint32_t countOfKind(const Array<PrTextDiffMergeChunk>& chunks, PrTextDiffMergeKind kind) {
     uint32_t count = 0;
     for (const PrTextDiffMergeChunk& chunk : chunks)
         count += chunk.kind == kind ? 1 : 0;
     return count;
 }
 
-std::vector<PrTextDiffConflict> conflictsOf(const std::string& text) {
+Array<PrTextDiffConflict> conflictsOf(PrStringView text) {
     Lines lines = linesOf(text);
     PrTextDiffText read = lines.text();
-    std::vector<PrTextDiffConflict> conflicts(prTextDiffConflicts(&read, nullptr, 0));
-    prTextDiffConflicts(&read, conflicts.data(), uint32_t(conflicts.size()));
+    Array<PrTextDiffConflict> conflicts(prTextDiffConflicts(&read, nullptr, 0));
+    prTextDiffConflicts(&read, conflicts.data(), conflicts.count());
     return conflicts;
 }
 
@@ -215,7 +214,8 @@ TEST_CASE("text diff merge: a sync point splits a conflict, so that its lines pa
     CHECK(plain.conflicts == 1);
     // With line 1 of each synced, the left's change of line 0 and the right's of line 2 stand apart, and only line 1
     // conflicts.
-    Merged synced = merge(base, left, right, {{1, 1, 1}});
+    const PrTextDiffMergeSync syncs[] = {{1, 1, 1}};
+    Merged synced = merge(base, left, right, syncs);
     checkChunks(base, left, right, synced.chunks);
     CHECK(synced.conflicts == 1);
     CHECK(countOfKind(synced.chunks, PrTextDiffMergeKind_Left) == 1);
@@ -238,13 +238,13 @@ TEST_CASE("text diff merge: merges of random texts cover each text, and their co
     };
     auto edited = [&](const Lines& from) {
         Lines out;
-        for (const std::string& line : from.lines) {
+        for (const String& line : from.lines) {
             uint32_t roll = next() % 10;
             if (roll == 0)
                 continue;
             if (roll == 1)
-                out.lines.push_back(std::string(1, char('m' + next() % 4)));
-            out.lines.push_back(roll == 2 ? std::string(1, char('w' + next() % 4)) : line);
+                out.lines.push(String().append(char('m' + next() % 4)));
+            out.lines.push(roll == 2 ? String().append(char('w' + next() % 4)) : line);
         }
         return out;
     };
@@ -252,13 +252,13 @@ TEST_CASE("text diff merge: merges of random texts cover each text, and their co
         Lines base;
         uint32_t count = next() % 30;
         for (uint32_t i = 0; i < count; ++i)
-            base.lines.push_back(std::string(1, char('a' + next() % 6)));
+            base.lines.push(String().append(char('a' + next() % 6)));
         Lines left = edited(base);
         Lines right = edited(base);
         Merged merged = merge(base, left, right);
         checkChunks(base, left, right, merged.chunks);
-        std::vector<PrTextDiffConflict> found = conflictsOf(merged.text);
-        REQUIRE(found.size() == merged.conflicts);
+        Array<PrTextDiffConflict> found = conflictsOf(merged.text);
+        REQUIRE(found.count() == merged.conflicts);
         uint32_t k = 0;
         Lines text = linesOf(merged.text);
         for (const PrTextDiffMergeChunk& chunk : merged.chunks) {
@@ -275,10 +275,10 @@ TEST_CASE("text diff merge: merges of random texts cover each text, and their co
 }
 
 TEST_CASE("text diff merge: conflicts are found by their markers, and markers that do not close one are text") {
-    std::vector<PrTextDiffConflict> found = conflictsOf(
+    Array<PrTextDiffConflict> found = conflictsOf(
         "a\n<<<<<<< ours\nl\n=======\nr1\nr2\n>>>>>>> theirs\nb\n<<<<<<<\nnever closed\n<<<<<<<\nx\n|||||||\n"
             "base\n=======\n>>>>>>>\n<<<<<<<< too long\n=======\n>>>>>>>");
-    REQUIRE(found.size() == 2);
+    REQUIRE(found.count() == 2);
     CHECK(found[0].start == 1);
     CHECK(found[0].end == 7);
     CHECK_FALSE(found[0].hasBase);

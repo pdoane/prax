@@ -1,9 +1,8 @@
+#include "pr/array.h"
+
 #include "dom/src/dom_node.h"
 
 #include "tools/harness/test.h"
-
-#include <utility>
-#include <vector>
 
 namespace pr_impl {
 
@@ -32,16 +31,24 @@ PrDomEventTarget* targetOf(PrDomNode* node) {
     return node;
 }
 
+// A phase and current target that a listener saw.
+struct Call {
+    PrDomEventPhase phase;
+    PrDomEventTarget* target;
+
+    friend bool operator==(const Call& a, const Call& b) { return a.phase == b.phase && a.target == b.target; }
+};
+
 // The phases and current targets that the listeners saw, in call order.
 struct Trace {
-    std::vector<std::pair<PrDomEventPhase, PrDomEventTarget*>> calls;
+    Array<Call> calls;
     bool stop = false;
     bool cancel = false;
 };
 
 void trace(void* context, PrDomEvent* event) {
     Trace* state = static_cast<Trace*>(context);
-    state->calls.push_back({prDomEventPhase(event), prDomEventCurrentTarget(event)});
+    state->calls.push(Call{prDomEventPhase(event), prDomEventCurrentTarget(event)});
     if (state->stop)
         prDomEventStopPropagation(event);
     if (state->cancel)
@@ -237,11 +244,11 @@ TEST_CASE("an event is captured from the root in, then bubbles from the target o
     bool proceed = false;
     CHECK(prDomEventTargetDispatchEvent(targetOf(child), event, &proceed) == PrStatus_Ok);
     CHECK(proceed);
-    REQUIRE(state.calls.size() == 4);
-    CHECK(state.calls[0] == std::make_pair(PrDomEventPhase_Capturing, targetOf(parent)));
-    CHECK(state.calls[1] == std::make_pair(PrDomEventPhase_AtTarget, targetOf(child)));
-    CHECK(state.calls[2] == std::make_pair(PrDomEventPhase_AtTarget, targetOf(child)));
-    CHECK(state.calls[3] == std::make_pair(PrDomEventPhase_Bubbling, targetOf(parent)));
+    REQUIRE(state.calls.count() == 4);
+    CHECK(state.calls[0] == Call{PrDomEventPhase_Capturing, targetOf(parent)});
+    CHECK(state.calls[1] == Call{PrDomEventPhase_AtTarget, targetOf(child)});
+    CHECK(state.calls[2] == Call{PrDomEventPhase_AtTarget, targetOf(child)});
+    CHECK(state.calls[3] == Call{PrDomEventPhase_Bubbling, targetOf(parent)});
     CHECK(prDomEventTarget(event) == targetOf(child));
     CHECK(prDomEventCurrentTarget(event) == nullptr);
     CHECK(prDomEventPhase(event) == PrDomEventPhase_None);
@@ -250,7 +257,7 @@ TEST_CASE("an event is captured from the root in, then bubbles from the target o
     state.calls.clear();
     prDomEventInitEvent(event, "test", false, false);
     prDomEventTargetDispatchEvent(targetOf(child), event, nullptr);
-    CHECK(state.calls.size() == 3);
+    CHECK(state.calls.count() == 3);
     prDomEventRelease(event);
     domNodeRelease(document);
 }
@@ -273,7 +280,7 @@ TEST_CASE("stopping propagation ends dispatch after the current target, and canc
     PrDomEvent* event = prDomEventCreate("test", &init);
     bool proceed = false;
     prDomEventTargetDispatchEvent(targetOf(child), event, &proceed);
-    CHECK(state.calls.size() == 2);
+    CHECK(state.calls.count() == 2);
     CHECK(proceed);
     CHECK(!prDomEventDefaultPrevented(event));
 
@@ -303,7 +310,7 @@ TEST_CASE("a passive listener cannot cancel, and wheel listeners on a document a
     PrDomEvent* event = prDomEventCreate("test", &init);
     bool proceed = false;
     prDomEventTargetDispatchEvent(targetOf(document), event, &proceed);
-    CHECK(state.calls.size() == 1);
+    CHECK(state.calls.count() == 1);
     CHECK(proceed);
     prDomEventRelease(event);
     domNodeRelease(document);

@@ -1,10 +1,10 @@
+#include "pr/array.h"
+#include "pr/span.h"
+#include "pr/string.h"
 #include "pr/text_edit.h"
 #include "pr/text_edit_command.h"
 
 #include "tools/harness/test.h"
-
-#include <string>
-#include <vector>
 
 extern "C" int prTestTextEditCApi(void);
 
@@ -13,11 +13,11 @@ namespace pr_impl {
 namespace {
 
 // Returns the text of `buffer`, read chunk by chunk.
-std::string textOf(const PrTextEditBuffer* buffer) {
-    std::string out;
-    while (out.size() < prTextEditBufferSize(buffer)) {
-        PrStringView chunk = prTextEditBufferChunk(buffer, uint32_t(out.size()));
-        out.append(chunk.data, chunk.size);
+String textOf(const PrTextEditBuffer* buffer) {
+    String out("");
+    while (out.count() < prTextEditBufferSize(buffer)) {
+        PrStringView chunk = prTextEditBufferChunk(buffer, out.count());
+        out.append(chunk);
     }
     return out;
 }
@@ -67,7 +67,7 @@ void moveModel(ModelAnchor& a, uint32_t start, uint32_t end, uint32_t size) {
 }
 
 // Brings `replica` up to date from the records of `stream`.
-void applyRecords(PrTextEditStream* stream, std::string& replica) {
+void applyRecords(PrTextEditStream* stream, String& replica) {
     PrTextEditRecord records[8];
     for (;;) {
         uint32_t count = prTextEditStreamTake(stream, records, 8);
@@ -76,23 +76,26 @@ void applyRecords(PrTextEditStream* stream, std::string& replica) {
         for (uint32_t i = 0; i < count; ++i) {
             const PrTextEditRecord& r = records[i];
             CHECK(r.newEnd == r.start + r.text.size);
-            replica.replace(r.start, r.oldEnd - r.start, r.text.data, r.text.size);
+            replica.replace(r.start, r.oldEnd - r.start, r.text);
         }
     }
 }
 
-// The buffer's runs, as start and style in turn.
-std::vector<uint32_t> runsOf(const PrTextEditBuffer* buffer) {
-    std::vector<uint32_t> out;
+// The buffer's style runs, as start and style in turn.
+Array<uint32_t> runsOf(const PrTextEditBuffer* buffer) {
+    Array<uint32_t> out;
     const PrTextEditStyleRun* runs = prTextEditBufferStyleRuns(buffer);
     for (uint32_t i = 0; i < prTextEditBufferStyleRunCount(buffer); ++i) {
-        out.push_back(runs[i].start);
-        out.push_back(runs[i].style);
+        out.push(runs[i].start);
+        out.push(runs[i].style);
     }
     return out;
 }
 
-using Runs = std::vector<uint32_t>;
+// Returns true if the buffer's style runs are `expected`, as start and style in turn.
+bool runsAre(const PrTextEditBuffer* buffer, Span<const uint32_t> expected) {
+    return runsOf(buffer).span().asConst() == expected;
+}
 
 } // namespace
 
@@ -131,7 +134,7 @@ TEST_CASE("a buffer reads back through chunks wherever the gap stands") {
 
     char copied[5];
     prTextEditBufferCopy(b, 3, 8, copied);
-    CHECK(std::string(copied, 5) == "lo, t");
+    CHECK(PrStringView(copied, 5) == "lo, t");
 
     CHECK(prTextEditBufferText(b) == "Jello, there");
     prTextEditBufferDestroy(b);
@@ -237,11 +240,11 @@ TEST_CASE("a stream's records apply in order, each correct for the text that the
     PrTextEditChange changes[] = {change(1, 2, "aa"), change(5, 6, "bbb")};
     REQUIRE(prTextEditBufferApply(b, changes, 2, PrTextEditOrigin_Local));
 
-    std::string replica = "0123456789";
+    String replica = "0123456789";
     PrTextEditRecord records[4];
     uint32_t count = prTextEditStreamTake(stream, records, 4);
     REQUIRE(count == 2);
-    std::string texts[] = {"bbb", "aa"};
+    const char* const texts[] = {"bbb", "aa"};
     for (uint32_t i = 0; i < count; ++i)
         replica.replace(records[i].start, records[i].oldEnd - records[i].start, texts[i]);
     CHECK(replica == textOf(b));
@@ -372,7 +375,7 @@ TEST_CASE("an edit through one view carries the selections of another") {
 TEST_CASE("a proposal can reject a transaction or change its text") {
     struct Filter {
         bool reject = false;
-        std::string text;
+        String text;
         PrTextEditOrigin origin = PrTextEditOrigin_Remote;
     } filter;
     PrTextEditProposeFn propose = [](void* context, PrTextEditOrigin origin, PrTextEditChange* changes, uint32_t) {
@@ -471,7 +474,8 @@ TEST_CASE("a run of typing is one step until it is broken or the caret moves") {
     PrTextEditHistory* h = prTextEditHistoryCreate(b);
     PrTextEditView* v = prTextEditViewCreate(b);
 
-    for (const char* letter : {"a", "b", "c"})
+    const char* const letters[] = {"a", "b", "c"};
+    for (const char* letter : letters)
         REQUIRE(prTextEditViewInsert(v, letter, PrTextEditOrigin_Local, PrTextEditMerge_Typing));
     prTextEditHistoryBreak(h);
     REQUIRE(prTextEditViewInsert(v, "d", PrTextEditOrigin_Local, PrTextEditMerge_Typing));
@@ -548,9 +552,9 @@ TEST_CASE("only local transactions enter the history, and remote and program one
 
 TEST_CASE("text from outside the program keeps what an edit asks for, with each line ending a line feed") {
     auto normalized = [](PrStringView text, PrTextEditInputFlags keep) {
-        std::string out(text.size, '\0');
-        out.resize(prTextEditInputNormalize(text, keep, out.data()));
-        return out;
+        char out[64];
+        REQUIRE(text.size <= sizeof(out));
+        return String(PrStringView(out, prTextEditInputNormalize(text, keep, out)));
     };
     PrStringView text = "a\r\nb\rc\nd\te\x01" "f\x7f";
     CHECK(normalized(text, 0) == "abcdef");
@@ -558,7 +562,7 @@ TEST_CASE("text from outside the program keeps what an edit asks for, with each 
     CHECK(normalized(text, PrTextEditInputFlag_LineFeeds | PrTextEditInputFlag_Tabs) == "a\nb\nc\nd\tef");
     uint8_t all = PrTextEditInputFlag_LineFeeds | PrTextEditInputFlag_Tabs | PrTextEditInputFlag_Controls;
     CHECK(normalized(text, all) == "a\nb\nc\nd\te\x01" "f\x7f");
-    CHECK(normalized("", all).empty());
+    CHECK(normalized("", all).isEmpty());
 }
 
 TEST_CASE("a selection's ends are in the order of the text, and the last selection is primary") {
@@ -635,54 +639,55 @@ TEST_CASE("a stream's records carry what a replica needs, whichever stream reads
 }
 
 TEST_CASE("random transactions agree across the text, lines, anchors, views, streams and history") {
-    for (uint32_t seed : {1u, 2u, 3u, 4u, 5u}) {
+    const uint32_t seeds[] = {1u, 2u, 3u, 4u, 5u};
+    for (uint32_t seed : seeds) {
         uint32_t state = seed * 2654435761u;
         auto next = [&](uint32_t bound) {
             state = state * 1664525u + 1013904223u;
             return (state >> 8) % bound;
         };
-        std::string model = "first line\nsecond line\n\nfourth\n";
+        String model = "first line\nsecond line\n\nfourth\n";
         PrTextEditBuffer* b = prTextEditBufferCreate(model);
         PrTextEditView* editing = prTextEditViewCreate(b);
         PrTextEditView* other = prTextEditViewCreate(b);
         PrTextEditStream* stream = prTextEditStreamCreate(b);
         PrTextEditHistory* history = prTextEditHistoryCreate(b);
-        std::string replica = model;
+        String replica = model;
 
-        std::vector<ModelAnchor> anchors;
+        Array<ModelAnchor> anchors;
         for (uint32_t i = 0; i < 40; ++i) {
             PrTextEditBias bias = i % 2 != 0 ? PrTextEditBias_Right : PrTextEditBias_Left;
-            uint32_t at = next(uint32_t(model.size()) + 1);
-            anchors.push_back({prTextEditAnchorCreate(b, at, bias), bias, at, true});
+            uint32_t at = next(model.count() + 1);
+            anchors.push({prTextEditAnchorCreate(b, at, bias), bias, at, true});
         }
-        std::vector<std::string> before;
+        Array<String> before;
 
         for (uint32_t step = 0; step < 300; ++step) {
             // Up to three changes in ascending order, which do not touch.
             const char* texts[] = {"", "x", "a\nb", "\n", "longer text", "\xc3\xa9"};
-            std::vector<PrTextEditChange> changes;
-            uint32_t at = next(uint32_t(model.size()) / 2 + 1);
+            Array<PrTextEditChange> changes;
+            uint32_t at = next(model.count() / 2 + 1);
             uint32_t count = next(3) + 1;
-            for (uint32_t i = 0; i < count && at <= model.size(); ++i) {
+            for (uint32_t i = 0; i < count && at <= model.count(); ++i) {
                 uint32_t end = at + next(6);
-                end = end < model.size() ? end : uint32_t(model.size());
-                changes.push_back(change(at, end, texts[next(6)]));
+                end = end < model.count() ? end : model.count();
+                changes.push(change(at, end, texts[next(6)]));
                 at = end + 1 + next(20);
             }
-            select(other, next(uint32_t(model.size()) + 1), next(uint32_t(model.size()) + 1));
+            select(other, next(model.count() + 1), next(model.count() + 1));
 
-            before.push_back(model);
+            before.push(model);
             uint64_t version = prTextEditBufferVersion(b);
-            REQUIRE(prTextEditViewApply(editing, changes.data(), uint32_t(changes.size()), PrTextEditOrigin_Local,
+            REQUIRE(prTextEditViewApply(editing, changes.data(), changes.count(), PrTextEditOrigin_Local,
                 PrTextEditMerge_None));
-            for (size_t i = changes.size(); i-- > 0;) {
+            for (uint32_t i = changes.count(); i-- > 0;) {
                 const PrTextEditChange& c = changes[i];
-                model.replace(c.start, c.end - c.start, c.text.data, c.text.size);
+                model.replace(c.start, c.end - c.start, c.text);
                 for (ModelAnchor& a : anchors)
                     moveModel(a, c.start, c.end, uint32_t(c.text.size));
             }
             if (prTextEditBufferVersion(b) == version)
-                before.pop_back();
+                before.pop();
 
             REQUIRE(textOf(b) == model);
             applyRecords(stream, replica);
@@ -691,10 +696,11 @@ TEST_CASE("random transactions agree across the text, lines, anchors, views, str
                 REQUIRE(prTextEditAnchorOffset(b, a.anchor) == a.offset);
                 REQUIRE(prTextEditAnchorIsLive(b, a.anchor) == a.live);
             }
-            for (const PrTextEditView* v : {editing, other}) {
+            const PrTextEditView* views[] = {editing, other};
+            for (const PrTextEditView* v : views) {
                 const PrTextEditSelection& s = prTextEditViewPrimary(v);
-                REQUIRE(s.anchor <= model.size());
-                REQUIRE(s.caret <= model.size());
+                REQUIRE(s.anchor <= model.count());
+                REQUIRE(s.caret <= model.count());
             }
         }
         uint32_t lines = 1;
@@ -703,8 +709,8 @@ TEST_CASE("random transactions agree across the text, lines, anchors, views, str
         CHECK(prTextEditBufferLineCount(b) == lines);
 
         // Undoing every step passes through every earlier text, and redoing returns to the last.
-        std::string last = model;
-        for (size_t i = before.size(); i-- > 0;) {
+        String last = model;
+        for (uint32_t i = before.count(); i-- > 0;) {
             REQUIRE(prTextEditHistoryUndo(history, editing));
             REQUIRE(textOf(b) == before[i]);
             applyRecords(stream, replica);
@@ -726,24 +732,26 @@ TEST_CASE("random transactions agree across the text, lines, anchors, views, str
 }
 
 TEST_CASE("random runs of typing and deleting merge into steps that undo through earlier texts in order") {
-    for (uint32_t seed : {11u, 12u, 13u, 14u, 15u}) {
+    const uint32_t seeds[] = {11u, 12u, 13u, 14u, 15u};
+    for (uint32_t seed : seeds) {
         uint32_t state = seed * 2654435761u;
         auto next = [&](uint32_t bound) {
             state = state * 1664525u + 1013904223u;
             return (state >> 8) % bound;
         };
-        std::string model = "the quick brown fox";
+        String model = "the quick brown fox";
         PrTextEditBuffer* b = prTextEditBufferCreate(model);
         PrTextEditHistory* h = prTextEditHistoryCreate(b);
         PrTextEditView* v = prTextEditViewCreate(b);
-        std::vector<std::string> texts{model};
+        Array<String> texts;
+        texts.push(model);
 
         for (uint32_t step = 0; step < 400; ++step) {
             uint32_t caret = prTextEditViewPrimary(v).caret;
             char letter = 0;
             switch (next(8)) {
                 case 0:
-                    select(v, next(uint32_t(model.size()) + 1), next(uint32_t(model.size()) + 1));
+                    select(v, next(model.count() + 1), next(model.count() + 1));
                     break;
                 case 1:
                     prTextEditHistoryBreak(h);
@@ -761,33 +769,33 @@ TEST_CASE("random runs of typing and deleting merge into steps that undo through
                         erase(v, caret - 1, caret, PrTextEditMerge_Deleting);
                     break;
                 default:
-                    if (caret < model.size() && prTextEditViewPrimary(v).anchor == caret)
+                    if (caret < model.count() && prTextEditViewPrimary(v).anchor == caret)
                         erase(v, caret, caret + 1, PrTextEditMerge_Deleting);
                     break;
             }
             model = textOf(b);
-            if (model != texts.back())
-                texts.push_back(model);
+            if (model != texts.last())
+                texts.push(model);
         }
 
         // Each undo lands on the current text or an earlier one, so the search for it only moves back. A step can leave
         // the text as it was, by replacing a selection with the same letter.
-        size_t at = texts.size() - 1;
+        uint32_t at = texts.count() - 1;
         uint32_t steps = 0;
         while (prTextEditHistoryCanUndo(h)) {
             REQUIRE(prTextEditHistoryUndo(h, v));
             ++steps;
-            std::string text = textOf(b);
+            String text = textOf(b);
             while (at > 0 && texts[at] != text)
                 --at;
             REQUIRE(texts[at] == text);
-            REQUIRE(prTextEditViewPrimary(v).caret <= text.size());
+            REQUIRE(prTextEditViewPrimary(v).caret <= text.count());
         }
         CHECK(at == 0);
-        CHECK(steps < texts.size() - 1);
+        CHECK(steps < texts.count() - 1);
         while (prTextEditHistoryCanRedo(h))
             REQUIRE(prTextEditHistoryRedo(h, v));
-        CHECK(textOf(b) == texts.back());
+        CHECK(textOf(b) == texts.last());
 
         prTextEditViewDestroy(v);
         prTextEditHistoryDestroy(h);
@@ -796,29 +804,30 @@ TEST_CASE("random runs of typing and deleting merge into steps that undo through
 }
 
 TEST_CASE("many edits at scattered places agree with a plain string") {
-    std::string model = "first line\nsecond line\nthird\n";
+    String model = "first line\nsecond line\nthird\n";
     PrTextEditBuffer* b = prTextEditBufferCreate(model);
     uint32_t seed = 12345;
     for (uint32_t i = 0; i < 2000; ++i) {
         seed = seed * 1664525u + 1013904223u;
-        uint32_t start = (seed >> 8) % (uint32_t(model.size()) + 1);
+        uint32_t start = (seed >> 8) % (model.count() + 1);
         seed = seed * 1664525u + 1013904223u;
         uint32_t length = (seed >> 8) % 6;
-        uint32_t end = start + length < model.size() ? start + length : uint32_t(model.size());
+        uint32_t end = start + length < model.count() ? start + length : model.count();
         const char* texts[] = {"", "x", "a\nb", "\n", "longer text"};
-        std::string text = texts[(seed >> 20) % 5];
+        PrStringView text = texts[(seed >> 20) % 5];
         replace(b, start, end, text);
         model.replace(start, end - start, text);
     }
     CHECK(textOf(b) == model);
 
-    std::vector<uint32_t> starts{0};
-    for (size_t i = 0; i < model.size(); ++i) {
-        if (model[i] == '\n')
-            starts.push_back(uint32_t(i) + 1);
+    Array<uint32_t> starts;
+    starts.push(0);
+    for (uint32_t i = 0; i < model.count(); ++i) {
+        if (model.data()[i] == '\n')
+            starts.push(i + 1);
     }
-    REQUIRE(prTextEditBufferLineCount(b) == starts.size());
-    for (uint32_t line = 0; line < starts.size(); ++line)
+    REQUIRE(prTextEditBufferLineCount(b) == starts.count());
+    for (uint32_t line = 0; line < starts.count(); ++line)
         CHECK(prTextEditBufferLineStart(b, line) == starts[line]);
     prTextEditBufferDestroy(b);
 }
@@ -888,7 +897,8 @@ TEST_CASE("a buffer with no styles has no runs, and setting style zero back remo
     CHECK(prTextEditBufferStyleRunCount(b) == 0);
     CHECK(prTextEditBufferStyleAt(b, 3) == 0);
     prTextEditBufferSetStyle(b, 2, 4, 7);
-    CHECK(runsOf(b) == Runs{0, 0, 2, 7, 4, 0});
+    const uint32_t styled[] = {0, 0, 2, 7, 4, 0};
+    CHECK(runsAre(b, styled));
     CHECK(prTextEditBufferStyleAt(b, 3) == 7);
     prTextEditBufferSetStyle(b, 2, 4, 0);
     CHECK(prTextEditBufferStyleRunCount(b) == 0);
@@ -901,26 +911,30 @@ TEST_CASE("style runs follow edits, and inserted text takes the style of what it
         uint32_t start;
         uint32_t end;
         const char* text;
-        Runs expected;
+        Span<const uint32_t> expected;
     };
+    static constexpr uint32_t kShifted[] = {0, 0, 3, 7, 5, 0};
+    static constexpr uint32_t kWidened[] = {0, 0, 2, 7, 5, 0};
+    static constexpr uint32_t kUnmoved[] = {0, 0, 2, 7, 4, 0};
+    static constexpr uint32_t kNarrowed[] = {0, 0, 2, 7, 3, 0};
     const Case cases[] = {
-        {"before the run", 1, 1, "x", {0, 0, 3, 7, 5, 0}},
-        {"at the run's start joins the text before it", 2, 2, "x", {0, 0, 3, 7, 5, 0}},
-        {"inside the run", 3, 3, "x", {0, 0, 2, 7, 5, 0}},
-        {"at the run's end joins the run", 4, 4, "x", {0, 0, 2, 7, 5, 0}},
-        {"after the run", 5, 5, "x", {0, 0, 2, 7, 4, 0}},
-        {"replacing the run takes its style", 2, 4, "xyz", {0, 0, 2, 7, 5, 0}},
+        {"before the run", 1, 1, "x", kShifted},
+        {"at the run's start joins the text before it", 2, 2, "x", kShifted},
+        {"inside the run", 3, 3, "x", kWidened},
+        {"at the run's end joins the run", 4, 4, "x", kWidened},
+        {"after the run", 5, 5, "x", kUnmoved},
+        {"replacing the run takes its style", 2, 4, "xyz", kWidened},
         {"removing the run removes it", 2, 4, "", {}},
-        {"replacing across the run takes the first byte's style", 1, 3, "x", {0, 0, 2, 7, 3, 0}},
-        {"at the start takes the first style", 0, 0, "x", {0, 0, 3, 7, 5, 0}},
+        {"replacing across the run takes the first byte's style", 1, 3, "x", kNarrowed},
+        {"at the start takes the first style", 0, 0, "x", kShifted},
     };
     for (const Case& c : cases) {
-        INFO(std::string(c.name));
+        INFO(c.name);
         PrTextEditBuffer* b = prTextEditBufferCreate("abcdef");
         prTextEditBufferSetStyle(b, 2, 4, 7);
         PrTextEditChange change{.start = c.start, .end = c.end, .text = c.text};
         prTextEditBufferApply(b, &change, 1, PrTextEditOrigin_Local);
-        CHECK(runsOf(b) == c.expected);
+        CHECK(runsAre(b, c.expected));
         prTextEditBufferDestroy(b);
     }
 }
@@ -930,7 +944,8 @@ TEST_CASE("a transaction's changes each move the runs") {
     prTextEditBufferSetStyle(b, 2, 4, 7);
     PrTextEditChange changes[] = {{.start = 0, .end = 0, .text = "xx"}, {.start = 5, .end = 6, .text = ""}};
     prTextEditBufferApply(b, changes, 2, PrTextEditOrigin_Local);
-    CHECK(runsOf(b) == Runs{0, 0, 4, 7, 6, 0});
+    const uint32_t moved[] = {0, 0, 4, 7, 6, 0};
+    CHECK(runsAre(b, moved));
     prTextEditBufferDestroy(b);
 }
 
@@ -939,14 +954,14 @@ TEST_CASE("undo restores the styles of deleted text, and redo removes them again
     PrTextEditHistory* history = prTextEditHistoryCreate(b);
     PrTextEditView* view = prTextEditViewCreate(b);
     prTextEditBufferSetStyle(b, 2, 4, 7);
-    Runs start = runsOf(b);
+    Array<uint32_t> start = runsOf(b);
     PrTextEditChange change{.start = 1, .end = 5};
     prTextEditViewApply(view, &change, 1, PrTextEditOrigin_Local, PrTextEditMerge_None);
-    CHECK(runsOf(b) == Runs{});
+    CHECK(runsOf(b).isEmpty());
     prTextEditHistoryUndo(history, view);
     CHECK(runsOf(b) == start);
     prTextEditHistoryRedo(history, view);
-    CHECK(runsOf(b) == Runs{});
+    CHECK(runsOf(b).isEmpty());
     prTextEditHistoryUndo(history, view);
     CHECK(runsOf(b) == start);
     prTextEditViewDestroy(view);
@@ -955,13 +970,14 @@ TEST_CASE("undo restores the styles of deleted text, and redo removes them again
 }
 
 TEST_CASE("undo of a run of deletions restores each deleted byte's style") {
-    for (bool forward : {false, true}) {
+    const bool directions[] = {false, true};
+    for (bool forward : directions) {
         INFO(forward);
         PrTextEditBuffer* b = prTextEditBufferCreate("abcdef");
         PrTextEditHistory* history = prTextEditHistoryCreate(b);
         PrTextEditView* view = prTextEditViewCreate(b);
         prTextEditBufferSetStyle(b, 2, 3, 7);
-        Runs start = runsOf(b);
+        Array<uint32_t> start = runsOf(b);
         for (uint32_t i = 0; i < 4; ++i) {
             uint32_t at = forward ? 0 : 5 - i;
             PrTextEditSelection caret{.anchor = at + (forward ? 0 : 1), .caret = at + (forward ? 0 : 1)};
@@ -986,12 +1002,13 @@ TEST_CASE("a view's style change is a step of the history of each selection") {
     prTextEditViewSetSelections(view, selections, 2);
     uint64_t version = prTextEditBufferVersion(b);
     prTextEditViewSetStyle(view, 7);
-    CHECK(runsOf(b) == Runs{0, 7, 1, 0, 3, 7, 4, 0});
+    const uint32_t styled[] = {0, 7, 1, 0, 3, 7, 4, 0};
+    CHECK(runsAre(b, styled));
     CHECK(prTextEditBufferVersion(b) == version);
     prTextEditHistoryUndo(history, view);
-    CHECK(runsOf(b) == Runs{});
+    CHECK(runsOf(b).isEmpty());
     prTextEditHistoryRedo(history, view);
-    CHECK(runsOf(b) == Runs{0, 7, 1, 0, 3, 7, 4, 0});
+    CHECK(runsAre(b, styled));
     prTextEditViewDestroy(view);
     prTextEditHistoryDestroy(history);
     prTextEditBufferDestroy(b);
@@ -1006,10 +1023,12 @@ TEST_CASE("a style set at a caret waits for the next insertion, until the caret 
     CHECK(prTextEditBufferStyleRunCount(b) == 0);
     prTextEditViewSetSelections(view, &caret, 1);
     prTextEditViewInsert(view, "x", PrTextEditOrigin_Local, PrTextEditMerge_Typing);
-    CHECK(runsOf(b) == Runs{0, 0, 1, 7, 2, 0});
+    const uint32_t typed[] = {0, 0, 1, 7, 2, 0};
+    CHECK(runsAre(b, typed));
     // The next insertion follows the text that it joins.
     prTextEditViewInsert(view, "y", PrTextEditOrigin_Local, PrTextEditMerge_Typing);
-    CHECK(runsOf(b) == Runs{0, 0, 1, 7, 3, 0});
+    const uint32_t joined[] = {0, 0, 1, 7, 3, 0};
+    CHECK(runsAre(b, joined));
 
     PrTextEditSelection end{.anchor = 4, .caret = 4};
     prTextEditViewSetSelections(view, &end, 1);

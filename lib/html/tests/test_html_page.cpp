@@ -11,10 +11,6 @@
 
 #include "tools/harness/test.h"
 
-#include <cstring>
-#include <string>
-#include <vector>
-
 namespace pr_impl {
 
 namespace {
@@ -24,7 +20,7 @@ namespace {
 struct LaterHost {
     TestFetcher fetcher;
     TestModules modules;
-    std::string log;
+    String log;
 
     PrHtmlHost host() {
         PrHtmlHost host = prHtmlHostDefault();
@@ -33,11 +29,14 @@ struct LaterHost {
         host.execute = [](void* data, PrHtmlPage*, const PrHtmlScript* script) -> PrStatus {
             LaterHost* laterHost = static_cast<LaterHost*>(data);
             if (script->kind == PrHtmlScriptKind_Module) {
-                const std::string& source = laterHost->modules.sources[script->module];
-                laterHost->log += source.substr(source.rfind('\n') + 1) + " ";
+                PrStringView source = laterHost->modules.sources[script->module];
+                size_t newline = prStringFindLastByte(source, '\n');
+                size_t start = newline == source.size ? 0 : newline + 1;
+                laterHost->log.append(prStringSlice(source, start, source.size - start));
             } else {
-                laterHost->log += std::string(script->source.data, script->source.size) + " ";
+                laterHost->log.append(script->source);
             }
+            laterHost->log.append(' ');
             return PrStatus_Ok;
         };
         host.parseModule = [](void* data, PrHtmlPage*, const PrHtmlScript* script,
@@ -67,7 +66,7 @@ struct LaterHost {
         fetcher.waiting();
         size_t count = 0;
         for (PrFetchInterceptRequest* request : fetcher.held)
-            count += TestFetcher::urlOf(request).ends_with(name);
+            count += prStringEndsWith(TestFetcher::urlOf(request), name);
         return count;
     }
 };
@@ -87,27 +86,27 @@ bool has(PrHtmlPage* page, const char* id) {
 }
 
 // Returns the media text of the document's sheet at `index`.
-std::string sheetMedia(PrHtmlPage* page, uint32_t index) {
+String sheetMedia(PrHtmlPage* page, uint32_t index) {
     PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(page));
     PrCssStyleSheet* sheet = prCssStyleSheetListStyleSheetAt(prCssDocumentStyleSheets(document), index);
     REQUIRE(sheet != nullptr);
     PrRawString text = prCssMediaListMediaText(prCssStyleSheetMedia(sheet));
-    std::string out(prRawStringView(&text).data, prRawStringView(&text).size);
+    String out(prRawStringView(&text));
     prRawStringReset(&text);
     return out;
 }
 
 // Loads `source` at `url` in a page whose host decodes images with `images`, and returns the URL of its icon, or
 // "(none)" for the null string.
-std::string iconUrl(PrImageCodec* PR_NULLABLE images, PrStringView source, PrStringView url) {
+String iconUrl(PrImageCodec* PR_NULLABLE images, PrStringView source, PrStringView url) {
     PrHtmlHost host = prHtmlHostDefault();
     host.images = images;
     PrHtmlPage* page = prHtmlPageCreate(&host);
     REQUIRE(prHtmlPageLoad(page, source, url, nullptr) == PrStatus_Ok);
     PrRawString icon = prHtmlPageIconUrl(page);
-    std::string out = "(none)";
+    String out = "(none)";
     if (!prRawStringIsNull(&icon))
-        out = std::string(prRawStringView(&icon).data, prRawStringView(&icon).size);
+        out = String(prRawStringView(&icon));
     prRawStringReset(&icon);
     prHtmlPageDestroy(page);
     return out;
@@ -215,8 +214,8 @@ TEST_CASE("a script whose status is not ok fails, and not the load, and a failed
 
 TEST_CASE("base URL uses the first href and rejects data and javascript schemes") {
     PrHtmlPage* page = prHtmlPageCreate(nullptr);
-    for (PrStringView href :
-            {"https://[invalid", "data:text/plain,base", "javascript:base"}) {
+    const PrStringView kHrefs[] = {"https://[invalid", "data:text/plain,base", "javascript:base"};
+    for (PrStringView href : kHrefs) {
         PrRawString html = prRawStringCopy("<base href='");
         prRawStringAppend(&html, href);
         prRawStringAppend(&html, "'><base href='https://ignored.test/'><script src='unloaded.js'></script>");
@@ -231,11 +230,11 @@ TEST_CASE("base URL uses the first href and rejects data and javascript schemes"
 }
 
 TEST_CASE("a script runs by its type, and data blocks and empty scripts do not") {
-    struct State { std::string sources; } state;
+    struct State { String sources; } state;
     PrHtmlHost host = prHtmlHostDefault();
     host.context = &state;
     host.execute = [](void* data, PrHtmlPage*, const PrHtmlScript* script) -> PrStatus {
-        static_cast<State*>(data)->sources.append(script->source.data, script->source.size);
+        static_cast<State*>(data)->sources.append(script->source);
         return PrStatus_Ok;
     };
     PrHtmlPage* page = prHtmlPageCreate(&host);
@@ -281,13 +280,13 @@ TEST_CASE("a module script runs once its graph is fetched, which fetches and par
     later.answerScript("a.js", "import shared.js\na");
     later.answerScript("b.js", "import a.js\nb");
     later.settle(page);
-    CHECK(later.log.empty());
+    CHECK(later.log.isEmpty());
     CHECK(readiness(page) != PrHtmlDocumentReadyState_Complete);
     later.answerScript("shared.js", "shared");
     later.settle(page);
     // The deferred module scripts run in order, and the modules of their graphs are parsed once each.
     CHECK(later.log == "root root inline ");
-    CHECK(later.modules.sources.size() == 5);
+    CHECK(later.modules.sources.count() == 5);
     CHECK(later.fetcher.waiting() == 0);
     CHECK(readiness(page) == PrHtmlDocumentReadyState_Complete);
     prHtmlPageDestroy(page);
@@ -309,7 +308,8 @@ TEST_CASE("a module script whose graph has a module that does not load fires err
         nullptr,
     };
     PrDomNode* root = prDomDocumentAsNode(prHtmlWindowDocument(prHtmlPageWindow(page)));
-    for (const char* id : {"missing", "typed"})
+    const char* const kIds[] = {"missing", "typed"};
+    for (const char* id : kIds)
         prDomEventTargetAddEventListener(prDomElementAsEventTarget(prDomNodeGetElementById(root, id)), "error", &error, nullptr);
     later.settle(page);
     later.answerScript("root.js", "import gone.js\nroot");
@@ -326,9 +326,9 @@ TEST_CASE("a module script whose graph has a module that does not load fires err
 
 TEST_CASE("an import fetches its graph and reports in a task, and one that waits is lost with its document") {
     struct Imported {
-        std::vector<PrStatus> statuses;
+        Array<PrStatus> statuses;
         static void done(void* PR_NULLABLE data, PrStatus status) {
-            static_cast<Imported*>(data)->statuses.push_back(status);
+            static_cast<Imported*>(data)->statuses.push(status);
         }
     } imported;
     LaterHost later;
@@ -341,21 +341,21 @@ TEST_CASE("an import fetches its graph and reports in a task, and one that waits
     later.answerScript("a.js", "import b.js\na");
     later.answer("missing.js", "", 404);
     later.settle(page);
-    CHECK(imported.statuses == std::vector<PrStatus>{PrStatus_NotFound});
+    CHECK(imported.statuses == Array<PrStatus>({PrStatus_NotFound}));
     later.answerScript("b.js", "b");
     later.settle(page);
-    CHECK(imported.statuses == std::vector<PrStatus>{PrStatus_NotFound, PrStatus_Ok});
+    CHECK(imported.statuses == Array<PrStatus>({PrStatus_NotFound, PrStatus_Ok}));
 
     // A graph that is already fetched is reported in a task too.
     prHtmlPageImportModule(page, "https://example.test/a.js", Imported::done, &imported);
-    CHECK(imported.statuses.size() == 2);
+    CHECK(imported.statuses.count() == 2);
     later.settle(page);
-    CHECK(imported.statuses.back() == PrStatus_Ok);
+    CHECK(imported.statuses.last() == PrStatus_Ok);
 
     prHtmlPageImportModule(page, "https://example.test/later.js", Imported::done, &imported);
     prHtmlPageDestroy(page);
-    CHECK(imported.statuses.back() == PrStatus_Lost);
-    CHECK(later.modules.sources.size() == 2);
+    CHECK(imported.statuses.last() == PrStatus_Lost);
+    CHECK(later.modules.sources.count() == 2);
 }
 
 TEST_CASE("a module's imports resolve against the URL that redirects left its response at") {
@@ -365,7 +365,7 @@ TEST_CASE("a module's imports resolve against the URL that redirects left its re
     CHECK(prHtmlPageLoad(page, "<script type=module src=root.js></script>", "https://example.test/", nullptr) ==
         PrStatus_Ok);
     later.settle(page);
-    REQUIRE(later.fetcher.held.size() == 1);
+    REQUIRE(later.fetcher.held.count() == 1);
     later.fetcher.respondTo(later.fetcher.held[0], "import a.js\nroot", 200, "text/javascript",
         "https://example.test/moved/root.js");
     later.settle(page);
@@ -378,9 +378,9 @@ TEST_CASE("a module's imports resolve against the URL that redirects left its re
 
 TEST_CASE("an import's fetches do not delay the load event") {
     struct Imported {
-        std::vector<PrStatus> statuses;
+        Array<PrStatus> statuses;
         static void done(void* PR_NULLABLE data, PrStatus status) {
-            static_cast<Imported*>(data)->statuses.push_back(status);
+            static_cast<Imported*>(data)->statuses.push(status);
         }
     } imported;
     LaterHost later;
@@ -393,10 +393,10 @@ TEST_CASE("an import's fetches do not delay the load event") {
     later.settle(page);
     CHECK(readiness(page) == PrHtmlDocumentReadyState_Complete);
     CHECK(later.waitingFor("a.js") == 1);
-    CHECK(imported.statuses.empty());
+    CHECK(imported.statuses.isEmpty());
     later.answerScript("a.js", "a");
     later.settle(page);
-    CHECK(imported.statuses == std::vector<PrStatus>{PrStatus_Ok});
+    CHECK(imported.statuses == Array<PrStatus>({PrStatus_Ok}));
     prHtmlPageDestroy(page);
 }
 
@@ -684,7 +684,7 @@ TEST_CASE("a script the host answers later pauses the parse, and a sheet it answ
         "<script src=b.js></script></head><body><p id=after>after</p>"
         "<script defer src=d.js></script><img src=i.png></body>", "https://example.test/", nullptr) == PrStatus_Ok);
     // The sheet blocks the inline script, and the parse waits for it: the document has no body, and does not render.
-    CHECK(later.log.empty());
+    CHECK(later.log.isEmpty());
     CHECK_FALSE(has(page, "after"));
     CHECK(prHtmlPageIsRenderBlocked(page));
     CHECK(readiness(page) == PrHtmlDocumentReadyState_Loading);
@@ -750,7 +750,7 @@ TEST_CASE("a media attribute changes its sheet's media in place, and a link's lo
     CHECK(prDomElementSetAttribute(style, "media", "screen") == PrStatus_Ok);
     CHECK(sheetMedia(page, 1) == "screen");
     prDomElementRemoveAttribute(style, "media");
-    CHECK(sheetMedia(page, 1).empty());
+    CHECK(sheetMedia(page, 1).isEmpty());
     later.settle(page);
     CHECK(state.loads == 1);
     prHtmlPageDestroy(page);
@@ -764,11 +764,11 @@ TEST_CASE("a preload link fetches its resource and fires load or error, and fetc
         "<link id=x rel=preload href=c.png as=nothing>", "https://example.test/", nullptr) == PrStatus_Ok);
     PrDomNode* root = prDomDocumentAsNode(prHtmlWindowDocument(prHtmlPageWindow(page)));
     // Each listener writes the type of the event that it receives.
-    std::string log;
+    String log;
     PrDomEventListener listener{
         [](void* data, PrDomEvent* event) {
             PrStringView type = prDomEventType(event);
-            static_cast<std::string*>(data)->append(type.data, type.size).append(" ");
+            static_cast<String*>(data)->append(type).append(" ");
         },
         &log,
         1,
@@ -813,7 +813,7 @@ TEST_CASE("an element's crossorigin attribute decides its request's mode and cre
     for (const Expected& e : expected) {
         PrFetchInterceptRequest* last = nullptr;
         for (PrFetchInterceptRequest* request : later.fetcher.held) {
-            if (TestFetcher::urlOf(request).ends_with(e.name))
+            if (prStringEndsWith(TestFetcher::urlOf(request), e.name))
                 last = request;
         }
         REQUIRE_MESSAGE(last != nullptr, e.name);
@@ -857,7 +857,7 @@ TEST_CASE("an XML document's script waits for the style sheets before it that bl
         "<link rel='stylesheet' href='a.css'/></head>"
         "<body><script>inline</script><p id='after'/></body></html>", "https://example.test/page.xhtml", &headers) ==
         PrStatus_Ok);
-    CHECK(later.log.empty());
+    CHECK(later.log.isEmpty());
     CHECK_FALSE(has(page, "after"));
     REQUIRE(later.fetcher.waiting() == 1);
     later.answer("a.css", "p { color: green }");
@@ -948,7 +948,7 @@ TEST_CASE("a fetch the host answers after its browsing context is gone is droppe
     // An answer whose task has not run yet is dropped with the context too.
     later.answer("a.js", "first");
     prHtmlPageDestroy(page);
-    CHECK(later.log.empty());
+    CHECK(later.log.isEmpty());
     // A new load drops the previous load's fetches as well.
     page = prHtmlPageCreate(&host);
     CHECK(prHtmlPageLoad(page, "<script src=c.js></script>", "https://example.test/", nullptr) == PrStatus_Ok);
@@ -957,7 +957,7 @@ TEST_CASE("a fetch the host answers after its browsing context is gone is droppe
     prHtmlPageDestroy(page);
     later.answer("c.js", "late");
     prNetNullRun(later.fetcher.net);
-    CHECK(later.log.empty());
+    CHECK(later.log.isEmpty());
 }
 
 TEST_CASE("a location of another document navigates the page from a task, and a fragment does not") {
@@ -1000,10 +1000,10 @@ TEST_CASE("a navigation that a document starts is fetched from its origin, and t
     auto originOf = [&](const char* name) {
         later.settle(page);
         REQUIRE(later.waitingFor(name) == 1);
-        std::string origin = "<none>";
+        String origin = "<none>";
         for (PrFetchInterceptRequest* request : later.fetcher.held) {
-            if (TestFetcher::urlOf(request).ends_with(name) && request->desc.origin.data != nullptr)
-                origin = std::string(request->desc.origin.data, request->desc.origin.size);
+            if (prStringEndsWith(TestFetcher::urlOf(request), name) && request->desc.origin.data != nullptr)
+                origin = String(request->desc.origin);
         }
         later.answer(name, "<p>");
         later.settle(page);
@@ -1022,12 +1022,12 @@ TEST_CASE("a navigation that a document starts is fetched from its origin, and t
 
 TEST_CASE("a hyperlink whose target names no browsing context needs the user's activation for a new one") {
     struct Opened {
-        std::vector<std::string> urls;
+        Array<String> urls;
     } opened;
     PrHtmlHost host = prHtmlHostDefault();
     host.context = &opened;
     host.openWindow = [](void* context, PrHtmlPage*, PrStringView url) {
-        static_cast<Opened*>(context)->urls.emplace_back(url.data, url.size);
+        static_cast<Opened*>(context)->urls.emplace(url);
     };
     PrHtmlPage* page = prHtmlPageCreate(&host);
     REQUIRE(prHtmlPageLoad(page, "<a id=blank target=_BLANK href=one></a><a id=unknown target=nowhere href=two></a>"
@@ -1039,9 +1039,10 @@ TEST_CASE("a hyperlink whose target names no browsing context needs the user's a
         prHtmlElementClick(prHtmlElementQuery(prDomElementAsEventTarget(prDomNodeGetElementById(root, id))));
     };
     click("blank");
-    CHECK(opened.urls.empty());
+    CHECK(opened.urls.isEmpty());
     CHECK(!prHtmlWindowHasStickyActivation(window));
-    for (const char* id : {"blank", "unknown", "dangling"}) {
+    const char* const kIds[] = {"blank", "unknown", "dangling"};
+    for (const char* id : kIds) {
         prHtmlWindowNotifyUserActivation(window);
         CHECK(prHtmlWindowHasTransientActivation(window));
         click(id);
@@ -1052,9 +1053,9 @@ TEST_CASE("a hyperlink whose target names no browsing context needs the user's a
     prHtmlWindowNotifyUserActivation(window);
     click("script");
     CHECK(prHtmlWindowHasTransientActivation(window));
-    CHECK(opened.urls == std::vector<std::string>{
+    CHECK(opened.urls == Array<String>({
         "https://example.test/one", "https://example.test/two", "https://example.test/three",
-    });
+    }));
     prHtmlPageDestroy(page);
 }
 
@@ -1066,7 +1067,7 @@ TEST_CASE("a page's session history keeps each document's entries, and going to 
     PrHtmlPage* page = prHtmlPageCreate(&host);
     auto url = [&](uint32_t index) {
         PrStringView text = prHtmlSessionHistoryUrl(history, index);
-        return text.data == nullptr ? std::string("<none>") : std::string(text.data, text.size);
+        return text.data == nullptr ? String("<none>") : String(text);
     };
     // Answers the navigation that waits for the document at the URL that ends in `name`.
     auto arrive = [&](const char* name) {
@@ -1102,7 +1103,7 @@ TEST_CASE("a page's session history keeps each document's entries, and going to 
     uint32_t generation = 0;
     REQUIRE(prHtmlHistoryState(window, &state, &generation) == PrStatus_Ok);
     CHECK(state.data == nullptr);
-    CHECK(later.fetcher.held.empty());
+    CHECK(later.fetcher.held.isEmpty());
 
     // Going back past the document navigates to the entry's URL, and the document that loads takes that entry.
     prHtmlPageTraverse(page, -2);
@@ -1115,7 +1116,7 @@ TEST_CASE("a page's session history keeps each document's entries, and going to 
     arrive("/c");
     CHECK(prHtmlSessionHistoryIndex(history) == 3);
     REQUIRE(prHtmlHistoryState(prHtmlPageWindow(page), &state, &generation) == PrStatus_Ok);
-    CHECK(std::string(state.data, state.size) == "state");
+    CHECK(String(state) == "state");
 
     // A navigation that replaces drops nothing, and the document that loads takes the current entry with no state.
     REQUIRE(prHtmlWindowSetLocation(prHtmlPageWindow(page), prHtmlPageWindow(page), PrUrlComponent_Href, "d",
@@ -1140,35 +1141,31 @@ TEST_CASE("a page's session history keeps each document's entries, and going to 
 
 TEST_CASE("a script's fetch sends what it asks, and receives the response filtered as its type says") {
     struct Responses {
-        std::vector<PrStatus> statuses;
-        std::vector<std::string> received;
+        Array<PrStatus> statuses;
+        Array<String> received;
         static void done(void* PR_NULLABLE data, const PrFetchResponse* response) {
             Responses* responses = static_cast<Responses*>(data);
-            responses->statuses.push_back(response->status);
+            responses->statuses.push(response->status);
             PrStringView url = response->url.data != nullptr ? response->url : PrStringView{""};
-            std::string text = std::to_string(response->responseStatus) + " " + std::string(url.data, url.size) + " ";
-            for (uint32_t i = 0; i < response->headerCount; ++i) {
-                text += std::string(response->headers[i].name.data, response->headers[i].name.size) + "=" +
-                    std::string(response->headers[i].value.data, response->headers[i].value.size) + " ";
-            }
+            String text = format("{} {} ", response->responseStatus, url);
+            for (uint32_t i = 0; i < response->headerCount; ++i)
+                formatTo(text, "{}={} ", response->headers[i].name, response->headers[i].value);
             if (response->body.size != 0)
-                text += std::string(reinterpret_cast<const char*>(response->body.data), response->body.size);
-            responses->received.push_back(text);
+                text.append(prStringFromBytes(response->body));
+            responses->received.push(text);
         }
     } responses;
     LaterHost later;
-    std::string sent;
+    String sent;
     later.fetcher.answer = [&](PrFetchInterceptRequest* request) {
         const PrFetchRequestDesc* desc = &request->desc;
-        std::string url = TestFetcher::urlOf(request);
-        if (url.ends_with("/wait"))
+        String url = TestFetcher::urlOf(request);
+        if (prStringEndsWith(url, "/wait"))
             return;
-        if (url.ends_with("/post")) {
-            sent = std::string(desc->method.data, desc->method.size) + " " + std::to_string(desc->destination) + " " +
-                std::to_string(desc->mode) + " " +
-                std::string(reinterpret_cast<const char*>(desc->body.data), desc->body.size);
+        if (prStringEndsWith(url, "/post")) {
+            sent = format("{} {} {} {}", desc->method, desc->destination, desc->mode, prStringFromBytes(desc->body));
             for (uint32_t i = 0; i < desc->headerCount; ++i)
-                sent += " " + std::string(desc->headers[i].name.data, desc->headers[i].name.size);
+                formatTo(sent, " {}", desc->headers[i].name);
         }
         const PrFetchHeader headers[] = {
             {"Content-Type", "text/plain"}, {"Set-Cookie", "a=b"},
@@ -1176,9 +1173,9 @@ TEST_CASE("a script's fetch sends what it asks, and receives the response filter
             {"Access-Control-Expose-Headers", "X-Exposed"},
         };
         PrFetchResponseType type = PrFetchResponseType_Basic;
-        if (url.ends_with("/cors"))
+        if (prStringEndsWith(url, "/cors"))
             type = PrFetchResponseType_Cors;
-        else if (url.ends_with("/opaque"))
+        else if (prStringEndsWith(url, "/opaque"))
             type = PrFetchResponseType_Opaque;
         PrFetchInterceptResponse response{
             .status = 201,
@@ -1214,11 +1211,11 @@ TEST_CASE("a script's fetch sends what it asks, and receives the response filter
     PrFetchClientRequest invalid{.url = "https://user@example.test/", .mode = PrFetchMode_Cors};
     CHECK(prHtmlPageFetch(page, &invalid, Responses::done, &responses) == PrStatus_InvalidData);
     // Nothing is answered during the calls that ask, a data: URL included.
-    CHECK(responses.statuses.empty());
+    CHECK(responses.statuses.isEmpty());
     later.settle(page);
     CHECK(sent == "POST 0 1 sent X-Asked");
-    CHECK(responses.statuses == std::vector<PrStatus>{PrStatus_Ok, PrStatus_Ok, PrStatus_Ok, PrStatus_Ok});
-    REQUIRE(responses.received.size() == 4);
+    CHECK(responses.statuses == Array<PrStatus>({PrStatus_Ok, PrStatus_Ok, PrStatus_Ok, PrStatus_Ok}));
+    REQUIRE(responses.received.count() == 4);
     // The data: URL is answered in a task of its own, before the network's answers arrive. A basic response hides
     // Set-Cookie, a CORS one shows only what it exposes, and an opaque one shows nothing.
     CHECK(responses.received[0] == "200 data:,inline Content-Type=text/plain;charset=US-ASCII inline");
@@ -1234,7 +1231,7 @@ TEST_CASE("a script's fetch sends what it asks, and receives the response filter
     CHECK(later.waitingFor("/wait") == 1);
     CHECK(readiness(page) == PrHtmlDocumentReadyState_Complete);
     prHtmlPageDestroy(page);
-    CHECK(responses.statuses.back() == PrStatus_Lost);
+    CHECK(responses.statuses.last() == PrStatus_Lost);
 }
 
 TEST_CASE("document.open() on an iframe's initial about:blank stops the load of its source") {
@@ -1331,7 +1328,7 @@ TEST_CASE("a navigation fetches its document, keeps the current one until the re
     PrHtmlPage* page = prHtmlPageCreate(&host);
     auto url = [&] {
         PrRawString text = prDomDocumentUrl(prHtmlWindowDocument(prHtmlPageWindow(page)));
-        std::string out(prRawStringView(&text).data, prRawStringView(&text).size);
+        String out(prRawStringView(&text));
         prRawStringReset(&text);
         return out;
     };
@@ -1365,14 +1362,14 @@ TEST_CASE("a navigation that fails loads a document that says why, and reports t
     PrHtmlPage* page = prHtmlPageCreate(&host);
     REQUIRE(prHtmlPageNavigate(page, "https://example.test/gone.html") == PrStatus_Ok);
     later.settle(page);
-    REQUIRE(later.fetcher.held.size() == 1);
+    REQUIRE(later.fetcher.held.count() == 1);
     later.fetcher.failTo(later.fetcher.held[0]);
     later.settle(page);
     CHECK(loaded == PrStatus_Io);
     CHECK_FALSE(prHtmlPageIsFetching(page));
     PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(page));
     PrRawString text = prDomNodeTextContent(prDomElementAsNode(prDomDocumentElement(document)));
-    CHECK(std::string(prRawStringView(&text).data, prRawStringView(&text).size).find("gone.html") != std::string::npos);
+    CHECK(prStringContains(prRawStringView(&text), "gone.html"));
     prRawStringReset(&text);
     prHtmlPageDestroy(page);
 }

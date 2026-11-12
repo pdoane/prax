@@ -124,30 +124,31 @@ struct Painted {
 };
 
 // Appends the glyphs that `list` draws under `transform`, including through the lists it embeds.
-void appendPainted(const PrDrawList* list, PrDAffine2 transform, std::vector<Painted>& out) {
-    std::vector<PrDAffine2> stack{transform};
+void appendPainted(const PrDrawList* list, PrDAffine2 transform, Array<Painted>& out) {
+    Array<PrDAffine2> stack;
+    stack.push(transform);
     const PrDrawCommand* commands = prDrawListCommands(list);
     for (uint32_t i = 0; i < prDrawListCommandCount(list); ++i) {
         const PrDrawCommand& command = commands[i];
-        const PrDAffine2& t = stack.back();
+        const PrDAffine2& t = stack.last();
         switch (command.kind) {
             case PrDrawCommandKind_Embed: appendPainted(command.embed.list, t, out); break;
             case PrDrawCommandKind_PushTransformAffine2: {
                 const PrDAffine2& m = command.affine;
-                stack.push_back(PrDAffine2{
+                stack.push(PrDAffine2{
                     t.a * m.a + t.c * m.b, t.b * m.a + t.d * m.b, t.a * m.c + t.c * m.d,
                     t.b * m.c + t.d * m.d, t.a * m.e + t.c * m.f + t.e,
                     t.b * m.e + t.d * m.f + t.f,
                 });
                 break;
             }
-            case PrDrawCommandKind_PopTransform: stack.pop_back(); break;
+            case PrDrawCommandKind_PopTransform: stack.pop(); break;
             case PrDrawCommandKind_Glyphs:
                 for (uint32_t g = 0; g < command.glyphs->glyphCount; ++g) {
                     PrVec2 p = command.glyphs->glyphs[g].position;
                     double x = double(p.x);
                     double y = double(p.y);
-                    out.push_back(Painted{
+                    out.push(Painted{
                         command.glyphs->glyphs[g].id, t.a * x + t.c * y + t.e,
                         t.b * x + t.d * y + t.f,
                         t.b != 0,
@@ -160,10 +161,10 @@ void appendPainted(const PrDrawList* list, PrDAffine2 transform, std::vector<Pai
 }
 
 // Returns the glyphs that the tree paints, in the order it paints them.
-std::vector<Painted> painted(PrLayoutTree* tree) {
+Array<Painted> painted(PrLayoutTree* tree) {
     PrDrawList* list = prDrawListCreate();
     prLayoutTreePaint(tree, list);
-    std::vector<Painted> out;
+    Array<Painted> out;
     appendPainted(list, PrDAffine2{1, 0, 0, 1, 0, 0}, out);
     prDrawListRelease(list);
     return out;
@@ -205,7 +206,8 @@ TEST_CASE("vertical-rl blocks stack from the right, and their stage is as wide a
 }
 
 TEST_CASE("block-axis margins collapse across a vertical flow") {
-    for (PrLayoutWritingMode mode : {kRl, kLr}) {
+    const PrLayoutWritingMode modes[] = {kRl, kLr};
+    for (PrLayoutWritingMode mode : modes) {
         CAPTURE(int(mode));
         Page p;
         PrLayoutNode stage = p.stage(200, 200, mode);
@@ -352,7 +354,8 @@ TEST_CASE("an orthogonal flow root in an indefinite block size falls back to its
         CHECK(p.height(box) == 120);
     }
     // The nearest scroll container, through a block of auto height, and its max-height if that is smaller.
-    for (float maxHeight : {-1.0f, 100.0f}) {
+    const float maxHeights[] = {-1.0f, 100.0f};
+    for (float maxHeight : maxHeights) {
         CAPTURE(maxHeight);
         Page p;
         PrLayoutBoxStyle scroller = sized(200, 150);
@@ -665,8 +668,10 @@ TEST_CASE("a scroll container scrolls from its writing mode's start corner, with
 TEST_CASE("a scroll container's padding shows past its in-flow children, from each origin, and not past a descendant") {
     // 100 wide with 20 padding around a 300 child: it scrolls through 340, toward its end in either direction. If the
     // child is in a wrapper 100 wide, the scroller's padding is past the wrapper, and the child reaches 320.
-    for (bool wrapped : {false, true}) {
-        for (PrTextDirection direction : {PrTextDirection_Ltr, PrTextDirection_Rtl}) {
+    const bool wrapModes[] = {false, true};
+    for (bool wrapped : wrapModes) {
+        const PrTextDirection directions[] = {PrTextDirection_Ltr, PrTextDirection_Rtl};
+        for (PrTextDirection direction : directions) {
             CAPTURE(wrapped);
             CAPTURE(int(direction));
             Page p;
@@ -693,8 +698,10 @@ TEST_CASE("a scroll container's padding shows past its in-flow children, from ea
 
 TEST_CASE("a clipping child's content stays clipped, and its whole border box reachable") {
     // A 300 wide child with a 10 border, clipping its 500 wide content, directly in the scroller and in a wrapper.
-    for (bool wrapped : {false, true}) {
-        for (PrTextDirection direction : {PrTextDirection_Ltr, PrTextDirection_Rtl}) {
+    const bool wrapModes[] = {false, true};
+    for (bool wrapped : wrapModes) {
+        const PrTextDirection directions[] = {PrTextDirection_Ltr, PrTextDirection_Rtl};
+        for (PrTextDirection direction : directions) {
             CAPTURE(wrapped);
             CAPTURE(int(direction));
             Page p;
@@ -743,7 +750,8 @@ TEST_CASE("a box that does not scroll lets its content overflow toward its inlin
 }
 
 TEST_CASE("Latin in a vertical line is set sideways on the line's central baseline, and lines stack from line-over") {
-    for (PrLayoutWritingMode mode : {kRl, kLr, kSwRl}) {
+    const PrLayoutWritingMode modes[] = {kRl, kLr, kSwRl};
+    for (PrLayoutWritingMode mode : modes) {
         CAPTURE(int(mode));
         Page p;
         PrLayoutNode stage = p.stage(-1, 200, mode);
@@ -763,7 +771,8 @@ TEST_CASE("Latin in a vertical line is set sideways on the line's central baseli
 }
 
 TEST_CASE("sideways glyphs turn clockwise from line-over, but in sideways-lr, which reads from the bottom") {
-    for (PrLayoutWritingMode mode : {kRl, kLr, kSwRl, kSwLr}) {
+    const PrLayoutWritingMode modes[] = {kRl, kLr, kSwRl, kSwLr};
+    for (PrLayoutWritingMode mode : modes) {
         CAPTURE(int(mode));
         Page p;
         PrLayoutNode stage = p.stage(-1, 200, mode);
@@ -775,8 +784,8 @@ TEST_CASE("sideways glyphs turn clockwise from line-over, but in sideways-lr, wh
         CHECK(p.height(span) == doctest::Approx(32.25).epsilon(0.001));
         // sideways-lr's line starts at the bottom.
         CHECK(p.top(span, stage) == doctest::Approx(mode == kSwLr ? 167.75 : 0).epsilon(0.001));
-        std::vector<Painted> glyphs = painted(p.f.tree);
-        REQUIRE(glyphs.size() == 3);
+        Array<Painted> glyphs = painted(p.f.tree);
+        REQUIRE(glyphs.count() == 3);
         for (const Painted& g : glyphs)
             CHECK(g.turned);
         // The alphabetic baseline is the ascent, 18, from line-over: the right side, or the left side for sideways-lr.
@@ -798,8 +807,8 @@ TEST_CASE("text-orientation upright sets Latin upright, advancing by the ascent 
     CHECK(p.left(span, stage) == 9);
     CHECK(p.width(span) == 22);
     CHECK(p.height(span) == 66);
-    std::vector<Painted> glyphs = painted(p.f.tree);
-    REQUIRE(glyphs.size() == 3);
+    Array<Painted> glyphs = painted(p.f.tree);
+    REQUIRE(glyphs.count() == 3);
     for (uint32_t i = 0; i < 3; ++i) {
         CAPTURE(i);
         CHECK_FALSE(glyphs[i].turned);
@@ -814,7 +823,8 @@ TEST_CASE("text-orientation upright sets Latin upright, advancing by the ascent 
 TEST_CASE("Japanese is set upright and Latin among it sideways, each centered on the central baseline") {
     Page p;
     PrLayoutFontStyle font = Page::font(kRl);
-    font.font = textFontOf(20, {p.f.family("NotoSansJP-VF.otf", "Noto Sans JP")});
+    const PrFontFamily families[] = {p.f.family("NotoSansJP-VF.otf", "Noto Sans JP")};
+    font.font = textFontOf(20, families);
     PrLayoutNode stage = p.styled(p.root, sized(-1, 200), font);
     PrLayoutNode kanji = p.styled(stage, inlineBox(), font);
     p.f.text(kanji, "日本");
@@ -829,8 +839,8 @@ TEST_CASE("Japanese is set upright and Latin among it sideways, each centered on
     CHECK(p.left(latin, stage) == 6);
     CHECK(p.top(latin, stage) == 40);
     CHECK(p.height(latin) == doctest::Approx(33.828).epsilon(0.001));
-    std::vector<Painted> glyphs = painted(p.f.tree);
-    REQUIRE(glyphs.size() == 6);
+    Array<Painted> glyphs = painted(p.f.tree);
+    REQUIRE(glyphs.count() == 6);
     CHECK_FALSE(glyphs[0].turned);
     CHECK_FALSE(glyphs[1].turned);
     CHECK(glyphs[1].y - glyphs[0].y == doctest::Approx(20));
@@ -842,7 +852,8 @@ TEST_CASE("text in another face is centered on the line's central baseline by it
     Page p;
     PrLayoutNode stage = p.stage(-1, 200, kRl);
     PrLayoutFontStyle jp = Page::font(kRl);
-    jp.font = textFontOf(20, {p.f.family("NotoSansJP-VF.otf", "Noto Sans JP")});
+    const PrFontFamily families[] = {p.f.family("NotoSansJP-VF.otf", "Noto Sans JP")};
+    jp.font = textFontOf(20, families);
     PrLayoutNode kanji = p.styled(stage, inlineBox(), jp);
     p.f.text(kanji, "日本");
     PrLayoutNode latin = p.add(stage, inlineBox(), kRl);
@@ -859,7 +870,8 @@ TEST_CASE("text in another face is centered on the line's central baseline by it
 TEST_CASE("text-orientation sideways turns Japanese, set on its alphabetic baseline") {
     Page p;
     PrLayoutFontStyle font = oriented(kRl, PrLayoutTextOrientation_Sideways);
-    font.font = textFontOf(20, {p.f.family("NotoSansJP-VF.otf", "Noto Sans JP")});
+    const PrFontFamily families[] = {p.f.family("NotoSansJP-VF.otf", "Noto Sans JP")};
+    font.font = textFontOf(20, families);
     PrLayoutNode stage = p.styled(p.root, sized(-1, 200), font);
     PrLayoutNode span = p.styled(stage, inlineBox(), font);
     p.f.text(span, "日本語");
@@ -919,7 +931,8 @@ TEST_CASE("central baselines of two sizes align") {
 }
 
 TEST_CASE("vertical-align top and lengths go toward line-over, the right but in sideways-lr") {
-    for (PrLayoutWritingMode mode : {kRl, kLr, kSwLr}) {
+    const PrLayoutWritingMode modes[] = {kRl, kLr, kSwLr};
+    for (PrLayoutWritingMode mode : modes) {
         CAPTURE(int(mode));
         Page p;
         PrLayoutNode stage = p.stage(-1, 200, mode);
@@ -965,7 +978,8 @@ TEST_CASE("an inline box's padding and border in a vertical line go around its c
 }
 
 TEST_CASE("a span set on its alphabetic baseline attaches by the line's central baseline") {
-    for (bool sideways : {true, false}) {
+    const bool sidewaysModes[] = {true, false};
+    for (bool sideways : sidewaysModes) {
         CAPTURE(sideways);
         Page p;
         PrLayoutNode stage = p.stage(-1, 200, kRl);
@@ -995,24 +1009,26 @@ TEST_CASE("a justified upright line spreads its glyphs down the line") {
     PrLayoutNode stage = p.styled(p.root, sized(-1, 200), font);
     p.f.text(stage, "ab cd ef gh ij");
     p.layout();
-    std::vector<Painted> glyphs = painted(p.f.tree);
-    REQUIRE(glyphs.size() >= 4);
+    Array<Painted> glyphs = painted(p.f.tree);
+    REQUIRE(glyphs.count() >= 4);
     // A first line of eight glyphs and a space fills 200, so each step is more than the 22 that a glyph advances.
     CHECK(glyphs[1].y - glyphs[0].y > 22);
     CHECK(glyphs[1].x == doctest::Approx(glyphs[0].x).epsilon(0.05));
 }
 
 TEST_CASE("orientation alone splits a run: a digit among Han takes its script and is set sideways") {
-    for (PrLayoutTextOrientation orientation : {PrLayoutTextOrientation_Mixed, PrLayoutTextOrientation_Upright}) {
+    const PrLayoutTextOrientation orientations[] = {PrLayoutTextOrientation_Mixed, PrLayoutTextOrientation_Upright};
+    for (PrLayoutTextOrientation orientation : orientations) {
         CAPTURE(int(orientation));
         Page p;
         PrLayoutFontStyle font = oriented(kRl, orientation);
-        font.font = textFontOf(20, {p.f.family("NotoSansJP-VF.otf", "Noto Sans JP")});
+        const PrFontFamily families[] = {p.f.family("NotoSansJP-VF.otf", "Noto Sans JP")};
+        font.font = textFontOf(20, families);
         PrLayoutNode stage = p.styled(p.root, sized(-1, 200), font);
         p.f.text(stage, "日1本");
         p.layout();
-        std::vector<Painted> glyphs = painted(p.f.tree);
-        REQUIRE(glyphs.size() == 3);
+        Array<Painted> glyphs = painted(p.f.tree);
+        REQUIRE(glyphs.count() == 3);
         CHECK_FALSE(glyphs[0].turned);
         CHECK(glyphs[1].turned == (orientation == PrLayoutTextOrientation_Mixed));
         CHECK_FALSE(glyphs[2].turned);
@@ -1042,8 +1058,8 @@ TEST_CASE("a vertical-only script keeps its intrinsic orientation under upright,
     PrLayoutNode stage = p.styled(p.root, sized(-1, 200), font);
     p.f.text(stage, "\xe1\xa0\xae\xe1\xa0\xa3 \xe1\xa0\xa8" "a");
     p.layout();
-    std::vector<Painted> glyphs = painted(p.f.tree);
-    REQUIRE(glyphs.size() == 5);
+    Array<Painted> glyphs = painted(p.f.tree);
+    REQUIRE(glyphs.count() == 5);
     for (uint32_t i = 0; i < 4; ++i) {
         CAPTURE(i);
         CHECK(glyphs[i].turned);
@@ -1054,7 +1070,8 @@ TEST_CASE("a vertical-only script keeps its intrinsic orientation under upright,
 TEST_CASE("an orthogonal flow root's min block size resolves a cyclic percentage against zero in its contribution") {
     // In a float that shrinks to fit, a vertical box's min-width is its min block size, whose percentage base is the
     // float's width, which the contribution decides.
-    for (bool raw : {true, false}) {
+    const bool rawModes[] = {true, false};
+    for (bool raw : rawModes) {
         CAPTURE(raw);
         Page p;
         PrLayoutBoxStyle outer = block();

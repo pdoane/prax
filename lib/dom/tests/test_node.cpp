@@ -1,12 +1,11 @@
+#include "pr/array.h"
 #include "pr/memory.h"
+#include "pr/string.h"
 #include "pr/string_ops.h"
 
 #include "dom/src/dom_node.h"
 
 #include "tools/harness/test.h"
-
-#include <string>
-#include <vector>
 
 namespace pr_impl {
 
@@ -50,16 +49,24 @@ size_t ownedCount(PrDomDocument* document) {
 }
 
 // Returns the text of a view. The null view reads as the empty string.
-std::string textOf(PrStringView text) {
-    return std::string(text.size != 0 ? text.data : "", text.size);
+String textOf(PrStringView text) {
+    return String(text);
 }
 
-std::string taken(PrRawString text) {
-    PrStringView view = prRawStringView(&text);
-    std::string result(view.data != nullptr ? view.data : "", view.size);
-    prRawStringReset(&text);
-    return result;
+// Returns the text of `text`, which the string then frees.
+String taken(PrRawString text) {
+    return String::adopt(text);
 }
+
+// How many references and retains a node has.
+struct Counts {
+    uint32_t references;
+    uint32_t retained;
+
+    friend bool operator==(const Counts& a, const Counts& b) {
+        return a.references == b.references && a.retained == b.retained;
+    }
+};
 
 } // namespace
 
@@ -427,13 +434,15 @@ TEST_CASE("an element's classes are a list of its document's, shared by every el
     domAttach(html, a, nullptr);
     domNodeRetain(b);
     auto classes = [](const PrDomElement* element) {
-        std::string out;
+        String out;
         if (element->classes == kDomClassesNone)
             return out;
         DomClassList list = domClassesList(element->document, element->classes);
         for (uint32_t i = 0; i < list.count; ++i) {
             PrStringView text = domClassesName(element->document, list.atoms[i]);
-            out += (i != 0 ? " " : "") + std::string(text.data, text.size);
+            if (i != 0)
+                out.append(' ');
+            out.append(text);
         }
         return out;
     };
@@ -500,38 +509,37 @@ TEST_CASE("references counted together are counted as each would be alone") {
     PrDomDocument* document = domDocumentCreate(DomDocumentKind_Html);
     PrDomElement* html = domElementCreate(document, PrDomNamespace_Html, PrDomTag_Html, "");
     domAttach(document, html, nullptr);
-    std::vector<PrDomNode*> all = {document, html};
-    std::vector<PrDomNode*> groups;
+    Array<PrDomNode*> all({document, html});
     for (int i = 0; i < 3; ++i) {
         PrDomElement* group = domElementCreate(document, PrDomNamespace_Html, PrDomTag_Div, "");
         domAttach(html, group, nullptr);
-        all.push_back(group);
+        all.push(group);
         for (int j = 0; j < 3; ++j) {
             PrDomElement* leaf = domElementCreate(document, PrDomNamespace_Html, PrDomTag_Span, "");
             domAttach(group, leaf, nullptr);
-            all.push_back(leaf);
+            all.push(leaf);
         }
     }
     PrDomElement* detached = domElementCreate(document, PrDomNamespace_Html, PrDomTag_P, "");
     PrDomElement* inside = domElementCreate(document, PrDomNamespace_Html, PrDomTag_B, "");
     domAttach(detached, inside, nullptr);
     domNodeRetain(detached);
-    all.push_back(detached);
-    all.push_back(inside);
+    all.push(detached);
+    all.push(inside);
 
     // In tree order, out of it, across trees, and with a node twice.
-    std::vector<PrDomNode*> nodes = {all[3], all[4], all[5], all[2], all[9], inside, all[7], all[1], inside, all[4]};
+    Array<PrDomNode*> nodes({all[3], all[4], all[5], all[2], all[9], inside, all[7], all[1], inside, all[4]});
     auto counts = [&] {
-        std::vector<std::pair<uint32_t, uint32_t>> out;
+        Array<Counts> out;
         for (PrDomNode* node : all)
-            out.push_back({node->references, node->retained});
+            out.push(Counts{node->references, node->retained});
         return out;
     };
-    domNodeRetainEach(nodes.data(), uint32_t(nodes.size()));
-    std::vector<std::pair<uint32_t, uint32_t>> together = counts();
+    domNodeRetainEach(nodes.data(), nodes.count());
+    Array<Counts> together = counts();
     for (PrDomNode* node : all)
         CHECK((node->flags & DomNodeFlag_Counting) == 0);
-    domNodeReleaseEach(nodes.data(), uint32_t(nodes.size()));
+    domNodeReleaseEach(nodes.data(), nodes.count());
     for (PrDomNode* node : nodes)
         domNodeRetain(node);
     CHECK(counts() == together);
@@ -545,6 +553,10 @@ TEST_CASE("references counted together are counted as each would be alone") {
     domNodeReleaseEach(&last, 1);
     CHECK(document->detached == nullptr);
     domNodeRelease(document);
+    // The test's own arrays are counted too.
+    all.reset();
+    nodes.reset();
+    together.reset();
     CHECK(prMemoryLiveCount() == before);
 }
 

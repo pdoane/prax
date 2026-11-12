@@ -1,3 +1,5 @@
+#include "pr/array.h"
+#include "pr/atomic.h"
 #include "pr/css.h"
 #include "pr/css_intersection_observer.h"
 #include "pr/css_presentation.h"
@@ -15,17 +17,14 @@
 #include "pr/layout_style.h"
 #include "pr/layout_tree.h"
 #include "pr/locale.h"
+#include "pr/span.h"
+#include "pr/string.h"
+#include "pr/string_ops.h"
 #include "pr/text_harfbuzz.h"
 
 #include "css/src/css_presentation.h"
 
 #include "tools/harness/test.h"
-
-#include <atomic>
-#include <cmath>
-#include <string>
-#include <utility>
-#include <vector>
 
 namespace pr_impl {
 
@@ -44,7 +43,7 @@ bool verified(PrCssPresentation* presentation) {
     bool same = prCssPresentationVerify(presentation, &report);
     if (!same) {
         PrStringView what = prRawStringView(&report);
-        MESSAGE(std::string(what.data, what.size));
+        MESSAGE(String(what));
     }
     prRawStringReset(&report);
     return same;
@@ -83,7 +82,7 @@ float px(PrLayoutLength length) {
 }
 
 const PrFont* load(const char* name) {
-    std::string path = std::string(PR_FONTS_DIR) + "/" + name;
+    String path = format("{}/{}", PR_FONTS_DIR, name);
     const PrFont* font = nullptr;
     REQUIRE(prFontCreateFromFile(path, 0, nullptr, &font) == PrStatus_Ok);
     return font;
@@ -99,8 +98,8 @@ struct Page {
     PrCssPresentation* presentation = nullptr;
 
     // `sheets` follow HTML's user agent sheets.
-    explicit Page(const char* html, PrVec2 viewport = PrVec2{800, 600},
-            PrDomAgentOptions agentOptions = prDomAgentOptionsDefault(), const std::vector<PrCssUserAgentSheet>& sheets = {}) {
+    explicit Page(PrStringView html, PrVec2 viewport = PrVec2{800, 600},
+            PrDomAgentOptions agentOptions = prDomAgentOptionsDefault(), Span<const PrCssUserAgentSheet> sheets = {}) {
         const char* files[] = {"Tinos-Regular.ttf", "Arimo-Regular.ttf", "Ahem.ttf"};
         for (const char* file : files) {
             const PrFont* font = load(file);
@@ -117,15 +116,16 @@ struct Page {
         agent = prDomAgentCreate(&agentOptions);
         uint32_t htmlCount = 0;
         const PrCssUserAgentSheet* htmlSheets = prHtmlUserAgentSheets(&htmlCount);
-        std::vector<PrCssUserAgentSheet> all(htmlSheets, htmlSheets + htmlCount);
-        all.insert(all.end(), sheets.begin(), sheets.end());
+        Array<PrCssUserAgentSheet> all;
+        all.append(htmlSheets, htmlCount);
+        all.append(sheets);
         PrCssPresentationDesc renderDesc{
             .document = document,
             .font = defaultFont,
             .shaper = shaper,
             .agent = agent,
             .userAgentSheets = all.data(),
-            .userAgentSheetCount = uint32_t(all.size()),
+            .userAgentSheetCount = all.count(),
         };
         presentation = prCssPresentationCreate(&renderDesc);
         prHtmlPresentationUpdate(presentation, prLayoutVecFromPx(viewport));
@@ -211,12 +211,11 @@ PrCssPresentationStats update(Page& page) {
 
 // Returns the resolved value of `property` of the element with `id`, or of its pseudo-element that `pseudoElement`
 // names, as a script reads it.
-std::string resolved(Page& page, const char* id, PrCssProperty property, const char* pseudoElement = "") {
+String resolved(Page& page, const char* id, PrCssProperty property, const char* pseudoElement = "") {
     PrCssDeclarationName name = prCssDeclarationNameFromProperty(property);
     PrCssStyleProperties* computed = prCssElementComputedStyle(byId(page, id), pseudoElement);
     PrRawString read = prCssStyleDeclarationGetPropertyValue(prCssStylePropertiesAsCssStyleDeclaration(computed), &name);
-    std::string value(prRawStringView(&read).data, prRawStringView(&read).size);
-    prRawStringReset(&read);
+    String value = String::adopt(read);
     return value;
 }
 
@@ -252,7 +251,7 @@ void runDue(PrHtmlPage* page) {
 // event, with its elapsed time and the timeline's time at which it fires, the timeline's time that a timer reads, and
 // the frames that ran.
 struct Observed {
-    std::vector<std::string> events;
+    Array<String> events;
     double timerSaw = -1;
     uint32_t frames = 0;
     PrHtmlDocumentTimeline* PR_NULLABLE timeline = nullptr;
@@ -288,17 +287,16 @@ Observed observeAnimation(PrHtmlAnimationFrames frames) {
             PrStringView type = prDomEventType(event);
             double time = -1;
             prHtmlDocumentTimelineCurrentTime(o->timeline, &time);
-            char line[128];
-            snprintf(line, sizeof(line), "%.*s %.3f at %.1f", int(type.size), type.data,
-                prCssAnimationEventElapsedTime(prCssAnimationEventQuery(event)), time);
-            o->events.push_back(line);
+            o->events.push(format("{} {:.3f} at {:.1f}", type,
+                prCssAnimationEventElapsedTime(prCssAnimationEventQuery(event)), time));
         },
         &seen,
         1,
         nullptr,
         nullptr,
     };
-    for (const char* type : {"animationstart", "animationiteration", "animationend"})
+    const char* const types[] = {"animationstart", "animationiteration", "animationend"};
+    for (const char* type : types)
         prDomEventTargetAddEventListener(prDomNodeAsEventTarget(prDomElementAsNode(a)), type, &record, nullptr);
     PrHtmlTimerHandler timer{
         [](void* PR_NULLABLE c) {
@@ -326,23 +324,21 @@ Observed observeAnimation(PrHtmlAnimationFrames frames) {
 
 // Returns the boxes under `node`, joined by `separator`: the text of each text box, and the boxes under each other box
 // in brackets, joined by nothing.
-std::string boxesUnder(PrLayoutTree* tree, PrLayoutNode node, const char* separator) {
-    std::string out;
+String boxesUnder(PrLayoutTree* tree, PrLayoutNode node, const char* separator) {
+    String out("");
     for (PrLayoutNode c = prLayoutNodeFirstChild(tree, node); c != kPrLayoutNodeNone; c = prLayoutNodeNextSibling(tree, c)) {
         if (c != prLayoutNodeFirstChild(tree, node))
-            out += separator;
-        if (prLayoutNodeKind(tree, c) == PrLayoutNodeKind_Text) {
-            PrStringView text = prLayoutNodeText(tree, c);
-            out.append(text.data, text.size);
-        } else {
-            out += '[' + boxesUnder(tree, c, "") + ']';
-        }
+            out.append(separator);
+        if (prLayoutNodeKind(tree, c) == PrLayoutNodeKind_Text)
+            out.append(prLayoutNodeText(tree, c));
+        else
+            formatTo(out, "[{}]", boxesUnder(tree, c, ""));
     }
     return out;
 }
 
 // Returns the boxes under the box of the element with `id`, joined by spaces (boxesUnder).
-std::string childBoxes(Page& page, const char* id) {
+String childBoxes(Page& page, const char* id) {
     return boxesUnder(prCssPresentationTree(page.presentation), page.node(id), " ");
 }
 
@@ -364,12 +360,11 @@ PrDomElement* inShadow(PrDomShadowRoot* shadow, const char* selector) {
 }
 
 // Returns the resolved value of `property` of `element`, as a script reads it.
-std::string resolvedOf(PrDomElement* element, PrCssProperty property) {
+String resolvedOf(PrDomElement* element, PrCssProperty property) {
     PrCssDeclarationName name = prCssDeclarationNameFromProperty(property);
     PrRawString read = prCssStyleDeclarationGetPropertyValue(
         prCssStylePropertiesAsCssStyleDeclaration(prCssElementComputedStyle(element, "")), &name);
-    std::string value(prRawStringView(&read).data, prRawStringView(&read).size);
-    prRawStringReset(&read);
+    String value = String::adopt(read);
     return value;
 }
 
@@ -389,8 +384,14 @@ CssAppearance usedAppearance(Page& page, const char* id, bool before = false) {
 }
 
 // Returns the commands that `html` paints at 100ms and at 1100ms, as text. The page runs in a browsing context on a
-// clock that the test steps, and is painted through a view, as a host shows it.
-std::pair<std::string, std::string> paintedAtTwoTimes(const char* html) {
+// clock that the test steps, and is painted through a view, as a host shows it. The commands that a page paints at two
+// times, as text.
+struct Painted {
+    String first;
+    String second;
+};
+
+Painted paintedAtTwoTimes(const char* html) {
     Page fonts("");
     SteppedClock clock;
     PrHtmlHost host = prHtmlHostDefault();
@@ -420,15 +421,14 @@ std::pair<std::string, std::string> paintedAtTwoTimes(const char* html) {
         prHtmlViewPaint(view, list);
         prHtmlViewDestroy(view);
         PrRawString dump = prDrawListDump(list);
-        std::string text(prRawStringView(&dump).data, prRawStringView(&dump).size);
-        prRawStringReset(&dump);
+        String text = String::adopt(dump);
         prDrawListRelease(list);
         return text;
     };
-    std::string start = paintedAt(100);
-    std::string later = paintedAt(1100);
+    String start = paintedAt(100);
+    String later = paintedAt(1100);
     prHtmlPageDestroy(page);
-    return {start, later};
+    return Painted{.first = move(start), .second = move(later)};
 }
 
 } // namespace
@@ -497,9 +497,9 @@ TEST_CASE("a pseudo-element's rules style it, under its originating element's fe
     CHECK(resolved(page, "a", PrCssProperty_Width, "before") == "10px");
     CHECK(resolved(page, "a", PrCssProperty_Width, "::selection") == "10px");
     // An argument that is not a pseudo-element gives an empty style.
-    CHECK(resolved(page, "a", PrCssProperty_Width, ":hover").empty());
-    CHECK(resolved(page, "a", PrCssProperty_Width, "::nonsense").empty());
-    CHECK(resolved(page, "a", PrCssProperty_Width, "::part(x)").empty());
+    CHECK(resolved(page, "a", PrCssProperty_Width, ":hover").isEmpty());
+    CHECK(resolved(page, "a", PrCssProperty_Width, "::nonsense").isEmpty());
+    CHECK(resolved(page, "a", PrCssProperty_Width, "::part(x)").isEmpty());
 }
 
 TEST_CASE("a computed style gives the element's custom properties, read one at a time and listed after the longhands") {
@@ -511,8 +511,7 @@ TEST_CASE("a computed style gives the element's custom properties, read one at a
         PrCssDeclarationName name{};
         REQUIRE(prCssStyleDeclarationNameFromText(computed, text, &name));
         PrRawString read = prCssStyleDeclarationGetPropertyValue(computed, &name);
-        std::string value(prRawStringView(&read).data, prRawStringView(&read).size);
-        prRawStringReset(&read);
+        String value = String::adopt(read);
         prCssDeclarationNameReset(&name);
         return value;
     };
@@ -521,13 +520,12 @@ TEST_CASE("a computed style gives the element's custom properties, read one at a
     // Custom properties inherit.
     CHECK(custom("b", "--blur") == "20px");
     CHECK(custom("b", "--own") == "x");
-    CHECK(custom("a", "--own").empty());
+    CHECK(custom("a", "--own").isEmpty());
     PrRawString text = prCssStyleDeclarationCssText(
         prCssStylePropertiesAsCssStyleDeclaration(prCssElementComputedStyle(byId(page, "b"), "")));
-    std::string listed(prRawStringView(&text).data, prRawStringView(&text).size);
-    prRawStringReset(&text);
-    CHECK(listed.find("--own: x;") != std::string::npos);
-    CHECK(listed.find("--blur: 20px;") > listed.find("width:"));
+    String listed = String::adopt(text);
+    CHECK(prStringContains(listed, "--own: x;"));
+    CHECK(prStringFind(listed, "--blur: 20px;") > prStringFind(listed, "width:"));
 }
 
 TEST_CASE("::first-line and ::first-letter take their rules, and the first letter inherits from the first line") {
@@ -961,7 +959,7 @@ TEST_CASE("the user agent's rules for quirks mode apply in quirks mode alone") {
     CHECK(resolved(quirks, "a", PrCssProperty_BoxSizing) == "border-box");
     CHECK(resolved(quirks, "i", PrCssProperty_BoxSizing) == "border-box");
     CHECK(resolved(quirks, "m", PrCssProperty_BoxSizing) == "content-box");
-    Page standard((std::string("<!doctype html>") + body).c_str());
+    Page standard(format("<!doctype html>{}", body));
     CHECK(resolved(standard, "f", PrCssProperty_MarginBottom) == "0px");
     CHECK(resolved(standard, "t", PrCssProperty_FontWeight) == "700");
     CHECK(resolved(standard, "a", PrCssProperty_BoxSizing) == "content-box");
@@ -1110,7 +1108,7 @@ TEST_CASE("the used appearance follows appearance, the kind of widget, and the a
 }
 
 TEST_CASE("a sheet for one appearance styles the widgets rendered with it, in its place in the cascade") {
-    std::vector<PrCssUserAgentSheet> sheets{
+    const PrCssUserAgentSheet sheets[] = {
         {
             .source = "input { margin-left: 7px } div, .a::before { color: rgb(0, 128, 0) }",
             .appearance = PrCssSheetAppearance_Native,
@@ -1122,7 +1120,7 @@ TEST_CASE("a sheet for one appearance styles the widgets rendered with it, in it
         "<input id=native><input id=pad class=pad><input id=none class=none><input id=base class=base>"
         "<input id=bg class=bg><div id=div style='appearance: auto'></div>"
         "<button id=button class=a></button><div id=plain class=a></div>",
-        PrVec2{800, 600}, prDomAgentOptionsDefault(), sheets);
+        PrVec2{800, 600}, prDomAgentOptionsDefault(), Span(sheets));
     CHECK(resolved(page, "native", PrCssProperty_MarginLeft) == "7px");
     CHECK(resolved(page, "pad", PrCssProperty_MarginLeft) == "5px");
     CHECK(resolved(page, "none", PrCssProperty_MarginLeft) == "0px");
@@ -1141,7 +1139,8 @@ TEST_CASE("a sheet for one appearance styles the widgets rendered with it, in it
 TEST_CASE("controls take a font of 10pt") {
     Page page("<!doctype html><input id=i><button id=b>x</button><select id=s></select><textarea id=t></textarea><p id=p>");
     // 10pt is 13.333px, which a length holds as 853/64.
-    for (const char* id : {"i", "b", "s", "t"})
+    const char* const ids[] = {"i", "b", "s", "t"};
+    for (const char* id : ids)
         CHECK(page.fontStyle(id).size == 13.328125f);
     CHECK(page.fontStyle("p").size == 16.0f);
 }
@@ -1149,7 +1148,8 @@ TEST_CASE("controls take a font of 10pt") {
 TEST_CASE("a control rendered with its base appearance takes its colors and font from the page") {
     Page page("<!doctype html><style>body { color: rgb(0, 128, 0); font-size: 20px } .base { appearance: base }"
         "</style><input id=text class=base><button id=button class=base>x</button><input id=native>");
-    for (const char* id : {"text", "button"}) {
+    const char* const ids[] = {"text", "button"};
+    for (const char* id : ids) {
         CHECK(resolved(page, id, PrCssProperty_Color) == "rgb(0, 128, 0)");
         CHECK(resolved(page, id, PrCssProperty_FontSize) == "20px");
         CHECK(resolved(page, id, PrCssProperty_BoxSizing) == "border-box");
@@ -1221,16 +1221,16 @@ TEST_CASE("custom properties substitute into values") {
 
 TEST_CASE("custom properties layer over the root's, and hide, inherit and override them") {
     // The root declares many properties, so its descendants' sets layer over it rather than copy it.
-    std::string html = "<style>:root {";
+    String html = "<style>:root {";
     for (int i = 0; i < 100; ++i)
-        html += " --r" + std::to_string(i) + ": " + std::to_string(i) + "px;";
-    html += " --w: 10px }#outer { --a: 4px; --w: 20px }#hide { --w: initial; width: var(--w, 1px) }"
+        formatTo(html, " --r{}: {}px;", i, i);
+    html.append(" --w: 10px }#outer { --a: 4px; --w: 20px }#hide { --w: initial; width: var(--w, 1px) }"
         "#cycle { --w: var(--w); width: var(--w, 2px) }#inherit { --w: inherit; width: var(--w) }"
         "#inner { --b: calc(var(--a) + var(--r5)); width: var(--b) }"
         "#deep { --c: 1px; width: calc(var(--w) + var(--a) + var(--c) + var(--r99)) }#root-only { width: var(--w) }"
         "</style><div id=root-only></div><div id=outer><div id=hide></div><div id=cycle></div><div id=inherit></div>"
-        "<div id=inner><div id=deep></div></div></div>";
-    Page page(html.c_str());
+        "<div id=inner><div id=deep></div></div></div>");
+    Page page(html);
     CHECK(px(page.box("root-only").width) == 10.0f);
     CHECK(px(page.box("hide").width) == 1.0f);
     CHECK(px(page.box("cycle").width) == 2.0f);
@@ -1376,7 +1376,7 @@ TEST_CASE("a document's default language is its content-language pragma's, or el
         return Answer{prTextFontLocale(text), px(box.width) == 1.0f};
     };
     auto load = [&](const char* source, const char* language) {
-        std::string text = std::string("<style>#a:lang(ko) { width: 1px }</style>") + source;
+        String text = format("<style>#a:lang(ko) {{ width: 1px }}</style>{}", source);
         PrHtmlResponseHeaders headers{};
         headers.contentLanguage = language != nullptr ? language : PrStringView{nullptr, 0};
         REQUIRE(prHtmlPageLoad(htmlPage, text, "about:blank", &headers) == PrStatus_Ok);
@@ -1572,12 +1572,12 @@ TEST_CASE("the root's used writing mode and direction are the body's, the princi
 }
 
 TEST_CASE("containment on the root or the body keeps the body's writing mode and overflow from the root") {
-    for (const char* on : {"r", "b"}) {
+    const char* const ons[] = {"r", "b"};
+    for (const char* on : ons) {
         CAPTURE(on);
-        std::string root = std::string("<html id=r") + (on[0] == 'r' ? " style='contain: layout'" : "") + ">";
-        std::string body = std::string("<body id=b style='writing-mode: vertical-rl; overflow: hidden") +
-            (on[0] == 'b' ? "; contain: paint'" : "'") + "><p>x</p></body></html>";
-        Page page((root + body).c_str());
+        String markup = format("<html id=r{}><body id=b style='writing-mode: vertical-rl; overflow: hidden{}><p>x</p></body></html>",
+            on[0] == 'r' ? " style='contain: layout'" : "", on[0] == 'b' ? "; contain: paint'" : "'");
+        Page page(markup);
         CHECK(page.font("r").writingMode == PrLayoutWritingMode_HorizontalTb);
         CHECK(page.box("b").overflowX == PrLayoutOverflow_Hidden);
         CHECK(verified(page.presentation));
@@ -1634,7 +1634,8 @@ TEST_CASE("scrollLeft and scrollTop are below zero from a right or bottom scroll
         " .t { width: 10px; height: 300px }</style><div id=rtl class=s style='direction: rtl'><div class=w></div></div>"
         "<div id=vrl class=s style='writing-mode: vertical-rl'><div class=w></div></div>"
         "<div id=up class=s style='writing-mode: vertical-rl; direction: rtl'><div class=t></div></div>");
-    for (const char* id : {"rtl", "vrl"}) {
+    const char* const ids[] = {"rtl", "vrl"};
+    for (const char* id : ids) {
         CAPTURE(id);
         PrDomElement* element = byId(page, id);
         CHECK(prCssElementScrollLeft(element) == 0);
@@ -1661,7 +1662,8 @@ TEST_CASE("scrollWidth and scrollHeight are a box's scrolling area, whether or n
         "<div id=scroller class=t><div><div></div><p></p></div></div>");
     // A child that reaches the padding box's far edges adds nothing, and a scroll container's own border is not
     // scrolled to.
-    for (const char* id : {"visible", "hidden"}) {
+    const char* const ids[] = {"visible", "hidden"};
+    for (const char* id : ids) {
         CAPTURE(id);
         CHECK(prCssElementScrollWidth(byId(page, id)) == 90);
         CHECK(prCssElementScrollHeight(byId(page, id)) == 90);
@@ -1696,14 +1698,14 @@ TEST_CASE("elements that match the same rules under the same inherited style tak
 TEST_CASE("an element restyled from the same inputs keeps its style, however many styles came between") {
     // The root declares custom properties, which are costly to compute again. Hundreds of distinct styles follow it,
     // more than the matched properties cache holds.
-    std::string markup = "<style>:root { --a: 1px; --b: 2px } :root[data-mode=dark] { --b: 3px } p { margin-top: var(--a) }";
+    String markup = "<style>:root { --a: 1px; --b: 2px } :root[data-mode=dark] { --b: 3px } p { margin-top: var(--a) }";
     for (uint32_t i = 0; i < 400; ++i)
-        markup += ".c" + std::to_string(i) + " { padding-top: " + std::to_string(i) + "px }";
-    markup += "</style>";
+        formatTo(markup, ".c{} {{ padding-top: {}px }}", i, i);
+    markup.append("</style>");
     for (uint32_t i = 0; i < 400; ++i)
-        markup += "<p class=c" + std::to_string(i) + ">p</p>";
-    markup += "<p id=last>p</p>";
-    Page page(markup.c_str());
+        formatTo(markup, "<p class=c{}>p</p>", i);
+    markup.append("<p id=last>p</p>");
+    Page page(markup);
     CHECK(verified(page.presentation));
     // An attribute that a selector reads, set to a value that it does not match, restyles the root alone, which takes
     // the style it had.
@@ -1829,7 +1831,8 @@ TEST_CASE("resolved sizes take the padding layout resolved against the containin
         "<div id=cb><span><span id=ib></span></span><span><img id=img></span><span><span id=bb></span></span></div>");
     CHECK(page.bounds("ib").right - page.bounds("ib").left == 40.0f);
     CHECK(page.bounds("ib").bottom - page.bounds("ib").top == 50.0f);
-    for (const char* id : {"ib", "img"}) {
+    const char* const ids[] = {"ib", "img"};
+    for (const char* id : ids) {
         CAPTURE(id);
         CHECK(resolved(page, id, PrCssProperty_Width) == "20px");
         CHECK(resolved(page, id, PrCssProperty_Height) == "10px");
@@ -1952,8 +1955,7 @@ TEST_CASE("border widths resolve snapped to whole target pixels, and one under a
         PrCssDeclarationName name = prCssDeclarationNameFromProperty(property);
         PrRawString read = prCssStyleDeclarationGetPropertyValue(
             prCssStylePropertiesAsCssStyleDeclaration(prCssElementComputedStyle(element, PrStringView{})), &name);
-        std::string value(prRawStringView(&read).data, prRawStringView(&read).size);
-        prRawStringReset(&read);
+        String value = String::adopt(read);
         return value;
     };
     prHtmlPresentationUpdate(presentation, prLayoutVecFromPx(PrVec2{800, 600}));
@@ -2005,11 +2007,11 @@ TEST_CASE("color-hdr() resolves for the display's headroom, which projects again
     setHeadroom(htmlPage, 4);
     prHtmlPresentationUpdate(presentation, prLayoutVecFromPx(PrVec2{800, 600}));
     CHECK(prCssPresentationStats(presentation).elementsStyled == 1);
-    float encodedFour = 1.055f * std::pow(4.0f, 1 / 2.4f) - 0.055f;
+    float encodedFour = 1.055f * prF32Pow(4.0f, 1 / 2.4f) - 0.055f;
     CHECK(background("hdr").g == doctest::Approx(encodedFour).epsilon(0.01));
     setHeadroom(htmlPage, 2);
     prHtmlPresentationUpdate(presentation, prLayoutVecFromPx(PrVec2{800, 600}));
-    float encodedTwo = 1.055f * std::pow(2.0f, 1 / 2.4f) - 0.055f;
+    float encodedTwo = 1.055f * prF32Pow(2.0f, 1 / 2.4f) - 0.055f;
     CHECK(background("hdr").g == doctest::Approx(encodedTwo).epsilon(0.01));
     CHECK(sameColor(background("sdr"), PrColor{1, 0, 0, 1}));
     CHECK(verified(presentation));
@@ -2048,7 +2050,7 @@ TEST_CASE("an inherited currentcolor and an animated color resolve for the displ
     CHECK(color("animated").g == doctest::Approx(1.0f).epsilon(0.01));
     setHeadroom(htmlPage, 4);
     prHtmlPresentationUpdate(presentation, prLayoutVecFromPx(PrVec2{800, 600}));
-    float encodedFour = 1.055f * std::pow(4.0f, 1 / 2.4f) - 0.055f;
+    float encodedFour = 1.055f * prF32Pow(4.0f, 1 / 2.4f) - 0.055f;
     CHECK(color("inherits").g == doctest::Approx(encodedFour).epsilon(0.01));
     CHECK(color("animated").g == doctest::Approx(encodedFour).epsilon(0.01));
     CHECK(verified(presentation));
@@ -2272,7 +2274,7 @@ TEST_CASE("dynamic-range-limit caps an element's colors, and a mix follows the d
         PrLayoutStyle record = prLayoutStyleRecord(tree, prLayoutNodeStyle(tree, node));
         return prLayoutDecorationStyleRecord(tree, record.groups[PrLayoutGroup_Decoration]);
     };
-    auto encoded = [](float linear) { return 1.055f * std::pow(linear, 1 / 2.4f) - 0.055f; };
+    auto encoded = [](float linear) { return 1.055f * prF32Pow(linear, 1 / 2.4f) - 0.055f; };
     setHeadroom(htmlPage, 4);
     prHtmlPresentationUpdate(presentation, prLayoutVecFromPx(PrVec2{800, 600}));
     CHECK(prColorFromColor16(decoration("standard").background).g == doctest::Approx(1.0f).epsilon(0.01));
@@ -2342,13 +2344,15 @@ TEST_CASE("the root's display is blockified, and its block box fills the viewpor
     };
     // A table shrinks to fit its content even as the root (css-tables-3/#layout-principles). Its width is the body's
     // margins around an x.
-    for (Case c : {Case{"inline", "block", "800px"}, Case{"inline-block", "block", "800px"},
+    const Case cases[] = {
+        Case{"inline", "block", "800px"}, Case{"inline-block", "block", "800px"},
         Case{"inline flow-root", "block", "800px"}, Case{"inline-table", "table", "24px"},
-                Case{"inline list-item", "list-item", "800px"}, Case{"initial", "block", "800px"},
-                Case{"inherit", "block", "800px"}}) {
+        Case{"inline list-item", "list-item", "800px"}, Case{"initial", "block", "800px"},
+        Case{"inherit", "block", "800px"},
+    };
+    for (Case c : cases) {
         CAPTURE(c.display);
-        std::string html = std::string("<html id=r style='display: ") + c.display + "'><body>x</body></html>";
-        Page page(html.c_str());
+        Page page(format("<html id=r style='display: {}'><body>x</body></html>", c.display));
         CHECK(resolved(page, "r", PrCssProperty_Display) == c.computed);
         CHECK(!prLayoutDisplayIsInlineLevel(page.box("r").display));
         CHECK(resolved(page, "r", PrCssProperty_Width) == c.width);
@@ -2644,15 +2648,17 @@ TEST_CASE("the overflow pair computes together: visible and clip beside a scroll
         const char* computedX;
         const char* computedY;
     };
-    for (Case c : {Case{"visible", "hidden", "auto", "hidden"}, Case{"clip", "scroll", "hidden", "scroll"},
+    const Case cases[] = {
+        Case{"visible", "hidden", "auto", "hidden"}, Case{"clip", "scroll", "hidden", "scroll"},
         Case{"auto", "visible", "auto", "auto"}, Case{"clip", "visible", "clip", "visible"},
-                Case{"visible", "clip", "visible", "clip"}, Case{"hidden", "clip", "hidden", "hidden"},
-                Case{"inherit", "visible", "scroll", "auto"}}) {
+        Case{"visible", "clip", "visible", "clip"}, Case{"hidden", "clip", "hidden", "hidden"},
+        Case{"inherit", "visible", "scroll", "auto"},
+    };
+    for (Case c : cases) {
         CAPTURE(c.x);
         CAPTURE(c.y);
-        std::string html = std::string("<div style='overflow-x: scroll; overflow-y: hidden'><div id=e style='overflow-x: ") +
-            c.x + "; overflow-y: " + c.y + "'></div></div>";
-        Page page(html.c_str());
+        Page page(format("<div style='overflow-x: scroll; overflow-y: hidden'><div id=e style='overflow-x: {}; overflow-y: {}'>"
+            "</div></div>", c.x, c.y));
         CHECK(resolved(page, "e", PrCssProperty_OverflowX) == c.computedX);
         CHECK(resolved(page, "e", PrCssProperty_OverflowY) == c.computedY);
         CHECK(verified(page.presentation));
@@ -2660,11 +2666,11 @@ TEST_CASE("the overflow pair computes together: visible and clip beside a scroll
 }
 
 TEST_CASE("a scroll container with visible in one axis clips both, and is hit in neither past its edge") {
-    for (const char* axis : {"overflow-y", "overflow-x"}) {
+    const char* const axises[] = {"overflow-y", "overflow-x"};
+    for (const char* axis : axises) {
         CAPTURE(axis);
-        std::string html = std::string("<style>body { margin: 0 }</style><div id=p style='width: 20px; height: 20px; ") +
-            axis + ": hidden'><div id=c style='width: 40px; height: 40px'></div></div>";
-        Page page(html.c_str());
+        Page page(format("<style>body {{ margin: 0 }}</style><div id=p style='width: 20px; height: 20px; {}: hidden'>"
+            "<div id=c style='width: 40px; height: 40px'></div></div>", axis));
         PrLayoutTree* tree = prCssPresentationTree(page.presentation);
         PrLayoutNode hit = kPrLayoutNodeNone;
         prLayoutTreeHitTest(tree, prLayoutVecFromPx(PrVec2{30, 10}), &hit, 1);
@@ -2838,8 +2844,8 @@ TEST_CASE("the presentations of an agent's documents lay out in turn on the agen
         .userAgentSheetCount = sheetCount,
     };
     PrCssPresentation* presentation = prCssPresentationCreate(&desc);
-    std::atomic<uint32_t> done{0};
-    prDomAgentSetLayoutDone(page.agent, [](void* context) { static_cast<std::atomic<uint32_t>*>(context)->fetch_add(1); }, &done);
+    Atomic<uint32_t> done{};
+    prDomAgentSetLayoutDone(page.agent, [](void* context) { static_cast<Atomic<uint32_t>*>(context)->fetchAdd(1); }, &done);
     for (uint32_t frame = 0; frame < 10; ++frame) {
         prDomElementSetAttribute(byId(page, "a"), "style", (frame % 2 == 0 ? "height: 30px" : "height: 10px"));
         prHtmlPresentationStart(page.presentation, prLayoutVecFromPx(PrVec2{800, 600}));
@@ -2871,8 +2877,8 @@ TEST_CASE("a job budget takes new content in in steps, and changes to the conten
         REQUIRE(prDomElementCreate(page.document, "p", nullptr, &item) == PrStatus_Ok);
         prDomNodeAppendChild(list, prDomElementAsNode(item));
     }
-    std::atomic<uint32_t> done{0};
-    prDomAgentSetLayoutDone(page.agent, [](void* context) { static_cast<std::atomic<uint32_t>*>(context)->fetch_add(1); }, &done);
+    Atomic<uint32_t> done{};
+    prDomAgentSetLayoutDone(page.agent, [](void* context) { static_cast<Atomic<uint32_t>*>(context)->fetchAdd(1); }, &done);
     // The smallest budget takes in the fewest elements that a job takes.
     prCssPresentationSetJobBudget(page.presentation, 1e-6);
     auto job = [&] {
@@ -3108,21 +3114,21 @@ TEST_CASE("a change restyles the elements whose selectors read the feature that 
 }
 
 TEST_CASE("a restyle of whole subtrees divides its work among a pool's threads, and gives the styles one thread does") {
-    std::string html = "<style>.row:nth-child(odd) { color: blue } .row .cell { padding-left: 2px }"
+    String html = "<style>.row:nth-child(odd) { color: blue } .row .cell { padding-left: 2px }"
         ".dark * { color: white; background-color: black } :root { --gap: 3px }"
         ".cell { margin-top: var(--gap) } :disabled { color: gray } input:default { width: 3px }"
         "</style><form id=f></form><div id=top>";
     for (uint32_t row = 0; row < 100; ++row) {
         // States that the selectors read, one of which looks up the form by ID.
-        html += "<div class=row><input type=submit form=f>";
+        html.append("<div class=row><input type=submit form=f>");
         for (uint32_t cell = 0; cell < 8; ++cell)
-            html += "<span class=cell style='width: " + std::to_string(cell) + "px'>x</span>";
-        html += "</div>";
+            formatTo(html, "<span class=cell style='width: {}px'>x</span>", cell);
+        html.append("</div>");
     }
-    html += "</div>";
+    html.append("</div>");
     HostPool pool(4);
-    Page parallel(html.c_str(), PrVec2{800, 600}, withPool(pool));
-    Page serial(html.c_str());
+    Page parallel(html, PrVec2{800, 600}, withPool(pool));
+    Page serial(html);
     PrCssPresentationStats stats = prCssPresentationStats(parallel.presentation);
     CHECK(pool.widest > 1);
     CHECK(stats.elementsStyledAhead > 900);
@@ -3131,7 +3137,8 @@ TEST_CASE("a restyle of whole subtrees divides its work among a pool's threads, 
     CHECK(stats.elementsStyled == prCssPresentationStats(serial.presentation).elementsStyled);
 
     // A class on an ancestor that restyles its whole subtree: the rows, their inputs and their cells.
-    for (Page* page : {&parallel, &serial}) {
+    Page* const pages[] = {&parallel, &serial};
+    for (Page* page : pages) {
         prDomElementSetAttribute(byId(*page, "top"), "class", "dark");
         stats = update(*page);
         CHECK(stats.elementsStyled == 1000);
@@ -3143,13 +3150,13 @@ TEST_CASE("a restyle of whole subtrees divides its work among a pool's threads, 
 TEST_CASE("a parallel restyle under an element with a running transition inherits what the transition presents") {
     // The threads compute each style under its parent's style from the cascade, which a running transition is not part
     // of.
-    std::string html = "<style>.x { color: black; transition: color 1s linear } .x.on { color: red }"
+    String html = "<style>.x { color: black; transition: color 1s linear } .x.on { color: red }"
         " .dark * { padding-left: 1px }</style><div id=top><div id=a class=x>";
     for (uint32_t i = 0; i < 600; ++i)
-        html += "<span>x</span>";
-    html += "</div></div>";
+        html.append("<span>x</span>");
+    html.append("</div></div>");
     HostPool pool(4);
-    Page page(html.c_str(), PrVec2{800, 600}, withPool(pool));
+    Page page(html, PrVec2{800, 600}, withPool(pool));
     prCssPresentationSetTime(page.presentation, 0);
     update(page);
     prDomElementSetAttribute(byId(page, "a"), "class", "x on");
@@ -3217,7 +3224,7 @@ TEST_CASE("a transition repaints, relayouts or composites as its property says, 
     PrCssStyleDeclaration* computed =
         prCssStylePropertiesAsCssStyleDeclaration(prCssElementComputedStyle(byId(page, "fade"), PrStringView{}));
     PrRawString read = prCssStyleDeclarationGetPropertyValue(computed, &name);
-    CHECK(std::string(prRawStringView(&read).data, prRawStringView(&read).size) == "0.5");
+    CHECK(prRawStringView(&read) == "0.5");
     prRawStringReset(&read);
     // A change midway transitions from the current value.
     prDomElementSetAttribute(byId(page, "fade"), "class", "");
@@ -3507,12 +3514,12 @@ TEST_CASE("a host that observes its animations through events alone runs the fra
     Observed all = observeAnimation(PrHtmlAnimationFrames_All);
     Observed observed = observeAnimation(PrHtmlAnimationFrames_Observed);
     auto joined = [](const Observed& o) {
-        std::string text;
-        for (const std::string& event : o.events)
-            text += event + "; ";
+        String text("");
+        for (const String& event : o.events)
+            formatTo(text, "{}; ", event);
         return text;
     };
-    REQUIRE(all.events.size() == 3);
+    REQUIRE(all.events.count() == 3);
     CHECK(joined(observed) == joined(all));
     CHECK(observed.timerSaw == all.timerSaw);
     CHECK(all.timerSaw > 12000);
@@ -3572,7 +3579,7 @@ TEST_CASE("a click on a link to a fragment scrolls to the element it names, whic
     CHECK(prCssElementGetBoundingClientRect(byId("x")).y == 0.0);
     CHECK(target(byId("x")));
     PrRawString hash = prHtmlWindowLocation(window, PrUrlComponent_Hash);
-    CHECK(std::string(prRawStringView(&hash).data, prRawStringView(&hash).size) == "#x");
+    CHECK(prRawStringView(&hash) == "#x");
     prRawStringReset(&hash);
 
     // A click that a listener cancels follows nothing.
@@ -3755,7 +3762,7 @@ TEST_CASE("a resize observer reports the boxes that changed, deeper ones in the 
     };
     // Each call's entries, and the box that the first call widens.
     struct Observed {
-        std::vector<std::vector<PrCssResizeObserverEntry>> calls;
+        Array<Array<PrCssResizeObserverEntry>> calls;
         PrDomElement* PR_NULLABLE widen = nullptr;
         uint32_t errors = 0;
     } observed;
@@ -3765,7 +3772,7 @@ TEST_CASE("a resize observer reports the boxes that changed, deeper ones in the 
     callback.invoke = [](void* PR_NULLABLE context, PrCssResizeObserver*, const PrCssResizeObserverEntry* entries,
             uint32_t count) {
         Observed& o = *static_cast<Observed*>(context);
-        o.calls.emplace_back(entries, entries + count);
+        o.calls.emplace().append(entries, count);
         if (o.widen != nullptr) {
             prDomElementSetAttribute(o.widen, "style", "width: 200px; height: 50px; padding: 5px 7px; border: 3px solid");
             o.widen = nullptr;
@@ -3790,8 +3797,8 @@ TEST_CASE("a resize observer reports the boxes that changed, deeper ones in the 
 
     // The first frame reports every box, a box without one at zero. The box inside the one that the call widens is
     // deeper, and is reported again in the same frame. The widened box is not, and its loop error is reported instead.
-    REQUIRE(observed.calls.size() == 2);
-    REQUIRE(observed.calls[0].size() == 4);
+    REQUIRE(observed.calls.count() == 2);
+    REQUIRE(observed.calls[0].count() == 4);
     const PrCssResizeObserverEntry& a = observed.calls[0][0];
     CHECK(a.target == byId("a"));
     CHECK(a.contentRect.x == 7.0);
@@ -3808,7 +3815,7 @@ TEST_CASE("a resize observer reports the boxes that changed, deeper ones in the 
     CHECK(observed.calls[0][2].borderBoxSize.inlineSize == 40.0);
     CHECK(observed.calls[0][2].borderBoxSize.blockSize == 20.0);
     CHECK(observed.calls[0][3].borderBoxSize.inlineSize == 0.0);
-    REQUIRE(observed.calls[1].size() == 1);
+    REQUIRE(observed.calls[1].count() == 1);
     CHECK(observed.calls[1][0].target == byId("in"));
     CHECK(observed.calls[1][0].contentBoxSize.inlineSize == 100.0);
     CHECK(observed.errors == 1);
@@ -3816,8 +3823,8 @@ TEST_CASE("a resize observer reports the boxes that changed, deeper ones in the 
     // The next frame reports the box that was skipped.
     clock.now = 40;
     runDue(page);
-    REQUIRE(observed.calls.size() == 3);
-    REQUIRE(observed.calls[2].size() == 1);
+    REQUIRE(observed.calls.count() == 3);
+    REQUIRE(observed.calls[2].count() == 1);
     CHECK(observed.calls[2][0].target == byId("a"));
     CHECK(observed.calls[2][0].contentBoxSize.inlineSize == 200.0);
     CHECK(prDomAgentIsIdle(prHtmlPageAgent(page)));
@@ -3827,8 +3834,8 @@ TEST_CASE("a resize observer reports the boxes that changed, deeper ones in the 
     prDomElementSetAttribute(byId("a"), "style", "width: 300px; height: 50px");
     clock.now = 60;
     runDue(page);
-    REQUIRE(observed.calls.size() == 4);
-    REQUIRE(observed.calls[3].size() == 1);
+    REQUIRE(observed.calls.count() == 4);
+    REQUIRE(observed.calls[3].count() == 1);
     CHECK(observed.calls[3][0].target == byId("in"));
     CHECK(observed.calls[3][0].contentBoxSize.inlineSize == 150.0);
     CHECK(observed.errors == 1);
@@ -3855,16 +3862,16 @@ TEST_CASE("an intersection observer reports a target's crossings of its threshol
     PrDomElement* target = prDomNodeGetElementById(prDomDocumentAsNode(document), "t");
     REQUIRE(target != nullptr);
     // The entries of each call.
-    std::vector<std::vector<PrCssIntersectionObserverEntry>> calls;
+    Array<Array<PrCssIntersectionObserverEntry>> calls;
     PrCssIntersectionCallback callback{};
     callback.context = &calls;
     callback.invoke = [](void* PR_NULLABLE context, PrCssIntersectionObserver* observer) {
-        std::vector<std::vector<PrCssIntersectionObserverEntry>>& delivered =
-            *static_cast<std::vector<std::vector<PrCssIntersectionObserverEntry>>*>(context);
-        delivered.emplace_back();
+        Array<Array<PrCssIntersectionObserverEntry>>& delivered =
+            *static_cast<Array<Array<PrCssIntersectionObserverEntry>>*>(context);
+        delivered.emplace();
         PrCssIntersectionObserverEntry entry{};
         while (prCssIntersectionObserverTakeRecords(observer, &entry, 1) != 0) {
-            delivered.back().push_back(entry);
+            delivered.last().push(entry);
             prDomNodeRelease(prDomElementAsNode(entry.target));
         }
     };
@@ -3880,7 +3887,7 @@ TEST_CASE("an intersection observer reports a target's crossings of its threshol
     CHECK(sorted[0] == 0.0);
     CHECK(sorted[1] == 0.5);
     PrRawString margin = prCssIntersectionObserverRootMargin(observer);
-    CHECK(std::string(prRawStringView(&margin).data, prRawStringView(&margin).size) == "0px 0px 0px 0px");
+    CHECK(prRawStringView(&margin) == "0px 0px 0px 0px");
     prRawStringReset(&margin);
     prCssIntersectionObserverObserve(observer, target);
     CHECK_FALSE(prDomAgentIsIdle(prHtmlPageAgent(page)));
@@ -3888,8 +3895,8 @@ TEST_CASE("an intersection observer reports a target's crossings of its threshol
     runDue(page);
 
     // The first update reports the target below the viewport, which does not intersect it.
-    REQUIRE(calls.size() == 1);
-    REQUIRE(calls[0].size() == 1);
+    REQUIRE(calls.count() == 1);
+    REQUIRE(calls[0].count() == 1);
     const PrCssIntersectionObserverEntry& below = calls[0][0];
     CHECK_FALSE(below.isIntersecting);
     CHECK(below.intersectionRatio == 0.0);
@@ -3901,8 +3908,8 @@ TEST_CASE("an intersection observer reports a target's crossings of its threshol
     prCssElementScroll(prDomDocumentElement(document), &half);
     clock.now = 40;
     runDue(page);
-    REQUIRE(calls.size() == 2);
-    REQUIRE(calls[1].size() == 1);
+    REQUIRE(calls.count() == 2);
+    REQUIRE(calls[1].count() == 1);
     CHECK(calls[1][0].isIntersecting);
     CHECK(calls[1][0].intersectionRatio == 0.5);
     CHECK(calls[1][0].intersectionRect.height == 50.0);
@@ -3912,7 +3919,7 @@ TEST_CASE("an intersection observer reports a target's crossings of its threshol
     prCssElementScroll(prDomDocumentElement(document), &more);
     clock.now = 60;
     runDue(page);
-    CHECK(calls.size() == 2);
+    CHECK(calls.count() == 2);
 
     // A target observed once the page is idle keeps it from idling until its first update is delivered.
     REQUIRE(prDomAgentIsIdle(prHtmlPageAgent(page)));
@@ -3922,8 +3929,8 @@ TEST_CASE("an intersection observer reports a target's crossings of its threshol
     CHECK_FALSE(prDomAgentIsIdle(prHtmlPageAgent(page)));
     clock.now = 80;
     runDue(page);
-    REQUIRE(calls.size() == 3);
-    REQUIRE(calls[2].size() == 1);
+    REQUIRE(calls.count() == 3);
+    REQUIRE(calls[2].count() == 1);
     CHECK(calls[2][0].isIntersecting);
     CHECK(prDomAgentIsIdle(prHtmlPageAgent(page)));
     prCssIntersectionObserverDisconnect(later);
@@ -4081,17 +4088,16 @@ TEST_CASE("transitions and animations fire their events at the rendering updates
         "#a { animation: k 100ms linear 2 }</style><div id=t></div><div id=a></div>", "about:blank", nullptr) ==
         PrStatus_Ok);
     PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(page));
-    std::string log;
+    String log;
     PrDomEventListener listener{
         [](void* data, PrDomEvent* event) {
-            std::string* log = static_cast<std::string*>(data);
-            PrStringView type = prDomEventType(event);
-            *log += std::string(type.data, type.size);
+            String* log = static_cast<String*>(data);
+            log->append(prDomEventType(event));
             if (PrCssTransitionEvent* transition = prCssTransitionEventQuery(event))
-                *log += "@" + std::to_string(int(prCssTransitionEventElapsedTime(transition) * 1000));
+                formatTo(*log, "@{}", int(prCssTransitionEventElapsedTime(transition) * 1000));
             if (PrCssAnimationEvent* animation = prCssAnimationEventQuery(event))
-                *log += "@" + std::to_string(int(prCssAnimationEventElapsedTime(animation) * 1000));
-            *log += " ";
+                formatTo(*log, "@{}", int(prCssAnimationEventElapsedTime(animation) * 1000));
+            log->append(" ");
         },
         &log,
         1,
@@ -4099,8 +4105,11 @@ TEST_CASE("transitions and animations fire their events at the rendering updates
         nullptr,
     };
     PrDomEventTarget* target = prDomNodeAsEventTarget(prDomDocumentAsNode(document));
-    for (const char* type : {"transitionrun", "transitionstart", "transitionend", "transitioncancel", "animationstart",
-        "animationiteration", "animationend", "animationcancel"})
+    const char* const types[] = {
+        "transitionrun", "transitionstart", "transitionend", "transitioncancel",
+        "animationstart", "animationiteration", "animationend", "animationcancel",
+    };
+    for (const char* type : types)
         prDomEventTargetAddEventListener(target, type, &listener, nullptr);
     PrDomElement* t = prDomNodeGetElementById(prDomDocumentAsNode(document), "t");
 
@@ -4108,7 +4117,7 @@ TEST_CASE("transitions and animations fire their events at the rendering updates
     // sends its events from the following update.
     clock.now = 20;
     runDue(page);
-    CHECK(log.empty());
+    CHECK(log.isEmpty());
     prDomElementSetAttribute(t, "class", "wide");
     clock.now = 40;
     runDue(page);
@@ -4207,9 +4216,9 @@ TEST_CASE("a document streamed in pieces renders as it arrives, once its head is
     CHECK(prCssPresentationLayoutNode(presentation, prDomElementAsNode(first)) != kPrLayoutNodeNone);
 
     // A large piece parses a slice per task, and each update styles what the slices added.
-    std::string many;
+    String many;
     for (uint32_t i = 0; i < 2000; ++i)
-        many += "<p>paragraph</p>";
+        many.append("<p>paragraph</p>");
     prHtmlPageAppendLoad(page, many);
     CHECK(prDomAgentRunTask(prHtmlPageAgent(page)));
     prHtmlPresentationUpdate(presentation, prLayoutVecFromPx(PrVec2{800, 600}));
@@ -4244,9 +4253,9 @@ TEST_CASE("text that a streamed load appends to a text node reaches the presenta
 
     // Each piece ends inside the paragraph's text, so the parser appends each later piece to the text node that the
     // first made, and the presentation lays out between the pieces.
-    std::string source = "<!doctype html><body><p id=t>The page is complete</p>";
-    for (size_t at = 0; at < source.size(); at += 3) {
-        prHtmlPageAppendLoad(page, source.substr(at, 3));
+    PrStringView source = "<!doctype html><body><p id=t>The page is complete</p>";
+    for (size_t at = 0; at < source.size; at += 3) {
+        prHtmlPageAppendLoad(page, prStringSlice(source, at, at + 3 < source.size ? 3 : source.size - at));
         runDue(page);
         prHtmlPresentationUpdate(presentation, prLayoutVecFromPx(PrVec2{800, 600}));
     }
@@ -4277,9 +4286,9 @@ TEST_CASE("a load restyles on one thread, and a change once the load is in divid
     REQUIRE(prHtmlPageBeginLoad(page, "about:blank", &utf8) == PrStatus_Ok);
     PrCssPresentation* presentation = prHtmlPagePresentation(page);
     PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(page));
-    std::string many = "<!doctype html><html><head><style>.dark * { color: white }</style></head><body>";
+    String many = "<!doctype html><html><head><style>.dark * { color: white }</style></head><body>";
     for (uint32_t i = 0; i < 2000; ++i)
-        many += "<p>paragraph</p>";
+        many.append("<p>paragraph</p>");
     prHtmlPageAppendLoad(page, many);
     runDue(page);
     prHtmlPresentationStart(presentation, prLayoutVecFromPx(PrVec2{800, 600}));
@@ -4313,13 +4322,13 @@ TEST_CASE("a load restyles on one thread, and a change once the load is in divid
 }
 
 TEST_CASE("without a pool, a restyle runs on the agent's thread alone, whatever number of threads it asks for") {
-    std::string html = "<style>.dark * { color: white }</style><div id=top>";
+    String html = "<style>.dark * { color: white }</style><div id=top>";
     for (uint32_t i = 0; i < 2000; ++i)
-        html += "<span>x</span>";
-    html += "</div>";
+        html.append("<span>x</span>");
+    html.append("</div>");
     PrDomAgentOptions options = prDomAgentOptionsDefault();
     options.restyleThreads = 4;
-    Page page(html.c_str(), PrVec2{800, 600}, options);
+    Page page(html, PrVec2{800, 600}, options);
     prDomElementSetAttribute(byId(page, "top"), "class", "dark");
     PrCssPresentationStats stats = update(page);
     CHECK(stats.elementsStyled == 2000);
@@ -4327,17 +4336,18 @@ TEST_CASE("without a pool, a restyle runs on the agent's thread alone, whatever 
 }
 
 TEST_CASE("a restyle divides its work among no more threads than the agent asks for, nor than its pool has") {
-    std::string html = "<style>.dark * { color: white }</style><div id=top>";
+    String html = "<style>.dark * { color: white }</style><div id=top>";
     for (uint32_t i = 0; i < 2000; ++i)
-        html += "<span>x</span>";
-    html += "</div>";
+        html.append("<span>x</span>");
+    html.append("</div>");
     HostPool wide(8);
     PrDomAgentOptions options = withPool(wide);
     options.restyleThreads = 2;
-    Page limited(html.c_str(), PrVec2{800, 600}, options);
+    Page limited(html, PrVec2{800, 600}, options);
     HostPool narrow(3);
-    Page pooled(html.c_str(), PrVec2{800, 600}, withPool(narrow));
-    for (Page* page : {&limited, &pooled}) {
+    Page pooled(html, PrVec2{800, 600}, withPool(narrow));
+    Page* const pages[] = {&limited, &pooled};
+    for (Page* page : pages) {
         prDomElementSetAttribute(byId(*page, "top"), "class", "dark");
         CHECK(update(*page).elementsStyledAhead == 2000);
     }
@@ -4549,6 +4559,12 @@ TEST_CASE("light-dark() of images picks the image or none of the element's used 
         "<div id=both style='color-scheme: light dark'></div>", "about:blank", nullptr) == PrStatus_Ok);
     PrCssPresentation* presentation = prHtmlPagePresentation(htmlPage);
     PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(htmlPage));
+    // The kinds of an element's two layers.
+    struct Kinds {
+        PrLayoutImageKind first;
+        PrLayoutImageKind second;
+        bool operator==(const Kinds&) const = default;
+    };
     // Returns the kinds of the element's two layers.
     auto kinds = [&](const char* id) {
         PrDomElement* element = prDomNodeGetElementById(prDomDocumentAsNode(document), id);
@@ -4559,17 +4575,13 @@ TEST_CASE("light-dark() of images picks the image or none of the element's used 
         PrLayoutBackgroundIndex layers =
             prLayoutDecorationStyleRecord(tree, record.groups[PrLayoutGroup_Decoration]).backgroundLayers;
         REQUIRE(prLayoutBackgroundLayerCount(tree, layers) == 2);
-        return std::pair<PrLayoutImageKind, PrLayoutImageKind>{
-            prLayoutBackgroundLayer(tree, layers, 0).kind,
-            prLayoutBackgroundLayer(tree, layers, 1).kind,
-        };
+        return Kinds{prLayoutBackgroundLayer(tree, layers, 0).kind, prLayoutBackgroundLayer(tree, layers, 1).kind};
     };
     auto prefer = [&](PrAppColorScheme scheme) {
         PrAppUserPreferences preferences{.colorScheme = scheme};
         prHtmlPageSetUserPreferences(htmlPage, &preferences);
         prHtmlPresentationUpdate(presentation, prLayoutVecFromPx(PrVec2{800, 600}));
     };
-    using Kinds = std::pair<PrLayoutImageKind, PrLayoutImageKind>;
     const Kinds lightKinds{PrLayoutImageKind_Gradient, PrLayoutImageKind_None};
     const Kinds darkKinds{PrLayoutImageKind_None, PrLayoutImageKind_Gradient};
     prefer(PrAppColorScheme_Light);
@@ -4701,9 +4713,9 @@ TEST_CASE("a calculation that folds into a length inside a function leaves the f
     prDomElementSetAttribute(byId(page, "t"), "style",
         "background-image: radial-gradient(circle calc(-0.5em + 10px) at calc(-1em + 10px) calc(-2em + 10px), red, blue)");
     update(page);
-    std::string value = resolved(page, "t", PrCssProperty_BackgroundImage);
-    CHECK(value.find("at -30px -70px, ") != std::string::npos);
-    CHECK(value.back() == ')');
+    String value = resolved(page, "t", PrCssProperty_BackgroundImage);
+    CHECK(prStringContains(value, "at -30px -70px, "));
+    CHECK(prStringEndsWith(value, ")"));
 }
 
 TEST_CASE("an element that loses its box before its children's boxes are made gives them none, and gives them boxes "
@@ -4748,22 +4760,20 @@ TEST_CASE("an attribute that changes while its element is out of the document gi
 }
 
 TEST_CASE("a CSS animation in a marker's content moves the marker frame by frame") {
-    std::pair<std::string, std::string> painted = paintedAtTwoTimes(
-        "<!doctype html><style>.turn { animation: turn 4s linear infinite }"
-            " @keyframes turn { to { transform: rotate(90deg) } }</style>"
-            "<svg width=0 height=0><marker id=m viewBox='-10 -10 20 20' markerWidth=20 markerHeight=20"
-            " markerUnits=userSpaceOnUse><rect id=r class=turn x=-6 y=-6 width=12 height=12 /></marker></svg>"
-            "<svg width=160 height=60><path d='M 20 30 H 140' stroke=black marker-start='url(#m)' /></svg>");
+    Painted painted = paintedAtTwoTimes("<!doctype html><style>.turn { animation: turn 4s linear infinite }"
+        " @keyframes turn { to { transform: rotate(90deg) } }</style>"
+        "<svg width=0 height=0><marker id=m viewBox='-10 -10 20 20' markerWidth=20 markerHeight=20"
+        " markerUnits=userSpaceOnUse><rect id=r class=turn x=-6 y=-6 width=12 height=12 /></marker></svg>"
+        "<svg width=160 height=60><path d='M 20 30 H 140' stroke=black marker-start='url(#m)' /></svg>");
     CHECK(painted.first != painted.second);
 }
 
 TEST_CASE("a CSS animation of an instance's transform in a use element's shadow tree moves it frame by frame") {
     // An instance root's parent is the use's shadow root, but in the flat tree it is the use: SVG content, which no
     // compositor runs, so the presentation applies the animation.
-    std::pair<std::string, std::string> painted = paintedAtTwoTimes(
-        "<!doctype html><style>.move { animation: move 4s linear infinite }"
-            " @keyframes move { to { transform: translateX(80px) } }</style>"
-            "<svg width=160 height=60><defs><rect id=r class=move x=20 y=20 width=20 height=20 /></defs><use href='#r' /></svg>");
+    Painted painted = paintedAtTwoTimes("<!doctype html><style>.move { animation: move 4s linear infinite }"
+        " @keyframes move { to { transform: translateX(80px) } }</style>"
+        "<svg width=160 height=60><defs><rect id=r class=move x=20 y=20 width=20 height=20 /></defs><use href='#r' /></svg>");
     CHECK(painted.first != painted.second);
 }
 

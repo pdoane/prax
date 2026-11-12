@@ -11,6 +11,7 @@
 #include "pr/float.h"
 #include "pr/hash_index.h"
 #include "pr/raw_array.h"
+#include "pr/string_ops.h"
 
 #include "draw/backends/shared/src/draw_shared_writer.h"
 
@@ -538,9 +539,8 @@ void addPage(PrDrawWriter* writer, const PrDrawPage* page) {
         prTextBufferAppend(&out, "</defs>\n");
     }
     uint32_t output = s.page++;
-    s.document.write(s.document.context, output, PrByteView{reinterpret_cast<const uint8_t*>(out.data), out.size});
-    s.document.write(s.document.context, output,
-        PrByteView{reinterpret_cast<const uint8_t*>(s.body.data), s.body.size});
+    s.document.write(s.document.context, output, prStringBytes(prTextBufferView(&out)));
+    s.document.write(s.document.context, output, prStringBytes(prTextBufferView(&s.body)));
     s.document.write(s.document.context, output, PrByteView{reinterpret_cast<const uint8_t*>("</svg>\n"), 7});
 }
 

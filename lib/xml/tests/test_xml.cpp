@@ -1,39 +1,32 @@
+#include "pr/array.h"
+#include "pr/span.h"
+#include "pr/string.h"
 #include "pr/string_ops.h"
 #include "pr/xml.h"
 
 #include "tools/harness/test.h"
 
-#include <string>
-#include <vector>
-
 namespace pr_impl {
 namespace {
-
-std::string text(PrStringView view) {
-    return std::string(view.data != nullptr ? view.data : "", view.size);
-}
 
 // Writes what a parse reports as a tree, one line per node, indented two spaces per level. An element is shown as its
 // namespace URL and qualified name, followed by its attributes. Each other node is shown as its kind and data.
 struct Recorder {
-    std::string out;
+    String out;
     int depth = 0;
 
-    void line(const std::string& text) {
-        out += std::string(size_t(depth) * 2, ' ') + text + "\n";
-    }
+    void line(PrStringView text) { formatTo(out, "{:{}}{}\n", "", depth * 2, text); }
 };
 
-std::string qualified(const PrXmlName& name) {
-    return (name.prefix.data != nullptr ? text(name.prefix) + ":" : "") + text(name.local);
+String qualified(const PrXmlName& name) {
+    return name.prefix.data != nullptr ? format("{}:{}", name.prefix, name.local) : String(name.local);
 }
 
 PrStatus recordStart(void* context, PrXmlParser*, const PrXmlName* name, const PrXmlAttribute* attributes, uint32_t count) {
     Recorder* r = static_cast<Recorder*>(context);
-    std::string line = "<" + text(name->space) + " " + qualified(*name) + ">";
+    String line = format("<{} {}>", name->space, qualified(*name));
     for (uint32_t i = 0; i < count; ++i)
-        line += " " + text(attributes[i].name.space) + " " + qualified(attributes[i].name) + "=" +
-            text(attributes[i].value);
+        formatTo(line, " {} {}={}", attributes[i].name.space, qualified(attributes[i].name), attributes[i].value);
     r->line(line);
     ++r->depth;
     return PrStatus_Ok;
@@ -45,27 +38,27 @@ PrStatus recordEnd(void* context, PrXmlParser*, const PrXmlName*) {
 }
 
 PrStatus recordText(void* context, PrXmlParser*, PrStringView data) {
-    static_cast<Recorder*>(context)->line("\"" + text(data) + "\"");
+    static_cast<Recorder*>(context)->line(format("\"{}\"", data));
     return PrStatus_Ok;
 }
 
 PrStatus recordCdata(void* context, PrXmlParser*, PrStringView data) {
-    static_cast<Recorder*>(context)->line("<![CDATA[" + text(data) + "]]>");
+    static_cast<Recorder*>(context)->line(format("<![CDATA[{}]]>", data));
     return PrStatus_Ok;
 }
 
 PrStatus recordComment(void* context, PrXmlParser*, PrStringView data) {
-    static_cast<Recorder*>(context)->line("<!--" + text(data) + "-->");
+    static_cast<Recorder*>(context)->line(format("<!--{}-->", data));
     return PrStatus_Ok;
 }
 
 PrStatus recordInstruction(void* context, PrXmlParser*, PrStringView target, PrStringView data) {
-    static_cast<Recorder*>(context)->line("<?" + text(target) + " " + text(data) + "?>");
+    static_cast<Recorder*>(context)->line(format("<?{} {}?>", target, data));
     return PrStatus_Ok;
 }
 
 PrStatus recordDoctype(void* context, PrXmlParser*, PrStringView name, PrStringView publicId, PrStringView systemId) {
-    static_cast<Recorder*>(context)->line("<!DOCTYPE " + text(name) + " \"" + text(publicId) + "\" \"" + text(systemId) + "\">");
+    static_cast<Recorder*>(context)->line(format("<!DOCTYPE {} \"{}\" \"{}\">", name, publicId, systemId));
     return PrStatus_Ok;
 }
 
@@ -91,14 +84,14 @@ PrXmlHandler recordingHandler(Recorder* recorder) {
 }
 
 // Returns the tree that a parse recorded, or the parser's error and its position.
-std::string outcome(const Recorder& recorder, PrStatus status, const PrXmlError& error) {
+String outcome(const Recorder& recorder, PrStatus status, const PrXmlError& error) {
     if (status == PrStatus_Ok)
         return recorder.out;
-    return "error " + std::to_string(error.line) + ":" + std::to_string(error.column) + " " + text(error.message);
+    return format("error {}:{} {}", error.line, error.column, error.message);
 }
 
 // Returns what `source` parses to whole.
-std::string parse(const std::string& source) {
+String parse(PrStringView source) {
     Recorder recorder;
     PrXmlHandler handler = recordingHandler(&recorder);
     PrXmlError error = {};
@@ -108,22 +101,22 @@ std::string parse(const std::string& source) {
 
 // Returns what `source` parses to when its input arrives in the pieces that `breaks`, offsets in increasing order,
 // divide it into, with a run after each piece.
-std::string parsePieces(const std::string& source, const std::vector<size_t>& breaks) {
+String parsePieces(PrStringView source, Span<const size_t> breaks) {
     Recorder recorder;
     PrXmlHandler handler = recordingHandler(&recorder);
     PrXmlParser* parser = prXmlParserCreate(&handler);
     PrStatus status = PrStatus_Ok;
     size_t start = 0;
-    for (size_t i = 0; i <= breaks.size() && status == PrStatus_Ok; ++i) {
-        size_t end = i < breaks.size() ? breaks[i] : source.size();
-        prXmlParserAppend(parser, PrStringView{source.data() + start, end - start});
+    for (uint32_t i = 0; i <= breaks.count() && status == PrStatus_Ok; ++i) {
+        size_t end = i < breaks.count() ? breaks[i] : source.size;
+        prXmlParserAppend(parser, PrStringView{source.data + start, end - start});
         start = end;
-        if (i == breaks.size())
+        if (i == breaks.count())
             prXmlParserEnd(parser);
         status = prXmlParserRun(parser);
     }
     CHECK(prXmlParserIsEnded(parser));
-    std::string out = outcome(recorder, status, prXmlParserError(parser));
+    String out = outcome(recorder, status, prXmlParserError(parser));
     prXmlParserDestroy(parser);
     return out;
 }
@@ -141,7 +134,7 @@ PrStatus stopAtEnd(void* context, PrXmlParser* parser, const PrXmlName*) {
 
 // Records the end of an element, and pauses the parse at the end of each element named s.
 PrStatus pauseAtS(void* context, PrXmlParser* parser, const PrXmlName* name) {
-    if (text(name->local) == "s")
+    if (name->local == "s")
         prXmlParserPause(parser);
     return recordEnd(context, parser, name);
 }
@@ -195,7 +188,7 @@ TEST_CASE("a handler can find a document wrong, or stop its parse") {
     PrXmlHandler refusing = {.startElement = refuseStart};
     PrXmlError error = {};
     CHECK(prXmlParse("<a/>", &refusing, &error) == PrStatus_Syntax);
-    CHECK(text(error.message) == "refused");
+    CHECK(error.message == "refused");
     CHECK(error.line == 1);
     CHECK(error.column == 5);
 
@@ -208,7 +201,7 @@ TEST_CASE("a handler can find a document wrong, or stop its parse") {
 }
 
 TEST_CASE("a document whose input arrives in pieces parses as it does whole, wherever the pieces divide it") {
-    const std::string documents[] = {
+    const PrStringView documents[] = {
         "\xEF\xBB\xBF<?xml version='1.0' encoding='utf-8'?>\r\n<!--c--><?pi data?>"
             "<r a='x>y' b=\"'\">a&lt;&#x41;&#66;\r\n<![CDATA[<x>]]]]>]\r</r>",
         "<!DOCTYPE r [<!ENTITY e \"<b>&#65;</b>\"> <!-- ]> --> <?pi ]>?> %p; <!ATTLIST r a CDATA '>'>]><r>&e;&e;</r>",
@@ -221,14 +214,14 @@ TEST_CASE("a document whose input arrives in pieces parses as it does whole, whe
         "<a>",
         "",
     };
-    for (const std::string& document : documents) {
-        std::string whole = parse(document);
-        for (size_t at = 0; at <= document.size(); ++at)
-            CHECK_MESSAGE(parsePieces(document, {at}) == whole, document << " divided at " << at);
-        std::vector<size_t> bytes;
-        for (size_t at = 1; at < document.size(); ++at)
-            bytes.push_back(at);
-        CHECK_MESSAGE(parsePieces(document, bytes) == whole, document << " in bytes");
+    for (PrStringView document : documents) {
+        String whole = parse(document);
+        for (size_t at = 0; at <= document.size; ++at)
+            CHECK_MESSAGE(parsePieces(document, Span<const size_t>(&at, 1)) == whole, document << " divided at " << at);
+        Array<size_t> bytes;
+        for (size_t at = 1; at < document.size; ++at)
+            bytes.push(at);
+        CHECK_MESSAGE(parsePieces(document, bytes.span().asConst()) == whole, document << " in bytes");
     }
 }
 

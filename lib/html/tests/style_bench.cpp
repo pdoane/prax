@@ -16,13 +16,12 @@
 #include "pr/html.h"
 #include "pr/html_page.h"
 #include "pr/layout_style.h"
+#include "pr/print.h"
 #include "pr/string_ops.h"
 #include "pr/text_buffer.h"
 #include "pr/text_harfbuzz.h"
 
 #include "tools/harness/harness.h"
-
-#include <stdio.h>
 
 using namespace harness;
 
@@ -233,10 +232,10 @@ constexpr Case kCases[] = {
         [](Work* w) {
             PrCssDeclarationName width = prCssDeclarationNameFromProperty(PrCssProperty_Width);
             PrCssStyleDeclaration* style = prCssStylePropertiesAsCssStyleDeclaration(prCssElementStyle(w->cards[kCards - 1]));
-            char text[16];
+            char digits[16];
             for (uint32_t i = 0; i < 10; ++i) {
-                int size = snprintf(text, sizeof(text), "%upx", 300 + i);
-                prCssStyleDeclarationSetProperty(style, &width, PrStringView{text, size_t(size)}, false);
+                PrStringView text = formatToBuffer(Span(digits), "{}px", 300 + i);
+                prCssStyleDeclarationSetProperty(style, &width, text, false);
                 read(w->cards[kCards - 1], PrCssProperty_Width);
             }
         },
@@ -248,10 +247,10 @@ constexpr Case kCases[] = {
             PrCssStyleDeclaration* style = prCssStylePropertiesAsCssStyleDeclaration(prCssElementStyle(w->cards[kCards - 2]));
             PrHtmlElement* text = prHtmlElementQuery(
                 prDomNodeAsEventTarget(prDomElementAsNode(firstNamed(w->cards[kCards - 2], "p"))));
-            char value[16];
+            char digits[16];
             for (uint32_t i = 0; i < 10; ++i) {
-                int size = snprintf(value, sizeof(value), "%upx", 200 + 10 * i);
-                prCssStyleDeclarationSetProperty(style, &width, PrStringView{value, size_t(size)}, false);
+                PrStringView value = formatToBuffer(Span(digits), "{}px", 200 + 10 * i);
+                prCssStyleDeclarationSetProperty(style, &width, value, false);
                 w->height += prHtmlElementOffsetHeight(text);
             }
         },
@@ -305,12 +304,12 @@ PrCssStyleSheet* addStyle(Work* work, PrStringView text) {
 int main(int argc, char** argv) {
     prCrashHandler();
     if (argc != 2 && argc != 3) {
-        fprintf(stderr, "usage: style_bench <large.css> [case]\n");
+        printError("usage: style_bench <large.css> [case]\n");
         return 2;
     }
     PrTextBuffer large = {};
     if (!harnessReadFile(&large, argv[1])) {
-        fprintf(stderr, "style_bench: cannot read the stylesheet\n");
+        printError("style_bench: cannot read the stylesheet\n");
         return 1;
     }
     // The checkout's fonts, which the shell renders in.
@@ -357,7 +356,9 @@ int main(int argc, char** argv) {
     build(&work);
 
     PrStringView only = argc == 3 ? argv[2] : PrStringView{};
-    printf("[");
+    // The cases' rows go through the C library's buffered output, so the opening bracket is written before any of them,
+    // and the closing one after them through the same buffer.
+    print("[");
     for (uint32_t i = 0; i < countOf(kCases); ++i) {
         const Case& c = kCases[i];
         if (c.setup != nullptr)
@@ -373,7 +374,7 @@ int main(int argc, char** argv) {
             build(&work);
         harnessWriteCase(i == 0, c.name, cost);
     }
-    printf("\n]\n");
+    harnessWriteLine("\n]");
 
     prDomNodeRelease(work.inserted);
     prDomNodeRelease(work.extra);

@@ -1,11 +1,10 @@
+#include "pr/array.h"
 #include "pr/kit_dock.h"
 #include "pr/kit_text.h"
 
 #include "tools/harness/kit_fixture.h"
 
 #include "tools/harness/test.h"
-
-#include <vector>
 
 using namespace harness;
 
@@ -42,7 +41,7 @@ void seed(PrKitDock* dock) {
 struct DockFixture : KitFixture {
     PrKitDock* dock = prKitDockCreate();
     PrLayoutNode area = kPrLayoutNodeNone;
-    std::vector<PrKitDockPane> panes;
+    Array<PrKitDockPane> panes;
 
     DockFixture() {
         seed(dock);
@@ -51,7 +50,7 @@ struct DockFixture : KitFixture {
             panes.clear();
             for (uint32_t i = 0; i < prKitDockPaneCount(dock); ++i) {
                 PrKitDockPane pane = prKitDockPane(dock, i);
-                panes.push_back(pane);
+                panes.push(pane);
                 prKitLabel(kit, pane.content, {.text = describe(nullptr, pane.panel).title}, {});
             }
         };
@@ -163,7 +162,7 @@ TEST_CASE("a panel moved to another leaf's tabs opens there, and moving within a
 TEST_CASE("a seeded dock lays out its columns by their weights") {
     DockFixture f;
     f.frame();
-    REQUIRE(f.panes.size() == 5);
+    REQUIRE(f.panes.count() == 5);
     double free = 800 - 2 * double(kPrKitSplitBand);
     CHECK(width(f.bounds(f.content(kScene))) == doctest::Approx(free * 0.25).epsilon(0.01));
     CHECK(width(f.bounds(f.content(kViewport))) == doctest::Approx(free * 0.5).epsilon(0.01));
@@ -280,12 +279,12 @@ TEST_CASE("closing a tab removes its panel at the next build") {
     f.move(tab);
     f.frame();
     // The close button is the tab's square press target, found by hit testing along the strip.
-    std::vector<PrLayoutNode> hits(32);
+    Array<PrLayoutNode> hits(32);
     PrVec2 close{};
     bool found = false;
     for (float x = content.left + 20; x < content.right && !found; x += 1) {
         PrLayoutVec at{prLayoutUnitFromPx(x), prLayoutUnitFromPx(tab.y)};
-        uint32_t count = prLayoutTreeHitTest(f.tree, at, hits.data(), uint32_t(hits.size()));
+        uint32_t count = prLayoutTreeHitTest(f.tree, at, hits.data(), hits.count());
         for (uint32_t i = 0; i < count && !found; ++i) {
             if ((prUiFlags(f.ui, hits[i]) & PrUiFlag_Focusable) != 0 &&
                     width(f.bounds(hits[i])) == doctest::Approx(double(kPrKitHeightXs))) {
@@ -299,7 +298,7 @@ TEST_CASE("closing a tab removes its panel at the next build") {
     f.frame();
     CHECK(prKitDockPanelLeaf(f.dock, kInspector) == kPrKitDockNodeNone);
     CHECK(prKitDockSplitChildCount(f.dock, prKitDockRoot(f.dock)) == 2);
-    CHECK(f.panes.size() == 4);
+    CHECK(f.panes.count() == 4);
     CHECK(kitVerified(f.tree));
 }
 
@@ -444,11 +443,11 @@ TEST_CASE("an empty primary leaf holds its room and takes a dropped tab") {
     PrKitDockNode primary = prKitDockPrimary(f.dock);
     CHECK(prKitDockNodeIsValid(f.dock, primary));
     CHECK(prKitDockLeafTabCount(f.dock, primary) == 0);
-    CHECK(f.panes.size() == 4);
+    CHECK(f.panes.count() == 4);
     PrRect projectBox = f.bounds(f.content(kScene));
     PrVec2 from{projectBox.left + 10, projectBox.top - 11};
     f.drag(from, PrVec2{100, 150});
     CHECK(prKitDockPanelLeaf(f.dock, kScene) == primary);
-    CHECK(f.panes.size() == 5);
+    CHECK(f.panes.count() == 5);
     CHECK(kitVerified(f.tree));
 }

@@ -3,10 +3,13 @@
 // Spaces (mspace) of known sizes stand in for content, so that every position follows from the constants alone.
 
 #include "pr/compress_builtin.h"
+#include "pr/float.h"
 #include "pr/font_math.h"
 #include "pr/layout_query.h"
 #include "pr/layout_style.h"
 #include "pr/layout_tree.h"
+#include "pr/min_max.h"
+#include "pr/string_ops.h"
 
 #include "layout/src/layout_fragment.h"
 #include "layout/src/layout_tree.h"
@@ -15,29 +18,11 @@
 
 #include "tools/harness/test.h"
 
-#include <algorithm>
-#include <cstdio>
-#include <cstring>
-#include <string>
-#include <vector>
-
 namespace pr_impl {
 
 namespace {
 
 constexpr float kSize = 32;
-
-std::vector<uint8_t> readFile(const std::string& path) {
-    std::vector<uint8_t> bytes;
-    FILE* file = std::fopen(path.c_str(), "rb");
-    REQUIRE(file != nullptr);
-    uint8_t buffer[65536];
-    size_t read = 0;
-    while ((read = std::fread(buffer, 1, sizeof(buffer), file)) != 0)
-        bytes.insert(bytes.end(), buffer, buffer + read);
-    std::fclose(file);
-    return bytes;
-}
 
 // A tree whose math is set at kSize px in New Computer Modern Math, or in the font that the constructor names: a font
 // file's path, or the name of a WPT math test font such as "radical-rtlm".
@@ -49,12 +34,12 @@ struct MathFixture {
 
     explicit MathFixture(const char* wpt = nullptr) {
         PrStatus status = PrStatus_Ok;
-        if (wpt == nullptr || std::strchr(wpt, '/') != nullptr) {
-            std::string path = wpt != nullptr ? wpt : std::string(PR_FONTS_DIR) + "/NewCMMath-Regular.otf";
-            std::vector<uint8_t> bytes = readFile(path);
+        if (wpt == nullptr || prStringContains(wpt, "/")) {
+            String path = wpt != nullptr ? String(wpt) : format("{}/NewCMMath-Regular.otf", PR_FONTS_DIR);
+            Array<uint8_t> bytes = harness::readFile(path);
             status = prFontCreate(bytes, 0, nullptr, &font);
         } else {
-            std::vector<uint8_t> bytes = readFile(std::string(PR_FONTS_DIR) + "/math/" + wpt + ".woff");
+            Array<uint8_t> bytes = harness::readFile(format("{}/math/{}.woff", PR_FONTS_DIR, wpt));
             PrCompressCodec* codec = prCompressBuiltinCreate();
             status = prFontCreateWoff(bytes, 0, nullptr, codec, &font);
             prCompressCodecDestroy(codec);
@@ -64,7 +49,8 @@ struct MathFixture {
         descriptor.family = "TestMath";
         descriptor.automatic = PrFontFaceAutoFlags(descriptor.automatic & ~PrFontFaceAutoFlag_Family);
         prFontSetAdd(f.fonts, &descriptor, font);
-        text = f.textFont(kSize, {prFontFamilyFromName("TestMath")});
+        const PrFontFamily families[] = {prFontFamilyFromName("TestMath")};
+        text = f.textFont(kSize, families);
     }
 
     ~MathFixture() { prFontRelease(font); }
@@ -350,7 +336,8 @@ TEST_CASE("math radical: a nested radical sits inside its parent's sign, its rul
     // √(√(√(...x))), around a tall space, so that each sign is an assembly of the size asked for, and around a short
     // one, so that the signs step between the font's sizes, each taller than asked for by its own amount.
     constexpr uint32_t kLevels = 5;
-    for (float height : {100.0f, 6.0f}) {
+    const float heights[] = {100.0f, 6.0f};
+    for (float height : heights) {
         CAPTURE(height);
         MathFixture m;
         PrLayoutNode math = m.root();
@@ -433,10 +420,7 @@ TEST_CASE("math root: a display formula's box holds the ink of everything it dra
     // The ink of every glyph and paint below the root, from its top left, in px.
     PrRect ink{1e9f, 1e9f, -1e9f, -1e9f};
     auto add = [&](PrRect r) {
-        ink = PrRect{
-            std::min(ink.left, r.left), std::min(ink.top, r.top), std::max(ink.right, r.right),
-            std::max(ink.bottom, r.bottom),
-        };
+        ink = PrRect{min(ink.left, r.left), min(ink.top, r.top), max(ink.right, r.right), max(ink.bottom, r.bottom)};
     };
     auto walk = [&](auto& recurse, const LayoutFragment* f, PrVec2 at) -> void {
         if (f->kind == LayoutFragmentKind_Text) {
@@ -501,11 +485,11 @@ TEST_CASE("math operators: a stretchy fence covers what it encloses about the ax
     m.layout();
     const PrFontMathConstants& c = m.c();
     float axis = c.axisHeight * kSize;
-    float target = 2 * std::max(60 - axis, 40 + axis);
+    float target = 2 * max(60 - axis, 40 + axis);
     // The plain stretchy operator covers the target. The fence covers at least 90.1% of it, and at most half an em
     // less.
     CHECK(prLayoutUnitToPx(height(m.bounds(open))) >= target - 1);
-    CHECK(prLayoutUnitToPx(height(m.bounds(fence))) >= std::max(target * 0.901f, target - kSize / 2) - 1);
+    CHECK(prLayoutUnitToPx(height(m.bounds(fence))) >= max(target * 0.901f, target - kSize / 2) - 1);
 }
 
 TEST_CASE("math operators: an assembly of many extenders draws every part, its top part at its top") {
@@ -529,8 +513,8 @@ TEST_CASE("math operators: an assembly of many extenders draws every part, its t
     for (uint32_t g = 0; g < paint.glyphCount; ++g) {
         const PrFontGlyph& glyph = data.glyphs[paint.glyphStart + g];
         PrRect ink = prFontGlyphInkBounds(m.font, glyph.id);
-        top = std::min(top, glyph.position.y + ink.top * paint.size);
-        bottom = std::max(bottom, glyph.position.y + ink.bottom * paint.size);
+        top = min(top, glyph.position.y + ink.top * paint.size);
+        bottom = max(bottom, glyph.position.y + ink.bottom * paint.size);
     }
     CHECK(top == doctest::Approx(paint.rect.top).epsilon(0.001));
     CHECK(bottom == doctest::Approx(paint.rect.bottom).epsilon(0.001));
@@ -613,13 +597,14 @@ TEST_CASE("math fenced: fences and separators drawn as operators around and betw
     CHECK(pxOf(m.bounds(c).left - m.bounds(b).right) == pxOf(advance(',') + layoutUnitPx(3)));
     // The fences cover at least 90.1% of b's height and depth, centered on the axis.
     float axis = m.c().axisHeight * kSize;
-    float target = 2 * std::max(60 - axis, 40 + axis);
-    CHECK(prLayoutUnitToPx(height(rb)) >= std::max(target * 0.901f, target - kSize / 2) - 1);
+    float target = 2 * max(60 - axis, 40 + axis);
+    CHECK(prLayoutUnitToPx(height(rb)) >= max(target * 0.901f, target - kSize / 2) - 1);
 }
 
 TEST_CASE("math right to left: a radical takes its sign's rtlm form, and its base comes before the sign") {
     // WPT's font draws the radical 4em wide, and its rtlm form 1em wide.
-    for (PrTextDirection direction : {PrTextDirection_Ltr, PrTextDirection_Rtl}) {
+    const PrTextDirection directions[] = {PrTextDirection_Ltr, PrTextDirection_Rtl};
+    for (PrTextDirection direction : directions) {
         CAPTURE(int(direction));
         MathFixture m("radical-rtlm");
         m.direction = direction;
@@ -701,7 +686,7 @@ TEST_CASE("math stack: numbers aligned on their decimal points, each character i
     CHECK(pxOf(m.bounds(line).top - m.bounds(b).bottom) ==
         pxOf(layoutUnitMax(m.u(c.overbarVerticalGap), layoutUnitPx(1))));
     // The bottoms of their ink differ by less than a pixel from their baselines.
-    CHECK(std::abs(pxOf(m.bounds(b).bottom - m.bounds(a).bottom) - pxOf(m.u(1.2f))) < 1);
+    CHECK(prF64Abs(pxOf(m.bounds(b).bottom - m.bounds(a).bottom) - pxOf(m.u(1.2f))) < 1);
 }
 
 TEST_CASE("math stack: a row's position moves it left by columns, and a carry sits over its column of the next row") {
@@ -722,7 +707,7 @@ TEST_CASE("math stack: a row's position moves it left by columns, and a carry si
     CHECK(pxOf(rb.right) == pxOf(ra.left + digit * 2));
     // The carry is centered over the 3, half the overbar gap above its ink.
     PrLayoutUnit three = ra.left + digit * 2;
-    CHECK(std::abs(prLayoutUnitToPx((rc.left + rc.right) - (three * 2 + digit))) <= 1.0f / 32);
+    CHECK(prF32Abs(prLayoutUnitToPx((rc.left + rc.right) - (three * 2 + digit))) <= 1.0f / 32);
     PrLayoutUnit gap = layoutUnitMax(m.u(m.c().overbarVerticalGap), layoutUnitPx(1));
     CHECK(pxOf(ra.top - rc.bottom) == pxOf(PrLayoutUnit{gap.raw / 2}));
 }
@@ -810,21 +795,21 @@ TEST_CASE("math line breaks: a display formula breaks at its operators to fit it
     equals.breakPenalty = 500;
     PrLayoutMathStyle plus = op(0, 6, 6);
     plus.breakPenalty = 700;
-    std::vector<PrLayoutNode> terms;
-    std::vector<PrLayoutNode> pluses;
-    terms.push_back(m.space(math, 30, 10, 0));
+    Array<PrLayoutNode> terms;
+    Array<PrLayoutNode> pluses;
+    terms.push(m.space(math, 30, 10, 0));
     PrLayoutNode relation = m.token(math, "=", PrLayoutMathKind_Operator, equals);
     for (int i = 0; i < 5; ++i) {
-        terms.push_back(m.space(math, 30, 10, 0));
+        terms.push(m.space(math, 30, 10, 0));
         if (i < 4)
-            pluses.push_back(m.token(math, "+", PrLayoutMathKind_Operator, plus));
+            pluses.push(m.token(math, "+", PrLayoutMathKind_Operator, plus));
     }
     m.layout();
     PrLayoutRect box = m.bounds(container);
     PrLayoutRect first = m.bounds(terms[0]);
     for (PrLayoutNode term : terms)
         CHECK(m.bounds(term).right <= box.right);
-    CHECK(m.bounds(terms.back()).top > first.top);
+    CHECK(m.bounds(terms.last()).top > first.top);
     // Each line after the first starts with a +, where the right side of the equation starts.
     PrLayoutUnit rhs = m.bounds(relation).right + layoutUnitPx(8);
     int starts = 0;

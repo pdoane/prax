@@ -188,7 +188,8 @@ TEST_CASE("a box that a column break crosses has a box in each column, inside a 
         c = s.box(inner, 50);
     s.layout();
     PrRect stage = s.f.bounds(s.container);
-    for (PrLayoutNode node : {outer, inner}) {
+    const PrLayoutNode nodes[] = {outer, inner};
+    for (PrLayoutNode node : nodes) {
         PrLayoutRect boxes[3];
         REQUIRE(prLayoutNodeBoxes(s.f.tree, node, PrLayoutCoordinates_Viewport, boxes, 3) == 2);
         PrRect first = prLayoutRectToPx(boxes[0]);
@@ -456,7 +457,7 @@ TEST_CASE("a column rule paints in the middle of the gap between columns with co
         s.box(ruled, 50);
     s.layout();
     PrRect at = s.f.bounds(ruled);
-    std::vector<uint8_t> pixels = render(s.f.tree, 800, 200);
+    Array<uint8_t> pixels = render(s.f.tree, 800, 200);
     uint32_t y = uint32_t(at.top) + 25;
     CHECK(pixel(pixels, 800, 210, y) == "255 0 0 255");
     CHECK(pixel(pixels, 800, 205, y) == "0 0 0 0");
@@ -488,7 +489,11 @@ TEST_CASE("a block of a fixed height breaks where a column ends") {
 }
 
 TEST_CASE("box-decoration-break clone gives each piece its border, which takes room in each column") {
-    for (PrLayoutBoxDecorationBreak decoration : {PrLayoutBoxDecorationBreak_Slice, PrLayoutBoxDecorationBreak_Clone}) {
+    const PrLayoutBoxDecorationBreak decorations[] = {
+        PrLayoutBoxDecorationBreak_Slice,
+        PrLayoutBoxDecorationBreak_Clone,
+    };
+    for (PrLayoutBoxDecorationBreak decoration : decorations) {
         Stage s;
         PrLayoutFragmentationStyle fragmentation = prLayoutFragmentationStyleDefault();
         fragmentation.boxDecorationBreak = decoration;
@@ -527,8 +532,8 @@ TEST_CASE("a positioned inline box that starts in a later column, with a box out
     // content area, which is empty at size 0, on the baseline of the second line of the second column.
     CHECK(s.left(span) == 220);
     CHECK(double(s.at(span).bottom) == 40);
-    std::vector<uint8_t> pixels = render(s.f.tree, 800, 100);
-    CHECK(pixels.size() == size_t(800) * 100 * 4);
+    Array<uint8_t> pixels = render(s.f.tree, 800, 100);
+    CHECK(pixels.count() == 800u * 100 * 4);
 }
 
 TEST_CASE("a multi-column container's first baseline is its first column's, which a flex line aligns by") {
@@ -603,7 +608,7 @@ TEST_CASE("a positioned box that breaks across columns paints each of its pieces
     s.box(positioned, 60);
     s.layout();
     PrRect at = s.f.bounds(s.container);
-    std::vector<uint8_t> pixels = render(s.f.tree, 800, 200);
+    Array<uint8_t> pixels = render(s.f.tree, 800, 200);
     // The first piece fills the first column, and the second holds the second box at the top of the second column, to
     // the right of its replaced content.
     CHECK(pixel(pixels, 800, 150, uint32_t(at.top) + 50) == "0 255 0 255");
@@ -639,7 +644,8 @@ TEST_CASE("a change in a later piece of a positioned box paints again") {
 
 TEST_CASE("a float that a column ends inside breaks, and continues at the top of the next column before what clears it") {
     // Among inline content, and among blocks in flow.
-    for (bool blocks : {false, true}) {
+    const bool blockModes[] = {false, true};
+    for (bool blocks : blockModes) {
         CAPTURE(blocks);
         PrLayoutFragmentationStyle columns = Stage::counted(2);
         columns.columnFill = PrLayoutColumnFill_Auto;

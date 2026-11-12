@@ -10,10 +10,6 @@
 
 #include "tools/harness/test.h"
 
-#include <cmath>
-#include <string>
-#include <vector>
-
 namespace pr_impl {
 
 namespace {
@@ -165,18 +161,18 @@ struct Stage {
     }
 
     // Returns a node's boxes, in content order, relative to the stage's top left, each as left, top, width and height.
-    std::vector<std::vector<double>> rects(PrLayoutNode node) {
+    Array<Array<double>> rects(PrLayoutNode node) {
         uint32_t count = prLayoutNodeBoxes(f.tree, node, PrLayoutCoordinates_Viewport, nullptr, 0);
-        std::vector<PrLayoutRect> boxes(count);
+        Array<PrLayoutRect> boxes(count);
         prLayoutNodeBoxes(f.tree, node, PrLayoutCoordinates_Viewport, boxes.data(), count);
         PrRect origin = stageBounds();
-        std::vector<std::vector<double>> out;
+        Array<Array<double>> out;
         for (const PrLayoutRect& box : boxes) {
             PrRect r = prLayoutRectToPx(box);
-            out.push_back({
+            out.push(Array<double>({
                 double(r.left - origin.left), double(r.top - origin.top), double(r.right - r.left),
                 double(r.bottom - r.top),
-            });
+            }));
         }
         return out;
     }
@@ -186,8 +182,8 @@ struct Stage {
 #define CHECK_NEAR(actual, expected) CHECK((actual) == doctest::Approx(expected).epsilon(1e-3))
 
 // Checks a rectangle's left, top, width and height.
-void checkBox(const std::vector<double>& r, double left, double top, double width, double height) {
-    REQUIRE(r.size() == 4);
+void checkBox(const Array<double>& r, double left, double top, double width, double height) {
+    REQUIRE(r.count() == 4);
     CHECK_NEAR(r[0], left);
     CHECK_NEAR(r[1], top);
     CHECK_NEAR(r[2], width);
@@ -338,7 +334,8 @@ TEST_CASE("the static position gives the start edges of its static context, what
         CHECK_NEAR(s.left(box), 152.188);
     }
     SUBCASE("between runs of two directions, it resolves as a neutral: the paragraph's direction") {
-        for (PrTextDirection direction : {PrTextDirection_Ltr, PrTextDirection_Rtl}) {
+        const PrTextDirection directions[] = {PrTextDirection_Ltr, PrTextDirection_Rtl};
+        for (PrTextDirection direction : directions) {
             CAPTURE(direction);
             bool rtl = direction == PrTextDirection_Rtl;
             Stage s(false, -1, direction);
@@ -347,7 +344,7 @@ TEST_CASE("the static position gives the start edges of its static context, what
             s.text(s.stage, rtl ? "abc" : "אבג");
             s.layout();
             // Where the run of the paragraph's direction ends: after "abc", and before "אבג" from the right.
-            CHECK(std::abs(s.left(box) - (rtl ? 147.016 : 32.25)) < 0.05);
+            CHECK(prF64Abs(s.left(box) - (rtl ? 147.016 : 32.25)) < 0.05);
         }
     }
     SUBCASE("inside a run of the other direction, it takes the run's") {
@@ -356,7 +353,7 @@ TEST_CASE("the static position gives the start edges of its static context, what
         PrLayoutNode box = s.add(s.stage, square(true));
         s.text(s.stage, "דהו");
         s.layout();
-        CHECK(std::abs(s.left(box) - 43.922) < 0.05);
+        CHECK(prF64Abs(s.left(box) - 43.922) < 0.05);
     }
     SUBCASE("an rtl static block in an ltr containing block: the box's right edge, its width fitting its content") {
         Stage s(true);
@@ -454,7 +451,8 @@ TEST_CASE("an inline box is the containing block of the boxes out of flow in it:
         CHECK(s.height(box) == 82);
     }
     SUBCASE("before a positioned or transformed block container around it") {
-        for (bool transform : {false, true}) {
+        const bool transforms[] = {false, true};
+        for (bool transform : transforms) {
             CAPTURE(transform);
             Stage s(!transform);
             PrLayoutNode host = transform ? s.add(s.stage, transformed(padded(block(), 7))) : s.stage;
@@ -463,8 +461,8 @@ TEST_CASE("an inline box is the containing block of the boxes out of flow in it:
             s.text(span, "yy");
             PrLayoutNode box = s.add(span, inset(square(), 0, kAuto, kAuto, 0));
             s.layout();
-            std::vector<std::vector<double>> parts = s.rects(span);
-            REQUIRE(parts.size() == 1);
+            Array<Array<double>> parts = s.rects(span);
+            REQUIRE(parts.count() == 1);
             CHECK_NEAR(s.left(box), parts[0][0]);
             CHECK_NEAR(s.top(box), parts[0][1]);
         }
@@ -481,8 +479,8 @@ TEST_CASE("an empty inline box on a phantom line is zero high at the line's top,
     s.text(span, " ");
     s.layout();
     CHECK(s.height(outer) == 0);
-    std::vector<std::vector<double>> rects = s.rects(span);
-    REQUIRE(rects.size() == 1);
+    Array<Array<double>> rects = s.rects(span);
+    REQUIRE(rects.count() == 1);
     checkBox(rects[0], 0, 0, 0, 0);
     CHECK(s.top(box) == 0);
     CHECK(s.left(box) == 0);
@@ -743,8 +741,8 @@ TEST_CASE("a relative inline box moves its parts and what they hold, and nothing
         s.text(span, "yyy zzzzzzz wwwww");
         PrLayoutNode marker = s.add(span, inlineBlock(30, 10));
         s.layout();
-        std::vector<std::vector<double>> rects = s.rects(span);
-        REQUIRE(rects.size() == 2);
+        Array<Array<double>> rects = s.rects(span);
+        REQUIRE(rects.count() == 2);
         checkBox(rects[0], 65.563, 19, 105.563, 22);
         checkBox(rects[1], 10, 59, 102.219, 22);
         CHECK_NEAR(s.left(marker), 82.219);
@@ -822,7 +820,8 @@ TEST_CASE("a box out of flow paints where its placeholder is in tree order, out 
         CHECK(s.hit(150, 30) == box);
     }
     SUBCASE("a fixed box in an absolute box whose holder is outside the point, clipped or not") {
-        for (bool clips : {false, true}) {
+        const bool clipOptions[] = {false, true};
+        for (bool clips : clipOptions) {
             CAPTURE(clips);
             Stage s(false, 100);
             PrLayoutBoxStyle wrapStyle = sized(block(), 40, 40);
@@ -864,12 +863,12 @@ TEST_CASE("a box out of flow escapes an opacity layer's clip and scrolling when 
     f.element(layer, inset(sized(absolute(), 20, 20), 60, kAuto, kAuto, 60), &red);
     f.layout(px(100, 100));
     CHECK(verified(f.tree));
-    std::vector<uint8_t> before = render(f.tree, 100, 100);
+    Array<uint8_t> before = render(f.tree, 100, 100);
     // Faded, and outside the container's clip. The colors are premultiplied.
     CHECK(pixel(before, 100, 70, 70) == "128 0 0 128");
     // A scroll of the container moves nothing of the box, and records nothing.
     prLayoutNodeSetScroll(f.tree, container, px(0, 30));
-    std::vector<uint8_t> after = render(f.tree, 100, 100);
+    Array<uint8_t> after = render(f.tree, 100, 100);
     CHECK(prLayoutTreeStats(f.tree).layersRecorded == 0);
     CHECK(pixel(after, 100, 70, 70) == "128 0 0 128");
     CHECK(verified(f.tree));
@@ -890,14 +889,15 @@ TEST_CASE("a fixed box in a fading body stays put as the document scrolls, and a
     CHECK(verified(f.tree));
     CHECK(pixel(render(f.tree, 50, 50), 50, 10, 10) == "128 0 0 128");
     prLayoutNodeSetScroll(f.tree, kPrLayoutNodeNone, px(0, 100));
-    std::vector<uint8_t> scrolled = render(f.tree, 50, 50);
+    Array<uint8_t> scrolled = render(f.tree, 50, 50);
     CHECK(prLayoutTreeStats(f.tree).layersRecorded == 0);
     CHECK(pixel(scrolled, 50, 10, 10) == "128 0 0 128");
     CHECK(verified(f.tree));
 }
 
 TEST_CASE("a fixed box in an absolute box, both held outside a fading layer, paints in the layer") {
-    for (bool ownLayer : {false, true}) {
+    const bool ownLayers[] = {false, true};
+    for (bool ownLayer : ownLayers) {
         CAPTURE(ownLayer);
         Fixture f;
         PrLayoutNode root = f.element(kPrLayoutNodeNone, block());
@@ -915,7 +915,7 @@ TEST_CASE("a fixed box in an absolute box, both held outside a fading layer, pai
         CHECK(pixel(render(f.tree, 100, 100), 100, 5, 5) == (ownLayer ? "64 0 0 64" : "128 0 0 128"));
         // A scroll of the document moves nothing of it, and records nothing.
         prLayoutNodeSetScroll(f.tree, kPrLayoutNodeNone, px(0, 10));
-        std::vector<uint8_t> scrolled = render(f.tree, 100, 100);
+        Array<uint8_t> scrolled = render(f.tree, 100, 100);
         CHECK(prLayoutTreeStats(f.tree).layersRecorded == 0);
         CHECK(pixel(scrolled, 100, 5, 5) == (ownLayer ? "64 0 0 64" : "128 0 0 128"));
         CHECK(verified(f.tree));
@@ -926,7 +926,8 @@ TEST_CASE("a kept recording replayed inside one being made passes on the boxes o
     // A holder of a fixed content width holds a red box at its right, inside static wrappers. It is recorded once, then
     // with only the outer wrapper changed, then with the holder's padding grown, which moves the box and keeps the
     // wrappers.
-    for (bool runs : {false, true}) {
+    const bool runOptions[] = {false, true};
+    for (bool runs : runOptions) {
         CAPTURE(runs);
         Fixture f;
         PrLayoutNode root = f.element(kPrLayoutNodeNone, block());
@@ -954,7 +955,7 @@ TEST_CASE("a kept recording replayed inside one being made passes on the boxes o
         holderStyle.padding[PrRectSide_Right] = prLayoutLengthPx(50);
         prLayoutNodeSetStyle(f.tree, holder, f.style(holderStyle));
         f.layout(px(200, 120));
-        std::vector<uint8_t> moved = render(f.tree, 200, 120);
+        Array<uint8_t> moved = render(f.tree, 200, 120);
         CHECK(pixel(moved, 200, 140, 10) == "255 0 0 255");
         CHECK(pixel(moved, 200, 90, 10) != "255 0 0 255");
         CHECK(verified(f.tree));
@@ -1149,8 +1150,8 @@ TEST_CASE("a transformed block, a relative block, a clipping static block and ne
     PrLayoutNode b = s.add(sNode, half);
     s.layout();
     auto checkPlaces = [&](double bTop) {
-        std::vector<std::vector<double>> parts = s.rects(q);
-        REQUIRE(parts.size() == 1);
+        Array<Array<double>> parts = s.rects(q);
+        REQUIRE(parts.count() == 1);
         CHECK_NEAR(s.left(a), parts[0][0]);
         CHECK_NEAR(s.top(a), parts[0][1] + 30);
         CHECK(s.left(fixed) == 180);
@@ -1204,8 +1205,8 @@ TEST_CASE("a positioned span around a block holds what the block passes up, and 
         s.layout();
     };
     auto heldBySpan = [&]() {
-        std::vector<std::vector<double>> parts = s.rects(span);
-        REQUIRE(!parts.empty());
+        Array<Array<double>> parts = s.rects(span);
+        REQUIRE(!parts.isEmpty());
         CHECK_NEAR(s.left(box), parts[0][0]);
         CHECK_NEAR(s.top(box), parts[0][1]);
     };
@@ -1234,7 +1235,8 @@ TEST_CASE("a positioned span around a block holds what the block passes up, and 
 
 TEST_CASE("an inline box's containing block moves with its relative offset, and is visual across bidi") {
     SUBCASE("moved relatively") {
-        for (bool moved : {false, true}) {
+        const bool moveds[] = {false, true};
+        for (bool moved : moveds) {
             CAPTURE(moved);
             Stage s;
             s.text(s.stage, "x");
@@ -1259,8 +1261,8 @@ TEST_CASE("an inline box's containing block moves with its relative offset, and 
         PrLayoutNode box = s.add(span, covering);
         s.text(s.stage, " ב");
         s.layout();
-        CHECK(std::abs(s.left(box) - 111.09) < 0.05);
-        CHECK(std::abs(s.width(box) - 70.79) < 0.05);
+        CHECK(prF64Abs(s.left(box) - 111.09) < 0.05);
+        CHECK(prF64Abs(s.width(box) - 70.79) < 0.05);
     }
 }
 
@@ -1291,7 +1293,8 @@ TEST_CASE("a stretched size clamps through either box-sizing, never below the bo
 TEST_CASE("a scene's input finds an escaped scroll container and slot outside the clip of the layer they paint in") {
     // A holder outside a 40px scroll container holds a box in a fading layer inside it, at 60, 60. The container is a
     // scroll container or a slot of embedded content.
-    for (bool slot : {false, true}) {
+    const bool slots[] = {false, true};
+    for (bool slot : slots) {
         CAPTURE(slot);
         Fixture f;
         PrLayoutNode root = f.element(kPrLayoutNodeNone, block());
@@ -1377,7 +1380,7 @@ TEST_CASE("a recording that escapes stays current as a layer appears and goes ab
     CHECK(pixel(render(f.tree, 100, 100), 100, 70, 45) == "0 0 0 0");
     prLayoutNodeSetStyle(f.tree, clip, f.style(sized(block(), 40, 40)));
     f.layout(px(100, 100));
-    std::vector<uint8_t> unclipped = render(f.tree, 100, 100);
+    Array<uint8_t> unclipped = render(f.tree, 100, 100);
     CHECK(pixel(unclipped, 100, 70, 70) == "255 0 0 255");
     CHECK(pixel(unclipped, 100, 70, 45) == "0 255 0 255");
     CHECK(verified(f.tree));

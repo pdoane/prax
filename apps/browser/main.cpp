@@ -94,7 +94,7 @@ void answerBrowserPage(void* PR_NULLABLE, PrFetchInterceptRequest* request) {
         .type = PrFetchResponseType_Basic,
         .headers = &type,
         .headerCount = 1,
-        .body = {reinterpret_cast<const uint8_t*>(kDocument.data), kDocument.size},
+        .body =prStringBytes(kDocument),
     };
     prFetchInterceptRequestRespond(request, &response);
 }

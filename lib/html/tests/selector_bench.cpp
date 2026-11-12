@@ -13,12 +13,11 @@
 #include "pr/assert.h"
 #include "pr/html.h"
 #include "pr/html_page.h"
+#include "pr/print.h"
 #include "pr/string_ops.h"
 #include "pr/text_buffer.h"
 
 #include "tools/harness/harness.h"
-
-#include <stdio.h>
 
 using namespace harness;
 
@@ -165,7 +164,7 @@ void treeMarkup(PrTextBuffer* out) {
 int main(int argc, char** argv) {
     prCrashHandler();
     if (argc > 2) {
-        fprintf(stderr, "usage: selector_bench [case]\n");
+        printError("usage: selector_bench [case]\n");
         return 2;
     }
     PrTextBuffer markup = {};
@@ -184,7 +183,9 @@ int main(int argc, char** argv) {
 
     PrStringView only = argc == 2 ? argv[1] : PrStringView{};
     Work work = {.list = prDomNodeListCreate()};
-    printf("[");
+    // The cases' rows go through the C library's buffered output, so the opening bracket is written before any of them,
+    // and the closing one after them through the same buffer.
+    print("[");
     bool first = true;
     for (const Case& c : kCases) {
         if (only.data != nullptr && only != c.name)
@@ -201,7 +202,7 @@ int main(int argc, char** argv) {
         harnessWriteCase(first, c.name, harnessMeasure([&] { run(&work); }));
         first = false;
     }
-    printf("\n]\n");
+    harnessWriteLine("\n]");
 
     prDomNodeListDestroy(work.list);
     prHtmlPageDestroy(page);

@@ -10,96 +10,94 @@
 
 #include "tools/harness/test.h"
 
-#include <string>
-
 namespace pr_impl {
 
 namespace {
 
 // Writes the tree on one line, with each node's boundaries, so that adjacent Text nodes differ from one Text node.
-void writeTree(std::string* out, const PrDomNode* node) {
+void writeTree(String* out, const PrDomNode* node) {
     for (const PrDomNode* child = node->first; child != nullptr; child = child->next) {
         switch (child->type) {
             case PrDomNodeType_Element: {
                 const PrDomElement* element = domElementFromNode(child);
                 PrStringView name = domElementName(element);
-                *out += '<';
-                out->append(name.data, name.size);
+                out->append('<');
+                out->append(name);
                 for (const PrDomAttr* attribute = element->firstAttribute; attribute != nullptr;
                         attribute = static_cast<const PrDomAttr*>(attribute->next)) {
                     PrStringView text = prRawStringView(&attribute->name);
-                    *out += ' ';
-                    out->append(text.data, text.size);
+                    out->append(' ');
+                    out->append(text);
                     text = prRawStringView(&attribute->value);
-                    *out += "=\"";
-                    out->append(text.data, text.size);
-                    *out += '"';
+                    out->append("=\"");
+                    out->append(text);
+                    out->append('"');
                 }
-                *out += '>';
+                out->append('>');
                 writeTree(out, child);
-                *out += "</";
-                out->append(name.data, name.size);
-                *out += '>';
+                out->append("</");
+                out->append(name);
+                out->append('>');
                 break;
             }
             case PrDomNodeType_Text: {
                 PrStringView text = prRawStringView(&static_cast<const PrDomText*>(child)->data);
-                *out += "[";
-                out->append(text.data, text.size);
-                *out += "]";
+                out->append("[");
+                out->append(text);
+                out->append("]");
                 break;
             }
             case PrDomNodeType_Comment: {
                 PrStringView text = prRawStringView(&static_cast<const PrDomComment*>(child)->data);
-                *out += "<!--";
-                out->append(text.data, text.size);
-                *out += "-->";
+                out->append("<!--");
+                out->append(text);
+                out->append("-->");
                 break;
             }
             case PrDomNodeType_DocumentType:
-                *out += "<!doctype>";
+                out->append("<!doctype>");
                 break;
             default:
-                *out += "?";
+                out->append("?");
                 break;
         }
     }
 }
 
-std::string treeOf(const PrDomNode* node) {
-    std::string out;
+String treeOf(const PrDomNode* node) {
+    String out;
     writeTree(&out, node);
     return out;
 }
 
 // Returns the HTML that lib/markdown writes for `markdown`, parsed whole: its blocks, then its footnotes.
-std::string htmlOf(PrStringView markdown, const PrMarkdownOptions& options) {
+String htmlOf(PrStringView markdown, const PrMarkdownOptions& options) {
     PrMarkdown* document = prMarkdownCreate(&options);
     prMarkdownParse(document, markdown);
     PrRawString html = prRawStringEmpty();
     prMarkdownAppendHtml(document, 0, prMarkdownBlockCount(document), &html);
     prMarkdownAppendFootnotesHtml(document, &html);
-    std::string out(prRawStringView(&html).data, prRawStringView(&html).size);
+    String out(prRawStringView(&html));
     prRawStringReset(&html);
     prMarkdownDestroy(document);
     return out;
 }
 
 // The tree of the document that parsing lib/markdown's HTML gives, as a Markdown document starts it.
-std::string expectedDocument(PrStringView markdown, const PrMarkdownOptions& options) {
-    std::string source = "<!DOCTYPE html><html><head></head><body>" + htmlOf(markdown, options);
+String expectedDocument(PrStringView markdown, const PrMarkdownOptions& options) {
+    String source = format("<!DOCTYPE html><html><head></head><body>{}", htmlOf(markdown, options));
     PrDomDocument* document = domDocumentCreate(DomDocumentKind_Html);
     HtmlParser parser = {};
     htmlParserInit(&parser, document, HtmlParseFlag_DeclarativeShadowRoots);
     htmlParse(&parser, source);
     htmlParserReset(&parser);
-    std::string tree = treeOf(document);
+    String tree = treeOf(document);
     domNodeRelease(document);
     return tree;
 }
 
 // The tree of the document that the builder builds from `markdown`, given whole, or a byte at a time if `streamed`.
-std::string builtDocument(PrStringView markdown, const PrMarkdownOptions& options, bool streamed) {
+String builtDocument(PrStringView markdown, const PrMarkdownOptions& options, bool streamed) {
     PrDomDocument* document = domDocumentCreate(DomDocumentKind_Html);
     HtmlMarkdownBuilder builder;
     htmlMarkdownBuilderInitDocument(&builder, document, HtmlParseFlag_DeclarativeShadowRoots, &options);
@@ -111,14 +109,14 @@ std::string builtDocument(PrStringView markdown, const PrMarkdownOptions& option
     }
     htmlMarkdownBuilderEnd(&builder);
     htmlMarkdownBuilderReset(&builder);
-    std::string tree = treeOf(document);
+    String tree = treeOf(document);
     domNodeRelease(document);
     return tree;
 }
 
 // The tree of a div's contents that parsing lib/markdown's HTML as them gives.
-std::string expectedElement(PrStringView markdown, const PrMarkdownOptions& options) {
-    std::string source = htmlOf(markdown, options);
+String expectedElement(PrStringView markdown, const PrMarkdownOptions& options) {
+    String source = htmlOf(markdown, options);
     PrDomDocument* document = domDocumentCreate(DomDocumentKind_Html);
     HtmlParser parser = {};
     htmlParserInit(&parser, document, 0);
@@ -126,7 +124,7 @@ std::string expectedElement(PrStringView markdown, const PrMarkdownOptions& opti
     domNodeRetain(context);
     PrDomNode* fragment = htmlParseFragment(&parser, context, source);
     htmlParserReset(&parser);
-    std::string tree = treeOf(fragment);
+    String tree = treeOf(fragment);
     domNodeRelease(fragment);
     domNodeRelease(context);
     domNodeRelease(document);
@@ -134,7 +132,7 @@ std::string expectedElement(PrStringView markdown, const PrMarkdownOptions& opti
 }
 
 // The tree of a div's contents that a stream builds from `markdown`, given whole, or a byte at a time if `streamed`.
-std::string builtElement(PrStringView markdown, const PrMarkdownOptions& options, bool streamed) {
+String builtElement(PrStringView markdown, const PrMarkdownOptions& options, bool streamed) {
     PrDomDocument* document = domDocumentCreate(DomDocumentKind_Html);
     PrDomElement* element = domElementCreate(document, PrDomNamespace_Html, PrDomTag_Div, "div");
     domNodeRetain(element);
@@ -147,7 +145,7 @@ std::string builtElement(PrStringView markdown, const PrMarkdownOptions& options
     } else {
         prHtmlSetMarkdown(element, markdown, &options);
     }
-    std::string tree = treeOf(element);
+    String tree = treeOf(element);
     domNodeRelease(element);
     domNodeRelease(document);
     return tree;
@@ -161,11 +159,11 @@ PrMarkdownOptions everything() {
 
 // Checks that every way of building `markdown` gives the tree that parsing its HTML gives.
 void checkBuilds(PrStringView markdown, const PrMarkdownOptions& options = everything()) {
-    INFO(std::string(markdown.data, markdown.size));
-    std::string document = expectedDocument(markdown, options);
+    INFO(markdown);
+    String document = expectedDocument(markdown, options);
     CHECK(builtDocument(markdown, options, false) == document);
     CHECK(builtDocument(markdown, options, true) == document);
-    std::string element = expectedElement(markdown, options);
+    String element = expectedElement(markdown, options);
     CHECK(builtElement(markdown, options, false) == element);
     CHECK(builtElement(markdown, options, true) == element);
 }
@@ -219,7 +217,7 @@ TEST_CASE("math builds MathML elements, as parsing its HTML does") {
     countMathMl(element, false, &mathml, &other);
     CHECK(mathml > 20);
     CHECK(other == 0);
-    CHECK(treeOf(element).find("<math display=\"block\"><semantics><mrow><mo>[{]</mo><mtable ") != std::string::npos);
+    CHECK(prStringContains(treeOf(element), "<math display=\"block\"><semantics><mrow><mo>[{]</mo><mtable "));
     domNodeRelease(element);
     domNodeRelease(document);
 }

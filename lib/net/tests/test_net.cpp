@@ -1,10 +1,10 @@
 #include "pr/net_sockets.h"
+#include "pr/string.h"
+#include "pr/string_ops.h"
 
 #include "tools/harness/net_peer.h"
 
 #include "tools/harness/test.h"
-
-#include <string>
 
 using namespace harness;
 
@@ -105,19 +105,14 @@ TEST_CASE("net: bytes beyond the buffers flow both ways") {
     Fixture fixture{};
     if (!open(&fixture))
         return;
-    std::string payload;
-    for (uint32_t i = 0; payload.size() < 3 * 1024 * 1024; ++i)
-        payload += "line " + std::to_string(i) + "\n";
+    String payload;
+    for (uint32_t i = 0; payload.count() < 3 * 1024 * 1024; ++i)
+        formatTo(payload, "line {}\n", i);
     Target target{"127.0.0.1", fixture.peer.tcpEcho};
     NetProbe probe{};
-    NetProbeScript script{
-        .open = openTcp,
-        .context = &target,
-        .payload = PrByteView{reinterpret_cast<const uint8_t*>(payload.data()), payload.size()},
-        .finish = true,
-    };
+    NetProbeScript script{.open = openTcp, .context = &target, .payload = prStringBytes(payload), .finish = true};
     netProbeRun(&probe, fixture.net, &script);
-    CHECK(netProbeReceived(&probe, payload + "<eof:clean>"));
+    CHECK(netProbeReceived(&probe, format("{}<eof:clean>", payload)));
     CHECK(netProbeEventCount(&probe, PrNetStreamEvent_Writable) >= 1);
     netProbeReset(&probe);
     reset(&fixture);

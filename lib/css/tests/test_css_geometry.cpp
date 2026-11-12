@@ -13,7 +13,7 @@ namespace pr_impl {
 
 namespace {
 
-std::string text(const PrDomMatrix& matrix) {
+String text(const PrDomMatrix& matrix) {
     PrRawString out = {};
     REQUIRE(prCssMatrixToString(&matrix, &out) == PrStatus_Ok);
     return take(out);

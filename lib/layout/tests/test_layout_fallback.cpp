@@ -1,16 +1,15 @@
 // Font fallback: a cluster that no family named by its style serves is set in an installed family, chosen by its
 // script, its language and its presentation, or in Last Resort if no family serves it.
 
+#include "pr/array.h"
 #include "pr/locale_common.h"
+#include "pr/map.h"
+#include "pr/sort.h"
+#include "pr/string.h"
 
 #include "layout/tests/layout_fixture.h"
 
-#include <algorithm>
-#include <fstream>
-#include <iterator>
-#include <map>
-#include <string>
-#include <vector>
+#include "tools/harness/test.h"
 
 namespace pr_impl {
 
@@ -18,7 +17,7 @@ namespace {
 
 // Adds the test font `file` to `f`'s set.
 void install(Fixture& f, const char* file) {
-    std::string path = std::string(PR_FONTS_DIR) + "/" + file;
+    String path = format("{}/{}", PR_FONTS_DIR, file);
     const PrFont* PR_NULLABLE font = nullptr;
     REQUIRE(prFontCreateFromFile(path, 0, nullptr, &font) == PrStatus_Ok);
     PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
@@ -34,77 +33,81 @@ constexpr PrLocale kJapanese = prLocaleMake(PrLanguage_None, PrScript_Jpan, PrRe
 constexpr PrLocale kKorean = prLocaleMake(PrLanguage_None, PrScript_Kore, PrRegion_None);
 
 // Returns the font file `bytes` with a name table that names its family `family` and nothing else.
-std::vector<uint8_t> renamed(const std::vector<uint8_t>& bytes, const std::string& family) {
-    auto read16 = [&](size_t at) { return uint32_t(bytes[at] << 8 | bytes[at + 1]); };
-    auto read32 = [&](size_t at) { return read16(at) << 16 | read16(at + 2); };
-    auto put16 = [](std::vector<uint8_t>& out, uint32_t value) {
-        out.push_back(uint8_t(value >> 8));
-        out.push_back(uint8_t(value));
+Array<uint8_t> renamed(const Array<uint8_t>& bytes, PrStringView family) {
+    auto read16 = [&](uint32_t at) { return uint32_t(bytes[at] << 8 | bytes[at + 1]); };
+    auto read32 = [&](uint32_t at) { return read16(at) << 16 | read16(at + 2); };
+    auto put16 = [](Array<uint8_t>& out, uint32_t value) {
+        out.push(uint8_t(value >> 8));
+        out.push(uint8_t(value));
     };
-    auto put32 = [&](std::vector<uint8_t>& out, uint32_t value) {
+    auto put32 = [&](Array<uint8_t>& out, uint32_t value) {
         put16(out, value >> 16);
         put16(out, value & 0xffff);
     };
     struct Table {
         uint32_t tag;
-        std::vector<uint8_t> data;
+        Array<uint8_t> data;
     };
-    std::vector<Table> tables;
+    Array<Table> tables;
     constexpr uint32_t kName = PR_FONT_TAG('n', 'a', 'm', 'e');
     for (uint32_t i = 0; i < read16(4); ++i) {
-        size_t record = 12 + 16 * size_t(i);
+        uint32_t record = 12 + 16 * i;
         const uint8_t* data = bytes.data() + read32(record + 8);
-        if (read32(record) != kName)
-            tables.push_back({read32(record), {data, data + read32(record + 12)}});
+        if (read32(record) != kName) {
+            Table table{.tag = read32(record)};
+            table.data.append(data, read32(record + 12));
+            tables.push(move(table));
+        }
     }
     // The family's name, in UTF-16BE, as Windows' platform names it: its family (1) and its typographic family (16).
-    std::vector<uint8_t> text;
+    Array<uint8_t> text;
     for (char c : family)
         put16(text, uint8_t(c));
-    Table name{kName, {}};
+    Table name{.tag = kName};
     put16(name.data, 0);
     put16(name.data, 2);
     put16(name.data, 6 + 12 * 2);
-    for (uint32_t id : {1u, 16u}) {
-        for (uint32_t value : {3u, 1u, 0x409u, id, uint32_t(text.size()), 0u})
+    const uint32_t ids[] = {1u, 16u};
+    for (uint32_t id : ids) {
+        const uint32_t record[] = {3u, 1u, 0x409u, id, text.count(), 0u};
+        for (uint32_t value : record)
             put16(name.data, value);
     }
-    name.data.insert(name.data.end(), text.begin(), text.end());
-    tables.push_back(name);
-    std::sort(tables.begin(), tables.end(), [](const Table& a, const Table& b) { return a.tag < b.tag; });
-    std::vector<uint8_t> out;
+    name.data.append(text.span());
+    tables.push(move(name));
+    sortItems(tables.span(), [](const Table& a, const Table& b) { return a.tag < b.tag; });
+    Array<uint8_t> out;
     put32(out, read32(0));
-    uint32_t count = uint32_t(tables.size());
+    uint32_t count = tables.count();
     uint32_t power = 1;
     uint32_t log = 0;
     while (power * 2 <= count) {
         power *= 2;
         ++log;
     }
-    for (uint32_t value : {count, power * 16, log, count * 16 - power * 16})
+    const uint32_t header[] = {count, power * 16, log, count * 16 - power * 16};
+    for (uint32_t value : header)
         put16(out, value);
     uint32_t offset = 12 + 16 * count;
     for (const Table& table : tables) {
-        for (uint32_t value : {table.tag, 0u, offset, uint32_t(table.data.size())})
+        const uint32_t record[] = {table.tag, 0u, offset, table.data.count()};
+        for (uint32_t value : record)
             put32(out, value);
-        offset += (uint32_t(table.data.size()) + 3) & ~3u;
+        offset += (table.data.count() + 3) & ~3u;
     }
     for (const Table& table : tables) {
-        out.insert(out.end(), table.data.begin(), table.data.end());
-        out.resize((out.size() + 3) & ~size_t(3));
+        out.append(table.data.span());
+        out.resize((out.count() + 3) & ~3u);
     }
     return out;
 }
 
 // Adds Noto Sans JP's outlines to `f`'s set as the family `family`, made once for each family and kept for the run.
 void installAs(Fixture& f, const char* family) {
-    static std::map<std::string, std::vector<uint8_t>> made;
-    std::vector<uint8_t>& bytes = made[family];
-    if (bytes.empty()) {
-        std::ifstream file(std::string(PR_FONTS_DIR) + "/NotoSansJP-VF.otf", std::ios::binary);
-        REQUIRE(file.good());
-        bytes = renamed({std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()}, family);
-    }
+    static Map<String, Array<uint8_t>> made;
+    Array<uint8_t>& bytes = made[family];
+    if (bytes.isEmpty())
+        bytes = renamed(harness::readFile(format("{}/NotoSansJP-VF.otf", PR_FONTS_DIR)), family);
     const PrFont* PR_NULLABLE font = nullptr;
     REQUIRE(prFontCreate(bytes, 0, nullptr, &font) == PrStatus_Ok);
     PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
@@ -117,8 +120,11 @@ void installAs(Fixture& f, const char* family) {
 // under each family's name: what falls back to them is chosen by their names and their locales, which their glyphs do
 // not change.
 void installCjk(Fixture& f) {
-    for (const char* family : {"Noto Sans SC", "Noto Sans TC", "Noto Sans HK", "Noto Sans JP", "Noto Sans KR",
-        "Noto Serif SC"})
+    const char* const names[] = {
+        "Noto Sans SC", "Noto Sans TC", "Noto Sans HK", "Noto Sans JP", "Noto Sans KR",
+        "Noto Serif SC",
+    };
+    for (const char* family : names)
         installAs(f, family);
     install(f, "LastResort-Regular.ttf");
     const PrFontFallbackFamily families[] = {
@@ -137,12 +143,12 @@ void installCjk(Fixture& f) {
 // generic's keyword), or in the default family if `family` is null.
 void layOut(Fixture& f, const char* text, const char* PR_NULLABLE locale = nullptr, const char* PR_NULLABLE family = nullptr) {
     PrLayoutFontStyle font = prLayoutFontStyleDefault();
-    std::vector<PrFontFamily> families;
+    Array<PrFontFamily> families;
     if (family != nullptr) {
         PrFontGeneric generic = prFontGenericFromName(family);
-        families.push_back(generic != PrFontGeneric_None ? prFontFamilyGeneric(generic) : prFontFamilyFromName(family));
+        families.push(generic != PrFontGeneric_None ? prFontFamilyGeneric(generic) : prFontFamilyFromName(family));
     }
-    font.font = f.textFont(20, families, locale != nullptr ? prLocaleFromTag(locale) : 0);
+    font.font = f.textFont(20, families.span(), locale != nullptr ? prLocaleFromTag(locale) : 0);
     PrLayoutNode root = f.element(kPrLayoutNodeNone, block(), nullptr, nullptr, &font);
     f.text(root, text);
     f.layout(px(800, 600));
@@ -150,31 +156,27 @@ void layOut(Fixture& f, const char* text, const char* PR_NULLABLE locale = nullp
 }
 
 // Appends the fonts of the glyph runs that the tree paints, in order, including through the lists it embeds.
-void appendFonts(const PrDrawList* list, std::vector<const PrFont*>& out) {
+void appendFonts(const PrDrawList* list, Array<const PrFont*>& out) {
     const PrDrawCommand* commands = prDrawListCommands(list);
     for (uint32_t i = 0; i < prDrawListCommandCount(list); ++i) {
         if (commands[i].kind == PrDrawCommandKind_Embed)
             appendFonts(commands[i].embed.list, out);
         if (commands[i].kind == PrDrawCommandKind_Glyphs)
-            out.push_back(commands[i].glyphs->font);
+            out.push(commands[i].glyphs->font);
     }
 }
-std::vector<const PrFont*> paintedFonts(Fixture& f) {
+Array<const PrFont*> paintedFonts(Fixture& f) {
     PrDrawList* list = prDrawListCreate();
     prLayoutTreePaint(f.tree, list);
-    std::vector<const PrFont*> fonts;
+    Array<const PrFont*> fonts;
     appendFonts(list, fonts);
     prDrawListRelease(list);
     return fonts;
 }
 
 // Returns the family of a font, such as "Noto Sans SC".
-std::string familyOf(const PrFont* font) {
-    PrRawString family = prFontFamilyName(font);
-    PrStringView view = prRawStringView(&family);
-    std::string out(view.data, view.size);
-    prRawStringReset(&family);
-    return out;
+String familyOf(const PrFont* font) {
+    return String::adopt(prFontFamilyName(font));
 }
 
 // Returns true if a font declares the OpenType script `tag`.
@@ -200,15 +202,18 @@ TEST_CASE("Han falls back to the family made for its writing system, the closest
         const char* PR_NULLABLE locale;
         const char* family;
     };
-    for (Case c : {Case{nullptr, "Noto Sans SC"}, Case{"zh-Hans", "Noto Sans SC"}, Case{"zh", "Noto Sans SC"},
+    const Case cases[] = {
+        Case{nullptr, "Noto Sans SC"}, Case{"zh-Hans", "Noto Sans SC"}, Case{"zh", "Noto Sans SC"},
         Case{"zh-TW", "Noto Sans TC"}, Case{"zh-HK", "Noto Sans HK"}, Case{"yue", "Noto Sans HK"},
-                Case{"yue-Hans", "Noto Sans SC"}, Case{"ja", "Noto Sans JP"}, Case{"ko", "Noto Sans KR"}}) {
+        Case{"yue-Hans", "Noto Sans SC"}, Case{"ja", "Noto Sans JP"}, Case{"ko", "Noto Sans KR"},
+    };
+    for (Case c : cases) {
         CAPTURE(c.locale != nullptr ? c.locale : "none");
         Fixture f;
         installCjk(f);
         layOut(f, "ab \xe6\x97\xa5\xe6\x9c\xac", c.locale);
-        std::vector<const PrFont*> fonts = paintedFonts(f);
-        REQUIRE(fonts.size() == 2);
+        Array<const PrFont*> fonts = paintedFonts(f);
+        REQUIRE(fonts.count() == 2);
         CHECK(familyOf(fonts[1]) == c.family);
     }
 }
@@ -221,15 +226,18 @@ TEST_CASE("Han falls back to a family drawn in its style's generic family, after
     };
     // Noto Serif SC is the only serif family. Serif Simplified Chinese uses it, and serif Traditional Chinese uses a
     // sans family made for Traditional Chinese over a serif family that is not.
-    for (Case c : {Case{"zh-Hans", "serif", "Noto Serif SC"}, Case{"zh-Hans", "sans-serif", "Noto Sans SC"},
-        Case{"zh-Hans", "monospace", "Noto Sans SC"}, Case{"zh-TW", "serif", "Noto Sans TC"}}) {
+    const Case cases[] = {
+        Case{"zh-Hans", "serif", "Noto Serif SC"}, Case{"zh-Hans", "sans-serif", "Noto Sans SC"},
+        Case{"zh-Hans", "monospace", "Noto Sans SC"}, Case{"zh-TW", "serif", "Noto Sans TC"},
+    };
+    for (Case c : cases) {
         CAPTURE(c.locale);
         CAPTURE(c.generic);
         Fixture f;
         installCjk(f);
         layOut(f, "\xe6\x97\xa5\xe6\x9c\xac", c.locale, c.generic);
-        std::vector<const PrFont*> fonts = paintedFonts(f);
-        REQUIRE(fonts.size() == 1);
+        Array<const PrFont*> fonts = paintedFonts(f);
+        REQUIRE(fonts.count() == 1);
         CHECK(familyOf(fonts[0]) == c.family);
     }
 }
@@ -242,7 +250,8 @@ TEST_CASE("a family is preferred for the locale the host makes it for, and only 
         const char* locale;
         const char* family;
     };
-    for (Case c : {Case{"ar", "Noto Sans Arabic"}, Case{"ug", "Noto Sans Arabic"}, Case{"ur", "Noto Nastaliq Urdu"}}) {
+    const Case cases[] = {Case{"ar", "Noto Sans Arabic"}, Case{"ug", "Noto Sans Arabic"}, Case{"ur", "Noto Nastaliq Urdu"}};
+    for (Case c : cases) {
         CAPTURE(c.locale);
         Fixture f;
         install(f, "NotoSansArabic[wdth,wght].ttf");
@@ -253,8 +262,8 @@ TEST_CASE("a family is preferred for the locale the host makes it for, and only 
         };
         prFontSetSetFallbackFamilies(f.fonts, families, 2);
         layOut(f, "\xd8\xb3\xd9\x84\xd8\xa7\xd9\x85", c.locale);
-        std::vector<const PrFont*> fonts = paintedFonts(f);
-        REQUIRE(fonts.size() == 1);
+        Array<const PrFont*> fonts = paintedFonts(f);
+        REQUIRE(fonts.count() == 1);
         CHECK(familyOf(fonts[0]) == c.family);
     }
 }
@@ -264,8 +273,8 @@ TEST_CASE("a cluster no face serves is set in Last Resort, alone") {
     installCjk(f);
     // U+0F00, Tibetan, which none of these families except Last Resort serves.
     layOut(f, "a\xe0\xbc\x80" "b");
-    std::vector<const PrFont*> fonts = paintedFonts(f);
-    REQUIRE(fonts.size() == 3);
+    Array<const PrFont*> fonts = paintedFonts(f);
+    REQUIRE(fonts.count() == 3);
     CHECK(fonts[0] == fonts[2]);
     CHECK(fonts[1] != fonts[0]);
     CHECK_FALSE(declaresScript(fonts[1], "hani"));
@@ -275,8 +284,8 @@ TEST_CASE("a private-use code point falls back to no installed family") {
     Fixture f;
     installCjk(f);
     layOut(f, "a\xee\x80\x80" "b");
-    std::vector<const PrFont*> fonts = paintedFonts(f);
-    REQUIRE(fonts.size() == 1);
+    Array<const PrFont*> fonts = paintedFonts(f);
+    REQUIRE(fonts.count() == 1);
 }
 
 TEST_CASE("a control character falls back to no installed family") {
@@ -284,8 +293,8 @@ TEST_CASE("a control character falls back to no installed family") {
     Fixture f;
     installCjk(f);
     layOut(f, "a\x7f" "b");
-    std::vector<const PrFont*> fonts = paintedFonts(f);
-    REQUIRE(fonts.size() == 1);
+    Array<const PrFont*> fonts = paintedFonts(f);
+    REQUIRE(fonts.count() == 1);
 }
 
 TEST_CASE("a cluster's face does not depend on what text came before it") {
@@ -294,9 +303,9 @@ TEST_CASE("a cluster's face does not depend on what text came before it") {
         Fixture f;
         installCjk(f);
         layOut(f, text, "ja");
-        std::vector<const PrFont*> fonts = paintedFonts(f);
-        REQUIRE(!fonts.empty());
-        return familyOf(fonts.back());
+        Array<const PrFont*> fonts = paintedFonts(f);
+        REQUIRE(!fonts.isEmpty());
+        return familyOf(fonts.last());
     };
     CHECK(faceOf("한국 日本") == faceOf("日本"));
     CHECK(faceOf("日本") == "Noto Sans JP");
@@ -306,8 +315,8 @@ TEST_CASE("a page of text its named family serves falls back to nothing") {
     Fixture f;
     installCjk(f);
     layOut(f, "The quick brown fox");
-    std::vector<const PrFont*> fonts = paintedFonts(f);
-    REQUIRE(fonts.size() == 1);
+    Array<const PrFont*> fonts = paintedFonts(f);
+    REQUIRE(fonts.count() == 1);
     CHECK(familyOf(fonts[0]) == "Arimo");
 }
 
@@ -323,8 +332,8 @@ TEST_CASE("a cluster of emoji presentation falls back to a color font first, and
     // U+2601 CLOUD, of text presentation by default, which both families serve and Arimo does not: with VS16 and with
     // VS15.
     layOut(f, "a\xe2\x98\x81\xef\xb8\x8f" "b\xe2\x98\x81\xef\xb8\x8e");
-    std::vector<const PrFont*> fonts = paintedFonts(f);
-    REQUIRE(fonts.size() == 4);
+    Array<const PrFont*> fonts = paintedFonts(f);
+    REQUIRE(fonts.count() == 4);
     CHECK(fonts[1] != fonts[3]);
     CHECK(fonts[1] != fonts[0]);
     CHECK(fonts[3] != fonts[0]);
@@ -351,7 +360,7 @@ TEST_CASE("a shaping holds its font groups through the collect a layout starts w
     prLayoutNodeSetStyle(f.tree, container, f.style(block(), nullptr, nullptr, &font));
     f.layout(px(800, 600));
     CHECK(verified(f.tree));
-    std::vector<const PrFont*> fonts = paintedFonts(f);
-    REQUIRE(!fonts.empty());
-    CHECK(familyOf(fonts.back()) == "Noto Sans JP");
+    Array<const PrFont*> fonts = paintedFonts(f);
+    REQUIRE(!fonts.isEmpty());
+    CHECK(familyOf(fonts.last()) == "Noto Sans JP");
 }

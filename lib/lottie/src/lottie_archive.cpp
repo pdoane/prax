@@ -176,7 +176,7 @@ PrStatus prLottieAnimationCreateFromArchive(const PrLottieArchive* archive, uint
         PrLottieOptions own = options != nullptr ? *options : PrLottieOptions{};
         own.load = loadEntry;
         own.loadContext = &files;
-        status = prLottieAnimationCreate(PrStringView{reinterpret_cast<const char*>(json.data), json.size}, &own, out);
+        status = prLottieAnimationCreate(prStringFromBytes(json), &own, out);
     }
     for (uint32_t i = 0; i < files.read.count; ++i)
         prMemoryFree(files.read.data[i]);

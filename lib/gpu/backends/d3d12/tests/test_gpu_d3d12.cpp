@@ -1,15 +1,13 @@
 // The tests of what only the Direct3D 12 backend has: recording into the application's command lists and passes. The
 // interface's own tests run on Direct3D 12 as well.
 
+#include "pr/array.h"
 #include "pr/gpu_d3d12.h"
+#include "pr/mem.h"
 
 #include "gpu/tests/kTestGpuNativeShaders.h"
 
 #include "tools/harness/test.h"
-
-#include <cstdint>
-#include <cstring>
-#include <vector>
 
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
@@ -17,6 +15,8 @@
 #include <d3d12.h>
 
 namespace pr_impl {
+
+using namespace pr;
 
 namespace {
 
@@ -85,7 +85,7 @@ struct Fixture {
     }
 
     // Copies the words of `buffer` into readback memory, waits for them, and returns them.
-    std::vector<uint32_t> words(PrGpuBuffer buffer, uint32_t count) {
+    Array<uint32_t> words(PrGpuBuffer buffer, uint32_t count) {
         PrGpuBuffer readback = this->buffer(uint64_t(count) * 4, 0, PrGpuMemory_Readback);
         PrGpuCommands* commands = nullptr;
         REQUIRE(prGpuCommandsBegin(device, nullptr, &commands));
@@ -93,8 +93,8 @@ struct Fixture {
             PrGpuAccessFlag_CopyRead);
         prGpuCommandsCopyBuffer(commands, buffer, 0, readback, 0, uint64_t(count) * 4);
         prGpuDeviceWait(device, prGpuCommandsSubmit(commands));
-        std::vector<uint32_t> out(count);
-        memcpy(out.data(), prGpuBufferMap(device, readback), size_t(count) * 4);
+        Array<uint32_t> out(count);
+        prMemCopy(out.data(), prGpuBufferMap(device, readback), size_t(count) * 4);
         prGpuBufferDestroy(device, readback);
         return out;
     }
@@ -176,7 +176,7 @@ TEST_CASE("d3d12 records into the application's command list, around the applica
     PrGpuFence fence = prGpuCommandsSubmit(commands);
     prGpuDeviceWait(f.device, fence);
     CHECK(prGpuDeviceIsComplete(f.device, fence));
-    CHECK(f.words(output, 4) == std::vector<uint32_t>{0, 11, 9, 9});
+    CHECK(f.words(output, 4) == Array<uint32_t>({0, 11, 9, 9}));
     prGpuPipelineDestroy(f.device, pipeline);
     prGpuBufferDestroy(f.device, output);
 }

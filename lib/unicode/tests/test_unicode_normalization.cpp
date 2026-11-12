@@ -1,19 +1,14 @@
+#include "pr/string.h"
 #include "pr/unicode_normalization.h"
 
 #include "tools/harness/test.h"
-
-#include <string>
 
 namespace pr_impl {
 
 namespace {
 
-std::string normalize(const std::string& text, PrUnicodeNormalForm form) {
-    PrRawString normalized = prUnicodeNormalize(text, form);
-    PrStringView view = prRawStringView(&normalized);
-    std::string out(view.data != nullptr ? view.data : "", view.size);
-    prRawStringReset(&normalized);
-    return out;
+String normalize(PrStringView text, PrUnicodeNormalForm form) {
+    return String::adopt(prUnicodeNormalize(text, form));
 }
 
 } // namespace

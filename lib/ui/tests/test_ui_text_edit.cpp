@@ -13,9 +13,6 @@
 
 #include "tools/harness/test.h"
 
-#include <string>
-#include <vector>
-
 namespace pr_impl {
 
 namespace {
@@ -38,7 +35,7 @@ struct Styled {
     PrTextDirection direction = PrTextDirection_Ltr;
 
     explicit Styled(const char* text, PrTextDirection paragraph = PrTextDirection_Ltr) : direction(paragraph) {
-        std::string path = std::string(PR_FONTS_DIR) + "/Arimo-Regular.ttf";
+        String path = format("{}/Arimo-Regular.ttf", PR_FONTS_DIR);
         const PrFont* PR_NULLABLE face = nullptr;
         REQUIRE(prFontCreateFromFile(path, 0, nullptr, &face) == PrStatus_Ok);
         PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
@@ -136,25 +133,25 @@ struct Styled {
         settle();
     }
 
-    std::string text() {
+    String text() {
         PrStringView view = prTextEditBufferText(buffer);
-        return std::string(view.data, view.size);
+        return String(view);
     }
 
     // Returns the text of the node after `at` in the control's next run.
-    std::vector<std::string> shownRuns() {
-        std::vector<std::string> shown;
+    Array<String> shownRuns() {
+        Array<String> shown;
         for (PrLayoutNode box = prLayoutNodeFirstChild(tree, control); box != kPrLayoutNodeNone;
                 box = prLayoutNodeNextSibling(tree, box)) {
             PrLayoutNode node = prLayoutNodeFirstChild(tree, box);
             PrStringView part = prLayoutNodeText(tree, node);
-            shown.push_back(std::string(part.data, part.size));
+            shown.push(String(part));
         }
         return shown;
     }
 };
 
-using Strings = std::vector<std::string>;
+using Strings = Array<String>;
 
 } // namespace
 
@@ -166,10 +163,10 @@ TEST_CASE("each style run of a buffer shows as an inline box of its style, with 
     Styled s("hello world");
     prTextEditBufferSetStyle(s.buffer, 6, 11, s.bold);
     s.settle();
-    CHECK(s.shownRuns() == Strings{"hello ", "world"});
+    CHECK(s.shownRuns() == Strings({"hello ", "world"}));
     prTextEditBufferSetStyle(s.buffer, 0, 2, s.bold);
     s.settle();
-    CHECK(s.shownRuns() == Strings{"he", "llo ", "world"});
+    CHECK(s.shownRuns() == Strings({"he", "llo ", "world"}));
 }
 
 TEST_CASE("the arrows count in the whole text across runs, with one press for each place") {
@@ -196,7 +193,7 @@ TEST_CASE("typing joins the run that it follows, and Backspace across runs remov
     s.select(3, 3);
     s.type("x");
     CHECK(s.text() == "abcxdef");
-    CHECK(s.shownRuns() == Strings{"abcx", "def"});
+    CHECK(s.shownRuns() == Strings({"abcx", "def"}));
     s.select(7, 7);
     for (uint32_t i = 0; i < 3; ++i) {
         s.key(PrAppKey_Backspace);
@@ -229,7 +226,7 @@ TEST_CASE("a style set through the view shows, undoes, and waits at a caret for 
     s.select(2, 4);
     prTextEditViewSetStyle(prUiTextEditView(s.ui, s.control), s.bold);
     s.settle();
-    CHECK(s.shownRuns() == Strings{"ab", "cd", "ef"});
+    CHECK(s.shownRuns() == Strings({"ab", "cd", "ef"}));
     CHECK(prTextEditHistoryUndo(s.history, prUiTextEditView(s.ui, s.control)));
     s.settle();
     CHECK(prTextEditBufferStyleRunCount(s.buffer) == 0);
@@ -238,7 +235,7 @@ TEST_CASE("a style set through the view shows, undoes, and waits at a caret for 
     prTextEditViewSetStyle(prUiTextEditView(s.ui, s.control), s.bold);
     s.type("x");
     CHECK(s.text() == "abcdefx");
-    CHECK(s.shownRuns() == Strings{"abcdef", "x"});
+    CHECK(s.shownRuns() == Strings({"abcdef", "x"}));
 }
 
 TEST_CASE("a press lands in the run under it, and counts in the whole text") {

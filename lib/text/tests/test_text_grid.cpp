@@ -1,16 +1,18 @@
 // Text grids: text set in cells, as a terminal sets it.
 
+#include "pr/array.h"
 #include "pr/float.h"
 #include "pr/font_set.h"
+#include "pr/span.h"
+#include "pr/string.h"
 #include "pr/text_grid.h"
 #include "pr/text_harfbuzz.h"
 
 #include "tools/harness/test.h"
 
-#include <string>
-#include <vector>
-
 namespace pr_impl {
+
+using namespace pr;
 
 namespace {
 
@@ -21,11 +23,12 @@ struct Grid {
     PrTextFont* font = nullptr;
     PrTextGrid* grid = prTextGridCreate();
     PrTextGridMetrics metrics{};
-    std::string text;
+    String text;
 
     Grid() {
-        for (const char* name : {"Cousine-Regular.ttf", "NotoSansJP-VF.otf", "NotoSansHebrew[wdth,wght].ttf"}) {
-            std::string path = std::string(PR_FONTS_DIR) + "/" + name;
+        const char* const names[] = {"Cousine-Regular.ttf", "NotoSansJP-VF.otf", "NotoSansHebrew[wdth,wght].ttf"};
+        for (const char* name : names) {
+            String path = format("{}/{}", PR_FONTS_DIR, PrStringView(name));
             const PrFont* PR_NULLABLE face = nullptr;
             REQUIRE(prFontCreateFromFile(path, 0, nullptr, &face) == PrStatus_Ok);
             PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
@@ -53,28 +56,22 @@ struct Grid {
 
     // Sets `clusters` from column zero, one cell each. `wide` gives the columns of each cell and `groups` its group. A
     // cell past the end of either list spans one column and has group zero.
-    void set(const std::vector<std::string>& clusters, const std::vector<uint32_t>& wide = {},
-            const std::vector<uint32_t>& groups = {}) {
+    void set(Span<const PrStringView> clusters, Span<const uint32_t> wide = {}, Span<const uint32_t> groups = {}) {
         text.clear();
-        std::vector<PrTextGridCell> cells;
+        Array<PrTextGridCell> cells;
         uint32_t column = 0;
-        for (size_t i = 0; i < clusters.size(); ++i) {
-            uint32_t columns = i < wide.size() ? wide[i] : 1;
-            uint32_t group = i < groups.size() ? groups[i] : 0;
-            cells.push_back(PrTextGridCell{
-                .start = uint32_t(text.size()),
-                .column = column,
-                .columns = columns,
-                .group = group,
-            });
-            text += clusters[i];
+        for (uint32_t i = 0; i < clusters.count(); ++i) {
+            uint32_t columns = i < wide.count() ? wide[i] : 1;
+            uint32_t group = i < groups.count() ? groups[i] : 0;
+            cells.push(PrTextGridCell{.start = text.count(), .column = column, .columns = columns, .group = group});
+            text.append(clusters[i]);
             column += columns;
         }
         PrTextFont* fontList[] = {font};
         PrTextGridDesc desc{
             .text = text,
             .cells = cells.data(),
-            .cellCount = uint32_t(cells.size()),
+            .cellCount = cells.count(),
             .fonts = fontList,
             .fontCount = 1,
             .shaper = shaper,
@@ -86,12 +83,12 @@ struct Grid {
     }
 
     // The x of each glyph, in the order of the runs.
-    std::vector<float> positions() const {
-        std::vector<float> out;
+    Array<float> positions() const {
+        Array<float> out;
         for (uint32_t r = 0; r < prTextGridRunCount(grid); ++r) {
             PrFontGlyphRun run = prTextGridRun(grid, r);
             for (uint32_t g = 0; g < run.glyphCount; ++g)
-                out.push_back(run.glyphs[g].position.x);
+                out.push(run.glyphs[g].position.x);
         }
         return out;
     }
@@ -125,10 +122,11 @@ TEST_CASE("text grid: cells are as wide as a digit and as tall as a line, in who
 
 TEST_CASE("text grid: each cluster sits in its column, on the baseline") {
     Grid g;
-    g.set({"a", "b", "c", "W"});
+    const PrStringView clusters[] = {"a", "b", "c", "W"};
+    g.set(clusters);
     REQUIRE(prTextGridRunCount(g.grid) == 1);
-    std::vector<float> x = g.positions();
-    REQUIRE(x.size() == 4);
+    Array<float> x = g.positions();
+    REQUIRE(x.count() == 4);
     PrFontGlyphRun run = prTextGridRun(g.grid, 0);
     for (uint32_t i = 0; i < 4; ++i) {
         CAPTURE(i);
@@ -140,12 +138,14 @@ TEST_CASE("text grid: each cluster sits in its column, on the baseline") {
 
 TEST_CASE("text grid: a wide cluster centers in its two columns, in the face that it falls back to") {
     Grid g;
-    g.set({"a", "\xe4\xb8\xad", "b"}, {1, 2, 1});
+    const PrStringView clusters[] = {"a", "\xe4\xb8\xad", "b"};
+    const uint32_t wide[] = {1, 2, 1};
+    g.set(clusters, wide);
     // Cousine sets the Latin letters and Noto Sans JP the ideograph, which splits the runs.
     REQUIRE(prTextGridRunCount(g.grid) == 3);
     CHECK(prTextGridRun(g.grid, 0).font != prTextGridRun(g.grid, 1).font);
-    std::vector<float> x = g.positions();
-    REQUIRE(x.size() == 3);
+    Array<float> x = g.positions();
+    REQUIRE(x.count() == 3);
     float cell = g.metrics.cell.x;
     // The ideograph is an em wide, which is narrower than two cells of a face whose advance is about 0.6 em.
     CHECK(x[1] > cell);
@@ -155,7 +155,8 @@ TEST_CASE("text grid: a wide cluster centers in its two columns, in the face tha
 
 TEST_CASE("text grid: a cluster wider than its cell scales down to fit it, about the middle of its face's line") {
     Grid g;
-    g.set({"a", "\xe4\xb8\xad", "b"});
+    const PrStringView clusters[] = {"a", "\xe4\xb8\xad", "b"};
+    g.set(clusters);
     REQUIRE(prTextGridRunCount(g.grid) == 3);
     // The letters keep their size.
     CHECK(prTextGridRun(g.grid, 0).transforms == nullptr);
@@ -175,16 +176,17 @@ TEST_CASE("text grid: a cluster wider than its cell scales down to fit it, about
     };
     float line = middle(prTextGridRun(g.grid, 0).font, run.size);
     CHECK(prF32Abs(run.glyphs[0].position.y - middle(run.font, run.size) * scale - (g.metrics.baseline - line)) < 1e-3f);
-    std::vector<float> x = g.positions();
-    REQUIRE(x.size() == 3);
+    Array<float> x = g.positions();
+    REQUIRE(x.count() == 3);
     CHECK(prF32Abs(x[2] - 2 * cell) < 0.5f);
 }
 
 TEST_CASE("text grid: a right-to-left script keeps the order of its cells") {
     Grid g;
-    g.set({"\xd7\xa9", "\xd7\x9c", "\xd7\x95", "\xd7\x9d"});
-    std::vector<float> x = g.positions();
-    REQUIRE(x.size() == 4);
+    const PrStringView clusters[] = {"\xd7\xa9", "\xd7\x9c", "\xd7\x95", "\xd7\x9d"};
+    g.set(clusters);
+    Array<float> x = g.positions();
+    REQUIRE(x.count() == 4);
     for (uint32_t i = 1; i < 4; ++i)
         CHECK(x[i] > x[i - 1]);
     CHECK(x[0] < g.metrics.cell.x);
@@ -192,14 +194,16 @@ TEST_CASE("text grid: a right-to-left script keeps the order of its cells") {
 
 TEST_CASE("text grid: a run holds cells of one group, which the caller reads back") {
     Grid g;
-    g.set({"a", "b", "c", "d"}, {}, {7, 7, 9, 7});
+    const PrStringView clusters[] = {"a", "b", "c", "d"};
+    const uint32_t cellGroups[] = {7, 7, 9, 7};
+    g.set(clusters, {}, cellGroups);
     REQUIRE(prTextGridRunCount(g.grid) == 3);
     CHECK(prTextGridRunGroup(g.grid, 0) == 7);
     CHECK(prTextGridRun(g.grid, 0).glyphCount == 2);
     CHECK(prTextGridRunGroup(g.grid, 1) == 9);
     CHECK(prTextGridRunGroup(g.grid, 2) == 7);
-    std::vector<float> x = g.positions();
-    REQUIRE(x.size() == 4);
+    Array<float> x = g.positions();
+    REQUIRE(x.count() == 4);
     CHECK(prF32Abs(x[3] - 3 * g.metrics.cell.x) < 0.5f);
 }
 

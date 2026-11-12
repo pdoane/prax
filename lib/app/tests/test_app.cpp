@@ -1,10 +1,9 @@
 #include "pr/app.h"
+#include "pr/array.h"
+#include "pr/string.h"
 #include "pr/vec.h"
 
 #include "tools/harness/test.h"
-
-#include <string>
-#include <vector>
 
 extern "C" int prTestAppCApi(void);
 
@@ -15,7 +14,7 @@ namespace {
 // An application that runs by calling each handler function once, and records the calls made to it.
 struct FakeApp {
     PrApp record;
-    std::vector<std::string> calls;
+    Array<String> calls;
     double frameTime;
 };
 
@@ -23,7 +22,7 @@ struct FakeApp {
 struct FakeNotifier {
     FakeApp fake;
     bool active;
-    std::vector<std::string> posted;
+    Array<String> posted;
 };
 
 FakeNotifier& notifierOf(PrApp* app) {
@@ -35,9 +34,9 @@ FakeApp& fakeOf(PrApp* app) {
 }
 
 void createFake(FakeApp& fake) {
-    fake.record.destroy = [](PrApp* app) { fakeOf(app).calls.push_back("destroy"); };
+    fake.record.destroy = [](PrApp* app) { fakeOf(app).calls.push("destroy"); };
     fake.record.run = [](PrApp* app, const PrAppHandler* handler) {
-        fakeOf(app).calls.push_back("run");
+        fakeOf(app).calls.push("run");
         PrAppFrame frame{.extent = {100, 50}, .display = {.pixelRatio = 2, .headroom = 1, .potentialHeadroom = 1}};
         handler->start(handler->context, app, &frame);
         prAppDeliverFrame(app, handler, &frame);
@@ -47,18 +46,18 @@ void createFake(FakeApp& fake) {
         handler->event(handler->context, app, &event);
         handler->shutdown(handler->context, app);
     };
-    fake.record.stop = [](PrApp* app) { fakeOf(app).calls.push_back("stop"); };
-    fake.record.wake = [](PrApp* app) { fakeOf(app).calls.push_back("wake"); };
-    fake.record.requestFrame = [](PrApp* app) { fakeOf(app).calls.push_back("frame"); };
+    fake.record.stop = [](PrApp* app) { fakeOf(app).calls.push("stop"); };
+    fake.record.wake = [](PrApp* app) { fakeOf(app).calls.push("wake"); };
+    fake.record.requestFrame = [](PrApp* app) { fakeOf(app).calls.push("frame"); };
     fake.record.requestFrameAt = [](PrApp* app, double time) { fakeOf(app).frameTime = time; };
-    fake.record.setCursor = [](PrApp* app, PrAppCursor) { fakeOf(app).calls.push_back("cursor"); };
-    fake.record.setTitle = [](PrApp* app, PrStringView) { fakeOf(app).calls.push_back("title"); };
-    fake.record.requestAttention = [](PrApp* app) { fakeOf(app).calls.push_back("attention"); };
+    fake.record.setCursor = [](PrApp* app, PrAppCursor) { fakeOf(app).calls.push("cursor"); };
+    fake.record.setTitle = [](PrApp* app, PrStringView) { fakeOf(app).calls.push("title"); };
+    fake.record.requestAttention = [](PrApp* app) { fakeOf(app).calls.push("attention"); };
     fake.record.surface = [](PrApp*, PrAppSurface*) -> PrStatus { return PrStatus_InvalidState; };
     fake.record.openUrl = [](PrApp*, PrStringView) -> PrStatus { return PrStatus_Ok; };
-    fake.record.requestClipboardText = [](PrApp* app) { fakeOf(app).calls.push_back("clipboard"); };
+    fake.record.requestClipboardText = [](PrApp* app) { fakeOf(app).calls.push("clipboard"); };
     fake.record.setClipboardText = [](PrApp*, PrStringView) -> PrStatus { return PrStatus_Ok; };
-    fake.record.requestClipboardImage = [](PrApp* app) { fakeOf(app).calls.push_back("clipboard image"); };
+    fake.record.requestClipboardImage = [](PrApp* app) { fakeOf(app).calls.push("clipboard image"); };
     fake.record.setClipboardImage = [](PrApp*, PrPixelView) -> PrStatus { return PrStatus_Ok; };
 }
 
@@ -76,26 +75,26 @@ TEST_CASE("a run delivers to the handler in order") {
     FakeApp fake{};
     createFake(fake);
     PrApp* app = &fake.record;
-    std::vector<std::string> seen;
+    Array<String> seen;
     PrAppHandler handler{
         &seen,
         [](void* context, PrApp*, const PrAppFrame*) {
-            static_cast<std::vector<std::string>*>(context)->push_back("start");
+            static_cast<Array<String>*>(context)->push("start");
         },
         [](void* context, PrApp*, const PrAppFrame* frame) {
-            static_cast<std::vector<std::string>*>(context)->push_back(
-                "frame " + std::to_string(int(frame->extent.x * frame->display.pixelRatio)));
+            static_cast<Array<String>*>(context)->push(
+                format("frame {}", int(frame->extent.x * frame->display.pixelRatio)));
             return PrAppOutput{};
         },
         [](void* context, PrApp*, const PrAppEvent* event) {
-            static_cast<std::vector<std::string>*>(context)->push_back("key " + std::string(1, char(event->key)));
+            static_cast<Array<String>*>(context)->push(String("key ").append(char(event->key)));
         },
         [](void* context, PrApp*) {
-            static_cast<std::vector<std::string>*>(context)->push_back("shutdown");
+            static_cast<Array<String>*>(context)->push("shutdown");
         },
     };
     prAppRun(app, &handler);
-    CHECK(seen == std::vector<std::string>{"start", "frame 200", "key A", "shutdown"});
+    CHECK(seen == Array<String>({"start", "frame 200", "key A", "shutdown"}));
 }
 
 TEST_CASE("the interface passes calls through") {
@@ -117,9 +116,9 @@ TEST_CASE("the interface passes calls through") {
     CHECK(browser == nullptr);
     prAppDestroy(app);
     prAppDestroy(nullptr);
-    CHECK(fake.calls == std::vector<std::string>{
+    CHECK(fake.calls == Array<String>({
         "frame", "wake", "title", "attention", "clipboard", "clipboard image", "stop", "destroy",
-    });
+    }));
 }
 
 TEST_CASE("an application without notifications posts none, and one that cannot tell its window is active") {
@@ -136,8 +135,7 @@ TEST_CASE("a notification reaches the backend, and the backend says whether the 
     PrApp* app = &notifier.fake.record;
     app->isActive = [](PrApp* app) { return notifierOf(app).active; };
     app->notificationPost = [](PrApp* app, const PrAppNotificationDesc* desc) -> PrStatus {
-        notifierOf(app).posted.push_back(std::string(desc->title.data, desc->title.size) + "|" +
-            std::string(desc->body.data, desc->body.size) + "|" + std::to_string(desc->tag));
+        notifierOf(app).posted.push(format("{}|{}|{}", desc->title, desc->body, desc->tag));
         return PrStatus_Ok;
     };
     CHECK_FALSE(prAppIsActive(app));
@@ -147,7 +145,7 @@ TEST_CASE("a notification reaches the backend, and the backend says whether the 
     CHECK(prAppNotificationPost(app, &desc) == PrStatus_Ok);
     PrAppNotificationDesc untitled{.body = "only a body"};
     CHECK(prAppNotificationPost(app, &untitled) == PrStatus_Ok);
-    CHECK(notifier.posted == std::vector<std::string>{"Build|done|42", "|only a body|0"});
+    CHECK(notifier.posted == Array<String>({"Build|done|42", "|only a body|0"}));
 }
 
 TEST_CASE("named keys and codes take the names of UI Events") {
@@ -183,7 +181,7 @@ TEST_CASE("a frame's output reaches the window") {
     };
     PrAppFrame frame{};
     prAppDeliverFrame(&fake.record, &handler, &frame);
-    CHECK(fake.calls == std::vector<std::string>{"cursor", "frame"});
+    CHECK(fake.calls == Array<String>({"cursor", "frame"}));
 }
 
 TEST_CASE("a frame's time reaches the window, requests no frame now, and the next frame's output replaces it") {
@@ -193,7 +191,7 @@ TEST_CASE("a frame's time reaches the window, requests no frame now, and the nex
     handler.frame = [](void*, PrApp*, const PrAppFrame*) { return PrAppOutput{.frameTime = 12.5}; };
     PrAppFrame frame{};
     prAppDeliverFrame(&fake.record, &handler, &frame);
-    CHECK(fake.calls == std::vector<std::string>{"cursor"});
+    CHECK(fake.calls == Array<String>({"cursor"}));
     CHECK(fake.frameTime == 12.5);
     handler.frame = [](void*, PrApp*, const PrAppFrame*) { return PrAppOutput{}; };
     prAppDeliverFrame(&fake.record, &handler, &frame);

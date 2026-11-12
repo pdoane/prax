@@ -7,8 +7,6 @@
 
 #include "tools/harness/test.h"
 
-#include <string>
-
 extern "C" int prTestSyntaxCApi(void);
 
 namespace pr_impl {

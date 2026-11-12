@@ -2,35 +2,32 @@
 #include "pr/layout_query.h"
 #include "pr/layout_scene.h"
 #include "pr/layout_tree.h"
+#include "pr/span.h"
 
 #include "layout/tests/layout_fixture.h"
 
 #include "tools/harness/test.h"
-
-#include <string>
-#include <vector>
 
 namespace pr_impl {
 
 namespace {
 
 // Returns the committed tree under `node` as text: each text node's text, and each element's children in brackets.
-std::string shape(PrLayoutTree* tree, PrLayoutNode node) {
-    if (prLayoutNodeKind(tree, node) == PrLayoutNodeKind_Text) {
-        PrStringView text = prLayoutNodeText(tree, node);
-        return std::string(text.data, text.size);
-    }
-    std::string out = "[";
+String shape(PrLayoutTree* tree, PrLayoutNode node) {
+    if (prLayoutNodeKind(tree, node) == PrLayoutNodeKind_Text)
+        return String(prLayoutNodeText(tree, node));
+    String out = "[";
     for (PrLayoutNode child = prLayoutNodeFirstChild(tree, node); child != kPrLayoutNodeNone;
             child = prLayoutNodeNextSibling(tree, child)) {
-        if (out.size() > 1)
-            out += " ";
-        out += shape(tree, child);
+        if (out.count() > 1)
+            out.append(' ');
+        out.append(shape(tree, child));
     }
-    return out + "]";
+    out.append(']');
+    return out;
 }
 
-std::string shape(PrLayoutTree* tree) {
+String shape(PrLayoutTree* tree) {
     PrLayoutNode root = prLayoutTreeRoot(tree);
     return root == kPrLayoutNodeNone ? "" : shape(tree, root);
 }
@@ -38,18 +35,18 @@ std::string shape(PrLayoutTree* tree) {
 // One item of a list that a frame declares: its key, or 0 to be identified by its position, and its text.
 struct Item {
     uint64_t key;
-    const char* text;
+    PrStringView text;
 };
 
 // The nodes that a frame of a list declared.
 struct ListFrame {
     PrLayoutNode root;
     PrLayoutNode list;
-    std::vector<PrLayoutNode> rows;     // in the order of the items
+    Array<PrLayoutNode> rows;     // in the order of the items
 };
 
 // Declares, as one frame, a root holding a heading and a list, with a block for each item holding its text.
-ListFrame declareList(Fixture& f, const std::vector<Item>& items) {
+ListFrame declareList(Fixture& f, Span<const Item> items) {
     uint32_t box = f.style(block());
     ListFrame out{};
     prLayoutTreeBeginFrame(f.tree);
@@ -60,7 +57,7 @@ ListFrame declareList(Fixture& f, const std::vector<Item>& items) {
     for (const Item& item : items) {
         PrLayoutNode row = prLayoutTreeFrameElement(f.tree, out.list, item.key, box);
         prLayoutTreeFrameText(f.tree, row, 0, item.text);
-        out.rows.push_back(row);
+        out.rows.push(row);
     }
     return out;
 }
@@ -77,13 +74,15 @@ using namespace pr_impl;
 
 TEST_CASE("a frame that creates the committed tree again keeps every node and changes nothing") {
     Fixture f;
-    ListFrame first = declareList(f, {{0, "a"}, {0, "b"}, {0, "c"}});
+    const Item firstItems[] = {{0, "a"}, {0, "b"}, {0, "c"}};
+    ListFrame first = declareList(f, firstItems);
     layOut(f);
     CHECK(prLayoutTreeStats(f.tree).frameNodesMade == 9);
     CHECK(shape(f.tree) == "[heading [[a] [b] [c]]]");
     const PrLayoutScene* scene = prLayoutTreeScene(f.tree);
 
-    ListFrame again = declareList(f, {{0, "a"}, {0, "b"}, {0, "c"}});
+    const Item againItems[] = {{0, "a"}, {0, "b"}, {0, "c"}};
+    ListFrame again = declareList(f, againItems);
     CHECK(again.root == first.root);
     CHECK(again.list == first.list);
     CHECK(again.rows == first.rows);
@@ -104,11 +103,13 @@ TEST_CASE("a frame that creates the committed tree again keeps every node and ch
 
 TEST_CASE("a frame's insertion makes one node, and every node after it keeps its handle") {
     Fixture f;
-    ListFrame first = declareList(f, {{0, "a"}, {0, "c"}});
+    const Item firstItems[] = {{0, "a"}, {0, "c"}};
+    ListFrame first = declareList(f, firstItems);
     layOut(f);
     // Unkeyed rows continue by position: the second row continues the row that held "c" and changes its text, and the
     // third is new.
-    ListFrame byPlace = declareList(f, {{0, "a"}, {0, "b"}, {0, "c"}});
+    const Item byPlaceItems[] = {{0, "a"}, {0, "b"}, {0, "c"}};
+    ListFrame byPlace = declareList(f, byPlaceItems);
     layOut(f);
     CHECK(byPlace.rows[0] == first.rows[0]);
     CHECK(byPlace.rows[1] == first.rows[1]);
@@ -119,10 +120,12 @@ TEST_CASE("a frame's insertion makes one node, and every node after it keeps its
 
 TEST_CASE("keyed rows follow their keys through an insertion, a removal and a reorder") {
     Fixture f;
-    ListFrame first = declareList(f, {{1, "a"}, {2, "b"}, {3, "c"}});
+    const Item firstItems[] = {{1, "a"}, {2, "b"}, {3, "c"}};
+    ListFrame first = declareList(f, firstItems);
     layOut(f);
 
-    ListFrame inserted = declareList(f, {{1, "a"}, {4, "new"}, {2, "b"}, {3, "c"}});
+    const Item insertedItems[] = {{1, "a"}, {4, "new"}, {2, "b"}, {3, "c"}};
+    ListFrame inserted = declareList(f, insertedItems);
     layOut(f);
     CHECK(inserted.rows[0] == first.rows[0]);
     CHECK(inserted.rows[2] == first.rows[1]);
@@ -132,7 +135,8 @@ TEST_CASE("keyed rows follow their keys through an insertion, a removal and a re
     CHECK(shape(f.tree) == "[heading [[a] [new] [b] [c]]]");
     CHECK(verified(f.tree));
 
-    ListFrame removed = declareList(f, {{1, "a"}, {4, "new"}, {3, "c"}});
+    const Item removedItems[] = {{1, "a"}, {4, "new"}, {3, "c"}};
+    ListFrame removed = declareList(f, removedItems);
     layOut(f);
     CHECK(removed.rows[2] == first.rows[2]);
     CHECK(prLayoutTreeStats(f.tree).frameNodesGone == 1);
@@ -140,7 +144,8 @@ TEST_CASE("keyed rows follow their keys through an insertion, a removal and a re
     CHECK(shape(f.tree) == "[heading [[a] [new] [c]]]");
     CHECK(verified(f.tree));
 
-    ListFrame reordered = declareList(f, {{3, "c"}, {1, "a"}, {4, "new"}});
+    const Item reorderedItems[] = {{3, "c"}, {1, "a"}, {4, "new"}};
+    ListFrame reordered = declareList(f, reorderedItems);
     layOut(f);
     CHECK(reordered.rows[0] == first.rows[2]);
     CHECK(reordered.rows[1] == first.rows[0]);
@@ -152,7 +157,8 @@ TEST_CASE("keyed rows follow their keys through an insertion, a removal and a re
 
 TEST_CASE("a key that a frame gives twice makes the second node without it, and the commit reports both nodes") {
     Fixture f;
-    ListFrame first = declareList(f, {{1, "a"}, {2, "b"}, {1, "again"}});
+    const Item firstItems[] = {{1, "a"}, {2, "b"}, {1, "again"}};
+    ListFrame first = declareList(f, firstItems);
     CHECK(first.rows[2] != first.rows[0]);
     CHECK(prLayoutNodeKey(f.tree, first.rows[2]) == 0);
     layOut(f);
@@ -165,7 +171,8 @@ TEST_CASE("a key that a frame gives twice makes the second node without it, and 
     CHECK(verified(f.tree));
 
     // The report holds while the next frame is built, and a frame without the duplicate reports none.
-    declareList(f, {{1, "a"}, {2, "b"}});
+    const Item withoutDuplicate[] = {{1, "a"}, {2, "b"}};
+    declareList(f, withoutDuplicate);
     CHECK(prLayoutTreeDuplicateKeys(f.tree, nullptr, 0) == 1);
     layOut(f);
     CHECK(prLayoutTreeDuplicateKeys(f.tree, nullptr, 0) == 0);
@@ -253,24 +260,24 @@ TEST_CASE("creations out of preorder give the tree creations in order give") {
 
 TEST_CASE("a change in a long list relinks only the list, and the frame follows the preorder around it") {
     Fixture f;
-    std::vector<std::string> texts;
+    Array<String> texts;
     for (uint32_t i = 0; i < 20; ++i)
-        texts.push_back("row " + std::to_string(i));
+        texts.push(format("row {}", i));
     auto items = [&](uint64_t skip, uint64_t insertAfter) {
-        std::vector<Item> out;
+        Array<Item> out;
         for (uint32_t i = 0; i < 20; ++i) {
             if (i + 1 != skip)
-                out.push_back(Item{i + 1, texts[i].c_str()});
+                out.push(Item{i + 1, texts[i]});
             if (i + 1 == insertAfter)
-                out.push_back(Item{100, "inserted"});
+                out.push(Item{100, "inserted"});
         }
         return out;
     };
-    ListFrame first = declareList(f, items(0, 0));
+    ListFrame first = declareList(f, items(0, 0).span());
     layOut(f);
 
     // The inserted row is made; every row after it is the next node in preorder.
-    ListFrame inserted = declareList(f, items(0, 10));
+    ListFrame inserted = declareList(f, items(0, 10).span());
     layOut(f);
     PrLayoutTreeStats stats = prLayoutTreeStats(f.tree);
     CHECK(stats.frameNodesMade == 2);
@@ -281,7 +288,7 @@ TEST_CASE("a change in a long list relinks only the list, and the frame follows 
     CHECK(verified(f.tree));
 
     // The row after the removed one is found by its key, and the frame goes on in preorder from it.
-    ListFrame removed = declareList(f, items(5, 10));
+    ListFrame removed = declareList(f, items(5, 10).span());
     layOut(f);
     stats = prLayoutTreeStats(f.tree);
     CHECK(stats.frameNodesMade == 0);
@@ -296,7 +303,8 @@ TEST_CASE("a change in a long list relinks only the list, and the frame follows 
 TEST_CASE("a frame after retained edits continues the tree as the edits left it") {
     Fixture f;
     uint32_t box = f.style(block());
-    ListFrame first = declareList(f, {{0, "a"}, {0, "b"}});
+    const Item firstItems[] = {{0, "a"}, {0, "b"}};
+    ListFrame first = declareList(f, firstItems);
     layOut(f);
     // A retained edit restyles a row and adds a node to the list between frames.
     prLayoutNodeSetStyle(f.tree, first.rows[0], f.style(block(50)));
@@ -306,7 +314,8 @@ TEST_CASE("a frame after retained edits continues the tree as the edits left it"
     CHECK(f.bounds(first.rows[0]).bottom - f.bounds(first.rows[0]).top == 50.0f);
 
     // The frame restates the rows' record and leaves out the added node.
-    ListFrame again = declareList(f, {{0, "a"}, {0, "b"}});
+    const Item againItems[] = {{0, "a"}, {0, "b"}};
+    ListFrame again = declareList(f, againItems);
     layOut(f);
     CHECK(again.rows == first.rows);
     CHECK(prLayoutTreeStats(f.tree).frameNodesGone == 1);
@@ -397,7 +406,8 @@ TEST_CASE("a text changed in a frame lays out its own line") {
         prLayoutTreeBeginFrame(f.tree);
         PrLayoutNode root = prLayoutTreeFrameElement(f.tree, kPrLayoutNodeNone, 0, box);
         f.root = root;
-        for (const char* text : {"a", middle, "c"})
+        const char* const texts[] = {"a", middle, "c"};
+        for (const char* text : texts)
             prLayoutTreeFrameText(f.tree, prLayoutTreeFrameElement(f.tree, root, 0, box), 0, text);
     };
     declare("b");
@@ -439,9 +449,11 @@ TEST_CASE("a frame's roots replace the committed roots, and a frame with none em
 
 TEST_CASE("a frame and the retained tree it ends in lay out alike") {
     Fixture framed;
-    ListFrame frame = declareList(framed, {{1, "one"}, {2, "two"}, {0, "three"}});
+    const Item frameItems[] = {{1, "one"}, {2, "two"}, {0, "three"}};
+    ListFrame frame = declareList(framed, frameItems);
     layOut(framed);
-    declareList(framed, {{2, "two"}, {0, "three"}, {1, "one"}});
+    const Item rotated[] = {{2, "two"}, {0, "three"}, {1, "one"}};
+    declareList(framed, rotated);
     layOut(framed);
 
     Fixture retained;
@@ -449,11 +461,12 @@ TEST_CASE("a frame and the retained tree it ends in lay out alike") {
     PrLayoutNode root = retained.element(kPrLayoutNodeNone, block());
     retained.text(root, "heading");
     PrLayoutNode list = prLayoutNodeCreateElement(retained.tree, root, box);
-    std::vector<PrLayoutNode> rows;
-    for (const char* text : {"two", "three", "one"}) {
+    Array<PrLayoutNode> rows;
+    const char* const texts[] = {"two", "three", "one"};
+    for (const char* text : texts) {
         PrLayoutNode row = prLayoutNodeCreateElement(retained.tree, list, box);
         retained.text(row, text);
-        rows.push_back(row);
+        rows.push(row);
     }
     layOut(retained);
     CHECK(shape(framed.tree) == shape(retained.tree));
@@ -509,15 +522,16 @@ TEST_CASE("a run of a stacking list that a cached part replays paints in its own
             }
         }
     };
-    std::vector<std::vector<uint8_t>> renders;
-    for (uint32_t inserted : {0u, 1u, 3u, 0u}) {
+    Array<Array<uint8_t>> renders;
+    const uint32_t insertions[] = {0u, 1u, 3u, 0u};
+    for (uint32_t inserted : insertions) {
         declare(inserted);
         f.layout(px(kWidth, 20));
-        renders.push_back(render(f.tree, kWidth, 20));
+        renders.push(render(f.tree, kWidth, 20));
         CHECK(verified(f.tree));
     }
     // The second band is green throughout, whatever the first band holds.
-    for (const std::vector<uint8_t>& pixels : renders) {
+    for (const Array<uint8_t>& pixels : renders) {
         for (uint32_t x = 5; x < kWidth; x += 10)
             CHECK(pixel(pixels, kWidth, x, 15) == "0 255 0 255");
     }

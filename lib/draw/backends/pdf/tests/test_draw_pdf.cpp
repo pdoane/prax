@@ -1,14 +1,15 @@
+#include "pr/array.h"
+#include "pr/ascii.h"
 #include "pr/compress.h"
 #include "pr/draw_pdf.h"
 #include "pr/float.h"
 #include "pr/font.h"
+#include "pr/integer.h"
+#include "pr/string.h"
+#include "pr/string_ops.h"
 #include "pr/task.h"
 
 #include "tools/harness/test.h"
-
-#include <cstdlib>
-#include <string>
-#include <vector>
 
 extern "C" int prTestDrawPdfCApi(void);
 
@@ -16,16 +17,34 @@ namespace pr_impl {
 
 namespace {
 
+using namespace pr;
+
 void collect(void* PR_NULLABLE context, uint32_t output, PrByteView bytes) {
     CHECK(output == 0);
-    static_cast<std::string*>(context)->append(reinterpret_cast<const char*>(bytes.data), bytes.size);
+    static_cast<String*>(context)->append(prStringFromBytes(bytes));
+}
+
+// Reads the decimal integer at `*at` in `text`, after any whitespace, and moves `*at` past it. Returns zero if no digit
+// is there.
+size_t readInteger(PrStringView text, size_t* at) {
+    while (*at < text.size && prAsciiIsSpace(text.data[*at]))
+        ++*at;
+    uint64_t value = 0;
+    if (*at < text.size)
+        *at += prU64ParsePrefix(text.data + *at, text.size - *at, &value, 10);
+    return size_t(value);
+}
+
+// Returns the decimal integer at `at` in `text`, as readInteger reads it.
+size_t integerAt(PrStringView text, size_t at) {
+    return readInteger(text, &at);
 }
 
 // A document written by the PDF writer, read back by its cross-reference table or stream.
 struct Pdf {
-    std::string bytes;
-    std::vector<std::string> bodies;    // by object: its body, or empty for a free object
-    std::string trailer;                // the trailer's entries, in its dictionary or the cross-reference stream's
+    String bytes;
+    Array<String> bodies;    // each object's body, by its number, or empty for a free object
+    String trailer;          // the trailer's entries, in its dictionary or the cross-reference stream's
     PrCompressCodec* codec = nullptr;
 
     Pdf(const PrDrawPage* pages, uint32_t count, const PrDrawStructure* PR_NULLABLE structure = nullptr,
@@ -54,155 +73,163 @@ struct Pdf {
 
     // Returns the body of object `object`, which starts at `offset`, from after its header to its endobj, and checks
     // that its header names it.
-    std::string direct(size_t object, size_t offset) const {
-        std::string head = std::to_string(object) + " 0 obj\n";
-        CHECK(bytes.compare(offset, head.size(), head) == 0);
-        size_t start = offset + head.size();
-        size_t end = bytes.find("\nendobj\n", start);
-        REQUIRE(end != std::string::npos);
-        return bytes.substr(start, end - start);
+    String direct(size_t object, size_t offset) const {
+        String head = format("{} 0 obj\n", object);
+        CHECK(prStringStartsWith(prStringFrom(bytes, offset), head));
+        size_t start = offset + head.count();
+        size_t end = prStringFindFrom(bytes, "\nendobj\n", start);
+        REQUIRE(end != bytes.count());
+        return String(prStringSlice(bytes, start, end - start));
     }
 
     // Returns the integer after `entry` in `text`.
-    static size_t integerAfter(const std::string& text, const std::string& entry) {
-        size_t at = text.find(entry);
-        REQUIRE(at != std::string::npos);
-        return size_t(std::strtoull(text.c_str() + at + entry.size(), nullptr, 10));
+    static size_t integerAfter(PrStringView text, PrStringView entry) {
+        size_t at = prStringFind(text, entry);
+        REQUIRE(at != text.size);
+        return integerAt(text, at + entry.size);
     }
 
     // Reads the cross-reference table or stream that startxref names, and the objects that it finds.
     void readXref() {
-        CHECK(bytes.compare(0, 9, "%PDF-2.0\n") == 0);
-        CHECK(bytes.compare(bytes.size() - 6, 6, "%%EOF\n") == 0);
-        size_t start = bytes.rfind("startxref\n");
-        REQUIRE(start != std::string::npos);
-        size_t xref = size_t(std::strtoull(bytes.c_str() + start + 10, nullptr, 10));
-        if (bytes.compare(xref, 5, "xref\n") == 0) {
+        CHECK(prStringStartsWith(bytes, "%PDF-2.0\n"));
+        CHECK(prStringEndsWith(bytes, "%%EOF\n"));
+        size_t start = prStringFindLast(bytes, "startxref\n");
+        REQUIRE(start != bytes.count());
+        size_t xref = integerAt(bytes, start + 10);
+        if (prStringStartsWith(prStringFrom(bytes, xref), "xref\n")) {
             size_t at = xref + 5;
-            REQUIRE(bytes.compare(at, 2, "0 ") == 0);
-            size_t count = size_t(std::strtoull(bytes.c_str() + at + 2, nullptr, 10));
-            at = bytes.find('\n', at) + 1;
-            bodies.assign(count, {});
+            REQUIRE(prStringStartsWith(prStringFrom(bytes, at), "0 "));
+            size_t count = integerAt(bytes, at + 2);
+            at = prStringFindFrom(bytes, "\n", at) + 1;
+            bodies = Array<String>(count);
             for (size_t i = 0; i < count; ++i) {
-                std::string entry = bytes.substr(at + i * 20, 20);
-                REQUIRE(entry.size() == 20);
-                CHECK(entry.substr(18) == "\r\n");
-                if (i != 0 && entry[17] == 'n')
-                    bodies[i] = direct(i, size_t(std::strtoull(entry.c_str(), nullptr, 10)));
+                PrStringView entry = prStringHead(prStringFrom(bytes, at + i * 20), 20);
+                REQUIRE(entry.size == 20);
+                CHECK(prStringFrom(entry, 18) == "\r\n");
+                if (i != 0 && entry.data[17] == 'n')
+                    bodies[uint32_t(i)] = direct(i, integerAt(entry, 0));
             }
-            size_t dictionary = bytes.find("trailer\n", at + count * 20);
-            REQUIRE(dictionary != std::string::npos);
-            trailer = bytes.substr(dictionary, start - dictionary);
+            size_t dictionary = prStringFindFrom(bytes, "trailer\n", at + count * 20);
+            REQUIRE(dictionary != bytes.count());
+            trailer = prStringSlice(bytes, dictionary, start - dictionary);
             return;
         }
         // A cross-reference stream: entries of a type, a field of /W's width, and two bytes.
-        size_t number = size_t(std::strtoull(bytes.c_str() + xref, nullptr, 10));
-        std::string body = direct(number, xref);
-        trailer = body.substr(0, body.find(">>\nstream\n"));
-        CHECK(trailer.find("/Type /XRef") != std::string::npos);
+        size_t number = integerAt(bytes, xref);
+        String body = direct(number, xref);
+        trailer = prStringHead(body, prStringFind(body, ">>\nstream\n"));
+        CHECK(prStringContains(trailer, "/Type /XRef"));
         size_t count = integerAfter(trailer, "/Size ");
         size_t width = integerAfter(trailer, "/W [1 ");
-        std::string entries = data(body);
-        REQUIRE(entries.size() == count * (width + 3));
+        String entries = data(body);
+        REQUIRE(entries.count() == count * (width + 3));
+        const char* fields = entries.data();
         auto field = [&](size_t at, size_t size) {
             size_t value = 0;
             for (size_t k = 0; k < size; ++k)
-                value = value << 8 | uint8_t(entries[at + k]);
+                value = value << 8 | uint8_t(fields[at + k]);
             return value;
         };
-        bodies.assign(count, {});
+        bodies = Array<String>(count);
         for (size_t i = 1; i < count; ++i) {
             size_t at = i * (width + 3);
-            if (entries[at] == 1)
-                bodies[i] = direct(i, field(at + 1, width));
+            if (fields[at] == 1)
+                bodies[uint32_t(i)] = direct(i, field(at + 1, width));
         }
         // Each object in an object stream follows the stream's pairs of number and offset, from /First.
         for (size_t i = 1; i < count; ++i) {
             size_t at = i * (width + 3);
-            if (entries[at] != 2)
+            if (fields[at] != 2)
                 continue;
             size_t container = field(at + 1, width);
-            size_t index = field(at + 1 + width, 2);
-            const std::string& head = bodies[container];
-            REQUIRE(head.find("/Type /ObjStm") != std::string::npos);
-            std::string packed = data(head);
+            uint32_t index = uint32_t(field(at + 1 + width, 2));
+            const String& head = bodies[uint32_t(container)];
+            REQUIRE(prStringContains(head, "/Type /ObjStm"));
+            String packed = data(head);
             size_t first = integerAfter(head, "/First ");
             size_t objects = integerAfter(head, "/N ");
             REQUIRE(index < objects);
-            std::vector<size_t> numbers(objects);
-            std::vector<size_t> offsets(objects + 1, packed.size() - first);
-            const char* cursor = packed.c_str();
-            for (size_t k = 0; k < objects; ++k) {
-                char* end = nullptr;
-                numbers[k] = size_t(std::strtoull(cursor, &end, 10));
-                offsets[k] = size_t(std::strtoull(end, &end, 10));
-                cursor = end;
+            Array<size_t> numbers(objects);
+            Array<size_t> offsets(objects + 1);
+            offsets.last() = packed.count() - first;
+            size_t cursor = 0;
+            for (uint32_t k = 0; k < objects; ++k) {
+                numbers[k] = readInteger(packed, &cursor);
+                offsets[k] = readInteger(packed, &cursor);
             }
             CHECK(numbers[index] == i);
-            std::string object = packed.substr(first + offsets[index], offsets[index + 1] - offsets[index]);
-            while (!object.empty() && object.back() == '\n')
-                object.pop_back();
-            bodies[i] = object;
+            PrStringView object =
+                prStringHead(prStringFrom(packed, first + offsets[index]), offsets[index + 1] - offsets[index]);
+            bodies[uint32_t(i)] = prStringTrimEndByte(object, '\n');
         }
     }
 
     // Returns the body of object `object`, from after its header to its endobj.
-    std::string object(size_t object) const {
-        REQUIRE(object < bodies.size());
-        return bodies[object];
+    String object(size_t object) const {
+        REQUIRE(object < bodies.count());
+        return bodies[uint32_t(object)];
     }
 
     // Returns the object that the reference after `entry` in `text` names, as "/Key N 0 R".
-    size_t referenced(const std::string& text, const std::string& entry) const {
-        size_t at = text.find(entry);
-        REQUIRE(at != std::string::npos);
-        at += entry.size();
-        while (at < text.size() && (text[at] == ' ' || text[at] == '['))
+    size_t referenced(PrStringView text, PrStringView entry) const {
+        size_t at = prStringFind(text, entry);
+        REQUIRE(at != text.size);
+        at += entry.size;
+        while (at < text.size && (text.data[at] == ' ' || text.data[at] == '['))
             ++at;
-        return size_t(std::strtoull(text.c_str() + at, nullptr, 10));
+        return integerAt(text, at);
     }
 
     // Returns the number of the first object whose body contains `part`, or zero.
-    size_t find(const std::string& part) const {
-        for (size_t i = 1; i < bodies.size(); ++i) {
-            if (bodies[i].find(part) != std::string::npos)
+    size_t find(PrStringView part) const {
+        for (uint32_t i = 1; i < bodies.count(); ++i) {
+            if (prStringContains(bodies[i], part))
                 return i;
         }
         return 0;
     }
 
     // Returns the data of the stream `object`, decompressed if it is compressed.
-    std::string stream(size_t object) const {
+    String stream(size_t object) const {
         return data(this->object(object));
     }
 
     // Returns the data of a stream whose body is `body`, decompressed if it is compressed.
-    std::string data(const std::string& body) const {
-        size_t start = body.find(">>\nstream\n");
-        REQUIRE(start != std::string::npos);
+    String data(PrStringView body) const {
+        size_t start = prStringFind(body, ">>\nstream\n");
+        REQUIRE(start != body.size);
         start += 10;
-        size_t end = body.rfind("\nendstream");
-        std::string data = body.substr(start, end - start);
-        if (body.find("/FlateDecode") == std::string::npos)
+        size_t end = prStringFindLast(body, "\nendstream");
+        PrStringView data = prStringHead(prStringFrom(body, start), end - start);
+        if (!prStringContains(body, "/FlateDecode"))
             return data;
-        std::vector<uint8_t> out(1 << 22);
+        Array<uint8_t> out(1 << 22);
         PrCompressRead read{};
-        PrByteView input{reinterpret_cast<const uint8_t*>(data.data()), data.size()};
-        REQUIRE(prCompressCodecDecode(codec, PrCompressFormat_Zlib, input, out.data(), out.size(), &read) ==
+        PrByteView input = prStringBytes(data);
+        REQUIRE(prCompressCodecDecode(codec, PrCompressFormat_Zlib, input, out.data(), out.count(), &read) ==
             PrStatus_Ok);
-        return std::string(reinterpret_cast<const char*>(out.data()), read.written);
+        return PrStringView{reinterpret_cast<const char*>(out.data()), read.written};
     }
 
     // Returns the content stream of the first page.
-    std::string pageContent() const {
+    String pageContent() const {
         size_t page = find("/Type /Page ");
         REQUIRE(page != 0);
         return stream(referenced(object(page), "/Contents"));
     }
 };
 
-bool contains(const std::string& text, const std::string& part) {
-    return text.find(part) != std::string::npos;
+bool contains(PrStringView text, PrStringView part) {
+    return prStringContains(text, part);
+}
+
+// Returns true if every byte of `text` is an uppercase hexadecimal digit.
+bool upperHex(PrStringView text) {
+    for (char c : text) {
+        if (!prAsciiIsDigit(c) && (c < 'A' || c > 'F'))
+            return false;
+    }
+    return true;
 }
 
 const PrFont* notoSans() {
@@ -226,12 +253,12 @@ TEST_CASE("a page's content is in px with y down, scaled to points") {
     prDrawListRect(list, PrRect{10, 10, 30, 20}, {.color = PrColor{1, 0, 0, 1}});
     PrDrawPage page{.list = list, .extent = PrVec2{200, 100}};
     Pdf pdf(&page, 1);
-    std::string pageObject = pdf.object(pdf.find("/Type /Page "));
+    String pageObject = pdf.object(pdf.find("/Type /Page "));
     CHECK(contains(pageObject, "/MediaBox [0 0 150 75]"));
-    std::string content = pdf.pageContent();
-    CHECK(content.find("0.75 0 0 -0.75 0 75 cm\n") == 0);
+    String content = pdf.pageContent();
+    CHECK(prStringStartsWith(content, "0.75 0 0 -0.75 0 75 cm\n"));
     CHECK(contains(content, "1 0 0 rg\n10 10 20 10 re\nf\n"));
-    std::string catalog = pdf.object(1);
+    String catalog = pdf.object(1);
     CHECK(contains(catalog, "/Type /Catalog /Pages 2 0 R"));
     CHECK(!contains(catalog, "/StructTreeRoot"));
     prDrawListRelease(list);
@@ -246,12 +273,12 @@ TEST_CASE("a page writes its bleed and trim boxes in points with y up, if they d
     };
     Pdf pdf(pages, 3);
     // The pages' objects, in the order of the pages.
-    std::vector<std::string> objects;
-    for (const std::string& body : pdf.bodies) {
+    Array<String> objects;
+    for (const String& body : pdf.bodies) {
         if (contains(body, "/Type /Page /Parent"))
-            objects.push_back(body);
+            objects.push(body);
     }
-    REQUIRE(objects.size() == 3);
+    REQUIRE(objects.count() == 3);
     CHECK(contains(objects[0], "/MediaBox [0 0 150 75] /BleedBox [6 6 144 69] /TrimBox [12 6 138 66]"));
     // A box that is the media box is left out, since a missing box defaults to it, and so is an empty box.
     CHECK(!contains(objects[1], "/BleedBox"));
@@ -268,7 +295,7 @@ TEST_CASE("streams are compressed with the writer's codec") {
     PrDrawPage page{.list = list, .extent = PrVec2{100, 100}};
     Pdf pdf(&page, 1, nullptr, true);
     size_t pageObject = pdf.find("/Type /Page ");
-    std::string raw = pdf.object(pdf.referenced(pdf.object(pageObject), "/Contents"));
+    String raw = pdf.object(pdf.referenced(pdf.object(pageObject), "/Contents"));
     CHECK(contains(raw, "/Filter /FlateDecode"));
     CHECK(contains(pdf.pageContent(), "19 0 1 10 re\nf\n"));
     // The objects that are not streams are compressed in object streams, which a cross-reference stream finds.
@@ -280,22 +307,22 @@ TEST_CASE("streams are compressed with the writer's codec") {
 }
 
 TEST_CASE("a writer with a pool compresses streams on its threads, and writes the same objects") {
-    std::vector<PrDrawList*> lists;
-    std::vector<PrDrawPage> pages;
+    Array<PrDrawList*> lists;
+    Array<PrDrawPage> pages;
     for (int i = 0; i < 150; ++i) {
         PrDrawList* list = prDrawListCreate();
         for (int k = 0; k < 20; ++k)
             prDrawListRect(list, PrRect{float(k), float(i), float(k) + 1, 10}, {.color = PrColor{0, 0, 0, 1}});
-        lists.push_back(list);
-        pages.push_back(PrDrawPage{.list = list, .extent = PrVec2{100, 100}});
+        lists.push(list);
+        pages.push(PrDrawPage{.list = list, .extent = PrVec2{100, 100}});
     }
     PrTaskPool* tasks = prTaskPoolCreate(PrTaskPoolBackend_Default, 3);
-    Pdf alone(pages.data(), uint32_t(pages.size()), nullptr, true);
-    Pdf pooled(pages.data(), uint32_t(pages.size()), nullptr, true, {}, {}, tasks);
+    Pdf alone(pages.data(), pages.count(), nullptr, true);
+    Pdf pooled(pages.data(), pages.count(), nullptr, true, {}, {}, tasks);
     // The streams are written in another order, so only the cross-reference stream, the last object, and the identifier
     // that it holds differ.
-    REQUIRE(pooled.bodies.size() == alone.bodies.size());
-    for (size_t i = 0; i + 1 < alone.bodies.size(); ++i)
+    REQUIRE(pooled.bodies.count() == alone.bodies.count());
+    for (uint32_t i = 0; i + 1 < alone.bodies.count(); ++i)
         CHECK(pooled.bodies[i] == alone.bodies[i]);
     prTaskPoolDestroy(tasks);
     for (PrDrawList* list : lists)
@@ -308,11 +335,11 @@ TEST_CASE("a document has an identifier made from its content") {
     PrDrawPage page{.list = list, .extent = PrVec2{100, 100}};
     Pdf first(&page, 1);
     Pdf second(&page, 1);
-    size_t at = first.trailer.find("/ID [<");
-    REQUIRE(at != std::string::npos);
-    std::string id = first.trailer.substr(at + 6, 32);
-    CHECK(id.find_first_not_of("0123456789ABCDEF") == std::string::npos);
-    CHECK(contains(first.trailer, "/ID [<" + id + "> <" + id + ">]"));
+    size_t at = prStringFind(first.trailer, "/ID [<");
+    REQUIRE(at != first.trailer.count());
+    String id = prStringHead(prStringFrom(first.trailer, at + 6), 32);
+    CHECK(upperHex(id));
+    CHECK(contains(first.trailer, format("/ID [<{}> <{}>]", id, id)));
     CHECK(first.bytes == second.bytes);
     prDrawListRect(list, PrRect{0, 0, 20, 20}, {.color = PrColor{0, 0, 0, 1}});
     Pdf third(&page, 1);
@@ -352,7 +379,7 @@ TEST_CASE("gradients are shading patterns") {
     Pdf pdf(&page, 1);
     size_t pattern = pdf.find("/PatternType 2");
     REQUIRE(pattern != 0);
-    std::string body = pdf.object(pattern);
+    String body = pdf.object(pattern);
     CHECK(contains(body, "/ShadingType 3 /Coords [5 5 0 10 10 10 ]"));
     CHECK(contains(body, "/C0 [1 0 0] /C1 [0 0 1]"));
     CHECK(contains(body, "/Extend [true true]"));
@@ -387,35 +414,29 @@ TEST_CASE("text is a subset font that maps back to the run's characters") {
     Pdf pdf(&page, 1, nullptr, true);
     size_t type0 = pdf.find("/Subtype /Type0");
     REQUIRE(type0 != 0);
-    std::string fontObject = pdf.object(type0);
+    String fontObject = pdf.object(type0);
     CHECK(contains(fontObject, "/Encoding /Identity-H"));
-    std::string cid = pdf.object(pdf.referenced(fontObject, "/DescendantFonts"));
+    String cid = pdf.object(pdf.referenced(fontObject, "/DescendantFonts"));
     CHECK(contains(cid, "/Subtype /CIDFontType2"));
     CHECK(contains(cid, "/CIDToGIDMap /Identity"));
     // The font is named by its PostScript name, after the subset's tag.
     CHECK(contains(cid, "/BaseFont /AAAAAA+NotoSans-Regular"));
-    std::string descriptor = pdf.object(pdf.referenced(cid, "/FontDescriptor"));
+    String descriptor = pdf.object(pdf.referenced(cid, "/FontDescriptor"));
     size_t file = pdf.referenced(descriptor, "/FontFile2");
-    std::string subset = pdf.stream(file);
-    CHECK(subset.size() < prFontData(font).size / 4);
+    String subset = pdf.stream(file);
+    CHECK(subset.count() < prFontData(font).size / 4);
     const PrFont* reopened = nullptr;
-    CHECK(prFontCreate(PrByteView{reinterpret_cast<const uint8_t*>(subset.data()), subset.size()}, 0, nullptr,
-        &reopened) == PrStatus_Ok);
+    CHECK(prFontCreate(prStringBytes(subset), 0, nullptr, &reopened) == PrStatus_Ok);
     prFontRelease(reopened);
-    std::string toUnicode = pdf.stream(pdf.referenced(fontObject, "/ToUnicode"));
-    char hex[16];
-    std::snprintf(hex, sizeof(hex), "<%04X> <0048>", h);
-    CHECK(contains(toUnicode, hex));
-    std::snprintf(hex, sizeof(hex), "<%04X> <0069>", i);
-    CHECK(contains(toUnicode, hex));
+    String toUnicode = pdf.stream(pdf.referenced(fontObject, "/ToUnicode"));
+    CHECK(contains(toUnicode, format("<{:04X}> <0048>", h)));
+    CHECK(contains(toUnicode, format("<{:04X}> <0069>", i)));
     // The run is one text object at the run's size, whose TJ array moves `i` back from where the width of `h` leaves
     // it, in thousandths of an em.
-    std::string content = pdf.pageContent();
+    String content = pdf.pageContent();
     CHECK(contains(content, "BT\n/F0 20 Tf\n1 0 0 -1 4 30 Tm\n"));
     long back = long(prF32Round(prFontGlyphAdvance(font, h, 0) * 1000 - 12.0f / 20 * 1000));
-    char shown[64];
-    std::snprintf(shown, sizeof(shown), "[<%04X>%ld<%04X>]TJ\nET\n", h, back, i);
-    CHECK(contains(content, shown));
+    CHECK(contains(content, format("[<{:04X}>{}<{:04X}>]TJ\nET\n", h, back, i)));
     CHECK(!contains(content, "/ActualText"));
     prDrawListRelease(list);
     prFontRelease(font);
@@ -434,17 +455,15 @@ TEST_CASE("runs of text share a text object, which starts each line by Td") {
     prDrawListGlyphs(list, &run, PrVec2{5, 34}, {.color = PrColor{0, 0, 0, 1}});
     PrDrawPage page{.list = list, .extent = PrVec2{60, 60}};
     Pdf pdf(&page, 1);
-    std::string content = pdf.pageContent();
-    char expected[160];
-    std::snprintf(expected, sizeof(expected), "0 0 0 rg\nBT\n/F0 10 Tf\n1 0 0 -1 5 20 Tm\n[<%04X%04X>]TJ\n", a, a);
-    CHECK(contains(content, expected));
+    String content = pdf.pageContent();
+    CHECK(contains(content, format("0 0 0 rg\nBT\n/F0 10 Tf\n1 0 0 -1 5 20 Tm\n[<{:04X}{:04X}>]TJ\n", a, a)));
     // The raised glyph and the next run each start a line, and the font and the color are not selected again.
-    std::string after = content.substr(content.find("]TJ\n") + 4);
+    PrStringView after = prStringFrom(content, prStringFind(content, "]TJ\n") + 4);
     CHECK(contains(after, " 4 Td\n["));
     CHECK(contains(after, " -18 Td\n["));
     CHECK(!contains(after, "Tf"));
     CHECK(!contains(after, "rg"));
-    CHECK(content.find("ET\n") == content.rfind("ET\n"));
+    CHECK(prStringFind(content, "ET\n") == prStringFindLast(content, "ET\n"));
     prDrawListRelease(list);
     prFontRelease(font);
 }
@@ -463,7 +482,7 @@ TEST_CASE("a run whose glyphs do not map back to its text carries it as replacem
     prDrawListGlyphs(list, &run, PrVec2{30, 30}, {.color = PrColor{0, 0, 0, 1}});
     PrDrawPage page{.list = list, .extent = PrVec2{60, 40}};
     Pdf pdf(&page, 1);
-    std::string content = pdf.pageContent();
+    String content = pdf.pageContent();
     CHECK(!contains(content, "/Span << /ActualText (fi) >> BDC"));
     CHECK(contains(content, "/Span << /ActualText (f) >> BDC"));
     prDrawListRelease(list);
@@ -495,41 +514,41 @@ TEST_CASE("a tagged document joins its marks to its structure") {
     PrDrawStructureNode a = prDrawStructureAppendNode(structure, p, &link);
     prDrawStructureAppendKey(structure, a, 102);
     Pdf pdf(&page, 1, structure, false, "Doc", "en");
-    std::string content = pdf.pageContent();
+    String content = pdf.pageContent();
     // The background and the mark that no node names are artifacts.
     CHECK(contains(content, "/Artifact BMC\n0.5 0.5 0.5 rg"));
     CHECK(contains(content, "/H1 << /MCID 0 >> BDC\n"));
     CHECK(contains(content, "/Link << /MCID 1 >> BDC\n"));
     CHECK(!contains(content, "/MCID 2"));
-    std::string catalog = pdf.object(1);
+    String catalog = pdf.object(1);
     CHECK(contains(catalog, "/Lang (en)"));
     CHECK(contains(catalog, "/MarkInfo << /Marked true >>"));
     CHECK(contains(catalog, "/ViewerPreferences << /DisplayDocTitle true >>"));
     // The metadata gives the title and claims PDF/UA-2, as an XMP packet that is not compressed.
-    std::string metadata = pdf.object(pdf.referenced(catalog, "/Metadata"));
+    String metadata = pdf.object(pdf.referenced(catalog, "/Metadata"));
     CHECK(contains(metadata, "/Type /Metadata /Subtype /XML"));
     CHECK(contains(metadata, "<dc:title><rdf:Alt><rdf:li xml:lang=\"x-default\">Doc</rdf:li></rdf:Alt></dc:title>"));
     CHECK(contains(metadata, "<pdfuaid:part>2</pdfuaid:part>"));
-    std::string root = pdf.object(pdf.referenced(catalog, "/StructTreeRoot"));
+    String root = pdf.object(pdf.referenced(catalog, "/StructTreeRoot"));
     CHECK(contains(root, "/ParentTree << /Nums [0 ["));
-    std::string document = pdf.object(pdf.referenced(root, "/K"));
+    String document = pdf.object(pdf.referenced(root, "/K"));
     CHECK(contains(document, "/S /Document"));
-    std::string h1Element = pdf.object(pdf.find("/S /H1"));
+    String h1Element = pdf.object(pdf.find("/S /H1"));
     CHECK(contains(h1Element, "/K [0 ]"));
     CHECK(contains(h1Element, "/T (Title)"));
-    std::string linkElement = pdf.object(pdf.find("/S /Link"));
+    String linkElement = pdf.object(pdf.find("/S /Link"));
     CHECK(contains(linkElement, "/Type /OBJR"));
     size_t annotation = pdf.find("/Subtype /Link");
     REQUIRE(annotation != 0);
-    std::string annotationObject = pdf.object(annotation);
+    String annotationObject = pdf.object(annotation);
     CHECK(contains(annotationObject, "/URI (https://example.com/)"));
     CHECK(contains(annotationObject, "/Rect ["));
     CHECK(contains(annotationObject, "/StructParent 1"));
-    std::string pageObject = pdf.object(pdf.find("/Type /Page "));
+    String pageObject = pdf.object(pdf.find("/Type /Page "));
     CHECK(contains(pageObject, "/Annots ["));
     CHECK(contains(pageObject, "/StructParents 0"));
     CHECK(contains(pageObject, "/Tabs /S"));
-    std::string outline = pdf.object(pdf.referenced(catalog, "/Outlines"));
+    String outline = pdf.object(pdf.referenced(catalog, "/Outlines"));
     CHECK(contains(outline, "/Count 1"));
     CHECK(pdf.find("/Title (Title) /Parent") != 0);
     prDrawStructureDestroy(structure);
@@ -550,7 +569,7 @@ TEST_CASE("a node's content may span pages") {
     PrDrawStructureNodeDesc paragraph = prDrawStructureNodeDescDefault(PrDrawStructureType_P);
     prDrawStructureAppendKey(structure, prDrawStructureAppendNode(structure, kPrDrawStructureRoot, &paragraph), 7);
     Pdf pdf(pages, 2, structure);
-    std::string element = pdf.object(pdf.find("/S /P"));
+    String element = pdf.object(pdf.find("/S /P"));
     CHECK(contains(element, "/K [0 << /Type /MCR /Pg "));
     prDrawStructureDestroy(structure);
     prDrawListRelease(first);
@@ -572,13 +591,13 @@ TEST_CASE("a rasterized group's image takes the place of its first mark's conten
     figure.alt = "A square";
     prDrawStructureAppendKey(structure, prDrawStructureAppendNode(structure, kPrDrawStructureRoot, &figure), 5);
     Pdf pdf(&page, 1, structure);
-    std::string content = pdf.pageContent();
-    size_t mark = content.find("/Figure << /MCID 0 >> BDC\n");
-    size_t image = content.find("/I0 Do");
-    REQUIRE(mark != std::string::npos);
-    REQUIRE(image != std::string::npos);
+    String content = pdf.pageContent();
+    size_t mark = prStringFind(content, "/Figure << /MCID 0 >> BDC\n");
+    size_t image = prStringFind(content, "/I0 Do");
+    REQUIRE(mark != content.count());
+    REQUIRE(image != content.count());
     CHECK(mark < image);
-    CHECK(content.find("EMC", image) != std::string::npos);
+    CHECK(prStringFindFrom(content, "EMC", image) != content.count());
     CHECK(contains(pdf.object(pdf.find("/S /Figure")), "/Alt (A square)"));
     prDrawStructureDestroy(structure);
     prDrawListRelease(list);
@@ -602,12 +621,9 @@ TEST_CASE("glyphs that letter spacing places past the font's widths show with ch
     prDrawListGlyphs(list, &run, PrVec2{5, 40}, {.color = PrColor{0, 0, 0, 1}});
     PrDrawPage page{.list = list, .extent = PrVec2{60, 60}};
     Pdf pdf(&page, 1);
-    std::string content = pdf.pageContent();
-    char expected[160];
-    std::snprintf(expected, sizeof(expected), "2 Tc\n[<%04X%04X%04X%04X>]TJ\n", a, a, a, a);
-    CHECK(contains(content, expected));
-    std::snprintf(expected, sizeof(expected), "0 Tc\n[<%04X%04X>]TJ\n", a, a);
-    CHECK(contains(content, expected));
+    String content = pdf.pageContent();
+    CHECK(contains(content, format("2 Tc\n[<{:04X}{:04X}{:04X}{:04X}>]TJ\n", a, a, a, a)));
+    CHECK(contains(content, format("0 Tc\n[<{:04X}{:04X}>]TJ\n", a, a)));
     prDrawListRelease(list);
     prFontRelease(font);
 }
@@ -632,17 +648,14 @@ TEST_CASE("text in a font with synthetic bold is text of a CFF font that holds t
     prDrawListGlyphs(list, &run, PrVec2{4, 30}, {.color = PrColor{0, 0, 0, 1}});
     PrDrawPage page{.list = list, .extent = PrVec2{60, 40}};
     Pdf pdf(&page, 1);
-    std::string fontObject = pdf.object(pdf.find("/Subtype /Type0"));
-    std::string cid = pdf.object(pdf.referenced(fontObject, "/DescendantFonts"));
+    String fontObject = pdf.object(pdf.find("/Subtype /Type0"));
+    String cid = pdf.object(pdf.referenced(fontObject, "/DescendantFonts"));
     CHECK(contains(cid, "/Subtype /CIDFontType0"));
-    std::string descriptor = pdf.object(pdf.referenced(cid, "/FontDescriptor"));
+    String descriptor = pdf.object(pdf.referenced(cid, "/FontDescriptor"));
     CHECK(contains(pdf.object(pdf.referenced(descriptor, "/FontFile3")), "/Subtype /CIDFontType0C"));
-    char hex[16];
-    std::snprintf(hex, sizeof(hex), "<%04X> <0048>", h);
-    CHECK(contains(pdf.stream(pdf.referenced(fontObject, "/ToUnicode")), hex));
-    std::string content = pdf.pageContent();
-    std::snprintf(hex, sizeof(hex), "[<%04X>]TJ", h);
-    CHECK(contains(content, hex));
+    CHECK(contains(pdf.stream(pdf.referenced(fontObject, "/ToUnicode")), format("<{:04X}> <0048>", h)));
+    String content = pdf.pageContent();
+    CHECK(contains(content, format("[<{:04X}>]TJ", h)));
     CHECK(!contains(content, "/ActualText"));
     prDrawListRelease(list);
     prFontRelease(derived);

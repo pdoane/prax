@@ -12,7 +12,7 @@ bool profileRead(PrStringView path, String* out) {
     PrByteView mapping{};
     if (!prFileMap(path, &mapping))
         return false;
-    *out = PrStringView{reinterpret_cast<const char*>(mapping.data), mapping.size};
+    *out = prStringFromBytes(mapping);
     prFileUnmap(&mapping);
     return true;
 }
@@ -21,7 +21,7 @@ bool profileWrite(PrStringView path, PrStringView text) {
     PrStringView parent = prFilePathParent(path);
     if (!parent.isEmpty())
         prFileCreateDirectory(parent);
-    return prFileWrite(path, PrByteView{prStringBytes(text), text.size});
+    return prFileWrite(path, prStringBytes(text));
 }
 
 } // namespace browser

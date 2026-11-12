@@ -10,13 +10,13 @@ namespace {
 // Returns a font of `family`, at 20px.
 PrLayoutFontStyle fontOf(PrFontFamily family) {
     PrLayoutFontStyle font = prLayoutFontStyleDefault();
-    font.font = textFontOf(20, {family});
+    font.font = textFontOf(20, Span<const PrFontFamily>(&family, 1));
     return font;
 }
 
 // Returns the glyphs that `build` paints, in a block of the font of `families`, laid out 800 wide.
 template <typename Build>
-std::vector<uint16_t> glyphsOf(const char* file, const char* family, Build build) {
+Array<uint16_t> glyphsOf(PrStringView file, PrStringView family, Build build) {
     Fixture f;
     PrLayoutFontStyle font = fontOf(f.family(file, family));
     PrLayoutNode root = f.element(kPrLayoutNodeNone, block(), nullptr, nullptr, &font);
@@ -45,18 +45,18 @@ using namespace pr_impl;
 
 TEST_CASE("two scripts in one face shape each in its own script") {
     // कि reorders its vowel sign before its consonant in Devanagari, but not in Latin, which the text starts in.
-    std::vector<uint16_t> alone = glyphsOf(kDevanagari, "Noto Sans Devanagari",
+    Array<uint16_t> alone = glyphsOf(kDevanagari, "Noto Sans Devanagari",
         [](Fixture& f, PrLayoutNode root, const PrLayoutFontStyle&) { f.text(root, "कि"); });
-    std::vector<uint16_t> mixed = glyphsOf(kDevanagari, "Noto Sans Devanagari",
+    Array<uint16_t> mixed = glyphsOf(kDevanagari, "Noto Sans Devanagari",
         [](Fixture& f, PrLayoutNode root, const PrLayoutFontStyle&) { f.text(root, "ab कि"); });
-    REQUIRE(alone.size() == 2);
-    REQUIRE(mixed.size() == 5);
+    REQUIRE(alone.count() == 2);
+    REQUIRE(mixed.count() == 5);
     CHECK(mixed[3] == alone[0]);
     CHECK(mixed[4] == alone[1]);
     // Punctuation between them takes the script before it, and a closing bracket takes its opening bracket's script.
-    std::vector<uint16_t> bracketed = glyphsOf(kDevanagari, "Noto Sans Devanagari",
+    Array<uint16_t> bracketed = glyphsOf(kDevanagari, "Noto Sans Devanagari",
         [](Fixture& f, PrLayoutNode root, const PrLayoutFontStyle&) { f.text(root, "(कि) a"); });
-    REQUIRE(bracketed.size() == 6);
+    REQUIRE(bracketed.count() == 6);
     CHECK(bracketed[1] == alone[0]);
     CHECK(bracketed[2] == alone[1]);
 }
@@ -73,8 +73,8 @@ TEST_CASE("identically styled inline boxes and adjacent text nodes shape as one 
         f.text(span(f, root, font), "ع");
         f.text(root, "ع");
     };
-    std::vector<uint16_t> expected = glyphsOf(kArabic, "Noto Sans Arabic", joined);
-    REQUIRE(expected.size() == 3);
+    Array<uint16_t> expected = glyphsOf(kArabic, "Noto Sans Arabic", joined);
+    REQUIRE(expected.count() == 3);
     // The letters join: initial, medial and final forms differ.
     CHECK(expected[0] != expected[1]);
     CHECK(glyphsOf(kArabic, "Noto Sans Arabic", nodes) == expected);
@@ -91,11 +91,11 @@ TEST_CASE("an inline box's padding interrupts shaping and the joining context ac
     auto unjoined = [](Fixture& f, PrLayoutNode root, const PrLayoutFontStyle&) {
         f.text(root, "ع‌ع‌ع");
     };
-    std::vector<uint16_t> expected = glyphsOf(kArabic, "Noto Sans Arabic", unjoined);
-    std::vector<uint16_t> shaped = glyphsOf(kArabic, "Noto Sans Arabic", padded);
-    REQUIRE(shaped.size() == 3);
+    Array<uint16_t> expected = glyphsOf(kArabic, "Noto Sans Arabic", unjoined);
+    Array<uint16_t> shaped = glyphsOf(kArabic, "Noto Sans Arabic", padded);
+    REQUIRE(shaped.count() == 3);
     // Each letter stands alone: the same isolated form three times.
     CHECK(shaped[0] == shaped[1]);
     CHECK(shaped[1] == shaped[2]);
-    CHECK(shaped[0] == expected.back());
+    CHECK(shaped[0] == expected.last());
 }

@@ -15,6 +15,7 @@
 // it, so that neither counts the check. If a case is named, only that case runs, repeatedly, for five minutes
 // (harnessRepeat). This is for attaching a profiler.
 
+#include "pr/array.h"
 #include "pr/assert.h"
 #include "pr/count_of.h"
 #include "pr/css.h"
@@ -22,20 +23,17 @@
 #include "pr/css_view.h"
 #include "pr/html.h"
 #include "pr/html_page.h"
+#include "pr/integer.h"
 #include "pr/layout_scene.h"
 #include "pr/layout_style.h"
 #include "pr/layout_tree.h"
+#include "pr/print.h"
 #include "pr/string_ops.h"
 #include "pr/text_buffer.h"
 #include "pr/text_harfbuzz.h"
 #include "pr/time.h"
 
 #include "tools/harness/harness.h"
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <vector>
 
 using namespace harness;
 
@@ -90,7 +88,7 @@ struct Work {
     PrHtmlPage* page;
     PrCssPresentation* presentation;
     PrDomDocument* document;
-    std::vector<PrDomElement*> cards;
+    Array<PrDomElement*> cards;
     PrDomElement* middle;           // the card in the middle of the page
     PrDomElement* faded;            // a card with a layer of its own, for its opacity
     PrDomElement* raised;           // a relative card over the one before it, for its z-index
@@ -287,11 +285,15 @@ int main(int argc, char** argv) {
     uint32_t cardCount = kDefaultCards;
     bool verify = false;
     for (;;) {
-        if (argc >= 3 && strcmp(argv[1], "--cards") == 0) {
-            cardCount = uint32_t(atoi(argv[2]));
+        if (argc >= 3 && PrStringView(argv[1]) == "--cards") {
+            // An argument that does not start with digits is no cards, which the usage rejects.
+            PrStringView digits(argv[2]);
+            uint64_t parsed = 0;
+            prU64ParsePrefix(digits.data, digits.size, &parsed, 10);
+            cardCount = parsed > UINT32_MAX ? UINT32_MAX : uint32_t(parsed);
             argc -= 2;
             argv += 2;
-        } else if (argc >= 2 && strcmp(argv[1], "--verify") == 0) {
+        } else if (argc >= 2 && PrStringView(argv[1]) == "--verify") {
             verify = true;
             argc -= 1;
             argv += 1;
@@ -300,12 +302,12 @@ int main(int argc, char** argv) {
         }
     }
     if ((argc != 2 && argc != 3) || cardCount < 20) {
-        fprintf(stderr, "usage: frame_bench [--cards N] [--verify] <large.css> [case], with N at least 20\n");
+        printError("usage: frame_bench [--cards N] [--verify] <large.css> [case], with N at least 20\n");
         return 2;
     }
     PrTextBuffer large = {};
     if (!harnessReadFile(&large, argv[1])) {
-        fprintf(stderr, "frame_bench: cannot read the stylesheet\n");
+        printError("frame_bench: cannot read the stylesheet\n");
         return 1;
     }
     PrFontSet* fonts = nullptr;
@@ -325,7 +327,7 @@ int main(int argc, char** argv) {
     work.document = prHtmlWindowDocument(prHtmlPageWindow(work.page));
     PrDomHtmlCollection* cards = prDomHtmlCollectionCreateByClassName(prDomDocumentAsNode(work.document), "card");
     for (uint32_t i = 0; i < cardCount; ++i)
-        work.cards.push_back(prDomHtmlCollectionElementAt(cards, i));
+        work.cards.push(prDomHtmlCollectionElementAt(cards, i));
     prDomHtmlCollectionDestroy(cards);
     work.middle = work.cards[cardCount >> 1];
     work.faded = work.cards[(cardCount >> 1) + 2];
@@ -345,7 +347,9 @@ int main(int argc, char** argv) {
     PrStringView only = argc == 3 ? argv[2] : PrStringView{};
     bool first = true;
     bool failed = false;
-    printf("[");
+    // The array's opening and the cases' rows reach the output before the harness writes to it (harnessWriteCase,
+    // harnessWriteLine), which buffers what it writes, so the rows stay in order.
+    print("[");
     for (const Case& c : kCases) {
         if (only.data != nullptr) {
             if (only != c.name)
@@ -362,7 +366,7 @@ int main(int argc, char** argv) {
         PrRawString report{};
         if (verify && !prCssPresentationVerify(work.presentation, &report)) {
             PrStringView what = prRawStringView(&report);
-            fprintf(stderr, "frame_bench: %s: presentation verify: %.*s\n", c.name, int(what.size), what.data);
+            printError("frame_bench: {}: presentation verify: {}\n", c.name, what);
             failed = true;
         }
         prRawStringReset(&report);
@@ -379,7 +383,7 @@ int main(int argc, char** argv) {
         harnessCountsAdd(&counts, "time", cost);
         harnessCountsWrite(&counts, &row);
         prTextBufferAppend(&row, "}");
-        fwrite(row.data, 1, row.size, stdout);
+        print("{}", prTextBufferView(&row));
         prTextBufferReset(&row);
         first = false;
     }
@@ -393,7 +397,7 @@ int main(int argc, char** argv) {
         harnessWriteCase(false, "load to first frame", firstFrame);
         harnessWriteCase(false, "load to end", end);
     }
-    printf("\n]\n");
+    harnessWriteLine("\n]");
 
     prDomNodeRelease(prDomElementAsNode(work.added));
     prHtmlPageDestroy(work.page);

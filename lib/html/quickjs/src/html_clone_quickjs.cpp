@@ -528,7 +528,7 @@ JSValue readBlob(CloneReader* r) {
     if (!getBytes(r, &isFile, sizeof(isFile)) || !getBytes(r, &lastModified, sizeof(lastModified)) ||
             !getView(r, &type) || !getView(r, &name) || !getView(r, &bytes))
         return corrupt(r->ctx);
-    PrByteView content{reinterpret_cast<const uint8_t*>(bytes.data), bytes.size};
+    PrByteView content = prStringBytes(bytes);
     const PrFetchBlob* blob =
         isFile != 0 ? prFetchBlobCreateFile(content, type, name, lastModified) : prFetchBlobCreate(content, type);
     return remember(r, prJsFetchBlobNew(r->ctx, blob));

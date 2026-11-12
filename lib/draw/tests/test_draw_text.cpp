@@ -1,29 +1,22 @@
+#include "pr/array.h"
 #include "pr/draw_glyph.h"
 #include "pr/draw_lower.h"
+#include "pr/string.h"
+#include "pr/string_ops.h"
 #include "pr/vec.h"
 
 #include "draw/src/draw_glyph.h"
 
 #include "tools/harness/test.h"
 
-#include <cstdio>
-#include <string>
-#include <vector>
-
 namespace pr_impl {
 
 namespace {
 
+using namespace pr;
+
 const PrFont* load(const char* name) {
-    std::string path = std::string(PR_FONTS_DIR) + "/" + name;
-    std::vector<uint8_t> bytes;
-    FILE* file = std::fopen(path.c_str(), "rb");
-    REQUIRE(file != nullptr);
-    uint8_t buffer[65536];
-    size_t read = 0;
-    while ((read = std::fread(buffer, 1, sizeof(buffer), file)) != 0)
-        bytes.insert(bytes.end(), buffer, buffer + read);
-    std::fclose(file);
+    Array<uint8_t> bytes = harness::readFile(format("{}/{}", PR_FONTS_DIR, name));
     const PrFont* font = nullptr;
     REQUIRE(prFontCreate(bytes, 0, nullptr, &font) == PrStatus_Ok);
     return font;
@@ -31,12 +24,8 @@ const PrFont* load(const char* name) {
 
 constexpr PrColor kBlack{0, 0, 0, 1};
 
-std::string dump(const PrDrawList* list) {
-    PrRawString text = prDrawListDump(list);
-    PrStringView view = prRawStringView(&text);
-    std::string result(view.data != nullptr ? view.data : "", view.size);
-    prRawStringReset(&text);
-    return result;
+String dump(const PrDrawList* list) {
+    return String::adopt(prDrawListDump(list));
 }
 
 } // namespace
@@ -48,14 +37,11 @@ using namespace pr_impl;
 TEST_CASE("a glyph run is recorded with copies of its glyphs and a reference to its stack") {
     const PrFont* font = load("NotoSans[wdth,wght].ttf");
     PrDrawList* list = prDrawListCreate();
-    std::vector<PrFontGlyph> glyphs = {
-        {prFontCodePointGlyph(font, 'H'), {10, 20}},
-        {prFontCodePointGlyph(font, 'i'), {18, 20}},
-    };
+    PrFontGlyph glyphs[] = {{prFontCodePointGlyph(font, 'H'), {10, 20}}, {prFontCodePointGlyph(font, 'i'), {18, 20}}};
     PrFontGlyphRun run{};
     run.font = font;
     run.size = 10;
-    run.glyphs = glyphs.data();
+    run.glyphs = glyphs;
     run.glyphCount = 2;
     prDrawListGlyphs(list, &run, PrVec2{}, {.color = kBlack});
     glyphs[0].position.x = 99;
@@ -72,7 +58,7 @@ TEST_CASE("a glyph run is recorded with copies of its glyphs and a reference to 
     const PrDrawCommand& c = prDrawListCommands(list)[0];
     CHECK(c.kind == PrDrawCommandKind_Glyphs);
     CHECK(c.glyphs->glyphs[0].position.x == 10.0f);
-    CHECK(dump(list).rfind("glyphs size 10 43 10 20 76 18 20 color 0 0 0 1", 0) == 0);
+    CHECK(prStringStartsWith(dump(list), "glyphs size 10 43 10 20 76 18 20 color 0 0 0 1"));
     // The list holds a reference to the stack.
     CHECK(prFontGlyphAdvance(c.glyphs->font, c.glyphs->glyphs[0].id, 0) > 0.0f);
     prDrawListRelease(list);
@@ -180,16 +166,17 @@ TEST_CASE("a color glyph's fill under a transform covers the em box, mapped thro
         if (drawn == nullptr)
             continue;
         const PrDrawCommand* commands = prDrawListCommands(drawn);
-        std::vector<PrAffine2> transforms{prAffine2Identity()};
+        Array<PrAffine2> transforms;
+        transforms.push(prAffine2Identity());
         for (uint32_t i = 0; i < prDrawListCommandCount(drawn); ++i) {
             const PrDrawCommand& c = commands[i];
             if (c.kind == PrDrawCommandKind_PushTransformAffine2)
-                transforms.push_back(prAffine2Concat(prAffine2FromDAffine2(c.affine), transforms.back()));
+                transforms.push(prAffine2Concat(prAffine2FromDAffine2(c.affine), transforms.last()));
             else if (c.kind == PrDrawCommandKind_PopTransform)
-                transforms.pop_back();
-            if (c.kind != PrDrawCommandKind_Rect || transforms.size() == 1)
+                transforms.pop();
+            if (c.kind != PrDrawCommandKind_Rect || transforms.count() == 1)
                 continue;
-            PrRect ems = prAffine2MapRect(transforms.back(), c.rect);
+            PrRect ems = prAffine2MapRect(transforms.last(), c.rect);
             CHECK(ems.left <= -15.99f);
             CHECK(ems.top <= -15.99f);
             CHECK(ems.right >= 15.99f);

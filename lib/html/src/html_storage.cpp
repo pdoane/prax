@@ -9,6 +9,7 @@
 #include "pr/raw_array.h"
 #include "pr/storage_disk.h"
 #include "pr/storage_memory.h"
+#include "pr/string_ops.h"
 #include "pr/text_buffer.h"
 
 #include "html/src/html_window.h"
@@ -204,7 +205,7 @@ PrRawString prHtmlStorageGetItem(const PrHtmlStorage* storage, PrStringView key)
     PrStorageRecord record{};
     if (!prStorageRead(storage->area, key, &record))
         return prRawStringNull();
-    PrStringView text = {reinterpret_cast<const char*>(record.bytes.data), record.bytes.size};
+    PrStringView text =prStringFromBytes(record.bytes);
     PrRawString value = prRawStringCopy(text);
     prStorageRecordRelease(storage->area, &record);
     return value;
@@ -213,12 +214,12 @@ PrRawString prHtmlStorageGetItem(const PrHtmlStorage* storage, PrStringView key)
 PrStatus prHtmlStorageSetItem(PrHtmlStorage* storage, PrStringView key, PrStringView value) {
     PrStorageRecord record{};
     if (prStorageRead(storage->area, key, &record)) {
-        bool same = PrStringView{reinterpret_cast<const char*>(record.bytes.data), record.bytes.size} == value;
+        bool same = prStringFromBytes(record.bytes) == value;
         prStorageRecordRelease(storage->area, &record);
         if (same)
             return PrStatus_Ok;
     }
-    PrByteView bytes{reinterpret_cast<const uint8_t*>(value.data), value.size};
+    PrByteView bytes = prStringBytes(value);
     return prStorageWrite(storage->area, key, bytes) ? PrStatus_Ok : PrStatus_Limit;
 }
 

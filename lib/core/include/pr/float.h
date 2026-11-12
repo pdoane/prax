@@ -35,6 +35,9 @@ PR_CRT_IMPORT float __cdecl exp2f(float x);
 PR_CRT_IMPORT double __cdecl floor(double x);
 PR_CRT_IMPORT double __cdecl round(double x);
 PR_CRT_IMPORT double __cdecl hypot(double x, double y);
+PR_CRT_IMPORT double __cdecl erf(double x);
+PR_CRT_IMPORT double __cdecl nextafter(double x, double y);
+PR_CRT_IMPORT float __cdecl nextafterf(float x, float y);
 PR_CRT_IMPORT float __cdecl acosf(float x);
 PR_CRT_IMPORT float __cdecl atanf(float x);
 PR_CRT_IMPORT float __cdecl ceilf(float x);
@@ -158,6 +161,13 @@ static inline double prF64Cbrt(double value) {
 }
 static inline double prF64Hypot(double x, double y) {
     return PR_MATH_BUILTIN(hypot)(x, y);
+}
+static inline double prF64Erf(double value) {
+    return PR_MATH_BUILTIN(erf)(value);
+}
+// Returns the double after `from` in the direction of `toward`, or `toward` if they are equal.
+static inline double prF64NextAfter(double from, double toward) {
+    return PR_MATH_BUILTIN(nextafter)(from, toward);
 }
 static inline double prF64Log(double value) {
     return PR_MATH_BUILTIN(log)(value);
@@ -319,6 +329,10 @@ PR_CONSTEXPR float prF32DegreesToRadians(float degrees) {
 }
 
 // Wrappers for the C library's IEEE-754 functions. They return the C library's results for zeros, infinities and NaN.
+// Returns the float after `from` in the direction of `toward`, or `toward` if they are equal.
+static inline float prF32NextAfter(float from, float toward) {
+    return PR_MATH_BUILTIN(nextafterf)(from, toward);
+}
 static inline float prF32Sqrt(float value) {
     return PR_MATH_BUILTIN(sqrtf)(value);
 }

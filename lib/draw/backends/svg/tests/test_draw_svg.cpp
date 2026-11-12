@@ -1,13 +1,13 @@
+#include "pr/array.h"
 #include "pr/compress.h"
 #include "pr/draw_filter.h"
 #include "pr/draw_svg.h"
 #include "pr/font.h"
 #include "pr/image.h"
+#include "pr/string.h"
+#include "pr/string_ops.h"
 
 #include "tools/harness/test.h"
-
-#include <string>
-#include <vector>
 
 extern "C" int prTestDrawSvgCApi(void);
 
@@ -15,22 +15,24 @@ namespace pr_impl {
 
 namespace {
 
+using namespace pr;
+
 // Appends the bytes to the string of their output, by page.
 void collect(void* PR_NULLABLE context, uint32_t output, PrByteView bytes) {
-    std::vector<std::string>& outputs = *static_cast<std::vector<std::string>*>(context);
-    if (output >= outputs.size())
+    Array<String>& outputs = *static_cast<Array<String>*>(context);
+    if (output >= outputs.count())
         outputs.resize(output + 1);
-    outputs[output].append(reinterpret_cast<const char*>(bytes.data), bytes.size);
+    outputs[output].append(prStringFromBytes(bytes));
 }
 
 // Writes the pages as SVG, with a PNG encoder for images, and returns each page's document.
-std::vector<std::string> writePages(const PrDrawPage* pages, uint32_t count, PrStringView title = {}) {
+Array<String> writePages(const PrDrawPage* pages, uint32_t count, PrStringView title = {}) {
     PrCompressCodec* compress = prCompressCodecCreate(PrCompressCodecBackend_Default);
     PrImageCodec* images = prImageCodecCreate(PrImageCodecBackend_Default, compress);
     PrDrawWriterOptions options = prDrawWriterOptionsDefault();
     options.images = images;
     PrDrawWriter* writer = prDrawSvgCreate(&options);
-    std::vector<std::string> outputs;
+    Array<String> outputs;
     PrDrawDocumentDesc desc{.write = collect, .context = &outputs, .title = title};
     prDrawWriterWrite(writer, &desc, pages, count);
     prDrawWriterDestroy(writer);
@@ -40,15 +42,27 @@ std::vector<std::string> writePages(const PrDrawPage* pages, uint32_t count, PrS
 }
 
 // Writes the list as a page of `extent` and returns its document.
-std::string write(const PrDrawList* list, PrVec2 extent) {
+String write(const PrDrawList* list, PrVec2 extent) {
     PrDrawPage page{.list = list, .extent = extent};
-    std::vector<std::string> outputs = writePages(&page, 1);
-    REQUIRE(outputs.size() == 1);
+    Array<String> outputs = writePages(&page, 1);
+    REQUIRE(outputs.count() == 1);
     return outputs[0];
 }
 
-bool contains(const std::string& text, const std::string& part) {
-    return text.find(part) != std::string::npos;
+bool contains(PrStringView text, PrStringView part) {
+    return prStringContains(text, part);
+}
+
+// The number of places that `part` starts in `text`.
+uint32_t occurrences(PrStringView text, PrStringView part) {
+    uint32_t found = 0;
+    for (size_t at = prStringFind(text, part); at != text.size; ++found) {
+        size_t next = at + 1;
+        PrStringView rest = prStringSlice(text, next, text.size - next);
+        size_t within = prStringFind(rest, part);
+        at = within == rest.size ? text.size : next + within;
+    }
+    return found;
 }
 
 } // namespace
@@ -89,7 +103,7 @@ TEST_CASE("clips and plain groups are SVG's own") {
     prDrawListRect(list, PrRect{0, 0, 16, 16}, {.color = PrColor{0, 1, 0, 1}});
     prDrawListPopGroup(list);
     prDrawListPopClip(list);
-    std::string svg = write(list, PrVec2{16, 16});
+    String svg = write(list, PrVec2{16, 16});
     CHECK(contains(svg, "<clipPath id=\"c1\"><path d=\"M0 0L8 0L8 8L0 8Z\"/></clipPath>"));
     CHECK(contains(svg, "<g clip-path=\"url(#c1)\">\n<g opacity=\"0.25\" style=\"mix-blend-mode:multiply;\">\n"));
     CHECK(!contains(svg, "<image"));
@@ -101,7 +115,7 @@ TEST_CASE("gradients are SVG gradients in the command's space") {
     PrDrawColorStop stops[2] = {{.offset = 0, .color = PrColor{1, 0, 0, 1}}, {.offset = 1, .color = PrColor{0, 0, 1, 1}}};
     PrDrawBrush brush = prDrawBrushLinear(PrVec2{0, 0}, PrVec2{20, 0}, stops, 2);
     prDrawListRect(list, PrRect{0, 0, 20, 10}, {.brush = &brush});
-    std::string svg = write(list, PrVec2{20, 10});
+    String svg = write(list, PrVec2{20, 10});
     CHECK(contains(svg, "<linearGradient id=\"g1\" x1=\"0\" y1=\"0\" x2=\"20\" y2=\"0\" gradientUnits=\"userSpaceOnUse\">"
         "<stop offset=\"0\" stop-color=\"#FF0000\"/><stop offset=\"1\" stop-color=\"#0000FF\"/></linearGradient>"));
     CHECK(contains(svg, "fill=\"url(#g1)\""));
@@ -112,7 +126,7 @@ TEST_CASE("what SVG cannot draw is rasterized into an image where it lies") {
     PrDrawList* list = prDrawListCreate();
     PrDrawShadow shadow{.shape = {.rect = PrRect{4, 4, 12, 12}}, .sigma = 2};
     prDrawListDropShadow(list, &shadow, {.color = PrColor{0, 0, 0, 1}});
-    std::string svg = write(list, PrVec2{16, 16});
+    String svg = write(list, PrVec2{16, 16});
     CHECK(contains(svg, "<image width=\""));
     CHECK(contains(svg, "href=\"data:image/png;base64,"));
     CHECK(!contains(svg, "<path"));
@@ -127,12 +141,12 @@ TEST_CASE("each page is a document of its own, with its own definitions") {
     PrDrawList* second = prDrawListCreate();
     prDrawListRect(second, PrRect{0, 0, 5, 5}, {.brush = &brush});
     PrDrawPage pages[2] = {{.list = first, .extent = PrVec2{10, 20}}, {.list = second, .extent = PrVec2{30, 15}}};
-    std::vector<std::string> svgs = writePages(pages, 2, "Two & more");
-    REQUIRE(svgs.size() == 2);
+    Array<String> svgs = writePages(pages, 2, "Two & more");
+    REQUIRE(svgs.count() == 2);
     CHECK(contains(svgs[0], "width=\"10\" height=\"20\" viewBox=\"0 0 10 20\""));
     CHECK(contains(svgs[1], "width=\"30\" height=\"15\" viewBox=\"0 0 30 15\""));
-    for (const std::string& svg : svgs) {
-        CHECK(svg.starts_with("<?xml"));
+    for (const String& svg : svgs) {
+        CHECK(prStringStartsWith(svg, "<?xml"));
         CHECK(contains(svg, "<title>Two &amp; more</title>"));
         CHECK(contains(svg, "<linearGradient id=\"g1\""));
         CHECK(contains(svg, "fill=\"url(#g1)\""));
@@ -150,9 +164,9 @@ TEST_CASE("glyphs are outlines defined once, and the run's text labels them") {
     PrFontGlyphRun run{.font = font, .size = 16, .glyphs = glyphs, .glyphCount = 3, .text = "aaa", .clusters = clusters};
     PrDrawList* list = prDrawListCreate();
     prDrawListGlyphs(list, &run, PrVec2{0, 20}, {.color = PrColor{0, 0, 0, 1}});
-    std::string svg = write(list, PrVec2{40, 30});
+    String svg = write(list, PrVec2{40, 30});
     CHECK(contains(svg, "<path id=\"f0\" d=\"M"));
-    CHECK(svg.find("<path id=") == svg.rfind("<path id="));
+    CHECK(occurrences(svg, "<path id=") <= 1);
     CHECK(contains(svg, "<g fill=\"#000000\" aria-label=\"aaa\"><use href=\"#f0\" transform=\"matrix(16 0 0 16 0 20)\"/>"));
     prDrawListRelease(list);
     prFontRelease(font);

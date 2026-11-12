@@ -27,7 +27,7 @@ private:
     char storage[1024];
 
     static bool writeTo(void* PR_NULLABLE context, PrStringView text) {
-        PrByteView bytes{prStringBytes(text), text.size};
+        PrByteView bytes = prStringBytes(text);
         return prFileStreamWrite(static_cast<StreamWriter*>(context)->stream, bytes);
     }
 };

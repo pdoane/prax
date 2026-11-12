@@ -1,11 +1,10 @@
+#include "pr/array.h"
 #include "pr/command.h"
 #include "pr/command_keymap.h"
 #include "pr/json.h"
+#include "pr/string.h"
 
 #include "tools/harness/test.h"
-
-#include <string>
-#include <vector>
 
 extern "C" int prTestCommandCApi(void);
 
@@ -15,25 +14,23 @@ namespace {
 
 // What the commands of a test did.
 struct Log {
-    std::vector<std::string> runs;
+    Array<String> runs;
     bool disabled = false;
     bool checked = false;
 };
 
 void record(void* PR_NULLABLE context, const PrCommandArgs* args) {
     Log* log = static_cast<Log*>(context);
-    std::string run = "run";
-    if (prCommandArgsHas(args, "name")) {
-        PrStringView name = prCommandArgsString(args, "name", "");
-        run += " " + std::string(name.data, name.size);
-    }
+    String run = "run";
+    if (prCommandArgsHas(args, "name"))
+        formatTo(run, " {}", prCommandArgsString(args, "name", ""));
     if (prCommandArgsHas(args, "count"))
-        run += " " + std::to_string(int(prCommandArgsNumber(args, "count", 0)));
+        formatTo(run, " {}", int(prCommandArgsNumber(args, "count", 0)));
     if (prCommandArgsBool(args, "loud", false))
-        run += "!";
-    log->runs.push_back(run);
+        run.append('!');
+    log->runs.push(run);
     if (args->result != nullptr)
-        prJsonWriterNumber(args->result, double(log->runs.size()));
+        prJsonWriterNumber(args->result, double(log->runs.count()));
 }
 
 PrCommandStateFlags stateOf(void* PR_NULLABLE context) {
@@ -48,22 +45,21 @@ const PrCommandParam kParams[] = {
     {.name = "loud", .kind = PrCommandParamKind_Bool},
 };
 
-std::string stringOf(PrRawString* string) {
-    PrStringView view = prRawStringView(string);
-    std::string out(view.data != nullptr ? view.data : "", view.size);
-    prRawStringReset(string);
+String stringOf(PrRawString* string) {
+    String out = String::adopt(*string);
+    *string = PrRawString{};
     return out;
 }
 
 // Runs `id` with the arguments that the JSON `text` holds, and returns the status and, through `error`, why it failed.
-PrStatus runWith(const PrCommandRegistry* registry, const char* id, const char* text, std::string* error = nullptr,
+PrStatus runWith(const PrCommandRegistry* registry, const char* id, const char* text, String* error = nullptr,
         PrJsonWriter* result = nullptr) {
     PrJson* document = prJsonCreate();
     REQUIRE(prJsonParse(document, text, nullptr));
     PrCommandArgs args{.document = document, .object = 0, .result = result};
     PrRawString why = prRawStringNull();
     PrStatus status = prCommandRegistryRun(registry, id, &args, &why);
-    std::string explained = stringOf(&why);
+    String explained = stringOf(&why);
     if (error != nullptr)
         *error = explained;
     prJsonDestroy(document);
@@ -89,7 +85,7 @@ TEST_CASE("the public headers compile as C") {
 TEST_CASE("a registry keeps its commands in order, by id, with copies of what describes them") {
     Log log;
     PrCommandRegistry* registry = prCommandRegistryCreate();
-    std::string id = "app.greet";
+    String id = "app.greet";
     PrCommandDesc greet{
         .id = id,
         .title = "Greet",
@@ -146,9 +142,9 @@ TEST_CASE("a run checks its arguments against the parameters, and a disabled com
         PrStatus_Ok);
     CHECK(prJsonWriterText(result) == "1");
     CHECK(runWith(registry, "app.greet", "{\"name\": \"bo\"}") == PrStatus_Ok);
-    CHECK(log.runs == std::vector<std::string>{"run ada 2!", "run bo"});
+    CHECK(log.runs == Array<String>({"run ada 2!", "run bo"}));
 
-    std::string error;
+    String error;
     CHECK(runWith(registry, "app.greet", "{}", &error) == PrStatus_InvalidData);
     CHECK(error == "The command app.greet needs the parameter \"name\".");
     CHECK(runWith(registry, "app.greet", "{\"name\": 1}", &error) == PrStatus_InvalidData);
@@ -162,7 +158,7 @@ TEST_CASE("a run checks its arguments against the parameters, and a disabled com
     log.disabled = true;
     CHECK(runWith(registry, "app.greet", "{\"name\": \"ada\"}", &error) == PrStatus_InvalidState);
     CHECK(error == "The command app.greet is disabled.");
-    CHECK(log.runs.size() == 2);
+    CHECK(log.runs.count() == 2);
     prJsonWriterDestroy(result);
     prCommandRegistryDestroy(registry);
 }
@@ -181,7 +177,8 @@ TEST_CASE("a chord reads from modifiers and a key, and shows as the platform sho
     CHECK(chordOf("Space").key == ' ');
     CHECK(chordOf("I").modifiers == 0);
     PrCommandChord chord{};
-    for (const char* bad : {"", "Cmd", "Cmd Shift", "P Cmd", "Hyper P", "Cmd PP"})
+    const char* bads[] = {"", "Cmd", "Cmd Shift", "P Cmd", "Hyper P", "Cmd PP"};
+    for (const char* bad : bads)
         CHECK_FALSE(prCommandChordParse(bad, &chord));
 
     PrRawString text = prCommandChordText(chordOf("Cmd Shift P"));

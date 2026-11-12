@@ -1581,7 +1581,7 @@ bool loadSecureImage(void* PR_NULLABLE context, PrDomDocument* from, PrStringVie
         if (htmlImageIsSvg(bytes)) {
             out->svg = svgImageOf(bytes, domUrlFragment(url), codec);
         } else if (codec != nullptr) {
-            PrByteView view{reinterpret_cast<const uint8_t*>(bytes.data), bytes.size};
+            PrByteView view = prStringBytes(bytes);
             prDrawImageCreateFromBytes(codec, view, &out->raster, nullptr);
         }
     }
@@ -1633,7 +1633,7 @@ PrLayoutPainter svgPainter(PrHtmlPage* page, PrStringView bytes, PrStringView fr
 // here, and the host decodes any other image.
 bool decodeImage(void* PR_NULLABLE context, PrByteView bytes, PrStringView fragment, DomDecodedImage* out) {
     PrHtmlPage* page = static_cast<PrHtmlPage*>(context);
-    PrStringView text{reinterpret_cast<const char*>(bytes.data), bytes.size};
+    PrStringView text = prStringFromBytes(bytes);
     *out = DomDecodedImage{};
     uint32_t width = 0;
     uint32_t height = 0;
@@ -1677,7 +1677,7 @@ void showImage(PrHtmlPage* page, PrDomElement* element, PrStringView bytes) {
         PrStringView fragment = domUrlFragment(prRawStringView(&state->imageUrl));
         state->vector = svgPainter(page, bytes, fragment, &state->vectorNatural);
     } else if (state->image == PrDomImageState_CompletelyAvailable && page->host.images != nullptr) {
-        PrByteView view{reinterpret_cast<const uint8_t*>(bytes.data), bytes.size};
+        PrByteView view = prStringBytes(bytes);
         PrImageOrientation orientation = PrImageOrientation_Identity;
         if (prDrawImageCreateFromBytes(page->host.images, view, &state->picture, &orientation) == PrStatus_Ok) {
             PrUVec2 extent = prDrawImageExtent(state->picture);

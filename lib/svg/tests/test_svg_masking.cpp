@@ -11,8 +11,8 @@ constexpr const char* kBlue = "0 0 255";
 constexpr const char* kWhite = "255 255 255";
 
 // Returns a drawing of a blue rectangle that fills a viewport of 100 by 100, with `attributes`, after `defs`.
-std::string clipped(const std::string& defs, const std::string& attributes) {
-    return svgDocument(defs + "<rect width='100' height='100' fill='#0000ff' " + attributes + "/>");
+String clipped(PrStringView defs, PrStringView attributes) {
+    return svgDocument(format("{}<rect width='100' height='100' fill='#0000ff' {}/>", defs, attributes));
 }
 
 // Returns the number of commands of `kind` in a drawing's list.
@@ -57,12 +57,13 @@ TEST_CASE("a clipPath's children are OR'd, and each takes its own clip-rule") {
 }
 
 TEST_CASE("clip-rule inherits into a clipPath from its ancestors, not from the element that it clips") {
-    std::string path = "<path d='M 10 10 h 60 v 60 h -60 Z M 30 30 h 20 v 20 h -20 Z'/>";
-    Drawing inherited(clipped("<g clip-rule='evenodd'><clipPath id='c'>" + path + "</clipPath></g>",
+    const char* path = "<path d='M 10 10 h 60 v 60 h -60 Z M 30 30 h 20 v 20 h -20 Z'/>";
+    Drawing inherited(clipped(format("<g clip-rule='evenodd'><clipPath id='c'>{}</clipPath></g>", path),
         "clip-path='url(#c)'"));
     CHECK(inherited.pixel(40, 40) == kWhite);
     CHECK(inherited.pixel(20, 20) == kBlue);
-    Drawing referencing(clipped("<clipPath id='c'>" + path + "</clipPath>", "clip-rule='evenodd' clip-path='url(#c)'"));
+    Drawing referencing(clipped(format("<clipPath id='c'>{}</clipPath>", path),
+        "clip-rule='evenodd' clip-path='url(#c)'"));
     CHECK(referencing.pixel(40, 40) == kBlue);
 }
 
@@ -72,10 +73,10 @@ TEST_CASE("a hidden child of a clipPath does not contribute, and an empty clipPa
     CHECK(hidden.pixel(10, 10) == kBlue);
     CHECK(hidden.pixel(60, 10) == kWhite);
     Drawing empty(clipped("<clipPath id='c'/>", "clip-path='url(#c)'"));
-    CHECK(empty.commands.empty());
+    CHECK(empty.commands.isEmpty());
     Drawing none(clipped("<clipPath id='c'><rect width='20' height='20' display='none'/></clipPath>",
         "clip-path='url(#c)'"));
-    CHECK(none.commands.empty());
+    CHECK(none.commands.isEmpty());
 }
 
 TEST_CASE("a clipPath inside display none still clips") {
@@ -128,7 +129,7 @@ TEST_CASE("a use child of a clipPath contributes only if it references a shape o
     CHECK(shape.pixel(5, 10) == kWhite);
     Drawing group(clipped("<defs><g id='g'><rect width='20' height='20'/></g></defs>"
         "<clipPath id='c'><use href='#g'/></clipPath>", "clip-path='url(#c)'"));
-    CHECK(group.commands.empty());
+    CHECK(group.commands.isEmpty());
 }
 
 TEST_CASE("a clipPath's fill, stroke, opacity and mask do not reach its silhouettes") {
@@ -151,10 +152,10 @@ TEST_CASE("a clipPath that references itself ignores the reference") {
 
 TEST_CASE("text in a clipPath clips by its glyphs") {
     // A font whose glyph `a` is a square of half an em, set at an em of 40.
-    std::string font = "<font horiz-adv-x='1000'><font-face font-family='Squares' units-per-em='1000'/>"
+    const char* font = "<font horiz-adv-x='1000'><font-face font-family='Squares' units-per-em='1000'/>"
         "<glyph unicode='a' d='M0 0h500v500z'/></font>";
-    Drawing drawing(clipped("<defs>" + font + "</defs><clipPath id='c'><text x='10' y='50' font-family='Squares' "
-        "font-size='40' fill='none'>aa</text></clipPath>", "clip-path='url(#c)'"));
+    Drawing drawing(clipped(format("<defs>{}</defs><clipPath id='c'><text x='10' y='50' font-family='Squares' "
+        "font-size='40' fill='none'>aa</text></clipPath>", font), "clip-path='url(#c)'"));
     CHECK(countOf(drawing, PrDrawCommandKind_PushGroup) == 1);
     CHECK(drawing.pixel(20, 40) == kBlue);
     CHECK(drawing.pixel(40, 40) == kWhite);
@@ -166,16 +167,16 @@ TEST_CASE("text in a clipPath clips by its glyphs") {
 // Basic shapes and reference boxes
 
 TEST_CASE("a basic shape clips in the stroke box by default, and in the box that it names") {
-    std::string rect = "<rect x='20' y='20' width='60' height='60' fill='#0000ff' stroke='#0000ff' stroke-width='10' ";
-    Drawing border(svgDocument(rect + "style='clip-path: inset(0)'/>"));
+    const char* rect = "<rect x='20' y='20' width='60' height='60' fill='#0000ff' stroke='#0000ff' stroke-width='10' ";
+    Drawing border(svgDocument(format("{}style='clip-path: inset(0)'/>", rect)));
     CHECK(border.pixel(17, 50) == kBlue);
-    Drawing fill(svgDocument(rect + "style='clip-path: inset(0) fill-box'/>"));
+    Drawing fill(svgDocument(format("{}style='clip-path: inset(0) fill-box'/>", rect)));
     CHECK(fill.pixel(17, 50) == kWhite);
     CHECK(fill.pixel(22, 50) == kBlue);
     // content-box is fill-box for an element without a CSS box.
-    Drawing content(svgDocument(rect + "style='clip-path: inset(0) content-box'/>"));
+    Drawing content(svgDocument(format("{}style='clip-path: inset(0) content-box'/>", rect)));
     CHECK(content.pixel(17, 50) == kWhite);
-    Drawing circle(svgDocument(rect + "style='clip-path: circle(50%) fill-box'/>"));
+    Drawing circle(svgDocument(format("{}style='clip-path: circle(50%) fill-box'/>", rect)));
     CHECK(circle.pixel(50, 50) == kBlue);
     CHECK(circle.pixel(23, 23) == kWhite);
 }
@@ -210,8 +211,8 @@ TEST_CASE("a container's boxes are the union of its children's") {
 // The mask element
 
 TEST_CASE("a mask is luminance by default, and alpha by mask-type") {
-    std::string content = "<rect width='50' height='100' fill='black'/><rect x='50' width='50' height='100' fill='white'/>";
-    Drawing luminance(clipped("<mask id='m' maskUnits='userSpaceOnUse'>" + content + "</mask>", "mask='url(#m)'"));
+    const char* content = "<rect width='50' height='100' fill='black'/><rect x='50' width='50' height='100' fill='white'/>";
+    Drawing luminance(clipped(format("<mask id='m' maskUnits='userSpaceOnUse'>{}</mask>", content), "mask='url(#m)'"));
     CHECK(luminance.pixel(25, 50) == kWhite);
     CHECK(luminance.pixel(75, 50) == kBlue);
     CHECK(luminance.pixel(50, 50) == kBlue);
@@ -222,29 +223,29 @@ TEST_CASE("a mask is luminance by default, and alpha by mask-type") {
         "<rect width='33' height='100' fill='#0000ff' mask='url(#m)'/>"));
     CHECK(fraction.pixel(0, 50) == kBlue);
     CHECK(fraction.pixel(32, 50) == kBlue);
-    Drawing alpha(clipped("<mask id='m' maskUnits='userSpaceOnUse' style='mask-type: alpha'>" + content + "</mask>",
-        "mask='url(#m)'"));
+    Drawing alpha(clipped(format("<mask id='m' maskUnits='userSpaceOnUse' style='mask-type: alpha'>{}</mask>",
+        content), "mask='url(#m)'"));
     CHECK(alpha.pixel(25, 50) == kBlue);
     CHECK(alpha.pixel(75, 50) == kBlue);
 }
 
 TEST_CASE("mask-mode overrides a mask's mask-type") {
-    std::string mask = "<mask id='m' maskUnits='userSpaceOnUse'><rect width='50' height='100' fill='black'/></mask>";
-    Drawing alpha(svgDocument(mask + "<rect width='100' height='100' fill='#0000ff' "
-        "style='mask-image: url(#m); mask-mode: alpha'/>"));
+    const char* mask = "<mask id='m' maskUnits='userSpaceOnUse'><rect width='50' height='100' fill='black'/></mask>";
+    Drawing alpha(svgDocument(format("{}<rect width='100' height='100' fill='#0000ff' "
+        "style='mask-image: url(#m); mask-mode: alpha'/>", mask)));
     CHECK(alpha.pixel(25, 50) == kBlue);
     CHECK(alpha.pixel(75, 50) == kWhite);
 }
 
 TEST_CASE("a mask's region defaults to -10% and 120% of the bounding box, and a width of zero hides the element") {
-    std::string content = "<rect x='-1000' y='-1000' width='2000' height='2000' fill='white'/>";
-    Drawing whole(svgDocument("<mask id='m'>" + content + "</mask><rect x='20' y='20' width='50' height='50' "
-        "fill='#0000ff' stroke='#0000ff' stroke-width='16' mask='url(#m)'/>"));
+    const char* content = "<rect x='-1000' y='-1000' width='2000' height='2000' fill='white'/>";
+    Drawing whole(svgDocument(format("<mask id='m'>{}</mask><rect x='20' y='20' width='50' height='50' "
+        "fill='#0000ff' stroke='#0000ff' stroke-width='16' mask='url(#m)'/>", content)));
     // The region runs from 15 to 80 in each axis, which cuts the stroke's outer edge at 12.
     CHECK(whole.pixel(17, 40) == kBlue);
     CHECK(whole.pixel(13, 40) == kWhite);
-    Drawing zero(clipped("<mask id='m' width='0'>" + content + "</mask>", "mask='url(#m)'"));
-    CHECK(zero.commands.empty());
+    Drawing zero(clipped(format("<mask id='m' width='0'>{}</mask>", content), "mask='url(#m)'"));
+    CHECK(zero.commands.isEmpty());
 }
 
 TEST_CASE("maskContentUnits objectBoundingBox draws the content in fractions of the bounding box") {
@@ -255,9 +256,9 @@ TEST_CASE("maskContentUnits objectBoundingBox draws the content in fractions of 
 }
 
 TEST_CASE("a mask's content resolves currentColor in its own tree, and its opacity and display do not apply") {
-    std::string content = "<rect width='50' height='100' fill='currentColor'/>";
-    Drawing current(svgDocument("<g color='white'><mask id='m' maskUnits='userSpaceOnUse'>" + content +
-        "</mask></g><rect width='100' height='100' fill='#0000ff' color='black' mask='url(#m)'/>"));
+    const char* content = "<rect width='50' height='100' fill='currentColor'/>";
+    Drawing current(svgDocument(format("<g color='white'><mask id='m' maskUnits='userSpaceOnUse'>{}"
+        "</mask></g><rect width='100' height='100' fill='#0000ff' color='black' mask='url(#m)'/>", content)));
     CHECK(current.pixel(25, 50) == kBlue);
     CHECK(current.pixel(75, 50) == kWhite);
     Drawing faded(svgDocument("<mask id='m' maskUnits='userSpaceOnUse' opacity='0' display='none'>"
@@ -279,11 +280,11 @@ TEST_CASE("a reference to nothing or to an element that is not a mask masks noth
 }
 
 TEST_CASE("mask layers composite from the bottom up by mask-composite") {
-    std::string defs = "<mask id='left' maskUnits='userSpaceOnUse'><rect width='60' height='100' fill='white'/></mask>"
+    const char* defs = "<mask id='left' maskUnits='userSpaceOnUse'><rect width='60' height='100' fill='white'/></mask>"
         "<mask id='right' maskUnits='userSpaceOnUse'><rect x='40' width='60' height='100' fill='white'/></mask>";
-    auto drawn = [&](const std::string& composite) {
-        return svgDocument(defs + "<rect width='100' height='100' fill='#0000ff' style='mask-image: url(#left), "
-            "url(#right); mask-composite: " + composite + "'/>");
+    auto drawn = [&](PrStringView composite) {
+        return svgDocument(format("{}<rect width='100' height='100' fill='#0000ff' style='mask-image: url(#left), "
+            "url(#right); mask-composite: {}'/>", defs, composite));
     };
     Drawing add(drawn("add"));
     CHECK(add.pixel(20, 50) == kBlue);
@@ -340,26 +341,26 @@ TEST_CASE("a gradient masks by its alpha, over the stroke box by default") {
 }
 
 TEST_CASE("mask-clip and mask-origin take SVG's boxes, and the boxes of CSS map onto them") {
-    std::string rect = "<rect x='20' y='20' width='60' height='60' fill='#0000ff' stroke='#0000ff' stroke-width='20' ";
-    Drawing content(svgDocument(rect + "style='mask-image: linear-gradient(black, black); mask-clip: content-box'/>"));
+    const char* rect = "<rect x='20' y='20' width='60' height='60' fill='#0000ff' stroke='#0000ff' stroke-width='20' ";
+    Drawing content(svgDocument(format("{}style='mask-image: linear-gradient(black, black); mask-clip: content-box'/>", rect)));
     CHECK(content.pixel(15, 50) == kWhite);
     CHECK(content.pixel(25, 50) == kBlue);
-    Drawing stroke(svgDocument(rect + "style='mask-image: linear-gradient(black, black); mask-repeat: no-repeat; "
-        "mask-origin: stroke-box; mask-clip: no-clip'/>"));
+    Drawing stroke(svgDocument(format("{}style='mask-image: linear-gradient(black, black); mask-repeat: no-repeat; "
+        "mask-origin: stroke-box; mask-clip: no-clip'/>", rect)));
     CHECK(stroke.pixel(15, 50) == kBlue);
-    Drawing fill(svgDocument(rect + "style='mask-image: linear-gradient(black, black); mask-repeat: no-repeat; "
-        "mask-clip: no-clip'/>"));
+    Drawing fill(svgDocument(format("{}style='mask-image: linear-gradient(black, black); mask-repeat: no-repeat; "
+        "mask-clip: no-clip'/>", rect)));
     CHECK(fill.pixel(15, 50) == kWhite);
     CHECK(fill.pixel(25, 50) == kBlue);
 }
 
 TEST_CASE("mask-size, mask-position and mask-repeat place an image layer") {
-    std::string rect = "<rect width='100' height='100' fill='#0000ff' style='mask-image: linear-gradient(black, black); ";
-    Drawing placed(svgDocument(rect + "mask-size: 20px 20px; mask-position: 50% 50%; mask-repeat: no-repeat'/>"));
+    const char* rect = "<rect width='100' height='100' fill='#0000ff' style='mask-image: linear-gradient(black, black); ";
+    Drawing placed(svgDocument(format("{}mask-size: 20px 20px; mask-position: 50% 50%; mask-repeat: no-repeat'/>", rect)));
     CHECK(placed.pixel(50, 50) == kBlue);
     CHECK(placed.pixel(35, 50) == kWhite);
     CHECK(placed.pixel(65, 50) == kWhite);
-    Drawing spaced(svgDocument(rect + "mask-size: 30px 100px; mask-repeat: space no-repeat'/>"));
+    Drawing spaced(svgDocument(format("{}mask-size: 30px 100px; mask-repeat: space no-repeat'/>", rect)));
     // Three copies 30 wide across 100, with gaps of 5 between them.
     CHECK(spaced.pixel(15, 50) == kBlue);
     CHECK(spaced.pixel(32, 50) == kWhite);

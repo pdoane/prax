@@ -1,11 +1,11 @@
+#include "pr/array.h"
+#include "pr/atomic.h"
 #include "pr/cache.h"
+#include "pr/span.h"
+#include "pr/string.h"
 #include "pr/task.h"
 
 #include "tools/harness/test.h"
-
-#include <atomic>
-#include <string>
-#include <vector>
 
 extern "C" int prTestCacheCApi(void);
 
@@ -13,20 +13,22 @@ namespace pr_impl {
 
 namespace {
 
+using namespace pr;
+
 // A loader that keeps its loads until the test finishes them, and records the cache's calls.
 struct Loader {
-    std::vector<PrCacheLoad*> loads;
-    std::vector<std::string> keys;
-    std::vector<std::string> released;
+    Array<PrCacheLoad*> loads;
+    Array<String> keys;
+    Array<String> released;
     uint32_t cancels = 0;
-    std::atomic<uint32_t> wakes{0};
+    Atomic<uint32_t> wakes{};
     bool finishOnCancel = true;
 };
 
 void* loadValue(void* PR_NULLABLE context, PrStringView key, PrCacheLoad* load) {
     Loader& loader = *static_cast<Loader*>(context);
-    loader.keys.emplace_back(key.data, key.size);
-    loader.loads.push_back(load);
+    loader.keys.emplace(key);
+    loader.loads.push(load);
     return load;
 }
 
@@ -39,11 +41,11 @@ void cancelValue(void* PR_NULLABLE context, void* PR_NULLABLE state) {
 
 void releaseValue(void* PR_NULLABLE context, const void* value) {
     Loader& loader = *static_cast<Loader*>(context);
-    loader.released.push_back(static_cast<const char*>(value));
+    loader.released.emplace(static_cast<const char*>(value));
 }
 
 void wakeOwner(void* PR_NULLABLE context) {
-    ++static_cast<Loader*>(context)->wakes;
+    static_cast<Loader*>(context)->wakes.fetchAdd(1);
 }
 
 PrCacheDesc descOf(Loader& loader, uint32_t idlePumps) {
@@ -58,9 +60,20 @@ PrCacheDesc descOf(Loader& loader, uint32_t idlePumps) {
 }
 
 // The text of the value at `key`, or "(null)". The tests' values are string literals.
-std::string textAt(PrCache* cache, PrStringView key) {
+PrStringView textAt(PrCache* cache, PrStringView key) {
     const char* value = static_cast<const char*>(prCacheValue(cache, key));
     return value != nullptr ? value : "(null)";
+}
+
+// Returns true if `texts` holds `expected`, in order.
+bool textsAre(const Array<String>& texts, Span<const char* const> expected) {
+    if (texts.count() != expected.count())
+        return false;
+    for (uint32_t i = 0; i < expected.count(); ++i) {
+        if (texts[i] != expected[i])
+            return false;
+    }
+    return true;
 }
 
 } // namespace
@@ -79,19 +92,21 @@ TEST_CASE("cache: the first ask loads a key, and the pump after the load finishe
     PrCache* cache = prCacheCreate(&desc);
     CHECK(textAt(cache, "a") == "(null)");
     CHECK(textAt(cache, "a") == "(null)");
-    REQUIRE(loader.keys == std::vector<std::string>{"a"});
+    const char* const keys[] = {"a"};
+    REQUIRE(textsAre(loader.keys, keys));
     CHECK(prCacheKeyState(cache, "a") == PrCacheState_Loading);
     CHECK(!prCachePump(cache));
     prCacheLoadFinish(loader.loads[0], "apple");
-    CHECK(loader.wakes == 1);
+    CHECK(loader.wakes.load() == 1);
     CHECK(textAt(cache, "a") == "(null)");
     CHECK(prCachePump(cache));
     CHECK(textAt(cache, "a") == "apple");
     CHECK(prCacheKeyState(cache, "a") == PrCacheState_Ready);
     CHECK(prCacheKeyState(cache, "b") == PrCacheState_None);
-    CHECK(loader.keys.size() == 1);
+    CHECK(loader.keys.count() == 1);
     prCacheDestroy(cache);
-    CHECK(loader.released == std::vector<std::string>{"apple"});
+    const char* const released[] = {"apple"};
+    CHECK(textsAre(loader.released, released));
 }
 
 TEST_CASE("cache: a load that fails leaves its key failed until it is removed") {
@@ -103,11 +118,11 @@ TEST_CASE("cache: a load that fails leaves its key failed until it is removed") 
     prCachePump(cache);
     CHECK(prCacheKeyState(cache, "a") == PrCacheState_Failed);
     CHECK(textAt(cache, "a") == "(null)");
-    CHECK(loader.keys.size() == 1);
+    CHECK(loader.keys.count() == 1);
     prCacheRemove(cache, "a");
     CHECK(prCacheKeyState(cache, "a") == PrCacheState_None);
     prCacheValue(cache, "a");
-    CHECK(loader.keys.size() == 2);
+    CHECK(loader.keys.count() == 2);
     prCacheDestroy(cache);
 }
 
@@ -124,7 +139,8 @@ TEST_CASE("cache: a pump evicts the values that more than its idle pumps have pa
     prCachePump(cache);
     CHECK(textAt(cache, "a") == "apple");
     prCachePump(cache);
-    CHECK(loader.released == std::vector<std::string>{"banana"});
+    const char* const released[] = {"banana"};
+    CHECK(textsAre(loader.released, released));
     CHECK(prCacheKeyState(cache, "b") == PrCacheState_None);
     CHECK(textAt(cache, "a") == "apple");
     prCacheDestroy(cache);
@@ -142,7 +158,8 @@ TEST_CASE("cache: removing a key that loads cancels the load, and its late value
     prCacheLoadFinish(loader.loads[0], "stale");
     prCacheLoadFinish(loader.loads[1], "fresh");
     prCachePump(cache);
-    CHECK(loader.released == std::vector<std::string>{"stale"});
+    const char* const released[] = {"stale"};
+    CHECK(textsAre(loader.released, released));
     CHECK(textAt(cache, "a") == "fresh");
     prCacheDestroy(cache);
 }
@@ -156,7 +173,7 @@ TEST_CASE("cache: posted tasks run at the pump, before it adopts the loads that 
         Loader& loader = *static_cast<Loader*>(context);
         prCacheLoadFinish(loader.loads[0], "apple");
     }, &loader);
-    CHECK(loader.wakes == 1);
+    CHECK(loader.wakes.load() == 1);
     CHECK(prCachePump(cache));
     CHECK(textAt(cache, "a") == "apple");
     prCacheDestroy(cache);
@@ -169,7 +186,8 @@ TEST_CASE("cache: destroying a cache cancels its loads and waits for those that 
     REQUIRE(pool != nullptr);
     PrCacheDesc desc = descOf(loader, 0);
     PrCache* cache = prCacheCreate(&desc);
-    for (const char* key : {"a", "b", "c"})
+    const char* const keys[] = {"a", "b", "c"};
+    for (const char* key : keys)
         prCacheValue(cache, key);
     for (PrCacheLoad* load : loader.loads) {
         prTaskPoolPost(pool, [](void* PR_NULLABLE context) {
@@ -179,6 +197,7 @@ TEST_CASE("cache: destroying a cache cancels its loads and waits for those that 
     prCacheDestroy(cache);
     // A load that the pool finishes before the destroy reaches it is not canceled.
     CHECK(loader.cancels <= 3);
-    CHECK(loader.released == std::vector<std::string>{"late", "late", "late"});
+    const char* const released[] = {"late", "late", "late"};
+    CHECK(textsAre(loader.released, released));
     prTaskPoolDestroy(pool);
 }

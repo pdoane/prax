@@ -1,9 +1,9 @@
+#include "pr/array.h"
 #include "pr/media_windows.h"
+#include "pr/mem.h"
 #include "pr/thread.h"
 
 #include "tools/harness/test.h"
-
-#include <vector>
 
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
@@ -73,8 +73,8 @@ IMFMediaType* videoType(const GUID& subtype) {
 }
 
 // Returns an H.264 MPEG-4 movie of kFrames frames of kWidth by kHeight, or nothing if the system cannot encode one.
-std::vector<uint8_t> encodeMovie() {
-    std::vector<uint8_t> bytes;
+Array<uint8_t> encodeMovie() {
+    Array<uint8_t> bytes;
     IStream* memory = SHCreateMemStream(nullptr, 0);
     IMFByteStream* stream = nullptr;
     IMFAttributes* attributes = nullptr;
@@ -101,10 +101,10 @@ std::vector<uint8_t> encodeMovie() {
     }
     STATSTG stat{};
     if (ok && SUCCEEDED(memory->Stat(&stat, STATFLAG_NONAME))) {
-        bytes.resize(size_t(stat.cbSize.QuadPart));
+        bytes.resize(uint32_t(stat.cbSize.QuadPart));
         ULONG read = 0;
         memory->Seek(LARGE_INTEGER{}, STREAM_SEEK_SET, nullptr);
-        memory->Read(bytes.data(), ULONG(bytes.size()), &read);
+        memory->Read(bytes.data(), ULONG(bytes.count()), &read);
         bytes.resize(read);
     }
     stream->Release();
@@ -145,8 +145,8 @@ using namespace pr_impl;
 TEST_CASE("the Media Foundation codec reads a movie from memory and decodes the frame that shows at each time") {
     PrMediaCodec* codec = prMediaWindowsCreate();
     REQUIRE(codec != nullptr);
-    std::vector<uint8_t> bytes = encodeMovie();
-    REQUIRE(!bytes.empty());
+    Array<uint8_t> bytes = encodeMovie();
+    REQUIRE(!bytes.isEmpty());
     PrMediaDecoder* decoder = nullptr;
     PrMediaInfo info{};
     REQUIRE(prMediaDecoderCreate(codec, bytes, &decoder, &info) == PrStatus_Ok);
@@ -189,10 +189,12 @@ TEST_CASE("the Media Foundation codec reads a movie from memory and decodes the 
     prMediaDecoderDestroy(decoder);
 
     // Bytes that are no container that Media Foundation reads are not supported, and a container's start is corrupt.
-    std::vector<uint8_t> noise(256, 0x5a);
+    Array<uint8_t> noise(256);
+    prMemFill(noise.data(), 0x5a, noise.count());
     CHECK(prMediaDecoderCreate(codec, noise, &decoder, &info) == PrStatus_NotSupported);
     CHECK(decoder == nullptr);
-    std::vector<uint8_t> truncated(bytes.begin(), bytes.begin() + 16);
+    Array<uint8_t> truncated;
+    truncated.append(bytes.data(), 16);
     CHECK(prMediaDecoderCreate(codec, truncated, &decoder, &info) != PrStatus_Ok);
     CHECK(decoder == nullptr);
     prMediaCodecDestroy(codec);
@@ -204,7 +206,7 @@ TEST_CASE("the Media Foundation codec decodes for a thread in a single-threaded 
     prThreadStart(&thread, [](void* context) {
         CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
         PrMediaCodec* codec = prMediaWindowsCreate();
-        std::vector<uint8_t> bytes = encodeMovie();
+        Array<uint8_t> bytes = encodeMovie();
         PrMediaDecoder* decoder = nullptr;
         PrMediaInfo info{};
         if (prMediaDecoderCreate(codec, bytes, &decoder, &info) == PrStatus_Ok) {

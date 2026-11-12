@@ -63,7 +63,7 @@ bool scriptsWrite(PrStringView directory) {
         PrRawString path = pathJoin(directory, kTerminalShellScriptsPaths[i]);
         PrStringView view = prRawStringView(&path);
         PrStringView script = kTerminalShellScriptsBytes[i];
-        PrByteView bytes{reinterpret_cast<const uint8_t*>(script.data), script.size};
+        PrByteView bytes = prStringBytes(script);
         if (!fileHolds(view, bytes))
             written = written && prFileCreateDirectory(prFilePathParent(view)) && prFileWrite(view, bytes);
         prRawStringReset(&path);

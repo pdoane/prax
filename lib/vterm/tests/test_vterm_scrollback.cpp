@@ -1,10 +1,9 @@
 #include "pr/mem.h"
+#include "pr/span.h"
 
 #include "vterm/src/vterm_screen.h"
 
 #include "tools/harness/test.h"
-
-#include <initializer_list>
 
 namespace pr_impl {
 
@@ -60,10 +59,10 @@ struct Row {
     }
 
     // Gives the cell at `column` the cluster code points `points`, which follow its first code point.
-    void cluster(uint32_t column, std::initializer_list<uint32_t> points) {
+    void cluster(uint32_t column, Span<const uint32_t> points) {
         PrVtermCell& cell = at(column);
         cell.clusterStart = line.codePoints.count;
-        cell.clusterCount = uint32_t(points.size());
+        cell.clusterCount = points.count();
         for (uint32_t point : points)
             line.codePoints.push(point);
     }
@@ -245,9 +244,11 @@ TEST_CASE("vterm scrollback: wide clusters, spacers, clusters and every code poi
     row.at(0) = PrVtermCell{.codePoint = 0x4e2d, .flags = PrVtermCellFlag_Wide};
     row.at(1) = PrVtermCell{.flags = PrVtermCellFlag_WideTail};
     row.at(2) = PrVtermCell{.codePoint = 'e'};
-    row.cluster(2, {0x301, 0x302});
+    const uint32_t accents[] = {0x301, 0x302};
+    row.cluster(2, accents);
     row.at(3) = PrVtermCell{.codePoint = 0x1f600, .flags = PrVtermCellFlag_Wide};
-    row.cluster(3, {0xfe0f});
+    const uint32_t selector[] = {0xfe0f};
+    row.cluster(3, selector);
     row.at(4) = PrVtermCell{.flags = PrVtermCellFlag_WideTail};
     row.at(5) = PrVtermCell{.codePoint = 0xd800};
     row.at(6) = PrVtermCell{.codePoint = 0x1fffff};

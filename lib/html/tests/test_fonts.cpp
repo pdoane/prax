@@ -5,10 +5,12 @@
 #include "pr/base64.h"
 #include "pr/compress_builtin.h"
 #include "pr/css_presentation.h"
+#include "pr/file.h"
 #include "pr/font_set.h"
 #include "pr/html_page.h"
 #include "pr/layout_style.h"
 #include "pr/layout_tree.h"
+#include "pr/string_ops.h"
 #include "pr/text_harfbuzz.h"
 
 #include "css/src/css_presentation.h"
@@ -17,51 +19,44 @@
 
 #include "tools/harness/test.h"
 
-#include <cstdio>
-#include <string>
-#include <vector>
-
 namespace pr_impl {
 
 namespace {
 
-// Returns the bytes of the checkout's font file `name`, or an empty string if it cannot be read.
-std::string readFont(const std::string& name) {
-    std::string path = std::string(PR_FONTS_DIR) + "/" + name;
-    std::string bytes;
-    if (FILE* file = std::fopen(path.c_str(), "rb")) {
-        char buffer[65536];
-        size_t read = 0;
-        while ((read = std::fread(buffer, 1, sizeof(buffer), file)) != 0)
-            bytes.append(buffer, read);
-        std::fclose(file);
+// Returns the bytes of the checkout's font file `name`, or no bytes if it cannot be read.
+Array<uint8_t> readFont(PrStringView name) {
+    String path = format("{}/{}", PR_FONTS_DIR, name);
+    Array<uint8_t> bytes;
+    PrByteView mapped{};
+    if (prFileMap(path, &mapped)) {
+        bytes.append(mapped.data, uint32_t(mapped.size));
+        prFileUnmap(&mapped);
     }
     return bytes;
 }
 
 // Returns a font as a url() of a data: URL.
-std::string fontUrl() {
-    std::string bytes = readFont("noto_handwriting-cff2_colr_1.otf");
-    std::string encoded(prBase64EncodedSize(bytes.size()), '\0');
-    prBase64Encode(bytes, encoded.data(), encoded.size());
-    return "url(data:font/otf;base64," + encoded + ")";
+String fontUrl() {
+    Array<uint8_t> bytes = readFont("noto_handwriting-cff2_colr_1.otf");
+    Array<char> encoded(prBase64EncodedSize(bytes.count()));
+    prBase64Encode(PrStringView{reinterpret_cast<const char*>(bytes.data()), bytes.count()}, encoded.data(),
+        encoded.count());
+    return format("url(data:font/otf;base64,{})", PrStringView{encoded.data(), encoded.count()});
 }
 
 // Returns the text of a view. The null view reads as the empty string.
-std::string textOf(PrStringView text) {
-    return std::string(text.size != 0 ? text.data : "", text.size);
+String textOf(PrStringView text) {
+    return String(text.size != 0 ? text : PrStringView(""));
 }
 
-std::string take(PrRawString string) {
-    PrStringView view = prRawStringView(&string);
-    std::string text(view.data != nullptr ? view.data : "", view.size);
-    prRawStringReset(&string);
-    return text;
+String take(PrRawString string) {
+    String text = String::adopt(string);
+    return text.isNull() ? String("") : text;
 }
 
 // The notifications from the font callback and the set's events, in order.
 struct Heard {
-    std::vector<std::string> said;
+    Array<String> said;
 };
 
 // The network of the test's Served, which runTasks runs with the agent's tasks.
@@ -83,7 +78,7 @@ PrDomEventListener recorder(Heard* heard) {
         [](void* context, PrDomEvent* event) {
             PrCssFontFaceSetLoadEvent* load = prCssFontFaceSetLoadEventQuery(event);
             uint32_t faces = load != nullptr ? prCssFontFaceSetLoadEventFontFaces(load, nullptr, 0) : 0;
-            static_cast<Heard*>(context)->said.push_back(textOf(prDomEventType(event)) + " " + std::to_string(faces));
+            static_cast<Heard*>(context)->said.push(format("{} {}", textOf(prDomEventType(event)), faces));
         },
         heard,
         0,
@@ -99,8 +94,8 @@ struct Served {
     PrTextShaper* shaper = prTextHarfBuzzCreate();
     PrCompressCodec* compress = prCompressBuiltinCreate();
     PrTextFont* defaultFont = nullptr;
-    std::vector<std::string> fetched;      // the files fetched, in order
-    bool hold = false;                     // if true, fetches wait until release() answers them
+    Array<String> fetched;      // the files fetched, in order
+    bool hold = false;          // if true, fetches wait until release() answers them
     TestFetcher fetcher;
 
     Served() {
@@ -108,12 +103,13 @@ struct Served {
         fetcher.answer = [this](PrFetchInterceptRequest* request) {
             CHECK(request->desc.destination == PrFetchDestination_Font);
             CHECK(request->desc.mode == PrFetchMode_Cors);
-            fetched.push_back(nameOf(request));
+            fetched.push(nameOf(request));
             if (!hold)
                 answer(request);
         };
-        for (const char* file : {"Tinos-Regular.ttf", "Arimo-Regular.ttf"}) {
-            std::string path = std::string(PR_FONTS_DIR) + "/" + file;
+        const char* const kFiles[] = {"Tinos-Regular.ttf", "Arimo-Regular.ttf"};
+        for (const char* file : kFiles) {
+            String path = format("{}/{}", PR_FONTS_DIR, file);
             const PrFont* font = nullptr;
             REQUIRE(prFontCreateFromFile(path, 0, nullptr, &font) == PrStatus_Ok);
             PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
@@ -137,30 +133,33 @@ struct Served {
     }
 
     // Returns the file that a request names: the last segment of its URL's path.
-    static std::string nameOf(const PrFetchInterceptRequest* request) {
-        std::string name = TestFetcher::urlOf(request);
-        name = name.substr(0, name.find('?'));
-        return name.substr(name.rfind('/') + 1);
+    static String nameOf(const PrFetchInterceptRequest* request) {
+        String url = TestFetcher::urlOf(request);
+        PrStringView name = prStringSlice(url, 0, prStringFindByte(url, '?'));
+        size_t slash = prStringFindLastByte(name, '/');
+        size_t start = slash == name.size ? 0 : slash + 1;
+        return String(prStringSlice(name, start, name.size - start));
     }
 
     // Answers a request with the font file that it names, or with a 404 if there is none.
     void answer(PrFetchInterceptRequest* request) {
-        std::string bytes = readFont(nameOf(request));
-        fetcher.respondTo(request, bytes, bytes.empty() ? 404 : 200);
+        Array<uint8_t> bytes = readFont(nameOf(request));
+        fetcher.respondTo(request, bytes, bytes.isEmpty() ? 404 : 200);
     }
 
     // Answers the first `count` fetches held so far, in the order in which they were requested, or every fetch.
     void release(size_t count = SIZE_MAX) {
         prNetNullRun(fetcher.net);
-        size_t taken = count < fetcher.held.size() ? count : fetcher.held.size();
-        std::vector<PrFetchInterceptRequest*> answering(fetcher.held.begin(), fetcher.held.begin() + long(taken));
+        uint32_t taken = count < fetcher.held.count() ? uint32_t(count) : fetcher.held.count();
+        Array<PrFetchInterceptRequest*> answering;
+        answering.append(fetcher.held.span().slice(0, taken));
         for (PrFetchInterceptRequest* request : answering)
             answer(request);
     }
 
     // Creates a browsing context that has loaded `html`. If `decompress` is false, the host gives no codec. If
     // `presentation` is false, it gives no font or shaper, so the document has no presentation.
-    PrHtmlPage* load(const char* html, bool decompress = true, bool presentation = true) {
+    PrHtmlPage* load(PrStringView html, bool decompress = true, bool presentation = true) {
         PrHtmlHost host = prHtmlHostDefault();
         host.context = this;
         host.font = presentation ? defaultFont : nullptr;
@@ -213,19 +212,21 @@ struct SetHeard {
             nullptr,
             [](void* context, PrDomDocument*, PrCssFontFaceSet* set) {
                 bool loading = prCssFontFaceSetStatus(set) == PrCssFontFaceSetLoadStatus_Loading;
-                static_cast<Heard*>(context)->said.push_back(loading ? "set loading" : "set loaded");
+                static_cast<Heard*>(context)->said.push(loading ? "set loading" : "set loaded");
             },
             &heard,
         };
         prCssDocumentSetFontCallback(document, &callback);
-        for (PrStringView type : {"loadingdone", "loadingerror"})
+        const PrStringView kTypes[] = {"loadingdone", "loadingerror"};
+        for (PrStringView type : kTypes)
             prDomEventTargetAddEventListener(prCssFontFaceSetAsEventTarget(prCssDocumentFonts(document)), type,
                 &listener, nullptr);
     }
 
     ~SetHeard() {
         prCssDocumentSetFontCallback(document, nullptr);
-        for (PrStringView type : {"loadingdone", "loadingerror"})
+        const PrStringView kTypes[] = {"loadingdone", "loadingerror"};
+        for (PrStringView type : kTypes)
             prDomEventTargetRemoveEventListener(prCssFontFaceSetAsEventTarget(prCssDocumentFonts(document)), type,
                 &listener, nullptr);
         prDomNodeRelease(prDomDocumentAsNode(document));
@@ -266,9 +267,8 @@ using namespace pr_impl;
 
 TEST_CASE("a style sheet's @font-face rules are the document's faces, before those added") {
     PrHtmlPage* page = prHtmlPageCreate(nullptr);
-    std::string source = std::string("<style>@font-face { font-family: A; src: ") + fontUrl() +
-        "; } @layer x { @font-face { font-family: B; src: url(b) } } "
-        "@media print { @font-face { font-family: C; src: url(c) } }</style>";
+    String source = format("<style>@font-face {{ font-family: A; src: {}; }} @layer x {{ @font-face {{ font-family: B; "
+        "src: url(b) }} }} @media print {{ @font-face {{ font-family: C; src: url(c) }} }}</style>", fontUrl());
     CHECK(prHtmlPageLoad(page, source, "about:blank", nullptr) == PrStatus_Ok);
     PrCssFontFaceSet* fonts = prCssDocumentFonts(prHtmlWindowDocument(prHtmlPageWindow(page)));
     // A face in a conditional group rule is left to the cascade.
@@ -295,11 +295,11 @@ TEST_CASE("a face loads in a task, and its set switches to loading and back") {
     PrCssFontCallback callback = {
         [](void* context, PrDomDocument*, PrCssFontFace* face) {
             constexpr const char* kStatuses[] = {"unloaded", "loading", "loaded", "error"};
-            static_cast<Heard*>(context)->said.push_back(std::string("face ") + kStatuses[prCssFontFaceStatus(face)]);
+            static_cast<Heard*>(context)->said.push(format("face {}", kStatuses[prCssFontFaceStatus(face)]));
         },
         [](void* context, PrDomDocument*, PrCssFontFaceSet* set) {
             bool loading = prCssFontFaceSetStatus(set) == PrCssFontFaceSetLoadStatus_Loading;
-            static_cast<Heard*>(context)->said.push_back(loading ? "set loading" : "set loaded");
+            static_cast<Heard*>(context)->said.push(loading ? "set loading" : "set loaded");
         },
         &heard,
     };
@@ -309,10 +309,11 @@ TEST_CASE("a face loads in a task, and its set switches to loading and back") {
     prCssDocumentSetFontCallback(document, &callback);
     PrCssFontFaceSet* fonts = prCssDocumentFonts(document);
     PrDomEventListener listener = recorder(&heard);
-    for (PrStringView type : {"loading", "loadingdone", "loadingerror"})
+    const PrStringView kTypes[] = {"loading", "loadingdone", "loadingerror"};
+    for (PrStringView type : kTypes)
         prDomEventTargetAddEventListener(prCssFontFaceSetAsEventTarget(fonts), type, &listener, nullptr);
 
-    std::string url = fontUrl();
+    String url = fontUrl();
     PrCssFontFace* good = prCssFontFaceCreate("Good", url, nullptr);
     PrCssFontFace* bad = prCssFontFaceCreate("Bad", "local(missing)", nullptr);
     prCssFontFaceSetAdd(fonts, good);
@@ -325,11 +326,11 @@ TEST_CASE("a face loads in a task, and its set switches to loading and back") {
     CHECK(prCssFontFaceStatus(bad) == PrCssFontFaceStatus_Error);
     CHECK_FALSE(prCssFontFaceFailedToParse(bad));
     CHECK(prCssFontFaceSetStatus(fonts) == PrCssFontFaceSetLoadStatus_Loaded);
-    CHECK(heard.said == std::vector<std::string>{
+    CHECK(heard.said == Array<String>({
         "face loading", "set loading", "face loading", "loading 0",
         "face loaded", "face error", "loadingdone 1",
         "loadingerror 1", "set loaded",
-    });
+    }));
     prCssDocumentSetFontCallback(document, nullptr);
     prCssFontFaceRelease(good);
     prCssFontFaceRelease(bad);
@@ -364,12 +365,12 @@ TEST_CASE("a FontFaceSetLoadEvent holds the faces it names") {
 
 TEST_CASE("text in a family of @font-face falls back while its face loads, then takes the face") {
     Served served;
-    std::string html = std::string("<style>@font-face { font-family: Web; src: url(fonts/Arimo-Regular.ttf) }</style>") + kSpans;
-    PrHtmlPage* page = served.load(html.c_str());
+    String html = format("{}{}", "<style>@font-face { font-family: Web; src: url(fonts/Arimo-Regular.ttf) }</style>", kSpans);
+    PrHtmlPage* page = served.load(html);
     prHtmlPresentationUpdate(prHtmlPagePresentation(page), prLayoutVecFromPx(PrVec2{800, 600}));
     CHECK(widthOf(page, "web") == widthOf(page, "serif"));
     settle(page);
-    CHECK(served.fetched == std::vector<std::string>{"Arimo-Regular.ttf"});
+    CHECK(served.fetched == Array<String>({"Arimo-Regular.ttf"}));
     CHECK(widthOf(page, "web") == widthOf(page, "sans"));
     CHECK(widthOf(page, "web") != widthOf(page, "serif"));
     prHtmlPageDestroy(page);
@@ -382,27 +383,27 @@ TEST_CASE("a family whose faces all failed hides the installed family of its nam
             "<span id=arimo style='font-family: Arimo, serif'>Hamburgefonstiv</span>"
             "<span id=serif style='font-family: serif'>Hamburgefonstiv</span>");
     settle(page);
-    CHECK(served.fetched == std::vector<std::string>{"Missing.ttf"});
+    CHECK(served.fetched == Array<String>({"Missing.ttf"}));
     CHECK(widthOf(page, "arimo") == widthOf(page, "serif"));
     prHtmlPageDestroy(page);
 }
 
 TEST_CASE("a face whose unicode-range holds none of the text is not fetched") {
     Served served;
-    std::string html = std::string("<style>@font-face { font-family: Web; src: url(Arimo-Regular.ttf); unicode-range: U+0-7F }"
-        "@font-face { font-family: Web; src: url(Cousine-Regular.ttf); unicode-range: U+400-4FF }</style>") + kSpans;
-    PrHtmlPage* page = served.load(html.c_str());
+    String html = format("{}{}", "<style>@font-face { font-family: Web; src: url(Arimo-Regular.ttf); unicode-range: U+0-7F }"
+        "@font-face { font-family: Web; src: url(Cousine-Regular.ttf); unicode-range: U+400-4FF }</style>", kSpans);
+    PrHtmlPage* page = served.load(html);
     settle(page);
-    CHECK(served.fetched == std::vector<std::string>{"Arimo-Regular.ttf"});
+    CHECK(served.fetched == Array<String>({"Arimo-Regular.ttf"}));
     CHECK(widthOf(page, "web") == widthOf(page, "sans"));
     prHtmlPageDestroy(page);
 }
 
 TEST_CASE("a WOFF face loads with the host's codec, and fails without one") {
     Served served;
-    std::string html = std::string("<style>@font-face { font-family: Web; src: url(AD.woff) }</style>") + kSpans;
-    PrHtmlPage* decoded = served.load(html.c_str());
-    PrHtmlPage* undecoded = served.load(html.c_str(), false);
+    String html = format("{}{}", "<style>@font-face { font-family: Web; src: url(AD.woff) }</style>", kSpans);
+    PrHtmlPage* decoded = served.load(html);
+    PrHtmlPage* undecoded = served.load(html, false);
     settle(decoded);
     settle(undecoded);
     CHECK(widthOf(decoded, "web") != widthOf(decoded, "serif"));
@@ -415,8 +416,8 @@ TEST_CASE("a WOFF face loads with the host's codec, and fails without one") {
 
 TEST_CASE("a document's faces set only its own text") {
     Served served;
-    std::string html = std::string("<style>@font-face { font-family: Web; src: url(Arimo-Regular.ttf) }</style>") + kSpans;
-    PrHtmlPage* defining = served.load(html.c_str());
+    String html = format("{}{}", "<style>@font-face { font-family: Web; src: url(Arimo-Regular.ttf) }</style>", kSpans);
+    PrHtmlPage* defining = served.load(html);
     PrHtmlPage* plain = served.load(kSpans);
     settle(defining);
     settle(plain);
@@ -433,7 +434,7 @@ TEST_CASE("a face that the document's text asks for while it loads holds its loa
         nullptr,
         [](void* context, PrDomDocument*, PrCssFontFaceSet* set) {
             bool loading = prCssFontFaceSetStatus(set) == PrCssFontFaceSetLoadStatus_Loading;
-            static_cast<Heard*>(context)->said.push_back(loading ? "set loading" : "set loaded");
+            static_cast<Heard*>(context)->said.push(loading ? "set loading" : "set loaded");
         },
         &heard,
     };
@@ -450,7 +451,7 @@ TEST_CASE("a face that the document's text asks for while it loads holds its loa
     CHECK(prCssFontFaceStatus(prCssFontFaceSetAt(fonts, 0)) == PrCssFontFaceStatus_Loaded);
     CHECK(prHtmlDocumentReadyState(document) == PrHtmlDocumentReadyState_Complete);
     prHtmlPresentationUpdate(prHtmlPagePresentation(page), prLayoutVecFromPx(PrVec2{800, 600}));
-    CHECK(heard.said == std::vector<std::string>{"set loaded"});
+    CHECK(heard.said == Array<String>({"set loaded"}));
     prCssDocumentSetFontCallback(document, nullptr);
     prHtmlPageDestroy(page);
 }
@@ -463,12 +464,13 @@ TEST_CASE("a document's set whose text uses none of its faces is loaded once lai
     prHtmlPresentationUpdate(prHtmlPagePresentation(page), prLayoutVecFromPx(PrVec2{800, 600}));
     CHECK(prCssFontFaceStatus(prCssFontFaceSetAt(fonts, 0)) == PrCssFontFaceStatus_Unloaded);
     CHECK(prCssFontFaceSetStatus(fonts) == PrCssFontFaceSetLoadStatus_Loaded);
-    CHECK(served.fetched.empty());
+    CHECK(served.fetched.isEmpty());
     prHtmlPageDestroy(page);
 }
 
 TEST_CASE("a set whose last loading face is deleted or cleared switches to loaded without its load") {
-    for (bool clear : {false, true}) {
+    const bool kClears[] = {false, true};
+    for (bool clear : kClears) {
         Served served;
         served.hold = true;
         PrHtmlPage* page = served.load("<p>text");
@@ -485,13 +487,13 @@ TEST_CASE("a set whose last loading face is deleted or cleared switches to loade
         // The deletion changed the document's fonts, so the set waits for the layout that may request a font.
         update(page);
         CHECK(prCssFontFaceSetStatus(fonts) == PrCssFontFaceSetLoadStatus_Loaded);
-        CHECK(heard.heard.said == std::vector<std::string>{"set loading", "loadingdone 0", "set loaded"});
+        CHECK(heard.heard.said == Array<String>({"set loading", "loadingdone 0", "set loaded"}));
         // The face's load still settles the face, and changes nothing in the set that it left.
         served.release();
         runTasks(page);
         CHECK(prCssFontFaceStatus(face) == PrCssFontFaceStatus_Loaded);
         CHECK(prCssFontFaceSetStatus(fonts) == PrCssFontFaceSetLoadStatus_Loaded);
-        CHECK(heard.heard.said.size() == 3);
+        CHECK(heard.heard.said.count() == 3);
         prCssFontFaceRelease(face);
         prHtmlPageDestroy(page);
     }
@@ -513,10 +515,10 @@ TEST_CASE("a face deleted while it loads and added again settles the set it rejo
     runTasks(page);
     update(page);
     CHECK(prCssFontFaceSetStatus(fonts) == PrCssFontFaceSetLoadStatus_Loaded);
-    CHECK(heard.heard.said == std::vector<std::string>{
+    CHECK(heard.heard.said == Array<String>({
         "set loading", "loadingdone 0", "set loaded", "set loading", "loadingdone 1",
         "set loaded",
-    });
+    }));
     prCssFontFaceRelease(face);
     prHtmlPageDestroy(page);
 }
@@ -539,10 +541,10 @@ TEST_CASE("a face whose sheet leaves the document while it loads leaves the set 
     prDomNodeRemove(prDomElementAsNode(prDomNodeGetElementById(prDomDocumentAsNode(document), "s")));
     update(page);
     CHECK(prCssFontFaceSetStatus(fonts) == PrCssFontFaceSetLoadStatus_Loaded);
-    CHECK(heard.heard.said == std::vector<std::string>{"loadingdone 0", "set loaded"});
+    CHECK(heard.heard.said == Array<String>({"loadingdone 0", "set loaded"}));
     served.release();
     runTasks(page);
-    CHECK(heard.heard.said.size() == 2);
+    CHECK(heard.heard.said.count() == 2);
     prHtmlPageDestroy(page);
 }
 
@@ -579,7 +581,7 @@ TEST_CASE("a presentation awaits font requests while a change since its last syn
     CHECK(cssPresentationAwaitsFontRequests(presentation));
     settle(page);
     CHECK_FALSE(cssPresentationAwaitsFontRequests(presentation));
-    CHECK(served.fetched == std::vector<std::string>{"Arimo-Regular.ttf"});
+    CHECK(served.fetched == Array<String>({"Arimo-Regular.ttf"}));
     prHtmlPageDestroy(page);
 }
 
@@ -590,18 +592,18 @@ TEST_CASE("a family whose matched face failed falls back to the next family, not
         "<span id=web style='font-family: Web, serif'>Hamburgefonstiv</span>"
         "<span id=serif style='font-family: serif'>Hamburgefonstiv</span>");
     settle(page);
-    CHECK(served.fetched == std::vector<std::string>{"Missing.ttf"});
+    CHECK(served.fetched == Array<String>({"Missing.ttf"}));
     CHECK(widthOf(page, "web") == widthOf(page, "serif"));
     prHtmlPageDestroy(page);
 }
 
 TEST_CASE("a failed face gives way to an earlier face of the same style") {
     Served served;
-    std::string html = std::string("<style>@font-face { font-family: Web; src: url(Arimo-Regular.ttf) }"
-        "@font-face { font-family: Web; src: url(Missing.ttf) }</style>") + kSpans;
-    PrHtmlPage* page = served.load(html.c_str());
+    String html = format("{}{}", "<style>@font-face { font-family: Web; src: url(Arimo-Regular.ttf) }"
+        "@font-face { font-family: Web; src: url(Missing.ttf) }</style>", kSpans);
+    PrHtmlPage* page = served.load(html);
     settle(page);
-    CHECK(served.fetched == std::vector<std::string>{"Missing.ttf", "Arimo-Regular.ttf"});
+    CHECK(served.fetched == Array<String>({"Missing.ttf", "Arimo-Regular.ttf"}));
     CHECK(widthOf(page, "web") == widthOf(page, "sans"));
     prHtmlPageDestroy(page);
 }
@@ -638,14 +640,14 @@ TEST_CASE("a face's size-adjust scales its font once") {
     settle(page);
     CHECK(widthOf(page, "half") == doctest::Approx(widthOf(page, "web") / 2).epsilon(0.02));
     // The two rules name one source, which is fetched once.
-    CHECK(served.fetched == std::vector<std::string>{"Arimo-Regular.ttf"});
+    CHECK(served.fetched == Array<String>({"Arimo-Regular.ttf"}));
     prHtmlPageDestroy(page);
 }
 
 TEST_CASE("a rule put back whose source the document decoded sets its face at once, without a fetch") {
     Served served;
-    std::string html = std::string("<style id=s>@font-face { font-family: Web; src: url(Arimo-Regular.ttf) }</style>") + kSpans;
-    PrHtmlPage* page = served.load(html.c_str());
+    String html = format("{}{}", "<style id=s>@font-face { font-family: Web; src: url(Arimo-Regular.ttf) }</style>", kSpans);
+    PrHtmlPage* page = served.load(html);
     PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(page));
     settle(page);
     float web = widthOf(page, "web");
@@ -669,7 +671,7 @@ TEST_CASE("a rule put back whose source the document decoded sets its face at on
     CHECK(widthOf(page, "web") == web);
     settle(page);
     CHECK(widthOf(page, "web") == web);
-    CHECK(served.fetched == std::vector<std::string>{"Arimo-Regular.ttf"});
+    CHECK(served.fetched == Array<String>({"Arimo-Regular.ttf"}));
     prHtmlPageDestroy(page);
 }
 
@@ -679,7 +681,7 @@ TEST_CASE("a face tries its sources in order, fetching an earlier one before a d
         "@font-face { font-family: Second; src: url(Cousine-Regular.ttf), url(Arimo-Regular.ttf) }"
         "span { display: inline-block }</style><span id=first style='font-family: First'>Hamburgefonstiv</span>");
     settle(page);
-    CHECK(served.fetched == std::vector<std::string>{"Arimo-Regular.ttf"});
+    CHECK(served.fetched == Array<String>({"Arimo-Regular.ttf"}));
     PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(page));
     PrDomElement* span = nullptr;
     REQUIRE(prDomElementCreate(document, "span", nullptr, &span) == PrStatus_Ok);
@@ -689,7 +691,7 @@ TEST_CASE("a face tries its sources in order, fetching an earlier one before a d
         PrStatus_Ok);
     prDomNodeRelease(prDomElementAsNode(span));
     settle(page);
-    CHECK(served.fetched == std::vector<std::string>{"Arimo-Regular.ttf", "Cousine-Regular.ttf"});
+    CHECK(served.fetched == Array<String>({"Arimo-Regular.ttf", "Cousine-Regular.ttf"}));
     prHtmlPageDestroy(page);
 }
 
@@ -716,7 +718,7 @@ TEST_CASE("fonts that load one at a time, and leave and come back, lay out as a 
         verifyUpdate(page);
         runTasks(page);
     }
-    CHECK(served.fetched.size() == 3);
+    CHECK(served.fetched.count() == 3);
     CHECK(widthOf(page, "float") != fallback);
     float loaded = widthOf(page, "float");
 
@@ -736,7 +738,7 @@ TEST_CASE("fonts that load one at a time, and leave and come back, lay out as a 
     CHECK(widthOf(page, "float") == loaded);
     runTasks(page);
     verifyUpdate(page);
-    CHECK(served.fetched.size() == 3);
+    CHECK(served.fetched.count() == 3);
     prHtmlPageDestroy(page);
 }
 
@@ -779,10 +781,10 @@ TEST_CASE("a document with no presentation leaves a face whose sheet left out of
         prDomNodeRemove(style);
         runTasks(page);
         CHECK(prCssFontFaceSetStatus(fonts) == PrCssFontFaceSetLoadStatus_Loaded);
-        CHECK(heard.heard.said == std::vector<std::string>{"loadingdone 0", "set loaded"});
+        CHECK(heard.heard.said == Array<String>({"loadingdone 0", "set loaded"}));
         served.release();
         runTasks(page);
-        CHECK(heard.heard.said.size() == 2);
+        CHECK(heard.heard.said.count() == 2);
         prDomNodeRelease(style);
     }
     prHtmlPageDestroy(page);
@@ -793,15 +795,15 @@ TEST_CASE("sources no face uses are bounded as they become unused, whether or no
     PrHtmlPage* page = served.load("<p>text");
     PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(page));
     // More sources than the cache keeps unused, each held by a face that loaded from it.
-    std::vector<PrCssFontFace*> faces;
+    Array<PrCssFontFace*> faces;
     for (int i = 0; i < 80; ++i) {
-        std::string source = "url(Arimo-Regular.ttf?" + std::to_string(i) + ")";
+        String source = format("url(Arimo-Regular.ttf?{})", i);
         PrCssFontFace* face = prCssFontFaceCreate("B", source, nullptr);
         prCssFontFaceLoad(face, document);
-        faces.push_back(face);
+        faces.push(face);
     }
     runTasks(page);
-    CHECK(prCssFontFaceStatus(faces.back()) == PrCssFontFaceStatus_Loaded);
+    CHECK(prCssFontFaceStatus(faces.last()) == PrCssFontFaceStatus_Loaded);
     const CssRoot* style = cssDocumentRoot(document);
     CHECK(style->fontSources.count == 80);
     // The faces are released, nothing is fetched afterward, and the cache keeps no more than its bound. If faces are
@@ -812,7 +814,7 @@ TEST_CASE("sources no face uses are bounded as they become unused, whether or no
             prCssFontFaceRelease(face);
     }
     SUBCASE("newest first") {
-        for (size_t i = faces.size(); i > 0; --i)
+        for (uint32_t i = faces.count(); i > 0; --i)
             prCssFontFaceRelease(faces[i - 1]);
     }
     CHECK(style->fontSources.count <= 64);

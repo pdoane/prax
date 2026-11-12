@@ -1,18 +1,20 @@
+#include "pr/array.h"
 #include "pr/draw_commands.h"
 #include "pr/draw_list.h"
 #include "pr/draw_lower.h"
 #include "pr/draw_transform.h"
+#include "pr/float.h"
+#include "pr/min_max.h"
 #include "pr/path_rasterizer.h"
 #include "pr/vec.h"
 
 #include "tools/harness/test.h"
 
-#include <cmath>
-#include <vector>
-
 namespace pr_impl {
 
 namespace {
+
+using namespace pr;
 
 constexpr double kPi = 3.14159265358979;
 
@@ -21,7 +23,7 @@ constexpr double kPi = 3.14159265358979;
 double areaOf(const PrPath* path, PrPathFillRule rule = PrPathFillRule_NonZero) {
     constexpr uint32_t kScale = 4;
     constexpr uint32_t kSize = 128 * kScale;
-    std::vector<uint8_t> coverage(kSize * kSize);
+    Array<uint8_t> coverage(kSize * kSize);
     PrPixels mask{coverage.data(), kSize, {kSize, kSize}};
     PrPathRasterizer* rasterizer = prPathRasterizerCreate();
     PrPathPolyline polyline{};
@@ -52,34 +54,34 @@ PrDrawBrush brushOf(PrDrawBrushKind kind, const PrDrawColorStop* stops, uint32_t
 }
 
 bool near(float a, float b, float within = 1e-3f) {
-    return std::fabs(a - b) <= within;
+    return prF32Abs(a - b) <= within;
 }
 
 // Collects a border's pieces: the area that each shape covers before any cut, and its side and color.
 struct Pieces {
-    std::vector<double> areas;
-    std::vector<PrDrawBorderPiece> pieces;
+    Array<double> areas;
+    Array<PrDrawBorderPiece> pieces;
 };
 
 void collect(void* context, const PrDrawBorderPiece* piece, const PrPathPolyline* shape, const PrPathPolyline* cut) {
     Pieces& p = *static_cast<Pieces*>(context);
-    p.pieces.push_back(*piece);
-    p.areas.push_back(areaOf(*shape, piece->rule));
+    p.pieces.push(*piece);
+    p.areas.push(areaOf(*shape, piece->rule));
     (void)cut;
 }
 
 // Writes the ramp's colors in sRGB at each of `count` points of its parameter, in [-1, 2].
 void rampAt(const PrDrawBrush* brush, PrColor color, const float* at, uint32_t count, PrColor* out) {
-    std::vector<PrDrawRampPiece> pieces(prDrawGradientRampMaxPieces(brush->stopCount));
-    std::vector<PrColor> colors(prDrawGradientRampMaxColors(brush->stopCount, 1024));
-    pieces.resize(prDrawGradientRamp(brush, color, PrColorSpace_Srgb, 1024, pieces.data(), colors.data()));
+    Array<PrDrawRampPiece> pieces(prDrawGradientRampMaxPieces(brush->stopCount));
+    Array<PrColor> colors(prDrawGradientRampMaxColors(brush->stopCount, 1024));
+    pieces.resize(uint32_t(prDrawGradientRamp(brush, color, PrColorSpace_Srgb, 1024, pieces.data(), colors.data())));
     for (uint32_t i = 0; i < count; ++i)
         out[i] = prDrawRampColor(&pieces[prDrawRampPieceAt(pieces.data(), at[i], 0)], colors.data(), at[i]);
 }
 
 // Writes the ramp's colors in sRGB at `count` even steps of its parameter from 0 to 1.
 void evenRamp(const PrDrawBrush* brush, PrColor color, uint32_t count, PrColor* out) {
-    std::vector<float> at(count);
+    Array<float> at(count);
     for (uint32_t i = 0; i < count; ++i)
         at[i] = float(i) / float(count - 1);
     rampAt(brush, color, at.data(), count, out);
@@ -184,7 +186,7 @@ TEST_CASE("a ramp's pieces meet at its stops, and a piece that mixes linearly is
     };
     PrDrawBrush brush = brushOf(PrDrawBrushKind_Linear, stops, 4);
     PrDrawRampPiece pieces[7];
-    std::vector<PrColor> colors(prDrawGradientRampMaxColors(4, 1024));
+    Array<PrColor> colors(prDrawGradientRampMaxColors(4, 1024));
     REQUIRE(prDrawGradientRamp(&brush, PrColor{1, 1, 1, 1}, PrColorSpace_Srgb, 1024, pieces, colors.data()) == 6);
     // Red before 0, before the first stop and from it to the hard stop, blue to green, then green to 1 and past it.
     CHECK(pieces[0].start == -1.0f);
@@ -200,8 +202,9 @@ TEST_CASE("a ramp's pieces meet at its stops, and a piece that mixes linearly is
     CHECK(pieces[5].end == 2.0f);
     CHECK(prDrawRampColorCount(pieces, 6) == 7);
 
-    // The hard stop is exact on both sides: the later color at its offset, and only the earlier just before it.
-    float before = std::nextafter(0.5f, 0.0f);
+    // The hard stop is exact on both sides: the later color at its offset, and only the earlier just before it, at the
+    // float just below 0.5.
+    float before = 0x1.fffffep-2f;
     PrColor red = prDrawRampColor(&pieces[prDrawRampPieceAt(pieces, before, 0)], colors.data(), before);
     PrColor blue = prDrawRampColor(&pieces[prDrawRampPieceAt(pieces, 0.5f, 0)], colors.data(), 0.5f);
     CHECK(red.r == 1.0f);
@@ -239,7 +242,7 @@ TEST_CASE("a ramp's piece that mixes in another space has colors at the resoluti
     PrDrawBrush brush = brushOf(PrDrawBrushKind_Linear, stops, 2);
     brush.interpolationSpace = PrColorSpace_SrgbLinear;
     PrDrawRampPiece pieces[5];
-    std::vector<PrColor> colors(prDrawGradientRampMaxColors(2, 64));
+    Array<PrColor> colors(prDrawGradientRampMaxColors(2, 64));
     REQUIRE(prDrawGradientRamp(&brush, PrColor{1, 1, 1, 1}, PrColorSpace_Srgb, 64, pieces, colors.data()) == 4);
     CHECK(pieces[1].count == 33);
     CHECK(pieces[2].count == 1);
@@ -268,7 +271,7 @@ TEST_CASE("a ramp mixes stops premultiplied, in their space, and takes the color
     };
     brush = brushOf(PrDrawBrushKind_Linear, hinted, 2);
     evenRamp(&brush, PrColor{1, 1, 1, 1}, 3, ramp);
-    CHECK(near(ramp[1].r, std::pow(0.5f, std::log(0.5f) / std::log(0.25f))));
+    CHECK(near(ramp[1].r, prF32Pow(0.5f, prF32Log(0.5f) / prF32Log(0.25f))));
 
     // Equal offsets make a hard stop, with the later stop's color at the offset.
     PrDrawColorStop hard[] = {
@@ -307,7 +310,7 @@ TEST_CASE("a ramp that mixes straight mixes color and alpha apart, toward the co
     CHECK(near(ramp[1].g, 0.125f, 1e-2f));
     // The piece is not linear in the premultiplied output, so it has a color at each step.
     PrDrawRampPiece pieces[5];
-    std::vector<PrColor> colors(prDrawGradientRampMaxColors(2, 64));
+    Array<PrColor> colors(prDrawGradientRampMaxColors(2, 64));
     REQUIRE(prDrawGradientRamp(&brush, PrColor{1, 1, 1, 1}, PrColorSpace_Srgb, 64, pieces, colors.data()) == 3);
     CHECK(pieces[1].count == 65);
     // Two stops of one alpha mix linearly, as premultiplied stops do.
@@ -497,7 +500,7 @@ TEST_CASE("a shadow grows by its spread, and a small radius grows by less") {
     CHECK(near(g.shape.rect.right, 61));
     CHECK(near(g.sigma, 5));
     CHECK(near(g.shape.corners[0].radii.x, 24));
-    CHECK(near(g.shape.corners[1].radii.x, 4 + 8 * (1 + std::pow(0.5f - 1, 3.0f))));
+    CHECK(near(g.shape.corners[1].radii.x, 4 + 8 * (1 + prF32Pow(0.5f - 1, 3.0f))));
     CHECK(near(g.shape.corners[2].radii.x, 0));
     g = prDrawShadowGeometry(&shadow, PrDrawShadowKind_Inner);
     CHECK(near(g.shape.rect.left, 21));
@@ -543,8 +546,8 @@ TEST_CASE("a wavy decoration is its thickness along the sine, in points that fol
     const double k = 2 * kPi / 20;
     double arc = 0;
     for (int i = 0; i < 100000; ++i) {
-        double slope = 5 * k * std::cos(k * (double(i) + 0.5) / 1000);
-        arc += std::sqrt(1 + slope * slope) / 1000;
+        double slope = 5 * k * prF64Cos(k * (double(i) + 0.5) / 1000);
+        arc += prF64Sqrt(1 + slope * slope) / 1000;
     }
     PrPathPolyline outline{};
     prDrawDecorationOutline(&d, 0.01f, &outline);
@@ -561,14 +564,17 @@ TEST_CASE("a wavy decoration is its thickness along the sine, in points that fol
 
 TEST_CASE("a decoration too long for its pattern draws a bounded number of dots and dashes") {
     PrPathPolyline outline{};
-    for (float length : {1e30f, INFINITY}) {
+    const float lengths[] = {1e30f, kPrF32Infinity};
+    const PrDrawDecorationStyle styles[] = {
+        PrDrawDecorationStyle_Dotted, PrDrawDecorationStyle_Dashed, PrDrawDecorationStyle_Wavy,
+    };
+    for (float length : lengths) {
         PrDrawDecoration d{};
         d.length = length;
         d.thickness = 1;
         d.wavelength = 4;
         d.amplitude = 1;
-        for (PrDrawDecorationStyle style : {PrDrawDecorationStyle_Dotted, PrDrawDecorationStyle_Dashed,
-            PrDrawDecorationStyle_Wavy}) {
+        for (PrDrawDecorationStyle style : styles) {
             d.style = style;
             prPathPolylineClear(&outline);
             prDrawDecorationOutline(&d, 0.25f, &outline);
@@ -618,7 +624,7 @@ TEST_CASE("a uniform border is one area, and sides that differ are pieces of the
     Pieces p;
     border.shape.rect = PrRect{10, 10, 110, 70};
     prDrawBorderLower(&border, 0.01f, collect, &p);
-    REQUIRE(p.pieces.size() == 1);
+    REQUIRE(p.pieces.count() == 1);
     CHECK(p.areas[0] == doctest::Approx(100 * 60 - 80 * 40).epsilon(0.002));
 
     border.sides[1].color = PrColor{1, 0, 0, 1};
@@ -626,7 +632,7 @@ TEST_CASE("a uniform border is one area, and sides that differ are pieces of the
     p = Pieces{};
     border.shape.rect = PrRect{10, 10, 110, 70};
     prDrawBorderLower(&border, 0.01f, collect, &p);
-    REQUIRE(p.pieces.size() == 4);
+    REQUIRE(p.pieces.count() == 4);
     double total = 0;
     for (double area : p.areas)
         total += area;
@@ -639,7 +645,7 @@ TEST_CASE("a uniform border is one area, and sides that differ are pieces of the
     p = Pieces{};
     border.shape.rect = PrRect{10, 10, 110, 70};
     prDrawBorderLower(&border, 0.01f, collect, &p);
-    REQUIRE(p.pieces.size() == 4);
+    REQUIRE(p.pieces.count() == 4);
     CHECK(near(p.pieces[0].color.r, kPrDrawBorderShade));
     CHECK(near(p.pieces[2].color.r, 1));
 }
@@ -716,32 +722,36 @@ TEST_CASE("a wide shadow blurs at a lower resolution, close to the full blur, wh
     prPathFlatten(shape, prAffine2Identity(), 0.05f, PrPathFlattening_Balanced, &outline);
     PrPathPolyline caster{};
     const PrIRect box{0, 0, 300, 260};
-    std::vector<uint8_t> reduced(300 * 260);
+    Array<uint8_t> reduced(300 * 260);
     prDrawShadowCoverage(rasterizer, &outline, &caster, PrDrawShadowKind_Drop, 40, PrPathCoverage_Area,
         PrIVec2{box.left, box.top}, PrPixels{reduced.data(), 300, {300, 260}});
     // The same blur at full resolution, over enough room that nothing is cut off.
     const uint32_t margin = 200;
     const uint32_t width = 300 + 2 * margin;
     const uint32_t height = 260 + 2 * margin;
-    std::vector<uint8_t> coverage(size_t(width) * height);
+    Array<uint8_t> coverage(size_t(width) * height);
     PrPixels mask{coverage.data(), width, {width, height}};
     prPathRasterizerFill(rasterizer, &outline, PrPathFillRule_NonZero, PrPathCoverage_Area,
         PrIVec2{-int32_t(margin), -int32_t(margin)}, mask);
-    std::vector<float> values(coverage.begin(), coverage.end());
+    Array<float> values;
+    values.reserve(coverage.count());
+    for (uint8_t c : coverage)
+        values.push(float(c));
     PrPixels blurred{reinterpret_cast<uint8_t*>(values.data()), width * sizeof(float), {width, height}};
     prImageBlur(blurred, PrPixelFormat_RF32, PrVec2{40, 40}, PrImageEdgeMode_None);
     int worst = 0;
     for (uint32_t y = 0; y < 260; ++y) {
         for (uint32_t x = 0; x < 300; ++x) {
             int exact = int(values[(y + margin) * width + x + margin] + 0.5f);
-            int d = std::abs(int(reduced[y * 300 + x]) - exact);
+            int difference = int(reduced[y * 300 + x]) - exact;
+            int d = max(difference, -difference);
             worst = d > worst ? d : worst;
         }
     }
     CHECK(worst <= 4);
     // A sigma far wider than the box blurs to a faint wash over it. The blur is computed over an area no larger than
     // the box.
-    std::vector<uint8_t> wash(64 * 64);
+    Array<uint8_t> wash(64 * 64);
     prPathClear(shape);
     prPathAddRect(shape, PrRect{0, 0, 64, 64});
     prPathPolylineClear(&outline);

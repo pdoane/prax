@@ -108,7 +108,7 @@ bool netPeerOpen(NetPeer* out) {
     PrByteView ports{};
     if (!prFileMap(PrStringView{path, size + 6}, &ports))
         return false;
-    PrStringView text{reinterpret_cast<const char*>(ports.data), ports.size};
+    PrStringView text = prStringFromBytes(ports);
     out->tcpEcho = portOf(text, "tcp_echo");
     out->tlsEcho = portOf(text, "tls_echo");
     out->tlsTruncating = portOf(text, "tls_truncating");

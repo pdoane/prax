@@ -1,10 +1,8 @@
+#include "pr/float.h"
 #include "pr/path_polyline.h"
 #include "pr/vec.h"
 
 #include "tools/harness/test.h"
-
-#include <cmath>
-#include <initializer_list>
 
 namespace pr_impl {
 
@@ -56,7 +54,7 @@ double area(const PrPath* path) {
             }
         }
     }
-    return std::fabs(sum / 2);
+    return prF64Abs(sum / 2);
 }
 
 uint32_t contours(const PrPath* path) {
@@ -234,7 +232,7 @@ TEST_CASE("a self-intersecting star fills by its rule") {
     PrPath* star = prPathCreate();
     for (int i = 0; i < 5; ++i) {
         double angle = -kPi / 2 + 2 * kPi * double(i * 2 % 5) / 5;
-        PrVec2 p{float(10 * std::cos(angle)), float(10 * std::sin(angle))};
+        PrVec2 p{float(10 * prF64Cos(angle)), float(10 * prF64Sin(angle))};
         if (i == 0)
             prPathMoveTo(star, p);
         else
@@ -245,8 +243,8 @@ TEST_CASE("a self-intersecting star fills by its rule") {
     double nonzero = combined(star, empty, PrPathPolylineOp_Union, PrPathFillRule_NonZero);
     double evenodd = combined(star, empty, PrPathPolylineOp_Union, PrPathFillRule_EvenOdd);
     // The pentagon in the middle winds twice, so it is inside by nonzero and outside by even-odd.
-    double inner = 10 * std::sin(kPi / 10) / std::sin(7 * kPi / 10);
-    double pentagon = 2.5 * inner * inner * std::sin(2 * kPi / 5);
+    double inner = 10 * prF64Sin(kPi / 10) / prF64Sin(7 * kPi / 10);
+    double pentagon = 2.5 * inner * inner * prF64Sin(2 * kPi / 5);
     CHECK(nonzero - evenodd == doctest::Approx(pentagon).epsilon(0.001));
     prPathDestroy(empty);
     prPathDestroy(star);
@@ -356,7 +354,8 @@ TEST_CASE("random self-intersecting polygons combine as their windings say") {
 TEST_CASE("a contour of no area leaves nothing where it is intersected") {
     // A lone point, as a contour of one vertex closed onto itself, beside a square and on its edge. The region
     // intersected with each contains all of it.
-    for (PrVec2 point : {PrVec2{50, 50}, PrVec2{15, 10}, PrVec2{20, 13.37f}}) {
+    const PrVec2 points[] = {PrVec2{50, 50}, PrVec2{15, 10}, PrVec2{20, 13.37f}};
+    for (PrVec2 point : points) {
         PrPath* shapes = prPathCreate();
         prPathMoveTo(shapes, point);
         prPathCubicTo(shapes, point, point, point);
@@ -388,14 +387,17 @@ TEST_CASE("a contour of no area leaves nothing where it is intersected") {
 
 TEST_CASE("polylines with points that are not finite combine to nothing") {
     PrPath* square = rect(0, 0, 10, 10);
-    for (float bad : {INFINITY, -INFINITY, NAN}) {
+    const float bads[] = {kPrF32Infinity, -kPrF32Infinity, kPrF32Nan};
+    for (float bad : bads) {
         PrPath* broken = prPathCreate();
         prPathMoveTo(broken, PrVec2{0, 0});
         prPathLineTo(broken, PrVec2{bad, 5});
         prPathLineTo(broken, PrVec2{5, 10});
         prPathClose(broken);
-        for (PrPathPolylineOp op :
-                {PrPathPolylineOp_Union, PrPathPolylineOp_Intersect, PrPathPolylineOp_Difference, PrPathPolylineOp_Xor}) {
+        const PrPathPolylineOp ops[] = {
+            PrPathPolylineOp_Union, PrPathPolylineOp_Intersect, PrPathPolylineOp_Difference, PrPathPolylineOp_Xor,
+        };
+        for (PrPathPolylineOp op : ops) {
             PrPath* out = prPathCreate();
             combinePaths(square, PrPathFillRule_NonZero, broken, PrPathFillRule_NonZero, op, 0.1f, out);
             CHECK(prPathVerbCount(out) == 0);

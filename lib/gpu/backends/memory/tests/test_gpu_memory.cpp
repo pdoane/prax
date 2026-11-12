@@ -3,17 +3,18 @@
 // draw with shaders, so they skip this device.
 
 #include "pr/app_surface.h"
+#include "pr/array.h"
 #include "pr/float16.h"
 #include "pr/gpu.h"
 #include "pr/gpu_memory.h"
+#include "pr/mem.h"
 #include "pr/thread.h"
 
 #include "tools/harness/test.h"
 
-#include <cstring>
-#include <vector>
-
 namespace pr_impl {
+
+using namespace pr;
 
 namespace {
 
@@ -30,9 +31,9 @@ struct Device {
         return texture;
     }
 
-    std::vector<uint8_t> read(PrGpuTexture texture, uint32_t texelBytes = 4) {
+    Array<uint8_t> read(PrGpuTexture texture, uint32_t texelBytes = 4) {
         PrUVec2 extent = prGpuTextureExtent(device, texture);
-        std::vector<uint8_t> texels(size_t(extent.x) * extent.y * texelBytes);
+        Array<uint8_t> texels(extent.x * extent.y * texelBytes);
         prGpuTextureRead(device, texture, PrGpuAccessFlag_ShaderRead, PrIVec2{0, 0},
             PrPixels{texels.data(), size_t(extent.x) * texelBytes, extent});
         return texels;
@@ -77,15 +78,15 @@ TEST_CASE("a memory device holds textures in memory and runs no shaders") {
 TEST_CASE("a memory texture's texels are written and read back, clipped to the texture") {
     Device d;
     PrGpuTexture texture = d.texture(PrUVec2{3, 2});
-    std::vector<uint8_t> texels(3 * 2 * 4);
-    for (size_t i = 0; i < texels.size(); ++i)
+    Array<uint8_t> texels(3 * 2 * 4);
+    for (uint32_t i = 0; i < texels.count(); ++i)
         texels[i] = uint8_t(i + 1);
     prGpuTextureWrite(d.device, texture, PrIVec2{0, 0}, PrPixelView{texels.data(), 12, {3, 2}});
     CHECK(d.read(texture) == texels);
     uint8_t white[4] = {255, 255, 255, 255};
     prGpuTextureWrite(d.device, texture, PrIVec2{2, 1}, PrPixelView{white, 4, {1, 1}});
-    std::vector<uint8_t> after = d.read(texture);
-    CHECK(std::memcmp(&after[20], white, 4) == 0);
+    Array<uint8_t> after = d.read(texture);
+    CHECK(prMemEquals(&after[20], white, 4));
     CHECK(after[16] == 17);
     prGpuTextureDestroy(d.device, texture);
 }
@@ -95,7 +96,7 @@ TEST_CASE("a memory pass clears its target to the color as the target's format h
     PrColor color{1, 0.5f, 0, 1};
     PrGpuTexture rgba = d.texture(PrUVec2{2, 2});
     d.clear(rgba, color);
-    std::vector<uint8_t> texels = d.read(rgba);
+    Array<uint8_t> texels = d.read(rgba);
     CHECK(texels[0] == 255);
     CHECK(texels[1] == 128);
     CHECK(texels[2] == 0);
@@ -103,15 +104,15 @@ TEST_CASE("a memory pass clears its target to the color as the target's format h
     // Bgra8 swaps red and blue, and a Srgb format holds sRGB's encoding of the linear color.
     PrGpuTexture bgra = d.texture(PrUVec2{1, 1}, PrGpuFormat_Bgra8Srgb);
     d.clear(bgra, color);
-    std::vector<uint8_t> encoded = d.read(bgra);
+    Array<uint8_t> encoded = d.read(bgra);
     CHECK(encoded[0] == 0);
     CHECK(encoded[1] == 188);
     CHECK(encoded[2] == 255);
     PrGpuTexture half = d.texture(PrUVec2{1, 1}, PrGpuFormat_Rgba16F);
     d.clear(half, PrColor{2, -1, 0.25f, 1});
-    std::vector<uint8_t> halves = d.read(half, 8);
+    Array<uint8_t> halves = d.read(half, 8);
     PrFloat16 red{};
-    std::memcpy(&red, halves.data(), 2);
+    prMemCopy(&red, halves.data(), 2);
     CHECK(prFloat16ToFloat(red) == 2.0f);
     prGpuTextureDestroy(d.device, rgba);
     prGpuTextureDestroy(d.device, bgra);
@@ -140,7 +141,7 @@ TEST_CASE("a memory command buffer runs its work in order when it is submitted, 
     PrGpuFence fence = prGpuCommandsSubmit(commands);
     CHECK(done);
     CHECK(prGpuDeviceIsComplete(d.device, fence));
-    CHECK(std::memcmp(bytes, sevens, 16) == 0);
+    CHECK(prMemEquals(bytes, sevens, 16));
     prGpuBufferDestroy(d.device, source);
     prGpuBufferDestroy(d.device, target);
 }
@@ -208,14 +209,15 @@ TEST_CASE("a memory pass draws through the application, in order with its clear,
     CHECK(drawn.extent.y == 2);
     CHECK(drawn.format == PrGpuFormat_Rgba8);
     CHECK(drawn.cleared == 255);
-    std::vector<uint8_t> texels = d.read(texture);
+    Array<uint8_t> texels = d.read(texture);
     CHECK(texels[12 + 1] == 255);
     prGpuTextureDestroy(d.device, texture);
 }
 
 TEST_CASE("a memory texture over the application's pixels draws and reads them in place, with their stride") {
     Device d;
-    std::vector<uint8_t> pixels(3 * 16, 7);
+    Array<uint8_t> pixels(3 * 16);
+    prMemFill(pixels.data(), 7, pixels.count());
     PrGpuTexture texture{};
     REQUIRE(prGpuTextureCreateOverPixels(d.device, PrGpuFormat_Rgba8, PrPixels{pixels.data(), 16, {3, 3}},
         PrGpuTextureUsageFlag_RenderTarget, &texture) == PrStatus_Ok);
@@ -276,8 +278,8 @@ TEST_CASE("a memory device imports pixels by copying them, and is done with them
         &texture) == PrStatus_Ok);
     CHECK(released);
     CHECK(prGpuTextureDesc(d.device, texture).usage == PrGpuTextureUsageFlag_Sampled);
-    std::vector<uint8_t> read = d.read(texture);
-    CHECK(std::memcmp(read.data(), texels, 8) == 0);
+    Array<uint8_t> read = d.read(texture);
+    CHECK(prMemEquals(read.data(), texels, 8));
     prGpuTextureDestroy(d.device, texture);
 }
 
@@ -296,12 +298,12 @@ TEST_CASE("a memory device runs work while another thread makes and destroys tex
     PrThread thread{};
     prThreadStart(&thread, [](void* context) {
         Maker& m = *static_cast<Maker*>(context);
-        std::vector<PrGpuTexture> made;
+        Array<PrGpuTexture> made;
         for (int i = 0; i < 2000; ++i) {
             PrGpuTextureDesc desc = prGpuTextureDesc2d(PrGpuFormat_Rgba8, PrUVec2{2, 2}, PrGpuTextureUsageFlag_Sampled);
             PrGpuTexture texture{};
             m.failed |= prGpuTextureCreate(m.device, &desc, &texture) != PrStatus_Ok;
-            made.push_back(texture);
+            made.push(texture);
         }
         for (PrGpuTexture texture : made)
             prGpuTextureDestroy(m.device, texture);

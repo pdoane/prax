@@ -2,8 +2,6 @@
 
 #include "tools/harness/test.h"
 
-#include <string>
-
 TEST_CASE("webidl/#dfn-error-names-table gives a code to the names it has one for") {
     struct Case {
         PrStringView name;
@@ -21,5 +19,5 @@ TEST_CASE("webidl/#dfn-error-names-table gives a code to the names it has one fo
         {"", 0},
     };
     for (const Case& c : cases)
-        CHECK_MESSAGE(prWebIdlErrorCode(c.name) == c.code, std::string(c.name.data, c.name.size));
+        CHECK_MESSAGE(prWebIdlErrorCode(c.name) == c.code, c.name);
 }

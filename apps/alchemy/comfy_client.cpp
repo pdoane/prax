@@ -199,7 +199,7 @@ void exchange(ComfyClient* client, PrStringView method, PrStringView path, PrStr
         .url = request->url,
         .headers = typed ? &header : nullptr,
         .headerCount = typed ? 1u : 0u,
-        .body = PrByteView{prStringBytes(request->body), request->body.count()},
+        .body = prStringBytes(request->body),
         .event = requestEvent,
         .context = request,
     };
@@ -265,7 +265,7 @@ void fetchImage(ComfyClient* client, PrStringView promptId, PrStringView filenam
             event.promptId = promptId;
             event.filename = filename;
             if (status == 200)
-                event.bytes.append(prStringBytes(body), uint32_t(body.size));
+                event.bytes.append(prStringBytes(body));
             deliver(client, move(event));
             uint32_t* fetching = client->fetching.get(promptId);
             if (fetching == nullptr || --*fetching != 0)
@@ -360,8 +360,7 @@ void socketEvent(void* PR_NULLABLE context, PrWebSocket* socket, PrWebSocketEven
         case PrWebSocketEvent_Message: {
             PrWebSocketMessage message = prWebSocketMessage(socket);
             if (message.kind == PrWebSocketMessageKind_Text) {
-                handleMessage(client, PrStringView(reinterpret_cast<const char*>(message.data.data),
-                    message.data.size));
+                handleMessage(client, prStringFromBytes(message.data));
             } else if (message.data.size > 8) {
                 // A preview frame: a 4-byte event type and a 4-byte image format, then the image.
                 ComfyEvent preview;

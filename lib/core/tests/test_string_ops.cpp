@@ -60,3 +60,29 @@ TEST_CASE("string find returns an index relative to the view or its size when ab
     CHECK(prStringFindByte(prStringSlice(text, 5, 0), '/') == 0);
     CHECK(prStringFindByte(PrStringView{}, '/') == 0);
 }
+
+TEST_CASE("a head, a tail and the rest from an index keep what there is") {
+    CHECK(prStringHead("abc", 2) == "ab");
+    CHECK(prStringHead("abc", 9) == "abc");
+    CHECK(prStringTail("abc", 2) == "bc");
+    CHECK(prStringTail("abc", 9) == "abc");
+    CHECK(prStringFrom("abc", 1) == "bc");
+    CHECK(prStringFrom("abc", 9) == "");
+}
+
+TEST_CASE("a search from an index, and for the last occurrence") {
+    CHECK(prStringFindFrom("abcabc", "bc", 0) == 1);
+    CHECK(prStringFindFrom("abcabc", "bc", 2) == 4);
+    CHECK(prStringFindFrom("abcabc", "bc", 5) == 6);
+    CHECK(prStringFindFrom("abc", "", 2) == 2);
+    CHECK(prStringFindLast("abcabc", "bc") == 4);
+    CHECK(prStringFindLast("abcabc", "x") == 6);
+    CHECK(prStringFindLast("ab", "abc") == 2);
+    CHECK(prStringFindLast("abc", "") == 3);
+}
+
+TEST_CASE("trimming a byte drops only its run at the end") {
+    CHECK(prStringTrimEndByte("ab  ", ' ') == "ab");
+    CHECK(prStringTrimEndByte("ab \t", ' ') == "ab \t");
+    CHECK(prStringTrimEndByte("   ", ' ') == "");
+}

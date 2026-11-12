@@ -1,19 +1,21 @@
+#include "pr/array.h"
 #include "pr/http.h"
 #include "pr/net_sockets.h"
+#include "pr/string.h"
+#include "pr/string_ops.h"
 #include "pr/tls.h"
 
 #include "tools/harness/net_peer.h"
 
 #include "tools/harness/test.h"
 
-#include <string>
-#include <vector>
-
 using namespace harness;
 
 extern "C" int prTestHttpCApi(void);
 
 namespace pr_impl {
+
+using namespace pr;
 
 namespace {
 
@@ -55,38 +57,41 @@ void reset(Fixture* fixture) {
     netPeerReset(&fixture->peer);
 }
 
+// A header of a response, as it arrived.
+struct Header {
+    String name;
+    String value;
+};
+
 // One exchange run from a test's thread, and what it received, which the loop writes before it opens `done`.
 struct Probe {
     PrHttp* http;
-    std::string url;
-    std::string method;
-    std::string body;
+    String url;
+    String method;
+    String body;
     PrHttpExchange* PR_NULLABLE exchange;
     NetLatch done;
-    std::vector<PrHttpEvent> events;
+    Array<PrHttpEvent> events;
     uint16_t status;
-    std::vector<std::pair<std::string, std::string>> headers;
-    std::string received;
+    Array<Header> headers;
+    String received;
     PrNetError error;
 };
 
 void probeEvent(void* PR_NULLABLE context, PrHttpExchange* exchange, PrHttpEvent event) {
     Probe* probe = static_cast<Probe*>(context);
-    probe->events.push_back(event);
+    probe->events.push(event);
     if (event == PrHttpEvent_Response) {
         probe->status = prHttpExchangeStatus(exchange);
         for (uint32_t i = 0; i < prHttpExchangeHeaderCount(exchange); ++i) {
             PrHttpHeader header = prHttpExchangeHeader(exchange, i);
-            probe->headers.push_back({
-                std::string(header.name.data, header.name.size),
-                std::string(header.value.data, header.value.size),
-            });
+            probe->headers.push(Header{.name = header.name, .value = header.value});
         }
     }
     uint8_t chunk[4096];
     for (size_t got = prHttpExchangeRead(exchange, chunk, sizeof(chunk)); got != 0;
             got = prHttpExchangeRead(exchange, chunk, sizeof(chunk)))
-        probe->received.append(reinterpret_cast<const char*>(chunk), got);
+        probe->received.append(PrStringView{reinterpret_cast<const char*>(chunk), got});
     if (event == PrHttpEvent_End || event == PrHttpEvent_Fail) {
         probe->error = prHttpExchangeError(exchange);
         prHttpExchangeDestroy(exchange);
@@ -98,9 +103,9 @@ void probeEvent(void* PR_NULLABLE context, PrHttpExchange* exchange, PrHttpEvent
 void startProbe(void* PR_NULLABLE context) {
     Probe* probe = static_cast<Probe*>(context);
     PrHttpRequestDesc desc{
-        .method = probe->method.empty() ? PrStringView{} : PrStringView(probe->method),
+        .method = probe->method.isEmpty() ? PrStringView{} : PrStringView(probe->method),
         .url = probe->url,
-        .body = PrByteView{reinterpret_cast<const uint8_t*>(probe->body.data()), probe->body.size()},
+        .body = prStringBytes(probe->body),
         .event = probeEvent,
         .context = probe,
     };
@@ -109,7 +114,7 @@ void startProbe(void* PR_NULLABLE context) {
 }
 
 // Runs an exchange for `url` with `method` and `body`, and waits until it ends or fails.
-void run(Fixture* fixture, Probe* probe, const std::string& url, const std::string& method = "", const std::string& body = "") {
+void run(Fixture* fixture, Probe* probe, PrStringView url, PrStringView method = "", PrStringView body = "") {
     probe->http = fixture->http;
     probe->url = url;
     probe->method = method;
@@ -120,23 +125,23 @@ void run(Fixture* fixture, Probe* probe, const std::string& url, const std::stri
     netLatchReset(&probe->done);
 }
 
-std::string headerOf(const Probe& probe, const char* name) {
-    for (const std::pair<std::string, std::string>& header : probe.headers) {
-        if (header.first == name)
-            return header.second;
+String headerOf(const Probe& probe, const char* name) {
+    for (const Header& header : probe.headers) {
+        if (header.name == name)
+            return header.value;
     }
     return "";
 }
 
-std::string urlOf(uint16_t port, const char* path, const char* scheme = "http") {
-    return std::string(scheme) + "://localhost:" + std::to_string(port) + path;
+String urlOf(uint16_t port, const char* path, const char* scheme = "http") {
+    return format("{}://localhost:{}{}", scheme, port, path);
 }
 
 // Exchanges made at once on the loop, each destroyed as its response arrives, as a cache that revalidates does with a
 // 304. The loop writes the results before it opens `done`.
 struct Abandoned {
     PrHttp* http;
-    std::string url;
+    String url;
     uint32_t count;
     uint32_t answered;
     uint32_t reused;                // the responses that a connection carried after another
@@ -185,9 +190,9 @@ TEST_CASE("http: a response framed by its Content-Length arrives with its status
     CHECK(probe.status == 200);
     CHECK(headerOf(probe, "Content-Type") == "text/plain");
     CHECK(probe.received == "hello");
-    REQUIRE(!probe.events.empty());
-    CHECK(probe.events.front() == PrHttpEvent_Response);
-    CHECK(probe.events.back() == PrHttpEvent_End);
+    REQUIRE(!probe.events.isEmpty());
+    CHECK(probe.events[0] == PrHttpEvent_Response);
+    CHECK(probe.events.last() == PrHttpEvent_End);
     reset(&fixture);
 }
 
@@ -201,7 +206,7 @@ TEST_CASE("http: chunked and connection-delimited content arrive whole") {
     Probe closed{};
     run(&fixture, &closed, urlOf(fixture.peer.http, "/close"));
     CHECK(closed.received == "closed");
-    CHECK(closed.events.back() == PrHttpEvent_End);
+    CHECK(closed.events.last() == PrHttpEvent_End);
     reset(&fixture);
 }
 
@@ -231,7 +236,7 @@ TEST_CASE("http: a 204 that declares content leaves its connection to no other r
     Probe empty{};
     run(&fixture, &empty, urlOf(fixture.peer.http, "/no-content-sent"));
     CHECK(empty.status == 204);
-    CHECK(empty.received.empty());
+    CHECK(empty.received.isEmpty());
     // The content that the server sends after the head would otherwise be taken for the head of this response.
     Probe after{};
     run(&fixture, &after, urlOf(fixture.peer.http, "/hello"));
@@ -263,10 +268,10 @@ TEST_CASE("http: content beyond the buffers arrives whole") {
         return;
     Probe probe{};
     run(&fixture, &probe, urlOf(fixture.peer.http, "/large"));
-    std::string expected;
+    String expected;
     for (uint32_t i = 0; i < 400000; ++i)
-        expected += "line " + std::to_string(i) + "\n";
-    CHECK(probe.received.size() == expected.size());
+        formatTo(expected, "line {}\n", i);
+    CHECK(probe.received.count() == expected.count());
     CHECK(probe.received == expected);
     reset(&fixture);
 }
@@ -286,8 +291,8 @@ TEST_CASE("http: a redirect and an error status are responses, and content codin
     Probe encoded{};
     run(&fixture, &encoded, urlOf(fixture.peer.http, "/gzip"));
     CHECK(headerOf(encoded, "Content-Encoding") == "gzip");
-    CHECK(encoded.received.size() > 2);
-    CHECK(encoded.received.substr(0, 2) == "\x1f\x8b");
+    CHECK(encoded.received.count() > 2);
+    CHECK(prStringSlice(encoded.received, 0, 2) == "\x1f\x8b");
     reset(&fixture);
 }
 
@@ -298,8 +303,8 @@ TEST_CASE("http: HEAD has no content, and POST sends its body") {
     Probe head{};
     run(&fixture, &head, urlOf(fixture.peer.http, "/hello"), "HEAD");
     CHECK(head.status == 200);
-    CHECK(head.received.empty());
-    CHECK(head.events.back() == PrHttpEvent_End);
+    CHECK(head.received.isEmpty());
+    CHECK(head.events.last() == PrHttpEvent_End);
     Probe post{};
     run(&fixture, &post, urlOf(fixture.peer.http, "/echo"), "POST", "posted body");
     CHECK(post.status == 200);
@@ -347,20 +352,20 @@ TEST_CASE("http: a host rule connects a host elsewhere, and the request keeps it
     Probe kept{};
     run(&fixture, &kept, urlOf(fixture.peer.http, "/headers").replace(7, 9, "www.Any.test"));
     CHECK(kept.status == 200);
-    CHECK(headerOf(kept, "X-Host") == "www.any.test:" + std::to_string(fixture.peer.http));
+    CHECK(headerOf(kept, "X-Host") == format("www.any.test:{}", fixture.peer.http));
     // A rule's port applies only to that port, a wildcard does not match its own name, and a name without a rule has no
     // address.
     Probe other{};
     run(&fixture, &other, "http://peer.test:81/headers");
-    CHECK(other.events.back() == PrHttpEvent_Fail);
+    CHECK(other.events.last() == PrHttpEvent_Fail);
     Probe bare{};
     run(&fixture, &bare, urlOf(fixture.peer.http, "/headers").replace(7, 9, "any.test"));
-    CHECK(bare.events.back() == PrHttpEvent_Fail);
+    CHECK(bare.events.last() == PrHttpEvent_Fail);
     // TLS verifies the request's host, which the peer's certificate does not name.
     if (fixture.tls != nullptr) {
         Probe secure{};
         run(&fixture, &secure, "https://secure.test/hello");
-        CHECK(secure.events.back() == PrHttpEvent_Fail);
+        CHECK(secure.events.last() == PrHttpEvent_Fail);
         CHECK(secure.error == PrNetError_Protocol);
     }
     reset(&fixture);
@@ -372,11 +377,11 @@ TEST_CASE("http: a refused connection fails, and a URL that is not http is not s
         return;
     Probe refused{};
     run(&fixture, &refused, urlOf(fixture.peer.closed, "/"));
-    CHECK(refused.events.size() == 1);
-    CHECK(refused.events.back() == PrHttpEvent_Fail);
+    CHECK(refused.events.count() == 1);
+    CHECK(refused.events.last() == PrHttpEvent_Fail);
     CHECK(refused.error == PrNetError_Refused);
     Probe other{};
     run(&fixture, &other, "ftp://localhost/");
-    CHECK(other.events.empty());
+    CHECK(other.events.isEmpty());
     reset(&fixture);
 }
