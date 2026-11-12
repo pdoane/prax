@@ -117,27 +117,30 @@ struct UiFixture {
         prUiPushEvent(ui, &event);
     }
     void move(float x, float y) {
-        push(PrAppEvent{.kind = PrAppEventKind_PointerMove, .position = PrVec2{x, y}});
+        push(PrAppEvent{.kind = PrAppEventKind_PointerMove, .pointer = {.position = PrVec2{x, y}}});
     }
     void down(float x, float y, uint8_t button = 0) {
-        push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .button = button, .position = PrVec2{x, y}});
+        push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .pointer = {.position = PrVec2{x, y}, .button = button}});
     }
     void up(float x, float y, uint8_t button = 0) {
-        push(PrAppEvent{.kind = PrAppEventKind_PointerUp, .button = button, .position = PrVec2{x, y}});
+        push(PrAppEvent{.kind = PrAppEventKind_PointerUp, .pointer = {.position = PrVec2{x, y}, .button = button}});
     }
     void press(float x, float y, uint8_t button = 0, uint32_t clicks = 1) {
-        push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .button = button, .clicks = clicks, .position = PrVec2{x, y}});
+        push(PrAppEvent{
+            .kind = PrAppEventKind_PointerDown,
+            .pointer = {.position = PrVec2{x, y}, .button = button, .clicks = clicks},
+        });
         up(x, y, button);
     }
     void key(PrAppKey key, PrAppModifierFlags modifiers = 0) {
-        push(PrAppEvent{.kind = PrAppEventKind_KeyDown, .modifiers = modifiers, .key = key});
-        push(PrAppEvent{.kind = PrAppEventKind_KeyUp, .modifiers = modifiers, .key = key});
+        push(PrAppEvent{.kind = PrAppEventKind_KeyDown, .modifiers = modifiers, .keyboard = {.key = key}});
+        push(PrAppEvent{.kind = PrAppEventKind_KeyUp, .modifiers = modifiers, .keyboard = {.key = key}});
     }
     void text(const char* text) {
-        push(PrAppEvent{.kind = PrAppEventKind_Text, .text = text});
+        push(PrAppEvent{.kind = PrAppEventKind_Text, .input = {.text = text}});
     }
     void wheel(float x, float y, float dx, float dy) {
-        push(PrAppEvent{.kind = PrAppEventKind_Scroll, .position = PrVec2{x, y}, .delta = PrVec2{dx, dy}});
+        push(PrAppEvent{.kind = PrAppEventKind_Scroll, .scroll = {.position = PrVec2{x, y}, .delta = PrVec2{dx, dy}}});
     }
 };
 

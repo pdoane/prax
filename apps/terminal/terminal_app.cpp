@@ -292,7 +292,7 @@ bool handleEvent(TerminalApp& t, const PrAppEvent& event) {
     if (event.kind != PrAppEventKind_Notification)
         return false;
     for (uint32_t i = 0; i < t.terminals.count(); ++i) {
-        if (prTerminalNotificationTag(t.terminals[i]) != event.tag)
+        if (prTerminalNotificationTag(t.terminals[i]) != event.notification.tag)
             continue;
         t.shown = i;
         prTerminalFocus(t.terminals[i]);

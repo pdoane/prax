@@ -42,7 +42,7 @@ void createFake(FakeApp& fake) {
         prAppDeliverFrame(app, handler, &frame);
         PrAppEvent event{};
         event.kind = PrAppEventKind_KeyDown;
-        event.key = 'A';
+        event.keyboard.key = 'A';
         handler->event(handler->context, app, &event);
         handler->shutdown(handler->context, app);
     };
@@ -87,7 +87,7 @@ TEST_CASE("a run delivers to the handler in order") {
             return PrAppOutput{};
         },
         [](void* context, PrApp*, const PrAppEvent* event) {
-            static_cast<Array<String>*>(context)->push(String("key ").append(char(event->key)));
+            static_cast<Array<String>*>(context)->push(String("key ").append(char(event->keyboard.key)));
         },
         [](void* context, PrApp*) {
             static_cast<Array<String>*>(context)->push("shutdown");
@@ -162,11 +162,11 @@ TEST_CASE("named keys and codes take the names of UI Events") {
 }
 
 TEST_CASE("a scroll resolves to pixels by its unit") {
-    PrAppEvent pixels{.kind = PrAppEventKind_Scroll, .delta = PrVec2{3, -4}};
+    PrAppEvent pixels{.kind = PrAppEventKind_Scroll, .scroll = {.delta = PrVec2{3, -4}}};
     PrVec2 resolved = prAppEventScrollPixels(&pixels, 20);
     CHECK(resolved.x == 3.0f);
     CHECK(resolved.y == -4.0f);
-    PrAppEvent lines{.kind = PrAppEventKind_Scroll, .scrollUnit = PrAppScrollUnit_Line, .delta = PrVec2{1, -2}};
+    PrAppEvent lines{.kind = PrAppEventKind_Scroll, .scroll = {.delta = PrVec2{1, -2}, .unit = PrAppScrollUnit_Line}};
     resolved = prAppEventScrollPixels(&lines, 20);
     CHECK(resolved.x == 20.0f);
     CHECK(resolved.y == -40.0f);

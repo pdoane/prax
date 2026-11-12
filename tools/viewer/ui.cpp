@@ -546,8 +546,8 @@ bool uiEvent(Ui* ui, const PrAppEvent& event) {
         case PrAppEventKind_PointerMove:
         case PrAppEventKind_PointerDown:
         case PrAppEventKind_PointerUp: {
-            ui->pointer = event.position;
-            bool over = overControls(*ui, event.position);
+            ui->pointer = event.pointer.position;
+            bool over = overControls(*ui, event.pointer.position);
             bool taken = over || ui->pressed;
             if (event.kind == PrAppEventKind_PointerDown)
                 ui->pressed = over;
@@ -570,8 +570,10 @@ bool uiEvent(Ui* ui, const PrAppEvent& event) {
                 return true;
             }
             // The tree takes the arrow and page keys. The rest are the viewer's.
-            bool moves = event.key == PrAppKey_Up || event.key == PrAppKey_Down || event.key == PrAppKey_Left ||
-                event.key == PrAppKey_Right || event.key == PrAppKey_PageUp || event.key == PrAppKey_PageDown;
+            bool moves = event.keyboard.key == PrAppKey_Up || event.keyboard.key == PrAppKey_Down ||
+                event.keyboard.key == PrAppKey_Left ||
+                event.keyboard.key == PrAppKey_Right || event.keyboard.key == PrAppKey_PageUp ||
+                event.keyboard.key == PrAppKey_PageDown;
             if (moves)
                 prUiPushEvent(ui->ui, &event);
             return moves;

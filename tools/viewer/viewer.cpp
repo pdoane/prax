@@ -1537,14 +1537,17 @@ bool toPage(Viewer& v, const PrAppEvent& event) {
         case PrAppEventKind_PointerDown:
         case PrAppEventKind_PointerUp:
         case PrAppEventKind_Scroll: {
-            PrVec2 window = event.kind == PrAppEventKind_Scroll ? PrVec2{v.pointerX, v.pointerY} : event.position;
+            PrVec2 window =
+                event.kind == PrAppEventKind_Scroll ? PrVec2{v.pointerX, v.pointerY} : event.pointer.position;
             PrAppEvent local = event;
+            PrVec2 position{};
             Loaded* page = nullptr;
             uint32_t index = 0;
             for (uint32_t i = 0; i < 2 && page == nullptr; ++i) {
                 index = v.pagePressed ? v.pagePane : i;
-                page = pageAt(v, index, window, &local.position);
+                page = pageAt(v, index, window, &position);
             }
+            prAppEventSetPosition(&local, position);
             if (event.kind == PrAppEventKind_PointerDown) {
                 v.pageKeys = page != nullptr;
                 v.pagePane = index;
@@ -1600,14 +1603,14 @@ void event(void* context, PrApp* app, const PrAppEvent* event) {
     if (taken && event->kind == PrAppEventKind_PointerDown)
         v.pageKeys = false;
     if (event->kind == PrAppEventKind_PointerDown || event->kind == PrAppEventKind_PointerMove) {
-        v.pointerX = event->position.x;
-        v.pointerY = event->position.y;
+        v.pointerX = event->pointer.position.x;
+        v.pointerY = event->pointer.position.y;
     }
     // The pointer and the wheel over a document go to the document.
     if (!taken && !key && toPage(v, *event))
         return;
     if (event->kind == PrAppEventKind_KeyDown && !taken)
-        keyDown(v, app, event->key, event->modifiers);
+        keyDown(v, app, event->keyboard.key, event->modifiers);
 }
 
 void shutdown(void* context, PrApp*) {

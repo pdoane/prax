@@ -64,6 +64,20 @@ const char* const kKeyCodeNames[] = {
 };
 static_assert(countOf(kKeyCodeNames) == PrAppKeyCode_Count, "a name for each code");
 
+// Returns true if events of `kind` use the union's pointer, keyboard or input member.
+bool isPointerEvent(PrAppEventKind kind) {
+    return kind == PrAppEventKind_PointerMove || kind == PrAppEventKind_PointerDown || kind == PrAppEventKind_PointerUp;
+}
+
+bool isKeyboardEvent(PrAppEventKind kind) {
+    return kind == PrAppEventKind_KeyDown || kind == PrAppEventKind_KeyUp;
+}
+
+bool isInputEvent(PrAppEventKind kind) {
+    return kind == PrAppEventKind_Text || kind == PrAppEventKind_Clipboard ||
+        kind == PrAppEventKind_CompositionUpdate || kind == PrAppEventKind_CompositionEnd;
+}
+
 } // namespace
 
 } // namespace pr_impl
@@ -72,9 +86,44 @@ using namespace pr_impl;
 
 PrVec2 prAppEventScrollPixels(const PrAppEvent* event, float lineHeight) {
     PR_ASSERT(event->kind == PrAppEventKind_Scroll);
-    if (event->scrollUnit == PrAppScrollUnit_Pixel)
-        return event->delta;
-    return PrVec2{event->delta.x * lineHeight, event->delta.y * lineHeight};
+    if (event->scroll.unit == PrAppScrollUnit_Pixel)
+        return event->scroll.delta;
+    return PrVec2{event->scroll.delta.x * lineHeight, event->scroll.delta.y * lineHeight};
+}
+
+PrStringView prAppEventText(const PrAppEvent* event) {
+    if (isKeyboardEvent(event->kind))
+        return event->keyboard.text;
+    if (isInputEvent(event->kind))
+        return event->input.text;
+    return "";
+}
+
+void prAppEventSetText(PrAppEvent* event, PrStringView text) {
+    if (isKeyboardEvent(event->kind))
+        event->keyboard.text = text;
+    else if (isInputEvent(event->kind))
+        event->input.text = text;
+}
+
+bool prAppEventPosition(const PrAppEvent* event, PrVec2* out) {
+    if (isPointerEvent(event->kind)) {
+        *out = event->pointer.position;
+        return true;
+    }
+    if (event->kind == PrAppEventKind_Scroll) {
+        *out = event->scroll.position;
+        return true;
+    }
+    *out = PrVec2{};
+    return false;
+}
+
+void prAppEventSetPosition(PrAppEvent* event, PrVec2 position) {
+    if (isPointerEvent(event->kind))
+        event->pointer.position = position;
+    else if (event->kind == PrAppEventKind_Scroll)
+        event->scroll.position = position;
 }
 
 PrStringView prAppKeyName(PrAppKey key) {

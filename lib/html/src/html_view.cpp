@@ -708,11 +708,11 @@ bool fireMouse(HtmlView* v, PrStringView type, PrDomElement* element, PrVec2 poi
     PrDomMouseEventInit init = prDomMouseEventInitDefault();
     init.ui = inputInit(element, true);
     init.ui.detail = (type == "mousedown" || type == "mouseup") && v->presses != 0 ? int32_t(v->presses) : 1;
-    init.screenX = double(event->position.x);
-    init.screenY = double(event->position.y);
+    init.screenX = double(event->pointer.position.x);
+    init.screenY = double(event->pointer.position.y);
     init.clientX = double(point.x);
     init.clientY = double(point.y);
-    init.button = mouseButtonOf(event->button);
+    init.button = mouseButtonOf(event->pointer.button);
     init.buttons = v->buttons;
     init.modifiers = modifiersOf(event->modifiers);
     PrDomMouseEvent* mouse = prDomMouseEventCreate(type, &init);
@@ -747,10 +747,10 @@ bool isModifierKey(PrAppKey key) {
 // Returns the key value of a key event (uievents-key): the name of a named key, or else the character that the key
 // types, or else "Unidentified".
 PrStringView keyValue(const PrAppEvent* event) {
-    PrStringView name = prAppKeyName(event->key);
+    PrStringView name = prAppKeyName(event->keyboard.key);
     if (name.size != 0)
         return name;
-    return event->text.size != 0 ? event->text : PrStringView{"Unidentified"};
+    return event->keyboard.text.size != 0 ? event->keyboard.text : PrStringView{"Unidentified"};
 }
 
 // Returns where the key at `code` is among the keys that share its value (uievents/#events-keyboard-key-location).
@@ -844,13 +844,13 @@ PrDomKeyboardEventInit keyInit(HtmlView* v, const PrDomElement* target, const Pr
     PrDomKeyboardEventInit init = prDomKeyboardEventInitDefault();
     init.ui = inputInit(target, true);
     init.modifiers = modifiersOf(event->modifiers);
-    init.code = prAppKeyCodeName(event->code);
-    init.location = keyLocation(event->code);
-    init.repeat = event->repeat;
+    init.code = prAppKeyCodeName(event->keyboard.code);
+    init.location = keyLocation(event->keyboard.code);
+    init.repeat = event->keyboard.repeat;
     init.isComposing = v->composing;
     bool process = v->composing && event->kind == PrAppEventKind_KeyDown;
     init.key = process ? PrStringView{"Process"} : keyValue(event);
-    init.keyCode = process ? kComposingKeyCode : legacyKeyCode(event->key, event->code);
+    init.keyCode = process ? kComposingKeyCode : legacyKeyCode(event->keyboard.key, event->keyboard.code);
     return init;
 }
 
@@ -914,7 +914,7 @@ void scrollByKey(HtmlView* v, PrDomElement* element, const PrAppEvent* event) {
         return;
     KeyScroll way = KeyScroll_None;
     PrVec2 direction{};
-    switch (event->key) {
+    switch (event->keyboard.key) {
         case PrAppKey_Up: way = command ? KeyScroll_End : KeyScroll_Line; direction.y = -1; break;
         case PrAppKey_Down: way = command ? KeyScroll_End : KeyScroll_Line; direction.y = 1; break;
         case PrAppKey_Left: way = command ? KeyScroll_None : KeyScroll_Line; direction.x = -1; break;
@@ -1135,7 +1135,7 @@ void pasted(HtmlView* v, const PrAppEvent* event) {
     PrDomElement* target = keyTarget(v);
     if (target == nullptr || target != target->document->focused || !htmlTextControlIsEditable(target))
         return;
-    PrDomClipboardEvent* paste = prDomClipboardEventCreate("paste", &kClipboardInit, event->text);
+    PrDomClipboardEvent* paste = prDomClipboardEventCreate("paste", &kClipboardInit, event->input.text);
     PrDomEventTarget* at = prDomNodeAsEventTarget(prDomElementAsNode(target));
     bool proceed = dispatchTrusted(at, prDomClipboardEventAsEvent(paste));
     prDomEventRelease(prDomClipboardEventAsEvent(paste));
@@ -1143,9 +1143,9 @@ void pasted(HtmlView* v, const PrAppEvent* event) {
         return;
     bool multiline = domIsHtml(target, PrDomTag_Textarea);
     PrTextBuffer text{};
-    for (size_t i = 0; i < event->text.size; ++i) {
-        char c = event->text.data[i];
-        if (c == '\r' && i + 1 < event->text.size && event->text.data[i + 1] == '\n')
+    for (size_t i = 0; i < event->input.text.size; ++i) {
+        char c = event->input.text.data[i];
+        if (c == '\r' && i + 1 < event->input.text.size && event->input.text.data[i + 1] == '\n')
             continue;
         c = c == '\r' ? '\n' : c;
         if (c != '\n' || multiline)
@@ -1164,20 +1164,20 @@ PrHtmlViewEventResult keyDefault(HtmlView* v, PrDomElement* target, const PrAppE
     bool focused = target == target->document->focused;
     if (focused && htmlTextControlIsEditable(target) && editKey(v, target, event))
         return PrHtmlViewEventResult_Handled;
-    if (event->key == PrAppKey_Tab &&
+    if (event->keyboard.key == PrAppKey_Tab &&
             (event->modifiers & (PrAppModifierFlag_Control | PrAppModifierFlag_Alt | PrAppModifierFlag_Super)) == 0) {
         bool back = (event->modifiers & PrAppModifierFlag_Shift) != 0;
         bool moved = htmlFocusNavigate(documentOf(v), back ? HtmlFocusDirection_Backward : HtmlFocusDirection_Forward);
         return moved ? PrHtmlViewEventResult_Handled : PrHtmlViewEventResult_FocusLeft;
     }
-    if (event->key == PrAppKey_Enter) {
+    if (event->keyboard.key == PrAppKey_Enter) {
         // Enter types no text, and fires its keypress as a key that does (uievents/#event-type-keypress).
         bool proceed = fireKeypress(v, target, "Enter", '\r');
         if (proceed && focused && (isLink(target) || isButton(target)))
             fireClick(target, modifiers);
         return PrHtmlViewEventResult_Handled;
     }
-    if (event->key == ' ' && isButton(target) && focused) {
+    if (event->keyboard.key == ' ' && isButton(target) && focused) {
         releaseSpaced(v);
         v->spaced = target;
         prDomNodeRetain(prDomElementAsNode(target));
@@ -1195,11 +1195,11 @@ PrHtmlViewEventResult keyDown(HtmlView* v, const PrAppEvent* event) {
     PrDomElement* target = keyTarget(v);
     if (target == nullptr)
         return PrHtmlViewEventResult_Ignored;
-    v->keyCode = event->code;
+    v->keyCode = event->keyboard.code;
     v->keyModifiers = modifiersOf(event->modifiers);
-    if (!isModifierKey(event->key))
+    if (!isModifierKey(event->keyboard.key))
         htmlFocusKey(target->document);
-    if (event->key != PrAppKey_Escape)
+    if (event->keyboard.key != PrAppKey_Escape)
         notifyActivation(target);
     if (!fireKey(target, "keydown", keyInit(v, target, event)))
         return PrHtmlViewEventResult_Canceled;
@@ -1215,7 +1215,7 @@ PrHtmlViewEventResult keyUp(HtmlView* v, const PrAppEvent* event) {
     if (target == nullptr)
         return PrHtmlViewEventResult_Ignored;
     bool proceed = fireKey(target, "keyup", keyInit(v, target, event));
-    if (event->key == ' ' && v->spaced != nullptr) {
+    if (event->keyboard.key == ' ' && v->spaced != nullptr) {
         PrDomElement* spaced = v->spaced;
         prDomNodeRetain(prDomElementAsNode(spaced));
         releaseSpaced(v);
@@ -1242,15 +1242,15 @@ PrHtmlViewEventResult typed(HtmlView* v, const PrAppEvent* event) {
     if (target == nullptr || (v->keyModifiers & (PrDomModifier_Control | PrDomModifier_Meta)) != 0)
         return PrHtmlViewEventResult_Ignored;
     bool proceed = true;
-    for (size_t at = 0; at < event->text.size;) {
+    for (size_t at = 0; at < event->input.text.size;) {
         uint32_t codePoint = 0;
-        uint32_t length = prUtf8DecodeScalar(event->text, at, &codePoint);
+        uint32_t length = prUtf8DecodeScalar(event->input.text, at, &codePoint);
         if (codePoint >= 0x20 && codePoint != 0x7f)
-            proceed = fireKeypress(v, target, PrStringView{event->text.data + at, length}, codePoint) && proceed;
+            proceed = fireKeypress(v, target, PrStringView{event->input.text.data + at, length}, codePoint) && proceed;
         at += length;
     }
     if (proceed && target == target->document->focused && htmlTextControlIsEditable(target)) {
-        htmlTextControlInsert(target, event->text, "insertText");
+        htmlTextControlInsert(target, event->input.text, "insertText");
         caretMoved(v, event->time);
     }
     return proceed ? PrHtmlViewEventResult_Handled : PrHtmlViewEventResult_Canceled;
@@ -1279,9 +1279,9 @@ PrHtmlViewEventResult compose(HtmlView* v, const PrAppEvent* event) {
             v->composing = true;
             fireComposition(target, "compositionstart", "");
         }
-        fireComposition(target, "compositionupdate", event->text);
+        fireComposition(target, "compositionupdate", event->input.text);
         if (htmlTextControlIsEditable(target)) {
-            htmlTextControlCompose(target, event->text);
+            htmlTextControlCompose(target, event->input.text);
             caretMoved(v, event->time);
         }
         return PrHtmlViewEventResult_Handled;
@@ -1289,18 +1289,18 @@ PrHtmlViewEventResult compose(HtmlView* v, const PrAppEvent* event) {
     if (!v->composing)
         return PrHtmlViewEventResult_Ignored;
     v->composing = false;
-    v->committing = event->text.size != 0;
+    v->committing = event->input.text.size != 0;
     // The marked text leaves as a composition, and the committed text enters as the user's edit, ahead of
     // compositionend (uievents/#events-composition-order).
     if (htmlTextControlIsEditable(target)) {
         htmlTextControlCompose(target, "");
         DomControl* control = domControlFromElement(target);
         control->markStart = control->markEnd = 0;
-        if (event->text.size != 0)
-            htmlTextControlInsert(target, event->text, "insertText");
+        if (event->input.text.size != 0)
+            htmlTextControlInsert(target, event->input.text, "insertText");
         caretMoved(v, event->time);
     }
-    fireComposition(target, "compositionend", event->text);
+    fireComposition(target, "compositionend", event->input.text);
     return PrHtmlViewEventResult_Handled;
 }
 
@@ -1317,7 +1317,7 @@ PrLayoutNode boxOf(HtmlView* v, PrDomElement* element) {
 // box ends the sequence, as does a pointer that moves.
 bool continuesWheel(HtmlView* v, const PrAppEvent* event) {
     return v->wheelTarget != nullptr && event->time - v->wheelTime <= kPrLayoutWheelSequenceGap / 1000 &&
-        event->position.x == v->wheelAt.x && event->position.y == v->wheelAt.y &&
+        event->scroll.position.x == v->wheelAt.x && event->scroll.position.y == v->wheelAt.y &&
         domIsConnected(prDomElementAsNode(v->wheelTarget)) && v->wheelBox != kPrLayoutNodeNone &&
         boxOf(v, v->wheelTarget) == v->wheelBox;
 }
@@ -1327,8 +1327,8 @@ bool continuesWheel(HtmlView* v, const PrAppEvent* event) {
 bool fireWheel(HtmlView* v, PrDomElement* element, PrVec2 point, const PrAppEvent* event, PrVec2 delta, bool cancelable) {
     PrDomWheelEventInit init = prDomWheelEventInitDefault();
     init.mouse.ui = inputInit(element, cancelable);
-    init.mouse.screenX = double(event->position.x);
-    init.mouse.screenY = double(event->position.y);
+    init.mouse.screenX = double(event->scroll.position.x);
+    init.mouse.screenY = double(event->scroll.position.y);
     init.mouse.clientX = double(point.x);
     init.mouse.clientY = double(point.y);
     init.mouse.buttons = v->buttons;
@@ -1349,10 +1349,10 @@ bool fireWheel(HtmlView* v, PrDomElement* element, PrVec2 point, const PrAppEven
 PrHtmlViewEventResult wheel(HtmlView* v, const PrAppEvent* event, PrHtmlViewEventFlags flags) {
     bool starts = !continuesWheel(v, event);
     v->wheelTime = event->time;
-    v->wheelAt = event->position;
+    v->wheelAt = event->scroll.position;
     if (starts) {
         endWheel(v);
-        ViewHit hit = hitAt(v, event->position);
+        ViewHit hit = hitAt(v, event->scroll.position);
         v->wheelTarget = hit.element;
         v->wheelPoint = hit.point;
         if (v->wheelTarget == nullptr)
@@ -1408,7 +1408,8 @@ void applyPost(void* PR_NULLABLE context) {
     if (PrHtmlView* view = post->inbox->view) {
         switch (post->kind) {
             case ViewPostKind_Event:
-                post->event.text = PrStringView{reinterpret_cast<const char*>(post + 1), post->event.text.size};
+                prAppEventSetText(&post->event,
+                    PrStringView{reinterpret_cast<const char*>(post + 1), prAppEventText(&post->event).size});
                 prHtmlViewEvent(view, &post->event, post->flags);
                 break;
             case ViewPostKind_Frame:
@@ -1924,29 +1925,29 @@ PrHtmlViewEventResult prHtmlViewEvent(PrHtmlView* view, const PrAppEvent* event,
             pasted(view, event);
             return PrHtmlViewEventResult_Handled;
         case PrAppEventKind_PointerMove:
-            view->pointer = event->position;
+            view->pointer = event->pointer.position;
             view->pointed = true;
             view->hoverDue = true;
             // A drag from a press in an editable text control extends its selection.
             if ((view->buttons & buttonBit(0)) != 0 && view->pressed != nullptr &&
                     htmlTextControlIsEditable(view->pressed))
-                dragText(view, view->pressed, event->position, event->time);
+                dragText(view, view->pressed, event->pointer.position, event->time);
             return PrHtmlViewEventResult_Handled;
         case PrAppEventKind_Scroll:
             return wheel(view, event, flags);
         case PrAppEventKind_PointerDown: {
-            view->pointer = event->position;
+            view->pointer = event->pointer.position;
             view->pointed = true;
-            ViewHit hit = hitAt(view, event->position);
+            ViewHit hit = hitAt(view, event->pointer.position);
             PrDomElement* element = hit.element;
             if (element == nullptr)
                 return PrHtmlViewEventResult_Ignored;
-            int16_t button = mouseButtonOf(event->button);
+            int16_t button = mouseButtonOf(event->pointer.button);
             view->buttons = uint16_t(view->buttons | buttonBit(button));
             designate(view, element, prHtmlDocumentSetActive);
             if (button == 0) {
                 // A multi-click continues only on the element that it began on.
-                view->presses = element == view->pressElement && event->clicks > 1 ? event->clicks : 1;
+                view->presses = element == view->pressElement && event->pointer.clicks > 1 ? event->pointer.clicks : 1;
                 view->pressElement = element;
             }
             // A press that no listener cancels moves the focus (html/#focus-processing-model).
@@ -1964,12 +1965,12 @@ PrHtmlViewEventResult prHtmlViewEvent(PrHtmlView* view, const PrAppEvent* event,
             return PrHtmlViewEventResult_Handled;
         }
         case PrAppEventKind_PointerUp: {
-            view->pointer = event->position;
+            view->pointer = event->pointer.position;
             view->pointed = true;
-            int16_t button = mouseButtonOf(event->button);
+            int16_t button = mouseButtonOf(event->pointer.button);
             view->buttons = uint16_t(view->buttons & ~buttonBit(button));
             designate(view, nullptr, prHtmlDocumentSetActive);
-            ViewHit hit = hitAt(view, event->position);
+            ViewHit hit = hitAt(view, event->pointer.position);
             PrDomElement* element = hit.element;
             if (element != nullptr) {
                 fireMouse(view, "mouseup", element, hit.point, event);
@@ -1997,20 +1998,21 @@ void prHtmlViewPostEvent(PrHtmlView* view, const PrAppEvent* event) {
     PrHtmlViewEventFlags flags = 0;
     PrLayoutCompositor* compositor = view->inbox->compositor;
     if (event->kind == PrAppEventKind_Scroll && compositor != nullptr) {
-        PrLayoutVec at = prLayoutVecFromPx(event->position);
+        PrLayoutVec at = prLayoutVecFromPx(event->scroll.position);
         if (!prLayoutCompositorWheelBlocks(compositor, at)) {
             prLayoutCompositorScrollAt(compositor, at,
                 prLayoutVecFromPx(prAppEventScrollPixels(event, kPrAppScrollLineHeight)));
             flags = PrHtmlViewEventFlag_Scrolled;
         }
     }
-    size_t size = event->text.data != nullptr ? event->text.size : 0;
+    PrStringView text = prAppEventText(event);
+    size_t size = text.data != nullptr ? text.size : 0;
     ViewPost* post = newPost(view->inbox, ViewPostKind_Event, size);
     post->event = *event;
-    post->event.text = PrStringView{nullptr, size};
+    prAppEventSetText(&post->event, PrStringView{nullptr, size});
     post->flags = flags;
     if (size != 0)
-        prMemCopy(post + 1, event->text.data, size);
+        prMemCopy(post + 1, text.data, size);
     prDomAgentPost(view->inbox->agent, applyPost, post);
 }
 

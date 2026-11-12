@@ -47,11 +47,11 @@ void pointerEvent(PrUi* ui, PrTextView* view, TextViewState& state, const PrAppE
         return;
     }
     bool press = e.kind == PrAppEventKind_PointerDown;
-    if ((press && e.button != 0) || (!press && !state.dragging))
+    if ((press && e.pointer.button != 0) || (!press && !state.dragging))
         return;
     uint32_t at = 0;
     PrTextEditAffinity side = 0;
-    if (!prTextViewOffsetFromPoint(view, e.position, &at, &side))
+    if (!prTextViewOffsetFromPoint(view, e.pointer.position, &at, &side))
         return;
     if (!press) {
         // A drag keeps whole the unit that the press selected.
@@ -106,7 +106,7 @@ void composeEvent(PrTextView* view, TextViewState& state, const PrAppEvent& e) {
     PrTextEditSelection s = prTextEditViewPrimary(prTextViewEdit(view));
     uint32_t low = prTextEditSelectionStart(s);
     uint32_t high = prTextEditSelectionEnd(s);
-    PrStringView text = e.kind == PrAppEventKind_CompositionEnd ? PrStringView{} : e.text;
+    PrStringView text = e.kind == PrAppEventKind_CompositionEnd ? PrStringView{} : e.input.text;
     PrTextEditChange change{.start = low, .end = high, .text = text};
     prTextEditViewApply(edit, &change, 1, PrTextEditOrigin_Composition, PrTextEditMerge_None);
     state.markStart = low;
@@ -142,11 +142,11 @@ void prUiTextView(PrUi* ui, const PrUiTextViewDesc* desc) {
                     select(view, state.markStart, state.markEnd, PrTextEditAffinity_Downstream);
                     state.markStart = state.markEnd = 0;
                 }
-                insertOutside(view, e.text, PrTextEditMerge_Typing);
+                insertOutside(view, e.input.text, PrTextEditMerge_Typing);
                 break;
             case PrAppEventKind_Clipboard:
                 if (state.pasting)
-                    insertOutside(view, e.text, PrTextEditMerge_None);
+                    insertOutside(view, e.input.text, PrTextEditMerge_None);
                 state.pasting = false;
                 break;
             case PrAppEventKind_CompositionUpdate:

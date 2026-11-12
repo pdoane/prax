@@ -747,12 +747,22 @@ bool readInputEvent(JSContext* ctx, JSValueConst value, InputEvent* out) {
     event = PrAppEvent{};
     event.kind = kind->kind;
     event.time = prTimeMonotonicMilliseconds() / 1000;
-    event.position = PrVec2{float(number("x")), float(number("y"))};
-    event.delta = PrVec2{float(number("deltaX")), float(number("deltaY"))};
-    event.button = uint8_t(number("button"));
     event.modifiers = PrAppModifierFlags(number("modifiers"));
-    event.key = keyNamed(string("key"));
-    event.code = codeNamed(string("code"));
+    PrVec2 position{float(number("x")), float(number("y"))};
+    switch (event.kind) {
+        case PrAppEventKind_Scroll:
+            event.scroll = {.position = position, .delta = {float(number("deltaX")), float(number("deltaY"))}};
+            break;
+        case PrAppEventKind_KeyDown:
+        case PrAppEventKind_KeyUp:
+            event.keyboard = {.key = keyNamed(string("key")), .code = codeNamed(string("code"))};
+            break;
+        case PrAppEventKind_Text:
+            break;
+        default:
+            event.pointer = {.position = position, .button = uint8_t(number("button"))};
+            break;
+    }
     out->text = string("text");
     return true;
 }
@@ -907,7 +917,7 @@ bool dispatchInput(HostState& s) {
             PendingInput pending = std::move(page->input.front());
             page->input.erase(page->input.begin());
             for (InputEvent& input : pending.events) {
-                input.event.text = input.text;
+                prAppEventSetText(&input.event, input.text);
                 dispatchEvent(s, page, input.event);
             }
             JS_FreeValue(page->ctx, JS_Call(page->ctx, pending.resolve, JS_UNDEFINED, 0, nullptr));

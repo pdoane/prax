@@ -94,8 +94,8 @@ struct ListScene {
 
     void clickRow(uint32_t index, PrAppModifierFlags modifiers = 0) {
         PrVec2 at = f.center(cells[index]);
-        f.push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .modifiers = modifiers, .position = at});
-        f.push(PrAppEvent{.kind = PrAppEventKind_PointerUp, .modifiers = modifiers, .position = at});
+        f.push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .modifiers = modifiers, .pointer = {.position = at}});
+        f.push(PrAppEvent{.kind = PrAppEventKind_PointerUp, .modifiers = modifiers, .pointer = {.position = at}});
         f.frame();
     }
 };
@@ -330,7 +330,7 @@ TEST_CASE("the wheel moves a list's window in its frame, laying out the list's c
     f.move(at);
     f.frame();
     f.frame();
-    f.push(PrAppEvent{.kind = PrAppEventKind_Scroll, .position = at, .delta = PrVec2{0, 50 * kRowHeight}});
+    f.push(PrAppEvent{.kind = PrAppEventKind_Scroll, .scroll = {.position = at, .delta = PrVec2{0, 50 * kRowHeight}}});
     f.frame();
     CHECK(scene.scrollY() == doctest::Approx(50 * double(kRowHeight)));
     CHECK(scene.rows.first > 40);
@@ -592,7 +592,7 @@ TEST_CASE("a row dragged onto another reports where it lands, by the third the p
         uint32_t target = scene.indexOf(20);
         PrRect box = f.bounds(scene.nodes[target]);
         PrVec2 over{f.center(scene.nodes[target]).x, box.top + (box.bottom - box.top) * c.at};
-        f.push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .position = f.center(scene.nodes[source])});
+        f.push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .pointer = {.position = f.center(scene.nodes[source])}});
         f.frame();
         f.move(over);
         f.frame();
@@ -600,7 +600,7 @@ TEST_CASE("a row dragged onto another reports where it lands, by the third the p
         f.frame();
         // The target is marked where the drop would land. The mark affects only painting.
         CHECK(prLayoutTreeStats(f.tree).blocksLaidOut == 0);
-        f.push(PrAppEvent{.kind = PrAppEventKind_PointerUp, .position = over});
+        f.push(PrAppEvent{.kind = PrAppEventKind_PointerUp, .pointer = {.position = over}});
         f.frame();
         CHECK(scene.drop.zone == c.zone);
         CHECK(scene.drop.item == 11);
@@ -617,7 +617,7 @@ TEST_CASE("a drop target's row is marked while a row is dragged over it") {
     f.frame();
     f.frame();
     PrLayoutStyleIndex rest = prLayoutNodeStyle(f.tree, scene.nodes[2]);
-    f.push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .position = f.center(scene.nodes[0])});
+    f.push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .pointer = {.position = f.center(scene.nodes[0])}});
     f.frame();
     f.move(f.center(scene.nodes[2]));
     f.frame();
@@ -718,7 +718,7 @@ TEST_CASE("columns wider than a table scroll it sideways, and the header scrolls
     PrLayoutNode view = scene.scroller();
     float before = f.bounds(scene.cells[0][0]).left;
     f.move(f.center(view));
-    f.push(PrAppEvent{.kind = PrAppEventKind_Scroll, .position = f.center(view), .delta = PrVec2{40, 0}});
+    f.push(PrAppEvent{.kind = PrAppEventKind_Scroll, .scroll = {.position = f.center(view), .delta = PrVec2{40, 0}}});
     f.frame();
     float scrolled = prLayoutUnitToPx(prLayoutNodeScroll(f.tree, view).x);
     CHECK(scrolled > 0.0f);
@@ -842,8 +842,8 @@ TEST_CASE("a tile's image grows inside its thumbnail under the pointer, and a ti
     // It grows evenly past the thumbnail's edges.
     CHECK((grown.left + grown.right) / 2 == doctest::Approx((before.left + before.right) / 2));
 
-    f.push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .button = 1, .position = at});
-    f.push(PrAppEvent{.kind = PrAppEventKind_PointerUp, .button = 1, .position = at});
+    f.push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .pointer = {.position = at, .button = 1}});
+    f.push(PrAppEvent{.kind = PrAppEventKind_PointerUp, .pointer = {.position = at, .button = 1}});
     f.frame();
     CHECK(secondary);
 

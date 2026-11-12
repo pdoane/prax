@@ -163,8 +163,12 @@ bool overPage(Browser& b, PrVec2 position) {
 // CSS pixels, at the tab's zoom.
 PrAppEvent toPage(const Browser& b, const Tab& tab, const PrAppEvent& e) {
     PrAppEvent moved = e;
-    moved.position = PrVec2{(e.position.x - b.chrome.page.left) / tab.zoom, (e.position.y - b.chrome.page.top) / tab.zoom};
-    moved.delta = PrVec2{e.delta.x / tab.zoom, e.delta.y / tab.zoom};
+    PrVec2 at{};
+    if (prAppEventPosition(&e, &at))
+        prAppEventSetPosition(&moved,
+            PrVec2{(at.x - b.chrome.page.left) / tab.zoom, (at.y - b.chrome.page.top) / tab.zoom});
+    if (e.kind == PrAppEventKind_Scroll)
+        moved.scroll.delta = PrVec2{e.scroll.delta.x / tab.zoom, e.scroll.delta.y / tab.zoom};
     return moved;
 }
 
@@ -314,24 +318,24 @@ void event(void* context, PrApp* app, const PrAppEvent* e) {
             }
             break;
         case PrAppEventKind_PointerMove:
-            b.pointer = e->position;
-            toPageToo = b.pageButtons != 0 || overPage(b, e->position);
+            b.pointer = e->pointer.position;
+            toPageToo = b.pageButtons != 0 || overPage(b, e->pointer.position);
             break;
         case PrAppEventKind_PointerDown:
-            b.pointer = e->position;
-            if (overPage(b, e->position)) {
-                b.pageButtons |= 1u << e->button;
+            b.pointer = e->pointer.position;
+            if (overPage(b, e->pointer.position)) {
+                b.pageButtons |= 1u << e->pointer.button;
                 b.chrome.releaseFocus = true;
                 toPageToo = true;
             }
             break;
         case PrAppEventKind_PointerUp:
-            b.pointer = e->position;
-            toPageToo = (b.pageButtons & (1u << e->button)) != 0;
-            b.pageButtons &= ~(1u << e->button);
+            b.pointer = e->pointer.position;
+            toPageToo = (b.pageButtons & (1u << e->pointer.button)) != 0;
+            b.pageButtons &= ~(1u << e->pointer.button);
             break;
         case PrAppEventKind_Scroll:
-            if (view != nullptr && overPage(b, e->position)) {
+            if (view != nullptr && overPage(b, e->scroll.position)) {
                 PrAppEvent moved = toPage(b, *tab, *e);
                 prHtmlViewPostEvent(view, &moved);
                 if (prLayoutCompositorWantsFrame(tab->compositor))

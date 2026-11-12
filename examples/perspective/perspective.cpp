@@ -560,7 +560,7 @@ PrAppOutput frame(void* context, PrApp*, const PrAppFrame* f) {
 
 void event(void* context, PrApp* app, const PrAppEvent* e) {
     Window& w = *static_cast<Window*>(context);
-    if (e->kind == PrAppEventKind_KeyDown && e->key == PrAppKey_Escape) {
+    if (e->kind == PrAppEventKind_KeyDown && e->keyboard.key == PrAppKey_Escape) {
         prAppStop(app);
         return;
     }

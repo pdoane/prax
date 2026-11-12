@@ -78,7 +78,7 @@ constexpr const char* kStageNames[Stage_Count] = {"frame", "prepare", "render"};
 
 // Queues an event of `kind` with the pointer at `at`.
 void pointer(Host& host, PrAppEventKind kind, PrVec2 at, double time) {
-    hostEvent(host, PrAppEvent{.kind = kind, .position = at, .time = time});
+    hostEvent(host, PrAppEvent{.kind = kind, .time = time, .pointer = {.position = at}});
 }
 
 void click(Host& host, PrVec2 at, double time) {
@@ -87,7 +87,7 @@ void click(Host& host, PrVec2 at, double time) {
 }
 
 void wheel(Host& host, PrVec2 at, PrVec2 delta, double time) {
-    hostEvent(host, PrAppEvent{.kind = PrAppEventKind_Scroll, .position = at, .delta = delta, .time = time});
+    hostEvent(host, PrAppEvent{.kind = PrAppEventKind_Scroll, .time = time, .scroll = {.position = at, .delta = delta}});
 }
 
 // Moves the pointer between two points of the viewport, over nothing that responds to it.

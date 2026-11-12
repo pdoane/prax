@@ -310,42 +310,84 @@ typedef struct PrAppTextRange {
     uint32_t end;
 } PrAppTextRange;
 
-// An input event. `kind` decides which fields apply. Positions are in the window's logical pixels, from its top left. A
-// scroll's delta is positive right and down, in the unit that the device reports (prAppEventScrollPixels resolves it).
-// `text` and `pixels` are valid only while the event is delivered.
+// A pointer event: PointerMove, PointerDown or PointerUp. The position is in logical pixels from the window's top left.
+typedef struct PrAppPointerEvent {
+    PrVec2 position;
+    uint8_t button;             // the button pressed or released, 0 for the primary button
+    uint32_t clicks;            // PointerDown: the number of presses in the current multi-click, including this one
+} PrAppPointerEvent;
+
+// A Scroll event at `position`, in logical pixels from the window's top left. The delta is positive to the right and
+// down, in the unit that the device reports. prAppEventScrollPixels converts it to pixels.
+typedef struct PrAppScrollEvent {
+    PrVec2 position;
+    PrVec2 delta;
+    PrAppScrollUnit unit;
+} PrAppScrollEvent;
+
+// A KeyDown or KeyUp event. `key` is the key's meaning, and `code` its position.
 //
-// A key carries `key`, its meaning, and `code`, its position. Its `text` is the character that it types with Shift and
-// a layout's third level (AltGr, Option) applied and Control and Command not: `a` for A and for Control+A, `A` for
-// Shift+A, `å` for Option+A on a Mac. The text is empty for a key that types no character. A modifier key sends KeyDown
-// and KeyUp as it is pressed and released, and a lock key as it turns on and off. A Text event that a key types comes
-// after that key's KeyDown and before the next KeyDown, so that a program can drop the text of a key whose press it
-// refused.
+// `text` is the character that the key types with Shift and the layout's third level (AltGr, Option) applied, but
+// without Control or Command: `a` for A and for Control+A, `A` for Shift+A, and `å` for Option+A on a Mac. The text is
+// empty if the key types no character. A modifier key sends KeyDown when pressed and KeyUp when released. A lock key
+// sends KeyDown when it turns on and KeyUp when it turns off. The Text event that a key types comes after the key's
+// KeyDown and before the next KeyDown, so a program that refuses a key press can drop its text.
+//
+// `composing` is true if the input method takes the key to begin, continue or end a composition. The input method
+// interprets such a key, as it does an Enter that commits a composition. A program acts only on the composition events
+// and the committed text.
+typedef struct PrAppKeyboardEvent {
+    PrAppKey key;
+    PrAppKeyCode code;
+    bool repeat;                // KeyDown: true if the event repeats a held key
+    bool composing;             // KeyDown
+    PrStringView text;
+} PrAppKeyboardEvent;
+
+// A Text, Clipboard, CompositionUpdate or CompositionEnd event: the text typed, read from the clipboard, or composed.
+typedef struct PrAppInputEvent {
+    PrStringView text;
+    PrAppTextRange selection;   // CompositionUpdate: the range of the text that the input method selects
+} PrAppInputEvent;
+
+// A ClipboardImage event: the clipboard's image, straight-alpha sRGB Rgba8, or empty pixels if it holds no image.
+typedef struct PrAppImageEvent {
+    PrPixelView pixels;
+} PrAppImageEvent;
+
+// A Notification event: the click on a notification posted with prAppNotificationPost.
+typedef struct PrAppNotificationEvent {
+    uint64_t tag;               // the tag from PrAppNotificationDesc
+} PrAppNotificationEvent;
+
+// An event. Its kind decides which member of the union holds its details. Some kinds, such as Wake, have no details. A
+// string or pixels that an event holds are valid only during delivery.
 typedef struct PrAppEvent {
     PrAppEventKind kind;
     PrAppModifierFlags modifiers;
-    uint8_t button;             // pointer buttons: 0 for the primary one
-    bool repeat;                // KeyDown: true if the event repeats a held key
-
-    // KeyDown: true if the input method takes the key for a composition, which it continues, begins or ends. Such a key
-    // is the input method's to interpret, as Enter that commits a composition is, so a program acts only on the
-    // composition's events and on the text it commits.
-    bool composing;
-
-    uint32_t clicks;            // PointerDown: the presses of a multi-click, by the user's system settings, counting it
-    PrAppKey key;               // KeyDown, KeyUp
-    PrAppKeyCode code;          // KeyDown, KeyUp
-    PrAppScrollUnit scrollUnit; // Scroll
-    PrVec2 position;            // pointer events
-    PrVec2 delta;               // Scroll
-    PrStringView text;          // KeyDown, KeyUp, Text, Clipboard, CompositionUpdate, CompositionEnd
-    PrAppTextRange selection;   // CompositionUpdate: the part of the text that the input method selects
-    PrPixelView pixels;         // ClipboardImage: straight-alpha sRGB Rgba8, empty if the clipboard holds no image
-    uint64_t tag;               // Notification: the tag from PrAppNotificationDesc
     double time;                // seconds, from a monotonic clock
+    union {
+        PrAppPointerEvent pointer;
+        PrAppScrollEvent scroll;
+        PrAppKeyboardEvent keyboard;
+        PrAppInputEvent input;
+        PrAppImageEvent image;
+        PrAppNotificationEvent notification;
+    };
 } PrAppEvent;
 
-// A Scroll event's delta in logical pixels, with a line of `lineHeight` pixels.
+// Returns a Scroll event's delta in logical pixels, converting each line to `lineHeight` pixels.
 PrVec2 prAppEventScrollPixels(const PrAppEvent* event, float lineHeight);
+
+// Returns or replaces the text of a keyboard or input event. Another event has no text: the getter returns an empty
+// view, and the setter does nothing.
+PrStringView prAppEventText(const PrAppEvent* event);
+void prAppEventSetText(PrAppEvent* event, PrStringView text);
+
+// Returns or replaces the position of a pointer or scroll event. The getter writes the position to `out` and returns
+// true. Another event has no position: the getter writes zero and returns false, and the setter does nothing.
+bool prAppEventPosition(const PrAppEvent* event, PrVec2* out);
+void prAppEventSetPosition(PrAppEvent* event, PrVec2 position);
 
 // The key value of UI Events that a named key has, such as "ArrowLeft" for PrAppKey_Left, or the empty view for a
 // printable key or PrAppKey_Unknown.

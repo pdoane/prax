@@ -14,8 +14,8 @@ namespace pr_impl {
 namespace {
 
 void secondaryClick(KitFixture& f, PrVec2 at) {
-    f.push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .button = 1, .position = at});
-    f.push(PrAppEvent{.kind = PrAppEventKind_PointerUp, .button = 1, .position = at});
+    f.push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .pointer = {.position = at, .button = 1}});
+    f.push(PrAppEvent{.kind = PrAppEventKind_PointerUp, .pointer = {.position = at, .button = 1}});
 }
 
 bool inside(PrRect outer, PrRect inner) {
@@ -215,7 +215,7 @@ TEST_CASE("a drag's ghost follows the pointer in the overlay, and is gone when t
     f.frame();
     CHECK(ghost == kPrLayoutNodeNone);
     PrVec2 at = f.center(source);
-    f.push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .position = at});
+    f.push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .pointer = {.position = at}});
     f.frame();
     f.move(PrVec2{at.x + 100, at.y + 100});
     f.frame();
@@ -224,7 +224,7 @@ TEST_CASE("a drag's ghost follows the pointer in the overlay, and is gone when t
     PrRect box = f.bounds(ghost);
     CHECK(box.left > at.x + 100);
     CHECK(box.left < at.x + 130);
-    f.push(PrAppEvent{.kind = PrAppEventKind_PointerUp, .position = PrVec2{at.x + 100, at.y + 100}});
+    f.push(PrAppEvent{.kind = PrAppEventKind_PointerUp, .pointer = {.position = PrVec2{at.x + 100, at.y + 100}}});
     f.frame();
     CHECK(ghost == kPrLayoutNodeNone);
     CHECK(kitVerified(f.tree));

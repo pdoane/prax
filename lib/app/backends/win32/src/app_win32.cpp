@@ -132,9 +132,9 @@ struct Win32App : PrApp {
     // messages, and the events that they deliver wait here, so that no callback nests in another.
     RawArray<HeldEvent> held;
 
-    // The pointer buttons that are down, by bit of PrAppEvent::button, where the pointer last was, and the keys that
-    // are down, by their position. The window releases them when it loses the pointer's capture or the keyboard, which
-    // then reports no release of its own.
+    // The pointer buttons that are down, by bit of PrAppPointerEvent::button, where the pointer last was, and the keys
+    // that are down, by their position. The window releases them when it loses the pointer's capture or the keyboard,
+    // which then reports no release of its own.
     uint8_t buttons;
     PrVec2 pointer;
     HeldKey keys[PrAppKeyCode_Count];
@@ -324,12 +324,10 @@ void endCallback(Win32App* app) {
     for (uint32_t i = 0; i < app->held.count && app->running; ++i) {
         // An event that its delivery holds goes to the end of the array, which may move the array but not the text.
         PrAppEvent event = app->held.data[i].event;
-        event.text = PrStringView{
-            app->held.data[i].text.data != nullptr ? app->held.data[i].text.data : "",
-            app->held.data[i].text.count,
-        };
+        const RawArray<char>& held = app->held.data[i].text;
+        prAppEventSetText(&event, PrStringView{held.data != nullptr ? held.data : "", held.count});
         if (event.kind == PrAppEventKind_ClipboardImage)
-            event.pixels.data = reinterpret_cast<const uint8_t*>(app->held.data[i].text.data);
+            event.image.pixels.data = reinterpret_cast<const uint8_t*>(held.data);
         callEvent(app, event);
     }
     for (uint32_t i = 0; i < app->held.count; ++i)
@@ -343,11 +341,12 @@ void deliver(Win32App* app, const PrAppEvent& event) {
         return;
     if (app->inCallback) {
         HeldEvent held{.event = event};
-        if (event.text.size != 0)
-            held.text.append(event.text.data, uint32_t(event.text.size));
-        if (event.kind == PrAppEventKind_ClipboardImage && event.pixels.extent.y != 0) {
-            held.text.append(reinterpret_cast<const char*>(event.pixels.data),
-                uint32_t(event.pixels.stride * event.pixels.extent.y));
+        PrStringView text = prAppEventText(&event);
+        if (text.size != 0)
+            held.text.append(text.data, uint32_t(text.size));
+        if (event.kind == PrAppEventKind_ClipboardImage && event.image.pixels.extent.y != 0) {
+            const PrPixelView& pixels = event.image.pixels;
+            held.text.append(reinterpret_cast<const char*>(pixels.data), uint32_t(pixels.stride * pixels.extent.y));
         }
         app->held.push(held);
         return;
@@ -653,7 +652,8 @@ void deliverPointer(Win32App* app, UINT message, WPARAM wParam, LPARAM lParam) {
     PrAppEvent event{};
     event.time = secondsNow();
     event.modifiers = modifiersNow();
-    event.position = positionOf(app, int16_t(LOWORD(lParam)), int16_t(HIWORD(lParam)));
+    PrAppPointerEvent& pointer = event.pointer;
+    pointer.position = positionOf(app, int16_t(LOWORD(lParam)), int16_t(HIWORD(lParam)));
     switch (message) {
         case WM_MOUSEMOVE: event.kind = PrAppEventKind_PointerMove; break;
         case WM_LBUTTONDOWN:
@@ -664,27 +664,27 @@ void deliverPointer(Win32App* app, UINT message, WPARAM wParam, LPARAM lParam) {
     }
     switch (message) {
         case WM_RBUTTONDOWN:
-        case WM_RBUTTONUP: event.button = 1; break;
+        case WM_RBUTTONUP: pointer.button = 1; break;
         case WM_MBUTTONDOWN:
-        case WM_MBUTTONUP: event.button = 2; break;
+        case WM_MBUTTONUP: pointer.button = 2; break;
         case WM_XBUTTONDOWN:
-        case WM_XBUTTONUP: event.button = GET_XBUTTON_WPARAM(wParam) == XBUTTON1 ? 3 : 4; break;
+        case WM_XBUTTONUP: pointer.button = GET_XBUTTON_WPARAM(wParam) == XBUTTON1 ? 3 : 4; break;
         default: break;
     }
-    app->pointer = event.position;
-    uint8_t bit = uint8_t(1u << event.button);
+    app->pointer = pointer.position;
+    uint8_t bit = uint8_t(1u << pointer.button);
     if (event.kind == PrAppEventKind_PointerDown) {
         app->buttons |= bit;
         POINT at{int16_t(LOWORD(lParam)), int16_t(HIWORD(lParam))};
-        bool continues = app->clicks != 0 && event.button == app->clickButton &&
+        bool continues = app->clicks != 0 && pointer.button == app->clickButton &&
             event.time - app->clickTime <= double(GetDoubleClickTime()) / 1000 &&
             abs(at.x - app->clickPoint.x) <= GetSystemMetrics(SM_CXDOUBLECLK) / 2 &&
             abs(at.y - app->clickPoint.y) <= GetSystemMetrics(SM_CYDOUBLECLK) / 2;
         app->clicks = continues ? app->clicks + 1 : 1;
         app->clickTime = event.time;
         app->clickPoint = at;
-        app->clickButton = event.button;
-        event.clicks = app->clicks;
+        app->clickButton = pointer.button;
+        pointer.clicks = app->clicks;
     }
     else if (event.kind == PrAppEventKind_PointerUp)
         app->buttons &= uint8_t(~bit);
@@ -709,8 +709,8 @@ void releaseButtons(Win32App* app) {
         event.kind = PrAppEventKind_PointerUp;
         event.time = secondsNow();
         event.modifiers = modifiersNow();
-        event.button = button;
-        event.position = app->pointer;
+        event.pointer.button = button;
+        event.pointer.position = app->pointer;
         deliver(app, event);
     }
 }
@@ -727,9 +727,9 @@ void releaseKeys(Win32App* app) {
         event.kind = PrAppEventKind_KeyUp;
         event.time = secondsNow();
         event.modifiers = modifiersNow();
-        event.key = held.key;
-        event.code = PrAppKeyCode(code);
-        event.text = "";
+        event.keyboard.key = held.key;
+        event.keyboard.code = PrAppKeyCode(code);
+        event.keyboard.text = "";
         deliver(app, event);
     }
 }
@@ -750,13 +750,13 @@ void deliverScroll(Win32App* app, WPARAM wParam, LPARAM lParam, bool horizontal)
     event.kind = PrAppEventKind_Scroll;
     event.time = secondsNow();
     event.modifiers = modifiersNow();
-    event.position = positionOf(app, point.x, point.y);
-    event.scrollUnit = PrAppScrollUnit_Line;
+    event.scroll.position = positionOf(app, point.x, point.y);
+    event.scroll.unit = PrAppScrollUnit_Line;
     // A vertical notch away from the user is positive and scrolls up. A horizontal tilt to the right is positive.
     if (horizontal)
-        event.delta.x = notches * perNotch;
+        event.scroll.delta.x = notches * perNotch;
     else
-        event.delta.y = -notches * perNotch;
+        event.scroll.delta.y = -notches * perNotch;
     deliver(app, event);
 }
 
@@ -766,13 +766,13 @@ void deliverKey(Win32App* app, UINT message, WPARAM virtualKey, LPARAM flags) {
     event.kind = down ? PrAppEventKind_KeyDown : PrAppEventKind_KeyUp;
     event.time = secondsNow();
     event.modifiers = modifiersNow();
-    event.code = codeOf(scanOf(virtualKey, flags));
-    event.repeat = down && (flags & (LPARAM(1) << 30)) != 0;
-    event.key = namedKeyOf(virtualKey);
-    event.text = "";
+    event.keyboard.code = codeOf(scanOf(virtualKey, flags));
+    event.keyboard.repeat = down && (flags & (LPARAM(1) << 30)) != 0;
+    event.keyboard.key = namedKeyOf(virtualKey);
+    event.keyboard.text = "";
     if (virtualKey == VK_CAPITAL || virtualKey == VK_NUMLOCK) {
         // A lock key reports KeyDown as it turns on and KeyUp as it turns off, whichever way the key moves.
-        if (!down || event.repeat)
+        if (!down || event.keyboard.repeat)
             return;
         event.kind = (GetKeyState(int(virtualKey)) & 1) != 0 ? PrAppEventKind_KeyDown : PrAppEventKind_KeyUp;
         deliver(app, event);
@@ -780,11 +780,11 @@ void deliverKey(Win32App* app, UINT message, WPARAM virtualKey, LPARAM flags) {
     }
     // An input method takes the key, which types nothing itself.
     if (virtualKey == VK_PROCESSKEY) {
-        event.key = PrAppKey_Unknown;
+        event.keyboard.key = PrAppKey_Unknown;
         deliver(app, event);
         return;
     }
-    if (event.key == PrAppKey_Unknown) {
+    if (event.keyboard.key == PrAppKey_Unknown) {
         const KeyText& stashed = app->keyText;
         KeyText text;
         if (stashed.message == message && stashed.virtualKey == virtualKey && stashed.flags == flags)
@@ -792,18 +792,18 @@ void deliverKey(Win32App* app, UINT message, WPARAM virtualKey, LPARAM flags) {
         else
             text = translateKey(message, virtualKey, flags);
         if (text.dead) {
-            event.key = PrAppKey_Dead;
+            event.keyboard.key = PrAppKey_Dead;
         } else if (text.count != 0) {
-            event.text = win32Narrow(text.units, text.count, app->utf8);
+            event.keyboard.text = win32Narrow(text.units, text.count, app->utf8);
             wchar_t first = text.units[0];
             if (first >= L'a' && first <= L'z')
                 first = wchar_t(first - L'a' + L'A');
-            event.key = first < 128 ? PrAppKey(first) : PrAppKey_Unknown;
+            event.keyboard.key = first < 128 ? PrAppKey(first) : PrAppKey_Unknown;
         }
     }
     app->keyText = KeyText{};
-    if (event.code != PrAppKeyCode_Unidentified)
-        app->keys[event.code] = HeldKey{.down = down, .key = event.key};
+    if (event.keyboard.code != PrAppKeyCode_Unidentified)
+        app->keys[event.keyboard.code] = HeldKey{.down = down, .key = event.keyboard.key};
     deliver(app, event);
 }
 
@@ -811,8 +811,8 @@ void deliverText(Win32App* app, PrAppEventKind kind, PrStringView text, PrAppTex
     PrAppEvent event{};
     event.kind = kind;
     event.time = secondsNow();
-    event.text = text;
-    event.selection = selection;
+    event.input.text = text;
+    event.input.selection = selection;
     deliver(app, event);
 }
 
@@ -972,7 +972,7 @@ void deliverClipboard(Win32App* app) {
     PrAppEvent event{};
     event.kind = PrAppEventKind_Clipboard;
     event.time = secondsNow();
-    event.text = text;
+    event.input.text = text;
     deliver(app, event);
 }
 
@@ -1035,7 +1035,7 @@ void deliverClipboardImage(Win32App* app) {
     PrAppEvent event{};
     event.kind = PrAppEventKind_ClipboardImage;
     event.time = secondsNow();
-    event.pixels = PrPixelView{pixels.data, size_t(extent.x) * 4, extent};
+    event.image.pixels = PrPixelView{pixels.data, size_t(extent.x) * 4, extent};
     deliver(app, event);
     pixels.reset();
 }
@@ -1056,7 +1056,7 @@ void notifyIconAction(Win32App* app, UINT action) {
             bringForward(app);
             PrAppEvent event{};
             event.kind = PrAppEventKind_Notification;
-            event.tag = app->notificationTag;
+            event.notification.tag = app->notificationTag;
             event.time = secondsNow();
             deliver(app, event);
             break;

@@ -426,7 +426,7 @@ String commandShortcut(const Browser& b, PrStringView id) {
 
 bool commandsRunChord(Browser& b, const PrAppEvent& event) {
     PrAppModifierFlags modifiers = PrAppModifierFlags(event.modifiers & ~PrAppModifierFlag_CapsLock);
-    PrStringView id = prCommandKeymapCommand(b.keymap, PrCommandChord{event.key, modifiers}, "");
+    PrStringView id = prCommandKeymapCommand(b.keymap, PrCommandChord{event.keyboard.key, modifiers}, "");
     if (id.data == nullptr)
         return false;
     commandRun(b, id);

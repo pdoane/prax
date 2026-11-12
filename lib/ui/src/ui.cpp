@@ -444,11 +444,6 @@ void deliver(Ui* ui, PrLayoutNode node, const PrAppEvent& event) {
         ui->routed.push(UiRouted{node, event});
 }
 
-bool isPointerEvent(PrAppEventKind kind) {
-    return kind == PrAppEventKind_PointerMove || kind == PrAppEventKind_PointerDown ||
-        kind == PrAppEventKind_PointerUp || kind == PrAppEventKind_Scroll;
-}
-
 // Returns true if an event of this kind changes the answers to a round's queries, so that a second such event in the
 // same round would be lost.
 bool isTransition(PrAppEventKind kind) {
@@ -608,7 +603,7 @@ PrLayoutNode focusScopeOf(const Ui* ui, PrLayoutNode node) {
 const UiClaim* PR_NULLABLE claimOf(const Ui* ui, PrLayoutNode at, const PrAppEvent& e, bool capture) {
     for (uint32_t i = 0; i < ui->lastClaims.count; ++i) {
         const UiClaim& c = ui->lastClaims.data[i];
-        if (c.node == at && c.key == e.key && c.modifiers == e.modifiers && c.capture == capture)
+        if (c.node == at && c.key == e.keyboard.key && c.modifiers == e.modifiers && c.capture == capture)
             return &c;
     }
     return nullptr;
@@ -618,12 +613,13 @@ const UiClaim* PR_NULLABLE claimOf(const Ui* ui, PrLayoutNode at, const PrAppEve
 // on them, then to focus traversal, then to activation.
 void routeKey(Ui* ui, const PrAppEvent& e) {
     // A modifier key alone does not show the focus.
-    bool modifier = e.key == PrAppKey_Shift || e.key == PrAppKey_Control || e.key == PrAppKey_Alt ||
-        e.key == PrAppKey_Meta || e.key == PrAppKey_CapsLock || e.key == PrAppKey_Fn;
+    bool modifier =
+        e.keyboard.key == PrAppKey_Shift || e.keyboard.key == PrAppKey_Control || e.keyboard.key == PrAppKey_Alt ||
+        e.keyboard.key == PrAppKey_Meta || e.keyboard.key == PrAppKey_CapsLock || e.keyboard.key == PrAppKey_Fn;
     ui->focusVisible = ui->focusVisible || !modifier;
     // A key that the input method takes belongs to the composition, which the focus receives. It claims no binding and
     // moves no focus.
-    if (e.composing) {
+    if (e.keyboard.composing) {
         deliver(ui, ui->focus, e);
         return;
     }
@@ -649,19 +645,19 @@ void routeKey(Ui* ui, const PrAppEvent& e) {
             return;
         }
     }
-    if (e.key == PrAppKey_Escape && ui->payload.carried) {
+    if (e.keyboard.key == PrAppKey_Escape && ui->payload.carried) {
         endDrag(ui->buttons[0], false);
         ui->payload = UiCarry{};
         return;
     }
-    if (e.key == PrAppKey_Tab && (e.modifiers & ~PrAppModifierFlag_Shift) == 0) {
+    if (e.keyboard.key == PrAppKey_Tab && (e.modifiers & ~PrAppModifierFlag_Shift) == 0) {
         bool reverse = (e.modifiers & PrAppModifierFlag_Shift) != 0;
         PrLayoutNode next = focusStep(ui, ui->focus, focusScopeOf(ui, ui->focus), reverse);
         if (next != kPrLayoutNodeNone)
             ui->focus = next;
         return;
     }
-    bool activates = e.key == PrAppKey_Enter || e.key == ' ';
+    bool activates = e.keyboard.key == PrAppKey_Enter || e.keyboard.key == ' ';
     if (activates && e.modifiers == 0 && takes(ui, ui->focus, PrUiFlag_Pressable)) {
         ui->keyActivated = ui->focus;
         deliver(ui, ui->focus, e);
@@ -672,10 +668,11 @@ void routeKey(Ui* ui, const PrAppEvent& e) {
 
 // Routes one event against the committed tree.
 void route(Ui* ui, const PrAppEvent& e) {
-    if (isPointerEvent(e.kind)) {
+    PrVec2 position{};
+    if (prAppEventPosition(&e, &position)) {
         ui->hasPointer = true;
-        ui->pointer = e.position;
-        ui->hovered = hitAt(ui, e.position);
+        ui->pointer = position;
+        ui->hovered = hitAt(ui, position);
     }
     switch (e.kind) {
         case PrAppEventKind_PointerMove: {
@@ -683,7 +680,7 @@ void route(Ui* ui, const PrAppEvent& e) {
             for (uint32_t b = 0; b < kUiButtons; ++b) {
                 UiButton& button = ui->buttons[b];
                 if (button.dragging)
-                    moveDrag(button, e.position);
+                    moveDrag(button, e.pointer.position);
                 if (button.capture != kPrLayoutNodeNone)
                     to = button.capture;
             }
@@ -692,48 +689,48 @@ void route(Ui* ui, const PrAppEvent& e) {
             break;
         }
         case PrAppEventKind_PointerDown: {
-            if (e.button >= kUiButtons)
+            if (e.pointer.button >= kUiButtons)
                 break;
             ui->focusVisible = false;
-            ui->pressedRound[e.button] = true;
+            ui->pressedRound[e.pointer.button] = true;
             for (PrLayoutNode at = ui->hovered; at != kPrLayoutNodeNone; at = parentOf(ui, at))
                 slotOf(ui, at).pressRound = ui->roundId;
             PrLayoutNode target = innermost(ui, ui->hovered, PrUiFlag_Pressable);
-            UiButton& b = ui->buttons[e.button];
+            UiButton& b = ui->buttons[e.pointer.button];
             // A multi-click continues only on the node that it began on.
-            bool sequence = target != kPrLayoutNodeNone && target == b.pressed && e.clicks > 1;
-            uint32_t presses = sequence ? e.clicks : 1;
+            bool sequence = target != kPrLayoutNodeNone && target == b.pressed && e.pointer.clicks > 1;
+            uint32_t presses = sequence ? e.pointer.clicks : 1;
             b = UiButton{
                 .capture = target,
                 .node = target,
                 .pressed = target,
                 .pressTime = ui->time,
                 .repeatTime = ui->time,
-                .origin = e.position,
-                .position = e.position,
+                .origin = e.pointer.position,
+                .position = e.pointer.position,
                 .modifiers = e.modifiers,
                 .presses = presses,
                 .dragging = target != kPrLayoutNodeNone,
             };
-            if (e.button == 0)
+            if (e.pointer.button == 0)
                 ui->focus = innermost(ui, ui->hovered, PrUiFlag_Focusable);
             deliver(ui, target != kPrLayoutNodeNone ? target : ui->hovered, e);
             break;
         }
         case PrAppEventKind_PointerUp: {
-            if (e.button >= kUiButtons)
+            if (e.pointer.button >= kUiButtons)
                 break;
-            UiButton& b = ui->buttons[e.button];
+            UiButton& b = ui->buttons[e.pointer.button];
             if (b.dragging)
-                moveDrag(b, e.position);
-            bool carried = e.button == 0 && ui->payload.carried;
+                moveDrag(b, e.pointer.position);
+            bool carried = e.pointer.button == 0 && ui->payload.carried;
             if (carried) {
                 ui->dropped = dropTargetOf(ui, ui->hovered);
                 ui->droppedPayload = ui->payload.payload;
             } else if (b.capture != kPrLayoutNodeNone && within(ui, ui->hovered, b.capture)) {
-                ui->clicked[e.button] = b.capture;
+                ui->clicked[e.pointer.button] = b.capture;
             }
-            if (e.button == 0)
+            if (e.pointer.button == 0)
                 ui->payload = UiCarry{};
             deliver(ui, b.capture != kPrLayoutNodeNone ? b.capture : ui->hovered, e);
             endDrag(b, true);
@@ -1073,8 +1070,9 @@ void routeQueue(Ui* ui) {
             break;
         ui->transitioned = ui->transitioned || transition;
         PrAppEvent event = queued.event;
-        if (event.text.size != 0)
-            event.text.data = ui->queueText.data + queued.textStart;
+        PrStringView text = prAppEventText(&event);
+        if (text.size != 0)
+            prAppEventSetText(&event, PrStringView{ui->queueText.data + queued.textStart, text.size});
         ++ui->consumed;
         route(ui, event);
     }
@@ -1154,7 +1152,7 @@ void compactQueue(Ui* ui) {
     uint32_t text = 0;
     for (uint32_t i = ui->consumed; i < ui->queue.count; ++i) {
         UiQueued queued = ui->queue.data[i];
-        uint32_t size = uint32_t(queued.event.text.size);
+        uint32_t size = uint32_t(prAppEventText(&queued.event).size);
         if (size != 0)
             prMemMove(ui->queueText.data + text, ui->queueText.data + queued.textStart, size);
         queued.textStart = text;
@@ -1249,9 +1247,11 @@ PrApp* PR_NULLABLE prUiApp(const PrUi* ui) {
 void prUiPushEvent(PrUi* ui, const PrAppEvent* event) {
     PR_ASSERT(!ui->building);
     UiQueued queued{.event = *event, .textStart = ui->queueText.count};
-    queued.event.text = PrStringView{nullptr, event->text.size};
-    if (event->text.size != 0)
-        ui->queueText.append(event->text.data, uint32_t(event->text.size));
+    // The queue holds the text, and the event holds its size alone.
+    PrStringView text = prAppEventText(event);
+    prAppEventSetText(&queued.event, PrStringView{nullptr, text.size});
+    if (text.size != 0)
+        ui->queueText.append(text.data, uint32_t(text.size));
     ui->queue.push(queued);
 }
 

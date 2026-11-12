@@ -204,7 +204,7 @@ bool namedKey(Vterm* vterm, PrAppKey key, PrAppModifierFlags modifiers) {
 
 // Sends a printable key in the legacy encoding. Returns false if the key's Text event should send its text instead.
 bool printableKey(Vterm* vterm, const PrAppEvent* event, const PrVtermInputDesc* desc) {
-    uint32_t key = event->key;
+    uint32_t key = event->keyboard.key;
     PrAppModifierFlags modifiers = event->modifiers;
     bool control = (modifiers & PrAppModifierFlag_Control) != 0;
     bool meta = (modifiers & PrAppModifierFlag_Alt) != 0 && desc->altSendsEscape;
@@ -224,7 +224,8 @@ bool printableKey(Vterm* vterm, const PrAppEvent* event, const PrVtermInputDesc*
         // A shifted key other than a letter has the character that the layout gives it. The text holds that character
         // unless Alt changed it too.
         uint32_t codePoint = 0;
-        if (event->text.size == 0 || prUtf8Decode(event->text, 0, &codePoint) != event->text.size || codePoint >= 0x80)
+        if (event->keyboard.text.size == 0 ||
+                prUtf8Decode(event->keyboard.text, 0, &codePoint) != event->keyboard.text.size || codePoint >= 0x80)
             return false;
         character = codePoint;
     }
@@ -498,20 +499,21 @@ uint32_t singleCase(uint32_t codePoint, PrUnicodeCase target) {
 // uppercase, or else the text.
 bool characterKey(const PrAppEvent* event, KittyKey* out) {
     uint32_t typed = 0;
-    if (event->text.size == 0 || prUtf8Decode(event->text, 0, &typed) != event->text.size || isControl(typed))
+    if (event->keyboard.text.size == 0 || prUtf8Decode(event->keyboard.text, 0, &typed) != event->keyboard.text.size ||
+            isControl(typed))
         typed = 0;
-    uint32_t base = baseLayoutKey(event->code);
+    uint32_t base = baseLayoutKey(event->keyboard.code);
     bool shift = (event->modifiers & PrAppModifierFlag_Shift) != 0;
     uint32_t number = 0;
-    if (event->key >= 'A' && event->key <= 'Z') {
-        number = event->key - 'A' + 'a';
-    } else if (event->key != PrAppKey_Unknown && event->key < 0x80) {
-        number = event->key;
+    if (event->keyboard.key >= 'A' && event->keyboard.key <= 'Z') {
+        number = event->keyboard.key - 'A' + 'a';
+    } else if (event->keyboard.key != PrAppKey_Unknown && event->keyboard.key < 0x80) {
+        number = event->keyboard.key;
         if (shift && base != 0 && baseLayoutShifted(base) == number)
             number = base;
     } else if (typed != 0) {
         number = singleCase(typed, PrUnicodeCase_Lower);
-    } else if (!hasPrintable(event->text)) {
+    } else if (!hasPrintable(event->keyboard.text)) {
         return false;
     }
     out->number = number;
@@ -538,22 +540,22 @@ bool keyEvent(Vterm* vterm, const PrAppEvent* event, const PrVtermInputDesc* des
         if ((flags & kVtermKeyboardEvents) == 0)
             return false;
         action = KeyAction_Release;
-    } else if (event->repeat && (flags & kVtermKeyboardEvents) != 0) {
+    } else if (event->keyboard.repeat && (flags & kVtermKeyboardEvents) != 0) {
         action = KeyAction_Repeat;
     }
 
     // Without the protocol's escape codes, a key uses its legacy encoding, in which a keypad key sends the key that it
     // means. A release is reported only with event types, so it never uses this encoding.
     if ((flags & (kVtermKeyboardDisambiguate | kVtermKeyboardEvents | kVtermKeyboardAllKeys)) == 0) {
-        if (event->key >= PrAppKey_Left)
-            return namedKey(vterm, event->key, event->modifiers);
-        return event->key != PrAppKey_Unknown && printableKey(vterm, event, desc);
+        if (event->keyboard.key >= PrAppKey_Left)
+            return namedKey(vterm, event->keyboard.key, event->modifiers);
+        return event->keyboard.key != PrAppKey_Unknown && printableKey(vterm, event, desc);
     }
 
     uint32_t modifiers = modifierBits(event->modifiers);
     KittyKey key{.action = action};
     uint32_t bit = 0;
-    uint32_t modifierNumber = modifierKeyNumber(event->key, event->code, &bit);
+    uint32_t modifierNumber = modifierKeyNumber(event->keyboard.key, event->keyboard.code, &bit);
     if (modifierNumber != 0) {
         if (!allKeys)
             return false;
@@ -564,16 +566,16 @@ bool keyEvent(Vterm* vterm, const PrAppEvent* event, const PrVtermInputDesc* des
         putKittyKey(vterm, key);
         return true;
     }
-    bool keypad = (disambiguate || allKeys) && keypadKey(event->key, event->code, &key);
+    bool keypad = (disambiguate || allKeys) && keypadKey(event->keyboard.key, event->keyboard.code, &key);
     bool character = false;
-    if (!keypad && !functionalKey(event->key, event->code, &key)) {
-        if (event->key >= PrAppKey_Left || !characterKey(event, &key))
+    if (!keypad && !functionalKey(event->keyboard.key, event->keyboard.code, &key)) {
+        if (event->keyboard.key >= PrAppKey_Left || !characterKey(event, &key))
             return false;
         character = true;
     }
 
     // If Alt selects the layout's third level, it belongs to the layout and is not a modifier of the text.
-    bool typesText = hasPrintable(event->text);
+    bool typesText = hasPrintable(event->keyboard.text);
     if (typesText && !desc->altSendsEscape && (modifiers & (kModifierControl | kModifierSuper)) == 0)
         modifiers &= ~kModifierAlt;
     uint32_t held = modifiers & ~kModifierLocks;
@@ -604,7 +606,7 @@ bool keyEvent(Vterm* vterm, const PrAppEvent* event, const PrVtermInputDesc* des
                 return true;
             }
             if (character && action == KeyAction_Press)
-                return event->key != PrAppKey_Unknown && printableKey(vterm, event, desc);
+                return event->keyboard.key != PrAppKey_Unknown && printableKey(vterm, event, desc);
         }
     }
     if ((flags & kVtermKeyboardAlternates) == 0 || !character) {
@@ -612,7 +614,7 @@ bool keyEvent(Vterm* vterm, const PrAppEvent* event, const PrVtermInputDesc* des
         key.base = 0;
     }
     if ((flags & kVtermKeyboardText) != 0 && textual && action != KeyAction_Release)
-        key.text = event->text;
+        key.text = event->keyboard.text;
     putKittyKey(vterm, key);
     return true;
 }
@@ -717,17 +719,17 @@ void putMouse(Vterm* vterm, uint32_t code, bool release, PrUVec2 cell, PrUVec2 p
 
 bool pointerButton(Vterm* vterm, const PrAppEvent* event, const PrVtermInputDesc* desc) {
     bool press = event->kind == PrAppEventKind_PointerDown;
-    if (event->button < 8) {
-        uint8_t bit = uint8_t(1u << event->button);
+    if (event->pointer.button < 8) {
+        uint8_t bit = uint8_t(1u << event->pointer.button);
         vterm->pointerButtons = press ? uint8_t(vterm->pointerButtons | bit) : uint8_t(vterm->pointerButtons & ~bit);
     }
     if (vterm->mouseTracking == VtermMouseTracking_None)
         return false;
-    uint32_t code = buttonCode(event->button);
+    uint32_t code = buttonCode(event->pointer.button);
     if (code == kMouseNone || (!press && vterm->mouseTracking == VtermMouseTracking_Press))
         return true;
-    PrUVec2 cell = cellAt(vterm, event->position, desc);
-    putMouse(vterm, code, !press, cell, pixelAt(event->position, desc), event->modifiers);
+    PrUVec2 cell = cellAt(vterm, event->pointer.position, desc);
+    putMouse(vterm, code, !press, cell, pixelAt(event->pointer.position, desc), event->modifiers);
     vterm->mouseCell = cell;
     vterm->mouseMoved = true;
     return true;
@@ -744,11 +746,11 @@ bool pointerMove(Vterm* vterm, const PrAppEvent* event, const PrVtermInputDesc* 
     }
     if (tracking < VtermMouseTracking_Drag || (tracking == VtermMouseTracking_Drag && code == kMouseNone))
         return false;
-    PrUVec2 cell = cellAt(vterm, event->position, desc);
+    PrUVec2 cell = cellAt(vterm, event->pointer.position, desc);
     bool pixels = vterm->mouseEncoding == VtermMouseEncoding_SgrPixels;
     if (!pixels && vterm->mouseMoved && cell.x == vterm->mouseCell.x && cell.y == vterm->mouseCell.y)
         return true;
-    putMouse(vterm, code | kMouseMotion, false, cell, pixelAt(event->position, desc), event->modifiers);
+    putMouse(vterm, code | kMouseMotion, false, cell, pixelAt(event->pointer.position, desc), event->modifiers);
     vterm->mouseCell = cell;
     vterm->mouseMoved = true;
     return true;
@@ -769,13 +771,13 @@ bool scroll(Vterm* vterm, const PrAppEvent* event, const PrVtermInputDesc* desc)
         vterm->scrollRemainder = PrVec2{0, 0};
         return false;
     }
-    PrVec2 delta = event->delta;
-    if (event->scrollUnit == PrAppScrollUnit_Pixel)
+    PrVec2 delta = event->scroll.delta;
+    if (event->scroll.unit == PrAppScrollUnit_Pixel)
         delta = PrVec2{delta.x / desc->cellExtent.x, delta.y / desc->cellExtent.y};
     int32_t down = wholeLines(&vterm->scrollRemainder.y, delta.y);
     int32_t right = wholeLines(&vterm->scrollRemainder.x, delta.x);
-    PrUVec2 cell = cellAt(vterm, event->position, desc);
-    PrUVec2 pixel = pixelAt(event->position, desc);
+    PrUVec2 cell = cellAt(vterm, event->scroll.position, desc);
+    PrUVec2 pixel = pixelAt(event->scroll.position, desc);
     for (int32_t i = 0; i < (down < 0 ? -down : down); ++i) {
         if (tracked)
             putMouse(vterm, down < 0 ? kMouseWheelUp : kMouseWheelDown, false, cell, pixel, event->modifiers);
@@ -804,29 +806,29 @@ bool prVtermInputEvent(PrVterm* vterm, const PrAppEvent* event, const PrVtermInp
     switch (event->kind) {
         case PrAppEventKind_KeyDown: {
             bool sent = keyEvent(vterm, event, desc);
-            if (sent && event->text.size <= kVtermDropTextMax) {
-                prMemCopy(vterm->dropText, event->text.data, event->text.size);
-                vterm->dropTextSize = uint8_t(event->text.size);
+            if (sent && event->keyboard.text.size <= kVtermDropTextMax) {
+                prMemCopy(vterm->dropText, event->keyboard.text.data, event->keyboard.text.size);
+                vterm->dropTextSize = uint8_t(event->keyboard.text.size);
             }
             return sent;
         }
         case PrAppEventKind_KeyUp:
             return keyEvent(vterm, event, desc);
         case PrAppEventKind_Text: {
-            if (dropTextSize != 0 && PrStringView{vterm->dropText, dropTextSize} == event->text)
+            if (dropTextSize != 0 && PrStringView{vterm->dropText, dropTextSize} == event->input.text)
                 return true;
             // Text that no key reported is sent as key zero, if the program asked for text in the escape codes.
             uint8_t flags = keyboardFlags(vterm);
             uint8_t textKeys = kVtermKeyboardAllKeys | kVtermKeyboardText;
-            if ((flags & textKeys) == textKeys && hasPrintable(event->text)) {
-                putKittyKey(vterm, KittyKey{.final = 'u', .action = KeyAction_Press, .text = event->text});
+            if ((flags & textKeys) == textKeys && hasPrintable(event->input.text)) {
+                putKittyKey(vterm, KittyKey{.final = 'u', .action = KeyAction_Press, .text = event->input.text});
                 return true;
             }
-            vtermPut(vterm, event->text);
+            vtermPut(vterm, event->input.text);
             return true;
         }
         case PrAppEventKind_Clipboard:
-            prVtermInputPaste(vterm, event->text);
+            prVtermInputPaste(vterm, event->input.text);
             return true;
         case PrAppEventKind_PointerDown:
         case PrAppEventKind_PointerUp:
