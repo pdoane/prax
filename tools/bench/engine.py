@@ -11,6 +11,15 @@ import sys
 
 from tools.bench import common
 
+def by_engine(args, harness, extra):
+    """Runs a harness whose rows each name the engine that measured them, and returns the rows by engine, without that
+    member."""
+    engines = {}
+    for row in common.run_json([common.binary(args.bin, harness)] + extra, harness):
+        engines.setdefault(row.pop("engine"), []).append(row)
+    return engines
+
+
 # ----------------------------------------------------------------------------------------------------------------------
 # frame
 
@@ -83,10 +92,7 @@ def flex_options(parser):
 def flex(args):
     """Each row is one engine's measure of a tree, filed under the engine that measured it. lib/layout's rows are filed
     as prax, beside the rows of Yoga and Taffy."""
-    engines = {}
-    for row in common.run_json([common.binary(args.bin, "flex_bench")] + args.trees, "flex_bench"):
-        engines.setdefault(row.pop("engine"), []).append(row)
-    return engines, []
+    return by_engine(args, "flex_bench", args.trees), []
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -99,10 +105,7 @@ def vterm_options(parser):
 def vterm(args):
     """Runs vterm_bench and groups its rows by engine. Each row is one engine's measure of a workload. The rows of
     lib/vterm are filed as prax, beside those of libvterm."""
-    engines = {}
-    for row in common.run_json([common.binary(args.bin, "vterm_bench")] + args.workloads, "vterm_bench"):
-        engines.setdefault(row.pop("engine"), []).append(row)
-    return engines, []
+    return by_engine(args, "vterm_bench", args.workloads), []
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -266,3 +269,29 @@ def image_decode(args):
     if args.images:
         files = [f for f in files if any(word in os.path.basename(f) for word in args.images)]
     return {"prax": common.run_json([common.binary(args.bin, "image_bench")] + files, "image_bench")}, files
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+# numbers
+
+def numbers_options(parser):
+    parser.add_argument("cases", nargs="*", help="cases by the start of the name, as format f64; every case by default")
+
+
+def numbers(args):
+    """Runs number_bench and groups its rows by engine. Each row is one engine's cost of one conversion in a case:
+    lib/core's rows are filed as prax, beside those of the standard library's <charconv>, filed as std."""
+    return by_engine(args, "number_bench", args.cases), []
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+# format
+
+def format_options(parser):
+    parser.add_argument("cases", nargs="*", help="cases by the start of the name, as buffer float; every case by default")
+
+
+def format_strings(args):
+    """Each row is one engine's cost of one call in a case: pr/format.h's rows are filed as prax, beside those of the
+    standard library's <format>, filed as std."""
+    return by_engine(args, "format_bench", args.cases), []

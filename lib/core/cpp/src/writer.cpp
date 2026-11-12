@@ -52,10 +52,20 @@ void Writer::write(PrStringView text) {
 }
 
 void Writer::writeChar(char c) {
+    if (size < capacity) {
+        buffer[size++] = c;
+        return;
+    }
     write(PrStringView{&c, 1});
 }
 
 void Writer::writeRepeated(char c, uint32_t count) {
+    if (count <= capacity - size) {
+        if (count != 0)
+            prMemFill(buffer + size, uint8_t(c), count);
+        size += count;
+        return;
+    }
     char run[64];
     prMemFill(run, uint8_t(c), sizeof(run));
     while (count != 0) {

@@ -162,6 +162,14 @@ BENCHES = [
           sources=[os.path.join(common.ROOT, "tools", "bench", "doc_bench.cpp")]),
     Bench("draw", "recording and rendering draw_features' drawings on a renderer of lib/draw",
           ["draw_bench"], fetch=["fonts"], run=engine.draw, options=engine.draw_options),
+    Bench("numbers", "numbers converted to text and back in lib/core and in the standard library's <charconv>: "
+          "integers, shortest and rounded floats, and parses",
+          ["number_bench"], run=engine.numbers, options=engine.numbers_options,
+          sources=[os.path.join(common.ROOT, "tools", "bench", "number_bench.cpp")]),
+    Bench("format", "format strings in lib/core's pr/format.h and in the standard library's <format>: integers, "
+          "floats, padded text and log lines, into a buffer and into a string",
+          ["format_bench"], run=engine.format_strings, options=engine.format_options,
+          sources=[os.path.join(common.ROOT, "tools", "bench", "format_bench.cpp")]),
     Bench("image-decode", "decoding the PNG and JPEG images of WPT's images directory",
           ["image_bench"], fetch=["wpt"], run=engine.image_decode, options=engine.image_decode_options,
           sources=[os.path.join(common.ROOT, "tools", "bench", "image_bench.cpp")]),

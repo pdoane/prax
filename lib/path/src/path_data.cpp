@@ -4,7 +4,6 @@
 
 #include "pr/assert.h"
 #include "pr/float.h"
-#include "pr/float_convert.h"
 #include "pr/number_list.h"
 #include "pr/string_ops.h"
 
@@ -283,14 +282,7 @@ bool hasLength(const PrPathDataVertex& vertex) {
 // Appends `value` to `out` with the fewest significant digits that parse back to it.
 void appendNumber(PrRawString* out, float value) {
     char text[kPrF64TextMaxBytes];
-    size_t length = 0;
-    for (uint32_t digits = 6; digits <= 9; ++digits) {
-        length = prF64FormatSignificant(double(value), digits, text);
-        double parsed = 0;
-        if (prF64ParsePrefix(PrStringView{text, length}, &parsed) && float(parsed) == value)
-            break;
-    }
-    prRawStringAppend(out, PrStringView{text, length});
+    prRawStringAppend(out, PrStringView{text, prF32Format(value, text)});
 }
 
 } // namespace

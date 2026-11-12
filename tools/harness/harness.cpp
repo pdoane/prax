@@ -252,7 +252,7 @@ void harnessCountsAdd(HarnessCounts* counts, PrStringView name, const HarnessCou
         prTextBufferAppend(out, ", ");
     harnessWriteString(out, name);
     harnessAppendFormat(out, ": {\"instructions\": %.0f, \"cycles\": %.0f, \"performanceInstructions\": %.0f, "
-        "\"performanceCycles\": %.0f, \"energy\": %.4f, \"time\": %.6f",
+        "\"performanceCycles\": %.0f, \"energy\": %.4f, \"time\": %.9g",
         cost.instructions, cost.cycles, cost.performanceInstructions, cost.performanceCycles, cost.energy, cost.millis);
     if (cost.gpu > 0)
         harnessAppendFormat(out, ", \"gpu\": %.6f", cost.gpu);
@@ -270,7 +270,7 @@ void harnessWriteCase(bool first, const char* name, const HarnessCounters& cost)
     PrTextBuffer row{};
     prTextBufferAppend(&row, first ? "\n  {\"name\": " : ",\n  {\"name\": ");
     harnessWriteString(&row, name);
-    harnessAppendFormat(&row, ", \"time\": %.6f", cost.millis);
+    harnessAppendFormat(&row, ", \"time\": %.9g", cost.millis);
     HarnessCounts counts{};
     harnessCountsAdd(&counts, "time", cost);
     harnessCountsWrite(&counts, &row);
