@@ -1,10 +1,9 @@
+#include "pr/array.h"
 #include "pr/atom_table.h"
+#include "pr/string.h"
 #include "pr/string_ops.h"
 
 #include "tools/harness/test.h"
-
-#include <string>
-#include <vector>
 
 namespace pr_impl {
 
@@ -21,18 +20,21 @@ TEST_CASE("an atom table answers one atom for each text, whose text stays where 
     CHECK(atomTableFind(&table, "a") == kAtomNone);
 
     // Enough text to fill several pages, and one text longer than a page.
-    std::vector<std::string> texts;
+    Array<String> texts;
     for (int i = 0; i < 3000; ++i)
-        texts.push_back("text-" + std::to_string(i));
-    texts.push_back(std::string(kAtomPageSize + 10, 'x'));
-    texts.push_back("");
-    std::vector<uint32_t> atoms;
-    std::vector<const char*> where;
-    for (const std::string& text : texts) {
-        atoms.push_back(atomTableAdd(&table, text));
-        where.push_back(atomTableText(&table, atoms.back()).data);
+        texts.push(format("text-{}", i));
+    String longText;
+    for (uint32_t i = 0; i < kAtomPageSize + 10; ++i)
+        longText.append('x');
+    texts.push(move(longText));
+    texts.push("");
+    Array<uint32_t> atoms;
+    Array<const char*> where;
+    for (const String& text : texts) {
+        atoms.push(atomTableAdd(&table, text));
+        where.push(atomTableText(&table, atoms.last()).data);
     }
-    for (size_t i = 0; i < texts.size(); ++i) {
+    for (uint32_t i = 0; i < texts.count(); ++i) {
         CHECK(atomTableAdd(&table, texts[i]) == atoms[i]);
         CHECK(atomTableFind(&table, texts[i]) == atoms[i]);
         CHECK(atomTableText(&table, atoms[i]) == texts[i]);

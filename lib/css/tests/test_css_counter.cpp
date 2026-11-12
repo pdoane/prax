@@ -5,14 +5,12 @@
 
 #include "tools/harness/test.h"
 
-#include <string>
-
 namespace pr_impl {
 
 namespace {
 
 // Returns the representation of `value` in the predefined style `name`.
-std::string represent(const char* name, int32_t value, CssCounterFlow flow = kCssCounterFlowDefault) {
+String represent(const char* name, int32_t value, CssCounterFlow flow = kCssCounterFlowDefault) {
     const CssCounterStyle* style = cssCounterStyleFind(nullptr, name);
     REQUIRE(style != nullptr);
     PrTextBuffer out{};
@@ -21,7 +19,7 @@ std::string represent(const char* name, int32_t value, CssCounterFlow flow = kCs
 }
 
 // Returns the marker string that a list-style-type, written as CSS, gives the list-item counter `value`, or "none".
-std::string marker(const char* type, int32_t value) {
+String marker(const char* type, int32_t value) {
     CssTestSource source(type);
     CssValuePool pool{};
     CssMatchState match{};
@@ -31,8 +29,8 @@ std::string marker(const char* type, int32_t value) {
     bool any = cssCounterAppendMarker(&out, nullptr, cssValuePoolRun(&pool, span), value, kCssCounterFlowDefault);
     cssValuePoolReset(&pool);
     cssMatchStateReset(&match);
-    std::string text = take(&out);
-    return any ? text : "none";
+    String text = take(&out);
+    return any ? text : String("none");
 }
 
 } // namespace

@@ -1,11 +1,11 @@
 #include "pr/file.h"
 #include "pr/storage_disk.h"
 #include "pr/storage_memory.h"
+#include "pr/string.h"
+#include "pr/string_ops.h"
 #include "pr/task_builtin.h"
 
 #include "tools/harness/test.h"
-
-#include <string>
 
 extern "C" int prTestStorageCApi(void);
 
@@ -13,30 +13,32 @@ namespace pr_impl {
 
 namespace {
 
-PrByteView bytesOf(const std::string& text) {
-    return PrByteView{reinterpret_cast<const uint8_t*>(text.data()), text.size()};
+PrByteView bytesOf(PrStringView text) {
+    return prStringBytes(text);
 }
 
 // Returns the record at `key` as text, or "<none>" if the store has none.
-std::string readText(PrStorage* storage, const char* key) {
+String readText(PrStorage* storage, const char* key) {
     PrStorageRecord record{};
     if (!prStorageRead(storage, key, &record))
         return "<none>";
-    std::string text(reinterpret_cast<const char*>(record.bytes.data), record.bytes.size);
+    String text(prStringFromBytes(record.bytes));
     prStorageRecordRelease(storage, &record);
     return text;
 }
 
-std::string directoryOf(const char* name) {
-    return std::string(PR_STORAGE_TEST_DIR) + "/" + name;
+String directoryOf(const char* name) {
+    return format("{}/{}", PR_STORAGE_TEST_DIR, name);
 }
 
 // Returns the store's keys in the order of their positions, separated by spaces.
-std::string keysOf(PrStorage* storage) {
-    std::string keys;
+String keysOf(PrStorage* storage) {
+    String keys;
     for (uint32_t i = 0; i < prStorageCount(storage); ++i) {
         PrRawString key = prStorageKey(storage, i);
-        keys += (keys.empty() ? "" : " ") + std::string(prRawStringView(&key).data, prRawStringView(&key).size);
+        if (!keys.isEmpty())
+            keys.append(' ');
+        keys.append(prRawStringView(&key));
         prRawStringReset(&key);
     }
     PrRawString past = prStorageKey(storage, prStorageCount(storage));
@@ -55,7 +57,7 @@ PrTaskPool* writer() {
 
 // Opens a disk store in a directory of its own, emptied first.
 PrStorage* openDisk(const char* name, uint64_t limit, PrStorageEviction eviction = PrStorageEviction_LeastRecentlyUsed) {
-    std::string directory = directoryOf(name);
+    String directory = directoryOf(name);
     PrStorageDiskDesc desc{.directory = directory, .limitBytes = limit, .eviction = eviction, .pool = writer()};
     PrStorage* storage = nullptr;
     REQUIRE(prStorageDiskCreate(&desc, &storage) == PrStatus_Ok);
@@ -80,7 +82,7 @@ void checkStore(PrStorage* storage) {
     PrStorageRecord held{};
     REQUIRE(prStorageRead(storage, "a", &held));
     CHECK(prStorageWrite(storage, "a", bytesOf("5678")));
-    CHECK(std::string(reinterpret_cast<const char*>(held.bytes.data), held.bytes.size) == "1234");
+    CHECK(prStringFromBytes(held.bytes) == "1234");
     prStorageRecordRelease(storage, &held);
     CHECK(readText(storage, "a") == "5678");
 
@@ -201,7 +203,7 @@ TEST_CASE("storage: a record whose file is gone is not read, and its entry goes"
     prStorageWrite(storage, "kept", bytesOf("bytes"));
     prStorageDestroy(storage);
     // The store's first file holds the record.
-    REQUIRE(prFileRemove(directoryOf("lost") + "/1"));
+    REQUIRE(prFileRemove(format("{}/1", directoryOf("lost"))));
     storage = openDisk("lost", 100);
     CHECK(prStorageSize(storage) == 9);
     CHECK(readText(storage, "kept") == "<none>");
@@ -210,25 +212,26 @@ TEST_CASE("storage: a record whose file is gone is not read, and its entry goes"
 }
 
 TEST_CASE("storage: stores on disk that share a pool each keep their records") {
-    for (uint32_t threads : {0u, 1u}) {
+    const uint32_t threadCounts[] = {0u, 1u};
+    for (uint32_t threads : threadCounts) {
         PrTaskPool* pool = prTaskBuiltinCreate(threads);
         const char* names[] = {"shared-a", "shared-b", "shared-c"};
         PrStorage* stores[3];
         for (uint32_t i = 0; i < 3; ++i) {
-            std::string directory = directoryOf(names[i]);
+            String directory = directoryOf(names[i]);
             PrStorageDiskDesc desc{.directory = directory, .limitBytes = 100, .pool = pool};
             REQUIRE(prStorageDiskCreate(&desc, &stores[i]) == PrStatus_Ok);
             prStorageClear(stores[i]);
             for (uint32_t j = 0; j < 20; ++j)
-                prStorageWrite(stores[i], "key", bytesOf(std::string(names[i]) + std::to_string(j)));
+                prStorageWrite(stores[i], "key", bytesOf(format("{}{}", names[i], j)));
         }
         for (PrStorage* store : stores)
             prStorageDestroy(store);
         for (uint32_t i = 0; i < 3; ++i) {
-            std::string directory = directoryOf(names[i]);
+            String directory = directoryOf(names[i]);
             PrStorageDiskDesc desc{.directory = directory, .limitBytes = 100, .pool = pool};
             REQUIRE(prStorageDiskCreate(&desc, &stores[i]) == PrStatus_Ok);
-            CHECK(readText(stores[i], "key") == std::string(names[i]) + "19");
+            CHECK(readText(stores[i], "key") == format("{}19", names[i]));
             CHECK(prStorageCount(stores[i]) == 1);
             prStorageDestroy(stores[i]);
         }

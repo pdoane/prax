@@ -1,10 +1,8 @@
+#include "pr/array.h"
 #include "pr/draw_shared_atlas.h"
+#include "pr/string.h"
 
 #include "tools/harness/test.h"
-
-#include <cstdio>
-#include <string>
-#include <vector>
 
 extern "C" int prTestDrawSharedCApi(void);
 
@@ -12,16 +10,10 @@ namespace pr_impl {
 
 namespace {
 
+using namespace pr;
+
 const PrFont* load(const char* name) {
-    std::string path = std::string(PR_FONTS_DIR) + "/" + name;
-    std::vector<uint8_t> bytes;
-    FILE* file = std::fopen(path.c_str(), "rb");
-    REQUIRE(file != nullptr);
-    uint8_t buffer[65536];
-    size_t read = 0;
-    while ((read = std::fread(buffer, 1, sizeof(buffer), file)) != 0)
-        bytes.insert(bytes.end(), buffer, buffer + read);
-    std::fclose(file);
+    Array<uint8_t> bytes = harness::readFile(format("{}/{}", PR_FONTS_DIR, name));
     const PrFont* font = nullptr;
     REQUIRE(prFontCreate(bytes, 0, nullptr, &font) == PrStatus_Ok);
     return font;

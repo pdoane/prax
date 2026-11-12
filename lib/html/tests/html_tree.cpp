@@ -7,13 +7,12 @@
 // html/#tree-construction - https://html.spec.whatwg.org/multipage/parsing.html#tree-construction
 
 #include "pr/assert.h"
+#include "pr/print.h"
 #include "pr/string_ops.h"
 #include "pr/text_buffer.h"
 
 #include "html/src/html_parser.h"
 #include "tools/harness/harness.h"
-
-#include <stdio.h>
 
 using namespace harness;
 
@@ -199,7 +198,7 @@ int main() {
 
     while (harnessReadCase(&test)) {
         if (test.fieldCount != 3) {
-            fprintf(stderr, "a case names a scripting flag and a context element\n");
+            printError("a case names a scripting flag and a context element\n");
             return 2;
         }
         prTextBufferClear(&out);

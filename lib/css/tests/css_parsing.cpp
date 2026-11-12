@@ -8,6 +8,7 @@
 
 #include "pr/assert.h"
 #include "pr/float.h"
+#include "pr/print.h"
 #include "pr/string_ops.h"
 #include "pr/text_buffer.h"
 #include "pr/utf8.h"
@@ -16,10 +17,9 @@
 #include "css/src/css_syntax.h"
 #include "tools/harness/harness.h"
 
-#include <stdio.h>
-#include <string.h>
-
 using namespace harness;
+
+using namespace pr;
 
 using namespace pr_impl;
 
@@ -397,12 +397,12 @@ void runUrange(PrTextBuffer* out, const CssTokenStream* ts) {
 int main(int argc, char** argv) {
     prCrashHandler();
     if (argc != 2) {
-        fprintf(stderr, "usage: css_parsing <suite>\n");
+        printError("usage: css_parsing <suite>\n");
         return 2;
     }
 
-    const char* suite = argv[1];
-    bool ranges = strcmp(suite, "urange") == 0;
+    PrStringView suite = argv[1];
+    bool ranges = suite == "urange";
 
     HarnessCase test = {};
     PrTextBuffer out = {};
@@ -414,24 +414,24 @@ int main(int argc, char** argv) {
         CssTokenStream ts = cssStream(&tokens);
 
         prTextBufferClear(&out);
-        if (strcmp(suite, "component_value_list") == 0)
+        if (suite == "component_value_list")
             writeComponentValueList(&out, &ts, cssStreamAll(&ts));
-        else if (strcmp(suite, "one_component_value") == 0)
+        else if (suite == "one_component_value")
             runOneComponentValue(&out, &ts);
-        else if (strcmp(suite, "one_declaration") == 0)
+        else if (suite == "one_declaration")
             runOneDeclaration(&out, &ts);
-        else if (strcmp(suite, "declaration_list") == 0)
+        else if (suite == "declaration_list")
             runBlock(&out, &ts, false);
-        else if (strcmp(suite, "one_rule") == 0)
+        else if (suite == "one_rule")
             runOneRule(&out, &ts);
-        else if (strcmp(suite, "rule_list") == 0 || strcmp(suite, "stylesheet") == 0)
+        else if (suite == "rule_list" || suite == "stylesheet")
             runBlock(&out, &ts, true);
-        else if (strcmp(suite, "An+B") == 0)
+        else if (suite == "An+B")
             runAnPlusB(&out, &ts);
         else if (ranges)
             runUrange(&out, &ts);
         else {
-            fprintf(stderr, "no suite named %s\n", suite);
+            printError("no suite named {}\n", suite);
             return 2;
         }
 

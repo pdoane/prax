@@ -332,7 +332,7 @@ void posterFetched(void* PR_NULLABLE data, const DomFetchResult* result) {
     HtmlMedia* media = fetch->media;
     PrImageCodec* images = media->window != nullptr ? media->window->images : nullptr;
     if (fetch->generation == media->posters && images != nullptr && domFetchIsOk(result)) {
-        PrByteView bytes{reinterpret_cast<const uint8_t*>(result->body.data), result->body.size};
+        PrByteView bytes = prStringBytes(result->body);
         const PrDrawImage* poster = nullptr;
         if (prDrawImageCreateFromBytes(images, bytes, &poster, nullptr) == PrStatus_Ok) {
             prDrawImageRelease(media->poster);
@@ -539,7 +539,7 @@ void openSourceDecoder(HtmlMedia* media) {
 bool resourceArrived(HtmlMedia* media, PrStringView body) {
     PrMediaCodec* codec = media->window != nullptr ? media->window->mediaCodec : nullptr;
     PrMediaInfo info{};
-    PrByteView bytes{reinterpret_cast<const uint8_t*>(body.data), body.size};
+    PrByteView bytes = prStringBytes(body);
     if (codec == nullptr || prMediaDecoderCreate(codec, bytes, &media->decoder, &info) != PrStatus_Ok)
         return false;
     startAudio(media, info);

@@ -3,6 +3,8 @@
 
 #include "pr/css.h"
 #include "pr/css_presentation.h"
+#include "pr/float.h"
+#include "pr/float_convert.h"
 #include "pr/font.h"
 #include "pr/font_set.h"
 #include "pr/html.h"
@@ -10,22 +12,22 @@
 #include "pr/layout_style.h"
 #include "pr/layout_tree.h"
 #include "pr/layout_value.h"
+#include "pr/string.h"
 #include "pr/text_font.h"
 #include "pr/text_harfbuzz.h"
 #include "pr/text_transform.h"
 
 #include "tools/harness/test.h"
 
-#include <cmath>
-#include <cstdlib>
-#include <string>
-
 namespace pr_impl {
+
+using namespace pr;
+
 namespace {
 
 // Loads the font in the file `name` of the test fonts.
 const PrFont* load(const char* name) {
-    std::string path = std::string(PR_FONTS_DIR) + "/" + name;
+    String path = format("{}/{}", PR_FONTS_DIR, PrStringView(name));
     const PrFont* font = nullptr;
     REQUIRE(prFontCreateFromFile(path, 0, nullptr, &font) == PrStatus_Ok);
     return font;
@@ -80,15 +82,13 @@ struct Page {
     }
 
     // Returns the resolved value of `property` of the element with `id`, as a script reads it.
-    std::string operator()(const char* id, PrCssProperty property) {
+    String operator()(const char* id, PrCssProperty property) {
         PrDomElement* element = prDomNodeGetElementById(prDomDocumentAsNode(document), id);
         REQUIRE(element != nullptr);
         PrCssDeclarationName name = prCssDeclarationNameFromProperty(property);
         PrCssStyleProperties* computed = prCssElementComputedStyle(element, "");
         PrRawString read = prCssStyleDeclarationGetPropertyValue(prCssStylePropertiesAsCssStyleDeclaration(computed), &name);
-        std::string value(prRawStringView(&read).data, prRawStringView(&read).size);
-        prRawStringReset(&read);
-        return value;
+        return String::adopt(read);
     }
 
     // Returns the element with `id`.
@@ -122,14 +122,16 @@ struct Page {
         PrRawString report{};
         bool same = prCssPresentationVerify(presentation, &report);
         if (!same)
-            MESSAGE(std::string(prRawStringView(&report).data, prRawStringView(&report).size));
+            MESSAGE(report);
         CHECK(same);
         prRawStringReset(&report);
     }
 
     // Returns the computed font size of the element with `id`, in px.
     double fontSize(const char* id) {
-        return std::strtod((*this)(id, PrCssProperty_FontSize).c_str(), nullptr);
+        double size = 0;
+        prF64ParsePrefix((*this)(id, PrCssProperty_FontSize), &size);
+        return size;
     }
 };
 
@@ -195,8 +197,8 @@ TEST_CASE("math-depth stays within its range however add() and scriptlevel nest"
     CHECK(page("up", PrCssProperty_MathDepth) == "1000000000");
     CHECK(page("more", PrCssProperty_MathDepth) == "1000000000");
     CHECK(page("down", PrCssProperty_MathDepth) == "-1000000000");
-    CHECK(std::isfinite(page.fontSize("up")));
-    CHECK(std::isfinite(page.fontSize("down")));
+    CHECK(prF64IsFinite(page.fontSize("up")));
+    CHECK(prF64IsFinite(page.fontSize("down")));
 }
 
 TEST_CASE("font-size: math scales by the MATH table's script scales, or by 0.71 a level without one") {
@@ -204,14 +206,14 @@ TEST_CASE("font-size: math scales by the MATH table's script scales, or by 0.71 
     Page page("<math id=m style='font-size: 100px'><msub><mi>x</mi><mi id=s1>i</mi></msub><msub><mi>x</mi><msub>"
         "<mi>y</mi><mi id=s2>j</mi></msub></msub><mrow id=d5 style='math-depth: 5'></mrow><mrow style='math-depth: 2'>"
         "<mrow id=back style='math-depth: 0'></mrow></mrow></math>");
-    CHECK(std::fabs(page.fontSize("s1") - 60) < 0.01);
-    CHECK(std::fabs(page.fontSize("s2") - 50) < 0.01);
-    CHECK(std::fabs(page.fontSize("d5") - 50 * 0.71 * 0.71 * 0.71) < 0.01);
-    CHECK(std::fabs(page.fontSize("back") - 100) < 0.01);
+    CHECK(prF64Abs(page.fontSize("s1") - 60) < 0.01);
+    CHECK(prF64Abs(page.fontSize("s2") - 50) < 0.01);
+    CHECK(prF64Abs(page.fontSize("d5") - 50 * 0.71 * 0.71 * 0.71) < 0.01);
+    CHECK(prF64Abs(page.fontSize("back") - 100) < 0.01);
     Page plain("<math style='font-size: 100px'><msub><mi>x</mi><mi id=s1>i</mi></msub><mrow id=d2 "
         "style='math-depth: 2'></mrow></math>", false);
-    CHECK(std::fabs(plain.fontSize("s1") - 71) < 0.01);
-    CHECK(std::fabs(plain.fontSize("d2") - 50.41) < 0.01);
+    CHECK(prF64Abs(plain.fontSize("s1") - 71) < 0.01);
+    CHECK(prF64Abs(plain.fontSize("d2") - 50.41) < 0.01);
 }
 
 TEST_CASE("MathML's attributes are presentational hints") {
@@ -263,7 +265,7 @@ TEST_CASE("a change to a MathML attribute restyles what its hints reach") {
     prDomElementSetAttribute(page.element("r"), "scriptlevel", "2");
     page.update();
     CHECK(page("x", PrCssProperty_MathDepth) == "2");
-    CHECK(std::fabs(page.fontSize("x") - 50) < 0.01);
+    CHECK(prF64Abs(page.fontSize("x") - 50) < 0.01);
     prDomElementSetAttribute(page.element("t"), "columnalign", "right");
     page.update();
     CHECK(page("c", PrCssProperty_TextAlign) == "right");

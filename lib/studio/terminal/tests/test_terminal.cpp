@@ -1,5 +1,6 @@
 // Tests the terminal frame by frame, driven as an application drives it, with programs that the tests run.
 
+#include "pr/array.h"
 #include "pr/atomic.h"
 #include "pr/base64.h"
 #include "pr/count_of.h"
@@ -8,11 +9,14 @@
 #include "pr/environment.h"
 #include "pr/file.h"
 #include "pr/float.h"
+#include "pr/function.h"
 #include "pr/kit_theme.h"
 #include "pr/layout_frame.h"
 #include "pr/min_max.h"
 #include "pr/process.h"
 #include "pr/raw_array.h"
+#include "pr/span.h"
+#include "pr/string.h"
 #include "pr/string_ops.h"
 #include "pr/terminal.h"
 #include "pr/text_font.h"
@@ -29,11 +33,6 @@
 #include "tools/harness/kit_fixture.h"
 
 #include "tools/harness/test.h"
-
-#include <functional>
-#include <initializer_list>
-#include <string>
-#include <vector>
 
 extern "C" int prTestTerminalCApi(void);
 
@@ -53,11 +52,11 @@ constexpr double kPatience = 10000;
 struct FakeApp {
     PrApp app;
     Atomic<uint32_t> wakes{};
-    std::vector<std::string> urls;
-    std::string clipboard;
+    Array<String> urls;
+    String clipboard = "";
     bool clipboardRequested = false;
     bool active = true;
-    std::vector<std::string> posted;
+    Array<String> posted;
     PrStatus postStatus = PrStatus_Ok;
     uint32_t attention = 0;
 
@@ -68,16 +67,15 @@ struct FakeApp {
         app.requestAttention = [](PrApp* a) { ++reinterpret_cast<FakeApp*>(a)->attention; };
         app.notificationPost = [](PrApp* a, const PrAppNotificationDesc* desc) -> PrStatus {
             FakeApp* fake = reinterpret_cast<FakeApp*>(a);
-            fake->posted.push_back(std::string(desc->title.data, desc->title.size) + "|" +
-                std::string(desc->body.data, desc->body.size) + "|" + std::to_string(desc->tag));
+            fake->posted.push(format("{}|{}|{}", desc->title, desc->body, desc->tag));
             return fake->postStatus;
         };
         app.openUrl = [](PrApp* a, PrStringView url) -> PrStatus {
-            reinterpret_cast<FakeApp*>(a)->urls.emplace_back(url.data, url.size);
+            reinterpret_cast<FakeApp*>(a)->urls.push(String(url));
             return PrStatus_Ok;
         };
         app.setClipboardText = [](PrApp* a, PrStringView text) -> PrStatus {
-            reinterpret_cast<FakeApp*>(a)->clipboard.assign(text.data, text.size);
+            reinterpret_cast<FakeApp*>(a)->clipboard.assign(text.isNull() ? PrStringView("") : text);
             return PrStatus_Ok;
         };
         app.requestClipboardText = [](PrApp* a) { reinterpret_cast<FakeApp*>(a)->clipboardRequested = true; };
@@ -106,7 +104,7 @@ struct FakeLauncher {
     PrProcessReceiveFn PR_NULLABLE receive = nullptr;
     void* PR_NULLABLE receiveContext = nullptr;
     PrMutex mutex;
-    std::string written;
+    String written = "";
 
     FakeLauncher() {
         prMutexInit(&mutex);
@@ -124,7 +122,7 @@ struct FakeLauncher {
         p.write = [](PrProcess* written, PrByteView bytes) {
             FakeLauncher* fake = reinterpret_cast<FakeProcess*>(written)->launcher;
             prMutexLock(&fake->mutex);
-            fake->written.append(reinterpret_cast<const char*>(bytes.data), bytes.size);
+            fake->written.append(prStringFromBytes(bytes));
             prMutexUnlock(&fake->mutex);
         };
         p.closeInput = [](PrProcess*) {};
@@ -142,21 +140,20 @@ struct FakeLauncher {
 
     // Gives `text` to the terminal as the program's output, on the calling thread, as a backend's thread gives it. The
     // terminal must have launched its program through this launcher.
-    void output(const std::string& text) {
-        receive(receiveContext, &process.process, PrProcessStream_Output,
-            PrByteView{reinterpret_cast<const uint8_t*>(text.data()), text.size()});
+    void output(PrStringView text) {
+        receive(receiveContext, &process.process, PrProcessStream_Output, prStringBytes(text));
     }
 
     // What the terminal has written to the program.
-    std::string input() {
+    String input() {
         prMutexLock(&mutex);
-        std::string text = written;
+        String text = written;
         prMutexUnlock(&mutex);
         return text;
     }
 
     // Sets `desc` to launch through this launcher (Term's setup).
-    std::function<void(PrTerminalDesc*)> setup() {
+    Function<void(PrTerminalDesc*)> setup() {
         return [this](PrTerminalDesc* desc) { desc->launcher = &launcher; };
     }
 };
@@ -164,11 +161,11 @@ struct FakeLauncher {
 // Gives `text` to a terminal from a thread of its own, as a program's output, until stopped. Stopping joins the thread.
 struct Flood {
     FakeLauncher* fake;
-    std::string text;
+    String text;
     Atomic<uint32_t> stopping{};
     PrThread thread{};
 
-    Flood(FakeLauncher* launcher, std::string flooded) : fake(launcher), text(std::move(flooded)) {
+    Flood(FakeLauncher* launcher, PrStringView flooded) : fake(launcher), text(flooded) {
         prThreadStart(&thread, [](void* context) {
             Flood* flood = static_cast<Flood*>(context);
             while (flood->stopping.load() == 0)
@@ -232,8 +229,8 @@ struct Term {
     PrVec2 viewport{640, 480};
 
     // If `setup` is set, it edits the terminal's description before the terminal is created.
-    Term(PrStringView program, std::initializer_list<PrStringView> arguments, PrApp* PR_NULLABLE app = nullptr,
-            PrStringView directory = {}, const std::function<void(PrTerminalDesc*)>& setup = nullptr,
+    Term(PrStringView program, Span<const PrStringView> arguments, PrApp* PR_NULLABLE app = nullptr,
+            PrStringView directory = {}, const Function<void(PrTerminalDesc*)>& setup = {},
             const KitFonts& fonts = KitFonts{}) : f(fonts) {
         PrTerminalDesc desc{
             .kit = f.kit,
@@ -241,8 +238,8 @@ struct Term {
             .app = app,
             .launcher = launcher,
             .program = program,
-            .arguments = arguments.begin(),
-            .argumentCount = uint32_t(arguments.size()),
+            .arguments = arguments.data(),
+            .argumentCount = arguments.count(),
             .directory = directory,
             .scrollback = 100,
             .notificationTag = 9,
@@ -271,33 +268,26 @@ struct Term {
     }
 
     // The working directory that the terminal reports.
-    std::string directory() const {
-        PrRawString text = prTerminalWorkingDirectory(terminal);
-        std::string out(prRawStringView(&text).data, prRawStringView(&text).size);
-        prRawStringReset(&text);
-        return out;
-    }
+    String directory() const { return String::adopt(prTerminalWorkingDirectory(terminal)); }
 
     // The text of the screen's rows, each followed by a line feed, without trailing spaces.
-    std::string screen() const {
+    String screen() const {
         Locked vterm(terminal);
         PrUVec2 extent = prVtermExtent(vterm);
-        std::string out;
+        String out = "";
         for (uint32_t row = 0; row < extent.y; ++row) {
             PrRawString text = prRawStringNull();
             uint32_t index = prVtermScrollbackCount(vterm) + row;
             prVtermLineAppendText(vterm, index, 0, extent.x, &text);
-            std::string line(prRawStringView(&text).data, prRawStringView(&text).size);
+            out.append(prStringTrimEndByte(prRawStringView(&text), ' '));
+            out.append('\n');
             prRawStringReset(&text);
-            while (!line.empty() && line.back() == ' ')
-                line.pop_back();
-            out += line + "\n";
         }
         return out;
     }
 
     // Runs frames until `done` returns true. Fails the test if that takes longer than kPatience.
-    void frameUntil(const std::function<bool()>& done) {
+    void frameUntil(const Function<bool()>& done) {
         double end = prTimeMonotonicMilliseconds() + kPatience;
         while (!done()) {
             if (prTimeMonotonicMilliseconds() >= end)
@@ -320,12 +310,12 @@ struct Term {
     // as sleep does.
     void settle() {
 #if defined(_WIN32)
-        std::string name(prTerminalTitle(terminal).data, prTerminalTitle(terminal).size);
-        frameUntil([&] { return prTerminalTitle(terminal) != PrStringView(name); });
+        String name(prTerminalTitle(terminal));
+        frameUntil([&] { return prTerminalTitle(terminal) != name.view(); });
 #endif
     }
 
-    bool shows(const std::string& text) const { return screen().find(text) != std::string::npos; }
+    bool shows(PrStringView text) const { return prStringContains(screen(), text); }
 
     // The center of the screen cell at `column` and `row`, in viewport coordinates.
     PrVec2 cellCenter(uint32_t column, uint32_t row) {
@@ -336,12 +326,7 @@ struct Term {
         return PrVec2{x, bounds.top + origin.y + (float(row) + 0.5f) * cell.y};
     }
 
-    std::string selection() const {
-        PrRawString text = prTerminalSelection(terminal);
-        std::string out(prRawStringView(&text).data, prRawStringView(&text).size);
-        prRawStringReset(&text);
-        return out;
-    }
+    String selection() const { return String::adopt(prTerminalSelection(terminal)); }
 
     void press(PrVec2 at, uint32_t clicks, PrAppModifierFlags modifiers = 0) {
         f.push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .modifiers = modifiers, .clicks = clicks, .position = at});
@@ -356,34 +341,32 @@ struct Term {
     }
 
     // Writes `text` to the screen as if the program wrote it.
-    void write(const std::string& text) {
-        prVtermWrite(Locked(terminal), PrByteView{reinterpret_cast<const uint8_t*>(text.data()), text.size()});
+    void write(PrStringView text) {
+        prVtermWrite(Locked(terminal), prStringBytes(text));
     }
 
     // Renders the tree that the last frame laid out, and returns the color of the pixel at `at` in the viewport.
     // `canvas` sets the pixels before the tree paints.
     PrColor8 pixel(PrVec2 at, KitCanvas canvas = KitCanvas_Cleared) {
-        std::vector<uint8_t> rgba;
+        Array<uint8_t> rgba;
         REQUIRE(f.render(&rgba, canvas));
-        size_t i = (size_t(at.y) * KitFixture::kRenderWidth + size_t(at.x)) * 4;
+        uint32_t i = (uint32_t(at.y) * KitFixture::kRenderWidth + uint32_t(at.x)) * 4;
         return PrColor8{rgba[i], rgba[i + 1], rgba[i + 2], rgba[i + 3]};
     }
 };
 
 // Returns the binary's folder (harness::testFolder), after writing a file of three lines named `name` in it. The path
 // is normalized, as the terminal's paths are.
-std::string folderWithFile(const std::string& name) {
-    PrRawString absolute = prFilePathAbsolute(harness::testFolder(), "");
-    std::string folder(prRawStringView(&absolute).data, prRawStringView(&absolute).size);
-    prRawStringReset(&absolute);
-    std::string text = "one\ntwo\nthree\n";
-    REQUIRE(prFileWrite(folder + "/" + name, PrByteView{reinterpret_cast<const uint8_t*>(text.data()), text.size()}));
+String folderWithFile(PrStringView name) {
+    String folder = String::adopt(prFilePathAbsolute(harness::testFolder(), ""));
+    PrStringView text = "one\ntwo\nthree\n";
+    REQUIRE(prFileWrite(concat(folder, "/", name), prStringBytes(text)));
     return folder;
 }
 
 // A file link that the terminal passed to its handler for opening files.
 struct OpenedFile {
-    std::string path;
+    String path;
     uint32_t line;
     uint32_t column;
 
@@ -393,18 +376,18 @@ struct OpenedFile {
 };
 
 // Describes the links found in `text`. A URL is "url|<url>", and a file reference is "<text>|<path>|<line>|<column>".
-std::vector<std::string> textLinks(const std::string& text) {
+Array<String> textLinks(PrStringView text) {
     RawArray<TerminalTextLink> links;
-    terminalTextLinks(PrStringView(text), &links);
-    std::vector<std::string> out;
+    terminalTextLinks(text, &links);
+    Array<String> out;
     for (const TerminalTextLink& link : links.span()) {
-        std::string target = text.substr(link.targetStart, link.targetEnd - link.targetStart);
+        PrStringView target = prStringSlice(text, link.targetStart, link.targetEnd - link.targetStart);
         if (link.kind == TerminalTextLinkKind_Url) {
-            out.push_back("url|" + target);
+            out.push(concat("url|", target));
             continue;
         }
-        out.push_back(text.substr(link.start, link.end - link.start) + "|" + target + "|" + std::to_string(link.line) +
-            "|" + std::to_string(link.column));
+        out.push(format("{}|{}|{}|{}", prStringSlice(text, link.start, link.end - link.start), target, link.line,
+            link.column));
     }
     links.reset();
     return out;
@@ -413,58 +396,51 @@ std::vector<std::string> textLinks(const std::string& text) {
 // Returns true if each of the red, green and blue channels of `a` is within two of `b`. The tolerance covers the
 // rounding of rendering's conversions.
 bool near(PrColor8 a, PrColor8 b) {
-    auto close = [](uint8_t x, uint8_t y) { return (x > y ? x - y : y - x) <= 2; };
+    auto close = [](uint8_t x, uint8_t y) { return absDifference(x, y) <= 2; };
     return close(a.r, b.r) && close(a.g, b.g) && close(a.b, b.b);
 }
 
 // Creates and returns the folder `name` in the binary's folder (harness::testFolder).
-std::string subfolder(const std::string& name) {
-    std::string folder = harness::testFolder() + "/" + name;
+String subfolder(PrStringView name) {
+    String folder = concat(harness::testFolder(), "/", name);
     REQUIRE(prFileCreateDirectory(folder));
     return folder;
 }
 
-void writeFile(const std::string& path, const std::string& text) {
-    REQUIRE(prFileWrite(path, PrByteView{reinterpret_cast<const uint8_t*>(text.data()), text.size()}));
-}
-
-std::string readFile(const std::string& path) {
-    PrByteView bytes{};
-    REQUIRE(prFileMap(path, &bytes));
-    std::string text(reinterpret_cast<const char*>(bytes.data), bytes.size);
-    prFileUnmap(&bytes);
-    return text;
+void writeFile(PrStringView path, PrStringView text) {
+    REQUIRE(prFileWrite(path, prStringBytes(text)));
 }
 
 // Returns the text of `string`, and releases `string`.
-std::string taken(PrRawString string) {
-    std::string text(prRawStringView(&string).data, prRawStringView(&string).size);
-    prRawStringReset(&string);
+String taken(PrRawString string) {
+    String text = String::adopt(string);
+    if (text.isNull())
+        text = "";
     return text;
 }
 
-std::vector<std::string> strings(const RawArray<PrRawString>& array) {
-    std::vector<std::string> out;
+Array<String> strings(const RawArray<PrRawString>& array) {
+    Array<String> out;
     for (const PrRawString& string : array.span())
-        out.emplace_back(prRawStringView(&string).data, prRawStringView(&string).size);
+        out.push(String(prRawStringView(&string)));
     return out;
 }
 
-std::string nameOf(const std::string& path) {
-    PrStringView name = prFilePathName(path);
-    return std::string(name.data, name.size);
+PrStringView nameOf(PrStringView path) {
+    return prFilePathName(path);
 }
 
 // The installed shells that the terminal has an integration for, with one path for each shell.
-std::vector<std::string> integratedShells() {
-    std::vector<std::string> found;
-    for (const char* path : {"/bin/zsh", "/usr/bin/zsh", "/bin/bash", "/usr/bin/bash"}) {
+Array<String> integratedShells() {
+    Array<String> found;
+    const char* const paths[] = {"/bin/zsh", "/usr/bin/zsh", "/bin/bash", "/usr/bin/bash"};
+    for (const char* path : paths) {
         bool seen = false;
-        for (const std::string& shell : found)
+        for (const String& shell : found)
             seen = seen || nameOf(shell) == nameOf(path);
         PrFileInfo info{};
         if (!seen && prFileInfo(path, &info) && info.kind == PrFileKind_Regular)
-            found.emplace_back(path);
+            found.push(String(path));
     }
     return found;
 }
@@ -479,29 +455,45 @@ PrAppModifierFlags promptModifiers() {
 }
 
 // What a shell with the terminal's integration writes for a prompt.
-const std::string kPrompt = "\x1b]133;A\x07$ \x1b]133;B\x07";
+constexpr PrStringView kPrompt = "\x1b]133;A\x07$ \x1b]133;B\x07";
 
 // What a shell with the terminal's integration writes for one command: a prompt, the typed `input`, each line of
 // `output`, and the command's end with the exit code `exit`.
-std::string command(const std::string& input, const std::vector<std::string>& output, const std::string& exit) {
-    std::string text = kPrompt + input + "\r\n\x1b]133;C\x07";
-    for (const std::string& line : output)
-        text += line + "\r\n";
-    return text + "\x1b]133;D;" + exit + "\x07";
+String command(PrStringView input, Span<const PrStringView> output, PrStringView exit) {
+    String text = concat(kPrompt, input, "\r\n\x1b]133;C\x07");
+    for (PrStringView line : output) {
+        text.append(line);
+        text.append("\r\n");
+    }
+    text.append("\x1b]133;D;");
+    text.append(exit);
+    text.append("\x07");
+    return text;
+}
+
+// Views of `strings`, valid while they are.
+Array<PrStringView> viewsOf(const Array<String>& strings) {
+    Array<PrStringView> views;
+    for (const String& text : strings)
+        views.push(text);
+    return views;
 }
 
 // `count` lines of output, each `prefix` followed by its index.
-std::vector<std::string> numbered(const std::string& prefix, uint32_t count) {
-    std::vector<std::string> lines;
+Array<String> numbered(PrStringView prefix, uint32_t count) {
+    Array<String> lines;
     for (uint32_t i = 0; i < count; ++i)
-        lines.push_back(prefix + std::to_string(i));
+        lines.push(format("{}{}", prefix, i));
     return lines;
 }
 
-std::string joined(const std::vector<std::string>& lines) {
-    std::string text;
-    for (const std::string& line : lines)
-        text += (text.empty() ? "" : "\n") + line;
+String joined(const Array<String>& lines) {
+    String text = "";
+    for (const String& line : lines) {
+        if (!text.isEmpty())
+            text.append('\n');
+        text.append(line);
+    }
     return text;
 }
 
@@ -519,21 +511,21 @@ PrColor8 color8Of(PrColor color) {
 }
 
 // The sequence that opens a hyperlink to `uri` with `params` (OSC 8), and the one that closes it.
-std::string hyperlink(const std::string& uri, const std::string& params = "") {
-    return "\x1b]8;" + params + ";" + uri + "\x1b\\";
+String hyperlink(PrStringView uri, PrStringView params = "") {
+    return concat("\x1b]8;", params, ";", uri, "\x1b\\");
 }
-const std::string kHyperlinkEnd = "\x1b]8;;\x1b\\";
+constexpr PrStringView kHyperlinkEnd = "\x1b]8;;\x1b\\";
 
 // Renders the tree that the last frame laid out, and returns true if any pixel in the lower half of the cell at
 // `column` and `row` is near `color`.
 bool cellHasColor(Term& t, uint32_t column, uint32_t row, PrColor8 color) {
-    std::vector<uint8_t> rgba;
+    Array<uint8_t> rgba;
     REQUIRE(t.f.render(&rgba));
     PrVec2 center = t.cellCenter(column, row);
     PrVec2 cell = prTerminalCellExtent(t.terminal);
     for (uint32_t y = uint32_t(center.y); y < uint32_t(center.y + cell.y / 2); ++y) {
         for (uint32_t x = uint32_t(center.x - cell.x / 2) + 1; x + 1 < uint32_t(center.x + cell.x / 2); ++x) {
-            size_t i = (size_t(y) * KitFixture::kRenderWidth + x) * 4;
+            uint32_t i = (y * KitFixture::kRenderWidth + x) * 4;
             if (near(PrColor8{rgba[i], rgba[i + 1], rgba[i + 2], rgba[i + 3]}, color))
                 return true;
         }
@@ -545,13 +537,13 @@ bool cellHasColor(Term& t, uint32_t column, uint32_t row, PrColor8 color) {
 // by row. `bounds` is in viewport coordinates.
 struct CellInk {
     uint32_t count = 0;
-    std::vector<bool> inked;
+    Array<bool> inked;
     PrRect bounds{1e9f, 1e9f, -1e9f, -1e9f};
 };
 
 // Renders the tree that the last frame laid out, and returns the ink of the cell at `column` and `row`.
 CellInk cellInk(Term& t, uint32_t column, uint32_t row) {
-    std::vector<uint8_t> rgba;
+    Array<uint8_t> rgba;
     REQUIRE(t.f.render(&rgba));
     PrColor8 background = prVtermRoleColor(Locked(t.terminal), PrVtermColorRole_Background);
     PrVec2 center = t.cellCenter(column, row);
@@ -559,9 +551,9 @@ CellInk cellInk(Term& t, uint32_t column, uint32_t row) {
     CellInk ink;
     for (uint32_t y = uint32_t(center.y - cell.y / 2); y < uint32_t(center.y + cell.y / 2); ++y) {
         for (uint32_t x = uint32_t(center.x - cell.x / 2); x < uint32_t(center.x + cell.x / 2); ++x) {
-            size_t i = (size_t(y) * KitFixture::kRenderWidth + x) * 4;
+            uint32_t i = (y * KitFixture::kRenderWidth + x) * 4;
             bool inked = !near(PrColor8{rgba[i], rgba[i + 1], rgba[i + 2], rgba[i + 3]}, background);
-            ink.inked.push_back(inked);
+            ink.inked.push(inked);
             if (!inked)
                 continue;
             ++ink.count;
@@ -575,10 +567,14 @@ CellInk cellInk(Term& t, uint32_t column, uint32_t row) {
 }
 
 // A graphics command with the `control` keys, which transmits `pixels` in base64.
-std::string graphics(const std::string& control, const std::string& pixels = "") {
-    std::string payload(prBase64EncodedSize(pixels.size()), '\0');
-    prBase64Encode(pixels, payload.data(), payload.size());
-    return "\x1b_G" + control + (pixels.empty() ? "" : ";" + payload) + "\x1b\\";
+String graphics(PrStringView control, PrStringView pixels = "") {
+    Array<char> payload(prBase64EncodedSize(pixels.size));
+    prBase64Encode(pixels, payload.data(), payload.count());
+    String out = concat("\x1b_G", control);
+    if (!pixels.isEmpty())
+        out.append(concat(";", PrStringView(payload.data(), payload.count())));
+    out.append("\x1b\\");
+    return out;
 }
 
 // The pixel extent of a cell on the terminal's screen.
@@ -587,19 +583,22 @@ PrUVec2 cellPixelExtent(PrTerminal* terminal) {
 }
 
 // RGB pixels of one color, enough to fill `columns` by `rows` cells of the terminal's screen.
-std::string cellPixels(PrTerminal* terminal, uint32_t columns, uint32_t rows, PrColor8 color) {
+String cellPixels(PrTerminal* terminal, uint32_t columns, uint32_t rows, PrColor8 color) {
     PrUVec2 cell = cellPixelExtent(terminal);
-    std::string out;
-    for (uint32_t i = 0; i < cell.x * columns * cell.y * rows; ++i)
-        out += std::string{char(color.r), char(color.g), char(color.b)};
+    String out = "";
+    for (uint32_t i = 0; i < cell.x * columns * cell.y * rows; ++i) {
+        out.append(char(color.r));
+        out.append(char(color.g));
+        out.append(char(color.b));
+    }
     return out;
 }
 
 // The control keys that transmit and put an RGB image of `columns` by `rows` cells without moving the cursor, followed
 // by `keys`.
-std::string cellImage(PrTerminal* terminal, uint32_t columns, uint32_t rows, const std::string& keys) {
+String cellImage(PrTerminal* terminal, uint32_t columns, uint32_t rows, PrStringView keys) {
     PrUVec2 cell = cellPixelExtent(terminal);
-    return "a=T,f=24,C=1,s=" + std::to_string(cell.x * columns) + ",v=" + std::to_string(cell.y * rows) + keys;
+    return format("a=T,f=24,C=1,s={},v={}{}", cell.x * columns, cell.y * rows, keys);
 }
 
 constexpr PrColor8 kImageRed = {0xff, 0x00, 0x00, 0xff};
@@ -630,13 +629,14 @@ TEST_CASE("terminal: the public header compiles as C") {
 }
 
 TEST_CASE("terminal: the screen fills its extent with whole cells, and the program's terminal has its size") {
-    Term t("sh", {"-c", "stty size; sleep 5"});
+    const PrStringView arguments[] = {"-c", "stty size; sleep 5"};
+    Term t("sh", arguments);
     PrUVec2 extent = prVtermExtent(Locked(t.terminal));
     CHECK(extent.x >= 60);
     CHECK(extent.x <= 100);
     CHECK(extent.y >= 20);
     CHECK(extent.y <= 40);
-    std::string size = std::to_string(extent.y) + " " + std::to_string(extent.x);
+    String size = format("{} {}", extent.y, extent.x);
     t.frameUntil([&] { return t.shows(size); });
     CHECK(t.f.paintedCommands() > 0);
 }
@@ -653,7 +653,8 @@ TEST_CASE("terminal: typed text reaches the program, whose terminal echoes it") 
 }
 
 TEST_CASE("terminal: the program sets the title, and its exit shows on the screen") {
-    Term t("sh", {"-c", "printf '\\033]2;Greeting\\007'; exit 3"});
+    const PrStringView arguments[] = {"-c", "printf '\\033]2;Greeting\\007'; exit 3"};
+    Term t("sh", arguments);
     t.frameUntil([&] { return t.shows("[exited with code 3]"); });
     CHECK(prTerminalTitle(t.terminal) == "Greeting");
     PrProcessInfo info = prTerminalProcessInfo(t.terminal);
@@ -662,7 +663,8 @@ TEST_CASE("terminal: the program sets the title, and its exit shows on the scree
 }
 
 TEST_CASE("terminal: a double click selects a word, a triple click a line, and a drag with Alt a block") {
-    Term t("sh", {"-c", "printf 'alpha beta-gamma delta\\nbravo charlie\\n'; sleep 5"});
+    const PrStringView arguments[] = {"-c", "printf 'alpha beta-gamma delta\\nbravo charlie\\n'; sleep 5"};
+    Term t("sh", arguments);
     t.frameUntil([&] { return t.shows("bravo charlie"); });
     PrVec2 beta = t.cellCenter(8, 0);
     t.f.move(beta);
@@ -697,11 +699,12 @@ TEST_CASE("terminal: a double click selects a word, a triple click a line, and a
     // A click that does not move selects nothing.
     t.f.click(beta);
     t.f.frame();
-    CHECK(t.selection().empty());
+    CHECK(t.selection().isEmpty());
 }
 
 TEST_CASE("terminal: the pointer over a URL with the primary modifier shows that a click opens it") {
-    Term t("sh", {"-c", "printf 'see (https://example.com/a), or not\\n'; sleep 5"});
+    const PrStringView arguments[] = {"-c", "printf 'see (https://example.com/a), or not\\n'; sleep 5"};
+    Term t("sh", arguments);
     t.frameUntil([&] { return t.shows("https://example.com/a"); });
     t.move(t.cellCenter(10, 0), primaryModifier());
     t.f.frame();
@@ -721,11 +724,14 @@ TEST_CASE("terminal: the pointer over a URL with the primary modifier shows that
 
 TEST_CASE("terminal: a click with the primary modifier opens the URL under it, and a plain click does not") {
     FakeApp app;
-    Term t("sh", {"-c", "printf 'see (https://example.com/a) and www.example.org file:///tmp\\n'; sleep 5"}, &app.app);
+    const PrStringView arguments[] = {
+        "-c", "printf 'see (https://example.com/a) and www.example.org file:///tmp\\n'; sleep 5",
+    };
+    Term t("sh", arguments, &app.app);
     t.frameUntil([&] { return t.shows("file:///tmp"); });
     t.f.click(t.cellCenter(10, 0));
     t.f.frame();
-    CHECK(app.urls.empty());
+    CHECK(app.urls.isEmpty());
     t.f.click(t.cellCenter(10, 0), primaryModifier());
     t.f.frame();
     // Only http and https URLs are found in the text.
@@ -733,17 +739,18 @@ TEST_CASE("terminal: a click with the primary modifier opens the URL under it, a
     t.f.frame();
     t.f.click(t.cellCenter(50, 0), primaryModifier());
     t.f.frame();
-    CHECK(app.urls == std::vector<std::string>{"https://example.com/a"});
-    CHECK(t.selection().empty());
+    CHECK(app.urls == Array<String>({"https://example.com/a"}));
+    CHECK(t.selection().isEmpty());
 }
 
 TEST_CASE("terminal: a hyperlink under the pointer with the primary modifier underlines all of its cells") {
     FakeApp app;
-    Term t("sleep", {"10"}, &app.app);
+    const PrStringView arguments[] = {"10"};
+    Term t("sleep", arguments, &app.app);
     t.settle();
     // One link in two parts, whose text differs from its URI, followed by a URL in plain text.
-    t.write(hyperlink("https://example.com/real", "id=a") + "one" + kHyperlinkEnd + " gap " +
-        hyperlink("https://example.com/real", "id=a") + "three" + kHyperlinkEnd + " https://example.com/text");
+    t.write(concat(hyperlink("https://example.com/real", "id=a"), "one", kHyperlinkEnd, " gap ",
+        hyperlink("https://example.com/real", "id=a"), "three", kHyperlinkEnd, " https://example.com/text"));
     t.f.frame();
     PrColor8 accent = color8Of(t.f.kit->theme.palette.accent);
     CHECK_FALSE(cellHasColor(t, 10, 0, accent));
@@ -762,24 +769,25 @@ TEST_CASE("terminal: a hyperlink under the pointer with the primary modifier und
     t.f.frame();
     t.f.click(t.cellCenter(20, 0), primaryModifier());
     t.f.frame();
-    CHECK(app.urls == std::vector<std::string>{"https://example.com/real", "https://example.com/text"});
+    CHECK(app.urls == Array<String>({"https://example.com/real", "https://example.com/text"}));
 }
 
 TEST_CASE("terminal: a hyperlink at rest has a faint dotted underline, and text without a link has none") {
-    Term t("sleep", {"10"});
+    const PrStringView arguments[] = {"10"};
+    Term t("sleep", arguments);
     t.settle();
-    t.write("____\r\n" + hyperlink("https://example.com/") + "____" + kHyperlinkEnd);
+    t.write(concat("____\r\n", hyperlink("https://example.com/"), "____", kHyperlinkEnd));
     t.f.frame();
-    std::vector<uint8_t> rgba;
+    Array<uint8_t> rgba;
     REQUIRE(t.f.render(&rgba));
     // The lower halves of the cells in the two rows differ only by the link's underline.
     auto lowerHalf = [&](uint32_t row) {
         PrVec2 center = t.cellCenter(1, row);
         PrVec2 cell = prTerminalCellExtent(t.terminal);
-        std::vector<uint8_t> pixels;
+        Array<uint8_t> pixels;
         for (uint32_t y = uint32_t(center.y); y < uint32_t(center.y + cell.y / 2); ++y) {
-            size_t start = (size_t(y) * KitFixture::kRenderWidth + size_t(center.x - cell.x / 2)) * 4;
-            pixels.insert(pixels.end(), rgba.begin() + long(start), rgba.begin() + long(start + size_t(cell.x) * 4));
+            uint32_t start = (y * KitFixture::kRenderWidth + uint32_t(center.x - cell.x / 2)) * 4;
+            pixels.append(rgba.span().slice(start, uint32_t(cell.x) * 4));
         }
         return pixels;
     };
@@ -788,21 +796,21 @@ TEST_CASE("terminal: a hyperlink at rest has a faint dotted underline, and text 
 }
 
 TEST_CASE("terminal: a hyperlink to a file that exists opens through the handler, and any other through the app") {
-    std::string folder = folderWithFile("linked.txt");
+    String folder = folderWithFile("linked.txt");
     FakeApp app;
-    std::vector<OpenedFile> opened;
+    Array<OpenedFile> opened;
     auto setup = [&](PrTerminalDesc* desc) {
         desc->openFile = [](void* context, const PrTerminalFileLink* link) {
-            static_cast<std::vector<OpenedFile>*>(context)->push_back(
-                OpenedFile{std::string(link->path.data, link->path.size), link->line, link->column});
+            static_cast<Array<OpenedFile>*>(context)->push(OpenedFile{String(link->path), link->line, link->column});
         };
         desc->openFileContext = &opened;
     };
-    Term t("sleep", {"10"}, &app.app, {}, setup);
+    const PrStringView arguments[] = {"10"};
+    Term t("sleep", arguments, &app.app, {}, setup);
     t.settle();
-    std::string uri = taken(prUrlFromFilePath(folder + "/linked.txt"));
-    t.write(hyperlink(uri) + "here" + kHyperlinkEnd + " " + hyperlink("file:///nowhere/missing.txt") + "gone" +
-        kHyperlinkEnd + " " + hyperlink("file://elsewhere.invalid/x") + "far" + kHyperlinkEnd);
+    String uri = taken(prUrlFromFilePath(concat(folder, "/linked.txt")));
+    t.write(concat(hyperlink(uri), "here", kHyperlinkEnd, " ", hyperlink("file:///nowhere/missing.txt"), "gone",
+        kHyperlinkEnd, " ", hyperlink("file://elsewhere.invalid/x"), "far", kHyperlinkEnd));
     t.f.frame();
     t.f.click(t.cellCenter(1, 0), primaryModifier());
     t.f.frame();
@@ -810,12 +818,13 @@ TEST_CASE("terminal: a hyperlink to a file that exists opens through the handler
     t.f.frame();
     t.f.click(t.cellCenter(11, 0), primaryModifier());
     t.f.frame();
-    CHECK(opened == std::vector<OpenedFile>{OpenedFile{folder + "/linked.txt", 0, 0}});
-    CHECK(app.urls == std::vector<std::string>{"file:///nowhere/missing.txt", "file://elsewhere.invalid/x"});
+    CHECK(opened == Array<OpenedFile>({OpenedFile{concat(folder, "/linked.txt"), 0, 0}}));
+    CHECK(app.urls == Array<String>({"file:///nowhere/missing.txt", "file://elsewhere.invalid/x"}));
 }
 
 TEST_CASE("terminal: a change of the palette, the roles or reverse video redraws the rows that it colors") {
-    Term t("sleep", {"10"});
+    const PrStringView arguments[] = {"10"};
+    Term t("sleep", arguments);
     t.settle();
     // Two full blocks, which the terminal draws as shapes that fill their cells. One is in the default foreground, and
     // one is in the palette's red.
@@ -839,7 +848,8 @@ TEST_CASE("terminal: a change of the palette, the roles or reverse video redraws
 }
 
 TEST_CASE("terminal: the screen takes the colors of the kit's theme, and follows its changes") {
-    Term t("sleep", {"10"});
+    const PrStringView arguments[] = {"10"};
+    Term t("sleep", arguments);
     t.settle();
     auto color8 = [](PrColor color) {
         return PrColor8{uint8_t(color.r * 255 + 0.5f), uint8_t(color.g * 255 + 0.5f), uint8_t(color.b * 255 + 0.5f), 255};
@@ -860,7 +870,8 @@ TEST_CASE("terminal: the screen takes the colors of the kit's theme, and follows
 }
 
 TEST_CASE("terminal: the view paints no background, and its owner's shows under the cells, the gutter and the edges") {
-    Term t("sleep", {"10"});
+    const PrStringView arguments[] = {"10"};
+    Term t("sleep", arguments);
     t.settle();
     t.viewport = PrVec2{float(KitFixture::kRenderWidth), float(KitFixture::kRenderHeight)};
     t.f.frame();
@@ -871,7 +882,8 @@ TEST_CASE("terminal: the view paints no background, and its owner's shows under 
     PrVec2 blank = t.cellCenter(10, 5);
     PrVec2 gutter = gutterAt(t, 5);
     PrVec2 corner{float(KitFixture::kRenderWidth) - 1, float(KitFixture::kRenderHeight) - 1};
-    for (PrVec2 at : {blank, gutter, corner}) {
+    const PrVec2 points[] = {blank, gutter, corner};
+    for (PrVec2 at : points) {
         CHECK(t.pixel(at, KitCanvas_Unfilled).a == 0);
         CHECK(near(t.pixel(at), background));
     }
@@ -913,7 +925,8 @@ TEST_CASE("terminal: the view paints no background, and its owner's shows under 
 }
 
 TEST_CASE("terminal: a terminal that paints its background in its view shows it within the view alone") {
-    Term t("sleep", {"10"});
+    const PrStringView arguments[] = {"10"};
+    Term t("sleep", arguments);
     t.settle();
     // A panel in the window holds the terminal, which paints its own background, as in Scribe.
     t.f.build = [&t](PrLayoutNode root) {
@@ -941,7 +954,8 @@ TEST_CASE("terminal: a terminal that paints its background in its view shows it 
 
 TEST_CASE("terminal: a bell flashes the screen and fades, and asks for attention once while the window is inactive") {
     FakeApp app;
-    Term t("sleep", {"10"}, &app.app);
+    const PrStringView arguments[] = {"10"};
+    Term t("sleep", arguments, &app.app);
     t.settle();
     PrVec2 blank = t.cellCenter(10, 5);
     PrColor8 background = prVtermRoleColor(Locked(t.terminal), PrVtermColorRole_Background);
@@ -979,7 +993,8 @@ TEST_CASE("terminal: a bell flashes the screen and fades, and asks for attention
 
 TEST_CASE("terminal: with reduced motion, the bell's flash holds still and ends at its time") {
     FakeApp app;
-    Term t("sleep", {"10"}, &app.app);
+    const PrStringView arguments[] = {"10"};
+    Term t("sleep", arguments, &app.app);
     t.settle();
     t.f.preferences.reducedMotion = true;
     t.f.frame();
@@ -1002,26 +1017,27 @@ TEST_CASE("terminal: a notification posts unless the terminal has focus in the a
     FakeApp app;
     // The notifications take the program's name as their title, so the test does not settle (Term::settle), which waits
     // for a Windows pseudoconsole's title. A notification acts on the screen's events, not its contents.
-    Term t("sleep", {"10"}, &app.app);
+    const PrStringView arguments[] = {"10"};
+    Term t("sleep", arguments, &app.app);
     // The terminal shows in the active window without focus. The default and unfocused conditions post, and the
     // invisible condition does not.
     t.write("\x1b]9;one\x07\x1b]99;o=unfocused;two\x1b\\\x1b]99;o=invisible;three\x1b\\");
     t.f.frame();
-    CHECK(app.posted == std::vector<std::string>{"sleep|one|9", "two||9"});
+    CHECK(app.posted == Array<String>({"sleep|one|9", "two||9"}));
     CHECK(prTerminalAlerts(t.terminal) == 0);
 
     app.posted.clear();
     t.focus();
     t.write("\x1b]9;four\x07\x1b]99;o=always;five\x1b\\\x1b]777;notify;Six;six\x07");
     t.f.frame();
-    CHECK(app.posted == std::vector<std::string>{"five||9"});
+    CHECK(app.posted == Array<String>({"five||9"}));
 
     // In an inactive window, every notification posts and raises an alert until the window becomes active.
     app.posted.clear();
     app.active = false;
     t.write("\x1b]777;notify;Seven;seven\x07\x1b]99;o=invisible;eight\x1b\\");
     t.f.frame();
-    CHECK(app.posted == std::vector<std::string>{"Seven|seven|9", "eight||9"});
+    CHECK(app.posted == Array<String>({"Seven|seven|9", "eight||9"}));
     CHECK(prTerminalAlerts(t.terminal) == PrTerminalAlertFlag_Notification);
     CHECK(app.attention == 0);
     app.active = true;
@@ -1048,7 +1064,7 @@ TEST_CASE("terminal: a flood of output goes on showing in the frames that the te
     } output{&fake, {}};
     prThreadStart(&output.thread, [](void* context) {
         FakeLauncher* fake = static_cast<Output*>(context)->fake;
-        std::string chunk(4 * kPrTerminalParseSliceBytes, 'a');
+        String chunk = String().append(4 * kPrTerminalParseSliceBytes, 'a');
         for (uint32_t i = 0; i < 64; ++i)
             fake->output(chunk);
         fake->output("\r\nflood-done\r\n");
@@ -1078,10 +1094,10 @@ TEST_CASE("terminal: while the program floods the screen, the UI waits for it no
     REQUIRE(fake.receive != nullptr);
     // Colored text, wide characters and scrolling lines, which parse slower than plain text, in pieces of several
     // slices.
-    std::string line = "\033[31mred \033[1;4mbold\033[0m \xe6\xbc\xa2\xe5\xad\x97 caf\xc3\xa9 plain text\r\n";
-    std::string text;
-    while (text.size() < 4 * kPrTerminalParseSliceBytes)
-        text += line;
+    PrStringView line = "\033[31mred \033[1;4mbold\033[0m \xe6\xbc\xa2\xe5\xad\x97 caf\xc3\xa9 plain text\r\n";
+    String text = "";
+    while (text.count() < 4 * kPrTerminalParseSliceBytes)
+        text.append(line);
     // Frames until the UI has waited for the parser in the middle of its output, and many times over.
     PrTerminalLockInfo info{};
     {
@@ -1130,7 +1146,7 @@ TEST_CASE("terminal: a terminal that does not show wakes the application for the
     runWoken(t, app);
     uint32_t wakes = 0;
     for (uint32_t i = 0; i < 20; ++i) {
-        fake.output("line " + std::to_string(i) + "\r\n");
+        fake.output(format("line {}\r\n", i));
         wakes += runWoken(t, app);
     }
     CHECK(wakes == 0);
@@ -1197,20 +1213,21 @@ TEST_CASE("terminal: the clipboard's keys copy the selection and paste, in each 
     t.f.key('C', PrAppModifierFlag_Control);
     t.f.frame();
     CHECK(app.clipboard == "alpha");
-    CHECK(t.selection().empty());
-    CHECK(fake.input().empty());
+    CHECK(t.selection().isEmpty());
+    CHECK(fake.input().isEmpty());
     t.f.key('C', PrAppModifierFlag_Control);
     t.f.frame();
     CHECK(fake.input() == "\x03");
 #else
     // The clipboard's keys write nothing to the program.
-    CHECK(fake.input().empty());
+    CHECK(fake.input().isEmpty());
 #endif
 }
 
 TEST_CASE("terminal: a program that asks for key releases has them, but for the keys that the view takes") {
     FakeApp app;
-    Term t("sh", {"-c", "stty raw -echo; printf '\\033[>2u'; echo ready; cat -v"}, &app.app);
+    const PrStringView arguments[] = {"-c", "stty raw -echo; printf '\\033[>2u'; echo ready; cat -v"};
+    Term t("sh", arguments, &app.app);
     t.focus();
     t.frameUntil([&] { return t.shows("ready"); });
     auto stroke = [&](PrAppKey key, PrAppModifierFlags modifiers, const char* text, PrAppKeyCode code) {
@@ -1235,11 +1252,12 @@ TEST_CASE("terminal: a terminal that has no title is named for its program, with
 #if defined(_WIN32)
     // A pseudoconsole sets the title shortly after the launch, so the check comes first.
     PrRawString shell = prEnvironmentVariable("COMSPEC");
-    std::string program(prRawStringView(&shell).data, prRawStringView(&shell).size);
-    prRawStringReset(&shell);
-    REQUIRE(program.find('\\') != std::string::npos);
-    Term t(program, {"/c", "set /p line="});
-    CHECK(prTerminalTitle(t.terminal) == program.substr(program.rfind('\\') + 1));
+    String program = String::adopt(shell);
+    REQUIRE(prStringFindByte(program, '\\') != program.count());
+    const PrStringView arguments[] = {"/c", "set /p line="};
+    Term t(program, arguments);
+    size_t name = prStringFindLastByte(program, '\\') + 1;
+    CHECK(prTerminalTitle(t.terminal) == prStringFrom(program, name));
 #else
     Term t("/bin/cat", {});
     CHECK(prTerminalTitle(t.terminal) == "cat");
@@ -1266,7 +1284,8 @@ TEST_CASE("terminal: a terminal of no program runs the user's shell") {
 TEST_CASE("terminal: Option with an arrow moves by a word, and Command with an arrow to the line's ends, as on a Mac") {
     // cat -v shows each control character that it reads as ^ and a letter, and an escape as ^[. The keys are sent only
     // once the terminal is raw, because a terminal that edits lines handles ^U and ^? itself.
-    Term t("sh", {"-c", "stty raw -echo; echo ready; cat -v"});
+    const PrStringView arguments[] = {"-c", "stty raw -echo; echo ready; cat -v"};
+    Term t("sh", arguments);
     t.focus();
     t.frameUntil([&] { return t.shows("ready"); });
     t.f.key(PrAppKey_Left, PrAppModifierFlag_Alt);
@@ -1281,7 +1300,8 @@ TEST_CASE("terminal: Option with an arrow moves by a word, and Command with an a
 
 TEST_CASE("terminal: Control with an arrow, Backspace or Delete, and Home and End, go as xterm encodes them") {
     // The keys are sent only once the terminal is raw, because a terminal that edits lines handles ^U and ^? itself.
-    Term t("sh", {"-c", "stty raw -echo; echo ready; cat -v"});
+    const PrStringView arguments[] = {"-c", "stty raw -echo; echo ready; cat -v"};
+    Term t("sh", arguments);
     t.focus();
     t.frameUntil([&] { return t.shows("ready"); });
     t.f.key(PrAppKey_Left, PrAppModifierFlag_Control);
@@ -1303,7 +1323,7 @@ TEST_CASE("terminal: a terminal that does not show parses all of its program's o
     t.f.frame();
     CHECK(prTerminalNode(t.terminal) == kPrLayoutNodeNone);
     // Many slices of output while the terminal does not show, followed by a marker.
-    std::string chunk(4 * kPrTerminalParseSliceBytes, 'a');
+    String chunk = String().append(4 * kPrTerminalParseSliceBytes, 'a');
     for (uint32_t i = 0; i < 16; ++i) {
         fake.output(chunk);
         runWoken(t, app);
@@ -1317,7 +1337,8 @@ TEST_CASE("terminal: a terminal that does not show parses all of its program's o
 }
 
 TEST_CASE("terminal: a terminal that stops showing loses focus, which the program hears if it asked to") {
-    Term t("sh", {"-c", "stty raw -echo; printf '\\033[?1004h'; echo ready; cat -v"});
+    const PrStringView arguments[] = {"-c", "stty raw -echo; printf '\\033[?1004h'; echo ready; cat -v"};
+    Term t("sh", arguments);
     t.focus();
     t.frameUntil([&] { return t.shows("ready"); });
     t.f.build = [&](PrLayoutNode) { prTerminalUpdate(t.terminal); };
@@ -1327,7 +1348,8 @@ TEST_CASE("terminal: a terminal that stops showing loses focus, which the progra
 }
 
 TEST_CASE("terminal: the working directory is the file URL of this machine that the program reports, decoded") {
-    Term t("sleep", {"10"}, nullptr, "/");
+    const PrStringView arguments[] = {"10"};
+    Term t("sleep", arguments, nullptr, "/");
     t.settle();
     // Without a report, the directory is the one that the program started in.
     CHECK(t.directory() == "/");
@@ -1336,7 +1358,7 @@ TEST_CASE("terminal: the working directory is the file URL of this machine that 
     t.write("\x1b]7;file://localhost/usr/lib\x1b\\");
     CHECK(t.directory() == "/usr/lib");
     PrRawString host = prEnvironmentHostName();
-    t.write("\x1b]7;file://" + std::string(prRawStringView(&host).data, prRawStringView(&host).size) + "/var\x07");
+    t.write(concat("\x1b]7;file://", prRawStringView(&host), "/var\x07"));
     prRawStringReset(&host);
     CHECK(t.directory() == "/var");
     // A report with another host, another scheme, or a path that contains a NUL is ignored.
@@ -1351,18 +1373,20 @@ TEST_CASE("terminal: the working directory is the file URL of this machine that 
 #if defined(_WIN32)
 TEST_CASE("terminal: without a report, the working directory is the one that the program started in") {
     // A pseudoconsole does not report its foreground program.
-    std::string folder = folderWithFile("started.txt");
-    Term t("cmd", {"/c", "cd .. & set /p line="}, nullptr, folder);
+    String folder = folderWithFile("started.txt");
+    const PrStringView arguments[] = {"/c", "cd .. & set /p line="};
+    Term t("cmd", arguments, nullptr, folder);
     prThreadSleep(200);
     t.f.frame();
     CHECK(t.directory() == folder);
 }
 #else
 TEST_CASE("terminal: without a report, the working directory is the foreground program's") {
-    Term t("sh", {"-c", "cd /tmp && pwd -P && exec sleep 10"}, nullptr, "/");
-    t.frameUntil([&] { return t.screen().find('\n') > 1; });
-    std::string screen = t.screen();
-    std::string expected = screen.substr(0, screen.find('\n'));
+    const PrStringView arguments[] = {"-c", "cd /tmp && pwd -P && exec sleep 10"};
+    Term t("sh", arguments, nullptr, "/");
+    t.frameUntil([&] { return prStringFindByte(t.screen(), '\n') > 1; });
+    String screen = t.screen();
+    String expected(prStringHead(screen, prStringFindByte(screen, '\n')));
     t.frameUntil([&] { return t.directory() == expected; });
 }
 #endif
@@ -1371,7 +1395,8 @@ TEST_CASE("terminal: a new font remakes the cells, and the program hears of the 
     // The program reports its size when it reads a line. The frame that takes the new font resizes the program's
     // terminal before the line is typed, so the report has the new size. A trap on SIGWINCH would depend on when the
     // signal arrives, which under a Windows pseudoconsole is late or never.
-    Term t("sh", {"-c", "echo ready; read line; stty size; sleep 10"});
+    const PrStringView arguments[] = {"-c", "echo ready; read line; stty size; sleep 10"};
+    Term t("sh", arguments);
     t.focus();
     t.frameUntil([&] { return t.shows("ready"); });
     PrVec2 cell = prTerminalCellExtent(t.terminal);
@@ -1386,7 +1411,7 @@ TEST_CASE("terminal: a new font remakes the cells, and the program hears of the 
     CHECK(fewer.x < extent.x);
     CHECK(fewer.y < extent.y);
     t.f.key(PrAppKey_Enter);
-    t.frameUntil([&] { return t.shows(std::to_string(fewer.y) + " " + std::to_string(fewer.x)); });
+    t.frameUntil([&] { return t.shows(format("{} {}", fewer.y, fewer.x)); });
 }
 
 TEST_CASE("terminal: arcs, braille patterns and Powerline separators are drawn as shapes within their cells") {
@@ -1428,7 +1453,8 @@ TEST_CASE("terminal: arcs, braille patterns and Powerline separators are drawn a
 }
 
 TEST_CASE("terminal: the icons of Nerd Fonts draw within their cells, centered in the line") {
-    Term t("sleep", {"10"});
+    const PrStringView arguments[] = {"10"};
+    Term t("sleep", arguments);
     t.settle();
     // A file icon from the Private Use Area and a Material Design icon from the Supplementary Private Use Area, each
     // followed by a blank cell.
@@ -1456,8 +1482,9 @@ TEST_CASE("terminal: with the terminal app's fonts, what Noto Sans Mono lacks dr
         return;
     }
     {
-        Term t("sleep", {"10"}, nullptr, {}, nullptr,
-            KitFonts{.bundles = {PrFontBundle_NotoMono, PrFontBundle_NerdFontSymbols}, .system = system});
+        const PrStringView arguments[] = {"10"};
+        Term t("sleep", arguments, nullptr, {}, {},
+            KitFonts{.bundles = {PrFontBundle_NotoMono, PrFontBundle_NerdFontSymbols}, .bundleCount = 2, .system = system});
         t.settle();
         // A Han ideograph and an emoji, each two columns wide, and a Nerd Fonts file icon. Each is followed by a blank
         // cell.
@@ -1470,7 +1497,8 @@ TEST_CASE("terminal: with the terminal app's fonts, what Noto Sans Mono lacks dr
             uint32_t column;
             uint32_t width;
         };
-        for (Glyph glyph : {Glyph{0, 2}, Glyph{3, 2}, Glyph{6, 1}}) {
+        const Glyph glyphs[] = {{0, 2}, {3, 2}, {6, 1}};
+        for (Glyph glyph : glyphs) {
             CAPTURE(glyph.column);
             uint32_t ink = 0;
             for (uint32_t i = 0; i < glyph.width; ++i)
@@ -1484,7 +1512,8 @@ TEST_CASE("terminal: with the terminal app's fonts, what Noto Sans Mono lacks dr
 }
 
 TEST_CASE("terminal: blinking text hides and shows on a steady period over its background") {
-    Term t("sleep", {"10"});
+    const PrStringView arguments[] = {"10"};
+    Term t("sleep", arguments);
     t.settle();
     // A full block that blinks over a red background, and one that does not.
     t.write("\x1b[5;41m\xe2\x96\x88\x1b[0m \xe2\x96\x88");
@@ -1510,7 +1539,8 @@ TEST_CASE("terminal: blinking text hides and shows on a steady period over its b
 }
 
 TEST_CASE("terminal: blinking text stays shown for a user who asks for less motion") {
-    Term t("sleep", {"10"});
+    const PrStringView arguments[] = {"10"};
+    Term t("sleep", arguments);
     t.settle();
     t.f.preferences.reducedMotion = true;
     t.write("\x1b[5m\xe2\x96\x88\x1b[0m");
@@ -1561,42 +1591,40 @@ TEST_CASE("terminal: a paste of lines asks first, and Enter pastes them while Es
 }
 
 TEST_CASE("terminal: URLs are found in the text without the brackets and punctuation around them") {
-    CHECK(textLinks("see (https://example.com/a), or not") == std::vector<std::string>{"url|https://example.com/a"});
-    CHECK(textLinks("<http://x.org/p?q=1>.") == std::vector<std::string>{"url|http://x.org/p?q=1"});
+    CHECK(textLinks("see (https://example.com/a), or not") == Array<String>({"url|https://example.com/a"}));
+    CHECK(textLinks("<http://x.org/p?q=1>.") == Array<String>({"url|http://x.org/p?q=1"}));
     // A URL's path is not a file reference. Only http and https start URLs, so a bare name with a dot may name a file.
-    CHECK(textLinks("https://x.com/a.txt:3") == std::vector<std::string>{"url|https://x.com/a.txt:3"});
-    CHECK(textLinks("www.example.org") == std::vector<std::string>{"www.example.org|www.example.org|0|0"});
+    CHECK(textLinks("https://x.com/a.txt:3") == Array<String>({"url|https://x.com/a.txt:3"}));
+    CHECK(textLinks("www.example.org") == Array<String>({"www.example.org|www.example.org|0|0"}));
     CHECK(textLinks("a.cpp:1 https://b/ c.h:2") ==
-        std::vector<std::string>{"a.cpp:1|a.cpp|1|0", "url|https://b/", "c.h:2|c.h|2|0"});
+        Array<String>({"a.cpp:1|a.cpp|1|0", "url|https://b/", "c.h:2|c.h|2|0"}));
 }
 
 TEST_CASE("terminal: references to files are found with the line and the column that tools print after them") {
-    CHECK(textLinks("src/a.cpp:12:5: error: no") == std::vector<std::string>{"src/a.cpp:12:5|src/a.cpp|12|5"});
-    CHECK(textLinks("a.cpp:7 b") == std::vector<std::string>{"a.cpp:7|a.cpp|7|0"});
-    CHECK(textLinks("Makefile:3: *** missing") == std::vector<std::string>{"Makefile:3|Makefile|3|0"});
-    CHECK(textLinks("C:\\x\\a.cpp(12,5): error C2065") ==
-        std::vector<std::string>{"C:\\x\\a.cpp(12,5)|C:\\x\\a.cpp|12|5"});
-    CHECK(textLinks("foo.h(3): warning") == std::vector<std::string>{"foo.h(3)|foo.h|3|0"});
+    CHECK(textLinks("src/a.cpp:12:5: error: no") == Array<String>({"src/a.cpp:12:5|src/a.cpp|12|5"}));
+    CHECK(textLinks("a.cpp:7 b") == Array<String>({"a.cpp:7|a.cpp|7|0"}));
+    CHECK(textLinks("Makefile:3: *** missing") == Array<String>({"Makefile:3|Makefile|3|0"}));
+    CHECK(textLinks("C:\\x\\a.cpp(12,5): error C2065") == Array<String>({"C:\\x\\a.cpp(12,5)|C:\\x\\a.cpp|12|5"}));
+    CHECK(textLinks("foo.h(3): warning") == Array<String>({"foo.h(3)|foo.h|3|0"}));
     CHECK(textLinks("  File \"/tmp/x y.py\", line 42, in <module>") ==
-        std::vector<std::string>{"/tmp/x y.py\", line 42|/tmp/x y.py|42|0"});
-    CHECK(textLinks("    at f (/a/b.js:10:15)") == std::vector<std::string>{"/a/b.js:10:15|/a/b.js|10|15"});
-    CHECK(textLinks("see notes.txt, then ./run") ==
-        std::vector<std::string>{"notes.txt|notes.txt|0|0", "./run|./run|0|0"});
-    CHECK(textLinks("plain words: here").empty());
+        Array<String>({"/tmp/x y.py\", line 42|/tmp/x y.py|42|0"}));
+    CHECK(textLinks("    at f (/a/b.js:10:15)") == Array<String>({"/a/b.js:10:15|/a/b.js|10|15"}));
+    CHECK(textLinks("see notes.txt, then ./run") == Array<String>({"notes.txt|notes.txt|0|0", "./run|./run|0|0"}));
+    CHECK(textLinks("plain words: here").isEmpty());
 }
 
 TEST_CASE("terminal: a click with the primary modifier opens a file that a reference names, from the directory") {
-    std::string folder = folderWithFile("hello.txt");
-    std::vector<OpenedFile> opened;
+    String folder = folderWithFile("hello.txt");
+    Array<OpenedFile> opened;
     auto setup = [&](PrTerminalDesc* desc) {
         desc->directory = PrStringView(folder);
         desc->openFile = [](void* context, const PrTerminalFileLink* link) {
-            static_cast<std::vector<OpenedFile>*>(context)->push_back(
-                OpenedFile{std::string(link->path.data, link->path.size), link->line, link->column});
+            static_cast<Array<OpenedFile>*>(context)->push(OpenedFile{String(link->path), link->line, link->column});
         };
         desc->openFileContext = &opened;
     };
-    Term t("sh", {"-c", "printf 'hello.txt:3:2: note\\nmissing.txt:1:1: note\\n'; sleep 10"}, nullptr, {}, setup);
+    const PrStringView arguments[] = {"-c", "printf 'hello.txt:3:2: note\\nmissing.txt:1:1: note\\n'; sleep 10"};
+    Term t("sh", arguments, nullptr, {}, setup);
     t.frameUntil([&] { return t.shows("missing.txt"); });
     t.move(t.cellCenter(2, 0), primaryModifier());
     t.f.frame();
@@ -1611,8 +1639,8 @@ TEST_CASE("terminal: a click with the primary modifier opens a file that a refer
 
     t.f.click(t.cellCenter(2, 0), primaryModifier());
     t.f.frame();
-    REQUIRE(opened.size() == 1);
-    CHECK(opened[0] == OpenedFile{folder + "/hello.txt", 3, 2});
+    REQUIRE(opened.count() == 1);
+    CHECK(opened[0] == OpenedFile{concat(folder, "/hello.txt"), 3, 2});
 
     // A directory that the program reports replaces the one that it started in.
     t.write("\x1b]7;file:///nowhere/at/all\x07");
@@ -1623,33 +1651,34 @@ TEST_CASE("terminal: a click with the primary modifier opens a file that a refer
 }
 
 TEST_CASE("terminal: a reference to a file opens as a file URL without a handler") {
-    std::string folder = folderWithFile("hello.txt");
+    String folder = folderWithFile("hello.txt");
     FakeApp app;
     auto setup = [&](PrTerminalDesc* desc) { desc->directory = PrStringView(folder); };
-    Term t("sh", {"-c", "printf 'hello.txt:3\\n'; sleep 10"}, &app.app, {}, setup);
+    const PrStringView arguments[] = {"-c", "printf 'hello.txt:3\\n'; sleep 10"};
+    Term t("sh", arguments, &app.app, {}, setup);
     t.frameUntil([&] { return t.shows("hello.txt"); });
     t.f.click(t.cellCenter(2, 0), primaryModifier());
     t.f.frame();
-    CHECK(app.urls == std::vector<std::string>{taken(prUrlFromFilePath(folder + "/hello.txt"))});
+    CHECK(app.urls == Array<String>({taken(prUrlFromFilePath(concat(folder, "/hello.txt")))}));
 }
 
 TEST_CASE("terminal: the shell integration writes its scripts, and starts each shell that it knows to read them") {
-    std::string directory = subfolder("integration");
+    String directory = subfolder("integration");
     TerminalShellLaunch launch{};
     CHECK_FALSE(terminalShellIntegrate("/bin/sh", directory, nullptr, 0, &launch));
     CHECK(launch.arguments.count == 0);
 
     const PrStringView zdotdir[] = {"ZDOTDIR=/home/me/zsh"};
     REQUIRE(terminalShellIntegrate("/usr/local/bin/zsh", directory, zdotdir, 1, &launch));
-    CHECK(strings(launch.arguments) == std::vector<std::string>{"-l"});
+    CHECK(strings(launch.arguments) == Array<String>({"-l"}));
     CHECK(strings(launch.environment) ==
-        std::vector<std::string>{"ZDOTDIR=" + directory + "/zsh", "PRAX_ZSH_ZDOTDIR=/home/me/zsh"});
-    CHECK(readFile(directory + "/zsh/.zshenv").find("PRAX_ZSH_ZDOTDIR") != std::string::npos);
+        Array<String>({concat("ZDOTDIR=", directory, "/zsh"), "PRAX_ZSH_ZDOTDIR=/home/me/zsh"}));
+    CHECK(prStringContains(readText(concat(directory, "/zsh/.zshenv")), "PRAX_ZSH_ZDOTDIR"));
     terminalShellLaunchReset(&launch);
 
     REQUIRE(terminalShellIntegrate("bash", directory, nullptr, 0, &launch));
-    CHECK(strings(launch.arguments) == std::vector<std::string>{"--rcfile", directory + "/bash/prax.bash"});
-    CHECK(strings(launch.environment) == std::vector<std::string>{"PRAX_BASH_LOGIN=1"});
+    CHECK(strings(launch.arguments) == Array<String>({"--rcfile", concat(directory, "/bash/prax.bash")}));
+    CHECK(strings(launch.environment) == Array<String>({"PRAX_BASH_LOGIN=1"}));
     terminalShellLaunchReset(&launch);
     const PrStringView posix[] = {"POSIXLY_CORRECT=1"};
     CHECK_FALSE(terminalShellIntegrate("bash", directory, posix, 1, &launch));
@@ -1659,37 +1688,37 @@ TEST_CASE("terminal: the shell integration writes its scripts, and starts each s
     const PrStringView unset[] = {"XDG_DATA_DIRS="};
     REQUIRE(terminalShellIntegrate("/opt/bin/fish", directory, unset, 1, &launch));
     CHECK(strings(launch.environment) ==
-        std::vector<std::string>{"XDG_DATA_DIRS=" + directory + ":/usr/local/share:/usr/share"});
+        Array<String>({concat("XDG_DATA_DIRS=", directory, ":/usr/local/share:/usr/share")}));
     terminalShellLaunchReset(&launch);
     const PrStringView data[] = {"XDG_DATA_DIRS=/opt/share"};
     REQUIRE(terminalShellIntegrate("fish", directory, data, 1, &launch));
     CHECK(strings(launch.environment) ==
-        std::vector<std::string>{"XDG_DATA_DIRS=" + directory + ":/opt/share", "PRAX_FISH_XDG_DATA_DIRS=/opt/share"});
+        Array<String>({concat("XDG_DATA_DIRS=", directory, ":/opt/share"), "PRAX_FISH_XDG_DATA_DIRS=/opt/share"}));
     terminalShellLaunchReset(&launch);
     PrFileInfo info{};
-    CHECK(prFileInfo(directory + "/fish/vendor_conf.d/prax-shell-integration.fish", &info));
+    CHECK(prFileInfo(concat(directory, "/fish/vendor_conf.d/prax-shell-integration.fish"), &info));
 
     // A script that changed is written again.
-    writeFile(directory + "/zsh/prax.zsh", "changed");
+    writeFile(concat(directory, "/zsh/prax.zsh"), "changed");
     REQUIRE(terminalShellIntegrate("zsh", directory, nullptr, 0, &launch));
     terminalShellLaunchReset(&launch);
-    CHECK(readFile(directory + "/zsh/prax.zsh") != "changed");
+    CHECK(readText(concat(directory, "/zsh/prax.zsh")) != "changed");
 }
 
 TEST_CASE("terminal: the user's shell starts with the integration, after its own startup files, and marks commands") {
-    std::vector<std::string> shells = integratedShells();
-    if (shells.empty())
+    Array<String> shells = integratedShells();
+    if (shells.isEmpty())
         MESSAGE("no shell that the terminal has an integration for");
-    for (const std::string& shell : shells) {
+    for (const String& shell : shells) {
         CAPTURE(shell);
-        std::string home = subfolder("home-" + nameOf(shell));
-        writeFile(home + "/.zshrc", "export PRAX_TEST_RC=read\nPS1='ready$ '\n");
-        writeFile(home + "/.bash_profile", "export PRAX_TEST_RC=read\nPS1='ready$ '\n");
+        String home = subfolder(concat("home-", nameOf(shell)));
+        writeFile(concat(home, "/.zshrc"), "export PRAX_TEST_RC=read\nPS1='ready$ '\n");
+        writeFile(concat(home, "/.bash_profile"), "export PRAX_TEST_RC=read\nPS1='ready$ '\n");
         // The shell reads its startup files from the test home. For zsh, ZDOTDIR names that home, and it still does
         // inside the shell.
-        std::string shellVariable = "SHELL=" + shell;
-        std::string homeVariable = "HOME=" + home;
-        std::string zdotdirVariable = "ZDOTDIR=" + home;
+        String shellVariable = concat("SHELL=", shell);
+        String homeVariable = concat("HOME=", home);
+        String zdotdirVariable = concat("ZDOTDIR=", home);
         PrStringView environment[] = {shellVariable, homeVariable, zdotdirVariable, "BASH_SILENCE_DEPRECATION_WARNING=1"};
         auto setup = [&](PrTerminalDesc* desc) {
             desc->environment = environment;
@@ -1714,28 +1743,28 @@ TEST_CASE("terminal: the user's shell starts with the integration, after its own
         // The prompts of the two commands, and the prompt that follows them.
         t.frameUntil(input);
         Locked vterm(t.terminal);
-        std::vector<PrVtermCommandStatus> statuses;
+        Array<PrVtermCommandStatus> statuses;
         for (uint32_t i = 0; i < prVtermScrollbackCount(vterm) + prVtermExtent(vterm).y; ++i) {
             PrVtermLine line = prVtermLine(vterm, i);
             if ((line.marks & PrVtermLineMarkFlag_Prompt) != 0)
-                statuses.push_back(line.commandStatus);
+                statuses.push(line.commandStatus);
         }
-        CHECK(statuses == std::vector<PrVtermCommandStatus>{
+        CHECK(statuses == Array<PrVtermCommandStatus>({
             PrVtermCommandStatus_Succeeded, PrVtermCommandStatus_Failed, PrVtermCommandStatus_None,
-        });
+        }));
     }
 }
 
 TEST_CASE("terminal: a terminal whose caller turns the integration off runs the user's shell without it") {
-    std::vector<std::string> shells = integratedShells();
-    if (shells.empty())
+    Array<String> shells = integratedShells();
+    if (shells.isEmpty())
         MESSAGE("no shell that the terminal has an integration for");
-    for (const std::string& shell : shells) {
+    for (const String& shell : shells) {
         CAPTURE(shell);
-        std::string home = subfolder("home-" + nameOf(shell));
-        std::string shellVariable = "SHELL=" + shell;
-        std::string homeVariable = "HOME=" + home;
-        std::string zdotdirVariable = "ZDOTDIR=" + home;
+        String home = subfolder(concat("home-", nameOf(shell)));
+        String shellVariable = concat("SHELL=", shell);
+        String homeVariable = concat("HOME=", home);
+        String zdotdirVariable = concat("ZDOTDIR=", home);
         PrStringView environment[] = {shellVariable, homeVariable, zdotdirVariable, "BASH_SILENCE_DEPRECATION_WARNING=1"};
         auto setup = [&](PrTerminalDesc* desc) {
             desc->environment = environment;
@@ -1754,10 +1783,13 @@ TEST_CASE("terminal: a terminal whose caller turns the integration off runs the 
 
 TEST_CASE("terminal: the last command's output and exit code are the application's to read and copy") {
     FakeApp app;
-    Term t("sleep", {"10"}, &app.app);
+    const PrStringView arguments[] = {"10"};
+    Term t("sleep", arguments, &app.app);
     t.settle();
-    CHECK(taken(prTerminalCommandOutput(t.terminal)).empty());
-    t.write(command("one", {"a"}, "0") + command("two", {"b", "c  ", ""}, "4") + kPrompt);
+    CHECK(taken(prTerminalCommandOutput(t.terminal)).isEmpty());
+    const PrStringView one[] = {"a"};
+    const PrStringView two[] = {"b", "c  ", ""};
+    t.write(concat(command("one", one, "0"), command("two", two, "4"), kPrompt));
     t.f.frame();
     CHECK(taken(prTerminalCommandOutput(t.terminal)) == "b\nc");
     PrVtermShellInfo info = prTerminalShellInfo(t.terminal);
@@ -1773,12 +1805,15 @@ TEST_CASE("terminal: the last command's output and exit code are the application
 }
 
 TEST_CASE("terminal: the prompt keys scroll from prompt to prompt, and the jumped-to command's output selects") {
-    Term t("sleep", {"10"});
+    const PrStringView arguments[] = {"10"};
+    Term t("sleep", arguments);
     t.settle();
     uint32_t rows = prVtermExtent(Locked(t.terminal)).y;
-    std::vector<std::string> first = numbered("f", rows + 4);
-    std::vector<std::string> second = numbered("s", rows + 4);
-    t.write(command("first", first, "0") + command("second", second, "1") + kPrompt);
+    Array<String> first = numbered("f", rows + 4);
+    Array<String> second = numbered("s", rows + 4);
+    Array<PrStringView> firstLines = viewsOf(first);
+    Array<PrStringView> secondLines = viewsOf(second);
+    t.write(concat(command("first", firstLines.span(), "0"), command("second", secondLines.span(), "1"), kPrompt));
     t.focus();
     t.f.frame();
 
@@ -1816,9 +1851,10 @@ TEST_CASE("terminal: the prompt keys scroll from prompt to prompt, and the jumpe
 
 TEST_CASE("terminal: the gutter marks a command that succeeded in the theme's success color, and one that failed in "
         "its danger color") {
-    Term t("sleep", {"10"});
+    const PrStringView arguments[] = {"10"};
+    Term t("sleep", arguments);
     t.settle();
-    t.write(command("ok", {}, "0") + command("bad", {}, "2") + kPrompt);
+    t.write(concat(command("ok", {}, "0"), command("bad", {}, "2"), kPrompt));
     t.f.frame();
     const PrKitPalette& palette = t.f.kit->theme.palette;
     CHECK(prTerminalScreenOrigin(t.terminal).x > 0);
@@ -1828,7 +1864,8 @@ TEST_CASE("terminal: the gutter marks a command that succeeded in the theme's su
 }
 
 TEST_CASE("terminal: the cell's pixel extent is the cell's in target pixels, which the screen reports to programs") {
-    Term t("sleep", {"10"});
+    const PrStringView arguments[] = {"10"};
+    Term t("sleep", arguments);
     t.settle();
     PrVec2 cell = prTerminalCellExtent(t.terminal);
     PrUVec2 pixels = cellPixelExtent(t.terminal);
@@ -1837,18 +1874,19 @@ TEST_CASE("terminal: the cell's pixel extent is the cell's in target pixels, whi
 }
 
 TEST_CASE("terminal: images draw over the text, between the backgrounds and the text, or under the backgrounds") {
-    Term t("sleep", {"10"});
+    const PrStringView arguments[] = {"10"};
+    Term t("sleep", arguments);
     t.settle();
     PrColor8 blue = prVtermPaletteColor(Locked(t.terminal), 4);
     PrColor8 foreground = prVtermRoleColor(Locked(t.terminal), PrVtermColorRole_Foreground);
     // Row 0: three cells with a blue background, each with an image in a different z-index band. Row 1: two full blocks
     // in the foreground color, with an image under the first and over the second.
     t.write("\x1b[44m   \x1b[0m\r\n\xe2\x96\x88\xe2\x96\x88\x1b[H");
-    std::string red = cellPixels(t.terminal, 1, 1, kImageRed);
-    t.write(graphics(cellImage(t.terminal, 1, 1, ",z=1"), red) + "\x1b[C");
-    t.write(graphics(cellImage(t.terminal, 1, 1, ",z=-1"), red) + "\x1b[C");
+    String red = cellPixels(t.terminal, 1, 1, kImageRed);
+    t.write(concat(graphics(cellImage(t.terminal, 1, 1, ",z=1"), red), "\x1b[C"));
+    t.write(concat(graphics(cellImage(t.terminal, 1, 1, ",z=-1"), red), "\x1b[C"));
     t.write(graphics(cellImage(t.terminal, 1, 1, ",z=-1073741825"), red));
-    t.write("\x1b[2;1H" + graphics(cellImage(t.terminal, 1, 1, ",z=-1"), red) + "\x1b[C");
+    t.write(concat("\x1b[2;1H", graphics(cellImage(t.terminal, 1, 1, ",z=-1"), red), "\x1b[C"));
     t.write(graphics(cellImage(t.terminal, 1, 1, ",z=0"), red));
     t.f.frame();
     CHECK(near(t.pixel(t.cellCenter(0, 0)), kImageRed));
@@ -1864,10 +1902,11 @@ TEST_CASE("terminal: images draw over the text, between the backgrounds and the 
 }
 
 TEST_CASE("terminal: an image scrolls with its text, into the scrollback that the view scrolls back to") {
-    Term t("sleep", {"10"});
+    const PrStringView arguments[] = {"10"};
+    Term t("sleep", arguments);
     t.settle();
     PrColor8 background = prVtermRoleColor(Locked(t.terminal), PrVtermColorRole_Background);
-    t.write("\x1b[3;5H" + graphics(cellImage(t.terminal, 2, 2, ""), cellPixels(t.terminal, 2, 2, kImageRed)));
+    t.write(concat("\x1b[3;5H", graphics(cellImage(t.terminal, 2, 2, ""), cellPixels(t.terminal, 2, 2, kImageRed))));
     t.f.frame();
     CHECK(near(t.pixel(t.cellCenter(5, 2)), kImageRed));
     CHECK(near(t.pixel(t.cellCenter(5, 4)), background));
@@ -1892,7 +1931,8 @@ TEST_CASE("terminal: an image scrolls with its text, into the scrollback that th
 }
 
 TEST_CASE("terminal: the placeholders of a virtual placement draw its image in their cells") {
-    Term t("sleep", {"10"});
+    const PrStringView arguments[] = {"10"};
+    Term t("sleep", arguments);
     t.settle();
     PrColor8 background = prVtermRoleColor(Locked(t.terminal), PrVtermColorRole_Background);
     t.write(graphics(cellImage(t.terminal, 2, 1, ",U=1,i=7,c=2,r=1,q=2"), cellPixels(t.terminal, 2, 1, kImageRed)));
@@ -1910,7 +1950,10 @@ TEST_CASE("terminal: the placeholders of a virtual placement draw its image in t
 #if !defined(_WIN32)
 TEST_CASE("terminal: a program shows an image with the graphics protocol") {
     // One red pixel, encoded in base64 in the escape code, shown over two cells.
-    Term t("sh", {"-c", "printf '\\033_Ga=T,f=24,s=1,v=1,c=2,r=1,i=5,q=2;/wAA\\033\\\\done'; sleep 5"});
+    const PrStringView arguments[] = {
+        "-c", "printf '\\033_Ga=T,f=24,s=1,v=1,c=2,r=1,i=5,q=2;/wAA\\033\\\\done'; sleep 5",
+    };
+    Term t("sh", arguments);
     t.frameUntil([&] { return t.shows("done"); });
     t.f.frame();
     CHECK(near(t.pixel(t.cellCenter(0, 0)), kImageRed));

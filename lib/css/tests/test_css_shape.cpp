@@ -1,6 +1,8 @@
 // Basic shapes (css-shapes-1) and the values of the masking properties (css-masking-1).
 
+#include "pr/float.h"
 #include "pr/path.h"
+#include "pr/string.h"
 
 #include "css/src/css_parse.h"
 #include "css/src/css_property.h"
@@ -10,8 +12,6 @@
 #include "css/tests/css_tests.h"
 
 #include "tools/harness/test.h"
-
-#include <cmath>
 
 namespace pr_impl {
 
@@ -37,10 +37,10 @@ struct Parsed : CssTestSource {
 };
 
 // Returns the serialization of `value` as a value of `property`, or the empty string if it is not one.
-std::string specified(PrStringView property, PrStringView value) {
+String specified(PrStringView property, PrStringView value) {
     Parsed parsed(property, value);
     if (!parsed.valid)
-        return std::string();
+        return {};
     PrTextBuffer out = {};
     cssSerializeValues(&out, parsed.run());
     return take(&out);
@@ -68,8 +68,8 @@ Outline outlineOf(PrStringView value, PrRect box) {
 }
 
 bool near(PrRect a, PrRect b) {
-    bool same = std::fabs(a.left - b.left) < 1e-3f && std::fabs(a.top - b.top) < 1e-3f &&
-        std::fabs(a.right - b.right) < 1e-3f && std::fabs(a.bottom - b.bottom) < 1e-3f;
+    bool same = prF32Abs(a.left - b.left) < 1e-3f && prF32Abs(a.top - b.top) < 1e-3f &&
+        prF32Abs(a.right - b.right) < 1e-3f && prF32Abs(a.bottom - b.bottom) < 1e-3f;
     if (!same)
         MESSAGE("{" << a.left << ", " << a.top << ", " << a.right << ", " << a.bottom << "}");
     return same;
@@ -84,26 +84,28 @@ using namespace pr_impl;
 TEST_CASE("a circle's radius may be one percentage, and two sizes are invalid") {
     CHECK(specified("clip-path", "circle(40%) border-box") == "circle(40%) border-box");
     CHECK(specified("clip-path", "circle(closest-corner at 20px 50px)") == "circle(closest-corner at 20px 50px)");
-    CHECK(specified("clip-path", "circle(4% 20%)").empty());
-    CHECK(specified("clip-path", "circle(-10%)").empty());
+    CHECK(specified("clip-path", "circle(4% 20%)").isEmpty());
+    CHECK(specified("clip-path", "circle(-10%)").isEmpty());
     CHECK(specified("clip-path", "ellipse(closest-side 20%)") == "ellipse(closest-side 20%)");
-    CHECK(specified("clip-path", "ellipse(10px)").empty());
+    CHECK(specified("clip-path", "ellipse(10px)").isEmpty());
 }
 
 TEST_CASE("clip's rect() separates its edges with commas or with spaces, but not both") {
     CHECK(specified("clip", "rect(0, 40px, 20px, 0)") == "rect(0px, 40px, 20px, 0px)");
     CHECK(specified("clip", "rect(10px, -20px, auto, auto)") == "rect(10px, -20px, auto, auto)");
-    CHECK(!specified("clip", "rect(0 40px 20px 0)").empty());
-    CHECK(specified("clip", "rect(10px 20px, 30px 40px)").empty());
-    CHECK(specified("clip", "rect(10%, 20px, 30px, 40px)").empty());
+    CHECK(!specified("clip", "rect(0 40px 20px 0)").isEmpty());
+    CHECK(specified("clip", "rect(10px 20px, 30px 40px)").isEmpty());
+    CHECK(specified("clip", "rect(10%, 20px, 30px, 40px)").isEmpty());
 }
 
 TEST_CASE("clip paths, mask layers, filters and blending are computed in a group of their own, which does not inherit") {
-    for (PrCssProperty property : {PrCssProperty_ClipPath, PrCssProperty_Clip, PrCssProperty_MaskImage,
-        PrCssProperty_MaskMode, PrCssProperty_MaskRepeat, PrCssProperty_MaskPosition,
-                PrCssProperty_MaskSize, PrCssProperty_MaskOrigin, PrCssProperty_MaskClip,
-                PrCssProperty_MaskComposite, PrCssProperty_Filter, PrCssProperty_BackdropFilter,
-                PrCssProperty_MixBlendMode, PrCssProperty_Isolation})
+    const PrCssProperty properties[] = {
+        PrCssProperty_ClipPath, PrCssProperty_Clip, PrCssProperty_MaskImage,
+        PrCssProperty_MaskMode, PrCssProperty_MaskRepeat, PrCssProperty_MaskPosition, PrCssProperty_MaskSize,
+        PrCssProperty_MaskOrigin, PrCssProperty_MaskClip, PrCssProperty_MaskComposite, PrCssProperty_Filter,
+        PrCssProperty_BackdropFilter, PrCssProperty_MixBlendMode, PrCssProperty_Isolation,
+    };
+    for (PrCssProperty property : properties)
         CHECK(cssStyleSlot(property).group == CssStyleGroup_Compositing);
     CHECK(!cssStyleGroupInherited(CssStyleGroup_Compositing));
 }
@@ -119,7 +121,7 @@ TEST_CASE("inset() moves each side in, and reduces a pair of insets that is larg
 TEST_CASE("circle() and ellipse() take radii from lengths, percentages and extents") {
     PrRect box{0, 0, 100, 60};
     // A percentage of a circle is of the box's normalized diagonal.
-    float diagonal = std::sqrt((100.0f * 100 + 60.0f * 60) / 2);
+    float diagonal = prF32Sqrt((100.0f * 100 + 60.0f * 60) / 2);
     float r = diagonal * 0.4f;
     CHECK(near(outlineOf("circle(40%)", box).bounds, PrRect{50 - r, 30 - r, 50 + r, 30 + r}));
     // closest-side is the default, from the center.

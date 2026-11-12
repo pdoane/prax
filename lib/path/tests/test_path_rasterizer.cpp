@@ -1,20 +1,19 @@
+#include "pr/array.h"
 #include "pr/float.h"
+#include "pr/mem.h"
+#include "pr/min_max.h"
 #include "pr/path_rasterizer.h"
+#include "pr/string.h"
 #include "pr/vec.h"
 
 #include "tools/harness/test.h"
-
-#include <cmath>
-#include <string>
-#include <utility>
-#include <vector>
 
 namespace pr_impl {
 
 namespace {
 
 struct Fill {
-    std::vector<uint8_t> coverage;
+    Array<uint8_t> coverage;
     PrPixels mask;
 };
 
@@ -22,7 +21,8 @@ struct Fill {
 Fill fill(const PrPath* path, uint32_t width, uint32_t height, PrPathFillRule rule = PrPathFillRule_NonZero,
         bool antialias = true, PrAffine2 transform = prAffine2Identity(), int32_t left = 0, int32_t top = 0) {
     Fill result;
-    result.coverage.assign(size_t(width) * height, 0xaa);
+    result.coverage.resize(width * height);
+    prMemFill(result.coverage.data(), 0xaa, result.coverage.count());
     result.mask = PrPixels{result.coverage.data(), width, {width, height}};
     PrPathRasterizer* rasterizer = prPathRasterizerCreate();
     PrPathPolyline polyline{};
@@ -35,15 +35,15 @@ Fill fill(const PrPath* path, uint32_t width, uint32_t height, PrPathFillRule ru
 }
 
 // Returns the coverage as rows of values, one row per line.
-std::string rows(const Fill& f) {
-    std::string text;
+String rows(const Fill& f) {
+    String text;
     for (uint32_t y = 0; y < f.mask.extent.y; ++y) {
         for (uint32_t x = 0; x < f.mask.extent.x; ++x) {
             if (x != 0)
-                text += ' ';
-            text += std::to_string(f.coverage[y * f.mask.extent.x + x]);
+                text.append(' ');
+            formatTo(text, "{}", uint32_t(f.coverage[y * f.mask.extent.x + x]));
         }
-        text += '\n';
+        text.append('\n');
     }
     return text;
 }
@@ -58,7 +58,7 @@ PrPath* rectPath(PrRect rect) {
 double filledArea(const PrPath* path, PrPathFillRule rule = PrPathFillRule_NonZero) {
     constexpr uint32_t kScale = 8;
     constexpr uint32_t kSize = 64 * kScale;
-    std::vector<uint8_t> coverage(kSize * kSize);
+    Array<uint8_t> coverage(kSize * kSize);
     PrPixels mask{coverage.data(), kSize, {kSize, kSize}};
     PrPathRasterizer* rasterizer = prPathRasterizerCreate();
     PrPathPolyline polyline{};
@@ -75,9 +75,15 @@ double filledArea(const PrPath* path, PrPathFillRule rule = PrPathFillRule_NonZe
 
 constexpr double kPiD = 3.14159265358979;
 
+// A point at double precision.
+struct Point {
+    double x;
+    double y;
+};
+
 // Returns the area of the convex polygon `points` inside the pixel at `x`, `y`: the polygon clipped to each of the
 // pixel's sides in turn, then measured by the shoelace formula.
-double areaInPixel(std::vector<std::pair<double, double>> points, uint32_t x, uint32_t y) {
+double areaInPixel(Array<Point> points, uint32_t x, uint32_t y) {
     // Each side keeps the points whose coordinate `axis` is on its side of `edge`: above it if `above`, else below.
     struct Side {
         int axis;
@@ -89,30 +95,30 @@ double areaInPixel(std::vector<std::pair<double, double>> points, uint32_t x, ui
         {1, double(y + 1), false},
     };
     for (const Side& side : sides) {
-        auto coordinate = [&](const std::pair<double, double>& p) { return side.axis == 0 ? p.first : p.second; };
-        auto keeps = [&](const std::pair<double, double>& p) {
+        auto coordinate = [&](const Point& p) { return side.axis == 0 ? p.x : p.y; };
+        auto keeps = [&](const Point& p) {
             return side.above ? coordinate(p) >= side.edge : coordinate(p) <= side.edge;
         };
-        std::vector<std::pair<double, double>> kept;
-        for (size_t i = 0; i < points.size(); ++i) {
-            const std::pair<double, double>& a = points[i];
-            const std::pair<double, double>& b = points[(i + 1) % points.size()];
+        Array<Point> kept;
+        for (uint32_t i = 0; i < points.count(); ++i) {
+            const Point& a = points[i];
+            const Point& b = points[(i + 1) % points.count()];
             if (keeps(a))
-                kept.push_back(a);
+                kept.push(a);
             if (keeps(a) != keeps(b)) {
                 double t = (side.edge - coordinate(a)) / (coordinate(b) - coordinate(a));
-                kept.push_back({a.first + t * (b.first - a.first), a.second + t * (b.second - a.second)});
+                kept.push(Point{a.x + t * (b.x - a.x), a.y + t * (b.y - a.y)});
             }
         }
         points = kept;
     }
     double twice = 0;
-    for (size_t i = 0; i < points.size(); ++i) {
-        const std::pair<double, double>& a = points[i];
-        const std::pair<double, double>& b = points[(i + 1) % points.size()];
-        twice += a.first * b.second - b.first * a.second;
+    for (uint32_t i = 0; i < points.count(); ++i) {
+        const Point& a = points[i];
+        const Point& b = points[(i + 1) % points.count()];
+        twice += a.x * b.y - b.x * a.y;
     }
-    return std::abs(twice) / 2;
+    return prF64Abs(twice) / 2;
 }
 
 } // namespace
@@ -267,7 +273,7 @@ TEST_CASE("sectors are slices, rings and annular pieces") {
 TEST_CASE("a capsule is every point within its radius of the segment") {
     PrPath* path = prPathCreate();
     prPathAddCapsule(path, PrVec2{15, 20}, PrVec2{45, 40}, 8);
-    double length = std::sqrt(30.0 * 30 + 20 * 20);
+    double length = prF64Sqrt(30.0 * 30 + 20 * 20);
     CHECK(filledArea(path) == doctest::Approx(16 * length + kPiD * 64).epsilon(0.002));
     prPathClear(path);
     prPathAddCapsule(path, PrVec2{30, 30}, PrVec2{30, 30}, 8);
@@ -288,7 +294,8 @@ TEST_CASE("coverage along a curve is the area inside the pixel") {
     // Circles, and the exact area of each pixel inside them, sampled finely.
     constexpr float kCenter = 12;
     constexpr int kSamples = 128;
-    for (float radius : {8.0f, 2.5f}) {
+    const float radiusList[] = {8.0f, 2.5f};
+    for (float radius : radiusList) {
         PrPath* path = prPathCreate();
         prPathAddEllipse(path, PrVec2{kCenter, kCenter}, PrVec2{radius, radius}, 0);
         Fill f = fill(path, 24, 24);
@@ -303,8 +310,8 @@ TEST_CASE("coverage along a curve is the area inside the pixel") {
                         inside += px * px + py * py <= double(radius * radius);
                     }
                 }
-                int exact = int(std::lround(255.0 * inside / (kSamples * kSamples)));
-                int error = std::abs(int(f.coverage[y * 24 + x]) - exact);
+                int exact = int(prF64Round(255.0 * inside / (kSamples * kSamples)));
+                int error = abs(int(f.coverage[y * 24 + x]) - exact);
                 worst = error > worst ? error : worst;
             }
         }
@@ -316,13 +323,14 @@ TEST_CASE("coverage along a curve is the area inside the pixel") {
 TEST_CASE("coverage along straight edges is the area inside the pixel") {
     // A square rotated by a third of a right angle, and a polygon of many sides, against the exact area of each pixel
     // inside them.
-    for (uint32_t sides : {4u, 64u}) {
+    const uint32_t sidesList[] = {4u, 64u};
+    for (uint32_t sides : sidesList) {
         PrPath* path = prPathCreate();
-        std::vector<std::pair<double, double>> points;
+        Array<Point> points;
         for (uint32_t i = 0; i < sides; ++i) {
             double angle = 0.5 + 2 * kPiD * i / sides;
-            PrVec2 p{float(12 + 8 * std::cos(angle)), float(12 + 8 * std::sin(angle))};
-            points.push_back({double(p.x), double(p.y)});
+            PrVec2 p{float(12 + 8 * prF64Cos(angle)), float(12 + 8 * prF64Sin(angle))};
+            points.push(Point{double(p.x), double(p.y)});
             if (i == 0)
                 prPathMoveTo(path, p);
             else
@@ -333,8 +341,8 @@ TEST_CASE("coverage along straight edges is the area inside the pixel") {
         int worst = 0;
         for (uint32_t y = 0; y < 24; ++y) {
             for (uint32_t x = 0; x < 24; ++x) {
-                int exact = int(std::lround(255.0 * areaInPixel(points, x, y)));
-                int error = std::abs(int(f.coverage[y * 24 + x]) - exact);
+                int exact = int(prF64Round(255.0 * areaInPixel(points, x, y)));
+                int error = abs(int(f.coverage[y * 24 + x]) - exact);
                 worst = error > worst ? error : worst;
             }
         }
@@ -345,10 +353,12 @@ TEST_CASE("coverage along straight edges is the area inside the pixel") {
 
 TEST_CASE("a path with points or a transform that are not finite fills without failing") {
     PrPathRasterizer* rasterizer = prPathRasterizerCreate();
-    std::vector<uint8_t> coverage(16 * 16, 0xab);
+    Array<uint8_t> coverage(16 * 16);
+    prMemFill(coverage.data(), 0xab, coverage.count());
     PrPixels mask{coverage.data(), 16, {16, 16}};
     PrPathPolyline polyline{};
-    for (float bad : {kPrF32Infinity, -kPrF32Infinity, kPrF32Nan, 1e30f}) {
+    const float bads[] = {kPrF32Infinity, -kPrF32Infinity, kPrF32Nan, 1e30f};
+    for (float bad : bads) {
         PrPath* path = prPathCreate();
         prPathMoveTo(path, PrVec2{0, 0});
         prPathLineTo(path, PrVec2{bad, 5});

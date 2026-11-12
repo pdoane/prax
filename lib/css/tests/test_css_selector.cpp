@@ -10,7 +10,7 @@ namespace {
 
 // Parses `text` as a selector list, nested in a style rule as `nesting` says, and serializes it. Returns "" if `text`
 // is not a selector list.
-std::string roundTrip(PrStringView text, CssSelectorNesting nesting = CssSelectorNesting_None) {
+String roundTrip(PrStringView text, CssSelectorNesting nesting = CssSelectorNesting_None) {
     CssParser parser = {};
     CssSelectorContext context = {};
     context.nesting = nesting;
@@ -37,7 +37,7 @@ CssSpecificity specificity(PrStringView text) {
     return out;
 }
 
-std::string nth(int32_t a, int32_t b) {
+String nth(int32_t a, int32_t b) {
     PrTextBuffer buffer = {};
     cssSerializeNth(&buffer, a, b);
     return take(&buffer);

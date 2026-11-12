@@ -1,10 +1,9 @@
 #include "pr/locale_full.h"
+#include "pr/string.h"
 #include "pr/unicode.h"
 #include "pr/utf8.h"
 
 #include "tools/harness/test.h"
-
-#include <string>
 
 extern "C" int prTestUnicodeCApi(void);
 
@@ -13,17 +12,17 @@ namespace pr_impl {
 namespace {
 
 // Returns `text` mapped to `target` in `language`, one code point at a time, with the whole text as context.
-std::string mapped(const std::string& text, PrUnicodeCase target, PrLanguage language = 0) {
-    std::string out;
-    PrStringView view{text.data(), text.size()};
-    for (size_t at = 0; at < text.size();) {
+String mapped(PrStringView text, PrUnicodeCase target, PrLanguage language = 0) {
+    String out;
+    PrStringView view = text;
+    for (size_t at = 0; at < text.size;) {
         uint32_t codePoint = 0;
         uint32_t length = prUtf8Decode(view, at, &codePoint);
         uint32_t result[kPrUnicodeCaseMaxCodePoints];
         uint32_t count = prUnicodeMapCase(view, at, target, language, result);
         for (uint32_t i = 0; i < count; ++i) {
             char bytes[kPrUtf8MaxBytes];
-            out.append(bytes, prUtf8Encode(result[i], bytes));
+            out.append(PrStringView(bytes, prUtf8Encode(result[i], bytes)));
         }
         at += length;
     }

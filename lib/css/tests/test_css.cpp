@@ -1,5 +1,7 @@
+#include "pr/array.h"
 #include "pr/css.h"
 #include "pr/dom.h"
+#include "pr/string.h"
 
 #include "css/src/css_object.h"
 #include "css/tests/css_tests.h"
@@ -22,23 +24,23 @@ PrCssRule* ruleAt(const CssTestSheet& sheet, uint32_t index) {
 
 // Returns the strings that a sequence function writes, and releases them.
 template <typename Handle>
-std::vector<std::string> strings(uint32_t (*function)(const Handle*, PrRawString* PR_NULLABLE, uint32_t), const Handle* handle) {
-    std::vector<PrRawString> items(function(handle, nullptr, 0));
-    function(handle, items.data(), uint32_t(items.size()));
-    std::vector<std::string> out;
+Array<String> strings(uint32_t (*function)(const Handle*, PrRawString* PR_NULLABLE, uint32_t), const Handle* handle) {
+    Array<PrRawString> items(function(handle, nullptr, 0));
+    function(handle, items.data(), items.count());
+    Array<String> out;
     for (PrRawString& item : items)
-        out.push_back(take(item));
+        out.push(take(item));
     return out;
 }
 
 // Returns the views that a sequence function writes, as strings.
 template <typename Handle>
-std::vector<std::string> strings(uint32_t (*function)(const Handle*, PrStringView* PR_NULLABLE, uint32_t), const Handle* handle) {
-    std::vector<PrStringView> items(function(handle, nullptr, 0));
-    function(handle, items.data(), uint32_t(items.size()));
-    std::vector<std::string> out;
+Array<String> strings(uint32_t (*function)(const Handle*, PrStringView* PR_NULLABLE, uint32_t), const Handle* handle) {
+    Array<PrStringView> items(function(handle, nullptr, 0));
+    function(handle, items.data(), items.count());
+    Array<String> out;
     for (PrStringView item : items)
-        out.push_back(textOf(item));
+        out.push(textOf(item));
     return out;
 }
 
@@ -279,7 +281,7 @@ TEST_CASE("a keyframes rule finds, appends and deletes its keyframes by their se
     CHECK(prCssKeyframeRuleSetKeyText(found, "nonsense") == PrStatus_Syntax);
 
     prCssKeyframesRuleSetName(keyframes, "none");
-    CHECK(take(prCssRuleCssText(ruleAt(sheet, 0))).rfind("@keyframes \"none\" {", 0) == 0);
+    CHECK(prStringStartsWith(take(prCssRuleCssText(ruleAt(sheet, 0))), "@keyframes \"none\" {"));
     prCssRuleRelease(prCssKeyframeRuleAsCssRule(found));
 }
 
@@ -291,8 +293,8 @@ TEST_CASE("a rule's prelude answers its interface's attributes") {
     CHECK(textOf(prCssNamespaceRuleNamespaceUri(space)) == "http://x");
 
     PrCssLayerStatementRule* layers = prCssLayerStatementRuleQuery(ruleAt(sheet, 1));
-    std::vector<std::string> names = strings(prCssLayerStatementRuleNameList, layers);
-    REQUIRE(names.size() == 2);
+    Array<String> names = strings(prCssLayerStatementRuleNameList, layers);
+    REQUIRE(names.count() == 2);
     CHECK(names[0] == "a.b");
     CHECK(names[1] == "c");
 
@@ -338,7 +340,7 @@ TEST_CASE("a descriptor attribute reads and writes its rule's declaration") {
     CHECK(take(prCssStyleDeclarationCssText(descriptors)) == "font-family: bar; font-display: swap;");
 
     PrCssViewTransitionRule* transition = prCssViewTransitionRuleQuery(ruleAt(sheet, 3));
-    CHECK(strings(prCssViewTransitionRuleTypes, transition) == std::vector<std::string>{"a", "b"});
+    CHECK(strings(prCssViewTransitionRuleTypes, transition) == Array<String>({"a", "b"}));
 }
 
 TEST_CASE("a font feature values rule holds a map of each feature type") {
@@ -409,7 +411,7 @@ TEST_CASE("mixin and apply rules retain parameters arguments and nested declarat
     PrCssApplyBlockRule* apply = prCssApplyBlockRuleQuery(prCssRuleListRuleAt(rules, 0));
     REQUIRE(apply != nullptr);
     CHECK(prCssApplyBlockRuleGetArguments(apply, nullptr, 3) == 3);
-    CHECK(strings(prCssApplyBlockRuleGetArguments, apply) == std::vector<std::string>{"1px", "red, blue", "calc(1px + 2px)"});
+    CHECK(strings(prCssApplyBlockRuleGetArguments, apply) == Array<String>({"1px", "red, blue", "calc(1px + 2px)"}));
     CHECK(prCssRuleListLength(prCssGroupingRuleCssRules(prCssApplyBlockRuleAsCssGroupingRule(apply))) == 1);
     CHECK(prCssApplyStatementRuleQuery(prCssRuleListRuleAt(rules, 1)) != nullptr);
     CHECK(prCssGroupingRuleQuery(prCssRuleListRuleAt(rules, 1)) == nullptr);
@@ -430,7 +432,7 @@ TEST_CASE("apply serialization omits empty parentheses and unnecessary argument 
     rules = prCssGroupingRuleCssRules(prCssGroupingRuleQuery(ruleAt(unfinished, 0)));
     REQUIRE(prCssRuleListLength(rules) == 1);
     CHECK(strings(prCssApplyStatementRuleGetArguments, prCssApplyStatementRuleQuery(prCssRuleListRuleAt(rules, 0))) ==
-        std::vector<std::string>{""});
+        Array<String>({""}));
 }
 
 TEST_CASE("a highlight holds its ranges, and a registry names its highlights without holding them") {

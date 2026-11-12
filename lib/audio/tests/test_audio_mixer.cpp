@@ -5,8 +5,6 @@
 
 #include "tools/harness/test.h"
 
-#include <vector>
-
 namespace pr_impl {
 
 namespace {
@@ -51,32 +49,32 @@ struct Fixture {
         prAudioOutputDestroy(output);
     }
 
-    std::vector<float> render(uint32_t frames) {
-        std::vector<float> samples(frames);
+    Array<float> render(uint32_t frames) {
+        Array<float> samples(frames);
         prAudioMixerRender(mixer, samples.data(), frames);
         return samples;
     }
 };
 
-double rootMeanSquare(const std::vector<float>& samples, size_t from = 0) {
+double rootMeanSquare(const Array<float>& samples, uint32_t from = 0) {
     double sum = 0;
-    for (size_t i = from; i < samples.size(); ++i)
+    for (uint32_t i = from; i < samples.count(); ++i)
         sum += double(samples[i]) * double(samples[i]);
-    return prF64Sqrt(sum / double(samples.size() - from));
+    return prF64Sqrt(sum / double(samples.count() - from));
 }
 
 // The frequency of the samples, by their crossings of zero.
-double frequencyOf(const std::vector<float>& samples) {
+double frequencyOf(const Array<float>& samples) {
     uint32_t crossings = 0;
-    for (size_t i = 1; i < samples.size(); ++i)
+    for (uint32_t i = 1; i < samples.count(); ++i)
         crossings += (samples[i - 1] < 0) != (samples[i] < 0) ? 1 : 0;
-    return double(crossings) / 2 / (double(samples.size()) / kRate);
+    return double(crossings) / 2 / (double(samples.count()) / kRate);
 }
 
 // The largest change from one sample to the next.
-float largestStep(const std::vector<float>& samples) {
+float largestStep(const Array<float>& samples) {
     float largest = 0;
-    for (size_t i = 1; i < samples.size(); ++i) {
+    for (uint32_t i = 1; i < samples.count(); ++i) {
         float step = samples[i] > samples[i - 1] ? samples[i] - samples[i - 1] : samples[i - 1] - samples[i];
         largest = step > largest ? step : largest;
     }
@@ -91,7 +89,7 @@ using namespace pr_impl;
 
 TEST_CASE("a source plays once it starts, at its gain" * doctest::skip(!prThreadSupported())) {
     Fixture f;
-    std::vector<float> samples = f.render(kRate / 4);
+    Array<float> samples = f.render(kRate / 4);
     CHECK(rootMeanSquare(samples, 1024) == doctest::Approx(0.707).epsilon(0.01));
     CHECK(frequencyOf(samples) == doctest::Approx(1000).epsilon(0.01));
     prAudioSourceSetGain(f.source, 0.5f);
@@ -132,7 +130,7 @@ TEST_CASE("sources add" * doctest::skip(!prThreadSupported())) {
     prAudioSourceSetPlaying(other, true);
     prAudioSourceSetGain(f.source, 0.25f);
     prAudioSourceSetGain(other, 0.25f);
-    std::vector<float> samples = f.render(kRate / 4);
+    Array<float> samples = f.render(kRate / 4);
     // Two sines of different frequencies have twice the power of one, which is 0.25 at these gains.
     CHECK(rootMeanSquare(samples, 1024) == doctest::Approx(0.25).epsilon(0.02));
     prAudioSourceDestroy(other);
@@ -141,7 +139,7 @@ TEST_CASE("sources add" * doctest::skip(!prThreadSupported())) {
 TEST_CASE("a rate that preserves pitch changes speed and not frequency" * doctest::skip(!prThreadSupported())) {
     Fixture f;
     prAudioSourceSetRate(f.source, 1.5, true);
-    std::vector<float> samples = f.render(kRate);
+    Array<float> samples = f.render(kRate);
     CHECK(prAudioSourceClock(f.source).position == doctest::Approx(1.5).epsilon(0.02));
     CHECK(frequencyOf(samples) == doctest::Approx(1000).epsilon(0.02));
     CHECK(rootMeanSquare(samples, 4096) == doctest::Approx(0.707).epsilon(0.05));
@@ -150,7 +148,7 @@ TEST_CASE("a rate that preserves pitch changes speed and not frequency" * doctes
 TEST_CASE("a slow rate that preserves pitch changes speed and not frequency" * doctest::skip(!prThreadSupported())) {
     Fixture f;
     prAudioSourceSetRate(f.source, 0.5, true);
-    std::vector<float> samples = f.render(kRate);
+    Array<float> samples = f.render(kRate);
     CHECK(prAudioSourceClock(f.source).position == doctest::Approx(0.5).epsilon(0.02));
     CHECK(frequencyOf(samples) == doctest::Approx(1000).epsilon(0.02));
 }
@@ -158,7 +156,7 @@ TEST_CASE("a slow rate that preserves pitch changes speed and not frequency" * d
 TEST_CASE("a rate that does not preserve pitch changes speed and frequency" * doctest::skip(!prThreadSupported())) {
     Fixture f;
     prAudioSourceSetRate(f.source, 2, false);
-    std::vector<float> samples = f.render(kRate);
+    Array<float> samples = f.render(kRate);
     CHECK(prAudioSourceClock(f.source).position == doctest::Approx(2).epsilon(0.02));
     CHECK(frequencyOf(samples) == doctest::Approx(2000).epsilon(0.02));
 }

@@ -2,15 +2,14 @@
 
 #include "pr/fetch_intercept.h"
 #include "pr/html_page.h"
+#include "pr/lock.h"
+#include "pr/mutex.h"
 #include "pr/net_sockets.h"
+#include "pr/string_ops.h"
+#include "pr/thread.h"
+#include "pr/time.h"
 
 #include "tools/harness/test.h"
-
-#include <chrono>
-#include <condition_variable>
-#include <mutex>
-#include <string>
-#include <vector>
 
 namespace pr_impl {
 
@@ -20,22 +19,32 @@ namespace {
 // posted to it. The loop answers a request for a.js at once, and holds any other request until the test asks the loop
 // to fail it. `mutex` guards `posted` and `log`.
 struct Threaded {
-    PrNet* net;
-    PrFetchNetwork* fetcher;
-    PrDomAgent* agent;
-    std::vector<PrFetchInterceptRequest*> held;  // reached on the loop alone
-    std::mutex mutex;
-    std::condition_variable wake;
+    PrNet* net = nullptr;
+    PrFetchNetwork* fetcher = nullptr;
+    PrDomAgent* agent = nullptr;
+    Array<PrFetchInterceptRequest*> held;  // reached on the loop alone
+    PrMutex mutex;
+    PrCondition wake;
     bool posted = false;
     bool loopDone = false;
-    std::string log;
+    String log;
+
+    Threaded() {
+        prMutexInit(&mutex);
+        prConditionInit(&wake);
+    }
+    ~Threaded() {
+        prConditionReset(&wake);
+        prMutexReset(&mutex);
+    }
+    Threaded(const Threaded&) = delete;
+    Threaded& operator=(const Threaded&) = delete;
 };
 
 void answer(void* PR_NULLABLE context, PrFetchInterceptRequest* request) {
     Threaded* t = static_cast<Threaded*>(context);
-    std::string url(request->desc.url.data, request->desc.url.size);
-    if (!url.ends_with("a.js")) {
-        t->held.push_back(request);
+    if (!prStringEndsWith(request->desc.url, "a.js")) {
+        t->held.push(request);
         return;
     }
     PrFetchInterceptResponse response{
@@ -47,9 +56,9 @@ void answer(void* PR_NULLABLE context, PrFetchInterceptRequest* request) {
 
 void woken(void* PR_NULLABLE context) {
     Threaded* t = static_cast<Threaded*>(context);
-    std::lock_guard<std::mutex> lock(t->mutex);
+    Lock lock(&t->mutex);
     t->posted = true;
-    t->wake.notify_one();
+    prConditionSignal(&t->wake);
 }
 
 // Fails the requests that the loop holds, on the loop.
@@ -64,23 +73,25 @@ void failHeld(void* PR_NULLABLE context) {
 void closeOnLoop(void* PR_NULLABLE context) {
     Threaded* t = static_cast<Threaded*>(context);
     prFetchNetworkDestroy(t->fetcher);
-    std::lock_guard<std::mutex> lock(t->mutex);
+    Lock lock(&t->mutex);
     t->loopDone = true;
-    t->wake.notify_one();
+    prConditionSignal(&t->wake);
 }
 
 // Runs the agent's tasks, sleeping until one is posted, until `done` returns true or a second passes.
 template <typename Done>
 bool runUntil(Threaded* t, Done done) {
-    std::chrono::steady_clock::time_point deadline = std::chrono::steady_clock::now() + std::chrono::seconds(1);
+    double deadline = prTimeMonotonicMilliseconds() + 1000;
     while (!done()) {
         while (prDomAgentRunTask(t->agent)) {
         }
         if (done())
             return true;
-        std::unique_lock<std::mutex> lock(t->mutex);
-        if (!t->wake.wait_until(lock, deadline, [&] { return t->posted; }))
-            return false;
+        Lock lock(&t->mutex);
+        while (!t->posted) {
+            if (!prConditionWaitFor(&t->wake, &t->mutex, deadline - prTimeMonotonicMilliseconds()) && !t->posted)
+                return false;
+        }
         t->posted = false;
     }
     return true;
@@ -93,8 +104,9 @@ PrHtmlHost hostOf(Threaded* t) {
     host.fetcher = t->fetcher;
     host.execute = [](void* data, PrHtmlPage*, const PrHtmlScript* script) -> PrStatus {
         Threaded* threaded = static_cast<Threaded*>(data);
-        std::lock_guard<std::mutex> lock(threaded->mutex);
-        threaded->log += std::string(script->source.data, script->source.size) + " ";
+        Lock lock(&threaded->mutex);
+        threaded->log.append(script->source);
+        threaded->log.append(' ');
         return PrStatus_Ok;
     };
     return host;
@@ -107,7 +119,7 @@ PrHtmlHost hostOf(Threaded* t) {
 using namespace pr_impl;
 
 TEST_CASE("fetches run on the network's thread and arrive in the agent's tasks, and a dropped one posts nothing") {
-    Threaded t{};
+    Threaded t;
     t.net = prNetSocketsCreate();
     PrFetchInterceptDesc desc{.net = t.net, .request = answer, .context = &t};
     t.fetcher = prFetchInterceptCreate(&desc);
@@ -123,7 +135,7 @@ TEST_CASE("fetches run on the network's thread and arrive in the agent's tasks, 
         return prHtmlDocumentReadyState(document) == PrHtmlDocumentReadyState_Complete;
     }));
     {
-        std::lock_guard<std::mutex> lock(t.mutex);
+        Lock lock(&t.mutex);
         CHECK(t.log == "external ");
     }
     prHtmlPageDestroy(page);
@@ -136,8 +148,9 @@ TEST_CASE("fetches run on the network's thread and arrive in the agent's tasks, 
 
     prNetPost(t.net, closeOnLoop, &t);
     {
-        std::unique_lock<std::mutex> lock(t.mutex);
-        t.wake.wait(lock, [&] { return t.loopDone; });
+        Lock lock(&t.mutex);
+        while (!t.loopDone)
+            prConditionWait(&t.wake, &t.mutex);
     }
     while (prDomAgentRunTask(t.agent)) {
     }

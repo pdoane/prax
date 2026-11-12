@@ -1,3 +1,5 @@
+#include "pr/ascii.h"
+
 #include "css/src/css_grammar.h"
 #include "css/src/css_keyword.h"
 #include "css/src/css_property.h"
@@ -7,8 +9,6 @@
 #include "css/tests/css_tests.h"
 
 #include "tools/harness/test.h"
-
-#include <ctype.h>
 
 namespace pr_impl {
 
@@ -159,11 +159,11 @@ TEST_CASE("a subtree ends inside the array") {
 
 TEST_CASE("prose terminals resolve to a terminal node") {
     // The productions that need hand-written parsers.
-    for (CssValueDef def :
-            {
-                CssValueDef_Length, CssValueDef_String, CssValueDef_Integer, CssValueDef_Number,
-                CssValueDef_CustomIdent, CssValueDef_HexColor, CssValueDef_DeclarationValue,
-            }) {
+    const CssValueDef kProse[] = {
+        CssValueDef_Length, CssValueDef_String, CssValueDef_Integer, CssValueDef_Number,
+        CssValueDef_CustomIdent, CssValueDef_HexColor, CssValueDef_DeclarationValue,
+    };
+    for (CssValueDef def : kProse) {
         INFO(textOf(kCssValueDefName[def]));
         CHECK(cssGrammarType(kCssGrammarNodes[kCssValueDefGrammarRoot[def]]) == CssGrammarType_Terminal);
     }
@@ -260,7 +260,7 @@ TEST_CASE("keywords are lowercase, since idents are case-insensitive") {
         PrStringView name = cssKeywordName(i);
         for (size_t at = 0; at < name.size; ++at) {
             INFO(textOf(name));
-            CHECK_FALSE(isupper(uint8_t(name.data[at])));
+            CHECK_FALSE(prAsciiIsUpper(name.data[at]));
         }
     }
 }

@@ -3,18 +3,17 @@
 #include "pr/canvas.h"
 #include "pr/draw_cpu.h"
 #include "pr/draw_renderer.h"
+#include "pr/float.h"
 #include "pr/gpu.h"
-#include "pr/string_ops.h"
+#include "pr/string.h"
 
 #include "tools/harness/test.h"
-
-#include <cmath>
-#include <cstdlib>
-#include <string>
 
 extern "C" int prTestCanvasCApi(void);
 
 namespace pr_impl {
+
+using namespace pr;
 
 namespace {
 
@@ -35,7 +34,7 @@ struct MemoryCanvas {
     }
 
     // Returns the pixel at (x, y) as "r,g,b,a".
-    std::string pixel(int32_t x, int32_t y) {
+    String pixel(int32_t x, int32_t y) {
         uint8_t bytes[4];
         PrCanvasImageData data{
             .extent = PrUVec2{1, 1},
@@ -43,8 +42,7 @@ struct MemoryCanvas {
             .colorSpace = PrColorSpace_Srgb,
         };
         prCanvasGetImageData(handle, PrIVec2{x, y}, &data, bytes);
-        return std::to_string(bytes[0]) + "," + std::to_string(bytes[1]) + "," + std::to_string(bytes[2]) + "," +
-            std::to_string(bytes[3]);
+        return format("{},{},{},{}", bytes[0], bytes[1], bytes[2], bytes[3]);
     }
 
     // Returns true if each channel of the pixel at (x, y) is within `tolerance` of r, g, b, a.
@@ -58,19 +56,14 @@ struct MemoryCanvas {
         prCanvasGetImageData(handle, PrIVec2{x, y}, &data, bytes);
         const int expected[] = {r, g, b, a};
         for (uint32_t i = 0; i < 4; ++i) {
-            if (std::abs(int(bytes[i]) - expected[i]) > tolerance)
+            int difference = int(bytes[i]) - expected[i];
+            if (difference > tolerance || difference < -tolerance)
                 return false;
         }
         return true;
     }
 
-    std::string fillStyle() {
-        return std::string(toStd(prCanvasStyle(handle, PrCanvasStyleRole_Fill).color));
-    }
-
-    static std::string toStd(PrStringView view) {
-        return std::string(view.data != nullptr ? view.data : "", view.size);
-    }
+    String fillStyle() { return String(prCanvasStyle(handle, PrCanvasStyleRole_Fill).color); }
 };
 
 // Returns true if the build has a renderer that draws on a device, and the run tests on the platform's GPU
@@ -247,7 +240,7 @@ TEST_CASE("setLineDash ignores a negative or non-finite segment, and repeats an 
 TEST_CASE("a shadow is drawn offset and in its color, beneath the shape") {
     MemoryCanvas canvas;
     prCanvasSetShadowColor(canvas.handle, "#0f0");
-    CHECK(MemoryCanvas::toStd(prCanvasShadowColor(canvas.handle)) == "#00ff00");
+    CHECK(prCanvasShadowColor(canvas.handle) == "#00ff00");
     prCanvasSetShadowOffset(canvas.handle, PrDVec2{50, 0});
     prCanvasSetStyleColor(canvas.handle, PrCanvasStyleRole_Fill, "#f00");
     prCanvasFillRect(canvas.handle, 0, 0, 50, 50);
@@ -325,7 +318,7 @@ TEST_CASE("isPointInPath counts points on the path's edge as inside") {
     CHECK(prCanvasIsPointInPath(canvas.handle, nullptr, 20, 10, PrPathFillRule_NonZero));
     CHECK(prCanvasIsPointInPath(canvas.handle, nullptr, 10, 10, PrPathFillRule_NonZero));
     CHECK(!prCanvasIsPointInPath(canvas.handle, nullptr, 21, 10, PrPathFillRule_NonZero));
-    CHECK(!prCanvasIsPointInPath(canvas.handle, nullptr, std::nan(""), 10, PrPathFillRule_NonZero));
+    CHECK(!prCanvasIsPointInPath(canvas.handle, nullptr, kPrF64Nan, 10, PrPathFillRule_NonZero));
 }
 
 TEST_CASE("isPointInStroke tests the stroke at the line width") {
@@ -413,10 +406,11 @@ TEST_CASE("a bitmap on a device reads back what the context drew before any pres
         prCanvasGetImageData(canvas, PrIVec2{x, y}, &data, read);
         return int(read[3]);
     };
+    auto halfOpaque = [](int alpha) { return alpha >= 127 && alpha <= 129; };
     // A half-opaque fill, which would be more opaque if it drew twice.
     prCanvasSetStyleColor(canvas, PrCanvasStyleRole_Fill, "rgba(0, 0, 255, 0.5)");
     prCanvasFillRect(canvas, 0, 0, 8, 8);
-    CHECK(std::abs(alphaAt(1, 1) - 128) <= 1);
+    CHECK(halfOpaque(alphaAt(1, 1)));
 
     // The presenting renderer draws the bitmap that the read drew into, and none of what the read drew again.
     PrDrawRenderer* renderer = nullptr;
@@ -432,7 +426,7 @@ TEST_CASE("a bitmap on a device reads back what the context drew before any pres
     PrDrawTarget into{.extent = PrUVec2{8, 8}, .format = PrPixelFormat_Rgba8, .commands = commands};
     REQUIRE(prDrawFramePrepare(frame, list, &into) == PrStatus_Ok);
     prGpuCommandsSubmitAndWait(commands);
-    CHECK(std::abs(alphaAt(1, 1) - 128) <= 1);
+    CHECK(halfOpaque(alphaAt(1, 1)));
 
     // A write follows the drawing before it, which the write's read draws first.
     prCanvasFillRect(canvas, 0, 0, 8, 8);

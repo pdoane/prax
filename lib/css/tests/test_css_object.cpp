@@ -8,19 +8,19 @@ namespace pr_impl {
 
 namespace {
 
-std::string text(const CssRuleData* rule) {
+String text(const CssRuleData* rule) {
     PrTextBuffer buffer = {};
     cssSerializeRule(&buffer, rule);
     return take(&buffer);
 }
 
-std::string selectors(const CssRuleData* rule) {
+String selectors(const CssRuleData* rule) {
     PrTextBuffer buffer = {};
     cssSerializeSelectorText(&buffer, rule);
     return take(&buffer);
 }
 
-std::string prelude(const CssRuleData* rule) {
+String prelude(const CssRuleData* rule) {
     PrTextBuffer buffer = {};
     cssSerializePrelude(&buffer, rule);
     return take(&buffer);
@@ -35,7 +35,7 @@ bool preludeHolds(const CssRuleData* rule, CssValueDef production) {
     return false;
 }
 
-std::string declarations(const CssDeclarationBlock* block) {
+String declarations(const CssDeclarationBlock* block) {
     PrTextBuffer buffer = {};
     cssSerializeDeclarationBlock(&buffer, block);
     return take(&buffer);
@@ -45,11 +45,11 @@ const CssDeclaration& declarationAt(const CssDeclarationBlock* block, uint32_t i
     return cssDeclarations(block)[index];
 }
 
-std::string nameAt(const CssDeclarationBlock* block, uint32_t index) {
+String nameAt(const CssDeclarationBlock* block, uint32_t index) {
     return textOf(cssDeclarationName(block, &declarationAt(block, index)));
 }
 
-std::string valueAt(const CssDeclarationBlock* block, uint32_t index) {
+String valueAt(const CssDeclarationBlock* block, uint32_t index) {
     PrTextBuffer buffer = {};
     cssSerializeDeclarationValue(&buffer, block, &declarationAt(block, index));
     return take(&buffer);
@@ -164,17 +164,17 @@ TEST_CASE("a media query list serializes the way cssom defines") {
         PrStringView written;
         const char* serialized;
     };
-    for (const Case& test :
-            {
-                Case{"@media aLL {}", "all"}, Case{"@media not PRINT {}", "not print"},
-                Case{"@media all and (color) {}", "(color)"},
-                Case{"@media not all and (color) {}", "not all and (color)"},
-                Case{
-                    "@media screen and (MIN-width:5px) AND (max-width:40px) {}",
-                    "screen and (min-width: 5px) and (max-width: 40px)",
-                },
-                Case{"@media (400px <= width < 700px), print {}", "(400px <= width < 700px), print"},
-            }) {
+    const Case cases[] = {
+        Case{"@media aLL {}", "all"}, Case{"@media not PRINT {}", "not print"},
+        Case{"@media all and (color) {}", "(color)"},
+        Case{"@media not all and (color) {}", "not all and (color)"},
+        Case{
+            "@media screen and (MIN-width:5px) AND (max-width:40px) {}",
+            "screen and (min-width: 5px) and (max-width: 40px)",
+        },
+        Case{"@media (400px <= width < 700px), print {}", "(400px <= width < 700px), print"},
+    };
+    for (const Case& test : cases) {
         INFO(textOf(test.written));
         CssTestSheet sheet(test.written);
         REQUIRE(sheet.count() == 1);
@@ -190,19 +190,19 @@ TEST_CASE("a media query that is not one is not all") {
         PrStringView written;
         const char* serialized;
     };
-    for (const Case& test :
-            {
-                Case{"@media (example, all,), speech {}", "(example, all,), speech"},
-                Case{"@media &test, speech {}", "not all, speech"},
-                Case{
-                    "@media screen and (max-weight: 3kg) and (color), (color) {}",
-                    "screen and (max-weight: 3kg) and (color), (color)",
-                },
-                Case{"@media (min-orientation: portrait) {}", "(min-orientation: portrait)"},
-                Case{"@media (color: 20example) {}", "(color: 20example)"},
-                Case{"@media or and (color) {}", "not all"},
-                Case{"@media (orientation < portrait) {}", "(orientation < portrait)"},
-            }) {
+    const Case cases[] = {
+        Case{"@media (example, all,), speech {}", "(example, all,), speech"},
+        Case{"@media &test, speech {}", "not all, speech"},
+        Case{
+            "@media screen and (max-weight: 3kg) and (color), (color) {}",
+            "screen and (max-weight: 3kg) and (color), (color)",
+        },
+        Case{"@media (min-orientation: portrait) {}", "(min-orientation: portrait)"},
+        Case{"@media (color: 20example) {}", "(color: 20example)"},
+        Case{"@media or and (color) {}", "not all"},
+        Case{"@media (orientation < portrait) {}", "(orientation < portrait)"},
+    };
+    for (const Case& test : cases) {
         INFO(textOf(test.written));
         CssTestSheet sheet(test.written);
         REQUIRE(sheet.count() == 1);
@@ -230,19 +230,19 @@ TEST_CASE("a container query's features are the ones of the function they are in
         PrStringView written;
         bool known;
     };
-    for (const Case& test :
-            {
-                Case{"@container (width > 1px) {}", true},
-                Case{"@container (stuck: top) {}", false},
-                Case{"@container scroll-state(stuck: top) {}", true},
-                Case{"@container scroll-state((snapped: x) or (scrollable)) {}", true},
-                Case{"@container scroll-state(width > 1px) {}", false},
-                Case{"@container anchored(fallback: none) {}", true},
-                Case{"@container anchored(fallback: --a flip-block) {}", true},
-                Case{"@container anchored(fallback: 0) {}", false},
-                Case{"@container anchored(fallback:) {}", false},
-                Case{"@container anchored(stuck: top) {}", false},
-            }) {
+    const Case cases[] = {
+        Case{"@container (width > 1px) {}", true},
+        Case{"@container (stuck: top) {}", false},
+        Case{"@container scroll-state(stuck: top) {}", true},
+        Case{"@container scroll-state((snapped: x) or (scrollable)) {}", true},
+        Case{"@container scroll-state(width > 1px) {}", false},
+        Case{"@container anchored(fallback: none) {}", true},
+        Case{"@container anchored(fallback: --a flip-block) {}", true},
+        Case{"@container anchored(fallback: 0) {}", false},
+        Case{"@container anchored(fallback:) {}", false},
+        Case{"@container anchored(stuck: top) {}", false},
+    };
+    for (const Case& test : cases) {
         INFO(textOf(test.written));
         CssTestSheet sheet(test.written);
         REQUIRE(sheet.count() == 1);
@@ -776,7 +776,7 @@ TEST_CASE("a range descriptor whose bounds are the same serializes as the one va
 TEST_CASE("a palette's override colors are absolute colors") {
     // css-fonts-4/#descdef-font-palette-values-override-colors
     auto colors = [](PrStringView value) {
-        std::string rule = "@font-palette-values --a { override-colors: " + textOf(value) + " }";
+        String rule = format("@font-palette-values --a {{ override-colors: {} }}", value);
         CssTestSheet sheet(rule);
         return declarations(&sheet.rule(0)->style);
     };
@@ -789,7 +789,7 @@ TEST_CASE("a palette's override colors are absolute colors") {
 
 TEST_CASE("a src descriptor keeps the sources that parse and that the UA supports") {
     auto src = [](PrStringView value) {
-        std::string rule = "@font-face { src: " + textOf(value) + " }";
+        String rule = format("@font-face {{ src: {} }}", value);
         CssTestSheet sheet(rule);
         return declarations(&sheet.rule(0)->style);
     };

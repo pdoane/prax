@@ -34,7 +34,7 @@ struct Source : CssTestSource {
 
     const CssValueNode& at(uint32_t index) const { return pool.values.data[index]; }
 
-    std::string text(const CssValueNode& value) const {
+    String text(const CssValueNode& value) const {
         return textOf(PrStringView{pool.text.data + value.text.start, value.text.length});
     }
 
@@ -53,11 +53,11 @@ bool matches(PrStringView property, PrStringView value) {
 }
 
 // Returns a value of a property as it serializes once parsed, or the empty string if it does not parse.
-std::string serialized(PrStringView property, PrStringView value) {
+String serialized(PrStringView property, PrStringView value) {
     Source s(value);
     CssValueSpan span;
     if (!s.parseProperty(property, &span))
-        return std::string();
+        return String();
     PrTextBuffer out = {};
     cssSerializeValues(&out, cssValuePoolRun(&s.pool, span));
     return take(&out);
@@ -98,12 +98,15 @@ TEST_CASE("a dimension parses as the type its unit measures") {
         CssValueDef def;
         PrCssUnit unit;
     };
-    for (const Case& test : {Case{"3px", CssValueDef_Length, PrCssUnit_Px},
+    const Case cases[] = {
+        Case{"3px", CssValueDef_Length, PrCssUnit_Px},
         Case{"45deg", CssValueDef_Angle, PrCssUnit_Deg}, Case{"2s", CssValueDef_Time, PrCssUnit_S},
-                Case{"50Hz", CssValueDef_Frequency, PrCssUnit_Hz},
-                Case{"2dppx", CssValueDef_Resolution, PrCssUnit_Dppx},
-                Case{"1fr", CssValueDef_Flex, PrCssUnit_Fr}, Case{"-6dB", CssValueDef_Decibel, PrCssUnit_DB},
-                Case{"2st", CssValueDef_Semitones, PrCssUnit_St}}) {
+        Case{"50Hz", CssValueDef_Frequency, PrCssUnit_Hz},
+        Case{"2dppx", CssValueDef_Resolution, PrCssUnit_Dppx},
+        Case{"1fr", CssValueDef_Flex, PrCssUnit_Fr}, Case{"-6dB", CssValueDef_Decibel, PrCssUnit_DB},
+        Case{"2st", CssValueDef_Semitones, PrCssUnit_St},
+    };
+    for (const Case& test : cases) {
         INFO(test.text);
         Source s(test.text);
         CssValueNode value;
@@ -129,7 +132,8 @@ TEST_CASE("only a length may drop the unit from a zero") {
     CHECK(value.unit == PrCssUnit_Px);
     CHECK(value.number == 0);
 
-    for (CssValueDef def : {CssValueDef_Angle, CssValueDef_Time, CssValueDef_Flex}) {
+    const CssValueDef defs[] = {CssValueDef_Angle, CssValueDef_Time, CssValueDef_Flex};
+    for (CssValueDef def : defs) {
         Source s("0");
         CHECK_FALSE(s.parse(def, &value));
     }
@@ -179,8 +183,8 @@ TEST_CASE("a string value drops its quotes") {
 }
 
 TEST_CASE("a custom ident is any ident but the CSS-wide keywords") {
-    for (PrStringView text : {"inherit", "INITIAL", "unset",
-        "revert", "revert-layer", "default"}) {
+    const PrStringView texts[] = {"inherit", "INITIAL", "unset", "revert", "revert-layer", "default"};
+    for (PrStringView text : texts) {
         INFO(textOf(text));
         Source s(text);
         CssValueNode value;
@@ -205,7 +209,8 @@ TEST_CASE("a custom ident excludes the keywords its property's prose names") {
 }
 
 TEST_CASE("a dashed ident needs the two hyphens, however they are escaped") {
-    for (PrStringView text : {"--x", "\\--x", "-\\-x"}) {
+    const PrStringView texts[] = {"--x", "\\--x", "-\\-x"};
+    for (PrStringView text : texts) {
         INFO(textOf(text));
         Source s(text);
         CssValueNode value;
@@ -234,8 +239,11 @@ TEST_CASE("a declaration value's last token is written as it was read where the 
         PrStringView written;
         const char* kept;
     };
-    for (const Case& test : {Case{"a  foo\\", "a  foo\uFFFD"},
-        Case{"url(foo\\", "url(foo\uFFFD)"}, Case{"\"foo\\", "\"foo\""}, Case{"a  b", "a  b"}}) {
+    const Case cases[] = {
+        Case{"a  foo\\", "a  foo\uFFFD"},
+        Case{"url(foo\\", "url(foo\uFFFD)"}, Case{"\"foo\\", "\"foo\""}, Case{"a  b", "a  b"},
+    };
+    for (const Case& test : cases) {
         INFO(textOf(test.written));
         Source s(test.written);
         CssValueNode value;
@@ -245,7 +253,8 @@ TEST_CASE("a declaration value's last token is written as it was read where the 
 }
 
 TEST_CASE("a declaration value holds no top-level bang or semicolon") {
-    for (PrStringView text : {"red !important", "red; rest"}) {
+    const PrStringView texts[] = {"red !important", "red; rest"};
+    for (PrStringView text : texts) {
         INFO(textOf(text));
         Source s(text);
         CssValueNode value;
@@ -374,8 +383,8 @@ TEST_CASE("a definition with no grammar matches nothing") {
 }
 
 TEST_CASE("a CSS-wide keyword is the value of any property at all") {
-    for (PrStringView text : {"inherit", "INITIAL", "unset",
-        "revert", "revert-layer", "revert-rule"}) {
+    const PrStringView texts[] = {"inherit", "INITIAL", "unset", "revert", "revert-layer", "revert-rule"};
+    for (PrStringView text : texts) {
         INFO(textOf(text));
         Source s(text);
         CssValueSpan span;
@@ -389,8 +398,8 @@ TEST_CASE("a CSS-wide keyword is the value of any property at all") {
 }
 
 TEST_CASE("a value reaching a substitution function is kept as tokens") {
-    for (PrStringView text : {"var(--x)", "calc(var(--x) + 1px)",
-        "env(safe-area-inset-top)"}) {
+    const PrStringView texts[] = {"var(--x)", "calc(var(--x) + 1px)", "env(safe-area-inset-top)"};
+    for (PrStringView text : texts) {
         INFO(textOf(text));
         Source s(text);
         CssValueSpan span;
@@ -479,10 +488,10 @@ TEST_CASE("a comma is omitted when what it would separate is not there") {
 
 TEST_CASE("a value that cannot match gives up rather than searching forever") {
     // Backtracking over a comma-separated list grows with its length, so the matcher counts the nodes that it enters.
-    std::string text;
+    String text;
     for (int i = 0; i < 16; ++i)
-        text += "url(a) luminance 0 0 / 1px 1px repeat border-box border-box add, ";
-    text += "ZZZ";
+        text.append("url(a) luminance 0 0 / 1px 1px repeat border-box border-box add, ");
+    text.append("ZZZ");
 
     Source s(text);
     CssValueSpan span;

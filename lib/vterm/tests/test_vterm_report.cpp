@@ -1,12 +1,14 @@
 // Tests the reports of the terminal's settings, capabilities and color scheme that a program requests.
 
+#include "pr/string.h"
+#include "pr/string_ops.h"
 #include "pr/vterm.h"
 
 #include "tools/harness/test.h"
 
-#include <string>
-
 namespace pr_impl {
+
+using namespace pr;
 
 namespace {
 
@@ -22,58 +24,62 @@ struct Term {
     Term(const Term&) = delete;
     Term& operator=(const Term&) = delete;
 
-    void write(const std::string& text) {
-        prVtermWrite(vterm, PrByteView{reinterpret_cast<const uint8_t*>(text.data()), text.size()});
+    void write(PrStringView text) {
+        prVtermWrite(vterm, prStringBytes(text));
     }
 
     // Returns and consumes the output queued for the program.
-    std::string output() {
+    String output() {
         PrByteView bytes = prVtermOutput(vterm);
-        std::string out(reinterpret_cast<const char*>(bytes.data), bytes.size);
+        String out(prStringFromBytes(bytes));
         prVtermOutputConsume(vterm, bytes.size);
         return out;
     }
 
     // The answer to a request for the setting of the control function `name` (DECRQSS).
-    std::string setting(const std::string& name) {
-        write("\x1bP$q" + name + "\x1b\\");
+    String setting(PrStringView name) {
+        write(format("\x1bP$q{}\x1b\\", name));
         return output();
     }
 
     // The answer to a request for the capabilities `names`, separated by semicolons (XTGETTCAP).
-    std::string capabilities(const std::string& names) {
-        std::string hex;
-        for (char c : names)
-            hex += c == ';' ? std::string(";") : toHex(std::string(1, c));
-        write("\x1bP+q" + hex + "\x1b\\");
+    String capabilities(PrStringView names) {
+        String hex;
+        for (char c : names) {
+            if (c == ';')
+                hex.append(c);
+            else
+                hex.append(toHex(PrStringView(&c, 1)));
+        }
+        write(format("\x1bP+q{}\x1b\\", hex));
         return output();
     }
 
-    static std::string toHex(const std::string& text) {
+    static String toHex(PrStringView text) {
         static const char kDigits[] = "0123456789ABCDEF";
-        std::string out;
+        String out;
         for (char c : text) {
-            out += kDigits[uint8_t(c) >> 4];
-            out += kDigits[uint8_t(c) & 15];
+            out.append(kDigits[uint8_t(c) >> 4]);
+            out.append(kDigits[uint8_t(c) & 15]);
         }
         return out;
     }
 };
 
 // The reply to a request for a setting that the terminal has.
-std::string settingReply(const std::string& setting) {
-    return "\x1bP1$r" + setting + "\x1b\\";
+String settingReply(PrStringView setting) {
+    return format("\x1bP1$r{}\x1b\\", setting);
 }
 
 // The reply for a capability that the terminal has. A boolean capability has no value.
-std::string capabilityReply(const std::string& name, const std::string* value = nullptr) {
-    std::string reply = "\x1bP1+r" + Term::toHex(name);
+String capabilityReply(PrStringView name, const PrStringView* value = nullptr) {
+    String reply = format("\x1bP1+r{}", Term::toHex(name));
     if (value != nullptr)
-        reply += "=" + Term::toHex(*value);
-    return reply + "\x1b\\";
+        formatTo(reply, "={}", Term::toHex(*value));
+    return format("{}\x1b\\", reply);
 }
 
-std::string capabilityReply(const std::string& name, const std::string& value) {
+String capabilityReply(PrStringView name, PrStringView value) {
     return capabilityReply(name, &value);
 }
 
@@ -163,11 +169,12 @@ TEST_CASE("vterm reports: XTGETTCAP answers each capability that the terminal ha
     CHECK(term.capabilities("nope") == "\x1bP0+r\x1b\\");
 
     // Each name gets its own reply, in the order of the request.
-    CHECK(term.capabilities("Co;nope;Tc") == capabilityReply("Co", "256") + "\x1bP0+r\x1b\\" + capabilityReply("Tc"));
+    CHECK(term.capabilities("Co;nope;Tc") ==
+        format("{}\x1bP0+r\x1b\\{}", capabilityReply("Co", "256"), capabilityReply("Tc")));
 
     // A name in lowercase hexadecimal is also accepted, and the reply spells it as the request did.
     term.write("\x1bP+q544e\x1b\\");
-    CHECK(term.output() == "\x1bP1+r544e=" + Term::toHex("xterm-256color") + "\x1b\\");
+    CHECK(term.output() == format("\x1bP1+r544e={}\x1b\\", Term::toHex("xterm-256color")));
 
     // A name that is not hexadecimal is invalid.
     term.write("\x1bP+q54G\x1b\\\x1bP+q545\x1b\\");
@@ -179,7 +186,7 @@ TEST_CASE("vterm reports: XTGETTCAP reports the sequences of the extensions that
     CHECK(term.capabilities("Setulc") ==
         capabilityReply("Setulc", "\x1b[58:2::%p1%{65536}%/%d:%p1%{256}%/%{255}%&%d:%p1%{255}%&%d%;m"));
     CHECK(term.capabilities("Sync") == capabilityReply("Sync", "\x1b[?2026%?%p1%{1}%-%tl%eh%;"));
-    CHECK(term.capabilities("BE;BD") == capabilityReply("BE", "\x1b[?2004h") + capabilityReply("BD", "\x1b[?2004l"));
+    CHECK(term.capabilities("BE;BD") == format("{}{}", capabilityReply("BE", "\x1b[?2004h"), capabilityReply("BD", "\x1b[?2004l")));
 }
 
 TEST_CASE("vterm reports: the color scheme is dark until the caller sets it, and a query reports it") {
@@ -190,7 +197,7 @@ TEST_CASE("vterm reports: the color scheme is dark until the caller sets it, and
     prVtermSetColorScheme(term.vterm, PrAppColorScheme_Light);
     CHECK(prVtermColorScheme(term.vterm) == PrAppColorScheme_Light);
     // Without mode 2031, the change is not reported.
-    CHECK(term.output().empty());
+    CHECK(term.output().isEmpty());
     term.write("\x1b[?996n");
     CHECK(term.output() == "\x1b[?997;2n");
 
@@ -210,16 +217,16 @@ TEST_CASE("vterm reports: mode 2031 reports each change of the color scheme, and
     CHECK(term.output() == "\x1b[?997;2n");
     // Setting the scheme that the terminal already has is not a change.
     prVtermSetColorScheme(term.vterm, PrAppColorScheme_Light);
-    CHECK(term.output().empty());
+    CHECK(term.output().isEmpty());
     prVtermSetColorScheme(term.vterm, PrAppColorScheme_Dark);
     CHECK(term.output() == "\x1b[?997;1n");
 
     term.write("\x1b[?2031l");
     prVtermSetColorScheme(term.vterm, PrAppColorScheme_Light);
-    CHECK(term.output().empty());
+    CHECK(term.output().isEmpty());
 
     // A full reset ends the mode.
     term.write("\x1b[?2031h\x1b" "c");
     prVtermSetColorScheme(term.vterm, PrAppColorScheme_Dark);
-    CHECK(term.output().empty());
+    CHECK(term.output().isEmpty());
 }

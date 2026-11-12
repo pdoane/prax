@@ -1,0 +1,40 @@
+diff --git a/doctest/doctest.h b/doctest/doctest.h
+--- a/doctest/doctest.h
++++ b/doctest/doctest.h
+@@ -499,13 +499,13 @@
+ #include <ciso646>
+ #endif // clang
+ 
+-#ifdef _LIBCPP_VERSION
+-#ifndef DOCTEST_CONFIG_USE_STD_HEADERS
+-#define DOCTEST_CONFIG_USE_STD_HEADERS
+-#endif
+-#endif // _LIBCPP_VERSION
+-
+-#ifdef DOCTEST_CONFIG_USE_STD_HEADERS
++#if defined(_LIBCPP_VERSION) && !defined(DOCTEST_CONFIG_USE_STD_HEADERS)
++#ifndef DOCTEST_CONFIG_INCLUDE_TYPE_TRAITS
++#define DOCTEST_CONFIG_INCLUDE_TYPE_TRAITS
++#endif // DOCTEST_CONFIG_INCLUDE_TYPE_TRAITS
++#include <cstddef>
++#include <iosfwd>
++#elif defined(DOCTEST_CONFIG_USE_STD_HEADERS)
+ #ifndef DOCTEST_CONFIG_INCLUDE_TYPE_TRAITS
+ #define DOCTEST_CONFIG_INCLUDE_TYPE_TRAITS
+ #endif // DOCTEST_CONFIG_INCLUDE_TYPE_TRAITS
+@@ -1163,12 +1163,12 @@
+     template <typename T, size_t N>
+     struct filldata<T[N]> {
+         static void fill(std::ostream* stream, const T(&in)[N]) {
+-            *stream << "[";
++            *stream << String("[");
+             for (size_t i = 0; i < N; i++) {
+-                if (i != 0) { *stream << ", "; }
++                if (i != 0) { *stream << String(", "); }
+                 *stream << (DOCTEST_STRINGIFY(in[i]));
+             }
+-            *stream << "]";
++            *stream << String("]");
+         }
+     };
+ // NOLINTEND(*-avoid-c-arrays)

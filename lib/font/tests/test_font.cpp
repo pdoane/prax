@@ -1,4 +1,8 @@
+#include "pr/array.h"
 #include "pr/font.h"
+#include "pr/mem.h"
+#include "pr/string.h"
+#include "pr/string_ops.h"
 #include "pr/thread.h"
 #include "pr/vec.h"
 
@@ -9,49 +13,33 @@
 #include "freetype/tttables.h"
 #include "tools/harness/test.h"
 
-#include <algorithm>
-#include <cmath>
-#include <cstdio>
-#include <string>
-#include <thread>
-#include <vector>
-
 extern "C" int prTestFontCApi(void);
 
 namespace pr_impl {
 
+using namespace pr;
+
 namespace {
 
-std::vector<uint8_t> readPath(const std::string& path) {
-    std::vector<uint8_t> bytes;
-    FILE* file = std::fopen(path.c_str(), "rb");
-    REQUIRE(file != nullptr);
-    uint8_t buffer[65536];
-    size_t read = 0;
-    while ((read = std::fread(buffer, 1, sizeof(buffer), file)) != 0)
-        bytes.insert(bytes.end(), buffer, buffer + read);
-    std::fclose(file);
-    return bytes;
+// Returns the bytes of the font file `name`, in the fonts directory.
+Array<uint8_t> fontFile(PrStringView name) {
+    return harness::readFile(format("{}/{}", PR_FONTS_DIR, name));
 }
 
-std::vector<uint8_t> readFile(const char* name) {
-    return readPath(std::string(PR_FONTS_DIR) + "/" + name);
+Array<uint8_t> newCmMathBytes() {
+    return fontFile("NewCMMath-Regular.otf");
 }
 
-std::vector<uint8_t> newCmMathBytes() {
-    return readPath(std::string(PR_FONTS_DIR) + "/NewCMMath-Regular.otf");
-}
-
-const PrFont* fromBytes(const std::vector<uint8_t>& bytes) {
+const PrFont* fromBytes(const Array<uint8_t>& bytes) {
     const PrFont* font = nullptr;
     REQUIRE(prFontCreate(bytes, 0, nullptr, &font) == PrStatus_Ok);
     return font;
 }
 
 // Returns the byte offset in the file of the Unicode Variation Sequences subtable (cmap format 14) of its first face.
-uint32_t sequencesOffset(const std::vector<uint8_t>& bytes) {
+uint32_t sequencesOffset(const Array<uint8_t>& bytes) {
     Sfnt sfnt{};
-    REQUIRE(sfntOpen(bytes.data(), bytes.size(), 0, &sfnt));
+    REQUIRE(sfntOpen(bytes.data(), bytes.count(), 0, &sfnt));
     SfntTable cmap = sfntTable(sfnt, PR_FONT_TAG('c', 'm', 'a', 'p'));
     for (uint32_t i = 0; i < cmap.uint16At(2); ++i) {
         uint32_t record = 4 + i * 8;
@@ -63,27 +51,27 @@ uint32_t sequencesOffset(const std::vector<uint8_t>& bytes) {
     return 0;
 }
 
-void poke24(std::vector<uint8_t>& bytes, uint32_t at, uint32_t value) {
+void poke24(Array<uint8_t>& bytes, uint32_t at, uint32_t value) {
     bytes[at] = uint8_t(value >> 16);
     bytes[at + 1] = uint8_t(value >> 8);
     bytes[at + 2] = uint8_t(value);
 }
 
-void poke32(std::vector<uint8_t>& bytes, uint32_t at, uint32_t value) {
+void poke32(Array<uint8_t>& bytes, uint32_t at, uint32_t value) {
     bytes[at] = uint8_t(value >> 24);
     poke24(bytes, at + 1, value & 0xffffff);
 }
 
-uint32_t peek24(const std::vector<uint8_t>& bytes, uint32_t at) {
+uint32_t peek24(const Array<uint8_t>& bytes, uint32_t at) {
     return uint32_t(bytes[at]) << 16 | uint32_t(bytes[at + 1]) << 8 | bytes[at + 2];
 }
 
-uint32_t peek32(const std::vector<uint8_t>& bytes, uint32_t at) {
+uint32_t peek32(const Array<uint8_t>& bytes, uint32_t at) {
     return uint32_t(bytes[at]) << 24 | peek24(bytes, at + 1);
 }
 
 const PrFont* load(const char* name) {
-    std::vector<uint8_t> bytes = readFile(name);
+    Array<uint8_t> bytes = fontFile(name);
     const PrFont* font = nullptr;
     REQUIRE(prFontCreate(bytes, 0, nullptr, &font) == PrStatus_Ok);
     return font;
@@ -105,9 +93,9 @@ const PrFont* hinted(const PrFont* font, PrFontHinting hinting) {
     });
 }
 
-std::string text(PrRawString string) {
+String text(PrRawString string) {
     PrStringView view = prRawStringView(&string);
-    std::string result(view.data != nullptr ? view.data : "", view.size);
+    String result(view.size != 0 ? view : PrStringView(""));
     prRawStringReset(&string);
     return result;
 }
@@ -116,23 +104,23 @@ constexpr uint32_t kWght = PR_FONT_TAG('w', 'g', 'h', 't');
 
 // A painter that writes each call as a word.
 struct Trace {
-    std::string calls;
-    std::vector<PrColor> colors;
+    String calls;
+    Array<PrColor> colors;
     uint32_t depth = 0;
     uint32_t deepest = 0;
     bool balanced = true;
 };
 
 void push(Trace& t, const char* word) {
-    t.calls += word;
-    t.calls += ' ';
+    t.calls.append(word);
+    t.calls.append(' ');
     if (++t.depth > t.deepest)
         t.deepest = t.depth;
 }
 
 void pop(Trace& t, const char* word) {
-    t.calls += word;
-    t.calls += ' ';
+    t.calls.append(word);
+    t.calls.append(' ');
     if (t.depth == 0)
         t.balanced = false;
     else
@@ -150,8 +138,8 @@ PrFontPainter tracer() {
     p.fill = [](void* c, const PrFontPaint* paint) {
         const char* kinds[] = {"solid", "linear", "radial", "conic"};
         Trace& t = *static_cast<Trace*>(c);
-        t.calls += kinds[paint->kind];
-        t.calls += ' ';
+        t.calls.append(kinds[paint->kind]);
+        t.calls.append(' ');
     };
     return p;
 }
@@ -161,21 +149,21 @@ const PrFont* derived(const PrFont* font, const PrFontDerivation& derivation) {
     return out;
 }
 
-void put16(std::vector<uint8_t>& out, uint32_t value) {
-    out.push_back(uint8_t(value >> 8));
-    out.push_back(uint8_t(value));
+void put16(Array<uint8_t>& out, uint32_t value) {
+    out.push(uint8_t(value >> 8));
+    out.push(uint8_t(value));
 }
 
-void put32(std::vector<uint8_t>& out, uint32_t value) {
+void put32(Array<uint8_t>& out, uint32_t value) {
     put16(out, value >> 16);
     put16(out, value & 0xffff);
 }
 
 // Returns the font file with its sbix table replaced by one strike of `ppem` pixels per em, in which glyph `glyph` is
 // `image` of the sbix graphic type `type`, with its bottom left corner at the origin.
-std::vector<uint8_t> withSbixImage(std::vector<uint8_t> font, uint16_t glyph, uint16_t glyphCount, uint32_t type,
-        const std::vector<uint8_t>& image, uint16_t ppem) {
-    std::vector<uint8_t> sbix;
+Array<uint8_t> withSbixImage(Array<uint8_t> font, uint16_t glyph, uint16_t glyphCount, uint32_t type,
+        const Array<uint8_t>& image, uint16_t ppem) {
+    Array<uint8_t> sbix;
     put16(sbix, 1);
     put16(sbix, 1);
     put32(sbix, 1);
@@ -184,24 +172,24 @@ std::vector<uint8_t> withSbixImage(std::vector<uint8_t> font, uint16_t glyph, ui
     put16(sbix, ppem);
     put16(sbix, 72);
     for (uint32_t g = 0; g <= glyphCount; ++g)
-        put32(sbix, g <= glyph ? data : data + 8 + uint32_t(image.size()));
+        put32(sbix, g <= glyph ? data : data + 8 + image.count());
     put16(sbix, 0);
     put16(sbix, 0);
     put32(sbix, type);
-    sbix.insert(sbix.end(), image.begin(), image.end());
+    sbix.append(image.span());
     // The table goes at the end of the file, and its record points there.
-    while (font.size() % 4 != 0)
-        font.push_back(0);
-    uint32_t offset = uint32_t(font.size());
-    font.insert(font.end(), sbix.begin(), sbix.end());
+    while (font.count() % 4 != 0)
+        font.push(0);
+    uint32_t offset = font.count();
+    font.append(sbix.span());
     uint32_t tables = uint32_t(font[4]) << 8 | font[5];
     for (uint32_t i = 0; i < tables; ++i) {
         uint8_t* record = font.data() + 12 + i * 16;
-        if (std::string(reinterpret_cast<const char*>(record), 4) != "sbix")
+        if (PrStringView(reinterpret_cast<const char*>(record), 4) != "sbix")
             continue;
         for (uint32_t k = 0; k < 4; ++k) {
             record[8 + k] = uint8_t(offset >> (24 - 8 * k));
-            record[12 + k] = uint8_t(sbix.size() >> (24 - 8 * k));
+            record[12 + k] = uint8_t(sbix.count() >> (24 - 8 * k));
         }
     }
     return font;
@@ -229,12 +217,12 @@ TEST_CASE("the Unicode cmap subtable is the one FreeType chooses, and maps every
     REQUIRE(FT_Init_FreeType(&library) == 0);
     for (const char* name : names) {
         CAPTURE(name);
-        std::vector<uint8_t> bytes = readFile(name);
+        Array<uint8_t> bytes = fontFile(name);
         FT_Face face = nullptr;
-        REQUIRE(FT_New_Memory_Face(library, bytes.data(), FT_Long(bytes.size()), 0, &face) == 0);
+        REQUIRE(FT_New_Memory_Face(library, bytes.data(), FT_Long(bytes.count()), 0, &face) == 0);
         REQUIRE(face->charmap != nullptr);
         Sfnt sfnt{};
-        REQUIRE(sfntOpen(bytes.data(), bytes.size(), 0, &sfnt));
+        REQUIRE(sfntOpen(bytes.data(), bytes.count(), 0, &sfnt));
         SfntCmap cmap{};
         REQUIRE(sfntCmapUnicode(sfnt, &cmap));
         CHECK(cmap.format == uint16_t(FT_Get_CMap_Format(face->charmap)));
@@ -252,18 +240,19 @@ TEST_CASE("the Unicode cmap subtable is the one FreeType chooses, and maps every
 }
 
 TEST_CASE("variation sequences map as FreeType maps them") {
-    std::vector<std::string> paths = {std::string(PR_FONTS_DIR) + "/NewCMMath-Regular.otf"};
-    for (const char* name : {"NotoSansJP-VF.otf", "cmap14_font1.otf", "NotoSansMongolian-Regular.ttf", "NotoColorEmoji.subset.multiple_size_tables.ttf",
-        "NotoSansMath-Regular.ttf", "NotoSans[wdth,wght].ttf"})
-        paths.push_back(std::string(PR_FONTS_DIR) + "/" + name);
+    const char* const names[] = {
+        "NewCMMath-Regular.otf", "NotoSansJP-VF.otf", "cmap14_font1.otf", "NotoSansMongolian-Regular.ttf",
+        "NotoColorEmoji.subset.multiple_size_tables.ttf", "NotoSansMath-Regular.ttf", "NotoSans[wdth,wght].ttf",
+    };
     FT_Library library = nullptr;
     REQUIRE(FT_Init_FreeType(&library) == 0);
     uint32_t listed = 0;
-    for (const std::string& path : paths) {
+    for (const char* name : names) {
+        String path = format("{}/{}", PR_FONTS_DIR, name);
         CAPTURE(path);
-        std::vector<uint8_t> bytes = readPath(path);
+        Array<uint8_t> bytes = harness::readFile(path);
         FT_Face face = nullptr;
-        REQUIRE(FT_New_Memory_Face(library, bytes.data(), FT_Long(bytes.size()), 0, &face) == 0);
+        REQUIRE(FT_New_Memory_Face(library, bytes.data(), FT_Long(bytes.count()), 0, &face) == 0);
         const PrFont* font = fromBytes(bytes);
         uint32_t differ = 0;
         uint32_t firstBase = 0;
@@ -285,10 +274,10 @@ TEST_CASE("variation sequences map as FreeType maps them") {
         };
         // FreeType returns each list in a buffer of the face's, which its next list reuses, so the selectors are copied
         // before their code points are asked for.
-        std::vector<FT_UInt32> selectors;
+        Array<FT_UInt32> selectors;
         for (FT_UInt32* at = FT_Face_GetVariantSelectors(face); at != nullptr && *at != 0; ++at)
-            selectors.push_back(*at);
-        for (size_t s = 0; s < selectors.size(); ++s) {
+            selectors.push(*at);
+        for (uint32_t s = 0; s < selectors.count(); ++s) {
             FT_UInt32* bases = FT_Face_GetCharsOfVariant(face, selectors[s]);
             for (uint32_t b = 0; bases != nullptr && bases[b] != 0; ++b, ++listed) {
                 // The code points beside a listed one, which the font may not list.
@@ -332,7 +321,7 @@ TEST_CASE("a variation sequence maps to its own glyph, its base's glyph, or noth
 
 // Each malformation leaves the font open, with its character map, and makes the subtable map no sequence.
 TEST_CASE("a malformed variation sequences subtable maps no sequence") {
-    std::vector<uint8_t> original = newCmMathBytes();
+    Array<uint8_t> original = newCmMathBytes();
     uint32_t at = sequencesOffset(original);
     uint32_t length = peek32(original, at + 2);
     REQUIRE(peek32(original, at + 6) >= 2);
@@ -346,61 +335,61 @@ TEST_CASE("a malformed variation sequences subtable maps no sequence") {
     REQUIRE(variants != 0);
     struct Malformation {
         const char* name;
-        void (*apply)(std::vector<uint8_t>& bytes, uint32_t at, uint32_t length, uint32_t variants);
+        void (*apply)(Array<uint8_t>& bytes, uint32_t at, uint32_t length, uint32_t variants);
     };
     const Malformation malformations[] = {
         {
             "a length past the table",
-            [](std::vector<uint8_t>& b, uint32_t at, uint32_t length, uint32_t) {
+            [](Array<uint8_t>& b, uint32_t at, uint32_t length, uint32_t) {
                 poke32(b, at + 2, length + 0x100000);
             },
         },
         {
             "a length short of the header",
-            [](std::vector<uint8_t>& b, uint32_t at, uint32_t, uint32_t) {
+            [](Array<uint8_t>& b, uint32_t at, uint32_t, uint32_t) {
                 poke32(b, at + 2, 9);
             },
         },
         {
             "more records than the length holds",
-            [](std::vector<uint8_t>& b, uint32_t at, uint32_t length, uint32_t) {
+            [](Array<uint8_t>& b, uint32_t at, uint32_t length, uint32_t) {
                 poke32(b, at + 6, length / 11);
             },
         },
         {
             "records out of order",
-            [](std::vector<uint8_t>& b, uint32_t at, uint32_t, uint32_t) {
+            [](Array<uint8_t>& b, uint32_t at, uint32_t, uint32_t) {
                 poke24(b, at + 10 + 11, peek24(b, at + 10));
             },
         },
         {
             "a selector past U+10FFFF",
-            [](std::vector<uint8_t>& b, uint32_t at, uint32_t, uint32_t) {
+            [](Array<uint8_t>& b, uint32_t at, uint32_t, uint32_t) {
                 poke24(b, at + 10, 0x110000);
             },
         },
         {
             "a list past the length",
-            [](std::vector<uint8_t>& b, uint32_t at, uint32_t length, uint32_t) {
+            [](Array<uint8_t>& b, uint32_t at, uint32_t length, uint32_t) {
                 poke32(b, at + 10 + 7, length - 2);
             },
         },
         {
             "more variants than the length holds",
-            [](std::vector<uint8_t>& b, uint32_t at, uint32_t length, uint32_t variants) {
+            [](Array<uint8_t>& b, uint32_t at, uint32_t length, uint32_t variants) {
                 poke32(b, at + variants, length / 5);
             },
         },
         {
             "variants out of order",
-            [](std::vector<uint8_t>& b, uint32_t at, uint32_t, uint32_t variants) {
+            [](Array<uint8_t>& b, uint32_t at, uint32_t, uint32_t variants) {
                 poke24(b, at + variants + 4 + 5, peek24(b, at + variants + 4));
             },
         },
     };
     for (const Malformation& m : malformations) {
         CAPTURE(m.name);
-        std::vector<uint8_t> bytes = original;
+        Array<uint8_t> bytes = original;
         m.apply(bytes, at, length, variants);
         const PrFont* font = fromBytes(bytes);
         CHECK(prFontCodePointGlyph(font, 0x1D49C) != 0);
@@ -413,24 +402,24 @@ TEST_CASE("a malformed variation sequences subtable maps no sequence") {
 // A file of one cmap table, whose one subtable is a format 14 subtable of one record: U+FE00, with a default range that
 // ends at U+10FFFF and one variant.
 TEST_CASE("a variation sequences subtable at the limits of its records maps what it lists") {
-    std::vector<uint8_t> sub;
+    Array<uint8_t> sub;
     put16(sub, 14);
     put32(sub, 0);                      // the length, set below
     put32(sub, 1);
-    sub.push_back(0x00);
+    sub.push(0x00);
     put16(sub, 0xFE00);
     put32(sub, 21);
     put32(sub, 29);
     put32(sub, 1);                      // the default list: U+10FFF0 to U+10FFFF
-    sub.push_back(0x10);
+    sub.push(0x10);
     put16(sub, 0xFFF0);
-    sub.push_back(15);
+    sub.push(15);
     put32(sub, 1);                      // the variant list: A as glyph 7
-    sub.push_back(0x00);
+    sub.push(0x00);
     put16(sub, 'A');
     put16(sub, 7);
-    poke32(sub, 2, uint32_t(sub.size()));
-    std::vector<uint8_t> file;
+    poke32(sub, 2, sub.count());
+    Array<uint8_t> file;
     put32(file, 0x00010000);
     put16(file, 1);
     put16(file, 16);
@@ -439,16 +428,16 @@ TEST_CASE("a variation sequences subtable at the limits of its records maps what
     put32(file, PR_FONT_TAG('c', 'm', 'a', 'p'));
     put32(file, 0);
     put32(file, 28);
-    put32(file, 12 + uint32_t(sub.size()));
+    put32(file, 12 + sub.count());
     put16(file, 0);
     put16(file, 1);
     put16(file, 0);
     put16(file, 5);
     put32(file, 12);
-    file.insert(file.end(), sub.begin(), sub.end());
+    file.append(sub.span());
     constexpr uint32_t kSub = 28 + 12;
     Sfnt sfnt{};
-    REQUIRE(sfntOpen(file.data(), file.size(), 0, &sfnt));
+    REQUIRE(sfntOpen(file.data(), file.count(), 0, &sfnt));
     SfntCmapSequences sequences{};
     REQUIRE(sfntCmapSequencesOpen(sfnt, &sequences));
     CHECK(sfntCmapSequenceGlyph(sequences, 0x10FFFF, 0xFE00).mapping == PrFontSequenceMapping_Default);
@@ -460,13 +449,13 @@ TEST_CASE("a variation sequences subtable at the limits of its records maps what
     CHECK(sfntCmapSequenceGlyph(sequences, 'A', 0xFE01).mapping == PrFontSequenceMapping_None);
     CHECK(sfntCmapSequenceGlyph(sequences, 'B', 0xFE00).mapping == PrFontSequenceMapping_None);
     // A default range past U+10FFFF is malformed, and so is a subtable one byte short of its last list.
-    std::vector<uint8_t> past = file;
+    Array<uint8_t> past = file;
     past[kSub + 25 + 3] = 16;
-    REQUIRE(sfntOpen(past.data(), past.size(), 0, &sfnt));
+    REQUIRE(sfntOpen(past.data(), past.count(), 0, &sfnt));
     CHECK_FALSE(sfntCmapSequencesOpen(sfnt, &sequences));
-    std::vector<uint8_t> shorter = file;
-    poke32(shorter, kSub + 2, uint32_t(sub.size() - 1));
-    REQUIRE(sfntOpen(shorter.data(), shorter.size(), 0, &sfnt));
+    Array<uint8_t> shorter = file;
+    poke32(shorter, kSub + 2, sub.count() - 1);
+    REQUIRE(sfntOpen(shorter.data(), shorter.count(), 0, &sfnt));
     CHECK_FALSE(sfntCmapSequencesOpen(sfnt, &sequences));
     CHECK(sequences.subtable.data == nullptr);
 }
@@ -481,9 +470,9 @@ TEST_CASE("a font's design advances are FreeType's unhinted ones") {
     REQUIRE(FT_Init_FreeType(&library) == 0);
     for (const char* name : names) {
         CAPTURE(name);
-        std::vector<uint8_t> bytes = readFile(name);
+        Array<uint8_t> bytes = fontFile(name);
         FT_Face face = nullptr;
-        REQUIRE(FT_New_Memory_Face(library, bytes.data(), FT_Long(bytes.size()), 0, &face) == 0);
+        REQUIRE(FT_New_Memory_Face(library, bytes.data(), FT_Long(bytes.count()), 0, &face) == 0);
         const PrFont* font = nullptr;
         REQUIRE(prFontCreate(bytes, 0, nullptr, &font) == PrStatus_Ok);
         bool scalable = FT_IS_SCALABLE(face) && FT_Set_Char_Size(face, 0, FT_F26Dot6(face->units_per_EM) << 6, 72, 72) == 0;
@@ -505,7 +494,7 @@ TEST_CASE("a font's design advances are FreeType's unhinted ones") {
 }
 
 TEST_CASE("a single font has one face, and bytes that are not a font none") {
-    std::vector<uint8_t> bytes = readFile("NotoSans[wdth,wght].ttf");
+    Array<uint8_t> bytes = fontFile("NotoSans[wdth,wght].ttf");
     CHECK(prFontCount(bytes) == 1);
     // A collection header that counts more faces than its bytes hold.
     const uint8_t collection[] = {'t', 't', 'c', 'f', 0, 1, 0, 0, 0xff, 0xff, 0xff, 0xff, 0, 0, 0, 0};
@@ -523,10 +512,10 @@ TEST_CASE("a font's PostScript name is its name table's, or names the axes of an
     derivation.variations = bold;
     derivation.variationCount = 2;
     const PrFont* instance = prFontCreateDerived(flex, &derivation);
-    std::string name = text(prFontPostScriptName(instance));
-    CHECK(name.rfind("RobotoFlex", 0) == 0);
-    CHECK(name.find("_700wght") != std::string::npos);
-    CHECK(name.find("_87.5wdth") != std::string::npos);
+    String name = text(prFontPostScriptName(instance));
+    CHECK(prStringStartsWith(name, "RobotoFlex"));
+    CHECK(prStringContains(name, "_700wght"));
+    CHECK(prStringContains(name, "_87.5wdth"));
     prFontRelease(instance);
     prFontRelease(flex);
 }
@@ -663,7 +652,7 @@ TEST_CASE("color glyphs paint as balanced pushes and pops") {
         CHECK(trace.depth == 0);
         for (uint32_t k = 0; k < 4; ++k) {
             const char* names[] = {"solid ", "linear ", "radial ", "conic "};
-            kinds[k] = kinds[k] || trace.calls.find(names[k]) != std::string::npos;
+            kinds[k] = kinds[k] || prStringContains(trace.calls, names[k]);
         }
     }
     CHECK(colored > 50);
@@ -704,22 +693,32 @@ TEST_CASE("one state of a font's face is one font, while it is open") {
 
 TEST_CASE("threads that derive one state at once share one font" * doctest::skip(!prThreadSupported())) {
     const PrFont* font = load("NotoSans[wdth,wght].ttf");
-    std::vector<std::thread> threads;
-    std::vector<const PrFont*> made(8);
+    // What one thread derives from, and the font that it keeps.
+    struct Deriving {
+        const PrFont* font;
+        const PrFont* PR_NULLABLE made;
+    };
+    PrThread threads[8];
+    Deriving work[8];
+    const PrFont* made[8] = {};
     for (uint32_t t = 0; t < 8; ++t) {
-        threads.emplace_back([font, t, &made] {
+        work[t] = Deriving{font, nullptr};
+        prThreadStart(&threads[t], [](void* PR_NULLABLE context) {
+            Deriving& deriving = *static_cast<Deriving*>(context);
             PrFontVariation heavy{kWght, 600};
             PrFontDerivation d = prFontDerivationDefault();
             d.variations = &heavy;
             d.variationCount = 1;
             // Each thread makes and drops the state, then keeps it, so that a lookup meets fonts being freed.
             for (int i = 0; i < 50; ++i)
-                prFontRelease(prFontCreateDerived(font, &d));
-            made[t] = prFontCreateDerived(font, &d);
-        });
+                prFontRelease(prFontCreateDerived(deriving.font, &d));
+            deriving.made = prFontCreateDerived(deriving.font, &d);
+        }, &work[t]);
     }
-    for (std::thread& thread : threads)
-        thread.join();
+    for (uint32_t t = 0; t < 8; ++t) {
+        prThreadJoin(&threads[t]);
+        made[t] = work[t].made;
+    }
     for (uint32_t t = 1; t < 8; ++t)
         CHECK(made[t] == made[0]);
     for (const PrFont* each : made)
@@ -729,23 +728,34 @@ TEST_CASE("threads that derive one state at once share one font" * doctest::skip
 
 TEST_CASE("a font is read from several threads at once" * doctest::skip(!prThreadSupported())) {
     const PrFont* font = load("NotoSans[wdth,wght].ttf");
-    std::vector<std::thread> threads;
-    std::vector<float> widths(4);
+    // What one thread reads, at what size, and the sum of the advances that it read.
+    struct Reading {
+        const PrFont* font;
+        float size;
+        float width;
+    };
+    PrThread threads[4];
+    Reading work[4];
+    float widths[4] = {};
     for (uint32_t t = 0; t < 4; ++t) {
-        threads.emplace_back([font, t, &widths] {
+        work[t] = Reading{font, t == 0 ? 13.0f : 0, 0};
+        prThreadStart(&threads[t], [](void* PR_NULLABLE context) {
+            Reading& reading = *static_cast<Reading*>(context);
             PrPath* path = prPathCreate();
             float sum = 0;
             for (uint16_t g = 1; g < 400; ++g) {
                 prPathClear(path);
-                prFontGlyphOutline(font, g, t == 0 ? 13.0f : 0, prAffine2Identity(), path);
-                sum += prFontGlyphAdvance(font, g, 0);
+                prFontGlyphOutline(reading.font, g, reading.size, prAffine2Identity(), path);
+                sum += prFontGlyphAdvance(reading.font, g, 0);
             }
-            widths[t] = sum;
+            reading.width = sum;
             prPathDestroy(path);
-        });
+        }, &work[t]);
     }
-    for (std::thread& thread : threads)
-        thread.join();
+    for (uint32_t t = 0; t < 4; ++t) {
+        prThreadJoin(&threads[t]);
+        widths[t] = work[t].width;
+    }
     CHECK(widths[0] == widths[3]);
     prFontRelease(font);
 }
@@ -870,7 +880,7 @@ TEST_CASE("Ahem is aliased however it is opened, unless a derivation says otherw
     // From bytes, as the @font-face of a page loads it, and from a file, as a host installs it.
     const PrFont* bytes = load("Ahem.ttf");
     CHECK(prFontIsAliased(bytes));
-    std::string path = std::string(PR_FONTS_DIR) + "/Ahem.ttf";
+    String path = format("{}/Ahem.ttf", PR_FONTS_DIR);
     const PrFont* file = nullptr;
     REQUIRE(prFontCreateFromFile(path, 0, nullptr, &file) == PrStatus_Ok);
     CHECK(prFontIsAliased(file));
@@ -907,13 +917,13 @@ TEST_CASE("a palette's colors are overridden entry by entry") {
     PrFontPainter painter = tracer();
     painter.fill = [](void* c, const PrFontPaint* paint) {
         for (uint32_t i = 0; i < paint->stopCount; ++i)
-            static_cast<Trace*>(c)->colors.push_back(paint->stops[i].color);
+            static_cast<Trace*>(c)->colors.push(paint->stops[i].color);
     };
     PrFontPaletteColor green{4, PrColor{0, 1, 0, 1}};
     PrFontPalette palette{0, &green, 1};
     painter.context = &stops;
     REQUIRE(prFontGlyphPaint(font, 12, &palette, PrColor{0, 0, 0, 1}, &painter));
-    REQUIRE(stops.colors.size() == 4);
+    REQUIRE(stops.colors.count() == 4);
     CHECK(stops.colors[1].g == 1.0f);
     CHECK(stops.colors[1].b == 0.0f);
     CHECK(stops.colors[2].r == 1.0f);
@@ -943,7 +953,8 @@ TEST_CASE("a face describes its weight, width and slope, as ranges where axes va
 TEST_CASE("without a hinter, a font of any hinting draws and advances as designed") {
     const PrFont* font = load("NotoSans[wdth,wght].ttf");
     uint16_t x = prFontCodePointGlyph(font, 'x');
-    for (PrFontHinting hinting : {PrFontHinting_Light, PrFontHinting_Full}) {
+    const PrFontHinting hintings[] = {PrFontHinting_Light, PrFontHinting_Full};
+    for (PrFontHinting hinting : hintings) {
         const PrFont* asked = hinted(font, hinting);
         CHECK(prFontHinting(asked) == PrFontHinting_None);
         CHECK(prFontHinter(asked) == nullptr);
@@ -961,7 +972,7 @@ TEST_CASE("without a hinter, a font of any hinting draws and advances as designe
 }
 
 TEST_CASE("a font made with a derivation is the font derived from its default instance") {
-    std::vector<uint8_t> bytes = readFile("NotoSans[wdth,wght].ttf");
+    Array<uint8_t> bytes = fontFile("NotoSans[wdth,wght].ttf");
     PrFontVariation heavy{PR_FONT_TAG('w', 'g', 'h', 't'), 800};
     PrFontDerivation d = prFontDerivationDefault();
     d.variations = &heavy;
@@ -994,7 +1005,7 @@ TEST_CASE("an sbix glyph's image goes where its origin offset puts it") {
     CHECK(image.extent.y == 128);
     REQUIRE(image.bytes.size > 8);
     CHECK(image.bytes.data[1] == 'P');
-    CHECK(std::string(image.type.data, image.type.size) == "image/png");
+    CHECK(image.type == "image/png");
     // The bottom left corner 4 pixels right of the origin and 27 below the baseline.
     CHECK(image.bounds.left == doctest::Approx(4.0 / 109));
     CHECK(image.bounds.bottom == doctest::Approx(27.0 / 109));
@@ -1009,37 +1020,38 @@ TEST_CASE("an sbix glyph's image goes where its origin offset puts it") {
 }
 
 TEST_CASE("an sbix strike's JPEG and TIFF images are sized from their headers") {
-    std::vector<uint8_t> file = readFile("TwemojiSmileySbix.ttf");
+    Array<uint8_t> file = fontFile("TwemojiSmileySbix.ttf");
     const PrFont* original = nullptr;
     REQUIRE(prFontCreate(file, 0, nullptr, &original) == PrStatus_Ok);
     uint16_t glyphs = uint16_t(prFontGlyphCount(original));
     prFontRelease(original);
     // The start of image and the frame header of a JPEG, 64 wide and 48 tall.
-    std::vector<uint8_t> jpeg = {
+    Array<uint8_t> jpeg({
         0xff, 0xd8, 0xff, 0xe0, 0x00, 0x04, 0x00, 0x00, 0xff, 0xc0, 0x00, 0x0b,
         0x08, 0x00, 0x30, 0x00, 0x40, 0x01, 0x01, 0x11, 0x00,
-    };
+    });
     // The header of a little-endian TIFF and a directory of its width, 20, and length, 10.
-    std::vector<uint8_t> tiff = {
+    Array<uint8_t> tiff({
         'I', 'I', 42, 0, 8, 0, 0, 0, 2, 0,
         0, 1, 3, 0, 1, 0, 0, 0, 20, 0, 0, 0,
         1, 1, 4, 0, 1, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0,
-    };
+    });
     struct Case {
         uint32_t type;
-        const std::vector<uint8_t>& bytes;
+        const Array<uint8_t>& bytes;
         const char* mime;
         uint32_t width;
         uint32_t height;
     };
-    for (const Case& c : {Case{0x6a706720, jpeg, "image/jpeg", 64, 48}, Case{0x74696666, tiff, "image/tiff", 20, 10}}) {
-        std::vector<uint8_t> bytes = withSbixImage(file, 2, glyphs, c.type, c.bytes, 100);
+    const Case cases[] = {{0x6a706720, jpeg, "image/jpeg", 64, 48}, {0x74696666, tiff, "image/tiff", 20, 10}};
+    for (const Case& c : cases) {
+        Array<uint8_t> bytes = withSbixImage(file, 2, glyphs, c.type, c.bytes, 100);
         const PrFont* font = nullptr;
         REQUIRE(prFontCreate(bytes, 0, nullptr, &font) == PrStatus_Ok);
         PrFontGlyphImage image{};
         REQUIRE(prFontGlyphImage(font, 2, 100, &image));
-        CHECK(std::string(image.type.data, image.type.size) == c.mime);
-        CHECK(image.bytes.size == c.bytes.size());
+        CHECK(image.type == c.mime);
+        CHECK(image.bytes.size == c.bytes.count());
         CHECK(image.extent.x == c.width);
         CHECK(image.extent.y == c.height);
         CHECK(image.bounds.top == doctest::Approx(-float(c.height) / 100));
@@ -1069,12 +1081,12 @@ TEST_CASE("a CBDT glyph's image comes from the strike best for the size") {
 }
 
 TEST_CASE("a CBDT image whose length runs past its table has no image") {
-    std::vector<uint8_t> bytes = readFile("NotoColorEmoji.subset.multiple_size_tables.ttf");
+    Array<uint8_t> bytes = fontFile("NotoColorEmoji.subset.multiple_size_tables.ttf");
     // The PNG of each image follows its length. A length that wraps past 2^32 when added to its position fails.
     const uint8_t signature[] = {0x89, 'P', 'N', 'G'};
     uint32_t corrupted = 0;
-    for (size_t i = 4; i + 4 <= bytes.size(); ++i) {
-        if (std::equal(signature, signature + 4, bytes.begin() + ptrdiff_t(i))) {
+    for (uint32_t i = 4; i + 4 <= bytes.count(); ++i) {
+        if (prMemEquals(signature, bytes.data() + i, 4)) {
             bytes[i - 4] = bytes[i - 3] = bytes[i - 2] = 0xff;
             bytes[i - 1] = 0xf8;
             ++corrupted;

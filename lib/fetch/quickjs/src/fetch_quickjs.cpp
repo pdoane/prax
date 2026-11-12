@@ -486,7 +486,7 @@ bool extractBody(JSContext* ctx, JSValueConst init, ExtractedBody* out) {
     }
     if (!jsReadString(ctx, init, &text))
         return false;
-    *out = ExtractedBody{PrByteView{prStringBytes(text), text.size}, "text/plain;charset=UTF-8"};
+    *out = ExtractedBody{prStringBytes(text), "text/plain;charset=UTF-8"};
     return true;
 }
 
@@ -521,13 +521,13 @@ JSValue consume(JSContext* ctx, Body* body, Read read, PrStringView type) {
     JSValue result = JS_UNDEFINED;
     switch (read) {
         case Read_ArrayBuffer:
-            result = JS_NewArrayBufferCopy(ctx, prStringBytes(bytes), bytes.size);
+            result = JS_NewArrayBufferCopy(ctx, prStringBytes(bytes).data, bytes.size);
             break;
         case Read_Bytes:
-            result = JS_NewUint8ArrayCopy(ctx, prStringBytes(bytes), bytes.size);
+            result = JS_NewUint8ArrayCopy(ctx, prStringBytes(bytes).data, bytes.size);
             break;
         case Read_Blob:
-            result = prJsFetchBlobNew(ctx, prFetchBlobCreate(PrByteView{prStringBytes(bytes), bytes.size}, type));
+            result = prJsFetchBlobNew(ctx, prFetchBlobCreate(prStringBytes(bytes), type));
             break;
         case Read_Text:
         case Read_Json: {
@@ -721,7 +721,7 @@ JSValue jsonStatic(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv) {
     JS_FreeValue(ctx, text);
     if (!read)
         return JS_EXCEPTION;
-    ExtractedBody body{PrByteView{prStringBytes(serialized), serialized.size}, "application/json"};
+    ExtractedBody body{prStringBytes(serialized), "application/json"};
     JsResponse* response = allocZeroed<JsResponse>();
     response->constructed = true;
     JsHeaders* headers = headersCreate(Guard_Response);
@@ -1460,7 +1460,7 @@ bool prJsFetchRequestRead(JSContext* ctx, JSValueConst input, JSValueConst init,
         auto copy = [&](PrStringView text) {
             uint32_t at = used;
             if (text.size != 0)
-                prMemCopy(out->bytes + at, prStringBytes(text), text.size);
+                prMemCopy(out->bytes + at, text.data, text.size);
             used += uint32_t(text.size);
             return PrStringView{reinterpret_cast<const char*>(out->bytes) + at, text.size};
         };
@@ -1473,8 +1473,8 @@ bool prJsFetchRequestRead(JSContext* ctx, JSValueConst input, JSValueConst init,
             PrStringView name = copy(prRawStringView(&headers->names.data[i]));
             out->headers[i] = PrFetchHeader{name, copy(prRawStringView(&headers->values.data[i]))};
         }
-        PrStringView bytes = copy(PrStringView{reinterpret_cast<const char*>(body.bytes.data), body.bytes.size});
-        out->body = PrByteView{prStringBytes(bytes), bytes.size};
+        PrStringView bytes = copy(prStringFromBytes(body.bytes));
+        out->body = prStringBytes(bytes);
     }
     headersDestroy(headers);
     out->hasBody = ok && hasBody;

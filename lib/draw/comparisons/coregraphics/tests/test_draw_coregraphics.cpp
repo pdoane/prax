@@ -1,43 +1,35 @@
+#include "pr/array.h"
 #include "pr/draw_coregraphics.h"
 #include "pr/draw_cpu.h"
+#include "pr/string.h"
 #include "pr/text_coretext.h"
 
 #include "tools/harness/test.h"
-
-#include <cstdio>
-#include <string>
-#include <vector>
 
 namespace pr_impl {
 
 namespace {
 
+using namespace pr;
+
 const PrFont* load(const char* name) {
-    std::string path = std::string(PR_FONTS_DIR) + "/" + name;
-    std::vector<uint8_t> bytes;
-    FILE* file = std::fopen(path.c_str(), "rb");
-    REQUIRE(file != nullptr);
-    uint8_t buffer[65536];
-    size_t read = 0;
-    while ((read = std::fread(buffer, 1, sizeof(buffer), file)) != 0)
-        bytes.insert(bytes.end(), buffer, buffer + read);
-    std::fclose(file);
+    Array<uint8_t> bytes = harness::readFile(format("{}/{}", PR_FONTS_DIR, name));
     const PrFont* font = nullptr;
     REQUIRE(prFontCreate(bytes, 0, nullptr, &font) == PrStatus_Ok);
     return font;
 }
 
-std::vector<uint8_t> render(PrDrawRenderer* renderer, const PrDrawList* list, uint32_t width, uint32_t height) {
-    std::vector<uint8_t> bytes(size_t(width) * height * 4, 0);
+Array<uint8_t> render(PrDrawRenderer* renderer, const PrDrawList* list, uint32_t width, uint32_t height) {
+    Array<uint8_t> bytes(size_t(width) * height * 4);
     PrPixels into{bytes.data(), size_t(width) * 4, {width, height}};
     REQUIRE(prDrawRendererRenderPixels(renderer, list, into, PrPixelFormat_Bgra8) == PrStatus_Ok);
     return bytes;
 }
 
 // Returns the total alpha of the pixels.
-double inkOf(const std::vector<uint8_t>& pixels) {
+double inkOf(const Array<uint8_t>& pixels) {
     double sum = 0;
-    for (size_t i = 3; i < pixels.size(); i += 4)
+    for (uint32_t i = 3; i < pixels.count(); i += 4)
         sum += pixels[i];
     return sum / 255;
 }
@@ -88,7 +80,7 @@ TEST_CASE("a glyph with a brush fills its outline as cpu does") {
         {.offset = 1, .color = PrColor{0, 0, 0, 1}},
     };
     PrDrawBrush brush = prDrawBrushLinear(PrVec2{0, 0}, PrVec2{100, 0}, stops, 2);
-    for (char c : std::string("AVTRWEyoSMLPI")) {
+    for (char c : PrStringView("AVTRWEyoSMLPI")) {
         recordGlyph(list, font, prFontCodePointGlyph(font, uint32_t(c)), 60, &brush);
         INFO("glyph ", c);
         CHECK(inkOf(render(cg, list, 100, 100)) == doctest::Approx(inkOf(render(cpu, list, 100, 100))).epsilon(0.03));
@@ -117,7 +109,8 @@ TEST_CASE("native text draws each glyph of a font at its defaults") {
     PrDrawList* list = prDrawListCreate();
     for (uint32_t i = 0; i < prTextGlyphBufferGlyphCount(shaped); ++i) {
         uint16_t glyph = prTextGlyphBufferGlyphs(shaped)[i].id;
-        for (float size : {11.0f, 26.0f, 60.0f}) {
+        const float sizes[] = {11.0f, 26.0f, 60.0f};
+        for (float size : sizes) {
             recordGlyph(list, font, glyph, size);
             INFO("glyph ", glyph, " at ", size);
             CHECK(inkOf(render(native, list, 100, 100)) ==
@@ -151,7 +144,7 @@ TEST_CASE("native text draws each glyph of a variation") {
         derivation.variations = point;
         derivation.variationCount = 2;
         varied = prFontCreateDerived(font, &derivation);
-        for (char c : std::string("AVTRWEyoSMLPIacegn")) {
+        for (char c : PrStringView("AVTRWEyoSMLPIacegn")) {
             recordGlyph(list, varied, prFontCodePointGlyph(varied, uint32_t(c)), 40);
             INFO("glyph ", c, " at wght ", point[0].value);
             CHECK(inkOf(render(native, list, 100, 100)) ==
@@ -178,10 +171,10 @@ TEST_CASE("an operator acts where its shape covers, and a group's across the cli
     prDrawListPopClip(list);
     PrDrawRenderer* cg = prDrawCoreGraphicsCreate(nullptr);
     PrDrawRenderer* cpu = prDrawCpuCreate(nullptr);
-    std::vector<uint8_t> drawn = render(cg, list, 48, 32);
-    std::vector<uint8_t> expected = render(cpu, list, 48, 32);
+    Array<uint8_t> drawn = render(cg, list, 48, 32);
+    Array<uint8_t> expected = render(cpu, list, 48, 32);
     size_t differing = 0;
-    for (size_t i = 0; i < drawn.size(); ++i)
+    for (uint32_t i = 0; i < drawn.count(); ++i)
         differing += (drawn[i] > expected[i] ? drawn[i] - expected[i] : expected[i] - drawn[i]) > 2;
     CHECK(differing == 0);
     prDrawRendererDestroy(cg);
@@ -197,7 +190,8 @@ TEST_CASE("a group is masked by a gradient's alpha, or by its inverse, as cpu do
     PrDrawBrush fade = prDrawBrushLinear(PrVec2{8, 0}, PrVec2{56, 0}, stops, 2);
     PrDrawRenderer* cg = prDrawCoreGraphicsCreate(nullptr);
     PrDrawRenderer* cpu = prDrawCpuCreate(nullptr);
-    for (bool invert : {false, true}) {
+    const bool inverts[] = {false, true};
+    for (bool invert : inverts) {
         PrDrawMask mask = prDrawMaskDefault(&fade);
         mask.invert = invert;
         PrDrawGroup group = prDrawGroupDefault();
@@ -206,10 +200,10 @@ TEST_CASE("a group is masked by a gradient's alpha, or by its inverse, as cpu do
         prDrawListPushGroup(list, &group);
         prDrawListRect(list, PrRect{8, 8, 56, 40}, {.color = PrColor{0.2f, 0.4f, 0.8f, 1}});
         prDrawListPopGroup(list);
-        std::vector<uint8_t> drawn = render(cg, list, 64, 48);
-        std::vector<uint8_t> expected = render(cpu, list, 64, 48);
+        Array<uint8_t> drawn = render(cg, list, 64, 48);
+        Array<uint8_t> expected = render(cpu, list, 64, 48);
         size_t differing = 0;
-        for (size_t i = 0; i < drawn.size(); ++i)
+        for (uint32_t i = 0; i < drawn.count(); ++i)
             differing += (drawn[i] > expected[i] ? drawn[i] - expected[i] : expected[i] - drawn[i]) > 6;
         CHECK(differing == 0);
         prDrawListRelease(list);
@@ -240,12 +234,12 @@ TEST_CASE("a projected group draws through its projection's tangent, where cpu d
     PrDrawList* list = prDrawListCreate();
     // A light tilt, which the tangent approximates within a fraction of a pixel.
     recordTilted(list, 0.35f, 300);
-    std::vector<uint8_t> drawn = render(cg, list, 64, 64);
-    std::vector<uint8_t> expected = render(cpu, list, 64, 64);
+    Array<uint8_t> drawn = render(cg, list, 64, 64);
+    Array<uint8_t> expected = render(cpu, list, 64, 64);
     CHECK(inkOf(drawn) == doctest::Approx(inkOf(expected)).epsilon(0.02));
     size_t differing = 0;
-    for (size_t i = 0; i < drawn.size(); i += 4) {
-        for (size_t k = 0; k < 4; ++k) {
+    for (uint32_t i = 0; i < drawn.count(); i += 4) {
+        for (uint32_t k = 0; k < 4; ++k) {
             int delta = int(drawn[i + k]) - int(expected[i + k]);
             if (delta > 48 || delta < -48) {
                 ++differing;

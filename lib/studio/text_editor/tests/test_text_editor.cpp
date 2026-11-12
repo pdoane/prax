@@ -1,6 +1,7 @@
 // The editor through its frames, as an application drives it: its documents, gutter and commands, and a language
 // server's diagnostics, hover and definitions, from a server that the tests run.
 
+#include "pr/array.h"
 #include "pr/command.h"
 #include "pr/command_keymap.h"
 #include "pr/command_kit.h"
@@ -9,6 +10,7 @@
 #include "pr/layout_query.h"
 #include "pr/layout_tree.h"
 #include "pr/process.h"
+#include "pr/string.h"
 #include "pr/string_ops.h"
 #include "pr/text_editor.h"
 #include "pr/text_font.h"
@@ -23,9 +25,6 @@
 #include "tools/harness/kit_fixture.h"
 
 #include "tools/harness/test.h"
-
-#include <string>
-#include <vector>
 
 extern "C" int prTestTextEditorCApi(void);
 
@@ -109,28 +108,22 @@ struct Editor {
 
     PrTextEditorDocument* shown() { return prTextEditorShown(editor); }
 
-    std::string text() {
-        PrStringView all = prTextEditBufferText(prTextEditorDocumentBuffer(shown()));
-        return std::string(all.data, all.size);
-    }
+    String text() { return String(prTextEditBufferText(prTextEditorDocumentBuffer(shown()))); }
 
     PrTextEditPoint caret() { return prTextViewInfo(prTextEditorDocumentView(shown())).caret; }
 
-    std::string status() {
-        PrStringView status = prTextEditorStatus(editor);
-        return std::string(status.data, status.size);
-    }
+    String status() { return String(prTextEditorStatus(editor)); }
 
     // Returns the text of every text node under `node`, in order.
-    std::string textUnder(PrLayoutNode node) {
-        std::string all;
+    String textUnder(PrLayoutNode node) {
+        String all = "";
         for (PrLayoutNode child = prLayoutNodeFirstChild(f.tree, node); child != kPrLayoutNodeNone;
                 child = prLayoutNodeNextSibling(f.tree, child)) {
             if (prLayoutNodeKind(f.tree, child) == PrLayoutNodeKind_Text) {
                 PrStringView text = prLayoutNodeText(f.tree, child);
-                all.append(text.data, text.size);
+                all.append(text);
             } else {
-                all += textUnder(child);
+                all.append(textUnder(child));
             }
         }
         return all;
@@ -138,13 +131,13 @@ struct Editor {
 };
 
 // Writes `text` to a file of `name` in the binary's folder (harness::testFolder), and returns its path.
-std::string writeFile(const std::string& name, const std::string& text) {
-    std::string path = harness::testFolder() + "/" + name;
-    REQUIRE(prFileWrite(path, PrByteView{reinterpret_cast<const uint8_t*>(text.data()), text.size()}));
+String writeFile(PrStringView name, PrStringView text) {
+    String path = format("{}/{}", harness::testFolder(), name);
+    REQUIRE(prFileWrite(path, prStringBytes(text)));
     return path;
 }
 
-PrTextEditorDocument* open(Editor& e, const std::string& path) {
+PrTextEditorDocument* open(Editor& e, PrStringView path) {
     PrTextEditorDocumentDesc desc{.path = path};
     PrTextEditorDocument* document = nullptr;
     REQUIRE(prTextEditorDocumentCreate(e.editor, &desc, &document) == PrStatus_Ok);
@@ -153,16 +146,15 @@ PrTextEditorDocument* open(Editor& e, const std::string& path) {
 }
 
 // Creates a document of `text`, which the user may edit.
-PrTextEditorDocument* textDocument(Editor& e, const std::string& text) {
+PrTextEditorDocument* textDocument(Editor& e, PrStringView text) {
     PrTextEditorDocumentDesc desc{.text = text};
     PrTextEditorDocument* document = nullptr;
     REQUIRE(prTextEditorDocumentCreate(e.editor, &desc, &document) == PrStatus_Ok);
     return document;
 }
 
-std::string textOf(PrTextEditorDocument* document) {
-    PrStringView all = prTextEditBufferText(prTextEditorDocumentBuffer(document));
-    return std::string(all.data, all.size);
+String textOf(PrTextEditorDocument* document) {
+    return String(prTextEditBufferText(prTextEditorDocumentBuffer(document)));
 }
 
 double documentSize(PrTextEditorDocument* document) {
@@ -189,23 +181,23 @@ TEST_CASE("text editor: a document of text shows, takes focus, and numbers its l
     e.f.type("x");
     e.settle();
     CHECK(e.text() == "xone\ntwo\nthree");
-    std::string shown = e.textUnder(prTextEditorTextNode(e.editor));
-    CHECK(shown.find("1xone2two3three") != std::string::npos);
+    String shown = e.textUnder(prTextEditorTextNode(e.editor));
+    CHECK(prStringContains(shown, "1xone2two3three"));
     CHECK(prTextEditorDocumentInfo(document).edited);
 
     PrTextEditorOptions options = prTextEditorOptions(e.editor);
     options.lineNumbers = false;
     prTextEditorSetOptions(e.editor, &options);
     e.settle();
-    CHECK(e.textUnder(prTextEditorTextNode(e.editor)).find("xonetwothree") != std::string::npos);
+    CHECK(prStringContains(e.textUnder(prTextEditorTextNode(e.editor)), "xonetwothree"));
 }
 
 TEST_CASE("text editor: a press on the scrollbar puts the thumb's middle under the pointer, wherever the editor is") {
     Editor e;
     e.top = 300;
-    std::string text;
+    String text;
     for (uint32_t i = 0; i < 2000; ++i)
-        text += "line\n";
+        text.append("line\n");
     PrTextEditorDocument* document = textDocument(e, text);
     e.settle();
     PrTextView* view = prTextEditorDocumentView(document);
@@ -232,7 +224,7 @@ TEST_CASE("text editor: a press on the scrollbar puts the thumb's middle under t
 
 TEST_CASE("text editor: a file opens, saves with its line endings, and a missing file is NotFound") {
     Editor e;
-    std::string path = writeFile("crlf.txt", "a\r\nb\r\n");
+    String path = writeFile("crlf.txt", "a\r\nb\r\n");
     PrTextEditorDocument* document = open(e, path);
     CHECK(e.text() == "a\nb\n");
     CHECK(prTextEditorDocumentInfo(document).crlf);
@@ -242,7 +234,7 @@ TEST_CASE("text editor: a file opens, saves with its line endings, and a missing
     CHECK(e.status() == "saved");
     PrByteView mapping{};
     REQUIRE(prFileMap(path, &mapping));
-    CHECK(std::string(reinterpret_cast<const char*>(mapping.data), mapping.size) == "za\r\nb\r\n");
+    CHECK(prStringFromBytes(mapping) == "za\r\nb\r\n");
     prFileUnmap(&mapping);
     CHECK_FALSE(prTextEditorDocumentInfo(document).edited);
 
@@ -254,21 +246,18 @@ TEST_CASE("text editor: a file opens, saves with its line endings, and a missing
 
 TEST_CASE("text editor: a document's workspace is the folder above it that holds .git, or its own folder") {
     Editor e;
-    std::string path = writeFile("plain.txt", "a\n");
-    std::string folder = path.substr(0, path.rfind('/'));
-    REQUIRE(prFileCreateDirectory(folder + "/workspace/.git"));
-    REQUIRE(prFileCreateDirectory(folder + "/workspace/sub"));
-    std::string nested = writeFile("workspace/sub/nested.txt", "b\n");
+    String path = writeFile("plain.txt", "a\n");
+    String folder(prStringSlice(path, 0, prStringFindLastByte(path, '/')));
+    REQUIRE(prFileCreateDirectory(format("{}/workspace/.git", folder)));
+    REQUIRE(prFileCreateDirectory(format("{}/workspace/sub", folder)));
+    String nested = writeFile("workspace/sub/nested.txt", "b\n");
     auto workspace = [](PrTextEditorDocument* document) {
-        PrRawString root = prTextEditorDocumentWorkspace(document);
-        std::string text(prRawStringView(&root).data, prRawStringView(&root).size);
-        prRawStringReset(&root);
-        return text;
+        return String::adopt(prTextEditorDocumentWorkspace(document));
     };
-    CHECK(workspace(open(e, nested)) == folder + "/workspace");
+    CHECK(workspace(open(e, nested)) == format("{}/workspace", folder));
     // A folder above the tests' folder may contain .git, so the workspace of a file there is its own folder or a folder
     // above it.
-    std::string own = workspace(open(e, path));
+    String own = workspace(open(e, path));
     CHECK(prStringStartsWith(folder, own));
     PrRawString none = prTextEditorDocumentWorkspace(textDocument(e, "c\n"));
     CHECK(prRawStringIsNull(&none));
@@ -276,16 +265,21 @@ TEST_CASE("text editor: a document's workspace is the folder above it that holds
 
 TEST_CASE("text editor: a comparison aligns its sides, tints what changed, and scrolls them together") {
     Editor e;
-    std::string old;
-    std::string young;
+    String old;
+    String young;
     // Line 6 is long on both sides, so that the sides scroll along their lines.
-    std::string wide(400, 'x');
+    String wide;
+    for (uint32_t i = 0; i < 400; ++i)
+        wide.append('x');
     for (uint32_t i = 0; i < 400; ++i) {
-        std::string tail = i == 6 ? wide : std::string();
-        old += "line " + std::to_string(i) + tail + "\n";
-        young += (i == 1 ? std::string("LINE 1") : "line " + std::to_string(i) + tail) + "\n";
+        PrStringView tail = i == 6 ? wide.view() : PrStringView("");
+        formatTo(old, "line {}{}\n", i, tail);
+        if (i == 1)
+            young.append("LINE 1\n");
+        else
+            formatTo(young, "line {}{}\n", i, tail);
         if (i == 3)
-            young += "added a\nadded b\n";
+            young.append("added a\nadded b\n");
     }
     PrTextEditorDocumentDesc oldDesc{.text = old, .readOnly = true};
     PrTextEditorDocumentDesc youngDesc{.text = young};
@@ -421,7 +415,7 @@ TEST_CASE("text editor: a sync point aligns its lines, follows edits, and goes w
     CHECK(info.caret.line == 0);
     e.run("diff.toggleSync");
     CHECK(prTextEditorDiffSyncs(diff, nullptr, 0) == 1);
-    CHECK(e.textUnder(prTextEditorTextNode(e.editor)).find("\xE2\x87\x94 1") != std::string::npos);
+    CHECK(prStringContains(e.textUnder(prTextEditorTextNode(e.editor)), "\xE2\x87\x94 1"));
     e.run("diff.toggleSync");
     CHECK(prTextEditorDiffSyncs(diff, nullptr, 0) == 0);
     prTextEditorDiffDestroy(diff);
@@ -560,28 +554,28 @@ TEST_CASE("text editor: a debugging session stops at a breakpoint, steps, shows 
         .launch = "{\"program\":\"/fake/program\"}",
     };
     prTextEditorSetDebugger(e.editor, &debugger);
-    std::string path = writeFile("debugged.c", "int main(void) {\n    int x = 1;\n    x += 1;\n    return x;\n}\n");
+    String path = writeFile("debugged.c", "int main(void) {\n    int x = 1;\n    x += 1;\n    return x;\n}\n");
     PrTextEditorDocument* document = open(e, path);
     // A breakpoint on the caret's line, line 1.
     prTextViewRun(prTextEditorDocumentView(document), PrTextEditCommand_Down, PrTextEditSelectionMove_Collapse);
     e.run("debug.toggleBreakpoint");
     CHECK(prTextEditorDocumentBreakpoints(document, nullptr, 0) == 1);
-    CHECK(e.textUnder(prTextEditorTextNode(e.editor)).find("\xE2\x97\x8F 2") != std::string::npos);
+    CHECK(prStringContains(e.textUnder(prTextEditorTextNode(e.editor)), "\xE2\x97\x8F 2"));
     // The caret moves away, so that the stop brings it back.
     prTextViewRun(prTextEditorDocumentView(document), PrTextEditCommand_TextEnd, PrTextEditSelectionMove_Collapse);
     e.settle();
 
     e.run("debug.continue");
     e.waitFor([&] { return prTextEditorDebugInfo(e.editor).state == PrTextEditorDebugState_Stopped; });
-    e.waitFor([&] { return e.textUnder(e.f.root).find("steps = 0") != std::string::npos; });
+    e.waitFor([&] { return prStringContains(e.textUnder(e.f.root), "steps = 0"); });
     PrTextEditorDebugInfo info = prTextEditorDebugInfo(e.editor);
     CHECK(info.path == PrStringView(path));
     CHECK(info.line == 1);
     CHECK(e.caret().line == 1);
-    std::string panel = e.textUnder(e.f.root);
-    CHECK(panel.find("stopped: breakpoint") != std::string::npos);
-    CHECK(panel.find("main  debugged.c:2") != std::string::npos);
-    CHECK(panel.find("hello") != std::string::npos);
+    String panel = e.textUnder(e.f.root);
+    CHECK(prStringContains(panel, "stopped: breakpoint"));
+    CHECK(prStringContains(panel, "main  debugged.c:2"));
+    CHECK(prStringContains(panel, "hello"));
     // The stopped line's row is tinted.
     PrLayoutNode port = prTextEditorTextNode(e.editor);
     PrLayoutNode second = prLayoutNodeNextSibling(e.f.tree, prLayoutNodeFirstChild(e.f.tree, port));
@@ -589,21 +583,21 @@ TEST_CASE("text editor: a debugging session stops at a breakpoint, steps, shows 
     CHECK(prLayoutDecorationStyleRecord(e.f.tree, filled.groups[PrLayoutGroup_Decoration]).background.a != 0);
 
     e.run("debug.stepOver");
-    e.waitFor([&] { return e.textUnder(e.f.root).find("steps = 1") != std::string::npos; });
+    e.waitFor([&] { return prStringContains(e.textUnder(e.f.root), "steps = 1"); });
     CHECK(prTextEditorDebugInfo(e.editor).line == 2);
     CHECK(e.caret().line == 2);
 
     e.run("debug.continue");
     e.waitFor([&] { return prTextEditorDebugInfo(e.editor).state == PrTextEditorDebugState_Ended; });
-    e.waitFor([&] { return e.textUnder(e.f.root).find("exit code 0") != std::string::npos; });
-    CHECK(e.textUnder(e.f.root).find("bye") != std::string::npos);
+    e.waitFor([&] { return prStringContains(e.textUnder(e.f.root), "exit code 0"); });
+    CHECK(prStringContains(e.textUnder(e.f.root), "bye"));
     e.run("debug.stop");
     CHECK(prTextEditorDebugInfo(e.editor).state == PrTextEditorDebugState_None);
 }
 
 TEST_CASE("text editor: Compare with Saved compares a document with its file, and closing it shows the document") {
     Editor e;
-    std::string path = writeFile("compared.txt", "one\ntwo\nthree\n");
+    String path = writeFile("compared.txt", "one\ntwo\nthree\n");
     PrTextEditorDocument* document = open(e, path);
     e.f.type("zero\n");
     e.settle();
@@ -644,7 +638,7 @@ TEST_CASE("text editor: a language server's diagnostics, hover and definition re
     };
     prTextEditorAddServer(e.editor, &server);
     // The emoji counts two units in UTF-16, which the server counts in.
-    std::string path = writeFile("served.c", "int x = y;\n\xF0\x9F\x98\x80  z;\n");
+    String path = writeFile("served.c", "int x = y;\n\xF0\x9F\x98\x80  z;\n");
     PrTextEditorDocument* document = open(e, path);
     e.waitFor([&] { return prTextEditorDocumentInfo(document).errors == 1; });
     CHECK(prTextEditorDocumentInfo(document).server == PrTextEditorServerState_Running);
@@ -654,15 +648,15 @@ TEST_CASE("text editor: a language server's diagnostics, hover and definition re
     PrLayoutNode row = prLayoutNodeFirstChild(e.f.tree, prTextEditorTextNode(e.editor));
     PrLayoutNode block = prLayoutNodeNextSibling(e.f.tree, prLayoutNodeFirstChild(e.f.tree, row));
     PrLayoutNode text = prLayoutNodeFirstChild(e.f.tree, block);
-    std::vector<PrLayoutHighlight> marks(prLayoutNodeHighlights(e.f.tree, text, nullptr, 0));
-    prLayoutNodeHighlights(e.f.tree, text, marks.data(), uint32_t(marks.size()));
+    Array<PrLayoutHighlight> marks(prLayoutNodeHighlights(e.f.tree, text, nullptr, 0));
+    prLayoutNodeHighlights(e.f.tree, text, marks.data(), marks.count());
     bool underlined = false;
     for (const PrLayoutHighlight& mark : marks)
         underlined = underlined || (mark.start == 0 && mark.end == 3 && mark.underline.a != 0);
     CHECK(underlined);
 
     e.run("language.hover");
-    e.waitFor([&] { return e.textUnder(e.f.root).find("hover at 0:0") != std::string::npos; });
+    e.waitFor([&] { return prStringContains(e.textUnder(e.f.root), "hover at 0:0"); });
 
     // The definition is on line 1 at UTF-16 unit 4, which is past the emoji's four bytes and two spaces.
     e.run("language.definition");

@@ -1,11 +1,10 @@
+#include "pr/float.h"
 #include "pr/path.h"
 #include "pr/path_polyline.h"
+#include "pr/string.h"
 #include "pr/vec.h"
 
 #include "tools/harness/test.h"
-
-#include <cmath>
-#include <string>
 
 extern "C" int prTestPathCApi(void);
 
@@ -14,19 +13,19 @@ namespace pr_impl {
 namespace {
 
 // Returns the verbs of the path as letters, each followed by its points.
-std::string describe(const PrPath* path) {
-    std::string text;
+String describe(const PrPath* path) {
+    String text;
     const PrPathVerb* verbs = prPathVerbs(path);
     const PrVec2* points = prPathPoints(path);
     uint32_t next = 0;
     for (uint32_t i = 0; i < prPathVerbCount(path); ++i) {
         static constexpr const char kLetter[] = "MLQCZ";
         static constexpr uint32_t kPoints[] = {1, 1, 2, 3, 0};
-        if (!text.empty())
-            text += ' ';
-        text += kLetter[verbs[i]];
+        if (!text.isEmpty())
+            text.append(' ');
+        text.append(kLetter[verbs[i]]);
         for (uint32_t j = 0; j < kPoints[verbs[i]]; ++j, ++next)
-            text += " " + std::to_string(int(points[next].x)) + "," + std::to_string(int(points[next].y));
+            formatTo(text, " {},{}", int(points[next].x), int(points[next].y));
     }
     return text;
 }
@@ -187,21 +186,22 @@ TEST_CASE("curves flatten within the tolerance, inside them or balanced to their
     PrPath* circle = prPathCreate();
     prPathAddEllipse(circle, PrVec2{0, 0}, PrVec2{10, 10}, 0);
     constexpr double kArea = 3.14159265358979 * 100;
-    for (float tolerance : {0.5f, 0.05f}) {
+    const float tolerances[] = {0.5f, 0.05f};
+    for (float tolerance : tolerances) {
         PrPathPolyline inside{};
         prPathFlatten(circle, prAffine2Identity(), tolerance, PrPathFlattening_Inside, &inside);
         REQUIRE(inside.contourCount == 1);
         for (uint32_t i = 0; i < inside.pointCount; ++i) {
             PrVec2 p = inside.points[i];
-            double radius = std::sqrt(double(p.x) * double(p.x) + double(p.y) * double(p.y));
+            double radius = prF64Sqrt(double(p.x) * double(p.x) + double(p.y) * double(p.y));
             // The cubics of the ellipse lie up to 0.027% of the radius outside the circle.
             CHECK(radius <= 10.003);
             CHECK(radius >= 10 - double(tolerance) - 0.001);
         }
-        CHECK(std::fabs(contourArea(inside, 0)) < kArea);
+        CHECK(prF64Abs(contourArea(inside, 0)) < kArea);
         PrPathPolyline balanced{};
         prPathFlatten(circle, prAffine2Identity(), tolerance, PrPathFlattening_Balanced, &balanced);
-        CHECK(std::fabs(contourArea(balanced, 0)) == doctest::Approx(kArea).epsilon(0.001));
+        CHECK(prF64Abs(contourArea(balanced, 0)) == doctest::Approx(kArea).epsilon(0.001));
         prPathPolylineReset(&inside);
         prPathPolylineReset(&balanced);
     }

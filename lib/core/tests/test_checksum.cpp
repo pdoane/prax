@@ -1,17 +1,17 @@
+#include "pr/array.h"
 #include "pr/checksum.h"
+#include "pr/mem.h"
+#include "pr/string.h"
+#include "pr/string_ops.h"
 
 #include "tools/harness/test.h"
-
-#include <string>
-#include <string_view>
-#include <vector>
 
 namespace pr_impl {
 
 namespace {
 
-PrByteView bytes(std::string_view value) {
-    return {reinterpret_cast<const uint8_t*>(value.data()), value.size()};
+PrByteView bytes(PrStringView value) {
+    return prStringBytes(value);
 }
 
 } // namespace
@@ -29,13 +29,13 @@ TEST_CASE("CRC-32 and Adler-32 match published check values") {
 }
 
 TEST_CASE("SHA-1 matches the digests of rfc 3174 and FIPS 180") {
-    auto hex = [](std::string_view text) {
+    auto hex = [](PrStringView text) {
         uint8_t digest[kPrSha1Bytes];
         prSha1Digest(bytes(text), digest);
-        std::string out;
+        String out;
         for (uint8_t byte : digest) {
-            out += "0123456789abcdef"[byte >> 4];
-            out += "0123456789abcdef"[byte & 15];
+            out.append("0123456789abcdef"[byte >> 4]);
+            out.append("0123456789abcdef"[byte & 15]);
         }
         return out;
     };
@@ -44,18 +44,21 @@ TEST_CASE("SHA-1 matches the digests of rfc 3174 and FIPS 180") {
     // 56 bytes, whose padding needs a second block.
     CHECK(hex("abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq") ==
         "84983e441c3bd26ebaae4aa1f95129e5e54670f1");
-    CHECK(hex(std::string(1000000, 'a')) == "34aa973cd4c4daa4f61eeb2bdbad27316534016f");
+    Array<char> million(1000000);
+    prMemFill(million.data(), 'a', million.count());
+    CHECK(hex(PrStringView(million.data(), million.count())) == "34aa973cd4c4daa4f61eeb2bdbad27316534016f");
 }
 
 TEST_CASE("checksum updates retain state across arbitrary chunk boundaries") {
-    std::vector<uint8_t> data(100000, 0xff);
-    const PrByteView input{data.data(), data.size()};
+    Array<uint8_t> data(100000);
+    prMemFill(data.data(), 0xff, data.count());
+    const PrByteView input{data.data(), data.count()};
     const uint32_t crc = prCrc32Update(0, input);
     const uint32_t adler = prAdler32Update(1, input);
-    for (size_t split :
-            {size_t(0), size_t(1), size_t(5551), size_t(5552), size_t(5553), data.size()}) {
+    const uint32_t splits[] = {0, 1, 5551, 5552, 5553, data.count()};
+    for (uint32_t split : splits) {
         const PrByteView first{data.data(), split};
-        const PrByteView second{data.data() + split, data.size() - split};
+        const PrByteView second{data.data() + split, data.count() - split};
         CHECK(prCrc32Update(prCrc32Update(0, first), second) == crc);
         CHECK(prAdler32Update(prAdler32Update(1, first), second) == adler);
     }
@@ -70,18 +73,19 @@ TEST_CASE("checksum updates retain state across arbitrary chunk boundaries") {
 }
 
 TEST_CASE("adler-32 weighs each byte by its distance from the end") {
-    std::vector<uint8_t> data(20000);
+    Array<uint8_t> data(20000);
     uint32_t state = 1;
     for (uint8_t& value : data) {
         state = state * 1103515245u + 12345u;
         value = uint8_t(state >> 16);
     }
-    for (size_t start : {size_t(0), size_t(1), size_t(3), size_t(7)}) {
+    const uint32_t starts[] = {0, 1, 3, 7};
+    for (uint32_t start : starts) {
         uint32_t slowLow = 1, slowHigh = 0;
-        for (size_t i = start; i < data.size(); ++i) {
+        for (uint32_t i = start; i < data.count(); ++i) {
             slowLow = (slowLow + data[i]) % 65521;
             slowHigh = (slowHigh + slowLow) % 65521;
         }
-        CHECK(prAdler32Update(1, {data.data() + start, data.size() - start}) == ((slowHigh << 16) | slowLow));
+        CHECK(prAdler32Update(1, {data.data() + start, data.count() - start}) == ((slowHigh << 16) | slowLow));
     }
 }

@@ -113,9 +113,14 @@ pr_dependency(slang
 
 # The development build's dependencies: the test framework, and the implementations that the engine is compared with.
 
+# doctest, with the changes that patches/doctest makes: its header declares the streams it names through <iosfwd> with
+# libc++, rather than including <ostream> and <istream>, which are most of the standard library and so most of a test's
+# compile.
+pr_patch_arguments(PR_DOCTEST_PATCH doctest ${PROJECT_SOURCE_DIR}/patches/doctest)
 pr_dependency(doctest
     URL https://github.com/doctest/doctest/archive/refs/tags/v2.4.12.tar.gz
     URL_HASH SHA256=73381c7aa4dee704bd935609668cf41880ea7f19fa0504a200e13b74999c2d70
+    ${PR_DOCTEST_PATCH}
     EXCLUDE_FROM_ALL
     SYSTEM
 )

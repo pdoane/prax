@@ -110,12 +110,12 @@ TEST_CASE("every type reference resolves") {
 
 TEST_CASE("the heavy terminals are present") {
     // The dozen productions that carry most of the references.
-    for (PrStringView name :
-            {
-                "<number>", "<percentage>", "<length>", "<string>",
-                "<integer>", "<custom-ident>", "<angle>", "<dashed-ident>",
-                "<ident>", "<time>", "<zero>", "<flex>",
-            }) {
+    const PrStringView names[] = {
+        "<number>", "<percentage>", "<length>", "<string>",
+        "<integer>", "<custom-ident>", "<angle>", "<dashed-ident>",
+        "<ident>", "<time>", "<zero>", "<flex>",
+    };
+    for (PrStringView name : names) {
         INFO(textOf(name));
         bool found = false;
         for (CssValueDef def = 0; def < CssValueDef_Count; ++def) {
@@ -157,7 +157,7 @@ TEST_CASE("a terminal begins with a token its first set holds") {
             CssValueSpan span;
             CssTokenKind kind = cssPeek(&source.ts);
             if (cssParseValue(kCssValueDefGrammarRoot[def], &source.ts, &pool, &match, &span)) {
-                INFO(textOf(kCssValueDefName[def]), " parsed ", std::string(sample));
+                INFO(textOf(kCssValueDefName[def]), " parsed ", PrStringView(sample));
                 CHECK((first.kinds & (1u << kind)) != 0);
             }
             cssValuePoolReset(&pool);

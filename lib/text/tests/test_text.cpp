@@ -1,5 +1,10 @@
+#include "pr/array.h"
+#include "pr/float.h"
 #include "pr/font_freetype.h"
 #include "pr/locale_common.h"
+#include "pr/span.h"
+#include "pr/string.h"
+#include "pr/string_ops.h"
 #include "pr/text.h"
 #include "pr/text_font.h"
 #include "pr/text_harfbuzz.h"
@@ -13,28 +18,17 @@
 
 #include "tools/harness/test.h"
 
-#include <cmath>
-#include <cstdio>
-#include <string>
-#include <vector>
-
 extern "C" int prTestTextCApi(void);
 
 namespace pr_impl {
+
+using namespace pr;
 
 namespace {
 
 // Loads a test font by its file name.
 const PrFont* load(const char* name) {
-    std::string path = std::string(PR_FONTS_DIR) + "/" + name;
-    std::vector<uint8_t> bytes;
-    FILE* file = std::fopen(path.c_str(), "rb");
-    REQUIRE(file != nullptr);
-    uint8_t buffer[65536];
-    size_t read = 0;
-    while ((read = std::fread(buffer, 1, sizeof(buffer), file)) != 0)
-        bytes.insert(bytes.end(), buffer, buffer + read);
-    std::fclose(file);
+    Array<uint8_t> bytes = harness::readFile(format("{}/{}", PR_FONTS_DIR, PrStringView(name)));
     const PrFont* font = nullptr;
     REQUIRE(prFontCreate(bytes, 0, nullptr, &font) == PrStatus_Ok);
     return font;
@@ -48,24 +42,21 @@ struct Case {
     const char* language;           // BCP 47, or null for none
 };
 
-std::vector<PrTextGlyph> shape(PrTextShaper* shaper, const PrTextRun& run) {
+Array<PrTextGlyph> shape(PrTextShaper* shaper, const PrTextRun& run) {
     PrTextGlyphBuffer* glyphs = prTextGlyphBufferCreate();
     REQUIRE(prTextShaperShape(shaper, &run, glyphs) == PrStatus_Ok);
-    std::vector<PrTextGlyph> out(prTextGlyphBufferGlyphs(glyphs),
-        prTextGlyphBufferGlyphs(glyphs) + prTextGlyphBufferGlyphCount(glyphs));
+    Array<PrTextGlyph> out;
+    out.append(prTextGlyphBufferGlyphs(glyphs), prTextGlyphBufferGlyphCount(glyphs));
     prTextGlyphBufferDestroy(glyphs);
     return out;
 }
 
 // Returns each glyph as its id, its cluster and its position.
-std::string describe(const std::vector<PrTextGlyph>& glyphs) {
-    std::string out;
-    char text[96];
+String describe(const Array<PrTextGlyph>& glyphs) {
+    String out;
     PrVec2 pen{0, 0};
     for (const PrTextGlyph& g : glyphs) {
-        std::snprintf(text, sizeof(text), "%u@%u(%.3f,%.3f) ", g.id, g.cluster, double(pen.x + g.offset.x),
-            double(pen.y + g.offset.y));
-        out += text;
+        formatTo(out, "{}@{}({:.3f},{:.3f}) ", g.id, g.cluster, double(pen.x + g.offset.x), double(pen.y + g.offset.y));
         pen.x += g.advance.x;
         pen.y += g.advance.y;
     }
@@ -74,22 +65,22 @@ std::string describe(const std::vector<PrTextGlyph>& glyphs) {
 
 // Returns true if two shapers agree: the same glyphs from the same clusters, each within `tolerance` of the same
 // position, and the same total advance.
-bool agree(const std::vector<PrTextGlyph>& a, const std::vector<PrTextGlyph>& b, float tolerance) {
-    if (a.size() != b.size())
+bool agree(const Array<PrTextGlyph>& a, const Array<PrTextGlyph>& b, float tolerance) {
+    if (a.count() != b.count())
         return false;
     PrVec2 penA{0, 0}, penB{0, 0};
-    for (size_t i = 0; i < a.size(); ++i) {
+    for (uint32_t i = 0; i < a.count(); ++i) {
         if (a[i].id != b[i].id || a[i].cluster != b[i].cluster)
             return false;
-        if (std::fabs(penA.x + a[i].offset.x - penB.x - b[i].offset.x) > tolerance ||
-                std::fabs(penA.y + a[i].offset.y - penB.y - b[i].offset.y) > tolerance)
+        if (prF32Abs(penA.x + a[i].offset.x - penB.x - b[i].offset.x) > tolerance ||
+                prF32Abs(penA.y + a[i].offset.y - penB.y - b[i].offset.y) > tolerance)
             return false;
         penA.x += a[i].advance.x;
         penA.y += a[i].advance.y;
         penB.x += b[i].advance.x;
         penB.y += b[i].advance.y;
     }
-    return std::fabs(penA.x - penB.x) <= tolerance && std::fabs(penA.y - penB.y) <= tolerance;
+    return prF32Abs(penA.x - penB.x) <= tolerance && prF32Abs(penA.y - penB.y) <= tolerance;
 }
 
 constexpr Case kCases[] = {
@@ -129,16 +120,16 @@ constexpr Case kCases[] = {
 #if defined(__APPLE__)
 // Returns true if two shapers draw the same: the same glyphs in the same places, in any order, and the same total
 // advance. The comparisons of CoreText with HarfBuzz use it.
-bool drawAlike(const std::vector<PrTextGlyph>& a, const std::vector<PrTextGlyph>& b, float tolerance) {
+bool drawAlike(const Array<PrTextGlyph>& a, const Array<PrTextGlyph>& b, float tolerance) {
     struct Placed {
         uint32_t id;
         PrVec2 at;
     };
-    auto place = [](const std::vector<PrTextGlyph>& glyphs, PrVec2* end) {
-        std::vector<Placed> out;
+    auto place = [](const Array<PrTextGlyph>& glyphs, PrVec2* end) {
+        Array<Placed> out;
         PrVec2 pen{0, 0};
         for (const PrTextGlyph& g : glyphs) {
-            out.push_back(Placed{g.id, pen + g.offset});
+            out.push(Placed{g.id, pen + g.offset});
             pen.x += g.advance.x;
             pen.y += g.advance.y;
         }
@@ -146,14 +137,14 @@ bool drawAlike(const std::vector<PrTextGlyph>& a, const std::vector<PrTextGlyph>
         return out;
     };
     PrVec2 endA{}, endB{};
-    std::vector<Placed> pa = place(a, &endA);
-    std::vector<Placed> pb = place(b, &endB);
-    if (pa.size() != pb.size() || std::fabs(endA.x - endB.x) > tolerance)
+    Array<Placed> pa = place(a, &endA);
+    Array<Placed> pb = place(b, &endB);
+    if (pa.count() != pb.count() || prF32Abs(endA.x - endB.x) > tolerance)
         return false;
     for (const Placed& p : pa) {
         bool found = false;
         for (Placed& q : pb) {
-            if (q.id == p.id && std::fabs(q.at.x - p.at.x) <= tolerance && std::fabs(q.at.y - p.at.y) <= tolerance) {
+            if (q.id == p.id && prF32Abs(q.at.x - p.at.x) <= tolerance && prF32Abs(q.at.y - p.at.y) <= tolerance) {
                 q.id = 0xffffffffu;
                 found = true;
                 break;
@@ -167,10 +158,12 @@ bool drawAlike(const std::vector<PrTextGlyph>& a, const std::vector<PrTextGlyph>
 #endif
 
 // Returns the shapers that shape features, one of each.
-std::vector<PrTextShaper*> featureShapers() {
-    std::vector<PrTextShaper*> shapers{prTextKbCreate(), prTextHarfBuzzCreate()};
+Array<PrTextShaper*> featureShapers() {
+    Array<PrTextShaper*> shapers;
+    shapers.push(prTextKbCreate());
+    shapers.push(prTextHarfBuzzCreate());
 #if defined(__APPLE__)
-    shapers.push_back(prTextCoreTextCreate());
+    shapers.push(prTextCoreTextCreate());
 #endif
     return shapers;
 }
@@ -182,10 +175,10 @@ PrTextRun runOf(const PrFont* font, const char* text) {
     return run;
 }
 
-std::vector<uint32_t> idsOf(const std::vector<PrTextGlyph>& glyphs) {
-    std::vector<uint32_t> ids;
+Array<uint32_t> idsOf(const Array<PrTextGlyph>& glyphs) {
+    Array<uint32_t> ids;
     for (const PrTextGlyph& g : glyphs)
-        ids.push_back(g.id);
+        ids.push(g.id);
     return ids;
 }
 
@@ -197,7 +190,7 @@ struct SetFace {
     const PrFontCodePointRange* PR_NULLABLE ranges = nullptr;
 };
 
-PrFontSet* setOf(std::initializer_list<SetFace> faces) {
+PrFontSet* setOf(Span<const SetFace> faces) {
     PrFontSet* set = prFontSetCreate(nullptr);
     for (const SetFace& f : faces) {
         const PrFont* font = load(f.file);
@@ -215,24 +208,24 @@ PrFontSet* setOf(std::initializer_list<SetFace> faces) {
 }
 
 // Returns the text font of the named families, in `set`.
-PrTextFont* fontOf(PrFontSet* set, std::initializer_list<const char*> names) {
-    std::vector<PrFontFamily> families;
+PrTextFont* fontOf(PrFontSet* set, Span<const char* const> names) {
+    Array<PrFontFamily> families;
     for (const char* name : names)
-        families.push_back(prFontFamilyFromName(name));
+        families.push(prFontFamilyFromName(name));
     PrTextFontDesc desc{
         .set = set,
         .families = families.data(),
-        .familyCount = uint32_t(families.size()),
+        .familyCount = families.count(),
         .style = prFontStyleDefault(),
     };
     return prTextFontCreate(&desc);
 }
 
 // Returns the runs of `text` as one paragraph in the text font `group`, left to right unless `rtl`.
-std::vector<PrTextItemRun> itemize(PrTextFont* group, const std::string& text, bool rtl = false) {
+Array<PrTextItemRun> itemize(PrTextFont* group, PrStringView text, bool rtl = false) {
     PrTextPiece piece{};
     piece.kind = PrTextPieceKind_Text;
-    piece.end = uint32_t(text.size());
+    piece.end = uint32_t(text.size);
     piece.font = group;
     PrTextItemizeDesc desc{};
     desc.text = text;
@@ -241,27 +234,27 @@ std::vector<PrTextItemRun> itemize(PrTextFont* group, const std::string& text, b
     desc.direction = rtl ? PrTextDirection_Rtl : PrTextDirection_Ltr;
     PrTextItems* items = prTextItemsCreate();
     prTextItemsItemize(items, &desc);
-    std::vector<PrTextItemRun> runs(prTextItemsRuns(items), prTextItemsRuns(items) + prTextItemsRunCount(items));
+    Array<PrTextItemRun> runs;
+    runs.append(prTextItemsRuns(items), prTextItemsRunCount(items));
     prTextItemsDestroy(items);
     return runs;
 }
 
 // Returns the families of the faces that set the runs.
-std::vector<std::string> familiesOf(PrTextFont* group, const std::vector<PrTextItemRun>& runs) {
-    std::vector<std::string> families;
-    for (const PrTextItemRun& run : runs) {
-        PrRawString family = prFontFamilyName(prTextFontMatchedFont(group, run.face));
-        PrStringView name = prRawStringView(&family);
-        families.emplace_back(name.data, name.size);
-        prRawStringReset(&family);
-    }
+Array<String> familiesOf(PrTextFont* group, const Array<PrTextItemRun>& runs) {
+    Array<String> families;
+    for (const PrTextItemRun& run : runs)
+        families.push(String::adopt(prFontFamilyName(prTextFontMatchedFont(group, run.face))));
     return families;
 }
+
+// The faces of the host set of Layered.
+constexpr SetFace kLayeredHostFaces[] = {{"NotoSans[wdth,wght].ttf"}, {"NotoSerif[wdth,wght].ttf"}};
 
 // A set over a host set of Noto Sans and Noto Serif, with serif as its default family, in the way that the set of a
 // document is layered over the set of its host.
 struct Layered {
-    PrFontSet* host = setOf({{"NotoSans[wdth,wght].ttf"}, {"NotoSerif[wdth,wght].ttf"}});
+    PrFontSet* host = setOf(kLayeredHostFaces);
     PrFontSet* document = prFontSetCreate(host);
 
     Layered() {
@@ -292,14 +285,11 @@ struct Layered {
 };
 
 // Returns the family of the face that sets `cluster` in `font`, or an empty string if no face does.
-std::string familyFor(PrTextFont* font, const char* cluster, PrScript script = PrScript_Latn) {
+String familyFor(PrTextFont* font, PrStringView cluster, PrScript script = PrScript_Latn) {
     uint32_t face = prTextFontMatch(font, cluster, script);
     if (face == kPrTextMatchNone)
         return "";
-    PrRawString family = prFontFamilyName(prTextFontMatchedFont(font, face));
-    std::string name(prRawStringView(&family).data, prRawStringView(&family).size);
-    prRawStringReset(&family);
-    return name;
+    return String::adopt(prFontFamilyName(prTextFontMatchedFont(font, face)));
 }
 
 // Checks that `backend` sets each variation sequence that New Computer Modern Math lists in the sequence's glyph: the
@@ -316,19 +306,20 @@ void checkVariationSequences(PrTextShaperBackend backend) {
     uint16_t a = prFontCodePointGlyph(font, 'A');
     const char* text = "\xf0\x9d\x92\x9c\xef\xb8\x81\xf0\x9d\x92\x9c\xe2\x88\x85\xef\xb8\x80" "A\xef\xb8\x81\xef\xb8\x81";
     PrTextShaper* shaper = prTextShaperCreate(backend);
-    CAPTURE(std::string(prTextShaperBackendName(backend).data, prTextShaperBackendName(backend).size));
-    for (PrTextAxis axis : {PrTextAxis_Horizontal, PrTextAxis_Vertical}) {
+    CAPTURE(prTextShaperBackendName(backend));
+    const PrTextAxis axes[] = {PrTextAxis_Horizontal, PrTextAxis_Vertical};
+    for (PrTextAxis axis : axes) {
         CAPTURE(int(axis));
         PrTextRun run = runOf(font, text);
         run.axis = axis;
         run.script = PrScript_Zmth;
-        std::vector<PrTextGlyph> glyphs = shape(shaper, run);
+        Array<PrTextGlyph> glyphs = shape(shaper, run);
         INFO(describe(glyphs));
-        CHECK(idsOf(glyphs) == std::vector<uint32_t>{roundhand, script, emptySet, a});
-        std::vector<uint32_t> clusters;
+        CHECK(idsOf(glyphs) == Array<uint32_t>({roundhand, script, emptySet, a}));
+        Array<uint32_t> clusters;
         for (const PrTextGlyph& g : glyphs)
-            clusters.push_back(g.cluster);
-        CHECK(clusters == std::vector<uint32_t>{0, 7, 11, 17});
+            clusters.push(g.cluster);
+        CHECK(clusters == Array<uint32_t>({0, 7, 11, 17}));
     }
     prTextShaperDestroy(shaper);
     prFontRelease(font);
@@ -355,8 +346,8 @@ TEST_CASE("kb shapes as HarfBuzz does") {
         run.direction = c.direction;
         run.script = c.script;
         run.locale = c.language != nullptr ? prLocaleFromTag(c.language) : 0;
-        std::vector<PrTextGlyph> expected = shape(hb, run);
-        std::vector<PrTextGlyph> actual = shape(kb, run);
+        Array<PrTextGlyph> expected = shape(hb, run);
+        Array<PrTextGlyph> actual = shape(kb, run);
         INFO(c.text);
         INFO("harfbuzz: ", describe(expected));
         INFO("kb:       ", describe(actual));
@@ -380,10 +371,10 @@ TEST_CASE("kb shapes a variable font's instance as HarfBuzz does") {
     PrTextRun run{};
     run.text = "AVATAR Toyota WAVE office";
     run.font = font;
-    std::vector<PrTextGlyph> regular = shape(kb, run);
+    Array<PrTextGlyph> regular = shape(kb, run);
     run.font = instance;
-    std::vector<PrTextGlyph> expected = shape(hb, run);
-    std::vector<PrTextGlyph> actual = shape(kb, run);
+    Array<PrTextGlyph> expected = shape(hb, run);
+    Array<PrTextGlyph> actual = shape(kb, run);
     INFO("harfbuzz: ", describe(expected));
     INFO("kb:       ", describe(actual));
     CHECK_FALSE(agree(regular, actual, 1e-3f));
@@ -402,8 +393,8 @@ TEST_CASE("kb composes a sequence of marks as HarfBuzz does") {
     PrTextRun run{};
     run.font = font;
     run.text = "a\xcc\x8a\xcc\x81";
-    std::vector<PrTextGlyph> expected = shape(hb, run);
-    std::vector<PrTextGlyph> actual = shape(kb, run);
+    Array<PrTextGlyph> expected = shape(hb, run);
+    Array<PrTextGlyph> actual = shape(kb, run);
     INFO("harfbuzz: ", describe(expected));
     INFO("kb:       ", describe(actual));
     CHECK(agree(expected, actual, 1e-3f));
@@ -424,8 +415,8 @@ TEST_CASE("CoreText draws as HarfBuzz does") {
         run.direction = c.direction;
         run.script = c.script;
         run.locale = c.language != nullptr ? prLocaleFromTag(c.language) : 0;
-        std::vector<PrTextGlyph> expected = shape(hb, run);
-        std::vector<PrTextGlyph> actual = shape(ct, run);
+        Array<PrTextGlyph> expected = shape(hb, run);
+        Array<PrTextGlyph> actual = shape(ct, run);
         INFO(c.text);
         INFO("harfbuzz: ", describe(expected));
         INFO("coretext: ", describe(actual));
@@ -451,12 +442,12 @@ TEST_CASE("CoreText shapes a variable font between its named instances in the fo
     PrTextRun run{};
     run.font = instance;
     run.text = "Slanted type";
-    std::vector<PrTextGlyph> expected = shape(hb, run);
-    std::vector<PrTextGlyph> actual = shape(ct, run);
+    Array<PrTextGlyph> expected = shape(hb, run);
+    Array<PrTextGlyph> actual = shape(ct, run);
     INFO("harfbuzz: ", describe(expected));
     INFO("coretext: ", describe(actual));
-    REQUIRE(actual.size() == expected.size());
-    for (size_t i = 0; i < actual.size(); ++i)
+    REQUIRE(actual.count() == expected.count());
+    for (uint32_t i = 0; i < actual.count(); ++i)
         CHECK(actual[i].id == expected[i].id);
     prFontRelease(instance);
     prFontRelease(font);
@@ -472,14 +463,14 @@ TEST_CASE("features turn on and off over ranges") {
         PrTextRun run{};
         run.font = font;
         run.text = PrStringView{text, 5};
-        std::vector<PrTextGlyph> ligated = shape(shaper, run);
-        CHECK(ligated.size() == 3);
+        Array<PrTextGlyph> ligated = shape(shaper, run);
+        CHECK(ligated.count() == 3);
         // Ligatures off for the first word only.
         PrTextFeature off{PR_FONT_TAG('l', 'i', 'g', 'a'), 0, 0, 2};
         run.features = &off;
         run.featureCount = 1;
-        std::vector<PrTextGlyph> split = shape(shaper, run);
-        CHECK(split.size() == 4);
+        Array<PrTextGlyph> split = shape(shaper, run);
+        CHECK(split.count() == 4);
         prTextShaperDestroy(shaper);
     }
     prFontRelease(font);
@@ -525,23 +516,25 @@ TEST_CASE("a run shaped with its context joins as the whole text does") {
     size_t split = 4;
     PrTextRun whole = runOf(font, word);
     whole.direction = PrTextDirection_Rtl;
-    std::vector<PrTextGlyph> all = shape(hb, whole);
+    Array<PrTextGlyph> all = shape(hb, whole);
     PrTextRun first = whole;
     first.text = PrStringView{word, split};
-    first.after = PrStringView{word + split, std::strlen(word) - split};
+    first.after = PrStringView{word + split, PrStringView(word).size - split};
     PrTextRun second = whole;
-    second.text = PrStringView{word + split, std::strlen(word) - split};
+    second.text = PrStringView{word + split, PrStringView(word).size - split};
     second.before = PrStringView{word, split};
-    std::vector<uint32_t> a = idsOf(shape(hb, first));
-    std::vector<uint32_t> b = idsOf(shape(hb, second));
+    Array<uint32_t> a = idsOf(shape(hb, first));
+    Array<uint32_t> b = idsOf(shape(hb, second));
     // Right to left: the glyphs of the second half come first.
-    std::vector<uint32_t> joined = b;
-    joined.insert(joined.end(), a.begin(), a.end());
+    Array<uint32_t> joined = b;
+    joined.append(a.span());
     CHECK(joined == idsOf(all));
     // Without context, the halves get their isolated and final forms.
     first.after = PrStringView{};
-    std::vector<uint32_t> ids = idsOf(all);
-    CHECK(idsOf(shape(hb, first)) != std::vector<uint32_t>(ids.end() - long(a.size()), ids.end()));
+    Array<uint32_t> ids = idsOf(all);
+    Array<uint32_t> last;
+    last.append(ids.span().from(ids.count() - a.count()));
+    CHECK(idsOf(shape(hb, first)) != last);
     prTextShaperDestroy(hb);
     prFontRelease(font);
 }
@@ -554,17 +547,17 @@ TEST_CASE("kb joins a run with its context as HarfBuzz does" * doctest::should_f
     size_t split = 4;
     PrTextRun whole = runOf(font, word);
     whole.direction = PrTextDirection_Rtl;
-    std::vector<uint32_t> all = idsOf(shape(kb, whole));
+    Array<uint32_t> all = idsOf(shape(kb, whole));
     PrTextRun first = whole;
     first.text = PrStringView{word, split};
-    first.after = PrStringView{word + split, std::strlen(word) - split};
+    first.after = PrStringView{word + split, PrStringView(word).size - split};
     PrTextRun second = whole;
-    second.text = PrStringView{word + split, std::strlen(word) - split};
+    second.text = PrStringView{word + split, PrStringView(word).size - split};
     second.before = PrStringView{word, split};
     // Right to left: the glyphs of the second half come first.
-    std::vector<uint32_t> joined = idsOf(shape(kb, second));
-    std::vector<uint32_t> a = idsOf(shape(kb, first));
-    joined.insert(joined.end(), a.begin(), a.end());
+    Array<uint32_t> joined = idsOf(shape(kb, second));
+    Array<uint32_t> a = idsOf(shape(kb, first));
+    joined.append(a.span());
     CHECK(joined == all);
     prTextShaperDestroy(kb);
     prFontRelease(font);
@@ -574,13 +567,13 @@ TEST_CASE("the first glyph of each grapheme cluster is marked") {
     const PrFont* font = load("NotoSans[wdth,wght].ttf");
     PrTextShaper* hb = prTextHarfBuzzCreate();
     // e and a combining acute, which NotoSans composes, then q with two marks it keeps separate.
-    std::vector<PrTextGlyph> glyphs = shape(hb, runOf(font, "e\xcc\x81q\xcc\x87\xcc\xa3x"));
+    Array<PrTextGlyph> glyphs = shape(hb, runOf(font, "e\xcc\x81q\xcc\x87\xcc\xa3x"));
     uint32_t starts = 0;
     for (const PrTextGlyph& g : glyphs)
         starts += (g.flags & PrTextGlyphFlag_ClusterStart) != 0 ? 1 : 0;
     CHECK(starts == 3);
-    CHECK((glyphs.front().flags & PrTextGlyphFlag_ClusterStart) != 0);
-    CHECK((glyphs.back().flags & PrTextGlyphFlag_ClusterStart) != 0);
+    CHECK((glyphs[0].flags & PrTextGlyphFlag_ClusterStart) != 0);
+    CHECK((glyphs.last().flags & PrTextGlyphFlag_ClusterStart) != 0);
     prTextShaperDestroy(hb);
     prFontRelease(font);
 }
@@ -591,17 +584,17 @@ TEST_CASE("features over the same text all apply") {
         PrTextRun run{};
         run.font = font;
         run.text = "fi 1";
-        std::vector<PrTextGlyph> plain = shape(shaper, run);
+        Array<PrTextGlyph> plain = shape(shaper, run);
         PrTextFeature features[] = {
             {PR_FONT_TAG('l', 'i', 'g', 'a'), 0, 0, 0xffffffffu},
             {PR_FONT_TAG('o', 'n', 'u', 'm'), 1, 0, 0xffffffffu},
         };
         run.features = features;
         run.featureCount = 2;
-        std::vector<PrTextGlyph> both = shape(shaper, run);
+        Array<PrTextGlyph> both = shape(shaper, run);
         INFO(describe(plain), " / ", describe(both));
-        REQUIRE(both.size() == 4);
-        CHECK(both[3].id != plain.back().id);
+        REQUIRE(both.count() == 4);
+        CHECK(both[3].id != plain.last().id);
         prTextShaperDestroy(shaper);
     }
     prFontRelease(font);
@@ -634,7 +627,7 @@ TEST_CASE("small capitals come from the font, or are synthesized from its capita
     PrTextRun run = runOf(noto, "Caps");
     run.caps = PrTextCaps_Small;
     run.synthesis = PrTextSynthesisFlag_SmallCaps;
-    std::vector<PrTextGlyph> real = shape(hb, run);
+    Array<PrTextGlyph> real = shape(hb, run);
     for (const PrTextGlyph& g : real)
         CHECK(g.scale == 1.0f);
     CHECK(real[1].id != prFontCodePointGlyph(noto, 'a'));
@@ -644,8 +637,8 @@ TEST_CASE("small capitals come from the font, or are synthesized from its capita
     run = runOf(flex, "Stra\xc3\x9f" "e");
     run.caps = PrTextCaps_Small;
     run.synthesis = PrTextSynthesisFlag_SmallCaps;
-    std::vector<PrTextGlyph> glyphs = shape(hb, run);
-    REQUIRE(glyphs.size() == 7);
+    Array<PrTextGlyph> glyphs = shape(hb, run);
+    REQUIRE(glyphs.count() == 7);
     CHECK(glyphs[0].id == prFontCodePointGlyph(flex, 'S'));
     CHECK(glyphs[0].scale == 1.0f);
     CHECK(glyphs[1].id == prFontCodePointGlyph(flex, 'T'));
@@ -668,14 +661,14 @@ TEST_CASE("letter spacing follows each grapheme cluster as shaped, and word spac
     const PrFont* flex = load("RobotoFlex.ttf");
     // An e with a combining acute is one grapheme cluster, which takes the spacing once.
     PrTextRun run = runOf(flex, "a e\xcc\x81");
-    std::vector<PrTextGlyph> plain = shape(hb, run);
+    Array<PrTextGlyph> plain = shape(hb, run);
     run.letterSpacing = 0.25f;
     run.wordSpacing = 0.5f;
-    std::vector<PrTextGlyph> spaced = shape(hb, run);
-    REQUIRE(spaced.size() == plain.size());
+    Array<PrTextGlyph> spaced = shape(hb, run);
+    REQUIRE(spaced.count() == plain.count());
     float before = 0;
     float after = 0;
-    for (uint32_t i = 0; i < plain.size(); ++i) {
+    for (uint32_t i = 0; i < plain.count(); ++i) {
         before += plain[i].advance.x;
         after += spaced[i].advance.x;
     }
@@ -690,10 +683,10 @@ TEST_CASE("letter spacing follows each grapheme cluster as shaped, and word spac
     plain = shape(hb, run);
     run.letterSpacing = 0.25f;
     spaced = shape(hb, run);
-    REQUIRE(spaced.size() == plain.size());
+    REQUIRE(spaced.count() == plain.count());
     before = 0;
     after = 0;
-    for (uint32_t i = 0; i < plain.size(); ++i) {
+    for (uint32_t i = 0; i < plain.count(); ++i) {
         before += plain[i].advance.x;
         after += spaced[i].advance.x;
     }
@@ -706,7 +699,7 @@ TEST_CASE("letter spacing follows each grapheme cluster as shaped, and word spac
     plain = shape(hb, run);
     run.letterSpacing = 0.25f;
     spaced = shape(hb, run);
-    REQUIRE(spaced.size() == 2);
+    REQUIRE(spaced.count() == 2);
     CHECK(spaced[0].advance.x == doctest::Approx(plain[0].advance.x + 0.25f));
     CHECK(spaced[1].advance.x == doctest::Approx(plain[1].advance.x + 0.25f));
 
@@ -717,8 +710,8 @@ TEST_CASE("letter spacing follows each grapheme cluster as shaped, and word spac
     plain = shape(hb, run);
     run.letterSpacing = 0.25f;
     spaced = shape(hb, run);
-    REQUIRE(spaced.size() == plain.size());
-    for (uint32_t i = 0; i < plain.size(); ++i) {
+    REQUIRE(spaced.count() == plain.count());
+    for (uint32_t i = 0; i < plain.count(); ++i) {
         CHECK(spaced[i].advance.x == doctest::Approx(plain[i].advance.x + 0.25f));
         CHECK(spaced[i].offset.x == doctest::Approx(plain[i].offset.x + 0.25f));
     }
@@ -731,8 +724,8 @@ TEST_CASE("letter spacing follows each grapheme cluster as shaped, and word spac
     plain = shape(hb, run);
     run.letterSpacing = 0.25f;
     spaced = shape(hb, run);
-    REQUIRE(spaced.size() == plain.size());
-    for (uint32_t i = 0; i < plain.size(); ++i)
+    REQUIRE(spaced.count() == plain.count());
+    for (uint32_t i = 0; i < plain.count(); ++i)
         CHECK(spaced[i].advance.x == doctest::Approx(plain[i].advance.x));
     prFontRelease(arabic);
     prFontRelease(flex);
@@ -743,13 +736,13 @@ TEST_CASE("spaced letters take no optional ligatures, unless the run asks for th
     PrTextShaper* hb = prTextHarfBuzzCreate();
     const PrFont* noto = load("NotoSans[wdth,wght].ttf");
     PrTextRun run = runOf(noto, "ffi");
-    CHECK(shape(hb, run).size() < 3);
+    CHECK(shape(hb, run).count() < 3);
     run.letterSpacing = 0.1f;
-    CHECK(shape(hb, run).size() == 3);
+    CHECK(shape(hb, run).count() == 3);
     PrTextFeature liga{PR_FONT_TAG('l', 'i', 'g', 'a'), 1, 0, 3};
     run.features = &liga;
     run.featureCount = 1;
-    CHECK(shape(hb, run).size() < 3);
+    CHECK(shape(hb, run).count() < 3);
     prFontRelease(noto);
     prTextShaperDestroy(hb);
 }
@@ -758,12 +751,12 @@ TEST_CASE("a superscript the font lacks is scaled and raised as its metrics say"
     const PrFont* flex = load("RobotoFlex.ttf");
     PrTextShaper* hb = prTextHarfBuzzCreate();
     PrTextRun run = runOf(flex, "x2");
-    std::vector<PrTextGlyph> plain = shape(hb, run);
+    Array<PrTextGlyph> plain = shape(hb, run);
     run.position = PrTextPosition_Superscript;
     run.synthesis = PrTextSynthesisFlag_Position;
-    std::vector<PrTextGlyph> raised = shape(hb, run);
+    Array<PrTextGlyph> raised = shape(hb, run);
     PrFontMetrics m = prFontMetrics(flex);
-    REQUIRE(raised.size() == 2);
+    REQUIRE(raised.count() == 2);
     CHECK(raised[0].id == plain[0].id);
     CHECK(raised[0].scale == doctest::Approx(m.superscriptSize));
     CHECK(raised[0].offset.y == doctest::Approx(m.superscriptPosition));
@@ -776,10 +769,10 @@ TEST_CASE("a vertical run goes down, with vertical forms") {
     const PrFont* font = load("NotoSansJP-VF.otf");
     PrTextShaper* hb = prTextHarfBuzzCreate();
     PrTextRun run = runOf(font, "\xe6\x97\xa5\xe6\x9c\xac\xef\xbc\x88");
-    std::vector<PrTextGlyph> across = shape(hb, run);
+    Array<PrTextGlyph> across = shape(hb, run);
     run.axis = PrTextAxis_Vertical;
-    std::vector<PrTextGlyph> down = shape(hb, run);
-    REQUIRE(down.size() == 3);
+    Array<PrTextGlyph> down = shape(hb, run);
+    REQUIRE(down.count() == 3);
     for (const PrTextGlyph& g : down) {
         CHECK(g.advance.x == doctest::Approx(0));
         CHECK(g.advance.y == doctest::Approx(1));
@@ -797,8 +790,8 @@ TEST_CASE("a vertical run goes down, with vertical forms") {
     PrTextShaper* others[] = {prTextKbCreate()};
 #endif
     for (PrTextShaper* other : others) {
-        std::vector<PrTextGlyph> units = shape(other, run);
-        REQUIRE(units.size() == 3);
+        Array<PrTextGlyph> units = shape(other, run);
+        REQUIRE(units.count() == 3);
         for (uint32_t i = 0; i < 3; ++i) {
             CAPTURE(i);
             CHECK(units[i].id == down[i].id);
@@ -826,28 +819,28 @@ TEST_CASE("vertical positioning applies in a vertical shaping, and not where a b
         PrTextRun with = run;
         with.features = on ? &vpal : nullptr;
         with.featureCount = on ? 1 : 0;
-        std::vector<float> at;
+        Array<float> at;
         float pen = 0;
         for (const PrTextGlyph& g : shape(shaper, with)) {
-            at.push_back(pen + g.offset.y);
+            at.push(pen + g.offset.y);
             pen += g.advance.y;
         }
         return at;
     };
     PrTextShaper* hb = prTextHarfBuzzCreate();
     PrTextShaper* kb = prTextKbCreate();
-    std::vector<float> grid = origins(hb, false);
-    std::vector<float> proportional = origins(hb, true);
-    std::vector<float> units = origins(kb, true);
-    REQUIRE(proportional.size() == 3);
-    REQUIRE(units.size() == 3);
+    Array<float> grid = origins(hb, false);
+    Array<float> proportional = origins(hb, true);
+    Array<float> units = origins(kb, true);
+    REQUIRE(proportional.count() == 3);
+    REQUIRE(units.count() == 3);
     CHECK(proportional[2] < grid[2] - 0.1f);
     for (uint32_t i = 0; i < 3; ++i)
         CHECK(units[i] == doctest::Approx(grid[i]).epsilon(0.01));
 #if defined(__APPLE__)
     PrTextShaper* ct = prTextCoreTextCreate();
-    std::vector<float> coreText = origins(ct, true);
-    REQUIRE(coreText.size() == 3);
+    Array<float> coreText = origins(ct, true);
+    REQUIRE(coreText.count() == 3);
     for (uint32_t i = 0; i < 3; ++i)
         CHECK(coreText[i] == doctest::Approx(proportional[i]).epsilon(0.01));
     prTextShaperDestroy(ct);
@@ -862,12 +855,12 @@ TEST_CASE("an upright run that a backend sets a unit at a time joins nothing acr
     const PrFont* font = load("NotoSansArabic[wdth,wght].ttf");
     PrTextShaper* kb = prTextKbCreate();
     PrTextRun alone = runOf(font, "\xd8\xb9");
-    std::vector<PrTextGlyph> isolated = shape(kb, alone);
+    Array<PrTextGlyph> isolated = shape(kb, alone);
     PrTextRun run = runOf(font, "\xd8\xb9\xd8\xb9\xd8\xb9\xd9\x8e");
     run.axis = PrTextAxis_Vertical;
-    std::vector<PrTextGlyph> down = shape(kb, run);
-    REQUIRE(isolated.size() == 1);
-    REQUIRE(down.size() == 4);
+    Array<PrTextGlyph> down = shape(kb, run);
+    REQUIRE(isolated.count() == 1);
+    REQUIRE(down.count() == 4);
     CHECK(down[0].id == isolated[0].id);
     CHECK(down[1].id == isolated[0].id);
     // The mark is at the place of its base on the line, which the unit leaves after the mark.
@@ -882,21 +875,24 @@ TEST_CASE("an upright cluster with a variation selector advances once in kb, as 
     // 葛 with an ideographic variation selector, then 日, in a font that lists the sequence, in fonts without the
     // ideographs, whose clusters are .notdef, and in a font whose .notdef has no vertical metrics. kb sets each cluster
     // across on its own, and must leave the selector drawing nothing and the cluster one advance down the line.
-    for (const char* name : {"NotoSansJP-VF.otf", "NotoSans[wdth,wght].ttf", "Ahem.ttf", "NotoSansArabic[wdth,wght].ttf"}) {
+    const char* const names[] = {
+        "NotoSansJP-VF.otf", "NotoSans[wdth,wght].ttf", "Ahem.ttf", "NotoSansArabic[wdth,wght].ttf",
+    };
+    for (const char* name : names) {
         CAPTURE(name);
         const PrFont* font = load(name);
         PrTextRun run = runOf(font, "\xe8\x91\x9b\xf3\xa0\x84\x80\xe6\x97\xa5");
         run.axis = PrTextAxis_Vertical;
         PrTextShaper* hb = prTextHarfBuzzCreate();
         PrTextShaper* kb = prTextKbCreate();
-        std::vector<PrTextGlyph> expected = shape(hb, run);
-        std::vector<PrTextGlyph> units = shape(kb, run);
+        Array<PrTextGlyph> expected = shape(hb, run);
+        Array<PrTextGlyph> units = shape(kb, run);
         CAPTURE(describe(expected));
         CAPTURE(describe(units));
-        CHECK(expected.size() == 2);
-        CHECK(units.size() == 2);
-        bool same = units.size() == expected.size();
-        for (size_t i = 0; same && i < units.size(); ++i)
+        CHECK(expected.count() == 2);
+        CHECK(units.count() == 2);
+        bool same = units.count() == expected.count();
+        for (uint32_t i = 0; same && i < units.count(); ++i)
             same =
                 units[i].cluster == expected[i].cluster && units[i].advance.y == doctest::Approx(expected[i].advance.y);
         CHECK(same);
@@ -926,25 +922,26 @@ TEST_CASE("a font's size-adjust scales what it shapes") {
 }
 
 TEST_CASE("text divides into runs of the faces that set its grapheme clusters") {
-    PrFontSet* set = setOf({{"NotoSans[wdth,wght].ttf"}, {"NotoSansJP-VF.otf"}, {"Twemoji.ttf"}});
-    PrTextFont* group = fontOf(set, {"Noto Sans", "Noto Sans JP", "twemoji-glyf_colr_1"});
+    const SetFace faces[] = {{"NotoSans[wdth,wght].ttf"}, {"NotoSansJP-VF.otf"}, {"Twemoji.ttf"}};
+    PrFontSet* set = setOf(faces);
+    const char* const names[] = {"Noto Sans", "Noto Sans JP", "twemoji-glyf_colr_1"};
+    PrTextFont* group = fontOf(set, names);
     PrTextShaper* hb = prTextHarfBuzzCreate();
     // The exclamation mark goes back to the first family, which has it. The emoji, which Noto Sans JP lacks, falls
     // through to Twemoji. The script of the Han splits it from the Latin.
-    std::string text = "Hi \xe6\xbc\xa2\xe5\xad\x97!\xf0\x9f\x98\x80";
-    std::vector<PrTextItemRun> runs = itemize(group, text);
-    CHECK(familiesOf(group, runs) ==
-        std::vector<std::string>{"Noto Sans", "Noto Sans JP", "Noto Sans", "twemoji-glyf_colr_1"});
-    REQUIRE(runs.size() == 4);
+    PrStringView text = "Hi \xe6\xbc\xa2\xe5\xad\x97!\xf0\x9f\x98\x80";
+    Array<PrTextItemRun> runs = itemize(group, text);
+    CHECK(familiesOf(group, runs) == Array<String>({"Noto Sans", "Noto Sans JP", "Noto Sans", "twemoji-glyf_colr_1"}));
+    REQUIRE(runs.count() == 4);
     CHECK(runs[1].start == 3);
     CHECK(runs[1].script == PrScript_Hani);
     CHECK(runs[2].start == 9);
     CHECK(runs[3].start == 10);
-    CHECK(runs[3].end == text.size());
+    CHECK(runs[3].end == text.size);
     // Each run shapes in the font of its face, with glyphs for all of the run.
     for (const PrTextItemRun& range : runs) {
         PrTextRun run = runOf(prTextFontMatchedFont(group, range.face), "");
-        run.text = PrStringView{text.data() + range.start, range.end - range.start};
+        run.text = prStringSlice(text, range.start, range.end - range.start);
         for (const PrTextGlyph& glyph : shape(hb, run))
             CHECK(glyph.id != 0);
     }
@@ -968,33 +965,37 @@ TEST_CASE("a family of more faces than a match keeps sets text, and holds the re
         prFontSetAdd(set, &d, sans);
     }
     prFontRelease(sans);
-    PrTextFont* group = fontOf(set, {"Digits"});
-    CHECK(itemize(group, "0123456789").size() >= 1);
+    const char* const names[] = {"Digits"};
+    PrTextFont* group = fontOf(set, names);
+    CHECK(itemize(group, "0123456789").count() >= 1);
     prTextFontRelease(group);
     prFontSetDestroy(set);
 }
 
 TEST_CASE("a unicode-range excludes a face from code points it has glyphs for") {
     PrFontCodePointRange kanji{0x4e00, 0x9fff};
-    PrFontSet* set = setOf({{"NotoSansJP-VF.otf", "Kanji", &kanji}, {"NotoSans[wdth,wght].ttf"}});
-    PrTextFont* group = fontOf(set, {"Kanji", "Noto Sans"});
-    CHECK(familiesOf(group, itemize(group, "A\xe6\xbc\xa2")) == std::vector<std::string>{"Noto Sans", "Noto Sans JP"});
-    CHECK(itemize(group, "").empty());
+    const SetFace faces[] = {{"NotoSansJP-VF.otf", "Kanji", &kanji}, {"NotoSans[wdth,wght].ttf"}};
+    PrFontSet* set = setOf(faces);
+    const char* const names[] = {"Kanji", "Noto Sans"};
+    PrTextFont* group = fontOf(set, names);
+    CHECK(familiesOf(group, itemize(group, "A\xe6\xbc\xa2")) == Array<String>({"Noto Sans", "Noto Sans JP"}));
+    CHECK(itemize(group, "").isEmpty());
     prTextFontRelease(group);
     prFontSetDestroy(set);
 }
 
 TEST_CASE("a cluster of emoji presentation tries the emoji faces first") {
-    PrFontSet* set = setOf({{"NotoSansJP-VF.otf"}, {"Twemoji.ttf"}});
-    PrTextFont* group = fontOf(set, {"Noto Sans JP", "twemoji-glyf_colr_1"});
+    const SetFace faces[] = {{"NotoSansJP-VF.otf"}, {"Twemoji.ttf"}};
+    PrFontSet* set = setOf(faces);
+    const char* const names[] = {"Noto Sans JP", "twemoji-glyf_colr_1"};
+    PrTextFont* group = fontOf(set, names);
     const PrFont* jp = prTextFontMatchedFont(group, prTextFontFirst(group));
     REQUIRE(prFontCodePointGlyph(jp, 0x2665) != 0);
     // A heart suit is text by default, and emoji when a variation selector requests it.
-    CHECK(familiesOf(group, itemize(group, "\xe2\x99\xa5")) == std::vector<std::string>{"Noto Sans JP"});
-    CHECK(familiesOf(group, itemize(group, "\xe2\x99\xa5\xef\xb8\x8f")) == std::vector<std::string>{"twemoji-glyf_colr_1"});
+    CHECK(familiesOf(group, itemize(group, "\xe2\x99\xa5")) == Array<String>({"Noto Sans JP"}));
+    CHECK(familiesOf(group, itemize(group, "\xe2\x99\xa5\xef\xb8\x8f")) == Array<String>({"twemoji-glyf_colr_1"}));
     // A grinning face is emoji by default. Requested as text, it moves past a text face that lacks it.
-    CHECK(familiesOf(group, itemize(group, "\xf0\x9f\x98\x80\xef\xb8\x8e")) ==
-        std::vector<std::string>{"twemoji-glyf_colr_1"});
+    CHECK(familiesOf(group, itemize(group, "\xf0\x9f\x98\x80\xef\xb8\x8e")) == Array<String>({"twemoji-glyf_colr_1"}));
     prTextFontRelease(group);
     prFontSetDestroy(set);
 }
@@ -1020,27 +1021,32 @@ TEST_CASE("kb shapes a variation sequence to the glyph that the font lists for i
 // after U+FE01. Each sequence is set in the face that lists it, wherever that face is in the order, and a sequence that
 // no face lists is set in the first face with its base.
 TEST_CASE("a cluster with a variation sequence prefers the face that lists the sequence") {
-    PrFontSet* set = setOf({{"NotoSansMath-Regular.ttf"}, {"NewCMMath-Regular.otf"}, {"NotoSans[wdth,wght].ttf"}});
+    const SetFace faces[] = {{"NotoSansMath-Regular.ttf"}, {"NewCMMath-Regular.otf"}, {"NotoSans[wdth,wght].ttf"}};
+    PrFontSet* set = setOf(faces);
     const char* chancery = "\xf0\x9d\x92\x9c\xef\xb8\x80";
     const char* roundhand = "\xf0\x9d\x92\x9c\xef\xb8\x81";
     const char* unlisted = "\xf0\x9d\x92\x9c\xef\xb8\x82";
-    PrTextFont* notoFirst = fontOf(set, {"Noto Sans Math", "NewComputerModernMath"});
+    const char* const notoFirstNames[] = {"Noto Sans Math", "NewComputerModernMath"};
+    PrTextFont* notoFirst = fontOf(set, notoFirstNames);
     CHECK(familyFor(notoFirst, chancery, PrScript_Zmth) == "Noto Sans Math");
     CHECK(familyFor(notoFirst, roundhand, PrScript_Zmth) == "NewComputerModernMath");
     CHECK(familyFor(notoFirst, unlisted, PrScript_Zmth) == "Noto Sans Math");
     CHECK(familyFor(notoFirst, "\xf0\x9d\x92\x9c", PrScript_Zmth) == "Noto Sans Math");
-    PrTextFont* newCmFirst = fontOf(set, {"NewComputerModernMath", "Noto Sans Math"});
+    const char* const newCmFirstNames[] = {"NewComputerModernMath", "Noto Sans Math"};
+    PrTextFont* newCmFirst = fontOf(set, newCmFirstNames);
     CHECK(familyFor(newCmFirst, chancery, PrScript_Zmth) == "Noto Sans Math");
     CHECK(familyFor(newCmFirst, roundhand, PrScript_Zmth) == "NewComputerModernMath");
     CHECK(familyFor(newCmFirst, unlisted, PrScript_Zmth) == "NewComputerModernMath");
     // A fallback family that lists the sequence is preferred to a requested face that has only its base.
     const PrFontFallbackFamily fallback{.family = "Noto Sans Math"};
     prFontSetSetFallbackFamilies(set, &fallback, 1);
-    PrTextFont* newCmOnly = fontOf(set, {"NewComputerModernMath"});
+    const char* const newCmOnlyNames[] = {"NewComputerModernMath"};
+    PrTextFont* newCmOnly = fontOf(set, newCmOnlyNames);
     CHECK(familyFor(newCmOnly, chancery, PrScript_Zmth) == "Noto Sans Math");
     CHECK(familyFor(newCmOnly, unlisted, PrScript_Zmth) == "NewComputerModernMath");
     // The emoji presentation selectors choose by presentation, not by the faces that list them.
-    PrTextFont* sans = fontOf(set, {"Noto Sans"});
+    const char* const sansNames[] = {"Noto Sans"};
+    PrTextFont* sans = fontOf(set, sansNames);
     CHECK(familyFor(sans, "A\xef\xb8\x8e") == "Noto Sans");
     prTextFontRelease(sans);
     prTextFontRelease(newCmOnly);
@@ -1053,19 +1059,21 @@ TEST_CASE("a run shaped with the text around it as context keeps its joining for
     // The Arabic font also has Latin letters, which its range excludes. The space and the Latin letters fall to the
     // second family.
     PrFontCodePointRange range{0x600, 0x6ff};
-    PrFontSet* set = setOf({{"NotoSansArabic[wdth,wght].ttf", "Arabic", &range}, {"NotoSans[wdth,wght].ttf"}});
-    PrTextFont* group = fontOf(set, {"Arabic", "Noto Sans"});
+    const SetFace faces[] = {{"NotoSansArabic[wdth,wght].ttf", "Arabic", &range}, {"NotoSans[wdth,wght].ttf"}};
+    PrFontSet* set = setOf(faces);
+    const char* const names[] = {"Arabic", "Noto Sans"};
+    PrTextFont* group = fontOf(set, names);
     PrTextShaper* hb = prTextHarfBuzzCreate();
     const char* word = "\xd8\xa8\xd8\xb3\xd9\x85\xd9\x84\xd8\xa9";
-    std::string text = std::string(word) + " abc";
-    std::vector<PrTextItemRun> runs = itemize(group, text);
-    REQUIRE(familiesOf(group, runs).front() == "Noto Sans Arabic");
+    String text = format("{} abc", PrStringView(word));
+    Array<PrTextItemRun> runs = itemize(group, text);
+    REQUIRE(familiesOf(group, runs)[0] == "Noto Sans Arabic");
     CHECK(runs[0].level == 1);
     const PrFont* arabic = prTextFontMatchedFont(group, runs[0].face);
     PrTextRun run = runOf(arabic, "");
     run.direction = PrTextDirection_Rtl;
-    run.text = PrStringView{text.data(), runs[0].end};
-    run.after = PrStringView{text.data() + runs[0].end, runs[0].contextEnd - runs[0].end};
+    run.text = prStringSlice(text, 0, runs[0].end);
+    run.after = prStringSlice(text, runs[0].end, runs[0].contextEnd - runs[0].end);
     PrTextRun alone = run;
     alone.text = word;
     alone.after = PrStringView{};
@@ -1079,7 +1087,8 @@ TEST_CASE("a run of a font with full hinting takes the hinted advances") {
     const PrFont* font = load("NotoSans[wdth,wght].ttf");
     PrTextShaper* hb = prTextHarfBuzzCreate();
     PrFontHinter* hinter = prFontFreeTypeCreate();
-    for (PrFontHinting hinting : {PrFontHinting_Full, PrFontHinting_Light}) {
+    const PrFontHinting hintings[] = {PrFontHinting_Full, PrFontHinting_Light};
+    for (PrFontHinting hinting : hintings) {
         PrFontDerivation d = prFontDerivationDefault();
         d.hinting = hinting;
         d.hinter = hinter;
@@ -1096,7 +1105,7 @@ TEST_CASE("a run of a font with full hinting takes the hinted advances") {
                 expected = prFontGlyphAdvance(font, g.id, 0);
             CHECK(g.advance.x == doctest::Approx(expected));
             if (hinting == PrFontHinting_Full)
-                CHECK(g.advance.x * 11 == doctest::Approx(std::round(g.advance.x * 11)));
+                CHECK(g.advance.x * 11 == doctest::Approx(prF32Round(g.advance.x * 11)));
         }
         prFontRelease(hinted);
     }
@@ -1107,8 +1116,10 @@ TEST_CASE("a run of a font with full hinting takes the hinted advances") {
 }
 
 TEST_CASE("a text layout breaks lines where text may break, the spaces a line ends in hanging past its width") {
-    PrFontSet* set = setOf({{"NotoSans[wdth,wght].ttf"}});
-    PrTextFont* font = fontOf(set, {"Noto Sans"});
+    const SetFace faces[] = {{"NotoSans[wdth,wght].ttf"}};
+    PrFontSet* set = setOf(faces);
+    const char* const names[] = {"Noto Sans"};
+    PrTextFont* font = fontOf(set, names);
     PrTextShaper* hb = prTextHarfBuzzCreate();
     PrTextLayout* layout = prTextLayoutCreate();
     PrTextLayoutDesc desc{.text = "one two three", .font = font, .shaper = hb};
@@ -1160,8 +1171,10 @@ TEST_CASE("a text layout breaks lines where text may break, the spaces a line en
 }
 
 TEST_CASE("a text layout aligns each line in the width the lines take, its start and end by its direction") {
-    PrFontSet* set = setOf({{"NotoSans[wdth,wght].ttf"}});
-    PrTextFont* font = fontOf(set, {"Noto Sans"});
+    const SetFace faces[] = {{"NotoSans[wdth,wght].ttf"}};
+    PrFontSet* set = setOf(faces);
+    const char* const names[] = {"Noto Sans"};
+    PrTextFont* font = fontOf(set, names);
     PrTextShaper* hb = prTextHarfBuzzCreate();
     PrTextLayout* layout = prTextLayoutCreate();
     PrTextLayoutDesc desc{.text = "word", .font = font, .shaper = hb, .width = 200};
@@ -1186,12 +1199,14 @@ TEST_CASE("a text layout aligns each line in the width the lines take, its start
 }
 
 TEST_CASE("a text layout orders a line's runs for display, and puts carets at their clusters' leading edges") {
-    PrFontSet* set = setOf({{"NotoSans[wdth,wght].ttf"}, {"NotoSansArabic[wdth,wght].ttf"}});
-    PrTextFont* font = fontOf(set, {"Noto Sans", "Noto Sans Arabic"});
+    const SetFace faces[] = {{"NotoSans[wdth,wght].ttf"}, {"NotoSansArabic[wdth,wght].ttf"}};
+    PrFontSet* set = setOf(faces);
+    const char* const names[] = {"Noto Sans", "Noto Sans Arabic"};
+    PrTextFont* font = fontOf(set, names);
     PrTextShaper* hb = prTextHarfBuzzCreate();
     PrTextLayout* layout = prTextLayoutCreate();
     // Latin, a space, and Arabic, in a right-to-left paragraph: the Arabic goes left of the Latin.
-    std::string text = "abc \xd8\xb3\xd9\x84\xd8\xa7\xd9\x85";
+    PrStringView text = "abc \xd8\xb3\xd9\x84\xd8\xa7\xd9\x85";
     PrTextLayoutDesc desc{.text = text, .font = font, .shaper = hb, .direction = PrTextDirection_Rtl};
     prTextLayoutSet(layout, &desc);
     REQUIRE(prTextLayoutLineCount(layout) == 1);
@@ -1205,10 +1220,10 @@ TEST_CASE("a text layout orders a line's runs for display, and puts carets at th
     CHECK(latin.y == line.baseline);
     CHECK(arabic.x < latin.x);
     // The end of the content of a right-to-left line is at its left.
-    CHECK(prTextLayoutCaret(layout, uint32_t(text.size())).x == line.left);
+    CHECK(prTextLayoutCaret(layout, uint32_t(text.size)).x == line.left);
     // A point left of everything is past the end of the Arabic, in its direction. A point right of everything is at the
     // end of the Latin.
-    CHECK(prTextLayoutHitTest(layout, PrVec2{-10, line.baseline}) == uint32_t(text.size()));
+    CHECK(prTextLayoutHitTest(layout, PrVec2{-10, line.baseline}) == uint32_t(text.size));
     CHECK(prTextLayoutHitTest(layout, PrVec2{1000, line.baseline}) == 3);
     CHECK(prTextLayoutHitTest(layout, PrVec2{latin.x + 0.1f, line.baseline}) == 0);
     prTextLayoutDestroy(layout);
@@ -1226,7 +1241,8 @@ TEST_CASE("a text font keeps its answers where a change of its set changes none 
     prFontSetAddPending(sets.document, &d, 2);
     prFontSetLoaded(sets.document, 1, sans);
     prFontSetLoaded(sets.document, 2, sans);
-    PrTextFont* font = fontOf(sets.document, {"Web"});
+    const char* const names[] = {"Web"};
+    PrTextFont* font = fontOf(sets.document, names);
     uint32_t a = prTextFontMatch(font, "a", PrScript_Latn);
     uint32_t first = prTextFontFirst(font);
     uint64_t revision = prTextFontRevision(font);
@@ -1255,7 +1271,8 @@ TEST_CASE("a text font keeps its answers where a change of its set changes none 
 TEST_CASE("a load that changes an answer raises the revision") {
     Layered sets;
     sets.add("Web", 1, nullptr);
-    PrTextFont* font = fontOf(sets.document, {"Web"});
+    const char* const names[] = {"Web"};
+    PrTextFont* font = fontOf(sets.document, names);
     CHECK(familyFor(font, "a") == "Noto Serif");
     uint64_t revision = prTextFontRevision(font);
     const PrFont* sans = load("NotoSans[wdth,wght].ttf");
@@ -1270,7 +1287,8 @@ TEST_CASE("a load that changes an answer raises the revision") {
 TEST_CASE("after a change that keeps its answers, a text font answers new questions from its set as it is") {
     Layered sets;
     sets.add("Web", 1, "NotoSans[wdth,wght].ttf");
-    PrTextFont* font = fontOf(sets.document, {"Web"});
+    const char* const names[] = {"Web"};
+    PrTextFont* font = fontOf(sets.document, names);
     CHECK(familyFor(font, "a") == "Noto Sans");
     uint64_t revision = prTextFontRevision(font);
 
@@ -1286,7 +1304,8 @@ TEST_CASE("after a change that keeps its answers, a text font answers new questi
     PrFontCodePointRange greek{0x370, 0x3ff};
     sets.add("Web", 3, nullptr, &greek);
     CHECK_FALSE(prTextFontUpdate(font));
-    PrTextFont* other = fontOf(sets.document, {"Web"});
+    const char* const otherNames[] = {"Web"};
+    PrTextFont* other = fontOf(sets.document, otherNames);
     CHECK(familyFor(other, "\xce\xb1", PrScript_Grek) == "Noto Sans");
     const PrFont* serif = load("NotoSerif[wdth,wght].ttf");
     prFontSetLoaded(sets.document, 3, serif);
@@ -1300,7 +1319,8 @@ TEST_CASE("after a change that keeps its answers, a text font answers new questi
 TEST_CASE("clusters of more than one code point are answered again with their scripts") {
     Layered sets;
     sets.add("Web", 1, "NotoSans[wdth,wght].ttf");
-    PrTextFont* font = fontOf(sets.document, {"Web"});
+    const char* const names[] = {"Web"};
+    PrTextFont* font = fontOf(sets.document, names);
     // An e with a combining acute is kept as one question, keyed by its bytes and script.
     uint32_t accented = prTextFontMatch(font, "e\xcc\x81", PrScript_Latn);
     REQUIRE(accented != kPrTextMatchNone);
@@ -1314,11 +1334,12 @@ TEST_CASE("clusters of more than one code point are answered again with their sc
 TEST_CASE("a text font whose record passed its bound gives up its answers at the next change") {
     Layered sets;
     sets.add("Web", 1, "NotoSans[wdth,wght].ttf");
-    PrTextFont* font = fontOf(sets.document, {"Web"});
+    const char* const names[] = {"Web"};
+    PrTextFont* font = fontOf(sets.document, names);
     // One cluster of a base and more combining marks than the record can keep the bytes of.
-    std::string cluster = "e";
+    String cluster = "e";
     for (int i = 0; i < 40000; ++i)
-        cluster += "\xcc\x81";
+        cluster.append("\xcc\x81");
     uint32_t face = prTextFontMatch(font, cluster, PrScript_Latn);
     CHECK(face != kPrTextMatchNone);
     uint64_t revision = prTextFontRevision(font);
@@ -1338,9 +1359,11 @@ TEST_CASE("a text font sets what its families and the fallback families lack in 
         MESSAGE("the build has no system's fonts");
         return;
     }
-    PrFontSet* set = setOf({{"NotoSans[wdth,wght].ttf"}});
+    const SetFace faces[] = {{"NotoSans[wdth,wght].ttf"}};
+    PrFontSet* set = setOf(faces);
     prFontSetSetSystem(set, system);
-    PrTextFont* font = fontOf(set, {"Noto Sans"});
+    const char* const names[] = {"Noto Sans"};
+    PrTextFont* font = fontOf(set, names);
     CHECK(familyFor(font, "a") == "Noto Sans");
     // U+6F22, a Han ideograph, which Noto Sans lacks and the set has no fallback family for.
     uint32_t han = prTextFontMatch(font, "\xE6\xBC\xA2", PrScript_Hani);
@@ -1365,9 +1388,11 @@ TEST_CASE("a text font falls back to the font that the system gives for its own 
     // U+9AA8, which Japanese and Simplified Chinese fonts draw differently, and U+5B57, another ideograph.
     const char* bone = "\xE9\xAA\xA8";
     const char* character = "\xE5\xAD\x97";
-    for (const char* first : {"ja", "zh-Hans"}) {
+    const char* const firsts[] = {"ja", "zh-Hans"};
+    for (const char* first : firsts) {
         CAPTURE(first);
-        PrFontSet* set = setOf({{"NotoSans[wdth,wght].ttf"}});
+        const SetFace faces[] = {{"NotoSans[wdth,wght].ttf"}};
+        PrFontSet* set = setOf(faces);
         prFontSetSetSystem(set, system);
         PrFontFamily noto = prFontFamilyFromName("Noto Sans");
         auto fontIn = [&](const char* tag) {
@@ -1380,13 +1405,13 @@ TEST_CASE("a text font falls back to the font that the system gives for its own 
             };
             return prTextFontCreate(&desc);
         };
-        const char* second = std::strcmp(first, "ja") == 0 ? "zh-Hans" : "ja";
+        const char* second = PrStringView(first) == "ja" ? "zh-Hans" : "ja";
         PrTextFont* before = fontIn(first);
         PrTextFont* after = fontIn(second);
-        std::string earlier = familyFor(before, bone, PrScript_Hani);
-        std::string later = familyFor(after, bone, PrScript_Hani);
-        CHECK(!earlier.empty());
-        CHECK(!later.empty());
+        String earlier = familyFor(before, bone, PrScript_Hani);
+        String later = familyFor(after, bone, PrScript_Hani);
+        CHECK(!earlier.isEmpty());
+        CHECK(!later.isEmpty());
         CHECK(earlier != later);
         // Each text font keeps the family for its own locale, for the next ideograph and for the first one again.
         CHECK(familyFor(before, character, PrScript_Hani) == earlier);
@@ -1411,15 +1436,20 @@ TEST_CASE("a text font takes the set's new default family") {
 
 TEST_CASE("a cluster that the list's faces lack falls back past the default family, which stands in for an empty list") {
     PrFontCodePointRange basicLatin{0x20, 0x7e};
-    PrFontSet* set = setOf({{"RobotoFlex.ttf", "Latin Only", &basicLatin}, {"NotoSans[wdth,wght].ttf"}, {"NotoSerif[wdth,wght].ttf"}});
+    const SetFace faces[] = {
+        {"RobotoFlex.ttf", "Latin Only", &basicLatin}, {"NotoSans[wdth,wght].ttf"}, {"NotoSerif[wdth,wght].ttf"},
+    };
+    PrFontSet* set = setOf(faces);
     prFontSetSetGeneric(set, PrFontGeneric_Serif, "Noto Serif");
     prFontSetSetDefaultFamily(set, prFontFamilyGeneric(PrFontGeneric_Serif));
     PrFontFallbackFamily fallback{.family = "Noto Sans", .generic = PrFontGeneric_SansSerif};
     prFontSetSetFallbackFamilies(set, &fallback, 1);
-    PrTextFont* listed = fontOf(set, {"Latin Only"});
+    const char* const listedNames[] = {"Latin Only"};
+    PrTextFont* listed = fontOf(set, listedNames);
     CHECK(familyFor(listed, "a") == "Roboto Flex");
     CHECK(familyFor(listed, "\xce\xb1", PrScript_Grek) == "Noto Sans");
-    PrTextFont* missing = fontOf(set, {"No Such Family"});
+    const char* const missingNames[] = {"No Such Family"};
+    PrTextFont* missing = fontOf(set, missingNames);
     CHECK(familyFor(missing, "\xce\xb1", PrScript_Grek) == "Noto Serif");
     prTextFontRelease(missing);
     prTextFontRelease(listed);
@@ -1462,14 +1492,17 @@ TEST_CASE("a feature set gives a run its forms, kerning, synthesis and features,
 }
 
 TEST_CASE("a text font measures the advance of a code point in the face that sets it, along or down the line") {
-    PrFontSet* set = setOf({{"Ahem.ttf", "Ahem"}, {"NotoSans[wdth,wght].ttf", "Sans"}});
-    PrTextFont* ahem = fontOf(set, {"Ahem"});
+    const SetFace faces[] = {{"Ahem.ttf", "Ahem"}, {"NotoSans[wdth,wght].ttf", "Sans"}};
+    PrFontSet* set = setOf(faces);
+    const char* const ahemNames[] = {"Ahem"};
+    PrTextFont* ahem = fontOf(set, ahemNames);
     float advance = 0;
     REQUIRE(prTextFontAdvance(ahem, '0', PrScript_Zyyy, PrTextAxis_Horizontal, &advance));
     CHECK(advance == 1.0f);
     REQUIRE(prTextFontAdvance(ahem, '0', PrScript_Zyyy, PrTextAxis_Vertical, &advance));
     CHECK(advance == 1.0f);
-    PrTextFont* sans = fontOf(set, {"Sans"});
+    const char* const sansNames[] = {"Sans"};
+    PrTextFont* sans = fontOf(set, sansNames);
     REQUIRE(prTextFontAdvance(sans, '0', PrScript_Zyyy, PrTextAxis_Horizontal, &advance));
     CHECK(advance > 0.4f);
     CHECK(advance < 0.7f);

@@ -1,16 +1,14 @@
 // The tests of what only the Metal backend has: recording into the application's command buffers and passes. The
 // interface's own tests run on Metal as well.
 
+#include "pr/array.h"
 #include "pr/gpu_metal.h"
+#include "pr/mem.h"
 
 #include "gpu/backends/shared/src/gpu_shared_metal_display.h"
 #include "gpu/tests/kTestGpuNativeShaders.h"
 
 #include "tools/harness/test.h"
-
-#include <cstdint>
-#include <cstring>
-#include <vector>
 
 #import <AppKit/AppKit.h>
 #import <CoreVideo/CoreVideo.h>
@@ -18,6 +16,8 @@
 #import <QuartzCore/CAMetalLayer.h>
 
 namespace pr_impl {
+
+using namespace pr;
 
 namespace {
 
@@ -91,7 +91,7 @@ struct Fixture {
     }
 
     // Copies the words of `buffer` into readback memory, waits for them, and returns them.
-    std::vector<uint32_t> words(PrGpuBuffer buffer, uint32_t count) {
+    Array<uint32_t> words(PrGpuBuffer buffer, uint32_t count) {
         PrGpuBuffer readback = this->buffer(uint64_t(count) * 4, 0, PrGpuMemory_Readback);
         PrGpuCommands* commands = nullptr;
         REQUIRE(prGpuCommandsBegin(device, nullptr, &commands));
@@ -99,8 +99,8 @@ struct Fixture {
             PrGpuAccessFlag_CopyRead);
         prGpuCommandsCopyBuffer(commands, buffer, 0, readback, 0, uint64_t(count) * 4);
         prGpuDeviceWait(device, prGpuCommandsSubmit(commands));
-        std::vector<uint32_t> out(count);
-        memcpy(out.data(), prGpuBufferMap(device, readback), size_t(count) * 4);
+        Array<uint32_t> out(count);
+        prMemCopy(out.data(), prGpuBufferMap(device, readback), size_t(count) * 4);
         prGpuBufferDestroy(device, readback);
         return out;
     }
@@ -163,7 +163,7 @@ TEST_CASE("metal records into the application's command buffer, around the appli
     PrGpuFence fence = prGpuCommandsSubmit(commands);
     prGpuDeviceWait(f.device, fence);
     CHECK(prGpuDeviceIsComplete(f.device, fence));
-    CHECK(f.words(output, 4) == std::vector<uint32_t>{0, 11, 9, 9});
+    CHECK(f.words(output, 4) == Array<uint32_t>({0, 11, 9, 9}));
     prGpuPipelineDestroy(f.device, pipeline);
     prGpuBufferDestroy(f.device, output);
 }
@@ -286,7 +286,7 @@ TEST_CASE("metal imports a CVPixelBuffer as a texture without copying it, and re
     for (uint32_t y = 0; y < 2; ++y) {
         for (uint32_t x = 0; x < 4; ++x) {
             const uint8_t bgra[4] = {uint8_t(y == 0 ? 255 : 0), 0, uint8_t(y == 1 ? 255 : 0), 255};
-            memcpy(texels + y * stride + x * 4, bgra, 4);
+            prMemCopy(texels + y * stride + x * 4, bgra, 4);
         }
     }
     CVPixelBufferUnlockBaseAddress(buffer, 0);

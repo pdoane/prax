@@ -1,12 +1,12 @@
 // Studio Kit's node graph.
 
+#include "pr/array.h"
+#include "pr/count_of.h"
 #include "pr/kit_graph.h"
 
 #include "tools/harness/kit_fixture.h"
 
 #include "tools/harness/test.h"
-
-#include <vector>
 
 using namespace harness;
 
@@ -23,10 +23,10 @@ typedef uint32_t PortType;
 
 // The phases that an edit sink saw.
 struct Phases {
-    std::vector<PrUiEditPhase> seen;
+    Array<PrUiEditPhase> seen;
 
     static void record(void* context, PrLayoutNode, PrUiEditPhase phase) {
-        static_cast<Phases*>(context)->seen.push_back(phase);
+        static_cast<Phases*>(context)->seen.push(phase);
     }
     uint32_t count(PrUiEditPhase phase) const {
         uint32_t n = 0;
@@ -51,7 +51,7 @@ struct GraphScene {
     };
     PrKitGraphPort blendOut[1] = {{.id = 3, .type = PortType_Color, .label = "Out"}};
     PrKitGraphPort outputIn[1] = {{.id = 1, .type = PortType_Color, .label = "Color"}};
-    std::vector<PrKitGraphNode> nodes = {
+    PrKitGraphNode nodes[3] = {
         {.id = 1, .position = {20, 20}, .title = "Sampler", .outputs = samplerOut, .outputCount = 2},
         {
             .id = 2,
@@ -64,12 +64,12 @@ struct GraphScene {
         },
         {.id = 3, .position = {260, 200}, .title = "Output", .inputs = outputIn, .inputCount = 1, .bodyHeight = 40},
     };
-    std::vector<PrKitGraphWire> wires = {{.id = 1, .link = {.fromNode = 1, .fromPort = 1, .toNode = 2, .toPort = 1}}};
+    PrKitGraphWire wires[1] = {{.id = 1, .link = {.fromNode = 1, .fromPort = 1, .toNode = 2, .toPort = 1}}};
     PrColor colors[2] = {{0.4f, 0.6f, 0.9f, 1}, {0.9f, 0.6f, 0.3f, 1}};
     PrKitGraphView view{.zoom = 1};
     PrLayoutNode bodies[3] = {};
     PrLayoutNode canvas = kPrLayoutNodeNone;
-    std::vector<PrKitGraphLink> connected;
+    Array<PrKitGraphLink> connected;
     uint32_t removals = 0;
 
     explicit GraphScene(KitFixture& fixture) : f(fixture) {
@@ -77,10 +77,10 @@ struct GraphScene {
         f.editContext = &phases;
         f.build = [this](PrLayoutNode root) {
             PrKitGraph graph{
-                .nodes = nodes.data(),
-                .nodeCount = uint32_t(nodes.size()),
-                .wires = wires.data(),
-                .wireCount = uint32_t(wires.size()),
+                .nodes = nodes,
+                .nodeCount = uint32_t(countOf(nodes)),
+                .wires = wires,
+                .wireCount = uint32_t(countOf(wires)),
                 .typeColors = colors,
                 .typeCount = 2,
                 .view = &view,
@@ -91,7 +91,7 @@ struct GraphScene {
                 bodies[i] = prKitGraphBody(f.kit, canvas, i);
             PrKitGraphLink link{};
             if (prKitConnected(f.kit, canvas, &link))
-                connected.push_back(link);
+                connected.push(link);
             removals += prKitRemoved(f.kit, canvas) ? 1 : 0;
         };
     }
@@ -146,10 +146,10 @@ TEST_CASE("a wire dropped on a port of the other side and the same type asks to 
     f.frame();
     // The sampler's alpha onto the blend's color input: unlike types.
     scene.drag(scene.port(0, PrKitGraphSide_Output, 1), scene.port(1, PrKitGraphSide_Input, 0));
-    CHECK(scene.connected.empty());
+    CHECK(scene.connected.isEmpty());
     // The blend's mask, dragged onto the sampler's alpha, is joined from the output to the input.
     scene.drag(scene.port(1, PrKitGraphSide_Input, 1), scene.port(0, PrKitGraphSide_Output, 1));
-    REQUIRE(scene.connected.size() == 1);
+    REQUIRE(scene.connected.count() == 1);
     CHECK(scene.connected[0].fromNode == 1);
     CHECK(scene.connected[0].fromPort == 2);
     CHECK(scene.connected[0].toNode == 2);

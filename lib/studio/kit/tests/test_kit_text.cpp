@@ -3,15 +3,14 @@
 
 #include "pr/kit_box.h"
 #include "pr/kit_input.h"
+#include "pr/span.h"
+#include "pr/string.h"
 #include "pr/text_edit.h"
 #include "pr/ui_text_edit.h"
 
 #include "tools/harness/kit_fixture.h"
 
 #include "tools/harness/test.h"
-
-#include <string>
-#include <vector>
 
 using namespace harness;
 
@@ -20,24 +19,24 @@ namespace pr_impl {
 namespace {
 
 // Writes the text of the control `field` to `owned`, if it changed in the round, and returns the control.
-PrLayoutNode taken(PrKit* kit, PrLayoutNode field, std::string& owned) {
+PrLayoutNode taken(PrKit* kit, PrLayoutNode field, String& owned) {
     PrStringView text{};
     if (prKitTextChanged(kit, field, &text))
-        owned.assign(text.data, text.size);
+        owned.assign(text);
     return field;
 }
 
 // An application whose clipboard is a string, which a request delivers to the context as a Clipboard event.
 struct Clipboard {
     PrApp app;
-    std::string text;
+    String text = "";
     bool requested = false;
 
     Clipboard() {
         app = PrApp{};
         app.requestClipboardText = [](PrApp* a) { reinterpret_cast<Clipboard*>(a)->requested = true; };
         app.setClipboardText = [](PrApp* a, PrStringView text) -> PrStatus {
-            reinterpret_cast<Clipboard*>(a)->text.assign(text.data, text.size);
+            reinterpret_cast<Clipboard*>(a)->text.assign(text);
             return PrStatus_Ok;
         };
     }
@@ -53,10 +52,10 @@ struct Clipboard {
 // A text field or area in its own column, and its text.
 struct Edited {
     KitFixture f;
-    std::string text;
+    String text;
     PrLayoutNode node = kPrLayoutNodeNone;
 
-    explicit Edited(std::string initial, bool area = false, uint32_t rows = 3) : text(std::move(initial)) {
+    explicit Edited(PrStringView initial, bool area = false, uint32_t rows = 3) : text(initial) {
         f.build = [this, area, rows](PrLayoutNode root) {
             PrLayoutNode column = prKitBox(f.kit, root, {}, {.place = {.width = prKitPx(200)}});
             if (area)
@@ -148,7 +147,7 @@ TEST_CASE("Shift extends the selection, typing replaces it, and Command-A select
     CHECK(e.selection().caret == 11);
     e.f.key(PrAppKey_Backspace);
     e.f.frame();
-    CHECK(e.text.empty());
+    CHECK(e.text.isEmpty());
     CHECK(kitVerified(e.f.tree));
 }
 
@@ -172,15 +171,17 @@ TEST_CASE("the arrows run through a field's text in order, across a change of di
 TEST_CASE("an edit's description chooses how its arrows move at a change of direction") {
     struct Case {
         PrTextEditArrowMotion motion;
-        std::vector<uint32_t> offsets;
+        Span<const uint32_t> offsets;
     };
+    const uint32_t logical[] = {1, 2, 3, 4, 4, 6, 8, 10, 10, 11, 12};
+    const uint32_t visual[] = {1, 2, 3, 4, 8, 6, 4, 11, 12};
     const Case cases[] = {
-        {PrTextEditArrowMotion_LogicalStops, {1, 2, 3, 4, 4, 6, 8, 10, 10, 11, 12}},
-        {PrTextEditArrowMotion_Visual, {1, 2, 3, 4, 8, 6, 4, 11, 12}},
+        {PrTextEditArrowMotion_LogicalStops, Span(logical)},
+        {PrTextEditArrowMotion_Visual, Span(visual)},
     };
     for (const Case& c : cases) {
         KitFixture f;
-        std::string text = "abc \xd7\x90\xd7\x91\xd7\x92 z";
+        String text = "abc \xd7\x90\xd7\x91\xd7\x92 z";
         PrLayoutNode control = kPrLayoutNodeNone;
         f.build = [&](PrLayoutNode root) {
             control = prKitBox(f.kit, root, {}, {.place = {.width = prKitPx(200)}});
@@ -193,7 +194,7 @@ TEST_CASE("an edit's description chooses how its arrows move at a change of dire
             prUiTextEdit(f.ui, &edit);
             PrStringView changed{};
             if (prUiTextEditChanged(f.ui, control, &changed))
-                text.assign(changed.data, changed.size);
+                text.assign(changed);
         };
         f.frame();
         f.frame();
@@ -233,7 +234,7 @@ TEST_CASE("a text area shows a buffer's styles in their roles and tones, and edi
     f.frame();
     CHECK(prTextEditBufferStyleAt(buffer, 12) == 1);
     PrStringView text = prTextEditBufferText(buffer);
-    CHECK(std::string(text.data, text.size) == "plain strong!");
+    CHECK(text == "plain strong!");
     prTextEditBufferDestroy(buffer);
 }
 
@@ -253,7 +254,7 @@ TEST_CASE("the caret moves over a grapheme cluster as a whole") {
     // e and a combining acute accent, then a family emoji of four people joined by zero-width joiners.
     Edited e("e\xcc\x81" "\xf0\x9f\x91\xa8\xe2\x80\x8d\xf0\x9f\x91\xa9\xe2\x80\x8d\xf0\x9f\x91\xa7");
     e.focus();
-    uint32_t end = uint32_t(e.text.size());
+    uint32_t end = e.text.count();
     CHECK(e.selection().caret == end);
     e.f.key(PrAppKey_Left);
     e.f.frame();
@@ -577,7 +578,7 @@ TEST_CASE("marked text in the caller's buffer leaves with focus") {
 
 TEST_CASE("a disabled field takes no text and shows no caret") {
     KitFixture f;
-    std::string text = "fixed";
+    String text = "fixed";
     PrLayoutNode field = kPrLayoutNodeNone;
     f.build = [&](PrLayoutNode root) {
         field = taken(f.kit, prKitTextField(f.kit, root, {.text = text, .disabled = true}, {}), text);

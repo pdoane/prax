@@ -6,9 +6,6 @@
 
 #include "tools/harness/test.h"
 
-#include <string>
-#include <vector>
-
 extern "C" int prTestUiCApi(void);
 
 namespace pr_impl {
@@ -17,10 +14,14 @@ namespace {
 
 // The phases that a sink saw, by the control they were reported on.
 struct Reports {
-    std::vector<std::pair<PrLayoutNode, PrUiEditPhase>> seen;
+    struct Report {
+        PrLayoutNode control;
+        PrUiEditPhase phase;
+    };
+    Array<Report> seen;
 
     static void record(void* context, PrLayoutNode control, PrUiEditPhase phase) {
-        static_cast<Reports*>(context)->seen.push_back({control, phase});
+        static_cast<Reports*>(context)->seen.push(Report{.control = control, .phase = phase});
     }
 };
 
@@ -91,20 +92,20 @@ TEST_CASE("a context's first round routes nothing, and the next routes what was 
 
 TEST_CASE("a press and its release are rounds of their own, and a round that settles follows the release") {
     UiFixture f;
-    std::vector<std::string> seen;
+    Array<String> seen;
     f.build = [&] {
         PrLayoutNode button = f.box(f.root, 10, 10, 100, 40, PrUiFlag_Pressable);
         if (prUiIsPressed(f.ui, button, 0))
-            seen.push_back("pressed");
+            seen.push("pressed");
         if (prUiClicked(f.ui, button, 0))
-            seen.push_back("clicked");
+            seen.push("clicked");
         if (prUiActivated(f.ui, button))
-            seen.push_back("activated");
+            seen.push("activated");
     };
     f.frame();
     f.press(20, 20);
     CHECK(f.frame() == 3);
-    CHECK(seen == std::vector<std::string>{"pressed", "clicked", "activated"});
+    CHECK(seen == Array<String>({"pressed", "clicked", "activated"}));
 }
 
 TEST_CASE("a node with no interest passes the press to the pressable node around it") {
@@ -153,7 +154,8 @@ TEST_CASE("the pointer hits what paints on top: a later sibling, and a box of a 
     f.build = [&] {
         under = f.box(f.root, 0, 0, 100, 100, PrUiFlag_Pressable, 0, raised ? 5 : 0, raised);
         over = f.box(f.root, 50, 50, 100, 100, PrUiFlag_Pressable);
-        for (PrLayoutNode node : {under, over}) {
+        const PrLayoutNode kNodes[] = {under, over};
+        for (PrLayoutNode node : kNodes) {
             if (prUiClicked(f.ui, node, 0))
                 clicked = node;
         }
@@ -201,7 +203,8 @@ TEST_CASE("a press goes to a node turned in perspective where it is drawn, and m
     f.build = [&] {
         stage = prUiElement(f.ui, f.root, 0, styled(200, nullptr), PrUiFlag_Pressable);
         card = prUiElement(f.ui, stage, 0, styled(0, &turn), PrUiFlag_Pressable);
-        for (PrLayoutNode node : {stage, card}) {
+        const PrLayoutNode kNodes[] = {stage, card};
+        for (PrLayoutNode node : kNodes) {
             if (prUiClicked(f.ui, node, 0))
                 clicked = node;
         }
@@ -495,7 +498,7 @@ TEST_CASE("the cursor is the request nearest the pointer's node") {
 
 TEST_CASE("a primary press focuses the innermost focusable node, and Tab steps through the tree's order") {
     UiFixture f;
-    std::vector<PrLayoutNode> fields;
+    Array<PrLayoutNode> fields;
     bool disableSecond = false;
     f.build = [&] {
         fields.clear();
@@ -503,7 +506,7 @@ TEST_CASE("a primary press focuses the innermost focusable node, and Tab steps t
             PrUiFlags flags = PrUiFlag_Focusable | PrUiFlag_Pressable;
             if (i == 1 && disableSecond)
                 flags |= PrUiFlag_Disabled;
-            fields.push_back(f.box(f.root, 10, 10 + 50 * float(i), 100, 40, flags));
+            fields.push(f.box(f.root, 10, 10 + 50 * float(i), 100, 40, flags));
         }
     };
     f.frame();
@@ -541,13 +544,13 @@ TEST_CASE("a primary press focuses the innermost focusable node, and Tab steps t
 TEST_CASE("traversal wraps within the innermost focus scope") {
     UiFixture f;
     PrLayoutNode outer = kPrLayoutNodeNone;
-    std::vector<PrLayoutNode> inside;
+    Array<PrLayoutNode> inside;
     f.build = [&] {
         outer = f.box(f.root, 0, 0, 50, 50, PrUiFlag_Focusable | PrUiFlag_Pressable);
         PrLayoutNode dialog = f.box(f.root, 100, 100, 300, 300, PrUiFlag_FocusScope);
         inside.clear();
-        inside.push_back(f.box(dialog, 10, 10, 50, 50, PrUiFlag_Focusable | PrUiFlag_Pressable));
-        inside.push_back(f.box(dialog, 10, 100, 50, 50, PrUiFlag_Focusable | PrUiFlag_Pressable));
+        inside.push(f.box(dialog, 10, 10, 50, 50, PrUiFlag_Focusable | PrUiFlag_Pressable));
+        inside.push(f.box(dialog, 10, 100, 50, 50, PrUiFlag_Focusable | PrUiFlag_Pressable));
     };
     f.frame();
     f.press(120, 120);
@@ -563,78 +566,78 @@ TEST_CASE("a key press goes to the nearest claim on the focused node's ancestors
     UiFixture f;
     PrLayoutNode panel = kPrLayoutNodeNone;
     PrLayoutNode field = kPrLayoutNodeNone;
-    std::vector<std::string> seen;
+    Array<String> seen;
     f.build = [&] {
         panel = f.box(f.root, 0, 0, 400, 400);
         field = f.box(panel, 10, 10, 100, 40, PrUiFlag_Focusable | PrUiFlag_Pressable);
         if (prUiKeyPressed(f.ui, field, PrAppKey_Escape, 0))
-            seen.push_back("field escape");
+            seen.push("field escape");
         if (prUiKeyPressed(f.ui, panel, PrAppKey_Escape, 0))
-            seen.push_back("panel escape");
+            seen.push("panel escape");
         if (prUiKeyPressed(f.ui, panel, 'F', PrAppModifierFlag_Super))
-            seen.push_back("panel find");
+            seen.push("panel find");
         if (prUiKeyPressed(f.ui, f.root, 'S', PrAppModifierFlag_Super))
-            seen.push_back("root save");
+            seen.push("root save");
     };
     f.frame();
     f.key('S', PrAppModifierFlag_Super);
     f.frame();
-    CHECK(seen == std::vector<std::string>{"root save"});
+    CHECK(seen == Array<String>({"root save"}));
     f.press(20, 20);
     f.key(PrAppKey_Escape);
     f.key('F', PrAppModifierFlag_Super);
     f.key('S', PrAppModifierFlag_Super);
     f.key('F', PrAppModifierFlag_Super | PrAppModifierFlag_Shift);
     f.frame(1.0 / 60, 16);
-    CHECK(seen == std::vector<std::string>{"root save", "field escape", "panel find", "root save"});
+    CHECK(seen == Array<String>({"root save", "field escape", "panel find", "root save"}));
 }
 
 TEST_CASE("a captured key goes to the outermost capture on the focus path, ahead of every claim") {
     UiFixture f;
     PrLayoutNode panel = kPrLayoutNodeNone;
     PrLayoutNode field = kPrLayoutNodeNone;
-    std::vector<std::string> seen;
+    Array<String> seen;
     f.build = [&] {
         panel = f.box(f.root, 0, 0, 400, 400);
         field = f.box(panel, 10, 10, 100, 40, PrUiFlag_Focusable | PrUiFlag_Pressable);
         if (prUiKeyPressed(f.ui, field, PrAppKey_Backspace, PrAppModifierFlag_Super))
-            seen.push_back("field claim");
+            seen.push("field claim");
         if (prUiKeyCaptured(f.ui, panel, PrAppKey_Backspace, PrAppModifierFlag_Super))
-            seen.push_back("panel capture");
+            seen.push("panel capture");
         if (prUiKeyCaptured(f.ui, f.root, PrAppKey_Backspace, PrAppModifierFlag_Super))
-            seen.push_back("root capture");
+            seen.push("root capture");
         if (prUiKeyCaptured(f.ui, panel, PrAppKey_Enter, PrAppModifierFlag_Super))
-            seen.push_back("panel enter");
+            seen.push("panel enter");
         if (prUiKeyPressed(f.ui, panel, PrAppKey_Enter, PrAppModifierFlag_Super))
-            seen.push_back("panel enter claim");
+            seen.push("panel enter claim");
     };
     f.frame();
     f.press(20, 20);
     f.key(PrAppKey_Backspace, PrAppModifierFlag_Super);
     f.key(PrAppKey_Enter, PrAppModifierFlag_Super);
     f.frame(1.0 / 60, 8);
-    CHECK(seen == std::vector<std::string>{"root capture", "panel enter"});
+    CHECK(seen == Array<String>({"root capture", "panel enter"}));
     // With no focus, only the root's captures and claims are on the path.
     seen.clear();
     f.press(390, 390);
     f.key(PrAppKey_Enter, PrAppModifierFlag_Super);
     f.key(PrAppKey_Backspace, PrAppModifierFlag_Super);
     f.frame(1.0 / 60, 8);
-    CHECK(seen == std::vector<std::string>{"root capture"});
+    CHECK(seen == Array<String>({"root capture"}));
 }
 
 TEST_CASE("Enter and Space activate the focused pressable node, and text goes to the focused node") {
     UiFixture f;
     PrLayoutNode button = kPrLayoutNodeNone;
     uint32_t activations = 0;
-    std::string typed;
+    String typed;
     f.build = [&] {
         button = f.box(f.root, 10, 10, 100, 40, PrUiFlag_Focusable | PrUiFlag_Pressable);
         activations += prUiActivated(f.ui, button) ? 1 : 0;
         PrUiEvents events = prUiEvents(f.ui, button);
         for (uint32_t i = 0; i < events.count; ++i) {
             if (events.events[i].kind == PrAppEventKind_Text)
-                typed += std::string(events.events[i].text.data, events.events[i].text.size);
+                typed.append(events.events[i].text);
         }
     };
     f.frame();
@@ -734,9 +737,9 @@ TEST_CASE("state is kept while every round asks for it, by owner and key, and mo
     UiFixture f;
     static const char kitOwner = 0;
     static const char appOwner = 0;
-    std::vector<uint64_t> keys = {1, 2};
+    Array<uint64_t> keys({1, 2});
     bool ask = true;
-    std::vector<int*> counters;
+    Array<int*> counters;
     f.build = [&] {
         PrLayoutNode list = f.box(f.root, 0, 0, 400, 400);
         counters.clear();
@@ -748,14 +751,14 @@ TEST_CASE("state is kept while every round asks for it, by owner and key, and mo
             int* app = static_cast<int*>(prUiState(f.ui, row, &appOwner, 7, sizeof(int)));
             *kit += 1;
             *app += 10;
-            counters.push_back(kit);
+            counters.push(kit);
         }
     };
     f.frame();
     f.frame();
     CHECK(*counters[0] == 2);
     CHECK(*counters[1] == 2);
-    keys = {2, 1};
+    keys = Array<uint64_t>({2, 1});
     f.frame();
     CHECK(*counters[0] == 3);
     CHECK(*counters[1] == 3);
@@ -1030,10 +1033,10 @@ TEST_CASE("a control reports its gestures to the nearest sink above it, and a nu
             prUiEdit(f.ui, control, PrUiEditPhase_Commit);
     };
     f.frame(1.0 / 60, 1);
-    REQUIRE(outer.seen.size() == 1);
-    CHECK(outer.seen[0].first == controls[0]);
-    REQUIRE(inner.seen.size() == 1);
-    CHECK(inner.seen[0].first == controls[1]);
+    REQUIRE(outer.seen.count() == 1);
+    CHECK(outer.seen[0].control == controls[0]);
+    REQUIRE(inner.seen.count() == 1);
+    CHECK(inner.seen[0].control == controls[1]);
 }
 
 TEST_CASE("records are found by place in the round and groups by recipe, apart for each owner") {

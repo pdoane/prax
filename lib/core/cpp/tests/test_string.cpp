@@ -124,3 +124,17 @@ TEST_CASE("a string replaces a range of its bytes, with any text including its o
     s.replace(0, 4, s);
     CHECK(s == "good world! world!");
 }
+
+TEST_CASE("a run of one byte, the last byte, and texts joined") {
+    String s("a");
+    s.append(3, '-');
+    CHECK(s == "a---");
+    s.append(200, 'x');
+    CHECK(s.count() == 204);
+    CHECK(s.last() == 'x');
+    s.append(0, 'y');
+    CHECK(s.count() == 204);
+    String name("b{}");
+    CHECK(concat("dir", "/", name, "/c") == "dir/b{}/c");
+    CHECK(concat().isEmpty());
+}

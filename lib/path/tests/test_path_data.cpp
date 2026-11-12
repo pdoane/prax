@@ -2,20 +2,19 @@
 
 #include "pr/path.h"
 #include "pr/path_data.h"
+#include "pr/string.h"
 
 #include "tools/harness/test.h"
-
-#include <string>
 
 namespace pr_impl {
 
 namespace {
 
 // Returns the verbs of the path, one letter each, as path data spells them.
-std::string verbs(const PrPath* path) {
-    std::string out;
+String verbs(const PrPath* path) {
+    String out;
     for (uint32_t i = 0; i < prPathVerbCount(path); ++i)
-        out += "MLQCZ"[prPathVerbs(path)[i]];
+        out.append("MLQCZ"[prPathVerbs(path)[i]]);
     return out;
 }
 

@@ -155,3 +155,12 @@ TEST_CASE("an array compares its elements in order, and an array of bytes is a b
     CHECK(view.size == 2);
     CHECK(view.data == bytes.data());
 }
+
+TEST_CASE("an array of copies of one value") {
+    Array<int> sevens(3, 7);
+    CHECK(sevens == Array<int>({7, 7, 7}));
+    Array<String> names(2u, String("x"));
+    CHECK(names.count() == 2);
+    CHECK(names[1] == "x");
+    CHECK(Array<int>(0, 1).isEmpty());
+}

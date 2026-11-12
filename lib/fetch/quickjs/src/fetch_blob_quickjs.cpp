@@ -103,7 +103,7 @@ bool appendPart(JSContext* ctx, JSValueConst part, BlobInit* init, PrTextBuffer*
     }
     if (const PrFetchBlob* blob = prJsFetchBlobFromValue(ctx, part)) {
         PrByteView bytes = prFetchBlobBytes(blob);
-        prTextBufferAppend(out, PrStringView{reinterpret_cast<const char*>(bytes.data), bytes.size});
+        prTextBufferAppend(out, prStringFromBytes(bytes));
         return true;
     }
     PrStringView text;
@@ -152,7 +152,7 @@ bool readParts(JSContext* ctx, JSValueConst parts, BlobInit* init, PrTextBuffer*
 
 PrByteView byteViewOf(const PrTextBuffer* buffer) {
     PrStringView view = prTextBufferView(buffer);
-    return PrByteView{reinterpret_cast<const uint8_t*>(view.data), view.size};
+    return prStringBytes(view);
 }
 
 JSValue blobConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSValueConst* argv) {
@@ -256,9 +256,7 @@ JSValue blobRead(JSContext* ctx, JSValueConst blobObject, int, JSValueConst*, in
     } else {
         PrCharsetDecoder decoder = prCharsetDecoderMake(PrCharset_Utf8, 0);
         PrRawString decoded = prRawStringNull();
-        PrStringView text =
-            prCharsetDecodeView(&decoder, PrStringView{reinterpret_cast<const char*>(bytes.data), bytes.size},
-                PrCharsetInput_Final, &decoded);
+        PrStringView text = prCharsetDecodeView(&decoder, prStringFromBytes(bytes), PrCharsetInput_Final, &decoded);
         value = jsNewStringView(ctx, text);
         prRawStringReset(&decoded);
     }

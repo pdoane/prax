@@ -2,22 +2,18 @@
 
 #include "tools/harness/test.h"
 
-#include <string>
-
 extern "C" int prTestUrlCApi(void);
 
 namespace pr_impl {
 
 namespace {
 
-std::string text(PrStringView view) {
-    return std::string(view.data != nullptr ? view.data : "", view.size);
+String text(PrStringView view) {
+    return String(view);
 }
 
-std::string take(PrRawString value) {
-    std::string result = text(prRawStringView(&value));
-    prRawStringReset(&value);
-    return result;
+String take(PrRawString value) {
+    return String::adopt(value);
 }
 
 PrUrl* parse(const char* input) {
@@ -26,7 +22,7 @@ PrUrl* parse(const char* input) {
     return url;
 }
 
-std::string href(const PrUrl* url) {
+String href(const PrUrl* url) {
     return take(prUrlSerialize(url, PrUrlSerialization_Whole));
 }
 
@@ -84,9 +80,7 @@ TEST_CASE("a query is percent-encoded in the charset of the document that a URL 
     auto parsed = [](PrStringView input, PrCharset charset) {
         PrUrl* url = nullptr;
         REQUIRE(prUrlCreate(input, nullptr, charset, &url) == PrStatus_Ok);
-        PrRawString text = prUrlSerialize(url, PrUrlSerialization_Whole);
-        std::string result(prRawStringView(&text).data, prRawStringView(&text).size);
-        prRawStringReset(&text);
+        String result = String::adopt(prUrlSerialize(url, PrUrlSerialization_Whole));
         prUrlDestroy(url);
         return result;
     };

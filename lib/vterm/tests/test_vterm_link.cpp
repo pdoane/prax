@@ -1,13 +1,15 @@
 // Tests the hyperlinks that a program puts on cells (OSC 8). They cover which cells take a link, which cells share one
 // link, and how links last through scrolling, rewrapping, editing and erasing.
 
+#include "pr/string.h"
+#include "pr/string_ops.h"
 #include "pr/vterm.h"
 
 #include "tools/harness/test.h"
 
-#include <string>
-
 namespace pr_impl {
+
+using namespace pr;
 
 namespace {
 
@@ -23,13 +25,13 @@ struct Term {
     Term(const Term&) = delete;
     Term& operator=(const Term&) = delete;
 
-    void write(const std::string& text) {
-        prVtermWrite(vterm, PrByteView{reinterpret_cast<const uint8_t*>(text.data()), text.size()});
+    void write(PrStringView text) {
+        prVtermWrite(vterm, prStringBytes(text));
     }
 
-    std::string output() {
+    String output() {
         PrByteView bytes = prVtermOutput(vterm);
-        std::string out(reinterpret_cast<const char*>(bytes.data), bytes.size);
+        String out(prStringFromBytes(bytes));
         prVtermOutputConsume(vterm, bytes.size);
         return out;
     }
@@ -42,26 +44,26 @@ struct Term {
 
     // The link of a screen cell, and the URI and id of a link. The URI and id are empty for kPrVtermLinkNone.
     PrVtermLinkIndex link(uint32_t column, uint32_t row) const { return cell(column, row).link; }
-    std::string uri(PrVtermLinkIndex link) const {
+    String uri(PrVtermLinkIndex link) const {
         if (link == kPrVtermLinkNone)
             return "";
         PrStringView uri = prVtermLink(vterm, link).uri;
-        return std::string(uri.data, uri.size);
+        return String(uri);
     }
-    std::string id(PrVtermLinkIndex link) const {
+    String id(PrVtermLinkIndex link) const {
         if (link == kPrVtermLinkNone)
             return "";
         PrStringView id = prVtermLink(vterm, link).id;
-        return std::string(id.data, id.size);
+        return String(id);
     }
-    std::string uriAt(uint32_t column, uint32_t row) const { return uri(link(column, row)); }
+    String uriAt(uint32_t column, uint32_t row) const { return uri(link(column, row)); }
 };
 
 // The sequence that opens a link to `uri` with `params`, and the one that closes it.
-std::string open(const std::string& uri, const std::string& params = "") {
-    return "\x1b]8;" + params + ";" + uri + "\x1b\\";
+String open(PrStringView uri, PrStringView params = "") {
+    return format("\x1b]8;{};{}\x1b\\", params, uri);
 }
-const std::string kClose = "\x1b]8;;\x1b\\";
+constexpr PrStringView kClose = "\x1b]8;;\x1b\\";
 
 } // namespace
 
@@ -71,7 +73,7 @@ using namespace pr_impl;
 
 TEST_CASE("vterm link: printed cells take the open link, and closing it ends it") {
     Term t(20, 4);
-    t.write("a" + open("https://example.com/", "id=x") + "bc" + kClose + "d");
+    t.write(format("a{}bc{}d", open("https://example.com/", "id=x"), kClose));
     CHECK(t.link(0, 0) == kPrVtermLinkNone);
     PrVtermLinkIndex link = t.link(1, 0);
     REQUIRE(link != kPrVtermLinkNone);
@@ -90,14 +92,14 @@ TEST_CASE("vterm link: the BEL terminator opens a link too, and a link without a
 
 TEST_CASE("vterm link: cells of the same id and URI are one link, apart, and after a redraw") {
     Term t(20, 4);
-    t.write(open("https://a/", "id=1") + "one" + kClose + " gap " + open("https://a/", "id=1") + "two" + kClose);
+    t.write(format("{}one{} gap {}two{}", open("https://a/", "id=1"), kClose, open("https://a/", "id=1"), kClose));
     CHECK(t.link(0, 0) == t.link(9, 0));
     // A redraw of the same text at the same place keeps the link.
-    t.write("\x1b[H" + open("https://a/", "id=1") + "one" + kClose);
+    t.write(format("\x1b[H{}one{}", open("https://a/", "id=1"), kClose));
     CHECK(t.link(0, 0) == t.link(9, 0));
     // Another URI with the same id, the same URI with another id, and an open without an id are each a separate link.
-    t.write("\r\n" + open("https://b/", "id=1") + "b" + kClose + open("https://a/", "id=2") + "c" + kClose);
-    t.write(open("https://a/") + "d" + kClose + open("https://a/") + "e" + kClose);
+    t.write(format("\r\n{}b{}{}c{}", open("https://b/", "id=1"), kClose, open("https://a/", "id=2"), kClose));
+    t.write(format("{}d{}{}e{}", open("https://a/"), kClose, open("https://a/"), kClose));
     PrVtermLinkIndex links[] = {t.link(0, 0), t.link(0, 1), t.link(1, 1), t.link(2, 1), t.link(3, 1)};
     for (uint32_t i = 0; i < 5; ++i) {
         for (uint32_t j = i + 1; j < 5; ++j)
@@ -108,7 +110,7 @@ TEST_CASE("vterm link: cells of the same id and URI are one link, apart, and aft
 
 TEST_CASE("vterm link: an open without an id is one link across the line that it wraps to") {
     Term t(4, 4);
-    t.write(open("https://wrap/") + "abcdef" + kClose);
+    t.write(format("{}abcdef{}", open("https://wrap/"), kClose));
     PrVtermLinkIndex link = t.link(0, 0);
     CHECK(link != kPrVtermLinkNone);
     CHECK(t.link(3, 0) == link);
@@ -118,46 +120,46 @@ TEST_CASE("vterm link: an open without an id is one link across the line that it
 
 TEST_CASE("vterm link: parameters other than the id are ignored, and a malformed command changes nothing") {
     Term t(20, 4);
-    t.write(open("https://p/", "foo=bar:id=k:x=y") + "a");
+    t.write(format("{}a", open("https://p/", "foo=bar:id=k:x=y")));
     CHECK(t.id(t.link(0, 0)) == "k");
     // A command without the separator before the URI leaves the current link open.
-    t.write("\x1b]8;id=z\x1b\\b" + kClose);
+    t.write(format("\x1b]8;id=z\x1b\\b{}", kClose));
     CHECK(t.link(1, 0) == t.link(0, 0));
 }
 
 TEST_CASE("vterm link: a URI that is too long or has bytes outside printable ASCII opens no link") {
     Term t(20, 4);
-    std::string longUri = "https://x/" + std::string(kPrVtermLinkMaxUriBytes, 'a');
-    t.write(open("https://ok/") + "a" + open(longUri) + "b" + kClose);
+    String longUri = format("https://x/{}", String().append(kPrVtermLinkMaxUriBytes, 'a'));
+    t.write(format("{}a{}b{}", open("https://ok/"), open(longUri), kClose));
     CHECK(t.uriAt(0, 0) == "https://ok/");
     CHECK(t.link(1, 0) == kPrVtermLinkNone);
-    t.write(open("https://a b\x7f/") + "c" + kClose);
+    t.write(format("{}c{}", open("https://a b\x7f/"), kClose));
     CHECK(t.link(2, 0) == kPrVtermLinkNone);
-    std::string exact = "https://x/" + std::string(kPrVtermLinkMaxUriBytes - 10, 'a');
-    t.write(open(exact) + "d" + kClose);
+    String exact = format("https://x/{}", String().append(kPrVtermLinkMaxUriBytes - 10, 'a'));
+    t.write(format("{}d{}", open(exact), kClose));
     CHECK(t.uriAt(3, 0) == exact);
-    std::string longId(kPrVtermLinkMaxIdBytes + 1, 'i');
-    t.write(open("https://id/", "id=" + longId) + "e" + kClose);
+    String longId = String().append(kPrVtermLinkMaxIdBytes + 1, 'i');
+    t.write(format("{}e{}", open("https://id/", format("id={}", longId)), kClose));
     CHECK(t.link(4, 0) == kPrVtermLinkNone);
 }
 
 TEST_CASE("vterm link: a wide cluster's halves both take the link") {
     Term t(10, 2);
-    t.write(open("https://wide/") + "\xe4\xb8\x80" + kClose);
+    t.write(format("{}\xe4\xb8\x80{}", open("https://wide/"), kClose));
     CHECK(t.link(0, 0) != kPrVtermLinkNone);
     CHECK(t.link(1, 0) == t.link(0, 0));
 }
 
 TEST_CASE("vterm link: links stay on lines that scroll into the scrollback") {
     Term t(10, 2);
-    t.write(open("https://old/") + "old" + kClose + "\r\n\n\n");
+    t.write(format("{}old{}\r\n\n\n", open("https://old/"), kClose));
     REQUIRE(t.scrollback() == 2);
     CHECK(t.uri(t.at(0, 0).link) == "https://old/");
 }
 
 TEST_CASE("vterm link: a rewrap keeps the cells' links") {
     Term t(10, 4);
-    t.write("ab" + open("https://r/", "id=r") + "cdefghij" + kClose + "kl");
+    t.write(format("ab{}cdefghij{}kl", open("https://r/", "id=r"), kClose));
     prVtermResize(t.vterm, PrUVec2{4, 4});
     uint32_t base = t.scrollback();
     // The line "abcdefghijkl" now spans three rows of four.
@@ -175,7 +177,7 @@ TEST_CASE("vterm link: a rewrap keeps the cells' links") {
 
 TEST_CASE("vterm link: inserting and deleting characters moves the links with their cells") {
     Term t(10, 2);
-    t.write(open("https://m/") + "ab" + kClose + "cd");
+    t.write(format("{}ab{}cd", open("https://m/"), kClose));
     PrVtermLinkIndex link = t.link(0, 0);
     t.write("\x1b[H\x1b[2@");
     CHECK(t.link(0, 0) == kPrVtermLinkNone);
@@ -188,13 +190,13 @@ TEST_CASE("vterm link: inserting and deleting characters moves the links with th
 
 TEST_CASE("vterm link: erasing and overwriting drop the links, and erasing cells gives them no link") {
     Term t(10, 3);
-    t.write(open("https://e/") + "abcdef\r\nghij" + kClose);
+    t.write(format("{}abcdef\r\nghij{}", open("https://e/"), kClose));
     PrVtermLinkIndex link = t.link(0, 0);
     // An erase while a link is open leaves blank cells without the link.
-    t.write("\x1b[H" + open("https://e2/") + "\x1b[2X");
+    t.write(format("\x1b[H{}\x1b[2X", open("https://e2/")));
     CHECK(t.link(0, 0) == kPrVtermLinkNone);
     CHECK(t.link(1, 0) == kPrVtermLinkNone);
-    t.write(kClose + "\x1b[1;4HZ\x1b[2;1H\x1b[K");
+    t.write(format("{}\x1b[1;4HZ\x1b[2;1H\x1b[K", kClose));
     CHECK(t.link(2, 0) == link);
     CHECK(t.link(3, 0) == kPrVtermLinkNone);
     CHECK(t.link(0, 1) == kPrVtermLinkNone);
@@ -202,7 +204,7 @@ TEST_CASE("vterm link: erasing and overwriting drop the links, and erasing cells
 
 TEST_CASE("vterm link: scrolling a region between left and right margins copies the links with the cells") {
     Term t(10, 4);
-    t.write("\x1b[2;1H" + open("https://s/") + "0123456789" + kClose);
+    t.write(format("\x1b[2;1H{}0123456789{}", open("https://s/"), kClose));
     PrVtermLinkIndex link = t.link(0, 1);
     t.write("\x1b[?69h\x1b[3;6s\x1b[1;4r\x1b[1;3H\x1b[S");
     // Columns 3 to 6 of the second row moved up. The rest of that row did not move.
@@ -216,55 +218,56 @@ TEST_CASE("vterm link: scrolling a region between left and right margins copies 
 
 TEST_CASE("vterm link: SGR and saving and restoring the cursor keep the link, and a reset ends it") {
     Term t(20, 2);
-    t.write(open("https://g/") + "a\x1b[0m\x1b[1mb\x1b" "7\x1b[5;5H\x1b" "8c\x1b[?1049hd\x1b[?1049l");
+    t.write(format("{}a\x1b[0m\x1b[1mb\x1b" "7\x1b[5;5H\x1b" "8c\x1b[?1049hd\x1b[?1049l", open("https://g/")));
     PrVtermLinkIndex link = t.link(0, 0);
     CHECK(t.link(1, 0) == link);
     CHECK(t.link(2, 0) == link);
     t.write("\x1b[!pe");
     CHECK(t.link(3, 0) == kPrVtermLinkNone);
-    t.write(open("https://g/") + "\x1b" "cf");
+    t.write(format("{}\x1b" "cf", open("https://g/")));
     CHECK(t.link(0, 0) == kPrVtermLinkNone);
 }
 
 TEST_CASE("vterm link: an open link leaves DECRQSS's report of the pen as it is") {
     Term t(20, 2);
-    t.write("\x1b[1m" + open("https://q/", "id=q") + "\x1bP$qm\x1b\\");
+    t.write(format("\x1b[1m{}\x1bP$qm\x1b\\", open("https://q/", "id=q")));
     CHECK(t.output() == "\x1bP1$r0;1m\x1b\\");
 }
 
 TEST_CASE("vterm link: the alternate screen's links are its own, and the primary screen's stay while it shows") {
     Term t(10, 2);
-    t.write(open("https://primary/") + "p" + kClose + "\x1b[?1049h\x1b[H" + open("https://alt/") + "q" + kClose);
+    t.write(format("{}p{}\x1b[?1049h\x1b[H{}q{}", open("https://primary/"), kClose, open("https://alt/"), kClose));
     CHECK(t.uriAt(0, 0) == "https://alt/");
     // Links that no cell holds are freed. The links on the hidden primary screen stay.
     for (uint32_t i = 0; i < 2000; ++i)
-        t.write("\x1b[2;1H" + open("https://churn/" + std::to_string(i)) + "x" + kClose);
+        t.write(format("\x1b[2;1H{}x{}", open(format("https://churn/{}", i)), kClose));
     t.write("\x1b[?1049l");
     CHECK(t.uriAt(0, 0) == "https://primary/");
 }
 
 TEST_CASE("vterm link: links that no cell holds any more are freed, and those that cells hold stay") {
     Term t(10, 3, 1000);
-    t.write(open("https://kept/", "id=k") + "k" + kClose);
+    t.write(format("{}k{}", open("https://kept/", "id=k"), kClose));
     // Each link replaces the previous one in the same cell, so the table never holds more than a few links.
     for (uint32_t i = 0; i < 3 * uint32_t(kPrVtermMaxLinks); ++i)
-        t.write("\x1b[2;1H" + open("https://u/" + std::to_string(i)) + "x" + kClose);
+        t.write(format("\x1b[2;1H{}x{}", open(format("https://u/{}", i)), kClose));
     CHECK(t.uriAt(0, 0) == "https://kept/");
-    CHECK(t.uriAt(0, 1) == "https://u/" + std::to_string(3 * uint32_t(kPrVtermMaxLinks) - 1));
+    CHECK(t.uriAt(0, 1) == format("https://u/{}", 3 * uint32_t(kPrVtermMaxLinks) - 1));
     // Opening the same id and URI again gives the same link.
-    t.write("\x1b[1;2H" + open("https://kept/", "id=k") + "j" + kClose);
+    t.write(format("\x1b[1;2H{}j{}", open("https://kept/", "id=k"), kClose));
     CHECK(t.link(1, 0) == t.link(0, 0));
 }
 
 TEST_CASE("vterm link: a link past the most that the terminal holds opens no link until cells free some") {
     // A cell for each link that the terminal can hold, and one more.
     Term t(256, 256, 0);
-    std::string text;
+    String text;
     for (uint32_t i = 0; i < uint32_t(kPrVtermMaxLinks) + 1; ++i)
-        text += open("https://n/" + std::to_string(i)) + "x";
-    t.write(text + kClose);
-    CHECK(t.uriAt(254, 255) == "https://n/" + std::to_string(kPrVtermMaxLinks - 1));
+        formatTo(text, "{}x", open(format("https://n/{}", i)));
+    text.append(kClose);
+    t.write(text);
+    CHECK(t.uriAt(254, 255) == format("https://n/{}", kPrVtermMaxLinks - 1));
     CHECK(t.link(255, 255) == kPrVtermLinkNone);
-    t.write("\x1b[2J\x1b[H" + open("https://after/") + "y" + kClose);
+    t.write(format("\x1b[2J\x1b[H{}y{}", open("https://after/"), kClose));
     CHECK(t.uriAt(0, 0) == "https://after/");
 }

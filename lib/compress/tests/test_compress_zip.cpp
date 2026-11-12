@@ -1,15 +1,16 @@
+#include "pr/array.h"
 #include "pr/compress_builtin.h"
 #include "pr/compress_zip.h"
+#include "pr/string.h"
 #include "pr/string_ops.h"
 
 #include "tools/harness/test.h"
 
-#include <string>
-#include <vector>
-
 namespace pr_impl {
 
 namespace {
+
+using namespace pr;
 
 // An archive with a stored entry and a deflated one in a directory, as Python's zipfile writes it.
 constexpr uint8_t kArchive[] = {
@@ -31,11 +32,11 @@ constexpr uint8_t kArchive[] = {
     0x02, 0x00, 0x02, 0x00, 0x77, 0x00, 0x00, 0x00, 0x71, 0x00, 0x00, 0x00, 0x00, 0x00,
 };
 
-std::string read(PrCompressZip* archive, uint32_t index, PrStatus* status) {
+String read(PrCompressZip* archive, uint32_t index, PrStatus* status) {
     PrCompressZipEntry entry = prCompressZipEntry(archive, index);
-    std::vector<uint8_t> bytes(size_t(entry.size));
-    *status = prCompressZipRead(archive, index, bytes.data(), bytes.size());
-    return std::string(bytes.begin(), bytes.end());
+    Array<uint8_t> bytes(entry.size);
+    *status = prCompressZipRead(archive, index, bytes.data(), bytes.count());
+    return String(PrStringView{reinterpret_cast<const char*>(bytes.data()), bytes.count()});
 }
 
 } // namespace
@@ -72,7 +73,7 @@ TEST_CASE("bytes that are not an archive, or an entry whose checksum is wrong, a
     const uint8_t junk[] = {1, 2, 3, 4, 5};
     CHECK(prCompressZipOpen(archive, junk) == PrStatus_InvalidData);
     CHECK(prCompressZipEntryCount(archive) == 0);
-    std::vector<uint8_t> damaged(kArchive, kArchive + sizeof(kArchive));
+    Array<uint8_t> damaged(kArchive);
     // The first byte of the stored entry.
     damaged[40] ^= 0xff;
     REQUIRE(prCompressZipOpen(archive, damaged) == PrStatus_Ok);

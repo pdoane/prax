@@ -1,10 +1,8 @@
+#include "pr/float.h"
 #include "pr/path_measure.h"
 #include "pr/vec.h"
 
 #include "tools/harness/test.h"
-
-#include <cmath>
-#include <initializer_list>
 
 namespace pr_impl {
 
@@ -148,7 +146,7 @@ TEST_CASE("a contour that returns to its start before closing leaves later conto
     PrPathMeasure* measure = measureOf(path);
     REQUIRE(prPathMeasureContourCount(measure) == 2);
     float start = prPathMeasureContour(measure, 1).start;
-    CHECK(start == doctest::Approx(20 + std::sqrt(200.0f)));
+    CHECK(start == doctest::Approx(20 + prF32Sqrt(200.0f)));
     PrPathMeasurePosition at = prPathMeasurePosition(measure, start + 2);
     CHECK(at.point.x == doctest::Approx(20));
     CHECK(at.point.y == doctest::Approx(2));
@@ -161,17 +159,20 @@ TEST_CASE("a contour that returns to its start before closing leaves later conto
 }
 
 TEST_CASE("a path or distances that are not finite measure without failing") {
-    for (float bad : {INFINITY, -INFINITY, NAN}) {
+    const float bads[] = {kPrF32Infinity, -kPrF32Infinity, kPrF32Nan};
+    for (float bad : bads) {
         PrPath* path = prPathCreate();
         prPathMoveTo(path, PrVec2{0, 0});
         prPathLineTo(path, PrVec2{bad, 5});
         prPathCubicTo(path, PrVec2{bad, bad}, PrVec2{1, 2}, PrVec2{3, 4});
         prPathClose(path);
         PrPathMeasure* empty = prPathMeasureCreate();
-        for (PrPath* measured : {path, square()}) {
+        PrPath* const measureds[] = {path, square()};
+        for (PrPath* measured : measureds) {
             PrPathMeasure* measure = measureOf(measured);
             PrPathPolyline out{};
-            for (PrPathMeasure* m : {measure, empty}) {
+            PrPathMeasure* const measures[] = {measure, empty};
+            for (PrPathMeasure* m : measures) {
                 PrAffine2 onPath{};
                 prPathMeasurePosition(m, bad);
                 prPathMeasurePosition(m, 1);

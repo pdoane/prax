@@ -1,12 +1,11 @@
+#include "pr/array.h"
 #include "pr/media_apple.h"
+#include "pr/mem.h"
+#include "pr/sort.h"
+#include "pr/string.h"
 #include "pr/thread.h"
 
 #include "tools/harness/test.h"
-
-#include <algorithm>
-#include <string>
-#include <utility>
-#include <vector>
 
 #import <AVFoundation/AVFoundation.h>
 
@@ -26,7 +25,7 @@ uint8_t redOf(int32_t index) {
 
 // Returns an H.264 MPEG-4 movie of kFrames frames of kWidth by kHeight, each a solid color whose red tells it apart, or
 // nothing if the system cannot encode one.
-std::vector<uint8_t> encodeMovie() {
+Array<uint8_t> encodeMovie() {
     @autoreleasepool {
         NSString* path = [NSTemporaryDirectory()
             stringByAppendingPathComponent:[NSString stringWithFormat:@"prax-media-%@.mp4", NSUUID.UUID.UUIDString]];
@@ -83,8 +82,9 @@ std::vector<uint8_t> encodeMovie() {
         [NSFileManager.defaultManager removeItemAtURL:url error:nil];
         if (writer.status != AVAssetWriterStatusCompleted || data == nil)
             return {};
-        const uint8_t* bytes = static_cast<const uint8_t*>(data.bytes);
-        return std::vector<uint8_t>(bytes, bytes + data.length);
+        Array<uint8_t> bytes;
+        bytes.append(static_cast<const uint8_t*>(data.bytes), uint32_t(data.length));
+        return bytes;
     }
 }
 
@@ -100,7 +100,7 @@ bool waitForFrame(PrMediaDecoder* decoder, double seconds, PrMediaFrame* out) {
 }
 
 // Returns an AAC file of `seconds` of a sine at `frequency`, or nothing if the system cannot encode one.
-std::vector<uint8_t> encodeTone(double frequency, double seconds) {
+Array<uint8_t> encodeTone(double frequency, double seconds) {
     @autoreleasepool {
         NSString* path = [NSTemporaryDirectory()
             stringByAppendingPathComponent:[NSString stringWithFormat:@"prax-tone-%@.m4a", NSUUID.UUID.UUIDString]];
@@ -111,7 +111,7 @@ std::vector<uint8_t> encodeTone(double frequency, double seconds) {
             AVNumberOfChannelsKey: @1,
         };
         NSError* error = nil;
-        std::vector<uint8_t> bytes;
+        Array<uint8_t> bytes;
         {
             AVAudioFile* file = [[AVAudioFile alloc] initForWriting:url settings:settings error:&error];
             if (file == nil)
@@ -128,8 +128,7 @@ std::vector<uint8_t> encodeTone(double frequency, double seconds) {
         NSData* data = [NSData dataWithContentsOfURL:url];
         [NSFileManager.defaultManager removeItemAtURL:url error:nil];
         if (data != nil) {
-            const uint8_t* start = static_cast<const uint8_t*>(data.bytes);
-            bytes.assign(start, start + data.length);
+            bytes.append(static_cast<const uint8_t*>(data.bytes), uint32_t(data.length));
         }
         return bytes;
     }
@@ -137,8 +136,8 @@ std::vector<uint8_t> encodeTone(double frequency, double seconds) {
 
 // Reads the decoder's audio until `frames` frames arrive or the audio ends, waiting between reads. Writes where the
 // first frame lies to `time`.
-std::vector<float> readAudio(PrMediaDecoder* decoder, uint32_t frames, double* time) {
-    std::vector<float> samples(frames);
+Array<float> readAudio(PrMediaDecoder* decoder, uint32_t frames, double* time) {
+    Array<float> samples(frames);
     uint32_t got = 0;
     bool timed = false;
     for (int waits = 0; got < frames && waits < 2000;) {
@@ -160,24 +159,24 @@ std::vector<float> readAudio(PrMediaDecoder* decoder, uint32_t frames, double* t
 }
 
 // The frequency of the samples at `rate`, by their crossings of zero.
-double frequencyOf(const std::vector<float>& samples, double rate) {
+double frequencyOf(Span<const float> samples, double rate) {
     uint32_t crossings = 0;
-    for (size_t i = 1; i < samples.size(); ++i)
+    for (uint32_t i = 1; i < samples.count(); ++i)
         crossings += (samples[i - 1] < 0) != (samples[i] < 0) ? 1 : 0;
-    return double(crossings) / 2 / (double(samples.size()) / rate);
+    return double(crossings) / 2 / (double(samples.count()) / rate);
 }
 
 // A track's compressed samples, as a media source's frames, with what a sample decoder needs to know of the track.
 struct Compressed {
     PrMediaTrackInfo track{};
-    std::string codec;
-    std::vector<uint8_t> config;
-    std::vector<std::vector<uint8_t>> bytes;
-    std::vector<PrMediaBufferedFrame> frames;
+    String codec;
+    Array<uint8_t> config;
+    Array<Array<uint8_t>> bytes;
+    Array<PrMediaBufferedFrame> frames;
 };
 
 // Returns the bytes of the descriptor of `tag` inside an MPEG-4 ES descriptor, or nothing.
-std::vector<uint8_t> descriptorOf(const uint8_t* data, size_t size, uint8_t tag) {
+Array<uint8_t> descriptorOf(const uint8_t* data, size_t size, uint8_t tag) {
     for (size_t at = 0; at + 2 < size; ++at) {
         if (data[at] != tag)
             continue;
@@ -190,19 +189,22 @@ std::vector<uint8_t> descriptorOf(const uint8_t* data, size_t size, uint8_t tag)
                 break;
             }
         }
-        if (length != 0 && i + length <= size)
-            return std::vector<uint8_t>(data + i, data + i + length);
+        if (length != 0 && i + length <= size) {
+            Array<uint8_t> out;
+            out.append(data + i, uint32_t(length));
+            return out;
+        }
     }
     return {};
 }
 
 // Reads the first track of `kind` from a file's bytes without decoding it: its samples and its configuration record.
-Compressed compressedOf(const std::vector<uint8_t>& file, NSString* kind) {
+Compressed compressedOf(const Array<uint8_t>& file, NSString* kind) {
     Compressed out;
     @autoreleasepool {
         NSString* path = [NSTemporaryDirectory()
             stringByAppendingPathComponent:[NSString stringWithFormat:@"prax-samples-%@.mp4", NSUUID.UUID.UUIDString]];
-        [[NSData dataWithBytes:file.data() length:file.size()] writeToFile:path atomically:NO];
+        [[NSData dataWithBytes:file.data() length:file.count()] writeToFile:path atomically:NO];
         AVURLAsset* asset = [AVURLAsset URLAssetWithURL:[NSURL fileURLWithPath:path] options:nil];
         AVAssetTrack* track = nil;
         for (AVAssetTrack* candidate in asset.tracks) {
@@ -218,11 +220,9 @@ Compressed compressedOf(const std::vector<uint8_t>& file, NSString* kind) {
             NSDictionary* atoms = (__bridge NSDictionary*)CMFormatDescriptionGetExtension(format,
                 kCMFormatDescriptionExtension_SampleDescriptionExtensionAtoms);
             NSData* avcc = atoms[@"avcC"];
-            out.config.assign(static_cast<const uint8_t*>(avcc.bytes),
-                static_cast<const uint8_t*>(avcc.bytes) + avcc.length);
-            char name[16];
-            snprintf(name, sizeof name, "avc1.%02X%02X%02X", out.config[1], out.config[2], out.config[3]);
-            out.codec = name;
+            out.config.clear();
+            out.config.append(static_cast<const uint8_t*>(avcc.bytes), uint32_t(avcc.length));
+            formatTo(out.codec, "avc1.{:02X}{:02X}{:02X}", out.config[1], out.config[2], out.config[3]);
             CMVideoDimensions size = CMVideoFormatDescriptionGetDimensions(format);
             out.track.kind = PrMediaTrackKind_Video;
             out.track.extent = PrUVec2{uint32_t(size.width), uint32_t(size.height)};
@@ -249,10 +249,10 @@ Compressed compressedOf(const std::vector<uint8_t>& file, NSString* kind) {
                 double start = CMTimeGetSeconds(CMSampleBufferGetPresentationTimeStamp(sample));
                 double rate = out.track.sampleRate;
                 for (size_t i = 0; i < packetCount; ++i) {
-                    std::vector<uint8_t>& bytes = out.bytes.emplace_back(packets[i].mDataByteSize);
-                    CMBlockBufferCopyDataBytes(block, size_t(packets[i].mStartOffset), bytes.size(), bytes.data());
+                    Array<uint8_t>& bytes = out.bytes.emplace(packets[i].mDataByteSize);
+                    CMBlockBufferCopyDataBytes(block, size_t(packets[i].mStartOffset), bytes.count(), bytes.data());
                     double time = start + double(i) * 1024 / rate;
-                    out.frames.push_back(PrMediaBufferedFrame{
+                    out.frames.push(PrMediaBufferedFrame{
                         .presentation = time,
                         .decode = time,
                         .duration = 1024 / rate,
@@ -260,15 +260,15 @@ Compressed compressedOf(const std::vector<uint8_t>& file, NSString* kind) {
                     });
                 }
             } else if (block != nullptr && CMSampleBufferGetNumSamples(sample) == 1) {
-                std::vector<uint8_t>& bytes = out.bytes.emplace_back(CMBlockBufferGetDataLength(block));
-                CMBlockBufferCopyDataBytes(block, 0, bytes.size(), bytes.data());
+                Array<uint8_t>& bytes = out.bytes.emplace(CMBlockBufferGetDataLength(block));
+                CMBlockBufferCopyDataBytes(block, 0, bytes.count(), bytes.data());
                 bool key = true;
                 CFArrayRef attachments = CMSampleBufferGetSampleAttachmentsArray(sample, false);
                 if (attachments != nullptr && CFArrayGetCount(attachments) != 0) {
                     CFDictionaryRef first = static_cast<CFDictionaryRef>(CFArrayGetValueAtIndex(attachments, 0));
                     key = !CFDictionaryContainsKey(first, kCMSampleAttachmentKey_NotSync);
                 }
-                out.frames.push_back(PrMediaBufferedFrame{
+                out.frames.push(PrMediaBufferedFrame{
                     .presentation = CMTimeGetSeconds(CMSampleBufferGetPresentationTimeStamp(sample)),
                     .decode = CMTimeGetSeconds(CMSampleBufferGetDecodeTimeStamp(sample)),
                     .duration = CMTimeGetSeconds(CMSampleBufferGetDuration(sample)),
@@ -279,18 +279,24 @@ Compressed compressedOf(const std::vector<uint8_t>& file, NSString* kind) {
         }
         [[NSFileManager defaultManager] removeItemAtPath:path error:nil];
     }
-    for (size_t i = 0; i < out.frames.size(); ++i)
+    for (uint32_t i = 0; i < out.frames.count(); ++i)
         out.frames[i].bytes = PrByteView(out.bytes[i]);
-    out.track.codec = PrStringView(out.codec);
+    out.track.codec = out.codec.view();
     out.track.config = PrByteView(out.config);
     return out;
 }
 
-// What a sample decoder gave: each image's presentation and the red at its center, and the samples.
+// What a sample decoder gave: each image's presentation and the red at its center, and the samples. An image that a
+// sample decoder gave: its presentation, and the red at its center.
+struct DecodedImage {
+    double presentation;
+    uint8_t red;
+};
+
 struct Decoded {
     PrMediaCodec* codec = nullptr;
-    std::vector<std::pair<double, uint8_t>> images;
-    std::vector<float> samples;
+    Array<DecodedImage> images;
+    Array<float> samples;
 };
 
 PrMediaSampleSink sinkOf(Decoded* decoded) {
@@ -306,11 +312,11 @@ PrMediaSampleSink sinkOf(Decoded* decoded) {
         uint8_t red = view.data[(view.extent.y / 2) * view.stride + (view.extent.x / 2) * 4 + 2];
         prGpuImportUnlock(&imported);
         d->codec->imageRelease(d->codec, image);
-        d->images.emplace_back(presentation, red);
+        d->images.push(DecodedImage{.presentation = presentation, .red = red});
     };
     sink.samples = [](void* context, const float* samples, uint32_t frames, double) {
         Decoded* d = static_cast<Decoded*>(context);
-        d->samples.insert(d->samples.end(), samples, samples + frames);
+        d->samples.append(samples, frames);
     };
     return sink;
 }
@@ -342,7 +348,7 @@ using namespace pr_impl;
 
 TEST_CASE("the AVFoundation codec decodes a video track's frames one at a time, as a media source gives them") {
     Compressed video = compressedOf(encodeMovie(), AVMediaTypeVideo);
-    REQUIRE(video.frames.size() == size_t(kFrames));
+    REQUIRE(video.frames.count() == uint32_t(kFrames));
     PrMediaCodec* codec = prMediaAppleCreate();
     CHECK(prMediaCodecSupportsSourceType(codec, "video/mp4; codecs=\"avc1.42E01E\"") == PrMediaSupport_Probably);
     CHECK(prMediaCodecSupportsSourceType(codec, "video/mp4; codecs=\"xyz1\"") == PrMediaSupport_No);
@@ -354,17 +360,19 @@ TEST_CASE("the AVFoundation codec decodes a video track's frames one at a time, 
     for (const PrMediaBufferedFrame& frame : video.frames)
         CHECK(codec->sampleDecode(codec, decoder, &frame, &sink));
     codec->sampleDecoderFlush(codec, decoder);
-    REQUIRE(decoded.images.size() == size_t(kFrames));
+    REQUIRE(decoded.images.count() == uint32_t(kFrames));
     // The decoder gives images in decode order, which B-frames make differ from presentation order. Each frame keeps
     // its time and its color through the decoder.
-    std::sort(decoded.images.begin(), decoded.images.end());
+    sortItems(decoded.images.span(), [](const DecodedImage& a, const DecodedImage& b) {
+        return a.presentation != b.presentation ? a.presentation < b.presentation : a.red < b.red;
+    });
     // The reader's timestamps include the encoder's delay, so the frames are one frame apart from the first, and
     // compression moves each red level by a few steps.
-    double first = decoded.images[0].first;
+    double first = decoded.images[0].presentation;
     for (int32_t i = 0; i < kFrames; ++i) {
-        CHECK(decoded.images[size_t(i)].first - first == doctest::Approx(double(i) / kFramesPerSecond));
-        CHECK(int(decoded.images[size_t(i)].second) - int(redOf(i)) < 16);
-        CHECK(int(decoded.images[size_t(i)].second) - int(redOf(i)) > -16);
+        CHECK(decoded.images[uint32_t(i)].presentation - first == doctest::Approx(double(i) / kFramesPerSecond));
+        CHECK(int(decoded.images[uint32_t(i)].red) - int(redOf(i)) < 16);
+        CHECK(int(decoded.images[uint32_t(i)].red) - int(redOf(i)) > -16);
     }
     codec->sampleDecoderDestroy(codec, decoder);
     prMediaCodecDestroy(codec);
@@ -372,8 +380,8 @@ TEST_CASE("the AVFoundation codec decodes a video track's frames one at a time, 
 
 TEST_CASE("the AVFoundation codec decodes an AAC track's frames one at a time, at the rate asked for") {
     Compressed audio = compressedOf(encodeTone(1000, 1), AVMediaTypeAudio);
-    REQUIRE(!audio.frames.empty());
-    REQUIRE(!audio.config.empty());
+    REQUIRE(!audio.frames.isEmpty());
+    REQUIRE(!audio.config.isEmpty());
     PrMediaCodec* codec = prMediaAppleCreate();
     PrMediaSampleDecoder* decoder = nullptr;
     REQUIRE(codec->sampleDecoderCreate(codec, &audio.track, 48000, 1, &decoder) == PrStatus_Ok);
@@ -383,17 +391,17 @@ TEST_CASE("the AVFoundation codec decodes an AAC track's frames one at a time, a
     for (const PrMediaBufferedFrame& frame : audio.frames)
         CHECK(codec->sampleDecode(codec, decoder, &frame, &sink));
     // About a second at 48 kHz, less the frames that the decoder keeps for its delay.
-    CHECK(decoded.samples.size() > 40000);
-    CHECK(decoded.samples.size() < 52000);
-    std::vector<float> middle(decoded.samples.begin() + 12000, decoded.samples.begin() + 36000);
+    CHECK(decoded.samples.count() > 40000);
+    CHECK(decoded.samples.count() < 52000);
+    Span<const float> middle = decoded.samples.span().slice(12000, 24000).asConst();
     CHECK(frequencyOf(middle, 48000) == doctest::Approx(1000).epsilon(0.02));
     codec->sampleDecoderDestroy(codec, decoder);
     prMediaCodecDestroy(codec);
 }
 
 TEST_CASE("the AVFoundation codec decodes AAC at the rate asked for, and seeks in it") {
-    std::vector<uint8_t> bytes = encodeTone(1000, 2);
-    REQUIRE(!bytes.empty());
+    Array<uint8_t> bytes = encodeTone(1000, 2);
+    REQUIRE(!bytes.isEmpty());
     PrMediaCodec* codec = prMediaAppleCreate();
     PrMediaDecoder* decoder = nullptr;
     PrMediaInfo info{};
@@ -402,19 +410,19 @@ TEST_CASE("the AVFoundation codec decodes AAC at the rate asked for, and seeks i
     CHECK(!info.hasVideo);
     REQUIRE(prMediaDecoderAudioStart(decoder, 48000, 1, 0));
     double time = -1;
-    std::vector<float> samples = readAudio(decoder, 24000, &time);
-    REQUIRE(samples.size() == 24000);
+    Array<float> samples = readAudio(decoder, 24000, &time);
+    REQUIRE(samples.count() == 24000);
     CHECK(time == doctest::Approx(0).epsilon(0.05));
-    CHECK(frequencyOf(samples, 48000) == doctest::Approx(1000).epsilon(0.02));
+    CHECK(frequencyOf(samples.span().asConst(), 48000) == doctest::Approx(1000).epsilon(0.02));
 
     prMediaDecoderAudioSeek(decoder, 1.5);
     samples = readAudio(decoder, 12000, &time);
-    REQUIRE(samples.size() == 12000);
+    REQUIRE(samples.count() == 12000);
     CHECK(time == doctest::Approx(1.5).epsilon(0.01));
 
     // Reading to the end reports the end.
     samples = readAudio(decoder, 96000, &time);
-    CHECK(samples.size() < 24000);
+    CHECK(samples.count() < 24000);
     float nothing = 0;
     CHECK(prMediaDecoderAudioRead(decoder, &nothing, 1).ended);
     prMediaDecoderDestroy(decoder);
@@ -422,8 +430,8 @@ TEST_CASE("the AVFoundation codec decodes AAC at the rate asked for, and seeks i
 }
 
 TEST_CASE("the AVFoundation codec reads a movie from memory and decodes the frame that shows at each time") {
-    std::vector<uint8_t> bytes = encodeMovie();
-    REQUIRE(!bytes.empty());
+    Array<uint8_t> bytes = encodeMovie();
+    REQUIRE(!bytes.isEmpty());
     PrMediaCodec* codec = prMediaAppleCreate();
     CHECK(prMediaCodecSupportsType(codec, "video/mp4") != PrMediaSupport_No);
     CHECK(prMediaCodecSupportsType(codec, "video/mp4; codecs=\"avc1.42E01E\"") == PrMediaSupport_Probably);
@@ -460,7 +468,8 @@ TEST_CASE("the AVFoundation codec reads a movie from memory and decodes the fram
     prMediaDecoderDestroy(decoder);
 
     // Bytes that are no container that AVFoundation reads are not supported.
-    std::vector<uint8_t> noise(256, 0x5a);
+    Array<uint8_t> noise(256);
+    prMemFill(noise.data(), 0x5a, noise.count());
     CHECK(prMediaDecoderCreate(codec, noise, &decoder, &info) == PrStatus_NotSupported);
     CHECK(decoder == nullptr);
     prMediaCodecDestroy(codec);

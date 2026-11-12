@@ -1,17 +1,18 @@
+#include "pr/alloc.h"
+#include "pr/array.h"
 #include "pr/command.h"
 #include "pr/command_keymap.h"
 #include "pr/command_kit.h"
+#include "pr/construct.h"
 #include "pr/kit_box.h"
 #include "pr/kit_input.h"
 #include "pr/kit_menu.h"
+#include "pr/memory.h"
+#include "pr/string.h"
 
 #include "tools/harness/kit_fixture.h"
 
 #include "tools/harness/test.h"
-
-#include <memory>
-#include <string>
-#include <vector>
 
 using namespace harness;
 
@@ -24,24 +25,32 @@ struct Commands {
     // A command's context: its id, and the commands that it belongs to.
     struct Entry {
         Commands* commands;
-        std::string id;
+        String id;
     };
 
     PrCommandRegistry* registry = prCommandRegistryCreate();
     PrCommandKeymap* keymap = prCommandKeymapCreate();
-    std::vector<std::unique_ptr<Entry>> entries;
-    std::vector<std::string> runs;
+    Array<Entry*> entries;
+    Array<String> runs;
     bool disabled = false;
     bool checked = false;
 
     ~Commands() {
         prCommandKeymapDestroy(keymap);
         prCommandRegistryDestroy(registry);
+        for (Entry* entry : entries) {
+            destroy(entry);
+            prMemoryFree(entry);
+        }
     }
+
+    Commands() = default;
+    Commands(const Commands&) = delete;
+    Commands& operator=(const Commands&) = delete;
 
     void add(const char* id, const char* title, const char* category, PrCommandFlags flags = 0,
             const PrCommandParam* params = nullptr, uint32_t paramCount = 0) {
-        entries.push_back(std::make_unique<Entry>(Entry{this, id}));
+        entries.push(construct<Entry>(alloc<Entry>(), Entry{this, id}));
         PrCommandDesc desc{
             .id = id,
             .title = title,
@@ -51,7 +60,7 @@ struct Commands {
             .paramCount = paramCount,
             .run = run,
             .state = state,
-            .context = entries.back().get(),
+            .context = entries.last(),
         };
         prCommandRegistryAdd(registry, &desc);
     }
@@ -65,7 +74,7 @@ struct Commands {
 
     static void run(void* PR_NULLABLE context, const PrCommandArgs*) {
         Entry* entry = static_cast<Entry*>(context);
-        entry->commands->runs.push_back(entry->id);
+        entry->commands->runs.push(entry->id);
     }
 
     static PrCommandStateFlags state(void* PR_NULLABLE context) {
@@ -76,10 +85,10 @@ struct Commands {
 };
 
 // Writes the text of the control `field` to `owned`, if it changed in the round, and returns the control.
-PrLayoutNode taken(PrKit* kit, PrLayoutNode field, std::string& owned) {
+PrLayoutNode taken(PrKit* kit, PrLayoutNode field, String& owned) {
     PrStringView text{};
     if (prKitTextChanged(kit, field, &text))
-        owned.assign(text.data, text.size);
+        owned.assign(text);
     return field;
 }
 
@@ -107,7 +116,7 @@ TEST_CASE("a scope runs the command of a chord while focus is within it, and the
     c.bind("Cmd O", "app.save");
     PrLayoutNode panel = kPrLayoutNodeNone;
     PrLayoutNode field = kPrLayoutNodeNone;
-    std::string text;
+    String text = "";
     f.build = [&](PrLayoutNode root) {
         prCommandScope(f.ui, root, c.registry, c.keymap, "");
         panel = prKitBox(f.kit, root, {}, {});
@@ -118,7 +127,7 @@ TEST_CASE("a scope runs the command of a chord while focus is within it, and the
     // With nothing focused, the root's scope takes the chord.
     f.key('S', kPrCommandPrimaryModifier);
     f.frame();
-    CHECK(c.runs == std::vector<std::string>{"app.save"});
+    CHECK(c.runs == Array<String>({"app.save"}));
     // With focus in the panel, the panel's scope takes it, and a chord that only the root binds reaches the root.
     f.click(f.center(field));
     f.frame();
@@ -128,7 +137,7 @@ TEST_CASE("a scope runs the command of a chord while focus is within it, and the
     f.frame();
     f.key('O', kPrCommandPrimaryModifier);
     f.frame();
-    CHECK(c.runs == std::vector<std::string>{"panel.save", "app.save"});
+    CHECK(c.runs == Array<String>({"panel.save", "app.save"}));
 }
 
 TEST_CASE("an override takes a chord that a focused text field claims, and a normal binding does not") {
@@ -139,7 +148,7 @@ TEST_CASE("an override takes a chord that a focused text field claims, and a nor
     c.bind("Cmd Backspace", "image.delete", "", PrCommandBindingKind_Override);
     c.bind("Left", "image.left");
     PrLayoutNode field = kPrLayoutNodeNone;
-    std::string text = "abc";
+    String text = "abc";
     f.build = [&](PrLayoutNode root) {
         prCommandScope(f.ui, root, c.registry, c.keymap, "");
         field = taken(f.kit, prKitTextField(f.kit, root, {.text = text}, {}), text);
@@ -149,10 +158,10 @@ TEST_CASE("an override takes a chord that a focused text field claims, and a nor
     f.frame();
     f.key(PrAppKey_Left);
     f.frame();
-    CHECK(c.runs.empty());
+    CHECK(c.runs.isEmpty());
     f.key(PrAppKey_Backspace, kPrCommandPrimaryModifier);
     f.frame();
-    CHECK(c.runs == std::vector<std::string>{"image.delete"});
+    CHECK(c.runs == Array<String>({"image.delete"}));
     CHECK(text == "abc");
 }
 
@@ -169,14 +178,14 @@ TEST_CASE("a disabled command's chord is taken and does nothing, and a command w
     c.disabled = true;
     f.key('R', kPrCommandPrimaryModifier);
     f.frame();
-    CHECK(c.runs.empty());
+    CHECK(c.runs.isEmpty());
     c.disabled = false;
     f.key('R', kPrCommandPrimaryModifier);
     f.frame();
-    CHECK(c.runs.size() == 1);
+    CHECK(c.runs.count() == 1);
     f.key('N', kPrCommandPrimaryModifier);
     f.frame();
-    CHECK(c.runs.size() == 1);
+    CHECK(c.runs.count() == 1);
 }
 
 TEST_CASE("a command's menu item shows its title, chord and check, and runs it") {
@@ -206,7 +215,7 @@ TEST_CASE("a command's menu item shows its title, chord and check, and runs it")
     CHECK(missing == kPrLayoutNodeNone);
     f.click(f.center(item));
     f.frame();
-    CHECK(c.runs.size() == 1);
+    CHECK(c.runs.count() == 1);
     CHECK_FALSE(prKitIsOpen(f.kit, trigger));
 }
 
@@ -219,7 +228,7 @@ TEST_CASE("the command palette lists the commands that match its query, and runs
     c.add("view.zoom", "Zoom In", "View");
     c.add("app.hidden", "Hidden Open", "File", PrCommandFlag_Hidden);
     c.add("app.named", "Open Named", "File", 0, required, 1);
-    std::string query;
+    String query = "";
     PrLayoutNode trigger = kPrLayoutNodeNone;
     PrLayoutNode list = kPrLayoutNodeNone;
     f.build = [&](PrLayoutNode root) {
@@ -244,7 +253,7 @@ TEST_CASE("the command palette lists the commands that match its query, and runs
     f.frame();
     f.key(PrAppKey_Enter);
     f.frame();
-    CHECK(c.runs == std::vector<std::string>{"file.save"});
+    CHECK(c.runs == Array<String>({"file.save"}));
     f.frame();
     CHECK(list == kPrLayoutNodeNone);
 }

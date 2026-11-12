@@ -1,49 +1,43 @@
 // Math fonts: the MATH table of New Computer Modern Math and of WPT's math test fonts, whose values their generators
 // set, the fallbacks of fonts without one, and MATH tables that are malformed.
 
+#include "pr/array.h"
 #include "pr/compress_builtin.h"
 #include "pr/float.h"
 #include "pr/font.h"
 #include "pr/font_math.h"
+#include "pr/min_max.h"
+#include "pr/sort.h"
+#include "pr/string.h"
 
 #include "tools/harness/test.h"
 
-#include <algorithm>
-#include <cstdio>
-#include <string>
-#include <vector>
-
 namespace pr_impl {
+
+using namespace pr;
 
 namespace {
 
 constexpr uint32_t kMath = PR_FONT_TAG('M', 'A', 'T', 'H');
 
-std::vector<uint8_t> readPath(const std::string& path) {
-    std::vector<uint8_t> bytes;
-    FILE* file = std::fopen(path.c_str(), "rb");
-    REQUIRE(file != nullptr);
-    uint8_t buffer[65536];
-    size_t read = 0;
-    while ((read = std::fread(buffer, 1, sizeof(buffer), file)) != 0)
-        bytes.insert(bytes.end(), buffer, buffer + read);
-    std::fclose(file);
-    return bytes;
+// Returns the bytes of the font file `name`, in the fonts directory.
+Array<uint8_t> fontFile(PrStringView name) {
+    return harness::readFile(format("{}/{}", PR_FONTS_DIR, name));
 }
 
-std::vector<uint8_t> newCmBytes() {
-    return readPath(std::string(PR_FONTS_DIR) + "/NewCMMath-Regular.otf");
+Array<uint8_t> newCmBytes() {
+    return fontFile("NewCMMath-Regular.otf");
 }
 
-const PrFont* fromBytes(const std::vector<uint8_t>& bytes) {
+const PrFont* fromBytes(const Array<uint8_t>& bytes) {
     const PrFont* font = nullptr;
     REQUIRE(prFontCreate(bytes, 0, nullptr, &font) == PrStatus_Ok);
     return font;
 }
 
 // Loads one of WPT's math test fonts, which are WOFF files.
-const PrFont* wptFont(const std::string& name) {
-    std::vector<uint8_t> bytes = readPath(std::string(PR_FONTS_DIR) + "/math/" + name + ".woff");
+const PrFont* wptFont(PrStringView name) {
+    Array<uint8_t> bytes = fontFile(format("math/{}.woff", name));
     PrCompressCodec* codec = prCompressBuiltinCreate();
     const PrFont* font = nullptr;
     PrStatus status = prFontCreateWoff(bytes, 0, nullptr, codec, &font);
@@ -60,83 +54,89 @@ uint16_t be16(const uint8_t* bytes) {
     return uint16_t(bytes[0] << 8 | bytes[1]);
 }
 
-void put16(std::vector<uint8_t>& out, uint32_t value) {
-    out.push_back(uint8_t(value >> 8));
-    out.push_back(uint8_t(value));
+void put16(Array<uint8_t>& out, uint32_t value) {
+    out.push(uint8_t(value >> 8));
+    out.push(uint8_t(value));
 }
 
-void put32(std::vector<uint8_t>& out, uint32_t value) {
+void put32(Array<uint8_t>& out, uint32_t value) {
     put16(out, value >> 16);
     put16(out, value);
 }
 
-void set16(std::vector<uint8_t>& out, size_t at, uint32_t value) {
+void set16(Array<uint8_t>& out, uint32_t at, uint32_t value) {
     out[at] = uint8_t(value >> 8);
     out[at + 1] = uint8_t(value);
 }
 
 // Returns the bytes of table `tag` of a single font file, or empty if it has none.
-std::vector<uint8_t> tableOf(const std::vector<uint8_t>& font, uint32_t tag) {
+Array<uint8_t> tableOf(const Array<uint8_t>& font, uint32_t tag) {
     uint16_t count = be16(font.data() + 4);
     for (uint16_t i = 0; i < count; ++i) {
         const uint8_t* record = font.data() + 12 + i * 16;
-        if (be32(record) == tag)
-            return std::vector<uint8_t>(font.data() + be32(record + 8), font.data() + be32(record + 8) + be32(record + 12));
+        if (be32(record) == tag) {
+            Array<uint8_t> table;
+            table.append(font.data() + be32(record + 8), be32(record + 12));
+            return table;
+        }
     }
     return {};
 }
 
 // Returns the single font file `font` with table `tag` replaced by `table`, or added if it has none.
-std::vector<uint8_t> withTable(const std::vector<uint8_t>& font, uint32_t tag, const std::vector<uint8_t>& table) {
+Array<uint8_t> withTable(const Array<uint8_t>& font, uint32_t tag, const Array<uint8_t>& table) {
     struct Table {
         uint32_t tag;
-        std::vector<uint8_t> bytes;
+        Array<uint8_t> bytes;
     };
-    std::vector<Table> tables;
+    Array<Table> tables;
     uint16_t count = be16(font.data() + 4);
     for (uint16_t i = 0; i < count; ++i) {
         const uint8_t* record = font.data() + 12 + i * 16;
         if (be32(record) != tag)
-            tables.push_back(Table{be32(record), tableOf(font, be32(record))});
+            tables.push(Table{be32(record), tableOf(font, be32(record))});
     }
-    tables.push_back(Table{tag, table});
-    std::sort(tables.begin(), tables.end(), [](const Table& a, const Table& b) { return a.tag < b.tag; });
-    std::vector<uint8_t> out(font.begin(), font.begin() + 4);
-    put16(out, uint32_t(tables.size()));
+    tables.push(Table{tag, table});
+    // The tags are distinct, so that the order is the same whether or not the sort is stable.
+    sortItems(tables.span(), [](const Table& a, const Table& b) { return a.tag < b.tag; });
+    Array<uint8_t> out;
+    out.append(font.data(), 4);
+    put16(out, tables.count());
     put16(out, 0);
     put16(out, 0);
     put16(out, 0);
-    uint32_t offset = uint32_t(12 + tables.size() * 16);
+    uint32_t offset = 12 + tables.count() * 16;
     for (const Table& t : tables) {
         put32(out, t.tag);
         put32(out, 0);
         put32(out, offset);
-        put32(out, uint32_t(t.bytes.size()));
-        offset += (uint32_t(t.bytes.size()) + 3) & ~3u;
+        put32(out, t.bytes.count());
+        offset += (t.bytes.count() + 3) & ~3u;
     }
     for (const Table& t : tables) {
-        out.insert(out.end(), t.bytes.begin(), t.bytes.end());
-        while (out.size() % 4 != 0)
-            out.push_back(0);
+        out.append(t.bytes.span());
+        while (out.count() % 4 != 0)
+            out.push(0);
     }
     return out;
 }
 
 // Stretches and returns the glyphs, checking that a call with too little room writes only what fits.
-std::vector<PrFontGlyph> stretch(const PrFont* font, uint16_t glyph, PrFontMathAxis axis, float size,
-        PrFontMathStretchInfo* info) {
+Array<PrFontGlyph> stretch(const PrFont* font, uint16_t glyph, PrFontMathAxis axis, float size, PrFontMathStretchInfo* info) {
     uint32_t count = prFontMathGlyphStretch(font, glyph, axis, size, info, nullptr, 0);
-    std::vector<PrFontGlyph> glyphs(count + 1, PrFontGlyph{0xFFFF, PrVec2{0, 0}});
+    Array<PrFontGlyph> glyphs;
+    for (uint32_t i = 0; i <= count; ++i)
+        glyphs.push(PrFontGlyph{0xFFFF, PrVec2{0, 0}});
     CHECK(prFontMathGlyphStretch(font, glyph, axis, size, info, glyphs.data(), count) == count);
     CHECK(glyphs[count].id == 0xFFFF);
-    glyphs.pop_back();
+    glyphs.pop();
     return glyphs;
 }
 
-std::vector<uint16_t> ids(const std::vector<PrFontGlyph>& glyphs) {
-    std::vector<uint16_t> out;
+Array<uint16_t> ids(const Array<PrFontGlyph>& glyphs) {
+    Array<uint16_t> out;
     for (const PrFontGlyph& g : glyphs)
-        out.push_back(g.id);
+        out.push(g.id);
     return out;
 }
 
@@ -189,7 +189,8 @@ TEST_CASE("New Computer Modern Math's glyph info: italics correction, accent att
     CHECK(prFontMathGlyphIsExtendedShape(font, integral));
     CHECK_FALSE(prFontMathGlyphIsExtendedShape(font, f));
     // 𝑃 has one kern at its bottom right, at every height, and none at its other corners.
-    for (float height : {-1.0f, 0.0f, 0.3f, 2.0f})
+    const float heights[] = {-1.0f, 0.0f, 0.3f, 2.0f};
+    for (float height : heights)
         CHECK(prFontMathGlyphKern(font, italicP, PrFontMathCorner_BottomRight, height) == doctest::Approx(-0.1));
     CHECK(prFontMathGlyphKern(font, italicP, PrFontMathCorner_TopRight, 0.5f) == 0);
     CHECK(prFontMathGlyphKern(font, f, PrFontMathCorner_TopRight, 0.5f) == 0);
@@ -239,38 +240,38 @@ TEST_CASE("New Computer Modern Math's parenthesis stretches through its variants
     uint16_t paren = prFontCodePointGlyph(font, '(');
     PrFontMathStretchInfo info{};
     // The glyph's own ink height covers a small size.
-    std::vector<PrFontGlyph> glyphs = stretch(font, paren, PrFontMathAxis_Vertical, 0.5f, &info);
+    Array<PrFontGlyph> glyphs = stretch(font, paren, PrFontMathAxis_Vertical, 0.5f, &info);
     CHECK(info.kind == PrFontMathStretchKind_Glyph);
-    CHECK(ids(glyphs) == std::vector<uint16_t>{9});
+    CHECK(ids(glyphs) == Array<uint16_t>({9}));
     CHECK(info.ascent == doctest::Approx(0.748));
     CHECK(info.descent == doctest::Approx(0.248));
     // The first variant whose measurement covers the size.
     glyphs = stretch(font, paren, PrFontMathAxis_Vertical, 1.4f, &info);
-    CHECK(ids(glyphs) == std::vector<uint16_t>{5959});
+    CHECK(ids(glyphs) == Array<uint16_t>({5959}));
     CHECK(info.advance == doctest::Approx(0.523));
     // Past the largest variant, the assembly: bottom, five extenders and top, which repeat at the fewest repeats that
     // reach 5em, 2.99 + 5 × 0.478, and overlap by 0.08em each to land on 5em exactly.
     glyphs = stretch(font, paren, PrFontMathAxis_Vertical, 5, &info);
     CHECK(info.kind == PrFontMathStretchKind_Assembly);
-    CHECK(ids(glyphs) == std::vector<uint16_t>{1376, 1375, 1375, 1375, 1375, 1375, 1374});
+    CHECK(ids(glyphs) == Array<uint16_t>({1376, 1375, 1375, 1375, 1375, 1375, 1374}));
     CHECK(info.ascent == doctest::Approx(5));
     CHECK(info.descent == 0);
     CHECK(info.advance == doctest::Approx(0.875));
     CHECK(info.italicsCorrection == 0);
     // Each part sits on the end of the one before less the overlap. The parts' ink starts at their origins.
     const float bottoms[] = {0, 1.415f, 1.833f, 2.251f, 2.669f, 3.087f, 3.505f};
-    for (size_t i = 0; i < glyphs.size(); ++i) {
+    for (uint32_t i = 0; i < glyphs.count(); ++i) {
         CHECK(glyphs[i].position.x == 0);
         CHECK(glyphs[i].position.y == doctest::Approx(-bottoms[i]));
     }
     // The top part ends at the size.
-    CHECK(-glyphs.back().position.y + 1.495f == doctest::Approx(5));
+    CHECK(-glyphs.last().position.y + 1.495f == doctest::Approx(5));
     // The integral's middle extender has ink below its origin, which its position makes up for.
     uint16_t integral = prFontCodePointGlyph(font, 0x222B);
     glyphs = stretch(font, integral, PrFontMathAxis_Vertical, 4, &info);
     CHECK(info.kind == PrFontMathStretchKind_Assembly);
     CHECK(info.italicsCorrection == doctest::Approx(0.08));
-    REQUIRE(glyphs.size() == 4);
+    REQUIRE(glyphs.count() == 4);
     CHECK(glyphs[0].position.y == doctest::Approx(-0.022));
     // Two extenders after the 1.344em bottom reach 4.446em, which an overlap of 0.446 / 3em brings to 4em.
     CHECK(glyphs[1].position.y + prFontGlyphInkBounds(font, glyphs[1].id).bottom == doctest::Approx(-(1.344 - 0.446 / 3)));
@@ -284,7 +285,7 @@ TEST_CASE("a horizontal assembly's ink is its parts' ink, which an overline's st
     PrRect bar = prFontGlyphInkBounds(font, overline);
     REQUIRE(bar.bottom < 0);
     PrFontMathStretchInfo info{};
-    std::vector<PrFontGlyph> glyphs = stretch(font, overline, PrFontMathAxis_Horizontal, 6, &info);
+    Array<PrFontGlyph> glyphs = stretch(font, overline, PrFontMathAxis_Horizontal, 6, &info);
     CHECK(info.kind == PrFontMathStretchKind_Assembly);
     CHECK(info.advance == doctest::Approx(6));
     CHECK(info.descent == doctest::Approx(bar.bottom));
@@ -293,7 +294,7 @@ TEST_CASE("a horizontal assembly's ink is its parts' ink, which an overline's st
 }
 
 TEST_CASE("Noto Sans Math, a TrueType font, reads and stretches from its MATH table") {
-    const PrFont* font = fromBytes(readPath(std::string(PR_FONTS_DIR) + "/NotoSansMath-Regular.ttf"));
+    const PrFont* font = fromBytes(fontFile("NotoSansMath-Regular.ttf"));
     CHECK(prFontHasMath(font));
     CHECK(prFontMathConstants(font)->axisHeight == doctest::Approx(0.278));
     CHECK(prFontMathConstants(font)->scriptPercentScaleDown == doctest::Approx(0.6));
@@ -302,8 +303,8 @@ TEST_CASE("Noto Sans Math, a TrueType font, reads and stretches from its MATH ta
     CHECK(prFontMathGlyphItalicsCorrection(font, integral) == doctest::Approx(0.274));
     PrFontMathStretchInfo info{};
     // 6em takes five extenders after the 2.138em of the ends, and overlaps of 1.483 / 6em.
-    std::vector<PrFontGlyph> glyphs = stretch(font, prFontCodePointGlyph(font, '('), PrFontMathAxis_Vertical, 6, &info);
-    CHECK(ids(glyphs) == std::vector<uint16_t>{1959, 1961, 1961, 1961, 1961, 1961, 1960});
+    Array<PrFontGlyph> glyphs = stretch(font, prFontCodePointGlyph(font, '('), PrFontMathAxis_Vertical, 6, &info);
+    CHECK(ids(glyphs) == Array<uint16_t>({1959, 1961, 1961, 1961, 1961, 1961, 1960}));
     CHECK(info.ascent == doctest::Approx(6));
     glyphs = stretch(font, integral, PrFontMathAxis_Vertical, 5, &info);
     CHECK(info.kind == PrFontMathStretchKind_Assembly);
@@ -313,7 +314,7 @@ TEST_CASE("Noto Sans Math, a TrueType font, reads and stretches from its MATH ta
 }
 
 TEST_CASE("a font without constructions stretches by the assembly of Unicode's parts of stretched operators") {
-    std::vector<uint8_t> bytes = readPath(std::string(PR_FONTS_DIR) + "/NotoSansMath-Regular.ttf");
+    Array<uint8_t> bytes = fontFile("NotoSansMath-Regular.ttf");
     const PrFont* font = fromBytes(withTable(bytes, kMath, {}));
     REQUIRE_FALSE(prFontHasMath(font));
     uint16_t paren = prFontCodePointGlyph(font, '(');
@@ -346,7 +347,7 @@ TEST_CASE("a font without constructions stretches by the assembly of Unicode's p
 }
 
 TEST_CASE("a feature's single substitutions give a glyph's math forms: dotless and right-to-left mirrored") {
-    std::vector<uint8_t> bytes = readPath(std::string(PR_FONTS_DIR) + "/NotoSansMath-Regular.ttf");
+    Array<uint8_t> bytes = fontFile("NotoSansMath-Regular.ttf");
     const PrFont* font = fromBytes(bytes);
     uint16_t i = prFontCodePointGlyph(font, 'i');
     uint16_t partial = prFontCodePointGlyph(font, 0x2202);
@@ -360,10 +361,11 @@ TEST_CASE("a feature's single substitutions give a glyph's math forms: dotless a
     CHECK(prFontFeatureGlyph(font, PR_FONT_TAG('f', 'l', 'a', 'c'), partial) == partial);
     // A GSUB table cut short anywhere substitutes nothing out of bounds.
     constexpr uint32_t kGsub = PR_FONT_TAG('G', 'S', 'U', 'B');
-    std::vector<uint8_t> gsub = tableOf(bytes, kGsub);
-    REQUIRE(!gsub.empty());
-    for (size_t size = 0; size < gsub.size(); size += 97) {
-        std::vector<uint8_t> cut(gsub.begin(), gsub.begin() + ptrdiff_t(size));
+    Array<uint8_t> gsub = tableOf(bytes, kGsub);
+    REQUIRE(!gsub.isEmpty());
+    for (uint32_t size = 0; size < gsub.count(); size += 97) {
+        Array<uint8_t> cut;
+        cut.append(gsub.data(), size);
         const PrFont* truncated = fromBytes(withTable(bytes, kGsub, cut));
         CHECK(prFontFeatureGlyph(truncated, PR_FONT_TAG('r', 't', 'l', 'm'), partial) < prFontGlyphCount(truncated));
         prFontRelease(truncated);
@@ -386,8 +388,8 @@ TEST_CASE("the size-adjust scales New Computer Modern Math's lengths and stretch
     CHECK(prFontMathGlyphKern(font, 2981, PrFontMathCorner_BottomRight, 0) == doctest::Approx(-0.2));
     CHECK(prFontMathMinConnectorOverlap(font) == doctest::Approx(0.04));
     PrFontMathStretchInfo info{};
-    std::vector<PrFontGlyph> glyphs = stretch(font, prFontCodePointGlyph(font, '('), PrFontMathAxis_Vertical, 10, &info);
-    CHECK(glyphs.size() == 7);
+    Array<PrFontGlyph> glyphs = stretch(font, prFontCodePointGlyph(font, '('), PrFontMathAxis_Vertical, 10, &info);
+    CHECK(glyphs.count() == 7);
     CHECK(info.ascent == doctest::Approx(10));
     CHECK(glyphs[1].position.y == doctest::Approx(-2.83));
     prFontRelease(font);
@@ -443,8 +445,8 @@ TEST_CASE("WPT's large operator font stretches U+2AFF to its display variant, wi
     uint16_t glyph = prFontCodePointGlyph(font, 0x2AFF);
     REQUIRE(glyph == 2);
     PrFontMathStretchInfo info{};
-    std::vector<PrFontGlyph> glyphs = stretch(font, glyph, PrFontMathAxis_Vertical, 2, &info);
-    CHECK(ids(glyphs) == std::vector<uint16_t>{3});
+    Array<PrFontGlyph> glyphs = stretch(font, glyph, PrFontMathAxis_Vertical, 2, &info);
+    CHECK(ids(glyphs) == Array<uint16_t>({3}));
     CHECK(info.kind == PrFontMathStretchKind_Glyph);
     CHECK(info.italicsCorrection == doctest::Approx(3));
     CHECK(info.ascent == 2);
@@ -466,29 +468,29 @@ TEST_CASE("WPT's stretchy font stretches by its variants and its assembly to exa
     PrFontMathStretchInfo info{};
 
     // The glyph's own height covers half an em, and the variants each up to their measurement (n em plus one unit).
-    CHECK(ids(stretch(font, vertical, PrFontMathAxis_Vertical, 0.5f, &info)) == std::vector<uint16_t>{4});
-    CHECK(ids(stretch(font, vertical, PrFontMathAxis_Vertical, 1.5f, &info)) == std::vector<uint16_t>{7});
-    CHECK(ids(stretch(font, vertical, PrFontMathAxis_Vertical, 4, &info)) == std::vector<uint16_t>{11});
+    CHECK(ids(stretch(font, vertical, PrFontMathAxis_Vertical, 0.5f, &info)) == Array<uint16_t>({4}));
+    CHECK(ids(stretch(font, vertical, PrFontMathAxis_Vertical, 1.5f, &info)) == Array<uint16_t>({7}));
+    CHECK(ids(stretch(font, vertical, PrFontMathAxis_Vertical, 4, &info)) == Array<uint16_t>({11}));
     CHECK(info.ascent == 4);
 
     // 4.5em: one extender after the 3em part, overlapping by half an em.
-    std::vector<PrFontGlyph> glyphs = stretch(font, vertical, PrFontMathAxis_Vertical, 4.5f, &info);
+    Array<PrFontGlyph> glyphs = stretch(font, vertical, PrFontMathAxis_Vertical, 4.5f, &info);
     CHECK(info.kind == PrFontMathStretchKind_Assembly);
-    CHECK(ids(glyphs) == std::vector<uint16_t>{9, 7});
+    CHECK(ids(glyphs) == Array<uint16_t>({9, 7}));
     CHECK(glyphs[1].position.y == doctest::Approx(-2.5));
     CHECK(info.ascent == doctest::Approx(4.5));
     CHECK(info.advance == 1);
 
     // 5em: two extenders, overlapping by the full em of their connectors.
     glyphs = stretch(font, vertical, PrFontMathAxis_Vertical, 5, &info);
-    CHECK(ids(glyphs) == std::vector<uint16_t>{9, 7, 7});
+    CHECK(ids(glyphs) == Array<uint16_t>({9, 7, 7}));
     CHECK(glyphs[1].position.y == -2);
     CHECK(glyphs[2].position.y == doctest::Approx(-3));
     CHECK(info.ascent == 5);
 
     // 6em: two extenders, overlapping by half an em.
     glyphs = stretch(font, vertical, PrFontMathAxis_Vertical, 6, &info);
-    CHECK(ids(glyphs) == std::vector<uint16_t>{9, 7, 7});
+    CHECK(ids(glyphs) == Array<uint16_t>({9, 7, 7}));
     CHECK(glyphs[1].position.y == doctest::Approx(-2.5));
     CHECK(glyphs[2].position.y == doctest::Approx(-4));
     CHECK(info.ascent == 6);
@@ -496,9 +498,9 @@ TEST_CASE("WPT's stretchy font stretches by its variants and its assembly to exa
 
     // 10em horizontally: five extenders, overlapping by 0.6em.
     glyphs = stretch(font, horizontal, PrFontMathAxis_Horizontal, 10, &info);
-    CHECK(ids(glyphs) == std::vector<uint16_t>{10, 8, 8, 8, 8, 8});
+    CHECK(ids(glyphs) == Array<uint16_t>({10, 8, 8, 8, 8, 8}));
     const float lefts[] = {0, 2.4f, 3.8f, 5.2f, 6.6f, 8};
-    for (size_t i = 0; i < glyphs.size(); ++i) {
+    for (uint32_t i = 0; i < glyphs.count(); ++i) {
         CHECK(glyphs[i].position.x == doctest::Approx(lefts[i]));
         CHECK(glyphs[i].position.y == 0);
     }
@@ -507,7 +509,7 @@ TEST_CASE("WPT's stretchy font stretches by its variants and its assembly to exa
     CHECK(info.descent == 0);
 
     // A glyph with variants and no assembly stretches no further than its largest variant.
-    CHECK(ids(stretch(font, base, PrFontMathAxis_Vertical, 6, &info)) == std::vector<uint16_t>{11});
+    CHECK(ids(stretch(font, base, PrFontMathAxis_Vertical, 6, &info)) == Array<uint16_t>({11}));
     CHECK(info.kind == PrFontMathStretchKind_Glyph);
     CHECK(info.ascent == 4);
 
@@ -516,8 +518,8 @@ TEST_CASE("WPT's stretchy font stretches by its variants and its assembly to exa
     CHECK(info.kind == PrFontMathStretchKind_None);
 
     // Sizes that are not finite stretch to nothing, or to the most repeats.
-    CHECK(ids(stretch(font, vertical, PrFontMathAxis_Vertical, -1, &info)) == std::vector<uint16_t>{4});
-    CHECK(ids(stretch(font, vertical, PrFontMathAxis_Vertical, kPrF32Nan, &info)) == std::vector<uint16_t>{4});
+    CHECK(ids(stretch(font, vertical, PrFontMathAxis_Vertical, -1, &info)) == Array<uint16_t>({4}));
+    CHECK(ids(stretch(font, vertical, PrFontMathAxis_Vertical, kPrF32Nan, &info)) == Array<uint16_t>({4}));
     uint32_t most = prFontMathGlyphStretch(font, vertical, PrFontMathAxis_Vertical, kPrF32Infinity, &info, nullptr, 0);
     CHECK(most == 1 + 0xFFFF);
     CHECK(info.kind == PrFontMathStretchKind_Assembly);
@@ -529,8 +531,8 @@ TEST_CASE("an assembly of unequal connectors, from WPT's asymmetric stretchy fon
     uint16_t paren = prFontCodePointGlyph(font, ')');
     PrFontMathStretchInfo info{};
     // Three extenders of 2em after a 3em part make 9em, and 7em needs an overlap of 2/3em, which the connectors allow.
-    std::vector<PrFontGlyph> glyphs = stretch(font, paren, PrFontMathAxis_Vertical, 7, &info);
-    CHECK(glyphs.size() == 4);
+    Array<PrFontGlyph> glyphs = stretch(font, paren, PrFontMathAxis_Vertical, 7, &info);
+    CHECK(glyphs.count() == 4);
     CHECK(info.ascent == doctest::Approx(7));
     CHECK(glyphs[3].position.y == doctest::Approx(-(3 + 2 * 2 - 3 * 2.0 / 3)));
     CHECK(info.advance == 2);
@@ -540,7 +542,7 @@ TEST_CASE("an assembly of unequal connectors, from WPT's asymmetric stretchy fon
 }
 
 TEST_CASE("a font without MATH takes MathML Core's fallbacks, derived from its metrics") {
-    const PrFont* font = fromBytes(readPath(std::string(PR_FONTS_DIR) + "/NotoSans[wdth,wght].ttf"));
+    const PrFont* font = fromBytes(fontFile("NotoSans[wdth,wght].ttf"));
     CHECK_FALSE(prFontHasMath(font));
     PrFontMetrics m = prFontMetrics(font);
     float rule = m.underlineThickness;
@@ -577,7 +579,7 @@ TEST_CASE("a font without MATH takes MathML Core's fallbacks, derived from its m
 
     // The fallbacks follow the metrics of a derived font: its instance and its size-adjust, except for lengths that
     // MathML Core gives in ems of the font size.
-    const PrFont* flex = fromBytes(readPath(std::string(PR_FONTS_DIR) + "/RobotoFlex.ttf"));
+    const PrFont* flex = fromBytes(fontFile("RobotoFlex.ttf"));
     PrFontVariation wide{PR_FONT_TAG('w', 'g', 'h', 't'), 900};
     PrFontDerivation d = prFontDerivationDefault();
     d.variations = &wide;
@@ -594,7 +596,7 @@ TEST_CASE("a font without MATH takes MathML Core's fallbacks, derived from its m
 TEST_CASE("a cut-in kern applies between the correction heights that bound the height asked") {
     // A MATH table with only a MathKernInfo: glyph 1 kerns at its top right by -10 units below 100, -20 up to 300, and
     // -30 above.
-    std::vector<uint8_t> math;
+    Array<uint8_t> math;
     put32(math, 0x00010000);
     put16(math, 0);                 // MathConstants
     put16(math, 10);                // MathGlyphInfo
@@ -618,7 +620,7 @@ TEST_CASE("a cut-in kern applies between the correction heights that bound the h
         put16(math, uint16_t(value));
         put16(math, 0);
     }
-    std::vector<uint8_t> ahem = readPath(std::string(PR_FONTS_DIR) + "/Ahem.ttf");
+    Array<uint8_t> ahem = fontFile("Ahem.ttf");
     const PrFont* font = fromBytes(withTable(ahem, kMath, math));
     REQUIRE(prFontHasMath(font));
     float em = float(prFontMetrics(font).unitsPerEm);
@@ -633,8 +635,9 @@ TEST_CASE("a cut-in kern applies between the correction heights that bound the h
     CHECK(prFontMathConstants(font)->scriptPercentScaleDown == doctest::Approx(0.71));
 
     // Cut short inside the MathKern, the kern reads the heights that fit, or none.
-    for (size_t size = math.size(); size > 30; --size) {
-        std::vector<uint8_t> cut(math.begin(), math.begin() + ptrdiff_t(size));
+    for (uint32_t size = math.count(); size > 30; --size) {
+        Array<uint8_t> cut;
+        cut.append(math.data(), size);
         const PrFont* truncated = fromBytes(withTable(ahem, kMath, cut));
         float kern = prFontMathGlyphKern(truncated, 1, PrFontMathCorner_TopRight, 1);
         CHECK(kern <= 0);
@@ -645,13 +648,14 @@ TEST_CASE("a cut-in kern applies between the correction heights that bound the h
 }
 
 TEST_CASE("a truncated MATH table reads what is left and falls back for the rest") {
-    std::vector<uint8_t> bytes = newCmBytes();
-    std::vector<uint8_t> math = tableOf(bytes, kMath);
-    REQUIRE(math.size() > 1000);
+    Array<uint8_t> bytes = newCmBytes();
+    Array<uint8_t> math = tableOf(bytes, kMath);
+    REQUIRE(math.count() > 1000);
     uint16_t constants = be16(math.data() + 4);
     // MathConstants cut after axisHeight: the constants before it read, and those after it fall back.
     {
-        std::vector<uint8_t> cut(math.begin(), math.begin() + constants + 16);
+        Array<uint8_t> cut;
+        cut.append(math.data(), constants + 16u);
         const PrFont* font = fromBytes(withTable(bytes, kMath, cut));
         const PrFontMathConstants& c = *prFontMathConstants(font);
         CHECK(c.scriptPercentScaleDown == doctest::Approx(0.70));
@@ -663,26 +667,30 @@ TEST_CASE("a truncated MATH table reads what is left and falls back for the rest
     }
     // Offsets past the end, and every length of the table, read without fault. The glyphs are those of the tests above,
     // and one past the font.
-    std::vector<size_t> sizes = {0, 1, 4, 9, 10, 11, 100, 213, 214, 215};
-    for (size_t size = 300; size < math.size(); size += 997)
-        sizes.push_back(size);
-    sizes.push_back(math.size() - 1);
-    std::vector<uint8_t> outOfRange = math;
-    for (size_t at = 4; at < 10; at += 2)
+    Array<uint32_t> sizes({0, 1, 4, 9, 10, 11, 100, 213, 214, 215});
+    for (uint32_t size = 300; size < math.count(); size += 997)
+        sizes.push(size);
+    sizes.push(math.count() - 1);
+    Array<uint8_t> outOfRange = math;
+    for (uint32_t at = 4; at < 10; at += 2)
         set16(outOfRange, at, 0xFFF0);
-    for (size_t size : sizes) {
+    const uint16_t glyphs[] = {9, 71, 1006, 2981, 0xFFFF};
+    const PrFontMathAxis axes[] = {PrFontMathAxis_Horizontal, PrFontMathAxis_Vertical};
+    for (uint32_t size : sizes) {
         CAPTURE(size);
-        std::vector<uint8_t> cut(math.begin(), math.begin() + ptrdiff_t(std::min(size, math.size())));
-        for (const std::vector<uint8_t>* table : {&cut, &outOfRange}) {
+        Array<uint8_t> cut;
+        cut.append(math.data(), min(size, math.count()));
+        const Array<uint8_t>* const tables[] = {&cut, &outOfRange};
+        for (const Array<uint8_t>* table : tables) {
             const PrFont* font = fromBytes(withTable(bytes, kMath, *table));
             CHECK(prFontMathConstants(font)->scriptScriptPercentScaleDown > 0);
-            for (uint16_t glyph : {uint16_t(9), uint16_t(71), uint16_t(1006), uint16_t(2981), uint16_t(0xFFFF)}) {
+            for (uint16_t glyph : glyphs) {
                 prFontMathGlyphItalicsCorrection(font, glyph);
                 prFontMathGlyphTopAccentAttachment(font, glyph);
                 prFontMathGlyphIsExtendedShape(font, glyph);
                 prFontMathGlyphKern(font, glyph, PrFontMathCorner_BottomRight, 0.5f);
                 prFontMathGlyphPreferredAdvance(font, glyph);
-                for (PrFontMathAxis axis : {PrFontMathAxis_Horizontal, PrFontMathAxis_Vertical}) {
+                for (PrFontMathAxis axis : axes) {
                     uint32_t parts = prFontMathGlyphPartCount(font, glyph, axis);
                     for (uint32_t i = 0; i < parts; ++i)
                         prFontMathGlyphPart(font, glyph, axis, i);

@@ -1,12 +1,15 @@
 #include "pr/atomic.h"
+#include "pr/integer.h"
+#include "pr/mem.h"
 #include "pr/mutex.h"
 #include "pr/process.h"
+#include "pr/span.h"
+#include "pr/string.h"
+#include "pr/string_ops.h"
 #include "pr/thread.h"
 #include "pr/time.h"
 
 #include "tools/harness/test.h"
-
-#include <string>
 
 #if !defined(_WIN32)
 #include <sys/resource.h>
@@ -31,12 +34,12 @@ struct Launcher {
     }
 
     // Starts `program` with `arguments`.
-    PrProcess* start(PrStringView program, std::initializer_list<PrStringView> arguments,
+    PrProcess* start(PrStringView program, Span<const PrStringView> arguments,
             PrProcessErrors errors = PrProcessErrors_Discard, PrStringView directory = {}) {
         PrProcessDesc desc{
             .program = program,
-            .arguments = arguments.begin(),
-            .argumentCount = uint32_t(arguments.size()),
+            .arguments = arguments.data(),
+            .argumentCount = arguments.count(),
             .directory = directory,
             .errors = errors,
         };
@@ -47,13 +50,13 @@ struct Launcher {
 };
 
 // Reads `stream` until the process exits and its output ends, and returns what it read.
-std::string drain(PrProcess* process, PrProcessStream stream = PrProcessStream_Output) {
-    std::string text;
+String drain(PrProcess* process, PrProcessStream stream = PrProcessStream_Output) {
+    String text;
     double end = prTimeMonotonicMilliseconds() + kPatience;
     for (;;) {
         uint8_t chunk[4096];
         size_t got = prProcessRead(process, stream, chunk, sizeof(chunk));
-        text.append(reinterpret_cast<const char*>(chunk), got);
+        text.append(PrStringView{reinterpret_cast<const char*>(chunk), got});
         PrProcessInfo info = prProcessInfo(process);
         if (got == 0 && info.exited && info.outputEnded)
             break;
@@ -65,7 +68,7 @@ std::string drain(PrProcess* process, PrProcessStream stream = PrProcessStream_O
     if (stream == PrProcessStream_Error) {
         uint8_t chunk[4096];
         while (size_t got = prProcessRead(process, stream, chunk, sizeof(chunk)))
-            text.append(reinterpret_cast<const char*>(chunk), got);
+            text.append(PrStringView{reinterpret_cast<const char*>(chunk), got});
     }
     return text;
 }
@@ -85,12 +88,11 @@ void countWake(void* PR_NULLABLE context) {
 
 // Starts `program` with `arguments` on an 80 by 24 terminal. It runs in `directory`, or in the launcher's directory if
 // `directory` is the null view.
-PrProcess* startOnTerminal(Launcher& l, PrStringView program, std::initializer_list<PrStringView> arguments,
-        PrStringView directory = {}) {
+PrProcess* startOnTerminal(Launcher& l, PrStringView program, Span<const PrStringView> arguments, PrStringView directory = {}) {
     PrProcessDesc desc{
         .program = program,
-        .arguments = arguments.begin(),
-        .argumentCount = uint32_t(arguments.size()),
+        .arguments = arguments.data(),
+        .argumentCount = arguments.count(),
         .directory = directory,
         .streams = PrProcessStreams_Terminal,
         .terminalExtent = {80, 24},
@@ -101,13 +103,13 @@ PrProcess* startOnTerminal(Launcher& l, PrStringView program, std::initializer_l
 }
 
 // Reads the output until it contains `text`, and returns everything it read.
-std::string readUntil(PrProcess* process, const std::string& text) {
-    std::string read;
+String readUntil(PrProcess* process, PrStringView text) {
+    String read;
     double end = prTimeMonotonicMilliseconds() + kPatience;
-    while (read.find(text) == std::string::npos) {
+    while (!prStringContains(read, text)) {
         uint8_t chunk[4096];
         size_t got = prProcessRead(process, PrProcessStream_Output, chunk, sizeof(chunk));
-        read.append(reinterpret_cast<const char*>(chunk), got);
+        read.append(PrStringView{reinterpret_cast<const char*>(chunk), got});
         if (got == 0)
             prThreadSleep(1);
         REQUIRE(prTimeMonotonicMilliseconds() < end);
@@ -119,7 +121,7 @@ std::string readUntil(PrProcess* process, const std::string& text) {
 // process, once.
 struct Received {
     PrMutex mutex;
-    std::string text;
+    String text;
     uint32_t calls = 0;
     bool answered = false;
     size_t answerAfter = 0;         // the bytes past "ready" that arrive before the answer
@@ -130,9 +132,9 @@ struct Received {
     Received(const Received&) = delete;
     Received& operator=(const Received&) = delete;
 
-    std::string taken() {
+    String taken() {
         prMutexLock(&mutex);
-        std::string copy = text;
+        String copy = text;
         prMutexUnlock(&mutex);
         return copy;
     }
@@ -141,11 +143,11 @@ struct Received {
 void receive(void* PR_NULLABLE context, PrProcess* process, PrProcessStream stream, PrByteView bytes) {
     Received* received = static_cast<Received*>(context);
     prMutexLock(&received->mutex);
-    received->text.append(reinterpret_cast<const char*>(bytes.data), bytes.size);
+    received->text.append(prStringFromBytes(bytes));
     received->calls += stream == PrProcessStream_Output ? 1 : 1000000;
-    size_t ready = received->text.find("ready");
-    bool answer = !received->answered && ready != std::string::npos &&
-        received->text.size() >= ready + 5 + received->answerAfter;
+    PrStringView text = received->text;
+    size_t ready = prStringFind(text, "ready");
+    bool answer = !received->answered && ready != text.size && text.size >= ready + 5 + received->answerAfter;
     received->answered = received->answered || answer;
     prMutexUnlock(&received->mutex);
     if (answer)
@@ -215,7 +217,8 @@ TEST_CASE("process: backends are named, and Default creates the first that the b
 
 TEST_CASE("process: output arrives, and the exit status follows") {
     Launcher l;
-    PrProcess* process = l.start("sh", {"-c", "printf hello; exit 3"});
+    const PrStringView arguments[] = {"-c", "printf hello; exit 3"};
+    PrProcess* process = l.start("sh", arguments);
     CHECK(drain(process) == "hello");
     PrProcessInfo info = prProcessInfo(process);
     CHECK(info.exited);
@@ -238,7 +241,8 @@ TEST_CASE("process: input reaches the process, and closing it ends what the proc
 
 TEST_CASE("process: standard error is a stream of its own when it is a pipe") {
     Launcher l;
-    PrProcess* process = l.start("sh", {"-c", "printf out; printf err >&2"}, PrProcessErrors_Pipe);
+    const PrStringView arguments[] = {"-c", "printf out; printf err >&2"};
+    PrProcess* process = l.start("sh", arguments, PrProcessErrors_Pipe);
     CHECK(drain(process) == "out");
     CHECK(drain(process, PrProcessStream_Error) == "err");
     prProcessDestroy(process);
@@ -246,21 +250,27 @@ TEST_CASE("process: standard error is a stream of its own when it is a pipe") {
 
 TEST_CASE("process: output past what a process holds waits for its reader, and none is lost") {
     Launcher l;
-    PrProcess* process = l.start("head", {"-c", "3000000", "/dev/zero"});
+    const PrStringView arguments[] = {"-c", "3000000", "/dev/zero"};
+    PrProcess* process = l.start("head", arguments);
     // Nothing is read until the process has had time to fill what it may hold.
     prThreadSleep(50);
-    CHECK(drain(process).size() == 3000000);
+    CHECK(drain(process).count() == 3000000);
     prProcessDestroy(process);
 }
 
 TEST_CASE("process: input larger than a pipe holds arrives whole") {
     Launcher l;
-    PrProcess* process = l.start("wc", {"-c"});
-    std::string input(1000000, 'x');
-    prProcessWrite(process, PrByteView{reinterpret_cast<const uint8_t*>(input.data()), input.size()});
+    const PrStringView arguments[] = {"-c"};
+    PrProcess* process = l.start("wc", arguments);
+    Array<uint8_t> input(1000000);
+    prMemFill(input.data(), 'x', input.count());
+    prProcessWrite(process, input);
     prProcessCloseInput(process);
-    std::string counted = drain(process);
-    CHECK(std::stoul(counted) == 1000000);
+    String counted = drain(process);
+    PrStringView digits = prStringTrim(counted);
+    uint64_t count = 0;
+    CHECK(prU64ParsePrefix(digits.data, digits.size, &count, 10) != 0);
+    CHECK(count == 1000000);
     prProcessDestroy(process);
 }
 
@@ -282,7 +292,8 @@ TEST_CASE("process: a program that cannot be found is NotFound") {
 
 TEST_CASE("process: a killed process ends by its signal") {
     Launcher l;
-    PrProcess* process = l.start("sleep", {"30"});
+    const PrStringView arguments[] = {"30"};
+    PrProcess* process = l.start("sleep", arguments);
     prProcessKill(process);
     PrProcessInfo info = waitForExit(process);
     CHECK(info.signaled);
@@ -292,7 +303,8 @@ TEST_CASE("process: a killed process ends by its signal") {
 
 TEST_CASE("process: destroying a running process ends it") {
     Launcher l;
-    PrProcess* process = l.start("sleep", {"30"});
+    const PrStringView arguments[] = {"30"};
+    PrProcess* process = l.start("sleep", arguments);
     double before = prTimeMonotonicMilliseconds();
     prProcessDestroy(process);
     CHECK(prTimeMonotonicMilliseconds() - before < 5000);
@@ -340,7 +352,7 @@ TEST_CASE("process: a receive function takes output past what a process holds fo
     Atomic<uint32_t> wakes{};
     PrProcess* process = nullptr;
     receiveFrom(l, "head -c 3000000 /dev/zero", PrProcessStreams_Pipes, &received, &wakes, &process);
-    CHECK(received.taken().size() == 3000000);
+    CHECK(received.taken().count() == 3000000);
     CHECK(received.calls > 1);
     CHECK(received.calls < 1000000);
     prProcessDestroy(process);
@@ -358,7 +370,7 @@ TEST_CASE("process: what a receive function writes during a flood reaches a prog
     PrProcessInfo info = receiveFrom(l, "stty -echo; printf ready; yes & read line; kill $!; wait; test \"$line\" = hello",
         PrProcessStreams_Terminal, &received, &wakes, &process);
     CHECK(info.code == 0);
-    CHECK(received.taken().size() > received.answerAfter);
+    CHECK(received.taken().count() > received.answerAfter);
     prProcessDestroy(process);
 }
 
@@ -383,10 +395,11 @@ TEST_CASE("process: the environment sets and replaces variables, and keeps the l
 TEST_CASE("process: a process on a terminal has it as its controlling terminal, at its extent") {
     Launcher l;
     // Only a controlling terminal has a foreground process group, and the shell leads it.
-    PrProcess* process = startOnTerminal(l, "sh", {
+    const PrStringView arguments[] = {
         "-c", "test -t 0 && test -t 2 && stty size && "
             "test \"$(ps -o tpgid= -p $$ | tr -d ' ')\" = \"$$\" && echo controlled",
-    });
+    };
+    PrProcess* process = startOnTerminal(l, "sh", arguments);
     // The terminal ends each line with CR LF.
     CHECK(drain(process) == "24 80\r\ncontrolled\r\n");
     CHECK(prProcessInfo(process).code == 0);
@@ -397,10 +410,10 @@ TEST_CASE("process: a terminal's pixel extent reaches its program, at the start 
     Launcher l;
     // stty does not print the pixel size, so Python reads it. If Python is missing, the program prints "none" and the
     // test checks nothing more.
-    std::string script = "import fcntl, struct, sys, termios\n"
+    PrStringView script = "import fcntl, struct, sys, termios\n"
         "rows, columns, width, height = struct.unpack('HHHH', fcntl.ioctl(0, termios.TIOCGWINSZ, b'\\0' * 8))\n"
         "print(columns, rows, width, height)\n";
-    std::string command = "if command -v python3 >/dev/null; then python3 -c \"$0\"; read line; python3 -c \"$0\"; "
+    PrStringView command = "if command -v python3 >/dev/null; then python3 -c \"$0\"; read line; python3 -c \"$0\"; "
         "else echo none; fi";
     PrStringView arguments[] = {"-c", command, script};
     PrProcessDesc desc{
@@ -413,26 +426,27 @@ TEST_CASE("process: a terminal's pixel extent reaches its program, at the start 
     };
     PrProcess* process = nullptr;
     REQUIRE(prProcessLaunch(l.launcher, &desc, &process) == PrStatus_Ok);
-    std::string first = readUntil(process, "\r\n");
+    String first = readUntil(process, "\r\n");
     if (first != "none\r\n") {
         CHECK(first == "80 24 640 480\r\n");
         prProcessTerminalResize(process, PrUVec2{100, 30}, PrUVec2{1000, 600});
         prProcessWrite(process, PrByteView{reinterpret_cast<const uint8_t*>("\n"), 1});
-        CHECK(readUntil(process, "100 30 1000 600\r\n").size() > 0);
+        CHECK(readUntil(process, "100 30 1000 600\r\n").count() > 0);
     }
     prProcessDestroy(process);
 }
 
 TEST_CASE("process: a job of an interactive shell on a terminal is signaled when the terminal resizes") {
     Launcher l;
-    PrProcess* process = startOnTerminal(l, "sh", {"-i"});
+    const PrStringView arguments[] = {"-i"};
+    PrProcess* process = startOnTerminal(l, "sh", arguments);
     // The shell puts the job in its own process group and makes that the terminal's foreground group. The job computes
     // the marker that it prints on SIGWINCH, so the echoed command line never contains it.
-    std::string job = "sh -c 'trap \"echo W\\$((1+1))\" WINCH; echo ready; while :; do sleep 0.05; done'\n";
-    prProcessWrite(process, PrByteView{reinterpret_cast<const uint8_t*>(job.data()), job.size()});
+    PrStringView job = "sh -c 'trap \"echo W\\$((1+1))\" WINCH; echo ready; while :; do sleep 0.05; done'\n";
+    prProcessWrite(process, prStringBytes(job));
     readUntil(process, "ready\r\n");
     prProcessTerminalResize(process, PrUVec2{100, 30}, PrUVec2{800, 480});
-    CHECK(readUntil(process, "W2\r\n").size() > 0);
+    CHECK(readUntil(process, "W2\r\n").count() > 0);
     prProcessDestroy(process);
 }
 
@@ -459,18 +473,20 @@ TEST_CASE("process: a program on a terminal holds no descriptor of the launcher'
     REQUIRE(pipe(ends) == 0);
     REQUIRE(dup2(ends[0], 100) == 100);
     REQUIRE(dup2(ends[1], high) == high);
-    std::string script = "for n in 100 " + std::to_string(high) + "; do [ -e /dev/fd/$n ] && echo held $n; done; " +
-        "echo checked";
-    PrProcess* process = startOnTerminal(l, "sh", {"-c", script.c_str()});
+    String script = format("for n in 100 {}; do [ -e /dev/fd/$n ] && echo held $n; done; echo checked", high);
+    const PrStringView arguments[] = {"-c", script};
+    PrProcess* process = startOnTerminal(l, "sh", arguments);
     CHECK(drain(process) == "checked\r\n");
     prProcessDestroy(process);
-    for (int descriptor : {ends[0], ends[1], 100, high})
+    const int descriptors[] = {ends[0], ends[1], 100, high};
+    for (int descriptor : descriptors)
         close(descriptor);
 }
 
 TEST_CASE("process: a program's exit is seen while a job that it left holds its output open") {
     Launcher l;
-    PrProcess* process = l.start("sh", {"-c", "sleep 30 & exit 4"});
+    const PrStringView arguments[] = {"-c", "sleep 30 & exit 4"};
+    PrProcess* process = l.start("sh", arguments);
     PrProcessInfo info = waitForExit(process);
     CHECK(info.code == 4);
     CHECK_FALSE(info.outputEnded);
@@ -481,7 +497,8 @@ TEST_CASE("process: a program on a terminal exits while a job that it left holds
     Launcher l;
     // The job ignores the SIGHUP that the program's exit sends it, and holds the terminal open longer than the test
     // waits.
-    PrProcess* process = startOnTerminal(l, "sh", {"-c", "trap '' HUP; sleep 30 & echo started; exit 4"});
+    const PrStringView arguments[] = {"-c", "trap '' HUP; sleep 30 & echo started; exit 4"};
+    PrProcess* process = startOnTerminal(l, "sh", arguments);
     CHECK(drain(process) == "started\r\n");
     CHECK(prProcessInfo(process).code == 4);
     prProcessDestroy(process);
@@ -489,12 +506,11 @@ TEST_CASE("process: a program on a terminal exits while a job that it left holds
 
 TEST_CASE("process: resizing a terminal signals the process, which reads the new extent") {
     Launcher l;
-    PrProcess* process = startOnTerminal(l, "sh", {
-        "-c", "trap 'stty size; exit' WINCH; echo ready; while :; do sleep 0.01; done",
-    });
+    const PrStringView arguments[] = {"-c", "trap 'stty size; exit' WINCH; echo ready; while :; do sleep 0.01; done"};
+    PrProcess* process = startOnTerminal(l, "sh", arguments);
     readUntil(process, "ready\r\n");
     prProcessTerminalResize(process, PrUVec2{100, 30}, PrUVec2{800, 480});
-    CHECK(readUntil(process, "30 100\r\n").size() > 0);
+    CHECK(readUntil(process, "30 100\r\n").count() > 0);
     CHECK(waitForExit(process).code == 0);
     prProcessDestroy(process);
 }
@@ -503,31 +519,33 @@ TEST_CASE("process: destroying a process whose terminal holds all the output it 
     Launcher l;
     // The terminal fills, and the process waits for a reader. Some systems hold an exiting process until its terminal's
     // output drains, and nothing reads that output once destruction begins.
-    PrProcess* process = startOnTerminal(l, "sh", {"-c", "head -c 8000000 /dev/zero; sleep 10"});
+    const PrStringView arguments[] = {"-c", "head -c 8000000 /dev/zero; sleep 10"};
+    PrProcess* process = startOnTerminal(l, "sh", arguments);
     prThreadSleep(200);
     prProcessDestroy(process);
 }
 
 TEST_CASE("process: a terminal's foreground directory is its foreground job's, and the shell's once the job ends") {
     Launcher l;
-    PrProcess* process = startOnTerminal(l, "sh", {"-i"}, "/");
+    const PrStringView arguments[] = {"-i"};
+    PrProcess* process = startOnTerminal(l, "sh", arguments, "/");
     // The job prints its directory after a marker that it computes, so the echoed command line never contains it.
-    std::string job = "sh -c 'cd /tmp && echo \"P$((1+1)):$(pwd -P):\" && sleep 5'\n";
-    prProcessWrite(process, PrByteView{reinterpret_cast<const uint8_t*>(job.data()), job.size()});
-    std::string read = readUntil(process, "P2:");
-    size_t start = read.find("P2:") + 3;
-    if (read.find(":\r\n", start) == std::string::npos)
-        read += readUntil(process, ":\r\n");
-    std::string expected = read.substr(start, read.find(":\r\n", start) - start);
-    REQUIRE(!expected.empty());
+    PrStringView job = "sh -c 'cd /tmp && echo \"P$((1+1)):$(pwd -P):\" && sleep 5'\n";
+    prProcessWrite(process, prStringBytes(job));
+    String read = readUntil(process, "P2:");
+    size_t start = prStringFind(read, "P2:") + 3;
+    auto rest = [&] { return prStringSlice(read, start, read.count() - start); };
+    if (!prStringContains(rest(), ":\r\n"))
+        read.append(readUntil(process, ":\r\n"));
+    String expected = prStringSlice(read, start, prStringFind(rest(), ":\r\n"));
+    REQUIRE(!expected.isEmpty());
 
     // Returns the foreground directory once it equals `directory`, or its last value if the wait times out.
-    auto waitFor = [&](const std::string& directory) {
+    auto waitFor = [&](PrStringView directory) {
         double end = prTimeMonotonicMilliseconds() + kPatience;
         for (;;) {
             PrRawString found = prProcessTerminalForegroundDirectory(process);
-            std::string text(prRawStringView(&found).data, prRawStringView(&found).size);
-            prRawStringReset(&found);
+            String text = String::adopt(found);
             if (text == directory || prTimeMonotonicMilliseconds() >= end)
                 return text;
             prThreadSleep(2);
@@ -540,7 +558,8 @@ TEST_CASE("process: a terminal's foreground directory is its foreground job's, a
     prProcessDestroy(process);
 
     // A process over pipes has no terminal.
-    PrProcess* piped = l.start("sleep", {"5"});
+    const PrStringView pipedArguments[] = {"5"};
+    PrProcess* piped = l.start("sleep", pipedArguments);
     PrRawString none = prProcessTerminalForegroundDirectory(piped);
     CHECK(prRawStringIsNull(&none));
     prProcessDestroy(piped);
@@ -548,10 +567,12 @@ TEST_CASE("process: a terminal's foreground directory is its foreground job's, a
 
 TEST_CASE("process: writing to a process that stopped reading drops the input") {
     Launcher l;
-    PrProcess* process = l.start("sh", {"-c", "exec 0<&-; sleep 0.05"});
-    std::string input(200000, 'x');
+    const PrStringView arguments[] = {"-c", "exec 0<&-; sleep 0.05"};
+    PrProcess* process = l.start("sh", arguments);
+    Array<uint8_t> input(200000);
+    prMemFill(input.data(), 'x', input.count());
     for (int i = 0; i < 10; ++i)
-        prProcessWrite(process, PrByteView{reinterpret_cast<const uint8_t*>(input.data()), input.size()});
+        prProcessWrite(process, input);
     waitForExit(process);
     CHECK(prProcessInfo(process).code == 0);
     prProcessDestroy(process);
@@ -564,7 +585,8 @@ TEST_CASE("process: writing to a process that stopped reading drops the input") 
 
 TEST_CASE("process: output arrives, and the exit status follows") {
     Launcher l;
-    PrProcess* process = l.start("cmd", {"/c", "echo hello& exit 3"});
+    const PrStringView arguments[] = {"/c", "echo hello& exit 3"};
+    PrProcess* process = l.start("cmd", arguments);
     CHECK(drain(process) == "hello\r\n");
     PrProcessInfo info = prProcessInfo(process);
     CHECK(info.exited);
@@ -587,7 +609,8 @@ TEST_CASE("process: input reaches the process, and closing it ends what the proc
 
 TEST_CASE("process: standard error is a stream of its own when it is a pipe") {
     Launcher l;
-    PrProcess* process = l.start("cmd", {"/c", "echo out& echo err 1>&2"}, PrProcessErrors_Pipe);
+    const PrStringView arguments[] = {"/c", "echo out& echo err 1>&2"};
+    PrProcess* process = l.start("cmd", arguments, PrProcessErrors_Pipe);
     CHECK(drain(process) == "out\r\n");
     CHECK(drain(process, PrProcessStream_Error) == "err \r\n");
     prProcessDestroy(process);
@@ -595,7 +618,8 @@ TEST_CASE("process: standard error is a stream of its own when it is a pipe") {
 
 TEST_CASE("process: a killed process exits with 1") {
     Launcher l;
-    PrProcess* process = l.start("cmd", {"/c", "set /p line="});
+    const PrStringView arguments[] = {"/c", "set /p line="};
+    PrProcess* process = l.start("cmd", arguments);
     prProcessKill(process);
     PrProcessInfo info = waitForExit(process);
     CHECK(!info.signaled);
@@ -656,40 +680,44 @@ TEST_CASE("process: a receive function takes the output as it arrives, in order,
 
 TEST_CASE("process: a program on a terminal writes to it, and its output ends once it exits") {
     Launcher l;
-    PrProcess* process = startOnTerminal(l, "cmd", {"/c", "echo hello& exit 3"});
-    CHECK(drain(process).find("hello\r\n") != std::string::npos);
+    const PrStringView arguments[] = {"/c", "echo hello& exit 3"};
+    PrProcess* process = startOnTerminal(l, "cmd", arguments);
+    CHECK(prStringContains(drain(process), "hello\r\n"));
     CHECK(prProcessInfo(process).code == 3);
     prProcessDestroy(process);
 }
 
 TEST_CASE("process: input reaches a program on a terminal") {
     Launcher l;
-    PrProcess* process = startOnTerminal(l, "cmd", {"/v:on", "/c", "set /p line=ready& echo [got !line!]"});
+    const PrStringView arguments[] = {"/v:on", "/c", "set /p line=ready& echo [got !line!]"};
+    PrProcess* process = startOnTerminal(l, "cmd", arguments);
     readUntil(process, "ready");
     // A terminal sends a carriage return for the Enter key.
     prProcessWrite(process, PrByteView{reinterpret_cast<const uint8_t*>("hello\r"), 6});
-    CHECK(readUntil(process, "[got hello]").size() > 0);
+    CHECK(readUntil(process, "[got hello]").count() > 0);
     CHECK(waitForExit(process).code == 0);
     prProcessDestroy(process);
 }
 
 TEST_CASE("process: a program on a terminal goes on running once its input is closed") {
     Launcher l;
-    PrProcess* process = startOnTerminal(l, "cmd", {"/c", "ping -n 2 127.0.0.1 >nul& echo alive& exit 5"});
+    const PrStringView arguments[] = {"/c", "ping -n 2 127.0.0.1 >nul& echo alive& exit 5"};
+    PrProcess* process = startOnTerminal(l, "cmd", arguments);
     prProcessCloseInput(process);
     prProcessWrite(process, PrByteView{reinterpret_cast<const uint8_t*>("dropped\r"), 8});
-    CHECK(drain(process).find("alive") != std::string::npos);
+    CHECK(prStringContains(drain(process), "alive"));
     CHECK(prProcessInfo(process).code == 5);
     prProcessDestroy(process);
 }
 
 TEST_CASE("process: resizing a terminal changes the extent that its program reads") {
     Launcher l;
-    PrProcess* process = startOnTerminal(l, "cmd", {"/c", "mode con& set /p line=& mode con"});
+    const PrStringView arguments[] = {"/c", "mode con& set /p line=& mode con"};
+    PrProcess* process = startOnTerminal(l, "cmd", arguments);
     readUntil(process, "Columns:        80");
     prProcessTerminalResize(process, PrUVec2{100, 30}, PrUVec2{800, 480});
     prProcessWrite(process, PrByteView{reinterpret_cast<const uint8_t*>("\r"), 1});
-    CHECK(readUntil(process, "Columns:        100").size() > 0);
+    CHECK(readUntil(process, "Columns:        100").count() > 0);
     CHECK(waitForExit(process).code == 0);
     prProcessDestroy(process);
 }
@@ -697,7 +725,8 @@ TEST_CASE("process: resizing a terminal changes the extent that its program read
 TEST_CASE("process: destroying a process whose terminal holds all the output it can ends the process") {
     Launcher l;
     // Nothing reads the output, so the pseudoconsole fills and waits for a reader.
-    PrProcess* process = startOnTerminal(l, "cmd", {"/c", "for /l %i in (1,1,1000000) do @echo %i"});
+    const PrStringView arguments[] = {"/c", "for /l %i in (1,1,1000000) do @echo %i"};
+    PrProcess* process = startOnTerminal(l, "cmd", arguments);
     prThreadSleep(200);
     double before = prTimeMonotonicMilliseconds();
     prProcessDestroy(process);
@@ -706,7 +735,8 @@ TEST_CASE("process: destroying a process whose terminal holds all the output it 
 
 TEST_CASE("process: a terminal's foreground directory is the null string, which a pseudoconsole does not report") {
     Launcher l;
-    PrProcess* process = startOnTerminal(l, "cmd", {"/c", "set /p line="});
+    const PrStringView arguments[] = {"/c", "set /p line="};
+    PrProcess* process = startOnTerminal(l, "cmd", arguments);
     PrRawString none = prProcessTerminalForegroundDirectory(process);
     CHECK(prRawStringIsNull(&none));
     prProcessDestroy(process);

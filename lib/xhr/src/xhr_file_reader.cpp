@@ -7,6 +7,7 @@
 #include "pr/base64.h"
 #include "pr/charset.h"
 #include "pr/memory.h"
+#include "pr/string_ops.h"
 #include "pr/text_buffer.h"
 
 #include "xhr/src/xhr.h"
@@ -36,9 +37,7 @@ void decodeText(PrXhrFileReader* reader, PrByteView bytes) {
         charset = PrCharset_Utf8;
     PrCharsetDecoder decoder = prCharsetDecoderMake(charset, 0);
     PrRawString decoded = prRawStringNull();
-    PrStringView text =
-        prCharsetDecodeView(&decoder, PrStringView{reinterpret_cast<const char*>(bytes.data), bytes.size},
-            PrCharsetInput_Final, &decoded);
+    PrStringView text = prCharsetDecodeView(&decoder, prStringFromBytes(bytes), PrCharsetInput_Final, &decoded);
     reader->text = prRawStringCopy(text);
     prRawStringReset(&decoded);
 }
@@ -67,7 +66,7 @@ void packageResult(PrXhrFileReader* reader) {
             PrStringView type = prFetchBlobType(reader->blob);
             prTextBufferAppend(&text, type.size != 0 ? type : PrStringView{"application/octet-stream"});
             prTextBufferAppend(&text, ";base64,");
-            PrStringView input{reinterpret_cast<const char*>(bytes.data), bytes.size};
+            PrStringView input = prStringFromBytes(bytes);
             size_t size = prBase64EncodedSize(bytes.size);
             char* encoded = static_cast<char*>(prMemoryAlloc(size != 0 ? size : 1));
             prBase64Encode(input, encoded, size);

@@ -4,11 +4,10 @@
 #include "pr/draw_list.h"
 #include "pr/draw_projection.h"
 #include "pr/float.h"
+#include "pr/string_ops.h"
 #include "pr/vec.h"
 
 #include "tools/harness/test.h"
-
-#include <string>
 
 namespace pr_impl {
 
@@ -141,7 +140,8 @@ TEST_CASE("a projection's tangent agrees with it at the center of the placed are
     PrMatrix3 plane = prMatrix3FromMatrix4(&seen);
     PrMatrix3 target = prMatrix3FromAffine2(toTarget);
     PrMatrix3 h = prMatrix3Concat(&plane, &target);
-    for (PrVec2 at : {PrVec2{0, -5}, PrVec2{0.1f, -5.1f}}) {
+    const PrVec2 points[] = {{0, -5}, {0.1f, -5.1f}};
+    for (PrVec2 at : points) {
         PrVec2 expected{};
         REQUIRE(prMatrix3MapPoint(&h, at, &expected));
         CHECK(nearPoint(prAffine2MapPoint(tangent, at), expected, 1e-2f));
@@ -221,9 +221,8 @@ TEST_CASE("a projected group is copied, dumped and bounded by its projected plan
 
     PrRawString text = prDrawListDump(list);
     PrStringView view = prRawStringView(&text);
-    std::string dumped(view.data, view.size);
+    CHECK(prStringStartsWith(view, "push-group -20 -20 20 20 opacity 1 projection 1 -0.358"));
     prRawStringReset(&text);
-    CHECK(dumped.find("push-group -20 -20 20 20 opacity 1 projection 1 -0.358") == 0);
     prDrawListRelease(list);
 }
 

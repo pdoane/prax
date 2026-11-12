@@ -6,49 +6,51 @@
 #include "pr/font_bundle.h"
 #include "pr/locale.h"
 #include "pr/locale_common.h"
+#include "pr/span.h"
+#include "pr/string.h"
+#include "pr/string_ops.h"
 #include "pr/text_font.h"
 
 #include "tools/harness/test.h"
-
-#include <initializer_list>
-#include <string>
 
 namespace pr_impl {
 
 namespace {
 
+using namespace pr;
+
 // Returns the family of the face that `name` matches in `set`, or empty if it matches none. If `name` is the keyword of
 // a generic family, it is matched as that generic family.
-std::string familyOf(PrFontSet* set, const char* name) {
+String familyOf(PrFontSet* set, const char* name) {
     PrFontGeneric generic = prFontGenericFromName(name);
     PrFontFamily asked = generic != PrFontGeneric_None ? prFontFamilyGeneric(generic) : prFontFamilyFromName(name);
     PrFontStyle style = prFontStyleDefault();
     PrFontMatch* match = prFontMatchCreate();
     prFontSetMatch(set, asked, &style, match);
-    std::string answer;
-    if (prFontMatchFaceCount(match) != 0) {
-        PrRawString family = prFontFamilyName(prFontMatchFace(match, 0).font);
-        PrStringView answered = prRawStringView(&family);
-        answer.assign(answered.data, answered.size);
-        prRawStringReset(&family);
-    }
+    String answer;
+    if (prFontMatchFaceCount(match) != 0)
+        answer = String::adopt(prFontFamilyName(prFontMatchFace(match, 0).font));
     prFontMatchDestroy(match);
     return answer;
 }
 
 // Installs `bundles` into `set`, in order, and returns the number of files added.
-uint32_t install(PrFontSet* set, std::initializer_list<PrFontBundle> bundles) {
-    return prFontBundleInstall(set, bundles.begin(), uint32_t(bundles.size()), PR_FONT_BUNDLE_DIR);
+uint32_t install(PrFontSet* set, Span<const PrFontBundle> bundles) {
+    return prFontBundleInstall(set, bundles.data(), bundles.count(), PR_FONT_BUNDLE_DIR);
+}
+
+// Installs the one bundle `bundle` into `set`, and returns the number of files added.
+uint32_t install(PrFontSet* set, PrFontBundle bundle) {
+    return install(set, Span<const PrFontBundle>(&bundle, 1));
 }
 
 // Returns the family of fallback family `index` of `set`.
-std::string fallbackFamily(PrFontSet* set, uint32_t index) {
-    PrStringView family = prFontSetFallbackFamily(set, index).family;
-    return std::string(family.data, family.size);
+String fallbackFamily(PrFontSet* set, uint32_t index) {
+    return prFontSetFallbackFamily(set, index).family;
 }
 
 // Returns the family of the face that sets `text` in a text font of `generic` in `set`, as the fallback finds it.
-std::string fallbackOf(PrFontSet* set, PrFontGeneric generic, const char* text, PrScript script, PrLocale locale = 0) {
+String fallbackOf(PrFontSet* set, PrFontGeneric generic, const char* text, PrScript script, PrLocale locale = 0) {
     PrFontFamily family = prFontFamilyGeneric(generic);
     PrTextFontDesc desc{
         .set = set,
@@ -59,12 +61,9 @@ std::string fallbackOf(PrFontSet* set, PrFontGeneric generic, const char* text, 
     };
     PrTextFont* font = prTextFontCreate(&desc);
     uint32_t match = prTextFontMatch(font, text, script);
-    std::string answer;
-    if (match != kPrTextMatchNone) {
-        PrRawString name = prFontFamilyName(prTextFontMatchedFont(font, match));
-        answer.assign(prRawStringView(&name).data, prRawStringView(&name).size);
-        prRawStringReset(&name);
-    }
+    String answer;
+    if (match != kPrTextMatchNone)
+        answer = String::adopt(prFontFamilyName(prTextFontMatchedFont(font, match)));
     prTextFontRelease(font);
     return answer;
 }
@@ -108,13 +107,13 @@ TEST_CASE("each bundle falls back only to its own families") {
     for (const Expected& e : expected) {
         CAPTURE(int(e.bundle));
         PrFontSet* set = prFontSetCreate(nullptr);
-        CHECK(install(set, {e.bundle}) != 0);
+        CHECK(install(set, e.bundle) != 0);
         uint32_t count = prFontSetFallbackCount(set);
         REQUIRE(count != 0);
         CHECK(fallbackFamily(set, 0) == e.first);
         CHECK(fallbackFamily(set, count - 1) == e.last);
         for (uint32_t i = 0; i < count && e.prefix != nullptr; ++i)
-            CHECK(fallbackFamily(set, i).rfind(e.prefix, 0) == 0);
+            CHECK(prStringStartsWith(fallbackFamily(set, i), e.prefix));
         prFontSetDestroy(set);
     }
 }
@@ -127,11 +126,10 @@ TEST_CASE("a stack of bundles installs each file once, and falls back to each bu
         prFontBundleFileCount(&bundles[0], 1) + prFontBundleFileCount(&bundles[1], 1) - 1);
     PrFontSet* both = prFontSetCreate(nullptr);
     PrFontSet* each = prFontSetCreate(nullptr);
-    CHECK(install(both, {PrFontBundle_Standard14, PrFontBundle_Complete}) ==
-        install(each, {PrFontBundle_Standard14}) + install(each, {PrFontBundle_Complete}) - 1);
+    CHECK(install(both, bundles) == install(each, PrFontBundle_Standard14) + install(each, PrFontBundle_Complete) - 1);
     prFontSetDestroy(both);
     prFontSetDestroy(each);
-    install(set, {PrFontBundle_Standard14, PrFontBundle_Complete});
+    install(set, bundles);
     // The first bundle that gives a name binds it, and a later bundle binds what the earlier ones do not.
     CHECK(familyOf(set, "serif") == "Tinos");
     CHECK(familyOf(set, "Helvetica") == "Arimo");
@@ -150,19 +148,19 @@ TEST_CASE("a stack of bundles installs each file once, and falls back to each bu
 
 TEST_CASE("Noto names the generic families") {
     PrFontSet* set = prFontSetCreate(nullptr);
-    install(set, {PrFontBundle_Complete});
+    install(set, PrFontBundle_Complete);
     CHECK(familyOf(set, "serif") == "Noto Serif");
     CHECK(familyOf(set, "sans-serif") == "Noto Sans");
     CHECK(familyOf(set, "system-ui") == "Noto Sans");
     CHECK(familyOf(set, "monospace") == "Noto Sans Mono");
     CHECK(familyOf(set, "math") == "NewComputerModernMath");
-    CHECK(familyOf(set, "Helvetica").empty());
+    CHECK(familyOf(set, "Helvetica").isEmpty());
     prFontSetDestroy(set);
 }
 
 TEST_CASE("Standard14 names the generic families and PDF's standard fonts") {
     PrFontSet* set = prFontSetCreate(nullptr);
-    install(set, {PrFontBundle_Standard14});
+    install(set, PrFontBundle_Standard14);
     CHECK(familyOf(set, "serif") == "Tinos");
     CHECK(familyOf(set, "Times") == "Tinos");
     CHECK(familyOf(set, "sans-serif") == "Arimo");
@@ -178,19 +176,21 @@ TEST_CASE("a bundle whose directory holds none of its files installs none, and f
     PrFontSet* set = prFontSetCreate(nullptr);
     PrFontBundle bundle = PrFontBundle_Complete;
     CHECK(prFontBundleInstall(set, &bundle, 1, "/nonexistent") == 0);
-    CHECK(familyOf(set, "serif").empty());
+    CHECK(familyOf(set, "serif").isEmpty());
     CHECK(prFontSetFallbackCount(set) == 0);
     prFontSetDestroy(set);
 }
 
 TEST_CASE("Noto sets the symbols of no script that its text faces lack in a face of the text's style, not in a CJK face") {
     PrFontSet* set = prFontSetCreate(nullptr);
-    install(set, {PrFontBundle_Complete});
+    install(set, PrFontBundle_Complete);
     // The math and symbol families come before the CJK families. An arrow beside Latin text therefore sits on the math
     // axis, as a math face draws it, rather than as wide and as high as an ideograph. Itemization gives an arrow in
     // Latin text the Latin script, and an arrow alone no script.
-    for (const char* arrow : {"\xe2\x86\x90", "\xe2\x87\x92"}) {
-        for (PrScript script : {PrScript_Latn, PrScript_Zyyy}) {
+    const char* const arrows[] = {"\xe2\x86\x90", "\xe2\x87\x92"};
+    const PrScript scripts[] = {PrScript_Latn, PrScript_Zyyy};
+    for (const char* arrow : arrows) {
+        for (PrScript script : scripts) {
             CAPTURE(arrow);
             CAPTURE(int(script));
             CHECK(fallbackOf(set, PrFontGeneric_SansSerif, arrow, script) == "Noto Sans Math");
@@ -213,7 +213,8 @@ TEST_CASE("Nerd Fonts' symbols serve the private-use code points after the text 
     const char* square = "\xf3\xb0\x80\x81";        // U+F0001, a Material Design vector square
     const char* heart = "\xe2\x99\xa5";             // U+2665, a heart, which Nerd Fonts' symbols also map
     PrFontSet* set = prFontSetCreate(nullptr);
-    install(set, {PrFontBundle_Complete, PrFontBundle_NerdFontSymbols});
+    const PrFontBundle bundles[] = {PrFontBundle_Complete, PrFontBundle_NerdFontSymbols};
+    install(set, bundles);
     // NerdFontSymbols names no family, and its family is the only one that serves private-use code points.
     CHECK(familyOf(set, "monospace") == "Noto Sans Mono");
     uint32_t count = prFontSetFallbackCount(set);
@@ -222,7 +223,8 @@ TEST_CASE("Nerd Fonts' symbols serve the private-use code points after the text 
     for (uint32_t i = 0; i < count; ++i)
         CHECK(prFontSetFallbackFamily(set, i).privateUse == (i == count - 1));
     // Last Resort comes before it and has a glyph for every code point, but a private-use code point skips it.
-    for (PrFontGeneric generic : {PrFontGeneric_Monospace, PrFontGeneric_SansSerif, PrFontGeneric_Serif}) {
+    const PrFontGeneric generics[] = {PrFontGeneric_Monospace, PrFontGeneric_SansSerif, PrFontGeneric_Serif};
+    for (PrFontGeneric generic : generics) {
         CAPTURE(int(generic));
         CHECK(fallbackOf(set, generic, file, PrScript_Zyyy) == "Symbols Nerd Font Mono");
         CHECK(fallbackOf(set, generic, square, PrScript_Zyyy) == "Symbols Nerd Font Mono");

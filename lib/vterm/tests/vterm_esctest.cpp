@@ -8,11 +8,10 @@
 // Usage: vterm_esctest <program> [arguments...]
 
 #include "pr/mutex.h"
+#include "pr/print.h"
 #include "pr/process.h"
 #include "pr/thread.h"
 #include "pr/vterm.h"
-
-#include <stdio.h>
 
 namespace {
 
@@ -69,18 +68,20 @@ int relay(PrProcess* process, PrVterm* vterm, Wake* signal) {
 
 } // namespace
 
+using namespace pr;
+
 int main(int argc, char** argv) {
     if (argc < 2) {
-        fprintf(stderr, "usage: vterm_esctest <program> [arguments...]\n");
+        printError("usage: vterm_esctest <program> [arguments...]\n");
         return 2;
     }
     PrProcessLauncher* launcher = prProcessLauncherCreate(PrProcessBackend_Default);
     if (launcher == nullptr) {
-        fprintf(stderr, "vterm_esctest: the build has no process launcher\n");
+        printError("vterm_esctest: the build has no process launcher\n");
         return 2;
     }
     if (argc - 2 > int(kMaxArguments)) {
-        fprintf(stderr, "vterm_esctest: more than %u arguments\n", kMaxArguments);
+        printError("vterm_esctest: more than {} arguments\n", kMaxArguments);
         return 2;
     }
     PrStringView arguments[kMaxArguments];
@@ -113,7 +114,7 @@ int main(int argc, char** argv) {
         code = relay(process, vterm, &signal);
         prVtermDestroy(vterm);
     } else {
-        fprintf(stderr, "vterm_esctest: cannot start %s\n", argv[1]);
+        printError("vterm_esctest: cannot start {}\n", PrStringView(argv[1]));
     }
     prProcessDestroy(process);
     prProcessLauncherDestroy(launcher);

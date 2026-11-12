@@ -1,12 +1,12 @@
+#include "pr/array.h"
 #include "pr/net_sockets.h"
+#include "pr/string.h"
+#include "pr/string_ops.h"
 #include "pr/tls.h"
 
 #include "tools/harness/net_peer.h"
 
 #include "tools/harness/test.h"
-
-#include <string>
-#include <vector>
 
 using namespace harness;
 
@@ -19,21 +19,21 @@ namespace {
 // A backend under test, and what its header says that it cannot do.
 struct Backend {
     PrTlsBackend backend;
-    std::string name;
+    String name;
     bool overTransport;         // true if its sessions run over a transport that they are given
     bool finishes;              // true if its sessions end their sending side alone
     bool detectsTruncation;     // true if it tells a transport's end from the peer's close_notify
 };
 
 // The backends that the build has. Network.framework connects on its own and has no half-close.
-std::vector<Backend> backends() {
-    std::vector<Backend> found;
+Array<Backend> backends() {
+    Array<Backend> found;
     for (PrTlsBackend backend = PrTlsBackend_Default + 1; backend < PrTlsBackend_Count; ++backend) {
         if (!prTlsBackendIsBuilt(backend))
             continue;
         PrStringView name = prTlsBackendName(backend);
         bool streams = backend != PrTlsBackend_Apple;
-        found.push_back(Backend{backend, std::string(name.data, name.size), streams, streams, streams});
+        found.push(Backend{backend, String(name), streams, streams, streams});
     }
     return found;
 }
@@ -45,7 +45,7 @@ struct Session {
     PrTlsSessionDesc desc;
     bool overTransport;         // true to connect TCP first, and run the session over it
     PrTlsSessionInfo info;
-    std::string protocol;
+    String protocol;
 };
 
 PrStatus openSession(void* PR_NULLABLE context, PrNet* net, PrNetStreamFn event, void* eventContext,
@@ -75,8 +75,7 @@ PrStatus openSession(void* PR_NULLABLE context, PrNet* net, PrNetStreamFn event,
 void inspect(void* PR_NULLABLE context, PrNetStream* stream) {
     Session* session = static_cast<Session*>(context);
     session->info = prTlsSessionInfo(reinterpret_cast<PrTlsSession*>(stream));
-    session->protocol.assign(session->info.protocol.data != nullptr ? session->info.protocol.data : "",
-        session->info.protocol.size);
+    session->protocol.assign(session->info.protocol.isNull() ? PrStringView("") : session->info.protocol);
 }
 
 const PrStringView kProtocols[] = {"h2", "http/1.1"};
@@ -243,10 +242,10 @@ TEST_CASE("tls: a session runs over a transport that it is given, or the backend
 }
 
 TEST_CASE("tls: bytes beyond the buffers flow both ways") {
-    std::string payload;
-    for (uint32_t i = 0; payload.size() < 3 * 1024 * 1024; ++i)
-        payload += "record " + std::to_string(i) + "\n";
-    payload += "<bye>";
+    String payload;
+    for (uint32_t i = 0; payload.count() < 3 * 1024 * 1024; ++i)
+        formatTo(payload, "record {}\n", i);
+    payload.append("<bye>");
     for (const Backend& backend : backends()) {
         INFO("backend: " << backend.name);
         Fixture fixture{};
@@ -254,9 +253,8 @@ TEST_CASE("tls: bytes beyond the buffers flow both ways") {
             return;
         Session session{.tls = fixture.tls, .desc = trusting(fixture, "localhost", fixture.peer.tlsEcho)};
         NetProbe probe{};
-        run(&probe, &fixture, &session, PrByteView{reinterpret_cast<const uint8_t*>(payload.data()), payload.size()},
-            Ending_Wait);
-        CHECK(netProbeReceived(&probe, payload + "<eof:asked>"));
+        run(&probe, &fixture, &session, prStringBytes(payload), Ending_Wait);
+        CHECK(netProbeReceived(&probe, format("{}<eof:asked>", payload)));
         CHECK(netProbeEventCount(&probe, PrNetStreamEvent_Writable) >= 1);
         netProbeReset(&probe);
         reset(&fixture);
@@ -279,7 +277,7 @@ TEST_CASE("tls: a certificate that fails verification fails the session with its
     };
     for (const Backend& backend : backends()) {
         for (const Case& test : cases) {
-            INFO("backend: " << backend.name << ", case: " << std::string(test.name));
+            INFO("backend: " << backend.name << ", case: " << test.name);
             Fixture fixture{};
             if (!open(&fixture, backend))
                 return;

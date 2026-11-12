@@ -9,8 +9,6 @@
 
 #include "tools/harness/test.h"
 
-#include <vector>
-
 namespace pr_impl {
 
 namespace {
@@ -740,7 +738,7 @@ TEST_CASE("a row's background paints behind its cells, and an empty cell can hid
     hidden.box.width = prLayoutLengthPx(30);
     s.add(row, hidden);
     s.layout(100, 60);
-    std::vector<uint8_t> pixels = render(s.f.tree, 100, 60);
+    Array<uint8_t> pixels = render(s.f.tree, 100, 60);
     // In the first cell, the row's background shows; in the spacing and in the hidden cell, nothing does.
     CHECK(pixel(pixels, 100, 20, 20) == "255 0 0 255");
     CHECK(pixel(pixels, 100, 45, 20) == "0 0 0 0");
@@ -760,7 +758,7 @@ TEST_CASE("a table paints its border around its grid, and collapsed borders over
     PrLayoutNode c = s.add(s.part(table, PrLayoutDisplay_TableRow), cell);
     s.word(c, 40, 20);
     s.layout(100, 60);
-    std::vector<uint8_t> pixels = render(s.f.tree, 100, 60);
+    Array<uint8_t> pixels = render(s.f.tree, 100, 60);
     // The caption has no border; the grid's 4px border straddles its edge over the cell's background.
     CHECK(pixel(pixels, 100, 1, 5) == "0 0 0 0");
     CHECK(pixel(pixels, 100, 1, 12) == "0 0 255 255");
@@ -782,7 +780,7 @@ TEST_CASE("each column of a column group paints its background behind its own ce
     s.cell(row, 30, 30);
     s.cell(row, 30, 30);
     s.layout(100, 60);
-    std::vector<uint8_t> pixels = render(s.f.tree, 100, 60);
+    Array<uint8_t> pixels = render(s.f.tree, 100, 60);
     CHECK(pixel(pixels, 100, 15, 15) == "255 0 0 255");
     CHECK(pixel(pixels, 100, 45, 15) == "0 255 0 255");
 }
@@ -798,7 +796,7 @@ TEST_CASE("a table that is not visible draws no collapsed borders") {
     cell.color.visibility = PrLayoutVisibility_Hidden;
     s.word(s.add(s.part(table, PrLayoutDisplay_TableRow), cell), 30, 30);
     s.layout(100, 60);
-    std::vector<uint8_t> pixels = render(s.f.tree, 100, 60);
+    Array<uint8_t> pixels = render(s.f.tree, 100, 60);
     CHECK(pixel(pixels, 100, 2, 2) == "0 0 0 0");
 }
 
@@ -819,11 +817,11 @@ TEST_CASE("a column is never hit, and its cells are") {
 TEST_CASE("a change in one cell lays out that cell and the table, and the other cells are reused") {
     Stage s;
     PrLayoutNode table = s.add(s.root, spacedTable(0));
-    std::vector<PrLayoutNode> words;
+    Array<PrLayoutNode> words;
     for (uint32_t r = 0; r < 3; ++r) {
         PrLayoutNode row = s.part(table, PrLayoutDisplay_TableRow);
         for (uint32_t c = 0; c < 2; ++c)
-            words.push_back(s.word(s.part(row, PrLayoutDisplay_TableCell), 20, 10));
+            words.push(s.word(s.part(row, PrLayoutDisplay_TableCell), 20, 10));
     }
     s.layout();
     CHECK(s.stats().tablesLaidOut == 1);

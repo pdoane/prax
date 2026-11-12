@@ -7,26 +7,26 @@ namespace pr_impl {
 
 namespace {
 
-std::string number(double value) {
+String number(double value) {
     PrTextBuffer text = {};
     cssSerializeNumber(&text, value);
     return take(&text);
 }
 
-std::string ident(PrStringView value) {
+String ident(PrStringView value) {
     PrTextBuffer text = {};
     cssSerializeIdent(&text, value);
     return take(&text);
 }
 
-std::string string(PrStringView value) {
+String string(PrStringView value) {
     PrTextBuffer text = {};
     cssSerializeString(&text, value);
     return take(&text);
 }
 
 // Tokenizes `source` and serializes every token of it.
-std::string tokens(PrStringView source) {
+String tokens(PrStringView source) {
     CssTestSource s(source);
     PrTextBuffer text = {};
     cssSerializeTokens(&text, &s.ts, cssStreamAll(&s.ts));

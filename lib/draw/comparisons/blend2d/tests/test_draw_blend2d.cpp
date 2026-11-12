@@ -1,30 +1,32 @@
+#include "pr/array.h"
 #include "pr/draw_blend2d.h"
 #include "pr/draw_cpu.h"
+#include "pr/min_max.h"
 #include "pr/vec.h"
 
 #include "tools/harness/test.h"
-
-#include <cstdlib>
-#include <vector>
 
 namespace pr_impl {
 
 namespace {
 
-std::vector<uint8_t> render(PrDrawRenderer* renderer, const PrDrawList* list, uint32_t width,
+using namespace pr;
+
+Array<uint8_t> render(PrDrawRenderer* renderer, const PrDrawList* list, uint32_t width,
         uint32_t height, PrPixelFormat format = PrPixelFormat_Bgra8) {
-    std::vector<uint8_t> bytes(size_t(width) * height * 4, 0);
+    Array<uint8_t> bytes(size_t(width) * height * 4);
     PrPixels into{bytes.data(), size_t(width) * 4, {width, height}};
     REQUIRE(prDrawRendererRenderPixels(renderer, list, into, format) == PrStatus_Ok);
     return bytes;
 }
 
 // Returns the number of pixels of two renders that differ in some channel by more than `tolerance`.
-size_t differing(const std::vector<uint8_t>& a, const std::vector<uint8_t>& b, int tolerance) {
+size_t differing(const Array<uint8_t>& a, const Array<uint8_t>& b, int tolerance) {
     size_t count = 0;
-    for (size_t i = 0; i < a.size(); i += 4) {
-        for (size_t k = 0; k < 4; ++k) {
-            if (std::abs(int(a[i + k]) - int(b[i + k])) > tolerance) {
+    for (uint32_t i = 0; i < a.count(); i += 4) {
+        for (uint32_t k = 0; k < 4; ++k) {
+            int difference = int(a[i + k]) - int(b[i + k]);
+            if (max(difference, -difference) > tolerance) {
                 ++count;
                 break;
             }
@@ -41,9 +43,9 @@ size_t againstCpu(const PrDrawList* list, uint32_t width, uint32_t height, int t
     PrDrawRenderer* blend2d = prDrawBlend2dCreate(&options);
     options.threads = 4;
     PrDrawRenderer* threaded = prDrawBlend2dCreate(&options);
-    std::vector<uint8_t> expected = render(cpu, list, width, height);
-    std::vector<uint8_t> actual = render(blend2d, list, width, height);
-    std::vector<uint8_t> async = render(threaded, list, width, height);
+    Array<uint8_t> expected = render(cpu, list, width, height);
+    Array<uint8_t> actual = render(blend2d, list, width, height);
+    Array<uint8_t> async = render(threaded, list, width, height);
     CHECK(differing(actual, async, 0) == 0);
     prDrawRendererDestroy(cpu);
     prDrawRendererDestroy(blend2d);
@@ -228,7 +230,8 @@ TEST_CASE("blend2d masks a group by a gradient's alpha, or by its inverse") {
         {.offset = 1, .color = PrColor{0, 0, 0, 0}},
     };
     PrDrawBrush fade = prDrawBrushLinear(PrVec2{8, 0}, PrVec2{56, 0}, stops, 2);
-    for (bool invert : {false, true}) {
+    const bool inverts[] = {false, true};
+    for (bool invert : inverts) {
         PrDrawMask mask = prDrawMaskDefault(&fade);
         mask.invert = invert;
         PrDrawGroup group = prDrawGroupDefault();
@@ -268,8 +271,8 @@ TEST_CASE("blend2d draws a projected group through its projection's tangent, whe
     prDrawListClear(list);
     recordTilted(list, 1.5707964f, 300);
     PrDrawRenderer* blend2d = prDrawBlend2dCreate(nullptr);
-    std::vector<uint8_t> drawn = render(blend2d, list, 64, 64);
-    CHECK(differing(drawn, std::vector<uint8_t>(drawn.size(), 0), 0) == 0);
+    Array<uint8_t> drawn = render(blend2d, list, 64, 64);
+    CHECK(differing(drawn, Array<uint8_t>(drawn.count()), 0) == 0);
     prDrawRendererDestroy(blend2d);
     prDrawListRelease(list);
 }

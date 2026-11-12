@@ -242,7 +242,10 @@ says what they must contain.
   indexes it: a ` // by <domain>` comment, a type that names the index, or a word that every reader knows (byte, code
   point, glyph, slot). `lint.py` checks the comment (`index-domain`).
 - **The standard library and the system** are wrapped by core. Only the core source that wraps a facility includes its
-  header, and `lint.py` records which source that is. `stdbool.h`, `stddef.h` and `stdint.h` are used directly.
+  header, and `lint.py` records which source that is. `stdbool.h`, `stddef.h` and `stdint.h` are used directly. The
+  tests, and the harness headers that they include, are held to the same rule: there are many of them, and a standard
+  header such as `<string>` costs more to compile than most tests do. A function that reads a list takes a `Span`, and
+  its caller passes a local array, which converts to one.
   Anything the library does to the host on its own initiative, such as allocating memory or reporting a failure, goes
   through the platform ([platform.md](platform.md)). That means its default backends, unless the build binds its own
   functions at compile time.

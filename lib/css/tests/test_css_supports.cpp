@@ -15,7 +15,7 @@ bool supports(const char* text) {
 }
 
 bool matches(const char* condition) {
-    std::string source = std::string("@supports ") + condition + " {}";
+    String source = format("@supports {} {{}}", condition);
     CssTestSheet sheet(source);
     REQUIRE(sheet.count() == 1);
     return prCssSupportsRuleMatches(prCssSupportsRuleQuery((sheet.object(0))));

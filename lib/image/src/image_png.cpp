@@ -6,6 +6,7 @@
 #include "pr/checksum.h"
 #include "pr/mem.h"
 #include "pr/raw_array.h"
+#include "pr/string_ops.h"
 #include "pr/text_buffer.h"
 #include "pr/utf8.h"
 
@@ -165,7 +166,7 @@ bool readText(const Chunk& chunk, PrCompressCodec* PR_NULLABLE codec, PrImagePng
                 ok = codec != nullptr && inflate(codec, rest, &inflated);
                 rest = PrByteView{inflated.data, inflated.count};
             }
-            text.text = PrStringView{reinterpret_cast<const char*>(rest.data), rest.size};
+            text.text = prStringFromBytes(rest);
             ok = ok && prUtf8Validate(text.text) == text.text.size &&
                 prUtf8Validate(text.translatedKeyword) == text.translatedKeyword.size;
         }
@@ -206,9 +207,9 @@ void writeText(Output* out, PrStringView keyword, PrStringView text) {
     write(out, kFields, sizeof(kFields));
     write(out, text.data, text.size);
     uint32_t crc = prCrc32Update(0, PrByteView{head + 4, 4});
-    crc = prCrc32Update(crc, PrByteView{reinterpret_cast<const uint8_t*>(keyword.data), keyword.size});
+    crc = prCrc32Update(crc, prStringBytes(keyword));
     crc = prCrc32Update(crc, PrByteView{kFields, sizeof(kFields)});
-    crc = prCrc32Update(crc, PrByteView{reinterpret_cast<const uint8_t*>(text.data), text.size});
+    crc = prCrc32Update(crc, prStringBytes(text));
     uint8_t tail[4];
     storeU32(tail, crc);
     write(out, tail, sizeof(tail));

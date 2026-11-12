@@ -10,12 +10,12 @@ namespace pr_impl {
 namespace {
 
 // Returns the serialization of `value` parsed as the color property, or "invalid".
-std::string color(PrStringView value) {
+String color(PrStringView value) {
     CssTestSource source(value);
     CssValuePool pool = {};
     CssMatchState match = {};
     CssValueSpan span;
-    std::string result = "invalid";
+    String result = "invalid";
     if (cssParsePropertyValue(PrCssProperty_Color, &source.ts, &pool, &match, &span)) {
         PrTextBuffer out = {};
         cssSerializeValues(&out, cssValuePoolRun(&pool, span));

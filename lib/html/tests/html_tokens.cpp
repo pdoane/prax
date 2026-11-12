@@ -7,14 +7,12 @@
 // html/#tokenization - https://html.spec.whatwg.org/multipage/parsing.html#tokenization
 
 #include "pr/assert.h"
+#include "pr/print.h"
 #include "pr/string_ops.h"
 #include "pr/text_buffer.h"
 
 #include "html/src/html_tokenizer.h"
 #include "tools/harness/harness.h"
-
-#include <stdio.h>
-#include <stdlib.h>
 
 using namespace harness;
 
@@ -132,17 +130,21 @@ void writeErrors(PrTextBuffer* out, const HtmlTokenizer* tokenizer, const RawArr
 // ---------------------------------------------------------------------------------------------------------------------
 // Cases
 
-HtmlState stateFromName(PrStringView name) {
+// Returns false if no state has the name.
+bool stateFromName(PrStringView name, HtmlState* out) {
     for (HtmlState state = 0; state < HtmlState_Count; ++state) {
-        if (name == kHtmlStateName[state])
-            return state;
+        if (name == kHtmlStateName[state]) {
+            *out = state;
+            return true;
+        }
     }
-    fprintf(stderr, "no state named %.*s\n", int(name.size), name.data);
-    exit(2);
+    printError("no state named {}\n", name);
+    return false;
 }
 
-// A case's fields are its state and its last start tag, which is "-" if the case names none.
-void run(PrTextBuffer* out, HtmlTokenizer* tokenizer, const HarnessCase& test, RawArray<HtmlError>* errors) {
+// A case's fields are its state and its last start tag, which is "-" if the case names none. Returns false if the case
+// names no state.
+bool run(PrTextBuffer* out, HtmlTokenizer* tokenizer, const HarnessCase& test, RawArray<HtmlError>* errors) {
     errors->count = 0;
     PrStringView input = prTextBufferView(&test.input);
     htmlTokenizerStart(tokenizer, input, errors);
@@ -151,7 +153,10 @@ void run(PrTextBuffer* out, HtmlTokenizer* tokenizer, const HarnessCase& test, R
     PrStringView tag = test.fields[1];
     if (tag == "-")
         tag = PrStringView{};
-    htmlTokenizerSetState(tokenizer, stateFromName(test.fields[0]), tag);
+    HtmlState state = 0;
+    if (!stateFromName(test.fields[0], &state))
+        return false;
+    htmlTokenizerSetState(tokenizer, state, tag);
 
     prTextBufferAppend(out, "{\"tokens\": [");
     bool first = true;
@@ -167,6 +172,7 @@ void run(PrTextBuffer* out, HtmlTokenizer* tokenizer, const HarnessCase& test, R
     prTextBufferAppend(out, "], \"errors\": ");
     writeErrors(out, tokenizer, *errors);
     prTextBufferAppend(out, "}");
+    return true;
 }
 
 } // namespace
@@ -180,11 +186,12 @@ int main() {
 
     while (harnessReadCase(&test)) {
         if (test.fieldCount != 2) {
-            fprintf(stderr, "a case names a state and a last start tag\n");
+            printError("a case names a state and a last start tag\n");
             return 2;
         }
         prTextBufferClear(&out);
-        run(&out, &tokenizer, test, &errors);
+        if (!run(&out, &tokenizer, test, &errors))
+            return 2;
         harnessWriteLine(prTextBufferView(&out));
     }
 

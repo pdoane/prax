@@ -1,16 +1,15 @@
+#include "pr/array.h"
 #include "pr/layout_query.h"
 #include "pr/layout_scene.h"
 #include "pr/layout_style.h"
 #include "pr/layout_tree.h"
+#include "pr/string.h"
 
 #include "layout/src/layout_stacking.h"
 #include "layout/src/layout_tree.h"
 #include "layout/tests/layout_fixture.h"
 
 #include "tools/harness/test.h"
-
-#include <cmath>
-#include <vector>
 
 namespace pr_impl {
 
@@ -141,26 +140,26 @@ struct Stage {
     }
 
     // Returns a node's boxes, in content order, relative to the stage's top left, each as left, top, width and height.
-    std::vector<std::vector<double>> rects(PrLayoutNode node) {
+    Array<Array<double>> rects(PrLayoutNode node) {
         uint32_t count = prLayoutNodeBoxes(f.tree, node, PrLayoutCoordinates_Viewport, nullptr, 0);
-        std::vector<PrLayoutRect> boxes(count);
+        Array<PrLayoutRect> boxes(count);
         prLayoutNodeBoxes(f.tree, node, PrLayoutCoordinates_Viewport, boxes.data(), count);
         PrRect origin = stageBounds();
-        std::vector<std::vector<double>> out;
+        Array<Array<double>> out;
         for (const PrLayoutRect& box : boxes) {
             PrRect r = prLayoutRectToPx(box);
-            out.push_back({
+            out.push(Array<double>({
                 double(r.left - origin.left), double(r.top - origin.top), double(r.right - r.left),
                 double(r.bottom - r.top),
-            });
+            }));
         }
         return out;
     }
 
     // Returns the pixels of the tree rendered at 400 by 400.
-    std::vector<uint8_t> pixels() { return render(f.tree, 400, 400); }
+    Array<uint8_t> pixels() { return render(f.tree, 400, 400); }
     // Returns the color of the pixel at a point relative to the stage's top left.
-    std::string color(const std::vector<uint8_t>& bytes, float x, float y) {
+    String color(PrByteView bytes, float x, float y) {
         PrRect origin = stageBounds();
         return pixel(bytes, 400, uint32_t(origin.left + x), uint32_t(origin.top + y));
     }
@@ -177,12 +176,12 @@ PrLayoutDecorationStyle blue() {
 // Levels and contexts
 
 // Returns the boxes of the list of the stacking context `context`, in order.
-std::vector<PrLayoutNode> listOf(Stage& s, PrLayoutNode context) {
+Array<PrLayoutNode> listOf(Stage& s, PrLayoutNode context) {
     const LayoutTree* tree = s.f.tree;
     LayoutStackedBoxes list = layoutStackingList(tree, layoutNodeIndex(tree, context));
-    std::vector<PrLayoutNode> nodes;
+    Array<PrLayoutNode> nodes;
     for (uint32_t i = 0; i < list.count; ++i)
-        nodes.push_back(layoutNodeName(tree, list.boxes[i].node));
+        nodes.push(layoutNodeName(tree, list.boxes[i].node));
     return nodes;
 }
 
@@ -205,8 +204,8 @@ TEST_CASE("a stacking context lists the boxes that paint whole in it by level an
     s.add(s.stage, hidden);
     s.layout();
     // The boxes in the positioned box at auto belong to its context, after it; those in the context at 2 are its own.
-    CHECK(listOf(s, s.stage) == std::vector<PrLayoutNode>{under, container, inner, first, context});
-    CHECK(listOf(s, context) == std::vector<PrLayoutNode>{contained});
+    CHECK(listOf(s, s.stage) == Array<PrLayoutNode>({under, container, inner, first, context}));
+    CHECK(listOf(s, context) == Array<PrLayoutNode>({contained}));
     CHECK(verified(s.f.tree));
 
     // Each change below moves boxes in the lists the tree holds, and finds none again.
@@ -216,17 +215,17 @@ TEST_CASE("a stacking context lists the boxes that paint whole in it by level an
     PrLayoutNode added = s.add(s.stage, positioned(block()));
     prLayoutTreeRemove(s.f.tree, first);
     s.layout();
-    CHECK(listOf(s, s.stage) == std::vector<PrLayoutNode>{under, container, added, context});
+    CHECK(listOf(s, s.stage) == Array<PrLayoutNode>({under, container, added, context}));
     CHECK(found() == 0);
     // A box removed alone leaves the list.
     prLayoutTreeRemove(s.f.tree, added);
     s.layout();
-    CHECK(listOf(s, s.stage) == std::vector<PrLayoutNode>{under, container, context});
+    CHECK(listOf(s, s.stage) == Array<PrLayoutNode>({under, container, context}));
     prLayoutTreeInsert(s.f.tree, s.stage, added, kPrLayoutNodeNone);
     // A context at auto again lists nothing of its own, and its boxes belong to its context.
     s.set(context, positioned(block()));
     s.layout();
-    CHECK(listOf(s, s.stage) == std::vector<PrLayoutNode>{under, container, context, contained, added});
+    CHECK(listOf(s, s.stage) == Array<PrLayoutNode>({under, container, context, contained, added}));
     CHECK(found() == 0);
     CHECK(verified(s.f.tree));
     // A box inserted before another at its level goes before it in tree order, and a box inserted inside one at auto
@@ -236,15 +235,15 @@ TEST_CASE("a stacking context lists the boxes that paint whole in it by level an
     prLayoutTreeInsert(s.f.tree, s.stage, between, context);
     PrLayoutNode nested = s.add(container, positioned(block()));
     s.layout();
-    std::vector<PrLayoutNode> all{under, container, nested, between, context, contained, added};
+    Array<PrLayoutNode> all({under, container, nested, between, context, contained, added});
     CHECK(listOf(s, s.stage) == all);
     // A level that changes moves the box among the levels, and back to its place in tree order at 0.
     s.set(container, zIndexed(positioned(block())));
     PrLayoutEffectStyle three = level(3);
     s.set(between, zIndexed(positioned(block())), &three);
     s.layout();
-    CHECK(listOf(s, s.stage) == std::vector<PrLayoutNode>{container, context, contained, added, between});
-    CHECK(listOf(s, container) == std::vector<PrLayoutNode>{under, nested});
+    CHECK(listOf(s, s.stage) == Array<PrLayoutNode>({container, context, contained, added, between}));
+    CHECK(listOf(s, container) == Array<PrLayoutNode>({under, nested}));
     s.set(between, positioned(block()));
     s.set(container, positioned(block()));
     s.layout();
@@ -260,26 +259,26 @@ TEST_CASE("a box that turns between block and flex moves its children in the lis
     PrLayoutNode child = s.add(container, positioned(block()));
     PrLayoutNode grandchild = s.add(child, positioned(block()));
     s.layout();
-    CHECK(listOf(s, s.stage) == std::vector<PrLayoutNode>{container});
-    CHECK(listOf(s, container) == std::vector<PrLayoutNode>{child, grandchild});
+    CHECK(listOf(s, s.stage) == Array<PrLayoutNode>({container}));
+    CHECK(listOf(s, container) == Array<PrLayoutNode>({child, grandchild}));
     PrLayoutBoxStyle flex = block();
     flex.display = PrLayoutDisplay_Flex;
     s.set(container, flex);
     s.layout();
-    CHECK(listOf(s, s.stage) == std::vector<PrLayoutNode>{child, grandchild});
+    CHECK(listOf(s, s.stage) == Array<PrLayoutNode>({child, grandchild}));
     s.set(container, zIndexed(positioned(block())));
     s.layout();
-    CHECK(listOf(s, s.stage) == std::vector<PrLayoutNode>{container});
-    CHECK(listOf(s, container) == std::vector<PrLayoutNode>{child, grandchild});
+    CHECK(listOf(s, s.stage) == Array<PrLayoutNode>({container}));
+    CHECK(listOf(s, container) == Array<PrLayoutNode>({child, grandchild}));
     // A positioned box at auto, which is in its context's list with its children, turns into flex and back.
     PrLayoutBoxStyle positionedFlex = positioned(block());
     positionedFlex.display = PrLayoutDisplay_Flex;
     s.set(container, positionedFlex);
     s.layout();
-    CHECK(listOf(s, s.stage) == std::vector<PrLayoutNode>{container, child, grandchild});
+    CHECK(listOf(s, s.stage) == Array<PrLayoutNode>({container, child, grandchild}));
     s.set(container, positioned(block()));
     s.layout();
-    CHECK(listOf(s, s.stage) == std::vector<PrLayoutNode>{container, child, grandchild});
+    CHECK(listOf(s, s.stage) == Array<PrLayoutNode>({container, child, grandchild}));
     CHECK(prLayoutTreeStats(s.f.tree).stackingListsFound == 0);
 }
 
@@ -383,7 +382,8 @@ TEST_CASE("a box at a negative level paints over its context's background and un
 }
 
 TEST_CASE("a stacking context contains its descendants' levels, and a positioned box at auto does not") {
-    for (bool context : {true, false}) {
+    const bool contexts[] = {true, false};
+    for (bool context : contexts) {
         CAPTURE(context);
         Stage s(90);
         PrLayoutBoxStyle parentBox = absolute(20, 10, 110, 80);
@@ -397,7 +397,8 @@ TEST_CASE("a stacking context contains its descendants' levels, and a positioned
 
 TEST_CASE("z-index applies to positioned boxes alone, and the boxes that make contexts contain their descendants") {
     SUBCASE("a static block at 10, of opacity or not, under a relative block after it") {
-        for (float opacity : {1.0f, 0.9f}) {
+        const float opacities[] = {1.0f, 0.9f};
+        for (float opacity : opacities) {
             CAPTURE(opacity);
             Stage s;
             PrLayoutEffectStyle effects = level(10, opacity);
@@ -478,16 +479,16 @@ TEST_CASE("flex items paint whole as inline-blocks, in order-modified document o
         PrLayoutNode second = s.add(container, b);
         s.layout();
         CHECK(s.hit(50, 10) == first);
-        CHECK(listOf(s, s.stage) == std::vector<PrLayoutNode>{first});
+        CHECK(listOf(s, s.stage) == Array<PrLayoutNode>({first}));
         // The container turned into a block: z-index applies to no static box, and A paints in flow under B.
         s.set(container, sized(block(), 200, 80));
         s.layout();
-        CHECK(listOf(s, s.stage).empty());
+        CHECK(listOf(s, s.stage).isEmpty());
         CHECK(s.hit(10, 50) == second);
         // And back.
         s.set(container, flex);
         s.layout();
-        CHECK(listOf(s, s.stage) == std::vector<PrLayoutNode>{first});
+        CHECK(listOf(s, s.stage) == Array<PrLayoutNode>({first}));
         CHECK(s.hit(50, 10) == first);
     }
     SUBCASE("a static item at 0 contains a child at -1 over its background") {
@@ -497,7 +498,7 @@ TEST_CASE("flex items paint whole as inline-blocks, in order-modified document o
         PrLayoutNode child = s.at(first, positioned(sized(block(), 20, 20)), -1);
         s.layout();
         CHECK(s.hit(10, 10) == child);
-        CHECK(listOf(s, first) == std::vector<PrLayoutNode>{child});
+        CHECK(listOf(s, first) == Array<PrLayoutNode>({child}));
     }
 }
 
@@ -551,7 +552,8 @@ TEST_CASE("a box out of order is clipped by the clips around it as in flow") {
 
 TEST_CASE("a line's children are in tree order, so equal levels on a bidi line paint in it") {
     // rtl: span A, then span B pulled over it by a negative start margin. Each holds an inline-block.
-    for (bool relative : {false, true}) {
+    const bool relatives[] = {false, true};
+    for (bool relative : relatives) {
         CAPTURE(relative);
         Stage s(-1, false, PrTextDirection_Rtl);
         PrLayoutBoxStyle a = relative ? positioned(inlineBox()) : inlineBox();
@@ -569,7 +571,8 @@ TEST_CASE("a line's children are in tree order, so equal levels on a bidi line p
 
 TEST_CASE("a float is in tree order at its anchor on its line") {
     // A relative float, then on its line a relative span holding an inline-block pulled back over the float.
-    for (int32_t z : {0, 1}) {
+    const int32_t zs[] = {0, 1};
+    for (int32_t z : zs) {
         CAPTURE(z);
         Stage s;
         PrLayoutNode fl;
@@ -694,7 +697,7 @@ TEST_CASE("an inline box of opacity paints whole, faded as one group in a layer 
         s.f.element(span, pulled, &orange, nullptr, &s.style);
         s.text(span, "y");
         s.layout();
-        std::vector<uint8_t> bytes = s.pixels();
+        Array<uint8_t> bytes = s.pixels();
         // The float is over the part, and the block over both: they form one group, so the overlap is red at half, not
         // darker.
         CHECK(s.color(bytes, 5, 30) == "128 0 0 128");
@@ -709,7 +712,7 @@ TEST_CASE("an inline box of opacity paints whole, faded as one group in a layer 
         s.text(span, "a");
         s.layout();
         // A point of its part above the glyph.
-        std::vector<double> part = s.rects(span)[0];
+        Array<double> part = s.rects(span)[0];
         float x = float(part[0] + 2);
         float y = float(part[1] + 2);
         CHECK(s.color(s.pixels(), x, y) == "255 0 0 255");
@@ -788,8 +791,8 @@ TEST_CASE("an inline box has a part on a line where it starts and where it ends,
         PrLayoutNode span = s.add(s.stage, inlineBox());
         s.add(span, block(20));
         s.layout();
-        std::vector<std::vector<double>> rects = s.rects(span);
-        REQUIRE(rects.size() == 3);
+        Array<Array<double>> rects = s.rects(span);
+        REQUIRE(rects.count() == 3);
         CHECK(rects[0][2] == 0);
         CHECK(rects[1][2] == 200);
         CHECK(rects[2][2] == 0);
@@ -800,8 +803,8 @@ TEST_CASE("an inline box has a part on a line where it starts and where it ends,
         PrLayoutNode span = s.add(s.stage, inlineBox());
         s.add(span, floatLeft(20, 20));
         s.layout();
-        std::vector<std::vector<double>> rects = s.rects(span);
-        REQUIRE(rects.size() == 1);
+        Array<Array<double>> rects = s.rects(span);
+        REQUIRE(rects.count() == 1);
         CHECK(rects[0][0] == 20);
         CHECK(rects[0][2] == 0);
     }
@@ -924,7 +927,8 @@ TEST_CASE("a box out of flow held outside its stacking context is in its context
 TEST_CASE("a list keeps tree order at a level: a box, two in a box held outside the context, then another") {
     // The stage, static and with opacity, holds L1, then an absolute box R that the root holds, with E1 and E2 inside,
     // then L2, all at 1, each overlapping the next.
-    for (bool nested : {false, true}) {
+    const bool nesteds[] = {false, true};
+    for (bool nested : nesteds) {
         CAPTURE(nested);
         Fixture f;
         PrLayoutFontStyle style = font();
@@ -950,7 +954,8 @@ TEST_CASE("a list keeps tree order at a level: a box, two in a box held outside 
 }
 
 TEST_CASE("an absolute box at auto holding one going to 1 lists it in its context, held inside the context or outside") {
-    for (bool inside : {true, false}) {
+    const bool insides[] = {true, false};
+    for (bool inside : insides) {
         CAPTURE(inside);
         Fixture f;
         PrLayoutFontStyle style = font();
@@ -1073,12 +1078,12 @@ TEST_CASE("nested inline boxes that paint whole, opening on a declined line, are
         PrLayoutBoxStyle moved = positioned(inlineBlock(40, 40));
         PrLayoutNode x = s.add(outer, positioned(inlineBlock(40, 40)));
         s.layout();
-        std::vector<std::vector<double>> lines = s.rects(inner);
-        REQUIRE(lines.size() >= 3);
+        Array<Array<double>> lines = s.rects(inner);
+        REQUIRE(lines.count() >= 3);
         moved.inset[PrRectSide_Top] = prLayoutLengthPx(-float(s.rects(x)[0][1] - lines[1][1]));
         s.set(x, moved);
         s.layout();
-        std::vector<double> at = s.rects(x)[0];
+        Array<double> at = s.rects(x)[0];
         REQUIRE(at[1] == lines[1][1]);
         CHECK(s.hit(float(at[0] + 5), float(at[1] + 10)) == x);
     }
@@ -1090,8 +1095,8 @@ TEST_CASE("nested inline boxes that paint whole, opening on a declined line, are
         PrLayoutBoxStyle pulled = sized(block(), 200, 40);
         PrLayoutNode later = s.add(s.stage, pulled);
         s.layout();
-        std::vector<std::vector<double>> lines = s.rects(inner);
-        REQUIRE(lines.size() >= 3);
+        Array<Array<double>> lines = s.rects(inner);
+        REQUIRE(lines.count() >= 3);
         // The block pulled up over I's second line.
         pulled.margin[PrRectSide_Top] = prLayoutLengthPx(-float(s.rects(later)[0][1] - lines[1][1]));
         s.set(later, pulled);
@@ -1120,12 +1125,14 @@ TEST_CASE("boxes held outside a declined container hit in the painting order of 
         PrLayoutNode out[8];
         PrRect o = s.stageBounds();
         uint32_t count = prLayoutTreeHitTest(s.f.tree, prLayoutVecFromPx(PrVec2{o.left + x, o.top + 150}), out, 8);
-        return std::vector<PrLayoutNode>(out, out + (count < 8 ? count : 8));
+        Array<PrLayoutNode> nodes;
+        nodes.append(out, count < 8 ? count : 8);
+        return nodes;
     };
     // Topmost first, each once: the positive level over what paints at 0 in tree order, over the negative level.
-    CHECK(hits(50) == std::vector<PrLayoutNode>{high, mid, low, s.stage, s.root});
-    CHECK(hits(70) == std::vector<PrLayoutNode>{inNested, mid, low, s.stage, s.root});
-    CHECK(hits(110) == std::vector<PrLayoutNode>{inNested, s.stage, s.root});
+    CHECK(hits(50) == Array<PrLayoutNode>({high, mid, low, s.stage, s.root}));
+    CHECK(hits(70) == Array<PrLayoutNode>({inNested, mid, low, s.stage, s.root}));
+    CHECK(hits(110) == Array<PrLayoutNode>({inNested, s.stage, s.root}));
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1158,7 +1165,7 @@ TEST_CASE("what paints out of order is painted where its levels put it") {
         s.f.element(span, pulled, &color, nullptr, &s.style);
         s.text(span, "y");
         s.layout();
-        std::vector<double> part = s.rects(span)[0];
+        Array<double> part = s.rects(span)[0];
         CHECK(s.color(s.pixels(), float(part[0] + part[2] - 2), float(part[1] + part[3] - 2)) == "255 0 0 255");
     }
     SUBCASE("a float in a span of opacity faded with it") {
@@ -1182,7 +1189,7 @@ TEST_CASE("what paints out of order is painted where its levels put it") {
         s.f.element(s.stage, sized(block(), 200, 40), &b, nullptr, &s.style);
         s.f.element(s.stage, zIndexed(absolute(20, 20, 60, 60)), &r, &high, &s.style);
         s.layout();
-        std::vector<uint8_t> bytes = s.pixels();
+        Array<uint8_t> bytes = s.pixels();
         CHECK(s.color(bytes, 10, 10) == "0 0 255 255");
         CHECK(s.color(bytes, 10, 50) == "128 0 0 128");
         CHECK(s.color(bytes, 30, 30) == "255 0 0 255");
@@ -1191,7 +1198,8 @@ TEST_CASE("what paints out of order is painted where its levels put it") {
 }
 
 TEST_CASE("an inline box that paints whole at the start, middle and end of a run of children past kPaintRun") {
-    for (uint32_t at : {0u, 20u, 39u}) {
+    const uint32_t ats[] = {0u, 20u, 39u};
+    for (uint32_t at : ats) {
         CAPTURE(at);
         Stage s;
         PrLayoutNode span = kPrLayoutNodeNone;
@@ -1253,14 +1261,14 @@ TEST_CASE("the worked trace: a stacking context's list, its painting order, and 
     // The levels other than 0 of S's list, each once.
     auto levelsOfS = [&] {
         LayoutStackedBoxes list = layoutStackingList(tree, owner);
-        std::vector<int32_t> levels;
+        Array<int32_t> levels;
         for (uint32_t i = 0; i < list.count; ++i) {
-            if (list.boxes[i].level != 0 && (levels.empty() || levels.back() != list.boxes[i].level))
-                levels.push_back(list.boxes[i].level);
+            if (list.boxes[i].level != 0 && (levels.isEmpty() || levels.last() != list.boxes[i].level))
+                levels.push(list.boxes[i].level);
         }
         return levels;
     };
-    CHECK(levelsOfS() == std::vector<int32_t>{-1, 1, 2});
+    CHECK(levelsOfS() == Array<int32_t>({-1, 1, 2}));
     // Q is clipped by C, which holds Q's placeholder but not Q, because Q's holder P is in C.
     CHECK(f.hit(PrVec2{10, 50}) != q);
     // Q's level from 2 to -2 lays nothing out, moves Q in S's list rather than finding the list again, and records the
@@ -1271,7 +1279,7 @@ TEST_CASE("the worked trace: a stacking context's list, its painting order, and 
     CHECK(prLayoutTreeStats(f.tree).blocksLaidOut == 0);
     render(f.tree, 400, 400);
     CHECK(prLayoutTreeStats(f.tree).stackingListsFound == 0);
-    CHECK(levelsOfS() == std::vector<int32_t>{-2, -1, 1});
+    CHECK(levelsOfS() == Array<int32_t>({-2, -1, 1}));
     CHECK(verified(f.tree));
     // O's opacity becomes 1: R joins S's levels, inserted in its list.
     prLayoutNodeSetStyle(f.tree, o, f.style(block(), nullptr, nullptr, &style));
@@ -1280,13 +1288,13 @@ TEST_CASE("the worked trace: a stacking context's list, its painting order, and 
     render(f.tree, 400, 400);
     CHECK(prLayoutTreeStats(f.tree).stackingListsFound == 0);
     CHECK(verified(f.tree));
-    CHECK(levelsOfS() == std::vector<int32_t>{-2, -1, 1, 5});
+    CHECK(levelsOfS() == Array<int32_t>({-2, -1, 1, 5}));
     // Text before I lays S's content out again, which changes no list: S's is the one found before.
     prLayoutNodeSetText(f.tree, prLayoutNodeFirstChild(f.tree, s) == c ? prLayoutNodeNextSibling(f.tree, c) : c, "more text ");
     f.layout(px(400, 400));
     render(f.tree, 400, 400);
     CHECK(prLayoutTreeStats(f.tree).stackingListsFound == 0);
-    CHECK(levelsOfS() == std::vector<int32_t>{-2, -1, 1, 5});
+    CHECK(levelsOfS() == Array<int32_t>({-2, -1, 1, 5}));
     CHECK(verified(f.tree));
     (void)n;
     (void)fl;
@@ -1366,10 +1374,10 @@ TEST_CASE("a box split by bidi into parts on one line paints its content once, a
     PrLayoutNode inner = s.add(span, positioned(inlineBox()));
     s.text(inner, "ef");
     s.layout();
-    std::vector<std::vector<double>> rects = s.rects(span);
-    REQUIRE(!rects.empty());
+    Array<Array<double>> rects = s.rects(span);
+    REQUIRE(!rects.isEmpty());
     double width = 0;
-    for (const std::vector<double>& r : rects)
+    for (const Array<double>& r : rects)
         width += r[2];
     CHECK(width > 0);
     CHECK(s.hit(float(s.rects(inner)[0][0] + 2), 20) == inner);
@@ -1380,7 +1388,8 @@ TEST_CASE("a box split by bidi into parts on one line opens on the part at its s
     // In an ltr paragraph, a span ends in Hebrew that the Hebrew after it reorders around, so that the span's Latin is
     // on the left and its Hebrew on the right of the text after it. Its first part in content order is the one at its
     // start edge: the leftmost part for an ltr span, and the rightmost for an rtl one.
-    for (PrTextDirection direction : {PrTextDirection_Ltr, PrTextDirection_Rtl}) {
+    const PrTextDirection directions[] = {PrTextDirection_Ltr, PrTextDirection_Rtl};
+    for (PrTextDirection direction : directions) {
         CAPTURE(direction);
         Stage s(-1, false);
         s.text(s.stage, "ab ");
@@ -1389,9 +1398,9 @@ TEST_CASE("a box split by bidi into parts on one line opens on the part at its s
         s.text(span, "cd \xd7\x90\xd7\x91");
         s.text(s.stage, " \xd7\x92\xd7\x93 ef");
         s.layout();
-        std::vector<std::vector<double>> rects = s.rects(span);
-        REQUIRE(rects.size() > 1);
-        for (size_t i = 1; i < rects.size(); ++i) {
+        Array<Array<double>> rects = s.rects(span);
+        REQUIRE(rects.count() > 1);
+        for (uint32_t i = 1; i < rects.count(); ++i) {
             if (direction == PrTextDirection_Ltr)
                 CHECK(rects[0][0] < rects[i][0]);
             else
@@ -1403,8 +1412,10 @@ TEST_CASE("a box split by bidi into parts on one line opens on the part at its s
 TEST_CASE("a static float holding a relative box, before a relative span on its line, paints in tree order") {
     // F holds A, relative. B, a relative span on F's line, holds an inline-block pulled back over A. The cases are at
     // -1, 0 and 1.
-    for (int32_t z : {-1, 0, 1}) {
-        for (bool inWhole : {false, true}) {
+    const int32_t zs[] = {-1, 0, 1};
+    for (int32_t z : zs) {
+        const bool inWholes[] = {false, true};
+        for (bool inWhole : inWholes) {
             CAPTURE(z);
             CAPTURE(inWhole);
             Stage s(60);
@@ -1430,7 +1441,8 @@ TEST_CASE("a static float holding a relative box, before a relative span on its 
 
 TEST_CASE("a static float in text reaches a box at a level that it places and its stacking context holds") {
     // The stage holds A, an absolute box inside the float F beside the stage's text, clear of F's area.
-    for (int32_t z : {-1, 1}) {
+    const int32_t zs[] = {-1, 1};
+    for (int32_t z : zs) {
         CAPTURE(z);
         Stage s(100);
         s.text(s.stage, "x ");
@@ -1491,7 +1503,7 @@ TEST_CASE("a box of opacity whose content its scroll containers, clips, escaping
             s.f.element(box, sized(block(), 100, 40), &orange, &animated, &s.style);
         }
         s.layout();
-        std::vector<uint8_t> bytes = s.pixels();
+        Array<uint8_t> bytes = s.pixels();
         CHECK(s.color(bytes, 50, 20) == "128 0 0 128");
         if (kind == 2)
             CHECK(s.color(bytes, 50, 80) == "128 0 0 128");

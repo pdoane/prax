@@ -129,11 +129,15 @@ TEST_CASE("text-align places each line's content in its line box, by its start o
         CHECK(s.left(box) == doctest::Approx(170.0));
     }
     // Start and end follow the container's direction; left and right do not.
-    for (PrTextDirection direction : {PrTextDirection_Ltr, PrTextDirection_Rtl}) {
+    const PrTextDirection directions[] = {PrTextDirection_Ltr, PrTextDirection_Rtl};
+    for (PrTextDirection direction : directions) {
         CAPTURE(int(direction));
         bool rtl = direction == PrTextDirection_Rtl;
-        for (PrLayoutTextAlign align : {PrLayoutTextAlign_Start, PrLayoutTextAlign_End, PrLayoutTextAlign_Left,
-            PrLayoutTextAlign_Right}) {
+        const PrLayoutTextAlign aligns[] = {
+            PrLayoutTextAlign_Start, PrLayoutTextAlign_End, PrLayoutTextAlign_Left,
+            PrLayoutTextAlign_Right,
+        };
+        for (PrLayoutTextAlign align : aligns) {
             CAPTURE(int(align));
             PrLayoutFontStyle font = aligned(align);
             font.direction = direction;
@@ -239,7 +243,8 @@ TEST_CASE("justification spreads a line's free space over its word separators, f
     }
     {
         // Text, with a no-break space also counting as a word separator.
-        for (const char* gap : {" ", " "}) {
+        const char* const gaps[] = {" ", " "};
+        for (const char* gap : gaps) {
             CAPTURE(gap);
             Stage s(aligned(PrLayoutTextAlign_Justify), 150);
             PrLayoutNode spans[4];
@@ -282,7 +287,8 @@ TEST_CASE("a justified line that cannot stretch is aligned as text-align-last sa
         PrLayoutTextAlign last;
         double left;
     };
-    for (Case c : {Case{PrLayoutTextAlign_Center, 5.0}, Case{PrLayoutTextAlign_End, 10.0}}) {
+    const Case cases[] = {Case{PrLayoutTextAlign_Center, 5.0}, Case{PrLayoutTextAlign_End, 10.0}};
+    for (Case c : cases) {
         CAPTURE(int(c.last));
         Stage s(aligned(PrLayoutTextAlign_Justify, c.last), 100);
         PrLayoutNode only = s.add(word(90));
@@ -379,7 +385,8 @@ TEST_CASE("text-justify decides which opportunities a justified line has, by the
         padded.padding[PrRectSide_Left] = prLayoutLengthPx(2);
         padded.padding[PrRectSide_Right] = prLayoutLengthPx(2);
         double widths[2][3] = {};
-        for (bool justified : {false, true}) {
+        const bool justifiedModes[] = {false, true};
+        for (bool justified : justifiedModes) {
             Stage s(justified ? chars : aligned(PrLayoutTextAlign_Start), 100);
             s.text("a");
             PrLayoutNode bare = s.add(inlineBox());
@@ -404,10 +411,11 @@ TEST_CASE("text-justify decides which opportunities a justified line has, by the
             const char* first;
             const char* rest;
         };
-        for (Split cut : {Split{"e", "\u0301"}, Split{"\U0001F44D", "\U0001F3FD"}}) {
+        const Split cuts[] = {Split{"e", "\u0301"}, Split{"\U0001F44D", "\U0001F3FD"}};
+        for (Split cut : cuts) {
             CAPTURE(cut.rest);
             double lefts[2] = {};
-            for (bool justified : {false, true}) {
+            for (bool justified : justifiedModes) {
                 Stage s(justified ? chars : aligned(PrLayoutTextAlign_Start), 100);
                 s.text(cut.first);
                 PrLayoutNode rest = s.text(cut.rest);
@@ -541,11 +549,16 @@ TEST_CASE("text-indent widens the first piece of each indented line in intrinsic
         bool blockFirst;
         double width;
     };
-    for (Case c : {Case{prLayoutLengthPx(30), 0, false, false, 60}, Case{prLayoutLengthPx(-10), 0, false, false, 20},
-        Case{prLayoutLengthPercent(50), 0, false, false, 30}, Case{prLayoutLengthPx(30), 0, true, false, 60},
-                Case{prLayoutLengthPx(30), PrLayoutTextIndentFlag_Hanging, false, false, 50},
-                Case{prLayoutLengthPx(30), PrLayoutTextIndentFlag_EachLine, false, false, 60},
-                Case{prLayoutLengthPx(30), 0, false, true, 30}}) {
+    const Case cases[] = {
+        Case{prLayoutLengthPx(30), 0, false, false, 60},
+        Case{prLayoutLengthPx(-10), 0, false, false, 20},
+        Case{prLayoutLengthPercent(50), 0, false, false, 30},
+        Case{prLayoutLengthPx(30), 0, true, false, 60},
+        Case{prLayoutLengthPx(30), PrLayoutTextIndentFlag_Hanging, false, false, 50},
+        Case{prLayoutLengthPx(30), PrLayoutTextIndentFlag_EachLine, false, false, 60},
+        Case{prLayoutLengthPx(30), 0, false, true, 30},
+    };
+    for (Case c : cases) {
         CAPTURE(c.width);
         Stage s(aligned(PrLayoutTextAlign_Start));
         PrLayoutFontStyle font = indented(aligned(PrLayoutTextAlign_Start), c.indent, c.flags);

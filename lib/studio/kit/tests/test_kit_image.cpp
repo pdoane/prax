@@ -1,14 +1,14 @@
 // Studio Kit's images.
 
+#include "pr/array.h"
 #include "pr/draw_image.h"
 #include "pr/kit_box.h"
 #include "pr/kit_image.h"
+#include "pr/mem.h"
 
 #include "tools/harness/kit_fixture.h"
 
 #include "tools/harness/test.h"
-
-#include <vector>
 
 using namespace harness;
 
@@ -18,7 +18,8 @@ namespace {
 
 // Returns an image of `width` by `height` opaque white pixels, which the caller releases.
 const PrDrawImage* whiteImage(uint32_t width, uint32_t height) {
-    std::vector<uint8_t> pixels(size_t(width) * height * 4, 255);
+    Array<uint8_t> pixels(width * height * 4);
+    prMemFill(pixels.data(), 255, pixels.count());
     PrDrawImageDesc desc{
         PrPixelView{pixels.data(), width * 4, {width, height}}, PrPixelFormat_Rgba8,
         PrDrawAlpha_Straight, PrColorSpace_Srgb,

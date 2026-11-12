@@ -1,7 +1,9 @@
 // Resource documents: the other documents that references name, fetched once and kept.
 
+#include "pr/array.h"
 #include "pr/dom.h"
 #include "pr/dom_xml.h"
+#include "pr/string.h"
 #include "pr/string_ops.h"
 #include "pr/url.h"
 
@@ -12,9 +14,6 @@
 
 #include "tools/harness/test.h"
 
-#include <string>
-#include <vector>
-
 namespace pr_impl {
 
 namespace {
@@ -22,13 +21,13 @@ namespace {
 // A document at an https URL whose host holds each fetch until the test answers it.
 struct HostedDocument {
     struct HeldFetch {
-        std::string url;
+        String url;
         DomFetchFn done;
         void* data;
         void (*drop)(void*);
     };
 
-    std::vector<HeldFetch> fetches;
+    Array<HeldFetch> fetches;
     DomDocumentHost host{};
     PrDomDocument* document = nullptr;
 
@@ -41,8 +40,7 @@ struct HostedDocument {
             PrStatus_Ok);
         host.context = this;
         host.fetch = [](void* context, const DomFetchRequest* request, DomFetchFn done, void* data, void (*drop)(void*)) {
-            static_cast<HostedDocument*>(context)->fetches.push_back(
-                HeldFetch{std::string(request->url.data, request->url.size), done, data, drop});
+            static_cast<HostedDocument*>(context)->fetches.push(HeldFetch{String(request->url), done, data, drop});
         };
         document->host = &host;
     }
@@ -58,9 +56,9 @@ struct HostedDocument {
 
     // Answers the first fetch waiting with `body`. A fetch that is answered is not dropped.
     void answer(const char* body) {
-        REQUIRE(!fetches.empty());
-        HeldFetch fetch = fetches.front();
-        fetches.erase(fetches.begin());
+        REQUIRE(!fetches.isEmpty());
+        HeldFetch fetch = fetches[0];
+        fetches.erase(0);
         DomFetchResult result{.status = PrStatus_Ok, .responseStatus = 200, .body = body};
         fetch.done(fetch.data, &result);
     }
@@ -79,9 +77,8 @@ struct HostedDocument {
     }
 };
 
-std::string urlOf(const DomReference& reference) {
-    PrStringView url = prRawStringView(&reference.url);
-    return url.data != nullptr ? std::string(url.data, url.size) : std::string();
+String urlOf(const DomReference& reference) {
+    return String(prRawStringView(&reference.url));
 }
 
 } // namespace
@@ -118,7 +115,7 @@ TEST_CASE("a use instances an element of another document once the document load
     PrDomElement* use = d.byId("use");
     CHECK(d.instanceOf(use) == nullptr);
     // Both uses name one document, which is fetched once.
-    REQUIRE(d.fetches.size() == 1);
+    REQUIRE(d.fetches.count() == 1);
     CHECK(d.fetches[0].url == "https://example.test/dir/defs.svg");
     d.answer("<svg xmlns='http://www.w3.org/2000/svg'><rect id='square' width='10'/></svg>");
     PrDomElement* instance = d.instanceOf(use);
@@ -135,11 +132,11 @@ TEST_CASE("a reference to another origin, or a document that fails to load, name
     HostedDocument d("<svg xmlns='http://www.w3.org/2000/svg'><use id='other' href='https://elsewhere.test/a.svg#a'/>"
         "<use id='broken' href='broken.svg#a'/></svg>");
     CHECK(d.instanceOf(d.byId("other")) == nullptr);
-    REQUIRE(d.fetches.size() == 1);
+    REQUIRE(d.fetches.count() == 1);
     CHECK(d.fetches[0].url == "https://example.test/dir/broken.svg");
     d.answer("");
     CHECK(d.instanceOf(d.byId("broken")) == nullptr);
-    CHECK(d.fetches.empty());
+    CHECK(d.fetches.isEmpty());
 }
 
 TEST_CASE("a document without a browsing context takes resource documents from its loader") {
@@ -149,11 +146,11 @@ TEST_CASE("a document without a browsing context takes resource documents from i
         prDomParseXml("<svg xmlns='http://www.w3.org/2000/svg'><circle id='a' r='3'/></svg>", "image/svg+xml", nullptr);
     struct Loader {
         PrDomDocument* library;
-        std::vector<std::string> urls;
+        Array<String> urls;
     } loader{library, {}};
     domResourcesSetLoader(document, [](void* context, PrDomDocument*, PrStringView url) -> PrDomDocument* {
         Loader* l = static_cast<Loader*>(context);
-        l->urls.emplace_back(url.data, url.size);
+        l->urls.push(String(url));
         return l->library;
     }, &loader);
     domUsesSync(document);
@@ -162,7 +159,7 @@ TEST_CASE("a document without a browsing context takes resource documents from i
     REQUIRE(shadow != nullptr);
     REQUIRE(domElementFromNode(shadow->first) != nullptr);
     CHECK(domElementName(domElementFromNode(shadow->first)) == "circle");
-    REQUIRE(loader.urls.size() == 1);
+    REQUIRE(loader.urls.count() == 1);
     CHECK(loader.urls[0] == "lib.svg");
     domResourcesSetLoader(document, nullptr, nullptr);
     prDomDocumentRelease(library);

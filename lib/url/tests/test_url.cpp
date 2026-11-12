@@ -3,27 +3,21 @@
 
 #include "tools/harness/test.h"
 
-#include <string>
-
 namespace pr_impl {
 
 namespace {
 
-std::string take(PrRawString value) {
-    PrStringView text = prRawStringView(&value);
-    std::string result(text.data != nullptr ? text.data : "", text.size);
-    prRawStringReset(&value);
-    return result;
+String take(PrRawString value) {
+    return String::adopt(value);
 }
-std::string parse(const char* text, const char* base = nullptr,
-        PrUrlSerialization serialization = PrUrlSerialization_Whole) {
+String parse(const char* text, const char* base = nullptr, PrUrlSerialization serialization = PrUrlSerialization_Whole) {
     PrUrl* parent = nullptr;
     if (base != nullptr) REQUIRE(urlParse(base, nullptr, PrCharset_Utf8, &parent) == PrStatus_Ok);
     PrUrl* result = nullptr;
     PrStatus status = urlParse(text, parent, PrCharset_Utf8, &result);
     urlDestroy(parent);
     if (status != PrStatus_Ok) return take(prRawStringCopy(prStatusName(status)));
-    std::string serialized = take(urlSerialize(result, serialization));
+    String serialized = take(urlSerialize(result, serialization));
     Url* copy = urlClone(result);
     urlDestroy(result);
     CHECK(take(urlSerialize(copy, serialization)) == serialized);

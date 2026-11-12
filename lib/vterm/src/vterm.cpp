@@ -7,6 +7,7 @@
 #include "pr/base64.h"
 #include "pr/integer.h"
 #include "pr/mem.h"
+#include "pr/string_ops.h"
 #include "pr/utf8.h"
 
 #include "vterm/src/vterm_parser.h"
@@ -1473,7 +1474,7 @@ void prVtermWrite(PrVterm* vterm, PrByteView bytes) {
     if (bytes.size == 0)
         return;
     vtermRevise(vterm);
-    PrStringView text{reinterpret_cast<const char*>(bytes.data), bytes.size};
+    PrStringView text = prStringFromBytes(bytes);
     size_t at = 0;
     for (;;) {
         VtermAction* action = vtermParserNext(&vterm->parser, text, &at);

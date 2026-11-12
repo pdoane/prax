@@ -46,12 +46,12 @@ struct Block {
     }
 
     // Returns the boxes of the bytes from `start` to `end`, in px.
-    std::vector<PrRect> range(uint32_t start, uint32_t end) {
+    Array<PrRect> range(uint32_t start, uint32_t end) {
         PrLayoutRect out[16];
         uint32_t count = prLayoutNodeTextRangeBoxes(f.tree, text, start, end, PrLayoutCoordinates_Viewport, out, 16);
-        std::vector<PrRect> rects;
+        Array<PrRect> rects;
         for (uint32_t i = 0; i < count && i < 16; ++i)
-            rects.push_back(prLayoutRectToPx(out[i]));
+            rects.push(prLayoutRectToPx(out[i]));
         return rects;
     }
 
@@ -71,8 +71,8 @@ struct Painted {
         PrRect rect;
         PrColor16 color;
     };
-    std::vector<Fill> rects;
-    std::vector<PrColor16> glyphColors;
+    Array<Fill> rects;
+    Array<PrColor16> glyphColors;
     uint32_t clips = 0;
 
     void read(const PrDrawList* list) {
@@ -81,8 +81,8 @@ struct Painted {
             const PrDrawCommand& command = commands[i];
             switch (command.kind) {
                 case PrDrawCommandKind_Embed: read(command.embed.list); break;
-                case PrDrawCommandKind_Rect: rects.push_back(Fill{command.rect, command.color}); break;
-                case PrDrawCommandKind_Glyphs: glyphColors.push_back(command.color); break;
+                case PrDrawCommandKind_Rect: rects.push(Fill{command.rect, command.color}); break;
+                case PrDrawCommandKind_Glyphs: glyphColors.push(command.color); break;
                 case PrDrawCommandKind_PushClipRect: ++clips; break;
                 default: break;
             }
@@ -140,7 +140,7 @@ TEST_CASE("a caret on a line that holds only a preserved break stands at that li
     CHECK(b.caret(2).top == doctest::Approx(first.top));
     CHECK(b.caret(2).left > first.left);
     // A break adds no box of its own.
-    CHECK(b.range(0, 6).size() == 2);
+    CHECK(b.range(0, 6).count() == 2);
 }
 
 TEST_CASE("at a soft wrap, a caret stands at the next line's start downstream, and the line's end upstream") {
@@ -162,13 +162,13 @@ TEST_CASE("collapsed white space stands within the space it collapsed to") {
 
 TEST_CASE("a range covers one box for each line it reaches, between the carets at its ends") {
     Block b("aaaa bbbb", 60, PrLayoutWhiteSpaceCollapse_Collapse);
-    std::vector<PrRect> rects = b.range(2, 7);
-    REQUIRE(rects.size() == 2);
+    Array<PrRect> rects = b.range(2, 7);
+    REQUIRE(rects.count() == 2);
     CHECK(rects[0].left == doctest::Approx(b.caret(2).left));
     CHECK(rects[1].left == doctest::Approx(b.caret(5).left));
     CHECK(rects[1].right == doctest::Approx(b.caret(7).left));
     CHECK(rects[1].top == doctest::Approx(rects[0].top + 40));
-    CHECK(b.range(3, 3).empty());
+    CHECK(b.range(3, 3).isEmpty());
 }
 
 TEST_CASE("in rtl text, a caret moves left as the offset grows") {
@@ -237,8 +237,8 @@ TEST_CASE("a highlight fills its range's box behind the text, and paints the gly
     PrLayoutHighlight highlight{.start = 2, .end = 4, .color = kRed, .background = kYellow};
     prLayoutNodeSetHighlights(b.f.tree, b.text, &highlight, 1);
     Painted painted = paintOf(b.f.tree);
-    std::vector<PrRect> range = b.range(2, 4);
-    REQUIRE(range.size() == 1);
+    Array<PrRect> range = b.range(2, 4);
+    REQUIRE(range.count() == 1);
     bool filled = false;
     for (const Painted::Fill& r : painted.rects)
         filled = filled || (sameColor(r.color, kYellow) && r.rect.left == doctest::Approx(range[0].left) &&
@@ -249,9 +249,9 @@ TEST_CASE("a highlight fills its range's box behind the text, and paints the gly
 
     prLayoutNodeSetHighlights(b.f.tree, b.text, nullptr, 0);
     Painted plain = paintOf(b.f.tree);
-    CHECK(plain.glyphColors.size() == 1);
+    CHECK(plain.glyphColors.count() == 1);
     // The text before, inside and after the highlight, each clipped to its stretch.
-    REQUIRE(painted.glyphColors.size() == 3);
+    REQUIRE(painted.glyphColors.count() == 3);
     CHECK(sameColor(painted.glyphColors[1], kRed));
     CHECK(painted.clips == plain.clips + 3);
     CHECK(prLayoutNodeHighlights(b.f.tree, b.text, nullptr, 0) == 0);
@@ -407,10 +407,7 @@ TEST_CASE("a frame's highlights and caret last until a frame that does not set t
 TEST_CASE("rendered text: white space is processed, and removed only at the edges of a line") {
     auto renderedOf = [](const char* value, PrLayoutWhiteSpaceCollapse collapse, float width = 400) {
         Block b(value, width, collapse);
-        PrRawString text = prLayoutNodeRenderedText(b.f.tree, b.root, nullptr);
-        std::string copy(prRawStringView(&text).data, prRawStringView(&text).size);
-        prRawStringReset(&text);
-        return copy;
+        return String::adopt(prLayoutNodeRenderedText(b.f.tree, b.root, nullptr));
     };
     CHECK(renderedOf("  a  \n b  ", PrLayoutWhiteSpaceCollapse_Collapse) == "a b");
     CHECK(renderedOf("  a  \n b  ", PrLayoutWhiteSpaceCollapse_Preserve) == "  a  \n b  ");

@@ -1,11 +1,10 @@
 #include "pr/lottie.h"
+#include "pr/string.h"
 
 #include "lottie/src/lottie_eval.h"
 #include "lottie/src/lottie_model.h"
 
 #include "tools/harness/test.h"
-
-#include <string>
 
 namespace pr_impl {
 
@@ -13,21 +12,23 @@ namespace {
 
 // Returns an animation at 30 frames per second, with a null layer "Target" that moves, and a layer "Moved" whose
 // opacity is given by the expression.
-std::string animationWith(const std::string& expression) {
-    return R"({"w": 100, "h": 100, "fr": 30, "ip": 0, "op": 60, "layers": [
+String animationWith(PrStringView expression) {
+    String json(R"({"w": 100, "h": 100, "fr": 30, "ip": 0, "op": 60, "layers": [
         {"ty": 3, "nm": "Target", "ind": 1, "ip": 0, "op": 60, "st": 0,
          "ks": {"p": {"a": 1, "k": [{"t": 0, "s": [0, 0], "o": {"x": 0, "y": 0}, "i": {"x": 1, "y": 1}},
                                     {"t": 30, "s": [30, 60]}]}},
          "ef": [{"ty": 5, "nm": "Slider Control", "ef": [{"ty": 0, "nm": "Slider", "v": {"k": 42}}]}]},
         {"ty": 3, "nm": "Moved", "ind": 2, "ip": 0, "op": 60, "st": 0,
          "ks": {"o": {"a": 1, "k": [{"t": 0, "s": [0], "o": {"x": [0], "y": [0]}, "i": {"x": [1], "y": [1]}},
-                                    {"t": 10, "s": [100]}], "x": ")"
-        + expression + R"("}}}]})";
+                                    {"t": 10, "s": [100]}], "x": ")");
+    json.append(expression);
+    json.append(R"("}}}]})");
+    return json;
 }
 
 // Returns the opacity of the layer "Moved" at `frame`, with its expression evaluated.
-float opacityAt(const std::string& expression, double frame) {
-    std::string json = animationWith(expression);
+float opacityAt(PrStringView expression, double frame) {
+    String json = animationWith(expression);
     PrLottieAnimation* animation = nullptr;
     REQUIRE(prLottieAnimationCreate(json, nullptr, &animation) == PrStatus_Ok);
     const LottieAnimation& a = *animation;
@@ -65,7 +66,7 @@ TEST_CASE("loopOut cycles a property's keyframes past its last") {
 }
 
 TEST_CASE("wiggle and random draw the same at a frame however often it is drawn, and wiggle within its amplitude") {
-    std::string json = animationWith("var $bm_rt; $bm_rt = wiggle(3, 20) + random(0, 0.001);");
+    String json = animationWith("var $bm_rt; $bm_rt = wiggle(3, 20) + random(0, 0.001);");
     PrLottieAnimation* animation = nullptr;
     REQUIRE(prLottieAnimationCreate(json, nullptr, &animation) == PrStatus_Ok);
     const LottieAnimation& a = *animation;

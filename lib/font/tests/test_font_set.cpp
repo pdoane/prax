@@ -1,21 +1,22 @@
+#include "pr/array.h"
+#include "pr/float.h"
 #include "pr/font_set.h"
+#include "pr/string.h"
 
 #include "tools/harness/test.h"
 
-#include <cmath>
-#include <string>
-#include <vector>
-
 namespace pr_impl {
+
+using namespace pr;
 
 namespace {
 
-std::string fontPath(const char* name) {
-    return std::string(PR_FONTS_DIR) + "/" + name;
+String fontPath(const char* name) {
+    return format("{}/{}", PR_FONTS_DIR, name);
 }
 
 void addFile(PrFontSet* set, const PrFontFaceDescriptor& descriptor, const char* name) {
-    std::string path = fontPath(name);
+    String path = fontPath(name);
     const PrFont* font = nullptr;
     REQUIRE(prFontCreateFromFile(path, 0, nullptr, &font) == PrStatus_Ok);
     prFontSetAdd(set, &descriptor, font);
@@ -28,7 +29,7 @@ float axisValue(const PrFont* font, uint32_t tag) {
         if (prFontAxis(font, i).tag == tag)
             return prFontAxisValue(font, i);
     }
-    return NAN;
+    return kPrF32Nan;
 }
 
 // What a test requests of a set: a family, and a style.
@@ -38,15 +39,15 @@ struct Asked {
 };
 
 // Returns the faces that `asked` matches in `set`, each holding a reference to its font that the caller releases.
-std::vector<PrFontFace> matchAll(PrFontSet* set, const Asked& asked) {
+Array<PrFontFace> matchAll(PrFontSet* set, const Asked& asked) {
     PrFontMatch* match = prFontMatchCreate();
     prFontSetMatch(set, asked.family, &asked.style, match);
-    std::vector<PrFontFace> faces;
+    Array<PrFontFace> faces;
     for (uint32_t i = 0; i < prFontMatchFaceCount(match); ++i) {
         PrFontFace face = prFontMatchFace(match, i);
         if (face.font != nullptr)
             prFontRetain(face.font);
-        faces.push_back(face);
+        faces.push(face);
     }
     prFontMatchDestroy(match);
     return faces;
@@ -54,8 +55,8 @@ std::vector<PrFontFace> matchAll(PrFontSet* set, const Asked& asked) {
 
 // Returns the single face that `asked` matches, holding a reference to its font that the caller releases.
 PrFontFace matchOne(PrFontSet* set, const Asked& asked) {
-    std::vector<PrFontFace> faces = matchAll(set, asked);
-    REQUIRE(faces.size() == 1);
+    Array<PrFontFace> faces = matchAll(set, asked);
+    REQUIRE(faces.count() == 1);
     return faces[0];
 }
 
@@ -69,13 +70,12 @@ Asked request(PrFontGeneric generic) {
 
 // Returns the family of the first face that `r` matches in `set`, or an empty string if it matches no face or a face
 // that is still loading.
-std::string familyMatched(PrFontSet* set, const Asked& r) {
-    std::vector<PrFontFace> faces = matchAll(set, r);
-    std::string answer;
-    if (!faces.empty() && faces[0].font != nullptr) {
+String familyMatched(PrFontSet* set, const Asked& r) {
+    Array<PrFontFace> faces = matchAll(set, r);
+    String answer;
+    if (!faces.isEmpty() && faces[0].font != nullptr) {
         PrRawString family = prFontFamilyName(faces[0].font);
-        PrStringView answered = prRawStringView(&family);
-        answer.assign(answered.data, answered.size);
+        answer.assign(prRawStringView(&family));
         prRawStringReset(&family);
     }
     for (const PrFontFace& face : faces)
@@ -84,7 +84,7 @@ std::string familyMatched(PrFontSet* set, const Asked& r) {
 }
 
 const PrFont* loadFont(const char* name) {
-    std::string path = fontPath(name);
+    String path = fontPath(name);
     const PrFont* font = nullptr;
     REQUIRE(prFontCreateFromFile(path, 0, nullptr, &font) == PrStatus_Ok);
     return font;
@@ -111,9 +111,9 @@ TEST_CASE("a font set lists the families of its faces once each") {
     REQUIRE(prFontSetFamilyCount(set) == 2);
     PrStringView first = prFontSetFamily(set, 0);
     PrStringView second = prFontSetFamily(set, 1);
-    CHECK(std::string(first.data, first.size) == "Noto Sans");
-    CHECK(std::string(second.data, second.size) == "Noto Serif");
-    CHECK(matchAll(set, request("Nothing")).empty());
+    CHECK(first == "Noto Sans");
+    CHECK(second == "Noto Serif");
+    CHECK(matchAll(set, request("Nothing")).isEmpty());
     prFontSetDestroy(set);
 }
 
@@ -127,7 +127,7 @@ TEST_CASE("an alias matches its family's faces, and a family with faces matches 
     prFontSetAlias(set, "noto sans", "Noto Serif");
     CHECK(familyMatched(set, request("TIMES")) == "Noto Serif");
     CHECK(familyMatched(set, request("Noto Sans")) == "Noto Sans");
-    CHECK(familyMatched(set, request("Helvetica")).empty());
+    CHECK(familyMatched(set, request("Helvetica")).isEmpty());
     CHECK(prFontSetFamilyCount(set) == 2);
     prFontSetDestroy(set);
 }
@@ -140,8 +140,8 @@ TEST_CASE("a generic family matches the family bound to it, and is never a name"
     prFontSetSetGeneric(set, PrFontGeneric_Serif, "Noto Serif");
     CHECK(familyMatched(set, request(PrFontGeneric_Serif)) == "Noto Serif");
     // A family named "serif" is not the generic, and an unbound generic matches nothing.
-    CHECK(familyMatched(set, request("serif")).empty());
-    CHECK(familyMatched(set, request(PrFontGeneric_SansSerif)).empty());
+    CHECK(familyMatched(set, request("serif")).isEmpty());
+    CHECK(familyMatched(set, request(PrFontGeneric_SansSerif)).isEmpty());
     CHECK(prFontGenericFromName("Sans-Serif") == PrFontGeneric_SansSerif);
     CHECK(prFontGenericFromName("nastaliq") == PrFontGeneric_Nastaliq);
     CHECK(prFontGenericFromName("Noto Sans") == PrFontGeneric_None);
@@ -155,7 +155,7 @@ TEST_CASE("a font set's default family is serif until it is set") {
     prFontSetSetDefaultFamily(set, prFontFamilyFromName("Times"));
     PrFontFamily named = prFontSetDefaultFamily(set);
     CHECK(named.generic == PrFontGeneric_None);
-    CHECK(std::string(named.name.data, named.name.size) == "Times");
+    CHECK(named.name == "Times");
     PrFontSet* child = prFontSetCreate(set);
     CHECK(prFontSetDefaultFamily(child).generic == PrFontGeneric_None);
     prFontSetDestroy(child);
@@ -182,7 +182,7 @@ TEST_CASE("a set over a parent matches its own family before the parent's, and t
     CHECK(familyMatched(document, request(PrFontGeneric_Serif)) == "Noto Serif");
     REQUIRE(prFontSetFallbackCount(document) == 1);
     PrStringView first = prFontSetFallbackFamily(document, 0).family;
-    CHECK(std::string(first.data, first.size) == "Noto Sans");
+    CHECK(first == "Noto Sans");
     prFontSetDestroy(document);
     prFontSetDestroy(host);
 }
@@ -220,7 +220,7 @@ TEST_CASE("a pending face is matched without a font until it loads, and a failed
 
     // Failed: the family is missing, and the family of that name in the host is not matched in its place.
     prFontSetFailed(document, 8);
-    CHECK(matchAll(document, request("Noto Sans")).empty());
+    CHECK(matchAll(document, request("Noto Sans")).isEmpty());
     // A change to the parent changes the version of the child.
     version = prFontSetVersion(document);
     prFontSetSetGeneric(host, PrFontGeneric_Monospace, "Noto Sans");
@@ -232,7 +232,8 @@ TEST_CASE("a pending face is matched without a font until it loads, and a failed
 TEST_CASE("matching narrows weights as css-fonts-4 orders them") {
     // One variable font described as three static weights, as @font-face rules would describe it.
     PrFontSet* set = prFontSetCreate(nullptr);
-    for (float weight : {300.0f, 400.0f, 700.0f}) {
+    const float weights[] = {300.0f, 400.0f, 700.0f};
+    for (float weight : weights) {
         PrFontFaceDescriptor d = prFontFaceDescriptorDefault();
         d.automatic = PrFontFaceAutoFlag_All & ~PrFontFaceAutoFlag_Weight;
         d.weightMin = d.weightMax = weight;
@@ -296,7 +297,7 @@ TEST_CASE("matching sets a variable face's axes to the request") {
     r = request("Literata");
     r.style.slope = PrFontSlope_Italic;
     match = matchOne(set, r);
-    CHECK(prFontOblique(match.font) == doctest::Approx(std::tan(14 * 3.14159265 / 180)));
+    CHECK(prFontOblique(match.font) == doctest::Approx(prF64Tan(14 * 3.14159265 / 180)));
     prFontRelease(match.font);
     r.style.flags &= ~PrFontStyleFlag_SynthesizeStyle;
     match = matchOne(set, r);
@@ -396,7 +397,7 @@ TEST_CASE("a face with a color glyph for an emoji is an emoji face, unless its d
     addFile(set, d, "TwemojiSmileySbix.ttf");
     d.family = "Text";
     addFile(set, d, "NotoSans[wdth,wght].ttf");
-    std::string path = fontPath("Twemoji.ttf");
+    String path = fontPath("Twemoji.ttf");
     const PrFont* font = nullptr;
     REQUIRE(prFontCreateFromFile(path, 0, nullptr, &font) == PrStatus_Ok);
     d.family = "Added";
@@ -445,7 +446,7 @@ TEST_CASE("a failed face leaves no face of its style rather than moving the matc
     prFontSetLoaded(set, 2, sans);
     prFontSetFailed(set, 1);
     // The 400 face is still the best match, so no face matches, and the text moves to its next family.
-    CHECK(matchAll(set, request("Web")).empty());
+    CHECK(matchAll(set, request("Web")).isEmpty());
     Asked light = request("Web");
     light.style.weight = 300;
     CHECK(familyMatched(set, light) == "Noto Sans");
@@ -500,7 +501,7 @@ TEST_CASE("a removed face leaves the set, which a repeated removal and addition 
         prFontSetRequestLoad(set, key);
         prFontSetRemove(set, key);
         CHECK(prFontSetFaceCount(set) == 0);
-        CHECK(matchAll(set, request("Web")).empty());
+        CHECK(matchAll(set, request("Web")).isEmpty());
     }
     // A load requested before the removal is not taken after it.
     CHECK(prFontSetTakeLoads(set, nullptr, 0) == 0);
@@ -629,7 +630,7 @@ TEST_CASE("fallback families are matched among the outermost set's faces, never 
     prFontSetMatchFallback(document, 0, &style, match);
     REQUIRE(prFontMatchFaceCount(match) == 1);
     PrRawString family = prFontFamilyName(prFontMatchFace(match, 0).font);
-    CHECK(std::string(prRawStringView(&family).data, prRawStringView(&family).size) == "Noto Sans");
+    CHECK(prRawStringView(&family) == "Noto Sans");
     prRawStringReset(&family);
     uint64_t stamp = prFontSetFallbackStamp(document);
     prFontSetRemove(document, 1);
@@ -641,9 +642,9 @@ TEST_CASE("fallback families are matched among the outermost set's faces, never 
 
 TEST_CASE("a file added by its family is read when a match first asks for the family, and only then") {
     PrFontSet* set = prFontSetCreate(nullptr);
-    std::string regular = fontPath("Arimo-Regular.ttf");
-    std::string italic = fontPath("Arimo-Italic.ttf");
-    std::string missing = fontPath("Missing.ttf");
+    String regular = fontPath("Arimo-Regular.ttf");
+    String italic = fontPath("Arimo-Italic.ttf");
+    String missing = fontPath("Missing.ttf");
     prFontSetAddFileFamily(set, "Arimo", regular);
     prFontSetAddFileFamily(set, "Arimo", italic);
     prFontSetAddFileFamily(set, "Arimo", italic);
@@ -658,7 +659,7 @@ TEST_CASE("a file added by its family is read when a match first asks for the fa
     prFontRelease(face.font);
     // The missing file is not read until its family is asked for, and then gives no face.
     CHECK(prFontSetFaceCount(set) == 3);
-    CHECK(matchAll(set, request("Missing")).empty());
+    CHECK(matchAll(set, request("Missing")).isEmpty());
     CHECK(prFontSetFaceCount(set) == 2);
     CHECK(prFontSetFamilyCount(set) == 2);
     prFontSetDestroy(set);
@@ -666,14 +667,14 @@ TEST_CASE("a file added by its family is read when a match first asks for the fa
 
 TEST_CASE("a file whose faces read as another family gives them the family it was added by, as automatic faces") {
     PrFontSet* set = prFontSetCreate(nullptr);
-    std::string sans = fontPath("NotoSans[wdth,wght].ttf");
-    std::string emoji = fontPath("Twemoji.ttf");
+    String sans = fontPath("NotoSans[wdth,wght].ttf");
+    String emoji = fontPath("Twemoji.ttf");
     prFontSetAddFileFamily(set, "Platform Sans", sans);
     prFontSetAddFileFamily(set, "Platform Emoji", emoji);
     CHECK(familyMatched(set, request("Platform Sans")) == "Noto Sans");
     PrFontFace face = matchOne(set, request("Platform Emoji"));
     CHECK(face.flags == PrFontFaceFlag_Emoji);
     prFontRelease(face.font);
-    CHECK(familyMatched(set, request("Noto Sans")).empty());
+    CHECK(familyMatched(set, request("Noto Sans")).isEmpty());
     prFontSetDestroy(set);
 }

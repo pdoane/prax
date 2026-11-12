@@ -1,15 +1,17 @@
+#include "pr/array.h"
 #include "pr/compress_builtin.h"
+#include "pr/string.h"
+#include "pr/string_ops.h"
 
 #include "tools/harness/test.h"
-
-#include <string>
-#include <vector>
 
 extern "C" int prTestCompressCApi(void);
 
 namespace pr_impl {
 
 namespace {
+
+using namespace pr;
 
 // "the quick brown fox jumps over the lazy dog " twenty times, zlib-framed.
 constexpr uint8_t kZlib[] = {
@@ -38,22 +40,22 @@ constexpr uint8_t kBrotli[] = {
     0x1f, 0x1e, 0x27, 0x4a, 0x29, 0x38, 0xc2, 0xfb, 0xab, 0x0f, 0xa2,
 };
 
-std::string expected() {
-    std::string text;
+String expected() {
+    String text;
     for (int i = 0; i < 20; ++i)
-        text += "the quick brown fox jumps over the lazy dog ";
+        text.append("the quick brown fox jumps over the lazy dog ");
     return text;
 }
 
 // Decodes a whole stream at once into room for `capacity` bytes.
-PrStatus decode(PrCompressFormat format, const uint8_t* bytes, size_t size, std::string* out,
+PrStatus decode(PrCompressFormat format, const uint8_t* bytes, size_t size, String* out,
         size_t capacity = 4096, PrCompressRead* read = nullptr) {
-    std::vector<uint8_t> output(capacity);
+    Array<uint8_t> output(capacity);
     PrCompressRead local{};
     PrStatus status = prCompressCodecDecode(prCompressBuiltinCreate(), format, PrByteView{bytes, size}, output.data(),
-        output.size(), read != nullptr ? read : &local);
+        output.count(), read != nullptr ? read : &local);
     const PrCompressRead& r = read != nullptr ? *read : local;
-    out->assign(reinterpret_cast<const char*>(output.data()), r.written);
+    out->assign(PrStringView{reinterpret_cast<const char*>(output.data()), r.written});
     return status;
 }
 
@@ -68,7 +70,7 @@ TEST_CASE("the public headers compile as C") {
 }
 
 TEST_CASE("each format decodes whole") {
-    std::string text;
+    String text;
     PrCompressRead read{};
     CHECK(decode(PrCompressFormat_Zlib, kZlib, sizeof(kZlib), &text, 4096, &read) == PrStatus_Ok);
     CHECK(read.progress == PrCompressProgress_Done);
@@ -88,7 +90,7 @@ TEST_CASE("each format decodes whole") {
 TEST_CASE("a stream decodes a byte of input at a time into little room") {
     PrCompressDecoder* decoder = nullptr;
     REQUIRE(prCompressDecoderCreate(prCompressBuiltinCreate(), PrCompressFormat_Zlib, &decoder) == PrStatus_Ok);
-    std::string text;
+    String text;
     uint8_t room[7];
     size_t at = 0;
     PrCompressRead read{};
@@ -97,7 +99,7 @@ TEST_CASE("a stream decodes a byte of input at a time into little room") {
         REQUIRE(prCompressDecoderRead(decoder, input, at + 1 >= sizeof(kZlib), room, sizeof(room), &read) ==
             PrStatus_Ok);
         at += read.consumed;
-        text.append(reinterpret_cast<const char*>(room), read.written);
+        text.append(PrStringView{reinterpret_cast<const char*>(room), read.written});
     } while (read.progress != PrCompressProgress_Done);
     prCompressDecoderDestroy(decoder);
     CHECK(text == expected());
@@ -105,15 +107,16 @@ TEST_CASE("a stream decodes a byte of input at a time into little room") {
 }
 
 TEST_CASE("output that fills first asks for room") {
-    std::string text;
+    String text;
     PrCompressRead read{};
     CHECK(decode(PrCompressFormat_Zlib, kZlib, sizeof(kZlib), &text, 100, &read) == PrStatus_Ok);
     CHECK(read.progress == PrCompressProgress_Output);
-    CHECK(text == expected().substr(0, 100));
+    String all = expected();
+    CHECK(text == prStringSlice(all, 0, 100));
 }
 
 TEST_CASE("a stream that ends early is truncated, and a corrupt one fails") {
-    std::string text;
+    String text;
     CHECK(decode(PrCompressFormat_Zlib, kZlib, sizeof(kZlib) - 3, &text) == PrStatus_Truncated);
     uint8_t corrupt[sizeof(kZlib)];
     for (size_t i = 0; i < sizeof(kZlib); ++i)
@@ -127,6 +130,6 @@ TEST_CASE("a stream that ends early is truncated, and a corrupt one fails") {
 TEST_CASE("a zlib stream that needs a preset dictionary is not supported") {
     // FDICT set, with the check bits that make the header a multiple of 31.
     const uint8_t header[] = {0x78, 0xbb, 0x00, 0x00, 0x00, 0x01};
-    std::string text;
+    String text;
     CHECK(decode(PrCompressFormat_Zlib, header, sizeof(header), &text) == PrStatus_NotSupported);
 }

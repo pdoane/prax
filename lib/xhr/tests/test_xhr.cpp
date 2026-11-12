@@ -1,13 +1,16 @@
+#include "pr/array.h"
+#include "pr/span.h"
+#include "pr/string.h"
+#include "pr/string_ops.h"
 #include "pr/xhr.h"
 
 #include "tools/harness/test.h"
 
-#include <string>
-#include <vector>
-
 extern "C" int prTestXhrCApi(void);
 
 namespace pr_impl {
+
+using namespace pr;
 
 namespace {
 
@@ -15,10 +18,10 @@ namespace {
 // timers.
 struct TestClient {
     struct Request {
-        std::string url;
-        std::string method;
-        std::vector<std::string> headers;   // each as "name: value"
-        std::string body;
+        String url;
+        String method;
+        Array<String> headers;   // each as "name: value"
+        String body;
         PrFetchCredentials credentials;
         PrFetchResponseFn done;
         void* PR_NULLABLE context;
@@ -30,8 +33,8 @@ struct TestClient {
         bool cleared;
     };
 
-    std::vector<Request> fetches;
-    std::vector<Timer> timers;
+    Array<Request> fetches;
+    Array<Timer> timers;
     bool refuses = false;               // true if the client cannot fetch
 
     PrXhrClient client() {
@@ -44,20 +47,18 @@ struct TestClient {
                     if (client->refuses)
                         return PrStatus_NotSupported;
                     Request fetch{
-                        .url = std::string(request->url.data, request->url.size),
+                        .url = String(request->url),
                         .method = "GET",
-                        .body = std::string(reinterpret_cast<const char*>(request->body.data), request->body.size),
+                        .body = String(prStringFromBytes(request->body)),
                         .credentials = request->credentials,
                         .done = done,
                         .context = doneContext,
                     };
                     if (request->method.data != nullptr)
-                        fetch.method = std::string(request->method.data, request->method.size);
+                        fetch.method = String(request->method);
                     for (uint32_t i = 0; i < request->headerCount; ++i)
-                        fetch.headers.push_back(std::string(request->headers[i].name.data,
-                            request->headers[i].name.size) + ": " +
-                            std::string(request->headers[i].value.data, request->headers[i].value.size));
-                    client->fetches.push_back(fetch);
+                        fetch.headers.push(format("{}: {}", request->headers[i].name, request->headers[i].value));
+                    client->fetches.push(fetch);
                     return PrStatus_Ok;
                 },
             .cancelFetch = [](void* context, void* doneContext) {
@@ -70,11 +71,11 @@ struct TestClient {
                 TestClient* client = static_cast<TestClient*>(context);
                 if (task->retain != nullptr)
                     task->retain(task->context);
-                client->timers.push_back(Timer{*task, milliseconds, false});
-                return int32_t(client->timers.size());
+                client->timers.push(Timer{*task, milliseconds, false});
+                return int32_t(client->timers.count());
             },
             .clearTimeout = [](void* context, int32_t id) {
-                Timer& timer = static_cast<TestClient*>(context)->timers[size_t(id - 1)];
+                Timer& timer = static_cast<TestClient*>(context)->timers[uint32_t(id - 1)];
                 if (timer.cleared)
                     return;
                 timer.cleared = true;
@@ -86,7 +87,7 @@ struct TestClient {
 
     // Fires the timers that are set, in order.
     void fireTimers() {
-        for (size_t i = 0; i < timers.size(); ++i) {
+        for (uint32_t i = 0; i < timers.count(); ++i) {
             Timer timer = timers[i];
             if (timer.cleared)
                 continue;
@@ -98,22 +99,22 @@ struct TestClient {
     }
 
     // Answers the last fetch with `body`, `status` and `headers`.
-    void respond(const std::string& body, uint16_t status, std::vector<PrFetchHeader> headers) {
-        Request fetch = fetches.back();
+    void respond(PrStringView body, uint16_t status, Span<const PrFetchHeader> headers) {
+        Request fetch = fetches.last();
         PrFetchResponse response{
             .status = PrStatus_Ok,
             .responseStatus = status,
             .url = "https://example.com/final",
             .headers = headers.data(),
-            .headerCount = uint32_t(headers.size()),
-            .body = PrByteView{reinterpret_cast<const uint8_t*>(body.data()), body.size()},
+            .headerCount = headers.count(),
+            .body = prStringBytes(body),
         };
         fetch.done(fetch.context, &response);
     }
 
     // Fails the last fetch with `status`, a network error or Lost.
     void fail(PrStatus status) {
-        Request fetch = fetches.back();
+        Request fetch = fetches.last();
         PrFetchResponse response{.status = status};
         fetch.done(fetch.context, &response);
     }
@@ -122,17 +123,16 @@ struct TestClient {
 // The events that reach the targets of a request, in order, each as its type and the request's state when it fired.
 struct Recorded {
     PrXhr* request;
-    std::vector<std::string> events;
+    Array<String> events;
 };
 
 void record(void* PR_NULLABLE context, PrDomEvent* event) {
     Recorded* recorded = static_cast<Recorded*>(context);
     PrStringView type = prDomEventType(event);
-    recorded->events.push_back(std::string(type.data, type.size) + ":" +
-        std::to_string(prXhrReadyState(recorded->request)));
+    recorded->events.push(format("{}:{}", type, prXhrReadyState(recorded->request)));
 }
 
-void listen(Recorded* recorded, PrDomEventTarget* target, std::initializer_list<const char*> types) {
+void listen(Recorded* recorded, PrDomEventTarget* target, Span<const char* const> types) {
     PrDomEventListener listener{.invoke = record, .context = recorded, .identity = 1};
     for (const char* type : types)
         prDomEventTargetAddEventListener(target, type, &listener, nullptr);
@@ -140,7 +140,7 @@ void listen(Recorded* recorded, PrDomEventTarget* target, std::initializer_list<
 
 // Tracks the activity that a request reports.
 struct Activity {
-    std::vector<bool> changes;
+    Array<bool> changes;
 };
 
 PrXhr* createRequest(TestClient* client, Activity* activity = nullptr) {
@@ -148,14 +148,14 @@ PrXhr* createRequest(TestClient* client, Activity* activity = nullptr) {
     PrXhr* request = prXhrCreate(&desc);
     if (activity != nullptr) {
         prXhrSetActivity(request,
-            [](void* context, PrXhr*, bool active) { static_cast<Activity*>(context)->changes.push_back(active); }, activity);
+            [](void* context, PrXhr*, bool active) { static_cast<Activity*>(context)->changes.push(active); }, activity);
     }
     return request;
 }
 
-std::string take(PrRawString text) {
+String take(PrRawString text) {
     PrStringView view = prRawStringView(&text);
-    std::string result = view.data != nullptr ? std::string(view.data, view.size) : std::string("(null)");
+    String result = view.data != nullptr ? String(view) : String("(null)");
     prRawStringReset(&text);
     return result;
 }
@@ -193,7 +193,8 @@ TEST_CASE("open checks its method and URL, and only the first open of a request 
     TestClient client;
     PrXhr* request = createRequest(&client);
     Recorded recorded{request, {}};
-    listen(&recorded, prXhrAsEventTarget(request), {"readystatechange"});
+    const char* const types[] = {"readystatechange"};
+    listen(&recorded, prXhrAsEventTarget(request), types);
     CHECK(prXhrQuery(prXhrAsEventTarget(request)) == request);
     CHECK(prXhrUploadQuery(prXhrUploadAsEventTarget(prXhrUpload(request))) == prXhrUpload(request));
     CHECK(prXhrReadyState(request) == PrXhrState_Unsent);
@@ -202,11 +203,11 @@ TEST_CASE("open checks its method and URL, and only the first open of a request 
     CHECK(prXhrOpen(request, "TRACE", "a", true) == PrStatus_NotAllowed);
     CHECK(prXhrOpen(request, "GET", "https://exa mple.com/", true) == PrStatus_Syntax);
     CHECK(prXhrOpen(request, "GET", "a", false) == PrStatus_NotSupported);
-    CHECK(recorded.events.empty());
+    CHECK(recorded.events.isEmpty());
 
     CHECK(prXhrOpen(request, "get", "a", true) == PrStatus_Ok);
     CHECK(prXhrOpen(request, "POST", "a", true) == PrStatus_Ok);
-    CHECK(recorded.events == std::vector<std::string>{"readystatechange:1"});
+    CHECK(recorded.events == Array<String>({"readystatechange:1"}));
     prXhrRelease(request);
 }
 
@@ -224,11 +225,11 @@ TEST_CASE("a request sends its method, its URL resolved against the client's bas
     REQUIRE(prXhrSend(request, PrByteView{body, 2}, "text/plain;charset=UTF-8") == PrStatus_Ok);
     CHECK(prXhrSetRequestHeader(request, "X-Late", "1") == PrStatus_InvalidState);
     CHECK(prXhrSetWithCredentials(request, false) == PrStatus_InvalidState);
-    REQUIRE(client.fetches.size() == 1);
+    REQUIRE(client.fetches.count() == 1);
     const TestClient::Request& fetch = client.fetches[0];
     CHECK(fetch.url == "https://example.com/dir/data.json#fragment");
     CHECK(fetch.method == "POST");
-    CHECK(fetch.headers == std::vector<std::string>{"X-Test: 1, 2", "Content-Type: text/plain;charset=UTF-8"});
+    CHECK(fetch.headers == Array<String>({"X-Test: 1, 2", "Content-Type: text/plain;charset=UTF-8"}));
     CHECK(fetch.body == "hi");
     CHECK(fetch.credentials == PrFetchCredentials_Include);
     client.respond("", 204, {});
@@ -240,18 +241,24 @@ TEST_CASE("a response fires its events in order, and is read as its headers, its
     Activity activity;
     PrXhr* request = createRequest(&client, &activity);
     Recorded recorded{request, {}};
-    listen(&recorded, prXhrAsEventTarget(request), {"readystatechange", "loadstart", "progress", "load", "loadend", "error"});
+    const char* const types[] = {"readystatechange", "loadstart", "progress", "load", "loadend", "error"};
+    listen(&recorded, prXhrAsEventTarget(request), types);
     REQUIRE(prXhrOpen(request, "GET", "a", true) == PrStatus_Ok);
     REQUIRE(prXhrSend(request, PrByteView{nullptr, 0}, PrStringView{nullptr, 0}) == PrStatus_Ok);
-    CHECK(activity.changes == std::vector<bool>{true});
+    CHECK(activity.changes == Array<bool>({true}));
     CHECK(prXhrSend(request, PrByteView{nullptr, 0}, PrStringView{nullptr, 0}) == PrStatus_InvalidState);
-    client.respond("caf\xe9", 200,
-        {{"Content-Type", "text/plain; charset=windows-1252"}, {"X-B", "1"}, {"x-a", "2"}, {"X-B", "3"}});
-    CHECK(recorded.events == std::vector<std::string>{
+    const PrFetchHeader headers[] = {
+        {"Content-Type", "text/plain; charset=windows-1252"},
+        {"X-B", "1"},
+        {"x-a", "2"},
+        {"X-B", "3"},
+    };
+    client.respond("caf\xe9", 200, headers);
+    CHECK(recorded.events == Array<String>({
         "readystatechange:1", "loadstart:1", "readystatechange:2", "readystatechange:3",
         "progress:3", "readystatechange:4", "load:4", "loadend:4",
-    });
-    CHECK(activity.changes == std::vector<bool>{true, false});
+    }));
+    CHECK(activity.changes == Array<bool>({true, false}));
     CHECK(prXhrStatus(request) == 200);
     CHECK(prXhrResponseUrl(request) == "https://example.com/final");
     CHECK(take(prXhrResponseHeader(request, "x-b")) == "1, 3");
@@ -270,31 +277,35 @@ TEST_CASE("an overridden MIME type decides the charset of the response's text") 
     REQUIRE(prXhrOpen(request, "GET", "a", true) == PrStatus_Ok);
     REQUIRE(prXhrOverrideMimeType(request, "text/plain;charset=windows-1252") == PrStatus_Ok);
     REQUIRE(prXhrSend(request, PrByteView{nullptr, 0}, PrStringView{nullptr, 0}) == PrStatus_Ok);
-    client.respond("\xe9", 200, {{"Content-Type", "text/plain;charset=utf-8"}});
+    const PrFetchHeader headers[] = {{"Content-Type", "text/plain;charset=utf-8"}};
+    client.respond("\xe9", 200, headers);
     CHECK(take(prXhrResponseText(request)) == "\xc3\xa9");
     prXhrRelease(request);
 }
 
 TEST_CASE("a network error, and a client that cannot fetch, fire error and loadend at the request and its upload") {
-    for (bool refuses : {false, true}) {
+    const bool refusals[] = {false, true};
+    for (bool refuses : refusals) {
         CAPTURE(refuses);
         TestClient client;
         client.refuses = refuses;
         PrXhr* request = createRequest(&client);
         Recorded recorded{request, {}};
-        for (PrDomEventTarget* target : {prXhrAsEventTarget(request), prXhrUploadAsEventTarget(prXhrUpload(request))})
-            listen(&recorded, target, {"readystatechange", "loadstart", "error", "load", "loadend"});
+        PrDomEventTarget* targets[] = {prXhrAsEventTarget(request), prXhrUploadAsEventTarget(prXhrUpload(request))};
+        const char* const types[] = {"readystatechange", "loadstart", "error", "load", "loadend"};
+        for (PrDomEventTarget* target : targets)
+            listen(&recorded, target, types);
         REQUIRE(prXhrOpen(request, "POST", "a", true) == PrStatus_Ok);
         const uint8_t body[] = {'a', 'b'};
         REQUIRE(prXhrSend(request, PrByteView{body, 2}, "text/plain") == PrStatus_Ok);
-        CHECK(recorded.events == std::vector<std::string>{"readystatechange:1", "loadstart:1", "loadstart:1"});
+        CHECK(recorded.events == Array<String>({"readystatechange:1", "loadstart:1", "loadstart:1"}));
         recorded.events.clear();
         // The error of a fetch that did not start comes later than send(), from the client's timer.
         if (refuses)
             client.fireTimers();
         else
             client.fail(PrStatus_Io);
-        CHECK(recorded.events == std::vector<std::string>{"readystatechange:4", "error:4", "loadend:4", "error:4", "loadend:4"});
+        CHECK(recorded.events == Array<String>({"readystatechange:4", "error:4", "loadend:4", "error:4", "loadend:4"}));
         CHECK(prXhrStatus(request) == 0);
         prXhrRelease(request);
     }
@@ -305,24 +316,25 @@ TEST_CASE("a request times out once its timeout passes, and a client that goes a
     Activity activity;
     PrXhr* request = createRequest(&client, &activity);
     Recorded recorded{request, {}};
-    listen(&recorded, prXhrAsEventTarget(request), {"timeout", "loadend", "error"});
+    const char* const types[] = {"timeout", "loadend", "error"};
+    listen(&recorded, prXhrAsEventTarget(request), types);
     REQUIRE(prXhrOpen(request, "GET", "a", true) == PrStatus_Ok);
     prXhrSetTimeout(request, 50);
     REQUIRE(prXhrSend(request, PrByteView{nullptr, 0}, PrStringView{nullptr, 0}) == PrStatus_Ok);
-    REQUIRE(client.timers.size() == 1);
+    REQUIRE(client.timers.count() == 1);
     CHECK(client.timers[0].milliseconds == 50);
     client.fireTimers();
     CHECK(client.fetches[0].cancelled);
-    CHECK(recorded.events == std::vector<std::string>{"timeout:4", "loadend:4"});
-    CHECK(activity.changes == std::vector<bool>{true, false});
+    CHECK(recorded.events == Array<String>({"timeout:4", "loadend:4"}));
+    CHECK(activity.changes == Array<bool>({true, false}));
 
     recorded.events.clear();
     REQUIRE(prXhrOpen(request, "GET", "a", true) == PrStatus_Ok);
     REQUIRE(prXhrSend(request, PrByteView{nullptr, 0}, PrStringView{nullptr, 0}) == PrStatus_Ok);
     client.fail(PrStatus_Lost);
-    CHECK(recorded.events.empty());
+    CHECK(recorded.events.isEmpty());
     CHECK(client.timers[1].cleared);
-    CHECK(activity.changes == std::vector<bool>{true, false, true, false});
+    CHECK(activity.changes == Array<bool>({true, false, true, false}));
     prXhrRelease(request);
 }
 
@@ -331,26 +343,28 @@ TEST_CASE("an active request keeps itself alive until it fires loadend") {
     Activity activity;
     PrXhr* request = createRequest(&client, &activity);
     Recorded recorded{request, {}};
-    listen(&recorded, prXhrAsEventTarget(request), {"load", "loadend"});
+    const char* const types[] = {"load", "loadend"};
+    listen(&recorded, prXhrAsEventTarget(request), types);
     REQUIRE(prXhrOpen(request, "GET", "a", true) == PrStatus_Ok);
     REQUIRE(prXhrSend(request, PrByteView{nullptr, 0}, PrStringView{nullptr, 0}) == PrStatus_Ok);
     prXhrRelease(request);
     client.respond("body", 200, {});
-    CHECK(recorded.events == std::vector<std::string>{"load:4", "loadend:4"});
-    CHECK(activity.changes == std::vector<bool>{true, false});
+    CHECK(recorded.events == Array<String>({"load:4", "loadend:4"}));
+    CHECK(activity.changes == Array<bool>({true, false}));
 }
 
 TEST_CASE("abort ends a request in flight with abort and loadend, and leaves it unsent") {
     TestClient client;
     PrXhr* request = createRequest(&client);
     Recorded recorded{request, {}};
-    listen(&recorded, prXhrAsEventTarget(request), {"readystatechange", "abort", "loadend", "error"});
+    const char* const types[] = {"readystatechange", "abort", "loadend", "error"};
+    listen(&recorded, prXhrAsEventTarget(request), types);
     REQUIRE(prXhrOpen(request, "GET", "a", true) == PrStatus_Ok);
     REQUIRE(prXhrSend(request, PrByteView{nullptr, 0}, PrStringView{nullptr, 0}) == PrStatus_Ok);
     recorded.events.clear();
     prXhrAbort(request);
     CHECK(client.fetches[0].cancelled);
-    CHECK(recorded.events == std::vector<std::string>{"readystatechange:4", "abort:4", "loadend:4"});
+    CHECK(recorded.events == Array<String>({"readystatechange:4", "abort:4", "loadend:4"}));
     CHECK(prXhrReadyState(request) == PrXhrState_Unsent);
     prXhrRelease(request);
 }

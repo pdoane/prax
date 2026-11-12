@@ -1,17 +1,18 @@
 // Paged media: a tree laid out as pages. Each page is 400 by 500 px with margins of 50 px, so its page area is 300 by
 // 400 px, unless a case says otherwise.
 
+#include "pr/array.h"
 #include "pr/draw_list.h"
 #include "pr/draw_transform.h"
 #include "pr/layout_page.h"
 #include "pr/layout_style.h"
 #include "pr/layout_tree.h"
+#include "pr/span.h"
+#include "pr/string.h"
 
 #include "layout/tests/layout_fixture.h"
 
 #include "tools/harness/test.h"
-
-#include <vector>
 
 namespace pr_impl {
 
@@ -21,7 +22,7 @@ namespace {
 struct Book {
     Fixture f;
     PrLayoutNode root = kPrLayoutNodeNone;
-    std::vector<PrLayoutPageContext> asked;
+    Array<PrLayoutPageContext> asked;
     PrLayoutName wide = kPrLayoutNameNone;    // a name whose pages are 600 px wide
     float bleed = 0;                          // px
     PrLayoutPageMarkFlags marks = PrLayoutPageMarkFlag_None;
@@ -35,7 +36,7 @@ struct Book {
 
     static void boxOf(void* PR_NULLABLE context, const PrLayoutPageContext* page, PrLayoutPageBox* box) {
         Book* book = static_cast<Book*>(context);
-        book->asked.push_back(*page);
+        book->asked.push(*page);
         box->extent = px(page->name == book->wide ? 600 : 400, 500);
         for (PrLayoutUnit& margin : box->margin)
             margin = prLayoutUnitFromPx(50);
@@ -89,18 +90,18 @@ struct Book {
 
     // Returns the box of `node` on the `index`th page that it reaches.
     PrRect piece(PrLayoutNode node, uint32_t index) {
-        std::vector<PrLayoutRect> boxes(pieces(node));
-        REQUIRE(index < boxes.size());
-        prLayoutNodeBoxes(f.tree, node, PrLayoutCoordinates_Viewport, boxes.data(), uint32_t(boxes.size()));
+        Array<PrLayoutRect> boxes(pieces(node));
+        REQUIRE(index < boxes.count());
+        prLayoutNodeBoxes(f.tree, node, PrLayoutCoordinates_Viewport, boxes.data(), boxes.count());
         return prLayoutRectToPx(boxes[index]);
     }
     PrLayoutPage page(uint32_t index) { return prLayoutTreePage(f.tree, index); }
 
     // Returns the RGBA pixels of the page at `index`, painted alone onto a sheet of `width` by `height` px.
-    std::vector<uint8_t> paint(uint32_t index, uint32_t width = 400, uint32_t height = 500) {
+    Array<uint8_t> paint(uint32_t index, uint32_t width = 400, uint32_t height = 500) {
         PrDrawList* list = prDrawListCreate();
         prLayoutTreePaintPage(f.tree, index, list);
-        std::vector<uint8_t> bytes(size_t(width) * height * 4, 0);
+        Array<uint8_t> bytes(size_t(width) * height * 4);
         PrDrawRenderer* renderer = prDrawCpuCreate(nullptr);
         PrPixels into{bytes.data(), size_t(width) * 4, {width, height}};
         REQUIRE(prDrawRendererRenderPixels(renderer, list, into, PrPixelFormat_Rgba8) == PrStatus_Ok);
@@ -113,39 +114,41 @@ struct Book {
 // Adds to `count` the commands that a consumer walks of `list` played under `transform`, within `clip`, a rectangle in
 // target pixels. Like every consumer, it skips an embedded list that misses the clip (prDrawListMisses).
 void countDrawn(const PrDrawList* list, PrDrawTransform transform, PrRect clip, uint32_t& count) {
-    std::vector<PrDrawTransform> transforms{transform};
-    std::vector<PrRect> clips{clip};
+    Array<PrDrawTransform> transforms;
+    transforms.push(transform);
+    Array<PrRect> clips;
+    clips.push(clip);
     const PrDrawCommand* commands = prDrawListCommands(list);
     for (uint32_t i = 0; i < prDrawListCommandCount(list); ++i) {
         const PrDrawCommand& c = commands[i];
         ++count;
-        PrAffine2 affine = transforms.back().affine;
+        PrAffine2 affine = transforms.last().affine;
         switch (c.kind) {
             case PrDrawCommandKind_PushTransformAffine2:
-                transforms.push_back(prDrawTransformPush(&transforms.back(), &c));
+                transforms.push(prDrawTransformPush(&transforms.last(), &c));
                 break;
             case PrDrawCommandKind_PopTransform:
-                transforms.pop_back();
+                transforms.pop();
                 break;
             case PrDrawCommandKind_PushClipRect:
-                clips.push_back(prRectIntersect(clips.back(), prAffine2MapRect(affine, c.rect)));
+                clips.push(prRectIntersect(clips.last(), prAffine2MapRect(affine, c.rect)));
                 break;
             case PrDrawCommandKind_PushClipCornerRect:
-                clips.push_back(prRectIntersect(clips.back(), prAffine2MapRect(affine, c.cornerRect->rect)));
+                clips.push(prRectIntersect(clips.last(), prAffine2MapRect(affine, c.cornerRect->rect)));
                 break;
             case PrDrawCommandKind_PushClipPath:
-                clips.push_back(prRectIntersect(clips.back(), prAffine2MapRect(affine, prPathTightBounds(c.path))));
+                clips.push(prRectIntersect(clips.last(), prAffine2MapRect(affine, prPathTightBounds(c.path))));
                 break;
             case PrDrawCommandKind_PushClipTargetRect:
-                clips.push_back(prRectIntersect(clips.back(), c.rect));
+                clips.push(prRectIntersect(clips.last(), c.rect));
                 break;
             case PrDrawCommandKind_PopClip:
-                clips.pop_back();
+                clips.pop();
                 break;
             case PrDrawCommandKind_Embed: {
-                PrDrawTransform moved = prDrawTransformMoved(&transforms.back(), c.embed.offset);
-                if (!prDrawListMisses(c.embed.list, moved.affine, clips.back()))
-                    countDrawn(c.embed.list, moved, clips.back(), count);
+                PrDrawTransform moved = prDrawTransformMoved(&transforms.last(), c.embed.offset);
+                if (!prDrawListMisses(c.embed.list, moved.affine, clips.last()))
+                    countDrawn(c.embed.list, moved, clips.last(), count);
                 break;
             }
             default:
@@ -184,7 +187,8 @@ PrLayoutNode titledList(Book& b, uint32_t items) {
         return node;
     };
     PrLayoutBoxStyle padded = block();
-    for (PrRectSide side : {PrRectSide_Top, PrRectSide_Bottom})
+    const PrRectSide sides[] = {PrRectSide_Top, PrRectSide_Bottom};
+    for (PrRectSide side : sides)
         padded.padding[side] = prLayoutLengthPx(10);
     PrLayoutNode sidebar = b.add(b.add(b.root, padded), block());
     PrLayoutFragmentationStyle avoid = prLayoutFragmentationStyleDefault();
@@ -215,25 +219,41 @@ PrLayoutNode marginBox(Book& b, float width, float height, const PrLayoutBoxStyl
     return box;
 }
 
-// Sets the margin boxes of every page of `b` to `boxes`, by PrLayoutMarginBox, for the first `pages` pages, one set of
-// boxes for each page.
-void setMargins(Book& b, const std::vector<std::vector<PrLayoutNode>>& pages) {
-    std::vector<PrLayoutNode> all;
-    for (const std::vector<PrLayoutNode>& page : pages) {
-        std::vector<PrLayoutNode> set(PrLayoutMarginBox_Count, kPrLayoutNodeNone);
-        for (uint32_t i = 0; i < page.size(); ++i)
-            set[i] = page[i];
-        all.insert(all.end(), set.begin(), set.end());
-    }
-    prLayoutTreeSetPageMargins(b.f.tree, all.data(), uint32_t(pages.size()));
+// The margin boxes of a page, by PrLayoutMarginBox.
+struct MarginBoxes {
+    PrLayoutNode nodes[PrLayoutMarginBox_Count];
+};
+
+// A margin box of a page: the node at `which`.
+struct MarginBoxAt {
+    PrLayoutMarginBox which;
+    PrLayoutNode node;
+};
+
+// Sets the margin boxes of the first pages of `b`, one set of boxes for each page.
+void setMargins(Book& b, Span<const MarginBoxes> pages) {
+    Array<PrLayoutNode> all;
+    for (const MarginBoxes& page : pages)
+        all.append(Span(page.nodes));
+    prLayoutTreeSetPageMargins(b.f.tree, all.data(), pages.count());
+}
+// Sets the margin boxes of the first page of `b`.
+void setMargins(Book& b, const MarginBoxes& page) {
+    setMargins(b, Span<const MarginBoxes>(&page, 1));
 }
 
-// Returns a set of margin boxes with `node` at `which` and none elsewhere.
-std::vector<PrLayoutNode> only(std::initializer_list<std::pair<PrLayoutMarginBox, PrLayoutNode>> boxes) {
-    std::vector<PrLayoutNode> set(PrLayoutMarginBox_Count, kPrLayoutNodeNone);
-    for (const auto& [which, node] : boxes)
-        set[which] = node;
+// Returns a set of margin boxes with each of `boxes` at its place and none elsewhere.
+MarginBoxes only(Span<const MarginBoxAt> boxes) {
+    MarginBoxes set;
+    for (PrLayoutNode& node : set.nodes)
+        node = kPrLayoutNodeNone;
+    for (const MarginBoxAt& box : boxes)
+        set.nodes[box.which] = box.node;
     return set;
+}
+// Returns a set of margin boxes with `box` at its place and none elsewhere.
+MarginBoxes only(const MarginBoxAt& box) {
+    return only(Span<const MarginBoxAt>(&box, 1));
 }
 
 } // namespace
@@ -304,7 +324,7 @@ TEST_CASE("painting a page draws its background and its own content, from the to
     (void)boxes;
     b.layout();
     REQUIRE(b.pages() == 2);
-    std::vector<uint8_t> bytes = b.paint(1);
+    Array<uint8_t> bytes = b.paint(1);
     CHECK(pixel(bytes, 400, 10, 10) == "0 0 255 255");
     CHECK(pixel(bytes, 400, 60, 60) == "255 0 0 255");
     CHECK(pixel(bytes, 400, 60, 360) == "0 0 255 255");
@@ -316,8 +336,7 @@ TEST_CASE("a page's sheet holds its bleed area, and the band of its marks outsid
     box.extent = px(400, 500);
     auto rect = [](PrLayoutRect r) {
         PrRect p = prLayoutRectToPx(r);
-        return std::to_string(int(p.left)) + " " + std::to_string(int(p.top)) + " " + std::to_string(int(p.right)) +
-            " " + std::to_string(int(p.bottom));
+        return format("{} {} {} {}", int(p.left), int(p.top), int(p.right), int(p.bottom));
     };
     // A page with no bleed and no marks is its own sheet.
     PrLayoutPageSheet sheet = prLayoutPageBoxSheet(&box);
@@ -378,7 +397,7 @@ TEST_CASE("the viewport stacks the sheets of pages, and a page paints its backgr
     CHECK(prLayoutVecToPx(b.page(0).offset) == PrVec2{50, 50});
     CHECK(prLayoutVecToPx(b.page(1).offset) == PrVec2{50, 660});
     CHECK(b.f.bounds(wide).left == 30);
-    std::vector<uint8_t> bytes = b.paint(0, 500, 600);
+    Array<uint8_t> bytes = b.paint(0, 500, 600);
     // The block shows in the bleed area, 10 px past the page box, and is clipped there.
     CHECK(pixel(bytes, 500, 45, 120) == "255 0 0 255");
     CHECK(pixel(bytes, 500, 35, 120) == "0 0 0 0");
@@ -388,7 +407,7 @@ TEST_CASE("the viewport stacks the sheets of pages, and a page paints its backgr
     CHECK(pixel(bytes, 500, 300, 555) == "0 0 255 255");
     // A crop mark extends the page box's left edge from 10 to 42 px above it, and nothing else is drawn outside the
     // bleed area.
-    auto alpha = [&](uint32_t x, uint32_t y) { return bytes[(size_t(y) * 500 + x) * 4 + 3]; };
+    auto alpha = [&](uint32_t x, uint32_t y) { return bytes[(y * 500 + x) * 4 + 3]; };
     CHECK(alpha(49, 25) + alpha(50, 25) > 0);
     CHECK(alpha(49, 5) + alpha(50, 5) == 0);
     CHECK(alpha(30, 25) == 0);
@@ -486,7 +505,8 @@ TEST_CASE("a long document lays out in work proportional to its content, and eac
     PrLayoutTreeStats stats = prLayoutTreeStats(b.f.tree);
     CHECK(stats.blocksLaidOut < 2 * kBoxes);
     uint32_t first = 0;
-    for (uint32_t page : {0u, b.pages() / 2, b.pages() - 1}) {
+    const uint32_t pages[] = {0u, b.pages() / 2, b.pages() - 1};
+    for (uint32_t page : pages) {
         PrDrawList* list = prDrawListCreate();
         prLayoutTreePaintPage(b.f.tree, page, list);
         uint32_t drawn = commandsDrawn(list);
@@ -550,9 +570,9 @@ TEST_CASE("a table breaks between its rows, and its header repeats on every page
     PrLayoutNode head = group(PrLayoutDisplay_TableHeaderGroup);
     row(head);
     PrLayoutNode body = group(PrLayoutDisplay_TableRowGroup);
-    std::vector<PrLayoutNode> rows;
+    Array<PrLayoutNode> rows;
     for (int i = 0; i < 40; ++i)
-        rows.push_back(row(body));
+        rows.push(row(body));
     b.layout();
     // Each page area is 400 px tall: the header and 19 body rows.
     REQUIRE(b.pages() == 3);
@@ -582,7 +602,7 @@ TEST_CASE("a fixed box repeats on every page, at the same place in each page are
     // Its placement is on the first page.
     checkRect(b.f.bounds(fixed), 250, 60, 270, 80);
     for (uint32_t index = 0; index < 3; ++index) {
-        std::vector<uint8_t> bytes = b.paint(index);
+        Array<uint8_t> bytes = b.paint(index);
         CHECK(pixel(bytes, 400, 260, 70) == "0 255 0 255");
         CHECK(pixel(bytes, 400, 260, 90) == "0 0 255 255");
     }
@@ -607,7 +627,7 @@ TEST_CASE("a fixed box that a later page holds repeats on the pages before it to
     b.layout();
     REQUIRE(b.pages() == 3);
     for (uint32_t index = 0; index < 3; ++index) {
-        std::vector<uint8_t> bytes = b.paint(index);
+        Array<uint8_t> bytes = b.paint(index);
         CHECK(pixel(bytes, 400, 260, 70) == "0 255 0 255");
         CHECK(pixel(bytes, 400, 260, 90) == "0 0 255 255");
     }
@@ -618,7 +638,7 @@ TEST_CASE("a multi-column container breaks between rows of columns across pages,
     PrLayoutFragmentationStyle columns = prLayoutFragmentationStyleDefault();
     columns.columnCount = 2;
     PrLayoutNode multicol = b.add(b.root, block(), &columns);
-    std::vector<PrLayoutNode> boxes;
+    Array<PrLayoutNode> boxes;
     for (int i = 0; i < 10; ++i) {
         PrLayoutStyle record = prLayoutStyleDefault();
         PrLayoutBoxStyle style = block(100);
@@ -626,7 +646,7 @@ TEST_CASE("a multi-column container breaks between rows of columns across pages,
         record.groups[PrLayoutGroup_Box] = prLayoutBoxStyleIntern(b.f.tree, &style);
         PrLayoutNode node = prLayoutNodeCreateReplaced(b.f.tree, multicol, prLayoutStyleIntern(b.f.tree, &record));
         prLayoutNodeSetNaturalSize(b.f.tree, node, natural(100, 100));
-        boxes.push_back(node);
+        boxes.push(node);
     }
     b.layout();
     // Each page area is 400 px tall, so the first page's columns hold four boxes each, and the second page's row
@@ -649,7 +669,7 @@ TEST_CASE("a multi-column container below other content on a page fills the room
     PrLayoutFragmentationStyle columns = prLayoutFragmentationStyleDefault();
     columns.columnCount = 2;
     PrLayoutNode multicol = b.add(b.root, block(), &columns);
-    std::vector<PrLayoutNode> boxes;
+    Array<PrLayoutNode> boxes;
     for (int i = 0; i < 10; ++i) {
         PrLayoutStyle record = prLayoutStyleDefault();
         PrLayoutBoxStyle style = block(100);
@@ -657,7 +677,7 @@ TEST_CASE("a multi-column container below other content on a page fills the room
         record.groups[PrLayoutGroup_Box] = prLayoutBoxStyleIntern(b.f.tree, &style);
         PrLayoutNode node = prLayoutNodeCreateReplaced(b.f.tree, multicol, prLayoutStyleIntern(b.f.tree, &record));
         prLayoutNodeSetNaturalSize(b.f.tree, node, natural(100, 100));
-        boxes.push_back(node);
+        boxes.push(node);
     }
     b.layout();
     // The first page's columns hold the three boxes that fit below the box above, and the second page's row balances
@@ -689,7 +709,7 @@ TEST_CASE("a table does not break between rows that a cell spans") {
     groupBox.display = PrLayoutDisplay_TableRowGroup;
     PrLayoutNode body = b.add(table, groupBox);
     // Each row holds a cell with a box 110 px tall, and the third row's cell spans the fourth row too.
-    std::vector<PrLayoutNode> rows;
+    Array<PrLayoutNode> rows;
     for (int i = 0; i < 6; ++i) {
         PrLayoutBoxStyle rowBox = prLayoutBoxStyleDefault();
         rowBox.display = PrLayoutDisplay_TableRow;
@@ -708,7 +728,7 @@ TEST_CASE("a table does not break between rows that a cell spans") {
         record.groups[PrLayoutGroup_Box] = prLayoutBoxStyleIntern(b.f.tree, &content);
         PrLayoutNode box = prLayoutNodeCreateReplaced(b.f.tree, cell, prLayoutStyleIntern(b.f.tree, &record));
         prLayoutNodeSetNaturalSize(b.f.tree, box, natural(100, 110));
-        rows.push_back(box);
+        rows.push(box);
     }
     b.layout();
     // Three rows fit in a page area 400 px tall, but the break between the third and fourth rows falls inside the
@@ -770,7 +790,8 @@ TEST_CASE("a long table with collapsed borders is sized once, and lays out and p
     CHECK(stats.tableRowsSized <= 2 * (kRows + 1));
     CHECK(stats.tableRowsPlaced <= 2 * (kRows + 1) + 2 * b.pages());
     uint32_t first = 0;
-    for (uint32_t page : {0u, 1u, b.pages() / 2, b.pages() - 2}) {
+    const uint32_t pages[] = {0u, 1u, b.pages() / 2, b.pages() - 2};
+    for (uint32_t page : pages) {
         PrDrawList* list = prDrawListCreate();
         prLayoutTreePaintPage(b.f.tree, page, list);
         uint32_t drawn = commandsDrawn(list);
@@ -821,7 +842,8 @@ TEST_CASE("a table row taller than a page breaks inside, and its cells continue 
 }
 
 TEST_CASE("a long flex or grid container lays out its items once, and places on each page the items there") {
-    for (PrLayoutDisplay display : {PrLayoutDisplay_Flex, PrLayoutDisplay_Grid}) {
+    const PrLayoutDisplay displays[] = {PrLayoutDisplay_Flex, PrLayoutDisplay_Grid};
+    for (PrLayoutDisplay display : displays) {
         CAPTURE(int(display));
         Book b;
         PrLayoutBoxStyle containerBox = block();
@@ -839,11 +861,11 @@ TEST_CASE("a long flex or grid container lays out its items once, and places on 
         content.width = prLayoutLengthPx(100);
         record.groups[PrLayoutGroup_Box] = prLayoutBoxStyleIntern(b.f.tree, &content);
         PrLayoutStyleIndex style = prLayoutStyleIntern(b.f.tree, &record);
-        std::vector<PrLayoutNode> items;
+        Array<PrLayoutNode> items;
         for (uint32_t i = 0; i < kItems; ++i) {
             PrLayoutNode item = prLayoutNodeCreateReplaced(b.f.tree, container, style);
             prLayoutNodeSetNaturalSize(b.f.tree, item, natural(100, 20));
-            items.push_back(item);
+            items.push(item);
         }
         b.layout();
         // Each page area holds 20 items.
@@ -891,7 +913,7 @@ TEST_CASE("a page paints the floats and the boxes out of flow on it") {
     REQUIRE(b.pages() == 2);
     for (uint32_t index = 0; index < 2; ++index) {
         CAPTURE(index);
-        std::vector<uint8_t> bytes = b.paint(index);
+        Array<uint8_t> bytes = b.paint(index);
         CHECK(pixel(bytes, 400, 340, 60) == "0 255 0 255");
         CHECK(pixel(bytes, 400, 320, 60) == "0 255 0 255");
         CHECK(pixel(bytes, 400, 300, 60) == "0 0 255 255");
@@ -1090,7 +1112,8 @@ TEST_CASE("the left and right boxes of a side share it in proportion to their co
     b.box(100);
     PrLayoutNode left = marginBox(b, 100, 10);
     PrLayoutNode right = marginBox(b, 50, 10);
-    setMargins(b, {only({{PrLayoutMarginBox_TopLeft, left}, {PrLayoutMarginBox_TopRight, right}})});
+    const MarginBoxAt placed[] = {{PrLayoutMarginBox_TopLeft, left}, {PrLayoutMarginBox_TopRight, right}};
+    setMargins(b, only(placed));
     b.layout();
     // The side is 300 px between the corners. The boxes' content asks for 150 px, and the 150 px left go to the boxes
     // in proportion to their max-content sizes. Each fills the top margin.
@@ -1104,13 +1127,12 @@ TEST_CASE("the middle box of a side is centered, and the boxes beside it take ha
     PrLayoutNode left = marginBox(b, 100, 10);
     PrLayoutNode center = marginBox(b, 60, 10);
     PrLayoutNode right = marginBox(b, 20, 10);
-    setMargins(b, {
-        only({
-            {PrLayoutMarginBox_BottomLeft, left},
-            {PrLayoutMarginBox_BottomCenter, center},
-            {PrLayoutMarginBox_BottomRight, right},
-        }),
-    });
+    const MarginBoxAt placed[] = {
+        {PrLayoutMarginBox_BottomLeft, left},
+        {PrLayoutMarginBox_BottomCenter, center},
+        {PrLayoutMarginBox_BottomRight, right},
+    };
+    setMargins(b, only(placed));
     b.layout();
     // The middle box shares 300 px with a box twice the wider of the others, 200 px: 40 px are left, of which it takes
     // 60/260.
@@ -1137,7 +1159,8 @@ TEST_CASE("a box with a width of its own keeps it, and the auto box beside it ta
     fixed.margin[PrRectSide_Left] = prLayoutLengthPx(10);
     PrLayoutNode left = marginBox(b, 10, 10);
     PrLayoutNode right = marginBox(b, 10, 10, &fixed);
-    setMargins(b, {only({{PrLayoutMarginBox_TopLeft, left}, {PrLayoutMarginBox_TopRight, right}})});
+    const MarginBoxAt placed[] = {{PrLayoutMarginBox_TopLeft, left}, {PrLayoutMarginBox_TopRight, right}};
+    setMargins(b, only(placed));
     b.layout();
     checkRect(b.f.bounds(right), 310, 0, 350, 50);
     checkRect(b.f.bounds(left), 50, 0, 300, 50);
@@ -1150,7 +1173,8 @@ TEST_CASE("a max width caps a box of a side, and the others share the rest") {
     capped.maxWidth = prLayoutLengthPx(60);
     PrLayoutNode left = marginBox(b, 100, 10, &capped);
     PrLayoutNode right = marginBox(b, 100, 10);
-    setMargins(b, {only({{PrLayoutMarginBox_TopLeft, left}, {PrLayoutMarginBox_TopRight, right}})});
+    const MarginBoxAt placed[] = {{PrLayoutMarginBox_TopLeft, left}, {PrLayoutMarginBox_TopRight, right}};
+    setMargins(b, only(placed));
     b.layout();
     checkRect(b.f.bounds(left), 50, 0, 110, 50);
     checkRect(b.f.bounds(right), 110, 0, 350, 50);
@@ -1163,20 +1187,20 @@ TEST_CASE("a corner box fills its corner, and auto margins center a box of a fix
     PrLayoutBoxStyle small = prLayoutBoxStyleDefault();
     small.width = prLayoutLengthPx(20);
     small.height = prLayoutLengthPx(10);
-    for (PrRectSide side : {PrRectSide_Left, PrRectSide_Right, PrRectSide_Top, PrRectSide_Bottom})
+    const PrRectSide sides[] = {PrRectSide_Left, PrRectSide_Right, PrRectSide_Top, PrRectSide_Bottom};
+    for (PrRectSide side : sides)
         small.margin[side] = prLayoutLengthAuto();
     PrLayoutNode centered = marginBox(b, 5, 5, &small);
     PrLayoutBoxStyle sized = prLayoutBoxStyleDefault();
     sized.width = prLayoutLengthPx(20);
     sized.height = prLayoutLengthPx(10);
     PrLayoutNode pinned = marginBox(b, 5, 5, &sized);
-    setMargins(b, {
-        only({
-            {PrLayoutMarginBox_TopLeftCorner, corner},
-            {PrLayoutMarginBox_BottomRightCorner, centered},
-            {PrLayoutMarginBox_TopRightCorner, pinned},
-        }),
-    });
+    const MarginBoxAt placed[] = {
+        {PrLayoutMarginBox_TopLeftCorner, corner},
+        {PrLayoutMarginBox_BottomRightCorner, centered},
+        {PrLayoutMarginBox_TopRightCorner, pinned},
+    };
+    setMargins(b, only(placed));
     b.layout();
     checkRect(b.f.bounds(corner), 0, 0, 50, 50);
     checkRect(b.f.bounds(centered), 365, 470, 385, 480);
@@ -1189,7 +1213,8 @@ TEST_CASE("the boxes of the left and right sides share the side's height by thei
     b.box(100);
     PrLayoutNode top = marginBox(b, 10, 100);
     PrLayoutNode middle = marginBox(b, 10, 30);
-    setMargins(b, {only({{PrLayoutMarginBox_LeftTop, top}, {PrLayoutMarginBox_LeftMiddle, middle}})});
+    const MarginBoxAt placed[] = {{PrLayoutMarginBox_LeftTop, top}, {PrLayoutMarginBox_LeftMiddle, middle}};
+    setMargins(b, only(placed));
     b.layout();
     // The side is 400 px. The middle box shares it with a box of 200 px.
     double height = 30 + 170.0 * 30 / 230;
@@ -1210,14 +1235,18 @@ TEST_CASE("each page lays out its own margin boxes, paints them over its content
     PrColor green{0, 1, 0, 1};
     PrLayoutNode first = marginBox(b, 100, 10, nullptr, green);
     PrLayoutNode second = marginBox(b, 100, 10, nullptr, green);
-    setMargins(b, {only({{PrLayoutMarginBox_TopCenter, first}}), only({{PrLayoutMarginBox_BottomCenter, second}})});
+    const MarginBoxes perPage[] = {
+        only({PrLayoutMarginBox_TopCenter, first}),
+        only({PrLayoutMarginBox_BottomCenter, second}),
+    };
+    setMargins(b, perPage);
     b.layout();
     REQUIRE(b.pages() == 2);
     CHECK(prLayoutNodePage(b.f.tree, first) == 0);
     CHECK(prLayoutNodePage(b.f.tree, second) == 1);
     checkRect(b.f.bounds(first), 50, 0, 350, 50);
     checkRect(b.f.bounds(second), 50, 950, 350, 1000);
-    std::vector<uint8_t> page = b.paint(0);
+    Array<uint8_t> page = b.paint(0);
     CHECK(pixel(page, 400, 200, 25) == "0 255 0 255");
     CHECK(pixel(page, 400, 200, 475) == "0 0 255 255");
     page = b.paint(1);
@@ -1231,10 +1260,9 @@ TEST_CASE("each page lays out its own margin boxes, paints them over its content
     CHECK(stats.blocksLaidOut <= 2);
     // Margin boxes given to the pages after the content is laid out lay out without laying the content out again.
     PrLayoutNode third = marginBox(b, 50, 10);
-    setMargins(b, {
-        only({{PrLayoutMarginBox_TopCenter, first}}),
-        only({{PrLayoutMarginBox_BottomCenter, second}, {PrLayoutMarginBox_TopLeft, third}}),
-    });
+    const MarginBoxAt secondPage[] = {{PrLayoutMarginBox_BottomCenter, second}, {PrLayoutMarginBox_TopLeft, third}};
+    const MarginBoxes withThird[] = {only({PrLayoutMarginBox_TopCenter, first}), only(secondPage)};
+    setMargins(b, withThird);
     b.layout();
     stats = prLayoutTreeStats(b.f.tree);
     CHECK(stats.blocksLaidOut <= 2);
@@ -1274,13 +1302,12 @@ TEST_CASE("a margin box places its content by its vertical-align, as a table cel
     PrLayoutNode centered = marginBox(b, 20, 10, &middle);
     PrLayoutNode low = marginBox(b, 20, 10, &bottom);
     PrLayoutNode top = marginBox(b, 20, 10);
-    setMargins(b, {
-        only({
-            {PrLayoutMarginBox_TopLeft, centered},
-            {PrLayoutMarginBox_TopCenter, low},
-            {PrLayoutMarginBox_TopRight, top},
-        }),
-    });
+    const MarginBoxAt placed[] = {
+        {PrLayoutMarginBox_TopLeft, centered},
+        {PrLayoutMarginBox_TopCenter, low},
+        {PrLayoutMarginBox_TopRight, top},
+    };
+    setMargins(b, only(placed));
     b.layout();
     CHECK(b.f.bounds(prLayoutNodeFirstChild(b.f.tree, centered)).top == 20);
     CHECK(b.f.bounds(prLayoutNodeFirstChild(b.f.tree, low)).top == 40);
@@ -1290,15 +1317,20 @@ TEST_CASE("a margin box places its content by its vertical-align, as a table cel
 TEST_CASE("margin boxes given after the content leave the placements of text broken across pages as a fresh layout's") {
     Book b;
     PrLayoutNode section = b.add(b.root, block());
-    std::string words;
+    Array<char> words;
     for (uint32_t i = 0; i < 400; ++i)
-        words += "word ";
-    b.f.text(b.add(section, block()), words.c_str());
+        words.append("word ", 5);
+    words.push('\0');
+    b.f.text(b.add(section, block()), words.data());
     b.layout();
     REQUIRE(b.pages() > 1);
     PrLayoutNode first = marginBox(b, 50, 10);
     PrLayoutNode second = marginBox(b, 50, 10);
-    setMargins(b, {only({{PrLayoutMarginBox_TopCenter, first}}), only({{PrLayoutMarginBox_TopCenter, second}})});
+    const MarginBoxes perPage[] = {
+        only({PrLayoutMarginBox_TopCenter, first}),
+        only({PrLayoutMarginBox_TopCenter, second}),
+    };
+    setMargins(b, perPage);
     b.layout();
     // The margin boxes and the boxes in them are all that is laid out.
     CHECK(prLayoutTreeStats(b.f.tree).blocksLaidOut <= 4);

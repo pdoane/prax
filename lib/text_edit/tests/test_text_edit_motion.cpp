@@ -1,25 +1,33 @@
 // Motion: tables of cases per script and writing mode, against text's own lines and against real layout, in flat text
 // and in a tree of nodes.
 
+#include "pr/array.h"
 #include "pr/font_set.h"
 #include "pr/layout_style.h"
 #include "pr/layout_tree.h"
+#include "pr/span.h"
+#include "pr/string.h"
 #include "pr/text_edit_layout.h"
 #include "pr/text_edit_motion.h"
 #include "pr/text_harfbuzz.h"
 
 #include "tools/harness/test.h"
 
-#include <string>
-#include <vector>
-
 namespace pr_impl {
 
 namespace {
 
+// Returns the offsets as text, each followed by a space.
+String shownOf(Span<const uint32_t> offsets) {
+    String shown;
+    for (uint32_t offset : offsets)
+        formatTo(shown, "{} ", offset);
+    return shown;
+}
+
 // Each key of a walk until the caret stops, as the offsets that it stands at.
-std::vector<uint32_t> walk(const PrTextEditGeometry& g, PrTextEditPosition at, PrTextEditMotion motion) {
-    std::vector<uint32_t> offsets;
+Array<uint32_t> walk(const PrTextEditGeometry& g, PrTextEditPosition at, PrTextEditMotion motion) {
+    Array<uint32_t> offsets;
     for (uint32_t i = 0; i < 32; ++i) {
         float goal = 0;
         bool hasGoal = false;
@@ -27,9 +35,14 @@ std::vector<uint32_t> walk(const PrTextEditGeometry& g, PrTextEditPosition at, P
         if (next.node == at.node && next.offset == at.offset && next.affinity == at.affinity)
             break;
         at = next;
-        offsets.push_back(at.offset);
+        offsets.push(at.offset);
     }
     return offsets;
+}
+
+// Returns true if a walk stands at the offsets `expected`, in order.
+bool walks(const PrTextEditGeometry& g, PrTextEditPosition at, PrTextEditMotion motion, Span<const uint32_t> expected) {
+    return walk(g, at, motion).span() == expected;
 }
 
 // A tree over Noto Sans Arabic and Arimo in an 800 by 600 px viewport.
@@ -41,13 +54,13 @@ struct Fixture {
     PrLayoutNode root = kPrLayoutNodeNone;
 
     Fixture() {
-        std::string path = std::string(PR_FONTS_DIR) + "/Arimo-Regular.ttf";
+        String path = format("{}/Arimo-Regular.ttf", PR_FONTS_DIR);
         const PrFont* PR_NULLABLE face = nullptr;
         REQUIRE(prFontCreateFromFile(path, 0, nullptr, &face) == PrStatus_Ok);
         PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
         prFontSetAdd(fonts, &descriptor, face);
         prFontRelease(face);
-        std::string arabicPath = std::string(PR_FONTS_DIR) + "/NotoSansArabic[wdth,wght].ttf";
+        String arabicPath = format("{}/NotoSansArabic[wdth,wght].ttf", PR_FONTS_DIR);
         REQUIRE(prFontCreateFromFile(arabicPath, 0, nullptr, &face) == PrStatus_Ok);
         prFontSetAdd(fonts, &descriptor, face);
         prFontRelease(face);
@@ -130,8 +143,6 @@ struct Shown {
     }
 };
 
-using Offsets = std::vector<uint32_t>;
-
 // Latin with a Hebrew word at its end: a space, then three letters of two bytes each.
 const char* const kMixed = "abc \xd7\x90\xd7\x91\xd7\x92";
 
@@ -185,10 +196,14 @@ using namespace pr_impl;
 
 TEST_CASE("a logical motion runs through the text in order, and a stopping motion stops at a change of direction") {
     Shown s(kMixed);
-    CHECK(walk(s.geometry, s.at(0), PrTextEditMotion_ClusterAfter) == Offsets{1, 2, 3, 4, 6, 8, 10});
-    CHECK(walk(s.geometry, s.at(10), PrTextEditMotion_ClusterBefore) == Offsets{8, 6, 4, 3, 2, 1, 0});
-    CHECK(walk(s.geometry, s.at(0), PrTextEditMotion_StopAfter) == Offsets{1, 2, 3, 4, 4, 6, 8, 10});
-    CHECK(walk(s.geometry, s.at(10), PrTextEditMotion_StopBefore) == Offsets{8, 6, 4, 4, 3, 2, 1, 0});
+    const uint32_t clusters[] = {1, 2, 3, 4, 6, 8, 10};
+    CHECK(walks(s.geometry, s.at(0), PrTextEditMotion_ClusterAfter, clusters));
+    const uint32_t clustersBack[] = {8, 6, 4, 3, 2, 1, 0};
+    CHECK(walks(s.geometry, s.at(10), PrTextEditMotion_ClusterBefore, clustersBack));
+    const uint32_t stops[] = {1, 2, 3, 4, 4, 6, 8, 10};
+    CHECK(walks(s.geometry, s.at(0), PrTextEditMotion_StopAfter, stops));
+    const uint32_t stopsBack[] = {8, 6, 4, 4, 3, 2, 1, 0};
+    CHECK(walks(s.geometry, s.at(10), PrTextEditMotion_StopBefore, stopsBack));
 
     // At the boundary, a logical motion stands with the Latin, and a stop reaches each side in turn.
     float goal = 0;
@@ -242,28 +257,33 @@ TEST_CASE("a visual motion walks a line in the order that it shows, in each scri
         PrTextDirection direction;
         uint32_t start;
         PrTextEditMotion motion;
-        Offsets expected;
+        Span<const uint32_t> expected;
     };
+    static constexpr uint32_t kLatin[] = {1, 2, 3};
+    static constexpr uint32_t kLatinBack[] = {2, 1, 0};
+    static constexpr uint32_t kForward[] = {2, 4, 6, 8};
+    static constexpr uint32_t kBack[] = {6, 4, 2, 0};
+    static constexpr uint32_t kThaiClusters[] = {9, 18};
+    static constexpr uint32_t kHanCharacters[] = {3, 6, 9};
+    static constexpr uint32_t kMixedForward[] = {1, 2, 3, 4, 8, 6, 4};
+    static constexpr uint32_t kMixedEnd[] = {6, 8, 10, 3, 2, 1, 0};
     const Case cases[] = {
-        {"latin", "abc", PrTextDirection_Ltr, 0, PrTextEditMotion_Right, {1, 2, 3}},
-        {"latin back", "abc", PrTextDirection_Ltr, 3, PrTextEditMotion_Left, {2, 1, 0}},
-        {"hebrew runs leftward", kHebrew, PrTextDirection_Rtl, 0, PrTextEditMotion_Left, {2, 4, 6, 8}},
-        {"hebrew back", kHebrew, PrTextDirection_Rtl, 8, PrTextEditMotion_Right, {6, 4, 2, 0}},
-        {"arabic stops inside a ligature", kArabic, PrTextDirection_Rtl, 0, PrTextEditMotion_Left, {2, 4, 6, 8}},
-        {"thai moves by cluster", kThai, PrTextDirection_Ltr, 0, PrTextEditMotion_Right, {9, 18}},
-        {"han", kHan, PrTextDirection_Ltr, 0, PrTextEditMotion_Right, {3, 6, 9}},
-        {"mixed across a level", kMixed, PrTextDirection_Ltr, 0, PrTextEditMotion_Right, {1, 2, 3, 4, 8, 6, 4}},
-        {"mixed reaches the text's end", kMixed, PrTextDirection_Ltr, 4, PrTextEditMotion_Left, {6, 8, 10, 3, 2, 1, 0}},
+        {"latin", "abc", PrTextDirection_Ltr, 0, PrTextEditMotion_Right, kLatin},
+        {"latin back", "abc", PrTextDirection_Ltr, 3, PrTextEditMotion_Left, kLatinBack},
+        {"hebrew runs leftward", kHebrew, PrTextDirection_Rtl, 0, PrTextEditMotion_Left, kForward},
+        {"hebrew back", kHebrew, PrTextDirection_Rtl, 8, PrTextEditMotion_Right, kBack},
+        {"arabic stops inside a ligature", kArabic, PrTextDirection_Rtl, 0, PrTextEditMotion_Left, kForward},
+        {"thai moves by cluster", kThai, PrTextDirection_Ltr, 0, PrTextEditMotion_Right, kThaiClusters},
+        {"han", kHan, PrTextDirection_Ltr, 0, PrTextEditMotion_Right, kHanCharacters},
+        {"mixed across a level", kMixed, PrTextDirection_Ltr, 0, PrTextEditMotion_Right, kMixedForward},
+        {"mixed reaches the text's end", kMixed, PrTextDirection_Ltr, 4, PrTextEditMotion_Left, kMixedEnd},
     };
     for (const Case& c : cases) {
-        INFO(std::string(c.name));
+        INFO(c.name);
         Shown s(c.text, c.direction);
-        Offsets walked = walk(s.geometry, s.at(c.start), c.motion);
-        std::string shown;
-        for (uint32_t offset : walked)
-            shown += std::to_string(offset) + " ";
-        INFO(shown);
-        CHECK(walked == c.expected);
+        Array<uint32_t> walked = walk(s.geometry, s.at(c.start), c.motion);
+        INFO(shownOf(walked.span()));
+        CHECK(walked.span() == c.expected);
     }
 }
 
@@ -291,8 +311,10 @@ TEST_CASE("a word motion runs the way that its side runs in the paragraph") {
 
 TEST_CASE("a press past a soft wrap moves past its offset, and a line's end is a place of its own") {
     Shown s("aaaa bbbb", PrTextDirection_Ltr, PrLayoutWritingMode_HorizontalTb, 60);
-    CHECK(walk(s.geometry, s.at(3), PrTextEditMotion_Right) == Offsets{4, 5, 6, 7, 8, 9});
-    CHECK(walk(s.geometry, s.at(7), PrTextEditMotion_Left) == Offsets{6, 5, 4, 3, 2, 1, 0});
+    const uint32_t rightward[] = {4, 5, 6, 7, 8, 9};
+    CHECK(walks(s.geometry, s.at(3), PrTextEditMotion_Right, rightward));
+    const uint32_t leftward[] = {6, 5, 4, 3, 2, 1, 0};
+    CHECK(walks(s.geometry, s.at(7), PrTextEditMotion_Left, leftward));
 }
 
 TEST_CASE("motion between lines keeps its goal, and ends at the edge of the text") {
@@ -339,7 +361,8 @@ TEST_CASE("an arrow means what the writing mode makes it") {
 
 TEST_CASE("vertical text moves along its lines and between them") {
     Shown s("\xe6\x97\xa5\xe6\x9c\xac\n\xe8\xaa\x9e", PrTextDirection_Ltr, PrLayoutWritingMode_VerticalRl);
-    CHECK(walk(s.geometry, s.at(0), PrTextEditMotion_Right) == Offsets{3, 6, 7, 10});
+    const uint32_t expected[] = {3, 6, 7, 10};
+    CHECK(walks(s.geometry, s.at(0), PrTextEditMotion_Right, expected));
     float goal = 0;
     bool hasGoal = false;
     CHECK(prTextEditMotionMove(&s.geometry, s.at(0), PrTextEditMotion_LineNext, &goal, &hasGoal).offset == 7);
@@ -369,7 +392,7 @@ TEST_CASE("Backspace takes one code point, and a sequence that means one thing w
         {"a keycap", "1\xef\xb8\x8f\xe2\x83\xa3", 0},
     };
     for (const Case& c : cases) {
-        INFO(std::string(c.name));
+        INFO(c.name);
         PrStringView text = c.text;
         CHECK(prTextEditBackspaceStart(text, uint32_t(text.size)) == c.expected);
     }
@@ -378,7 +401,8 @@ TEST_CASE("Backspace takes one code point, and a sequence that means one thing w
 TEST_CASE("empty lines and the end of shown text are places for a caret") {
     Shown s("a\n\nb\n ");
     PrTextEditGeometry flat = prTextEditGeometryFromLayoutText(s.f.tree, s.text, "a\n\nb\n");
-    CHECK(walk(flat, s.at(0), PrTextEditMotion_Right) == Offsets{1, 2, 3, 4, 5});
+    const uint32_t expected[] = {1, 2, 3, 4, 5};
+    CHECK(walks(flat, s.at(0), PrTextEditMotion_Right, expected));
     float goal = 0;
     bool hasGoal = false;
     CHECK(prTextEditMotionMove(&flat, s.at(0), PrTextEditMotion_LineNext, &goal, &hasGoal).offset == 2);
@@ -414,7 +438,8 @@ TEST_CASE("text's own lines serve when no layout shows it") {
     PrStringView text = "ab\ncd";
     PrTextEditGeometry g = prTextEditGeometryFromText(text, PrTextDirection_Ltr);
     PrTextEditPosition at{0, 1, PrTextEditAffinity_Downstream};
-    CHECK(walk(g, at, PrTextEditMotion_Right) == Offsets{2, 3, 4, 5});
+    const uint32_t expected[] = {2, 3, 4, 5};
+    CHECK(walks(g, at, PrTextEditMotion_Right, expected));
     float goal = 0;
     bool hasGoal = false;
     CHECK(prTextEditMotionMove(&g, at, PrTextEditMotion_LineNext, &goal, &hasGoal).offset == 4);
@@ -424,11 +449,12 @@ TEST_CASE("text's own lines serve when no layout shows it") {
 TEST_CASE("a layout that is out of date falls back on the text's own lines, in the direction that its style gives") {
     Shown s("ab");
     PrTextEditGeometry stale = prTextEditGeometryFromLayoutText(s.f.tree, s.text, "abc");
-    CHECK(walk(stale, s.at(2), PrTextEditMotion_ClusterAfter) == Offsets{3});
+    const uint32_t expected[] = {3};
+    CHECK(walks(stale, s.at(2), PrTextEditMotion_ClusterAfter, expected));
     prTextEditGeometryReset(&stale);
 
     Shown hebrew(kHebrew, PrTextDirection_Rtl);
-    std::string longer = std::string(kHebrew) + "\xd7\x90";
+    String longer = format("{}\xd7\x90", kHebrew);
     PrTextEditGeometry rtl = prTextEditGeometryFromLayoutText(hebrew.f.tree, hebrew.text, longer);
     CHECK(prTextEditMotionFromCommand(&rtl, hebrew.at(8), PrTextEditCommand_Left, PrTextEditArrowMotion_Logical) ==
         PrTextEditMotion_ClusterAfter);
@@ -509,43 +535,27 @@ TEST_CASE("in a tree of nodes, a visual motion walks each script through every n
         PrTextDirection direction;
         PrLayoutWritingMode mode;
         PrTextEditMotion motion;
-        Offsets expected;
+        Span<const uint32_t> expected;
     };
+    static constexpr uint32_t kLatinNodes[] = {1, 2, 3, 1, 2, 3, 0, 1, 2, 3};
+    static constexpr uint32_t kRtlNodes[] = {2, 4, 6, 8, 2, 4, 6, 8, 0, 2, 4, 6, 8};
+    static constexpr uint32_t kThaiNodes[] = {9, 18, 9, 18, 0, 9, 18};
+    static constexpr uint32_t kHanNodes[] = {3, 6, 9, 3, 6, 9, 0, 3, 6, 9};
     const Case cases[] = {
-        {
-            "latin", "abc", PrTextDirection_Ltr, PrLayoutWritingMode_HorizontalTb, PrTextEditMotion_Right,
-            {1, 2, 3, 1, 2, 3, 0, 1, 2, 3},
-        },
-        {
-            "arabic", kArabic, PrTextDirection_Rtl, PrLayoutWritingMode_HorizontalTb, PrTextEditMotion_Left,
-            {2, 4, 6, 8, 2, 4, 6, 8, 0, 2, 4, 6, 8},
-        },
-        {
-            "hebrew", kHebrew, PrTextDirection_Rtl, PrLayoutWritingMode_HorizontalTb, PrTextEditMotion_Left,
-            {2, 4, 6, 8, 2, 4, 6, 8, 0, 2, 4, 6, 8},
-        },
-        {
-            "thai", kThai, PrTextDirection_Ltr, PrLayoutWritingMode_HorizontalTb, PrTextEditMotion_Right,
-            {9, 18, 9, 18, 0, 9, 18},
-        },
-        {
-            "han", kHan, PrTextDirection_Ltr, PrLayoutWritingMode_HorizontalTb, PrTextEditMotion_Right,
-            {3, 6, 9, 3, 6, 9, 0, 3, 6, 9},
-        },
-        {
-            "vertical han", kHan, PrTextDirection_Ltr, PrLayoutWritingMode_VerticalRl, PrTextEditMotion_Right,
-            {3, 6, 9, 3, 6, 9, 0, 3, 6, 9},
-        },
+        {"latin", "abc", PrTextDirection_Ltr, PrLayoutWritingMode_HorizontalTb, PrTextEditMotion_Right, kLatinNodes},
+        {"arabic", kArabic, PrTextDirection_Rtl, PrLayoutWritingMode_HorizontalTb, PrTextEditMotion_Left, kRtlNodes},
+        {"hebrew", kHebrew, PrTextDirection_Rtl, PrLayoutWritingMode_HorizontalTb, PrTextEditMotion_Left, kRtlNodes},
+        {"thai", kThai, PrTextDirection_Ltr, PrLayoutWritingMode_HorizontalTb, PrTextEditMotion_Right, kThaiNodes},
+        {"han", kHan, PrTextDirection_Ltr, PrLayoutWritingMode_HorizontalTb, PrTextEditMotion_Right, kHanNodes},
+        {"vertical han", kHan, PrTextDirection_Ltr, PrLayoutWritingMode_VerticalRl, PrTextEditMotion_Right, kHanNodes},
     };
     for (const Case& c : cases) {
-        INFO(std::string(c.name));
+        INFO(c.name);
         Tree t(c.text, c.text, c.text, c.direction, c.mode);
-        Offsets walked = walk(t.geometry, PrTextEditPosition{t.first, 0, PrTextEditAffinity_Downstream}, c.motion);
-        std::string shown;
-        for (uint32_t offset : walked)
-            shown += std::to_string(offset) + " ";
-        INFO(shown);
-        CHECK(walked == c.expected);
+        PrTextEditPosition start{t.first, 0, PrTextEditAffinity_Downstream};
+        Array<uint32_t> walked = walk(t.geometry, start, c.motion);
+        INFO(shownOf(walked.span()));
+        CHECK(walked.span() == c.expected);
     }
 }
 

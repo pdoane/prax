@@ -1,12 +1,10 @@
+#include "pr/array.h"
 #include "pr/charset.h"
+#include "pr/string.h"
+#include "pr/string_ops.h"
 #include "pr/utf8.h"
 
 #include "tools/harness/test.h"
-
-#include <string>
-#include <vector>
-
-using namespace std::string_literals;
 
 extern "C" bool prTestCharsetC(void);
 
@@ -14,64 +12,72 @@ namespace pr_impl {
 
 namespace {
 
+using namespace pr;
+
+// The whole of a literal, NUL bytes among it, but not the NUL that ends it.
+template <size_t N>
+PrStringView literal(const char (&text)[N]) {
+    return PrStringView{text, N - 1};
+}
+
 // The text of `bytes` decoded whole by a new decoder of `charset`, or "error" if a fatal decoder fails.
-std::string decoded(PrCharset charset, const std::string& bytes, PrCharsetDecoderFlags flags = 0) {
+String decoded(PrCharset charset, PrStringView bytes, PrCharsetDecoderFlags flags = 0) {
     PrCharsetDecoder decoder = prCharsetDecoderMake(charset, flags);
     PrRawString out{};
-    PrStringView text = prCharsetDecodeView(&decoder, {bytes.data(), bytes.size()}, PrCharsetInput_Final, &out);
-    std::string result = text.data == nullptr ? "error" : std::string(text.data, text.size);
+    PrStringView text = prCharsetDecodeView(&decoder, bytes, PrCharsetInput_Final, &out);
+    String result = text.data == nullptr ? String("error") : String(text);
     prRawStringReset(&out);
     return result;
 }
 
 // The text of `bytes` decoded in parts of `step` bytes, through prCharsetDecode, which checks the bound that
 // prCharsetDecodeMaxSize gives.
-std::string decodedInParts(PrCharset charset, const std::string& bytes, size_t step) {
+String decodedInParts(PrCharset charset, PrStringView bytes, size_t step) {
     PrCharsetDecoder decoder = prCharsetDecoderMake(charset, 0);
-    std::string result;
+    String result;
     size_t at = 0;
     do {
-        size_t size = bytes.size() - at < step ? bytes.size() - at : step;
-        PrCharsetInput input = at + size == bytes.size() ? PrCharsetInput_Final : PrCharsetInput_Partial;
+        size_t size = bytes.size - at < step ? bytes.size - at : step;
+        PrCharsetInput input = at + size == bytes.size ? PrCharsetInput_Final : PrCharsetInput_Partial;
         size_t capacity = prCharsetDecodeMaxSize(&decoder, size);
-        std::vector<char> out(capacity + 1, '!');
+        Array<char> out(capacity + 1, '!');
         size_t written = 0;
-        CHECK(prCharsetDecode(&decoder, {bytes.data() + at, size}, input, out.data(), &written));
+        CHECK(prCharsetDecode(&decoder, {bytes.data + at, size}, input, out.data(), &written));
         CHECK(written <= capacity);
-        CHECK(out[capacity] == '!');
-        result.append(out.data(), written);
+        CHECK(out[uint32_t(capacity)] == '!');
+        result.append(PrStringView{out.data(), written});
         at += size;
-    } while (at < bytes.size());
+    } while (at < bytes.size);
     return result;
 }
 
 // Returns true if decoding `bytes` gives a view of them, starting `offset` bytes in, without copying them.
-bool decodesInPlace(PrCharset charset, const std::string& bytes, size_t offset = 0) {
+bool decodesInPlace(PrCharset charset, PrStringView bytes, size_t offset = 0) {
     PrCharsetDecoder decoder = prCharsetDecoderMake(charset, 0);
     PrRawString out{};
-    PrStringView text = prCharsetDecodeView(&decoder, {bytes.data(), bytes.size()}, PrCharsetInput_Final, &out);
-    bool inPlace = prRawStringIsNull(&out) && text.data == bytes.data() + offset && text.size == bytes.size() - offset;
+    PrStringView text = prCharsetDecodeView(&decoder, bytes, PrCharsetInput_Final, &out);
+    bool inPlace = prRawStringIsNull(&out) && text.data == bytes.data + offset && text.size == bytes.size - offset;
     prRawStringReset(&out);
     return inPlace;
 }
 
 // The bytes of `text` encoded whole by a new encoder of `charset`, with each code point that the charset cannot encode
 // written as "&#N;" between the bytes around it.
-std::string encoded(PrCharset charset, const std::string& text) {
+String encoded(PrCharset charset, PrStringView text) {
     PrCharsetEncoder encoder = prCharsetEncoderMake(charset);
-    std::string result;
+    String result;
     size_t at = 0;
     for (;;) {
-        std::vector<char> out(prCharsetEncodeMaxSize(&encoder, text.size() - at));
+        Array<char> out(prCharsetEncodeMaxSize(&encoder, text.size - at));
         size_t size = 0;
         uint32_t unencoded = 0;
-        at += prCharsetEncode(&encoder, {text.data() + at, text.size() - at}, PrCharsetInput_Final, out.data(), &size,
+        at += prCharsetEncode(&encoder, {text.data + at, text.size - at}, PrCharsetInput_Final, out.data(), &size,
             &unencoded);
-        CHECK(size <= out.size());
-        result.append(out.data(), size);
+        CHECK(size <= out.count());
+        result.append(PrStringView{out.data(), size});
         if (unencoded == kPrCharsetUnencodedNone)
             return result;
-        result += "&#" + std::to_string(unencoded) + ";";
+        formatTo(result, "&#{};", unencoded);
     }
 }
 
@@ -153,8 +159,8 @@ TEST_CASE("UTF-8 replaces each maximal subpart of an ill-formed sequence") {
 }
 
 TEST_CASE("a sequence that spans two parts decodes as one") {
-    std::string text = "\xE2\x82\xAC \xF0\x9F\x98\x80 \xEF\xBB\xBF";
-    for (size_t step = 1; step <= text.size(); ++step)
+    PrStringView text = "\xE2\x82\xAC \xF0\x9F\x98\x80 \xEF\xBB\xBF";
+    for (size_t step = 1; step <= text.size; ++step)
         CHECK(decodedInParts(PrCharset_Utf8, text, step) == text);
     CHECK(decodedInParts(PrCharset_Utf8, "\xEF\xBB\xBFx", 1) == "x");
 }
@@ -223,17 +229,17 @@ TEST_CASE("ISO-2022-JP switches its state at each escape") {
 }
 
 TEST_CASE("UTF-16 pairs its surrogates and replaces the unpaired") {
-    CHECK(decoded(PrCharset_Utf16Le, "A\x00"s) == "A");
-    CHECK(decoded(PrCharset_Utf16Be, "\x00" "A"s) == "A");
-    CHECK(decoded(PrCharset_Utf16Le, "\xFF\xFE" "A\x00"s) == "A");
-    CHECK(decoded(PrCharset_Utf16Le, "\xFF\xFE" "A\x00"s, PrCharsetDecoderFlag_KeepBom) == "\xEF\xBB\xBF" "A");
-    CHECK(decoded(PrCharset_Utf16Le, "\x3D\xD8\x00\xDE"s) == "\xF0\x9F\x98\x80");
-    CHECK(decoded(PrCharset_Utf16Be, "\xD8\x3D\xDE\x00"s) == "\xF0\x9F\x98\x80");
-    CHECK(decoded(PrCharset_Utf16Le, "\x00\xD8" "A\x00"s) == "\xEF\xBF\xBD" "A");
-    CHECK(decoded(PrCharset_Utf16Le, "\x00\xD8\x00\xD8\x00\xDC"s) == "\xEF\xBF\xBD\xF0\x90\x80\x80");
-    CHECK(decoded(PrCharset_Utf16Le, "\x00\xDC"s) == "\xEF\xBF\xBD");
-    CHECK(decoded(PrCharset_Utf16Le, "\x00\xD8"s) == "\xEF\xBF\xBD");
-    CHECK(decoded(PrCharset_Utf16Le, "A\x00" "B"s) == "A\xEF\xBF\xBD");
+    CHECK(decoded(PrCharset_Utf16Le, literal("A\x00")) == "A");
+    CHECK(decoded(PrCharset_Utf16Be, literal("\x00" "A")) == "A");
+    CHECK(decoded(PrCharset_Utf16Le, literal("\xFF\xFE" "A\x00")) == "A");
+    CHECK(decoded(PrCharset_Utf16Le, literal("\xFF\xFE" "A\x00"), PrCharsetDecoderFlag_KeepBom) == "\xEF\xBB\xBF" "A");
+    CHECK(decoded(PrCharset_Utf16Le, literal("\x3D\xD8\x00\xDE")) == "\xF0\x9F\x98\x80");
+    CHECK(decoded(PrCharset_Utf16Be, literal("\xD8\x3D\xDE\x00")) == "\xF0\x9F\x98\x80");
+    CHECK(decoded(PrCharset_Utf16Le, literal("\x00\xD8" "A\x00")) == "\xEF\xBF\xBD" "A");
+    CHECK(decoded(PrCharset_Utf16Le, literal("\x00\xD8\x00\xD8\x00\xDC")) == "\xEF\xBF\xBD\xF0\x90\x80\x80");
+    CHECK(decoded(PrCharset_Utf16Le, literal("\x00\xDC")) == "\xEF\xBF\xBD");
+    CHECK(decoded(PrCharset_Utf16Le, literal("\x00\xD8")) == "\xEF\xBF\xBD");
+    CHECK(decoded(PrCharset_Utf16Le, literal("A\x00" "B")) == "A\xEF\xBF\xBD");
 }
 
 TEST_CASE("replacement decodes any input but the empty one to one U+FFFD") {
@@ -244,19 +250,20 @@ TEST_CASE("replacement decodes any input but the empty one to one U+FFFD") {
 
 TEST_CASE("every charset decodes the same in parts as whole, within the bound") {
     uint32_t state = 12345;
-    std::string bytes;
+    String bytes;
     for (uint32_t i = 0; i < 600; ++i) {
         state = state * 1103515245 + 12345;
         // Mostly bytes that start or continue sequences, with ASCII and escapes among them.
         uint32_t r = state >> 16;
-        bytes += char(r % 5 == 0 ? 0x1b : r % 7 == 0 ? 0x24 + (r >> 8) % 6 : 0x20 + (r >> 4) % 0xe0);
+        bytes.append(char(r % 5 == 0 ? 0x1b : r % 7 == 0 ? 0x24 + (r >> 8) % 6 : 0x20 + (r >> 4) % 0xe0));
     }
     for (PrCharset charset = PrCharset_None + 1; charset < PrCharset_Count; ++charset) {
-        std::string name(prCharsetName(charset).data, prCharsetName(charset).size);
+        String name = prCharsetName(charset);
         CAPTURE(name);
-        std::string whole = decoded(charset, bytes);
-        CHECK(decodedInParts(charset, bytes, bytes.size()) == whole);
-        for (size_t step : {size_t(1), size_t(2), size_t(3), size_t(5), size_t(17)})
+        String whole = decoded(charset, bytes);
+        CHECK(decodedInParts(charset, bytes, bytes.count()) == whole);
+        const size_t steps[] = {1, 2, 3, 5, 17};
+        for (size_t step : steps)
             CHECK(decodedInParts(charset, bytes, step) == whole);
     }
 }
@@ -293,23 +300,23 @@ TEST_CASE("what a charset decodes from one or two bytes encodes back to bytes th
     for (PrCharset charset = PrCharset_None + 1; charset < PrCharset_Count; ++charset) {
         if (prCharsetOutput(charset) != charset || charset == PrCharset_Utf8 || charset == PrCharset_Iso2022Jp)
             continue;
-        std::string name(prCharsetName(charset).data, prCharsetName(charset).size);
+        String name = prCharsetName(charset);
         CAPTURE(name);
         uint32_t checked = 0;
         for (uint32_t first = 0x80; first < 0x100; ++first) {
             for (uint32_t second = 0; second < 0x100; second += first < 0x81 ? 0x100 : 1) {
-                std::string bytes(1, char(first));
+                String bytes;
+                bytes.append(char(first));
                 if (first >= 0x81)
-                    bytes += char(second);
-                std::string text = decoded(charset, bytes);
+                    bytes.append(char(second));
+                String text = decoded(charset, bytes);
                 uint32_t codePoint = 0;
                 // Only bytes that decode whole, to one code point, round trip.
-                if (prUtf8Decode({text.data(), text.size()}, 0, &codePoint) != text.size() ||
-                        codePoint == kPrUtf8Replacement)
+                if (prUtf8Decode(text, 0, &codePoint) != text.count() || codePoint == kPrUtf8Replacement)
                     continue;
-                std::string back = encoded(charset, text);
+                String back = encoded(charset, text);
                 CAPTURE(text);
-                if (back.find("&#") != std::string::npos) {
+                if (prStringContains(back, "&#")) {
                     // Big5 does not encode its Hong Kong extensions, gb18030 does not encode U+E5E5, and Shift_JIS does
                     // not encode its user-defined area.
                     CHECK((charset == PrCharset_Big5 || charset == PrCharset_Gb18030 || charset == PrCharset_Gbk ||

@@ -286,22 +286,22 @@ TEST_CASE("intrinsic sizes: a keyword limit on the block size clamps after layou
         f.element(child, block(content));
         f.element(node, block(30));
         layout(f);
-        return std::vector<double>{heightOf(f, node), heightOf(f, child)};
+        return Array<double>({heightOf(f, node), heightOf(f, child)});
     };
     PrLayoutBoxStyle minimum = block(100);
     minimum.minHeight = prLayoutLengthMinContent();
-    CHECK(article(minimum, 50, 150) == std::vector<double>{100, 50});
-    CHECK(article(minimum, 200, 150) == std::vector<double>{230, 200});
+    CHECK(article(minimum, 50, 150) == Array<double>({100, 50}));
+    CHECK(article(minimum, 200, 150) == Array<double>({230, 200}));
     minimum.minHeight = prLayoutLengthMaxContent();
-    CHECK(article(minimum, 50, 150) == std::vector<double>{100, 50});
+    CHECK(article(minimum, 50, 150) == Array<double>({100, 50}));
     PrLayoutBoxStyle maximum = block(100);
     maximum.maxHeight = prLayoutLengthMinContent();
-    CHECK(article(maximum, 50, 20) == std::vector<double>{80, 50});
+    CHECK(article(maximum, 50, 20) == Array<double>({80, 50}));
     // A keyword block size is auto, and a fixed limit clamps it without making the children's base definite.
     PrLayoutBoxStyle keyword = block();
     keyword.height = prLayoutLengthMinContent();
     keyword.minHeight = prLayoutLengthPx(300);
-    CHECK(article(keyword, 50, 20) == std::vector<double>{300, 20});
+    CHECK(article(keyword, 50, 20) == Array<double>({300, 20}));
 }
 
 TEST_CASE("intrinsic sizes: the children's block base takes the fixed limits") {
@@ -319,10 +319,10 @@ TEST_CASE("intrinsic sizes: the children's block base takes the fixed limits") {
         image.height = prLayoutLengthPercent(100);
         PrLayoutNode child = replaced(f, node, image, imageQ());
         layout(f);
-        return std::vector<double>{widthOf(f, node), widthOf(f, child)};
+        return Array<double>({widthOf(f, node), widthOf(f, child)});
     };
-    CHECK(box(50, 100, -1) == std::vector<double>{200, 200});
-    CHECK(box(200, -1, 100) == std::vector<double>{200, 200});
+    CHECK(box(50, 100, -1) == Array<double>({200, 200}));
+    CHECK(box(200, -1, 100) == Array<double>({200, 200}));
 }
 
 TEST_CASE("an inline image's percentage height resolves against its block container") {
@@ -346,9 +346,9 @@ TEST_CASE("intrinsic sizes: a change measures its path again and reuses the rest
     Fixture f;
     PrLayoutNode root = f.element(kPrLayoutNodeNone, block());
     PrLayoutNode parent = f.element(root, withWidth(block(), prLayoutLengthFitContent()));
-    std::vector<PrLayoutNode> texts;
+    Array<PrLayoutNode> texts;
     for (int i = 0; i < 3; ++i)
-        texts.push_back(f.text(f.element(parent, block()), "some card text"));
+        texts.push(f.text(f.element(parent, block()), "some card text"));
     layout(f);
     prLayoutNodeSetText(f.tree, texts[1], "other card text");
     layout(f);

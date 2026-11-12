@@ -9,7 +9,9 @@
 #include "pr/layout_style.h"
 #include "pr/layout_tree.h"
 #include "pr/layout_worker.h"
+#include "pr/mem.h"
 #include "pr/memory.h"
+#include "pr/string_ops.h"
 #include "pr/text_harfbuzz.h"
 #include "pr/thread.h"
 
@@ -17,9 +19,6 @@
 #include "layout/tests/layout_fixture.h"
 
 #include "tools/harness/test.h"
-
-#include <string>
-#include <vector>
 
 namespace pr_impl {
 
@@ -69,12 +68,14 @@ uint32_t projectedGroups(PrLayoutTree* tree) {
     PrDrawList* list = prDrawListCreate();
     prLayoutTreePaint(tree, list);
     PrRawString dump = prDrawListDump(list);
-    std::string text(prRawStringView(&dump).data, prRawStringView(&dump).size);
-    prRawStringReset(&dump);
     prDrawListRelease(list);
     uint32_t count = 0;
-    for (size_t at = text.find(" projection"); at != std::string::npos; at = text.find(" projection", at + 1))
+    PrStringView rest = prRawStringView(&dump);
+    for (size_t at = prStringFind(rest, " projection"); at != rest.size; at = prStringFind(rest, " projection")) {
         ++count;
+        rest = prStringSlice(rest, at + 1, rest.size - at - 1);
+    }
+    prRawStringReset(&dump);
     return count;
 }
 
@@ -83,7 +84,7 @@ struct Host {
     double now = 0;
     uint32_t presented = 0;
     uint32_t wanted = 0;            // the times the compositor came to want a frame
-    std::vector<uint8_t> pixels;
+    Array<uint8_t> pixels;
 };
 
 double hostNow(void* PR_NULLABLE context) {
@@ -97,7 +98,8 @@ void hostWantFrame(void* PR_NULLABLE context) {
 void hostPresent(void* PR_NULLABLE context, PrDrawList* list, PrColor16) {
     Host* host = static_cast<Host*>(context);
     ++host->presented;
-    host->pixels.assign(size_t(20) * 20 * 4, 0);
+    host->pixels.clear();
+    host->pixels.resize(20 * 20 * 4);
     PrDrawRenderer* renderer = prDrawCpuCreate(nullptr);
     PrPixels into{host->pixels.data(), size_t(20) * 4, {20, 20}};
     prDrawRendererRenderPixels(renderer, list, into, PrPixelFormat_Rgba8);
@@ -108,7 +110,7 @@ void hostPresent(void* PR_NULLABLE context, PrDrawList* list, PrColor16) {
 // to `applied`.
 void commitTree(PrLayoutCompositor* compositor, const PrLayoutTree* tree, const PrLayoutScene* scene, uint64_t embed,
         uint32_t applied, const PrLayoutTrack* PR_NULLABLE tracks = nullptr, uint32_t trackCount = 0) {
-    std::vector<PrLayoutSceneScroll> scrolls = treeScrolls(tree, scene);
+    Array<PrLayoutSceneScroll> scrolls = treeScrolls(tree, scene);
     PrLayoutCommit commit{
         .embed = embed,
         .scene = scene,
@@ -116,7 +118,7 @@ void commitTree(PrLayoutCompositor* compositor, const PrLayoutTree* tree, const 
         .tracks = tracks,
         .trackCount = trackCount,
         .scrolls = scrolls.data(),
-        .scrollCount = uint32_t(scrolls.size()),
+        .scrollCount = scrolls.count(),
         .scrollsApplied = applied,
     };
     prLayoutCompositorCommit(compositor, &commit);
@@ -124,7 +126,7 @@ void commitTree(PrLayoutCompositor* compositor, const PrLayoutTree* tree, const 
 
 // Returns a font file of the checkout.
 const PrFont* fontFile(const char* name) {
-    std::string path = std::string(PR_FONTS_DIR) + "/" + name;
+    String path = format("{}/{}", PR_FONTS_DIR, name);
     const PrFont* font = nullptr;
     REQUIRE(prFontCreateFromFile(path, 0, nullptr, &font) == PrStatus_Ok);
     return font;
@@ -148,7 +150,8 @@ struct WebAndDefault {
 WebAndDefault webAndDefault(Fixture& f) {
     PrLayoutNode root = f.element(kPrLayoutNodeNone, block());
     PrLayoutFontStyle font = prLayoutFontStyleDefault();
-    font.font = textFontOf(16, {prFontFamilyFromName("Web")});
+    const PrFontFamily families[] = {prFontFamilyFromName("Web")};
+    font.font = textFontOf(16, families);
     PrLayoutFontStyle taller = font;
     taller.lineHeight = prLayoutLineHeightPx(40);
     WebAndDefault nodes{
@@ -198,14 +201,14 @@ PrLayoutBoxStyle placedAt(float left, float top, float width, float height) {
 }
 
 // Renders the tree onto `width` by `height` RGBA pixels, at `ratio` pixels per px.
-std::vector<uint8_t> renderAt(PrLayoutTree* tree, uint32_t width, uint32_t height, float ratio) {
+Array<uint8_t> renderAt(PrLayoutTree* tree, uint32_t width, uint32_t height, float ratio) {
     PrDrawList* painted = prDrawListCreate();
     prLayoutTreePaint(tree, painted);
     PrDrawList* list = prDrawListCreate();
     prDrawListPushTransformAffine2(list, prAffine2Scale(PrVec2{ratio, ratio}));
     prDrawListEmbed(list, painted, PrDVec2{0, 0});
     prDrawListPopTransform(list);
-    std::vector<uint8_t> bytes(size_t(width) * height * 4, 0);
+    Array<uint8_t> bytes(width * height * 4);
     PrDrawRenderer* renderer = prDrawCpuCreate(nullptr);
     PrPixels into{bytes.data(), size_t(width) * 4, {width, height}};
     REQUIRE(prDrawRendererRenderPixels(renderer, list, into, PrPixelFormat_Rgba8) == PrStatus_Ok);
@@ -320,16 +323,16 @@ TEST_CASE("a scene's canvas is the root's background over the tree's canvas colo
         PrLayoutScenePlayOptions options = prLayoutScenePlayOptionsDefault();
         options.canvasFilled = filled;
         prLayoutScenePlay(scene, list, &options);
-        std::vector<uint8_t> bytes(size_t(20) * 20 * 4, 0);
+        Array<uint8_t> bytes(20 * 20 * 4);
         PrDrawRenderer* renderer = prDrawCpuCreate(nullptr);
         PrPixels into{bytes.data(), size_t(20) * 4, {20, 20}};
         REQUIRE(prDrawRendererRenderPixels(renderer, list, into, PrPixelFormat_Rgba8) == PrStatus_Ok);
         prDrawRendererDestroy(renderer);
         prDrawListRelease(list);
-        const uint8_t* p = &bytes[(size_t(15) * 20 + 10) * 4];
-        return std::vector<uint8_t>{p[0], p[1], p[2], p[3]};
+        const uint8_t* p = &bytes[(15 * 20 + 10) * 4];
+        return Array<uint8_t>({p[0], p[1], p[2], p[3]});
     };
-    std::vector<uint8_t> played = pixel(false);
+    Array<uint8_t> played = pixel(false);
     CHECK(played[3] == 255);
     CHECK(played[0] > 120);
     CHECK(played[2] > 120);
@@ -363,7 +366,7 @@ TEST_CASE("a box that covers the canvas paints its own background, which the can
     options.canvasFilled = true;
     prLayoutScenePlay(scene, list, &options);
     prLayoutSceneRelease(scene);
-    std::vector<uint8_t> bytes(size_t(20) * 20 * 4, 0);
+    Array<uint8_t> bytes(20 * 20 * 4);
     PrDrawRenderer* renderer = prDrawCpuCreate(nullptr);
     PrPixels into{bytes.data(), size_t(20) * 4, {20, 20}};
     REQUIRE(prDrawRendererRenderPixels(renderer, list, into, PrPixelFormat_Rgba8) == PrStatus_Ok);
@@ -522,7 +525,7 @@ TEST_CASE("overflow clip clips in its own axis, without scrolling, and passes ma
     CHECK(verified(f.tree));
     // The child's margin collapses through the box, which establishes no formatting context.
     checkRect(f.bounds(box), 0, 5, 20, 25);
-    std::vector<uint8_t> pixels = render(f.tree, 60, 60);
+    Array<uint8_t> pixels = render(f.tree, 60, 60);
     CHECK(pixel(pixels, 60, 30, 10) == "255 0 0 255");     // past it in the axis it does not clip
     CHECK(pixel(pixels, 60, 10, 30) == "0 0 0 0");         // past it in the axis it clips
     CHECK(f.hit(PrVec2{30, 10}) == inner);
@@ -557,7 +560,7 @@ TEST_CASE("a box that only clips scrolls by no offset, the tree's or a player's,
     clip.overflowY = PrLayoutOverflow_Clip;
     prLayoutNodeSetStyle(f.tree, box, f.style(clip));
     f.layout(px(20, 40));
-    std::vector<uint8_t> pixels = render(f.tree, 20, 40);
+    Array<uint8_t> pixels = render(f.tree, 20, 40);
     CHECK(pixel(pixels, 20, 10, 10) == "0 255 0 255");
     CHECK(pixel(pixels, 20, 10, 30) == "0 0 0 0");
     CHECK(f.hit(PrVec2{10, 10}) == top);
@@ -581,7 +584,7 @@ TEST_CASE("a box that only clips scrolls by no offset, the tree's or a player's,
     options.scrolls = &offset;
     options.scrollCount = 1;
     prLayoutScenePlay(scene, list, &options);
-    std::vector<uint8_t> played(size_t(20) * 40 * 4, 0);
+    Array<uint8_t> played(20 * 40 * 4);
     PrDrawRenderer* renderer = prDrawCpuCreate(nullptr);
     PrPixels into{played.data(), size_t(20) * 4, {20, 40}};
     REQUIRE(prDrawRendererRenderPixels(renderer, list, into, PrPixelFormat_Rgba8) == PrStatus_Ok);
@@ -593,7 +596,8 @@ TEST_CASE("a box that only clips scrolls by no offset, the tree's or a player's,
 }
 
 TEST_CASE("a scroll container clips both axes, whatever overflow it has in the other") {
-    for (bool vertical : {true, false}) {
+    const bool verticals[] = {true, false};
+    for (bool vertical : verticals) {
         CAPTURE(vertical);
         Fixture f;
         PrLayoutNode root = f.element(kPrLayoutNodeNone, block());
@@ -610,7 +614,7 @@ TEST_CASE("a scroll container clips both axes, whatever overflow it has in the o
         PrLayoutNode inner = f.element(box, child, &red);
         f.layout(px(60, 60));
         CHECK(verified(f.tree));
-        std::vector<uint8_t> pixels = render(f.tree, 60, 60);
+        Array<uint8_t> pixels = render(f.tree, 60, 60);
         CHECK(pixel(pixels, 60, 30, 10) == "0 0 0 0");
         CHECK(pixel(pixels, 60, 10, 30) == "0 0 0 0");
         CHECK(pixel(pixels, 60, 10, 10) == "255 0 0 255");
@@ -670,7 +674,8 @@ TEST_CASE("a box shows where the boxes that clip it and the viewport leave it, a
 TEST_CASE("a change to what a box paints inside an inline box with effects records its block again") {
     // An inline box paints on its lines, whatever its effects, and so does every box inside it, which inline layout
     // also treats as an inline box. Neither has a layer of its own.
-    for (bool nested : {false, true}) {
+    const bool nesteds[] = {false, true};
+    for (bool nested : nesteds) {
         CAPTURE(nested);
         Fixture f;
         PrLayoutNode root = f.element(kPrLayoutNodeNone, block());
@@ -879,7 +884,7 @@ TEST_CASE("a parent's perspective projects a child's 3D transform, which paints 
     CHECK(double(bounds.right) == doctest::Approx(20 + 17.3205 / 1.25).epsilon(0.01));
     CHECK(double(bounds.top) == doctest::Approx(20 - 20 / 0.75).epsilon(0.01));
     CHECK(projectedGroups(f.tree) == 1);
-    std::vector<uint8_t> pixels = render(f.tree, 40, 40);
+    Array<uint8_t> pixels = render(f.tree, 40, 40);
     CHECK(pixel(pixels, 40, 2, 1) == "255 0 0 255");
     CHECK(pixel(pixels, 40, 2, 20) == "255 0 0 255");
     CHECK(pixel(pixels, 40, 36, 20) == "0 0 0 0");
@@ -962,7 +967,7 @@ TEST_CASE("a projected plane inside another flattens into the outer plane") {
     f.layout(px(40, 40));
     CHECK(projectedGroups(f.tree) == 2);
     // The centers of both planes stay at the parent's center, and the outer plane's near side stays red.
-    std::vector<uint8_t> pixels = render(f.tree, 40, 40);
+    Array<uint8_t> pixels = render(f.tree, 40, 40);
     CHECK(pixel(pixels, 40, 20, 20) == "0 255 0 255");
     CHECK(pixel(pixels, 40, 3, 20) == "255 0 0 255");
 }
@@ -1065,7 +1070,7 @@ TEST_CASE("a compositor's 3D transform plays through its layer's projection, wit
     prLayoutScenePlay(scene, list, &options);
     PrRawString dump = prDrawListDump(list);
     PrStringView text = prRawStringView(&dump);
-    CHECK(std::string(text.data, text.size).find(" projection") != std::string::npos);
+    CHECK(prStringContains(text, " projection"));
     prRawStringReset(&dump);
     prDrawListRelease(list);
     prLayoutSceneRelease(scene);
@@ -1106,7 +1111,7 @@ TEST_CASE("painting draws the canvas, backgrounds, borders and opacity") {
     half.opacity = 0.5f;
     f.element(root, block(10), &white, &half);
     f.layout(px(40, 40));
-    std::vector<uint8_t> pixels = render(f.tree, 40, 40);
+    Array<uint8_t> pixels = render(f.tree, 40, 40);
     // The root's background covers the canvas past the root's box.
     CHECK(pixel(pixels, 40, 30, 35) == "255 0 0 255");
     CHECK(pixel(pixels, 40, 10, 2) == "0 255 0 255");
@@ -1386,7 +1391,7 @@ TEST_CASE("a replaced box's content fits its content box as object-fit says, and
     prLayoutNodeSetContent(f.tree, fitted, &red);
     prDrawListRelease(red.list);
     f.layout(px(40, 40));
-    std::vector<uint8_t> pixels = render(f.tree, 40, 40);
+    Array<uint8_t> pixels = render(f.tree, 40, 40);
     // Fill stretches the content over the box; contain keeps its ratio, centered.
     CHECK(pixel(pixels, 40, 2, 10) == "255 0 0 255");
     CHECK(pixel(pixels, 40, 38, 10) == "255 0 0 255");
@@ -1432,7 +1437,7 @@ TEST_CASE("an image's content covers its natural size, which object-fit and obje
     prDrawImageRelease(image);
     CHECK(prLayoutNodeContent(f.tree, left).image == image);
     f.layout(px(40, 80));
-    std::vector<uint8_t> pixels = render(f.tree, 40, 80);
+    Array<uint8_t> pixels = render(f.tree, 40, 80);
     // Cover scales the image to 80 by 40, which shows its red half at the start and its blue half at the end.
     CHECK(pixel(pixels, 40, 10, 20) == "255 0 0 255");
     CHECK(pixel(pixels, 40, 30, 60) == "0 0 255 255");
@@ -1459,7 +1464,7 @@ TEST_CASE("a background is painted within the box background-clip names, and an 
     decoration.outlineColor = prColor16FromColor(PrColor{0, 0, 1, 1});
     f.element(root, box, &decoration);
     f.layout(px(40, 40));
-    std::vector<uint8_t> pixels = render(f.tree, 40, 40);
+    Array<uint8_t> pixels = render(f.tree, 40, 40);
     CHECK(pixel(pixels, 40, 20, 20) == "255 0 0 255");
     // The padding is not painted, nor is the gap that the offset leaves; the outline is.
     CHECK(pixel(pixels, 40, 12, 20) == "0 0 0 0");
@@ -1486,7 +1491,7 @@ TEST_CASE("a background layer fixed to the viewport stays with it as its box scr
     layer.attachment = PrLayoutBackgroundAttachment_Fixed;
     backgroundBox(f, box, 20, 100, &layer, 1);
     f.layout(px(20, 40));
-    std::vector<uint8_t> pixels = render(f.tree, 20, 40);
+    Array<uint8_t> pixels = render(f.tree, 20, 40);
     CHECK(pixel(pixels, 20, 10, 10) == "255 0 0 255");
     CHECK(pixel(pixels, 20, 10, 30) == "0 0 255 255");
     // Scrolled, the box moves and the layer does not.
@@ -1521,7 +1526,7 @@ TEST_CASE("a background layer fixed to the viewport scrolls with its box under a
     f.layout(px(20, 40));
     // Placed as a scrolling layer is, in its box 100 tall, whose top half is red.
     prLayoutNodeSetScroll(f.tree, box, px(0, 40));
-    std::vector<uint8_t> pixels = render(f.tree, 20, 40);
+    Array<uint8_t> pixels = render(f.tree, 20, 40);
     CHECK(pixel(pixels, 20, 10, 5) == "255 0 0 255");
     CHECK(pixel(pixels, 20, 10, 15) == "0 0 255 255");
     CHECK(verified(f.tree));
@@ -1565,7 +1570,7 @@ TEST_CASE("a linear gradient runs along its line, which a corner points") {
     corner.gradient.corner = PrLayoutGradientCorner_BottomRight;
     backgroundBox(f, root, 20, 20, &corner, 1);
     f.layout(px(40, 40));
-    std::vector<uint8_t> pixels = render(f.tree, 40, 40);
+    Array<uint8_t> pixels = render(f.tree, 40, 40);
     CHECK(pixel(pixels, 40, 18, 5) == "255 0 0 255");
     CHECK(pixel(pixels, 40, 22, 5) == "0 0 255 255");
     CHECK(pixel(pixels, 40, 3, 13) == "255 0 0 255");
@@ -1586,7 +1591,7 @@ TEST_CASE("color stops without positions spread evenly, and a stop before an ear
     layer.gradient.angle = 90;
     backgroundBox(f, root, 40, 10, &layer, 1);
     f.layout(px(40, 40));
-    std::vector<uint8_t> pixels = render(f.tree, 40, 40);
+    Array<uint8_t> pixels = render(f.tree, 40, 40);
     // Lime at 10px, a quarter of the way.
     CHECK(pixels[(5 * 40 + 10) * 4 + 1] > 230);
     CHECK(pixels[(5 * 40 + 10) * 4] < 20);
@@ -1617,7 +1622,7 @@ TEST_CASE("a background image is sized, positioned and repeated in its positioni
     row.repeatX = PrLayoutBackgroundRepeat_Space;
     backgroundBox(f, root, 40, 20, &row, 1, PrColor{0, 0, 1, 1});
     f.layout(px(40, 40));
-    std::vector<uint8_t> pixels = render(f.tree, 40, 40);
+    Array<uint8_t> pixels = render(f.tree, 40, 40);
     CHECK(pixel(pixels, 40, 35, 15) == "255 0 0 255");
     CHECK(pixel(pixels, 40, 25, 15) == "0 0 255 255");
     CHECK(pixel(pixels, 40, 35, 5) == "0 0 255 255");
@@ -1650,7 +1655,7 @@ TEST_CASE("space spreads whole copies, and round scales them to fill the area") 
     rounded.gradient.angle = 90;
     backgroundBox(f, root, 40, 10, &rounded, 1, PrColor{0, 0, 1, 1});
     f.layout(px(40, 40));
-    std::vector<uint8_t> pixels = render(f.tree, 40, 40);
+    Array<uint8_t> pixels = render(f.tree, 40, 40);
     CHECK(pixel(pixels, 40, 11, 5) == "255 0 0 255");
     CHECK(pixel(pixels, 40, 13, 5) == "0 0 255 255");
     CHECK(pixel(pixels, 40, 15, 5) == "255 0 0 255");
@@ -1679,7 +1684,7 @@ TEST_CASE("a repeating conic gradient repeats its stops around the turn") {
     layer.sizeY = prLayoutLengthPx(20);
     backgroundBox(f, root, 40, 40, &layer, 1);
     f.layout(px(40, 40));
-    std::vector<uint8_t> pixels = render(f.tree, 40, 40);
+    Array<uint8_t> pixels = render(f.tree, 40, 40);
     CHECK(pixel(pixels, 40, 15, 5) == "255 255 255 255");
     CHECK(pixel(pixels, 40, 15, 15) == "0 0 0 255");
     CHECK(pixel(pixels, 40, 5, 15) == "255 255 255 255");
@@ -1704,7 +1709,7 @@ TEST_CASE("a radial gradient's ellipse meets the farthest corner by default") {
     circle.gradient.radiusX = prLayoutLengthPx(10);
     backgroundBox(f, root, 40, 20, &circle, 1);
     f.layout(px(40, 40));
-    std::vector<uint8_t> pixels = render(f.tree, 40, 40);
+    Array<uint8_t> pixels = render(f.tree, 40, 40);
     // The ellipse through the corners has radii of 20 and 10 times the square root of 2, so 70% of it reaches about
     // 19.8px across and 9.9px down.
     CHECK(pixel(pixels, 40, 38, 10) == "255 0 0 255");
@@ -1729,7 +1734,7 @@ TEST_CASE("the root's background layers cover the canvas, placed by the root's b
     decoration.backgroundLayers = prLayoutBackgroundIntern(f.tree, &layer, 1);
     f.element(kPrLayoutNodeNone, box, &decoration);
     f.layout(px(40, 40));
-    std::vector<uint8_t> pixels = render(f.tree, 40, 40);
+    Array<uint8_t> pixels = render(f.tree, 40, 40);
     // The row of squares is at the root's top, past which the color covers the canvas.
     CHECK(pixel(pixels, 40, 35, 25) == "255 0 0 255");
     CHECK(pixel(pixels, 40, 35, 5) == "0 0 255 255");
@@ -1753,7 +1758,7 @@ TEST_CASE("an image background repeats its texels at its natural size") {
     backgroundBox(f, root, 40, 20, &layer, 1);
     prDrawImageRelease(image);
     f.layout(px(40, 40));
-    std::vector<uint8_t> pixels = render(f.tree, 40, 40);
+    Array<uint8_t> pixels = render(f.tree, 40, 40);
     CHECK(pixel(pixels, 40, 5, 5) == "255 0 0 255");
     CHECK(pixel(pixels, 40, 15, 5) == "0 0 255 255");
     CHECK(pixel(pixels, 40, 25, 5) == "255 0 0 255");
@@ -1781,7 +1786,7 @@ TEST_CASE("an inline replaced box with effects paints whole, as a layer of its o
     CHECK(prLayoutSceneHasLayer(scene, image));
     prLayoutSceneRelease(scene);
     // The box is 10 by 10 on its line, drawn twice that.
-    std::vector<uint8_t> pixels = render(f.tree, 40, 40);
+    Array<uint8_t> pixels = render(f.tree, 40, 40);
     CHECK(pixel(pixels, 40, 15, 15) == "255 0 0 255");
     CHECK(pixel(pixels, 40, 25, 25) == "0 0 0 0");
     CHECK(verified(f.tree));
@@ -1810,7 +1815,7 @@ TEST_CASE("a painter draws a replaced box's content for its content box's size, 
     content.painter.context = &painted;
     prLayoutNodeSetContent(f.tree, node, &content);
     f.layout(px(40, 40));
-    std::vector<uint8_t> pixels = render(f.tree, 40, 40);
+    Array<uint8_t> pixels = render(f.tree, 40, 40);
     CHECK(painted.calls == 1);
     CHECK(painted.extent.x == 40.0f);
     CHECK(painted.extent.y == 20.0f);
@@ -1911,7 +1916,7 @@ TEST_CASE("a painter draws another root in a replaced box's content, and draws a
     prLayoutNodeSetContent(f.tree, node, &content);
     PrLayoutRoot roots[2] = {{root, px(40, 40)}, {hosted, px(20, 10)}};
     prLayoutTreeLayout(f.tree, roots, 2);
-    std::vector<uint8_t> pixels = render(f.tree, 40, 40);
+    Array<uint8_t> pixels = render(f.tree, 40, 40);
     CHECK(host.calls == 1);
     CHECK(pixel(pixels, 40, 5, 5) == "0 255 0 255");
     CHECK(pixel(pixels, 40, 25, 5) == "0 0 0 0");
@@ -1955,7 +1960,8 @@ TEST_CASE("every root that a frame creates is committed, and a root that it does
 }
 
 TEST_CASE("text in an aliased font covers each pixel of a glyph whole or not at all") {
-    for (bool aliased : {false, true}) {
+    const bool aliaseds[] = {false, true};
+    for (bool aliased : aliaseds) {
         CAPTURE(aliased);
         Fixture f(aliased);
         PrLayoutFontStyle font = prLayoutFontStyleDefault();
@@ -1963,10 +1969,10 @@ TEST_CASE("text in an aliased font covers each pixel of a glyph whole or not at 
         PrLayoutNode root = f.element(kPrLayoutNodeNone, block(), nullptr, nullptr, &font);
         f.text(root, "sow");
         f.layout(px(60, 30));
-        std::vector<uint8_t> pixels = render(f.tree, 60, 30);
+        Array<uint8_t> pixels = render(f.tree, 60, 30);
         uint32_t covered = 0;
         uint32_t partial = 0;
-        for (size_t i = 3; i < pixels.size(); i += 4) {
+        for (uint32_t i = 3; i < pixels.count(); i += 4) {
             covered += pixels[i] == 255;
             partial += pixels[i] != 0 && pixels[i] != 255;
         }
@@ -1985,11 +1991,11 @@ TEST_CASE("a scroll container clips and scrolls its content") {
     f.element(s, block(20));
     f.element(s, block(20), &green);
     f.layout(px(20, 40));
-    std::vector<uint8_t> before = render(f.tree, 20, 40);
+    Array<uint8_t> before = render(f.tree, 20, 40);
     CHECK(pixel(before, 20, 10, 10) == "0 0 0 0");
     CHECK(pixel(before, 20, 10, 30) == "0 0 0 0");
     prLayoutNodeSetScroll(f.tree, s, px(0, 100));
-    std::vector<uint8_t> after = render(f.tree, 20, 40);
+    Array<uint8_t> after = render(f.tree, 20, 40);
     CHECK(pixel(after, 20, 10, 10) == "0 255 0 255");
     CHECK(pixel(after, 20, 10, 30) == "0 0 0 0");
 }
@@ -2009,7 +2015,7 @@ TEST_CASE("a scene scrolls a container's content as it plays, and a scroll recor
     lifted.position = PrLayoutPosition_Relative;
     f.element(s, lifted, &red);
     f.layout(px(20, 40));
-    std::vector<uint8_t> before = render(f.tree, 20, 40);
+    Array<uint8_t> before = render(f.tree, 20, 40);
     CHECK(pixel(before, 20, 10, 10) == "255 0 0 255");
 
     PrLayoutScrollInfo info{};
@@ -2025,7 +2031,7 @@ TEST_CASE("a scene scrolls a container's content as it plays, and a scroll recor
     CHECK(scrolled == last);
     prLayoutSceneRelease(scrolled);
     prLayoutSceneRelease(last);
-    std::vector<uint8_t> after = render(f.tree, 20, 40);
+    Array<uint8_t> after = render(f.tree, 20, 40);
     CHECK(prLayoutTreeStats(f.tree).layersRecorded == 0);
     CHECK(pixel(after, 20, 10, 2) == "0 255 0 255");
     CHECK(pixel(after, 20, 10, 15) == "255 0 0 255");
@@ -2037,8 +2043,8 @@ TEST_CASE("a scene scrolls a container's content as it plays, and a scroll recor
     // A scene holds no offsets: a player plays it at the player's offsets, and the tree's offsets are the tree's own.
     const PrLayoutScene* scene = prLayoutTreeScene(f.tree);
     CHECK(prLayoutSceneHasScroll(scene, s));
-    std::vector<PrLayoutSceneScroll> scrolls = treeScrolls(f.tree, scene);
-    REQUIRE(scrolls.size() == 2);
+    Array<PrLayoutSceneScroll> scrolls = treeScrolls(f.tree, scene);
+    REQUIRE(scrolls.count() == 2);
     CHECK(scrolls[0].node == kPrLayoutNodeNone);
     CHECK(scrolls[1].node == s);
     CHECK(scrolls[1].offset == px(0, 30));
@@ -2048,7 +2054,7 @@ TEST_CASE("a scene scrolls a container's content as it plays, and a scroll recor
     options.scrolls = &offset;
     options.scrollCount = 1;
     prLayoutScenePlay(scene, list, &options);
-    std::vector<uint8_t> played(size_t(20) * 40 * 4, 0);
+    Array<uint8_t> played(20 * 40 * 4);
     PrDrawRenderer* renderer = prDrawCpuCreate(nullptr);
     PrPixels into{played.data(), size_t(20) * 4, {20, 40}};
     REQUIRE(prDrawRendererRenderPixels(renderer, list, into, PrPixelFormat_Rgba8) == PrStatus_Ok);
@@ -2075,7 +2081,7 @@ TEST_CASE("the viewport scrolls the document, as the root's overflow lets it") {
 
     render(f.tree, 20, 40);
     prLayoutNodeSetScroll(f.tree, kPrLayoutNodeNone, px(0, 60));
-    std::vector<uint8_t> pixels = render(f.tree, 20, 40);
+    Array<uint8_t> pixels = render(f.tree, 20, 40);
     CHECK(pixel(pixels, 10, 10, 10) == "0 255 0 255");
     CHECK(prLayoutTreeStats(f.tree).layersRecorded == 0);
     // Geometry as painted is scrolled; as laid out it is not.
@@ -2096,14 +2102,15 @@ TEST_CASE("the viewport scrolls the document, as the root's overflow lets it") {
 TEST_CASE("geometry follows the boxes as they move, whether a query looks for one node or reads every box placed") {
     Fixture f;
     PrLayoutNode root = f.element(kPrLayoutNodeNone, block());
-    std::vector<PrLayoutNode> blocks;
+    Array<PrLayoutNode> blocks;
     for (int i = 0; i < 40; ++i)
-        blocks.push_back(f.element(root, block(10)));
-    PrLayoutNode last = blocks.back();
+        blocks.push(f.element(root, block(10)));
+    PrLayoutNode last = blocks.last();
     // The first queries look up one node's boxes each, and the rest read every placed box once, when that costs less.
     auto checkAll = [&](double first) {
-        for (PrLayoutCoordinates coordinates : {PrLayoutCoordinates_Viewport, PrLayoutCoordinates_Layout}) {
-            for (size_t i = 0; i < blocks.size(); ++i) {
+        const PrLayoutCoordinates spaces[] = {PrLayoutCoordinates_Viewport, PrLayoutCoordinates_Layout};
+        for (PrLayoutCoordinates coordinates : spaces) {
+            for (uint32_t i = 0; i < blocks.count(); ++i) {
                 double top = i == 0 ? 0 : first + 10 * double(i - 1);
                 double bottom = i == 0 ? first : top + 10;
                 checkRect(prLayoutRectToPx(prLayoutNodeBounds(f.tree, blocks[i], coordinates)), 0, top, 100, bottom);
@@ -2359,12 +2366,12 @@ TEST_CASE("verifying a tree publishes nothing: its placements, queries and recor
     };
     LayoutTree* t = f.tree;
     auto published = [&] {
-        std::vector<Published> out;
+        Array<Published> out;
         for (LayoutNodeIndex node = 0; node < t->nodes.count; ++node) {
             if (!t->nodes.data[node].live)
                 continue;
             PrLayoutNode name = layoutNodeName(t, node);
-            out.push_back(Published{
+            out.push(Published{
                 layoutCachePlacement(t->cache, node),
                 prLayoutNodeBounds(f.tree, name, PrLayoutCoordinates_Viewport),
                 prLayoutNodeContentExtent(f.tree, name),
@@ -2372,17 +2379,17 @@ TEST_CASE("verifying a tree publishes nothing: its placements, queries and recor
         }
         return out;
     };
-    auto same = [](const std::vector<Published>& a, const std::vector<Published>& b) {
-        bool equal = a.size() == b.size();
-        for (size_t i = 0; i < a.size() && equal; ++i) {
+    auto same = [](const Array<Published>& a, const Array<Published>& b) {
+        bool equal = a.count() == b.count();
+        for (uint32_t i = 0; i < a.count() && equal; ++i) {
             const LayoutPlacement& x = a[i].placement;
             const LayoutPlacement& y = b[i].placement;
             equal = x.parent == y.parent && x.offset == y.offset && x.fragment == y.fragment &&
-                memcmp(&a[i].bounds, &b[i].bounds, sizeof(PrLayoutRect)) == 0 && a[i].content == b[i].content;
+                prMemEquals(&a[i].bounds, &b[i].bounds, sizeof(PrLayoutRect)) && a[i].content == b[i].content;
         }
         return equal;
     };
-    std::vector<Published> before = published();
+    Array<Published> before = published();
     CHECK(verified(f.tree));
     CHECK(same(before, published()));
     render(f.tree, 100, 100);
@@ -2444,7 +2451,7 @@ TEST_CASE("a paint keeps the recordings of the boxes with layers of their own wh
     f.text(faded, "words");
     auto paint = [&](uint32_t width = 40, uint32_t height = 40) {
         f.layout(px(float(width), float(height)));
-        std::vector<uint8_t> pixels = render(f.tree, width, height);
+        Array<uint8_t> pixels = render(f.tree, width, height);
         CHECK(verified(f.tree));
         return pixels;
     };
@@ -2460,7 +2467,7 @@ TEST_CASE("a paint keeps the recordings of the boxes with layers of their own wh
     // A background in the root's flow records the root's layer again, as a background of the positioned box does.
     PrLayoutDecorationStyle green = background(PrColor{0, 1, 0, 1});
     prLayoutNodeSetStyle(f.tree, plain, f.style(block(10), &green));
-    std::vector<uint8_t> pixels = paint();
+    Array<uint8_t> pixels = paint();
     CHECK(prLayoutTreeStats(f.tree).layersRecorded == 1);
     CHECK(pixel(pixels, 40, 5, 5) == "0 255 0 255");
     prLayoutNodeSetStyle(f.tree, positioned, f.style(relative, &green));
@@ -2504,7 +2511,7 @@ TEST_CASE("recording a box that paints whole again embeds the recordings of its 
     }
     auto paint = [&]() {
         f.layout(px(40, 130));
-        std::vector<uint8_t> pixels = render(f.tree, 40, 130);
+        Array<uint8_t> pixels = render(f.tree, 40, 130);
         CHECK(verified(f.tree));
         return pixels;
     };
@@ -2519,7 +2526,7 @@ TEST_CASE("recording a box that paints whole again embeds the recordings of its 
     // run are reused.
     PrLayoutDecorationStyle green = background(PrColor{0, 1, 0, 1});
     prLayoutNodeSetStyle(f.tree, first, f.style(block(1), &green));
-    std::vector<uint8_t> pixels = paint();
+    Array<uint8_t> pixels = paint();
     CHECK(prLayoutTreeStats(f.tree).layersRecorded == 1);
     CHECK(prLayoutTreeStats(f.tree).subtreesRecorded == 1 + 2 + 2);
     CHECK(prLayoutTreeStats(f.tree).subtreesReused == 2 * 2 + 2 + 31);
@@ -2542,12 +2549,12 @@ TEST_CASE("a positioned box without a layer reuses its cached recording when a s
     PrLayoutDecorationStyle red = background(PrColor{1, 0, 0, 1});
     PrLayoutBoxStyle relative = block(10);
     relative.position = PrLayoutPosition_Relative;
-    std::vector<PrLayoutNode> cards;
+    Array<PrLayoutNode> cards;
     for (int i = 0; i < 4; ++i)
-        cards.push_back(f.element(root, relative, &red));
+        cards.push(f.element(root, relative, &red));
     auto paint = [&]() {
         f.layout(px(40, 40));
-        std::vector<uint8_t> pixels = render(f.tree, 40, 40);
+        Array<uint8_t> pixels = render(f.tree, 40, 40);
         CHECK(verified(f.tree));
         return pixels;
     };
@@ -2557,7 +2564,7 @@ TEST_CASE("a positioned box without a layer reuses its cached recording when a s
     // Changing one card re-records the root's layer and that card. The other three replay from cache.
     PrLayoutDecorationStyle green = background(PrColor{0, 1, 0, 1});
     prLayoutNodeSetStyle(f.tree, cards[1], f.style(relative, &green));
-    std::vector<uint8_t> pixels = paint();
+    Array<uint8_t> pixels = paint();
     CHECK(prLayoutTreeStats(f.tree).layersRecorded == 1);
     CHECK(prLayoutTreeStats(f.tree).subtreesRecorded == 1);
     CHECK(prLayoutTreeStats(f.tree).subtreesReused == 3);
@@ -2570,10 +2577,10 @@ TEST_CASE("a layout shapes the inline formatting contexts that changed, and noth
     PrLayoutNode root = f.element(kPrLayoutNodeNone, block());
     PrLayoutBoxStyle span = prLayoutBoxStyleDefault();
     span.display = PrLayoutDisplay_Inline;
-    std::vector<PrLayoutNode> texts;
+    Array<PrLayoutNode> texts;
     for (int p = 0; p < 64; ++p) {
         PrLayoutNode paragraph = f.element(root, block());
-        texts.push_back(f.text(paragraph, "Some words that break across lines "));
+        texts.push(f.text(paragraph, "Some words that break across lines "));
         PrLayoutNode inner = f.element(paragraph, span);
         f.text(inner, "and more words in a span");
     }
@@ -2582,7 +2589,7 @@ TEST_CASE("a layout shapes the inline formatting contexts that changed, and noth
     CHECK(verified(f.tree));
 
     // What changed is shaped again, and nothing else.
-    for (size_t i = 0; i < texts.size(); i += 2)
+    for (uint32_t i = 0; i < texts.count(); i += 2)
         prLayoutNodeSetText(f.tree, texts[i], "Other words, which break otherwise ");
     f.layout(px(120, 600));
     CHECK(prLayoutTreeStats(f.tree).inlinesShaped == 32);
@@ -2890,18 +2897,18 @@ TEST_CASE("a scroll container whose overscroll behavior contains a scroll keeps 
     prLayoutSceneRelease(scene);
     // The container takes 10 of the 30 and keeps the rest from the viewport. Past the container, the viewport scrolls.
     CHECK(prLayoutCompositorScrollAt(compositor, px(5, 5), px(0, 30)));
-    std::vector<PrLayoutScroll> taken;
+    Array<PrLayoutScroll> taken;
     PrLayoutScrollFn record = [](void* PR_NULLABLE context, const PrLayoutScroll* scroll) {
-        static_cast<std::vector<PrLayoutScroll>*>(context)->push_back(*scroll);
+        static_cast<Array<PrLayoutScroll>*>(context)->push(*scroll);
     };
     prLayoutCompositorTakeScrolls(compositor, record, &taken);
-    REQUIRE(taken.size() == 1);
+    REQUIRE(taken.count() == 1);
     CHECK(taken[0].node == s);
     CHECK(prLayoutUnitToPx(taken[0].offset.y) == 10);
     CHECK(prLayoutCompositorScrollAt(compositor, px(5, 15), px(0, 30)));
     taken.clear();
     prLayoutCompositorTakeScrolls(compositor, record, &taken);
-    REQUIRE(taken.size() == 1);
+    REQUIRE(taken.count() == 1);
     CHECK(taken[0].node == kPrLayoutNodeNone);
     prLayoutCompositorDestroy(compositor);
 }
@@ -3167,13 +3174,14 @@ TEST_CASE("a box's edges snap to the nearest target pixel of their position, hal
     PrLayoutNode outer = f.element(root, placedAt(10.25f, 10, 20, 4));
     f.element(outer, placedAt(0.25f, 0, 10, 4), &black);
     f.layout(px(40, 20));
-    std::vector<uint8_t> pixels = render(f.tree, 40, 20);
+    Array<uint8_t> pixels = render(f.tree, 40, 20);
     CHECK(verified(f.tree));
     CHECK(pixel(pixels, 40, 9, 1) == kClear);
     CHECK(pixel(pixels, 40, 10, 1) == kBlack);
     CHECK(pixel(pixels, 40, 19, 1) == kBlack);
     CHECK(pixel(pixels, 40, 20, 1) == kClear);
-    for (uint32_t y : {6u, 11u}) {
+    const uint32_t rows[] = {6u, 11u};
+    for (uint32_t y : rows) {
         CHECK(pixel(pixels, 40, 10, y) == kClear);
         CHECK(pixel(pixels, 40, 11, y) == kBlack);
         CHECK(pixel(pixels, 40, 20, y) == kBlack);
@@ -3197,7 +3205,7 @@ TEST_CASE("boxes that abut at a fraction of a pixel meet on one snapped edge, wi
     f.element(row, block(), &green, nullptr, nullptr, &grow);
     f.element(row, block(), &blue, nullptr, nullptr, &grow);
     f.layout(px(120, 4));
-    std::vector<uint8_t> pixels = render(f.tree, 120, 4);
+    Array<uint8_t> pixels = render(f.tree, 120, 4);
     // The first item ends at 10.5 + 33.33, which rounds to 44.
     CHECK(pixel(pixels, 120, 10, 1) == kClear);
     CHECK(pixel(pixels, 120, 11, 1) == "255 0 0 255");
@@ -3227,7 +3235,7 @@ TEST_CASE("at a ratio that is not whole, edges snap to target pixels and borders
     widths.border[PrRectSide_Bottom] = prLayoutUnitFromPx(2);
     PrLayoutNode measured = f.element(root, widths);
     f.layout(px(40, 30));
-    std::vector<uint8_t> pixels = renderAt(f.tree, 60, 45, 1.5f);
+    Array<uint8_t> pixels = renderAt(f.tree, 60, 45, 1.5f);
     CHECK(verified(f.tree));
     CHECK(pixel(pixels, 60, 14, 1) == kClear);
     CHECK(pixel(pixels, 60, 15, 1) == kBlack);
@@ -3258,10 +3266,10 @@ TEST_CASE("text's baseline lands on a whole target pixel, and its glyphs keep th
     f.layout(px(100, 40));
     PrDrawList* list = prDrawListCreate();
     prLayoutTreePaint(f.tree, list);
-    std::vector<DrawnGlyph> drawn;
+    Array<DrawnGlyph> drawn;
     appendGlyphs(list, prDrawTransformFromDAffine2(PrDAffine2{1, 0, 0, 1, 0, 0}), drawn);
     prDrawListRelease(list);
-    REQUIRE(drawn.size() == 2);
+    REQUIRE(drawn.count() == 2);
     CHECK(drawn[0].x == doctest::Approx(0.25));
     for (const DrawnGlyph& glyph : drawn)
         CHECK(glyph.y == doctest::Approx(double(int64_t(glyph.y + 0.5))));
@@ -3277,7 +3285,7 @@ TEST_CASE("a recording is reused wherever it moves, and its edges snap where it 
         f.element(section, block(1), &red);
     auto paint = [&]() {
         f.layout(px(10, 20));
-        std::vector<uint8_t> pixels = render(f.tree, 10, 20);
+        Array<uint8_t> pixels = render(f.tree, 10, 20);
         CHECK(verified(f.tree));
         return pixels;
     };
@@ -3288,7 +3296,7 @@ TEST_CASE("a recording is reused wherever it moves, and its edges snap where it 
     CHECK(whole != 0);
     // A move by a fraction of a pixel reuses as much as a move by whole pixels: snapping happens as the list plays.
     prLayoutNodeSetStyle(f.tree, spacer, f.style(block(3.5f)));
-    std::vector<uint8_t> pixels = paint();
+    Array<uint8_t> pixels = paint();
     CHECK(prLayoutTreeStats(f.tree).subtreesReused == whole);
     // The section's first leaf, from 3.5 to 4.5, snaps to the pixel from 4 to 5.
     CHECK(pixel(pixels, 10, 5, 3) == kClear);
@@ -3311,7 +3319,7 @@ TEST_CASE("a scroll offset plays rounded to whole target pixels, and records not
     render(f.tree, 10, 20);
     // 2.5 rounds to 3, so the red box covers the pixels above 7 whole.
     prLayoutNodeSetScroll(f.tree, s, px(0, 2.5f));
-    std::vector<uint8_t> pixels = render(f.tree, 10, 20);
+    Array<uint8_t> pixels = render(f.tree, 10, 20);
     CHECK(prLayoutTreeStats(f.tree).layersRecorded == 0);
     CHECK(pixel(pixels, 10, 5, 6) == "255 0 0 255");
     CHECK(pixel(pixels, 10, 5, 7) == "0 255 0 255");
@@ -3328,7 +3336,7 @@ TEST_CASE("replaced content fills its content box's snapped edges") {
     prLayoutNodeSetContent(f.tree, image, &content);
     prDrawListRelease(content.list);
     f.layout(px(40, 10));
-    std::vector<uint8_t> pixels = render(f.tree, 40, 10);
+    Array<uint8_t> pixels = render(f.tree, 40, 10);
     CHECK(verified(f.tree));
     CHECK(pixel(pixels, 40, 9, 2) == kClear);
     CHECK(pixel(pixels, 40, 10, 2) == kBlack);

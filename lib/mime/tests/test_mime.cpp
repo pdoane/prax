@@ -1,8 +1,7 @@
 #include "pr/mime.h"
+#include "pr/string.h"
 
 #include "tools/harness/test.h"
-
-#include <string>
 
 extern "C" int prTestMimeCApi(void);
 
@@ -10,15 +9,14 @@ namespace pr_impl {
 
 namespace {
 
+using namespace pr;
+
 // Returns the value of the parameter `name` of `type`, or "<none>" if it has none.
-std::string parameterOf(PrStringView type, PrStringView name) {
+String parameterOf(PrStringView type, PrStringView name) {
     PrRawString value = prRawStringNull();
     if (!prMimeTypeParameter(type, name, &value))
         return "<none>";
-    PrStringView view = prRawStringView(&value);
-    std::string result(view.data, view.size);
-    prRawStringReset(&value);
-    return result;
+    return String::adopt(value);
 }
 
 } // namespace

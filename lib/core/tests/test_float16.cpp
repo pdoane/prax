@@ -4,8 +4,6 @@
 
 #include "tools/harness/test.h"
 
-#include <cmath>
-
 namespace pr_impl {
 
 namespace {
@@ -53,8 +51,8 @@ TEST_CASE("a float narrows to the nearest 16-bit float, a tie to the even one") 
         float middle = (low + high) / 2;
         uint32_t even = (bits & 1) == 0 ? bits : bits + 1;
         wrong += bitsOf(prFloat16FromFloat(middle)) == even ? 0 : 1;
-        wrong += bitsOf(prFloat16FromFloat(std::nextafter(middle, 0.0f))) == bits ? 0 : 1;
-        wrong += bitsOf(prFloat16FromFloat(std::nextafter(middle, high))) == bits + 1 ? 0 : 1;
+        wrong += bitsOf(prFloat16FromFloat(prF32NextAfter(middle, 0.0f))) == bits ? 0 : 1;
+        wrong += bitsOf(prFloat16FromFloat(prF32NextAfter(middle, kPrF32Infinity))) == bits + 1 ? 0 : 1;
     }
     CHECK(wrong == 0);
 }

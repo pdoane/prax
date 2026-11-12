@@ -2,20 +2,18 @@
 #include "pr/draw_list.h"
 #include "pr/draw_structure.h"
 #include "pr/draw_writer.h"
+#include "pr/string.h"
 
 #include "tools/harness/test.h"
-
-#include <string>
 
 namespace pr_impl {
 
 namespace {
 
-std::string text(PrRawString raw) {
-    PrStringView view = prRawStringView(&raw);
-    std::string result(view.data != nullptr ? view.data : "", view.size);
-    prRawStringReset(&raw);
-    return result;
+using namespace pr;
+
+String text(PrRawString raw) {
+    return String::adopt(raw);
 }
 
 } // namespace

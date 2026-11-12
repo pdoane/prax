@@ -3,30 +3,32 @@
 
 #pragma once
 
+#include "pr/array.h"
 #include "pr/css.h"
 #include "pr/dom_xml.h"
 #include "pr/draw_commands.h"
 #include "pr/draw_cpu.h"
 #include "pr/draw_renderer.h"
+#include "pr/float.h"
 #include "pr/geom.h"
+#include "pr/mem.h"
 #include "pr/path.h"
+#include "pr/string.h"
 #include "pr/string_ops.h"
 #include "pr/svg.h"
 #include "pr/svg_render.h"
 
 #include "tools/harness/test.h"
 
-#include <cmath>
-#include <string>
-#include <vector>
-
 PR_ASSUME_NONNULL_BEGIN
 
 namespace pr_impl {
 
+using namespace pr;
+
 // Returns `body` as the content of an outermost svg element in SVG's namespace, with xlink's declared.
-inline std::string svgDocument(const std::string& body) {
-    return "<svg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>" + body + "</svg>";
+inline String svgDocument(PrStringView body) {
+    return format("<svg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>{}</svg>", body);
 }
 
 // A painting command, with its geometry in the space that the document is drawn in.
@@ -45,11 +47,11 @@ struct Drawn {
     bool stroked;
     PrPathStroke stroke;
     bool nonScaling;
-    std::vector<float> dashes;
+    Array<float> dashes;
 
     PrPathFillRule rule;                      // Path
     PrVec2 radii;                             // Ellipse, and the first corner of a CornerRect
-    std::vector<PrPathVerb> verbs;            // Path
+    Array<PrPathVerb> verbs;                  // Path
     const PrFontGlyphRun* PR_NULLABLE glyphs; // Glyphs, valid while the drawing lives
 };
 
@@ -57,11 +59,11 @@ struct Drawn {
 struct Drawing {
     PrDomDocument* document = nullptr;
     PrDrawList* list = nullptr;
-    std::vector<Drawn> commands;
+    Array<Drawn> commands;
     PrVec2 extent{};
 
     // Draws the document `source` in a viewport of `viewport`, with `options`, or the defaults if null.
-    explicit Drawing(const std::string& source, PrVec2 viewport = PrVec2{100, 100},
+    explicit Drawing(PrStringView source, PrVec2 viewport = PrVec2{100, 100},
             const PrSvgDrawOptions* PR_NULLABLE options = nullptr) {
         document = prDomParseXml(source, "image/svg+xml", nullptr);
         prCssEnable(document);
@@ -84,47 +86,50 @@ struct Drawing {
     }
 
     // Returns the commands of `kind`.
-    std::vector<const Drawn*> of(PrDrawCommandKind kind) const {
-        std::vector<const Drawn*> found;
+    Array<const Drawn*> of(PrDrawCommandKind kind) const {
+        Array<const Drawn*> found;
         for (const Drawn& command : commands)
             if (command.kind == kind)
-                found.push_back(&command);
+                found.push(&command);
         return found;
     }
 
     // Returns the commands that fill, or that stroke.
-    std::vector<const Drawn*> fills() const { return filtered(false); }
-    std::vector<const Drawn*> strokes() const { return filtered(true); }
+    Array<const Drawn*> fills() const { return filtered(false); }
+    Array<const Drawn*> strokes() const { return filtered(true); }
 
     // Returns the color of the pixel at `x`, `y` of the drawing rendered on the CPU over white, as "r g b".
-    std::string pixel(uint32_t x, uint32_t y) const {
+    String pixel(uint32_t x, uint32_t y) const {
         uint32_t width = uint32_t(extent.x);
         uint32_t height = uint32_t(extent.y);
-        std::vector<uint8_t> bytes(size_t(width) * height * 4, 255);
+        Array<uint8_t> bytes(width * height * 4);
+        prMemFill(bytes.data(), 255, bytes.count());
         PrDrawRenderer* renderer = prDrawCpuCreate(nullptr);
         prDrawRendererRenderPixels(renderer, list, PrPixels{bytes.data(), size_t(width) * 4, {width, height}},
             PrPixelFormat_Rgba8);
         prDrawRendererDestroy(renderer);
         const uint8_t* p = bytes.data() + (size_t(y) * width + x) * 4;
-        return std::to_string(p[0]) + " " + std::to_string(p[1]) + " " + std::to_string(p[2]);
+        return format("{} {} {}", p[0], p[1], p[2]);
     }
 
     // Returns the painting commands of `list` in order, as a drawing reads them.
-    static std::vector<Drawn> commandsOf(const PrDrawList* list) {
-        std::vector<Drawn> commands;
-        std::vector<PrAffine2> transforms{prAffine2Identity()};
-        std::vector<float> opacities{1};
+    static Array<Drawn> commandsOf(const PrDrawList* list) {
+        Array<Drawn> commands;
+        Array<PrAffine2> transforms;
+        transforms.push(prAffine2Identity());
+        Array<float> opacities;
+        opacities.push(1);
         uint32_t clips = 0;
         const PrDrawCommand* all = prDrawListCommands(list);
         for (uint32_t i = 0; i < prDrawListCommandCount(list); ++i) {
             const PrDrawCommand& c = all[i];
             switch (c.kind) {
                 case PrDrawCommandKind_PushTransformAffine2:
-                    transforms.push_back(prAffine2Concat(prAffine2FromDAffine2(c.affine), transforms.back()));
+                    transforms.push(prAffine2Concat(prAffine2FromDAffine2(c.affine), transforms.last()));
                     continue;
-                case PrDrawCommandKind_PopTransform: transforms.pop_back(); continue;
-                case PrDrawCommandKind_PushGroup: opacities.push_back(opacities.back() * c.group->opacity); continue;
-                case PrDrawCommandKind_PopGroup: opacities.pop_back(); continue;
+                case PrDrawCommandKind_PopTransform: transforms.pop(); continue;
+                case PrDrawCommandKind_PushGroup: opacities.push(opacities.last() * c.group->opacity); continue;
+                case PrDrawCommandKind_PopGroup: opacities.pop(); continue;
                 case PrDrawCommandKind_PushClipRect:
                 case PrDrawCommandKind_PushClipTargetRect:
                 case PrDrawCommandKind_PushClipCornerRect:
@@ -136,12 +141,12 @@ struct Drawing {
             }
             Drawn d{};
             d.kind = c.kind;
-            d.transform = transforms.back();
+            d.transform = transforms.last();
             d.color = prColorFromColor16(c.color);
             d.brushed = c.brush != nullptr;
             d.brush = c.brush;
             d.antialias = c.antialias;
-            d.opacity = opacities.back();
+            d.opacity = opacities.last();
             d.clips = clips;
             d.rule = c.rule;
             PrRect local{};
@@ -160,8 +165,8 @@ struct Drawing {
                     break;
                 case PrDrawCommandKind_Line:
                     local = PrRect{
-                        std::fmin(c.line.start.x, c.line.end.x), std::fmin(c.line.start.y, c.line.end.y),
-                        std::fmax(c.line.start.x, c.line.end.x), std::fmax(c.line.start.y, c.line.end.y),
+                        prF32Min(c.line.start.x, c.line.end.x), prF32Min(c.line.start.y, c.line.end.y),
+                        prF32Max(c.line.start.x, c.line.end.x), prF32Max(c.line.start.y, c.line.end.y),
                     };
                     break;
                 case PrDrawCommandKind_Path: {
@@ -173,13 +178,13 @@ struct Drawing {
                             local = PrRect{at.x, at.y, at.x, at.y};
                         else
                             local = PrRect{
-                                std::fmin(local.left, at.x), std::fmin(local.top, at.y),
-                                std::fmax(local.right, at.x), std::fmax(local.bottom, at.y),
+                                prF32Min(local.left, at.x), prF32Min(local.top, at.y),
+                                prF32Max(local.right, at.x), prF32Max(local.bottom, at.y),
                             };
                     }
                     const PrPathVerb* verbs = prPathVerbs(c.path);
                     for (uint32_t v = 0; v < prPathVerbCount(c.path); ++v)
-                        d.verbs.push_back(verbs[v]);
+                        d.verbs.push(verbs[v]);
                     break;
                 }
                 case PrDrawCommandKind_Glyphs: d.glyphs = c.glyphs; break;
@@ -191,19 +196,19 @@ struct Drawing {
                 d.stroke = c.stroke->shape;
                 d.nonScaling = c.stroke->nonScaling;
                 for (uint32_t k = 0; k < d.stroke.dashCount; ++k)
-                    d.dashes.push_back(d.stroke.dashes[k]);
+                    d.dashes.push(d.stroke.dashes[k]);
                 d.stroke.dashes = nullptr;
             }
-            commands.push_back(d);
+            commands.push(move(d));
         }
         return commands;
     }
 
     // Returns the order in which the commands fill and stroke, as `f` for a fill and `s` for a stroke.
-    std::string order() const {
-        std::string out;
+    String order() const {
+        String out;
         for (const Drawn& command : commands)
-            out += command.stroked ? 's' : 'f';
+            out.append(command.stroked ? 's' : 'f');
         return out;
     }
 
@@ -221,18 +226,18 @@ private:
                 out = PrRect{at.x, at.y, at.x, at.y};
             else
                 out = PrRect{
-                    std::fmin(out.left, at.x), std::fmin(out.top, at.y), std::fmax(out.right, at.x),
-                    std::fmax(out.bottom, at.y),
+                    prF32Min(out.left, at.x), prF32Min(out.top, at.y), prF32Max(out.right, at.x),
+                    prF32Max(out.bottom, at.y),
                 };
         }
         return out;
     }
 
-    std::vector<const Drawn*> filtered(bool stroked) const {
-        std::vector<const Drawn*> found;
+    Array<const Drawn*> filtered(bool stroked) const {
+        Array<const Drawn*> found;
         for (const Drawn& command : commands)
             if (command.stroked == stroked)
-                found.push_back(&command);
+                found.push(&command);
         return found;
     }
 
@@ -240,7 +245,7 @@ private:
 
 // Returns true if two numbers are within a thousandth of each other.
 inline bool near(float a, float b, float tolerance = 1e-3f) {
-    return std::fabs(a - b) <= tolerance;
+    return prF32Abs(a - b) <= tolerance;
 }
 
 // Returns true if two rectangles are within `tolerance` on each side. Reports both if they are not.
@@ -255,12 +260,12 @@ inline bool near(PrRect a, PrRect b, float tolerance = 1e-3f) {
 
 // Returns the angle that a transform turns the x-axis to, in degrees.
 inline float angleOf(PrAffine2 transform) {
-    return std::atan2(transform.b, transform.a) * 180 / 3.14159265f;
+    return prF32Atan2(transform.b, transform.a) * 180 / 3.14159265f;
 }
 
 // Returns the scale of a transform along its x-axis.
 inline float scaleOf(PrAffine2 transform) {
-    return std::sqrt(transform.a * transform.a + transform.b * transform.b);
+    return prF32Sqrt(transform.a * transform.a + transform.b * transform.b);
 }
 
 } // namespace pr_impl

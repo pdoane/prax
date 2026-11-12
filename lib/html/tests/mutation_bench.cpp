@@ -15,12 +15,11 @@
 #include "pr/css.h"
 #include "pr/html.h"
 #include "pr/html_page.h"
+#include "pr/print.h"
 #include "pr/string_ops.h"
 #include "pr/text_buffer.h"
 
 #include "tools/harness/harness.h"
-
-#include <stdio.h>
 
 using namespace harness;
 
@@ -452,13 +451,13 @@ constexpr Case kCases[] = {
 int main(int argc, char** argv) {
     prCrashHandler();
     if (argc != 3 && argc != 4) {
-        fprintf(stderr, "usage: mutation_bench <small.css> <large.css> [case]\n");
+        printError("usage: mutation_bench <small.css> <large.css> [case]\n");
         return 2;
     }
     PrTextBuffer small = {};
     PrTextBuffer large = {};
     if (!harnessReadFile(&small, argv[1]) || !harnessReadFile(&large, argv[2])) {
-        fprintf(stderr, "mutation_bench: cannot read the stylesheets\n");
+        printError("mutation_bench: cannot read the stylesheets\n");
         return 1;
     }
     PrTextBuffer html = {};
@@ -478,7 +477,9 @@ int main(int argc, char** argv) {
     work.large = prTextBufferView(&large);
 
     PrStringView only = argc == 4 ? argv[3] : PrStringView{};
-    printf("[");
+    // The array's opening reaches the output before the harness writes to it (harnessWriteCase, harnessWriteLine),
+    // which buffers what it writes, so it stays first.
+    print("[");
     for (uint32_t i = 0; i < countOf(kCases); ++i) {
         const Case& c = kCases[i];
         if (only.data != nullptr) {
@@ -491,7 +492,7 @@ int main(int argc, char** argv) {
         harnessWriteCase(i == 0, c.name, harnessMeasure([&] { c.run(&work); }));
         clear(&work);
     }
-    printf("\n]\n");
+    harnessWriteLine("\n]");
 
     prHtmlPageDestroy(page);
     prTextBufferReset(&html);

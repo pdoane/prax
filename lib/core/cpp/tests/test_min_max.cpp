@@ -25,3 +25,12 @@ TEST_CASE("clamp keeps NaN and bounds everything else") {
     CHECK(clamp(2.0f, 0.0f, 1.0f) == 1.0f);
     CHECK(clamp(-kPrF32Infinity, 0.0f, 1.0f) == 0.0f);
 }
+
+TEST_CASE("a magnitude, and a difference that an unsigned type gives without wrapping") {
+    CHECK(abs(-3) == 3);
+    CHECK(abs(3) == 3);
+    CHECK(abs(-1.5) == 1.5);
+    CHECK(absDifference(uint8_t(10), uint8_t(250)) == 240);
+    CHECK(absDifference(uint8_t(250), uint8_t(10)) == 240);
+    CHECK(absDifference(-2, 5) == 7);
+}

@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "pr/array.h"
 #include "pr/draw_commands.h"
 #include "pr/draw_cpu.h"
 #include "pr/draw_list.h"
@@ -12,19 +13,19 @@
 #include "pr/layout_style.h"
 #include "pr/layout_tree.h"
 #include "pr/mem.h"
+#include "pr/sort.h"
+#include "pr/span.h"
+#include "pr/string.h"
 #include "pr/string_view.h"
 #include "pr/text_harfbuzz.h"
 
 #include "tools/harness/test.h"
 
-#include <algorithm>
-#include <string>
-#include <utility>
-#include <vector>
-
 PR_ASSUME_NONNULL_BEGIN
 
 namespace pr_impl {
+
+using namespace pr;
 
 // Verifies the tree's incremental work, and reports the first difference if there is one.
 inline bool verified(PrLayoutTree* tree) {
@@ -32,7 +33,7 @@ inline bool verified(PrLayoutTree* tree) {
     bool same = prLayoutTreeVerify(tree, &difference);
     if (!same) {
         PrStringView what = prRawStringView(&difference.what);
-        MESSAGE("node " << uint32_t(difference.node) << ": " << std::string(what.data, what.size));
+        MESSAGE("node " << uint32_t(difference.node) << ": " << String(what));
         prRawStringReset(&difference.what);
     }
     return same;
@@ -57,13 +58,13 @@ struct Fixture {
 
     // The text fonts that textFont made, each made once for its inputs, so that equal fonts are one font group.
     struct Made {
-        std::string key;
+        String key;
         PrTextFont* font;
     };
-    std::vector<Made> made;
+    Array<Made> made;
 
     explicit Fixture(bool aliased = false) {
-        std::string path = std::string(PR_FONTS_DIR) + "/Arimo-Regular.ttf";
+        PrStringView path = PR_FONTS_DIR "/Arimo-Regular.ttf";
         const PrFont* PR_NULLABLE font = nullptr;
         PrFontDerivation derivation = prFontDerivationDefault();
         derivation.aliased = aliased;
@@ -79,7 +80,7 @@ struct Fixture {
         tree = prLayoutTreeCreate(&desc);
         // The default font is textFont's font of its size and nothing else, so that text in the default style is set in
         // one font.
-        made.push_back(Made{keyOf(defaultFontDesc.style.size, {}, 0, kPrFontWeightNormal), defaultFont});
+        made.push(Made{keyOf(defaultFontDesc.style.size, {}, 0, kPrFontWeightNormal), defaultFont});
         currentFixture() = this;
     }
 
@@ -94,8 +95,8 @@ struct Fixture {
 
     // Adds the faces of the font file `file` to the set, as the family that the file names, and returns that family,
     // whose name is `name`.
-    PrFontFamily family(const char* file, const char* name) {
-        std::string path = std::string(PR_FONTS_DIR) + "/" + file;
+    PrFontFamily family(PrStringView file, PrStringView name) {
+        String path = format("{}/{}", PR_FONTS_DIR, file);
         const PrFont* PR_NULLABLE font = nullptr;
         REQUIRE(prFontCreateFromFile(path, 0, nullptr, &font) == PrStatus_Ok);
         PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
@@ -105,18 +106,18 @@ struct Fixture {
     }
 
     // Returns the key by which textFont keeps a text font.
-    static std::string keyOf(float size, const std::vector<PrFontFamily>& families, PrLocale locale, float weight) {
-        std::string key = std::to_string(size) + "/" + std::to_string(weight) + "/" + std::to_string(locale);
+    static String keyOf(float size, Span<const PrFontFamily> families, PrLocale locale, float weight) {
+        String key = format("{:.6f}/{:.6f}/{}", size, weight, locale);
         for (const PrFontFamily& family : families)
-            key += "/" + std::to_string(family.generic) + ":" + std::string(family.name.data, family.name.size);
+            formatTo(key, "/{}:{}", int(family.generic), family.name);
         return key;
     }
 
     // Returns the text font of `families`, then the set's default family, at `size` px, `weight` and `locale`. It is
     // made once for its inputs and held until the fixture ends.
-    PrTextFont* textFont(float size, std::vector<PrFontFamily> families = {}, PrLocale locale = 0,
+    PrTextFont* textFont(float size, Span<const PrFontFamily> families = {}, PrLocale locale = 0,
             float weight = kPrFontWeightNormal) {
-        std::string key = keyOf(size, families, locale, weight);
+        String key = keyOf(size, families, locale, weight);
         for (const Made& m : made) {
             if (m.key == key)
                 return m.font;
@@ -127,12 +128,12 @@ struct Fixture {
         PrTextFontDesc desc{
             .set = fonts,
             .families = families.data(),
-            .familyCount = uint32_t(families.size()),
+            .familyCount = families.count(),
             .style = style,
             .locale = locale,
         };
-        made.push_back(Made{key, prTextFontCreate(&desc)});
-        return made.back().font;
+        made.push(Made{move(key), prTextFontCreate(&desc)});
+        return made.last().font;
     }
 
     uint32_t style(const PrLayoutBoxStyle& box, const PrLayoutDecorationStyle* PR_NULLABLE decoration = nullptr,
@@ -184,11 +185,11 @@ struct Fixture {
 };
 
 // Returns the current fixture's text font of `families` at `size` px, `weight` and `locale` (Fixture::textFont).
-inline PrTextFont* textFontOf(float size, std::vector<PrFontFamily> families = {}, PrLocale locale = 0,
+inline PrTextFont* textFontOf(float size, Span<const PrFontFamily> families = {}, PrLocale locale = 0,
         float weight = kPrFontWeightNormal) {
     Fixture* PR_NULLABLE f = currentFixture();
     REQUIRE(f != nullptr);
-    return f->textFont(size, std::move(families), locale, weight);
+    return f->textFont(size, families, locale, weight);
 }
 
 // Returns a block box, of `height` if one is given, or an inline box.
@@ -278,26 +279,27 @@ struct DrawnGlyph {
 
 // Appends the glyphs that `list` draws under `transform`, in the order it draws them, including through the lists it
 // embeds. Transforms compose as a backend's walk composes them, snapping included (prDrawTransformPush).
-inline void appendGlyphs(const PrDrawList* list, PrDrawTransform transform, std::vector<DrawnGlyph>& out) {
-    std::vector<PrDrawTransform> stack{transform};
+inline void appendGlyphs(const PrDrawList* list, PrDrawTransform transform, Array<DrawnGlyph>& out) {
+    Array<PrDrawTransform> stack;
+    stack.push(transform);
     const PrDrawCommand* commands = prDrawListCommands(list);
     for (uint32_t i = 0; i < prDrawListCommandCount(list); ++i) {
         const PrDrawCommand& command = commands[i];
-        const PrDAffine2& t = stack.back().daffine;
+        const PrDAffine2& t = stack.last().daffine;
         switch (command.kind) {
             case PrDrawCommandKind_Embed:
-                appendGlyphs(command.embed.list, prDrawTransformMoved(&stack.back(), command.embed.offset), out);
+                appendGlyphs(command.embed.list, prDrawTransformMoved(&stack.last(), command.embed.offset), out);
                 break;
             case PrDrawCommandKind_PushTransformAffine2:
-                stack.push_back(prDrawTransformPush(&stack.back(), &command));
+                stack.push(prDrawTransformPush(&stack.last(), &command));
                 break;
-            case PrDrawCommandKind_PopTransform: stack.pop_back(); break;
+            case PrDrawCommandKind_PopTransform: stack.pop(); break;
             case PrDrawCommandKind_Glyphs:
                 for (uint32_t g = 0; g < command.glyphs->glyphCount; ++g) {
                     PrVec2 p = command.glyphs->glyphs[g].position;
                     double x = double(p.x);
                     double y = double(p.y);
-                    out.push_back(DrawnGlyph{
+                    out.push(DrawnGlyph{
                         command.glyphs->glyphs[g].id, t.a * x + t.c * y + t.e,
                         t.b * x + t.d * y + t.f, command.glyphs->size,
                     });
@@ -310,33 +312,43 @@ inline void appendGlyphs(const PrDrawList* list, PrDrawTransform transform, std:
 
 // Returns the ids of the glyphs that the tree paints, in visual order: by line from the top, and from the left along
 // each line. A line paints its fragments in tree order, so on a bidi line the painting order is not the visual order.
-inline std::vector<uint16_t> paintedGlyphs(PrLayoutTree* tree) {
+inline Array<uint16_t> paintedGlyphs(PrLayoutTree* tree) {
     PrDrawList* list = prDrawListCreate();
     prLayoutTreePaint(tree, list);
-    std::vector<DrawnGlyph> drawn;
+    Array<DrawnGlyph> drawn;
     appendGlyphs(list, prDrawTransformFromDAffine2(PrDAffine2{1, 0, 0, 1, 0, 0}), drawn);
     prDrawListRelease(list);
-    std::stable_sort(drawn.begin(), drawn.end(), [](const DrawnGlyph& a, const DrawnGlyph& b) {
-        return a.y != b.y ? a.y < b.y : a.x < b.x;
+    // Glyphs at the same point keep their painting order: the sort orders by index after position.
+    Array<uint32_t> order(drawn.count());
+    for (uint32_t i = 0; i < order.count(); ++i)
+        order[i] = i;
+    sortItems(order.span(), [&](uint32_t a, uint32_t b) {
+        const DrawnGlyph& ga = drawn[a];
+        const DrawnGlyph& gb = drawn[b];
+        if (ga.y != gb.y)
+            return ga.y < gb.y;
+        if (ga.x != gb.x)
+            return ga.x < gb.x;
+        return a < b;
     });
-    std::vector<uint16_t> ids;
-    for (const DrawnGlyph& glyph : drawn)
-        ids.push_back(glyph.id);
+    Array<uint16_t> ids;
+    for (uint32_t i : order)
+        ids.push(drawn[i].id);
     return ids;
 }
 
 // Returns the tree's offsets for the scroll containers of its scene.
-inline std::vector<PrLayoutSceneScroll> treeScrolls(const PrLayoutTree* tree, const PrLayoutScene* scene) {
-    std::vector<PrLayoutSceneScroll> scrolls(prLayoutSceneScrolls(tree, scene, nullptr, 0));
-    prLayoutSceneScrolls(tree, scene, scrolls.data(), uint32_t(scrolls.size()));
+inline Array<PrLayoutSceneScroll> treeScrolls(const PrLayoutTree* tree, const PrLayoutScene* scene) {
+    Array<PrLayoutSceneScroll> scrolls(prLayoutSceneScrolls(tree, scene, nullptr, 0));
+    prLayoutSceneScrolls(tree, scene, scrolls.data(), scrolls.count());
     return scrolls;
 }
 
 // Renders the tree onto `width` by `height` RGBA pixels.
-inline std::vector<uint8_t> render(PrLayoutTree* tree, uint32_t width, uint32_t height) {
+inline Array<uint8_t> render(PrLayoutTree* tree, uint32_t width, uint32_t height) {
     PrDrawList* list = prDrawListCreate();
     prLayoutTreePaint(tree, list);
-    std::vector<uint8_t> bytes(size_t(width) * height * 4, 0);
+    Array<uint8_t> bytes(size_t(width) * height * 4);
     PrDrawRenderer* renderer = prDrawCpuCreate(nullptr);
     PrPixels into{bytes.data(), size_t(width) * 4, {width, height}};
     REQUIRE(prDrawRendererRenderPixels(renderer, list, into, PrPixelFormat_Rgba8) == PrStatus_Ok);
@@ -346,9 +358,9 @@ inline std::vector<uint8_t> render(PrLayoutTree* tree, uint32_t width, uint32_t 
 }
 
 // Returns the RGBA bytes of the pixel at `x`, `y` of `bytes`, which is `width` pixels wide, as text.
-inline std::string pixel(const std::vector<uint8_t>& bytes, uint32_t width, uint32_t x, uint32_t y) {
-    const uint8_t* p = bytes.data() + (size_t(y) * width + x) * 4;
-    return std::to_string(p[0]) + " " + std::to_string(p[1]) + " " + std::to_string(p[2]) + " " + std::to_string(p[3]);
+inline String pixel(PrByteView bytes, uint32_t width, uint32_t x, uint32_t y) {
+    const uint8_t* p = bytes.data + (size_t(y) * width + x) * 4;
+    return format("{} {} {} {}", p[0], p[1], p[2], p[3]);
 }
 
 } // namespace pr_impl

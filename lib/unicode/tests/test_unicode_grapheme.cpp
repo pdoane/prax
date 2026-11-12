@@ -4,8 +4,6 @@
 
 #include "tools/harness/test.h"
 
-#include <initializer_list>
-
 TEST_CASE("a printable ASCII character begins a cluster in the state of all zeros") {
     // A terminal relies on this to begin a run of ASCII clusters without reading their properties.
     for (uint32_t codePoint = 0x20; codePoint < 0x7f; ++codePoint) {
@@ -48,15 +46,19 @@ TEST_CASE("character properties read from the database") {
     CHECK((prUnicodeFlags(0x200e) & PrUnicodeFlag_DefaultIgnorable) != 0);
     CHECK((prUnicodeFlags(0x00ad) & PrUnicodeFlag_DefaultIgnorable) != 0);
     CHECK((prUnicodeFlags(' ') & PrUnicodeFlag_DefaultIgnorable) == 0);
-    for (uint32_t selector : {0x180Bu, 0x180Fu, 0xFE00u, 0xFE0Fu, 0xE0100u, 0xE01EFu})
+    const uint32_t selectors[] = {0x180Bu, 0x180Fu, 0xFE00u, 0xFE0Fu, 0xE0100u, 0xE01EFu};
+    for (uint32_t selector : selectors)
         CHECK((prUnicodeFlags(selector) & PrUnicodeFlag_VariationSelector) != 0);
-    for (uint32_t other : {0x180Eu, 0xFE10u, 0xE00FFu, 0xE01F0u, uint32_t('A')})
+    const uint32_t others[] = {0x180Eu, 0xFE10u, 0xE00FFu, 0xE01F0u, uint32_t('A')};
+    for (uint32_t other : others)
         CHECK((prUnicodeFlags(other) & PrUnicodeFlag_VariationSelector) == 0);
     // Wide (CJK, an emoji presentation) and Fullwidth (a fullwidth A) are wide; Halfwidth, Ambiguous and Neutral are
     // not.
-    for (uint32_t wide : {0x4E2Du, 0x1F600u, 0xFF21u})
+    const uint32_t wides[] = {0x4E2Du, 0x1F600u, 0xFF21u};
+    for (uint32_t wide : wides)
         CHECK((prUnicodeFlags(wide) & PrUnicodeFlag_EastAsianWide) != 0);
-    for (uint32_t narrow : {0xFF61u, 0x00A1u, uint32_t('A'), 0x2764u})
+    const uint32_t narrows[] = {0xFF61u, 0x00A1u, uint32_t('A'), 0x2764u};
+    for (uint32_t narrow : narrows)
         CHECK((prUnicodeFlags(narrow) & PrUnicodeFlag_EastAsianWide) == 0);
     // An arrow is used with no script, a Latin letter with its own, and the danda with each script that writes it.
     PrScript scripts[kPrUnicodeMaxScriptExtensions];

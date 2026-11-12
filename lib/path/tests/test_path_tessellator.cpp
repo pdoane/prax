@@ -1,12 +1,10 @@
+#include "pr/array.h"
+#include "pr/float.h"
 #include "pr/path_tessellator.h"
 #include "pr/random.h"
 #include "pr/vec.h"
 
 #include "tools/harness/test.h"
-
-#include <cmath>
-#include <cstdint>
-#include <vector>
 
 namespace pr_impl {
 
@@ -14,9 +12,9 @@ namespace {
 
 constexpr double kPi = 3.14159265358979;
 
-PrPath* polygon(const std::vector<PrVec2>& points) {
+PrPath* polygon(const Array<PrVec2>& points) {
     PrPath* path = prPathCreate();
-    for (size_t i = 0; i < points.size(); ++i) {
+    for (uint32_t i = 0; i < points.count(); ++i) {
         if (i == 0)
             prPathMoveTo(path, points[i]);
         else
@@ -38,7 +36,7 @@ double covered(const PrPathMesh& mesh) {
         uint32_t a = mesh.indices[i];
         uint32_t b = mesh.indices[i + 1];
         uint32_t c = mesh.indices[i + 2];
-        double area = std::fabs(twiceArea(mesh.points[a], mesh.points[b], mesh.points[c])) / 2;
+        double area = prF64Abs(twiceArea(mesh.points[a], mesh.points[b], mesh.points[c])) / 2;
         sum += area * double(mesh.coverage[a] + mesh.coverage[b] + mesh.coverage[c]) / 3;
     }
     return sum;
@@ -78,12 +76,12 @@ uint32_t containing(const PrPathMesh& mesh, PrVec2 p) {
 }
 
 // Returns the winding of the polygons around the point.
-int winding(const std::vector<std::vector<PrVec2>>& rings, PrVec2 p) {
+int winding(const Array<Array<PrVec2>>& rings, PrVec2 p) {
     int w = 0;
-    for (const std::vector<PrVec2>& ring : rings) {
-        for (size_t i = 0; i < ring.size(); ++i) {
+    for (const Array<PrVec2>& ring : rings) {
+        for (uint32_t i = 0; i < ring.count(); ++i) {
             PrVec2 a = ring[i];
-            PrVec2 b = ring[(i + 1) % ring.size()];
+            PrVec2 b = ring[(i + 1) % ring.count()];
             if (a.y <= p.y) {
                 if (b.y > p.y && twiceArea(a, b, p) > 0)
                     ++w;
@@ -138,17 +136,17 @@ TEST_CASE("a circle covers its area with and without a fringe") {
 
 TEST_CASE("the fill rules decide a star's center and a ring's hole") {
     PrPathTessellator* t = prPathTessellatorCreate();
-    std::vector<PrVec2> star;
+    Array<PrVec2> star;
     for (int i = 0; i < 5; ++i) {
         double angle = -kPi / 2 + i * 4 * kPi / 5;
-        star.push_back(PrVec2{float(50 + 40 * std::cos(angle)), float(50 + 40 * std::sin(angle))});
+        star.push(PrVec2{float(50 + 40 * prF64Cos(angle)), float(50 + 40 * prF64Sin(angle))});
     }
     PrPath* path = polygon(star);
     double nonzero = fill(t, path, PrPathFillRule_NonZero, 0);
     double evenOdd = fill(t, path, PrPathFillRule_EvenOdd, 0);
     // The center pentagon has the circumradius R cos(72°) / cos(36°), and area (5/2) r² sin(72°).
-    double inner = 40 * std::cos(2 * kPi / 5) / std::cos(kPi / 5);
-    double pentagon = 2.5 * inner * inner * std::sin(2 * kPi / 5);
+    double inner = 40 * prF64Cos(2 * kPi / 5) / prF64Cos(kPi / 5);
+    double pentagon = 2.5 * inner * inner * prF64Sin(2 * kPi / 5);
     CHECK(nonzero - evenOdd == doctest::Approx(pentagon).epsilon(0.001));
     prPathDestroy(path);
 
@@ -212,7 +210,7 @@ TEST_CASE("inputs that are not finite, and paths with no area, tessellate nothin
     PrPath* path = prPathCreate();
     prPathAddRect(path, PrRect{0, 0, 10, 10});
     PrPathMesh mesh{};
-    tessellate(t, path, prAffine2Scale(PrVec2{NAN, 1}), PrPathFillRule_NonZero, 0.1f, 1, &mesh);
+    tessellate(t, path, prAffine2Scale(PrVec2{kPrF32Nan, 1}), PrPathFillRule_NonZero, 0.1f, 1, &mesh);
     CHECK(mesh.indexCount == 0);
     prPathClear(path);
     prPathMoveTo(path, PrVec2{0, 0});
@@ -229,24 +227,24 @@ TEST_CASE("random polygons' triangles cover each point as the fill rule does") {
     PrPathTessellator* t = prPathTessellatorCreate();
     PrRandom random = {.state = 12345};
     for (int round = 0; round < 60; ++round) {
-        std::vector<std::vector<PrVec2>> rings;
+        Array<Array<PrVec2>> rings;
         PrPath* path = prPathCreate();
         int ringCount = 1 + round % 3;
         for (int r = 0; r < ringCount; ++r) {
-            std::vector<PrVec2> ring;
+            Array<PrVec2> ring;
             int n = 3 + int(prRandomF32(&random) * 12);
             for (int i = 0; i < n; ++i) {
                 // Some rounds snap to a coarse grid, for shared vertices and collinear edges.
                 float x = prRandomF32(&random) * 100;
                 float y = prRandomF32(&random) * 100;
                 if (round % 4 == 0) {
-                    x = std::floor(x / 20) * 20;
-                    y = std::floor(y / 20) * 20;
+                    x = prF32Floor(x / 20) * 20;
+                    y = prF32Floor(y / 20) * 20;
                 }
-                ring.push_back(PrVec2{x, y});
+                ring.push(PrVec2{x, y});
             }
-            rings.push_back(ring);
-            for (size_t i = 0; i < ring.size(); ++i) {
+            rings.push(ring);
+            for (uint32_t i = 0; i < ring.count(); ++i) {
                 if (i == 0)
                     prPathMoveTo(path, ring[i]);
                 else
@@ -254,7 +252,8 @@ TEST_CASE("random polygons' triangles cover each point as the fill rule does") {
             }
             prPathClose(path);
         }
-        for (PrPathFillRule rule : {PrPathFillRule_NonZero, PrPathFillRule_EvenOdd}) {
+        const PrPathFillRule rules[] = {PrPathFillRule_NonZero, PrPathFillRule_EvenOdd};
+        for (PrPathFillRule rule : rules) {
             PrPathMesh mesh{};
             tessellate(t, path, prAffine2Identity(), rule, 0.1f, 0, &mesh);
             uint32_t wrong = 0;
@@ -286,19 +285,19 @@ TEST_CASE("with a fringe, points away from the boundary are still covered once o
         u = u < 0 ? 0 : u > 1 ? 1 : u;
         double ex = double(a.x) + u * dx - double(p.x);
         double ey = double(a.y) + u * dy - double(p.y);
-        return std::sqrt(ex * ex + ey * ey);
+        return prF64Sqrt(ex * ex + ey * ey);
     };
     for (int round = 0; round < 60; ++round) {
-        std::vector<std::vector<PrVec2>> rings;
+        Array<Array<PrVec2>> rings;
         PrPath* path = prPathCreate();
         int ringCount = 1 + round % 3;
         for (int r = 0; r < ringCount; ++r) {
-            std::vector<PrVec2> ring;
+            Array<PrVec2> ring;
             int n = 3 + int(prRandomF32(&random) * 10);
             for (int i = 0; i < n; ++i)
-                ring.push_back(PrVec2{prRandomF32(&random) * 100, prRandomF32(&random) * 100});
-            rings.push_back(ring);
-            for (size_t i = 0; i < ring.size(); ++i) {
+                ring.push(PrVec2{prRandomF32(&random) * 100, prRandomF32(&random) * 100});
+            rings.push(ring);
+            for (uint32_t i = 0; i < ring.count(); ++i) {
                 if (i == 0)
                     prPathMoveTo(path, ring[i]);
                 else
@@ -313,9 +312,9 @@ TEST_CASE("with a fringe, points away from the boundary are still covered once o
             for (int sx = 0; sx < 50; ++sx) {
                 PrVec2 p{float(sx) * 2 + 0.3173f, float(sy) * 2 + 0.7331f};
                 double nearest = 1e9;
-                for (const std::vector<PrVec2>& ring : rings) {
-                    for (size_t i = 0; i < ring.size(); ++i)
-                        nearest = std::fmin(nearest, distance(ring[i], ring[(i + 1) % ring.size()], p));
+                for (const Array<PrVec2>& ring : rings) {
+                    for (uint32_t i = 0; i < ring.count(); ++i)
+                        nearest = prF64Min(nearest, distance(ring[i], ring[(i + 1) % ring.count()], p));
                 }
                 if (nearest < 1.5)
                     continue;

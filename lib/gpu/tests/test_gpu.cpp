@@ -1,3 +1,4 @@
+#include "pr/array.h"
 #include "pr/gpu.h"
 #include "pr/mem.h"
 #include "pr/utf8.h"
@@ -6,13 +7,11 @@
 
 #include "tools/harness/test.h"
 
-#include <cstring>
-#include <string>
-#include <vector>
-
 extern "C" int prTestGpuCApi(void);
 
 namespace pr_impl {
+
+using namespace pr;
 
 namespace {
 
@@ -73,15 +72,15 @@ struct Fixture {
     }
 
     // Returns the texels of a texture of 8-bit RGBA that its passes left.
-    std::vector<uint8_t> read(PrGpuTexture texture, uint32_t access = PrGpuAccessFlag_ShaderRead) {
+    Array<uint8_t> read(PrGpuTexture texture, uint32_t access = PrGpuAccessFlag_ShaderRead) {
         PrUVec2 extent = prGpuTextureExtent(device, texture);
-        std::vector<uint8_t> texels(size_t(extent.x) * extent.y * 4);
+        Array<uint8_t> texels(extent.x * extent.y * 4);
         prGpuTextureRead(device, texture, access, PrIVec2{0, 0}, PrPixels{texels.data(), size_t(extent.x) * 4, extent});
         return texels;
     }
 
     // Returns the bytes of a buffer, copied through a readback buffer.
-    std::vector<uint8_t> read(PrGpuBuffer buffer, uint64_t size) {
+    Array<uint8_t> read(PrGpuBuffer buffer, uint64_t size) {
         PrGpuBufferDesc desc{.size = size, .memory = PrGpuMemory_Readback};
         PrGpuBuffer readback{};
         REQUIRE(prGpuBufferCreate(device, &desc, &readback) == PrStatus_Ok);
@@ -91,7 +90,7 @@ struct Fixture {
             PrGpuAccessFlag_CopyRead);
         prGpuCommandsCopyBuffer(commands, buffer, 0, readback, 0, size);
         prGpuCommandsSubmitAndWait(commands);
-        std::vector<uint8_t> bytes(static_cast<size_t>(size));
+        Array<uint8_t> bytes(size);
         prMemCopy(bytes.data(), prGpuBufferMap(device, readback), size_t(size));
         prGpuBufferDestroy(device, readback);
         return bytes;
@@ -124,8 +123,8 @@ Push fill(float r, float g, float b, float a) {
 }
 
 // Returns the texel at (x, y) of 8-bit RGBA texels `width` wide.
-const uint8_t* texel(const std::vector<uint8_t>& texels, uint32_t width, uint32_t x, uint32_t y) {
-    return &texels[(size_t(y) * width + x) * 4];
+const uint8_t* texel(const Array<uint8_t>& texels, uint32_t width, uint32_t x, uint32_t y) {
+    return &texels[(y * width + x) * 4];
 }
 
 bool near(const uint8_t* t, uint8_t r, uint8_t g, uint8_t b, uint8_t a, int tolerance = 1) {
@@ -144,7 +143,7 @@ void onEachBackend(Test test) {
         if (f.device == nullptr)
             continue;
         PrStringView name = prGpuBackendName(backend);
-        CAPTURE(std::string(name.data, name.size));
+        CAPTURE(name);
         test(f);
     }
 }
@@ -185,8 +184,8 @@ TEST_CASE("a device reports its backend and limits") {
 TEST_CASE("a texture's texels are written and read back, clipped to the texture") {
     onEachBackend([](Fixture& f) {
         PrGpuTexture texture = f.target(PrUVec2{4, 3});
-        std::vector<uint8_t> texels(4 * 3 * 4);
-        for (size_t i = 0; i < texels.size(); ++i)
+        Array<uint8_t> texels(4 * 3 * 4);
+        for (uint32_t i = 0; i < texels.count(); ++i)
             texels[i] = uint8_t(i);
         prGpuTextureWrite(f.device, texture, PrIVec2{0, 0}, PrPixelView{texels.data(), 16, {4, 3}});
         CHECK(f.read(texture) == texels);
@@ -194,7 +193,7 @@ TEST_CASE("a texture's texels are written and read back, clipped to the texture"
         uint8_t white[2 * 2 * 4];
         prMemFill(white, 255, sizeof(white));
         prGpuTextureWrite(f.device, texture, PrIVec2{-1, -1}, PrPixelView{white, 8, {2, 2}});
-        std::vector<uint8_t> after = f.read(texture);
+        Array<uint8_t> after = f.read(texture);
         CHECK(near(texel(after, 4, 0, 0), 255, 255, 255, 255, 0));
         CHECK(near(texel(after, 4, 1, 0), 4, 5, 6, 7, 0));
         // A read that hangs off the bottom right reads zeros outside.
@@ -211,12 +210,14 @@ TEST_CASE("a buffer is created zeroed, in device memory and in memory that the a
         PrGpuBufferDesc desc{.size = 4096};
         PrGpuBuffer device{};
         REQUIRE(prGpuBufferCreate(f.device, &desc, &device) == PrStatus_Ok);
-        CHECK(f.read(device, 4096) == std::vector<uint8_t>(4096, 0));
+        CHECK(f.read(device, 4096) == Array<uint8_t>(4096));
         desc.memory = PrGpuMemory_Upload;
         PrGpuBuffer upload{};
         REQUIRE(prGpuBufferCreate(f.device, &desc, &upload) == PrStatus_Ok);
         const uint8_t* bytes = static_cast<const uint8_t*>(prGpuBufferMap(f.device, upload));
-        CHECK(std::vector<uint8_t>(bytes, bytes + 4096) == std::vector<uint8_t>(4096, 0));
+        Array<uint8_t> mapped;
+        mapped.append(bytes, 4096);
+        CHECK(mapped == Array<uint8_t>(4096));
         prGpuBufferDestroy(f.device, upload);
         prGpuBufferDestroy(f.device, device);
     });
@@ -227,7 +228,7 @@ TEST_CASE("uploads to one resource before a submission land as they would copied
         PrGpuBufferDesc desc{.size = 4096, .usage = PrGpuBufferUsageFlag_Storage};
         PrGpuBuffer buffer{};
         REQUIRE(prGpuBufferCreate(f.device, &desc, &buffer) == PrStatus_Ok);
-        std::vector<uint8_t> expected(4096, 0);
+        Array<uint8_t> expected(4096);
         // Overlapping writes of every shape: within, across the start, across the end, covering, and unaligned.
         struct Write {
             uint64_t offset;
@@ -239,9 +240,10 @@ TEST_CASE("uploads to one resource before a submission land as they would copied
             {0, 1000, 6}, {999, 3, 7},   {1001, 1, 8}, {4000, 96, 9}, {3, 1, 10},
         };
         for (const Write& w : writes) {
-            std::vector<uint8_t> bytes(size_t(w.size), w.value);
+            Array<uint8_t> bytes(w.size);
+            prMemFill(bytes.data(), w.value, bytes.count());
             prGpuBufferUpload(f.device, buffer, w.offset, bytes.data(), w.size);
-            prMemFill(&expected[size_t(w.offset)], w.value, size_t(w.size));
+            prMemFill(&expected[uint32_t(w.offset)], w.value, size_t(w.size));
         }
         CHECK(f.read(buffer, 4096) == expected);
         // Writes to one texture land in order too.
@@ -253,7 +255,7 @@ TEST_CASE("uploads to one resource before a submission land as they would copied
         }
         uint8_t last[4] = {200, 200, 200, 200};
         prGpuTextureWrite(f.device, texture, PrIVec2{1, 1}, PrPixelView{last, 4, {1, 1}});
-        std::vector<uint8_t> texels = f.read(texture);
+        Array<uint8_t> texels = f.read(texture);
         CHECK(near(texel(texels, 2, 0, 0), 120, 120, 120, 120, 0));
         CHECK(near(texel(texels, 2, 1, 1), 200, 200, 200, 200, 0));
         prGpuTextureDestroy(f.device, texture);
@@ -267,9 +269,9 @@ TEST_CASE("a large upload is staged in pieces and lands whole") {
         PrGpuBufferDesc desc{.size = size};
         PrGpuBuffer buffer{};
         REQUIRE(prGpuBufferCreate(f.device, &desc, &buffer) == PrStatus_Ok);
-        std::vector<uint8_t> bytes(static_cast<size_t>(size));
+        Array<uint8_t> bytes(size);
         for (uint64_t i = 0; i < size; ++i)
-            bytes[size_t(i)] = uint8_t(i * 7 + (i >> 20));
+            bytes[uint32_t(i)] = uint8_t(i * 7 + (i >> 20));
         prGpuBufferUpload(f.device, buffer, 0, bytes.data(), size);
         CHECK(f.read(buffer, size) == bytes);
         prGpuBufferDestroy(f.device, buffer);
@@ -284,7 +286,7 @@ TEST_CASE("a pass clears its target, and a draw covers what its vertices cover, 
         Push push = fill(1, 0, 0, 1);
         push.rect[3] = 0;
         f.draw(target, solid, push, PrGpuLoad_Clear, PrColor{0, 0, 1, 1});
-        std::vector<uint8_t> texels = f.read(target);
+        Array<uint8_t> texels = f.read(target);
         CHECK(near(texel(texels, 8, 0, 0), 255, 0, 0, 255));
         CHECK(near(texel(texels, 8, 7, 3), 255, 0, 0, 255));
         CHECK(near(texel(texels, 8, 0, 4), 0, 0, 255, 255));
@@ -323,7 +325,7 @@ TEST_CASE("a shader samples a texture and pulls vertices from a buffer, both by 
         push.texture = source.id;
         push.sampler = nearest.id;
         f.draw(target, sampled, push);
-        std::vector<uint8_t> out = f.read(target);
+        Array<uint8_t> out = f.read(target);
         CHECK(near(texel(out, 4, 0, 0), 255, 0, 0, 255));
         CHECK(near(texel(out, 4, 3, 0), 0, 255, 0, 255));
         CHECK(near(texel(out, 4, 0, 3), 0, 0, 255, 255));
@@ -411,7 +413,7 @@ TEST_CASE("a dispatch writes a buffer that a copy reads after a barrier") {
         CHECK(group.width == 64);
         CHECK(group.height == 1);
         const uint32_t count = 256;
-        std::vector<uint32_t> input(count);
+        Array<uint32_t> input(count);
         for (uint32_t i = 0; i < count; ++i)
             input[i] = i;
         PrGpuBufferDesc desc{.size = count * 4, .usage = PrGpuBufferUsageFlag_Storage};
@@ -430,7 +432,7 @@ TEST_CASE("a dispatch writes a buffer that a copy reads after a barrier") {
         prGpuCommandsDispatch(commands, PrGpuExtent{count / 64, 1, 1});
         prGpuCommandsBufferBarrier(commands, out, PrGpuAccessFlag_ComputeWrite, PrGpuAccessFlag_ShaderRead);
         prGpuCommandsSubmitAndWait(commands);
-        std::vector<uint8_t> bytes = f.read(out, count * 4);
+        Array<uint8_t> bytes = f.read(out, count * 4);
         const uint32_t* words = reinterpret_cast<const uint32_t*>(bytes.data());
         CHECK(words[0] == 0);
         CHECK(words[1] == 2);
@@ -475,7 +477,7 @@ TEST_CASE("a shader reads the target as the draws before it left it") {
         prGpuCommandsTextureBarrier(commands, target, PrGpuSubresources{}, PrGpuAccessFlag_ColorAttachment,
             PrGpuAccessFlag_ShaderRead);
         prGpuCommandsSubmitAndWait(commands);
-        std::vector<uint8_t> texels = f.read(target);
+        Array<uint8_t> texels = f.read(target);
         CHECK(near(texel(texels, 4, 0, 0), 0, 255, 255, 255));
         CHECK(near(texel(texels, 4, 3, 3), 255, 255, 255, 255));
         prGpuPipelineDestroy(f.device, inverted);
@@ -541,7 +543,7 @@ TEST_CASE("mip levels are filled with the average of the level before") {
         REQUIRE(prGpuTextureCreateView(f.device, texture, PrGpuTextureKind_2d,
             PrGpuSubresources{.firstLevel = 2, .levels = 1, .layers = 1}, &last) == PrStatus_Ok);
         CHECK(prGpuTextureExtent(f.device, last).x == 1);
-        std::vector<uint8_t> top = f.read(last);
+        Array<uint8_t> top = f.read(last);
         CHECK(near(top.data(), 128, 128, 128, 128, 2));
         prGpuTextureDestroy(f.device, last);
         prGpuTextureDestroy(f.device, texture);
@@ -554,16 +556,15 @@ TEST_CASE("a command buffer reports its time and the texels that it read when it
         PrGpuPipeline solid = f.pipeline("quadVertex", "solid");
         f.draw(target, solid, fill(0, 0, 1, 1));
         struct Read {
-            std::vector<uint8_t> texels;
+            Array<uint8_t> texels;
             double seconds = -1;
         } read;
         PrGpuCommands* commands = nullptr;
         REQUIRE(prGpuCommandsBegin(f.device, nullptr, &commands));
         prGpuCommandsReadTexture(commands, target, PrGpuAccessFlag_ShaderRead, [](void* context, PrPixelView texels) {
-            std::vector<uint8_t>& into = static_cast<Read*>(context)->texels;
+            Array<uint8_t>& into = static_cast<Read*>(context)->texels;
             for (uint32_t y = 0; y < texels.extent.y; ++y)
-                into.insert(into.end(), texels.data + y * texels.stride,
-                    texels.data + y * texels.stride + texels.extent.x * 4);
+                into.append(texels.data + y * texels.stride, texels.extent.x * 4);
         }, &read);
         prGpuCommandsOnDone(
             commands, [](void* context, double seconds) { static_cast<Read*>(context)->seconds = seconds; }, &read);
@@ -575,7 +576,7 @@ TEST_CASE("a command buffer reports its time and the texels that it read when it
         for (int i = 0; i < 1000 && read.seconds < 0; ++i)
             prGpuDeviceWaitIdle(f.device);
         CHECK(read.seconds >= 0);
-        REQUIRE(read.texels.size() == 3 * 2 * 4);
+        REQUIRE(read.texels.count() == 3 * 2 * 4);
         CHECK(near(texel(read.texels, 3, 2, 1), 0, 0, 255, 255));
         prGpuPipelineDestroy(f.device, solid);
         prGpuTextureDestroy(f.device, target);

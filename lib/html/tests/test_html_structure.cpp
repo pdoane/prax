@@ -5,12 +5,11 @@
 #include "pr/html_page.h"
 #include "pr/html_structure.h"
 #include "pr/html_view.h"
+#include "pr/set.h"
+#include "pr/string.h"
 #include "pr/text_harfbuzz.h"
 
 #include "tools/harness/test.h"
-
-#include <set>
-#include <string>
 
 namespace pr_impl {
 
@@ -59,16 +58,15 @@ struct Structured {
     }
 
     // Returns the structure as text, each key as the text of the node that it is, quoted.
-    std::string dump() const { return dumpNode(kPrDrawStructureRoot, 0); }
+    String dump() const { return dumpNode(kPrDrawStructureRoot, 0); }
 
-    std::string dumpNode(PrDrawStructureNode node, uint32_t depth) const {
-        std::string out(depth * 2, ' ');
+    String dumpNode(PrDrawStructureNode node, uint32_t depth) const {
+        String out = format("{:{}}", "", depth * 2);
         PrDrawStructureNodeDesc desc = prDrawStructureNodeDesc(structure, node);
-        PrStringView name = prDrawStructureTypeName(desc.type);
-        out.append(name.data, name.size);
+        out.append(prDrawStructureTypeName(desc.type));
         auto attribute = [&](const char* label, PrStringView value) {
             if (value.size != 0)
-                out += std::string(" ") + label + "=\"" + std::string(value.data, value.size) + "\"";
+                formatTo(out, " {}=\"{}\"", label, value);
         };
         attribute("alt", desc.alt);
         attribute("lang", desc.language);
@@ -76,51 +74,46 @@ struct Structured {
         attribute("uri", desc.uri);
         attribute("expansion", desc.expansion);
         if (desc.destination != 0)
-            out += " destination=" + textOf(desc.destination);
-        out += "\n";
+            formatTo(out, " destination={}", textOf(desc.destination));
+        out.append("\n");
         const PrDrawStructureItem* items = prDrawStructureItems(structure, node);
         for (uint32_t i = 0; i < prDrawStructureItemCount(structure, node); ++i) {
             if (items[i].node != kPrDrawStructureNodeNone)
-                out += dumpNode(items[i].node, depth + 1);
+                out.append(dumpNode(items[i].node, depth + 1));
             else
-                out += std::string((depth + 1) * 2, ' ') + textOf(items[i].key) + "\n";
+                formatTo(out, "{:{}}{}\n", "", (depth + 1) * 2, textOf(items[i].key));
         }
         return out;
     }
 
     // Returns the text of the node that `key` is, quoted, or the element's name in angle brackets.
-    static std::string textOf(uint64_t key) {
+    static String textOf(uint64_t key) {
         PrDomNode* node = reinterpret_cast<PrDomNode*>(uintptr_t(key));
-        if (prDomNodeType(node) != PrDomNodeType_Text) {
-            PrStringView name = prDomElementLocalName(prDomElementQuery(prDomNodeAsEventTarget(node)));
-            return "<" + std::string(name.data, name.size) + ">";
-        }
-        PrRawString text = prDomNodeTextContent(node);
-        PrStringView view = prRawStringView(&text);
-        std::string result = "\"" + std::string(view.data, view.size) + "\"";
-        prRawStringReset(&text);
-        return result;
+        if (prDomNodeType(node) != PrDomNodeType_Text)
+            return format("<{}>", prDomElementLocalName(prDomElementQuery(prDomNodeAsEventTarget(node))));
+        String text = String::adopt(prDomNodeTextContent(node));
+        return format("\"{}\"", text);
     }
 
     // Returns the keys of the marks that the paint recorded, through the lists that it embeds.
-    static void markKeys(const PrDrawList* list, std::set<uint64_t>& out) {
+    static void markKeys(const PrDrawList* list, Set<uint64_t>& out) {
         const PrDrawCommand* commands = prDrawListCommands(list);
         for (uint32_t i = 0; i < prDrawListCommandCount(list); ++i) {
             if (commands[i].kind == PrDrawCommandKind_Embed)
                 markKeys(commands[i].embed.list, out);
             else if (commands[i].kind == PrDrawCommandKind_PushMark)
-                out.insert(commands[i].key);
+                out.add(commands[i].key);
         }
     }
 
     // Returns the keys that the structure names.
-    void structureKeys(PrDrawStructureNode node, std::set<uint64_t>& out) const {
+    void structureKeys(PrDrawStructureNode node, Set<uint64_t>& out) const {
         const PrDrawStructureItem* items = prDrawStructureItems(structure, node);
         for (uint32_t i = 0; i < prDrawStructureItemCount(structure, node); ++i) {
             if (items[i].node != kPrDrawStructureNodeNone)
                 structureKeys(items[i].node, out);
             else
-                out.insert(items[i].key);
+                out.add(items[i].key);
         }
     }
 };
@@ -165,12 +158,12 @@ TEST_CASE("a document's structure follows its roles in reading order, and leaves
         "    Span expansion=\"HyperText Markup Language\"\n"
         "      \"HTML\"\n");
     // Every key that the structure names was painted with a mark.
-    std::set<uint64_t> painted;
+    Set<uint64_t> painted;
     Structured::markKeys(s.list, painted);
-    std::set<uint64_t> named;
+    Set<uint64_t> named;
     s.structureKeys(kPrDrawStructureRoot, named);
     for (uint64_t key : named)
-        CHECK(painted.count(key) == 1);
+        CHECK(painted.contains(key));
 }
 
 TEST_CASE("a link to a fragment leads to the first text of its target, and aria-owns moves what it owns") {

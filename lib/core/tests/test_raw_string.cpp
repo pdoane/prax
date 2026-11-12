@@ -1,9 +1,7 @@
+#include "pr/mem.h"
 #include "pr/raw_string.h"
 
 #include "tools/harness/test.h"
-
-#include <initializer_list>
-#include <string.h>
 
 namespace pr_impl {
 
@@ -81,7 +79,7 @@ TEST_CASE("an external string copies nothing") {
 
     const char* bytes = prRawStringView(&string).data;
     CHECK(bytes == text);
-    CHECK(prRawStringView(&string).size == strlen(text));
+    CHECK(prRawStringView(&string).size == PrStringView(text).size);
     prRawStringReset(&string);
     CHECK(prRawStringIsNull(&string));
 }
@@ -140,7 +138,7 @@ TEST_CASE("a NUL-terminated string views its bytes without the terminator") {
     PrStringView sv = "background-color";
     CHECK(sv.size == 16);
     CHECK(sv.data[16] == '\0');
-    CHECK(memcmp(sv.data, "background-color", sv.size) == 0);
+    CHECK(prMemCompare(sv.data, "background-color", sv.size) == 0);
 }
 
 TEST_CASE("the null string is not the empty string") {
@@ -193,11 +191,11 @@ TEST_CASE("a clone owns its bytes, whatever it was cloned from") {
     PrRawString owned = prRawStringClone(&external);
     CHECK(prRawStringKind(&owned) == PrRawStringKind_Owned);
     CHECK(prRawStringView(&owned).data != text);
-    CHECK(prRawStringView(&owned) == PrStringView{text, strlen(text)});
+    CHECK(prRawStringView(&owned) == PrStringView(text));
 
     PrRawString inline_ = prRawStringClone(&owned);
     prRawStringReset(&owned);
-    CHECK(prRawStringView(&inline_).size == strlen(text));
+    CHECK(prRawStringView(&inline_).size == PrStringView(text).size);
 
     prRawStringReset(&external);
     prRawStringReset(&inline_);
@@ -280,13 +278,14 @@ TEST_CASE("append doubles the capacity, so a string built a byte at a time copie
 }
 
 TEST_CASE("string replacement can copy a view of its current storage") {
-    for (const char* text : {"short", "a value longer than the inline string capacity"}) {
+    const char* texts[] = {"short", "a value longer than the inline string capacity"};
+    for (const char* text : texts) {
         PrRawString string = prRawStringCopy(text);
         PrStringView original = prRawStringView(&string);
         prRawStringReplace(&string, {original.data + 1, original.size - 1});
-        CHECK(prRawStringView(&string) == PrStringView{text + 1, strlen(text) - 1});
+        CHECK(prRawStringView(&string) == PrStringView{text + 1, PrStringView(text).size - 1});
         prRawStringReplace(&string, prRawStringView(&string));
-        CHECK(prRawStringView(&string) == PrStringView{text + 1, strlen(text) - 1});
+        CHECK(prRawStringView(&string) == PrStringView{text + 1, PrStringView(text).size - 1});
         prRawStringReset(&string);
     }
 }

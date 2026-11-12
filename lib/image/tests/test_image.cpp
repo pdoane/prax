@@ -1,10 +1,7 @@
 #include "pr/image.h"
+#include "pr/mem.h"
 
 #include "tools/harness/test.h"
-
-#include <cstring>
-#include <initializer_list>
-#include <limits>
 
 extern "C" int prTestImageCApi(void);
 
@@ -39,7 +36,7 @@ struct Reader {
         if (offset > sizeof(reader.bytes) || size > sizeof(reader.bytes) - size_t(offset)) {
             return PrStatus_Io;
         }
-        std::memcpy(out, reader.bytes + offset, size);
+        prMemCopy(out, reader.bytes + offset, size);
         return PrStatus_Ok;
     }
 
@@ -67,7 +64,7 @@ struct FakeCodec {
     }
 
     static bool supportsType(PrImageCodec*, PrStringView type) {
-        return type.size == 10 && std::memcmp(type.data, "image/test", 10) == 0;
+        return type.size == 10 && prMemCompare(type.data, "image/test", 10) == 0;
     }
 
     static bool recognize(PrImageCodec* codec, PrByteView prefix) {
@@ -198,7 +195,8 @@ TEST_CASE("unmatched image codecs do not open a decoder") {
 }
 
 TEST_CASE("a failed open leaves no image open") {
-    for (PrStatus status : {PrStatus_InvalidData, PrStatus_NotSupported, PrStatus_Limit, PrStatus_Io}) {
+    const PrStatus statusList[] = {PrStatus_InvalidData, PrStatus_NotSupported, PrStatus_Limit, PrStatus_Io};
+    for (PrStatus status : statusList) {
         Reader reader;
         FakeCodec fake;
         PrImageCodec* codec = fake.codec();
@@ -219,7 +217,7 @@ TEST_CASE("image source bounds are checked before callbacks") {
     PrImageSource source = reader.source();
     uint8_t result[4] = {};
     CHECK(prImageSourceRead(&source, 6, result, 4) != PrStatus_Ok);
-    CHECK(prImageSourceRead(&source, std::numeric_limits<uint64_t>::max(), result, 2) != PrStatus_Ok);
+    CHECK(prImageSourceRead(&source, UINT64_MAX, result, 2) != PrStatus_Ok);
     CHECK(reader.reads == 0);
     REQUIRE(prImageSourceRead(&source, 4, result, 4) == PrStatus_Ok);
     CHECK(result[0] == 1);
@@ -246,7 +244,8 @@ TEST_CASE("image dispatch propagates source I/O failure without classification")
 }
 
 TEST_CASE("image dispatch applies input and header ceilings before reading") {
-    for (bool inputLimit : {false, true}) {
+    const bool inputLimits[] = {false, true};
+    for (bool inputLimit : inputLimits) {
         Reader reader;
         FakeCodec fake;
         PrImageCodec* codec = fake.codec();
@@ -321,7 +320,7 @@ TEST_CASE("image dispatch enforces inspected pixel frame and output limits") {
 TEST_CASE("image named color ignores inactive profile fields") {
     Reader reader;
     FakeCodec fake;
-    fake.info.format.color.profile = {reader.bytes, std::numeric_limits<size_t>::max()};
+    fake.info.format.color.profile = {reader.bytes, SIZE_MAX};
     PrImageCodec* codec = fake.codec();
     PrImageDecoder* decoder = prImageDecoderCreate(codec);
     REQUIRE(prImageDecoderOpen(decoder, reader.source(), nullptr) == PrStatus_Ok);
@@ -339,7 +338,7 @@ TEST_CASE("persistent image decoder checks the frame and respects padding") {
     REQUIRE(prImageDecoderInfo(decoder) != nullptr);
     CHECK(prImageDecoderInfo(decoder)->extent.x == 2);
     uint8_t pixels[24];
-    std::memset(pixels, 0xA5, sizeof(pixels));
+    prMemFill(pixels, 0xA5, sizeof(pixels));
     const PrPixels output{pixels, 12, {2, 2}};
     CHECK(prImageDecoderRead(decoder, 1, output) == PrStatus_OutOfRange);
     PrImageFrameInfo frameInfo = {};
@@ -348,7 +347,8 @@ TEST_CASE("persistent image decoder checks the frame and respects padding") {
     REQUIRE(prImageDecoderRead(decoder, 0, output) == PrStatus_Ok);
     CHECK(pixels[0] == 10);
     CHECK(pixels[12] == 12);
-    for (size_t at : {size_t(8), size_t(9), size_t(10), size_t(11), size_t(20), size_t(23)}) {
+    const size_t ats[] = {size_t(8), size_t(9), size_t(10), size_t(11), size_t(20), size_t(23)};
+    for (size_t at : ats) {
         CHECK(pixels[at] == 0xA5);
     }
     prImageDecoderDestroy(decoder);
@@ -391,9 +391,9 @@ TEST_CASE("rendering image convenience rejects overflowing RGBA size before allo
     fake.info.format.alpha = PrImageAlpha_None;
     PrImageCodec* codec = fake.codec();
     PrImageLimits limits = prImageLimitsDefault();
-    limits.pixels = std::numeric_limits<uint64_t>::max();
-    limits.workingBytes = std::numeric_limits<uint64_t>::max();
-    limits.outputBytes = std::numeric_limits<uint64_t>::max();
+    limits.pixels = UINT64_MAX;
+    limits.workingBytes = UINT64_MAX;
+    limits.outputBytes = UINT64_MAX;
     PrImageDecoder* decoder = prImageDecoderCreate(codec);
     REQUIRE(prImageDecoderOpen(decoder, reader.source(), &limits) == PrStatus_Ok);
     uint8_t dummy = 0xA5;
@@ -411,12 +411,12 @@ TEST_CASE("orienting arranges pixels of any size as the orientation displays the
     uint8_t column[6] = {};
     prImageOrient(PrPixelView{row, sizeof(row), {3, 1}}, 2, PrImageOrientation_Rotate90, PrPixels{column, 2, {1, 3}});
     const uint8_t turned[] = {1, 1, 2, 2, 3, 3};
-    CHECK(memcmp(column, turned, sizeof(column)) == 0);
+    CHECK(prMemCompare(column, turned, sizeof(column)) == 0);
     uint8_t flipped[6] = {};
     prImageOrient(PrPixelView{row, sizeof(row), {3, 1}}, 2, PrImageOrientation_FlipHorizontal,
         PrPixels{flipped, sizeof(flipped), {3, 1}});
     const uint8_t mirrored[] = {3, 3, 2, 2, 1, 1};
-    CHECK(memcmp(flipped, mirrored, sizeof(flipped)) == 0);
+    CHECK(prMemCompare(flipped, mirrored, sizeof(flipped)) == 0);
 }
 
 TEST_CASE("an orientation's inverse arranges oriented pixels as they were stored") {
@@ -430,7 +430,7 @@ TEST_CASE("an orientation's inverse arranges oriented pixels as they were stored
         uint8_t restored[6] = {};
         prImageOrient(PrPixelView{oriented, extent.x, extent}, 1, prImageOrientationInverse(orientation),
             PrPixels{restored, 3, {3, 2}});
-        CHECK(memcmp(restored, stored, sizeof(stored)) == 0);
+        CHECK(prMemCompare(restored, stored, sizeof(stored)) == 0);
     }
 }
 
@@ -475,7 +475,8 @@ TEST_CASE("rendering image convenience rejects ICC transforms despite fallback p
 
 TEST_CASE("cover frame requests require the codec to advertise a separate cover") {
     Reader reader;
-    for (bool cover : {false, true}) {
+    const bool covers[] = {false, true};
+    for (bool cover : covers) {
         FakeCodec fake;
         fake.info.hasCover = cover;
         PrImageCodec* codec = fake.codec();

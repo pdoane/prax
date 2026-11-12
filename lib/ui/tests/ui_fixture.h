@@ -3,14 +3,13 @@
 
 #pragma once
 
+#include "pr/function.h"
 #include "pr/layout_frame.h"
 #include "pr/layout_style.h"
 #include "pr/layout_tree.h"
 #include "pr/ui.h"
 
 #include "tools/harness/test.h"
-
-#include <functional>
 
 PR_ASSUME_NONNULL_BEGIN
 
@@ -23,7 +22,7 @@ struct UiFixture {
     PrUi* ui;
     double time = 0;
     PrLayoutNode root = kPrLayoutNodeNone;
-    std::function<void()> build;
+    Function<void()> build;
 
     UiFixture() {
         PrLayoutTreeDesc desc{.targetPixelRatio = 1};

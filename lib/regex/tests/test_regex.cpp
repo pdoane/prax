@@ -1,15 +1,16 @@
 // Regular expressions: their syntax, their preference among matches, their groups, and their limits.
 
+#include "pr/array.h"
 #include "pr/regex.h"
+#include "pr/string.h"
 
 #include "tools/harness/test.h"
-
-#include <string>
-#include <vector>
 
 extern "C" int prTestRegexCApi(void);
 
 namespace pr_impl {
+
+using namespace pr;
 
 namespace {
 
@@ -17,27 +18,27 @@ namespace {
 struct Compiled {
     PrRegex* regex = nullptr;
 
-    explicit Compiled(const std::string& pattern) { REQUIRE(prRegexCreate(pattern, &regex) == PrStatus_Ok); }
+    explicit Compiled(PrStringView pattern) { REQUIRE(prRegexCreate(pattern, &regex) == PrStatus_Ok); }
     ~Compiled() { prRegexDestroy(regex); }
 
-    bool search(const std::string& text) const { return prRegexSearch(regex, text, nullptr, 0); }
-    bool match(const std::string& text) const { return prRegexMatch(regex, text, nullptr, 0); }
+    bool search(PrStringView text) const { return prRegexSearch(regex, text, nullptr, 0); }
+    bool match(PrStringView text) const { return prRegexMatch(regex, text, nullptr, 0); }
 
     // The groups of the first match of a search, or none.
-    std::vector<PrRegexGroup> groups(const std::string& text) const {
-        std::vector<PrRegexGroup> out(prRegexGroupCount(regex));
-        if (!prRegexSearch(regex, text, out.data(), uint32_t(out.size())))
+    Array<PrRegexGroup> groups(PrStringView text) const {
+        Array<PrRegexGroup> out(prRegexGroupCount(regex));
+        if (!prRegexSearch(regex, text, out.data(), out.count()))
             out.clear();
         return out;
     }
 
-    PrRegexGroup range(const std::string& text) const {
-        std::vector<PrRegexGroup> found = groups(text);
-        return found.empty() ? PrRegexGroup{kPrRegexGroupNone, kPrRegexGroupNone} : found[0];
+    PrRegexGroup range(PrStringView text) const {
+        Array<PrRegexGroup> found = groups(text);
+        return found.isEmpty() ? PrRegexGroup{kPrRegexGroupNone, kPrRegexGroupNone} : found[0];
     }
 };
 
-PrStatus statusOf(const std::string& pattern) {
+PrStatus statusOf(PrStringView pattern) {
     PrRegex* regex = nullptr;
     PrStatus status = prRegexCreate(pattern, &regex);
     CHECK((status == PrStatus_Ok) == (regex != nullptr));
@@ -178,14 +179,14 @@ TEST_CASE("Perl classes and escapes") {
 }
 
 TEST_CASE("groups record what they matched, and a group that took no part is none") {
-    std::vector<PrRegexGroup> g = Compiled("(a)(b)(c)").groups("zzabc");
-    REQUIRE(g.size() == 4);
+    Array<PrRegexGroup> g = Compiled("(a)(b)(c)").groups("zzabc");
+    REQUIRE(g.count() == 4);
     CHECK(g[0].start == 2);
     CHECK(g[0].end == 5);
     CHECK(g[1].start == 2);
     CHECK(g[3].start == 4);
     g = Compiled("(a)(b)?(c)").groups("ac");
-    REQUIRE(g.size() == 4);
+    REQUIRE(g.count() == 4);
     CHECK(g[2].start == kPrRegexGroupNone);
     CHECK(g[3].start == 1);
     // A repeated group records its last repetition.
@@ -198,24 +199,29 @@ TEST_CASE("groups record what they matched, and a group that took no part is non
 }
 
 TEST_CASE("patterns that do not parse, and patterns past the limits, fail") {
-    for (const char* pattern : {"a(b", "a)b", "[abc", "*", "a**", "a{2,1}", "\\q", "(?P<x>a)", "[z-a]", "a\\"})
+    const char* const patterns[] = {"a(b", "a)b", "[abc", "*", "a**", "a{2,1}", "\\q", "(?P<x>a)", "[z-a]", "a\\"};
+    for (const char* pattern : patterns)
         CHECK_MESSAGE(statusOf(pattern) == PrStatus_Syntax, pattern);
     CHECK(statusOf("a{1001}") == PrStatus_Limit);
-    CHECK(statusOf(std::string(300, '(') + std::string(300, ')')) == PrStatus_Limit);
+    String nested;
+    nested.append(300, '(').append(300, ')');
+    CHECK(statusOf(nested) == PrStatus_Limit);
     CHECK(statusOf("((a{1000}){1000}){2}") == PrStatus_Limit);
 }
 
 TEST_CASE("long patterns and texts compile and match without deep recursion") {
-    std::string literal(200000, 'a');
+    String literal;
+    literal.append(200000, 'a');
     Compiled long_(literal);
     CHECK(long_.match(literal));
-    std::string alternatives = "x0";
+    String alternatives = "x0";
     for (uint32_t i = 1; i < 20000; ++i)
-        alternatives += "|x" + std::to_string(i);
+        formatTo(alternatives, "|x{}", i);
     Compiled many(alternatives);
     CHECK(many.match("x19999"));
     CHECK_FALSE(many.match("x20000"));
-    std::string text(1u << 20, 'b');
+    String text;
+    text.append(1u << 20, 'b');
     CHECK(Compiled("b*$").search(text));
-    CHECK(Compiled("(?:b?){500}b{500}").match(std::string(500, 'b')));
+    CHECK(Compiled("(?:b?){500}b{500}").match(String().append(500, 'b')));
 }

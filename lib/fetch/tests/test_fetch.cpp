@@ -1,3 +1,4 @@
+#include "pr/array.h"
 #include "pr/compress_builtin.h"
 #include "pr/fetch.h"
 #include "pr/fetch_load.h"
@@ -7,6 +8,8 @@
 #include "pr/net_sockets.h"
 #include "pr/storage_disk.h"
 #include "pr/storage_memory.h"
+#include "pr/string.h"
+#include "pr/string_ops.h"
 #include "pr/task_builtin.h"
 #include "pr/thread.h"
 
@@ -14,14 +17,13 @@
 
 #include "tools/harness/test.h"
 
-#include <string>
-#include <vector>
-
 using namespace harness;
 
 extern "C" int prTestFetchCApi(void);
 
 namespace pr_impl {
+
+using namespace pr;
 
 namespace {
 
@@ -75,43 +77,43 @@ void reset(Fixture* fixture) {
 // the request's mode, credentials, origin and referrer before it runs the probe.
 struct Probe {
     PrFetchNetwork* fetcher;
-    std::string url;
-    std::string method;
-    std::vector<PrFetchHeader> headers;
+    String url;
+    String method;
+    Array<PrFetchHeader> headers;
     PrFetchRedirect redirect;
     PrFetchMode mode;
     PrFetchCredentials credentials;
-    std::string origin;
-    std::string referrer;
+    String origin;
+    String referrer;
     PrFetchReferrerPolicy referrerPolicy;
     PrFetch* PR_NULLABLE fetch;
     PrStatus created;
     NetLatch done;
-    std::vector<PrFetchEvent> events;
+    Array<PrFetchEvent> events;
     uint16_t status;
     PrFetchResponseType responseType;
     PrFetchTiming timing;
-    std::string responseUrl;
-    std::string type;
-    std::string received;
+    String responseUrl;
+    String type;
+    String received;
     PrNetError error;
 };
 
 void probeEvent(void* PR_NULLABLE context, PrFetch* fetch, PrFetchEvent event) {
     Probe* probe = static_cast<Probe*>(context);
-    probe->events.push_back(event);
+    probe->events.push(event);
     if (event == PrFetchEvent_Response) {
         probe->status = prFetchStatus(fetch);
         probe->responseType = prFetchResponseType(fetch);
         PrStringView url = prFetchUrl(fetch);
-        probe->responseUrl.assign(url.data, url.size);
+        probe->responseUrl.assign(url);
         PrStringView type = prFetchHeaderValue(fetch, "content-type");
-        probe->type.assign(type.data != nullptr ? type.data : "", type.size);
+        probe->type.assign(type);
     }
     uint8_t chunk[4096];
     for (size_t got = prFetchRead(fetch, chunk, sizeof(chunk)); got != 0; got =
             prFetchRead(fetch, chunk, sizeof(chunk)))
-        probe->received.append(reinterpret_cast<const char*>(chunk), got);
+        probe->received.append(PrStringView(reinterpret_cast<const char*>(chunk), got));
     if (event == PrFetchEvent_End || event == PrFetchEvent_Fail) {
         probe->error = prFetchError(fetch);
         probe->timing = prFetchTiming(fetch);
@@ -125,14 +127,14 @@ void startProbe(void* PR_NULLABLE context) {
     Probe* probe = static_cast<Probe*>(context);
     PrFetchRequestDesc desc{
         .url = probe->url,
-        .method = probe->method.empty() ? PrStringView{} : PrStringView(probe->method),
+        .method = probe->method.isEmpty() ? PrStringView{} : PrStringView(probe->method),
         .headers = probe->headers.data(),
-        .headerCount = uint32_t(probe->headers.size()),
+        .headerCount = probe->headers.count(),
         .mode = probe->mode,
         .credentials = probe->credentials,
         .redirect = probe->redirect,
-        .origin = probe->origin.empty() ? PrStringView{} : PrStringView(probe->origin),
-        .referrer = probe->referrer.empty() ? PrStringView{} : PrStringView(probe->referrer),
+        .origin = probe->origin.isEmpty() ? PrStringView{} : PrStringView(probe->origin),
+        .referrer = probe->referrer.isEmpty() ? PrStringView{} : PrStringView(probe->referrer),
         .referrerPolicy = probe->referrerPolicy,
     };
     probe->created = prFetchCreate(probe->fetcher, &desc, probeEvent, probe, &probe->fetch);
@@ -141,8 +143,8 @@ void startProbe(void* PR_NULLABLE context) {
 }
 
 // Fetches `url` with `method` and `redirect`, and waits until the fetch ends or fails.
-void run(Fixture* fixture, Probe* probe, const std::string& url, PrFetchRedirect redirect = PrFetchRedirect_Follow,
-        const std::string& method = "") {
+void run(Fixture* fixture, Probe* probe, PrStringView url, PrFetchRedirect redirect = PrFetchRedirect_Follow,
+        PrStringView method = "") {
     probe->fetcher = fixture->fetcher;
     probe->url = url;
     probe->method = method;
@@ -153,38 +155,44 @@ void run(Fixture* fixture, Probe* probe, const std::string& url, PrFetchRedirect
     netLatchReset(&probe->done);
 }
 
-std::string urlOf(const Fixture& fixture, const std::string& path) {
-    return "http://localhost:" + std::to_string(fixture.peer.http) + path;
+String urlOf(const Fixture& fixture, PrStringView path) {
+    return format("http://localhost:{}{}", fixture.peer.http, path);
 }
 
 // The peer's origin as the tests' requests name it, and a URL on the same server at another origin, by its address.
-std::string originOf(const Fixture& fixture) {
-    return "http://localhost:" + std::to_string(fixture.peer.http);
+String originOf(const Fixture& fixture) {
+    return format("http://localhost:{}", fixture.peer.http);
 }
 
-std::string otherUrlOf(const Fixture& fixture, const std::string& path) {
-    return "http://127.0.0.1:" + std::to_string(fixture.peer.http) + path;
+String otherUrlOf(const Fixture& fixture, PrStringView path) {
+    return format("http://127.0.0.1:{}{}", fixture.peer.http, path);
 }
 
 // Fetches `url` with a fetcher of `net`, a network that the test runs, and runs the network until the fetch ends.
-void runOn(PrNet* net, PrFetchNetwork* fetcher, Probe* probe, const std::string& url) {
+void runOn(PrNet* net, PrFetchNetwork* fetcher, Probe* probe, PrStringView url) {
     probe->fetcher = fetcher;
     probe->url = url;
     startProbe(probe);
     prNetNullRun(net);
 }
 
+// A task that the loop posts to the owner.
+struct OwnerTask {
+    PrFetchTaskFn fn;
+    void* PR_NULLABLE context;
+};
+
 // The owner's queue of a test's loads: the tasks that the loop posts, which the test's thread runs.
 struct OwnerQueue {
     PrMutex mutex;
     PrCondition posted;
-    std::vector<std::pair<PrFetchTaskFn, void*>> tasks;
+    Array<OwnerTask> tasks;
 };
 
 void postToOwner(void* PR_NULLABLE queue, PrFetchTaskFn fn, void* PR_NULLABLE context) {
     OwnerQueue* owner = static_cast<OwnerQueue*>(queue);
     prMutexLock(&owner->mutex);
-    owner->tasks.emplace_back(fn, context);
+    owner->tasks.push(OwnerTask{fn, context});
     prConditionSignal(&owner->posted);
     prMutexUnlock(&owner->mutex);
 }
@@ -192,13 +200,12 @@ void postToOwner(void* PR_NULLABLE queue, PrFetchTaskFn fn, void* PR_NULLABLE co
 // Runs the tasks that the owner's queue holds, after waiting for one if `wait` is true.
 void runOwner(OwnerQueue* owner, bool wait) {
     prMutexLock(&owner->mutex);
-    while (wait && owner->tasks.empty())
+    while (wait && owner->tasks.isEmpty())
         prConditionWait(&owner->posted, &owner->mutex);
-    std::vector<std::pair<PrFetchTaskFn, void*>> tasks;
-    tasks.swap(owner->tasks);
+    Array<OwnerTask> tasks = move(owner->tasks);
     prMutexUnlock(&owner->mutex);
-    for (const std::pair<PrFetchTaskFn, void*>& task : tasks)
-        task.first(task.second);
+    for (const OwnerTask& task : tasks)
+        task.fn(task.context);
 }
 
 // What a load delivered, and the load, which `done` destroys.
@@ -207,9 +214,9 @@ struct Delivery {
     uint32_t calls;
     PrStatus status;
     uint16_t responseStatus;
-    std::string url;
-    std::string type;
-    std::string body;
+    String url;
+    String type;
+    String body;
 };
 
 void delivered(void* PR_NULLABLE context, const PrFetchResponse* response) {
@@ -217,18 +224,18 @@ void delivered(void* PR_NULLABLE context, const PrFetchResponse* response) {
     ++delivery->calls;
     delivery->status = response->status;
     delivery->responseStatus = response->responseStatus;
-    delivery->url.assign(response->url.data != nullptr ? response->url.data : "", response->url.size);
+    delivery->url.assign(response->url);
     for (uint32_t i = 0; i < response->headerCount; ++i) {
         if (response->headers[i].name == "Content-Type" || response->headers[i].name == "content-type")
-            delivery->type.assign(response->headers[i].value.data, response->headers[i].value.size);
+            delivery->type.assign(response->headers[i].value);
     }
-    delivery->body.assign(reinterpret_cast<const char*>(response->body.data), response->body.size);
+    delivery->body.assign(prStringFromBytes(response->body));
     prFetchLoadDestroy(delivery->load);
     delivery->load = nullptr;
 }
 
 // Loads `url` for the test's thread and waits for the response, with a body of at most `maxBodySize` bytes.
-Delivery load(Fixture* fixture, OwnerQueue* owner, const std::string& url, uint64_t maxBodySize = 0) {
+Delivery load(Fixture* fixture, OwnerQueue* owner, PrStringView url, uint64_t maxBodySize = 0) {
     Delivery delivery{};
     PrFetchRequestDesc request{.url = url};
     PrFetchLoadDesc desc{
@@ -264,7 +271,7 @@ TEST_CASE("fetch: a redirect is followed, and the response's URL is the one that
     CHECK(probe.status == 200);
     CHECK(probe.responseUrl == urlOf(fixture, "/hello"));
     CHECK(probe.received == "hello");
-    CHECK(probe.events.back() == PrFetchEvent_End);
+    CHECK(probe.events.last() == PrFetchEvent_End);
     reset(&fixture);
 }
 
@@ -285,15 +292,15 @@ TEST_CASE("fetch: the redirect modes error and manual stop at the redirect, and 
         return;
     Probe error{.origin = originOf(fixture)};
     run(&fixture, &error, urlOf(fixture, "/redirect"), PrFetchRedirect_Error);
-    CHECK(error.events.back() == PrFetchEvent_Fail);
+    CHECK(error.events.last() == PrFetchEvent_Fail);
     CHECK(error.error == PrNetError_Protocol);
     Probe manual{.origin = originOf(fixture)};
     run(&fixture, &manual, urlOf(fixture, "/redirect"), PrFetchRedirect_Manual);
     CHECK(manual.status == 302);
-    CHECK(manual.events.back() == PrFetchEvent_End);
+    CHECK(manual.events.last() == PrFetchEvent_End);
     Probe loop{};
     run(&fixture, &loop, urlOf(fixture, "/loop"));
-    CHECK(loop.events.back() == PrFetchEvent_Fail);
+    CHECK(loop.events.last() == PrFetchEvent_Fail);
     CHECK(loop.status == 0);
     reset(&fixture);
 }
@@ -304,9 +311,9 @@ TEST_CASE("fetch: a body in a content coding arrives decoded") {
         return;
     Probe probe{};
     run(&fixture, &probe, urlOf(fixture, "/gzip"));
-    std::string expected;
+    String expected;
     for (int i = 0; i < 1000; ++i)
-        expected += "compressed ";
+        expected.append("compressed ");
     CHECK(probe.received == expected);
     reset(&fixture);
 }
@@ -319,38 +326,38 @@ TEST_CASE("fetch: a status that is not ok is a response, not a network error") {
     run(&fixture, &probe, urlOf(fixture, "/missing"));
     CHECK(probe.status == 404);
     CHECK(probe.received == "missing");
-    CHECK(probe.events.back() == PrFetchEvent_End);
+    CHECK(probe.events.last() == PrFetchEvent_End);
     reset(&fixture);
 }
 
 TEST_CASE("fetch: a file: URL is read from the disk, with the type of its extension, and http: needs an HTTP source") {
-    std::string directory = std::string(PR_FETCH_TEST_DIR) + "/files";
+    String directory = format("{}/files", PR_FETCH_TEST_DIR);
     REQUIRE(prFileCreateDirectory(directory));
-    std::string page = directory + "/page one.html";
-    std::string empty = directory + "/empty.css";
+    String page = format("{}/page one.html", directory);
+    String empty = format("{}/empty.css", directory);
     REQUIRE(prFileWrite(page, PrByteView{reinterpret_cast<const uint8_t*>("<p>file"), 7}));
     REQUIRE(prFileWrite(empty, PrByteView{nullptr, 0}));
     PrNet* net = prNetNullCreate();
     PrFetchNetworkDesc desc{.net = net};
     PrFetchNetwork* fetcher = prFetchNetworkCreate(PrFetchNetworkBackend_Default, &desc);
     Probe file{};
-    runOn(net, fetcher, &file, "file://" + directory + "/page%20one.html#part");
+    runOn(net, fetcher, &file, format("file://{}/page%20one.html#part", directory));
     CHECK(file.status == 200);
     CHECK(file.type == "text/html");
     CHECK(file.received == "<p>file");
     Probe nothing{};
-    runOn(net, fetcher, &nothing, "file://" + empty);
+    runOn(net, fetcher, &nothing, format("file://{}", empty));
     CHECK(nothing.status == 200);
     CHECK(nothing.type == "text/css");
-    CHECK(nothing.received.empty());
-    CHECK(nothing.events.back() == PrFetchEvent_End);
+    CHECK(nothing.received.isEmpty());
+    CHECK(nothing.events.last() == PrFetchEvent_End);
     Probe missing{};
-    runOn(net, fetcher, &missing, "file://" + directory + "/missing.html");
-    CHECK(missing.events.back() == PrFetchEvent_Fail);
+    runOn(net, fetcher, &missing, format("file://{}/missing.html", directory));
+    CHECK(missing.events.last() == PrFetchEvent_Fail);
     CHECK(missing.error == PrNetError_Io);
     Probe http{};
     runOn(net, fetcher, &http, "http://example.com/");
-    CHECK(http.events.back() == PrFetchEvent_Fail);
+    CHECK(http.events.last() == PrFetchEvent_Fail);
     prFetchNetworkDestroy(fetcher);
     prNetDestroy(net);
 }
@@ -367,10 +374,10 @@ TEST_CASE("fetch: data: and about:blank are answered by the fetcher, and other s
     Probe blank{};
     run(&fixture, &blank, "about:blank");
     CHECK(blank.status == 200);
-    CHECK(blank.received.empty());
+    CHECK(blank.received.isEmpty());
     Probe other{};
     run(&fixture, &other, "ftp://localhost/file");
-    CHECK(other.events.back() == PrFetchEvent_Fail);
+    CHECK(other.events.last() == PrFetchEvent_Fail);
     Probe invalid{};
     run(&fixture, &invalid, "not a url");
     CHECK(invalid.created == PrStatus_InvalidData);
@@ -387,7 +394,7 @@ TEST_CASE("fetch: a fresh response is answered from the cache, and one that it m
     run(&fixture, &second, urlOf(fixture, "/cache/fresh"));
     CHECK(first.status == 200);
     CHECK(second.received == first.received);
-    CHECK(second.events.back() == PrFetchEvent_End);
+    CHECK(second.events.last() == PrFetchEvent_End);
     Probe stored{};
     run(&fixture, &stored, urlOf(fixture, "/cache/no-store"));
     Probe again{};
@@ -425,17 +432,17 @@ TEST_CASE("fetch: a cached response answers only the requests that match what it
     if (!open(&fixture, prStorageMemoryCreate(1 << 20, PrStorageEviction_LeastRecentlyUsed)))
         return;
     Probe a{};
-    a.headers.push_back(PrFetchHeader{"X-Variant", "a"});
+    a.headers.push(PrFetchHeader{"X-Variant", "a"});
     run(&fixture, &a, urlOf(fixture, "/cache/variant"));
     Probe sameA{};
-    sameA.headers.push_back(PrFetchHeader{"X-Variant", "a"});
+    sameA.headers.push(PrFetchHeader{"X-Variant", "a"});
     run(&fixture, &sameA, urlOf(fixture, "/cache/variant"));
     Probe b{};
-    b.headers.push_back(PrFetchHeader{"X-Variant", "b"});
+    b.headers.push(PrFetchHeader{"X-Variant", "b"});
     run(&fixture, &b, urlOf(fixture, "/cache/variant"));
     CHECK(sameA.received == a.received);
     CHECK(b.received != a.received);
-    CHECK(b.received.find(" b ") != std::string::npos);
+    CHECK(prStringContains(b.received, " b "));
     reset(&fixture);
 }
 
@@ -455,7 +462,7 @@ TEST_CASE("fetch: a request that may change a resource invalidates what the cach
 }
 
 TEST_CASE("fetch: a cache on disk answers a fetcher made after the one that stored the response") {
-    std::string directory = std::string(PR_FETCH_TEST_DIR) + "/cache";
+    String directory = format("{}/cache", PR_FETCH_TEST_DIR);
     // The pool that writes the store's files, which outlives every store that the test opens.
     struct Pool {
         PrTaskPool* pool = prTaskBuiltinCreate(1);
@@ -495,7 +502,7 @@ TEST_CASE("fetch: a response from another origin is opaque to no-cors, and a sam
     CHECK(opaque.received == "hello");
     Probe sameOrigin{.mode = PrFetchMode_SameOrigin, .origin = originOf(fixture)};
     run(&fixture, &sameOrigin, otherUrlOf(fixture, "/hello"));
-    CHECK(sameOrigin.events.back() == PrFetchEvent_Fail);
+    CHECK(sameOrigin.events.last() == PrFetchEvent_Fail);
     CHECK(sameOrigin.error == PrNetError_Blocked);
     Probe manual{.origin = originOf(fixture)};
     run(&fixture, &manual, otherUrlOf(fixture, "/redirect"), PrFetchRedirect_Manual);
@@ -510,9 +517,9 @@ TEST_CASE("fetch: a CORS response from another origin is received only if it all
     Fixture fixture{};
     if (!open(&fixture))
         return;
-    std::string origin = originOf(fixture);
+    String origin = originOf(fixture);
     Probe allowed{.mode = PrFetchMode_Cors, .origin = origin};
-    run(&fixture, &allowed, otherUrlOf(fixture, "/cors?origin=" + origin));
+    run(&fixture, &allowed, otherUrlOf(fixture, format("/cors?origin={}", origin)));
     CHECK(allowed.responseType == PrFetchResponseType_Cors);
     CHECK(allowed.received == "GET none");
     Probe any{.mode = PrFetchMode_Cors, .origin = origin};
@@ -534,15 +541,15 @@ TEST_CASE("fetch: a CORS response allows credentials only by naming the origin a
     Fixture fixture{};
     if (!open(&fixture))
         return;
-    std::string origin = originOf(fixture);
+    String origin = originOf(fixture);
     Probe any{.mode = PrFetchMode_Cors, .credentials = PrFetchCredentials_Include, .origin = origin};
     run(&fixture, &any, otherUrlOf(fixture, "/cors?origin=*&credentials=true"));
     CHECK(any.error == PrNetError_Blocked);
     Probe named{.mode = PrFetchMode_Cors, .credentials = PrFetchCredentials_Include, .origin = origin};
-    run(&fixture, &named, otherUrlOf(fixture, "/cors?origin=" + origin));
+    run(&fixture, &named, otherUrlOf(fixture, format("/cors?origin={}", origin)));
     CHECK(named.error == PrNetError_Blocked);
     Probe allowed{.mode = PrFetchMode_Cors, .credentials = PrFetchCredentials_Include, .origin = origin};
-    run(&fixture, &allowed, otherUrlOf(fixture, "/cors?credentials=true&origin=" + origin));
+    run(&fixture, &allowed, otherUrlOf(fixture, format("/cors?credentials=true&origin={}", origin)));
     CHECK(allowed.responseType == PrFetchResponseType_Cors);
     reset(&fixture);
 }
@@ -551,24 +558,26 @@ TEST_CASE("fetch: a CORS request that is not simple is sent only if its prefligh
     Fixture fixture{};
     if (!open(&fixture))
         return;
-    std::string origin = originOf(fixture);
-    Probe simple{.headers = {{"Accept", "text/plain"}}, .mode = PrFetchMode_Cors, .origin = origin};
-    run(&fixture, &simple, otherUrlOf(fixture, "/cors?origin=" + origin), PrFetchRedirect_Follow, "POST");
+    String origin = originOf(fixture);
+    Probe simple{.headers = Array<PrFetchHeader>({{"Accept", "text/plain"}}), .mode = PrFetchMode_Cors, .origin = origin};
+    run(&fixture, &simple, otherUrlOf(fixture, format("/cors?origin={}", origin)), PrFetchRedirect_Follow, "POST");
     CHECK(simple.received == "POST none");
-    std::vector<PrFetchHeader> headers = {{"X-Probe", "1"}, {"Accept", "text/plain"}};
+    Array<PrFetchHeader> headers({{"X-Probe", "1"}, {"Accept", "text/plain"}});
     Probe allowed{.headers = headers, .mode = PrFetchMode_Cors, .origin = origin};
-    run(&fixture, &allowed, otherUrlOf(fixture, "/cors?methods=PUT&headers=x-probe&origin=" + origin),
+    run(&fixture, &allowed, otherUrlOf(fixture, format("/cors?methods=PUT&headers=x-probe&origin={}", origin)),
         PrFetchRedirect_Follow, "PUT");
     CHECK(allowed.status == 200);
     CHECK(allowed.received == "PUT PUT;x-probe");
     Probe wildcard{.headers = headers, .mode = PrFetchMode_Cors, .origin = origin};
-    run(&fixture, &wildcard, otherUrlOf(fixture, "/cors?methods=*&headers=*&origin=" + origin), PrFetchRedirect_Follow, "PUT");
+    run(&fixture, &wildcard, otherUrlOf(fixture, format("/cors?methods=*&headers=*&origin={}", origin)),
+        PrFetchRedirect_Follow, "PUT");
     CHECK(wildcard.status == 200);
     Probe method{.headers = headers, .mode = PrFetchMode_Cors, .origin = origin};
-    run(&fixture, &method, otherUrlOf(fixture, "/cors?headers=x-probe&origin=" + origin), PrFetchRedirect_Follow, "PUT");
+    run(&fixture, &method, otherUrlOf(fixture, format("/cors?headers=x-probe&origin={}", origin)),
+        PrFetchRedirect_Follow, "PUT");
     CHECK(method.error == PrNetError_Blocked);
     Probe header{.headers = headers, .mode = PrFetchMode_Cors, .origin = origin};
-    run(&fixture, &header, otherUrlOf(fixture, "/cors?methods=PUT&origin=" + origin), PrFetchRedirect_Follow, "PUT");
+    run(&fixture, &header, otherUrlOf(fixture, format("/cors?methods=PUT&origin={}", origin)), PrFetchRedirect_Follow, "PUT");
     CHECK(header.error == PrNetError_Blocked);
     reset(&fixture);
 }
@@ -577,14 +586,14 @@ TEST_CASE("fetch: a CORS request redirected through another origin sends its ori
     Fixture fixture{};
     if (!open(&fixture))
         return;
-    std::string origin = originOf(fixture);
-    std::string back = urlOf(fixture, "/cors?origin=" + origin);
-    std::string backToNull = urlOf(fixture, "/cors?origin=null");
+    String origin = originOf(fixture);
+    String back = urlOf(fixture, format("/cors?origin={}", origin));
+    String backToNull = urlOf(fixture, "/cors?origin=null");
     Probe named{.mode = PrFetchMode_Cors, .origin = origin};
-    run(&fixture, &named, otherUrlOf(fixture, "/cors?origin=" + origin + "&to=" + back));
+    run(&fixture, &named, otherUrlOf(fixture, format("/cors?origin={}&to={}", origin, back)));
     CHECK(named.error == PrNetError_Blocked);
     Probe tainted{.mode = PrFetchMode_Cors, .origin = origin};
-    run(&fixture, &tainted, otherUrlOf(fixture, "/cors?origin=" + origin + "&to=" + backToNull));
+    run(&fixture, &tainted, otherUrlOf(fixture, format("/cors?origin={}&to={}", origin, backToNull)));
     CHECK(tainted.responseType == PrFetchResponseType_Cors);
     CHECK(tainted.received == "GET none");
     reset(&fixture);
@@ -594,30 +603,30 @@ TEST_CASE("fetch: a request sends as much of its referrer as its policy allows, 
     Fixture fixture{};
     if (!open(&fixture))
         return;
-    std::string origin = originOf(fixture);
-    std::string page = urlOf(fixture, "/page?query#fragment");
-    std::string pageSent = urlOf(fixture, "/page?query");
+    String origin = originOf(fixture);
+    String page = urlOf(fixture, "/page?query#fragment");
+    String pageSent = urlOf(fixture, "/page?query");
     Probe same{.origin = origin, .referrer = page};
     run(&fixture, &same, urlOf(fixture, "/headers"));
-    CHECK(same.received == "Origin: -\nReferer: " + pageSent + "\n");
+    CHECK(same.received == format("Origin: -\nReferer: {}\n", pageSent));
     Probe cross{.origin = origin, .referrer = page};
     run(&fixture, &cross, otherUrlOf(fixture, "/headers"));
-    CHECK(cross.received == "Origin: -\nReferer: " + origin + "/\n");
+    CHECK(cross.received == format("Origin: -\nReferer: {}/\n", origin));
     Probe none{.origin = origin, .referrer = page, .referrerPolicy = PrFetchReferrerPolicy_NoReferrer};
     run(&fixture, &none, urlOf(fixture, "/headers"));
     CHECK(none.received == "Origin: -\nReferer: -\n");
     Probe unsafe{.origin = origin, .referrer = page, .referrerPolicy = PrFetchReferrerPolicy_UnsafeUrl};
     run(&fixture, &unsafe, otherUrlOf(fixture, "/headers"));
-    CHECK(unsafe.received == "Origin: -\nReferer: " + pageSent + "\n");
+    CHECK(unsafe.received == format("Origin: -\nReferer: {}\n", pageSent));
     Probe post{.origin = origin};
     run(&fixture, &post, urlOf(fixture, "/headers"), PrFetchRedirect_Follow, "POST");
-    CHECK(post.received == "Origin: " + origin + "\nReferer: -\n");
+    CHECK(post.received == format("Origin: {}\nReferer: -\n", origin));
     Probe sameCors{.mode = PrFetchMode_Cors, .origin = origin};
     run(&fixture, &sameCors, urlOf(fixture, "/headers"));
     CHECK(sameCors.received == "Origin: -\nReferer: -\n");
     Probe cors{.mode = PrFetchMode_Cors, .origin = origin};
     run(&fixture, &cors, otherUrlOf(fixture, "/headers"));
-    CHECK(cors.received == "Origin: " + origin + "\nReferer: -\n");
+    CHECK(cors.received == format("Origin: {}\nReferer: -\n", origin));
     // A loopback host is potentially trustworthy, so the request is no downgrade, and sends its referrer's origin. The
     // Origin header compares schemes alone, and withholds an https origin from an http URL.
     Probe secure{.origin = "https://example.com", .referrer = "https://example.com/page"};
@@ -644,7 +653,7 @@ TEST_CASE("fetch: a fetcher measures a fetch in order, and a body's size") {
     CHECK(timing.timingAllowPassed);
     CHECK_FALSE(timing.crossOriginRedirect);
     CHECK(timing.nextHopProtocol == "http/1.1");
-    CHECK(timing.decodedBodySize == probe.received.size());
+    CHECK(timing.decodedBodySize == probe.received.count());
     reset(&fixture);
 }
 
@@ -652,9 +661,9 @@ TEST_CASE("fetch: a redirect to another origin is measured, and fails the TAO ch
     Fixture fixture{};
     if (!open(&fixture))
         return;
-    std::string origin = originOf(fixture);
+    String origin = originOf(fixture);
     Probe probe{.mode = PrFetchMode_Cors, .origin = origin};
-    run(&fixture, &probe, urlOf(fixture, "/cors?origin=" + origin + "&to=" + otherUrlOf(fixture, "/cors?origin=null")));
+    run(&fixture, &probe, urlOf(fixture, format("/cors?origin={}&to={}", origin, otherUrlOf(fixture, "/cors?origin=null"))));
     CHECK(probe.timing.redirectCount == 1);
     CHECK(probe.timing.redirectStart == probe.timing.startTime);
     CHECK(probe.timing.redirectEnd >= probe.timing.redirectStart);
@@ -744,17 +753,17 @@ TEST_CASE("fetch: a load destroyed before its response arrives delivers nothing"
     prConditionInit(&owner.posted);
     Delivery early{};
     Delivery late{};
-    std::string largeUrl = urlOf(fixture, "/large");
+    String largeUrl = urlOf(fixture, "/large");
     PrFetchRequestDesc request{.url = largeUrl};
     PrFetchLoadDesc desc{.post = postToOwner, .queue = &owner, .done = delivered, .context = &early};
     prFetchLoadDestroy(prFetchLoadCreate(fixture.fetcher, &request, &desc));
     // A load whose response is posted to the owner before the owner destroys it.
-    std::string helloUrl = urlOf(fixture, "/hello");
+    String helloUrl = urlOf(fixture, "/hello");
     PrFetchRequestDesc hello{.url = helloUrl};
     desc.context = &late;
     late.load = prFetchLoadCreate(fixture.fetcher, &hello, &desc);
     prMutexLock(&owner.mutex);
-    while (owner.tasks.empty())
+    while (owner.tasks.isEmpty())
         prConditionWait(&owner.posted, &owner.mutex);
     prMutexUnlock(&owner.mutex);
     prFetchLoadDestroy(late.load);

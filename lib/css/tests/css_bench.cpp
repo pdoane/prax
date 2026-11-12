@@ -10,14 +10,15 @@
 
 #include "pr/assert.h"
 #include "pr/css.h"
+#include "pr/print.h"
 #include "pr/string_ops.h"
 
 #include "css/src/css_syntax.h"
 #include "tools/harness/harness.h"
 
-#include <stdio.h>
-
 using namespace harness;
+
+using namespace pr;
 
 using namespace pr_impl;
 
@@ -125,7 +126,7 @@ void report(PrStringView name, Work* work, uint32_t rules, uint32_t declarations
         declarations, parse.millis, ready.millis, write.millis, tokenize.millis, bound.millis);
     harnessCountsWrite(&counts, &row);
     prTextBufferAppend(&row, "}");
-    fwrite(row.data, 1, row.size, stdout);
+    print("{}", prTextBufferView(&row));
     prTextBufferReset(&row);
 }
 
@@ -134,10 +135,10 @@ void report(PrStringView name, Work* work, uint32_t rules, uint32_t declarations
 int main(int argc, char** argv) {
     prCrashHandler();
     PrTextBuffer file = {};
-    printf("[");
+    print("[");
     for (int i = 1; i < argc; ++i) {
         if (!harnessReadFile(&file, argv[i])) {
-            fprintf(stderr, "cannot read %s\n", argv[i]);
+            printError("cannot read {}\n", argv[i]);
             return 2;
         }
         PrStringView text = prTextBufferView(&file);
@@ -157,6 +158,6 @@ int main(int argc, char** argv) {
         prCssStyleSheetRelease(sheet);
     }
     prTextBufferReset(&file);
-    printf("\n]\n");
+    print("\n]\n");
     return 0;
 }

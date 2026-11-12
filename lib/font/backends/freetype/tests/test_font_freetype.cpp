@@ -1,27 +1,26 @@
 // The FreeType hinter: hinted outlines fit their size's pixel grid, full hinting fits advances to whole pixels, and a
 // font set hints the faces that it matches by it.
 
+#include "pr/float.h"
 #include "pr/font.h"
 #include "pr/font_freetype.h"
 #include "pr/font_set.h"
+#include "pr/string.h"
 
 #include "tools/harness/test.h"
-
-#include <cmath>
-#include <cstdio>
-#include <string>
-#include <vector>
 
 extern "C" int prTestFontFreeTypeCApi(void);
 
 namespace pr_impl {
 
+using namespace pr;
+
 namespace {
 
 const PrFont* load(const char* name) {
-    std::string path = std::string(PR_FONTS_DIR) + "/" + name;
+    String path = format("{}/{}", PR_FONTS_DIR, name);
     const PrFont* font = nullptr;
-    REQUIRE(prFontCreateFromFile(path.c_str(), 0, nullptr, &font) == PrStatus_Ok);
+    REQUIRE(prFontCreateFromFile(path, 0, nullptr, &font) == PrStatus_Ok);
     return font;
 }
 
@@ -50,16 +49,17 @@ TEST_CASE("a hinted outline fits its size's pixel grid") {
     uint16_t x = prFontCodePointGlyph(font, 'x');
     const float ppem = 13;
     float design = prFontGlyphBounds(font, x).top * ppem;
-    CHECK(std::fabs(design - std::round(design)) > 0.02f);
-    for (PrFontHinting hinting : {PrFontHinting_Light, PrFontHinting_Full}) {
+    CHECK(prF32Abs(design - prF32Round(design)) > 0.02f);
+    const PrFontHinting hintings[] = {PrFontHinting_Light, PrFontHinting_Full};
+    for (PrFontHinting hinting : hintings) {
         const PrFont* fitted = hinted(font, hinter, hinting);
         CHECK(prFontHinting(fitted) == hinting);
         CHECK(prFontHinter(fitted) == hinter);
         PrPath* path = prPathCreate();
         REQUIRE(prFontGlyphOutline(fitted, x, ppem, prAffine2Scale(PrVec2{ppem, ppem}), path));
         float top = prPathBounds(path).top;
-        CHECK(std::fabs(top - std::round(top)) < 0.02f);
-        CHECK(std::fabs(top - design) < 1.0f);
+        CHECK(prF32Abs(top - prF32Round(top)) < 0.02f);
+        CHECK(prF32Abs(top - design) < 1.0f);
         // A derivation of a hinted font stays hinted.
         PrFontDerivation none = prFontDerivationDefault();
         const PrFont* again = prFontCreateDerived(fitted, &none);
@@ -75,7 +75,8 @@ TEST_CASE("a hinted outline fits its size's pixel grid") {
 TEST_CASE("full hinting fits advances to whole pixels, and the others keep the design's") {
     PrFontHinter* hinter = prFontFreeTypeCreate();
     const PrFont* font = load("NotoSans[wdth,wght].ttf");
-    for (uint32_t c : {uint32_t('a'), uint32_t('m'), uint32_t('i')}) {
+    const uint32_t codePoints[] = {'a', 'm', 'i'};
+    for (uint32_t c : codePoints) {
         uint16_t glyph = prFontCodePointGlyph(font, c);
         float design = prFontGlyphAdvance(font, glyph, 0);
         CHECK(prFontGlyphAdvance(font, glyph, 11) == design);
@@ -86,8 +87,8 @@ TEST_CASE("full hinting fits advances to whole pixels, and the others keep the d
         CHECK(prFontGlyphAdvance(full, glyph, 0) == design);
         float pixels = prFontGlyphAdvance(full, glyph, 11) * 11;
         prFontRelease(full);
-        CHECK(pixels == doctest::Approx(std::round(pixels)).epsilon(1e-5));
-        CHECK(std::fabs(pixels - design * 11) <= 1.0f);
+        CHECK(pixels == doctest::Approx(prF32Round(pixels)).epsilon(1e-5));
+        CHECK(prF32Abs(pixels - design * 11) <= 1.0f);
     }
     prFontRelease(font);
     prFontHinterDestroy(hinter);
@@ -115,9 +116,9 @@ TEST_CASE("a hinter hints each instance of a variable font at its own axis value
 TEST_CASE("a set hints the faces that it matches, and a set over it hints them the same unless it sets its own") {
     PrFontHinter* hinter = prFontFreeTypeCreate();
     PrFontSet* host = prFontSetCreate(nullptr);
-    std::string path = std::string(PR_FONTS_DIR) + "/NotoSans[wdth,wght].ttf";
+    String path = format("{}/NotoSans[wdth,wght].ttf", PR_FONTS_DIR);
     PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
-    REQUIRE(prFontSetAddFile(host, &descriptor, path.c_str()) > 0);
+    REQUIRE(prFontSetAddFile(host, &descriptor, path) > 0);
     CHECK(prFontSetHinting(host, nullptr) == PrFontHinting_None);
     prFontSetSetHinting(host, PrFontHinting_Full, hinter);
     PrFontHinter* reported = nullptr;
@@ -157,11 +158,11 @@ TEST_CASE("a set hints the faces that it matches, and a set over it hints them t
 TEST_CASE("a face whose descriptor sets its hinting keeps it whatever its set's hinting") {
     PrFontHinter* hinter = prFontFreeTypeCreate();
     PrFontSet* set = prFontSetCreate(nullptr);
-    std::string path = std::string(PR_FONTS_DIR) + "/NotoSans[wdth,wght].ttf";
+    String path = format("{}/NotoSans[wdth,wght].ttf", PR_FONTS_DIR);
     PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
     descriptor.derivation.overrides = PrFontOverrideFlag_Hinting;
     descriptor.derivation.hinting = PrFontHinting_None;
-    REQUIRE(prFontSetAddFile(set, &descriptor, path.c_str()) > 0);
+    REQUIRE(prFontSetAddFile(set, &descriptor, path) > 0);
     prFontSetSetHinting(set, PrFontHinting_Full, hinter);
     PrFontStyle style = prFontStyleDefault();
     PrFontMatch* match = prFontMatchCreate();

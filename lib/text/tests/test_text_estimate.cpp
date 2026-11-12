@@ -1,13 +1,14 @@
 // Estimates of how text sets: lines from a table of advances, with no shaping.
 
 #include "pr/font_set.h"
+#include "pr/string.h"
 #include "pr/text_estimate.h"
 
 #include "tools/harness/test.h"
 
-#include <string>
-
 namespace pr_impl {
+
+using namespace pr;
 
 namespace {
 
@@ -18,7 +19,7 @@ struct Estimated {
     PrTextEstimator* estimator = nullptr;
 
     Estimated() {
-        std::string path = std::string(PR_FONTS_DIR) + "/Arimo-Regular.ttf";
+        PrStringView path = PR_FONTS_DIR "/Arimo-Regular.ttf";
         const PrFont* PR_NULLABLE face = nullptr;
         REQUIRE(prFontCreateFromFile(path, 0, nullptr, &face) == PrStatus_Ok);
         PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
@@ -38,7 +39,7 @@ struct Estimated {
         prFontSetDestroy(fonts);
     }
 
-    uint32_t lines(const std::string& text, float width) { return prTextEstimatorLineCount(estimator, text, width); }
+    uint32_t lines(PrStringView text, float width) { return prTextEstimatorLineCount(estimator, text, width); }
 };
 
 } // namespace
@@ -59,9 +60,9 @@ TEST_CASE("an estimator reads advances from the font") {
 TEST_CASE("a word that fits on no line breaks anywhere, and an empty text takes a line") {
     Estimated e;
     CHECK(e.lines("", 100) == 1);
-    CHECK(e.lines(std::string(10, 'x'), 80) == 1);
-    CHECK(e.lines(std::string(11, 'x'), 80) == 2);
-    CHECK(e.lines(std::string(4000, 'x'), 800) == 40);
+    CHECK(e.lines(String().append(10, 'x'), 80) == 1);
+    CHECK(e.lines(String().append(11, 'x'), 80) == 2);
+    CHECK(e.lines(String().append(4000, 'x'), 800) == 40);
     CHECK(e.lines("abc", 0) == 1);
 }
 
@@ -70,24 +71,23 @@ TEST_CASE("a line breaks at white space, and the word after it moves down whole"
     CHECK(e.lines("xxxxx xxxxx", 80) == 2);
     // Eight x and a space fit, and what hangs past the end takes no line.
     CHECK(e.lines("xxxxxxxxxx      ", 80) == 1);
-    CHECK(e.lines("xxxxx " + std::string(30, 'x'), 80) == 4);
+    CHECK(e.lines(format("xxxxx {}", String().append(30, 'x')), 80) == 4);
 }
 
 TEST_CASE("a tab advances to the next stop") {
     Estimated e;
     float space = prTextEstimatorAdvance(e.estimator, ' ');
     float stop = 8 * space;
-    std::string text = "\t\t";
-    CHECK(e.lines(text + "x", 2 * stop + 8) == 1);
-    CHECK(e.lines(text + "xx", 2 * stop + 8) == 2);
+    CHECK(e.lines("\t\tx", 2 * stop + 8) == 1);
+    CHECK(e.lines("\t\txx", 2 * stop + 8) == 2);
 }
 
 TEST_CASE("wide characters break between each other") {
     Estimated e;
     float wide = prTextEstimatorAdvance(e.estimator, 0x4e00);
-    std::string han;
+    String han;
     for (uint32_t i = 0; i < 10; ++i)
-        han += "\xe4\xb8\x80";
+        han.append("\xe4\xb8\x80");
     if (wide > 0)
         CHECK(e.lines(han, wide * 5) == 2);
 }

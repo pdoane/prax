@@ -1,8 +1,7 @@
 #include "pr/net_null.h"
+#include "pr/string.h"
 
 #include "tools/harness/test.h"
-
-#include <string>
 
 namespace pr_impl {
 
@@ -10,16 +9,16 @@ namespace {
 
 struct Ran {
     PrNet* net;
-    std::string order;
+    String order;
 };
 
 void second(void* PR_NULLABLE context) {
-    static_cast<Ran*>(context)->order += "2";
+    static_cast<Ran*>(context)->order.append('2');
 }
 
 void first(void* PR_NULLABLE context) {
     Ran* ran = static_cast<Ran*>(context);
-    ran->order += "1";
+    ran->order.append('1');
     prNetPost(ran->net, second, ran);
 }
 
@@ -35,7 +34,7 @@ TEST_CASE("the null network runs its tasks only when run, in order, with the tas
     PrNet* net = prNetNullCreate();
     Ran ran{net, ""};
     prNetPost(net, first, &ran);
-    CHECK(ran.order.empty());
+    CHECK(ran.order.isEmpty());
     CHECK(prNetNullRun(net));
     CHECK(ran.order == "12");
     CHECK(!prNetNullRun(net));

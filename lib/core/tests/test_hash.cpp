@@ -2,8 +2,6 @@
 
 #include "tools/harness/test.h"
 
-#include <initializer_list>
-
 using namespace pr_impl;
 
 TEST_CASE("a hash reads every byte, at any length and any alignment") {
@@ -13,11 +11,8 @@ TEST_CASE("a hash reads every byte, at any length and any alignment") {
         text[i] = char('a' + i % 26);
 
     // Changing any one byte of a text changes its hash, at every length the steps handle differently.
-    for (size_t size :
-            {
-                size_t(0), size_t(1), size_t(3), size_t(4), size_t(8), size_t(15), size_t(16), size_t(17),
-                size_t(32), size_t(48), size_t(49), size_t(97), size_t(150),
-            }) {
+    const size_t sizes[] = {0, 1, 3, 4, 8, 15, 16, 17, 32, 48, 49, 97, 150};
+    for (size_t size : sizes) {
         uint64_t hash = prHashBytes(text, size, kSeed);
         CHECK(hash != prHashBytes(text, size + 1, kSeed));
         for (size_t i = 0; i < size; ++i) {

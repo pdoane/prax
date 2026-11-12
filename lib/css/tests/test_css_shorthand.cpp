@@ -18,13 +18,13 @@ struct Block {
     Block(const Block&) = delete;
     Block& operator=(const Block&) = delete;
 
-    std::string value(PrStringView name) const {
+    String value(PrStringView name) const {
         PrTextBuffer buffer = {};
         cssSerializePropertyValue(&buffer, &style, named(&style, name));
         return take(&buffer);
     }
 
-    std::string text() const {
+    String text() const {
         PrTextBuffer buffer = {};
         cssSerializeDeclarationBlock(&buffer, &style);
         return take(&buffer);
@@ -449,8 +449,8 @@ TEST_CASE("shorthand serialization respects intermixed logical mappings") {
     CHECK(after.text() == "margin: 1px; margin-inline-start: 2px;");
     Block important("margin-top: 1px !important; margin-inline-start: 2px; "
         "margin-right: 1px !important; margin-bottom: 1px !important; margin-left: 1px !important");
-    CHECK(important.text().find("margin: ") == std::string::npos);
+    CHECK_FALSE(prStringContains(important.text(), "margin: "));
     Block corners("border-top-left-radius: 1px; border-start-start-radius: 2px; "
         "border-top-right-radius: 1px; border-bottom-right-radius: 1px; border-bottom-left-radius: 1px");
-    CHECK(corners.text().find("border-radius: ") == std::string::npos);
+    CHECK_FALSE(prStringContains(corners.text(), "border-radius: "));
 }

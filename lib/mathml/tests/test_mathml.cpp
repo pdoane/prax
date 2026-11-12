@@ -1,6 +1,7 @@
 // MathML's element model, attributes and operator dictionary.
 
 #include "pr/css.h"
+#include "pr/float.h"
 #include "pr/html.h"
 #include "pr/mathml.h"
 
@@ -9,8 +10,6 @@
 #include "mathml/src/mathml_operator.h"
 
 #include "tools/harness/test.h"
-
-#include <cmath>
 
 extern "C" int prTestMathMlCApi(void);
 
@@ -62,7 +61,7 @@ MathMlLength length(PrStringView text, MathMlLengthSyntax syntax = MathMlLengthS
 
 // Returns true if `length` is the single term `value` of `unit`.
 bool isTerm(const MathMlLength& length, float value, MathMlUnit unit) {
-    return length.count == 1 && length.units[0] == unit && std::fabs(length.values[0] - value) < 1e-4f;
+    return length.count == 1 && length.units[0] == unit && prF32Abs(length.values[0] - value) < 1e-4f;
 }
 
 } // namespace

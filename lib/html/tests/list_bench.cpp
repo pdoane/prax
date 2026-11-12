@@ -17,17 +17,15 @@
 #include "pr/css_presentation.h"
 #include "pr/html.h"
 #include "pr/html_page.h"
+#include "pr/integer.h"
 #include "pr/layout_scene.h"
 #include "pr/layout_tree.h"
+#include "pr/print.h"
 #include "pr/string_ops.h"
 #include "pr/text_buffer.h"
 #include "pr/text_harfbuzz.h"
 
 #include "tools/harness/harness.h"
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 using namespace harness;
 
@@ -161,6 +159,13 @@ HarnessCounters load(PrTextFont* font, PrTextShaper* shaper, PrStringView docume
     return spent;
 }
 
+// The number at the start of `text`, as the bench's options give it, or zero if it starts with no digit.
+uint32_t parseCount(PrStringView text) {
+    uint64_t value = 0;
+    prU64ParsePrefix(text.data, text.size, &value, 10);
+    return value > UINT32_MAX ? UINT32_MAX : uint32_t(value);
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -168,11 +173,11 @@ int main(int argc, char** argv) {
     uint32_t itemCount = kDefaultItems;
     bool verify = false;
     for (;;) {
-        if (argc >= 3 && strcmp(argv[1], "--items") == 0) {
-            itemCount = uint32_t(atoi(argv[2]));
+        if (argc >= 3 && PrStringView(argv[1]) == "--items") {
+            itemCount = parseCount(argv[2]);
             argc -= 2;
             argv += 2;
-        } else if (argc >= 2 && strcmp(argv[1], "--verify") == 0) {
+        } else if (argc >= 2 && PrStringView(argv[1]) == "--verify") {
             verify = true;
             argc -= 1;
             argv += 1;
@@ -181,7 +186,7 @@ int main(int argc, char** argv) {
         }
     }
     if (argc > 2 || itemCount < 2) {
-        fprintf(stderr, "usage: list_bench [--items N] [--verify] [case], with N at least 2\n");
+        printError("usage: list_bench [--items N] [--verify] [case], with N at least 2\n");
         return 2;
     }
     PrFontSet* fonts = nullptr;
@@ -211,7 +216,9 @@ int main(int argc, char** argv) {
     PrStringView only = argc == 2 ? argv[1] : PrStringView{};
     bool first = true;
     bool failed = false;
-    printf("[");
+    // The cases' rows go through the C library's buffered output, so the opening bracket is written before any of them,
+    // and the closing one after them through the same buffer.
+    print("[");
     for (const Case& c : kCases) {
         if (only.data != nullptr) {
             if (only != c.name)
@@ -227,8 +234,7 @@ int main(int argc, char** argv) {
         });
         PrRawString report{};
         if (verify && !prCssPresentationVerify(work.presentation, &report)) {
-            PrStringView what = prRawStringView(&report);
-            fprintf(stderr, "list_bench: %s: presentation verify: %.*s\n", c.name, int(what.size), what.data);
+            printError("list_bench: {}: presentation verify: {}\n", c.name, prRawStringView(&report));
             failed = true;
         }
         prRawStringReset(&report);
@@ -240,7 +246,7 @@ int main(int argc, char** argv) {
         load(font, shaper, prTextBufferView(&document));
         harnessWriteCase(false, "list load in pieces", load(font, shaper, prTextBufferView(&document)));
     }
-    printf("\n]\n");
+    harnessWriteLine("\n]");
 
     prDomNodeRelease(prDomElementAsNode(work.added));
     prHtmlPageDestroy(page);

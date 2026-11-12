@@ -1,5 +1,6 @@
 // Studio Kit's colors.
 
+#include "pr/array.h"
 #include "pr/color_space.h"
 #include "pr/kit_box.h"
 #include "pr/kit_color.h"
@@ -7,9 +8,6 @@
 #include "tools/harness/kit_fixture.h"
 
 #include "tools/harness/test.h"
-
-#include <string>
-#include <vector>
 
 using namespace harness;
 
@@ -19,10 +17,10 @@ namespace {
 
 // The phases that an edit sink saw, in order.
 struct Edits {
-    std::vector<PrUiEditPhase> phases;
+    Array<PrUiEditPhase> phases;
 
     static void record(void* context, PrLayoutNode, PrUiEditPhase phase) {
-        static_cast<Edits*>(context)->phases.push_back(phase);
+        static_cast<Edits*>(context)->phases.push(phase);
     }
     uint32_t count(PrUiEditPhase phase) const {
         uint32_t n = 0;
@@ -170,7 +168,8 @@ TEST_CASE("the OKLCH plane sets perceptual lightness across, and keeps a color t
     f.click(scene.at(scene.plane(), 0.7f, 0.01f));
     f.frame();
     CHECK(lightnessOf(scene.color) == doctest::Approx(0.7).epsilon(0.02));
-    for (float channel : {scene.color.r, scene.color.g, scene.color.b}) {
+    const float channels[] = {scene.color.r, scene.color.g, scene.color.b};
+    for (float channel : channels) {
         CHECK(channel >= -1e-3f);
         CHECK(channel <= 1 + 1e-3f);
     }
@@ -189,7 +188,8 @@ TEST_CASE("on a P3 display, the OKLCH plane picks a color past sRGB that P3 hold
     f.frame();
     CHECK(lightnessOf(scene.color) == doctest::Approx(0.7).epsilon(0.02));
     bool pastSrgb = false;
-    for (float channel : {scene.color.r, scene.color.g, scene.color.b})
+    const float channels[] = {scene.color.r, scene.color.g, scene.color.b};
+    for (float channel : channels)
         pastSrgb = pastSrgb || channel < -1e-3f || channel > 1 + 1e-3f;
     CHECK(pastSrgb);
     const double srgb[3] = {double(scene.color.r), double(scene.color.g), double(scene.color.b)};
@@ -250,9 +250,9 @@ TEST_CASE("a color picker reads a color that its caller changes, and an opaque p
 TEST_CASE("hex text round-trips a color through its channels") {
     char hex[9];
     PrStringView opaque = prKitColorHex(PrColor{1, 0.5f, 0, 1}, hex);
-    CHECK(std::string(opaque.data, opaque.size) == "#FF8000");
+    CHECK(opaque == "#FF8000");
     PrStringView clear = prKitColorHex(PrColor{0, 0, 1, 0.5f}, hex);
-    CHECK(std::string(clear.data, clear.size) == "#0000FF80");
+    CHECK(clear == "#0000FF80");
     PrColor parsed{};
     CHECK(prKitColorParseHex("ff8000", &parsed));
     CHECK(parsed.g == doctest::Approx(128.0 / 255));

@@ -32,6 +32,15 @@ struct Array {
         resize(uint32_t(count));
     }
 
+    // Makes `count` copies of `value`.
+    template <typename Count>
+    explicit Array(Count count, const T& value) requires(isIntegral<Count> && !isSame<Count, bool>) {
+        PR_ASSERT(uint64_t(count) <= 0xffffffffu);
+        reserve(uint32_t(count));
+        for (uint32_t i = 0; i < uint32_t(count); ++i)
+            push(value);
+    }
+
     // Copies the elements of the list `items`, as in `Array<int> a({1, 2, 3})`.
     template <uint32_t N>
     explicit Array(const T (&items)[N]) {
@@ -117,8 +126,8 @@ struct Array {
         }
     }
 
-    // Append copies of the `itemsCount` elements at `items`, or of the elements of `items`, growing once for all of
-    // them. The elements must not be in the array.
+    // Append copies of the `itemsCount` elements at `items`, or of the elements of `items`, or an array of bytes the
+    // bytes of a view, growing once for all of them. The elements must not be in the array.
     void append(const T* PR_NULLABLE items, uint32_t itemsCount) {
         if (itemsCount == 0)
             return;
@@ -132,6 +141,10 @@ struct Array {
     template <typename Item>
     void append(Span<Item> items) requires(isSame<RemoveConst<Item>, T>) {
         append(items.data(), items.count());
+    }
+    void append(PrByteView bytes) requires(isSame<T, uint8_t>) {
+        PR_ASSERT(bytes.size <= 0xffffffffu);
+        append(bytes.data, uint32_t(bytes.size));
     }
 
     // Inserts `value` at `index`, and moves the elements from `index` onward up by one.

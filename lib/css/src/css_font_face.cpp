@@ -435,7 +435,7 @@ void dropFetch(void* PR_NULLABLE data) {
 void sourceFetched(void* PR_NULLABLE data, const DomFetchResult* result) {
     SourceFetch* fetch = static_cast<SourceFetch*>(data);
     CssFontSource* source = fetch->source;
-    PrByteView bytes{reinterpret_cast<const uint8_t*>(result->body.data), result->body.size};
+    PrByteView bytes = prStringBytes(result->body);
     const DomDocumentHost* host = fetch->document->host;
     source->font = result->status == PrStatus_Ok && host != nullptr ? fontOf(bytes, host->compress) : nullptr;
     source->bytes = source->font != nullptr ? prFontData(source->font).size : 0;

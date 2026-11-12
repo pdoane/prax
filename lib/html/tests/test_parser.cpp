@@ -5,20 +5,17 @@
 
 #include "tools/harness/test.h"
 
-#include <string>
-#include <vector>
-
 namespace pr_impl {
 
 namespace {
 
 // A document, and the tree that `text` parses to.
 struct Parse {
-    std::string source;
+    String source;
     PrDomDocument* document = domDocumentCreate(DomDocumentKind_Html);
     HtmlParser parser = {};
 
-    explicit Parse(std::string text, HtmlParseFlags flags = 0) : source(std::move(text)) {
+    explicit Parse(String text, HtmlParseFlags flags = 0) : source(move(text)) {
         htmlParserInit(&parser, document, flags);
         htmlParse(&parser, source);
     }
@@ -31,13 +28,12 @@ struct Parse {
 
 // A fragment of `text` read as the contents of an element named `context`.
 struct Fragment {
-    std::string source;
+    String source;
     PrDomDocument* document = domDocumentCreate(DomDocumentKind_Html);
     HtmlParser parser = {};
     PrDomNode* node = nullptr;
 
-    Fragment(std::string text, PrStringView context, DomNamespaceId space = PrDomNamespace_Html) :
-            source(std::move(text)) {
+    Fragment(String text, PrStringView context, DomNamespaceId space = PrDomNamespace_Html) : source(move(text)) {
         htmlParserInit(&parser, document, 0);
         node = htmlParseFragment(&parser, domElementCreate(document, space, domTagFromText(context), context), source);
     }
@@ -48,84 +44,84 @@ struct Fragment {
     }
 };
 
-void writeNode(std::string* out, PrDomNode* node);
+void writeNode(String* out, PrDomNode* node);
 
-void writeChildren(std::string* out, PrDomNode* node) {
+void writeChildren(String* out, PrDomNode* node) {
     for (PrDomNode* child = node->first; child != nullptr; child = child->next)
         writeNode(out, child);
 }
 
 // Writes the tree on one line: an element as its name with its children in parentheses, and text in quotes, so that a
 // case reads as input against shape.
-void writeNode(std::string* out, PrDomNode* node) {
-    if (!out->empty() && out->back() != '(')
-        *out += ' ';
+void writeNode(String* out, PrDomNode* node) {
+    if (!out->isEmpty() && out->view().data[out->count() - 1] != '(')
+        out->append(' ');
 
     switch (node->type) {
         case PrDomNodeType_Element: {
             const PrDomElement* element = domElementFromNode(node);
             if (element->space == PrDomNamespace_Svg)
-                *out += "svg:";
+                out->append("svg:");
             else if (element->space == PrDomNamespace_MathMl)
-                *out += "math:";
+                out->append("math:");
             PrStringView name = domElementName(element);
-            out->append(name.data, name.size);
+            out->append(name);
             for (const PrDomAttr* attribute = element->firstAttribute; attribute != nullptr;
                     attribute = static_cast<const PrDomAttr*>(attribute->next)) {
                 PrStringView text = prRawStringView(&attribute->name);
-                *out += '[';
-                out->append(text.data, text.size);
+                out->append('[');
+                out->append(text);
                 text = prRawStringView(&attribute->value);
-                *out += '=';
-                out->append(text.data, text.size);
-                *out += ']';
+                out->append('=');
+                out->append(text);
+                out->append(']');
             }
             PrDomNode* contents = domElementContents(element);
             if (contents != nullptr && contents->first != nullptr) {
-                *out += "(content";
+                out->append("(content");
                 writeChildren(out, contents);
-                *out += ')';
+                out->append(')');
             }
             if (node->first != nullptr) {
-                *out += '(';
+                out->append('(');
                 writeChildren(out, node);
-                *out += ')';
+                out->append(')');
             }
             return;
         }
 
         case PrDomNodeType_Text: {
             PrStringView text = prRawStringView(&static_cast<const PrDomText*>(node)->data);
-            *out += '"';
+            out->append('"');
             // A control character is written as an escape, so that a failure prints on one line and a carriage return
             // does not move the cursor back over it.
             for (size_t i = 0; i < text.size; ++i) {
                 char c = text.data[i];
                 if (c == '\r')
-                    *out += "\\r";
+                    out->append("\\r");
                 else if (c == '\n')
-                    *out += "\\n";
+                    out->append("\\n");
                 else if (c == '\t')
-                    *out += "\\t";
+                    out->append("\\t");
                 else
-                    *out += c;
+                    out->append(c);
             }
-            *out += '"';
+            out->append('"');
             return;
         }
 
         case PrDomNodeType_Comment: {
             PrStringView text = prRawStringView(&static_cast<const PrDomComment*>(node)->data);
-            *out += "<!--";
-            out->append(text.data, text.size);
-            *out += "-->";
+            out->append("<!--");
+            out->append(text);
+            out->append("-->");
             return;
         }
 
         case PrDomNodeType_DocumentType: {
             PrStringView text = prRawStringView(&static_cast<const PrDomDocumentType*>(node)->name);
-            *out += "doctype:";
-            out->append(text.data, text.size);
+            out->append("doctype:");
+            out->append(text);
             return;
         }
 
@@ -133,26 +129,26 @@ void writeNode(std::string* out, PrDomNode* node) {
             const PrDomProcessingInstruction* instruction = static_cast<const PrDomProcessingInstruction*>(node);
             PrStringView target = prRawStringView(&instruction->target);
             PrStringView data = prRawStringView(&instruction->data);
-            *out += "<?";
-            out->append(target.data, target.size);
-            *out += ' ';
-            out->append(data.data, data.size);
-            *out += "?>";
+            out->append("<?");
+            out->append(target);
+            out->append(' ');
+            out->append(data);
+            out->append("?>");
             return;
         }
     }
 }
 
-std::string tree(std::string text, HtmlParseFlags flags = 0) {
-    Parse parse(std::move(text), flags);
-    std::string out;
+String tree(String text, HtmlParseFlags flags = 0) {
+    Parse parse(move(text), flags);
+    String out;
     writeChildren(&out, parse.document);
     return out;
 }
 
-std::string fragment(std::string text, PrStringView context, DomNamespaceId space = PrDomNamespace_Html) {
-    Fragment parse(std::move(text), context, space);
-    std::string out;
+String fragment(String text, PrStringView context, DomNamespaceId space = PrDomNamespace_Html) {
+    Fragment parse(move(text), context, space);
+    String out;
     writeChildren(&out, parse.node);
     return out;
 }
@@ -353,10 +349,7 @@ TEST_CASE("a hyperlink's URL parts read and write its href attribute") {
     REQUIRE(prHtmlAnchorElementQuery(prDomElementAsEventTarget(a)) != nullptr);
     REQUIRE(prHtmlAreaElementQuery(prDomElementAsEventTarget(c)) != nullptr);
     auto component = [](PrDomElement* element, PrUrlComponent part) {
-        PrRawString value = prHtmlHyperlinkComponent(element, part);
-        std::string text(prRawStringView(&value).data, prRawStringView(&value).size);
-        prRawStringReset(&value);
-        return text;
+        return String::adopt(prHtmlHyperlinkComponent(element, part));
     };
     CHECK(component(a, PrUrlComponent_Pathname) == "/one/two");
     CHECK(component(a, PrUrlComponent_Host) == "example.com:8080");
@@ -368,8 +361,8 @@ TEST_CASE("a hyperlink's URL parts read and write its href attribute") {
     // An href that does not parse reads as written, with a protocol of ":".
     CHECK(component(b, PrUrlComponent_Href) == "http://[bad");
     CHECK(component(b, PrUrlComponent_Protocol) == ":");
-    CHECK(component(b, PrUrlComponent_Pathname).empty());
-    CHECK(component(c, PrUrlComponent_Href).empty());
+    CHECK(component(b, PrUrlComponent_Pathname).isEmpty());
+    CHECK(component(c, PrUrlComponent_Href).isEmpty());
     CHECK(prHtmlHyperlinkSetComponent(c, PrUrlComponent_Origin, "x") == PrStatus_ReadOnly);
     // MathML's a element is a hyperlink with the same members (mathml-core/#the-a-element).
     CHECK(component(m, PrUrlComponent_Pathname) == "/math");

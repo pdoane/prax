@@ -2,11 +2,11 @@
 #include "pr/draw_filter.h"
 #include "pr/draw_list.h"
 #include "pr/float.h"
+#include "pr/string.h"
+#include "pr/string_ops.h"
 #include "pr/vec.h"
 
 #include "tools/harness/test.h"
-
-#include <string>
 
 extern "C" int prTestDrawCApi(void);
 
@@ -14,12 +14,18 @@ namespace pr_impl {
 
 namespace {
 
-std::string dump(const PrDrawList* list) {
-    PrRawString text = prDrawListDump(list);
-    PrStringView view = prRawStringView(&text);
-    std::string result(view.data != nullptr ? view.data : "", view.size);
-    prRawStringReset(&text);
-    return result;
+using namespace pr;
+
+String dump(const PrDrawList* list) {
+    return String::adopt(prDrawListDump(list));
+}
+
+// The first `lines` lines of `text`, each with its newline, or all of `text` if it has fewer.
+PrStringView firstLines(PrStringView text, uint32_t lines) {
+    size_t end = 0;
+    for (uint32_t i = 0; i < lines && end < text.size; ++i)
+        end += prStringFindByte(prStringSlice(text, end, text.size - end), '\n') + 1;
+    return prStringSlice(text, 0, end < text.size ? end : text.size);
 }
 
 PrDrawStroke stroke(float width) {
@@ -122,8 +128,8 @@ TEST_CASE("strokes, dashes, points and paths are copied as they are when recorde
     prPathDestroy(path);
     for (int i = 0; i < 300; ++i)
         prDrawListPolylineContour(list, points, 3, PrDrawContour_Closed, PrPathFillRule_NonZero, {.color = kRed});
-    std::string text = dump(list);
-    CHECK(text.substr(0, text.find('\n', text.find('\n') + 1) + 1) ==
+    String text = dump(list);
+    CHECK(firstLines(text, 2) ==
         "polyline open 0 0 10 0 10 10 stroke 1 4 0 miter butt butt butt dashes 3 1 non-scaling color 1 0 0 1\n"
         "path M 0 0 Q 5 10 10 0 Z evenodd color 1 0 0 1\n");
     prDrawListRelease(list);
@@ -595,7 +601,8 @@ TEST_CASE("color matrices saturate, rotate hues and move luminance to alpha, kee
     const float gray[4] = {0.5f, 0.5f, 0.5f, 0.75f};
     const float red[4] = {1, 0, 0, 1};
     float out[4];
-    for (const PrAffine4& matrix : {prDrawColorMatrixSaturate(0.3f), prDrawColorMatrixHueRotate(1)}) {
+    const PrAffine4 matrices[] = {prDrawColorMatrixSaturate(0.3f), prDrawColorMatrixHueRotate(1)};
+    for (const PrAffine4& matrix : matrices) {
         apply(matrix, gray, out);
         for (int channel = 0; channel < 3; ++channel)
             CHECK(out[channel] == doctest::Approx(0.5f));

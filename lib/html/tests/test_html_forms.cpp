@@ -6,17 +6,15 @@
 
 #include "tools/harness/test.h"
 
-#include <string>
-
 namespace pr_impl {
 
 namespace {
 
 // Returns the value of a color input after the color well's steps, given `text`.
-std::string well(const PrDomElement* input, PrStringView text) {
+String well(const PrDomElement* input, PrStringView text) {
     PrTextBuffer out = {};
     htmlColorWellValue(input, text, &out);
-    std::string value(prTextBufferView(&out).data, prTextBufferView(&out).size);
+    String value(prTextBufferView(&out));
     prTextBufferReset(&out);
     return value;
 }
@@ -43,10 +41,8 @@ TEST_CASE("a legacy color value parses as HTML's rules say, even from text that 
     auto parsed = [](PrStringView text) {
         PrColor8 color{};
         if (!htmlParseLegacyColor(text, &color))
-            return std::string("none");
-        char out[8];
-        snprintf(out, sizeof(out), "%02x%02x%02x", color.r, color.g, color.b);
-        return std::string(out);
+            return String("none");
+        return format("{:02x}{:02x}{:02x}", color.r, color.g, color.b);
     };
     CHECK(parsed("#009900") == "009900");
     CHECK(parsed(" Red ") == "ff0000");

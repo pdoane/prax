@@ -1,29 +1,30 @@
 // Text transforms: case, width, size and math forms, and the words that capitalize finds.
 
 #include "pr/locale_common.h"
+#include "pr/string.h"
 #include "pr/text_transform.h"
 #include "pr/utf8.h"
 
 #include "tools/harness/test.h"
 
-#include <string>
-
 namespace pr_impl {
+
+using namespace pr;
 
 namespace {
 
 // Returns the bytes [start, end) of `text` transformed by `transform`, with the rest of `text` as context. By default
 // the run is all of `text`.
-std::string transformed(const std::string& text, PrTextTransform transform, PrLocale locale = 0, size_t start = 0,
-        size_t end = std::string::npos) {
+String transformed(PrStringView text, PrTextTransform transform, PrLocale locale = 0, size_t start = 0,
+        size_t end = SIZE_MAX) {
     PrTextTransformRun run{
-        .text = {text.data(), text.size()},
+        .text = text,
         .start = start,
-        .end = end == std::string::npos ? text.size() : end,
+        .end = end == SIZE_MAX ? text.size : end,
         .transform = transform,
         .locale = locale,
     };
-    std::string out;
+    String out;
     for (size_t at = run.start; at < run.end;) {
         uint32_t codePoint = 0;
         uint32_t length = prUtf8Decode(run.text, at, &codePoint);
@@ -31,7 +32,7 @@ std::string transformed(const std::string& text, PrTextTransform transform, PrLo
         uint32_t count = prTextTransformAt(&run, at, result);
         for (uint32_t i = 0; i < count; ++i) {
             char bytes[kPrUtf8MaxBytes];
-            out.append(bytes, prUtf8Encode(result[i], bytes));
+            out.append(PrStringView(bytes, prUtf8Encode(result[i], bytes)));
         }
         at += length;
     }

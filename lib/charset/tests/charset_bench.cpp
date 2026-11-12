@@ -10,12 +10,13 @@
 
 #include "pr/assert.h"
 #include "pr/charset.h"
+#include "pr/print.h"
 
 #include "tools/harness/harness.h"
 
-#include <stdio.h>
-
 using namespace harness;
+
+using namespace pr;
 
 using namespace pr_impl;
 
@@ -72,14 +73,14 @@ void measure(PrStringView name, PrStringView bytes) {
 int main(int argc, char** argv) {
     prCrashHandler();
     if (argc < 2) {
-        fprintf(stderr, "usage: charset_bench <page>...\n");
+        printError("usage: charset_bench <page>...\n");
         return 2;
     }
 
     for (int i = 1; i < argc; ++i) {
         PrTextBuffer page = {};
         if (!harnessReadFile(&page, argv[i])) {
-            fprintf(stderr, "cannot read %s\n", argv[i]);
+            printError("cannot read {}\n", argv[i]);
             return 2;
         }
         measure(harnessFileName(argv[i]), prTextBufferView(&page));

@@ -5,8 +5,6 @@
 
 #include "tools/harness/test.h"
 
-#include <initializer_list>
-
 extern "C" int prTestLayoutCApi(void);
 
 namespace pr_impl {
@@ -121,7 +119,8 @@ TEST_CASE("pixels and percentages truncate toward zero and saturate, and a numbe
     volatile float tenth = 0.1f;
     volatile float big = 1e9f;
     volatile float nan = kPrF32Nan;
-    for (float sign : {1.0f, -1.0f}) {
+    const float signs[] = {1.0f, -1.0f};
+    for (float sign : signs) {
         CHECK(prLayoutWordPxValue(prLayoutWordPx(sign * tenth)).raw == int32_t(sign) * 6);
         CHECK(prLayoutWordPxValue(prLayoutWordPx(sign * 0.7f)).raw == int32_t(sign) * 44);
         CHECK(prLayoutWordPercentValue(prLayoutWordPercent(sign * 12.5f)) == sign * 12.5f);

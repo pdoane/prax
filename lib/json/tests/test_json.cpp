@@ -4,8 +4,6 @@
 
 #include "tools/harness/test.h"
 
-#include <initializer_list>
-
 extern "C" int prTestJsonCApi(void);
 
 namespace pr_impl {
@@ -80,8 +78,11 @@ TEST_CASE("escapes unescape, and a lone surrogate is a replacement") {
 TEST_CASE("what is not JSON fails where it stops") {
     PrJson* d = prJsonCreate();
     size_t at = 0;
-    for (const char* text : {"", "[1,]", "{\"a\" 1}", "[1 2]", "01", "1.", "\"a", "\"\t\"", "[}",
-        "{1: 2}", "tru", "[1] x", "\"\\x\""})
+    const char* const texts[] = {
+        "", "[1,]", "{\"a\" 1}", "[1 2]", "01", "1.", "\"a", "\"\t\"", "[}", "{1: 2}",
+        "tru", "[1] x", "\"\\x\"",
+    };
+    for (const char* text : texts)
         CHECK_FALSE(prJsonParse(d, text, &at));
     CHECK_FALSE(prJsonParse(d, "[1, 2 x", &at));
     CHECK(at == 6);
@@ -129,7 +130,8 @@ TEST_CASE("a writer escapes strings and writes numbers in their shortest form") 
     PrJsonWriter* w = prJsonWriterCreate();
     prJsonWriterBeginArray(w);
     prJsonWriterString(w, "q\"b\\n\n\x01\xC3\xA9\xFF");
-    for (double number : {0.1, -2.5, 1e21, 1e-7, 123456789.0})
+    const double numbers[] = {0.1, -2.5, 1e21, 1e-7, 123456789.0};
+    for (double number : numbers)
         prJsonWriterNumber(w, number);
     prJsonWriterNumber(w, kPrF64Infinity);
     prJsonWriterEndArray(w);

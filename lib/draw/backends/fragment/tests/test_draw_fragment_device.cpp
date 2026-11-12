@@ -1,26 +1,25 @@
+#include "pr/array.h"
 #include "pr/color_space.h"
 #include "pr/draw_cpu.h"
 #include "pr/draw_filter.h"
 #include "pr/draw_fragment.h"
 #include "pr/draw_list.h"
+#include "pr/float.h"
 #include "pr/gpu.h"
+#include "pr/min_max.h"
+#include "pr/span.h"
+#include "pr/string.h"
 #include "pr/vec.h"
 
 #include "tools/harness/test.h"
-
-#include <algorithm>
-#include <cmath>
-#include <cstdint>
-#include <cstdio>
-#include <initializer_list>
-#include <string>
-#include <vector>
 
 extern "C" int prTestDrawFragmentCApi(void);
 
 namespace pr_impl {
 
 namespace {
+
+using namespace pr;
 
 // Creates a device on the platform's GPU.
 PrGpuDevice* createDevice() {
@@ -91,7 +90,7 @@ struct Device {
     }
 
     // Prepares and encodes the list in a pass over the texture, then reads the texture back.
-    std::vector<uint8_t> render(const PrDrawList* list) {
+    Array<uint8_t> render(const PrDrawList* list) {
         PrGpuCommands* commands = nullptr;
         REQUIRE(prGpuCommandsBegin(gpuDevice, nullptr, &commands));
         PrDrawTarget prepared{
@@ -107,7 +106,7 @@ struct Device {
         prDrawFrameRender(frame, pass, PrIVec2{0, 0});
         endPass(pass, &desc);
         prGpuCommandsSubmitAndWait(commands);
-        std::vector<uint8_t> pixels(size_t(width) * height * 4);
+        Array<uint8_t> pixels(size_t(width) * height * 4);
         PrPixels out{pixels.data(), size_t(width) * 4, {width, height}};
         prGpuTextureRead(gpuDevice, texture, PrGpuAccessFlag_ShaderRead, PrIVec2{0, 0}, out);
         return pixels;
@@ -121,8 +120,8 @@ struct Device {
 
 // Returns the list rendered by the cpu backend onto transparent pixels, which the test compares the device's render
 // with.
-std::vector<uint8_t> cpuRender(const PrDrawList* list, uint32_t width, uint32_t height) {
-    std::vector<uint8_t> pixels(size_t(width) * height * 4, 0);
+Array<uint8_t> cpuRender(const PrDrawList* list, uint32_t width, uint32_t height) {
+    Array<uint8_t> pixels(size_t(width) * height * 4);
     PrDrawRenderer* renderer = prDrawCpuCreate(nullptr);
     PrPixels into{pixels.data(), size_t(width) * 4, {width, height}};
     REQUIRE(prDrawRendererRenderPixels(renderer, list, into, PrPixelFormat_Rgba8) == PrStatus_Ok);
@@ -130,44 +129,36 @@ std::vector<uint8_t> cpuRender(const PrDrawList* list, uint32_t width, uint32_t 
     return pixels;
 }
 
-double inked(const std::vector<uint8_t>& pixels) {
+double inked(const Array<uint8_t>& pixels) {
     double sum = 0;
-    for (size_t i = 3; i < pixels.size(); i += 4)
+    for (uint32_t i = 3; i < pixels.count(); i += 4)
         sum += pixels[i] / 255.0;
     return sum;
 }
 
 // Returns the fraction of pixels whose channels differ by more than `tolerance`.
-double fractionDiffering(const std::vector<uint8_t>& a, const std::vector<uint8_t>& b, int tolerance) {
+double fractionDiffering(const Array<uint8_t>& a, const Array<uint8_t>& b, int tolerance) {
     uint32_t differing = 0;
-    for (size_t i = 0; i < a.size(); i += 4) {
-        for (size_t k = 0; k < 4; ++k) {
-            if (std::abs(int(a[i + k]) - int(b[i + k])) > tolerance) {
+    for (uint32_t i = 0; i < a.count(); i += 4) {
+        for (uint32_t k = 0; k < 4; ++k) {
+            if (absDifference(a[i + k], b[i + k]) > tolerance) {
                 ++differing;
                 break;
             }
         }
     }
-    return double(differing) / double(a.size() / 4);
+    return double(differing) / double(a.count() / 4);
 }
 
 const PrFont* load(const char* name) {
-    std::string path = std::string(PR_FONTS_DIR) + "/" + name;
-    std::vector<uint8_t> bytes;
-    FILE* file = std::fopen(path.c_str(), "rb");
-    REQUIRE(file != nullptr);
-    uint8_t buffer[65536];
-    size_t read = 0;
-    while ((read = std::fread(buffer, 1, sizeof(buffer), file)) != 0)
-        bytes.insert(bytes.end(), buffer, buffer + read);
-    std::fclose(file);
+    Array<uint8_t> bytes = harness::readFile(format("{}/{}", PR_FONTS_DIR, name));
     const PrFont* font = nullptr;
     REQUIRE(prFontCreate(bytes, 0, nullptr, &font) == PrStatus_Ok);
     return font;
 }
 
 // Creates a filter of the nodes, in order.
-const PrDrawFilter* filterOf(std::initializer_list<PrDrawFilterNode> nodes) {
+const PrDrawFilter* filterOf(Span<const PrDrawFilterNode> nodes) {
     PrDrawFilterBuilder* builder = prDrawFilterBuilderCreate();
     for (const PrDrawFilterNode& node : nodes)
         prDrawFilterBuilderAdd(builder, &node);
@@ -175,6 +166,11 @@ const PrDrawFilter* filterOf(std::initializer_list<PrDrawFilterNode> nodes) {
     filter = prDrawFilterCreate(builder);
     prDrawFilterBuilderDestroy(builder);
     return filter;
+}
+
+// Creates a filter of the one node.
+const PrDrawFilter* filterOf(const PrDrawFilterNode& node) {
+    return filterOf(Span<const PrDrawFilterNode>(&node, 1));
 }
 
 PrDrawFilterNode nodeOf(PrDrawFilterKind kind, PrColorSpace space = PrColorSpace_Srgb) {
@@ -262,7 +258,7 @@ TEST_CASE("the fragment renderer evaluates superellipse corners as the cpu backe
     PrCorner squircle{{14, 14}, 2};
     PrCorner bevel{{10, 6}, 0};
     PrCorner scoop{{12, 12}, -1};
-    PrCorner notch{{8, 8}, -INFINITY};
+    PrCorner notch{{8, 8}, -kPrF32Infinity};
     prDrawListCornerRect(list, PrCornerRect{PrRect{4, 4, 44, 60}, {squircle, bevel, scoop, notch}},
         {.color = PrColor{0.2f, 0.4f, 0.8f, 1}});
     prDrawListPushTransformAffine2(list, prAffine2Concat(prAffine2Rotate(0.3f), prAffine2Translate(PrVec2{60, 6})));
@@ -271,8 +267,8 @@ TEST_CASE("the fragment renderer evaluates superellipse corners as the cpu backe
     prDrawListRect(list, PrRect{-10, -10, 50, 60}, {.color = PrColor{0.8f, 0.2f, 0.2f, 1}});
     prDrawListPopClip(list);
     prDrawListPopTransform(list);
-    std::vector<uint8_t> drawn = device.render(list);
-    std::vector<uint8_t> expected = cpuRender(list, 96, 64);
+    Array<uint8_t> drawn = device.render(list);
+    Array<uint8_t> expected = cpuRender(list, 96, 64);
     CHECK(inked(drawn) == doctest::Approx(inked(expected)).epsilon(0.005));
     CHECK(fractionDiffering(drawn, expected, 24) <= 0.01);
     prDrawListRelease(list);
@@ -281,7 +277,7 @@ TEST_CASE("the fragment renderer evaluates superellipse corners as the cpu backe
 TEST_CASE("the fragment renderer draws the host's texture as the cpu backend draws an image of its texels") {
     Device device(64, 32);
     // Straight texels: a translucent red over one half, and an opaque blue over the other.
-    std::vector<uint8_t> texels(8 * 8 * 4);
+    Array<uint8_t> texels(8 * 8 * 4);
     for (uint32_t i = 0; i < 64; ++i) {
         uint8_t* t = texels.data() + i * 4;
         bool left = i % 8 < 4;
@@ -296,7 +292,8 @@ TEST_CASE("the fragment renderer draws the host's texture as the cpu backend dra
     REQUIRE(prGpuTextureCreate(device.gpuDevice, &desc, &texture) == PrStatus_Ok);
     PrPixels upload{texels.data(), 32, {8, 8}};
     prGpuTextureWrite(device.gpuDevice, texture, PrIVec2{0, 0}, prPixelsView(upload));
-    for (PrDrawAlpha alpha : {PrDrawAlpha_Straight, PrDrawAlpha_Opaque}) {
+    const PrDrawAlpha alphas[] = {PrDrawAlpha_Straight, PrDrawAlpha_Opaque};
+    for (PrDrawAlpha alpha : alphas) {
         CAPTURE(int(alpha));
         PrDrawImageDesc imageDesc{
             PrPixelView{texels.data(), 32, {8, 8}}, PrPixelFormat_Rgba8, alpha,
@@ -314,8 +311,8 @@ TEST_CASE("the fragment renderer draws the host's texture as the cpu backend dra
             draw(prDrawSourceTexture(prDrawGpuTexture(texture), prGpuTextureExtent(device.gpuDevice, texture),
                 PrRect{0, 0, 8, 8}, alpha));
         PrDrawList* fromImage = draw(prDrawSourceImage(image, PrRect{0, 0, 8, 8}));
-        std::vector<uint8_t> drawn = device.render(fromTexture);
-        std::vector<uint8_t> expected = cpuRender(fromImage, 64, 32);
+        Array<uint8_t> drawn = device.render(fromTexture);
+        Array<uint8_t> expected = cpuRender(fromImage, 64, 32);
         CHECK(fractionDiffering(drawn, expected, 2) == 0);
         prDrawListRelease(fromTexture);
         prDrawListRelease(fromImage);
@@ -339,8 +336,8 @@ TEST_CASE("the fragment renderer fills shapes as the cpu backend does") {
     prPathLineTo(path, PrVec2{60, 62});
     prPathClose(path);
     prDrawListPath(list, path, PrPathFillRule_NonZero, {.color = PrColor{0.5f, 0.5f, 0, 1}});
-    std::vector<uint8_t> drawn = device.render(list);
-    std::vector<uint8_t> expected = cpuRender(list, 96, 64);
+    Array<uint8_t> drawn = device.render(list);
+    Array<uint8_t> expected = cpuRender(list, 96, 64);
     CHECK(inked(drawn) == doctest::Approx(inked(expected)).epsilon(0.005));
     CHECK(fractionDiffering(drawn, expected, 24) <= 0.01);
     prPathDestroy(path);
@@ -353,8 +350,10 @@ TEST_CASE("the fragment renderer paints each kind of gradient per pixel") {
         {.offset = 0.5f, .color = PrColor{0, 1, 0, 1}},
         {.offset = 1, .color = PrColor{0, 0, 1, 1}},
     };
-    for (PrDrawBrushKind kind : {PrDrawBrushKind_Linear, PrDrawBrushKind_Radial, PrDrawBrushKind_Conic,
-        PrDrawBrushKind_Diamond}) {
+    const PrDrawBrushKind kinds[] = {
+        PrDrawBrushKind_Linear, PrDrawBrushKind_Radial, PrDrawBrushKind_Conic, PrDrawBrushKind_Diamond,
+    };
+    for (PrDrawBrushKind kind : kinds) {
         CAPTURE(int(kind));
         Device device(96, 96);
         PrDrawList* list = prDrawListCreate();
@@ -372,8 +371,8 @@ TEST_CASE("the fragment renderer paints each kind of gradient per pixel") {
         if (kind == PrDrawBrushKind_Diamond)
             brush.diamond = {PrVec2{50, 20}, PrVec2{25, 15}};
         prDrawListRect(list, PrRect{0, 0, 96, 96}, {.brush = &brush});
-        std::vector<uint8_t> drawn = device.render(list);
-        std::vector<uint8_t> expected = cpuRender(list, 96, 96);
+        Array<uint8_t> drawn = device.render(list);
+        Array<uint8_t> expected = cpuRender(list, 96, 96);
         CHECK(fractionDiffering(drawn, expected, 6) <= 0.01);
         prDrawListRelease(list);
     }
@@ -391,8 +390,8 @@ TEST_CASE("the fragment renderer clips to rounded rectangles as the cpu backend 
     prDrawListPopClip(list);
     prDrawListPopClip(list);
     prDrawListPopTransform(list);
-    std::vector<uint8_t> drawn = device.render(list);
-    std::vector<uint8_t> expected = cpuRender(list, 64, 64);
+    Array<uint8_t> drawn = device.render(list);
+    Array<uint8_t> expected = cpuRender(list, 64, 64);
     CHECK(inked(drawn) == doctest::Approx(inked(expected)).epsilon(0.005));
     CHECK(fractionDiffering(drawn, expected, 24) <= 0.01);
     prDrawListRelease(list);
@@ -409,8 +408,8 @@ TEST_CASE("the fragment renderer blurs shadows as the cpu backend does") {
     shadow.sigma = 8;
     shadow.spread = 2;
     prDrawListDropShadow(list, &shadow, {.color = PrColor{0, 0, 0, 0.8f}});
-    std::vector<uint8_t> drawn = device.render(list);
-    std::vector<uint8_t> expected = cpuRender(list, 128, 128);
+    Array<uint8_t> drawn = device.render(list);
+    Array<uint8_t> expected = cpuRender(list, 128, 128);
     // The cpu backend's blur is three box passes, whose tails are lighter than the Gaussian's tails.
     CHECK(inked(drawn) == doctest::Approx(inked(expected)).epsilon(0.05));
     CHECK(fractionDiffering(drawn, expected, 8) <= 0.02);
@@ -434,7 +433,8 @@ TEST_CASE("the fragment renderer blurs a shadow by the Gaussian") {
     prDrawListDropShadow(list, &shadow, {.color = PrColor{0, 0, 0, 1}});
     double sigma = 8;
     auto profile = [&](double x, double a, double b) {
-        return 0.5 * (std::erf((x - a) / (sigma * std::sqrt(2.0))) - std::erf((x - b) / (sigma * std::sqrt(2.0))));
+        double scale = sigma * prF64Sqrt(2.0);
+        return 0.5 * (prF64Erf((x - a) / scale) - prF64Erf((x - b) / scale));
     };
     double ink = 0;
     for (int y = 0; y < 128; ++y) {
@@ -451,7 +451,7 @@ TEST_CASE("the fragment renderer blurs a shadow by the Gaussian") {
 TEST_CASE("the fragment renderer tiles an image brush in the shader") {
     Device device(64, 64);
     // Quadrants of red, green, blue and white, a texel to a pixel.
-    std::vector<uint8_t> texels(16 * 16 * 4);
+    Array<uint8_t> texels(16 * 16 * 4);
     for (uint32_t y = 0; y < 16; ++y) {
         for (uint32_t x = 0; x < 16; ++x) {
             uint8_t* t = texels.data() + (y * 16 + x) * 4;
@@ -468,7 +468,8 @@ TEST_CASE("the fragment renderer tiles an image brush in the shader") {
     };
     const PrDrawImage* image = nullptr;
     REQUIRE(prDrawImageCreate(&desc, &image) == PrStatus_Ok);
-    for (PrDrawExtend mode : {PrDrawExtend_None, PrDrawExtend_Repeat, PrDrawExtend_Reflect}) {
+    const PrDrawExtend modes[] = {PrDrawExtend_None, PrDrawExtend_Repeat, PrDrawExtend_Reflect};
+    for (PrDrawExtend mode : modes) {
         CAPTURE(int(mode));
         PrDrawList* list = prDrawListCreate();
         PrDrawBrush brush = prDrawBrushDefault(PrDrawBrushKind_Image);
@@ -478,8 +479,8 @@ TEST_CASE("the fragment renderer tiles an image brush in the shader") {
         brush.image.tiles.x = brush.image.tiles.y = mode;
         brush.image.sampling = PrDrawSampling_Nearest;
         prDrawListRect(list, PrRect{0, 0, 64, 64}, {.brush = &brush});
-        std::vector<uint8_t> drawn = device.render(list);
-        std::vector<uint8_t> expected = cpuRender(list, 64, 64);
+        Array<uint8_t> drawn = device.render(list);
+        Array<uint8_t> expected = cpuRender(list, 64, 64);
         CHECK(fractionDiffering(drawn, expected, 8) <= 0.01);
         // After the backend drops the resources that it created on the device, the next frame recreates them.
         prDrawFrameDestroy(device.frame);
@@ -532,8 +533,8 @@ TEST_CASE("the fragment renderer composites groups through layers, with masks, o
     prDrawListEllipse(list, PrVec2{78, 78}, PrVec2{8, 8}, 0, {.color = PrColor{0, 1, 1, 1}});
     prDrawListPopGroup(list);
     prDrawListPopClip(list);
-    std::vector<uint8_t> drawn = device.render(list);
-    std::vector<uint8_t> expected = cpuRender(list, 96, 96);
+    Array<uint8_t> drawn = device.render(list);
+    Array<uint8_t> expected = cpuRender(list, 96, 96);
     CHECK(fractionDiffering(drawn, expected, 8) <= 0.01);
     prDrawListRelease(list);
 }
@@ -544,7 +545,7 @@ TEST_CASE("the fragment renderer clips to paths through a mask layer") {
     PrPath* star = prPathCreate();
     for (int i = 0; i < 5; ++i) {
         float angle = -1.5708f + float(i) * 4 * 3.14159f / 5;
-        PrVec2 p{32 + 28 * std::cos(angle), 32 + 28 * std::sin(angle)};
+        PrVec2 p{32 + 28 * prF32Cos(angle), 32 + 28 * prF32Sin(angle)};
         if (i == 0)
             prPathMoveTo(star, p);
         else
@@ -556,8 +557,8 @@ TEST_CASE("the fragment renderer clips to paths through a mask layer") {
     prDrawListRect(list, PrRect{0, 0, 64, 64}, {.color = PrColor{0, 0, 0, 1}});
     prDrawListPopClip(list);
     prDrawListPopClip(list);
-    std::vector<uint8_t> drawn = device.render(list);
-    std::vector<uint8_t> expected = cpuRender(list, 64, 64);
+    Array<uint8_t> drawn = device.render(list);
+    Array<uint8_t> expected = cpuRender(list, 64, 64);
     CHECK(inked(drawn) == doctest::Approx(inked(expected)).epsilon(0.01));
     // The miters of the fringe at the star's points cover a little more than the star's area.
     CHECK(fractionDiffering(drawn, expected, 24) <= 0.03);
@@ -570,7 +571,7 @@ TEST_CASE("the fragment renderer runs filters as steps through layers") {
     PrDrawList* list = prDrawListCreate();
     PrDrawFilterNode blur = nodeOf(PrDrawFilterKind_Blur);
     blur.blur.sigma = PrVec2{4, 2};
-    pushFiltered(list, PrRect{0, 0, 64, 64}, filterOf({blur}), false);
+    pushFiltered(list, PrRect{0, 0, 64, 64}, filterOf(blur), false);
     subject(list, PrRect{0, 0, 64, 64});
     prDrawListPopGroup(list);
     // A color matrix computed in linear light.
@@ -578,25 +579,25 @@ TEST_CASE("the fragment renderer runs filters as steps through layers") {
     const float gray[20] = {0.2f, 0.7f, 0.1f, 0, 0, 0.2f, 0.7f, 0.1f, 0, 0, 0.2f, 0.7f, 0.1f, 0, 0, 0, 0, 0, 0.8f, 0};
     for (uint32_t k = 0; k < 20; ++k)
         matrix.matrix.m[k / 5][k % 5] = gray[k];
-    pushFiltered(list, PrRect{64, 0, 128, 64}, filterOf({matrix}), false);
+    pushFiltered(list, PrRect{64, 0, 128, 64}, filterOf(matrix), false);
     subject(list, PrRect{64, 0, 128, 64});
     prDrawListPopGroup(list);
     PrDrawFilterNode drop = nodeOf(PrDrawFilterKind_DropShadow);
     drop.shadow.offset = PrVec2{4, 5};
     drop.shadow.sigma = PrVec2{3, 3};
     drop.shadow.color = PrColor{0, 0, 0, 0.6f};
-    pushFiltered(list, PrRect{0, 64, 64, 128}, filterOf({drop}), false);
+    pushFiltered(list, PrRect{0, 64, 64, 128}, filterOf(drop), false);
     subject(list, PrRect{0, 64, 64, 128});
     prDrawListPopGroup(list);
     PrDrawFilterNode noise = nodeOf(PrDrawFilterKind_Turbulence);
     noise.turbulence.baseFrequency = PrVec2{0.05f, 0.08f};
     noise.turbulence.octaves = 3;
     noise.turbulence.seed = 7;
-    pushFiltered(list, PrRect{64, 64, 128, 128}, filterOf({noise}), false);
+    pushFiltered(list, PrRect{64, 64, 128, 128}, filterOf(noise), false);
     subject(list, PrRect{64, 64, 128, 128});
     prDrawListPopGroup(list);
-    std::vector<uint8_t> drawn = device.render(list);
-    std::vector<uint8_t> expected = cpuRender(list, 128, 128);
+    Array<uint8_t> drawn = device.render(list);
+    Array<uint8_t> expected = cpuRender(list, 128, 128);
     // The cpu backend's blur is three box blurs, which fall short of the Gaussian's tails. This backend samples the
     // Gaussian.
     CHECK(inked(drawn) == doctest::Approx(inked(expected)).epsilon(0.03));
@@ -617,7 +618,8 @@ TEST_CASE("the fragment renderer reads past an input's region by its edge mode, 
         blur.inputs[0] = 0;
         blur.blur.sigma = PrVec2{2, 2};
         blur.blur.edge = edges[i];
-        pushFiltered(list, cell, filterOf({part, blur}), false);
+        const PrDrawFilterNode nodes[] = {part, blur};
+        pushFiltered(list, cell, filterOf(nodes), false);
         prDrawListRect(list, PrRect{cell.left + 4, 4, cell.left + 12, 20}, {.color = PrColor{0.9f, 0.2f, 0.1f, 1}});
         prDrawListRect(list, PrRect{cell.left + 12, 4, cell.left + 20, 20}, {.color = PrColor{0.1f, 0.3f, 0.9f, 1}});
         prDrawListPopGroup(list);
@@ -628,11 +630,12 @@ TEST_CASE("the fragment renderer reads past an input's region by its edge mode, 
     PrDrawFilterNode displace = nodeOf(PrDrawFilterKind_DisplacementMap, PrColorSpace_SrgbLinear);
     displace.inputs[1] = 0;
     displace.displacement = PrDrawFilterDisplacement{.scale = 20, .x = PrDrawChannel_R, .y = PrDrawChannel_A};
-    pushFiltered(list, PrRect{96, 0, 128, 64}, filterOf({map, displace}), false);
+    const PrDrawFilterNode nodes[] = {map, displace};
+    pushFiltered(list, PrRect{96, 0, 128, 64}, filterOf(nodes), false);
     prDrawListRect(list, PrRect{96, 8, 112, 56}, {.color = PrColor{0.5f, 0.6f, 0.2f, 1}});
     prDrawListPopGroup(list);
-    std::vector<uint8_t> drawn = device.render(list);
-    std::vector<uint8_t> expected = cpuRender(list, 128, 64);
+    Array<uint8_t> drawn = device.render(list);
+    Array<uint8_t> expected = cpuRender(list, 128, 64);
     CHECK(fractionDiffering(drawn, expected, 32) <= 0.01);
     prDrawListRelease(list);
 }
@@ -650,12 +653,12 @@ TEST_CASE("the fragment renderer stitches turbulence over its tile as cpu does")
         noise.turbulence.seed = 7;
         noise.turbulence.kind = i == 0 ? PrDrawTurbulenceKind_FractalNoise : PrDrawTurbulenceKind_Turbulence;
         noise.turbulence.stitch = true;
-        pushFiltered(list, cell, filterOf({noise}), false);
+        pushFiltered(list, cell, filterOf(noise), false);
         subject(list, cell);
         prDrawListPopGroup(list);
     }
-    std::vector<uint8_t> drawn = device.render(list);
-    std::vector<uint8_t> expected = cpuRender(list, 128, 64);
+    Array<uint8_t> drawn = device.render(list);
+    Array<uint8_t> expected = cpuRender(list, 128, 64);
     CHECK(fractionDiffering(drawn, expected, 4) <= 0.005);
     prDrawListRelease(list);
 }
@@ -668,7 +671,7 @@ TEST_CASE("the fragment renderer filters what lies beneath a group as its backdr
     subject(list, PrRect{64, 0, 128, 64});
     PrDrawFilterNode blur = nodeOf(PrDrawFilterKind_Blur);
     blur.blur.sigma = PrVec2{5, 5};
-    pushFiltered(list, PrRect{8, 8, 56, 56}, filterOf({blur}), true);
+    pushFiltered(list, PrRect{8, 8, 56, 56}, filterOf(blur), true);
     prDrawListRect(list, PrRect{8, 8, 56, 56}, {.color = PrColor{1, 1, 1, 0.3f}});
     prDrawListPopGroup(list);
     // The backdrop is sharp at the top and most blurred at the bottom.
@@ -679,10 +682,10 @@ TEST_CASE("the fragment renderer filters what lies beneath a group as its backdr
     PrDrawFilterNode progressive = nodeOf(PrDrawFilterKind_ProgressiveBlur);
     progressive.progressive.sigma = 8;
     progressive.progressive.brush = prDrawBrushLinear(PrVec2{0, 4}, PrVec2{0, 60}, stops, 2);
-    pushFiltered(list, PrRect{68, 4, 124, 60}, filterOf({progressive}), true);
+    pushFiltered(list, PrRect{68, 4, 124, 60}, filterOf(progressive), true);
     prDrawListPopGroup(list);
-    std::vector<uint8_t> drawn = device.render(list);
-    std::vector<uint8_t> expected = cpuRender(list, 128, 64);
+    Array<uint8_t> drawn = device.render(list);
+    Array<uint8_t> expected = cpuRender(list, 128, 64);
     // The cpu backend's box blurs fall short of the Gaussian's tails here, too.
     CHECK(fractionDiffering(drawn, expected, 32) <= 0.005);
     prDrawListRelease(list);
@@ -703,8 +706,8 @@ TEST_CASE("the fragment renderer composites a group in sRGB-linear as the cpu ba
     prDrawListPushGroup(list, &group);
     prDrawListRect(list, PrRect{36, 4, 60, 28}, {.color = PrColor{0.5f, 0.5f, 0.5f, 1}});
     prDrawListPopGroup(list);
-    std::vector<uint8_t> drawn = device.render(list);
-    std::vector<uint8_t> expected = cpuRender(list, 64, 32);
+    Array<uint8_t> drawn = device.render(list);
+    Array<uint8_t> expected = cpuRender(list, 64, 32);
     CHECK(fractionDiffering(drawn, expected, 4) <= 0.01);
     prDrawListRelease(list);
 }
@@ -738,7 +741,7 @@ TEST_CASE("the fragment renderer reads what the host provides beneath a render a
         invert.matrix.m[i / 5][i % 5] = matrix[i];
     PrDrawGroup group = prDrawGroupDefault();
     group.bounds = PrRect{1, 1, 15, 15};
-    group.backdrop = filterOf({invert});
+    group.backdrop = filterOf(invert);
     prDrawListPushGroup(panel, &group);
     prDrawListRect(panel, PrRect{4, 4, 12, 12}, {.color = PrColor{1, 1, 1, 0.5f}});
     prDrawListPopGroup(panel);
@@ -798,7 +801,7 @@ TEST_CASE("the fragment renderer reads what the host provides beneath a render a
         endPass(pass, &framePass);
     }
     prGpuCommandsSubmitAndWait(commands);
-    std::vector<uint8_t> results[2];
+    Array<uint8_t> results[2];
     for (uint32_t i = 0; i < 2; ++i) {
         results[i].resize(size_t(kWidth) * kHeight * 4);
         PrPixels out{results[i].data(), size_t(kWidth) * 4, {kWidth, kHeight}};
@@ -806,7 +809,7 @@ TEST_CASE("the fragment renderer reads what the host provides beneath a render a
     }
 
     // The cpu backend reads what lies beneath from the pixels it draws into.
-    std::vector<uint8_t> expected = cpuRender(background, kWidth, kHeight);
+    Array<uint8_t> expected = cpuRender(background, kWidth, kHeight);
     PrDrawRenderer* cpu = prDrawCpuCreate(nullptr);
     PrPixels place{expected.data() + size_t(kAt) * 4, size_t(kWidth) * 4, {kPanel, kPanel}};
     REQUIRE(prDrawRendererRenderPixels(cpu, panel, place, PrPixelFormat_Rgba8) == PrStatus_Ok);
@@ -845,7 +848,7 @@ TEST_CASE("the fragment renderer reads the host's texture alone beneath a backdr
     // The host's columns, copied into the target before the pass, and a backdrop over them that inverts them.
     constexpr uint32_t kSize = 16;
     Device device(kSize, kSize);
-    std::vector<uint8_t> columns(size_t(kSize) * kSize * 4);
+    Array<uint8_t> columns(size_t(kSize) * kSize * 4);
     for (uint32_t i = 0; i < kSize * kSize; ++i) {
         bool red = (i % kSize) / 4 % 2 == 0;
         columns[i * 4] = red ? 200 : 40;
@@ -867,7 +870,7 @@ TEST_CASE("the fragment renderer reads the host's texture alone beneath a backdr
         invert.matrix.m[i / 5][i % 5] = matrix[i];
     PrDrawGroup group = prDrawGroupDefault();
     group.bounds = PrRect{2, 2, 14, 14};
-    group.backdrop = filterOf({invert});
+    group.backdrop = filterOf(invert);
     prDrawListPushGroup(list, &group);
     prDrawListPopGroup(list);
     prDrawFilterRelease(group.backdrop);
@@ -893,11 +896,11 @@ TEST_CASE("the fragment renderer reads the host's texture alone beneath a backdr
     prDrawFrameRender(device.frame, pass, PrIVec2{0, 0});
     endPass(pass, &passDesc);
     prGpuCommandsSubmitAndWait(commands);
-    std::vector<uint8_t> drawn(columns.size());
+    Array<uint8_t> drawn(columns.count());
     PrPixels out{drawn.data(), size_t(kSize) * 4, {kSize, kSize}};
     prGpuTextureRead(device.gpuDevice, device.texture, PrGpuAccessFlag_ShaderRead, PrIVec2{0, 0}, out);
 
-    std::vector<uint8_t> expected = columns;
+    Array<uint8_t> expected = columns;
     PrDrawRenderer* cpu = prDrawCpuCreate(nullptr);
     PrPixels into{expected.data(), size_t(kSize) * 4, {kSize, kSize}};
     REQUIRE(prDrawRendererRenderPixels(cpu, list, into, PrPixelFormat_Rgba8) == PrStatus_Ok);
@@ -927,7 +930,7 @@ TEST_CASE("the fragment renderer reads what lies beneath a turned group, as a te
     prDrawListPushTransformAffine2(list, turn);
     PrDrawGroup group = prDrawGroupDefault();
     group.bounds = PrRect{4, 4, 28, 28};
-    group.backdrop = filterOf({offset});
+    group.backdrop = filterOf(offset);
     prDrawListPushGroup(list, &group);
     prDrawListPopGroup(list);
     prDrawListPopTransform(list);
@@ -983,14 +986,14 @@ TEST_CASE("the fragment renderer reads what lies beneath a turned group, as a te
         endPass(pass, &framePass);
     }
     prGpuCommandsSubmitAndWait(commands);
-    std::vector<uint8_t> results[2];
+    Array<uint8_t> results[2];
     for (uint32_t i = 0; i < 2; ++i) {
         results[i].resize(size_t(kSize) * kSize * 4);
         PrPixels out{results[i].data(), size_t(kSize) * 4, {kSize, kSize}};
         prGpuTextureRead(device.gpuDevice, frames[i], PrGpuAccessFlag_ShaderRead, PrIVec2{0, 0}, out);
     }
 
-    std::vector<uint8_t> expected = cpuRender(columns, kSize, kSize);
+    Array<uint8_t> expected = cpuRender(columns, kSize, kSize);
     PrDrawRenderer* cpu = prDrawCpuCreate(nullptr);
     PrPixels into{expected.data(), size_t(kSize) * 4, {kSize, kSize}};
     REQUIRE(prDrawRendererRenderPixels(cpu, list, into, PrPixelFormat_Rgba8) == PrStatus_Ok);
@@ -1024,7 +1027,7 @@ TEST_CASE("the fragment renderer reads a solid color beneath a render as the cpu
         invert.matrix.m[i / 5][i % 5] = matrix[i];
     PrDrawGroup group = prDrawGroupDefault();
     group.bounds = PrRect{8, 8, 28, 28};
-    group.backdrop = filterOf({invert});
+    group.backdrop = filterOf(invert);
     prDrawListPushGroup(list, &group);
     prDrawListPopGroup(list);
     prDrawFilterRelease(group.backdrop);
@@ -1047,12 +1050,12 @@ TEST_CASE("the fragment renderer reads a solid color beneath a render as the cpu
     prDrawFrameRender(device.frame, pass, PrIVec2{0, 0});
     endPass(pass, &desc);
     prGpuCommandsSubmitAndWait(commands);
-    std::vector<uint8_t> drawn(size_t(kSize) * kSize * 4);
+    Array<uint8_t> drawn(size_t(kSize) * kSize * 4);
     PrPixels out{drawn.data(), size_t(kSize) * 4, {kSize, kSize}};
     prGpuTextureRead(device.gpuDevice, device.texture, PrGpuAccessFlag_ShaderRead, PrIVec2{0, 0}, out);
 
-    std::vector<uint8_t> expected(drawn.size());
-    for (size_t i = 0; i < expected.size(); i += 4) {
+    Array<uint8_t> expected(drawn.count());
+    for (uint32_t i = 0; i < expected.count(); i += 4) {
         expected[i] = drawn[0];
         expected[i + 1] = drawn[1];
         expected[i + 2] = drawn[2];
@@ -1079,13 +1082,13 @@ TEST_CASE("the fragment renderer composites a knockout group's children against 
     prDrawListEllipse(list, PrVec2{24, 28}, PrVec2{16, 16}, 0, {.color = PrColor{0, 0, 1, 0.5f}});
     prDrawListEllipse(list, PrVec2{40, 36}, PrVec2{16, 16}, 0, {.color = PrColor{1, 0, 0, 0.5f}});
     prDrawListPopGroup(list);
-    std::vector<uint8_t> drawn = device.render(list);
-    std::vector<uint8_t> expected = cpuRender(list, 64, 64);
+    Array<uint8_t> drawn = device.render(list);
+    Array<uint8_t> expected = cpuRender(list, 64, 64);
     CHECK(fractionDiffering(drawn, expected, 8) <= 0.01);
     // Where the shapes overlap, only the later shape covers the group's initial state, so the result is half the
     // background's blue.
     const uint8_t* overlap = drawn.data() + (size_t(32) * 64 + 32) * 4;
-    CHECK(std::abs(int(overlap[2]) - 102) <= 2);
+    CHECK(absDifference(overlap[2], uint8_t(102)) <= 2);
     prDrawListRelease(list);
 }
 
@@ -1095,7 +1098,7 @@ TEST_CASE("the fragment renderer fills paths alike whether tessellated, in strip
     PrPath* star = prPathCreate();
     for (int i = 0; i < 5; ++i) {
         float angle = -1.5708f + float(i) * 4 * 3.14159f / 5;
-        PrVec2 p{40 + 34 * std::cos(angle), 40 + 34 * std::sin(angle)};
+        PrVec2 p{40 + 34 * prF32Cos(angle), 40 + 34 * prF32Sin(angle)};
         if (i == 0)
             prPathMoveTo(star, p);
         else
@@ -1114,14 +1117,14 @@ TEST_CASE("the fragment renderer fills paths alike whether tessellated, in strip
     stroke.shape.join = PrPathJoin_Round;
     stroke.shape.startCap = stroke.shape.endCap = stroke.shape.dashCap = PrPathCap_Round;
     prDrawListPath(list, wave, PrPathFillRule_NonZero, {.color = PrColor{0, 0.5f, 0.2f, 1}, .stroke = &stroke});
-    std::vector<uint8_t> expected = cpuRender(list, 144, 112);
+    Array<uint8_t> expected = cpuRender(list, 144, 112);
     PrDrawFragmentPaths modes[] = {
         PrDrawFragmentPaths_Tessellate, PrDrawFragmentPaths_Strips,
         PrDrawFragmentPaths_Tiles,
     };
     for (PrDrawFragmentPaths paths : modes) {
         Device device(144, 112, paths);
-        std::vector<uint8_t> drawn = device.render(list);
+        Array<uint8_t> drawn = device.render(list);
         INFO("paths " << int(paths));
         CHECK(inked(drawn) == doctest::Approx(inked(expected)).epsilon(0.005));
         // Strips and tiles compute the rasterizer's coverage. Tessellation flattens curves more coarsely, and the
@@ -1137,22 +1140,22 @@ TEST_CASE("the fragment renderer draws glyphs from the atlas as the cpu backend 
     const PrFont* font = load("NotoSans[wdth,wght].ttf");
     PrDrawList* list = prDrawListCreate();
     const char* text = "Handgloves";
-    std::vector<PrFontGlyph> glyphs;
+    Array<PrFontGlyph> glyphs;
     float x = 4.3f;
     for (const char* c = text; *c != 0; ++c) {
         uint16_t id = prFontCodePointGlyph(font, uint32_t(*c));
-        glyphs.push_back(PrFontGlyph{id, {x, 30.6f}});
+        glyphs.push(PrFontGlyph{id, {x, 30.6f}});
         x += prFontGlyphAdvance(font, id, 0) * 22;
     }
     PrFontGlyphRun run{};
     run.font = font;
     run.size = 22;
     run.glyphs = glyphs.data();
-    run.glyphCount = uint32_t(glyphs.size());
+    run.glyphCount = glyphs.count();
     prDrawListGlyphs(list, &run, PrVec2{}, {.color = PrColor{0.1f, 0.1f, 0.1f, 1}});
     Device device(128, 40);
-    std::vector<uint8_t> drawn = device.render(list);
-    std::vector<uint8_t> expected = cpuRender(list, 128, 40);
+    Array<uint8_t> drawn = device.render(list);
+    Array<uint8_t> expected = cpuRender(list, 128, 40);
     CHECK(inked(drawn) == doctest::Approx(inked(expected)).epsilon(0.01));
     // Glyphs land within an eighth of a pixel of where they are drawn.
     CHECK(fractionDiffering(drawn, expected, 48) <= 0.01);
@@ -1172,7 +1175,7 @@ TEST_CASE("the fragment renderer draws small paths from the atlas as the cpu bac
     PrPath* star = prPathCreate();
     for (int i = 0; i < 5; ++i) {
         float angle = -1.5708f + float(i) * 4 * 3.14159f / 5;
-        PrVec2 p{12 + 10 * std::cos(angle), 12 + 10 * std::sin(angle)};
+        PrVec2 p{12 + 10 * prF32Cos(angle), 12 + 10 * prF32Sin(angle)};
         if (i == 0)
             prPathMoveTo(star, p);
         else
@@ -1206,11 +1209,11 @@ TEST_CASE("the fragment renderer draws small paths from the atlas as the cpu bac
         }
         y += 80;
     }
-    std::vector<uint8_t> expected = cpuRender(list, 128, 320);
+    Array<uint8_t> expected = cpuRender(list, 128, 320);
     Device device(128, 320, PrDrawFragmentPaths_Tiles);
     // The second frame draws the coverage that the first frame rasterized.
     for (int frame = 0; frame < 2; ++frame) {
-        std::vector<uint8_t> drawn = device.render(list);
+        Array<uint8_t> drawn = device.render(list);
         INFO("frame " << frame);
         CHECK(prDrawFrameStats(device.frame).pathFills == (frame == 0 ? 60u : 0u));
         CHECK(inked(drawn) == doctest::Approx(inked(expected)).epsilon(0.005));
@@ -1225,7 +1228,7 @@ TEST_CASE("the fragment renderer draws small paths from the atlas as the cpu bac
 
 TEST_CASE("the fragment renderer samples images as the cpu backend does, by every sampling, tile mode and tile flag") {
     // A gradient of texels with a hard diagonal, which each sampling filters differently.
-    std::vector<uint8_t> texels(12 * 10 * 4);
+    Array<uint8_t> texels(12 * 10 * 4);
     for (uint32_t y = 0; y < 10; ++y) {
         for (uint32_t x = 0; x < 12; ++x) {
             uint8_t* t = texels.data() + (y * 12 + x) * 4;
@@ -1253,10 +1256,12 @@ TEST_CASE("the fragment renderer samples images as the cpu backend does, by ever
         {PrRect{0, 0, 12, 10}, PrVec2{0, 0}},
     };
     const PrDrawTileFlags kFlagSets[] = {0, PrDrawTileFlag_Clamped};
-    for (PrDrawSampling sampling :
-            {PrDrawSampling_Nearest, PrDrawSampling_Linear, PrDrawSampling_Cubic, PrDrawSampling_Mipmap}) {
-        for (PrDrawExtend mode :
-                {PrDrawExtend_None, PrDrawExtend_Pad, PrDrawExtend_Repeat, PrDrawExtend_Reflect}) {
+    const PrDrawSampling samplings[] = {
+        PrDrawSampling_Nearest, PrDrawSampling_Linear, PrDrawSampling_Cubic, PrDrawSampling_Mipmap,
+    };
+    const PrDrawExtend modes[] = {PrDrawExtend_None, PrDrawExtend_Pad, PrDrawExtend_Repeat, PrDrawExtend_Reflect};
+    for (PrDrawSampling sampling : samplings) {
+        for (PrDrawExtend mode : modes) {
             for (PrDrawTileFlags flags : kFlagSets) {
                 for (const Case& c : cases) {
                     CAPTURE(int(sampling));
@@ -1275,8 +1280,8 @@ TEST_CASE("the fragment renderer samples images as the cpu backend does, by ever
                     brush.image.tiles.flags = flags;
                     brush.image.sampling = sampling;
                     prDrawListRect(list, PrRect{0, 0, 96, 96}, {.brush = &brush});
-                    std::vector<uint8_t> drawn = device.render(list);
-                    std::vector<uint8_t> expected = cpuRender(list, 96, 96);
+                    Array<uint8_t> drawn = device.render(list);
+                    Array<uint8_t> expected = cpuRender(list, 96, 96);
                     // The hardware's anisotropic filter picks its levels and taps by its own approximation of the
                     // footprint. The cpu backend takes the footprint's minor axis, with even taps along its major axis.
                     CHECK(fractionDiffering(drawn, expected, sampling == PrDrawSampling_Mipmap ? 32 : 2) <= 0.002);
@@ -1291,7 +1296,7 @@ TEST_CASE("the fragment renderer samples images as the cpu backend does, by ever
 TEST_CASE("the fragment renderer samples a sub-rectangle with a gutter through the hardware, as the cpu backend samples its taps") {
     // A motif of 8 texels repeated over 32: the texels around the middle 8 continue its tiles for Repeat, four texels
     // wide, which covers the bilinear and cubic filters and the first two mip levels.
-    std::vector<uint8_t> texels(32 * 32 * 4);
+    Array<uint8_t> texels(32 * 32 * 4);
     for (uint32_t y = 0; y < 32; ++y) {
         for (uint32_t x = 0; x < 32; ++x) {
             uint8_t* t = texels.data() + (y * 32 + x) * 4;
@@ -1308,7 +1313,8 @@ TEST_CASE("the fragment renderer samples a sub-rectangle with a gutter through t
     const PrDrawImage* image = nullptr;
     REQUIRE(prDrawImageCreate(&desc, &image) == PrStatus_Ok);
     Device device(96, 96);
-    for (PrDrawSampling sampling : {PrDrawSampling_Linear, PrDrawSampling_Cubic, PrDrawSampling_Mipmap}) {
+    const PrDrawSampling samplings[] = {PrDrawSampling_Linear, PrDrawSampling_Cubic, PrDrawSampling_Mipmap};
+    for (PrDrawSampling sampling : samplings) {
         CAPTURE(int(sampling));
         PrDrawList* list = prDrawListCreate();
         PrDrawBrush brush = prDrawBrushDefault(PrDrawBrushKind_Image);
@@ -1318,8 +1324,8 @@ TEST_CASE("the fragment renderer samples a sub-rectangle with a gutter through t
         brush.image.tiles.x = brush.image.tiles.y = PrDrawExtend_Repeat;
         brush.image.sampling = PrDrawSampling(sampling | PrDrawSamplingFlag_Gutter);
         prDrawListRect(list, PrRect{0, 0, 96, 96}, {.brush = &brush});
-        std::vector<uint8_t> drawn = device.render(list);
-        std::vector<uint8_t> expected = cpuRender(list, 96, 96);
+        Array<uint8_t> drawn = device.render(list);
+        Array<uint8_t> expected = cpuRender(list, 96, 96);
         // As for the whole image, the hardware's anisotropic filter differs from cpu's in its levels and taps.
         CHECK(fractionDiffering(drawn, expected, sampling == PrDrawSampling_Mipmap ? 32 : 2) <= 0.002);
         prDrawListRelease(list);
@@ -1360,12 +1366,13 @@ TEST_CASE("the fragment renderer maps a brush along strokes by each pixel's near
     prDrawListPushTransformAffine2(list, prAffine2Translate(PrVec2{0, 50}));
     prDrawListPath(list, path, PrPathFillRule_NonZero, {.brush = &along, .stroke = &stroke});
     prDrawListPopTransform(list);
-    std::vector<uint8_t> expected = cpuRender(list, 100, 110);
+    Array<uint8_t> expected = cpuRender(list, 100, 110);
     // Sparse coverage matches the rasterizer's coverage, so any difference comes from the mapping.
-    for (PrDrawFragmentPaths paths : {PrDrawFragmentPaths_Strips, PrDrawFragmentPaths_Tiles}) {
+    const PrDrawFragmentPaths pathModes[] = {PrDrawFragmentPaths_Strips, PrDrawFragmentPaths_Tiles};
+    for (PrDrawFragmentPaths paths : pathModes) {
         CAPTURE(int(paths));
         Device device(100, 110, paths);
-        std::vector<uint8_t> drawn = device.render(list);
+        Array<uint8_t> drawn = device.render(list);
         CHECK(fractionDiffering(drawn, expected, 16) <= 0.001);
     }
     prPathDestroy(path);
@@ -1392,7 +1399,9 @@ TEST_CASE("the fragment renderer draws a list source as a texture at its scale i
     PrDrawList* list = prDrawListCreate();
     prDrawListPushTransformAffine2(list, prAffine2Scale(PrVec2{1.3f, 1.3f}));
     prDrawListPushGroup(list, &masked);
-    std::vector<uint8_t> texels(8 * 8 * 4, 200);
+    Array<uint8_t> texels(8 * 8 * 4);
+    for (uint8_t& texel : texels)
+        texel = 200;
     PrDrawImageDesc desc{
         PrPixelView{texels.data(), 32, {8, 8}}, PrPixelFormat_Rgba8, PrDrawAlpha_Premultiplied,
         PrColorSpace_Srgb,
@@ -1406,8 +1415,8 @@ TEST_CASE("the fragment renderer draws a list source as a texture at its scale i
     prDrawListPopGroup(list);
     prDrawListPopTransform(list);
     Device device(100, 100);
-    std::vector<uint8_t> drawn = device.render(list);
-    std::vector<uint8_t> expected = cpuRender(list, 100, 100);
+    Array<uint8_t> drawn = device.render(list);
+    Array<uint8_t> expected = cpuRender(list, 100, 100);
     CHECK(inked(drawn) == doctest::Approx(inked(expected)).epsilon(0.01));
     CHECK(fractionDiffering(drawn, expected, 8) <= 0.01);
     // A brush of the list on a plain rect.
@@ -1415,8 +1424,8 @@ TEST_CASE("the fragment renderer draws a list source as a texture at its scale i
     prDrawListPushTransformAffine2(plain, prAffine2Scale(PrVec2{1.3f, 1.3f}));
     prDrawListRect(plain, photo, {.brush = &mask.brush});
     prDrawListPopTransform(plain);
-    std::vector<uint8_t> drawn2 = device.render(plain);
-    std::vector<uint8_t> expected2 = cpuRender(plain, 100, 100);
+    Array<uint8_t> drawn2 = device.render(plain);
+    Array<uint8_t> expected2 = cpuRender(plain, 100, 100);
     CHECK(inked(drawn2) == doctest::Approx(inked(expected2)).epsilon(0.01));
     CHECK(fractionDiffering(drawn2, expected2, 8) <= 0.01);
     prDrawListRelease(plain);
@@ -1432,15 +1441,15 @@ TEST_CASE("the fragment renderer filters a rotated group in the group's own spac
     blur.blur.sigma = PrVec2{6, 0};
     PrDrawGroup group = prDrawGroupDefault();
     group.bounds = PrRect{-60, -60, 60, 60};
-    group.filter = filterOf({blur});
+    group.filter = filterOf(blur);
     prDrawListPushGroup(list, &group);
     prDrawFilterRelease(group.filter);
     prDrawListRect(list, PrRect{-25, -25, 25, 25}, {.color = PrColor{0.5f, 0.2f, 0.8f, 1}});
     prDrawListPopGroup(list);
     prDrawListPopTransform(list);
     Device device(128, 128);
-    std::vector<uint8_t> drawn = device.render(list);
-    std::vector<uint8_t> expected = cpuRender(list, 128, 128);
+    Array<uint8_t> drawn = device.render(list);
+    Array<uint8_t> expected = cpuRender(list, 128, 128);
     // The blur runs along the group's x axis, including the part of its space left of its origin.
     CHECK(inked(drawn) == doctest::Approx(inked(expected)).epsilon(0.005));
     CHECK(fractionDiffering(drawn, expected, 16) <= 0.002);
@@ -1464,8 +1473,8 @@ TEST_CASE("the fragment renderer draws a group whose filter reaches far at a low
     prDrawListRect(list, PrRect{0, 0, 64, 64}, {.color = PrColor{0, 0, 0, 1}});
     prDrawListPopGroup(list);
     Device device(64, 64);
-    std::vector<uint8_t> drawn = device.render(list);
-    std::vector<uint8_t> expected = cpuRender(list, 64, 64);
+    Array<uint8_t> drawn = device.render(list);
+    Array<uint8_t> expected = cpuRender(list, 64, 64);
     CHECK(fractionDiffering(drawn, expected, 4) <= 0.01);
     prDrawListRelease(list);
     prDrawFilterRelease(filter);
@@ -1512,8 +1521,8 @@ TEST_CASE("the fragment renderer composites a projected group's layer through th
     prDrawListPopGroup(list);
     prDrawListPopGroup(list);
     prDrawListPopTransform(list);
-    std::vector<uint8_t> drawn = device.render(list);
-    std::vector<uint8_t> expected = cpuRender(list, 128, 128);
+    Array<uint8_t> drawn = device.render(list);
+    Array<uint8_t> expected = cpuRender(list, 128, 128);
     CHECK(fractionDiffering(drawn, expected, 16) <= 0.002);
     prDrawListRelease(list);
 }
@@ -1531,8 +1540,8 @@ TEST_CASE("the fragment renderer composites only the part of a projected group's
     prDrawListPushGroup(list, &group);
     planeContent(list, PrRect{-20.4f, -15.6f, 19.7f, 24.3f});
     prDrawListPopGroup(list);
-    std::vector<uint8_t> drawn = device.render(list);
-    std::vector<uint8_t> expected = cpuRender(list, 96, 96);
+    Array<uint8_t> drawn = device.render(list);
+    Array<uint8_t> expected = cpuRender(list, 96, 96);
     CHECK(fractionDiffering(drawn, expected, 8) <= 0.002);
     prDrawListRelease(list);
 }
@@ -1541,7 +1550,7 @@ TEST_CASE("the fragment renderer reads what lies beneath through a projected gro
     PrDrawFilterNode offset = nodeOf(PrDrawFilterKind_Offset);
     offset.inputs[0] = PrDrawFilterInput_Backdrop;
     offset.offset = PrVec2{16, 0};
-    const PrDrawFilter* filter = filterOf({offset});
+    const PrDrawFilter* filter = filterOf(offset);
     PrMatrix4 seen = tiltedPlane(0.4f, 200, PrVec2{32, 32});
     PrDrawList* list = prDrawListCreate();
     prDrawListRect(list, PrRect{0, 0, 32, 64}, {.color = PrColor{1, 0, 0, 1}});
@@ -1558,12 +1567,12 @@ TEST_CASE("the fragment renderer reads what lies beneath through a projected gro
     prDrawListPopGroup(list);
     prDrawListPopGroup(list);
     Device device(64, 64);
-    std::vector<uint8_t> drawn = device.render(list);
-    std::vector<uint8_t> expected = cpuRender(list, 64, 64);
+    Array<uint8_t> drawn = device.render(list);
+    Array<uint8_t> expected = cpuRender(list, 64, 64);
     // The hardware's trilinear filter may blend in the next level at a hard edge where cpu reads the first level alone.
     CHECK(fractionDiffering(drawn, expected, 32) <= 0.002);
     // Red beneath the plane shows on the plane's right, where both backdrops move it.
-    CHECK(fractionDiffering(drawn, std::vector<uint8_t>(drawn.size(), 0), 16) > 0.5);
+    CHECK(fractionDiffering(drawn, Array<uint8_t>(drawn.count()), 16) > 0.5);
     prDrawListRelease(list);
 
     // A plane drawn at twice its size reads what lies beneath in its own units.
@@ -1586,18 +1595,18 @@ TEST_CASE("the fragment renderer reads what lies beneath through a projected gro
 
 TEST_CASE("the fragment renderer draws a kept embed, in place and moved by whole pixels, as it draws the embed walked") {
     const PrFont* font = load("NotoSans[wdth,wght].ttf");
-    std::vector<PrFontGlyph> glyphs;
+    Array<PrFontGlyph> glyphs;
     float x = 2.3f;
     for (const char* c = "Kept"; *c != 0; ++c) {
         uint16_t id = prFontCodePointGlyph(font, uint32_t(*c));
-        glyphs.push_back(PrFontGlyph{id, {x, 14.6f}});
+        glyphs.push(PrFontGlyph{id, {x, 14.6f}});
         x += prFontGlyphAdvance(font, id, 0) * 14;
     }
     PrFontGlyphRun run{};
     run.font = font;
     run.size = 14;
     run.glyphs = glyphs.data();
-    run.glyphCount = uint32_t(glyphs.size());
+    run.glyphCount = glyphs.count();
     PrDrawList* inner = prDrawListCreate();
     prDrawListRect(inner, PrRect{0, 20, 30, 26}, {.color = PrColor{0.8f, 0.2f, 0.1f, 1}});
     prDrawListGlyphs(inner, &run, PrVec2{}, {.color = PrColor{0.1f, 0.1f, 0.1f, 1}});
@@ -1685,7 +1694,7 @@ TEST_CASE("the fragment renderer keeps colors past white in a half-float target,
         prDrawFrameRender(frame, encoder, PrIVec2{0, 0});
         endPass(encoder, &pass);
         prGpuCommandsSubmitAndWait(commands);
-        std::vector<PrFloat16> pixels(size_t(kWidth) * kHeight * 4);
+        Array<PrFloat16> pixels(size_t(kWidth) * kHeight * 4);
         PrPixels read{reinterpret_cast<uint8_t*>(pixels.data()), size_t(kWidth) * 8, {kWidth, kHeight}};
         prGpuTextureRead(gpuDevice, texture, PrGpuAccessFlag_ShaderRead, PrIVec2{0, 0}, read);
         for (uint32_t column = 0; column < 3; ++column) {
@@ -1694,8 +1703,8 @@ TEST_CASE("the fragment renderer keeps colors past white in a half-float target,
         }
     };
     auto near = [](PrColor a, PrColor b) {
-        return std::abs(a.r - b.r) < 0.01f && std::abs(a.g - b.g) < 0.01f && std::abs(a.b - b.b) < 0.01f &&
-            std::abs(a.a - b.a) < 0.01f;
+        return prF32Abs(a.r - b.r) < 0.01f && prF32Abs(a.g - b.g) < 0.01f && prF32Abs(a.b - b.b) < 0.01f &&
+            prF32Abs(a.a - b.a) < 0.01f;
     };
     PrColor colors[3];
     render(colors);
@@ -1707,7 +1716,7 @@ TEST_CASE("the fragment renderer keeps colors past white in a half-float target,
     brush.image.limit = 1.5f;
     prDrawListRect(list, PrRect{32, 0, 48, 8}, {.brush = &brush});
     render(colors);
-    float limit = 1.055f * std::pow(1.5f, 1 / 2.4f) - 0.055f;
+    float limit = 1.055f * prF32Pow(1.5f, 1 / 2.4f) - 0.055f;
     CHECK(near(colors[2], PrColor{limit, limit, limit, 1}));
     prDrawFrameDestroy(frame);
     prDrawRendererDestroy(renderer);
@@ -1772,7 +1781,7 @@ TEST_CASE("the fragment renderer renders colors past white into a half-float tar
     blur.inputs[0] = PrDrawFilterInput_Source;
     blur.blur.sigma = PrVec2{2, 2};
     PrDrawGroup blurred = prDrawGroupDefault();
-    blurred.filter = filterOf({blur});
+    blurred.filter = filterOf(blur);
     prDrawListPushGroup(list, &blurred);
     prDrawListRect(list, PrRect{40, 40, 56, 56}, {.color = PrColor{3, 3, 3, 1}});
     prDrawListPopGroup(list);
@@ -1794,11 +1803,11 @@ TEST_CASE("the fragment renderer renders colors past white into a half-float tar
     prDrawFrameRender(frame, encoder, PrIVec2{0, 0});
     endPass(encoder, &pass);
     prGpuCommandsSubmitAndWait(commands);
-    std::vector<PrFloat16> drawn(size_t(kSize) * kSize * 4);
+    Array<PrFloat16> drawn(size_t(kSize) * kSize * 4);
     prGpuTextureRead(gpuDevice, texture, PrGpuAccessFlag_ShaderRead, PrIVec2{0, 0},
         PrPixels{reinterpret_cast<uint8_t*>(drawn.data()), size_t(kSize) * 8, {kSize, kSize}});
 
-    std::vector<PrFloat16> expected(drawn.size());
+    Array<PrFloat16> expected(drawn.count());
     PrDrawRenderer* cpu = prDrawCpuCreate(nullptr);
     PrPixels into{reinterpret_cast<uint8_t*>(expected.data()), size_t(kSize) * 8, {kSize, kSize}};
     REQUIRE(prDrawRendererRenderPixels(cpu, list, into, PrPixelFormat_RgbaF16) == PrStatus_Ok);
@@ -1809,15 +1818,15 @@ TEST_CASE("the fragment renderer renders colors past white into a half-float tar
     float brightest = 0;
     double blurDrawn = 0;
     double blurExpected = 0;
-    for (size_t i = 0; i < drawn.size(); i += 4) {
+    for (uint32_t i = 0; i < drawn.count(); i += 4) {
         bool inBlur = (i / 4) % kSize >= 34 && (i / 4) / kSize >= 34;
         blurDrawn += inBlur ? double(prFloat16ToFloat(drawn[i])) : 0;
         blurExpected += inBlur ? double(prFloat16ToFloat(expected[i])) : 0;
-        for (size_t k = 0; k < 4 && !inBlur; ++k) {
+        for (uint32_t k = 0; k < 4 && !inBlur; ++k) {
             float a = prFloat16ToFloat(drawn[i + k]);
             float b = prFloat16ToFloat(expected[i + k]);
-            brightest = std::max(brightest, a);
-            if (std::abs(a - b) > 32.0f / 255 * std::max(1.0f, std::abs(b))) {
+            brightest = max(brightest, a);
+            if (prF32Abs(a - b) > 32.0f / 255 * max(1.0f, prF32Abs(b))) {
                 ++differing;
                 break;
             }
@@ -1871,20 +1880,19 @@ TEST_CASE("the fragment renderer draws a group into the host's texture, which ke
         prDrawListPopGroup(l);
         return l;
     };
-    auto pixel = [](const std::vector<uint8_t>& pixels, uint32_t x, uint32_t y) {
-        const uint8_t* p = &pixels[(size_t(y) * 8 + x) * 4];
-        return std::to_string(p[0]) + "," + std::to_string(p[1]) + "," + std::to_string(p[2]) + "," +
-            std::to_string(p[3]);
+    auto pixel = [](const Array<uint8_t>& pixels, uint32_t x, uint32_t y) {
+        const uint8_t* p = pixels.data() + (size_t(y) * 8 + x) * 4;
+        return format("{},{},{},{}", p[0], p[1], p[2], p[3]);
     };
     PrDrawList* first = list(1, 1);
-    std::vector<uint8_t> once = device.render(first);
+    Array<uint8_t> once = device.render(first);
     CHECK(drawn == 1);
     CHECK(pixel(once, 6, 6) == "255,0,0,255");
     // The same list again draws nothing new into the texture, which still shows what it holds.
     CHECK(pixel(device.render(first), 6, 6) == "255,0,0,255");
     // A list of revisions 1 and 2 draws only 2 over what the texture holds, and drawn again draws nothing new.
     PrDrawList* second = list(1, 2);
-    std::vector<uint8_t> blended = device.render(second);
+    Array<uint8_t> blended = device.render(second);
     CHECK(drawn == 2);
     CHECK(pixel(blended, 6, 6) == "255,0,0,255");
     CHECK(pixel(blended, 1, 1) != "255,0,0,255");
@@ -1950,7 +1958,7 @@ TEST_CASE("the fragment renderer paints a gradient's hard stops as the cpu backe
     };
     PrDrawBrush brush = prDrawBrushLinear(PrVec2{0, 0}, PrVec2{96, 0}, hard, 4);
     prDrawListRect(list, PrRect{0, 0, 96, 32}, {.brush = &brush});
-    std::vector<uint8_t> drawn = device.render(list);
+    Array<uint8_t> drawn = device.render(list);
     CHECK(fractionDiffering(drawn, cpuRender(list, 96, 32), 6) <= 0.01);
     prDrawListRelease(list);
 }

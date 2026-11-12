@@ -4,8 +4,6 @@
 
 #include "tools/harness/test.h"
 
-#include <initializer_list>
-
 extern "C" int prTestGeomCApi(void);
 
 namespace pr_impl {
@@ -159,7 +157,8 @@ TEST_CASE("a corner's curve runs from the side before it to the side after") {
     CHECK(nearPoint(prCornerCurvePoint(-1, 0.5f), PrVec2{1 - 0.70710678f, 0.70710678f}));
     CHECK(nearPoint(prCornerCurvePoint(kPrF32Infinity, 0.25f), PrVec2{0.5f, 0}));
     CHECK(nearPoint(prCornerCurvePoint(-kPrF32Infinity, 0.25f), PrVec2{0, 0.5f}));
-    for (float shape : {-3.0f, -1.0f, 0.0f, 0.5f, 1.0f, 2.0f, 5.0f}) {
+    const float shapes[] = {-3.0f, -1.0f, 0.0f, 0.5f, 1.0f, 2.0f, 5.0f};
+    for (float shape : shapes) {
         CHECK(nearPoint(prCornerCurvePoint(shape, 0), PrVec2{0, 0}));
         CHECK(nearPoint(prCornerCurvePoint(shape, 1), PrVec2{1, 1}));
     }

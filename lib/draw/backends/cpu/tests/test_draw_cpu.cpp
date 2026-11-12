@@ -1,21 +1,22 @@
+#include "pr/array.h"
 #include "pr/draw_cpu.h"
 #include "pr/draw_filter.h"
+#include "pr/float.h"
 #include "pr/gpu.h"
+#include "pr/min_max.h"
+#include "pr/span.h"
+#include "pr/string.h"
 #include "pr/vec.h"
 
 #include "tools/harness/test.h"
-
-#include <algorithm>
-#include <cmath>
-#include <cstdlib>
-#include <string>
-#include <vector>
 
 extern "C" int prTestDrawCpuCApi(void);
 
 namespace pr_impl {
 
 namespace {
+
+using namespace pr;
 
 // Records a rectangle filled with the source placed over it.
 void drawImageRect(PrDrawList* list, const PrDrawSource& source, PrRect destination, PrDrawSampling sampling) {
@@ -24,14 +25,14 @@ void drawImageRect(PrDrawList* list, const PrDrawSource& source, PrRect destinat
 }
 
 struct Target {
-    std::vector<uint8_t> bytes;
+    Array<uint8_t> bytes;
     PrPixels pixels;
     PrPixelFormat format;
 };
 
 Target target(uint32_t width, uint32_t height, PrPixelFormat format = PrPixelFormat_Rgba8) {
     Target t;
-    t.bytes.assign(size_t(width) * height * 4, 0);
+    t.bytes = Array<uint8_t>(size_t(width) * height * 4);
     t.pixels = PrPixels{t.bytes.data(), size_t(width) * 4, {width, height}};
     t.format = format;
     return t;
@@ -45,18 +46,18 @@ PrStatus render(Target& t, const PrDrawList* list) {
 }
 
 // Returns one pixel's bytes as "r g b a".
-std::string pixel(const Target& t, uint32_t x, uint32_t y) {
+String pixel(const Target& t, uint32_t x, uint32_t y) {
     const uint8_t* p = t.bytes.data() + y * t.pixels.stride + x * 4;
-    return std::to_string(p[0]) + " " + std::to_string(p[1]) + " " + std::to_string(p[2]) + " " + std::to_string(p[3]);
+    return format("{} {} {} {}", p[0], p[1], p[2], p[3]);
 }
 
 // Returns the alpha of each pixel of a row, as text.
-std::string alphaRow(const Target& t, uint32_t y) {
-    std::string text;
+String alphaRow(const Target& t, uint32_t y) {
+    String text;
     for (uint32_t x = 0; x < t.pixels.extent.x; ++x) {
         if (x != 0)
-            text += ' ';
-        text += std::to_string(t.bytes[y * t.pixels.stride + x * 4 + 3]);
+            text.append(' ');
+        formatTo(text, "{}", t.bytes[uint32_t(y * t.pixels.stride + x * 4 + 3)]);
     }
     return text;
 }
@@ -72,7 +73,7 @@ constexpr PrColor kBlack{0, 0, 0, 1};
 constexpr PrColor kWhite{1, 1, 1, 1};
 
 // Returns a filter of `nodes`, in order, over `region`.
-const PrDrawFilter* graphOf(std::initializer_list<PrDrawFilterNode> nodes, PrRect region) {
+const PrDrawFilter* graphOf(Span<const PrDrawFilterNode> nodes, PrRect region) {
     PrDrawFilterBuilder* builder = prDrawFilterBuilderCreate();
     prDrawFilterBuilderSetRegion(builder, region);
     for (const PrDrawFilterNode& node : nodes)
@@ -133,13 +134,13 @@ void pushProjected(PrDrawList* list, const PrMatrix4* projection, PrRect bounds)
 // Returns the number of bytes in which two renders differ by more than `tolerance`.
 uint32_t differences(const Target& a, const Target& b, uint32_t tolerance) {
     uint32_t count = 0;
-    for (size_t i = 0; i < a.bytes.size(); ++i)
+    for (uint32_t i = 0; i < a.bytes.count(); ++i)
         count += a.bytes[i] > b.bytes[i] + tolerance || b.bytes[i] > a.bytes[i] + tolerance;
     return count;
 }
 
 uint32_t alphaAt(const Target& t, uint32_t x, uint32_t y) {
-    return t.bytes[y * t.pixels.stride + x * 4 + 3];
+    return t.bytes[uint32_t(y * t.pixels.stride + x * 4 + 3)];
 }
 
 constexpr PrColor kRed{1, 0, 0, 1};
@@ -856,7 +857,8 @@ TEST_CASE("a blur reads past the region of its input by its edge mode") {
         blur.blur.edge = edge;
         Target t = target(16, 1);
         PrDrawList* list = prDrawListCreate();
-        drawFiltered(list, graphOf({half, blur}, PrRect{0, 0, 16, 1}), PrRect{0, 0, 16, 1}, kBlack);
+        const PrDrawFilterNode nodes[] = {half, blur};
+        drawFiltered(list, graphOf(nodes, PrRect{0, 0, 16, 1}), PrRect{0, 0, 16, 1}, kBlack);
         render(t, list);
         prDrawListRelease(list);
         return int(t.bytes[x * 4 + 3]);
@@ -865,7 +867,8 @@ TEST_CASE("a blur reads past the region of its input by its edge mode") {
     CHECK(alphaAt(PrImageEdgeMode_None, 7) < 255);
     CHECK(alphaAt(PrImageEdgeMode_None, 12) == 0);
     // Duplicate, wrap and mirror read the half's opaque pixels past its edge, across the whole row.
-    for (PrImageEdgeMode edge : {PrImageEdgeMode_Duplicate, PrImageEdgeMode_Wrap, PrImageEdgeMode_Mirror}) {
+    const PrImageEdgeMode edges[] = {PrImageEdgeMode_Duplicate, PrImageEdgeMode_Wrap, PrImageEdgeMode_Mirror};
+    for (PrImageEdgeMode edge : edges) {
         CHECK(alphaAt(edge, 7) == 255);
         CHECK(alphaAt(edge, 12) == 255);
     }
@@ -883,12 +886,14 @@ TEST_CASE("a displacement map reads its map in the node's space and moves its in
     displace.inputs[0] = PrDrawFilterInput_Source;
     displace.inputs[1] = 0;
     displace.displacement = PrDrawFilterDisplacement{.scale = 10, .x = PrDrawChannel_R, .y = PrDrawChannel_A};
-    for (PrColorSpace space : {PrColorSpace_Srgb, PrColorSpace_SrgbLinear}) {
+    const PrColorSpace spaces[] = {PrColorSpace_Srgb, PrColorSpace_SrgbLinear};
+    for (PrColorSpace space : spaces) {
         displace.space = space;
         map.space = space;
         Target t = target(12, 1);
         PrDrawList* list = prDrawListCreate();
-        drawFiltered(list, graphOf({map, displace}, PrRect{0, 0, 12, 1}), PrRect{0, 0, 4, 1}, PrColor{0.5f, 0.5f, 0.5f, 1});
+        const PrDrawFilterNode nodes[] = {map, displace};
+        drawFiltered(list, graphOf(nodes, PrRect{0, 0, 12, 1}), PrRect{0, 0, 4, 1}, PrColor{0.5f, 0.5f, 0.5f, 1});
         render(t, list);
         prDrawListRelease(list);
         bool linear = space == PrColorSpace_SrgbLinear;
@@ -911,7 +916,7 @@ TEST_CASE("stitched turbulence tiles the node's region, whatever the graph's reg
     auto noiseIn = [&](PrRect graph) {
         Target t = target(16, 16);
         PrDrawList* list = prDrawListCreate();
-        drawFiltered(list, graphOf({noise}, graph), PrRect{0, 0, 1, 1}, kBlack);
+        drawFiltered(list, graphOf(Span<const PrDrawFilterNode>(&noise, 1), graph), PrRect{0, 0, 1, 1}, kBlack);
         render(t, list);
         prDrawListRelease(list);
         return t;
@@ -934,33 +939,42 @@ TEST_CASE("stitched turbulence joins its tile's last column to its first, and it
         .seed = 3,
         .kind = PrDrawTurbulenceKind_FractalNoise,
     };
+    struct Steps {
+        double seam;
+        double within;
+    };
     // Returns the mean difference in alpha across the seam where a copy of the tile would follow it, and the mean
     // difference between neighbors within the tile, along x.
     auto steps = [&](bool stitch, bool across) {
         noise.turbulence.stitch = stitch;
         Target t = target(32, 32);
         PrDrawList* list = prDrawListCreate();
-        drawFiltered(list, graphOf({noise}, PrRect{0, 0, 32, 32}), PrRect{0, 0, 1, 1}, kBlack);
+        const PrDrawFilter* filter = graphOf(Span<const PrDrawFilterNode>(&noise, 1), PrRect{0, 0, 32, 32});
+        drawFiltered(list, filter, PrRect{0, 0, 1, 1}, kBlack);
         render(t, list);
         prDrawListRelease(list);
         auto alpha = [&](uint32_t x, uint32_t y) {
-            return int32_t(across ? t.bytes[(size_t(y) * 32 + x) * 4 + 3] : t.bytes[(size_t(x) * 32 + y) * 4 + 3]);
+            return int32_t(across ? t.bytes[(y * 32 + x) * 4 + 3] : t.bytes[(x * 32 + y) * 4 + 3]);
         };
         double seam = 0;
         double within = 0;
         for (uint32_t y = 0; y < 32; ++y) {
-            seam += std::abs(alpha(31, y) - alpha(0, y));
-            for (uint32_t x = 0; x + 1 < 32; ++x)
-                within += std::abs(alpha(x + 1, y) - alpha(x, y));
+            int32_t jump = alpha(31, y) - alpha(0, y);
+            seam += abs(jump);
+            for (uint32_t x = 0; x + 1 < 32; ++x) {
+                int32_t step = alpha(x + 1, y) - alpha(x, y);
+                within += abs(step);
+            }
         }
-        return std::pair<double, double>{seam / 32, within / (32 * 31)};
+        return Steps{seam / 32, within / (32 * 31)};
     };
-    for (bool across : {true, false}) {
-        std::pair<double, double> stitched = steps(true, across);
-        CHECK(stitched.first <= 2 * stitched.second + 1);
+    const bool acrosses[] = {true, false};
+    for (bool across : acrosses) {
+        Steps stitched = steps(true, across);
+        CHECK(stitched.seam <= 2 * stitched.within + 1);
         // Without stitching, the seam is a jump, which shows that the measure tells them apart.
-        std::pair<double, double> unstitched = steps(false, across);
-        CHECK(unstitched.first > 2 * unstitched.second + 1);
+        Steps unstitched = steps(false, across);
+        CHECK(unstitched.seam > 2 * unstitched.within + 1);
     }
 }
 
@@ -972,7 +986,8 @@ TEST_CASE("a drop shadow computed in linear light keeps its color") {
     shadow.shadow = PrDrawFilterShadow{.offset = PrVec2{3, 0}, .color = prColor16FromColor(PrColor{0.5f, 0, 1, 1})};
     Target t = target(8, 1);
     PrDrawList* list = prDrawListCreate();
-    drawFiltered(list, graphOf({shadow}, PrRect{0, 0, 8, 1}), PrRect{0, 0, 2, 1}, kBlack);
+    const PrDrawFilter* filter = graphOf(Span<const PrDrawFilterNode>(&shadow, 1), PrRect{0, 0, 8, 1});
+    drawFiltered(list, filter, PrRect{0, 0, 2, 1}, kBlack);
     render(t, list);
     prDrawListRelease(list);
     CHECK(pixel(t, 4, 0) == "128 0 255 255");
@@ -1397,7 +1412,7 @@ TEST_CASE("a half-float render keeps colors past white through paint, groups and
     prDrawListPopGroup(list);
 
     constexpr uint32_t kWidth = 48;
-    std::vector<PrFloat16> wide(size_t(kWidth) * 8 * 4);
+    Array<PrFloat16> wide(size_t(kWidth) * 8 * 4);
     PrPixels pixels{reinterpret_cast<uint8_t*>(wide.data()), size_t(kWidth) * 8, {kWidth, 8}};
     PrDrawRenderer* renderer = prDrawCpuCreate(nullptr);
     auto at = [&](uint32_t column) {
@@ -1405,8 +1420,8 @@ TEST_CASE("a half-float render keeps colors past white through paint, groups and
         return PrColor(PrColor16{p[0], p[1], p[2], p[3]});
     };
     auto near = [](PrColor a, PrColor b) {
-        return std::abs(a.r - b.r) < 0.02f && std::abs(a.g - b.g) < 0.02f && std::abs(a.b - b.b) < 0.02f &&
-            std::abs(a.a - b.a) < 0.02f;
+        return prF32Abs(a.r - b.r) < 0.02f && prF32Abs(a.g - b.g) < 0.02f && prF32Abs(a.b - b.b) < 0.02f &&
+            prF32Abs(a.a - b.a) < 0.02f;
     };
     REQUIRE(prDrawRendererRenderPixels(renderer, list, pixels, PrPixelFormat_RgbaF16) == PrStatus_Ok);
     CHECK(near(at(0), bright));
@@ -1417,7 +1432,8 @@ TEST_CASE("a half-float render keeps colors past white through paint, groups and
 
     // A frame renders the same colors, encoded, whatever the display it is shown on, and refuses a target of 10-bit
     // channels.
-    std::fill(wide.begin(), wide.end(), PrFloat16{});
+    for (PrFloat16& channel : wide)
+        channel = PrFloat16{};
     REQUIRE(prDrawRendererRenderPixels(renderer, list, pixels, PrPixelFormat_RgbaF16) == PrStatus_Ok);
     CHECK(near(at(0), bright));
     CHECK(near(at(1), PrColor{3, 3, 3, 1}));
@@ -1435,9 +1451,10 @@ TEST_CASE("a half-float render keeps colors past white through paint, groups and
         PrDrawSampling_Nearest);
     capped.image.limit = 1.5f;
     prDrawListRect(limited, PrRect{0, 0, 48, 8}, {.brush = &capped});
-    std::fill(wide.begin(), wide.end(), PrFloat16{});
+    for (PrFloat16& channel : wide)
+        channel = PrFloat16{};
     REQUIRE(prDrawRendererRenderPixels(renderer, limited, pixels, PrPixelFormat_RgbaF16) == PrStatus_Ok);
-    float limit = 1.055f * std::pow(1.5f, 1 / 2.4f) - 0.055f;
+    float limit = 1.055f * prF32Pow(1.5f, 1 / 2.4f) - 0.055f;
     CHECK(near(at(0), PrColor{limit, limit, limit, 1}));
     prDrawListRelease(limited);
 

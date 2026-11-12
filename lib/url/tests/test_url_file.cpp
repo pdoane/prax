@@ -1,31 +1,25 @@
 // File URLs: the URLs of paths, and the paths that URLs name on this machine.
 
 #include "pr/environment.h"
+#include "pr/string_ops.h"
 #include "pr/url_file.h"
 
 #include "tools/harness/test.h"
-
-#include <string>
 
 namespace pr_impl {
 
 namespace {
 
-std::string urlOf(PrStringView path) {
-    PrRawString url = prUrlFromFilePath(path);
-    std::string out(prRawStringView(&url).data, prRawStringView(&url).size);
-    prRawStringReset(&url);
-    return out;
+String urlOf(PrStringView path) {
+    return String::adopt(prUrlFromFilePath(path));
 }
 
 // The path that `url` names, or "-" for none.
-std::string pathOf(PrStringView url) {
+String pathOf(PrStringView url) {
     PrRawString path = prRawStringNull();
     if (!prUrlToFilePath(url, &path))
         return "-";
-    std::string out(prRawStringView(&path).data, prRawStringView(&path).size);
-    prRawStringReset(&path);
-    return out;
+    return String::adopt(path);
 }
 
 } // namespace
@@ -48,13 +42,11 @@ TEST_CASE("url file: a path's URL escapes what a URL's path escapes, and the per
 TEST_CASE("url file: a URL's path is decoded, for an empty host, localhost and this machine's name") {
     CHECK(pathOf("file:///tmp/a%20b.txt") == "/tmp/a b.txt");
     CHECK(pathOf("file://localhost/tmp/x") == "/tmp/x");
-    PrRawString name = prEnvironmentHostName();
-    std::string host(prRawStringView(&name).data, prRawStringView(&name).size);
-    prRawStringReset(&name);
-    if (!host.empty()) {
-        CHECK(pathOf("file://" + host + "/tmp/x") == "/tmp/x");
-        std::string label = host.substr(0, host.find('.'));
-        CHECK(pathOf("file://" + label + "/tmp/x") == "/tmp/x");
+    String host = String::adopt(prEnvironmentHostName());
+    if (!host.isEmpty()) {
+        CHECK(pathOf(format("file://{}/tmp/x", host)) == "/tmp/x");
+        PrStringView label = prStringSlice(host, 0, prStringFindByte(host, '.'));
+        CHECK(pathOf(format("file://{}/tmp/x", label)) == "/tmp/x");
     }
 }
 
@@ -67,6 +59,7 @@ TEST_CASE("url file: another scheme, another machine and a path that is not text
 }
 
 TEST_CASE("url file: a path's URL names the path") {
-    for (const char* path : {"/tmp/a b/c%d.txt", "/x/#?{}"})
+    const char* const kPaths[] = {"/tmp/a b/c%d.txt", "/x/#?{}"};
+    for (const char* path : kPaths)
         CHECK(pathOf(urlOf(path)) == path);
 }

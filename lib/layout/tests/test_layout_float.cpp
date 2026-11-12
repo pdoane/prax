@@ -8,8 +8,6 @@
 
 #include "tools/harness/test.h"
 
-#include <vector>
-
 namespace pr_impl {
 
 namespace {
@@ -184,7 +182,8 @@ TEST_CASE("a box that collapses through holding a float is placed after its bloc
 }
 
 TEST_CASE("clearance of floats adjoining a child puts it at their bottom, its margin taking no room") {
-    for (float margin : {40.0f, 100.0f}) {
+    const float margins[] = {40.0f, 100.0f};
+    for (float margin : margins) {
         CAPTURE(margin);
         Stage s;
         s.add(s.stage, block(20));
@@ -279,7 +278,8 @@ TEST_CASE("a float in a parent's first child that collapses through goes where t
 }
 
 TEST_CASE("a float before a block with a margin is placed before the margin") {
-    for (bool avoids : {false, true}) {
+    const bool avoidOptions[] = {false, true};
+    for (bool avoids : avoidOptions) {
         CAPTURE(avoids);
         Stage s;
         s.add(s.stage, block(20));
@@ -297,7 +297,8 @@ TEST_CASE("a float before a block with a margin is placed before the margin") {
 }
 
 TEST_CASE("a box that avoids floats resolves adjoining floats with its margin where it fits beside them") {
-    for (bool fits : {true, false}) {
+    const bool fitOptions[] = {true, false};
+    for (bool fits : fitOptions) {
         CAPTURE(fits);
         Stage s;
         s.add(s.stage, block(20));
@@ -613,7 +614,8 @@ TEST_CASE("lines beside a float are shortened over its height, and moved down wh
 }
 
 TEST_CASE("a line below many stacked floats moves down to where it fits with one search") {
-    for (bool inLine : {true, false}) {
+    const bool inLines[] = {true, false};
+    for (bool inLine : inLines) {
         CAPTURE(inLine);
         Stage s;
         // 70 full-width floats 1px tall, each clearing the one before, so that they stack.
@@ -660,7 +662,8 @@ TEST_CASE("floats take their sides by the line, and relative positioning leaves 
         CHECK(s.left(f) == 0);
         CHECK(s.left(word) == 160);
     }
-    for (PrLayoutFloat side : {PrLayoutFloat_Left, PrLayoutFloat_Right}) {
+    const PrLayoutFloat sides[] = {PrLayoutFloat_Left, PrLayoutFloat_Right};
+    for (PrLayoutFloat side : sides) {
         CAPTURE(int(side));
         Stage s(200, PrLayoutWritingMode_VerticalRl);
         PrLayoutFontStyle font = Stage::font0();
@@ -685,7 +688,8 @@ TEST_CASE("floats take their sides by the line, and relative positioning leaves 
 }
 
 TEST_CASE("floats of the logical sides follow the containing block's direction") {
-    for (PrTextDirection direction : {PrTextDirection_Ltr, PrTextDirection_Rtl}) {
+    const PrTextDirection directions[] = {PrTextDirection_Ltr, PrTextDirection_Rtl};
+    for (PrTextDirection direction : directions) {
         CAPTURE(int(direction));
         Stage s(200, PrLayoutWritingMode_HorizontalTb, direction);
         PrLayoutNode start = s.add(s.stage, floated(PrLayoutFloat_InlineStart, 30, 20));
@@ -747,7 +751,8 @@ TEST_CASE("clearance level with a float's bottom is clearance, and one unit past
 }
 
 TEST_CASE("intrinsic sizes sum floats beside one another, which clearance and blocks in flow end") {
-    enum { Kind_Left, Kind_Right, Kind_LeftClear, Kind_Block, Kind_Avoider, Kind_ClearBlock, Kind_Word };
+    // Kind_None marks the unused slots of a case's items.
+    enum { Kind_None, Kind_Left, Kind_Right, Kind_LeftClear, Kind_Block, Kind_Avoider, Kind_ClearBlock, Kind_Word };
     typedef uint8_t Kind;
     struct Item {
         Kind kind;
@@ -756,7 +761,7 @@ TEST_CASE("intrinsic sizes sum floats beside one another, which clearance and bl
     struct Case {
         const char* name;
         bool min;
-        std::vector<Item> items;
+        Item items[3];
         double width;
     };
     const Case cases[] = {
@@ -778,6 +783,7 @@ TEST_CASE("intrinsic sizes sum floats beside one another, which clearance and bl
         PrLayoutNode box = s.add(s.stage, measured);
         for (const Item& item : c.items) {
             switch (item.kind) {
+                case Kind_None: break;
                 case Kind_Left: s.add(box, left(item.width, 10)); break;
                 case Kind_Right: s.add(box, right(item.width, 10)); break;
                 case Kind_LeftClear: s.add(box, cleared(left(item.width, 10), PrLayoutClear_Left)); break;
@@ -846,7 +852,7 @@ TEST_CASE("a float paints over a block's background and under its text, and is h
     PrLayoutNode over = f.element(under, word, &blue, nullptr, &font);
     f.layout(px(40, 40));
     CHECK(verified(f.tree));
-    std::vector<uint8_t> pixels = render(f.tree, 40, 40);
+    Array<uint8_t> pixels = render(f.tree, 40, 40);
     CHECK(pixel(pixels, 40, 15, 15) == "0 255 0 255");
     CHECK(pixel(pixels, 40, 5, 5) == "0 0 255 255");
     CHECK(pixel(pixels, 40, 30, 30) == "255 0 0 255");

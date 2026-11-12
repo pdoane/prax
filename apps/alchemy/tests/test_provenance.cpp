@@ -47,7 +47,7 @@ void appendChunk(Array<uint8_t>* out, const char* type, PrStringView data) {
     appendU32(out, uint32_t(data.size));
     uint32_t start = out->count();
     out->append(reinterpret_cast<const uint8_t*>(type), 4);
-    out->append(prStringBytes(data), uint32_t(data.size));
+    out->append(prStringBytes(data));
     appendU32(out, prCrc32Update(0, PrByteView{out->data() + start, out->count() - start}));
 }
 
@@ -144,7 +144,7 @@ TEST_CASE("a record is written into a PNG file and read back from it") {
 
     CHECK_FALSE(provenanceRead(plain, nullptr, &read));
     PrStringView notPng = "not an image";
-    PrByteView notPngBytes{prStringBytes(notPng), notPng.size};
+    PrByteView notPngBytes = prStringBytes(notPng);
     CHECK_FALSE(provenanceRead(notPngBytes, nullptr, &read));
     CHECK(provenanceWrite(notPngBytes, written).isEmpty());
 }

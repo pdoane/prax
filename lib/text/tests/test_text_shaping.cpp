@@ -1,16 +1,17 @@
 // Shaped text: what a host measures and breaks without a layout tree.
 
+#include "pr/array.h"
 #include "pr/font_set.h"
+#include "pr/span.h"
+#include "pr/string.h"
 #include "pr/text_harfbuzz.h"
 #include "pr/text_shaping.h"
 
 #include "tools/harness/test.h"
 
-#include <initializer_list>
-#include <string>
-#include <vector>
-
 namespace pr_impl {
+
+using namespace pr;
 
 namespace {
 
@@ -21,14 +22,15 @@ struct Shaped {
     PrTextFont* font = nullptr;
     PrTextShaping* shaping = prTextShapingCreate();
     PrTextShapingScratch* scratch = prTextShapingScratchCreate();
-    std::string text;
+    String text;
     float tabSize = 0;
     float tabMinimum = 0;
     PrTextObjectBreak objectBreak = PrTextObjectBreak_Unicode;
 
     Shaped() {
-        for (const char* name : {"NotoSans[wdth,wght].ttf", "NotoSansArabic[wdth,wght].ttf"}) {
-            std::string path = std::string(PR_FONTS_DIR) + "/" + name;
+        const char* const names[] = {"NotoSans[wdth,wght].ttf", "NotoSansArabic[wdth,wght].ttf"};
+        for (const char* name : names) {
+            String path = format("{}/{}", PR_FONTS_DIR, PrStringView(name));
             const PrFont* PR_NULLABLE face = nullptr;
             REQUIRE(prFontCreateFromFile(path, 0, nullptr, &face) == PrStatus_Ok);
             PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
@@ -53,13 +55,13 @@ struct Shaped {
         return PrTextPiece{.kind = PrTextPieceKind_Text, .start = start, .end = end, .font = font, .breakStyle = style};
     }
 
-    void set(std::string value, std::vector<PrTextPiece> pieces, PrTextDirection direction = PrTextDirection_Ltr,
+    void set(PrStringView value, Span<const PrTextPiece> pieces, PrTextDirection direction = PrTextDirection_Ltr,
             const PrTextSpaceFlags* spaces = nullptr) {
-        text = std::move(value);
+        text = value;
         PrTextShapingDesc desc{
             .text = text,
             .pieces = pieces.data(),
-            .pieceCount = uint32_t(pieces.size()),
+            .pieceCount = pieces.count(),
             .direction = direction,
             .shaper = shaper,
             .spaces = spaces,
@@ -70,9 +72,9 @@ struct Shaped {
         prTextShapingSet(shaping, &desc, scratch);
     }
 
-    void set(std::string value, PrTextBreakStyle style = {}) {
-        uint32_t size = uint32_t(value.size());
-        set(std::move(value), std::vector<PrTextPiece>{piece(0, size, style)});
+    void set(PrStringView value, PrTextBreakStyle style = {}) {
+        const PrTextPiece pieces[] = {piece(0, uint32_t(value.size), style)};
+        set(value, pieces);
     }
 
     float width(uint32_t start, uint32_t end, const float* positions = nullptr) {
@@ -80,21 +82,26 @@ struct Shaped {
         return prTextShapingLineWidth(shaping, &line);
     }
 
-    // Returns the end of each line in `width`, or in the width that `widths` gives each line.
-    std::vector<uint32_t> ends(std::vector<float> widths, const float* positions = nullptr, PrTextWordBreaks* words = nullptr) {
-        std::vector<uint32_t> found;
-        uint32_t size = uint32_t(text.size());
+    // Returns the end of each line in `width`, or in the width that `widths` gives each line. `widths` must not be
+    // empty, and its last width is that of every line past it.
+    Array<uint32_t> ends(Span<const float> widths, const float* positions = nullptr, PrTextWordBreaks* words = nullptr) {
+        Array<uint32_t> found;
+        uint32_t size = text.count();
+        uint32_t last = widths.count() - 1;
         for (uint32_t start = 0; start < size;) {
-            float width = widths[found.size() < widths.size() ? found.size() : widths.size() - 1];
+            float width = widths[found.count() < last ? found.count() : last];
             PrTextShapingLine line{.start = start, .end = size, .positions = positions};
             start = prTextShapingBreakLine(shaping, text, &line, width, words);
-            found.push_back(start);
+            found.push(start);
         }
         return found;
     }
+    Array<uint32_t> ends(float width, const float* positions = nullptr, PrTextWordBreaks* words = nullptr) {
+        return ends(Span<const float>(&width, 1), positions, words);
+    }
 };
 
-using Ends = std::vector<uint32_t>;
+using Ends = Array<uint32_t>;
 
 } // namespace
 
@@ -109,10 +116,11 @@ TEST_CASE("a shaping breaks at any width without shaping again, each line in the
     CHECK(glyphs == 13);
     float one = s.width(0, 3);
     float three = s.width(8, 13);
-    CHECK(s.ends({1000}) == Ends{13});
-    CHECK(s.ends({three + 1}) == Ends{4, 8, 13});
+    CHECK(s.ends(1000) == Ends({13}));
+    CHECK(s.ends(three + 1) == Ends({4, 8, 13}));
     // A host beside a float narrows the lines it reaches.
-    CHECK(s.ends({one + 1, 1000}) == Ends{4, 13});
+    const float widths[] = {one + 1, 1000};
+    CHECK(s.ends(widths) == Ends({4, 13}));
     CHECK(prTextShapingInfo(s.shaping).glyphCount == glyphs);
 }
 
@@ -122,9 +130,9 @@ TEST_CASE("the white space that a line ends in hangs, and a line feed forces a b
     float ab = s.width(0, 2);
     CHECK(s.width(0, 5) == doctest::Approx(ab));
     // The spaces hang past the width, and the line takes them.
-    CHECK(s.ends({ab + 0.5f}) == Ends{5, 7});
+    CHECK(s.ends(ab + 0.5f) == Ends({5, 7}));
     s.set("ab\ncd");
-    CHECK(s.ends({1000}) == Ends{3, 5});
+    CHECK(s.ends(1000) == Ends({3, 5}));
 }
 
 TEST_CASE("a shaping's intrinsic sizes break at every opportunity and at forced breaks") {
@@ -149,10 +157,11 @@ TEST_CASE("an empty shaping has one segment and nothing to measure") {
 
 TEST_CASE("a host gives an object its advance, and a line may break beside it") {
     Shaped s;
-    std::string text = "ab\xef\xbf\xbc" "cd";
+    PrStringView text = "ab\xef\xbf\xbc" "cd";
     PrTextPiece object{.kind = PrTextPieceKind_Object, .start = 2, .end = 5};
     s.objectBreak = PrTextObjectBreak_Around;
-    s.set(text, std::vector<PrTextPiece>{s.piece(0, 2), object, s.piece(5, 7)});
+    const PrTextPiece pieces[] = {s.piece(0, 2), object, s.piece(5, 7)};
+    s.set(text, pieces);
     const PrUnicodeLineBreak* breaks = prTextShapingInfo(s.shaping).breaks;
     CHECK(breaks[2] == PrUnicodeLineBreak_Allowed);
     CHECK(breaks[5] == PrUnicodeLineBreak_Allowed);
@@ -163,8 +172,8 @@ TEST_CASE("a host gives an object its advance, and a line may break beside it") 
     float plain = s.width(0, 7);
     CHECK(s.width(0, 7, positions) == doctest::Approx(plain + 100));
     float ab = s.width(0, 2, positions);
-    CHECK(s.ends({ab + 110}, positions) == Ends{5, 7});
-    CHECK(s.ends({ab + 50}, positions) == Ends{2, 5, 7});
+    CHECK(s.ends(ab + 110, positions) == Ends({5, 7}));
+    CHECK(s.ends(ab + 50, positions) == Ends({2, 5, 7}));
     PrTextIntrinsic sizes = prTextShapingIntrinsic(s.shaping, 0, 7, positions, positions);
     CHECK(sizes.minContent >= 100);
     CHECK(sizes.maxContent == doctest::Approx(plain + 100));
@@ -175,7 +184,8 @@ TEST_CASE("a Break piece with no bytes starts a new segment, with an inline box'
     PrTextPiece open{.kind = PrTextPieceKind_Open, .start = 0, .end = 0};
     PrTextPiece close{.kind = PrTextPieceKind_Close, .start = 2, .end = 2};
     PrTextPiece block{.kind = PrTextPieceKind_Break, .start = 2, .end = 2};
-    s.set("abcd", std::vector<PrTextPiece>{open, s.piece(0, 2), close, block, s.piece(2, 4)});
+    const PrTextPiece pieces[] = {open, s.piece(0, 2), close, block, s.piece(2, 4)};
+    s.set("abcd", pieces);
     REQUIRE(prTextShapingInfo(s.shaping).segmentCount == 2);
     const PrTextShapingSegment* segments = prTextShapingInfo(s.shaping).segments;
     CHECK(segments[0].byteEnd == 2);
@@ -196,28 +206,33 @@ TEST_CASE("a host says where lines do not wrap, by the piece around an opportuni
     Shaped s;
     PrTextPiece piece = s.piece(0, 3);
     piece.noWrap = true;
-    s.set("a-b", std::vector<PrTextPiece>{piece});
+    const PrTextPiece noWrap[] = {piece};
+    s.set("a-b", noWrap);
     CHECK(prTextShapingInfo(s.shaping).breaks[2] == PrUnicodeLineBreak_Prohibited);
 
     // The opportunity between two pieces follows the nearest Open piece that holds both of them.
     PrTextPiece open{.kind = PrTextPieceKind_Open, .noWrap = true};
     PrTextPiece close{.kind = PrTextPieceKind_Close, .start = 3, .end = 3};
-    s.set("a-b", std::vector<PrTextPiece>{open, s.piece(0, 2), s.piece(2, 3), close});
+    const PrTextPiece held[] = {open, s.piece(0, 2), s.piece(2, 3), close};
+    s.set("a-b", held);
     CHECK(prTextShapingInfo(s.shaping).breaks[2] == PrUnicodeLineBreak_Prohibited);
-    s.set("a-b", std::vector<PrTextPiece>{s.piece(0, 2), s.piece(2, 3)});
+    const PrTextPiece apart[] = {s.piece(0, 2), s.piece(2, 3)};
+    s.set("a-b", apart);
     CHECK(prTextShapingInfo(s.shaping).breaks[2] == PrUnicodeLineBreak_Allowed);
 
     // An opportunity after white space belongs to the white space, whatever holds it.
     PrTextSpaceFlags wraps[] = {0, PrTextSpaceFlag_Hangs | PrTextSpaceFlag_Wraps, 0};
-    s.set("a b", std::vector<PrTextPiece>{piece}, PrTextDirection_Ltr, wraps);
+    s.set("a b", noWrap, PrTextDirection_Ltr, wraps);
     CHECK(prTextShapingInfo(s.shaping).breaks[2] == PrUnicodeLineBreak_Allowed);
     PrTextSpaceFlags stays[] = {0, PrTextSpaceFlag_Hangs, 0};
-    s.set("a b", std::vector<PrTextPiece>{s.piece(0, 3)}, PrTextDirection_Ltr, stays);
+    const PrTextPiece wrapping[] = {s.piece(0, 3)};
+    s.set("a b", wrapping, PrTextDirection_Ltr, stays);
     CHECK(prTextShapingInfo(s.shaping).breaks[2] == PrUnicodeLineBreak_Prohibited);
 
     PrTextPiece spaces = s.piece(0, 4);
     spaces.breakSpaces = true;
-    s.set("a  b", std::vector<PrTextPiece>{spaces});
+    const PrTextPiece breakSpaces[] = {spaces};
+    s.set("a  b", breakSpaces);
     CHECK(prTextShapingInfo(s.shaping).breaks[2] == PrUnicodeLineBreak_Allowed);
 }
 
@@ -226,7 +241,8 @@ TEST_CASE("a preserved tab shapes into nothing and advances to the stops that it
     s.tabSize = 40;
     s.tabMinimum = 5;
     PrTextSpaceFlags spaces[] = {0, PrTextSpaceFlag_Tab | PrTextSpaceFlag_Hangs, 0};
-    s.set("a\tb", std::vector<PrTextPiece>{s.piece(0, 3)}, PrTextDirection_Ltr, spaces);
+    const PrTextPiece pieces[] = {s.piece(0, 3)};
+    s.set("a\tb", pieces, PrTextDirection_Ltr, spaces);
     CHECK(prTextShapingInfo(s.shaping).glyphCount == 2);
     float a = s.width(0, 1);
     float b = s.width(2, 3);
@@ -239,9 +255,9 @@ TEST_CASE("a preserved tab shapes into nothing and advances to the stops that it
 TEST_CASE("a host chooses where a line may break beside an object") {
     Shaped s;
     // A no-break space before the object, and a word joiner after it.
-    std::string text = "a\xc2\xa0\xef\xbf\xbc\xe2\x81\xa0" "b";
+    PrStringView text = "a\xc2\xa0\xef\xbf\xbc\xe2\x81\xa0" "b";
     PrTextPiece object{.kind = PrTextPieceKind_Object, .start = 3, .end = 6};
-    std::vector<PrTextPiece> pieces{s.piece(0, 3), object, s.piece(6, 10)};
+    const PrTextPiece pieces[] = {s.piece(0, 3), object, s.piece(6, 10)};
     s.set(text, pieces);
     CHECK(prTextShapingInfo(s.shaping).breaks[3] == PrUnicodeLineBreak_Prohibited);
     CHECK(prTextShapingInfo(s.shaping).breaks[6] == PrUnicodeLineBreak_Prohibited);
@@ -258,36 +274,37 @@ TEST_CASE("overflow-wrap breaks a word that fits on no line, and only anywhere c
     CHECK(prTextShapingInfo(s.shaping).emergency == nullptr);
     float abc = s.width(0, 3);
     PrTextWordBreaks* words = prTextWordBreaksCreate();
-    CHECK(s.ends({abc + 0.5f}, nullptr, words) == Ends{3, 6});
+    CHECK(s.ends(abc + 0.5f, nullptr, words) == Ends({3, 6}));
     prTextWordBreaksClear(words);
     prTextWordBreaksDestroy(words);
     // Without memory for the word, each line finds its opportunities again and gets the same answer.
-    CHECK(s.ends({abc + 0.5f}) == Ends{3, 6});
+    CHECK(s.ends(abc + 0.5f) == Ends({3, 6}));
     CHECK(prTextShapingIntrinsic(s.shaping, 0, 6, nullptr, nullptr).minContent == doctest::Approx(s.width(0, 6)));
 
     s.set("abcdef", PrTextBreakStyle{.overflowWrap = PrTextOverflowWrap_Anywhere});
     CHECK(prTextShapingInfo(s.shaping).emergency != nullptr);
-    CHECK(s.ends({abc + 0.5f}) == Ends{3, 6});
+    CHECK(s.ends(abc + 0.5f) == Ends({3, 6}));
     CHECK(prTextShapingIntrinsic(s.shaping, 0, 6, nullptr, nullptr).minContent < s.width(0, 6));
 
     s.set("abcdef");
-    CHECK(s.ends({abc + 0.5f}) == Ends{6});
+    CHECK(s.ends(abc + 0.5f) == Ends({6}));
 }
 
 TEST_CASE("a line's runs are in visual order, with the white space that ends it at its paragraph's level") {
     Shaped s;
-    std::string text = "abc \xd8\xb3\xd9\x84\xd8\xa7\xd9\x85";
-    uint32_t size = uint32_t(text.size());
-    s.set(text, std::vector<PrTextPiece>{s.piece(0, size)}, PrTextDirection_Rtl);
+    PrStringView text = "abc \xd8\xb3\xd9\x84\xd8\xa7\xd9\x85";
+    uint32_t size = uint32_t(text.size);
+    const PrTextPiece pieces[] = {s.piece(0, size)};
+    s.set(text, pieces, PrTextDirection_Rtl);
     CHECK(prTextShapingParagraphLevel(s.shaping, 0) == 1);
     REQUIRE(prTextShapingInfo(s.shaping).levels != nullptr);
     uint32_t count = prTextShapingLineRuns(s.shaping, 0, size, size, nullptr, 0);
     REQUIRE(count >= 2);
-    std::vector<PrTextLineRun> parts(count);
+    Array<PrTextLineRun> parts(count);
     CHECK(prTextShapingLineRuns(s.shaping, 0, size, size, parts.data(), count) == count);
     // The Arabic goes left of the Latin.
-    CHECK(parts.front().start >= 4);
-    CHECK(parts.back().start == 0);
+    CHECK(parts[0].start >= 4);
+    CHECK(parts.last().start == 0);
 
     // The glyphs of a right-to-left run are in the order of the text, as every run's are.
     const PrTextShapedGlyph* glyphs = prTextShapingInfo(s.shaping).glyphs;
@@ -295,7 +312,8 @@ TEST_CASE("a line's runs are in visual order, with the white space that ends it 
         CHECK(glyphs[g - 1].cluster <= glyphs[g].cluster);
 
     // A line that ends in white space gives it the paragraph's level.
-    s.set("abc  ", std::vector<PrTextPiece>{s.piece(0, 5)}, PrTextDirection_Rtl);
+    const PrTextPiece trailing[] = {s.piece(0, 5)};
+    s.set("abc  ", trailing, PrTextDirection_Rtl);
     count = prTextShapingLineRuns(s.shaping, 0, 5, 3, nullptr, 0);
     REQUIRE(count == 2);
     PrTextLineRun two[2];
@@ -308,24 +326,27 @@ TEST_CASE("a line's runs are in visual order, with the white space that ends it 
 TEST_CASE("a piece's letter and word spacing widen its advances by their px, and Arabic takes no letter spacing") {
     Shaped s;
     // An e with a combining acute is one typographic character unit.
-    std::string text = "ab e\xcc\x81";
-    uint32_t size = uint32_t(text.size());
+    PrStringView text = "ab e\xcc\x81";
+    uint32_t size = uint32_t(text.size);
     s.set(text);
     float plain = s.width(0, size);
     PrTextPiece spaced = s.piece(0, size);
     spaced.letterSpacing = 2;
     spaced.wordSpacing = 5;
-    s.set(text, std::vector<PrTextPiece>{spaced});
+    const PrTextPiece spacedPieces[] = {spaced};
+    s.set(text, spacedPieces);
     CHECK(s.width(0, size) == doctest::Approx(plain + 4 * 2 + 5));
     // The space after a character is part of its advance.
     CHECK(s.width(0, 1) == doctest::Approx(prTextShapingInfo(s.shaping).advances[0]));
 
     // Arabic letters, which join, take no letter spacing.
-    std::string arabic = "\xd8\xb3\xd9\x84";
-    s.set(arabic, std::vector<PrTextPiece>{s.piece(0, 4)}, PrTextDirection_Rtl);
+    PrStringView arabic = "\xd8\xb3\xd9\x84";
+    const PrTextPiece arabicPieces[] = {s.piece(0, 4)};
+    s.set(arabic, arabicPieces, PrTextDirection_Rtl);
     float joined = s.width(0, 4);
     PrTextPiece rtl = s.piece(0, 4);
     rtl.letterSpacing = 3;
-    s.set(arabic, std::vector<PrTextPiece>{rtl}, PrTextDirection_Rtl);
+    const PrTextPiece rtlPieces[] = {rtl};
+    s.set(arabic, rtlPieces, PrTextDirection_Rtl);
     CHECK(s.width(0, 4) == doctest::Approx(joined));
 }

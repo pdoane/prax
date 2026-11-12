@@ -1,11 +1,13 @@
+#include "pr/array.h"
 #include "pr/css.h"
+#include "pr/string.h"
+#include "pr/string_ops.h"
 
 #include "tools/harness/test.h"
 
-#include <string>
-#include <vector>
-
 namespace pr_impl {
+
+using namespace pr;
 
 namespace {
 
@@ -91,22 +93,22 @@ struct Value {
     }
 };
 
-std::string take(PrRawString text) {
+String take(PrRawString text) {
     PrStringView view = prRawStringView(&text);
-    std::string result(view.data != nullptr ? view.data : "", view.size);
+    String result(view.size != 0 ? view : PrStringView(""));
     prRawStringReset(&text);
     return result;
 }
 
-std::string serialize(const PrCssValue* value) {
+String serialize(const PrCssValue* value) {
     return take(prCssValueSerialize(value, 0, prCssValueSize(value)));
 }
 
 // Returns the serialization of each tree of a value. Clears the value.
-std::vector<std::string> serializeAll(PrCssValue* value) {
-    std::vector<std::string> result;
+Array<String> serializeAll(PrCssValue* value) {
+    Array<String> result;
     for (uint32_t tree = 0; tree < prCssValueSize(value); tree = prCssValueNext(value, tree))
-        result.push_back(take(prCssValueSerialize(value, tree, prCssValueNext(value, tree))));
+        result.push(take(prCssValueSerialize(value, tree, prCssValueNext(value, tree))));
     prCssValueClear(value);
     return result;
 }
@@ -123,7 +125,7 @@ PrCssStyleDeclaration* newBlock(PrCssStyleSheet** sheet) {
     return prCssStylePropertiesAsCssStyleDeclaration(prCssStyleRuleStyle(rule));
 }
 
-std::string property(PrCssStyleDeclaration* block, PrCssProperty property) {
+String property(PrCssStyleDeclaration* block, PrCssProperty property) {
     return take(prCssStyleDeclarationGetPropertyValue(block, Prop(property)));
 }
 
@@ -137,14 +139,14 @@ TEST_CASE("units and keywords are named as values write them") {
     PrCssUnit unit;
     REQUIRE(prCssUnitFromName("KHZ", &unit));
     CHECK(unit == PrCssUnit_KHz);
-    CHECK(std::string(prCssUnitName(unit).data, prCssUnitName(unit).size) == "khz");
+    CHECK(prCssUnitName(unit) == "khz");
     REQUIRE(prCssUnitFromName("percent", &unit));
     CHECK(unit == PrCssUnit_Percent);
     CHECK_FALSE(prCssUnitFromName("lemon", &unit));
 
     CHECK(prCssKeywordFromText("AUTO") == PrCssKeyword_Auto);
     CHECK(prCssKeywordFromText("lemon") == PrCssKeyword_Unknown);
-    CHECK(std::string(prCssKeywordName(PrCssKeyword_Auto).data, 4) == "auto");
+    CHECK(PrStringView(prCssKeywordName(PrCssKeyword_Auto).data, 4) == "auto");
     PrColor8 color;
     REQUIRE(prCssColorFromKeyword(PrCssKeyword_Red, &color));
     CHECK((color.r == 255 && color.g == 0 && color.a == 255));
@@ -347,10 +349,10 @@ TEST_CASE("parsing gives the value a declaration of the text holds") {
     Value values;
     REQUIRE(prCssValueParse(Prop(PrCssProperty_Width), "calc(1px + 2em)", values) == PrStatus_Ok);
     CHECK(kindAt(values, 0) == PrCssValueKind_Math);
-    CHECK(serializeAll(values) == std::vector<std::string>{"calc(2em + 1px)"});
+    CHECK(serializeAll(values) == Array<String>({"calc(2em + 1px)"}));
 
     REQUIRE(prCssValueParse(Prop(PrCssProperty_TransitionDuration), "1s, 2s", values) == PrStatus_Ok);
-    CHECK(serializeAll(values) == std::vector<std::string>{"1s", ",", "2s"});
+    CHECK(serializeAll(values) == Array<String>({"1s", ",", "2s"}));
 
     // A named color stays the keyword it was written as, while a color parse gives its channels.
     REQUIRE(prCssValueParse(Prop(PrCssProperty_Color), "red", values) == PrStatus_Ok);
@@ -362,7 +364,7 @@ TEST_CASE("parsing gives the value a declaration of the text holds") {
     prCssValueColorChannels(values, 0, channels);
     CHECK(prCssValueFields(values, channels[0].node).number.value == 255);
     CHECK(channels[0].number == 1.0 / 255.0);
-    CHECK(serializeAll(values) == std::vector<std::string>{"rgb(255, 0, 0)"});
+    CHECK(serializeAll(values) == Array<String>({"rgb(255, 0, 0)"}));
     CHECK(prCssValueParseColor("1px", values) == PrStatus_Syntax);
 
     // A custom property's value is its tokens, and so is a value that a var() reaches.
@@ -382,14 +384,14 @@ TEST_CASE("parsing gives the value a declaration of the text holds") {
     // Parsing appends, and leaves the value unchanged if it fails.
     REQUIRE(prCssValueParse(Prop(PrCssProperty_Width), "1px", values) == PrStatus_Ok);
     CHECK(prCssValueParse(Prop(PrCssProperty_Width), "red", values) == PrStatus_Syntax);
-    CHECK(serializeAll(values) == std::vector<std::string>{"1px"});
+    CHECK(serializeAll(values) == Array<String>({"1px"}));
 
     // A descriptor is not a property, and these values are for properties.
     const PrCssDeclarationName src = {PrCssProperty_Count, PrCssDescriptor_FontFaceSrc, prRawStringNull()};
     CHECK(prCssValueParse(&src, "1px", values) == PrStatus_InvalidData);
     CHECK(prCssValueParseNumeric("auto", values) == PrStatus_Syntax);
     REQUIRE(prCssValueParseNumeric(" 1px ", values) == PrStatus_Ok);
-    CHECK(serializeAll(values) == std::vector<std::string>{"1px"});
+    CHECK(serializeAll(values) == Array<String>({"1px"}));
 }
 
 TEST_CASE("the var() references of tokens are found at their top level") {
@@ -398,11 +400,11 @@ TEST_CASE("the var() references of tokens are found at their top level") {
     REQUIRE(prCssVariableReferences(text, references, 4) == 2);
     CHECK(references[0].start == 2);
     CHECK(references[0].end == 20);
-    CHECK(std::string(references[0].name.data, references[0].name.size) == "--b");
+    CHECK(references[0].name == "--b");
     REQUIRE(references[0].hasFallback);
-    CHECK(std::string(text.data + references[0].fallbackStart,
-        references[0].fallbackEnd - references[0].fallbackStart) == " var(--c)");
-    CHECK(std::string(references[1].name.data, references[1].name.size) == "--e");
+    CHECK(prStringSlice(text, references[0].fallbackStart, references[0].fallbackEnd - references[0].fallbackStart) ==
+        " var(--c)");
+    CHECK(references[1].name == "--e");
     CHECK_FALSE(references[1].hasFallback);
     CHECK(prCssVariableReferences("var(x)", nullptr, 0) == 0);
 }
@@ -415,7 +417,7 @@ TEST_CASE("a value declared is matched by its type, not by the text it would be 
     Value zero;
     zero.number(0, PrCssUnit_Number);
     CHECK(prCssStyleDeclarationSetValue(block, Prop(PrCssProperty_Width), zero, false) == PrStatus_InvalidData);
-    CHECK(property(block, PrCssProperty_Width).empty());
+    CHECK(property(block, PrCssProperty_Width).isEmpty());
     REQUIRE(prCssStyleDeclarationSetValue(block, Prop(PrCssProperty_LineHeight), zero, false) == PrStatus_Ok);
     CHECK(property(block, PrCssProperty_LineHeight) == "0");
 

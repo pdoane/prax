@@ -4,44 +4,45 @@
 
 #include "tools/harness/test.h"
 
-#include <string>
-#include <vector>
-
 extern "C" int prTestLocaleCApi(void);
 
 namespace pr_impl {
 
 namespace {
 
-std::string tag(PrLocale locale) {
+String tag(PrLocale locale) {
     char out[kPrLocaleMaxTag];
-    return std::string(out, prLocaleTag(locale, out));
+    size_t size = prLocaleTag(locale, out);
+    return String(PrStringView{out, size});
 }
 
-std::string resolved(const char* text) {
+String resolved(const char* text) {
     return tag(prLocaleFromTag(text));
 }
 
 uint32_t ot(const char* text) {
-    std::string padded = std::string(text) + "    ";
-    return uint32_t(uint8_t(padded[0])) << 24 | uint32_t(uint8_t(padded[1])) << 16 | uint32_t(uint8_t(padded[2])) << 8 |
-        uint32_t(uint8_t(padded[3]));
+    // The name is padded with spaces to four bytes.
+    PrStringView name = text;
+    uint32_t tag = 0;
+    for (size_t i = 0; i < 4; ++i)
+        tag = tag << 8 | uint32_t(uint8_t(i < name.size ? name.data[i] : ' '));
+    return tag;
 }
 
-std::vector<uint32_t> systems(const char* text) {
+Array<uint32_t> systems(const char* text) {
     PrLocale locale = prLocaleFromTag(text);
-    std::vector<uint32_t> out(prLocaleOpenTypeLanguages(locale, nullptr, 0));
-    prLocaleOpenTypeLanguages(locale, out.data(), uint32_t(out.size()));
+    Array<uint32_t> out(prLocaleOpenTypeLanguages(locale, nullptr, 0));
+    prLocaleOpenTypeLanguages(locale, out.data(), out.count());
     return out;
 }
 
-std::string quote(const char* text, uint32_t depth, bool open) {
+String quote(const char* text, uint32_t depth, bool open) {
     PrStringView mark = prLocaleQuote(prLocaleFromTag(text), depth, open);
-    return std::string(mark.data, mark.size);
+    return String(mark);
 }
 
-std::string view(PrStringView text) {
-    return std::string(text.data, text.size);
+String view(PrStringView text) {
+    return String(text);
 }
 
 } // namespace
@@ -69,7 +70,7 @@ TEST_CASE("a subtag names its language, script or region whatever its case, a de
     CHECK(view(prLanguageSubtag(PrLanguage_Yue)) == "yue");
     CHECK(view(prScriptCode(PrScript_Hant)) == "Hant");
     CHECK(view(prRegionSubtag(PrRegion_419)) == "419");
-    CHECK(view(prLanguageSubtag(PrLanguage_None)).empty());
+    CHECK(view(prLanguageSubtag(PrLanguage_None)).isEmpty());
 }
 
 TEST_CASE("a tag resolves to its canonical locale, with its likely script and region") {
@@ -90,7 +91,7 @@ TEST_CASE("a tag resolves to its canonical locale, with its likely script and re
     // replacement.
     CHECK(resolved("zh-yue") == "yue-Hant-HK");
     CHECK(resolved("i-klingon") == "tlh");
-    CHECK(resolved("i-default").empty());
+    CHECK(resolved("i-default").isEmpty());
     // Variants, extensions and private use are dropped, and so are a private-use script and region.
     CHECK(resolved("de-DE-1996") == "de-Latn-DE");
     CHECK(resolved("en-US-u-ca-gregory-x-private") == "en-Latn-US");
@@ -98,7 +99,8 @@ TEST_CASE("a tag resolves to its canonical locale, with its likely script and re
 }
 
 TEST_CASE("a tag whose language does not resolve resolves to no locale") {
-    for (const char* text : {"", "e", "english", "qaa", "-en", "zz-US", "not a tag"})
+    const char* const kTexts[] = {"", "e", "english", "qaa", "-en", "zz-US", "not a tag"};
+    for (const char* text : kTexts)
         CHECK_MESSAGE(prLocaleFromTag(text) == 0, text);
 }
 
@@ -123,7 +125,7 @@ TEST_CASE("a locale packs its language, script and region, and writes its tag") 
     CHECK(prLocaleRegion(locale) == PrRegion_PT);
     CHECK(tag(locale) == "pt-Latn-PT");
     CHECK(tag(prLocaleMake(PrLanguage_Pt, PrScript_Zzzz, PrRegion_None)) == "pt");
-    CHECK(tag(0).empty());
+    CHECK(tag(0).isEmpty());
 }
 
 TEST_CASE("a script has its OpenType tags, the newest first") {
@@ -139,18 +141,18 @@ TEST_CASE("a script has its OpenType tags, the newest first") {
 }
 
 TEST_CASE("a locale's OpenType language systems go from its script and region to its language") {
-    CHECK(systems("en") == std::vector<uint32_t>{ot("ENG")});
-    CHECK(systems("zh") == std::vector<uint32_t>{ot("ZHS")});
-    CHECK(systems("zh-TW") == std::vector<uint32_t>{ot("ZHT")});
-    CHECK(systems("zh-HK") == std::vector<uint32_t>{ot("ZHH"), ot("ZHT")});
-    CHECK(systems("yue") == std::vector<uint32_t>{ot("ZHH"), ot("ZHT")});
+    CHECK(systems("en") == Array<uint32_t>({ot("ENG")}));
+    CHECK(systems("zh") == Array<uint32_t>({ot("ZHS")}));
+    CHECK(systems("zh-TW") == Array<uint32_t>({ot("ZHT")}));
+    CHECK(systems("zh-HK") == Array<uint32_t>({ot("ZHH"), ot("ZHT")}));
+    CHECK(systems("yue") == Array<uint32_t>({ot("ZHH"), ot("ZHT")}));
     // The system of a macrolanguage follows the language's own system. A macrolanguage that no system lists takes the
     // systems of its languages.
-    CHECK(systems("id") == std::vector<uint32_t>{ot("IND"), ot("MLY")});
-    CHECK(systems("no") == std::vector<uint32_t>{ot("NOR"), ot("NYN")});
+    CHECK(systems("id") == Array<uint32_t>({ot("IND"), ot("MLY")}));
+    CHECK(systems("no") == Array<uint32_t>({ot("NOR"), ot("NYN")}));
     // The system for Polytonic Greek belongs to a variant, which the engine does not distinguish.
-    CHECK(systems("el") == std::vector<uint32_t>{ot("ELL")});
-    CHECK(systems("ka") == std::vector<uint32_t>{ot("KAT")});
+    CHECK(systems("el") == Array<uint32_t>({ot("ELL")}));
+    CHECK(systems("ka") == Array<uint32_t>({ot("KAT")}));
     CHECK(prLocaleOpenTypeLanguages(0, nullptr, 0) == 0);
 }
 

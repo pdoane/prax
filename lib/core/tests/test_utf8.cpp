@@ -1,9 +1,10 @@
+#include "pr/array.h"
+#include "pr/string.h"
+#include "pr/string_ops.h"
 #include "pr/text_buffer.h"
 #include "pr/utf8.h"
 
 #include "tools/harness/test.h"
-
-#include <string>
 
 namespace pr_impl {
 
@@ -15,21 +16,21 @@ struct Decoded {
     uint32_t width;
 };
 
-Decoded decode(const std::string& text, uint32_t offset = 0) {
+Decoded decode(PrStringView text, uint32_t offset = 0) {
     Decoded out = {0, 0};
     out.width = prUtf8Decode(text, offset, &out.codePoint);
     return out;
 }
 
-Decoded decodeScalar(const std::string& text, uint32_t offset = 0) {
+Decoded decodeScalar(PrStringView text, uint32_t offset = 0) {
     Decoded out = {0, 0};
     out.width = prUtf8DecodeScalar(text, offset, &out.codePoint);
     return out;
 }
 
-std::string encode(uint32_t codePoint) {
+String encode(uint32_t codePoint) {
     char buffer[kPrUtf8MaxBytes];
-    return std::string(buffer, prUtf8Encode(codePoint, buffer));
+    return String(PrStringView(buffer, prUtf8Encode(codePoint, buffer)));
 }
 
 } // namespace
@@ -49,7 +50,7 @@ TEST_CASE("a sequence decodes to the code point it spells") {
 }
 
 TEST_CASE("reading at or past the end returns zero") {
-    CHECK(decode(std::string()).width == 0);
+    CHECK(decode("").width == 0);
     CHECK(decode("a", 1).width == 0);
     CHECK(decodeScalar("a", 1).width == 0);
 }
@@ -82,7 +83,7 @@ TEST_CASE("a surrogate is a code point, and a null is a null") {
     CHECK(decode("\xed\xa0\x80").width == 3);
     CHECK(decode("\xed\xbf\xbf").codePoint == 0xdfff);
 
-    Decoded decoded = decode(std::string("\0", 1));
+    Decoded decoded = decode(PrStringView("\0", 1));
     CHECK(decoded.codePoint == 0);
     CHECK(decoded.width == 1);
 }
@@ -92,7 +93,7 @@ TEST_CASE("a scalar value is never a surrogate and never a null") {
     CHECK(decodeScalar("\xed\xa0\x80").codePoint == kPrUtf8Replacement);
     CHECK(decodeScalar("\xed\xa0\x80").width == 1);
 
-    Decoded decoded = decodeScalar(std::string("\0", 1));
+    Decoded decoded = decodeScalar(PrStringView("\0", 1));
     CHECK(decoded.codePoint == kPrUtf8Replacement);
     CHECK(decoded.width == 1);
 
@@ -101,7 +102,7 @@ TEST_CASE("a scalar value is never a surrogate and never a null") {
 }
 
 TEST_CASE("validating stops at the first ill-formed sequence") {
-    auto validate = [](const std::string& text) {
+    auto validate = [](PrStringView text) {
         return prUtf8Validate(text);
     };
     CHECK(validate("") == 0);
@@ -115,29 +116,32 @@ TEST_CASE("validating stops at the first ill-formed sequence") {
 
 TEST_CASE("validating finds a sequence wherever it falls in a long text") {
     // A well-formed sequence at each offset of text long enough for several blocks, followed by an ill-formed one.
-    for (const std::string sequence :
-            {"\xc3\xa9", "\xe2\x82\xac", "\xf0\x9f\x98\x80", "\xed\xa0\x80"}) {
-        for (size_t at = 0; at < 150; ++at) {
-            std::string text(200, 'a');
-            text.replace(at, sequence.size(), sequence);
+    const PrStringView sequences[] = {"\xc3\xa9", "\xe2\x82\xac", "\xf0\x9f\x98\x80", "\xed\xa0\x80"};
+    for (PrStringView sequence : sequences) {
+        uint32_t size = uint32_t(sequence.size);
+        for (uint32_t at = 0; at < 150; ++at) {
+            String text;
+            for (uint32_t i = 0; i < 200; ++i)
+                text.append('a');
+            text.replace(at, size, sequence);
             CAPTURE(at);
-            CHECK(prUtf8Validate(text) == text.size());
+            CHECK(prUtf8Validate(text) == text.count());
 
-            text[at + sequence.size() + 7] = '\x80';
-            CHECK(prUtf8Validate(text) == at + sequence.size() + 7);
+            text.replace(at + size + 7, 1, "\x80");
+            CHECK(prUtf8Validate(text) == at + size + 7);
 
             // If the sequence is cut short, the text stops being well formed at the sequence.
-            text.replace(at, sequence.size(), sequence.substr(0, sequence.size() - 1) + "a");
+            text.replace(at, size, format("{}a", prStringSlice(sequence, 0, size - 1)));
             CHECK(prUtf8Validate(text) == at);
         }
     }
 }
 
 TEST_CASE("repaired text has U+FFFD in place of each maximal subpart") {
-    auto repair = [](const std::string& text) {
+    auto repair = [](PrStringView text) {
         PrTextBuffer out = {};
         prTextBufferAppendUtf8(&out, text);
-        std::string result(out.data != nullptr ? out.data : "", out.size);
+        String result(prTextBufferView(&out));
         prTextBufferReset(&out);
         return result;
     };
@@ -151,38 +155,41 @@ TEST_CASE("repaired text has U+FFFD in place of each maximal subpart") {
 TEST_CASE("a decoder of bytes one at a time agrees with decoding the whole text as scalar values") {
     // Returns the code points that a decoder gives for `text`, with a replacement for a sequence that is incomplete at
     // the end. The decoder keeps U+0000, which prUtf8DecodeScalar replaces.
-    auto pushed = [](const std::string& text) {
-        std::u32string out;
+    auto pushed = [](PrStringView text) {
+        Array<uint32_t> out;
         PrUtf8Decoder decoder = {};
-        for (size_t at = 0; at < text.size();) {
+        for (size_t at = 0; at < text.size;) {
             uint32_t codePoint = 0;
-            PrUtf8Step step = prUtf8DecoderPush(&decoder, uint8_t(text[at]), &codePoint);
+            PrUtf8Step step = prUtf8DecoderPush(&decoder, uint8_t(text.data[at]), &codePoint);
             if (step != PrUtf8Step_Interrupted)
                 ++at;
             if (step == PrUtf8Step_CodePoint)
-                out += char32_t(codePoint);
+                out.push(codePoint);
             else if (step != PrUtf8Step_Continue)
-                out += char32_t(kPrUtf8Replacement);
+                out.push(kPrUtf8Replacement);
         }
         if (prUtf8DecoderIsInSequence(&decoder))
-            out += char32_t(kPrUtf8Replacement);
+            out.push(kPrUtf8Replacement);
         return out;
     };
-    auto whole = [](const std::string& text) {
-        std::u32string out;
-        for (size_t at = 0; at < text.size();) {
+    auto whole = [](PrStringView text) {
+        Array<uint32_t> out;
+        for (size_t at = 0; at < text.size;) {
             uint32_t codePoint = 0;
             at += prUtf8DecodeScalar(text, at, &codePoint);
-            out += char32_t(codePoint);
+            out.push(codePoint);
         }
         return out;
     };
-    for (const std::string text : {"caf\xc3\xa9 \xe2\x82\xac \xf0\x9f\x98\x80", "a\xe2\x82""b", "\xe0\x80\x80",
-        "\xed\xa0\x80", "a\xf0\x9f\x98", "\xc0\xaf\xff", "\xf4\x90\x80\x80", "\xf0\x9f\x98\x80\x80", "\xc3"}) {
+    const PrStringView texts[] = {
+        "caf\xc3\xa9 \xe2\x82\xac \xf0\x9f\x98\x80", "a\xe2\x82""b", "\xe0\x80\x80",
+        "\xed\xa0\x80", "a\xf0\x9f\x98", "\xc0\xaf\xff", "\xf4\x90\x80\x80", "\xf0\x9f\x98\x80\x80", "\xc3",
+    };
+    for (PrStringView text : texts) {
         CAPTURE(text);
         CHECK(pushed(text) == whole(text));
     }
-    CHECK(pushed(std::string("\0", 1)) == std::u32string(1, U'\0'));
+    CHECK(pushed(PrStringView("\0", 1)) == Array<uint32_t>(1));
 }
 
 TEST_CASE("a code point encodes to the sequence that spells it") {

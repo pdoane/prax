@@ -362,7 +362,7 @@ void setStatus(TextEditor* editor, PrStringView text) {
 
 PrStringView sourceOf(const TextEditorDocument* document) {
     if (document->mapping.data != nullptr)
-        return PrStringView{reinterpret_cast<const char*>(document->mapping.data), document->mapping.size};
+        return prStringFromBytes(document->mapping);
     return PrStringView{document->source.data, document->source.count};
 }
 
@@ -949,8 +949,7 @@ PrStatus saveDocument(TextEditorDocument* document) {
         ok = prFileWrite(prRawStringView(&document->path), PrByteView{restored.data, restored.count});
         restored.reset();
     } else {
-        ok = prFileWrite(prRawStringView(&document->path),
-            PrByteView{reinterpret_cast<const uint8_t*>(text.data), text.size});
+        ok = prFileWrite(prRawStringView(&document->path), prStringBytes(text));
     }
     if (!ok)
         return PrStatus_Io;
@@ -1520,7 +1519,7 @@ void registerCommands(TextEditor* e) {
             return;
         }
         PrTextEditorDocumentDesc desc{
-            .text = PrStringView{reinterpret_cast<const char*>(mapping.data), mapping.size},
+            .text = prStringFromBytes(mapping),
             .name = prRawStringView(&young->path),
             .readOnly = true,
         };

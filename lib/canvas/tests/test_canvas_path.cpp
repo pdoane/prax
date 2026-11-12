@@ -1,10 +1,9 @@
 // The paths of CanvasPath: their subpaths, arcs and rounded rectangles, as Path2D builds them.
 
 #include "pr/canvas.h"
+#include "pr/float.h"
 
 #include "tools/harness/test.h"
-
-#include <cmath>
 
 namespace pr_impl {
 
@@ -54,7 +53,7 @@ TEST_CASE("an arc of a whole turn or more is a circle, and less than a turn goes
 TEST_CASE("a negative radius is out of range and adds nothing, and a non-finite argument adds nothing") {
     PrCanvasPath2D* path = prCanvasPath2DCreate();
     CHECK(prCanvasPath2DArc(path, 50, 50, -1, 0, kPi, false) == PrStatus_OutOfRange);
-    CHECK(prCanvasPath2DArc(path, std::nan(""), 50, -1, 0, kPi, false) == PrStatus_Ok);
+    CHECK(prCanvasPath2DArc(path, kPrF64Nan, 50, -1, 0, kPi, false) == PrStatus_Ok);
     CHECK(prCanvasPath2DArcTo(path, 0, 0, 10, 10, -1) == PrStatus_OutOfRange);
     prCanvasPath2DDestroy(path);
 }

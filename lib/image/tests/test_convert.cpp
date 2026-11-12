@@ -1,15 +1,12 @@
+#include "pr/array.h"
 #include "pr/color_space.h"
+#include "pr/float.h"
 #include "pr/image.h"
+#include "pr/mem.h"
+#include "pr/min_max.h"
+#include "pr/type_traits.h"
 
 #include "tools/harness/test.h"
-
-#include <algorithm>
-#include <cmath>
-#include <cstring>
-#include <initializer_list>
-#include <limits>
-#include <type_traits>
-#include <vector>
 
 namespace pr_impl {
 
@@ -27,7 +24,7 @@ struct Buffer {
 
 template <typename T, size_t N>
 Buffer buffer(T (&data)[N], PrImageFormat pixelFormat, uint32_t width = 1, uint32_t height = 1, size_t stride = 0) {
-    uint8_t* bytes = reinterpret_cast<uint8_t*>(const_cast<std::remove_const_t<T>*>(data));
+    uint8_t* bytes = reinterpret_cast<uint8_t*>(const_cast<RemoveConst<T>*>(data));
     return {{bytes, stride != 0 ? stride : sizeof(data) / height, {width, height}}, pixelFormat};
 }
 
@@ -157,7 +154,8 @@ TEST_CASE("image RGB and Lab conversions round trip characterized color") {
 }
 
 TEST_CASE("image hue models use degrees and percentage channels") {
-    for (PrColorSpace space : {PrColorSpace_Hsl, PrColorSpace_Hwb}) {
+    const PrColorSpace spaces[] = {PrColorSpace_Hsl, PrColorSpace_Hwb};
+    for (PrColorSpace space : spaces) {
         float original[] = {
             120.0f, space == PrColorSpace_Hsl ? 100.0f : 0.0f,
             space == PrColorSpace_Hsl ? 50.0f : 0.0f,
@@ -238,8 +236,8 @@ TEST_CASE("independent alpha does not weight color at zero or fractional values"
 TEST_CASE("independent alpha cannot be dropped introduced or reinterpreted as opacity") {
     float original[] = {0.2f, 0.3f, 0.4f, 0.0f};
     float result[4] = {};
-    for (PrImageAlpha alpha :
-            {PrImageAlpha_None, PrImageAlpha_Straight, PrImageAlpha_Premultiplied}) {
+    const PrImageAlpha alphas[] = {PrImageAlpha_None, PrImageAlpha_Straight, PrImageAlpha_Premultiplied};
+    for (PrImageAlpha alpha : alphas) {
         Buffer source = buffer(original, format(PrImageSample_F32, PrImageAlpha_Independent));
         Buffer destination = buffer(result, format(PrImageSample_F32, alpha));
         CHECK(convert(source, destination, 0) == PrStatus_NotSupported);
@@ -330,15 +328,15 @@ TEST_CASE("ICC image color cannot silently use an sRGB fallback") {
 
 TEST_CASE("ICC image color converts through its profile") {
     // An RGB profile with linear curves whose red and green colorants are sRGB's green and red, under D50.
-    auto putU32 = [](std::vector<uint8_t>& out, uint32_t v) {
+    auto putU32 = [](Array<uint8_t>& out, uint32_t v) {
         for (int shift = 24; shift >= 0; shift -= 8)
-            out.push_back(uint8_t(v >> shift));
+            out.push(uint8_t(v >> shift));
     };
-    auto text = [](std::vector<uint8_t>& out, const char* four) { out.insert(out.end(), four, four + 4); };
-    auto fixed = [&](std::vector<uint8_t>& out, double v) { putU32(out, uint32_t(int32_t(v * 65536 + 0.5))); };
+    auto text = [](Array<uint8_t>& out, const char* four) { out.append(reinterpret_cast<const uint8_t*>(four), 4); };
+    auto fixed = [&](Array<uint8_t>& out, double v) { putU32(out, uint32_t(int32_t(v * 65536 + 0.5))); };
     const char* names[] = {"rXYZ", "gXYZ", "bXYZ", "rTRC", "gTRC", "bTRC"};
     const double columns[3][3] = {{0.3851, 0.7169, 0.0971}, {0.4361, 0.2225, 0.0139}, {0.1431, 0.0606, 0.7141}};
-    std::vector<uint8_t> elements[6];
+    Array<uint8_t> elements[6];
     for (uint32_t i = 0; i < 3; ++i) {
         text(elements[i], "XYZ ");
         putU32(elements[i], 0);
@@ -348,21 +346,21 @@ TEST_CASE("ICC image color converts through its profile") {
         putU32(elements[3 + i], 0);
         putU32(elements[3 + i], 0);
     }
-    std::vector<uint8_t> icc(128, 0);
+    Array<uint8_t> icc(128);
     uint32_t at = 132 + 12 * 6;
-    std::vector<uint8_t> table;
+    Array<uint8_t> table;
     putU32(table, 6);
     for (uint32_t i = 0; i < 6; ++i) {
         text(table, names[i]);
         putU32(table, at);
-        putU32(table, uint32_t(elements[i].size()));
-        at += uint32_t(elements[i].size());
+        putU32(table, uint32_t(elements[i].count()));
+        at += uint32_t(elements[i].count());
     }
-    icc.insert(icc.end(), table.begin(), table.end());
-    for (const std::vector<uint8_t>& element : elements)
-        icc.insert(icc.end(), element.begin(), element.end());
-    std::vector<uint8_t> size;
-    putU32(size, uint32_t(icc.size()));
+    icc.append(table.span());
+    for (const Array<uint8_t>& element : elements)
+        icc.append(element.span());
+    Array<uint8_t> size;
+    putU32(size, uint32_t(icc.count()));
     for (uint32_t i = 0; i < 4; ++i) {
         icc[i] = size[i];
         icc[16 + i] = uint8_t("RGB "[i]);
@@ -372,7 +370,7 @@ TEST_CASE("ICC image color converts through its profile") {
     uint8_t original[] = {255, 0, 0};
     float result[3] = {};
     Buffer source = buffer(original, format(PrImageSample_U8));
-    source.format.color = {PrImageColorEncoding_Icc, 0, {icc.data(), icc.size()}};
+    source.format.color = {PrImageColorEncoding_Icc, 0, {icc.data(), icc.count()}};
     Buffer destination = buffer(result, format(PrImageSample_F32));
     REQUIRE(convert(source, destination, 0) == PrStatus_Ok);
     // Within the rounding of the profile's fixed-point colorants.
@@ -403,19 +401,15 @@ TEST_CASE("identical floating image formats preserve NaN payload and signed zero
     uint32_t patterns[] = {0x7FC12345u, 0x80000000u, 0x7F800000u};
     float original[3];
     float result[3] = {};
-    std::memcpy(original, patterns, sizeof(original));
+    prMemCopy(original, patterns, sizeof(original));
     Buffer source = buffer(original, format(PrImageSample_F32));
     Buffer destination = buffer(result, format(PrImageSample_F32));
     REQUIRE(convert(source, destination, 0) == PrStatus_Ok);
-    CHECK(std::memcmp(original, result, sizeof(original)) == 0);
+    CHECK(prMemCompare(original, result, sizeof(original)) == 0);
 }
 
 TEST_CASE("nonfinite floating image samples do not undergo undefined integer casts") {
-    float original[] = {
-        std::numeric_limits<float>::quiet_NaN(),
-        std::numeric_limits<float>::infinity(),
-        -std::numeric_limits<float>::infinity(),
-    };
+    float original[] = {kPrF32Nan, kPrF32Infinity, -kPrF32Infinity};
     uint8_t result[3] = {};
     Buffer source = buffer(original, format(PrImageSample_F32));
     Buffer destination = buffer(result, format(PrImageSample_U8));
@@ -448,10 +442,10 @@ TEST_CASE("eight-bit premultiplying and unpremultiplying round the exact value h
     for (uint32_t alpha = 0; alpha < 256; ++alpha) {
         for (uint32_t value = 0; value < 256; ++value) {
             const uint8_t* p = premultiplied + (alpha * 256 + value) * 4;
-            const uint32_t expected = uint32_t(std::floor(value * alpha / 255.0 + 0.5));
+            const uint32_t expected = uint32_t(prF64Floor(value * alpha / 255.0 + 0.5));
             wrong += p[0] != expected || p[3] != alpha;
             // Unpremultiplying the premultiplied value, clamped to one.
-            const uint32_t unpremultiplied = alpha == 0 ? 0 : std::min(255u, uint32_t(std::floor(p[0] * 255.0 / alpha + 0.5)));
+            const uint32_t unpremultiplied = alpha == 0 ? 0 : min(255u, uint32_t(prF64Floor(p[0] * 255.0 / alpha + 0.5)));
             wrong += restored[(alpha * 256 + value) * 4] != unpremultiplied;
         }
     }

@@ -13,13 +13,14 @@
 
 #include "pr/assert.h"
 #include "pr/css.h"
+#include "pr/print.h"
 #include "pr/string_ops.h"
 
 #include "tools/harness/harness.h"
 
-#include <stdio.h>
-
 using namespace harness;
+
+using namespace pr;
 
 using namespace pr_impl;
 
@@ -311,7 +312,7 @@ constexpr Case kCases[] = {
 int main(int argc, char** argv) {
     prCrashHandler();
     if (argc > 2) {
-        fprintf(stderr, "usage: typed_bench [case]\n");
+        printError("usage: typed_bench [case]\n");
         return 2;
     }
     Work work = {};
@@ -329,7 +330,7 @@ int main(int argc, char** argv) {
     work.map = prCssStylePropertiesAsCssStyleDeclaration(prCssStyleRuleStyle(rule));
 
     PrStringView only = argc == 2 ? argv[1] : PrStringView{};
-    printf("[");
+    print("[");
     bool first = true;
     for (const Case& c : kCases) {
         if (only.data != nullptr) {
@@ -342,7 +343,7 @@ int main(int argc, char** argv) {
         harnessWriteCase(first, c.name, harnessMeasure([&] { c.run(&work); }));
         first = false;
     }
-    printf("\n]\n");
+    print("\n]\n");
 
     prCssStyleSheetRelease(work.sheet);
     prCssValueDestroy(work.scratch);

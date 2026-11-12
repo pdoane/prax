@@ -4,21 +4,18 @@
 
 #include "pr/html_page.h"
 #include "pr/html_storage.h"
+#include "pr/string.h"
 #include "pr/task_builtin.h"
 
 #include "tools/harness/test.h"
-
-#include <string>
 
 namespace pr_impl {
 
 namespace {
 
-std::string textOf(PrRawString value) {
-    PrStringView view = prRawStringView(&value);
-    std::string text = prRawStringIsNull(&value) ? "<null>" : std::string(view.data, view.size);
-    prRawStringReset(&value);
-    return text;
+String textOf(PrRawString value) {
+    String text = String::adopt(value);
+    return text.isNull() ? String("<null>") : text;
 }
 
 // A browsing context whose window's document is at `url`, with the providers given.
@@ -38,7 +35,7 @@ PrHtmlPage* openAt(PrHtmlStorageProvider* local, PrHtmlStorageProvider* PR_NULLA
 using namespace pr_impl;
 
 TEST_CASE("a window's storage is its document's origin's area, which a provider on disk keeps") {
-    const std::string directory = std::string(PR_HTML_TEST_DIR) + "/storage";
+    const String directory = format("{}/storage", PR_HTML_TEST_DIR);
     PrTaskPool* pool = prTaskBuiltinCreate(1);
     PrHtmlStorageProviderDesc disk{.directory = directory, .quotaBytes = 16, .pool = pool};
     PrHtmlStorageProvider* local = prHtmlStorageProviderCreate(&disk);
@@ -94,7 +91,7 @@ TEST_CASE("a window's storage is its document's origin's area, which a provider 
 }
 
 TEST_CASE("clearing a provider empties every origin's area, including those that an earlier provider left on disk") {
-    const std::string directory = std::string(PR_HTML_TEST_DIR) + "/storage_clear";
+    const String directory = format("{}/storage_clear", PR_HTML_TEST_DIR);
     PrTaskPool* pool = prTaskBuiltinCreate(1);
     PrHtmlStorageProviderDesc disk{.directory = directory, .quotaBytes = 16, .pool = pool};
     auto setAt = [](PrHtmlStorageProvider* provider, const char* url, const char* value) {
@@ -108,7 +105,7 @@ TEST_CASE("clearing a provider empties every origin's area, including those that
         PrHtmlPage* page = openAt(provider, nullptr, url);
         PrHtmlStorage* storage = prHtmlWindowStorage(prHtmlPageWindow(page), PrHtmlStorageKind_Local);
         REQUIRE(storage != nullptr);
-        std::string value = textOf(prHtmlStorageGetItem(storage, "key"));
+        String value = textOf(prHtmlStorageGetItem(storage, "key"));
         prHtmlPageDestroy(page);
         return value;
     };

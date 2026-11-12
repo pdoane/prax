@@ -4,6 +4,7 @@
 
 #include "pr/ascii.h"
 #include "pr/base.h"
+#include "pr/byte_view.h"
 #include "pr/mem.h"
 #include "pr/string_view.h"
 
@@ -19,6 +20,20 @@ PR_CONSTEXPR PrStringView prStringSlice(PrStringView text, size_t start, size_t 
     return PR_LITERAL(PrStringView){text.data + start, count};
 }
 
+// Return the first `count` bytes of `text`, the last `count`, and those from `start` on: all of `text`, or none of it,
+// where it is shorter.
+PR_CONSTEXPR PrStringView prStringHead(PrStringView text, size_t count) {
+    return PR_LITERAL(PrStringView){text.data, count < text.size ? count : text.size};
+}
+PR_CONSTEXPR PrStringView prStringTail(PrStringView text, size_t count) {
+    size_t kept = count < text.size ? count : text.size;
+    return PR_LITERAL(PrStringView){text.data + (text.size - kept), kept};
+}
+PR_CONSTEXPR PrStringView prStringFrom(PrStringView text, size_t start) {
+    size_t skipped = start < text.size ? start : text.size;
+    return PR_LITERAL(PrStringView){text.data + skipped, text.size - skipped};
+}
+
 // Returns true if `text` starts with `prefix`.
 static inline bool prStringStartsWith(PrStringView text, PrStringView prefix) {
     return text.size >= prefix.size && (prefix.size == 0 || prMemEquals(text.data, prefix.data, prefix.size));
@@ -30,9 +45,13 @@ static inline bool prStringEndsWith(PrStringView text, PrStringView suffix) {
         (suffix.size == 0 || prMemEquals(text.data + text.size - suffix.size, suffix.data, suffix.size));
 }
 
-// Returns the bytes of `text`, for a reader that takes bytes rather than text.
-static inline const uint8_t* PR_NULLABLE prStringBytes(PrStringView text) {
-    return PR_POINTER_CAST(const uint8_t*, text.data);
+// Returns the bytes of `text`, for a reader that takes bytes rather than text, and `bytes` as text, for a reader that
+// takes text. Each views the same bytes, and the null view gives the null view.
+static inline PrByteView prStringBytes(PrStringView text) {
+    return PR_LITERAL(PrByteView){PR_POINTER_CAST(const uint8_t*, text.data), text.size};
+}
+static inline PrStringView prStringFromBytes(PrByteView bytes) {
+    return PR_LITERAL(PrStringView){PR_POINTER_CAST(const char*, bytes.data), bytes.size};
 }
 
 // Returns the index of the first `byte` in `text`, or `text.size` if there is none.
@@ -52,9 +71,26 @@ PR_CONSTEXPR size_t prStringFindLastByte(PrStringView text, char byte) {
     return text.size;
 }
 
+// Returns the index of the first `needle` in `text` at or after `start`, or `text.size` if there is none. The empty
+// needle is at `start`, which must not be past the end of `text`.
+static inline size_t prStringFindFrom(PrStringView text, PrStringView needle, size_t start) {
+    for (size_t at = start; at + needle.size <= text.size; ++at) {
+        if (prMemEquals(text.data + at, needle.data, needle.size))
+            return at;
+    }
+    return text.size;
+}
+
 // Returns the index of the first `needle` in `text`, or `text.size` if there is none. The empty needle is at 0.
 static inline size_t prStringFind(PrStringView text, PrStringView needle) {
-    for (size_t at = 0; at + needle.size <= text.size; ++at) {
+    return prStringFindFrom(text, needle, 0);
+}
+
+// Returns the index of the last `needle` in `text`, or `text.size` if there is none. The empty needle is at the end.
+static inline size_t prStringFindLast(PrStringView text, PrStringView needle) {
+    if (needle.size > text.size)
+        return text.size;
+    for (size_t at = text.size - needle.size + 1; at-- > 0;) {
         if (prMemEquals(text.data + at, needle.data, needle.size))
             return at;
     }
@@ -90,6 +126,14 @@ PR_CONSTEXPR PrStringView prStringTrim(PrStringView text) {
 PR_CONSTEXPR PrStringView prStringTrimEnd(PrStringView text) {
     size_t end = text.size;
     while (end > 0 && prAsciiIsSpace(text.data[end - 1]))
+        --end;
+    return PR_LITERAL(PrStringView){text.data, end};
+}
+
+// Returns `text` without the run of `byte` at its end.
+PR_CONSTEXPR PrStringView prStringTrimEndByte(PrStringView text, char byte) {
+    size_t end = text.size;
+    while (end > 0 && text.data[end - 1] == byte)
         --end;
     return PR_LITERAL(PrStringView){text.data, end};
 }

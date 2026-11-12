@@ -1,14 +1,14 @@
+#include "pr/array.h"
 #include "pr/draw_image.h"
 #include "pr/kit_box.h"
 #include "pr/kit_button.h"
 #include "pr/kit_collection.h"
 #include "pr/layout_unit.h"
+#include "pr/mem.h"
 
 #include "tools/harness/kit_fixture.h"
 
 #include "tools/harness/test.h"
-
-#include <vector>
 
 using namespace harness;
 
@@ -105,12 +105,12 @@ struct TreeScene {
     KitFixture& f;
     bool open[3] = {};
     bool hidden[3] = {};
-    std::vector<PrKitTreeItem> items;
-    std::vector<uint64_t> ids;
+    Array<PrKitTreeItem> items;
+    Array<uint64_t> ids;
     PrKitSelection selection{};
     Rows rows{};
-    std::vector<PrLayoutNode> nodes;
-    std::vector<PrLayoutNode> toggles;
+    Array<PrLayoutNode> nodes;
+    Array<PrLayoutNode> toggles;
     uint64_t selectedId = 0;
     PrKitTreeFold fold{.row = kPrKitRowNone};
     PrKitTreeDrop drop{};
@@ -124,13 +124,13 @@ struct TreeScene {
         items.clear();
         ids.clear();
         for (uint32_t group = 0; group < 3; ++group) {
-            items.push_back(PrKitTreeItem{.depth = 0, .hasChildren = true, .open = open[group]});
-            ids.push_back(group * 10 + 10);
+            items.push(PrKitTreeItem{.depth = 0, .hasChildren = true, .open = open[group]});
+            ids.push(group * 10 + 10);
             if (!open[group])
                 continue;
             for (uint32_t child = 0; child < 2; ++child) {
-                items.push_back(PrKitTreeItem{.depth = 1});
-                ids.push_back(group * 10 + 10 + child + 1);
+                items.push(PrKitTreeItem{.depth = 1});
+                ids.push(group * 10 + 10 + child + 1);
             }
         }
     }
@@ -138,7 +138,7 @@ struct TreeScene {
     void build(PrLayoutNode root) {
         order();
         PrKitTreeView tree{
-            .count = uint32_t(items.size()),
+            .count = items.count(),
             .selection = &selection,
             .items = items.data(),
             .dragKind = kRowKind,
@@ -146,8 +146,12 @@ struct TreeScene {
         PrLayoutNode view = prKitTreeView(f.kit, root, tree,
             {.rowHeight = kRowHeight, .place = {.height = prKitPx(kViewHeight), .flex = PrKitFlex_Fixed}});
         rows = rowsOf(f, view);
-        nodes.assign(items.size(), kPrLayoutNodeNone);
-        toggles.assign(items.size(), kPrLayoutNodeNone);
+        nodes.clear();
+        toggles.clear();
+        for (uint32_t i = 0; i < items.count(); ++i) {
+            nodes.push(kPrLayoutNodeNone);
+            toggles.push(kPrLayoutNodeNone);
+        }
         for (uint32_t i = 0; i < rows.count; ++i) {
             uint32_t index = rows.first + i;
             uint64_t id = ids[index];
@@ -178,7 +182,7 @@ struct TreeScene {
 
     // Returns the index of the row of `id` in the last order.
     uint32_t indexOf(uint64_t id) const {
-        for (uint32_t i = 0; i < ids.size(); ++i) {
+        for (uint32_t i = 0; i < ids.count(); ++i) {
             if (ids[i] == id)
                 return i;
         }
@@ -516,18 +520,18 @@ TEST_CASE("a click of a disclosure opens its row and selects nothing") {
     TreeScene scene(f);
     f.frame();
     f.frame();
-    REQUIRE(scene.items.size() == 3);
+    REQUIRE(scene.items.count() == 3);
     f.click(f.center(prLayoutNodeFirstChild(f.tree, scene.nodes[1])));
     f.frame();
     CHECK(scene.fold.row == 1);
     CHECK(scene.fold.open);
     CHECK(scene.open[1]);
-    CHECK(scene.items.size() == 5);
+    CHECK(scene.items.count() == 5);
     CHECK(scene.selectedId == 0);
     f.click(f.center(prLayoutNodeFirstChild(f.tree, scene.nodes[1])));
     f.frame();
     CHECK_FALSE(scene.open[1]);
-    CHECK(scene.items.size() == 3);
+    CHECK(scene.items.count() == 3);
     CHECK(kitVerified(f.tree));
 }
 
@@ -554,7 +558,7 @@ TEST_CASE("Right opens a row and steps into it, Left climbs to its parent and cl
     f.key(PrAppKey_Right);
     f.frame();
     CHECK(scene.open[0]);
-    CHECK(scene.items.size() == 5);
+    CHECK(scene.items.count() == 5);
     f.key(PrAppKey_Right);
     f.frame();
     CHECK(scene.selection.lead == 1);
@@ -568,7 +572,7 @@ TEST_CASE("Right opens a row and steps into it, Left climbs to its parent and cl
     f.key(PrAppKey_Left);
     f.frame();
     CHECK_FALSE(scene.open[0]);
-    CHECK(scene.items.size() == 3);
+    CHECK(scene.items.count() == 3);
     CHECK(kitVerified(f.tree));
 }
 
@@ -760,7 +764,8 @@ TEST_CASE("a grid's tiles fill rows of as many as fit, and its window holds whol
 
 TEST_CASE("a tile's image fills its thumbnail in place of its icon") {
     KitFixture f;
-    std::vector<uint8_t> pixels(16 * 8 * 4, 255);
+    Array<uint8_t> pixels(16 * 8 * 4);
+    prMemFill(pixels.data(), 255, pixels.count());
     PrDrawImageDesc desc{
         PrPixelView{pixels.data(), 16 * 4, {16, 8}}, PrPixelFormat_Rgba8, PrDrawAlpha_Straight,
         PrColorSpace_Srgb,
@@ -791,7 +796,7 @@ TEST_CASE("a tile's image fills its thumbnail in place of its icon") {
     CHECK(prRectWidth(imageBounds) == doctest::Approx(prRectWidth(thumbBounds)));
     CHECK(prRectHeight(imageBounds) == doctest::Approx(prRectHeight(thumbBounds)));
     CHECK(kitVerified(f.tree));
-    f.build = nullptr;
+    f.build = {};
     f.frame();
     prDrawImageRelease(image);
 }
@@ -842,7 +847,7 @@ TEST_CASE("a tile's image grows inside its thumbnail under the pointer, and a ti
     f.frame();
     CHECK(secondary);
 
-    f.build = nullptr;
+    f.build = {};
     f.frame();
     prDrawImageRelease(image);
 }

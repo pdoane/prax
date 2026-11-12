@@ -1,3 +1,8 @@
+#include "pr/array.h"
+#include "pr/span.h"
+#include "pr/string.h"
+#include "pr/string_ops.h"
+
 #include "css/src/css_parser.h"
 #include "css/src/css_selector_match.h"
 #include "css/tests/css_tests.h"
@@ -5,30 +10,52 @@
 
 #include "tools/harness/test.h"
 
-#include <initializer_list>
-#include <string>
-#include <utility>
-#include <vector>
-
 namespace pr_impl {
 
 namespace {
 
-// A node to build: an element with its attributes and children, or text if `name` is null.
-struct Spec {
-    const char* PR_NULLABLE name;
-    std::vector<std::pair<std::string, std::string>> attributes;
-    std::vector<Spec> children;
-    DomNamespaceId space = PrDomNamespace_Html;
-    const char* text = "";
+// An attribute of a node to build, by its qualified name.
+struct Attribute {
+    String name;
+    String value;
+
+    Attribute(PrStringView attributeName, PrStringView attributeValue) : name(attributeName), value(attributeValue) {}
 };
 
-Spec E(const char* name, std::vector<std::pair<std::string, std::string>> attributes = {}, std::vector<Spec> children = {}) {
-    return Spec{name, std::move(attributes), std::move(children)};
+// A node to build: an element with its attributes and children, or text if `name` is null. An element is built up a
+// call at a time, as `E("p").attr("id", "a").add(T("text"))`.
+struct Spec {
+    const char* PR_NULLABLE name;
+    Array<Attribute> attributes;
+    Array<Spec> children;
+    DomNamespaceId space = PrDomNamespace_Html;
+    const char* text = "";
+
+    // Adds the attribute `attributeName` with `value`, after those added before it.
+    Spec& attr(PrStringView attributeName, PrStringView value) {
+        attributes.push(Attribute(attributeName, value));
+        return *this;
+    }
+
+    // Adds `child`, or each of `list`, after the children added before.
+    Spec& add(const Spec& child) {
+        children.push(child);
+        return *this;
+    }
+    Spec& add(Span<const Spec> list) {
+        children.append(list);
+        return *this;
+    }
+};
+
+// Returns an HTML element named `name`, with no attributes or children.
+Spec E(const char* name) {
+    return Spec{name, {}, {}};
 }
 
-Spec Svg(const char* name, std::vector<std::pair<std::string, std::string>> attributes = {}, std::vector<Spec> children = {}) {
-    Spec spec = E(name, std::move(attributes), std::move(children));
+// Returns an SVG element, as E returns an HTML one.
+Spec Svg(const char* name) {
+    Spec spec = E(name);
     spec.space = PrDomNamespace_Svg;
     return spec;
 }
@@ -54,11 +81,12 @@ PrDomNode* build(PrDomDocument* document, PrDomNode* parent, const Spec& spec) {
     else
         element = domElementCreate(document, spec.space, domTagFromText(name), name);
     domAttach(parent, element, nullptr);
-    for (const auto& [attribute, value] : spec.attributes) {
+    for (const Attribute& attribute : spec.attributes) {
         // An `xml:` name is the attribute in the XML namespace.
-        bool xml = attribute.rfind("xml:", 0) == 0;
-        std::string local = xml ? attribute.substr(4) : attribute;
-        domSetAttribute(element, xml ? PrDomNamespace_Xml : PrDomNamespace_None, local, value);
+        PrStringView qualified = attribute.name;
+        bool xml = prStringStartsWith(qualified, "xml:");
+        PrStringView local = xml ? prStringSlice(qualified, 4, qualified.size - 4) : qualified;
+        domSetAttribute(element, xml ? PrDomNamespace_Xml : PrDomNamespace_None, local, attribute.value);
     }
     for (const Spec& child : spec.children)
         build(document, element, child);
@@ -85,24 +113,26 @@ struct Doc {
 
 // Returns the IDs of the descendants of `root` that the selectors match, in tree order, joined by spaces. "-" stands
 // for an element without an ID, and "!" means the text is not a selector list.
-std::string select(PrDomNode* root, const char* text) {
+String select(PrDomNode* root, const char* text) {
     PrCssSelectors* selectors = cssParseDomSelectors(text);
     if (selectors == nullptr)
         return "!";
-    std::string out;
+    String out;
     CssSelectorMatcher matcher;
     cssSelectorMatcherInit(&matcher, selectors, domElementFromNode(root), root->document, root);
     for (PrDomElement* element = cssSelectorMatcherNext(&matcher, root, root); element != nullptr;
             element = cssSelectorMatcherNext(&matcher, root, element)) {
         PrStringView id = domElementId(element);
-        out += (out.empty() ? "" : " ") + (id.size != 0 ? textOf(id) : std::string("-"));
+        if (!out.isEmpty())
+            out.append(' ');
+        out.append(id.size != 0 ? id : PrStringView("-"));
     }
     cssSelectorMatcherReset(&matcher);
     cssSelectorsDestroy(selectors);
     return out;
 }
 
-std::string select(const Doc& doc, const char* text) {
+String select(const Doc& doc, const char* text) {
     return select(doc.document, text);
 }
 
@@ -132,11 +162,13 @@ TEST_CASE("a DOM selectors string declares no namespace prefix and fails as a wh
 }
 
 TEST_CASE("type selectors compare an HTML element's name in lowercase and a foreign one's as written") {
-    Doc doc(E("html", {{"id", "html"}}, {
-        E("div", {{"id", "div"}}),
-        E("my-el", {{"id", "custom"}}),
-        Svg("svg", {{"id", "svg"}}, {Svg("foreignObject", {{"id", "fo"}}), Svg("div", {{"id", "svgdiv"}})}),
-    }));
+    const Spec inSvg[] = {Svg("foreignObject").attr("id", "fo"), Svg("div").attr("id", "svgdiv")};
+    const Spec body[] = {
+        E("div").attr("id", "div"),
+        E("my-el").attr("id", "custom"),
+        Svg("svg").attr("id", "svg").add(inSvg),
+    };
+    Doc doc(E("html").attr("id", "html").add(body));
     CHECK(select(doc, "div") == "div svgdiv");
     CHECK(select(doc, "DIV") == "div");
     CHECK(select(doc, "MY-EL") == "custom");
@@ -148,7 +180,7 @@ TEST_CASE("type selectors compare an HTML element's name in lowercase and a fore
 }
 
 TEST_CASE("a sheet's namespaces decide the elements and attributes its prefixes take") {
-    Doc doc(E("html", {}, {E("a", {{"id", "html"}, {"xml:lang", "en"}}), Svg("a", {{"id", "svg"}})}));
+    Doc doc(E("html").add(E("a").attr("id", "html").attr("xml:lang", "en")).add(Svg("a").attr("id", "svg")));
     CssTestSheet sheet("@namespace url(http://www.w3.org/2000/svg); @namespace x url(http://www.w3.org/XML/1998/namespace);");
     CssParser parser;
     cssParserInit(&parser);
@@ -171,10 +203,11 @@ TEST_CASE("a sheet's namespaces decide the elements and attributes its prefixes 
 }
 
 TEST_CASE("a compound without a type selector matches only the default namespace, but not as the subject in :is()") {
-    Doc doc(E("html", {}, {
-        E("a", {{"id", "html"}, {"class", "c"}}, {E("b", {{"id", "inner"}})}),
-        Svg("a", {{"id", "svg"}, {"class", "c"}}, {Svg("b", {{"id", "svgInner"}})}),
-    }));
+    const Spec body[] = {
+        E("a").attr("id", "html").attr("class", "c").add(E("b").attr("id", "inner")),
+        Svg("a").attr("id", "svg").attr("class", "c").add(Svg("b").attr("id", "svgInner")),
+    };
+    Doc doc(E("html").add(body));
     CssTestSheet sheet("@namespace url(http://www.w3.org/1999/xhtml);");
     CssParser parser;
     cssParserInit(&parser);
@@ -184,10 +217,14 @@ TEST_CASE("a compound without a type selector matches only the default namespace
     auto matched = [&](const char* text) {
         PrCssSelectors* selectors = cssParseSelectorText(&parser, text, &context);
         REQUIRE(selectors != nullptr);
-        std::string ids;
-        for (const char* id : {"html", "inner", "svg", "svgInner"}) {
-            if (cssSelectorsMatch(selectors, doc.byId(id), nullptr))
-                ids += ids.empty() ? id : std::string(" ") + id;
+        String ids;
+        const char* const named[] = {"html", "inner", "svg", "svgInner"};
+        for (const char* id : named) {
+            if (!cssSelectorsMatch(selectors, doc.byId(id), nullptr))
+                continue;
+            if (!ids.isEmpty())
+                ids.append(' ');
+            ids.append(id);
         }
         cssSelectorsDestroy(selectors);
         return ids;
@@ -210,7 +247,7 @@ TEST_CASE("a compound without a type selector matches only the default namespace
 }
 
 TEST_CASE("IDs and classes compare exactly, and ASCII case-insensitively in quirks mode") {
-    Spec tree = E("html", {}, {E("p", {{"id", "Foo"}, {"class", " a\tB\nc "}})});
+    Spec tree = E("html").add(E("p").attr("id", "Foo").attr("class", " a\tB\nc "));
     Doc standards(tree);
     CHECK(select(standards, "#Foo") == "Foo");
     CHECK(select(standards, "#foo") == "");
@@ -228,11 +265,12 @@ TEST_CASE("IDs and classes compare exactly, and ASCII case-insensitively in quir
 }
 
 TEST_CASE("attribute selectors test presence and each operator on the value") {
-    Doc doc(E("html", {}, {
-        E("p", {{"id", "a"}, {"title", "one two"}, {"lang", "en-US"}, {"data-x", ""}}),
-        E("p", {{"id", "b"}, {"title", "onetwo"}, {"lang", "en"}}),
-        E("p", {{"id", "c"}, {"title", "\x0bone"}, {"lang", "-x"}}),
-    }));
+    const Spec body[] = {
+        E("p").attr("id", "a").attr("title", "one two").attr("lang", "en-US").attr("data-x", ""),
+        E("p").attr("id", "b").attr("title", "onetwo").attr("lang", "en"),
+        E("p").attr("id", "c").attr("title", "\x0bone").attr("lang", "-x"),
+    };
+    Doc doc(E("html").add(body));
     CHECK(select(doc, "[title]") == "a b c");
     CHECK(select(doc, "[TITLE]") == "a b c");
     CHECK(select(doc, "[data-x]") == "a");
@@ -251,10 +289,11 @@ TEST_CASE("attribute selectors test presence and each operator on the value") {
 }
 
 TEST_CASE("the i and s flags and HTML's list of attributes decide the case of a value") {
-    Doc doc(E("html", {}, {
-        E("p", {{"id", "html"}, {"align", "LEFT"}, {"foo", "BAR"}, {"xml:lang", "EN"}}),
-        Svg("g", {{"id", "svg"}, {"align", "LEFT"}}),
-    }));
+    const Spec body[] = {
+        E("p").attr("id", "html").attr("align", "LEFT").attr("foo", "BAR").attr("xml:lang", "EN"),
+        Svg("g").attr("id", "svg").attr("align", "LEFT"),
+    };
+    Doc doc(E("html").add(body));
     CHECK(select(doc, "[foo=bar]") == "");
     CHECK(select(doc, "[foo=bar i]") == "html");
     CHECK(select(doc, "[foo=BAR s]") == "html");
@@ -267,15 +306,17 @@ TEST_CASE("the i and s flags and HTML's list of attributes decide the case of a 
 }
 
 TEST_CASE("combinators walk ancestors and earlier siblings") {
-    Doc doc(E("html", {{"id", "root"}}, {
-        E("div", {{"id", "d1"}, {"class", "x"}}, {
-            E("p", {{"id", "p1"}}),
-            T("text"),
-            E("span", {{"id", "s1"}}),
-            E("p", {{"id", "p2"}}, {E("em", {{"id", "e1"}})}),
-        }),
-        E("div", {{"id", "d2"}}, {E("div", {{"id", "d3"}}, {E("em", {{"id", "e2"}})})}),
-    }));
+    const Spec inD1[] = {
+        E("p").attr("id", "p1"),
+        T("text"),
+        E("span").attr("id", "s1"),
+        E("p").attr("id", "p2").add(E("em").attr("id", "e1")),
+    };
+    const Spec body[] = {
+        E("div").attr("id", "d1").attr("class", "x").add(inD1),
+        E("div").attr("id", "d2").add(E("div").attr("id", "d3").add(E("em").attr("id", "e2"))),
+    };
+    Doc doc(E("html").attr("id", "root").add(body));
     CHECK(select(doc, ".x em") == "e1");
     CHECK(select(doc, "div > em") == "e2");
     CHECK(select(doc, "p + span") == "s1");
@@ -290,21 +331,23 @@ TEST_CASE("combinators walk ancestors and earlier siblings") {
 }
 
 TEST_CASE("the reference combinator follows an attribute that holds an ID") {
-    Doc doc(E("html", {}, {
-        E("label", {{"id", "l1"}, {"for", "i2"}}),
-        E("input", {{"id", "i1"}}),
-        E("input", {{"id", "i2"}}),
-    }));
+    const Spec body[] = {
+        E("label").attr("id", "l1").attr("for", "i2"),
+        E("input").attr("id", "i1"),
+        E("input").attr("id", "i2"),
+    };
+    Doc doc(E("html").add(body));
     CHECK(select(doc, "label /for/ input") == "i2");
     CHECK(select(doc, "#l1 /FOR/ #i1") == "");
 }
 
 TEST_CASE(":is, :where and :not take a list, and :has searches from its element") {
-    Doc doc(E("html", {}, {
-        E("div", {{"id", "a"}}, {E("p", {{"id", "b"}}, {E("em", {{"id", "c"}})})}),
-        E("div", {{"id", "d"}}, {E("span", {{"id", "e"}})}),
-        E("section", {{"id", "f"}}),
-    }));
+    const Spec body[] = {
+        E("div").attr("id", "a").add(E("p").attr("id", "b").add(E("em").attr("id", "c"))),
+        E("div").attr("id", "d").add(E("span").attr("id", "e")),
+        E("section").attr("id", "f"),
+    };
+    Doc doc(E("html").add(body));
     CHECK(select(doc, ":is(p, span)") == "b e");
     CHECK(select(doc, "div :where(em, span)") == "c e");
     CHECK(select(doc, "div:not(:has(em))") == "d");
@@ -323,12 +366,14 @@ TEST_CASE(":is, :where and :not take a list, and :has searches from its element"
 }
 
 TEST_CASE(":has searches only where its argument's combinators reach") {
-    Doc doc(E("html", {}, {
-        E("div", {{"id", "a"}}, {E("p", {{"id", "b"}}, {E("em", {{"id", "c"}})}), E("span", {{"id", "d"}})}),
-        E("div", {{"id", "e"}}, {E("em", {{"id", "f"}, {"class", "x"}})}),
-        E("section", {{"id", "g"}}, {E("p", {{"id", "h"}})}),
-        E("p", {{"id", "i"}, {"class", "x"}}),
-    }));
+    const Spec inA[] = {E("p").attr("id", "b").add(E("em").attr("id", "c")), E("span").attr("id", "d")};
+    const Spec body[] = {
+        E("div").attr("id", "a").add(inA),
+        E("div").attr("id", "e").add(E("em").attr("id", "f").attr("class", "x")),
+        E("section").attr("id", "g").add(E("p").attr("id", "h")),
+        E("p").attr("id", "i").attr("class", "x"),
+    };
+    Doc doc(E("html").add(body));
     // A child combinator puts the subject at one depth, and sibling combinators after it keep it there.
     CHECK(select(doc, ":has(> em)") == "b e");
     CHECK(select(doc, "div:has(> * > em)") == "a");
@@ -350,13 +395,18 @@ TEST_CASE(":has searches only where its argument's combinators reach") {
 }
 
 TEST_CASE("an ID left of the subject limits the search to its element's descendants") {
-    Doc doc(E("html", {}, {
-        E("div", {{"id", "a"}},
-            {E("p", {{"id", "b"}}), E("section", {{"id", "c"}}, {E("p", {{"id", "d"}})}), E("p", {{"id", "e"}})}),
-        E("div", {{"id", "f"}}, {E("p", {{"id", "g"}})}),
-        E("div", {{"class", "dup"}, {"id", "dup"}}, {E("p", {{"id", "h"}})}),
-        E("div", {{"class", "dup"}, {"id", "dup"}}, {E("p", {{"id", "i"}})}),
-    }));
+    const Spec inA[] = {
+        E("p").attr("id", "b"),
+        E("section").attr("id", "c").add(E("p").attr("id", "d")),
+        E("p").attr("id", "e"),
+    };
+    const Spec body[] = {
+        E("div").attr("id", "a").add(inA),
+        E("div").attr("id", "f").add(E("p").attr("id", "g")),
+        E("div").attr("class", "dup").attr("id", "dup").add(E("p").attr("id", "h")),
+        E("div").attr("class", "dup").attr("id", "dup").add(E("p").attr("id", "i")),
+    };
+    Doc doc(E("html").add(body));
     CHECK(select(doc, "#a p") == "b d e");
     CHECK(select(doc, "#a > p") == "b e");
     CHECK(select(doc, "#a section > p, #f p") == "d g");
@@ -370,14 +420,15 @@ TEST_CASE("an ID left of the subject limits the search to its element's descenda
 }
 
 TEST_CASE("the structural pseudo-classes count element siblings") {
-    Doc doc(E("html", {{"id", "root"}}, {
-        E("p", {{"id", "p1"}}),
-        E("span", {{"id", "s1"}}),
-        E("p", {{"id", "p2"}, {"class", "x"}}),
-        E("p", {{"id", "p3"}}, {T(" \n\t")}),
-        E("div", {{"id", "d1"}}, {T("x")}),
-        E("div", {{"id", "d2"}}, {E("b", {{"id", "only"}})}),
-    }));
+    const Spec body[] = {
+        E("p").attr("id", "p1"),
+        E("span").attr("id", "s1"),
+        E("p").attr("id", "p2").attr("class", "x"),
+        E("p").attr("id", "p3").add(T(" \n\t")),
+        E("div").attr("id", "d1").add(T("x")),
+        E("div").attr("id", "d2").add(E("b").attr("id", "only")),
+    };
+    Doc doc(E("html").attr("id", "root").add(body));
     CHECK(select(doc, ":root") == "root");
     CHECK(select(doc, ":empty") == "p1 s1 p2 p3 only");
     CHECK(select(doc, ":first-child") == "root p1 only");
@@ -407,22 +458,24 @@ TEST_CASE("the structural pseudo-classes count element siblings") {
 TEST_CASE("a matcher answers each element as a matcher of its own would") {
     // Siblings of mixed types and classes, each queried under several counts of the same parent, and a :has() queried
     // again for each ancestor that a descendant combinator walks to.
-    std::vector<Spec> items;
+    Array<Spec> items;
     for (int i = 0; i < 24; ++i) {
-        std::string id = "i" + std::to_string(i);
-        items.push_back(E(i % 3 == 2 ? "p" : "li", {{"id", id}, {"class", i % 4 == 0 ? "a" : "b"}},
-            {E("em", {{"id", id + "e"}})}));
+        String id = format("i{}", i);
+        Spec item = E(i % 3 == 2 ? "p" : "li").attr("id", id).attr("class", i % 4 == 0 ? "a" : "b");
+        items.push(item.add(E("em").attr("id", format("{}e", id))));
     }
     // A list longer than the distance a count walks back, queried out of order by a :has() and a sibling combinator.
-    std::vector<Spec> longer;
+    Array<Spec> longer;
     for (int i = 0; i < 80; ++i) {
-        std::string id = "o" + std::to_string(i);
-        longer.push_back(E(i % 5 == 1 ? "dt" : "dd", {{"id", id}, {"class", i % 3 == 0 ? "c" : "d"}}));
+        String id = format("o{}", i);
+        longer.push(E(i % 5 == 1 ? "dt" : "dd").attr("id", id).attr("class", i % 3 == 0 ? "c" : "d"));
     }
-    Doc doc(E("html", {{"id", "root"}}, {
-        E("ul", {{"id", "list"}}, items), E("div", {{"id", "d"}}, {E("p", {{"id", "x"}})}),
-        E("dl", {{"id", "long"}}, longer)
-    }));
+    const Spec body[] = {
+        E("ul").attr("id", "list").add(items.span()),
+        E("div").attr("id", "d").add(E("p").attr("id", "x")),
+        E("dl").attr("id", "long").add(longer.span()),
+    };
+    Doc doc(E("html").attr("id", "root").add(body));
 
     const char* lists[] = {
         ":nth-child(3n+1), :nth-last-child(2n), li:nth-of-type(odd)",
@@ -439,12 +492,12 @@ TEST_CASE("a matcher answers each element as a matcher of its own would") {
     for (const char* text : lists) {
         PrCssSelectors* selectors = cssParseDomSelectors(text);
         REQUIRE(selectors != nullptr);
-        std::string expected;
+        String expected;
         for (PrDomNode* node = domNodeNext(doc.document, doc.document); node != nullptr;
                 node = domNodeNext(doc.document, node)) {
             PrDomElement* element = domElementFromNode(node);
             if (element != nullptr && cssSelectorsMatch(selectors, element, nullptr))
-                expected += (expected.empty() ? "" : " ") + textOf(domElementId(element));
+                formatTo(expected, "{}{}", expected.isEmpty() ? "" : " ", domElementId(element));
         }
         CHECK(select(doc, text) == expected);
         cssSelectorsDestroy(selectors);
@@ -453,8 +506,8 @@ TEST_CASE("a matcher answers each element as a matcher of its own would") {
 }
 
 TEST_CASE("a selector list parsed once answers every query that takes one") {
-    Doc doc(E("html", {{"id", "root"}},
-        {E("div", {{"id", "a"}}, {E("p", {{"id", "b"}}), E("p", {{"id", "c"}}), E("p", {{"id", "d"}})})}));
+    const Spec inA[] = {E("p").attr("id", "b"), E("p").attr("id", "c"), E("p").attr("id", "d")};
+    Doc doc(E("html").attr("id", "root").add(E("div").attr("id", "a").add(inA)));
     PrCssSelectors* bad = nullptr;
     CHECK(prCssSelectorsCreate("p,", &bad) == PrStatus_Syntax);
     CHECK(bad == nullptr);
@@ -480,10 +533,11 @@ TEST_CASE("a selector list parsed once answers every query that takes one") {
 }
 
 TEST_CASE("a query whose subject names an ID tries the elements its tree keeps by that ID") {
-    Doc doc(E("html", {{"id", "root"}}, {
-        E("div", {{"id", "a"}, {"class", "c"}}, {E("p", {{"id", "x"}}), E("span", {{"id", "y"}})}),
-        E("div", {{"id", "b"}}, {E("em", {{"id", "y"}})}),
-    }));
+    const Spec body[] = {
+        E("div").attr("id", "a").attr("class", "c").add(E("p").attr("id", "x")).add(E("span").attr("id", "y")),
+        E("div").attr("id", "b").add(E("em").attr("id", "y")),
+    };
+    Doc doc(E("html").attr("id", "root").add(body));
     CHECK(select(doc, "#x") == "x");
     CHECK(select(doc, "div#x") == "");
     CHECK(select(doc, ".c #x") == "x");
@@ -495,18 +549,18 @@ TEST_CASE("a query whose subject names an ID tries the elements its tree keeps b
     CHECK(select(doc.byId("b"), "#y") == "y");
 
     // In quirks mode an ID compares ASCII case-insensitively.
-    Doc quirks(E("html", {}, {E("p", {{"id", "x"}})}), DomQuirks_Yes);
+    Doc quirks(E("html").add(E("p").attr("id", "x")), DomQuirks_Yes);
     CHECK(select(quirks, "#X") == "x");
 }
 
 TEST_CASE("a document keeps the selector lists its queries parse") {
-    Doc doc(E("html", {{"id", "root"}}, {E("p", {{"id", "x"}, {"class", "c"}})}));
+    Doc doc(E("html").attr("id", "root").add(E("p").attr("id", "x").attr("class", "c")));
     PrDomElement* x = doc.byId("x");
     bool matched = false;
     // More lists than the document keeps, each queried twice, whatever was released in between.
     for (uint32_t round = 0; round < 2; ++round) {
         for (uint32_t i = 0; i < kCssSelectorCacheSize + 8; ++i) {
-            std::string text = "p:nth-child(" + std::to_string(i) + "n+1)";
+            String text = format("p:nth-child({}n+1)", i);
             REQUIRE(prCssElementMatches(x, text, &matched) == PrStatus_Ok);
             CHECK(matched);
         }
@@ -517,7 +571,8 @@ TEST_CASE("a document keeps the selector lists its queries parse") {
 }
 
 TEST_CASE(":scope is the scoping root, and :root where there is none") {
-    Doc doc(E("html", {{"id", "root"}}, {E("div", {{"id", "a"}}, {E("div", {{"id", "b"}}, {E("p", {{"id", "c"}})})})}));
+    Doc doc(E("html").attr("id", "root")
+        .add(E("div").attr("id", "a").add(E("div").attr("id", "b").add(E("p").attr("id", "c")))));
     PrDomElement* a = doc.byId("a");
     CHECK(select(a, ":scope") == "");
     CHECK(select(a, ":scope > div") == "b");
@@ -538,16 +593,17 @@ TEST_CASE(":scope is the scoping root, and :root where there is none") {
 }
 
 TEST_CASE(":lang matches the inherited language by extended filtering") {
-    Doc doc(E("html", {{"lang", "en"}}, {
-        E("p", {{"id", "en"}}),
-        E("p", {{"id", "frx"}, {"lang", "fr-x-standard"}}),
-        E("p", {{"id", "frstd"}, {"lang", "fr-standard"}}),
-        E("p", {{"id", "long"}, {"lang", "fr-ninechars"}}),
-        E("p", {{"id", "dech"}, {"lang", "de-Latn-CH"}}),
-        E("p", {{"id", "empty"}, {"lang", ""}}),
-        E("p", {{"id", "xml"}, {"xml:lang", "ja"}, {"lang", "ko"}}),
-        Svg("svg", {{"id", "svg"}, {"lang", "it"}}),
-    }));
+    const Spec body[] = {
+        E("p").attr("id", "en"),
+        E("p").attr("id", "frx").attr("lang", "fr-x-standard"),
+        E("p").attr("id", "frstd").attr("lang", "fr-standard"),
+        E("p").attr("id", "long").attr("lang", "fr-ninechars"),
+        E("p").attr("id", "dech").attr("lang", "de-Latn-CH"),
+        E("p").attr("id", "empty").attr("lang", ""),
+        E("p").attr("id", "xml").attr("xml:lang", "ja").attr("lang", "ko"),
+        Svg("svg").attr("id", "svg").attr("lang", "it"),
+    };
+    Doc doc(E("html").attr("lang", "en").add(body));
     CHECK(select(doc, "p:lang(en)") == "en");
     CHECK(select(doc, "p:lang(EN)") == "en");
     CHECK(select(doc, ":lang(fr)") == "frx frstd");
@@ -567,31 +623,30 @@ TEST_CASE(":lang matches the inherited language by extended filtering") {
 }
 
 TEST_CASE(":lang reaches a shadow tree's host") {
-    Doc doc(E("html", {{"lang", "en"}}, {E("div", {{"id", "host"}, {"lang", "fr"}})}));
+    Doc doc(E("html").attr("lang", "en").add(E("div").attr("id", "host").attr("lang", "fr")));
     PrDomShadowRootInit init = prDomShadowRootInitDefault(PrDomShadowRootMode_Open);
     PrDomShadowRoot* shadow = nullptr;
     REQUIRE(domAttachShadow(doc.byId("host"), &init, &shadow) == PrStatus_Ok);
-    PrDomElement* inside = static_cast<PrDomElement*>(build(doc.document, shadow, E("p", {})));
+    PrDomElement* inside = static_cast<PrDomElement*>(build(doc.document, shadow, E("p")));
     CHECK(matches(inside, ":lang(fr)"));
 }
 
 TEST_CASE(":dir follows the dir attribute, the parent and the first strong character") {
-    Doc doc(E("html", {}, {
-        E("div", {{"id", "rtl"}, {"dir", "RTL"}}, {
-            E("p", {{"id", "inherits"}}),
-            E("input", {{"id", "tel"}, {"type", "tel"}}),
-            Svg("svg", {{"id", "svg"}}),
-        }),
-        E("div", {{"id", "auto"}, {"dir", "auto"}}, {
-            E("script", {}, {T("abc")}),
-            E("span", {{"dir", "ltr"}}, {T("abc")}),
-            T("12 ת abc"),
-        }),
-        E("bdi", {{"id", "bdi"}}, {T("ا")}),
-        E("div", {{"id", "lol"}, {"dir", "lol"}}),
-        E("input", {{"id", "value"}, {"dir", "auto"}, {"value", "א"}}),
-        E("textarea", {{"id", "area"}, {"dir", "auto"}}, {T("x א")}),
-    }));
+    const Spec inRtl[] = {
+        E("p").attr("id", "inherits"),
+        E("input").attr("id", "tel").attr("type", "tel"),
+        Svg("svg").attr("id", "svg"),
+    };
+    const Spec inAuto[] = {E("script").add(T("abc")), E("span").attr("dir", "ltr").add(T("abc")), T("12 ת abc")};
+    const Spec body[] = {
+        E("div").attr("id", "rtl").attr("dir", "RTL").add(inRtl),
+        E("div").attr("id", "auto").attr("dir", "auto").add(inAuto),
+        E("bdi").attr("id", "bdi").add(T("ا")),
+        E("div").attr("id", "lol").attr("dir", "lol"),
+        E("input").attr("id", "value").attr("dir", "auto").attr("value", "א"),
+        E("textarea").attr("id", "area").attr("dir", "auto").add(T("x א")),
+    };
+    Doc doc(E("html").add(body));
     CHECK(select(doc, ":dir(rtl)") == "rtl inherits svg auto - bdi value");
     CHECK(select(doc, "div:dir(ltr)") == "lol");
     CHECK(select(doc, ":dir(auto)") == "");
@@ -599,60 +654,65 @@ TEST_CASE(":dir follows the dir attribute, the parent and the first strong chara
 }
 
 TEST_CASE(":defined leaves out an HTML element whose name is a valid custom element name") {
-    Doc doc(E("html", {{"id", "html"}}, {
-        E("my-el", {{"id", "custom"}}),
-        E("font-face", {{"id", "reserved"}}),
-        E("unknown", {{"id", "unknown"}}),
-        Svg("my-el", {{"id", "svg"}}),
-    }));
+    const Spec body[] = {
+        E("my-el").attr("id", "custom"),
+        E("font-face").attr("id", "reserved"),
+        E("unknown").attr("id", "unknown"),
+        Svg("my-el").attr("id", "svg"),
+    };
+    Doc doc(E("html").attr("id", "html").add(body));
     CHECK(select(doc, ":not(:defined)") == "custom");
 }
 
 TEST_CASE("a form attribute names a form of the element's own tree") {
     // html/#form-owner: a shadow tree's form attribute looks in the shadow tree.
-    Doc doc(E("html", {}, {E("div", {{"id", "host"}}), E("form", {{"id", "outer"}})}));
+    Doc doc(E("html").add(E("div").attr("id", "host")).add(E("form").attr("id", "outer")));
     PrDomShadowRootInit init = prDomShadowRootInitDefault(PrDomShadowRootMode_Open);
     PrDomShadowRoot* shadow = nullptr;
     REQUIRE(domAttachShadow(doc.byId("host"), &init, &shadow) == PrStatus_Ok);
-    build(doc.document, shadow, E("form", {{"id", "f"}}));
+    build(doc.document, shadow, E("form").attr("id", "f"));
     PrDomElement* inside = static_cast<PrDomElement*>(
-        build(doc.document, shadow, E("input", {{"type", "submit"}, {"form", "f"}})));
+        build(doc.document, shadow, E("input").attr("type", "submit").attr("form", "f")));
     PrDomElement* outside = static_cast<PrDomElement*>(
-        build(doc.document, shadow, E("input", {{"type", "submit"}, {"form", "outer"}})));
+        build(doc.document, shadow, E("input").attr("type", "submit").attr("form", "outer")));
     CHECK(matches(inside, ":default"));
     CHECK(!matches(outside, ":default"));
 }
 
 TEST_CASE("HTML defines the form and link pseudo-classes by attributes") {
-    Doc doc(E("html", {}, {
-        E("a", {{"id", "link"}, {"href", ""}}),
-        E("a", {{"id", "anchor"}}),
-        E("form", {{"id", "form"}}, {
-            E("input", {{"id", "checkbox"}, {"type", "CHECKBOX"}, {"checked", ""}}),
-            E("input", {{"id", "radio1"}, {"type", "radio"}, {"name", "r"}}),
-            E("input", {{"id", "radio2"}, {"type", "radio"}, {"name", "r"}, {"checked", ""}}),
-            E("input", {{"id", "radio3"}, {"type", "radio"}, {"name", "s"}}),
-            E("input", {{"id", "required"}, {"required", ""}, {"placeholder", "p"}}),
-            E("input", {{"id", "hidden"}, {"type", "hidden"}, {"required", ""}}),
-            E("input", {{"id", "readonly"}, {"readonly", ""}, {"value", "v"}, {"placeholder", "p"}}),
-            E("button", {{"id", "reset"}, {"type", "reset"}}),
-            E("button", {{"id", "submit"}}),
-            E("input", {{"id", "submit2"}, {"type", "submit"}}),
-            E("fieldset", {{"id", "fieldset"}, {"disabled", ""}}, {
-                E("legend", {{"id", "legend"}}, {E("input", {{"id", "inlegend"}, {"type", "button"}})}),
-                E("select", {{"id", "select"}}, {E("option", {{"id", "option"}, {"selected", ""}})}),
-            }),
-            E("select", {{"id", "select2"}},
-                {E("optgroup", {{"id", "group"}, {"disabled", ""}}, {E("option", {{"id", "grouped"}})})}),
-            E("textarea", {{"id", "area"}, {"placeholder", ""}}),
-        }),
-        E("progress", {{"id", "progress"}}),
-        E("details", {{"id", "details"}, {"open", ""}}),
-        E("div", {{"id", "editable"}, {"contenteditable", ""}}, {E("p", {{"id", "p"}, {"contenteditable", "false"}})}),
-        E("h1", {{"id", "h1"}}),
-        E("h6", {{"id", "h6"}}),
-        E("dialog", {{"id", "dialog"}}),
-    }));
+    const Spec inFieldset[] = {
+        E("legend").attr("id", "legend").add(E("input").attr("id", "inlegend").attr("type", "button")),
+        E("select").attr("id", "select").add(E("option").attr("id", "option").attr("selected", "")),
+    };
+    const Spec group = E("optgroup").attr("id", "group").attr("disabled", "").add(E("option").attr("id", "grouped"));
+    const Spec inEditable = E("p").attr("id", "p").attr("contenteditable", "false");
+    const Spec inForm[] = {
+        E("input").attr("id", "checkbox").attr("type", "CHECKBOX").attr("checked", ""),
+        E("input").attr("id", "radio1").attr("type", "radio").attr("name", "r"),
+        E("input").attr("id", "radio2").attr("type", "radio").attr("name", "r").attr("checked", ""),
+        E("input").attr("id", "radio3").attr("type", "radio").attr("name", "s"),
+        E("input").attr("id", "required").attr("required", "").attr("placeholder", "p"),
+        E("input").attr("id", "hidden").attr("type", "hidden").attr("required", ""),
+        E("input").attr("id", "readonly").attr("readonly", "").attr("value", "v").attr("placeholder", "p"),
+        E("button").attr("id", "reset").attr("type", "reset"),
+        E("button").attr("id", "submit"),
+        E("input").attr("id", "submit2").attr("type", "submit"),
+        E("fieldset").attr("id", "fieldset").attr("disabled", "").add(inFieldset),
+        E("select").attr("id", "select2").add(group),
+        E("textarea").attr("id", "area").attr("placeholder", ""),
+    };
+    const Spec body[] = {
+        E("a").attr("id", "link").attr("href", ""),
+        E("a").attr("id", "anchor"),
+        E("form").attr("id", "form").add(inForm),
+        E("progress").attr("id", "progress"),
+        E("details").attr("id", "details").attr("open", ""),
+        E("div").attr("id", "editable").attr("contenteditable", "").add(inEditable),
+        E("h1").attr("id", "h1"),
+        E("h6").attr("id", "h6"),
+        E("dialog").attr("id", "dialog"),
+    };
+    Doc doc(E("html").add(body));
     CHECK(select(doc, ":link") == "link");
     CHECK(select(doc, ":any-link") == "link");
     CHECK(select(doc, ":visited, :hover, :focus, :active, :target, :playing") == "");
@@ -674,7 +734,7 @@ TEST_CASE("HTML defines the form and link pseudo-classes by attributes") {
 }
 
 TEST_CASE("a link the host knows is visited is visited to the style, and unvisited to a script") {
-    Doc doc(E("div", {}, {E("a", {{"id", "seen"}, {"href", "x"}}), E("a", {{"id", "new"}, {"href", "y"}})}));
+    Doc doc(E("div").add(E("a").attr("id", "seen").attr("href", "x")).add(E("a").attr("id", "new").attr("href", "y")));
     DomDocumentHost host = {};
     host.context = doc.byId("seen");
     host.elementState = [](void* context, const PrDomElement* element, PrDomHostState wanted) -> PrDomHostState {
@@ -696,7 +756,7 @@ TEST_CASE("a link the host knows is visited is visited to the style, and unvisit
 }
 
 TEST_CASE("a pseudo-element never matches an element") {
-    Doc doc(E("html", {}, {E("p", {{"id", "p"}})}));
+    Doc doc(E("html").add(E("p").attr("id", "p")));
     CHECK(select(doc, "p::before") == "");
     CHECK(select(doc, "p::-webkit-anything") == "");
 }

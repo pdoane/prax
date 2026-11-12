@@ -1,10 +1,12 @@
+#include "pr/string.h"
+#include "pr/string_ops.h"
 #include "pr/vterm_input.h"
 
 #include "tools/harness/test.h"
 
-#include <string>
-
 namespace pr_impl {
+
+using namespace pr;
 
 namespace {
 
@@ -21,20 +23,20 @@ struct Term {
     Term(const Term&) = delete;
     Term& operator=(const Term&) = delete;
 
-    void write(const std::string& text) {
-        prVtermWrite(vterm, PrByteView{reinterpret_cast<const uint8_t*>(text.data()), text.size()});
+    void write(PrStringView text) {
+        prVtermWrite(vterm, prStringBytes(text));
     }
 
-    std::string output() {
+    String output() {
         PrByteView bytes = prVtermOutput(vterm);
-        std::string out(reinterpret_cast<const char*>(bytes.data), bytes.size);
+        String out(prStringFromBytes(bytes));
         prVtermOutputConsume(vterm, bytes.size);
         return out;
     }
 
     // Delivers a key press and then the text that it types, in the order that an application delivers them. Returns the
     // bytes that the terminal sent.
-    std::string key(PrAppKey key, PrAppModifierFlags modifiers = 0, const char* text = "",
+    String key(PrAppKey key, PrAppModifierFlags modifiers = 0, const char* text = "",
             PrAppKeyCode code = PrAppKeyCode_Unidentified) {
         return press(PrAppEvent{
             .kind = PrAppEventKind_KeyDown,
@@ -46,7 +48,7 @@ struct Term {
     }
 
     // Delivers an auto-repeat of a held key, in the same way as `key`.
-    std::string repeat(PrAppKey key, PrAppModifierFlags modifiers = 0, const char* text = "",
+    String repeat(PrAppKey key, PrAppModifierFlags modifiers = 0, const char* text = "",
             PrAppKeyCode code = PrAppKeyCode_Unidentified) {
         return press(PrAppEvent{
             .kind = PrAppEventKind_KeyDown,
@@ -59,15 +61,15 @@ struct Term {
     }
 
     // Releases `key`, and returns what the release sent.
-    std::string release(PrAppKey key, PrAppModifierFlags modifiers = 0, PrAppKeyCode code = PrAppKeyCode_Unidentified) {
+    String release(PrAppKey key, PrAppModifierFlags modifiers = 0, PrAppKeyCode code = PrAppKeyCode_Unidentified) {
         PrAppEvent up{.kind = PrAppEventKind_KeyUp, .modifiers = modifiers, .key = key, .code = code};
         bool taken = prVtermInputEvent(vterm, &up, &desc);
-        std::string sent = output();
-        CHECK(taken == !sent.empty());
+        String sent = output();
+        CHECK(taken == !sent.isEmpty());
         return sent;
     }
 
-    std::string press(const PrAppEvent& down) {
+    String press(const PrAppEvent& down) {
         prVtermInputEvent(vterm, &down, &desc);
         if (down.text.size != 0) {
             PrAppEvent typed{.kind = PrAppEventKind_Text, .text = down.text};
@@ -76,7 +78,7 @@ struct Term {
         return output();
     }
 
-    std::string text(const char* typed) {
+    String text(const char* typed) {
         PrAppEvent event{.kind = PrAppEventKind_Text, .text = typed};
         prVtermInputEvent(vterm, &event, &desc);
         return output();
@@ -111,7 +113,7 @@ TEST_CASE("vterm input: typed text is sent, and the text of a key that sent its 
     CHECK(term.key('X', PrAppModifierFlag_Alt, "x") == "\x1bx");
     CHECK(term.key('X', PrAppModifierFlag_Alt | PrAppModifierFlag_Shift, "X") == "\x1bX");
     CHECK(term.key('[', PrAppModifierFlag_Control, "[") == "\x1b");
-    CHECK(term.key(' ', PrAppModifierFlag_Control, " ") == std::string(1, '\0'));
+    CHECK(term.key(' ', PrAppModifierFlag_Control, " ") == PrStringView("\0", 1));
 
     // If Alt does not send an escape, Alt types the layout's text.
     term.desc.altSendsEscape = false;
@@ -156,7 +158,7 @@ TEST_CASE("vterm input: named keys send their sequences, with modifiers and the 
     CHECK(term.key(PrAppKey_Home) == "\x1bOH");
     term.write("\x1b[20h");
     CHECK(term.key(PrAppKey_Enter) == "\r\n");
-    CHECK(term.key(PrAppKey_Shift, PrAppModifierFlag_Shift).empty());
+    CHECK(term.key(PrAppKey_Shift, PrAppModifierFlag_Shift).isEmpty());
     CHECK(term.key(PrAppKey_ContextMenu) == "\x1b[29~");
 }
 
@@ -219,8 +221,8 @@ TEST_CASE("vterm input: disambiguated keys take the protocol's forms, and text k
     CHECK(term.key('+', control, "+", PrAppKeyCode_NumpadAdd) == "\x1b[57413;5u");
 
     // Modifier and lock keys are reported only if the program asks for every key as an escape code.
-    CHECK(term.key(PrAppKey_Shift, shift, "", PrAppKeyCode_ShiftLeft).empty());
-    CHECK(term.key(PrAppKey_CapsLock, PrAppModifierFlag_CapsLock, "", PrAppKeyCode_CapsLock).empty());
+    CHECK(term.key(PrAppKey_Shift, shift, "", PrAppKeyCode_ShiftLeft).isEmpty());
+    CHECK(term.key(PrAppKey_CapsLock, PrAppModifierFlag_CapsLock, "", PrAppKeyCode_CapsLock).isEmpty());
 }
 
 TEST_CASE("vterm input: caps lock is reported with the keys that the protocol sends, and keeps text keys typing") {
@@ -244,7 +246,7 @@ TEST_CASE("vterm input: event types report repeats and releases, but Enter, Tab 
     // Without event types, a repeat is sent as a press, and a release is left to the caller.
     term.write("\x1b[>1u");
     CHECK(term.repeat(PrAppKey_Up) == "\x1b[A");
-    CHECK(term.release(PrAppKey_Up).empty());
+    CHECK(term.release(PrAppKey_Up).isEmpty());
 
     term.write("\x1b[=2u");
     CHECK(term.key('A', 0, "a", PrAppKeyCode_KeyA) == "a");
@@ -267,11 +269,11 @@ TEST_CASE("vterm input: event types report repeats and releases, but Enter, Tab 
     CHECK(term.release(PrAppKey_Escape) == "\x1b[27;1:3u");
     CHECK(term.key(PrAppKey_Backspace) == "\x7f");
     CHECK(term.repeat(PrAppKey_Backspace) == "\x7f");
-    CHECK(term.release(PrAppKey_Backspace).empty());
+    CHECK(term.release(PrAppKey_Backspace).isEmpty());
     PrAppModifierFlags caps = PrAppModifierFlag_CapsLock;
     CHECK(term.key(PrAppKey_Enter, caps) == "\r");
-    CHECK(term.release(PrAppKey_Enter, caps).empty());
-    CHECK(term.release(PrAppKey_Tab).empty());
+    CHECK(term.release(PrAppKey_Enter, caps).isEmpty());
+    CHECK(term.release(PrAppKey_Tab).isEmpty());
     CHECK(term.release(PrAppKey_Enter, PrAppModifierFlag_Shift) == "\x1b[13;2:3u");
 
     term.write("\x1b[=10u");
@@ -347,7 +349,7 @@ TEST_CASE("vterm input: with every key, the modifier and lock keys report as key
     CHECK(term.key(PrAppKey_CapsLock, PrAppModifierFlag_CapsLock, "", PrAppKeyCode_CapsLock) == "\x1b[57358;65u");
     CHECK(term.key(PrAppKey_NumLock, 0, "", PrAppKeyCode_NumLock) == "\x1b[57360u");
     CHECK(term.key(PrAppKey_Unknown, 0, "", PrAppKeyCode_ScrollLock) == "\x1b[57359u");
-    CHECK(term.key(PrAppKey_Fn, 0, "", PrAppKeyCode_Fn).empty());
+    CHECK(term.key(PrAppKey_Fn, 0, "", PrAppKeyCode_Fn).isEmpty());
 }
 
 TEST_CASE("vterm input: a paste is bracketed if the program asked, and loses the escapes that would end it") {
@@ -365,7 +367,7 @@ TEST_CASE("vterm input: a paste is bracketed if the program asked, and loses the
 TEST_CASE("vterm input: focus is reported if the program asked") {
     Term term;
     prVtermInputFocus(term.vterm, true);
-    CHECK(term.output().empty());
+    CHECK(term.output().isEmpty());
     term.write("\x1b[?1004h");
     prVtermInputFocus(term.vterm, true);
     prVtermInputFocus(term.vterm, false);
@@ -376,7 +378,7 @@ TEST_CASE("vterm input: the pointer is the caller's until the program asks for r
     Term term;
     CHECK(!term.pointer(PrAppEventKind_PointerDown, PrVec2{15, 25}));
     CHECK(!term.scroll(1));
-    CHECK(term.output().empty());
+    CHECK(term.output().isEmpty());
 
     // Clicks in the default encoding: a press, then a release reported as button 3. Cells are one-based and offset by
     // 32.
@@ -395,7 +397,7 @@ TEST_CASE("vterm input: SGR reports carry the button, the modifiers, moves and t
     CHECK(term.pointer(PrAppEventKind_PointerDown, PrVec2{5, 5}, 1, PrAppModifierFlag_Control));
     CHECK(term.output() == "\x1b[<18;1;1M");
     CHECK(term.pointer(PrAppEventKind_PointerMove, PrVec2{8, 8}));
-    CHECK(term.output().empty());
+    CHECK(term.output().isEmpty());
     CHECK(term.pointer(PrAppEventKind_PointerMove, PrVec2{25, 45}));
     CHECK(term.output() == "\x1b[<34;3;3M");
     CHECK(term.pointer(PrAppEventKind_PointerUp, PrVec2{25, 45}, 1));
@@ -405,7 +407,7 @@ TEST_CASE("vterm input: SGR reports carry the button, the modifiers, moves and t
     CHECK(term.scroll(-2));
     CHECK(term.output() == "\x1b[<64;1;1M\x1b[<64;1;1M");
     CHECK(term.scroll(0.5f));
-    CHECK(term.output().empty());
+    CHECK(term.output().isEmpty());
     CHECK(term.scroll(0.5f));
     CHECK(term.output() == "\x1b[<65;1;1M");
 }

@@ -16,15 +16,13 @@
 #include "pr/layout_page.h"
 #include "pr/layout_style.h"
 #include "pr/layout_tree.h"
+#include "pr/string_ops.h"
 #include "pr/text_harfbuzz.h"
 
 #include "html/src/html_focus.h"
 #include "html/tests/support/html_test_fetch.h"
 
 #include "tools/harness/test.h"
-
-#include <string>
-#include <vector>
 
 namespace pr_impl {
 
@@ -43,15 +41,15 @@ bool verified(PrCssPresentation* presentation) {
     bool same = prCssPresentationVerify(presentation, &report);
     if (!same) {
         PrStringView what = prRawStringView(&report);
-        MESSAGE(std::string(what.data, what.size));
+        MESSAGE(String(what));
     }
     prRawStringReset(&report);
     return same;
 }
 
 // Renders `list` onto 40 by 40 RGBA pixels.
-std::vector<uint8_t> presentation(PrDrawList* list) {
-    std::vector<uint8_t> drawn(size_t(40) * 40 * 4, 0);
+Array<uint8_t> presentation(PrDrawList* list) {
+    Array<uint8_t> drawn(size_t(40) * 40 * 4);
     PrDrawRenderer* cpu = prDrawCpuCreate(nullptr);
     PrPixels into{drawn.data(), 40 * 4, {40, 40}};
     prDrawRendererRenderPixels(cpu, list, into, PrPixelFormat_Rgba8);
@@ -60,32 +58,34 @@ std::vector<uint8_t> presentation(PrDrawList* list) {
 }
 
 // Returns the red channel of a pixel of 40 by 40 RGBA pixels.
-uint8_t redAt(const std::vector<uint8_t>& pixels, uint32_t x, uint32_t y) {
-    return pixels[(size_t(y) * 40 + x) * 4];
+uint8_t redAt(const Array<uint8_t>& pixels, uint32_t x, uint32_t y) {
+    return pixels[(y * 40 + x) * 4];
 }
 
 // Returns the color of a pixel of 40 by 40 RGBA pixels as 0xRRGGBB.
-uint32_t rgbAt(const std::vector<uint8_t>& pixels, uint32_t x, uint32_t y) {
-    const uint8_t* p = &pixels[(size_t(y) * 40 + x) * 4];
+uint32_t rgbAt(const Array<uint8_t>& pixels, uint32_t x, uint32_t y) {
+    const uint8_t* p = &pixels[(y * 40 + x) * 4];
     return uint32_t(p[0]) << 16 | uint32_t(p[1]) << 8 | p[2];
 }
 
 // Returns `png` with an eXIf chunk after its header chunk, which gives the EXIF orientation `orientation`.
-std::vector<uint8_t> withOrientation(const std::vector<uint8_t>& png, uint8_t orientation) {
+Array<uint8_t> withOrientation(const Array<uint8_t>& png, uint8_t orientation) {
     // The chunk's type and a big-endian TIFF directory of one entry, the orientation tag.
-    std::vector<uint8_t> typed = {
+    Array<uint8_t> typed({
         'e', 'X', 'I', 'f', 'M', 'M', 0, 42, 0, 0, 0, 8, 0, 1, 0x01, 0x12, 0, 3,
         0,   0,   0,   1,   0,   orientation, 0, 0, 0, 0, 0, 0,
-    };
+    });
     uint32_t crc = prCrc32Update(0, typed);
-    uint32_t length = uint32_t(typed.size() - 4);
-    std::vector<uint8_t> chunk = {uint8_t(length >> 24), uint8_t(length >> 16), uint8_t(length >> 8), uint8_t(length)};
-    chunk.insert(chunk.end(), typed.begin(), typed.end());
-    chunk.insert(chunk.end(), {uint8_t(crc >> 24), uint8_t(crc >> 16), uint8_t(crc >> 8), uint8_t(crc)});
+    uint32_t length = typed.count() - 4;
+    Array<uint8_t> chunk({uint8_t(length >> 24), uint8_t(length >> 16), uint8_t(length >> 8), uint8_t(length)});
+    chunk.append(typed.span());
+    const uint8_t crcBytes[] = {uint8_t(crc >> 24), uint8_t(crc >> 16), uint8_t(crc >> 8), uint8_t(crc)};
+    chunk.append(Span(crcBytes));
     // The signature and the header chunk take 33 bytes.
-    std::vector<uint8_t> out(png.begin(), png.begin() + 33);
-    out.insert(out.end(), chunk.begin(), chunk.end());
-    out.insert(out.end(), png.begin() + 33, png.end());
+    Array<uint8_t> out;
+    out.append(png.span().slice(0, 33));
+    out.append(chunk.span());
+    out.append(png.span().from(33));
     return out;
 }
 
@@ -100,23 +100,23 @@ struct Viewed {
     PrHtmlView* view = nullptr;
     double now = 0;                 // the page's clock, in milliseconds
     uint32_t presented = 0;
-    uint32_t wanted = 0;            // the times the compositor came to want a frame
-    std::vector<uint8_t> pixels;    // the last frame presented, 40 by 40
+    uint32_t wanted = 0;      // the times the compositor came to want a frame
+    Array<uint8_t> pixels;    // the last frame presented, 40 by 40
 
     // The link that the host reports visited, or null for none.
     const PrDomElement* PR_NULLABLE visited = nullptr;
 
     // The resource that answers fetches, and the fetcher that holds them for answer() to answer, if it holds them.
-    const std::vector<uint8_t>* PR_NULLABLE resource = nullptr;
+    const Array<uint8_t>* PR_NULLABLE resource = nullptr;
     TestFetcher fetcher;
 
     // If `images` is given, the host decodes images. If `resource` is given, the host answers every fetch with it,
     // including the fetches of frames. The host answers at once, or when answer() is called if `holds` is set. The page
     // loads at `url`.
-    explicit Viewed(const char* html, PrImageCodec* PR_NULLABLE images = nullptr,
-            const std::vector<uint8_t>* PR_NULLABLE resource = nullptr, bool holds = false,
+    explicit Viewed(PrStringView html, PrImageCodec* PR_NULLABLE images = nullptr,
+            const Array<uint8_t>* PR_NULLABLE resource = nullptr, bool holds = false,
             const char* url = "about:blank") : resource(resource) {
-        std::string path = std::string(PR_FONTS_DIR) + "/Tinos-Regular.ttf";
+        String path = format("{}/Tinos-Regular.ttf", PR_FONTS_DIR);
         const PrFont* font = nullptr;
         REQUIRE(prFontCreateFromFile(path, 0, nullptr, &font) == PrStatus_Ok);
         PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
@@ -183,23 +183,23 @@ struct Viewed {
     }
 
     // Paints the view into 40 by 40 pixels.
-    std::vector<uint8_t> paint() {
+    Array<uint8_t> paint() {
         PrDrawList* list = prDrawListCreate();
         prHtmlViewPaint(view, list);
-        std::vector<uint8_t> drawn = presentation(list);
+        Array<uint8_t> drawn = presentation(list);
         prDrawListRelease(list);
         return drawn;
     }
 
     // Answers `request` with the PNG image that is the resource.
     void respond(PrFetchInterceptRequest* request) {
-        fetcher.respondTo(request, std::string(resource->begin(), resource->end()), 200, "image/png");
+        fetcher.respondTo(request, PrByteView(*resource), 200, "image/png");
     }
 
     // Answers the fetches held so far with the resource, and runs the tasks that the answers queue.
     void answer() {
         prNetNullRun(fetcher.net);
-        std::vector<PrFetchInterceptRequest*> answering = fetcher.held;
+        Array<PrFetchInterceptRequest*> answering = fetcher.held;
         for (PrFetchInterceptRequest* request : answering)
             respond(request);
         fetcher.settle(prHtmlPageAgent(page));
@@ -207,7 +207,7 @@ struct Viewed {
 
     // Answers the held fetch whose URL ends in `name` with `body`, of the content type `type`, and runs the tasks that
     // the answer queues.
-    void answer(const std::string& name, const char* body, const char* type) {
+    void answer(const String& name, const char* body, const char* type) {
         fetcher.waiting();
         if (!fetcher.respond(name, body, 200, type))
             FAIL("no fetch waits for " << name);
@@ -236,7 +236,7 @@ struct Viewed {
 // A page of inline SVG whose changes are checked against a full rebuild after each update.
 struct ViewedSvg : Viewed {
     explicit ViewedSvg(const char* body) :
-            Viewed((std::string("<style>body { margin: 0 } svg { display: block }</style>") + body).c_str()) {
+            Viewed(format("<style>body {{ margin: 0 }} svg {{ display: block }}</style>{}", body)) {
         update();
     }
 
@@ -270,14 +270,14 @@ constexpr const char* kSvgFonts =
 
 // The types of the events heard, in order.
 struct Heard {
-    std::vector<std::string> types;
+    Array<String> types;
 };
 
 PrDomEventListener recorder(Heard* heard) {
     return PrDomEventListener{
         [](void* context, PrDomEvent* event) {
             PrStringView type = prDomEventType(event);
-            static_cast<Heard*>(context)->types.emplace_back(type.data, type.size);
+            static_cast<Heard*>(context)->types.emplace(type);
         },
         heard,
         0,
@@ -289,7 +289,7 @@ PrDomEventListener recorder(Heard* heard) {
 // The events heard, each as its type, then for a keyboard event its key and legacy key code, and for a composition
 // event its data. An event that the engine did not fire is marked untrusted.
 struct HeardKeys {
-    std::vector<std::string> events;
+    Array<String> events;
     bool cancelKeydown = false;
 };
 
@@ -298,21 +298,21 @@ PrDomEventListener keyRecorder(HeardKeys* heard) {
         [](void* context, PrDomEvent* event) {
             HeardKeys* heardKeys = static_cast<HeardKeys*>(context);
             PrStringView type = prDomEventType(event);
-            std::string line(type.data, type.size);
+            String line(type);
             if (PrDomKeyboardEvent* key = prDomKeyboardEventQuery(event)) {
                 PrDomKeyboardEventInit members = prDomKeyboardEventMembers(key);
-                line += " " + std::string(members.key.data, members.key.size) + " " + std::to_string(members.keyCode);
+                formatTo(line, " {} {}", members.key, members.keyCode);
                 if (members.isComposing)
-                    line += " composing";
+                    line.append(" composing");
             }
             if (PrDomCompositionEvent* composition = prDomCompositionEventQuery(event)) {
                 PrStringView data = prDomCompositionEventData(composition);
-                line += " " + std::string(data.data, data.size);
+                formatTo(line, " {}", data);
             }
             if (!prDomEventIsTrusted(event))
-                line += " untrusted";
-            heardKeys->events.push_back(line);
-            if (heardKeys->cancelKeydown && line.rfind("keydown", 0) == 0)
+                line.append(" untrusted");
+            heardKeys->events.push(line);
+            if (heardKeys->cancelKeydown && prStringStartsWith(line, "keydown"))
                 prDomEventPreventDefault(event);
         },
         heard,
@@ -324,35 +324,41 @@ PrDomEventListener keyRecorder(HeardKeys* heard) {
 
 // Listens on `target` for the keyboard's, the composition's and click events.
 void listenForKeys(PrDomElement* target, PrDomEventListener* listener) {
-    for (const char* type : {"keydown", "keypress", "keyup", "click", "compositionstart", "compositionupdate",
-        "compositionend"})
+    const char* const kTypes[] = {
+        "keydown", "keypress", "keyup", "click", "compositionstart", "compositionupdate",
+        "compositionend",
+    };
+    for (const char* type : kTypes)
         prDomEventTargetAddEventListener(prDomNodeAsEventTarget(prDomElementAsNode(target)), type, listener, nullptr);
 }
 
 // Returns the events of pressing and releasing a key, with the text that it types between them.
-std::vector<PrAppEvent> press(PrAppKey key, PrAppKeyCode code, const char* text, PrAppModifierFlags modifiers = 0) {
+Array<PrAppEvent> press(PrAppKey key, PrAppKeyCode code, const char* text, PrAppModifierFlags modifiers = 0) {
     PrAppEvent down{.kind = PrAppEventKind_KeyDown, .modifiers = modifiers, .key = key, .code = code, .text = text};
     PrAppEvent typed{.kind = PrAppEventKind_Text, .modifiers = modifiers, .text = text};
     PrAppEvent up = down;
     up.kind = PrAppEventKind_KeyUp;
     if (text[0] == '\0')
-        return {down, up};
-    return {down, typed, up};
+        return Array<PrAppEvent>({down, up});
+    return Array<PrAppEvent>({down, typed, up});
 }
 
-void send(PrHtmlView* view, const std::vector<PrAppEvent>& events) {
+void send(PrHtmlView* view, Span<const PrAppEvent> events) {
     for (const PrAppEvent& event : events)
         prHtmlViewEvent(view, &event, 0);
 }
+void send(PrHtmlView* view, const Array<PrAppEvent>& events) {
+    send(view, events.span());
+}
 
 // Returns the ID of the element at a point of the page's viewport, its local name if it has none, or the empty string.
-std::string hitAt(Viewed& page, double x, double y) {
+String hitAt(Viewed& page, double x, double y) {
     PrDomElement* element = prCssDocumentElementFromPoint(page.document(), x, y);
     if (element == nullptr)
         return "";
     PrStringView id = prDomElementGetAttribute(element, "id");
     PrStringView text = id.size != 0 ? id : prDomElementLocalName(element);
-    return std::string(text.data, text.size);
+    return String(text);
 }
 
 // Sends a press and a release of the primary button at `point`.
@@ -369,7 +375,7 @@ void clickAt(Viewed& page, PrVec2 point) {
 // The wheel events heard, each as its target's id, its vertical delta, and whether it can be canceled. A listener
 // cancels each one while `cancel` is set.
 struct HeardWheels {
-    std::vector<std::string> events;
+    Array<String> events;
     bool cancel = false;
 };
 
@@ -381,10 +387,10 @@ PrDomEventListener wheelRecorder(HeardWheels* heard) {
             REQUIRE(wheel != nullptr);
             PrDomElement* target = prDomElementQuery(prDomEventTarget(event));
             PrStringView id = target != nullptr ? prDomElementId(target) : PrStringView{};
-            std::string line(id.data != nullptr ? id.data : "", id.size);
-            line += " " + std::to_string(int(prDomWheelEventMembers(wheel).deltaY));
-            line += prDomEventCancelable(event) ? " cancelable" : "";
-            heardWheels->events.push_back(line);
+            String line(id.data != nullptr ? id : PrStringView(""));
+            formatTo(line, " {}", int(prDomWheelEventMembers(wheel).deltaY));
+            line.append(prDomEventCancelable(event) ? " cancelable" : "");
+            heardWheels->events.push(line);
             if (heardWheels->cancel)
                 prDomEventPreventDefault(event);
         },
@@ -403,7 +409,7 @@ PrAppEvent wheelAt(PrVec2 at, float pixels, double time) {
 // The edits heard at a textarea, each as its type, input type, data and whether it is composing, and its value after
 // it. A listener cancels each beforeinput while `cancel` is set.
 struct HeardEdits {
-    std::vector<std::string> events;
+    Array<String> events;
     bool cancel = false;
 };
 
@@ -412,17 +418,17 @@ PrDomEventListener editRecorder(HeardEdits* heard) {
         [](void* context, PrDomEvent* event) {
             HeardEdits* heard = static_cast<HeardEdits*>(context);
             PrStringView type = prDomEventType(event);
-            std::string line(type.data, type.size);
+            String line(type);
             if (PrDomInputEvent* input = prDomInputEventQuery(event)) {
                 PrStringView kind = prDomInputEventInputType(input);
                 PrStringView data = prDomInputEventData(input);
-                line += " " + std::string(kind.data, kind.size) + " [" + std::string(data.data, data.size) + "]";
+                formatTo(line, " {} [{}]", kind, data);
                 if (prDomInputEventIsComposing(input))
-                    line += " composing";
+                    line.append(" composing");
                 if (heard->cancel && prDomEventCancelable(event))
                     prDomEventPreventDefault(event);
             }
-            heard->events.push_back(line);
+            heard->events.push(line);
         },
         heard,
         0,
@@ -431,10 +437,10 @@ PrDomEventListener editRecorder(HeardEdits* heard) {
     };
 }
 
-std::string valueOf(PrDomElement* element) {
+String valueOf(PrDomElement* element) {
     PrDomEventTarget* target = prDomNodeAsEventTarget(prDomElementAsNode(element));
     PrRawString value = prHtmlTextAreaElementValue(prHtmlTextAreaElementQuery(target));
-    std::string out(prRawStringView(&value).data, prRawStringView(&value).size);
+    String out(prRawStringView(&value));
     prRawStringReset(&value);
     return out;
 }
@@ -446,22 +452,23 @@ struct EditedArea {
     HeardEdits heard;
     PrDomEventListener listener;
 
-    explicit EditedArea(const char* markup) : page(markup) {
+    explicit EditedArea(PrStringView markup) : page(markup) {
         area = page.byId("t");
         listener = editRecorder(&heard);
-        for (const char* type : {"beforeinput", "input", "compositionstart", "compositionupdate", "compositionend"})
+        const char* const kTypes[] = {"beforeinput", "input", "compositionstart", "compositionupdate", "compositionend"};
+        for (const char* type : kTypes)
             prDomEventTargetAddEventListener(prDomNodeAsEventTarget(prDomElementAsNode(area)), type, &listener, nullptr);
         prHtmlFocus(area, nullptr);
-        uint32_t end = uint32_t(valueOf(area).size());
+        uint32_t end = uint32_t(valueOf(area).count());
         prHtmlTextControlSetSelectionRange(area, end, end, PrDomSelectionDirection_None);
     }
 };
 
 // Appends the text of the subtree of `node` in `tree` to `out`.
-void appendText(PrLayoutTree* tree, PrLayoutNode node, std::string& out) {
+void appendText(PrLayoutTree* tree, PrLayoutNode node, String& out) {
     if (prLayoutNodeKind(tree, node) == PrLayoutNodeKind_Text) {
         PrStringView text = prLayoutNodeText(tree, node);
-        out.append(text.data, text.size);
+        out.append(text);
         return;
     }
     for (PrLayoutNode child = prLayoutNodeFirstChild(tree, node); child != kPrLayoutNodeNone;
@@ -471,22 +478,22 @@ void appendText(PrLayoutTree* tree, PrLayoutNode node, std::string& out) {
 
 // Returns the text of each margin box of the page at `index` of a paged view, by PrLayoutMarginBox, and "-" for a box
 // that the page does not generate.
-std::vector<std::string> marginTexts(Viewed& v, uint32_t index) {
+Array<String> marginTexts(Viewed& v, uint32_t index) {
     PrLayoutTree* tree = prCssPresentationTree(prHtmlPagePresentation(v.page));
     PrLayoutNode boxes[PrLayoutMarginBox_Count];
     prLayoutTreePageMargins(tree, index, boxes);
-    std::vector<std::string> texts;
+    Array<String> texts;
     for (PrLayoutNode box : boxes) {
-        std::string text = box != kPrLayoutNodeNone ? "" : "-";
+        String text = box != kPrLayoutNodeNone ? "" : "-";
         if (box != kPrLayoutNodeNone)
             appendText(tree, box, text);
-        texts.push_back(text);
+        texts.push(text);
     }
     return texts;
 }
 
 // Returns the text of the margin box `which` of the page at `index`.
-std::string marginText(Viewed& v, uint32_t index, PrLayoutMarginBox which) {
+String marginText(Viewed& v, uint32_t index, PrLayoutMarginBox which) {
     return marginTexts(v, index)[which];
 }
 
@@ -652,7 +659,8 @@ TEST_CASE("a view routes the pointer to the elements under it") {
     Heard heard;
     PrDomEventListener listener = recorder(&heard);
     PrDomEventTarget* a = prDomNodeAsEventTarget(prDomElementAsNode(page.byId("a")));
-    for (const char* type : {"mousedown", "mouseup", "click"})
+    const char* const kTypes[] = {"mousedown", "mouseup", "click"};
+    for (const char* type : kTypes)
         prDomEventTargetAddEventListener(a, type, &listener, nullptr);
 
     // A move hovers at the view's next update.
@@ -680,7 +688,7 @@ TEST_CASE("a view routes the pointer to the elements under it") {
     event.kind = PrAppEventKind_PointerUp;
     event.position = PrVec2{10, 60};
     prHtmlViewEvent(page.view, &event, 0);
-    CHECK(heard.types == std::vector<std::string>{"mousedown", "mouseup", "click", "mousedown"});
+    CHECK(heard.types == Array<String>({"mousedown", "mouseup", "click", "mousedown"}));
 }
 
 TEST_CASE("a key fires keydown, a keypress for its text and keyup at the focused element, all trusted") {
@@ -691,17 +699,17 @@ TEST_CASE("a key fires keydown, a keypress for its text and keyup at the focused
     prHtmlFocus(page.byId("a"), nullptr);
     send(page.view, press('A', PrAppKeyCode_KeyA, "a"));
     send(page.view, press('A', PrAppKeyCode_KeyA, "A", PrAppModifierFlag_Shift));
-    CHECK(heard.events == std::vector<std::string>{
+    CHECK(heard.events == Array<String>({
         "keydown a 65", "keypress a 97", "keyup a 65", "keydown A 65",
         "keypress A 65", "keyup A 65",
-    });
+    }));
 
     // A shortcut types no text, and a canceled keydown drops the text of its key.
     heard.events.clear();
     send(page.view, press('A', PrAppKeyCode_KeyA, "a", PrAppModifierFlag_Control));
     heard.cancelKeydown = true;
     send(page.view, press('1', PrAppKeyCode_Digit1, "1"));
-    CHECK(heard.events == std::vector<std::string>{"keydown a 65", "keyup a 65", "keydown 1 49", "keyup 1 49"});
+    CHECK(heard.events == Array<String>({"keydown a 65", "keyup a 65", "keydown 1 49", "keyup 1 49"}));
 }
 
 TEST_CASE("the first focusable element with autofocus is focused at the next rendering update, once") {
@@ -728,7 +736,7 @@ TEST_CASE("typing in a textarea fires beforeinput and input around the edit") {
     EditedArea e("<textarea id=t>ab</textarea>");
     send(e.page.view, press('C', PrAppKeyCode_KeyC, "c"));
     CHECK(valueOf(e.area) == "abc");
-    CHECK(e.heard.events == std::vector<std::string>{"beforeinput insertText [c]", "input insertText [c]"});
+    CHECK(e.heard.events == Array<String>({"beforeinput insertText [c]", "input insertText [c]"}));
     CHECK(prHtmlTextControlSelectionStart(e.area) == 3);
 }
 
@@ -737,14 +745,14 @@ TEST_CASE("a canceled beforeinput leaves a textarea's value as it was") {
     e.heard.cancel = true;
     send(e.page.view, press('C', PrAppKeyCode_KeyC, "c"));
     CHECK(valueOf(e.area) == "ab");
-    CHECK(e.heard.events == std::vector<std::string>{"beforeinput insertText [c]"});
+    CHECK(e.heard.events == Array<String>({"beforeinput insertText [c]"}));
 }
 
 TEST_CASE("Left and Right move as a right-to-left textarea shows its text") {
-    for (const char* dir : {"rtl", "auto"}) {
-        std::string html = std::string("<meta charset=utf-8><textarea id=t dir=") + dir +
-            ">\xd7\xa9\xd7\x9c\xd7\x95\xd7\x9d</textarea>";
-        EditedArea e(html.c_str());
+    const char* const kDirs[] = {"rtl", "auto"};
+    for (const char* dir : kDirs) {
+        String html = format("<meta charset=utf-8><textarea id=t dir={}>\xd7\xa9\xd7\x9c\xd7\x95\xd7\x9d</textarea>", dir);
+        EditedArea e(html);
         CHECK(prHtmlTextControlSelectionStart(e.area) == 4);
         send(e.page.view, press(PrAppKey_Right, PrAppKeyCode_ArrowRight, ""));
         CHECK(prHtmlTextControlSelectionStart(e.area) == 3);
@@ -781,7 +789,7 @@ TEST_CASE("a masked right-to-left input moves as it shows, and a word motion goe
     prHtmlTextControlSetSelectionRange(e.area, 3, 3, PrDomSelectionDirection_None);
     send(e.page.view, press(PrAppKey_Right, PrAppKeyCode_ArrowRight, ""));
     CHECK(prHtmlTextControlSelectionStart(e.area) == 2);
-    std::vector<PrAppEvent> word = press(PrAppKey_Right, PrAppKeyCode_ArrowRight, "");
+    Array<PrAppEvent> word = press(PrAppKey_Right, PrAppKeyCode_ArrowRight, "");
     for (PrAppEvent& event : word)
         event.modifiers = PrAppModifierFlag_Alt;
     send(e.page.view, word);
@@ -861,7 +869,7 @@ TEST_CASE("a composition marks its text in a textarea, and commits it once, ahea
     PrAppEvent committed{.kind = PrAppEventKind_Text, .text = "\xe3\x81\x8b"};
     prHtmlViewEvent(e.page.view, &committed, 0);
     CHECK(valueOf(e.area) == "a\xe3\x81\x8b");
-    CHECK(e.heard.events == std::vector<std::string>{
+    CHECK(e.heard.events == Array<String>({
         "compositionstart",
         "compositionupdate",
         "beforeinput insertCompositionText [k] composing",
@@ -874,7 +882,7 @@ TEST_CASE("a composition marks its text in a textarea, and commits it once, ahea
         "beforeinput insertText [\xe3\x81\x8b]",
         "input insertText [\xe3\x81\x8b]",
         "compositionend",
-    });
+    }));
     // Only the commit is a step of the history.
     send(e.page.view, press('Z', PrAppKeyCode_KeyZ, "", PrAppModifierFlag_Super));
     CHECK(valueOf(e.area) == "a");
@@ -897,7 +905,8 @@ TEST_CASE("a drag in a textarea extends its selection from the press") {
 TEST_CASE("a text control's multi-click selects a word, a line, and the text") {
     EditedArea e("<style>body { margin: 0 }</style><textarea id=t cols=40>alpha beta\ngamma</textarea>");
     e.page.settle();
-    for (uint32_t clicks : {2u, 3u, 4u}) {
+    const uint32_t kClickCounts[] = {2u, 3u, 4u};
+    for (uint32_t clicks : kClickCounts) {
         CAPTURE(clicks);
         PrAppEvent event{.kind = PrAppEventKind_PointerDown, .clicks = 1, .position = PrVec2{10, 8}};
         prHtmlViewEvent(e.page.view, &event, 0);
@@ -941,7 +950,8 @@ TEST_CASE("the keys of a text control move by line and by word, and delete by wo
 TEST_CASE("a view asks for frames until a selection that a press made is shown, with no caret to blink") {
     EditedArea e("<style>body { margin: 0 }</style><textarea id=t cols=40>alpha beta</textarea>");
     e.page.settle();
-    for (uint32_t clicks : {1u, 2u}) {
+    const uint32_t kClickCounts[] = {1u, 2u};
+    for (uint32_t clicks : kClickCounts) {
         PrAppEvent event{.kind = PrAppEventKind_PointerDown, .clicks = clicks, .position = PrVec2{10, 8}};
         prHtmlViewEvent(e.page.view, &event, 0);
         event.kind = PrAppEventKind_PointerUp;
@@ -961,7 +971,7 @@ TEST_CASE("typing keeps the caret in view") {
     e.page.settle();
     e.page.settle();
     CHECK(prCssElementScrollLeft(e.area) == 0);
-    for (char c : std::string("a long value that overflows the field")) {
+    for (char c : String("a long value that overflows the field")) {
         char text[2] = {c, 0};
         send(e.page.view, press(PrAppKey(c >= 'a' && c <= 'z' ? c - 'a' + 'A' : c), PrAppKeyCode_KeyA, text));
         e.page.settle();
@@ -992,7 +1002,8 @@ TEST_CASE("a host that paints the document itself shows a selection at once, wit
     PrLayoutNode text = prCssPresentationFieldText(presentation, e.area);
     PrLayoutTree* tree = prCssPresentationTree(presentation);
     REQUIRE(text != kPrLayoutNodeNone);
-    for (uint32_t clicks : {1u, 2u}) {
+    const uint32_t kClickCounts[] = {1u, 2u};
+    for (uint32_t clicks : kClickCounts) {
         PrAppEvent event{.kind = PrAppEventKind_PointerDown, .clicks = clicks, .position = PrVec2{10, 8}};
         prHtmlViewEvent(e.page.view, &event, 0);
         event.kind = PrAppEventKind_PointerUp;
@@ -1068,11 +1079,11 @@ TEST_CASE("::selection colors what a text control has selected") {
 }
 
 TEST_CASE("cut, copy and paste use the clipboard, and fire events that can take them over") {
-    static std::string clipboard;
+    static String clipboard;
     static uint32_t requested;
     PrApp app{};
     app.setClipboardText = [](PrApp*, PrStringView text) -> PrStatus {
-        clipboard = std::string(text.data, text.size);
+        clipboard = String(text);
         return PrStatus_Ok;
     };
     app.requestClipboardText = [](PrApp*) { ++requested; };
@@ -1156,7 +1167,7 @@ TEST_CASE("without a focused element, keys go to the body") {
     PrDomEventListener listener = keyRecorder(&heard);
     listenForKeys(page.byId("body"), &listener);
     send(page.view, press(PrAppKey_Escape, PrAppKeyCode_Escape, ""));
-    CHECK(heard.events == std::vector<std::string>{"keydown Escape 27", "keyup Escape 27"});
+    CHECK(heard.events == Array<String>({"keydown Escape 27", "keyup Escape 27"}));
 }
 
 TEST_CASE("Enter activates a focused button or link as it goes down, and Space as it is released") {
@@ -1166,22 +1177,22 @@ TEST_CASE("Enter activates a focused button or link as it goes down, and Space a
     listenForKeys(page.byId("b"), &listener);
     prHtmlFocus(page.byId("b"), nullptr);
     send(page.view, press(PrAppKey_Enter, PrAppKeyCode_Enter, ""));
-    CHECK(heard.events == std::vector<std::string>{"keydown Enter 13", "keypress Enter 13", "click", "keyup Enter 13"});
+    CHECK(heard.events == Array<String>({"keydown Enter 13", "keypress Enter 13", "click", "keyup Enter 13"}));
 
     heard.events.clear();
-    std::vector<PrAppEvent> space = press(' ', PrAppKeyCode_Space, " ");
-    send(page.view, {space[0], space[1]});
+    Array<PrAppEvent> space = press(' ', PrAppKeyCode_Space, " ");
+    send(page.view, space.span().slice(0, 2));
     CHECK(page.matches("b", ":active"));
-    send(page.view, {space[2]});
+    send(page.view, space.span().from(2));
     CHECK_FALSE(page.matches("b", ":active"));
-    CHECK(heard.events == std::vector<std::string>{"keydown   32", "keypress   32", "keyup   32", "click"});
+    CHECK(heard.events == Array<String>({"keydown   32", "keypress   32", "keyup   32", "click"}));
 
     // A canceled keydown activates nothing.
     heard.events.clear();
     heard.cancelKeydown = true;
     send(page.view, press(PrAppKey_Enter, PrAppKeyCode_Enter, ""));
     send(page.view, press(' ', PrAppKeyCode_Space, " "));
-    CHECK(heard.events == std::vector<std::string>{"keydown Enter 13", "keyup Enter 13", "keydown   32", "keyup   32"});
+    CHECK(heard.events == Array<String>({"keydown Enter 13", "keyup Enter 13", "keydown   32", "keyup   32"}));
 }
 
 TEST_CASE("Tab past the last area leaves the document with the focus at the viewport, and the next Tab starts again") {
@@ -1216,7 +1227,8 @@ TEST_CASE("a press focuses the nearest focusable ancestor, or the viewport, and 
     PrAppEvent down{.kind = PrAppEventKind_PointerDown, .position = PrVec2{5, 10}};
     PrAppEvent up = down;
     up.kind = PrAppEventKind_PointerUp;
-    send(page.view, {down, up});
+    const PrAppEvent clickBox[] = {down, up};
+    send(page.view, clickBox);
     CHECK(prHtmlActiveElement(document) == page.byId("box"));
     CHECK_FALSE(page.matches("box", ":focus-visible"));
 
@@ -1228,12 +1240,14 @@ TEST_CASE("a press focuses the nearest focusable ancestor, or the viewport, and 
     CHECK(page.matches("box", ":focus-visible"));
 
     down.position = up.position = PrVec2{5, 30};
-    send(page.view, {down, up});
+    const PrAppEvent clickField[] = {down, up};
+    send(page.view, clickField);
     CHECK(prHtmlActiveElement(document) == page.byId("field"));
     CHECK(page.matches("field", ":focus-visible"));
 
     down.position = up.position = PrVec2{5, 50};
-    send(page.view, {down, up});
+    const PrAppEvent clickBody[] = {down, up};
+    send(page.view, clickBody);
     CHECK(prHtmlActiveElement(document) == prDomDocumentBody(page.document()));
 }
 
@@ -1322,7 +1336,7 @@ TEST_CASE("the wheel fires at the element under the pointer and scrolls from its
     event.delta = PrVec2{0, 1};
     prHtmlViewEvent(page.view, &event, 0);
     CHECK(prCssElementScrollTop(page.byId("s")) == 70.0);
-    CHECK(heard.events == std::vector<std::string>{"in 30 cancelable", "in 40"});
+    CHECK(heard.events == Array<String>({"in 30 cancelable", "in 40"}));
 
     // A listener that cancels the first wheel of a sequence keeps the scroll from happening, and may cancel the rest.
     heard.events.clear();
@@ -1332,14 +1346,14 @@ TEST_CASE("the wheel fires at the element under the pointer and scrolls from its
     event.time = 1.1;
     CHECK(prHtmlViewEvent(page.view, &event, 0) == PrHtmlViewEventResult_Canceled);
     CHECK(prCssElementScrollTop(page.byId("s")) == 70.0);
-    CHECK(heard.events == std::vector<std::string>{"in 30 cancelable", "in 30 cancelable"});
+    CHECK(heard.events == Array<String>({"in 30 cancelable", "in 30 cancelable"}));
 
     // A wheel that the host scrolled already fires a wheel event that cannot be canceled, and scrolls nothing again.
     heard.events.clear();
     event = wheelAt(PrVec2{10, 30}, 30, 2);
     CHECK(prHtmlViewEvent(page.view, &event, PrHtmlViewEventFlag_Scrolled) == PrHtmlViewEventResult_Handled);
     CHECK(prCssElementScrollTop(page.byId("s")) == 70.0);
-    CHECK(heard.events == std::vector<std::string>{"in 30"});
+    CHECK(heard.events == Array<String>({"in 30"}));
 }
 
 TEST_CASE("a wheel sequence keeps its first target, and a passive listener cannot cancel a wheel") {
@@ -1360,20 +1374,21 @@ TEST_CASE("a wheel sequence keeps its first target, and a passive listener canno
 
     // The sequence that starts over a keeps it as the document scrolls b under the pointer. Once no listener canceled
     // its first wheel, the rest of it cannot be canceled.
-    for (double time : {0.0, 0.1, 0.2}) {
+    const double kTimes[] = {0.0, 0.1, 0.2};
+    for (double time : kTimes) {
         PrAppEvent event = wheelAt(PrVec2{10, 40}, 10, time);
         prHtmlViewEvent(page.view, &event, 0);
         prHtmlViewUpdate(page.view);
         page.settle();
     }
     CHECK(prHtmlWindowScrollY(prHtmlPageWindow(page.page)) == 30.0);
-    CHECK(heard.events == std::vector<std::string>{"a 10 cancelable", "a 10", "a 10"});
+    CHECK(heard.events == Array<String>({"a 10 cancelable", "a 10", "a 10"}));
 
     // After a pause, the next sequence starts at what is under the pointer, whose listeners are passive.
     heard.events.clear();
     PrAppEvent event = wheelAt(PrVec2{10, 40}, -10, 0.2 + kPrLayoutWheelSequenceGap / 1000.0 + 0.1);
     prHtmlViewEvent(page.view, &event, 0);
-    CHECK(heard.events == std::vector<std::string>{"b -10"});
+    CHECK(heard.events == Array<String>({"b -10"}));
 }
 
 TEST_CASE("a wheel listener that can cancel puts its element's box, or the whole viewport, in the wheel region") {
@@ -1416,9 +1431,9 @@ TEST_CASE("a wheel listener that can cancel puts its element's box, or the whole
 // style. The view lays out the frame's document in the frame's content box.
 struct ViewedFrame : Viewed {
     explicit ViewedFrame(const char* inner) :
-            Viewed((std::string("<style>body { margin: 0; height: 2000px } iframe { display: block; margin: 10px; "
-                "border: 0; width: 30px; height: 20px }</style><iframe id=f srcdoc=\"<style>html { ") +
-                inner + " } body { margin: 0 } div { height: 100px }</style><div id=d></div>\"></iframe>") .c_str()) {
+            Viewed(format("<style>body {{ margin: 0; height: 2000px }} iframe {{ display: block; margin: 10px; "
+                "border: 0; width: 30px; height: 20px }}</style><iframe id=f srcdoc=\"<style>html {{ {} }} "
+                "body {{ margin: 0 }} div {{ height: 100px }}</style><div id=d></div>\"></iframe>", inner)) {
         for (uint32_t i = 0; i < 6; ++i) {
             prHtmlViewUpdate(view);
             prHtmlViewWait(view);
@@ -1440,13 +1455,13 @@ struct ViewedFrame : Viewed {
 
 TEST_CASE("the pointer reaches the elements of a frame's document, in that document's coordinates") {
     ViewedFrame page("");
-    std::vector<std::string> heard;
+    Array<String> heard;
     PrDomEventListener listener{
         [](void* context, PrDomEvent* event) {
             PrDomMouseEventInit mouse = prDomMouseEventMembers(prDomMouseEventQuery(event));
             PrStringView type = prDomEventType(event);
-            static_cast<std::vector<std::string>*>(context)->push_back(std::string(type.data, type.size) + " " +
-                std::to_string(int(mouse.clientX)) + "," + std::to_string(int(mouse.clientY)));
+            static_cast<Array<String>*>(context)->push(
+                format("{} {},{}", type, int(mouse.clientX), int(mouse.clientY)));
         },
         &heard,
         1,
@@ -1465,11 +1480,12 @@ TEST_CASE("the pointer reaches the elements of a frame's document, in that docum
     CHECK(page.matches("f", ":hover"));
     event.kind = PrAppEventKind_PointerDown;
     prHtmlViewEvent(page.view, &event, 0);
-    CHECK(heard == std::vector<std::string>{"mousedown 5,10"});
+    CHECK(heard == Array<String>({"mousedown 5,10"}));
 }
 
 TEST_CASE("the wheel scrolls a frame's document, then the page around it, unless the frame's root contains the scroll") {
-    for (bool contain : {false, true}) {
+    const bool kContains[] = {false, true};
+    for (bool contain : kContains) {
         ViewedFrame page(contain ? "overscroll-behavior-y: contain" : "");
         PrHtmlWindow* window = prHtmlPageWindow(page.page);
         PrAppEvent event = wheelAt(PrVec2{15, 20}, 100, 0);
@@ -1496,19 +1512,21 @@ TEST_CASE("a composition fires its events, its keys report Process, and its comm
     PrDomEventListener listener = keyRecorder(&heard);
     listenForKeys(page.byId("a"), &listener);
     prHtmlFocus(page.byId("a"), nullptr);
-    std::vector<PrAppEvent> k = press('K', PrAppKeyCode_KeyK, "k");
+    Array<PrAppEvent> k = press('K', PrAppKeyCode_KeyK, "k");
     PrAppEvent update{.kind = PrAppEventKind_CompositionUpdate, .text = "k"};
     PrAppEvent end{.kind = PrAppEventKind_CompositionEnd, .text = "\xe3\x81\x8b"};
     PrAppEvent commit{.kind = PrAppEventKind_Text, .text = "\xe3\x81\x8b"};
-    send(page.view, {k[0], update, k[2]});
-    std::vector<PrAppEvent> a = press('A', PrAppKeyCode_KeyA, "a");
+    const PrAppEvent composeK[] = {k[0], update, k[2]};
+    send(page.view, composeK);
+    Array<PrAppEvent> a = press('A', PrAppKeyCode_KeyA, "a");
     update.text = "\xe3\x81\x8b";
-    send(page.view, {a[0], update, end, commit, a[2]});
-    CHECK(heard.events == std::vector<std::string>{
+    const PrAppEvent composeA[] = {a[0], update, end, commit, a[2]};
+    send(page.view, composeA);
+    CHECK(heard.events == Array<String>({
         "keydown k 75", "compositionstart ", "compositionupdate k", "keyup k 75 composing",
         "keydown Process 229 composing", "compositionupdate \xe3\x81\x8b", "compositionend \xe3\x81\x8b",
         "keyup a 65",
-    });
+    }));
 }
 
 TEST_CASE("the moves since the view's last update hover once, at the latest") {
@@ -1516,7 +1534,8 @@ TEST_CASE("the moves since the view's last update hover once, at the latest") {
     prHtmlViewUpdate(page.view);
     page.settle();
     PrAppEvent move{.kind = PrAppEventKind_PointerMove};
-    for (float y : {10.0f, 20.0f, 30.0f, 60.0f}) {
+    const float kYs[] = {10.0f, 20.0f, 30.0f, 60.0f};
+    for (float y : kYs) {
         move.position = PrVec2{10, y};
         prHtmlViewEvent(page.view, &move, 0);
     }
@@ -1626,15 +1645,15 @@ TEST_CASE("an img is a replaced box, sized by its image and drawing it, as the h
     PrCompressCodec* compress = prCompressBuiltinCreate();
     PrImageCodec* images = prImageBuiltinCreate(compress);
     // A 4 by 2 red PNG.
-    std::vector<uint8_t> red(4 * 2 * 4, 0);
-    for (size_t i = 0; i < red.size(); i += 4) {
+    Array<uint8_t> red(4 * 2 * 4);
+    for (uint32_t i = 0; i < red.count(); i += 4) {
         red[i] = 255;
         red[i + 3] = 255;
     }
     PrPixelView pixels{red.data(), 16, {4, 2}};
     size_t size = 0;
     REQUIRE(prImageCodecEncode(images, "image/png", pixels, nullptr, 0, &size) == PrStatus_Ok);
-    std::vector<uint8_t> png(size);
+    Array<uint8_t> png(size);
     REQUIRE(prImageCodecEncode(images, "image/png", pixels, png.data(), size, &size) == PrStatus_Ok);
     {
         Viewed page("<style>body { margin: 0 } img { display: block }</style><img id=i src=http://test/red.png>"
@@ -1648,7 +1667,7 @@ TEST_CASE("an img is a replaced box, sized by its image and drawing it, as the h
 
         PrDrawList* list = prDrawListCreate();
         prHtmlViewPaint(page.view, list);
-        std::vector<uint8_t> drawn(size_t(40) * 40 * 4, 0);
+        Array<uint8_t> drawn(size_t(40) * 40 * 4);
         PrDrawRenderer* cpu = prDrawCpuCreate(nullptr);
         PrPixels into{drawn.data(), 40 * 4, {40, 40}};
         REQUIRE(prDrawRendererRenderPixels(cpu, list, into, PrPixelFormat_Rgba8) == PrStatus_Ok);
@@ -1680,11 +1699,11 @@ TEST_CASE("an img is a replaced box, sized by its image and drawing it, as the h
 TEST_CASE("an img's content takes the cap of its dynamic-range-limit and its image-rendering, as they change") {
     PrCompressCodec* compress = prCompressBuiltinCreate();
     PrImageCodec* images = prImageBuiltinCreate(compress);
-    std::vector<uint8_t> red(4 * 2 * 4, 255);
+    Array<uint8_t> red(4 * 2 * 4, 255);
     PrPixelView pixels{red.data(), 16, {4, 2}};
     size_t size = 0;
     REQUIRE(prImageCodecEncode(images, "image/png", pixels, nullptr, 0, &size) == PrStatus_Ok);
-    std::vector<uint8_t> png(size);
+    Array<uint8_t> png(size);
     REQUIRE(prImageCodecEncode(images, "image/png", pixels, png.data(), size, &size) == PrStatus_Ok);
     {
         Viewed page("<img id=i src=http://test/red.png style='dynamic-range-limit: standard'>", images, &png);
@@ -1726,7 +1745,7 @@ TEST_CASE("an img is sized and drawn as its image's orientation displays it, unl
     PrCompressCodec* compress = prCompressBuiltinCreate();
     PrImageCodec* images = prImageBuiltinCreate(compress);
     // Four by two pixels: a red column on the left, and blue elsewhere.
-    std::vector<uint8_t> stored(4 * 2 * 4, 0);
+    Array<uint8_t> stored(4 * 2 * 4);
     for (uint32_t i = 0; i < 8; ++i) {
         bool red = i % 4 == 0;
         stored[i * 4] = red ? 255 : 0;
@@ -1736,10 +1755,10 @@ TEST_CASE("an img is sized and drawn as its image's orientation displays it, unl
     PrPixelView pixels{stored.data(), 16, {4, 2}};
     size_t size = 0;
     REQUIRE(prImageCodecEncode(images, "image/png", pixels, nullptr, 0, &size) == PrStatus_Ok);
-    std::vector<uint8_t> png(size);
+    Array<uint8_t> png(size);
     REQUIRE(prImageCodecEncode(images, "image/png", pixels, png.data(), size, &size) == PrStatus_Ok);
     // A quarter turn clockwise displays it two by four, with the red row on top.
-    std::vector<uint8_t> turned = withOrientation(png, 6);
+    Array<uint8_t> turned = withOrientation(png, 6);
     {
         Viewed page("<img id=i src=http://test/turned.png>", images, &turned);
         PrDomAgent* agent = prHtmlPageAgent(page.page);
@@ -1782,11 +1801,11 @@ TEST_CASE("an img is sized and drawn as its image's orientation displays it, unl
 TEST_CASE("an img selects the source that matches, decodes and suits the display, and divides its size by its density") {
     PrCompressCodec* compress = prCompressBuiltinCreate();
     PrImageCodec* images = prImageBuiltinCreate(compress);
-    std::vector<uint8_t> stored(4 * 2 * 4, 255);
+    Array<uint8_t> stored(4 * 2 * 4, 255);
     PrPixelView pixels{stored.data(), 16, {4, 2}};
     size_t size = 0;
     REQUIRE(prImageCodecEncode(images, "image/png", pixels, nullptr, 0, &size) == PrStatus_Ok);
-    std::vector<uint8_t> png(size);
+    Array<uint8_t> png(size);
     REQUIRE(prImageCodecEncode(images, "image/png", pixels, png.data(), size, &size) == PrStatus_Ok);
     {
         // A picture's source of a type that the codec does not decode is passed over for the next.
@@ -1800,7 +1819,7 @@ TEST_CASE("an img selects the source that matches, decodes and suits the display
         };
         auto current = [&](const char* id) {
             PrStringView source = prHtmlImageElementCurrentSrc(image(id));
-            return std::string(source.data, source.size);
+            return String(source);
         };
         CHECK(current("p") == "http://test/one.png");
         CHECK(prHtmlImageElementNaturalWidth(image("p")) == 4);
@@ -1839,13 +1858,13 @@ TEST_CASE("an img selects the source that matches, decodes and suits the display
 TEST_CASE("a frame navigated to an image holds a media document whose img shows the image in its orientation") {
     PrCompressCodec* compress = prCompressBuiltinCreate();
     PrImageCodec* images = prImageBuiltinCreate(compress);
-    std::vector<uint8_t> stored(4 * 2 * 4, 255);
+    Array<uint8_t> stored(4 * 2 * 4, 255);
     PrPixelView pixels{stored.data(), 16, {4, 2}};
     size_t size = 0;
     REQUIRE(prImageCodecEncode(images, "image/png", pixels, nullptr, 0, &size) == PrStatus_Ok);
-    std::vector<uint8_t> png(size);
+    Array<uint8_t> png(size);
     REQUIRE(prImageCodecEncode(images, "image/png", pixels, png.data(), size, &size) == PrStatus_Ok);
-    std::vector<uint8_t> turned = withOrientation(png, 6);
+    Array<uint8_t> turned = withOrientation(png, 6);
     {
         // image-orientation does not inherit into the frame's document.
         Viewed page("<iframe id=f src=http://test/turned.png style='image-orientation: none'></iframe>", images, &turned);
@@ -1874,11 +1893,11 @@ TEST_CASE("a frame navigated to an image holds a media document whose img shows 
 TEST_CASE("an object of an image type is replaced by its image, and shows its fallback content without one") {
     PrCompressCodec* compress = prCompressBuiltinCreate();
     PrImageCodec* images = prImageBuiltinCreate(compress);
-    std::vector<uint8_t> red(4 * 2 * 4, 255);
+    Array<uint8_t> red(4 * 2 * 4, 255);
     PrPixelView pixels{red.data(), 16, {4, 2}};
     size_t size = 0;
     REQUIRE(prImageCodecEncode(images, "image/png", pixels, nullptr, 0, &size) == PrStatus_Ok);
-    std::vector<uint8_t> png(size);
+    Array<uint8_t> png(size);
     REQUIRE(prImageCodecEncode(images, "image/png", pixels, png.data(), size, &size) == PrStatus_Ok);
     {
         Viewed page("<object id=o data=http://test/red.png><span id=f>fallback</span></object>", images, &png);
@@ -1927,11 +1946,11 @@ TEST_CASE("an svg element in HTML is a replaced box that draws its content, agai
         CHECK(verified(presentation));
         PrDrawList* list = prDrawListCreate();
         prHtmlViewPaint(page.view, list);
-        std::vector<uint8_t> pixels = ::presentation(list);
+        Array<uint8_t> pixels = ::presentation(list);
         prDrawListRelease(list);
         return pixels;
     };
-    std::vector<uint8_t> pixels = drawn();
+    Array<uint8_t> pixels = drawn();
     PrLayoutNode node = prCssPresentationLayoutNode(presentation, prDomElementAsNode(page.byId("s")));
     CHECK(prLayoutNodeKind(prCssPresentationTree(presentation), node) == PrLayoutNodeKind_Replaced);
     CHECK(prCssElementGetBoundingClientRect(page.byId("s")).width == 20.0);
@@ -1999,7 +2018,7 @@ TEST_CASE("a foreignObject's content is laid out in its positioning rectangle an
         "<foreignObject id=f x=10 y=10 width=20 height=20><div id=d style='height: 10px; background: red'></div>"
         "<div style='position: absolute; right: 0; bottom: 0; width: 5px; height: 5px; background: lime'>"
         "</div></foreignObject></svg>");
-    std::vector<uint8_t> pixels = page.paint();
+    Array<uint8_t> pixels = page.paint();
     // The block fills the rectangle's width, and the absolutely positioned box sits in its bottom right corner.
     CHECK(rgbAt(pixels, 15, 15) == 0xff0000);
     CHECK(rgbAt(pixels, 29, 15) == 0xff0000);
@@ -2033,7 +2052,7 @@ TEST_CASE("a foreignObject of zero width or height draws nothing, and an svg in 
         "<div style='width: 20px; height: 10px; background: red'></div></foreignObject>"
         "<foreignObject x=0 y=20 width=40 height=20><svg width=20 height=10>"
         "<rect width=20 height=10 fill=lime /></svg></foreignObject></svg>");
-    std::vector<uint8_t> pixels = page.paint();
+    Array<uint8_t> pixels = page.paint();
     CHECK(rgbAt(pixels, 5, 5) == 0);
     CHECK(rgbAt(pixels, 5, 25) == 0x00ff00);
     CHECK(rgbAt(pixels, 25, 25) == 0);
@@ -2074,15 +2093,15 @@ TEST_CASE("an SVG image element draws the image that it names once the image has
     PrCompressCodec* compress = prCompressBuiltinCreate();
     PrImageCodec* images = prImageBuiltinCreate(compress);
     // A 4 by 2 red PNG.
-    std::vector<uint8_t> red(4 * 2 * 4, 0);
-    for (size_t i = 0; i < red.size(); i += 4) {
+    Array<uint8_t> red(4 * 2 * 4);
+    for (uint32_t i = 0; i < red.count(); i += 4) {
         red[i] = 255;
         red[i + 3] = 255;
     }
     PrPixelView pixels{red.data(), 16, {4, 2}};
     size_t size = 0;
     REQUIRE(prImageCodecEncode(images, "image/png", pixels, nullptr, 0, &size) == PrStatus_Ok);
-    std::vector<uint8_t> png(size);
+    Array<uint8_t> png(size);
     REQUIRE(prImageCodecEncode(images, "image/png", pixels, png.data(), size, &size) == PrStatus_Ok);
     {
         Viewed page("<style>body { margin: 0 } svg { display: block }</style><svg width=40 height=40>"
@@ -2098,7 +2117,7 @@ TEST_CASE("an SVG image element draws the image that it names once the image has
         prHtmlViewUpdate(page.view);
         page.settle();
         CHECK(verified(presentation));
-        std::vector<uint8_t> drawn = page.paint();
+        Array<uint8_t> drawn = page.paint();
         CHECK(rgbAt(drawn, 20, 20) == 0xff0000);
         CHECK(rgbAt(drawn, 20, 5) == 0);
 
@@ -2115,7 +2134,7 @@ TEST_CASE("an SVG image element draws the image that it names once the image has
 }
 
 TEST_CASE("an imported sheet applies in the layer that it names, unless its supports() condition fails") {
-    std::vector<uint8_t> none;
+    Array<uint8_t> none;
     Viewed page("<style>@import url(a.css); @import url(b.css) supports(not (display: block));"
         "@import url(c.css) layer(base);</style><p id=p>text</p><p id=q>text</p>",
         nullptr, &none, true, "https://example.test/page.html");
@@ -2128,7 +2147,7 @@ TEST_CASE("an imported sheet applies in the layer that it names, unless its supp
         PrCssDeclarationName name = prCssDeclarationNameFromProperty(property);
         PrRawString read = prCssStyleDeclarationGetPropertyValue(
             prCssStylePropertiesAsCssStyleDeclaration(prCssElementComputedStyle(page.byId(id), "")), &name);
-        std::string value(prRawStringView(&read).data, prRawStringView(&read).size);
+        String value(prRawStringView(&read));
         prRawStringReset(&read);
         return value;
     };
@@ -2139,7 +2158,7 @@ TEST_CASE("an imported sheet applies in the layer that it names, unless its supp
 }
 
 TEST_CASE("a use and a paint server of another document of the page's origin draw once the document loads") {
-    std::vector<uint8_t> none;
+    Array<uint8_t> none;
     Viewed page("<style>body { margin: 0 } svg { display: block }</style><svg width=40 height=40>"
         "<use href=defs.svg#square /><use href=https://elsewhere.test/defs.svg#square y=20 />"
         "<rect x=20 width=20 height=40 fill='url(defs.svg#red) black' /></svg>",
@@ -2150,7 +2169,7 @@ TEST_CASE("a use and a paint server of another document of the page's origin dra
     // One fetch for both references to the same document, and none for another origin.
     REQUIRE(page.fetcher.waiting() == 1);
     CHECK(TestFetcher::urlOf(page.fetcher.held[0]) == "https://example.test/defs.svg");
-    std::vector<uint8_t> before = page.paint();
+    Array<uint8_t> before = page.paint();
     CHECK(rgbAt(before, 10, 10) == 0);
     CHECK(rgbAt(before, 30, 10) == 0);
     page.answer("defs.svg",
@@ -2159,7 +2178,7 @@ TEST_CASE("a use and a paint server of another document of the page's origin dra
     prHtmlViewUpdate(page.view);
     page.settle();
     CHECK(verified(presentation));
-    std::vector<uint8_t> after = page.paint();
+    Array<uint8_t> after = page.paint();
     CHECK(rgbAt(after, 10, 10) == 0x0000ff);
     CHECK(rgbAt(after, 10, 30) == 0);
     CHECK(rgbAt(after, 30, 10) == 0xff0000);
@@ -2173,7 +2192,7 @@ TEST_CASE("a gradient is built again when its stops change, and the shapes that 
     CHECK(rgbAt(page.paint(), 20, 30) == 0xff0000);
     page.set("s", "stop-color", "blue");
     CHECK(page.update() == 0);
-    std::vector<uint8_t> pixels = page.paint();
+    Array<uint8_t> pixels = page.paint();
     CHECK((rgbAt(pixels, 1, 10) & 0xff) > 200);
     CHECK((rgbAt(pixels, 1, 30) & 0xff) > 200);
 }
@@ -2251,7 +2270,7 @@ TEST_CASE("a reference in a shadow tree names the element of its own tree first"
 TEST_CASE("an outermost svg element's clip path is its box's, which clips the content once") {
     ViewedSvg page("<svg width=40 height=20 clip-path=url(#c)><clipPath id=c><rect width=10 height=20 />"
         "</clipPath><rect width=40 height=20 fill=blue /></svg>");
-    std::vector<uint8_t> pixels = page.paint();
+    Array<uint8_t> pixels = page.paint();
     CHECK(rgbAt(pixels, 5, 10) == 0x0000ff);
     CHECK(rgbAt(pixels, 30, 10) == 0);
 }
@@ -2263,7 +2282,7 @@ TEST_CASE("an HTML box's clip path, mask and filter may reference SVG resources,
         "<div style='width: 30px; height: 10px; background: blue; clip-path: url(#c)'></div>"
         "<div style='width: 30px; height: 10px; background: blue; mask: url(#m)'></div>"
         "<div style='width: 30px; height: 10px; background: blue; filter: url(#f)'></div>");
-    std::vector<uint8_t> pixels = page.paint();
+    Array<uint8_t> pixels = page.paint();
     CHECK(rgbAt(pixels, 5, 5) == 0x0000ff);
     CHECK(rgbAt(pixels, 25, 5) == 0);
     CHECK(rgbAt(pixels, 15, 15) == 0x0000ff);
@@ -2283,7 +2302,7 @@ TEST_CASE("an HTML box's fill-box is its border box for mask-origin and its cont
     ViewedSvg page("<style>div { float: left; width: 6px; height: 6px; padding: 6px; background: blue;"
         " mask: linear-gradient(black, black) no-repeat; mask-size: 9px 9px }</style>"
         "<div style='mask-origin: fill-box; mask-clip: no-clip'></div><div style='mask-clip: fill-box'></div>");
-    std::vector<uint8_t> pixels = page.paint();
+    Array<uint8_t> pixels = page.paint();
     CHECK(rgbAt(pixels, 2, 2) == 0x0000ff);
     CHECK(rgbAt(pixels, 11, 11) == 0);
     CHECK(rgbAt(pixels, 25, 8) == 0x0000ff);
@@ -2295,7 +2314,7 @@ TEST_CASE("an HTML box's filter draws an feImage of an element, moved by the sub
     ViewedSvg page("<svg width=0 height=0><filter id=f x=-10% y=0 width=100% height=100%><feImage href=#g /></filter>"
         "<defs><g id=g><rect x=10 width=10 height=10 fill=lime /></g></defs></svg>"
         "<div style='width: 40px; height: 20px; filter: url(#f)'></div>");
-    std::vector<uint8_t> pixels = page.paint();
+    Array<uint8_t> pixels = page.paint();
     CHECK(rgbAt(pixels, 10, 5) == 0x00ff00);
     CHECK(rgbAt(pixels, 18, 5) == 0);
 }
@@ -2331,7 +2350,7 @@ TEST_CASE("a use's instances inherit from the use, and match the document's rule
     // the group, and not its instance, which is the shadow tree's root.
     ViewedSvg page("<style>#holder > rect { fill: red } use { fill: blue } .wide { width: 20px }</style>"
         "<svg width=40 height=40><defs><g id=holder><rect id=t class=wide height=10 /></g></defs><use href=#t x=0 y=20 /></svg>");
-    std::vector<uint8_t> pixels = page.paint();
+    Array<uint8_t> pixels = page.paint();
     CHECK(rgbAt(pixels, 5, 25) == 0x0000ff);
     CHECK(rgbAt(pixels, 15, 25) == 0x0000ff);
     CHECK(rgbAt(pixels, 25, 25) == 0);
@@ -2419,7 +2438,7 @@ TEST_CASE("::first-line styles the first line of a block, and ::first-letter mak
 TEST_CASE("text is laid out again when its ::first-line or ::first-letter style changes, its own style unchanged") {
     ViewedSvg page("<svg width=40 height=40><style>.line::first-line { fill: rgb(0, 0, 255) }</style>"
         "<text id=t y=35 font-size=30 fill=black>II</text></svg>");
-    auto blue = [](const std::vector<uint8_t>& pixels) {
+    auto blue = [](const Array<uint8_t>& pixels) {
         uint32_t count = 0;
         for (uint32_t y = 0; y < 40; ++y) {
             for (uint32_t x = 0; x < 40; ++x)
@@ -2448,10 +2467,10 @@ TEST_CASE("an img of an SVG image is sized by its root's width and height and dr
     CHECK(prCssElementGetBoundingClientRect(page.byId("s")).height == 20.0);
     PrDrawList* list = prDrawListCreate();
     prHtmlViewPaint(page.view, list);
-    std::vector<uint8_t> drawn = presentation(list);
+    Array<uint8_t> drawn = presentation(list);
     prDrawListRelease(list);
     CHECK(redAt(drawn, 35, 15) == 255);
-    CHECK(drawn[(size_t(25) * 40 + 35) * 4 + 3] == 0);
+    CHECK(drawn[(uint32_t(25) * 40 + 35) * 4 + 3] == 0);
     CHECK(verified(prHtmlPagePresentation(page.page)));
 }
 
@@ -2462,17 +2481,17 @@ TEST_CASE("an SVG image without a width or a height draws at the size it is show
         "height='100%25' fill='red'/></svg>";
     const char* square = "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'><rect "
         "width='10' height='10' fill='red'/></svg>";
-    std::string html = std::string("<style>body { margin: 0 } img, div { display: block; width: 40px; height: 10px }"
-        "</style><img src=\"") + full + "\"><img src=\"" + square +
-        "\"><div style=\"background-image: url(&quot;" + full + "&quot;)\"></div>";
-    Viewed page(html.c_str());
+    String html = format("<style>body {{ margin: 0 }} img, div {{ display: block; width: 40px; height: 10px }}"
+        "</style><img src=\"{0}\"><img src=\"{1}\"><div style=\"background-image: url(&quot;{0}&quot;)\"></div>",
+        full, square);
+    Viewed page(html);
     PrDomAgent* agent = prHtmlPageAgent(page.page);
     page.fetcher.settle(agent);
     prHtmlViewUpdate(page.view);
     page.settle();
     PrDrawList* list = prDrawListCreate();
     prHtmlViewPaint(page.view, list);
-    std::vector<uint8_t> drawn = presentation(list);
+    Array<uint8_t> drawn = presentation(list);
     prDrawListRelease(list);
     CHECK(rgbAt(drawn, 2, 5) == 0xff0000);
     CHECK(rgbAt(drawn, 37, 5) == 0xff0000);
@@ -2494,7 +2513,7 @@ TEST_CASE("an SVG image's root background fills the image, as the background of 
     page.settle();
     PrDrawList* list = prDrawListCreate();
     prHtmlViewPaint(page.view, list);
-    std::vector<uint8_t> drawn = presentation(list);
+    Array<uint8_t> drawn = presentation(list);
     prDrawListRelease(list);
     CHECK(rgbAt(drawn, 5, 5) == 0xff0000);
     CHECK(rgbAt(drawn, 30, 15) == 0x0000ff);
@@ -2517,14 +2536,14 @@ TEST_CASE("an iframe shows its document in its slot, laid out in a viewport of i
     REQUIRE(inner != nullptr);
     CHECK(prHtmlWindowInnerWidth(inner) == 40);
     prLayoutCompositorFrame(page.compositor);
-    REQUIRE(!page.pixels.empty());
+    REQUIRE(!page.pixels.isEmpty());
     CHECK(redAt(page.pixels, 10, 10) == 255);
     CHECK(redAt(page.pixels, 10, 30) == 0);
 
     // Recorded immediately, the document shows the same.
     PrDrawList* list = prDrawListCreate();
     prHtmlViewPaint(page.view, list);
-    std::vector<uint8_t> painted = presentation(list);
+    Array<uint8_t> painted = presentation(list);
     prDrawListRelease(list);
     CHECK(redAt(painted, 10, 10) == 255);
     CHECK(redAt(painted, 10, 30) == 0);
@@ -2547,7 +2566,7 @@ TEST_CASE("an iframe's document is laid out in its iframe's content box before i
     CHECK(prHtmlWindowScrollY(inner) == 30);
     PrDrawList* list = prDrawListCreate();
     prHtmlViewPaint(page.view, list);
-    std::vector<uint8_t> painted = presentation(list);
+    Array<uint8_t> painted = presentation(list);
     prDrawListRelease(list);
     CHECK(redAt(painted, 10, 10) == 255);
 }
@@ -2567,9 +2586,9 @@ TEST_CASE("an iframe's document prefers the iframe's color scheme, and paints an
     PrColor canvas = prColorFromColor16(prHtmlViewPaint(page.view, list));
     CHECK(canvas.r == 1.0f);
     CHECK(canvas.a == 1.0f);
-    std::vector<uint8_t> painted = presentation(list);
+    Array<uint8_t> painted = presentation(list);
     prDrawListRelease(list);
-    auto at = [&](uint32_t y, uint32_t channel) { return painted[(size_t(y) * 40 + 20) * 4 + channel]; };
+    auto at = [&](uint32_t y, uint32_t channel) { return painted[(uint32_t(y) * 40 + 20) * 4 + channel]; };
     // A light iframe around a dark document: the dark Canvas, opaque.
     CHECK(at(6, 3) == 255);
     CHECK(at(6, 0) < 64);
@@ -2589,16 +2608,16 @@ TEST_CASE("a view paints its composited animations at the presentation's time") 
         prCssPresentationSetTime(dom, time);
         PrDrawList* list = prDrawListCreate();
         prHtmlViewPaint(page.view, list);
-        std::vector<uint8_t> drawn = presentation(list);
+        Array<uint8_t> drawn = presentation(list);
         prDrawListRelease(list);
         return drawn;
     };
-    std::vector<uint8_t> start = paintAt(0);
+    Array<uint8_t> start = paintAt(0);
     CHECK(prCssPresentationTracks(dom, nullptr, 0) == 1);
     CHECK(redAt(start, 5, 10) == 255);
     CHECK(redAt(start, 35, 10) == 0);
     // Halfway, the box has moved by 10px, as a compositor's frame at that time shows it.
-    std::vector<uint8_t> half = paintAt(500);
+    Array<uint8_t> half = paintAt(500);
     CHECK(redAt(half, 5, 10) == 0);
     CHECK(redAt(half, 25, 10) == 255);
 }
@@ -2611,7 +2630,7 @@ TEST_CASE("an important declaration overrides an animation of its property, comp
     prCssPresentationSetTime(dom, 500);
     PrDrawList* list = prDrawListCreate();
     prHtmlViewPaint(page.view, list);
-    std::vector<uint8_t> drawn = presentation(list);
+    Array<uint8_t> drawn = presentation(list);
     prDrawListRelease(list);
     CHECK(redAt(drawn, 5, 10) == 255);
     CHECK(redAt(drawn, 25, 10) == 0);
@@ -2627,31 +2646,31 @@ TEST_CASE("a view paints a composited 3D transform under its parent's perspectiv
         prCssPresentationSetTime(dom, time);
         PrDrawList* list = prDrawListCreate();
         prHtmlViewPaint(page.view, list);
-        std::vector<uint8_t> drawn = presentation(list);
+        Array<uint8_t> drawn = presentation(list);
         prDrawListRelease(list);
         return drawn;
     };
-    std::vector<uint8_t> flat = paintAt(0);
+    Array<uint8_t> flat = paintAt(0);
     CHECK(redAt(flat, 2, 2) == 255);
     CHECK(redAt(flat, 37, 2) == 255);
     // At 30deg the near (left) edge grows past the box and the far (right) edge shrinks toward the center: the corner
     // at the far side's top is empty, and the near side still covers its middle.
-    std::vector<uint8_t> turned = paintAt(250);
+    Array<uint8_t> turned = paintAt(250);
     CHECK(redAt(turned, 37, 1) == 0);
     CHECK(redAt(turned, 2, 20) == 255);
 }
 
 TEST_CASE("a page that the wheel scrolled keeps the reader's place as its window narrows and content grows above") {
     // Like most pages, it adapts its padding to the width, which changes values on the path to every anchor.
-    std::string html = "<style>body { margin: 0; padding: 0 40px } p { margin: 0 0 16px }"
+    String html = "<style>body { margin: 0; padding: 0 40px } p { margin: 0 0 16px }"
         "@media (max-width: 700px) { body { padding: 0 8px } }</style>";
     for (int i = 0; i < 80; ++i) {
-        html += "<p id=p" + std::to_string(i) + ">Paragraph " + std::to_string(i);
+        formatTo(html, "<p id=p{0}>Paragraph {0}", i);
         for (int j = 0; j < 4 + i % 7; ++j)
-            html += " runs on with words that wrap at narrower widths";
-        html += "</p>";
+            html.append(" runs on with words that wrap at narrower widths");
+        html.append("</p>");
     }
-    Viewed page(html.c_str());
+    Viewed page(html);
     PrHtmlWindow* window = prHtmlPageWindow(page.page);
     // Each frame of the host: the viewport at the window's size, an update that commits the last job's scene and starts
     // the next, and a present.
@@ -2820,7 +2839,7 @@ TEST_CASE("the pointer hovers and clicks SVG content, and a click on an SVG link
     CHECK(page.matches("a", ":hover"));
     CHECK(page.matches("a", ":link"));
     clickAt(page, PrVec2{50, 10});
-    CHECK(heard.types == std::vector<std::string>{"click"});
+    CHECK(heard.types == Array<String>({"click"}));
     CHECK_FALSE(page.matches("t", ":target"));
     clickAt(page, PrVec2{10, 10});
     CHECK(page.matches("t", ":target"));
@@ -2865,20 +2884,20 @@ TEST_CASE("an instance in a use element's shadow tree is hit, its events retarge
         &documentListener, nullptr);
     CHECK(hitAt(page, 50, 10) == "use");
     clickAt(page, PrVec2{50, 10});
-    CHECK(original.types == std::vector<std::string>{"click"});
+    CHECK(original.types == Array<String>({"click"}));
     CHECK(target == prDomNodeAsEventTarget(page.node("use")));
     clickAt(page, PrVec2{10, 10});
-    CHECK(original.types.size() == 1);
+    CHECK(original.types.count() == 1);
 }
 
 TEST_CASE("an SVG image element fires load or error once what its href names has loaded, whether or not it renders") {
     PrCompressCodec* compress = prCompressBuiltinCreate();
     PrImageCodec* images = prImageBuiltinCreate(compress);
-    std::vector<uint8_t> red(4 * 4, 255);
+    Array<uint8_t> red(4 * 4, 255);
     PrPixelView pixels{red.data(), 8, {2, 2}};
     size_t size = 0;
     REQUIRE(prImageCodecEncode(images, "image/png", pixels, nullptr, 0, &size) == PrStatus_Ok);
-    std::vector<uint8_t> png(size);
+    Array<uint8_t> png(size);
     REQUIRE(prImageCodecEncode(images, "image/png", pixels, png.data(), size, &size) == PrStatus_Ok);
     {
         Viewed page("<svg width=40 height=40><image id=found href=http://test/red.png width=40 height=40 />"
@@ -2887,7 +2906,8 @@ TEST_CASE("an SVG image element fires load or error once what its href names has
         Heard missing;
         PrDomEventListener foundListener = recorder(&found);
         PrDomEventListener missingListener = recorder(&missing);
-        for (const char* type : {"load", "error"}) {
+        const char* const kTypes[] = {"load", "error"};
+        for (const char* type : kTypes) {
             prDomEventTargetAddEventListener(prDomNodeAsEventTarget(prDomElementAsNode(page.byId("found"))), type,
                 &foundListener, nullptr);
             prDomEventTargetAddEventListener(prDomNodeAsEventTarget(prDomElementAsNode(page.byId("missing"))), type,
@@ -2896,22 +2916,22 @@ TEST_CASE("an SVG image element fires load or error once what its href names has
         prHtmlViewUpdate(page.view);
         page.settle();
         REQUIRE(page.fetcher.waiting() == 2);
-        std::vector<PrFetchInterceptRequest*> answering = page.fetcher.held;
+        Array<PrFetchInterceptRequest*> answering = page.fetcher.held;
         for (PrFetchInterceptRequest* request : answering) {
-            if (TestFetcher::urlOf(request).find("missing") != std::string::npos)
+            if (prStringContains(TestFetcher::urlOf(request), "missing"))
                 page.fetcher.respondTo(request, "", 404);
             else
                 page.respond(request);
         }
         PrDomAgent* agent = prHtmlPageAgent(page.page);
         page.fetcher.settle(agent);
-        CHECK(found.types == std::vector<std::string>{"load"});
-        CHECK(missing.types == std::vector<std::string>{"error"});
+        CHECK(found.types == Array<String>({"load"}));
+        CHECK(missing.types == Array<String>({"error"}));
 
         // A new href fires the event again. An href that names an image that has already loaded fires at once.
         prDomElementSetAttribute(page.byId("missing"), "href", "http://test/red.png");
         page.fetcher.settle(agent);
-        CHECK(missing.types == std::vector<std::string>{"error", "load"});
+        CHECK(missing.types == Array<String>({"error", "load"}));
     }
     prImageCodecDestroy(images);
     prCompressCodecDestroy(compress);
@@ -2965,7 +2985,7 @@ TEST_CASE("a paged view lays its document out in the page boxes that its @page r
     CHECK(prLayoutUnitToPx(wide.box.extent.x) == 400);
     PrDrawList* list = prDrawListCreate();
     prHtmlViewPaintPage(v.view, 0, list);
-    std::vector<uint8_t> drawn(size_t(200) * 300 * 4, 0);
+    Array<uint8_t> drawn(size_t(200) * 300 * 4);
     PrDrawRenderer* cpu = prDrawCpuCreate(nullptr);
     PrPixels into{drawn.data(), 200 * 4, {200, 300}};
     prDrawRendererRenderPixels(cpu, list, into, PrPixelFormat_Rgba8);
@@ -2974,7 +2994,7 @@ TEST_CASE("a paged view lays its document out in the page boxes that its @page r
     // The blocks are red, and nothing fills the margins. The third block's fixed height breaks at the end of the first
     // page's area.
     auto rgba = [&](uint32_t x, uint32_t y) {
-        const uint8_t* p = &drawn[(size_t(y) * 200 + x) * 4];
+        const uint8_t* p = &drawn[(uint32_t(y) * 200 + x) * 4];
         return uint32_t(p[0]) << 24 | uint32_t(p[1]) << 16 | uint32_t(p[2]) << 8 | p[3];
     };
     CHECK(rgba(100, 60) == 0xff0000ffu);
@@ -3018,8 +3038,8 @@ TEST_CASE("@page's marks and bleed give a page's box its marks and its bleed, wh
     };
     for (const Expected& expected : cases) {
         CAPTURE(expected.rule);
-        std::string html = std::string("<style>@page { size: 100px 60px; ") + expected.rule + " }</style>x";
-        Viewed v(html.c_str());
+        String html = format("<style>@page {{ size: 100px 60px; {} }}</style>x", expected.rule);
+        Viewed v(html);
         PrLayoutPageBox initial = prLayoutPageBoxDefault();
         prHtmlViewSetPaged(v.view, &initial, 0);
         REQUIRE(prHtmlViewPageCount(v.view) == 1);
@@ -3046,7 +3066,7 @@ TEST_CASE("a paged view prints and previews each page on its sheet, with its mar
     CHECK(prLayoutRectToPx(sheet.bleed).left == 44);
     // Returns the RGBA pixels of `list` drawn into `width` by `height` px.
     auto render = [](PrDrawList* list, uint32_t width, uint32_t height) {
-        std::vector<uint8_t> drawn(size_t(width) * height * 4, 0);
+        Array<uint8_t> drawn(size_t(width) * height * 4);
         PrDrawRenderer* cpu = prDrawCpuCreate(nullptr);
         PrPixels into{drawn.data(), size_t(width) * 4, {width, height}};
         prDrawRendererRenderPixels(cpu, list, into, PrPixelFormat_Rgba8);
@@ -3055,13 +3075,13 @@ TEST_CASE("a paged view prints and previews each page on its sheet, with its mar
         return drawn;
     };
     // Returns the color of the pixel at `x`, `y` as 0xRRGGBBAA.
-    auto rgba = [](const std::vector<uint8_t>& drawn, uint32_t width, uint32_t x, uint32_t y) {
-        const uint8_t* p = &drawn[(size_t(y) * width + x) * 4];
+    auto rgba = [](const Array<uint8_t>& drawn, uint32_t width, uint32_t x, uint32_t y) {
+        const uint8_t* p = &drawn[(uint32_t(y) * width + x) * 4];
         return uint32_t(p[0]) << 24 | uint32_t(p[1]) << 16 | uint32_t(p[2]) << 8 | p[3];
     };
     PrDrawList* list = prDrawListCreate();
     prHtmlViewPaintPage(v.view, 0, list);
-    std::vector<uint8_t> printed = render(list, 196, 156);
+    Array<uint8_t> printed = render(list, 196, 156);
     // The block overflows the page box into the bleed area and is clipped at its edge, and the page's background fills
     // the rest of the bleed area. A crop mark extends the page box's left edge above it.
     CHECK(rgba(printed, 196, 46, 65) == 0xff0000ffu);
@@ -3072,7 +3092,7 @@ TEST_CASE("a paged view prints and previews each page on its sheet, with its mar
     // The preview shows the same sheet on white paper, with the page box at the page's offset, over the backdrop.
     list = prDrawListCreate();
     prHtmlViewPaint(v.view, list);
-    std::vector<uint8_t> shown = render(list, 800, 600);
+    Array<uint8_t> shown = render(list, 800, 600);
     PrVec2 offset = prLayoutVecToPx(prHtmlViewPage(v.view, 0).offset);
     uint32_t x = uint32_t(offset.x) - 48;
     uint32_t y = uint32_t(offset.y) - 48;
@@ -3098,7 +3118,7 @@ TEST_CASE("a paged view's viewport units are of the first page's area, and its m
     </style><div id=a></div><div id=b></div>)");
     auto extent = [&](const char* id) {
         PrDomRect rect = prCssElementGetBoundingClientRect(v.byId(id));
-        return std::to_string(int(rect.width)) + "x" + std::to_string(int(rect.height));
+        return format("{}x{}", int(rect.width), int(rect.height));
     };
     CHECK(extent("a") == "400x300");
     CHECK(extent("b") == "800x10");
@@ -3187,13 +3207,13 @@ TEST_CASE("a paged view keeps a heading on the page of the content after it") {
     auto red = [&](uint32_t page, uint32_t y) {
         PrDrawList* list = prDrawListCreate();
         prHtmlViewPaintPage(v.view, page, list);
-        std::vector<uint8_t> drawn(size_t(200) * 300 * 4, 0);
+        Array<uint8_t> drawn(size_t(200) * 300 * 4);
         PrDrawRenderer* cpu = prDrawCpuCreate(nullptr);
         PrPixels into{drawn.data(), 200 * 4, {200, 300}};
         prDrawRendererRenderPixels(cpu, list, into, PrPixelFormat_Rgba8);
         prDrawRendererDestroy(cpu);
         prDrawListRelease(list);
-        const uint8_t* p = &drawn[(size_t(y) * 200 + 100) * 4];
+        const uint8_t* p = &drawn[(uint32_t(y) * 200 + 100) * 4];
         return p[0] == 255 && p[1] == 0 && p[2] == 0;
     };
     // The heading would fit at the end of the first page, but the user agent's break-after: avoid-page moves it to the
@@ -3220,7 +3240,7 @@ TEST_CASE("a paged view draws the content of its pages' margin boxes, with the p
     auto blueIn = [&](uint32_t index, uint32_t top, uint32_t bottom, uint32_t* left, uint32_t* right) {
         PrDrawList* list = prDrawListCreate();
         prHtmlViewPaintPage(v.view, index, list);
-        std::vector<uint8_t> drawn(size_t(200) * 300 * 4, 0);
+        Array<uint8_t> drawn(size_t(200) * 300 * 4);
         PrDrawRenderer* cpu = prDrawCpuCreate(nullptr);
         PrPixels into{drawn.data(), 200 * 4, {200, 300}};
         prDrawRendererRenderPixels(cpu, list, into, PrPixelFormat_Rgba8);
@@ -3231,7 +3251,7 @@ TEST_CASE("a paged view draws the content of its pages' margin boxes, with the p
         *right = 0;
         for (uint32_t y = top; y < bottom; ++y) {
             for (uint32_t x = 0; x < 200; ++x) {
-                const uint8_t* p = &drawn[(size_t(y) * 200 + x) * 4];
+                const uint8_t* p = &drawn[(uint32_t(y) * 200 + x) * 4];
                 if (p[3] != 0 && p[2] > p[0]) {
                     ++count;
                     *left = x < *left ? x : *left;
@@ -3277,7 +3297,7 @@ TEST_CASE("a page's margin boxes show their strings and counters, and a box with
     CHECK(marginText(v, 2, PrLayoutMarginBox_TopLeft) == "Doc");
     // Content normal computes to none, and generates no box. An empty string generates an empty box.
     CHECK(marginText(v, 0, PrLayoutMarginBox_BottomCenter) == "-");
-    CHECK(marginText(v, 0, PrLayoutMarginBox_LeftMiddle).empty());
+    CHECK(marginText(v, 0, PrLayoutMarginBox_LeftMiddle).isEmpty());
     CHECK(marginText(v, 0, PrLayoutMarginBox_TopCenter) == "-");
     // Printing again keeps the boxes that are unchanged.
     PrLayoutTree* tree = prCssPresentationTree(prHtmlPagePresentation(v.page));
@@ -3320,19 +3340,19 @@ TEST_CASE("named strings take the assignment that first, start, last and first-e
     </style><h1>One</h1><h1>Two</h1><p class=first></p><h1 class=first>Three</h1>)");
     // Page one sets One and Two, page two sets none, and page three starts with Three.
     REQUIRE(paged(v) == 3);
-    std::vector<std::string> one = marginTexts(v, 0);
+    Array<String> one = marginTexts(v, 0);
     CHECK(one[PrLayoutMarginBox_TopLeft] == "One");
     CHECK(one[PrLayoutMarginBox_TopCenter] == "One");
     CHECK(one[PrLayoutMarginBox_TopRight] == "Two");
-    CHECK(one[PrLayoutMarginBox_BottomLeft].empty());
-    std::vector<std::string> two = marginTexts(v, 1);
+    CHECK(one[PrLayoutMarginBox_BottomLeft].isEmpty());
+    Array<String> two = marginTexts(v, 1);
     CHECK(two[PrLayoutMarginBox_TopLeft] == "Two");
     CHECK(two[PrLayoutMarginBox_TopCenter] == "Two");
     CHECK(two[PrLayoutMarginBox_TopRight] == "Two");
     CHECK(two[PrLayoutMarginBox_BottomLeft] == "Two");
-    std::vector<std::string> three = marginTexts(v, 2);
+    Array<String> three = marginTexts(v, 2);
     CHECK(three[PrLayoutMarginBox_TopCenter] == "Three");
-    CHECK(three[PrLayoutMarginBox_BottomLeft].empty());
+    CHECK(three[PrLayoutMarginBox_BottomLeft].isEmpty());
     prHtmlViewSetPaged(v.view, nullptr, 0);
 }
 
@@ -3354,12 +3374,15 @@ TEST_CASE("a running element leaves the flow, and a copy of it shows in the marg
     PrDrawStructure* structure = prDrawStructureCreate(nullptr);
     prHtmlStructureAppend(v.page, structure);
     PrRawString dump = prDrawStructureDump(structure);
-    std::string text(prRawStringView(&dump).data, prRawStringView(&dump).size);
+    String text(prRawStringView(&dump));
     size_t links = 0;
-    for (size_t at = text.find("Link"); at != std::string::npos; at = text.find("Link", at + 1))
+    for (PrStringView rest = text; prStringContains(rest, "Link");) {
+        size_t at = prStringFind(rest, "Link");
+        rest = prStringSlice(rest, at + 1, rest.size - at - 1);
         ++links;
+    }
     CHECK(links == 2);
-    CHECK(text.find("First") == std::string::npos);
+    CHECK(!prStringContains(text, "First"));
     prRawStringReset(&dump);
     prDrawStructureDestroy(structure);
     prHtmlViewSetPaged(v.view, nullptr, 0);

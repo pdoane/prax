@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include "pr/array.h"
 #include "pr/byte_view.h"
 #include "pr/raw_string.h"
 #include "pr/string.h"
@@ -10,29 +11,30 @@
 
 #include "doctest/doctest.h"
 
-#include <stdlib.h>
-#include <string>
-
 PR_ASSUME_NONNULL_BEGIN
 
 namespace harness {
+
+using namespace pr;
 
 // Whether the tests that need the platform's GPU run. A machine without one, such as a hosted runner of CI, sets the
 // environment variable PR_TEST_NO_GPU, and those tests skip: what stands in for the GPU there runs them too slowly to
 // be worth it, and the CPU renderer's tests check most of what they draw. A test skips with doctest::skip(!gpuTests()),
 // or a TEST_SUITE_BEGIN with that decorator for a file of them.
-inline bool gpuTests() {
-    return getenv("PR_TEST_NO_GPU") == nullptr;
-}
+bool gpuTests();
 
 // A word that is this test binary's own among those that run at once, for a file that must be where others' are.
-std::string runTag();
+String runTag();
 
 // A folder of this test binary's own, in the system's temporary folder, as a path with forward slashes. Binaries that
 // run at once each have their own, so that their files never collide. It is created on the first call, and removed with
 // what it holds when the binary ends (tools/harness/test.cpp). The path is real, with no links in it, as the paths that
 // programs report for their directories are.
-std::string testFolder();
+String testFolder();
+
+// The bytes, or the text, of the file at `path`. A file that cannot be read fails the test.
+Array<uint8_t> readFile(PrStringView path);
+String readText(PrStringView path);
 
 } // namespace harness
 

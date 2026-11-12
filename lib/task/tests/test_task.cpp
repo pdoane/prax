@@ -1,19 +1,20 @@
+#include "pr/array.h"
 #include "pr/task.h"
 
 #include "tools/harness/test.h"
 
-#include <vector>
-
 extern "C" int prTestTaskCApi(void);
 
 namespace pr_impl {
+
+using namespace pr;
 
 namespace {
 
 // A host's pool, which records the loops it is asked to run and runs each on the caller's thread.
 struct HostPool : PrTaskPool {
     uint32_t poolWidth;
-    std::vector<uint32_t> widths;   // the width of each loop that reached the backend
+    Array<uint32_t> widths;   // the width of each loop that reached the backend
 };
 
 uint32_t hostWidth(const PrTaskPool* base) {
@@ -22,7 +23,7 @@ uint32_t hostWidth(const PrTaskPool* base) {
 
 void hostRun(PrTaskPool* base, uint32_t count, uint32_t width, PrTaskFn fn, void* PR_NULLABLE context) {
     HostPool* pool = static_cast<HostPool*>(base);
-    pool->widths.push_back(width);
+    pool->widths.push(width);
     for (uint32_t i = 0; i < count; ++i)
         fn(context, i, i % width);
 }
@@ -62,7 +63,7 @@ TEST_CASE("a host's pool runs the loops that are wider than one thread, no wider
     prTaskPoolRun(&pool, 10, 8, sum, &total);
     prTaskPoolRun(&pool, 3, 8, sum, &total);
     CHECK(total == 45 + 3);
-    CHECK(pool.widths == std::vector<uint32_t>{4, 3});
+    CHECK(pool.widths == Array<uint32_t>({4, 3}));
 }
 
 TEST_CASE("a loop one thread wide, or of one index, runs on the caller without reaching the pool") {
@@ -72,10 +73,10 @@ TEST_CASE("a loop one thread wide, or of one index, runs on the caller without r
     prTaskPoolRun(&pool, 1, 4, sum, &total);
     prTaskPoolRun(&pool, 0, 4, sum, &total);
     CHECK(total == 45);
-    CHECK(pool.widths.empty());
+    CHECK(pool.widths.isEmpty());
     HostPool narrow = hostPool(1);
     prTaskPoolRun(&narrow, 10, 4, sum, &total);
-    CHECK(narrow.widths.empty());
+    CHECK(narrow.widths.isEmpty());
 }
 
 TEST_CASE("a job posted to a host's pool reaches it") {

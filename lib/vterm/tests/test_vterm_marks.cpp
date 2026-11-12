@@ -1,13 +1,15 @@
 // Tests the semantic prompt marks of shell integration (OSC 133) on a terminal's lines, and the shell state that the
 // terminal tracks.
 
+#include "pr/string.h"
+#include "pr/string_ops.h"
 #include "pr/vterm.h"
 
 #include "tools/harness/test.h"
 
-#include <string>
-
 namespace pr_impl {
+
+using namespace pr;
 
 namespace {
 
@@ -23,8 +25,8 @@ struct Term {
     Term(const Term&) = delete;
     Term& operator=(const Term&) = delete;
 
-    void write(const std::string& text) {
-        prVtermWrite(vterm, PrByteView{reinterpret_cast<const uint8_t*>(text.data()), text.size()});
+    void write(PrStringView text) {
+        prVtermWrite(vterm, prStringBytes(text));
     }
 
     uint32_t scrollback() const { return prVtermScrollbackCount(vterm); }
@@ -33,14 +35,15 @@ struct Term {
     PrVtermLine line(uint32_t index) const { return prVtermLine(vterm, index); }
     PrVtermLine row(uint32_t row) const { return line(scrollback() + row); }
 
-    std::string text(uint32_t index) const {
+    String text(uint32_t index) const {
         PrVtermLine at = line(index);
         PrRawString text = prRawStringNull();
         prVtermLineAppendText(vterm, index, 0, at.cellCount, &text);
-        std::string out(prRawStringView(&text).data, prRawStringView(&text).size);
+        PrStringView view = prRawStringView(&text);
+        while (!view.isEmpty() && view.data[view.size - 1] == ' ')
+            --view.size;
+        String out(view);
         prRawStringReset(&text);
-        while (!out.empty() && out.back() == ' ')
-            out.pop_back();
         return out;
     }
 
@@ -48,14 +51,14 @@ struct Term {
 };
 
 // Returns what a shell writes for the prompt `text`: the prompt-start mark, the prompt, and the input-start mark.
-std::string prompt(const std::string& text) {
-    return "\x1b]133;A\x07" + text + "\x1b]133;B\x07";
+String prompt(PrStringView text) {
+    return format("\x1b]133;A\x07{}\x1b]133;B\x07", text);
 }
 
 // Returns what a shell writes when it runs the typed command `command`: the echo of the input, the output-start mark,
 // `output`, and the command-end mark with the exit code `exit`.
-std::string run(const std::string& command, const std::string& output, const std::string& exit) {
-    return command + "\r\n\x1b]133;C\x07" + output + "\x1b]133;D;" + exit + "\x07";
+String run(PrStringView command, PrStringView output, PrStringView exit) {
+    return format("{}\r\n\x1b]133;C\x07{}\x1b]133;D;{}\x07", command, output, exit);
 }
 
 } // namespace
@@ -94,8 +97,8 @@ TEST_CASE("vterm marks: a prompt, its input, the output and the end mark their l
 
 TEST_CASE("vterm marks: a failure keeps its exit code, an end without one is finished, and an empty command is none") {
     Term t(20, 8);
-    t.write(prompt("$ ") + run("false", "", "1") + prompt("$ ") + run("true", "", "") + prompt("$ "));
-    t.write("\r\n\x1b]133;D\x07" + prompt("$ "));
+    t.write(format("{}{}{}{}{}", prompt("$ "), run("false", "", "1"), prompt("$ "), run("true", "", ""), prompt("$ ")));
+    t.write(format("\r\n\x1b]133;D\x07{}", prompt("$ ")));
     CHECK(t.row(0).commandStatus == PrVtermCommandStatus_Failed);
     CHECK(t.row(0).exitCode == 1);
     CHECK(t.row(1).commandStatus == PrVtermCommandStatus_Finished);
@@ -113,7 +116,7 @@ TEST_CASE("vterm marks: a failure keeps its exit code, an end without one is fin
 
 TEST_CASE("vterm marks: a prompt starts on a fresh line, unless it is an explicit prompt, which starts at the cursor") {
     Term t(20, 6);
-    t.write(prompt("$ ") + "printf x\r\n\x1b]133;C\x07x\x1b]133;D;0\x07" + prompt("$ "));
+    t.write(format("{}printf x\r\n\x1b]133;C\x07x\x1b]133;D;0\x07{}", prompt("$ "), prompt("$ ")));
     CHECK(t.text(t.scrollback() + 1) == "x");
     CHECK(t.row(1).marks == (PrVtermLineMarkFlag_Output | PrVtermLineMarkFlag_End));
     CHECK(t.row(2).marks == (PrVtermLineMarkFlag_Prompt | PrVtermLineMarkFlag_Input));
@@ -126,7 +129,7 @@ TEST_CASE("vterm marks: a prompt starts on a fresh line, unless it is an explici
 
 TEST_CASE("vterm marks: a secondary prompt continues the command, and a right prompt marks nothing") {
     Term t(20, 6);
-    t.write(prompt("$ ") + "echo 'a\r\n\x1b]133;A;k=s\x07> \x1b]133;B\x07" + "b'");
+    t.write(format("{}echo 'a\r\n\x1b]133;A;k=s\x07> \x1b]133;B\x07" "b'", prompt("$ ")));
     t.write("\x1b]133;P;k=r\x07");
     CHECK(t.row(1).marks == (PrVtermLineMarkFlag_Continuation | PrVtermLineMarkFlag_Input));
     CHECK(t.row(1).inputColumn == 2);
@@ -147,10 +150,10 @@ TEST_CASE("vterm marks: options after a mark are read, and a mark that the termi
 
 TEST_CASE("vterm marks: a prompt in the scrollback takes the exit code of its command") {
     Term t(20, 4);
-    std::string output;
+    String output;
     for (int i = 0; i < 10; ++i)
-        output += std::to_string(i) + "\r\n";
-    t.write(prompt("$ ") + run("seq", output, "5") + prompt("$ "));
+        formatTo(output, "{}\r\n", i);
+    t.write(format("{}{}{}", prompt("$ "), run("seq", output, "5"), prompt("$ ")));
     REQUIRE(t.scrollback() > 0);
     CHECK(t.line(0).marks == (PrVtermLineMarkFlag_Prompt | PrVtermLineMarkFlag_Input));
     CHECK(t.line(0).commandStatus == PrVtermCommandStatus_Failed);
@@ -160,10 +163,10 @@ TEST_CASE("vterm marks: a prompt in the scrollback takes the exit code of its co
 
 TEST_CASE("vterm marks: a prompt that left the scrollback leaves the exit code to the shell's state alone") {
     Term t(20, 4, 2);
-    std::string output;
+    String output;
     for (int i = 0; i < 10; ++i)
-        output += std::to_string(i) + "\r\n";
-    t.write(prompt("$ ") + run("seq", output, "0"));
+        formatTo(output, "{}\r\n", i);
+    t.write(format("{}{}", prompt("$ "), run("seq", output, "0")));
     for (uint32_t i = 0; i < t.scrollback() + 4; ++i)
         CHECK(t.line(i).commandStatus == PrVtermCommandStatus_None);
     CHECK(t.shell().lastStatus == PrVtermCommandStatus_Succeeded);
@@ -172,7 +175,7 @@ TEST_CASE("vterm marks: a prompt that left the scrollback leaves the exit code t
 TEST_CASE("vterm marks: the marks follow their text through a rewrap, and the prompt still takes its exit code") {
     Term t(10, 6);
     // A prompt of nine cells. The input starts at column 9 and wraps onto the next line.
-    t.write(prompt("~/abc/d$ ") + "echo hi\r\n\x1b]133;C\x07hi\r\n");
+    t.write(format("{}echo hi\r\n\x1b]133;C\x07hi\r\n", prompt("~/abc/d$ ")));
     REQUIRE(t.row(0).inputColumn == 9);
     prVtermResize(t.vterm, PrUVec2{5, 6});
     // After the rewrap, the lines are "~/abc", "/d$ e", "cho h" and "i", followed by the output.
@@ -202,7 +205,7 @@ TEST_CASE("vterm marks: the marks follow their text through a rewrap, and the pr
 
 TEST_CASE("vterm marks: an erase of the whole line clears its marks, and an erase of part of it keeps them") {
     Term t(20, 6);
-    t.write(prompt("$ ") + "abc");
+    t.write(format("{}abc", prompt("$ ")));
     uint64_t revision = t.row(0).revision;
     t.write("\x1b[3D\x1b[K");
     CHECK(t.row(0).marks == (PrVtermLineMarkFlag_Prompt | PrVtermLineMarkFlag_Input));
@@ -210,7 +213,7 @@ TEST_CASE("vterm marks: an erase of the whole line clears its marks, and an eras
     CHECK(t.row(0).marks == 0);
     CHECK(t.row(0).revision != revision);
     // The shell writes its prompt again, as it does on a redraw.
-    t.write(prompt("$ ") + "x\r\n\x1b]133;C\x07" + "out\r\n");
+    t.write(format("{}x\r\n\x1b]133;C\x07" "out\r\n", prompt("$ ")));
     t.write("\x1b[2J");
     for (uint32_t row = 0; row < 6; ++row)
         CHECK(t.row(row).marks == 0);
@@ -222,14 +225,14 @@ TEST_CASE("vterm marks: an erase of the whole line clears its marks, and an eras
 
 TEST_CASE("vterm marks: the prompt that a shell writes again on its line keeps the line's command") {
     Term t(20, 6);
-    t.write(prompt("$ ") + "ab");
-    t.write("\r" + prompt("$ ") + "ab\r\n\x1b]133;C\x07\x1b]133;D;0\x07");
+    t.write(format("{}ab", prompt("$ ")));
+    t.write(format("\r{}ab\r\n\x1b]133;C\x07\x1b]133;D;0\x07", prompt("$ ")));
     CHECK(t.row(0).commandStatus == PrVtermCommandStatus_Succeeded);
 }
 
 TEST_CASE("vterm marks: a full reset clears the marks and the shell's state") {
     Term t(20, 6);
-    t.write(prompt("$ ") + run("true", "", "0") + prompt("$ "));
+    t.write(format("{}{}{}", prompt("$ "), run("true", "", "0"), prompt("$ ")));
     t.write("\x1b" "c");
     CHECK(t.row(0).marks == 0);
     CHECK(t.shell().state == PrVtermShellState_None);
@@ -242,7 +245,7 @@ TEST_CASE("vterm marks: a full reset clears the marks and the shell's state") {
 
 TEST_CASE("vterm marks: the alternate screen takes no marks") {
     Term t(20, 6);
-    t.write(prompt("$ ") + "vi\r\n\x1b]133;C\x07\x1b[?1049h" + prompt("> "));
+    t.write(format("{}vi\r\n\x1b]133;C\x07\x1b[?1049h{}", prompt("$ "), prompt("> ")));
     CHECK(t.row(0).marks == 0);
     CHECK(t.shell().state == PrVtermShellState_Running);
     t.write("\x1b[?1049l\x1b]133;D;0\x07");

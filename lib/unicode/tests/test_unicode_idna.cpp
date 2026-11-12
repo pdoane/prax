@@ -1,17 +1,16 @@
+#include "pr/string.h"
 #include "pr/unicode_idna.h"
 
 #include "tools/harness/test.h"
-
-#include <string>
 
 namespace pr_impl {
 
 namespace {
 
-std::string taken(PrRawString* text) {
-    PrStringView view = prRawStringView(text);
-    std::string out(view.data != nullptr ? view.data : "", view.size);
-    prRawStringReset(text);
+// Returns the text of `text`, which it takes, and leaves `text` null.
+String taken(PrRawString* text) {
+    String out = String::adopt(*text);
+    *text = PrRawString{};
     return out;
 }
 

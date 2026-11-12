@@ -606,7 +606,7 @@ void service(Terminal* terminal) {
             }
             prRawStringAppend(&message, "]\x1b[0m\r\n");
             PrStringView text = prRawStringView(&message);
-            prVtermWrite(vterm, PrByteView{reinterpret_cast<const uint8_t*>(text.data), text.size});
+            prVtermWrite(vterm, prStringBytes(text));
             prRawStringReset(&message);
         }
         if (!terminal->exitShown)

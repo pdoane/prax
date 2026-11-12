@@ -1,15 +1,14 @@
+#include "pr/array.h"
 #include "pr/checksum.h"
 #include "pr/net_sockets.h"
+#include "pr/string.h"
+#include "pr/string_ops.h"
 #include "pr/tls.h"
 #include "pr/websocket.h"
 
 #include "tools/harness/net_peer.h"
 
 #include "tools/harness/test.h"
-
-#include <string>
-#include <utility>
-#include <vector>
 
 using namespace harness;
 
@@ -56,37 +55,42 @@ void reset(Fixture* fixture) {
 }
 
 // A message as a probe records it.
-using Message = std::pair<PrWebSocketMessageKind, std::string>;
+struct Message {
+    PrWebSocketMessageKind kind;
+    String payload;
+
+    friend bool operator==(const Message& a, const Message& b) = default;
+};
 
 // One socket run from a test's thread: what it sends once it opens, when it closes, and what it received, which the
 // loop writes before it opens `done`.
 struct Probe {
     PrWebSocketNetwork* network;
-    std::string url;
-    std::vector<std::string> protocols;
-    std::vector<Message> send;
-    size_t closeAfter;          // the number of messages received after which the client closes
+    String url;
+    Array<String> protocols;
+    Array<Message> send;
+    uint32_t closeAfter;        // the number of messages received after which the client closes
     bool closeWhileConnecting;
     PrWebSocket* PR_NULLABLE socket;
     NetLatch done;
     PrStatus created;
-    std::vector<PrWebSocketEvent> events;
-    std::vector<Message> received;
-    std::string protocol;
+    Array<PrWebSocketEvent> events;
+    Array<Message> received;
+    String protocol;
     PrWebSocketCloseInfo close;
-    std::string reason;
+    String reason;
 };
 
 void probeEvent(void* PR_NULLABLE context, PrWebSocket* socket, PrWebSocketEvent event) {
     Probe* probe = static_cast<Probe*>(context);
-    probe->events.push_back(event);
+    probe->events.push(event);
     switch (event) {
         case PrWebSocketEvent_Open: {
             PrStringView protocol = prWebSocketProtocol(socket);
-            probe->protocol = std::string(protocol.data, protocol.size);
+            probe->protocol = protocol;
             for (const Message& message : probe->send) {
-                PrByteView data{reinterpret_cast<const uint8_t*>(message.second.data()), message.second.size()};
-                CHECK(prWebSocketSend(socket, message.first, data) == PrStatus_Ok);
+                PrByteView data = prStringBytes(message.payload);
+                CHECK(prWebSocketSend(socket, message.kind, data) == PrStatus_Ok);
             }
             if (probe->closeAfter == 0)
                 prWebSocketClose(socket, 1000, "done");
@@ -94,10 +98,8 @@ void probeEvent(void* PR_NULLABLE context, PrWebSocket* socket, PrWebSocketEvent
         }
         case PrWebSocketEvent_Message: {
             PrWebSocketMessage message = prWebSocketMessage(socket);
-            probe->received.push_back({
-                message.kind, std::string(reinterpret_cast<const char*>(message.data.data), message.data.size),
-            });
-            if (probe->received.size() == probe->closeAfter)
+            probe->received.push(Message{message.kind, String(prStringFromBytes(message.data))});
+            if (probe->received.count() == probe->closeAfter)
                 prWebSocketClose(socket, 1000, "done");
             break;
         }
@@ -105,7 +107,7 @@ void probeEvent(void* PR_NULLABLE context, PrWebSocket* socket, PrWebSocketEvent
             CHECK(prWebSocketState(socket) == PrWebSocketState_Closed);
             CHECK(prWebSocketSend(socket, PrWebSocketMessageKind_Text, {}) == PrStatus_InvalidState);
             probe->close = prWebSocketCloseInfo(socket);
-            probe->reason = std::string(probe->close.reason.data, probe->close.reason.size);
+            probe->reason = probe->close.reason;
             prWebSocketDestroy(socket);
             probe->socket = nullptr;
             netLatchOpen(&probe->done);
@@ -115,13 +117,13 @@ void probeEvent(void* PR_NULLABLE context, PrWebSocket* socket, PrWebSocketEvent
 
 void startProbe(void* PR_NULLABLE context) {
     Probe* probe = static_cast<Probe*>(context);
-    std::vector<PrStringView> protocols;
-    for (const std::string& protocol : probe->protocols)
-        protocols.push_back(protocol);
+    Array<PrStringView> protocols;
+    for (const String& protocol : probe->protocols)
+        protocols.push(protocol);
     PrWebSocketDesc desc{
         .url = probe->url,
         .protocols = protocols.data(),
-        .protocolCount = uint32_t(protocols.size()),
+        .protocolCount = protocols.count(),
         .event = probeEvent,
         .context = probe,
     };
@@ -136,7 +138,7 @@ void startProbe(void* PR_NULLABLE context) {
 }
 
 // Runs a probe on `url` and waits until its socket closes, or fails to be made.
-void run(Fixture* fixture, Probe* probe, const std::string& url) {
+void run(Fixture* fixture, Probe* probe, PrStringView url) {
     probe->network = fixture->network;
     probe->url = url;
     netLatchInit(&probe->done);
@@ -145,8 +147,8 @@ void run(Fixture* fixture, Probe* probe, const std::string& url) {
     netLatchReset(&probe->done);
 }
 
-std::string urlOf(const char* scheme, uint16_t port, const char* path) {
-    return std::string(scheme) + "://localhost:" + std::to_string(port) + path;
+String urlOf(const char* scheme, uint16_t port, const char* path) {
+    return format("{}://localhost:{}{}", scheme, port, path);
 }
 
 } // namespace
@@ -162,24 +164,27 @@ TEST_CASE("the public headers compile as C") {
 TEST_CASE("messages echo both ways, and the client's close completes the closing handshake") {
     Fixture fixture{};
     REQUIRE(open(&fixture));
-    std::string large(100000, 'x');
-    for (const char* scheme : {"ws", "wss"}) {
+    String large;
+    for (uint32_t i = 0; i < 100000; ++i)
+        large.append('x');
+    const char* const schemes[] = {"ws", "wss"};
+    for (const char* scheme : schemes) {
         CAPTURE(scheme);
         Probe probe{
-            .send = {
+            .send = Array<Message>({
                 {PrWebSocketMessageKind_Text, "hello \xE2\x9C\x93"},
-                {PrWebSocketMessageKind_Binary, std::string("\0\1\2", 3)},
+                {PrWebSocketMessageKind_Binary, PrStringView{"\0\1\2", 3}},
                 {PrWebSocketMessageKind_Text, large},
-            },
+            }),
             .closeAfter = 3,
         };
         run(&fixture, &probe, urlOf(scheme, scheme[2] == 's' ? fixture.peer.wss : fixture.peer.ws, "/echo"));
         REQUIRE(probe.created == PrStatus_Ok);
-        REQUIRE(probe.received.size() == 3);
+        REQUIRE(probe.received.count() == 3);
         CHECK(probe.received[0] == Message{PrWebSocketMessageKind_Text, "hello \xE2\x9C\x93"});
-        CHECK(probe.received[1] == Message{PrWebSocketMessageKind_Binary, std::string("\0\1\2", 3)});
-        CHECK(probe.received[2].second == large);
-        CHECK(probe.events.front() == PrWebSocketEvent_Open);
+        CHECK(probe.received[1] == Message{PrWebSocketMessageKind_Binary, PrStringView{"\0\1\2", 3}});
+        CHECK(probe.received[2].payload == large);
+        CHECK(probe.events[0] == PrWebSocketEvent_Open);
         CHECK(probe.close.wasClean);
         CHECK(probe.close.code == 1000);
         CHECK(probe.close.error == PrNetError_None);
@@ -190,12 +195,12 @@ TEST_CASE("messages echo both ways, and the client's close completes the closing
 TEST_CASE("the server chooses a subprotocol among those offered") {
     Fixture fixture{};
     REQUIRE(open(&fixture));
-    Probe probe{.protocols = {"other", "superchat", "chat"}, .closeAfter = 0};
+    Probe probe{.protocols = Array<String>({"other", "superchat", "chat"}), .closeAfter = 0};
     run(&fixture, &probe, urlOf("ws", fixture.peer.ws, "/echo"));
     CHECK(probe.protocol == "superchat");
     CHECK(probe.close.wasClean);
 
-    Probe repeated{.protocols = {"chat", "chat"}};
+    Probe repeated{.protocols = Array<String>({"chat", "chat"})};
     run(&fixture, &repeated, urlOf("ws", fixture.peer.ws, "/echo"));
     CHECK(repeated.created == PrStatus_InvalidData);
     reset(&fixture);
@@ -206,11 +211,11 @@ TEST_CASE("fragments join into one message, a ping is answered, and a long frame
     REQUIRE(open(&fixture));
     Probe probe{.closeAfter = 2};
     run(&fixture, &probe, urlOf("ws", fixture.peer.ws, "/fragmented"));
-    REQUIRE(probe.received.size() == 2);
+    REQUIRE(probe.received.count() == 2);
     CHECK(probe.received[0] == Message{PrWebSocketMessageKind_Text, "hello world"});
-    CHECK(probe.received[1].first == PrWebSocketMessageKind_Binary);
-    REQUIRE(probe.received[1].second.size() == 70000);
-    CHECK(uint8_t(probe.received[1].second[69999]) == 69999 % 251);
+    CHECK(probe.received[1].kind == PrWebSocketMessageKind_Binary);
+    REQUIRE(probe.received[1].payload.count() == 70000);
+    CHECK(uint8_t(probe.received[1].payload.data()[69999]) == 69999 % 251);
     CHECK(probe.close.wasClean);
     reset(&fixture);
 }
@@ -220,7 +225,7 @@ TEST_CASE("the server's close reports its code and reason") {
     REQUIRE(open(&fixture));
     Probe probe{.closeAfter = 100};
     run(&fixture, &probe, urlOf("ws", fixture.peer.ws, "/close"));
-    CHECK(probe.events == std::vector<PrWebSocketEvent>{PrWebSocketEvent_Open, PrWebSocketEvent_Close});
+    CHECK(probe.events == Array<PrWebSocketEvent>({PrWebSocketEvent_Open, PrWebSocketEvent_Close}));
     CHECK(probe.close.wasClean);
     CHECK(probe.close.code == 4000);
     CHECK(probe.reason == "bye");
@@ -230,19 +235,20 @@ TEST_CASE("the server's close reports its code and reason") {
 TEST_CASE("a failed handshake, a broken frame or an abrupt end closes without a clean close") {
     Fixture fixture{};
     REQUIRE(open(&fixture));
-    for (const char* path : {"/reject", "/bad-accept", "/bad-frame", "/abort"}) {
+    const char* const paths[] = {"/reject", "/bad-accept", "/bad-frame", "/abort"};
+    for (const char* path : paths) {
         CAPTURE(path);
         Probe probe{.closeAfter = 100};
         run(&fixture, &probe, urlOf("ws", fixture.peer.ws, path));
         CHECK(!probe.close.wasClean);
         CHECK(probe.close.code == 1006);
         CHECK(probe.close.error != PrNetError_None);
-        bool opened = !probe.events.empty() && probe.events.front() == PrWebSocketEvent_Open;
-        CHECK(opened == (std::string(path) == "/bad-frame" || std::string(path) == "/abort"));
+        bool opened = !probe.events.isEmpty() && probe.events[0] == PrWebSocketEvent_Open;
+        CHECK(opened == (PrStringView(path) == "/bad-frame" || PrStringView(path) == "/abort"));
     }
     Probe refused{.closeAfter = 100};
     run(&fixture, &refused, urlOf("ws", fixture.peer.closed, "/echo"));
-    CHECK(refused.events == std::vector<PrWebSocketEvent>{PrWebSocketEvent_Close});
+    CHECK(refused.events == Array<PrWebSocketEvent>({PrWebSocketEvent_Close}));
     CHECK(refused.close.error == PrNetError_Refused);
     reset(&fixture);
 }
@@ -252,7 +258,7 @@ TEST_CASE("closing a connecting socket closes it after the call") {
     REQUIRE(open(&fixture));
     Probe probe{.closeAfter = 100, .closeWhileConnecting = true};
     run(&fixture, &probe, urlOf("ws", fixture.peer.ws, "/echo"));
-    CHECK(probe.events == std::vector<PrWebSocketEvent>{PrWebSocketEvent_Close});
+    CHECK(probe.events == Array<PrWebSocketEvent>({PrWebSocketEvent_Close}));
     CHECK(!probe.close.wasClean);
     CHECK(probe.close.code == 1006);
     reset(&fixture);

@@ -1,4 +1,4 @@
-// The lesser, the greater and the clamp of values of one type.
+// The lesser, the greater, the clamp and the magnitude of values of one type.
 //
 // <windows.h> defines min and max as macros unless NOMINMAX is defined first, so a source that includes it defines
 // NOMINMAX. A source that includes <windows.h> without it, before this header, is stopped here.
@@ -29,6 +29,16 @@ constexpr T max(T a, T b) {
 template <typename T>
 constexpr T clamp(T value, T low, T high) {
     return value < low ? low : value > high ? high : value;
+}
+
+// Returns the magnitude of `value`, and how far apart `a` and `b` are, which an unsigned type gives without wrapping.
+template <typename T>
+constexpr T abs(T value) {
+    return value < T(0) ? T(-value) : value;
+}
+template <typename T>
+constexpr T absDifference(T a, T b) {
+    return a < b ? T(b - a) : T(a - b);
 }
 
 } // namespace pr
