@@ -2,7 +2,8 @@
 
 Each runner's docstring (`tools/suite/wpt/wpt.py`, `tools/suite/css_parsing.py`, `tools/suite/html_tokens.py`,
 `tools/suite/html_tree.py`, `tools/suite/markdown/markdown_spec.py`, `tools/suite/markdown/markdown_dom.py`,
-`tools/suite/reftest.py`, `tools/suite/esctest.py`) documents its selection, counting and exclusions.
+`tools/suite/reftest.py`, `tools/suite/esctest.py`, `tools/suite/unicode.py`) documents its selection, counting and
+exclusions.
 
 ## Running
 
@@ -21,6 +22,7 @@ change touches:
 | Markdown | `commonmark`, `gfm`, `markdown-dom` |
 | URL | `url-parsing`, `url-wpt` |
 | terminals (`lib/vterm`) | `esctest` |
+| Unicode's algorithms (`lib/unicode`): bidi, normalization, segmentation, IDNA | `unicode` |
 | shell, runner, anything every page uses | every `*-wpt` suite, `wpt-runner` |
 | font bundles | `font-coverage` |
 | SVG, Lottie rendering | `resvg`, `lottie-web`, `skottie`, `rlottie`, `lottie-ios` |

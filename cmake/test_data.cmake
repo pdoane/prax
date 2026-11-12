@@ -1,7 +1,7 @@
-# The files that the tests read: fonts, the Unicode Character Database's conformance tests, and html5lib's encoding
-# tests. Each is fetched by pr_dependency, pinned and checked against its hash, into the download cache that the rest of
-# the build's dependencies share, and linked into a directory of the build (pr_dependency_link). A test reads them
-# there by name, so a build has everything its tests read, and nothing a suite or a benchmark reads.
+# The files that the tests read: fonts, and html5lib's encoding tests. Each is fetched by pr_dependency, pinned and
+# checked against its hash, into the download cache that the rest of the build's dependencies share, and linked into a
+# directory of the build (pr_dependency_link). A test reads them there by name, so a build has everything its tests
+# read, and nothing a suite or a benchmark reads.
 #
 # A font that a font bundle carries (font_bundle.cmake) is the bundle's file, so a build that fetches the bundle fetches
 # it once.
@@ -10,7 +10,6 @@
 set(_pr_test_ofl https://raw.githubusercontent.com/google/fonts/23e54b51ddffbc7713c583748e3bd86f62b1fa4a/ofl)
 set(_pr_test_color https://raw.githubusercontent.com/googlefonts/color-fonts/0046ea4c3b69e9fbbe464c2594816894e3aa5e4b/fonts)
 set(_pr_test_wpt https://raw.githubusercontent.com/web-platform-tests/wpt/269bca0dd35c303639f3c9cf1d8bcb3d911bdb60)
-set(_pr_test_unicode https://www.unicode.org/Public/17.0.0)
 set(_pr_test_html5lib https://raw.githubusercontent.com/html5lib/html5lib-tests/224991ec10db04f056a89eed8b0bd8695fd2950e)
 
 # Fonts each chosen for what they carry: color glyphs (COLRv1, sbix and CBDT), CFF2, variation axes, WOFF and WOFF2, and
@@ -235,26 +234,6 @@ foreach (entry IN LISTS _pr_test_math_fonts)
     list(APPEND PR_TEST_MATH_FONTS "${dependency}/${name}.woff")
 endforeach()
 
-# The Unicode Character Database's conformance tests, at the version that lib/unicode's tables are generated from: from
-# the database's archive, which holds them in less than half their size, and UTS #46's, which is published beside it.
-pr_dependency(test_unicode_ucd
-    URL ${_pr_test_unicode}/ucd/UCD.zip
-    URL_HASH SHA256=2066d1909b2ea93916ce092da1c0ee4808ea3ef8407c94b4f14f5b7eb263d28e)
-pr_dependency(test_unicode_IdnaTestV2
-    URL ${_pr_test_unicode}/idna/IdnaTestV2.txt
-    URL_HASH SHA256=beb5d0be20e896189b03209a82fdc34f06351502bbd4b8e2523583fc2954d9cf
-    DOWNLOAD_NO_EXTRACT ON
-    DOWNLOAD_NAME IdnaTestV2.txt)
-
-set(PR_TEST_UNICODE
-    "test_unicode_ucd/BidiTest.txt"
-    "test_unicode_ucd/BidiCharacterTest.txt"
-    "test_unicode_ucd/auxiliary/LineBreakTest.txt"
-    "test_unicode_ucd/auxiliary/GraphemeBreakTest.txt"
-    "test_unicode_ucd/auxiliary/WordBreakTest.txt"
-    "test_unicode_ucd/NormalizationTest.txt"
-    "test_unicode_IdnaTestV2/IdnaTestV2.txt")
-
 # html5lib's tests of the encoding sniffing algorithm.
 pr_dependency(test_html5lib_tests1
     URL ${_pr_test_html5lib}/encoding/tests1.dat
@@ -279,9 +258,7 @@ set(PR_TEST_HTML5LIB
 
 # The directories that the tests read the files from.
 set(PR_TEST_FONTS_DIR "${PROJECT_BINARY_DIR}/test_data/fonts")
-set(PR_TEST_UNICODE_DIR "${PROJECT_BINARY_DIR}/test_data/unicode")
 set(PR_TEST_HTML5LIB_DIR "${PROJECT_BINARY_DIR}/test_data/html5lib")
 pr_dependency_link("${PR_TEST_FONTS_DIR}" ${PR_TEST_FONTS})
 pr_dependency_link("${PR_TEST_FONTS_DIR}/math" ${PR_TEST_MATH_FONTS})
-pr_dependency_link("${PR_TEST_UNICODE_DIR}" ${PR_TEST_UNICODE})
 pr_dependency_link("${PR_TEST_HTML5LIB_DIR}/encoding" ${PR_TEST_HTML5LIB})

@@ -25,5 +25,6 @@ if (PR_DEVELOP)
         tests/test_unicode_normalization.cpp
     )
     target_link_libraries(unicode_tests PRIVATE prax::locale)
-    target_compile_definitions(unicode_tests PRIVATE PR_UNICODE_DIR="${PR_TEST_UNICODE_DIR}")
+    # The conformance files of the Unicode Character Database and UTS #46, which tools/suite/unicode.py drives.
+    pr_harness(unicode_conformance prax::unicode tests/unicode_conformance.cpp)
 endif()
