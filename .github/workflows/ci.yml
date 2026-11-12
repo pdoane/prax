@@ -29,7 +29,8 @@ jobs:
       matrix:
         os: [windows-latest]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 10
+    # A run without the compiler cache builds everything twice, in about half an hour.
+    timeout-minutes: 60
     defaults:
       run:
         # Git Bash on Windows, where dev.sh runs.
