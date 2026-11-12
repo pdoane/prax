@@ -11,6 +11,7 @@
 #include "doctest/doctest.h"
 
 #include <stdlib.h>
+#include <string>
 
 PR_ASSUME_NONNULL_BEGIN
 
@@ -23,6 +24,14 @@ namespace harness {
 inline bool gpuTests() {
     return getenv("PR_TEST_NO_GPU") == nullptr;
 }
+
+// A word that is this test binary's own among those that run at once, for a file that must be where others' are.
+std::string runTag();
+
+// A folder of this test binary's own, in the system's temporary folder, as a path with forward slashes. Binaries that
+// run at once each have their own, so that their files never collide. It is created on the first call, and removed with
+// what it holds when the binary ends (tools/harness/test.cpp).
+std::string testFolder();
 
 } // namespace harness
 

@@ -91,33 +91,51 @@ struct FakeApp {
 };
 
 // A launcher whose process is the test: the program's output is what the test passes to `output`, at the speed of
-// memory, with no pseudoterminal or program between. The process runs until the terminal destroys it, and takes and
-// drops what the terminal writes to it. A test that calls `output` from a thread of its own joins the thread before the
-// terminal is destroyed, as a backend stops its thread when its process is destroyed.
+// memory, with no pseudoterminal or program between. The process runs until the terminal destroys it, and keeps what
+// the terminal writes to it, for `input`. A test that calls `output` from a thread of its own joins the thread before
+// the terminal is destroyed, as a backend stops its thread when its process is destroyed.
 struct FakeLauncher {
+    // The process, and the launcher that it belongs to.
+    struct FakeProcess {
+        PrProcess process;
+        FakeLauncher* launcher;
+    };
+
     PrProcessLauncher launcher{};
-    PrProcess process{};
+    FakeProcess process{{}, this};
     PrProcessReceiveFn PR_NULLABLE receive = nullptr;
     void* PR_NULLABLE receiveContext = nullptr;
+    PrMutex mutex;
+    std::string written;
 
     FakeLauncher() {
+        prMutexInit(&mutex);
         launcher.destroy = [](PrProcessLauncher*) {};
         launcher.launch = [](PrProcessLauncher* l, const PrProcessDesc* desc, PrProcess* PR_NULLABLE* out) -> PrStatus {
             FakeLauncher* fake = reinterpret_cast<FakeLauncher*>(l);
             fake->receive = desc->receive;
             fake->receiveContext = desc->receiveContext;
-            *out = &fake->process;
+            *out = &fake->process.process;
             return PrStatus_Ok;
         };
-        process.destroy = [](PrProcess*) {};
-        process.write = [](PrProcess*, PrByteView) {};
-        process.closeInput = [](PrProcess*) {};
-        process.read = [](PrProcess*, PrProcessStream, uint8_t* PR_NULLABLE, size_t) { return size_t(0); };
-        process.info = [](const PrProcess*) { return PrProcessInfo{}; };
-        process.kill = [](PrProcess*) {};
-        process.terminalResize = [](PrProcess*, PrUVec2, PrUVec2) {};
-        process.terminalForegroundDirectory = [](const PrProcess*) { return prRawStringNull(); };
+        PrProcess& p = process.process;
+        p.destroy = [](PrProcess*) {};
+        // The terminal writes from the UI's thread and from the parser's.
+        p.write = [](PrProcess* written, PrByteView bytes) {
+            FakeLauncher* fake = reinterpret_cast<FakeProcess*>(written)->launcher;
+            prMutexLock(&fake->mutex);
+            fake->written.append(reinterpret_cast<const char*>(bytes.data), bytes.size);
+            prMutexUnlock(&fake->mutex);
+        };
+        p.closeInput = [](PrProcess*) {};
+        p.read = [](PrProcess*, PrProcessStream, uint8_t* PR_NULLABLE, size_t) { return size_t(0); };
+        p.info = [](const PrProcess*) { return PrProcessInfo{}; };
+        p.kill = [](PrProcess*) {};
+        p.terminalResize = [](PrProcess*, PrUVec2, PrUVec2) {};
+        p.terminalForegroundDirectory = [](const PrProcess*) { return prRawStringNull(); };
     }
+
+    ~FakeLauncher() { prMutexReset(&mutex); }
 
     FakeLauncher(const FakeLauncher&) = delete;
     FakeLauncher& operator=(const FakeLauncher&) = delete;
@@ -125,8 +143,16 @@ struct FakeLauncher {
     // Gives `text` to the terminal as the program's output, on the calling thread, as a backend's thread gives it. The
     // terminal must have launched its program through this launcher.
     void output(const std::string& text) {
-        receive(receiveContext, &process, PrProcessStream_Output,
+        receive(receiveContext, &process.process, PrProcessStream_Output,
             PrByteView{reinterpret_cast<const uint8_t*>(text.data()), text.size()});
+    }
+
+    // What the terminal has written to the program.
+    std::string input() {
+        prMutexLock(&mutex);
+        std::string text = written;
+        prMutexUnlock(&mutex);
+        return text;
     }
 
     // Sets `desc` to launch through this launcher (Term's setup).
@@ -337,16 +363,12 @@ struct Term {
     }
 };
 
-// Returns the tests' folder under the user's cache directory, after writing a file of three lines named `name` in it.
-// The path is normalized, as the terminal's paths are.
+// Returns the binary's folder (harness::testFolder), after writing a file of three lines named `name` in it. The path
+// is normalized, as the terminal's paths are.
 std::string folderWithFile(const std::string& name) {
-    PrRawString cache = prFileUserDirectory(PrFileUserDirectory_Cache);
-    PrRawString absolute = prFilePathAbsolute(prRawStringView(&cache), "");
+    PrRawString absolute = prFilePathAbsolute(harness::testFolder(), "");
     std::string folder(prRawStringView(&absolute).data, prRawStringView(&absolute).size);
     prRawStringReset(&absolute);
-    prRawStringReset(&cache);
-    folder += "/prax-tests/terminal";
-    REQUIRE(prFileCreateDirectory(folder));
     std::string text = "one\ntwo\nthree\n";
     REQUIRE(prFileWrite(folder + "/" + name, PrByteView{reinterpret_cast<const uint8_t*>(text.data()), text.size()}));
     return folder;
@@ -388,12 +410,9 @@ bool near(PrColor8 a, PrColor8 b) {
     return close(a.r, b.r) && close(a.g, b.g) && close(a.b, b.b);
 }
 
-// Creates and returns the tests' folder `name` under the user's cache directory.
-std::string testFolder(const std::string& name) {
-    PrRawString cache = prFileUserDirectory(PrFileUserDirectory_Cache);
-    std::string folder(prRawStringView(&cache).data, prRawStringView(&cache).size);
-    prRawStringReset(&cache);
-    folder += "/prax-tests/terminal/" + name;
+// Creates and returns the folder `name` in the binary's folder (harness::testFolder).
+std::string subfolder(const std::string& name) {
+    std::string folder = harness::testFolder() + "/" + name;
     REQUIRE(prFileCreateDirectory(folder));
     return folder;
 }
@@ -1151,10 +1170,11 @@ TEST_CASE("terminal: the key that pastes drops only its own text, and text typed
 
 TEST_CASE("terminal: the clipboard's keys copy the selection and paste, in each platform's chords") {
     FakeApp app;
-    // The keys are pressed once the program reads input.
-    Term t("sh", {"-c", "echo ready; cat"}, &app.app);
+    FakeLauncher fake;
+    Term t("program", {}, &app.app, {}, fake.setup());
+    REQUIRE(fake.receive != nullptr);
     prTerminalFocus(t.terminal);
-    t.frameUntil([&] { return t.shows("ready"); });
+    t.f.frame();
     t.write("\x1b[5;1Halpha beta");
     t.f.frame();
     PrVec2 alpha = t.cellCenter(1, 4);
@@ -1186,14 +1206,18 @@ TEST_CASE("terminal: the clipboard's keys copy the selection and paste, in each 
     t.f.key('V', PrAppModifierFlag_Control);
     t.f.frame();
     CHECK(app.clipboardRequested);
-    // Control with C copies and clears the selection. Pressed again, it interrupts the program.
+    // Control with C copies and clears the selection. Pressed again, it goes to the program, as the interrupt.
     t.f.key('C', PrAppModifierFlag_Control);
     t.f.frame();
     CHECK(app.clipboard == "alpha");
     CHECK(t.selection().empty());
+    CHECK(fake.input().empty());
     t.f.key('C', PrAppModifierFlag_Control);
     t.f.frame();
-    t.frameUntil([&] { return prTerminalProcessInfo(t.terminal).exited; });
+    CHECK(fake.input() == "\x03");
+#else
+    // The clipboard's keys write nothing to the program.
+    CHECK(fake.input().empty());
 #endif
 }
 
@@ -1614,7 +1638,7 @@ TEST_CASE("terminal: a reference to a file opens as a file URL without a handler
 }
 
 TEST_CASE("terminal: the shell integration writes its scripts, and starts each shell that it knows to read them") {
-    std::string directory = testFolder("integration");
+    std::string directory = subfolder("integration");
     TerminalShellLaunch launch{};
     CHECK_FALSE(terminalShellIntegrate("/bin/sh", directory, nullptr, 0, &launch));
     CHECK(launch.arguments.count == 0);
@@ -1662,7 +1686,7 @@ TEST_CASE("terminal: the user's shell starts with the integration, after its own
         MESSAGE("no shell that the terminal has an integration for");
     for (const std::string& shell : shells) {
         CAPTURE(shell);
-        std::string home = testFolder("home-" + nameOf(shell));
+        std::string home = subfolder("home-" + nameOf(shell));
         writeFile(home + "/.zshrc", "export PRAX_TEST_RC=read\nPS1='ready$ '\n");
         writeFile(home + "/.bash_profile", "export PRAX_TEST_RC=read\nPS1='ready$ '\n");
         // The shell reads its startup files from the test home. For zsh, ZDOTDIR names that home, and it still does
@@ -1712,7 +1736,7 @@ TEST_CASE("terminal: a terminal whose caller turns the integration off runs the 
         MESSAGE("no shell that the terminal has an integration for");
     for (const std::string& shell : shells) {
         CAPTURE(shell);
-        std::string home = testFolder("home-" + nameOf(shell));
+        std::string home = subfolder("home-" + nameOf(shell));
         std::string shellVariable = "SHELL=" + shell;
         std::string homeVariable = "HOME=" + home;
         std::string zdotdirVariable = "ZDOTDIR=" + home;

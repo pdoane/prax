@@ -1,10 +1,12 @@
 # What the harnesses, the tools and the tests of the libraries share.
 
-# The main() of every test binary, which installs the crash handler before doctest runs the tests. It takes core's
-# declarations only, so that each binary links the core that it tests.
-add_library(test_main STATIC test_main.cpp test.h)
+# The main() of every test binary, which installs the crash handler before doctest runs the tests, and what test.h
+# declares beyond doctest. It takes core's declarations only, and the C++ layer's headers, which are header-only, so
+# that each binary links the core that it tests.
+add_library(test_main STATIC test_main.cpp test.cpp test.h)
 # Every test includes doctest through test.h, by its path under the root.
-target_include_directories(test_main PUBLIC ${PROJECT_SOURCE_DIR} PRIVATE ${PROJECT_SOURCE_DIR}/lib/core/include)
+target_include_directories(test_main PUBLIC ${PROJECT_SOURCE_DIR}
+    PRIVATE ${PROJECT_SOURCE_DIR}/lib/core/include ${PROJECT_SOURCE_DIR}/lib/core/cpp/include)
 target_link_libraries(test_main PUBLIC doctest::doctest PRIVATE pr_warnings)
 
 # Reading files and framed cases, writing JSON, and the CPU's counters.

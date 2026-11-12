@@ -723,7 +723,8 @@ TEST_CASE("vterm graphics: XTWINOPS reports the cell's pixel extent and the scre
 
 TEST_CASE("vterm graphics: files are read only where the caller allows, and temporary files are deleted after") {
     std::string folder = temporaryFolder();
-    std::string path = folder + "/prax-vterm-tty-graphics-protocol-test.rgb";
+    // The protocol takes temporary files only from the system's temporary folder, where others' are too.
+    std::string path = folder + "/prax-vterm-tty-graphics-protocol-test-" + harness::runTag() + ".rgb";
     std::string pixels = solid(2, 2, 3, 7, 8, 9);
     writeFile(path, "xx" + pixels);
 

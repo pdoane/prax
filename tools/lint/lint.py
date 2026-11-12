@@ -2147,7 +2147,7 @@ def check_include_paths(report, path, text):
 # harness's doctest header stands in for doctest's own, so it sorts and is allowed as doctest is (check_test_include).
 THIRD_PARTY = {
     "tools/harness/test.h": ("lib/*/tests/*", "examples/*/tests/*", "apps/*/tests/*", "tools/*/tests/*",
-                             "tools/harness/kit_fixture.h"),
+                             "tools/harness/kit_fixture.h", "tools/harness/test.cpp"),
     "mimalloc.h": ("lib/core/backends/mimalloc/src/core_mimalloc.cpp",),
     "quickjs.h": ("lib/*/quickjs/*", "lib/*/quickjs_cpp/*", "lib/lottie/src/lottie_expression.cpp", "tools/shell/page_host.cpp",
                   "apps/browser/main.cpp"),

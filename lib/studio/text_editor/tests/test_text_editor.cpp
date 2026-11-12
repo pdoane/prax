@@ -137,13 +137,9 @@ struct Editor {
     }
 };
 
-// Writes `text` to a file of `name` in a folder of the tests' own, and returns its path.
+// Writes `text` to a file of `name` in the binary's folder (harness::testFolder), and returns its path.
 std::string writeFile(const std::string& name, const std::string& text) {
-    PrRawString cache = prFileUserDirectory(PrFileUserDirectory_Cache);
-    std::string folder = std::string(prRawStringView(&cache).data, prRawStringView(&cache).size) + "/prax-tests/text_editor";
-    prRawStringReset(&cache);
-    REQUIRE(prFileCreateDirectory(folder));
-    std::string path = folder + "/" + name;
+    std::string path = harness::testFolder() + "/" + name;
     REQUIRE(prFileWrite(path, PrByteView{reinterpret_cast<const uint8_t*>(text.data()), text.size()}));
     return path;
 }
