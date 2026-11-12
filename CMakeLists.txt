@@ -144,6 +144,11 @@ endif()
 if (EMSCRIPTEN)
     add_compile_options(-msimd128)
     add_link_options(-sSTACK_SIZE=8388608 -sALLOW_MEMORY_GROWTH=1)
+    # Debug compiles with the optimizer's first level, and keeps its assertions. Without it, a function keeps each of its
+    # temporaries in a WebAssembly local, and the engine's frame for QuickJS's interpreter grows so large that a few
+    # nested calls of JavaScript exhaust the engine's own stack, which neither Node.js nor a browser lets a page raise,
+    # long before QuickJS's limit stops them.
+    add_compile_options($<$<CONFIG:Debug>:-O1>)
 endif()
 
 if (PR_DEVELOP)

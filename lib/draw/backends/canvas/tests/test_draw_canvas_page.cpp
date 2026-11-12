@@ -328,14 +328,15 @@ TEST_CASE("the canvas renderer draws images, textures and lists as sources") {
 TEST_CASE("the canvas renderer clips to rects and paths, nested") {
     Renderers r;
     PrDrawList* list = prDrawListCreate();
-    prDrawListPushTransformAffine2(list, prAffine2Concat(prAffine2Rotate(0.4f), prAffine2Translate(PrVec2{40, 4})));
-    prDrawListPushClipRect(list, PrRect{0, 0, 40, 30}, PrDrawEdges_Antialiased);
-    prDrawListPopTransform(list);
+    // An ellipse, and inside it a rect in a rotated space.
     PrPath* path = prPathCreate();
     prPathAddEllipse(path, PrVec2{48, 32}, PrVec2{30, 20}, 0);
     prDrawListPushClipPath(list, path, PrPathFillRule_NonZero, PrDrawEdges_Antialiased);
+    prDrawListPushTransformAffine2(list, prAffine2Concat(prAffine2Rotate(0.4f), prAffine2Translate(PrVec2{40, 4})));
+    prDrawListPushClipRect(list, PrRect{0, 0, 40, 30}, PrDrawEdges_Antialiased);
     prDrawListRect(list, PrRect{0, 0, 128, 64}, {.color = PrColor{0, 0, 0, 1}});
     prDrawListPopClip(list);
+    prDrawListPopTransform(list);
     prDrawListPopClip(list);
     prDrawListPushClipCornerRect(list, prCornerRectRound(PrRect{90, 8, 124, 56}, 10), PrDrawEdges_Antialiased);
     prDrawListRect(list, PrRect{0, 0, 128, 64}, {.color = PrColor{0.8f, 0.2f, 0, 1}});
