@@ -104,7 +104,7 @@ def main(argv):
     if command in ("help", "-h", "--help"):
         help()
     if command not in COMMANDS:
-        print("dev.sh: no command named %s" % command, file=sys.stderr)
+        print("dev.sh: error: no command named %s" % command, file=sys.stderr)
         help(1)
     getattr(importlib.import_module(COMMANDS[command]), command)(args)
 

@@ -14,8 +14,14 @@ WINDOWS = os.name == "nt"
 
 
 def fail(message):
-    """Prints `message` and exits with a failure."""
-    print("dev.sh: " + message, file=sys.stderr)
+    """Prints `message` as an error and exits with a failure. What was printed before it comes first. Under GitHub
+    Actions, the message is also the step's error annotation, which the run's summary shows."""
+    sys.stdout.flush()
+    print("dev.sh: error: " + message, file=sys.stderr, flush=True)
+    if os.environ.get("GITHUB_ACTIONS") == "true":
+        # A workflow command's message is one line, with its percent signs and line breaks escaped.
+        escaped = message.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+        print("::error title=dev.sh::" + escaped, flush=True)
     sys.exit(1)
 
 
