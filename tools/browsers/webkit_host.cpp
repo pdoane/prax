@@ -1,6 +1,6 @@
-// webkit_host: runs the system's WebKit, as Safari uses it, in a browser of lib/app's Cocoa backend, the same browser
-// as the viewer's, so that tools/browsers/browsers.py can compare the engine with it and the probes and stills can
-// capture it. The application is headless: no window of it is seen and it never takes focus.
+// webkit_host: runs the system's WebKit, as Safari uses it, in a web view of lib/webview's WebKit backend, the same
+// engine as the viewer's, so that tools/browsers/browsers.py can compare the engine with it and the probes and stills
+// can capture it. The application is headless: no window of it is seen and it never takes focus.
 //
 // It loads the URL that it is given, over a data store that keeps nothing, so that no profile, tab or extension of the
 // developer's Safari runs beside it. It runs until it is stopped. It prints the processes that WebKit runs the page in
@@ -25,6 +25,7 @@
 #include "pr/app_cocoa.h"
 #include "pr/assert.h"
 #include "pr/string_ops.h"
+#include "pr/webview.h"
 
 #include "tools/harness/harness_png.h"
 
@@ -57,7 +58,7 @@ constexpr const char* kReady = "(async () => {  await document.fonts.ready;"
 
 struct Host {
     PrApp* app = nullptr;
-    PrAppBrowser* browser = nullptr;
+    PrWebView* browser = nullptr;
     std::string url;
     std::string screenshot;         // where to write the page, or empty
     std::string pdf;                // where to print the page, or empty. With neither, the host runs until stopped
@@ -80,11 +81,11 @@ void stop(Host& h, int status) {
 
 // Prints each process that WebKit runs the page in and that has not been printed for its role.
 void nameProcesses(Host& h) {
-    PrAppBrowserProcess processes[3];
-    uint32_t count = prAppBrowserProcesses(h.browser, processes, 3);
+    PrWebViewProcess processes[3];
+    uint32_t count = prWebViewProcesses(h.browser, processes, 3);
     static const char* const kRoles[] = {"web", "gpu", "network"};
     for (uint32_t i = 0; i < count && i < 3; ++i) {
-        PrAppBrowserProcessRole role = processes[i].role;
+        PrWebViewProcessRole role = processes[i].role;
         if (role >= 3 || h.named[role] == processes[i].id)
             continue;
         h.named[role] = processes[i].id;
@@ -128,14 +129,14 @@ void ready(void* context, PrStatus status, PrStringView json) {
     }
     if (!h.pdf.empty()) {
         PrVec2 paper{float(paperWidth), float(paperHeight)};
-        if (prAppBrowserPrint(h.browser, h.pdf, paper, printed, &h) != PrStatus_Ok) {
+        if (prWebViewPrint(h.browser, h.pdf, paper, printed, &h) != PrStatus_Ok) {
             std::fprintf(stderr, "webkit_host: this browser does not print\n");
             stop(h, 1);
         }
         return;
     }
     PrUVec2 pixels{uint32_t(double(h.size.x) * ratio + 0.5), uint32_t(double(h.size.y) * ratio + 0.5)};
-    prAppBrowserCapture(h.browser, PrRect{0, 0, float(h.size.x), float(h.size.y)}, pixels, captured, &h);
+    prWebViewCapture(h.browser, PrRect{0, 0, float(h.size.x), float(h.size.y)}, pixels, captured, &h);
 }
 
 void loaded(void* context, PrStatus status) {
@@ -149,7 +150,7 @@ void loaded(void* context, PrStatus status) {
         stop(h, 1);
         return;
     }
-    prAppBrowserEvaluate(h.browser, kReady, ready, &h);
+    prWebViewEvaluate(h.browser, kReady, ready, &h);
 }
 
 int usage() {
@@ -192,8 +193,8 @@ int main(int argc, char** argv) {
         &h,
         [](void* context, PrApp* app, const PrAppFrame*) {
             Host& h = *static_cast<Host*>(context);
-            PrAppBrowserDesc desc{.viewport = h.size, .pixelRatio = h.pixelRatio, .preferences = &h.preferences};
-            if (prAppBrowserCreate(app, &desc, &h.browser) != PrStatus_Ok) {
+            PrWebViewDesc desc{.viewport = h.size, .pixelRatio = h.pixelRatio, .preferences = &h.preferences};
+            if (prWebViewCreate(PrWebViewBackend_WebKit, &desc, &h.browser) != PrStatus_Ok) {
                 std::fprintf(stderr, "webkit_host: no browser\n");
                 stop(h, 1);
                 return;
@@ -205,7 +206,7 @@ int main(int argc, char** argv) {
                     prAppWake(app);
                 }
             });
-            prAppBrowserLoad(h.browser, h.url, loaded, &h);
+            prWebViewLoad(h.browser, h.url, loaded, &h);
         },
         [](void*, PrApp*, const PrAppFrame*) { return PrAppOutput{}; },
         [](void* context, PrApp*, const PrAppEvent* event) {
@@ -218,7 +219,7 @@ int main(int argc, char** argv) {
             h.polling = false;
             if (h.poller.joinable())
                 h.poller.join();
-            prAppBrowserDestroy(h.browser);
+            prWebViewDestroy(h.browser);
             h.browser = nullptr;
         },
     };

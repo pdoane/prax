@@ -166,8 +166,8 @@ a window that another window covers may skip drawing.
   gives the number of cores that each engine kept busy while it measured (its processes' time on cores divided by the
   elapsed time), and the summary compares time on cores beside time. A lead in time bought with more cores is not a
   lead in power.
-- WebKit, the engine that Safari uses, is the system's WebKit, running in `webkit_host`, a browser of lib/app's Cocoa
-  backend that keeps no data, so that no profile or tab of the developer's Safari runs beside it.
+- WebKit, the engine that Safari uses, is the system's WebKit, running in `webkit_host`, a web view of lib/webview's
+  WebKit backend that keeps no data, so that no profile or tab of the developer's Safari runs beside it.
 - A case measures the same work in every engine only if no engine can skip the work. An engine that caches results by
   their input answers a repeated input from its cache, so a case that means to measure the work gives each call an
   input that no earlier call has seen. For example, `css-parse` gives each parse a sheet with a comment that no other
