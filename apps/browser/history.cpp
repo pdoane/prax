@@ -3,10 +3,9 @@
 #include "apps/browser/history.h"
 
 #include "pr/array.h"
-#include "pr/float.h"
+#include "pr/date_time.h"
 #include "pr/json.h"
 #include "pr/string.h"
-#include "pr/time_date.h"
 
 #include "apps/browser/address.h"
 #include "apps/browser/profile.h"
@@ -16,8 +15,6 @@ namespace browser {
 using namespace pr;
 
 namespace {
-
-constexpr double kDayMilliseconds = 86400000;
 
 // Returns the string member `name` of the object at `item`, or empty if it has none of that type.
 String stringMember(const PrJson* json, PrJsonValueIndex item, const char* name) {
@@ -30,7 +27,7 @@ String stringMember(const PrJson* json, PrJsonValueIndex item, const char* name)
 
 } // namespace
 
-void historyRecord(Array<Visit>* history, PrStringView url, PrStringView title, double time) {
+void historyRecord(Array<Visit>* history, PrStringView url, PrStringView title, PrTimeSystem time) {
     if (addressIsBlank(url))
         return;
     historyRemove(history, url);
@@ -85,15 +82,13 @@ String historyDayLabel(int64_t day, int64_t today) {
         "January", "February", "March", "April", "May", "June",
         "July", "August", "September", "October", "November", "December",
     };
-    PrTimeDate date = prTimeDateFromDays(day);
-    return format("{}, {} {}, {}", kWeekdays[prTimeWeekdayFromDays(day)], kMonths[date.month - 1], date.day, date.year);
+    PrDateTime date = prDateTimeFromDays(day);
+    return format("{}, {} {}, {}", kWeekdays[date.weekday], kMonths[date.month - 1], uint32_t(date.day), date.year);
 }
 
-String historyTimeLabel(double time, double offset) {
-    double midnight = double(prTimeDaysFromMilliseconds(time, offset)) * kDayMilliseconds;
-    uint32_t minutes = uint32_t(prF64Floor((time + offset - midnight) / 60000));
-    uint32_t hours = minutes / 60;
-    return format("{:02}:{:02}", hours, minutes % 60);
+String historyTimeLabel(PrTimeSystem time, int32_t offset) {
+    PrDateTime local = prDateTimeFromSystem(time, offset);
+    return format("{:02}:{:02}", local.hour, local.minute);
 }
 
 bool historyParse(PrStringView text, Array<Visit>* out) {
@@ -108,7 +103,8 @@ bool historyParse(PrStringView text, Array<Visit>* out) {
         String url = stringMember(json, item, "url");
         PrJsonValueIndex time = prJsonMember(json, item, "time");
         bool timed = time != kPrJsonMissing && prJsonKind(json, time) == PrJsonKind_Number;
-        historyRecord(&history, url, stringMember(json, item, "title"), timed ? prJsonNumber(json, time, 0) : 0);
+        PrTimeSystem at = timed ? prTimeSystemFromUnixMilliseconds(prJsonNumber(json, time, 0)) : PrTimeSystem{};
+        historyRecord(&history, url, stringMember(json, item, "title"), at);
     }
     prJsonDestroy(json);
     if (parsed)
@@ -126,7 +122,7 @@ String historyText(const Array<Visit>& history) {
         prJsonWriterKey(writer, "title");
         prJsonWriterString(writer, visit.title);
         prJsonWriterKey(writer, "time");
-        prJsonWriterNumber(writer, visit.time);
+        prJsonWriterNumber(writer, prTimeSystemToUnixMilliseconds(visit.time));
         prJsonWriterEndObject(writer);
     }
     prJsonWriterEndArray(writer);

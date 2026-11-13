@@ -68,9 +68,9 @@ struct LayoutCompositor {
     uint32_t sequence;              // incremented by each scroll
     uint32_t taken;                 // the sequence as of the last take
     PrLayoutCompositorStats stats;
-    double lastStart;               // the monotonic time at which the last frame started, or zero before the first
+    PrTimePerf lastStart;           // when the last frame started, or zero ticks before the first
     PrLayoutVec shown;              // the viewport offset that the last frame showed
-    double lastMoved;               // when a frame last showed the viewport moved; zero before any did
+    PrTimePerf lastMoved;           // when a frame last showed the viewport moved, or zero ticks before any did
     bool unshown;                   // something was committed, removed or scrolled since the last frame
 
     // The current wheel sequence, once a wheel has come: when and where its last wheel came, on the clock of the
@@ -255,7 +255,7 @@ void playEmbedded(void* PR_NULLABLE context, uint64_t embed, PrLayoutVec, PrDraw
 constexpr double kScrollIdleMillis = 2000;
 
 void frame(LayoutCompositor* c) {
-    double started = prTimeMonotonicMilliseconds();
+    PrTimePerf started = prTimePerfNow();
     double time = c->desc.now(c->desc.context);
     prMutexLock(&c->mutex);
     if (contentOf(c, 0) == nullptr) {
@@ -312,25 +312,26 @@ void frame(LayoutCompositor* c) {
     PrColor16 canvas = prLayoutSceneCanvasColor(root->scene);
     for (uint32_t i = 0; i < c->parts.count; ++i)
         prLayoutSceneRelease(c->parts.data[i].scene);
-    double played = prTimeMonotonicMilliseconds();
+    PrTimePerf played = prTimePerfNow();
     c->desc.present(c->desc.context, c->list, canvas);
-    double ended = prTimeMonotonicMilliseconds();
+    PrTimePerf ended = prTimePerfNow();
     prMutexLock(&c->mutex);
     ++c->stats.frames;
     c->stats.sampled = sampled;
     c->stats.scrolled = scrolled;
-    c->stats.frameMillis = ended - started;
-    if (c->lastStart != 0 && started - c->lastStart > c->stats.longestGapMillis) {
-        c->stats.longestGapMillis = started - c->lastStart;
+    c->stats.frameMillis = prTimePerfMilliseconds(started, ended);
+    double gap = c->lastStart.ticks != 0 ? prTimePerfMilliseconds(c->lastStart, started) : 0;
+    if (gap > c->stats.longestGapMillis) {
+        c->stats.longestGapMillis = gap;
         c->stats.longestGapFrame = c->stats.frames;
     }
     c->lastStart = started;
     // A frame that shows the viewport moved ends a gap. The gap counts only if an earlier frame also moved the
     // viewport.
     if (shown.x != c->shown.x || shown.y != c->shown.y) {
-        if (c->lastMoved != 0 && started - c->lastMoved > c->stats.longestScrollGapMillis &&
-                started - c->lastMoved < kScrollIdleMillis) {
-            c->stats.longestScrollGapMillis = started - c->lastMoved;
+        double scrollGap = c->lastMoved.ticks != 0 ? prTimePerfMilliseconds(c->lastMoved, started) : 0;
+        if (scrollGap > c->stats.longestScrollGapMillis && scrollGap < kScrollIdleMillis) {
+            c->stats.longestScrollGapMillis = scrollGap;
             c->stats.longestScrollGapFrame = c->stats.frames;
         }
         c->lastMoved = started;
@@ -339,7 +340,7 @@ void frame(LayoutCompositor* c) {
     if (c->stats.frameMillis > c->stats.longestMillis) {
         c->stats.longestMillis = c->stats.frameMillis;
         c->stats.longestFrame = c->stats.frames;
-        c->stats.longestPlayMillis = played - started;
+        c->stats.longestPlayMillis = prTimePerfMilliseconds(started, played);
     }
     prMutexUnlock(&c->mutex);
 }

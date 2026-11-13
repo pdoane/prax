@@ -94,7 +94,7 @@ PrHtmlVisibility visibilityOf(bool shown) {
 
 void navigate(Tab& tab, const String& url) {
     tab.pending = url;
-    tab.loadStarted = prTimeMonotonicMilliseconds();
+    tab.loadStarted = prTimePerfNow();
     if (prHtmlPageNavigate(tab.page, url) != PrStatus_Ok)
         printError("browser: cannot navigate to {}\n", url);
 }
@@ -296,15 +296,15 @@ bool sameDocument(const TabInfo& a, const TabInfo& b) {
 // Prints how long a navigation took to settle, once its document is complete and the last scene shows all of it. Until
 // then, background work takes turns with input on the page's thread and the layout thread.
 void reportLoad(Tab& tab, const TabInfo& info) {
-    if (tab.loadStarted == 0 || info.loading)
+    if (tab.loadStarted.ticks == 0 || info.loading)
         return;
     PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(tab.page));
     const PrCssPresentation* presentation = prHtmlPagePresentation(tab.page);
     if (prHtmlDocumentReadyState(document) != PrHtmlDocumentReadyState_Complete || presentation == nullptr ||
             prCssPresentationIsBusy(presentation) || !prCssPresentationIsCurrent(presentation))
         return;
-    printError("browser: {} settled in {:.2f} s\n", info.url, (prTimeMonotonicMilliseconds() - tab.loadStarted) / 1000);
-    tab.loadStarted = 0;
+    printError("browser: {} settled in {:.2f} s\n", info.url, prTimePerfSeconds(tab.loadStarted, prTimePerfNow()));
+    tab.loadStarted = PrTimePerf{};
 }
 
 // Publishes what changed of each open tab since the last run, and asks the window for a frame to show it.
@@ -371,7 +371,7 @@ void record(Browser& b, Tab& tab) {
         return;
     if (info.url != tab.recorded) {
         tab.recorded = info.url;
-        historyRecord(&b.history, info.url, info.title, prTimeWallMilliseconds());
+        historyRecord(&b.history, info.url, info.title, prTimeSystemNow());
         post(b, new TabTask{.browser = &b, .tab = nullptr, .kind = TaskKind_Visit, .url = info.url});
     } else if (!historySetTitle(&b.history, info.url, info.title)) {
         return;

@@ -20,6 +20,10 @@
 #include "pr/core_posix_time.h"
 #include "pr/core_posix_vmem.h"
 #endif
+#if defined(__APPLE__)
+#include "pr/core_apple_time.h"
+#endif
+#include "pr/date_time.h"
 #include "pr/file.h"
 #include "pr/float.h"
 #include "pr/float16.h"
@@ -37,7 +41,6 @@
 #include "pr/text_buffer.h"
 #include "pr/thread.h"
 #include "pr/time.h"
-#include "pr/time_date.h"
 #include "pr/utf8.h"
 #include "pr/vec.h"
 #include "pr/vmem.h"
@@ -62,7 +65,10 @@ int prTestCoreCApi(void) {
     prMutexUnlock(&mutex);
     prMutexReset(&mutex);
     double now = prTimeMonotonicMilliseconds();
-    PrTimeDate epoch = prTimeDateFromDays(0);
+    PrTimePerf start = prTimePerfNow();
+    double elapsed = prTimePerfMilliseconds(start, prTimePerfNow());
+    PrDateTime epoch = prDateTimeFromDays(0);
+    PrDateTime today = prDateTimeFromSystem(prTimeSystemNow(), 0);
 
     PrTextBuffer text = {0};
     prTextBufferAppend(&text, PR_SV("Platform "));
@@ -75,5 +81,5 @@ int prTestCoreCApi(void) {
     PrStringView name = PR_SV("platform");
     PrVec2 point = {1, 2};
     return !texts || usable < 64 || name.size != 8 || point.y != 2 || !(now >= 0) || prThreadHardwareCount() == 0 ||
-        epoch.year != 1970;
+        epoch.year != 1970 || !(elapsed >= 0) || today.year < 2026;
 }

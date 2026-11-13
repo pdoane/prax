@@ -7,7 +7,7 @@
 #include "core/src/config.h"
 
 #if !defined(PR_PLATFORM_VMEM_RESERVE)
-#error "a build without the default platform binds PR_PLATFORM_VMEM_RESERVE"
+#error "a target without a default for the group binds PR_PLATFORM_VMEM_RESERVE"
 #endif
 
 void* prVmemReserve(size_t size) {

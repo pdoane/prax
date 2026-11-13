@@ -8,6 +8,7 @@
 #include "pr/raw_array.h"
 #include "pr/string_view.h"
 #include "pr/text_buffer.h"
+#include "pr/time.h"
 
 PR_ASSUME_NONNULL_BEGIN
 
@@ -25,17 +26,13 @@ struct FetchCacheControl {
 // no-cache (rfc 9111 section 5.4).
 FetchCacheControl fetchCacheControlFromHeaders(const PrFetchHeader* PR_NULLABLE headers, uint32_t count);
 
-// Parses an HTTP-date (rfc 9110 section 5.6.7) in any of its three forms into milliseconds since the Unix epoch.
-// Returns false if `text` is not a date.
-bool fetchCacheParseDate(PrStringView text, double* out);
-
 // A response as the cache keeps it: its status and headers, the request's values of the headers that its Vary names,
-// when it was requested and received on the wall clock, in milliseconds, and its decoded body. Its views are into the
-// record that it was read from, or into the response that it was made from.
+// when it was requested and received, and its decoded body. Its views are into the record that it was read from, or
+// into the response that it was made from.
 struct FetchCachedResponse {
     uint16_t status;
-    double requested;
-    double received;
+    PrTimeSystem requested;
+    PrTimeSystem received;
     RawArray<PrFetchHeader> headers;
     RawArray<PrFetchHeader> varied;    // each header that Vary names, with the request's value or the null view
     PrByteView body;
@@ -51,7 +48,7 @@ bool fetchCacheIsStorable(uint16_t status, const PrFetchHeader* PR_NULLABLE head
 double fetchCacheLifetime(const FetchCachedResponse* response);
 
 // Returns the response's age at `now`, in milliseconds (rfc 9111 section 4.2.3).
-double fetchCacheAge(const FetchCachedResponse* response, double now);
+double fetchCacheAge(const FetchCachedResponse* response, PrTimeSystem now);
 
 // Returns true if the request's headers match the values that the response's Vary recorded (rfc 9111 section 4.1). A
 // Vary of `*` matches nothing.

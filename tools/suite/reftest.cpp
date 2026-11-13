@@ -433,11 +433,11 @@ int main(int argc, char** argv) {
         if (status == PrStatus_Ok && paths[4] != "-")
             writePng(paths[4], reference.rgba, reference.width, reference.height);
         std::vector<uint8_t> rendered;
-        double started = prTimeMonotonicMilliseconds();
+        PrTimePerf started = prTimePerfNow();
         if (status == PrStatus_Ok)
             status = render(renderer, compressCodec, imageCodec, suite, textShaper, paths[0], reference.width,
                 reference.height, time, &rendered);
-        double ms = prTimeMonotonicMilliseconds() - started;
+        double ms = prTimePerfMilliseconds(started, prTimePerfNow());
         prTextBufferAppend(&out, "{\"status\":");
         harnessWriteString(&out, prStatusName(status));
         if (!rendered.empty()) {

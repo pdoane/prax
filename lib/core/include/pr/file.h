@@ -9,6 +9,7 @@
 #include "pr/raw_string.h"
 #include "pr/string_view.h"
 #include "pr/text_buffer.h"
+#include "pr/time.h"
 
 PR_ASSUME_NONNULL_BEGIN
 
@@ -37,8 +38,7 @@ typedef uint8_t PrFileKind;
 typedef struct PrFileInfo {
     PrFileKind kind;
     uint64_t size;              // the number of bytes of a regular file, and zero for any other kind
-    double modified;            // the time of the last change to the file's contents, in milliseconds since the Unix
-                                // epoch, which prTimeWallMilliseconds also measures from
+    PrTimeSystem modified;      // the time of the last change to the file's contents
 } PrFileInfo;
 
 // Reads into `out` what the file system records about the file at the UTF-8 `path`. Returns false, and leaves `out`

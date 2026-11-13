@@ -21,6 +21,11 @@ PrHtmlTimerHandler handlerFor(State* state) {
     };
 }
 
+// A host clock that moves only when the test steps it.
+double steppedNow(void* PR_NULLABLE context) {
+    return *static_cast<double*>(context);
+}
+
 } // namespace
 
 } // namespace pr_impl
@@ -62,7 +67,11 @@ TEST_CASE("an interval runs again with its id until it is cleared, by its own ha
 }
 
 TEST_CASE("a timer holds its handler until it fires or is cleared, and fires only when due and run") {
-    PrHtmlPage* page = prHtmlPageCreate(nullptr);
+    double now = 0;
+    PrHtmlHost host = prHtmlHostDefault();
+    host.context = &now;
+    host.now = steppedNow;
+    PrHtmlPage* page = prHtmlPageCreate(&host);
     PrHtmlWindow* window = prHtmlPageWindow(page);
     State state;
     PrHtmlTimerHandler handler = handlerFor(&state);
@@ -70,8 +79,7 @@ TEST_CASE("a timer holds its handler until it fires or is cleared, and fires onl
     CHECK_FALSE(prDomAgentRunTask(prHtmlPageAgent(page)));
     int32_t future = prHtmlWindowSetTimeout(window, &handler, 100000, false);
     CHECK(future > 0);
-    CHECK(prDomAgentNextTaskDelay(prHtmlPageAgent(page)) > 0);
-    CHECK(prDomAgentNextTaskDelay(prHtmlPageAgent(page)) <= 100000);
+    CHECK(prDomAgentNextTaskDelay(prHtmlPageAgent(page)) == 100000);
     CHECK_FALSE(prDomAgentRunTask(prHtmlPageAgent(page)));
     int32_t zero = prHtmlWindowSetTimeout(window, &handler, 0, false);
     int32_t negative = prHtmlWindowSetTimeout(window, &handler, -10, false);
@@ -91,8 +99,16 @@ TEST_CASE("a timer holds its handler until it fires or is cleared, and fires onl
     CHECK(state.calls == 1);
     CHECK(state.references == 1);
     CHECK_FALSE(prDomAgentRunTask(prHtmlPageAgent(page)));
-    prHtmlPageDestroy(page);
+    now = 99999;
+    CHECK(prDomAgentNextTaskDelay(prHtmlPageAgent(page)) == 1);
+    CHECK_FALSE(prDomAgentRunTask(prHtmlPageAgent(page)));
+    now = 100000;
+    CHECK(prDomAgentNextTaskDelay(prHtmlPageAgent(page)) == 0);
+    CHECK(prDomAgentRunTask(prHtmlPageAgent(page)));
+    CHECK(state.calls == 2);
     CHECK(state.references == 0);
+    CHECK(prDomAgentNextTaskDelay(prHtmlPageAgent(page)) == -1);
+    prHtmlPageDestroy(page);
 }
 
 TEST_CASE("a timer's handler can clear and set timers, and cannot run one itself") {

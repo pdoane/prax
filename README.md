@@ -107,7 +107,7 @@ recursion limits assume that much, as macOS and Linux give a main thread. The op
 | `PR_INSTALL` | `ON` when Prax is the top-level project | generates the install rules and the CMake package |
 | `PR_PLATFORM_MIMALLOC` | `OFF` | allocates with mimalloc instead of the C library |
 | `PR_PLATFORM_THREADS` | `ON`, and `OFF` on the web | starts threads; without them, the program runs on one thread |
-| `PR_USER_CONFIG`, `PR_PLATFORM_NO_DEFAULT` | | bind platform facilities at compile time from a header |
+| `PR_USER_CONFIG` | | binds platform facilities at compile time from a header |
 | `PR_SLANGC` | | the Slang compiler to use instead of the release the build fetches |
 | `PR_DOWNLOAD_DIR` | the environment variable of that name, or else `prax/downloads` in the user's cache directory | the download cache that builds share; empty disables it |
 

@@ -69,7 +69,7 @@ TEST_CASE("the rules for parsing floating-point numbers read a prefix, and the v
 }
 
 TEST_CASE("dates, weeks and times round-trip through their numbers") {
-    PrTimeDate date{};
+    PrDateTime date{};
     CHECK(domParseDate("2024-02-29", &date));
     CHECK(!domParseDate("2023-02-29", &date));
     CHECK(!domParseDate("0000-01-01", &date));
@@ -77,9 +77,9 @@ TEST_CASE("dates, weeks and times round-trip through their numbers") {
     // A week belongs to the year of its Thursday.
     int64_t year = 0;
     uint32_t week = 0;
-    domWeekOfDays(prTimeDateToDays(PrTimeDate{2010, 1, 3}), &year, &week);
+    domWeekOfDays(prDateTimeToDays(PrDateTime{2010, 1, 3}), &year, &week);
     CHECK((year == 2009 && week == 53));
-    domWeekOfDays(prTimeDateToDays(PrTimeDate{2008, 12, 29}), &year, &week);
+    domWeekOfDays(prDateTimeToDays(PrDateTime{2008, 12, 29}), &year, &week);
     CHECK((year == 2009 && week == 1));
     CHECK(domWeeksInYear(2009) == 53);
     CHECK(domWeeksInYear(2010) == 52);

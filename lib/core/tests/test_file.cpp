@@ -84,15 +84,15 @@ TEST_CASE("a file is written whole, replaced while a mapping of it stays valid, 
 TEST_CASE("a file's info is its kind, its size and when it changed") {
     REQUIRE(prFileCreateDirectory(pathOf("info")));
     String path = pathOf("info/sized.txt");
-    double before = prTimeWallMilliseconds();
+    PrTimeSystem before = prTimeSystemNow();
     REQUIRE(prFileWrite(path, bytesOf("12345")));
     PrFileInfo info{};
     REQUIRE(prFileInfo(path, &info));
     CHECK(info.kind == PrFileKind_Regular);
     CHECK(info.size == 5);
-    // File systems record times more coarsely than the wall clock reads them.
-    CHECK(info.modified > before - 2000.0);
-    CHECK(info.modified < prTimeWallMilliseconds() + 2000.0);
+    // File systems record times more coarsely than the system time reads them.
+    CHECK(prTimeSystemMilliseconds(before, info.modified) > -2000.0);
+    CHECK(prTimeSystemMilliseconds(info.modified, prTimeSystemNow()) > -2000.0);
     REQUIRE(prFileInfo(pathOf("info"), &info));
     CHECK(info.kind == PrFileKind_Directory);
     CHECK(info.size == 0);

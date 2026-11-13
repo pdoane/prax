@@ -60,7 +60,6 @@ PrRawString directoryOf(const wchar_t* name) {
 
 // Returns what the attributes, size and time of last write that Windows records describe.
 PrFileInfo infoOf(DWORD attributes, DWORD sizeHigh, DWORD sizeLow, FILETIME written) {
-    // A FILETIME counts 100 ns intervals since 1601, which is 11644473600 seconds before the Unix epoch.
     uint64_t ticks = uint64_t(written.dwHighDateTime) << 32 | written.dwLowDateTime;
     PrFileInfo info{};
     if ((attributes & FILE_ATTRIBUTE_DIRECTORY) != 0) {
@@ -71,7 +70,7 @@ PrFileInfo infoOf(DWORD attributes, DWORD sizeHigh, DWORD sizeLow, FILETIME writ
         info.kind = PrFileKind_Regular;
         info.size = uint64_t(sizeHigh) << 32 | sizeLow;
     }
-    info.modified = (double(ticks) - 116444736000000000.0) / 10000.0;
+    info.modified = prTimeSystemFromWindowsFileTime(ticks);
     return info;
 }
 

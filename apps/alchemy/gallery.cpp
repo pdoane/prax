@@ -96,7 +96,9 @@ void galleryRescan(Gallery& gallery) {
     gallery.entries.clear();
     prFileEachEntry(gallery.dir, collect, &gallery);
     sortItems(gallery.entries.span(), [](const GalleryEntry& a, const GalleryEntry& b) {
-        return a.modified != b.modified ? a.modified > b.modified : prStringCompare(a.filename, b.filename) > 0;
+        if (a.modified.ticks != b.modified.ticks)
+            return a.modified.ticks > b.modified.ticks;
+        return prStringCompare(a.filename, b.filename) > 0;
     });
     ++gallery.revision;
     // The selection carries over by name. If none of it remains, the newest image is selected.

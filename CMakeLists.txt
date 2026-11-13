@@ -76,7 +76,6 @@ endif()
 
 # The platform's build configuration (docs/platform.md).
 set(PR_USER_CONFIG "" CACHE FILEPATH "A header that binds platform facilities at compile time")
-option(PR_PLATFORM_NO_DEFAULT "Leave the default platform backends out, so that PR_USER_CONFIG binds every group" OFF)
 option(PR_PLATFORM_MIMALLOC "Allocate with mimalloc where the build leaves memory to the default backends" OFF)
 # The web runs a program on one thread unless its page has shared memory, which Prax does not ask of it.
 if (EMSCRIPTEN)

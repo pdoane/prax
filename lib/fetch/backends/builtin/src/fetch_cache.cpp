@@ -4,6 +4,7 @@
 #include "fetch/backends/builtin/src/fetch_cache.h"
 
 #include "pr/ascii.h"
+#include "pr/date_time.h"
 #include "pr/mem.h"
 #include "pr/string_ops.h"
 #include "pr/string_trim.h"
@@ -14,7 +15,7 @@ namespace {
 
 // The start of a record, and the version of its layout, which is in the machine's byte order.
 constexpr uint8_t kRecordMagic[4] = {'P', 'R', 'H', 'C'};
-constexpr uint32_t kRecordVersion = 1;
+constexpr uint32_t kRecordVersion = 2;
 
 // The size that a record writes for a header value that is the null view.
 constexpr uint32_t kNullValue = 0xffffffffu;
@@ -22,10 +23,14 @@ constexpr uint32_t kNullValue = 0xffffffffu;
 // The fraction of the time since a response's Last-Modified that it stays fresh by heuristic (rfc 9111 section 4.2.2).
 constexpr double kHeuristicFraction = 0.1;
 
-constexpr const char* kMonths[12] = {
-    "jan", "feb", "mar", "apr", "may", "jun",
-    "jul", "aug", "sep", "oct", "nov", "dec",
-};
+// Reads an HTTP-date (rfc 9110 section 5.6.7) into `out`. Returns false if `text` is not one.
+bool parseDate(PrStringView text, PrTimeSystem* out) {
+    PrDateTime dateTime{};
+    if (!prDateTimeParse(text, PrDateTimeFormat_Http, &dateTime))
+        return false;
+    *out = prDateTimeToSystem(dateTime);
+    return true;
+}
 
 // Calls `fn` with each element of the comma-separated list `value`, trimmed.
 template <typename Fn>
@@ -60,16 +65,6 @@ bool parseSeconds(PrStringView text, double* out) {
     }
     *out = seconds;
     return true;
-}
-
-// Returns the number of days from 1970-01-01 to the date in the proleptic Gregorian calendar.
-int64_t daysFromCivil(int64_t year, int64_t month, int64_t day) {
-    year -= month <= 2 ? 1 : 0;
-    int64_t era = (year >= 0 ? year : year - 399) / 400;
-    int64_t yearOfEra = year - era * 400;
-    int64_t dayOfYear = (153 * (month + (month > 2 ? -3 : 9)) + 2) / 5 + day - 1;
-    int64_t dayOfEra = yearOfEra * 365 + yearOfEra / 4 - yearOfEra / 100 + dayOfYear;
-    return era * 146097 + dayOfEra - 719468;
 }
 
 void appendU32(PrTextBuffer* out, uint32_t value) {
@@ -146,59 +141,6 @@ FetchCacheControl fetchCacheControlFromHeaders(const PrFetchHeader* PR_NULLABLE 
     return control;
 }
 
-bool fetchCacheParseDate(PrStringView text, double* out) {
-    int64_t day = -1;
-    int64_t month = -1;
-    int64_t year = -1;
-    int64_t hour = -1;
-    int64_t minute = 0;
-    int64_t second = 0;
-    size_t at = 0;
-    while (at < text.size) {
-        while (at < text.size && (text.data[at] == ' ' || text.data[at] == ',' || text.data[at] == '-'))
-            ++at;
-        size_t end = at;
-        while (end < text.size && text.data[end] != ' ' && text.data[end] != ',' && text.data[end] != '-')
-            ++end;
-        PrStringView token = prStringSlice(text, at, end - at);
-        at = end;
-        if (token.size == 0)
-            continue;
-        if (token.size == 8 && token.data[2] == ':' && token.data[5] == ':') {
-            for (size_t i = 0; i < 8; ++i) {
-                if (i != 2 && i != 5 && !prAsciiIsDigit(token.data[i]))
-                    return false;
-            }
-            hour = (token.data[0] - '0') * 10 + (token.data[1] - '0');
-            minute = (token.data[3] - '0') * 10 + (token.data[4] - '0');
-            second = (token.data[6] - '0') * 10 + (token.data[7] - '0');
-        } else if (prAsciiIsDigit(token.data[0])) {
-            int64_t value = 0;
-            for (size_t i = 0; i < token.size; ++i) {
-                if (!prAsciiIsDigit(token.data[i]))
-                    return false;
-                value = value * 10 + (token.data[i] - '0');
-            }
-            if (day < 0 && token.size <= 2)
-                day = value;
-            else if (year < 0)
-                year = token.size <= 2 ? (value < 70 ? 2000 + value : 1900 + value) : value;
-            else
-                return false;
-        } else if (token.size >= 3) {
-            for (int64_t m = 0; m < 12; ++m) {
-                if (prAsciiEqualsFold(prStringSlice(token, 0, 3), kMonths[m]) && token.size == 3)
-                    month = m + 1;
-            }
-        }
-    }
-    if (day < 1 || day > 31 || month < 1 || year < 1601 || hour < 0 || hour > 23 || minute > 59 || second > 60)
-        return false;
-    int64_t seconds = daysFromCivil(year, month, day) * 86400 + hour * 3600 + minute * 60 + second;
-    *out = double(seconds) * 1000;
-    return true;
-}
-
 PrStringView fetchCacheHeader(const PrFetchHeader* PR_NULLABLE headers, uint32_t count, PrStringView name) {
     for (uint32_t i = 0; i < count; ++i) {
         if (prAsciiEqualsFold(headers[i].name, name))
@@ -233,31 +175,33 @@ double fetchCacheLifetime(const FetchCachedResponse* response) {
     FetchCacheControl control = fetchCacheControlFromHeaders(headers, count);
     if (control.hasMaxAge)
         return control.maxAge * 1000;
-    double date = response->received;
-    fetchCacheParseDate(fetchCacheHeader(headers, count, "date"), &date);
+    PrTimeSystem date = response->received;
+    parseDate(fetchCacheHeader(headers, count, "date"), &date);
     PrStringView expires = fetchCacheHeader(headers, count, "expires");
     if (expires.data != nullptr) {
-        double when = 0;
+        PrTimeSystem when{};
         // An Expires that is not a date is in the past (rfc 9111 section 5.3).
-        return fetchCacheParseDate(expires, &when) && when > date ? when - date : 0;
+        return parseDate(expires, &when) && when.ticks > date.ticks ? prTimeSystemMilliseconds(date, when) : 0;
     }
-    double modified = 0;
-    if (fetchCacheParseDate(fetchCacheHeader(headers, count, "last-modified"), &modified) && modified < date)
-        return (date - modified) * kHeuristicFraction;
+    PrTimeSystem modified{};
+    PrStringView lastModified = fetchCacheHeader(headers, count, "last-modified");
+    if (parseDate(lastModified, &modified) && modified.ticks < date.ticks)
+        return prTimeSystemMilliseconds(modified, date) * kHeuristicFraction;
     return 0;
 }
 
-double fetchCacheAge(const FetchCachedResponse* response, double now) {
+double fetchCacheAge(const FetchCachedResponse* response, PrTimeSystem now) {
     const PrFetchHeader* headers = response->headers.data;
     uint32_t count = response->headers.count;
-    double date = response->received;
-    fetchCacheParseDate(fetchCacheHeader(headers, count, "date"), &date);
-    double apparent = response->received > date ? response->received - date : 0;
+    PrTimeSystem received = response->received;
+    PrTimeSystem date = received;
+    parseDate(fetchCacheHeader(headers, count, "date"), &date);
+    double apparent = received.ticks > date.ticks ? prTimeSystemMilliseconds(date, received) : 0;
     double ageSeconds = 0;
     parseSeconds(stringTrimBy(fetchCacheHeader(headers, count, "age"), prAsciiIsTabOrSpace), &ageSeconds);
-    double corrected = ageSeconds * 1000 + (response->received - response->requested);
+    double corrected = ageSeconds * 1000 + prTimeSystemMilliseconds(response->requested, received);
     double initial = apparent > corrected ? apparent : corrected;
-    double resident = now > response->received ? now - response->received : 0;
+    double resident = now.ticks > received.ticks ? prTimeSystemMilliseconds(received, now) : 0;
     return initial + resident;
 }
 

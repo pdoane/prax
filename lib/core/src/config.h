@@ -113,22 +113,32 @@
 #if defined(PR_PLATFORM_VMEM_RESERVE) != defined(PR_PLATFORM_VMEM_FREE)
 #error "PR_PLATFORM_VMEM_RESERVE and PR_PLATFORM_VMEM_FREE are defined together or not at all"
 #endif
-#if defined(PR_PLATFORM_TIME_MONOTONIC_MILLISECONDS) != defined(PR_PLATFORM_TIME_WALL_MILLISECONDS)
-#error "PR_PLATFORM_TIME_MONOTONIC_MILLISECONDS and PR_PLATFORM_TIME_WALL_MILLISECONDS are defined together or not at all"
+#if defined(PR_PLATFORM_TIME_PERF_NOW) != defined(PR_PLATFORM_TIME_PERF_NANOSECONDS)
+#error "PR_PLATFORM_TIME_PERF_NOW and PR_PLATFORM_TIME_PERF_NANOSECONDS are defined together or not at all"
 #endif
-#if defined(PR_PLATFORM_TIME_MONOTONIC_MILLISECONDS) != defined(PR_PLATFORM_TIME_LOCAL_OFFSET_MILLISECONDS)
-#error "PR_PLATFORM_TIME_MONOTONIC_MILLISECONDS and PR_PLATFORM_TIME_LOCAL_OFFSET_MILLISECONDS are defined together or not at all"
+#if defined(PR_PLATFORM_TIME_PERF_NOW) != defined(PR_PLATFORM_TIME_PERF_MILLISECONDS)
+#error "PR_PLATFORM_TIME_PERF_NOW and PR_PLATFORM_TIME_PERF_MILLISECONDS are defined together or not at all"
+#endif
+#if defined(PR_PLATFORM_TIME_PERF_NOW) != defined(PR_PLATFORM_TIME_MONOTONIC_MILLISECONDS)
+#error "PR_PLATFORM_TIME_PERF_NOW and PR_PLATFORM_TIME_MONOTONIC_MILLISECONDS are defined together or not at all"
+#endif
+#if defined(PR_PLATFORM_TIME_SYSTEM_NOW) != defined(PR_PLATFORM_TIME_LOCAL_OFFSET_SECONDS)
+#error "PR_PLATFORM_TIME_SYSTEM_NOW and PR_PLATFORM_TIME_LOCAL_OFFSET_SECONDS are defined together or not at all"
 #endif
 
 // The default backends of each target. The C library serves memory on every target, or mimalloc if the build chooses it
-// (PR_PLATFORM_MIMALLOC). POSIX serves the other groups on the Unix-like targets, and the Windows family on Windows.
-// Each group's backend is declared only if the build leaves the group unbound.
-#if !defined(PR_PLATFORM_NO_DEFAULT) && !defined(__unix__) && !defined(__APPLE__) && !defined(_WIN32)
-#error "this target has no default platform; bind every group in PR_USER_CONFIG"
+// (PR_PLATFORM_MIMALLOC). POSIX serves the other groups on the Unix-like targets, except the Apple family's clocks on
+// Apple's, and the Windows family serves them on Windows. Each group's backend is declared only if the build leaves the
+// group unbound. A target that neither family serves has no default for those groups, so its configuration binds each
+// of them that the build uses, and the source that uses an unbound group fails to compile.
+#if defined(_WIN32)
+#define PR_CORE_WINDOWS_TARGET
+#elif defined(__unix__) || defined(__APPLE__)
+#define PR_CORE_POSIX_TARGET
 #endif
 
 // The default memory, if the build binds none.
-#if !defined(PR_PLATFORM_NO_DEFAULT) && !defined(PR_PLATFORM_ALLOC_BYTES) && defined(PR_PLATFORM_MIMALLOC)
+#if !defined(PR_PLATFORM_ALLOC_BYTES) && defined(PR_PLATFORM_MIMALLOC)
 #include "pr/core_mimalloc.h"
 #define PR_PLATFORM_ALLOC_BYTES(size) prCoreMimallocAllocBytes(size)
 #define PR_PLATFORM_ALLOC_ZEROED_BYTES(size) prCoreMimallocAllocZeroedBytes(size)
@@ -136,7 +146,7 @@
 #define PR_PLATFORM_FREE_BYTES(memory) prCoreMimallocFreeBytes(memory)
 #define PR_PLATFORM_USABLE_BYTES(memory) prCoreMimallocUsableBytes(memory)
 #define PR_PLATFORM_TRIM_BYTES() prCoreMimallocTrimBytes()
-#elif !defined(PR_PLATFORM_NO_DEFAULT) && !defined(PR_PLATFORM_ALLOC_BYTES)
+#elif !defined(PR_PLATFORM_ALLOC_BYTES)
 #include "pr/core_libc.h"
 #define PR_PLATFORM_ALLOC_BYTES(size) prCoreLibcAllocBytes(size)
 #define PR_PLATFORM_ALLOC_ZEROED_BYTES(size) prCoreLibcAllocZeroedBytes(size)
@@ -147,11 +157,11 @@
 #endif
 
 // The default report of a failure, from Windows or POSIX, if the build binds none.
-#if !defined(PR_PLATFORM_NO_DEFAULT) && !defined(PR_PLATFORM_FAIL) && defined(_WIN32)
+#if !defined(PR_PLATFORM_FAIL) && defined(PR_CORE_WINDOWS_TARGET)
 #include "pr/core_windows_fail.h"
 #define PR_PLATFORM_FAIL(message, file, line) prCoreWindowsFailed(message, file, line)
 #define PR_PLATFORM_CRASH_HANDLER() prCoreWindowsCrashHandler()
-#elif !defined(PR_PLATFORM_NO_DEFAULT) && !defined(PR_PLATFORM_FAIL)
+#elif !defined(PR_PLATFORM_FAIL) && defined(PR_CORE_POSIX_TARGET)
 #include "pr/core_posix_fail.h"
 #define PR_PLATFORM_FAIL(message, file, line) prCorePosixFailed(message, file, line)
 #define PR_PLATFORM_CRASH_HANDLER() prCorePosixCrashHandler()
@@ -159,16 +169,16 @@
 
 // The default threads, mutexes and conditions, if the build binds none. A build without threads
 // (PR_PLATFORM_NO_THREADS) takes the no_threads family, with the target's own sleep. Any other takes Windows or POSIX.
-#if !defined(PR_PLATFORM_NO_DEFAULT) && !defined(PR_PLATFORM_THREAD_START) && defined(PR_PLATFORM_NO_THREADS)
+#if !defined(PR_PLATFORM_THREAD_START) && defined(PR_PLATFORM_NO_THREADS)
 #include "pr/core_no_threads_thread.h"
 #define PR_PLATFORM_THREAD_SUPPORTED() false
 #define PR_PLATFORM_THREAD_START(thread, run, context) prCoreNoThreadsThreadStart(thread, run, context)
 #define PR_PLATFORM_THREAD_JOIN(thread) prCoreNoThreadsThreadJoin(thread)
 #define PR_PLATFORM_THREAD_HARDWARE_COUNT() prCoreNoThreadsThreadHardwareCount()
-#if defined(_WIN32)
+#if defined(PR_CORE_WINDOWS_TARGET)
 #include "pr/core_windows_thread.h"
 #define PR_PLATFORM_THREAD_SLEEP(milliseconds) prCoreWindowsThreadSleep(milliseconds)
-#else
+#elif defined(PR_CORE_POSIX_TARGET)
 #include "pr/core_posix_thread.h"
 #define PR_PLATFORM_THREAD_SLEEP(milliseconds) prCorePosixThreadSleep(milliseconds)
 #endif
@@ -182,7 +192,7 @@
 #define PR_PLATFORM_CONDITION_WAIT_FOR(condition, mutex, ms) prCoreNoThreadsConditionWaitFor(condition, mutex, ms)
 #define PR_PLATFORM_CONDITION_SIGNAL(condition) prCoreNoThreadsConditionSignal(condition)
 #define PR_PLATFORM_CONDITION_BROADCAST(condition) prCoreNoThreadsConditionBroadcast(condition)
-#elif !defined(PR_PLATFORM_NO_DEFAULT) && !defined(PR_PLATFORM_THREAD_START) && defined(_WIN32)
+#elif !defined(PR_PLATFORM_THREAD_START) && defined(PR_CORE_WINDOWS_TARGET)
 #include "pr/core_windows_thread.h"
 #define PR_PLATFORM_THREAD_SUPPORTED() true
 #define PR_PLATFORM_THREAD_START(thread, run, context) prCoreWindowsThreadStart(thread, run, context)
@@ -199,7 +209,7 @@
 #define PR_PLATFORM_CONDITION_WAIT_FOR(condition, mutex, ms) prCoreWindowsConditionWaitFor(condition, mutex, ms)
 #define PR_PLATFORM_CONDITION_SIGNAL(condition) prCoreWindowsConditionSignal(condition)
 #define PR_PLATFORM_CONDITION_BROADCAST(condition) prCoreWindowsConditionBroadcast(condition)
-#elif !defined(PR_PLATFORM_NO_DEFAULT) && !defined(PR_PLATFORM_THREAD_START)
+#elif !defined(PR_PLATFORM_THREAD_START) && defined(PR_CORE_POSIX_TARGET)
 #include "pr/core_posix_thread.h"
 #define PR_PLATFORM_THREAD_SUPPORTED() true
 #define PR_PLATFORM_THREAD_START(thread, run, context) prCorePosixThreadStart(thread, run, context)
@@ -219,7 +229,7 @@
 #endif
 
 // The default files, from Windows or POSIX, if the build binds none.
-#if !defined(PR_PLATFORM_NO_DEFAULT) && !defined(PR_PLATFORM_FILE_MAP) && defined(_WIN32)
+#if !defined(PR_PLATFORM_FILE_MAP) && defined(PR_CORE_WINDOWS_TARGET)
 #include "pr/core_windows_file.h"
 #define PR_PLATFORM_FILE_MAP(path, out) prCoreWindowsFileMap(path, out)
 #define PR_PLATFORM_FILE_UNMAP(mapping) prCoreWindowsFileUnmap(mapping)
@@ -233,7 +243,7 @@
 #define PR_PLATFORM_FILE_WORKING_DIRECTORY() prCoreWindowsFileWorkingDirectory()
 #define PR_PLATFORM_FILE_STREAM_WRITE(stream, bytes) prCoreWindowsFileStreamWrite(stream, bytes)
 #define PR_PLATFORM_FILE_STREAM_READ(stream, out, capacity) prCoreWindowsFileStreamRead(stream, out, capacity)
-#elif !defined(PR_PLATFORM_NO_DEFAULT) && !defined(PR_PLATFORM_FILE_MAP)
+#elif !defined(PR_PLATFORM_FILE_MAP) && defined(PR_CORE_POSIX_TARGET)
 #include "pr/core_posix_file.h"
 #define PR_PLATFORM_FILE_MAP(path, out) prCorePosixFileMap(path, out)
 #define PR_PLATFORM_FILE_UNMAP(mapping) prCorePosixFileUnmap(mapping)
@@ -250,47 +260,66 @@
 #endif
 
 // The default address space, from Windows or POSIX, if the build binds none.
-#if !defined(PR_PLATFORM_NO_DEFAULT) && !defined(PR_PLATFORM_VMEM_RESERVE) && defined(_WIN32)
+#if !defined(PR_PLATFORM_VMEM_RESERVE) && defined(PR_CORE_WINDOWS_TARGET)
 #include "pr/core_windows_vmem.h"
 #define PR_PLATFORM_VMEM_RESERVE(size) prCoreWindowsVmemReserve(size)
 #define PR_PLATFORM_VMEM_COMMIT(base, size) prCoreWindowsVmemCommit(base, size)
 #define PR_PLATFORM_VMEM_FREE(base, size) prCoreWindowsVmemFree(base, size)
-#elif !defined(PR_PLATFORM_NO_DEFAULT) && !defined(PR_PLATFORM_VMEM_RESERVE)
+#elif !defined(PR_PLATFORM_VMEM_RESERVE) && defined(PR_CORE_POSIX_TARGET)
 #include "pr/core_posix_vmem.h"
 #define PR_PLATFORM_VMEM_RESERVE(size) prCorePosixVmemReserve(size)
 #define PR_PLATFORM_VMEM_COMMIT(base, size) prCorePosixVmemCommit(base, size)
 #define PR_PLATFORM_VMEM_FREE(base, size) prCorePosixVmemFree(base, size)
 #endif
 
-// The default clocks, from Windows or POSIX, if the build binds none.
-#if !defined(PR_PLATFORM_NO_DEFAULT) && !defined(PR_PLATFORM_TIME_MONOTONIC_MILLISECONDS) && defined(_WIN32)
+// The default clocks, from Windows, Apple or POSIX, if the build binds none.
+#if !defined(PR_PLATFORM_TIME_PERF_NOW) && defined(PR_CORE_WINDOWS_TARGET)
 #include "pr/core_windows_time.h"
+#define PR_PLATFORM_TIME_PERF_NOW() prCoreWindowsTimePerfNow()
+#define PR_PLATFORM_TIME_PERF_NANOSECONDS(ticks) prCoreWindowsTimePerfNanoseconds(ticks)
+#define PR_PLATFORM_TIME_PERF_MILLISECONDS(ticks) prCoreWindowsTimePerfMilliseconds(ticks)
 #define PR_PLATFORM_TIME_MONOTONIC_MILLISECONDS() prCoreWindowsTimeMonotonicMilliseconds()
-#define PR_PLATFORM_TIME_WALL_MILLISECONDS() prCoreWindowsTimeWallMilliseconds()
-#define PR_PLATFORM_TIME_LOCAL_OFFSET_MILLISECONDS(wall) prCoreWindowsTimeLocalOffsetMilliseconds(wall)
-#elif !defined(PR_PLATFORM_NO_DEFAULT) && !defined(PR_PLATFORM_TIME_MONOTONIC_MILLISECONDS)
+#elif !defined(PR_PLATFORM_TIME_PERF_NOW) && defined(__APPLE__)
+#include "pr/core_apple_time.h"
+#define PR_PLATFORM_TIME_PERF_NOW() prCoreAppleTimePerfNow()
+#define PR_PLATFORM_TIME_PERF_NANOSECONDS(ticks) prCoreAppleTimePerfNanoseconds(ticks)
+#define PR_PLATFORM_TIME_PERF_MILLISECONDS(ticks) prCoreAppleTimePerfMilliseconds(ticks)
+#define PR_PLATFORM_TIME_MONOTONIC_MILLISECONDS() prCoreAppleTimeMonotonicMilliseconds()
+#elif !defined(PR_PLATFORM_TIME_PERF_NOW) && defined(PR_CORE_POSIX_TARGET)
 #include "pr/core_posix_time.h"
+#define PR_PLATFORM_TIME_PERF_NOW() prCorePosixTimePerfNow()
+#define PR_PLATFORM_TIME_PERF_NANOSECONDS(ticks) prCorePosixTimePerfNanoseconds(ticks)
+#define PR_PLATFORM_TIME_PERF_MILLISECONDS(ticks) prCorePosixTimePerfMilliseconds(ticks)
 #define PR_PLATFORM_TIME_MONOTONIC_MILLISECONDS() prCorePosixTimeMonotonicMilliseconds()
-#define PR_PLATFORM_TIME_WALL_MILLISECONDS() prCorePosixTimeWallMilliseconds()
-#define PR_PLATFORM_TIME_LOCAL_OFFSET_MILLISECONDS(wall) prCorePosixTimeLocalOffsetMilliseconds(wall)
+#endif
+
+// The default system time, from Windows or POSIX, if the build binds none.
+#if !defined(PR_PLATFORM_TIME_SYSTEM_NOW) && defined(PR_CORE_WINDOWS_TARGET)
+#include "pr/core_windows_time.h"
+#define PR_PLATFORM_TIME_SYSTEM_NOW() prCoreWindowsTimeSystemNow()
+#define PR_PLATFORM_TIME_LOCAL_OFFSET_SECONDS(time) prCoreWindowsTimeLocalOffsetSeconds(time)
+#elif !defined(PR_PLATFORM_TIME_SYSTEM_NOW) && defined(PR_CORE_POSIX_TARGET)
+#include "pr/core_posix_time.h"
+#define PR_PLATFORM_TIME_SYSTEM_NOW() prCorePosixTimeSystemNow()
+#define PR_PLATFORM_TIME_LOCAL_OFFSET_SECONDS(time) prCorePosixTimeLocalOffsetSeconds(time)
 #endif
 
 // The default environment, from Windows or POSIX, if the build binds none.
-#if !defined(PR_PLATFORM_NO_DEFAULT) && !defined(PR_PLATFORM_ENVIRONMENT_VARIABLE) && defined(_WIN32)
+#if !defined(PR_PLATFORM_ENVIRONMENT_VARIABLE) && defined(PR_CORE_WINDOWS_TARGET)
 #include "pr/core_windows_environment.h"
 #define PR_PLATFORM_ENVIRONMENT_VARIABLE(name) prCoreWindowsEnvironmentVariable(name)
 #define PR_PLATFORM_ENVIRONMENT_HOST_NAME() prCoreWindowsEnvironmentHostName()
-#elif !defined(PR_PLATFORM_NO_DEFAULT) && !defined(PR_PLATFORM_ENVIRONMENT_VARIABLE)
+#elif !defined(PR_PLATFORM_ENVIRONMENT_VARIABLE) && defined(PR_CORE_POSIX_TARGET)
 #include "pr/core_posix_environment.h"
 #define PR_PLATFORM_ENVIRONMENT_VARIABLE(name) prCorePosixEnvironmentVariable(name)
 #define PR_PLATFORM_ENVIRONMENT_HOST_NAME() prCorePosixEnvironmentHostName()
 #endif
 
 // The default random bytes, from Windows or POSIX, if the build binds none.
-#if !defined(PR_PLATFORM_NO_DEFAULT) && !defined(PR_PLATFORM_RANDOM_BYTES) && defined(_WIN32)
+#if !defined(PR_PLATFORM_RANDOM_BYTES) && defined(PR_CORE_WINDOWS_TARGET)
 #include "pr/core_windows_random.h"
 #define PR_PLATFORM_RANDOM_BYTES(out, size) prCoreWindowsRandomBytes(out, size)
-#elif !defined(PR_PLATFORM_NO_DEFAULT) && !defined(PR_PLATFORM_RANDOM_BYTES)
+#elif !defined(PR_PLATFORM_RANDOM_BYTES) && defined(PR_CORE_POSIX_TARGET)
 #include "pr/core_posix_random.h"
 #define PR_PLATFORM_RANDOM_BYTES(out, size) prCorePosixRandomBytes(out, size)
 #endif

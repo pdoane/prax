@@ -9,25 +9,30 @@ using namespace browser;
 
 namespace {
 
-// Returns the visit of `url`, titled `title`, at `time`.
-Visit visit(const char* url, const char* title, double time) {
-    return Visit{.url = url, .title = title, .time = time};
+// Returns the system time `milliseconds` after the Unix epoch.
+PrTimeSystem at(double milliseconds) {
+    return prTimeSystemFromUnixMilliseconds(milliseconds);
+}
+
+// Returns the visit of `url`, titled `title`, at `milliseconds` after the Unix epoch.
+Visit visit(const char* url, const char* title, double milliseconds) {
+    return Visit{.url = url, .title = title, .time = at(milliseconds)};
 }
 
 } // namespace
 
 TEST_CASE("the history keeps a URL's most recent visit, the most recent last, and no blank tab") {
     Array<Visit> history;
-    historyRecord(&history, "https://a.example/", "A", 1000);
-    historyRecord(&history, "https://b.example/", "", 2000);
-    historyRecord(&history, "about:blank", "", 2500);
-    historyRecord(&history, "", "", 2600);
-    historyRecord(&history, "https://a.example/", "A again", 3000);
+    historyRecord(&history, "https://a.example/", "A", at(1000));
+    historyRecord(&history, "https://b.example/", "", at(2000));
+    historyRecord(&history, "about:blank", "", at(2500));
+    historyRecord(&history, "", "", at(2600));
+    historyRecord(&history, "https://a.example/", "A again", at(3000));
     REQUIRE(history.count() == 2);
     CHECK(history[0].url == "https://b.example/");
     CHECK(history[1].url == "https://a.example/");
     CHECK(history[1].title == "A again");
-    CHECK(history[1].time == 3000);
+    CHECK(history[1].time.ticks == at(3000).ticks);
 
     // A title that comes once the page loads names the visit, and an empty one leaves it.
     CHECK(historySetTitle(&history, "https://b.example/", "B"));
@@ -35,7 +40,7 @@ TEST_CASE("the history keeps a URL's most recent visit, the most recent last, an
     CHECK_FALSE(historySetTitle(&history, "https://b.example/", ""));
     CHECK_FALSE(historySetTitle(&history, "https://c.example/", "C"));
     CHECK(history[0].title == "B");
-    CHECK(history[0].time == 2000);
+    CHECK(history[0].time.ticks == at(2000).ticks);
 
     CHECK(historyRemove(&history, "https://b.example/"));
     CHECK_FALSE(historyRemove(&history, "https://b.example/"));
@@ -46,7 +51,7 @@ TEST_CASE("the history keeps a URL's most recent visit, the most recent last, an
 TEST_CASE("the history forgets its oldest visit past its limit") {
     Array<Visit> history;
     for (uint32_t i = 0; i <= kHistoryMaxVisits; ++i)
-        historyRecord(&history, format("https://example.com/{}", i), "", double(i));
+        historyRecord(&history, format("https://example.com/{}", i), "", at(double(i)));
     REQUIRE(history.count() == kHistoryMaxVisits);
     CHECK(history[0].url == "https://example.com/1");
 }
@@ -73,10 +78,10 @@ TEST_CASE("a day is headed by its name near today, and by its weekday and date f
 }
 
 TEST_CASE("a visit's time of day is local, on a 24-hour clock") {
-    double time = 1768519800000.0;  // 2026-01-15 at 23:30 UTC
+    PrTimeSystem time = at(1768519800000.0);  // 2026-01-15 at 23:30 UTC
     CHECK(historyTimeLabel(time, 0) == "23:30");
-    CHECK(historyTimeLabel(time, 2 * 3600000.0) == "01:30");
-    CHECK(historyTimeLabel(time, -5.5 * 3600000.0) == "18:00");
+    CHECK(historyTimeLabel(time, 2 * 3600) == "01:30");
+    CHECK(historyTimeLabel(time, -5 * 3600 - 1800) == "18:00");
 }
 
 TEST_CASE("the history survives being written and read back, and text that is not an array is refused") {
@@ -90,7 +95,7 @@ TEST_CASE("the history survives being written and read back, and text that is no
     for (uint32_t i = 0; i < history.count(); ++i) {
         CHECK(read[i].url == history[i].url);
         CHECK(read[i].title == history[i].title);
-        CHECK(read[i].time == history[i].time);
+        CHECK(read[i].time.ticks == history[i].time.ticks);
     }
 
     // An entry without a URL is skipped, and a member of another type reads as missing.
@@ -98,7 +103,7 @@ TEST_CASE("the history survives being written and read back, and text that is no
     REQUIRE(read.count() == 1);
     CHECK(read[0].url == "https://a.example/");
     CHECK(read[0].title == "");
-    CHECK(read[0].time == 0);
+    CHECK(read[0].time.ticks == 0);
 
     Array<Visit> unchanged;
     unchanged.push(visit("https://kept.example/", "kept", 1));

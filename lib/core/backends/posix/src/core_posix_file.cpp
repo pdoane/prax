@@ -60,7 +60,7 @@ PrFileInfo infoOf(const struct stat& status) {
     } else {
         info.kind = S_ISDIR(status.st_mode) ? PrFileKind_Directory : PrFileKind_Other;
     }
-    info.modified = double(modified.tv_sec) * 1000.0 + double(modified.tv_nsec) / 1e6;
+    info.modified = prTimeSystemFromUnix(int64_t(modified.tv_sec), uint32_t(modified.tv_nsec));
     return info;
 }
 

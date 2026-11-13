@@ -31,8 +31,8 @@ struct WindowRun {
     PrStatus status;                // how the run ended
     PrVec2 extent;                  // of the viewport, in px
 
-    double lastFrame;               // when the last frame ended
-    double firstEvent;              // when the oldest event that no frame has taken arrived, or zero
+    PrTimePerf lastFrame;           // when the last frame ended, or zero ticks before the first
+    PrTimePerf firstEvent;          // when the oldest event that no frame has taken arrived, or zero ticks
 
     PrFontSet* fonts;
     PrTextShaper* shaper;
@@ -190,7 +190,7 @@ void start(void* context, PrApp* app, const PrAppFrame*) {
 
 PrAppOutput frame(void* context, PrApp*, const PrAppFrame* f) {
     WindowRun& w = *static_cast<WindowRun*>(context);
-    double started = prTimeMonotonicMilliseconds();
+    PrTimePerf started = prTimePerfNow();
     // A lost device is made again, with everything on it. The frame draws from the model, as every frame does.
     if (w.device != nullptr && prGpuDeviceIsLost(w.device))
         closeDevice(w);
@@ -218,11 +218,11 @@ PrAppOutput frame(void* context, PrApp*, const PrAppFrame* f) {
         .preferences = f->preferences,
     };
     w.extent = f->extent;
-    double waited = prTimeMonotonicMilliseconds();
+    PrTimePerf waited = prTimePerfNow();
     uint32_t rounds = prUiFrame(w.ui, &desc, build, &w);
     if (w.desc.laidOut != nullptr && w.desc.laidOut(w.desc.context, w.handle))
         prUiRequestFrame(w.ui);
-    double built = prTimeMonotonicMilliseconds();
+    PrTimePerf built = prTimePerfNow();
 
     // The tree's scene plays into the list in target pixels, each scroll container at the tree's offset for it. The
     // pass clears to the canvas's color, so the list leaves the canvas unfilled.
@@ -235,7 +235,7 @@ PrAppOutput frame(void* context, PrApp*, const PrAppFrame* f) {
     options.scrolls = w.scrolls.data;
     options.scrollCount = w.scrolls.count;
     options.canvasFilled = true;
-    double sceneTaken = prTimeMonotonicMilliseconds();
+    PrTimePerf sceneTaken = prTimePerfNow();
     float ratio = f->display.pixelRatio;
     prDrawListClear(w.list);
     prDrawListPushTransformAffine2(w.list, prAffine2Scale(PrVec2{ratio, ratio}));
@@ -244,36 +244,36 @@ PrAppOutput frame(void* context, PrApp*, const PrAppFrame* f) {
     PrColor canvas = prColorFromColor16(prLayoutSceneCanvasColor(scene));
 
     PrUVec2 extent{uint32_t(f->extent.x * ratio + 0.5f), uint32_t(f->extent.y * ratio + 0.5f)};
-    double played = prTimeMonotonicMilliseconds();
+    PrTimePerf played = prTimePerfNow();
     if (extent.x != 0 && extent.y != 0)
         render(w, extent, PrColor{canvas.r * canvas.a, canvas.g * canvas.a, canvas.b * canvas.a, canvas.a}, f->display);
     if (w.desc.drawn != nullptr)
         w.desc.drawn(w.desc.context, w.handle, w.list, extent, canvas);
-    double end = prTimeMonotonicMilliseconds();
+    PrTimePerf end = prTimePerfNow();
     if (w.desc.trace != nullptr) {
         PrStudioWindowFrameTimes times{
             .extent = f->extent,
             .rounds = rounds,
-            .total = end - started,
-            .wait = waited - started,
-            .build = built - waited,
-            .scene = sceneTaken - built,
-            .play = played - sceneTaken,
-            .render = end - played,
-            .gap = w.lastFrame != 0 ? started - w.lastFrame : 0,
-            .inputWait = w.firstEvent != 0 ? started - w.firstEvent : 0,
+            .total = prTimePerfMilliseconds(started, end),
+            .wait = prTimePerfMilliseconds(started, waited),
+            .build = prTimePerfMilliseconds(waited, built),
+            .scene = prTimePerfMilliseconds(built, sceneTaken),
+            .play = prTimePerfMilliseconds(sceneTaken, played),
+            .render = prTimePerfMilliseconds(played, end),
+            .gap = w.lastFrame.ticks != 0 ? prTimePerfMilliseconds(w.lastFrame, started) : 0,
+            .inputWait = w.firstEvent.ticks != 0 ? prTimePerfMilliseconds(w.firstEvent, started) : 0,
         };
         w.desc.trace(w.desc.context, &times);
     }
     w.lastFrame = end;
-    w.firstEvent = 0;
+    w.firstEvent = PrTimePerf{};
     return prUiOutput(w.ui);
 }
 
 void event(void* context, PrApp* app, const PrAppEvent* e) {
     WindowRun& w = *static_cast<WindowRun*>(context);
-    if (w.firstEvent == 0)
-        w.firstEvent = prTimeMonotonicMilliseconds();
+    if (w.firstEvent.ticks == 0)
+        w.firstEvent = prTimePerfNow();
     if (w.desc.event == nullptr || !w.desc.event(w.desc.context, w.handle, e))
         prUiPushEvent(w.ui, e);
     prAppRequestFrame(app);

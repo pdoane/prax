@@ -11,6 +11,7 @@
 #include "pr/kit_collection.h"
 #include "pr/string.h"
 #include "pr/string_view.h"
+#include "pr/time.h"
 
 #include <stdint.h>
 
@@ -24,7 +25,7 @@ using namespace pr;
 struct GalleryEntry {
     String path;
     String filename;
-    double modified = 0;        // milliseconds since the Unix epoch
+    PrTimeSystem modified{};
 };
 
 // The images of a directory, newest first, and the browser's selection of them. `selected` holds a flag for each entry,

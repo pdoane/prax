@@ -56,10 +56,10 @@ void playChrome(Browser& b, float ratio) {
 // Presenting
 
 // Prints the frames' statistics if a second has passed since they were last printed, and starts counting again.
-void printStats(Browser& b, double now) {
-    if (b.statsSince == 0)
+void printStats(Browser& b, PrTimePerf now) {
+    if (b.statsSince.ticks == 0)
         b.statsSince = now;
-    double elapsed = now - b.statsSince;
+    double elapsed = prTimePerfMilliseconds(b.statsSince, now);
     if (elapsed < 1000)
         return;
     uint32_t frames = b.statsFrames;
@@ -82,11 +82,11 @@ void printStats(Browser& b, double now) {
 void render(Browser& b, PrDrawList* PR_NULLABLE page, PrColor canvas) {
     PrGpuTexture drawable{};
     PrGpuCommands* commands = nullptr;
-    double began = prTimeMonotonicMilliseconds();
+    PrTimePerf began = prTimePerfNow();
     if (b.extent.x == 0 || b.extent.y == 0 || prGpuSwapChainAcquire(b.swapChain, b.extent, &drawable) != PrStatus_Ok ||
             !prGpuCommandsBegin(b.device, nullptr, &commands))
         return;
-    double acquired = prTimeMonotonicMilliseconds();
+    PrTimePerf acquired = prTimePerfNow();
     PrGpuSwapChainInfo info = prGpuSwapChainInfo(b.swapChain);
     bool mapped = info.format != PrGpuFormat_Bgra8 || info.space != PrColorSpace_Srgb;
     if (mapped) {
@@ -135,10 +135,10 @@ void render(Browser& b, PrDrawList* PR_NULLABLE page, PrColor canvas) {
     }
     prGpuCommandsSubmit(commands);
     if (b.stats) {
-        double now = prTimeMonotonicMilliseconds();
+        PrTimePerf now = prTimePerfNow();
         ++b.statsFrames;
-        b.statsCpu += now - began;
-        b.statsWait += acquired - began;
+        b.statsCpu += prTimePerfMilliseconds(began, now);
+        b.statsWait += prTimePerfMilliseconds(began, acquired);
         b.statsLast = prDrawFrameStats(page != nullptr ? b.pageFrame : b.chromeFrame);
         printStats(b, now);
     }

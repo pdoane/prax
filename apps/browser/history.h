@@ -6,6 +6,7 @@
 #include "pr/base.h"
 #include "pr/string.h"
 #include "pr/string_view.h"
+#include "pr/time.h"
 
 #include <stdint.h>
 
@@ -19,14 +20,14 @@ using namespace pr;
 struct Visit {
     String url;
     String title;              // the page's title at the visit, or empty if it had none
-    double time = 0;           // when the visit was, in milliseconds since the Unix epoch
+    PrTimeSystem time{};       // when the visit was
 };
 
 // The most visits that the history keeps. Recording a visit past it forgets the oldest.
 constexpr size_t kHistoryMaxVisits = 5000;
 
 // Records a visit to `url` with `title` at `time`, which becomes the most recent visit. A blank URL is not recorded.
-void historyRecord(Array<Visit>* history, PrStringView url, PrStringView title, double time);
+void historyRecord(Array<Visit>* history, PrStringView url, PrStringView title, PrTimeSystem time);
 
 // Sets the title of the visit to `url`, which a page names once its document has loaded. Does nothing if the history
 // has no visit to `url`, or if `title` is empty. Returns true if the visit's title changed.
@@ -38,18 +39,18 @@ bool historyRemove(Array<Visit>* history, PrStringView url);
 // Returns the indices of the visits whose URL or title holds `query` (addressMatches), the most recent first.
 Array<uint32_t> historySearch(const Array<Visit>& history, PrStringView query);
 
-// Returns the heading of a day (pr/time_date.h): "Today" or "Yesterday" relative to `today`, or else the weekday and
+// Returns the heading of a day (pr/date_time.h): "Today" or "Yesterday" relative to `today`, or else the weekday and
 // the date, as in "Thursday, October 29, 2026".
 String historyDayLabel(int64_t day, int64_t today);
 
-// Returns the time of day of `time` on a 24-hour clock, as in "09:05", as a clock `offset` milliseconds ahead of UTC
-// shows it (prTimeDaysFromMilliseconds).
-String historyTimeLabel(double time, double offset);
+// Returns the time of day of `time` on a 24-hour clock, as in "09:05", as a clock `offset` seconds ahead of UTC shows
+// it (prDateTimeFromSystem).
+String historyTimeLabel(PrTimeSystem time, int32_t offset);
 
 // Reads visits from JSON `text`: an array of objects whose members `url` and `title` are strings and whose member
-// `time` is a number. An object without a URL is skipped, as is a member of another type. The visits are kept in the
-// order of the array, oldest first, and a later visit to a URL replaces an earlier one. Returns false if the text is
-// not such an array, and leaves `out` unchanged in that case.
+// `time` is a number of milliseconds since the Unix epoch. An object without a URL is skipped, as is a member of
+// another type. The visits are kept in the order of the array, oldest first, and a later visit to a URL replaces an
+// earlier one. Returns false if the text is not such an array, and leaves `out` unchanged in that case.
 bool historyParse(PrStringView text, Array<Visit>* out);
 
 // Returns the visits as the JSON text that historyParse reads.
