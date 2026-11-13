@@ -14,11 +14,6 @@ namespace pr_impl {
 
 namespace {
 
-// Returns a string as a view, or the null view for the null string.
-PrStringView viewOf(const PrRawString* text) {
-    return prRawStringIsNull(text) ? PrStringView{} : prRawStringView(text);
-}
-
 void resetReaction(DomCustomReactionEntry* reaction) {
     prRawStringReset(&reaction->name);
     prRawStringReset(&reaction->oldValue);
@@ -51,9 +46,9 @@ void runReactions(PrDomElement* element) {
             upgrade(element, reaction.upgrade, registry);
         } else if (custom->definition != nullptr && custom->registry != nullptr) {
             PrDomCustomReaction arguments = {
-                reaction.callback, viewOf(&reaction.name),
-                viewOf(&reaction.oldValue), viewOf(&reaction.value),
-                viewOf(&reaction.space),
+                reaction.callback, prRawStringView(&reaction.name),
+                prRawStringView(&reaction.oldValue), prRawStringView(&reaction.value),
+                prRawStringView(&reaction.space),
                 reaction.oldDocument,
                 reaction.newDocument,
             };
@@ -287,7 +282,7 @@ void domCustomTryUpgrade(PrDomElement* element) {
             element->customState != PrDomCustomElementState_Undefined)
         return;
     const DomCustomElement* custom = element->state != nullptr ? element->state->custom : nullptr;
-    PrStringView is = custom != nullptr ? viewOf(&custom->is) : PrStringView{};
+    PrStringView is = custom != nullptr ? prRawStringView(&custom->is) : PrStringView{};
     void* definition = registry->lookup(registry->context, domElementName(element), is);
     if (definition != nullptr)
         enqueueUpgrade(element, definition, registry);

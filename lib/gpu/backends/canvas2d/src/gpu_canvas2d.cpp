@@ -14,7 +14,7 @@
 // order, or in BGRA order if `bgra` is set.
 extern "C" bool prGpuCanvas2dAvailable(void);
 extern "C" uint32_t prGpuCanvas2dCreateCanvas(uint32_t width, uint32_t height);
-extern "C" uint32_t prGpuCanvas2dAttach(const char* selector, uint32_t width, uint32_t height);
+extern "C" uint32_t prGpuCanvas2dAttach(const char* PR_NULLABLE selector, size_t selectorSize, uint32_t width, uint32_t height);
 extern "C" void prGpuCanvas2dRelease(uint32_t canvas);
 extern "C" uint32_t prGpuCanvas2dImport(uint32_t image, uint32_t* width, uint32_t* height);
 extern "C" void prGpuCanvas2dClear(uint32_t canvas, float r, float g, float b, float a);
@@ -85,8 +85,8 @@ PrStatus textureImport(PrGpuDevice* device, const PrGpuImport* image, PrGpuRelea
 // The functions of the device's swap chains, which their creation installs.
 extern const PrGpuSwapChain kSwapChainFunctions;
 
-// A swap chain: the page's canvas, by its selector with its NUL, and the texture that the canvas is. The texture is
-// made again when the frame's extent changes.
+// A swap chain: the page's canvas, by its selector, and the texture that the canvas is. The texture is made again when
+// the frame's extent changes.
 struct SwapChain : GpuSharedSwapChain {
     PrRawString selector;
     PrGpuTexture texture;
@@ -108,9 +108,7 @@ PrStatus swapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const
     static_cast<PrGpuSwapChain&>(*s) = kSwapChainFunctions;
     s->device = device;
     s->info = PrGpuSwapChainInfo{.format = PrGpuFormat_Rgba8, .space = PrColorSpace_Srgb};
-    // The selector is kept with its NUL, which the page reads up to.
     s->selector = prRawStringCopy(static_cast<const char*>(surface->handle));
-    prRawStringAppend(&s->selector, PrStringView{"", 1});
     *out = s;
     return PrStatus_Ok;
 }
@@ -142,7 +140,8 @@ PrStatus swapChainAcquire(PrGpuSwapChain* swapChain, PrUVec2 extent, PrGpuTextur
         if (status != PrStatus_Ok)
             return status;
         // Sizing the page's canvas to the extent clears it, as the new texture's texels are clear.
-        uint32_t canvas = prGpuCanvas2dAttach(prRawStringView(&s->selector).data, extent.x, extent.y);
+        PrStringView selector = prRawStringView(&s->selector);
+        uint32_t canvas = prGpuCanvas2dAttach(selector.data, selector.size, extent.x, extent.y);
         if (canvas == 0) {
             prGpuTextureDestroy(device, s->texture);
             s->texture = PrGpuTexture{};

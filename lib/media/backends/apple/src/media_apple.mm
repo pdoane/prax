@@ -3,6 +3,7 @@
 #include "pr/media_apple.h"
 
 #include "pr/alloc.h"
+#include "pr/apple_string.h"
 #include "pr/ascii.h"
 #include "pr/assert.h"
 #include "pr/count_of.h"
@@ -320,7 +321,7 @@ void decodeAudio(AppleDecoder* d) {
 }
 
 PrMediaSupport supportsType(PrMediaCodec*, PrStringView type) {
-    NSString* text = [[NSString alloc] initWithBytes:type.data length:type.size encoding:NSUTF8StringEncoding];
+    NSString* text = prAppleNSString(type);
     if (text == nil || ![AVURLAsset isPlayableExtendedMIMEType:text])
         return PrMediaSupport_No;
     // A type that names its codecs, which the system plays, is probably playable.
@@ -585,8 +586,7 @@ PrStatus videoDecoderCreate(const PrMediaTrackInfo* track, PrMediaSampleDecoder*
         return PrStatus_NotSupported;
     @autoreleasepool {
         NSDictionary* atoms = @{
-            [NSString stringWithUTF8String:codec->record]: [NSData dataWithBytes:track->config.data
-                length:track->config.size],
+            prAppleNSString(codec->record): [NSData dataWithBytes:track->config.data length:track->config.size],
         };
         NSDictionary* extensions = @{(id)kCMFormatDescriptionExtension_SampleDescriptionExtensionAtoms: atoms};
         CMVideoFormatDescriptionRef format = nullptr;

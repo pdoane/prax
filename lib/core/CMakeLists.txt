@@ -84,6 +84,19 @@ if (PR_PLATFORM_MIMALLOC OR PR_DEVELOP)
     target_link_libraries(pr_core PRIVATE mimalloc-static)
 endif()
 
+# Core's helpers for one platform (docs/platform.md), which it builds and exposes on that platform only.
+if (WIN32)
+    target_sources(pr_core PRIVATE platform/windows/src/windows_string.cpp)
+    pr_headers(pr_core PUBLIC platform/windows/include)
+elseif (EMSCRIPTEN)
+    pr_js_library(pr_core platform/web/src/web_string.js)
+elseif (APPLE)
+    target_sources(pr_core PRIVATE platform/apple/src/apple_string.mm)
+    set_source_files_properties(platform/apple/src/apple_string.mm PROPERTIES COMPILE_OPTIONS -fobjc-arc)
+    pr_headers(pr_core PUBLIC platform/apple/include)
+    target_link_libraries(pr_core PUBLIC "-framework Foundation")
+endif()
+
 # The Windows family serves the groups other than memory on Windows, and the POSIX family on the Unix-like targets,
 # except the clocks of Apple's targets, which the Apple family serves. Another target has no family for them.
 if (WIN32)
@@ -196,7 +209,13 @@ if (PR_DEVELOP)
     )
     target_compile_definitions(core_tests PRIVATE PR_CORE_TEST_DIR="${CMAKE_CURRENT_BINARY_DIR}/core_tests_files")
     if (WIN32)
-        target_sources(core_tests PRIVATE backends/windows/tests/test_core_windows_file.cpp)
+        target_sources(core_tests PRIVATE
+            backends/windows/tests/test_core_windows_file.cpp
+            platform/windows/tests/test_windows_string.cpp
+        )
+    elseif (APPLE)
+        target_sources(core_tests PRIVATE platform/apple/tests/test_apple_string.mm)
+        set_source_files_properties(platform/apple/tests/test_apple_string.mm PROPERTIES COMPILE_OPTIONS -fobjc-arc)
     endif()
 
     pr_module_tests(core_cpp

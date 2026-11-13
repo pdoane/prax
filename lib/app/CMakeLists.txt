@@ -42,7 +42,6 @@ if (PR_APP_WIN32)
     target_sources(pr_app PRIVATE
         backends/win32/src/app_win32.cpp
         backends/win32/src/win32_browser.cpp
-        backends/win32/src/win32_text.cpp
     )
     pr_headers(pr_app PUBLIC backends/win32/include)
     target_compile_definitions(pr_app PRIVATE PR_APP_HAS_WIN32)

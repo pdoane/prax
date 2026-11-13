@@ -4,6 +4,7 @@
 
 #include "pr/align.h"
 #include "pr/alloc.h"
+#include "pr/apple_string.h"
 #include "pr/assert.h"
 #include "pr/integer.h"
 #include "pr/mem.h"
@@ -251,7 +252,7 @@ PrStatus bufferCreate(PrGpuDevice* device, const PrGpuBufferDesc* desc, PrGpuBuf
         if (buffer == nil)
             return PrStatus_Limit;
         if (desc->name.size != 0)
-            buffer.label = gpuMetalString(desc->name);
+            buffer.label = prAppleNSString(desc->name);
         uint32_t slot = gpuMetalResourceAdd(d, GpuMetalSlot_Buffer, buffer, buffer.gpuAddress);
         [buffer release];
         if (slot == 0)
@@ -318,7 +319,7 @@ PrStatus textureCreate(PrGpuDevice* device, const PrGpuTextureDesc* desc, PrGpuT
         if (texture == nil)
             return PrStatus_Limit;
         if (desc->name.size != 0)
-            texture.label = gpuMetalString(desc->name);
+            texture.label = prAppleNSString(desc->name);
         uint32_t slot = gpuMetalResourceAdd(d, GpuMetalSlot_Texture, texture, texture.gpuResourceID._impl);
         [texture release];
         if (slot == 0)
@@ -629,10 +630,6 @@ void gpuMetalSwapChainPresent(PrGpuSwapChain* handle, PrGpuCommands* commands) {
         return;
     gpuMetalCommandsFrom(commands)->drawables.push(GpuMetalDrawable{[sc->drawable retain], sc->transactional});
     releaseDrawable(gpuMetalDeviceFrom(device), sc);
-}
-
-NSString* gpuMetalString(PrStringView view) {
-    return [[[NSString alloc] initWithBytes:view.data length:view.size encoding:NSUTF8StringEncoding] autorelease];
 }
 
 MTLPixelFormat gpuMetalPixelFormat(PrGpuFormat format) {
@@ -1249,8 +1246,11 @@ void gpuMetalDeviceInit(GpuMetalDevice* d, id<MTLDevice> device) {
     d->swapChainCreateFn = swapChainCreate;
     d->shaderTarget = PrGpuShaderTarget_Metal;
     // The name's UTF-8 lives no longer than the autorelease pool, so the device keeps a copy.
-    if (![device.name getCString:d->adapter maxLength:sizeof(d->adapter) encoding:NSUTF8StringEncoding])
+    uint32_t size = prAppleNSStringToUtf8(device.name, d->adapter, uint32_t(sizeof(d->adapter) - 1));
+    if (size == 0 || size >= sizeof(d->adapter))
         prMemCopy(d->adapter, "Metal", sizeof("Metal"));
+    else
+        d->adapter[size] = 0;
     d->info.adapter = PrStringView{d->adapter, strlen(d->adapter)};
     // Framebuffer fetch on Apple's GPUs reads in raster order.
     d->info.features = PrGpuFeatureFlag_Timestamps | PrGpuFeatureFlag_TextureCompressionAstc |

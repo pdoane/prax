@@ -292,7 +292,6 @@ void gpuMetalSwapChainWait(PrGpuSwapChain* handle);
 void gpuMetalSwapChainPresent(PrGpuSwapChain* handle, PrGpuCommands* commands);
 
 // Returns an autoreleased string of the view.
-NSString* gpuMetalString(PrStringView view);
 
 // Conversions from the interface's values to Metal's.
 MTLPixelFormat gpuMetalPixelFormat(PrGpuFormat format);

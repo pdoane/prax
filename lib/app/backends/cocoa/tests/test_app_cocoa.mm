@@ -1,4 +1,5 @@
 #include "pr/app_cocoa.h"
+#include "pr/apple_string.h"
 #include "pr/array.h"
 #include "pr/string.h"
 #include "pr/thread.h"
@@ -158,8 +159,8 @@ TEST_CASE("a browser loads a page, runs a script in it and captures it at two pi
             [@"<svg xmlns='http://www.w3.org/2000/svg' width='40' height='20'><rect width='40' "
                 @"height='20' fill='#ff0000'/></svg>" writeToFile:path atomically:YES
                 encoding:NSUTF8StringEncoding error:nil];
-            NSString* url = [NSURL fileURLWithPath:path].absoluteString;
-            prAppBrowserLoad(b.browser, url.UTF8String, [](void* context, PrStatus status) {
+            String url = String::adopt(prAppleNSStringToRawString([NSURL fileURLWithPath:path].absoluteString));
+            prAppBrowserLoad(b.browser, url, [](void* context, PrStatus status) {
                 Browse& b = *static_cast<Browse*>(context);
                 b.loaded = status;
                 prAppBrowserEvaluate(b.browser, "document.documentElement.getAttribute('width')",
@@ -217,8 +218,8 @@ TEST_CASE("a page from a file reads the files beside it, and a promise answers o
                 error:nil];
             [@"beside" writeToFile:[directory stringByAppendingPathComponent:@"pr-browser-read.txt"] atomically:YES
                 encoding:NSUTF8StringEncoding error:nil];
-            NSString* url = [NSURL fileURLWithPath:page].absoluteString;
-            prAppBrowserLoad(b.browser, url.UTF8String, [](void* context, PrStatus status) {
+            String url = String::adopt(prAppleNSStringToRawString([NSURL fileURLWithPath:page].absoluteString));
+            prAppBrowserLoad(b.browser, url, [](void* context, PrStatus status) {
                 Browse& b = *static_cast<Browse*>(context);
                 b.loaded = status;
                 prAppBrowserEvaluate(b.browser,

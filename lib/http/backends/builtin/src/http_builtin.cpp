@@ -144,10 +144,6 @@ struct BuiltinHttp : PrHttp {
 
 constexpr PrStringView kProtocols[] = {"http/1.1"};
 
-PrStringView viewOf(const PrRawString& string) {
-    return prRawStringView(&string);
-}
-
 PrStringView bytesView(const RawArray<uint8_t>& bytes, uint32_t start) {
     return PrStringView{reinterpret_cast<const char*>(bytes.data) + start, bytes.count - start};
 }
@@ -373,7 +369,7 @@ bool parseHead(Connection* connection, Exchange* exchange) {
             continue;
         }
         prRawStringReplace(&exchange->response, head);
-        PrStringView stored = viewOf(exchange->response);
+        PrStringView stored = prRawStringView(&exchange->response);
         exchange->fields.clear();
         size_t cursor = next;
         bool chunked = false;
@@ -660,13 +656,13 @@ void resume(void* PR_NULLABLE context) {
 Connection* openConnection(BuiltinHttp* http, Exchange* exchange) {
     Connection* connection = allocZeroed<Connection>();
     connection->http = http;
-    connection->origin = prRawStringCopy(viewOf(exchange->origin));
+    connection->origin = prRawStringCopy(prRawStringView(&exchange->origin));
     PrStatus status = PrStatus_Ok;
     if (exchange->secure) {
         PrTlsSessionDesc desc{
-            .host = viewOf(exchange->target),
+            .host = prRawStringView(&exchange->target),
             .port = exchange->targetPort,
-            .serverName = viewOf(exchange->host),
+            .serverName = prRawStringView(&exchange->host),
             .protocols = kProtocols,
             .protocolCount = 1,
             .anchors = http->anchors,
@@ -679,7 +675,7 @@ Connection* openConnection(BuiltinHttp* http, Exchange* exchange) {
         connection->stream = prTlsSessionAsStream(session);
     } else {
         PrNetConnectDesc desc{
-            .host = viewOf(exchange->target),
+            .host = prRawStringView(&exchange->target),
             .port = exchange->targetPort,
             .event = connectionEvent,
             .context = connection,
@@ -700,13 +696,13 @@ void assign(Connection* connection, Exchange* exchange) {
     connection->reusable = false;
     exchange->connection = connection;
     exchange->state = ExchangeState_Head;
-    PrStringView request = viewOf(exchange->request);
+    PrStringView request = prRawStringView(&exchange->request);
     prNetStreamWrite(connection->stream, prStringBytes(request));
 }
 
 // Returns true if the rule's host matches `host`: the same name, or a subdomain of a wildcard's name.
 bool ruleMatches(const HostRule& rule, PrStringView host) {
-    PrStringView pattern = viewOf(rule.host);
+    PrStringView pattern = prRawStringView(&rule.host);
     if (!prStringStartsWith(pattern, "*."))
         return prAsciiEqualsFold(pattern, host);
     PrStringView suffix = prStringSlice(pattern, 1, pattern.size - 1);
@@ -737,12 +733,12 @@ void pump(void* PR_NULLABLE context) {
         progressed = false;
         for (uint32_t i = 0; i < http->queue.count && !progressed; ++i) {
             Exchange* exchange = http->queue.data[i];
-            PrStringView origin = viewOf(exchange->origin);
+            PrStringView origin = prRawStringView(&exchange->origin);
             Connection* idle = nullptr;
             uint32_t open = 0;
             for (uint32_t k = 0; k < http->connections.count; ++k) {
                 Connection* connection = http->connections.data[k];
-                if (viewOf(connection->origin) != origin)
+                if (prRawStringView(&connection->origin) != origin)
                     continue;
                 ++open;
                 if (connection->exchange == nullptr && idle == nullptr)
@@ -852,7 +848,7 @@ uint32_t exchangeHeaderCount(const PrHttpExchange* handle) {
 
 PrHttpHeader exchangeHeader(const PrHttpExchange* handle, uint32_t index) {
     const Exchange* exchange = static_cast<const Exchange*>(handle);
-    PrStringView stored = viewOf(exchange->response);
+    PrStringView stored = prRawStringView(&exchange->response);
     const FieldSpan& span = exchange->fields.data[index];
     return PrHttpHeader{
         prStringSlice(stored, span.nameStart, span.nameSize),
@@ -932,7 +928,7 @@ PrStatus createExchange(PrHttp* base, const PrHttpRequestDesc* desc, PrHttpExcha
     for (uint32_t i = 0; i < http->hostRules.count; ++i) {
         const HostRule& rule = http->hostRules.data[i];
         if (ruleMatches(rule, host) && (rule.port == 0 || rule.port == exchange->port)) {
-            prRawStringReplace(&exchange->target, viewOf(rule.target));
+            prRawStringReplace(&exchange->target, prRawStringView(&rule.target));
             exchange->targetPort = rule.targetPort != 0 ? rule.targetPort : exchange->port;
             break;
         }

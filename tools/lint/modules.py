@@ -24,6 +24,8 @@ class Target:
         self.include = []           # public include directories, relative to the root
         self.links = {}             # by linked target: its visibility
         self.link_lines = {}        # by linked target: the file, relative to the root, and the line that link it
+        self.engine_links = set()   # the linked targets that are named as the engine's, prax::<name>
+        self.alias = None           # the target that this name is an ALIAS of
 
 
 def calls(text):
@@ -136,6 +138,8 @@ def targets(root):
                 linked = name_of(value)
                 target(name).links.setdefault(linked, visibility)
                 target(name).link_lines.setdefault(linked, (path, line))
+                if value.startswith("prax::"):
+                    target(name).engine_links.add(linked)
 
     for path, command, arguments, line in every:
         if not arguments or "${" in arguments[0][0]:
@@ -144,7 +148,11 @@ def targets(root):
         name = arguments[0][0]
         rest = arguments[1:]
         if command in ("add_library", "add_executable"):
-            if any(value == "ALIAS" for value, _ in rest):
+            values = [value for value, _ in rest]
+            if "ALIAS" in values:
+                index = values.index("ALIAS")
+                if index + 1 < len(values):
+                    target(name).alias = name_of(values[index + 1])
                 continue
             create(name, "library" if command == "add_library" else "executable", path, line, rest, directory)
         elif command == "pr_library":

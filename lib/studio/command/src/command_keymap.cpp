@@ -26,10 +26,6 @@ struct CommandKeymap {
     RawArray<Binding*> bindings;   // in the order that they were made
 };
 
-PrStringView viewOf(const PrRawString& string) {
-    return prRawStringView(&string);
-}
-
 // A word of a chord's text that names a modifier.
 struct ModifierWord {
     PrStringView word;
@@ -197,7 +193,7 @@ void prCommandKeymapBind(PrCommandKeymap* keymap, PrCommandChord chord, PrString
     for (uint32_t i = 0; i < keymap->bindings.count; ++i) {
         Binding* binding = keymap->bindings.data[i];
         if (binding->chord.key == chord.key && binding->chord.modifiers == chord.modifiers &&
-                viewOf(binding->context) == context) {
+                prRawStringView(&binding->context) == context) {
             prRawStringReplace(&binding->commandId, commandId);
             binding->kind = kind;
             return;
@@ -218,13 +214,16 @@ uint32_t prCommandKeymapCount(const PrCommandKeymap* keymap) {
 PrCommandBinding prCommandKeymapBinding(const PrCommandKeymap* keymap, uint32_t index) {
     PR_ASSERT(index < keymap->bindings.count);
     const Binding& binding = *keymap->bindings.data[index];
-    return PrCommandBinding{binding.chord, viewOf(binding.commandId), viewOf(binding.context), binding.kind};
+    return PrCommandBinding{
+        binding.chord, prRawStringView(&binding.commandId), prRawStringView(&binding.context),
+        binding.kind,
+    };
 }
 
 bool prCommandKeymapChord(const PrCommandKeymap* keymap, PrStringView commandId, PrCommandChord* out) {
     for (uint32_t i = 0; i < keymap->bindings.count; ++i) {
         const Binding& binding = *keymap->bindings.data[i];
-        if (viewOf(binding.commandId) == commandId) {
+        if (prRawStringView(&binding.commandId) == commandId) {
             *out = binding.chord;
             return true;
         }
@@ -235,8 +234,9 @@ bool prCommandKeymapChord(const PrCommandKeymap* keymap, PrStringView commandId,
 PrStringView prCommandKeymapCommand(const PrCommandKeymap* keymap, PrCommandChord chord, PrStringView context) {
     for (uint32_t i = 0; i < keymap->bindings.count; ++i) {
         const Binding& binding = *keymap->bindings.data[i];
-        if (binding.chord.key == chord.key && binding.chord.modifiers == chord.modifiers && viewOf(binding.context) == context)
-            return viewOf(binding.commandId);
+        if (binding.chord.key == chord.key && binding.chord.modifiers == chord.modifiers &&
+                prRawStringView(&binding.context) == context)
+            return prRawStringView(&binding.commandId);
     }
     return PrStringView{};
 }

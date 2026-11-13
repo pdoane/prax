@@ -13,13 +13,15 @@
 #include <emscripten/html5.h>
 
 // The page's side of the backend (app_web.js).
-extern "C" void prAppWebSetTitle(const char* title);
-extern "C" void prAppWebSetCursor(const char* selector, const char* cursor);
-extern "C" void prAppWebCanvasOrigin(const char* selector, double* x, double* y);
-extern "C" void prAppWebOpenUrl(const char* url);
-extern "C" void prAppWebWriteClipboard(const char* text);
+extern "C" void prAppWebSetTitle(const char* PR_NULLABLE title, size_t titleSize);
+extern "C" void prAppWebSetCursor(const char* PR_NULLABLE selector, size_t selectorSize, const char* PR_NULLABLE cursor,
+    size_t cursorSize);
+extern "C" void prAppWebCanvasOrigin(const char* PR_NULLABLE selector, size_t selectorSize, double* x, double* y);
+extern "C" void prAppWebOpenUrl(const char* PR_NULLABLE url, size_t urlSize);
+extern "C" void prAppWebWriteClipboard(const char* PR_NULLABLE text, size_t textSize);
 extern "C" bool prAppWebHasFocus(void);
-extern "C" int prAppWebNotify(const char* title, const char* body, uint32_t tagLow, uint32_t tagHigh);
+extern "C" int prAppWebNotify(const char* PR_NULLABLE title, size_t titleSize, const char* PR_NULLABLE body,
+    size_t bodySize, uint32_t tagLow, uint32_t tagHigh);
 
 namespace pr_impl {
 
@@ -30,8 +32,11 @@ namespace {
 constexpr double kClickSeconds = 0.5;
 constexpr float kClickDistance = 4;
 
+// The selector of the page's canvas, as the page's side reads it.
+constexpr PrStringView kCanvas = PR_APP_WEB_CANVAS;
+
 // The page's CSS cursors, in the order of PrAppCursor.
-const char* const kCursors[PrAppCursor_Count] = {
+constexpr PrStringView kCursors[PrAppCursor_Count] = {
     "default", "none", "context-menu", "help", "pointer", "progress", "wait", "cell", "crosshair", "text",
     "vertical-text", "alias", "copy", "move", "no-drop", "not-allowed", "grab", "grabbing", "n-resize", "e-resize",
     "s-resize", "w-resize", "ne-resize", "nw-resize", "se-resize", "sw-resize", "ew-resize", "ns-resize",
@@ -147,7 +152,7 @@ PrAppModifierFlags modifiersOf(bool shift, bool control, bool alt, bool meta) {
 PrVec2 positionOf(const EmscriptenMouseEvent* event) {
     double x = 0;
     double y = 0;
-    prAppWebCanvasOrigin(PR_APP_WEB_CANVAS, &x, &y);
+    prAppWebCanvasOrigin(kCanvas.data, kCanvas.size, &x, &y);
     return PrVec2{float(event->clientX - x), float(event->clientY - y)};
 }
 
@@ -317,18 +322,15 @@ void stop(PrApp* base) {
 }
 
 void setCursor(PrApp*, PrAppCursor cursor) {
-    prAppWebSetCursor(PR_APP_WEB_CANVAS, kCursors[cursor < PrAppCursor_Count ? cursor : PrAppCursor_Arrow]);
+    PrStringView name = kCursors[cursor < PrAppCursor_Count ? cursor : PrAppCursor_Arrow];
+    prAppWebSetCursor(kCanvas.data, kCanvas.size, name.data, name.size);
 }
 
 void setTitle(PrApp* base, PrStringView title) {
     WebApp* app = appOf(base);
     prRawStringReset(&app->title);
     app->title = prRawStringCopy(title);
-    // The page reads a NUL-terminated copy.
-    PrRawString terminated = prRawStringCopy(title);
-    prRawStringAppend(&terminated, PrStringView{"", 1});
-    prAppWebSetTitle(prRawStringView(&terminated).data);
-    prRawStringReset(&terminated);
+    prAppWebSetTitle(title.data, title.size);
 }
 
 bool isActive(PrApp*) {
@@ -338,15 +340,9 @@ bool isActive(PrApp*) {
 PrStatus notificationPost(PrApp* base, const PrAppNotificationDesc* desc) {
     if (!appOf(base)->running)
         return PrStatus_InvalidState;
-    // The page reads NUL-terminated copies.
-    PrRawString title = prRawStringCopy(desc->title);
-    prRawStringAppend(&title, PrStringView{"", 1});
-    PrRawString body = prRawStringCopy(desc->body);
-    prRawStringAppend(&body, PrStringView{"", 1});
-    int shown = prAppWebNotify(prRawStringView(&title).data, prRawStringView(&body).data, uint32_t(desc->tag),
-        uint32_t(desc->tag >> 32));
-    prRawStringReset(&title);
-    prRawStringReset(&body);
+    int shown =
+        prAppWebNotify(desc->title.data, desc->title.size, desc->body.data, desc->body.size, uint32_t(desc->tag),
+            uint32_t(desc->tag >> 32));
     if (shown == 1)
         return PrStatus_NotAllowed;
     return shown == 0 ? PrStatus_Ok : PrStatus_NotSupported;
@@ -358,10 +354,7 @@ PrStatus surface(PrApp*, PrAppSurface* out) {
 }
 
 PrStatus openUrl(PrApp*, PrStringView url) {
-    PrRawString terminated = prRawStringCopy(url);
-    prRawStringAppend(&terminated, PrStringView{"", 1});
-    prAppWebOpenUrl(prRawStringView(&terminated).data);
-    prRawStringReset(&terminated);
+    prAppWebOpenUrl(url.data, url.size);
     return PrStatus_Ok;
 }
 
@@ -371,10 +364,7 @@ void requestClipboardText(PrApp* base) {
 }
 
 PrStatus setClipboardText(PrApp*, PrStringView text) {
-    PrRawString terminated = prRawStringCopy(text);
-    prRawStringAppend(&terminated, PrStringView{"", 1});
-    prAppWebWriteClipboard(prRawStringView(&terminated).data);
-    prRawStringReset(&terminated);
+    prAppWebWriteClipboard(text.data, text.size);
     return PrStatus_Ok;
 }
 

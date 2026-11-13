@@ -620,75 +620,76 @@ def check_anonymous_namespace(report, path, text):
 # A system facility's header belongs in the source that wraps the facility, because the rest of the library reaches
 # the facility only through that source.
 WRAPPERS = {
-    "lib/core/backends/mimalloc/src/core_mimalloc.cpp": {"malloc.h", "malloc/malloc.h", "stdlib.h"},
+    "lib/app/backends/web/src/app_web.cpp": {"emscripten/emscripten.h", "emscripten/eventloop.h", "emscripten/html5.h"},
+    "lib/app/backends/win32/src/app_win32.cpp": {"dwmapi.h", "dxgi1_6.h", "imm.h", "objbase.h", "shellapi.h",
+                                                 "windows.h"},
+    "lib/app/backends/win32/src/win32_browser.cpp": {"WebView2EnvironmentOptions.h", "wincodec.h", "windows.h",
+                                                     "wrl.h"},
+    "lib/audio/backends/apple/src/audio_apple.cpp": {"AudioToolbox/AudioToolbox.h", "CoreAudio/CoreAudio.h",
+                                                     "TargetConditionals.h"},
+    "lib/audio/backends/windows/src/audio_windows.cpp": {"audioclient.h", "avrt.h", "mmdeviceapi.h", "mmreg.h",
+                                                         "objbase.h", "windows.h"},
+    "lib/core/backends/apple/src/core_apple_time.cpp": {"mach/mach_time.h"},
     "lib/core/backends/libc/src/core_libc.cpp": {"malloc.h", "malloc/malloc.h", "stdlib.h"},
+    "lib/core/backends/mimalloc/src/core_mimalloc.cpp": {"malloc.h", "malloc/malloc.h", "stdlib.h"},
+    "lib/core/backends/posix/src/core_posix_environment.cpp": {"stdlib.h", "string.h", "unistd.h"},
     "lib/core/backends/posix/src/core_posix_fail.cpp": {"execinfo.h", "signal.h", "stdio.h", "stdlib.h", "string.h",
                                                         "unistd.h"},
     "lib/core/backends/posix/src/core_posix_file.cpp": {"dirent.h", "errno.h", "fcntl.h", "stdio.h", "stdlib.h",
                                                         "string.h", "sys/mman.h", "sys/stat.h", "unistd.h"},
+    "lib/core/backends/posix/src/core_posix_random.cpp": {"stdlib.h", "unistd.h"},
     "lib/core/backends/posix/src/core_posix_thread.cpp": {"errno.h", "pthread.h", "stdlib.h", "time.h", "unistd.h"},
     "lib/core/backends/posix/src/core_posix_time.cpp": {"time.h"},
-    "lib/core/backends/apple/src/core_apple_time.cpp": {"mach/mach_time.h"},
+    "lib/core/backends/posix/src/core_posix_vmem.cpp": {"sys/mman.h"},
+    "lib/core/backends/windows/src/core_windows_environment.cpp": {"stdlib.h", "windows.h"},
+    "lib/core/backends/windows/src/core_windows_fail.cpp": {"stdio.h", "windows.h"},
+    "lib/core/backends/windows/src/core_windows_file.cpp": {"stdio.h", "stdlib.h", "windows.h"},
+    "lib/core/backends/windows/src/core_windows_random.cpp": {"bcrypt.h", "windows.h"},
+    "lib/core/backends/windows/src/core_windows_thread.cpp": {"process.h", "stdlib.h", "windows.h"},
+    "lib/core/backends/windows/src/core_windows_time.cpp": {"windows.h"},
+    "lib/core/backends/windows/src/core_windows_vmem.cpp": {"windows.h"},
+    "lib/core/platform/apple/src/apple_string.mm": {"Foundation/Foundation.h"},
+    "lib/core/platform/apple/tests/test_apple_string.mm": {"Foundation/Foundation.h"},
+    "lib/core/platform/windows/src/windows_string.cpp": {"windows.h"},
+    "lib/core/quickjs_cpp/src/quickjs_callback.cpp": {"stdio.h"},
+    "lib/draw/comparisons/coregraphics/src/draw_coregraphics.cpp": {"CoreGraphics/CoreGraphics.h",
+                                                                    "CoreText/CoreText.h"},
+    "lib/font/backends/coretext/src/font_coretext.cpp": {"CoreText/CoreText.h"},
+    "lib/font/backends/directwrite/src/font_directwrite.cpp": {"dwrite_3.h", "windows.h"},
+    "lib/gpu/backends/d3d12/src/gpu_d3d12.cpp": {"d3d12.h", "dxgi1_6.h", "stdio.h", "windows.h"},
+    "lib/gpu/backends/vulkan/src/vulkan_internal.h": {"vulkan/vulkan_core.h"},
+    "lib/gpu/backends/vulkan/src/vulkan_platform.cpp": {"dlfcn.h", "stdio.h", "stdlib.h", "vulkan/vulkan_metal.h",
+                                                        "vulkan/vulkan_win32.h", "windows.h"},
+    "lib/gpu/src/gpu.cpp": {"stdlib.h"},
+    "lib/media/backends/windows/src/media_windows.cpp": {"mfapi.h", "mferror.h", "mfidl.h", "mfreadwrite.h",
+                                                         "objbase.h", "shlwapi.h", "windows.h"},
     "lib/net/backends/sockets/src/net_sockets_platform_posix.cpp": {"errno.h", "fcntl.h", "netdb.h", "netinet/in.h",
                                                                     "netinet/tcp.h", "poll.h", "sys/socket.h",
                                                                     "unistd.h"},
     "lib/net/backends/sockets/src/net_sockets_platform_windows.cpp": {"mstcpip.h", "winsock2.h", "ws2tcpip.h"},
     "lib/process/backends/posix/src/process_posix.cpp": {"crt_externs.h", "errno.h", "fcntl.h", "libproc.h", "poll.h",
-                                                        "signal.h", "spawn.h", "stdlib.h", "sys/event.h",
-                                                        "sys/ioctl.h", "sys/syscall.h", "sys/wait.h", "termios.h",
-                                                        "unistd.h"},
+                                                         "signal.h", "spawn.h", "stdlib.h", "sys/event.h",
+                                                         "sys/ioctl.h", "sys/syscall.h", "sys/wait.h", "termios.h",
+                                                         "unistd.h"},
     "lib/process/backends/windows/src/process_windows.cpp": {"windows.h"},
-    "tools/harness/net_peer.cpp": {"stdlib.h"},
+    "lib/text/backends/coretext/src/text_coretext.cpp": {"CoreText/CoreText.h"},
     "lib/tls/backends/apple/src/tls_apple.cpp": {"Network/Network.h", "Security/Security.h", "stdlib.h"},
     "lib/tls/backends/openssl/src/tls_openssl.cpp": {"openssl/err.h", "openssl/ssl.h", "openssl/x509v3.h"},
     "lib/tls/backends/schannel/src/tls_schannel.cpp": {"schannel.h", "security.h", "subauth.h", "wincrypt.h",
                                                        "windows.h"},
-    "lib/core/backends/posix/src/core_posix_vmem.cpp": {"sys/mman.h"},
-    "lib/core/backends/posix/src/core_posix_environment.cpp": {"stdlib.h", "string.h", "unistd.h"},
-    "lib/core/backends/posix/src/core_posix_random.cpp": {"stdlib.h", "unistd.h"},
-    "lib/core/backends/windows/src/core_windows_environment.cpp": {"windows.h", "stdlib.h"},
-    "lib/core/backends/windows/src/core_windows_random.cpp": {"windows.h", "bcrypt.h"},
-    "tools/harness/cpu_counters.cpp": {"TargetConditionals.h", "libproc.h", "mach/mach_time.h", "unistd.h",
+    "tools/harness/cpu_counters.cpp": {"libproc.h", "mach/mach_time.h", "TargetConditionals.h", "unistd.h",
                                        "windows.h"},
-    "lib/core/quickjs_cpp/src/quickjs_callback.cpp": {"stdio.h"},
-    "lib/text/backends/coretext/src/text_coretext.cpp": {"CoreText/CoreText.h"},
-    "lib/font/backends/coretext/src/font_coretext.cpp": {"CoreText/CoreText.h"},
-    "lib/font/backends/directwrite/src/font_directwrite.cpp": {"windows.h", "dwrite_3.h"},
-    "lib/audio/backends/apple/src/audio_apple.cpp": {"AudioToolbox/AudioToolbox.h", "CoreAudio/CoreAudio.h",
-                                                     "TargetConditionals.h"},
-    "lib/audio/backends/windows/src/audio_windows.cpp": {"windows.h", "audioclient.h", "avrt.h", "mmdeviceapi.h",
-                                                         "mmreg.h", "objbase.h"},
-    "lib/media/backends/windows/src/media_windows.cpp": {"windows.h", "mfapi.h", "mferror.h", "mfidl.h", "mfreadwrite.h",
-                                                         "objbase.h", "shlwapi.h"},
-    "tools/viewer/source_pdf.cpp": {"CoreGraphics/CoreGraphics.h"},
-    "lib/draw/comparisons/coregraphics/src/draw_coregraphics.cpp": {"CoreGraphics/CoreGraphics.h",
-                                                                 "CoreText/CoreText.h"},
     "tools/harness/harness.cpp": {"arm_neon.h", "stdarg.h", "stdio.h", "stdlib.h"},
     "tools/harness/harness_streams.cpp": {"fcntl.h", "initializer_list", "io.h", "stdio.h", "unistd.h"},
-    "lib/core/backends/windows/src/core_windows_fail.cpp": {"windows.h", "stdio.h"},
-    "lib/core/backends/windows/src/core_windows_file.cpp": {"windows.h", "stdio.h", "stdlib.h", "wchar.h"},
-    "lib/core/backends/windows/src/core_windows_thread.cpp": {"windows.h", "process.h", "stdlib.h"},
-    "lib/core/backends/windows/src/core_windows_time.cpp": {"windows.h"},
-    "lib/core/backends/windows/src/core_windows_vmem.cpp": {"windows.h"},
-    "lib/app/backends/win32/src/app_win32.cpp": {"windows.h", "dwmapi.h", "dxgi1_6.h", "imm.h", "objbase.h",
-                                                 "shellapi.h"},
-    "lib/app/backends/win32/src/win32_browser.cpp": {"windows.h", "wincodec.h", "wrl.h",
-                                                     "WebView2EnvironmentOptions.h"},
-    "lib/app/backends/win32/src/win32_text.cpp": {"windows.h"},
-    "lib/app/backends/web/src/app_web.cpp": {"emscripten/emscripten.h", "emscripten/eventloop.h",
-                                             "emscripten/html5.h"},
-    "lib/gpu/src/gpu.cpp": {"stdlib.h"},
-    "lib/gpu/backends/d3d12/src/gpu_d3d12.cpp": {"windows.h", "d3d12.h", "dxgi1_6.h", "stdio.h"},
-    "lib/gpu/backends/vulkan/src/vulkan_internal.h": {"vulkan/vulkan_core.h"},
-    "lib/gpu/backends/vulkan/src/vulkan_platform.cpp": {"windows.h", "vulkan/vulkan_win32.h", "vulkan/vulkan_metal.h",
-                                                        "dlfcn.h", "stdio.h", "stdlib.h"},
+    "tools/harness/net_peer.cpp": {"stdlib.h"},
+    "tools/viewer/source_pdf.cpp": {"CoreGraphics/CoreGraphics.h"},
     # The tests that check a backend against the facility that it wraps, which they reach directly.
     "lib/app/backends/win32/tests/test_app_win32.cpp": {"windows.h"},
     "lib/core/backends/windows/tests/test_core_windows_file.cpp": {"windows.h"},
-    "lib/gpu/backends/d3d12/tests/test_gpu_d3d12.cpp": {"windows.h", "d3d12.h"},
-    "lib/gpu/backends/vulkan/tests/test_gpu_vulkan.cpp": {"windows.h", "vulkan/vulkan_core.h"},
-    "lib/media/backends/windows/tests/test_media_windows.cpp": {"windows.h", "mfapi.h", "mfidl.h", "mfreadwrite.h",
-                                                                "objbase.h", "shlwapi.h"},
+    "lib/gpu/backends/d3d12/tests/test_gpu_d3d12.cpp": {"d3d12.h", "windows.h"},
+    "lib/gpu/backends/vulkan/tests/test_gpu_vulkan.cpp": {"vulkan/vulkan_core.h", "windows.h"},
+    "lib/media/backends/windows/tests/test_media_windows.cpp": {"mfapi.h", "mfidl.h", "mfreadwrite.h", "objbase.h",
+                                                                "shlwapi.h", "windows.h"},
     "lib/process/tests/test_process.cpp": {"sys/resource.h", "unistd.h"},
     # The platform of a build configured with a fail handler of its own, which ends the process as core's backends do.
     "lib/core/tests/test_platform_config.cpp": {"stdlib.h"},
@@ -3092,7 +3093,9 @@ def check_module_dependencies(report):
     """A target links each module whose public headers its files include, so the build's CMake states every dependency
     and a new one shows in its link lines. A public header includes only what the target links publicly, because its
     clients include it too. A target links no module that it includes nothing of, unless the module is a program's
-    implementation, such as a backend that it calls through an interface."""
+    implementation, such as a backend that it calls through an interface. Every engine target that a target links is
+    declared, on every platform, because CMake reports a missing one only when it configures the branch that links
+    it."""
     graph = modules.targets(ROOT)
     owners = modules.header_owners(ROOT, graph)
     implementations = modules.source_owners(graph)
@@ -3131,7 +3134,12 @@ def check_module_dependencies(report):
                                "a public header of %s includes pr/%s, of %s, which it links privately" %
                                (target.name, match.group(1), owner))
         for linked, (cmake, line) in sorted(target.link_lines.items()):
-            if linked in owners.values() and linked not in used and linked not in FOUNDATION:
+            declared = graph.get(linked)
+            undeclared = declared is None or (declared.kind is None and declared.alias is None)
+            if linked in target.engine_links and undeclared:
+                report.add(os.path.join(ROOT, cmake), line, "module-dependency",
+                           "%s links prax::%s, which no target is" % (target.name, linked))
+            elif linked in owners.values() and linked not in used and linked not in FOUNDATION:
                 report.add(os.path.join(ROOT, cmake), line, "module-dependency",
                            "%s links %s, but includes none of its headers" % (target.name, linked))
 

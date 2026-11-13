@@ -3,6 +3,7 @@
 #include "pr/tls_apple.h"
 
 #include "pr/alloc.h"
+#include "pr/apple_string.h"
 #include "pr/assert.h"
 #include "pr/atomic.h"
 #include "pr/mem.h"
@@ -531,7 +532,7 @@ PrStatus connectTls(PrTls* base, const PrTlsSessionDesc* desc, PrTlsSession* PR_
     session->stream.errorFn = errorSession;
     session->infoFn = infoSession;
     session->tls = tls;
-    session->serverName = CFStringCreateWithCString(nullptr, serverName, kCFStringEncodingUTF8);
+    session->serverName = prAppleStringCreate(PrStringView(serverName));
     session->anchors = anchors;
     // The client's reference, and the state handler's until the connection is cancelled.
     session->references.store(2);

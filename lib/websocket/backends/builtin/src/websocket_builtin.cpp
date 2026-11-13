@@ -93,10 +93,6 @@ struct Socket : PrWebSocket {
     PrNetError error;
 };
 
-PrStringView viewOf(const PrRawString& string) {
-    return prRawStringView(&string);
-}
-
 // Returns true if the comma-separated list `value` has `token`, without regard to ASCII case.
 bool listHas(PrStringView value, PrStringView token) {
     size_t start = 0;
@@ -251,13 +247,13 @@ bool acceptHead(Socket* socket, PrStringView head) {
         } else if (prAsciiEqualsFold(name, "connection")) {
             connection = listHas(value, "upgrade");
         } else if (prAsciiEqualsFold(name, "sec-websocket-accept")) {
-            accepted = value == viewOf(socket->accept);
+            accepted = value == prRawStringView(&socket->accept);
         } else if (prAsciiEqualsFold(name, "sec-websocket-extensions")) {
             // The client offers no extensions, so the server may use none.
             if (value.size != 0)
                 return false;
         } else if (prAsciiEqualsFold(name, "sec-websocket-protocol")) {
-            if (value.size == 0 || !listHas(viewOf(socket->offered), value) || prStringContains(value, ","))
+            if (value.size == 0 || !listHas(prRawStringView(&socket->offered), value) || prStringContains(value, ","))
                 return false;
             prRawStringReplace(&socket->protocol, value);
         }
@@ -476,7 +472,7 @@ void connect(void* PR_NULLABLE context) {
         if (socket->secure && network->tls != nullptr) {
             constexpr PrStringView kProtocols[] = {"http/1.1"};
             PrTlsSessionDesc desc{
-                .host = viewOf(socket->host),
+                .host = prRawStringView(&socket->host),
                 .port = socket->port,
                 .protocols = kProtocols,
                 .protocolCount = 1,
@@ -490,7 +486,7 @@ void connect(void* PR_NULLABLE context) {
             socket->stream = prTlsSessionAsStream(session);
         } else if (!socket->secure) {
             PrNetConnectDesc desc{
-                .host = viewOf(socket->host),
+                .host = prRawStringView(&socket->host),
                 .port = socket->port,
                 .event = streamEvent,
                 .context = socket,
@@ -498,7 +494,7 @@ void connect(void* PR_NULLABLE context) {
             status = prNetConnect(network->net, &desc, &socket->stream);
         }
         if (status == PrStatus_Ok) {
-            PrStringView request = viewOf(socket->request);
+            PrStringView request = prRawStringView(&socket->request);
             prNetStreamWrite(socket->stream, prStringBytes(request));
         } else {
             closeSocket(socket, false, kCloseAbnormal, "", socket->secure ? PrNetError_Protocol : PrNetError_Io);
@@ -562,7 +558,7 @@ void writeRequest(Socket* socket, const PrUrl* url, const PrWebSocketDesc* desc)
     prTextBufferAppend(&out, "\r\nSec-WebSocket-Version: 13\r\n");
     if (desc->protocolCount != 0) {
         prTextBufferAppend(&out, "Sec-WebSocket-Protocol: ");
-        prTextBufferAppend(&out, viewOf(socket->offered));
+        prTextBufferAppend(&out, prRawStringView(&socket->offered));
         prTextBufferAppend(&out, "\r\n");
     }
     prTextBufferAppend(&out, "\r\n");
@@ -590,7 +586,7 @@ PrWebSocketState socketState(const PrWebSocket* handle) {
 }
 
 PrStringView socketProtocol(const PrWebSocket* handle) {
-    return viewOf(static_cast<const Socket*>(handle)->protocol);
+    return prRawStringView(&static_cast<const Socket*>(handle)->protocol);
 }
 
 size_t socketBufferedAmount(const PrWebSocket* handle) {
@@ -631,7 +627,7 @@ PrWebSocketCloseInfo socketCloseInfo(const PrWebSocket* handle) {
     return PrWebSocketCloseInfo{
         .wasClean = socket->wasClean,
         .code = socket->closeCode,
-        .reason = prRawStringIsNull(&socket->closeReason) ? PrStringView{""} : viewOf(socket->closeReason),
+        .reason = prRawStringIsNull(&socket->closeReason) ? PrStringView{""} : prRawStringView(&socket->closeReason),
         .error = socket->error,
     };
 }

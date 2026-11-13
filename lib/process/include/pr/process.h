@@ -127,8 +127,9 @@ PrProcessLauncher* PR_NULLABLE prProcessLauncherCreate(PrProcessBackend backend)
 void prProcessLauncherDestroy(PrProcessLauncher* PR_NULLABLE launcher);
 
 // Starts the program that `desc` names and writes its process to `*out`. Returns NotFound if the program cannot be
-// found or started, Io if the backend cannot make its pipes or terminal, and NotSupported if the launcher cannot start
-// programs, or cannot start them on a terminal. On failure, `*out` is null.
+// found or started, Io if the backend cannot make its pipes or terminal, InvalidData if it cannot convert a string of
+// `desc` to the system's, and NotSupported if the launcher cannot start programs, or cannot start them on a terminal.
+// On failure, `*out` is null.
 PrStatus prProcessLaunch(PrProcessLauncher* launcher, const PrProcessDesc* desc, PrProcess* PR_NULLABLE* PR_NONNULL out);
 
 // Ends the process if it is still running, as prProcessKill does, waits for it to exit, and frees it. The wake function

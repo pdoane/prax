@@ -8,6 +8,7 @@
 #include "pr/text_coretext.h"
 
 #include "pr/alloc.h"
+#include "pr/apple_string.h"
 #include "pr/raw_array.h"
 #include "pr/sort.h"
 #include "pr/utf8.h"
@@ -165,8 +166,7 @@ CTFontRef featuredFont(CtBackend* c, const PrTextRun* run, CTFontRef font, uint6
             continue;
         const PrTextFeature& f = run->features[i];
         char tag[4] = {char(f.tag >> 24), char(f.tag >> 16), char(f.tag >> 8), char(f.tag)};
-        CFStringRef name = CFStringCreateWithBytes(nullptr, reinterpret_cast<const UInt8*>(tag), 4,
-            kCFStringEncodingASCII, false);
+        CFStringRef name = prAppleStringCreate(PrStringView{tag, 4});
         CFNumberRef value = numberOf(f.value);
         const void* keys[] = {kCTFontOpenTypeFeatureTag, kCTFontOpenTypeFeatureValue};
         const void* values[] = {name, value};
@@ -213,10 +213,11 @@ CFAttributedStringRef createText(CtBackend* c, const PrTextRun* run, CTFontRef f
     if (run->locale != 0) {
         char tag[kPrLocaleMaxTag];
         uint32_t size = prLocaleTag(run->locale, tag);
-        CFStringRef language = CFStringCreateWithBytes(nullptr, reinterpret_cast<const UInt8*>(tag), CFIndex(size),
-            kCFStringEncodingUTF8, false);
-        CFAttributedStringSetAttribute(text, all, kCTLanguageAttributeName, language);
-        CFRelease(language);
+        CFStringRef language = prAppleStringCreate(PrStringView{tag, size});
+        if (language != nullptr) {
+            CFAttributedStringSetAttribute(text, all, kCTLanguageAttributeName, language);
+            CFRelease(language);
+        }
     }
     // Each stretch of text between the ends of features gets a font with every feature that covers it.
     uint32_t featureCount = run->featureCount < 64 ? run->featureCount : 64;

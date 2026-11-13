@@ -76,3 +76,16 @@ development and the benchmarks.
 A family for one platform, such as `apple`, `linux`, `windows` or `wasm`, holds what that platform does its own way. On
 that target, its defaults replace the shared family's for the groups it implements. `lib/core/src/config.h` chooses
 each group's default by target. A target that has no default for a group binds the group in its configuration.
+
+## Platform helpers
+
+Core also provides helpers for one platform under `lib/core/platform/<platform>`, which it builds and exposes on that
+platform only. A helper serves any code that calls that platform's own API, such as the backends of every library for
+that platform, and binds no group. A helper is not a backend: what it does has no other implementation to choose, so a
+library that includes it depends on core and on nothing that a program could replace. Its header and functions are
+named for the platform: `pr/windows_string.h` converts between UTF-8 and the UTF-16 of Windows' wide-character
+functions, `pr/apple_string.h` between UTF-8 and the CFString and NSString of Apple's frameworks and between paths and
+file URLs, and on the web `prWebString`, of `web_string.js`, makes a page's string of a view that a JavaScript library
+receives as its pointer and its size. A helper's header is C, as core's are, and may add C++ and Objective-C forms for
+those languages' callers. A helper calls the platform for what the platform does, as these call its own conversions,
+rather than reimplementing it.

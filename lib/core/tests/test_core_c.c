@@ -12,6 +12,7 @@
 #include "pr/core_windows_thread.h"
 #include "pr/core_windows_time.h"
 #include "pr/core_windows_vmem.h"
+#include "pr/windows_string.h"
 #else
 #include "pr/core_posix_fail.h"
 #include "pr/core_posix_file.h"
@@ -21,6 +22,7 @@
 #include "pr/core_posix_vmem.h"
 #endif
 #if defined(__APPLE__)
+#include "pr/apple_string.h"
 #include "pr/core_apple_time.h"
 #endif
 #include "pr/date_time.h"

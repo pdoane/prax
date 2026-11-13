@@ -16,6 +16,7 @@
 #include "pr/gpu_metal4.h"
 
 #include "pr/alloc.h"
+#include "pr/apple_string.h"
 #include "pr/assert.h"
 #include "pr/mem.h"
 
@@ -183,7 +184,7 @@ void destroyDevice(PrGpuDevice* device) {
 
 MTL4LibraryFunctionDescriptor* functionDescriptor(const PrGpuShaderLibrary* library, const PrGpuShaderEntry* entry) {
     MTL4LibraryFunctionDescriptor* f = [[MTL4LibraryFunctionDescriptor new] autorelease];
-    f.name = gpuMetalString(entry->name);
+    f.name = prAppleNSString(entry->name);
     f.library = static_cast<const GpuMetalLibrary*>(library)->library;
     return f;
 }
@@ -199,7 +200,7 @@ PrStatus graphicsPipelineCreate(PrGpuDevice* device, const PrGpuGraphicsPipeline
         pd.rasterSampleCount = desc->formats.samples;
         pd.inputPrimitiveTopology = gpuMetalTopologyClass(desc->topology);
         if (desc->name.size != 0)
-            pd.label = gpuMetalString(desc->name);
+            pd.label = prAppleNSString(desc->name);
         for (uint8_t i = 0; i < desc->formats.colorCount; ++i) {
             MTL4RenderPipelineColorAttachmentDescriptor* a = pd.colorAttachments[i];
             const PrGpuBlend& blend = desc->blend[i];
@@ -233,7 +234,7 @@ PrStatus computePipelineCreate(PrGpuDevice* device, const PrGpuShaderLibrary* li
         MTL4ComputePipelineDescriptor* pd = [[MTL4ComputePipelineDescriptor new] autorelease];
         pd.computeFunctionDescriptor = functionDescriptor(library, compute);
         if (name.size != 0)
-            pd.label = gpuMetalString(name);
+            pd.label = prAppleNSString(name);
         NSError* error = nil;
         id<MTLComputePipelineState> state = [d->compiler newComputePipelineStateWithDescriptor:pd
             compilerTaskOptions:nil error:&error];
@@ -401,7 +402,7 @@ void commandsCopyTextureToBuffer(PrGpuCommands* commands, PrGpuTexture source,
 
 void commandsPushGroup(PrGpuCommands* commands, PrStringView name) {
     @autoreleasepool {
-        [commandsFrom(commands)->buffer pushDebugGroup:gpuMetalString(name)];
+        [commandsFrom(commands)->buffer pushDebugGroup:prAppleNSString(name)];
     }
 }
 
@@ -537,7 +538,7 @@ PrGpuPass* passBegin(PrGpuCommands* commands, const PrGpuPassDesc* desc) {
             endTail(c);
             pass->encoder = [[c->buffer renderCommandEncoderWithDescriptor:rp] retain];
             if (desc->name.size != 0)
-                [pass->encoder setLabel:gpuMetalString(desc->name)];
+                [pass->encoder setLabel:prAppleNSString(desc->name)];
         }
         passBind(c, pass);
         c->pass = pass;

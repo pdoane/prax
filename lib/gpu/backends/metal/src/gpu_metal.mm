@@ -22,6 +22,7 @@
 #include "pr/gpu_metal.h"
 
 #include "pr/alloc.h"
+#include "pr/apple_string.h"
 #include "pr/assert.h"
 
 #include "gpu/backends/shared/src/gpu_shared_metal.h"
@@ -169,13 +170,13 @@ PrStatus graphicsPipelineCreate(PrGpuDevice* device, const PrGpuGraphicsPipeline
     @autoreleasepool {
         id<MTLLibrary> library = static_cast<const GpuMetalLibrary*>(desc->library)->library;
         MTLRenderPipelineDescriptor* pd = [[MTLRenderPipelineDescriptor new] autorelease];
-        pd.vertexFunction = [[library newFunctionWithName:gpuMetalString(vertex->name)] autorelease];
+        pd.vertexFunction = [[library newFunctionWithName:prAppleNSString(vertex->name)] autorelease];
         if (fragment != nullptr)
-            pd.fragmentFunction = [[library newFunctionWithName:gpuMetalString(fragment->name)] autorelease];
+            pd.fragmentFunction = [[library newFunctionWithName:prAppleNSString(fragment->name)] autorelease];
         pd.rasterSampleCount = desc->formats.samples;
         pd.inputPrimitiveTopology = gpuMetalTopologyClass(desc->topology);
         if (desc->name.size != 0)
-            pd.label = gpuMetalString(desc->name);
+            pd.label = prAppleNSString(desc->name);
         for (uint8_t i = 0; i < desc->formats.colorCount; ++i) {
             MTLRenderPipelineColorAttachmentDescriptor* a = pd.colorAttachments[i];
             const PrGpuBlend& blend = desc->blend[i];
@@ -212,9 +213,9 @@ PrStatus computePipelineCreate(PrGpuDevice* device, const PrGpuShaderLibrary* li
     @autoreleasepool {
         MTLComputePipelineDescriptor* pd = [[MTLComputePipelineDescriptor new] autorelease];
         id<MTLLibrary> shaders = static_cast<const GpuMetalLibrary*>(library)->library;
-        pd.computeFunction = [[shaders newFunctionWithName:gpuMetalString(compute->name)] autorelease];
+        pd.computeFunction = [[shaders newFunctionWithName:prAppleNSString(compute->name)] autorelease];
         if (name.size != 0)
-            pd.label = gpuMetalString(name);
+            pd.label = prAppleNSString(name);
         NSError* error = nil;
         id<MTLComputePipelineState> state = [d->device newComputePipelineStateWithDescriptor:pd
             options:MTLPipelineOptionNone reflection:nil error:&error];
@@ -398,11 +399,11 @@ void commandsPushGroup(PrGpuCommands* commands, PrStringView name) {
     Commands* c = commandsFrom(commands);
     @autoreleasepool {
         if (c->pass != nullptr) {
-            [passEncoder(c->pass) pushDebugGroup:gpuMetalString(name)];
+            [passEncoder(c->pass) pushDebugGroup:prAppleNSString(name)];
             ++c->passGroups;
         } else {
             endEncoders(d, c);
-            [c->buffer pushDebugGroup:gpuMetalString(name)];
+            [c->buffer pushDebugGroup:prAppleNSString(name)];
         }
     }
 }
@@ -578,7 +579,7 @@ PrGpuPass* passBegin(PrGpuCommands* commands, const PrGpuPassDesc* desc) {
             endEncoders(d, c);
             pass->encoder = [[c->buffer renderCommandEncoderWithDescriptor:rp] retain];
             if (desc->name.size != 0)
-                [pass->encoder setLabel:gpuMetalString(desc->name)];
+                [pass->encoder setLabel:prAppleNSString(desc->name)];
         }
         id<MTLRenderCommandEncoder> encoder = passEncoder(pass);
         renderEncoderWait(d, encoder);
