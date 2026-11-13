@@ -9,7 +9,7 @@
 #include "core/src/config.h"
 
 #if !defined(PR_PLATFORM_ALLOC_BYTES)
-#error "a build without the default platform binds PR_PLATFORM_ALLOC_BYTES"
+#error "a target without a default for the group binds PR_PLATFORM_ALLOC_BYTES"
 #endif
 
 namespace pr_impl {

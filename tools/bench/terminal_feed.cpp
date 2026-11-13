@@ -157,12 +157,12 @@ void readInput(int tty, short revents, std::string& input) {
 // the bytes written to `written`, and returns true if every chunk was written.
 bool play(int tty, const std::vector<Chunk>& chunks, double end, double timeout, size_t* written) {
     std::string input;
-    double begin = prTimeMonotonicMilliseconds();
+    PrTimePerf begin = prTimePerfNow();
     size_t index = 0;
     size_t offset = 0;
     bool complete = true;
     for (;;) {
-        double now = prTimeMonotonicMilliseconds() - begin;
+        double now = prTimePerfMilliseconds(begin, prTimePerfNow());
         if (now > timeout) {
             complete = index == chunks.size();
             break;
@@ -281,9 +281,9 @@ void run(int tty, const Loaded& loaded, double share, double timeout) {
     winsize extent{};
     ioctl(tty, TIOCGWINSZ, &extent);
     size_t written = 0;
-    double begin = prTimeMonotonicMilliseconds();
+    PrTimePerf begin = prTimePerfNow();
     bool complete = play(tty, chunks, end, timeout, &written);
-    double elapsed = prTimeMonotonicMilliseconds() - begin;
+    double elapsed = prTimePerfMilliseconds(begin, prTimePerfNow());
     char line[160];
     snprintf(line, sizeof(line), "done %.3f %u %u %zu %d", elapsed, unsigned(extent.ws_col), unsigned(extent.ws_row),
         written, complete ? 1 : 0);

@@ -12,6 +12,7 @@
 #include "pr/array.h"
 #include "pr/command_keymap.h"
 #include "pr/command_kit.h"
+#include "pr/date_time.h"
 #include "pr/float.h"
 #include "pr/kit_box.h"
 #include "pr/kit_button.h"
@@ -26,7 +27,6 @@
 #include "pr/string.h"
 #include "pr/string_ops.h"
 #include "pr/time.h"
-#include "pr/time_date.h"
 #include "pr/utf8.h"
 
 #include "apps/browser/address.h"
@@ -520,7 +520,7 @@ void buildStart(Browser& b, PrLayoutNode root) {
 // Creates a row of the history page: the visit's time, and its title and site, which load the page, and a control that
 // removes the visit. A middle click or a click with the command modifier opens the page in a new tab. `offset` is the
 // local time zone's offset at the visit. Returns true if the user asked to remove the visit.
-bool historyRow(Browser& b, PrLayoutNode list, const Visit& visit, double offset) {
+bool historyRow(Browser& b, PrLayoutNode list, const Visit& visit, int32_t offset) {
     PrLayoutNode row = prKitBox(b.kit, list, {.key = prUiKey(b.kit->ui, list, visit.url)}, {
         .direction = PrKitDirection_Row,
         .align = PrKitAlign_Center,
@@ -644,16 +644,16 @@ void buildHistory(Browser& b, PrLayoutNode root) {
         prKitLabel(b.kit, list, {.text = "No page in the history matches the search."}, faint);
         return;
     }
-    double now = prTimeWallMilliseconds();
-    int64_t today = prTimeDaysFromMilliseconds(now, prTimeLocalOffsetMilliseconds(now));
+    PrTimeSystem now = prTimeSystemNow();
+    int64_t today = prDateTimeToDays(prDateTimeFromSystem(now, prTimeLocalOffsetSeconds(now)));
     int64_t shownDay = INT64_MIN;
     String removing;
     PrKitTextStyle day{.role = PrKitTextRole_Heading};
     PrKitPlace dayPlace{.margin = {12, 0, 4, 0}};
     for (uint32_t i = 0; i < found.count() && i < kMaxHistoryRows; ++i) {
         const Visit& visit = b.history[found[i]];
-        double offset = prTimeLocalOffsetMilliseconds(visit.time);
-        int64_t visitDay = prTimeDaysFromMilliseconds(visit.time, offset);
+        int32_t offset = prTimeLocalOffsetSeconds(visit.time);
+        int64_t visitDay = prDateTimeToDays(prDateTimeFromSystem(visit.time, offset));
         if (visitDay != shownDay) {
             shownDay = visitDay;
             PrLayoutNode label = prKitLabel(b.kit, list, {.text = historyDayLabel(visitDay, today)}, day);

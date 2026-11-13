@@ -64,10 +64,10 @@ const PrLayoutScene* runJob(PrLayoutTree* tree, const PrLayoutRoot* roots, uint3
 // Runs the job without the lock, and keeps its scene and its time with the lock held again.
 void runLocked(LayoutWorker* w, WorkerJob job) {
     prMutexUnlock(&w->mutex);
-    double started = prTimeMonotonicMilliseconds();
+    PrTimePerf started = prTimePerfNow();
     const PrLayoutScene* scene = runJob(job.tree, job.roots, job.rootCount);
     prMemoryFree(job.roots);
-    double took = prTimeMonotonicMilliseconds() - started;
+    double took = prTimePerfMilliseconds(started, prTimePerfNow());
     prMutexLock(&w->mutex);
     WorkerResult& result = resultOf(w, job.tree);
     prLayoutSceneRelease(result.scene);

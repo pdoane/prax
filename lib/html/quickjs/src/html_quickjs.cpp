@@ -108,7 +108,7 @@ JsHtmlRealm* realmOf(JSContext* ctx) {
 // without a page.
 int64_t dateNow(JSContext* ctx) {
     JsHtmlRealm* realm = realmOf(ctx);
-    double now = prTimeWallMilliseconds();
+    double now = prTimeSystemToUnixMilliseconds(prTimeSystemNow());
     if (realm != nullptr && realm->page != nullptr)
         now = prHtmlWindowCurrentTime(prHtmlPageWindow(realm->page));
     return int64_t(prF64Floor(now));

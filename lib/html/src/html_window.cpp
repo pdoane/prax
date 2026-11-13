@@ -563,7 +563,7 @@ PrHtmlWindow* htmlWindowCreate(void) {
 
 void htmlWindowStartClock(PrHtmlWindow* window) {
     window->timeOrigin = htmlWindowClock(window);
-    window->timeOriginWall = prTimeWallMilliseconds();
+    window->timeOriginWall = prTimeSystemToUnixMilliseconds(prTimeSystemNow());
     window->lastFrame = window->timeOrigin;
 }
 

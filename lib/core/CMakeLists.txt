@@ -17,7 +17,7 @@ pr_library(core INCLUDE include
     src/text_buffer.cpp
     src/thread.cpp
     src/time.cpp
-    src/time_date.cpp
+    src/date_time.cpp
     src/utf8.cpp
     src/vec.cpp
     src/vmem.cpp
@@ -34,9 +34,6 @@ target_compile_definitions(pr_core PRIVATE $<$<NOT:$<CONFIG:Release>>:PR_ALLOC_C
 if (PR_USER_CONFIG)
     target_compile_definitions(pr_core PUBLIC "PR_USER_CONFIG=\"${PR_USER_CONFIG}\"")
 endif()
-if (PR_PLATFORM_NO_DEFAULT)
-    target_compile_definitions(pr_core PUBLIC PR_PLATFORM_NO_DEFAULT)
-endif()
 if (PR_PLATFORM_MIMALLOC)
     target_compile_definitions(pr_core PUBLIC PR_PLATFORM_MIMALLOC)
 endif()
@@ -44,13 +41,15 @@ if (NOT PR_PLATFORM_THREADS)
     target_compile_definitions(pr_core PUBLIC PR_PLATFORM_NO_THREADS)
 endif()
 
-# The platform's backends, which core binds to by default (docs/platform.md): the C library for memory on every target,
-# or mimalloc if the build chooses it, and a family of the target for the other groups. They include core's headers
-# without linking it, because core links them.
-pr_library(core_libc INCLUDE backends/libc/include
+# The platform's backends (docs/platform.md), which core builds in: the C library's memory, and the no_threads family, on
+# every target, mimalloc if the build chooses it, and the families of the target for the other groups. A configuration
+# that binds a group may forward to them.
+target_sources(pr_core PRIVATE
     backends/libc/src/core_libc.cpp
+    backends/no_threads/src/core_no_threads_thread.cpp
 )
-target_include_directories(pr_core_libc PRIVATE ${PROJECT_SOURCE_DIR}/lib include)
+pr_headers(pr_core PUBLIC backends/libc/include)
+pr_headers(pr_core PUBLIC backends/no_threads/include)
 
 # mimalloc replaces nothing, because the library reaches it only through the platform.
 if (PR_PLATFORM_MIMALLOC OR PR_DEVELOP)
@@ -80,23 +79,15 @@ if (PR_PLATFORM_MIMALLOC OR PR_DEVELOP)
         target_compile_options(mimalloc-static PRIVATE -O2)
     endif()
 
-    pr_library(core_mimalloc INCLUDE backends/mimalloc/include
-        backends/mimalloc/src/core_mimalloc.cpp
-    )
-    target_include_directories(pr_core_mimalloc PRIVATE ${PROJECT_SOURCE_DIR}/lib include)
-    target_link_libraries(pr_core_mimalloc PRIVATE mimalloc-static)
+    target_sources(pr_core PRIVATE backends/mimalloc/src/core_mimalloc.cpp)
+    pr_headers(pr_core PUBLIC backends/mimalloc/include)
+    target_link_libraries(pr_core PRIVATE mimalloc-static)
 endif()
 
-# The no_threads family, which serves threads on every target in a build without them.
-pr_library(core_no_threads INCLUDE backends/no_threads/include
-    backends/no_threads/src/core_no_threads_thread.cpp
-)
-target_include_directories(pr_core_no_threads PRIVATE ${PROJECT_SOURCE_DIR}/lib include)
-
-# The POSIX family, which serves the groups other than memory on the Unix-like targets, and the Windows family, which
-# serves them on Windows. A target builds the family that it has.
+# The Windows family serves the groups other than memory on Windows, and the POSIX family on the Unix-like targets,
+# except the clocks of Apple's targets, which the Apple family serves. Another target has no family for them.
 if (WIN32)
-    pr_library(core_windows INCLUDE backends/windows/include
+    target_sources(pr_core PRIVATE
         backends/windows/src/core_windows_environment.cpp
         backends/windows/src/core_windows_fail.cpp
         backends/windows/src/core_windows_file.cpp
@@ -105,11 +96,11 @@ if (WIN32)
         backends/windows/src/core_windows_time.cpp
         backends/windows/src/core_windows_vmem.cpp
     )
-    target_include_directories(pr_core_windows PRIVATE ${PROJECT_SOURCE_DIR}/lib include)
+    pr_headers(pr_core PUBLIC backends/windows/include)
     # BCryptGenRandom, which the random bytes read.
-    target_link_libraries(pr_core_windows PRIVATE bcrypt)
-else()
-    pr_library(core_posix INCLUDE backends/posix/include
+    target_link_libraries(pr_core PRIVATE bcrypt)
+elseif (UNIX)
+    target_sources(pr_core PRIVATE
         backends/posix/src/core_posix_environment.cpp
         backends/posix/src/core_posix_fail.cpp
         backends/posix/src/core_posix_file.cpp
@@ -118,24 +109,14 @@ else()
         backends/posix/src/core_posix_time.cpp
         backends/posix/src/core_posix_vmem.cpp
     )
-    target_include_directories(pr_core_posix PRIVATE ${PROJECT_SOURCE_DIR}/lib include)
+    pr_headers(pr_core PUBLIC backends/posix/include)
+endif()
+if (APPLE)
+    target_sources(pr_core PRIVATE backends/apple/src/core_apple_time.cpp)
+    pr_headers(pr_core PUBLIC backends/apple/include)
 endif()
 # The C++ conveniences of the C headers, such as PrStringView's conversions, are C++20.
 target_compile_features(pr_core PUBLIC cxx_std_20)
-
-if (NOT PR_PLATFORM_NO_DEFAULT AND PR_PLATFORM_MIMALLOC)
-    target_link_libraries(pr_core PUBLIC prax::core_mimalloc)
-elseif (NOT PR_PLATFORM_NO_DEFAULT)
-    target_link_libraries(pr_core PUBLIC prax::core_libc)
-endif()
-if (NOT PR_PLATFORM_NO_DEFAULT AND WIN32)
-    target_link_libraries(pr_core PUBLIC prax::core_windows)
-elseif (NOT PR_PLATFORM_NO_DEFAULT)
-    target_link_libraries(pr_core PUBLIC prax::core_posix)
-endif()
-if (NOT PR_PLATFORM_NO_DEFAULT AND NOT PR_PLATFORM_THREADS)
-    target_link_libraries(pr_core PUBLIC prax::core_no_threads)
-endif()
 
 # Core's C++ layer: the toolkit that every library's implementation is written with, and the C++ side of the platform.
 pr_library(core_cpp INCLUDE cpp/include
@@ -210,10 +191,9 @@ if (PR_DEVELOP)
         tests/test_string_ops.cpp
         tests/test_string_view.cpp
         tests/test_thread.cpp
-        tests/test_time_date.cpp
+        tests/test_date_time.cpp
         tests/test_utf8.cpp
     )
-    target_link_libraries(core_tests PRIVATE prax::core_libc prax::core_mimalloc)
     target_compile_definitions(core_tests PRIVATE PR_CORE_TEST_DIR="${CMAKE_CURRENT_BINARY_DIR}/core_tests_files")
     if (WIN32)
         target_sources(core_tests PRIVATE backends/windows/tests/test_core_windows_file.cpp)
@@ -240,24 +220,18 @@ if (PR_DEVELOP)
         cpp/tests/test_writer.cpp
     )
 
-    # A build of core's memory, failure and strings configured by a header, with the builtin platform left out.
+    # A build of core's memory, failure and strings configured by a header that binds memory and failure in place of
+    # their defaults. It sees core's headers, the backends' included, so that the groups it leaves unbound keep theirs.
     add_library(core_configured STATIC
         src/assert.cpp
         src/memory.cpp
         src/raw_string.cpp
     )
-    target_include_directories(core_configured PUBLIC ${PROJECT_SOURCE_DIR}/lib include)
+    target_include_directories(core_configured PUBLIC $<TARGET_PROPERTY:pr_core,INTERFACE_INCLUDE_DIRECTORIES>)
     target_include_directories(core_configured PRIVATE cpp/include)
     target_compile_definitions(core_configured PUBLIC
         "PR_USER_CONFIG=\"${CMAKE_CURRENT_SOURCE_DIR}/tests/test_platform_config.h\"")
-    target_link_libraries(core_configured PRIVATE prax::core_libc prax::core_mimalloc prax::core_no_threads pr_warnings)
-    if (WIN32)
-        target_link_libraries(core_tests PRIVATE prax::core_windows)
-        target_link_libraries(core_configured PRIVATE prax::core_windows)
-    else()
-        target_link_libraries(core_tests PRIVATE prax::core_posix)
-        target_link_libraries(core_configured PRIVATE prax::core_posix)
-    endif()
+    target_link_libraries(core_configured PRIVATE pr_warnings)
     add_executable(core_config_tests tests/test_platform_config.cpp)
     target_link_libraries(core_config_tests PRIVATE core_configured test_main pr_warnings)
     # The tests' doctest header (tools/harness/test.h) prints the C++ layer's strings, which are header-only over the

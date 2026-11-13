@@ -143,7 +143,7 @@ struct BuiltinFetch : PrFetch {
     // The cache's part: the record that a stale entry was read from while the request revalidates it, when the request
     // was sent, and a copy of the body that the cache stores once it ends.
     PrStorageRecord revalidated;
-    double requested;
+    PrTimeSystem requested;
     bool storing;
     RawArray<uint8_t> stored;
 
@@ -543,7 +543,7 @@ void store(BuiltinFetch* fetch, PrByteView body) {
     FetchCachedResponse response{};
     response.status = fetch->status;
     response.requested = fetch->requested;
-    response.received = prTimeWallMilliseconds();
+    response.received = prTimeSystemNow();
     for (uint32_t i = 0; i < fetch->response.names.count; ++i) {
         PrStringView name = prRawStringView(&fetch->response.names.data[i]);
         // The body is stored decoded, so the headers that describe its encoding on the wire do not apply to it.
@@ -771,7 +771,7 @@ bool lookUp(BuiltinFetch* fetch, const RawArray<PrFetchHeader>& sent) {
     bool answered = false;
     if (fetchCacheRead(record.bytes, &entry) && fetchCacheVaryMatches(&entry, sent.data, sent.count)) {
         FetchCacheControl control = fetchCacheControlFromHeaders(entry.headers.data, entry.headers.count);
-        double age = fetchCacheAge(&entry, prTimeWallMilliseconds());
+        double age = fetchCacheAge(&entry, prTimeSystemNow());
         // A request's max-age limits the age of the response that it accepts (rfc 9111 section 5.2.1.1).
         bool tooOld = asked.hasMaxAge && age >= asked.maxAge * 1000;
         if (!asked.noCache && !control.noCache && !tooOld && age < fetchCacheLifetime(&entry)) {
@@ -835,7 +835,7 @@ void request(BuiltinFetch* fetch, const PrUrl* current) {
         .context = fetch,
     };
     fetch->state = FetchState_Waiting;
-    fetch->requested = prTimeWallMilliseconds();
+    fetch->requested = prTimeSystemNow();
     PrStatus status = prHttpExchangeCreate(fetcher->http, &desc, &fetch->exchange);
     headers.reset();
     if (status != PrStatus_Ok)
@@ -888,7 +888,7 @@ void answerRevalidated(BuiltinFetch* fetch, PrHttpExchange* exchange) {
     entry.headers.clear();
     headersView(&merged, &entry.headers);
     entry.requested = fetch->requested;
-    entry.received = prTimeWallMilliseconds();
+    entry.received = prTimeSystemNow();
     PrTextBuffer record{};
     fetchCacheWrite(&entry, &record);
     dropExchange(fetch);

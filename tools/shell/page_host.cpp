@@ -841,7 +841,7 @@ void startRun(HostState& s) {
     if (s.pacedAudio != nullptr)
         prAudioMemoryAdvance(s.pacedAudio, s.virtualTime);
     s.movedAt = prTimeMonotonicMilliseconds();
-    s.wallStart = prTimeWallMilliseconds();
+    s.wallStart = prTimeSystemToUnixMilliseconds(prTimeSystemNow());
     s.lastWall = s.wallStart;
     s.awaitingRender = false;
     PrHtmlStorageProviderDesc storage{.quotaBytes = kPrHtmlStorageQuotaBytes};
@@ -1430,7 +1430,7 @@ bool PageHost::print(Page* page, const PrLayoutPageBox& initial, const PrAppDisp
         PrDrawStructure* PR_NULLABLE structure, PrintTimings* PR_NULLABLE timings) {
     if (page->htmlPage == nullptr || prHtmlPagePresentation(page->htmlPage) == nullptr)
         return false;
-    double started = prTimeMonotonicMilliseconds();
+    PrTimePerf started = prTimePerfNow();
     PrHtmlView* view = viewOf(page);
     prHtmlViewSetDisplay(view, &display);
     prHtmlViewSetUserPreferences(view, &preferences);
@@ -1441,7 +1441,7 @@ bool PageHost::print(Page* page, const PrLayoutPageBox& initial, const PrAppDisp
     page->pageBox = initial;
     prepareWithFetches(view, [](PrHtmlView* paged) { prHtmlViewPageCount(paged); });
     uint32_t count = prHtmlViewPageCount(view);
-    double paginated = prTimeMonotonicMilliseconds();
+    PrTimePerf paginated = prTimePerfNow();
     prHtmlViewSetMarking(view, structure != nullptr ? PrLayoutMarking_Content : PrLayoutMarking_None);
     for (uint32_t i = 0; i < count; ++i) {
         PrDrawList* list = prDrawListCreate();
@@ -1455,7 +1455,7 @@ bool PageHost::print(Page* page, const PrLayoutPageBox& initial, const PrAppDisp
             .trim = prLayoutRectToPx(sheet.trim),
         });
     }
-    double painted = prTimeMonotonicMilliseconds();
+    PrTimePerf painted = prTimePerfNow();
     prHtmlViewSetMarking(view, PrLayoutMarking_None);
     if (state_->verify)
         verifyPrint(page, prHtmlPagePresentation(page->htmlPage));
@@ -1463,9 +1463,9 @@ bool PageHost::print(Page* page, const PrLayoutPageBox& initial, const PrAppDisp
         prHtmlStructureAppend(page->htmlPage, structure);
     if (timings != nullptr) {
         *timings = PrintTimings{
-            .paginate = paginated - started,
-            .paint = painted - paginated,
-            .structure = prTimeMonotonicMilliseconds() - painted,
+            .paginate = prTimePerfMilliseconds(started, paginated),
+            .paint = prTimePerfMilliseconds(paginated, painted),
+            .structure = prTimePerfMilliseconds(painted, prTimePerfNow()),
         };
     }
     return true;
@@ -1475,7 +1475,7 @@ bool PageHost::writeDocument(Page* page, Media media, const PrLayoutPageBox& pag
         PrDrawWriterBackend backend, const std::filesystem::path& path, DocumentTimings* PR_NULLABLE timings) {
     std::vector<PrintedPage> pages;
     PrintTimings phases{};
-    double started = prTimeMonotonicMilliseconds();
+    PrTimePerf started = prTimePerfNow();
     PrDrawStructure* structure = prDrawStructureCreate(nullptr);
     // The paint marks the content, which gives its text runs their text, and a format that tags its content joins the
     // marks to the structure.
@@ -1518,9 +1518,9 @@ bool PageHost::writeDocument(Page* page, Media media, const PrLayoutPageBox& pag
                 .bleed = printed.bleed,
                 .trim = printed.trim,
             });
-        double writing = prTimeMonotonicMilliseconds();
+        PrTimePerf writing = prTimePerfNow();
         prDrawWriterWrite(writer, &desc, written.data(), uint32_t(written.size()));
-        double filing = prTimeMonotonicMilliseconds();
+        PrTimePerf filing = prTimePerfNow();
         // The files of an earlier write go first, so that what remains is this write's.
         std::error_code error;
         for (const std::filesystem::path& file : documentFiles(path))
@@ -1537,9 +1537,9 @@ bool PageHost::writeDocument(Page* page, Media media, const PrLayoutPageBox& pag
                 .pages = uint32_t(pages.size()),
                 .bytes = bytes,
                 .print = phases,
-                .other = writing - started - phases.paginate - phases.paint - phases.structure,
-                .write = filing - writing,
-                .file = prTimeMonotonicMilliseconds() - filing,
+                .other = prTimePerfMilliseconds(started, writing) - phases.paginate - phases.paint - phases.structure,
+                .write = prTimePerfMilliseconds(writing, filing),
+                .file = prTimePerfMilliseconds(filing, prTimePerfNow()),
             };
         }
         if (!ok)

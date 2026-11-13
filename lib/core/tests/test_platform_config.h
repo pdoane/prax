@@ -1,6 +1,5 @@
-// A build configuration that binds memory and failure at compile time and leaves the default platform out, for the
-// tests of a configured build. It binds neither zeroed allocation nor usable sizes, which the library then does
-// without.
+// A build configuration that binds memory and failure at compile time in place of their defaults, for the tests of a
+// configured build. It binds neither zeroed allocation nor usable sizes, which the library then does without.
 
 #pragma once
 
@@ -27,4 +26,3 @@ PR_ASSUME_NONNULL_END
 #define PR_PLATFORM_FREE_BYTES(memory) ::pr_impl::configFreeBytes(memory)
 #define PR_PLATFORM_FAIL(message, file, line) ::pr_impl::configFailed(message, file, line)
 #define PR_PLATFORM_CRASH_HANDLER() ((void)0)
-#define PR_PLATFORM_NO_DEFAULT

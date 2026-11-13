@@ -10,7 +10,7 @@
 #include "core/src/config.h"
 
 #if !defined(PR_PLATFORM_FILE_MAP)
-#error "a build without the default platform binds PR_PLATFORM_FILE_MAP"
+#error "a target without a default for the group binds PR_PLATFORM_FILE_MAP"
 #endif
 
 // Windows' paths have drive letters and backslashes. So may the web's, whose file system can be a Windows host's

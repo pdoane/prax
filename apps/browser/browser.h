@@ -45,6 +45,7 @@
 #include "pr/task.h"
 #include "pr/text.h"
 #include "pr/thread.h"
+#include "pr/time.h"
 #include "pr/tls.h"
 #include "pr/ui.h"
 
@@ -117,12 +118,12 @@ struct Tab {
     bool changed = false;
 
     // The page's thread's state. `pending` is the URL of the navigation that the window asked for, which the chrome
-    // shows until the page's document is the new one. `loadStarted` is when that navigation started, and 0 once its
-    // load has been reported.
+    // shows until the page's document is the new one. `loadStarted` is when that navigation started, and zero ticks
+    // once its load has been reported.
     PrHtmlSessionHistory* PR_NULLABLE history = nullptr;
     PrHtmlPage* PR_NULLABLE page = nullptr;
     String pending;
-    double loadStarted = 0;
+    PrTimePerf loadStarted{};
 
     // The page's thread's account of a viewport's changes under --trace: the viewport last seen, when the first of the
     // changes that have not settled arrived, and the jobs that they took and those laid out at a viewport already
@@ -273,7 +274,7 @@ struct Browser {
     bool presented = false;
 
     // The frames' statistics since they were last printed. The GPU's time is added on the device's thread.
-    double statsSince = 0;
+    PrTimePerf statsSince{};
     uint32_t statsFrames = 0;
     double statsCpu = 0;               // milliseconds on the window's thread, in present
     double statsWait = 0;              // milliseconds of that spent waiting for a drawable

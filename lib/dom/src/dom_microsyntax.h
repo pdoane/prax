@@ -7,11 +7,11 @@
 
 #pragma once
 
+#include "pr/date_time.h"
 #include "pr/dom.h"
 #include "pr/raw_string.h"
 #include "pr/string_view.h"
 #include "pr/text_buffer.h"
-#include "pr/time_date.h"
 
 PR_ASSUME_NONNULL_BEGIN
 
@@ -44,7 +44,7 @@ void domAppendFloat(PrTextBuffer* out, double value);
 // ---------------------------------------------------------------------------------------------------------------------
 // Dates and times (html/#dates-and-times)
 //
-// Dates are in the proleptic Gregorian calendar (pr/time_date.h), and a year is greater than zero. A month is a year
+// Dates are in the proleptic Gregorian calendar (pr/date_time.h), and a year is greater than zero. A month is a year
 // and a month, and a week is a year and a week. A time is local, with no time zone.
 
 // A time of day, in milliseconds since midnight, below 86400000.
@@ -55,10 +55,10 @@ typedef double DomTime;
 // returns false for a string that is not one. A time's fraction of a second may have more digits than the valid
 // syntax's three, as the parsing rules allow (html/#parse-a-time-component), and `fractionDigits` says how many it has.
 bool domParseMonth(PrStringView text, int64_t* year, uint32_t* month);
-bool domParseDate(PrStringView text, PrTimeDate* out);
+bool domParseDate(PrStringView text, PrDateTime* out);
 bool domParseWeek(PrStringView text, int64_t* year, uint32_t* week);
 bool domParseTime(PrStringView text, DomTime* out, uint32_t* PR_NULLABLE fractionDigits = nullptr);
-bool domParseLocalDateTime(PrStringView text, PrTimeDate* date, DomTime* time, uint32_t* PR_NULLABLE fractionDigits = nullptr);
+bool domParseLocalDateTime(PrStringView text, PrDateTime* date, DomTime* time, uint32_t* PR_NULLABLE fractionDigits = nullptr);
 
 // Returns true if `text` is a valid time string, or a valid local date and time string: one that parses, with at most
 // three digits of a fraction of a second.
@@ -78,10 +78,10 @@ void domWeekOfDays(int64_t days, int64_t* year, uint32_t* week);
 // (html/#valid-normalised-local-date-and-time-string). A time string leaves out its seconds if they and the
 // milliseconds are zero, and the milliseconds if they are zero.
 void domAppendMonth(PrTextBuffer* out, int64_t year, uint32_t month);
-void domAppendDate(PrTextBuffer* out, PrTimeDate date);
+void domAppendDate(PrTextBuffer* out, PrDateTime date);
 void domAppendWeek(PrTextBuffer* out, int64_t year, uint32_t week);
 void domAppendTime(PrTextBuffer* out, DomTime time);
-void domAppendLocalDateTime(PrTextBuffer* out, PrTimeDate date, DomTime time);
+void domAppendLocalDateTime(PrTextBuffer* out, PrDateTime date, DomTime time);
 
 // Returns the attribute `name` of `element` as an unsigned long IDL attribute that reflects it with the default
 // `fallback` reads it (html/#reflecting-content-attributes-in-idl-attributes): a non-negative integer, or `fallback` if

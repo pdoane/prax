@@ -488,7 +488,7 @@ struct Run {
     std::vector<std::vector<PageRange>> referencePages;     // by reference
 
     bool timings = false;           // true if the run reports how long each phase took (--timings)
-    double started = 0;             // when the run began, in milliseconds of the monotonic clock
+    PrTimePerf started{};           // when the run began
     std::vector<Request> requests;
 };
 
@@ -718,7 +718,7 @@ int finish(PageHost& host, Run& run, Renderers& renderers) {
         }
         run.ok = settled == page_host::Settled_Idle;
         if (run.timings)
-            fprintf(stderr, "load: %.0f ms\n", prTimeMonotonicMilliseconds() - run.started);
+            fprintf(stderr, "load: %.0f ms\n", prTimePerfMilliseconds(run.started, prTimePerfNow()));
         // A page's load fails once its failure arrives.
         for (const Request& request : run.requests) {
             run.ok = run.ok && PageHost::pageOk(request.page);
@@ -853,7 +853,7 @@ int main(int argc, char** argv) {
     // The hinter lives as long as the process, because the fonts that name it are kept.
     host.setHinting(hinting, hinting != PrFontHinting_None ? prFontHinterCreate(PrFontHinterBackend_Default) : nullptr);
     Run run;
-    run.started = prTimeMonotonicMilliseconds();
+    run.started = prTimePerfNow();
     parse(host, args, run);
     Renderers renderers;
     // Glyphs are drawn at the phases that the fragment backend's atlas holds them at, so that runs that a page splits

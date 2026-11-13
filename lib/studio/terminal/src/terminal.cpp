@@ -371,10 +371,10 @@ void lockWaitAdd(PrTerminalLockInfo* info, double milliseconds, uint64_t bytes) 
 void lockScreen(const Terminal* constTerminal) {
     Terminal* terminal = const_cast<Terminal*>(constTerminal);
     terminal->uiWaiting.fetchAdd(1);
-    double start = prTimeMonotonicMilliseconds();
+    PrTimePerf start = prTimePerfNow();
     uint64_t parsed = terminal->parsedBytes.load();
     prMutexLock(&terminal->mutex);
-    lockWaitAdd(&terminal->waits, prTimeMonotonicMilliseconds() - start, terminal->parsedBytes.load() - parsed);
+    lockWaitAdd(&terminal->waits, prTimePerfMilliseconds(start, prTimePerfNow()), terminal->parsedBytes.load() - parsed);
     terminal->uiWaiting.fetchSub(1);
 }
 

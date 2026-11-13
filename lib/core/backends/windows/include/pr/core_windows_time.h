@@ -1,9 +1,10 @@
-// The Windows backend of clocks: the performance counter, and the system time at its full precision. It serves Windows,
-// and it is the default binding of clocks there.
+// The Windows backend of clocks and the system time: the performance counter, and the system time at its full
+// precision. It serves Windows, and it is the default binding of clocks and the system time there.
 
 #pragma once
 
 #include "pr/base.h"
+#include "pr/time.h"
 
 PR_ASSUME_NONNULL_BEGIN
 
@@ -11,11 +12,16 @@ PR_ASSUME_NONNULL_BEGIN
 extern "C" {
 #endif
 
-// Implement prTimeMonotonicMilliseconds, prTimeWallMilliseconds and prTimeLocalOffsetMilliseconds. The local time zone
-// is the system's active time zone.
+// Implement prTimePerfNow, the conversions of a difference of its ticks, and prTimeMonotonicMilliseconds. Both clocks
+// are QueryPerformanceCounter, which advances while the system sleeps.
+PrTimePerf prCoreWindowsTimePerfNow(void);
+uint64_t prCoreWindowsTimePerfNanoseconds(uint64_t ticks);
+double prCoreWindowsTimePerfMilliseconds(uint64_t ticks);
 double prCoreWindowsTimeMonotonicMilliseconds(void);
-double prCoreWindowsTimeWallMilliseconds(void);
-double prCoreWindowsTimeLocalOffsetMilliseconds(double wall);
+
+// Implement prTimeSystemNow and prTimeLocalOffsetSeconds. The local time zone is the system's active time zone.
+PrTimeSystem prCoreWindowsTimeSystemNow(void);
+int32_t prCoreWindowsTimeLocalOffsetSeconds(PrTimeSystem time);
 
 #if defined(__cplusplus)
 }

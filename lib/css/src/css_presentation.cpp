@@ -6811,9 +6811,9 @@ bool restyle(PrCssPresentation* r, PrLayoutVec extent, RestyleReach reach) {
 // it.
 void restyleAhead(PrCssPresentation* r, PrLayoutVec extent) {
     uint32_t taken = r->newTaken;
-    double started = prTimeMonotonicMilliseconds();
+    PrTimePerf started = prTimePerfNow();
     restyle(r, extent, RestyleReach_Job);
-    double time = prTimeMonotonicMilliseconds() - started;
+    double time = prTimePerfMilliseconds(started, prTimePerfNow());
     taken = r->newTaken - taken;
     if (taken < kMinJobElements || time <= 0)
         return;

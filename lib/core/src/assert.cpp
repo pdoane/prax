@@ -5,7 +5,7 @@
 #include "core/src/config.h"
 
 #if !defined(PR_PLATFORM_FAIL)
-#error "a build without the default platform binds PR_PLATFORM_FAIL"
+#error "a target without a default for the group binds PR_PLATFORM_FAIL"
 #endif
 
 // Kept out of line and cold, so that the call sites that reach it stay small.

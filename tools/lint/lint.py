@@ -628,6 +628,7 @@ WRAPPERS = {
                                                         "string.h", "sys/mman.h", "sys/stat.h", "unistd.h"},
     "lib/core/backends/posix/src/core_posix_thread.cpp": {"errno.h", "pthread.h", "stdlib.h", "time.h", "unistd.h"},
     "lib/core/backends/posix/src/core_posix_time.cpp": {"time.h"},
+    "lib/core/backends/apple/src/core_apple_time.cpp": {"mach/mach_time.h"},
     "lib/net/backends/sockets/src/net_sockets_platform_posix.cpp": {"errno.h", "fcntl.h", "netdb.h", "netinet/in.h",
                                                                     "netinet/tcp.h", "poll.h", "sys/socket.h",
                                                                     "unistd.h"},
@@ -2630,7 +2631,7 @@ def check_homes(report, headers, sources, texts):
 # types appear in other modules' signatures more than in their own, own a tag for each vocabulary. A numeric variant,
 # as PrIRect is of PrRect, is a tag of its own.
 TAGS = {
-    "lib/core": ("Adler32", "Ascii", "Base64", "ByteView", "Condition", "Core", "Crash", "Crc32", "DVec2",
+    "lib/core": ("Adler32", "Ascii", "Base64", "ByteView", "Condition", "Core", "Crash", "Crc32", "DateTime", "DVec2",
                  "Environment", "F32", "F64", "Fail", "File", "Float16", "Hash", "IVec2", "Mem", "Memory", "Mutex",
                  "Pixel", "Pixels", "Random", "RawString", "Sha1", "Status", "String", "TextBuffer", "Thread", "Time",
                  "U64", "UVec2", "Utf8", "Vec2", "Vec3", "Vmem"),

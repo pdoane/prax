@@ -22,7 +22,8 @@ implementation does not wait with a mutex from another, and one allocator does n
 | threads | `PR_PLATFORM_THREAD_SUPPORTED`, `_START`, `_JOIN`, `_HARDWARE_COUNT` and `_SLEEP`, `PR_PLATFORM_MUTEX_INIT`, `_RESET`, `_LOCK` and `_UNLOCK`, and `PR_PLATFORM_CONDITION_INIT`, `_RESET`, `_WAIT`, `_WAIT_FOR`, `_SIGNAL` and `_BROADCAST` | POSIX, or the Windows family on Windows, or none with `PR_PLATFORM_THREADS` off |
 | files | `PR_PLATFORM_FILE_MAP`, `_UNMAP`, `_INFO`, `_SAME`, `_EACH_ENTRY`, `_WRITE`, `_REMOVE`, `_CREATE_DIRECTORY`, `_USER_DIRECTORY`, `_WORKING_DIRECTORY`, `_STREAM_WRITE` and `_STREAM_READ` | POSIX, or the Windows family on Windows |
 | address space | `PR_PLATFORM_VMEM_RESERVE`, `_COMMIT` and `_FREE` | POSIX, or the Windows family on Windows |
-| clocks | `PR_PLATFORM_TIME_MONOTONIC_MILLISECONDS`, `_WALL_MILLISECONDS` and `_LOCAL_OFFSET_MILLISECONDS` | POSIX, or the Windows family on Windows |
+| clocks | `PR_PLATFORM_TIME_PERF_NOW`, `_PERF_NANOSECONDS`, `_PERF_MILLISECONDS` and `_MONOTONIC_MILLISECONDS` | POSIX, or the Apple family on Apple targets, or the Windows family on Windows |
+| system time | `PR_PLATFORM_TIME_SYSTEM_NOW` and `_LOCAL_OFFSET_SECONDS` | POSIX, or the Windows family on Windows |
 | environment | `PR_PLATFORM_ENVIRONMENT_VARIABLE` and `_HOST_NAME` | POSIX, or the Windows family on Windows |
 | random bytes | `PR_PLATFORM_RANDOM_BYTES` | POSIX, or the Windows family on Windows |
 
@@ -37,9 +38,9 @@ library sees the same configuration. The header defines the macros of the groups
 to a backend's functions, to change part of their behavior and keep the rest. A binding that must choose at run time,
 such as one for a binding's prebuilt library, calls through a table of its own and pays for the indirection alone.
 
-`PR_PLATFORM_NO_DEFAULT` leaves the default backends out of the build. A build without them binds every group that it
-compiles. The source that uses a group checks that the group is bound, so a build that never compiles threads need not
-bind them.
+A group that the configuration binds replaces its default, and the others keep theirs. A target that no family serves
+has no default for the groups other than memory, so its configuration binds each of them that the build uses. The
+source that uses a group checks that the group is bound, so a build that never compiles threads need not bind them.
 
 The configuration changes what the library does, and never the layout of a type in its API. `PrThread`, `PrMutex` and
 `PrCondition` hold fixed storage, which a platform's thread, mutex and condition fit in. So bindings built against the
@@ -47,13 +48,20 @@ plain headers agree with a configured library.
 
 ## Backends
 
-A backend is a family of implementations under `lib/core/backends/<family>`, and its functions are named for the
-family. A family declares each group in a header and implements it in a source of its own, so that a program links only
-the groups it uses. For example, `pr/core_posix_thread.h` declares `prCorePosixMutexLock`. A family serves every target
-that shares it, so one target's defaults may come from several families. The `libc` and `mimalloc` families serve
-every target, the `posix` family serves the Unix-like ones, and the `windows` family serves Windows: it fails without
-the C runtime's abort dialog, maps files with file mapping objects, runs Win32 threads with slim reader/writer locks and
-condition variables, reads the performance counter and the precise system time, and reserves with `VirtualAlloc`.
+A backend is a family of implementations under `lib/core/backends/<family>`, and its functions are named for the family.
+Core's library holds every family that its target has, because each group is bound at compile time rather than through a
+table, so a family's sources may call core's functions as any of core's do. A family declares each group in a header and
+implements it in a source of its own, so that a program links only the groups it uses. For example,
+`pr/core_posix_thread.h` declares `prCorePosixMutexLock`. A family serves every target that shares it, so one target's
+defaults may come from several families. The `libc` and `mimalloc` families serve every target, the `posix` family
+serves the Unix-like ones, the `apple` family serves clocks on Apple's targets from Mach's time base, and the `windows`
+family serves Windows: it fails without the C runtime's abort dialog, maps files with file mapping objects, runs Win32
+threads with slim reader/writer locks and condition variables, reads the performance counter and the precise system
+time, and reserves with `VirtualAlloc`.
+
+The clocks keep the promises of `pr/time.h` on every target. The performance counter is the cheapest reading that the
+target has. The monotonic clock advances while the system sleeps: `mach_continuous_time` on Apple's targets,
+`CLOCK_BOOTTIME` on Linux, and the performance counter on Windows.
 
 A build without threads binds them to the `no_threads` family, which serves every target. No thread starts, a mutex
 does nothing, and core fails a wait on a condition, because nothing else could signal it. The CMake option

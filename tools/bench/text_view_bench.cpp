@@ -217,7 +217,7 @@ struct RenderCost {
 
 // Renders the tree's last layout, and returns what it cost.
 RenderCost render(Rendering& r, PrLayoutTree* tree) {
-    double start = prTimeMonotonicMilliseconds();
+    PrTimePerf start = prTimePerfNow();
     const PrLayoutScene* scene = prLayoutTreeScene(tree);
     std::vector<PrLayoutSceneScroll> scrolls(prLayoutSceneScrolls(tree, scene, nullptr, 0));
     prLayoutSceneScrolls(tree, scene, scrolls.data(), uint32_t(scrolls.size()));
@@ -230,7 +230,7 @@ RenderCost render(Rendering& r, PrLayoutTree* tree) {
     prLayoutScenePlay(scene, r.list, &options);
     prDrawListPopTransform(r.list);
     prLayoutSceneRelease(scene);
-    double played = prTimeMonotonicMilliseconds();
+    PrTimePerf played = prTimePerfNow();
     PrGpuCommands* commands = nullptr;
     if (!prGpuCommandsBegin(r.device, nullptr, &commands))
         PR_FATAL("the device is lost");
@@ -244,9 +244,9 @@ RenderCost render(Rendering& r, PrLayoutTree* tree) {
     prDrawFrameRender(r.frame, pass, PrIVec2{0, 0});
     prGpuPassEnd(pass);
     prGpuCommandsTextureBarrier(commands, r.texture, all, PrGpuAccessFlag_ColorAttachment, PrGpuAccessFlag_ShaderRead);
-    double encoded = prTimeMonotonicMilliseconds();
+    PrTimePerf encoded = prTimePerfNow();
     double gpu = prGpuCommandsSubmitAndWait(commands) * 1000;
-    return RenderCost{played - start, encoded - played, gpu};
+    return RenderCost{prTimePerfMilliseconds(start, played), prTimePerfMilliseconds(played, encoded), gpu};
 }
 
 // Prints what `change` costs to lay out and render, on average over repeats, once the caches hold what it shows.
@@ -257,10 +257,10 @@ void rendered(Rendering& r, Bench& b, const char* label, Change change) {
     double layout = 0;
     RenderCost total{};
     for (uint32_t i = 0; i < kWarm + kRepeats; ++i) {
-        double start = prTimeMonotonicMilliseconds();
+        PrTimePerf start = prTimePerfNow();
         change(i);
         b.frame();
-        double took = prTimeMonotonicMilliseconds() - start;
+        double took = prTimePerfMilliseconds(start, prTimePerfNow());
         RenderCost cost = render(r, b.tree);
         if (i < kWarm)
             continue;
@@ -301,9 +301,9 @@ void renderedAt(Rendering& r, Bench& b, uint32_t line, const char* where) {
 // Times `work` once, and prints it.
 template <typename Work>
 void timed(const char* label, Work work) {
-    double start = prTimeMonotonicMilliseconds();
+    PrTimePerf start = prTimePerfNow();
     work();
-    printf("%-44s %10.2f ms\n", label, prTimeMonotonicMilliseconds() - start);
+    printf("%-44s %10.2f ms\n", label, prTimePerfMilliseconds(start, prTimePerfNow()));
 }
 
 // Prints what a real file costs cold.
@@ -330,20 +330,20 @@ int measureFile(const char* path) {
         PrSyntaxTree* growing = prSyntaxTreeCreate(language, b.registry, streamed);
         double slowest = 0;
         uint32_t pieces = 0;
-        double start = prTimeMonotonicMilliseconds();
+        PrTimePerf start = prTimePerfNow();
         for (size_t at = 0; at < text.size; at += kStreamPiece) {
             size_t size = text.size - at < kStreamPiece ? text.size - at : kStreamPiece;
-            double pieceStart = prTimeMonotonicMilliseconds();
+            PrTimePerf pieceStart = prTimePerfNow();
             uint32_t end = prTextEditBufferSize(streamed);
             PrTextEditChange piece{.start = end, .end = end, .text = PrStringView{text.data + at, size}};
             prTextEditBufferApply(streamed, &piece, 1, PrTextEditOrigin_Load);
             prSyntaxTreeUpdate(growing, kPrF64Infinity);
-            double took = prTimeMonotonicMilliseconds() - pieceStart;
+            double took = prTimePerfMilliseconds(pieceStart, prTimePerfNow());
             slowest = took > slowest ? took : slowest;
             ++pieces;
         }
         printf("%-44s %10.2f ms, %u pieces, slowest %.2f ms\n", "streamed load, parsing each piece",
-            prTimeMonotonicMilliseconds() - start, pieces, slowest);
+            prTimePerfMilliseconds(start, prTimePerfNow()), pieces, slowest);
         prSyntaxTreeDestroy(growing);
         prTextEditBufferDestroy(streamed);
         timed("first parse of the whole text", [&] { prSyntaxTreeUpdate(b.syntax, kPrF64Infinity); });
@@ -387,12 +387,12 @@ int measureFile(const char* path) {
             constexpr uint32_t kRuns = 20;
             for (uint32_t i = 0; i < kRuns; ++i) {
                 prTextViewInsert(b.view, "x", PrTextEditMerge_None);
-                double start = prTimeMonotonicMilliseconds();
+                PrTimePerf start = prTimePerfNow();
                 prSyntaxTreeUpdate(b.syntax, kPrF64Infinity);
-                double parsed = prTimeMonotonicMilliseconds();
+                PrTimePerf parsed = prTimePerfNow();
                 prSyntaxTreeSpans(b.syntax, windowStart, windowEnd, nullptr, 0);
-                spans += prTimeMonotonicMilliseconds() - parsed;
-                parse += parsed - start;
+                spans += prTimePerfMilliseconds(parsed, prTimePerfNow());
+                parse += prTimePerfMilliseconds(start, parsed);
                 if (i == 0) {
                     firstParse = parse;
                     firstSpans = spans;
@@ -434,22 +434,23 @@ int measureFile(const char* path) {
     double spent = 0;
     for (uint32_t i = 0; i < 120; ++i) {
         b.width = 1000 + float(i) * 2;
-        double start = prTimeMonotonicMilliseconds();
+        PrTimePerf start = prTimePerfNow();
         b.frame();
-        double took = prTimeMonotonicMilliseconds() - start;
+        double took = prTimePerfMilliseconds(start, prTimePerfNow());
         spent += took;
         slowest = took > slowest ? took : slowest;
     }
     printf("%-44s %10.2f ms, slowest %.2f ms\n", "120 frames of a drag", spent, slowest);
     uint32_t settling = 0;
-    double start = prTimeMonotonicMilliseconds();
+    PrTimePerf start = prTimePerfNow();
     while (settling < 1000 && b.frame())
         ++settling;
-    printf("%-44s %10.2f ms over %u frames\n", "frames until the view settles", prTimeMonotonicMilliseconds() - start, settling);
-    start = prTimeMonotonicMilliseconds();
+    printf("%-44s %10.2f ms over %u frames\n", "frames until the view settles",
+        prTimePerfMilliseconds(start, prTimePerfNow()), settling);
+    start = prTimePerfNow();
     while (prTextViewRefine(b.view, 1000)) {
     }
-    printf("%-44s %10.2f ms\n", "refining every line", prTimeMonotonicMilliseconds() - start);
+    printf("%-44s %10.2f ms\n", "refining every line", prTimePerfMilliseconds(start, prTimePerfNow()));
     typeHere(lines / 2, "the middle");
     typeHere(longest, "the longest line");
     b.width = 1000;

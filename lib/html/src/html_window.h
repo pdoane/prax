@@ -138,7 +138,7 @@ struct HtmlWindow : DomCountedTarget {
     void* PR_NULLABLE renderedContext;
     double lastFrame;          // the clock's time of the last rendering opportunity
     double timeOrigin;         // hr-time-3/#sec-time-origin, on the clock
-    double timeOriginWall;     // the same moment on the wall clock, in timeWallMilliseconds
+    double timeOriginWall;     // the same moment of the system time, in milliseconds since the Unix epoch
     PrHtmlPerformance performance;
     PrHtmlScreenOrientation orientation;
     HtmlSessionHistory* history;                    // the session history that its documents take entries in

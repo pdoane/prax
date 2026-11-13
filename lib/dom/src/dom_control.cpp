@@ -148,7 +148,7 @@ void appendSanitized(const PrDomElement* input, PrStringView text, PrTextBuffer*
             return;
         }
         case PrDomInputType_Date: {
-            PrTimeDate date{};
+            PrDateTime date{};
             if (domParseDate(value, &date))
                 prTextBufferAppend(out, value);
             return;
@@ -172,7 +172,7 @@ void appendSanitized(const PrDomElement* input, PrStringView text, PrTextBuffer*
                 prTextBufferAppend(out, value);
             return;
         case PrDomInputType_DatetimeLocal: {
-            PrTimeDate date{};
+            PrDateTime date{};
             DomTime time = 0;
             uint32_t digits = 0;
             if (domParseLocalDateTime(value, &date, &time, &digits) && digits <= 3)
@@ -763,10 +763,10 @@ DomInputApplyFlags domInputApplies(PrDomInputType type) {
 bool domInputStringToNumber(const PrDomElement* input, PrStringView text, double* out) {
     switch (domElementInputType(input)) {
         case PrDomInputType_Date: {
-            PrTimeDate date{};
+            PrDateTime date{};
             if (!domParseDate(text, &date))
                 return false;
-            *out = double(prTimeDateToDays(date)) * kDayMilliseconds;
+            *out = double(prDateTimeToDays(date)) * kDayMilliseconds;
             return true;
         }
         case PrDomInputType_Month: {
@@ -788,11 +788,11 @@ bool domInputStringToNumber(const PrDomElement* input, PrStringView text, double
         case PrDomInputType_Time:
             return domParseTime(text, out);
         case PrDomInputType_DatetimeLocal: {
-            PrTimeDate date{};
+            PrDateTime date{};
             DomTime time = 0;
             if (!domParseLocalDateTime(text, &date, &time))
                 return false;
-            *out = double(prTimeDateToDays(date)) * kDayMilliseconds + time;
+            *out = double(prDateTimeToDays(date)) * kDayMilliseconds + time;
             return true;
         }
         case PrDomInputType_Number:
@@ -807,7 +807,7 @@ void domInputNumberToString(const PrDomElement* input, double value, PrTextBuffe
     PR_ASSERT(prF64IsFinite(value));
     switch (domElementInputType(input)) {
         case PrDomInputType_Date:
-            domAppendDate(out, prTimeDateFromDays(int64_t(prF64Floor(value / kDayMilliseconds))));
+            domAppendDate(out, prDateTimeFromDays(int64_t(prF64Floor(value / kDayMilliseconds))));
             return;
         case PrDomInputType_Month: {
             int64_t months = int64_t(prF64Floor(value)) + 1970 * 12;
@@ -829,7 +829,7 @@ void domInputNumberToString(const PrDomElement* input, double value, PrTextBuffe
         }
         case PrDomInputType_DatetimeLocal: {
             double days = prF64Floor(value / kDayMilliseconds);
-            domAppendLocalDateTime(out, prTimeDateFromDays(int64_t(days)), prF64Floor(value - days * kDayMilliseconds));
+            domAppendLocalDateTime(out, prDateTimeFromDays(int64_t(days)), prF64Floor(value - days * kDayMilliseconds));
             return;
         }
         default:
@@ -846,7 +846,8 @@ bool domInputStringToDate(const PrDomElement* input, PrStringView text, double* 
             uint32_t month = 0;
             if (!domParseMonth(text, &year, &month))
                 return false;
-            *out = double(prTimeDateToDays(PrTimeDate{year, month, 1})) * kDayMilliseconds;
+            PrDateTime first{.year = year, .month = uint8_t(month), .day = 1};
+            *out = double(prDateTimeToDays(first)) * kDayMilliseconds;
             return true;
         }
         case PrDomInputType_Date:
@@ -860,7 +861,7 @@ bool domInputStringToDate(const PrDomElement* input, PrStringView text, double* 
 
 void domInputDateToString(const PrDomElement* input, double time, PrTextBuffer* out) {
     if (domElementInputType(input) == PrDomInputType_Month) {
-        PrTimeDate date = prTimeDateFromDays(int64_t(prF64Floor(time / kDayMilliseconds)));
+        PrDateTime date = prDateTimeFromDays(int64_t(prF64Floor(time / kDayMilliseconds)));
         domAppendMonth(out, date.year, date.month);
         return;
     }
