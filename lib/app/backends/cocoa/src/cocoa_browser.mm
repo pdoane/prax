@@ -5,6 +5,7 @@
 #include "app/backends/cocoa/src/cocoa_browser.h"
 
 #include "pr/alloc.h"
+#include "pr/apple_string.h"
 #include "pr/raw_array.h"
 
 #import <AppKit/AppKit.h>
@@ -141,10 +142,6 @@ PrCocoaBrowser* objectOf(PrAppBrowser* browser) {
     return (__bridge PrCocoaBrowser*)static_cast<CocoaBrowser*>(browser)->object;
 }
 
-NSString* stringOf(PrStringView text) {
-    return [[NSString alloc] initWithBytes:text.data length:text.size encoding:NSUTF8StringEncoding];
-}
-
 } // namespace
 
 void cocoaBrowserDestroy(PrApp*, PrAppBrowser* browser) {
@@ -208,7 +205,7 @@ void cocoaBrowserLoad(PrApp*, PrAppBrowser* browser, PrStringView url, PrAppBrow
         if (weak != nil)
             done(context, ok ? PrStatus_Ok : PrStatus_NotFound);
     };
-    NSURL* target = [NSURL URLWithString:stringOf(url)];
+    NSURL* target = [NSURL URLWithString:prAppleNSString(url)];
     if (target == nil) {
         dispatch_async(dispatch_get_main_queue(), ^{
             if (weak != nil)
@@ -227,13 +224,15 @@ void cocoaBrowserEvaluate(PrApp*, PrAppBrowser* browser, PrStringView script, Pr
     PrCocoaBrowser* object = objectOf(browser);
     __weak PrCocoaBrowser* weak = object;
     // The script runs as global code and is awaited, so that a promise's result is returned once it settles.
-    [object.view callAsyncJavaScript:@"return await (0, eval)(script);" arguments:@{@"script" : stringOf(script)}
+    [object.view callAsyncJavaScript:@"return await (0, eval)(script);" arguments:@{@"script" : prAppleNSString(script)}
         inFrame:nil inContentWorld:WKContentWorld.pageWorld completionHandler:^(id result, NSError* error) {
             if (weak == nil)
                 return;
             if (error != nil) {
                 NSString* message = error.userInfo[@"WKJavaScriptExceptionMessage"];
-                done(context, PrStatus_InvalidData, (message != nil ? message : error.localizedDescription).UTF8String);
+                PrRawString text = prAppleNSStringToRawString(message != nil ? message : error.localizedDescription);
+                done(context, PrStatus_InvalidData, prRawStringView(&text));
+                prRawStringReset(&text);
                 return;
             }
             NSData* json;
@@ -320,9 +319,15 @@ void cocoaBrowserCapture(PrApp*, PrAppBrowser* browser, PrRect rect, PrUVec2 siz
 void cocoaBrowserPrint(PrApp*, PrAppBrowser* browser, PrStringView path, PrVec2 paper, PrAppBrowserDoneFn done,
         void* PR_NULLABLE context) {
     PrCocoaBrowser* object = objectOf(browser);
+    NSURL* url = prAppleNSFileUrl(path);
+    NSString* saved = prAppleNSString(path);
+    if (url == nil || saved == nil) {
+        done(context, PrStatus_InvalidData);
+        return;
+    }
     NSPrintInfo* info = [[NSPrintInfo alloc] init];
     info.jobDisposition = NSPrintSaveJob;
-    info.dictionary[NSPrintJobSavingURL] = [NSURL fileURLWithPath:stringOf(path)].absoluteURL;
+    info.dictionary[NSPrintJobSavingURL] = url;
     // A CSS px is three quarters of a point.
     if (paper.x > 0 && paper.y > 0)
         info.paperSize = NSMakeSize(CGFloat(paper.x) * 0.75, CGFloat(paper.y) * 0.75);
@@ -332,7 +337,6 @@ void cocoaBrowserPrint(PrApp*, PrAppBrowser* browser, PrStringView path, PrVec2 
     info.rightMargin = 0;
     info.horizontallyCentered = NO;
     info.verticallyCentered = NO;
-    NSString* saved = stringOf(path);
     object.printed = ^(BOOL ok) {
         bool written = ok && [[NSFileManager defaultManager] fileExistsAtPath:saved];
         done(context, written ? PrStatus_Ok : PrStatus_Io);

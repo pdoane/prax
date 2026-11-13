@@ -6,6 +6,7 @@
 #include "pr/font_system_backend.h"
 #include "pr/locale.h"
 #include "pr/memory.h"
+#include "pr/windows_string.h"
 
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
@@ -24,45 +25,9 @@ struct DirectWriteSystem : PrFontSystem {
     IDWriteFontFallback* fallback;
 };
 
-// UTF-8 text converted from UTF-16, which the caller frees.
-struct Utf8 {
-    char* PR_NULLABLE data = nullptr;
-    size_t size = 0;
-};
-
-Utf8 utf8Of(const wchar_t* wide, UINT32 length) {
-    Utf8 text;
-    int bytes = WideCharToMultiByte(CP_UTF8, 0, wide, int(length), nullptr, 0, nullptr, nullptr);
-    if (bytes <= 0)
-        return text;
-    text.data = static_cast<char*>(prMemoryAlloc(size_t(bytes)));
-    text.size = size_t(WideCharToMultiByte(CP_UTF8, 0, wide, int(length), text.data, bytes, nullptr, nullptr));
-    return text;
-}
-
-// Returns `text` as NUL-terminated UTF-16, which the caller frees, or null if it is not UTF-8.
-wchar_t* PR_NULLABLE wideOf(PrStringView text, UINT32* PR_NULLABLE outLength) {
-    int length = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, text.data, int(text.size), nullptr, 0);
-    if (length <= 0 && text.size != 0)
-        return nullptr;
-    wchar_t* wide = static_cast<wchar_t*>(prMemoryAlloc((size_t(length) + 1) * sizeof(wchar_t)));
-    MultiByteToWideChar(CP_UTF8, 0, text.data, int(text.size), wide, length);
-    wide[length] = 0;
-    if (outLength != nullptr)
-        *outLength = UINT32(length);
-    return wide;
-}
-
-// Copies `text` to a raw string, and frees `text`.
-PrRawString rawOf(Utf8 text) {
-    PrRawString raw = text.data != nullptr ? prRawStringCopy(PrStringView{text.data, text.size}) : prRawStringNull();
-    prMemoryFree(text.data);
-    return raw;
-}
-
-// Returns the English name in `names`, or else its first name, or none if it has no name.
-Utf8 nameOf(IDWriteLocalizedStrings* names) {
-    Utf8 name;
+// Returns the English name in `names`, or else its first name, or the null string if it has no name.
+PrRawString nameOf(IDWriteLocalizedStrings* names) {
+    PrRawString name = prRawStringNull();
     UINT32 at = 0;
     BOOL english = FALSE;
     if (FAILED(names->FindLocaleName(L"en-us", &at, &english)) || !english)
@@ -71,15 +36,15 @@ Utf8 nameOf(IDWriteLocalizedStrings* names) {
     if (names->GetCount() > at && SUCCEEDED(names->GetStringLength(at, &length)) && length != 0) {
         wchar_t* wide = static_cast<wchar_t*>(prMemoryAlloc((size_t(length) + 1) * sizeof(wchar_t)));
         if (SUCCEEDED(names->GetString(at, wide, length + 1)))
-            name = utf8Of(wide, length);
+            name = prWindowsNarrowToRawString(wide, length);
         prMemoryFree(wide);
     }
     return name;
 }
 
-// Returns the path of the local file of `reference`, or none if the font is not in a local file.
-Utf8 pathOf(IDWriteFontFaceReference* reference) {
-    Utf8 path;
+// Returns the path of the local file of `reference`, or the null string if the font is not in a local file.
+PrRawString pathOf(IDWriteFontFaceReference* reference) {
+    PrRawString path = prRawStringNull();
     IDWriteFontFile* file = nullptr;
     IDWriteFontFileLoader* loader = nullptr;
     IDWriteLocalFontFileLoader* local = nullptr;
@@ -88,10 +53,10 @@ Utf8 pathOf(IDWriteFontFaceReference* reference) {
     UINT32 length = 0;
     if (SUCCEEDED(reference->GetFontFile(&file)) && SUCCEEDED(file->GetLoader(&loader)) &&
             SUCCEEDED(loader->QueryInterface(IID_PPV_ARGS(&local))) && SUCCEEDED(file->GetReferenceKey(&key, &keySize)) &&
-            SUCCEEDED(local->GetFilePathLengthFromKey(key, keySize, &length))) {
+            SUCCEEDED(local->GetFilePathLengthFromKey(key, keySize, &length)) && length != 0) {
         wchar_t* wide = static_cast<wchar_t*>(prMemoryAlloc((size_t(length) + 1) * sizeof(wchar_t)));
         if (SUCCEEDED(local->GetFilePathFromKey(key, keySize, wide, length + 1)))
-            path = utf8Of(wide, length);
+            path = prWindowsNarrowToRawString(wide, length);
         prMemoryFree(wide);
     }
     if (local != nullptr)
@@ -111,13 +76,13 @@ bool addFiles(PrFontSet* set, IDWriteFontSet* fonts, PrStringView family) {
         IDWriteFontFaceReference* reference = nullptr;
         if (FAILED(fonts->GetFontFaceReference(i, &reference)))
             continue;
-        Utf8 path = pathOf(reference);
+        PrRawString path = pathOf(reference);
         reference->Release();
-        if (path.data != nullptr) {
-            prFontSetAddFileFamily(set, family, PrStringView{path.data, path.size});
+        if (!prRawStringIsNull(&path)) {
+            prFontSetAddFileFamily(set, family, prRawStringView(&path));
             added = true;
         }
-        prMemoryFree(path.data);
+        prRawStringReset(&path);
     }
     return added;
 }
@@ -132,7 +97,7 @@ void destroy(PrFontSystem* system) {
 
 bool addFamily(PrFontSystem* system, PrFontSet* set, PrStringView family) {
     DirectWriteSystem* d = static_cast<DirectWriteSystem*>(system);
-    wchar_t* name = wideOf(family, nullptr);
+    wchar_t* name = prWindowsWidenCopy(family, nullptr);
     if (name == nullptr)
         return false;
     // Match the family by its typographic name first, and then by its Win32 name, which names a family of one weight,
@@ -229,17 +194,18 @@ struct ClusterSource final : IDWriteTextAnalysisSource {
 PrRawString addFallback(PrFontSystem* system, PrFontSet* set, PrStringView text, PrLocale locale, PrFontGeneric generic) {
     DirectWriteSystem* d = static_cast<DirectWriteSystem*>(system);
     UINT32 length = 0;
-    wchar_t* wide = wideOf(text, &length);
+    wchar_t* wide = prWindowsWidenCopy(text, &length);
     if (wide == nullptr || length == 0) {
         prMemoryFree(wide);
         return prRawStringNull();
     }
     char tag[kPrLocaleMaxTag];
     uint32_t tagSize = locale != 0 ? prLocaleTag(locale, tag) : 0;
-    wchar_t* localeName = wideOf(PrStringView{tag, tagSize}, nullptr);
+    wchar_t* localeName = prWindowsWidenCopy(PrStringView{tag, tagSize}, nullptr);
     // DirectWrite's fallback starts from the family of the generic family, or else from Segoe UI.
     const char* PR_NULLABLE base = kGenericFamilies[generic];
-    wchar_t* baseName = wideOf(base != nullptr ? PrStringView{base} : PrStringView{"Segoe UI"}, nullptr);
+    PrStringView baseFamily = base != nullptr ? PrStringView{base} : PrStringView{"Segoe UI"};
+    wchar_t* baseName = prWindowsWidenCopy(baseFamily, nullptr);
     ClusterSource source{};
     source.text = wide;
     source.length = length;
@@ -253,18 +219,18 @@ PrRawString addFallback(PrFontSystem* system, PrFontSet* set, PrStringView text,
         IDWriteFontFamily* fontFamily = nullptr;
         IDWriteLocalizedStrings* names = nullptr;
         if (SUCCEEDED(font->GetFontFamily(&fontFamily)) && SUCCEEDED(fontFamily->GetFamilyNames(&names)))
-            family = rawOf(nameOf(names));
+            family = nameOf(names);
         IDWriteFont3* font3 = nullptr;
         IDWriteFontFaceReference* reference = nullptr;
         bool added = false;
         if (prRawStringView(&family).size != 0 && SUCCEEDED(font->QueryInterface(IID_PPV_ARGS(&font3))) &&
                 SUCCEEDED(font3->GetFontFaceReference(&reference))) {
-            Utf8 path = pathOf(reference);
-            if (path.data != nullptr) {
-                prFontSetAddFileFamily(set, prRawStringView(&family), PrStringView{path.data, path.size});
+            PrRawString path = pathOf(reference);
+            if (!prRawStringIsNull(&path)) {
+                prFontSetAddFileFamily(set, prRawStringView(&family), prRawStringView(&path));
                 added = true;
             }
-            prMemoryFree(path.data);
+            prRawStringReset(&path);
         }
         if (!added)
             prRawStringReset(&family);

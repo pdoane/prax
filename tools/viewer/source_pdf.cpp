@@ -13,6 +13,8 @@
 #include <vector>
 
 #if defined(__APPLE__)
+#include "pr/apple_string.h"
+
 #include <CoreGraphics/CoreGraphics.h>
 #endif
 
@@ -93,8 +95,9 @@ bool pdfRasterized() {
 std::shared_ptr<PdfSource> loadPdf(const fs::path& path) {
 #if defined(__APPLE__)
     std::string name = path.string();
-    CFURLRef url = CFURLCreateFromFileSystemRepresentation(nullptr, reinterpret_cast<const UInt8*>(name.data()),
-        CFIndex(name.size()), false);
+    CFURLRef url = prAppleFileUrlCreate(name);
+    if (url == nullptr)
+        return nullptr;
     CGPDFDocumentRef document = CGPDFDocumentCreateWithURL(url);
     CFRelease(url);
     if (document == nullptr)

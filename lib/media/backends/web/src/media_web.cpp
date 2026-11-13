@@ -15,8 +15,8 @@
 // video element. A frame is the PrGpuCanvas of an entry of the page's images (prGpuCanvasAddImage), which the player
 // keeps until its next frame.
 extern "C" bool prMediaWebAvailable(void);
-extern "C" uint32_t prMediaWebCanPlay(const char* type, size_t size);
-extern "C" uint32_t prMediaWebOpen(const uint8_t* bytes, size_t size, const char* type);
+extern "C" uint32_t prMediaWebCanPlay(const char* PR_NULLABLE type, size_t typeSize);
+extern "C" uint32_t prMediaWebOpen(const uint8_t* bytes, size_t size, const char* type, size_t typeSize);
 extern "C" void prMediaWebClose(uint32_t player);
 extern "C" uint32_t prMediaWebFrame(uint32_t player, double seconds, double* time, uint32_t* serial);
 
@@ -44,13 +44,14 @@ PrMediaSupport supportsType(PrMediaCodec*, PrStringView type) {
     return PrMediaSupport(prMediaWebCanPlay(type.data, type.size));
 }
 
-// Returns the MIME type of a resource by its signature: MP4's ftyp box, or WebM's EBML header.
-const char* typeOf(PrByteView bytes) {
+// Returns the MIME type of a resource by its signature, MP4's ftyp box or WebM's EBML header, or the null view if it
+// has neither.
+PrStringView typeOf(PrByteView bytes) {
     if (bytes.size >= 8 && bytes.data[4] == 'f' && bytes.data[5] == 't' && bytes.data[6] == 'y' && bytes.data[7] == 'p')
         return "video/mp4";
     if (bytes.size >= 4 && bytes.data[0] == 0x1a && bytes.data[1] == 0x45 && bytes.data[2] == 0xdf && bytes.data[3] == 0xa3)
         return "video/webm";
-    return nullptr;
+    return PrStringView{};
 }
 
 void decoderDestroy(PrMediaDecoder* decoder) {
@@ -82,15 +83,15 @@ bool decoderFrame(PrMediaDecoder* decoder, double seconds, PrMediaFrame* out) {
 PrStatus decoderCreate(PrMediaCodec* codec, PrByteView bytes, PrMediaDecoder* PR_NULLABLE* PR_NONNULL out, PrMediaInfo* info) {
     WebCodec* c = static_cast<WebCodec*>(codec);
     *out = nullptr;
-    const char* type = typeOf(bytes);
-    if (type == nullptr)
+    PrStringView type = typeOf(bytes);
+    if (type.isNull())
         return PrStatus_NotSupported;
     // The built-in codec reads the resource's metadata. The page loads the video's own metadata later.
     *info = PrMediaInfo{.duration = kPrF64Nan, .hasVideo = true};
     PrMediaDecoder* metadata = nullptr;
     if (c->metadata != nullptr && prMediaDecoderCreate(c->metadata, bytes, &metadata, info) == PrStatus_Ok)
         prMediaDecoderDestroy(metadata);
-    uint32_t player = prMediaWebOpen(bytes.data, bytes.size, type);
+    uint32_t player = prMediaWebOpen(bytes.data, bytes.size, type.data, type.size);
     if (player == 0)
         return PrStatus_NotSupported;
     WebDecoder* d = allocZeroed<WebDecoder>();

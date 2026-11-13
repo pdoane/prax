@@ -17,8 +17,7 @@
 #include "pr/json.h"
 #include "pr/raw_array.h"
 #include "pr/text_buffer.h"
-
-#include "app/backends/win32/src/win32_text.h"
+#include "pr/windows_string.h"
 
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
@@ -318,7 +317,7 @@ void navigate(Win32Browser* b, Request& request) {
         Request replaced{.kind = RequestKind_Load, .done = b->loaded, .context = b->loadedContext};
         fail(b, replaced, PrStatus_NotFound);
     }
-    win32Widen(PrStringView{request.text.data, request.text.count}, b->utf16);
+    windowsWiden(PrStringView{request.text.data, request.text.count}, b->utf16);
     request.text.reset();
     b->navigation = 0;
     b->loaded = request.done;
@@ -332,7 +331,7 @@ void navigate(Win32Browser* b, Request& request) {
 // Calls `done` with the result of an evaluation, from the engine's answer to Runtime.evaluate.
 void answer(Win32Browser* b, HRESULT error, LPCWSTR json, PrAppBrowserResultFn done, void* PR_NULLABLE context) {
     PrJson* document = prJsonCreate();
-    PrStringView text = json != nullptr ? win32Narrow(json, lstrlenW(json), b->utf8) : PrStringView{""};
+    PrStringView text = json != nullptr ? windowsNarrow(json, uint32_t(lstrlenW(json)), b->utf8) : PrStringView{""};
     if (!prJsonParse(document, text, nullptr)) {
         prJsonDestroy(document);
         done(context, PrStatus_InvalidData, "the engine did not answer");
@@ -369,7 +368,7 @@ void evaluate(Win32Browser* b, Request& request) {
     prTextBufferAppend(&params, "{\"expression\":");
     appendJsonString(&params, prTextBufferView(&expression));
     prTextBufferAppend(&params, ",\"awaitPromise\":true,\"returnByValue\":true}");
-    win32Widen(prTextBufferView(&params), b->utf16);
+    windowsWiden(prTextBufferView(&params), b->utf16);
     prTextBufferReset(&expression);
     prTextBufferReset(&params);
     request.text.reset();
@@ -430,7 +429,7 @@ void deliverCapture(Win32Browser* b, HRESULT error, LPCWSTR json, PrUVec2 size, 
     if (ok) {
         PrJson* document = prJsonCreate();
         PrStringView data;
-        if (prJsonParse(document, win32Narrow(json, lstrlenW(json), b->utf8), nullptr))
+        if (prJsonParse(document, windowsNarrow(json, uint32_t(lstrlenW(json)), b->utf8), nullptr))
             data = prJsonString(document, prJsonMember(document, 0, "data"));
         else
             data = PrStringView{};
@@ -464,7 +463,7 @@ bool screenshot(Win32Browser* b, PrRect rect, PrUVec2 size, PrAppBrowserCaptureF
     prTextBufferAppend(&params, ",\"height\":");
     appendJsonNumber(&params, double(rect.bottom - rect.top));
     prTextBufferAppend(&params, ",\"scale\":1}}");
-    win32Widen(prTextBufferView(&params), b->utf16);
+    windowsWiden(prTextBufferView(&params), b->utf16);
     prTextBufferReset(&params);
     HRESULT called = b->view->CallDevToolsProtocolMethod(L"Page.captureScreenshot", b->utf16.data,
         Callback<ICoreWebView2CallDevToolsProtocolMethodCompletedHandler>(
@@ -482,7 +481,7 @@ bool screenshot(Win32Browser* b, PrRect rect, PrUVec2 size, PrAppBrowserCaptureF
 // Page.getLayoutMetrics.
 bool scrollOf(Win32Browser* b, LPCWSTR json, PrVec2* out) {
     PrJson* document = prJsonCreate();
-    bool ok = prJsonParse(document, win32Narrow(json, lstrlenW(json), b->utf8), nullptr);
+    bool ok = prJsonParse(document, windowsNarrow(json, uint32_t(lstrlenW(json)), b->utf8), nullptr);
     PrJsonValueIndex viewport = prJsonMember(document, 0, "cssVisualViewport");
     ok = ok && viewport != kPrJsonMissing;
     *out = PrVec2{
@@ -540,7 +539,7 @@ void print(Win32Browser* b, Request& request) {
         settings->put_ShouldPrintBackgrounds(TRUE);
         settings->put_ShouldPrintHeaderAndFooter(FALSE);
         // The engine writes only to an absolute path.
-        win32Widen(PrStringView{request.text.data, request.text.count}, b->utf16);
+        windowsWiden(PrStringView{request.text.data, request.text.count}, b->utf16);
         path.resize(GetFullPathNameW(b->utf16.data, 0, nullptr, nullptr) + 1);
         ok = GetFullPathNameW(b->utf16.data, path.count, path.data, nullptr) != 0;
     }

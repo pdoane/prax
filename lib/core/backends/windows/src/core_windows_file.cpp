@@ -3,13 +3,14 @@
 #include "pr/core_windows_file.h"
 
 #include "pr/mem.h"
+#include "pr/memory.h"
+#include "pr/windows_string.h"
 
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <wchar.h>
 
 namespace pr_impl {
 
@@ -19,32 +20,10 @@ namespace {
 // share one.
 volatile LONG writes = 0;
 
-// Returns `path` as a NUL-terminated UTF-16 string that the caller frees, or null if it is not valid UTF-8.
-wchar_t* PR_NULLABLE widen(PrStringView path) {
-    if (path.size > size_t(INT32_MAX))
-        return nullptr;
-    int count =
-        path.size == 0 ? 0 : MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path.data, int(path.size), nullptr, 0);
-    if (path.size != 0 && count == 0)
-        return nullptr;
-    wchar_t* wide = static_cast<wchar_t*>(malloc((size_t(count) + 1) * sizeof(wchar_t)));
-    if (wide == nullptr)
-        return nullptr;
-    if (count != 0)
-        MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path.data, int(path.size), wide, count);
-    wide[count] = 0;
-    return wide;
-}
-
 // Returns the NUL-terminated `wide` as UTF-8, or the null string if it is empty or is not valid UTF-16.
 PrRawString narrow(const wchar_t* wide) {
-    int size = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wide, -1, nullptr, 0, nullptr, nullptr);
-    char* utf8 = size > 1 ? static_cast<char*>(malloc(size_t(size))) : nullptr;
-    PrRawString text = prRawStringNull();
-    if (utf8 != nullptr && WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wide, -1, utf8, size, nullptr, nullptr) == size)
-        text = prRawStringCopy(PrStringView{utf8, size_t(size - 1)});
-    free(utf8);
-    return text;
+    size_t units = size_t(lstrlenW(wide));
+    return units != 0 ? prWindowsNarrowToRawString(wide, uint32_t(units)) : prRawStringNull();
 }
 
 // Returns the directory that the environment variable `name` holds, as UTF-8, or the null string if it holds none.
@@ -78,7 +57,7 @@ PrFileInfo infoOf(DWORD attributes, DWORD sizeHigh, DWORD sizeLow, FILETIME writ
 // file that is removed does, so a handle open on it that shares deletion does not stop the rename. A file system that
 // does not offer that falls back to a rename that only a file without open handles yields to.
 bool renameOver(HANDLE file, const wchar_t* target) {
-    size_t length = wcslen(target);
+    size_t length = size_t(lstrlenW(target));
     size_t size = offsetof(FILE_RENAME_INFO, FileName) + (length + 1) * sizeof(wchar_t);
     FILE_RENAME_INFO* info = static_cast<FILE_RENAME_INFO*>(calloc(1, size));
     if (info == nullptr)
@@ -105,13 +84,13 @@ using namespace pr_impl;
 
 bool prCoreWindowsFileMap(PrStringView path, PrByteView* out) {
     *out = PrByteView{};
-    wchar_t* wide = widen(path);
+    wchar_t* wide = prWindowsWidenCopy(path, nullptr);
     if (wide == nullptr)
         return false;
     // A directory does not open without FILE_FLAG_BACKUP_SEMANTICS, so only files reach the checks below.
     HANDLE file = CreateFileW(wide, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING,
         FILE_ATTRIBUTE_NORMAL, nullptr);
-    free(wide);
+    prMemoryFree(wide);
     if (file == INVALID_HANDLE_VALUE)
         return false;
     LARGE_INTEGER size;
@@ -141,12 +120,12 @@ void prCoreWindowsFileUnmap(PrByteView* mapping) {
 
 bool prCoreWindowsFileInfo(PrStringView path, PrFileInfo* out) {
     *out = PrFileInfo{};
-    wchar_t* wide = widen(path);
+    wchar_t* wide = prWindowsWidenCopy(path, nullptr);
     if (wide == nullptr)
         return false;
     WIN32_FILE_ATTRIBUTE_DATA data;
     bool found = GetFileAttributesExW(wide, GetFileExInfoStandard, &data) != 0;
-    free(wide);
+    prMemoryFree(wide);
     if (found)
         *out = infoOf(data.dwFileAttributes, data.nFileSizeHigh, data.nFileSizeLow, data.ftLastWriteTime);
     return found;
@@ -156,14 +135,14 @@ bool prCoreWindowsFileSame(PrStringView a, PrStringView b) {
     BY_HANDLE_FILE_INFORMATION found[2];
     PrStringView paths[2] = {a, b};
     for (int i = 0; i < 2; ++i) {
-        wchar_t* wide = widen(paths[i]);
+        wchar_t* wide = prWindowsWidenCopy(paths[i], nullptr);
         if (wide == nullptr)
             return false;
         // No access is asked for, which reads what the file system records, and a directory opens only with backup
         // semantics.
         DWORD share = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
         HANDLE file = CreateFileW(wide, 0, share, nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
-        free(wide);
+        prMemoryFree(wide);
         if (file == INVALID_HANDLE_VALUE)
             return false;
         bool read = GetFileInformationByHandle(file, &found[i]) != 0;
@@ -176,18 +155,18 @@ bool prCoreWindowsFileSame(PrStringView a, PrStringView b) {
 }
 
 bool prCoreWindowsFileEachEntry(PrStringView path, PrFileEntryFn fn, void* PR_NULLABLE context) {
-    wchar_t* wide = widen(path);
+    wchar_t* wide = prWindowsWidenCopy(path, nullptr);
     if (wide == nullptr)
         return false;
     // The pattern is the directory followed by a separator and a wildcard.
-    size_t length = wcslen(wide);
+    size_t length = size_t(lstrlenW(wide));
     wchar_t* pattern = static_cast<wchar_t*>(malloc((length + 3) * sizeof(wchar_t)));
     if (pattern == nullptr) {
-        free(wide);
+        prMemoryFree(wide);
         return false;
     }
     _snwprintf_s(pattern, length + 3, _TRUNCATE, L"%s\\*", wide);
-    free(wide);
+    prMemoryFree(wide);
     WIN32_FIND_DATAW data;
     HANDLE find = FindFirstFileExW(pattern, FindExInfoBasic, &data, FindExSearchNameMatch, nullptr,
         FIND_FIRST_EX_LARGE_FETCH);
@@ -213,15 +192,15 @@ bool prCoreWindowsFileEachEntry(PrStringView path, PrFileEntryFn fn, void* PR_NU
 }
 
 bool prCoreWindowsFileWrite(PrStringView path, PrByteView bytes) {
-    wchar_t* target = widen(path);
+    wchar_t* target = prWindowsWidenCopy(path, nullptr);
     if (target == nullptr)
         return false;
     // The bytes go to a file in the same directory, which takes the path's name once it is complete.
-    size_t length = wcslen(target);
+    size_t length = size_t(lstrlenW(target));
     size_t capacity = length + 64;
     wchar_t* temporary = static_cast<wchar_t*>(malloc(capacity * sizeof(wchar_t)));
     if (temporary == nullptr) {
-        free(target);
+        prMemoryFree(target);
         return false;
     }
     _snwprintf_s(temporary, capacity, _TRUNCATE, L"%s.%lu.%u.tmp", target, GetCurrentProcessId(),
@@ -246,28 +225,28 @@ bool prCoreWindowsFileWrite(PrStringView path, PrByteView bytes) {
             DeleteFileW(temporary);
     }
     free(temporary);
-    free(target);
+    prMemoryFree(target);
     return written;
 }
 
 bool prCoreWindowsFileRemove(PrStringView path) {
-    wchar_t* wide = widen(path);
+    wchar_t* wide = prWindowsWidenCopy(path, nullptr);
     if (wide == nullptr)
         return false;
     DWORD attributes = GetFileAttributesW(wide);
     bool directory = attributes != INVALID_FILE_ATTRIBUTES && (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
     bool removed = (directory ? RemoveDirectoryW(wide) : DeleteFileW(wide)) != 0;
-    free(wide);
+    prMemoryFree(wide);
     return removed;
 }
 
 bool prCoreWindowsFileCreateDirectory(PrStringView path) {
-    wchar_t* wide = widen(path);
+    wchar_t* wide = prWindowsWidenCopy(path, nullptr);
     if (wide == nullptr)
         return false;
     // Each directory from the root down is made, so that a parent exists before its child. A drive's root exists, and
     // making it fails, which the loop allows.
-    size_t length = wcslen(wide);
+    size_t length = size_t(lstrlenW(wide));
     for (size_t i = 1; i <= length; ++i) {
         if (i != length && wide[i] != L'/' && wide[i] != L'\\')
             continue;
@@ -275,13 +254,13 @@ bool prCoreWindowsFileCreateDirectory(PrStringView path) {
         wide[i] = 0;
         if (!CreateDirectoryW(wide, nullptr) && GetLastError() != ERROR_ALREADY_EXISTS &&
                 GetLastError() != ERROR_ACCESS_DENIED) {
-            free(wide);
+            prMemoryFree(wide);
             return false;
         }
         wide[i] = saved;
     }
     DWORD attributes = GetFileAttributesW(wide);
-    free(wide);
+    prMemoryFree(wide);
     return attributes != INVALID_FILE_ATTRIBUTES && (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
 }
 

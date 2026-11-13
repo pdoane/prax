@@ -3,6 +3,7 @@
 #include "pr/app_cocoa.h"
 
 #include "pr/alloc.h"
+#include "pr/apple_string.h"
 #include "pr/atomic.h"
 #include "pr/count_of.h"
 #include "pr/mem.h"
@@ -243,14 +244,10 @@ bool modifierDown(NSEvent* event, PrAppKeyCode code) {
     }
 }
 
-// Returns the length in UTF-8 of the first `units` UTF-16 units of `string`.
+// Returns the length in UTF-8 of the first `units` UTF-16 units of `string`, or zero if they are ill-formed.
 uint32_t utf8Length(NSString* string, NSUInteger units) {
-    units = MIN(units, string.length);
-    return uint32_t([[string substringToIndex:units] lengthOfBytesUsingEncoding:NSUTF8StringEncoding]);
-}
-
-PrStringView viewOf(NSData* bytes) {
-    return PrStringView{static_cast<const char*>(bytes.bytes), bytes.length};
+    uint32_t size = prAppleNSStringToUtf8([string substringToIndex:MIN(units, string.length)], nullptr, 0);
+    return size != kPrAppleStringInvalid ? size : 0;
 }
 
 void destroy(PrApp* app) {
@@ -425,7 +422,7 @@ void setCursor(PrApp* app, PrAppCursor cursor) {
 
 void setTitle(PrApp* app, PrStringView title) {
     PrCocoaHost* host = hostOf(app);
-    NSString* string = [[NSString alloc] initWithBytes:title.data length:title.size encoding:NSUTF8StringEncoding];
+    NSString* string = prAppleNSString(title);
     host.title = string != nil ? string : @"";
     if (host.window != nil)
         host.window.title = host.title;
@@ -485,7 +482,7 @@ PrStatus surface(PrApp* app, PrAppSurface* out) {
 }
 
 PrStatus openUrl(PrApp*, PrStringView url) {
-    NSString* string = [[NSString alloc] initWithBytes:url.data length:url.size encoding:NSUTF8StringEncoding];
+    NSString* string = prAppleNSString(url);
     NSURL* address = string != nil ? [NSURL URLWithString:string] : nil;
     if (address == nil)
         return PrStatus_Syntax;
@@ -496,12 +493,13 @@ void requestClipboardText(PrApp* app) {
     CocoaApp* cocoa = static_cast<CocoaApp*>(app);
     dispatch_async(dispatch_get_main_queue(), ^{
         NSString* string = [NSPasteboard.generalPasteboard stringForType:NSPasteboardTypeString];
-        NSData* bytes = [string != nil ? string : @"" dataUsingEncoding:NSUTF8StringEncoding];
+        PrRawString text = prAppleNSStringToRawString(string != nil ? string : @"");
         PrAppEvent event{};
         event.kind = PrAppEventKind_Clipboard;
         event.time = NSProcessInfo.processInfo.systemUptime;
-        event.input.text = viewOf(bytes);
+        event.input.text = prRawStringView(&text);
         [(__bridge PrCocoaHost*)cocoa->host deliver:event];
+        prRawStringReset(&text);
     });
 }
 
@@ -515,7 +513,7 @@ void setTextInputRect(PrApp* app, PrRect rect) {
 }
 
 PrStatus setClipboardText(PrApp*, PrStringView text) {
-    NSString* string = [[NSString alloc] initWithBytes:text.data length:text.size encoding:NSUTF8StringEncoding];
+    NSString* string = prAppleNSString(text);
     NSPasteboard* board = NSPasteboard.generalPasteboard;
     [board clearContents];
     return [board setString:string forType:NSPasteboardTypeString] ? PrStatus_Ok : PrStatus_Io;
@@ -704,12 +702,12 @@ using namespace pr_impl;
     event.modifiers = modifiersOf(source.modifierFlags);
     event.keyboard.repeat = kind == PrAppEventKind_KeyDown && source.isARepeat;
     event.keyboard.composing = composing;
-    NSData* bytes = nil;
+    PrRawString text = prRawStringNull();
     if (mac.key != PrAppKey_Unknown) {
         event.keyboard.key = mac.key;
     } else if (NSString* character = characterOf(source)) {
-        bytes = [character dataUsingEncoding:NSUTF8StringEncoding];
-        event.keyboard.text = viewOf(bytes);
+        text = prAppleNSStringToRawString(character);
+        event.keyboard.text = prRawStringView(&text);
         unichar first = [character.uppercaseString characterAtIndex:0];
         event.keyboard.key = first < 128 ? PrAppKey(first) : PrAppKey_Unknown;
     } else if (isDead(source)) {
@@ -720,6 +718,7 @@ using namespace pr_impl;
         [self.host deliver:event];
     else
         [self.host deliver:event ahead:mark];
+    prRawStringReset(&text);
 }
 - (void)key:(NSEvent*)source kind:(PrAppEventKind)kind {
     [self key:source kind:kind composing:NO mark:kNoMark];
@@ -750,17 +749,18 @@ using namespace pr_impl;
     [self key:e kind:modifierDown(e, mac.code) ? PrAppEventKind_KeyDown : PrAppEventKind_KeyUp];
 }
 - (void)deliverText:(NSString*)text kind:(PrAppEventKind)kind selection:(NSRange)selection {
-    NSData* bytes = [text dataUsingEncoding:NSUTF8StringEncoding];
+    PrRawString utf8 = prAppleNSStringToRawString(text);
     PrAppEvent event{};
     event.kind = kind;
     event.time = NSProcessInfo.processInfo.systemUptime;
-    event.input.text = viewOf(bytes);
+    event.input.text = prRawStringView(&utf8);
     if (selection.location != NSNotFound)
         event.input.selection = PrAppTextRange{
             utf8Length(text, selection.location),
             utf8Length(text, selection.location + selection.length),
         };
     [self.host deliver:event];
+    prRawStringReset(&utf8);
 }
 // Ends the composition, if there is one, committing `text`, which follows as a Text event.
 - (void)commit:(NSString*)text {
@@ -1067,10 +1067,8 @@ using namespace pr_impl;
 - (PrStatus)postNotification:(const PrAppNotificationDesc*)desc {
     if (self.permission == CocoaPermission_Refused)
         return PrStatus_NotAllowed;
-    NSString* title = [[NSString alloc] initWithBytes:desc->title.data length:desc->title.size
-        encoding:NSUTF8StringEncoding];
-    NSString* body = [[NSString alloc] initWithBytes:desc->body.data length:desc->body.size
-        encoding:NSUTF8StringEncoding];
+    NSString* title = prAppleNSString(desc->title);
+    NSString* body = prAppleNSString(desc->body);
     UNMutableNotificationContent* content = [[UNMutableNotificationContent alloc] init];
     content.title = title != nil ? title : @"";
     content.body = body != nil ? body : @"";
@@ -1219,8 +1217,7 @@ PrApp* prAppCocoaCreate(const PrAppDesc* desc) {
     app->browserProcesses = cocoaBrowserProcesses;
     PrCocoaHost* host = [[PrCocoaHost alloc] init];
     host.app = app;
-    host.title = [[NSString alloc] initWithBytes:desc->title.data length:desc->title.size
-        encoding:NSUTF8StringEncoding];
+    host.title = prAppleNSString(desc->title);
     host.size = NSMakeSize(desc->extent.x, desc->extent.y);
     host.headless = desc->headless;
     app->host = (__bridge_retained void*)host;

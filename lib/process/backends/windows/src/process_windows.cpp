@@ -9,6 +9,7 @@
 #include "pr/atomic.h"
 #include "pr/mem.h"
 #include "pr/thread.h"
+#include "pr/windows_string.h"
 
 #include "process/backends/shared/src/process_shared_piped.h"
 
@@ -61,32 +62,23 @@ void closeHandle(HANDLE* handle) {
     }
 }
 
-// Converts UTF-8 to a NUL-terminated UTF-16 string that the caller frees.
-wchar_t* wideString(PrStringView text) {
-    int count = text.size != 0 ? MultiByteToWideChar(CP_UTF8, 0, text.data, int(text.size), nullptr, 0) : 0;
-    wchar_t* wide = static_cast<wchar_t*>(prMemoryAlloc((size_t(count) + 1) * sizeof(wchar_t)));
-    if (count != 0)
-        MultiByteToWideChar(CP_UTF8, 0, text.data, int(text.size), wide, count);
-    wide[count] = 0;
-    return wide;
-}
-
 // Appends `argument` to `line` as CommandLineToArgvW reads it back: quoted if it is empty or holds a space, a tab or a
-// quote, with each quote escaped and the backslashes before a quote doubled.
-void appendArgument(RawArray<wchar_t>* line, PrStringView argument) {
-    wchar_t* wide = wideString(argument);
-    size_t length = 0;
-    while (wide[length] != 0)
-        ++length;
+// quote, with each quote escaped and the backslashes before a quote doubled. Returns false if `argument` does not
+// widen.
+bool appendArgument(RawArray<wchar_t>* line, PrStringView argument) {
+    uint32_t length = 0;
+    wchar_t* wide = prWindowsWidenCopy(argument, &length);
+    if (wide == nullptr)
+        return false;
     bool quoted = length == 0;
     for (size_t i = 0; i < length; ++i)
         quoted = quoted || wide[i] == L' ' || wide[i] == L'\t' || wide[i] == L'"';
     if (line->count != 0)
         line->push(L' ');
     if (!quoted) {
-        line->append(wide, uint32_t(length));
+        line->append(wide, length);
         prMemoryFree(wide);
-        return;
+        return true;
     }
     line->push(L'"');
     size_t backslashes = 0;
@@ -105,6 +97,7 @@ void appendArgument(RawArray<wchar_t>* line, PrStringView argument) {
         line->push(L'\\');
     line->push(L'"');
     prMemoryFree(wide);
+    return true;
 }
 
 // Returns true if the environment block entry `entry` and `variable` have the same name. Both are NAME=value in UTF-16.
@@ -121,16 +114,23 @@ bool sameName(const wchar_t* entry, const wchar_t* variable) {
 }
 
 // Appends the process's environment block to `block`. It is the launcher's variables, except those that `desc` sets,
-// followed by the variables of `desc`. Each variable ends with a NUL, and one more NUL ends the block.
-void buildEnvironment(const PrProcessDesc* desc, RawArray<wchar_t>* block) {
+// followed by the variables of `desc`. Each variable ends with a NUL, and one more NUL ends the block. Returns false,
+// and appends nothing, if a variable of `desc` does not widen.
+bool buildEnvironment(const PrProcessDesc* desc, RawArray<wchar_t>* block) {
     RawArray<wchar_t*> variables;
-    for (uint32_t i = 0; i < desc->environmentCount; ++i)
-        variables.push(wideString(desc->environment[i]));
+    for (uint32_t i = 0; i < desc->environmentCount; ++i) {
+        wchar_t* variable = prWindowsWidenCopy(desc->environment[i], nullptr);
+        if (variable == nullptr) {
+            for (wchar_t* widened : variables.span())
+                prMemoryFree(widened);
+            variables.reset();
+            return false;
+        }
+        variables.push(variable);
+    }
     wchar_t* inherited = GetEnvironmentStringsW();
     for (const wchar_t* entry = inherited; entry != nullptr && *entry != 0;) {
-        size_t length = 0;
-        while (entry[length] != 0)
-            ++length;
+        size_t length = size_t(lstrlenW(entry));
         bool replaced = false;
         for (uint32_t i = 0; i < variables.count && !replaced; ++i)
             replaced = sameName(entry, variables.data[i]);
@@ -141,14 +141,12 @@ void buildEnvironment(const PrProcessDesc* desc, RawArray<wchar_t>* block) {
     if (inherited != nullptr)
         FreeEnvironmentStringsW(inherited);
     for (wchar_t* variable : variables.span()) {
-        size_t length = 0;
-        while (variable[length] != 0)
-            ++length;
-        block->append(variable, uint32_t(length + 1));
+        block->append(variable, uint32_t(lstrlenW(variable)) + 1);
         prMemoryFree(variable);
     }
     variables.reset();
     block->push(0);
+    return true;
 }
 
 // Makes a pipe whose parent's end is overlapped and whose child's end the child inherits. `inbound` is true for a pipe
@@ -386,6 +384,28 @@ void resizeTerminal(PrProcess* base, PrUVec2 extent, PrUVec2) {
 
 // Starts the program on pipes or a pseudoconsole, and the thread that serves them.
 PrStatus launch(PrProcessLauncher*, const PrProcessDesc* desc, PrProcess* PR_NULLABLE* PR_NONNULL out) {
+    *out = nullptr;
+    // The command line, the working directory and the environment block, in UTF-16, before anything else is made.
+    RawArray<wchar_t> line;
+    RawArray<wchar_t> environment;
+    wchar_t* PR_NULLABLE directory = nullptr;
+    bool converted = appendArgument(&line, desc->program);
+    for (uint32_t i = 0; i < desc->argumentCount && converted; ++i)
+        converted = appendArgument(&line, desc->arguments[i]);
+    line.push(0);
+    if (converted && desc->directory.data != nullptr) {
+        directory = prWindowsWidenCopy(desc->directory, nullptr);
+        converted = directory != nullptr;
+    }
+    if (converted && desc->environmentCount != 0)
+        converted = buildEnvironment(desc, &environment);
+    if (!converted) {
+        line.reset();
+        environment.reset();
+        prMemoryFree(directory);
+        return PrStatus_InvalidData;
+    }
+
     bool onTerminal = desc->streams == PrProcessStreams_Terminal;
     WindowsProcess* process = allocZeroed<WindowsProcess>();
     process->onTerminal = onTerminal;
@@ -428,6 +448,9 @@ PrStatus launch(PrProcessLauncher*, const PrProcessDesc* desc, PrProcess* PR_NUL
         closeHandle(&childOutput);
         closeHandle(&childError);
         freeProcess(process);
+        line.reset();
+        environment.reset();
+        prMemoryFree(directory);
         return PrStatus_Io;
     }
 
@@ -458,15 +481,6 @@ PrStatus launch(PrProcessLauncher*, const PrProcessDesc* desc, PrProcess* PR_NUL
     }
     startup.lpAttributeList = list;
 
-    RawArray<wchar_t> line;
-    appendArgument(&line, desc->program);
-    for (uint32_t i = 0; i < desc->argumentCount; ++i)
-        appendArgument(&line, desc->arguments[i]);
-    line.push(0);
-    wchar_t* directory = desc->directory.data != nullptr ? wideString(desc->directory) : nullptr;
-    RawArray<wchar_t> environment;
-    if (desc->environmentCount != 0)
-        buildEnvironment(desc, &environment);
     PROCESS_INFORMATION started{};
     DWORD flags = EXTENDED_STARTUPINFO_PRESENT | CREATE_UNICODE_ENVIRONMENT;
     if (!onTerminal)

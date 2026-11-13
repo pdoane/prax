@@ -33,10 +33,6 @@ struct CommandRegistry {
     RawArray<Command*> commands;   // by PrCommandIndex
 };
 
-PrStringView viewOf(const PrRawString& string) {
-    return prRawStringView(&string);
-}
-
 const Command& commandAt(const CommandRegistry* registry, PrCommandIndex index) {
     PR_ASSERT(index < registry->commands.count);
     return *registry->commands.data[index];
@@ -99,7 +95,7 @@ const PrCommandParam* PR_NULLABLE paramOf(const Command& command, PrStringView n
 
 // Checks the arguments of a run against the parameters of `command`, and explains the first mismatch.
 PrStatus checkArgs(const Command& command, const PrCommandArgs* args, PrRawString* PR_NULLABLE error) {
-    PrStringView id = viewOf(command.id);
+    PrStringView id = prRawStringView(&command.id);
     const PrJson* document = args->document;
     if (document != nullptr) {
         if (prJsonKind(document, args->object) != PrJsonKind_Object) {
@@ -193,10 +189,10 @@ void prCommandRegistryAdd(PrCommandRegistry* registry, const PrCommandDesc* desc
         command->paramText[2 * i] = prRawStringCopy(param.name);
         command->paramText[2 * i + 1] = prRawStringCopy(param.description);
         command->params[i] = PrCommandParam{
-            .name = viewOf(command->paramText[2 * i]),
+            .name = prRawStringView(&command->paramText[2 * i]),
             .kind = param.kind,
             .required = param.required,
-            .description = viewOf(command->paramText[2 * i + 1]),
+            .description = prRawStringView(&command->paramText[2 * i + 1]),
         };
     }
     registry->commands.push(command);
@@ -209,10 +205,10 @@ uint32_t prCommandRegistryCount(const PrCommandRegistry* registry) {
 PrCommandDesc prCommandRegistryCommand(const PrCommandRegistry* registry, PrCommandIndex index) {
     const Command& command = commandAt(registry, index);
     return PrCommandDesc{
-        .id = viewOf(command.id),
-        .title = viewOf(command.title),
-        .category = viewOf(command.category),
-        .description = viewOf(command.description),
+        .id = prRawStringView(&command.id),
+        .title = prRawStringView(&command.title),
+        .category = prRawStringView(&command.category),
+        .description = prRawStringView(&command.description),
         .flags = command.flags,
         .params = command.params,
         .paramCount = command.paramCount,
@@ -224,7 +220,7 @@ PrCommandDesc prCommandRegistryCommand(const PrCommandRegistry* registry, PrComm
 
 PrCommandIndex prCommandRegistryFind(const PrCommandRegistry* registry, PrStringView id) {
     for (uint32_t i = 0; i < registry->commands.count; ++i) {
-        if (viewOf(registry->commands.data[i]->id) == id)
+        if (prRawStringView(&registry->commands.data[i]->id) == id)
             return i;
     }
     return kPrCommandMissing;

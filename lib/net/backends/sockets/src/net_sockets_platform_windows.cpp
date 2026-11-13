@@ -5,6 +5,7 @@
 #include "pr/assert.h"
 #include "pr/count_of.h"
 #include "pr/mem.h"
+#include "pr/windows_string.h"
 
 #include "net/backends/sockets/src/net_sockets_platform.h"
 
@@ -232,8 +233,10 @@ void socketsShutdownSend(SocketsHandle socket) {
 
 PrNetError socketsResolve(const char* host, uint16_t port, RawArray<SocketsAddress>* out) {
     wchar_t wide[kHostMaxBytes + 1];
-    if (MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, host, -1, wide, int(countOf(wide))) == 0)
+    uint32_t count = prWindowsWiden(PrStringView(host), wide, kHostMaxBytes);
+    if (count > kHostMaxBytes)
         return PrNetError_NameNotResolved;
+    wide[count] = 0;
     wchar_t service[8];
     uint32_t digits = 0;
     wchar_t reversed[8];

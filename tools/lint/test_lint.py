@@ -589,6 +589,19 @@ class ModuleDependencies(unittest.TestCase):
                  'target_link_libraries(geom PRIVATE prax::geom)\n')
         self.assertEqual(self.problems(cmake, {'examples/geom/main.cpp': '#include "pr/geom.h"\n'}), [])
 
+    def test_a_link_to_an_engine_target_that_is_not_declared_is_reported(self):
+        cmake = ('pr_library(geom INCLUDE lib/geom/include lib/geom/src/geom.cpp)\n'
+                 'if (WIN32)\n    target_link_libraries(pr_geom PRIVATE prax::core_windows)\nendif()\n')
+        self.assertEqual(self.problems(cmake, {}),
+                         [('CMakeLists.txt', 'geom links prax::core_windows, which no target is')])
+
+    def test_an_alias_is_a_target(self):
+        cmake = ('add_library(pr_zlib STATIC lib/zlib/zlib.c)\n'
+                 'add_library(prax::zlib ALIAS pr_zlib)\n'
+                 'pr_library(geom INCLUDE lib/geom/include lib/geom/src/geom.cpp)\n'
+                 'target_link_libraries(pr_geom PRIVATE prax::zlib)\n')
+        self.assertEqual(self.problems(cmake, {}), [])
+
     def test_a_tree_without_a_build_has_no_targets(self):
         with tempfile.TemporaryDirectory() as root:
             self.assertEqual(lint.modules.targets(root), {})
@@ -1318,6 +1331,22 @@ class SharedIncludes(unittest.TestCase):
                          ["pr/draw_shared_atlas.h is shared by the backends of lib/draw, and only they include it"])
 
 
+class Wrappers(unittest.TestCase):
+    def test_each_group_of_wrappers_is_sorted_by_path(self):
+        # The groups are the runs of entries between the table's comments, which lint.py's source holds.
+        text = Path(lint.__file__).read_text(encoding="utf-8")
+        body = text[text.index("WRAPPERS = {\n"):text.index("\n}\n", text.index("WRAPPERS = {\n"))]
+        groups = [[]]
+        for line in body.split("\n")[1:]:
+            if line.strip().startswith("#"):
+                groups.append([])
+            elif line.startswith('    "'):
+                groups[-1].append(line.split('"')[1])
+        for paths in groups:
+            self.assertEqual(paths, sorted(paths))
+        self.assertEqual(sum(len(paths) for paths in groups), len(lint.WRAPPERS))
+
+
 class BackendHeaders(unittest.TestCase):
     def problems(self, path, text):
         report = lint.Report()
@@ -1335,7 +1364,18 @@ class BackendHeaders(unittest.TestCase):
     def test_the_backend_headers_are_found_in_the_tree(self):
         headers = lint.backend_headers()
         self.assertEqual(headers.get("draw_cpu.h"), "lib/draw/")
+        self.assertEqual(headers.get("core_windows_file.h"), "lib/core/")
         self.assertNotIn("draw_shared_atlas.h", headers)
+        # A platform's helpers are core's, not a backend's.
+        self.assertNotIn("windows_string.h", headers)
+
+    def test_another_librarys_backend_does_not_include_cores_backends(self):
+        report = lint.Report()
+        path = os.path.join(lint.ROOT, 'lib/app/backends/win32/src/win32_browser.cpp')
+        lint.check_backend_headers(report, path, '#include "pr/core_windows_file.h"\n#include "pr/windows_string.h"\n',
+                                   lint.backend_headers())
+        self.assertEqual([message for _, _, _, message in report.problems],
+                         ["pr/core_windows_file.h is a backend of lib/core; use its interface"])
 
 
 class SharedImplementation(unittest.TestCase):

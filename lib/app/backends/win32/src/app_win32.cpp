@@ -11,9 +11,9 @@
 #include "pr/thread.h"
 #include "pr/time.h"
 #include "pr/vec.h"
+#include "pr/windows_string.h"
 
 #include "app/backends/win32/src/win32_browser.h"
-#include "app/backends/win32/src/win32_text.h"
 
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
@@ -794,7 +794,7 @@ void deliverKey(Win32App* app, UINT message, WPARAM virtualKey, LPARAM flags) {
         if (text.dead) {
             event.keyboard.key = PrAppKey_Dead;
         } else if (text.count != 0) {
-            event.keyboard.text = win32Narrow(text.units, text.count, app->utf8);
+            event.keyboard.text = windowsNarrow(text.units, uint32_t(text.count), app->utf8);
             wchar_t first = text.units[0];
             if (first >= L'a' && first <= L'z')
                 first = wchar_t(first - L'a' + L'A');
@@ -835,7 +835,7 @@ void deliverCharacter(Win32App* app, wchar_t unit) {
     app->highSurrogate = 0;
     if (!isPrintable(units, count))
         return;
-    deliverText(app, PrAppEventKind_Text, win32Narrow(units, count, app->utf8), PrAppTextRange{});
+    deliverText(app, PrAppEventKind_Text, windowsNarrow(units, uint32_t(count), app->utf8), PrAppTextRange{});
 }
 
 void deliverCodePoint(Win32App* app, uint32_t codePoint) {
@@ -849,7 +849,7 @@ void deliverCodePoint(Win32App* app, uint32_t codePoint) {
         units[0] = wchar_t(codePoint);
     }
     if (isPrintable(units, count))
-        deliverText(app, PrAppEventKind_Text, win32Narrow(units, count, app->utf8), PrAppTextRange{});
+        deliverText(app, PrAppEventKind_Text, windowsNarrow(units, uint32_t(count), app->utf8), PrAppTextRange{});
 }
 
 // Places the input method's windows at the caret that the program last gave, in the window's client area.
@@ -907,6 +907,12 @@ void compositionSelection(HIMC context, int count, int* start, int* end) {
     }
 }
 
+// Returns the length in UTF-8 of the first `count` UTF-16 units of `units`, or zero if they are ill-formed.
+uint32_t utf8Length(const wchar_t* units, int count) {
+    uint32_t size = prWindowsNarrow(units, uint32_t(count), nullptr, 0);
+    return size != kPrWindowsStringInvalid ? size : 0;
+}
+
 // Delivers a change to the composition. A result ends the composition and follows as a Text event, and a new
 // composition may begin in the same message.
 void deliverComposition(Win32App* app, LPARAM flags) {
@@ -915,7 +921,7 @@ void deliverComposition(Win32App* app, LPARAM flags) {
         return;
     if ((flags & GCS_RESULTSTR) != 0) {
         int count = compositionString(app, context, GCS_RESULTSTR);
-        PrStringView text = win32Narrow(app->utf16.data, count, app->utf8);
+        PrStringView text = windowsNarrow(app->utf16.data, uint32_t(count), app->utf8);
         if (app->composing) {
             app->composing = false;
             deliverText(app, PrAppEventKind_CompositionEnd, text, PrAppTextRange{});
@@ -934,10 +940,10 @@ void deliverComposition(Win32App* app, LPARAM flags) {
             int start = 0;
             int end = 0;
             compositionSelection(context, count, &start, &end);
-            PrAppTextRange selection{win32Utf8Length(app->utf16.data, start), win32Utf8Length(app->utf16.data, end)};
+            PrAppTextRange selection{utf8Length(app->utf16.data, start), utf8Length(app->utf16.data, end)};
             app->composing = true;
-            deliverText(app, PrAppEventKind_CompositionUpdate, win32Narrow(app->utf16.data, count, app->utf8),
-                selection);
+            PrStringView text = windowsNarrow(app->utf16.data, uint32_t(count), app->utf8);
+            deliverText(app, PrAppEventKind_CompositionUpdate, text, selection);
         }
     }
     ImmReleaseContext(app->window, context);
@@ -964,7 +970,7 @@ void deliverClipboard(Win32App* app) {
             size_t count = 0;
             while (count < capacity && units[count] != 0)
                 ++count;
-            text = win32Narrow(units, int(count < size_t(INT32_MAX) ? count : size_t(INT32_MAX)), app->utf8);
+            text = windowsNarrow(units, uint32_t(count < size_t(UINT32_MAX) ? count : size_t(UINT32_MAX)), app->utf8);
             GlobalUnlock(data);
         }
         CloseClipboard();
@@ -1536,7 +1542,7 @@ void setCursor(PrApp* base, PrAppCursor cursor) {
 void setTitle(PrApp* base, PrStringView title) {
     Win32App* app = static_cast<Win32App*>(base);
     RawArray<wchar_t> wide;
-    win32Widen(title, wide);
+    windowsWiden(title, wide);
     prMemoryFree(app->title);
     app->title = wide.data;
     if (app->window != nullptr)
@@ -1600,7 +1606,7 @@ bool isActive(PrApp* base) {
 // Copies `text` to `out`, a NUL-terminated field of `capacity` UTF-16 units. Text that does not fit is cut before the
 // first character that does not fit, so a surrogate pair is never split.
 void copyField(Win32App* app, PrStringView text, wchar_t* out, size_t capacity) {
-    win32Widen(text, app->utf16);
+    windowsWiden(text, app->utf16);
     size_t count = app->utf16.count - 1;
     if (count > capacity - 1) {
         count = capacity - 1;
@@ -1669,7 +1675,7 @@ PrStatus openUrl(PrApp* base, PrStringView url) {
     Win32App* app = static_cast<Win32App*>(base);
     if (!isUrl(url))
         return PrStatus_Syntax;
-    win32Widen(url, app->utf16);
+    windowsWiden(url, app->utf16);
     HINSTANCE result = ShellExecuteW(nullptr, L"open", app->utf16.data, nullptr, nullptr, SW_SHOWNORMAL);
     // A result above 32 is success, as the function's older interface defines it.
     return reinterpret_cast<INT_PTR>(result) > 32 ? PrStatus_Ok : PrStatus_Io;
@@ -1686,7 +1692,7 @@ PrStatus setClipboardText(PrApp* base, PrStringView text) {
     // The clipboard takes data only from an owner window, which exists during a run.
     if (app->window == nullptr)
         return PrStatus_Io;
-    win32Widen(text, app->utf16);
+    windowsWiden(text, app->utf16);
     size_t bytes = size_t(app->utf16.count) * sizeof(wchar_t);
     HGLOBAL memory = GlobalAlloc(GMEM_MOVEABLE, bytes);
     if (memory == nullptr)
@@ -1812,7 +1818,7 @@ PrApp* prAppWin32Create(const PrAppDesc* desc) {
     app->browserPrint = win32BrowserPrint;
     app->browserProcesses = win32BrowserProcesses;
     RawArray<wchar_t> title;
-    win32Widen(desc->title, title);
+    windowsWiden(desc->title, title);
     app->title = title.data;
     app->extent = desc->extent;
     app->headless = desc->headless;

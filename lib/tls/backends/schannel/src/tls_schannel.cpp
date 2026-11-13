@@ -8,6 +8,7 @@
 #include "pr/mem.h"
 #include "pr/raw_array.h"
 #include "pr/thread.h"
+#include "pr/windows_string.h"
 
 #include "tls/backends/shared/src/tls_shared.h"
 
@@ -536,8 +537,8 @@ bool copyName(PrStringView name, wchar_t* out) {
         if (name.data[i] == 0)
             return false;
     }
-    int written = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, name.data, int(name.size), out, int(kNameMaxBytes - 1));
-    if (written <= 0)
+    uint32_t written = prWindowsWiden(name, out, uint32_t(kNameMaxBytes - 1));
+    if (written == 0 || written > kNameMaxBytes - 1)
         return false;
     out[written] = 0;
     return true;

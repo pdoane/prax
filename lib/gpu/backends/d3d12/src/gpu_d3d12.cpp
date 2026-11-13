@@ -36,6 +36,7 @@
 #include "pr/raw_array.h"
 #include "pr/search.h"
 #include "pr/thread.h"
+#include "pr/windows_string.h"
 
 #include "gpu/backends/shared/src/gpu_shared_device.h"
 #include "gpu/backends/shared/src/gpu_shared_upload.h"
@@ -371,10 +372,10 @@ D3d12Commands* commandsOf(PrGpuCommands* commands) {
 void nameObject(ID3D12Object* object, PrStringView name) {
     if (name.size == 0)
         return;
-    wchar_t wide[256];
-    int count = MultiByteToWideChar(CP_UTF8, 0, name.data, int(name.size < 255 ? name.size : 255), wide, 255);
-    wide[count > 0 ? count : 0] = 0;
-    object->SetName(wide);
+    wchar_t* wide = prWindowsWidenCopy(name, nullptr);
+    if (wide != nullptr)
+        object->SetName(wide);
+    prMemoryFree(wide);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -2944,9 +2945,13 @@ void nameAdapter(D3d12Device* d) {
     if (d->factory != nullptr && SUCCEEDED(d->factory->EnumAdapterByLuid(luid, IID_PPV_ARGS(&adapter))))
         adapter->GetDesc1(&desc);
     release(adapter);
-    int size = WideCharToMultiByte(CP_UTF8, 0, desc.Description, -1, d->adapter, int(sizeof(d->adapter)), nullptr, nullptr);
-    if (size <= 1)
+    uint32_t units = uint32_t(lstrlenW(desc.Description));
+    uint32_t capacity = uint32_t(sizeof(d->adapter) - 1);
+    uint32_t size = prWindowsNarrow(desc.Description, units, d->adapter, capacity);
+    if (size == 0 || size > capacity)
         prMemCopy(d->adapter, "Direct3D 12", sizeof("Direct3D 12"));
+    else
+        d->adapter[size] = 0;
 }
 
 // The functions of the device's objects.

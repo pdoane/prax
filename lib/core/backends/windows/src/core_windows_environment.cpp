@@ -2,20 +2,37 @@
 
 #include "pr/core_windows_environment.h"
 
+#include "pr/memory.h"
+#include "pr/windows_string.h"
+
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <stdlib.h>
 
+namespace pr_impl {
+
+namespace {
+
+// Returns `count` UTF-16 units as UTF-8, or the empty string if they are not valid UTF-16.
+PrRawString narrow(const wchar_t* wide, uint32_t count) {
+    PrRawString value = prWindowsNarrowToRawString(wide, count);
+    return prRawStringIsNull(&value) ? prRawStringEmpty() : value;
+}
+
+} // namespace
+
+} // namespace pr_impl
+
+using namespace pr_impl;
+
 PrRawString prCoreWindowsEnvironmentVariable(PrStringView name) {
-    int nameCount = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, name.data, int(name.size), nullptr, 0);
-    if (nameCount == 0)
+    uint32_t nameCount = 0;
+    wchar_t* wideName = prWindowsWidenCopy(name, &nameCount);
+    if (wideName == nullptr || nameCount == 0) {
+        prMemoryFree(wideName);
         return prRawStringEmpty();
-    wchar_t* wideName = static_cast<wchar_t*>(malloc((size_t(nameCount) + 1) * sizeof(wchar_t)));
-    if (wideName == nullptr)
-        return prRawStringEmpty();
-    MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, name.data, int(name.size), wideName, nameCount);
-    wideName[nameCount] = 0;
+    }
 
     // The first call measures the value with its terminator, and the second reads it. The value can change between
     // them, and a longer one is not read.
@@ -23,16 +40,10 @@ PrRawString prCoreWindowsEnvironmentVariable(PrStringView name) {
     DWORD count = GetEnvironmentVariableW(wideName, nullptr, 0);
     wchar_t* wide = count > 1 ? static_cast<wchar_t*>(malloc(size_t(count) * sizeof(wchar_t))) : nullptr;
     DWORD read = wide != nullptr ? GetEnvironmentVariableW(wideName, wide, count) : 0;
-    if (read != 0 && read < count) {
-        int size = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wide, int(read), nullptr, 0, nullptr, nullptr);
-        char* utf8 = size > 0 ? static_cast<char*>(malloc(size_t(size))) : nullptr;
-        if (utf8 != nullptr &&
-                WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wide, int(read), utf8, size, nullptr, nullptr) == size)
-            value = prRawStringCopy(PrStringView{utf8, size_t(size)});
-        free(utf8);
-    }
+    if (read != 0 && read < count)
+        value = narrow(wide, uint32_t(read));
     free(wide);
-    free(wideName);
+    prMemoryFree(wideName);
     return value;
 }
 
@@ -44,14 +55,8 @@ PrRawString prCoreWindowsEnvironmentHostName(void) {
         return prRawStringEmpty();
     wchar_t* wide = static_cast<wchar_t*>(malloc(size_t(count) * sizeof(wchar_t)));
     PrRawString value = prRawStringEmpty();
-    if (wide != nullptr && GetComputerNameExW(ComputerNameDnsHostname, wide, &count) && count != 0) {
-        int size = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wide, int(count), nullptr, 0, nullptr, nullptr);
-        char* utf8 = size > 0 ? static_cast<char*>(malloc(size_t(size))) : nullptr;
-        if (utf8 != nullptr &&
-                WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wide, int(count), utf8, size, nullptr, nullptr) == size)
-            value = prRawStringCopy(PrStringView{utf8, size_t(size)});
-        free(utf8);
-    }
+    if (wide != nullptr && GetComputerNameExW(ComputerNameDnsHostname, wide, &count) && count != 0)
+        value = narrow(wide, uint32_t(count));
     free(wide);
     return value;
 }
