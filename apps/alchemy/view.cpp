@@ -752,7 +752,7 @@ void buildMenus(PrKit* kit, PrLayoutNode bar, Commands& commands) {
         "alchemy.pasteImage", "alchemy.importImage", nullptr, "alchemy.deleteImage", "alchemy.rescan",
         "alchemy.openGallery",
     };
-    static const char* const kViewItems[] = {"alchemy.toggleInfo", "alchemy.togglePreview"};
+    static const char* const kViewItems[] = {"alchemy.toggleInfo", "alchemy.togglePreview", nullptr, "view.fullscreen"};
     struct Menu {
         const char* title;
         Span<const char* const> items;
@@ -913,51 +913,71 @@ void viewReset(View& view) {
     view.dock = nullptr;
 }
 
-// The title bar: the run of the current mode and the stop, what the server is doing, and the connection to it. The stop
-// keeps its place whether or not a run is in flight, so that nothing moves under the pointer when one starts.
+// The title bar, in three parts: the menus at the start, the run of the current mode and the stop in the middle, and
+// what the server is doing and the connection to it at the end. The outer parts share the room equally, so that the run
+// stays centered. The stop keeps its place whether or not a run is in flight, so that nothing moves under the pointer
+// when one starts.
 void buildTitleBarRow(PrKit* kit, PrLayoutNode bar, View& view, Commands& commands) {
     static const char* const kRuns[] = {"Generate", "Upscale", "Outpaint", "Detail"};
     AppState& state = *commands.shell->state;
-    commandButton(kit, bar, commands, "alchemy.generate", kRuns[state.mode], PrKitIconKind_Play,
-        PrKitButtonVariant_Primary, PrKitControlSize_Sm);
-    commandButton(kit, bar, commands, "alchemy.interrupt", "", PrKitIconKind_Stop, PrKitButtonVariant_Danger,
-        PrKitControlSize_Sm);
-
-    // The activity sits in the middle: the active job's stage and progress, or the last message while nothing runs.
-    PrKitBoxStyle middle{
+    PrKitBoxStyle side{
         .direction = PrKitDirection_Row,
-        .justify = PrKitJustify_Center,
         .align = PrKitAlign_Center,
+        .overflow = PrKitOverflow_Clip,
         .gap = kPrKitSpace4,
         .place = {.flex = PrKitFlex_Fill},
     };
-    PrLayoutNode activity = prKitBox(kit, bar, {}, middle);
+    PrLayoutNode start = prKitBox(kit, bar, {}, side);
+    PrLayoutNode menus = prKitMenuBar(kit, start, {.plain = true});
+    buildMenus(kit, menus, commands);
+    if (commands.shell->paletteRequested) {
+        prKitSetOpen(kit, menus, true);
+        commands.shell->paletteRequested = false;
+    }
+    PrLayoutNode list = prCommandPalette(kit, menus, commands.registry, commands.keymap, view.paletteQuery);
+    PrStringView query{};
+    if (list == kPrLayoutNodeNone)
+        view.paletteQuery.clear();
+    else if (prKitTextChanged(kit, list, &query))
+        view.paletteQuery = query;
+
+    PrLayoutNode run = row(kit, bar);
+    PrKitPlace fixed{.flex = PrKitFlex_Fixed};
+    prKitPlace(kit, run, &fixed);
+    commandButton(kit, run, commands, "alchemy.generate", kRuns[state.mode], PrKitIconKind_Play,
+        PrKitButtonVariant_Primary, PrKitControlSize_Sm);
+    commandButton(kit, run, commands, "alchemy.interrupt", "", PrKitIconKind_Stop, PrKitButtonVariant_Danger,
+        PrKitControlSize_Sm);
+
+    // The activity: the active job's stage and progress, or the last message while nothing runs.
+    side.justify = PrKitJustify_End;
+    PrLayoutNode end = prKitBox(kit, bar, {}, side);
     if (const Job* job = activeJob(state)) {
         String stage = job->node.isEmpty() ? String("queued") : job->node;
-        prKitLabel(kit, activity, {.text = stage}, textStyle(PrKitTextRole_Mono, PrKitTone_Accent));
+        prKitLabel(kit, end, {.text = stage}, textStyle(PrKitTextRole_Mono, PrKitTone_Accent));
         if (job->progressMax != 0) {
             float done = float(job->progressValue) / float(job->progressMax);
-            PrLayoutNode progress = prKitProgress(kit, activity, {.value = done});
-            PrKitPlace width{.width = prKitPx(160)};
+            PrLayoutNode progress = prKitProgress(kit, end, {.value = done});
+            PrKitPlace width{.width = prKitPx(120)};
             prKitPlace(kit, progress, &width);
             String steps = format("{}/{}", job->progressValue, job->progressMax);
-            prKitLabel(kit, activity, {.text = steps}, textStyle(PrKitTextRole_Mono, PrKitTone_Muted));
+            prKitLabel(kit, end, {.text = steps}, textStyle(PrKitTextRole_Mono, PrKitTone_Muted));
         }
         uint32_t inFlight = runsInFlight(state);
         if (inFlight > 1 || state.queueRemaining > 1) {
             String queued = format("{} queued", max(inFlight, state.queueRemaining));
-            prKitLabel(kit, activity, {.text = queued}, textStyle(PrKitTextRole_Mono, PrKitTone_Muted));
+            prKitLabel(kit, end, {.text = queued}, textStyle(PrKitTextRole_Mono, PrKitTone_Muted));
         }
     } else {
-        prKitLabel(kit, activity, {.text = state.status}, textStyle(PrKitTextRole_BodySmall, PrKitTone_Muted));
+        prKitLabel(kit, end, {.text = state.status}, textStyle(PrKitTextRole_BodySmall, PrKitTone_Muted));
     }
 
     // The connection's state, whose server opens the server's dialog.
     static const char* const kStates[] = {"Disconnected", "Connecting", "Connected"};
     PrKitTone tones[] = {PrKitTone_Muted, PrKitTone_Warning, PrKitTone_Success};
-    prKitLabel(kit, bar, {.text = kStates[state.connection]},
-        textStyle(PrKitTextRole_Caption, tones[state.connection]));
-    view.server = prKitButton(kit, bar, {.text = state.server, .icon = PrKitIconKind_Link},
+    PrKitTextStyle connection = textStyle(PrKitTextRole_Caption, tones[state.connection]);
+    prKitLabel(kit, end, {.text = kStates[state.connection]}, connection);
+    view.server = prKitButton(kit, end, {.text = state.server, .icon = PrKitIconKind_Link},
         {.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Xs});
     prKitTooltip(kit, view.server, {.text = "Configure the server"});
     if (prKitActivated(kit, view.server))
@@ -967,19 +987,6 @@ void buildTitleBarRow(PrKit* kit, PrLayoutNode bar, View& view, Commands& comman
 void buildView(PrKit* kit, PrLayoutNode root, View& view, Commands& commands) {
     AppState& state = *commands.shell->state;
     prCommandScope(kit->ui, root, commands.registry, commands.keymap, "");
-    PrLayoutNode bar = prKitMenuBar(kit, root, {});
-    buildMenus(kit, bar, commands);
-    if (commands.shell->paletteRequested) {
-        prKitSetOpen(kit, bar, true);
-        commands.shell->paletteRequested = false;
-    }
-    PrLayoutNode list = prCommandPalette(kit, bar, commands.registry, commands.keymap, view.paletteQuery);
-    PrStringView query{};
-    if (list == kPrLayoutNodeNone)
-        view.paletteQuery.clear();
-    else if (prKitTextChanged(kit, list, &query))
-        view.paletteQuery = query;
-
     view.browserTitle = format("Browser · {}", state.gallery.entries.count());
     PrLayoutNode dock = prKitDockBuild(kit, root, {.dock = view.dock, .describe = describePanel, .context = &view});
     PrKitPlace fill{.flex = PrKitFlex_Fill};

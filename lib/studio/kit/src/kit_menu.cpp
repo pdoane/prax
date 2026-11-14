@@ -474,12 +474,15 @@ struct SelectListBox {
 // ---------------------------------------------------------------------------------------------------------------------
 // Menu bars
 
-// A menu bar: a row of its items, which stretch across it, with a rule below it.
+// A menu bar: a row of its items, which stretch across it, with a rule below it unless the bar is plain.
 struct BarBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
+    bool rule;
+
     void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Flex;
-        box.border[PrRectSide_Bottom] = prLayoutUnitFromPx(1);
+        if (rule)
+            box.border[PrRectSide_Bottom] = prLayoutUnitFromPx(1);
     }
 };
 struct BarFlex {
@@ -733,8 +736,9 @@ bool prKitStepped(const PrKit* kit, PrLayoutNode select, int32_t* step) {
 
 PrLayoutNode prKitMenuBar(PrKit* kit, PrLayoutNode parent, PrKitMenuBar bar) {
     const PrKitPalette& p = kit->theme.palette;
+    KitColors colors = bar.plain ? KitColors{} : KitColors{.background = p.bg2, .border = p.line1};
     PrLayoutNode node = prLayoutTreeFrameElement(kit->tree, parent, bar.key,
-        kitStyle(*kit, BarBox{}, BarFlex{}, KitColors{.background = p.bg2, .border = p.line1}));
+        kitStyle(*kit, BarBox{.rule = !bar.plain}, BarFlex{}, colors));
     // The open menu passes to the item under the pointer before any item is created, so that only one menu is open in
     // the round. The items are those of the last round, whose handles the round's items continue.
     BarState& state = kitState<BarState>(*kit, node, MenuStateKey_Bar);

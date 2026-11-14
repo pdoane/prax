@@ -153,13 +153,15 @@ bool prKitStepped(const PrKit* kit, PrLayoutNode select, int32_t* step);
 // The maximum number of items in one menu bar that can pass the open menu between them.
 enum { kPrKitMenuBarMaxItems = 32 };
 
-// The content of an application's menu bar.
+// The content of an application's menu bar. A plain menu bar has no background and no rule, so that it sits in a row of
+// its parent's, such as a custom title bar (prKitTitleBar).
 typedef struct PrKitMenuBar {
     PrUiKey key;
+    bool plain;
 } PrKitMenuBar;
 
-// Creates an application's menu bar: a row on the header background with a rule below it. While one of its items is
-// open, moving the pointer onto another item closes the open item and opens the other.
+// Creates an application's menu bar: a row on the header background with a rule below it, unless it is plain. While one
+// of its items is open, moving the pointer onto another item closes the open item and opens the other.
 PrLayoutNode prKitMenuBar(PrKit* kit, PrLayoutNode parent, PrKitMenuBar bar);
 
 // The content of an item of a menu bar.

@@ -46,6 +46,21 @@ struct CommandSpec {
 
 namespace {
 
+// The platform's chord for fullscreen: Control-Command-F on Apple's platforms, and F11 elsewhere.
+#if defined(__APPLE__)
+constexpr const char* kFullscreenChord = "Ctrl Cmd F";
+#else
+constexpr const char* kFullscreenChord = "F11";
+#endif
+
+// Makes the window fullscreen, or a Normal window again.
+void toggleFullscreen(Shell& s) {
+    if (s.window == nullptr)
+        return;
+    bool full = prAppWindowState(s.window) == PrAppWindowState_Fullscreen;
+    prAppWindowSetState(s.window, full ? PrAppWindowState_Normal : PrAppWindowState_Fullscreen);
+}
+
 PrCommandStateFlags disabledUnless(bool enabled) {
     return enabled ? 0 : PrCommandStateFlag_Disabled;
 }
@@ -558,6 +573,16 @@ constexpr CommandSpec kSpecs[] = {
         .state = [](Shell& s) { return checkedIf(s.state->showPreview); },
         .chord = "P",
         .context = kContextGallery,
+    },
+    {
+        .id = "view.fullscreen",
+        .title = "Full Screen",
+        .category = "View",
+        .run = [](Shell& s, const PrCommandArgs*) { toggleFullscreen(s); },
+        .state = [](Shell& s) {
+            return checkedIf(s.window != nullptr && prAppWindowState(s.window) == PrAppWindowState_Fullscreen);
+        },
+        .chord = kFullscreenChord,
     },
     {
         .id = "view.palette",
