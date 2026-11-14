@@ -29,7 +29,7 @@ TerminalApp& appOf(void* context) {
     return *static_cast<TerminalApp*>(context);
 }
 
-// Creates the app on the window's kit, ui and fonts, and opens its first tab. Returns false if the tab cannot start.
+// Creates the app on the window's kit, ui and fonts, and opens its first tab.
 bool open(void* context, PrStudioWindow* window) {
     TerminalApp& t = appOf(context);
     t.kit = prStudioWindowKit(window);
@@ -38,12 +38,8 @@ bool open(void* context, PrStudioWindow* window) {
     t.window = prStudioWindowAppWindow(window);
     t.fonts = prStudioWindowFonts(window);
     openApp(t);
-    PrStatus status = openTab(t);
-    if (status == PrStatus_NotFound)
-        printError("terminal: cannot start {}\n", t.program.isEmpty() ? PrStringView("the shell") : t.program.view());
-    else if (status != PrStatus_Ok)
-        printError("terminal: cannot make a terminal\n");
-    return status == PrStatus_Ok;
+    openTab(t);
+    return true;
 }
 
 // The largest number of columns or rows that --grid accepts.

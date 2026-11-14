@@ -191,7 +191,9 @@ void buildTerminalPanel(Scribe& s, PrLayoutNode root, PrVec2 extent) {
     String header = format("Terminal {} of {}: {}", s.terminal + 1, s.terminals.count(), prTerminalTitle(terminal));
     PrProcessInfo info = prTerminalProcessInfo(terminal);
     PrVtermShellInfo shell = prTerminalShellInfo(terminal);
-    if (info.exited)
+    if (prTerminalLaunchStatus(terminal) != PrStatus_Ok)
+        header.append("  (cannot start)");
+    else if (info.exited)
         header.append("  (exited)");
     else if (shell.state != PrVtermShellState_Running && shell.lastStatus == PrVtermCommandStatus_Failed)
         header.append(format("  (last command exited with {})", shell.lastExitCode));
@@ -392,7 +394,7 @@ void openText(Scribe& s, PrStringView text, PrStringView name) {
     prTextEditorDocumentCreate(s.editor, &desc, &document);
 }
 
-PrStatus openTerminal(Scribe& s) {
+void openTerminal(Scribe& s) {
     PR_ASSERT(s.fonts != nullptr);
     PrFontFamily mono{.generic = PrFontGeneric_Monospace};
     PrFontStyle style = prFontStyleDefault();
@@ -415,17 +417,13 @@ PrStatus openTerminal(Scribe& s) {
         .openFile = openTerminalFile,
         .openFileContext = &s,
     };
-    PrTerminal* terminal = nullptr;
-    PrStatus status = prTerminalCreate(&desc, &terminal);
+    PrTerminal* terminal = prTerminalCreate(&desc);
     prRawStringReset(&directory);
-    if (status != PrStatus_Ok)
-        return status;
     ++s.nextTerminalTag;
     s.terminals.push(terminal);
     s.terminal = s.terminals.count() - 1;
     s.terminalShown = true;
     prTerminalFocus(terminal);
-    return PrStatus_Ok;
 }
 
 void closeEditor(Scribe& s) {

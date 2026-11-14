@@ -79,8 +79,8 @@ void openText(Scribe& s, PrStringView text, PrStringView name);
 
 // Starts a terminal running the user's shell in the panel, shows it, and gives it focus. The shell starts in the
 // working directory of the panel's shown terminal. If the panel has no terminal, it starts in the workspace of the
-// document that shows (prTextEditorDocumentWorkspace). Returns the status of prTerminalCreate.
-PrStatus openTerminal(Scribe& s);
+// document that shows (prTextEditorDocumentWorkspace).
+void openTerminal(Scribe& s);
 
 // Frees the editor, its documents, the terminals and the commands.
 void closeEditor(Scribe& s);
