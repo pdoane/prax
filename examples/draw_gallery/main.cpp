@@ -7,11 +7,16 @@
 // renders into the swap chain itself. Left and Right step through the scenes, and Space pauses the clock, as the
 // caption under each scene says. The scenes follow the pointer and respond to a held primary button.
 //
-// Usage: draw [--renderer NAME] [--scene NUMBER]. NAME is the name of one of lib/draw's backends, and Default if it is
-// not given. NUMBER is the scene shown first, counted from 1. On the web, the page's query passes the arguments.
+// Every few seconds, the gallery prints the device and the renderer that it draws with, and the time that a frame takes
+// on the CPU, from recording the list to submitting it, and on the GPU where the device measures it.
+//
+// Usage: draw [--gpu NAME] [--renderer NAME] [--scene NUMBER]. The NAMEs are those of one of lib/gpu's backends and one
+// of lib/draw's, and Default if they are not given, which the environment variables PR_GPU_BACKEND and PR_DRAW_RENDERER
+// also choose. NUMBER is the scene shown first, counted from 1. On the web, the page's query passes the arguments.
 
 #include "pr/app.h"
 #include "pr/assert.h"
+#include "pr/atomic.h"
 #include "pr/draw_display.h"
 #include "pr/draw_list.h"
 #include "pr/draw_renderer.h"
@@ -22,6 +27,7 @@
 #include "pr/status.h"
 #include "pr/task.h"
 #include "pr/text.h"
+#include "pr/time.h"
 
 #include "examples/draw_gallery/scenes.h"
 
@@ -42,6 +48,7 @@ struct Window {
     float hold = 0;             // eases toward 1 while the button is held, and toward 0 after
     bool paused = false;
     PrDrawList* list = nullptr;
+    PrGpuBackend gpu = PrGpuBackend_Default;
     PrDrawRendererBackend backend = PrDrawRendererBackend_Default;
 
     PrApp* app = nullptr;
@@ -57,7 +64,18 @@ struct Window {
     PrDrawDisplay* display = nullptr;
 
     PrTaskPool* pool = nullptr;
+
+    // The frames since the last report, and their time on the CPU. The device's thread adds each frame's time on the
+    // GPU once its work is done.
+    double reported = 0;        // the frame time of the last report, in seconds
+    uint32_t frames = 0;
+    double cpuMilliseconds = 0;
+    Atomic<uint64_t> gpuNanoseconds;    // starts zero, as the window is static
+    Atomic<uint32_t> gpuFrames;
 };
+
+// The seconds between reports of the frames' times.
+constexpr double kReportSeconds = 2;
 
 void announce(const Window& w) {
     print("{}: {}\n", w.scenes[w.scene].name, w.scenes[w.scene].description);
@@ -86,7 +104,7 @@ void requestDevice(Window& w) {
         return;
     PrGpuDeviceOptions options = prGpuDeviceOptionsDefault();
     options.pool = w.pool;
-    w.device = prGpuDeviceCreate(PrGpuBackend_Default, &options);
+    w.device = prGpuDeviceCreate(w.gpu, &options);
 }
 
 // Returns true while the device is being created.
@@ -117,7 +135,8 @@ bool openDevice(Window& w) {
         return false;
     }
     w.frame = prDrawFrameCreate(w.renderer);
-    print("draw: rendering with {} on {}\n", prDrawRendererBackendName(w.backend), prGpuDeviceInfo(w.device).backend);
+    PrGpuDeviceInfo info = prGpuDeviceInfo(w.device);
+    print("draw: rendering with {} on {} ({})\n", prDrawRendererBackendName(w.backend), info.backend, info.adapter);
     return true;
 }
 
@@ -132,6 +151,34 @@ PrGpuTexture renderedFor(Window& w, PrUVec2 extent) {
         prGpuTextureCreate(w.device, &desc, &w.rendered);
     }
     return w.rendered;
+}
+
+// Adds a frame's time on the GPU to the window's.
+void frameDone(void* PR_NULLABLE context, double seconds) {
+    Window& w = *static_cast<Window*>(context);
+    w.gpuNanoseconds.fetchAdd(uint64_t(seconds * 1e9));
+    w.gpuFrames.fetchAdd(1);
+}
+
+// Prints the frames' average times since the last report, every kReportSeconds. A device without timestamps reports no
+// time on the GPU.
+void report(Window& w, double time) {
+    if (time - w.reported < kReportSeconds || w.frames == 0)
+        return;
+    uint64_t gpuNanoseconds = w.gpuNanoseconds.exchange(0);
+    uint32_t gpuFrames = w.gpuFrames.exchange(0);
+    PrGpuDeviceInfo info = prGpuDeviceInfo(w.device);
+    PrStringView renderer = prDrawRendererBackendName(w.backend);
+    double cpu = w.cpuMilliseconds / w.frames;
+    if ((info.features & PrGpuFeatureFlag_Timestamps) != 0 && gpuFrames != 0) {
+        double gpu = double(gpuNanoseconds) / 1e6 / gpuFrames;
+        print("draw: {} on {}: cpu {:.2f} ms, gpu {:.2f} ms a frame\n", renderer, info.backend, cpu, gpu);
+    } else {
+        print("draw: {} on {}: cpu {:.2f} ms a frame\n", renderer, info.backend, cpu);
+    }
+    w.reported = time;
+    w.frames = 0;
+    w.cpuMilliseconds = 0;
 }
 
 // Renders the list into the swap chain's texture at `extent` target pixels and presents it.
@@ -176,6 +223,7 @@ void render(Window& w, PrUVec2 extent, const PrAppDisplay& display) {
     }
     prGpuCommandsTextureBarrier(commands, drawable, all, PrGpuAccessFlag_ColorAttachment, PrGpuAccessFlag_Present);
     prGpuSwapChainPresent(w.swapChain, commands);
+    prGpuCommandsOnDone(commands, frameDone, &w);
     prGpuCommandsSubmit(commands);
 }
 
@@ -196,6 +244,7 @@ PrAppOutput frame(void* context, PrAppWindow*, const PrAppFrame* f) {
     w.hold += ((w.held ? 1.0f : 0.0f) - w.hold) * ease;
 
     // The scene draws in logical pixels, and the list's transform takes them to the display's target pixels.
+    PrTimePerf began = prTimePerfNow();
     float ratio = f->display.pixelRatio;
     prDrawListClear(w.list);
     prDrawListPushTransformAffine2(w.list, prAffine2Scale(PrVec2{ratio, ratio}));
@@ -209,6 +258,9 @@ PrAppOutput frame(void* context, PrAppWindow*, const PrAppFrame* f) {
     PrUVec2 extent{uint32_t(f->extent.x * ratio + 0.5f), uint32_t(f->extent.y * ratio + 0.5f)};
     if (extent.x != 0 && extent.y != 0)
         render(w, extent, f->display);
+    w.cpuMilliseconds += prTimePerfMilliseconds(began, prTimePerfNow());
+    ++w.frames;
+    report(w, f->time);
     return PrAppOutput{.wantsFrame = true};
 }
 
@@ -267,7 +319,13 @@ int main(int argc, char** argv) {
     uint32_t first = 1;
     for (int i = 1; i < argc; ++i) {
         PrStringView argument = argv[i];
-        if (argument == "--renderer" && i + 1 < argc) {
+        if (argument == "--gpu" && i + 1 < argc) {
+            w.gpu = prGpuBackendFromName(argv[++i]);
+            if (!prGpuBackendIsBuilt(w.gpu)) {
+                printError("draw: no GPU backend named {} in this build\n", PrStringView{argv[i]});
+                return 1;
+            }
+        } else if (argument == "--renderer" && i + 1 < argc) {
             w.backend = prDrawRendererBackendFromName(argv[++i]);
             if (!prDrawRendererBackendIsBuilt(w.backend)) {
                 printError("draw: no renderer named {} in this build\n", PrStringView{argv[i]});
@@ -278,7 +336,7 @@ int main(int argc, char** argv) {
             uint64_t parsed = 0;
             first = prU64Parse(number.data, number.size, &parsed, 10) && parsed <= UINT32_MAX ? uint32_t(parsed) : 0;
         } else {
-            printError("usage: draw [--renderer NAME] [--scene NUMBER]\n");
+            printError("usage: draw [--gpu NAME] [--renderer NAME] [--scene NUMBER]\n");
             return 1;
         }
     }

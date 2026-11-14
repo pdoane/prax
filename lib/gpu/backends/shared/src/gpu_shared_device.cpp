@@ -53,6 +53,11 @@ PrStatus deviceLostStatus(const PrGpuDevice* base) {
 // Waits for the device's creation, including its ready callback, then frees it with the backend's `destroy`.
 void deviceDestroy(PrGpuDevice* base) {
     GpuSharedDevice* device = sharedOf(base);
+    // A creation that the system finishes later on this thread cannot be waited for, so it frees the device itself.
+    if (device->initialize == nullptr && device->stage.load() == PrGpuDeviceStage_Creating) {
+        device->abandoned = true;
+        return;
+    }
     prMutexLock(&device->stageMutex);
     while (!device->created)
         prConditionWait(&device->stageSignal, &device->stageMutex);
@@ -65,15 +70,7 @@ void deviceDestroy(PrGpuDevice* base) {
 // Runs the backend's initialization, publishes the stage that it reached, and calls the ready callback.
 void deviceInitialize(void* PR_NULLABLE context) {
     GpuSharedDevice* device = static_cast<GpuSharedDevice*>(context);
-    PrStatus status = device->initialize(device);
-    device->failure = status;
-    device->stage.store(status == PrStatus_Ok ? PrGpuDeviceStage_Ready : PrGpuDeviceStage_Failed);
-    if (device->ready != nullptr)
-        device->ready(device->readyContext, device);
-    prMutexLock(&device->stageMutex);
-    device->created = true;
-    prConditionBroadcast(&device->stageSignal);
-    prMutexUnlock(&device->stageMutex);
+    gpuSharedDeviceFinish(device, device->initialize(device));
 }
 
 bool sameSampler(const PrGpuSamplerDesc& a, const PrGpuSamplerDesc& b) {
@@ -227,6 +224,31 @@ void gpuSharedDeviceStart(GpuSharedDevice* device, PrTaskPool* PR_NULLABLE pool,
         prTaskPoolPost(pool, deviceInitialize, device);
     else
         deviceInitialize(device);
+}
+
+void gpuSharedDeviceStartLater(GpuSharedDevice* device, PrGpuDeviceReadyFn PR_NULLABLE ready,
+        void* PR_NULLABLE readyContext) {
+    PR_ASSERT(device->removed != nullptr && device->destroy != nullptr);
+    device->ready = ready;
+    device->readyContext = readyContext;
+}
+
+void gpuSharedDeviceFinish(GpuSharedDevice* device, PrStatus status) {
+    device->failure = status;
+    device->stage.store(status == PrStatus_Ok ? PrGpuDeviceStage_Ready : PrGpuDeviceStage_Failed);
+    if (device->abandoned) {
+        device->created = true;
+        if (status == PrStatus_Ok)
+            device->waitIdleFn(device);
+        deviceDestroy(device);
+        return;
+    }
+    if (device->ready != nullptr)
+        device->ready(device->readyContext, device);
+    prMutexLock(&device->stageMutex);
+    device->created = true;
+    prConditionBroadcast(&device->stageSignal);
+    prMutexUnlock(&device->stageMutex);
 }
 
 void gpuSharedTextureForget(GpuSharedDevice* device, PrGpuTexture texture) {

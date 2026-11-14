@@ -69,6 +69,10 @@ struct GpuSharedDevice : PrGpuDevice {
     PrMutex stageMutex;
     PrCondition stageSignal;
     bool created;
+
+    // True if the device was destroyed while a creation that the system finishes later ran (gpuSharedDeviceStartLater).
+    // The creation frees the device once it finishes, without calling the ready callback.
+    bool abandoned;
 };
 
 // A command buffer: its device, and what the checks of its calls read.
@@ -112,6 +116,16 @@ void gpuSharedDeviceReset(GpuSharedDevice* device);
 // then publishes the stage and calls `ready`.
 void gpuSharedDeviceStart(GpuSharedDevice* device, PrTaskPool* PR_NULLABLE pool, PrGpuDeviceReadyFn PR_NULLABLE ready,
     void* PR_NULLABLE readyContext);
+
+// Starts the creation of a device whose system creates devices asynchronously, as a web page's does. The backend calls
+// gpuSharedDeviceFinish with the status that the creation reached once the system is done, on the thread that started
+// the creation. The device has no `initialize`.
+void gpuSharedDeviceStartLater(GpuSharedDevice* device, PrGpuDeviceReadyFn PR_NULLABLE ready,
+    void* PR_NULLABLE readyContext);
+
+// Publishes the stage that the device's initialization reached, Ready for Ok and Failed otherwise, and calls the ready
+// callback. gpuSharedDeviceStart calls it once `initialize` returns.
+void gpuSharedDeviceFinish(GpuSharedDevice* device, PrStatus status);
 
 // Returns true if the device's creation succeeded, so that the backend may use what `initialize` made.
 inline bool gpuSharedDeviceIsReady(const GpuSharedDevice* device) {

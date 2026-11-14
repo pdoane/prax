@@ -8,8 +8,9 @@ each backend runs it on one graphics API.
 | --- | --- | --- |
 | `metal` | Metal 3, the default on macOS | macOS (`PR_GPU_METAL`) |
 | `metal4` | Metal 4, kept for experiments | macOS (`PR_GPU_METAL4`) |
-| `d3d12` | Direct3D 12, shader model 6.6, enhanced barriers | Windows (`PR_GPU_D3D12`) |
+| `d3d12` | Direct3D 12, shader model 6.6, resource binding tier 3, enhanced barriers | Windows (`PR_GPU_D3D12`) |
 | `vulkan` | Vulkan 1.3, with mutable descriptors and push descriptors | Linux and Android (`PR_GPU_VULKAN`) |
+| `webgpu` | the page's WebGPU, with slots and no bindless | the web (`PR_GPU_WEBGPU`) |
 | `memory` | memory, with no shaders, for renderers that draw on the CPU | every platform (`PR_GPU_MEMORY`) |
 | `canvas2d` | memory and a web page's canvases, with no shaders | the web (`PR_GPU_CANVAS2D`) |
 

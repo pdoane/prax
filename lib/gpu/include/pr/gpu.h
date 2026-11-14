@@ -63,6 +63,7 @@ enum {
     PrGpuBackend_Metal4,
     PrGpuBackend_Vulkan,
     PrGpuBackend_D3d12,
+    PrGpuBackend_Webgpu,
     PrGpuBackend_Memory,
     PrGpuBackend_Canvas2d,
     PrGpuBackend_Count,

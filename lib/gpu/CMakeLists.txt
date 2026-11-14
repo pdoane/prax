@@ -84,6 +84,14 @@ if (PR_GPU_CANVAS2D)
     target_compile_definitions(pr_gpu PRIVATE PR_GPU_HAS_CANVAS2D)
     pr_js_library(pr_gpu backends/canvas2d/src/gpu_canvas2d.js)
 endif()
+# The WebGPU backend runs on the page's WebGPU through a library of its own, which decodes each command buffer's
+# commands.
+if (PR_GPU_WEBGPU)
+    target_sources(pr_gpu PRIVATE backends/webgpu/src/gpu_webgpu.cpp)
+    pr_headers(pr_gpu PUBLIC backends/webgpu/include)
+    target_compile_definitions(pr_gpu PRIVATE PR_GPU_HAS_WEBGPU)
+    pr_js_library(pr_gpu backends/webgpu/src/gpu_webgpu.js)
+endif()
 
 if (PR_DEVELOP)
     pr_module_tests(gpu

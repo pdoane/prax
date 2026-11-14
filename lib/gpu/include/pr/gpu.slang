@@ -1,6 +1,6 @@
 // The shaders' side of pr/gpu.h: handles to resources, the root data of a draw or a dispatch, and reading a pass's
 // target. A shader includes this file (`#include "pr/gpu.slang"`), which cmake/shader_library.cmake compiles once for
-// each backend with PR_GPU_METAL, PR_GPU_VULKAN or PR_GPU_D3D12 defined to 1.
+// each backend with PR_GPU_METAL, PR_GPU_VULKAN, PR_GPU_D3D12 or PR_GPU_WEBGPU defined to 1.
 //
 // A shader declares its root data as structures of its own, with the macros below:
 //
@@ -19,20 +19,24 @@
 
 #pragma once
 
-#if !defined(PR_GPU_METAL) && !defined(PR_GPU_VULKAN) && !defined(PR_GPU_D3D12)
-#error "pr/gpu.slang is compiled for one backend: PR_GPU_METAL, PR_GPU_VULKAN or PR_GPU_D3D12"
+#if !defined(PR_GPU_METAL) && !defined(PR_GPU_VULKAN) && !defined(PR_GPU_D3D12) && !defined(PR_GPU_WEBGPU)
+#error "pr/gpu.slang is compiled for one backend: PR_GPU_METAL, PR_GPU_VULKAN, PR_GPU_D3D12 or PR_GPU_WEBGPU"
 #endif
 
 // The root data. Push data is push constants on Vulkan, root constants on Direct3D 12, and a buffer of the command
-// buffer's stream on Metal. Uniforms are a uniform buffer in the stream everywhere, which the hardware reads through
-// its constant path.
+// buffer's stream on Metal and WebGPU, which WebGPU binds at group 0. Uniforms are a uniform buffer in the stream
+// everywhere, which the hardware reads through its constant path.
 //
 // Root data lays out as C lays it out under the rules of buffers above, and also under the constant buffer packing of
 // Direct3D 12 and Vulkan's std140: an array's elements, and a structure, start at multiples of 16 bytes, and a field
 // does not straddle one. So an array is of 4-vectors, or of structures whose size is a multiple of 16 bytes, and a
 // structure inside root data starts at a multiple of 16 bytes. cmake/shader_library.cmake checks each library's root
 // data against that rule.
+#if defined(PR_GPU_WEBGPU)
+#define PR_GPU_PUSH(Type, name) [[vk::binding(0, 0)]] ConstantBuffer<Type> name : register(b0)
+#else
 #define PR_GPU_PUSH(Type, name) [[vk::push_constant]] ConstantBuffer<Type> name : register(b0)
+#endif
 #define PR_GPU_UNIFORMS(Type, name) [[vk::binding(0, 1)]] ConstantBuffer<Type> name : register(b1)
 
 // A vertex attribute: a field of the structure that a vertex shader takes, at the location `at`, which the pipeline's
@@ -119,8 +123,9 @@ struct PrGpuMetalTextureAttribute {
 #define PR_GPU_RW_TEXTURE_REGISTER(slot) : register(PR_GPU_PASTE(u, PR_GPU_RW_TEXTURE_INDEX_##slot), space2)
 #define PR_GPU_RW_TEXTURE_ATTRIBUTE(slot) [PrGpuMetalTexture(PR_GPU_RW_TEXTURE_INDEX_##slot)]
 
-#elif defined(PR_GPU_VULKAN)
+#elif defined(PR_GPU_VULKAN) || defined(PR_GPU_WEBGPU)
 
+// WebGPU binds the slots at group 1, at their Vulkan bindings.
 #define PR_GPU_BUFFER_REGISTER(slot)
 #define PR_GPU_RW_BUFFER_REGISTER(slot)
 #define PR_GPU_TEXTURE_REGISTER(slot)
@@ -176,7 +181,8 @@ T prGpuLoad<T>(uint buffer, uint offset) {
 
 // Returns the resource that a handle names, from the device's descriptor heap: on Vulkan, the bindless set at set 2,
 // which the backend lays out as Slang's default mapping of handles reads it (cmake/shader_library.cmake pins the set),
-// and on Direct3D 12, the heaps of shader model 6.6.
+// and on Direct3D 12, the heaps of shader model 6.6. WebGPU has no bindless, so an entry point that reaches a resource
+// by handle reads a binding array at group 2, which the device refuses.
 T prGpuGet<T : IOpaqueDescriptor>(uint handle) {
     return defaultGetDescriptorFromHandle(DescriptorHandle<T>(uint2(handle, 0)));
 }

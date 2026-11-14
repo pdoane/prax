@@ -693,6 +693,7 @@ WRAPPERS = {
     "lib/gpu/backends/vulkan/src/vulkan_internal.h": {"vulkan/vulkan_core.h"},
     "lib/gpu/backends/vulkan/src/vulkan_platform.cpp": {"dlfcn.h", "stdio.h", "stdlib.h", "vulkan/vulkan_metal.h",
                                                         "vulkan/vulkan_win32.h", "windows.h"},
+    "lib/gpu/backends/webgpu/src/gpu_webgpu.cpp": {"emscripten/emscripten.h"},
     "lib/gpu/src/gpu.cpp": {"stdlib.h"},
     "lib/media/backends/windows/src/media_windows.cpp": {"mfapi.h", "mferror.h", "mfidl.h", "mfreadwrite.h",
                                                          "objbase.h", "shlwapi.h", "windows.h"},

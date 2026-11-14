@@ -29,6 +29,9 @@
 #if defined(PR_GPU_HAS_CANVAS2D)
 #include "pr/gpu_canvas2d.h"
 #endif
+#if defined(PR_GPU_HAS_WEBGPU)
+#include "pr/gpu_webgpu.h"
+#endif
 #if defined(PR_GPU_HAS_MEMORY)
 #include "pr/gpu_memory.h"
 #endif
@@ -157,7 +160,7 @@ PrGpuBuffer recordRead(PrGpuCommands* commands, PrGpuTexture texture, uint32_t a
 }
 
 constexpr PrStringView kBackendNames[PrGpuBackend_Count] = {
-    "default", "metal", "metal4", "vulkan", "d3d12", "memory", "canvas2d",
+    "default", "metal", "metal4", "vulkan", "d3d12", "webgpu", "memory", "canvas2d",
 };
 
 // The backends in the build, the platform's own first and memory last, and then Default. Default creates the first of
@@ -174,6 +177,9 @@ constexpr PrGpuBackend kBuilt[] = {
 #endif
 #if defined(PR_GPU_HAS_VULKAN)
     PrGpuBackend_Vulkan,
+#endif
+#if defined(PR_GPU_HAS_WEBGPU)
+    PrGpuBackend_Webgpu,
 #endif
 #if defined(PR_GPU_HAS_CANVAS2D)
     PrGpuBackend_Canvas2d,
@@ -240,6 +246,11 @@ PrGpuDevice* PR_NULLABLE create(PrGpuBackend backend, const PrGpuDeviceOptions& 
             d3d12.readyContext = o.readyContext;
             return prGpuD3d12Create(&d3d12);
         }
+#endif
+#if defined(PR_GPU_HAS_WEBGPU)
+        case PrGpuBackend_Webgpu:
+            // WebGPU has no bindless, so every device of it binds resources only to slots.
+            return prGpuWebgpuCreate(&o);
 #endif
 #if defined(PR_GPU_HAS_CANVAS2D)
         case PrGpuBackend_Canvas2d:

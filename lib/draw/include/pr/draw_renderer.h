@@ -116,10 +116,11 @@ typedef struct PrDrawStats {
     uint64_t uploadBytes;       // bytes copied to the device: the frame's data and texels
 } PrDrawStats;
 
-// The library's renderer backends, which the build turns on (README.md), and Default. Default is the first of the
-// fragment renderer, the triangles renderer, the Canvas 2D renderer and the CPU renderer that the device runs. The
-// fragment and triangles renderers run on a device that runs their shaders. The Canvas 2D renderer runs on a device
-// whose textures are a web page's canvases, and the CPU renderer runs on a memory device.
+// The library's renderer backends, which the build turns on (README.md), and Default. Default is the backend that the
+// environment variable PR_DRAW_RENDERER names (prDrawRendererBackendFromName), if the build has it. Otherwise it is the
+// first of the fragment renderer, the triangles renderer, the Canvas 2D renderer and the CPU renderer that the device
+// runs. The fragment and triangles renderers run on a device that runs their shaders. The Canvas 2D renderer runs on a
+// device whose textures are a web page's canvases, and the CPU renderer runs on a memory device.
 enum {
     PrDrawRendererBackend_Default,
     PrDrawRendererBackend_Cpu,

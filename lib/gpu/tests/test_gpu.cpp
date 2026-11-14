@@ -236,7 +236,8 @@ TEST_CASE("a backend's name names it, in any case") {
     CHECK(prGpuBackendFromName("opengl") == PrGpuBackend_Count);
     CHECK(prGpuBackendIsBuilt(PrGpuBackend_Default) == (prGpuBackendIsBuilt(PrGpuBackend_Metal) ||
         prGpuBackendIsBuilt(PrGpuBackend_Metal4) || prGpuBackendIsBuilt(PrGpuBackend_Vulkan) ||
-        prGpuBackendIsBuilt(PrGpuBackend_D3d12) || prGpuBackendIsBuilt(PrGpuBackend_Canvas2d)));
+        prGpuBackendIsBuilt(PrGpuBackend_D3d12) || prGpuBackendIsBuilt(PrGpuBackend_Webgpu) ||
+        prGpuBackendIsBuilt(PrGpuBackend_Canvas2d)));
 }
 
 TEST_CASE("a device created on a pool refuses work until its creation runs, then calls back once") {

@@ -39,10 +39,14 @@ Folder gFolder;
 namespace harness {
 
 bool gpuTests() {
+#if defined(__EMSCRIPTEN__)
+    return false;
+#else
     PrRawString value = prEnvironmentVariable("PR_TEST_NO_GPU");
     bool set = !prRawStringIsEmpty(&value);
     prRawStringReset(&value);
     return !set;
+#endif
 }
 
 String runTag() {

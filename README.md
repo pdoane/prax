@@ -126,7 +126,7 @@ third-party library. A development build (`PR_DEVELOP`), an examples build (`PR_
 | compression | `PR_COMPRESS_BUILTIN` | Prax | every platform | on |
 | draw renderer | `PR_DRAW_CPU` | CPU renderer | every platform | on |
 | draw renderer | `PR_DRAW_CANVAS` | the browser's Canvas 2D | the web | on |
-| draw renderer | `PR_DRAW_TRIANGLES` | GPU renderer: colored and textured triangles | every platform but the web | on |
+| draw renderer | `PR_DRAW_TRIANGLES` | GPU renderer: colored and textured triangles | every platform | on |
 | draw renderer | `PR_DRAW_FRAGMENT` | GPU renderer: per-pixel coverage and paint evaluation | every platform but the web | on |
 | draw writer | `PR_DRAW_SVG` | SVG documents, which need `PR_DRAW_CPU` | every platform | on |
 | draw writer | `PR_DRAW_PDF` | tagged PDF documents, which need `PR_DRAW_CPU` | every platform | on |
@@ -140,6 +140,7 @@ third-party library. A development build (`PR_DEVELOP`), an examples build (`PR_
 | gpu | `PR_GPU_D3D12` | Direct3D 12 | Windows | on |
 | gpu | `PR_GPU_VULKAN` | Vulkan | every platform but the web and iOS | on for Linux and Android |
 | gpu | `PR_GPU_MEMORY` | memory, without shaders or presentation | every platform | on |
+| gpu | `PR_GPU_WEBGPU` | WebGPU, with slots and no bindless | the web | on |
 | gpu | `PR_GPU_CANVAS2D` | memory and a web page's canvases, without shaders | the web | on |
 | http | `PR_HTTP_BUILTIN` | HTTP/1.1 over `lib/net` and `lib/tls` | every platform | on |
 | image codecs | `PR_IMAGE_BUILTIN` | Prax | every platform | on |

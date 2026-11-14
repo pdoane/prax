@@ -6,6 +6,7 @@
 #include "pr/assert.h"
 #include "pr/draw_commands.h"
 #include "pr/draw_renderer_backend.h"
+#include "pr/environment.h"
 #include "pr/mem.h"
 #include "pr/memory.h"
 #include "pr/vec.h"
@@ -132,6 +133,11 @@ PrStatus prDrawRendererCreate(PrDrawRendererBackend backend, PrGpuDevice* PR_NUL
     PrDrawRendererOptions o = options != nullptr ? *options : prDrawRendererOptionsDefault();
     if (backend != PrDrawRendererBackend_Default)
         return create(backend, device, o, out);
+    PrRawString named = prEnvironmentVariable("PR_DRAW_RENDERER");
+    PrDrawRendererBackend chosen = prDrawRendererBackendFromName(prRawStringView(&named));
+    prRawStringReset(&named);
+    if (chosen != PrDrawRendererBackend_Default && prDrawRendererBackendIsBuilt(chosen))
+        return create(chosen, device, o, out);
     // Default takes the first backend that the device runs.
     for (PrDrawRendererBackend built : kBuilt) {
         if (built == PrDrawRendererBackend_Default)
