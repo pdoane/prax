@@ -712,7 +712,7 @@ void buildApp(void* context, PrKit* kit, PrLayoutNode root) {
         .max = kMaxRate,
         .scale = PrKitSliderScale_Ratio,
     }, {});
-    prKitPlace(kit, rate, &slider);
+    prKitPlace(kit, rate, slider);
     prKitLabel(kit, bar, {.text = formatToBuffer(Span(label), "{:.0f} bytes a piece", prF32Round(s.chunk))}, meta);
     PrLayoutNode chunk = prKitSlider(kit, bar, {
         .value = prKitScalarF32(&s.chunk),
@@ -720,16 +720,14 @@ void buildApp(void* context, PrKit* kit, PrLayoutNode root) {
         .max = kMaxChunk,
         .scale = PrKitSliderScale_Ratio,
     }, {});
-    prKitPlace(kit, chunk, &slider);
+    prKitPlace(kit, chunk, slider);
     PrLayoutNode progress = prKitProgress(
         kit, bar, {.value = s.text.isEmpty() ? 0.0f : float(s.delivered) / float(s.text.count())});
-    PrKitPlace grow{.flex = PrKitFlex_Grow};
-    prKitPlace(kit, progress, &grow);
+    prKitPlace(kit, progress, {.flex = PrKitFlex_Grow});
 
     // The pane is a replaced element that fills the room under the bar, and its painter embeds the page.
     PrLayoutNode pane = prLayoutTreeFrameReplaced(tree, root, 0, 0);
-    PrKitPlace fill{.flex = PrKitFlex_Fill};
-    prKitPlace(kit, pane, &fill);
+    prKitPlace(kit, pane, {.flex = PrKitFlex_Fill});
     if (s.recorded != nullptr) {
         PrLayoutContent content{.kind = PrLayoutContentKind_Painter};
         content.painter = PrLayoutPainter{paintPage, s.recorded, retainPage, releasePage};

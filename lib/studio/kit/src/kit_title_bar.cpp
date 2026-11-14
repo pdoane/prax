@@ -53,8 +53,7 @@ void windowButton(PrKit& kit, PrLayoutNode parent, float height, PrKitIconKind i
     prLayoutTreeFrameSetStyle(kit.tree, c.node,
         kitStyle(kit, WindowButtonBox{.height = height}, WindowButtonFlex{}, dress.fill, dress.ink));
     kitIcon(kit, c.node, 0, icon, kWindowButtonGlyph, kit.looks[look].icon);
-    PrKitPlace top{.align = PrKitAlign_Start};
-    prKitPlace(&kit, c.node, &top);
+    prKitPlace(&kit, c.node, {.align = PrKitAlign_Start});
     prUiTitleBarRegion(kit.ui, c.node, kind);
 }
 

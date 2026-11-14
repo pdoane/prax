@@ -345,7 +345,7 @@ PrLayoutNode prKitTimeline(PrKit* kit, PrLayoutNode parent, PrKitTimeline timeli
     if (editable)
         flags = flags | PrUiFlag_Focusable;
     prUiSetFlags(ui, frame, flags);
-    prKitPlace(kit, frame, &style.place);
+    prKitPlace(kit, frame, style.place);
     TimelineState* state = static_cast<TimelineState*>(prUiState(ui, frame, &kKitOwner, KitStateKey_Timeline,
         sizeof(TimelineState)));
 

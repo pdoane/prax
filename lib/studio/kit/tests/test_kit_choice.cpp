@@ -354,8 +354,7 @@ TEST_CASE("a segment reports its click, and the arrow keys move the focus and ac
         PrLayoutNode row = prKitBox(f.kit, root, {}, {.direction = PrKitDirection_Row, .gap = 0});
         track = prKitSegmented(f.kit, row, {}, {.size = PrKitControlSize_Sm});
         choices(f, track, &selected, prKitSegment);
-        PrKitPlace place{.width = prKitPx(240)};
-        prKitPlace(f.kit, track, &place);
+        prKitPlace(f.kit, track, {.width = prKitPx(240)});
     };
     f.frame();
     CHECK(f.bounds(track).bottom - f.bounds(track).top == doctest::Approx(double(kPrKitHeightSm)));
@@ -530,8 +529,7 @@ TEST_CASE("a progress bar's run covers its fraction of the track, clamped to the
     PrLayoutNode bar = kPrLayoutNodeNone;
     f.build = [&](PrLayoutNode root) {
         bar = prKitProgress(f.kit, root, {.value = value});
-        PrKitPlace place{.width = prKitPx(200)};
-        prKitPlace(f.kit, bar, &place);
+        prKitPlace(f.kit, bar, {.width = prKitPx(200)});
     };
     f.frame();
     PrLayoutNode run = prLayoutNodeFirstChild(f.tree, bar);

@@ -136,8 +136,7 @@ PrColor shade(PrColor color, float amount) {
 void rampCell(PrKit* kit, PrLayoutNode parent, PrStringView name, PrColor band, PrStringView note) {
     PrLayoutNode cell = card(kit, parent, PrKitBoxStyle{});
     PrLayoutNode swatch = prKitSwatch(kit, cell, {.color = band}, {.size = kBandHeight});
-    PrKitPlace wide{.width = prKitFill(), .flex = PrKitFlex_Fixed};
-    prKitPlace(kit, swatch, &wide);
+    prKitPlace(kit, swatch, {.width = prKitFill(), .flex = PrKitFlex_Fixed});
     PrKitBoxStyle text{.gap = kPrKitSpace1, .padding = prKitEdgesAll(kPrKitSpace4)};
     PrLayoutNode words = prKitBox(kit, cell, {}, text);
     prKitLabel(kit, words, {.text = name}, kCaption);
@@ -216,7 +215,7 @@ void sectionColor(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
         PrKitPlace fixed{.width = prKitPx(220), .flex = PrKitFlex_Fixed};
         prKitLabel(kit, fields, {.text = "The same color in a field, which opens the picker in a popover:"},
             kBodySecondary);
-        prKitPlace(kit, prKitColorField(kit, fields, {.color = &state.color}, {}), &fixed);
+        prKitPlace(kit, prKitColorField(kit, fields, {.color = &state.color}, {}), fixed);
     }
     {
         PrLayoutNode panel = demoPanel(kit, section, "GAMUTS", "SRGB . DISPLAY P3 . REC. 2020", false);
@@ -322,8 +321,7 @@ void sectionSpace(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
             prKitLabel(kit, fixedColumn(kit, row, 60), {.text = step.key}, kCaption);
             prKitLabel(kit, fixedColumn(kit, row, 50), {.text = step.value}, kMeta);
             PrLayoutNode bar = prKitSwatch(kit, row, {.color = palette.accent}, {.size = kPrKitSpace6});
-            PrKitPlace width{.width = prKitPx(step.px), .flex = PrKitFlex_Fixed};
-            prKitPlace(kit, bar, &width);
+            prKitPlace(kit, bar, {.width = prKitPx(step.px), .flex = PrKitFlex_Fixed});
         }
     }
     {

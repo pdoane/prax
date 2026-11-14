@@ -90,8 +90,7 @@ PrLayoutNode specimenRow(PrKit* kit, PrLayoutNode parent, float gap, bool wrap) 
 
 // Places `node` at a fixed width.
 void fixedWidth(PrKit* kit, PrLayoutNode node, float width) {
-    PrKitPlace place{.width = prKitPx(width), .flex = PrKitFlex_Fixed};
-    prKitPlace(kit, node, &place);
+    prKitPlace(kit, node, {.width = prKitPx(width), .flex = PrKitFlex_Fixed});
 }
 
 void buildMenuBar(PrKit* kit, PrLayoutNode section) {

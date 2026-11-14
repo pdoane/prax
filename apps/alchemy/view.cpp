@@ -94,8 +94,7 @@ void selectName(PrKit* kit, PrLayoutNode parent, const Array<String>& names, Str
         PrStringView missing, PrKitFlex flex = PrKitFlex_Fill) {
     PrStringView label = names.isEmpty() ? missing : current.isEmpty() ? PrStringView("Choose...") : current.view();
     PrLayoutNode select = prKitSelect(kit, parent, {.label = label, .disabled = names.isEmpty()}, {});
-    PrKitPlace place{.flex = flex};
-    prKitPlace(kit, select, &place);
+    prKitPlace(kit, select, {.flex = flex});
     int32_t step = 0;
     if (prKitStepped(kit, select, &step) && !names.isEmpty()) {
         uint32_t at = names.find(current);
@@ -252,8 +251,7 @@ void buildLoras(PrKit* kit, PrLayoutNode parent, AppState& state) {
             .precision = 2,
         };
         PrLayoutNode number = prKitNumberField(kit, line, weight, {.size = PrKitControlSize_Sm});
-        PrKitPlace narrow{.width = prKitPx(64), .flex = PrKitFlex_Fixed};
-        prKitPlace(kit, number, &narrow);
+        prKitPlace(kit, number, {.width = prKitPx(64), .flex = PrKitFlex_Fixed});
         PrLayoutNode remove = prKitButton(kit, line, {.icon = PrKitIconKind_Close},
             {.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Sm});
         if (prKitActivated(kit, remove)) {
@@ -942,8 +940,7 @@ void buildTitleBarRow(PrKit* kit, PrLayoutNode bar, View& view, Commands& comman
         view.paletteQuery = query;
 
     PrLayoutNode run = row(kit, bar);
-    PrKitPlace fixed{.flex = PrKitFlex_Fixed};
-    prKitPlace(kit, run, &fixed);
+    prKitPlace(kit, run, {.flex = PrKitFlex_Fixed});
     commandButton(kit, run, commands, "alchemy.generate", kRuns[state.mode], PrKitIconKind_Play,
         PrKitButtonVariant_Primary, PrKitControlSize_Sm);
     commandButton(kit, run, commands, "alchemy.interrupt", "", PrKitIconKind_Stop, PrKitButtonVariant_Danger,
@@ -958,8 +955,7 @@ void buildTitleBarRow(PrKit* kit, PrLayoutNode bar, View& view, Commands& comman
         if (job->progressMax != 0) {
             float done = float(job->progressValue) / float(job->progressMax);
             PrLayoutNode progress = prKitProgress(kit, end, {.value = done});
-            PrKitPlace width{.width = prKitPx(120)};
-            prKitPlace(kit, progress, &width);
+            prKitPlace(kit, progress, {.width = prKitPx(120)});
             String steps = format("{}/{}", job->progressValue, job->progressMax);
             prKitLabel(kit, end, {.text = steps}, textStyle(PrKitTextRole_Mono, PrKitTone_Muted));
         }
@@ -989,8 +985,7 @@ void buildView(PrKit* kit, PrLayoutNode root, View& view, Commands& commands) {
     prCommandScope(kit->ui, root, commands.registry, commands.keymap, "");
     view.browserTitle = format("Browser · {}", state.gallery.entries.count());
     PrLayoutNode dock = prKitDockBuild(kit, root, {.dock = view.dock, .describe = describePanel, .context = &view});
-    PrKitPlace fill{.flex = PrKitFlex_Fill};
-    prKitPlace(kit, dock, &fill);
+    prKitPlace(kit, dock, {.flex = PrKitFlex_Fill});
     for (uint32_t i = 0; i < prKitDockPaneCount(view.dock); ++i) {
         PrKitDockPane pane = prKitDockPane(view.dock, i);
         switch (pane.panel) {

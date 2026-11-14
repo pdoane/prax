@@ -325,8 +325,7 @@ TEST_CASE("controls on a plane turned in perspective take input where they are d
         };
         panel = prKitPlane(f.kit, stage, {.transform = &turn}, inner);
         slider = prKitSlider(f.kit, panel, {.value = prKitScalarF32(&value), .min = 0, .max = 10}, {});
-        PrKitPlace fill{.align = PrKitAlign_Stretch};
-        prKitPlace(f.kit, slider, &fill);
+        prKitPlace(f.kit, slider, {.align = PrKitAlign_Stretch});
         button = prKitButton(f.kit, panel, {.text = "Press"}, {});
         activated = activated || prKitActivated(f.kit, button);
     };

@@ -326,8 +326,7 @@ void buildScenePanel(PrKit* kit, PrLayoutNode panel, EditorState& editor) {
     PrStringView changed{};
     if (prKitTextChanged(kit, field, &changed))
         editor.sceneFilter = changed;
-    PrKitPlace fill{.flex = PrKitFlex_Fill};
-    prKitPlace(kit, field, &fill);
+    prKitPlace(kit, field, {.flex = PrKitFlex_Fill});
     PrLayoutNode add = prKitButton(kit, actions, {.icon = PrKitIconKind_Plus}, kGhostXs);
     if (prKitActivated(kit, add))
         editor.addEntity();
@@ -567,8 +566,7 @@ void buildViewport(PrKit* kit, PrLayoutNode panel, EditorState& editor) {
     stack.place.flex = PrKitFlex_Fill;
     PrLayoutNode viewport = prKitStack(kit, panel, {}, stack);
     PrLayoutNode picture = prLayoutTreeFrameReplaced(tree, viewport, 0, 0);
-    PrKitPlace fill{.flex = PrKitFlex_Fill};
-    prKitPlace(kit, picture, &fill);
+    prKitPlace(kit, picture, {.flex = PrKitFlex_Fill});
     PrLayoutContent content{};
     content.kind = PrLayoutContentKind_Painter;
     content.painter.paint = paintViewport;
@@ -694,8 +692,7 @@ void buildInspector(PrKit* kit, PrLayoutNode panel, EditorState& editor) {
         prKitSlider(kit, drag, {.value = prKitScalarF32(&editor.drag), .min = 0, .max = 1}, {});
         PrKitNumberRange unit{.step = 0.005, .min = 0, .max = 1, .hasMin = true, .hasMax = true};
         PrLayoutNode number = prKitNumberField(kit, drag, {.value = prKitScalarF32(&editor.drag), .range = unit}, {});
-        PrKitPlace narrow{.width = prKitPx(56), .flex = PrKitFlex_Fixed};
-        prKitPlace(kit, number, &narrow);
+        prKitPlace(kit, number, {.width = prKitPx(56), .flex = PrKitFlex_Fixed});
         prKitToggle(kit, prKitInspectorRow(kit, rigidbody, {.label = "Gravity"}, {}), {.value = &entity->gravity}, {});
     }
     PrKitInspectorGroup scriptGroup{
@@ -762,8 +759,7 @@ void buildEditor(PrKit* kit, PrLayoutNode root, EditorState& editor) {
         .dock = editor.dock,
         .describe = describePanel,
     });
-    PrKitPlace fill{.flex = PrKitFlex_Fill};
-    prKitPlace(kit, dock, &fill);
+    prKitPlace(kit, dock, {.flex = PrKitFlex_Fill});
     for (uint32_t i = 0; i < prKitDockPaneCount(editor.dock); ++i) {
         PrKitDockPane pane = prKitDockPane(editor.dock, i);
         switch (pane.panel) {

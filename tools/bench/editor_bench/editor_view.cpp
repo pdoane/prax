@@ -507,8 +507,7 @@ void buildViewport(PrKit* kit, PrLayoutNode parent, EditorState& editor) {
     view.place.flex = PrKitFlex_Fill;
     PrLayoutNode viewport = prKitStack(kit, parent, {}, view);
     PrLayoutNode grid = prLayoutTreeFrameReplaced(tree, viewport, 0, 0);
-    PrKitPlace fill{.flex = PrKitFlex_Fill};
-    prKitPlace(kit, grid, &fill);
+    prKitPlace(kit, grid, {.flex = PrKitFlex_Fill});
     PrLayoutContent content{};
     content.kind = PrLayoutContentKind_Painter;
     content.painter.paint = paintGrid;
@@ -654,8 +653,7 @@ void buildInspector(PrKit* kit, PrLayoutNode parent, EditorState& editor) {
         PrKitNumberRange unit{.step = 0.005, .min = 0, .max = 1, .hasMin = true, .hasMax = true};
         PrKitNumber dragNumber{.value = prKitScalarF32(&editor.drag), .range = unit};
         PrLayoutNode dragField = prKitNumberField(kit, drag, dragNumber, {});
-        PrKitPlace narrow{.width = prKitPx(56), .flex = PrKitFlex_Fixed};
-        prKitPlace(kit, dragField, &narrow);
+        prKitPlace(kit, dragField, {.width = prKitPx(56), .flex = PrKitFlex_Fixed});
         prKitToggle(kit, prKitInspectorRow(kit, rigidbody, {.label = "Gravity"}, {}), {.value = &sel->gravity}, {});
     }
     PrKitInspectorGroup scriptGroup{
@@ -741,8 +739,7 @@ void buildEditor(PrKit* kit, PrLayoutNode root, EditorState& editor) {
     if (editor.dock == nullptr)
         editor.dock = makeDock();
     PrLayoutNode dock = prKitDockBuild(kit, root, {.dock = editor.dock, .describe = describePanel});
-    PrKitPlace fill{.flex = PrKitFlex_Fill};
-    prKitPlace(kit, dock, &fill);
+    prKitPlace(kit, dock, {.flex = PrKitFlex_Fill});
     for (uint32_t i = 0; i < prKitDockPaneCount(editor.dock); ++i) {
         PrKitDockPane pane = prKitDockPane(editor.dock, i);
         switch (pane.panel) {

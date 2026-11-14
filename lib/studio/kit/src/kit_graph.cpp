@@ -502,7 +502,7 @@ PrLayoutNode prKitGraph(PrKit* kit, PrLayoutNode parent, PrKitGraph graph, PrKit
     if (editable)
         flags = flags | PrUiFlag_Pressable | PrUiFlag_Focusable;
     prUiSetFlags(ui, canvas, flags);
-    prKitPlace(kit, canvas, &style.place);
+    prKitPlace(kit, canvas, style.place);
     GraphState* state = static_cast<GraphState*>(prUiState(ui, canvas, &kKitOwner, KitStateKey_Graph,
         sizeof(GraphState)));
     PrKitGraphView& view = *g.view;

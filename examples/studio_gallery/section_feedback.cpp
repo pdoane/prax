@@ -66,8 +66,7 @@ PrLayoutNode specimenRow(PrKit* kit, PrLayoutNode parent, float gap) {
 
 // Places `node` to take the room that its parent leaves.
 void fill(PrKit* kit, PrLayoutNode node) {
-    PrKitPlace place{.flex = PrKitFlex_Fill};
-    prKitPlace(kit, node, &place);
+    prKitPlace(kit, node, {.flex = PrKitFlex_Fill});
 }
 
 } // namespace
@@ -91,8 +90,7 @@ void sectionProgress(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
         const float fractions[] = {0, 0.25f, 0.5f, 0.75f, 1};
         for (float fraction : fractions) {
             PrLayoutNode node = prKitProgress(kit, steps, {.value = fraction});
-            PrKitPlace width{.width = prKitPx(80), .flex = PrKitFlex_Fixed};
-            prKitPlace(kit, node, &width);
+            prKitPlace(kit, node, {.width = prKitPx(80), .flex = PrKitFlex_Fixed});
         }
     }
     {

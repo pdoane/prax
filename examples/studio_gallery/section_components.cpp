@@ -217,8 +217,7 @@ void sectionInspector(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
         prKitSlider(kit, drag, {.value = prKitScalarF32(&inspector.drag), .min = 0, .max = 1}, {});
         PrKitNumberRange unit{.step = 0.005, .min = 0, .max = 1, .hasMin = true, .hasMax = true};
         PrLayoutNode field = prKitNumberField(kit, drag, {.value = prKitScalarF32(&inspector.drag), .range = unit}, {});
-        PrKitPlace fixed{.width = prKitPx(72), .flex = PrKitFlex_Fixed};
-        prKitPlace(kit, field, &fixed);
+        prKitPlace(kit, field, {.width = prKitPx(72), .flex = PrKitFlex_Fixed});
         prKitToggle(kit, prKitInspectorRow(kit, rigidbody, {.label = "Use Gravity"}, {}),
             {.value = &inspector.useGravity}, {});
     }
@@ -231,8 +230,7 @@ void sectionInspector(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
         PrKitButton content{.text = "Add Component", .icon = PrKitIconKind_Plus};
         PrKitButtonStyle small{.size = PrKitControlSize_Sm};
         PrLayoutNode button = prKitButton(kit, add, content, small);
-        PrKitPlace fill{.flex = PrKitFlex_Fill};
-        prKitPlace(kit, button, &fill);
+        prKitPlace(kit, button, {.flex = PrKitFlex_Fill});
     }
 
     // Monospaced labels set telemetry keys apart from prose.

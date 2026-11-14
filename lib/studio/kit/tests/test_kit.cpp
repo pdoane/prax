@@ -174,8 +174,7 @@ TEST_CASE("a widget placed by its caller takes the placement, and keeps the plac
         PrLayoutNode row = prKitBox(f.kit, root, {}, {.direction = PrKitDirection_Row, .gap = 0});
         PrKitButton content{.text = "Wide"};
         button = prKitButton(f.kit, row, content, {});
-        PrKitPlace place{.width = prKitPx(200)};
-        prKitPlace(f.kit, button, &place);
+        prKitPlace(f.kit, button, {.width = prKitPx(200)});
     };
     f.frame();
     CHECK(f.bounds(button).right - f.bounds(button).left == 200.0f);

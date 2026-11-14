@@ -22,8 +22,7 @@ PrLayoutNode card(PrKit* kit, PrLayoutNode parent, const PrKitBoxStyle& box) {
 
 PrLayoutNode fillLabel(PrKit* kit, PrLayoutNode parent, PrStringView text, const PrKitTextStyle& style) {
     PrLayoutNode label = prKitLabel(kit, parent, {.text = text}, style);
-    PrKitPlace fill{.flex = PrKitFlex_Fill};
-    prKitPlace(kit, label, &fill);
+    prKitPlace(kit, label, {.flex = PrKitFlex_Fill});
     return label;
 }
 

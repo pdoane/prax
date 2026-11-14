@@ -734,8 +734,7 @@ PrLayoutNode prKitRowIcon(PrKit* kit, PrLayoutNode row, PrKitIcon icon) {
 PrLayoutNode prKitRowLabel(PrKit* kit, PrLayoutNode row, PrKitLabel label, PrKitTone tone) {
     PrKitTextStyle style{.role = PrKitTextRole_BodySmall, .tone = tone, .wrap = PrKitWrap_Clip};
     PrLayoutNode node = prKitLabel(kit, row, label, style);
-    PrKitPlace fill{.flex = PrKitFlex_Fill};
-    prKitPlace(kit, node, &fill);
+    prKitPlace(kit, node, {.flex = PrKitFlex_Fill});
     return node;
 }
 

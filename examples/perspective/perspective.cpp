@@ -196,8 +196,7 @@ void buildPanel(PrKit* kit, PrLayoutNode row, uint32_t index, Panels& p, const P
     PrKitBoxStyle cover{};
     PrLayoutNode under = prKitLayer(kit, panel, {}, cover);
     PrLayoutNode glass = prLayoutTreeFrameReplaced(tree, under, 0, 0);
-    PrKitPlace fill{.flex = PrKitFlex_Fill};
-    prKitPlace(kit, glass, &fill);
+    prKitPlace(kit, glass, {.flex = PrKitFlex_Fill});
     PrLayoutContent background{.kind = PrLayoutContentKind_Painter};
     background.painter.paint = paintGlass;
     background.painter.context = &p;
@@ -210,8 +209,7 @@ void buildPanel(PrKit* kit, PrLayoutNode row, uint32_t index, Panels& p, const P
     PrKitTextStyle heading{.role = PrKitTextRole_Heading};
     prKitLabel(kit, content, {.text = text.heading}, heading);
     PrLayoutNode picture = prLayoutTreeFrameReplaced(tree, content, 0, 0);
-    PrKitPlace pictureBox{.height = prKitPx(96), .flex = PrKitFlex_Fixed};
-    prKitPlace(kit, picture, &pictureBox);
+    prKitPlace(kit, picture, {.height = prKitPx(96), .flex = PrKitFlex_Fixed});
     PrLayoutContent painted{.kind = PrLayoutContentKind_Painter};
     painted.painter.paint = paintPicture;
     painted.painter.context = &p;
@@ -254,8 +252,7 @@ void buildApp(void* context, PrKit* kit, PrLayoutNode root) {
     // The header stands at a level above the row, so that a panel tweened to the front passes under it.
     PrLayoutNode bar = prKitPanel(kit, prKitPlane(kit, root, {}, {.zIndex = 1}), {}, header);
     PrLayoutNode titles = prKitBox(kit, bar, {}, {.gap = 4});
-    PrKitPlace grow{.flex = PrKitFlex_Grow};
-    prKitPlace(kit, titles, &grow);
+    prKitPlace(kit, titles, {.flex = PrKitFlex_Grow});
     PrKitTextStyle caption{.role = PrKitTextRole_Caption, .tone = PrKitTone_Accent};
     prKitLabel(kit, titles, {.text = "PRAX / PANELS IN PERSPECTIVE"}, caption);
     PrKitTextStyle title{.role = PrKitTextRole_Title};
