@@ -271,7 +271,7 @@ struct Term {
         };
         if (setup)
             setup(&desc);
-        REQUIRE(prTerminalCreate(&desc, &terminal) == PrStatus_Ok);
+        terminal = prTerminalCreate(&desc);
         // As in a studio window, the kit's context pastes through the window.
         prUiSetWindow(f.ui, window);
         // As in the terminal app, the terminal gives its background to the root, and the canvas shows it.
@@ -331,15 +331,10 @@ struct Term {
         frameUntil([&] { return prTerminalHasFocus(terminal); });
     }
 
-    // Waits until the screen has only what the test writes to it (write). A Windows pseudoconsole clears the screen and
-    // sets the title shortly after the launch, which would erase anything written before it, so this runs frames until
-    // the title changes from the program's name. Elsewhere the screen is ready at once. The program must write nothing,
-    // as sleep does.
+    // Runs frames until the program has started, after which the screen has only what the test writes to it (write).
+    // The program must write nothing, as sleep does.
     void settle() {
-#if defined(_WIN32)
-        String name(prTerminalTitle(terminal));
-        frameUntil([&] { return prTerminalTitle(terminal) != name.view(); });
-#endif
+        frameUntil([&] { return prTerminalLaunched(terminal); });
     }
 
     bool shows(PrStringView text) const { return prStringContains(screen(), text); }
@@ -687,6 +682,14 @@ TEST_CASE("terminal: the screen fills its extent with whole cells, and the progr
     String size = format("{} {}", extent.y, extent.x);
     t.frameUntil([&] { return t.shows(size); });
     CHECK(t.f.paintedCommands() > 0);
+}
+
+TEST_CASE("terminal: a program that cannot start says so on the screen, and has not exited") {
+    Term t("pr-no-such-program", {});
+    t.settle();
+    CHECK(prTerminalLaunchStatus(t.terminal) == PrStatus_NotFound);
+    CHECK(t.shows("[cannot start pr-no-such-program]"));
+    CHECK_FALSE(prTerminalProcessInfo(t.terminal).exited);
 }
 
 TEST_CASE("terminal: typed text reaches the program, whose terminal echoes it") {

@@ -169,7 +169,7 @@ void openApp(TerminalApp& t) {
     });
 }
 
-PrStatus openTab(TerminalApp& t) {
+void openTab(TerminalApp& t) {
     PR_ASSERT(t.kit != nullptr && t.fonts != nullptr);
     Array<PrStringView> arguments;
     for (const String& argument : t.arguments)
@@ -190,16 +190,12 @@ PrStatus openTab(TerminalApp& t) {
         .scrollback = t.scrollback,
         .notificationTag = t.nextTag,
     };
-    PrTerminal* terminal = nullptr;
-    PrStatus status = prTerminalCreate(&desc, &terminal);
+    PrTerminal* terminal = prTerminalCreate(&desc);
     prRawStringReset(&directory);
-    if (status != PrStatus_Ok)
-        return status;
     ++t.nextTag;
     t.terminals.push(terminal);
     t.shown = t.terminals.count() - 1;
     prTerminalFocus(terminal);
-    return PrStatus_Ok;
 }
 
 void closeTab(TerminalApp& t, uint32_t index) {

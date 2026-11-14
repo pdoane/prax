@@ -129,9 +129,9 @@ typedef struct PrTerminalDesc {
     void* PR_NULLABLE openFileContext;
 } PrTerminalDesc;
 
-// Creates a terminal, starts its program, and writes the terminal to `*out`. If the program fails to start, returns the
-// status of prProcessLaunch and sets `*out` to null.
-PrStatus prTerminalCreate(const PrTerminalDesc* desc, PrTerminal* PR_NULLABLE* PR_NONNULL out);
+// Creates a terminal. Its program starts in the first frame (prTerminalFrame), so that the program's pseudoterminal has
+// the screen's size from the start. Whether it started is prTerminalLaunchStatus.
+PrTerminal* prTerminalCreate(const PrTerminalDesc* desc);
 
 // Ends the program if it still runs, and frees the terminal.
 void prTerminalDestroy(PrTerminal* PR_NULLABLE terminal);
@@ -145,7 +145,8 @@ typedef uint8_t PrTerminalBackground;
 
 // Declares the terminal's view under `parent` for this round, with an extent of `extent` px. Draws what the program
 // wrote, sends the program the user's input, and acts on the screen's events. The screen takes as many whole columns
-// and rows as fit right of the gutter, and the program's pseudoterminal is resized to match.
+// and rows as fit right of the gutter. The first frame starts the program on a pseudoterminal of that size, and later
+// frames resize the pseudoterminal to match.
 //
 // The box that `background` names takes the terminal's background color, which shows under the whole view. Over it, the
 // view draws the gutter's marks, the cell backgrounds that differ from it, the text, the images, the selection and the
@@ -182,8 +183,15 @@ PrStringView prTerminalTitle(const PrTerminal* terminal);
 // program started in the launcher's directory. The caller releases the string with prRawStringReset.
 PrRawString prTerminalWorkingDirectory(const PrTerminal* terminal);
 
-// Whether the program exited, and how.
+// Whether the program exited, and how. A program that has not started, or failed to start, has not exited.
 PrProcessInfo prTerminalProcessInfo(const PrTerminal* terminal);
+
+// Returns true once the terminal tried to start its program, in the first frame.
+bool prTerminalLaunched(const PrTerminal* terminal);
+
+// PrStatus_Ok until the program fails to start, and then the status of prProcessLaunch. The screen then says that the
+// program cannot start.
+PrStatus prTerminalLaunchStatus(const PrTerminal* terminal);
 
 // The kinds of attention requests from the program that the user has not seen.
 enum {

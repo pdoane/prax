@@ -41,7 +41,7 @@ struct Window {
         for (PrStringView argument : arguments)
             t.arguments.push(String(argument));
         openApp(t);
-        REQUIRE(openTab(t) == PrStatus_Ok);
+        openTab(t);
         f.build = [this](PrLayoutNode root) { buildApp(t, root, PrVec2{800, 600}); };
         settle();
     }

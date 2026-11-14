@@ -58,8 +58,8 @@ struct TerminalApp {
 void openApp(TerminalApp& t);
 
 // Starts a terminal in a new last tab, shows it and gives it focus. It starts in the working directory of the terminal
-// that showed before. Returns the status of prTerminalCreate.
-PrStatus openTab(TerminalApp& t);
+// that showed before. A program that cannot start says so in its tab (prTerminalLaunchStatus).
+void openTab(TerminalApp& t);
 
 // Closes the terminal at `index`. If it was showing, the next terminal shows, or the previous one if it was last.
 void closeTab(TerminalApp& t, uint32_t index);

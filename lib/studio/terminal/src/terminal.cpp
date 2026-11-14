@@ -226,6 +226,15 @@ struct Terminal {
     PrRawString directory;              // null for the launcher's directory
     bool exitShown;
 
+    // The start of the program, which waits for the first frame (launchProcess): the launcher, and the program, its
+    // arguments and its environment, which it frees once it tries. `launchStatus` is its status.
+    PrProcessLauncher* launcher;
+    PrRawString program;
+    RawArray<PrRawString> arguments;
+    RawArray<PrRawString> environment;
+    bool launched;
+    PrStatus launchStatus;
+
     PrLayoutNode node;
     bool focused;
     bool focusAsked;
@@ -487,6 +496,66 @@ void resizeProcess(Terminal* terminal, PrUVec2 extent) {
     terminal->processExtent = extent;
     terminal->processPixels = pixels;
     prProcessTerminalResize(terminal->process, extent, pixels);
+}
+
+// Frees what the start of the program needs.
+void launchReset(Terminal* terminal) {
+    prRawStringReset(&terminal->program);
+    for (PrRawString& argument : terminal->arguments.span())
+        prRawStringReset(&argument);
+    terminal->arguments.reset();
+    for (PrRawString& variable : terminal->environment.span())
+        prRawStringReset(&variable);
+    terminal->environment.reset();
+}
+
+// Starts the program on a pseudoterminal of `extent` columns and rows, so that the program never sees another size than
+// the screen's. If it fails to start, the screen says so. The caller does not hold the screen's lock.
+void launchProcess(Terminal* terminal, PrUVec2 extent) {
+    PR_ASSERT(!terminal->launched);
+    terminal->launched = true;
+    RawArray<PrStringView> arguments;
+    for (const PrRawString& argument : terminal->arguments.span())
+        arguments.push(prRawStringView(&argument));
+    RawArray<PrStringView> environment;
+    for (const PrRawString& variable : terminal->environment.span())
+        environment.push(prRawStringView(&variable));
+    PrUVec2 cell = cellPixels(terminal);
+    PrProcessDesc desc{
+        .program = prRawStringView(&terminal->program),
+        .arguments = arguments.data,
+        .argumentCount = arguments.count,
+        .directory = prRawStringView(&terminal->directory),
+        .environment = environment.data,
+        .environmentCount = environment.count,
+        .streams = PrProcessStreams_Terminal,
+        .terminalExtent = extent,
+        .terminalPixelExtent = {extent.x * cell.x, extent.y * cell.y},
+        .wake = terminal->app != nullptr ? wakeApp : nullptr,
+        .wakeContext = terminal->app,
+        .receive = receiveOutput,
+        .receiveContext = terminal,
+    };
+    terminal->processExtent = desc.terminalExtent;
+    terminal->processPixels = desc.terminalPixelExtent;
+    terminal->launchStatus = prProcessLaunch(terminal->launcher, &desc, &terminal->process);
+    arguments.reset();
+    environment.reset();
+    launchReset(terminal);
+    if (terminal->launchStatus == PrStatus_Ok)
+        return;
+    PrRawString message = prRawStringNull();
+    prRawStringAppend(&message, "\x1b[0;2m[cannot start ");
+    prRawStringAppend(&message, prRawStringView(&terminal->name));
+    if (terminal->launchStatus != PrStatus_NotFound) {
+        prRawStringAppend(&message, ": ");
+        prRawStringAppend(&message, prStatusName(terminal->launchStatus));
+    }
+    prRawStringAppend(&message, "]\x1b[0m\r\n");
+    lockScreen(terminal);
+    prVtermWrite(terminal->vterm, prStringBytes(prRawStringView(&message)));
+    unlockScreen(terminal);
+    prRawStringReset(&message);
 }
 
 void imagesReset(Terminal* terminal) {
@@ -2166,8 +2235,7 @@ using namespace pr_impl;
 // C opaque types
 struct PrTerminal : Terminal {};
 
-PrStatus prTerminalCreate(const PrTerminalDesc* desc, PrTerminal* PR_NULLABLE* PR_NONNULL out) {
-    *out = nullptr;
+PrTerminal* prTerminalCreate(const PrTerminalDesc* desc) {
     PrTerminal* terminal = allocZeroed<PrTerminal>();
     terminal->kit = desc->kit;
     terminal->ui = desc->kit->ui;
@@ -2260,35 +2328,20 @@ PrStatus prTerminalCreate(const PrTerminalDesc* desc, PrTerminal* PR_NULLABLE* P
             environment.push(desc->environment[i]);
     }
     environment.append(integration.data, integration.count);
-    PrProcessDesc processDesc{
-        .program = program,
-        .arguments = arguments,
-        .argumentCount = argumentCount,
-        .directory = desc->directory,
-        .environment = environment.data,
-        .environmentCount = environment.count,
-        .streams = PrProcessStreams_Terminal,
-        .terminalExtent = prVtermExtent(terminal->vterm),
-        .terminalPixelExtent = {80 * cellPixels(terminal).x, 24 * cellPixels(terminal).y},
-        .wake = terminal->app != nullptr ? wakeApp : nullptr,
-        .wakeContext = terminal->app,
-        .receive = receiveOutput,
-        .receiveContext = terminal,
-    };
-    terminal->processExtent = processDesc.terminalExtent;
-    terminal->processPixels = processDesc.terminalPixelExtent;
-    PrStatus status = prProcessLaunch(desc->launcher, &processDesc, &terminal->process);
+
+    // The program starts in the first frame, which gives the screen its size, so the terminal keeps what it starts.
+    terminal->launcher = desc->launcher;
+    terminal->program = prRawStringCopy(program);
+    for (uint32_t i = 0; i < argumentCount; ++i)
+        terminal->arguments.push(prRawStringCopy(arguments[i]));
+    for (PrStringView variable : environment.span())
+        terminal->environment.push(prRawStringCopy(variable));
     environment.reset();
     integration.reset();
     launchArguments.reset();
     terminalShellLaunchReset(&launch);
     prRawStringReset(&shell);
-    if (status != PrStatus_Ok) {
-        prTerminalDestroy(terminal);
-        return status;
-    }
-    *out = terminal;
-    return PrStatus_Ok;
+    return terminal;
 }
 
 void prTerminalDestroy(PrTerminal* PR_NULLABLE terminal) {
@@ -2296,6 +2349,7 @@ void prTerminalDestroy(PrTerminal* PR_NULLABLE terminal) {
         return;
     // The process's thread parses into the screen until the process is destroyed, so the process goes first.
     prProcessDestroy(terminal->process);
+    launchReset(terminal);
     prConditionReset(&terminal->turn);
     prMutexReset(&terminal->mutex);
     snapshotReset(&terminal->snapshot);
@@ -2385,9 +2439,12 @@ void prTerminalFrame(PrTerminal* terminal, PrLayoutNode parent, PrVec2 extent, P
     PrLayoutNode backgroundNode = background == PrTerminalBackground_Parent ? parent : node;
     setBackground(tree, backgroundNode, terminalBackground(terminal->snapshot.colors));
 
-    // The pseudoterminal resizes after the screen, so that the screen already has the new size when the program redraws
-    // for it.
-    resizeProcess(terminal, PrUVec2{columns, rows});
+    // The program starts once the screen has its size, and the pseudoterminal resizes after the screen, so that the
+    // screen already has the new size when the program draws for it.
+    if (!terminal->launched)
+        launchProcess(terminal, PrUVec2{columns, rows});
+    else
+        resizeProcess(terminal, PrUVec2{columns, rows});
     if (terminal->hasOpened) {
         terminal->hasOpened = false;
         openLink(terminal, terminal->opened);
@@ -2473,7 +2530,15 @@ PrRawString prTerminalWorkingDirectory(const PrTerminal* terminal) {
 }
 
 PrProcessInfo prTerminalProcessInfo(const PrTerminal* terminal) {
-    return prProcessInfo(terminal->process);
+    return terminal->process != nullptr ? prProcessInfo(terminal->process) : PrProcessInfo{};
+}
+
+bool prTerminalLaunched(const PrTerminal* terminal) {
+    return terminal->launched;
+}
+
+PrStatus prTerminalLaunchStatus(const PrTerminal* terminal) {
+    return terminal->launchStatus;
 }
 
 PrTerminalAlertFlags prTerminalAlerts(const PrTerminal* terminal) {
