@@ -208,7 +208,7 @@ TEST_CASE("a drag's ghost follows the pointer in the overlay, and is gone when t
     f.build = [&](PrLayoutNode root) {
         PrKitButton content{.text = "player_base.mesh"};
         source = prKitButton(f.kit, root, content, {});
-        prUiDragStart(f.ui, source, 4, 7, 0);
+        prUiDragStart(f.ui, source, 4, 7, 0, 0);
         PrKitDragGhost look{.text = "player_base.mesh", .icon = PrKitIconKind_Cube};
         ghost = prKitDragGhost(f.kit, look);
     };

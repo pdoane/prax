@@ -420,7 +420,7 @@ void buildProjectPanel(PrKit* kit, PrLayoutNode panel, EditorState& editor) {
         // An asset drags onto the inspector's mesh field.
         prUiSetFlags(ui, node, PrUiFlag_Pressable);
         if (prUiIsPressed(ui, node, 0))
-            prUiDragStart(ui, node, 4, kDragAsset, i);
+            prUiDragStart(ui, node, 4, kDragAsset, i, 0);
         if (prUiClicked(ui, node, 0))
             editor.selectedAsset = i;
         PrKitTone tone = PrKitTone(selected ? PrKitTone_Accent : PrKitTone_Muted);

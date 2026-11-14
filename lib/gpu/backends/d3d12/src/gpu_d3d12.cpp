@@ -45,6 +45,7 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <d3d12.h>
+#include <dcomp.h>
 #include <dxgi1_6.h>
 #include <stdio.h>
 
@@ -294,7 +295,34 @@ struct D3d12SwapChain : GpuSharedSwapChain {
     uint32_t buffers[kSwapChainBuffers];    // the resource slots of the buffers, by buffer
     PrUVec2 capacity;                       // the buffers' extent
     PrGpuTexture current;                   // the buffer of the acquired frame
+
+    // A transparent swap chain presents premultiplied alpha, which only a swap chain for composition can. A visual of
+    // DirectComposition shows it over the window's client area, unscaled at the top left. Each is held, or null.
+    IDCompositionDevice* PR_NULLABLE composition;
+    IDCompositionTarget* PR_NULLABLE target;
+    IDCompositionVisual* PR_NULLABLE visual;
 };
+
+// Shows the swap chain over its window's client area, in a visual of its own. Returns false if DirectComposition
+// refuses.
+bool compose(D3d12SwapChain* sc) {
+    return SUCCEEDED(DCompositionCreateDevice(nullptr, IID_PPV_ARGS(&sc->composition))) &&
+        SUCCEEDED(sc->composition->CreateTargetForHwnd(sc->window, TRUE, &sc->target)) &&
+        SUCCEEDED(sc->composition->CreateVisual(&sc->visual)) && SUCCEEDED(sc->visual->SetContent(sc->swapChain)) &&
+        SUCCEEDED(sc->target->SetRoot(sc->visual)) && SUCCEEDED(sc->composition->Commit());
+}
+
+// Releases the swap chain's objects that the device does not own: the composition, the displays' factory and the swap
+// chain itself.
+void releaseSwapChainObjects(D3d12SwapChain* sc) {
+    if (sc->waitable != nullptr)
+        CloseHandle(sc->waitable);
+    release(sc->visual);
+    release(sc->target);
+    release(sc->composition);
+    release(sc->displays);
+    release(sc->swapChain);
+}
 
 struct D3d12Device : GpuSharedDevice {
     ID3D12Device10* device;                 // held
@@ -989,9 +1017,9 @@ bool supportsFormat(const PrGpuDevice* device, PrGpuFormat format, PrGpuTextureU
     D3D12_FEATURE_DATA_FORMAT_SUPPORT target{formatOf(format)};
     D3D12_FEATURE_DATA_FORMAT_SUPPORT storage{storageFormatOf(format)};
     if (FAILED(d->device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &shader, sizeof(shader))) ||
-        FAILED(d->device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &target, sizeof(target))) ||
-        FAILED(d->device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &storage, sizeof(storage))))
-    return false;
+            FAILED(d->device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &target, sizeof(target))) ||
+            FAILED(d->device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &storage, sizeof(storage))))
+        return false;
     if ((usage & PrGpuTextureUsageFlag_Sampled) && !(shader.Support1 & D3D12_FORMAT_SUPPORT1_SHADER_LOAD))
         return false;
     if ((usage & PrGpuTextureUsageFlag_RenderTarget) && !(target.Support1 & D3D12_FORMAT_SUPPORT1_RENDER_TARGET))
@@ -2691,9 +2719,18 @@ PrStatus swapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const
     s.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
     s.Flags = DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT;
     IDXGISwapChain1* chain1 = nullptr;
-    if (FAILED(d->factory->CreateSwapChainForHwnd(d->queue, window, &s, nullptr, nullptr, &chain1)))
-        return PrStatus_NotSupported;
-    d->factory->MakeWindowAssociation(window, DXGI_MWA_NO_ALT_ENTER);
+    bool transparent = (desc->flags & PrGpuSwapChainFlag_Transparent) != 0;
+    if (transparent) {
+        // A swap chain for composition takes only stretched scaling, and its visual shows the buffers unscaled.
+        s.Scaling = DXGI_SCALING_STRETCH;
+        s.AlphaMode = DXGI_ALPHA_MODE_PREMULTIPLIED;
+        if (FAILED(d->factory->CreateSwapChainForComposition(d->queue, &s, nullptr, &chain1)))
+            return PrStatus_NotSupported;
+    } else {
+        if (FAILED(d->factory->CreateSwapChainForHwnd(d->queue, window, &s, nullptr, nullptr, &chain1)))
+            return PrStatus_NotSupported;
+        d->factory->MakeWindowAssociation(window, DXGI_MWA_NO_ALT_ENTER);
+    }
     IDXGISwapChain3* native = nullptr;
     chain1->QueryInterface(IID_PPV_ARGS(&native));
     chain1->Release();
@@ -2709,12 +2746,16 @@ PrStatus swapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const
     sc->hdr = desc->intent == PrGpuSwapChainIntent_Hdr;
     d->factory->AddRef();
     sc->displays = d->factory;
+    if (transparent && !compose(sc)) {
+        releaseSwapChainObjects(sc);
+        prMemoryFree(sc);
+        return PrStatus_NotSupported;
+    }
     if (sc->hdr) {
         sc->monitor = MonitorFromWindow(window, MONITOR_DEFAULTTONEAREST);
         PrGpuSwapChainInfo chosen = infoFor(sc);
         if ((chosen.format != info.format || chosen.space != info.space) && !takeInfo(sc, chosen, s.Width, s.Height)) {
-            release(sc->displays);
-            release(native);
+            releaseSwapChainObjects(sc);
             prMemoryFree(sc);
             return PrStatus_NotSupported;
         }
@@ -2725,10 +2766,7 @@ PrStatus swapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const
     sc->capacity = PrUVec2{s.Width, s.Height};
     if (!takeBuffers(d, sc)) {
         releaseBuffers(d, sc);
-        if (sc->waitable != nullptr)
-            CloseHandle(sc->waitable);
-        release(sc->displays);
-        release(native);
+        releaseSwapChainObjects(sc);
         prMemoryFree(sc);
         return PrStatus_Limit;
     }
@@ -2744,10 +2782,7 @@ void swapChainDestroy(PrGpuSwapChain* handle) {
     // can take another.
     waitIdle(device);
     releaseBuffers(d, sc);
-    if (sc->waitable != nullptr)
-        CloseHandle(sc->waitable);
-    release(sc->displays);
-    release(sc->swapChain);
+    releaseSwapChainObjects(sc);
     prMemoryFree(sc);
 }
 
@@ -2902,9 +2937,9 @@ bool createObjects(D3d12Device* d) {
         D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0,
     };
     if (FAILED(device->CreateDescriptorHeap(&resources, IID_PPV_ARGS(&d->resourceHeap))) ||
-        FAILED(device->CreateDescriptorHeap(&samplers, IID_PPV_ARGS(&d->samplerHeap))) ||
-        FAILED(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&d->fence))))
-    return false;
+            FAILED(device->CreateDescriptorHeap(&samplers, IID_PPV_ARGS(&d->samplerHeap))) ||
+            FAILED(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&d->fence))))
+        return false;
     d->resourceIncrement = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
     d->samplerIncrement = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
     d->colorIncrement = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);

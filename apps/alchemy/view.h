@@ -20,6 +20,10 @@ using namespace pr;
 struct View {
     PrKitDock* dock = nullptr;
     String paletteQuery;
+    String browserTitle;                            // the browser's tab, which counts the gallery's images
+
+    // The title bar's server button, which the server's dialog floats from, as the current round made it.
+    PrLayoutNode server = kPrLayoutNodeNone;
 
     // Whether each dialog was told of the state's request.
     bool deleteShown = false;
@@ -31,7 +35,10 @@ struct View {
 void viewInit(View& view);
 void viewReset(View& view);
 
-// Declares the interface under `root`, a surface that fills the window.
+// Declares the title bar's content in `bar`, before each round's build of the view.
+void buildTitleBarRow(PrKit* kit, PrLayoutNode bar, View& view, Commands& commands);
+
+// Declares the interface under `root`, a surface that fills the window below its title bar.
 void buildView(PrKit* kit, PrLayoutNode root, View& view, Commands& commands);
 
 } // namespace alchemy

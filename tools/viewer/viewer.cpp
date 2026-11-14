@@ -141,7 +141,7 @@ void record(PrDrawList* list, Loaded& loaded, float width, float height, float p
     update(loaded, time);
     PrAppDisplay display = prAppDisplayDefault();
     display.pixelRatio = pixelRatio;
-    draw(loaded, list, width, height, display, PrAppUserPreferences{});
+    draw(loaded, list, width, height, display, prAppUserPreferencesDefault());
     prDrawListPopTransform(list);
 }
 
@@ -556,7 +556,7 @@ struct Viewer {
     // The display that the panes render for, and the user's preferences, at the last frame. Without HDR, the display is
     // SDR in sRGB's gamut, which is all that an 8-bit swap chain shows.
     PrAppDisplay display = prAppDisplayDefault();
-    PrAppUserPreferences preferences{};
+    PrAppUserPreferences preferences = prAppUserPreferencesDefault();
     std::vector<RendererConfig> configs;
 
     // A renderer is used by one thread at a time. The viewer thread and the panes hold these locks while they use a
@@ -580,6 +580,7 @@ struct Viewer {
     PaneBrowser browsers[2];            // the browser of each pane
     PrGpuTexture difference{};
     PrApp* PR_NULLABLE app = nullptr;
+    PrAppWindow* PR_NULLABLE window = nullptr;
     std::unique_ptr<Comparer> comparer;
     Comparer::Result result;
     std::unique_ptr<Printer> printer;
@@ -704,7 +705,7 @@ PaneBrowser* PR_NULLABLE answered(void* context) {
     if (!current)
         return nullptr;
     b.busy = false;
-    prAppRequestFrame(v->app);
+    prAppWindowRequestFrame(v->window);
     return &b;
 }
 
@@ -781,7 +782,7 @@ void browserCaptured(void* context, PrStatus status, PrPixelView pixels) {
         pane.publish(index, c->version);
     }
     delete c;
-    prAppRequestFrame(v.app);
+    prAppWindowRequestFrame(v.window);
 }
 
 // Handles the answer once the page stands at the time. If the answer is a number, it is the frame that the page's
@@ -897,7 +898,7 @@ void browserShow(Viewer& v, uint32_t index) {
         source.at.top + source.docHeight * zoom,
     };
     PrAppSurface host{};
-    if (prAppSurface(v.app, &host) == PrStatus_Ok)
+    if (prAppWindowSurface(v.window, &host) == PrStatus_Ok)
         prWebViewShow(b.browser, &host, source.at, viewport);
 }
 
@@ -1111,16 +1112,18 @@ void updateDifference(Viewer& v, const std::string& first, const std::string& se
     }
 }
 
-void start(void* context, PrApp* app, const PrAppFrame*) {
-    Viewer& v = *static_cast<Viewer*>(context);
+// Makes the device that the viewer presents with, its swap chain over the window, and what renders on the device.
+// Returns false if there is no device to present with.
+bool openViewer(Viewer& v) {
+    PrApp* app = v.app;
+    PrAppWindow* window = v.window;
     PrAppSurface surface{};
     PrGpuSwapChainDesc desc = swapChainDesc(false);
     if (prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &v.device) != PrStatus_Ok ||
-            prAppSurface(app, &surface) != PrStatus_Ok ||
+            prAppWindowSurface(window, &surface) != PrStatus_Ok ||
             prGpuSwapChainCreate(v.device, &surface, &desc, &v.swapChain) != PrStatus_Ok) {
         std::fprintf(stderr, "viewer: no GPU device to present with\n");
-        prAppStop(app);
-        return;
+        return false;
     }
     PrGpuDeviceInfo info = prGpuDeviceInfo(v.device);
     PrStringView api = info.backend;
@@ -1148,14 +1151,18 @@ void start(void* context, PrApp* app, const PrAppFrame*) {
     }
     for (size_t b = 0; b < v.configs.size(); ++b)
         v.configLocks.push_back(std::make_unique<std::mutex>());
-    v.app = app;
     PaneContext shared{
         app,      v.device,      &v.configs,    &v.configLocks,
         &v.clock, &v.framesDone, &v.framesMutex, &v.framesDoneChanged,
     };
     for (std::unique_ptr<Pane>& pane : v.panes)
         pane = std::make_unique<Pane>(shared, true);
-    v.ui = uiCreate(v.device, app);
+    v.ui = uiCreate(v.device, window);
+    return true;
+}
+
+bool open(void*, PrAppWindow*, const PrAppFrame*) {
+    return true;
 }
 
 void frameDone(void* PR_NULLABLE context, double) {
@@ -1227,7 +1234,7 @@ PrAppOutput pageOutput(Viewer& v, const PrAppOutput& panel, double time) {
     const PaneSource& source = v.panes[index]->source();
     if (source.loaded == nullptr || !paneShown(v, index))
         return panel;
-    PrAppOutput page = prAppOutputPlaced(output(*source.loaded, v.app, time), PrVec2{source.at.left, source.at.top},
+    PrAppOutput page = prAppOutputPlaced(output(*source.loaded, v.window, time), PrVec2{source.at.left, source.at.top},
         v.choices.zoom);
     // A caret that blinks changes the page's render.
     if (page.wantsFrame || page.frameTime != 0)
@@ -1235,8 +1242,9 @@ PrAppOutput pageOutput(Viewer& v, const PrAppOutput& panel, double time) {
     return prAppOutputMerge(panel, page, inside(source.at, v.pointerX, v.pointerY));
 }
 
-PrAppOutput frame(void* context, PrApp* app, const PrAppFrame* frame) {
+PrAppOutput frame(void* context, PrAppWindow* window, const PrAppFrame* frame) {
     Viewer& v = *static_cast<Viewer*>(context);
+    PrApp* app = v.app;
     if (v.swapChain == nullptr || !(frame->extent.x > 0 && frame->extent.y > 0))
         return {};
     float pixelRatio = frame->display.pixelRatio;
@@ -1251,7 +1259,7 @@ PrAppOutput frame(void* context, PrApp* app, const PrAppFrame* frame) {
         PrAppSurface surface{};
         PrGpuSwapChain* swapChain = nullptr;
         PrGpuSwapChainDesc desc = swapChainDesc(v.choices.hdr);
-        if (prAppSurface(app, &surface) == PrStatus_Ok &&
+        if (prAppWindowSurface(window, &surface) == PrStatus_Ok &&
                 prGpuSwapChainCreate(v.device, &surface, &desc, &swapChain) == PrStatus_Ok) {
             prGpuSwapChainDestroy(v.swapChain);
             v.swapChain = swapChain;
@@ -1572,7 +1580,7 @@ bool toPage(Viewer& v, const PrAppEvent& event) {
         case PrAppEventKind_KeyDown:
         case PrAppEventKind_KeyUp:
         case PrAppEventKind_Text:
-        case PrAppEventKind_Clipboard:
+        case PrAppEventKind_Paste:
         case PrAppEventKind_CompositionUpdate:
         case PrAppEventKind_CompositionEnd: {
             const PaneSource& source = v.panes[v.pagePane]->source();
@@ -1590,11 +1598,15 @@ bool toPage(Viewer& v, const PrAppEvent& event) {
     }
 }
 
-void event(void* context, PrApp* app, const PrAppEvent* event) {
+void event(void* context, PrAppWindow* window, const PrAppEvent* event) {
     Viewer& v = *static_cast<Viewer*>(context);
+    if (event->kind == PrAppEventKind_CloseRequested) {
+        prAppStop(v.app);
+        return;
+    }
     if (v.ui == nullptr)
         return;
-    prAppRequestFrame(app);
+    prAppWindowRequestFrame(window);
     // Each input has one owner. The keys go to a page that holds the keyboard and to nothing else, apart from Command
     // chords, which stay the viewer's.
     bool key = event->kind == PrAppEventKind_KeyDown || event->kind == PrAppEventKind_KeyUp ||
@@ -1613,8 +1625,22 @@ void event(void* context, PrApp* app, const PrAppEvent* event) {
     if (!taken && !key && toPage(v, *event))
         return;
     if (event->kind == PrAppEventKind_KeyDown && !taken)
-        keyDown(v, app, event->keyboard.key, event->modifiers);
+        keyDown(v, v.app, event->keyboard.key, event->modifiers);
 }
+
+// Opens the viewer's window and its device. The window's close stops the application.
+bool start(void* context, PrApp* app) {
+    Viewer& v = *static_cast<Viewer*>(context);
+    v.app = app;
+    PrAppWindowDesc desc{
+        .title = "Prax draw viewer",
+        .extent = {uint32_t(kWindowWidth), uint32_t(kWindowHeight)},
+        .handler = {.context = &v, .open = open, .frame = frame, .event = event},
+    };
+    return prAppWindowCreate(app, &desc, &v.window) == PrStatus_Ok && openViewer(v);
+}
+
+void appEvent(void*, PrApp*, const PrAppEvent*) {}
 
 void shutdown(void* context, PrApp*) {
     Viewer& v = *static_cast<Viewer*>(context);
@@ -1760,10 +1786,8 @@ int main(int argc, char** argv) {
     // The clock starts where the command line puts it, on the document that the viewer opens.
     viewer.timedCollection = viewer.choices.collection;
     viewer.timedDocument = viewer.choices.document;
-    PrAppDesc appDesc{.title = "Prax draw viewer", .extent = {uint32_t(kWindowWidth), uint32_t(kWindowHeight)}};
-    PrApp* app = prAppCreate(PrAppBackend_Default, &appDesc);
-    PrAppHandler handler{&viewer, start, frame, event, shutdown};
-    prAppRun(app, &handler);
+    PrApp* app = prAppCreate(PrAppBackend_Default, nullptr);
+    prAppRun(app, {.context = &viewer, .start = start, .event = appEvent, .shutdown = shutdown});
     prAppDestroy(app);
     return 0;
 }

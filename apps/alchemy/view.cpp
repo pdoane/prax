@@ -43,10 +43,11 @@ constexpr float kRecordMaxHeight = 520;
 constexpr float kImportPreview = 360;
 constexpr float kMenuWidth = 200;
 
-PrKitDockTab describePanel(void* PR_NULLABLE, PrKitDockPanelId panel) {
+// The browser's tab counts the gallery's images.
+PrKitDockTab describePanel(void* PR_NULLABLE context, PrKitDockPanelId panel) {
     switch (panel) {
         case Panel_Parameters: return {.title = "Parameters"};
-        case Panel_Browser: return {.title = "Browser"};
+        case Panel_Browser: return {.title = static_cast<const View*>(context)->browserTitle};
         default: return {.title = "Viewport"};
     }
 }
@@ -355,28 +356,6 @@ void buildSampling(PrKit* kit, PrLayoutNode parent, AppState& state) {
         p.seedLocked = !p.seedLocked;
 }
 
-// The strip that the run's verbs stay on while the panel scrolls: the run of the current mode, and the stop, which
-// keeps its place whether or not a run is in flight, so that nothing moves under the pointer when one starts.
-void buildRunBar(PrKit* kit, PrLayoutNode parent, AppState& state, Commands& commands) {
-    static const char* const kRuns[] = {"Generate", "Upscale", "Outpaint", "Detail"};
-    PrKitSurfaceStyle bar{
-        .box = {
-            .direction = PrKitDirection_Row,
-            .align = PrKitAlign_Center,
-            .gap = kPrKitSpace2,
-            .padding = prKitEdgesXY(kPrKitSpace2, kPrKitSpace3),
-        },
-        .background = PrKitBackground_Header,
-    };
-    PrLayoutNode strip = prKitSurface(kit, parent, {}, bar);
-    PrLayoutNode run = commandButton(kit, strip, commands, "alchemy.generate", kRuns[state.mode], PrKitIconKind_Play,
-        PrKitButtonVariant_Primary, PrKitControlSize_Md);
-    PrKitPlace fill{.flex = PrKitFlex_Fill};
-    prKitPlace(kit, run, &fill);
-    commandButton(kit, strip, commands, "alchemy.interrupt", "", PrKitIconKind_Stop, PrKitButtonVariant_Danger,
-        PrKitControlSize_Md);
-}
-
 void buildParameters(PrKit* kit, PrLayoutNode content, AppState& state, Commands& commands) {
     prCommandScope(kit->ui, content, commands.registry, commands.keymap, kContextParameters);
     PrKitBoxStyle scroll{
@@ -386,7 +365,6 @@ void buildParameters(PrKit* kit, PrLayoutNode content, AppState& state, Commands
         .padding = prKitEdgesAll(kPrKitSpace5),
         .place = {.flex = PrKitFlex_Fill},
     };
-    buildRunBar(kit, content, state, commands);
     PrLayoutNode panel = prKitBox(kit, content, {}, scroll);
     buildMode(kit, panel, state);
     buildSource(kit, panel, state, commands);
@@ -774,7 +752,7 @@ void buildMenus(PrKit* kit, PrLayoutNode bar, Commands& commands) {
         "alchemy.pasteImage", "alchemy.importImage", nullptr, "alchemy.deleteImage", "alchemy.rescan",
         "alchemy.openGallery",
     };
-    static const char* const kViewItems[] = {"alchemy.toggleInfo", "alchemy.togglePreview"};
+    static const char* const kViewItems[] = {"alchemy.toggleInfo", "alchemy.togglePreview", nullptr, "view.fullscreen"};
     struct Menu {
         const char* title;
         Span<const char* const> items;
@@ -798,46 +776,6 @@ void buildMenus(PrKit* kit, PrLayoutNode bar, Commands& commands) {
                 prCommandMenuItem(kit, list, commands.registry, commands.keymap, id, {});
         }
     }
-}
-
-// Returns the bar's trigger of the server's dialog, the server's address, which shows beside the connection's state.
-PrLayoutNode buildStatus(PrKit* kit, PrLayoutNode parent, AppState& state) {
-    PrKitSurfaceStyle bar{
-        .box = {
-            .direction = PrKitDirection_Row,
-            .align = PrKitAlign_Center,
-            .gap = kPrKitSpace4,
-            .padding = prKitEdgesXY(kPrKitSpace2, kPrKitSpace5),
-        },
-        .background = PrKitBackground_Header,
-    };
-    PrLayoutNode status = prKitSurface(kit, parent, {}, bar);
-    static const char* const kStates[] = {"Disconnected", "Connecting", "Connected"};
-    PrKitTone tones[] = {PrKitTone_Muted, PrKitTone_Warning, PrKitTone_Success};
-    prKitLabel(kit, status, {.text = kStates[state.connection]},
-        textStyle(PrKitTextRole_Caption, tones[state.connection]));
-    PrLayoutNode server = prKitButton(kit, status, {.text = state.server, .icon = PrKitIconKind_Link},
-        {.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Xs});
-    prKitTooltip(kit, server, {.text = "Configure the server"});
-    if (prKitActivated(kit, server))
-        state.serverOpen = true;
-    PrLayoutNode message = prKitLabel(kit, status, {.text = state.status}, textStyle(PrKitTextRole_BodySmall));
-    PrKitPlace fill{.flex = PrKitFlex_Fill};
-    prKitPlace(kit, message, &fill);
-    if (const Job* job = activeJob(state)) {
-        String stage = job->node.isEmpty() ? String("queued") : job->node;
-        if (job->progressMax != 0)
-            formatTo(stage, " {}/{}", job->progressValue, job->progressMax);
-        prKitLabel(kit, status, {.text = stage}, textStyle(PrKitTextRole_Mono, PrKitTone_Accent));
-    }
-    uint32_t inFlight = runsInFlight(state);
-    if (inFlight > 1 || state.queueRemaining > 1) {
-        String queued = format("{} queued", max(inFlight, state.queueRemaining));
-        prKitLabel(kit, status, {.text = queued}, textStyle(PrKitTextRole_Mono, PrKitTone_Muted));
-    }
-    String count = format("{} images", state.gallery.entries.count());
-    prKitLabel(kit, status, {.text = count}, textStyle(PrKitTextRole_Mono, PrKitTone_Muted));
-    return server;
 }
 
 // Creates the dialog of `trigger`, which is open while `open` is true. `shown` holds whether the dialog was told so. A
@@ -975,23 +913,82 @@ void viewReset(View& view) {
     view.dock = nullptr;
 }
 
-void buildView(PrKit* kit, PrLayoutNode root, View& view, Commands& commands) {
+// The title bar, in three parts: the menus at the start, the run of the current mode and the stop in the middle, and
+// what the server is doing and the connection to it at the end. The outer parts share the room equally, so that the run
+// stays centered. The stop keeps its place whether or not a run is in flight, so that nothing moves under the pointer
+// when one starts.
+void buildTitleBarRow(PrKit* kit, PrLayoutNode bar, View& view, Commands& commands) {
+    static const char* const kRuns[] = {"Generate", "Upscale", "Outpaint", "Detail"};
     AppState& state = *commands.shell->state;
-    prCommandScope(kit->ui, root, commands.registry, commands.keymap, "");
-    PrLayoutNode bar = prKitMenuBar(kit, root, {});
-    buildMenus(kit, bar, commands);
+    PrKitBoxStyle side{
+        .direction = PrKitDirection_Row,
+        .align = PrKitAlign_Center,
+        .overflow = PrKitOverflow_Clip,
+        .gap = kPrKitSpace4,
+        .place = {.flex = PrKitFlex_Fill},
+    };
+    PrLayoutNode start = prKitBox(kit, bar, {}, side);
+    PrLayoutNode menus = prKitMenuBar(kit, start, {.plain = true});
+    buildMenus(kit, menus, commands);
     if (commands.shell->paletteRequested) {
-        prKitSetOpen(kit, bar, true);
+        prKitSetOpen(kit, menus, true);
         commands.shell->paletteRequested = false;
     }
-    PrLayoutNode list = prCommandPalette(kit, bar, commands.registry, commands.keymap, view.paletteQuery);
+    PrLayoutNode list = prCommandPalette(kit, menus, commands.registry, commands.keymap, view.paletteQuery);
     PrStringView query{};
     if (list == kPrLayoutNodeNone)
         view.paletteQuery.clear();
     else if (prKitTextChanged(kit, list, &query))
         view.paletteQuery = query;
 
-    PrLayoutNode dock = prKitDockBuild(kit, root, {.dock = view.dock, .describe = describePanel});
+    PrLayoutNode run = row(kit, bar);
+    PrKitPlace fixed{.flex = PrKitFlex_Fixed};
+    prKitPlace(kit, run, &fixed);
+    commandButton(kit, run, commands, "alchemy.generate", kRuns[state.mode], PrKitIconKind_Play,
+        PrKitButtonVariant_Primary, PrKitControlSize_Sm);
+    commandButton(kit, run, commands, "alchemy.interrupt", "", PrKitIconKind_Stop, PrKitButtonVariant_Danger,
+        PrKitControlSize_Sm);
+
+    // The activity: the active job's stage and progress, or the last message while nothing runs.
+    side.justify = PrKitJustify_End;
+    PrLayoutNode end = prKitBox(kit, bar, {}, side);
+    if (const Job* job = activeJob(state)) {
+        String stage = job->node.isEmpty() ? String("queued") : job->node;
+        prKitLabel(kit, end, {.text = stage}, textStyle(PrKitTextRole_Mono, PrKitTone_Accent));
+        if (job->progressMax != 0) {
+            float done = float(job->progressValue) / float(job->progressMax);
+            PrLayoutNode progress = prKitProgress(kit, end, {.value = done});
+            PrKitPlace width{.width = prKitPx(120)};
+            prKitPlace(kit, progress, &width);
+            String steps = format("{}/{}", job->progressValue, job->progressMax);
+            prKitLabel(kit, end, {.text = steps}, textStyle(PrKitTextRole_Mono, PrKitTone_Muted));
+        }
+        uint32_t inFlight = runsInFlight(state);
+        if (inFlight > 1 || state.queueRemaining > 1) {
+            String queued = format("{} queued", max(inFlight, state.queueRemaining));
+            prKitLabel(kit, end, {.text = queued}, textStyle(PrKitTextRole_Mono, PrKitTone_Muted));
+        }
+    } else {
+        prKitLabel(kit, end, {.text = state.status}, textStyle(PrKitTextRole_BodySmall, PrKitTone_Muted));
+    }
+
+    // The connection's state, whose server opens the server's dialog.
+    static const char* const kStates[] = {"Disconnected", "Connecting", "Connected"};
+    PrKitTone tones[] = {PrKitTone_Muted, PrKitTone_Warning, PrKitTone_Success};
+    PrKitTextStyle connection = textStyle(PrKitTextRole_Caption, tones[state.connection]);
+    prKitLabel(kit, end, {.text = kStates[state.connection]}, connection);
+    view.server = prKitButton(kit, end, {.text = state.server, .icon = PrKitIconKind_Link},
+        {.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Xs});
+    prKitTooltip(kit, view.server, {.text = "Configure the server"});
+    if (prKitActivated(kit, view.server))
+        state.serverOpen = true;
+}
+
+void buildView(PrKit* kit, PrLayoutNode root, View& view, Commands& commands) {
+    AppState& state = *commands.shell->state;
+    prCommandScope(kit->ui, root, commands.registry, commands.keymap, "");
+    view.browserTitle = format("Browser · {}", state.gallery.entries.count());
+    PrLayoutNode dock = prKitDockBuild(kit, root, {.dock = view.dock, .describe = describePanel, .context = &view});
     PrKitPlace fill{.flex = PrKitFlex_Fill};
     prKitPlace(kit, dock, &fill);
     for (uint32_t i = 0; i < prKitDockPaneCount(view.dock); ++i) {
@@ -1002,8 +999,8 @@ void buildView(PrKit* kit, PrLayoutNode root, View& view, Commands& commands) {
             default: buildViewport(kit, pane.content, state, commands); break;
         }
     }
-    PrLayoutNode server = buildStatus(kit, root, state);
-    buildServerDialog(kit, server, state, view);
+    if (view.server != kPrLayoutNodeNone)
+        buildServerDialog(kit, view.server, state, view);
     buildDeleteDialog(kit, dock, state, view);
     // The import's dialog has no control of its own to float from, since a command or a chord opens it.
     PrLayoutNode importTrigger = prKitBox(kit, root, {}, {});

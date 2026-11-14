@@ -373,12 +373,18 @@ def public_names(texts):
     return names
 
 
-def check_internal_names(report, path, text, names):
+def objc_classes(texts):
+    """Returns the Objective-C classes that the texts declare or implement."""
+    pattern = r"@(?:interface|implementation)\s+(\w+)"
+    return {name for text in texts for name in re.findall(pattern, mask_non_code(text))}
+
+
+def check_internal_names(report, path, text, names, classes=frozenset()):
     """The Pr and pr prefixes belong to the public API. Internal code names its own declarations in pr_impl without
-    them. An Objective-C class, which no namespace can hold, keeps the prefix, as does a function with C linkage, which
-    reaches the linker by its name alone (check_linkage)."""
+    them. An Objective-C class, which no namespace can hold, keeps the prefix, wherever it is declared (`classes`), as
+    does a function with C linkage, which reaches the linker by its name alone (check_linkage)."""
     code = mask_non_code(text)
-    classes = set(re.findall(r"@(?:interface|implementation)\s+(\w+)", code)) | c_linkage_names(text)
+    classes = set(classes) | objc_classes([text]) | c_linkage_names(text)
     reported = set()
     for match in PUBLIC_NAME.finditer(code):
         name = match.group(1)
@@ -621,8 +627,9 @@ def check_anonymous_namespace(report, path, text):
 # the facility only through that source.
 WRAPPERS = {
     "lib/app/backends/web/src/app_web.cpp": {"emscripten/emscripten.h", "emscripten/eventloop.h", "emscripten/html5.h"},
-    "lib/app/backends/win32/src/app_win32.cpp": {"dwmapi.h", "dxgi1_6.h", "imm.h", "objbase.h", "shellapi.h",
-                                                 "windows.h"},
+    "lib/app/backends/win32/src/app_win32.h": {"dwmapi.h", "dxgi1_6.h", "imm.h", "objbase.h", "ole2.h", "shellapi.h",
+                                                 "shellscalingapi.h", "shlobj.h", "shobjidl.h", "windows.h",
+                                                 "wtsapi32.h"},
     "lib/audio/backends/apple/src/audio_apple.cpp": {"AudioToolbox/AudioToolbox.h", "CoreAudio/CoreAudio.h",
                                                      "TargetConditionals.h"},
     "lib/audio/backends/windows/src/audio_windows.cpp": {"audioclient.h", "avrt.h", "mmdeviceapi.h", "mmreg.h",
@@ -654,7 +661,7 @@ WRAPPERS = {
                                                                     "CoreText/CoreText.h"},
     "lib/font/backends/coretext/src/font_coretext.cpp": {"CoreText/CoreText.h"},
     "lib/font/backends/directwrite/src/font_directwrite.cpp": {"dwrite_3.h", "windows.h"},
-    "lib/gpu/backends/d3d12/src/gpu_d3d12.cpp": {"d3d12.h", "dxgi1_6.h", "stdio.h", "windows.h"},
+    "lib/gpu/backends/d3d12/src/gpu_d3d12.cpp": {"d3d12.h", "dcomp.h", "dxgi1_6.h", "stdio.h", "windows.h"},
     "lib/gpu/backends/vulkan/src/vulkan_internal.h": {"vulkan/vulkan_core.h"},
     "lib/gpu/backends/vulkan/src/vulkan_platform.cpp": {"dlfcn.h", "stdio.h", "stdlib.h", "vulkan/vulkan_metal.h",
                                                         "vulkan/vulkan_win32.h", "windows.h"},
@@ -973,8 +980,8 @@ ENUM_HEAD = re.compile(r"(?:typedef\s+)?enum\b")
 CODE_BRACE = re.compile(r"(?:[)\]}^:]|\b(?:mutable|noexcept|const|override|final|else|do|try|[A-Z][A-Z0-9]*_[A-Z0-9_]+)"
                         r"|->\s*[\w:<>,*& ]+)\s*$")
 
-# A line that ends a statement without a semicolon: a macro that expands to declarations, or a template's header, which
-# may end with its requires-clause.
+# A line that begins a statement and ends it without a semicolon: a macro that expands to declarations, or a template's
+# header, which may end with its requires-clause.
 UNTERMINATED_STATEMENT = re.compile(r"[A-Z][A-Z0-9_]*(?:\(.*\))?|template\s*<.*>(?:\s+requires\b.*)?")
 
 # The first line of a statement whose body may follow it without braces.
@@ -1050,6 +1057,7 @@ def layout(text):
     stack = []          # each open bracket: its kind, its base indentation, the statement it opened in, its offset,
                         # and whether an item within it has begun a line
     previous = ""       # the last line of code, stripped, with its literals
+    began = False       # true if that line began a statement
     closes_data = False # true if that line ends by closing an initializer list, which does not end a statement
     statement = 0       # the index in `lines` of the line that began the current statement
     deepened = -1       # the index of the statement whose head has been indented further
@@ -1078,7 +1086,10 @@ def layout(text):
         leading = original[own:own + 1]  # the line's first character, which may begin a literal that the mask hides
         if directive or stripped.startswith("#"):
             directive = original.rstrip().endswith("\\")
-            previous = ""
+            # Within brackets, as around some items of an initializer list, the code reads on past a directive. Outside
+            # them, a directive ends the statement before it, which may be a macro without a semicolon.
+            if not stack or stack[-1][0] not in ("expression", "data"):
+                previous = ""
             continue
         # A line that begins inside a raw string keeps its indentation, which is the string's text. What follows the
         # string's end is still code: its brackets close what the string's line opened, and it may end the statement.
@@ -1109,7 +1120,8 @@ def layout(text):
         else:
             ended = (previous == "" or previous.endswith((";", "{")) or (previous.endswith("}") and not closes_data)
                      or LABEL.fullmatch(previous) is not None
-                     or previous.startswith("@") or UNTERMINATED_STATEMENT.fullmatch(previous) is not None)
+                     or previous.startswith("@")
+                     or (began and UNTERMINATED_STATEMENT.fullmatch(previous) is not None))
             if top is not None and top[0] == "list":
                 ended = ended or previous.endswith(",")
             if ended or leading == "}":
@@ -1179,6 +1191,7 @@ def layout(text):
             previous = commented[number - 1].strip()
         else:
             continue
+        began = role in ("start", "body")
         closes_data = stripped.endswith("}") and closed_kind == "data"
     return lines, braces
 
@@ -1608,16 +1621,17 @@ def check_leaning_comments(report, path, text):
 # Matches lines in a run of declarations that declare nothing themselves: preprocessor conditions, the regions that
 # the conventions wrap declarations in, scopes opening and closing, and lines that only import or check a name.
 UNDECLARING = re.compile(
-    r"^\s*(?:#\s*(?:if|ifdef|ifndef|elif|else|endif|error|pragma|include)\b"
+    r"^\s*(?:#\s*(?:if|ifdef|ifndef|elif|else|endif|error|pragma|include|import)\b"
     r"|PR_(?:ASSUME_NONNULL|NO_PADDING)_(?:BEGIN|END)\b"
     r"|(?:inline\s+)?namespace\b[^;]*\{|extern\s+\"C\"\s*\{|\}"
     r"|using\b|PR_STATIC_ASSERT\b|static_assert\b"
-    r"|(?:struct|class)\s+\w+\s*;)")
+    r"|(?:struct|class)\s+\w+\s*;|@class\s+[\w\s,]+;)")
 
 
 def check_documented(report, path, text):
     """Every declaration in a header is under a comment. A comment covers the declarations below it up to the next
-    blank line, so one comment documents a run of declarations."""
+    blank line, so one comment documents a run of declarations. The members of an Objective-C interface are documented
+    as a struct's are, with the interface's comment covering them."""
     code = mask_non_code(text).split("\n")
     lines = text.split("\n")
     comments = whole_line_comments(text)
@@ -1628,8 +1642,14 @@ def check_documented(report, path, text):
     scopes = []         # each open brace: whether it opens a namespace or an extern "C" block
     run = None          # the lines of the current run at namespace scope
     runs = []
+    interface = False   # the line is a member of an Objective-C interface
     for number, line in enumerate(lines):
-        top = all(scopes)
+        if interface and code[number].strip() == "@end":
+            interface = False
+            continue
+        top = all(scopes) and not interface
+        if top and re.match(r"\s*@(?:interface|protocol)\b", code[number]) and not code[number].rstrip().endswith(";"):
+            interface = True
         if top:
             if line.strip() == "" and number not in inside:
                 if run:
@@ -2643,7 +2663,7 @@ TAGS = {
     "lib/websocket": ("WebSocket",),
     "lib/webview": ("WebView",),
     "lib/mathml": ("MathMl",),
-    "lib/studio/window": ("StudioWindow",),
+    "lib/studio/app": ("StudioApp", "StudioWindow"),
 }
 
 # The vocabulary modules, whose headers declare names of several tags rather than of their own.
@@ -2804,8 +2824,12 @@ def check_header_names(report, paths, texts):
     """A public header is named for the tag of the names that it declares: pr/<tag>.h for a module's main header, and
     pr/<tag>_<topic>.h for the others. The names of a backend's headers start with its directories,
     <interface>_<backend>. A QuickJS layer's header is named for its module's tag, as <tag>_quickjs.h or
-    <tag>_<topic>_quickjs.h, and declares names of the layer's tag, Js<tag>."""
+    <tag>_<topic>_quickjs.h, and declares names of the layer's tag, Js<tag>. An umbrella header declares nothing: its
+    code is only the includes of the module's other headers."""
     for path in paths:
+        code = mask_non_code(texts[path])
+        if all(re.fullmatch(r"\s*(#pragma once|#include\s.*)?\s*", line) for line in code.splitlines()):
+            continue
         stem = os.path.basename(path)[:-2]
         module = os.path.relpath(public_module(path), ROOT).replace(os.sep, "/")
         backend = backend_of(path)
@@ -3174,7 +3198,7 @@ def check_code_file(path):
         check_public_includes(report, path, text)
     else:
         # Internal C++: its own names, its own types, and C++ spellings.
-        check_internal_names(report, path, text, shared.names)
+        check_internal_names(report, path, text, shared.names, shared.classes)
         check_shadowed_types(report, path, text, shared.types, shared.bases)
         check_parallel_enums(report, path, text)
         check_cpp_form(report, path, text)
@@ -3330,12 +3354,13 @@ def main():
     bases = handle_bases(texts.values())
     declared = declared_types(texts.values())
     constants = enum_constants(texts.values())
+    classes = objc_classes(texts.values())
 
     global shared
     shared = argparse.Namespace(texts=texts, headers=headers, public_bases=public_bases,
                                 cpp_api_homes=cpp_api_homes, names=names,
                                 typedefs=typedefs, types=types, bases=bases, declared=declared,
-                                constants=constants, defined=None)
+                                constants=constants, classes=classes, defined=None)
     check_each(report, check_code_file, headers + sources)
 
     # Every hand-written C and C++ file, including the harnesses of tools.

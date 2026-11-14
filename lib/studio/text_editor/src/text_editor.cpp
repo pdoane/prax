@@ -188,10 +188,7 @@ constexpr KeyCommand kKeyCommands[] = {
         PrTextEditSelectionMove_Collapse,
     },
 #if defined(__APPLE__)
-        {
-            "cursor.lineLeft", "Move to Line Start", "Cmd Left", PrTextEditCommand_EdgeLeft,
-            PrTextEditSelectionMove_Collapse,
-        },
+    {"cursor.lineLeft", "Move to Line Start", "Cmd Left", PrTextEditCommand_EdgeLeft, PrTextEditSelectionMove_Collapse},
     {
         "cursor.lineRight", "Move to Line End", "Cmd Right", PrTextEditCommand_EdgeRight,
         PrTextEditSelectionMove_Collapse,
@@ -215,10 +212,10 @@ constexpr KeyCommand kKeyCommands[] = {
         PrTextEditSelectionMove_Extend,
     },
 #else
-        {
-            "cursor.textStart", "Move to Text Start", "Ctrl Home", PrTextEditCommand_TextStart,
-            PrTextEditSelectionMove_Collapse,
-        },
+    {
+        "cursor.textStart", "Move to Text Start", "Ctrl Home", PrTextEditCommand_TextStart,
+        PrTextEditSelectionMove_Collapse,
+    },
     {"cursor.textEnd", "Move to Text End", "Ctrl End", PrTextEditCommand_TextEnd, PrTextEditSelectionMove_Collapse},
     {
         "select.textStart", "Select to Text Start", "Ctrl Shift Home", PrTextEditCommand_TextStart,
@@ -229,7 +226,7 @@ constexpr KeyCommand kKeyCommands[] = {
         PrTextEditSelectionMove_Extend,
     },
 #endif
-        {"cursor.home", "Move to Line Start", "Home", PrTextEditCommand_LineStart, PrTextEditSelectionMove_Collapse},
+    {"cursor.home", "Move to Line Start", "Home", PrTextEditCommand_LineStart, PrTextEditSelectionMove_Collapse},
     {"cursor.end", "Move to Line End", "End", PrTextEditCommand_LineEnd, PrTextEditSelectionMove_Collapse},
     {"select.home", "Select to Line Start", "Shift Home", PrTextEditCommand_LineStart, PrTextEditSelectionMove_Extend},
     {"select.end", "Select to Line End", "Shift End", PrTextEditCommand_LineEnd, PrTextEditSelectionMove_Extend},
@@ -1371,7 +1368,7 @@ void registerCommands(TextEditor* e) {
             return;
         PrRawString text = prTextViewSelectedText(editor.shown->view);
         if (editor.app != nullptr && prRawStringView(&text).size != 0)
-            prAppSetClipboardText(editor.app, prRawStringView(&text));
+            prAppDataWriteText(editor.app, kPrAppDataSourceClipboard, prRawStringView(&text));
         prRawStringReset(&text);
     }, e, needsDocument);
     addCommand(e, "edit.cut", "Cut", "Cmd X", [](void* c, const PrCommandArgs*) {
@@ -1380,14 +1377,14 @@ void registerCommands(TextEditor* e) {
             return;
         PrRawString text = prTextViewSelectedText(editor.shown->view);
         if (editor.app != nullptr && prRawStringView(&text).size != 0)
-            prAppSetClipboardText(editor.app, prRawStringView(&text));
+            prAppDataWriteText(editor.app, kPrAppDataSourceClipboard, prRawStringView(&text));
         prRawStringReset(&text);
         prTextViewEraseSelection(editor.shown->view);
     }, e, needsDocument);
     addCommand(e, "edit.paste", "Paste", "Cmd V", [](void* c, const PrCommandArgs*) {
         TextEditor& editor = editorOf(c);
         if (editor.port != kPrLayoutNodeNone)
-            prUiTextViewPaste(editor.ui, editor.port);
+            prUiPaste(editor.ui, editor.port);
     }, e, needsDocument);
     addCommand(e, "file.save", "Save", "Cmd S", [](void* c, const PrCommandArgs*) {
         TextEditor& editor = editorOf(c);

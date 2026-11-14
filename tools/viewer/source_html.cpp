@@ -227,9 +227,9 @@ float htmlContentWidth(HtmlSource& html) {
     return prLayoutUnitToPx(info.content.right - info.content.left);
 }
 
-void htmlSetApp(HtmlSource& html, PrApp* app) {
+void htmlSetWindow(HtmlSource& html, PrAppWindow* window) {
     if (html.page != nullptr)
-        html.host.setInteractive(html.page, app);
+        html.host.setInteractive(html.page, window);
 }
 
 bool printHtml(const fs::path& path, const fs::path& capture, bool scripts, const fs::path& out, PrDrawWriterBackend format) {

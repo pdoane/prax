@@ -1,1472 +1,565 @@
-// The Win32 application backend: a Windows window and the Win32 message loop.
+// The Win32 application backend: the application, its message window, the delivery of callbacks, and the system's
+// notices.
 
 #include "pr/app_win32.h"
+#include "app/backends/win32/src/app_win32.h"
 
-#include "pr/alloc.h"
-#include "pr/assert.h"
-#include "pr/atomic.h"
-#include "pr/count_of.h"
-#include "pr/mem.h"
-#include "pr/raw_array.h"
-#include "pr/thread.h"
-#include "pr/time.h"
-#include "pr/vec.h"
-#include "pr/windows_string.h"
-
-#define NOMINMAX
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#include <dwmapi.h>
-#include <dxgi1_6.h>
-#include <imm.h>
-#include <objbase.h>
-#include <shellapi.h>
+#include "app/backends/win32/src/app_win32_data.h"
+#include "app/backends/win32/src/app_win32_display.h"
+#include "app/backends/win32/src/app_win32_input.h"
+#include "app/backends/win32/src/app_win32_menu.h"
+#include "app/backends/win32/src/app_win32_shell.h"
+#include "app/backends/win32/src/app_win32_window.h"
 
 namespace pr_impl {
 
 namespace {
 
-// The messages that the backend posts to its own window.
-constexpr UINT kMessageFrame = WM_APP + 0;      // the pacer saw the display refresh
-constexpr UINT kMessageWake = WM_APP + 1;
-constexpr UINT kMessageClipboard = WM_APP + 2;      // the program requested the clipboard's text
-constexpr UINT kMessageClipboardImage = WM_APP + 3; // the program requested the clipboard's image
-constexpr UINT kMessageNotifyIcon = WM_APP + 4;     // the user acted on the icon in the notification area
-
-// The identifier of the window's icon in the notification area.
-constexpr UINT kNotifyIconId = 1;
-
-// The timer that times the frames of a window that is not composed, and its period.
-constexpr UINT_PTR kTimerFrame = 1;
-constexpr UINT_PTR kTimerFrameAt = 2;   // the time that an output names
-constexpr UINT kHiddenFrameMilliseconds = 16;
-
-// How often the display's headroom is read again, in seconds, while frames run. The headroom changes with the SDR
-// brightness that the user sets, which Windows announces to no window.
-constexpr double kDisplayRefreshSeconds = 1.0;
-
-// The luminance of SDR white in nits that Windows assumes when it reports none.
-constexpr float kDefaultSdrWhiteNits = 80.0f;
-
-// ToUnicodeEx's flag that leaves the keyboard's dead-key state unchanged (Windows 10, version 1607).
-constexpr UINT kToUnicodeKeepState = 1u << 2;
-
-constexpr wchar_t kClassName[] = L"PrAppWin32";
-constexpr wchar_t kPersonalizeKey[] = L"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize";
-
-// What a key types, which the message loop reads before TranslateMessage records a dead key that the key begins. Read
-// after that, a dead key would combine with itself.
-struct KeyText {
-    UINT message;
-    WPARAM virtualKey;
-    LPARAM flags;
-    bool dead;                  // the key is a dead key, which types nothing until the key it combines with
-    int count;                  // UTF-16 units
-    wchar_t units[8];
-};
-
-// An event that arrived while a callback ran, which waits for the callback to return, with its own copy of its text or
-// pixels.
-struct HeldEvent {
-    PrAppEvent event;
-    RawArray<char> text;
-};
-
-// What a key that is down reports, so that the window can release it when it loses the keyboard.
-struct HeldKey {
-    bool down;
-    PrAppKey key;
-};
-
-// The pointer buttons that the window can report down, by PrAppEvent::button.
-constexpr uint8_t kPointerButtons = 5;
-
-struct Win32App : PrApp {
-    PrAppHandler handler;
-    PrRect textInputRect;       // where the caret stands, in logical px
-    wchar_t* title;             // NUL-terminated
-    PrUVec2 extent;             // the extent that the window opens at, in logical pixels
-    bool headless;
-    bool running;
-    bool inCallback;            // a callback is running, and no other may start
-    bool frameRequested;
-    bool frameDue;              // the pacer's refresh for the requested frame came, and the frame runs once no other
-                                // message waits
-    bool framed;                // a frame ran in this run
-    bool inSizeMove;            // the user moves or resizes the window, in the system's modal loop
-    bool composing;             // an input method composes text
-    double lastFrame;
-
-    // The last press, which the next continues as a multi-click by the system's settings.
-    double clickTime;
-    POINT clickPoint;
-    uint8_t clickButton;
-    uint32_t clicks;
-    HWND window;
-    PrAppCursor shape;          // the pointer's shape over the client area
-    HCURSOR PR_NULLABLE cursor; // the system's cursor for `shape`, or null to hide the pointer
-    UINT dpi;
-    wchar_t highSurrogate;      // the first half of a character that WM_CHAR splits, or zero
-    KeyText keyText;
-    PrAppUserPreferences preferences;
-
-    // The display that shows the window, as it was last read, and the DXGI objects that it was read from.
-    PrAppDisplay display;
-    HMONITOR monitor;
-    double displayRead;
-    IDXGIFactory1* factory;
-    IDXGIOutput6* output;
-
-    // The thread that waits for the display's refresh after a frame is requested, and the event that it waits on.
-    PrThread pacer;
-    HANDLE pacerRequest;
-    Atomic<bool> pacerQuit;
-
-    // The window that prAppWake posts to, read from any thread, or null outside a run.
-    Atomic<HWND> wakeWindow;
-    Atomic<bool> wakePending;
-
-    // The events that arrived during the running callback, in order. A system call that a callback makes may dispatch
-    // messages, and the events that they deliver wait here, so that no callback nests in another.
-    RawArray<HeldEvent> held;
-
-    // The pointer buttons that are down, by bit of PrAppPointerEvent::button, where the pointer last was, and the keys
-    // that are down, by their position. The window releases them when it loses the pointer's capture or the keyboard,
-    // which then reports no release of its own.
-    uint8_t buttons;
-    PrVec2 pointer;
-    HeldKey keys[PrAppKeyCode_Count];
-
-    // The text of the event being delivered, and scratch storage for conversions.
-    RawArray<char> utf8;
-    RawArray<wchar_t> utf16;
-
-    // Notifications. `notifyIcon` is true once the window's icon is in the notification area. `notificationTag` is the
-    // tag of the last notification, whose balloon replaced any earlier one. `taskbarCreated` is the shell's message
-    // that the taskbar was recreated, as when Explorer restarts, which means the icon is gone.
-    bool notifyIcon;
-    uint64_t notificationTag;
-    UINT taskbarCreated;
-};
-
-// The window's style. The title bar's minimize and maximize buttons set a least width that no window message lowers, so
-// a window that is never shown has none, and opens at any extent.
-DWORD styleOf(const Win32App* app) {
-    return app->headless ? WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME : WS_OVERLAPPEDWINDOW;
-}
-
-double secondsNow() {
-    return prTimeMonotonicMilliseconds() / 1e3;
-}
-
-Win32App* PR_NULLABLE appOf(HWND window) {
-    return reinterpret_cast<Win32App*>(GetWindowLongPtrW(window, GWLP_USERDATA));
-}
-
-bool isDown(int virtualKey) {
-    return (GetKeyState(virtualKey) & 0x8000) != 0;
-}
-
-PrAppModifierFlags modifiersNow() {
-    PrAppModifierFlags modifiers = 0;
-    if ((GetKeyState(VK_CAPITAL) & 1) != 0)
-        modifiers |= PrAppModifierFlag_CapsLock;
-    if (isDown(VK_SHIFT))
-        modifiers |= PrAppModifierFlag_Shift;
-    if (isDown(VK_CONTROL))
-        modifiers |= PrAppModifierFlag_Control;
-    if (isDown(VK_MENU))
-        modifiers |= PrAppModifierFlag_Alt;
-    if (isDown(VK_LWIN) || isDown(VK_RWIN))
-        modifiers |= PrAppModifierFlag_Super;
-    return modifiers;
-}
-
-// A key's position by its scan code in set 1, with 0xE000 added for a key that Windows reports as extended.
-struct ScanKey {
-    uint16_t scan;
-    PrAppKeyCode code;
-};
-
-constexpr ScanKey kScanKeys[] = {
-    {0x01, PrAppKeyCode_Escape}, {0x02, PrAppKeyCode_Digit1}, {0x03, PrAppKeyCode_Digit2},
-    {0x04, PrAppKeyCode_Digit3}, {0x05, PrAppKeyCode_Digit4}, {0x06, PrAppKeyCode_Digit5},
-    {0x07, PrAppKeyCode_Digit6}, {0x08, PrAppKeyCode_Digit7}, {0x09, PrAppKeyCode_Digit8},
-    {0x0A, PrAppKeyCode_Digit9}, {0x0B, PrAppKeyCode_Digit0}, {0x0C, PrAppKeyCode_Minus}, {0x0D, PrAppKeyCode_Equal},
-    {0x0E, PrAppKeyCode_Backspace}, {0x0F, PrAppKeyCode_Tab}, {0x10, PrAppKeyCode_KeyQ}, {0x11, PrAppKeyCode_KeyW},
-    {0x12, PrAppKeyCode_KeyE}, {0x13, PrAppKeyCode_KeyR}, {0x14, PrAppKeyCode_KeyT}, {0x15, PrAppKeyCode_KeyY},
-    {0x16, PrAppKeyCode_KeyU}, {0x17, PrAppKeyCode_KeyI}, {0x18, PrAppKeyCode_KeyO}, {0x19, PrAppKeyCode_KeyP},
-    {0x1A, PrAppKeyCode_BracketLeft}, {0x1B, PrAppKeyCode_BracketRight}, {0x1C, PrAppKeyCode_Enter},
-    {0x1D, PrAppKeyCode_ControlLeft}, {0x1E, PrAppKeyCode_KeyA}, {0x1F, PrAppKeyCode_KeyS},
-    {0x20, PrAppKeyCode_KeyD}, {0x21, PrAppKeyCode_KeyF}, {0x22, PrAppKeyCode_KeyG}, {0x23, PrAppKeyCode_KeyH},
-    {0x24, PrAppKeyCode_KeyJ}, {0x25, PrAppKeyCode_KeyK}, {0x26, PrAppKeyCode_KeyL}, {0x27, PrAppKeyCode_Semicolon},
-    {0x28, PrAppKeyCode_Quote}, {0x29, PrAppKeyCode_Backquote}, {0x2A, PrAppKeyCode_ShiftLeft},
-    {0x2B, PrAppKeyCode_Backslash}, {0x2C, PrAppKeyCode_KeyZ}, {0x2D, PrAppKeyCode_KeyX}, {0x2E, PrAppKeyCode_KeyC},
-    {0x2F, PrAppKeyCode_KeyV}, {0x30, PrAppKeyCode_KeyB}, {0x31, PrAppKeyCode_KeyN}, {0x32, PrAppKeyCode_KeyM},
-    {0x33, PrAppKeyCode_Comma}, {0x34, PrAppKeyCode_Period}, {0x35, PrAppKeyCode_Slash},
-    {0x36, PrAppKeyCode_ShiftRight}, {0x37, PrAppKeyCode_NumpadMultiply}, {0x38, PrAppKeyCode_AltLeft},
-    {0x39, PrAppKeyCode_Space}, {0x3A, PrAppKeyCode_CapsLock}, {0x3B, PrAppKeyCode_F1}, {0x3C, PrAppKeyCode_F2},
-    {0x3D, PrAppKeyCode_F3}, {0x3E, PrAppKeyCode_F4}, {0x3F, PrAppKeyCode_F5}, {0x40, PrAppKeyCode_F6},
-    {0x41, PrAppKeyCode_F7}, {0x42, PrAppKeyCode_F8}, {0x43, PrAppKeyCode_F9}, {0x44, PrAppKeyCode_F10},
-    {0x45, PrAppKeyCode_Pause}, {0x46, PrAppKeyCode_ScrollLock}, {0x47, PrAppKeyCode_Numpad7},
-    {0x48, PrAppKeyCode_Numpad8}, {0x49, PrAppKeyCode_Numpad9}, {0x4A, PrAppKeyCode_NumpadSubtract},
-    {0x4B, PrAppKeyCode_Numpad4}, {0x4C, PrAppKeyCode_Numpad5}, {0x4D, PrAppKeyCode_Numpad6},
-    {0x4E, PrAppKeyCode_NumpadAdd}, {0x4F, PrAppKeyCode_Numpad1}, {0x50, PrAppKeyCode_Numpad2},
-    {0x51, PrAppKeyCode_Numpad3}, {0x52, PrAppKeyCode_Numpad0}, {0x53, PrAppKeyCode_NumpadDecimal},
-    {0x54, PrAppKeyCode_PrintScreen}, {0x56, PrAppKeyCode_IntlBackslash}, {0x57, PrAppKeyCode_F11},
-    {0x58, PrAppKeyCode_F12}, {0x59, PrAppKeyCode_NumpadEqual}, {0x64, PrAppKeyCode_F13}, {0x65, PrAppKeyCode_F14},
-    {0x66, PrAppKeyCode_F15}, {0x67, PrAppKeyCode_F16}, {0x68, PrAppKeyCode_F17}, {0x69, PrAppKeyCode_F18},
-    {0x6A, PrAppKeyCode_F19}, {0x6B, PrAppKeyCode_F20}, {0x71, PrAppKeyCode_Lang2}, {0x72, PrAppKeyCode_Lang1},
-    {0x73, PrAppKeyCode_IntlRo}, {0x7D, PrAppKeyCode_IntlYen}, {0x7E, PrAppKeyCode_NumpadComma},
-    {0xE01C, PrAppKeyCode_NumpadEnter}, {0xE01D, PrAppKeyCode_ControlRight}, {0xE035, PrAppKeyCode_NumpadDivide},
-    {0xE037, PrAppKeyCode_PrintScreen}, {0xE038, PrAppKeyCode_AltRight}, {0xE045, PrAppKeyCode_NumLock},
-    {0xE046, PrAppKeyCode_Pause}, {0xE047, PrAppKeyCode_Home}, {0xE048, PrAppKeyCode_ArrowUp},
-    {0xE049, PrAppKeyCode_PageUp}, {0xE04B, PrAppKeyCode_ArrowLeft}, {0xE04D, PrAppKeyCode_ArrowRight},
-    {0xE04F, PrAppKeyCode_End}, {0xE050, PrAppKeyCode_ArrowDown}, {0xE051, PrAppKeyCode_PageDown},
-    {0xE052, PrAppKeyCode_Insert}, {0xE053, PrAppKeyCode_Delete}, {0xE05B, PrAppKeyCode_MetaLeft},
-    {0xE05C, PrAppKeyCode_MetaRight}, {0xE05D, PrAppKeyCode_ContextMenu},
-};
-
-PrAppKeyCode codeOf(uint16_t scan) {
-    for (const ScanKey& key : kScanKeys) {
-        if (key.scan == scan)
-            return key.code;
-    }
-    return PrAppKeyCode_Unidentified;
-}
-
-// The scan code of a key message, as kScanKeys numbers it. A message that carries none, as one that a program
-// synthesizes may, takes the scan code that the layout gives its virtual key.
-uint16_t scanOf(WPARAM virtualKey, LPARAM flags) {
-    uint16_t scan = uint16_t((flags >> 16) & 0xFF);
-    if (scan == 0)
-        return uint16_t(MapVirtualKeyW(UINT(virtualKey), MAPVK_VK_TO_VSC_EX));
-    return (flags & (LPARAM(1) << 24)) != 0 ? uint16_t(0xE000 | scan) : scan;
-}
-
-// A key that types no character, by its virtual key.
-struct NamedKey {
-    uint8_t virtualKey;
-    PrAppKey key;
-};
-
-constexpr NamedKey kNamedKeys[] = {
-    {VK_LEFT, PrAppKey_Left}, {VK_RIGHT, PrAppKey_Right}, {VK_UP, PrAppKey_Up}, {VK_DOWN, PrAppKey_Down},
-    {VK_HOME, PrAppKey_Home}, {VK_END, PrAppKey_End}, {VK_PRIOR, PrAppKey_PageUp}, {VK_NEXT, PrAppKey_PageDown},
-    {VK_RETURN, PrAppKey_Enter}, {VK_ESCAPE, PrAppKey_Escape}, {VK_BACK, PrAppKey_Backspace},
-    {VK_DELETE, PrAppKey_Delete}, {VK_TAB, PrAppKey_Tab}, {VK_INSERT, PrAppKey_Insert}, {VK_SHIFT, PrAppKey_Shift},
-    {VK_LSHIFT, PrAppKey_Shift}, {VK_RSHIFT, PrAppKey_Shift}, {VK_CONTROL, PrAppKey_Control},
-    {VK_LCONTROL, PrAppKey_Control}, {VK_RCONTROL, PrAppKey_Control}, {VK_MENU, PrAppKey_Alt},
-    {VK_LMENU, PrAppKey_Alt}, {VK_RMENU, PrAppKey_Alt}, {VK_LWIN, PrAppKey_Meta}, {VK_RWIN, PrAppKey_Meta},
-    {VK_CAPITAL, PrAppKey_CapsLock}, {VK_NUMLOCK, PrAppKey_NumLock}, {VK_APPS, PrAppKey_ContextMenu},
-    {VK_HELP, PrAppKey_Help}, {VK_CLEAR, PrAppKey_Clear},
-};
-
-PrAppKey namedKeyOf(WPARAM virtualKey) {
-    if (virtualKey >= VK_F1 && virtualKey <= VK_F20)
-        return PrAppKey(PrAppKey_F1 + (virtualKey - VK_F1));
-    for (const NamedKey& named : kNamedKeys) {
-        if (named.virtualKey == virtualKey)
-            return named.key;
-    }
-    return PrAppKey_Unknown;
-}
-
-// Returns true if `count` UTF-16 units begin with a character that prints: not a control character or delete.
-bool isPrintable(const wchar_t* units, int count) {
-    return count > 0 && units[0] >= 32 && units[0] != 127 && (units[0] < 0x80 || units[0] > 0x9F);
-}
-
-// Returns what a key types with Shift and AltGr applied, and Control and Alt not. Windows reports AltGr as Control with
-// the right Alt key. A layout that has no AltGr types nothing with that pair, and then the key types what it types
-// without them. The keyboard's dead-key state is left as it was.
-KeyText translateKey(UINT message, WPARAM virtualKey, LPARAM flags) {
-    KeyText text{};
-    text.message = message;
-    text.virtualKey = virtualKey;
-    text.flags = flags;
-    BYTE state[256];
-    if (!GetKeyboardState(state))
-        return text;
-    UINT scan = UINT((flags >> 16) & 0xFF);
-    HKL layout = GetKeyboardLayout(0);
-    if ((state[VK_RMENU] & 0x80) != 0) {
-        text.count = ToUnicodeEx(UINT(virtualKey), scan, state, text.units, int(countOf(text.units)),
-            kToUnicodeKeepState, layout);
-        if (text.count < 0 || isPrintable(text.units, text.count)) {
-            text.dead = text.count < 0;
-            text.count = text.dead ? 0 : text.count;
-            return text;
-        }
-    }
-    state[VK_CONTROL] = state[VK_LCONTROL] = state[VK_RCONTROL] = 0;
-    state[VK_MENU] = state[VK_LMENU] = state[VK_RMENU] = 0;
-    text.count = ToUnicodeEx(UINT(virtualKey), scan, state, text.units, int(countOf(text.units)), kToUnicodeKeepState, layout);
-    text.dead = text.count < 0;
-    if (text.dead || !isPrintable(text.units, text.count))
-        text.count = 0;
-    return text;
-}
-
-// Calls the program's event callback, as no other callback runs.
-void callEvent(Win32App* app, const PrAppEvent& event) {
+// Calls the program with an event, as no other callback runs. A window that the program destroyed during the call is
+// freed. The run stops after a QuitRequested event that the program did not cancel.
+void callEvent(Win32App* app, Win32Window* PR_NULLABLE window, const PrAppEvent& event) {
     app->inCallback = true;
-    app->handler.event(app->handler.context, app, &event);
+    bool quit = event.kind == PrAppEventKind_QuitRequested;
+    app->quitDelivering = quit;
+    app->quitCancelled = false;
+    if (window == nullptr)
+        app->handler.event(app->handler.context, app, &event);
+    else if (!appWindowDeliverEvent(window->delivery, window, &event, win32FrameState))
+        win32WindowDestroy(window);
+    app->quitDelivering = false;
+    app->inCallback = false;
+    if (quit) {
+        app->quitAccepted = !app->quitCancelled;
+        if (app->quitAccepted)
+            app->stopFn(app);
+    }
+}
+
+// Calls the callback of an answer's request, as no other callback runs.
+void callAnswer(Win32App* app, AppAnswer& answer) {
+    app->inCallback = true;
+    appAnswerCall(answer, app->requests, app->sources);
     app->inCallback = false;
 }
 
-// Ends a callback, and delivers the events that arrived during it, and those that arrive during their own delivery, in
-// order. The events of a run that stopped are dropped.
-void endCallback(Win32App* app) {
-    app->inCallback = false;
-    for (uint32_t i = 0; i < app->held.count && app->running; ++i) {
-        // An event that its delivery holds goes to the end of the array, which may move the array but not the text.
-        PrAppEvent event = app->held.data[i].event;
-        const RawArray<char>& held = app->held.data[i].text;
-        prAppEventSetText(&event, PrStringView{held.data != nullptr ? held.data : "", held.count});
-        if (event.kind == PrAppEventKind_ClipboardImage)
-            event.image.pixels.data = reinterpret_cast<const uint8_t*>(held.data);
-        callEvent(app, event);
-    }
-    for (uint32_t i = 0; i < app->held.count; ++i)
-        app->held.data[i].text.reset();
-    app->held.clear();
-}
+bool serviceMessage(Win32App* app, UINT message, WPARAM wParam, LPARAM lParam, LRESULT* result);
 
-// Delivers an event, or holds it until the running callback returns.
-void deliver(Win32App* app, const PrAppEvent& event) {
-    if (!app->running)
-        return;
-    if (app->inCallback) {
-        HeldEvent held{.event = event};
-        PrStringView text = prAppEventText(&event);
-        if (text.size != 0)
-            held.text.append(text.data, uint32_t(text.size));
-        if (event.kind == PrAppEventKind_ClipboardImage && event.image.pixels.extent.y != 0) {
-            const PrPixelView& pixels = event.image.pixels;
-            held.text.append(reinterpret_cast<const char*>(pixels.data), uint32_t(pixels.stride * pixels.extent.y));
-        }
-        app->held.push(held);
-        return;
-    }
-    callEvent(app, event);
-    endCallback(app);
-}
-
-// ---------------------------------------------------------------------------------------------------------------------
-// Displays and preferences
-
-// The DXGI output that shows `monitor`, or null. The caller releases it.
-IDXGIOutput6* PR_NULLABLE outputOf(IDXGIFactory1* factory, HMONITOR monitor) {
-    IDXGIAdapter1* adapter = nullptr;
-    for (UINT a = 0; SUCCEEDED(factory->EnumAdapters1(a, &adapter)); ++a) {
-        IDXGIOutput* output = nullptr;
-        IDXGIOutput6* found = nullptr;
-        for (UINT o = 0; found == nullptr && SUCCEEDED(adapter->EnumOutputs(o, &output)); ++o) {
-            DXGI_OUTPUT_DESC desc;
-            if (SUCCEEDED(output->GetDesc(&desc)) && desc.Monitor == monitor)
-                output->QueryInterface(__uuidof(IDXGIOutput6), reinterpret_cast<void**>(&found));
-            output->Release();
-        }
-        adapter->Release();
-        if (found != nullptr)
-            return found;
-    }
-    return nullptr;
-}
-
-// The luminance of SDR white in nits on `monitor`, which the user sets for a display that shows HDR.
-float sdrWhiteNits(HMONITOR monitor) {
-    MONITORINFOEXW info{};
-    info.cbSize = sizeof(info);
-    UINT32 pathCount = 0;
-    UINT32 modeCount = 0;
-    if (!GetMonitorInfoW(monitor, &info) ||
-            GetDisplayConfigBufferSizes(QDC_ONLY_ACTIVE_PATHS, &pathCount, &modeCount) != ERROR_SUCCESS)
-        return kDefaultSdrWhiteNits;
-    RawArray<DISPLAYCONFIG_PATH_INFO> paths;
-    RawArray<DISPLAYCONFIG_MODE_INFO> modes;
-    paths.resize(pathCount);
-    modes.resize(modeCount);
-    float nits = kDefaultSdrWhiteNits;
-    if (QueryDisplayConfig(QDC_ONLY_ACTIVE_PATHS, &pathCount, paths.data, &modeCount, modes.data, nullptr) ==
-            ERROR_SUCCESS) {
-        for (uint32_t i = 0; i < pathCount; ++i) {
-            const DISPLAYCONFIG_PATH_INFO& path = paths.data[i];
-            DISPLAYCONFIG_SOURCE_DEVICE_NAME source{};
-            source.header.type = DISPLAYCONFIG_DEVICE_INFO_GET_SOURCE_NAME;
-            source.header.size = sizeof(source);
-            source.header.adapterId = path.sourceInfo.adapterId;
-            source.header.id = path.sourceInfo.id;
-            if (DisplayConfigGetDeviceInfo(&source.header) != ERROR_SUCCESS ||
-                    CompareStringOrdinal(source.viewGdiDeviceName, -1, info.szDevice, -1, TRUE) != CSTR_EQUAL)
-                continue;
-            DISPLAYCONFIG_SDR_WHITE_LEVEL white{};
-            white.header.type = DISPLAYCONFIG_DEVICE_INFO_GET_SDR_WHITE_LEVEL;
-            white.header.size = sizeof(white);
-            white.header.adapterId = path.targetInfo.adapterId;
-            white.header.id = path.targetInfo.id;
-            // The level is in thousandths of 80 nits.
-            if (DisplayConfigGetDeviceInfo(&white.header) == ERROR_SUCCESS && white.SDRWhiteLevel != 0)
-                nits = float(white.SDRWhiteLevel) / 1000.0f * 80.0f;
-            break;
-        }
-    }
-    paths.reset();
-    modes.reset();
-    return nits;
-}
-
-// The chromaticities of an RGB space's primaries, red, green then blue, as CIE xy.
-struct Primaries {
-    PrColorSpace space;
-    float xy[6];
-};
-
-constexpr Primaries kGamuts[] = {
-    {PrColorSpace_Srgb, {0.640f, 0.330f, 0.300f, 0.600f, 0.150f, 0.060f}},
-    {PrColorSpace_DisplayP3, {0.680f, 0.320f, 0.265f, 0.690f, 0.150f, 0.060f}},
-    {PrColorSpace_Rec2020, {0.708f, 0.292f, 0.170f, 0.797f, 0.131f, 0.046f}},
-};
-
-// The RGB space whose primaries are nearest the display's.
-PrColorSpace gamutOf(const DXGI_OUTPUT_DESC1& desc) {
-    const float display[6] = {
-        desc.RedPrimary[0],   desc.RedPrimary[1],  desc.GreenPrimary[0],
-        desc.GreenPrimary[1], desc.BluePrimary[0], desc.BluePrimary[1],
-    };
-    PrColorSpace nearest = PrColorSpace_Srgb;
-    float nearestDistance = 0;
-    for (uint32_t g = 0; g < countOf(kGamuts); ++g) {
-        float distance = 0;
-        for (uint32_t i = 0; i < 6; ++i)
-            distance += (display[i] - kGamuts[g].xy[i]) * (display[i] - kGamuts[g].xy[i]);
-        if (g == 0 || distance < nearestDistance) {
-            nearest = kGamuts[g].space;
-            nearestDistance = distance;
-        }
-    }
-    return nearest;
-}
-
-void releaseDisplayObjects(Win32App* app) {
-    if (app->output != nullptr)
-        app->output->Release();
-    if (app->factory != nullptr)
-        app->factory->Release();
-    app->output = nullptr;
-    app->factory = nullptr;
-    app->monitor = nullptr;
-}
-
-// Reads the headroom and gamut of the display that shows the window again, if the window moved to another display, the
-// displays changed, or the last read is older than kDisplayRefreshSeconds. DXGI describes an output as it was when its
-// factory was created, so a stale factory is replaced. A display shows more than SDR only while Windows composes it in
-// HDR, and then its headroom is its peak luminance over SDR white. In SDR, Windows composes in sRGB.
-void refreshDisplay(Win32App* app, double now) {
-    HMONITOR monitor = MonitorFromWindow(app->window, MONITOR_DEFAULTTONEAREST);
-    if (monitor == app->monitor && now - app->displayRead < kDisplayRefreshSeconds)
-        return;
-    app->displayRead = now;
-    if (app->factory != nullptr && !app->factory->IsCurrent())
-        releaseDisplayObjects(app);
-    if (monitor != app->monitor) {
-        if (app->output != nullptr)
-            app->output->Release();
-        app->output = nullptr;
-        if (app->factory == nullptr &&
-            FAILED(CreateDXGIFactory1(__uuidof(IDXGIFactory1), reinterpret_cast<void**>(&app->factory))))
-        app->factory = nullptr;
-        if (app->factory != nullptr)
-            app->output = outputOf(app->factory, monitor);
-        app->monitor = monitor;
-    }
-    PrAppDisplay& display = app->display;
-    display = prAppDisplayDefault();
-    DXGI_OUTPUT_DESC1 desc;
-    if (app->output != nullptr && SUCCEEDED(app->output->GetDesc1(&desc)) &&
-            desc.ColorSpace == DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020) {
-        float headroom = desc.MaxLuminance / sdrWhiteNits(monitor);
-        display.headroom = headroom > 1 ? headroom : 1;
-        display.potentialHeadroom = display.headroom;
-        display.gamut = gamutOf(desc);
-    }
-}
-
-DWORD personalizeValue(const wchar_t* name, DWORD fallback) {
-    DWORD value = 0;
-    DWORD size = sizeof(value);
-    if (RegGetValueW(HKEY_CURRENT_USER, kPersonalizeKey, name, RRF_RT_REG_DWORD, nullptr, &value, &size) !=
-            ERROR_SUCCESS)
-        return fallback;
-    return value;
-}
-
-// Reads the user's preferences, and matches the window's title bar to the color scheme. A contrast theme is a palette
-// of the user's, and its scheme is the one that its window background belongs to.
-void refreshPreferences(Win32App* app) {
-    PrAppUserPreferences& preferences = app->preferences;
-    preferences = PrAppUserPreferences{};
-    if (personalizeValue(L"AppsUseLightTheme", 1) == 0)
-        preferences.colorScheme = PrAppColorScheme_Dark;
-    HIGHCONTRASTW contrast{};
-    contrast.cbSize = sizeof(contrast);
-    if (SystemParametersInfoW(SPI_GETHIGHCONTRAST, sizeof(contrast), &contrast, 0) &&
-            (contrast.dwFlags & HCF_HIGHCONTRASTON) != 0) {
-        preferences.contrast = PrAppContrast_More;
-        COLORREF background = GetSysColor(COLOR_WINDOW);
-        uint32_t luma = 2126u * GetRValue(background) + 7152u * GetGValue(background) + 722u * GetBValue(background);
-        preferences.colorScheme = luma < 10000u * 128u ? PrAppColorScheme_Dark : PrAppColorScheme_Light;
-    }
-    BOOL animation = TRUE;
-    if (SystemParametersInfoW(SPI_GETCLIENTAREAANIMATION, 0, &animation, 0))
-        preferences.reducedMotion = !animation;
-    preferences.reducedTransparency = personalizeValue(L"EnableTransparency", 1) == 0;
-    BOOL dark = preferences.colorScheme == PrAppColorScheme_Dark;
-    DwmSetWindowAttribute(app->window, DWMWA_USE_IMMERSIVE_DARK_MODE, &dark, sizeof(dark));
-}
-
-// ---------------------------------------------------------------------------------------------------------------------
-// Frames
-
-// The window's client extent in logical pixels.
-PrVec2 extentOf(Win32App* app) {
-    RECT client;
-    if (!GetClientRect(app->window, &client))
-        return PrVec2{0, 0};
-    return PrVec2{float(client.right) * 96.0f / float(app->dpi), float(client.bottom) * 96.0f / float(app->dpi)};
-}
-
-// Waits until the display's next refresh. The compositor reports the time of a refresh and its period, and a waitable
-// timer sleeps to the next one. This holds the pace whether or not anything presents, unlike DwmFlush, which returns at
-// once when the compositor has nothing to compose, and it needs no DXGI output of the window's display, as
-// IDXGIOutput::WaitForVBlank does. The compositor runs at the refresh of the primary display.
-void waitForRefresh(HANDLE PR_NULLABLE timer) {
-    LARGE_INTEGER frequency;
-    LARGE_INTEGER now;
-    QueryPerformanceFrequency(&frequency);
-    QueryPerformanceCounter(&now);
-    DWM_TIMING_INFO timing{};
-    timing.cbSize = sizeof(timing);
-    int64_t period = frequency.QuadPart / 60;
-    int64_t vblank = now.QuadPart;
-    if (SUCCEEDED(DwmGetCompositionTimingInfo(nullptr, &timing)) && timing.qpcRefreshPeriod != 0) {
-        period = int64_t(timing.qpcRefreshPeriod);
-        vblank = int64_t(timing.qpcVBlank);
-    }
-    // The compositor reports a refresh that may be past or more than one period ahead, and the next refresh is the
-    // first on its grid after now.
-    int64_t ahead = (vblank - now.QuadPart) % period;
-    if (ahead <= 0)
-        ahead += period;
-    // A due time below zero is relative, in units of 100 ns.
-    int64_t units = ahead * 10000000 / frequency.QuadPart;
-    LARGE_INTEGER due;
-    due.QuadPart = -(units > 1 ? units : 1);
-    if (timer != nullptr && SetWaitableTimer(timer, &due, 0, nullptr, nullptr, FALSE))
-        WaitForSingleObject(timer, INFINITE);
-    else
-        Sleep(DWORD(units / 10000));
-}
-
-// The pacer: each time a frame is requested, it waits for the display's refresh and posts kMessageFrame to the window.
-// Waiting on a thread of its own keeps the message loop free for input, and the message reaches the window also during
-// a modal loop, which dispatches posted messages as the main loop does.
-void pace(void* PR_NULLABLE context) {
-    Win32App* app = static_cast<Win32App*>(context);
-    HANDLE timer = CreateWaitableTimerExW(nullptr, nullptr, CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, TIMER_ALL_ACCESS);
-    if (timer == nullptr)
-        timer = CreateWaitableTimerExW(nullptr, nullptr, 0, TIMER_ALL_ACCESS);
-    for (;;) {
-        WaitForSingleObject(app->pacerRequest, INFINITE);
-        if (app->pacerQuit.load())
-            break;
-        waitForRefresh(timer);
-        if (app->pacerQuit.load())
-            break;
-        PostMessageW(app->window, kMessageFrame, 0, 0);
-    }
-    if (timer != nullptr)
-        CloseHandle(timer);
-}
-
-// Arranges for a frame to run. A window that is hidden or minimized is not composed, so its frames are timed instead of
-// paced to the display.
-void scheduleFrame(Win32App* app) {
-    if (!IsWindowVisible(app->window) || IsIconic(app->window))
-        SetTimer(app->window, kTimerFrame, kHiddenFrameMilliseconds, nullptr);
-    else
-        SetEvent(app->pacerRequest);
-}
-
-// The window as a frame at `now` finds it, with the display refreshed.
-PrAppFrame frameAt(Win32App* app, double now) {
-    PrAppFrame frame{};
-    frame.time = now;
-    frame.delta = app->framed ? now - app->lastFrame : 0;
-    frame.extent = extentOf(app);
-    refreshDisplay(app, now);
-    frame.display = app->display;
-    frame.display.pixelRatio = float(app->dpi) / 96.0f;
-    frame.preferences = app->preferences;
-    return frame;
-}
-
-void runFrame(Win32App* app) {
-    if (!app->running)
-        return;
-    if (app->inCallback) {
-        // A callback that pumps messages, as some system calls do, cannot run a frame within it, so the frame waits.
-        app->frameRequested = true;
-        scheduleFrame(app);
-        return;
-    }
-    app->frameRequested = false;
-    app->frameDue = false;
-    double now = secondsNow();
-    PrAppFrame frame = frameAt(app, now);
-    app->framed = true;
-    app->lastFrame = now;
-    app->inCallback = true;
-    prAppDeliverFrame(app, &app->handler, &frame);
-    endCallback(app);
-}
-
-// ---------------------------------------------------------------------------------------------------------------------
-// Input
-
-PrVec2 positionOf(Win32App* app, int x, int y) {
-    return PrVec2{float(x) * 96.0f / float(app->dpi), float(y) * 96.0f / float(app->dpi)};
-}
-
-// Returns true if the key state of a pointer message has a button down.
-bool anyButtonDown(WPARAM keyState) {
-    WORD buttons = LOWORD(keyState);
-    return (buttons & MK_LBUTTON) != 0 || (buttons & MK_RBUTTON) != 0 || (buttons & MK_MBUTTON) != 0 ||
-        (buttons & MK_XBUTTON1) != 0 || (buttons & MK_XBUTTON2) != 0;
-}
-
-void deliverPointer(Win32App* app, UINT message, WPARAM wParam, LPARAM lParam) {
-    PrAppEvent event{};
-    event.time = secondsNow();
-    event.modifiers = modifiersNow();
-    PrAppPointerEvent& pointer = event.pointer;
-    pointer.position = positionOf(app, int16_t(LOWORD(lParam)), int16_t(HIWORD(lParam)));
-    switch (message) {
-        case WM_MOUSEMOVE: event.kind = PrAppEventKind_PointerMove; break;
-        case WM_LBUTTONDOWN:
-        case WM_RBUTTONDOWN:
-        case WM_MBUTTONDOWN:
-        case WM_XBUTTONDOWN: event.kind = PrAppEventKind_PointerDown; break;
-        default: event.kind = PrAppEventKind_PointerUp; break;
-    }
-    switch (message) {
-        case WM_RBUTTONDOWN:
-        case WM_RBUTTONUP: pointer.button = 1; break;
-        case WM_MBUTTONDOWN:
-        case WM_MBUTTONUP: pointer.button = 2; break;
-        case WM_XBUTTONDOWN:
-        case WM_XBUTTONUP: pointer.button = GET_XBUTTON_WPARAM(wParam) == XBUTTON1 ? 3 : 4; break;
-        default: break;
-    }
-    app->pointer = pointer.position;
-    uint8_t bit = uint8_t(1u << pointer.button);
-    if (event.kind == PrAppEventKind_PointerDown) {
-        app->buttons |= bit;
-        POINT at{int16_t(LOWORD(lParam)), int16_t(HIWORD(lParam))};
-        bool continues = app->clicks != 0 && pointer.button == app->clickButton &&
-            event.time - app->clickTime <= double(GetDoubleClickTime()) / 1000 &&
-            abs(at.x - app->clickPoint.x) <= GetSystemMetrics(SM_CXDOUBLECLK) / 2 &&
-            abs(at.y - app->clickPoint.y) <= GetSystemMetrics(SM_CYDOUBLECLK) / 2;
-        app->clicks = continues ? app->clicks + 1 : 1;
-        app->clickTime = event.time;
-        app->clickPoint = at;
-        app->clickButton = pointer.button;
-        pointer.clicks = app->clicks;
-    }
-    else if (event.kind == PrAppEventKind_PointerUp)
-        app->buttons &= uint8_t(~bit);
-    // The window captures the pointer while a button is down, so that a drag reports its moves and its release outside
-    // the window. The buttons are recorded first, since a release of the capture reports a loss of it.
-    if (event.kind == PrAppEventKind_PointerDown && GetCapture() != app->window)
-        SetCapture(app->window);
-    else if (event.kind == PrAppEventKind_PointerUp && !anyButtonDown(wParam) && GetCapture() == app->window)
-        ReleaseCapture();
-    deliver(app, event);
-}
-
-// Releases the buttons that are down where the pointer last was, for a window that lost the pointer's capture, as to
-// another window or a system dialog, which reports no release of its own.
-void releaseButtons(Win32App* app) {
-    for (uint8_t button = 0; button < kPointerButtons; ++button) {
-        uint8_t bit = uint8_t(1u << button);
-        if ((app->buttons & bit) == 0)
-            continue;
-        app->buttons &= uint8_t(~bit);
-        PrAppEvent event{};
-        event.kind = PrAppEventKind_PointerUp;
-        event.time = secondsNow();
-        event.modifiers = modifiersNow();
-        event.pointer.button = button;
-        event.pointer.position = app->pointer;
-        deliver(app, event);
-    }
-}
-
-// Releases the keys that are down, for a window that lost the keyboard, where the keys' releases go instead. A lock key
-// reports its state, not its movement, and is left as it is.
-void releaseKeys(Win32App* app) {
-    for (uint32_t code = 0; code < countOf(app->keys); ++code) {
-        HeldKey& held = app->keys[code];
-        if (!held.down)
-            continue;
-        held.down = false;
-        PrAppEvent event{};
-        event.kind = PrAppEventKind_KeyUp;
-        event.time = secondsNow();
-        event.modifiers = modifiersNow();
-        event.keyboard.key = held.key;
-        event.keyboard.code = PrAppKeyCode(code);
-        event.keyboard.text = "";
-        deliver(app, event);
-    }
-}
-
-// Delivers a wheel's turn in lines, positive right and down, as many per notch as the user sets. A notch is
-// WHEEL_DELTA, and a precise wheel or a touchpad reports parts of one. A setting of a page per notch scrolls the
-// window's height.
-void deliverScroll(Win32App* app, WPARAM wParam, LPARAM lParam, bool horizontal) {
-    POINT point{int16_t(LOWORD(lParam)), int16_t(HIWORD(lParam))};
-    ScreenToClient(app->window, &point);
-    UINT lines = 3;
-    SystemParametersInfoW(horizontal ? SPI_GETWHEELSCROLLCHARS : SPI_GETWHEELSCROLLLINES, 0, &lines, 0);
-    PrVec2 extent = extentOf(app);
-    float perNotch =
-        lines == WHEEL_PAGESCROLL ? (horizontal ? extent.x : extent.y) / kPrAppScrollLineHeight : float(lines);
-    float notches = float(GET_WHEEL_DELTA_WPARAM(wParam)) / float(WHEEL_DELTA);
-    PrAppEvent event{};
-    event.kind = PrAppEventKind_Scroll;
-    event.time = secondsNow();
-    event.modifiers = modifiersNow();
-    event.scroll.position = positionOf(app, point.x, point.y);
-    event.scroll.unit = PrAppScrollUnit_Line;
-    // A vertical notch away from the user is positive and scrolls up. A horizontal tilt to the right is positive.
-    if (horizontal)
-        event.scroll.delta.x = notches * perNotch;
-    else
-        event.scroll.delta.y = -notches * perNotch;
-    deliver(app, event);
-}
-
-void deliverKey(Win32App* app, UINT message, WPARAM virtualKey, LPARAM flags) {
-    bool down = message == WM_KEYDOWN || message == WM_SYSKEYDOWN;
-    PrAppEvent event{};
-    event.kind = down ? PrAppEventKind_KeyDown : PrAppEventKind_KeyUp;
-    event.time = secondsNow();
-    event.modifiers = modifiersNow();
-    event.keyboard.code = codeOf(scanOf(virtualKey, flags));
-    event.keyboard.repeat = down && (flags & (LPARAM(1) << 30)) != 0;
-    event.keyboard.key = namedKeyOf(virtualKey);
-    event.keyboard.text = "";
-    if (virtualKey == VK_CAPITAL || virtualKey == VK_NUMLOCK) {
-        // A lock key reports KeyDown as it turns on and KeyUp as it turns off, whichever way the key moves.
-        if (!down || event.keyboard.repeat)
-            return;
-        event.kind = (GetKeyState(int(virtualKey)) & 1) != 0 ? PrAppEventKind_KeyDown : PrAppEventKind_KeyUp;
-        deliver(app, event);
-        return;
-    }
-    // An input method takes the key, which types nothing itself.
-    if (virtualKey == VK_PROCESSKEY) {
-        event.keyboard.key = PrAppKey_Unknown;
-        deliver(app, event);
-        return;
-    }
-    if (event.keyboard.key == PrAppKey_Unknown) {
-        const KeyText& stashed = app->keyText;
-        KeyText text;
-        if (stashed.message == message && stashed.virtualKey == virtualKey && stashed.flags == flags)
-            text = stashed;
-        else
-            text = translateKey(message, virtualKey, flags);
-        if (text.dead) {
-            event.keyboard.key = PrAppKey_Dead;
-        } else if (text.count != 0) {
-            event.keyboard.text = windowsNarrow(text.units, uint32_t(text.count), app->utf8);
-            wchar_t first = text.units[0];
-            if (first >= L'a' && first <= L'z')
-                first = wchar_t(first - L'a' + L'A');
-            event.keyboard.key = first < 128 ? PrAppKey(first) : PrAppKey_Unknown;
-        }
-    }
-    app->keyText = KeyText{};
-    if (event.keyboard.code != PrAppKeyCode_Unidentified)
-        app->keys[event.keyboard.code] = HeldKey{.down = down, .key = event.keyboard.key};
-    deliver(app, event);
-}
-
-void deliverText(Win32App* app, PrAppEventKind kind, PrStringView text, PrAppTextRange selection) {
-    PrAppEvent event{};
-    event.kind = kind;
-    event.time = secondsNow();
-    event.input.text = text;
-    event.input.selection = selection;
-    deliver(app, event);
-}
-
-// Delivers a character that WM_CHAR types. A character beyond the BMP arrives as two messages, one per surrogate. A
-// control character types nothing: the program reads its key.
-void deliverCharacter(Win32App* app, wchar_t unit) {
-    if (IS_HIGH_SURROGATE(unit)) {
-        app->highSurrogate = unit;
-        return;
-    }
-    wchar_t units[2] = {unit, 0};
-    int count = 1;
-    if (IS_LOW_SURROGATE(unit)) {
-        if (app->highSurrogate == 0)
-            return;
-        units[0] = app->highSurrogate;
-        units[1] = unit;
-        count = 2;
-    }
-    app->highSurrogate = 0;
-    if (!isPrintable(units, count))
-        return;
-    deliverText(app, PrAppEventKind_Text, windowsNarrow(units, uint32_t(count), app->utf8), PrAppTextRange{});
-}
-
-void deliverCodePoint(Win32App* app, uint32_t codePoint) {
-    wchar_t units[2];
-    int count = 1;
-    if (codePoint >= 0x10000) {
-        units[0] = wchar_t(0xD800 + ((codePoint - 0x10000) >> 10));
-        units[1] = wchar_t(0xDC00 + ((codePoint - 0x10000) & 0x3FF));
-        count = 2;
-    } else {
-        units[0] = wchar_t(codePoint);
-    }
-    if (isPrintable(units, count))
-        deliverText(app, PrAppEventKind_Text, windowsNarrow(units, uint32_t(count), app->utf8), PrAppTextRange{});
-}
-
-// Places the input method's windows at the caret that the program last gave, in the window's client area.
-void placeInputMethod(Win32App* app) {
-    HIMC context = ImmGetContext(app->window);
-    if (context == nullptr)
-        return;
-    float scale = float(GetDpiForWindow(app->window)) / USER_DEFAULT_SCREEN_DPI;
-    POINT below{LONG(app->textInputRect.left * scale), LONG(app->textInputRect.bottom * scale)};
-    COMPOSITIONFORM composition{};
-    composition.dwStyle = CFS_POINT;
-    composition.ptCurrentPos = below;
-    ImmSetCompositionWindow(context, &composition);
-    CANDIDATEFORM candidate{};
-    candidate.dwStyle = CFS_CANDIDATEPOS;
-    candidate.ptCurrentPos = below;
-    ImmSetCandidateWindow(context, &candidate);
-    ImmReleaseContext(app->window, context);
-}
-
-// Reads one of the composition's strings into the scratch storage and returns its length in UTF-16 units.
-int compositionString(Win32App* app, HIMC context, DWORD index) {
-    LONG bytes = ImmGetCompositionStringW(context, index, nullptr, 0);
-    if (bytes <= 0)
-        return 0;
-    app->utf16.resize(uint32_t(bytes) / sizeof(wchar_t) + 1);
-    ImmGetCompositionStringW(context, index, app->utf16.data, DWORD(bytes));
-    return int(uint32_t(bytes) / sizeof(wchar_t));
-}
-
-// The part of the composition that the input method converts, from its clause attributes, or the caret if no clause is
-// a target. The range is in UTF-16 units.
-void compositionSelection(HIMC context, int count, int* start, int* end) {
-    RawArray<uint8_t> attributes;
-    LONG size = ImmGetCompositionStringW(context, GCS_COMPATTR, nullptr, 0);
-    *start = -1;
-    *end = -1;
-    if (size > 0) {
-        attributes.resize(uint32_t(size));
-        ImmGetCompositionStringW(context, GCS_COMPATTR, attributes.data, DWORD(size));
-        for (int i = 0; i < count && i < size; ++i) {
-            uint8_t attribute = attributes.data[i];
-            if (attribute == ATTR_TARGET_CONVERTED || attribute == ATTR_TARGET_NOTCONVERTED) {
-                if (*start < 0)
-                    *start = i;
-                *end = i + 1;
-            }
-        }
-    }
-    attributes.reset();
-    if (*start < 0) {
-        LONG caret = ImmGetCompositionStringW(context, GCS_CURSORPOS, nullptr, 0);
-        *start = caret >= 0 && caret <= count ? int(caret) : count;
-        *end = *start;
-    }
-}
-
-// Returns the length in UTF-8 of the first `count` UTF-16 units of `units`, or zero if they are ill-formed.
-uint32_t utf8Length(const wchar_t* units, int count) {
-    uint32_t size = prWindowsNarrow(units, uint32_t(count), nullptr, 0);
-    return size != kPrWindowsStringInvalid ? size : 0;
-}
-
-// Delivers a change to the composition. A result ends the composition and follows as a Text event, and a new
-// composition may begin in the same message.
-void deliverComposition(Win32App* app, LPARAM flags) {
-    HIMC context = ImmGetContext(app->window);
-    if (context == nullptr)
-        return;
-    if ((flags & GCS_RESULTSTR) != 0) {
-        int count = compositionString(app, context, GCS_RESULTSTR);
-        PrStringView text = windowsNarrow(app->utf16.data, uint32_t(count), app->utf8);
-        if (app->composing) {
-            app->composing = false;
-            deliverText(app, PrAppEventKind_CompositionEnd, text, PrAppTextRange{});
-        }
-        if (text.size != 0)
-            deliverText(app, PrAppEventKind_Text, text, PrAppTextRange{});
-    }
-    if ((flags & GCS_COMPSTR) != 0) {
-        int count = compositionString(app, context, GCS_COMPSTR);
-        if (count == 0) {
-            if (app->composing) {
-                app->composing = false;
-                deliverText(app, PrAppEventKind_CompositionEnd, "", PrAppTextRange{});
-            }
-        } else {
-            int start = 0;
-            int end = 0;
-            compositionSelection(context, count, &start, &end);
-            PrAppTextRange selection{utf8Length(app->utf16.data, start), utf8Length(app->utf16.data, end)};
-            app->composing = true;
-            PrStringView text = windowsNarrow(app->utf16.data, uint32_t(count), app->utf8);
-            deliverText(app, PrAppEventKind_CompositionUpdate, text, selection);
-        }
-    }
-    ImmReleaseContext(app->window, context);
-}
-
-// Opens the clipboard. Another process may hold it for a moment, so the open is tried a few times.
-bool openClipboard(HWND window) {
-    for (int attempt = 0; attempt < 10; ++attempt) {
-        if (OpenClipboard(window))
-            return true;
-        Sleep(1);
-    }
-    return false;
-}
-
-void deliverClipboard(Win32App* app) {
-    PrStringView text = "";
-    if (openClipboard(app->window)) {
-        HANDLE data = GetClipboardData(CF_UNICODETEXT);
-        const wchar_t* units = data != nullptr ? static_cast<const wchar_t*>(GlobalLock(data)) : nullptr;
-        if (units != nullptr) {
-            // The text ends at its NUL, or at the end of its memory if another program wrote none.
-            size_t capacity = GlobalSize(data) / sizeof(wchar_t);
-            size_t count = 0;
-            while (count < capacity && units[count] != 0)
-                ++count;
-            text = windowsNarrow(units, uint32_t(count < size_t(UINT32_MAX) ? count : size_t(UINT32_MAX)), app->utf8);
-            GlobalUnlock(data);
-        }
-        CloseClipboard();
-    }
-    PrAppEvent event{};
-    event.kind = PrAppEventKind_Clipboard;
-    event.time = secondsNow();
-    event.input.text = text;
-    deliver(app, event);
-}
-
-// Reads a device-independent bitmap of `size` bytes as straight-alpha Rgba8 rows into `out`. Returns its extent, or
-// zero for a form that it does not read. It reads 24 bits, and 32 bits with no masks or with the masks of BGRA.
-PrUVec2 dibPixels(const uint8_t* bytes, size_t size, RawArray<uint8_t>& out) {
-    if (size < sizeof(BITMAPINFOHEADER))
-        return PrUVec2{0, 0};
-    BITMAPINFOHEADER header;
-    prMemCopy(&header, bytes, sizeof(header));
-    bool bitfields = header.biCompression == BI_BITFIELDS;
-    bool readable = header.biPlanes == 1 && (header.biCompression == BI_RGB || bitfields) &&
-        (header.biBitCount == 32 || (header.biBitCount == 24 && !bitfields));
-    if (!readable || header.biWidth <= 0 || header.biHeight == 0 || header.biHeight == INT32_MIN)
-        return PrUVec2{0, 0};
-    size_t width = size_t(header.biWidth);
-    size_t height = size_t(header.biHeight < 0 ? -header.biHeight : header.biHeight);
-    size_t offset = header.biSize + header.biClrUsed * sizeof(RGBQUAD);
-    // A header of the first version keeps its masks after it. The later versions hold them within.
-    if (bitfields && header.biSize == sizeof(BITMAPINFOHEADER))
-        offset += 3 * sizeof(DWORD);
-    size_t stride = ((width * header.biBitCount + 31) / 32) * 4;
-    if (offset > size || stride * height > size - offset)
-        return PrUVec2{0, 0};
-    out.resize(uint32_t(width * height * 4));
-    // A 32-bit bitmap with no masks leaves its alpha undefined, and most programs write zero there.
-    bool hasAlpha = false;
-    if (header.biBitCount == 32) {
-        for (size_t i = offset + 3; i < offset + stride * height && !hasAlpha; i += 4)
-            hasAlpha = bytes[i] != 0;
-    }
-    for (size_t y = 0; y < height; ++y) {
-        size_t sourceRow = header.biHeight < 0 ? y : height - 1 - y;
-        const uint8_t* from = bytes + offset + sourceRow * stride;
-        uint8_t* to = out.data + y * width * 4;
-        for (size_t x = 0; x < width; ++x) {
-            to[x * 4] = from[2];
-            to[x * 4 + 1] = from[1];
-            to[x * 4 + 2] = from[0];
-            to[x * 4 + 3] = hasAlpha ? from[3] : 255;
-            from += header.biBitCount / 8;
-        }
-    }
-    return PrUVec2{uint32_t(width), uint32_t(height)};
-}
-
-void deliverClipboardImage(Win32App* app) {
-    RawArray<uint8_t> pixels{};
-    PrUVec2 extent{0, 0};
-    if (openClipboard(app->window)) {
-        // The system makes a CF_DIB of a CF_DIBV5 and the reverse, and either of a CF_BITMAP.
-        HANDLE data = GetClipboardData(CF_DIBV5);
-        const uint8_t* bytes = data != nullptr ? static_cast<const uint8_t*>(GlobalLock(data)) : nullptr;
-        if (bytes != nullptr) {
-            extent = dibPixels(bytes, GlobalSize(data), pixels);
-            GlobalUnlock(data);
-        }
-        CloseClipboard();
-    }
-    PrAppEvent event{};
-    event.kind = PrAppEventKind_ClipboardImage;
-    event.time = secondsNow();
-    event.image.pixels = PrPixelView{pixels.data, size_t(extent.x) * 4, extent};
-    deliver(app, event);
-    pixels.reset();
-}
-
-// Brings the window forward after a click on its notification or its icon. The click allows the process to take the
-// foreground.
-void bringForward(Win32App* app) {
-    if (IsIconic(app->window))
-        ShowWindow(app->window, SW_RESTORE);
-    SetForegroundWindow(app->window);
-}
-
-// Handles a user action on the icon in the notification area. A click on the balloon of the last notification brings
-// the window forward and delivers the click. A click on the icon brings the window forward.
-void notifyIconAction(Win32App* app, UINT action) {
-    switch (action) {
-        case NIN_BALLOONUSERCLICK: {
-            bringForward(app);
-            PrAppEvent event{};
-            event.kind = PrAppEventKind_Notification;
-            event.notification.tag = app->notificationTag;
-            event.time = secondsNow();
-            deliver(app, event);
-            break;
-        }
-        case NIN_SELECT:
-        case NIN_KEYSELECT:
-            bringForward(app);
-            break;
-        default:
-            break;
-    }
-}
-
-LRESULT CALLBACK windowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam) {
+// The procedure of the application's message window.
+LRESULT CALLBACK messageProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
     if (message == WM_NCCREATE) {
         const CREATESTRUCTW* create = reinterpret_cast<const CREATESTRUCTW*>(lParam);
-        SetWindowLongPtrW(window, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(create->lpCreateParams));
-        return DefWindowProcW(window, message, wParam, lParam);
+        SetWindowLongPtrW(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(create->lpCreateParams));
+        return DefWindowProcW(hwnd, message, wParam, lParam);
     }
-    Win32App* app = appOf(window);
+    Win32App* app = reinterpret_cast<Win32App*>(GetWindowLongPtrW(hwnd, GWLP_USERDATA));
     if (app == nullptr)
-        return DefWindowProcW(window, message, wParam, lParam);
+        return DefWindowProcW(hwnd, message, wParam, lParam);
     if (message == app->taskbarCreated && app->taskbarCreated != 0)
         app->notifyIcon = false;
+    LRESULT handled = 0;
+    if (serviceMessage(app, message, wParam, lParam, &handled))
+        return handled;
     switch (message) {
-        case WM_CLOSE:
-            app->stop(app);
-            return 0;
-        case WM_ERASEBKGND:
-            // The frames fill the window, and an erase would flash between them.
-            return 1;
-        case WM_SIZE:
-            // A frame at each step of a resize presents at the window's new size before the compositor shows it.
-            if (wParam != SIZE_MINIMIZED)
-                runFrame(app);
-            return 0;
-        case WM_PAINT: {
-            PAINTSTRUCT paint;
-            BeginPaint(window, &paint);
-            EndPaint(window, &paint);
-            if (app->frameRequested && !app->inSizeMove)
-                runFrame(app);
-            return 0;
-        }
-        case WM_GETMINMAXINFO: {
-            // The system's least width fits the title bar's buttons, and the window may be as small as its frame.
-            RECT frame{0, 0, 1, 1};
-            AdjustWindowRectExForDpi(&frame, styleOf(app), FALSE, 0, app->dpi != 0 ? app->dpi : 96);
-            MINMAXINFO* limits = reinterpret_cast<MINMAXINFO*>(lParam);
-            limits->ptMinTrackSize = POINT{frame.right - frame.left, frame.bottom - frame.top};
-            return 0;
-        }
-        case WM_ENTERSIZEMOVE:
-            app->inSizeMove = true;
-            break;
-        case WM_EXITSIZEMOVE:
-            app->inSizeMove = false;
-            break;
-        case WM_MOVE:
-            if (app->running && MonitorFromWindow(window, MONITOR_DEFAULTTONEAREST) != app->monitor)
-                app->requestFrame(app);
-            break;
-        case WM_DPICHANGED: {
-            app->dpi = HIWORD(wParam);
-            const RECT* suggested = reinterpret_cast<const RECT*>(lParam);
-            SetWindowPos(window, nullptr, suggested->left, suggested->top, suggested->right - suggested->left,
-                suggested->bottom - suggested->top, SWP_NOZORDER | SWP_NOACTIVATE);
-            app->requestFrame(app);
-            return 0;
-        }
-        case WM_DISPLAYCHANGE:
-            releaseDisplayObjects(app);
-            app->requestFrame(app);
-            break;
-        case WM_SETTINGCHANGE:
-        case WM_THEMECHANGED:
-        case WM_SYSCOLORCHANGE:
-            refreshPreferences(app);
-            app->requestFrame(app);
-            break;
-        case WM_SETCURSOR:
-            if (LOWORD(lParam) == HTCLIENT) {
-                SetCursor(app->cursor);
-                return TRUE;
-            }
-            break;
-        case WM_SYSCOMMAND:
-            // Alt or F10 alone would enter the menu loop of a window that has no menu, which takes the next key.
-            if ((wParam & 0xFFF0) == SC_KEYMENU && lParam == 0)
-                return 0;
-            break;
-        case WM_TIMER:
-            if (wParam == kTimerFrameAt) {
-                KillTimer(window, kTimerFrameAt);
-                app->requestFrame(app);
-                return 0;
-            }
-            if (wParam != kTimerFrame)
-                break;
-            KillTimer(window, kTimerFrame);
-            if (app->frameRequested)
-                runFrame(app);
-            return 0;
         case kMessageFrame:
             // The run's loop holds the pacer's message back, so another loop dispatched it: the system's modal loop for
-            // a move or a resize. A frame that waits behind input goes to the frame timer, whose message comes only
-            // when no other waits, so that the loop sees the input, such as the button's release that ends a resize,
-            // even where a frame takes longer than a refresh.
-            if (!app->frameRequested)
+            // a move or a resize. A frame that waits behind input goes to the window's frame timer, whose message comes
+            // only when no other waits, so that the loop sees the input, such as the button's release that ends a
+            // resize, even where a frame takes longer than a refresh.
+            if (HIWORD(GetQueueStatus(QS_INPUT)) == 0) {
+                win32RunRequestedFrames(app);
                 return 0;
-            if (HIWORD(GetQueueStatus(QS_INPUT)) != 0)
-                SetTimer(window, kTimerFrame, USER_TIMER_MINIMUM, nullptr);
-            else
-                runFrame(app);
+            }
+            for (uint32_t i = 0; i < app->windows.count; ++i) {
+                Win32Window* window = app->windows.data[i];
+                if (window->frameRequested)
+                    SetTimer(window->window, kTimerFrame, USER_TIMER_MINIMUM, nullptr);
+            }
             return 0;
         case kMessageWake: {
             app->wakePending.store(false);
             PrAppEvent event{};
             event.kind = PrAppEventKind_Wake;
-            event.time = secondsNow();
-            deliver(app, event);
+            event.time = win32SecondsNow();
+            win32Deliver(app, nullptr, event);
             return 0;
         }
-        case kMessageClipboard:
-            deliverClipboard(app);
-            return 0;
-        case kMessageClipboardImage:
-            deliverClipboardImage(app);
-            return 0;
-        case WM_CAPTURECHANGED:
-            if (reinterpret_cast<HWND>(lParam) != window)
-                releaseButtons(app);
-            return 0;
-        case WM_KILLFOCUS:
-            releaseKeys(app);
-            break;
-        case WM_ACTIVATE:
-            // Activation changes what prAppIsActive returns, so the next frame should see it.
-            app->requestFrame(app);
-            break;
         case kMessageNotifyIcon:
             // With NOTIFYICON_VERSION_4, the low word of lParam is the user's action.
-            notifyIconAction(app, LOWORD(lParam));
+            win32NotifyIconAction(app, LOWORD(lParam));
             return 0;
-        case WM_MOUSEMOVE:
-        case WM_LBUTTONDOWN:
-        case WM_LBUTTONUP:
-        case WM_RBUTTONDOWN:
-        case WM_RBUTTONUP:
-        case WM_MBUTTONDOWN:
-        case WM_MBUTTONUP:
-            deliverPointer(app, message, wParam, lParam);
+        case kMessageStatusItem:
+            win32StatusItemAction(app, HIWORD(lParam), LOWORD(lParam));
             return 0;
-        case WM_XBUTTONDOWN:
-        case WM_XBUTTONUP:
-            deliverPointer(app, message, wParam, lParam);
-            return TRUE;
-        case WM_MOUSEWHEEL:
-        case WM_MOUSEHWHEEL:
-            deliverScroll(app, wParam, lParam, message == WM_MOUSEHWHEEL);
+        case WM_INITMENUPOPUP:
+            win32MenuOpening(app, nullptr, reinterpret_cast<HMENU>(wParam));
             return 0;
-        case WM_KEYDOWN:
-        case WM_KEYUP:
-            deliverKey(app, message, wParam, lParam);
+        case WM_COMMAND:
+            win32MenuCommand(app, nullptr, LOWORD(wParam));
             return 0;
-        case WM_SYSKEYDOWN:
-        case WM_SYSKEYUP:
-            // The system keeps its own chords, such as Alt+F4.
-            deliverKey(app, message, wParam, lParam);
-            break;
-        case WM_CHAR:
-            deliverCharacter(app, wchar_t(wParam));
+        case kMessageDisplaysChanged: {
+            app->displaysChanged = false;
+            // The names that the last event's displays had stay valid until this event, which may change them.
+            appDisplayListReset(app->displays);
+            PrAppEvent event{};
+            event.kind = PrAppEventKind_DisplaysChanged;
+            event.time = win32SecondsNow();
+            win32Deliver(app, nullptr, event);
             return 0;
-        case WM_SYSCHAR:
-            // An Alt chord types nothing. Alt+Space opens the window's menu.
-            if (wParam == L' ')
-                break;
+        }
+        case kMessageRead:
+            win32AnswerRequest(app, reinterpret_cast<Win32Request*>(lParam));
             return 0;
-        case WM_DEADCHAR:
-        case WM_SYSDEADCHAR:
+        case WM_HOTKEY:
+            win32HotkeyPressed(app, int(wParam));
             return 0;
-        case WM_UNICHAR:
-            if (wParam == UNICODE_NOCHAR)
-                return TRUE;
-            deliverCodePoint(app, uint32_t(wParam));
+        case kMessageDialog:
+            // A dialog's modal loop waits for the callback that runs, so that no callback runs within another.
+            if (app->inCallback || app->dialog != nullptr)
+                PostMessageW(hwnd, kMessageDialog, wParam, lParam);
+            else
+                win32ShowDialog(app, reinterpret_cast<Win32DialogRequest*>(lParam));
             return 0;
-        case WM_IME_SETCONTEXT:
-            // The program shows the composition, and the input method shows only its candidates.
-            lParam &= ~LPARAM(ISC_SHOWUICOMPOSITIONWINDOW);
-            break;
-        case WM_IME_STARTCOMPOSITION:
-            placeInputMethod(app);
+        case kMessageDialogCancel:
+            win32CloseCancelledDialog(app);
             return 0;
-        case WM_IME_COMPOSITION:
-            deliverComposition(app, lParam);
-            return 0;
-        case WM_IME_ENDCOMPOSITION:
-            if (app->composing) {
-                app->composing = false;
-                deliverText(app, PrAppEventKind_CompositionEnd, "", PrAppTextRange{});
-            }
-            break;
         default:
             break;
     }
-    return DefWindowProcW(window, message, wParam, lParam);
+    return DefWindowProcW(hwnd, message, wParam, lParam);
 }
 
-// One of the system's cursors, by its IDC_ name, which is an integer whatever character type the name is spelled in.
-template <typename Name>
-HCURSOR systemCursor(Name name) {
-    return LoadCursorW(nullptr, MAKEINTRESOURCEW(reinterpret_cast<ULONG_PTR>(name)));
-}
-
-// Returns the system's nearest cursor to `cursor`, or null for none, which hides the pointer over the window. Windows
-// has no system cursors for a context menu, a cell, an alias, a copy, a grab or a zoom. A cell shows the crosshair, a
-// grab shows the hand, and the others show the arrow.
-HCURSOR PR_NULLABLE cursorFor(PrAppCursor cursor) {
-    switch (cursor) {
-        case PrAppCursor_None: return nullptr;
-        case PrAppCursor_Help: return systemCursor(IDC_HELP);
-        case PrAppCursor_Hand: return systemCursor(IDC_HAND);
-        case PrAppCursor_Progress: return systemCursor(IDC_APPSTARTING);
-        case PrAppCursor_Wait: return systemCursor(IDC_WAIT);
-        case PrAppCursor_Cell: return systemCursor(IDC_CROSS);
-        case PrAppCursor_Crosshair: return systemCursor(IDC_CROSS);
-        case PrAppCursor_Text: return systemCursor(IDC_IBEAM);
-        case PrAppCursor_VerticalText: return systemCursor(IDC_IBEAM);
-        case PrAppCursor_Move: return systemCursor(IDC_SIZEALL);
-        case PrAppCursor_NoDrop: return systemCursor(IDC_NO);
-        case PrAppCursor_NotAllowed: return systemCursor(IDC_NO);
-        case PrAppCursor_Grab: return systemCursor(IDC_HAND);
-        case PrAppCursor_Grabbing: return systemCursor(IDC_HAND);
-        case PrAppCursor_ResizeN: return systemCursor(IDC_SIZENS);
-        case PrAppCursor_ResizeS: return systemCursor(IDC_SIZENS);
-        case PrAppCursor_ResizeY: return systemCursor(IDC_SIZENS);
-        case PrAppCursor_ResizeRow: return systemCursor(IDC_SIZENS);
-        case PrAppCursor_ResizeE: return systemCursor(IDC_SIZEWE);
-        case PrAppCursor_ResizeW: return systemCursor(IDC_SIZEWE);
-        case PrAppCursor_ResizeX: return systemCursor(IDC_SIZEWE);
-        case PrAppCursor_ResizeColumn: return systemCursor(IDC_SIZEWE);
-        case PrAppCursor_ResizeNE: return systemCursor(IDC_SIZENESW);
-        case PrAppCursor_ResizeSW: return systemCursor(IDC_SIZENESW);
-        case PrAppCursor_ResizeNESW: return systemCursor(IDC_SIZENESW);
-        case PrAppCursor_ResizeNW: return systemCursor(IDC_SIZENWSE);
-        case PrAppCursor_ResizeSE: return systemCursor(IDC_SIZENWSE);
-        case PrAppCursor_ResizeNWSE: return systemCursor(IDC_SIZENWSE);
-        case PrAppCursor_AllScroll: return systemCursor(IDC_SIZEALL);
-        default: return systemCursor(IDC_ARROW);
-    }
-}
-
-void registerClass(HINSTANCE instance) {
+void registerClasses(HINSTANCE instance) {
     WNDCLASSEXW existing{};
     existing.cbSize = sizeof(existing);
-    if (GetClassInfoExW(instance, kClassName, &existing))
-        return;
-    WNDCLASSEXW windowClass{};
-    windowClass.cbSize = sizeof(windowClass);
-    windowClass.style = CS_HREDRAW | CS_VREDRAW;
-    windowClass.lpfnWndProc = windowProc;
-    windowClass.hInstance = instance;
-    windowClass.hIcon = LoadIconW(nullptr, MAKEINTRESOURCEW(reinterpret_cast<ULONG_PTR>(IDI_APPLICATION)));
-    windowClass.lpszClassName = kClassName;
-    RegisterClassExW(&windowClass);
+    if (!GetClassInfoExW(instance, kClassName, &existing)) {
+        WNDCLASSEXW windowClass{};
+        windowClass.cbSize = sizeof(windowClass);
+        windowClass.style = CS_HREDRAW | CS_VREDRAW;
+        windowClass.lpfnWndProc = win32WindowProc;
+        windowClass.hInstance = instance;
+        windowClass.hIcon = LoadIconW(nullptr, MAKEINTRESOURCEW(reinterpret_cast<ULONG_PTR>(IDI_APPLICATION)));
+        windowClass.lpszClassName = kClassName;
+        RegisterClassExW(&windowClass);
+    }
+    if (!GetClassInfoExW(instance, kMessageClassName, &existing)) {
+        WNDCLASSEXW messageClass{};
+        messageClass.cbSize = sizeof(messageClass);
+        messageClass.lpfnWndProc = messageProc;
+        messageClass.hInstance = instance;
+        messageClass.lpszClassName = kMessageClassName;
+        RegisterClassExW(&messageClass);
+    }
+    if (!GetClassInfoExW(instance, kDimClassName, &existing)) {
+        WNDCLASSEXW dimClass{};
+        dimClass.cbSize = sizeof(dimClass);
+        dimClass.lpfnWndProc = DefWindowProcW;
+        dimClass.hInstance = instance;
+        dimClass.hbrBackground = static_cast<HBRUSH>(GetStockObject(BLACK_BRUSH));
+        dimClass.lpszClassName = kDimClassName;
+        RegisterClassExW(&dimClass);
+    }
 }
 
-// Where placeWindow puts a window that is shown: centered on its display's work area, or where it already is.
-enum {
-    Placement_Center,
-    Placement_Keep,
-};
-typedef uint8_t Placement;
-
-// Sizes the window's client area to the application's extent. A window that is shown is clamped to its display's work
-// area, and centered on it if `placement` is Center.
-void placeWindow(Win32App* app, Placement placement) {
-    DWORD style = styleOf(app);
-    RECT frame{0, 0, MulDiv(int(app->extent.x), int(app->dpi), 96), MulDiv(int(app->extent.y), int(app->dpi), 96)};
-    AdjustWindowRectExForDpi(&frame, style, FALSE, 0, app->dpi);
-    int width = frame.right - frame.left;
-    int height = frame.bottom - frame.top;
-    int x = 0;
-    int y = 0;
-    UINT flags = SWP_NOZORDER | SWP_NOACTIVATE;
-    MONITORINFO monitor{};
-    monitor.cbSize = sizeof(monitor);
-    if (app->headless || !GetMonitorInfoW(MonitorFromWindow(app->window, MONITOR_DEFAULTTOPRIMARY), &monitor)) {
-        flags |= SWP_NOMOVE;
-    } else {
-        RECT work = monitor.rcWork;
-        width = width < work.right - work.left ? width : work.right - work.left;
-        height = height < work.bottom - work.top ? height : work.bottom - work.top;
-        x = work.left + (work.right - work.left - width) / 2;
-        y = work.top + (work.bottom - work.top - height) / 2;
-        if (placement == Placement_Keep)
-            flags |= SWP_NOMOVE;
+// Returns the application's lifecycle: Active while one of its windows is the foreground window, Background while none
+// of its windows shows, and Inactive otherwise.
+PrAppLifecycle computedLifecycle(const Win32App* app) {
+    if (app->headless)
+        return PrAppLifecycle_Background;
+    HWND foreground = GetForegroundWindow();
+    bool shows = false;
+    for (uint32_t i = 0; i < app->windows.count; ++i) {
+        HWND window = app->windows.data[i]->window;
+        if (window == foreground)
+            return PrAppLifecycle_Active;
+        if (IsWindowVisible(window) && !IsIconic(window))
+            shows = true;
     }
-    SetWindowPos(app->window, nullptr, x, y, width, height, flags);
+    return shows ? PrAppLifecycle_Inactive : PrAppLifecycle_Background;
+}
+
+// Takes the single instance's mutex, or hands this launch's command line to the instance that holds it and returns
+// false. The first instance's message window carries the instance's name as its title.
+bool claimSingleInstance(Win32App* app) {
+    if (app->instanceName.count == 0)
+        return true;
+    RawArray<wchar_t> mutexName;
+    mutexName.append(L"Local\\", 6);
+    mutexName.append(app->instanceName.data, app->instanceName.count);
+    app->instanceMutex = CreateMutexW(nullptr, FALSE, mutexName.data);
+    DWORD error = GetLastError();
+    mutexName.reset();
+    if (app->instanceMutex != nullptr && error != ERROR_ALREADY_EXISTS)
+        return true;
+    if (app->instanceMutex != nullptr)
+        CloseHandle(app->instanceMutex);
+    app->instanceMutex = nullptr;
+    HWND first = FindWindowW(kMessageClassName, app->instanceName.data);
+    if (first != nullptr) {
+        const wchar_t* line = GetCommandLineW();
+        COPYDATASTRUCT data{
+            .dwData = kCopyDataOpen,
+            .cbData = DWORD((wcslen(line) + 1) * sizeof(wchar_t)),
+            .lpData = const_cast<wchar_t*>(line),
+        };
+        DWORD process = 0;
+        GetWindowThreadProcessId(first, &process);
+        AllowSetForegroundWindow(process);
+        SendMessageW(first, WM_COPYDATA, 0, reinterpret_cast<LPARAM>(&data));
+    }
+    return false;
+}
+
+// Delivers the request of a second launch, whose command line `line` holds, with its arguments past the program.
+void openCommandLine(Win32App* app, const wchar_t* line) {
+    int count = 0;
+    wchar_t** arguments = CommandLineToArgvW(line, &count);
+    if (arguments == nullptr)
+        return;
+    AppStrings strings{};
+    for (int i = 1; i < count; ++i) {
+        appStringsAdd(strings, windowsNarrow(arguments[i], uint32_t(wcslen(arguments[i])), app->utf8));
+    }
+    LocalFree(arguments);
+    if (app->lastActive != nullptr)
+        win32BringForward(app->lastActive);
+    PrAppEvent event{};
+    event.kind = PrAppEventKind_Open;
+    event.time = win32SecondsNow();
+    event.open.arguments = appStringsViews(strings);
+    event.open.argumentCount = strings.ends.count;
+    win32Deliver(app, nullptr, event);
+    appStringsReset(strings);
+}
+
+void startServices(Win32App* app) {
+    app->lifecycle = computedLifecycle(app);
+    AddClipboardFormatListener(app->messageWindow);
+    WTSRegisterSessionNotification(app->messageWindow, NOTIFY_FOR_THIS_SESSION);
+    app->lowMemory = CreateMemoryResourceNotification(LowMemoryResourceNotification);
+    if (app->lowMemory != nullptr)
+        SetTimer(app->messageWindow, kTimerLowMemory, kLowMemoryMilliseconds, nullptr);
+}
+
+void stopServices(Win32App* app) {
+    for (uint32_t i = 0; i < app->timers.count; ++i)
+        KillTimer(app->messageWindow, app->timers.data[i].id);
+    app->timers.reset();
+    KillTimer(app->messageWindow, kTimerLowMemory);
+    if (app->lowMemory != nullptr)
+        CloseHandle(app->lowMemory);
+    app->lowMemory = nullptr;
+    RemoveClipboardFormatListener(app->messageWindow);
+    WTSUnRegisterSessionNotification(app->messageWindow);
+    if (app->taskbar != nullptr)
+        app->taskbar->Release();
+    app->taskbar = nullptr;
+    if (app->badge != nullptr)
+        DestroyIcon(app->badge);
+    app->badge = nullptr;
+    SetThreadExecutionState(ES_CONTINUOUS);
+}
+
+// Polls the memory's state, and delivers LowMemory as it turns low.
+void pollMemory(Win32App* app) {
+    BOOL low = FALSE;
+    if (app->lowMemory == nullptr || !QueryMemoryResourceNotification(app->lowMemory, &low))
+        return;
+    bool turned = low && !app->memoryLow;
+    app->memoryLow = low;
+    if (turned)
+        win32DeliverKind(app, PrAppEventKind_LowMemory);
+}
+
+Win32Timer* PR_NULLABLE timerOf(Win32App* app, uint64_t tag, uint32_t* index) {
+    for (uint32_t i = 0; i < app->timers.count; ++i) {
+        if (app->timers.data[i].tag == tag) {
+            *index = i;
+            return &app->timers.data[i];
+        }
+    }
+    return nullptr;
+}
+
+UINT millisecondsOf(double seconds) {
+    double milliseconds = seconds * 1000.0;
+    if (milliseconds < USER_TIMER_MINIMUM)
+        return USER_TIMER_MINIMUM;
+    return milliseconds > double(USER_TIMER_MAXIMUM) ? USER_TIMER_MAXIMUM : UINT(milliseconds);
+}
+
+void timerCancel(PrApp* base, uint64_t tag) {
+    Win32App* app = static_cast<Win32App*>(base);
+    uint32_t index = 0;
+    if (Win32Timer* timer = timerOf(app, tag, &index)) {
+        KillTimer(app->messageWindow, timer->id);
+        app->timers.erase(index);
+    }
+}
+
+void timerSet(PrApp* base, uint64_t tag, double delay, double interval) {
+    Win32App* app = static_cast<Win32App*>(base);
+    if (!app->running)
+        return;
+    timerCancel(base, tag);
+    UINT_PTR id = kFirstProgramTimer + ++app->lastTimerId;
+    app->timers.push(Win32Timer{.tag = tag, .id = id, .interval = interval > 0 ? interval : 0});
+    SetTimer(app->messageWindow, id, millisecondsOf(delay), nullptr);
+}
+
+// Delivers the firing of the program's timer `id`. Its first firing sets it to repeat at its interval, before the
+// delivery, so that the program may set or cancel the tag during the event.
+void timerFired(Win32App* app, UINT_PTR id) {
+    for (uint32_t i = 0; i < app->timers.count; ++i) {
+        Win32Timer& timer = app->timers.data[i];
+        if (timer.id != id)
+            continue;
+        uint64_t tag = timer.tag;
+        if (timer.interval == 0) {
+            KillTimer(app->messageWindow, id);
+            app->timers.erase(i);
+        } else if (!timer.repeating) {
+            timer.repeating = true;
+            SetTimer(app->messageWindow, id, millisecondsOf(timer.interval), nullptr);
+        }
+        PrAppEvent event{};
+        event.kind = PrAppEventKind_Timer;
+        event.time = win32SecondsNow();
+        event.tag = tag;
+        win32Deliver(app, nullptr, event);
+        return;
+    }
+    KillTimer(app->messageWindow, id);
+}
+
+// Asks the program whether the session may end, and answers at once: the session ends unless the program cancels the
+// quit. A request that arrives while a callback runs waits for it, and the session waits for nothing, so the
+// application refuses the end, and stops after the callback if the program lets it.
+LRESULT queryEndSession(Win32App* app) {
+    if (!app->running)
+        return TRUE;
+    bool held = app->inCallback;
+    PrAppEvent event{};
+    event.kind = PrAppEventKind_QuitRequested;
+    event.time = win32SecondsNow();
+    event.quit.sessionEnding = true;
+    win32Deliver(app, nullptr, event);
+    return !held && app->quitAccepted ? TRUE : FALSE;
+}
+
+void quitCancel(PrApp* base) {
+    Win32App* app = static_cast<Win32App*>(base);
+    if (app->quitDelivering)
+        app->quitCancelled = true;
+}
+
+// Handles the system's notices that reach the message window. Returns true and writes the result for a message that it
+// handled.
+bool serviceMessage(Win32App* app, UINT message, WPARAM wParam, LPARAM lParam, LRESULT* result) {
+    *result = 0;
+    switch (message) {
+        case WM_TIMER:
+            if (wParam == kTimerLowMemory)
+                pollMemory(app);
+            else if (wParam >= kFirstProgramTimer)
+                timerFired(app, wParam);
+            else
+                return false;
+            return true;
+        case WM_CLIPBOARDUPDATE:
+            win32DeliverKind(app, PrAppEventKind_ClipboardChanged);
+            return true;
+        case WM_POWERBROADCAST:
+            if (wParam == PBT_APMPOWERSTATUSCHANGE)
+                win32DeliverKind(app, PrAppEventKind_PowerChanged);
+            else if (wParam == PBT_APMSUSPEND)
+                win32DeliverKind(app, PrAppEventKind_Suspend);
+            else if (wParam == PBT_APMRESUMEAUTOMATIC)
+                win32DeliverKind(app, PrAppEventKind_Resume);
+            *result = TRUE;
+            return true;
+        case WM_WTSSESSION_CHANGE:
+            if (wParam == WTS_SESSION_LOCK)
+                win32DeliverKind(app, PrAppEventKind_ScreenLocked);
+            else if (wParam == WTS_SESSION_UNLOCK)
+                win32DeliverKind(app, PrAppEventKind_ScreenUnlocked);
+            return true;
+        case WM_SETTINGCHANGE:
+            if (lParam != 0 && wcscmp(reinterpret_cast<const wchar_t*>(lParam), L"intl") == 0)
+                win32DeliverKind(app, PrAppEventKind_LocaleChanged);
+            return false;
+        case WM_QUERYENDSESSION:
+            *result = queryEndSession(app);
+            return true;
+        case WM_COPYDATA: {
+            const COPYDATASTRUCT* data = reinterpret_cast<const COPYDATASTRUCT*>(lParam);
+            if (data == nullptr || data->dwData != kCopyDataOpen || data->cbData < sizeof(wchar_t))
+                return false;
+            RawArray<wchar_t> line;
+            line.append(static_cast<const wchar_t*>(data->lpData), data->cbData / sizeof(wchar_t));
+            line.push(0);
+            openCommandLine(app, line.data);
+            line.reset();
+            *result = TRUE;
+            return true;
+        }
+        default:
+            return false;
+    }
+}
+
+// Without a taskbar button, the application's windows are owned by its message window, which keeps them off the taskbar
+// and the window switcher. The taskbar decides a window's button as the window shows, so a window that shows already
+// gains or loses its button through the taskbar itself.
+void setPresence(PrApp* base, PrAppPresence presence) {
+    Win32App* app = static_cast<Win32App*>(base);
+    app->presence = presence;
+    bool accessory = presence == PrAppPresence_Accessory;
+    ITaskbarList3* taskbar = win32TaskbarOf(app);
+    for (uint32_t i = 0; i < app->windows.count; ++i) {
+        Win32Window* window = app->windows.data[i];
+        if (window->role != PrAppWindowRole_Normal)
+            continue;
+        HWND owner = accessory ? app->messageWindow : nullptr;
+        SetWindowLongPtrW(window->window, GWLP_HWNDPARENT, reinterpret_cast<LONG_PTR>(owner));
+        if (taskbar == nullptr || !IsWindowVisible(window->window))
+            continue;
+        if (accessory) {
+            taskbar->DeleteTab(window->window);
+        } else {
+            taskbar->AddTab(window->window);
+            win32ApplyTaskbar(window);
+        }
+    }
+}
+
+PrAppWindowModel windowModel(const PrApp* base) {
+    return static_cast<const Win32App*>(base)->windowModel;
+}
+
+PrAppLifecycle lifecycle(const PrApp* base) {
+    const Win32App* app = static_cast<const Win32App*>(base);
+    return app->running ? app->lifecycle : computedLifecycle(app);
 }
 
 void destroy(PrApp* base) {
     Win32App* app = static_cast<Win32App*>(base);
-    app->held.reset();
+    win32KeyLabelsReset(app);
+    appDisplayListReset(app->displays);
+    app->badgeText.reset();
+    app->instanceName.reset();
+    if (app->instanceMutex != nullptr)
+        CloseHandle(app->instanceMutex);
+    appDataRequestsReset(app->requests);
+    appDataSourcesReset(app->sources);
+    appEventQueueReset(app->held, &app->sources);
+    app->windows.reset();
     app->utf8.reset();
     app->utf16.reset();
-    prMemoryFree(app->title);
     prMemoryFree(app);
 }
 
-void run(PrApp* base, const PrAppHandler* handler) {
+void run(PrApp* base, PrAppHandler handler) {
     Win32App* app = static_cast<Win32App*>(base);
-    app->handler = *handler;
-    // The shell, which opens URLs, and the input methods expect a single-threaded apartment on the window's thread. A
-    // thread that already joined another apartment keeps it.
-    bool com = SUCCEEDED(CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE));
+    app->handler = handler;
+    // The shell, which opens URLs, and the input methods expect a single-threaded apartment on the windows' thread, and
+    // drags need OLE in it. A thread that already joined another apartment keeps it, and has no drags.
+    app->ole = SUCCEEDED(OleInitialize(nullptr));
+    win32DragsStart(app);
     HINSTANCE instance = GetModuleHandleW(nullptr);
-    registerClass(instance);
+    registerClasses(instance);
     app->taskbarCreated = RegisterWindowMessageW(L"TaskbarCreated");
-    app->window = CreateWindowExW(0, kClassName, app->title, styleOf(app), CW_USEDEFAULT, CW_USEDEFAULT,
-        CW_USEDEFAULT, CW_USEDEFAULT, nullptr, nullptr, instance, app);
-    if (app->window == nullptr)
-        PR_FATAL("the application's window could not be created");
-    app->dpi = GetDpiForWindow(app->window);
-    if (app->dpi == 0)
-        app->dpi = 96;
-    placeWindow(app, Placement_Center);
-    app->cursor = cursorFor(app->shape);
-    refreshPreferences(app);
-    app->display = prAppDisplayDefault();
-    app->displayRead = 0;
+    // A second launch of a single instance hands its command line to the first, and its run ends without a callback.
+    if (!claimSingleInstance(app)) {
+        win32DragsStop(app);
+        if (app->ole)
+            OleUninitialize();
+        app->ole = false;
+        return;
+    }
+    app->taskbarButtonCreated = RegisterWindowMessageW(L"TaskbarButtonCreated");
+    // The message window is a hidden top-level window rather than a message-only one, because only top-level windows
+    // receive the system's broadcasts: the session's end, power, and the settings.
+    const wchar_t* name = app->instanceName.count != 0 ? app->instanceName.data : L"";
+    app->messageWindow = CreateWindowExW(WS_EX_TOOLWINDOW, kMessageClassName, name, WS_POPUP, 0, 0, 0, 0, nullptr,
+        nullptr, instance, app);
+    if (app->messageWindow == nullptr)
+        PR_FATAL("the application's message window could not be created");
+    startServices(app);
     app->pacerRequest = CreateEventW(nullptr, FALSE, FALSE, nullptr);
     app->pacerQuit.store(false);
-    prThreadStart(&app->pacer, pace, app);
+    prThreadStart(&app->pacer, win32Pace, app);
     app->wakePending.store(false);
-    app->wakeWindow.store(app->window);
-    if (!app->headless) {
-        ShowWindow(app->window, SW_SHOW);
-        SetForegroundWindow(app->window);
-    }
+    app->wakeWindow.store(app->messageWindow);
     app->running = true;
-    app->framed = false;
     app->inCallback = true;
-    PrAppFrame window = frameAt(app, secondsNow());
-    app->handler.start(app->handler.context, app, &window);
-    endCallback(app);
-    app->requestFrame(app);
+    if (!handler.start(handler.context, app))
+        app->stopFn(app);
+    win32EndCallback(app);
     // A frame runs when nothing else waits in the queue, as WM_PAINT does, since a posted message comes ahead of input:
     // a frame that takes longer than a refresh would otherwise find the next frame's message waiting each time it
-    // returned, and the window would take no input. The pacer's message only marks the frame due here. A modal loop,
-    // such as a move's or a resize's, dispatches it to the window, which runs the frame at once.
+    // returned, and the windows would take no input. The pacer's message only marks the frames due here. A modal loop,
+    // such as a move's or a resize's, dispatches it to the message window, which runs the frames at once.
     while (app->running) {
         MSG message;
         if (!PeekMessageW(&message, nullptr, 0, 0, PM_REMOVE)) {
-            if (app->frameDue && app->frameRequested)
-                runFrame(app);
+            if (app->frameDue && win32AnyFrameRequested(app))
+                win32RunRequestedFrames(app);
             else
                 WaitMessage();
             continue;
         }
         if (message.message == WM_QUIT) {
-            app->stop(app);
+            app->stopFn(app);
             break;
         }
-        if (message.message == kMessageFrame && message.hwnd == app->window) {
+        if (message.message == kMessageFrame && message.hwnd == app->messageWindow) {
             app->frameDue = true;
             continue;
         }
+        if (win32TranslateAccelerator(app, message))
+            continue;
         if (message.message == WM_KEYDOWN || message.message == WM_SYSKEYDOWN)
-            app->keyText = translateKey(message.message, message.wParam, message.lParam);
+            app->keyText = win32TranslateKey(message.message, message.wParam, message.lParam);
         TranslateMessage(&message);
         DispatchMessageW(&message);
     }
     app->inCallback = true;
-    app->handler.shutdown(app->handler.context, app);
-    endCallback(app);
+    handler.shutdown(handler.context, app);
+    win32EndCallback(app);
+    stopServices(app);
+    while (app->statusItems.count != 0)
+        win32StatusItemDestroy(app->statusItems.data[app->statusItems.count - 1]);
+    app->statusItems.reset();
+    win32MenuCopyReset(app->menuBar);
+    app->menuBar = nullptr;
+    // The windows that the program left open close with the run.
+    while (app->windows.count != 0)
+        prAppWindowDestroy(app->windows.data[app->windows.count - 1]);
     app->wakeWindow.store(nullptr);
     app->pacerQuit.store(true);
     SetEvent(app->pacerRequest);
     prThreadJoin(&app->pacer);
     CloseHandle(app->pacerRequest);
     app->pacerRequest = nullptr;
-    KillTimer(app->window, kTimerFrame);
-    KillTimer(app->window, kTimerFrameAt);
-    if (GetCapture() == app->window)
-        ReleaseCapture();
-    releaseDisplayObjects(app);
     if (app->notifyIcon) {
         NOTIFYICONDATAW icon{};
         icon.cbSize = sizeof(icon);
-        icon.hWnd = app->window;
+        icon.hWnd = app->messageWindow;
         icon.uID = kNotifyIconId;
         Shell_NotifyIconW(NIM_DELETE, &icon);
         app->notifyIcon = false;
     }
-    SetWindowLongPtrW(app->window, GWLP_USERDATA, 0);
-    DestroyWindow(app->window);
-    app->window = nullptr;
-    app->frameRequested = false;
+    for (uint32_t i = 0; i < app->hotkeys.count; ++i)
+        UnregisterHotKey(app->messageWindow, app->hotkeys.data[i].id);
+    app->hotkeys.reset();
+    SetWindowLongPtrW(app->messageWindow, GWLP_USERDATA, 0);
+    DestroyWindow(app->messageWindow);
+    app->messageWindow = nullptr;
     app->frameDue = false;
-    app->composing = false;
-    app->highSurrogate = 0;
-    app->buttons = 0;
-    prMemZero(app->keys, sizeof(app->keys));
-    if (com)
-        CoUninitialize();
+    win32DragsStop(app);
+    if (app->ole)
+        OleUninitialize();
+    app->ole = false;
 }
 
 void stop(PrApp* base) {
@@ -1474,12 +567,16 @@ void stop(PrApp* base) {
     if (!app->running)
         return;
     app->running = false;
-    KillTimer(app->window, kTimerFrame);
-    KillTimer(app->window, kTimerFrameAt);
-    // The system's modal loop for a move or a resize ends when it is canceled, and the main loop then sees the stop.
-    if (app->inSizeMove)
-        PostMessageW(app->window, WM_CANCELMODE, 0, 0);
-    PostMessageW(app->window, WM_NULL, 0, 0);
+    for (uint32_t i = 0; i < app->windows.count; ++i) {
+        Win32Window* window = app->windows.data[i];
+        KillTimer(window->window, kTimerFrame);
+        KillTimer(window->window, kTimerFrameAt);
+        // The system's modal loop for a move or a resize ends when it is canceled, and the main loop then sees the
+        // stop.
+        if (window->inSizeMove)
+            PostMessageW(window->window, WM_CANCELMODE, 0, 0);
+    }
+    PostMessageW(app->messageWindow, WM_NULL, 0, 0);
 }
 
 void wake(PrApp* base) {
@@ -1491,322 +588,164 @@ void wake(PrApp* base) {
         app->wakePending.store(false);
 }
 
-void requestFrame(PrApp* base) {
-    Win32App* app = static_cast<Win32App*>(base);
-    if (!app->running || app->frameRequested)
-        return;
-    app->frameRequested = true;
-    scheduleFrame(app);
-}
-
-void requestFrameAt(PrApp* base, double time) {
-    Win32App* app = static_cast<Win32App*>(base);
-    if (!app->running)
-        return;
-    if (time == 0) {
-        KillTimer(app->window, kTimerFrameAt);
-        return;
-    }
-    double delay = time - secondsNow();
-    // The timer rounds up, so that the frame finds the time reached.
-    UINT milliseconds = delay > 0 ? UINT(delay * 1000) + 1 : USER_TIMER_MINIMUM;
-    SetTimer(app->window, kTimerFrameAt, milliseconds, nullptr);
-}
-
-void setTextInputRect(PrApp* base, PrRect rect) {
-    Win32App* app = static_cast<Win32App*>(base);
-    app->textInputRect = rect;
-    if (app->window != nullptr)
-        placeInputMethod(app);
-}
-
-void setCursor(PrApp* base, PrAppCursor cursor) {
-    Win32App* app = static_cast<Win32App*>(base);
-    if (cursor == app->shape)
-        return;
-    app->shape = cursor;
-    HCURSOR selected = cursorFor(cursor);
-    app->cursor = selected;
-    if (app->window == nullptr)
-        return;
-    // WM_SETCURSOR applies the shape on the pointer's next move, and a pointer that rests over the window takes it now.
-    POINT point;
-    RECT client;
-    if (GetCursorPos(&point) && WindowFromPoint(point) == app->window && ScreenToClient(app->window, &point) &&
-            GetClientRect(app->window, &client) && PtInRect(&client, point))
-        SetCursor(selected);
-}
-
-void setTitle(PrApp* base, PrStringView title) {
-    Win32App* app = static_cast<Win32App*>(base);
-    RawArray<wchar_t> wide;
-    windowsWiden(title, wide);
-    prMemoryFree(app->title);
-    app->title = wide.data;
-    if (app->window != nullptr)
-        SetWindowTextW(app->window, app->title);
-}
-
-void setExtent(PrApp* base, PrUVec2 extent) {
-    Win32App* app = static_cast<Win32App*>(base);
-    app->extent = extent;
-    if (app->window != nullptr)
-        placeWindow(app, Placement_Keep);
-}
-
-PrStatus surface(PrApp* base, PrAppSurface* out) {
-    Win32App* app = static_cast<Win32App*>(base);
-    if (app->window == nullptr)
-        return PrStatus_InvalidState;
-    out->kind = PrAppSurfaceKind_Hwnd;
-    out->handle = app->window;
-    return PrStatus_Ok;
-}
-
-// Returns true if `text` is an absolute URL: a scheme (RFC 3986, section 3.1), a colon, and characters that a URL holds
-// unescaped. A scheme of one letter is a drive, and the text a path.
-bool isUrl(PrStringView text) {
-    size_t colon = 0;
-    while (colon < text.size && text.data[colon] != ':')
-        ++colon;
-    if (colon < 2 || colon == text.size)
-        return false;
-    for (size_t i = 0; i < colon; ++i) {
-        char c = text.data[i];
-        bool letter = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
-        bool other = (c >= '0' && c <= '9') || c == '+' || c == '-' || c == '.';
-        if (!letter && (i == 0 || !other))
-            return false;
-    }
-    for (size_t i = colon + 1; i < text.size; ++i) {
-        unsigned char c = static_cast<unsigned char>(text.data[i]);
-        if (c <= 0x20 || c == 0x7F || c == '"' || c == '<' || c == '>' || c == '\\' || c == '^' || c == '`' ||
-                c == '{' || c == '|' || c == '}')
-            return false;
-    }
-    return true;
-}
-
-void requestAttention(PrApp* base) {
-    Win32App* app = static_cast<Win32App*>(base);
-    if (app->window == nullptr || GetForegroundWindow() == app->window)
-        return;
-    // The taskbar button flashes until the window comes to the foreground.
-    FLASHWINFO flash{.cbSize = sizeof(FLASHWINFO), .hwnd = app->window, .dwFlags = FLASHW_TRAY | FLASHW_TIMERNOFG};
-    FlashWindowEx(&flash);
-}
-
-bool isActive(PrApp* base) {
-    Win32App* app = static_cast<Win32App*>(base);
-    return app->window != nullptr && GetForegroundWindow() == app->window;
-}
-
-// Copies `text` to `out`, a NUL-terminated field of `capacity` UTF-16 units. Text that does not fit is cut before the
-// first character that does not fit, so a surrogate pair is never split.
-void copyField(Win32App* app, PrStringView text, wchar_t* out, size_t capacity) {
-    windowsWiden(text, app->utf16);
-    size_t count = app->utf16.count - 1;
-    if (count > capacity - 1) {
-        count = capacity - 1;
-        wchar_t last = app->utf16.data[count - 1];
-        if (last >= 0xD800 && last <= 0xDBFF)
-            --count;
-    }
-    prMemCopy(out, app->utf16.data, count * sizeof(wchar_t));
-    out[count] = 0;
-}
-
-// Adds the window's icon to the notification area, if it is not there. Notifications appear as balloons on this icon.
-// Returns false if the shell refuses the icon.
-bool addNotifyIcon(Win32App* app) {
-    if (app->notifyIcon)
-        return true;
-    NOTIFYICONDATAW icon{};
-    icon.cbSize = sizeof(icon);
-    icon.hWnd = app->window;
-    icon.uID = kNotifyIconId;
-    icon.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP | NIF_SHOWTIP;
-    icon.uCallbackMessage = kMessageNotifyIcon;
-    icon.hIcon = reinterpret_cast<HICON>(GetClassLongPtrW(app->window, GCLP_HICON));
-    lstrcpynW(icon.szTip, app->title, int(countOf(icon.szTip)));
-    if (!Shell_NotifyIconW(NIM_ADD, &icon))
-        return false;
-    icon.uVersion = NOTIFYICON_VERSION_4;
-    Shell_NotifyIconW(NIM_SETVERSION, &icon);
-    app->notifyIcon = true;
-    return true;
-}
-
-// A notification is a balloon on the window's icon in the notification area, which Windows 10 and later show as a
-// toast. A real toast needs an application user model ID, which only a packaged or installed application has. A balloon
-// needs nothing from the process. A new balloon replaces the previous one.
-PrStatus notificationPost(PrApp* base, const PrAppNotificationDesc* desc) {
-    Win32App* app = static_cast<Win32App*>(base);
-    if (!app->running || app->window == nullptr)
-        return PrStatus_InvalidState;
-    // A headless window posts nothing, because no user sees the window.
-    if (app->headless)
-        return PrStatus_NotSupported;
-    // A balloon without text removes the balloon, so a notification with only a title shows the title as its text. A
-    // notification with neither posts nothing.
-    PrStringView text = desc->body.size != 0 ? desc->body : desc->title;
-    PrStringView title = desc->body.size != 0 ? desc->title : PrStringView{};
-    if (text.size == 0)
-        return PrStatus_Ok;
-    if (!addNotifyIcon(app))
-        return PrStatus_Io;
-    NOTIFYICONDATAW icon{};
-    icon.cbSize = sizeof(icon);
-    icon.hWnd = app->window;
-    icon.uID = kNotifyIconId;
-    icon.uFlags = NIF_INFO;
-    icon.dwInfoFlags = NIIF_INFO | NIIF_RESPECT_QUIET_TIME;
-    copyField(app, title, icon.szInfoTitle, countOf(icon.szInfoTitle));
-    copyField(app, text, icon.szInfo, countOf(icon.szInfo));
-    if (!Shell_NotifyIconW(NIM_MODIFY, &icon))
-        return PrStatus_Io;
-    app->notificationTag = desc->tag;
-    return PrStatus_Ok;
-}
-
-PrStatus openUrl(PrApp* base, PrStringView url) {
-    Win32App* app = static_cast<Win32App*>(base);
-    if (!isUrl(url))
-        return PrStatus_Syntax;
-    windowsWiden(url, app->utf16);
-    HINSTANCE result = ShellExecuteW(nullptr, L"open", app->utf16.data, nullptr, nullptr, SW_SHOWNORMAL);
-    // A result above 32 is success, as the function's older interface defines it.
-    return reinterpret_cast<INT_PTR>(result) > 32 ? PrStatus_Ok : PrStatus_Io;
-}
-
-void requestClipboardText(PrApp* base) {
-    Win32App* app = static_cast<Win32App*>(base);
-    if (app->window != nullptr)
-        PostMessageW(app->window, kMessageClipboard, 0, 0);
-}
-
-PrStatus setClipboardText(PrApp* base, PrStringView text) {
-    Win32App* app = static_cast<Win32App*>(base);
-    // The clipboard takes data only from an owner window, which exists during a run.
-    if (app->window == nullptr)
-        return PrStatus_Io;
-    windowsWiden(text, app->utf16);
-    size_t bytes = size_t(app->utf16.count) * sizeof(wchar_t);
-    HGLOBAL memory = GlobalAlloc(GMEM_MOVEABLE, bytes);
-    if (memory == nullptr)
-        return PrStatus_Io;
-    void* at = GlobalLock(memory);
-    if (at == nullptr) {
-        GlobalFree(memory);
-        return PrStatus_Io;
-    }
-    prMemCopy(at, app->utf16.data, bytes);
-    GlobalUnlock(memory);
-    if (!openClipboard(app->window)) {
-        GlobalFree(memory);
-        return PrStatus_Io;
-    }
-    // The clipboard owns the memory once it takes it.
-    bool set = EmptyClipboard() && SetClipboardData(CF_UNICODETEXT, memory) != nullptr;
-    CloseClipboard();
-    if (!set)
-        GlobalFree(memory);
-    return set ? PrStatus_Ok : PrStatus_Io;
-}
-
-void requestClipboardImage(PrApp* base) {
-    Win32App* app = static_cast<Win32App*>(base);
-    if (app->window != nullptr)
-        PostMessageW(app->window, kMessageClipboardImage, 0, 0);
-}
-
-PrStatus setClipboardImage(PrApp* base, PrPixelView pixels) {
-    Win32App* app = static_cast<Win32App*>(base);
-    // The clipboard takes data only from an owner window, which exists during a run.
-    if (app->window == nullptr)
-        return PrStatus_Io;
-    size_t rowBytes = size_t(pixels.extent.x) * 4;
-    size_t bytes = sizeof(BITMAPV5HEADER) + rowBytes * pixels.extent.y;
-    HGLOBAL memory = GlobalAlloc(GMEM_MOVEABLE, bytes);
-    if (memory == nullptr)
-        return PrStatus_Io;
-    uint8_t* at = static_cast<uint8_t*>(GlobalLock(memory));
-    if (at == nullptr) {
-        GlobalFree(memory);
-        return PrStatus_Io;
-    }
-    BITMAPV5HEADER header{};
-    header.bV5Size = sizeof(header);
-    header.bV5Width = LONG(pixels.extent.x);
-    header.bV5Height = LONG(pixels.extent.y);
-    header.bV5Planes = 1;
-    header.bV5BitCount = 32;
-    header.bV5Compression = BI_BITFIELDS;
-    header.bV5SizeImage = DWORD(rowBytes * pixels.extent.y);
-    header.bV5RedMask = 0x00FF0000;
-    header.bV5GreenMask = 0x0000FF00;
-    header.bV5BlueMask = 0x000000FF;
-    header.bV5AlphaMask = 0xFF000000;
-    header.bV5CSType = LCS_sRGB;
-    header.bV5Intent = LCS_GM_IMAGES;
-    prMemCopy(at, &header, sizeof(header));
-    // A bitmap with a positive height holds its rows from the bottom up.
-    for (uint32_t y = 0; y < pixels.extent.y; ++y) {
-        const uint8_t* from = pixels.data + y * pixels.stride;
-        uint8_t* to = at + sizeof(header) + size_t(pixels.extent.y - 1 - y) * rowBytes;
-        for (uint32_t x = 0; x < pixels.extent.x; ++x) {
-            to[x * 4] = from[x * 4 + 2];
-            to[x * 4 + 1] = from[x * 4 + 1];
-            to[x * 4 + 2] = from[x * 4];
-            to[x * 4 + 3] = from[x * 4 + 3];
-        }
-    }
-    GlobalUnlock(memory);
-    if (!openClipboard(app->window)) {
-        GlobalFree(memory);
-        return PrStatus_Io;
-    }
-    // The clipboard owns the memory once it takes it.
-    bool set = EmptyClipboard() && SetClipboardData(CF_DIBV5, memory) != nullptr;
-    CloseClipboard();
-    if (!set)
-        GlobalFree(memory);
-    return set ? PrStatus_Ok : PrStatus_Io;
+bool isHidden(const PrApp* base) {
+    return static_cast<const Win32App*>(base)->hidden;
 }
 
 } // namespace
+
+Win32App* appOf(const Win32Window* window) {
+    return window->app;
+}
+
+double win32SecondsNow() {
+    return prTimeMonotonicMilliseconds() / 1e3;
+}
+
+void win32EndCallback(Win32App* app) {
+    app->inCallback = false;
+    uint32_t at = 0;
+    PrAppWindow* window = nullptr;
+    PrAppEvent event{};
+    AppAnswer* answer = nullptr;
+    while (app->running && appEventQueueNext(app->held, &at, &window, &event, &answer)) {
+        if (answer != nullptr)
+            callAnswer(app, *answer);
+        else
+            callEvent(app, static_cast<Win32Window*>(window), event);
+    }
+    appEventQueueClear(app->held, &app->sources);
+}
+
+void win32Deliver(Win32App* app, Win32Window* PR_NULLABLE window, const PrAppEvent& event) {
+    if (app->running && app->inCallback) {
+        appEventQueueHold(app->held, window, event);
+        return;
+    }
+    if (app->running)
+        callEvent(app, window, event);
+    appDataSourceRelease(app->sources, prAppEventSource(&event));
+    if (app->running)
+        win32EndCallback(app);
+}
+
+void win32AnswerDeliver(Win32App* app, AppAnswer* answer) {
+    if (!app->running) {
+        appAnswerDestroy(answer, &app->sources);
+        return;
+    }
+    if (app->inCallback) {
+        appEventQueueHoldAnswer(app->held, answer);
+        return;
+    }
+    callAnswer(app, *answer);
+    appAnswerDestroy(answer, &app->sources);
+    win32EndCallback(app);
+}
+
+void win32Deliver(Win32Window* window, const PrAppEvent& event) {
+    win32Deliver(appOf(window), window, event);
+}
+
+void win32ForgetWindow(Win32App* app, Win32Window* window) {
+    appEventQueueForget(app->held, window);
+    for (uint32_t i = 0; i < app->windows.count; ++i) {
+        if (app->windows.data[i] == window) {
+            app->windows.erase(i);
+            break;
+        }
+    }
+    if (app->lastActive == window)
+        app->lastActive = nullptr;
+}
+
+void win32DeliverKind(Win32App* app, PrAppEventKind kind) {
+    if (!app->running)
+        return;
+    PrAppEvent event{};
+    event.kind = kind;
+    event.time = win32SecondsNow();
+    win32Deliver(app, nullptr, event);
+}
+
+void win32LifecycleMayChange(Win32App* app) {
+    PrAppLifecycle now = computedLifecycle(app);
+    if (now == app->lifecycle)
+        return;
+    app->lifecycle = now;
+    win32DeliverKind(app, PrAppEventKind_LifecycleChanged);
+}
+
+void win32SetHidden(PrApp* base, bool hidden) {
+    Win32App* app = static_cast<Win32App*>(base);
+    if (app->headless || app->hidden == hidden)
+        return;
+    app->hidden = hidden;
+    for (uint32_t i = 0; i < app->windows.count; ++i) {
+        Win32Window* window = app->windows.data[i];
+        if (hidden && window->shown && IsWindowVisible(window->window)) {
+            window->hiddenByApp = true;
+            win32SetLock(window, false);
+            ShowWindow(window->window, SW_HIDE);
+        } else if (!hidden && window->hiddenByApp) {
+            window->hiddenByApp = false;
+            ShowWindow(window->window, window->overlay ? SW_SHOWNOACTIVATE : SW_SHOW);
+            win32RequestFrame(window);
+        }
+    }
+}
 
 } // namespace pr_impl
 
 using namespace pr_impl;
 
-PrApp* prAppWin32Create(const PrAppDesc* desc) {
+PrApp* prAppWin32Create(const PrAppOptions* options) {
     // The call fails if the process already chose an awareness, which then stands.
     SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
     Win32App* app = allocZeroed<Win32App>();
-    app->destroy = destroy;
-    app->run = run;
-    app->stop = stop;
-    app->wake = wake;
-    app->requestFrame = requestFrame;
-    app->requestFrameAt = requestFrameAt;
-    app->setCursor = setCursor;
-    app->setTextInputRect = setTextInputRect;
-    app->setTitle = setTitle;
-    app->setExtent = setExtent;
-    app->requestAttention = requestAttention;
-    app->isActive = isActive;
-    app->notificationPost = notificationPost;
-    app->surface = surface;
-    app->openUrl = openUrl;
-    app->requestClipboardText = requestClipboardText;
-    app->setClipboardText = setClipboardText;
-    app->requestClipboardImage = requestClipboardImage;
-    app->setClipboardImage = setClipboardImage;
-    RawArray<wchar_t> title;
-    windowsWiden(desc->title, title);
-    app->title = title.data;
-    app->extent = desc->extent;
-    app->headless = desc->headless;
+    app->destroyFn = destroy;
+    app->runFn = run;
+    app->stopFn = stop;
+    app->wakeFn = wake;
+    app->notificationPostFn = win32NotificationPost;
+    app->openUrlFn = win32OpenUrl;
+    app->cancelFn = win32DataCancel;
+    app->dataRetainFn = win32DataRetain;
+    app->dataReleaseFn = win32DataRelease;
+    app->dataReadFn = win32DataRead;
+    app->dataWriteFn = win32DataWrite;
+    app->dataWriteFileFn = win32DataWriteFile;
+    app->windowCreateFn = win32WindowCreate;
+    app->displaysFn = win32Displays;
+    app->displayInfoFn = win32DisplayInfo;
+    app->pointerPositionFn = win32PointerPosition;
+    app->setHiddenFn = win32SetHidden;
+    app->isHiddenFn = isHidden;
+    app->revealPathFn = win32RevealPath;
+    app->hotkeyRegisterFn = win32HotkeyRegister;
+    app->hotkeyUnregisterFn = win32HotkeyUnregister;
+    app->fileDialogFn = win32FileDialog;
+    app->quitCancelFn = quitCancel;
+    app->setPresenceFn = setPresence;
+    app->windowModelFn = windowModel;
+    app->lifecycleFn = lifecycle;
+    app->timerSetFn = timerSet;
+    app->timerCancelFn = timerCancel;
+    app->keyCodeLabelFn = win32KeyCodeLabel;
+    app->trashPathFn = win32TrashPath;
+    app->recentDocumentAddFn = win32RecentDocumentAdd;
+    app->recentDocumentsClearFn = win32RecentDocumentsClear;
+    app->setBadgeFn = win32SetBadge;
+    app->powerFn = win32Power;
+    app->setAwakeFn = win32SetAwake;
+    app->setMenuBarFn = win32SetMenuBar;
+    app->statusItemCreateFn = win32StatusItemCreate;
+    appDataSourcesInit(app->sources);
+    appDataRequestsInit(app->requests, app->sources);
+    app->headless = options->headless;
+    app->presence = options->presence;
+    app->windowModel = options->windowModel;
+    if (options->singleInstance.size != 0)
+        windowsWiden(options->singleInstance, app->instanceName);
     return app;
 }

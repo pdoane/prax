@@ -59,8 +59,13 @@ String testFolder() {
         std::error_code ignored;
         std::filesystem::remove_all(path, ignored);
         std::filesystem::create_directories(path);
-        // The real path: programs that report their directory resolve links, as macOS's /var to /private/var.
+        // The real path: programs that report their directory resolve links, as macOS's /var to /private/var. Under
+        // Node.js, Emscripten's paths are POSIX paths, and it resolves a Windows path with a drive as a relative path.
+#if defined(__EMSCRIPTEN__)
+        gFolder.path = path;
+#else
         gFolder.path = std::filesystem::canonical(path);
+#endif
     }
     return String(gFolder.path.generic_string().c_str());
 }

@@ -1044,7 +1044,7 @@ PrStringView recall(PrKit& kit, PrLayoutNode node, const PrKitTextField& field, 
 // text while the text is empty.
 void editedText(PrKit& kit, PrLayoutNode control, PrStringView text, PrTextEditBuffer* PR_NULLABLE buffer,
         PrStringView placeholder, const PrKitFieldStyle& style, bool disabled, bool area, PrUiTextEditFlags flags,
-        const PrKitTextAreaStyle* PR_NULLABLE styles = nullptr, uint32_t styleCount = 0) {
+        PrAppTextInputKind inputKind, const PrKitTextAreaStyle* PR_NULLABLE styles = nullptr, uint32_t styleCount = 0) {
     const PrKitPalette& p = kit.theme.palette;
     uint8_t textFlags = uint8_t((disabled ? PartFlag_Disabled : 0) | (style.mono ? PartFlag_Mono : 0) |
         (area ? PartFlag_Wraps : 0));
@@ -1067,6 +1067,7 @@ void editedText(PrKit& kit, PrLayoutNode control, PrStringView text, PrTextEditB
         .styles = records.data,
         .styleCount = records.count,
         .flags = PrUiTextEditFlags(flags | (area ? PrUiTextEditFlag_Multiline : 0)),
+        .inputKind = inputKind,
         .selection = kitColor16(p.textSelection),
         .caret = kitColor16(p.text1),
     };
@@ -1113,7 +1114,7 @@ PrLayoutNode textField(PrKit* kit, PrLayoutNode parent, const PrKitTextField& fi
         prKitIcon(kit, node, {.icon = field.icon},
             {.size = 12, .tone = PrKitTone(disabled ? PrKitTone_Faint : PrKitTone_Muted)});
     editedText(*kit, node, text, field.buffer, field.placeholder, style, disabled, false,
-        field.selectOnFocus ? PrUiTextEditFlag_SelectOnFocus : 0);
+        field.selectOnFocus ? PrUiTextEditFlag_SelectOnFocus : 0, field.inputKind);
     if (field.clearable && text.size != 0 && !disabled) {
         PrLayoutNode clear = prLayoutTreeFrameElement(kit->tree, node, 0, 0);
         prUiSetFlags(kit->ui, clear, PrUiFlag_Pressable);
@@ -1300,7 +1301,8 @@ PrLayoutNode prKitTextArea(PrKit* kit, PrLayoutNode parent, PrKitTextArea area, 
         .flags = flags,
     }));
     PrStringView text = area.buffer != nullptr ? prTextEditBufferText(area.buffer) : area.text;
-    editedText(k, node, text, area.buffer, area.placeholder, style, disabled, true, 0, area.styles, area.styleCount);
+    editedText(k, node, text, area.buffer, area.placeholder, style, disabled, true, 0, PrAppTextInputKind_Text,
+        area.styles, area.styleCount);
     prUiAddFlags(k.ui, node, PrUiFlag_Scrollable);
     return node;
 }
@@ -1401,10 +1403,7 @@ PrLayoutNode prKitAssetField(PrKit* kit, PrLayoutNode parent, PrKitAssetField fi
     bool disabled = prUiIsDisabled(k.ui, node);
     // The field is a target for its own kind alone, so that a payload of another kind passes it by for a target around
     // it.
-    const PrUiPayload* carried = prUiDragging(k.ui);
-    bool over = false;
-    if (!disabled && carried != nullptr && carried->kind == field.kind)
-        over = prUiIsDropTarget(k.ui, node);
+    bool over = !disabled && prUiIsDropTarget(k.ui, node, field.kind);
     const PrUiPayload* dropped = disabled ? nullptr : prUiDropped(k.ui, node);
     if (dropped != nullptr && dropped->kind == field.kind) {
         kitProvide<AssetDrop>(k, node, KitContext_AssetDrop).value = dropped->value;

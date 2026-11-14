@@ -8,7 +8,6 @@
 // the frame when told `window.prSetFrame(frame)`. The answer is the status.
 
 #include "pr/app.h"
-#include "pr/app_cocoa.h"
 #include "pr/assert.h"
 #include "pr/vec.h"
 #include "pr/webview.h"
@@ -137,30 +136,28 @@ int main() {
     harnessCaseReset(&test);
     if (c.cases.empty())
         return 0;
-    PrAppDesc appDesc{.title = "Lottie references", .extent = {64, 64}, .headless = true};
-    c.app = prAppCocoaCreate(&appDesc);
-    PrAppHandler handler{
-        &c,
-        [](void* context, PrApp* app, const PrAppFrame*) {
+    PrAppOptions options{.headless = true};
+    c.app = prAppCreate(PrAppBackend_Default, &options);
+    prAppRun(c.app, {
+        .context = &c,
+        .start = [](void* context, PrApp*) {
             Capturing& c = *static_cast<Capturing*>(context);
             PrWebViewDesc desc{.viewport = PrUVec2{c.cases[0].width, c.cases[0].height}};
             if (prWebViewCreate(PrWebViewBackend_WebKit, &desc, &c.browser) != PrStatus_Ok) {
                 for (; c.next < c.cases.size(); ++c.next)
                     answer(PrStatus_NotSupported);
-                prAppStop(app);
-                return;
+                return false;
             }
             runNext(c);
+            return true;
         },
-        [](void*, PrApp*, const PrAppFrame*) { return PrAppOutput{}; },
-        [](void*, PrApp*, const PrAppEvent*) {},
-        [](void* context, PrApp*) {
+        .event = [](void*, PrApp*, const PrAppEvent*) {},
+        .shutdown = [](void* context, PrApp*) {
             Capturing& c = *static_cast<Capturing*>(context);
             prWebViewDestroy(c.browser);
             c.browser = nullptr;
         },
-    };
-    prAppRun(c.app, &handler);
+    });
     prAppDestroy(c.app);
     return 0;
 }

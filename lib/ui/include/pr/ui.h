@@ -44,13 +44,22 @@ void prUiDestroy(PrUi* PR_NULLABLE ui);
 // Returns the tree that the context routes input against.
 PrLayoutTree* prUiTree(const PrUi* ui);
 
-// Sets the application whose clipboard the context's widgets cut, copy and paste through, or none, or returns it.
-// Without one, a cut or a copy leaves the clipboard as it was, and a paste pastes nothing.
-void prUiSetApp(PrUi* ui, PrApp* PR_NULLABLE app);
-PrApp* PR_NULLABLE prUiApp(const PrUi* ui);
+// Sets the window whose application's clipboard the context's widgets cut, copy and paste through, or none, or returns
+// it. Without one, a cut or a copy leaves the clipboard as it was, and a paste pastes nothing. Setting another window
+// cancels a pending paste.
+void prUiSetWindow(PrUi* ui, PrAppWindow* PR_NULLABLE window);
+PrAppWindow* PR_NULLABLE prUiWindow(const PrUi* ui);
 
-// Copies an event and its text into the queue for the next frame. Must not be called during a build.
+// Copies an event and its text into the queue for the next frame. Must not be called during a build. A Paste event goes
+// to the focused control.
 void prUiPushEvent(PrUi* ui, const PrAppEvent* event);
+
+// Reads the clipboard's text and delivers it to `control` as a Paste event in a later frame, whose request the read
+// makes. If a read is pending, its text goes to `control` instead of starting another read. A read that fails pastes
+// nothing. A clipboard without text, such as one holding an image, pastes the empty string: a control that inserts text
+// ignores it, and a terminal still tells its program that the user pasted, so the program can read the clipboard
+// itself. Destroying the context cancels the read.
+void prUiPaste(PrUi* ui, PrLayoutNode control);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Frames and rounds
@@ -246,13 +255,21 @@ double prUiHoverSeconds(const PrUi* ui, PrLayoutNode node);
 // closest to that node instead, wherever the pointer is.
 void prUiSetCursor(PrUi* ui, PrLayoutNode node, PrAppCursor cursor);
 
-// Sets where the caret of the text being edited stands in this frame, in logical px of the window.
-void prUiSetTextInput(PrUi* ui, PrRect caret);
+// Sets where the caret of the text being edited stands in this frame, in logical px of the window, and the kind of
+// text, which chooses the on-screen keyboard and how the system treats the typed text (PrAppOutput::textInputKind).
+void prUiSetTextInput(PrUi* ui, PrRect caret, PrAppTextInputKind kind);
+
+// Marks `node` as a part of the window's custom title bar in the current round (PrAppWindowDecoration_Custom). Its
+// bounds in the latest layout become a title bar region of the output. The controls within a Drag node, the nodes that
+// are pressable or focusable, become Client regions after it, so that they take the user's presses. Call during a
+// build.
+void prUiTitleBarRegion(PrUi* ui, PrLayoutNode node, PrAppTitleBarRegionKind kind);
 
 // Returns what the context reports to the window, which a frame handler returns or merges with its other surfaces: the
 // cursor resolved in the last round, or the arrow if no node requested one, whether it wants another frame because a
-// tween is moving, a press is repeating, an activation is pending, input is still queued, or a frame was requested, and
-// the caret of the text being edited. Call between frames.
+// tween is moving, a press is repeating, an activation is pending, input is still queued, or a frame was requested, the
+// caret of the text being edited, the title bar regions at the end of the last frame, and the answer to a drag of the
+// system. The regions are valid until the next frame. Call between frames.
 PrAppOutput prUiOutput(const PrUi* ui);
 
 // Returns true if the node has captured the pointer with a press of `button`. Button 0 is the primary button.
@@ -310,30 +327,63 @@ bool prUiWheel(const PrUi* ui, PrLayoutNode node, PrVec2* out);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Payloads
+//
+// A payload is what a drag and drop carries. A payload that the context's own nodes drag stays within the context,
+// unless its drag lets it leave the window. A drag of the system brings a payload from another window of the
+// application, or content from the system, such as files or text from another application.
+
+// The kind of payload that carries content from the system (PrUiPayload::forms). Every other kind is the application's
+// to choose.
+PR_CONSTANT uint64_t kPrUiPayloadKindSystem = UINT64_MAX;
 
 // The data a drag-and-drop operation carries. `kind` and `value` are chosen by the application. `source` is the node
-// the drag started from.
+// the drag started from, or none if the drag came from outside the context.
+//
+// A drag of the system carries content in `forms`, and its other members are zero for every other kind. A dropped
+// payload of the system names its content as `drop`, which the program reads as a source (prAppDataReadText).
 typedef struct PrUiPayload {
     uint64_t kind;
     uint64_t value;
     PrLayoutNode source;
+    PrAppDataFormFlags forms;
+    PrAppDataSource drop;
 } PrUiPayload;
+
+// How a payload's drag behaves.
+enum {
+    // The payload may leave the window for another window of the application. Once the pointer leaves the window, the
+    // context hands the payload to the system through its window (prUiSetWindow, prAppWindowDragStart), and the window
+    // under the pointer receives it as a drag of the system. Without a window, the payload stays in the window. The
+    // window where the user drops the payload receives it, and the source's context sees no drop of its own.
+    PrUiPayloadFlag_AnyWindow = 1 << 0,
+};
+typedef uint8_t PrUiPayloadFlags;
 
 // Starts a drag-and-drop operation from a primary press held by `source`. The payload is picked up once the pointer
 // moves `threshold` px, or immediately if `threshold` is 0. Escape cancels the drag, and losing pointer capture ends it
-// without a drop. The release that ends the drag does not produce a click.
-void prUiDragStart(PrUi* ui, PrLayoutNode source, float threshold, uint64_t kind, uint64_t value);
+// without a drop. The release that ends the drag does not produce a click. While the system carries a payload that left
+// the window (PrUiPayloadFlag_AnyWindow), the call does nothing.
+void prUiDragStart(PrUi* ui, PrLayoutNode source, float threshold, uint64_t kind, uint64_t value, PrUiPayloadFlags flags);
 
 // Returns the payload being dragged, or null if there is none. The pointer is valid until the drag ends.
 const PrUiPayload* PR_NULLABLE prUiDragging(const PrUi* ui);
 
-// Makes the node a drop target for the current round. Returns true if it was the innermost drop target under the
-// pointer in the previous round. A payload is never offered to its own source.
-bool prUiIsDropTarget(PrUi* ui, PrLayoutNode node);
+// Makes the node a drop target for payloads of `kind` in the current round. Returns true if it was the innermost drop
+// target for the dragged payload's kind under the pointer in the previous round. A payload is never offered to its own
+// source. While a drag of the system is over a target for its payload, the context answers the drag. It answers a
+// payload with a move and the system's content with a copy. If the source does not allow that operation, the context
+// answers with the first operation that the source allows.
+bool prUiIsDropTarget(PrUi* ui, PrLayoutNode node, uint64_t kind);
 
-// Returns the payload dropped on the node in the current round, or null. A drop goes to the innermost drop target under
-// the pointer at release.
+// Returns the payload dropped on the node in the current round, or null. A drop goes to the innermost drop target for
+// its kind under the pointer at release.
 const PrUiPayload* PR_NULLABLE prUiDropped(const PrUi* ui, PrLayoutNode node);
+
+// Returns the payload that left the window (PrUiPayloadFlag_AnyWindow) if its drag ended in the current round, or null.
+// Writes what became of it to `operation`: Move if a window of the application took it, this one included, and None if
+// none did, as when the user dropped it outside every window or canceled the drag. A program that moves its content out
+// of the window on a drop elsewhere, as a tab torn off into a window of its own, does so on None.
+const PrUiPayload* PR_NULLABLE prUiExportEnded(const PrUi* ui, PrAppDragOperation* operation);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Keys, text and focus
@@ -342,9 +392,10 @@ const PrUiPayload* PR_NULLABLE prUiDropped(const PrUi* ui, PrLayoutNode node);
 // the current round.
 //
 // Claims made in one round decide routing in the next. A key press goes to the nearest node, starting at the focused
-// node and walking up through its ancestors, that claimed the key. If nothing is focused, the walk starts at the root.
-// If no node claimed the key, it is used for focus traversal and activation. A key press that the input method takes
-// for a composition (PrAppKeyboardEvent::composing) is neither claimed nor captured. It goes to the focused node.
+// node and walking up through its ancestors, that claimed the key. If nothing is focused, the walk starts at the key
+// root (prUiSetKeyRoot). If no node claimed the key, it is used for focus traversal and activation. A key press that
+// the input method takes for a composition (PrAppKeyboardEvent::composing) is neither claimed nor captured. It goes to
+// the focused node.
 bool prUiKeyPressed(PrUi* ui, PrLayoutNode node, PrAppKey key, PrAppModifierFlags modifiers);
 
 // Captures `key` with exactly `modifiers` for the node, and returns true if such a key press was routed to the node in
@@ -364,6 +415,12 @@ PrUiEvents prUiEvents(const PrUi* ui, PrLayoutNode node);
 
 // Returns the focused node, or kPrLayoutNodeNone.
 PrLayoutNode prUiFocus(const PrUi* ui);
+
+// Sets the node of the current round that a key press starts at while nothing is focused, or the root for
+// kPrLayoutNodeNone, which every round starts with. A host that wraps the application's root in nodes of its own, such
+// as a title bar's, sets it to the application's root, so that the application's claims there take the keys. Call
+// during a build.
+void prUiSetKeyRoot(PrUi* ui, PrLayoutNode node);
 
 // Requests focus for a node, or clears focus if `node` is kPrLayoutNodeNone. The request takes effect at the end of the
 // round. If the node is focusable and not disabled in that round, it receives focus. Otherwise focus is cleared.

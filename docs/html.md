@@ -273,8 +273,9 @@ what it shows and those of the value.
 
 The view runs the user's motions and edits (`pr/text_edit_command.h`), and reports the caret to the window
 (`prHtmlViewOutput`). `::selection` colors the selection. Cut, copy and paste fire their events, whose listeners can take
-them over through `clipboardData`. The clipboard belongs to the application that the host gives the view
-(`prHtmlViewSetApp`), and a paste's text comes back as a Clipboard event that the host passes on.
+them over through `clipboardData`. The clipboard is the application's, through the window that the host gives the view
+(`prHtmlViewSetWindow`). A paste reads it, and the view posts the text that the read returns to its agent as a Paste
+event. A paste that the user chooses from a system menu reaches the view as a Paste event from the host.
 
 ## Structure
 

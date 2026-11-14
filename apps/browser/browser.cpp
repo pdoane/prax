@@ -180,24 +180,29 @@ bool pageHasKeys(Browser& b) {
 // ---------------------------------------------------------------------------------------------------------------------
 // The window
 
-void start(void* context, PrApp* app, const PrAppFrame* window) {
-    Browser& b = *static_cast<Browser*>(context);
-    b.app = app;
-    prUiSetApp(b.ui, app);
+// Makes the device that the window renders with, the swap chain over the window and the renderer. Returns false if
+// there is no device to render with.
+bool openDevice(Browser& b) {
+    PrAppWindow* window = b.window;
     PrAppSurface surface{};
     PrGpuSwapChainDesc swapChain{.intent = PrGpuSwapChainIntent_Hdr};
     if (prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &b.device) != PrStatus_Ok ||
-            prAppSurface(app, &surface) != PrStatus_Ok ||
+            prAppWindowSurface(window, &surface) != PrStatus_Ok ||
             prGpuSwapChainCreate(b.device, &surface, &swapChain, &b.swapChain) != PrStatus_Ok ||
             prDrawRendererCreate(PrDrawRendererBackend_Default, b.device, nullptr, &b.renderer) != PrStatus_Ok ||
             prDrawDisplayCreate(b.device, &b.display) != PrStatus_Ok) {
         printError("browser: no GPU device to render with\n");
-        prAppStop(app);
-        return;
+        return false;
     }
     b.pageFrame = prDrawFrameCreate(b.renderer);
     b.chromeFrame = prDrawFrameCreate(b.renderer);
-    b.pageWindow = *window;
+    return true;
+}
+
+// Opens the tabs at the window's first frame, and starts the thread that runs them.
+bool open(void* context, PrAppWindow* window, const PrAppFrame* first) {
+    Browser& b = *static_cast<Browser*>(context);
+    b.pageWindow = *first;
     for (const String& address : b.addresses)
         tabOpen(b, address, b.tabs.count());
     if (b.tabs.isEmpty()) {
@@ -207,13 +212,14 @@ void start(void* context, PrApp* app, const PrAppFrame* window) {
     tabActivate(b, 0);
     prThreadStart(&b.thread, [](void* PR_NULLABLE context) { tabsRun(*static_cast<Browser*>(context)); }, &b);
     b.started = true;
-    prAppRequestFrame(app);
+    prAppWindowRequestFrame(window);
+    return true;
 }
 
 // Each frame builds the chrome, posts the frame to the active tab's view at the extent of the page's box, and presents
 // the tab's compositor, which renders the page with the chrome over it. A tab with no frame to present yet renders the
 // chrome over a blank page.
-PrAppOutput frame(void* context, PrApp*, const PrAppFrame* f) {
+PrAppOutput frame(void* context, PrAppWindow*, const PrAppFrame* f) {
     Browser& b = *static_cast<Browser*>(context);
     prGpuSwapChainWait(b.swapChain);
     tabsRefresh(b);
@@ -287,29 +293,26 @@ PrAppOutput frame(void* context, PrApp*, const PrAppFrame* f) {
 // pointer out of it, and every press, so that a press in the page closes its menus. A key bound to one of the browser's
 // commands runs it wherever focus is: through the chrome's scope while the chrome has the keyboard, and ahead of the
 // page while the page has it.
-void event(void* context, PrApp* app, const PrAppEvent* e) {
+void event(void* context, PrAppWindow* window, const PrAppEvent* e) {
     Browser& b = *static_cast<Browser*>(context);
     Tab* tab = browserActiveTab(b);
     PrHtmlView* view = tab != nullptr ? tab->view.load() : nullptr;
     bool toPageToo = false;
     switch (e->kind) {
-        case PrAppEventKind_Wake:
-            if (b.frameWanted.exchange(false))
-                prAppRequestFrame(app);
+        case PrAppEventKind_CloseRequested:
+            prAppStop(b.app);
             return;
         case PrAppEventKind_KeyDown:
             if (view != nullptr && pageHasKeys(b) && commandsRunChord(b, *e)) {
-                prAppRequestFrame(app);
+                prAppWindowRequestFrame(window);
                 return;
             }
-            [[fallthrough]];
-        case PrAppEventKind_Clipboard:
-            // Whichever asked for the clipboard's text takes it.
             if (view != nullptr)
                 prHtmlViewPostEvent(view, e);
             break;
         case PrAppEventKind_KeyUp:
         case PrAppEventKind_Text:
+        case PrAppEventKind_Paste:
         case PrAppEventKind_CompositionUpdate:
         case PrAppEventKind_CompositionEnd:
             if (view != nullptr && pageHasKeys(b)) {
@@ -339,7 +342,7 @@ void event(void* context, PrApp* app, const PrAppEvent* e) {
                 PrAppEvent moved = toPage(b, *tab, *e);
                 prHtmlViewPostEvent(view, &moved);
                 if (prLayoutCompositorWantsFrame(tab->compositor))
-                    prAppRequestFrame(app);
+                    prAppWindowRequestFrame(window);
                 return;
             }
             break;
@@ -351,7 +354,29 @@ void event(void* context, PrApp* app, const PrAppEvent* e) {
         prHtmlViewPostEvent(view, &moved);
     }
     prUiPushEvent(b.ui, e);
-    prAppRequestFrame(app);
+    prAppWindowRequestFrame(window);
+}
+
+// Opens the browser's window and its device. The window's close stops the application.
+bool start(void* context, PrApp* app) {
+    Browser& b = *static_cast<Browser*>(context);
+    b.app = app;
+    PrAppWindowDesc desc{
+        .title = "Prax",
+        .extent = {1280, 860},
+        .handler = {.context = &b, .open = open, .frame = frame, .event = event},
+    };
+    if (prAppWindowCreate(app, &desc, &b.window) != PrStatus_Ok)
+        return false;
+    prUiSetWindow(b.ui, b.window);
+    return openDevice(b);
+}
+
+// A wake from a tab's thread asks for a frame, if one asked for it since the last.
+void appEvent(void* context, PrApp*, const PrAppEvent* e) {
+    Browser& b = *static_cast<Browser*>(context);
+    if (e->kind == PrAppEventKind_Wake && b.window != nullptr && b.frameWanted.exchange(false))
+        prAppWindowRequestFrame(b.window);
 }
 
 void shutdown(void* context, PrApp*) {
@@ -384,7 +409,7 @@ void browserPresent(Browser& b, PrDrawList* list, PrColor16 canvas) {
 }
 
 PrAppHandler browserHandler(Browser& b) {
-    return PrAppHandler{&b, start, frame, event, shutdown};
+    return PrAppHandler{.context = &b, .start = start, .event = appEvent, .shutdown = shutdown};
 }
 
 } // namespace browser

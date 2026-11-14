@@ -1,6 +1,7 @@
 // Studio Kit's text fields and areas as they are edited: typing, the caret's motions, the selection, the pointer, the
 // clipboard, and what the layout tree paints for the selection and the caret.
 
+#include "pr/app_backend.h"
 #include "pr/kit_box.h"
 #include "pr/kit_input.h"
 #include "pr/span.h"
@@ -26,26 +27,51 @@ PrLayoutNode taken(PrKit* kit, PrLayoutNode field, String& owned) {
     return field;
 }
 
-// An application whose clipboard is a string, which a request delivers to the context as a Clipboard event.
+// An application whose clipboard is a string, and its window. A read waits until the test answers it.
+struct ClipboardApp : PrApp {
+    String text;
+    PrAppDataTextFn PR_NULLABLE pending = nullptr;
+    void* PR_NULLABLE pendingContext = nullptr;
+    uint32_t cancels = 0;
+};
+
+struct ClipboardWindow : PrAppWindow {
+    ClipboardApp* app;
+};
+
 struct Clipboard {
-    PrApp app;
-    String text = "";
-    bool requested = false;
+    ClipboardApp app;
+    ClipboardWindow window;
 
     Clipboard() {
-        app = PrApp{};
-        app.requestClipboardText = [](PrApp* a) { reinterpret_cast<Clipboard*>(a)->requested = true; };
-        app.setClipboardText = [](PrApp* a, PrStringView text) -> PrStatus {
-            reinterpret_cast<Clipboard*>(a)->text.assign(text);
+        app.dataReadFn = [](PrApp* a, const PrAppDataRead* read) {
+            ClipboardApp* clipboard = static_cast<ClipboardApp*>(a);
+            REQUIRE(read->kind == PrAppDataReadKind_Text);
+            REQUIRE(clipboard->pending == nullptr);
+            clipboard->pending = reinterpret_cast<PrAppDataTextFn>(read->done);
+            clipboard->pendingContext = read->context;
+        };
+        app.cancelFn = [](PrApp* a, void* PR_NULLABLE context) {
+            ClipboardApp* clipboard = static_cast<ClipboardApp*>(a);
+            if (clipboard->pending != nullptr && clipboard->pendingContext == context)
+                clipboard->pending = nullptr;
+            clipboard->cancels++;
+        };
+        app.dataWriteFn = [](PrApp* a, PrAppDataSource, const PrAppDataContent* content) -> PrStatus {
+            static_cast<ClipboardApp*>(a)->text.assign(content->text);
             return PrStatus_Ok;
         };
+        window.app = &app;
+        window.appFn = [](const PrAppWindow* w) -> PrApp* { return static_cast<const ClipboardWindow*>(w)->app; };
+        window.requestFrameFn = [](PrAppWindow*) {};
     }
 
-    // Delivers the clipboard's text, as the application does after a request.
-    void deliver(KitFixture& f) {
-        REQUIRE(requested);
-        requested = false;
-        f.push(PrAppEvent{.kind = PrAppEventKind_Clipboard, .input = {.text = text}});
+    // Answers the pending read with the clipboard's text, as the application does after the callback that read returns.
+    void answer() {
+        REQUIRE(app.pending != nullptr);
+        PrAppDataTextFn done = app.pending;
+        app.pending = nullptr;
+        done(app.pendingContext, PrStatus_Ok, app.text);
     }
 };
 
@@ -294,27 +320,34 @@ TEST_CASE("a press places the caret at the nearer edge of the character under it
 TEST_CASE("cut, copy and paste go through the application's clipboard") {
     Edited e("copy me");
     Clipboard clipboard;
-    prUiSetApp(e.f.ui, &clipboard.app);
+    prUiSetWindow(e.f.ui, &clipboard.window);
     e.focus();
     e.f.key(PrAppKey_Left, PrAppModifierFlag_Shift | PrAppModifierFlag_Alt);
     e.f.frame();
     e.f.key('C', PrAppModifierFlag_Super);
     e.f.frame();
-    CHECK(clipboard.text == "me");
+    CHECK(clipboard.app.text == "me");
     CHECK(e.text == "copy me");
     e.f.key('X', PrAppModifierFlag_Control);
     e.f.frame();
     CHECK(e.text == "copy ");
     e.f.key('V', PrAppModifierFlag_Super);
     e.f.frame();
-    clipboard.deliver(e.f);
+    CHECK(e.text == "copy ");
+    clipboard.answer();
     e.f.frame();
     CHECK(e.text == "copy me");
-    // A Clipboard event that no paste asked for inserts nothing.
-    clipboard.requested = true;
-    clipboard.deliver(e.f);
+    // A paste that the user chose from a menu inserts at the caret of the focused control.
+    e.f.push(PrAppEvent{.kind = PrAppEventKind_Paste, .input = {.text = "!"}});
     e.f.frame();
-    CHECK(e.text == "copy me");
+    CHECK(e.text == "copy me!");
+    // A read that is pending when the context leaves the window is cancelled.
+    e.f.key('V', PrAppModifierFlag_Super);
+    e.f.frame();
+    REQUIRE(clipboard.app.pending != nullptr);
+    prUiSetWindow(e.f.ui, nullptr);
+    CHECK(clipboard.app.pending == nullptr);
+    CHECK(clipboard.app.cancels == 1);
 }
 
 TEST_CASE("the tree paints the selection as a highlight and the caret while the field has focus") {

@@ -28,7 +28,11 @@ constexpr PrStringView kContextImport = "import";
 struct Shell {
     AppState* state;
     PrUi* PR_NULLABLE ui = nullptr;
+
+    // The application, whose clipboard the commands read and write, and the window, whose frame shows what a read
+    // brought. The window's close cancels the reads.
     PrApp* PR_NULLABLE app = nullptr;
+    PrAppWindow* PR_NULLABLE window = nullptr;
 
     // The prompt fields as the last build made them, which the weight commands edit while one has focus.
     PrLayoutNode promptFields[2] = {kPrLayoutNodeNone, kPrLayoutNodeNone};

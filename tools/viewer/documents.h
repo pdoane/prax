@@ -209,9 +209,9 @@ void scrollTo(Loaded& loaded, PrVec2 offset);
 // wider of the viewport and the document's content. An animation fits its viewport, so it is as wide as the viewport.
 float contentWidth(Loaded& loaded);
 
-// Returns what a page reports to the window, in its own px, at `time` of the window's clock, and gives it the
-// application whose clipboard it uses. Any other source reports nothing.
-PrAppOutput output(Loaded& loaded, PrApp* app, double time);
+// Returns what a page reports to `window`, in its own px, at `time` of the window's clock, and gives it the window,
+// whose clipboard it uses. Any other source reports nothing.
+PrAppOutput output(Loaded& loaded, PrAppWindow* window, double time);
 
 // A named, ordered set of documents, listed on first access. Every document of the collection, and every reference, is
 // laid out in a viewport of `width` by `height` CSS pixels, the viewport that the collection's documents are written

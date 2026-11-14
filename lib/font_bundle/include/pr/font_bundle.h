@@ -32,8 +32,9 @@ enum {
     PrFontBundle_NotoMono,
 
     // Substitutes for PDF's standard 14 fonts. Times, Helvetica and Courier map to Tinos, Arimo and Cousine, which have
-    // the same metrics, and those fonts also serve as serif, sans-serif and monospace. Symbol and ZapfDingbats map to
-    // LeviSymbol and Levibats, and math to New Computer Modern Math. Falls back to its own text faces and math face.
+    // the same metrics, and those fonts also serve as serif, sans-serif and system-ui, and monospace. Symbol and
+    // ZapfDingbats map to LeviSymbol and Levibats, and math to New Computer Modern Math. Falls back to its own text
+    // faces and math face.
     PrFontBundle_Standard14,
 
     // Maps serif to IBM Plex Serif, sans-serif and system-ui to IBM Plex Sans, monospace to IBM Plex Mono, and math to

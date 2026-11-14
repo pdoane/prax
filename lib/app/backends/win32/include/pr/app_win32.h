@@ -1,8 +1,11 @@
-// The Win32 application backend: a Windows window and the Win32 message loop.
+// The Win32 application backend: Windows windows and the Win32 message loop.
 //
-// A notification is a balloon on the window's icon in the notification area, and Windows shows it as a toast. The first
-// notification adds the icon, and the end of the run removes it. A new notification replaces the previous one. A click
-// on the icon also brings the window forward. A headless window posts no notifications.
+// A window's surface is a PrAppSurfaceKind_Hwnd. The application has a hidden window of its own, which receives its
+// wakes and the system's broadcasts and owns the clipboard's data, so that it runs while it has no windows.
+//
+// A notification is a balloon on the application's icon in the notification area, and Windows shows it as a toast. The
+// first notification adds the icon, and the end of the run removes it. A new notification replaces the previous one. A
+// click on the icon brings the last active window forward. A headless application posts no notifications.
 
 #pragma once
 
@@ -15,9 +18,9 @@ PR_ASSUME_NONNULL_BEGIN
 extern "C" {
 #endif
 
-// Creates an application that is a Windows window on the Win32 message loop, as `desc` describes. The process becomes
-// aware of each monitor's DPI, version 2, unless it already chose an awareness.
-PrApp* prAppWin32Create(const PrAppDesc* desc);
+// Creates an application whose windows are Windows windows on the Win32 message loop. The process becomes aware of each
+// monitor's DPI, version 2, unless it already chose an awareness.
+PrApp* prAppWin32Create(const PrAppOptions* options);
 
 #if defined(__cplusplus)
 }

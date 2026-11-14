@@ -37,7 +37,7 @@ typedef struct PrVtermInputDesc {
 //   Otherwise a repeat is sent as a press, and a release is left to the caller. A caller passes a release only for a
 //   key whose press it passed. The protocol's alternate keys are approximated from the event. The shifted key comes
 //   from the key's meaning and its text, and the base layout key from its position on the PC-101 layout.
-// - Clipboard text is sent as a paste, as prVtermInputPaste sends it.
+// - A Paste event's text is sent as prVtermInputPaste sends it.
 // - A pointer's press, release and move, and a scroll, are reported if the program asked for them. If it did not, the
 //   pointer is left to the caller, for example to select text. While the alternate screen shows, a scroll that is not
 //   reported sends cursor keys instead, so that a pager scrolls, unless the program turned off alternate scroll mode

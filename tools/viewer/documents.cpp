@@ -332,11 +332,11 @@ float contentWidth(Loaded& loaded) {
     return loaded.viewport.x;
 }
 
-PrAppOutput output(Loaded& loaded, PrApp* app, double time) {
+PrAppOutput output(Loaded& loaded, PrAppWindow* window, double time) {
     std::lock_guard<std::mutex> lock(loaded.mutex);
     if (loaded.html == nullptr)
         return PrAppOutput{};
-    htmlSetApp(*loaded.html, app);
+    htmlSetWindow(*loaded.html, window);
     return htmlOutput(*loaded.html, time);
 }
 

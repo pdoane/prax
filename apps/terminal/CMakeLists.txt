@@ -7,7 +7,7 @@ target_link_libraries(terminal_app PUBLIC prax::app prax::color prax::font prax:
                                    PRIVATE prax::layout pr_warnings)
 
 pr_app(terminal main.cpp)
-target_link_libraries(terminal PRIVATE terminal_app prax::studio_window prax::font_bundle prax::vterm)
+target_link_libraries(terminal PRIVATE terminal_app prax::studio_app prax::font_bundle prax::vterm)
 
 if (PR_DEVELOP)
     pr_module_tests(terminal_app tests/test_terminal_app.cpp)

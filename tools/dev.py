@@ -58,7 +58,12 @@ def python(module, *args, cwd=ROOT, env=None, check=True):
 
 def executable(directory, name, wasm=False):
     """Returns the path of the program `name` in `directory`, with the platform's extension, or the extension of
-    Emscripten's script that loads a WebAssembly program."""
+    Emscripten's script that loads a WebAssembly program. On macOS, a program built as an application bundle runs from
+    inside the bundle."""
+    if not wasm and darwin():
+        bundled = os.path.join(directory, name + ".app", "Contents", "MacOS", name)
+        if os.path.exists(bundled):
+            return bundled
     return os.path.join(directory, name + (".js" if wasm else ".exe" if WINDOWS else ""))
 
 

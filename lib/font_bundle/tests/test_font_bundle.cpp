@@ -133,7 +133,7 @@ TEST_CASE("a stack of bundles installs each file once, and falls back to each bu
     // The first bundle that gives a name binds it, and a later bundle binds what the earlier ones do not.
     CHECK(familyOf(set, "serif") == "Tinos");
     CHECK(familyOf(set, "Helvetica") == "Arimo");
-    CHECK(familyOf(set, "system-ui") == "Noto Sans");
+    CHECK(familyOf(set, "system-ui") == "Arimo");
     uint32_t count = prFontSetFallbackCount(set);
     REQUIRE(count > 1);
     CHECK(fallbackFamily(set, 0) == "Arimo");
