@@ -29,12 +29,12 @@ void build(void* context, PrUi*, const PrUiRound*) {
         .background = PrKitBackground(opaque ? PrKitBackground_App : PrKitBackground_None),
     };
     PrLayoutNode window = prKitSurface(w->kit, kPrLayoutNodeNone, {}, style);
-    // A Custom title bar shows while the frame has one, which a fullscreen window does not.
-    if (w->desc.decoration != PrAppWindowDecoration_Custom || w->titleBar.height == 0) {
+    if (w->desc.decoration != PrAppWindowDecoration_Custom) {
         w->desc.build(w->desc.context, w, window, w->extent);
         return;
     }
-    // The application's title bar is at the top of the surface, and the application fills the rest.
+    // The application's title bar is at the top of the surface, and the application fills the rest. While the frame has
+    // no title bar, as in fullscreen, the title bar's content stays, in a plain row (prKitTitleBar).
     PrKitTitleBar titleBar{
         .bar = w->titleBar,
         .maximized = prAppWindowState(w->appWindow) == PrAppWindowState_Maximized,
