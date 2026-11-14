@@ -347,7 +347,8 @@ TEST_CASE("a key with Option held means the key that it types without Option, as
     Run run;
     run.begin = [](Run& r) {
         NSView* view = viewOf(r.window);
-        for (NSEventType type : {NSEventTypeKeyDown, NSEventTypeKeyUp}) {
+        NSEventType types[] = {NSEventTypeKeyDown, NSEventTypeKeyUp};
+        for (NSEventType type : types) {
             NSEvent* optionOne = [NSEvent keyEventWithType:type location:NSZeroPoint
                 modifierFlags:NSEventModifierFlagOption timestamp:0 windowNumber:view.window.windowNumber context:nil
                 characters:@"¡" charactersIgnoringModifiers:@"1" isARepeat:NO keyCode:18];
