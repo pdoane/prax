@@ -34,7 +34,7 @@ TEST_CASE("a title bar drags the window, a control within it takes presses, and 
     PrLayoutNode button = kPrLayoutNodeNone;
     PrKitTitleBar titleBar{.bar = {.height = 32, .flags = PrAppTitleBarFlag_ProgramButtons}};
     f.build = [&](PrLayoutNode root) {
-        PrLayoutNode row = prKitTitleBar(f.kit, root, &titleBar);
+        PrLayoutNode row = prKitTitleBar(f.kit, root, titleBar);
         button = prKitButton(f.kit, row, {.text = "Menu"}, {});
     };
     f.frame();
@@ -60,7 +60,7 @@ TEST_CASE("a title bar keeps its content out of the system's insets, and a windo
     KitFixture f;
     PrLayoutNode row = kPrLayoutNodeNone;
     PrKitTitleBar titleBar{.bar = {.height = 28, .leading = 70}};
-    f.build = [&](PrLayoutNode root) { row = prKitTitleBar(f.kit, root, &titleBar); };
+    f.build = [&](PrLayoutNode root) { row = prKitTitleBar(f.kit, root, titleBar); };
     f.frame();
     f.frame();
     Span<const PrAppTitleBarRegion> regions = regionsOf(f);

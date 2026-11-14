@@ -108,11 +108,11 @@ void sidebarRow(PrKit* kit, PrLayoutNode list, const SidebarEntry& entry, Galler
 
 void buildSidebar(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
     findActiveSection(kit, state);
-    PrKitSurfaceStyle sidebar{.background = PrKitBackground_App, .rules = PrKitRuleFlag_Right};
+    PrKitPanelStyle sidebar{.background = PrKitBackground_App, .rules = PrKitRuleFlag_Right};
     sidebar.box.overflow = PrKitOverflow_Clip;
     sidebar.box.place.width = prKitPx(kSidebarWidth);
     sidebar.box.place.flex = PrKitFlex_Fixed;
-    PrLayoutNode side = prKitSurface(kit, parent, {}, sidebar);
+    PrLayoutNode side = prKitPanel(kit, parent, {}, sidebar);
 
     PrKitBoxStyle head{.gap = kPrKitSpace3, .padding = {kPrKitSpace5, kPrKitSpace4, kPrKitSpace5, kPrKitSpace4}};
     head.place.flex = PrKitFlex_Fixed;

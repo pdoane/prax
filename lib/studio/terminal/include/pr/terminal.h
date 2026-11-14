@@ -1,8 +1,13 @@
 // Studio's terminal: a program that runs on a pseudoterminal, shown in a view of a window.
 //
 // A terminal runs its program on a pseudoterminal of its own process (pr/process.h) and parses the program's output
-// (pr/vterm.h). It draws the screen as cells of a monospaced font, aligned to target pixels. An application gives the
-// terminal the kit to draw with, and declares it in each round as one part of its window.
+// (pr/vterm.h). It draws the screen as cells of a monospaced font, aligned to target pixels.
+//
+// A terminal belongs to its application, not to a window. The window that shows it declares it in each round with that
+// window's kit (prTerminalFrame), and a terminal shows in one window at a time. A terminal that a window stops
+// declaring, as in a tab that does not show, leaves that window at the end of the round, and a frame in another window
+// moves it there. The application services every terminal as it wakes (prTerminalService), whether or not a window
+// shows it.
 //
 // While the view has focus, the terminal sends the user's keys, text, pastes, pointer and scrolls to the program, in
 // the forms that the program asked for. If the program does not read the pointer, the view handles it instead:
@@ -30,13 +35,13 @@
 // draws while it holds the lock, and then draws from the copy.
 //
 // The parser wakes the application (prAppWake) if the screen changes while the terminal shows. It also wakes it for an
-// event such as a bell, whether or not the terminal shows. It wakes it at most once until the next frame or update. A
+// event such as a bell, whether or not the terminal shows. It wakes it at most once until the next frame or service. A
 // synchronized update holds back changes until it ends, or for at most one second. The terminal acts on events in its
-// next frame, or in its next update if it does not show.
+// next frame or service.
 //
 // Alerts. The bell flashes the screen briefly if the terminal shows. The flash fades unless the user asks for reduced
-// motion. If the window is not active, the bell also requests the user's attention (prAppWindowRequestAttention), once
-// until the window is active again.
+// motion. If the window that shows the terminal is not active, the bell also requests the user's attention
+// (prAppWindowRequestAttention), once until the window is active again.
 //
 // The program's notifications (pr/vterm.h) post as desktop notifications (prAppNotificationPost), under the condition
 // that the program names. A notification with no condition posts unless the terminal has focus in the active window. A
@@ -94,15 +99,13 @@ typedef uint8_t PrTerminalShellIntegration;
 
 // What a terminal runs and draws with.
 typedef struct PrTerminalDesc {
-    PrKit* kit;
+    // The application, or null for none. It takes the clipboard's writes, opens URLs, posts notifications and wakes for
+    // the program's output.
+    PrApp* PR_NULLABLE app;
 
     // The monospaced font of the screen. Its size sets the size of a cell. The terminal derives the bold, italic and
     // bold italic fonts from the same families.
     PrTextFontDesc font;
-
-    // The window that shows the terminal, or null for none. Its application takes the clipboard's writes, opens URLs,
-    // posts notifications and wakes for the program's output.
-    PrAppWindow* PR_NULLABLE window;
 
     // The launcher, which must outlive the terminal, and the program it runs (PrProcessDesc). The program is a path or
     // a name to search for in PATH. A null directory is the launcher's. The terminal adds the variables that name its
@@ -129,8 +132,8 @@ typedef struct PrTerminalDesc {
     void* PR_NULLABLE openFileContext;
 } PrTerminalDesc;
 
-// Creates a terminal. Its program starts in the first frame (prTerminalFrame), so that the program's pseudoterminal has
-// the screen's size from the start. Whether it started is prTerminalLaunchStatus.
+// Creates a terminal. Its program starts in the first frame that measures the view (prTerminalFrame), so that the
+// program's pseudoterminal has the screen's size from the start. Whether it started is prTerminalLaunchStatus.
 PrTerminal* prTerminalCreate(const PrTerminalDesc* desc);
 
 // Ends the program if it still runs, and frees the terminal.
@@ -143,26 +146,32 @@ enum {
 };
 typedef uint8_t PrTerminalBackground;
 
-// Declares the terminal's view under `parent` for this round, with an extent of `extent` px. Draws what the program
-// wrote, sends the program the user's input, and acts on the screen's events. The screen takes as many whole columns
-// and rows as fit right of the gutter. The first frame starts the program on a pseudoterminal of that size, and later
-// frames resize the pseudoterminal to match.
+// Declares the terminal's view under `parent` for this round, in the window whose kit is `kit`. Draws what the program
+// wrote, sends the program the user's input, and acts on the screen's events. A frame in another window than the last
+// frame's moves the terminal there. The terminal keeps its program, its screen and scrollback, its scroll position, its
+// selection, and a paste that waits for confirmation, and takes the window's theme and pixel ratio.
+//
+// The view fills its parent: the room that a flex box's other children leave it, or a block's extent. The screen takes
+// as many whole columns and rows as fit in the view right of the gutter. The first frame that measures the view starts
+// the program on a pseudoterminal of that size, and later frames resize the pseudoterminal to match.
 //
 // The box that `background` names takes the terminal's background color, which shows under the whole view. Over it, the
 // view draws the gutter's marks, the cell backgrounds that differ from it, the text, the images, the selection and the
 // bell's flash. A strip narrower than a cell past the last column and row shows only the background.
-void prTerminalFrame(PrTerminal* terminal, PrLayoutNode parent, PrVec2 extent, PrTerminalBackground background);
+void prTerminalFrame(PrTerminal* terminal, PrKit* kit, PrLayoutNode parent, PrTerminalBackground background);
 
 // The terminal's background color, with straight alpha. It is the screen's default background, or its default
 // foreground in reverse video. The kit's theme sets it, and the program may change it (OSC 11). Returns the color that
 // the last frame showed, or the screen's current color before the first frame.
 PrColor prTerminalBackground(const PrTerminal* terminal);
 
-// Services a terminal that the round does not declare. An application calls it each round for each terminal that does
-// not show. It acts on the screen's events, such as a bell or a new title, and shows the program's exit. The program's
-// output is parsed whether or not the terminal shows, so the program never blocks on its output. The terminal loses
-// focus, and the screen keeps its columns and rows until a frame declares it again.
-void prTerminalUpdate(PrTerminal* terminal);
+// Acts on the screen's events, such as a bell, a new title or a notification, and shows the program's exit. An
+// application calls it for every terminal as it wakes (prAppWake), whether or not a window shows the terminal, and
+// never during the terminal's frame. `window` is the window that holds the terminal, as the window of its tab, whether
+// or not it shows the terminal: a bell or a notification that the user does not see asks for its attention while it is
+// inactive. The program's output is parsed whether or not the terminal shows, so the program never blocks on its
+// output. A terminal that no window shows keeps its columns and rows until a frame declares it again.
+void prTerminalService(PrTerminal* terminal, PrAppWindow* PR_NULLABLE window);
 
 // The element that shows the screen in the last frame, or kPrLayoutNodeNone. This element takes focus.
 PrLayoutNode prTerminalNode(const PrTerminal* terminal);
@@ -186,7 +195,7 @@ PrRawString prTerminalWorkingDirectory(const PrTerminal* terminal);
 // Whether the program exited, and how. A program that has not started, or failed to start, has not exited.
 PrProcessInfo prTerminalProcessInfo(const PrTerminal* terminal);
 
-// Returns true once the terminal tried to start its program, in the first frame.
+// Returns true once the terminal tried to start its program, in the first frame that measured the view.
 bool prTerminalLaunched(const PrTerminal* terminal);
 
 // PrStatus_Ok until the program fails to start, and then the status of prProcessLaunch. The screen then says that the

@@ -11,7 +11,7 @@
 #include "pr/integer.h"
 #include "pr/kit_box.h"
 #include "pr/kit_menu.h"
-#include "pr/kit_surface.h"
+#include "pr/kit_panel.h"
 #include "pr/kit_text.h"
 #include "pr/kit_theme.h"
 #include "pr/layout_frame.h"
@@ -1126,7 +1126,7 @@ void debugLine(TextEditor* editor, PrLayoutNode column, PrStringView text) {
 // and the debuggee's last lines of output.
 void buildDebugPanel(TextEditor* editor, PrLayoutNode parent, float top, PrVec2 extent) {
     const TextEditorDebugSession* session = editor->debug;
-    PrKitSurfaceStyle style{
+    PrKitPanelStyle style{
         .box = {
             .direction = PrKitDirection_Row,
             .overflow = PrKitOverflow_Clip,
@@ -1143,7 +1143,7 @@ void buildDebugPanel(TextEditor* editor, PrLayoutNode parent, float top, PrVec2 
     placed.inset[PrRectSide_Top] = prLayoutLengthPx(top);
     PrLayoutTree* tree = prUiTree(editor->ui);
     PrLayoutNode holder = prLayoutTreeFrameElement(tree, parent, 0, record(tree, placed));
-    PrLayoutNode panel = prKitSurface(editor->kit, holder, {}, style);
+    PrLayoutNode panel = prKitPanel(editor->kit, holder, {}, style);
 
     PrTextEditorDebugState state = textEditorDebugState(session);
     PrLayoutNode stack = debugColumn(editor, panel, "CALL STACK");

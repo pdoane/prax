@@ -142,13 +142,13 @@ void sectionInspector(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
             "A group header folds its rows away, and a numeric field scrubs under a drag.");
     PrLayoutNode panel = demoPanel(kit, section, "ENTITY PROPERTIES", "ENTITY . PLAYER", true);
     {
-        PrKitSurfaceStyle bar{.rules = PrKitRuleFlag_Bottom};
+        PrKitPanelStyle bar{.rules = PrKitRuleFlag_Bottom};
         bar.box.direction = PrKitDirection_Row;
         bar.box.align = PrKitAlign_Center;
         bar.box.gap = kPrKitSpace3;
         bar.box.padding = prKitEdgesXY(kPrKitSpace4, kPrKitSpace5);
         bar.box.place.flex = PrKitFlex_Fixed;
-        PrLayoutNode identity = prKitSurface(kit, panel, {}, bar);
+        PrLayoutNode identity = prKitPanel(kit, panel, {}, bar);
         prKitIcon(kit, identity, {.icon = PrKitIconKind_Cube}, {.size = 14, .tone = PrKitTone_Secondary});
         PrKitTextField name{.text = inspector.name};
         PrKitFieldStyle small{.size = PrKitControlSize_Sm};
@@ -217,22 +217,20 @@ void sectionInspector(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
         prKitSlider(kit, drag, {.value = prKitScalarF32(&inspector.drag), .min = 0, .max = 1}, {});
         PrKitNumberRange unit{.step = 0.005, .min = 0, .max = 1, .hasMin = true, .hasMax = true};
         PrLayoutNode field = prKitNumberField(kit, drag, {.value = prKitScalarF32(&inspector.drag), .range = unit}, {});
-        PrKitPlace fixed{.width = prKitPx(72), .flex = PrKitFlex_Fixed};
-        prKitPlace(kit, field, &fixed);
+        prKitPlace(kit, field, {.width = prKitPx(72), .flex = PrKitFlex_Fixed});
         prKitToggle(kit, prKitInspectorRow(kit, rigidbody, {.label = "Use Gravity"}, {}),
             {.value = &inspector.useGravity}, {});
     }
     {
-        PrKitSurfaceStyle foot{.rules = PrKitRuleFlag_Top};
+        PrKitPanelStyle foot{.rules = PrKitRuleFlag_Top};
         foot.box.direction = PrKitDirection_Row;
         foot.box.padding = prKitEdgesAll(kPrKitSpace4);
         foot.box.place.flex = PrKitFlex_Fixed;
-        PrLayoutNode add = prKitSurface(kit, panel, {}, foot);
+        PrLayoutNode add = prKitPanel(kit, panel, {}, foot);
         PrKitButton content{.text = "Add Component", .icon = PrKitIconKind_Plus};
         PrKitButtonStyle small{.size = PrKitControlSize_Sm};
         PrLayoutNode button = prKitButton(kit, add, content, small);
-        PrKitPlace fill{.flex = PrKitFlex_Fill};
-        prKitPlace(kit, button, &fill);
+        prKitPlace(kit, button, {.flex = PrKitFlex_Fill});
     }
 
     // Monospaced labels set telemetry keys apart from prose.
@@ -277,14 +275,14 @@ void sectionToolbar(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
     ToolbarState& toolbar = state.toolbar;
     PrLayoutNode section = sectionFrame(kit, parent, "12", "Toolbar", "The tool row and the transport beside it.", {});
     PrLayoutNode panel = demoPanel(kit, section, "VIEWPORT TOOLBAR", "MAIN", true);
-    PrKitSurfaceStyle strip{.background = PrKitBackground_Panel};
+    PrKitPanelStyle strip{.background = PrKitBackground_Panel};
     strip.box.direction = PrKitDirection_Row;
     strip.box.align = PrKitAlign_Center;
     strip.box.gap = kPrKitSpace1;
     strip.box.padding = prKitEdgesXY(0, kPrKitSpace3);
     strip.box.place.height = prKitPx(kPrKitHeightLg);
     strip.box.place.flex = PrKitFlex_Fixed;
-    PrLayoutNode bar = prKitSurface(kit, panel, {}, strip);
+    PrLayoutNode bar = prKitPanel(kit, panel, {}, strip);
     const char* const tips[] = {"Select", "Move", "Rotate", "Scale"};
     const PrKitIconKind tools[] = {PrKitIconKind_Cursor, PrKitIconKind_Move, PrKitIconKind_Rotate, PrKitIconKind_Scale};
     for (uint32_t i = 0; i < 4; ++i) {

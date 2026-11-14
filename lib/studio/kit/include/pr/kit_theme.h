@@ -19,8 +19,8 @@ extern "C" {
 // ---------------------------------------------------------------------------------------------------------------------
 // Palettes
 
-// A theme's colors, in straight alpha. Accent and semantic colors keep their roles across variants. The surface, rule
-// and text ramps give each variant its contrast.
+// A theme's colors, in straight alpha. Accent and semantic colors keep their roles across variants. The panel, rule and
+// text ramps give each variant its contrast.
 typedef struct PrKitPalette {
     PrColor accent;
     PrColor accentWeak;             // a selected item's wash
@@ -32,7 +32,7 @@ typedef struct PrKitPalette {
     PrColor warning;
     PrColor danger;
 
-    // The surfaces, from the application's background up to a raised control, and the viewport's.
+    // The panels, from the application's background up to a raised control, and the viewport's.
     PrColor bg0;
     PrColor bg1;
     PrColor bg2;

@@ -1,6 +1,6 @@
-// Studio Kit's surfaces: the backgrounds that the application, its panels, bars and cards are drawn on.
+// Studio Kit's panels: the backgrounds that the application, its panels, bars and cards are drawn on.
 
-#include "pr/kit_surface.h"
+#include "pr/kit_panel.h"
 
 #include "pr/layout_frame.h"
 
@@ -32,9 +32,9 @@ PrColor backgroundColor(const PrKit& kit, PrKitBackground background) {
     }
 }
 
-// A surface's box: its box's style, with a one px border on the sides it rules.
+// A panel's box: its box's style, with a one px border on the sides it rules.
 PR_NO_PADDING_BEGIN
-struct SurfaceBox {
+struct PanelBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
     PrKitBoxStyle style;
     PrKitRuleFlags rules;
@@ -54,8 +54,8 @@ struct SurfaceBox {
 };
 PR_NO_PADDING_END
 
-// Returns a surface's background and rule colors. Rules on the HUD background use the HUD's border color.
-KitColors surfaceColors(const PrKit& kit, PrKitBackground background) {
+// Returns a panel's background and rule colors. Rules on the HUD background use the HUD's border color.
+KitColors panelColors(const PrKit& kit, PrKitBackground background) {
     const PrKitPalette& p = kit.theme.palette;
     return KitColors{
         .background = backgroundColor(kit, background),
@@ -63,14 +63,14 @@ KitColors surfaceColors(const PrKit& kit, PrKitBackground background) {
     };
 }
 
-// Returns the record of a surface in `style`.
-PrLayoutStyleIndex surfaceStyle(PrKit& kit, const PrKitSurfaceStyle& style) {
-    return kitStyle(kit, SurfaceBox{.style = style.box, .rules = style.rules}, kitContainerFlex(style.box),
-        surfaceColors(kit, style.background));
+// Returns the record of a panel in `style`.
+PrLayoutStyleIndex panelStyle(PrKit& kit, const PrKitPanelStyle& style) {
+    return kitStyle(kit, PanelBox{.style = style.box, .rules = style.rules}, kitContainerFlex(style.box),
+        panelColors(kit, style.background));
 }
 
 // A panel header's bar: a row on the header background with a rule below it, a medium control's height.
-PrKitSurfaceStyle headerBar() {
+PrKitPanelStyle headerBar() {
     return {
         .box = {
             .direction = PrKitDirection_Row,
@@ -111,8 +111,8 @@ PR_NO_PADDING_END
 
 using namespace pr_impl;
 
-PrLayoutNode prKitSurface(PrKit* kit, PrLayoutNode parent, PrKitBox box, PrKitSurfaceStyle style) {
-    return kitBoxNode(*kit, parent, box, style.box.overflow, surfaceStyle(*kit, style));
+PrLayoutNode prKitPanel(PrKit* kit, PrLayoutNode parent, PrKitBox box, PrKitPanelStyle style) {
+    return kitBoxNode(*kit, parent, box, style.box.overflow, panelStyle(*kit, style));
 }
 
 PrLayoutNode prKitSelectable(PrKit* kit, PrLayoutNode parent, PrKitSelectable selectable, PrKitBoxStyle style) {
@@ -130,7 +130,7 @@ PrLayoutNode prKitSelectable(PrKit* kit, PrLayoutNode parent, PrKitSelectable se
 PrLayoutNode prKitPanelHeader(PrKit* kit, PrLayoutNode parent, PrKitPanelHeader header) {
     PrKit& k = *kit;
     PrLayoutNode bar =
-        kitBoxNode(k, parent, PrKitBox{.key = header.key}, PrKitOverflow_Visible, surfaceStyle(k, headerBar()));
+        kitBoxNode(k, parent, PrKitBox{.key = header.key}, PrKitOverflow_Visible, panelStyle(k, headerBar()));
     prKitLabel(kit, bar, PrKitLabel{.text = header.title}, kHeaderTitle);
     prKitSpacer(kit, bar, PrKitSpacer{});
     if (header.meta.size != 0)

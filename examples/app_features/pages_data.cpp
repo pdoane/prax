@@ -1,5 +1,5 @@
-// The data's pages: the clipboard in each form and the selection, drags into the window, and file dialogs, the file
-// manager and the trash.
+// The data's pages: the clipboard in each form and the selection, drags in and out of the window with a file that a
+// drag promises, and file dialogs, the file manager and the trash.
 
 #include "examples/app_features/pages_data.h"
 
@@ -7,7 +7,7 @@
 #include "pr/file.h"
 #include "pr/integer.h"
 #include "pr/kit_box.h"
-#include "pr/kit_surface.h"
+#include "pr/kit_panel.h"
 #include "pr/kit_text.h"
 #include "pr/print.h"
 #include "pr/raw_string.h"
@@ -24,7 +24,8 @@ namespace {
 // The type of the custom content that the Clipboard page writes and reads.
 constexpr PrStringView kCustomType = "org.prax.app-features";
 
-// The content of a file that a Save dialog chose.
+// The content of the file that a drag promises, and of a file that a Save dialog chose.
+constexpr PrStringView kPromised = "Promised by app_features\n";
 constexpr PrStringView kSaved = "Saved by app_features\n";
 
 PrByteView bytesOf(PrStringView text) {
@@ -122,6 +123,14 @@ void droppedFiles(void* context, PrStatus status, const PrAppDataFile* PR_NULLAB
     for (uint32_t i = 0; i < count; ++i)
         f.dropped.push(format("file: {} ({} bytes{})", files[i].name, files[i].size, files[i].directory ? ", directory" : ""));
     sourceFiles(context, status, files, count);
+}
+
+// Ends the promise that the drop asked for, once its file is written.
+void promiseWritten(void* context, PrStatus status) {
+    Features& f = featuresOf(context);
+    logLine(f, format("promised file written: {}", statusName(status)));
+    if (PrAppWindow* control = controlOf(f))
+        prAppWindowDragPromiseEnd(control, f.promiseIndex, status);
 }
 
 // Writes a new file in the user's temporary directory, and returns its path, or empty if it cannot be written.
@@ -246,7 +255,7 @@ void pageDrags(Features& f, PrStudioWindow* window, PrLayoutNode parent) {
     PrLayoutNode in = section(kit, parent, "DROP INTO THE WINDOW");
     const PrUiPayload* dragging = prUiDragging(ui);
     bool over = false;
-    PrLayoutNode zone = prKitSurface(kit, in, {}, PrKitSurfaceStyle{
+    PrLayoutNode zone = prKitPanel(kit, in, {}, PrKitPanelStyle{
         .box = {.align = PrKitAlign_Center, .padding = prKitEdgesAll(kPrKitSpace5)},
         .background = PrKitBackground_Raised,
         .rules = PrKitRuleFlag_All,
@@ -267,6 +276,26 @@ void pageDrags(Features& f, PrStudioWindow* window, PrLayoutNode parent) {
         line(kit, in, "nothing dropped yet");
     for (const String& item : f.dropped)
         line(kit, in, item);
+
+    PrLayoutNode out = section(kit, parent, "DRAG OUT OF THE WINDOW");
+    PrLayoutNode source = prKitPanel(kit, out, {}, PrKitPanelStyle{
+        .box = {.align = PrKitAlign_Center, .padding = prKitEdgesAll(kPrKitSpace5)},
+        .background = PrKitBackground_Raised,
+        .rules = PrKitRuleFlag_All,
+    });
+    prKitLabel(kit, source, {.text = "Drag me to another application, or to the desktop"}, {});
+    prUiSetFlags(ui, source, PrUiFlag_Pressable);
+    prUiSetCursor(ui, source, PrAppCursor_Grab);
+    static const PrAppDragPromise kPromises[] = {{.name = "Prax Note.txt"}};
+    PrAppDragDesc desc{
+        .content = {.forms = PrAppDataFormFlag_Text, .text = "Dragged from app_features"},
+        .promises = kPromises,
+        .promiseCount = uint32_t(countOf(kPromises)),
+        .operations = PrAppDragOperationFlag_Copy,
+    };
+    prUiDragStartContent(ui, source, 4, &desc);
+    note(kit, out, "The drag carries text, and promises a file, Prax Note.txt, which the program writes once the drop's "
+        "target asks for it: drop it on the Finder or the Explorer to see DragPromise. The web cannot promise a file.");
 }
 
 void pageFiles(Features& f, PrStudioWindow* window, PrLayoutNode parent) {
@@ -298,6 +327,14 @@ void pageFiles(Features& f, PrStudioWindow* window, PrLayoutNode parent) {
     }
     note(kit, m, "The temporary file lands in the Trash or the Recycle Bin, where it can be restored. The web cannot "
         "reveal a file or move it to the trash.");
+}
+
+bool dataWindowEvent(Features& f, const PrAppEvent& e) {
+    if (e.kind != PrAppEventKind_DragPromise)
+        return false;
+    f.promiseIndex = e.promise.index;
+    prAppDataWriteFile(appOf(f), e.promise.destination, 0, 0, bytesOf(kPromised), promiseWritten, &f);
+    return true;
 }
 
 bool dataAppEvent(Features& f, const PrAppEvent& e) {

@@ -502,7 +502,7 @@ PrLayoutNode prKitGraph(PrKit* kit, PrLayoutNode parent, PrKitGraph graph, PrKit
     if (editable)
         flags = flags | PrUiFlag_Pressable | PrUiFlag_Focusable;
     prUiSetFlags(ui, canvas, flags);
-    prKitPlace(kit, canvas, &style.place);
+    prKitPlace(kit, canvas, style.place);
     GraphState* state = static_cast<GraphState*>(prUiState(ui, canvas, &kKitOwner, KitStateKey_Graph,
         sizeof(GraphState)));
     PrKitGraphView& view = *g.view;
@@ -519,7 +519,7 @@ PrLayoutNode prKitGraph(PrKit* kit, PrLayoutNode parent, PrKitGraph graph, PrKit
         }
         PrVec2 pointer{};
         PrVec2 at{};
-        if (zoom && prUiPointer(ui, &pointer) && prUiLocalPoint(ui, canvas, pointer, &at)) {
+        if (zoom && prUiPointer(ui, nullptr, &pointer) && prUiLocalPoint(ui, canvas, pointer, &at)) {
             PrVec2 pivot = toGraph(view, at);
             float scale = view.zoom * prF32Exp(-wheel.y * kZoomPerPx);
             view.zoom = scale < kMinZoom ? kMinZoom : scale > kMaxZoom ? kMaxZoom : scale;

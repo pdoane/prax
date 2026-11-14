@@ -6,7 +6,7 @@
 #include "pr/count_of.h"
 #include "pr/kit_box.h"
 #include "pr/kit_choice.h"
-#include "pr/kit_surface.h"
+#include "pr/kit_panel.h"
 #include "pr/kit_text.h"
 #include "pr/print.h"
 #include "pr/ui.h"
@@ -71,7 +71,7 @@ void chosen(Features& f, uint64_t tag) {
     switch (tag) {
         case Tag_NewWindow:
             if (f.second == nullptr)
-                openSecond(f);
+                openSecond(f, nullptr);
             break;
         case Tag_Toolbar:
             f.toolbarShown = !f.toolbarShown;
@@ -202,7 +202,7 @@ void pageMenus(Features& f, PrStudioWindow* window, PrLayoutNode parent) {
         "menu's items reach the window that has the keyboard, and a system text field.");
 
     PrLayoutNode c = section(kit, parent, "CONTEXT MENU");
-    PrLayoutNode area = prKitSurface(kit, c, {}, PrKitSurfaceStyle{
+    PrLayoutNode area = prKitPanel(kit, c, {}, PrKitPanelStyle{
         .box = {.align = PrKitAlign_Center, .padding = {kPrKitSpace6, kPrKitSpace5, kPrKitSpace6, kPrKitSpace5}},
         .background = PrKitBackground_Raised,
         .rules = PrKitRuleFlag_All,
@@ -212,7 +212,7 @@ void pageMenus(Features& f, PrStudioWindow* window, PrLayoutNode parent) {
     PrUi* ui = prStudioWindowUi(window);
     prUiSetFlags(ui, area, PrUiFlag_Pressable);
     PrVec2 at{};
-    if (prUiClicked(ui, area, 1) && prUiPointer(ui, &at)) {
+    if (prUiClicked(ui, area, 1) && prUiPointer(ui, nullptr, &at)) {
         static const PrAppMenuItem kItems[] = {
             {.tag = Tag_ContextCopy, .title = "Copy"},
             {.tag = Tag_ContextInspect, .title = "Inspect"},

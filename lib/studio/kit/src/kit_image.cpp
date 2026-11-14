@@ -59,6 +59,6 @@ PrLayoutNode prKitImage(PrKit* kit, PrLayoutNode parent, PrKitImage image, PrKit
     content.kind = PrLayoutContentKind_Image;
     content.image = image.image;
     prLayoutTreeFrameSetContent(tree, node, &content);
-    prKitPlace(kit, node, &style.place);
+    prKitPlace(kit, node, style.place);
     return node;
 }

@@ -53,8 +53,7 @@ void windowButton(PrKit& kit, PrLayoutNode parent, float height, PrKitIconKind i
     prLayoutTreeFrameSetStyle(kit.tree, c.node,
         kitStyle(kit, WindowButtonBox{.height = height}, WindowButtonFlex{}, dress.fill, dress.ink));
     kitIcon(kit, c.node, 0, icon, kWindowButtonGlyph, kit.looks[look].icon);
-    PrKitPlace top{.align = PrKitAlign_Start};
-    prKitPlace(&kit, c.node, &top);
+    prKitPlace(&kit, c.node, {.align = PrKitAlign_Start});
     prUiTitleBarRegion(kit.ui, c.node, kind);
 }
 
@@ -64,16 +63,16 @@ void windowButton(PrKit& kit, PrLayoutNode parent, float height, PrKitIconKind i
 
 using namespace pr_impl;
 
-PrLayoutNode prKitTitleBar(PrKit* kit, PrLayoutNode parent, const PrKitTitleBar* titleBar) {
+PrLayoutNode prKitTitleBar(PrKit* kit, PrLayoutNode parent, PrKitTitleBar titleBar) {
     PrKit& k = *kit;
-    const PrAppTitleBar& bar = titleBar->bar;
+    const PrAppTitleBar& bar = titleBar.bar;
     PrKitBoxStyle bandStyle{.direction = PrKitDirection_Row, .align = PrKitAlign_Center};
     if (bar.height > 0) {
         bandStyle.padding = PrKitEdges{0, bar.trailing, 0, bar.leading};
         bandStyle.place.minHeight = prKitPx(bar.height);
         bandStyle.place.flex = PrKitFlex_Fixed;
     }
-    PrLayoutNode band = prKitBox(kit, parent, PrKitBox{.key = titleBar->key}, bandStyle);
+    PrLayoutNode band = prKitBox(kit, parent, PrKitBox{.key = titleBar.key}, bandStyle);
     PrLayoutNode content = prKitBox(kit, band, PrKitBox{}, PrKitBoxStyle{
         .direction = PrKitDirection_Row,
         .align = PrKitAlign_Center,
@@ -85,7 +84,7 @@ PrLayoutNode prKitTitleBar(PrKit* kit, PrLayoutNode parent, const PrKitTitleBar*
         return content;
     prUiTitleBarRegion(k.ui, band, PrAppTitleBarRegionKind_Drag);
     if ((bar.flags & PrAppTitleBarFlag_ProgramButtons) != 0) {
-        PrKitIconKind maximize = titleBar->maximized ? PrKitIconKind_WindowRestore : PrKitIconKind_WindowMaximize;
+        PrKitIconKind maximize = titleBar.maximized ? PrKitIconKind_WindowRestore : PrKitIconKind_WindowMaximize;
         windowButton(k, band, bar.height, PrKitIconKind_WindowMinimize, PrKitLookId_WindowButton,
             PrAppTitleBarRegionKind_Minimize);
         windowButton(k, band, bar.height, maximize, PrKitLookId_WindowButton, PrAppTitleBarRegionKind_Maximize);

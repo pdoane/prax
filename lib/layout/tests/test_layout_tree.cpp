@@ -1916,8 +1916,12 @@ TEST_CASE("a painter draws another root in a replaced box's content, and draws a
     prLayoutNodeSetContent(f.tree, node, &content);
     PrLayoutRoot roots[2] = {{root, px(40, 40)}, {hosted, px(20, 10)}};
     prLayoutTreeLayout(f.tree, roots, 2);
+    CHECK(prLayoutNodeDrawingRevision(f.tree, hosted) == 0);
     Array<uint8_t> pixels = render(f.tree, 40, 40);
     CHECK(host.calls == 1);
+    uint64_t first = prLayoutNodeDrawingRevision(f.tree, hosted);
+    CHECK(first != 0);
+    CHECK(prLayoutNodeDrawingRevision(f.tree, root) == 0);
     CHECK(pixel(pixels, 40, 5, 5) == "0 255 0 255");
     CHECK(pixel(pixels, 40, 25, 5) == "0 0 0 0");
     CHECK(pixel(pixels, 40, 5, 15) == "0 255 0 255");
@@ -1925,10 +1929,12 @@ TEST_CASE("a painter draws another root in a replaced box's content, and draws a
     // Painting again draws nothing again. A change in the other root draws the box again.
     render(f.tree, 40, 40);
     CHECK(host.calls == 1);
+    CHECK(prLayoutNodeDrawingRevision(f.tree, hosted) == first);
     prLayoutNodeSetStyle(f.tree, fill, f.style(block(10), &red));
     prLayoutTreeLayout(f.tree, roots, 2);
     pixels = render(f.tree, 40, 40);
     CHECK(host.calls == 2);
+    CHECK(prLayoutNodeDrawingRevision(f.tree, hosted) != first);
     CHECK(pixel(pixels, 40, 5, 5) == "255 0 0 255");
     render(f.tree, 40, 40);
     CHECK(host.calls == 2);

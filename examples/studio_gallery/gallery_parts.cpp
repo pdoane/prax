@@ -16,14 +16,13 @@ constexpr float kMeasure = 600;
 } // namespace
 
 PrLayoutNode card(PrKit* kit, PrLayoutNode parent, const PrKitBoxStyle& box) {
-    PrKitSurfaceStyle surface{.box = box, .background = PrKitBackground_Panel, .rules = PrKitRuleFlag_All};
-    return prKitSurface(kit, parent, {}, surface);
+    PrKitPanelStyle look{.box = box, .background = PrKitBackground_Panel, .rules = PrKitRuleFlag_All};
+    return prKitPanel(kit, parent, {}, look);
 }
 
 PrLayoutNode fillLabel(PrKit* kit, PrLayoutNode parent, PrStringView text, const PrKitTextStyle& style) {
     PrLayoutNode label = prKitLabel(kit, parent, {.text = text}, style);
-    PrKitPlace fill{.flex = PrKitFlex_Fill};
-    prKitPlace(kit, label, &fill);
+    prKitPlace(kit, label, {.flex = PrKitFlex_Fill});
     return label;
 }
 
@@ -44,13 +43,13 @@ PrLayoutNode captionRow(PrKit* kit, PrLayoutNode parent, PrStringView text, floa
 PrLayoutNode sectionFrame(PrKit* kit, PrLayoutNode parent, PrStringView number, PrStringView title, PrStringView lede,
         PrStringView description) {
     PrLayoutNode section = prKitBox(kit, parent, {}, {.gap = kPrKitSpace3});
-    PrKitSurfaceStyle header{.rules = PrKitRuleFlag_Bottom};
+    PrKitPanelStyle header{.rules = PrKitRuleFlag_Bottom};
     header.box.direction = PrKitDirection_Row;
     header.box.align = PrKitAlign_Baseline;
     header.box.gap = kPrKitSpace4;
     header.box.padding = PrKitEdges{0, 0, kPrKitSpace6, 0};
     header.box.place.flex = PrKitFlex_Fixed;
-    PrLayoutNode head = prKitSurface(kit, section, {}, header);
+    PrLayoutNode head = prKitPanel(kit, section, {}, header);
     prKitLabel(kit, head, {.text = number}, kMonoStrongFaint);
     prKitLabel(kit, head, {.text = title}, kTitle);
     if (lede.size != 0)
@@ -66,14 +65,14 @@ PrLayoutNode sectionFrame(PrKit* kit, PrLayoutNode parent, PrStringView number, 
 
 PrLayoutNode demoPanel(PrKit* kit, PrLayoutNode parent, PrStringView title, PrStringView tags, bool bare) {
     PrLayoutNode frame = card(kit, parent, PrKitBoxStyle{});
-    PrKitSurfaceStyle header{.background = PrKitBackground_Header, .rules = PrKitRuleFlag_Bottom};
+    PrKitPanelStyle header{.background = PrKitBackground_Header, .rules = PrKitRuleFlag_Bottom};
     header.box.direction = PrKitDirection_Row;
     header.box.align = PrKitAlign_Center;
     header.box.gap = kPrKitSpace3;
     header.box.padding = prKitEdgesXY(0, kPrKitSpace5);
     header.box.place.height = prKitPx(kPrKitHeightSm);
     header.box.place.flex = PrKitFlex_Fixed;
-    PrLayoutNode head = prKitSurface(kit, frame, {}, header);
+    PrLayoutNode head = prKitPanel(kit, frame, {}, header);
     prKitLabel(kit, head, {.text = title}, kCaption);
     if (tags.size != 0) {
         prKitSpacer(kit, head, {});
@@ -105,9 +104,9 @@ PrLayoutNode gridCell(Grid& grid) {
         grid.row = prKitBox(grid.kit, grid.parent, {}, row);
     }
     ++grid.count;
-    PrKitSurfaceStyle cell{.rules = PrKitRuleFlags(grid.ruled ? PrKitRuleFlag_Right | PrKitRuleFlag_Bottom : 0)};
+    PrKitPanelStyle cell{.rules = PrKitRuleFlags(grid.ruled ? PrKitRuleFlag_Right | PrKitRuleFlag_Bottom : 0)};
     cell.box.place.flex = PrKitFlex_Fill;
-    return prKitSurface(grid.kit, grid.row, {}, cell);
+    return prKitPanel(grid.kit, grid.row, {}, cell);
 }
 
 void gridEnd(Grid& grid) {

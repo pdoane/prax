@@ -160,7 +160,7 @@ PR_NO_PADDING_END
 
 // Restyles a node that a widget created in the current round with `place`, so that the caller can place the widget. A
 // widget's node that is placed the same way each round keeps its records, and costs one lookup.
-void prKitPlace(PrKit* kit, PrLayoutNode node, const PrKitPlace* place);
+void prKitPlace(PrKit* kit, PrLayoutNode node, PrKitPlace place);
 
 #if defined(__cplusplus)
 }

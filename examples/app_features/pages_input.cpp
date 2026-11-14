@@ -7,7 +7,7 @@
 #include "pr/integer.h"
 #include "pr/kit_box.h"
 #include "pr/kit_choice.h"
-#include "pr/kit_surface.h"
+#include "pr/kit_panel.h"
 #include "pr/kit_text.h"
 #include "pr/print.h"
 #include "pr/ui.h"
@@ -79,7 +79,7 @@ void pagePointer(Features& f, PrStudioWindow* window, PrLayoutNode parent) {
     PrLayoutNode grid = row(kit, cursors);
     PrUi* ui = prStudioWindowUi(window);
     for (uint32_t i = 0; i < PrAppCursor_Count; ++i) {
-        PrLayoutNode cell = prKitSurface(kit, grid, {}, PrKitSurfaceStyle{
+        PrLayoutNode cell = prKitPanel(kit, grid, {}, PrKitPanelStyle{
             .box = {.padding = prKitEdgesAll(kPrKitSpace3)},
             .background = PrKitBackground_Raised,
             .rules = PrKitRuleFlag_All,

@@ -7,7 +7,7 @@
 #include "pr/kit_button.h"
 #include "pr/kit_choice.h"
 #include "pr/kit_input.h"
-#include "pr/kit_surface.h"
+#include "pr/kit_panel.h"
 #include "pr/kit_text.h"
 #include "pr/layout_query.h"
 #include "pr/layout_unit.h"
@@ -124,7 +124,7 @@ void titleBar(void*, PrStudioWindow* window, PrLayoutNode bar) {
 }
 
 PrLayoutNode section(PrKit* kit, PrLayoutNode parent, PrStringView title) {
-    PrLayoutNode box = prKitSurface(kit, parent, {}, PrKitSurfaceStyle{
+    PrLayoutNode box = prKitPanel(kit, parent, {}, PrKitPanelStyle{
         .box = {.gap = kPrKitSpace3, .padding = prKitEdgesAll(kPrKitSpace4)},
         .background = PrKitBackground_Panel,
         .rules = PrKitRuleFlag_All,

@@ -13,7 +13,7 @@
 #include "pr/kit_collection.h"
 #include "pr/kit_input.h"
 #include "pr/kit_menu.h"
-#include "pr/kit_surface.h"
+#include "pr/kit_panel.h"
 #include "pr/kit_text.h"
 #include "pr/kit_theme.h"
 #include "pr/layout_query.h"
@@ -428,7 +428,7 @@ void build(void* context, PrUi*, const PrUiRound*) {
     Choices& choices = *r.choices;
     PrKitBoxStyle shell{.direction = PrKitDirection_Row, .place = {.width = prKitFill(), .height = prKitFill()}};
     PrLayoutNode root = prKitBox(kit, kPrLayoutNodeNone, {}, shell);
-    PrKitSurfaceStyle panelStyle{
+    PrKitPanelStyle panelStyle{
         .box = {
             .overflow = PrKitOverflow_ScrollY,
             .gap = kPrKitSpace3,
@@ -438,7 +438,7 @@ void build(void* context, PrUi*, const PrUiRound*) {
         .background = PrKitBackground_Panel,
         .rules = PrKitRuleFlag_Right,
     };
-    PrLayoutNode panel = prKitSurface(kit, root, {}, panelStyle);
+    PrLayoutNode panel = prKitPanel(kit, root, {}, panelStyle);
     ui.slot = prKitBox(kit, root, {}, {.place = {.height = prKitFill(), .flex = PrKitFlex_Fill}});
 
     const std::vector<Collection>& collections = allCollections();
@@ -555,18 +555,18 @@ bool uiEvent(Ui* ui, const PrAppEvent& event) {
                 ui->pressed = false;
             // The controls see every move, so that their hover follows the pointer out of them, and every press, so
             // that a press elsewhere closes their menus.
-            prUiPushEvent(ui->ui, &event);
+            prUiPushEvent(ui->ui, kPrUiViewportMain, &event);
             return taken;
         }
         case PrAppEventKind_Scroll:
             if (!overControls(*ui, ui->pointer))
                 return false;
-            prUiPushEvent(ui->ui, &event);
+            prUiPushEvent(ui->ui, kPrUiViewportMain, &event);
             return true;
         case PrAppEventKind_KeyDown:
         case PrAppEventKind_KeyUp: {
             if (holdsKeys(*ui)) {
-                prUiPushEvent(ui->ui, &event);
+                prUiPushEvent(ui->ui, kPrUiViewportMain, &event);
                 return true;
             }
             // The tree takes the arrow and page keys. The rest are the viewer's.
@@ -575,7 +575,7 @@ bool uiEvent(Ui* ui, const PrAppEvent& event) {
                 event.keyboard.key == PrAppKey_Right || event.keyboard.key == PrAppKey_PageUp ||
                 event.keyboard.key == PrAppKey_PageDown;
             if (moves)
-                prUiPushEvent(ui->ui, &event);
+                prUiPushEvent(ui->ui, kPrUiViewportMain, &event);
             return moves;
         }
         case PrAppEventKind_Text:
@@ -583,10 +583,10 @@ bool uiEvent(Ui* ui, const PrAppEvent& event) {
         case PrAppEventKind_CompositionEnd:
             if (!holdsKeys(*ui))
                 return false;
-            prUiPushEvent(ui->ui, &event);
+            prUiPushEvent(ui->ui, kPrUiViewportMain, &event);
             return true;
         case PrAppEventKind_Paste:
-            prUiPushEvent(ui->ui, &event);
+            prUiPushEvent(ui->ui, kPrUiViewportMain, &event);
             return true;
         default:
             return false;

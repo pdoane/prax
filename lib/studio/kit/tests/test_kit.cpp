@@ -2,7 +2,7 @@
 #include "pr/kit_box.h"
 #include "pr/kit_button.h"
 #include "pr/kit_icon.h"
-#include "pr/kit_surface.h"
+#include "pr/kit_panel.h"
 #include "pr/kit_text.h"
 
 #include "studio/kit/src/kit.h"
@@ -24,7 +24,7 @@ TEST_CASE("the public headers compile as C") {
     CHECK(prTestKitCApi() == 0);
 }
 
-TEST_CASE("a surface made as the root fills the viewport, and draws its background or, on none, nothing") {
+TEST_CASE("a panel made as the root fills the viewport, and draws its background or, on none, nothing") {
     KitFixture f;
     f.frame();
     PrRect bounds = f.bounds(f.root);
@@ -174,8 +174,7 @@ TEST_CASE("a widget placed by its caller takes the placement, and keeps the plac
         PrLayoutNode row = prKitBox(f.kit, root, {}, {.direction = PrKitDirection_Row, .gap = 0});
         PrKitButton content{.text = "Wide"};
         button = prKitButton(f.kit, row, content, {});
-        PrKitPlace place{.width = prKitPx(200)};
-        prKitPlace(f.kit, button, &place);
+        prKitPlace(f.kit, button, {.width = prKitPx(200)});
     };
     f.frame();
     CHECK(f.bounds(button).right - f.bounds(button).left == 200.0f);

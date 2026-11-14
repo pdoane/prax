@@ -8,7 +8,7 @@
 #include "pr/kit_icon.h"
 #include "pr/kit_image.h"
 #include "pr/kit_menu.h"
-#include "pr/kit_surface.h"
+#include "pr/kit_panel.h"
 #include "pr/ui.h"
 
 #include "examples/studio_gallery/gallery_parts.h"
@@ -24,14 +24,14 @@ constexpr float kFrameSize = 148;
 
 // Creates a square frame for a picture on the viewport's background, which shows where a fit leaves room.
 PrLayoutNode framed(PrKit* kit, PrLayoutNode parent) {
-    PrKitSurfaceStyle surface{.background = PrKitBackground_Viewport};
-    surface.box.place = {
+    PrKitPanelStyle look{.background = PrKitBackground_Viewport};
+    look.box.place = {
         .width = prKitPx(kFrameSize),
         .height = prKitPx(kFrameSize),
         .flex = PrKitFlex_Fixed,
         .align = PrKitAlign_Start,
     };
-    return prKitSurface(kit, parent, {}, surface);
+    return prKitPanel(kit, parent, {}, look);
 }
 
 // A button that shows a tooltip.
@@ -66,8 +66,7 @@ PrLayoutNode specimenRow(PrKit* kit, PrLayoutNode parent, float gap) {
 
 // Places `node` to take the room that its parent leaves.
 void fill(PrKit* kit, PrLayoutNode node) {
-    PrKitPlace place{.flex = PrKitFlex_Fill};
-    prKitPlace(kit, node, &place);
+    prKitPlace(kit, node, {.flex = PrKitFlex_Fill});
 }
 
 } // namespace
@@ -91,8 +90,7 @@ void sectionProgress(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
         const float fractions[] = {0, 0.25f, 0.5f, 0.75f, 1};
         for (float fraction : fractions) {
             PrLayoutNode node = prKitProgress(kit, steps, {.value = fraction});
-            PrKitPlace width{.width = prKitPx(80), .flex = PrKitFlex_Fixed};
-            prKitPlace(kit, node, &width);
+            prKitPlace(kit, node, {.width = prKitPx(80), .flex = PrKitFlex_Fixed});
         }
     }
     {
@@ -127,12 +125,12 @@ void sectionTooltips(PrKit* kit, PrLayoutNode parent) {
         PrLayoutNode panel = demoPanel(kit, section, "ANATOMY", "IN THE FLOW", false);
         PrLayoutNode row = specimenRow(kit, panel, kPrKitSpace3);
         for (const TipButton& tip : kTipButtons) {
-            PrKitSurfaceStyle chip{.background = PrKitBackground_Hud, .rules = PrKitRuleFlag_All};
+            PrKitPanelStyle chip{.background = PrKitBackground_Hud, .rules = PrKitRuleFlag_All};
             chip.box.direction = PrKitDirection_Row;
             chip.box.align = PrKitAlign_Center;
             chip.box.gap = kPrKitSpace3;
             chip.box.padding = prKitEdgesXY(kPrKitSpace1, kPrKitSpace3);
-            PrLayoutNode node = prKitSurface(kit, row, {}, chip);
+            PrLayoutNode node = prKitPanel(kit, row, {}, chip);
             prKitLabel(kit, node, {.text = tip.label}, kBodySmall);
             if (tip.shortcut[0] != 0)
                 prKitKbd(kit, node, {.text = tip.shortcut});
@@ -150,7 +148,7 @@ void sectionTooltips(PrKit* kit, PrLayoutNode parent) {
 }
 
 void sectionDialogs(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
-    PrLayoutNode section = sectionFrame(kit, parent, "17", "Dialogs", "A blocking surface for what cannot be undone.",
+    PrLayoutNode section = sectionFrame(kit, parent, "17", "Dialogs", "A blocking portal for what cannot be undone.",
         "A dialog is a modal carrying a titled card: the scrim dims the page and takes the presses that miss "
             "it, the close control and Escape take it down, and the footer holds the buttons that answer it.");
     {
@@ -166,10 +164,10 @@ void sectionDialogs(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
             prKitLabel(kit, body, {
                 .text = "Three entities and their children go with this. References from other scenes are left broken.",
             }, kBodySecondary);
-            PrKitSurfaceStyle callout{.background = PrKitBackground_Header};
+            PrKitPanelStyle callout{.background = PrKitBackground_Header};
             callout.box.gap = kPrKitSpace1;
             callout.box.padding = prKitEdgesXY(kPrKitSpace2, kPrKitSpace4);
-            PrLayoutNode lines = prKitSurface(kit, body, {}, callout);
+            PrLayoutNode lines = prKitPanel(kit, body, {}, callout);
             const char* const names[] = {
                 "Player . 0x7FF8_A2B0", "Enemy_04 . 0x7FF8_B001",
                 "LightProbe_Grid . 0x7FF8_B112",
@@ -231,7 +229,7 @@ void sectionDialogs(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
 void sectionStatus(PrKit* kit, PrLayoutNode parent) {
     PrLayoutNode section = sectionFrame(kit, parent, "18", "Status Bar & Console", "The two places the engine talks back.", {});
     PrLayoutNode panel = demoPanel(kit, section, "STATUS BAR", "BOTTOM CHROME", true);
-    PrKitSurfaceStyle strip{.background = PrKitBackground_Header, .rules = PrKitRuleFlag_Top};
+    PrKitPanelStyle strip{.background = PrKitBackground_Header, .rules = PrKitRuleFlag_Top};
     strip.box.direction = PrKitDirection_Row;
     strip.box.align = PrKitAlign_Center;
     strip.box.gap = kPrKitSpace4;
@@ -239,7 +237,7 @@ void sectionStatus(PrKit* kit, PrLayoutNode parent) {
     strip.box.overflow = PrKitOverflow_Clip;
     strip.box.place.height = prKitPx(kPrKitHeightSm);
     strip.box.place.flex = PrKitFlex_Fixed;
-    PrLayoutNode bar = prKitSurface(kit, panel, {}, strip);
+    PrLayoutNode bar = prKitPanel(kit, panel, {}, strip);
     auto status = [&](PrLayoutNode at, PrStringView text, PrKitTone tone) {
         PrKitTextStyle style{.role = PrKitTextRole_Caption, .tone = tone};
         prKitLabel(kit, at, {.text = text}, style);
@@ -277,11 +275,11 @@ void sectionStatus(PrKit* kit, PrLayoutNode parent) {
         prKitStatTile(kit, readouts, stat);
 
     PrLayoutNode console = demoPanel(kit, section, "CONSOLE", "LOG LEVELS", true);
-    PrKitSurfaceStyle log{.background = PrKitBackground_Panel};
+    PrKitPanelStyle log{.background = PrKitBackground_Panel};
     log.box.overflow = PrKitOverflow_ScrollY;
     log.box.place.height = prKitPx(180);
     log.box.place.flex = PrKitFlex_Fixed;
-    PrLayoutNode lines = prKitSurface(kit, console, {}, log);
+    PrLayoutNode lines = prKitPanel(kit, console, {}, log);
     for (const PrKitLogLine& entry : kLog)
         prKitLogLine(kit, lines, entry);
     PrLayoutNode compact = demoPanel(kit, section, "COMPACT CONSOLE", "MESSAGE ONLY", true);
@@ -347,9 +345,9 @@ void sectionKeys(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
     for (uint32_t i = 0; i < 3; ++i) {
         const char* name = i == 2 && state.keys.duplicate ? names[0] : names[i];
         PrUiKey key = prUiKey(kit->ui, rows, name);
-        PrKitSurfaceStyle row{.background = PrKitBackground_Raised};
+        PrKitPanelStyle row{.background = PrKitBackground_Raised};
         row.box.padding = prKitEdgesXY(kPrKitSpace3, kPrKitSpace4);
-        PrLayoutNode card = prKitSurface(kit, rows, {.key = key}, row);
+        PrLayoutNode card = prKitPanel(kit, rows, {.key = key}, row);
         prKitLabel(kit, card, {.text = labels[i]}, {});
     }
 }

@@ -1,4 +1,4 @@
-// Windows: surfaces on the screen, each with its own frames, input and handler.
+// Windows: regions of the screen, each with its own frames, input and handler.
 
 #pragma once
 
@@ -208,9 +208,8 @@ typedef struct PrAppFrame {
     PrRect keyboard;
 } PrAppFrame;
 
-// The result of a frame, which the window applies. A library that draws a surface reports its own output, as prUiOutput
-// and prHtmlViewOutput do. A host of several surfaces combines their outputs with prAppOutputPlaced and
-// prAppOutputMerge.
+// The result of a frame, which the window applies. A library that draws a view reports its own output, as prUiOutput
+// and prHtmlViewOutput do. A host of several views combines their outputs with prAppOutputPlaced and prAppOutputMerge.
 typedef struct PrAppOutput {
     PrAppCursor cursor;         // the cursor to show over the window
     bool wantsFrame;            // true to request another frame at the display's next refresh
@@ -440,16 +439,15 @@ void prAppWindowDragPromiseEnd(PrAppWindow* window, uint32_t index, PrStatus sta
 // ---------------------------------------------------------------------------------------------------------------------
 // Outputs
 
-// Returns a surface's output in the window's logical pixels. `origin` is the surface's origin in the window, and
-// `scale` is the number of window logical pixels per surface logical pixel. A caret in another window
-// (PrAppOutput::textInputWindow) stays as it is. The title bar belongs to the window, so the result has no title bar
-// regions.
+// Returns a view's output in the window's logical pixels. `origin` is the view's origin in the window, and `scale` is
+// the number of window logical pixels per view logical pixel. A caret in another window (PrAppOutput::textInputWindow)
+// stays as it is. The title bar belongs to the window, so the result has no title bar regions.
 PrAppOutput prAppOutputPlaced(PrAppOutput output, PrVec2 origin, float scale);
 
-// Combines the outputs of two surfaces of one window. The cursor and the drop operation come from the surface under the
-// pointer. The text input comes from the second surface if it has one, and from the first otherwise. The title bar
-// regions come from the first surface that has them. The result wants a frame if either output does, and its frame time
-// is the earlier of the two that are set.
+// Combines the outputs of two views of one window. The cursor and the drop operation come from the view under the
+// pointer. The text input comes from the second view if it has one, and from the first otherwise. The title bar regions
+// come from the first view that has them. The result wants a frame if either output does, and its frame time is the
+// earlier of the two that are set.
 PrAppOutput prAppOutputMerge(PrAppOutput first, PrAppOutput second, bool pointerInSecond);
 
 #if defined(__cplusplus)

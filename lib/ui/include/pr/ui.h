@@ -44,15 +44,23 @@ void prUiDestroy(PrUi* PR_NULLABLE ui);
 // Returns the tree that the context routes input against.
 PrLayoutTree* prUiTree(const PrUi* ui);
 
-// Sets the window whose application's clipboard the context's widgets cut, copy and paste through, or none, or returns
-// it. Without one, a cut or a copy leaves the clipboard as it was, and a paste pastes nothing. Setting another window
-// cancels a pending paste.
+// Sets the window that shows the context's main viewport, or none, or returns it. The window is the context's way to
+// the platform: what its widgets ask of the system goes through the window and its application, and the context's
+// output is the window's. Without a window, the context and its widgets work within the tree alone, and what needs the
+// system does nothing. Setting another window drops what the context waits for from the previous one.
 void prUiSetWindow(PrUi* ui, PrAppWindow* PR_NULLABLE window);
 PrAppWindow* PR_NULLABLE prUiWindow(const PrUi* ui);
 
-// Copies an event and its text into the queue for the next frame. Must not be called during a build. A Paste event goes
-// to the focused control.
-void prUiPushEvent(PrUi* ui, const PrAppEvent* event);
+// A viewport that shows a root of the tree: the main viewport, which shows the round's first root, or the viewport of a
+// portal that a host shows (prUiSetHost), which is the portal's key.
+typedef uint64_t PrUiViewport;
+
+// The main viewport.
+enum { kPrUiViewportMain = 0 };
+
+// Copies an event and its text into the queue for the next frame. The event's position, if it has one, is in px of
+// `viewport`. Must not be called during a build. A Paste event goes to the focused control.
+void prUiPushEvent(PrUi* ui, PrUiViewport viewport, const PrAppEvent* event);
 
 // Reads the clipboard's text and delivers it to `control` as a Paste event in a later frame, whose request the read
 // makes. If a read is pending, its text goes to `control` instead of starting another read. A read that fails pastes
@@ -82,8 +90,12 @@ typedef void (*PrUiBuildFn)(void* PR_NULLABLE context, PrUi* ui, const PrUiRound
 typedef struct PrUiFrameDesc {
     double time;                    // seconds, from the host's monotonic clock
     double delta;                   // seconds since the previous frame
-    PrVec2 extent;                  // viewport size in px, used for each round's layout
+    PrVec2 extent;                  // main viewport size in px, used for each round's layout
     uint32_t maxRounds;             // upper limit on rounds in the frame; 0 means 1
+
+    // The greatest extent of a portal's own viewport in px, such as the work area of the display, which portals are
+    // laid out in. Zero means `extent`.
+    PrVec2 portalExtent;
 
     // The display that the frame is shown on, whose pixel ratio the tree lays out for, and the user's preferences. A
     // build reads them through prUiDisplay and prUiUserPreferences.
@@ -199,12 +211,86 @@ bool prUiIsDisabled(PrUi* ui, PrLayoutNode node);
 // ---------------------------------------------------------------------------------------------------------------------
 // Overlay
 
-// Returns the round's overlay, a layer that covers the viewport's root and paints above everything in flow. The pointer
-// passes through the overlay to what is beneath it, except where a node in the overlay takes it. Every library creates
-// what floats over the application under the overlay, such as a menu, a tooltip or a drag's ghost.
+// Returns the round's overlay, a layer that covers the main viewport's root and paints above everything in flow. The
+// pointer passes through the overlay to what is beneath it, except where a node in the overlay takes it. A library
+// creates what stays in the main viewport under the overlay, such as the preview of a drop. What floats over the
+// application is a portal instead.
 //
 // The first call in a round creates the overlay under the first root that the round created, which must already exist.
 PrLayoutNode prUiOverlay(PrUi* ui);
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Portals
+//
+// A portal floats over the context's window, such as a menu, a tooltip or a dialog. It floats in the overlay, unless
+// the context has a host, which shows each portal in a viewport of its own: a window that the context's window owns, on
+// its display and at its pixel ratio. A library creates a portal the same way in both cases, and the context lays it
+// out and places it. The context's frame lays out every portal, and its output speaks for the windows of all of them
+// (prUiOutput).
+
+// How a portal is placed against its parent viewport.
+enum {
+    PrUiPortalKind_Popup,          // against an anchor, as a menu, a popover or a tooltip is
+    PrUiPortalKind_Dialog,         // centered on the parent
+};
+typedef uint8_t PrUiPortalKind;
+
+// A portal. A Popup opens against `placement`'s anchor, in px of `parent`. A Dialog in the overlay is centered on its
+// parent, or `top` px below the parent's top if `top` is nonzero, and a host may place it otherwise, as a sheet. A
+// modal Dialog takes the input of its parent while it shows. In the overlay, the context covers the parent beneath the
+// dialog with an element of record `cover`, which takes the pointer, or a transparent one for 0.
+typedef struct PrUiPortalDesc {
+    PrUiPortalKind kind;
+    PrUiViewport parent;
+    PrAppPopupPlacement placement;
+    float top;
+    bool modal;
+    PrLayoutStyleIndex cover;
+} PrUiPortalDesc;
+
+// Creates the round's portal of `key`, which must be unique in the tree, with input `flags`, and returns the node that
+// holds its content. The node is as large as its content at the last layout, and the context places it. A portal whose
+// flags are transparent lets the pointer through its viewport too. Call during a build. A portal lasts while every
+// round creates it.
+PrLayoutNode prUiPortal(PrUi* ui, PrUiKey key, const PrUiPortalDesc* desc, PrUiFlags flags);
+
+// Returns the viewport that shows `node` in the committed tree, or the main viewport for a node that it does not show.
+// Geometry queries on the node answer in px of that viewport.
+PrUiViewport prUiNodeViewport(const PrUi* ui, PrLayoutNode node);
+
+// Returns the window that shows the viewport of a portal, or null if none does yet.
+typedef PrAppWindow* PR_NULLABLE (*PrUiViewportWindowFn)(void* PR_NULLABLE context, PrUiViewport viewport);
+
+// What shows the portals of a context in viewports of their own: windows that the context's window (prUiSetWindow)
+// owns, on that window's display. The context converts points between the windows (prAppWindowPointToDisplay), so that
+// a pointer that one viewport captures can reach another, and names the window that holds the text being edited in its
+// output.
+typedef struct PrUiHost {
+    PrUiViewportWindowFn window;
+    void* PR_NULLABLE context;
+} PrUiHost;
+
+// Sets the host that shows the context's portals, or none to show them in the overlay. Call between frames.
+void prUiSetHost(PrUi* ui, const PrUiHost* PR_NULLABLE host);
+
+// A portal that a host shows, as of the last frame: its viewport, the viewport it floats from, and its place against
+// that viewport (PrUiPortalDesc). `root` is the root that the viewport shows (prLayoutNodeDraw), and `extent` the
+// portal's extent in px. `passthrough` is true if the pointer passes through it.
+typedef struct PrUiViewportInfo {
+    PrUiViewport viewport;
+    PrUiViewport parent;
+    PrUiPortalKind kind;
+    bool modal;
+    bool passthrough;
+    PrAppPopupPlacement placement;
+    float top;
+    PrLayoutNode root;
+    PrVec2 extent;
+} PrUiViewportInfo;
+
+// Writes up to `capacity` of the portals that the host shows to `out`, each after its parent and below the portals
+// after it, and returns their number.
+uint32_t prUiViewports(const PrUi* ui, PrUiViewportInfo* PR_NULLABLE out, uint32_t capacity);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Contexts and signals
@@ -234,14 +320,21 @@ bool prUiSignaled(const PrUi* ui, PrLayoutNode node, const void* owner, uint32_t
 // ---------------------------------------------------------------------------------------------------------------------
 // Pointer
 
-// Writes the most recently routed pointer position, in viewport px, to `out`. Returns false if no pointer event has
-// arrived yet.
-bool prUiPointer(const PrUi* ui, PrVec2* out);
+// Writes the most recently routed pointer position to `out`, in px of the viewport that it is over, or of the viewport
+// that reported it if it is over none, and that viewport to `viewport`. Returns false if no pointer event has arrived
+// yet.
+bool prUiPointer(const PrUi* ui, PrUiViewport* PR_NULLABLE viewport, PrVec2* out);
 
-// Maps `point`, in viewport px, into the node's own coordinates as of the last layout: px from the top left of its
-// first box, through every transform between them (prLayoutNodeLocalPoint). A widget measures a position within a box
-// this way, such as a slider's value under the pointer, so that it holds under a rotation, a scale or a projection.
-// Returns false if the node has no box, or if the point does not reach the box's plane.
+// Writes the extent of `node` at the last layout to `out`, in px, and returns true, or returns false if the node has no
+// extent yet, as before its first layout. A widget that fits what it shows to its box reads the box's extent this way.
+// If the round's layout gives the node another extent than the round read, the frame runs another round, as far as its
+// limit allows, so that the frame shows the node at its new extent. Call during a build.
+bool prUiExtent(PrUi* ui, PrLayoutNode node, PrVec2* out);
+
+// Maps `point`, in px of the node's viewport, into the node's own coordinates as of the last layout: px from the top
+// left of its first box, through every transform between them (prLayoutNodeLocalPoint). A widget measures a position
+// within a box this way, such as a slider's value under the pointer, so that it holds under a rotation, a scale or a
+// projection. Returns false if the node has no box, or if the point does not reach the box's plane.
 bool prUiLocalPoint(const PrUi* ui, PrLayoutNode node, PrVec2 point, PrVec2* out);
 
 // Returns true if the pointer is over the node or one of its descendants in the current round.
@@ -255,8 +348,9 @@ double prUiHoverSeconds(const PrUi* ui, PrLayoutNode node);
 // closest to that node instead, wherever the pointer is.
 void prUiSetCursor(PrUi* ui, PrLayoutNode node, PrAppCursor cursor);
 
-// Sets where the caret of the text being edited stands in this frame, in logical px of the window, and the kind of
-// text, which chooses the on-screen keyboard and how the system treats the typed text (PrAppOutput::textInputKind).
+// Sets where the caret of the text being edited stands in this frame, in px of the viewport that shows the focused
+// node, and the kind of text, which chooses the on-screen keyboard and how the system treats the typed text
+// (PrAppOutput::textInputKind).
 void prUiSetTextInput(PrUi* ui, PrRect caret, PrAppTextInputKind kind);
 
 // Marks `node` as a part of the window's custom title bar in the current round (PrAppWindowDecoration_Custom). Its
@@ -265,11 +359,13 @@ void prUiSetTextInput(PrUi* ui, PrRect caret, PrAppTextInputKind kind);
 // build.
 void prUiTitleBarRegion(PrUi* ui, PrLayoutNode node, PrAppTitleBarRegionKind kind);
 
-// Returns what the context reports to the window, which a frame handler returns or merges with its other surfaces: the
+// Returns what the context reports to the window, which a frame handler returns or merges with its other views: the
 // cursor resolved in the last round, or the arrow if no node requested one, whether it wants another frame because a
 // tween is moving, a press is repeating, an activation is pending, input is still queued, or a frame was requested, the
 // caret of the text being edited, the title bar regions at the end of the last frame, and the answer to a drag of the
-// system. The regions are valid until the next frame. Call between frames.
+// system. The output is the context's window's (prUiSetWindow). A caret in a portal's viewport names its window
+// (PrAppOutput::textInputWindow). The window of a portal shows the same cursor and answers drags the same way. The
+// regions are valid until the next frame. Call between frames.
 PrAppOutput prUiOutput(const PrUi* ui);
 
 // Returns true if the node has captured the pointer with a press of `button`. Button 0 is the primary button.
@@ -305,8 +401,9 @@ void prUiActivate(PrUi* ui, PrLayoutNode node);
 
 // The state of a pointer drag by a node that captured the pointer.
 //
-// `delta` is the motion in the current round. `moved` becomes true once the pointer has gone past the drag threshold,
-// and stays true for the rest of the drag. `released` and `cancelled` are set only in the round that ends the drag.
+// `origin` and `position` are in px of the viewport of the press, wherever the pointer goes. `delta` is the motion in
+// the current round. `moved` becomes true once the pointer has gone past the drag threshold, and stays true for the
+// rest of the drag. `released` and `cancelled` are set only in the round that ends the drag.
 typedef struct PrUiDrag {
     PrVec2 origin;
     PrVec2 position;
@@ -365,7 +462,16 @@ typedef uint8_t PrUiPayloadFlags;
 // the window (PrUiPayloadFlag_AnyWindow), the call does nothing.
 void prUiDragStart(PrUi* ui, PrLayoutNode source, float threshold, uint64_t kind, uint64_t value, PrUiPayloadFlags flags);
 
-// Returns the payload being dragged, or null if there is none. The pointer is valid until the drag ends.
+// Starts a drag of content from a primary press held by `source`, which other applications can take, such as text or a
+// file that the drag promises. The build calls it in each round of the press. Once the pointer moves `threshold` px,
+// the context hands `desc` to the system through its window (prAppWindowDragStart), which copies it, and the system
+// carries the content from then on. A press starts one drag. Without a window, the call does nothing. The drag's end
+// arrives as the export of a payload of the system's kind does (prUiExportEnded).
+void prUiDragStartContent(PrUi* ui, PrLayoutNode source, float threshold, const PrAppDragDesc* desc);
+
+// Returns the payload being dragged, or null if there is none. The round that drops the payload, on a target or on
+// none, still returns it, so that what a build shows while a payload is dragged, such as a drop target, is there to
+// take the drop. The pointer is valid until the round ends.
 const PrUiPayload* PR_NULLABLE prUiDragging(const PrUi* ui);
 
 // Makes the node a drop target for payloads of `kind` in the current round. Returns true if it was the innermost drop
@@ -379,7 +485,8 @@ bool prUiIsDropTarget(PrUi* ui, PrLayoutNode node, uint64_t kind);
 // its kind under the pointer at release.
 const PrUiPayload* PR_NULLABLE prUiDropped(const PrUi* ui, PrLayoutNode node);
 
-// Returns the payload that left the window (PrUiPayloadFlag_AnyWindow) if its drag ended in the current round, or null.
+// Returns the payload that left the window (PrUiPayloadFlag_AnyWindow), or the content that a drag handed to the system
+// (prUiDragStartContent) as a payload of kPrUiPayloadKindSystem, if its drag ended in the current round, or null.
 // Writes what became of it to `operation`: Move if a window of the application took it, this one included, and None if
 // none did, as when the user dropped it outside every window or canceled the drag. A program that moves its content out
 // of the window on a drop elsewhere, as a tab torn off into a window of its own, does so on None.
@@ -405,8 +512,8 @@ bool prUiKeyPressed(PrUi* ui, PrLayoutNode node, PrAppKey key, PrAppModifierFlag
 bool prUiKeyCaptured(PrUi* ui, PrLayoutNode node, PrAppKey key, PrAppModifierFlags modifiers);
 
 // The input events routed to a node in the current round, in order. Pointer events go to the node that captured the
-// pointer, or otherwise to the node under the pointer. Key and text events go to the focused node. The array is valid
-// until the build returns.
+// pointer, or otherwise to the node under the pointer, with their positions in px of the viewport of the press or of
+// the node. Key and text events go to the focused node. The array is valid until the build returns.
 typedef struct PrUiEvents {
     const PrAppEvent* PR_NULLABLE events;
     uint32_t count;

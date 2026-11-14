@@ -13,7 +13,7 @@
 #include "pr/kit_image.h"
 #include "pr/kit_input.h"
 #include "pr/kit_menu.h"
-#include "pr/kit_surface.h"
+#include "pr/kit_panel.h"
 #include "pr/kit_text.h"
 #include "pr/min_max.h"
 #include "pr/string.h"
@@ -94,8 +94,7 @@ void selectName(PrKit* kit, PrLayoutNode parent, const Array<String>& names, Str
         PrStringView missing, PrKitFlex flex = PrKitFlex_Fill) {
     PrStringView label = names.isEmpty() ? missing : current.isEmpty() ? PrStringView("Choose...") : current.view();
     PrLayoutNode select = prKitSelect(kit, parent, {.label = label, .disabled = names.isEmpty()}, {});
-    PrKitPlace place{.flex = flex};
-    prKitPlace(kit, select, &place);
+    prKitPlace(kit, select, {.flex = flex});
     int32_t step = 0;
     if (prKitStepped(kit, select, &step) && !names.isEmpty()) {
         uint32_t at = names.find(current);
@@ -252,8 +251,7 @@ void buildLoras(PrKit* kit, PrLayoutNode parent, AppState& state) {
             .precision = 2,
         };
         PrLayoutNode number = prKitNumberField(kit, line, weight, {.size = PrKitControlSize_Sm});
-        PrKitPlace narrow{.width = prKitPx(64), .flex = PrKitFlex_Fixed};
-        prKitPlace(kit, number, &narrow);
+        prKitPlace(kit, number, {.width = prKitPx(64), .flex = PrKitFlex_Fixed});
         PrLayoutNode remove = prKitButton(kit, line, {.icon = PrKitIconKind_Close},
             {.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Sm});
         if (prKitActivated(kit, remove)) {
@@ -556,7 +554,7 @@ void buildRecord(PrKit* kit, PrLayoutNode stack, AppState& state, Commands& comm
     const ProvenanceRecord* record = selectedRecord(state);
     PrKitBoxStyle layer{.align = PrKitAlign_End, .padding = prKitEdgesAll(kPrKitSpace5)};
     PrLayoutNode over = prKitLayer(kit, stack, {}, layer);
-    PrKitSurfaceStyle panel{
+    PrKitPanelStyle panel{
         .box = {
             .overflow = PrKitOverflow_ScrollY,
             .gap = kPrKitSpace2,
@@ -565,7 +563,7 @@ void buildRecord(PrKit* kit, PrLayoutNode stack, AppState& state, Commands& comm
         },
         .background = PrKitBackground_Panel,
     };
-    PrLayoutNode card = prKitSurface(kit, over, {}, panel);
+    PrLayoutNode card = prKitPanel(kit, over, {}, panel);
     PrLayoutNode header = row(kit, card, kPrKitSpace2);
     prKitLabel(kit, header, {.text = "Image Info"}, textStyle(PrKitTextRole_Caption, PrKitTone_Muted));
     if (record != nullptr)
@@ -608,7 +606,7 @@ void buildImageMenu(PrKit* kit, PrLayoutNode host, Commands& commands) {
 
 void buildViewport(PrKit* kit, PrLayoutNode content, AppState& state, Commands& commands) {
     prCommandScope(kit->ui, content, commands.registry, commands.keymap, kContextGallery);
-    PrKitSurfaceStyle bar{
+    PrKitPanelStyle bar{
         .box = {
             .direction = PrKitDirection_Row,
             .align = PrKitAlign_Center,
@@ -617,7 +615,7 @@ void buildViewport(PrKit* kit, PrLayoutNode content, AppState& state, Commands& 
         },
         .background = PrKitBackground_Header,
     };
-    PrLayoutNode toolbar = prKitSurface(kit, content, {}, bar);
+    PrLayoutNode toolbar = prKitPanel(kit, content, {}, bar);
     commandButton(kit, toolbar, commands, "alchemy.back", "", PrKitIconKind_ArrowLeft);
     commandButton(kit, toolbar, commands, "alchemy.forward", "", PrKitIconKind_ArrowRight);
     prKitDivider(kit, toolbar, {});
@@ -646,7 +644,7 @@ void buildViewport(PrKit* kit, PrLayoutNode content, AppState& state, Commands& 
         prKitLabel(kit, toolbar, {.text = label}, textStyle(PrKitTextRole_Mono, PrKitTone_Muted));
     }
 
-    PrKitSurfaceStyle background{
+    PrKitPanelStyle background{
         .box = {
             .justify = PrKitJustify_Center,
             .align = PrKitAlign_Center,
@@ -656,7 +654,7 @@ void buildViewport(PrKit* kit, PrLayoutNode content, AppState& state, Commands& 
         },
         .background = PrKitBackground_Viewport,
     };
-    PrLayoutNode stage = prKitSurface(kit, content, {}, background);
+    PrLayoutNode stage = prKitPanel(kit, content, {}, background);
     PrLayoutNode stack = prKitStack(kit, stage, {}, {
         .justify = PrKitJustify_Center,
         .align = PrKitAlign_Center,
@@ -720,7 +718,7 @@ void buildBrowser(PrKit* kit, PrLayoutNode content, AppState& state, Commands& c
         // A secondary click acts on what it lands on: a press outside the selection replaces it, and a press inside a
         // selection of several leaves all of them for the menu to act on.
         PrVec2 pointer{};
-        if (prUiClicked(ui, tile, 1) && prUiPointer(ui, &pointer)) {
+        if (prUiClicked(ui, tile, 1) && prUiPointer(ui, nullptr, &pointer)) {
             if (gallery.selected[i] == 0)
                 pendingSelect = i;
             prKitOpenContextMenu(kit, view, pointer);
@@ -832,7 +830,7 @@ void buildImportDialog(PrKit* kit, PrLayoutNode trigger, AppState& state, View& 
         return;
     }
     prCommandScope(kit->ui, body, commands.registry, commands.keymap, kContextImport);
-    PrKitSurfaceStyle stage{
+    PrKitPanelStyle stage{
         .box = {
             .justify = PrKitJustify_Center,
             .align = PrKitAlign_Center,
@@ -841,7 +839,7 @@ void buildImportDialog(PrKit* kit, PrLayoutNode trigger, AppState& state, View& 
         },
         .background = PrKitBackground_Viewport,
     };
-    PrLayoutNode preview = prKitSurface(kit, body, {}, stage);
+    PrLayoutNode preview = prKitPanel(kit, body, {}, stage);
     const PrDrawImage* image = state.import.image;
     if (image != nullptr) {
         PrKitImageStyle fit{
@@ -942,8 +940,7 @@ void buildTitleBarRow(PrKit* kit, PrLayoutNode bar, View& view, Commands& comman
         view.paletteQuery = query;
 
     PrLayoutNode run = row(kit, bar);
-    PrKitPlace fixed{.flex = PrKitFlex_Fixed};
-    prKitPlace(kit, run, &fixed);
+    prKitPlace(kit, run, {.flex = PrKitFlex_Fixed});
     commandButton(kit, run, commands, "alchemy.generate", kRuns[state.mode], PrKitIconKind_Play,
         PrKitButtonVariant_Primary, PrKitControlSize_Sm);
     commandButton(kit, run, commands, "alchemy.interrupt", "", PrKitIconKind_Stop, PrKitButtonVariant_Danger,
@@ -958,8 +955,7 @@ void buildTitleBarRow(PrKit* kit, PrLayoutNode bar, View& view, Commands& comman
         if (job->progressMax != 0) {
             float done = float(job->progressValue) / float(job->progressMax);
             PrLayoutNode progress = prKitProgress(kit, end, {.value = done});
-            PrKitPlace width{.width = prKitPx(120)};
-            prKitPlace(kit, progress, &width);
+            prKitPlace(kit, progress, {.width = prKitPx(120)});
             String steps = format("{}/{}", job->progressValue, job->progressMax);
             prKitLabel(kit, end, {.text = steps}, textStyle(PrKitTextRole_Mono, PrKitTone_Muted));
         }
@@ -989,8 +985,7 @@ void buildView(PrKit* kit, PrLayoutNode root, View& view, Commands& commands) {
     prCommandScope(kit->ui, root, commands.registry, commands.keymap, "");
     view.browserTitle = format("Browser · {}", state.gallery.entries.count());
     PrLayoutNode dock = prKitDockBuild(kit, root, {.dock = view.dock, .describe = describePanel, .context = &view});
-    PrKitPlace fill{.flex = PrKitFlex_Fill};
-    prKitPlace(kit, dock, &fill);
+    prKitPlace(kit, dock, {.flex = PrKitFlex_Fill});
     for (uint32_t i = 0; i < prKitDockPaneCount(view.dock); ++i) {
         PrKitDockPane pane = prKitDockPane(view.dock, i);
         switch (pane.panel) {

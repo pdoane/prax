@@ -32,7 +32,6 @@ struct Scribe {
     PrKit* PR_NULLABLE kit = nullptr;
     PrUi* PR_NULLABLE ui = nullptr;
     PrApp* PR_NULLABLE app = nullptr;
-    PrAppWindow* PR_NULLABLE window = nullptr;
     PrTextFont* PR_NULLABLE font = nullptr;    // what the text is set in
     PrFontSet* PR_NULLABLE fonts = nullptr;    // provides the terminals' monospaced faces
 
@@ -92,8 +91,9 @@ void buildScribe(Scribe& s, PrLayoutNode root, PrVec2 extent);
 // document loads.
 bool afterLayout(Scribe& s);
 
-// Handles Scribe's own window events. A click on a terminal's notification shows that terminal in the panel and gives
-// it focus. Returns true if Scribe handled the event.
+// Handles Scribe's application events. A wake services every terminal, whether or not the panel shows it
+// (prTerminalService). A click on a terminal's notification shows that terminal in the panel and gives it focus.
+// Returns true if Scribe handled the event.
 bool handleEvent(Scribe& s, const PrAppEvent& event);
 
 } // namespace scribe

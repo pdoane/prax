@@ -7,7 +7,7 @@
 #include "pr/draw_list.h"
 #include "pr/font_set.h"
 #include "pr/kit.h"
-#include "pr/kit_surface.h"
+#include "pr/kit_panel.h"
 #include "pr/layout_scene.h"
 #include "pr/layout_tree.h"
 #include "pr/text_font.h"

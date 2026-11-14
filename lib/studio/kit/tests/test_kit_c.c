@@ -8,7 +8,7 @@
 #include "pr/kit_icon.h"
 #include "pr/kit_input.h"
 #include "pr/kit_menu.h"
-#include "pr/kit_surface.h"
+#include "pr/kit_panel.h"
 #include "pr/kit_text.h"
 #include "pr/kit_theme.h"
 

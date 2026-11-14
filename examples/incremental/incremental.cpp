@@ -28,7 +28,7 @@
 #include "pr/kit_button.h"
 #include "pr/kit_choice.h"
 #include "pr/kit_input.h"
-#include "pr/kit_surface.h"
+#include "pr/kit_panel.h"
 #include "pr/kit_text.h"
 #include "pr/layout_frame.h"
 #include "pr/layout_unit.h"
@@ -673,7 +673,7 @@ String statusOf(const Stream& s) {
 void buildApp(void* context, PrKit* kit, PrLayoutNode root) {
     Stream& s = *static_cast<Stream*>(context);
     PrLayoutTree* tree = kit->tree;
-    PrKitSurfaceStyle header{
+    PrKitPanelStyle header{
         .box = {
             .direction = PrKitDirection_Row,
             .align = PrKitAlign_Center,
@@ -683,7 +683,7 @@ void buildApp(void* context, PrKit* kit, PrLayoutNode root) {
         .background = PrKitBackground_Hud,
         .rules = PrKitRuleFlag_Bottom,
     };
-    PrLayoutNode bar = prKitSurface(kit, root, {}, header);
+    PrLayoutNode bar = prKitPanel(kit, root, {}, header);
     PrKitTextStyle title{.role = PrKitTextRole_Heading};
     prKitLabel(kit, bar, {.text = "Incremental"}, title);
 
@@ -712,7 +712,7 @@ void buildApp(void* context, PrKit* kit, PrLayoutNode root) {
         .max = kMaxRate,
         .scale = PrKitSliderScale_Ratio,
     }, {});
-    prKitPlace(kit, rate, &slider);
+    prKitPlace(kit, rate, slider);
     prKitLabel(kit, bar, {.text = formatToBuffer(Span(label), "{:.0f} bytes a piece", prF32Round(s.chunk))}, meta);
     PrLayoutNode chunk = prKitSlider(kit, bar, {
         .value = prKitScalarF32(&s.chunk),
@@ -720,16 +720,14 @@ void buildApp(void* context, PrKit* kit, PrLayoutNode root) {
         .max = kMaxChunk,
         .scale = PrKitSliderScale_Ratio,
     }, {});
-    prKitPlace(kit, chunk, &slider);
+    prKitPlace(kit, chunk, slider);
     PrLayoutNode progress = prKitProgress(
         kit, bar, {.value = s.text.isEmpty() ? 0.0f : float(s.delivered) / float(s.text.count())});
-    PrKitPlace grow{.flex = PrKitFlex_Grow};
-    prKitPlace(kit, progress, &grow);
+    prKitPlace(kit, progress, {.flex = PrKitFlex_Grow});
 
     // The pane is a replaced element that fills the room under the bar, and its painter embeds the page.
     PrLayoutNode pane = prLayoutTreeFrameReplaced(tree, root, 0, 0);
-    PrKitPlace fill{.flex = PrKitFlex_Fill};
-    prKitPlace(kit, pane, &fill);
+    prKitPlace(kit, pane, {.flex = PrKitFlex_Fill});
     if (s.recorded != nullptr) {
         PrLayoutContent content{.kind = PrLayoutContentKind_Painter};
         content.painter = PrLayoutPainter{paintPage, s.recorded, retainPage, releasePage};
@@ -739,12 +737,12 @@ void buildApp(void* context, PrKit* kit, PrLayoutNode root) {
     if (bounds.right - bounds.left >= 1 && bounds.bottom - bounds.top >= 1)
         s.pane = bounds;
 
-    PrKitSurfaceStyle footer{
+    PrKitPanelStyle footer{
         .box = {.padding = prKitEdgesXY(6, 14)},
         .background = PrKitBackground_Hud,
         .rules = PrKitRuleFlag_Top,
     };
-    PrLayoutNode status = prKitSurface(kit, root, {}, footer);
+    PrLayoutNode status = prKitPanel(kit, root, {}, footer);
     String line = statusOf(s);
     prKitLabel(kit, status, {.text = line}, meta);
 }

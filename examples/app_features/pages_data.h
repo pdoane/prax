@@ -1,5 +1,5 @@
-// The data's pages: the clipboard in each form and the selection, drags into the window, and file dialogs, the file
-// manager and the trash.
+// The data's pages: the clipboard in each form and the selection, drags in and out of the window with a file that a
+// drag promises, and file dialogs, the file manager and the trash.
 
 #pragma once
 
@@ -20,6 +20,9 @@ void showDialog(Features& f, PrAppFileDialogKind kind, PrAppFileDialogFlags flag
 void pageClipboard(Features& f, PrStudioWindow* window, PrLayoutNode parent);
 void pageDrags(Features& f, PrStudioWindow* window, PrLayoutNode parent);
 void pageFiles(Features& f, PrStudioWindow* window, PrLayoutNode parent);
+
+// Writes the file that a drop asks a promise for. Returns true for an event that it consumed.
+bool dataWindowEvent(Features& f, const PrAppEvent& e);
 
 // Counts the clipboard's changes. Returns true for an event that it took.
 bool dataAppEvent(Features& f, const PrAppEvent& e);

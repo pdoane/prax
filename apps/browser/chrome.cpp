@@ -20,7 +20,7 @@
 #include "pr/kit_image.h"
 #include "pr/kit_input.h"
 #include "pr/kit_menu.h"
-#include "pr/kit_surface.h"
+#include "pr/kit_panel.h"
 #include "pr/kit_text.h"
 #include "pr/min_max.h"
 #include "pr/storage.h"
@@ -162,24 +162,21 @@ bool opensInNewTab(Browser& b, PrLayoutNode node) {
 // The tab strip, and the button that opens a tab after the strip's tabs. Each tab has a context menu, a middle click
 // closes it, and a drag moves it in the strip.
 void buildTabs(Browser& b, PrLayoutNode root) {
-    PrKitSurfaceStyle style{
+    PrKitPanelStyle style{
         .box = {.direction = PrKitDirection_Row, .align = PrKitAlign_End, .gap = 4, .padding = {6, 8, 0, 8}},
         .background = PrKitBackground_Header,
     };
-    PrLayoutNode row = prKitSurface(b.kit, root, {}, style);
-    PrLayoutNode strip = prKitTabStrip(b.kit, row, {.reorderable = true}, {});
-    PrKitPlace shrink{.flex = PrKitFlex_Auto};
-    prKitPlace(b.kit, strip, &shrink);
-    // The tabs change after the strip is built, so that each tab's node stays with its tab during the round. `chosen`
-    // is the tab that the user chose in the round, if any.
-    uint32_t chosen = UINT32_MAX;
-    uint32_t closing = UINT32_MAX;
-    uint32_t closingOthers = UINT32_MAX;
-    uint32_t duplicating = UINT32_MAX;
-    for (uint32_t i = 0; i < b.tabs.count(); ++i) {
-        Tab& tab = *b.tabs[i];
+    PrLayoutNode row = prKitPanel(b.kit, root, {}, style);
+    PrLayoutNode strip = prKitTabStrip(b.kit, row, {.tabs = b.tabStrip, .reorderable = true}, {});
+    prKitPlace(b.kit, strip, {.flex = PrKitFlex_Auto});
+    // Tabs close and open once the loop has created every tab, so that the loop walks a list that does not change.
+    Tab* closing = nullptr;
+    Tab* closingOthers = nullptr;
+    Tab* duplicating = nullptr;
+    for (Tab* each : b.tabs) {
+        Tab& tab = *each;
         // A tab shows its page's icon, if it has one, its label, and its close control.
-        PrLayoutNode node = prKitTab(b.kit, strip, {.selected = i == b.active});
+        PrLayoutNode node = prKitTab(b.kit, strip, {.id = tabId(tab)});
         if (const PrDrawImage* image = iconsGet(b, tab.info.iconUrl)) {
             PrKitImageStyle icon{
                 .fit = PrKitImageFit_Contain,
@@ -188,10 +185,8 @@ void buildTabs(Browser& b, PrLayoutNode root) {
             prKitImage(b.kit, node, {.image = image}, icon);
         }
         prKitTabLabel(b.kit, node, {.text = tabLabel(tab)});
-        if (prKitActivated(b.kit, node))
-            chosen = i;
         if (prKitActivated(b.kit, prKitTabClose(b.kit, node)) || prUiClicked(b.ui, node, 2))
-            closing = i;
+            closing = &tab;
         PrStringView tip = tab.info.title;
         if (tip.isEmpty())
             tip = addressShown(tab.info.url);
@@ -203,45 +198,33 @@ void buildTabs(Browser& b, PrLayoutNode root) {
         if (prKitActivated(b.kit, prKitMenuItem(b.kit, menu, {.text = "Reload"}, {})))
             tabTraverse(tab, 0);
         if (prKitActivated(b.kit, prKitMenuItem(b.kit, menu, {.text = "Duplicate"}, {})))
-            duplicating = i;
+            duplicating = &tab;
         prKitMenuSeparator(b.kit, menu, {});
         if (prKitActivated(b.kit, prKitMenuItem(b.kit, menu, {.text = "Close Tab"}, {})))
-            closing = i;
+            closing = &tab;
         PrKitMenuItem others{.text = "Close Other Tabs", .disabled = b.tabs.count() < 2};
         if (prKitActivated(b.kit, prKitMenuItem(b.kit, menu, others, {})))
-            closingOthers = i;
+            closingOthers = &tab;
     }
-    uint32_t from = 0;
-    uint32_t to = 0;
-    if (prKitMoved(b.kit, strip, &from, &to) && from < b.tabs.count() && to < b.tabs.count()) {
-        Tab* active = b.tabs[b.active];
-        Tab* moved = b.tabs[from];
-        b.tabs.erase(from);
-        b.tabs.insert(to, moved);
-        b.active = b.tabs.find(active);
-    }
+    // A click or a key in the strip may have chosen another tab.
+    tabsShowActive(b);
     PrKitButtonStyle small{.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Sm};
     PrLayoutNode plus = commandButton(b, row, {.icon = PrKitIconKind_Plus}, small, kCommandNewTab);
-    PrKitPlace below{.margin = {0, 0, 4, 0}};
-    prKitPlace(b.kit, plus, &below);
+    prKitPlace(b.kit, plus, {.margin = {0, 0, 4, 0}});
 
-    if (duplicating != UINT32_MAX) {
-        String url = b.tabs[duplicating]->info.url;
-        tabOpen(b, url, duplicating + 1);
-        chosen = duplicating + 1;
+    if (duplicating != nullptr) {
+        uint32_t after = prKitTabsIndex(b.tabStrip, tabId(*duplicating)) + 1;
+        tabActivate(b, *tabOpen(b, duplicating->info.url, after));
     }
-    if (closingOthers != UINT32_MAX) {
-        Tab* kept = b.tabs[closingOthers];
+    if (closingOthers != nullptr) {
         for (uint32_t i = b.tabs.count(); i-- > 0;) {
-            if (b.tabs[i] != kept)
-                tabClose(b, i);
+            if (b.tabs[i] != closingOthers)
+                tabClose(b, *b.tabs[i]);
         }
-        chosen = 0;
+        tabActivate(b, *closingOthers);
+    } else if (closing != nullptr) {
+        tabClose(b, *closing);
     }
-    if (closing != UINT32_MAX && closingOthers == UINT32_MAX)
-        tabClose(b, closing);
-    if (chosen != UINT32_MAX)
-        tabActivate(b, min(chosen, uint32_t(b.tabs.count() - 1)));
 }
 
 // Returns the address bar's suggestions for the text that the user typed: favorites first, then the history's pages,
@@ -271,7 +254,7 @@ Array<Favorite> suggestionsFor(const Browser& b, const String& typed) {
 void leaveAddress(Browser& b, PrLayoutNode field) {
     prUiSetFocus(b.ui, kPrLayoutNodeNone);
     prKitSetOpen(b.kit, field, false);
-    b.chrome.addressTab = 0;
+    b.chrome.addressTab = nullptr;
 }
 
 // The address bar, and the suggestions under it while the user types. Enter loads what the text means (addressResolve)
@@ -279,10 +262,10 @@ void leaveAddress(Browser& b, PrLayoutNode field) {
 void buildAddress(Browser& b, PrLayoutNode toolbar, Tab& tab) {
     Chrome& chrome = b.chrome;
     // The bar follows the active tab while the user is not editing it.
-    if (!chrome.addressFocused || chrome.addressTab != tab.key) {
+    if (!chrome.addressFocused || chrome.addressTab != &tab) {
         chrome.address = addressShown(tab.info.url);
         chrome.typed = chrome.address;
-        chrome.addressTab = tab.key;
+        chrome.addressTab = &tab;
     }
     PrKitTextField field{
         .text = chrome.address,
@@ -378,12 +361,12 @@ void buildMenu(Browser& b, PrLayoutNode toolbar) {
 void buildToolbar(Browser& b, PrLayoutNode root, Tab& tab) {
     bool loading = tab.info.loading;
     PrLayoutNode stack = prKitStack(b.kit, root, {}, {});
-    PrKitSurfaceStyle style{
+    PrKitPanelStyle style{
         .box = {.direction = PrKitDirection_Row, .align = PrKitAlign_Center, .gap = 2, .padding = prKitEdgesXY(5, 8)},
         .background = PrKitBackground_Panel,
         .rules = PrKitRuleFlag_Bottom,
     };
-    PrLayoutNode toolbar = prKitSurface(b.kit, stack, {}, style);
+    PrLayoutNode toolbar = prKitPanel(b.kit, stack, {}, style);
     toolButton(b, toolbar, PrKitIconKind_ArrowLeft, kCommandBack);
     toolButton(b, toolbar, PrKitIconKind_ArrowRight, kCommandForward);
     toolButton(b, toolbar, PrKitIconKind_Restart, kCommandReload);
@@ -400,14 +383,13 @@ void buildToolbar(Browser& b, PrLayoutNode root, Tab& tab) {
     PrKitBoxStyle bottom{.justify = PrKitJustify_End};
     PrLayoutNode layer = prKitLayer(b.kit, stack, {}, bottom);
     PrLayoutNode progress = prKitProgress(b.kit, layer, {.indeterminate = true});
-    PrKitPlace thin{.height = prKitPx(2)};
-    prKitPlace(b.kit, progress, &thin);
+    prKitPlace(b.kit, progress, {.height = prKitPx(2)});
 }
 
 // The favorites bar: a button for each favorite, which loads it. Each has a context menu, and a middle click or a click
 // with the command modifier opens it in a new tab.
 void buildFavorites(Browser& b, PrLayoutNode root) {
-    PrKitSurfaceStyle style{
+    PrKitPanelStyle style{
         .box = {
             .direction = PrKitDirection_Row,
             .align = PrKitAlign_Center,
@@ -418,7 +400,7 @@ void buildFavorites(Browser& b, PrLayoutNode root) {
         .background = PrKitBackground_Panel,
         .rules = PrKitRuleFlag_Bottom,
     };
-    PrLayoutNode bar = prKitSurface(b.kit, root, {}, style);
+    PrLayoutNode bar = prKitPanel(b.kit, root, {}, style);
     if (b.favorites.isEmpty()) {
         PrKitTextStyle faint{.role = PrKitTextRole_BodySmall, .tone = PrKitTone_Faint};
         prKitLabel(b.kit, bar, {.text = "Pages that you add to your favorites show here."}, faint);
@@ -475,7 +457,7 @@ void startLink(Browser& b, PrLayoutNode parent, PrStringView title, PrStringView
 
 // The start page of a tab that shows no document: the favorites as tiles, and the pages visited most recently.
 void buildStart(Browser& b, PrLayoutNode root) {
-    PrKitSurfaceStyle style{
+    PrKitPanelStyle style{
         .box = {
             .align = PrKitAlign_Center,
             .overflow = PrKitOverflow_ScrollY,
@@ -485,7 +467,7 @@ void buildStart(Browser& b, PrLayoutNode root) {
         },
         .background = PrKitBackground_App,
     };
-    PrLayoutNode page = prKitSurface(b.kit, root, {}, style);
+    PrLayoutNode page = prKitPanel(b.kit, root, {}, style);
     prKitLabel(b.kit, page, {.text = "Prax"}, {.role = PrKitTextRole_Display});
     PrKitTextStyle caption{.role = PrKitTextRole_Caption, .tone = PrKitTone_Muted};
     PrKitPlace column{.width = prKitPx(kStartWidth), .maxWidth = prKitPercent(100)};
@@ -510,8 +492,7 @@ void buildStart(Browser& b, PrLayoutNode root) {
         }
         PrKitButton all{.text = "Show Full History"};
         PrLayoutNode more = prKitButton(b.kit, section, all, {.variant = PrKitButtonVariant_Ghost});
-        PrKitPlace start{.align = PrKitAlign_Start};
-        prKitPlace(b.kit, more, &start);
+        prKitPlace(b.kit, more, {.align = PrKitAlign_Start});
         if (prKitActivated(b.kit, more))
             commandRun(b, kCommandShowHistory);
     }
@@ -544,8 +525,7 @@ bool historyRow(Browser& b, PrLayoutNode list, const Visit& visit, int32_t offse
     PrStringView site = host.isEmpty() ? url : host;
     prKitLabel(b.kit, link, {.text = historyTimeLabel(visit.time, offset)}, meta);
     PrLayoutNode heading = prKitLabel(b.kit, link, {.text = title.isEmpty() ? site : title}, strong);
-    PrKitPlace shrink{.flex = PrKitFlex_Auto};
-    prKitPlace(b.kit, heading, &shrink);
+    prKitPlace(b.kit, heading, {.flex = PrKitFlex_Auto});
     prKitLabel(b.kit, link, {.text = title.isEmpty() ? url : site}, meta);
     if (opensInNewTab(b, link))
         tabsLoad(b, visit.url, TabTarget_New);
@@ -598,7 +578,7 @@ void buildDeleteDialog(Browser& b, PrLayoutNode trigger) {
 // button opens the dialog that deletes the browsing data.
 void buildHistory(Browser& b, PrLayoutNode root) {
     Chrome& chrome = b.chrome;
-    PrKitSurfaceStyle style{
+    PrKitPanelStyle style{
         .box = {
             .align = PrKitAlign_Center,
             .overflow = PrKitOverflow_ScrollY,
@@ -608,7 +588,7 @@ void buildHistory(Browser& b, PrLayoutNode root) {
         },
         .background = PrKitBackground_App,
     };
-    PrLayoutNode page = prKitSurface(b.kit, root, {}, style);
+    PrLayoutNode page = prKitPanel(b.kit, root, {}, style);
     PrKitPlace column{.width = prKitPx(kStartWidth), .maxWidth = prKitPercent(100)};
     PrKitBoxStyle heading{.direction = PrKitDirection_Row, .align = PrKitAlign_Center, .gap = 8, .place = column};
     PrLayoutNode header = prKitBox(b.kit, page, {}, heading);
@@ -632,7 +612,7 @@ void buildHistory(Browser& b, PrLayoutNode root) {
     PrStringView text{};
     if (prKitTextChanged(b.kit, field, &text))
         chrome.historyQuery = text;
-    prKitPlace(b.kit, field, &column);
+    prKitPlace(b.kit, field, column);
     PrLayoutNode list = prKitBox(b.kit, page, {}, {.gap = 1, .place = column});
     PrKitTextStyle faint{.role = PrKitTextRole_Body, .tone = PrKitTone_Faint};
     if (b.history.isEmpty()) {
@@ -657,7 +637,7 @@ void buildHistory(Browser& b, PrLayoutNode root) {
         if (visitDay != shownDay) {
             shownDay = visitDay;
             PrLayoutNode label = prKitLabel(b.kit, list, {.text = historyDayLabel(visitDay, today)}, day);
-            prKitPlace(b.kit, label, &dayPlace);
+            prKitPlace(b.kit, label, dayPlace);
         }
         if (historyRow(b, list, visit, offset))
             removing = visit.url;
@@ -676,10 +656,10 @@ void chromeBuild(Browser& b) {
         prUiSetFocus(b.ui, kPrLayoutNodeNone);
         chrome.releaseFocus = false;
     }
-    PrKitSurfaceStyle style{
+    PrKitPanelStyle style{
         .box = {.overflow = PrKitOverflow_Clip, .place = {.width = prKitPercent(100), .height = prKitPercent(100)}},
     };
-    PrLayoutNode root = prKitSurface(b.kit, kPrLayoutNodeNone, {}, style);
+    PrLayoutNode root = prKitPanel(b.kit, kPrLayoutNodeNone, {}, style);
     prCommandScope(b.ui, root, b.commands, b.keymap, "");
     buildTabs(b, root);
     Tab& tab = *browserActiveTab(b);

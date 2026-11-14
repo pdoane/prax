@@ -1,4 +1,4 @@
-// The terminal app's interface: its commands, its tabs, and the terminal that shows.
+// The terminal app's interface: its tabs, its windows and their commands, and the work on its terminals.
 
 #include "apps/terminal/terminal_app.h"
 
@@ -6,9 +6,10 @@
 #include "pr/count_of.h"
 #include "pr/float.h"
 #include "pr/kit_button.h"
-#include "pr/kit_choice.h"
 #include "pr/layout_query.h"
 #include "pr/layout_tree.h"
+#include "pr/print.h"
+#include "pr/studio_window.h"
 
 namespace terminal {
 
@@ -16,8 +17,8 @@ using namespace pr;
 
 namespace {
 
-TerminalApp& appOf(void* context) {
-    return *static_cast<TerminalApp*>(context);
+TerminalWindow& windowOf(void* context) {
+    return *static_cast<TerminalWindow*>(context);
 }
 
 // The chords of the app's commands. On a Mac they use Command, which a terminal leaves to the app. Elsewhere they use
@@ -25,10 +26,12 @@ TerminalApp& appOf(void* context) {
 #if defined(__APPLE__)
 constexpr const char* kNewTab = "Cmd T";
 constexpr const char* kCloseTab = "Cmd W";
+constexpr const char* kNewWindow = "Cmd N";
 constexpr const char* kQuit = "Cmd Q";
 #else
 constexpr const char* kNewTab = "Ctrl Shift T";
 constexpr const char* kCloseTab = "Ctrl Shift W";
+constexpr const char* kNewWindow = "Ctrl Shift N";
 constexpr const char* kQuit = "";
 #endif
 
@@ -41,26 +44,29 @@ constexpr float kFontSize = 13;
 // The monospaced family that the terminals are set in.
 const PrFontFamily kMono{.generic = PrFontGeneric_Monospace};
 
-// Binds `chord` to the command `id`, if `chord` is not empty. The binding is an override, because the terminal binds
-// every chord that it can send to its program.
-void bindChord(TerminalApp& t, const char* id, const char* chord) {
+// The extent that a new window opens at, in px.
+constexpr PrUVec2 kWindowExtent{820, 560};
+
+// Binds `chord` to the command `id` of the window, if `chord` is not empty. The binding is an override, because the
+// terminal binds every chord that it can send to its program.
+void bindChord(TerminalWindow& w, const char* id, const char* chord) {
     PrCommandChord parsed{};
     if (chord[0] != 0 && prCommandChordParse(chord, &parsed))
-        prCommandKeymapBind(t.keymap, parsed, id, "", PrCommandBindingKind_Override);
+        prCommandKeymapBind(w.keymap, parsed, id, "", PrCommandBindingKind_Override);
 }
 
-// Adds a command, bound to `chord` if it is not empty (bindChord).
-void addCommand(TerminalApp& t, const char* id, const char* title, const char* chord, PrCommandRunFn run) {
-    PrCommandDesc desc{.id = id, .title = title, .category = "Terminal", .run = run, .context = &t};
-    prCommandRegistryAdd(t.commands, &desc);
-    bindChord(t, id, chord);
+// Adds a command of the window, bound to `chord` if it is not empty (bindChord).
+void addCommand(TerminalWindow& w, const char* id, const char* title, const char* chord, PrCommandRunFn run) {
+    PrCommandDesc desc{.id = id, .title = title, .category = "Terminal", .run = run, .context = &w};
+    prCommandRegistryAdd(w.commands, &desc);
+    bindChord(w, id, chord);
 }
 
 // The terminals' font, at the app's zoom.
-PrTextFontDesc fontOf(const TerminalApp& t) {
+PrTextFontDesc fontOf(const TerminalApp& app) {
     PrFontStyle style = prFontStyleDefault();
-    style.size = kFontSize * t.zoom;
-    return PrTextFontDesc{.set = t.fonts, .families = &kMono, .familyCount = 1, .style = style};
+    style.size = kFontSize * app.zoom;
+    return PrTextFontDesc{.set = app.fonts, .families = &kMono, .familyCount = 1, .style = style};
 }
 
 // Returns the zoom after `zoom` in the direction of `step`, or `zoom` if it is at the end of the range.
@@ -80,219 +86,346 @@ float zoomStep(float zoom, int32_t step) {
 }
 
 // Sets the zoom of every terminal's font.
-void setZoom(TerminalApp& t, float zoom) {
-    if (zoom == t.zoom)
+void setZoom(TerminalApp& app, float zoom) {
+    if (zoom == app.zoom)
         return;
-    t.zoom = zoom;
-    PrTextFontDesc font = fontOf(t);
-    for (PrTerminal* terminal : t.terminals)
-        prTerminalSetFont(terminal, &font);
+    app.zoom = zoom;
+    PrTextFontDesc font = fontOf(app);
+    for (const TerminalTab& tab : app.tabs)
+        prTerminalSetFont(tab.terminal, &font);
 }
 
-// Shows the terminal `step` after the one that shows, around the tabs.
-void cycle(TerminalApp& t, int32_t step) {
-    uint32_t count = t.terminals.count();
-    if (count == 0)
+// The id of a terminal's tab: its notification tag, which no other terminal of the app has.
+uint64_t idOf(const PrTerminal* terminal) {
+    return prTerminalNotificationTag(terminal);
+}
+
+// Returns the tab whose id is `id`, or null if no tab has it.
+TerminalTab* PR_NULLABLE tabWithId(TerminalApp& app, uint64_t id) {
+    for (TerminalTab& tab : app.tabs) {
+        if (idOf(tab.terminal) == id)
+            return &tab;
+    }
+    return nullptr;
+}
+
+// Returns the tab of `terminal`.
+TerminalTab& tabOf(TerminalApp& app, const PrTerminal* terminal) {
+    TerminalTab* tab = tabWithId(app, idOf(terminal));
+    PR_ASSERT(tab != nullptr);
+    return *tab;
+}
+
+// Returns the terminal of the window's selected tab, or null if the window has no tabs.
+PrTerminal* PR_NULLABLE selectedOf(TerminalWindow& w) {
+    TerminalTab* tab = tabWithId(*w.app, prKitTabsSelected(w.tabs));
+    return tab != nullptr ? tab->terminal : nullptr;
+}
+
+// Follows a tab out of the window's strip: a window left without tabs closes, and otherwise, if the tab was `selected`,
+// the tab selected in its place takes focus.
+void vacated(TerminalWindow& w, bool selected) {
+    if (prKitTabsCount(w.tabs) == 0) {
+        if (w.window != nullptr)
+            prStudioWindowDestroy(w.window);
         return;
-    t.shown = uint32_t((int64_t(t.shown) + step + count) % count);
-    prTerminalFocus(t.terminals[t.shown]);
+    }
+    if (selected)
+        prTerminalFocus(selectedOf(w));
 }
 
-// Returns true if the terminal's program has exited and all of its output has been read.
-bool hasEnded(PrTerminal* terminal) {
-    PrProcessInfo info = prTerminalProcessInfo(terminal);
-    return info.exited && info.outputEnded;
+// Shows the window's tab `step` after the one that shows, wrapping around the ends of its strip.
+void cycle(TerminalWindow& w, int32_t step) {
+    if (TerminalTab* tab = tabWithId(*w.app, prKitTabsStep(w.tabs, step)))
+        prTerminalFocus(tab->terminal);
 }
 
-// Declares the tab strip. Returns the index of the tab whose close control was clicked, or the number of terminals if
-// none was.
-uint32_t buildTabs(TerminalApp& t, PrLayoutNode root) {
-    uint32_t closed = t.terminals.count();
-    t.strip = prKitTabStrip(t.kit, root, {}, {});
-    for (uint32_t i = 0; i < t.terminals.count(); ++i) {
-        PrTerminal* terminal = t.terminals[i];
-        PrUiKey key = prUiKeyIndex(t.ui, t.strip, uint64_t(uintptr_t(terminal)));
-        PrLayoutNode tab = prKitTab(t.kit, t.strip, {.key = key, .selected = i == t.shown});
-        prKitTabLabel(t.kit, tab, {.text = prTerminalTitle(terminal)});
+// Applies a move of a tab between windows: a tab dropped on the window's strip from another window, or torn off from it
+// into a window of its own. A window keeps its last tab.
+void applyMove(TerminalWindow& w, const PrKitTabMove& move) {
+    TerminalApp& app = *w.app;
+    TerminalTab* tab = tabWithId(app, move.id);
+    if (tab == nullptr)
+        return;
+    PrTerminal* terminal = tab->terminal;
+    if (move.kind == PrKitTabMoveKind_Received) {
+        moveTab(app, terminal, w, move.index);
+        return;
+    }
+    if (app.studio == nullptr || prKitTabsCount(w.tabs) < 2)
+        return;
+    bool placed = move.position.display != kPrAppDisplayNone;
+    if (TerminalWindow* torn = newWindow(app, placed ? &move.position : nullptr))
+        moveTab(app, terminal, *torn, 0);
+}
+
+} // namespace
+
+void openApp(TerminalApp& app) {
+    app.launcher = prProcessLauncherCreate(PrProcessBackend_Default);
+}
+
+void closeApp(TerminalApp& app) {
+    PR_ASSERT(app.windows.isEmpty() && app.tabs.isEmpty());
+    prProcessLauncherDestroy(app.launcher);
+    app.launcher = nullptr;
+}
+
+TerminalWindow* PR_NULLABLE newWindow(TerminalApp& app, const PrAppDisplayPosition* PR_NULLABLE position) {
+    PR_ASSERT(app.studio != nullptr);
+    PrAppWindowPlacement placement = PrAppWindowPlacement_Default;
+    if (position != nullptr)
+        placement = PrAppWindowPlacement_Position;
+    TerminalWindow* w = new TerminalWindow{};
+    PrStudioWindowDesc desc{
+        .title = "Terminal",
+        .extent = kWindowExtent,
+        .placement = placement,
+        .position = position != nullptr ? *position : PrAppDisplayPosition{},
+        .build = [](void* context, PrStudioWindow*, PrLayoutNode root, PrVec2 extent) {
+            buildWindow(windowOf(context), root, extent);
+        },
+        .close = [](void* context, PrStudioWindow*) {
+            TerminalWindow* closing = static_cast<TerminalWindow*>(context);
+            closeWindow(*closing);
+            delete closing;
+        },
+        .context = w,
+    };
+    // The Studio window makes its kit as it is created, so the window takes tabs before it opens.
+    PrStudioWindow* window = nullptr;
+    if (prStudioWindowCreate(app.studio, &desc, &window) != PrStatus_Ok) {
+        delete w;
+        return nullptr;
+    }
+    w->window = window;
+    w->kit = prStudioWindowKit(window);
+    w->ui = prStudioWindowUi(window);
+    w->appWindow = prStudioWindowAppWindow(window);
+    openWindow(app, *w);
+    return w;
+}
+
+void openWindow(TerminalApp& app, TerminalWindow& w) {
+    w.app = &app;
+    w.grid = app.grid;
+    app.grid = PrUVec2{};
+    app.windows.push(&w);
+    w.tabs = prKitTabsCreate();
+    w.commands = prCommandRegistryCreate();
+    w.keymap = prCommandKeymapCreate();
+    addCommand(w, "tab.new", "New Tab", kNewTab, [](void* c, const PrCommandArgs*) { openTab(windowOf(c)); });
+    addCommand(w, "tab.close", "Close Tab", kCloseTab, [](void* c, const PrCommandArgs*) {
+        TerminalWindow& w = windowOf(c);
+        if (PrTerminal* selected = selectedOf(w))
+            closeTab(*w.app, selected);
+    });
+    addCommand(w, "tab.next", "Next Tab", "Ctrl Tab", [](void* c, const PrCommandArgs*) { cycle(windowOf(c), 1); });
+    addCommand(w, "tab.previous", "Previous Tab", "Ctrl Shift Tab", [](void* c, const PrCommandArgs*) {
+        cycle(windowOf(c), -1);
+    });
+    addCommand(w, "window.new", "New Window", kNewWindow, [](void* c, const PrCommandArgs*) {
+        TerminalApp& app = *windowOf(c).app;
+        if (app.studio == nullptr)
+            return;
+        if (TerminalWindow* opened = newWindow(app, nullptr))
+            openTab(*opened);
+    });
+    addCommand(w, "app.quit", "Quit", kQuit, [](void* c, const PrCommandArgs*) {
+        TerminalApp& app = *windowOf(c).app;
+        if (app.studio != nullptr)
+            prStudioAppStop(app.studio);
+    });
+    // The browser's zoom chords, with the primary modifier: Command on a Mac and Control elsewhere. Elsewhere this
+    // takes Control with minus away from the program, as the platforms' own terminals do.
+    addCommand(w, "view.zoomIn", "Zoom In", "Cmd =", [](void* c, const PrCommandArgs*) {
+        TerminalApp& app = *windowOf(c).app;
+        setZoom(app, zoomStep(app.zoom, 1));
+    });
+    bindChord(w, "view.zoomIn", "Cmd Shift =");
+    bindChord(w, "view.zoomIn", "Cmd Shift +");
+    addCommand(w, "view.zoomOut", "Zoom Out", "Cmd -", [](void* c, const PrCommandArgs*) {
+        TerminalApp& app = *windowOf(c).app;
+        setZoom(app, zoomStep(app.zoom, -1));
+    });
+    addCommand(w, "view.zoomReset", "Actual Size", "Cmd 0", [](void* c, const PrCommandArgs*) {
+        setZoom(*windowOf(c).app, 1);
+    });
+}
+
+void closeWindow(TerminalWindow& w) {
+    TerminalApp& app = *w.app;
+    for (uint32_t i = app.tabs.count(); i-- > 0;) {
+        if (app.tabs[i].window == &w) {
+            prTerminalDestroy(app.tabs[i].terminal);
+            app.tabs.erase(i);
+        }
+    }
+    prKitTabsDestroy(w.tabs);
+    prCommandKeymapDestroy(w.keymap);
+    prCommandRegistryDestroy(w.commands);
+    w.tabs = nullptr;
+    w.keymap = nullptr;
+    w.commands = nullptr;
+    app.windows.erase(app.windows.find(&w));
+}
+
+void openTab(TerminalWindow& w) {
+    PR_ASSERT(w.kit != nullptr && w.app != nullptr);
+    TerminalApp& app = *w.app;
+    Array<PrStringView> arguments;
+    for (const String& argument : app.arguments)
+        arguments.push(argument);
+    // A new tab starts in the working directory of the tab that shows.
+    PrRawString directory = prRawStringNull();
+    if (PrTerminal* selected = selectedOf(w))
+        directory = prTerminalWorkingDirectory(selected);
+    PrTerminalDesc desc{
+        .app = app.studio != nullptr ? prStudioAppApp(app.studio) : nullptr,
+        .font = fontOf(app),
+        .launcher = app.launcher,
+        .program = app.program,
+        .arguments = arguments.isEmpty() ? nullptr : &arguments[0],
+        .argumentCount = arguments.count(),
+        .directory = prRawStringView(&directory),
+        .scrollback = app.scrollback,
+        .notificationTag = app.nextTag,
+    };
+    PrTerminal* terminal = prTerminalCreate(&desc);
+    prRawStringReset(&directory);
+    ++app.nextTag;
+    app.tabs.push(TerminalTab{.terminal = terminal, .window = &w});
+    prKitTabsInsert(w.tabs, idOf(terminal), prKitTabsCount(w.tabs));
+    prKitTabsSelect(w.tabs, idOf(terminal));
+    prTerminalFocus(terminal);
+}
+
+Array<PrTerminal*> tabsOf(TerminalWindow& w) {
+    Array<PrTerminal*> terminals;
+    for (uint32_t i = 0; i < prKitTabsCount(w.tabs); ++i)
+        terminals.push(tabWithId(*w.app, prKitTabsAt(w.tabs, i))->terminal);
+    return terminals;
+}
+
+void closeTab(TerminalApp& app, PrTerminal* terminal) {
+    TerminalTab& tab = tabOf(app, terminal);
+    TerminalWindow& w = *tab.window;
+    uint64_t id = idOf(terminal);
+    bool selected = prKitTabsSelected(w.tabs) == id;
+    app.tabs.erase(uint32_t(&tab - app.tabs.data()));
+    prKitTabsRemove(w.tabs, id);
+    vacated(w, selected);
+    prTerminalDestroy(terminal);
+}
+
+void moveTab(TerminalApp& app, PrTerminal* terminal, TerminalWindow& to, uint32_t index) {
+    TerminalTab& tab = tabOf(app, terminal);
+    TerminalWindow& from = *tab.window;
+    uint64_t id = idOf(terminal);
+    bool selected = prKitTabsSelected(from.tabs) == id;
+    tab.window = &to;
+    prKitTabsMove(from.tabs, to.tabs, id, index);
+    prTerminalFocus(terminal);
+    if (&from == &to)
+        return;
+    // The window that the tab left closes if it has no tabs left, so it is asked for a frame first.
+    if (from.appWindow != nullptr)
+        prAppWindowRequestFrame(from.appWindow);
+    vacated(from, selected);
+}
+
+void serviceTabs(TerminalApp& app) {
+    for (const TerminalTab& tab : app.tabs)
+        prTerminalService(tab.terminal, tab.window->appWindow);
+    for (uint32_t i = app.tabs.count(); i-- > 0;) {
+        if (i >= app.tabs.count())
+            continue;
+        PrProcessInfo info = prTerminalProcessInfo(app.tabs[i].terminal);
+        if (info.exited && info.outputEnded)
+            closeTab(app, app.tabs[i].terminal);
+    }
+}
+
+void buildWindow(TerminalWindow& w, PrLayoutNode root, PrVec2 extent) {
+    TerminalApp& app = *w.app;
+    prCommandScope(w.ui, root, w.commands, w.keymap, "");
+    // The strip reports a tab moved between windows before its tabs, so that the round shows the tab where it went.
+    PrKitTabStrip content{.tabs = w.tabs, .group = kTabGroup, .reorderable = true, .collapsesSingle = true};
+    w.strip = prKitTabStrip(w.kit, root, content, {});
+    PrKitTabMove move{};
+    if (prKitTabMoved(w.kit, w.strip, &move))
+        applyMove(w, move);
+    PrAppColorScheme scheme = prUiUserPreferences(w.ui).colorScheme;
+    PrTerminal* closed = nullptr;
+    for (const TerminalTab& tab : app.tabs) {
+        if (tab.window != &w)
+            continue;
+        PrTerminal* terminal = tab.terminal;
+        // The terminals' programs see the color scheme that the window's theme follows.
+        prTerminalSetColorScheme(terminal, scheme);
+        PrLayoutNode node = prKitTab(w.kit, w.strip, {.id = idOf(terminal)});
+        prKitTabLabel(w.kit, node, {.text = prTerminalTitle(terminal)});
         // A badge marks a tab whose program rang the bell or posted a notification that the user has not seen. A
         // notification takes precedence over a bell. The badge has its own key, so the close control keeps its place
         // among the tab's parts.
         PrTerminalAlertFlags alerts = prTerminalAlerts(terminal);
         if (alerts != 0) {
             bool notified = (alerts & PrTerminalAlertFlag_Notification) != 0;
-            PrKitBadge badge{.key = prUiKey(t.ui, tab, "alert"), .text = notified ? "new" : "bell"};
+            PrKitBadge badge{.key = prUiKey(w.ui, node, "alert"), .text = notified ? "new" : "bell"};
             PrKitBadgeVariant variant = notified ? PrKitBadgeVariant_Accent : PrKitBadgeVariant_Warning;
-            prKitBadge(t.kit, tab, badge, {.variant = variant});
+            prKitBadge(w.kit, node, badge, {.variant = variant});
         }
-        if (prKitActivated(t.kit, prKitTabClose(t.kit, tab))) {
-            closed = i;
-        } else if (prKitActivated(t.kit, tab) && i != t.shown) {
-            t.shown = i;
+        // A click on a tab gives its terminal focus. The arrow keys leave focus on the strip.
+        if (prKitActivated(w.kit, node))
             prTerminalFocus(terminal);
-        }
+        if (prKitActivated(w.kit, prKitTabClose(w.kit, node)))
+            closed = terminal;
     }
-    return closed;
-}
-
-} // namespace
-
-void openApp(TerminalApp& t) {
-    t.commands = prCommandRegistryCreate();
-    t.keymap = prCommandKeymapCreate();
-    t.launcher = prProcessLauncherCreate(PrProcessBackend_Default);
-    addCommand(t, "tab.new", "New Tab", kNewTab, [](void* c, const PrCommandArgs*) { openTab(appOf(c)); });
-    addCommand(t, "tab.close", "Close Tab", kCloseTab, [](void* c, const PrCommandArgs*) {
-        TerminalApp& t = appOf(c);
-        if (!t.terminals.isEmpty())
-            closeTab(t, t.shown);
-    });
-    addCommand(t, "tab.next", "Next Tab", "Ctrl Tab", [](void* c, const PrCommandArgs*) { cycle(appOf(c), 1); });
-    addCommand(t, "tab.previous", "Previous Tab", "Ctrl Shift Tab", [](void* c, const PrCommandArgs*) {
-        cycle(appOf(c), -1);
-    });
-    addCommand(t, "app.quit", "Quit", kQuit, [](void* c, const PrCommandArgs*) {
-        if (appOf(c).app != nullptr)
-            prAppStop(appOf(c).app);
-    });
-    // The browser's zoom chords, with the primary modifier: Command on a Mac and Control elsewhere. Elsewhere this
-    // takes Control with minus away from the program, as the platforms' own terminals do.
-    addCommand(t, "view.zoomIn", "Zoom In", "Cmd =", [](void* c, const PrCommandArgs*) {
-        setZoom(appOf(c), zoomStep(appOf(c).zoom, 1));
-    });
-    bindChord(t, "view.zoomIn", "Cmd Shift =");
-    bindChord(t, "view.zoomIn", "Cmd Shift +");
-    addCommand(t, "view.zoomOut", "Zoom Out", "Cmd -", [](void* c, const PrCommandArgs*) {
-        setZoom(appOf(c), zoomStep(appOf(c).zoom, -1));
-    });
-    addCommand(t, "view.zoomReset", "Actual Size", "Cmd 0", [](void* c, const PrCommandArgs*) {
-        setZoom(appOf(c), 1);
-    });
-}
-
-void openTab(TerminalApp& t) {
-    PR_ASSERT(t.kit != nullptr && t.fonts != nullptr);
-    Array<PrStringView> arguments;
-    for (const String& argument : t.arguments)
-        arguments.push(argument);
-    // A new tab starts in the working directory of the tab that shows.
-    PrRawString directory = prRawStringNull();
-    if (t.shown < t.terminals.count())
-        directory = prTerminalWorkingDirectory(t.terminals[t.shown]);
-    PrTerminalDesc desc{
-        .kit = t.kit,
-        .font = fontOf(t),
-        .window = t.window,
-        .launcher = t.launcher,
-        .program = t.program,
-        .arguments = arguments.isEmpty() ? nullptr : &arguments[0],
-        .argumentCount = arguments.count(),
-        .directory = prRawStringView(&directory),
-        .scrollback = t.scrollback,
-        .notificationTag = t.nextTag,
-    };
-    PrTerminal* terminal = prTerminalCreate(&desc);
-    prRawStringReset(&directory);
-    ++t.nextTag;
-    t.terminals.push(terminal);
-    t.shown = t.terminals.count() - 1;
-    prTerminalFocus(terminal);
-}
-
-void closeTab(TerminalApp& t, uint32_t index) {
-    PR_ASSERT(index < t.terminals.count());
-    prTerminalDestroy(t.terminals[index]);
-    t.terminals.erase(index);
-    if (t.terminals.isEmpty()) {
-        t.shown = 0;
+    // The closed tab disappears in the next round, which lays out the strip without it.
+    if (closed != nullptr) {
+        closeTab(app, closed);
+        prUiRequestFrame(w.ui);
         return;
     }
-    if (t.shown > index || t.shown >= t.terminals.count())
-        t.shown = t.shown > 0 ? t.shown - 1 : 0;
-    prTerminalFocus(t.terminals[t.shown]);
-}
-
-void closeApp(TerminalApp& t) {
-    for (PrTerminal* terminal : t.terminals)
-        prTerminalDestroy(terminal);
-    t.terminals.clear();
-    prProcessLauncherDestroy(t.launcher);
-    prCommandKeymapDestroy(t.keymap);
-    prCommandRegistryDestroy(t.commands);
-}
-
-void buildApp(TerminalApp& t, PrLayoutNode root, PrVec2 extent) {
-    prCommandScope(t.ui, root, t.commands, t.keymap, "");
-    // The terminals' programs see the color scheme that the window's theme follows.
-    PrAppColorScheme scheme = prUiUserPreferences(t.ui).colorScheme;
-    for (PrTerminal* terminal : t.terminals)
-        prTerminalSetColorScheme(terminal, scheme);
-    // Hidden terminals still read their programs' output, so their titles and exits stay current.
-    for (uint32_t i = 0; i < t.terminals.count(); ++i) {
-        if (i != t.shown)
-            prTerminalUpdate(t.terminals[i]);
-    }
-    for (uint32_t i = t.terminals.count(); i-- > 0;) {
-        if (hasEnded(t.terminals[i]))
-            closeTab(t, i);
-    }
-    if (t.terminals.isEmpty()) {
-        if (t.app != nullptr)
-            prAppStop(t.app);
+    PrTerminal* shown = selectedOf(w);
+    if (shown == nullptr)
         return;
-    }
-
-    float height = extent.y;
-    t.strip = kPrLayoutNodeNone;
-    if (t.terminals.count() > 1) {
-        uint32_t closed = buildTabs(t, root);
-        height -= t.stripHeight;
-        if (closed < t.terminals.count()) {
-            // The closed tab disappears in the next round, which lays out the strip without it.
-            closeTab(t, closed);
-            prUiRequestFrame(t.ui);
-        }
-    }
-    PrTerminal* shown = t.terminals[t.shown];
-    prTerminalFrame(shown, root, PrVec2{extent.x, height > 0 ? height : 0}, PrTerminalBackground_Parent);
+    // The terminal fills what the tab strip leaves of the window.
+    prTerminalFrame(shown, w.kit, root, PrTerminalBackground_Parent);
     PrVec2 cell = prTerminalCellExtent(shown);
-    if (t.grid.x > 0 && t.grid.y > 0 && cell.x > 0 && cell.y > 0 && t.window != nullptr) {
-        // The window is sized to fit the grid in whole cells from the screen's origin. The tab strip keeps its height.
+    PrVec2 view{};
+    bool measured = prUiExtent(w.ui, prTerminalNode(shown), &view);
+    if (w.grid.x > 0 && w.grid.y > 0 && cell.x > 0 && cell.y > 0 && measured && w.appWindow != nullptr) {
+        // The window is sized to fit the grid in whole cells from the screen's origin, and keeps the room that the
+        // terminal's view leaves to the rest of the window, such as the tab strip.
         PrVec2 origin = prTerminalScreenOrigin(shown);
-        float windowWidth = origin.x + float(t.grid.x) * cell.x;
-        float windowHeight = extent.y - height + origin.y + float(t.grid.y) * cell.y;
-        prAppWindowSetExtent(t.window, PrUVec2{uint32_t(prF32Ceil(windowWidth)), uint32_t(prF32Ceil(windowHeight))});
-        t.grid = PrUVec2{};
+        float windowWidth = extent.x - view.x + origin.x + float(w.grid.x) * cell.x;
+        float windowHeight = extent.y - view.y + origin.y + float(w.grid.y) * cell.y;
+        prAppWindowSetExtent(w.appWindow, PrUVec2{uint32_t(prF32Ceil(windowWidth)), uint32_t(prF32Ceil(windowHeight))});
+        w.grid = PrUVec2{};
     }
 
     // The window's title is the title of the terminal that shows.
     PrStringView title = prTerminalTitle(shown);
-    if (t.window != nullptr && title != PrStringView(t.title)) {
-        t.title = title;
-        prAppWindowSetTitle(t.window, title);
+    if (w.appWindow != nullptr && title != PrStringView(w.title)) {
+        w.title = title;
+        prAppWindowSetTitle(w.appWindow, title);
     }
 }
 
-bool afterLayout(TerminalApp& t) {
-    float height = 0;
-    if (t.strip != kPrLayoutNodeNone) {
-        PrRect bar = prLayoutRectToPx(prLayoutNodeBounds(prUiTree(t.ui), t.strip, PrLayoutCoordinates_Viewport));
-        height = bar.bottom - bar.top;
+bool handleEvent(TerminalApp& app, const PrAppEvent& event) {
+    if (event.kind == PrAppEventKind_Wake) {
+        serviceTabs(app);
+        return true;
     }
-    if (height == t.stripHeight)
-        return false;
-    t.stripHeight = height;
-    return true;
-}
-
-bool handleEvent(TerminalApp& t, const PrAppEvent& event) {
     if (event.kind != PrAppEventKind_Notification)
         return false;
-    for (uint32_t i = 0; i < t.terminals.count(); ++i) {
-        if (prTerminalNotificationTag(t.terminals[i]) != event.tag)
-            continue;
-        t.shown = i;
-        prTerminalFocus(t.terminals[i]);
-        break;
+    // A click on a notification brings its tab forward.
+    if (TerminalTab* tab = tabWithId(app, event.tag)) {
+        prKitTabsSelect(tab->window->tabs, event.tag);
+        prTerminalFocus(tab->terminal);
+        if (tab->window->appWindow != nullptr)
+            prAppWindowFocus(tab->window->appWindow);
     }
     return true;
 }

@@ -494,12 +494,12 @@ bool prKitRemoved(const PrKit* kit, PrLayoutNode node) {
     return kitSignaled(*kit, node, KitSignal_Removed);
 }
 
-void prKitPlace(PrKit* kit, PrLayoutNode node, const PrKitPlace* place) {
+void prKitPlace(PrKit* kit, PrLayoutNode node, PrKitPlace place) {
     // The node's record with its box and flex groups placed, and the rest the record's own. The memo keys the placed
     // record by the record it was placed from, to which its entry holds a reference.
     PrKit& k = *kit;
     PrLayoutTree* tree = k.tree;
-    Placement key{.base = prLayoutTreeFrameStyle(tree, node), .place = *place};
+    Placement key{.base = prLayoutTreeFrameStyle(tree, node), .place = place};
     const void* type = uiTypeId<Placement>();
     PrLayoutStyleIndex placed = 0;
     const void* kept = prUiMemoFind(k.ui, type, &k, &placed);
@@ -508,8 +508,8 @@ void prKitPlace(PrKit* kit, PrLayoutNode node, const PrKitPlace* place) {
         PrLayoutStyle record = prLayoutStyleRecord(tree, key.base);
         PrLayoutGroupIndex& box = record.groups[PrLayoutGroup_Box];
         PrLayoutGroupIndex& flex = record.groups[PrLayoutGroup_Flex];
-        box = kitGroup(k, KitPlacedBox{.base = box, .place = *place});
-        flex = kitGroup(k, KitPlacedFlex{.base = flex, .place = *place});
+        box = kitGroup(k, KitPlacedBox{.base = box, .place = place});
+        flex = kitGroup(k, KitPlacedFlex{.base = flex, .place = place});
         placed = prUiMemoKeep(k.ui, &part, prLayoutStyleIntern(tree, &record), key.base);
     }
     prLayoutTreeFrameSetStyle(tree, node, placed);

@@ -6,7 +6,7 @@
 #include "pr/assert.h"
 #include "pr/hash.h"
 #include "pr/kit_button.h"
-#include "pr/kit_surface.h"
+#include "pr/kit_panel.h"
 #include "pr/kit_text.h"
 #include "pr/layout_query.h"
 #include "pr/raw_array.h"
@@ -687,14 +687,14 @@ PrKitDockPanelId panelOf(const PrUiPayload* PR_NULLABLE payload) {
 void buildStrip(DockBuild& b, PrLayoutNode column, PrKitDockNode leaf) {
     PrKit* kit = b.kit;
     PrUi* ui = kit->ui;
-    PrKitSurfaceStyle surface{};
-    surface.background = PrKitBackground_Header;
-    surface.rules = PrKitRuleFlag_Bottom;
-    surface.box.direction = PrKitDirection_Row;
-    surface.box.overflow = PrKitOverflow_Clip;
-    surface.box.place.height = prKitPx(kPrKitHeightSm);
-    surface.box.place.flex = PrKitFlex_Fixed;
-    PrLayoutNode strip = prKitSurface(kit, column, {}, surface);
+    PrKitPanelStyle look{};
+    look.background = PrKitBackground_Header;
+    look.rules = PrKitRuleFlag_Bottom;
+    look.box.direction = PrKitDirection_Row;
+    look.box.overflow = PrKitOverflow_Clip;
+    look.box.place.height = prKitPx(kPrKitHeightSm);
+    look.box.place.flex = PrKitFlex_Fixed;
+    PrLayoutNode strip = prKitPanel(kit, column, {}, look);
 
     // The tabs are created before any of them is styled, so that a click opens its tab before the strip shows which tab
     // is open.
@@ -759,11 +759,11 @@ void buildStrip(DockBuild& b, PrLayoutNode column, PrKitDockNode leaf) {
 
 void buildLeaf(DockBuild& b, PrLayoutNode parent, PrKitDockNode leaf) {
     PrKit* kit = b.kit;
-    PrKitSurfaceStyle surface{};
-    surface.background = PrKitBackground_Panel;
-    surface.box.overflow = PrKitOverflow_Clip;
-    surface.box.place.flex = PrKitFlex_Fill;
-    PrLayoutNode column = prKitSurface(kit, parent, {}, surface);
+    PrKitPanelStyle look{};
+    look.background = PrKitBackground_Panel;
+    look.box.overflow = PrKitOverflow_Clip;
+    look.box.place.flex = PrKitFlex_Fill;
+    PrLayoutNode column = prKitPanel(kit, parent, {}, look);
     if (b.dock->nodes.data[leaf].tabs.count != 0)
         buildStrip(b, column, leaf);
 
@@ -1052,7 +1052,7 @@ PrLayoutNode prKitDockBuild(PrKit* kit, PrLayoutNode parent, PrKitDockView view)
     DockBuild b{.kit = kit, .dock = dock, .describe = describe, .context = context, .node = area};
     b.area = boundsOf(*kit, area);
     b.dragging = dragged != 0;
-    prUiPointer(kit->ui, &b.pointer);
+    prUiPointer(kit->ui, nullptr, &b.pointer);
     buildNode(b, area, dock->root);
     if (b.dragging)
         buildFloating(b, dragged);

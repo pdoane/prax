@@ -90,8 +90,7 @@ PrLayoutNode specimenRow(PrKit* kit, PrLayoutNode parent, float gap, bool wrap) 
 
 // Places `node` at a fixed width.
 void fixedWidth(PrKit* kit, PrLayoutNode node, float width) {
-    PrKitPlace place{.width = prKitPx(width), .flex = PrKitFlex_Fixed};
-    prKitPlace(kit, node, &place);
+    prKitPlace(kit, node, {.width = prKitPx(width), .flex = PrKitFlex_Fixed});
 }
 
 void buildMenuBar(PrKit* kit, PrLayoutNode section) {
@@ -203,14 +202,14 @@ void buildContextMenu(PrKit* kit, PrLayoutNode section, MenuState& state) {
     PrLayoutNode panel = demoPanel(kit, section, "CONTEXT MENU", "RIGHT-CLICK", false);
     PrKitBoxStyle line{.direction = PrKitDirection_Row, .align = PrKitAlign_Start, .gap = kPrKitSpace4};
     PrLayoutNode row = prKitBox(kit, panel, {}, line);
-    PrKitSurfaceStyle zone{.background = PrKitBackground_Viewport};
+    PrKitPanelStyle zone{.background = PrKitBackground_Viewport};
     zone.box.direction = PrKitDirection_Row;
     zone.box.justify = PrKitJustify_Center;
     zone.box.align = PrKitAlign_Center;
     zone.box.place.width = prKitPx(220);
     zone.box.place.height = prKitPx(140);
     zone.box.place.flex = PrKitFlex_Fixed;
-    PrLayoutNode host = prKitSurface(kit, row, {}, zone);
+    PrLayoutNode host = prKitPanel(kit, row, {}, zone);
     prKitLabel(kit, host, {.text = "RIGHT-CLICK ANYWHERE"}, kMonoSecondary);
     PrKitMenuStyle wide{.minWidth = 220};
     PrLayoutNode menu = prKitContextMenu(kit, host, {}, wide);
@@ -278,7 +277,7 @@ void buildPalette(PrKit* kit, PrLayoutNode section, PaletteState& palette) {
 
 void sectionButtons(PrKit* kit, PrLayoutNode parent) {
     PrLayoutNode section = sectionFrame(kit, parent, "05", "Buttons", "Four variants across four height steps.",
-        "Primary for the one dominant action of a surface, secondary for the neutral options, ghost for "
+        "Primary for the one dominant action of a look, secondary for the neutral options, ghost for "
             "low-weight and toolbar use, and danger for what destroys something.");
     {
         PrLayoutNode panel = demoPanel(kit, section, "VARIANTS", "4 TYPES", false);
@@ -712,34 +711,24 @@ void sectionTabs(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
             {"Animator", nullptr, false},
             {"Shader Graph", nullptr, true},
         };
-        // The strip shows the tabs in the model's order, keyed by the model's tab, and the model applies a drag.
-        PrLayoutNode strip = prKitTabStrip(kit, panel, {.reorderable = true}, {});
+        PrLayoutNode strip = prKitTabStrip(kit, panel, {.tabs = tabs.panels, .reorderable = true}, {});
         for (uint32_t i = 0; i < 5; ++i) {
-            const PanelTab& shown = all[tabs.panelOrder[i]];
-            PrLayoutNode tab = prKitTab(kit, strip, {
-                .key = prUiKeyIndex(kit->ui, strip, tabs.panelOrder[i]),
-                .selected = tabs.panel == i,
-            });
+            const PanelTab& shown = all[i];
+            PrLayoutNode tab = prKitTab(kit, strip, {.id = i + 1u});
             prKitTabLabel(kit, tab, {.text = shown.label});
             if (shown.badge != nullptr)
                 prKitBadge(kit, tab, {.text = shown.badge}, {.variant = PrKitBadgeVariant_Warning});
             if (shown.closable)
                 prKitTabClose(kit, tab);
-            if (prKitActivated(kit, tab))
-                tabs.panel = i;
         }
-        uint32_t from = 0;
-        uint32_t to = 0;
-        if (prKitMoved(kit, strip, &from, &to))
-            moveTab(tabs, from, to);
         PrKitBoxStyle body{.padding = prKitEdgesAll(kPrKitSpace5)};
         const char* const bodies[] = {
             "The scene the viewport renders.", "The game view, at the target resolution.",
             "Three frames over budget.", "The state machine of the selected rig.",
             "The material graph of the selected mesh.",
         };
-        uint32_t at = tabs.panel < 5 ? tabs.panel : 0;
-        prKitLabel(kit, prKitBox(kit, panel, {}, body), {.text = bodies[tabs.panelOrder[at]]}, kBodySecondary);
+        uint32_t shown = uint32_t(prKitTabsSelected(tabs.panels) - 1);
+        prKitLabel(kit, prKitBox(kit, panel, {}, body), {.text = bodies[shown]}, kBodySecondary);
     }
     {
         PrLayoutNode panel = demoPanel(kit, section, "SEGMENTED", "VIEW MODE", false);
@@ -771,7 +760,7 @@ void sectionTabs(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
 
 void sectionMenus(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
     PrLayoutNode section = sectionFrame(kit, parent, "09", "Menus & Popovers", "Application menus, context menus, a palette.",
-        "Every floating surface here places itself from the box its trigger last stood in, stays inside the "
+        "Every portal here places itself from the box its trigger last stood in, stays inside the "
             "frame, and takes itself down on Escape or on a press that lands outside it.");
     buildMenuBar(kit, section);
     buildSelect(kit, section, state.menu);

@@ -8,7 +8,7 @@
 #include "pr/kit_data.h"
 #include "pr/kit_graph.h"
 #include "pr/kit_menu.h"
-#include "pr/kit_surface.h"
+#include "pr/kit_panel.h"
 #include "pr/kit_timeline.h"
 #include "pr/ui.h"
 
@@ -159,14 +159,14 @@ void sectionCollections(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
             "as tiles, as many to a row as fit, and shares the list's selection. The tree reaches them through "
             "their groups, where Right opens a group and steps into it and Left closes it.");
     PrLayoutNode panel = demoPanel(kit, section, "ASSET BROWSER", "LIST . GRID . TREE", true);
-    PrKitSurfaceStyle strip{.rules = PrKitRuleFlag_Bottom};
+    PrKitPanelStyle strip{.rules = PrKitRuleFlag_Bottom};
     strip.box.direction = PrKitDirection_Row;
     strip.box.align = PrKitAlign_Center;
     strip.box.gap = kPrKitSpace3;
     strip.box.padding = prKitEdgesXY(0, kPrKitSpace4);
     strip.box.place.height = prKitPx(kPrKitHeightMd);
     strip.box.place.flex = PrKitFlex_Fixed;
-    PrLayoutNode bar = prKitSurface(kit, panel, {}, strip);
+    PrLayoutNode bar = prKitPanel(kit, panel, {}, strip);
     const PrKitChoice modes[] = {{.label = "List"}, {.label = "Grid"}, {.label = "Tree"}};
     segmented(kit, bar, modes, 3, &collections.viewMode, {.size = PrKitControlSize_Sm});
     prKitSpacer(kit, bar, {});
@@ -202,10 +202,10 @@ void sectionCollections(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
     }
 
     PrLayoutNode empty = demoPanel(kit, section, "EMPTY STATE", "NO RESULTS", true);
-    PrKitSurfaceStyle region{.background = PrKitBackground_Panel};
+    PrKitPanelStyle region{.background = PrKitBackground_Panel};
     region.box.place.height = prKitPx(140);
     region.box.place.flex = PrKitFlex_Fixed;
-    prKitEmptyState(kit, prKitSurface(kit, empty, {}, region), {
+    prKitEmptyState(kit, prKitPanel(kit, empty, {}, region), {
         .icon = PrKitIconKind_Search,
         .title = "No assets match the filter",
         .hint = "Clear the filter to see every asset again",
@@ -232,14 +232,14 @@ void sectionTimeline(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
         prUiRequestFrame(ui);
     }
 
-    PrKitSurfaceStyle strip{.rules = PrKitRuleFlag_Bottom};
+    PrKitPanelStyle strip{.rules = PrKitRuleFlag_Bottom};
     strip.box.direction = PrKitDirection_Row;
     strip.box.align = PrKitAlign_Center;
     strip.box.gap = kPrKitSpace5;
     strip.box.padding = prKitEdgesXY(0, kPrKitSpace4);
     strip.box.place.height = prKitPx(kPrKitHeightMd);
     strip.box.place.flex = PrKitFlex_Fixed;
-    PrLayoutNode bar = prKitSurface(kit, section, {}, strip);
+    PrLayoutNode bar = prKitPanel(kit, section, {}, strip);
     prKitToggle(kit, bar, {.value = &timeline.playing, .label = "Play"}, {});
     PrKitButtonStyle small{.size = PrKitControlSize_Sm};
     PrKitButton reset{.text = "Reset cursor"};
@@ -309,11 +309,11 @@ void sectionTimeline(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
             .label = "New",
         });
     }
-    PrKitSurfaceStyle tally{.rules = PrKitRuleFlag_Top};
+    PrKitPanelStyle tally{.rules = PrKitRuleFlag_Top};
     tally.box.direction = PrKitDirection_Row;
     tally.box.gap = kPrKitSpace4;
     tally.box.padding = prKitEdgesAll(kPrKitSpace4);
-    PrLayoutNode counts = prKitSurface(kit, panel, {}, tally);
+    PrLayoutNode counts = prKitPanel(kit, panel, {}, tally);
     const char* const labels[] = {"BEGIN", "CHANGE", "COMMIT"};
     const uint32_t values[] = {timeline.begins, timeline.changes, timeline.commits};
     for (uint32_t i = 0; i < 3; ++i) {
@@ -340,14 +340,14 @@ void sectionGraph(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
             "what is selected. The wheel pans, and Cmd with the wheel zooms.");
     PrUi* ui = kit->ui;
 
-    PrKitSurfaceStyle strip{.rules = PrKitRuleFlag_Bottom};
+    PrKitPanelStyle strip{.rules = PrKitRuleFlag_Bottom};
     strip.box.direction = PrKitDirection_Row;
     strip.box.align = PrKitAlign_Center;
     strip.box.gap = kPrKitSpace3;
     strip.box.padding = prKitEdgesXY(0, kPrKitSpace4);
     strip.box.place.height = prKitPx(kPrKitHeightMd);
     strip.box.place.flex = PrKitFlex_Fixed;
-    PrLayoutNode bar = prKitSurface(kit, section, {}, strip);
+    PrLayoutNode bar = prKitPanel(kit, section, {}, strip);
     PrKitButtonStyle small{.size = PrKitControlSize_Sm};
     PrKitButton arrange{.text = "Arrange"};
     if (prUiActivated(ui, prKitButton(kit, bar, arrange, small)))
