@@ -25,7 +25,7 @@ typedef struct PrKitTitleBar {
 // maximize and close buttons at its end, as the platform places them. The band is the title bar's drag region, and the
 // controls in the row take the user's presses (prUiTitleBarRegion). A window without a custom title bar, as one that is
 // fullscreen, gets a plain row as tall as its content, which takes no drag.
-PrLayoutNode prKitTitleBar(PrKit* kit, PrLayoutNode parent, const PrKitTitleBar* titleBar);
+PrLayoutNode prKitTitleBar(PrKit* kit, PrLayoutNode parent, PrKitTitleBar titleBar);
 
 #if defined(__cplusplus)
 }

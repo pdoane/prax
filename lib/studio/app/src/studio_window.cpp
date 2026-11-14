@@ -35,11 +35,10 @@ void build(void* context, PrUi*, const PrUiRound*) {
     }
     // The application's title bar is at the top of the panel, and the application fills the rest. While the frame has
     // no title bar, as in fullscreen, the title bar's content stays, in a plain row (prKitTitleBar).
-    PrKitTitleBar titleBar{
+    PrLayoutNode bar = prKitTitleBar(w->kit, window, {
         .bar = w->titleBar,
         .maximized = prAppWindowState(w->appWindow) == PrAppWindowState_Maximized,
-    };
-    PrLayoutNode bar = prKitTitleBar(w->kit, window, &titleBar);
+    });
     if (w->desc.titleBar != nullptr)
         w->desc.titleBar(w->desc.context, w, bar);
     PrKitBoxStyle rest{.place = {.flex = PrKitFlex_Fill}};
