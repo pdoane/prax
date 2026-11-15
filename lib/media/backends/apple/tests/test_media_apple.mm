@@ -1,5 +1,6 @@
 #include "pr/array.h"
 #include "pr/blob_ref.h"
+#include "pr/float.h"
 #include "pr/media_apple.h"
 #include "pr/media_backend.h"
 #include "pr/mem.h"
@@ -160,12 +161,36 @@ Array<float> readAudio(PrMediaDecoder* decoder, uint32_t frames, double* time) {
     return samples;
 }
 
-// The frequency of the samples at `rate`, by their crossings of zero.
+// The frequency of the tone in the samples at `rate`, by the time between its first and last crossings of zero. A
+// crossing counts only once the signal swings past half its peak on the other side: a decoder's band-limited filters
+// ring near zero before a tone's sharp onset, for as many samples as the platform's filters are long, and that ringing
+// is not the tone.
 double frequencyOf(Span<const float> samples, double rate) {
+    float peak = 0;
+    for (float sample : samples) {
+        float magnitude = prF32Abs(sample);
+        peak = magnitude > peak ? magnitude : peak;
+    }
+    // The side of zero that the signal last swung past half its peak on, and where it last crossed zero.
+    int side = 0;
+    uint32_t zero = 0;
     uint32_t crossings = 0;
-    for (uint32_t i = 1; i < samples.count(); ++i)
-        crossings += (samples[i - 1] < 0) != (samples[i] < 0) ? 1 : 0;
-    return double(crossings) / 2 / (double(samples.count()) / rate);
+    uint32_t first = 0;
+    uint32_t last = 0;
+    for (uint32_t i = 0; i < samples.count(); ++i) {
+        if (i != 0 && (samples[i - 1] < 0) != (samples[i] < 0))
+            zero = i;
+        int now = samples[i] > peak / 2 ? 1 : samples[i] < -peak / 2 ? -1 : 0;
+        if (now == 0 || now == side)
+            continue;
+        if (side != 0) {
+            first = crossings == 0 ? zero : first;
+            last = zero;
+            ++crossings;
+        }
+        side = now;
+    }
+    return crossings < 2 ? 0 : double(crossings - 1) / 2 / (double(last - first) / rate);
 }
 
 // A track's compressed samples, as a media source's frames, with what a sample decoder needs to know of the track.
@@ -395,8 +420,7 @@ TEST_CASE("the AVFoundation codec decodes an AAC track's frames one at a time, a
     // About a second at 48 kHz, less the frames that the decoder keeps for its delay.
     CHECK(decoded.samples.count() > 40000);
     CHECK(decoded.samples.count() < 52000);
-    Span<const float> middle = decoded.samples.span().slice(12000, 24000).asConst();
-    CHECK(frequencyOf(middle, 48000) == doctest::Approx(1000).epsilon(0.02));
+    CHECK(frequencyOf(decoded.samples.span().asConst(), 48000) == doctest::Approx(1000).epsilon(0.001));
     decoder->destroyFn(decoder);
     prMediaCodecDestroy(codec);
 }
@@ -415,12 +439,13 @@ TEST_CASE("the AVFoundation codec decodes AAC at the rate asked for, and seeks i
     Array<float> samples = readAudio(decoder, 24000, &time);
     REQUIRE(samples.count() == 24000);
     CHECK(time == doctest::Approx(0).epsilon(0.05));
-    CHECK(frequencyOf(samples.span().asConst(), 48000) == doctest::Approx(1000).epsilon(0.02));
+    CHECK(frequencyOf(samples.span().asConst(), 48000) == doctest::Approx(1000).epsilon(0.001));
 
     prMediaDecoderAudioSeek(decoder, 1.5);
     samples = readAudio(decoder, 12000, &time);
     REQUIRE(samples.count() == 12000);
     CHECK(time == doctest::Approx(1.5).epsilon(0.01));
+    CHECK(frequencyOf(samples.span().asConst(), 48000) == doctest::Approx(1000).epsilon(0.001));
 
     // Reading to the end reports the end.
     samples = readAudio(decoder, 96000, &time);
