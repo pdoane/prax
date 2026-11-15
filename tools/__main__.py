@@ -39,6 +39,12 @@ COMMANDS = {
 }
 
 
+# The commands that run below normal priority (tools/dev.py lower_priority): those that can take every core and
+# neither measure time nor run something for the user to interact with.
+BATCH = {"build", "test", "ci", "suite", "prax", "markdown", "pages", "gen", "lint", "package", "rewrap", "includes",
+         "layout", "prose", "document", "fetch", "clean"}
+
+
 # The everyday commands, which ./dev.sh with no command prints.
 EVERYDAY = (
     ("test", "lint, build, and run the unit tests and the tools' tests on the host: the fast loop"),
@@ -106,6 +112,10 @@ def main(argv):
     if command not in COMMANDS:
         print("dev.sh: error: no command named %s" % command, file=sys.stderr)
         help(1)
+    if command in BATCH:
+        from tools import dev
+
+        dev.lower_priority()
     getattr(importlib.import_module(COMMANDS[command]), command)(args)
 
 

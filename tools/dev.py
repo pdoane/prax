@@ -25,6 +25,24 @@ def fail(message):
     sys.exit(1)
 
 
+def lower_priority():
+    """Runs this process, and the programs it starts, below normal priority, so that a build or a suite that takes
+    every core leaves the machine responsive to what the user is doing. The programs started inherit it: on Windows the
+    below normal priority class, elsewhere the niceness. Raising the priority again takes privileges outside Windows, so
+    this is for the commands that measure nothing and run nothing interactive."""
+    if WINDOWS:
+        import ctypes
+
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel32.GetCurrentProcess.restype = ctypes.c_void_p
+        kernel32.SetPriorityClass.argtypes = (ctypes.c_void_p, ctypes.c_uint32)
+        BELOW_NORMAL_PRIORITY_CLASS = 0x4000
+        kernel32.SetPriorityClass(kernel32.GetCurrentProcess(), BELOW_NORMAL_PRIORITY_CLASS)
+    else:
+        # A command that another runs is already nice, and adding to its niceness again would run it lower still.
+        os.nice(max(0, 10 - os.nice(0)))
+
+
 def run(command, cwd=ROOT, env=None, check=True, stdout=None, stderr=None):
     """Runs `command` in `cwd`, with `env` added to the environment, and returns its exit status. A failure exits with
     the command's status unless `check` is false."""
