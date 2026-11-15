@@ -40,14 +40,15 @@ USAGE = {
     whether the tree is in a good state on this machine: lint beside each configuration of each platform named, each run
     past the failures of the others, and then a table of their outcomes, as in ./dev.sh ci debug ios. With no
     configuration named, they are the default and debug, and with no platform named, every platform that the machine
-    checks: its own, and on macOS WebAssembly and iOS too, and the iOS simulator only when it is named. Each runs the
-    build's unit tests, with the tools' tests on the host's platform and the page tests on WebAssembly, except iOS,
-    whose tests are built and not run. `asan` is the host's alone. Each build is its lean form, which fetches only what its tests read (./dev.sh build --lean), and
-    builds past a compile error, so that it reports every error (./dev.sh build --keep-going). --configure configures
-    each build and fetches what lint reads, and builds and runs nothing: everything that the run fetches, which CI
-    caches before it runs (.github/workflows/ci.yml). In CI, where third_party then holds what the run fetched and
-    nothing else, it fails past a budget (FETCH_BUDGET). --key prints a hash of what decides what the run fetches,
-    which changes when that does, as CI's cache of third_party is keyed""",
+    checks: its own, and on macOS WebAssembly, iOS and the iOS simulator too. Each runs the build's unit tests, with the
+    tools' tests on the host's platform and the page tests on WebAssembly, except iOS, whose tests are built and not
+    run: the iOS simulator runs them, on a simulator device. `asan` is the host's alone. Each build is its lean form,
+    which fetches only what its tests read (./dev.sh build --lean), and builds past a compile error, so that it reports
+    every error (./dev.sh build --keep-going). --configure configures each build and fetches what lint reads, and builds
+    and runs nothing: everything that the run fetches, which CI caches before it runs (.github/workflows/ci.yml). In CI,
+    where third_party then holds what the run fetched and nothing else, it fails past a budget (FETCH_BUDGET). --key
+    prints a hash of what decides what the run fetches, which changes when that does, as CI's cache of third_party is
+    keyed""",
     "example": """\
 ./dev.sh example [wasm] <name> [args...]
 ./dev.sh example wasm <name> --screenshot <png> [--seconds S] [args...]
@@ -157,9 +158,9 @@ PLATFORM_NAMES = {
     "macos": "macOS", "windows": "Windows", "linux": "Linux", "wasm": "wasm", "ios": "iOS", "ios-sim": "iOS simulator",
 }
 
-# The platforms other than the host's that ./dev.sh ci checks on macOS when none is named. The simulator's tests run on
-# a simulator device, which a run checks only when it names the platform.
-CI_DEFAULT_CROSS_PLATFORMS = ("wasm", "ios")
+# The platforms other than the host's that ./dev.sh ci checks on macOS when none is named: the web, iOS devices, whose
+# build compiles for them, and the iOS simulator, whose tests run on a simulator device.
+CI_DEFAULT_CROSS_PLATFORMS = ("wasm", "ios", "ios-sim")
 
 
 def ci(argv):

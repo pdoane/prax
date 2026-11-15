@@ -28,11 +28,13 @@ if (PR_DEVELOP)
     # The tests of lib/net, lib/tls, lib/http and lib/fetch run against the servers of tools/harness/net_peer.py, which runs
     # each binary whole, through its peer (tools/harness/net_peer.h). They run over the platform's sockets.
 
-    # Adds the test binary `name` that tools/harness/net_peer.py runs.
+    # Adds the test binary `name` that tools/harness/net_peer.py runs, through the build's emulator if it has one, as a
+    # simulator build's binaries run on a simulator device, which reaches the peer's servers on the host.
     function(pr_net_tests name)
         add_executable(${name} ${ARGN})
         target_link_libraries(${name} PRIVATE net_peer prax::net prax::core_cpp test_main pr_warnings)
-        pr_add_test(${name} COMMAND ${Python3_EXECUTABLE} -m tools.harness.net_peer $<TARGET_FILE:${name}>
+        pr_add_test(${name} COMMAND ${Python3_EXECUTABLE} -m tools.harness.net_peer ${CMAKE_CROSSCOMPILING_EMULATOR}
+                    $<TARGET_FILE:${name}>
                     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR} TIMEOUT 60)
     endfunction()
 

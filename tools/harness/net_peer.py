@@ -1,7 +1,8 @@
 """The peer of the network's tests: TCP, TLS and HTTP servers that a test binary connects to.
 
-`python3 -m tools.harness.net_peer <binary> [arguments]` makes certificates for this run with the openssl command,
-starts each server on a port of its own on 127.0.0.1, and runs the binary with PR_NET_PEER set to a directory. The
+`python3 -m tools.harness.net_peer <command>...` makes certificates for this run with the openssl command, starts each
+server on a port of its own on 127.0.0.1, and runs the command, a test binary with its arguments, or a runner that runs
+one on a simulator device, with PR_NET_PEER set to a directory. The
 directory holds `ports`, a line of a server's name and port for each server, and the trusted CA's certificate as
 `ca.der`. The peer exits with the binary's status.
 
@@ -615,7 +616,7 @@ def accept(server, context, handle):
 
 def main():
     if len(sys.argv) < 2:
-        print("usage: net_peer.py <binary> [arguments]", file=sys.stderr)
+        print("usage: net_peer.py <command>...", file=sys.stderr)
         return 2
     with tempfile.TemporaryDirectory(prefix="pr_net_peer") as directory:
         make_ca(directory, "ca", "Prax Test CA")

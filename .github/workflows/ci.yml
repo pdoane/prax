@@ -29,13 +29,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [windows, macos, wasm, ios]
+        platform: [windows, macos, wasm, ios, ios-sim]
         configuration: [default, debug]
         include:
           - {platform: windows, os: windows-latest}
           - {platform: macos, os: macos-latest}
           - {platform: wasm, os: ubuntu-latest}
           - {platform: ios, os: macos-latest}
+          - {platform: ios-sim, os: macos-latest}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     defaults:
