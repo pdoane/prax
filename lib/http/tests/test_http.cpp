@@ -35,7 +35,7 @@ bool open(Fixture* fixture, const PrHttpHostRule* PR_NULLABLE rules = nullptr, u
     }
     fixture->net = prNetSocketsCreate();
     fixture->tls = prTlsCreate(PrTlsBackend_Default, fixture->net);
-    fixture->anchor = PrByteView{fixture->peer.ca.data, fixture->peer.ca.size};
+    fixture->anchor = prBlobBytes(fixture->peer.ca);
     PrHttpDesc desc{
         .net = fixture->net,
         .tls = fixture->tls,

@@ -30,9 +30,9 @@ struct Scene {
     void (*draw)(PrDrawList* list, float width, float height, double time, const SceneInput& input);
 };
 
-// Gets the scenes ready to draw, with their text shaped by `shaper` in the fonts of the Complete bundle under `fonts`.
-// `shaper` must outlive the scenes' use.
-void scenesOpen(PrTextShaper* shaper, const char* fonts);
+// Gets the scenes ready to draw, with their text shaped by `shaper` in the fonts of the Complete bundle among the
+// program's resources (font_bundle/<file>). `shaper` must outlive the scenes' use.
+void scenesOpen(PrTextShaper* shaper);
 
 // Frees the images and fonts that the scenes made.
 void scenesClose();

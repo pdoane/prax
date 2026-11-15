@@ -155,9 +155,8 @@ double fractionDiffering(const Array<uint8_t>& a, const Array<uint8_t>& b, int t
 }
 
 const PrFont* load(const char* name) {
-    Array<uint8_t> bytes = readFile(format("{}/{}", PR_FONTS_DIR, name));
     const PrFont* font = nullptr;
-    REQUIRE(prFontCreate(bytes, 0, nullptr, &font) == PrStatus_Ok);
+    REQUIRE(prFontCreate(openFile(format("{}/{}", PR_FONTS_DIR, name)), 0, nullptr, &font) == PrStatus_Ok);
     return font;
 }
 

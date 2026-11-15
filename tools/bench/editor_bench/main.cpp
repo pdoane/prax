@@ -188,8 +188,7 @@ void runFrame(Run& r) {
 
 bool open(Run& r, float pixelRatio) {
     r.display.pixelRatio = pixelRatio;
-    if (!hostOpen(r.host, PR_FONT_BUNDLE_DIR) ||
-            gpuDeviceCreate(PrGpuBackend_Default, nullptr, &r.device) != PrStatus_Ok ||
+    if (!hostOpen(r.host) || gpuDeviceCreate(PrGpuBackend_Default, nullptr, &r.device) != PrStatus_Ok ||
             prDrawFragmentCreate(r.device, nullptr, &r.renderer) != PrStatus_Ok)
         return false;
     r.drawFrame = prDrawFrameCreate(r.renderer);
@@ -241,7 +240,7 @@ int main(int argc, char** argv) {
             r = Run{};
         }
         if (!open(r, c.pixelRatio)) {
-            fprintf(stderr, "editor_bench: no fonts under %s, or no GPU device\n", PR_FONT_BUNDLE_DIR);
+            fprintf(stderr, "editor_bench: no fonts among its resources, or no GPU device\n");
             return 1;
         }
         auto run = [&] {

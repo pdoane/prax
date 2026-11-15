@@ -7,10 +7,10 @@ target_link_libraries(terminal_app PUBLIC prax::app prax::color prax::font prax:
                                           prax::core_cpp
                                    PRIVATE prax::layout pr_warnings)
 
-pr_app(terminal main.cpp)
+pr_app(terminal main.cpp FONT_BUNDLES NotoMono NerdFontSymbols)
 target_link_libraries(terminal PRIVATE terminal_app prax::studio_app prax::font_bundle prax::vterm)
 
 if (PR_DEVELOP)
     pr_module_tests(terminal_app tests/test_terminal_app.cpp)
-    target_link_libraries(terminal_app_tests PRIVATE kit_fixture prax::color prax::layout prax::ui prax::url)
+    target_link_libraries(terminal_app_tests PRIVATE kit_fixture prax::color prax::layout prax::process prax::ui prax::url)
 endif()

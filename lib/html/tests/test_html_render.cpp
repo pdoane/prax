@@ -29,6 +29,8 @@
 
 namespace pr_impl {
 
+using namespace harness;
+
 namespace {
 
 // Sets the headroom of the display that the context shows its document on, in sRGB's gamut.
@@ -85,7 +87,7 @@ float px(PrLayoutLength length) {
 const PrFont* load(const char* name) {
     String path = format("{}/{}", PR_FONTS_DIR, name);
     const PrFont* font = nullptr;
-    REQUIRE(prFontCreateFromFile(path, 0, nullptr, &font) == PrStatus_Ok);
+    REQUIRE(prFontCreate(openFile(path), 0, nullptr, &font) == PrStatus_Ok);
     return font;
 }
 

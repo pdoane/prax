@@ -11,8 +11,10 @@
 // profiler.
 
 #include "pr/assert.h"
+#include "pr/blob_ref.h"
 #include "pr/count_of.h"
 #include "pr/css.h"
+#include "pr/file.h"
 #include "pr/html.h"
 #include "pr/html_page.h"
 #include "pr/layout_style.h"
@@ -321,7 +323,8 @@ int main(int argc, char** argv) {
         prTextBufferAppend(&path, "/");
         prTextBufferAppend(&path, kFonts[i][0]);
         const PrFont* font = nullptr;
-        if (prFontCreateFromFile(prTextBufferView(&path), 0, nullptr, &font) == PrStatus_Ok) {
+        BlobRef opened = BlobRef::adopt(prFileOpen(prTextBufferView(&path)));
+        if (opened && prFontCreate(opened, 0, nullptr, &font) == PrStatus_Ok) {
             PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
             prFontSetAdd(fonts, &descriptor, font);
             prFontRelease(font);

@@ -3,6 +3,7 @@
 #include "apps/alchemy/image_cache.h"
 
 #include "pr/array.h"
+#include "pr/blob_ref.h"
 #include "pr/cache.h"
 #include "pr/file.h"
 #include "pr/function.h"
@@ -44,10 +45,8 @@ void runDecode(void* PR_NULLABLE context) {
     Decode* decode = static_cast<Decode*>(context);
     ImageCache* images = decode->scale->images;
     const PrDrawImage* image = nullptr;
-    PrByteView mapping{};
-    if (prFileMap(decode->path, &mapping)) {
-        image = imageDecode(images->codec, mapping.data, mapping.size);
-        prFileUnmap(&mapping);
+    if (BlobRef file = BlobRef::adopt(prFileOpen(decode->path))) {
+        image = imageDecode(images->codec, file.bytes().data, file.bytes().size);
         if (image != nullptr && decode->scale->scale == ImageScale_Thumbnail) {
             const PrDrawImage* full = image;
             image = imageShrink(full, kThumbnailMaxEdge);

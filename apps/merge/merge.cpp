@@ -2,6 +2,7 @@
 
 #include "apps/merge/merge.h"
 
+#include "pr/blob_ref.h"
 #include "pr/file.h"
 #include "pr/string_ops.h"
 #include "pr/text_diff.h"
@@ -13,11 +14,9 @@ namespace {
 
 // A file's text as lines, without their line breaks, as a merge reads them.
 struct FileLines {
-    PrByteView mapping{};
+    BlobRef file;
     Array<PrStringView> lines;
     bool crlf = false;              // the first line ends with CR LF
-
-    ~FileLines() { prFileUnmap(&mapping); }
 
     PrTextDiffText text() const {
         return PrTextDiffText{
@@ -31,9 +30,10 @@ struct FileLines {
 // Reads the file at `path` into `out`, its lines split at line feeds, each without a CR before its feed. A file that
 // ends with a line break has an empty last line, as an editor's buffer does. Returns false if it cannot be read.
 bool readLines(PrStringView path, FileLines* out) {
-    if (!prFileMap(path, &out->mapping))
+    out->file = BlobRef::adopt(prFileOpen(path));
+    if (!out->file)
         return false;
-    PrStringView all = prStringFromBytes(out->mapping);
+    PrStringView all = prStringFromBytes(out->file.bytes());
     size_t start = 0;
     for (size_t i = 0; i <= all.size; ++i) {
         if (i != all.size && all.data[i] != '\n')

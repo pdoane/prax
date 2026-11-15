@@ -2,6 +2,7 @@
 
 #include "apps/browser/profile.h"
 
+#include "pr/blob_ref.h"
 #include "pr/file.h"
 #include "pr/string.h"
 #include "pr/string_ops.h"
@@ -9,11 +10,10 @@
 namespace browser {
 
 bool profileRead(PrStringView path, String* out) {
-    PrByteView mapping{};
-    if (!prFileMap(path, &mapping))
+    BlobRef file = BlobRef::adopt(prFileOpen(path));
+    if (!file)
         return false;
-    *out = prStringFromBytes(mapping);
-    prFileUnmap(&mapping);
+    *out = prStringFromBytes(file.bytes());
     return true;
 }
 

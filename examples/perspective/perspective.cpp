@@ -19,7 +19,6 @@
 #include "pr/draw_filter.h"
 #include "pr/draw_image.h"
 #include "pr/draw_renderer.h"
-#include "pr/file.h"
 #include "pr/float.h"
 #include "pr/font_bundle.h"
 #include "pr/gpu.h"
@@ -35,6 +34,7 @@
 #include "pr/layout_scene.h"
 #include "pr/layout_unit.h"
 #include "pr/print.h"
+#include "pr/resource.h"
 #include "pr/status.h"
 #include "pr/task.h"
 #include "pr/text.h"
@@ -315,16 +315,15 @@ bool openPanels(Panels& p) {
     p.frosted = prDrawFilterCreate(builder);
     prDrawFilterBuilderDestroy(builder);
 
-    PrByteView file = {};
-    if (!prFileMap(PR_PERSPECTIVE_PICTURE, &file))
+    PrBlob* picture = prResourceOpen("picture.png");
+    if (picture == nullptr)
         return false;
     PrCompressCodec* compress = prCompressCodecCreate(PrCompressCodecBackend_Default);
     PrImageCodec* images = prImageCodecCreate(PrImageCodecBackend_Default, compress);
-    PrByteView bytes{file.data, file.size};
-    bool read = prDrawImageCreateFromBytes(images, bytes, &p.picture, nullptr) == PrStatus_Ok;
+    bool read = prDrawImageCreateFromBytes(images, prBlobBytes(picture), &p.picture, nullptr) == PrStatus_Ok;
     prImageCodecDestroy(images);
     prCompressCodecDestroy(compress);
-    prFileUnmap(&file);
+    prBlobRelease(picture);
     return read;
 }
 
@@ -618,11 +617,11 @@ int main() {
     w.pool = prTaskPoolCreate(PrTaskPoolBackend_Default, 1);
     requestDevice(w);
     if (!openPanels(w.panels))
-        printError("perspective: the picture at {} could not be read\n", PR_PERSPECTIVE_PICTURE);
+        printError("perspective: its resource picture.png could not be read\n");
     w.fonts = prFontSetCreate(nullptr);
     PrFontBundle bundle = PrFontBundle_Complete;
-    if (prFontBundleInstall(w.fonts, &bundle, 1, PR_FONT_BUNDLE_DIR) == 0) {
-        printError("perspective: the fonts under {} could not be installed\n", PR_FONT_BUNDLE_DIR);
+    if (prFontBundleInstall(w.fonts, &bundle, 1) == 0) {
+        printError("perspective: the font bundles among its resources could not be installed\n");
         closeDevice(w);
         prTaskPoolDestroy(w.pool);
         return 1;

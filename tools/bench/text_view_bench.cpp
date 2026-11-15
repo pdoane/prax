@@ -10,6 +10,7 @@
 // and what rendering each change costs on the platform's device.
 
 #include "pr/assert.h"
+#include "pr/blob_ref.h"
 #include "pr/draw_list.h"
 #include "pr/draw_renderer.h"
 #include "pr/file.h"
@@ -35,6 +36,7 @@
 #include <vector>
 
 using namespace harness;
+using namespace pr;
 
 namespace {
 
@@ -76,7 +78,8 @@ struct Bench {
     Bench() {
         std::string path = std::string(PR_FONTS_DIR) + "/Arimo.ttf";
         const PrFont* PR_NULLABLE face = nullptr;
-        if (prFontCreateFromFile(path, 0, nullptr, &face) != PrStatus_Ok)
+        BlobRef opened = BlobRef::adopt(prFileOpen(path));
+        if (!opened || prFontCreate(opened, 0, nullptr, &face) != PrStatus_Ok)
             PR_FATAL("cannot open Arimo");
         PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
         prFontSetAdd(fonts, &descriptor, face);
@@ -309,12 +312,13 @@ void timed(const char* label, Work work) {
 
 // Prints what a real file costs cold.
 int measureFile(const char* path) {
-    PrByteView mapping{};
-    if (!prFileMap(path, &mapping)) {
+    PrBlob* blob = prFileOpen(path);
+    if (blob == nullptr) {
         fprintf(stderr, "text_view_bench: cannot read %s\n", path);
         return 1;
     }
     Bench b;
+    PrByteView mapping = prBlobBytes(blob);
     PrStringView text{reinterpret_cast<const char*>(mapping.data), mapping.size};
     timed("open", [&] {
         b.buffer = prTextEditBufferCreate(text);
@@ -463,7 +467,7 @@ int measureFile(const char* path) {
     } else {
         printf("no device to render with\n");
     }
-    prFileUnmap(&mapping);
+    prBlobRelease(blob);
     return 0;
 }
 

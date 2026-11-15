@@ -4,13 +4,14 @@
 #include "examples/draw_gallery/scenes.h"
 
 #include "pr/array.h"
+#include "pr/blob_ref.h"
 #include "pr/count_of.h"
-#include "pr/file.h"
 #include "pr/float.h"
 #include "pr/font.h"
 #include "pr/locale.h"
 #include "pr/min_max.h"
 #include "pr/print.h"
+#include "pr/resource.h"
 #include "pr/string.h"
 #include "pr/string_ops.h"
 #include "pr/text.h"
@@ -29,7 +30,6 @@ constexpr PrColor kWhite{1, 1, 1, 1};
 // Text
 
 PrTextShaper* textShaper = nullptr;
-String fontDirectory;
 PrTextGlyphBuffer* glyphBuffer = nullptr;
 
 // A font of the bundle at a design point, loaded once for each.
@@ -61,13 +61,9 @@ const PrFont* PR_NULLABLE fontVaried(const char* file, const PrFontVariation* PR
         derivation.variationCount = count;
         font = base != nullptr ? prFontCreateDerived(base, &derivation) : nullptr;
     } else {
-        // The font copies the file's bytes, so the mapping goes as soon as the font is made.
-        PrByteView mapping = {};
-        String path = format("{}/{}", fontDirectory, file);
-        bool mapped = prFileMap(path, &mapping);
-        if (!mapped || prFontCreate(mapping, 0, nullptr, &font) != PrStatus_Ok)
+        BlobRef resource = BlobRef::adopt(prResourceOpen(format("font_bundle/{}", file)));
+        if (!resource || prFontCreate(resource, 0, nullptr, &font) != PrStatus_Ok)
             font = nullptr;
-        prFileUnmap(&mapping);
     }
     loadedFonts().push(LoadedFont{key, font});
     return font;
@@ -1790,9 +1786,8 @@ void drawScene(PrDrawList* list, float width, float height, double time, const S
 
 } // namespace
 
-void scenesOpen(PrTextShaper* shaper, const char* fonts) {
+void scenesOpen(PrTextShaper* shaper) {
     textShaper = shaper;
-    fontDirectory = fonts;
     glyphBuffer = prTextGlyphBufferCreate();
 }
 

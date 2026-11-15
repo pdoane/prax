@@ -239,7 +239,7 @@ void present(void* PR_NULLABLE context, PrDrawList* list, PrColor16 canvasColor)
 bool setUp(Bench& b) {
     b.fonts = prFontSetCreate(nullptr);
     PrFontBundle bundle = PrFontBundle_Complete;
-    prFontBundleInstall(b.fonts, &bundle, 1, PR_FONT_BUNDLE_DIR);
+    prFontBundleInstall(b.fonts, &bundle, 1);
     b.system = prFontSystemCreate(PrFontSystemBackend_Default);
     prFontSetSetSystem(b.fonts, b.system);
     b.shaper = prTextHarfBuzzCreate();

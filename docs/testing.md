@@ -198,10 +198,11 @@ prax fit` lists the pages that do not fit their 600 by 800 viewport.
 ## Examples and apps
 
 The examples under `examples/` and the apps under `apps/` are applications over the public headers, each a window on
-lib/app's default backend (`prAppCreate`) whose `main()` composes everything that runs it. An example shows what a
-library does. An app is for daily use, and keeps its model in a library of its own, which its unit tests link. Each is
-checked by running it. `./dev.sh example <name> [args...]` builds an example and runs it, and `./dev.sh app <name>
-[args...]` an app.
+lib/app's default backend (`prAppCreate`) whose `main()` composes everything that runs it. The files that each reads,
+such as its font bundles, are its resources (`pr/resource.h`), which its build stages with it on every platform. An
+example shows what a library does. An app is for daily use, and keeps its model in a library of its own, which its unit
+tests link. Each is checked by running it. `./dev.sh example <name> [args...]` builds an example and runs it, and
+`./dev.sh app <name> [args...]` an app.
 
 `./dev.sh package` checks the libraries as a consumer takes them. It builds them with the build's defaults and installs
 them, then builds `tools/package`, a program over their public headers, against the installed package and against the

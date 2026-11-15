@@ -145,7 +145,7 @@ struct HtmlDocumentLoad {
 // without its fragment, and its bytes.
 struct HtmlAvailableImage {
     PrRawString url;
-    PrRawString bytes;
+    PrBlob* bytes;                  // the response's body, which the list retains
 };
 
 // A module of a window's module map (html/#module-map), by its index in the browsing context's modules.

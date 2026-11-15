@@ -4,6 +4,7 @@
 #pragma once
 
 #include "pr/base.h"
+#include "pr/blob.h"
 #include "pr/byte_view.h"
 #include "pr/file.h"
 #include "pr/string_view.h"
@@ -14,11 +15,8 @@ PR_ASSUME_NONNULL_BEGIN
 extern "C" {
 #endif
 
-// Maps the file at `path` into `out`. Returns false and leaves `out` empty if the file cannot be mapped.
-bool prCorePosixFileMap(PrStringView path, PrByteView* out);
-
-// Unmaps `mapping`, which is not empty.
-void prCorePosixFileUnmap(PrByteView* mapping);
+// Returns a blob of the file at `path`, which it maps, or null if the file cannot be mapped.
+PrBlob* PR_NULLABLE prCorePosixFileOpen(PrStringView path);
 
 // Reads what the file system records about the file at `path` into `out`. Returns false if there is no such file or it
 // cannot be read.

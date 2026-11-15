@@ -166,6 +166,7 @@ endif()
 
 include(GNUInstallDirs)
 include(cmake/build.cmake)
+include(cmake/resources.cmake)
 include(cmake/dependencies.cmake)
 
 # The backends that the libraries build (README.md). A library holds each of its backends that the build turns on, and
@@ -318,6 +319,7 @@ endif()
 if (PR_INSTALL)
     include(cmake/install.cmake)
 endif()
+pr_stage_resources()
 if (PR_DEVELOP)
     pr_write_tests()
 endif()

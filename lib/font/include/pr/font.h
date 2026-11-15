@@ -6,6 +6,7 @@
 #pragma once
 
 #include "pr/base.h"
+#include "pr/blob.h"
 #include "pr/byte_view.h"
 #include "pr/color.h"
 #include "pr/compress.h"
@@ -108,10 +109,12 @@ typedef struct PrFontDerivation {
 // Returns the derivation with no variation, feature, override or synthesis, and a size-adjust of one.
 PrFontDerivation prFontDerivationDefault(void);
 
-// Creates the font at `index` of the file in `bytes`, derived as `derivation` specifies (prFontCreateDerived), and
-// copies the bytes. A null `derivation` gives the default instance. Returns InvalidData if the bytes are not a font or
-// the file has no font `index`. On failure, `*out` is null.
-PrStatus prFontCreate(PrByteView bytes, uint32_t index, const PrFontDerivation* PR_NULLABLE derivation,
+// Creates the font at `index` of the file in `blob`, derived as `derivation` specifies (prFontCreateDerived). The font
+// retains the blob for as long as it or a font derived from it lives, rather than copying its bytes, so a mapped file
+// or resource stays mapped (prFileOpen, prResourceOpen) and bytes that are the caller's are copied first (prBlobCopy).
+// A null `derivation` gives the default instance. Returns InvalidData if the bytes are not a font or the file has no
+// font `index`. On failure, `*out` is null.
+PrStatus prFontCreate(PrBlob* blob, uint32_t index, const PrFontDerivation* PR_NULLABLE derivation,
     const PrFont* PR_NULLABLE* PR_NONNULL out);
 
 // Creates a font in the same way as prFontCreate, from a WOFF or WOFF2 file in `bytes`, whose tables `codec`
@@ -120,12 +123,6 @@ PrStatus prFontCreate(PrByteView bytes, uint32_t index, const PrFontDerivation* 
 // the same cases as prFontCreate, and for a file that the rules of the format reject.
 PrStatus prFontCreateWoff(PrByteView bytes, uint32_t index, const PrFontDerivation* PR_NULLABLE derivation,
     PrCompressCodec* codec, const PrFont* PR_NULLABLE* PR_NONNULL out);
-
-// Creates a font in the same way as prFontCreate, for the file at the UTF-8 `path`. The file is mapped instead of
-// copied. Returns Io if the file cannot be read, and InvalidData in the same cases as prFontCreate. On failure, `*out`
-// is null.
-PrStatus prFontCreateFromFile(PrStringView path, uint32_t index, const PrFontDerivation* PR_NULLABLE derivation,
-    const PrFont* PR_NULLABLE* PR_NONNULL out);
 
 // Creates a font of the same file and index as `font`, derived as `derivation` specifies. The two fonts share their
 // bytes. The size-adjust is finite and above zero, and the synthesis is finite. A variation whose tag names no axis of

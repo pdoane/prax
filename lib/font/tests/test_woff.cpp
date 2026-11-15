@@ -41,9 +41,8 @@ PrStatus loadWoff(PrStringView name, uint32_t index, const PrFont** font) {
 }
 
 const PrFont* loadFont(PrStringView name) {
-    Array<uint8_t> bytes = fontFile(name);
     const PrFont* font = nullptr;
-    REQUIRE(prFontCreate(bytes, 0, nullptr, &font) == PrStatus_Ok);
+    REQUIRE(prFontCreate(openFile(format("{}/{}", PR_FONTS_DIR, name)), 0, nullptr, &font) == PrStatus_Ok);
     return font;
 }
 

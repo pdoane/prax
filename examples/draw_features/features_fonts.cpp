@@ -3,10 +3,11 @@
 
 #include "examples/draw_features/features_fonts.h"
 
+#include "pr/blob_ref.h"
 #include "pr/compress_builtin.h"
 #include "pr/count_of.h"
-#include "pr/file.h"
 #include "pr/font_set.h"
+#include "pr/resource.h"
 #include "pr/sort.h"
 #include "pr/string.h"
 #include "pr/svg_glyph.h"
@@ -31,14 +32,16 @@ const PrFont* adjusted;
 Array<const PrFont*> matchedFonts;      // a reference to each font that a match returned
 PrDrawGlyphDecoder* svgDecoder;         // the drawings' own decoder, created on first use
 
-String fontPath(const char* file) {
-    return format("{}/{}", PR_FONTS_DIR, file);
+// Returns the blob of the font file `file`, the resource fonts/<file>, which is empty if the program has no such
+// resource.
+BlobRef fontBlob(const char* file) {
+    return BlobRef::adopt(prResourceOpen(format("fonts/{}", file)));
 }
 
 void addFile(PrFontSet* set, const PrFontFaceDescriptor& descriptor, const char* file) {
-    String path = fontPath(file);
     const PrFont* font = nullptr;
-    if (prFontCreateFromFile(path, 0, nullptr, &font) != PrStatus_Ok)
+    BlobRef resource = fontBlob(file);
+    if (!resource || prFontCreate(resource, 0, nullptr, &font) != PrStatus_Ok)
         return;
     prFontSetAdd(set, &descriptor, font);
     prFontRelease(font);
@@ -989,15 +992,6 @@ constexpr uint32_t kOpsz = PR_FONT_TAG('o', 'p', 's', 'z');
 
 const PrFont* collectionFaces[2];             // the faces of a WOFF2 collection, loaded on first use
 
-Array<uint8_t> fileBytes(const char* file) {
-    Array<uint8_t> bytes;
-    PrByteView mapping = {};
-    if (prFileMap(fontPath(file), &mapping))
-        bytes.append(mapping.data, uint32_t(mapping.size));
-    prFileUnmap(&mapping);
-    return bytes;
-}
-
 // The transforms a WOFF2 file's table directory names (woff2 4.1): glyf and loca rebuilt point by point, and hmtx's
 // bearings taken from the glyphs' boxes.
 struct Woff2Transforms {
@@ -1006,21 +1000,21 @@ struct Woff2Transforms {
     bool hmtx = false;
 };
 
-Woff2Transforms transformsOf(const Array<uint8_t>& bytes) {
+Woff2Transforms transformsOf(PrByteView bytes) {
     Woff2Transforms out;
-    if (bytes.count() < 48)
+    if (bytes.size < 48)
         return out;
-    out.tables = uint32_t(bytes[12]) << 8 | bytes[13];
+    out.tables = uint32_t(bytes.data[12]) << 8 | bytes.data[13];
     uint32_t at = 48;
     auto base128 = [&]() {
-        while (at < bytes.count() && (bytes[at++] & 0x80) != 0) {
+        while (at < bytes.size && (bytes.data[at++] & 0x80) != 0) {
         }
     };
-    for (uint32_t i = 0; i < out.tables && at < bytes.count(); ++i) {
-        const uint8_t flags = bytes[at++];
+    for (uint32_t i = 0; i < out.tables && at < bytes.size; ++i) {
+        const uint8_t flags = bytes.data[at++];
         PrStringView tag{};
         if ((flags & 63) == 63) {
-            tag = PrStringView{reinterpret_cast<const char*>(bytes.data() + at), 4};
+            tag = PrStringView{reinterpret_cast<const char*>(bytes.data + at), 4};
             at += 4;
         }
         const uint32_t known = flags & 63;
@@ -1050,8 +1044,8 @@ void webFonts(PrDrawList* list, float, float, double) {
     const char* woffFile = "Literata-Latin.woff";
     const PrFont* fromWoff2 = fontNamed(woff2File);
     const PrFont* fromWoff = fontNamed(woffFile);
-    const Array<uint8_t> woff2Bytes = fileBytes(woff2File);
-    const Woff2Transforms transforms = transformsOf(woff2Bytes);
+    const BlobRef woff2Bytes = fontBlob(woff2File);
+    const Woff2Transforms transforms = transformsOf(woff2Bytes.bytes());
 
     // Literata's Latin subset as WOFF2 and as WOFF, each beside the font file it decodes to. Fontsource builds the two
     // files separately, so their font files differ slightly.
@@ -1064,8 +1058,8 @@ void webFonts(PrDrawList* list, float, float, double) {
         const PrFont* font;
     };
     const Row rows[] = {
-        {"WOFF2: one Brotli stream", woff2Bytes.count(), prFontData(fromWoff2).size, kBlue, fromWoff2},
-        {"WOFF: zlib, table by table", fileBytes(woffFile).count(), prFontData(fromWoff).size, kTeal, fromWoff},
+        {"WOFF2: one Brotli stream", woff2Bytes.bytes().size, prFontData(fromWoff2).size, kBlue, fromWoff2},
+        {"WOFF: zlib, table by table", fontBlob(woffFile).bytes().size, prFontData(fromWoff).size, kTeal, fromWoff},
     };
     const float largest = float(max(rows[0].decoded, rows[1].decoded));
     for (uint32_t i = 0; i < 2; ++i) {
@@ -1151,7 +1145,7 @@ void webFonts(PrDrawList* list, float, float, double) {
         const char tag[5] = {char(axis.tag >> 24), char(axis.tag >> 16), char(axis.tag >> 8), char(axis.tag), 0};
         formatTo(axes, "{}{} {:g} to {:g}", axes.isEmpty() ? "" : ", ", tag, double(axis.min), double(axis.max));
     }
-    String described = format("{} bytes of WOFF2; axes {}", fileBytes(variableFile).count(), axes);
+    String described = format("{} bytes of WOFF2; axes {}", fontBlob(variableFile).bytes().size, axes);
     label(described, PrVec2{30, 352});
     const float sizes[] = {8, 18, 48};
     const float weights[] = {200, 400, 600, 900};
@@ -1173,9 +1167,9 @@ void webFonts(PrDrawList* list, float, float, double) {
     // A collection in one WOFF2 file: its fonts share the file, and the font file it decodes to is a collection.
     label("A collection in one WOFF2 file: WPT's two test faces", PrVec2{600, 470}, 13, kInk);
     if (collectionFaces[0] == nullptr) {
-        const Array<uint8_t> bytes = fileBytes("woff2/available-002.woff2");
+        const BlobRef bytes = fontBlob("woff2/available-002.woff2");
         for (uint32_t index = 0; index < 2; ++index)
-            prFontCreateWoff(bytes, index, nullptr, prCompressBuiltinCreate(), &collectionFaces[index]);
+            prFontCreateWoff(bytes.bytes(), index, nullptr, prCompressBuiltinCreate(), &collectionFaces[index]);
     }
     for (uint32_t index = 0; index < 2; ++index) {
         const PrFont* face = collectionFaces[index];

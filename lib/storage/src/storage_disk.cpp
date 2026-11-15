@@ -51,10 +51,10 @@ struct DiskStorage : PrStorage {
     bool draining;              // true from when a drain is posted until it ends
 };
 
-// A record read from a store: the buffer of a record that is not yet written, or the mapping of its file.
+// A record read from a store: the buffer of a record that is not yet written, or the blob of its file.
 struct DiskRecord {
     StorageBuffer* PR_NULLABLE buffer;
-    PrByteView mapping;
+    PrBlob* PR_NULLABLE file;
 };
 
 void appendPath(const DiskStorage* storage, uint64_t file, PrTextBuffer* out) {
@@ -171,11 +171,11 @@ void unlockAndDrain(DiskStorage* storage) {
 void readIndex(DiskStorage* storage) {
     PrTextBuffer path{};
     appendPath(storage, 0, &path);
-    PrByteView mapping{};
-    bool mapped = prFileMap(prTextBufferView(&path), &mapping);
+    PrBlob* blob = prFileOpen(prTextBufferView(&path));
     prTextBufferReset(&path);
-    if (!mapped)
+    if (blob == nullptr)
         return;
+    PrByteView mapping = prBlobBytes(blob);
     const uint8_t* at = mapping.data;
     const uint8_t* end = mapping.data + mapping.size;
     auto take = [&](void* out, size_t size) {
@@ -211,7 +211,7 @@ void readIndex(DiskStorage* storage) {
                 storage->nextFile = file + 1;
         }
     }
-    prFileUnmap(&mapping);
+    prBlobRelease(blob);
 }
 
 // Store functions
@@ -261,15 +261,16 @@ bool readStorage(PrStorage* base, PrStringView key, PrStorageRecord* out) {
     unlockAndDrain(storage);
     PrTextBuffer path{};
     appendPath(storage, file, &path);
-    bool mapped = size == 0 || prFileMap(prTextBufferView(&path), &record->mapping);
+    record->file = size != 0 ? prFileOpen(prTextBufferView(&path)) : nullptr;
     prTextBufferReset(&path);
-    if (mapped && record->mapping.size == size) {
-        *out = PrStorageRecord{record->mapping, record};
+    PrByteView bytes = record->file != nullptr ? prBlobBytes(record->file) : PrByteView{};
+    if ((size == 0 || record->file != nullptr) && bytes.size == size) {
+        *out = PrStorageRecord{bytes, record};
         return true;
     }
     // A file that is missing or of another size than the index says is not the record. The entry goes, unless another
     // write replaced it meanwhile.
-    prFileUnmap(&record->mapping);
+    prBlobRelease(record->file);
     prMemoryFree(record);
     prMutexLock(&storage->mutex);
     position = storageIndexFind(&storage->index, key);
@@ -282,7 +283,7 @@ bool readStorage(PrStorage* base, PrStringView key, PrStorageRecord* out) {
 void releaseRecord(PrStorage*, PrStorageRecord* record) {
     DiskRecord* disk = static_cast<DiskRecord*>(record->handle);
     storageBufferRelease(disk->buffer);
-    prFileUnmap(&disk->mapping);
+    prBlobRelease(disk->file);
     prMemoryFree(disk);
 }
 

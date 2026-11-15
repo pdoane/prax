@@ -95,7 +95,7 @@ bool open(Fixture* fixture, const Backend& backend) {
     }
     fixture->net = prNetSocketsCreate();
     fixture->tls = prTlsCreate(backend.backend, fixture->net);
-    fixture->anchor = PrByteView{fixture->peer.ca.data, fixture->peer.ca.size};
+    fixture->anchor = prBlobBytes(fixture->peer.ca);
     return true;
 }
 

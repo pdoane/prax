@@ -7,8 +7,8 @@
 // beneath it. Space pauses the clock, and Escape quits.
 //
 // Usage: video [--renderer NAME] [FILE]. NAME is the name of one of lib/draw's backends, and Default if it is not
-// given. FILE is the video to play, and the example's own video if it is not given (./dev.sh fetch videos). On the web,
-// the page's query passes the arguments.
+// given. FILE is the video to play, and the example's own video, its resource cat.mp4, if it is not given (./dev.sh
+// fetch videos). On the web, the page's query passes the arguments.
 
 #include "pr/app.h"
 #include "pr/draw_list.h"
@@ -18,6 +18,7 @@
 #include "pr/gpu.h"
 #include "pr/media.h"
 #include "pr/print.h"
+#include "pr/resource.h"
 #include "pr/status.h"
 #include "pr/task.h"
 
@@ -37,7 +38,6 @@ struct Window {
     PrDrawList* list = nullptr;
     PrDrawRendererBackend backend = PrDrawRendererBackend_Default;
 
-    PrByteView file{};
     PrMediaCodec* codec = nullptr;
     PrMediaDecoder* decoder = nullptr;
     PrMediaInfo info{};
@@ -251,7 +251,6 @@ void shutdown(void* context, PrApp*) {
     closeDevice(w);
     prMediaDecoderDestroy(w.decoder);
     prMediaCodecDestroy(w.codec);
-    prFileUnmap(&w.file);
     prDrawListRelease(w.list);
 }
 
@@ -260,7 +259,7 @@ void shutdown(void* context, PrApp*) {
 int main(int argc, char** argv) {
     prCrashHandler();
     static Window w;
-    PrStringView path = PR_VIDEO_FILE;
+    PrStringView path{};
     for (int i = 1; i < argc; ++i) {
         PrStringView argument = argv[i];
         if (argument == "--renderer" && i + 1 < argc) {
@@ -279,14 +278,22 @@ int main(int argc, char** argv) {
     // The device is created on the pool while the video and the window open.
     w.pool = prTaskPoolCreate(PrTaskPoolBackend_Default, 1);
     requestDevice(w);
-    if (!prFileMap(path, &w.file)) {
+    // The example's own video is its resource, and a video that the arguments name is a file of the host.
+    PrBlob* video = path.isEmpty() ? prResourceOpen("cat.mp4") : prFileOpen(path);
+    if (path.isEmpty())
+        path = "cat.mp4";
+    if (video == nullptr) {
         printError("video: cannot read {}; ./dev.sh fetch videos fetches the example's own\n", path);
         closeDevice(w);
         prTaskPoolDestroy(w.pool);
         return 1;
     }
     w.codec = prMediaCodecCreate(PrMediaCodecBackend_Default);
-    if (w.codec == nullptr || prMediaDecoderCreate(w.codec, w.file, &w.decoder, &w.info) != PrStatus_Ok) {
+    PrStatus opened = PrStatus_NotSupported;
+    if (w.codec != nullptr)
+        opened = prMediaDecoderCreate(w.codec, video, &w.decoder, &w.info);
+    prBlobRelease(video);
+    if (opened != PrStatus_Ok) {
         printError("video: no codec plays {}\n", path);
         closeDevice(w);
         prTaskPoolDestroy(w.pool);

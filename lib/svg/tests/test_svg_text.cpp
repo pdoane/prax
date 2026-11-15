@@ -19,6 +19,7 @@
 
 namespace pr_impl {
 
+using namespace harness;
 using namespace pr;
 
 namespace {
@@ -335,7 +336,7 @@ TEST_CASE("text in the host's fonts is shaped, and a generic family is the set's
     PrFontSet* set = prFontSetCreate(nullptr);
     PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
     const PrFont* font = nullptr;
-    REQUIRE(prFontCreateFromFile(PR_FONTS_DIR "/NotoSans[wdth,wght].ttf", 0, nullptr, &font) == PrStatus_Ok);
+    REQUIRE(prFontCreate(openFile(PR_FONTS_DIR "/NotoSans[wdth,wght].ttf"), 0, nullptr, &font) == PrStatus_Ok);
     prFontSetAdd(set, &descriptor, font);
     prFontRelease(font);
     prFontSetSetGeneric(set, PrFontGeneric_SansSerif, "Noto Sans");

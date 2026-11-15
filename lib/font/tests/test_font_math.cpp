@@ -3,6 +3,7 @@
 
 #include "pr/align.h"
 #include "pr/array.h"
+#include "pr/blob_ref.h"
 #include "pr/compress_builtin.h"
 #include "pr/float.h"
 #include "pr/font.h"
@@ -34,7 +35,7 @@ Array<uint8_t> newCmBytes() {
 
 const PrFont* fromBytes(const Array<uint8_t>& bytes) {
     const PrFont* font = nullptr;
-    REQUIRE(prFontCreate(bytes, 0, nullptr, &font) == PrStatus_Ok);
+    REQUIRE(prFontCreate(BlobRef::adopt(prBlobCopy(bytes)), 0, nullptr, &font) == PrStatus_Ok);
     return font;
 }
 

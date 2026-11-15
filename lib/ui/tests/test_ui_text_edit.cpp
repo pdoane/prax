@@ -15,6 +15,8 @@
 
 namespace pr_impl {
 
+using namespace harness;
+
 namespace {
 
 // An edit of a buffer, in a tree over Arimo, with two styles of runs, which each round interns.
@@ -38,7 +40,7 @@ struct Styled {
     explicit Styled(const char* text, PrTextDirection paragraph = PrTextDirection_Ltr) : direction(paragraph) {
         String path = format("{}/Arimo-Regular.ttf", PR_FONTS_DIR);
         const PrFont* PR_NULLABLE face = nullptr;
-        REQUIRE(prFontCreateFromFile(path, 0, nullptr, &face) == PrStatus_Ok);
+        REQUIRE(prFontCreate(openFile(path), 0, nullptr, &face) == PrStatus_Ok);
         PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
         prFontSetAdd(fonts, &descriptor, face);
         prFontRelease(face);

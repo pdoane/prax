@@ -442,14 +442,18 @@ void decoderAudioWait(PrMediaDecoder* decoder, uint32_t frames) {
     prMediaAudioQueueWait(static_cast<AppleDecoder*>(decoder)->queue, frames);
 }
 
-PrStatus decoderCreate(PrMediaCodec*, PrByteView bytes, PrMediaDecoder* PR_NULLABLE* PR_NONNULL out, PrMediaInfo* info) {
+PrStatus decoderCreate(PrMediaCodec*, PrBlob* blob, PrMediaDecoder* PR_NULLABLE* PR_NONNULL out, PrMediaInfo* info) {
     @autoreleasepool {
+        PrByteView bytes = prBlobBytes(blob);
         NSString* type = containerType(bytes);
         if (type == nil)
             return PrStatus_NotSupported;
         PrMediaAppleSource* source = [[PrMediaAppleSource alloc] init];
         source.loader = [[PrMediaAppleLoader alloc] init];
-        source.loader.data = [NSData dataWithBytes:bytes.data length:bytes.size];
+        // The loader's data holds the blob's bytes without a copy, and releases the blob when it goes.
+        prBlobRetain(blob);
+        source.loader.data = [[NSData alloc] initWithBytesNoCopy:const_cast<uint8_t*>(bytes.data) length:bytes.size
+            deallocator:^(void*, NSUInteger) { prBlobRelease(blob); }];
         source.loader.contentType = type;
         source.queue = dispatch_queue_create("prax.media.loader", DISPATCH_QUEUE_SERIAL);
         source.asset = [AVURLAsset URLAssetWithURL:[NSURL URLWithString:@"prax-media://resource"] options:nil];

@@ -54,29 +54,28 @@ TEST_CASE("a file is written whole, replaced while a mapping of it stays valid, 
     REQUIRE(prFileCreateDirectory(PR_CORE_TEST_DIR));
     String path = pathOf("written.txt");
     REQUIRE(prFileWrite(path, bytesOf("first")));
-    PrByteView first{};
-    REQUIRE(prFileMap(path, &first));
-    CHECK(contentsOf(first) == "first");
+    PrBlob* first = prFileOpen(path);
+    REQUIRE(first != nullptr);
+    CHECK(contentsOf(prBlobBytes(first)) == "first");
 
     REQUIRE(prFileWrite(path, bytesOf("second, and longer")));
-    PrByteView second{};
-    REQUIRE(prFileMap(path, &second));
-    CHECK(contentsOf(second) == "second, and longer");
-    CHECK(contentsOf(first) == "first");
-    prFileUnmap(&first);
-    prFileUnmap(&second);
+    PrBlob* second = prFileOpen(path);
+    REQUIRE(second != nullptr);
+    CHECK(contentsOf(prBlobBytes(second)) == "second, and longer");
+    CHECK(contentsOf(prBlobBytes(first)) == "first");
+    prBlobRelease(first);
+    prBlobRelease(second);
 
-    // An empty file maps to an empty mapping.
+    // An empty file opens as a blob of no bytes.
     REQUIRE(prFileWrite(path, PrByteView{nullptr, 0}));
-    PrByteView empty{};
-    CHECK(prFileMap(path, &empty));
-    CHECK(empty.size == 0);
-    prFileUnmap(&empty);
+    PrBlob* empty = prFileOpen(path);
+    REQUIRE(empty != nullptr);
+    CHECK(prBlobBytes(empty).size == 0);
+    prBlobRelease(empty);
 
     CHECK(prFileRemove(path));
     CHECK(!prFileRemove(path));
-    PrByteView gone{};
-    CHECK(!prFileMap(path, &gone));
+    CHECK(prFileOpen(path) == nullptr);
     // A file in a directory that does not exist cannot be written.
     CHECK(!prFileWrite(pathOf("missing/written.txt"), bytesOf("x")));
 }

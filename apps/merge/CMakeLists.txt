@@ -5,7 +5,7 @@ add_library(merge_model STATIC merge.cpp)
 target_include_directories(merge_model PUBLIC ${PROJECT_SOURCE_DIR})
 target_link_libraries(merge_model PUBLIC prax::core_cpp PRIVATE prax::text_diff pr_warnings)
 
-pr_app(merge main.cpp)
+pr_app(merge main.cpp FONT_BUNDLES NotoMono)
 target_link_libraries(merge PRIVATE merge_model prax::layout prax::studio_command prax::studio_kit
                                     prax::studio_text_editor prax::studio_app prax::font_bundle prax::syntax prax::text
                                     prax::ui)

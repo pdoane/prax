@@ -1,8 +1,8 @@
 // Font bundles: the generic families and the families that text falls back to, bound to fonts that a build fetches
 // (lib/font_bundle/font_bundle.cmake), for an application to install into its font set.
 //
-// The library knows the files of each bundle by name, but not where they are. The application passes the directory that
-// holds them, either as pr_font_bundle_fetch creates it or as the application ships it.
+// The library knows the files of each bundle by name. They are the program's resources (pr/resource.h), each
+// font_bundle/<file>, which its build declares with pr_font_bundle_resources.
 
 #pragma once
 
@@ -51,15 +51,15 @@ typedef uint8_t PrFontBundle;
 
 // Installs the stacks of `bundles`, in order, into `set`.
 //
-// The call adds the faces of the bundles' files in `directory` to `set`, each file once. It binds the generic families
-// to the bundles' fonts, and adds the bundles' other names as aliases. A name refers to the fonts of the first bundle
-// that gives it. The call makes serif the default family. It sets the fallback families in the order that they are
-// tried (prFontSetSetFallbackFamilies): the families of each bundle in turn, so that a later bundle serves what the
-// earlier ones lack. Each fallback family carries the language that it is made for, if its faces do not say. A file
-// that is not in the directory is left out.
+// The call adds the faces of the bundles' files, the program's resources font_bundle/<file>, to `set`, each file once.
+// It binds the generic families to the bundles' fonts, and adds the bundles' other names as aliases. A name refers to
+// the fonts of the first bundle that gives it. The call makes serif the default family. It sets the fallback families
+// in the order that they are tried (prFontSetSetFallbackFamilies): the families of each bundle in turn, so that a later
+// bundle serves what the earlier ones lack. Each fallback family carries the language that it is made for, if its faces
+// do not say. A file that is not among the program's resources is left out.
 //
 // Returns the number of files added, out of prFontBundleFileCount(bundles, count).
-uint32_t prFontBundleInstall(PrFontSet* set, const PrFontBundle* bundles, uint32_t count, PrStringView directory);
+uint32_t prFontBundleInstall(PrFontSet* set, const PrFontBundle* bundles, uint32_t count);
 
 // Returns the number of files that the bundles install together.
 uint32_t prFontBundleFileCount(const PrFontBundle* bundles, uint32_t count);

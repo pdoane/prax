@@ -103,9 +103,9 @@ void decoderDestroy(PrMediaDecoder* decoder) {
     prMemoryFree(static_cast<BuiltinDecoder*>(decoder));
 }
 
-PrStatus decoderCreate(PrMediaCodec*, PrByteView bytes, PrMediaDecoder* PR_NULLABLE* PR_NONNULL out, PrMediaInfo* info) {
+PrStatus decoderCreate(PrMediaCodec*, PrBlob* blob, PrMediaDecoder* PR_NULLABLE* PR_NONNULL out, PrMediaInfo* info) {
     info->duration = kPrF64Nan;
-    if (!readMovie(bytes, info))
+    if (!readMovie(prBlobBytes(blob), info))
         return PrStatus_NotSupported;
     BuiltinDecoder* d = allocZeroed<BuiltinDecoder>();
     d->destroyFn = decoderDestroy;

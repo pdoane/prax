@@ -27,9 +27,9 @@ TEST_CASE("a file that another reader holds open, sharing its removal, is still 
     REQUIRE(held != INVALID_HANDLE_VALUE);
     CHECK(prFileWrite(path, prStringBytes("second")));
     CloseHandle(held);
-    PrByteView mapping{};
-    REQUIRE(prFileMap(path, &mapping));
-    CHECK(prStringFromBytes(mapping) == "second");
-    prFileUnmap(&mapping);
+    PrBlob* blob = prFileOpen(path);
+    REQUIRE(blob != nullptr);
+    CHECK(prStringFromBytes(prBlobBytes(blob)) == "second");
+    prBlobRelease(blob);
     CHECK(prFileRemove(path));
 }

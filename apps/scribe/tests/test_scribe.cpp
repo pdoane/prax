@@ -6,6 +6,7 @@
 #include "pr/font_set.h"
 #include "pr/layout_query.h"
 #include "pr/layout_tree.h"
+#include "pr/process.h"
 #include "pr/string.h"
 #include "pr/string_ops.h"
 #include "pr/text_font.h"
@@ -520,7 +521,8 @@ TEST_CASE("Save waits for the load to finish") {
     CHECK((prCommandRegistryState(e.s.commands, index) & PrCommandStateFlag_Disabled) == 0);
 }
 
-TEST_CASE("a click with the primary modifier on a terminal's reference to a file shows the file at its line") {
+TEST_CASE("a click with the primary modifier on a terminal's reference to a file shows the file at its line" *
+        doctest::skip(!prProcessBackendIsBuilt(PrProcessBackend_Default))) {
     String folder = String(PrStringView(testFolder()));
     String path = format("{}/linked.txt", folder);
     String text = document(5);

@@ -599,13 +599,15 @@ bool readFile(Vterm* vterm, const GraphicsCommand& command, PrStringView payload
     if (allowed && prFileInfo(absolute, &info) && info.kind == PrFileKind_Regular &&
             info.size <= limit + command.offset) {
         uint64_t end = command.size != 0 ? uint64_t(command.offset) + command.size : info.size;
-        PrByteView mapped{};
-        if (end <= info.size && end > command.offset && end - command.offset <= limit && prFileMap(absolute, &mapped)) {
+        bool fits = end <= info.size && end > command.offset && end - command.offset <= limit;
+        PrBlob* blob = fits ? prFileOpen(absolute) : nullptr;
+        if (blob != nullptr) {
+            PrByteView mapped = prBlobBytes(blob);
             if (mapped.size >= end) {
                 out->append(mapped.data + command.offset, uint32_t(end - command.offset));
                 read = true;
             }
-            prFileUnmap(&mapped);
+            prBlobRelease(blob);
         }
     }
     if (allowed && temporary)

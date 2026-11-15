@@ -25,6 +25,7 @@ PR_ASSUME_NONNULL_BEGIN
 
 namespace pr_impl {
 
+using namespace harness;
 using namespace pr;
 
 // Verifies the tree's incremental work, and reports the first difference if there is one.
@@ -69,7 +70,7 @@ struct Fixture {
         PrFontDerivation derivation = prFontDerivationDefault();
         derivation.aliased = aliased;
         derivation.overrides = PrFontOverrideFlag_Aliased;
-        REQUIRE(prFontCreateFromFile(path, 0, &derivation, &font) == PrStatus_Ok);
+        REQUIRE(prFontCreate(openFile(path), 0, &derivation, &font) == PrStatus_Ok);
         PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
         prFontSetAdd(fonts, &descriptor, font);
         prFontRelease(font);
@@ -98,7 +99,7 @@ struct Fixture {
     PrFontFamily family(PrStringView file, PrStringView name) {
         String path = format("{}/{}", PR_FONTS_DIR, file);
         const PrFont* PR_NULLABLE font = nullptr;
-        REQUIRE(prFontCreateFromFile(path, 0, nullptr, &font) == PrStatus_Ok);
+        REQUIRE(prFontCreate(openFile(path), 0, nullptr, &font) == PrStatus_Ok);
         PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
         prFontSetAdd(fonts, &descriptor, font);
         prFontRelease(font);

@@ -1,4 +1,5 @@
 #include "pr/array.h"
+#include "pr/blob_ref.h"
 #include "pr/checksum.h"
 #include "pr/compress_builtin.h"
 #include "pr/draw_cpu.h"
@@ -26,9 +27,8 @@ Array<uint8_t> fontFile(const char* name) {
 }
 
 const PrFont* load(const char* name) {
-    Array<uint8_t> bytes = fontFile(name);
     const PrFont* font = nullptr;
-    REQUIRE(prFontCreate(bytes, 0, nullptr, &font) == PrStatus_Ok);
+    REQUIRE(prFontCreate(openFile(format("{}/{}", PR_FONTS_DIR, name)), 0, nullptr, &font) == PrStatus_Ok);
     return font;
 }
 
@@ -224,7 +224,7 @@ TEST_CASE("a gzip-compressed document draws as it does uncompressed, and not wit
     Array<uint8_t> compressed = gzipStored(document);
     Array<uint8_t> bytes = withSvgDocument(file, glyph, compressed);
     const PrFont* gzipped = nullptr;
-    REQUIRE(prFontCreate(bytes, 0, nullptr, &gzipped) == PrStatus_Ok);
+    REQUIRE(prFontCreate(BlobRef::adopt(prBlobCopy(bytes)), 0, nullptr, &gzipped) == PrStatus_Ok);
     PrFontGlyphSvg packed{};
     REQUIRE(prFontGlyphSvg(gzipped, glyph, &packed));
     CHECK(packed.document.data[0] == 0x1f);

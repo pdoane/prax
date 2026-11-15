@@ -2,11 +2,12 @@
 
 #include "examples/draw_features/drawing.h"
 
+#include "pr/blob_ref.h"
 #include "pr/compress_builtin.h"
-#include "pr/file.h"
 #include "pr/image.h"
 #include "pr/image_builtin.h"
 #include "pr/print.h"
+#include "pr/resource.h"
 #include "pr/string.h"
 #include "pr/vec.h"
 
@@ -289,22 +290,18 @@ const PrFont* fontDerived(const char* file, const PrFontDerivation& derivation) 
     }
     const PrFont* font = nullptr;
     if (key == keyOf(file, prFontDerivationDefault())) {
-        // The font copies the file's bytes, so the mapping goes as soon as the font is made.
-        String path = format("{}/{}", PR_FONTS_DIR, file);
-        PrByteView mapping = {};
         PrStatus status = PrStatus_NotFound;
-        if (prFileMap(path, &mapping)) {
+        if (BlobRef resource = BlobRef::adopt(prResourceOpen(format("fonts/{}", file)))) {
             // A WOFF or WOFF2 file decodes through the built-in codec.
-            const PrByteView view{mapping.data, mapping.size};
+            const PrByteView view = resource.bytes();
             const bool woff = view.size >= 4 && view.data[0] == 'w' && view.data[1] == 'O' && view.data[2] == 'F';
             if (woff)
                 status = prFontCreateWoff(view, 0, nullptr, prCompressBuiltinCreate(), &font);
             else
-                status = prFontCreate(view, 0, nullptr, &font);
+                status = prFontCreate(resource, 0, nullptr, &font);
         }
-        prFileUnmap(&mapping);
         if (status != PrStatus_Ok) {
-            printError("draw_features: no font at {}; ./dev.sh fetch fonts\n", path);
+            printError("draw_features: no font {} among its resources; ./dev.sh fetch fonts\n", file);
             PR_FATAL("a drawing's font is missing");
         }
     } else {

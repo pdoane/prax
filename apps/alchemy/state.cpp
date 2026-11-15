@@ -4,6 +4,7 @@
 
 #include "pr/array.h"
 #include "pr/ascii.h"
+#include "pr/blob_ref.h"
 #include "pr/file.h"
 #include "pr/float.h"
 #include "pr/string.h"
@@ -23,12 +24,9 @@ constexpr double kHeldEventMaxAge = 5.0;
 constexpr size_t kHistoryLimit = 100;
 
 Array<uint8_t> readFile(PrStringView path) {
-    PrByteView mapping{};
-    if (!prFileMap(path, &mapping))
-        return Array<uint8_t>();
+    BlobRef file = BlobRef::adopt(prFileOpen(path));
     Array<uint8_t> bytes;
-    bytes.append(mapping.data, uint32_t(mapping.size));
-    prFileUnmap(&mapping);
+    bytes.append(file.bytes().data, uint32_t(file.bytes().size));
     return bytes;
 }
 

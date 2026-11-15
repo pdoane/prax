@@ -12,6 +12,7 @@
 
 namespace pr_impl {
 
+using namespace harness;
 using namespace pr;
 
 namespace {
@@ -30,7 +31,7 @@ struct Grid {
         for (const char* name : names) {
             String path = format("{}/{}", PR_FONTS_DIR, PrStringView(name));
             const PrFont* PR_NULLABLE face = nullptr;
-            REQUIRE(prFontCreateFromFile(path, 0, nullptr, &face) == PrStatus_Ok);
+            REQUIRE(prFontCreate(openFile(path), 0, nullptr, &face) == PrStatus_Ok);
             PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
             prFontSetAdd(fonts, &descriptor, face);
             prFontRelease(face);

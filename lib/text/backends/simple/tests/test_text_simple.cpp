@@ -1,6 +1,7 @@
 // The simple shaper: one glyph per character and pair kerning place Latin, Greek and Cyrillic text as HarfBuzz does.
 
 #include "pr/array.h"
+#include "pr/blob_ref.h"
 #include "pr/font.h"
 #include "pr/string.h"
 #include "pr/text_harfbuzz.h"
@@ -24,7 +25,7 @@ Array<uint8_t> readFont(const char* name) {
 
 const PrFont* load(const Array<uint8_t>& bytes) {
     const PrFont* font = nullptr;
-    REQUIRE(prFontCreate(bytes, 0, nullptr, &font) == PrStatus_Ok);
+    REQUIRE(prFontCreate(BlobRef::adopt(prBlobCopy(bytes)), 0, nullptr, &font) == PrStatus_Ok);
     return font;
 }
 

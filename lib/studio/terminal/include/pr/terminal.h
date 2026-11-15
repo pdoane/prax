@@ -107,14 +107,15 @@ typedef struct PrTerminalDesc {
     // bold italic fonts from the same families.
     PrTextFontDesc font;
 
-    // The launcher, which must outlive the terminal, and the program it runs (PrProcessDesc). The program is a path or
-    // a name to search for in PATH. A null directory is the launcher's. The terminal adds the variables that name its
-    // type (TERM and others) unless `environment` sets them.
+    // The launcher, which must outlive the terminal, or null to start no program, as where the build has no process
+    // backend (prProcessLauncherCreate), so that the program fails to start (prTerminalLaunchStatus). The program that
+    // it runs (PrProcessDesc) is a path or a name to search for in PATH. A null directory is the launcher's. The
+    // terminal adds the variables that name its type (TERM and others) unless `environment` sets them.
     //
     // An empty program runs the user's shell, and ignores `arguments`. On POSIX, the shell is the one that SHELL names
     // in the program's environment, or /bin/sh, and it runs as a login shell. On Windows, it is the one that COMSPEC
     // names, or cmd.exe.
-    PrProcessLauncher* launcher;
+    PrProcessLauncher* PR_NULLABLE launcher;
     PrStringView program;
     const PrStringView* PR_NULLABLE arguments;
     uint32_t argumentCount;

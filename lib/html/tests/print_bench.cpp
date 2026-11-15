@@ -13,11 +13,13 @@
 
 #include "pr/array.h"
 #include "pr/assert.h"
+#include "pr/blob_ref.h"
 #include "pr/compress.h"
 #include "pr/count_of.h"
 #include "pr/draw_list.h"
 #include "pr/draw_structure.h"
 #include "pr/draw_writer.h"
+#include "pr/file.h"
 #include "pr/html.h"
 #include "pr/html_page.h"
 #include "pr/html_structure.h"
@@ -132,7 +134,8 @@ PrTextFont* makeFont(PrFontSet** fonts, PrTextShaper** shaper) {
     PrTextBuffer path = {};
     prTextBufferAppend(&path, PR_FONTS_DIR "/Tinos.ttf");
     const PrFont* font = nullptr;
-    if (prFontCreateFromFile(prTextBufferView(&path), 0, nullptr, &font) == PrStatus_Ok) {
+    BlobRef opened = BlobRef::adopt(prFileOpen(prTextBufferView(&path)));
+    if (opened && prFontCreate(opened, 0, nullptr, &font) == PrStatus_Ok) {
         PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
         prFontSetAdd(*fonts, &descriptor, font);
         prFontRelease(font);

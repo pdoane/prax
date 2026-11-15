@@ -1,6 +1,7 @@
 // The state's verbs that work over the gallery's files: the record's groups, and the import.
 
 #include "pr/array.h"
+#include "pr/blob_ref.h"
 #include "pr/compress.h"
 #include "pr/file.h"
 #include "pr/image.h"
@@ -54,10 +55,9 @@ struct Fixture {
         REQUIRE(confirmImport(state));
         const GalleryEntry* entry = gallerySelected(state.gallery);
         REQUIRE(entry != nullptr);
-        PrByteView mapping{};
-        REQUIRE(prFileMap(entry->path, &mapping));
-        Array<uint8_t> png = provenanceWrite(mapping, record);
-        prFileUnmap(&mapping);
+        BlobRef file = BlobRef::adopt(prFileOpen(entry->path));
+        REQUIRE(file.get() != nullptr);
+        Array<uint8_t> png = provenanceWrite(file.bytes(), record);
         REQUIRE(prFileWrite(entry->path, png));
         galleryRescan(state.gallery);
     }

@@ -30,9 +30,9 @@ namespace {
 
 // Loads a test font by its file name.
 const PrFont* load(const char* name) {
-    Array<uint8_t> bytes = readFile(format("{}/{}", PR_FONTS_DIR, PrStringView(name)));
     const PrFont* font = nullptr;
-    REQUIRE(prFontCreate(bytes, 0, nullptr, &font) == PrStatus_Ok);
+    REQUIRE(prFontCreate(openFile(format("{}/{}", PR_FONTS_DIR, PrStringView(name))), 0, nullptr,
+        &font) == PrStatus_Ok);
     return font;
 }
 

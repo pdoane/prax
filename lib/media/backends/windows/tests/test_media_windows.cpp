@@ -1,4 +1,5 @@
 #include "pr/array.h"
+#include "pr/blob_ref.h"
 #include "pr/media_windows.h"
 #include "pr/mem.h"
 #include "pr/thread.h"
@@ -149,7 +150,7 @@ TEST_CASE("the Media Foundation codec reads a movie from memory and decodes the 
     REQUIRE(!bytes.isEmpty());
     PrMediaDecoder* decoder = nullptr;
     PrMediaInfo info{};
-    REQUIRE(prMediaDecoderCreate(codec, bytes, &decoder, &info) == PrStatus_Ok);
+    REQUIRE(prMediaDecoderCreate(codec, BlobRef::adopt(prBlobCopy(bytes)), &decoder, &info) == PrStatus_Ok);
     CHECK(info.hasVideo);
     CHECK(!info.hasAudio);
     CHECK(info.videoExtent.x == kWidth);
@@ -191,11 +192,11 @@ TEST_CASE("the Media Foundation codec reads a movie from memory and decodes the 
     // Bytes that are no container that Media Foundation reads are not supported, and a container's start is corrupt.
     Array<uint8_t> noise(256);
     prMemFill(noise.data(), 0x5a, noise.count());
-    CHECK(prMediaDecoderCreate(codec, noise, &decoder, &info) == PrStatus_NotSupported);
+    CHECK(prMediaDecoderCreate(codec, BlobRef::adopt(prBlobCopy(noise)), &decoder, &info) == PrStatus_NotSupported);
     CHECK(decoder == nullptr);
     Array<uint8_t> truncated;
     truncated.append(bytes.data(), 16);
-    CHECK(prMediaDecoderCreate(codec, truncated, &decoder, &info) != PrStatus_Ok);
+    CHECK(prMediaDecoderCreate(codec, BlobRef::adopt(prBlobCopy(truncated)), &decoder, &info) != PrStatus_Ok);
     CHECK(decoder == nullptr);
     prMediaCodecDestroy(codec);
 }
@@ -209,7 +210,7 @@ TEST_CASE("the Media Foundation codec decodes for a thread in a single-threaded 
         Array<uint8_t> bytes = encodeMovie();
         PrMediaDecoder* decoder = nullptr;
         PrMediaInfo info{};
-        if (prMediaDecoderCreate(codec, bytes, &decoder, &info) == PrStatus_Ok) {
+        if (prMediaDecoderCreate(codec, BlobRef::adopt(prBlobCopy(bytes)), &decoder, &info) == PrStatus_Ok) {
             PrMediaFrame frame{};
             *static_cast<bool*>(context) = waitForFrame(decoder, 5.5 / kFramesPerSecond, &frame);
             prMediaDecoderDestroy(decoder);

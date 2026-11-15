@@ -22,6 +22,8 @@
 
 namespace pr_impl {
 
+using namespace harness;
+
 namespace {
 
 // Returns a transform that turns a box by `radians` about its y axis, or about its x axis if `aboutX` is set.
@@ -128,7 +130,7 @@ void commitTree(PrLayoutCompositor* compositor, const PrLayoutTree* tree, const 
 const PrFont* fontFile(const char* name) {
     String path = format("{}/{}", PR_FONTS_DIR, name);
     const PrFont* font = nullptr;
-    REQUIRE(prFontCreateFromFile(path, 0, nullptr, &font) == PrStatus_Ok);
+    REQUIRE(prFontCreate(openFile(path), 0, nullptr, &font) == PrStatus_Ok);
     return font;
 }
 

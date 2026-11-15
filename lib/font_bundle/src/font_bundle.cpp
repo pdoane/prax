@@ -5,6 +5,7 @@
 #include "pr/count_of.h"
 #include "pr/locale_common.h"
 #include "pr/raw_array.h"
+#include "pr/resource.h"
 #include "pr/string_ops.h"
 
 namespace pr_impl {
@@ -328,14 +329,18 @@ bool bundleFileIsAdded(const RawArray<BundleFile>& files, const char* file) {
     return files.data[bundleFileIndex(files, file)].added;
 }
 
-// Adds the font file `file` of `directory` to `set`. Returns false if it does not load.
-bool add(PrFontSet* set, PrStringView directory, const char* file) {
-    PrRawString path = prRawStringCopy(directory);
-    prRawStringAppend(&path, "/");
-    prRawStringAppend(&path, file);
+// Adds the font of the bundle's file `file`, the resource font_bundle/<file>, to `set`. Returns false if it does not
+// load.
+bool add(PrFontSet* set, const char* file) {
+    PrRawString name = prRawStringCopy("font_bundle/");
+    prRawStringAppend(&name, file);
     const PrFont* PR_NULLABLE font = nullptr;
-    PrStatus status = prFontCreateFromFile(prRawStringView(&path), 0, nullptr, &font);
-    prRawStringReset(&path);
+    PrBlob* resource = prResourceOpen(prRawStringView(&name));
+    prRawStringReset(&name);
+    if (resource == nullptr)
+        return false;
+    PrStatus status = prFontCreate(resource, 0, nullptr, &font);
+    prBlobRelease(resource);
     if (status != PrStatus_Ok)
         return false;
     PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
@@ -349,12 +354,12 @@ bool add(PrFontSet* set, PrStringView directory, const char* file) {
 
 using namespace pr_impl;
 
-uint32_t prFontBundleInstall(PrFontSet* set, const PrFontBundle* bundles, uint32_t count, PrStringView directory) {
+uint32_t prFontBundleInstall(PrFontSet* set, const PrFontBundle* bundles, uint32_t count) {
     RawArray<BundleFile> files{};
     bundleFilesRecord(files, bundles, count);
     uint32_t added = 0;
     for (uint32_t i = 0; i < files.count; ++i) {
-        files.data[i].added = add(set, directory, files.data[i].file);
+        files.data[i].added = add(set, files.data[i].file);
         added += files.data[i].added ? 1 : 0;
     }
     // The bundles bind their names last to first, so that the first bundle to give a name binds it.

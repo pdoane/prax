@@ -17,6 +17,8 @@ extern "C" int prTestLottieCApi(void);
 
 namespace pr_impl {
 
+using namespace harness;
+
 namespace {
 
 PrLottieAnimation* read(PrStringView json) {
@@ -309,7 +311,7 @@ TEST_CASE("text is shaped a paragraph at a time, and each letter is its cluster'
     String path = format("{}/NotoSansArabic[wdth,wght].ttf", PR_FONTS_DIR);
     PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
     const PrFont* font = nullptr;
-    REQUIRE(prFontCreateFromFile(path, 0, nullptr, &font) == PrStatus_Ok);
+    REQUIRE(prFontCreate(openFile(path), 0, nullptr, &font) == PrStatus_Ok);
     prFontSetAdd(fonts, &descriptor, font);
     prFontRelease(font);
     PrTextShaper* shaper = prTextKbCreate();

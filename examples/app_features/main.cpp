@@ -221,8 +221,8 @@ int main(int argc, char** argv) {
     const PrFontBundle bundles[] = {PrFontBundle_Standard14};
     if (system != nullptr) {
         prFontSetSetSystem(fonts, system);
-    } else if (prFontBundleInstall(fonts, bundles, uint32_t(countOf(bundles)), PR_FONT_BUNDLE_DIR) == 0) {
-        printError("app_features: the fonts under {} could not be installed\n", PR_FONT_BUNDLE_DIR);
+    } else if (prFontBundleInstall(fonts, bundles, uint32_t(countOf(bundles))) == 0) {
+        printError("app_features: the font bundles among its resources could not be installed\n");
         prFontSetDestroy(fonts);
         return 1;
     }

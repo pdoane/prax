@@ -3,6 +3,7 @@
 
 #include "tools/harness/net_peer.h"
 
+#include "pr/file.h"
 #include "pr/mem.h"
 #include "pr/string_ops.h"
 
@@ -105,10 +106,10 @@ bool netPeerOpen(NetPeer* out) {
         ++size;
     }
     prMemCopy(path + size, "/ports", 6);
-    PrByteView ports{};
-    if (!prFileMap(PrStringView{path, size + 6}, &ports))
+    PrBlob* ports = prFileOpen(PrStringView{path, size + 6});
+    if (ports == nullptr)
         return false;
-    PrStringView text = prStringFromBytes(ports);
+    PrStringView text = prStringFromBytes(prBlobBytes(ports));
     out->tcpEcho = portOf(text, "tcp_echo");
     out->tlsEcho = portOf(text, "tls_echo");
     out->tlsTruncating = portOf(text, "tls_truncating");
@@ -120,13 +121,15 @@ bool netPeerOpen(NetPeer* out) {
     out->wss = portOf(text, "wss");
     out->comfy = portOf(text, "comfy");
     out->closed = portOf(text, "closed");
-    prFileUnmap(&ports);
+    prBlobRelease(ports);
     prMemCopy(path + size, "/ca.der", 7);
-    return prFileMap(PrStringView{path, size + 7}, &out->ca);
+    out->ca = prFileOpen(PrStringView{path, size + 7});
+    return out->ca != nullptr;
 }
 
 void netPeerReset(NetPeer* peer) {
-    prFileUnmap(&peer->ca);
+    prBlobRelease(peer->ca);
+    peer->ca = nullptr;
 }
 
 void netLatchInit(NetLatch* latch) {

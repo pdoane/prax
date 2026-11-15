@@ -7,6 +7,7 @@
 
 namespace pr_impl {
 
+using namespace harness;
 using namespace pr;
 
 namespace {
@@ -18,7 +19,7 @@ String fontPath(const char* name) {
 void addFile(PrFontSet* set, const PrFontFaceDescriptor& descriptor, const char* name) {
     String path = fontPath(name);
     const PrFont* font = nullptr;
-    REQUIRE(prFontCreateFromFile(path, 0, nullptr, &font) == PrStatus_Ok);
+    REQUIRE(prFontCreate(openFile(path), 0, nullptr, &font) == PrStatus_Ok);
     prFontSetAdd(set, &descriptor, font);
     prFontRelease(font);
 }
@@ -86,7 +87,7 @@ String familyMatched(PrFontSet* set, const Asked& r) {
 const PrFont* loadFont(const char* name) {
     String path = fontPath(name);
     const PrFont* font = nullptr;
-    REQUIRE(prFontCreateFromFile(path, 0, nullptr, &font) == PrStatus_Ok);
+    REQUIRE(prFontCreate(openFile(path), 0, nullptr, &font) == PrStatus_Ok);
     return font;
 }
 
@@ -399,7 +400,7 @@ TEST_CASE("a face with a color glyph for an emoji is an emoji face, unless its d
     addFile(set, d, "NotoSans[wdth,wght].ttf");
     String path = fontPath("Twemoji.ttf");
     const PrFont* font = nullptr;
-    REQUIRE(prFontCreateFromFile(path, 0, nullptr, &font) == PrStatus_Ok);
+    REQUIRE(prFontCreate(openFile(path), 0, nullptr, &font) == PrStatus_Ok);
     d.family = "Added";
     prFontSetAdd(set, &d, font);
     prFontRelease(font);

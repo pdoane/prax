@@ -33,7 +33,7 @@ if ((APPLE OR WIN32) AND PR_JS)
 
     # The viewer: the documents, rendered by each renderer, beside its controls in Studio Kit.
     add_executable(viewer viewer.cpp ui.cpp)
-    target_compile_definitions(viewer PRIVATE PR_FONT_BUNDLE_DIR="${PR_FONT_BUNDLE_DIR}")
+    pr_font_bundle_resources(viewer Complete)
     target_link_libraries(viewer PRIVATE viewer_documents prax::app prax::webview prax::draw prax::font
                                          prax::font_bundle prax::geom prax::gpu prax::compress prax::image prax::layout
                                          prax::studio_kit prax::text prax::ui prax::core_cpp pr_warnings)

@@ -16,6 +16,11 @@ namespace pr_impl {
 
 namespace {
 
+// Unmaps the bytes of a blob of a mapped file.
+void unmap(void* PR_NULLABLE, PrByteView bytes) {
+    UnmapViewOfFile(bytes.data);
+}
+
 // Counts the files that writes have made beside the files that they replace, so that two writes of one process never
 // share one.
 volatile LONG writes = 0;
@@ -82,40 +87,34 @@ bool renameOver(HANDLE file, const wchar_t* target) {
 
 using namespace pr_impl;
 
-bool prCoreWindowsFileMap(PrStringView path, PrByteView* out) {
-    *out = PrByteView{};
+PrBlob* PR_NULLABLE prCoreWindowsFileOpen(PrStringView path) {
     wchar_t* wide = prWindowsWidenCopy(path, nullptr);
     if (wide == nullptr)
-        return false;
+        return nullptr;
     // A directory does not open without FILE_FLAG_BACKUP_SEMANTICS, so only files reach the checks below.
     HANDLE file = CreateFileW(wide, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING,
         FILE_ATTRIBUTE_NORMAL, nullptr);
     prMemoryFree(wide);
     if (file == INVALID_HANDLE_VALUE)
-        return false;
+        return nullptr;
     LARGE_INTEGER size;
-    bool mapped = false;
+    PrBlob* blob = nullptr;
     bool sized = GetFileType(file) == FILE_TYPE_DISK && GetFileSizeEx(file, &size);
     // An empty file has nothing to map.
-    mapped = sized && size.QuadPart == 0;
+    if (sized && size.QuadPart == 0)
+        blob = prBlobCopy(PrByteView{});
     if (sized && size.QuadPart > 0 && uint64_t(size.QuadPart) <= SIZE_MAX) {
         HANDLE mapping = CreateFileMappingW(file, nullptr, PAGE_READONLY, 0, 0, nullptr);
         if (mapping != nullptr) {
             // The view keeps the mapping object alive, so neither handle outlives this call.
             void* data = MapViewOfFile(mapping, FILE_MAP_READ, 0, 0, 0);
-            if (data != nullptr) {
-                *out = PrByteView{static_cast<const uint8_t*>(data), size_t(size.QuadPart)};
-                mapped = true;
-            }
+            if (data != nullptr)
+                blob = prBlobCreate(PrByteView{static_cast<const uint8_t*>(data), size_t(size.QuadPart)}, unmap, nullptr);
             CloseHandle(mapping);
         }
     }
     CloseHandle(file);
-    return mapped;
-}
-
-void prCoreWindowsFileUnmap(PrByteView* mapping) {
-    UnmapViewOfFile(mapping->data);
+    return blob;
 }
 
 bool prCoreWindowsFileInfo(PrStringView path, PrFileInfo* out) {

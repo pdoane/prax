@@ -13,6 +13,8 @@
 
 namespace pr_impl {
 
+using namespace harness;
+
 namespace {
 
 // A page presented by a view, over Tinos, painted with its content marked.
@@ -27,7 +29,7 @@ struct Structured {
 
     explicit Structured(const char* html) {
         const PrFont* font = nullptr;
-        REQUIRE(prFontCreateFromFile(PR_FONTS_DIR "/Tinos-Regular.ttf", 0, nullptr, &font) == PrStatus_Ok);
+        REQUIRE(prFontCreate(openFile(PR_FONTS_DIR "/Tinos-Regular.ttf"), 0, nullptr, &font) == PrStatus_Ok);
         PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
         prFontSetAdd(fonts, &descriptor, font);
         prFontRelease(font);

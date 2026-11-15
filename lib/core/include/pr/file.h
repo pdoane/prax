@@ -5,6 +5,7 @@
 #pragma once
 
 #include "pr/base.h"
+#include "pr/blob.h"
 #include "pr/byte_view.h"
 #include "pr/raw_string.h"
 #include "pr/string_view.h"
@@ -17,13 +18,10 @@ PR_ASSUME_NONNULL_BEGIN
 extern "C" {
 #endif
 
-// Maps the file at the UTF-8 `path` and writes its bytes to `out`. The bytes are read only, and stay valid until
-// prFileUnmap. The platform either maps the file or reads it. An empty file maps to an empty view. Returns false, and
-// leaves `out` empty, if the file cannot be opened or is not a regular file.
-bool prFileMap(PrStringView path, PrByteView* out);
-
-// Unmaps the bytes that prFileMap wrote to `mapping`, and leaves `mapping` empty. An empty view is left as it is.
-void prFileUnmap(PrByteView* mapping);
+// Returns a blob of the bytes of the file at the UTF-8 `path`, which the caller releases (prBlobRelease). The platform
+// either maps the file or reads it, and the blob's bytes are those of the file when it was opened. An empty file gives
+// a blob of no bytes. Returns null if the file cannot be opened or is not a regular file.
+PrBlob* PR_NULLABLE prFileOpen(PrStringView path);
 
 // What a path names.
 enum {
@@ -66,13 +64,13 @@ typedef void (*PrFileEntryFn)(void* PR_NULLABLE context, const PrFileEntry* entr
 bool prFileEachEntry(PrStringView path, PrFileEntryFn fn, void* PR_NULLABLE context);
 
 // Writes `bytes` as the whole of the file at the UTF-8 `path`, in place of any file there. A reader sees the file that
-// was there or the new one, never part of either: the bytes go to a file beside it, which then takes its name. A
-// mapping of the file that was there stays valid, and a reader that has it open does not stop the write, unless the
-// reader refuses its removal, as a Windows reader can. Returns false if the file cannot be written.
+// was there or the new one, never part of either: the bytes go to a file beside it, which then takes its name. A blob
+// of the file that was there stays valid, and a reader that has it open does not stop the write, unless the reader
+// refuses its removal, as a Windows reader can. Returns false if the file cannot be written.
 bool prFileWrite(PrStringView path, PrByteView bytes);
 
-// Removes the file or the empty directory at the UTF-8 `path`. A mapping of the file stays valid. Returns false if
-// there is no such file, or it cannot be removed, as a directory that holds files cannot.
+// Removes the file or the empty directory at the UTF-8 `path`. A blob of the file stays valid. Returns false if there
+// is no such file, or it cannot be removed, as a directory that holds files cannot.
 bool prFileRemove(PrStringView path);
 
 // Creates the directory at the UTF-8 `path`, and each directory above it that is missing. Returns true if the directory

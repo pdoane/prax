@@ -3,6 +3,7 @@
 #include "apps/alchemy/models.h"
 
 #include "pr/ascii.h"
+#include "pr/blob_ref.h"
 #include "pr/count_of.h"
 #include "pr/file.h"
 #include "pr/json.h"
@@ -176,12 +177,8 @@ ModelArchitecture architectureFromPrefix(PrByteView leading) {
 }
 
 ModelArchitecture readArchitecture(PrStringView path) {
-    PrByteView mapping{};
-    if (!prFileMap(path, &mapping))
-        return ModelArchitecture_Unknown;
-    ModelArchitecture arch = architectureFromPrefix(mapping);
-    prFileUnmap(&mapping);
-    return arch;
+    BlobRef file = BlobRef::adopt(prFileOpen(path));
+    return file ? architectureFromPrefix(file.bytes()) : ModelArchitecture_Unknown;
 }
 
 PrStringView modelFolderName(ModelFolder folder) {

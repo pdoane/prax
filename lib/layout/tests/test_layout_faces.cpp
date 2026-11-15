@@ -19,13 +19,15 @@
 
 namespace pr_impl {
 
+using namespace harness;
+
 namespace {
 
 // Adds the font file `path` to the fixture's set as family `family`, serving the code points of `ranges` if given.
 void addFace(Fixture& f, PrStringView path, const char* family,
         const PrFontCodePointRange* PR_NULLABLE ranges = nullptr, uint32_t count = 0) {
     const PrFont* PR_NULLABLE loaded = nullptr;
-    REQUIRE(prFontCreateFromFile(path, 0, nullptr, &loaded) == PrStatus_Ok);
+    REQUIRE(prFontCreate(openFile(path), 0, nullptr, &loaded) == PrStatus_Ok);
     PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
     descriptor.family = PrStringView(family);
     descriptor.automatic = PrFontFaceAutoFlags(descriptor.automatic & ~PrFontFaceAutoFlag_Family);

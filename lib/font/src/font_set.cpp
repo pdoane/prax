@@ -330,14 +330,24 @@ uint32_t addFace(FontSet* set, const PrFontFaceDescriptor* descriptor, const PrF
 
 // Returns the face `index` of a file at the path, read from its tables in `sfnt` and described by `descriptor` with the
 // family `family`. A face that may draw emoji is opened to find out, and keeps the font for matching. The font of any
-// other face is created when a match first needs it.
+// other face is created when a match first needs it. Creates the font at `index` of the file at `path`, as prFontCreate
+// does for a blob of the file.
+PrStatus fileFont(PrStringView path, uint32_t index, const PrFont* PR_NULLABLE* PR_NONNULL out) {
+    PrBlob* file = prFileOpen(path);
+    if (file == nullptr)
+        return PrStatus_Io;
+    PrStatus status = prFontCreate(file, index, nullptr, out);
+    prBlobRelease(file);
+    return status;
+}
+
 Face fileFace(FontSet* set, const PrFontFaceDescriptor* descriptor, const Sfnt& sfnt, PrStringView path, uint32_t index,
         PrStringView family) {
     PrFontInfo info;
     sfntDescribe(sfnt, &info);
     const PrFont* font = nullptr;
     if ((descriptor->automatic & PrFontFaceAutoFlag_Emoji) != 0 && hasColorGlyphs(sfnt) &&
-            prFontCreateFromFile(path, index, nullptr, &font) != PrStatus_Ok)
+            fileFont(path, index, &font) != PrStatus_Ok)
         font = nullptr;
     Face face = describedFace(set, descriptor, info, family, font != nullptr && drawsEmoji(font));
     face.path = prRawStringCopy(path);
@@ -348,9 +358,10 @@ Face fileFace(FontSet* set, const PrFontFaceDescriptor* descriptor, const Sfnt& 
 
 // Adds every face of the file at the path as `descriptor` describes it, and returns the number added.
 uint32_t addFile(FontSet* set, const PrFontFaceDescriptor* descriptor, PrStringView path) {
-    PrByteView mapping{};
-    if (!prFileMap(path, &mapping))
+    PrBlob* file = prFileOpen(path);
+    if (file == nullptr)
         return 0;
+    PrByteView mapping = prBlobBytes(file);
     uint32_t faces = sfntFaceCount(mapping.data, mapping.size);
     uint32_t added = 0;
     for (uint32_t i = 0; i < faces; ++i) {
@@ -365,7 +376,7 @@ uint32_t addFile(FontSet* set, const PrFontFaceDescriptor* descriptor, PrStringV
         prRawStringReset(&family);
         ++added;
     }
-    prFileUnmap(&mapping);
+    prBlobRelease(file);
     return added;
 }
 
@@ -379,8 +390,8 @@ void readFile(FontSet* set, uint32_t at) {
     PrStringView family = prRawStringView(&unread.family);
     PrStringView path = prRawStringView(&unread.path);
     PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
-    PrByteView mapping{};
-    if (prFileMap(path, &mapping)) {
+    if (PrBlob* file = prFileOpen(path)) {
+        PrByteView mapping = prBlobBytes(file);
         uint32_t faces = sfntFaceCount(mapping.data, mapping.size);
         uint32_t added = 0;
         for (uint32_t pass = 0; pass < 2 && added == 0; ++pass) {
@@ -399,7 +410,7 @@ void readFile(FontSet* set, uint32_t at) {
                 ++added;
             }
         }
-        prFileUnmap(&mapping);
+        prBlobRelease(file);
     }
     faceReset(unread);
 }
@@ -408,7 +419,7 @@ void readFile(FontSet* set, uint32_t at) {
 const PrFont* PR_NULLABLE fontOfFace(Face& face) {
     if (face.font == nullptr && !face.unreadable) {
         const PrFont* font = nullptr;
-        PrStatus status = prFontCreateFromFile(prRawStringView(&face.path), face.index, nullptr, &font);
+        PrStatus status = fileFont(prRawStringView(&face.path), face.index, &font);
         if (status == PrStatus_Ok)
             face.font = font;
         else

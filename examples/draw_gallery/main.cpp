@@ -344,7 +344,7 @@ int main(int argc, char** argv) {
     w.pool = prTaskPoolCreate(PrTaskPoolBackend_Default, 1);
     requestDevice(w);
     PrTextShaper* shaper = prTextShaperCreate(PrTextShaperBackend_Default);
-    scenesOpen(shaper, PR_FONT_BUNDLE_DIR);
+    scenesOpen(shaper);
     w.scenes = allScenes(&w.sceneCount);
     w.scene = first >= 1 && first <= w.sceneCount ? first - 1 : 0;
     w.list = prDrawListCreate();

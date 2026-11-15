@@ -4,6 +4,7 @@
 #pragma once
 
 #include "pr/array.h"
+#include "pr/blob_ref.h"
 #include "pr/byte_view.h"
 #include "pr/raw_string.h"
 #include "pr/string.h"
@@ -33,8 +34,14 @@ String runTag();
 // programs report for their directories are.
 String testFolder();
 
-// The bytes, or the text, of the file at `path`. A file that cannot be read fails the test.
+// The bytes of the file at `path`. A file that cannot be read fails the test.
 Array<uint8_t> readFile(PrStringView path);
+
+// The blob of the file at `path` (prFileOpen), for what keeps its bytes, as a font does. A file that cannot be opened
+// fails the test.
+BlobRef openFile(PrStringView path);
+
+// The text of the file at `path`. A file that cannot be read fails the test.
 String readText(PrStringView path);
 
 } // namespace harness

@@ -7,6 +7,7 @@
 #include "pr/ascii.h"
 #include "pr/audio_memory.h"
 #include "pr/base64.h"
+#include "pr/blob_ref.h"
 #include "pr/callback.h"
 #include "pr/charset_quickjs.h"
 #include "pr/compress_builtin.h"
@@ -1001,7 +1002,7 @@ PageHost::PageHost(PrTextShaper* shaper, PrMediaCodec* PR_NULLABLE media, PrAudi
     s.fonts = prFontSetCreate(nullptr);
     // The PDF standard fonts, and the Complete bundle for the characters that they lack.
     const PrFontBundle bundles[] = {PrFontBundle_Standard14, PrFontBundle_Complete};
-    prFontBundleInstall(s.fonts, bundles, 2, PR_FONT_BUNDLE_DIR);
+    prFontBundleInstall(s.fonts, bundles, 2);
     PrTextFontDesc defaultFontDesc{.set = s.fonts, .style = prFontStyleDefault()};
     s.font = prTextFontCreate(&defaultFontDesc);
     s.shaper = shaper;
@@ -1074,7 +1075,8 @@ void PageHost::addPrelude(const std::filesystem::path& script) {
 bool PageHost::addFont(const std::filesystem::path& file) {
     std::string path = file.string();
     const PrFont* font = nullptr;
-    if (prFontCreateFromFile(path, 0, nullptr, &font) != PrStatus_Ok) {
+    BlobRef opened = BlobRef::adopt(prFileOpen(path));
+    if (!opened || prFontCreate(opened, 0, nullptr, &font) != PrStatus_Ok) {
         fprintf(stderr, "cannot load the font %s\n", path.c_str());
         return false;
     }

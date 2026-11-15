@@ -3,6 +3,7 @@
 
 #include "pr/align.h"
 #include "pr/array.h"
+#include "pr/blob_ref.h"
 #include "pr/locale_common.h"
 #include "pr/map.h"
 #include "pr/sort.h"
@@ -22,7 +23,7 @@ namespace {
 void install(Fixture& f, const char* file) {
     String path = format("{}/{}", PR_FONTS_DIR, file);
     const PrFont* PR_NULLABLE font = nullptr;
-    REQUIRE(prFontCreateFromFile(path, 0, nullptr, &font) == PrStatus_Ok);
+    REQUIRE(prFontCreate(openFile(path), 0, nullptr, &font) == PrStatus_Ok);
     PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
     prFontSetAdd(f.fonts, &descriptor, font);
     prFontRelease(font);
@@ -112,7 +113,7 @@ void installAs(Fixture& f, const char* family) {
     if (bytes.isEmpty())
         bytes = renamed(readFile(format("{}/NotoSansJP-VF.otf", PR_FONTS_DIR)), family);
     const PrFont* PR_NULLABLE font = nullptr;
-    REQUIRE(prFontCreate(bytes, 0, nullptr, &font) == PrStatus_Ok);
+    REQUIRE(prFontCreate(BlobRef::adopt(prBlobCopy(bytes)), 0, nullptr, &font) == PrStatus_Ok);
     PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
     prFontSetAdd(f.fonts, &descriptor, font);
     prFontRelease(font);

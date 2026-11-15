@@ -34,7 +34,7 @@ bool open(Fixture* fixture) {
     }
     fixture->net = prNetSocketsCreate();
     fixture->tls = prTlsCreate(PrTlsBackend_Default, fixture->net);
-    fixture->anchor = PrByteView{fixture->peer.ca.data, fixture->peer.ca.size};
+    fixture->anchor = prBlobBytes(fixture->peer.ca);
     PrWebSocketNetworkDesc desc{
         .net = fixture->net,
         .tls = fixture->tls,

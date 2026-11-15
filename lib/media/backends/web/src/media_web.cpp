@@ -80,16 +80,18 @@ bool decoderFrame(PrMediaDecoder* decoder, double seconds, PrMediaFrame* out) {
     return true;
 }
 
-PrStatus decoderCreate(PrMediaCodec* codec, PrByteView bytes, PrMediaDecoder* PR_NULLABLE* PR_NONNULL out, PrMediaInfo* info) {
+PrStatus decoderCreate(PrMediaCodec* codec, PrBlob* blob, PrMediaDecoder* PR_NULLABLE* PR_NONNULL out, PrMediaInfo* info) {
     WebCodec* c = static_cast<WebCodec*>(codec);
     *out = nullptr;
+    // The page's player reads a copy of the bytes, which it takes into a blob of the page's own.
+    PrByteView bytes = prBlobBytes(blob);
     PrStringView type = typeOf(bytes);
     if (type.isNull())
         return PrStatus_NotSupported;
     // The built-in codec reads the resource's metadata. The page loads the video's own metadata later.
     *info = PrMediaInfo{.duration = kPrF64Nan, .hasVideo = true};
     PrMediaDecoder* metadata = nullptr;
-    if (c->metadata != nullptr && prMediaDecoderCreate(c->metadata, bytes, &metadata, info) == PrStatus_Ok)
+    if (c->metadata != nullptr && prMediaDecoderCreate(c->metadata, blob, &metadata, info) == PrStatus_Ok)
         prMediaDecoderDestroy(metadata);
     uint32_t player = prMediaWebOpen(bytes.data, bytes.size, type.data, type.size);
     if (player == 0)

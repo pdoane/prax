@@ -38,8 +38,7 @@ struct MathFixture {
         PrStatus status = PrStatus_Ok;
         if (wpt == nullptr || prStringContains(wpt, "/")) {
             String path = wpt != nullptr ? String(wpt) : format("{}/NewCMMath-Regular.otf", PR_FONTS_DIR);
-            Array<uint8_t> bytes = readFile(path);
-            status = prFontCreate(bytes, 0, nullptr, &font);
+            status = prFontCreate(openFile(path), 0, nullptr, &font);
         } else {
             Array<uint8_t> bytes = readFile(format("{}/math/{}.woff", PR_FONTS_DIR, wpt));
             PrCompressCodec* codec = prCompressBuiltinCreate();

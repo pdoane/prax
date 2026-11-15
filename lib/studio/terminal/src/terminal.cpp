@@ -242,7 +242,7 @@ struct Terminal {
 
     // The start of the program, which waits for the first frame that measures the view (launchProcess): the launcher,
     // and the program, its arguments and its environment, which it frees once it tries. `launchStatus` is its status.
-    PrProcessLauncher* launcher;
+    PrProcessLauncher* PR_NULLABLE launcher;
     PrRawString program;
     RawArray<PrRawString> arguments;
     RawArray<PrRawString> environment;
@@ -551,7 +551,10 @@ void launchProcess(Terminal* terminal, PrUVec2 extent) {
     };
     terminal->processExtent = desc.terminalExtent;
     terminal->processPixels = desc.terminalPixelExtent;
-    terminal->launchStatus = prProcessLaunch(terminal->launcher, &desc, &terminal->process);
+    // Without a launcher, no program starts, as a launcher that cannot start programs says.
+    terminal->launchStatus = PrStatus_NotSupported;
+    if (terminal->launcher != nullptr)
+        terminal->launchStatus = prProcessLaunch(terminal->launcher, &desc, &terminal->process);
     arguments.reset();
     environment.reset();
     launchReset(terminal);

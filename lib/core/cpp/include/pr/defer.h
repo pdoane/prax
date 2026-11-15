@@ -9,7 +9,7 @@ PR_ASSUME_NONNULL_BEGIN
 
 namespace pr {
 
-// Calls `fn` at the end of its scope, as in `Defer unmapping([&] { prFileUnmap(&mapping); });`.
+// Calls `fn` at the end of its scope, as in `Defer closing([&] { prMediaDecoderDestroy(decoder); });`.
 template <typename Fn>
 struct Defer {
     explicit Defer(Fn fn) : deferred(move(fn)) {}

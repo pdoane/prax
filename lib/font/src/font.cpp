@@ -14,7 +14,6 @@
 #include "pr/assert.h"
 #include "pr/atomic.h"
 #include "pr/bit_cast.h"
-#include "pr/file.h"
 #include "pr/float.h"
 #include "pr/font_hinter.h"
 #include "pr/mem.h"
@@ -61,9 +60,13 @@ void releaseData(FontData* data) {
         return;
     data->fonts.reset();
     prMutexReset(&data->lock);
-    prFileUnmap(&data->mapping);
-    prMemoryFree(data->owned);
+    prBlobRelease(data->blob);
     prMemoryFree(data);
+}
+
+// Releases the bytes that prFontCreateWoff decoded.
+void freeBytes(void* PR_NULLABLE, PrByteView bytes) {
+    prMemoryFree(const_cast<uint8_t*>(bytes.data));
 }
 
 // Takes a reference to a font in the list of the data, unless its last reference is gone, as it is while the font is
@@ -742,16 +745,17 @@ PrFontDerivation prFontDerivationDefault(void) {
     return d;
 }
 
-PrStatus prFontCreate(PrByteView bytes, uint32_t index, const PrFontDerivation* PR_NULLABLE derivation,
+PrStatus prFontCreate(PrBlob* blob, uint32_t index, const PrFontDerivation* PR_NULLABLE derivation,
         const PrFont* PR_NULLABLE* PR_NONNULL out) {
     PR_ASSERT(validDerivation(derivation));
-    FontData* copy = static_cast<FontData*>(prMemoryAllocZeroed(sizeof(FontData) + bytes.size));
-    initData(copy);
-    copy->bytes = reinterpret_cast<const uint8_t*>(copy + 1);
-    copy->size = bytes.size;
-    prMemCopy(copy + 1, bytes.data, bytes.size);
+    FontData* data = allocZeroed<FontData>();
+    initData(data);
+    prBlobRetain(blob);
+    data->blob = blob;
+    data->bytes = prBlobBytes(blob).data;
+    data->size = prBlobBytes(blob).size;
     PrFont* font = allocZeroed<PrFont>();
-    *out = openDerived(font, copy, index, nullptr, derivation) ? static_cast<const PrFont*>(intern(font)) : nullptr;
+    *out = openDerived(font, data, index, nullptr, derivation) ? static_cast<const PrFont*>(intern(font)) : nullptr;
     return *out != nullptr ? PrStatus_Ok : PrStatus_InvalidData;
 }
 
@@ -760,36 +764,15 @@ PrStatus prFontCreateWoff(PrByteView bytes, uint32_t index, const PrFontDerivati
     PR_ASSERT(validDerivation(derivation));
     *out = nullptr;
     RawArray<uint8_t> decoded;
-    const PrStatus status = woffDecode(bytes, codec, &decoded);
-    if (status != PrStatus_Ok) {
+    const PrStatus decodedStatus = woffDecode(bytes, codec, &decoded);
+    if (decodedStatus != PrStatus_Ok) {
         decoded.reset();
-        return status;
+        return decodedStatus;
     }
-    FontData* data = allocZeroed<FontData>();
-    initData(data);
-    data->owned = decoded.data;
-    data->bytes = decoded.data;
-    data->size = decoded.count;
-    PrFont* font = allocZeroed<PrFont>();
-    *out = openDerived(font, data, index, nullptr, derivation) ? static_cast<const PrFont*>(intern(font)) : nullptr;
-    return *out != nullptr ? PrStatus_Ok : PrStatus_InvalidData;
-}
-
-PrStatus prFontCreateFromFile(PrStringView path, uint32_t index, const PrFontDerivation* PR_NULLABLE derivation,
-        const PrFont* PR_NULLABLE* PR_NONNULL out) {
-    PR_ASSERT(validDerivation(derivation));
-    *out = nullptr;
-    PrByteView mapping{};
-    if (!prFileMap(path, &mapping))
-        return PrStatus_Io;
-    FontData* data = allocZeroed<FontData>();
-    initData(data);
-    data->bytes = mapping.data;
-    data->size = mapping.size;
-    data->mapping = mapping;
-    PrFont* font = allocZeroed<PrFont>();
-    *out = openDerived(font, data, index, nullptr, derivation) ? static_cast<const PrFont*>(intern(font)) : nullptr;
-    return *out != nullptr ? PrStatus_Ok : PrStatus_InvalidData;
+    PrBlob* blob = prBlobCreate(PrByteView{decoded.data, decoded.count}, freeBytes, nullptr);
+    PrStatus status = prFontCreate(blob, index, derivation, out);
+    prBlobRelease(blob);
+    return status;
 }
 
 const PrFont* prFontCreateDerived(const PrFont* font, const PrFontDerivation* derivation) {

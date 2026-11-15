@@ -10,10 +10,11 @@ if (PR_SYNTAX_TREESITTER)
     target_compile_definitions(scribe_editor PUBLIC SCRIBE_HAS_TREESITTER)
 endif()
 
-pr_app(scribe main.cpp)
+pr_app(scribe main.cpp FONT_BUNDLES NotoMono NerdFontSymbols)
 target_link_libraries(scribe PRIVATE scribe_editor prax::studio_app prax::font_bundle prax::text)
 
 if (PR_DEVELOP)
     pr_module_tests(scribe_editor tests/test_scribe.cpp)
-    target_link_libraries(scribe_editor_tests PRIVATE kit_fixture prax::font prax::layout prax::text prax::ui prax::url)
+    target_link_libraries(scribe_editor_tests PRIVATE kit_fixture prax::font prax::layout prax::process prax::text
+                                                      prax::ui prax::url)
 endif()

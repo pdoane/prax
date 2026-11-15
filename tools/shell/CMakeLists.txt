@@ -4,7 +4,7 @@ if (PR_JS)
     # host pages with.
     add_library(page_host STATIC page_host.cpp)
     target_include_directories(page_host PUBLIC ${PROJECT_SOURCE_DIR})
-    target_compile_definitions(page_host PRIVATE PR_FONT_BUNDLE_DIR="${PR_FONT_BUNDLE_DIR}")
+    pr_font_bundle_resources(page_host Standard14 Complete)
     target_link_libraries(page_host PUBLIC prax::app prax::audio prax::draw prax::layout prax::media
                                     PRIVATE prax::core_quickjs_cpp prax::html_quickjs
                                             prax::svg_quickjs prax::mathml_quickjs prax::url_quickjs

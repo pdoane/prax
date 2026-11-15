@@ -7,6 +7,7 @@
 #pragma once
 
 #include "pr/base.h"
+#include "pr/blob.h"
 #include "pr/byte_view.h"
 #include "pr/gpu.h"
 #include "pr/media_segment.h"
@@ -101,9 +102,10 @@ PrMediaSupport prMediaCodecSupportsType(PrMediaCodec* codec, PrStringView type);
 // one coded frame at a time.
 PrMediaSupport prMediaCodecSupportsSourceType(PrMediaCodec* codec, PrStringView type);
 
-// Opens the resource in `bytes`, which the decoder copies, and writes what it holds to `info`. Returns NotSupported if
-// the codec does not read the resource, and InvalidData if the resource is corrupt. On failure, `*out` is null.
-PrStatus prMediaDecoderCreate(PrMediaCodec* codec, PrByteView bytes, PrMediaDecoder* PR_NULLABLE* PR_NONNULL out,
+// Opens the resource in `blob`, and writes what it holds to `info`. The decoder retains the blob for as long as it
+// reads it, or copies what it reads where its platform takes only bytes of its own. Returns NotSupported if the codec
+// does not read the resource, and InvalidData if the resource is corrupt. On failure, `*out` is null.
+PrStatus prMediaDecoderCreate(PrMediaCodec* codec, PrBlob* blob, PrMediaDecoder* PR_NULLABLE* PR_NONNULL out,
     PrMediaInfo* info);
 
 // Creates a decoder of the media source whose track buffers are `buffers`: the first video track among them, and the

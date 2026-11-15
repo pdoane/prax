@@ -27,6 +27,8 @@
 
 namespace pr_impl {
 
+using namespace harness;
+
 namespace {
 
 // Sets the headroom of the display that the view is shown on, in sRGB's gamut.
@@ -119,7 +121,7 @@ struct Viewed {
             const char* url = "about:blank") : resource(resource) {
         String path = format("{}/Tinos-Regular.ttf", PR_FONTS_DIR);
         const PrFont* font = nullptr;
-        REQUIRE(prFontCreateFromFile(path, 0, nullptr, &font) == PrStatus_Ok);
+        REQUIRE(prFontCreate(openFile(path), 0, nullptr, &font) == PrStatus_Ok);
         PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
         prFontSetAdd(fonts, &descriptor, font);
         prFontRelease(font);

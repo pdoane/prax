@@ -512,7 +512,7 @@ Ui* uiCreate(PrGpuDevice* device, PrAppWindow* window) {
     ui->device = device;
     ui->fonts = prFontSetCreate(nullptr);
     PrFontBundle bundle = PrFontBundle_Complete;
-    prFontBundleInstall(ui->fonts, &bundle, 1, PR_FONT_BUNDLE_DIR);
+    prFontBundleInstall(ui->fonts, &bundle, 1);
     ui->shaper = prTextShaperCreate(PrTextShaperBackend_Default);
     PrLayoutTreeDesc tree{.shaper = ui->shaper};
     ui->layout = prLayoutTreeCreate(&tree);

@@ -2,9 +2,15 @@
 #
 #   pr_font_bundle_fetch(<directory> <bundle>...)
 #
-# makes the files of the bundles named available in <directory>, where prFontBundleInstall finds them, each linked there
-# under its name upstream. The bundles are Complete, NotoMono, Standard14, Plex and NerdFontSymbols. The list of each
-# bundle holds every file that it installs.
+# makes the files of the bundles named available in <directory>, each linked there under its name upstream. The bundles
+# are Complete, NotoMono, Standard14, Plex and NerdFontSymbols. The list of each bundle holds every file that it
+# installs.
+#
+#   pr_font_bundle_resources(<target> [FROM <directory>] <bundle>...)
+#
+# makes the bundles' files that <directory> holds resources of <target> (pr_resources), as font_bundle/<name>, where
+# prFontBundleInstall finds them. The directory is PR_FONT_BUNDLE_DIR, where the build fetches PR_FONT_BUNDLES, unless
+# FROM names another, such as the tests' fonts, which hold the bundles' files that the tests set text in.
 
 # Noto's site, at the commit the fonts are pinned to.
 set(_pr_noto https://raw.githubusercontent.com/notofonts/notofonts.github.io/b966e2e80feb783346a7d3b7c14c8d6e7e1a757b/fonts)
@@ -709,4 +715,23 @@ function(pr_font_bundle_fetch directory)
         list(APPEND files ${PR_FONT_BUNDLE_${bundle}})
     endforeach()
     pr_dependency_link("${directory}" ${files})
+endfunction()
+
+function(pr_font_bundle_resources target)
+    cmake_parse_arguments(PARSE_ARGV 1 arg "" "FROM" "")
+    set(directory "${PR_FONT_BUNDLE_DIR}")
+    if (arg_FROM)
+        set(directory "${arg_FROM}")
+    endif()
+    set(resources)
+    foreach (bundle IN LISTS arg_UNPARSED_ARGUMENTS)
+        if (NOT DEFINED PR_FONT_BUNDLE_${bundle})
+            message(FATAL_ERROR "pr_font_bundle_resources: no font bundle named ${bundle}")
+        endif()
+        foreach (file IN LISTS PR_FONT_BUNDLE_${bundle})
+            get_filename_component(name "${file}" NAME)
+            list(APPEND resources "${directory}/${name}@font_bundle/${name}")
+        endforeach()
+    endforeach()
+    pr_resources(${target} ${resources})
 endfunction()

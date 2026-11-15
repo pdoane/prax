@@ -7,6 +7,7 @@
 #include "pr/function.h"
 #include "pr/layout_tree.h"
 #include "pr/min_max.h"
+#include "pr/process.h"
 #include "pr/span.h"
 #include "pr/string.h"
 #include "pr/string_ops.h"
@@ -220,7 +221,8 @@ TEST_CASE("terminal app: a click on a tab's notification shows the tab and gives
     CHECK_FALSE(handleEvent(a.app, key));
 }
 
-TEST_CASE("terminal app: a tab closes once its program exits") {
+TEST_CASE("terminal app: a tab closes once its program exits" *
+        doctest::skip(!prProcessBackendIsBuilt(PrProcessBackend_Default))) {
     const PrStringView arguments[] = {"-c", "sleep 5"};
     Window a("sh", arguments);
     a.app.program = "sh";
@@ -232,7 +234,8 @@ TEST_CASE("terminal app: a tab closes once its program exits") {
     CHECK(a.shown() == 0);
 }
 
-TEST_CASE("terminal app: a tab that does not show reads all that its program writes, and closes once it exits") {
+TEST_CASE("terminal app: a tab that does not show reads all that its program writes, and closes once it exits" *
+        doctest::skip(!prProcessBackendIsBuilt(PrProcessBackend_Default))) {
     // The program writes more than the process and the pseudoterminal can buffer, after the second tab shows.
     const PrStringView arguments[] = {"-c", "sleep 0.3; head -c 8000000 /dev/zero; exit 0"};
     Window a("sh", arguments);
@@ -247,7 +250,8 @@ TEST_CASE("terminal app: a tab that does not show reads all that its program wri
     CHECK(a.tabs()[0] != writer);
 }
 
-TEST_CASE("terminal app: a new tab starts in the working directory of the terminal that shows") {
+TEST_CASE("terminal app: a new tab starts in the working directory of the terminal that shows" *
+        doctest::skip(!prProcessBackendIsBuilt(PrProcessBackend_Default))) {
     // A directory with no links in its path, and a command that prints the working directory in the same form. On
     // Windows, the sh of Git for Windows prints a Windows path with pwd -W.
 #if defined(_WIN32)

@@ -91,7 +91,7 @@ struct KitFixture {
 
     explicit KitFixture(const KitFonts& kitFonts = KitFonts{}) {
         fonts = prFontSetCreate(nullptr);
-        prFontBundleInstall(fonts, kitFonts.bundles, kitFonts.bundleCount, PR_FONT_BUNDLE_DIR);
+        prFontBundleInstall(fonts, kitFonts.bundles, kitFonts.bundleCount);
         prFontSetSetSystem(fonts, kitFonts.system);
         shaper = prTextHarfBuzzCreate();
         PrLayoutTreeDesc desc{.shaper = shaper, .targetPixelRatio = 1};

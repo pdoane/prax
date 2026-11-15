@@ -10,6 +10,8 @@
 // profiler.
 
 #include "pr/assert.h"
+#include "pr/blob_ref.h"
+#include "pr/file.h"
 #include "pr/font_set.h"
 #include "pr/layout_style.h"
 #include "pr/layout_tree.h"
@@ -25,6 +27,7 @@
 #include <string>
 
 using namespace harness;
+using namespace pr;
 
 namespace {
 
@@ -114,7 +117,8 @@ void measureMotion(const std::string& document, uint32_t lines, bool& first) {
     PrTextShaper* shaper = prTextHarfBuzzCreate();
     const PrFont* PR_NULLABLE face = nullptr;
     std::string path = std::string(PR_FONTS_DIR) + "/Arimo.ttf";
-    if (prFontCreateFromFile(path, 0, nullptr, &face) != PrStatus_Ok)
+    BlobRef opened = BlobRef::adopt(prFileOpen(path));
+    if (!opened || prFontCreate(opened, 0, nullptr, &face) != PrStatus_Ok)
         PR_FATAL("cannot open Arimo");
     PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
     prFontSetAdd(fonts, &descriptor, face);

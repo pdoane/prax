@@ -11,6 +11,8 @@
 
 namespace pr_impl {
 
+using namespace harness;
+
 namespace {
 
 constexpr uint32_t kSide = 64;
@@ -104,7 +106,7 @@ TEST_CASE("clips, groups and gradients read back as they were drawn") {
 
 TEST_CASE("glyph outlines read back as the glyphs drew") {
     const PrFont* font = nullptr;
-    REQUIRE(prFontCreateFromFile(PR_FONTS_DIR "/NotoSans[wdth,wght].ttf", 0, nullptr, &font) == PrStatus_Ok);
+    REQUIRE(prFontCreate(openFile(PR_FONTS_DIR "/NotoSans[wdth,wght].ttf"), 0, nullptr, &font) == PrStatus_Ok);
     PrFontGlyph glyphs[3] = {
         {prFontCodePointGlyph(font, 'S'), PrVec2{0, 0}},
         {prFontCodePointGlyph(font, 'v'), PrVec2{14, 0}},

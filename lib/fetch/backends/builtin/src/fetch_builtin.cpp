@@ -1184,11 +1184,11 @@ bool readFile(BuiltinFetch* fetch, PrStringView url, PrStringView* type) {
     PrStringView decoded = prTextBufferView(&path);
     if (decoded.size >= 3 && decoded.data[0] == '/' && prAsciiIsLetter(decoded.data[1]) && decoded.data[2] == ':')
         decoded = prStringFrom(decoded, 1);
-    PrByteView mapping{};
-    bool read = prStringFindByte(decoded, '\0') == decoded.size && prFileMap(decoded, &mapping);
+    PrBlob* file = prStringFindByte(decoded, '\0') == decoded.size ? prFileOpen(decoded) : nullptr;
+    bool read = file != nullptr;
     if (read)
-        fetch->content.append(mapping.data, uint32_t(mapping.size));
-    prFileUnmap(&mapping);
+        fetch->content.append(prBlobBytes(file).data, uint32_t(prBlobBytes(file).size));
+    prBlobRelease(file);
     *type = fileTypeOf(decoded);
     prTextBufferReset(&path);
     return read;

@@ -3,12 +3,20 @@
 # own headers from the repository's root, as apps/<name>/<header>. An app's target is named for its directory, which
 # `./dev.sh app <name>` builds and runs.
 
-# Adds the app `name`, built from `sources`, which reads the font bundles' files from the build directory.
+# Adds the app `name`, built from its sources, whose resources (pr/resource.h) are the files of FONT_BUNDLES:
+#
+#   pr_app(<name> <source>... [FONT_BUNDLES <bundle>...])
 function(pr_app name)
-    add_executable(${name} ${ARGN})
+    cmake_parse_arguments(PARSE_ARGV 1 arg "" "" "FONT_BUNDLES")
+    add_executable(${name} ${arg_UNPARSED_ARGUMENTS})
     target_include_directories(${name} PRIVATE ${PROJECT_SOURCE_DIR})
     target_link_libraries(${name} PRIVATE pr_warnings)
-    target_compile_definitions(${name} PRIVATE PR_FONT_BUNDLE_DIR="${PR_FONT_BUNDLE_DIR}")
+    if (arg_FONT_BUNDLES)
+        pr_font_bundle_resources(${name} ${arg_FONT_BUNDLES})
+    endif()
+    if (PR_IOS)
+        pr_ios_bundle(${name})
+    endif()
 endfunction()
 
 add_subdirectory(alchemy)

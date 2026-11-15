@@ -662,6 +662,7 @@ WRAPPERS = {
                                                      "TargetConditionals.h"},
     "lib/audio/backends/windows/src/audio_windows.cpp": {"audioclient.h", "avrt.h", "mmdeviceapi.h", "mmreg.h",
                                                          "objbase.h", "windows.h"},
+    "lib/core/backends/apple/src/core_apple_resource.mm": {"Foundation/Foundation.h"},
     "lib/core/backends/apple/src/core_apple_time.cpp": {"mach/mach_time.h"},
     "lib/core/backends/libc/src/core_libc.cpp": {"malloc.h", "malloc/malloc.h", "stdlib.h"},
     "lib/core/backends/mimalloc/src/core_mimalloc.cpp": {"malloc.h", "malloc/malloc.h", "stdlib.h"},
@@ -671,13 +672,16 @@ WRAPPERS = {
     "lib/core/backends/posix/src/core_posix_file.cpp": {"dirent.h", "errno.h", "fcntl.h", "stdio.h", "stdlib.h",
                                                         "string.h", "sys/mman.h", "sys/stat.h", "unistd.h"},
     "lib/core/backends/posix/src/core_posix_random.cpp": {"stdlib.h", "unistd.h"},
+    "lib/core/backends/posix/src/core_posix_resource.cpp": {"limits.h", "unistd.h"},
     "lib/core/backends/posix/src/core_posix_thread.cpp": {"errno.h", "pthread.h", "stdlib.h", "time.h", "unistd.h"},
     "lib/core/backends/posix/src/core_posix_time.cpp": {"time.h"},
     "lib/core/backends/posix/src/core_posix_vmem.cpp": {"sys/mman.h"},
+    "lib/core/backends/web/src/core_web_resource.cpp": {"stdlib.h", "string.h"},
     "lib/core/backends/windows/src/core_windows_environment.cpp": {"stdlib.h", "windows.h"},
     "lib/core/backends/windows/src/core_windows_fail.cpp": {"stdio.h", "windows.h"},
     "lib/core/backends/windows/src/core_windows_file.cpp": {"stdio.h", "stdlib.h", "windows.h"},
     "lib/core/backends/windows/src/core_windows_random.cpp": {"bcrypt.h", "windows.h"},
+    "lib/core/backends/windows/src/core_windows_resource.cpp": {"windows.h"},
     "lib/core/backends/windows/src/core_windows_thread.cpp": {"process.h", "stdlib.h", "windows.h"},
     "lib/core/backends/windows/src/core_windows_time.cpp": {"windows.h"},
     "lib/core/backends/windows/src/core_windows_vmem.cpp": {"windows.h"},
@@ -1780,8 +1784,8 @@ def check_allocation(report, path, text):
 
 # The headers of core's managed layer, as they are included: types that construct, copy and destroy their contents,
 # which applications and tests use. An implementation in lib/ manages memory explicitly, so it includes none of them.
-MANAGED = {"pr/array.h", "pr/construct.h", "pr/defer.h", "pr/function.h", "pr/lock.h", "pr/map.h", "pr/print.h",
-           "pr/set.h", "pr/string.h"}
+MANAGED = {"pr/array.h", "pr/blob_ref.h", "pr/construct.h", "pr/defer.h", "pr/function.h", "pr/lock.h", "pr/map.h",
+           "pr/print.h", "pr/set.h", "pr/string.h"}
 
 
 def is_implementation(path):
@@ -2462,8 +2466,13 @@ def public_handles(paths, texts):
 def check_backend_names(report, paths, texts):
     """An interface's record is named for what callers hold, never `Backend`. A backend's own header declares the
     function that makes the record, pr<Interface><Backend>Create, named for the backend's directory,
-    lib/<interface>/backends/<backend> or lib/<interface>/comparisons/<backend>."""
+    lib/<interface>/backends/<backend> or lib/<interface>/comparisons/<backend>. Only the record is the backend: any
+    other handle of its interface that a backend makes, as a family of core's makes a PrBlob, is named for what it
+    does."""
     handles = public_handles(paths, texts)
+    records = set()
+    for path in paths:
+        records.update(m.group(1) for m in RECORD.finditer(mask_non_code(texts[path])) if m.group(1) == m.group(2))
     for path in paths:
         text = texts[path]
         code = mask_non_code(text)
@@ -2478,7 +2487,7 @@ def check_backend_names(report, paths, texts):
             made = [match.group(1)] if match.group(1) else []
             made += [m.group(1) for m in OUT_HANDLE.finditer(match.group(3))]
             for made_type in made:
-                if handles.get(made_type) not in interfaces_of(backend):
+                if made_type not in records or handles.get(made_type) not in interfaces_of(backend):
                     continue
                 expected = "pr" + backend_file_prefix(backend).replace("_", "") + "create"
                 if name.lower() != expected:
@@ -2711,10 +2720,10 @@ def check_homes(report, headers, sources, texts):
 # types appear in other modules' signatures more than in their own, own a tag for each vocabulary. A numeric variant,
 # as PrIRect is of PrRect, is a tag of its own.
 TAGS = {
-    "lib/core": ("Adler32", "Ascii", "Base64", "ByteView", "Condition", "Core", "Crash", "Crc32", "DateTime", "DVec2",
-                 "Environment", "F32", "F64", "Fail", "File", "Float16", "Hash", "IVec2", "Mem", "Memory", "Mutex",
-                 "Pixel", "Pixels", "Random", "RawString", "Sha1", "Status", "String", "TextBuffer", "Thread", "Time",
-                 "U64", "UVec2", "Utf8", "Vec2", "Vec3", "Vmem"),
+    "lib/core": ("Adler32", "Ascii", "Base64", "Blob", "ByteView", "Condition", "Core", "Crash", "Crc32", "DateTime",
+                 "DVec2", "Environment", "F32", "F64", "Fail", "File", "Float16", "Hash", "IVec2", "Mem", "Memory",
+                 "Mutex", "Pixel", "Pixels", "Random", "RawString", "Resource", "Sha1", "Status", "String",
+                 "TextBuffer", "Thread", "Time", "U64", "UVec2", "Utf8", "Vec2", "Vec3", "Vmem"),
     "lib/geom": ("Affine2", "Affine4", "Corner", "DAffine2", "DMatrix3", "DMatrix4", "IRect", "Matrix3", "Matrix4",
                  "Rect"),
     "lib/locale": ("Language", "Locale", "Region", "Script"),

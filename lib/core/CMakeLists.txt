@@ -2,8 +2,10 @@
 pr_library(core INCLUDE include
     src/assert.cpp
     src/base64.cpp
+    src/blob.cpp
     src/checksum.cpp
     src/environment.cpp
+    src/resource.cpp
     src/file.cpp
     src/float.cpp
     src/float_convert.cpp
@@ -98,13 +100,16 @@ elseif (APPLE)
 endif()
 
 # The Windows family serves the groups other than memory on Windows, and the POSIX family on the Unix-like targets,
-# except the clocks of Apple's targets, which the Apple family serves. Another target has no family for them.
+# except the clocks and the resources of Apple's targets, which the Apple family serves, and the resources of the web,
+# which the web family serves. Another target has no family for them.
 if (WIN32)
     target_sources(pr_core PRIVATE
         backends/windows/src/core_windows_environment.cpp
         backends/windows/src/core_windows_fail.cpp
         backends/windows/src/core_windows_file.cpp
         backends/windows/src/core_windows_random.cpp
+        backends/shared/src/core_shared_resource.cpp
+        backends/windows/src/core_windows_resource.cpp
         backends/windows/src/core_windows_thread.cpp
         backends/windows/src/core_windows_time.cpp
         backends/windows/src/core_windows_vmem.cpp
@@ -123,10 +128,29 @@ elseif (UNIX)
         backends/posix/src/core_posix_vmem.cpp
     )
     pr_headers(pr_core PUBLIC backends/posix/include)
+    # Apple's targets and the web keep resources where families of their own find them.
+    if (NOT APPLE AND NOT EMSCRIPTEN)
+        target_sources(pr_core PRIVATE
+            backends/posix/src/core_posix_resource.cpp
+            backends/shared/src/core_shared_resource.cpp
+        )
+    endif()
 endif()
 if (APPLE)
-    target_sources(pr_core PRIVATE backends/apple/src/core_apple_time.cpp)
+    target_sources(pr_core PRIVATE
+        backends/apple/src/core_apple_resource.mm
+        backends/apple/src/core_apple_time.cpp
+        backends/shared/src/core_shared_resource.cpp
+    )
+    set_source_files_properties(backends/apple/src/core_apple_resource.mm PROPERTIES COMPILE_OPTIONS -fobjc-arc)
     pr_headers(pr_core PUBLIC backends/apple/include)
+elseif (EMSCRIPTEN)
+    target_sources(pr_core PRIVATE
+        backends/shared/src/core_shared_resource.cpp
+        backends/web/src/core_web_resource.cpp
+    )
+    pr_headers(pr_core PUBLIC backends/web/include)
+    pr_js_library(pr_core backends/web/src/core_web_resource.js)
 endif()
 # The C++ conveniences of the C headers, such as PrStringView's conversions, are C++20.
 target_compile_features(pr_core PUBLIC cxx_std_20)
@@ -200,6 +224,7 @@ if (PR_DEVELOP)
         tests/test_platform.cpp
         tests/test_environment.cpp
         tests/test_random.cpp
+        tests/test_resource.cpp
         tests/test_raw_string.cpp
         tests/test_string_ops.cpp
         tests/test_string_view.cpp
@@ -208,6 +233,7 @@ if (PR_DEVELOP)
         tests/test_utf8.cpp
     )
     target_compile_definitions(core_tests PRIVATE PR_CORE_TEST_DIR="${CMAKE_CURRENT_BINARY_DIR}/core_tests_files")
+    pr_resources(core_tests ${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures@fixtures)
     if (WIN32)
         target_sources(core_tests PRIVATE
             backends/windows/tests/test_core_windows_file.cpp

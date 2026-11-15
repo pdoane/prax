@@ -83,9 +83,9 @@ struct TextEditorDocument {
     PrSyntaxTree* PR_NULLABLE syntax;
     uint64_t syntaxChanges;         // the number of updates that changed the tree's spans
 
-    // The text that streams into the document as it loads: the file, mapped, or a copy of the text that it was given,
+    // The text that streams into the document as it loads: the file's blob, or a copy of the text that it was given,
     // and how much of it the buffer holds. The document is loading until the buffer holds all of it.
-    PrByteView mapping;
+    PrBlob* PR_NULLABLE file;
     RawArray<char> source;
     uint32_t loaded;
     bool loading;
@@ -358,8 +358,8 @@ void setStatus(TextEditor* editor, PrStringView text) {
 }
 
 PrStringView sourceOf(const TextEditorDocument* document) {
-    if (document->mapping.data != nullptr)
-        return prStringFromBytes(document->mapping);
+    if (document->file != nullptr)
+        return prStringFromBytes(prBlobBytes(document->file));
     return PrStringView{document->source.data, document->source.count};
 }
 
@@ -434,9 +434,8 @@ void attachServer(TextEditor* editor, TextEditorDocument* document) {
 void finishLoad(TextEditorDocument* document) {
     document->loading = false;
     document->savedVersion = prTextEditBufferVersion(document->buffer);
-    if (document->mapping.data != nullptr)
-        prFileUnmap(&document->mapping);
-    document->mapping = PrByteView{};
+    prBlobRelease(document->file);
+    document->file = nullptr;
     document->source.reset();
     attachServer(document->editor, document);
 }
@@ -1510,19 +1509,19 @@ void registerCommands(TextEditor* e) {
         if (young == nullptr || prRawStringIsEmpty(&young->path) || young->loading)
             return;
         // The saved text is a document of no file of its own, which the file's name gives the same language.
-        PrByteView mapping{};
-        if (!prFileMap(prRawStringView(&young->path), &mapping)) {
+        PrBlob* file = prFileOpen(prRawStringView(&young->path));
+        if (file == nullptr) {
             setStatus(&editor, "the saved file cannot be read");
             return;
         }
         PrTextEditorDocumentDesc desc{
-            .text = prStringFromBytes(mapping),
+            .text = prStringFromBytes(prBlobBytes(file)),
             .name = prRawStringView(&young->path),
             .readOnly = true,
         };
         PrTextEditorDocument* saved = nullptr;
         PrStatus status = prTextEditorDocumentCreate(editor.handle, &desc, &saved);
-        prFileUnmap(&mapping);
+        prBlobRelease(file);
         if (status != PrStatus_Ok) {
             setStatus(&editor, "the saved file is too large to compare");
             return;
@@ -2073,8 +2072,7 @@ void freeDocument(TextEditorDocument* document) {
     document->breakpoints.reset();
     document->sentLines.reset();
     prLspDocumentDestroy(document->lsp);
-    if (document->mapping.data != nullptr)
-        prFileUnmap(&document->mapping);
+    prBlobRelease(document->file);
     prSyntaxTreeDestroy(document->syntax);
     prTextViewDestroy(document->view);
     prTextEditHistoryDestroy(document->history);
@@ -2407,13 +2405,15 @@ PrStringView prTextEditorStatus(const PrTextEditor* editor) {
 PrStatus prTextEditorDocumentCreate(PrTextEditor* editor, const PrTextEditorDocumentDesc* desc,
         PrTextEditorDocument* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;
-    PrByteView mapping{};
+    PrBlob* file = nullptr;
     bool crlf = false;
     if (!desc->path.isEmpty()) {
-        if (!prFileMap(desc->path, &mapping))
+        file = prFileOpen(desc->path);
+        if (file == nullptr)
             return PrStatus_NotFound;
+        PrByteView mapping = prBlobBytes(file);
         if (mapping.size > size_t(kPrTextEditBufferMaxBytes)) {
-            prFileUnmap(&mapping);
+            prBlobRelease(file);
             return PrStatus_Limit;
         }
         // A document records its line ending, and its buffer ends lines with a line feed.
@@ -2448,7 +2448,7 @@ PrStatus prTextEditorDocumentCreate(PrTextEditor* editor, const PrTextEditorDocu
         document->language = prSyntaxRegistryFromPath(editor->languages, name);
     if (document->language != nullptr)
         document->syntax = prSyntaxTreeCreate(document->language, editor->languages, document->buffer);
-    document->mapping = mapping;
+    document->file = file;
     if (desc->path.isEmpty() && desc->text.size != 0)
         document->source.append(desc->text.data, uint32_t(desc->text.size));
     document->loading = sourceOf(document).size != 0;

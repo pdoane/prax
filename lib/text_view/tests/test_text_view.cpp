@@ -18,6 +18,7 @@ extern "C" int prTestTextViewCApi(void);
 
 namespace pr_impl {
 
+using namespace harness;
 using namespace pr;
 
 namespace {
@@ -61,7 +62,7 @@ struct Shown {
     explicit Shown(PrStringView text, PrStringView family = "Arimo") {
         String path = format("{}/{}-Regular.ttf", PR_FONTS_DIR, family);
         const PrFont* PR_NULLABLE face = nullptr;
-        REQUIRE(prFontCreateFromFile(path, 0, nullptr, &face) == PrStatus_Ok);
+        REQUIRE(prFontCreate(openFile(path), 0, nullptr, &face) == PrStatus_Ok);
         PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
         prFontSetAdd(fonts, &descriptor, face);
         prFontRelease(face);

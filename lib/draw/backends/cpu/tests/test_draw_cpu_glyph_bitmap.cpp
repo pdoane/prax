@@ -1,4 +1,5 @@
 #include "pr/array.h"
+#include "pr/blob_ref.h"
 #include "pr/compress_builtin.h"
 #include "pr/draw_cpu.h"
 #include "pr/draw_glyph.h"
@@ -100,12 +101,12 @@ using namespace pr_impl;
 TEST_CASE("a TIFF image in an sbix strike draws through the image codec") {
     Array<uint8_t> file = readFile(format("{}/TwemojiSmileySbix.ttf", PR_FONTS_DIR));
     const PrFont* original = nullptr;
-    REQUIRE(prFontCreate(file, 0, nullptr, &original) == PrStatus_Ok);
+    REQUIRE(prFontCreate(BlobRef::adopt(prBlobCopy(file)), 0, nullptr, &original) == PrStatus_Ok);
     uint16_t glyphs = uint16_t(prFontGlyphCount(original));
     prFontRelease(original);
     Array<uint8_t> bytes = withSbixImage(file, 2, glyphs, 0x74696666, solidTiff(32, 0, 0, 255), 32);
     const PrFont* font = nullptr;
-    REQUIRE(prFontCreate(bytes, 0, nullptr, &font) == PrStatus_Ok);
+    REQUIRE(prFontCreate(BlobRef::adopt(prBlobCopy(bytes)), 0, nullptr, &font) == PrStatus_Ok);
 
     PrCompressCodec* compressCodec = prCompressBuiltinCreate();
     PrImageCodec* imageCodec = prImageBuiltinCreate(compressCodec);

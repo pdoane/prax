@@ -9,8 +9,8 @@
 
 #include "core/src/config.h"
 
-#if !defined(PR_PLATFORM_FILE_MAP)
-#error "a target without a default for the group binds PR_PLATFORM_FILE_MAP"
+#if !defined(PR_PLATFORM_FILE_OPEN)
+#error "a target without a default for the group binds PR_PLATFORM_FILE_OPEN"
 #endif
 
 // Windows' paths have drive letters and backslashes. So may the web's, whose file system can be a Windows host's
@@ -107,17 +107,8 @@ void appendParts(PrTextBuffer* out, uint32_t rootEnd, PrStringView path, size_t 
 
 using namespace pr_impl;
 
-bool prFileMap(PrStringView path, PrByteView* out) {
-    if (PR_PLATFORM_FILE_MAP(path, out))
-        return true;
-    *out = PrByteView{};
-    return false;
-}
-
-void prFileUnmap(PrByteView* mapping) {
-    if (mapping->data != nullptr)
-        PR_PLATFORM_FILE_UNMAP(mapping);
-    *mapping = PrByteView{};
+PrBlob* PR_NULLABLE prFileOpen(PrStringView path) {
+    return PR_PLATFORM_FILE_OPEN(path);
 }
 
 bool prFileInfo(PrStringView path, PrFileInfo* out) {

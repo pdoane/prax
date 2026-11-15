@@ -9,6 +9,8 @@
 
 namespace pr_impl {
 
+using namespace harness;
+
 namespace {
 
 // The line box (CSS2/#line-height): vertical-align, and a line's height from the boxes on it. Each case is a stage of
@@ -135,7 +137,7 @@ PrLayoutBoxStyle sourced(PrLayoutBoxStyle box, PrLayoutBaselineSource source) {
 PrFontMetrics metricsOf(const char* file) {
     String path = format("{}/{}", PR_FONTS_DIR, file);
     const PrFont* PR_NULLABLE loaded = nullptr;
-    REQUIRE(prFontCreateFromFile(path, 0, nullptr, &loaded) == PrStatus_Ok);
+    REQUIRE(prFontCreate(openFile(path), 0, nullptr, &loaded) == PrStatus_Ok);
     PrFontMetrics metrics = prFontMetrics(loaded);
     prFontRelease(loaded);
     return metrics;
@@ -151,7 +153,7 @@ double arimoBaseline(float PrFontMetrics::*name, float size) {
 void addFace(Fixture& f, const char* file, const char* family, const PrFontCodePointRange* PR_NULLABLE ranges, uint32_t count) {
     String path = format("{}/{}", PR_FONTS_DIR, file);
     const PrFont* PR_NULLABLE loaded = nullptr;
-    REQUIRE(prFontCreateFromFile(path, 0, nullptr, &loaded) == PrStatus_Ok);
+    REQUIRE(prFontCreate(openFile(path), 0, nullptr, &loaded) == PrStatus_Ok);
     PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
     descriptor.family = family;
     descriptor.automatic = PrFontFaceAutoFlags(descriptor.automatic & ~PrFontFaceAutoFlag_Family);

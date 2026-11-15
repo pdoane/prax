@@ -117,7 +117,7 @@ target_compile_definitions(flex_bench PRIVATE PR_FLEX_BENCH_TAFFY=$<BOOL:${PR_CA
 
 # A check that Yoga can set Prax text. It links lib/text and no layout, so it fails if the library comes to need one.
 add_executable(text_yoga_check flex_bench/text_yoga_check.cpp)
-target_link_libraries(text_yoga_check PRIVATE prax::font prax::text yoga pr_warnings)
+target_link_libraries(text_yoga_check PRIVATE prax::font prax::text prax::core_cpp yoga pr_warnings)
 target_compile_definitions(text_yoga_check PRIVATE PR_FONTS_DIR="${PR_TEST_FONTS_DIR}")
 pr_add_test(text_yoga_check COMMAND text_yoga_check)
 
@@ -136,7 +136,7 @@ if (PR_JS)
                                                prax::draw prax::gpu prax::layout prax::ui
                                                prax::ui_cpp prax::font prax::color prax::core_cpp
                                                pr_warnings)
-    target_compile_definitions(editor_bench PRIVATE PR_FONT_BUNDLE_DIR="${PR_FONT_BUNDLE_DIR}")
+    pr_font_bundle_resources(editor_bench Complete)
 
     # What a long document costs to load, scroll, hover, navigate and resize. ./dev.sh bench long-doc runs it.
     add_executable(doc_bench doc_bench.cpp)
@@ -144,7 +144,7 @@ if (PR_JS)
                                             prax::font_bundle prax::font prax::image
                                             prax::compress prax::css prax::layout
                                             prax::fetch prax::net prax::task pr_warnings)
-    target_compile_definitions(doc_bench PRIVATE PR_FONT_BUNDLE_DIR="${PR_FONT_BUNDLE_DIR}")
+    pr_font_bundle_resources(doc_bench Complete)
 endif()
 
 # What each drawing of draw_features costs to record and render with each backend, which needs the examples' drawings.

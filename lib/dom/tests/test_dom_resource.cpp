@@ -59,8 +59,10 @@ struct HostedDocument {
         REQUIRE(!fetches.isEmpty());
         HeldFetch fetch = fetches[0];
         fetches.erase(0);
-        DomFetchResult result{.status = PrStatus_Ok, .responseStatus = 200, .body = body};
+        PrBlob* blob = prBlobCopy(prStringBytes(body));
+        DomFetchResult result{.status = PrStatus_Ok, .responseStatus = 200, .body = blob};
         fetch.done(fetch.data, &result);
+        prBlobRelease(blob);
     }
 
     PrDomElement* byId(const char* id) {

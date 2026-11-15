@@ -21,16 +21,18 @@
 
 namespace pr_impl {
 
+using namespace harness;
+
 namespace {
 
 // Returns the bytes of the checkout's font file `name`, or no bytes if it cannot be read.
 Array<uint8_t> readFont(PrStringView name) {
     String path = format("{}/{}", PR_FONTS_DIR, name);
     Array<uint8_t> bytes;
-    PrByteView mapped{};
-    if (prFileMap(path, &mapped)) {
-        bytes.append(mapped.data, uint32_t(mapped.size));
-        prFileUnmap(&mapped);
+    PrBlob* file = prFileOpen(path);
+    if (file != nullptr) {
+        bytes.append(prBlobBytes(file).data, uint32_t(prBlobBytes(file).size));
+        prBlobRelease(file);
     }
     return bytes;
 }
@@ -111,7 +113,7 @@ struct Served {
         for (const char* file : kFiles) {
             String path = format("{}/{}", PR_FONTS_DIR, file);
             const PrFont* font = nullptr;
-            REQUIRE(prFontCreateFromFile(path, 0, nullptr, &font) == PrStatus_Ok);
+            REQUIRE(prFontCreate(openFile(path), 0, nullptr, &font) == PrStatus_Ok);
             PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
             prFontSetAdd(fonts, &descriptor, font);
             prFontRelease(font);

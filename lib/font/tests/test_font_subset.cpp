@@ -1,4 +1,5 @@
 #include "pr/array.h"
+#include "pr/blob_ref.h"
 #include "pr/float.h"
 #include "pr/font_subset.h"
 #include "pr/path.h"
@@ -10,6 +11,7 @@ extern "C" int prTestFontSubsetCApi(void);
 
 namespace pr_impl {
 
+using namespace harness;
 using namespace pr;
 
 namespace {
@@ -21,7 +23,7 @@ void collect(void* PR_NULLABLE context, PrByteView bytes) {
 
 const PrFont* open(const char* path) {
     const PrFont* font = nullptr;
-    REQUIRE(prFontCreateFromFile(path, 0, nullptr, &font) == PrStatus_Ok);
+    REQUIRE(prFontCreate(openFile(path), 0, nullptr, &font) == PrStatus_Ok);
     return font;
 }
 
@@ -105,7 +107,7 @@ TEST_CASE("a TrueType subset keeps the glyphs asked for under their ids") {
     CHECK(prFontSubset(font, glyphs, 2, collect, &bytes) == PrFontSubsetFormat_TrueType);
     CHECK(bytes.count() < prFontData(font).size / 10);
     const PrFont* subset = nullptr;
-    REQUIRE(prFontCreate(bytes, 0, nullptr, &subset) == PrStatus_Ok);
+    REQUIRE(prFontCreate(BlobRef::adopt(prBlobCopy(bytes)), 0, nullptr, &subset) == PrStatus_Ok);
     uint16_t largest = e > aacute ? e : aacute;
     CHECK(prFontGlyphCount(subset) >= uint32_t(largest) + 1);
     CHECK(outline(subset, e) == outline(font, e));
@@ -134,7 +136,7 @@ TEST_CASE("a CFF subset keeps the glyphs asked for under their ids") {
     file.append(data.data, uint32_t(data.size));
     Array<uint8_t> rebuilt = withCff(file, cff);
     const PrFont* subset = nullptr;
-    REQUIRE(prFontCreate(rebuilt, 0, nullptr, &subset) == PrStatus_Ok);
+    REQUIRE(prFontCreate(BlobRef::adopt(prBlobCopy(rebuilt)), 0, nullptr, &subset) == PrStatus_Ok);
     CHECK(outline(subset, kept) == outline(font, kept));
     CHECK(outline(subset, 0) == outline(font, 0));
     for (uint16_t g = 1; g < kept; ++g)
@@ -155,7 +157,7 @@ TEST_CASE("a font whose file does not hold its outlines is subset as CFF, with t
         CHECK(prFontSubset(font, &glyph, 1, collect, &cff) == PrFontSubsetFormat_Cff);
         Array<uint8_t> rebuilt = withGlyphCount(withCff(file, cff), uint32_t(glyph) + 1);
         const PrFont* subset = nullptr;
-        REQUIRE(prFontCreate(rebuilt, 0, nullptr, &subset) == PrStatus_Ok);
+        REQUIRE(prFontCreate(BlobRef::adopt(prBlobCopy(rebuilt)), 0, nullptr, &subset) == PrStatus_Ok);
         return subset;
     };
     // Each point of an outline is rounded to a thousandth of an em.

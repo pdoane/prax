@@ -666,7 +666,9 @@ void decoderAudioWait(PrMediaDecoder* decoder, uint32_t frames) {
     prMediaAudioQueueWait(static_cast<WindowsDecoder*>(decoder)->queue, frames);
 }
 
-PrStatus decoderCreate(PrMediaCodec*, PrByteView bytes, PrMediaDecoder* PR_NULLABLE* PR_NONNULL out, PrMediaInfo* info) {
+PrStatus decoderCreate(PrMediaCodec*, PrBlob* blob, PrMediaDecoder* PR_NULLABLE* PR_NONNULL out, PrMediaInfo* info) {
+    // The source reader reads a stream of its own, which holds a copy of the bytes.
+    PrByteView bytes = prBlobBytes(blob);
     const wchar_t* container = containerType(bytes);
     if (container == nullptr || bytes.size > UINT32_MAX)
         return PrStatus_NotSupported;

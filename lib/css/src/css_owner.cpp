@@ -228,7 +228,7 @@ void sheetFetched(void* PR_NULLABLE data, const DomFetchResult* result) {
     PrRawString decoded = {};
     PrStringView text;
     if (loaded)
-        text = cssDecodeBytes(result->body, prCharsetFromMimeType(result->contentType), fetch->environment, &decoded);
+        text = cssDecodeBytes(domFetchText(result), prCharsetFromMimeType(result->contentType), fetch->environment, &decoded);
     else
         text = PrStringView{};
     CssSheetData* sheet = nullptr;
@@ -291,7 +291,8 @@ void instructionSheetFetched(void* PR_NULLABLE data, const DomFetchResult* resul
     if (result->status != PrStatus_Ok || instruction->parent == nullptr)
         return;
     PrRawString decoded = {};
-    PrStringView text = cssDecodeBytes(result->body, prCharsetFromMimeType(result->contentType), document->charset, &decoded);
+    PrCharset charset = prCharsetFromMimeType(result->contentType);
+    PrStringView text = cssDecodeBytes(domFetchText(result), charset, document->charset, &decoded);
     PrCssStyleSheet* sheet = cssStyleSheetCreate(cssSheetDataCreate());
     sheet->href = prRawStringClone(&fetch->href);
     sheet->data->href = prRawStringClone(&fetch->href);

@@ -335,8 +335,10 @@ TEST_CASE("an xml-stylesheet instruction in the prolog fetches its CSS sheet, wh
         {}, nullptr, nullptr) == PrStatus_Ok);
     REQUIRE(fetches.count() == 1);
     CHECK(fetches[0].url == "https://example.test/dir/blue.css");
-    DomFetchResult result{.status = PrStatus_Ok, .responseStatus = 200, .body = "rect { fill: blue }"};
+    PrBlob* body = prBlobCopy(prStringBytes("rect { fill: blue }"));
+    DomFetchResult result{.status = PrStatus_Ok, .responseStatus = 200, .body = body};
     fetches[0].done(fetches[0].data, &result);
+    prBlobRelease(body);
     PrCssStyleSheetList* sheets = prCssDocumentStyleSheets(document);
     REQUIRE(prCssStyleSheetListLength(sheets) == 1);
     PrCssStyleSheet* sheet = prCssStyleSheetListStyleSheetAt(sheets, 0);

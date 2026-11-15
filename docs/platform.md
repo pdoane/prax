@@ -2,13 +2,14 @@
 
 The platform is what the library does to the host on its own initiative: allocating memory, reporting a failure it
 cannot continue past, starting threads and locking between them, reading clocks, reading and writing files by path,
-reserving address space, reading the environment, and reading random bytes. What an embedder hands the library already,
+reading the files that the program is packaged with, reserving address space, reading the environment, and reading
+random bytes. What an embedder hands the library already,
 such as a window's surface or a font's bytes, does not go through it. Atomics are instructions, not a facility, and stay
 in the toolkit (`pr/atomic.h`). The CPU counters that the benchmarks read are tooling, not part of the platform.
 
 Core's C API is the platform's interface (`pr/memory.h`, `pr/assert.h`, `pr/thread.h`, `pr/mutex.h`, `pr/time.h`,
-`pr/file.h`, `pr/vmem.h`, `pr/random.h`), and every library reaches the host through it. Each facility is bound at
-compile time, so the library calls the function that implements it directly, with no table between them.
+`pr/file.h`, `pr/resource.h`, `pr/vmem.h`, `pr/random.h`), and every library reaches the host through it. Each facility
+is bound at compile time, so the library calls the function that implements it directly, with no table between them.
 
 ## Groups
 
@@ -20,7 +21,8 @@ implementation does not wait with a mutex from another, and one allocator does n
 | memory | `PR_PLATFORM_ALLOC_BYTES`, `REALLOC_BYTES` and `FREE_BYTES`, with `ALLOC_ZEROED_BYTES`, `USABLE_BYTES` and `TRIM_BYTES` if the embedder has them | the C library, or mimalloc with `PR_PLATFORM_MIMALLOC` |
 | failure | `PR_PLATFORM_FAIL`, and `PR_ASSERT`, which replaces the library's assertions | POSIX, or the Windows family on Windows |
 | threads | `PR_PLATFORM_THREAD_SUPPORTED`, `_START`, `_JOIN`, `_HARDWARE_COUNT` and `_SLEEP`, `PR_PLATFORM_MUTEX_INIT`, `_RESET`, `_LOCK` and `_UNLOCK`, and `PR_PLATFORM_CONDITION_INIT`, `_RESET`, `_WAIT`, `_WAIT_FOR`, `_SIGNAL` and `_BROADCAST` | POSIX, or the Windows family on Windows, or none with `PR_PLATFORM_THREADS` off |
-| files | `PR_PLATFORM_FILE_MAP`, `_UNMAP`, `_INFO`, `_SAME`, `_EACH_ENTRY`, `_WRITE`, `_REMOVE`, `_CREATE_DIRECTORY`, `_USER_DIRECTORY`, `_WORKING_DIRECTORY`, `_STREAM_WRITE` and `_STREAM_READ` | POSIX, or the Windows family on Windows |
+| files | `PR_PLATFORM_FILE_OPEN`, `_INFO`, `_SAME`, `_EACH_ENTRY`, `_WRITE`, `_REMOVE`, `_CREATE_DIRECTORY`, `_USER_DIRECTORY`, `_WORKING_DIRECTORY`, `_STREAM_WRITE` and `_STREAM_READ` | POSIX, or the Windows family on Windows |
+| resources | `PR_PLATFORM_RESOURCE_OPEN` | POSIX, or the Apple family on Apple targets, the web family on the web, or the Windows family on Windows |
 | address space | `PR_PLATFORM_VMEM_RESERVE`, `_COMMIT` and `_FREE` | POSIX, or the Windows family on Windows |
 | clocks | `PR_PLATFORM_TIME_PERF_NOW`, `_PERF_NANOSECONDS`, `_PERF_MILLISECONDS` and `_MONOTONIC_MILLISECONDS` | POSIX, or the Apple family on Apple targets, or the Windows family on Windows |
 | system time | `PR_PLATFORM_TIME_SYSTEM_NOW` and `_LOCAL_OFFSET_SECONDS` | POSIX, or the Windows family on Windows |
@@ -54,10 +56,22 @@ table, so a family's sources may call core's functions as any of core's do. A fa
 implements it in a source of its own, so that a program links only the groups it uses. For example,
 `pr/core_posix_thread.h` declares `prCorePosixMutexLock`. A family serves every target that shares it, so one target's
 defaults may come from several families. The `libc` and `mimalloc` families serve every target, the `posix` family
-serves the Unix-like ones, the `apple` family serves clocks on Apple's targets from Mach's time base, and the `windows`
-family serves Windows: it fails without the C runtime's abort dialog, maps files with file mapping objects, runs Win32
-threads with slim reader/writer locks and condition variables, reads the performance counter and the precise system
-time, and reserves with `VirtualAlloc`.
+serves the Unix-like ones, the `apple` family serves clocks on Apple's targets from Mach's time base and resources from
+the application bundle, the `web` family serves resources on the web, and the `windows` family serves Windows: it fails
+without the C runtime's abort dialog, maps files with file mapping objects, runs Win32 threads with slim reader/writer
+locks and condition variables, reads the performance counter and the precise system time, and reserves with
+`VirtualAlloc`.
+
+Files and resources open as blobs (`pr/blob.h`): bytes together with what frees them, shared by reference, so a binding
+hands out bytes however its platform holds them, as a mapping, an asset or a copy, and whatever keeps them retains the
+blob. Resources are reached by name and never by path (`pr/resource.h`), because a platform need not keep them as files:
+an application package keeps them as assets that the platform reads for the program. The default families keep them as
+files, in the directory where the build stages them (`pr_resources`, `cmake/resources.cmake`), and what they share for
+that is under `lib/core/backends/shared`. A program reads them from `<executable>.resources` beside its executable, as a
+program under Node.js does beside its script. An application bundle is the exception, which reads them from the bundle's
+resources, `Contents/Resources` on macOS and the bundle itself on iOS, and a web page reads them from `/resources` of
+its file system, where the page packages them. A platform that keeps them otherwise, or an embedder that keeps them in
+an archive of its own, binds the group.
 
 The clocks keep the promises of `pr/time.h` on every target. The performance counter is the cheapest reading that the
 target has. The monotonic clock advances while the system sleeps: `mach_continuous_time` on Apple's targets,

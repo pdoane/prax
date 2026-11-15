@@ -52,13 +52,15 @@ CssDeclaredName reflected(uint32_t descriptor) {
     return cssDescriptorDeclaredName(kReflected[descriptor].descriptor);
 }
 
-// Returns the font of the first face of the file in `bytes`, or null if the bytes are not a font that the engine reads.
-// `compress` decompresses a WOFF file. If `compress` is null, a WOFF file is not read.
-const PrFont* PR_NULLABLE fontOf(PrByteView bytes, PrCompressCodec* PR_NULLABLE compress) {
+// Returns the font of the first face of the file in `blob`, which the font retains, or null if the bytes are not a font
+// that the engine reads. `compress` decompresses a WOFF file, whose font holds the decoded file instead. If `compress`
+// is null, a WOFF file is not read.
+const PrFont* PR_NULLABLE fontOf(PrBlob* blob, PrCompressCodec* PR_NULLABLE compress) {
+    PrByteView bytes = prBlobBytes(blob);
     bool woff = bytes.size >= 4 && bytes.data[0] == 'w' && bytes.data[1] == 'O' && bytes.data[2] == 'F';
     const PrFont* font = nullptr;
     if (!woff)
-        prFontCreate(bytes, 0, nullptr, &font);
+        prFontCreate(blob, 0, nullptr, &font);
     else if (compress != nullptr)
         prFontCreateWoff(bytes, 0, nullptr, compress, &font);
     return font;
@@ -435,9 +437,9 @@ void dropFetch(void* PR_NULLABLE data) {
 void sourceFetched(void* PR_NULLABLE data, const DomFetchResult* result) {
     SourceFetch* fetch = static_cast<SourceFetch*>(data);
     CssFontSource* source = fetch->source;
-    PrByteView bytes = prStringBytes(result->body);
     const DomDocumentHost* host = fetch->document->host;
-    source->font = result->status == PrStatus_Ok && host != nullptr ? fontOf(bytes, host->compress) : nullptr;
+    bool fetched = result->status == PrStatus_Ok && result->body != nullptr && host != nullptr;
+    source->font = fetched ? fontOf(result->body, host->compress) : nullptr;
     source->bytes = source->font != nullptr ? prFontData(source->font).size : 0;
     source->settled = true;
     RawArray<CssFontLoad*> waiting = source->waiting;
@@ -582,7 +584,10 @@ PrCssFontFace* cssFontFaceCreate(PrStringView family, PrStringView source, PrByt
     }
     face->fromData = data.data != nullptr;
     if (face->fromData) {
-        face->font = fontOf(data, compress);
+        // The script's buffer is its own, so the font holds a copy.
+        PrBlob* copy = prBlobCopy(data);
+        face->font = fontOf(copy, compress);
+        prBlobRelease(copy);
         // css-font-loading-3/#font-face-constructor: data that is not a font fails as a syntax error.
         face->unparsed = !parsed || face->font == nullptr;
         face->status = face->unparsed ? PrCssFontFaceStatus_Error : PrCssFontFaceStatus_Loaded;

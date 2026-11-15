@@ -232,10 +232,10 @@ TEST_CASE("text editor: a file opens, saves with its line endings, and a missing
     e.settle();
     e.run("file.save");
     CHECK(e.status() == "saved");
-    PrByteView mapping{};
-    REQUIRE(prFileMap(path, &mapping));
-    CHECK(prStringFromBytes(mapping) == "za\r\nb\r\n");
-    prFileUnmap(&mapping);
+    PrBlob* saved = prFileOpen(path);
+    REQUIRE(saved != nullptr);
+    CHECK(prStringFromBytes(prBlobBytes(saved)) == "za\r\nb\r\n");
+    prBlobRelease(saved);
     CHECK_FALSE(prTextEditorDocumentInfo(document).edited);
 
     PrTextEditorDocumentDesc missing{.path = "/prax/no/such/file.txt"};

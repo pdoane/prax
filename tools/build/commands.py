@@ -136,14 +136,15 @@ def test(argv):
         names = sorted(name[:-len(ending)] for name in os.listdir(chosen.directory) for ending in endings
                        if name.endswith(ending))
         dev.fail("no unit tests named %s; one of: %s" % (module, " ".join(names)))
+    # A simulator build's binary runs on a simulator device, through its runner, and a network module's binary runs with
+    # its peer's servers, which a simulator device reaches on the host.
+    command = [sys.executable, builds.SIMULATOR_RUNNER, binary] if chosen.simulator else [binary]
     if chosen.wasm:
         dev.run([emsdk.node(), binary, *args])
-    elif chosen.simulator:
-        dev.run([sys.executable, builds.SIMULATOR_RUNNER, binary, *args])
     elif module in NETWORK_MODULES:
-        dev.python("tools.harness.net_peer", binary, *args)
+        dev.python("tools.harness.net_peer", *command, *args)
     else:
-        dev.run([binary, *args])
+        dev.run([*command, *args])
 
 
 # The configurations that ./dev.sh ci checks, and those it checks when none is named. The debug build checks the

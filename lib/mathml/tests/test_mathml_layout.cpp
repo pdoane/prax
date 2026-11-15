@@ -16,6 +16,8 @@
 #include "tools/harness/test.h"
 
 namespace pr_impl {
+
+using namespace harness;
 namespace {
 
 // A document presented over Ahem, with New Computer Modern Math as the math family.
@@ -31,7 +33,7 @@ struct MathPage {
         const PrStringView paths[] = {PR_FONTS_DIR "/Ahem.ttf", PR_FONTS_DIR "/NewCMMath-Regular.otf"};
         for (PrStringView path : paths) {
             const PrFont* font = nullptr;
-            REQUIRE(prFontCreateFromFile(path, 0, nullptr, &font) == PrStatus_Ok);
+            REQUIRE(prFontCreate(openFile(path), 0, nullptr, &font) == PrStatus_Ok);
             PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
             prFontSetAdd(fonts, &descriptor, font);
             prFontRelease(font);

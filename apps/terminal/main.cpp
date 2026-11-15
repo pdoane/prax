@@ -98,8 +98,8 @@ int main(int argc, char** argv) {
     // fonts.
     PrFontSet* fonts = prFontSetCreate(nullptr);
     const PrFontBundle bundles[] = {PrFontBundle_NotoMono, PrFontBundle_NerdFontSymbols};
-    if (prFontBundleInstall(fonts, bundles, uint32_t(countOf(bundles)), PR_FONT_BUNDLE_DIR) == 0) {
-        printError("terminal: the fonts under {} could not be installed\n", PR_FONT_BUNDLE_DIR);
+    if (prFontBundleInstall(fonts, bundles, uint32_t(countOf(bundles))) == 0) {
+        printError("terminal: the font bundles among its resources could not be installed\n");
         prFontSetDestroy(fonts);
         return 1;
     }

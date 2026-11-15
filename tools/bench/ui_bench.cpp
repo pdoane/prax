@@ -13,6 +13,8 @@
 // profiler.
 
 #include "pr/assert.h"
+#include "pr/blob_ref.h"
+#include "pr/file.h"
 #include "pr/layout_frame.h"
 #include "pr/layout_scene.h"
 #include "pr/layout_style.h"
@@ -214,7 +216,8 @@ PrTextFont* makeFont(PrFontSet** fonts, PrTextShaper** shaper) {
     PrTextBuffer path = {};
     prTextBufferAppend(&path, PR_FONTS_DIR "/Arimo.ttf");
     const PrFont* font = nullptr;
-    if (prFontCreateFromFile(prTextBufferView(&path), 0, nullptr, &font) == PrStatus_Ok) {
+    BlobRef opened = BlobRef::adopt(prFileOpen(prTextBufferView(&path)));
+    if (opened && prFontCreate(opened, 0, nullptr, &font) == PrStatus_Ok) {
         PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
         prFontSetAdd(*fonts, &descriptor, font);
         prFontRelease(font);

@@ -118,11 +118,11 @@ PrMediaSupport prMediaCodecSupportsSourceType(PrMediaCodec* codec, PrStringView 
     return codec->supportsTypeFn(codec, type);
 }
 
-PrStatus prMediaDecoderCreate(PrMediaCodec* codec, PrByteView bytes, PrMediaDecoder* PR_NULLABLE* PR_NONNULL out,
+PrStatus prMediaDecoderCreate(PrMediaCodec* codec, PrBlob* blob, PrMediaDecoder* PR_NULLABLE* PR_NONNULL out,
         PrMediaInfo* info) {
     *out = nullptr;
     *info = PrMediaInfo{};
-    PrStatus status = codec->decoderCreateFn(codec, bytes, out, info);
+    PrStatus status = codec->decoderCreateFn(codec, blob, out, info);
     PR_ASSERT((status == PrStatus_Ok) == (*out != nullptr));
     return status;
 }

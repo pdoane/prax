@@ -1,4 +1,5 @@
 #include "pr/array.h"
+#include "pr/blob_ref.h"
 #include "pr/media_builtin.h"
 #include "pr/mem.h"
 #include "pr/span.h"
@@ -67,7 +68,7 @@ TEST_CASE("the built-in codec reads a movie's duration and its first video track
     Array<uint8_t> bytes = movie(2500, join(tracks));
     PrMediaDecoder* decoder = nullptr;
     PrMediaInfo info{};
-    REQUIRE(prMediaDecoderCreate(codec, bytes, &decoder, &info) == PrStatus_Ok);
+    REQUIRE(prMediaDecoderCreate(codec, BlobRef::adopt(prBlobCopy(bytes)), &decoder, &info) == PrStatus_Ok);
     CHECK(info.duration == 2.5);
     CHECK(info.hasVideo);
     CHECK(info.hasAudio);
@@ -79,18 +80,18 @@ TEST_CASE("the built-in codec reads a movie's duration and its first video track
     prMediaDecoderDestroy(decoder);
 
     Array<uint8_t> audio = movie(1000, track("soun", 0, 0));
-    REQUIRE(prMediaDecoderCreate(codec, audio, &decoder, &info) == PrStatus_Ok);
+    REQUIRE(prMediaDecoderCreate(codec, BlobRef::adopt(prBlobCopy(audio)), &decoder, &info) == PrStatus_Ok);
     CHECK(!info.hasVideo);
     CHECK(info.videoExtent.x == 0);
     prMediaDecoderDestroy(decoder);
 
     // A resource without a movie header, or without a file type box, is not a movie.
     Array<uint8_t> untimed = box("ftyp", Array<uint8_t>(8));
-    CHECK(prMediaDecoderCreate(codec, untimed, &decoder, &info) == PrStatus_NotSupported);
+    CHECK(prMediaDecoderCreate(codec, BlobRef::adopt(prBlobCopy(untimed)), &decoder, &info) == PrStatus_NotSupported);
     CHECK(decoder == nullptr);
     Array<uint8_t> noise(64);
     prMemFill(noise.data(), 0x5a, noise.count());
-    CHECK(prMediaDecoderCreate(codec, noise, &decoder, &info) == PrStatus_NotSupported);
+    CHECK(prMediaDecoderCreate(codec, BlobRef::adopt(prBlobCopy(noise)), &decoder, &info) == PrStatus_NotSupported);
     prMediaCodecDestroy(codec);
 }
 

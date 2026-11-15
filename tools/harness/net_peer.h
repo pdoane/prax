@@ -3,8 +3,8 @@
 
 #pragma once
 
+#include "pr/blob.h"
 #include "pr/byte_view.h"
-#include "pr/file.h"
 #include "pr/net.h"
 #include "pr/raw_array.h"
 #include "pr/string_view.h"
@@ -30,7 +30,7 @@ struct NetPeer {
     uint16_t wss;               // WebSocket over TLS
     uint16_t comfy;             // a fake ComfyUI server, over TCP
     uint16_t closed;            // a port that nothing listens on
-    PrByteView ca;              // DER
+    PrBlob* PR_NULLABLE ca;     // DER
 };
 
 // Reads the peer from the directory that PR_NET_PEER names. Returns false if the tests run without the peer.

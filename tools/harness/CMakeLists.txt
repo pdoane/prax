@@ -54,10 +54,11 @@ if (PR_TOOLS)
 endif()
 
 # The fixture of the tests of Studio Kit and of the libraries over it (kit_fixture.h): a kit that sets text in font
-# bundles, and the frames that drive it. It installs the bundles from the tests' fonts (cmake/test_data.cmake), which
-# hold the bundles' files that the tests set text in, so that what the tests see does not depend on PR_FONT_BUNDLES.
+# bundles, and the frames that drive it. Its resources, which each test that links it stages, are the bundles' files
+# that the tests' fonts hold (cmake/test_data.cmake), the files that the tests set text in, so that what the tests see
+# does not depend on PR_FONT_BUNDLES.
 add_library(kit_fixture INTERFACE kit_fixture.h)
 target_include_directories(kit_fixture INTERFACE ${PROJECT_SOURCE_DIR})
-target_compile_definitions(kit_fixture INTERFACE PR_FONT_BUNDLE_DIR="${PR_TEST_FONTS_DIR}")
+pr_font_bundle_resources(kit_fixture FROM ${PR_TEST_FONTS_DIR} Complete NotoMono NerdFontSymbols)
 target_link_libraries(kit_fixture INTERFACE prax::studio_kit prax::font_bundle prax::font prax::text prax::draw
                                             prax::layout prax::ui prax::compress prax::image harness_png doctest::doctest)

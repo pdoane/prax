@@ -314,7 +314,7 @@ function(pr_page_tests module)
         set_target_properties(${name} PROPERTIES LINK_OPTIONS "${options}")
     endif()
     set(shell ${PROJECT_SOURCE_DIR}/tools/harness/page_tests.html)
-    set_target_properties(${name} PROPERTIES SUFFIX ".html")
+    set_target_properties(${name} PROPERTIES SUFFIX ".html" PR_WEB_PAGE TRUE)
     target_link_options(${name} PRIVATE "--shell-file=${shell}" -sEXIT_RUNTIME=1)
     set_property(TARGET ${name} APPEND PROPERTY LINK_DEPENDS ${shell})
     pr_web_preload(${name} ${PAGE_PRELOAD})
@@ -344,4 +344,40 @@ endfunction()
 function(pr_harness name module)
     add_executable(${name} ${ARGN})
     target_link_libraries(${name} PRIVATE ${module} harness pr_warnings)
+endfunction()
+
+# Signs the application bundle of the program `target` whole and ad hoc, after it is built, which is after its resources
+# are staged (pr_stage_resources), since a signature seals what the bundle holds. The linker signs only the executable.
+# A signature of the whole bundle binds its Info.plist and so its identifier, which notifications need, and the
+# simulator installs only a signed bundle. Called in the directory that declares the target.
+#
+#   pr_sign_bundle(<target>)
+function(pr_sign_bundle target)
+    add_custom_command(TARGET ${target} POST_BUILD COMMAND codesign --force --sign - $<TARGET_BUNDLE_DIR:${target}>
+        VERBATIM)
+endfunction()
+
+# Makes `target`, an example or an app, an application bundle for iOS, org.prax.<target>. Its Info.plist is
+# cmake/ios_info.plist.in. With MULTIPLE_SCENES, the application may show several scenes where the device does, as an
+# iPad does, which lib/app's Multiple window model needs. The bundle is signed whole and ad hoc once its resources are
+# staged (pr_sign_bundle), as the simulator requires of what it installs.
+#
+#   pr_ios_bundle(<target> [MULTIPLE_SCENES])
+function(pr_ios_bundle target)
+    cmake_parse_arguments(PARSE_ARGV 1 arg "MULTIPLE_SCENES" "" "")
+    set(PR_IOS_MULTIPLE_SCENES false)
+    if (arg_MULTIPLE_SCENES)
+        set(PR_IOS_MULTIPLE_SCENES true)
+    endif()
+    # The bundle's properties fill in the rest of the template when CMake writes the bundle.
+    set(plist ${CMAKE_CURRENT_BINARY_DIR}/${target}_info.plist.in)
+    configure_file(${PROJECT_SOURCE_DIR}/cmake/ios_info.plist.in ${plist} @ONLY)
+    set_target_properties(${target} PROPERTIES
+        MACOSX_BUNDLE TRUE
+        MACOSX_BUNDLE_GUI_IDENTIFIER org.prax.${target}
+        MACOSX_BUNDLE_BUNDLE_NAME ${target}
+        MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION}
+        MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
+        MACOSX_BUNDLE_INFO_PLIST ${plist})
+    pr_sign_bundle(${target})
 endfunction()

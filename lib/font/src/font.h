@@ -4,7 +4,6 @@
 
 #include "pr/atomic.h"
 #include "pr/base.h"
-#include "pr/file.h"
 #include "pr/font.h"
 #include "pr/mutex.h"
 #include "pr/path.h"
@@ -23,14 +22,13 @@ namespace pr_impl {
 
 struct Font;
 
-// The bytes of a font file, shared by the fonts derived from it: either a copy that follows this structure in the same
-// allocation, or a mapped file.
+// The bytes of a font file, shared by the fonts derived from it: the bytes of a blob that the data holds a reference
+// to.
 struct FontData {
     Atomic<uint32_t> references;
-    const uint8_t* bytes;
+    PrBlob* blob;
+    const uint8_t* bytes;           // the blob's bytes
     size_t size;
-    PrByteView mapping;
-    uint8_t* PR_NULLABLE owned;     // bytes allocated apart from the data, which the data frees
 
     // The fonts open over the data, among which prFontCreateDerived looks for one equal to the font that it would make.
     // Each font removes itself as it is freed. The lock guards the list.

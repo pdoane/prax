@@ -13,6 +13,8 @@
 
 namespace pr_impl {
 
+using namespace harness;
+
 namespace {
 
 // Returns a font for text on 20px lines, with white space and wrapping as given. A record inherits nothing, so each
@@ -228,7 +230,7 @@ TEST_CASE("text is shaped in its font group's locale, and a new locale shapes it
     Fixture f;
     PrStringView path = PR_FONTS_DIR "/NotoSans[wdth,wght].ttf";
     const PrFont* noto = nullptr;
-    REQUIRE(prFontCreateFromFile(path, 0, nullptr, &noto) == PrStatus_Ok);
+    REQUIRE(prFontCreate(openFile(path), 0, nullptr, &noto) == PrStatus_Ok);
     PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
     prFontSetAdd(f.fonts, &descriptor, noto);
     prFontRelease(noto);
@@ -301,7 +303,7 @@ TEST_CASE("text in a fully hinted font advances as hinted at the tree's target p
         // The width that the font's advances give at a ratio: hinted to the target pixels of that ratio, or as
         // designed.
         const PrFont* file = nullptr;
-        REQUIRE(prFontCreateFromFile(PR_FONTS_DIR "/Arimo-Regular.ttf", 0, nullptr, &file) == PrStatus_Ok);
+        REQUIRE(prFontCreate(openFile(PR_FONTS_DIR "/Arimo-Regular.ttf"), 0, nullptr, &file) == PrStatus_Ok);
         PrFontDerivation hinted = prFontDerivationDefault();
         hinted.hinting = PrFontHinting_Full;
         hinted.hinter = hinter;

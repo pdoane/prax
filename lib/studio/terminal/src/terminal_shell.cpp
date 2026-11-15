@@ -46,11 +46,12 @@ PrRawString pathJoin(PrStringView directory, PrStringView part) {
 
 // Returns true if the file at `path` holds `bytes`.
 bool fileHolds(PrStringView path, PrByteView bytes) {
-    PrByteView mapping{};
-    if (!prFileMap(path, &mapping))
+    PrBlob* file = prFileOpen(path);
+    if (file == nullptr)
         return false;
-    bool same = mapping.size == bytes.size && prMemCompare(mapping.data, bytes.data, bytes.size) == 0;
-    prFileUnmap(&mapping);
+    PrByteView held = prBlobBytes(file);
+    bool same = held.size == bytes.size && prMemCompare(held.data, bytes.data, bytes.size) == 0;
+    prBlobRelease(file);
     return same;
 }
 

@@ -1,4 +1,5 @@
 #include "pr/array.h"
+#include "pr/blob_ref.h"
 #include "pr/media_apple.h"
 #include "pr/media_backend.h"
 #include "pr/mem.h"
@@ -406,7 +407,7 @@ TEST_CASE("the AVFoundation codec decodes AAC at the rate asked for, and seeks i
     PrMediaCodec* codec = prMediaAppleCreate();
     PrMediaDecoder* decoder = nullptr;
     PrMediaInfo info{};
-    REQUIRE(prMediaDecoderCreate(codec, bytes, &decoder, &info) == PrStatus_Ok);
+    REQUIRE(prMediaDecoderCreate(codec, BlobRef::adopt(prBlobCopy(bytes)), &decoder, &info) == PrStatus_Ok);
     CHECK(info.hasAudio);
     CHECK(!info.hasVideo);
     REQUIRE(prMediaDecoderAudioStart(decoder, 48000, 1, 0));
@@ -439,7 +440,7 @@ TEST_CASE("the AVFoundation codec reads a movie from memory and decodes the fram
     CHECK(prMediaCodecSupportsType(codec, "text/plain") == PrMediaSupport_No);
     PrMediaDecoder* decoder = nullptr;
     PrMediaInfo info{};
-    REQUIRE(prMediaDecoderCreate(codec, bytes, &decoder, &info) == PrStatus_Ok);
+    REQUIRE(prMediaDecoderCreate(codec, BlobRef::adopt(prBlobCopy(bytes)), &decoder, &info) == PrStatus_Ok);
     CHECK(info.hasVideo);
     CHECK(!info.hasAudio);
     CHECK(info.videoExtent.x == kWidth);
@@ -471,7 +472,7 @@ TEST_CASE("the AVFoundation codec reads a movie from memory and decodes the fram
     // Bytes that are no container that AVFoundation reads are not supported.
     Array<uint8_t> noise(256);
     prMemFill(noise.data(), 0x5a, noise.count());
-    CHECK(prMediaDecoderCreate(codec, noise, &decoder, &info) == PrStatus_NotSupported);
+    CHECK(prMediaDecoderCreate(codec, BlobRef::adopt(prBlobCopy(noise)), &decoder, &info) == PrStatus_NotSupported);
     CHECK(decoder == nullptr);
     prMediaCodecDestroy(codec);
 }

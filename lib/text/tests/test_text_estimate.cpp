@@ -8,6 +8,7 @@
 
 namespace pr_impl {
 
+using namespace harness;
 using namespace pr;
 
 namespace {
@@ -21,7 +22,7 @@ struct Estimated {
     Estimated() {
         PrStringView path = PR_FONTS_DIR "/Arimo-Regular.ttf";
         const PrFont* PR_NULLABLE face = nullptr;
-        REQUIRE(prFontCreateFromFile(path, 0, nullptr, &face) == PrStatus_Ok);
+        REQUIRE(prFontCreate(openFile(path), 0, nullptr, &face) == PrStatus_Ok);
         PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
         prFontSetAdd(fonts, &descriptor, face);
         prFontRelease(face);

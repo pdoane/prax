@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "pr/blob.h"
 #include "pr/byte_view.h"
 #include "pr/charset_names.h"
 #include "pr/compress.h"
@@ -112,17 +113,29 @@ struct DomFetchRequest {
     PrStringView referrerPolicy = PrStringView{nullptr, 0};
 };
 
-// The result of a fetch: the resource's bytes and its MIME type, or a network error for a status other than Ok. The
-// MIME type is the null view if none is known. The views are valid during the call that receives the result.
+// The result of a fetch: the resource's body and its MIME type, or a network error for a status other than Ok. The body
+// is a blob, null for a network error, which a receiver that keeps the bytes retains. The MIME type is the null view if
+// none is known. The views are valid during the call that receives the result.
 struct DomFetchResult {
     PrStatus status;
     uint16_t responseStatus;        // the response's status (fetch/#concept-response-status), or 0 for a network error
-    PrStringView body;
+    PrBlob* PR_NULLABLE body;
     PrStringView contentType;       // the Content-Type header, or the null view for none
     PrStringView contentLanguage;   // the Content-Language header, or the null view for none
     PrStringView url;               // the response's URL after redirects, without its fragment, or the null view
     bool opaque;                    // true for an opaque response (fetch/#concept-filtered-response-opaque)
 };
+
+// Returns the body of `result` as text, valid during the call that receives the result: the empty view for a body of no
+// bytes, and the null view for a network error.
+inline PrStringView domFetchText(const DomFetchResult* result) {
+    if (result->body == nullptr)
+        return PrStringView{nullptr, 0};
+    PrByteView bytes = prBlobBytes(result->body);
+    if (bytes.data == nullptr)
+        return "";
+    return PrStringView{reinterpret_cast<const char*>(bytes.data), bytes.size};
+}
 
 // Returns true if the fetch received a response whose status is ok (fetch/#ok-status).
 inline bool domFetchIsOk(const DomFetchResult* result) {

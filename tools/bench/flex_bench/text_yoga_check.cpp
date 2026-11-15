@@ -1,6 +1,8 @@
 // Checks that another flexbox can set Prax text: Yoga measures text through lib/text alone, with no layout tree. The
 // program exits with a nonzero status if a result is wrong.
 
+#include "pr/blob_ref.h"
+#include "pr/file.h"
 #include "pr/font_set.h"
 #include "pr/text_harfbuzz.h"
 #include "pr/text_shaping.h"
@@ -8,6 +10,8 @@
 #include <stdio.h>
 #include <string>
 #include <yoga/Yoga.h>
+
+using namespace pr;
 
 namespace {
 
@@ -55,7 +59,8 @@ int main() {
     PrFontSet* set = prFontSetCreate(nullptr);
     const PrFont* PR_NULLABLE face = nullptr;
     std::string path = std::string(PR_FONTS_DIR) + "/Arimo-Regular.ttf";
-    if (prFontCreateFromFile(path, 0, nullptr, &face) != PrStatus_Ok) {
+    BlobRef opened = BlobRef::adopt(prFileOpen(path));
+    if (!opened || prFontCreate(opened, 0, nullptr, &face) != PrStatus_Ok) {
         fprintf(stderr, "text_yoga_check: cannot open %s\n", path.c_str());
         return 1;
     }

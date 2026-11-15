@@ -254,6 +254,18 @@ void reportFetch(HtmlFetch* fetch) {
     htmlPerformanceMarkResource(page->window, &report);
 }
 
+// Frees the body of a fetch, which its blob took (completeFetch).
+void freeBody(void* PR_NULLABLE, PrByteView bytes) {
+    prMemoryFree(const_cast<uint8_t*>(bytes.data));
+}
+
+// Frees the decoded body of a data: URL, which its blob took (startFetch).
+void freeDataBody(void* PR_NULLABLE context, PrByteView) {
+    PrRawString* body = static_cast<PrRawString*>(context);
+    prRawStringReset(body);
+    prMemoryFree(body);
+}
+
 // Passes the response to the fetch's callback, and releases the agent's reference.
 void completeFetch(HtmlFetch* fetch) {
     reportFetch(fetch);
@@ -264,9 +276,12 @@ void completeFetch(HtmlFetch* fetch) {
         releaseFetch(fetch);
         return;
     }
-    PrStringView body{reinterpret_cast<const char*>(fetch->body.data), fetch->body.count};
-    if (fetch->status == PrStatus_Ok && body.data == nullptr)
-        body = "";
+    // The body that the fetch read becomes a blob without a copy, which a receiver that keeps it retains.
+    PrBlob* body = nullptr;
+    if (fetch->status == PrStatus_Ok) {
+        body = prBlobCreate(PrByteView{fetch->body.data, fetch->body.count}, freeBody, nullptr);
+        fetch->body = RawArray<uint8_t>{};
+    }
     DomFetchResult result{
         fetch->status, fetch->responseStatus, body, prRawStringView(&fetch->contentType),
         prRawStringView(&fetch->contentLanguage), prRawStringView(&fetch->responseUrl),
@@ -279,6 +294,7 @@ void completeFetch(HtmlFetch* fetch) {
     fetch->done(fetch->data, &result);
     if (page != nullptr)
         page->completingFetch = nullptr;
+    prBlobRelease(body);
     releaseFetch(fetch);
 }
 
@@ -604,18 +620,23 @@ void startFetch(PrHtmlPage* page, PrStringView url, DomFetchDestination destinat
         PrStringView referrerPolicy, FetchSettings settings, DomFetchFn done, void* PR_NULLABLE data,
         void (*PR_NULLABLE drop)(void* PR_NULLABLE data)) {
     if (prAsciiStartsWithFold(url, "data:") || page->host.fetcher == nullptr) {
-        PrRawString body = {};
+        PrRawString* body = allocZeroed<PrRawString>();
         PrRawString contentType = {};
         PrStatus status = PrStatus_NotSupported;
         if (prAsciiStartsWithFold(url, "data:"))
-            status = prUrlProcessData(url, &body, &contentType);
+            status = prUrlProcessData(url, body, &contentType);
+        // The decoded body becomes a blob without a copy, which a receiver that keeps it retains.
+        PrBlob* blob = nullptr;
+        if (status == PrStatus_Ok)
+            blob = prBlobCreate(prStringBytes(prRawStringView(body)), freeDataBody, body);
+        else
+            freeDataBody(body, PrByteView{});
         DomFetchResult result{
-            status, uint16_t(status == PrStatus_Ok ? 200 : 0), prRawStringView(&body),
-            prRawStringView(&contentType), PrStringView{nullptr, 0},
-            status == PrStatus_Ok ? url : PrStringView{nullptr, 0}, false,
+            status, uint16_t(status == PrStatus_Ok ? 200 : 0), blob, prRawStringView(&contentType),
+            PrStringView{nullptr, 0}, status == PrStatus_Ok ? url : PrStringView{nullptr, 0}, false,
         };
         done(data, &result);
-        prRawStringReset(&body);
+        prBlobRelease(blob);
         prRawStringReset(&contentType);
         return;
     }
@@ -740,7 +761,7 @@ void moduleFetched(void* PR_NULLABLE data, const DomFetchResult* result) {
     } else {
         PrRawString decoded = {};
         PrCharsetDecoder decoder = prCharsetDecoderMake(PrCharset_Utf8, 0);
-        PrStringView text = prCharsetDecodeView(&decoder, result->body, PrCharsetInput_Final, &decoded);
+        PrStringView text = prCharsetDecodeView(&decoder, domFetchText(result), PrCharsetInput_Final, &decoded);
         PrRawString url = prRawStringClone(&page->modules.data[index].url);
         PrRawString base = result->url.data != nullptr ? prRawStringCopy(result->url) : prRawStringClone(&url);
         PrHtmlScript script{
@@ -911,7 +932,7 @@ void scriptFetched(void* PR_NULLABLE data, const DomFetchResult* result) {
     if (result->status == PrStatus_Ok) {
         // A classic script is decoded in the charset of its byte order mark, or of its response, or its own
         // (html/#fetch-a-classic-script). A module script is UTF-8 (html/#fetch-a-single-module-script).
-        PrStringView body = result->body.data != nullptr ? result->body : "";
+        PrStringView body = domFetchText(result);
         PrCharset charset = script->charset;
         if (script->kind == PrHtmlScriptKind_Classic) {
             PrCharset response = prCharsetFromMimeType(result->contentType);
@@ -1477,7 +1498,7 @@ void frameFetched(void* PR_NULLABLE data, const DomFetchResult* result) {
             };
         // The document replaces the initial about:blank, as a navigation of the iframe's browsing context would.
         dropFrame(fetch->page, fetch->element);
-        attachFrame(fetch->page, fetch->element, loaded ? result->body : "", prRawStringView(&fetch->url), headers);
+        attachFrame(fetch->page, fetch->element, loaded ? domFetchText(result) : "", prRawStringView(&fetch->url), headers);
     }
     dropEmbedFetch(fetch);
 }
@@ -1710,7 +1731,7 @@ const HtmlAvailableImage* PR_NULLABLE availableImage(const PrHtmlPage* page, PrS
 void dropAvailableImages(PrHtmlPage* page) {
     for (uint32_t i = 0; i < page->availableImages.count; ++i) {
         prRawStringReset(&page->availableImages.data[i].url);
-        prRawStringReset(&page->availableImages.data[i].bytes);
+        prBlobRelease(page->availableImages.data[i].bytes);
     }
     page->availableImages.reset();
 }
@@ -1720,17 +1741,18 @@ void imageFetched(void* PR_NULLABLE data, const DomFetchResult* result) {
     if (isCurrent(fetch)) {
         DomElementState* state = fetch->element->state;
         bool loaded = result->status == PrStatus_Ok &&
-            htmlImageSize(result->body, &state->naturalWidth, &state->naturalHeight);
+            htmlImageSize(domFetchText(result), &state->naturalWidth, &state->naturalHeight);
         correctForDensity(state);
         PrStringView url = prRawStringView(&fetch->url);
         PrStringView request = prStringSlice(url, 0, prStringFindByte(url, '#'));
         if (loaded && availableImage(fetch->page, request) == nullptr) {
-            HtmlAvailableImage available = {prRawStringCopy(request), prRawStringCopy(result->body)};
+            prBlobRetain(result->body);
+            HtmlAvailableImage available = {prRawStringCopy(request), result->body};
             fetch->page->availableImages.push(available);
         }
         if (loaded)
             state->image = PrDomImageState_CompletelyAvailable;
-        showImage(fetch->page, fetch->element, loaded ? result->body : PrStringView{});
+        showImage(fetch->page, fetch->element, loaded ? domFetchText(result) : PrStringView{});
         queueElementEvent(fetch->page, fetch->element, !loaded);
     }
     dropEmbedFetch(fetch);
@@ -1759,10 +1781,11 @@ void updateImage(PrHtmlPage* page, PrDomElement* element, PrStringView source, d
         state->imageUrl = prUrlSerialize(url, PrUrlSerialization_Whole);
         PrRawString request = prUrlSerialize(url, PrUrlSerialization_ExcludeFragment);
         if (const HtmlAvailableImage* available = availableImage(page, prRawStringView(&request))) {
-            htmlImageSize(prRawStringView(&available->bytes), &state->naturalWidth, &state->naturalHeight);
+            PrStringView bytes = prStringFromBytes(prBlobBytes(available->bytes));
+            htmlImageSize(bytes, &state->naturalWidth, &state->naturalHeight);
             correctForDensity(state);
             state->image = PrDomImageState_CompletelyAvailable;
-            showImage(page, element, prRawStringView(&available->bytes));
+            showImage(page, element, bytes);
             queueElementEvent(page, element, false);
         } else {
             EmbedFetch* fetch = newEmbedFetch(page, element, prUrlSerialize(url, PrUrlSerialization_Whole));
@@ -1838,13 +1861,13 @@ void objectFetched(void* PR_NULLABLE data, const DomFetchResult* result) {
         if (!domFetchIsOk(result)) {
             queueElementEvent(fetch->page, element, true);
         } else if (prAsciiStartsWithFold(essence, "image/") && !prMimeTypeIsXml(essence)) {
-            bool decoded = htmlImageSize(result->body, &state->naturalWidth, &state->naturalHeight);
+            bool decoded = htmlImageSize(domFetchText(result), &state->naturalWidth, &state->naturalHeight);
             if (decoded)
                 state->image = PrDomImageState_CompletelyAvailable;
-            showImage(fetch->page, element, decoded ? result->body : PrStringView{});
+            showImage(fetch->page, element, decoded ? domFetchText(result) : PrStringView{});
             queueElementEvent(fetch->page, element, !decoded);
         } else if (prAsciiEqualsFold(essence, "text/html") || prMimeTypeIsXml(essence)) {
-            attachFrame(fetch->page, element, result->body, prRawStringView(&fetch->url),
+            attachFrame(fetch->page, element, domFetchText(result), prRawStringView(&fetch->url),
                 PrHtmlResponseHeaders{essence, result->contentLanguage, PrStringView{nullptr, 0}});
         }
     }

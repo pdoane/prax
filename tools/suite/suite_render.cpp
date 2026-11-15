@@ -69,8 +69,10 @@ bool readLine(PrFontSet* fonts, PrColor* background, PrStringView line, PrString
         prTextBufferAppend(&file, value);
         PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
         const PrFont* font = nullptr;
-        PrStatus status = prFontCreateFromFile(prTextBufferView(&file), 0, nullptr, &font);
+        PrBlob* opened = prFileOpen(prTextBufferView(&file));
         prTextBufferReset(&file);
+        PrStatus status = opened != nullptr ? prFontCreate(opened, 0, nullptr, &font) : PrStatus_NotFound;
+        prBlobRelease(opened);
         if (status != PrStatus_Ok)
             return false;
         prFontSetAdd(fonts, &descriptor, font);
@@ -106,9 +108,10 @@ bool readLine(PrFontSet* fonts, PrColor* background, PrStringView line, PrString
 
 // Reads the settings file at `path` into `fonts` and `background`.
 bool readFile(PrFontSet* fonts, PrColor* background, PrStringView path, PrStringView root) {
-    PrByteView mapping{};
-    if (!prFileMap(path, &mapping))
+    PrBlob* blob = prFileOpen(path);
+    if (blob == nullptr)
         return false;
+    PrByteView mapping = prBlobBytes(blob);
     const char* data = reinterpret_cast<const char*>(mapping.data);
     bool ok = true;
     size_t start = 0;
@@ -118,7 +121,7 @@ bool readFile(PrFontSet* fonts, PrColor* background, PrStringView path, PrString
         ok = readLine(fonts, background, PrStringView{data + start, i - start}, root) && ok;
         start = i + 1;
     }
-    prFileUnmap(&mapping);
+    prBlobRelease(blob);
     return ok;
 }
 

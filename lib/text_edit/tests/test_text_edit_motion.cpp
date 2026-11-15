@@ -15,6 +15,8 @@
 
 namespace pr_impl {
 
+using namespace harness;
+
 namespace {
 
 // Returns the offsets as text, each followed by a space.
@@ -56,12 +58,12 @@ struct Fixture {
     Fixture() {
         String path = format("{}/Arimo-Regular.ttf", PR_FONTS_DIR);
         const PrFont* PR_NULLABLE face = nullptr;
-        REQUIRE(prFontCreateFromFile(path, 0, nullptr, &face) == PrStatus_Ok);
+        REQUIRE(prFontCreate(openFile(path), 0, nullptr, &face) == PrStatus_Ok);
         PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
         prFontSetAdd(fonts, &descriptor, face);
         prFontRelease(face);
         String arabicPath = format("{}/NotoSansArabic[wdth,wght].ttf", PR_FONTS_DIR);
-        REQUIRE(prFontCreateFromFile(arabicPath, 0, nullptr, &face) == PrStatus_Ok);
+        REQUIRE(prFontCreate(openFile(arabicPath), 0, nullptr, &face) == PrStatus_Ok);
         prFontSetAdd(fonts, &descriptor, face);
         prFontRelease(face);
         prFontSetSetDefaultFamily(fonts, prFontFamilyFromName("Arimo"));

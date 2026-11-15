@@ -74,38 +74,35 @@
 #if defined(PR_PLATFORM_THREAD_START) != defined(PR_PLATFORM_CONDITION_BROADCAST)
 #error "PR_PLATFORM_THREAD_START and PR_PLATFORM_CONDITION_BROADCAST are defined together or not at all"
 #endif
-#if defined(PR_PLATFORM_FILE_MAP) != defined(PR_PLATFORM_FILE_UNMAP)
-#error "PR_PLATFORM_FILE_MAP and PR_PLATFORM_FILE_UNMAP are defined together or not at all"
+#if defined(PR_PLATFORM_FILE_OPEN) != defined(PR_PLATFORM_FILE_INFO)
+#error "PR_PLATFORM_FILE_OPEN and PR_PLATFORM_FILE_INFO are defined together or not at all"
 #endif
-#if defined(PR_PLATFORM_FILE_MAP) != defined(PR_PLATFORM_FILE_INFO)
-#error "PR_PLATFORM_FILE_MAP and PR_PLATFORM_FILE_INFO are defined together or not at all"
+#if defined(PR_PLATFORM_FILE_OPEN) != defined(PR_PLATFORM_FILE_SAME)
+#error "PR_PLATFORM_FILE_OPEN and PR_PLATFORM_FILE_SAME are defined together or not at all"
 #endif
-#if defined(PR_PLATFORM_FILE_MAP) != defined(PR_PLATFORM_FILE_SAME)
-#error "PR_PLATFORM_FILE_MAP and PR_PLATFORM_FILE_SAME are defined together or not at all"
+#if defined(PR_PLATFORM_FILE_OPEN) != defined(PR_PLATFORM_FILE_EACH_ENTRY)
+#error "PR_PLATFORM_FILE_OPEN and PR_PLATFORM_FILE_EACH_ENTRY are defined together or not at all"
 #endif
-#if defined(PR_PLATFORM_FILE_MAP) != defined(PR_PLATFORM_FILE_EACH_ENTRY)
-#error "PR_PLATFORM_FILE_MAP and PR_PLATFORM_FILE_EACH_ENTRY are defined together or not at all"
+#if defined(PR_PLATFORM_FILE_OPEN) != defined(PR_PLATFORM_FILE_WRITE)
+#error "PR_PLATFORM_FILE_OPEN and PR_PLATFORM_FILE_WRITE are defined together or not at all"
 #endif
-#if defined(PR_PLATFORM_FILE_MAP) != defined(PR_PLATFORM_FILE_WRITE)
-#error "PR_PLATFORM_FILE_MAP and PR_PLATFORM_FILE_WRITE are defined together or not at all"
+#if defined(PR_PLATFORM_FILE_OPEN) != defined(PR_PLATFORM_FILE_REMOVE)
+#error "PR_PLATFORM_FILE_OPEN and PR_PLATFORM_FILE_REMOVE are defined together or not at all"
 #endif
-#if defined(PR_PLATFORM_FILE_MAP) != defined(PR_PLATFORM_FILE_REMOVE)
-#error "PR_PLATFORM_FILE_MAP and PR_PLATFORM_FILE_REMOVE are defined together or not at all"
+#if defined(PR_PLATFORM_FILE_OPEN) != defined(PR_PLATFORM_FILE_CREATE_DIRECTORY)
+#error "PR_PLATFORM_FILE_OPEN and PR_PLATFORM_FILE_CREATE_DIRECTORY are defined together or not at all"
 #endif
-#if defined(PR_PLATFORM_FILE_MAP) != defined(PR_PLATFORM_FILE_CREATE_DIRECTORY)
-#error "PR_PLATFORM_FILE_MAP and PR_PLATFORM_FILE_CREATE_DIRECTORY are defined together or not at all"
+#if defined(PR_PLATFORM_FILE_OPEN) != defined(PR_PLATFORM_FILE_USER_DIRECTORY)
+#error "PR_PLATFORM_FILE_OPEN and PR_PLATFORM_FILE_USER_DIRECTORY are defined together or not at all"
 #endif
-#if defined(PR_PLATFORM_FILE_MAP) != defined(PR_PLATFORM_FILE_USER_DIRECTORY)
-#error "PR_PLATFORM_FILE_MAP and PR_PLATFORM_FILE_USER_DIRECTORY are defined together or not at all"
+#if defined(PR_PLATFORM_FILE_OPEN) != defined(PR_PLATFORM_FILE_STREAM_WRITE)
+#error "PR_PLATFORM_FILE_OPEN and PR_PLATFORM_FILE_STREAM_WRITE are defined together or not at all"
 #endif
-#if defined(PR_PLATFORM_FILE_MAP) != defined(PR_PLATFORM_FILE_STREAM_WRITE)
-#error "PR_PLATFORM_FILE_MAP and PR_PLATFORM_FILE_STREAM_WRITE are defined together or not at all"
+#if defined(PR_PLATFORM_FILE_OPEN) != defined(PR_PLATFORM_FILE_STREAM_READ)
+#error "PR_PLATFORM_FILE_OPEN and PR_PLATFORM_FILE_STREAM_READ are defined together or not at all"
 #endif
-#if defined(PR_PLATFORM_FILE_MAP) != defined(PR_PLATFORM_FILE_STREAM_READ)
-#error "PR_PLATFORM_FILE_MAP and PR_PLATFORM_FILE_STREAM_READ are defined together or not at all"
-#endif
-#if defined(PR_PLATFORM_FILE_MAP) != defined(PR_PLATFORM_FILE_WORKING_DIRECTORY)
-#error "PR_PLATFORM_FILE_MAP and PR_PLATFORM_FILE_WORKING_DIRECTORY are defined together or not at all"
+#if defined(PR_PLATFORM_FILE_OPEN) != defined(PR_PLATFORM_FILE_WORKING_DIRECTORY)
+#error "PR_PLATFORM_FILE_OPEN and PR_PLATFORM_FILE_WORKING_DIRECTORY are defined together or not at all"
 #endif
 #if defined(PR_PLATFORM_VMEM_RESERVE) != defined(PR_PLATFORM_VMEM_COMMIT)
 #error "PR_PLATFORM_VMEM_RESERVE and PR_PLATFORM_VMEM_COMMIT are defined together or not at all"
@@ -229,10 +226,9 @@
 #endif
 
 // The default files, from Windows or POSIX, if the build binds none.
-#if !defined(PR_PLATFORM_FILE_MAP) && defined(PR_CORE_WINDOWS_TARGET)
+#if !defined(PR_PLATFORM_FILE_OPEN) && defined(PR_CORE_WINDOWS_TARGET)
 #include "pr/core_windows_file.h"
-#define PR_PLATFORM_FILE_MAP(path, out) prCoreWindowsFileMap(path, out)
-#define PR_PLATFORM_FILE_UNMAP(mapping) prCoreWindowsFileUnmap(mapping)
+#define PR_PLATFORM_FILE_OPEN(path) prCoreWindowsFileOpen(path)
 #define PR_PLATFORM_FILE_INFO(path, out) prCoreWindowsFileInfo(path, out)
 #define PR_PLATFORM_FILE_SAME(a, b) prCoreWindowsFileSame(a, b)
 #define PR_PLATFORM_FILE_EACH_ENTRY(path, fn, context) prCoreWindowsFileEachEntry(path, fn, context)
@@ -243,10 +239,9 @@
 #define PR_PLATFORM_FILE_WORKING_DIRECTORY() prCoreWindowsFileWorkingDirectory()
 #define PR_PLATFORM_FILE_STREAM_WRITE(stream, bytes) prCoreWindowsFileStreamWrite(stream, bytes)
 #define PR_PLATFORM_FILE_STREAM_READ(stream, out, capacity) prCoreWindowsFileStreamRead(stream, out, capacity)
-#elif !defined(PR_PLATFORM_FILE_MAP) && defined(PR_CORE_POSIX_TARGET)
+#elif !defined(PR_PLATFORM_FILE_OPEN) && defined(PR_CORE_POSIX_TARGET)
 #include "pr/core_posix_file.h"
-#define PR_PLATFORM_FILE_MAP(path, out) prCorePosixFileMap(path, out)
-#define PR_PLATFORM_FILE_UNMAP(mapping) prCorePosixFileUnmap(mapping)
+#define PR_PLATFORM_FILE_OPEN(path) prCorePosixFileOpen(path)
 #define PR_PLATFORM_FILE_INFO(path, out) prCorePosixFileInfo(path, out)
 #define PR_PLATFORM_FILE_SAME(a, b) prCorePosixFileSame(a, b)
 #define PR_PLATFORM_FILE_EACH_ENTRY(path, fn, context) prCorePosixFileEachEntry(path, fn, context)
@@ -313,6 +308,22 @@
 #include "pr/core_posix_environment.h"
 #define PR_PLATFORM_ENVIRONMENT_VARIABLE(name) prCorePosixEnvironmentVariable(name)
 #define PR_PLATFORM_ENVIRONMENT_HOST_NAME() prCorePosixEnvironmentHostName()
+#endif
+
+// The default resources, if the build binds none: the Apple family's on Apple's targets, the web's on the web, and
+// Windows' or POSIX's elsewhere.
+#if !defined(PR_PLATFORM_RESOURCE_OPEN) && defined(PR_CORE_WINDOWS_TARGET)
+#include "pr/core_windows_resource.h"
+#define PR_PLATFORM_RESOURCE_OPEN(name) prCoreWindowsResourceOpen(name)
+#elif !defined(PR_PLATFORM_RESOURCE_OPEN) && defined(__APPLE__)
+#include "pr/core_apple_resource.h"
+#define PR_PLATFORM_RESOURCE_OPEN(name) prCoreAppleResourceOpen(name)
+#elif !defined(PR_PLATFORM_RESOURCE_OPEN) && defined(__EMSCRIPTEN__)
+#include "pr/core_web_resource.h"
+#define PR_PLATFORM_RESOURCE_OPEN(name) prCoreWebResourceOpen(name)
+#elif !defined(PR_PLATFORM_RESOURCE_OPEN) && defined(PR_CORE_POSIX_TARGET)
+#include "pr/core_posix_resource.h"
+#define PR_PLATFORM_RESOURCE_OPEN(name) prCorePosixResourceOpen(name)
 #endif
 
 // The default random bytes, from Windows or POSIX, if the build binds none.

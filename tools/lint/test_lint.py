@@ -1266,7 +1266,7 @@ class BackendNames(unittest.TestCase):
         return [message for _, _, _, message in report.problems]
 
     def test_a_backend_constructor_names_its_interface_and_backend(self):
-        interface = 'void prDrawRendererDestroy(PrDrawRenderer* renderer);\n'
+        interface = 'struct PrDrawRenderer {\n    void (*PR_NULLABLE destroyFn)(PrDrawRenderer* renderer);\n};\n'
         self.assertEqual(self.problems(interface, 'PrDrawRenderer* prDrawCpuCreate(void);\n'), [])
         self.assertEqual(self.problems(interface, 'PrDrawRenderer* prDrawCpuBackend(void);\n'),
                          ["prDrawCpuBackend makes a PrDrawRenderer, so it is named like prdrawcpucreate"])
@@ -1279,7 +1279,7 @@ class BackendNames(unittest.TestCase):
     def test_a_backend_of_a_backend_names_both(self):
         report = lint.Report()
         paths = {os.path.join(lint.ROOT, 'lib/draw/backends/fragment/include/pr/draw_fragment.h'):
-                 'void prDrawFragmentDriverDestroy(PrDrawFragmentDriver* driver);\n',
+                 'struct PrDrawFragmentDriver {\n    void (*PR_NULLABLE destroyFn)(PrDrawFragmentDriver* driver);\n};\n',
                  os.path.join(lint.ROOT, 'lib/draw/backends/fragment_metal/include/pr/draw_fragment_metal.h'):
                  'PrDrawFragmentDriver* prDrawFragmentMetalCreate(void);\n'
                  'PrDrawFragmentDriver* prDrawMetalCreate(void);\n'
@@ -1290,6 +1290,11 @@ class BackendNames(unittest.TestCase):
                           "prdrawfragmentmetalcreate",
                           "prDrawMetalDriverCreate makes a PrDrawFragmentDriver, so it is named like "
                           "prdrawfragmentmetalcreate"])
+
+    def test_a_handle_that_is_not_the_record_is_named_for_what_makes_it(self):
+        interface = ('struct PrDrawRenderer {\n    void (*PR_NULLABLE destroyFn)(PrDrawRenderer* renderer);\n};\n'
+                     'void prDrawImageRelease(PrDrawImage* image);\n')
+        self.assertEqual(self.problems(interface, 'PrDrawImage* prDrawCpuImageOpen(PrStringView path);\n'), [])
 
     def test_no_type_is_named_backend(self):
         self.assertEqual(self.problems('typedef struct PrDrawBackend PrDrawBackend;\n', ''),

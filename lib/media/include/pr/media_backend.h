@@ -57,7 +57,7 @@ struct PrMediaSampleDecoder {
 struct PrMediaCodec {
     void (*PR_NULLABLE destroyFn)(PrMediaCodec* codec);
     PrMediaSupport (*supportsTypeFn)(PrMediaCodec* codec, PrStringView type);
-    PrStatus (*decoderCreateFn)(PrMediaCodec* codec, PrByteView bytes, PrMediaDecoder* PR_NULLABLE* PR_NONNULL out,
+    PrStatus (*decoderCreateFn)(PrMediaCodec* codec, PrBlob* blob, PrMediaDecoder* PR_NULLABLE* PR_NONNULL out,
         PrMediaInfo* info);
     PrMediaSupport (*PR_NULLABLE supportsSourceTypeFn)(PrMediaCodec* codec, PrStringView type);
     PrStatus (*PR_NULLABLE sampleDecoderCreateFn)(PrMediaCodec* codec, const PrMediaTrackInfo* track,

@@ -68,10 +68,10 @@ void fetched(void* PR_NULLABLE data, const DomFetchResult* result) {
     ResourceFetch* fetch = static_cast<ResourceFetch*>(data);
     DomResource& resource = fetch->document->resources->documents.data[fetch->index];
     resource.state = DomResourceState_Failed;
-    if (domFetchIsOk(result) && result->body.size != 0) {
+    if (domFetchIsOk(result) && domFetchText(result).size != 0) {
         PrRawString decoded{};
         PrCharset charset = PrCharset_None;
-        PrStringView text = domXmlDecode(result->body, PrCharset_None, &decoded, &charset);
+        PrStringView text = domXmlDecode(domFetchText(result), PrCharset_None, &decoded, &charset);
         PrDomDocument* parsed = domDocumentCreate(DomDocumentKind_Xml);
         parsed->contentType = prRawStringExternal("image/svg+xml");
         domNotifyDocumentCreated(fetch->document, parsed);

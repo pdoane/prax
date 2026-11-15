@@ -1,5 +1,6 @@
 #include "pr/array.h"
 #include "pr/ascii.h"
+#include "pr/blob_ref.h"
 #include "pr/compress.h"
 #include "pr/draw_pdf.h"
 #include "pr/float.h"
@@ -17,6 +18,7 @@ namespace pr_impl {
 
 namespace {
 
+using namespace harness;
 using namespace pr;
 
 void collect(void* PR_NULLABLE context, uint32_t output, PrByteView bytes) {
@@ -234,7 +236,7 @@ bool upperHex(PrStringView text) {
 
 const PrFont* notoSans() {
     const PrFont* font = nullptr;
-    REQUIRE(prFontCreateFromFile(PR_FONTS_DIR "/NotoSans[wdth,wght].ttf", 0, nullptr, &font) == PrStatus_Ok);
+    REQUIRE(prFontCreate(openFile(PR_FONTS_DIR "/NotoSans[wdth,wght].ttf"), 0, nullptr, &font) == PrStatus_Ok);
     return font;
 }
 
@@ -426,7 +428,7 @@ TEST_CASE("text is a subset font that maps back to the run's characters") {
     String subset = pdf.stream(file);
     CHECK(subset.count() < prFontData(font).size / 4);
     const PrFont* reopened = nullptr;
-    CHECK(prFontCreate(prStringBytes(subset), 0, nullptr, &reopened) == PrStatus_Ok);
+    CHECK(prFontCreate(BlobRef::adopt(prBlobCopy(prStringBytes(subset))), 0, nullptr, &reopened) == PrStatus_Ok);
     prFontRelease(reopened);
     String toUnicode = pdf.stream(pdf.referenced(fontObject, "/ToUnicode"));
     CHECK(contains(toUnicode, format("<{:04X}> <0048>", h)));

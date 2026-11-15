@@ -1,4 +1,5 @@
 #include "pr/array.h"
+#include "pr/blob_ref.h"
 #include "pr/font.h"
 #include "pr/mem.h"
 #include "pr/string.h"
@@ -34,7 +35,7 @@ Array<uint8_t> newCmMathBytes() {
 
 const PrFont* fromBytes(const Array<uint8_t>& bytes) {
     const PrFont* font = nullptr;
-    REQUIRE(prFontCreate(bytes, 0, nullptr, &font) == PrStatus_Ok);
+    REQUIRE(prFontCreate(BlobRef::adopt(prBlobCopy(bytes)), 0, nullptr, &font) == PrStatus_Ok);
     return font;
 }
 
@@ -73,9 +74,8 @@ uint32_t peek32(const Array<uint8_t>& bytes, uint32_t at) {
 }
 
 const PrFont* load(const char* name) {
-    Array<uint8_t> bytes = fontFile(name);
     const PrFont* font = nullptr;
-    REQUIRE(prFontCreate(bytes, 0, nullptr, &font) == PrStatus_Ok);
+    REQUIRE(prFontCreate(openFile(format("{}/{}", PR_FONTS_DIR, name)), 0, nullptr, &font) == PrStatus_Ok);
     return font;
 }
 
@@ -476,7 +476,7 @@ TEST_CASE("a font's design advances are FreeType's unhinted ones") {
         FT_Face face = nullptr;
         REQUIRE(FT_New_Memory_Face(library, bytes.data(), FT_Long(bytes.count()), 0, &face) == 0);
         const PrFont* font = nullptr;
-        REQUIRE(prFontCreate(bytes, 0, nullptr, &font) == PrStatus_Ok);
+        REQUIRE(prFontCreate(BlobRef::adopt(prBlobCopy(bytes)), 0, nullptr, &font) == PrStatus_Ok);
         bool scalable = FT_IS_SCALABLE(face) && FT_Set_Char_Size(face, 0, FT_F26Dot6(face->units_per_EM) << 6, 72, 72) == 0;
         uint32_t differ = 0;
         uint32_t first = 0;
@@ -884,7 +884,7 @@ TEST_CASE("Ahem is aliased however it is opened, unless a derivation says otherw
     CHECK(prFontIsAliased(bytes));
     String path = format("{}/Ahem.ttf", PR_FONTS_DIR);
     const PrFont* file = nullptr;
-    REQUIRE(prFontCreateFromFile(path, 0, nullptr, &file) == PrStatus_Ok);
+    REQUIRE(prFontCreate(openFile(path), 0, nullptr, &file) == PrStatus_Ok);
     CHECK(prFontIsAliased(file));
     // An instance that a producer derives takes the setting of its base, and a derivation can turn it off.
     const PrFont* half = derive(bytes, [](PrFontDerivation& d) { d.sizeAdjust = 0.5f; });
@@ -982,9 +982,9 @@ TEST_CASE("a font made with a derivation is the font derived from its default in
     d.sizeAdjust = 0.9f;
     d.embolden = 0.01f;
     const PrFont* direct = nullptr;
-    REQUIRE(prFontCreate(bytes, 0, &d, &direct) == PrStatus_Ok);
+    REQUIRE(prFontCreate(BlobRef::adopt(prBlobCopy(bytes)), 0, &d, &direct) == PrStatus_Ok);
     const PrFont* plain = nullptr;
-    REQUIRE(prFontCreate(bytes, 0, nullptr, &plain) == PrStatus_Ok);
+    REQUIRE(prFontCreate(BlobRef::adopt(prBlobCopy(bytes)), 0, nullptr, &plain) == PrStatus_Ok);
     const PrFont* derived = prFontCreateDerived(plain, &d);
     CHECK(prFontAxisValue(direct, 0) == 800.0f);
     CHECK(prFontAxisValue(direct, 0) == prFontAxisValue(derived, 0));
@@ -1024,7 +1024,7 @@ TEST_CASE("an sbix glyph's image goes where its origin offset puts it") {
 TEST_CASE("an sbix strike's JPEG and TIFF images are sized from their headers") {
     Array<uint8_t> file = fontFile("TwemojiSmileySbix.ttf");
     const PrFont* original = nullptr;
-    REQUIRE(prFontCreate(file, 0, nullptr, &original) == PrStatus_Ok);
+    REQUIRE(prFontCreate(BlobRef::adopt(prBlobCopy(file)), 0, nullptr, &original) == PrStatus_Ok);
     uint16_t glyphs = uint16_t(prFontGlyphCount(original));
     prFontRelease(original);
     // The start of image and the frame header of a JPEG, 64 wide and 48 tall.
@@ -1049,7 +1049,7 @@ TEST_CASE("an sbix strike's JPEG and TIFF images are sized from their headers") 
     for (const Case& c : cases) {
         Array<uint8_t> bytes = withSbixImage(file, 2, glyphs, c.type, c.bytes, 100);
         const PrFont* font = nullptr;
-        REQUIRE(prFontCreate(bytes, 0, nullptr, &font) == PrStatus_Ok);
+        REQUIRE(prFontCreate(BlobRef::adopt(prBlobCopy(bytes)), 0, nullptr, &font) == PrStatus_Ok);
         PrFontGlyphImage image{};
         REQUIRE(prFontGlyphImage(font, 2, 100, &image));
         CHECK(image.type == c.mime);
@@ -1096,7 +1096,7 @@ TEST_CASE("a CBDT image whose length runs past its table has no image") {
     }
     REQUIRE(corrupted != 0);
     const PrFont* font = nullptr;
-    REQUIRE(prFontCreate(bytes, 0, nullptr, &font) == PrStatus_Ok);
+    REQUIRE(prFontCreate(BlobRef::adopt(prBlobCopy(bytes)), 0, nullptr, &font) == PrStatus_Ok);
     PrFontGlyphImage image{};
     CHECK_FALSE(prFontGlyphImage(font, prFontCodePointGlyph(font, '9'), 50, &image));
     prFontRelease(font);

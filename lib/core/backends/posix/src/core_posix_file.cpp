@@ -16,6 +16,11 @@ namespace pr_impl {
 
 namespace {
 
+// Unmaps the bytes of a blob of a mapped file.
+void unmap(void* PR_NULLABLE, PrByteView bytes) {
+    munmap(const_cast<uint8_t*>(bytes.data), bytes.size);
+}
+
 // Returns a copy of `path` with a terminator, which the caller frees, or null if memory runs out.
 char* PR_NULLABLE terminate(PrStringView path) {
     char* terminated = static_cast<char*>(malloc(path.size + 1));
@@ -70,32 +75,28 @@ PrFileInfo infoOf(const struct stat& status) {
 
 using namespace pr_impl;
 
-bool prCorePosixFileMap(PrStringView path, PrByteView* out) {
-    *out = PrByteView{};
+PrBlob* PR_NULLABLE prCorePosixFileOpen(PrStringView path) {
     char* terminated = terminate(path);
     if (terminated == nullptr)
-        return false;
+        return nullptr;
     int fd = open(terminated, O_RDONLY | O_CLOEXEC);
     free(terminated);
     if (fd < 0)
-        return false;
+        return nullptr;
     struct stat info;
-    bool mapped = false;
+    PrBlob* blob = nullptr;
     if (fstat(fd, &info) == 0 && S_ISREG(info.st_mode)) {
         // An empty file has nothing to map.
-        mapped = info.st_size == 0;
-        void* data = mapped ? MAP_FAILED : mmap(nullptr, size_t(info.st_size), PROT_READ, MAP_PRIVATE, fd, 0);
-        if (data != MAP_FAILED) {
-            *out = PrByteView{static_cast<const uint8_t*>(data), size_t(info.st_size)};
-            mapped = true;
+        if (info.st_size == 0) {
+            blob = prBlobCopy(PrByteView{});
+        } else {
+            void* data = mmap(nullptr, size_t(info.st_size), PROT_READ, MAP_PRIVATE, fd, 0);
+            if (data != MAP_FAILED)
+                blob = prBlobCreate(PrByteView{static_cast<const uint8_t*>(data), size_t(info.st_size)}, unmap, nullptr);
         }
     }
     close(fd);
-    return mapped;
-}
-
-void prCorePosixFileUnmap(PrByteView* mapping) {
-    munmap(const_cast<uint8_t*>(mapping->data), mapping->size);
+    return blob;
 }
 
 bool prCorePosixFileInfo(PrStringView path, PrFileInfo* out) {

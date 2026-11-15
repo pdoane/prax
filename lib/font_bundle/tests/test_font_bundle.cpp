@@ -36,7 +36,7 @@ String familyOf(PrFontSet* set, const char* name) {
 
 // Installs `bundles` into `set`, in order, and returns the number of files added.
 uint32_t install(PrFontSet* set, Span<const PrFontBundle> bundles) {
-    return prFontBundleInstall(set, bundles.data(), bundles.count(), PR_FONT_BUNDLE_DIR);
+    return prFontBundleInstall(set, bundles.data(), bundles.count());
 }
 
 // Installs the one bundle `bundle` into `set`, and returns the number of files added.
@@ -172,10 +172,11 @@ TEST_CASE("Standard14 names the generic families and PDF's standard fonts") {
     prFontSetDestroy(set);
 }
 
-TEST_CASE("a bundle whose directory holds none of its files installs none, and falls back to nothing") {
+TEST_CASE("a bundle none of whose files are resources installs none, and falls back to nothing") {
+    // The tests' resources hold none of Plex's files.
     PrFontSet* set = prFontSetCreate(nullptr);
-    PrFontBundle bundle = PrFontBundle_Complete;
-    CHECK(prFontBundleInstall(set, &bundle, 1, "/nonexistent") == 0);
+    PrFontBundle bundle = PrFontBundle_Plex;
+    CHECK(prFontBundleInstall(set, &bundle, 1) == 0);
     CHECK(familyOf(set, "serif").isEmpty());
     CHECK(prFontSetFallbackCount(set) == 0);
     prFontSetDestroy(set);

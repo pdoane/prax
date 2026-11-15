@@ -117,7 +117,7 @@ void agree(const Difference& d, double inkEpsilon, double differing) {
 const PrFont* load(const char* name) {
     String path = format("/fonts/{}", name);
     const PrFont* font = nullptr;
-    REQUIRE(prFontCreateFromFile(path, 0, nullptr, &font) == PrStatus_Ok);
+    REQUIRE(prFontCreate(openFile(path), 0, nullptr, &font) == PrStatus_Ok);
     return font;
 }
 

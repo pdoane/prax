@@ -75,12 +75,19 @@ String testFolder() {
 }
 
 Array<uint8_t> readFile(PrStringView path) {
-    PrByteView mapping{};
-    REQUIRE_MESSAGE(prFileMap(path, &mapping), "cannot read ", String(path));
+    PrBlob* blob = prFileOpen(path);
+    REQUIRE_MESSAGE(blob != nullptr, "cannot read ", String(path));
+    PrByteView read = prBlobBytes(blob);
     Array<uint8_t> bytes;
-    bytes.append(mapping.data, uint32_t(mapping.size));
-    prFileUnmap(&mapping);
+    bytes.append(read.data, uint32_t(read.size));
+    prBlobRelease(blob);
     return bytes;
+}
+
+BlobRef openFile(PrStringView path) {
+    BlobRef file = BlobRef::adopt(prFileOpen(path));
+    REQUIRE_MESSAGE(file.get() != nullptr, "cannot open ", String(path));
+    return file;
 }
 
 String readText(PrStringView path) {
