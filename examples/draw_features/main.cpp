@@ -4,20 +4,24 @@
 // list with lib/draw's fragment renderer into the window's swap chain, which is made for HDR. Where the swap chain
 // holds more than 8-bit sRGB, as it does for a display that shows more, the list renders into a texture of half floats,
 // which the display shader then maps to the display (pr/draw_display.h); elsewhere into the swap chain itself. Left and
-// Right turn through the drawings, Space pauses the clock, and a caption under the drawing names it.
+// Right turn through the drawings, Space pauses the clock, and a caption under the drawing names it. The renderer draws
+// the glyphs that are pictures, SVG documents and bitmaps, with a decoder of its own.
 //
 // `draw_features [word]` opens on the first drawing whose name contains the word.
 
 #include "pr/app.h"
 #include "pr/assert.h"
+#include "pr/compress_builtin.h"
 #include "pr/draw_display.h"
 #include "pr/draw_list.h"
 #include "pr/draw_renderer.h"
 #include "pr/gpu.h"
+#include "pr/image_builtin.h"
 #include "pr/print.h"
 #include "pr/status.h"
 #include "pr/string.h"
 #include "pr/string_ops.h"
+#include "pr/svg_glyph.h"
 #include "pr/task.h"
 #include "pr/text.h"
 
@@ -48,6 +52,11 @@ struct Window {
     PrGpuSwapChain* swapChain = nullptr;
     PrDrawRenderer* renderer = nullptr;
     PrDrawFrame* frame = nullptr;
+
+    // The codecs and the decoder of the glyphs that are pictures, which outlive every renderer made on a device.
+    PrCompressCodec* compressCodec = nullptr;
+    PrImageCodec* imageCodec = nullptr;
+    PrDrawGlyphDecoder* glyphDecoder = nullptr;
 
     // Where the swap chain holds more than 8-bit sRGB: the texture of half floats that the list renders into, and the
     // shader that maps it to the display.
@@ -109,9 +118,11 @@ bool openDevice(Window& w) {
         return true;
     PrAppSurface surface{};
     PrGpuSwapChainDesc desc{.intent = PrGpuSwapChainIntent_Hdr};
+    PrDrawRendererOptions options = prDrawRendererOptionsDefault();
+    options.glyphDecoder = w.glyphDecoder;
     if (prAppWindowSurface(w.window, &surface) != PrStatus_Ok ||
             prGpuSwapChainCreate(w.device, &surface, &desc, &w.swapChain) != PrStatus_Ok ||
-            prDrawRendererCreate(PrDrawRendererBackend_Fragment, w.device, nullptr, &w.renderer) != PrStatus_Ok) {
+            prDrawRendererCreate(PrDrawRendererBackend_Fragment, w.device, &options, &w.renderer) != PrStatus_Ok) {
         printError("draw_features: the device cannot render to the window\n");
         closeDevice(w);
         return false;
@@ -258,6 +269,9 @@ int main(int argc, char** argv) {
     static Window w;
     // The device is created on the pool while the drawings load and the window opens.
     w.pool = prTaskPoolCreate(PrTaskPoolBackend_Default, 1);
+    w.compressCodec = prCompressBuiltinCreate();
+    w.imageCodec = prImageBuiltinCreate(w.compressCodec);
+    w.glyphDecoder = prSvgGlyphDecoderCreate(w.imageCodec, w.compressCodec);
     requestDevice(w);
     w.drawings.append(allFeatures().span());
     w.drawings.append(workloadDrawings().span());
@@ -275,6 +289,9 @@ int main(int argc, char** argv) {
     prAppDestroy(app);
 
     prTaskPoolDestroy(w.pool);
+    prDrawGlyphDecoderDestroy(w.glyphDecoder);
+    prImageCodecDestroy(w.imageCodec);
+    prCompressCodecDestroy(w.compressCodec);
     prDrawListRelease(w.list);
     releaseDrawings();
     prTextShaperDestroy(w.shaper);

@@ -1,5 +1,6 @@
-// Fonts: the faces of font files, read by the readers of font/src: sfnt.h for their tables, glyf.h and cff.h for their
-// outlines, glyph_metrics.h for their advances, colr.h for their color glyphs and font_math.h for their MATH tables.
+// Fonts: the faces of font files, read by the readers of font/src: sfnt.h for their tables, glyf.h, cff.h and hvgl.h
+// for their outlines, glyph_metrics.h for their advances, colr.h for their color glyphs and font_math.h for their MATH
+// tables.
 //
 // The readers only read the font's bytes, so any number of threads load from a font at once. The mutex of the font
 // guards the caches of outlines that it fills behind const. Outlines are cached in the ems of the design. Every value
@@ -26,6 +27,7 @@
 #include "font/src/font_math.h"
 #include "font/src/glyf.h"
 #include "font/src/glyph_metrics.h"
+#include "font/src/hvgl.h"
 #include "font/src/outline.h"
 #include "font/src/sfnt.h"
 #include "font/src/woff.h"
@@ -93,14 +95,20 @@ bool openReaders(Font* font) {
         return false;
     font->glyphCount = sfntTable(sfnt, tagOf('m', 'a', 'x', 'p')).uint16At(4);
     fontGlyphMetricsOpen(sfnt, &font->metricTables);
-    font->truetype = glyfOpen(sfnt, &font->metricTables, font->glyphCount, &font->glyf);
-    font->outlined = font->truetype || cffOpen(sfnt, &font->cff);
-    if (!font->truetype && font->outlined && cffGlyphCount(font->cff) < font->glyphCount)
-        font->glyphCount = cffGlyphCount(font->cff);
+    font->outlineTable = FontOutlines_None;
+    if (glyfOpen(sfnt, &font->metricTables, font->glyphCount, &font->glyf)) {
+        font->outlineTable = FontOutlines_Glyf;
+    } else if (cffOpen(sfnt, &font->cff)) {
+        font->outlineTable = FontOutlines_Cff;
+        font->glyphCount = cffGlyphCount(font->cff) < font->glyphCount ? cffGlyphCount(font->cff) : font->glyphCount;
+    } else if (hvglOpen(sfnt, &font->hvgl)) {
+        font->outlineTable = FontOutlines_Hvgl;
+        font->glyphCount = font->hvgl.glyphCount < font->glyphCount ? font->hvgl.glyphCount : font->glyphCount;
+    }
     font->strikes =
         sfntTable(sfnt, tagOf('s', 'b', 'i', 'x')).size != 0 || sfntTable(sfnt, tagOf('C', 'B', 'L', 'C')).size != 0;
     font->svg = sfntTable(sfnt, tagOf('S', 'V', 'G', ' ')).size != 0;
-    if ((!font->outlined && !font->strikes) || font->glyphCount == 0)
+    if ((font->outlineTable == FontOutlines_None && !font->strikes) || font->glyphCount == 0)
         return false;
     font->boundsFilled = static_cast<Atomic<uint8_t>*>(prMemoryAllocZeroed(sizeof(Atomic<uint8_t>) * font->glyphCount));
     sfntCmapUnicode(sfnt, &font->cmap);
@@ -149,11 +157,18 @@ void setInstance(Font* font, const float* values) {
 // Returns false if the face has no outline for it.
 bool loadDesign(const Font* font, uint32_t glyph, FontGlyphOutline* out, GlyfPhantom* phantom) {
     *phantom = GlyfPhantom{};
-    if (!font->outlined || glyph >= font->glyphCount)
+    if (glyph >= font->glyphCount)
         return false;
-    if (font->truetype)
-        return glyfLoad(font->glyf, coordsOf(font), glyph, out, phantom);
-    return cffLoad(font->cff, coordsOf(font), glyph, out);
+    switch (font->outlineTable) {
+        case FontOutlines_Glyf:
+            return glyfLoad(font->glyf, coordsOf(font), glyph, out, phantom);
+        case FontOutlines_Cff:
+            return cffLoad(font->cff, coordsOf(font), glyph, out);
+        case FontOutlines_Hvgl:
+            return hvglLoad(font->hvgl, coordsOf(font), glyph, out);
+        default:
+            return false;
+    }
 }
 
 // Gets the box of the glyph of a code point in font units with y up, for a metric that the font lacks. Returns false if
@@ -696,7 +711,8 @@ float designAdvance(const Font* font, uint32_t glyph) {
     if (bits != kAdvanceUnknown)
         return bitCast<float>(bits);
     float units = 0;
-    if (font->truetype && !fontGlyphMetricsVariesHorizontal(font->metricTables) && font->glyf.gvar.size != 0) {
+    if (font->outlineTable == FontOutlines_Glyf && !fontGlyphMetricsVariesHorizontal(font->metricTables) &&
+            font->glyf.gvar.size != 0) {
         FontGlyphOutline outline{};
         GlyfPhantom phantom{};
         if (loadDesign(font, glyph, &outline, &phantom))
@@ -977,8 +993,8 @@ float prFontGlyphVerticalAdvance(const PrFont* font, uint16_t glyph) {
     const FontGlyphMetricTables& tables = data->metricTables;
     float units = 0;
     // A TrueType font whose variation moves its phantom points, without VVAR, finds the advance by loading the glyph.
-    if (data->truetype && data->normalized.count != 0 && !fontGlyphMetricsVariesVertical(tables) &&
-            tables.verticalCount != 0 && data->glyf.gvar.size != 0) {
+    if (data->outlineTable == FontOutlines_Glyf && data->normalized.count != 0 &&
+            !fontGlyphMetricsVariesVertical(tables) && tables.verticalCount != 0 && data->glyf.gvar.size != 0) {
         FontGlyphOutline outline{};
         GlyfPhantom phantom{};
         if (loadDesign(data, glyph, &outline, &phantom))
@@ -1003,11 +1019,12 @@ PrVec2 prFontGlyphVerticalOrigin(const PrFont* font, uint16_t glyph) {
     if (loadDesign(data, glyph, &outline, &phantom)) {
         // The vertical origin lies half the horizontal advance across, and the top side bearing above the glyph's top.
         PrRect box = fontOutlineControlBox(outline);
-        float advance = data->truetype ? phantom.horizontalAdvance.x - phantom.horizontalOrigin.x : designAdvance(data, glyph);
+        bool truetype = data->outlineTable == FontOutlines_Glyf;
+        float advance = truetype ? phantom.horizontalAdvance.x - phantom.horizontalOrigin.x : designAdvance(data, glyph);
         const FontGlyphMetricTables& tables = data->metricTables;
         float top = 0;
         // The bearing and the height round to whole units, as FreeType divides them out of its scaled coordinates.
-        if (tables.verticalCount != 0 && data->truetype) {
+        if (tables.verticalCount != 0 && truetype) {
             top = prF32Round(phantom.verticalOrigin.y - box.bottom);
         } else if (tables.verticalCount != 0) {
             int32_t height = 0;

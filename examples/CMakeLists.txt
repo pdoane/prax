@@ -95,10 +95,11 @@ target_link_libraries(draw_features_drawings PUBLIC prax::app prax::draw prax::f
                                              PRIVATE prax::color prax::compress prax::image prax::path prax::svg
                                                      pr_warnings)
 
-# The feature drawings in a window, rendered on the GPU and mapped to the display.
+# The feature drawings in a window, rendered on the GPU and mapped to the display, with the glyphs that are pictures
+# decoded by lib/svg's decoder.
 pr_example(draw_features draw_features/main.cpp)
-target_link_libraries(draw_features PRIVATE draw_features_drawings prax::app prax::draw prax::gpu prax::task prax::text
-                                            prax::core_cpp)
+target_link_libraries(draw_features PRIVATE draw_features_drawings prax::app prax::compress prax::draw prax::gpu
+                                            prax::image prax::svg prax::task prax::text prax::core_cpp)
 
 # The editor example: Studio Kit's widgets and a HUD library of its own over an editor's model, composed in one tree.
 pr_example(editor

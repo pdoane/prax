@@ -30,6 +30,7 @@ constexpr uint32_t kTagMaxp = PR_FONT_TAG('m', 'a', 'x', 'p');
 constexpr uint32_t kTagPost = PR_FONT_TAG('p', 'o', 's', 't');
 constexpr uint32_t kTagCff = PR_FONT_TAG('C', 'F', 'F', ' ');
 constexpr uint32_t kTagCff2 = PR_FONT_TAG('C', 'F', 'F', '2');
+constexpr uint32_t kTagHvgl = PR_FONT_TAG('h', 'v', 'g', 'l');
 
 // The tables that a TrueType subset copies as they are: the hinting programs and their data, and the tables that
 // describe the font as a whole.
@@ -953,9 +954,10 @@ PrFontSubsetFormat prFontSubsetFormat(const PrFont* font) {
     bool glyf = sfntTable(sfnt, kTagGlyf).size != 0 && sfntTable(sfnt, kTagLoca).size != 0;
     bool cff = sfntTable(sfnt, kTagCff).size != 0;
     bool cff2 = sfntTable(sfnt, kTagCff2).size != 0;
+    bool hvgl = sfntTable(sfnt, kTagHvgl).size != 0;
     if (glyf && ownsOutlines(font))
         return PrFontSubsetFormat_TrueType;
-    if (glyf || cff || cff2)
+    if (glyf || cff || cff2 || hvgl)
         return PrFontSubsetFormat_Cff;
     return PrFontSubsetFormat_None;
 }
@@ -969,7 +971,8 @@ PrFontSubsetFormat prFontSubset(const PrFont* font, const uint16_t* PR_NULLABLE 
     bool written = true;
     if (format == PrFontSubsetFormat_TrueType)
         written = subsetTrueType(sfnt, glyphs, glyphCount, write, context);
-    else if (ownsOutlines(font) && sfntTable(sfnt, kTagCff2).size == 0 && sfntTable(sfnt, kTagGlyf).size == 0)
+    else if (ownsOutlines(font) && sfntTable(sfnt, kTagCff).size != 0 && sfntTable(sfnt, kTagCff2).size == 0 &&
+            sfntTable(sfnt, kTagGlyf).size == 0)
         written = subsetCff(sfnt, glyphs, glyphCount, write, context);
     else
         subsetOutlines(font, glyphs, glyphCount, write, context);

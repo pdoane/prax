@@ -228,6 +228,8 @@ def draw_options(parser):
                         help="a collection to measure, by a word of its name; the features by default")
     parser.add_argument("--pixel-ratio", type=float, default=None,
                         help="target pixels per unit of the drawings; 2 by default")
+    parser.add_argument("--images", default=None, metavar="DIR",
+                        help="a directory to write what each row rendered into, as a PNG named for the row")
     parser.add_argument("drawings", nargs="*", help="drawings by number or by a word of the name; all by default")
 
 
@@ -243,6 +245,9 @@ def draw(args):
         command += ["--collection", collection]
     if args.pixel_ratio is not None:
         command += ["--pixel-ratio", str(args.pixel_ratio)]
+    if args.images is not None:
+        os.makedirs(args.images, exist_ok=True)
+        command += ["--images", os.path.abspath(args.images)]
     rows = common.run_json(command + args.drawings, "draw_bench")
     drawings = os.path.join(common.ROOT, "examples", "draw_features")
     return {"prax": rows}, sorted(glob.glob(os.path.join(drawings, "*.cpp")) + glob.glob(os.path.join(drawings, "*.h")))

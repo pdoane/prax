@@ -25,8 +25,8 @@ typedef uint8_t PrFontSubsetFormat;
 
 // Returns the form of the font's subsets. A font whose file holds the outlines that it draws is subset in the form of
 // its outlines: TrueType for glyf, and CFF for CFF. Any other font with outlines, such as an instance of a variable
-// font away from its default, a font with synthetic bold, or a font of CFF2 outlines, is subset as CFF, with the
-// outlines that it draws. A font of bitmap strikes only has none. Synthetic oblique and size-adjust are left to the
+// font away from its default, a font with synthetic bold, or a font of CFF2 or hvgl outlines, is subset as CFF, with
+// the outlines that it draws. A font of bitmap strikes only has none. Synthetic oblique and size-adjust are left to the
 // code that places the glyphs, as they are for outlines (prFontGlyphOutline).
 PrFontSubsetFormat prFontSubsetFormat(const PrFont* font);
 

@@ -1,5 +1,5 @@
 // Feature drawings for fonts: font sets matching styles, faces falling back, what lib/font reads from a font beyond its
-// outlines, and web fonts.
+// outlines, outlines of Apple's hvgl, and web fonts.
 
 #include "examples/draw_features/features_fonts.h"
 
@@ -986,6 +986,129 @@ void svgGlyphs(PrDrawList* list, float, float, double) {
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
+// hvgl outlines
+
+// PingFang's own axes, beside the registered wght.
+constexpr uint32_t kWidthAxis = PR_FONT_TAG('W', 'D', 'T', 'H');
+constexpr uint32_t kHeightAxis = PR_FONT_TAG('H', 'G', 'H', 'T');
+
+// A system font at a point of its axes, held until the drawings are released.
+struct VariedFont {
+    const PrFont* base;
+    float weight;
+    float width;
+    float height;
+    const PrFont* font;
+};
+
+Array<VariedFont> variedFonts;
+
+// Returns `base` at the weight, width and height of PingFang's axes, held until the drawings are released.
+const PrFont* pingFangAt(const PrFont* base, float weight, float width, float height) {
+    for (const VariedFont& v : variedFonts) {
+        if (v.base == base && v.weight == weight && v.width == width && v.height == height)
+            return v.font;
+    }
+    const PrFontVariation values[] = {{kWght, weight}, {kWidthAxis, width}, {kHeightAxis, height}};
+    PrFontDerivation derivation = prFontDerivationDefault();
+    derivation.variations = values;
+    derivation.variationCount = countOf(values);
+    const PrFont* font = prFontCreateDerived(base, &derivation);
+    variedFonts.push(VariedFont{base, weight, width, height, font});
+    return font;
+}
+
+// Returns true if the face of `font` has a table of `tag`, as its file's table directory lists them.
+bool hasTable(const PrFont* font, uint32_t tag) {
+    const PrByteView bytes = prFontData(font);
+    auto be32 = [&](size_t at) {
+        if (at + 4 > bytes.size)
+            return 0u;
+        const uint8_t* p = bytes.data + at;
+        return uint32_t(p[0]) << 24 | uint32_t(p[1]) << 16 | uint32_t(p[2]) << 8 | uint32_t(p[3]);
+    };
+    size_t face = 0;
+    if (be32(0) == PR_FONT_TAG('t', 't', 'c', 'f'))
+        face = be32(12 + 4 * size_t(prFontIndex(font)));
+    const uint32_t count = be32(face + 4) >> 16;
+    for (uint32_t i = 0; i < count; ++i) {
+        if (be32(face + 12 + 16 * size_t(i)) == tag)
+            return true;
+    }
+    return false;
+}
+
+// PingFang from the system's fonts, whose glyphs Apple's systems draw from hvgl: parts composed of parts, each varying
+// on axes of its own that the font's axes drive. Swept along each axis, and across weight and width together.
+void hvglOutlines(PrDrawList* list, float, float, double) {
+    label("hvgl: Apple's hierarchical variation glyphs, parts composed of parts, each varying on axes of its own",
+        PrVec2{30, 30}, 12, kInk);
+    const PrFont* base = matchFont(fontsOfSystem(), requestOf("PingFang SC"));
+    if (base == nullptr) {
+        label("(PingFang SC, a font of Apple's systems, is not installed here)", PrVec2{30, 60});
+        return;
+    }
+    const bool hvgl = hasTable(base, PR_FONT_TAG('h', 'v', 'g', 'l'));
+    String described = format("PingFang SC, from the system's fonts: {}; axes",
+        hvgl ? "hvgl outlines" : "outlines of another table, as systems before hvgl have it");
+    for (uint32_t i = 0; i < prFontAxisCount(base); ++i) {
+        const PrFontAxis axis = prFontAxis(base, i);
+        const char tag[5] = {char(axis.tag >> 24), char(axis.tag >> 16), char(axis.tag >> 8), char(axis.tag), 0};
+        formatTo(described, "{} {} {:g} to {:g}", i == 0 ? "" : ",", tag, double(axis.min), double(axis.max));
+    }
+    label(described, PrVec2{30, 50});
+
+    // Each axis swept from its minimum to its maximum, the others at their defaults.
+    struct Sweep {
+        uint32_t tag;
+        const char* name;
+        PrColor tint;
+    };
+    const Sweep sweeps[] = {{kWght, "wght", kInk}, {kWidthAxis, "WDTH", kBlue}, {kHeightAxis, "HGHT", kTeal}};
+    constexpr uint32_t kSteps = 11;
+    float y = 130;
+    for (const Sweep& sweep : sweeps) {
+        PrFontAxis axis{};
+        for (uint32_t i = 0; i < prFontAxisCount(base); ++i) {
+            if (prFontAxis(base, i).tag == sweep.tag)
+                axis = prFontAxis(base, i);
+        }
+        if (axis.tag == 0)
+            continue;
+        String text = format("{} {:g} to {:g}", sweep.name, double(axis.min), double(axis.max));
+        label(text, PrVec2{30, y - 60});
+        for (uint32_t step = 0; step < kSteps; ++step) {
+            float value = axis.min + (axis.max - axis.min) * float(step) / float(kSteps - 1);
+            float weight = sweep.tag == kWght ? value : valueOf(base, kWght);
+            float width = sweep.tag == kWidthAxis ? value : valueOf(base, kWidthAxis);
+            float height = sweep.tag == kHeightAxis ? value : valueOf(base, kHeightAxis);
+            const PrFont* instance = pingFangAt(base, weight, width, height);
+            drawText(list, styleOf(instance, 56, sweep.tint), "\xe6\xb0\xb8", PrVec2{30 + float(step) * 80, y});
+        }
+        y += 110;
+    }
+
+    // Weight down and width across, set in a line of the Thousand Character Classic.
+    const float weights[] = {100, 300, 500, 600};
+    const float widths[] = {1, 500, 1000};
+    const float columns[] = {90, 340, 620};
+    for (uint32_t column = 0; column < countOf(widths); ++column) {
+        String text = format("WDTH {:g}", double(widths[column]));
+        label(text, PrVec2{columns[column], 410});
+    }
+    for (uint32_t row = 0; row < countOf(weights); ++row) {
+        float baseline = 470 + float(row) * 72;
+        String text = format("wght {:g}", double(weights[row]));
+        label(text, PrVec2{30, baseline});
+        for (uint32_t column = 0; column < countOf(widths); ++column) {
+            const PrFont* instance = pingFangAt(base, weights[row], widths[column], valueOf(base, kHeightAxis));
+            drawText(list, styleOf(instance, 48), "\xe5\xa4\xa9\xe5\x9c\xb0\xe7\x8e\x84\xe9\xbb\x84",
+                PrVec2{columns[column], baseline});
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
 // Web fonts
 
 constexpr uint32_t kOpsz = PR_FONT_TAG('o', 'p', 's', 'z');
@@ -1193,6 +1316,9 @@ void webFonts(PrDrawList* list, float, float, double) {
 void releaseDrawingFonts() {
     prDrawGlyphDecoderDestroy(svgDecoder);
     svgDecoder = nullptr;
+    for (const VariedFont& v : variedFonts)
+        prFontRelease(v.font);
+    variedFonts.clear();
     for (const PrFont* font : matchedFonts)
         prFontRelease(font);
     matchedFonts.clear();
@@ -1217,6 +1343,7 @@ const Array<Drawing>& fontFeatures() {
         {"Vertical text", "Top-to-bottom runs with vertical forms and metrics.", verticalText},
         {"Metrics and baselines", "Every metric and baseline a font gives or synthesizes.", metricsAndBaselines},
         {"Synthesized variants", "Small capitals and sub- and superscripts, from the font or synthesized.", synthesis},
+        {"hvgl outlines", "Apple's hierarchical variation glyphs, swept along each axis of PingFang.", hvglOutlines},
         {"Bitmap glyphs", "Color glyphs as images in strikes of set sizes: sbix and CBDT.", bitmapGlyphs},
         {"SVG glyphs", "Color glyphs as SVG documents, beside the same glyphs' color layers.", svgGlyphs},
         {

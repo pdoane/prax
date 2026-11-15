@@ -267,12 +267,12 @@ Times drawPasses(PrDrawFrame* frame, BenchTarget& target, PrColor color, const s
     return Times{submitted - started, gpu / kDrawPasses};
 }
 
-// Writes what the target holds after a render as a PNG at `path`. The pixels are premultiplied, which a PNG reads as
-// straight, so only an opaque render is exact.
-void writeImage(PrImageCodec* codec, const BenchTarget& target, const std::string& path) {
+// Writes what a render left in the target as a PNG at `path`: its texture if the render was `onDevice`, and else its
+// pixels in memory. The pixels are premultiplied, which a PNG reads as straight, so only an opaque render is exact.
+void writeImage(PrImageCodec* codec, const BenchTarget& target, bool onDevice, const std::string& path) {
     size_t count = size_t(target.width) * target.height;
     std::vector<uint8_t> rgba(count * 4);
-    if (target.texture.id == 0) {
+    if (!onDevice) {
         for (size_t i = 0; i < count; ++i) {
             const uint8_t* bgra = &target.pixels[i * 4];
             uint8_t* to = &rgba[i * 4];
@@ -411,7 +411,7 @@ int main(int argc, char** argv) {
                         continue;
                     }
                     if (imageCodec != nullptr)
-                        writeImage(imageCodec, target,
+                        writeImage(imageCodec, target, onDevice,
                             std::string(images) + "/" + name + " - " + config.name + target.output.suffix + ".png");
                     double frameMillis = rendering.millis;
                     rendering.gpu = t.gpu;
