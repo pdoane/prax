@@ -8,6 +8,8 @@
 #include "pr/count_of.h"
 #include "pr/mem.h"
 
+#include "compress/backends/builtin/src/compress_copy.h"
+
 namespace pr_impl {
 namespace {
 
@@ -26,10 +28,8 @@ constexpr uint32_t kFastBits = 10;
 // The longest match.
 constexpr uint32_t kMaxMatch = 258;
 
-// The number of bytes past the end of a match that its copy may write, and the largest number of bits that one literal
-// or match reads. A match reads a 15-bit code and 5 extra bits for the length, and a 15-bit code and 13 extra bits for
-// the distance.
-constexpr uint32_t kMatchSlack = 8;
+// The largest number of bits that one literal or match reads. A match reads a 15-bit code and 5 extra bits for the
+// length, and a 15-bit code and 13 extra bits for the distance.
 constexpr uint32_t kSymbolMaxBits = 48;
 
 // The lengths encoded by the codes of the literal alphabet from symbol 257 up, and the extra bits that each reads (rfc
@@ -224,29 +224,6 @@ void keepHistory(Deflate& parser, const uint8_t* data, size_t size) {
     parser.historySize = parser.historySize + count < kHistorySize ? parser.historySize + count : kHistorySize;
 }
 
-// Copies a match of `length` bytes from `distance` back in the output. The copy runs forward, so a match longer than
-// its distance repeats a pattern. It copies eight bytes at a time and may write up to kMatchSlack bytes past the match.
-// A match nearer than eight bytes is a pattern with period `distance`. After its first eight bytes, it copies from the
-// nearest multiple of the period that is at least eight bytes back.
-void copyMatch(uint8_t* out, uint32_t distance, uint32_t length) {
-    uint32_t at = 0;
-    const uint8_t* from = out - distance;
-    if (distance >= 8) {
-        for (; at < length; at += 8)
-            prMemCopy(out + at, from + at, 8);
-        return;
-    }
-    for (; at < 8; ++at)
-        out[at] = from[at];
-    // The eight bytes read may overlap the eight written, so they pass through a register.
-    const uint32_t step = distance * (8 / distance);
-    for (; at < length; at += step) {
-        uint64_t word = 0;
-        prMemCopy(&word, out + (at - step), 8);
-        prMemCopy(out + at, &word, 8);
-    }
-}
-
 constexpr bool buildHuffman(Huffman& table, const uint8_t* lengths, uint32_t count) {
     for (uint16_t& c : table.counts)
         c = 0;
@@ -398,7 +375,7 @@ void decodeFast(Deflate& parser, InflateSpan& span) {
         count -= n;
         return value;
     };
-    while (span.capacity - written >= kMaxMatch + kMatchSlack) {
+    while (span.capacity - written >= kMaxMatch + kCompressMatchSlack) {
         // Fills the register to at least 56 bits with one read of eight bytes, or one byte at a time near the end of
         // the input. It stops if the rest of the input may not hold a whole literal or match.
         if (inputEnd - at >= 8) {
@@ -447,7 +424,7 @@ void decodeFast(Deflate& parser, InflateSpan& span) {
         }
         const size_t produced = written - span.base;
         if (distance <= produced) {
-            copyMatch(out + written, distance, matchLength);
+            compressCopyMatch(out + written, distance, matchLength);
         } else {
             for (uint32_t k = 0; k < matchLength; ++k) {
                 span.written = written + k;
@@ -593,7 +570,7 @@ InflateResult decodeDeflate(Deflate& parser, InflateSpan& span) {
                 break;
             case InflatePhase_Symbol: {
                 if (parser.bitCount + (span.input.size - span.consumed) * 8 >= kSymbolMaxBits &&
-                        span.capacity - span.written >= kMaxMatch + kMatchSlack) {
+                        span.capacity - span.written >= kMaxMatch + kCompressMatchSlack) {
                     const size_t consumed = span.consumed;
                     const size_t written = span.written;
                     const InflatePhase phase = parser.phase;

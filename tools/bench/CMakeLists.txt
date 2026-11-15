@@ -8,6 +8,13 @@ target_link_libraries(image_bench PRIVATE prax::compress prax::image)
 # ./dev.sh bench numbers runs.
 pr_harness(number_bench prax::core_cpp number_bench.cpp)
 
+# What decoding a compressed stream costs in lib/compress's built-in codec and, on Apple's platforms, in
+# libcompression, which ./dev.sh bench compress runs.
+pr_harness(compress_bench prax::compress compress_bench.cpp)
+if (APPLE)
+    target_link_libraries(compress_bench PRIVATE compression)
+endif()
+
 # What formatting costs with pr/format.h's format strings and with the standard library's <format>, which ./dev.sh
 # bench format runs.
 pr_harness(format_bench prax::core_cpp format_bench.cpp)

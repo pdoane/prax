@@ -10,6 +10,7 @@ if (PR_COMPRESS_BUILTIN)
         backends/builtin/src/compress_builtin.cpp
         backends/builtin/src/deflate.cpp
         backends/builtin/src/inflate.cpp
+        backends/builtin/src/lzfse.cpp
     )
     if (PR_COMPRESS_BROTLI)
         target_sources(pr_compress PRIVATE
@@ -33,6 +34,7 @@ if (PR_DEVELOP)
             backends/builtin/tests/test_brotli.cpp
             backends/builtin/tests/test_deflate.cpp
             backends/builtin/tests/test_inflate.cpp
+            backends/builtin/tests/test_lzfse.cpp
         )
     endif()
 endif()

@@ -26,6 +26,7 @@ enum {
     PrCompressFormat_Zlib,      // Deflate framed as zlib
     PrCompressFormat_Gzip,      // Deflate framed as gzip, whose members decode as one stream
     PrCompressFormat_Brotli,    // Brotli (rfc 7932)
+    PrCompressFormat_Lzfse,     // LZFSE, Apple's LZ77 with finite state entropy coding, and its LZVN blocks
 };
 typedef uint8_t PrCompressFormat;
 

@@ -170,6 +170,10 @@ BENCHES = [
           "floats, padded text and log lines, into a buffer and into a string",
           ["format_bench"], run=engine.format_strings, options=engine.format_options,
           sources=[os.path.join(common.ROOT, "tools", "bench", "format_bench.cpp")]),
+    Bench("compress", "streams decoded by lib/compress's built-in codec and by Apple's libcompression: Deflate, "
+          "Brotli and LZFSE, of text, a font and a small input",
+          ["compress_bench"], fetch=["css", "fonts"], run=engine.compress, options=engine.compress_options,
+          sources=[os.path.join(common.ROOT, "tools", "bench", "compress_bench.cpp")]),
     Bench("image-decode", "decoding the PNG and JPEG images of WPT's images directory",
           ["image_bench"], fetch=["wpt"], run=engine.image_decode, options=engine.image_decode_options,
           sources=[os.path.join(common.ROOT, "tools", "bench", "image_bench.cpp")]),

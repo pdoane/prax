@@ -66,13 +66,13 @@ void prCompressCodecDestroy(PrCompressCodec* PR_NULLABLE codec) {
 }
 
 bool prCompressCodecDecodes(PrCompressCodec* codec, PrCompressFormat format) {
-    PR_ASSERT(format <= PrCompressFormat_Brotli);
+    PR_ASSERT(format <= PrCompressFormat_Lzfse);
     return codec->decodesFn == nullptr || codec->decodesFn(codec, format);
 }
 
 PrStatus prCompressDecoderCreate(PrCompressCodec* codec, PrCompressFormat format,
         PrCompressDecoder* PR_NULLABLE* PR_NONNULL out) {
-    PR_ASSERT(format <= PrCompressFormat_Brotli);
+    PR_ASSERT(format <= PrCompressFormat_Lzfse);
     *out = nullptr;
     PrStatus status = codec->decoderCreateFn(codec, format, out);
     PR_ASSERT(status != PrStatus_Ok || *out != nullptr);
@@ -105,13 +105,13 @@ PrStatus prCompressCodecDecode(PrCompressCodec* codec, PrCompressFormat format, 
 }
 
 size_t prCompressCodecEncodeBound(PrCompressCodec* codec, PrCompressFormat format, size_t size) {
-    PR_ASSERT(format <= PrCompressFormat_Brotli);
+    PR_ASSERT(format <= PrCompressFormat_Lzfse);
     return codec->encodeBoundFn != nullptr ? codec->encodeBoundFn(codec, format, size) : 0;
 }
 
 PrStatus prCompressCodecEncode(PrCompressCodec* codec, PrCompressFormat format, PrCompressLevel level,
         PrByteView input, uint8_t* output, size_t* written) {
-    PR_ASSERT(format <= PrCompressFormat_Brotli && level <= PrCompressLevel_Small);
+    PR_ASSERT(format <= PrCompressFormat_Lzfse && level <= PrCompressLevel_Small);
     PR_ASSERT(input.data != nullptr || input.size == 0);
     *written = 0;
     if (codec->encodeFn == nullptr)

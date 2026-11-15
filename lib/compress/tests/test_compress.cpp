@@ -40,6 +40,16 @@ constexpr uint8_t kBrotli[] = {
     0x1f, 0x1e, 0x27, 0x4a, 0x29, 0x38, 0xc2, 0xfb, 0xab, 0x0f, 0xa2,
 };
 
+// The same text as kZlib, as LZFSE.
+constexpr uint8_t kLzfse[] = {
+    0x62, 0x76, 0x78, 0x6e, 0x70, 0x03, 0x00, 0x00, 0x43, 0x00, 0x00, 0x00, 0xe0, 0x0f, 0x74,
+    0x68, 0x65, 0x20, 0x71, 0x75, 0x69, 0x63, 0x6b, 0x20, 0x62, 0x72, 0x6f, 0x77, 0x6e, 0x20,
+    0x66, 0x6f, 0x78, 0x20, 0x6a, 0x75, 0x6d, 0x70, 0x73, 0x20, 0x6f, 0x76, 0x65, 0x72, 0x20,
+    0x08, 0x1f, 0xe9, 0x6c, 0x61, 0x7a, 0x79, 0x20, 0x64, 0x6f, 0x67, 0x20, 0x38, 0x2c, 0xf0,
+    0xff, 0xf0, 0xff, 0xf0, 0xff, 0xf9, 0xe4, 0x64, 0x6f, 0x67, 0x20, 0x06, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x62, 0x76, 0x78, 0x24,
+};
+
 String expected() {
     String text;
     for (int i = 0; i < 20; ++i)
@@ -85,6 +95,25 @@ TEST_CASE("each format decodes whole") {
     CHECK(read.consumed == sizeof(kBrotli));
     CHECK(text == expected());
     CHECK(decode(PrCompressFormat_Brotli, kBrotli, sizeof(kBrotli) - 1, &text) == PrStatus_Truncated);
+    CHECK(decode(PrCompressFormat_Lzfse, kLzfse, sizeof(kLzfse), &text, 4096, &read) == PrStatus_Ok);
+    CHECK(read.progress == PrCompressProgress_Done);
+    CHECK(read.consumed == sizeof(kLzfse));
+    CHECK(text == expected());
+    CHECK(decode(PrCompressFormat_Lzfse, kLzfse, sizeof(kLzfse) - 1, &text) == PrStatus_Truncated);
+    CHECK(decode(PrCompressFormat_Lzfse, kZlib, sizeof(kZlib), &text) == PrStatus_InvalidData);
+}
+
+TEST_CASE("the built-in codec decodes every format and encodes the Deflate ones") {
+    PrCompressCodec* codec = prCompressBuiltinCreate();
+    for (PrCompressFormat format = PrCompressFormat_Deflate; format <= PrCompressFormat_Lzfse; ++format) {
+        CAPTURE(format);
+        CHECK(prCompressCodecDecodes(codec, format));
+        CHECK((prCompressCodecEncodeBound(codec, format, 100) != 0) == (format < PrCompressFormat_Brotli));
+    }
+    uint8_t out[16];
+    size_t written = 0;
+    CHECK(prCompressCodecEncode(codec, PrCompressFormat_Lzfse, PrCompressLevel_Default, PrByteView{}, out, &written) ==
+        PrStatus_NotSupported);
 }
 
 TEST_CASE("a stream decodes a byte of input at a time into little room") {

@@ -10,14 +10,16 @@
 #endif
 #include "compress/backends/builtin/src/deflate.h"
 #include "compress/backends/builtin/src/inflate.h"
+#include "compress/backends/builtin/src/lzfse.h"
 
 namespace pr_impl {
 
 namespace {
 
-// A decoder of a Deflate format, or of Brotli.
+// A decoder of a Deflate format, of Brotli or of LZFSE. One of the decoders is set.
 struct BuiltinDecoder : PrCompressDecoder {
     Inflate* PR_NULLABLE inflate;
+    Lzfse* PR_NULLABLE lzfse;
 #if defined(PR_COMPRESS_HAS_BROTLI)
     Brotli* PR_NULLABLE brotli;
 #endif
@@ -30,7 +32,7 @@ constexpr InflateFormat kInflateFormat[] = {
     InflateFormat_Gzip, // PrCompressFormat_Gzip
 };
 
-// Returns true if the build decodes `format`: every Deflate format, and Brotli if the build has it.
+// Returns true if the build decodes `format`: every Deflate format, LZFSE, and Brotli if the build has it.
 bool decodes(PrCompressCodec*, PrCompressFormat format) {
 #if defined(PR_COMPRESS_HAS_BROTLI)
     (void)format;
@@ -43,6 +45,7 @@ bool decodes(PrCompressCodec*, PrCompressFormat format) {
 void destroyDecoder(PrCompressDecoder* decoder) {
     BuiltinDecoder* builtin = static_cast<BuiltinDecoder*>(decoder);
     inflateDestroy(builtin->inflate);
+    lzfseDestroy(builtin->lzfse);
 #if defined(PR_COMPRESS_HAS_BROTLI)
     brotliDestroy(builtin->brotli);
 #endif
@@ -52,6 +55,23 @@ void destroyDecoder(PrCompressDecoder* decoder) {
 PrStatus read(PrCompressDecoder* decoder, PrByteView input, bool final, uint8_t* PR_NULLABLE output, size_t capacity,
         PrCompressRead* out) {
     BuiltinDecoder* builtin = static_cast<BuiltinDecoder*>(decoder);
+    if (builtin->lzfse != nullptr) {
+        switch (lzfseRead(builtin->lzfse, input, final, &out->consumed, output, capacity, &out->written)) {
+            case LzfseResult_Input:
+                out->progress = PrCompressProgress_Input;
+                return PrStatus_Ok;
+            case LzfseResult_Output:
+                out->progress = PrCompressProgress_Output;
+                return PrStatus_Ok;
+            case LzfseResult_Done:
+                out->progress = PrCompressProgress_Done;
+                return PrStatus_Ok;
+            case LzfseResult_Truncated:
+                return PrStatus_Truncated;
+            default:
+                return PrStatus_InvalidData;
+        }
+    }
 #if defined(PR_COMPRESS_HAS_BROTLI)
     if (builtin->brotli != nullptr) {
         switch (brotliRead(builtin->brotli, input, final, &out->consumed, output, capacity, &out->written)) {
@@ -94,30 +114,31 @@ PrStatus read(PrCompressDecoder* decoder, PrByteView input, bool final, uint8_t*
 PrStatus createDecoder(PrCompressCodec* codec, PrCompressFormat format, PrCompressDecoder* PR_NULLABLE* PR_NONNULL out) {
     if (!decodes(codec, format))
         return PrStatus_NotSupported;
-    BuiltinDecoder* decoder = alloc<BuiltinDecoder>();
+    BuiltinDecoder* decoder = allocZeroed<BuiltinDecoder>();
     decoder->destroyFn = destroyDecoder;
     decoder->readFn = read;
-    decoder->inflate = nullptr;
+    *out = decoder;
+    if (format == PrCompressFormat_Lzfse) {
+        decoder->lzfse = lzfseCreate();
+        return PrStatus_Ok;
+    }
 #if defined(PR_COMPRESS_HAS_BROTLI)
-    decoder->brotli = nullptr;
     if (format == PrCompressFormat_Brotli) {
         decoder->brotli = brotliCreate();
-        *out = decoder;
         return PrStatus_Ok;
     }
 #endif
     decoder->inflate = inflateCreate(kInflateFormat[format]);
-    *out = decoder;
     return PrStatus_Ok;
 }
 
 size_t encodeBound(PrCompressCodec*, PrCompressFormat format, size_t size) {
-    return format == PrCompressFormat_Brotli ? 0 : deflateBound(kInflateFormat[format], size);
+    return format < PrCompressFormat_Brotli ? deflateBound(kInflateFormat[format], size) : 0;
 }
 
 PrStatus encode(PrCompressCodec*, PrCompressFormat format, PrCompressLevel level, PrByteView input, uint8_t* output,
         size_t* written) {
-    if (format == PrCompressFormat_Brotli)
+    if (format >= PrCompressFormat_Brotli)
         return PrStatus_NotSupported;
     *written = deflateEncode(kInflateFormat[format], level, input, output);
     return PrStatus_Ok;

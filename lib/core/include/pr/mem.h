@@ -100,6 +100,14 @@ PR_CONSTEXPR void prMemWriteBeU32(uint8_t* bytes, uint32_t value) {
     bytes[2] = PR_VALUE_CAST(uint8_t, value >> 8);
     bytes[3] = PR_VALUE_CAST(uint8_t, value);
 }
+PR_CONSTEXPR void prMemWriteLeU16(uint8_t* bytes, uint16_t value) {
+    bytes[0] = PR_VALUE_CAST(uint8_t, value);
+    bytes[1] = PR_VALUE_CAST(uint8_t, value >> 8);
+}
+PR_CONSTEXPR void prMemWriteLeU32(uint8_t* bytes, uint32_t value) {
+    prMemWriteLeU16(bytes, PR_VALUE_CAST(uint16_t, value));
+    prMemWriteLeU16(bytes + 2, PR_VALUE_CAST(uint16_t, value >> 16));
+}
 
 #if defined(__cplusplus)
 }

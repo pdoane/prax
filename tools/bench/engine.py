@@ -290,6 +290,30 @@ def numbers(args):
 
 
 # ----------------------------------------------------------------------------------------------------------------------
+# compress
+
+# The inputs that every format compresses: a stylesheet for text, and a font for binary data.
+COMPRESS_INPUTS = [BOOTSTRAP, os.path.join(common.ROOT, "third_party", "fonts", "Arimo.ttf")]
+
+# The size of the small input, the start of the first input: under the 4 KB below which Apple's LZFSE encoder writes
+# LZVN, and the size of a stream that a font's table or an emoji's image holds.
+COMPRESS_SMALL = 2048
+
+
+def compress_options(parser):
+    parser.add_argument("cases", nargs="*", help="cases by the start of the name, as bootstrap.css lzfse; every case by "
+                        "default")
+
+
+def compress(args):
+    """Runs compress_bench and groups its rows by engine. Each row is one engine's cost of decoding one stream:
+    lib/compress's rows are filed as prax, beside those of Apple's libcompression, filed as apple, on Apple's
+    platforms."""
+    inputs = [arg for path in COMPRESS_INPUTS for arg in ("--input", path)]
+    return by_engine(args, "compress_bench", inputs + ["--small", str(COMPRESS_SMALL)] + args.cases), []
+
+
+# ----------------------------------------------------------------------------------------------------------------------
 # format
 
 def format_options(parser):
