@@ -62,7 +62,7 @@ if (PR_DEVELOP)
         tests/test_outline.cpp
         tests/test_woff.cpp
     )
-    target_link_libraries(font_tests PRIVATE prax::compress prax::path freetype)
+    target_link_libraries(font_tests PRIVATE prax::compress prax::image prax::path freetype)
     target_compile_definitions(font_tests PRIVATE PR_FONTS_DIR="${PR_TEST_FONTS_DIR}")
     if (PR_FONT_FREETYPE)
         target_sources(font_tests PRIVATE

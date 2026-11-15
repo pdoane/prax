@@ -1,5 +1,5 @@
 // Feature drawings for fonts: font sets matching styles, faces falling back, what lib/font reads from a font beyond its
-// outlines, outlines of Apple's hvgl, and web fonts.
+// outlines, outlines of Apple's hvgl, Apple Color Emoji, and web fonts.
 
 #include "examples/draw_features/features_fonts.h"
 
@@ -940,17 +940,46 @@ void bitmapGlyphs(PrDrawList* list, float, float, double) {
         String text = format("{:g}px", double(size));
         label(text, PrVec2{30, y});
     }
+}
 
-    // The system's emoji, if it has them.
-    const PrFont* apple = matchFont(fontsOfSystem(), requestOf("Apple Color Emoji"));
-    label("Apple Color Emoji, from the system's fonts", PrVec2{30, 700}, 12, kInk);
-    if (apple != nullptr) {
-        TextStyle emoji = styleOf(apple, 48);
-        drawText(list, emoji, "\xf0\x9f\x98\x80\xf0\x9f\x9a\x80\xf0\x9f\x8c\x88\xf0\x9f\x90\x99\xf0\x9f"
-            "\x8e\x89\xf0\x9f\x91\xa9\xe2\x80\x8d\xf0\x9f\x9a\x80\xf0\x9f\x87\xaf\xf0" "\x9f\x87\xb5", PrVec2{30, 770});
-    } else {
-        label("(not installed here)", PrVec2{30, 760});
+// Apple Color Emoji from the system's fonts, whose images are PNG on macOS and Apple's emjc on iOS: a row of emoji, the
+// strikes that both systems have, each drawn at its pixels per em, and the glyphs that draw another glyph's image
+// mirrored.
+void appleColorEmoji(PrDrawList* list, float, float, double) {
+    const PrFont* emoji = matchFont(fontsOfSystem(), requestOf("Apple Color Emoji"));
+    if (emoji == nullptr) {
+        label("Apple Color Emoji, a font of Apple's systems, is not installed here", PrVec2{30, 30}, 12, kInk);
+        return;
     }
+    // The format of the font's images, from a glyph's: emjc in iOS's font, and PNG in macOS's.
+    PrFontGlyphImage image{};
+    const bool imaged = prFontGlyphImage(emoji, prFontCodePointGlyph(emoji, 0x1f600), 64, &image);
+    const PrStringView type = imaged ? image.type : PrStringView("none");
+    const bool emjc = type == "image/x-emjc";
+    String described = format("Apple Color Emoji, from the system's fonts: {} images ({})",
+        emjc ? "emjc" : type == "image/png" ? "PNG" : "no", type);
+    label(described, PrVec2{30, 30}, 16, emjc ? kTeal : kBlue);
+    drawText(list, styleOf(emoji, 64), "\xf0\x9f\x98\x80\xf0\x9f\x9a\x80\xf0\x9f\x8c\x88\xf0\x9f\x90\x99"
+        "\xf0\x9f\x8e\x89\xf0\x9f\x91\xa9\xe2\x80\x8d\xf0\x9f\x9a\x80\xf0\x9f\x87\xaf\xf0\x9f\x87\xb5",
+        PrVec2{30, 110});
+
+    // Strikes that macOS's font and iOS's both have, each drawn at its own size.
+    label("Strikes, each drawn at its pixels per em", PrVec2{30, 150}, 12, kInk);
+    float x = 30;
+    const float strikes[] = {40.0f, 64.0f, 96.0f, 160.0f};
+    for (float strike : strikes) {
+        drawText(list, styleOf(emoji, strike), "\xf0\x9f\xa6\x8a", PrVec2{x, 170 + strike});
+        label(format("{:g}px", double(strike)), PrVec2{x, 350});
+        x += strike * 1.2f + 30;
+    }
+
+    // People facing left, and the sequences that face them right, which draw the same images mirrored (sbix flip).
+    label("Mirrored: each person, then the sequence facing it right, which draws its image reflected", PrVec2{30, 390}, 12, kInk);
+    drawText(list, styleOf(emoji, 48), "\xf0\x9f\x9a\xb6\xf0\x9f\x9a\xb6\xe2\x80\x8d\xe2\x9e\xa1\xef\xb8\x8f "
+        "\xf0\x9f\x8f\x83\xf0\x9f\x8f\x83\xe2\x80\x8d\xe2\x9e\xa1\xef\xb8\x8f "
+        "\xf0\x9f\xa7\x8e\xf0\x9f\xa7\x8e\xe2\x80\x8d\xe2\x9e\xa1\xef\xb8\x8f "
+        "\xf0\x9f\xa7\x91\xe2\x80\x8d\xf0\x9f\xa6\xbc\xf0\x9f\xa7\x91\xe2\x80\x8d\xf0\x9f\xa6\xbc"
+        "\xe2\x80\x8d\xe2\x9e\xa1\xef\xb8\x8f", PrVec2{30, 460});
 }
 
 // Draws Nabla, whose color glyphs are both COLR layers and SVG documents, each way in two of its palettes.
@@ -1345,6 +1374,10 @@ const Array<Drawing>& fontFeatures() {
         {"Synthesized variants", "Small capitals and sub- and superscripts, from the font or synthesized.", synthesis},
         {"hvgl outlines", "Apple's hierarchical variation glyphs, swept along each axis of PingFang.", hvglOutlines},
         {"Bitmap glyphs", "Color glyphs as images in strikes of set sizes: sbix and CBDT.", bitmapGlyphs},
+        {
+            "Apple Color Emoji", "The system's emoji: PNG images on macOS, emjc on iOS, and glyphs drawn mirrored.",
+            appleColorEmoji,
+        },
         {"SVG glyphs", "Color glyphs as SVG documents, beside the same glyphs' color layers.", svgGlyphs},
         {
             "Palettes and hinting", "Light and dark palettes, color overrides, and outlines fitted to the pixel grid.",

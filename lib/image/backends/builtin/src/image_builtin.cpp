@@ -8,6 +8,7 @@
 #include "pr/mem.h"
 #include "pr/string_ops.h"
 
+#include "image/backends/builtin/src/emjc.h"
 #include "image/backends/builtin/src/gif.h"
 #include "image/backends/builtin/src/ico.h"
 #include "image/backends/builtin/src/jpeg.h"
@@ -23,7 +24,7 @@ constexpr uint8_t kPngSignature[8] = {0x89, 'P', 'N', 'G', '\r', '\n', 0x1A, '\n
 
 bool supportsType(PrImageCodec*, PrStringView type) {
     return type == "image/png" || type == "image/apng" || type == "image/jpeg" || type == "image/gif" ||
-        type == "image/tiff" || type == "image/x-icon" || type == "image/vnd.microsoft.icon";
+        type == "image/tiff" || type == "image/x-icon" || type == "image/vnd.microsoft.icon" || type == "image/x-emjc";
 }
 
 enum {
@@ -32,6 +33,7 @@ enum {
     BuiltinKind_Gif,
     BuiltinKind_Ico,
     BuiltinKind_Tiff,
+    BuiltinKind_Emjc,
 };
 typedef uint8_t BuiltinKind;
 
@@ -51,6 +53,7 @@ struct BuiltinDecoder : PrImageReader {
     PngAnimation* png;
     IcoImage icon;
     TiffImage tiff;
+    EmjcImage emjc;
     uint8_t* PR_NULLABLE profile;   // the ICC profile that the image's color names, expanded
     BuiltinKind kind;
     PrStatus openStatus;
@@ -543,6 +546,32 @@ PrStatus inspectTiff(BuiltinDecoder& decoder, const PrImageLimits& limits) {
     return finishInfo(&info, limits, decoder.size, 0, sizeof(BuiltinDecoder));
 }
 
+PrStatus inspectEmjc(BuiltinDecoder& decoder, const PrImageLimits& limits) {
+    if (limits.work == 0)
+        return PrStatus_Limit;
+    if (!prCompressCodecDecodes(decoder.compressCodec, PrCompressFormat_Lzfse))
+        return PrStatus_NotSupported;
+    PrStatus status = emjcImage({decoder.bytes, decoder.size}, &decoder.emjc);
+    if (status != PrStatus_Ok)
+        return status;
+    const EmjcImage& emjc = decoder.emjc;
+    PrImageInfo& info = decoder.info;
+    info.extent.x = emjc.width;
+    info.extent.y = emjc.height;
+    info.format.model = PrColorModel_Rgb;
+    info.format.sample = PrImageSample_U8;
+    info.format.alpha = PrImageAlpha_Straight;
+    info.format.color = unknownColor();
+    info.frameCount = 1;
+    info.playCount = 1;
+    if (uint64_t(emjc.width) * emjc.height > limits.work)
+        return PrStatus_Limit;
+    // The planes and the decoded pixels take four bytes a pixel each, and the components of two rows 24 bytes a pixel
+    // of a row.
+    const uint64_t fixed = sizeof(BuiltinDecoder) + emjc.height + emjc.appendixSize + 24 * uint64_t(emjc.width);
+    return finishInfo(&info, limits, decoder.size, 8, fixed);
+}
+
 bool isIcon(const uint8_t* bytes, size_t size) {
     return size >= 6 && prMemReadLeU16(bytes) == 0 && prMemReadLeU16(bytes + 2) == 1;
 }
@@ -586,7 +615,7 @@ bool recognize(PrImageCodec*, PrByteView prefix) {
     const uint8_t jpeg[2] = {0xFF, 0xD8};
     return startsWith(prefix, {kPngSignature, sizeof(kPngSignature)}) ||
         startsWith(prefix, {jpeg, sizeof(jpeg)}) || gifHasSignature(prefix) || tiffHasSignature(prefix) ||
-        isIcon(prefix.data, prefix.size);
+        emjcHasSignature(prefix) || isIcon(prefix.data, prefix.size);
 }
 
 void close(PrImageReader* reader) {
@@ -632,6 +661,8 @@ PrStatus decode(PrImageReader* reader, uint32_t frame, PrPixels output) {
         ok = jpegDecode({decoder->bytes, decoder->size}, decoder->scratch, decoder->pixelsSize);
     } else if (decoder->kind == BuiltinKind_Tiff) {
         ok = tiffDecode(decoder->tiff, decoder->scratch, decoder->pixelsSize);
+    } else if (decoder->kind == BuiltinKind_Emjc) {
+        ok = emjcDecode(decoder->compressCodec, decoder->emjc, decoder->scratch, decoder->pixelsSize);
     } else if (decoder->kind == BuiltinKind_Ico) {
         if (decoder->icon.png)
             ok = pngDecode(decoder->compressCodec, {decoder->icon.bytes, decoder->icon.size}, decoder->scratch,
@@ -680,6 +711,8 @@ PrStatus open(PrImageCodec* imageCodec, const PrImageSource* source, const PrIma
         decoder->kind = BuiltinKind_Jpeg;
     else if (tiffHasSignature({decoder->bytes, decoder->size}))
         decoder->kind = BuiltinKind_Tiff;
+    else if (emjcHasSignature({decoder->bytes, decoder->size}))
+        decoder->kind = BuiltinKind_Emjc;
     else if (isIcon(decoder->bytes, decoder->size))
         decoder->kind = BuiltinKind_Ico;
     else
@@ -689,6 +722,8 @@ PrStatus open(PrImageCodec* imageCodec, const PrImageSource* source, const PrIma
         status = inspectIcon(*decoder, *limits);
     else if (decoder->kind == BuiltinKind_Tiff)
         status = inspectTiff(*decoder, *limits);
+    else if (decoder->kind == BuiltinKind_Emjc)
+        status = inspectEmjc(*decoder, *limits);
     else
         status = inspect(decoder->compressCodec, decoder->kind, decoder->bytes, decoder->size, *limits, &decoder->info);
     if (status != PrStatus_Ok && status != PrStatus_Truncated) {

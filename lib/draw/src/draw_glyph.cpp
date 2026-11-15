@@ -454,7 +454,12 @@ bool prDrawGlyphImage(PrImageCodec* codec, const PrFont* font, uint16_t glyph, f
     PrRect whole{0, 0, float(prDrawImageExtent(decoded).x), float(prDrawImageExtent(decoded).y)};
     PrDrawSource drawn = prDrawSourceImage(decoded, whole);
     PrDrawBrush brush = prDrawBrushImage(drawn, image.bounds, PrDrawSampling_Mipmap);
+    // A mirrored image reflects about the vertical line through the middle of its bounds.
+    if (image.mirrored)
+        prDrawListPushTransformAffine2(list, PrAffine2{-1, 0, 0, 1, image.bounds.left + image.bounds.right, 0});
     prDrawListRect(list, image.bounds, {.brush = &brush});
+    if (image.mirrored)
+        prDrawListPopTransform(list);
     prDrawImageRelease(decoded);
     return true;
 }

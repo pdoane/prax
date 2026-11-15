@@ -1171,7 +1171,10 @@ bool prFontGlyphImage(const PrFont* font, uint16_t glyph, float pixelsPerEm, PrF
         return false;
     float unit = k / image.pixelsPerEm;
     out->bytes = PrByteView{image.data, image.size};
-    out->type = image.type == SfntImageType_Png    ? "image/png" : image.type == SfntImageType_Jpeg ? "image/jpeg" : "image/tiff";
+    // The image types by SfntImageType.
+    constexpr PrStringView kTypes[] = {"image/png", "image/jpeg", "image/tiff", "image/x-emjc"};
+    out->type = kTypes[image.type];
+    out->mirrored = image.mirrored;
     out->extent.x = image.width;
     out->extent.y = image.height;
     out->pixelsPerEm = image.pixelsPerEm;

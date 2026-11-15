@@ -1,5 +1,5 @@
 // Feature drawings for fonts: font sets matching styles, faces falling back, what lib/font reads from a font beyond its
-// outlines, outlines of Apple's hvgl, and web fonts.
+// outlines, outlines of Apple's hvgl, Apple Color Emoji, and web fonts.
 
 #pragma once
 

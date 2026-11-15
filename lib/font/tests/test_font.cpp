@@ -1,6 +1,10 @@
 #include "pr/array.h"
 #include "pr/blob_ref.h"
+#include "pr/compress_builtin.h"
+#include "pr/file.h"
 #include "pr/font.h"
+#include "pr/font_set.h"
+#include "pr/image_builtin.h"
 #include "pr/mem.h"
 #include "pr/string.h"
 #include "pr/string_ops.h"
@@ -161,24 +165,37 @@ void put32(Array<uint8_t>& out, uint32_t value) {
     put16(out, value & 0xffff);
 }
 
-// Returns the font file with its sbix table replaced by one strike of `ppem` pixels per em, in which glyph `glyph` is
-// `image` of the sbix graphic type `type`, with its bottom left corner at the origin.
-Array<uint8_t> withSbixImage(Array<uint8_t> font, uint16_t glyph, uint16_t glyphCount, uint32_t type,
-        const Array<uint8_t>& image, uint16_t ppem) {
+// The data of a glyph in an sbix strike: an image of the graphic type `type`, with its bottom left corner at the
+// origin, or a reference to another glyph.
+struct SbixRecord {
+    uint16_t glyph;
+    uint32_t type;
+    Array<uint8_t> bytes;
+};
+
+// Returns the font file with its sbix table replaced by one strike of `ppem` pixels per em that holds `records`, in
+// order of their glyphs.
+Array<uint8_t> withSbixRecords(Array<uint8_t> font, uint16_t glyphCount, Span<const SbixRecord> records, uint16_t ppem) {
     Array<uint8_t> sbix;
     put16(sbix, 1);
     put16(sbix, 1);
     put32(sbix, 1);
     put32(sbix, 12);
-    uint32_t data = 4 + (uint32_t(glyphCount) + 1) * 4;
     put16(sbix, ppem);
     put16(sbix, 72);
-    for (uint32_t g = 0; g <= glyphCount; ++g)
-        put32(sbix, g <= glyph ? data : data + 8 + image.count());
-    put16(sbix, 0);
-    put16(sbix, 0);
-    put32(sbix, type);
-    sbix.append(image.span());
+    uint32_t data = 4 + (uint32_t(glyphCount) + 1) * 4;
+    uint32_t next = 0;
+    for (uint32_t g = 0; g <= glyphCount; ++g) {
+        put32(sbix, data);
+        if (next < records.count() && records[next].glyph == g)
+            data += 8 + records[next++].bytes.count();
+    }
+    for (const SbixRecord& record : records) {
+        put16(sbix, 0);
+        put16(sbix, 0);
+        put32(sbix, record.type);
+        sbix.append(record.bytes.span());
+    }
     // The table goes at the end of the file, and its record points there.
     while (font.count() % 4 != 0)
         font.push(0);
@@ -195,6 +212,41 @@ Array<uint8_t> withSbixImage(Array<uint8_t> font, uint16_t glyph, uint16_t glyph
         }
     }
     return font;
+}
+
+// Returns the system's Apple Color Emoji, holding a reference that the caller releases, or null if the system has none.
+const PrFont* PR_NULLABLE systemEmoji() {
+    PrFontSystem* system = prFontSystemCreate(PrFontSystemBackend_Default);
+    PrFontSet* set = prFontSetCreate(nullptr);
+    prFontSetSetSystem(set, system);
+    PrFontStyle style = prFontStyleDefault();
+    PrFontMatch* match = prFontMatchCreate();
+    prFontSetMatch(set, prFontFamilyFromName("Apple Color Emoji"), &style, match);
+    const PrFont* font = prFontMatchFaceCount(match) != 0 ? prFontMatchFace(match, 0).font : nullptr;
+    if (font != nullptr)
+        prFontRetain(font);
+    prFontMatchDestroy(match);
+    prFontSetDestroy(set);
+    prFontSystemDestroy(system);
+    return font;
+}
+
+// Decodes an image of a glyph as straight-alpha Rgba8. Returns an empty array if the codec cannot.
+Array<uint8_t> decodeGlyphImage(PrImageCodec* codec, const PrFontGlyphImage& image) {
+    PrImageDecoder* decoder = prImageDecoderCreate(codec);
+    Array<uint8_t> pixels;
+    PrImageSource source{};
+    source.memory = image.bytes;
+    if (prImageDecoderOpen(decoder, source, nullptr) == PrStatus_Ok) {
+        const PrUVec2 extent = prImageDecoderInfo(decoder)->extent;
+        pixels.resize(extent.x * extent.y * 4);
+        PrPixels output{pixels.data(), size_t(extent.x) * 4, extent};
+        if (prImageDecoderReadRgba8(decoder, 0, PrImageAlpha_Straight, PrImageOrientation_Identity, output) !=
+                PrStatus_Ok)
+            pixels.clear();
+    }
+    prImageDecoderDestroy(decoder);
+    return pixels;
 }
 
 } // namespace
@@ -1021,7 +1073,7 @@ TEST_CASE("an sbix glyph's image goes where its origin offset puts it") {
     prFontRelease(font);
 }
 
-TEST_CASE("an sbix strike's JPEG and TIFF images are sized from their headers") {
+TEST_CASE("an sbix strike's JPEG, TIFF and emjc images are sized from their headers") {
     Array<uint8_t> file = fontFile("TwemojiSmileySbix.ttf");
     const PrFont* original = nullptr;
     REQUIRE(prFontCreate(BlobRef::adopt(prBlobCopy(file)), 0, nullptr, &original) == PrStatus_Ok);
@@ -1038,6 +1090,8 @@ TEST_CASE("an sbix strike's JPEG and TIFF images are sized from their headers") 
         0, 1, 3, 0, 1, 0, 0, 0, 20, 0, 0, 0,
         1, 1, 4, 0, 1, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0,
     });
+    // The header of an emjc image, 40 wide and 30 tall, with its sizes little-endian.
+    Array<uint8_t> emjc({'e', 'm', 'j', '1', 0, 1, 0x01, 0xa1, 40, 0, 30, 0, 0, 0, 0, 0, 'b', 'v', 'x', '$'});
     struct Case {
         uint32_t type;
         const Array<uint8_t>& bytes;
@@ -1045,9 +1099,14 @@ TEST_CASE("an sbix strike's JPEG and TIFF images are sized from their headers") 
         uint32_t width;
         uint32_t height;
     };
-    const Case cases[] = {{0x6a706720, jpeg, "image/jpeg", 64, 48}, {0x74696666, tiff, "image/tiff", 20, 10}};
+    const Case cases[] = {
+        {0x6a706720, jpeg, "image/jpeg", 64, 48},
+        {0x74696666, tiff, "image/tiff", 20, 10},
+        {0x656d6a63, emjc, "image/x-emjc", 40, 30},
+    };
     for (const Case& c : cases) {
-        Array<uint8_t> bytes = withSbixImage(file, 2, glyphs, c.type, c.bytes, 100);
+        const SbixRecord records[] = {{2, c.type, c.bytes}};
+        Array<uint8_t> bytes = withSbixRecords(file, glyphs, records, 100);
         const PrFont* font = nullptr;
         REQUIRE(prFontCreate(BlobRef::adopt(prBlobCopy(bytes)), 0, nullptr, &font) == PrStatus_Ok);
         PrFontGlyphImage image{};
@@ -1060,6 +1119,123 @@ TEST_CASE("an sbix strike's JPEG and TIFF images are sized from their headers") 
         CHECK_FALSE(prFontGlyphImage(font, 3, 100, &image));
         prFontRelease(font);
     }
+}
+
+TEST_CASE("an sbix glyph may draw another glyph's image, as it is or mirrored") {
+    Array<uint8_t> file = fontFile("TwemojiSmileySbix.ttf");
+    const PrFont* original = nullptr;
+    REQUIRE(prFontCreate(BlobRef::adopt(prBlobCopy(file)), 0, nullptr, &original) == PrStatus_Ok);
+    uint16_t glyphs = uint16_t(prFontGlyphCount(original));
+    prFontRelease(original);
+    REQUIRE(glyphs > 8);
+    Array<uint8_t> emjc({'e', 'm', 'j', '1', 0, 1, 0x01, 0xa1, 40, 0, 30, 0, 0, 0, 0, 0, 'b', 'v', 'x', '$'});
+    // Glyph 2 is the image. Glyph 3 duplicates it, 4 flips it, 5 duplicates 4, and 6 flips 5, which mirrors it twice.
+    // Glyph 7 refers to itself, and glyph 8 to a glyph past the last.
+    auto reference = [](uint16_t glyph) { return Array<uint8_t>({uint8_t(glyph >> 8), uint8_t(glyph)}); };
+    const uint32_t dupe = 0x64757065;
+    const uint32_t flip = 0x666c6970;
+    const SbixRecord records[] = {
+        {2, 0x656d6a63, emjc},
+        {3, dupe, reference(2)},
+        {4, flip, reference(2)},
+        {5, dupe, reference(4)},
+        {6, flip, reference(5)},
+        {7, dupe, reference(7)},
+        {8, flip, reference(glyphs)},
+    };
+    const PrFont* font = fromBytes(withSbixRecords(file, glyphs, records, 100));
+    PrFontGlyphImage original2{};
+    REQUIRE(prFontGlyphImage(font, 2, 100, &original2));
+    CHECK_FALSE(original2.mirrored);
+    struct Case {
+        uint16_t glyph;
+        bool mirrored;
+    };
+    const Case cases[] = {{3, false}, {4, true}, {5, true}, {6, false}};
+    for (const Case& c : cases) {
+        CAPTURE(c.glyph);
+        PrFontGlyphImage image{};
+        REQUIRE(prFontGlyphImage(font, c.glyph, 100, &image));
+        CHECK(image.mirrored == c.mirrored);
+        CHECK(image.bytes.data == original2.bytes.data);
+        CHECK(image.type == "image/x-emjc");
+        CHECK(image.bounds.left == original2.bounds.left);
+        CHECK(image.bounds.right == original2.bounds.right);
+    }
+    PrFontGlyphImage image{};
+    CHECK_FALSE(prFontGlyphImage(font, 7, 100, &image));
+    CHECK_FALSE(prFontGlyphImage(font, 8, 100, &image));
+    prFontRelease(font);
+}
+
+TEST_CASE("Apple Color Emoji's emjc images on iOS decode to the pixels of its PNG images on macOS") {
+    // The two fonts draw the same emoji at the same strikes, iOS's as emjc and macOS's as PNG. iOS's is the system's on
+    // the iOS simulator, which reads macOS's from the machine that it runs on.
+    const PrFont* ios = systemEmoji();
+    PrFontGlyphImage probe{};
+    if (ios == nullptr || !prFontGlyphImage(ios, prFontCodePointGlyph(ios, 0x1f600), 160, &probe) ||
+            probe.type != "image/x-emjc") {
+        prFontRelease(ios);
+        MESSAGE("skipped: the system's Apple Color Emoji is not iOS's");
+        return;
+    }
+    BlobRef macFile = BlobRef::adopt(prFileOpen("/System/Library/Fonts/Apple Color Emoji.ttc"));
+    const PrFont* mac = nullptr;
+    REQUIRE(macFile.get() != nullptr);
+    REQUIRE(prFontCreate(macFile, 0, nullptr, &mac) == PrStatus_Ok);
+    PrCompressCodec* compressCodec = prCompressBuiltinCreate();
+    PrImageCodec* codec = prImageBuiltinCreate(compressCodec);
+    uint32_t compared = 0;
+    uint32_t same = 0;
+    for (uint32_t codePoint = 0x1f000; codePoint < 0x1fb00; ++codePoint) {
+        const uint16_t iosGlyph = prFontCodePointGlyph(ios, codePoint);
+        const uint16_t macGlyph = prFontCodePointGlyph(mac, codePoint);
+        PrFontGlyphImage iosImage{};
+        PrFontGlyphImage macImage{};
+        if (iosGlyph == 0 || macGlyph == 0 || !prFontGlyphImage(ios, iosGlyph, 160, &iosImage) ||
+                !prFontGlyphImage(mac, macGlyph, 160, &macImage))
+            continue;
+        CAPTURE(codePoint);
+        REQUIRE(iosImage.type == "image/x-emjc");
+        REQUIRE(macImage.type == "image/png");
+        CHECK(iosImage.pixelsPerEm == macImage.pixelsPerEm);
+        CHECK(iosImage.extent.x == macImage.extent.x);
+        CHECK(iosImage.extent.y == macImage.extent.y);
+        CHECK(iosImage.mirrored == macImage.mirrored);
+        const Array<uint8_t> iosPixels = decodeGlyphImage(codec, iosImage);
+        const Array<uint8_t> macPixels = decodeGlyphImage(codec, macImage);
+        REQUIRE(iosPixels.count() == size_t(iosImage.extent.x) * iosImage.extent.y * 4);
+        REQUIRE(macPixels.count() == iosPixels.count());
+        // The colors of transparent pixels are not seen, and need not be kept.
+        bool equal = true;
+        for (uint32_t i = 0; i < iosPixels.count() && equal; i += 4)
+            equal = iosPixels[i + 3] == macPixels[i + 3] &&
+                (iosPixels[i + 3] == 0 || prMemEquals(&iosPixels[i], &macPixels[i], 3));
+        ++compared;
+        same += equal ? 1 : 0;
+    }
+    CHECK(compared > 1000);
+    CHECK(same == compared);
+    // Every image of every strike decodes, including those of the glyphs that only sequences reach and those that
+    // mirror another glyph's.
+    uint32_t images = 0;
+    uint32_t failed = 0;
+    const float strikes[] = {40, 64, 96, 160};
+    for (uint32_t glyph = 0; glyph < prFontGlyphCount(ios); ++glyph) {
+        for (float strike : strikes) {
+            PrFontGlyphImage image{};
+            if (!prFontGlyphImage(ios, uint16_t(glyph), strike, &image) || image.pixelsPerEm != strike)
+                continue;
+            ++images;
+            failed += decodeGlyphImage(codec, image).count() == image.extent.x * image.extent.y * 4 ? 0 : 1;
+        }
+    }
+    CHECK(images > 10000);
+    CHECK(failed == 0);
+    prImageCodecDestroy(codec);
+    prCompressCodecDestroy(compressCodec);
+    prFontRelease(mac);
+    prFontRelease(ios);
 }
 
 TEST_CASE("a CBDT glyph's image comes from the strike best for the size") {

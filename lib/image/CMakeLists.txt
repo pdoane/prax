@@ -10,6 +10,7 @@ target_link_libraries(pr_image PUBLIC prax::core prax::color prax::compress PRIV
 if (PR_IMAGE_BUILTIN)
     target_sources(pr_image PRIVATE
         backends/builtin/src/image_builtin.cpp
+        backends/builtin/src/emjc.cpp
         backends/builtin/src/gif.cpp
         backends/builtin/src/ico.cpp
         backends/builtin/src/jpeg.cpp
@@ -34,6 +35,7 @@ if (PR_DEVELOP)
         target_sources(image_tests PRIVATE
             backends/builtin/tests/test_image_builtin.cpp
             backends/builtin/tests/test_image_builtin_c.c
+            backends/builtin/tests/test_emjc.cpp
             backends/builtin/tests/test_gif.cpp
             backends/builtin/tests/test_ico.cpp
             backends/builtin/tests/test_jpeg.cpp

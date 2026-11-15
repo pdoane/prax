@@ -520,13 +520,15 @@ bool prFontGlyphPaint(const PrFont* font, uint16_t glyph, const PrFontPalette* P
 // Bitmap glyphs
 
 // A color glyph as an encoded image, from one of the strikes of fixed sizes of the font (sbix, CBDT). The size-adjust
-// scales `bounds`. Synthetic bold does not affect the image.
+// scales `bounds`. Synthetic bold does not affect the image. Apple Color Emoji's images on iOS are of the type
+// image/x-emjc, and some of its glyphs draw another glyph's image mirrored.
 typedef struct PrFontGlyphImage {
     PrByteView bytes;           // the encoded image, valid while the font lives
     PrStringView type;          // the essence of its MIME type, as an image codec names it
     PrUVec2 extent;             // in pixels
     float pixelsPerEm;          // the pixels per em of the strike that the image belongs to
     PrRect bounds;              // the position of the image, in ems with y down
+    bool mirrored;              // true if the image draws reflected left to right within `bounds`
 } PrFontGlyphImage;
 
 // Writes to `out` the image of the glyph from the strike for drawing at `pixelsPerEm` pixels per em. That is the

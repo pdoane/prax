@@ -71,6 +71,13 @@ derive from Apple's reference implementation of LZFSE (https://github.com/lzfse/
 
 Copyright (c) 2015-2016, Apple Inc. All rights reserved. Used under the BSD 3-Clause License (below).
 
+## EmojiFonts
+
+The emjc decoding in `lib/image/backends/builtin/src/emjc.cpp` follows EmojiFonts' description of the format and its
+decoder (https://github.com/PoomSmart/EmojiFonts).
+
+Copyright (c) 2022 - 2026 PoomSmart. Used under the MIT License (below).
+
 ## Ryu
 
 The binary-to-decimal conversion in `lib/core/src/float_convert.cpp` and its tables in
@@ -288,7 +295,7 @@ DEALINGS IN THE SOFTWARE.
 
 ### MIT License
 
-For webref, fast_float, QuickJS and Taffy, each with its copyright notice above.
+For webref, fast_float, QuickJS, Taffy and EmojiFonts, each with its copyright notice above.
 
 ```
 Permission is hereby granted, free of charge, to any person obtaining a copy

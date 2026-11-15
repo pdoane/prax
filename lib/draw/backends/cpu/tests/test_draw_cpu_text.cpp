@@ -2,6 +2,7 @@
 #include "pr/compress_builtin.h"
 #include "pr/draw_cpu.h"
 #include "pr/draw_glyph.h"
+#include "pr/file.h"
 #include "pr/image_builtin.h"
 #include "pr/string.h"
 
@@ -134,4 +135,58 @@ TEST_CASE("a bitmap glyph draws its strike's image, and nothing without a codec"
     }
     prImageCodecDestroy(imageCodec);
     prCompressCodecDestroy(compressCodec);
+}
+
+TEST_CASE("a bitmap glyph that mirrors another glyph's image draws it reflected") {
+    // Apple Color Emoji mirrors the images of some glyphs for others. It is the system's, and a machine may lack it.
+    BlobRef file = BlobRef::adopt(prFileOpen("/System/Library/Fonts/Apple Color Emoji.ttc"));
+    if (file.get() == nullptr) {
+        MESSAGE("skipped: this machine has no Apple Color Emoji");
+        return;
+    }
+    const PrFont* font = nullptr;
+    REQUIRE(prFontCreate(file, 0, nullptr, &font) == PrStatus_Ok);
+    PrFontGlyphImage image{};
+    uint16_t glyph = 0;
+    while (glyph < prFontGlyphCount(font) && !(prFontGlyphImage(font, glyph, 64, &image) && image.mirrored))
+        ++glyph;
+    REQUIRE(glyph < prFontGlyphCount(font));
+    PrCompressCodec* compressCodec = prCompressBuiltinCreate();
+    PrImageCodec* imageCodec = prImageBuiltinCreate(compressCodec);
+    const PrDrawImage* decoded = nullptr;
+    REQUIRE(prDrawImageCreateFromBytes(imageCodec, image.bytes, &decoded, nullptr) == PrStatus_Ok);
+    // The glyph at its strike's size, a pixel of the image to a pixel of the target, with the image at the origin.
+    const uint32_t width = image.extent.x;
+    const uint32_t height = image.extent.y;
+    PrDrawList* list = prDrawListCreate();
+    prDrawListPushTransformAffine2(list, PrAffine2{
+        image.pixelsPerEm, 0, 0, image.pixelsPerEm,
+        -image.bounds.left * image.pixelsPerEm, -image.bounds.top * image.pixelsPerEm,
+    });
+    REQUIRE(prDrawGlyphImage(imageCodec, font, glyph, 64, list));
+    prDrawListPopTransform(list);
+    PrDrawList* plain = prDrawListCreate();
+    const PrRect whole{0, 0, float(width), float(height)};
+    PrDrawBrush brush = prDrawBrushImage(prDrawSourceImage(decoded, whole), whole, PrDrawSampling_Mipmap);
+    prDrawListRect(plain, whole, {.brush = &brush});
+    const uint32_t size = width > height ? width : height;
+    const Array<uint8_t> drawn = render(list, size);
+    const Array<uint8_t> unmirrored = render(plain, size);
+    // Each pixel is that of the image across the vertical line through its middle.
+    uint32_t differing = 0;
+    for (uint32_t y = 0; y < height; ++y) {
+        for (uint32_t x = 0; x < width; ++x) {
+            const uint8_t* a = drawn.data() + (size_t(y) * size + x) * 4;
+            const uint8_t* b = unmirrored.data() + (size_t(y) * size + (width - 1 - x)) * 4;
+            for (uint32_t k = 0; k < 4; ++k)
+                differing += (a[k] > b[k] ? a[k] - b[k] : b[k] - a[k]) > 2 ? 1 : 0;
+        }
+    }
+    CHECK(differing == 0);
+    prDrawListRelease(plain);
+    prDrawListRelease(list);
+    prDrawImageRelease(decoded);
+    prImageCodecDestroy(imageCodec);
+    prCompressCodecDestroy(compressCodec);
+    prFontRelease(font);
 }

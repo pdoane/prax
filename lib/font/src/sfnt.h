@@ -142,6 +142,7 @@ enum {
     SfntImageType_Png,
     SfntImageType_Jpeg,
     SfntImageType_Tiff,
+    SfntImageType_Emjc,     // Apple's format of the images of Apple Color Emoji on iOS
 };
 typedef uint8_t SfntImageType;
 
@@ -159,6 +160,9 @@ struct SfntImage {
 
     // How `data` is encoded.
     SfntImageType type;
+
+    // True if the glyph draws the image mirrored left to right, within the same place.
+    bool mirrored;
 };
 
 // Gets the image of the glyph from the best strike for `pixelsPerEm`, among the strikes with an image of the glyph. The

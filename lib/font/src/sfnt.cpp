@@ -4,6 +4,7 @@
 
 #include "font/src/sfnt.h"
 
+#include "pr/mem.h"
 #include "pr/raw_array.h"
 #include "pr/search.h"
 #include "pr/sort.h"
@@ -32,7 +33,9 @@ constexpr uint32_t kSvg = 0x53564720;            // 'SVG '
 constexpr uint32_t kPng = 0x706e6720;            // 'png ' in sbix
 constexpr uint32_t kJpg = 0x6a706720;            // 'jpg ' in sbix
 constexpr uint32_t kTiff = 0x74696666;           // 'tiff' in sbix
+constexpr uint32_t kEmjc = 0x656d6a63;           // 'emjc' in sbix
 constexpr uint32_t kDupe = 0x64757065;           // 'dupe' in sbix
+constexpr uint32_t kFlip = 0x666c6970;           // 'flip' in sbix
 
 // Returns the scalar of a region at the coordinates: the product of the tents of its axes.
 float regionScalar(SfntTable regions, uint16_t index, SfntCoords coords) {
@@ -143,17 +146,31 @@ bool tiffSize(SfntTable tiff, uint32_t* width, uint32_t* height) {
     return *width != 0 && *height != 0;
 }
 
-// Finds the image of a glyph in an sbix strike, following a duplicate once. Returns false if the strike has no image
-// for the glyph.
+// Reads the size of an emjc image from its header. Returns false for bytes that are not an emjc image.
+bool emjcSize(SfntTable emjc, uint32_t* width, uint32_t* height) {
+    if (emjc.size < 16 || emjc.uint32At(0) != 0x656d6a31u)
+        return false;
+    *width = prMemReadLeU16(emjc.data + 8);
+    *height = prMemReadLeU16(emjc.data + 10);
+    return *width != 0 && *height != 0;
+}
+
+// The most references that an sbix glyph follows to the glyph whose image it draws.
+constexpr uint32_t kSbixMaxReferences = 4;
+
+// Finds the image of a glyph in an sbix strike, following a few references to the images of other glyphs: a duplicate
+// draws the other glyph's image, and a flip draws it mirrored. Returns false if the strike has no image for the glyph.
 bool sbixImage(SfntTable strike, uint32_t glyph, uint32_t glyphCount, SfntImage* out) {
-    for (uint32_t follow = 0; follow < 2 && glyph < glyphCount; ++follow) {
+    bool mirrored = false;
+    for (uint32_t follow = 0; follow <= kSbixMaxReferences && glyph < glyphCount; ++follow) {
         uint32_t start = strike.uint32At(4 + glyph * 4);
         uint32_t end = strike.uint32At(8 + glyph * 4);
         if (end > strike.size || start >= end || end - start <= 8)
             return false;
         SfntTable data = strike.from(start);
         uint32_t type = data.uint32At(4);
-        if (type == kDupe) {
+        if (type == kDupe || type == kFlip) {
+            mirrored = mirrored != (type == kFlip);
             glyph = data.uint16At(8);
             continue;
         }
@@ -161,18 +178,26 @@ bool sbixImage(SfntTable strike, uint32_t glyph, uint32_t glyphCount, SfntImage*
         uint32_t width = 0;
         uint32_t height = 0;
         bool sized = false;
-        if (type == kPng)
+        SfntImageType imageType = SfntImageType_Png;
+        if (type == kPng) {
             sized = pngSize(image, &width, &height);
-        else if (type == kJpg)
+        } else if (type == kJpg) {
             sized = jpegSize(image, &width, &height);
-        else if (type == kTiff)
+            imageType = SfntImageType_Jpeg;
+        } else if (type == kTiff) {
             sized = tiffSize(image, &width, &height);
+            imageType = SfntImageType_Tiff;
+        } else if (type == kEmjc) {
+            sized = emjcSize(image, &width, &height);
+            imageType = SfntImageType_Emjc;
+        }
         if (!sized)
             return false;
         // The origin offset places the bottom left corner of the image, with y up.
         out->data = image.data;
         out->size = image.size;
-        out->type = type == kPng ? SfntImageType_Png : type == kJpg ? SfntImageType_Jpeg : SfntImageType_Tiff;
+        out->type = imageType;
+        out->mirrored = mirrored;
         out->width = width;
         out->height = height;
         out->left = float(data.int16At(0));

@@ -2847,7 +2847,7 @@ def check_function_names(report, paths, texts):
 # module as surely as its tag does.
 FORMAT_WORDS = {
     "lib/font": ("sfnt", "cff", "colr", "glyf", "hvgl", "woff"),
-    "lib/image": ("png", "gif", "jpeg", "ico", "tiff"),
+    "lib/image": ("png", "gif", "jpeg", "ico", "tiff", "emjc"),
     "lib/compress": ("inflate", "deflate", "brotli", "lzfse"),
 }
 
