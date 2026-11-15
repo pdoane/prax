@@ -18,13 +18,12 @@
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
-
-using namespace harness;
 #endif
 
-namespace pr_impl {
-
+using namespace harness;
 using namespace pr;
+
+namespace pr_impl {
 
 namespace {
 
