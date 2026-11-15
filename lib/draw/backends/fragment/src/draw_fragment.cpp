@@ -525,6 +525,34 @@ FragmentPaint plainPaint(const Walk& w) {
     return r;
 }
 
+// Sets whether the paint's texels span its texture whole along each axis.
+void setWhole(FragmentPaint& r, PrRect texels, float width, float height) {
+    r.wholeX = texels.left == 0 && texels.right == width;
+    r.wholeY = texels.top == 0 && texels.bottom == height;
+}
+
+// Returns the sampler that an Image paint read by FragmentImageRead_Sampler filters its texels with. Along each axis,
+// it addresses by the tile mode if the texels span the texture whole, and is transparent past the texture's edge
+// otherwise. A copy that is filtered on its own (PrDrawTileFlag_Clamped) pads, and tiles with spacing are transparent
+// between them. Mipmap sampling reads along the pixel's footprint, which a mapped stroke's image has none of.
+uint32_t imageSampler(const FragmentPaint& r) {
+    bool clamped = (r.tileFlags & PrDrawTileFlag_Clamped) != 0;
+    auto address = [&](uint32_t mode, float spacing, bool whole) -> uint32_t {
+        bool wraps = mode == PrDrawExtend_Repeat || mode == PrDrawExtend_Reflect;
+        if (!whole || mode == PrDrawExtend_None)
+            return FragmentAddress_Zero;
+        if (mode == PrDrawExtend_Pad || (wraps && clamped))
+            return FragmentAddress_Clamp;
+        if (spacing > 0)
+            return FragmentAddress_Zero;
+        return mode == PrDrawExtend_Repeat ? FragmentAddress_Repeat : FragmentAddress_Mirror;
+    };
+    uint32_t sampler = address(r.tileX, r.spacing.x, r.wholeX != 0) * 4 + address(r.tileY, r.spacing.y, r.wholeY != 0);
+    if (r.sampling == PrDrawSampling_Mipmap && (r.pieceCount != 0 || r.map == 0))
+        sampler += kFragmentAnisotropicSamplers;
+    return sampler;
+}
+
 // Returns the ink of the record and the premultiplied color. The record is added only if the color alone cannot paint
 // it.
 Ink inkOf(Walk& w, const FragmentPaint& r, const float color[4]) {
@@ -532,6 +560,10 @@ Ink inkOf(Walk& w, const FragmentPaint& r, const float color[4]) {
     ink.reads = r.composite != PrDrawComposite_SourceOver || r.blendMode != PrDrawBlendMode_Normal || r.knockout != 0;
     if (r.kind != FragmentPaintKind_Solid || ink.reads || r.groupMask != FragmentMask_None || r.map != 0) {
         w.b->paints.push(r);
+        // The sampler follows from the record as it is drawn, whose tile modes a caller may set after it is made.
+        FragmentPaint& pushed = w.b->paints.data[w.b->paints.count - 1];
+        if (pushed.kind == FragmentPaintKind_Image)
+            pushed.sampler = imageSampler(pushed);
         ink.paint = w.b->paints.count;
     }
     return ink;
@@ -720,6 +752,7 @@ bool makePaint(Walk& w, const PrDrawBrush* PR_NULLABLE brush, PrColor color, PrR
             r.sampling = brush->image.sampling & PrDrawSamplingFlag_Kind;
             r.read =
                 imageRead(brush->image.sampling, texture.alpha, tiles, texture.texels, texture.width, texture.height);
+            setWhole(r, texture.texels, texture.width, texture.height);
             r.alpha = texture.alpha;
             r.limit = brush->image.limit;
             r.tileX = tiles.x;
@@ -1872,6 +1905,17 @@ void drawNineSlice(Walk& w, const PrDrawCommand& c) {
             };
             w.b->pieces.push(p);
             prPathAddRect(w.f->shape, d);
+            // The samplers filter the pieces only if the pieces span the texture whole along the same axes, so that
+            // their taps beyond their texels read by the same address modes. Nearest reads one texel, with no sampler.
+            FragmentPaint piecewise{};
+            setWhole(piecewise, p.source, texture.width, texture.height);
+            if (i == 0) {
+                r.wholeX = piecewise.wholeX;
+                r.wholeY = piecewise.wholeY;
+            } else if ((piecewise.wholeX != r.wholeX || piecewise.wholeY != r.wholeY) &&
+                    r.sampling != PrDrawSampling_Nearest) {
+                r.read = FragmentImageRead_Texels;
+            }
         }
         fillPath(w, w.f->shape, PrPathFillRule_NonZero, c.antialias, inkOf(w, r, color));
     }
@@ -1897,6 +1941,8 @@ void writePixels(Walk& w, const PrDrawCommand& c) {
     r.tileY = PrDrawExtend_None;
     r.tile = prRectFromIRect(prIRectAt(c.writePixels.origin, prDrawImageExtent(image)));
     r.texels = PrRect{0, 0, width, height};
+    r.wholeX = 1;
+    r.wholeY = 1;
     r.texture = tableOf(w, texture);
     float white[4] = {1, 1, 1, 1};
     Ink ink = inkOf(w, r, white);
@@ -2293,6 +2339,8 @@ void placeLayer(Walk& w, FragmentPaint& r, const FragmentLayer& layer, const PrM
     r.tile = prRectFromIRect(prIRectAt(layer.origin, layer.extent));
     r.tileX = PrDrawExtend_None;
     r.tileY = PrDrawExtend_None;
+    r.wholeX = layer.exact || layer.mipmapped;
+    r.wholeY = r.wholeX;
     r.texture = tableOf(w, layer.texture);
 }
 

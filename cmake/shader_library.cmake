@@ -23,8 +23,10 @@
 # blob.
 #
 #   cmake -DSLANGC=<path> -DTARGETS=<target>[|<target>...] -DVARIABLE=<name> [-DINCLUDES=<directory>[|...]]
-#         [-DMETAL_SDK=<sdk>] -DSOURCE=<path> -DHEADER=<path> -DSCRATCH=<directory> -DROOT=<directory>
-#         [-DDEPFILE=<path>] -P shader_library.cmake
+#         [-DDEFINES=<macro>[|...]] [-DMETAL_SDK=<sdk>] -DSOURCE=<path> -DHEADER=<path> -DSCRATCH=<directory>
+#         -DROOT=<directory> [-DDEPFILE=<path>] -P shader_library.cmake
+#
+# DEFINES names macros that every target compiles the source with, each defined to 1, beside the target's own.
 #
 # ROOT is the directory that the header names the source relative to. METAL_SDK is the SDK that the metallib runs on:
 # macosx, the default, iphoneos or iphonesimulator.
@@ -56,6 +58,7 @@ set(STAGE_compute 2)
 
 string(REPLACE "|" ";" TARGETS "${TARGETS}")
 string(REPLACE "|" ";" INCLUDES "${INCLUDES}")
+string(REPLACE "|" ";" DEFINES "${DEFINES}")
 if (NOT EXISTS "${SLANGC}")
     message(FATAL_ERROR "shader_library: no slangc at ${SLANGC}")
 endif()
@@ -102,7 +105,7 @@ function(slang target directory output name)
     set(reflection "${directory}/${name}.json")
     set(depfile "${directory}/${name}.d")
     set(command "${SLANGC}" "${SOURCE}")
-    foreach (define IN LISTS DEFINE_${target})
+    foreach (define IN LISTS DEFINE_${target} DEFINES)
         list(APPEND command -D ${define}=1)
     endforeach()
     list(APPEND command -warnings-as-errors all -O2 -matrix-layout-row-major -reflection-json "${reflection}"
@@ -424,7 +427,8 @@ endfunction()
 
 # Compiles the WebGPU target: WGSL for each entry point on its own, so that an entry point that reaches resources by
 # handle, which WebGPU cannot run, leaves the module of every other entry point valid. Handles index binding arrays at
-# group 2, which the device refuses.
+# group 2, which the device refuses. Each module turns off WGSL's check that derivatives are taken in uniform control
+# flow, which the other targets do not make, so that derivatives follow their rules (pr/gpu.slang's prGpuDdxFine).
 function(compile_wgsl directory)
     slang(wgsl "${directory}" "" wgsl -target wgsl -no-codegen)
     entry_records("${REFLECTED}")
@@ -440,6 +444,8 @@ function(compile_wgsl directory)
         endforeach()
         slang(wgsl "${directory}" "${directory}/${name}.wgsl" "${name}" -target wgsl -entry "${name}" -stage ${option}
               -bindless-space-index 2)
+        file(READ "${directory}/${name}.wgsl" code)
+        file(WRITE "${directory}/${name}.wgsl" "diagnostic(off, derivative_uniformity);\n${code}")
         list(APPEND codes "${directory}/${name}.wgsl")
     endforeach()
     set(RECORDS ${RECORDS} PARENT_SCOPE)

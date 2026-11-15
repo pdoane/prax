@@ -204,6 +204,9 @@ struct FragmentPaint {
     uint32_t tileY;
     uint32_t sampling;              // Image: PrDrawSampling
     uint32_t read;                  // Image: FragmentImageRead
+    uint32_t sampler;               // Image read by FragmentImageRead_Sampler: the sampler, below kFragmentSamplers
+    uint32_t wholeX;                // Image: whether `texels` spans its texture whole along x
+    uint32_t wholeY;
     uint32_t texture;               // Image, Layer: an index into the frame's textures plus one
     uint32_t pieces;                // Image: the index of its first piece in the frame's pieces
     uint32_t pieceCount;            // Image: zero for an image in one piece
@@ -220,6 +223,7 @@ struct FragmentPaint {
 
     float limit;                    // Image: the brightest that a texel paints (prColorLimit), or zero for no limit
     uint32_t tileFlags;             // Image: PrDrawTileFlags
+    uint32_t _pad;
 };
 PR_NO_PADDING_END
 

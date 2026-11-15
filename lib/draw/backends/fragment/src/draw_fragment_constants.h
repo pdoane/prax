@@ -115,7 +115,8 @@ enum : uint32_t {
     // `texels` spans whole, a tap past the texture's edge reads as the axis's tile mode places it: clamped for Pad,
     // wrapped for Repeat, mirrored for Reflect, and transparent for None or for tiles with spacing. Along an axis that
     // `texels` spans in part, a tap past `texels` reads whatever texels lie around them (PrDrawSamplingFlag_Gutter),
-    // and a tap past the texture's edge is transparent. Pad keeps the point within the centers of the edge texels.
+    // and a tap past the texture's edge is transparent. Pad keeps the point within the centers of the edge texels. The
+    // paint's `sampler` holds those address modes.
     //
     // Nearest and Linear read the first level. Mipmap is trilinear and anisotropic, up to 16 taps, along the pixel's
     // footprint: the brush's change in texels from the pixel to its right and to its lower neighbor. Cubic is
@@ -129,9 +130,42 @@ enum : uint32_t {
 };
 typedef uint8_t FragmentImageRead;
 
+// An address mode of the samplers along one axis.
+enum : uint32_t {
+    FragmentAddress_Clamp,
+    FragmentAddress_Repeat,
+    FragmentAddress_Mirror,
+    FragmentAddress_Zero,             // transparent past the texture's edge
+};
+typedef uint8_t FragmentAddress;
+
+// The samplers that Image paints read by FragmentImageRead_Sampler filter with, which a paint's `sampler` indexes: one
+// for each pair of FragmentAddress along x and y, at x * 4 + y, filtering bilinearly from the first level, then from
+// kFragmentAnisotropicSamplers on, the same pairs filtering trilinearly and anisotropically along the pixel's
+// footprint.
+PR_FRAGMENT_CONSTANT uint32_t kFragmentAnisotropicSamplers = 16;
+PR_FRAGMENT_CONSTANT uint32_t kFragmentSamplers = 32;
+
 // The steps of a gradient's ramp table from 0 to 1, and the colors per unit of the parameter in a ramp's pieces that
 // mix nonlinearly (prDrawGradientRamp).
 PR_FRAGMENT_CONSTANT uint32_t kFragmentRampResolution = 256;
+
+// On a device without bindless, the Texture slots of a draw, each for one kind of texture that its instances read. A
+// run of instances draws in one draw while each slot that they read holds one texture. A layer reads its entry's
+// texture through a Layer slot, and the texture of the entry under it, if any, through the Under slot beside it.
+// draw_fragment.slang declares the slots by these numbers.
+enum : uint32_t {
+    FragmentSlot_Snapshot,      // the snapshot of the pass's layer (FragmentPass)
+    FragmentSlot_Coverage,      // an Atlas instance's page
+    FragmentSlot_Layer0,        // an Image paint's image and sampler, a Layer paint's layer, or a filter's first input
+    FragmentSlot_Under0,
+    FragmentSlot_Layer1,        // a clip's mask, or a filter step's second input
+    FragmentSlot_Under1,
+    FragmentSlot_Layer2,        // a group's mask, or a filter step's third input
+    FragmentSlot_Under2,
+    FragmentSlot_Count,
+};
+typedef uint32_t FragmentSlot;
 
 // A step of a filter, which a pass carries out over its instances' pixels into its layer. A step's inputs are up to
 // three layers, which it reads at pixels of the target. A layer is transparent outside itself. Colors are premultiplied

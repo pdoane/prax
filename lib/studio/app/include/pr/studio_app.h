@@ -68,9 +68,9 @@ typedef struct PrStudioAppDesc {
 } PrStudioAppDesc;
 
 // Runs an application as `desc` describes until it stops, and frees it. Returns NotSupported if the platform has no
-// application, or if a description without a pool gets no device. Returns InvalidState if the window of the description
-// failed to open, and Ok otherwise. The windows render once the device is ready. A device whose creation fails on the
-// pool is created again for a later frame, as a lost device is.
+// application, or if the creation of the device of a description without a pool fails. Returns InvalidState if the
+// window of the description failed to open, and Ok otherwise. The windows render once the device is ready. A device
+// whose creation fails on the pool is created again for a later frame, as a lost device is.
 PrStatus prStudioAppRun(const PrStudioAppDesc* desc);
 
 // Stops the run, as prAppStop does.

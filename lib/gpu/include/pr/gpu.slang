@@ -221,7 +221,9 @@ T prGpuLoad<T>(uint buffer, uint offset) {
 #endif
 
 // The derivatives of a value across a fragment's neighbors, computed for each pixel of a quad where the API tells fine
-// derivatives from coarse ones. Metal's are computed for each pixel.
+// derivatives from coarse ones. Metal's are computed for each pixel. A shader may take them in control flow that every
+// pixel of a quad takes alike, as one that depends only on a primitive's flat values does, on every target. WGSL's own
+// analysis cannot see that, and its modules turn that check off (cmake/shader_library.cmake).
 #if defined(PR_GPU_METAL)
 #define prGpuDdxFine(x) ddx(x)
 #define prGpuDdyFine(x) ddy(x)

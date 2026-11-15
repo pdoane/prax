@@ -127,7 +127,7 @@ third-party library. A development build (`PR_DEVELOP`), an examples build (`PR_
 | draw renderer | `PR_DRAW_CPU` | CPU renderer | every platform | on |
 | draw renderer | `PR_DRAW_CANVAS` | the browser's Canvas 2D | the web | on |
 | draw renderer | `PR_DRAW_TRIANGLES` | GPU renderer: colored and textured triangles | every platform | on |
-| draw renderer | `PR_DRAW_FRAGMENT` | GPU renderer: per-pixel coverage and paint evaluation | every platform but the web | on |
+| draw renderer | `PR_DRAW_FRAGMENT` | GPU renderer: per-pixel coverage and paint evaluation | every platform | on |
 | draw writer | `PR_DRAW_SVG` | SVG documents, which need `PR_DRAW_CPU` | every platform | on |
 | draw writer | `PR_DRAW_PDF` | tagged PDF documents, which need `PR_DRAW_CPU` | every platform | on |
 | fetch | `PR_FETCH_BUILTIN` | the Fetch Standard over `lib/http` | every platform | on |

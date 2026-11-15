@@ -11,10 +11,10 @@ namespace pr_impl {
 namespace {
 
 // Asks for the device, opens the description's window, and calls the application's start. Without a pool, the run fails
-// if there is no device.
+// if the device's creation failed. A creation that is still running ends during the frames.
 bool start(void* context, PrApp*) {
     PrStudioApp* s = static_cast<PrStudioApp*>(context);
-    if (!studioAppMakeDevice(s) && s->desc.pool == nullptr) {
+    if (!studioAppMakeDevice(s) && !studioAppCreatingDevice(s) && s->desc.pool == nullptr) {
         s->status = PrStatus_NotSupported;
         return false;
     }

@@ -75,9 +75,11 @@ if (PR_DRAW_FRAGMENT)
     pr_headers(pr_draw PUBLIC backends/fragment/include)
     target_compile_definitions(pr_draw PRIVATE PR_DRAW_HAS_FRAGMENT)
     # The fragment renderer's shaders share the frame's constants and records with its C++ (draw_fragment_constants.h
-    # and draw_fragment_records.h).
+    # and draw_fragment_records.h). They compile once for devices with bindless, and once for the slots alone.
     pr_slang(pr_draw backends/fragment/src/draw_fragment.slang VARIABLE kDrawFragmentShaders
         INCLUDE ${PROJECT_SOURCE_DIR}/lib)
+    pr_slang(pr_draw backends/fragment/src/draw_fragment.slang VARIABLE kDrawFragmentSlotShaders
+        INCLUDE ${PROJECT_SOURCE_DIR}/lib DEFINES PR_DRAW_FRAGMENT_SLOTS)
 endif()
 
 if (PR_DRAW_TRIANGLES)

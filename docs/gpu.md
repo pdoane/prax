@@ -73,6 +73,10 @@ SPIR-V hold every entry point in one module. Direct3D 12 takes DXIL for each ent
 takes DXBC of shader model 5.0. An entry point that reaches a resource by handle has no DXBC, so a Direct3D 11 device
 refuses a pipeline of it, as a WebGPU device does.
 
+A device without bindless runs only the entry points that reach their resources through slots. A renderer that
+reaches resources by handle where it can compiles its source a second time for such devices, with a macro of its own
+(`DEFINES` of `pr_slang`) that turns its handles into slots, as `lib/draw`'s fragment renderer does.
+
 `pr/gpu.slang` is the shaders' side of the interface. The source compiles once per backend with `PR_GPU_METAL`,
 `PR_GPU_VULKAN`, `PR_GPU_D3D12`, `PR_GPU_D3D11` or `PR_GPU_WEBGPU`, and the header hides what differs:
 

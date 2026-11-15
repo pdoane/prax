@@ -433,8 +433,8 @@ class ChromePage:
         self.server.shutdown()
 
     def message(self):
-        """Returns the next message from Chrome, or None if none arrives within a second. A message of the console is
-        kept in `logged`."""
+        """Returns the next message from Chrome, or None if none arrives within a second. A message of the console, and
+        an exception that the page did not catch, is kept in `logged`."""
         import json
         import socket
 
@@ -445,6 +445,10 @@ class ChromePage:
         if answer.get("method") == "Runtime.consoleAPICalled":
             self.logged.append(" ".join(str(argument.get("value", argument.get("description", "")))
                                         for argument in answer["params"]["args"]))
+        elif answer.get("method") == "Runtime.exceptionThrown":
+            details = answer["params"]["exceptionDetails"]
+            exception = details.get("exception", {})
+            self.logged.append("uncaught: " + exception.get("description", details.get("text", "")))
         return answer
 
     def call(self, method, parameters=None):

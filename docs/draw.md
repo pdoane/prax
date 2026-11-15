@@ -214,7 +214,9 @@ lowers both kinds to lists. Hinting applies only under a plain scale, and shapin
   sub-rectangle without a gutter,
   and an opaque host texture whose taps can land on no texel, read texels in the shader instead. Straight-alpha host
   textures are premultiplied after filtering, so the colors of their transparent texels bleed into their edges. A
-  projected group composites as one quad that samples its layer through the projection.
+  projected group composites as one quad that samples its layer through the projection. On a device without bindless,
+  each kind of texture that an instance reads has a slot of its own, an image's slot holds its sampler, and a run of
+  instances takes a new draw where the texture or the sampler in a slot changes.
 
 A device backend is a GPU-free builder that turns a list into a frame of plain data, plus one renderer that draws the
 frame on a `lib/gpu` device. The fragment renderer defines its records once, in a header that C++ and Slang share

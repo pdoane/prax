@@ -124,11 +124,12 @@ endfunction()
 # a header that holds the library's bytes as `const unsigned char <VARIABLE>[]`, which a source includes by the path of
 # the shader's directory under lib, or under the root outside lib: "<module>/.../<VARIABLE>.h". A shader includes
 # pr/gpu.slang, and INCLUDE names other directories that it includes from, and DEPENDS the files that it includes that
-# the build generates.
+# the build generates. DEFINES names macros that the source is compiled with, each defined to 1, so that one source
+# compiles into several libraries, each with a VARIABLE of its own.
 #
-#   pr_slang(<target> <source> VARIABLE <name> [INCLUDE <directory>...] [DEPENDS <file>...])
+#   pr_slang(<target> <source> VARIABLE <name> [INCLUDE <directory>...] [DEPENDS <file>...] [DEFINES <macro>...])
 function(pr_slang target source)
-    cmake_parse_arguments(PARSE_ARGV 2 SLANG "" "VARIABLE" "INCLUDE;DEPENDS")
+    cmake_parse_arguments(PARSE_ARGV 2 SLANG "" "VARIABLE" "INCLUDE;DEPENDS;DEFINES")
     cmake_path(ABSOLUTE_PATH source NORMALIZE)
     cmake_path(RELATIVE_PATH source BASE_DIRECTORY ${PROJECT_SOURCE_DIR} OUTPUT_VARIABLE relative)
     cmake_path(GET relative PARENT_PATH directory)
@@ -137,9 +138,11 @@ function(pr_slang target source)
     list(JOIN PR_SHADER_TARGETS "|" targets)
     set(includes ${PROJECT_SOURCE_DIR}/lib/gpu/include ${SLANG_INCLUDE})
     list(JOIN includes "|" includes)
+    list(JOIN SLANG_DEFINES "|" defines)
     add_custom_command(OUTPUT ${header}
         COMMAND ${CMAKE_COMMAND} -DSLANGC=${PR_SLANGC} -DTARGETS=${targets} -DVARIABLE=${SLANG_VARIABLE}
-            -DMETAL_SDK=${PR_METAL_SDK} -DINCLUDES=${includes} -DSOURCE=${source} -DHEADER=${header}
+            -DMETAL_SDK=${PR_METAL_SDK} -DINCLUDES=${includes} -DDEFINES=${defines} -DSOURCE=${source}
+            -DHEADER=${header}
             -DDEPFILE=${header}.d
             -DSCRATCH=${PROJECT_BINARY_DIR}/slang/${directory}/${SLANG_VARIABLE} -DROOT=${PROJECT_SOURCE_DIR}
             -P ${PROJECT_SOURCE_DIR}/cmake/shader_library.cmake

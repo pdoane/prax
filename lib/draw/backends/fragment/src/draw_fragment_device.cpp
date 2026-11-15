@@ -1,14 +1,17 @@
 // The fragment renderer's work on a GPU device.
 //
 // A frame's data, every array of its records, goes into the stream of the command buffer that prepares it, as one
-// allocation, and the shaders read each array from its offset there (draw_fragment.slang). The frame's texture table is
-// an array of texture handles, which instances and records index, so that any instance can read any texture. A pass
-// draws its instances as instanced strips. It issues one draw for each run of instances that either all read the
-// destination or all do not, with a pipeline for its target's format and that mode. Within a run that does not read the
-// destination, long runs of basic instances draw with a separate pipeline. Its shader handles only basic instances,
-// which make up most of a frame of text and rectangles, and it is much smaller than the shader for every instance.
-// Where the device's reads of the target are not ordered within a draw, a run that reads the destination is drawn in
-// batches of instances that cover disjoint pixels.
+// allocation, and the shaders read each array from its offset there (draw_fragment.slang). Instances and records name
+// textures by their index in the frame's table. On a device with bindless, the table is an array of texture handles, so
+// that any instance can read any texture. On a device of slots alone, the shaders compiled for slots read the data
+// through Buffer slot 0, and each kind of texture that an instance reads has a Texture slot of its own (FragmentSlot),
+// with an Image paint's sampler beside its texture, so a run of instances is split into a draw for each run of them
+// that reads one texture and one sampler in each slot. A pass draws its instances as instanced strips. It issues one
+// draw for each run of instances that either all read the destination or all do not, with a pipeline for its target's
+// format and that mode. Within a run that does not read the destination, long runs of basic instances draw with a
+// separate pipeline. Its shader handles only basic instances, which make up most of a frame of text and rectangles, and
+// it is much smaller than the shader for every instance. Where the device's reads of the target are not ordered within
+// a draw, a run that reads the destination is drawn in batches of instances that cover disjoint pixels.
 //
 // The textures that the frames request are the renderer's own, and rest in the accesses of shader reads. Layers come
 // from a pool. The queue executes the commands that read a returned layer before those of the frame that takes it next,
@@ -25,6 +28,7 @@
 #include "pr/raw_array.h"
 
 #include "draw/backends/fragment/src/kDrawFragmentShaders.h"
+#include "draw/backends/fragment/src/kDrawFragmentSlotShaders.h"
 
 namespace pr_impl {
 
@@ -108,12 +112,10 @@ enum {
 };
 typedef uint32_t FragmentPart;
 
-// The samplers that the shaders sample images with: one for each pair of address modes along x and y, at x * 4 + y,
-// filtering bilinearly from the first level, then the same pairs filtering trilinearly and anisotropically.
-constexpr uint32_t kFragmentSamplers = 32;
-
 // The uniforms of a frame's draws: each array's offset in the buffer that holds the frame's data, the samplers, and
-// that buffer. The shaders read the arrays as arrays of 4-vectors, as root data's arrays are (pr/gpu.slang).
+// that buffer. The shaders read the arrays as arrays of 4-vectors, as root data's arrays are (pr/gpu.slang). Through
+// slots, the offsets are from where the data is bound, and the samplers and the buffer are unused: each draw binds the
+// sampler of its Image paints beside their texture.
 struct FragmentUniforms {
     uint32_t parts[FragmentPart_Count];   // by FragmentPart, in bytes
     uint32_t samplers[kFragmentSamplers];
@@ -135,6 +137,8 @@ struct FragmentPush {
 struct FragmentFrameState {
     const FragmentFrame* frame;
     FragmentUniforms uniforms;
+    PrGpuBuffer data;                  // the buffer of the frame's data and its offset there, bound to Buffer slot 0
+    uint64_t dataOffset;
     bool prepared;
     RawArray<PrGpuTexture> textures;   // the frame's table, by index, zero for a texture that is gone
     RawArray<uint32_t> layers;         // for each of the frame's layers, its index in the pool, or kArrayMissing if not
@@ -148,6 +152,8 @@ struct FragmentDevice {
     PrGpuShaderLibrary* library;
     bool targetReads;               // the device reads the target (PrGpuFeatureFlag_TargetReads)
     bool orderedReads;              // the device's reads of the target are ordered within a draw
+    bool slots;                     // the device has no bindless, so the shaders read through slots
+    PrGpuTexture blank;             // slots: a transparent texel, bound to the slots that a draw leaves empty
     uint32_t samplers[kFragmentSamplers];
     RawArray<FragmentPipeline> pipelines;
     RawArray<FragmentOwnTexture> textures;
@@ -336,15 +342,155 @@ BasicRun basicRun(const FragmentFrame* frame, uint32_t start, uint32_t end) {
     return run;
 }
 
+// What a draw reads through its Texture slots, by FragmentSlot: each texture an index in the frame's table, and each
+// sampler an index below kFragmentSamplers, or kAny where its instances read none. The snapshot's slot is the pass's,
+// and is never set here.
+struct SlotTextures {
+    uint32_t at[FragmentSlot_Count];
+    uint32_t samplers[FragmentSlot_Count];
+};
+
+constexpr uint32_t kAny = 0xffffffffu;
+
+SlotTextures noSlotTextures() {
+    SlotTextures s;
+    for (uint32_t k = 0; k < FragmentSlot_Count; ++k) {
+        s.at[k] = kAny;
+        s.samplers[k] = kAny;
+    }
+    return s;
+}
+
+// Sets the Layer slot to the entry named by its index plus one, and the Under slot after it to the entry under it, as
+// draw_fragment.slang's layerAt reads them.
+void setLayer(const FragmentFrame* frame, FragmentSlot slot, uint32_t entry, SlotTextures& s) {
+    if (entry == 0 || entry > frame->textureCount)
+        return;
+    s.at[slot] = entry - 1;
+    uint32_t under = frame->textures[entry - 1].under;
+    if (under != 0 && under <= frame->textureCount)
+        s.at[slot + 1] = under - 1;
+}
+
+// The textures that the instance reads, as draw_fragment.slang's shade reads them.
+SlotTextures instanceTextures(const FragmentFrame* frame, const FragmentInstance& i) {
+    SlotTextures s = noSlotTextures();
+    if ((i.flags & FragmentInstanceFlag_Coverage) == FragmentCoverage_Atlas && i.data != 0)
+        s.at[FragmentSlot_Coverage] = i.data - 1;
+    if (i.clip != 0)
+        setLayer(frame, FragmentSlot_Layer1, frame->clips[i.clip - 1].mask, s);
+    if (i.paint == 0)
+        return s;
+    const FragmentPaint& r = frame->paints[i.paint - 1];
+    if (r.kind == FragmentPaintKind_Image && r.texture != 0) {
+        s.at[FragmentSlot_Layer0] = r.texture - 1;
+        // Nearest reads one texel, with no sampler.
+        if (r.read == FragmentImageRead_Sampler && r.sampling != PrDrawSampling_Nearest)
+            s.samplers[FragmentSlot_Layer0] = r.sampler;
+    }
+    if (r.kind == FragmentPaintKind_Layer)
+        setLayer(frame, FragmentSlot_Layer0, r.texture, s);
+    if (r.groupMask != FragmentMask_None)
+        setLayer(frame, FragmentSlot_Layer2, r.groupMaskTexture, s);
+    return s;
+}
+
+// Adds what `s` reads to `into`, unless a slot that both read would hold two textures or two samplers. Returns whether
+// it did.
+bool mergeSlotTextures(SlotTextures& into, const SlotTextures& s) {
+    auto conflicts = [](uint32_t a, uint32_t b) { return a != kAny && b != kAny && a != b; };
+    for (uint32_t k = 0; k < FragmentSlot_Count; ++k) {
+        if (conflicts(s.at[k], into.at[k]) || conflicts(s.samplers[k], into.samplers[k]))
+            return false;
+    }
+    for (uint32_t k = 0; k < FragmentSlot_Count; ++k) {
+        if (s.at[k] != kAny)
+            into.at[k] = s.at[k];
+        if (s.samplers[k] != kAny)
+            into.samplers[k] = s.samplers[k];
+    }
+    return true;
+}
+
+// What the Texture slots of a pass hold, by FragmentSlot: zero for a slot that holds no texture yet.
+struct SlotBindings {
+    PrGpuTexture textures[FragmentSlot_Count];
+    PrGpuSampler samplers[FragmentSlot_Count];
+};
+
+// Binds what a draw reads to its slots. A slot that the draw does not read keeps what it holds, or holds the blank
+// texture and the first sampler, since a draw reads every slot that its shaders use (pr/gpu.h). A texture that is gone
+// reads as the blank one.
+void bindSlotTextures(const FragmentDevice* d, const FragmentFrameState& state, PrGpuCommands* commands,
+        const SlotTextures& s, SlotBindings& bindings) {
+    for (uint32_t k = FragmentSlot_Coverage; k < FragmentSlot_Count; ++k) {
+        PrGpuTexture texture = bindings.textures[k].id != 0 ? bindings.textures[k] : d->blank;
+        if (s.at[k] != kAny) {
+            texture = d->blank;
+            if (s.at[k] < state.textures.count && state.textures.data[s.at[k]].id != 0)
+                texture = state.textures.data[s.at[k]];
+        }
+        PrGpuSampler sampler = bindings.samplers[k].id != 0 ? bindings.samplers[k] : PrGpuSampler{d->samplers[0]};
+        if (s.samplers[k] != kAny)
+            sampler = PrGpuSampler{d->samplers[s.samplers[k]]};
+        if (bindings.textures[k].id == texture.id && bindings.samplers[k].id == sampler.id)
+            continue;
+        prGpuCommandsSetTexture(commands, k, texture, sampler);
+        bindings.textures[k] = texture;
+        bindings.samplers[k] = sampler;
+    }
+}
+
+// Draws `count` instances from `first` with the push data. Through slots, it binds the textures that they read, and
+// issues a draw for each run of them that reads one texture and one sampler in each slot. A filter step's draw reads
+// its inputs.
+void drawInstances(const FragmentDevice* d, const FragmentFrame* frame, const FragmentFrameState& state,
+        SlotBindings& bindings, PrGpuPass* pass, FragmentPush& push, uint32_t first, uint32_t count,
+        const FragmentFilter* PR_NULLABLE filter) {
+    PrGpuCommands* commands = prGpuPassCommands(pass);
+    if (!d->slots) {
+        push.first = first;
+        prGpuCommandsSetPush(commands, &push, sizeof(push));
+        prGpuPassDraw(pass, 4, count, 0, 0);
+        return;
+    }
+    if (filter != nullptr) {
+        SlotTextures s = noSlotTextures();
+        for (uint32_t k = 0; k < 3; ++k)
+            setLayer(frame, FragmentSlot_Layer0 + 2 * k, filter->inputs[k], s);
+        bindSlotTextures(d, state, commands, s, bindings);
+        push.first = first;
+        prGpuCommandsSetPush(commands, &push, sizeof(push));
+        prGpuPassDraw(pass, 4, count, 0, 0);
+        return;
+    }
+    uint32_t end = first + count;
+    while (first < end) {
+        SlotTextures s = noSlotTextures();
+        uint32_t stop = first;
+        while (stop < end && mergeSlotTextures(s, instanceTextures(frame, frame->instances[stop])))
+            ++stop;
+        bindSlotTextures(d, state, commands, s, bindings);
+        push.first = first;
+        prGpuCommandsSetPush(commands, &push, sizeof(push));
+        prGpuPassDraw(pass, 4, stop - first, 0, 0);
+        first = stop;
+    }
+}
+
 // Draws the pass's instances into `pass`, whose attachment is the target or the pass's layer. It issues one draw for
 // each run of instances that either all read the destination or all do not, or runs the pass's filter step over them.
 // In a run that does not read the destination, long runs of basic instances draw with the basic pipeline. The target's
 // pixel (0, 0) is at `at` of the attachment, and `scissor` limits the draws.
-void encodePass(FragmentDevice* d, const FragmentFrame* frame, const FragmentPass& fp, PrGpuPass* pass,
-        PrIVec2 at, PrIRect scissor) {
+void encodePass(FragmentDevice* d, const FragmentFrame* frame, const FragmentFrameState& state, const FragmentPass& fp,
+        PrGpuPass* pass, PrIVec2 at, PrIRect scissor) {
     if (fp.count == 0)
         return;
     PrGpuCommands* commands = prGpuPassCommands(pass);
+    if (fp.snapshot != 0)
+        prGpuCommandsSetTexture(commands, FragmentSlot_Snapshot, layerTexture(d, state, fp.snapshot - 1),
+            PrGpuSampler{});
+    SlotBindings bindings{};
     PrGpuFormat format = prGpuPassFormats(pass).color[0];
     // The target's pixels that are drawn into, and their position in the pass's attachment.
     float into[4] = {0, 0, float(frame->extent.x), float(frame->extent.y)};
@@ -370,8 +516,7 @@ void encodePass(FragmentDevice* d, const FragmentFrame* frame, const FragmentPas
         if (pipeline.id == 0)
             return;
         prGpuCommandsSetPipeline(commands, pipeline);
-        prGpuCommandsSetPush(commands, &push, sizeof(push));
-        prGpuPassDraw(pass, 4, fp.count, 0, 0);
+        drawInstances(d, frame, state, bindings, pass, push, fp.first, fp.count, &frame->filters[fp.filter - 1]);
         return;
     }
     // The pixels that a draw may touch, which bound the batches of a run that reads the destination.
@@ -395,9 +540,7 @@ void encodePass(FragmentDevice* d, const FragmentFrame* frame, const FragmentPas
             PrGpuPipeline pipeline = pipelineFor(d, format, FragmentMode_Write);
             if (pipeline.id != 0) {
                 prGpuCommandsSetPipeline(commands, pipeline);
-                push.first = start;
-                prGpuCommandsSetPush(commands, &push, sizeof(push));
-                prGpuPassDraw(pass, 4, stop - start, 0, 0);
+                drawInstances(d, frame, state, bindings, pass, push, start, stop - start, nullptr);
             }
             start = stop;
             continue;
@@ -422,9 +565,7 @@ void encodePass(FragmentDevice* d, const FragmentFrame* frame, const FragmentPas
                     pipeline = pipelineFor(d, format, FragmentMode_Blend);
                 if (pipeline.id != 0) {
                     prGpuCommandsSetPipeline(commands, pipeline);
-                    push.first = start;
-                    prGpuCommandsSetPush(commands, &push, sizeof(push));
-                    prGpuPassDraw(pass, 4, to - start, 0, 0);
+                    drawInstances(d, frame, state, bindings, pass, push, start, to - start, nullptr);
                 }
                 start = to;
             }
@@ -438,9 +579,7 @@ void encodePass(FragmentDevice* d, const FragmentFrame* frame, const FragmentPas
         }
         prGpuCommandsSetPipeline(commands, pipeline);
         if (snapshot || d->orderedReads) {
-            push.first = start;
-            prGpuCommandsSetPush(commands, &push, sizeof(push));
-            prGpuPassDraw(pass, 4, stop - start, 0, 0);
+            drawInstances(d, frame, state, bindings, pass, push, start, stop - start, nullptr);
             start = stop;
             continue;
         }
@@ -469,9 +608,7 @@ void encodePass(FragmentDevice* d, const FragmentFrame* frame, const FragmentPas
                 ++batch;
             }
             prGpuPassSetScissor(pass, bounds);
-            push.first = start;
-            prGpuCommandsSetPush(commands, &push, sizeof(push));
-            prGpuPassDraw(pass, 4, batch - start, 0, 0);
+            drawInstances(d, frame, state, bindings, pass, push, start, batch - start, nullptr);
             start = batch;
         }
         prGpuPassSetScissor(pass, scissor);
@@ -555,9 +692,9 @@ void runRequests(FragmentDevice* d, const FragmentFrame* frame, PrGpuCommands* c
 }
 
 // Copies the frame's arrays into the stream of `commands`, with the table of texture handles, and fills the uniforms
-// with where they are.
-void writeData(const FragmentFrame* frame, const PrDrawBeneath* PR_NULLABLE beneath, PrGpuTexture hostBeneath,
-        uint32_t beneathId, PrGpuCommands* commands, FragmentFrameState* state) {
+// with where they are. Through slots, they are where the data is bound.
+void writeData(const FragmentDevice* d, const FragmentFrame* frame, const PrDrawBeneath* PR_NULLABLE beneath,
+        PrGpuTexture hostBeneath, uint32_t beneathId, PrGpuCommands* commands, FragmentFrameState* state) {
     auto view = [](const void* PR_NULLABLE bytes, size_t size) {
         return PrByteView{static_cast<const uint8_t*>(bytes), size};
     };
@@ -586,10 +723,15 @@ void writeData(const FragmentFrame* frame, const PrDrawBeneath* PR_NULLABLE bene
     };
     PrGpuBuffer buffer{};
     uint64_t offsets[FragmentPart_Count];
-    uint8_t* bytes = static_cast<uint8_t*>(prGpuCommandsStreamGather(commands, parts, FragmentPart_Count, 0, &buffer, offsets));
+    PrGpuBufferUsageFlags usage = d->slots ? PrGpuBufferUsageFlag_Storage : 0;
+    uint8_t* bytes =
+        static_cast<uint8_t*>(prGpuCommandsStreamGather(commands, parts, FragmentPart_Count, usage, &buffer, offsets));
+    uint64_t base = d->slots ? offsets[0] : 0;
     for (uint32_t part = 0; part < FragmentPart_Count; ++part)
-        state->uniforms.parts[part] = uint32_t(offsets[part]);
+        state->uniforms.parts[part] = uint32_t(offsets[part] - base);
     state->uniforms.data = buffer.id;
+    state->data = buffer;
+    state->dataOffset = base;
     // The host's texture beneath the render is placed so that its texels line up with the target's pixels.
     FragmentTexture* entries = reinterpret_cast<FragmentTexture*>(bytes + (offsets[FragmentPart_Entries] - offsets[0]));
     for (uint32_t i = 0; i < frame->textureCount && hostBeneath.id != 0 && beneathId != 0; ++i) {
@@ -603,28 +745,54 @@ void writeData(const FragmentFrame* frame, const PrDrawBeneath* PR_NULLABLE bene
         table[i] = state->textures.data[i].id;
 }
 
+// Sets the frame's uniforms for the draws recorded after the call, and through slots binds its data.
+void bindFrame(const FragmentDevice* d, const FragmentFrameState& state, PrGpuCommands* commands) {
+    prGpuCommandsSetUniforms(commands, &state.uniforms, sizeof(state.uniforms));
+    if (d->slots)
+        prGpuCommandsSetBuffer(commands, 0, state.data, state.dataOffset);
+}
+
 } // namespace
 
 PrStatus fragmentDeviceCreate(PrGpuDevice* device, FragmentDevice* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;
-    // The renderer's shaders reach its resources by handle.
-    if ((prGpuDeviceInfo(device).features & PrGpuFeatureFlag_Bindless) == 0)
+    // The shaders reach the frame's resources by handle, or through slots: the data's buffer, the snapshot's texture
+    // and a draw's textures.
+    const PrGpuDeviceInfo& info = prGpuDeviceInfo(device);
+    bool slots = (info.features & PrGpuFeatureFlag_Bindless) == 0;
+    if (slots && (info.maxBufferSlots < 1 || info.maxTextureSlots < FragmentSlot_Count))
         return PrStatus_NotSupported;
+    const unsigned char* shaders = slots ? kDrawFragmentSlotShaders : kDrawFragmentShaders;
+    uint64_t size = slots ? sizeof(kDrawFragmentSlotShaders) : sizeof(kDrawFragmentShaders);
     PrGpuShaderLibrary* library = nullptr;
-    PrStatus status = prGpuShaderLibraryCreate(device, kDrawFragmentShaders, sizeof(kDrawFragmentShaders), &library);
+    PrStatus status = prGpuShaderLibraryCreate(device, shaders, size, &library);
     if (status != PrStatus_Ok)
         return status;
     FragmentDevice* d = allocZeroed<FragmentDevice>();
     d->device = device;
     d->library = library;
-    PrGpuFeatureFlags features = prGpuDeviceInfo(device).features;
-    d->targetReads = (features & PrGpuFeatureFlag_TargetReads) != 0;
-    d->orderedReads = (features & PrGpuFeatureFlag_OrderedTargetReads) != 0;
+    d->slots = slots;
+    d->targetReads = (info.features & PrGpuFeatureFlag_TargetReads) != 0;
+    d->orderedReads = (info.features & PrGpuFeatureFlag_OrderedTargetReads) != 0;
+    if (slots) {
+        // The texture of the slots that a draw does not read.
+        PrGpuTextureDesc desc = prGpuTextureDesc2d(PrGpuFormat_Rgba8, PrUVec2{1, 1}, PrGpuTextureUsageFlag_Sampled);
+        desc.name = "fragment blank";
+        status = prGpuTextureCreate(device, &desc, &d->blank);
+        if (status != PrStatus_Ok) {
+            fragmentDeviceDestroy(d);
+            return status;
+        }
+        const uint8_t transparent[4] = {};
+        prGpuTextureWrite(device, d->blank, PrIVec2{0, 0}, PrPixelView{transparent, 4, {1, 1}});
+    }
+    // By FragmentAddress.
     const PrGpuAddress modes[4] = {PrGpuAddress_Clamp, PrGpuAddress_Repeat, PrGpuAddress_Mirror, PrGpuAddress_Border};
     for (uint32_t i = 0; i < kFragmentSamplers; ++i) {
-        bool anisotropic = i >= 16;
-        PrGpuSamplerDesc desc = prGpuSamplerDescDefault(PrGpuFilter_Linear, modes[(i % 16) / 4]);
-        desc.address[1] = modes[i % 4];
+        bool anisotropic = i >= kFragmentAnisotropicSamplers;
+        uint32_t pair = i % kFragmentAnisotropicSamplers;
+        PrGpuSamplerDesc desc = prGpuSamplerDescDefault(PrGpuFilter_Linear, modes[pair / 4]);
+        desc.address[1] = modes[pair % 4];
         desc.maxAnisotropy = anisotropic ? 16 : 1;
         PrGpuSampler sampler{};
         status = prGpuSamplerIntern(device, &desc, &sampler);
@@ -646,6 +814,7 @@ void fragmentDeviceDestroy(FragmentDevice* PR_NULLABLE device) {
     for (uint32_t i = 0; i < d->pipelines.count; ++i)
         prGpuPipelineDestroy(d->device, d->pipelines.data[i].pipeline);
     d->pipelines.reset();
+    prGpuTextureDestroy(d->device, d->blank);
     prGpuShaderLibraryDestroy(d->library);
     prMemoryFree(d);
 }
@@ -708,9 +877,9 @@ void fragmentDevicePrepare(FragmentDevice* d, const FragmentFrame* frame, PrGpuC
     }
     for (uint32_t i = 0; i < kFragmentSamplers; ++i)
         state->uniforms.samplers[i] = d->samplers[i];
-    writeData(frame, beneath, hostBeneath, beneathId, commands, state);
+    writeData(d, frame, beneath, hostBeneath, beneathId, commands, state);
     state->prepared = true;
-    prGpuCommandsSetUniforms(commands, &state->uniforms, sizeof(state->uniforms));
+    bindFrame(d, *state, commands);
     // The passes into layers. Each begins and ends with a barrier, since the passes after read what it draws.
     for (uint32_t i = 0; i < frame->passCount; ++i) {
         const FragmentPass& fp = frame->passes[i];
@@ -728,8 +897,6 @@ void fragmentDevicePrepare(FragmentDevice* d, const FragmentFrame* frame, PrGpuC
             copySnapshot(d, frame, *state, fp, layer, commands);
             continue;
         }
-        if (fp.snapshot != 0)
-            prGpuCommandsSetTexture(commands, 0, layerTexture(d, *state, fp.snapshot - 1), PrGpuSampler{});
         prGpuCommandsTextureBarrier(commands, layer, all, PrGpuAccessFlag_FragmentRead,
             PrGpuAccessFlag_ColorAttachment);
         PrGpuPassDesc desc = prGpuPassDescColor(layer, fp.clear ? PrGpuLoad_Clear : PrGpuLoad_Keep, PrColor{});
@@ -738,12 +905,12 @@ void fragmentDevicePrepare(FragmentDevice* d, const FragmentFrame* frame, PrGpuC
         PrUVec2 extent = prGpuPassExtent(pass);
         PrIRect whole{0, 0, int32_t(extent.x), int32_t(extent.y)};
         if (fp.beneath && beneath != nullptr && beneath->kind == PrDrawBeneathKind_Draw) {
-            // The host draws first, in the same pass, and may leave any state, so the pass sets its uniforms again.
+            // The host draws first, in the same pass, and may leave any state, so the pass binds its frame again.
             const FragmentLayer& l = frame->layers[fp.layer - 1];
             beneath->draw(beneath->context, pass, prIRectAt(l.origin, l.extent));
-            prGpuCommandsSetUniforms(commands, &state->uniforms, sizeof(state->uniforms));
+            bindFrame(d, *state, commands);
         }
-        encodePass(d, frame, fp, pass, PrIVec2{0, 0}, whole);
+        encodePass(d, frame, *state, fp, pass, PrIVec2{0, 0}, whole);
         prGpuPassEnd(pass);
         prGpuCommandsTextureBarrier(commands, layer, all, PrGpuAccessFlag_ColorAttachment,
             PrGpuAccessFlag_FragmentRead);
@@ -764,10 +931,10 @@ void fragmentDeviceRender(FragmentDevice* d, const FragmentFrame* frame, PrGpuPa
     }, whole);
     if (scissor.right <= scissor.left || scissor.bottom <= scissor.top)
         return;
-    prGpuCommandsSetUniforms(prGpuPassCommands(pass), &state->uniforms, sizeof(state->uniforms));
+    bindFrame(d, *state, prGpuPassCommands(pass));
     for (uint32_t i = 0; i < frame->passCount; ++i) {
         if (frame->passes[i].layer == 0)
-            encodePass(d, frame, frame->passes[i], pass, origin, scissor);
+            encodePass(d, frame, *state, frame->passes[i], pass, origin, scissor);
     }
     // The viewport and scissor over the whole attachments, so that the host can continue to draw in the pass.
     prGpuPassSetViewport(pass, PrRect{0, 0, float(extent.x), float(extent.y)}, 0, 1);

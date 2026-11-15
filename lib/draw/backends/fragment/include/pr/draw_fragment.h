@@ -1,5 +1,12 @@
 // The fragment draw renderer, which turns a list into instances whose coverage, clips and paint a fragment shader
 // evaluates for each pixel, on a GPU device.
+//
+// It runs on devices of either binding tier of pr/gpu.h, and renders alike on both. Its shaders filter images with the
+// hardware's samplers where that is exact, and by reading texels otherwise. With PrGpuFeatureFlag_Bindless, they reach
+// the frame's textures and samplers by handle. On a device of slots alone, each kind of texture that an instance reads
+// has a slot of its own, and an image's slot holds its sampler, so a run of instances takes a new draw where an
+// instance reads a texture or a sampler other than the one in its slot. Such a device needs a Buffer slot and eight
+// Texture slots.
 
 #pragma once
 
