@@ -30,6 +30,7 @@ enum {
     PrGpuShaderTarget_SpirvLocalRead = 3,   // a SPIR-V module that reads the target with dynamic rendering local read
     PrGpuShaderTarget_Dxil = 4,             // DXIL, one blob for each entry point
     PrGpuShaderTarget_Wgsl = 5,             // WGSL source, one module for each entry point
+    PrGpuShaderTarget_Dxbc = 6,             // DXBC, one blob for each entry point, empty for one that has no code
 };
 typedef uint32_t PrGpuShaderTarget;
 

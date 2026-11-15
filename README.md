@@ -138,6 +138,7 @@ third-party library. A development build (`PR_DEVELOP`), an examples build (`PR_
 | gpu | `PR_GPU_METAL` | Metal 3 | macOS | on |
 | gpu | `PR_GPU_METAL4` | Metal 4, for experiments | macOS | on |
 | gpu | `PR_GPU_D3D12` | Direct3D 12 | Windows | on |
+| gpu | `PR_GPU_D3D11` | Direct3D 11, with slots and no bindless | Windows | on |
 | gpu | `PR_GPU_VULKAN` | Vulkan | every platform but the web and iOS | on for Linux and Android |
 | gpu | `PR_GPU_MEMORY` | memory, without shaders or presentation | every platform | on |
 | gpu | `PR_GPU_WEBGPU` | WebGPU, with slots and no bindless | the web | on |

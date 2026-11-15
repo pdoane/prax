@@ -1,6 +1,6 @@
 // The shaders' side of pr/gpu.h: handles to resources, the root data of a draw or a dispatch, and reading a pass's
 // target. A shader includes this file (`#include "pr/gpu.slang"`), which cmake/shader_library.cmake compiles once for
-// each backend with PR_GPU_METAL, PR_GPU_VULKAN, PR_GPU_D3D12 or PR_GPU_WEBGPU defined to 1.
+// each backend with PR_GPU_METAL, PR_GPU_VULKAN, PR_GPU_D3D12, PR_GPU_D3D11 or PR_GPU_WEBGPU defined to 1.
 //
 // A shader declares its root data as structures of its own, with the macros below:
 //
@@ -19,8 +19,9 @@
 
 #pragma once
 
-#if !defined(PR_GPU_METAL) && !defined(PR_GPU_VULKAN) && !defined(PR_GPU_D3D12) && !defined(PR_GPU_WEBGPU)
-#error "pr/gpu.slang is compiled for one backend: PR_GPU_METAL, PR_GPU_VULKAN, PR_GPU_D3D12 or PR_GPU_WEBGPU"
+#if !defined(PR_GPU_METAL) && !defined(PR_GPU_VULKAN) && !defined(PR_GPU_D3D12) && !defined(PR_GPU_D3D11) && \
+    !defined(PR_GPU_WEBGPU)
+#error "pr/gpu.slang is compiled for one backend, which PR_GPU_<BACKEND> names"
 #endif
 
 // The root data. Push data is push constants on Vulkan, root constants on Direct3D 12, and a buffer of the command
@@ -123,6 +124,30 @@ struct PrGpuMetalTextureAttribute {
 #define PR_GPU_RW_TEXTURE_REGISTER(slot) : register(PR_GPU_PASTE(u, PR_GPU_RW_TEXTURE_INDEX_##slot), space2)
 #define PR_GPU_RW_TEXTURE_ATTRIBUTE(slot) [PrGpuMetalTexture(PR_GPU_RW_TEXTURE_INDEX_##slot)]
 
+#elif defined(PR_GPU_D3D11)
+
+// Direct3D 11 has one space of registers of each kind, which the slots split: Buffer slots at t0 to t3, Texture slots
+// at t4 to t11 with their samplers at s0 to s7, RwTexture slots at u0 to u3 and RwBuffer slots at u4 to u7. A fragment
+// shader shares the u registers with the pass's color attachments, which take the first of them.
+#define PR_GPU_TEXTURE_INDEX_0 4
+#define PR_GPU_TEXTURE_INDEX_1 5
+#define PR_GPU_TEXTURE_INDEX_2 6
+#define PR_GPU_TEXTURE_INDEX_3 7
+#define PR_GPU_TEXTURE_INDEX_4 8
+#define PR_GPU_TEXTURE_INDEX_5 9
+#define PR_GPU_TEXTURE_INDEX_6 10
+#define PR_GPU_TEXTURE_INDEX_7 11
+#define PR_GPU_RW_BUFFER_INDEX_0 4
+#define PR_GPU_RW_BUFFER_INDEX_1 5
+#define PR_GPU_RW_BUFFER_INDEX_2 6
+#define PR_GPU_RW_BUFFER_INDEX_3 7
+#define PR_GPU_BUFFER_REGISTER(slot) : register(t##slot)
+#define PR_GPU_RW_BUFFER_REGISTER(slot) : register(PR_GPU_PASTE(u, PR_GPU_RW_BUFFER_INDEX_##slot))
+#define PR_GPU_TEXTURE_REGISTER(slot) : register(PR_GPU_PASTE(t, PR_GPU_TEXTURE_INDEX_##slot))
+#define PR_GPU_SAMPLER_REGISTER(slot) : register(s##slot)
+#define PR_GPU_RW_TEXTURE_REGISTER(slot) : register(u##slot)
+#define PR_GPU_RW_TEXTURE_ATTRIBUTE(slot)
+
 #elif defined(PR_GPU_VULKAN) || defined(PR_GPU_WEBGPU)
 
 // WebGPU binds the slots at group 1, at their Vulkan bindings.
@@ -181,8 +206,9 @@ T prGpuLoad<T>(uint buffer, uint offset) {
 
 // Returns the resource that a handle names, from the device's descriptor heap: on Vulkan, the bindless set at set 2,
 // which the backend lays out as Slang's default mapping of handles reads it (cmake/shader_library.cmake pins the set),
-// and on Direct3D 12, the heaps of shader model 6.6. WebGPU has no bindless, so an entry point that reaches a resource
-// by handle reads a binding array at group 2, which the device refuses.
+// and on Direct3D 12, the heaps of shader model 6.6. WebGPU and Direct3D 11 have no bindless, so an entry point that
+// reaches a resource by handle reads a binding array in space 2, which cmake/shader_library.cmake compiles to no code
+// for Direct3D 11 and the WebGPU device refuses.
 T prGpuGet<T : IOpaqueDescriptor>(uint handle) {
     return defaultGetDescriptorFromHandle(DescriptorHandle<T>(uint2(handle, 0)));
 }

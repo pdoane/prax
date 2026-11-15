@@ -3,8 +3,9 @@
 #
 # A library holds every entry point of the source, each named by its function, with its stage and, for a compute shader,
 # its group size, which the reflection of the compiled code gives. It holds code for each target named, for the backend
-# that runs it: a metallib for Metal, a SPIR-V module for Vulkan, DXIL for Direct3D 12, and WGSL for WebGPU. The source
-# is compiled once per target with PR_GPU_METAL, PR_GPU_VULKAN, PR_GPU_D3D12 or PR_GPU_WEBGPU defined to 1.
+# that runs it: a metallib for Metal, a SPIR-V module for Vulkan, DXIL for Direct3D 12, DXBC for Direct3D 11, and WGSL
+# for WebGPU. The source is compiled once per target with PR_GPU_METAL, PR_GPU_VULKAN, PR_GPU_D3D12, PR_GPU_D3D11 or
+# PR_GPU_WEBGPU defined to 1.
 #
 # Vulkan has two targets. `spirv` is the baseline, which does not read a pipeline's target. `spirv_local_read` is for
 # devices with dynamic rendering local read, and reads the target as an input attachment. It is compiled with
@@ -39,11 +40,13 @@ set(TARGET_spirv 2)
 set(TARGET_spirv_local_read 3)
 set(TARGET_dxil 4)
 set(TARGET_wgsl 5)
+set(TARGET_dxbc 6)
 set(DEFINE_metal PR_GPU_METAL)
 set(DEFINE_spirv PR_GPU_VULKAN)
 set(DEFINE_spirv_local_read PR_GPU_VULKAN PR_GPU_LOCAL_READ)
 set(DEFINE_dxil PR_GPU_D3D12)
 set(DEFINE_wgsl PR_GPU_WEBGPU)
+set(DEFINE_dxbc PR_GPU_D3D11)
 
 # pr/gpu_backend.h's PrGpuShaderStage, by the name that Slang's reflection gives the stage, which slangc's -stage option
 # also takes.
@@ -387,6 +390,38 @@ function(compile_dxil directory)
     set(INPUTS ${INPUTS} PARENT_SCOPE)
 endfunction()
 
+# Compiles the Direct3D 11 target: the DXBC of each entry point, compiled on its own for shader model 5.0. Shader model
+# 5.0 has no descriptor heaps, so an entry point that reaches a resource by handle, which its HLSL reads from a heap,
+# has no code, and the device refuses a pipeline of it.
+function(compile_dxbc directory)
+    slang(dxbc "${directory}" "" dxbc -target hlsl -no-codegen)
+    check_root_layout("${REFLECTED}")
+    entry_records("${REFLECTED}")
+    set(codes "")
+    foreach (record IN LISTS RECORDS)
+        string(REPLACE "|" ";" fields "${record}")
+        list(GET fields 0 name)
+        list(GET fields 1 stage)
+        foreach (stage_name vertex fragment compute)
+            if (STAGE_${stage_name} EQUAL stage)
+                set(option ${stage_name})
+            endif()
+        endforeach()
+        slang(dxbc "${directory}" "${directory}/${name}.hlsl" "${name}" -target hlsl -entry "${name}" -stage ${option})
+        file(READ "${directory}/${name}.hlsl" hlsl)
+        if (hlsl MATCHES "DescriptorHeap")
+            file(WRITE "${directory}/${name}.dxbc" "")
+        else()
+            slang(dxbc "${directory}" "${directory}/${name}.dxbc" "${name}" -target dxbc -profile sm_5_0 -entry "${name}"
+                  -stage ${option})
+        endif()
+        list(APPEND codes "${directory}/${name}.dxbc")
+    endforeach()
+    set(RECORDS ${RECORDS} PARENT_SCOPE)
+    set(CODES ${codes} PARENT_SCOPE)
+    set(INPUTS ${INPUTS} PARENT_SCOPE)
+endfunction()
+
 # Compiles the WebGPU target: WGSL for each entry point on its own, so that an entry point that reaches resources by
 # handle, which WebGPU cannot run, leaves the module of every other entry point valid. Handles index binding arrays at
 # group 2, which the device refuses.
@@ -466,6 +501,8 @@ foreach (target IN LISTS TARGETS)
         compile_dxil("${scratch}")
     elseif (target STREQUAL "wgsl")
         compile_wgsl("${scratch}")
+    elseif (target STREQUAL "dxbc")
+        compile_dxbc("${scratch}")
     else()
         message(FATAL_ERROR "shader_library: no target named ${target}")
     endif()

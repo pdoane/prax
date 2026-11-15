@@ -9,6 +9,7 @@ each backend runs it on one graphics API.
 | `metal` | Metal 3, the default on macOS | macOS (`PR_GPU_METAL`) |
 | `metal4` | Metal 4, kept for experiments | macOS (`PR_GPU_METAL4`) |
 | `d3d12` | Direct3D 12, shader model 6.6, resource binding tier 3, enhanced barriers | Windows (`PR_GPU_D3D12`) |
+| `d3d11` | Direct3D 11.1 on feature level 11_0, with slots and no bindless | Windows (`PR_GPU_D3D11`) |
 | `vulkan` | Vulkan 1.3, with mutable descriptors and push descriptors | Linux and Android (`PR_GPU_VULKAN`) |
 | `webgpu` | the page's WebGPU, with slots and no bindless | the web (`PR_GPU_WEBGPU`) |
 | `memory` | memory, with no shaders, for renderers that draw on the CPU | every platform (`PR_GPU_MEMORY`) |
@@ -68,10 +69,12 @@ a 3D renderer needs it.
 Shaders are Slang. `cmake/shader_library.cmake` compiles each source at build time into one library per backend that the
 platform builds, which a header embeds (`pr_slang` in `cmake/build.cmake`). The library names each entry point, its stage
 and, for compute, its group size, which the reflection gives, so a dispatch and its shader cannot disagree. Metal and
-SPIR-V hold every entry point in one module. Direct3D 12 takes DXIL for each entry point on its own.
+SPIR-V hold every entry point in one module. Direct3D 12 takes DXIL for each entry point on its own, and Direct3D 11
+takes DXBC of shader model 5.0. An entry point that reaches a resource by handle has no DXBC, so a Direct3D 11 device
+refuses a pipeline of it, as a WebGPU device does.
 
 `pr/gpu.slang` is the shaders' side of the interface. The source compiles once per backend with `PR_GPU_METAL`,
-`PR_GPU_VULKAN` or `PR_GPU_D3D12`, and the header hides what differs:
+`PR_GPU_VULKAN`, `PR_GPU_D3D12`, `PR_GPU_D3D11` or `PR_GPU_WEBGPU`, and the header hides what differs:
 
 | | Metal | Direct3D 12 | Vulkan |
 | --- | --- | --- | --- |

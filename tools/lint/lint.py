@@ -689,6 +689,7 @@ WRAPPERS = {
                                                                     "CoreText/CoreText.h"},
     "lib/font/backends/coretext/src/font_coretext.cpp": {"CoreText/CoreText.h"},
     "lib/font/backends/directwrite/src/font_directwrite.cpp": {"dwrite_3.h", "windows.h"},
+    "lib/gpu/backends/d3d11/src/gpu_d3d11.cpp": {"d3d11_4.h", "dcomp.h", "dxgi1_6.h", "stdio.h", "windows.h"},
     "lib/gpu/backends/d3d12/src/gpu_d3d12.cpp": {"d3d12.h", "dcomp.h", "dxgi1_6.h", "stdio.h", "windows.h"},
     "lib/gpu/backends/vulkan/src/vulkan_internal.h": {"vulkan/vulkan_core.h"},
     "lib/gpu/backends/vulkan/src/vulkan_platform.cpp": {"dlfcn.h", "stdio.h", "stdlib.h", "vulkan/vulkan_metal.h",

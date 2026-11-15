@@ -26,6 +26,9 @@
 #if defined(PR_GPU_HAS_D3D12)
 #include "pr/gpu_d3d12.h"
 #endif
+#if defined(PR_GPU_HAS_D3D11)
+#include "pr/gpu_d3d11.h"
+#endif
 #if defined(PR_GPU_HAS_CANVAS2D)
 #include "pr/gpu_canvas2d.h"
 #endif
@@ -160,7 +163,7 @@ PrGpuBuffer recordRead(PrGpuCommands* commands, PrGpuTexture texture, uint32_t a
 }
 
 constexpr PrStringView kBackendNames[PrGpuBackend_Count] = {
-    "default", "metal", "metal4", "vulkan", "d3d12", "webgpu", "memory", "canvas2d",
+    "default", "metal", "metal4", "vulkan", "d3d12", "d3d11", "webgpu", "memory", "canvas2d",
 };
 
 // The backends in the build, the platform's own first and memory last, and then Default. Default creates the first of
@@ -177,6 +180,9 @@ constexpr PrGpuBackend kBuilt[] = {
 #endif
 #if defined(PR_GPU_HAS_VULKAN)
     PrGpuBackend_Vulkan,
+#endif
+#if defined(PR_GPU_HAS_D3D11)
+    PrGpuBackend_D3d11,
 #endif
 #if defined(PR_GPU_HAS_WEBGPU)
     PrGpuBackend_Webgpu,
@@ -245,6 +251,17 @@ PrGpuDevice* PR_NULLABLE create(PrGpuBackend backend, const PrGpuDeviceOptions& 
             d3d12.ready = o.ready;
             d3d12.readyContext = o.readyContext;
             return prGpuD3d12Create(&d3d12);
+        }
+#endif
+#if defined(PR_GPU_HAS_D3D11)
+        case PrGpuBackend_D3d11: {
+            // Direct3D 11 has no bindless, so every device of it binds resources only to slots.
+            PrGpuD3d11Options d3d11 = prGpuD3d11OptionsDefault();
+            d3d11.validation = d3d11.validation || o.validation;
+            d3d11.pool = o.pool;
+            d3d11.ready = o.ready;
+            d3d11.readyContext = o.readyContext;
+            return prGpuD3d11Create(&d3d11);
         }
 #endif
 #if defined(PR_GPU_HAS_WEBGPU)
