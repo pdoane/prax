@@ -52,11 +52,11 @@ typedef uint64_t PrGpuFence;
 
 // The library's device backends, which the build turns on (README.md), and Default. Default is the backend that the
 // environment variable PR_GPU_BACKEND names (prGpuBackendFromName), if the build has it, so a program and its tests run
-// on any backend in the build. Otherwise Default is the first backend of the build that has not failed, trying the
-// platform's own first and the memory backend last. A backend has failed once a creation by it fails with NotSupported,
-// which only a creation finds out. A creation without a pool whose failure is known when it returns moves on to the
-// next backend at once. Otherwise the device is lost, and the application's recovery from the loss creates a device of
-// the next backend.
+// on any backend in the build. Otherwise Default is the first backend of the build that has not failed and makes a
+// device with the options, as one of slots alone, trying the platform's own first and the memory backend last. A
+// backend has failed once a creation by it fails with NotSupported, which only a creation finds out. A creation whose
+// failure is known when it returns moves on to the next backend at once. Otherwise the device is lost, and the
+// application's recovery from the loss creates a device of the next backend.
 enum {
     PrGpuBackend_Default,
     PrGpuBackend_Metal,

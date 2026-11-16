@@ -299,18 +299,31 @@ float3 shapedDistance(FragmentCornerRect s, float2 p) {
     return d.x > d.y ? float3(max(d.x, 0.0) + min(d.x, 0.0), side.x, 0) : float3(d.y, 0, side.y);
 }
 
-// The fraction of the pixel inside the shape at the point of its space. How fast the distance changes across pixels is
-// its direction through the point's own rate of change, which has no kinks.
-float shapedCoverage(FragmentCornerRect s, float2 p) {
+// The fraction of the pixel inside the shape at the point of its space, whose rates of change across the target's x and
+// y are `dx` and `dy`. How fast the distance changes across pixels is its direction through the point's own rate of
+// change, which has no kinks.
+float shapedCoverage(FragmentCornerRect s, float2 p, float2 dx, float2 dy) {
     float3 d = shapedDistance(s, p);
-    float2 across = float2(dot(d.yz, prGpuDdxFine(p)), dot(d.yz, prGpuDdyFine(p)));
-    float g = length(across);
+    float g = length(float2(dot(d.yz, dx), dot(d.yz, dy)));
     return g > 0 ? clamp(0.5 - d.x / g, 0.0, 1.0) : (d.x < 0 ? 1.0 : 0.0);
 }
 
-// The fraction of the pixel inside a clip's shape, whose transform maps the pixel into its space.
+// The fraction of the pixel inside the shape at the point of its space, taking the point's rates of change from the
+// pixel's neighbors.
+float shapedCoverage(FragmentCornerRect s, float2 p) {
+    return shapedCoverage(s, p, prGpuDdxFine(p), prGpuDdyFine(p));
+}
+
+// The fraction of the pixel inside a clip's shape, whose transform maps the pixel into its space. The mapped point's
+// rates of change come from the transform rather than the pixel's neighbors, so that it needs no gradient instruction
+// and can be called in a loop that varies across pixels.
 float shapeCoverage(FragmentClipShape s, float2 pixel) {
-    float c = shapedCoverage(s.shape, mapPoint(s.transform, pixel));
+    FragmentMatrix3 m = s.transform;
+    float w = dot(float3(m.m[2][0], m.m[2][1], m.m[2][2]), float3(pixel, 1));
+    float2 p = mapPoint(m, pixel);
+    float2 dx = (float2(m.m[0][0], m.m[1][0]) - p * m.m[2][0]) / w;
+    float2 dy = (float2(m.m[0][1], m.m[1][1]) - p * m.m[2][1]) / w;
+    float c = shapedCoverage(s.shape, p, dx, dy);
     return s.invert != 0 ? 1 - c : c;
 }
 
@@ -441,15 +454,14 @@ bool gradientParameter(FragmentPaint r, float2 b, inout float t) {
         t = turn - floor(turn);
         return true;
     }
-    default: {
-        // Diamond.
-        if (!(g[2] > 0 && g[3] > 0))
-            return false;
-        float2 d = abs(b - float2(g[0], g[1]));
-        t = d.x / g[2] + d.y / g[3];
-        return true;
+    default: break;
     }
-    }
+    // Diamond. It follows the switch, because fxc does not see that a switch whose every case returns does.
+    if (!(g[2] > 0 && g[3] > 0))
+        return false;
+    float2 d = abs(b - float2(g[0], g[1]));
+    t = d.x / g[2] + d.y / g[3];
+    return true;
 }
 
 // Maps `t` as the mode extends the gradient (prDrawGradientExtend). Returns false past the range of None, where it
@@ -1556,6 +1568,8 @@ float4 turbulence(uint d, float2 pixel) {
         s.w = int(frameFilterData[d + 12] * frequency.y + 4096 + float(s.y));
     }
     float4 result;
+    // Unrolled, so that it writes the vector's components at constant indices rather than through indexed memory.
+    [ForceUnroll]
     for (uint channel = 0; channel < 4; ++channel) {
         float sum = 0;
         float vx = p.x * frequency.x;
@@ -1663,6 +1677,8 @@ float4 filterStep(VertexOut vertexIn) : SV_Target {
     case FragmentFilterOp_ColorMatrix: {
         float4 s = straightOf(readInput(inputs, 0, p));
         float4 m;
+        // Unrolled, so that it writes the vector's components at constant indices rather than through indexed memory.
+        [ForceUnroll]
         for (uint r = 0; r < 4; ++r) {
             m[r] = frameFilterData[d + r * 5] * s.r + frameFilterData[d + r * 5 + 1] * s.g
                    + frameFilterData[d + r * 5 + 2] * s.b + frameFilterData[d + r * 5 + 3] * s.a
@@ -1674,6 +1690,8 @@ float4 filterStep(VertexOut vertexIn) : SV_Target {
     case FragmentFilterOp_Transfer: {
         float4 s = straightOf(readInput(inputs, 0, p));
         uint at = 0;
+        // Unrolled, so that it writes the vector's components at constant indices rather than through indexed memory.
+        [ForceUnroll]
         for (uint c = 0; c < 4; ++c)
             s[c] = transferChannel(d, at, s[c]);
         result = premultiplied(s);

@@ -294,9 +294,10 @@ PrGpuBackend namedBackend() {
     return chosen != PrGpuBackend_Default && prGpuBackendIsBuilt(chosen) ? chosen : PrGpuBackend_Count;
 }
 
-// Returns the first backend of the build that Default does not pass over, or Default if there is none.
-PrGpuBackend firstSupported() {
-    uint32_t passed = unsupported.load();
+// Returns the first backend of the build that Default does not pass over, nor one of `refused`, or Default if there is
+// none.
+PrGpuBackend firstSupported(uint32_t refused = 0) {
+    uint32_t passed = unsupported.load() | refused;
     for (PrGpuBackend built : kBuilt) {
         if (built == PrGpuBackend_Default || (passed & (1u << built)) == 0)
             return built;
@@ -309,71 +310,79 @@ void passOver(PrGpuBackend backend) {
     while (!unsupported.cas(passed, passed | (1u << backend))) {}
 }
 
-// A creation that Default started. `waiting` is true while the creating call, without a pool, decides what follows a
-// failed creation itself. It then sets `retry` if another backend remains to try.
+// How far a creation that Default started has come. The creating call and the ready callback each mark their arrival by
+// exchanging the stage, so that whichever arrives second sees what the first did, and frees the creation.
+enum {
+    DefaultStage_Creating,      // neither has arrived
+    DefaultStage_Returned,      // the creating call returned the device, and the callback has yet to run
+    DefaultStage_Done,          // the callback ran during the creating call, and called the creator's callback
+    DefaultStage_Retry,         // the callback ran during the creating call, which tries another backend instead
+};
+typedef uint8_t DefaultStage;
+
+// A creation that Default started. `refused` holds the backends that make no device with its options (createDefault).
 struct DefaultCreation {
     PrGpuBackend backend;
+    uint32_t refused;
     PrGpuDeviceReadyFn PR_NULLABLE ready;
     void* PR_NULLABLE readyContext;
-    bool waiting;
-    bool retry;
+    Atomic<DefaultStage> stage;
 };
 
-// Passes over the backend of a creation that failed with NotSupported, then calls the creator's ready callback, unless
-// the creating call tries another backend in its place.
+// Passes over the backend of a creation that failed with NotSupported. If the creation is done before the creating call
+// returns and another backend remains, the creating call tries it in place of the device. Otherwise it calls the
+// creator's ready callback.
 void defaultReady(void* PR_NULLABLE context, PrGpuDevice* device) {
     DefaultCreation* c = static_cast<DefaultCreation*>(context);
     bool failed = device->lostStatusFn(device) == PrStatus_NotSupported;
     if (failed)
         passOver(c->backend);
-    if (c->waiting) {
-        c->retry = failed && firstSupported() != PrGpuBackend_Default;
-        if (!c->retry && c->ready != nullptr)
-            c->ready(c->readyContext, device);
-        return;
-    }
-    if (c->ready != nullptr)
-        c->ready(c->readyContext, device);
-    prMemoryFree(c);
+    bool retry = failed && firstSupported(c->refused) != PrGpuBackend_Default;
+    // The creating call may free the creation once the stage is exchanged.
+    PrGpuDeviceReadyFn ready = c->ready;
+    void* readyContext = c->readyContext;
+    bool returned = c->stage.exchange(retry ? DefaultStage_Retry : DefaultStage_Done) == DefaultStage_Returned;
+    if (returned)
+        prMemoryFree(c);
+    if ((returned || !retry) && ready != nullptr)
+        ready(readyContext, device);
 }
 
 // Creates a device as Default does: by the backend that PR_GPU_BACKEND names, or else by the first backend that is not
-// passed over. A creation without a pool whose failure is known when it returns moves on to the next backend at once.
-// Otherwise the failed backend is passed over by the next creation.
+// passed over and makes a device with the options. A creation whose failure is known when it returns moves on to the
+// next backend at once. Otherwise the failed backend is passed over by the next creation.
 PrGpuDevice* PR_NULLABLE createDefault(const PrGpuDeviceOptions& o) {
     PrGpuBackend named = namedBackend();
     if (named != PrGpuBackend_Count)
         return create(named, o);
+    // The backends that make no device with these options, which another creation's options may not share.
+    uint32_t refused = 0;
     for (;;) {
-        PrGpuBackend backend = firstSupported();
+        PrGpuBackend backend = firstSupported(refused);
         if (backend == PrGpuBackend_Default)
             return nullptr;
         DefaultCreation* c = allocZeroed<DefaultCreation>();
-        *c = DefaultCreation{
-            .backend = backend,
-            .ready = o.ready,
-            .readyContext = o.readyContext,
-            .waiting = o.pool == nullptr,
-        };
+        c->backend = backend;
+        c->refused = refused;
+        c->ready = o.ready;
+        c->readyContext = o.readyContext;
+        c->stage.store(DefaultStage_Creating);
         PrGpuDeviceOptions chained = o;
         chained.ready = defaultReady;
         chained.readyContext = c;
         PrGpuDevice* device = create(backend, chained);
-        // On a pool, the ready callback frees the creation.
-        if (o.pool != nullptr)
-            return device;
+        // A backend that makes no device with the options makes none at once, and calls no ready callback.
         if (device == nullptr) {
             prMemoryFree(c);
-            return nullptr;
+            refused |= 1u << backend;
+            continue;
         }
-        // A creation that runs on after the call, as on the web, frees itself once it is done.
-        if (!prGpuDeviceIsReady(device)) {
-            c->waiting = false;
+        DefaultStage stage = c->stage.exchange(DefaultStage_Returned);
+        // The callback has yet to run, and frees the creation when it does.
+        if (stage == DefaultStage_Creating)
             return device;
-        }
-        bool retry = c->retry;
         prMemoryFree(c);
-        if (!retry)
+        if (stage == DefaultStage_Done)
             return device;
         prGpuDeviceDestroy(device);
     }
