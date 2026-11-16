@@ -37,7 +37,7 @@ struct Page {
     JSContext* ctx;
     PrHtmlPage* page;
 
-    explicit Page(PrStringView markup) : runtime(jsRuntimeCreate()), ctx(JS_NewContext(runtime)), page(nullptr) {
+    explicit Page(PrStringView markup) : runtime(jsRuntimeCreate()), ctx(jsContextCreate(runtime)), page(nullptr) {
         PrHtmlHost host = hostOf(ctx);
         page = prHtmlPageCreate(&host);
         prJsDomBind(ctx);

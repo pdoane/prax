@@ -213,6 +213,10 @@ JSRuntime* jsRuntimeCreate();
 // object, so the runtime must be destroyed before the native objects that its scripts reach.
 void jsRuntimeDestroy(JSRuntime* PR_NULLABLE runtime);
 
+// Creates a context with only the language's built-in objects. The bindings define host globals such as atob,
+// DOMException and performance, and the engine's own versions would shadow them. Returns null if out of memory.
+JSContext* PR_NULLABLE jsContextCreate(JSRuntime* runtime);
+
 // Lists a callback with `owner`, if `owner` is an object of a bound class, or else with the runtime. The owner's mark
 // traces the callback's value, and its finalizer detaches the callback. A callback listed with the runtime has a value
 // that is a root. Unlinking removes the callback from whichever list holds it.

@@ -48,6 +48,7 @@ enum {
     PrFetchDestination_Font,
     PrFetchDestination_Media,   // audio or video
     PrFetchDestination_Object,
+    PrFetchDestination_Json,    // a JSON module script
 };
 typedef uint8_t PrFetchDestination;
 

@@ -26,7 +26,7 @@ using namespace pr_impl;
 
 TEST_CASE("a failing member throws the DOMException its status stands for") {
     JSRuntime* runtime = jsRuntimeCreate();
-    JSContext* ctx = JS_NewContext(runtime);
+    JSContext* ctx = jsContextCreate(runtime);
     prJsDomBind(ctx);
     prJsCssBind(ctx);
 
@@ -64,7 +64,7 @@ TEST_CASE("a failing member throws the DOMException its status stands for") {
 
 TEST_CASE("projected CSS rules retain live child handles after removal") {
     JSRuntime* runtime = jsRuntimeCreate();
-    JSContext* ctx = JS_NewContext(runtime);
+    JSContext* ctx = jsContextCreate(runtime);
     prJsDomBind(ctx);
     prJsCssBind(ctx);
 

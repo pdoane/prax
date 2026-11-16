@@ -30,12 +30,19 @@ extern "C" {
 // top-level pages, and a page makes the page of each of its iframes.
 typedef struct PrHtmlPage PrHtmlPage;
 
-// The kinds of script that the host runs.
+// The kinds of script that the host runs (html/#concept-script).
 enum {
     PrHtmlScriptKind_Classic,
     PrHtmlScriptKind_Module,
 };
 typedef uint8_t PrHtmlScriptKind;
+
+// The type of a module script's module (html/#module-type-from-module-request).
+enum {
+    PrHtmlModuleType_JavaScript,
+    PrHtmlModuleType_Json,      // a JSON module, whose default export is the JSON's value
+};
+typedef uint8_t PrHtmlModuleType;
 
 // A script to execute. Its string views are valid for the duration of the execute call.
 typedef struct PrHtmlScript {
@@ -43,6 +50,7 @@ typedef struct PrHtmlScript {
     PrStringView url;                   // the URL that the source came from
     PrStringView baseUrl;               // the URL that imports resolve against
     PrHtmlScriptKind kind;
+    PrHtmlModuleType moduleType;        // the type of a module script's module
     bool external;                      // true if the source came from the src attribute
 
     // The line and column at which the source starts, counting from one. Columns count UTF-16 code units.
@@ -52,8 +60,8 @@ typedef struct PrHtmlScript {
     uint32_t module;                    // for a module script to execute, the module that the host parsed of it
 } PrHtmlScript;
 
-// Called with the URL of each module that a module imports (PrHtmlHost::parseModule).
-typedef void (*PrHtmlModuleRequestFn)(void* PR_NULLABLE context, PrStringView url);
+// Called with the URL and the module type of each module that a module imports (PrHtmlHost::parseModule).
+typedef void (*PrHtmlModuleRequestFn)(void* PR_NULLABLE context, PrStringView url, PrHtmlModuleType type);
 
 // Called once with the outcome of prHtmlPageImportModule.
 typedef void (*PrHtmlImportFn)(void* PR_NULLABLE context, PrStatus status);
@@ -101,12 +109,14 @@ typedef struct PrHtmlHost {
     // aborts the load with its status. Null disables scripting.
     PrStatus (*PR_NULLABLE execute)(void* PR_NULLABLE context, PrHtmlPage* page, const PrHtmlScript* script);
 
-    // Parses `script`, a module script, into a module of the page's realm without evaluating it
-    // (html/#creating-a-javascript-module-script), and returns the host's number for the module (PrHtmlScript::module).
-    // Calls `request` with `requestContext` and the URL of each module that the module imports, resolved against the
-    // script's base URL (html/#resolve-a-module-specifier). A module that does not parse, or that names a specifier
-    // that does not resolve, keeps its error and imports nothing. The page fetches and parses each module of the
-    // window's module map once (html/#module-map). Null runs no module scripts.
+    // Parses `script`, a module script, into a module of the page's realm without evaluating it, and returns the host's
+    // number for the module (PrHtmlScript::module). A JavaScript module (html/#creating-a-javascript-module-script)
+    // calls `request` with `requestContext` for each module that it imports. The URL is resolved against the script's
+    // base URL (html/#resolve-a-module-specifier), and the module type comes from the import's type attribute. A JSON
+    // module (html/#creating-a-json-module-script) imports nothing. A module that does not parse, that names a
+    // specifier that does not resolve, or that imports an unsupported module type keeps its error and imports nothing.
+    // The page fetches and parses each module of the window's module map once (html/#module-map). Null runs no module
+    // scripts.
     uint32_t (*PR_NULLABLE parseModule)(void* PR_NULLABLE context, PrHtmlPage* page,
         const PrHtmlScript* script, PrHtmlModuleRequestFn request, void* PR_NULLABLE requestContext);
 
@@ -316,12 +326,13 @@ void prHtmlPageEndLoad(PrHtmlPage* page);
 // fetcher, or the call comes from a script of the page or from within a load of the page.
 PrStatus prHtmlPageNavigate(PrHtmlPage* page, PrStringView url);
 
-// Fetches the module graph at `url`, an absolute URL, as a script's import() does (html/#hostloadimportedmodule): each
-// module that the window's module map lacks is fetched and parsed with the host's parseModule, which the host must
-// have. Calls `done` with `context` in a task, with Ok once every module of the graph is parsed, or with the status of
-// a fetch that failed. If the window's document is replaced or the page destroyed first, `done` is called with Lost
-// during that call.
-void prHtmlPageImportModule(PrHtmlPage* page, PrStringView url, PrHtmlImportFn done, void* PR_NULLABLE context);
+// Fetches the module graph at `url`, an absolute URL, as a script's import() does (html/#hostloadimportedmodule).
+// `type` is the root's module type. Each module that the window's module map lacks is fetched and parsed with the
+// host's parseModule, which the host must have. Calls `done` with `context` in a task, with Ok once every module of the
+// graph is parsed, or with the status of a fetch that failed. If the window's document is replaced or the page
+// destroyed first, `done` is called with Lost during that call.
+void prHtmlPageImportModule(PrHtmlPage* page, PrStringView url, PrHtmlModuleType type, PrHtmlImportFn done,
+    void* PR_NULLABLE context);
 
 // Fetches what `request` asks for a script of the window, through the host's fetcher. The window's document is the
 // request's client: the request has its origin, its URL as the referrer, and its base URL. Calls `done` with `context`

@@ -106,6 +106,7 @@ enum {
     PrDomEventKind_FontFaceSetLoad,    // css-font-loading-3/#fontfacesetloadevent
     PrDomEventKind_Transition,         // css-transitions-1/#interface-transitionevent
     PrDomEventKind_Animation,          // css-animations-1/#interface-animationevent
+    PrDomEventKind_AnimationPlayback,  // web-animations-1/#the-animationplaybackevent-interface
     PrDomEventKind_Mouse,              // pointerevents4/#mouseevent-interface
     PrDomEventKind_Wheel,              // pointerevents4/#interface-wheelevent
     PrDomEventKind_Keyboard,           // uievents/#interface-keyboardevent

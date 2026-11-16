@@ -994,15 +994,18 @@ void fileAtRule(Filing& f, const CssRuleData* rule, uint16_t layer, PrStringView
             PrStringView name = prStringTrim(prTextBufferView(&prelude));
             if (name.size >= 2 && (name.data[0] == '"' || name.data[0] == '\''))
                 name = PrStringView{name.data + 1, name.size - 2};
+            CssKeyframes* compiled = cssKeyframesCompile(rule);
             bool replaced = false;
             for (uint32_t i = 0; i < f.set->keyframes.count && !replaced; ++i) {
-                if (prRawStringView(&f.set->keyframes.data[i].name) == name) {
-                    f.set->keyframes.data[i].rule = rule;
+                CssNamedKeyframes& named = f.set->keyframes.data[i];
+                if (prRawStringView(&named.name) == name) {
+                    cssKeyframesRelease(named.keyframes);
+                    named.keyframes = compiled;
                     replaced = true;
                 }
             }
             if (!replaced)
-                f.set->keyframes.push(CssKeyframes{prRawStringCopy(name), rule});
+                f.set->keyframes.push(CssNamedKeyframes{prRawStringCopy(name), compiled});
             prTextBufferReset(&prelude);
             break;
         }
@@ -3159,10 +3162,10 @@ bool cssBlockReadsAttributes(const CssDeclarationBlock* block) {
     return reads;
 }
 
-const CssRuleData* PR_NULLABLE cssRuleSetKeyframes(const CssRuleSet* set, PrStringView name) {
+CssKeyframes* PR_NULLABLE cssRuleSetKeyframes(const CssRuleSet* set, PrStringView name) {
     for (uint32_t i = 0; i < set->keyframes.count; ++i) {
         if (prRawStringView(&set->keyframes.data[i].name) == name)
-            return set->keyframes.data[i].rule;
+            return set->keyframes.data[i].keyframes;
     }
     return nullptr;
 }
@@ -3282,8 +3285,10 @@ void cssRuleSetReset(CssRuleSet* set) {
     for (uint32_t i = 0; i < set->layers.count; ++i)
         prRawStringReset(&set->layers.data[i]);
     set->layers.reset();
-    for (uint32_t i = 0; i < set->keyframes.count; ++i)
+    for (uint32_t i = 0; i < set->keyframes.count; ++i) {
         prRawStringReset(&set->keyframes.data[i].name);
+        cssKeyframesRelease(set->keyframes.data[i].keyframes);
+    }
     set->keyframes.reset();
     set->counterStyleRules.reset();
     cssCounterStylesReset(&set->counterStyles);

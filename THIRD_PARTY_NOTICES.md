@@ -117,7 +117,7 @@ Copyright (c) 2018-2025 Microsoft Corporation, Daan Leijen. Used under the MIT L
 
 `patches/quickjs` holds changes to QuickJS (https://github.com/quickjs-ng/quickjs) with lines of its source.
 
-Copyright (c) 2017-2024 Fabrice Bellard, Copyright (c) 2017-2024 Charlie Gordon, Copyright (c) 2023-2025 Ben
+Copyright (c) 2017-2026 Fabrice Bellard, Copyright (c) 2017-2024 Charlie Gordon, Copyright (c) 2023-2026 Ben
 Noordhuis. Used under the MIT License (below).
 
 ## Taffy

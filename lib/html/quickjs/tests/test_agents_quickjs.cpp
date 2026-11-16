@@ -27,7 +27,7 @@ constexpr uint32_t kRounds = 20;
 // list, which is queried on the document through C.
 bool runAgent(const PrCssSelectors* shared) {
     JSRuntime* runtime = jsRuntimeCreate();
-    JSContext* ctx = JS_NewContext(runtime);
+    JSContext* ctx = jsContextCreate(runtime);
     prJsUrlBind(ctx);
     prJsDomBind(ctx);
     prJsCssBind(ctx);

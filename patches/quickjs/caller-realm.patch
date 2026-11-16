@@ -1,11 +1,11 @@
 diff --git a/quickjs.c b/quickjs.c
+index 8cbc85e..ec52251 100644
 --- a/quickjs.c
 +++ b/quickjs.c
-@@ -14390,7 +14390,22 @@ static JSValueConst JS_GetActiveFunction(JSContext *ctx)
- {
-     return ctx->rt->current_stack_frame->cur_func;
+@@ -6438,6 +6438,21 @@ static bool js_class_has_bytecode(JSClassID class_id)
+             class_id == JS_CLASS_ASYNC_GENERATOR_FUNCTION);
  }
-
+ 
 +/* the realm of the innermost script function on the stack, or NULL if none runs */
 +JSContext *JS_GetCallerRealm(JSContext *ctx)
 +{
@@ -21,13 +21,18 @@ diff --git a/quickjs.c b/quickjs.c
 +    return NULL;
 +}
 +
- static JSVarRef *get_var_ref(JSContext *ctx, JSStackFrame *sf,
-                              int var_idx, bool is_arg)
+ /* return NULL without exception if not a function or no bytecode */
+ static JSFunctionBytecode *JS_GetFunctionBytecode(JSValueConst val)
  {
 diff --git a/quickjs.h b/quickjs.h
+index 1324066..c330e68 100644
 --- a/quickjs.h
 +++ b/quickjs.h
-@@ -444,2 +444,3 @@
+@@ -540,6 +540,7 @@ JS_EXTERN JSContext *JS_DupContext(JSContext *ctx);
+ JS_EXTERN void *JS_GetContextOpaque(JSContext *ctx);
+ JS_EXTERN void JS_SetContextOpaque(JSContext *ctx, void *opaque);
  JS_EXTERN JSRuntime *JS_GetRuntime(JSContext *ctx);
 +JS_EXTERN JSContext *JS_GetCallerRealm(JSContext *ctx);
  JS_EXTERN void JS_SetClassProto(JSContext *ctx, JSClassID class_id, JSValue obj);
+ JS_EXTERN JSValue JS_GetClassProto(JSContext *ctx, JSClassID class_id);
+ JS_EXTERN JSValue JS_GetFunctionProto(JSContext *ctx);

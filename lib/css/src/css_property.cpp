@@ -2404,6 +2404,57 @@ extern const uint64_t kCssPropertyRepeatableList[bitsetWords(PrCssProperty_Count
     UINT64_C(0x000000050000001c),
 };
 
+extern const uint64_t kCssPropertyNonNegative[bitsetWords(PrCssProperty_Count)] = {
+    // -webkit-line-clamp, -webkit-text-stroke-width, animation-delay-end, animation-duration,
+    // animation-iteration-count, aspect-ratio, background-size, block-size, block-step
+    UINT64_C(0xc40000400a400220),
+    // block-step-size, bookmark-level, border-block-end-radius, border-block-end-width, border-block-start-radius,
+    // border-block-start-width, border-block-width, border-bottom-left-radius, border-bottom-radius,
+    // border-bottom-right-radius, border-bottom-width, border-end-end-radius, border-end-start-radius,
+    // border-image-outset, border-image-slice, border-image-width, border-inline-end-radius, border-inline-end-width,
+    // border-inline-start-radius, border-inline-start-width, border-inline-width
+    UINT64_C(0x2a28156171514028),
+    // border-left-radius, border-left-width, border-limit, border-radius, border-right-radius, border-right-width,
+    // border-spacing, border-start-end-radius, border-start-start-radius, border-top-left-radius, border-top-radius,
+    // border-top-right-radius, border-top-width, border-width, box-shadow-blur, column-count, column-gap, column-height
+    UINT64_C(0x01a000002370ea3a),
+    // column-rule-style, column-rule-width, column-span, column-width, columns, contain-intrinsic-block-size,
+    // contain-intrinsic-height, contain-intrinsic-inline-size, contain-intrinsic-size, contain-intrinsic-width
+    UINT64_C(0x000000000003eba0),
+    // dynamic-range-limit, fill-size, flex, flex-basis, flex-grow, flex-line-count, flex-shrink, flow-tolerance,
+    // font-feature-settings, font-palette, font-size, font-size-adjust
+    UINT64_C(0x00071200e6800100),
+    // font-weight, font-width, gap, grid, grid-auto-columns, grid-auto-rows, grid-template, grid-template-columns,
+    // grid-template-rows, height, hyphenate-limit-chars, hyphenate-limit-lines, initial-letter, inline-size, line-clamp
+    UINT64_C(0x8000012055a0550c),
+    // line-height, line-height-step, mask-border-outset, mask-border-slice, mask-border-width, mask-size,
+    // max-block-size, max-height, max-inline-size, max-lines, max-size, max-width, min-block-size, min-height,
+    // min-inline-size, min-size, min-width
+    UINT64_C(0x1bfe10150000000c),
+    // orphans, outline-width, padding, padding-block, padding-block-end, padding-block-start, padding-bottom,
+    // padding-inline, padding-inline-end, padding-inline-start, padding-left, padding-right, padding-top, path-length,
+    // pause, pause-after, pause-before, perspective
+    UINT64_C(0xf83ff80000042000),
+    // r, rest, rest-after, rest-before, row-gap, row-rule-style, row-rule-width, rule-style, rule-width, rx, ry
+    UINT64_C(0x1d00050009c20000),
+    // scroll-padding, scroll-padding-block, scroll-padding-block-end, scroll-padding-block-start,
+    // scroll-padding-bottom, scroll-padding-inline, scroll-padding-inline-end, scroll-padding-inline-start,
+    // scroll-padding-left, scroll-padding-right, scroll-padding-top, shape-margin, shape-padding, size,
+    // stroke-dasharray
+    UINT64_C(0x0400015000ffe000),
+    // stroke-size, stroke-width, tab-size, text-combine-upright, text-size-adjust
+    UINT64_C(0x00000400000200e0),
+    // transition-duration, voice-duration, voice-family, voice-rate, widows, width, zoom, -webkit-animation-duration,
+    // -webkit-animation-iteration-count
+    UINT64_C(0x1408001826000040),
+    // -webkit-background-size, -webkit-border-bottom-left-radius, -webkit-border-bottom-right-radius,
+    // -webkit-border-radius, -webkit-border-top-left-radius, -webkit-border-top-right-radius, -webkit-flex,
+    // -webkit-flex-basis, -webkit-flex-grow, -webkit-flex-shrink, -webkit-mask-box-image-outset,
+    // -webkit-mask-box-image-slice, -webkit-mask-box-image-width, -webkit-mask-size, -webkit-perspective,
+    // -webkit-text-size-adjust, -webkit-transition-duration, font-stretch, grid-column-gap, grid-gap, grid-row-gap
+    UINT64_C(0x000790540a8663f0),
+};
+
 extern const uint64_t kCssPropertyPresentation[bitsetWords(PrCssProperty_Count)] = {
     // alignment-baseline, baseline-shift
     UINT64_C(0x0800000000008000),

@@ -2,6 +2,7 @@
 
 #include "pr/css.h"
 
+#include "css/src/css_animate.h"
 #include "css/src/css_presentation.h"
 #include "css/src/css_root.h"
 #include "dom/src/dom_hooks.h"
@@ -70,6 +71,9 @@ constexpr CssPresentationHooks kCssHooks = {
     .awaitsFontRequests = [](const void* context) {
         return cssPresentationAwaitsFontRequests(static_cast<const PrCssPresentation*>(context));
     },
+    .effectChanged = [](void* context, const PrDomElement* element) {
+        cssPresentationEffectChanged(presentationOf(context), element);
+    },
 };
 
 // Returns the presentation of the node's document, if the node is in the document.
@@ -85,11 +89,13 @@ void cssPresentationAttach(PrCssPresentation* presentation, PrDomDocument* docum
     style->presentationHooks = &kCssHooks;
     style->presentation = presentation;
     domDocumentSubscribe(document, &kDomHooks, presentation);
+    cssAnimateAttach(presentation);
 }
 
 void cssPresentationDetach(PrCssPresentation* presentation, PrDomDocument* document) {
     if (cssPresentationOf(document) != presentation)
         return;
+    cssAnimateDetach(presentation);
     domDocumentUnsubscribe(document, &kDomHooks);
     CssRoot* style = document->style;
     style->presentationHooks = nullptr;

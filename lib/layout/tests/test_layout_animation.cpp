@@ -1,3 +1,4 @@
+#include "pr/float.h"
 #include "pr/layout_animation.h"
 #include "pr/span.h"
 
@@ -83,25 +84,87 @@ TEST_CASE("easing functions map progress as css-easing-2 defines them") {
 }
 
 TEST_CASE("timing plays iterations in their direction, and fills where it says") {
-    PrLayoutTiming timing = prLayoutTimingDefault();
-    timing.start = 100;
+    PrLayoutEffectTiming timing = prLayoutEffectTimingDefault();
     timing.delay = 50;
     timing.duration = 200;
     timing.iterations = 2;
     timing.direction = PrLayoutPlaybackDirection_Alternate;
-    bool finished = false;
-    CHECK(prLayoutTimingProgress(&timing, 120, &finished) < 0);
-    CHECK(prLayoutTimingProgress(&timing, 200, &finished) == doctest::Approx(0.25));
-    CHECK(prLayoutTimingProgress(&timing, 400, &finished) == doctest::Approx(0.75));
-    CHECK_FALSE(finished);
-    CHECK(prLayoutTimingProgress(&timing, 600, &finished) < 0);
-    CHECK(finished);
+    PrLayoutComputedTiming c = prLayoutEffectTimingCompute(&timing, 20, 1);
+    CHECK(c.phase == PrLayoutEffectPhase_Before);
+    CHECK(prF64IsNan(c.progress));
+    c = prLayoutEffectTimingCompute(&timing, 100, 1);
+    CHECK(c.phase == PrLayoutEffectPhase_Active);
+    CHECK(c.progress == doctest::Approx(0.25));
+    CHECK(c.currentIteration == 0);
+    c = prLayoutEffectTimingCompute(&timing, 300, 1);
+    CHECK(c.progress == doctest::Approx(0.75));
+    CHECK(c.currentIteration == 1);
+    CHECK_FALSE(c.forwards);
+    c = prLayoutEffectTimingCompute(&timing, 500, 1);
+    CHECK(c.phase == PrLayoutEffectPhase_After);
+    CHECK(prF64IsNan(c.progress));
+    CHECK(c.endTime == 450);
+    CHECK(c.activeDuration == 400);
+
     timing.fill = PrLayoutFill_Both;
-    CHECK(prLayoutTimingProgress(&timing, 120, &finished) == doctest::Approx(0));
-    CHECK(prLayoutTimingProgress(&timing, 600, &finished) == doctest::Approx(0));
-    timing.paused = true;
-    timing.hold = 150;
-    CHECK(prLayoutTimingProgress(&timing, 10000, &finished) == doctest::Approx(0.5));
+    CHECK(prLayoutEffectTimingCompute(&timing, 20, 1).progress == doctest::Approx(0));
+    // The end of the last iteration, which plays backwards, is its start.
+    c = prLayoutEffectTimingCompute(&timing, 500, 1);
+    CHECK(c.progress == doctest::Approx(0));
+    CHECK(c.currentIteration == 1);
+    CHECK(prF64IsNan(prLayoutEffectTimingCompute(&timing, kPrF64Nan, 1).progress));
+}
+
+TEST_CASE("timing places the boundaries of the active interval by the direction of play") {
+    PrLayoutEffectTiming timing = prLayoutEffectTimingDefault();
+    timing.delay = 100;
+    timing.duration = 100;
+    CHECK(prLayoutEffectTimingCompute(&timing, 100, 1).phase == PrLayoutEffectPhase_Active);
+    CHECK(prLayoutEffectTimingCompute(&timing, 100, -1).phase == PrLayoutEffectPhase_Before);
+    CHECK(prLayoutEffectTimingCompute(&timing, 200, 1).phase == PrLayoutEffectPhase_After);
+    CHECK(prLayoutEffectTimingCompute(&timing, 200, -1).phase == PrLayoutEffectPhase_Active);
+    // A negative end delay cuts the active interval short.
+    timing.endDelay = -150;
+    PrLayoutComputedTiming c = prLayoutEffectTimingCompute(&timing, 60, 1);
+    CHECK(c.endTime == 50);
+    CHECK(c.phase == PrLayoutEffectPhase_After);
+}
+
+TEST_CASE("timing starts iterations part way, and eases the directed progress") {
+    PrLayoutEffectTiming timing = prLayoutEffectTimingDefault();
+    timing.duration = 100;
+    timing.iterations = 1.5;
+    timing.iterationStart = 0.5;
+    timing.fill = PrLayoutFill_Forwards;
+    PrLayoutComputedTiming c = prLayoutEffectTimingCompute(&timing, 0, 1);
+    CHECK(c.progress == doctest::Approx(0.5));
+    CHECK(c.currentIteration == 0);
+    c = prLayoutEffectTimingCompute(&timing, 150, 1);
+    CHECK(c.simpleProgress == 1);
+    CHECK(c.currentIteration == 1);
+    // A step at the start shows its first step before the active interval.
+    timing.iterationStart = 0;
+    timing.iterations = 1;
+    timing.fill = PrLayoutFill_Both;
+    timing.delay = 10;
+    timing.easing.kind = PrLayoutEasingKind_Steps;
+    timing.easing.steps = 2;
+    timing.easing.position = PrLayoutStepPosition_JumpStart;
+    CHECK(prLayoutEffectTimingCompute(&timing, 0, 1).progress == doctest::Approx(0));
+    CHECK(prLayoutEffectTimingCompute(&timing, 10, 1).progress == doctest::Approx(0.5));
+}
+
+TEST_CASE("a playback holds its time, or runs it from its start at its rate") {
+    PrLayoutPlayback playback = prLayoutPlaybackDefault();
+    CHECK(prF64IsNan(prLayoutPlaybackCurrentTime(&playback, 100)));
+    CHECK_FALSE(prLayoutPlaybackMoves(&playback));
+    playback.startTime = 100;
+    playback.rate = 2;
+    CHECK(prLayoutPlaybackCurrentTime(&playback, 150) == 100);
+    CHECK(prLayoutPlaybackMoves(&playback));
+    playback.holdTime = 30;
+    CHECK(prLayoutPlaybackCurrentTime(&playback, 1000) == 30);
+    CHECK_FALSE(prLayoutPlaybackMoves(&playback));
 }
 
 TEST_CASE("transforms interpolate function by function, and by matrix where their kinds differ") {
@@ -256,7 +319,9 @@ TEST_CASE("a track samples its keyframes at a time") {
     PrLayoutTrack track{};
     track.node = 1;
     track.effect = PrLayoutEffect_Opacity;
-    track.timing = prLayoutTimingDefault();
+    track.playback = prLayoutPlaybackDefault();
+    track.playback.startTime = 0;
+    track.timing = prLayoutEffectTimingDefault();
     track.timing.duration = 1000;
     track.keyframes = frames;
     track.keyframeCount = 3;

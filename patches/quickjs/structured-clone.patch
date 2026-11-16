@@ -1,9 +1,8 @@
 diff --git a/quickjs.c b/quickjs.c
+index 8cbc85e..904606b 100644
 --- a/quickjs.c
 +++ b/quickjs.c
-@@ -47807,8 +47807,85 @@
- static int JS_WriteSet(BCWriterState *s, struct JSMapState *map_state)
- {
+@@ -54193,6 +54193,112 @@ static int JS_WriteSet(BCWriterState *s, struct JSMapState *map_state)
      return js_map_write(s, map_state, MAGIC_SET);
  }
  
@@ -84,10 +83,39 @@ diff --git a/quickjs.c b/quickjs.c
 +    return JS_NewObjectProtoClass(ctx, ctx->native_error_proto[index], JS_CLASS_ERROR);
 +}
 +
- static int js_setlike_get_size(JSContext *ctx, JSValueConst setlike,
-                                int64_t *pout)
++/* The stack that an error holds in its [[ErrorData]], which Error.prototype.stack reads, or undefined if `obj` is not
++   an error. */
++JSValue JS_GetErrorStack(JSContext *ctx, JSValueConst obj)
++{
++    JSObject *p;
++
++    if (JS_VALUE_GET_TAG(obj) != JS_TAG_OBJECT)
++        return JS_UNDEFINED;
++    p = JS_VALUE_GET_OBJ(obj);
++    if (p->class_id != JS_CLASS_ERROR)
++        return JS_UNDEFINED;
++    return js_dup(p->u.object_data);
++}
++
++/* Replaces the stack in an error's [[ErrorData]], taking `stack`. Nothing happens if `obj` is not an error. */
++void JS_SetErrorStack(JSContext *ctx, JSValueConst obj, JSValue stack)
++{
++    JSObject *p;
++
++    if (JS_VALUE_GET_TAG(obj) != JS_TAG_OBJECT || JS_VALUE_GET_OBJ(obj)->class_id != JS_CLASS_ERROR) {
++        JS_FreeValue(ctx, stack);
++        return;
++    }
++    p = JS_VALUE_GET_OBJ(obj);
++    JS_FreeValue(ctx, p->u.object_data);
++    p->u.object_data = stack;
++}
++
++
+ static int js_setlike_get_props(JSContext *ctx, JSValueConst setlike,
+                                 uint64_t *psize, JSValue *phas, JSValue *pkeys)
  {
-@@ -54536,6 +54536,30 @@
+@@ -62174,6 +62280,31 @@ static JSValue js_dataview_get_byteLength(JSContext *ctx, JSValueConst this_val)
      return js_uint32(ta->length);
  }
  
@@ -115,13 +143,17 @@ diff --git a/quickjs.c b/quickjs.c
 +    return js_dataview_constructor(ctx, JS_UNDEFINED, track ? 2 : 3, args);
 +}
 +
++
  static JSValue js_dataview_get_byteOffset(JSContext *ctx, JSValueConst this_val)
  {
      JSTypedArray *ta;
 diff --git a/quickjs.h b/quickjs.h
+index 1324066..f74f732 100644
 --- a/quickjs.h
 +++ b/quickjs.h
-@@ -824,3 +824,23 @@
+@@ -950,6 +950,28 @@ JS_EXTERN bool JS_SetConstructorBit(JSContext *ctx, JSValueConst func_obj, bool
+ 
+ JS_EXTERN bool JS_IsRegExp(JSValueConst val);
  JS_EXTERN bool JS_IsMap(JSValueConst val);
 +/* What structured serialization treats an object as (JS_GetCloneKind). */
 +enum {
@@ -141,7 +173,10 @@ diff --git a/quickjs.h b/quickjs.h
 +JS_EXTERN int JS_MapAppend(JSContext *ctx, JSValueConst map, JSValueConst key, JSValueConst value);
 +JS_EXTERN JSValue JS_MapEntries(JSContext *ctx, JSValueConst map);
 +JS_EXTERN JSValue JS_NewNativeError(JSContext *ctx, int index);
++JS_EXTERN JSValue JS_GetErrorStack(JSContext *ctx, JSValueConst obj);
++JS_EXTERN void JS_SetErrorStack(JSContext *ctx, JSValueConst obj, JSValue stack);
 +JS_EXTERN JSValue JS_GetViewBuffer(JSContext *ctx, JSValueConst obj, size_t *offset, size_t *length, bool *track);
 +JS_EXTERN JSValue JS_NewDataView(JSContext *ctx, JSValueConst buffer, size_t offset, size_t length, bool track);
- 
- JS_EXTERN JSValue JS_NewArray(JSContext *ctx);
+ JS_EXTERN bool JS_IsSet(JSValueConst val);
+ JS_EXTERN bool JS_IsWeakRef(JSValueConst val);
+ JS_EXTERN bool JS_IsWeakSet(JSValueConst val);

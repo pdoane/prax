@@ -27,8 +27,8 @@ enum {
 
     // Reference-counted targets: a Window (html/#the-window-object), a MediaQueryList
     // (cssom-view-1/#the-mediaquerylist-interface), an XMLHttpRequest (xhr/#interface-xmlhttprequest), a MessagePort
-    // (html/#message-ports), a FileReader (FileAPI/#APIASynch), a MediaSource (media-source-2/#mediasource) and a
-    // SourceBuffer (media-source-2/#sourcebuffer).
+    // (html/#message-ports), a FileReader (FileAPI/#APIASynch), a MediaSource (media-source-2/#mediasource), a
+    // SourceBuffer (media-source-2/#sourcebuffer) and an Animation (web-animations-1/#the-animation-interface).
     DomTargetType_Window = DomTargetTypeFlag_Counted | 0x100,
     DomTargetType_MediaQueryList,
     DomTargetType_XmlHttpRequest,
@@ -36,6 +36,7 @@ enum {
     DomTargetType_FileReader,
     DomTargetType_MediaSource,
     DomTargetType_SourceBuffer,
+    DomTargetType_Animation,
 
     // Parts of other targets: a PreferenceObject (mediaqueries-5/#preferenceobject), a Performance
     // (hr-time-3/#sec-performance), a ScreenOrientation (screen-orientation/#screenorientation-interface), an

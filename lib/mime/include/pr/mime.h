@@ -24,6 +24,10 @@ bool prMimeTypeParameter(PrStringView type, PrStringView name, PrRawString* out)
 // regard to ASCII case.
 bool prMimeTypeIsJavaScript(PrStringView essence);
 
+// Returns true if `essence` is the essence of a JSON MIME type (mimesniff/#json-mime-type), without regard to ASCII
+// case. An essence that does not parse as a type and a subtype is not one.
+bool prMimeTypeIsJson(PrStringView essence);
+
 // Returns true if the MIME type `type` is an XML MIME type (mimesniff/#xml-mime-type).
 bool prMimeTypeIsXml(PrStringView type);
 

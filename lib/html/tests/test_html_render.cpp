@@ -1,6 +1,7 @@
 #include "pr/array.h"
 #include "pr/atomic.h"
 #include "pr/css.h"
+#include "pr/css_animations.h"
 #include "pr/css_intersection_observer.h"
 #include "pr/css_presentation.h"
 #include "pr/css_resize_observer.h"
@@ -257,7 +258,7 @@ struct Observed {
     Array<String> events;
     double timerSaw = -1;
     uint32_t frames = 0;
-    PrHtmlDocumentTimeline* PR_NULLABLE timeline = nullptr;
+    PrCssTimeline* PR_NULLABLE timeline = nullptr;
 };
 
 Observed observeAnimation(PrHtmlAnimationFrames frames) {
@@ -283,13 +284,12 @@ Observed observeAnimation(PrHtmlAnimationFrames frames) {
     PrDomDocument* document = prHtmlWindowDocument(window);
     PrDomElement* a = prDomNodeGetElementById(prDomDocumentAsNode(document), "a");
     REQUIRE(a != nullptr);
-    seen.timeline = prHtmlDocumentTimelineCreate(document, 0);
+    seen.timeline = prCssDocumentTimeline(document);
     PrDomEventListener record{
         [](void* PR_NULLABLE c, PrDomEvent* event) {
             Observed* o = static_cast<Observed*>(c);
             PrStringView type = prDomEventType(event);
-            double time = -1;
-            prHtmlDocumentTimelineCurrentTime(o->timeline, &time);
+            double time = prCssTimelineCurrentTime(o->timeline);
             o->events.push(format("{} {:.3f} at {:.1f}", type,
                 prCssAnimationEventElapsedTime(prCssAnimationEventQuery(event)), time));
         },
@@ -304,7 +304,7 @@ Observed observeAnimation(PrHtmlAnimationFrames frames) {
     PrHtmlTimerHandler timer{
         [](void* PR_NULLABLE c) {
             Observed* o = static_cast<Observed*>(c);
-            prHtmlDocumentTimelineCurrentTime(o->timeline, &o->timerSaw);
+            o->timerSaw = prCssTimelineCurrentTime(o->timeline);
         },
         &seen,
         nullptr,
@@ -319,7 +319,6 @@ Observed observeAnimation(PrHtmlAnimationFrames frames) {
         clock.now += delay;
         prDomAgentRunTask(agent);
     }
-    prHtmlDocumentTimelineDestroy(seen.timeline);
     seen.timeline = nullptr;
     prHtmlPageDestroy(page);
     return seen;
@@ -432,6 +431,26 @@ Painted paintedAtTwoTimes(const char* html) {
     String later = paintedAt(1100);
     prHtmlPageDestroy(page);
     return Painted{.first = move(start), .second = move(later)};
+}
+
+// Makes a script's animation of `target`'s width from 10px to 110px over `duration`, playing on the document's
+// timeline.
+PrCssAnimation* animateWidth(Page& page, PrDomElement* target, double duration, PrCssFillMode fill) {
+    const PrCssKeyframeProperty from[] = {{"width", "10px"}};
+    const PrCssKeyframeProperty to[] = {{"width", "110px"}};
+    const PrCssKeyframe frames[] = {
+        {kPrF64Nan, kPrF64Nan, PrStringView{}, PrCssComposite_Auto, from, 1},
+        {kPrF64Nan, kPrF64Nan, PrStringView{}, PrCssComposite_Auto, to, 1},
+    };
+    PrCssEffectTiming timing = prCssEffectTimingDefault();
+    timing.duration = duration;
+    timing.fill = fill;
+    PrCssKeyframeEffect* effect = nullptr;
+    REQUIRE(prCssKeyframeEffectCreate(page.document, target, PrStringView{}, frames, 2, &timing, &effect) ==
+        PrStatus_Ok);
+    PrCssAnimation* animation = prCssAnimationCreate(page.document, effect, prCssDocumentTimeline(page.document));
+    prCssKeyframeEffectRelease(effect);
+    return animation;
 }
 
 } // namespace
@@ -3229,11 +3248,12 @@ TEST_CASE("a transition repaints, relayouts or composites as its property says, 
     PrRawString read = prCssStyleDeclarationGetPropertyValue(computed, &name);
     CHECK(prRawStringView(&read) == "0.5");
     prRawStringReset(&read);
-    // A change midway transitions from the current value.
+    // A change midway transitions back from the current value, in the half of the duration that the reversed transition
+    // had run (css-transitions-1/#reversing).
     prDomElementSetAttribute(byId(page, "fade"), "class", "");
     frame(page, 2500);
     REQUIRE(prCssPresentationTracks(page.presentation, &track, 1) == 1);
-    REQUIRE(prLayoutTrackSample(&track, 3000, PrVec2{0, 0}, &opacity, &matrix));
+    REQUIRE(prLayoutTrackSample(&track, 2750, PrVec2{0, 0}, &opacity, &matrix));
     CHECK(double(opacity) == doctest::Approx(0.65));
     // Once it ends, the box is no longer a layer.
     frame(page, 4000);
@@ -3241,6 +3261,162 @@ TEST_CASE("a transition repaints, relayouts or composites as its property says, 
     effects = page.effects("fade");
     CHECK_FALSE(effects.layer);
     CHECK(effects.opacity == doctest::Approx(0.8));
+}
+
+TEST_CASE("a script's animation starts at the frame that renders it, and plays, pauses and finishes") {
+    Page page("<style>#a { height: 5px }</style><div id=a></div>");
+    frame(page, 0);
+    PrCssAnimation* animation = animateWidth(page, byId(page, "a"), 1000, PrCssFillMode_None);
+    REQUIRE(prCssAnimationPlay(animation) == PrStatus_Ok);
+    // Until a frame runs the play task, the animation is pending at its start, with no start time.
+    CHECK(prCssAnimationPending(animation));
+    CHECK(prF64IsNan(prCssAnimationStartTime(animation)));
+    CHECK(prCssAnimationCurrentTime(animation) == 0);
+    frame(page, 100);
+    CHECK_FALSE(prCssAnimationPending(animation));
+    CHECK(prCssAnimationStartTime(animation) == 100);
+    frame(page, 600);
+    CHECK(px(page.box("a").width) == doctest::Approx(60));
+    CHECK(prCssAnimationPlayState(animation) == PrCssPlayState_Running);
+
+    // A pause holds the time at which the frame runs its task.
+    REQUIRE(prCssAnimationPause(animation) == PrStatus_Ok);
+    CHECK(prCssAnimationPlayState(animation) == PrCssPlayState_Paused);
+    frame(page, 700);
+    CHECK(prCssAnimationCurrentTime(animation) == 600);
+    frame(page, 900);
+    CHECK(px(page.box("a").width) == doctest::Approx(70));
+
+    // Finishing seeks to the end, which without a fill shows the base value.
+    REQUIRE(prCssAnimationFinish(animation) == PrStatus_Ok);
+    CHECK(prCssAnimationPlayState(animation) == PrCssPlayState_Finished);
+    CHECK(prCssAnimationCurrentTime(animation) == 1000);
+    frame(page, 1000);
+    CHECK(page.box("a").width.bits == prLayoutLengthAuto().bits);
+    prCssAnimationRelease(animation);
+}
+
+TEST_CASE("an animation plays backwards once reversed, and refuses to finish an infinite effect") {
+    Page page("<style>#a { height: 5px }</style><div id=a></div>");
+    frame(page, 0);
+    PrCssAnimation* animation = animateWidth(page, byId(page, "a"), 1000, PrCssFillMode_Both);
+    REQUIRE(prCssAnimationPlay(animation) == PrStatus_Ok);
+    frame(page, 0);
+    frame(page, 400);
+    REQUIRE(prCssAnimationReverse(animation) == PrStatus_Ok);
+    frame(page, 400);
+    frame(page, 500);
+    CHECK(prCssAnimationPlaybackRate(animation) == -1);
+    CHECK(prCssAnimationCurrentTime(animation) == 300);
+    CHECK(px(page.box("a").width) == doctest::Approx(40));
+
+    PrCssEffectTiming timing = prCssEffectTimingDefault();
+    timing.iterations = kPrF64Infinity;
+    REQUIRE(prCssKeyframeEffectUpdateTiming(prCssAnimationEffect(animation), &timing, PrCssTimingMember_Iterations) ==
+        PrStatus_Ok);
+    prCssAnimationSetPlaybackRate(animation, 1);
+    CHECK(prCssAnimationFinish(animation) == PrStatus_InvalidState);
+    prCssAnimationRelease(animation);
+}
+
+TEST_CASE("keyframes are refused out of order, and those without offsets are spaced between the others") {
+    Page page("<div id=a></div>");
+    const PrCssKeyframeProperty width[] = {{"width", "10px"}};
+    PrCssKeyframe frames[] = {
+        {0.5, kPrF64Nan, PrStringView{}, PrCssComposite_Auto, width, 1},
+        {0.25, kPrF64Nan, PrStringView{}, PrCssComposite_Auto, width, 1},
+    };
+    PrCssEffectTiming timing = prCssEffectTimingDefault();
+    PrCssKeyframeEffect* effect = nullptr;
+    CHECK(prCssKeyframeEffectCreate(page.document, byId(page, "a"), PrStringView{}, frames, 2, &timing, &effect) ==
+        PrStatus_InvalidData);
+    CHECK(effect == nullptr);
+    frames[1].offset = kPrF64Nan;
+    frames[1].easing = "bounce";
+    CHECK(prCssKeyframeEffectCreate(page.document, byId(page, "a"), PrStringView{}, frames, 2, &timing, &effect) ==
+        PrStatus_InvalidData);
+    CHECK(prCssKeyframeEffectCreate(page.document, byId(page, "a"), "before", frames, 1, &timing, &effect) ==
+        PrStatus_Syntax);
+
+    // The first keyframe is at 0 unless it says otherwise, and the last at 1, with those between spaced evenly.
+    PrCssKeyframe spaced[] = {
+        {kPrF64Nan, kPrF64Nan, PrStringView{}, PrCssComposite_Auto, width, 1},
+        {kPrF64Nan, kPrF64Nan, "ease-in", PrCssComposite_Add, width, 1},
+        {kPrF64Nan, kPrF64Nan, PrStringView{}, PrCssComposite_Auto, width, 1},
+        {0.9, kPrF64Nan, PrStringView{}, PrCssComposite_Auto, width, 1},
+        {kPrF64Nan, kPrF64Nan, PrStringView{}, PrCssComposite_Auto, width, 1},
+    };
+    REQUIRE(prCssKeyframeEffectCreate(page.document, byId(page, "a"), "::before", spaced, 5, &timing, &effect) ==
+        PrStatus_Ok);
+    CHECK(prCssKeyframeEffectPseudoElement(effect) == "::before");
+    PrCssComputedKeyframe read[5] = {};
+    REQUIRE(prCssKeyframeEffectKeyframes(effect, read, 5) == 5);
+    const double offsets[] = {0, 0.3, 0.6, 0.9, 1};
+    for (uint32_t i = 0; i < 5; ++i) {
+        CAPTURE(i);
+        CHECK(read[i].computedOffset == doctest::Approx(offsets[i]));
+        CHECK(read[i].propertyCount == 1);
+    }
+    CHECK(prF64IsNan(read[1].offset));
+    CHECK(prRawStringView(&read[1].easing) == "ease-in");
+    CHECK(read[1].composite == PrCssComposite_Add);
+    for (PrCssComputedKeyframe& frame : read)
+        prRawStringReset(&frame.easing);
+    PrRawString name = prRawStringNull();
+    PrRawString value = prRawStringNull();
+    REQUIRE(prCssKeyframeEffectKeyframeProperty(effect, 2, 0, &name, &value));
+    CHECK(prRawStringView(&name) == "width");
+    CHECK(prRawStringView(&value) == "10px");
+    prRawStringReset(&name);
+    prRawStringReset(&value);
+    prCssKeyframeEffectRelease(effect);
+}
+
+TEST_CASE("a document's animations are its CSS animations, then the animations of scripts, in composite order") {
+    Page page("<style>@keyframes grow { to { width: 110px } } #a { height: 5px; animation: grow 1s linear }</style>"
+        "<div id=a></div>");
+    frame(page, 0);
+    PrCssAnimation* script = animateWidth(page, byId(page, "a"), 1000, PrCssFillMode_None);
+    REQUIRE(prCssAnimationPlay(script) == PrStatus_Ok);
+    PrCssAnimation* found[4] = {};
+    REQUIRE(prCssDocumentAnimations(page.document, nullptr, true, found, 4) == 2);
+    CHECK(prCssAnimationKind(found[0]) == PrCssAnimationKind_Css);
+    CHECK(prCssAnimationName(found[0]) == "grow");
+    CHECK(found[1] == script);
+    for (PrCssAnimation* animation : found)
+        prCssAnimationRelease(animation);
+    // A script's animation that fills over the same property as an earlier one replaces it once both are finished.
+    PrCssAnimation* later = animateWidth(page, byId(page, "a"), 500, PrCssFillMode_Forwards);
+    PrCssEffectTiming fills = prCssEffectTimingDefault();
+    fills.fill = PrCssFillMode_Forwards;
+    prCssKeyframeEffectUpdateTiming(prCssAnimationEffect(script), &fills, PrCssTimingMember_Fill);
+    REQUIRE(prCssAnimationPlay(later) == PrStatus_Ok);
+    frame(page, 100);
+    frame(page, 2000);
+    CHECK(prCssAnimationReplaceState(script) == PrCssReplaceState_Removed);
+    CHECK(prCssAnimationReplaceState(later) == PrCssReplaceState_Active);
+    prCssAnimationRelease(script);
+    prCssAnimationRelease(later);
+}
+
+TEST_CASE("a document that no presentation shows has an inactive timeline, which never readies an animation") {
+    PrDomDocument* document =
+        prHtmlDomParserParseFromString(nullptr, "<div id=a></div>", PrHtmlDomParserSupportedType_TextHtml);
+    PrCssTimeline* timeline = prCssDocumentTimeline(document);
+    CHECK(prF64IsNan(prCssTimelineCurrentTime(timeline)));
+    PrCssEffectTiming timing = prCssEffectTimingDefault();
+    timing.duration = 1000;
+    PrCssKeyframeEffect* effect = nullptr;
+    PrDomElement* a = prDomNodeGetElementById(prDomDocumentAsNode(document), "a");
+    REQUIRE(prCssKeyframeEffectCreate(document, a, PrStringView{}, nullptr, 0, &timing, &effect) == PrStatus_Ok);
+    PrCssAnimation* animation = prCssAnimationCreate(document, effect, timeline);
+    REQUIRE(prCssAnimationPlay(animation) == PrStatus_Ok);
+    CHECK(prCssAnimationPending(animation));
+    CHECK_FALSE(prCssAnimationRunning(animation));
+    CHECK(prCssAnimationReverse(animation) == PrStatus_InvalidState);
+    prCssAnimationRelease(animation);
+    prCssKeyframeEffectRelease(effect);
+    prDomNodeRelease(prDomDocumentAsNode(document));
 }
 
 TEST_CASE("a CSS animation runs its keyframes, iterations and direction") {

@@ -22,10 +22,12 @@
 
 namespace pr_impl {
 
-// A module of a realm (html/#module-script), by the name that imports resolve to: its URL, or an inline module script's
-// own name. A module that an import names is recorded before it is parsed, and is undefined until then.
+// A module of a realm (html/#module-script), by the name that imports resolve to and its module type. The name is its
+// URL, or an inline module script's own name. A module that an import names is recorded before it is parsed, and is
+// undefined until then.
 struct JsHtmlModule {
     PrRawString name;
+    PrHtmlModuleType type;
     PrRawString base;               // the URL that its imports resolve against, which is its import.meta.url
     JSValue module;                 // compiled, with its imports unresolved until its graph is linked; or undefined
     JSValue error;                  // html/#concept-script-parse-error, or undefined
@@ -42,14 +44,16 @@ struct JsHtmlClassicScript {
 struct JsHtmlEngine;
 struct JsHtmlRealm;
 
-// An import() whose module graph the browsing context fetches. Its promise is settled once the graph is fetched. The
-// import outlives the engine, which frees its values, until the browsing context reports it.
+// An import() whose module graph the browsing context fetches. Its promise is settled, through the token that QuickJS
+// gave the import (JS_FinishDynamicImport), once the graph is fetched. The import outlives the engine, which frees its
+// token, until the browsing context reports it.
 struct JsHtmlImport {
     JsHtmlRealm* realm;
-    JSValue resolvingFuncs[2];
+    JSValue token;
     PrRawString base;                  // the name of the script or module that imports
     PrRawString specifier;
     PrRawString url;                   // the URL that the specifier resolved to, the name of the graph's root
+    PrHtmlModuleType type;             // the root's module type
 };
 
 // A fetch() whose response the browsing context fetches. Its promise is settled once the response arrives, or once its
@@ -270,7 +274,7 @@ void bindFetch(JSContext* ctx) {
 // Gives the realm a new context, with the engine's bindings.
 void bindContext(JsHtmlRealm* realm) {
     JsHtmlEngine* engine = realm->engine;
-    realm->ctx = JS_NewContext(engine->runtime);
+    realm->ctx = jsContextCreate(engine->runtime);
     JS_SetContextOpaque(realm->ctx, realm);
     prJsDomBind(realm->ctx);
     prJsCssBind(realm->ctx);
@@ -307,8 +311,7 @@ void freeContext(JsHtmlRealm* realm) {
     realm->classicScripts.reset();
     for (uint32_t i = 0; i < realm->imports.count; ++i) {
         JsHtmlImport* import = realm->imports.data[i];
-        JS_FreeValue(realm->ctx, import->resolvingFuncs[0]);
-        JS_FreeValue(realm->ctx, import->resolvingFuncs[1]);
+        JS_FreeValue(realm->ctx, import->token);
     }
     realm->imports.reset();
     for (uint32_t i = 0; i < realm->fetches.count; ++i)
@@ -336,21 +339,29 @@ void evalText(PrStringView text, uint32_t column, PrTextBuffer* out) {
     prTextBufferAppendChar(out, '\0');
 }
 
-// Returns the index of the module named `name`, or kArrayMissing.
-uint32_t findModule(const JsHtmlRealm* realm, PrStringView name) {
+// Returns the index of the module named `name` with the module type `type`, or kArrayMissing.
+uint32_t findModule(const JsHtmlRealm* realm, PrStringView name, PrHtmlModuleType type) {
     for (uint32_t i = 0; i < realm->modules.count; ++i) {
-        if (prRawStringView(&realm->modules.data[i].name) == name)
+        const JsHtmlModule& module = realm->modules.data[i];
+        if (prRawStringView(&module.name) == name && module.type == type)
             return i;
     }
     return kArrayMissing;
 }
 
-// Returns the index of the module named `name`, which is recorded unparsed if the realm has none by that name.
-uint32_t recordModule(JsHtmlRealm* realm, PrStringView name) {
-    uint32_t index = findModule(realm, name);
+// Returns the index of the module named `name` with the module type `type`. The module is recorded unparsed if the
+// realm lacks it.
+uint32_t recordModule(JsHtmlRealm* realm, PrStringView name, PrHtmlModuleType type) {
+    uint32_t index = findModule(realm, name, type);
     if (index != kArrayMissing)
         return index;
-    realm->modules.push(JsHtmlModule{prRawStringCopy(name), prRawStringCopy(name), JS_UNDEFINED, JS_UNDEFINED, {}});
+    realm->modules.push(JsHtmlModule{
+        .name = prRawStringCopy(name),
+        .type = type,
+        .base = prRawStringCopy(name),
+        .module = JS_UNDEFINED,
+        .error = JS_UNDEFINED,
+    });
     return realm->modules.count - 1;
 }
 
@@ -384,7 +395,7 @@ PrStringView baseOf(const JsHtmlRealm* realm, PrStringView name) {
         if (prRawStringView(&realm->classicScripts.data[i].name) == name)
             return prRawStringView(&realm->classicScripts.data[i].base);
     }
-    uint32_t module = findModule(realm, name);
+    uint32_t module = findModule(realm, name, PrHtmlModuleType_JavaScript);
     return module != kArrayMissing ? prRawStringView(&realm->modules.data[module].base) : name;
 }
 
@@ -411,33 +422,100 @@ char* PR_NULLABLE normalizeModule(JSContext* ctx, const char* baseName, const ch
     return result;
 }
 
-// Returns the module's imports resolved against its base URL, or false, with the TypeError thrown, if a specifier does
-// not resolve.
-bool resolveRequests(JsHtmlRealm* realm, JSModuleDef* definition, PrStringView base, RawArray<PrRawString>* out) {
+// Writes the module type that an import's attributes ask for to `out` (html/#module-type-from-module-request). An
+// import without a type attribute asks for a JavaScript module. Returns false, with a TypeError thrown, for a type that
+// the engine does not support (html/#module-type-allowed).
+bool moduleTypeOf(JSContext* ctx, JSValueConst attributes, PrHtmlModuleType* out) {
+    *out = PrHtmlModuleType_JavaScript;
+    if (!JS_IsObject(attributes))
+        return true;
+    JSValue type = JS_GetPropertyStr(ctx, attributes, "type");
+    if (JS_IsException(type))
+        return false;
+    if (JS_IsUndefined(type))
+        return true;
+    const char* name = JS_ToCString(ctx, type);
+    JS_FreeValue(ctx, type);
+    if (name == nullptr)
+        return false;
+    bool json = PrStringView{name} == "json";
+    if (json)
+        *out = PrHtmlModuleType_Json;
+    else
+        JS_ThrowTypeError(ctx, "Module type '%s' is not supported", name);
+    JS_FreeCString(ctx, name);
+    return json;
+}
+
+// A module that a module imports: its URL and its module type.
+struct JsHtmlRequest {
+    PrRawString url;
+    PrHtmlModuleType type;
+};
+
+// Appends the module's imports to `out`, resolved against its base URL. Returns false, with a TypeError thrown, if a
+// specifier does not resolve or an import asks for an unsupported module type.
+bool resolveRequests(JsHtmlRealm* realm, JSModuleDef* definition, PrStringView base, RawArray<JsHtmlRequest>* out) {
+    JSContext* ctx = realm->ctx;
     int count = JS_GetModuleRequestCount(definition);
     for (int i = 0; i < count; ++i) {
-        JSAtom atom = JS_GetModuleRequest(realm->ctx, definition, i);
-        const char* specifier = JS_AtomToCString(realm->ctx, atom);
-        JS_FreeAtom(realm->ctx, atom);
+        JSValue attributes = JS_GetModuleRequestAttributes(ctx, definition, i);
+        PrHtmlModuleType type = PrHtmlModuleType_JavaScript;
+        bool typed = moduleTypeOf(ctx, attributes, &type);
+        JS_FreeValue(ctx, attributes);
+        if (!typed)
+            return false;
+        JSAtom atom = JS_GetModuleRequest(ctx, definition, i);
+        const char* specifier = JS_AtomToCString(ctx, atom);
+        JS_FreeAtom(ctx, atom);
         if (specifier == nullptr)
             return false;
         PrRawString resolved = {};
         bool ok = resolveSpecifier(specifier, base, &resolved);
         if (ok)
-            out->push(resolved);
+            out->push(JsHtmlRequest{resolved, type});
         else
-            JS_ThrowTypeError(realm->ctx, "Failed to resolve module specifier '%s'", specifier);
-        JS_FreeCString(realm->ctx, specifier);
+            JS_ThrowTypeError(ctx, "Failed to resolve module specifier '%s'", specifier);
+        JS_FreeCString(ctx, specifier);
         if (!ok)
             return false;
     }
     return true;
 }
 
-// The host's parseModule. Compiles the module without loading what it imports, records the modules that it imports, and
-// reports each to the browsing context, which fetches the graph before the module is linked. A module that the realm
-// already parsed by the same name is not parsed again. An error is kept with the module, for the execution or the
-// import() that reaches it.
+// Sets the default export of a JSON module to the value that the module's private value holds.
+int initJsonModule(JSContext* ctx, JSModuleDef* definition) {
+    return JS_SetModuleExport(ctx, definition, "default", JS_GetModulePrivateValue(ctx, definition));
+}
+
+// Returns a JSON module named `name` whose default export is the value that `source` parses to
+// (html/#creating-a-json-module-script). Throws the SyntaxError if `source` is not JSON. The module carries the type
+// attribute "json", so that only an import that asks for that type resolves to it.
+JSValue newJsonModule(JSContext* ctx, const char* name, PrStringView source) {
+    PrTextBuffer text = {};
+    prTextBufferAppend(&text, source);
+    prTextBufferAppendChar(&text, '\0');
+    JSValue value = JS_ParseJSON(ctx, prTextBufferView(&text).data, source.size, name);
+    prTextBufferReset(&text);
+    if (JS_IsException(value))
+        return value;
+    JSModuleDef* definition = JS_NewCModule(ctx, name, initJsonModule);
+    JSValue attributes = definition != nullptr ? JS_NewObject(ctx) : JS_EXCEPTION;
+    if (JS_IsException(attributes) || JS_AddModuleExport(ctx, definition, "default") < 0 ||
+            JS_SetPropertyStr(ctx, attributes, "type", JS_NewString(ctx, "json")) < 0) {
+        JS_FreeValue(ctx, attributes);
+        JS_FreeValue(ctx, value);
+        return JS_EXCEPTION;
+    }
+    JS_SetModulePrivateValue(ctx, definition, value);
+    JS_SetModuleAttributes(ctx, definition, attributes);
+    return JS_DupValue(ctx, JS_MKPTR(JS_TAG_MODULE, definition));
+}
+
+// The host's parseModule. Compiles a JavaScript module without loading what it imports, records the modules that it
+// imports, and reports each to the browsing context, which fetches the graph before the module is linked. A JSON module
+// is parsed into its value. A module that the realm already parsed by the same name and type is not parsed again. An
+// error is kept with the module, for the execution or the import() that reaches it.
 uint32_t parseModule(void* context, PrHtmlPage*, const PrHtmlScript* script, PrHtmlModuleRequestFn request,
         void* PR_NULLABLE requestContext) {
     JsHtmlRealm* realm = static_cast<JsHtmlRealm*>(context);
@@ -451,8 +529,17 @@ uint32_t parseModule(void* context, PrHtmlPage*, const PrHtmlScript* script, PrH
         prTextBufferAppend(&name, "] ");
     }
     prTextBufferAppend(&name, script->url);
-    uint32_t index = recordModule(realm, prTextBufferView(&name));
+    PrHtmlModuleType type = script->moduleType;
+    uint32_t index = recordModule(realm, prTextBufferView(&name), type);
     JsHtmlModule* module = &realm->modules.data[index];
+    if (type == PrHtmlModuleType_Json && JS_IsUndefined(module->module) && JS_IsUndefined(module->error)) {
+        prTextBufferAppendChar(&name, '\0');
+        JSValue json = newJsonModule(ctx, prTextBufferView(&name).data, script->source);
+        if (JS_IsException(json))
+            module->error = JS_GetException(ctx);
+        else
+            module->module = json;
+    }
     if (JS_IsUndefined(module->module) && JS_IsUndefined(module->error)) {
         prRawStringReplace(&module->base, script->baseUrl);
         PrTextBuffer text = {};
@@ -466,7 +553,7 @@ uint32_t parseModule(void* context, PrHtmlPage*, const PrHtmlScript* script, PrH
         PrStringView eval = prTextBufferView(&text);
         JSValue compiled = JS_Eval2(ctx, eval.data, eval.size - 1, &options);
         prTextBufferReset(&text);
-        RawArray<PrRawString> requests;
+        RawArray<JsHtmlRequest> requests;
         bool parsed = !JS_IsException(compiled);
         if (parsed) {
             JSModuleDef* definition = static_cast<JSModuleDef*>(JS_VALUE_GET_PTR(compiled));
@@ -478,11 +565,11 @@ uint32_t parseModule(void* context, PrHtmlPage*, const PrHtmlScript* script, PrH
         }
         // Recording an import may move the modules.
         for (uint32_t i = 0; parsed && i < requests.count; ++i) {
-            uint32_t imported = recordModule(realm, prRawStringView(&requests.data[i]));
+            uint32_t imported = recordModule(realm, prRawStringView(&requests.data[i].url), requests.data[i].type);
             realm->modules.data[index].requests.push(imported);
         }
         for (uint32_t i = 0; i < requests.count; ++i)
-            prRawStringReset(&requests.data[i]);
+            prRawStringReset(&requests.data[i].url);
         requests.reset();
         module = &realm->modules.data[index];
         module->module = JS_IsException(compiled) ? JS_UNDEFINED : compiled;
@@ -491,8 +578,8 @@ uint32_t parseModule(void* context, PrHtmlPage*, const PrHtmlScript* script, PrH
     }
     prTextBufferReset(&name);
     for (uint32_t i = 0; i < realm->modules.data[index].requests.count; ++i) {
-        uint32_t imported = realm->modules.data[index].requests.data[i];
-        request(requestContext, prRawStringView(&realm->modules.data[imported].name));
+        const JsHtmlModule& imported = realm->modules.data[realm->modules.data[index].requests.data[i]];
+        request(requestContext, prRawStringView(&imported.name), imported.type);
     }
     return index;
 }
@@ -543,9 +630,33 @@ JSValue linkAndEvaluate(JsHtmlRealm* realm, uint32_t index) {
 
 // QuickJS's loader, which links a module to the modules that it imports. The browsing context fetched and parsed each
 // before the graph is linked, so a module that the realm lacks is one that was not fetched.
-JSModuleDef* PR_NULLABLE loadModule(JSContext* ctx, const char* name, void*) {
+JSModuleDef* PR_NULLABLE loadModule(JSContext* ctx, const char* name, void*, JSValueConst) {
     JS_ThrowTypeError(ctx, "Module '%s' was not fetched", name);
     return nullptr;
+}
+
+// Throws a SyntaxError for an import attribute whose key is not "type" (html/#validate-requested-module-specifiers).
+// The engine calls this when it parses an import declaration and when import() is called.
+int checkImportAttributes(JSContext* ctx, void*, JSValueConst attributes) {
+    if (!JS_IsObject(attributes))
+        return 0;
+    JSPropertyEnum* names = nullptr;
+    uint32_t count = 0;
+    if (JS_GetOwnPropertyNames(ctx, &names, &count, attributes, JS_GPN_STRING_MASK | JS_GPN_ENUM_ONLY) < 0)
+        return -1;
+    int result = 0;
+    for (uint32_t i = 0; i < count && result == 0; ++i) {
+        const char* key = JS_AtomToCString(ctx, names[i].atom);
+        if (key == nullptr) {
+            result = -1;
+        } else if (PrStringView{key} != "type") {
+            JS_ThrowSyntaxError(ctx, "Import attribute '%s' is not supported", key);
+            result = -1;
+        }
+        JS_FreeCString(ctx, key);
+    }
+    JS_FreePropertyEnum(ctx, names, count);
+    return result;
 }
 
 // Copies `text` into `out` with a NUL after it.
@@ -575,8 +686,7 @@ void imported(void* PR_NULLABLE context, PrStatus status) {
     realm->imports.removeFirst(import);
     JSContext* ctx = realm->ctx;
     if (status == PrStatus_Lost) {
-        JS_FreeValue(ctx, import->resolvingFuncs[0]);
-        JS_FreeValue(ctx, import->resolvingFuncs[1]);
+        JS_FreeValue(ctx, import->token);
         freeImport(import);
         return;
     }
@@ -586,56 +696,58 @@ void imported(void* PR_NULLABLE context, PrStatus status) {
     if (status != PrStatus_Ok) {
         result = JS_ThrowTypeError(ctx, "Failed to fetch module '%s'", prTextBufferView(&url).data);
     } else {
-        JSValue error = firstParseError(realm, findModule(realm, prRawStringView(&import->url)));
+        JSValue error = firstParseError(realm, findModule(realm, prRawStringView(&import->url), import->type));
         if (!JS_IsUndefined(error)) {
             result = JS_Throw(ctx, error);
         } else {
             PrTextBuffer base = {};
             PrTextBuffer specifier = {};
+            // The attributes find the module of the root's type among those of its name.
+            JSValue attributes = JS_UNDEFINED;
+            if (import->type == PrHtmlModuleType_Json) {
+                attributes = JS_NewObject(ctx);
+                JS_SetPropertyStr(ctx, attributes, "type", JS_NewString(ctx, "json"));
+            }
             jsEnterRealm(ctx);
             result = JS_LoadModule(ctx, cStringOf(prRawStringView(&import->base), &base),
-                cStringOf(prRawStringView(&import->specifier), &specifier));
+                cStringOf(prRawStringView(&import->specifier), &specifier), attributes);
             jsLeaveRealm(ctx);
+            JS_FreeValue(ctx, attributes);
             prTextBufferReset(&base);
             prTextBufferReset(&specifier);
         }
     }
     prTextBufferReset(&url);
-    bool rejected = JS_IsException(result);
-    if (rejected)
-        result = JS_GetException(ctx);
-    JSValue settled = JS_Call(ctx, import->resolvingFuncs[rejected ? 1 : 0], JS_UNDEFINED, 1, &result);
-    JS_FreeValue(ctx, settled);
-    JS_FreeValue(ctx, result);
-    JS_FreeValue(ctx, import->resolvingFuncs[0]);
-    JS_FreeValue(ctx, import->resolvingFuncs[1]);
+    // The import takes the module's promise, or the exception.
+    JSValue exception = JS_IsException(result) ? JS_GetException(ctx) : JS_UNDEFINED;
+    JS_FinishDynamicImport(ctx, import->token, result, exception);
     freeImport(import);
     engineCheckpoint(realm->engine);
 }
 
 // QuickJS's import(), which asks the browsing context to fetch the graph of the module that `specifier` names
-// (html/#hostloadimportedmodule). A specifier that does not resolve rejects the import's promise.
-void importModule(JSContext* ctx, const char* baseName, const char* specifier, JSValueConst* resolvingFuncs, void*) {
+// (html/#hostloadimportedmodule). The import holds `token` until it settles. A specifier that does not resolve, or an
+// unsupported module type, rejects the import's promise.
+void importModule(JSContext* ctx, const char* baseName, const char* specifier, JSValue token, JSValueConst attributes, void*) {
     JsHtmlRealm* realm = realmOf(ctx);
-    char* url = normalizeModule(ctx, baseName, specifier, nullptr);
+    PrHtmlModuleType type = PrHtmlModuleType_JavaScript;
+    char* url = moduleTypeOf(ctx, attributes, &type) ? normalizeModule(ctx, baseName, specifier, nullptr) : nullptr;
     if (url == nullptr) {
-        JSValue error = JS_GetException(ctx);
-        JSValue settled = JS_Call(ctx, resolvingFuncs[1], JS_UNDEFINED, 1, &error);
-        JS_FreeValue(ctx, settled);
-        JS_FreeValue(ctx, error);
+        JS_FinishDynamicImport(ctx, token, JS_EXCEPTION, JS_GetException(ctx));
         return;
     }
     JsHtmlImport* import = allocZeroed<JsHtmlImport>();
     *import = JsHtmlImport{
         .realm = realm,
-        .resolvingFuncs = {JS_DupValue(ctx, resolvingFuncs[0]), JS_DupValue(ctx, resolvingFuncs[1])},
+        .token = token,
         .base = prRawStringCopy(baseName),
         .specifier = prRawStringCopy(specifier),
         .url = prRawStringCopy(url),
+        .type = type,
     };
     js_free(ctx, url);
     realm->imports.push(import);
-    prHtmlPageImportModule(realm->page, prRawStringView(&import->url), imported, import);
+    prHtmlPageImportModule(realm->page, prRawStringView(&import->url), type, imported, import);
 }
 
 // The members of the host that prJsHtmlEngineHost returns. Each is called with the realm.
@@ -945,8 +1057,8 @@ PrJsHtmlEngine* prJsHtmlEngineCreate(const PrJsHtmlEngineDesc* desc) {
     engine->runtime = jsRuntimeCreate();
     JS_SetDateNowFunc(engine->runtime, dateNow);
     prJsHtmlConsoleSetPrinter(engine->runtime, desc->console);
-    JS_SetModuleLoaderFunc(engine->runtime, normalizeModule, loadModule, nullptr);
-    JS_SetModuleImportFunc(engine->runtime, importModule);
+    JS_SetModuleLoaderFunc2(engine->runtime, normalizeModule, loadModule, checkImportAttributes, nullptr);
+    JS_SetDynamicImportFunc(engine->runtime, importModule, nullptr);
     engine->own = createRealm(engine);
     JSValue global = JS_GetGlobalObject(engine->own->ctx);
     JS_SetPropertyStr(engine->own->ctx, global, "self", JS_DupValue(engine->own->ctx, global));

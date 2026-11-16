@@ -53,6 +53,29 @@ TEST_CASE("sorting orders few and many items, duplicates and all") {
     }
 }
 
+TEST_CASE("a stable sort keeps the order of items that compare equal, at few and many items") {
+    struct Item {
+        int key;
+        uint32_t order;
+    };
+    const uint32_t kCounts[] = {0, 1, 2, 7, 16, 17, 33, 1000};
+    for (uint32_t count : kCounts) {
+        CAPTURE(count);
+        Array<Item> items;
+        uint32_t state = 54321;
+        for (uint32_t i = 0; i < count; ++i) {
+            state = state * 1103515245u + 12345u;
+            items.push(Item{int(state >> 20) % 7, i});
+        }
+        stableSortItems(items.span(), [](const Item& a, const Item& b) { return a.key < b.key; });
+        for (uint32_t i = 1; i < count; ++i) {
+            CHECK(items[i - 1].key <= items[i].key);
+            if (items[i - 1].key == items[i].key)
+                CHECK(items[i - 1].order < items[i].order);
+        }
+    }
+}
+
 TEST_CASE("reversing puts the items in the opposite order, an odd count's middle in place") {
     const uint32_t counts[] = {0, 1, 2, 5, 6};
     for (uint32_t count : counts) {

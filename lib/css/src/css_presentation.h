@@ -442,7 +442,6 @@ struct CssPresentation {
     RawArray<CssPresentationPrefetch> prefetched; // in tree order
     uint32_t prefetchNext;                        // first prefetched element that the walk has not taken
     RawArray<uint32_t> tasks;                     // scratch: roots of the subtrees that the pool computes
-    CssAnimateState animations;
     RawArray<CssPresentationEntry> entries;
     RawArray<uint32_t> free;           // free entries
     RawArray<PrLayoutCalcNode> calc;   // scratch: a length's calculation
@@ -782,6 +781,13 @@ CssColorContext cssPresentationColorContext(PrCssPresentation* presentation, con
 // presentation next restyles. Called on the presentation's thread, outside a restyle.
 const CssComputedStyle* PR_NULLABLE cssPresentationStyleCurrent(PrCssPresentation* presentation, const PrDomElement* element);
 
+// Styles the element again at the next update, with its pseudo-elements, because an effect that targets one of them
+// changed (CssPresentationHooks::effectChanged).
+void cssPresentationEffectChanged(PrCssPresentation* presentation, const PrDomElement* element);
+
+// Samples the effects of the element, or of its pseudo-element `pseudo`, again at the next update.
+void cssPresentationAnimateTarget(PrCssPresentation* presentation, const PrDomElement* element, CssPseudo pseudo);
+
 // Returns the tree, which the caller's thread owns until the presentation next starts a worker.
 PrLayoutTree* cssPresentationOwnTree(PrCssPresentation* presentation);
 
@@ -801,10 +807,14 @@ void cssPresentationScrollTo(PrCssPresentation* presentation, PrLayoutNode node,
 // event at the document bubbles.
 void cssPresentationRunScrollSteps(PrCssPresentation* presentation);
 
-// Fires the events of the presentation's transitions and CSS animations that are due at its current time, and the
-// events of those canceled since the last call, in the order in which they happened
-// (web-animations-1/#update-animations-and-send-events).
+// Dispatches the events of the document's animations that wait in its queue: the events of transitions and CSS
+// animations at their elements, and the playback events of animations at the animations, in the order in which they
+// happened (web-animations-1/#update-animations-and-send-events).
 void cssPresentationSendAnimationEvents(PrCssPresentation* presentation);
+
+// Returns the pseudo-element `pseudo` of the element that the presentation generates, or null if it generates none.
+const PrDomNode* PR_NULLABLE cssPresentationPseudoNode(const PrCssPresentation* presentation,
+    const PrDomElement* element, CssPseudo pseudo);
 
 // Returns true if the presentation has work for the next rendering update: events of scrolls or of animations to fire,
 // a change of the document whose styles it has yet to compute, or a layout to make that may request fonts

@@ -18,7 +18,7 @@ namespace {
 // A runtime with the DOM bound, and a probe object whose finalizations it counts.
 struct Lifetime {
     JSRuntime* runtime = jsRuntimeCreate();
-    JSContext* ctx = JS_NewContext(runtime);
+    JSContext* ctx = jsContextCreate(runtime);
     int finalized = 0;
 
     Lifetime() {
@@ -41,7 +41,7 @@ struct Lifetime {
             ++*static_cast<int*>(JS_GetAnyOpaque(value, &id));
         };
         jsRegisterClass(runtime, &probeClass, definition);
-        JSValue object = JS_NewObjectClass(ctx, int(probeClass));
+        JSValue object = JS_NewObjectClass(ctx, probeClass);
         JS_SetOpaque(object, &finalized);
         return object;
     }
@@ -71,7 +71,7 @@ using namespace pr_impl;
 
 TEST_CASE("a collection or an element a query returns keeps its document alive") {
     JSRuntime* runtime = jsRuntimeCreate();
-    JSContext* ctx = JS_NewContext(runtime);
+    JSContext* ctx = jsContextCreate(runtime);
     prJsDomBind(ctx);
     prJsCssBind(ctx);
     jsHtmlBind(ctx);
@@ -86,7 +86,7 @@ TEST_CASE("a collection or an element a query returns keeps its document alive")
         ++*static_cast<int*>(JS_GetAnyOpaque(value, &id));
     };
     jsRegisterClass(runtime, &probeClass, definition);
-    JSValue probe = JS_NewObjectClass(ctx, int(probeClass));
+    JSValue probe = JS_NewObjectClass(ctx, probeClass);
     JS_SetOpaque(probe, &finalized);
     const char source[] = R"JS((function(probe) {
         const doc = new DOMParser().parseFromString('<p id="first"></p><p name="second"></p>', 'text/html');

@@ -40,6 +40,7 @@ enum {
     CloneTag_Error,
     CloneTag_Port,
     CloneTag_Blob,
+    CloneTag_DomException,
 };
 typedef uint8_t CloneTag;
 
@@ -167,8 +168,51 @@ bool writeMap(CloneWriter* w, JSValueConst map, bool isSet) {
     return ok;
 }
 
-// An error's name, which is read through its prototypes, and its own message, stack and cause if they are data
-// properties.
+void putView(CloneWriter* w, PrStringView text) {
+    putU32(w, uint32_t(text.size));
+    putBytes(w, text.data, text.size);
+}
+
+// Returns the string in the own stack data property of `object`, or undefined if it has none.
+JSValue ownStack(JSContext* ctx, JSValueConst object) {
+    JSAtom atom = JS_NewAtom(ctx, "stack");
+    JSPropertyDescriptor descriptor;
+    int present = JS_GetOwnProperty(ctx, &descriptor, object, atom);
+    JS_FreeAtom(ctx, atom);
+    if (present < 0)
+        return JS_EXCEPTION;
+    if (present == 0)
+        return JS_UNDEFINED;
+    JSValue stack = JS_UNDEFINED;
+    if ((descriptor.flags & JS_PROP_GETSET) == 0 && JS_IsString(descriptor.value))
+        stack = JS_DupValue(ctx, descriptor.value);
+    JS_FreeValue(ctx, descriptor.value);
+    JS_FreeValue(ctx, descriptor.getter);
+    JS_FreeValue(ctx, descriptor.setter);
+    return stack;
+}
+
+bool writeValue(CloneWriter* w, JSValueConst value);
+
+// Writes a DOMException's state and its stack (webidl/#idl-DOMException).
+bool writeDomException(CloneWriter* w, JSValueConst value, const JsDomExceptionState& exception) {
+    putTag(w, CloneTag_DomException);
+    putU32(w, exception.quotaExceeded ? 1 : 0);
+    putView(w, exception.name);
+    putView(w, exception.message);
+    putF64(w, exception.quota);
+    putF64(w, exception.requested);
+    JSValue stack = ownStack(w->ctx, value);
+    if (JS_IsException(stack))
+        return false;
+    bool ok = writeValue(w, stack);
+    JS_FreeValue(w->ctx, stack);
+    return ok;
+}
+
+// Writes an error's name, its own message and cause data properties, and its stack. The name is read through the
+// prototype chain. The stack is an own data property if there is one, or else the stack in [[ErrorData]]
+// (proposal-error-stack-accessor).
 bool writeError(CloneWriter* w, JSValueConst error) {
     JSContext* ctx = w->ctx;
     JSValue nameValue = JS_GetPropertyStr(ctx, error, "name");
@@ -204,6 +248,13 @@ bool writeError(CloneWriter* w, JSValueConst error) {
             JS_FreeValue(ctx, descriptor.value);
             JS_FreeValue(ctx, descriptor.getter);
             JS_FreeValue(ctx, descriptor.setter);
+        }
+        if (JS_IsUndefined(item) && PrStringView{member} == "stack") {
+            item = JS_GetErrorStack(ctx, error);
+            if (!JS_IsString(item)) {
+                JS_FreeValue(ctx, item);
+                item = JS_UNDEFINED;
+            }
         }
         if (JS_IsException(item))
             return false;
@@ -296,6 +347,9 @@ bool writeObject(CloneWriter* w, JSValueConst value) {
         writeBlob(w, blob);
         return true;
     }
+    JsDomExceptionState exception;
+    if (jsDomExceptionState(ctx, value, &exception))
+        return writeDomException(w, value, exception);
     ++w->depth;
     bool ok = false;
     switch (JS_GetCloneKind(value)) {
@@ -370,7 +424,9 @@ bool writeValue(CloneWriter* w, JSValueConst value) {
             return true;
         }
         case JS_TAG_STRING:
+        case JS_TAG_STRING_ROPE:
         case JS_TAG_BIG_INT:
+        case JS_TAG_SHORT_BIG_INT:
             return writeEngine(w, CloneTag_Primitive, value);
         case JS_TAG_OBJECT:
             return writeObject(w, value);
@@ -474,7 +530,10 @@ JSValue readError(CloneReader* r) {
         }
         if (JS_IsUndefined(text))
             continue;
-        JS_DefinePropertyValueStr(ctx, error, member, text, JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
+        if (PrStringView{member} == "stack")
+            JS_SetErrorStack(ctx, error, text);
+        else
+            JS_DefinePropertyValueStr(ctx, error, member, text, JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
     }
     return error;
 }
@@ -532,6 +591,30 @@ JSValue readBlob(CloneReader* r) {
     const PrFetchBlob* blob =
         isFile != 0 ? prFetchBlobCreateFile(content, type, name, lastModified) : prFetchBlobCreate(content, type);
     return remember(r, prJsFetchBlobNew(r->ctx, blob));
+}
+
+JSValue readDomException(CloneReader* r) {
+    JsDomExceptionState state = {};
+    uint32_t quotaExceeded = 0;
+    if (!getBytes(r, &quotaExceeded, sizeof(quotaExceeded)) || !getView(r, &state.name) ||
+            !getView(r, &state.message) || !getBytes(r, &state.quota, sizeof(state.quota)) ||
+            !getBytes(r, &state.requested, sizeof(state.requested)))
+        return corrupt(r->ctx);
+    state.quotaExceeded = quotaExceeded != 0;
+    JSValue exception = jsDomExceptionFromState(r->ctx, state);
+    if (JS_IsException(exception))
+        return exception;
+    remember(r, exception);
+    JSValue stack = readValue(r);
+    if (JS_IsException(stack)) {
+        JS_FreeValue(r->ctx, exception);
+        return stack;
+    }
+    if (JS_IsString(stack))
+        JS_DefinePropertyValueStr(r->ctx, exception, "stack", stack, JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
+    else
+        JS_FreeValue(r->ctx, stack);
+    return exception;
 }
 
 JSValue readValue(CloneReader* r) {
@@ -595,6 +678,8 @@ JSValue readValue(CloneReader* r) {
             return readError(r);
         case CloneTag_Blob:
             return readBlob(r);
+        case CloneTag_DomException:
+            return readDomException(r);
         case CloneTag_Port: {
             uint32_t position = 0;
             if (!getBytes(r, &position, sizeof(position)) || JS_IsUndefined(r->ports))

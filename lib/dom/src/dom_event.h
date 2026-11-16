@@ -325,6 +325,7 @@ struct PrDomInputEvent : PrDomUiEvent {};
 struct PrDomClipboardEvent : PrDomEvent {};
 struct PrCssAnimationEvent : PrDomEvent {};
 struct PrCssTransitionEvent : PrDomEvent {};
+struct PrCssAnimationPlaybackEvent : PrDomEvent {};
 struct PrCssFontFaceSetLoadEvent : PrDomEvent {};
 
 PR_ASSUME_NONNULL_END

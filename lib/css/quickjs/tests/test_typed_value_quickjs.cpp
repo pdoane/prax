@@ -33,7 +33,7 @@ using namespace pr_impl;
 
 TEST_CASE("Typed OM bindings preserve child identity and lifetime across mutation and GC") {
     JSRuntime* runtime = jsRuntimeCreate();
-    JSContext* ctx = JS_NewContext(runtime);
+    JSContext* ctx = jsContextCreate(runtime);
     prJsDomBind(ctx);
     prJsCssBind(ctx);
     CHECK(evaluates(ctx, R"JS((() => {
@@ -77,7 +77,7 @@ TEST_CASE("Typed OM bindings preserve child identity and lifetime across mutatio
 
 TEST_CASE("Typed OM indexed setters, iteration, and Web IDL conversions") {
     JSRuntime* runtime = jsRuntimeCreate();
-    JSContext* ctx = JS_NewContext(runtime);
+    JSContext* ctx = jsContextCreate(runtime);
     prJsDomBind(ctx);
     prJsCssBind(ctx);
     CHECK(evaluates(ctx, R"JS((() => {
@@ -116,7 +116,7 @@ TEST_CASE("Typed OM indexed setters, iteration, and Web IDL conversions") {
 
 TEST_CASE("Typed OM numeric constructors, conversion and nested serialization") {
     JSRuntime* runtime = jsRuntimeCreate();
-    JSContext* ctx = JS_NewContext(runtime);
+    JSContext* ctx = jsContextCreate(runtime);
     prJsDomBind(ctx);
     prJsCssBind(ctx);
     CHECK(evaluates(ctx, R"JS((() => {
@@ -150,7 +150,7 @@ TEST_CASE("Typed OM numeric constructors, conversion and nested serialization") 
 
 TEST_CASE("Typed OM values are checked a level at a time as they are made, whatever their depth") {
     JSRuntime* runtime = jsRuntimeCreate();
-    JSContext* ctx = JS_NewContext(runtime);
+    JSContext* ctx = jsContextCreate(runtime);
     prJsDomBind(ctx);
     prJsCssBind(ctx);
     CHECK(evaluates(ctx, R"JS((() => {
@@ -173,7 +173,7 @@ TEST_CASE("Typed OM values are checked a level at a time as they are made, whate
 
 TEST_CASE("Typed OM transforms retain children and serialize their dimensions") {
     JSRuntime* runtime = jsRuntimeCreate();
-    JSContext* ctx = JS_NewContext(runtime);
+    JSContext* ctx = jsContextCreate(runtime);
     prJsDomBind(ctx);
     prJsCssBind(ctx);
     CHECK(evaluates(ctx, R"JS((() => {
@@ -223,7 +223,7 @@ TEST_CASE("Typed OM transforms retain children and serialize their dimensions") 
 
 TEST_CASE("Typed OM matrices parse CSS, expose mutable elements and preserve identity") {
     JSRuntime* runtime = jsRuntimeCreate();
-    JSContext* ctx = JS_NewContext(runtime);
+    JSContext* ctx = jsContextCreate(runtime);
     prJsDomBind(ctx);
     prJsCssBind(ctx);
     CHECK(evaluates(ctx, R"JS((() => {
@@ -254,7 +254,7 @@ TEST_CASE("Typed OM matrices parse CSS, expose mutable elements and preserve ide
 
 TEST_CASE("Typed OM colors parse as written, rectify their channels and serialize their function") {
     JSRuntime* runtime = jsRuntimeCreate();
-    JSContext* ctx = JS_NewContext(runtime);
+    JSContext* ctx = jsContextCreate(runtime);
     prJsDomBind(ctx);
     prJsCssBind(ctx);
     CHECK(evaluates(ctx, R"JS((() => {

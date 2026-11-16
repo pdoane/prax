@@ -938,17 +938,28 @@ double UiBuilder::time() const {
 }
 
 float UiBuilder::progress(const UiAnimation& animation) {
-    PrLayoutTiming timing = prLayoutTimingDefault();
-    timing.start = animation.start * 1000;
+    PrLayoutEffectTiming timing = prLayoutEffectTimingDefault();
     timing.delay = animation.delay * 1000;
     timing.duration = animation.duration * 1000;
     timing.iterations = animation.iterations;
     timing.direction = animation.alternate ? PrLayoutPlaybackDirection_Alternate : PrLayoutPlaybackDirection_Normal;
     timing.fill = PrLayoutFill_Both;
+    // Tailwind's curves (tailwindcss.com/docs/transition-timing-function).
+    switch (animation.ease) {
+        case UiEase_In:
+            timing.easing = {.x1 = 0.4, .y1 = 0, .x2 = 1, .y2 = 1, .kind = PrLayoutEasingKind_CubicBezier};
+            break;
+        case UiEase_Out:
+            timing.easing = {.x1 = 0, .y1 = 0, .x2 = 0.2, .y2 = 1, .kind = PrLayoutEasingKind_CubicBezier};
+            break;
+        case UiEase_InOut:
+            timing.easing = {.x1 = 0.4, .y1 = 0, .x2 = 0.2, .y2 = 1, .kind = PrLayoutEasingKind_CubicBezier};
+            break;
+        default: break;
+    }
     double now = prUiCurrentRound(state_->ui)->time;
-    bool finished = false;
-    double input = prLayoutTimingProgress(&timing, now * 1000, &finished);
-    if (!finished) {
+    PrLayoutComputedTiming computed = prLayoutEffectTimingCompute(&timing, (now - animation.start) * 1000, 1);
+    if (computed.phase != PrLayoutEffectPhase_After) {
         // The memo being built shows the animation, so it builds again when the animation next moves.
         PrLayoutNode shows = state_->memos.count != 0 ? state_->memos.last() : kPrLayoutNodeNone;
         double begins = animation.start + animation.delay;
@@ -963,19 +974,8 @@ float UiBuilder::progress(const UiAnimation& animation) {
             prUiRequestFrame(state_->ui);
         }
     }
-    if (input < 0)
-        return 0;
-    // Tailwind's curves (tailwindcss.com/docs/transition-timing-function).
-    PrLayoutEasing easing = prLayoutEasingLinear();
-    switch (animation.ease) {
-        case UiEase_In: easing = {.x1 = 0.4, .y1 = 0, .x2 = 1, .y2 = 1, .kind = PrLayoutEasingKind_CubicBezier}; break;
-        case UiEase_Out: easing = {.x1 = 0, .y1 = 0, .x2 = 0.2, .y2 = 1, .kind = PrLayoutEasingKind_CubicBezier}; break;
-        case UiEase_InOut:
-            easing = {.x1 = 0.4, .y1 = 0, .x2 = 0.2, .y2 = 1, .kind = PrLayoutEasingKind_CubicBezier};
-            break;
-        default: break;
-    }
-    return float(prLayoutEase(&easing, input, false));
+    // An unresolved progress has no effect.
+    return computed.progress == computed.progress ? float(computed.progress) : 0;
 }
 
 float UiBuilder::animate(const UiAnimation& animation, float from, float to) {

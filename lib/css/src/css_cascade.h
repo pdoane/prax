@@ -18,6 +18,7 @@
 #include "pr/string_view.h"
 
 #include "css/src/css_counter.h"
+#include "css/src/css_keyframes.h"
 #include "css/src/css_media.h"
 #include "css/src/css_rule.h"
 #include "css/src/css_selector_match.h"
@@ -213,10 +214,10 @@ struct CssRuleReads {
     bool attributes;                // an attr() whose name another function gives: any attribute can restyle
 };
 
-// A @keyframes rule that animations name (css-animations-1/#keyframes).
-struct CssKeyframes {
+// The keyframes of the @keyframes rule that animations name (css-animations-1/#keyframes).
+struct CssNamedKeyframes {
     PrRawString name;
-    const CssRuleData* rule;
+    CssKeyframes* keyframes;        // compiled from the rule, holding a reference
 };
 
 // A media query list that the build of a rule set evaluated, and its result.
@@ -243,7 +244,7 @@ struct CssRuleSet {
     const PrDomDocument* PR_NULLABLE document;        // the document whose elements the set matches
     uint32_t generation;                              // incremented by each build; the matchers of a scratch follow it
     RawArray<PrRawString> layers;                     // the name of each layer, in layer order
-    RawArray<CssKeyframes> keyframes;                 // the last @keyframes rule of each name
+    RawArray<CssNamedKeyframes> keyframes;            // of the last @keyframes rule of each name
 
     // The @counter-style rules, in cascade order, and the counter styles that they define.
     RawArray<const CssRuleData* PR_NONNULL> counterStyleRules;
@@ -262,8 +263,8 @@ struct CssRuleSet {
 // Returns true if a declaration of the block reads attributes through attr() (css-values-5/#attr-notation).
 bool cssBlockReadsAttributes(const CssDeclarationBlock* block);
 
-// Returns the @keyframes rule that `name` names, or null if none does.
-const CssRuleData* PR_NULLABLE cssRuleSetKeyframes(const CssRuleSet* set, PrStringView name);
+// Returns the keyframes of the @keyframes rule that `name` names, or null if none does.
+CssKeyframes* PR_NULLABLE cssRuleSetKeyframes(const CssRuleSet* set, PrStringView name);
 
 // Returns what a change to the feature that hashes to `hash` invalidates: the first invalidation of its chain
 // (CssInvalidation::next). Returns null if no selector reads the feature.

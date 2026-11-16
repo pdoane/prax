@@ -338,8 +338,9 @@ TEST_CASE("an import fetches its graph and reports in a task, and one that waits
     PrHtmlHost host = later.host();
     PrHtmlPage* page = prHtmlPageCreate(&host);
     CHECK(prHtmlPageLoad(page, "<p>page</p>", "https://example.test/", nullptr) == PrStatus_Ok);
-    prHtmlPageImportModule(page, "https://example.test/a.js", Imported::done, &imported);
-    prHtmlPageImportModule(page, "https://example.test/missing.js", Imported::done, &imported);
+    prHtmlPageImportModule(page, "https://example.test/a.js", PrHtmlModuleType_JavaScript, Imported::done, &imported);
+    prHtmlPageImportModule(page, "https://example.test/missing.js", PrHtmlModuleType_JavaScript, Imported::done,
+        &imported);
     later.settle(page);
     later.answerScript("a.js", "import b.js\na");
     later.answer("missing.js", "", 404);
@@ -350,15 +351,46 @@ TEST_CASE("an import fetches its graph and reports in a task, and one that waits
     CHECK(imported.statuses == Array<PrStatus>({PrStatus_NotFound, PrStatus_Ok}));
 
     // A graph that is already fetched is reported in a task too.
-    prHtmlPageImportModule(page, "https://example.test/a.js", Imported::done, &imported);
+    prHtmlPageImportModule(page, "https://example.test/a.js", PrHtmlModuleType_JavaScript, Imported::done, &imported);
     CHECK(imported.statuses.count() == 2);
     later.settle(page);
     CHECK(imported.statuses.last() == PrStatus_Ok);
 
-    prHtmlPageImportModule(page, "https://example.test/later.js", Imported::done, &imported);
+    prHtmlPageImportModule(page, "https://example.test/later.js", PrHtmlModuleType_JavaScript, Imported::done,
+        &imported);
     prHtmlPageDestroy(page);
     CHECK(imported.statuses.last() == PrStatus_Lost);
     CHECK(later.modules.sources.count() == 2);
+}
+
+TEST_CASE("the module map keys a module by its URL and its type, and a JSON module needs a JSON response") {
+    LaterHost later;
+    PrHtmlHost host = later.host();
+    PrHtmlPage* page = prHtmlPageCreate(&host);
+    CHECK(prHtmlPageLoad(page, "<script type=module>import json data.json\nimport data.json\nroot</script>"
+        "<script type=module>import json text.json\ntyped</script>", "https://example.test/", nullptr) ==
+        PrStatus_Ok);
+    later.settle(page);
+    REQUIRE(later.fetcher.held.count() == 3);
+    uint32_t json = 0;
+    for (PrFetchInterceptRequest* request : later.fetcher.held)
+        json += request->desc.destination == PrFetchDestination_Json ? 1 : 0;
+    CHECK(json == 2);
+    for (PrFetchInterceptRequest* request : Array<PrFetchInterceptRequest*>(later.fetcher.held)) {
+        bool isJson = request->desc.destination == PrFetchDestination_Json;
+        bool text = prStringEndsWith(TestFetcher::urlOf(request), "text.json");
+        if (text)
+            later.fetcher.respondTo(request, "{}", 200, "text/javascript");
+        else if (isJson)
+            later.fetcher.respondTo(request, "{}", 200, "application/json");
+        else
+            later.fetcher.respondTo(request, "data", 200, "text/javascript");
+    }
+    later.settle(page);
+    // A JSON module served as JavaScript fails its graph, so only the first script runs.
+    CHECK(later.log == "root ");
+    CHECK(later.modules.sources.count() == 4);
+    prHtmlPageDestroy(page);
 }
 
 TEST_CASE("a module's imports resolve against the URL that redirects left its response at") {
@@ -390,7 +422,7 @@ TEST_CASE("an import's fetches do not delay the load event") {
     PrHtmlHost host = later.host();
     PrHtmlPage* page = prHtmlPageCreate(&host);
     CHECK(prHtmlPageLoad(page, "<img src=image.png>", "https://example.test/", nullptr) == PrStatus_Ok);
-    prHtmlPageImportModule(page, "https://example.test/a.js", Imported::done, &imported);
+    prHtmlPageImportModule(page, "https://example.test/a.js", PrHtmlModuleType_JavaScript, Imported::done, &imported);
     later.settle(page);
     later.answer("image.png", "");
     later.settle(page);

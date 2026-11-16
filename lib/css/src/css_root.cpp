@@ -44,6 +44,7 @@ CssRoot* cssDocumentRoot(PrDomDocument* document) {
 void cssRootDestroy(CssRoot* PR_NULLABLE style) {
     if (style == nullptr)
         return;
+    cssAnimationsReset(&style->animations);
     // The owner nodes own the sheets, and the document owns those of its processing instructions.
     style->sheets.sheets.reset();
     cssRootResetSheets(style);

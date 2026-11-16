@@ -1,16 +1,16 @@
 diff --git a/quickjs.c b/quickjs.c
-index cb87b50..ba733b5 100644
+index 8cbc85e..51d4206 100644
 --- a/quickjs.c
 +++ b/quickjs.c
-@@ -320,6 +320,7 @@ struct JSClass {
+@@ -332,6 +332,7 @@ typedef struct JSClass {
      JSClassCall *call;
      /* pointers for exotic behavior, can be NULL if none are present */
      const JSClassExoticMethods *exotic;
 +    JSClassStateHook *state;
- };
+ } JSClass;
  
- typedef struct JSStackFrame {
-@@ -1159,8 +1160,9 @@ static int JS_CreateProperty(JSContext *ctx, JSObject *p,
+ struct JSRuntime {
+@@ -1428,8 +1429,9 @@ static int JS_CreateProperty(JSContext *ctx, JSObject *p,
  static int js_string_memcmp(JSString *p1, JSString *p2, int len);
  static void reset_weak_ref(JSRuntime *rt, JSWeakRefRecord **first_weak_ref);
  static bool is_valid_weakref_target(JSValueConst val);
@@ -21,7 +21,7 @@ index cb87b50..ba733b5 100644
  static JSValue js_array_buffer_constructor3(JSContext *ctx,
                                              JSValueConst new_target,
                                              uint64_t len, uint64_t *max_len,
-@@ -3555,6 +3557,7 @@ static int JS_NewClass1(JSRuntime *rt, JSClassID class_id,
+@@ -4239,6 +4241,7 @@ static int JS_NewClass1(JSRuntime *rt, JSClassID class_id,
      cl->gc_mark = class_def->gc_mark;
      cl->call = class_def->call;
      cl->exotic = class_def->exotic;
@@ -29,7 +29,7 @@ index cb87b50..ba733b5 100644
      return 0;
  }
  
-@@ -7202,6 +7205,7 @@ static int JS_SetPrototypeInternal(JSContext *ctx, JSValueConst obj,
+@@ -8748,6 +8751,7 @@ static int JS_SetPrototypeInternal(JSContext *ctx, JSValueConst obj,
  
      if (js_shape_prepare_update(ctx, p, NULL))
          return -1;
@@ -37,16 +37,16 @@ index cb87b50..ba733b5 100644
      sh = p->shape;
      if (sh->proto)
          JS_FreeValue(ctx, JS_MKPTR(JS_TAG_OBJECT, sh->proto));
-@@ -8120,6 +8124,8 @@ int JS_PreventExtensions(JSContext *ctx, JSValueConst obj)
-     p = JS_VALUE_GET_OBJ(obj);
-     if (unlikely(p->class_id == JS_CLASS_PROXY))
-         return js_proxy_preventExtensions(ctx, obj);
+@@ -9883,6 +9887,8 @@ int JS_PreventExtensions(JSContext *ctx, JSValueConst obj)
+             return false;
+         }
+     }
 +    if (p->extensible)
 +        js_object_state(ctx->rt, p);
      p->extensible = false;
      return true;
  }
-@@ -8370,6 +8376,14 @@ JSValue JS_GetPropertyStr(JSContext *ctx, JSValueConst this_obj,
+@@ -10151,6 +10157,14 @@ JSValue JS_GetPropertyStr(JSContext *ctx, JSValueConst this_obj,
      return ret;
  }
  
@@ -61,15 +61,15 @@ index cb87b50..ba733b5 100644
  /* Note: the property value is not initialized. Return NULL if memory
     error. */
  static JSProperty *add_property(JSContext *ctx,
-@@ -8377,6 +8391,7 @@ static JSProperty *add_property(JSContext *ctx,
+@@ -10158,6 +10172,7 @@ static JSProperty *add_property(JSContext *ctx,
  {
      JSShape *sh, *new_sh;
  
 +    js_object_state(ctx->rt, p);
-     sh = p->shape;
-     if (sh->is_hashed) {
-         /* try to find an existing shape */
-@@ -47198,7 +47213,7 @@ static JSMapRecord *map_add_record(JSContext *ctx, JSMapState *s,
+     if (unlikely(p->is_prototype)) {
+         /* track addition of small integer properties to
+            Array.prototype and Object.prototype */
+@@ -53579,7 +53594,7 @@ static JSMapRecord *map_add_record(JSContext *ctx, JSMapState *s,
          }
          wr->kind = JS_WEAK_REF_KIND_MAP;
          wr->u.map_record = mr;
@@ -78,7 +78,7 @@ index cb87b50..ba733b5 100644
          mr->key = unsafe_unconst(key);
      } else {
          mr->key = js_dup(key);
-@@ -55465,7 +55480,7 @@ static JSValue js_weakref_constructor(JSContext *ctx, JSValueConst new_target,
+@@ -63185,7 +63200,7 @@ static JSValue js_weakref_constructor(JSContext *ctx, JSValueConst new_target,
      wrd->obj = obj;
      wr->kind = JS_WEAK_REF_KIND_WEAK_REF;
      wr->u.weak_ref_data = wrd;
@@ -87,7 +87,7 @@ index cb87b50..ba733b5 100644
  
      JS_SetOpaqueInternal(obj, wrd);
      return obj;
-@@ -55619,7 +55634,7 @@ static JSValue js_finrec_register(JSContext *ctx, JSValueConst this_val,
+@@ -63349,7 +63364,7 @@ static JSValue js_finrec_register(JSContext *ctx, JSValueConst this_val,
      list_add_tail(&fre->link, &frd->entries);
      wr->kind = JS_WEAK_REF_KIND_FINALIZATION_REGISTRY_ENTRY;
      wr->u.fin_rec_entry = fre;
@@ -96,7 +96,7 @@ index cb87b50..ba733b5 100644
  
      return JS_UNDEFINED;
  }
-@@ -55787,10 +55802,12 @@ static bool is_valid_weakref_target(JSValueConst val)
+@@ -63539,10 +63554,12 @@ static bool is_valid_weakref_target(JSValueConst val)
      return true;
  }
  
@@ -111,10 +111,10 @@ index cb87b50..ba733b5 100644
      wr->next_weak_ref = *pwr;
      *pwr = wr;
 diff --git a/quickjs.h b/quickjs.h
-index 087b557..6fb8140 100644
+index 1324066..0e010ab 100644
 --- a/quickjs.h
 +++ b/quickjs.h
-@@ -572,6 +572,12 @@ typedef JSValue JSClassCall(JSContext *ctx, JSValueConst func_obj,
+@@ -681,6 +681,12 @@ typedef JSValue JSClassCall(JSContext *ctx, JSValueConst func_obj,
                              JSValueConst this_val, int argc,
                              JSValueConst *argv, int flags);
  
@@ -127,7 +127,7 @@ index 087b557..6fb8140 100644
  typedef struct JSClassDef {
      const char *class_name; /* pure ASCII only! */
      JSClassFinalizer *finalizer;
-@@ -585,6 +591,7 @@ typedef struct JSClassDef {
+@@ -694,6 +700,7 @@ typedef struct JSClassDef {
      /* XXX: suppress this indirection ? It is here only to save memory
         because only a few classes need these methods */
      JSClassExoticMethods *exotic;

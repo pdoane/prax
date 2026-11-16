@@ -1,15 +1,16 @@
 diff --git a/quickjs.c b/quickjs.c
+index 8cbc85e..3ae2d9a 100644
 --- a/quickjs.c
 +++ b/quickjs.c
-@@ -241,6 +241,7 @@ struct JSRuntime {
-     JSMallocFunctions mf;
+@@ -339,6 +339,7 @@ struct JSRuntime {
      JSMallocState malloc_state;
+     JSArenaState arena_state;
      const char *rt_info;
 +    JSDateNowFunc *date_now_func;
  
      int atom_hash_size; /* power of two */
      int atom_count;
-@@ -50649,11 +50650,23 @@ static JSValue get_date_string(JSContext *ctx, JSValueConst this_val,
+@@ -57740,11 +57741,23 @@ static JSValue get_date_string(JSContext *ctx, JSValueConst this_val,
      return js_new_string8_len(ctx, buf, pos);
  }
  
@@ -35,7 +36,7 @@ diff --git a/quickjs.c b/quickjs.c
  static JSValue js_date_constructor(JSContext *ctx, JSValueConst new_target,
                                     int argc, JSValueConst *argv)
  {
-@@ -50668,7 +50681,7 @@ static JSValue js_date_constructor(JSContext *ctx, JSValueConst new_target,
+@@ -57759,7 +57772,7 @@ static JSValue js_date_constructor(JSContext *ctx, JSValueConst new_target,
      }
      n = argc;
      if (n == 0) {
@@ -44,7 +45,7 @@ diff --git a/quickjs.c b/quickjs.c
      } else if (n == 1) {
          JSValue v, dv;
          if (JS_VALUE_GET_TAG(argv[0]) == JS_TAG_OBJECT) {
-@@ -51209,7 +51222,7 @@ static JSValue js_Date_now(JSContext *ctx, JSValueConst this_val,
+@@ -58307,7 +58320,7 @@ static JSValue js_Date_now(JSContext *ctx, JSValueConst this_val,
                             int argc, JSValueConst *argv)
  {
      // now()
@@ -54,9 +55,10 @@ diff --git a/quickjs.c b/quickjs.c
  
  static JSValue js_date_Symbol_toPrimitive(JSContext *ctx, JSValueConst this_val,
 diff --git a/quickjs.h b/quickjs.h
+index 1324066..836a192 100644
 --- a/quickjs.h
 +++ b/quickjs.h
-@@ -413,6 +413,11 @@ typedef struct JSGCObjectHeader JSGCObjectHeader;
+@@ -511,6 +511,11 @@ typedef struct JSGCObjectHeader JSGCObjectHeader;
  JS_EXTERN JSRuntime *JS_NewRuntime(void);
  /* info lifetime must exceed that of rt */
  JS_EXTERN void JS_SetRuntimeInfo(JSRuntime *rt, const char *info);

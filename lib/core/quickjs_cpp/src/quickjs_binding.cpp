@@ -598,6 +598,20 @@ void jsRuntimeDestroy(JSRuntime* PR_NULLABLE runtime) {
     prMemoryFree(wrappers);
 }
 
+JSContext* PR_NULLABLE jsContextCreate(JSRuntime* runtime) {
+    JSContext* ctx = JS_NewContextRaw(runtime);
+    if (ctx == nullptr)
+        return nullptr;
+    if (JS_AddIntrinsicBaseObjects(ctx) || JS_AddIntrinsicDate(ctx) || JS_AddIntrinsicEval(ctx) ||
+            JS_AddIntrinsicRegExp(ctx) || JS_AddIntrinsicJSON(ctx) || JS_AddIntrinsicProxy(ctx) ||
+            JS_AddIntrinsicMapSet(ctx) || JS_AddIntrinsicTypedArrays(ctx) || JS_AddIntrinsicPromise(ctx) ||
+            JS_AddIntrinsicWeakRef(ctx)) {
+        JS_FreeContext(ctx);
+        return nullptr;
+    }
+    return ctx;
+}
+
 void jsCallbackLink(JSRuntime* runtime, JsCallback* callback, JSValueConst owner) {
     JSClassID id = 0;
     JsWrapper* wrapper = JS_IsObject(owner) ? static_cast<JsWrapper*>(JS_GetAnyOpaque(owner, &id)) : nullptr;
@@ -678,7 +692,7 @@ JSValue jsWrap(JSContext* ctx, JSClassID id, JSValueConst owner, void* PR_NULLAB
     if (found != nullptr)
         return JS_DupValue(ctx, objectOf(found));
 
-    JSValue object = JS_NewObjectClass(ctx, int(id));
+    JSValue object = JS_NewObjectClass(ctx, id);
     if (JS_IsException(object))
         return object;
 

@@ -1,8 +1,8 @@
 diff --git a/quickjs.c b/quickjs.c
-index cb87b50..dd5a5f5 100644
+index 8cbc85e..3700320 100644
 --- a/quickjs.c
 +++ b/quickjs.c
-@@ -958,13 +958,6 @@ typedef struct JSCallSiteData {
+@@ -1219,13 +1219,6 @@ typedef struct JSCallSiteData {
      int col_num;
  } JSCallSiteData;
  
@@ -13,14 +13,14 @@ index cb87b50..dd5a5f5 100644
 -#undef DEF
 -    JS_ATOM_END,
 -};
- #define JS_ATOM_LAST_KEYWORD JS_ATOM_super
+ #define JS_ATOM_LAST_KEYWORD JS_ATOM_using
  #define JS_ATOM_LAST_STRICT_KEYWORD JS_ATOM_yield
  
 diff --git a/quickjs.h b/quickjs.h
-index 087b557..48e3ad7 100644
+index 1324066..b20592f 100644
 --- a/quickjs.h
 +++ b/quickjs.h
-@@ -510,6 +510,15 @@ JS_EXTERN void JS_DumpMemoryUsage(FILE *fp, const JSMemoryUsage *s, JSRuntime *r
+@@ -612,6 +612,15 @@ JS_EXTERN void JS_DumpMemoryUsage(FILE *fp, const JSMemoryUsage *s, JSRuntime *r
  /* atom support */
  #define JS_ATOM_NULL 0
  

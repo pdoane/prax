@@ -354,7 +354,7 @@ PrColor16 playTree(HtmlView* v, PrCssPresentation* presentation, PrDrawList* lis
     tracks.resize(prCssPresentationTracks(presentation, nullptr, 0));
     prCssPresentationTracks(presentation, tracks.data, tracks.count);
     RawArray<PrLayoutSceneEffect> effects;
-    double time = presentation->animations.time;
+    double time = cssAnimations(presentation->document).time;
     effects.resize(prLayoutSceneSampleTracks(scene, tracks.data, tracks.count, time, nullptr, 0));
     prLayoutSceneSampleTracks(scene, tracks.data, tracks.count, time, effects.data, effects.count);
     PrLayoutScenePlayOptions options = prLayoutScenePlayOptionsDefault();

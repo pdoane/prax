@@ -87,8 +87,6 @@ JSClassID htmlHashChangeEventClass;
 JSClassID htmlPreferenceManagerClass;
 JSClassID htmlPreferenceObjectClass;
 JSClassID htmlStorageClass;
-JSClassID htmlAnimationTimelineClass;
-JSClassID htmlDocumentTimelineClass;
 JSClassID htmlWindowPropertiesClass;
 JSClassID htmlCrossOriginWindowClass;
 JSClassID htmlCrossOriginLocationClass;
@@ -2193,58 +2191,6 @@ JSValue performanceToJson(JSContext* ctx, JSValueConst performanceObject, int, J
     return object;
 }
 
-// ---------------------------------------------------------------------------------------------------------------------
-// AnimationTimeline and DocumentTimeline (web-animations-1/#the-animationtimeline-interface)
-
-JSValue timelineCurrentTime(JSContext* ctx, JSValueConst timelineObject) {
-    PrHtmlDocumentTimeline* timeline = jsThis<PrHtmlDocumentTimeline>(ctx, timelineObject, htmlAnimationTimelineClass);
-    if (timeline == nullptr)
-        return JS_EXCEPTION;
-    double time = 0;
-    return prHtmlDocumentTimelineCurrentTime(timeline, &time) ? JS_NewFloat64(ctx, time) : JS_NULL;
-}
-
-// duration (web-animations-2/#dom-animationtimeline-duration). A document timeline has none.
-JSValue timelineDuration(JSContext* ctx, JSValueConst timelineObject) {
-    PrHtmlDocumentTimeline* timeline = jsThis<PrHtmlDocumentTimeline>(ctx, timelineObject, htmlAnimationTimelineClass);
-    return timeline != nullptr ? JS_NULL : JS_EXCEPTION;
-}
-
-// Creates a timeline of `document`, whose object keeps the document's object alive.
-JSValue timelineOf(JSContext* ctx, JSValueConst documentObject, PrDomDocument* document, double originTime) {
-    PrHtmlDocumentTimeline* timeline = prHtmlDocumentTimelineCreate(document, originTime);
-    JSValue object = jsWrap(ctx, htmlDocumentTimelineClass, documentObject, timeline, true);
-    if (JS_IsException(object))
-        prHtmlDocumentTimelineDestroy(timeline);
-    return object;
-}
-
-// DocumentTimeline(options): a timeline of the document of the current global.
-JSValue timelineConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSValueConst* argv) {
-    bool present = false;
-    double originTime = 0;
-    JSValueConst dictionary = argc > 0 ? argv[0] : JS_UNDEFINED;
-    if (!jsDictionary(ctx, dictionary, &present) ||
-            (present && !jsDictNumber(ctx, dictionary, "originTime", &originTime)))
-        return JS_EXCEPTION;
-    PrDomDocument* document = prJsDomGlobalDocument(ctx);
-    if (document == nullptr)
-        return JS_ThrowTypeError(ctx, "Illegal constructor");
-    JSValue documentObject = jsWrapAs(ctx, prJsDomDocumentClass, JS_UNDEFINED, document, false);
-    JSValue object = timelineOf(ctx, documentObject, document, originTime);
-    JS_FreeValue(ctx, documentObject);
-    return jsConstructed(ctx, newTarget, object);
-}
-
-// [SameObject] timeline (web-animations-1/#dom-document-timeline): the document's default timeline, whose origin time
-// is zero.
-JSValue documentTimeline(JSContext* ctx, JSValueConst documentObject) {
-    PrDomDocument* document = jsThis<PrDomDocument>(ctx, documentObject, prJsDomDocumentClass);
-    if (document == nullptr)
-        return JS_EXCEPTION;
-    return jsSameObject(ctx, documentObject, "timeline", [&] { return timelineOf(ctx, documentObject, document, 0); });
-}
-
 JSValue navigator(JSContext* ctx, JSValueConst windowObject) {
     PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlWindowClass);
     if (window == nullptr)
@@ -3296,7 +3242,7 @@ void defineNamedProperties(JSContext* ctx) {
     JSClassDef definition = {"WindowProperties",      nullptr, nullptr, nullptr, &kNamedPropertiesExotic, nullptr};
     jsRegisterClass(runtime, &htmlWindowPropertiesClass, definition);
     JSValue proto = JS_GetClassProto(ctx, htmlWindowClass);
-    JSValue properties = JS_NewObjectClass(ctx, int(htmlWindowPropertiesClass));
+    JSValue properties = JS_NewObjectClass(ctx, htmlWindowPropertiesClass);
     JSValue above = JS_GetPrototype(ctx, proto);
     JS_SetPrototype(ctx, properties, above);
     JS_SetPrototype(ctx, proto, properties);
@@ -3481,7 +3427,6 @@ constexpr JSCFunctionListEntry kDocumentProto[] = {
     PR_JS_MAGIC_GET("forms", documentCollection, PrHtmlDocumentCollection_Forms),
     PR_JS_MAGIC_GET("scripts", documentCollection, PrHtmlDocumentCollection_Scripts),
     PR_JS_MAGIC_GET("anchors", documentCollection, PrHtmlDocumentCollection_Anchors),
-    PR_JS_GET("timeline", documentTimeline),
     PR_JS_METHOD("open", 0, documentOpen),
     PR_JS_GET_SET("domain", documentDomain, setDocumentDomain),
     PR_JS_MAGIC("write", 1, documentWrite, 0),
@@ -4014,14 +3959,6 @@ constexpr JSCFunctionListEntry kPerformanceProto[] = {
     PR_JS_METHOD("toJSON", 0, performanceToJson),
 };
 
-constexpr JSCFunctionListEntry kAnimationTimelineProto[] = {
-    PR_JS_TAG("AnimationTimeline"),
-    PR_JS_GET("currentTime", timelineCurrentTime),
-    PR_JS_GET("duration", timelineDuration),
-};
-
-constexpr JSCFunctionListEntry kDocumentTimelineProto[] = {PR_JS_TAG("DocumentTimeline")};
-
 constexpr JSCFunctionListEntry kCrossOriginWindowProto[] = {
     PR_JS_GET("window", crossOriginSelf),
     PR_JS_GET("self", crossOriginSelf),
@@ -4297,16 +4234,6 @@ constexpr JsClassDefinition kClasses[] = {
         PR_JS_CLASS("Performance", htmlPerformanceClass, jsViewFinalizer<&htmlPerformanceClass>, kPerformanceProto),
         .base = &prJsDomEventTargetClass,
         .references = &kTargetReferences,
-    },
-    {
-        PR_JS_CLASS("AnimationTimeline", htmlAnimationTimelineClass,
-            (jsFinalizer<&htmlAnimationTimelineClass, prHtmlDocumentTimelineDestroy>), kAnimationTimelineProto),
-    },
-    {
-        PR_JS_CLASS("DocumentTimeline", htmlDocumentTimelineClass,
-            (jsFinalizer<&htmlDocumentTimelineClass, prHtmlDocumentTimelineDestroy>), kDocumentTimelineProto),
-        .constructor = timelineConstruct,
-        .base = &htmlAnimationTimelineClass,
     },
     {
         PR_JS_CLASS("CrossOriginWindow", htmlCrossOriginWindowClass, jsViewFinalizer<&htmlCrossOriginWindowClass>,

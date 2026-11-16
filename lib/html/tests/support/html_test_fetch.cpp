@@ -105,12 +105,14 @@ uint32_t TestModules::parse(const PrHtmlScript* script, PrHtmlModuleRequestFn re
             size_t end = start + prStringFindByte(rest, '\n');
             PrStringView line = prStringSlice(source, start, end - start);
             PrUrl* imported = nullptr;
-            PrStringView keyword = "import ";
+            bool json = prStringStartsWith(line, "import json ");
+            PrStringView keyword = json ? "import json " : "import ";
             if (prStringStartsWith(line, keyword) &&
                     prUrlCreate(prStringSlice(line, keyword.size, line.size - keyword.size), base, PrCharset_Utf8,
                         &imported) == PrStatus_Ok) {
                 PrRawString url = prUrlSerialize(imported, PrUrlSerialization_Whole);
-                request(requestContext, prRawStringView(&url));
+                request(requestContext, prRawStringView(&url),
+                    json ? PrHtmlModuleType_Json : PrHtmlModuleType_JavaScript);
                 prRawStringReset(&url);
             }
             prUrlDestroy(imported);

@@ -67,8 +67,8 @@ struct TestFetcher {
 };
 
 // The modules that a test's host parses (PrHtmlHost::parseModule), by the number that `parse` returns. Each line of a
-// module's source that is `import` and a specifier imports the module that the specifier names, resolved against the
-// module's base URL.
+// module's source that is `import` and a specifier imports the JavaScript module that the specifier names, resolved
+// against the module's base URL. A line that is `import json` and a specifier imports a JSON module.
 struct TestModules {
     Array<String> sources;
 

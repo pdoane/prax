@@ -600,46 +600,111 @@ double prLayoutEase(const PrLayoutEasing* easing, double input, bool before) {
     }
 }
 
-PrLayoutTiming prLayoutTimingDefault(void) {
-    PrLayoutTiming timing{};
+PrLayoutEffectTiming prLayoutEffectTimingDefault(void) {
+    PrLayoutEffectTiming timing{};
     timing.iterations = 1;
+    timing.easing = prLayoutEasingLinear();
     timing.direction = PrLayoutPlaybackDirection_Normal;
     timing.fill = PrLayoutFill_None;
     return timing;
 }
 
-double prLayoutTimingProgress(const PrLayoutTiming* timing, double time, bool* finished) {
-    const PrLayoutTiming& t = *timing;
-    double local = (t.paused ? t.hold : time - t.start) - t.delay;
-    double duration = t.duration > 0 ? t.duration : 0;
-    double active = duration * t.iterations;
-    bool backwards = t.fill == PrLayoutFill_Backwards || t.fill == PrLayoutFill_Both;
-    bool forwards = t.fill == PrLayoutFill_Forwards || t.fill == PrLayoutFill_Both;
-    *finished = false;
-    double overall = 0;
-    if (local < 0) {
-        if (!backwards)
-            return -1;
-    } else if (local >= active) {
-        *finished = true;
-        if (!forwards)
-            return -1;
-        overall = t.iterations;
-    } else {
-        overall = duration > 0 ? local / duration : t.iterations;
+PrLayoutComputedTiming prLayoutEffectTimingCompute(const PrLayoutEffectTiming* timing, double localTime, double rate) {
+    const PrLayoutEffectTiming& t = *timing;
+    PrLayoutComputedTiming c{};
+    // web-animations-1/#calculating-the-active-duration: zero iterations or a zero duration are no active interval,
+    // even when the other is infinite.
+    c.activeDuration = t.duration == 0 || t.iterations == 0 ? 0 : t.duration * t.iterations;
+    c.endTime = prF64Max(t.delay + c.activeDuration + t.endDelay, 0);
+    c.localTime = localTime;
+    c.activeTime = kPrF64Nan;
+    c.overallProgress = kPrF64Nan;
+    c.simpleProgress = kPrF64Nan;
+    c.currentIteration = kPrF64Nan;
+    c.progress = kPrF64Nan;
+    c.phase = PrLayoutEffectPhase_None;
+    c.forwards = true;
+    if (prF64IsNan(localTime))
+        return c;
+
+    // web-animations-1/#animation-effect-phases-and-states
+    double beforeActive = prF64Max(prF64Min(t.delay, c.endTime), 0);
+    double activeAfter = prF64Max(prF64Min(t.delay + c.activeDuration, c.endTime), 0);
+    bool backwards = rate < 0;
+    if (localTime < beforeActive || (backwards && localTime == beforeActive))
+        c.phase = PrLayoutEffectPhase_Before;
+    else if (localTime > activeAfter || (!backwards && localTime == activeAfter))
+        c.phase = PrLayoutEffectPhase_After;
+    else
+        c.phase = PrLayoutEffectPhase_Active;
+
+    // web-animations-1/#calculating-the-active-time
+    bool fillsBackwards = t.fill == PrLayoutFill_Backwards || t.fill == PrLayoutFill_Both;
+    bool fillsForwards = t.fill == PrLayoutFill_Forwards || t.fill == PrLayoutFill_Both;
+    if (c.phase == PrLayoutEffectPhase_Before) {
+        if (fillsBackwards)
+            c.activeTime = prF64Max(localTime - t.delay, 0);
+    } else if (c.phase == PrLayoutEffectPhase_Active) {
+        c.activeTime = localTime - t.delay;
+    } else if (fillsForwards) {
+        c.activeTime = prF64Max(prF64Min(localTime - t.delay, c.activeDuration), 0);
     }
-    double iteration = prF64Floor(overall);
-    double progress = overall - iteration;
-    // The end of a whole number of iterations is the end of the last iteration, not the start of the next one.
-    if (progress == 0 && overall != 0 && local >= active) {
-        progress = 1;
-        iteration -= 1;
+    if (prF64IsNan(c.activeTime))
+        return c;
+
+    // web-animations-1/#calculating-the-overall-progress
+    if (t.duration == 0)
+        c.overallProgress = c.phase == PrLayoutEffectPhase_Before ? t.iterationStart : t.iterationStart + t.iterations;
+    else
+        c.overallProgress = c.activeTime / t.duration + t.iterationStart;
+
+    // web-animations-1/#calculating-the-simple-iteration-progress
+    c.simpleProgress = prF64IsFinite(c.overallProgress) ? prF64Fmod(c.overallProgress, 1) : prF64Fmod(t.iterationStart, 1);
+    if (c.simpleProgress == 0 && (c.phase == PrLayoutEffectPhase_Active || c.phase == PrLayoutEffectPhase_After) &&
+            c.activeTime == c.activeDuration && t.iterations != 0)
+        c.simpleProgress = 1;
+
+    // web-animations-1/#calculating-the-current-iteration
+    if (c.phase == PrLayoutEffectPhase_After && !prF64IsFinite(t.iterations))
+        c.currentIteration = kPrF64Infinity;
+    else if (c.simpleProgress == 1)
+        c.currentIteration = prF64Floor(c.overallProgress) - 1;
+    else
+        c.currentIteration = prF64Floor(c.overallProgress);
+
+    // web-animations-1/#calculating-the-directed-progress
+    if (t.direction == PrLayoutPlaybackDirection_Reverse) {
+        c.forwards = false;
+    } else if (t.direction == PrLayoutPlaybackDirection_Alternate ||
+            t.direction == PrLayoutPlaybackDirection_AlternateReverse) {
+        double d = c.currentIteration;
+        if (t.direction == PrLayoutPlaybackDirection_AlternateReverse)
+            d += 1;
+        c.forwards = !prF64IsFinite(d) || prF64Fmod(d, 2) == 0;
     }
-    bool odd = prF64Fmod(iteration, 2) != 0;
-    bool reverse = t.direction == PrLayoutPlaybackDirection_Reverse ||
-        (t.direction == PrLayoutPlaybackDirection_Alternate && odd) ||
-        (t.direction == PrLayoutPlaybackDirection_AlternateReverse && !odd);
-    return reverse ? 1 - progress : progress;
+    double directed = c.forwards ? c.simpleProgress : 1 - c.simpleProgress;
+
+    // web-animations-1/#calculating-the-transformed-progress
+    bool before =
+        (c.forwards && c.phase == PrLayoutEffectPhase_Before) || (!c.forwards && c.phase == PrLayoutEffectPhase_After);
+    c.progress = prLayoutEase(&t.easing, directed, before);
+    return c;
+}
+
+PrLayoutPlayback prLayoutPlaybackDefault(void) {
+    return PrLayoutPlayback{kPrF64Nan, kPrF64Nan, 1};
+}
+
+double prLayoutPlaybackCurrentTime(const PrLayoutPlayback* playback, double timelineTime) {
+    if (!prF64IsNan(playback->holdTime))
+        return playback->holdTime;
+    if (prF64IsNan(playback->startTime) || prF64IsNan(timelineTime))
+        return kPrF64Nan;
+    return (timelineTime - playback->startTime) * playback->rate;
+}
+
+bool prLayoutPlaybackMoves(const PrLayoutPlayback* playback) {
+    return prF64IsNan(playback->holdTime) && !prF64IsNan(playback->startTime) && playback->rate != 0;
 }
 
 PrMatrix4 prLayoutTransformListMatrix(const PrLayoutTransformList* list, PrVec2 extent) {
@@ -724,9 +789,10 @@ bool prLayoutTransformListInterpolates(const PrLayoutTransformList* from, const 
 }
 
 bool prLayoutTrackSample(const PrLayoutTrack* track, double time, PrVec2 extent, float* opacity, PrMatrix4* transform) {
-    bool finished = false;
-    double progress = prLayoutTimingProgress(&track->timing, time, &finished);
-    if (progress < 0 || track->keyframeCount == 0)
+    double local = prLayoutPlaybackCurrentTime(&track->playback, time);
+    PrLayoutComputedTiming computed = prLayoutEffectTimingCompute(&track->timing, local, track->playback.rate);
+    double progress = computed.progress;
+    if (prF64IsNan(progress) || track->keyframeCount == 0)
         return false;
     const PrLayoutKeyframe* frames = track->keyframes;
     uint32_t at = 0;
@@ -735,12 +801,12 @@ bool prLayoutTrackSample(const PrLayoutTrack* track, double time, PrVec2 extent,
     const PrLayoutKeyframe& from = frames[at];
     const PrLayoutKeyframe& to = at + 1 < track->keyframeCount ? frames[at + 1] : frames[at];
     double span = to.offset - from.offset;
-    double local = span > 0 ? prLayoutEase(&from.easing, (progress - from.offset) / span, false) : 1;
+    double eased = span > 0 ? prLayoutEase(&from.easing, (progress - from.offset) / span, false) : 1;
     if (track->effect == PrLayoutEffect_Opacity) {
-        double value = prF64Lerp(double(from.opacity), double(to.opacity), local);
+        double value = prF64Lerp(double(from.opacity), double(to.opacity), eased);
         *opacity = float(value < 0 ? 0 : value > 1 ? 1 : value);
     } else {
-        PrLayoutTransformList between = prLayoutTransformListInterpolate(&from.transform, &to.transform, local, extent);
+        PrLayoutTransformList between = prLayoutTransformListInterpolate(&from.transform, &to.transform, eased, extent);
         *transform = prLayoutTransformListMatrix(&between, extent);
     }
     return true;

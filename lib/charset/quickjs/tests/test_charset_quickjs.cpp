@@ -29,7 +29,7 @@ using namespace pr_impl;
 
 TEST_CASE("TextDecoder decodes buffers and views in its charset, in parts when it streams") {
     JSRuntime* runtime = jsRuntimeCreate();
-    JSContext* ctx = JS_NewContext(runtime);
+    JSContext* ctx = jsContextCreate(runtime);
     prJsCharsetBind(ctx);
     evaluate(ctx, R"JS(
         function check(value, what) { if (!value) throw new Error('check failed: ' + what); }
@@ -63,7 +63,7 @@ TEST_CASE("TextDecoder decodes buffers and views in its charset, in parts when i
 
 TEST_CASE("TextEncoder encodes scalar values as UTF-8, and encodes into a buffer as much as fits") {
     JSRuntime* runtime = jsRuntimeCreate();
-    JSContext* ctx = JS_NewContext(runtime);
+    JSContext* ctx = jsContextCreate(runtime);
     prJsCharsetBind(ctx);
     evaluate(ctx, R"JS(
         function check(value, what) { if (!value) throw new Error('check failed: ' + what); }

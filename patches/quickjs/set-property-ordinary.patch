@@ -1,7 +1,8 @@
 diff --git a/quickjs.c b/quickjs.c
+index 8cbc85e..d4e450e 100644
 --- a/quickjs.c
 +++ b/quickjs.c
-@@ -8828,8 +8828,10 @@
+@@ -10677,8 +10677,10 @@ retry:
                          ret = em->set_property(ctx, obj1, prop,
                                                 val, this_obj, flags);
                          JS_FreeValue(ctx, obj1);
@@ -15,9 +16,10 @@ diff --git a/quickjs.c b/quickjs.c
                      if (em->get_own_property) {
                          /* get_own_property can free the prototype */
 diff --git a/quickjs.h b/quickjs.h
+index 1324066..9d28f39 100644
 --- a/quickjs.h
 +++ b/quickjs.h
-@@ -571,11 +571,16 @@
+@@ -668,11 +668,16 @@ typedef struct JSClassExoticMethods {
      int (*has_property)(JSContext *ctx, JSValueConst obj, JSAtom atom);
      JSValue (*get_property)(JSContext *ctx, JSValueConst obj, JSAtom atom,
                              JSValueConst receiver);

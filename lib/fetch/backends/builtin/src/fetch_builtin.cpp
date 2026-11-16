@@ -224,6 +224,8 @@ PrStringView acceptOf(PrFetchDestination destination) {
             return "image/png,image/svg+xml,image/*;q=0.8,*/*;q=0.5";
         case PrFetchDestination_Style:
             return "text/css,*/*;q=0.1";
+        case PrFetchDestination_Json:
+            return "application/json,*/*;q=0.5";
         default:
             return "*/*";
     }

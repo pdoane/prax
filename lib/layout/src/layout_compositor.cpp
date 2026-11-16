@@ -272,12 +272,15 @@ void frame(LayoutCompositor* c) {
     c->moving = false;
     for (uint32_t k = 0; k < c->contents.count; ++k) {
         const CompositorContent& content = c->contents.data[k];
-        // A track moves until its active interval is over, unless it is paused. One whose delay has not passed moves
-        // once it starts.
+        // A track moves while its playback moves and its effect has not reached the end it plays toward. One whose
+        // delay has not passed moves once it starts.
         for (uint32_t i = 0; i < content.tracks.count && !c->moving; ++i) {
-            bool finished = false;
-            prLayoutTimingProgress(&content.tracks.data[i].timing, time, &finished);
-            c->moving = !content.tracks.data[i].timing.paused && !finished;
+            const PrLayoutTrack& track = content.tracks.data[i];
+            if (!prLayoutPlaybackMoves(&track.playback))
+                continue;
+            double local = prLayoutPlaybackCurrentTime(&track.playback, time);
+            PrLayoutComputedTiming computed = prLayoutEffectTimingCompute(&track.timing, local, track.playback.rate);
+            c->moving = track.playback.rate > 0 ? local < computed.endTime : local > 0;
         }
         uint32_t start = c->effects.count;
         sampled += layoutSceneSampleTracks(content.scene, content.tracks.data, content.tracks.count, time, c->effects);

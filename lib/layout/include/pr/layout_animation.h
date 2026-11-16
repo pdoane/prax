@@ -65,6 +65,9 @@ double prLayoutEase(const PrLayoutEasing* easing, double input, bool before);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Timing (web-animations-1/#timing-model)
+//
+// An animation effect's timing places its iterations in its local time, which its animation gives it from a timeline.
+// Times are milliseconds. A time that is unresolved is NaN.
 
 // The direction iterations play in (web-animations-1/#playback-direction).
 enum {
@@ -75,7 +78,7 @@ enum {
 };
 typedef uint8_t PrLayoutPlaybackDirection;
 
-// Where an animation has an effect outside its active interval (web-animations-1/#fill-mode).
+// Where an effect has an effect outside its active interval (web-animations-1/#fill-modes).
 enum {
     PrLayoutFill_None,
     PrLayoutFill_Forwards,
@@ -84,25 +87,68 @@ enum {
 };
 typedef uint8_t PrLayoutFill;
 
-// When an animation runs, and how its iterations play. Times are milliseconds on the timeline the animation runs on.
-typedef struct PrLayoutTiming {
-    double start;                       // the time its delay starts
+// How an effect's iterations play in its local time (web-animations-1/#the-effecttiming-dictionaries). The easing
+// shapes the progress of each iteration.
+typedef struct PrLayoutEffectTiming {
     double delay;                       // may be negative
-    double duration;                    // of one iteration
-    double iterations;                  // may be infinite
+    double endDelay;                    // may be negative
+    double iterationStart;              // at least zero
+    double iterations;                  // at least zero, and may be infinite
+    double duration;                    // of one iteration, at least zero, and may be infinite
+    PrLayoutEasing easing;
     PrLayoutPlaybackDirection direction;
     PrLayoutFill fill;
-    bool paused;                        // true if it holds at `hold` past its start
-    double hold;
-} PrLayoutTiming;
+} PrLayoutEffectTiming;
 
-// Returns the default timing: normal direction, no fill, and one iteration of zero duration, starting at zero.
-PrLayoutTiming prLayoutTimingDefault(void);
+// Returns the default timing: no delays, one iteration of zero duration, linear easing, normal direction and no fill.
+PrLayoutEffectTiming prLayoutEffectTimingDefault(void);
 
-// Returns the directed iteration progress of an animation at `time` (web-animations-1/#the-iteration-progress), in [0,
-// 1], or a negative value if the animation has no effect at that time. `finished` says whether its active interval is
-// over.
-double prLayoutTimingProgress(const PrLayoutTiming* timing, double time, bool* finished);
+// Where an effect's local time falls (web-animations-1/#animation-effect-phases-and-states). The phase is None while
+// the local time is unresolved.
+enum {
+    PrLayoutEffectPhase_None,
+    PrLayoutEffectPhase_Before,
+    PrLayoutEffectPhase_Active,
+    PrLayoutEffectPhase_After,
+};
+typedef uint8_t PrLayoutEffectPhase;
+
+// An effect's timing at one local time, where a value that is unresolved is NaN
+// (web-animations-1/#calculating-the-transformed-progress).
+typedef struct PrLayoutComputedTiming {
+    double endTime;                     // the end of the end delay, at least zero
+    double activeDuration;
+    double localTime;
+    double activeTime;
+    double overallProgress;
+    double simpleProgress;              // the simple iteration progress, in [0, 1]
+    double currentIteration;            // a whole number, which may be infinite
+    double progress;                    // the transformed progress, after direction and easing
+    PrLayoutEffectPhase phase;
+    bool forwards;                      // true if the current iteration plays forwards
+} PrLayoutComputedTiming;
+
+// Computes the timing of an effect at `localTime`, for an animation that plays at `rate`. The sign of the rate decides
+// the phase at the boundaries of the active interval: a backwards animation is before its start at the start, and a
+// forwards one past its end at the end.
+PrLayoutComputedTiming prLayoutEffectTimingCompute(const PrLayoutEffectTiming* timing, double localTime, double rate);
+
+// The time of an animation (web-animations-1/#the-current-time-of-an-animation). While the hold time is resolved, it is
+// the current time. Otherwise the current time runs from the start time at the rate, on the timeline's time.
+typedef struct PrLayoutPlayback {
+    double startTime;
+    double holdTime;
+    double rate;
+} PrLayoutPlayback;
+
+// Returns a playback with no start time or hold time, at a rate of 1.
+PrLayoutPlayback prLayoutPlaybackDefault(void);
+
+// Returns the playback's current time when its timeline's time is `timelineTime`, or NaN if it is unresolved.
+double prLayoutPlaybackCurrentTime(const PrLayoutPlayback* playback, double timelineTime);
+
+// Returns true if the current time of the playback moves as the timeline's time does.
+bool prLayoutPlaybackMoves(const PrLayoutPlayback* playback);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Transforms (css-transforms-2/#transform-functions)
@@ -182,7 +228,8 @@ typedef struct PrLayoutKeyframe {
 typedef struct PrLayoutTrack {
     PrLayoutNode node;
     PrLayoutEffect effect;
-    PrLayoutTiming timing;
+    PrLayoutPlayback playback;          // on the timeline whose time the track is sampled at
+    PrLayoutEffectTiming timing;
     const PrLayoutKeyframe* keyframes;
     uint32_t keyframeCount;
 } PrLayoutTrack;

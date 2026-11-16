@@ -10,6 +10,7 @@
 #include "pr/dom.h"
 #include "pr/string_view.h"
 
+#include "css/src/css_animations.h"
 #include "css/src/css_font_face.h"
 #include "css/src/css_highlight.h"
 #include "css/src/css_object.h"
@@ -105,6 +106,10 @@ struct CssPresentationHooks {
     // Returns true if the presentation will request fonts at its next layout, which keeps the document's FontFaceSet
     // pending on the environment (css-font-loading-3/#fontfaceset-pending-on-the-environment).
     bool (*awaitsFontRequests)(const void* presentation);
+
+    // An effect that targets the element or one of its pseudo-elements changed: its keyframes, its timing, its
+    // animation or its playback. The element is styled again, which computes the effect's keyframes for it.
+    void (*effectChanged)(void* presentation, const PrDomElement* element);
 };
 
 // The CSS state of a document or a shadow root, created on first use.
@@ -167,6 +172,9 @@ struct CssRoot {
     // For a document, its presentation and the hooks that the presentation gives it, or null if it has none.
     const CssPresentationHooks* PR_NULLABLE presentationHooks;
     void* PR_NULLABLE presentation;
+
+    // For a document, its timelines and animations (web-animations-1/#timelines).
+    CssAnimations animations;
 };
 
 // Returns the document's style data, creating it on first use.

@@ -41,8 +41,8 @@ endfunction()
 # QuickJS, with the changes that patches/quickjs makes, for whatever is built to run JavaScript.
 pr_patch_arguments(PR_QUICKJS_PATCH quickjs ${PROJECT_SOURCE_DIR}/patches/quickjs)
 pr_dependency(quickjs
-    URL https://github.com/quickjs-ng/quickjs/archive/refs/tags/v0.9.0.tar.gz
-    URL_HASH SHA256=77f9e79b42e2e7cff9517bae612431af47e120730286cb1dcfad0753bc160f10
+    URL https://github.com/quickjs-ng/quickjs/archive/refs/tags/v0.18.0.tar.gz
+    URL_HASH SHA256=28bcd89aa3683fd2a946537e5ce3f11cc46b5cbf3383c7561aaef3df5ff9f1dd
     ${PR_QUICKJS_PATCH}
     SOURCE_SUBDIR none
 )

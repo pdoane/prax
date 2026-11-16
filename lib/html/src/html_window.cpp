@@ -114,7 +114,7 @@ double framesToDue(const PrHtmlWindow* window) {
             window->revealing || window->taskHead != window->tasks.count || presentation == nullptr ||
             cssPresentationHasWork(presentation))
         return 1;
-    double event = cssAnimateNextEventTime(&presentation->animations);
+    double event = cssAnimateNextEventTime(presentation->document);
     double target = event >= 0 ? window->timeOrigin + event : -1;
     uint32_t timer = nextTimerIndex(window);
     if (timer != window->timers.count && (target < 0 || window->timers.data[timer].deadline < target))
@@ -853,7 +853,7 @@ bool htmlWindowIsIdle(const PrHtmlWindow* window) {
     return window->taskHead == window->tasks.count && window->frameRequests.count == 0 && !window->revealing &&
         !awaitsRenderingSteps(window) && !htmlMediaAwaitsPicture(window) &&
         (presentation == nullptr || (!cssPresentationHasWork(presentation) &&
-            !cssAnimateHaveEventsAhead(&presentation->animations)));
+            !cssAnimateHaveEventsAhead(presentation->document)));
 }
 
 bool htmlWindowIsFullyActive(const PrHtmlWindow* window) {

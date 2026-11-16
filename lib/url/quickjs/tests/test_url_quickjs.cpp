@@ -29,7 +29,7 @@ using namespace pr_impl;
 
 TEST_CASE("URL JS ownership, iteration and conversion survive collection") {
     JSRuntime* runtime = jsRuntimeCreate();
-    JSContext* ctx = JS_NewContext(runtime);
+    JSContext* ctx = jsContextCreate(runtime);
     prJsUrlBind(ctx);
     evaluate(ctx, R"JS(
         function check(value) { if (!value) throw new Error('check failed'); }

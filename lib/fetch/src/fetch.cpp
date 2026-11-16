@@ -157,7 +157,7 @@ PrStatus prFetchCreate(PrFetchNetwork* fetcher, const PrFetchRequestDesc* desc, 
         void* PR_NULLABLE context, PrFetch* PR_NULLABLE* PR_NONNULL out) {
     PR_ASSERT(desc->headers != nullptr || desc->headerCount == 0);
     PR_ASSERT(desc->body.data != nullptr || desc->body.size == 0);
-    PR_ASSERT(desc->destination <= PrFetchDestination_Object && desc->redirect <= PrFetchRedirect_Manual);
+    PR_ASSERT(desc->destination <= PrFetchDestination_Json && desc->redirect <= PrFetchRedirect_Manual);
     PR_ASSERT(desc->mode <= PrFetchMode_Navigate && desc->credentials <= PrFetchCredentials_Include);
     PR_ASSERT(desc->referrerPolicy <= PrFetchReferrerPolicy_UnsafeUrl);
     *out = nullptr;

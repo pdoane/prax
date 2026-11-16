@@ -39,37 +39,22 @@ uint32_t functionArguments(CssValueRun run, double* numbers, uint32_t capacity, 
     return count;
 }
 
-// Returns true if a computed value of `property` may be below zero.
+// Returns true if a number of `property` that an animation combines may be negative: if a number that the property's
+// grammar takes has no lower bound of zero or more.
 bool allowsNegative(PrCssProperty property) {
+    return !bitsetTest(kCssPropertyNonNegative, property);
+}
+
+// Returns true if `property` takes an <opacity-value>, which is clamped to [0, 1]
+// (css-color-4/#typedef-opacity-opacity-value).
+bool isOpacityValue(PrCssProperty property) {
     switch (property) {
-        case PrCssProperty_MarginTop:
-        case PrCssProperty_MarginRight:
-        case PrCssProperty_MarginBottom:
-        case PrCssProperty_MarginLeft:
-        case PrCssProperty_Top:
-        case PrCssProperty_Right:
-        case PrCssProperty_Bottom:
-        case PrCssProperty_Left:
-        case PrCssProperty_Transform:
-        case PrCssProperty_TransformOrigin:
-        case PrCssProperty_Translate:
-        case PrCssProperty_Rotate:
-        case PrCssProperty_Scale:
-        case PrCssProperty_TextIndent:
-        case PrCssProperty_LetterSpacing:
-        case PrCssProperty_WordSpacing:
-        case PrCssProperty_OutlineOffset:
-        case PrCssProperty_BaselineShift:
-        case PrCssProperty_Cx:
-        case PrCssProperty_Cy:
-        case PrCssProperty_X:
-        case PrCssProperty_Y:
-        case PrCssProperty_StrokeDashoffset:
-        case PrCssProperty_MaskPosition:
-        case PrCssProperty_BoxShadowOffset:
-        case PrCssProperty_BoxShadowSpread:
-        case PrCssProperty_Clip:
-        case PrCssProperty_ClipPath:
+        case PrCssProperty_Opacity:
+        case PrCssProperty_FillOpacity:
+        case PrCssProperty_StrokeOpacity:
+        case PrCssProperty_FloodOpacity:
+        case PrCssProperty_StopOpacity:
+        case PrCssProperty_ShapeImageThreshold:
             return true;
         default:
             return false;
@@ -111,8 +96,9 @@ double combinedNumber(PrCssProperty property, const CssValueNode& value, double 
         return number;
     if (!allowsNegative(property) && number < 0)
         number = 0;
-    if (property == PrCssProperty_Opacity && number > 1)
-        number = 1;
+    // An <opacity-value> computes clamped to [0, 1], which its grammar does not say.
+    if (isOpacityValue(property))
+        number = number < 0 ? 0 : number > 1 ? 1 : number;
     if (property == PrCssProperty_FontWeight)
         number = number < 1 ? 1 : number > 1000 ? 1000 : number;
     return number;
@@ -1931,6 +1917,17 @@ void interpolate(CssValuePool* out, PrCssProperty property, CssValueRun from, Cs
             return;
         }
     }
+    // Display between none and another value is the other value, and content-visibility between hidden and another
+    // value is the other value (css-display-4/#display-animation, css-contain-2/#content-visibility-animation).
+    if (property == PrCssProperty_Display || property == PrCssProperty_ContentVisibility) {
+        PrCssKeyword hidden = property == PrCssProperty_Display ? PrCssKeyword_None : PrCssKeyword_Hidden;
+        bool fromHidden = from.count == 1 && cssValueIsKeyword(from.values, hidden);
+        bool toHidden = to.count == 1 && cssValueIsKeyword(to.values, hidden);
+        if (fromHidden != toHidden && progress > 0 && progress < 1) {
+            cssValuePoolAddRun(out, fromHidden ? to : from);
+            return;
+        }
+    }
     if (bitsetTest(kCssPropertyDiscrete, property)) {
         cssValuePoolAddRun(out, progress < 0.5 ? from : to);
         return;
@@ -2026,14 +2023,14 @@ void interpolate(CssValuePool* out, PrCssProperty property, CssValueRun from, Cs
 }
 
 void combine(CssValuePool* out, PrCssProperty property, CssValueRun underlying, CssValueRun value,
-        CssComposite composite, const CssColorContext& colors) {
+        PrCssComposite composite, const CssColorContext& colors) {
     // A dash array does not add, so it composites as it replaces (SVG2/painting.html#StrokeDashing).
-    if (composite == CssComposite_Replace || property == PrCssProperty_Visibility ||
+    if (composite == PrCssComposite_Replace || property == PrCssProperty_Visibility ||
             property == PrCssProperty_StrokeDasharray || bitsetTest(kCssPropertyDiscrete, property)) {
         cssValuePoolAddRun(out, value);
         return;
     }
-    bool accumulate = composite == CssComposite_Accumulate;
+    bool accumulate = composite == PrCssComposite_Accumulate;
     // Colors add premultiplied, with their alpha clamped to [0, 1].
     CssColor a{};
     CssColor b{};
@@ -2325,30 +2322,30 @@ void cssInterpolate(CssValuePool* out, PrCssProperty property, CssValueRun from,
     cssValuePoolReset(&between);
 }
 
-CssComposite cssCompositeFromValue(CssValueRun item) {
+PrCssComposite cssCompositeFromValue(CssValueRun item) {
     if (item.count != 1 || item.values[0].kind != PrCssValueKind_Keyword)
-        return CssComposite_Replace;
+        return PrCssComposite_Replace;
     switch (cssValueKeyword(item.values)) {
-        case PrCssKeyword_Add: return CssComposite_Add;
-        case PrCssKeyword_Accumulate: return CssComposite_Accumulate;
-        default: return CssComposite_Replace;
+        case PrCssKeyword_Add: return PrCssComposite_Add;
+        case PrCssKeyword_Accumulate: return PrCssComposite_Accumulate;
+        default: return PrCssComposite_Replace;
     }
 }
 
 void cssComposite(CssValuePool* out, PrCssProperty property, CssValueRun underlying, CssValueRun value,
-        CssComposite composite, const CssColorContext& colors) {
+        PrCssComposite composite, const CssColorContext& colors) {
     if (isFilterList(property)) {
-        if (composite == CssComposite_Replace)
+        if (composite == PrCssComposite_Replace)
             cssValuePoolAddRun(out, value);
         else
-            addFiltersComposite(out, underlying, value, composite == CssComposite_Accumulate, colors);
+            addFiltersComposite(out, underlying, value, composite == PrCssComposite_Accumulate, colors);
         return;
     }
     // Track sizes add as their numbers do, for add and accumulate alike.
     if (isTrackList(property)) {
         TrackItems a;
         TrackItems b;
-        if (composite != CssComposite_Replace && trackListsCombine(underlying, value, &a, &b))
+        if (composite != PrCssComposite_Replace && trackListsCombine(underlying, value, &a, &b))
             addTrackItems(out, TrackOp{.property = property, .progress = 0, .add = true, .first = false}, a, b);
         else
             cssValuePoolAddRun(out, value);

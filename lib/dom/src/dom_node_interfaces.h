@@ -85,6 +85,7 @@ enum {
     DomFetchDestination_Media,
     DomFetchDestination_Object,
     DomFetchDestination_Empty,      // a script's fetch()
+    DomFetchDestination_Json,       // a JSON module script
 };
 typedef uint8_t DomFetchDestination;
 

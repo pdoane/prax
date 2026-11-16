@@ -53,7 +53,6 @@ typedef struct PrHtmlWindow PrHtmlWindow;
 typedef struct PrHtmlPreferenceObject PrHtmlPreferenceObject;
 typedef struct PrHtmlPerformance PrHtmlPerformance;
 typedef struct PrHtmlScreenOrientation PrHtmlScreenOrientation;
-typedef struct PrHtmlDocumentTimeline PrHtmlDocumentTimeline;
 
 // ---------------------------------------------------------------------------------------------------------------------
 // DOMParser (html)
@@ -1200,24 +1199,6 @@ PrHtmlOrientationType prHtmlScreenOrientationType(const PrHtmlScreenOrientation*
 // Returns the screen's rotation from its natural orientation in degrees
 // (screen-orientation/#dom-screenorientation-angle).
 uint16_t prHtmlScreenOrientationAngle(const PrHtmlScreenOrientation* orientation);
-
-// ---------------------------------------------------------------------------------------------------------------------
-// DocumentTimeline : AnimationTimeline (web-animations)
-//
-// A document's timeline (web-animations-1/#document-timelines). Its time is the time of its window's latest rendering
-// update minus the timeline's origin time. The timeline refers to its document, but does not keep it alive.
-
-// Creates a timeline of `document` whose origin time is `originTime`, in milliseconds on the clock of
-// prHtmlPerformanceNow. The caller owns the timeline.
-PrHtmlDocumentTimeline* prHtmlDocumentTimelineCreate(PrDomDocument* document, double originTime);
-
-// Frees the timeline.
-void prHtmlDocumentTimelineDestroy(PrHtmlDocumentTimeline* PR_NULLABLE timeline);
-
-// Writes the timeline's time to `out` (web-animations-1/#dom-animationtimeline-currenttime). Returns false if the
-// timeline is inactive (web-animations-1/#inactive-timeline), such as the timeline of a document that no browsing
-// context shows.
-bool prHtmlDocumentTimelineCurrentTime(const PrHtmlDocumentTimeline* timeline, double* out);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Window : EventTarget (html)

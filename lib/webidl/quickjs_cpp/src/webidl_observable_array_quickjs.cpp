@@ -310,7 +310,7 @@ void jsObservableArrayBind(JSContext* ctx) {
 }
 
 JSValue jsObservableArrayNew(JSContext* ctx, JSValueConst owner, const JsObservableArrayHooks* hooks) {
-    JSValue object = JS_NewObjectClass(ctx, int(handlerClass));
+    JSValue object = JS_NewObjectClass(ctx, handlerClass);
     if (JS_IsException(object))
         return object;
     Handler* handler = alloc<Handler>();

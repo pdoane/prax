@@ -5174,7 +5174,7 @@ bool visitPseudo(Walk& w, uint32_t at, uint32_t which, CssPseudo kind, PrDomElem
         bool animationReads = false;
         CssColorEnvironment environment = colorEnvironmentOf(r, r->headroom, &animationReads);
         const CssStyleValues* initial = r->styles.initial[CssStyleGroup_Animation];
-        if (restyle && (entry.animated || base->groups[CssStyleGroup_Animation] != initial)) {
+        if (restyle && (entry.animated || base->groups[CssStyleGroup_Animation] != initial || cssAnimateHas(r, pseudo))) {
             CssAnimateContext context{parent, w.rootFont, viewportOf(r)};
             cssAnimateRestyled(r, pseudo, old != nullptr ? oldBase : nullptr, old, base, context, environment);
         }
@@ -5386,7 +5386,8 @@ bool visitElement(Walk& w, PrDomElement* element, const CssComputedStyle* PR_NUL
         // Animated colors resolve for the display, as the box's colors do. A new headroom then restyles the element.
         bool animationReads = false;
         CssColorEnvironment environment = colorEnvironmentOf(r, r->headroom, &animationReads);
-        if (restyle && (entry.animated || base->groups[CssStyleGroup_Animation] != initial)) {
+        if (restyle &&
+                (entry.animated || base->groups[CssStyleGroup_Animation] != initial || cssAnimateHas(r, element))) {
             CssAnimateContext context{parentStyle, w.rootFont, viewportOf(r)};
             cssAnimateRestyled(r, element, old != nullptr ? oldBase : nullptr, old, base, context, environment);
         }
@@ -6924,6 +6925,8 @@ bool restyle(PrCssPresentation* r, PrLayoutVec extent, RestyleReach reach) {
     r->invalidations.clear();
     r->invalidationIndex.clear();
     r->document->pending = 0;
+    // What the restyle styled can render, the animations pending since included.
+    cssAnimateRendered(r);
     for (uint32_t i = 0; i < r->threads.count; ++i) {
         const RawArray<CssStructureRead>& structure = r->threads.data[i].scratch.structure;
         for (uint32_t k = 0; k < structure.count; ++k) {
@@ -7712,6 +7715,25 @@ const CssComputedStyle* PR_NULLABLE cssPresentationStyleCurrent(PrCssPresentatio
     return cssPresentationStyle(presentation, element);
 }
 
+void cssPresentationEffectChanged(PrCssPresentation* presentation, const PrDomElement* element) {
+    if (!domIsConnected(element) || element->document != presentation->document)
+        return;
+    mark(const_cast<PrDomElement*>(element), DomStyleFlag_Self);
+    presentation->changed = true;
+}
+
+void cssPresentationAnimateTarget(PrCssPresentation* presentation, const PrDomElement* element, CssPseudo pseudo) {
+    if (!domIsConnected(element) || element->document != presentation->document)
+        return;
+    const PrDomNode* target = pseudo == CssPseudo_None ? element : cssPresentationPseudoNode(presentation, element, pseudo);
+    // A pseudo-element that is not generated yet is generated as its element is styled.
+    if (target != nullptr)
+        mark(const_cast<PrDomNode*>(target), DomStyleFlag_Animate);
+    else
+        mark(const_cast<PrDomElement*>(element), DomStyleFlag_Self);
+    presentation->changed = true;
+}
+
 PrLayoutTree* cssPresentationOwnTree(PrCssPresentation* presentation) {
     own(presentation);
     return presentation->tree;
@@ -7762,39 +7784,49 @@ void cssPresentationRunScrollSteps(PrCssPresentation* presentation) {
 }
 
 void cssPresentationSendAnimationEvents(PrCssPresentation* presentation) {
-    CssAnimateState& a = presentation->animations;
-    cssAnimateFindEvents(presentation);
-    if (a.events.count == 0)
-        return;
     // Listeners can start and cancel animations. The events of those animations wait for the next update.
-    RawArray<CssAnimateEvent> events = a.events;
-    a.events = {};
-    sortItems(events.span(), [](const CssAnimateEvent& x, const CssAnimateEvent& y) {
-        return x.scheduled < y.scheduled;
-    });
-    PrDomEventInit init = prDomEventInitDefault();
-    init.bubbles = true;
+    RawArray<CssAnimateEvent> events = cssAnimateTakeEvents(presentation->document);
     for (uint32_t i = 0; i < events.count; ++i) {
         CssAnimateEvent& e = events.data[i];
         PrDomEvent* event;
-        if (e.transition)
-            event = domEventCreate<PrCssTransitionEvent>(e.type, init, PrDomEventKind_Transition);
-        else
-            event = domEventCreate<PrCssAnimationEvent>(e.type, init, PrDomEventKind_Animation);
-        domEventSetAnimation(event, prRawStringView(&e.name), e.elapsedTime, cssPseudoName(e.pseudo));
+        if (e.kind == PrDomEventKind_AnimationPlayback) {
+            PrCssAnimationPlaybackEventInit init = prCssAnimationPlaybackEventInitDefault();
+            init.currentTime = e.currentTime;
+            init.timelineTime = e.timelineTime;
+            event = prCssAnimationPlaybackEventCreate(e.type, &init);
+        } else {
+            PrDomEventInit init = prDomEventInitDefault();
+            init.bubbles = true;
+            if (e.kind == PrDomEventKind_Transition)
+                event = domEventCreate<PrCssTransitionEvent>(e.type, init, PrDomEventKind_Transition);
+            else
+                event = domEventCreate<PrCssAnimationEvent>(e.type, init, PrDomEventKind_Animation);
+            domEventSetAnimation(event, prRawStringView(&e.name), e.elapsedTime, cssPseudoName(e.pseudo));
+        }
         event->trusted = true;
-        PrDomElement* target = const_cast<PrDomElement*>(e.element);
-        domEventDispatch(target, event);
+        domEventDispatch(e.target, event);
         domEventRelease(event);
-        domNodeUnhold(target);
-        prRawStringReset(&e.name);
+        cssAnimateEventReset(&e);
     }
     events.reset();
 }
 
+const PrDomNode* PR_NULLABLE cssPresentationPseudoNode(const PrCssPresentation* presentation,
+        const PrDomElement* element, CssPseudo pseudo) {
+    uint32_t at = cssPresentationNodeEntry(presentation, element);
+    if (at == kHashMissing)
+        return nullptr;
+    for (uint32_t which = 0; which < kCssPresentationPseudos; ++which) {
+        const CssPresentationPseudo* node = presentation->entries.data[at].pseudos[which];
+        if (node != nullptr && node->pseudo == pseudo)
+            return node;
+    }
+    return nullptr;
+}
+
 bool cssPresentationHasWork(const PrCssPresentation* presentation) {
     return presentation->scrolled.count != 0 || presentation->anchorMoves.count != 0 ||
-        presentation->animations.events.count != 0 || presentation->changed ||
+        cssAnimations(presentation->document).events.count != 0 || presentation->changed ||
         cssDocumentRoot(presentation->document)->fontsVersion != presentation->fontsVersion ||
         cssPresentationAwaitsFontRequests(presentation);
 }
@@ -8008,7 +8040,6 @@ void prCssPresentationDestroy(PrCssPresentation* PR_NULLABLE presentation) {
     r->counterChanges.reset();
     cssPresentationClearSvgNotes(r);
     r->svgNotes.reset();
-    cssAnimateReset(&r->animations);
     r->entries.reset();
     r->free.reset();
     cssPresentationDetach(r, r->document);
@@ -8122,34 +8153,8 @@ const PrLayoutScene* PR_NULLABLE prCssPresentationTakeScene(PrCssPresentation* p
 }
 
 void prCssPresentationSetTime(PrCssPresentation* presentation, double milliseconds) {
-    // The animations and the marks belong to the document's side, which the presentation's thread does not read.
-    CssAnimateState& a = presentation->animations;
-    if (milliseconds == a.time)
-        return;
-    // Marks the targets whose animations show something different at the new time: the targets of every transition, and
-    // of each CSS animation that runs at either time. A compositor shows the composited animations. Their targets are
-    // visited only when such an animation ends, because their boxes then stop being layers.
-    double before = a.time;
-    auto touch = [&](const PrDomNode* target) {
-        mark(const_cast<PrDomNode*>(target), DomStyleFlag_Animate);
-        presentation->changed = true;
-    };
-    for (uint32_t i = 0; i < a.animations.count; ++i) {
-        CssRunningAnimation* animation = &a.animations.data[i];
-        bool wasRunning = cssAnimationRunning(&a, animation);
-        a.time = milliseconds;
-        bool running = cssAnimationRunning(&a, animation);
-        a.time = before;
-        if (animation->composited ? wasRunning && !running : wasRunning || running)
-            touch(animation->target);
-    }
-    for (uint32_t i = 0; i < a.transitions.count; ++i) {
-        const CssRunningTransition& t = a.transitions.data[i];
-        double end = t.start + t.delay + t.duration;
-        if (!t.composited || (before < end && milliseconds >= end))
-            touch(t.target);
-    }
-    a.time = milliseconds;
+    // The animations belong to the document's side, which the presentation's thread does not read.
+    cssAnimateUpdate(presentation, milliseconds);
 }
 
 uint32_t prCssPresentationTracks(PrCssPresentation* presentation, PrLayoutTrack* PR_NULLABLE out, uint32_t capacity) {
@@ -8173,14 +8178,7 @@ uint32_t prCssPresentationTracks(PrCssPresentation* presentation, PrLayoutTrack*
 }
 
 bool prCssPresentationIsAnimating(const PrCssPresentation* presentation) {
-    const CssAnimateState& a = presentation->animations;
-    if (a.transitions.count != 0)
-        return true;
-    for (uint32_t i = 0; i < a.animations.count; ++i) {
-        if (cssAnimationRunning(&a, &a.animations.data[i]))
-            return true;
-    }
-    return false;
+    return cssAnimateIsAnimating(presentation->document);
 }
 
 PrCssPresentationStats prCssPresentationStats(const PrCssPresentation* presentation) {

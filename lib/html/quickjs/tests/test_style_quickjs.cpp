@@ -38,7 +38,7 @@ using namespace pr_impl;
 
 TEST_CASE("a script reads and changes a style element's sheet through document.styleSheets") {
     JSRuntime* runtime = jsRuntimeCreate();
-    JSContext* ctx = JS_NewContext(runtime);
+    JSContext* ctx = jsContextCreate(runtime);
     prJsDomBind(ctx);
     prJsCssBind(ctx);
     prJsSvgBind(ctx);
@@ -69,7 +69,7 @@ TEST_CASE("a script reads and changes a style element's sheet through document.s
 
 TEST_CASE("a script reaches the rule interfaces, their media lists and their maps") {
     JSRuntime* runtime = jsRuntimeCreate();
-    JSContext* ctx = JS_NewContext(runtime);
+    JSContext* ctx = jsContextCreate(runtime);
     prJsDomBind(ctx);
     prJsCssBind(ctx);
     prJsSvgBind(ctx);
@@ -110,7 +110,7 @@ TEST_CASE("a script reaches the rule interfaces, their media lists and their map
 
 TEST_CASE("a script matches media queries against the environment the host sets") {
     JSRuntime* runtime = jsRuntimeCreate();
-    JSContext* ctx = JS_NewContext(runtime);
+    JSContext* ctx = jsContextCreate(runtime);
     prJsDomBind(ctx);
     prJsCssBind(ctx);
     prJsSvgBind(ctx);
@@ -146,7 +146,7 @@ TEST_CASE("a script matches media queries against the environment the host sets"
 
 TEST_CASE("devicePixelRatio is the display's pixel ratio, not a resolution a query sees, and replaceable") {
     JSRuntime* runtime = jsRuntimeCreate();
-    JSContext* ctx = JS_NewContext(runtime);
+    JSContext* ctx = jsContextCreate(runtime);
     prJsDomBind(ctx);
     prJsCssBind(ctx);
     prJsSvgBind(ctx);
@@ -175,7 +175,7 @@ TEST_CASE("devicePixelRatio is the display's pixel ratio, not a resolution a que
 
 TEST_CASE("the viewport that the host sets is the one that scripts measure, and the screen's orientation follows it") {
     JSRuntime* runtime = jsRuntimeCreate();
-    JSContext* ctx = JS_NewContext(runtime);
+    JSContext* ctx = jsContextCreate(runtime);
     prJsDomBind(ctx);
     prJsCssBind(ctx);
     prJsSvgBind(ctx);
@@ -211,7 +211,7 @@ TEST_CASE("the viewport that the host sets is the one that scripts measure, and 
 
 TEST_CASE("a face's object made while it loads is held until the load settles its promise") {
     JSRuntime* runtime = jsRuntimeCreate();
-    JSContext* ctx = JS_NewContext(runtime);
+    JSContext* ctx = jsContextCreate(runtime);
     prJsDomBind(ctx);
     prJsCssBind(ctx);
     prJsSvgBind(ctx);
@@ -251,7 +251,7 @@ TEST_CASE("a face's object made while it loads is held until the load settles it
 
 TEST_CASE("the ready promise taken while the last loading face loads resolves when the face is deleted") {
     JSRuntime* runtime = jsRuntimeCreate();
-    JSContext* ctx = JS_NewContext(runtime);
+    JSContext* ctx = jsContextCreate(runtime);
     prJsDomBind(ctx);
     prJsCssBind(ctx);
     prJsSvgBind(ctx);

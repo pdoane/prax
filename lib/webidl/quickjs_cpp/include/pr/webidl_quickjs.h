@@ -359,6 +359,23 @@ JSValue jsDomExceptionThrow(JSContext* ctx, PrStringView name);
 // `requested`, each NaN for null, and returns JS_EXCEPTION.
 JSValue jsQuotaExceededErrorThrow(JSContext* ctx, double quota, double requested);
 
+// The state that serializing a DOMException keeps (webidl/#idl-DOMException). A QuotaExceededError also keeps its quota
+// and requested amount, each NaN for null. Every other DOMException has `quotaExceeded` false.
+struct JsDomExceptionState {
+    PrStringView name;
+    PrStringView message;
+    double quota;
+    double requested;
+    bool quotaExceeded;
+};
+
+// Returns true if `value` is a DOMException, and fills `out` with its state. The views stay valid while `value` is
+// alive.
+bool jsDomExceptionState(JSContext* ctx, JSValueConst value, JsDomExceptionState* out);
+
+// Returns a new DOMException, or QuotaExceededError, with `state`.
+JSValue jsDomExceptionFromState(JSContext* ctx, const JsDomExceptionState& state);
+
 } // namespace pr
 
 PR_ASSUME_NONNULL_END

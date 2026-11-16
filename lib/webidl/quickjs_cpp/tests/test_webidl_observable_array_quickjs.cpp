@@ -68,7 +68,7 @@ using namespace pr_impl;
 
 TEST_CASE("an observable array is an array whose indexes pass through its owner's hooks") {
     JSRuntime* runtime = jsRuntimeCreate();
-    JSContext* ctx = JS_NewContext(runtime);
+    JSContext* ctx = jsContextCreate(runtime);
     jsObservableArrayBind(ctx);
     JSValue global = JS_GetGlobalObject(ctx);
     JSValue owner = JS_NewObject(ctx);

@@ -8,6 +8,7 @@
 #include "lottie/src/lottie_expression.h"
 
 #include "pr/alloc.h"
+#include "pr/assert.h"
 #include "pr/mem.h"
 #include "pr/raw_array.h"
 #include "pr/string_ops.h"
@@ -362,7 +363,13 @@ LottieExpressions* create(const LottieAnimation& a) {
     }
     e->runtime = JS_NewRuntime2(&kExpressionAllocator, nullptr);
     JS_SetMaxStackSize(e->runtime, kExpressionStackSize);
-    e->ctx = JS_NewContext(e->runtime);
+    // Expressions get only the language's built-in objects. With no host APIs, an expression gives the same value for
+    // the same frame.
+    e->ctx = JS_NewContextRaw(e->runtime);
+    if (e->ctx == nullptr || JS_AddIntrinsicBaseObjects(e->ctx) || JS_AddIntrinsicEval(e->ctx) ||
+            JS_AddIntrinsicRegExp(e->ctx) || JS_AddIntrinsicJSON(e->ctx) || JS_AddIntrinsicMapSet(e->ctx) ||
+            JS_AddIntrinsicTypedArrays(e->ctx))
+        PR_FATAL("out of memory for a Lottie expression context");
     JS_SetContextOpaque(e->ctx, e);
     JSValue natives = JS_NewObject(e->ctx);
     for (const Native& n : kNatives)

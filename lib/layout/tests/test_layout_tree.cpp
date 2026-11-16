@@ -3212,7 +3212,9 @@ TEST_CASE("a compositor plays a scene with its tracks' effects, and no paint") {
     PrLayoutTrack track{};
     track.node = box;
     track.effect = PrLayoutEffect_Opacity;
-    track.timing = prLayoutTimingDefault();
+    track.playback = prLayoutPlaybackDefault();
+    track.playback.startTime = 0;
+    track.timing = prLayoutEffectTimingDefault();
     track.timing.duration = 1000;
     track.keyframes = frames;
     track.keyframeCount = 2;

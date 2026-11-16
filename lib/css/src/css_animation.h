@@ -7,6 +7,7 @@
 #pragma once
 
 #include "pr/color.h"
+#include "pr/css_animations.h"
 #include "pr/layout_animation.h"
 
 #include "css/src/css_style.h"
@@ -67,17 +68,9 @@ bool cssInterpolable(PrCssProperty property, CssValueRun from, CssValueRun to, c
 void cssInterpolate(CssValuePool* out, PrCssProperty property, CssValueRun from, CssValueRun to, double progress,
     const CssColorContext& colors);
 
-// How a keyframe's value combines with the value under the animation (web-animations-1/#effect-composition).
-enum {
-    CssComposite_Replace,
-    CssComposite_Add,
-    CssComposite_Accumulate,
-};
-typedef uint8_t CssComposite;
-
 // Returns the operation that an item of a computed animation-composition names
 // (css-animations-2/#animation-composition).
-CssComposite cssCompositeFromValue(CssValueRun item);
+PrCssComposite cssCompositeFromValue(CssValueRun item);
 
 // Appends the computed value of `property` that `value` gives over `underlying` by `composite`
 // (css-values-4/#combining-values). Addition sums numbers, lengths and percentages, adds colors premultiplied in the
@@ -89,7 +82,7 @@ CssComposite cssCompositeFromValue(CssValueRun item);
 // nothing at an amount of one (filter-effects-1/#accumulation). Any other pair, and every pair of a discrete property,
 // gives `value`, as replace does. Colors resolve in `colors`.
 void cssComposite(CssValuePool* out, PrCssProperty property, CssValueRun underlying, CssValueRun value,
-    CssComposite composite, const CssColorContext& colors);
+    PrCssComposite composite, const CssColorContext& colors);
 
 } // namespace pr_impl
 

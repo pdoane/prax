@@ -44,12 +44,6 @@ namespace pr_impl {
 
 namespace {
 
-// A document timeline (web-animations-1/#document-timelines).
-struct HtmlDocumentTimeline {
-    PrDomDocument* document;
-    double originTime;   // web-animations-1/#origin-time, on the same clock as htmlWindowNow
-};
-
 // A message that a window posted, and the origin that its target's document must have, or the null string for any
 // origin.
 struct PostedMessage {
@@ -292,9 +286,6 @@ int32_t mediaInteger(const PrHtmlWindow* window, PrCssDescriptor feature) {
 } // namespace pr_impl
 
 using namespace pr_impl;
-
-// C opaque types
-struct PrHtmlDocumentTimeline : HtmlDocumentTimeline {};
 
 PrDomDocument* prHtmlDomParserParseFromString(PrDomDocument* PR_NULLABLE creator, PrStringView source,
         PrHtmlDomParserSupportedType type) {
@@ -1643,24 +1634,6 @@ PrHtmlOrientationType prHtmlScreenOrientationType(const PrHtmlScreenOrientation*
 
 uint16_t prHtmlScreenOrientationAngle(const PrHtmlScreenOrientation*) {
     return 0;
-}
-
-PrHtmlDocumentTimeline* prHtmlDocumentTimelineCreate(PrDomDocument* document, double originTime) {
-    PrHtmlDocumentTimeline* timeline = allocZeroed<PrHtmlDocumentTimeline>();
-    *timeline = PrHtmlDocumentTimeline{{document, originTime}};
-    return timeline;
-}
-
-void prHtmlDocumentTimelineDestroy(PrHtmlDocumentTimeline* PR_NULLABLE timeline) {
-    prMemoryFree(timeline);
-}
-
-bool prHtmlDocumentTimelineCurrentTime(const PrHtmlDocumentTimeline* timeline, double* out) {
-    PrHtmlWindow* window = prHtmlDocumentDefaultView(timeline->document);
-    if (window == nullptr)
-        return false;
-    *out = htmlWindowFrameTime(window) - timeline->originTime;
-    return true;
 }
 
 PrHtmlWindow* PR_NULLABLE prHtmlWindowQuery(PrDomEventTarget* PR_NULLABLE object) {

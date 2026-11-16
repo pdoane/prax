@@ -181,8 +181,7 @@ target_link_libraries(pr_core_cpp PUBLIC prax::core)
 if (PR_JS)
     pr_dependency_available(quickjs)
     add_library(pr_quickjs STATIC
-        ${quickjs_SOURCE_DIR}/cutils.c
-        ${quickjs_SOURCE_DIR}/libbf.c
+        ${quickjs_SOURCE_DIR}/dtoa.c
         ${quickjs_SOURCE_DIR}/libregexp.c
         ${quickjs_SOURCE_DIR}/libunicode.c
         ${quickjs_SOURCE_DIR}/quickjs.c
@@ -202,13 +201,6 @@ if (PR_JS)
         target_link_libraries(pr_quickjs PRIVATE m)
     endif()
     pr_third_party(pr_quickjs)
-    # The big-number library takes its AVX2 path with GCC's vector operators, which MSVC does not have, so MSVC builds
-    # the portable path.
-    if (MSVC)
-        get_target_property(PR_QUICKJS_OPTIONS pr_quickjs COMPILE_OPTIONS)
-        list(FILTER PR_QUICKJS_OPTIONS EXCLUDE REGEX "AVX2")
-        set_target_properties(pr_quickjs PROPERTIES COMPILE_OPTIONS "${PR_QUICKJS_OPTIONS}")
-    endif()
     set_property(GLOBAL APPEND PROPERTY PR_LIBRARIES pr_quickjs)
 
     # Core's QuickJS C++ layer, which makes native handles into JS objects: the toolkit that the QuickJS layers are
@@ -305,6 +297,7 @@ if (PR_DEVELOP)
     if (PR_JS)
         pr_module_tests(core_quickjs_cpp
             quickjs_cpp/tests/test_quickjs_callback.cpp
+            quickjs_cpp/tests/test_quickjs_gc.cpp
         )
     endif()
 endif()

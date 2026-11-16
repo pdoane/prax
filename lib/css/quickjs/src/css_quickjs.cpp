@@ -23,6 +23,8 @@
 #include "pr/webidl_observable_array_quickjs.h"
 #include "pr/webidl_quickjs.h"
 
+#include "css/quickjs/src/css_animations_quickjs.h"
+
 namespace pr_impl {
 
 JSClassID cssFontFaceClass;
@@ -1554,6 +1556,8 @@ JSValue setLoad(JSContext* ctx, JSValueConst setObject, int argc, JSValueConst* 
 // FontFaceSetLoadEvent (css-font-loading-3/#fontfacesetloadevent)
 
 JSClassID classifyCssEvent(void* handle) {
+    if (JSClassID animation = cssAnimationsEventClass(handle))
+        return animation;
     PrDomEvent* event = static_cast<PrDomEvent*>(handle);
     if (prCssFontFaceSetLoadEventQuery(event) != nullptr)
         return cssFontFaceSetLoadEventClass;
@@ -3270,6 +3274,8 @@ void addMembers(JSContext* ctx, JSClassID id, const JSCFunctionListEntry* member
 
 // Gives the event targets of CSS their classes.
 JSClassID classifyCssTarget(void* handle) {
+    if (JSClassID animation = cssAnimationsTargetClass(handle))
+        return animation;
     PrDomEventTarget* target = static_cast<PrDomEventTarget*>(handle);
     if (prCssFontFaceSetQuery(target) != nullptr)
         return prJsCssFontFaceSetClass;
@@ -3295,6 +3301,7 @@ void prJsCssBind(JSContext* ctx) {
     PR_ASSERT(jsIndexAtomsTagged(ctx));
     for (const JsClassDefinition& definition : kClasses)
         JS_FreeValue(ctx, jsDefineClass(ctx, definition));
+    cssAnimationsBind(ctx);
     for (const AttributeList& attributes : kAttributes) {
         JSValue proto = JS_GetClassProto(ctx, *attributes.id);
         defineAttributes(ctx, proto, attributes.names);

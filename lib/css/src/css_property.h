@@ -34,6 +34,10 @@ extern const uint64_t kCssPropertyDiscrete[bitsetWords(PrCssProperty_Count)];
 // lengths repeat to their least common multiple before they combine.
 extern const uint64_t kCssPropertyRepeatableList[bitsetWords(PrCssProperty_Count)];
 
+// Whether every number that the property's grammar takes is bounded below by zero or more, as <length [0,∞]> is, so
+// that a number that an animation combines is clamped to zero.
+extern const uint64_t kCssPropertyNonNegative[bitsetWords(PrCssProperty_Count)];
+
 // Whether every SVG element has a presentation attribute of the property, spelled as the property is
 // (SVG2/styling.html#PresentationAttributes).
 extern const uint64_t kCssPropertyPresentation[bitsetWords(PrCssProperty_Count)];

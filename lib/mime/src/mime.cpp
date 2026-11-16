@@ -118,6 +118,15 @@ bool prMimeTypeIsJavaScript(PrStringView essence) {
     return false;
 }
 
+bool prMimeTypeIsJson(PrStringView essence) {
+    size_t slash = prStringFindByte(essence, '/');
+    if (slash == essence.size || !isTokens(prStringSlice(essence, 0, slash)) ||
+            !isTokens(prStringSlice(essence, slash + 1, essence.size - slash - 1)))
+        return false;
+    return prAsciiEqualsFold(essence, "application/json") || prAsciiEqualsFold(essence, "text/json") ||
+        prAsciiEndsWithFold(essence, "+json");
+}
+
 bool prMimeTypeIsXml(PrStringView type) {
     PrStringView essence = prMimeTypeEssence(type);
     return prAsciiEqualsFold(essence, "text/xml") || prAsciiEqualsFold(essence, "application/xml") ||
@@ -127,7 +136,7 @@ bool prMimeTypeIsXml(PrStringView type) {
 PrStringView prMimeTypeMinimize(PrStringView essence) {
     if (prMimeTypeIsJavaScript(essence))
         return "text/javascript";
-    if (essence == "application/json" || essence == "text/json" || prAsciiEndsWithFold(essence, "+json"))
+    if (prMimeTypeIsJson(essence))
         return "application/json";
     if (essence == "image/svg+xml")
         return essence;

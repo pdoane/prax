@@ -10,6 +10,7 @@
 #include "pr/assert.h"
 #include "pr/charset.h"
 #include "pr/css.h"
+#include "pr/css_animations.h"
 #include "pr/css_presentation.h"
 #include "pr/dom_xml.h"
 #include "pr/float.h"
@@ -490,6 +491,8 @@ PrFetchDestination fetchDestinationOf(DomFetchDestination destination) {
             return PrFetchDestination_Media;
         case DomFetchDestination_Empty:
             return PrFetchDestination_Empty;
+        case DomFetchDestination_Json:
+            return PrFetchDestination_Json;
         case DomFetchDestination_Object:
             break;
     }
@@ -689,11 +692,11 @@ void releaseScript(PreparedScript* script) {
     prMemoryFree(script);
 }
 
-// Returns the module of the window's module map at `url`, or kArrayMissing.
-HtmlModuleIndex findModule(const PrHtmlPage* page, PrStringView url) {
+// Returns the module of the window's module map at `url` with the module type `type`, or kArrayMissing.
+HtmlModuleIndex findModule(const PrHtmlPage* page, PrStringView url, PrHtmlModuleType type) {
     for (HtmlModuleIndex i = 0; i < page->modules.count; ++i) {
-        const PrRawString& key = page->modules.data[i].url;
-        if (!prRawStringIsNull(&key) && prRawStringView(&key) == url)
+        const HtmlModule& module = page->modules.data[i];
+        if (!prRawStringIsNull(&module.url) && prRawStringView(&module.url) == url && module.type == type)
             return i;
     }
     return kArrayMissing;
@@ -750,7 +753,7 @@ struct ModuleFetch {
 
 void parseModule(PrHtmlPage* page, HtmlModuleIndex index, const PrHtmlScript& script);
 
-// Receives a module's response, and parses the module if the response is ok and JavaScript
+// Receives a module's response, and parses the module if the response is ok and its MIME type matches the module type
 // (html/#fetch-a-single-module-script). A module script is UTF-8. The map keys the module by the URL that it was
 // requested at, and its imports resolve against the URL of its response, after redirects.
 void moduleFetched(void* PR_NULLABLE data, const DomFetchResult* result) {
@@ -758,7 +761,10 @@ void moduleFetched(void* PR_NULLABLE data, const DomFetchResult* result) {
     PrHtmlPage* page = fetch->page;
     HtmlModuleIndex index = fetch->module;
     prMemoryFree(fetch);
-    if (!domFetchIsOk(result) || !prMimeTypeIsJavaScript(prMimeTypeEssence(result->contentType))) {
+    PrHtmlModuleType type = page->modules.data[index].type;
+    PrStringView essence = prMimeTypeEssence(result->contentType);
+    bool typed = type == PrHtmlModuleType_Json ? prMimeTypeIsJson(essence) : prMimeTypeIsJavaScript(essence);
+    if (!domFetchIsOk(result) || !typed) {
         page->modules.data[index].state = HtmlModuleState_Failed;
     } else {
         PrRawString decoded = {};
@@ -771,6 +777,7 @@ void moduleFetched(void* PR_NULLABLE data, const DomFetchResult* result) {
             .url = prRawStringView(&url),
             .baseUrl = prRawStringView(&base),
             .kind = PrHtmlScriptKind_Module,
+            .moduleType = type,
             .external = true,
             .line = 1,
             .column = 1,
@@ -796,39 +803,49 @@ void fetchModule(PrHtmlPage* page, HtmlModuleIndex index) {
     FetchSettings mode{PrFetchMode_Cors, module.credentials, false};
     ModuleFetch* fetch = allocZeroed<ModuleFetch>();
     *fetch = ModuleFetch{page, index};
-    startFetch(page, prRawStringView(&request), DomFetchDestination_Script, PrFetchInitiator_Script,
+    DomFetchDestination destination =
+        module.type == PrHtmlModuleType_Json ? DomFetchDestination_Json : DomFetchDestination_Script;
+    startFetch(page, prRawStringView(&request), destination, PrFetchInitiator_Script,
         PrStringView{nullptr, 0}, mode, moduleFetched, fetch, dropModuleFetch);
     prRawStringReset(&request);
 }
 
-// Returns the module of the map at `url`, which is added if the map lacks it. A module that is added appends its index
-// to `added`, and its fetch is the caller's to start.
-HtmlModuleIndex addModule(PrHtmlPage* page, PrStringView url, PrFetchCredentials credentials, RawArray<HtmlModuleIndex>* added) {
-    HtmlModuleIndex index = findModule(page, url);
+// Returns the module of the map at `url` with the module type `type`, which is added if the map lacks it. A module that
+// is added appends its index to `added`, and its fetch is the caller's to start.
+HtmlModuleIndex addModule(PrHtmlPage* page, PrStringView url, PrHtmlModuleType type, PrFetchCredentials credentials,
+        RawArray<HtmlModuleIndex>* added) {
+    HtmlModuleIndex index = findModule(page, url, type);
     if (index != kArrayMissing)
         return index;
     index = page->modules.count;
-    page->modules.push(HtmlModule{.url = prRawStringCopy(url), .credentials = credentials});
+    page->modules.push(HtmlModule{.url = prRawStringCopy(url), .type = type, .credentials = credentials});
     added->push(index);
     return index;
 }
 
-void collectRequest(void* PR_NULLABLE context, PrStringView url) {
-    static_cast<RawArray<PrRawString>*>(context)->push(prRawStringCopy(url));
+// A module that a module imports, as the host reports it.
+struct ModuleRequest {
+    PrRawString url;
+    PrHtmlModuleType type;
+};
+
+void collectRequest(void* PR_NULLABLE context, PrStringView url, PrHtmlModuleType type) {
+    static_cast<RawArray<ModuleRequest>*>(context)->push(ModuleRequest{prRawStringCopy(url), type});
 }
 
 // Parses `script` into the module at `index` with the host, records the modules that it imports, and fetches those that
 // the map lacks (html/#fetch-the-descendants-of-and-link-a-module-script). The fetches start once the module's imports
 // are recorded, since the fetch of a data: URL is answered during the call that starts it.
 void parseModule(PrHtmlPage* page, HtmlModuleIndex index, const PrHtmlScript& script) {
-    RawArray<PrRawString> requests;
+    RawArray<ModuleRequest> requests;
     uint32_t record = page->host.parseModule(page->host.context, page, &script, collectRequest, &requests);
     PrFetchCredentials credentials = page->modules.data[index].credentials;
     RawArray<HtmlModuleIndex> added;
     uint32_t first = page->moduleRequests.count;
     for (uint32_t i = 0; i < requests.count; ++i) {
-        page->moduleRequests.push(addModule(page, prRawStringView(&requests.data[i]), credentials, &added));
-        prRawStringReset(&requests.data[i]);
+        const ModuleRequest& request = requests.data[i];
+        page->moduleRequests.push(addModule(page, prRawStringView(&request.url), request.type, credentials, &added));
+        prRawStringReset(&requests.data[i].url);
     }
     requests.reset();
     HtmlModule& module = page->modules.data[index];
@@ -903,10 +920,14 @@ PrStatus executeScript(PrHtmlPage* page, const PreparedScript* prepared) {
         return PrStatus_Ok;
     }
     PrHtmlScript script{
-        prRawStringView(&prepared->source), prRawStringView(&prepared->url),
-        prRawStringView(&prepared->baseUrl), prepared->kind, prepared->external,
-        prepared->line, prepared->column,
-        module ? page->modules.data[prepared->module].record : 0,
+        .source = prRawStringView(&prepared->source),
+        .url = prRawStringView(&prepared->url),
+        .baseUrl = prRawStringView(&prepared->baseUrl),
+        .kind = prepared->kind,
+        .external = prepared->external,
+        .line = prepared->line,
+        .column = prepared->column,
+        .module = module ? page->modules.data[prepared->module].record : 0,
     };
     bool running = page->runningScript;
     page->runningScript = running || (page->parsing && prepared->kind == PrHtmlScriptKind_Classic);
@@ -979,7 +1000,8 @@ void fetchScript(PrHtmlPage* page, PreparedScript* script, PrStringView src, con
         prUrlDestroy(resource);
         RawArray<HtmlModuleIndex> added;
         FetchSettings mode = scriptSettingsOf(script->element, script->kind);
-        HtmlModuleIndex root = addModule(page, prRawStringView(&script->url), mode.credentials, &added);
+        HtmlModuleIndex root =
+            addModule(page, prRawStringView(&script->url), PrHtmlModuleType_JavaScript, mode.credentials, &added);
         if (added.count != 0)
             fetchModule(page, root);
         added.reset();
@@ -1264,6 +1286,9 @@ void discardDocument(PrHtmlPage* page) {
         return;
     domListenersDestroy(document->listeners);
     document->listeners = nullptr;
+    // The window's scripts no longer hear about the document, whose realm is gone or going.
+    prCssDocumentSetAnimationCallback(document, nullptr);
+    prCssDocumentSetFontCallback(document, nullptr);
     prCssPresentationDestroy(page->presentation);
     page->presentation = nullptr;
     svgPresentationDestroy(page->svg);
@@ -1304,7 +1329,7 @@ void newDocument(PrHtmlPage* page) {
         page->presentation = prCssPresentationCreate(&desc);
         page->svg = svgPresentationCreate(page->presentation);
         // The window's rendering updates fire the presentation's animation events.
-        page->presentation->animations.recordsEvents = true;
+        cssAnimations(page->presentation->document).recordsEvents = true;
     }
 }
 
@@ -4171,12 +4196,13 @@ PrStatus prHtmlPageNavigate(PrHtmlPage* page, PrStringView url) {
     return startNavigation(page, url, PrStringView{});
 }
 
-void prHtmlPageImportModule(PrHtmlPage* page, PrStringView url, PrHtmlImportFn done, void* PR_NULLABLE context) {
+void prHtmlPageImportModule(PrHtmlPage* page, PrStringView url, PrHtmlModuleType type, PrHtmlImportFn done,
+        void* PR_NULLABLE context) {
     PR_ASSERT(page->host.parseModule != nullptr);
     // An import() fetches with the credentials of the default script fetch options
     // (html/#default-script-fetch-options).
     RawArray<HtmlModuleIndex> added;
-    HtmlModuleIndex root = addModule(page, url, PrFetchCredentials_SameOrigin, &added);
+    HtmlModuleIndex root = addModule(page, url, type, PrFetchCredentials_SameOrigin, &added);
     if (added.count != 0)
         fetchModule(page, root);
     added.reset();

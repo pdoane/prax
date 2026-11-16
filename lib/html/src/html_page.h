@@ -155,14 +155,15 @@ typedef uint32_t HtmlModuleIndex;
 enum {
     HtmlModuleState_Fetching,
     HtmlModuleState_Parsed,     // parsed by the host, with an error or without
-    HtmlModuleState_Failed,     // its fetch failed, or its response is not JavaScript
+    HtmlModuleState_Failed,     // its fetch failed, or its response's MIME type does not match its module type
 };
 typedef uint8_t HtmlModuleState;
 
 // A module of the module map, or an inline module script's module, which the map does not key. Once parsed, the module
 // names the modules that it imports, each of which the map holds.
 struct HtmlModule {
-    PrRawString url;                       // the key, or the null string for an inline module script's
+    PrRawString url;                    // the key with `type`, or the null string for an inline module script's
+    PrHtmlModuleType type;
     HtmlModuleState state;
     PrFetchCredentials credentials;     // the credentials mode of its fetch, which its imports' fetches take
     uint32_t record;                    // the host's number for the parsed module (PrHtmlScript::module)

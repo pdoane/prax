@@ -2566,6 +2566,13 @@ def same_tree(a, b):
             and all(same_tree(x, y) for x, y in zip(a.children, b.children)))
 
 
+# The numeric types, whose values an animation combines as numbers.
+NUMERIC_TYPES = {
+    "<length>", "<percentage>", "<length-percentage>", "<number>", "<integer>", "<angle>", "<angle-percentage>",
+    "<time>", "<time-percentage>", "<frequency>", "<resolution>", "<flex>", "<dimension>",
+}
+
+
 def walk(node):
     yield node
     for c in node.children:
@@ -3084,6 +3091,9 @@ def emit_property_header(path, props):
     body.append("\n// Whether the property animates as a repeatable list (web-animations-1/#repeatable-list): two lists "
                 "of different\n// lengths repeat to their least common multiple before they combine.\nextern const "
                 "uint64_t kCssPropertyRepeatableList[bitsetWords(PrCssProperty_Count)];\n")
+    body.append("\n// Whether every number that the property's grammar takes is bounded below by zero or more, as\n"
+                "// <length [0,∞]> is, so that a number that an animation combines is clamped to zero.\nextern const "
+                "uint64_t kCssPropertyNonNegative[bitsetWords(PrCssProperty_Count)];\n")
     body.append("\n// Whether every SVG element has a presentation attribute of the property, spelled as the "
                 "property is\n// (SVG2/styling.html#PresentationAttributes).\nextern const uint64_t "
                 "kCssPropertyPresentation[bitsetWords(PrCssProperty_Count)];\n")
@@ -3294,6 +3304,43 @@ def emit_property_source(path, props, g, shorthands, values):
     body.append(bitset("extern const uint64_t "
                        "kCssPropertyRepeatableList[bitsetWords(PrCssProperty_Count)]",
                        [repeatable(name) for name in props], names=list(props)))
+
+    def bounds(tree, seen):
+        """Returns (numeric, nonnegative) for the numbers that `tree` takes, through the productions it names. A math
+        function's own terms are not the value's, so its productions are not followed."""
+        numeric, nonnegative = False, True
+        for node in walk(tree):
+            # A property that the grammar names, as <'width'>, takes what that property takes.
+            if node.type == "property" and ("property", node.value) in g.trees and node.value not in seen:
+                seen.add(node.value)
+                inner = bounds(g.trees[("property", node.value)], seen)
+                numeric = numeric or inner[0]
+                nonnegative = nonnegative and inner[1]
+                continue
+            if node.type != "type":
+                continue
+            name = normalize_ref(node.value)
+            if name in NUMERIC_TYPES:
+                numeric = True
+                low = node.range[0] if node.range is not None else None
+                nonnegative = nonnegative and low is not None and low >= 0
+            elif name not in seen and ("type", name) in g.trees and not name.startswith("<calc"):
+                seen.add(name)
+                inner = bounds(g.trees[("type", name)], seen)
+                numeric = numeric or inner[0]
+                nonnegative = nonnegative and inner[1]
+        return numeric, nonnegative
+
+    def nonnegative(name):
+        name = props[name].alias_of() or name
+        tree = g.trees.get(("property", name))
+        if tree is None:
+            return False
+        numeric, bounded = bounds(tree, set())
+        return numeric and bounded
+    body.append(bitset("extern const uint64_t "
+                       "kCssPropertyNonNegative[bitsetWords(PrCssProperty_Count)]",
+                       [nonnegative(name) for name in props], names=list(props)))
     missing = PRESENTATION - set(props)
     if missing:
         sys.exit("gen_css: presentation attributes of unknown properties: " + ", ".join(sorted(missing)))

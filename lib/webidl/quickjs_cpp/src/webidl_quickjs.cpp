@@ -671,6 +671,22 @@ DomException* PR_NULLABLE exceptionOf(JSContext* ctx, JSValueConst object) {
     return jsValueOf<DomException>(ctx, object, domExceptionClass, "DOMException");
 }
 
+// Gives `exception` an own stack property that holds the backtrace at its creation, as the engine gives its errors. The
+// stack is implementation-defined (webidl/#js-DOMException-specialness).
+void addStack(JSContext* ctx, JSValueConst exception) {
+    JSValue error = JS_NewError(ctx);
+    if (JS_IsException(error)) {
+        JS_FreeValue(ctx, JS_GetException(ctx));
+        return;
+    }
+    JSValue stack = JS_GetErrorStack(ctx, error);
+    JS_FreeValue(ctx, error);
+    if (JS_IsString(stack))
+        JS_DefinePropertyValueStr(ctx, exception, "stack", stack, JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
+    else
+        JS_FreeValue(ctx, stack);
+}
+
 JSValue newException(JSContext* ctx, JSClassID id, PrStringView message, PrStringView name,
         double quota = kPrF64Nan, double requested = kPrF64Nan) {
     DomException exception = {prRawStringCopy(name), prRawStringCopy(message), quota, requested};
@@ -678,7 +694,9 @@ JSValue newException(JSContext* ctx, JSClassID id, PrStringView message, PrStrin
     if (JS_IsException(object)) {
         prRawStringReset(&exception.name);
         prRawStringReset(&exception.message);
+        return object;
     }
+    addStack(ctx, object);
     return object;
 }
 
@@ -911,7 +929,7 @@ void jsPairIteratorBind(JSContext* ctx, JSClassID* id, const char* name) {
 }
 
 JSValue jsPairIterator(JSContext* ctx, JSClassID id, JSValueConst owner, JSCFunction* entryAt, JsMapPart part) {
-    JSValue value = JS_NewObjectClass(ctx, int(id));
+    JSValue value = JS_NewObjectClass(ctx, id);
     if (JS_IsException(value))
         return value;
     PairIterator* iterator = allocZeroed<PairIterator>();
@@ -1217,6 +1235,27 @@ JSValue jsDomExceptionThrow(JSContext* ctx, PrStringView name) {
 JSValue jsQuotaExceededErrorThrow(JSContext* ctx, double quota, double requested) {
     JSValue exception = newException(ctx, quotaExceededErrorClass, "", "QuotaExceededError", quota, requested);
     return JS_IsException(exception) ? exception : JS_Throw(ctx, exception);
+}
+
+bool jsDomExceptionState(JSContext* ctx, JSValueConst value, JsDomExceptionState* out) {
+    const DomException* exception = static_cast<const DomException*>(jsHandleIn(ctx, value, domExceptionClass));
+    if (exception == nullptr)
+        return false;
+    *out = JsDomExceptionState{
+        .name = prRawStringView(&exception->name),
+        .message = prRawStringView(&exception->message),
+        .quota = exception->quota,
+        .requested = exception->requested,
+        .quotaExceeded = jsHandleIn(ctx, value, quotaExceededErrorClass) != nullptr,
+    };
+    return true;
+}
+
+JSValue jsDomExceptionFromState(JSContext* ctx, const JsDomExceptionState& state) {
+    if (state.quotaExceeded)
+        return newException(ctx, quotaExceededErrorClass, state.message, "QuotaExceededError", state.quota,
+            state.requested);
+    return newException(ctx, domExceptionClass, state.message, state.name);
 }
 
 } // namespace pr

@@ -3,6 +3,8 @@ pr_library(css INCLUDE include
     src/css.cpp
     src/css_animate.cpp
     src/css_animation.cpp
+    src/css_animations.cpp
+    src/css_keyframes.cpp
     src/css_at_rule.cpp
     src/css_boxes.cpp
     src/css_cascade.cpp
@@ -66,6 +68,7 @@ target_link_libraries(pr_css PUBLIC prax::dom prax::core prax::url prax::layout 
 
 if (PR_JS)
     pr_library(css_quickjs INCLUDE quickjs/include
+        quickjs/src/css_animations_quickjs.cpp
         quickjs/src/css_quickjs.cpp
         quickjs/src/css_typed_om_quickjs.cpp
     )

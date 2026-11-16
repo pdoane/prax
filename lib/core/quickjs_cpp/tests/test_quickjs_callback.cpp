@@ -7,7 +7,7 @@ using namespace pr_impl;
 
 TEST_CASE("a callback holds its function on its own and leaves the context's opaque state alone") {
     JSRuntime* runtime = jsRuntimeCreate();
-    JSContext* ctx = JS_NewContext(runtime);
+    JSContext* ctx = jsContextCreate(runtime);
     int hostState = 17;
     JS_SetContextOpaque(ctx, &hostState);
 
