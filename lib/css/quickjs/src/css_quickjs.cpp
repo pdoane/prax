@@ -20,6 +20,7 @@
 #include "pr/quickjs_callback.h"
 #include "pr/raw_array.h"
 #include "pr/string_ops.h"
+#include "pr/webidl_observable_array_quickjs.h"
 #include "pr/webidl_quickjs.h"
 
 namespace pr_impl {
@@ -237,12 +238,40 @@ JSValue sheetConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSValue
     init.baseUrl = baseUrl.value();
     if (init.media.mediaList == nullptr)
         init.media.string = media.value();
-    PrCssStyleSheet* sheet = prCssStyleSheetCreate(&init);
+    PrCssStyleSheet* sheet = nullptr;
+    if (prCssStyleSheetCreate(prJsDomGlobalDocument(ctx), &init, &sheet) != PrStatus_Ok)
+        return jsDomExceptionThrow(ctx, "NotAllowedError");
     // The object replaces the reference that the sheet was created with.
     JSValue object = jsWrap(ctx, prJsCssStyleSheetClass, JS_UNDEFINED, sheet, true);
     if (JS_IsException(object))
         prCssStyleSheetRelease(sheet);
     return jsConstructed(ctx, newTarget, object);
+}
+
+// replace(text) (cssom-1/#dom-cssstylesheet-replace). The text is parsed at the call, so no change waits on it, and the
+// promise settles with the sheet in a promise job. A sheet that is not constructed rejects with a NotAllowedError.
+JSValue sheetReplace(JSContext* ctx, JSValueConst sheetObject, int argc, JSValueConst* argv) {
+    JSValue functions[2];
+    JSValue promise = JS_NewPromiseCapability(ctx, functions);
+    if (JS_IsException(promise))
+        return promise;
+    // An operation that returns a promise rejects it rather than throw (webidl/#es-operations).
+    PrCssStyleSheet* sheet = jsThis<PrCssStyleSheet>(ctx, sheetObject, prJsCssStyleSheetClass);
+    StringArgument text = {ctx};
+    bool read = sheet != nullptr && jsArgCount(ctx, argc, 1) && text.read(argv[0]);
+    bool replaced = read && prCssStyleSheetReplaceSync(sheet, text.value()) == PrStatus_Ok;
+    JSValue value;
+    if (!read)
+        value = JS_GetException(ctx);
+    else if (replaced)
+        value = JS_DupValue(ctx, sheetObject);
+    else
+        value = jsDomExceptionNew(ctx, "NotAllowedError");
+    JS_FreeValue(ctx, JS_Call(ctx, functions[replaced ? 0 : 1], JS_UNDEFINED, 1, &value));
+    JS_FreeValue(ctx, value);
+    JS_FreeValue(ctx, functions[0]);
+    JS_FreeValue(ctx, functions[1]);
+    return promise;
 }
 
 JSValue sheetInsertRule(JSContext* ctx, JSValueConst sheetObject, int argc, JSValueConst* argv) {
@@ -1721,6 +1750,7 @@ constexpr JSCFunctionListEntry kCssStyleSheetProto[] = {
         (jsSameObjectGetter<&prJsCssStyleSheetClass, prCssStyleSheetCssRules, &cssRuleListClass, "cssRules">)),
     PR_JS_METHOD("insertRule", 1, sheetInsertRule),
     PR_JS_MAGIC("deleteRule", 1, sheetDeleteRule, 0),
+    PR_JS_METHOD("replace", 1, sheetReplace),
     PR_JS_METHOD("replaceSync", 1, replaceSync),
     // cssom-1/#legacy-css-style-sheet-members: rules is cssRules.
     PR_JS_GET("rules",
@@ -2896,14 +2926,135 @@ constexpr JSCFunctionListEntry kElementMembers[] = {
 };
 constexpr JSCFunctionListEntry kMatrixReadOnlyMembers[] = {PR_JS_METHOD("toString", 0, matrixToString)};
 constexpr JSCFunctionListEntry kMatrixMembers[] = {PR_JS_METHOD("setMatrixValue", 1, setMatrixValue)};
+
+// ---------------------------------------------------------------------------------------------------------------------
+// adoptedStyleSheets (cssom-1/#dom-documentorshadowroot-adoptedstylesheets)
+//
+// The attribute is an observable array of the document or shadow root, whose backing list the root's adopted sheets
+// follow. Each change to the list sets the root's whole list.
+
+// The adopted sheets of the document or shadow root that `object` is, read into `out`. Returns false if it is neither.
+bool readAdopted(JSContext* ctx, JSValueConst object, RawArray<PrCssStyleSheet* PR_NONNULL>* out) {
+    if (PrDomDocument* document = jsHandleAs<PrDomDocument>(ctx, object, prJsDomDocumentClass)) {
+        out->resize(prCssDocumentAdoptedStyleSheets(document, nullptr, 0));
+        prCssDocumentAdoptedStyleSheets(document, out->data, out->count);
+        return true;
+    }
+    if (PrDomShadowRoot* shadow = jsHandleAs<PrDomShadowRoot>(ctx, object, prJsDomShadowRootClass)) {
+        out->resize(prCssShadowRootAdoptedStyleSheets(shadow, nullptr, 0));
+        prCssShadowRootAdoptedStyleSheets(shadow, out->data, out->count);
+        return true;
+    }
+    return false;
+}
+
+// Sets the adopted sheets of the document or shadow root that `object` is. Throws a NotAllowedError for a sheet that it
+// may not adopt.
+bool writeAdopted(JSContext* ctx, JSValueConst object, const RawArray<PrCssStyleSheet* PR_NONNULL>& sheets) {
+    PrStatus status = PrStatus_NotAllowed;
+    if (PrDomDocument* document = jsHandleAs<PrDomDocument>(ctx, object, prJsDomDocumentClass))
+        status = prCssDocumentSetAdoptedStyleSheets(document, sheets.data, sheets.count);
+    else if (PrDomShadowRoot* shadow = jsHandleAs<PrDomShadowRoot>(ctx, object, prJsDomShadowRootClass))
+        status = prCssShadowRootSetAdoptedStyleSheets(shadow, sheets.data, sheets.count);
+    if (status == PrStatus_Ok)
+        return true;
+    jsDomExceptionThrow(ctx, "NotAllowedError");
+    return false;
+}
+
+// Converts `value` to a sheet that the document or shadow root that `owner` is may adopt: a constructed sheet of its
+// node document (cssom-1/#dom-documentorshadowroot-adoptedstylesheets).
+JSValue adoptedConvert(JSContext* ctx, JSValueConst owner, JSValueConst value) {
+    PrCssStyleSheet* sheet = jsHandleAs<PrCssStyleSheet>(ctx, value, prJsCssStyleSheetClass);
+    if (sheet == nullptr)
+        return JS_ThrowTypeError(ctx, "The value is not a CSSStyleSheet");
+    PrDomDocument* document = jsHandleAs<PrDomDocument>(ctx, owner, prJsDomDocumentClass);
+    if (document == nullptr)
+        document = prDomNodeOwnerDocument(prDomShadowRootAsNode(jsHandleAs<PrDomShadowRoot>(ctx, owner,
+            prJsDomShadowRootClass)));
+    if (document == nullptr || prCssStyleSheetConstructorDocument(sheet) != document)
+        return jsDomExceptionThrow(ctx, "NotAllowedError");
+    return JS_DupValue(ctx, value);
+}
+
+// The root's list follows the backing list: a set replaces or appends, and a delete removes the last sheet. The delete
+// steps run first when a set replaces a value, so a set at the last index finds that index past the end.
+bool adoptedSet(JSContext* ctx, JSValueConst owner, JSValueConst value, uint32_t index) {
+    RawArray<PrCssStyleSheet* PR_NONNULL> sheets;
+    bool ok = readAdopted(ctx, owner, &sheets);
+    PrCssStyleSheet* sheet = jsHandleAs<PrCssStyleSheet>(ctx, value, prJsCssStyleSheetClass);
+    if (ok && index < sheets.count)
+        sheets.data[index] = sheet;
+    else if (ok)
+        sheets.push(sheet);
+    ok = ok && writeAdopted(ctx, owner, sheets);
+    sheets.reset();
+    return ok;
+}
+
+bool adoptedRemove(JSContext* ctx, JSValueConst owner, JSValueConst, uint32_t index) {
+    RawArray<PrCssStyleSheet* PR_NONNULL> sheets;
+    bool ok = readAdopted(ctx, owner, &sheets);
+    if (ok && index + 1 == sheets.count) {
+        sheets.pop();
+        ok = writeAdopted(ctx, owner, sheets);
+    }
+    sheets.reset();
+    return ok;
+}
+
+constexpr JsObservableArrayHooks kAdoptedHooks = {adoptedConvert, adoptedSet, adoptedRemove};
+
+// Returns true if `object` is a document or a shadow root, and otherwise throws a TypeError.
+bool adoptsSheets(JSContext* ctx, JSValueConst object) {
+    if (jsHandleAs<PrDomDocument>(ctx, object, prJsDomDocumentClass) != nullptr ||
+            jsHandleAs<PrDomShadowRoot>(ctx, object, prJsDomShadowRootClass) != nullptr)
+        return true;
+    JS_ThrowTypeError(ctx, "Illegal invocation");
+    return false;
+}
+
+JSValue adoptedStyleSheets(JSContext* ctx, JSValueConst object) {
+    if (!adoptsSheets(ctx, object))
+        return JS_EXCEPTION;
+    JSValue array = jsSameObject(ctx, object, "adoptedStyleSheets",
+        [&] { return jsObservableArrayNew(ctx, object, &kAdoptedHooks); });
+    if (JS_IsException(array))
+        return array;
+    // A shadow root that moved to another document let go of its sheets, and its array follows.
+    RawArray<PrCssStyleSheet* PR_NONNULL> sheets;
+    if (readAdopted(ctx, object, &sheets) && sheets.count == 0 && jsObservableArrayLength(ctx, array) != 0) {
+        JSValue empty = JS_NewArray(ctx);
+        bool ok = jsObservableArraySet(ctx, array, empty);
+        JS_FreeValue(ctx, empty);
+        if (!ok) {
+            JS_FreeValue(ctx, array);
+            array = JS_EXCEPTION;
+        }
+    }
+    sheets.reset();
+    return array;
+}
+
+JSValue setAdoptedStyleSheets(JSContext* ctx, JSValueConst object, JSValueConst input) {
+    JSValue array = adoptedStyleSheets(ctx, object);
+    if (JS_IsException(array))
+        return array;
+    bool ok = jsObservableArraySet(ctx, array, input);
+    JS_FreeValue(ctx, array);
+    return ok ? JS_UNDEFINED : JS_EXCEPTION;
+}
+
 constexpr JSCFunctionListEntry kDocumentMembers[] = {
     PR_JS_GET("styleSheets", (jsSameObjectGetter<&prJsDomDocumentClass, prCssDocumentStyleSheets,
         &prJsCssStyleSheetListClass, "styleSheets">)),
     PR_JS_GET("fonts", prJsCssFonts),
+    PR_JS_GET_SET("adoptedStyleSheets", adoptedStyleSheets, setAdoptedStyleSheets),
 };
 constexpr JSCFunctionListEntry kShadowRootMembers[] = {
     PR_JS_GET("styleSheets", (jsSameObjectGetter<&prJsDomShadowRootClass, prCssShadowRootStyleSheets,
         &prJsCssStyleSheetListClass, "styleSheets">)),
+    PR_JS_GET_SET("adoptedStyleSheets", adoptedStyleSheets, setAdoptedStyleSheets),
 };
 
 // Adds `members` to the prototype of the class `id`, which another module defines.

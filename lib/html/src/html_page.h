@@ -366,10 +366,13 @@ uint64_t htmlPageEmbed(const PrHtmlPage* page);
 // Navigates the browsing context whose current window is `window` to the document at `url` (html/#navigate), through
 // its host, from a task. `source` is the window that starts the navigation, whose origin fetches the document, or null
 // for a traversal of the session history. A javascript: URL runs only if `source` has the origin of `window`. Any call
-// but a traversal replaces the ongoing navigation of the browsing context. Returns false, and does nothing, if the
-// window is not its browsing context's current window or the host does not navigate.
+// but a traversal replaces the ongoing navigation of the browsing context. The request for the document has the
+// referrer policy `referrerPolicy`, or the source document's if it is Default (fetch/#concept-request-referrer-policy).
+// Returns false, and does nothing, if the window is not its browsing context's current window or the host does not
+// navigate.
 bool htmlPageNavigate(PrHtmlWindow* window, const PrHtmlWindow* PR_NULLABLE source, PrStringView url,
-    HtmlHistoryCommit commit = HtmlHistoryCommit_Push, uint32_t target = 0);
+    HtmlHistoryCommit commit = HtmlHistoryCommit_Push, uint32_t target = 0,
+    PrFetchReferrerPolicy referrerPolicy = PrFetchReferrerPolicy_Default);
 
 // Returns the window of the browsing context that `name` chooses for a hyperlink of `window`
 // (html/#the-rules-for-choosing-a-navigable), or null if the link needs a new top-level browsing context.

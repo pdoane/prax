@@ -39,6 +39,25 @@ bool htmlTextControlUndo(PrDomElement* element, bool redo);
 // keeps. A selection that the motion changed fires select.
 void htmlTextControlSetSelection(PrDomElement* element, const PrTextEditSelection& selection);
 
+// Runs the attribute change steps of a details element (html/#the-details-element) for its attribute `name`, given
+// whether the element had the attribute before and has it now. A change of open queues the element's toggle event,
+// which coalesces with one that is queued already (html/#queue-a-details-toggle-event-task). Opening closes the other
+// details elements of its name group, and a change of name closes the element if another of its new group is open.
+void htmlDetailsAttributeChanged(PrDomElement* details, PrStringView name, bool had, bool has);
+
+// Runs the insertion steps of each details element at or under `node` (html/#the-details-element): one that is open
+// closes if another of its name group is.
+void htmlDetailsInserted(PrDomNode* node);
+
+// Returns true if the element is the summary for its parent details (html/#summary-for-its-parent-details), whose
+// activation opens or closes the details.
+bool htmlSummaryActivates(const PrDomElement* element);
+
+// Runs the activation behavior of a summary that activates for `click` (html/#the-summary-element): its details opens
+// if it is closed, and closes if it is open. A click on interactive content inside the summary
+// (html/#interactive-content), such as a link or a form control, leaves the details as it is.
+void htmlSummaryActivate(PrDomElement* summary, PrDomEvent* click);
+
 } // namespace pr_impl
 
 PR_ASSUME_NONNULL_END

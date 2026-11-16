@@ -71,8 +71,10 @@ typedef uint8_t PrHtmlDomParserSupportedType;
 
 // Creates a document from `source` parsed as `type`, without running its scripts (html/#dom-domparser-parsefromstring).
 // The caller holds the one reference. If an XML source is not well-formed, the document holds a parsererror element
-// that describes the error.
-PrDomDocument* prHtmlDomParserParseFromString(PrStringView source, PrHtmlDomParserSupportedType type);
+// that describes the error. The document has the origin of `creator`, the document of the parser's global, or of no
+// document if it is null.
+PrDomDocument* prHtmlDomParserParseFromString(PrDomDocument* PR_NULLABLE creator, PrStringView source,
+    PrHtmlDomParserSupportedType type);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // DOM parsing and serialization (html)
@@ -137,6 +139,16 @@ void prHtmlSetTabIndex(PrDomElement* element, int32_t value);
 
 // Returns the window whose document this is, or null if there is none (html/#dom-document-defaultview).
 PrHtmlWindow* PR_NULLABLE prHtmlDocumentDefaultView(PrDomDocument* document);
+
+// Returns the effective domain of the document's origin (html/#dom-document-domain), or the empty string for an opaque
+// origin or a document with no window. The caller releases the text.
+PrRawString prHtmlDocumentDomain(PrDomDocument* document);
+
+// Sets the domain of the document's origin to `value`, parsed as a host (html/#dom-document-domain). Returns NotAllowed
+// if the document has no window, is sandboxed from setting its domain, or has no effective domain, or if `value` is
+// neither that domain nor a registrable domain suffix of it (html/#is-a-registrable-domain-suffix-of-or-is-equal-to): a
+// suffix after a dot that is not within its public suffix.
+PrStatus prHtmlDocumentSetDomain(PrDomDocument* document, PrStringView value);
 
 // Returns the URL of the document that navigated to `document`, as its referrer policy left it, or the empty view for
 // none (html/#dom-document-referrer).
@@ -419,6 +431,23 @@ void prHtmlDialogElementClose(PrHtmlDialogElement* element, PrStringView result)
 void prHtmlDialogElementRequestClose(PrHtmlDialogElement* element, PrStringView result);
 
 // ---------------------------------------------------------------------------------------------------------------------
+// Navigable containers (html/#navigable-container)
+//
+// An iframe, object or embed element can show the document of a browsing context, which the browsing context of the
+// element's document owns. These functions return null for any other element.
+
+// Returns the window of the browsing context that the element shows (html/#content-window), or null if it shows none.
+PrHtmlWindow* PR_NULLABLE prHtmlElementContentWindow(PrHtmlElement* element);
+
+// Returns the document of that window (html/#concept-bcc-content-document). Returns null if there is no window. It also
+// returns null if the document and the element's document are not same origin-domain.
+PrDomDocument* PR_NULLABLE prHtmlElementContentDocument(PrHtmlElement* element);
+
+// Returns the content document if it was loaded as an SVG image, with the MIME type image/svg+xml
+// (html/#dom-media-getsvgdocument). Returns null otherwise.
+PrDomDocument* PR_NULLABLE prHtmlElementSvgDocument(PrHtmlElement* element);
+
+// ---------------------------------------------------------------------------------------------------------------------
 // HTMLIFrameElement : HTMLElement (html)
 
 // An HTMLIFrameElement as each interface it inherits from.
@@ -430,12 +459,9 @@ PR_HANDLE_UPCAST(HtmlIFrameElement, DomEventTarget, EventTarget)
 // Returns `object` as an HTMLIFrameElement, or null if it is not one.
 PrHtmlIFrameElement* PR_NULLABLE prHtmlIFrameElementQuery(PrDomEventTarget* PR_NULLABLE object);
 
-// Returns the window of the browsing context that the iframe contains (html/#dom-iframe-contentwindow). The browsing
-// context of the iframe's document owns that window. Returns null if the iframe contains no browsing context.
-PrHtmlWindow* PR_NULLABLE prHtmlIFrameElementContentWindow(PrHtmlIFrameElement* element);
-
-// Returns the document of that window, or null if there is no window.
-PrDomDocument* PR_NULLABLE prHtmlIFrameElementContentDocument(PrHtmlIFrameElement* element);
+// Creates the token list of the sandbox attribute, whose supported tokens are its keywords (html/#dom-iframe-sandbox).
+// The caller destroys the list.
+PrDomTokenList* prHtmlIFrameElementSandbox(PrHtmlIFrameElement* element);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // HTMLImageElement : HTMLElement (html)
@@ -1238,6 +1264,20 @@ PrHtmlWindow* PR_NULLABLE prHtmlWindowParent(PrHtmlWindow* window);
 // document's origin does not match. Returns Syntax if `targetOrigin` is none of those.
 PrStatus prHtmlWindowPostMessage(PrHtmlWindow* window, PrHtmlWindow* source, PrStringView serialized,
     PrDomEventTarget* PR_NONNULL const* PR_NULLABLE ports, uint32_t portCount, PrStringView targetOrigin);
+
+// Returns true if the documents of two windows have the same origin (html/#same-origin), or the same origin-domain
+// (html/#same-origin-domain), which document.domain changes and which decides what script may reach. Distinct opaque
+// origins differ.
+bool prHtmlWindowIsSameOrigin(const PrHtmlWindow* a, const PrHtmlWindow* b);
+bool prHtmlWindowIsSameOriginDomain(const PrHtmlWindow* a, const PrHtmlWindow* b);
+
+// Returns true if the window's browsing context is gone (html/#dom-window-closed): its page was destroyed, or its
+// iframe removed.
+bool prHtmlWindowIsClosed(const PrHtmlWindow* window);
+
+// Returns the origin of the window's document, serialized (html/#dom-origin): "null" for an opaque origin, as that of a
+// document that an iframe's sandbox gives one of its own.
+PrRawString prHtmlWindowOrigin(const PrHtmlWindow* window);
 
 // Returns a component of the URL of the window's document (html/#the-location-interface).
 PrRawString prHtmlWindowLocation(const PrHtmlWindow* window, PrUrlComponent component);

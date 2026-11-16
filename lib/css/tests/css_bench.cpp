@@ -70,13 +70,15 @@ uint32_t serializeAll(PrCssRuleList* rules) {
 }
 
 void parseOnly(Work* work) {
-    PrCssStyleSheet* sheet = prCssStyleSheetCreate(nullptr);
+    PrCssStyleSheet* sheet = nullptr;
+    prCssStyleSheetCreate(nullptr, nullptr, &sheet);
     prCssStyleSheetReplaceSync(sheet, work->text);
     prCssStyleSheetRelease(sheet);
 }
 
 void parseAndWalk(Work* work) {
-    PrCssStyleSheet* sheet = prCssStyleSheetCreate(nullptr);
+    PrCssStyleSheet* sheet = nullptr;
+    prCssStyleSheetCreate(nullptr, nullptr, &sheet);
     prCssStyleSheetReplaceSync(sheet, work->text);
 
     Counts counts = {0, 0};
@@ -141,7 +143,9 @@ int main(int argc, char** argv) {
         }
         PrStringView text = prTextBufferView(&file);
 
-        PrCssStyleSheet* sheet = prCssStyleSheetCreate(nullptr);
+        PrCssStyleSheet* sheet = nullptr;
+
+        prCssStyleSheetCreate(nullptr, nullptr, &sheet);
         prCssStyleSheetReplaceSync(sheet, text);
 
         Work work = {text, sheet, {}, {}, 0};

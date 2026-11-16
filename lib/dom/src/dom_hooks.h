@@ -51,6 +51,10 @@ struct DomDocumentHooks {
         PrDomNode* const PR_NONNULL* PR_NULLABLE before, uint32_t beforeCount);
     void (*PR_NULLABLE shadowAttached)(void* PR_NULLABLE context, PrDomElement* host);
 
+    // A shadow root with style data (DomShadowRoot::style) moved from the subscriber's document into its node document
+    // (dom/#concept-node-adopt).
+    void (*PR_NULLABLE shadowRootAdopted)(void* PR_NULLABLE context, PrDomShadowRoot* shadow);
+
     // The element gained or lost a wheel listener that is not passive (domHasBlockingWheelListener).
     void (*PR_NULLABLE wheelListenersChanged)(void* PR_NULLABLE context, PrDomElement* element);
 
@@ -109,6 +113,7 @@ enum : uint8_t {
     DomHook_DataChanged,
     DomHook_SlotChanged,
     DomHook_ShadowAttached,
+    DomHook_ShadowRootAdopted,
     DomHook_WheelListenersChanged,
     DomHook_StatesChanged,
     DomHook_LanguageChanged,
@@ -210,6 +215,15 @@ inline void domNotifySlotChanged(PrDomElement* slot, PrDomNode* const PR_NONNULL
         return;
     domEachFollower(slot->document, DomHook_SlotChanged, [&](const DomDocumentHooks& hooks, void* PR_NULLABLE context) {
         hooks.slotChanged(context, slot, before, beforeCount);
+    });
+}
+
+// Reports to the subscribers of `from` that the shadow root moved from it into its node document.
+inline void domNotifyShadowRootAdopted(PrDomShadowRoot* shadow, PrDomDocument* from) {
+    if (shadow->style == nullptr || from->followers[DomHook_ShadowRootAdopted] == 0)
+        return;
+    domEachFollower(from, DomHook_ShadowRootAdopted, [&](const DomDocumentHooks& hooks, void* PR_NULLABLE context) {
+        hooks.shadowRootAdopted(context, shadow);
     });
 }
 

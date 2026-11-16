@@ -4,6 +4,7 @@
 
 #include "pr/html.h"
 #include "pr/html_media_source.h"
+#include "pr/quickjs_binding.h"
 #include "pr/string_view.h"
 
 #include "quickjs.h"
@@ -22,6 +23,30 @@ extern JSClassID htmlPerformanceClass;
 
 // Returns the window of the context's global, or null if it has none.
 PrHtmlWindow* PR_NULLABLE jsHtmlGlobalWindow(JSContext* ctx);
+
+// The members that the navigable containers share (pr/html.h): the contentWindow and contentDocument attributes, and
+// getSVGDocument(). Each reads `element`, and throws if `element` is null.
+JSValue jsHtmlContentWindow(JSContext* ctx, PrDomElement* PR_NULLABLE element);
+JSValue jsHtmlContentDocument(JSContext* ctx, PrDomElement* PR_NULLABLE element);
+JSValue jsHtmlSvgDocument(JSContext* ctx, PrDomElement* PR_NULLABLE element);
+
+// The getter of contentWindow on the prototype of `Class`.
+template <const JSClassID* Class>
+JSValue jsHtmlContentWindowGetter(JSContext* ctx, JSValueConst object) {
+    return jsHtmlContentWindow(ctx, jsThis<PrDomElement>(ctx, object, *Class));
+}
+
+// The getter of contentDocument on the prototype of `Class`.
+template <const JSClassID* Class>
+JSValue jsHtmlContentDocumentGetter(JSContext* ctx, JSValueConst object) {
+    return jsHtmlContentDocument(ctx, jsThis<PrDomElement>(ctx, object, *Class));
+}
+
+// getSVGDocument() on the prototype of `Class`.
+template <const JSClassID* Class>
+JSValue jsHtmlSvgDocumentMethod(JSContext* ctx, JSValueConst object, int, JSValueConst*) {
+    return jsHtmlSvgDocument(ctx, jsThis<PrDomElement>(ctx, object, *Class));
+}
 
 // Returns a new TimeRanges of `ranges`, which are in order and do not touch (html/#timeranges).
 JSValue jsHtmlTimeRangesNew(JSContext* ctx, const PrMediaTimeRange* PR_NULLABLE ranges, uint32_t count);

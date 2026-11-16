@@ -56,6 +56,24 @@ PrRawString prUrlOrigin(const PrUrl* url);
 // same as no other.
 bool prUrlHasSameOrigin(const PrUrl* url, const PrUrl* other);
 
+// ---------------------------------------------------------------------------------------------------------------------
+// Hosts (url/#hosts-(domains-and-ip-addresses))
+//
+// A host is given as it is serialized (url/#concept-host-serializer), as prUrlHost returns it.
+
+// Parses `input` as the host of a special URL (url/#concept-host-parser), and writes it serialized to `out`, which the
+// caller releases. Returns Syntax, and writes the null string, if it does not parse.
+PrStatus prUrlHostParse(PrStringView input, PrRawString* out);
+
+// Returns the host's public suffix (url/#host-public-suffix): its last labels that the Public Suffix List makes a
+// suffix under which anyone may register names, as a view of `host`, with its trailing dot if it has one. A label that
+// no rule covers is a public suffix of its own. Returns the null view for a host that is not a domain.
+PrStringView prUrlHostPublicSuffix(PrStringView host);
+
+// Returns the host's registrable domain (url/#host-registrable-domain): its public suffix and the label before it, as a
+// view of `host`. Returns the null view for a host that is not a domain, or that is a public suffix itself.
+PrStringView prUrlHostRegistrableDomain(PrStringView host);
+
 // Return the URL's components (url/#concept-url), each as text. The views stay valid until the URL changes. A null
 // host, query or fragment is the null view. The path is as url/#url-path-serializer writes it.
 PrStringView prUrlScheme(const PrUrl* url);

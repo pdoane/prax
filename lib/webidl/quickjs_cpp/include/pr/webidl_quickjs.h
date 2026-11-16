@@ -267,6 +267,8 @@ struct JsClassDefinition {
     // The slot in which a handle keeps its object, for the root of a hierarchy whose handles have such a slot. The
     // objects of other hierarchies are found in a table.
     void* PR_NULLABLE* PR_NONNULL (*PR_NULLABLE slot)(void* handle);
+
+    bool unexposed;     // the global does not name the interface
 };
 
 // The entries of a prototype's member list. Web IDL operations and attributes are enumerable (webidl/#js-attributes,

@@ -296,9 +296,12 @@ using namespace pr_impl;
 // C opaque types
 struct PrHtmlDocumentTimeline : HtmlDocumentTimeline {};
 
-PrDomDocument* prHtmlDomParserParseFromString(PrStringView source, PrHtmlDomParserSupportedType type) {
+PrDomDocument* prHtmlDomParserParseFromString(PrDomDocument* PR_NULLABLE creator, PrStringView source,
+        PrHtmlDomParserSupportedType type) {
     if (type == PrHtmlDomParserSupportedType_TextHtml) {
         PrDomDocument* document = domDocumentCreate(DomDocumentKind_Html);
+        if (creator != nullptr)
+            domDocumentShareOrigin(document, creator);
         prCssEnable(document);
         prSvgEnable(document);
         htmlEnable(document);
@@ -311,6 +314,8 @@ PrDomDocument* prHtmlDomParserParseFromString(PrStringView source, PrHtmlDomPars
     // An XML type is parsed with scripting disabled, into a document of that content type.
     constexpr PrStringView kXmlTypes[] = {"text/xml", "application/xml", "application/xhtml+xml", "image/svg+xml"};
     PrDomDocument* document = domDocumentCreate(DomDocumentKind_Xml);
+    if (creator != nullptr)
+        domDocumentShareOrigin(document, creator);
     prCssEnable(document);
     prSvgEnable(document);
     htmlEnable(document);
@@ -411,6 +416,41 @@ PrHtmlWindow* PR_NULLABLE prHtmlDocumentDefaultView(PrDomDocument* document) {
         return nullptr;
     PrHtmlWindow* window = static_cast<PrHtmlWindow*>(global);
     return window->document == document ? window : nullptr;
+}
+
+PrRawString prHtmlDocumentDomain(PrDomDocument* document) {
+    // A document that DOMImplementation or DOMParser made has its creator's origin.
+    if (document->originDocument != nullptr)
+        document = document->originDocument;
+    PrHtmlWindow* window = prHtmlDocumentDefaultView(document);
+    PrStringView domain = window != nullptr ? htmlWindowEffectiveDomain(window) : PrStringView{};
+    return prRawStringCopy(domain.data != nullptr ? domain : PrStringView(""));
+}
+
+PrStatus prHtmlDocumentSetDomain(PrDomDocument* document, PrStringView value) {
+    PrHtmlWindow* window = prHtmlDocumentDefaultView(document);
+    if (window == nullptr || (window->sandbox & HtmlSandboxFlag_DocumentDomain) != 0)
+        return PrStatus_NotAllowed;
+    PrStringView original = htmlWindowEffectiveDomain(window);
+    PrRawString parsed = prRawStringNull();
+    if (original.data == nullptr || value.size == 0 || prUrlHostParse(value, &parsed) != PrStatus_Ok)
+        return PrStatus_NotAllowed;
+    // html/#is-a-registrable-domain-suffix-of-or-is-equal-to
+    PrStringView suffix = prRawStringView(&parsed);
+    bool allowed = suffix == original;
+    if (!allowed) {
+        PrStringView suffixOfSuffix = prUrlHostPublicSuffix(suffix);
+        PrStringView suffixOfOriginal = prUrlHostPublicSuffix(original);
+        auto endsAfterDot = [](PrStringView text, PrStringView end) {
+            return text.size > end.size && prStringEndsWith(text, end) && text.data[text.size - end.size - 1] == '.';
+        };
+        allowed = suffixOfSuffix.data != nullptr && suffixOfOriginal.data != nullptr && endsAfterDot(original, suffix) &&
+            suffix != suffixOfSuffix && !endsAfterDot(suffixOfOriginal, suffix);
+    }
+    if (allowed)
+        htmlWindowSetDomain(window, suffix);
+    prRawStringReset(&parsed);
+    return allowed ? PrStatus_Ok : PrStatus_NotAllowed;
 }
 
 PrStringView prHtmlDocumentReferrer(PrDomDocument* document) {
@@ -895,17 +935,33 @@ void prHtmlDialogElementRequestClose(PrHtmlDialogElement* element, PrStringView 
         prHtmlDialogElementClose(element, result);
 }
 
+PrHtmlWindow* PR_NULLABLE prHtmlElementContentWindow(PrHtmlElement* element) {
+    return htmlFrameWindow(element);
+}
+
+PrDomDocument* PR_NULLABLE prHtmlElementContentDocument(PrHtmlElement* element) {
+    PrHtmlWindow* window = htmlFrameWindow(element);
+    if (window == nullptr || window->parent == nullptr || !htmlWindowIsSameOriginDomain(window, window->parent))
+        return nullptr;
+    return window->document;
+}
+
+PrDomDocument* PR_NULLABLE prHtmlElementSvgDocument(PrHtmlElement* element) {
+    PrDomDocument* document = prHtmlElementContentDocument(element);
+    if (document == nullptr || prRawStringView(&document->contentType) != "image/svg+xml")
+        return nullptr;
+    return document;
+}
+
 PrHtmlIFrameElement* PR_NULLABLE prHtmlIFrameElementQuery(PrDomEventTarget* PR_NULLABLE object) {
     return htmlElementQuery<PrHtmlIFrameElement>(object, PrDomTag_Iframe);
 }
 
-PrHtmlWindow* PR_NULLABLE prHtmlIFrameElementContentWindow(PrHtmlIFrameElement* element) {
-    return htmlFrameWindow(element);
-}
-
-PrDomDocument* PR_NULLABLE prHtmlIFrameElementContentDocument(PrHtmlIFrameElement* element) {
-    PrHtmlWindow* window = htmlFrameWindow(element);
-    return window != nullptr ? window->document : nullptr;
+PrDomTokenList* prHtmlIFrameElementSandbox(PrHtmlIFrameElement* element) {
+    PrDomTokenList* list = domTokenListCreate(element, "sandbox");
+    list->supported = kHtmlSandboxTokens;
+    list->supportedCount = kHtmlSandboxTokenCount;
+    return list;
 }
 
 PrHtmlImageElement* PR_NULLABLE prHtmlImageElementQuery(PrDomEventTarget* PR_NULLABLE object) {
@@ -1666,6 +1722,22 @@ PrStatus prHtmlWindowPostMessage(PrHtmlWindow* window, PrHtmlWindow* source, PrS
     return PrStatus_Ok;
 }
 
+bool prHtmlWindowIsSameOrigin(const PrHtmlWindow* a, const PrHtmlWindow* b) {
+    return htmlWindowIsSameOrigin(a, b);
+}
+
+bool prHtmlWindowIsSameOriginDomain(const PrHtmlWindow* a, const PrHtmlWindow* b) {
+    return htmlWindowIsSameOriginDomain(a, b);
+}
+
+bool prHtmlWindowIsClosed(const PrHtmlWindow* window) {
+    return window->document == nullptr || htmlDocumentPage(window->document) == nullptr;
+}
+
+PrRawString prHtmlWindowOrigin(const PrHtmlWindow* window) {
+    return htmlWindowOrigin(window);
+}
+
 PrRawString prHtmlWindowLocation(const PrHtmlWindow* window, PrUrlComponent component) {
     return prUrlComponent(window->document->url, component);
 }
@@ -1683,45 +1755,19 @@ PrStatus prHtmlWindowSetLocation(PrHtmlWindow* window, PrHtmlWindow* source, PrU
             return PrStatus_Syntax;
     } else {
         copy = prUrlClone(document->url);
+        // Location's hash setter keeps an empty fragment for the empty string (html/#dom-location-hash), where the
+        // URL's own setter removes the fragment. A lone # sets an empty fragment.
+        if (component == PrUrlComponent_Hash && value.size == 0)
+            value = "#";
         prUrlSetComponent(copy, component, value);
     }
-    PrStringView was = prUrlFragment(document->url);
-    PrStringView now = prUrlFragment(copy);
-    bool sameFragment = was == now && (was.data == nullptr) == (now.data == nullptr);
-    // html/#dom-location-hash: a fragment that the URL has already navigates nowhere.
-    if (component == PrUrlComponent_Hash && sameFragment) {
+    // html/#dom-location-hash: a fragment that the URL has already navigates nowhere. A URL without a fragment has the
+    // empty one there.
+    if (component == PrUrlComponent_Hash && prUrlFragment(document->url) == prUrlFragment(copy)) {
         prUrlDestroy(copy);
         return PrStatus_Ok;
     }
-    PrRawString before = prUrlSerialize(document->url, PrUrlSerialization_ExcludeFragment);
-    PrRawString after = prUrlSerialize(copy, PrUrlSerialization_ExcludeFragment);
-    bool same = prRawStringView(&before) == prRawStringView(&after);
-    bool fragment = same && (component == PrUrlComponent_Hash || now.data != nullptr);
-    prRawStringReset(&before);
-    prRawStringReset(&after);
-    if (!fragment) {
-        PrRawString href = prUrlSerialize(copy, PrUrlSerialization_Whole);
-        prUrlDestroy(copy);
-        HtmlHistoryCommit commit =
-            handling == PrHtmlHistoryHandling_Replace ? HtmlHistoryCommit_Replace : HtmlHistoryCommit_Push;
-        bool navigated = htmlPageNavigate(window, source, prRawStringView(&href), commit, window->history->index);
-        prRawStringReset(&href);
-        return navigated ? PrStatus_Ok : PrStatus_NotSupported;
-    }
-    // html/#navigate-fragid: the URL that the document has already replaces its entry (html/#navigate), popstate fires,
-    // hashchange follows if the fragment changed, and the document scrolls to the fragment.
-    PrRawString old = prUrlSerialize(document->url, PrUrlSerialization_Whole);
-    PrRawString next = prUrlSerialize(copy, PrUrlSerialization_Whole);
-    if (prRawStringView(&old) == prRawStringView(&next))
-        handling = PrHtmlHistoryHandling_Replace;
-    prRawStringReset(&next);
-    prUrlDestroy(document->url);
-    document->url = copy;
-    htmlHistoryUpdate(window, prRawStringNull(), handling);
-    htmlHistoryNotify(window, prRawStringView(&old));
-    prRawStringReset(&old);
-    htmlWindowScrollToFragment(window);
-    return PrStatus_Ok;
+    return htmlWindowNavigate(window, source, copy, handling, PrFetchReferrerPolicy_Default);
 }
 
 PrRawString prHtmlWindowName(const PrHtmlWindow* window) {
@@ -1779,7 +1825,7 @@ PrHtmlWindow* PR_NULLABLE prHtmlWindowFrameFromName(PrHtmlWindow* window, PrStri
                 PrDomNodePosition_Preceding) != 0)
             first = frame;
     }
-    return first != nullptr && htmlWindowIsSameOrigin(first->window, window) ? first->window : nullptr;
+    return first != nullptr && htmlWindowIsSameOriginDomain(first->window, window) ? first->window : nullptr;
 }
 
 PrDomElement* PR_NULLABLE prHtmlWindowNamedItem(PrHtmlWindow* window, PrStringView name) {

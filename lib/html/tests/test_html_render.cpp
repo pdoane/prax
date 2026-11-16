@@ -115,7 +115,7 @@ struct Page {
         prFontSetSetDefaultFamily(fonts, prFontFamilyFromName("Tinos"));
         PrTextFontDesc defaultFontDesc{.set = fonts, .style = prFontStyleDefault()};
         defaultFont = prTextFontCreate(&defaultFontDesc);
-        document = prHtmlDomParserParseFromString(html, PrHtmlDomParserSupportedType_TextHtml);
+        document = prHtmlDomParserParseFromString(nullptr, html, PrHtmlDomParserSupportedType_TextHtml);
         agent = prDomAgentCreate(&agentOptions);
         uint32_t htmlCount = 0;
         const PrCssUserAgentSheet* htmlSheets = prHtmlUserAgentSheets(&htmlCount);
@@ -2210,8 +2210,8 @@ TEST_CASE("a frame's document sees its parent's display and user preferences, be
     auto matches = [&](const char* id, const char* query) {
         PrDomElement* element = prDomNodeGetElementById(prDomDocumentAsNode(document), id);
         REQUIRE(element != nullptr);
-        PrHtmlWindow* window = prHtmlIFrameElementContentWindow(
-            prHtmlIFrameElementQuery(prDomNodeAsEventTarget(prDomElementAsNode(element))));
+        PrHtmlWindow* window = prHtmlElementContentWindow(
+            prHtmlElementQuery(prDomNodeAsEventTarget(prDomElementAsNode(element))));
         REQUIRE(window != nullptr);
         PrCssMediaQueryList* list = prHtmlWindowMatchMedia(window, query);
         bool matched = prCssMediaQueryListMatches(list);
@@ -2834,7 +2834,7 @@ TEST_CASE("a scroll set while the layout thread lays out applies as the presenta
 
 TEST_CASE("the presentations of an agent's documents lay out in turn on the agent's one layout thread") {
     Page page("<style>body { margin: 0 }</style><div id=a style='height: 10px'></div>");
-    PrDomDocument* other = prHtmlDomParserParseFromString("<div style='height: 20px'>other</div>",
+    PrDomDocument* other = prHtmlDomParserParseFromString(nullptr, "<div style='height: 20px'>other</div>",
         PrHtmlDomParserSupportedType_TextHtml);
     uint32_t sheetCount = 0;
     const PrCssUserAgentSheet* sheets = prHtmlUserAgentSheets(&sheetCount);

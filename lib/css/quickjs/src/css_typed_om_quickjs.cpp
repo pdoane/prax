@@ -2525,11 +2525,11 @@ JSValue colorChannel(JSContext* ctx, JSValueConst value, ChannelType type, Color
 
 // The set hook of a CSSColor's channels. css-typed-om-1/#dom-csscolor-channels rectifies each value that is set. A
 // deleted value needs nothing.
-JSValue channelsSet(JSContext* ctx, JSValueConst, JSValueConst value, uint32_t) {
+JSValue channelsConvert(JSContext* ctx, JSValueConst, JSValueConst value) {
     return colorChannel(ctx, value, ChannelType_Percent, ColorIdl_Channel);
 }
 
-constexpr JsObservableArrayHooks kChannelsHooks = {channelsSet, nullptr};
+constexpr JsObservableArrayHooks kChannelsHooks = {channelsConvert, nullptr, nullptr};
 
 // Returns the channels of a CSSColor, holding `channels`, which it takes.
 JSValue newChannels(JSContext* ctx, JSValueConst owner, JSValue* channels, uint32_t count) {

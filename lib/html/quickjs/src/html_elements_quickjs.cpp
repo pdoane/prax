@@ -10,6 +10,7 @@
 #include "pr/quickjs_callback.h"
 
 #include "html/quickjs/src/custom_elements_quickjs.h"
+#include "html/quickjs/src/html_bindings_quickjs.h"
 #include "html/quickjs/src/html_reflect_quickjs.h"
 
 namespace pr_impl {
@@ -588,6 +589,7 @@ constexpr JSCFunctionListEntry kEmbedProto[] = {
     PR_REFLECT_STRING("height", "height"),
     PR_REFLECT_STRING("align", "align"),
     PR_REFLECT_STRING("name", "name"),
+    PR_JS_METHOD("getSVGDocument", 0, jsHtmlSvgDocumentMethod<&htmlEmbedElementClass>),
 };
 
 constexpr JSCFunctionListEntry kFontProto[] = {
@@ -674,6 +676,9 @@ constexpr JSCFunctionListEntry kObjectProto[] = {
     PR_REFLECT_STRING("useMap", "usemap"),
     PR_REFLECT_STRING("width", "width"),
     PR_REFLECT_STRING("height", "height"),
+    PR_JS_GET("contentDocument", jsHtmlContentDocumentGetter<&htmlObjectElementClass>),
+    PR_JS_GET("contentWindow", jsHtmlContentWindowGetter<&htmlObjectElementClass>),
+    PR_JS_METHOD("getSVGDocument", 0, jsHtmlSvgDocumentMethod<&htmlObjectElementClass>),
     PR_REFLECT_STRING("align", "align"),
     PR_REFLECT_STRING("archive", "archive"),
     PR_REFLECT_STRING("code", "code"),

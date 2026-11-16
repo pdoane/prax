@@ -14,7 +14,7 @@ GENERATORS = ("brotli", "charset", "css", "dom", "html", "url", "webidl", "unico
               "gpu")
 
 # The checkouts that the generators read, and the generators that compute their tables and read none.
-SOURCES = ("webref", "entities", "encodings", "unicode", "cldr", "rfcs", "drafts", "mathml")
+SOURCES = ("webref", "entities", "encodings", "unicode", "cldr", "rfcs", "drafts", "mathml", "publicsuffix")
 COMPUTED = ("float", "gpu")
 
 

@@ -12,16 +12,21 @@ PR_ASSUME_NONNULL_BEGIN
 
 namespace pr {
 
-// How an observable array attribute handles the changes to its backing list.
+// How an observable array attribute handles the changes to its backing list. A value set at an index is converted, then
+// the delete steps run for the value that the index held, if it held one, and then the set steps run for the new value
+// (webidl/#observable-array-exotic-object-set-the-indexed-value). A shorter length runs the delete steps for each value
+// past it, last first.
 struct JsObservableArrayHooks {
-    // Converts `value`, given for `index`, to the IDL type, and runs the steps of
-    // webidl/#observable-array-attribute-set-an-indexed-value. Returns the value that the backing list then holds at
-    // `index`, or JS_EXCEPTION.
-    JSValue (*set)(JSContext* ctx, JSValueConst owner, JSValueConst value, uint32_t index);
+    // Converts `value` to the IDL type, and returns the value that the backing list is to hold, or JS_EXCEPTION. An
+    // attribute whose set steps can throw checks for that here, before the delete steps run, so that a value that
+    // throws changes nothing.
+    JSValue (*convert)(JSContext* ctx, JSValueConst owner, JSValueConst value);
 
-    // Runs the steps of webidl/#observable-array-attribute-delete-an-indexed-value for `value`, which the backing list
-    // holds at `index`. Returns false, with an exception pending, if the steps threw. The hook is null for an attribute
-    // with no steps.
+    // Run the steps of webidl/#observable-array-attribute-set-an-indexed-value for the converted `value` at `index`,
+    // and of webidl/#observable-array-attribute-delete-an-indexed-value for `value`, which the backing list holds at
+    // `index`. Each returns false, with an exception pending, if its steps threw. A hook is null for an attribute with
+    // no steps.
+    bool (*PR_NULLABLE set)(JSContext* ctx, JSValueConst owner, JSValueConst value, uint32_t index);
     bool (*PR_NULLABLE remove)(JSContext* ctx, JSValueConst owner, JSValueConst value, uint32_t index);
 };
 

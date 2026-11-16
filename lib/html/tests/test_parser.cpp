@@ -313,7 +313,7 @@ TEST_CASE("an HTML destroy takes null and does nothing") {
 }
 
 TEST_CASE("DOMParser parses an XML type as XML, and shows where it is not well-formed") {
-    PrDomDocument* document = prHtmlDomParserParseFromString(
+    PrDomDocument* document = prHtmlDomParserParseFromString(nullptr,
         "<p xmlns='urn:x'>a</p>", PrHtmlDomParserSupportedType_ImageSvgXml);
     PrStringView type = prDomDocumentContentType(document);
     CHECK(type == "image/svg+xml");
@@ -322,7 +322,7 @@ TEST_CASE("DOMParser parses an XML type as XML, and shows where it is not well-f
     prDomDocumentRelease(document);
 
     // An XHTML doctype's entities are the HTML named character references.
-    document = prHtmlDomParserParseFromString(
+    document = prHtmlDomParserParseFromString(nullptr,
         "<!DOCTYPE p PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"x\"><p>&nbsp;&hearts;</p>",
         PrHtmlDomParserSupportedType_ApplicationXhtmlXml);
     PrRawString text = prDomNodeTextContent(prDomElementAsNode(prDomDocumentElement(document)));
@@ -330,14 +330,14 @@ TEST_CASE("DOMParser parses an XML type as XML, and shows where it is not well-f
     prRawStringReset(&text);
     prDomDocumentRelease(document);
 
-    document = prHtmlDomParserParseFromString("<p>", PrHtmlDomParserSupportedType_TextXml);
+    document = prHtmlDomParserParseFromString(nullptr, "<p>", PrHtmlDomParserSupportedType_TextXml);
     PrStringView name = prDomElementLocalName(prDomDocumentElement(document));
     CHECK(name == "parsererror");
     prDomDocumentRelease(document);
 }
 
 TEST_CASE("a hyperlink's URL parts read and write its href attribute") {
-    PrDomDocument* document = prHtmlDomParserParseFromString(
+    PrDomDocument* document = prHtmlDomParserParseFromString(nullptr,
         "<a id=a href='https://example.com:8080/one/two?q=1#top'>x</a><a id=b href='http://[bad'>y</a><area id=c>"
             "<math><a id=m href='https://example.com/math'>z</a></math>",
         PrHtmlDomParserSupportedType_TextHtml);

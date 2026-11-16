@@ -7,8 +7,8 @@ namespace pr_impl {
 
 namespace {
 
-// Hooks of an array of positive numbers, which logs each deleted value on its owner.
-JSValue positive(JSContext* ctx, JSValueConst, JSValueConst value, uint32_t) {
+// Hooks of an array of positive numbers, which logs each value that it sets or deletes on its owner, in order.
+JSValue positive(JSContext* ctx, JSValueConst, JSValueConst value) {
     double number = 0;
     if (JS_ToFloat64(ctx, &number, value) < 0)
         return JS_EXCEPTION;
@@ -17,19 +17,33 @@ JSValue positive(JSContext* ctx, JSValueConst, JSValueConst value, uint32_t) {
     return JS_NewFloat64(ctx, number);
 }
 
-bool logRemoved(JSContext* ctx, JSValueConst owner, JSValueConst value, uint32_t index) {
-    JSValue log = JS_GetPropertyStr(ctx, owner, "removed");
+// Appends [value, index] to the owner's log `name`.
+bool record(JSContext* ctx, JSValueConst owner, const char* name, JSValueConst value, uint32_t index) {
+    JSValue list = JS_GetPropertyStr(ctx, owner, name);
     JSValue entry = JS_NewArray(ctx);
     JS_SetPropertyUint32(ctx, entry, 0, JS_DupValue(ctx, value));
     JS_SetPropertyUint32(ctx, entry, 1, JS_NewUint32(ctx, index));
     int64_t length = 0;
-    JS_GetLength(ctx, log, &length);
-    JS_SetPropertyUint32(ctx, log, uint32_t(length), entry);
-    JS_FreeValue(ctx, log);
+    JS_GetLength(ctx, list, &length);
+    JS_SetPropertyUint32(ctx, list, uint32_t(length), entry);
+    JS_FreeValue(ctx, list);
     return true;
 }
 
-constexpr JsObservableArrayHooks kHooks = {positive, logRemoved};
+bool logSet(JSContext* ctx, JSValueConst owner, JSValueConst value, uint32_t index) {
+    return record(ctx, owner, "steps", value, index);
+}
+
+bool logRemoved(JSContext* ctx, JSValueConst owner, JSValueConst value, uint32_t index) {
+    double number = 0;
+    JS_ToFloat64(ctx, &number, value);
+    JSValue negated = JS_NewFloat64(ctx, -number);
+    bool ok = record(ctx, owner, "removed", value, index) && record(ctx, owner, "steps", negated, index);
+    JS_FreeValue(ctx, negated);
+    return ok;
+}
+
+constexpr JsObservableArrayHooks kHooks = {positive, logSet, logRemoved};
 
 bool evaluates(JSContext* ctx, const char* source) {
     JSValue result = JS_Eval(ctx, source, strlen(source), "observable", JS_EVAL_TYPE_GLOBAL);
@@ -59,6 +73,7 @@ TEST_CASE("an observable array is an array whose indexes pass through its owner'
     JSValue global = JS_GetGlobalObject(ctx);
     JSValue owner = JS_NewObject(ctx);
     JS_SetPropertyStr(ctx, owner, "removed", JS_NewArray(ctx));
+    JS_SetPropertyStr(ctx, owner, "steps", JS_NewArray(ctx));
     JSValue array = jsObservableArrayNew(ctx, owner, &kHooks);
     REQUIRE(!JS_IsException(array));
     JS_SetPropertyStr(ctx, global, "owner", owner);
@@ -95,11 +110,19 @@ TEST_CASE("an observable array is an array whose indexes pass through its owner'
         return array.length === 1 && array[0] === 4 && JSON.stringify(owner.removed) === '[[1,0],[3,2],[2,1]]';
     })())JS"));
     CHECK(evaluates(ctx, "try { array.length = 1.5; false } catch (e) { e instanceof RangeError }"));
+    // A set at an index that holds a value runs the delete steps for that value first, which a delete logs as the value
+    // negated. A value that does not convert runs neither.
+    CHECK(evaluates(ctx, R"JS((() => {
+        owner.steps.length = 0;
+        array[0] = 5;
+        try { array[0] = 0; } catch (e) {}
+        return JSON.stringify(owner.steps) === '[[-4,0],[5,0]]';
+    })())JS"));
 
     JSValue values = JS_Eval(ctx, "[7, 8]", 6, "values", JS_EVAL_TYPE_GLOBAL);
     CHECK(jsObservableArraySet(ctx, array, values));
     JS_FreeValue(ctx, values);
-    CHECK(evaluates(ctx, "array.join() === '7,8' && JSON.stringify(owner.removed.at(-1)) === '[4,0]'"));
+    CHECK(evaluates(ctx, "array.join() === '7,8' && JSON.stringify(owner.removed.at(-1)) === '[5,0]'"));
 
     JS_FreeValue(ctx, array);
     JS_FreeValue(ctx, global);

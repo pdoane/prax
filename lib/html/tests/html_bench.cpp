@@ -54,7 +54,7 @@ void tokenizeOnly(PrStringView text) {
 
 // Runs the parse: the tokenizer, the tree builder, and the tree that they build.
 PrDomDocument* parseOnce(PrStringView text) {
-    return prHtmlDomParserParseFromString(text, PrHtmlDomParserSupportedType_TextHtml);
+    return prHtmlDomParserParseFromString(nullptr, text, PrHtmlDomParserSupportedType_TextHtml);
 }
 
 void measure(PrStringView name, PrStringView text) {

@@ -33,7 +33,7 @@ static_assert(sizeof(DomText) == 128);
 static_assert(sizeof(DomComment) == 128);
 static_assert(sizeof(DomProcessingInstruction) == 160);
 static_assert(sizeof(DomDocumentType) == 192);
-static_assert(sizeof(DomDocument) == 632);
+static_assert(sizeof(DomDocument) == 640);
 #endif
 
 // Returns the fragment that a template element holds (html/#the-template-element), or null for any other element.
@@ -58,6 +58,10 @@ inline uint32_t domElementAttributeCount(const PrDomElement* element) {
 
 // Creates a document of `kind` with the initial content type of that kind, and one reference that the caller holds.
 PrDomDocument* domDocumentCreate(DomDocumentKind kind);
+
+// Gives `created`, a document that `creator`'s DOMImplementation or its global's DOMParser made, the origin of
+// `creator` (dom/#dom-domimplementation-createdocument, html/#dom-domparser-parsefromstring).
+void domDocumentShareOrigin(PrDomDocument* created, PrDomDocument* creator);
 
 // Returns the inert document that holds the contents of the templates of `document`
 // (html/#appropriate-template-contents-owner-document). It has no browsing context, so nothing in it loads, runs or

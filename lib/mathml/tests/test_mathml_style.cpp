@@ -56,7 +56,7 @@ struct Page {
         prFontSetSetDefaultFamily(fonts, prFontFamilyFromName("Tinos"));
         PrTextFontDesc defaultFontDesc{.set = fonts, .style = prFontStyleDefault()};
         defaultFont = prTextFontCreate(&defaultFontDesc);
-        document = prHtmlDomParserParseFromString(html, PrHtmlDomParserSupportedType_TextHtml);
+        document = prHtmlDomParserParseFromString(nullptr, html, PrHtmlDomParserSupportedType_TextHtml);
         PrDomAgentOptions agentOptions = prDomAgentOptionsDefault();
         agent = prDomAgentCreate(&agentOptions);
         uint32_t count = 0;

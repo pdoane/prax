@@ -25,8 +25,9 @@ static PrStringView constructed(PrStringView failed) {
     PrCssStyleSheetInit options = prCssStyleSheetInitDefault();
     PrCssStyleSheet* sheet;
 
-    options.baseUrl = PR_SV("x");
-    sheet = prCssStyleSheetCreate(&options);
+    options.baseUrl = PR_SV("https://example.test/");
+    if (prCssStyleSheetCreate(NULL, &options, &sheet) != PrStatus_Ok)
+        return check(failed, false, "a sheet with a base URL that parses is created");
     prCssStyleSheetReplaceSync(sheet, PR_SV("a {} b {}"));
 
     failed = check(failed, prCssRuleListLength(prCssStyleSheetCssRules(sheet)) == 2,

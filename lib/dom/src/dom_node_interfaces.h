@@ -272,7 +272,7 @@ struct DomDocumentSubscriber {
 constexpr uint32_t kDomDocumentSubscribers = 6;
 
 // The number of entries of DomDocumentHooks (DomHook_Count).
-constexpr uint32_t kDomDocumentHooks = 21;
+constexpr uint32_t kDomDocumentHooks = 22;
 
 // A document (dom/#interface-document).
 struct DomDocument : PrDomNode {
@@ -313,6 +313,10 @@ struct DomDocument : PrDomNode {
 
     // The Window of the document. An event reaches the Window after the document (html/#the-window-object).
     PrDomEventTarget* PR_NULLABLE global;
+
+    // For a document that DOMImplementation or DOMParser made, the document whose origin it has
+    // (html/#concept-document-origin), or null. The document holds a reference to it.
+    PrDomDocument* PR_NULLABLE originDocument;
 
     const DomDocumentHost* PR_NULLABLE host;
     AtomTable* PR_NULLABLE namespaces;                 // URLs of the namespaces from PrDomNamespace_Other on, if any
@@ -378,6 +382,10 @@ struct DomDocument : PrDomNode {
     // True if the document has created a form-associated element or a form. From then on, changes to its trees run the
     // steps of controls (dom_control.h).
     bool controls;
+
+    // True if the document has created an HTML details element. From then on, insertions into its trees run the details
+    // elements' insertion steps (html/#the-details-element).
+    bool details;
 
     DomQuirks quirks;
     uint8_t referrerPolicy;     // referrer-policy/#referrer-policies, by the values of PrFetchReferrerPolicy

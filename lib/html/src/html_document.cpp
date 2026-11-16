@@ -13,6 +13,12 @@ namespace pr_impl {
 namespace {
 
 constexpr DomDocumentHooks kHooks = {
+    .inserted = [](void*, PrDomNode* node) { htmlDetailsInserted(node); },
+    .attributeChanged = [](void*, PrDomElement* element, DomNamespaceId space, PrStringView name, PrStringView oldValue,
+        PrStringView value) {
+            if (space == PrDomNamespace_None && domIsHtml(element, PrDomTag_Details))
+                htmlDetailsAttributeChanged(element, name, oldValue.data != nullptr, value.data != nullptr);
+        },
     .colorValue =
         [](void*, const PrDomElement* input, PrStringView text, PrTextBuffer* out) { htmlColorWellValue(input, text, out); },
     .linkUpdate = [](void*, PrDomElement* element, DomInsertedBy by) { htmlLinkUpdate(element, by); },

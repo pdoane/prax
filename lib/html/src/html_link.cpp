@@ -25,25 +25,6 @@ typedef uint8_t HtmlLinkEvent;
 // The longest type of an icon link that the codec is asked about.
 constexpr size_t kIconTypeMaxSize = 128;
 
-// Returns true if the element's `rel` contains the keyword `keyword`, ASCII case-insensitively (html/#attr-link-rel).
-bool relHolds(const PrDomElement* element, PrStringView keyword) {
-    const PrDomAttr* rel = domAttribute(element, PrDomNamespace_None, "rel");
-    if (rel == nullptr)
-        return false;
-    PrStringView text = prRawStringView(&rel->value);
-    size_t at = 0;
-    while (at < text.size) {
-        while (at < text.size && prAsciiIsSpace(text.data[at]))
-            ++at;
-        size_t start = at;
-        while (at < text.size && !prAsciiIsSpace(text.data[at]))
-            ++at;
-        if (at != start && prAsciiEqualsFold(PrStringView{text.data + start, at - start}, keyword))
-            return true;
-    }
-    return false;
-}
-
 // Fires the event that the latest sheet fetch of a link queued, if the link still has one. Releases the link that the
 // task held.
 void fireLinkEvent(void* data) {
@@ -147,6 +128,24 @@ void preload(PrDomElement* element, const DomDocumentHost* host) {
 
 } // namespace
 
+bool htmlRelHolds(const PrDomElement* element, PrStringView keyword) {
+    const PrDomAttr* rel = domAttribute(element, PrDomNamespace_None, "rel");
+    if (rel == nullptr)
+        return false;
+    PrStringView text = prRawStringView(&rel->value);
+    size_t at = 0;
+    while (at < text.size) {
+        while (at < text.size && prAsciiIsSpace(text.data[at]))
+            ++at;
+        size_t start = at;
+        while (at < text.size && !prAsciiIsSpace(text.data[at]))
+            ++at;
+        if (at != start && prAsciiEqualsFold(PrStringView{text.data + start, at - start}, keyword))
+            return true;
+    }
+    return false;
+}
+
 void htmlLinkUpdate(PrDomElement* element, DomInsertedBy by) {
     if (!domIsHtml(element, PrDomTag_Link))
         return;
@@ -160,12 +159,12 @@ void htmlLinkUpdate(PrDomElement* element, DomInsertedBy by) {
     // if it has one, must be CSS.
     const DomDocumentHost* host = document->host;
     const PrDomAttr* href = domAttribute(element, PrDomNamespace_None, "href");
-    if (host != nullptr && domIsConnected(element) && !relHolds(element, "stylesheet") && relHolds(element, "preload")) {
+    if (host != nullptr && domIsConnected(element) && !htmlRelHolds(element, "stylesheet") && htmlRelHolds(element, "preload")) {
         preload(element, host);
         return;
     }
     // A disabled link obtains no sheet (html/#attr-link-disabled).
-    if (host == nullptr || !domIsConnected(element) || !relHolds(element, "stylesheet") ||
+    if (host == nullptr || !domIsConnected(element) || !htmlRelHolds(element, "stylesheet") ||
             href == nullptr || domAttribute(element, PrDomNamespace_None, "disabled") != nullptr ||
             prRawStringIsEmpty(&href->value) || !cssOwnerTypeIsCss(element))
         return;
@@ -185,7 +184,7 @@ void htmlLinkUpdate(PrDomElement* element, DomInsertedBy by) {
     if (environment == PrCharset_None)
         environment = document->charset;
     cssOwnerFetch(element, url, domCorsSettings(domAttributeValue(element, "crossorigin")), environment,
-        relHolds(element, "alternate"), linkSettled);
+        htmlRelHolds(element, "alternate"), linkSettled);
     prUrlDestroy(url);
 }
 
@@ -199,7 +198,7 @@ PrRawString htmlLinkIconUrl(const PrDomDocument* document, const PrImageCodecSet
     PrRawString found = prRawStringNull();
     for (const PrDomNode* node = document->first; node != nullptr; node = domNodeNext(document, node)) {
         const PrDomElement* element = domElementFromNode(node);
-        if (element == nullptr || !domIsHtml(element, PrDomTag_Link) || !relHolds(element, "icon"))
+        if (element == nullptr || !domIsHtml(element, PrDomTag_Link) || !htmlRelHolds(element, "icon"))
             continue;
         PrStringView href = domAttributeValue(element, "href");
         if (href.size == 0)

@@ -1197,6 +1197,7 @@ PrStatus prDomDocumentCreateXml(PrDomImplementation* implementation, PrStringVie
     *out = nullptr;
     PrDomDocument* handle = prDomDocumentCreate();
     domNotifyDocumentCreated(implementation, handle);
+    domDocumentShareOrigin(handle, implementation);
     PrDomElement* element = nullptr;
     if (qualifiedName.size != 0) {
         PrStatus status = prDomElementCreateNs(handle, namespaceUrl, qualifiedName, nullptr, &element);
@@ -1226,6 +1227,7 @@ PrStatus prDomDocumentCreateXml(PrDomImplementation* implementation, PrStringVie
 PrDomDocument* prDomDocumentCreateHtml(PrDomImplementation* implementation, PrStringView title) {
     PrDomDocument* document = domDocumentCreate(DomDocumentKind_Html);
     domNotifyDocumentCreated(implementation, document);
+    domDocumentShareOrigin(document, implementation);
     domInsert(document, domDocumentTypeCreate(document, "html", "", ""), nullptr);
     PrDomElement* html = domElementCreate(document, PrDomNamespace_Html, PrDomTag_Html, PrStringView{});
     domInsert(document, html, nullptr);

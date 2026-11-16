@@ -71,7 +71,7 @@ TEST_CASE("a style element outside a template makes a sheet when its type is emp
     checkSheets(prHtmlWindowDocument(prHtmlPageWindow(page)));
     prHtmlPageDestroy(page);
 
-    PrDomDocument* inert = prHtmlDomParserParseFromString(source, PrHtmlDomParserSupportedType_TextHtml);
+    PrDomDocument* inert = prHtmlDomParserParseFromString(nullptr, source, PrHtmlDomParserSupportedType_TextHtml);
     checkSheets(inert);
     prDomDocumentRelease(inert);
 }

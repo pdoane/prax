@@ -878,10 +878,10 @@ bool isLink(const PrDomElement* element) {
         domAttributeValue(element, "href").data != nullptr;
 }
 
-// Returns true if `element` is a button, which Enter and Space activate: a button element, or an input of a button
-// type.
+// Returns true if `element` acts as a button, which Enter and Space activate: a button element, an input of a button
+// type, or the summary of a details element.
 bool isButton(const PrDomElement* element) {
-    if (domIsHtml(element, PrDomTag_Button))
+    if (domIsHtml(element, PrDomTag_Button) || htmlSummaryActivates(element))
         return true;
     if (!domIsHtml(element, PrDomTag_Input))
         return false;

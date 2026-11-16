@@ -3492,6 +3492,11 @@ void dropEntry(PrCssPresentation* r, uint32_t at) {
     CssPresentationEntry& entry = r->entries.data[at];
     if (entry.originates)
         dropFirsts(r, firstsOf(r, static_cast<const PrDomElement*>(entry.node)));
+    // Erasing a box forgets the boxes of its subtree, so a box left here is outside the boxes of the node's ancestors,
+    // as the root that a foreignObject's box is. It goes with the node, whose address a later node's box may take as
+    // its key.
+    if (entry.layoutNode != kPrLayoutNodeNone)
+        eraseBox(r, at);
     // The counters of the nodes after a participant change once it is gone, and a change listed at it has no place.
     if (entry.counts || entry.countsBelow || entry.counterChanged) {
         cssCountersChanged(r, nullptr);
@@ -5590,18 +5595,32 @@ bool visitElement(Walk& w, PrDomElement* element, const CssComputedStyle* PR_NUL
 // Appends the sheets of the document's trees to `out`: the document's own, then those of each connected shadow root, in
 // shadow-including tree order. A document that has never had a shadow root has no other tree to walk for.
 void treeSheets(PrDomDocument* document, RawArray<CssTreeSheets>& out) {
-    PrCssStyleSheetList* sheets = cssDocumentStyleSheets(document);
-    out.push(CssTreeSheets{document, 0, sheets->sheets.data, sheets->sheets.count});
+    const CssRoot* root = cssDocumentRoot(document);
+    out.push(CssTreeSheets{
+        .tree = document,
+        .sheets = root->sheets.sheets.data,
+        .count = root->sheets.sheets.count,
+        .adopted = root->adopted.data,
+        .adoptedCount = root->adopted.count,
+    });
     if (document->slots == nullptr)
         return;
     for (PrDomNode* node = document; node != nullptr; node = domShadowIncludingNext(document, node)) {
         PrDomShadowRoot* shadow = domNodeShadowRoot(node);
-        if (shadow == nullptr || shadow->style == nullptr || shadow->style->sheets.sheets.count == 0)
+        if (shadow == nullptr || shadow->style == nullptr ||
+                shadow->style->sheets.sheets.count + shadow->style->adopted.count == 0)
             continue;
         uint32_t depth = 0;
         for (const PrDomShadowRoot* at = shadow; at != nullptr; at = domNodeShadowRoot(domNodeRoot(at->host)))
             ++depth;
-        out.push(CssTreeSheets{shadow, depth, shadow->style->sheets.sheets.data, shadow->style->sheets.sheets.count});
+        out.push(CssTreeSheets{
+            .tree = shadow,
+            .depth = depth,
+            .sheets = shadow->style->sheets.sheets.data,
+            .count = shadow->style->sheets.sheets.count,
+            .adopted = shadow->style->adopted.data,
+            .adoptedCount = shadow->style->adopted.count,
+        });
     }
 }
 

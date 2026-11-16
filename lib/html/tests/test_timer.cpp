@@ -259,7 +259,7 @@ TEST_CASE("an iframe's tasks run on its parent's agent, until the iframe is remo
     PrDomElement* frame = prDomNodeGetElementById(prDomDocumentAsNode(document), "f");
     REQUIRE(frame != nullptr);
     PrHtmlWindow* inner =
-        prHtmlIFrameElementContentWindow(prHtmlIFrameElementQuery(prDomNodeAsEventTarget(prDomElementAsNode(frame))));
+        prHtmlElementContentWindow(prHtmlElementQuery(prDomNodeAsEventTarget(prDomElementAsNode(frame))));
     REQUIRE(inner != nullptr);
 
     // A timer of the iframe's window runs when the agent runs the parent's tasks.

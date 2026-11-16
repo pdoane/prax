@@ -1253,6 +1253,15 @@ TEST_CASE("Enter activates a focused button or link as it goes down, and Space a
     CHECK(heard.events == Array<String>({"keydown Enter 13", "keyup Enter 13", "keydown   32", "keyup   32"}));
 }
 
+TEST_CASE("Enter and Space open and close a focused details element's summary, as they activate a button") {
+    Viewed page("<details id=d><summary id=s>More</summary>Body</details>");
+    prHtmlFocus(page.byId("s"), nullptr);
+    send(page.view, press(PrAppKey_Enter, PrAppKeyCode_Enter, ""));
+    CHECK(prDomElementHasAttribute(page.byId("d"), "open"));
+    send(page.view, press(' ', PrAppKeyCode_Space, " "));
+    CHECK_FALSE(prDomElementHasAttribute(page.byId("d"), "open"));
+}
+
 TEST_CASE("Tab past the last area leaves the document with the focus at the viewport, and the next Tab starts again") {
     Viewed page("<button id=a></button><button id=b tabindex=-1></button><button id=c></button>");
     prHtmlViewUpdate(page.view);
@@ -1503,8 +1512,7 @@ struct ViewedFrame : Viewed {
     }
 
     PrHtmlWindow* frameWindow() {
-        return prHtmlIFrameElementContentWindow(
-            prHtmlIFrameElementQuery(prDomNodeAsEventTarget(prDomElementAsNode(byId("f")))));
+        return prHtmlElementContentWindow(prHtmlElementQuery(prDomNodeAsEventTarget(prDomElementAsNode(byId("f")))));
     }
 
     PrDomElement* inner(const char* id) {
@@ -2176,9 +2184,9 @@ TEST_CASE("a frame navigated to an image holds a media document whose img shows 
         Viewed page("<iframe id=f src=http://test/turned.png style='image-orientation: none'></iframe>", images, &turned);
         PrDomAgent* agent = prHtmlPageAgent(page.page);
         page.fetcher.settle(agent);
-        PrHtmlIFrameElement* frame = prHtmlIFrameElementQuery(prDomElementAsEventTarget(page.byId("f")));
+        PrHtmlElement* frame = prHtmlElementQuery(prDomElementAsEventTarget(page.byId("f")));
         REQUIRE(frame != nullptr);
-        PrDomDocument* document = prHtmlIFrameElementContentDocument(frame);
+        PrDomDocument* document = prHtmlWindowDocument(prHtmlElementContentWindow(frame));
         REQUIRE(document != nullptr);
         CHECK(!prDomDocumentQuirks(document));
         PrDomElement* body = prDomDocumentBody(document);
@@ -2351,6 +2359,23 @@ TEST_CASE("a foreignObject's content is laid out in its positioning rectangle an
     pixels = page.paint();
     CHECK(rgbAt(pixels, 5, 25) == 0x0000ff);
     CHECK(rgbAt(pixels, 5, 15) == 0);
+}
+
+TEST_CASE("the box of a foreignObject goes with the svg element around it") {
+    ViewedSvg page("<svg id=s width=40 height=40><foreignObject id=f width=20 height=20><div id=d></div>"
+        "</foreignObject></svg>");
+    PrLayoutTree* tree = prCssPresentationTree(prHtmlPagePresentation(page.page));
+    PrDomNode* foreign = page.node("f");
+    PrDomNode* content = page.node("d");
+    prDomNodeRetain(foreign);
+    REQUIRE(prLayoutNodeFromKey(tree, uint64_t(uintptr_t(foreign))) != kPrLayoutNodeNone);
+    // The foreignObject's box is a root of its own, outside the svg element's box, and no box presents a node that
+    // left, whose address a later node may take.
+    prDomNodeRemove(page.node("s"));
+    page.update();
+    CHECK(prLayoutNodeFromKey(tree, uint64_t(uintptr_t(foreign))) == kPrLayoutNodeNone);
+    CHECK(prLayoutNodeFromKey(tree, uint64_t(uintptr_t(content))) == kPrLayoutNodeNone);
+    prDomNodeRelease(foreign);
 }
 
 TEST_CASE("a foreignObject of zero width or height draws nothing, and an svg in one is drawn as its own") {
@@ -2838,7 +2863,7 @@ TEST_CASE("an iframe shows its document in its slot, laid out in a viewport of i
     prHtmlViewUpdate(page.view);
     PrDomElement* frame = page.byId("f");
     PrHtmlWindow* inner =
-        prHtmlIFrameElementContentWindow(prHtmlIFrameElementQuery(prDomNodeAsEventTarget(prDomElementAsNode(frame))));
+        prHtmlElementContentWindow(prHtmlElementQuery(prDomNodeAsEventTarget(prDomElementAsNode(frame))));
     REQUIRE(inner != nullptr);
     CHECK(prHtmlWindowInnerWidth(inner) == 40);
     prLayoutCompositorFrame(page.compositor);
@@ -2861,7 +2886,7 @@ TEST_CASE("an iframe's document is laid out in its iframe's content box before i
         "<div style='height: 20px; background: rgb(255, 0, 0)'></div><div></div>\"></iframe>");
     PrDomElement* frame = page.byId("f");
     PrHtmlWindow* inner =
-        prHtmlIFrameElementContentWindow(prHtmlIFrameElementQuery(prDomNodeAsEventTarget(prDomElementAsNode(frame))));
+        prHtmlElementContentWindow(prHtmlElementQuery(prDomNodeAsEventTarget(prDomElementAsNode(frame))));
     REQUIRE(inner != nullptr);
     // No job of the view has sized the frame yet: a script's query reads the iframe's content box.
     CHECK(prHtmlWindowInnerWidth(inner) == 40);

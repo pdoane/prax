@@ -21,7 +21,7 @@ struct Document {
     PrDomDocument* document;
 
     explicit Document(PrStringView html) {
-        document = prHtmlDomParserParseFromString(html, PrHtmlDomParserSupportedType_TextHtml);
+        document = prHtmlDomParserParseFromString(nullptr, html, PrHtmlDomParserSupportedType_TextHtml);
     }
     ~Document() {
         prDomDocumentRelease(document);

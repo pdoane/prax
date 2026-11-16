@@ -15,6 +15,10 @@ PR_ASSUME_NONNULL_BEGIN
 
 namespace pr_impl {
 
+// Returns true if the rel attribute of a link, a, area or SVG a element contains the keyword `keyword`, ASCII
+// case-insensitively (html/#linkTypes).
+bool htmlRelHolds(const PrDomElement* element, PrStringView keyword);
+
 // Updates an HTML link element's sheet or preload (html/#link-type-stylesheet, html/#link-type-preload). If the element
 // is a stylesheet link connected in a document with a host, fetches its sheet and the sheets that it imports. Once they
 // arrive, gives the element the sheet and fires load or error at it. Does nothing for any other element.

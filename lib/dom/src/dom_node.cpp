@@ -698,6 +698,8 @@ void transferDocument(PrDomDocument* document, PrDomNode* node, uint32_t* moved)
         domCustomAdopted(element, from);
         if (domIsHtml(element, PrDomTag_Option) || domIsHtml(element, PrDomTag_Selectedcontent))
             document->options = true;
+        if (domIsHtml(element, PrDomTag_Details))
+            document->details = true;
         domControlAdopted(element, from);
         for (PrDomAttr* attribute = element->firstAttribute; attribute != nullptr;
                 attribute = static_cast<PrDomAttr*>(attribute->next)) {
@@ -711,6 +713,7 @@ void transferDocument(PrDomDocument* document, PrDomNode* node, uint32_t* moved)
         if (PrDomShadowRoot* shadow = domShadowRootOfHost(element)) {
             domSlotsEnable(document);
             adoptTree(document, shadow, moved);
+            domNotifyShadowRootAdopted(shadow, from);
         }
     }
     for (PrDomNode* child = node->first; child != nullptr; child = child->next)
@@ -1281,6 +1284,8 @@ void destroyDocument(PrDomDocument* document) {
     PR_ASSERT(document->ranges == nullptr);
     domSelectionDestroy(document->selection);
     document->selection = nullptr;
+    PrDomDocument* origin = document->originDocument;
+    document->originDocument = nullptr;
     prUrlDestroy(document->url);
     prRawStringReset(&document->contentType);
     prRawStringReset(&document->languagePragma);
@@ -1318,6 +1323,7 @@ void destroyDocument(PrDomDocument* document) {
     // The inert document outlives the contents of the templates that were just destroyed.
     PrDomDocument* inert = document->templateDocument;
     prMemoryFree(document);
+    domNodeRelease(origin);
     if (inert != nullptr && inert != document) {
         inert->templateOwner = nullptr;
         domDocumentRelease(inert);
@@ -1410,6 +1416,13 @@ PrDomDocument* domDocumentCreate(DomDocumentKind kind) {
     document->charset = PrCharset_Utf8;
     prUrlCreate("about:blank", nullptr, PrCharset_Utf8, &document->url);
     return document;
+}
+
+void domDocumentShareOrigin(PrDomDocument* created, PrDomDocument* creator) {
+    PrDomDocument* origin = creator->originDocument != nullptr ? creator->originDocument : creator;
+    domNodeRetain(origin);
+    domNodeRelease(created->originDocument);
+    created->originDocument = origin;
 }
 
 PrDomDocument* domDocumentTemplateDocument(PrDomDocument* document) {
@@ -1614,6 +1627,8 @@ PrDomElement* domElementCreate(PrDomDocument* document, DomNamespaceId space, Pr
     element->tag = tag != PrDomTag_Unknown ? DomTagId(tag) : internLocalName(document, name);
     if (space == PrDomNamespace_Html && (tag == PrDomTag_Option || tag == PrDomTag_Selectedcontent))
         document->options = true;
+    if (space == PrDomNamespace_Html && tag == PrDomTag_Details)
+        document->details = true;
     domControlCreated(element);
     if (space == PrDomNamespace_Html && tag == PrDomTag_Template)
         domElementState(element)->contents = makeOwned<PrDomDocumentFragment>(domDocumentTemplateDocument(document), element);

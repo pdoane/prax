@@ -40,6 +40,7 @@
 #include "dom/src/dom_resource.h"
 #include "html/src/html_canvas.h"
 #include "html/src/html_document.h"
+#include "html/src/html_forms.h"
 #include "html/src/html_image.h"
 #include "html/src/html_image_source.h"
 #include "html/src/html_link.h"
@@ -1357,6 +1358,22 @@ EmbedFetch* newEmbedFetch(PrHtmlPage* page, PrDomElement* element, PrRawString u
     return fetch;
 }
 
+// Returns the URL of the document that `result` answers `fetch` with: the response's URL after its redirects, with the
+// fragment of the URL that was fetched, which a response does not carry (fetch/#concept-response-url).
+PrRawString embedResponseUrl(const EmbedFetch* fetch, const DomFetchResult* result) {
+    PrStringView requested = prRawStringView(&fetch->url);
+    if (result->url.data == nullptr)
+        return prRawStringCopy(requested);
+    PrStringView fragment = domUrlFragment(requested);
+    PrTextBuffer url = {};
+    prTextBufferAppend(&url, result->url);
+    if (fragment.data != nullptr) {
+        prTextBufferAppendChar(&url, '#');
+        prTextBufferAppend(&url, fragment);
+    }
+    return prTextBufferTake(&url);
+}
+
 void dropEmbedFetch(void* PR_NULLABLE data) {
     EmbedFetch* fetch = static_cast<EmbedFetch*>(data);
     if (fetch->element->state != nullptr && fetch->element->state->generation == fetch->generation)
@@ -1428,14 +1445,29 @@ enum {
 typedef uint8_t FrameDocument;
 
 // Gives the element a frame that holds a new browsing context, navigated to `source` at `url` as a response with
-// `headers`.
+// `headers`. The context's documents are sandboxed by `snapshot`, the flags of the navigation that loads them, or else
+// by the element's sandbox attribute as it is now and the sandbox of the window around it
+// (html/#determining-the-creation-sandboxing-flags). A context sandboxed from scripts gets no script host, whatever the
+// page's host gives it.
 void attachFrame(PrHtmlPage* page, PrDomElement* element, PrStringView source, PrStringView url,
-        const PrHtmlResponseHeaders& headers, FrameDocument kind = FrameDocument_Navigated) {
+        const PrHtmlResponseHeaders& headers, FrameDocument kind = FrameDocument_Navigated,
+        const HtmlSandboxFlags* PR_NULLABLE snapshot = nullptr) {
     PrHtmlWindow* window = page->window;
+    HtmlSandboxFlags sandbox = window->sandbox;
+    if (snapshot != nullptr)
+        sandbox = *snapshot;
+    else if (element->tag == PrDomTag_Iframe && domAttribute(element, PrDomNamespace_None, "sandbox") != nullptr)
+        sandbox |= htmlSandboxParse(domAttributeValue(element, "sandbox"));
     PrHtmlHost childHost = prHtmlHostDefault();
     childHost.navigatorCompatibilityMode = page->host.navigatorCompatibilityMode;
     if (page->host.frame != nullptr)
         page->host.frame(page->host.context, page, &childHost);
+    if ((sandbox & HtmlSandboxFlag_Scripts) != 0) {
+        childHost.execute = nullptr;
+        childHost.parseModule = nullptr;
+        childHost.compile = nullptr;
+        childHost.evaluate = nullptr;
+    }
     if (childHost.agent == nullptr)
         childHost.agent = window->agent;
     if (childHost.font == nullptr)
@@ -1462,6 +1494,7 @@ void attachFrame(PrHtmlPage* page, PrDomElement* element, PrStringView source, P
         childHost.sessionStorage = page->host.sessionStorage;
     PrHtmlPage* child = prHtmlPageCreate(&childHost);
     child->window->parent = window;
+    child->window->sandbox = sandbox;
     child->initialBlank = kind == FrameDocument_InitialBlank;
     child->targetName = prRawStringCopy(domAttributeValue(element, "name"));
     child->defaultCharset = page->defaultCharset;
@@ -1502,9 +1535,15 @@ void frameFetched(void* PR_NULLABLE data, const DomFetchResult* result) {
             headers = PrHtmlResponseHeaders{
                 result->contentType, result->contentLanguage, referrerPolicyOfFetch(fetch->page),
             };
-        // The document replaces the initial about:blank, as a navigation of the iframe's browsing context would.
+        // The document replaces the initial about:blank, as a navigation of the iframe's browsing context would, with
+        // the sandbox that the navigation began with (html/#determining-the-creation-sandboxing-flags).
+        PrHtmlWindow* initial = htmlFrameWindow(fetch->element);
+        HtmlSandboxFlags sandbox = initial != nullptr ? initial->sandbox : 0;
         dropFrame(fetch->page, fetch->element);
-        attachFrame(fetch->page, fetch->element, loaded ? domFetchText(result) : "", prRawStringView(&fetch->url), headers);
+        PrRawString url = embedResponseUrl(fetch, result);
+        attachFrame(fetch->page, fetch->element, loaded ? domFetchText(result) : "", prRawStringView(&url), headers,
+            FrameDocument_Navigated, initial != nullptr ? &sandbox : nullptr);
+        prRawStringReset(&url);
     }
     dropEmbedFetch(fetch);
 }
@@ -2035,8 +2074,10 @@ void objectFetched(void* PR_NULLABLE data, const DomFetchResult* result) {
             }
             queueImageEvent(fetch->page, element, !decoded);
         } else if (prAsciiEqualsFold(essence, "text/html") || prMimeTypeIsXml(essence)) {
-            attachFrame(fetch->page, element, domFetchText(result), prRawStringView(&fetch->url),
+            PrRawString url = embedResponseUrl(fetch, result);
+            attachFrame(fetch->page, element, domFetchText(result), prRawStringView(&url),
                 PrHtmlResponseHeaders{essence, result->contentLanguage, PrStringView{nullptr, 0}});
+            prRawStringReset(&url);
         }
     }
     dropEmbedFetch(fetch);
@@ -2077,8 +2118,11 @@ void objectChanged(PrHtmlPage* page, PrDomElement* element) {
 bool activates(void* PR_NULLABLE, const PrDomElement* element) {
     if (element->space == PrDomNamespace_Svg || element->space == PrDomNamespace_MathMl)
         return element->tag == PrDomTag_A && domElementLink(element);
-    // A click in an editing host places the caret, so a link there does not navigate.
-    if (!domIsHtml(element, PrDomTag_A) && !domIsHtml(element, PrDomTag_Area))
+    if (htmlSummaryActivates(element))
+        return true;
+    // Only a hyperlink, which has an href, activates (html/#hyperlink). A click in an editing host places the caret, so
+    // a link there does not navigate.
+    if ((!domIsHtml(element, PrDomTag_A) && !domIsHtml(element, PrDomTag_Area)) || !domHasAttribute(element, "href"))
         return false;
     PrDomNode* node = const_cast<PrDomElement*>(element);
     return !prHtmlElementIsContentEditable(prHtmlElementQuery(prDomNodeAsEventTarget(node)));
@@ -2092,8 +2136,11 @@ void frameNameChanged(const PrDomElement* element) {
         prRawStringReplace(&child->targetName, domAttributeValue(element, "name"));
 }
 
-void activate(void* PR_NULLABLE context, PrDomElement* element, PrDomEvent*) {
-    htmlWindowFollowHyperlink(static_cast<PrHtmlPage*>(context)->window, element);
+void activate(void* PR_NULLABLE context, PrDomElement* element, PrDomEvent* event) {
+    if (htmlSummaryActivates(element))
+        htmlSummaryActivate(element, event);
+    else
+        htmlWindowFollowHyperlink(static_cast<PrHtmlPage*>(context)->window, element);
 }
 
 // Handles a change to embedded content that the browsing context of its document loads. An image updates when its
@@ -2505,6 +2552,7 @@ void closeWindow(PrHtmlPage* page) {
     domListenersDestroy(window->orientation.listeners);
     window->orientation.listeners = nullptr;
     prRawStringReset(&window->referrer);
+    prRawStringReset(&window->domain);
     for (PrHtmlStorage& storage : window->storage)
         htmlStorageReset(&storage);
 }
@@ -2521,6 +2569,7 @@ void replaceWindow(PrHtmlPage* page) {
     window->agent = closed->agent;
     window->history = closed->history;
     window->parent = closed->parent;
+    window->sandbox = closed->sandbox;
     window->media = closed->media;
     for (CssMediaValue& value : window->media.overrides)
         value.keyword = PrCssKeyword_Unknown;
@@ -3723,12 +3772,14 @@ uint64_t htmlPageEmbed(const PrHtmlPage* page) {
 }
 
 bool htmlPageNavigate(PrHtmlWindow* window, const PrHtmlWindow* PR_NULLABLE source, PrStringView url,
-        HtmlHistoryCommit commit, uint32_t target) {
+        HtmlHistoryCommit commit, uint32_t target, PrFetchReferrerPolicy referrerPolicy) {
     PrHtmlPage* page = htmlDocumentPage(window->document);
     if (page == nullptr || page->window != window)
         return false;
     bool javascript = hasJavascriptScheme(url);
     if (!javascript && page->host.fetcher == nullptr)
+        return false;
+    if (source != nullptr && !htmlWindowAllowedToNavigate(source, window))
         return false;
     // A traversal does not replace the ongoing navigation of the iframe's source.
     if (source != nullptr)
@@ -3742,7 +3793,9 @@ bool htmlPageNavigate(PrHtmlWindow* window, const PrHtmlWindow* PR_NULLABLE sour
     navigation->origin = source == nullptr ? prRawStringNull() : htmlWindowOrigin(source);
     if (source != nullptr) {
         navigation->referrer = prUrlSerialize(source->document->url, PrUrlSerialization_Whole);
-        navigation->referrerPolicy = source->document->referrerPolicy;
+        navigation->referrerPolicy = referrerPolicy;
+        if (referrerPolicy == PrFetchReferrerPolicy_Default)
+            navigation->referrerPolicy = source->document->referrerPolicy;
     }
     navigation->commit = commit;
     navigation->target = target;
@@ -3775,6 +3828,9 @@ PrHtmlWindow* PR_NULLABLE htmlPageChooseTarget(PrHtmlWindow* window, PrStringVie
 void htmlPageOpenWindow(PrHtmlWindow* window, PrStringView url) {
     PrHtmlPage* page = htmlDocumentPage(window->document);
     if (page == nullptr || page->host.openWindow == nullptr || hasJavascriptScheme(url))
+        return;
+    // html/#the-rules-for-choosing-a-navigable: a sandboxed document opens no auxiliary browsing context.
+    if ((window->sandbox & HtmlSandboxFlag_AuxiliaryNavigation) != 0)
         return;
     // html/#popup-blocker: a new top-level browsing context needs the user's recent interaction, and uses it up.
     if (!prHtmlWindowHasTransientActivation(window))

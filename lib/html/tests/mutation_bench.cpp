@@ -129,7 +129,8 @@ PrStringView unique(Work* work, PrStringView text) {
 }
 
 PrCssStyleSheet* sheetOf(PrStringView text) {
-    PrCssStyleSheet* sheet = prCssStyleSheetCreate(nullptr);
+    PrCssStyleSheet* sheet = nullptr;
+    prCssStyleSheetCreate(nullptr, nullptr, &sheet);
     prCssStyleSheetReplaceSync(sheet, text);
     return sheet;
 }

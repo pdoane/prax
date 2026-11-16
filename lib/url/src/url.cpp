@@ -5,12 +5,14 @@
 #include "pr/url.h"
 
 #include "pr/alloc.h"
+#include "pr/ascii.h"
 #include "pr/assert.h"
 #include "pr/string_ops.h"
 #include "pr/text_buffer.h"
 #include "pr/utf8.h"
 
 #include "url/src/url_percent.h"
+#include "url/src/url_public_suffix.h"
 #include "url/src/url_record.h"
 
 namespace pr_impl {
@@ -169,6 +171,69 @@ bool prUrlHasSameOrigin(const PrUrl* url, const PrUrl* other) {
     prRawStringReset(&a);
     prRawStringReset(&b);
     return same;
+}
+
+PrStatus prUrlHostParse(PrStringView input, PrRawString* out) {
+    return urlHostParse(input, out);
+}
+
+PrStringView prUrlHostPublicSuffix(PrStringView host) {
+    // A serialized IPv6 address is bracketed, and an IPv4 address ends in a number (url/#ends-in-a-number-checker),
+    // which no domain does. An opaque host has no rules to match.
+    if (host.size == 0 || host.data[0] == '[')
+        return PrStringView{};
+    PrStringView name = host;
+    if (name.data[name.size - 1] == '.')
+        name.size -= 1;
+    size_t lastDot = name.size;
+    while (lastDot != 0 && name.data[lastDot - 1] != '.')
+        --lastDot;
+    PrStringView last = prStringFrom(name, lastDot);
+    bool numeric = last.size != 0;
+    for (size_t i = 0; i < last.size && numeric; ++i)
+        numeric = prAsciiIsDigit(last.data[i]);
+    if (numeric || last.size == 0)
+        return PrStringView{};
+    // publicsuffix.org/list/: the prevailing rule is an exception if one matches, and otherwise the matching rule with
+    // the most labels, or the implicit `*` rule. An exception's suffix is its name without its first label.
+    size_t suffix = lastDot;
+    for (size_t at = name.size;;) {
+        size_t start = at;
+        // `start` is where the candidate of one more label begins, or 0 for the whole name.
+        while (start != 0 && name.data[start - 1] != '.')
+            --start;
+        PrStringView candidate = prStringFrom(name, start);
+        UrlSuffixRuleFlags rules = urlSuffixRules(candidate);
+        if ((rules & UrlSuffixRuleFlag_Exception) != 0) {
+            suffix = at == name.size ? start : at + 1;
+            break;
+        }
+        if ((rules & UrlSuffixRuleFlag_Exact) != 0)
+            suffix = start;
+        // A wildcard rule for the candidate makes the candidate and one more label a suffix.
+        if ((rules & UrlSuffixRuleFlag_Wildcard) != 0 && start != 0) {
+            size_t more = start - 1;
+            while (more != 0 && name.data[more - 1] != '.')
+                --more;
+            PrStringView wider = prStringFrom(name, more);
+            if ((urlSuffixRules(wider) & UrlSuffixRuleFlag_Exception) == 0)
+                suffix = more;
+        }
+        if (start == 0)
+            break;
+        at = start - 1;
+    }
+    return prStringFrom(host, suffix);
+}
+
+PrStringView prUrlHostRegistrableDomain(PrStringView host) {
+    PrStringView suffix = prUrlHostPublicSuffix(host);
+    if (suffix.data == nullptr || suffix.size == host.size)
+        return PrStringView{};
+    size_t start = host.size - suffix.size - 1;
+    while (start != 0 && host.data[start - 1] != '.')
+        --start;
+    return prStringFrom(host, start);
 }
 
 PrStringView prUrlScheme(const PrUrl* url) {
