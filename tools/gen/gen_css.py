@@ -29,7 +29,7 @@ import textwrap
 
 from tools.gen import gen_common
 from tools.gen import name_table
-from tools.gen.gen_common import bitset, c_string, enum_members, namespaced, table, write
+from tools.gen.gen_common import Prose, bitset, c_string, enum_members, namespaced, table, write
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Spec ranking
@@ -887,16 +887,17 @@ STYLE_GROUPS = [
             "text-decoration-style", "text-decoration-color", "text-decoration-thickness",
         ]),
     StyleGroup(
-        "Background", False, "read by painting: the background's color and layers, and corners",
+        "Background", False, "read by painting: the background's color and layers, corners, and shadows",
         ("Most elements declare no background, so the background's longhands are a group of their own, apart from the "
          "borders and outlines that more elements declare. The corners' radii, which round the background, join it, "
-         "since few elements declare them either."),
+         "since few elements declare them either, and so do the box's shadows."),
         [
             "background-color", "background-clip", "background-image", "background-position", "background-size",
             "background-repeat", "background-attachment", "background-origin", "border-top-left-radius",
             "border-top-right-radius", "border-bottom-right-radius", "border-bottom-left-radius",
             "corner-top-left-shape", "corner-top-right-shape", "corner-bottom-right-shape", "corner-bottom-left-shape",
-            "background-blend-mode",
+            "background-blend-mode", "box-shadow-color", "box-shadow-offset", "box-shadow-blur",
+            "box-shadow-spread", "box-shadow-position",
         ]),
     StyleGroup(
         "Effect", False, "read by compositing: opacity, transforms and stacking",
@@ -1011,8 +1012,7 @@ NOT_COMPUTED = {
     "block-ellipsis", "block-step-align", "block-step-insert", "block-step-round", "block-step-size", "bookmark-label",
     "bookmark-level", "bookmark-state", "border-bottom-clip", "border-boundary", "border-image-outset",
     "border-image-repeat", "border-image-slice", "border-image-source", "border-image-width", "border-left-clip",
-    "border-limit", "border-right-clip", "border-shape", "border-top-clip", "box-shadow", "box-shadow-blur",
-    "box-shadow-color", "box-shadow-offset", "box-shadow-position", "box-shadow-spread", "box-snap", "caret-animation",
+    "border-limit", "border-right-clip", "border-shape", "border-top-clip", "box-snap", "caret-animation",
     "caret-shape", "column-height", "column-rule-break", "column-rule-inset-cap-end", "column-rule-inset-cap-start",
     "column-rule-inset-junction-end", "column-rule-inset-junction-start", "column-rule-visibility-items", "column-wrap",
     "container-name", "continue", "copy-into", "corner", "corner-block-end", "corner-block-start", "corner-bottom",
@@ -1375,20 +1375,21 @@ def keyword_forms(g):
 # are the members of the CssShorthand enum, and the comment on each member says what that form means.
 
 SHORTHAND_FORMS = [
-    ("Box", "One to four values, for the top, right, bottom and left. An omitted bottom or left takes the value "
-            "of the side opposite it, and an omitted right takes the top's (css-box-4/#propdef-margin)."),
-    ("Pair", "One or two values. An omitted second value copies the first "
-             "(css-logical-1/#propdef-margin-block)."),
-    ("Mirror", "The value of the one property that the grammar names. It sets the first run of longhands, and "
+    ("Box", Prose("One to four values, for the top, right, bottom and left. An omitted bottom or left takes the value "
+            "of the side opposite it, and an omitted right takes the top's (css-box-4/#propdef-margin).")),
+    ("Pair", Prose("One or two values. An omitted second value copies the first "
+             "(css-logical-1/#propdef-margin-block).")),
+    ("Mirror", Prose("The value of the one property that the grammar names. It sets the first run of longhands, and "
                "each further run of as many longhands takes the same values "
-               "(css-logical-1/#propdef-border-block)."),
-    ("Components", "Each component sets the longhand that the grammar marks it with, or the longhands of the "
+               "(css-logical-1/#propdef-border-block).")),
+    ("Components", Prose("Each component sets the longhand that the grammar marks it with, or the longhands of the "
                    "shorthand it is marked with. A longhand that no component sets takes its initial value "
-                   "(css-cascade-5/#shorthand-property)."),
-    ("Layers", "Components in comma-separated layers. A longhand takes one entry per layer: the value of the "
+                   "(css-cascade-5/#shorthand-property).")),
+    ("Layers", Prose("Components in comma-separated layers. A longhand takes one entry per layer: the value of the "
                "component that sets it, or its initial value where no component does "
-               "(css-backgrounds-3/#layering)."),
+               "(css-backgrounds-3/#layering).")),
     ("Background", "css-backgrounds-3/#propdef-background"),
+    ("BoxShadow", "css-borders-4/#propdef-box-shadow"),
     ("Mask", "css-masking-1/#the-mask"),
     ("ListStyle", "css-lists-3/#propdef-list-style"),
     ("BorderRadius", "css-backgrounds-3/#propdef-border-radius"),
@@ -1417,7 +1418,7 @@ POSITIONAL_FORMS = {"Box", "Pair"}
 
 # The forms whose expansion reads which longhand each component of the grammar sets. The grammar
 # of a shorthand of one of these forms wraps each such component in a CssGrammarType_Longhand node.
-MARKED_FORMS = {"Mirror", "Components", "Layers", "Background", "Mask", "ListStyle", "Flex", "Font",
+MARKED_FORMS = {"Mirror", "Components", "Layers", "Background", "BoxShadow", "Mask", "ListStyle", "Flex", "Font",
                 "FontVariant", "GridTemplate", "Grid", "Place", "TextBox", "WhiteSpace", "RuleInset",
                 "GapRule"}
 
@@ -1571,6 +1572,9 @@ SHORTHANDS = {
                    ["transition-property", "transition-duration", "transition-timing-function",
                               # css-transitions-1/#propdef-transition
                               "transition-delay", "transition-behavior"]),
+    # css-borders-4/#propdef-box-shadow: a layer for each shadow.
+    "box-shadow": ("BoxShadow", ["box-shadow-color", "box-shadow-offset", "box-shadow-blur", "box-shadow-spread",
+                              "box-shadow-position"]),
     # css-masking-1/#the-mask: the layers, and mask-border reset.
     "mask": ("Mask", ["mask-image", "mask-position", "mask-size", "mask-repeat", "mask-origin",
                       "mask-clip", "mask-composite", "mask-mode"] + MASK_BORDER),
@@ -1742,6 +1746,8 @@ SHORTHAND_COMPONENTS = {
     # the row properties.
     "row-rule-inset": {"<'column-rule-inset-cap'>": ["row-rule-inset-cap"],
                        "<'column-rule-inset-junction'>": ["row-rule-inset-junction"]},
+    # css-borders-4/#typedef-spread-shadow: the two lengths, or none, are the shadow's offset.
+    "box-shadow": {"none | <length> {2,2}": ["box-shadow-offset"]},
     # css-masking-1/#the-mask: the first <geometry-box> is the origin, and the second the clip.
     "mask": {"<geometry-box>": ["mask-origin"], "<geometry-box> | no-clip": ["mask-clip"]},
     # css-inline-3/#propdef-vertical-align: first and last are values of baseline-source.
@@ -4972,8 +4978,8 @@ def emit_pseudo_header(path, pseudos):
                          + [(p.ident(), "::%s%s" % (p.name, "()" if p.function else ""))
                             for p in elements]
                          + [("CssPseudoElement_UnknownWebkit",
-                             "Any other name that starts with ::-webkit- "
-                             "(selectors-4/#unknown--webkit--pseudo-elements).")])
+                             Prose("Any other name that starts with ::-webkit- "
+                                   "(selectors-4/#unknown--webkit--pseudo-elements)."))])
     body.append("\n    CssPseudoElement_Count,\n};\n"
                 "typedef uint8_t CssPseudoElement;\n")
     for kind, prefix, none, example in (("pseudo-class", "CssPseudoClass", "CssPseudoClass_None", "nth-child"),

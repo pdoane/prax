@@ -279,6 +279,27 @@ bool expandLayers(const Expansion* e, Items value, uint64_t last, LayerEntryFn e
     return true;
 }
 
+// Returns true if `longhand` is one of a shadow's lengths that a shadow may leave out: the blur or the spread.
+bool isShadowLength(PrCssProperty longhand) {
+    return longhand == PrCssProperty_BoxShadowBlur || longhand == PrCssProperty_BoxShadowSpread;
+}
+
+// css-borders-4/#propdef-box-shadow: a shadow that leaves out its blur or spread gives it the initial value, marked as
+// left out (CssValueAuxFlag_Implicit), so that serializing the shadow keeps what it wrote.
+bool shadowEntry(const Expansion* e, Items layer, PrCssProperty longhand) {
+    if (componentEntry(e, layer, longhand))
+        return true;
+    if (!isShadowLength(longhand))
+        return false;
+    CssValuePool* pool = poolOf(e);
+    uint32_t at = pool->values.count;
+    initialValue(e->parser, longhand);
+    CssValueNode& value = pool->values.data[at];
+    if (value.kind == PrCssValueKind_Number || value.kind == PrCssValueKind_Dimension)
+        value.aux |= CssValueAuxFlag_Implicit;
+    return true;
+}
+
 // The longhands for the two boxes of a layered shorthand: the origin and the clip.
 struct Boxes {
     PrCssProperty origin;
@@ -715,6 +736,7 @@ bool expand(const Expansion* e, Items value) {
         case CssShorthand_Components:    return expandComponents(e, value);
         case CssShorthand_Layers:        return expandLayers(e, value, 0, componentEntry);
         case CssShorthand_Background:    return expandBackground(e, value);
+        case CssShorthand_BoxShadow:     return expandLayers(e, value, 0, shadowEntry);
         case CssShorthand_Mask:          return expandLayers(e, value, 0, boxEntry);
         case CssShorthand_ListStyle:     return expandListStyle(e, value);
         case CssShorthand_BorderRadius:  return expandBorderRadius(e, value);
@@ -1090,11 +1112,44 @@ void writeBoxes(Walk* w) {
     }
 }
 
+// css-borders-4/#propdef-box-shadow: a shadow's blur and spread are written if the shadow wrote them, even at their
+// initial values, as box-shadow keeps them, and are left out if the shadow left them out. A layer whose offset is none
+// is no shadow, and writes none alone.
+void writeShadowLengths(Walk* w, const Longhands* l, uint32_t k) {
+    uint32_t offset = longhandIndex(l, PrCssProperty_BoxShadowOffset);
+    CssValueRun offsetEntry = entryOf(l->values[offset], k);
+    if (offsetEntry.count == 1 && cssValueIsKeyword(&offsetEntry.values[0], PrCssKeyword_None)) {
+        for (uint32_t j = 0; j < l->properties.count; ++j)
+            w->skip |= j == offset ? 0 : uint64_t(1) << j;
+        w->force |= uint64_t(1) << offset;
+        return;
+    }
+    for (uint32_t j = 0; j < l->properties.count; ++j) {
+        if (!isShadowLength(l->properties.data[j]))
+            continue;
+        CssValueRun entry = entryOf(l->values[j], k);
+        const CssValueNode* first = entry.count != 0 ? &entry.values[0] : nullptr;
+        bool lengthy = first != nullptr &&
+            (first->kind == PrCssValueKind_Number || first->kind == PrCssValueKind_Dimension);
+        if (lengthy && (first->aux & CssValueAuxFlag_Implicit) != 0)
+            w->skip |= uint64_t(1) << j;
+        else
+            w->force |= uint64_t(1) << j;
+    }
+}
+
+// What the layers of a layered shorthand hold, beyond the components that its grammar writes.
+enum {
+    LayerKind_Plain,
+    LayerKind_Boxes,            // an origin and a clip, which one box can write (writeBoxes)
+    LayerKind_Shadows,          // shadows, which keep the lengths that they wrote (writeShadowLengths)
+};
+typedef uint8_t LayerKind;
+
 // css-backgrounds-3/#layering: each layer is written by the grammar, and the layers are joined with commas. Every
 // longhand that a component sets has the same number of entries, and the others hold their initial values. The
-// longhands in `last` belong to the final layer only. `boxes` means the layers have an origin and a clip that one box
-// can write.
-bool serializeLayers(const Longhands* l, PrTextBuffer* out, uint64_t last, bool boxes) {
+// longhands in `last` belong to the final layer only.
+bool serializeLayers(const Longhands* l, PrTextBuffer* out, uint64_t last, LayerKind kind) {
     uint64_t components = componentsOf(l->shorthand, l->properties);
     uint64_t listed = components & ~last;
     uint32_t layers = 0;
@@ -1119,8 +1174,10 @@ bool serializeLayers(const Longhands* l, PrTextBuffer* out, uint64_t last, bool 
         if (k != 0)
             prTextBufferAppend(out, ", ");
         Walk w = walkOf(&entries, out);
-        if (boxes)
+        if (kind == LayerKind_Boxes)
             writeBoxes(&w);
+        else if (kind == LayerKind_Shadows)
+            writeShadowLengths(&w, l, k);
         if (!final)
             w.skip |= last;
         written = walkGrammar(&w, layerGrammar(l->shorthand, final));
@@ -1589,10 +1646,12 @@ bool serializeLonghands(const Longhands* l, PrTextBuffer* out) {
         case CssShorthand_Pair:          return serializePair(l, out);
         case CssShorthand_Mirror:        return serializeMirror(l, out);
         case CssShorthand_Components:    return serializeComponents(l, out);
-        case CssShorthand_Layers:        return serializeLayers(l, out, 0, false);
+        case CssShorthand_Layers:        return serializeLayers(l, out, 0, LayerKind_Plain);
         case CssShorthand_Background:
-            return serializeLayers(l, out, uint64_t(1) << longhandIndex(l, PrCssProperty_BackgroundColor), true);
-        case CssShorthand_Mask:          return serializeLayers(l, out, 0, true);
+            return serializeLayers(l, out, uint64_t(1) << longhandIndex(l, PrCssProperty_BackgroundColor),
+                LayerKind_Boxes);
+        case CssShorthand_Mask:          return serializeLayers(l, out, 0, LayerKind_Boxes);
+        case CssShorthand_BoxShadow:     return serializeLayers(l, out, 0, LayerKind_Shadows);
         case CssShorthand_ListStyle:     return serializeComponents(l, out);
         case CssShorthand_BorderRadius:  return serializeBorderRadius(l, out);
         case CssShorthand_Flex:          return serializeFlex(l, out);

@@ -119,6 +119,8 @@ void countEntry(LayoutCompounds* compounds, LayoutEffectKind kind, const LayoutE
         case LayoutEffectKind_Shape:
             eachShapeLength(entry.shape, [&](PrLayoutLength length) { countLength(compounds, length, delta); });
             break;
+        case LayoutEffectKind_Shadow:
+            break;
         case LayoutEffectKind_Mask:
             for (uint32_t i = 0; i < entry.mask.layerCount; ++i) {
                 layoutBackgroundCountLayers(compounds, &entry.mask.layers[i].image, 1, delta);
@@ -149,7 +151,7 @@ uint32_t stopsOf(const PrLayoutBackgroundLayer& image) {
 
 // Fills `entry` with a copy of the value that its kind holds, which it owns.
 void copyInto(LayoutEffectEntry& entry, LayoutEffectKind kind, const PrLayoutShape* shape, const PrLayoutMask* mask,
-        const PrLayoutFilter* filters, uint32_t filterCount) {
+        const PrLayoutFilter* filters, const PrLayoutShadow* shadows, uint32_t filterCount) {
     switch (kind) {
         case LayoutEffectKind_Shape: {
             entry.shape = *shape;
@@ -198,6 +200,11 @@ void copyInto(LayoutEffectEntry& entry, LayoutEffectKind kind, const PrLayoutSha
             layoutImageTakeFilters(entry.mask.border.image, entry.filters, &nextFilter);
             break;
         }
+        case LayoutEffectKind_Shadow:
+            entry.shadows = static_cast<PrLayoutShadow*>(prMemoryAlloc(sizeof(PrLayoutShadow) * filterCount));
+            prMemCopy(entry.shadows, shadows, sizeof(PrLayoutShadow) * filterCount);
+            entry.shadowCount = filterCount;
+            break;
         default:
             entry.filters = static_cast<PrLayoutFilter*>(prMemoryAlloc(sizeof(PrLayoutFilter) * filterCount));
             prMemCopy(entry.filters, filters, sizeof(PrLayoutFilter) * filterCount);
@@ -224,6 +231,7 @@ void freeEntry(LayoutEffectEntry& entry) {
     prPathDestroy(const_cast<PrPath*>(entry.shape.path));
     prMemoryFree(const_cast<PrLayoutMaskLayer*>(entry.mask.layers));
     prMemoryFree(entry.filters);
+    prMemoryFree(entry.shadows);
     prMemoryFree(entry.stops);
     entry.key.reset();
     entry = LayoutEffectEntry{};
@@ -231,7 +239,8 @@ void freeEntry(LayoutEffectEntry& entry) {
 
 // Interns the value of `kind` whose key is `key`, which the entry takes.
 uint32_t intern(LayoutEffectLists* lists, LayoutCompounds* compounds, LayoutEffectKind kind, RawArray<uint8_t>& key,
-        const PrLayoutShape* shape, const PrLayoutMask* mask, const PrLayoutFilter* filters, uint32_t filterCount) {
+        const PrLayoutShape* shape, const PrLayoutMask* mask, const PrLayoutFilter* filters,
+        const PrLayoutShadow* shadows, uint32_t filterCount) {
     LayoutEffectTable& table = lists->tables[kind];
     uint32_t hash = uint32_t(prHashBytes(key.data, key.count, kEffectSeed));
     uint32_t found = table.index.find(hash, [&](uint32_t i) {
@@ -251,7 +260,7 @@ uint32_t intern(LayoutEffectLists* lists, LayoutCompounds* compounds, LayoutEffe
         table.entries.push(LayoutEffectEntry{});
     }
     LayoutEffectEntry& entry = table.entries.data[at];
-    copyInto(entry, kind, shape, mask, filters, filterCount);
+    copyInto(entry, kind, shape, mask, filters, shadows, filterCount);
     entry.live = true;
     entry.key = key;
     entry.hash = hash;
@@ -919,7 +928,7 @@ PrLayoutShapeIndex layoutEffectListsInternShape(LayoutEffectLists* lists, Layout
     own.pointCount = shape.pointCount < kPrLayoutShapeMaxPoints ? shape.pointCount : uint32_t(kPrLayoutShapeMaxPoints);
     RawArray<uint8_t> key;
     shapeKey(key, own);
-    return intern(lists, compounds, LayoutEffectKind_Shape, key, &own, nullptr, nullptr, 0);
+    return intern(lists, compounds, LayoutEffectKind_Shape, key, &own, nullptr, nullptr, nullptr, 0);
 }
 
 PrLayoutMaskIndex layoutEffectListsInternMask(LayoutEffectLists* lists, LayoutCompounds* compounds, const PrLayoutMask& mask) {
@@ -927,7 +936,7 @@ PrLayoutMaskIndex layoutEffectListsInternMask(LayoutEffectLists* lists, LayoutCo
         return kPrLayoutMaskNone;
     RawArray<uint8_t> key;
     maskKey(key, mask);
-    return intern(lists, compounds, LayoutEffectKind_Mask, key, nullptr, &mask, nullptr, 0);
+    return intern(lists, compounds, LayoutEffectKind_Mask, key, nullptr, &mask, nullptr, nullptr, 0);
 }
 
 PrLayoutFilterIndex layoutEffectListsInternFilter(LayoutEffectLists* lists, LayoutCompounds* compounds,
@@ -936,7 +945,37 @@ PrLayoutFilterIndex layoutEffectListsInternFilter(LayoutEffectLists* lists, Layo
         return kPrLayoutFilterNone;
     RawArray<uint8_t> key;
     layoutFilterKey(key, filters, count);
-    return intern(lists, compounds, LayoutEffectKind_Filter, key, nullptr, nullptr, filters, count);
+    return intern(lists, compounds, LayoutEffectKind_Filter, key, nullptr, nullptr, filters, nullptr, count);
+}
+
+PrLayoutShadowIndex layoutEffectListsInternShadows(LayoutEffectLists* lists, LayoutCompounds* compounds,
+        const PrLayoutShadow* shadows, uint32_t count) {
+    if (count == 0)
+        return kPrLayoutShadowNone;
+    RawArray<uint8_t> key;
+    key.append(reinterpret_cast<const uint8_t*>(shadows), uint32_t(sizeof(PrLayoutShadow) * count));
+    return intern(lists, compounds, LayoutEffectKind_Shadow, key, nullptr, nullptr, nullptr, shadows, count);
+}
+
+void layoutEffectListsCountShadows(LayoutEffectLists* lists, PrLayoutShadowIndex shadows, uint32_t delta) {
+    countAt(lists->tables[LayoutEffectKind_Shadow], shadows, delta);
+}
+
+float layoutShadowsReach(const LayoutEffectLists* lists, PrLayoutShadowIndex shadows) {
+    if (shadows == kPrLayoutShadowNone)
+        return 0;
+    const LayoutEffectEntry& e = layoutEffectAt(lists, LayoutEffectKind_Shadow, shadows);
+    float reach = 0;
+    for (uint32_t i = 0; i < e.shadowCount; ++i) {
+        const PrLayoutShadow& s = e.shadows[i];
+        if (s.inset)
+            continue;
+        float dx = s.offset.x < 0 ? -s.offset.x : s.offset.x;
+        float dy = s.offset.y < 0 ? -s.offset.y : s.offset.y;
+        float r = (dx > dy ? dx : dy) + s.blur + (s.spread > 0 ? s.spread : 0);
+        reach = r > reach ? r : reach;
+    }
+    return reach;
 }
 
 void layoutEffectListsCount(LayoutEffectLists* lists, LayoutCompounds* compounds,
@@ -955,7 +994,7 @@ void layoutEffectListsCount(LayoutEffectLists* lists, LayoutCompounds* compounds
 }
 
 void layoutEffectListsCollect(LayoutEffectLists* lists, LayoutCompounds* compounds) {
-    for (uint32_t kind = 0; kind < 3; ++kind) {
+    for (uint32_t kind = 0; kind < LayoutEffectKind_Count; ++kind) {
         LayoutEffectTable& table = lists->tables[kind];
         for (uint32_t k = 0; k < table.candidates.count; ++k) {
             uint32_t i = table.candidates.data[k];
@@ -984,7 +1023,7 @@ bool layoutEffectListsVerify(const LayoutEffectLists* lists) {
 }
 
 void layoutEffectListsReset(LayoutEffectLists* lists) {
-    for (uint32_t kind = 0; kind < 3; ++kind) {
+    for (uint32_t kind = 0; kind < LayoutEffectKind_Count; ++kind) {
         LayoutEffectTable& table = lists->tables[kind];
         for (uint32_t i = 0; i < table.entries.count; ++i) {
             LayoutEffectEntry& e = table.entries.data[i];

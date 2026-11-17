@@ -1514,6 +1514,34 @@ TEST_CASE("a background is painted within the box background-clip names, and an 
     CHECK(verified(f.tree));
 }
 
+TEST_CASE("an outer shadow paints outside the border box and beneath it, and an inset shadow inside the padding box") {
+    Fixture f;
+    PrLayoutNode root = f.element(kPrLayoutNodeNone, block());
+    // A box 20 by 20 at 10,10, filled red, with a hard blue shadow 4px out on every side and a hard green inset shadow
+    // 3px in.
+    PrLayoutBoxStyle box = block();
+    box.width = prLayoutLengthPx(20);
+    box.height = prLayoutLengthPx(20);
+    for (uint32_t side = 0; side < PrRectSide_Count; ++side)
+        box.margin[side] = prLayoutLengthPx(10);
+    PrLayoutDecorationStyle decoration = background(PrColor{1, 0, 0, 1});
+    PrLayoutShadow shadows[] = {
+        PrLayoutShadow{.spread = 4, .color = prColor16FromColor(PrColor{0, 0, 1, 1})},
+        PrLayoutShadow{.spread = 3, .color = prColor16FromColor(PrColor{0, 1, 0, 1}), .inset = true},
+    };
+    decoration.shadows = prLayoutShadowIntern(f.tree, shadows, 2);
+    REQUIRE(prLayoutShadowCount(f.tree, decoration.shadows) == 2);
+    CHECK(prLayoutShadowAt(f.tree, decoration.shadows, 1).inset);
+    f.element(root, box, &decoration);
+    f.layout(px(40, 40));
+    Array<uint8_t> pixels = render(f.tree, 40, 40);
+    CHECK(pixel(pixels, 40, 20, 20) == "255 0 0 255");
+    CHECK(pixel(pixels, 40, 11, 20) == "0 255 0 255");
+    CHECK(pixel(pixels, 40, 8, 20) == "0 0 255 255");
+    CHECK(pixel(pixels, 40, 4, 20) == "0 0 0 0");
+    CHECK(verified(f.tree));
+}
+
 TEST_CASE("a background layer fixed to the viewport stays with it as its box scrolls, and fills a new viewport") {
     Fixture f;
     PrLayoutNode root = f.element(kPrLayoutNodeNone, block());

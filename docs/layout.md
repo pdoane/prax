@@ -1184,8 +1184,11 @@ whether floats are among its descendants, so the floats phase walks only toward 
 paint whole paints at its place on its line as if it made a stacking context: its decoration, its block-level content,
 then its inline content. The root's background paints the canvas.
 
-A box's decoration is its background, its border, and its outline, painted with them, after the border. A later box
-covers the outline, whereas CSS2's Appendix E paints outlines last in their stacking context. A visitor of the walk
+A box's decoration is its shadows, its background, its border, and its outline, painted with them, after the border.
+Its outer shadows paint first, beneath its background, and its inset shadows paint over the background, beneath the
+border (css-backgrounds-3/#box-shadow). The tree interns a box's shadows as a list, as it does its filters, and a
+layer's bounds take in the reach of its box's outer shadows. A later box covers the outline, whereas CSS2's Appendix E
+paints outlines last in their stacking context. A visitor of the walk
 declares only what it does, over defaults that decline, and says which subtrees it enters. Hit testing enters a
 subtree only if the area in which its boxes can be hit, through the transforms of the boxes that paint whole, holds the
 point. The tree keeps each fragment's area while it holds the fragment and the effects of the fragment's nodes are the

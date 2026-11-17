@@ -64,6 +64,10 @@ enum {
     // Color: set for sRGB written as a hex color, rgb() or rgba() rather than color().
     CssValueAuxFlag_ColorLegacy = 1 << 8,
 
+    // Number, Dimension: a length that a shorthand gave a longhand that one of its layers left out, its initial value,
+    // which serializing the shorthand leaves out again, as it keeps a length that the layer wrote.
+    CssValueAuxFlag_Implicit = 1 << 0,
+
     CssValueAuxFlag_MathCategory = 0x000f,    // math: the CssUnitCategory that its type resolves to
     CssValueAuxFlag_CalcOperator = 0x0003,    // calc: the PrCssCalc
 };

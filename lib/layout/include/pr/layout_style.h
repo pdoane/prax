@@ -599,6 +599,39 @@ PrLayoutGroupIndex prLayoutBoxStyleCreate(PrLayoutTree* tree, const PrLayoutBoxS
 PrLayoutBoxStyle prLayoutBoxStyleRecord(const PrLayoutTree* tree, PrLayoutGroupIndex index);
 
 // ---------------------------------------------------------------------------------------------------------------------
+// Shadows
+
+PR_NO_PADDING_BEGIN
+// A box's shadow (css-backgrounds-3/#box-shadow), resolved: its offset, its blur radius, which is twice the standard
+// deviation of the blur, and its spread, in pixels, and its color, extended sRGB with straight alpha. An outer shadow
+// is cast by the border box and paints outside it, beneath the background. An inset shadow paints inside the padding
+// box, above the background and beneath the border.
+typedef struct PrLayoutShadow {
+    PrVec2 offset;
+    float blur;
+    float spread;
+    PrColor16 color;
+    bool inset;
+    uint8_t _pad[7];
+} PrLayoutShadow;
+PR_NO_PADDING_END
+
+// An interned list of a box's shadows (prLayoutShadowIntern).
+typedef uint32_t PrLayoutShadowIndex;
+
+// No shadow: the list of none.
+enum { kPrLayoutShadowNone = 0 };
+
+// Interns a box's shadows, `count` of them from the top shadow down, as box-shadow lists them, and returns their index.
+// No shadows is kPrLayoutShadowNone. Equal lists are one entry. The decoration groups that name an entry keep it, and
+// otherwise it stays valid until the next layout of the tree.
+PrLayoutShadowIndex prLayoutShadowIntern(PrLayoutTree* tree, const PrLayoutShadow* shadows, uint32_t count);
+
+// The number of shadows of the list at `index`, and the shadow at `shadow`, valid while the entry is.
+uint32_t prLayoutShadowCount(const PrLayoutTree* tree, PrLayoutShadowIndex index);
+PrLayoutShadow prLayoutShadowAt(const PrLayoutTree* tree, PrLayoutShadowIndex index, uint32_t shadow);
+
+// ---------------------------------------------------------------------------------------------------------------------
 // Decoration group
 
 // How a replaced box's content fits its content box (css-images-3/#the-object-fit).
@@ -686,6 +719,7 @@ typedef struct PrLayoutDecorationStyle {
     PrLayoutUnit columnRuleWidth;
     PrLayoutUnit textDecorationThickness;
     PrLayoutBackgroundIndex backgroundLayers;
+    PrLayoutShadowIndex shadows;        // box-shadow (css-backgrounds-3/#box-shadow)
     PrDrawBorderStyle borderStyle[PrRectSide_Count];
     PrDrawBorderStyle outlineStyle;
     PrLayoutObjectFit objectFit;

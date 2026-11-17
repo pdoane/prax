@@ -149,6 +149,7 @@ enum {
     CssShorthand_Layers,
 
     CssShorthand_Background,                // css-backgrounds-3/#propdef-background
+    CssShorthand_BoxShadow,                 // css-borders-4/#propdef-box-shadow
     CssShorthand_Mask,                      // css-masking-1/#the-mask
     CssShorthand_ListStyle,                 // css-lists-3/#propdef-list-style
     CssShorthand_BorderRadius,              // css-backgrounds-3/#propdef-border-radius
@@ -165,15 +166,12 @@ enum {
     CssShorthand_WhiteSpace,                // css-text-4/#propdef-white-space
     CssShorthand_TextAlign,                 // css-text-3/#propdef-text-align
     CssShorthand_GlyphOrientationVertical,  // css-writing-modes-4/#glyph-orientation
-
-    // one value, which every longhand takes (css-gaps-1/#propdef-column-rule-inset-start)
-    CssShorthand_Same,
-
+    CssShorthand_Same,                      // one value, which every longhand takes
+                                            // (css-gaps-1/#propdef-column-rule-inset-start)
     CssShorthand_RuleInset,                 // css-gaps-1/#propdef-column-rule-inset
     CssShorthand_GapRule,                   // css-gaps-1/#propdef-column-rule
-
-    // every longhand but direction and unicode-bidi (css-cascade-5/#propdef-all)
-    CssShorthand_All,
+    CssShorthand_All,                       // every longhand but direction and unicode-bidi
+                                            // (css-cascade-5/#propdef-all)
 };
 typedef uint8_t CssShorthand;
 

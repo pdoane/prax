@@ -51,16 +51,16 @@ of a change to it is what the change did.
 | css/css-align                    |     296/296 |     3883/5364 |   72.3% |
 | css/css-anchor-position          |     519/526 |   10268/13918 |   73.7% |
 | css/css-animations               |     196/207 |      910/1507 |   60.3% |
-| css/css-backgrounds              |     824/859 |     5350/6946 |   77.0% |
-| css/css-borders                  |     181/181 |     1233/1670 |   73.8% |
+| css/css-backgrounds              |     824/859 |     5216/6946 |   75.0% |
+| css/css-borders                  |     181/181 |     1267/1670 |   75.8% |
 | css/css-box                      |     148/148 |      707/1132 |   62.4% |
-| css/css-break                    |   1250/1250 |      907/1915 |   47.3% |
-| css/css-cascade                  |     157/157 |      806/1115 |   72.2% |
+| css/css-break                    |   1250/1250 |      908/1915 |   47.4% |
+| css/css-cascade                  |     157/157 |      810/1120 |   72.3% |
 | css/css-color                    |     375/376 |   11508/12968 |   88.7% |
 | css/css-color-adjust             |       36/36 |       155/191 |   81.1% |
 | css/css-color-hdr                |         4/4 |        56/116 |   48.2% |
 | css/css-conditional              |     465/467 |     2480/3447 |   71.9% |
-| css/css-contain                  |     572/583 |       551/973 |   56.6% |
+| css/css-contain                  |     572/583 |       550/973 |   56.5% |
 | css/css-content                  |       78/78 |       276/322 |   85.7% |
 | css/css-counter-styles           |     259/259 |       399/402 |   99.2% |
 | css/css-display                  |     248/249 |       535/776 |   68.9% |
@@ -79,18 +79,18 @@ of a change to it is what the change did.
 | css/css-inline                   |     251/251 |      684/1047 |   65.3% |
 | css/css-lists                    |     224/224 |      920/1159 |   79.3% |
 | css/css-logical                  |       91/92 |     1141/1371 |   83.2% |
-| css/css-masking                  |     480/551 |     5010/6847 |   73.1% |
+| css/css-masking                  |     480/551 |     5012/6847 |   73.1% |
 | css/css-mixins                   |       55/55 |       173/603 |   28.6% |
 | css/css-motion-path              |         1/1 |           1/1 |  100.0% |
 | css/css-multicol                 |     717/717 |     1636/2228 |   73.4% |
 | css/css-nesting                  |       47/47 |       105/149 |   70.4% |
-| css/css-overflow                 |     685/686 |      751/1488 |   50.4% |
+| css/css-overflow                 |     685/686 |      754/1488 |   50.6% |
 | css/css-overscroll-behavior      |       11/12 |         78/96 |   81.2% |
 | css/css-page                     |     258/258 |       239/385 |   62.0% |
 | css/css-parser-api               |         1/1 |          5/71 |    7.0% |
 | css/css-position                 |     377/388 |     1393/1770 |   78.7% |
 | css/css-properties-values-api    |     123/123 |      686/1393 |   49.2% |
-| css/css-pseudo                   |     339/342 |      699/1126 |   62.0% |
+| css/css-pseudo                   |     339/342 |      700/1126 |   62.1% |
 | css/css-ruby                     |     178/178 |       118/247 |   47.7% |
 | css/css-scroll-anchoring         |       78/78 |         89/98 |   90.8% |
 | css/css-scroll-snap              |     181/197 |       366/838 |   43.6% |
@@ -105,17 +105,17 @@ of a change to it is what the change did.
 | css/css-text                     |   1866/1877 |     4228/6185 |   68.3% |
 | css/css-text-decor               |     365/365 |     1158/1693 |   68.3% |
 | css/css-transforms               |     896/922 |     4229/6326 |   66.8% |
-| css/css-transitions              |     131/142 |     1000/1492 |   67.0% |
+| css/css-transitions              |     131/142 |     1000/1491 |   67.0% |
 | css/css-typed-om                 |     370/372 |    9291/12919 |   71.9% |
 | css/css-ui                       |   1076/1076 |     2075/2899 |   71.5% |
 | css/css-values                   |     512/512 |    5322/10374 |   51.3% |
-| css/css-variables                |     249/249 |       577/774 |   74.5% |
+| css/css-variables                |     249/249 |       580/774 |   74.9% |
 | css/css-view-transitions         |     451/494 |     1194/1753 |   68.1% |
-| css/css-viewport                 |     134/137 |       451/681 |   66.2% |
+| css/css-viewport                 |     134/137 |       464/690 |   67.2% |
 | css/css-will-change              |       53/53 |       186/221 |   84.1% |
 | css/css-writing-modes            |   1234/1234 |     1294/1555 |   83.2% |
 | css/css-zoom                     |         1/1 |           1/1 |  100.0% |
-| css/cssom                        |     282/283 |     3397/4403 |   77.1% |
+| css/cssom                        |     282/283 |     3398/4403 |   77.1% |
 | css/cssom-view                   |     229/237 |     1364/2578 |   52.9% |
 | css/fetching                     |         0/1 |           1/1 |  100.0% |
 | css/fill-stroke                  |       11/11 |       283/410 |   69.0% |
@@ -133,7 +133,7 @@ of a change to it is what the change did.
 | web-animations/interfaces        |       45/47 |        80/834 |    9.5% |
 | web-animations/responsive        |       40/46 |         0/105 |    0.0% |
 | web-animations/timing-model      |       25/34 |         2/402 |    0.4% |
-| **total**                        | 32145/32468 | 154235/209301 |   73.6% |
+| **total**                        | 32145/32468 | 154162/209314 |   73.6% |
 
 ## dom
 
@@ -231,7 +231,7 @@ of a change to it is what the change did.
 | html/rendering                                      |   488/490 |   10611/11508 |   92.2% |
 | html/scripting                                      |       3/3 |           0/4 |    0.0% |
 | html/select                                         |       2/2 |           5/6 |   83.3% |
-| html/semantics                                      | 2531/2914 |   10545/20030 |   52.6% |
+| html/semantics                                      | 2531/2914 |   10548/20030 |   52.6% |
 | html/syntax                                         |   249/250 |     6682/6914 |   96.6% |
 | html/the-xhtml-syntax                               |     15/15 |   21368/25609 |   83.4% |
 | html/user-activation                                |     13/21 |         32/46 |   69.5% |
@@ -245,7 +245,7 @@ of a change to it is what the change did.
 | quirks/hashless-hex-color                           |       3/3 |     1974/2060 |   95.8% |
 | quirks/historical                                   |       2/2 |           2/2 |  100.0% |
 | quirks/text-decoration-doesnt-propagate-into-tables |       2/2 |           1/2 |   50.0% |
-| quirks/unitless-length                              |       6/6 |     4637/4819 |   96.2% |
+| quirks/unitless-length                              |       6/6 |     4638/4819 |   96.2% |
 | requestidlecallback                                 |     18/20 |         48/57 |   84.2% |
 | webmessaging                                        |     43/47 |         55/64 |   85.9% |
 | webmessaging/broadcastchannel                       |      7/12 |          0/45 |    0.0% |
@@ -264,7 +264,7 @@ of a change to it is what the change did.
 | workers/multi-globals                               |       1/1 |           0/1 |    0.0% |
 | workers/same-site-cookies                           |       6/6 |           0/6 |    0.0% |
 | workers/semantics                                   |     23/29 |          0/32 |    0.0% |
-| **total**                                           | 8388/9541 | 127542/157122 |   81.1% |
+| **total**                                           | 8388/9541 | 127546/157122 |   81.1% |
 
 ## infrastructure
 

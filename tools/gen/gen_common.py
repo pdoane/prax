@@ -2,6 +2,7 @@
 
 import os
 import re
+import textwrap
 
 import tools
 from tools.lint import includes
@@ -124,9 +125,14 @@ def bitset(declaration, bits, names=None):
     return "".join(out)
 
 
+class Prose(str):
+    """A member's comment that is prose: sentences that explain it, which go above it, between blank lines. Any other
+    comment is a brief note that trails its member."""
+
+
 def enum_members(members, first=None, marker=None, note=()):
-    """Returns the member lines of an enum from (ident, comment) pairs, with the comments aligned in a column. A comment
-    that does not fit beside its member goes above it, between blank lines, so it must be written as sentences.
+    """Returns the member lines of an enum from (ident, comment) pairs. A note trails its member in a column that the
+    notes share, and wraps onto lines that continue the column. A Prose comment goes above its member.
 
     `marker` is a member that marks the start of a range that runs to the last member. It goes before
     `members[first]`, under the lines of `note`, and `members[first]` takes its value.
@@ -139,12 +145,18 @@ def enum_members(members, first=None, marker=None, note=()):
         if index == first:
             out.append("\n" + "".join("    // %s\n" % line for line in note))
             out.append("    %s,\n" % marker)
-        line = "    %s  %s" % ((ident + ",").ljust(width), "// " + comment if comment else "")
-        if len(line) > LINE_LIMIT:
-            above = "    // %s\n    %s,\n\n" % (comment, ident)
+        if isinstance(comment, Prose):
+            lines = textwrap.wrap(comment, LINE_LIMIT - 7, break_on_hyphens=False, break_long_words=False)
+            above = "".join("    // %s\n" % line for line in lines) + "    %s,\n\n" % ident
             out.append(above if not out or out[-1].endswith("\n\n") else "\n" + above)
-        else:
-            out.append(line.rstrip() + "\n")
+            continue
+        lead = "    %s  " % (ident + ",").ljust(width)
+        if not comment:
+            out.append(lead.rstrip() + "\n")
+            continue
+        lines = textwrap.wrap(comment, LINE_LIMIT - len(lead) - 3, break_on_hyphens=False, break_long_words=False)
+        out.append(lead + "// " + lines[0] + "\n")
+        out += [" " * len(lead) + "// " + rest + "\n" for rest in lines[1:]]
     if out and out[-1].endswith("\n\n"):
         out[-1] = out[-1][:-1]
     return out

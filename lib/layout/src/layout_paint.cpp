@@ -978,6 +978,33 @@ struct Painter : LayoutWalkVisitor {
         return kLayoutVecZero;
     }
 
+    // Records a box's outer shadows, or its inset shadows, from the bottom shadow up (css-backgrounds-3/#box-shadow).
+    // `shape` is its border box with its corners. An outer shadow is cast by the border box, and an inset shadow opens
+    // into the padding box.
+    void shadows(const PrLayoutDecorationStyle& decoration, const PrLayoutBoxStyle& box, const PrCornerRect& shape, bool inset) {
+        if (decoration.shadows == kPrLayoutShadowNone)
+            return;
+        const LayoutEffectEntry& e = layoutEffectAt(&styles->effectLists, LayoutEffectKind_Shadow, decoration.shadows);
+        PrCornerRect opening = shape;
+        if (inset) {
+            float widths[PrRectSide_Count];
+            for (uint32_t side = 0; side < PrRectSide_Count; ++side)
+                widths[side] = prLayoutUnitToPx(box.border[side]);
+            opening = prCornerRectInset(shape, widths);
+        }
+        for (uint32_t i = e.shadowCount; i-- > 0;) {
+            const PrLayoutShadow& s = e.shadows[i];
+            if (s.inset != inset || !(prFloat16ToFloat(s.color.a) > 0))
+                continue;
+            PrDrawShadow shadow{.shape = opening, .offset = s.offset, .sigma = s.blur / 2, .spread = s.spread};
+            if (inset)
+                prDrawListInnerShadow(out(), &shadow, {.color = s.color});
+            else
+                prDrawListDropShadow(out(), &shadow, {.color = s.color});
+            recorded();
+        }
+    }
+
     // Records the background layers of the box `node`, from the bottom layer up. `boxes` are the box's background
     // boxes. If the box `scrolls`, the layers attached to its content are left to the content's recording. A layer
     // fixed to the viewport is recorded as a segment of its own. If a transform applies to the box, a fixed layer is
@@ -1436,6 +1463,8 @@ struct Painter : LayoutWalkVisitor {
             shape = layoutBorderShape(styles, decoration, rect, fragment->broken);
         else
             shape = prCornerRectRound(rect, 0);
+        if (decorates && !root)
+            shadows(decoration, box, shape, false);
         PrColor16 background = decoration.background;
         const LayoutBackground& layers = layoutBackgroundAt(&styles->backgrounds, decoration.backgroundLayers);
         if (decorates && !root && (prFloat16ToFloat(background.a) > 0 || layers.count != 0)) {
@@ -1455,6 +1484,8 @@ struct Painter : LayoutWalkVisitor {
             if (layers.blends)
                 closeBlending(wasHeld);
         }
+        if (decorates && !root)
+            shadows(decoration, box, shape, true);
         PrDrawBorder border{};
         border.shape = shape;
         bool any = false;

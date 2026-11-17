@@ -400,9 +400,9 @@ constexpr char kCssPropertyInitialBlob[] =
     "separate" "0px" "0px" "0" "stretch" "100%" "none" "1" "none" "currentcolor" "none"
     "medium" "none" "currentcolor" "none" "medium" "none" "currentcolor" "none" "medium" "all"
     "none" "currentcolor" "none" "medium" "none" "0px 0px" "0px" "0px" "none" "currentcolor"
-    "0px" "0px" "none" "medium" "auto" "slice" "none" "0px" "currentcolor" "none" "outset"
-    "0px" "content-box" "none" "auto" "auto" "auto" "top" "auto" "auto" "auto" "none" "auto"
-    "none" "nonzero" "canvastext" "srgb" "linearrgb" "normal" "auto" "balance" "normal" "auto"
+    "0px" "0px" "none" "medium" "auto" "slice" "0px" "currentcolor" "none" "outset" "0px"
+    "content-box" "none" "auto" "auto" "auto" "top" "auto" "auto" "auto" "none" "auto" "none"
+    "nonzero" "canvastext" "srgb" "linearrgb" "normal" "auto" "balance" "normal" "auto"
     "normal" "currentcolor" "0px" "0px" "0px" "0px" "none" "normal" "medium" "none" "auto"
     "auto" "none" "none" "none" "none" "none" "none" "normal" "normal" "visible" "auto" "none"
     "round" "round" "round" "round" "round" "round" "round" "round" "none" "none" "none" "none"
@@ -459,62 +459,62 @@ constexpr uint16_t kCssPropertyInitialAt[] = {
     449, 461, 461, 465, 471, 471, 471, 471, 475, 487, 487, 491,
     497, 500, 500, 500, 504, 516, 516, 520, 526, 530, 537, 540,
     543, 543, 543, 547, 559, 562, 562, 565, 569, 575, 575, 579,
-    584, 588, 591, 603, 607, 613, 616, 627, 631, 635, 639, 643,
-    646, 646, 650, 654, 658, 662, 666, 670, 677, 687, 687, 691,
-    700, 706, 710, 717, 723, 727, 727, 733, 745, 745, 745, 748,
-    751, 751, 751, 754, 757, 757, 761, 767, 773, 777, 781, 785,
-    785, 789, 793, 797, 801, 801, 805, 805, 809, 815, 821, 828,
-    832, 836, 836, 836, 836, 836, 836, 836, 836, 841, 841, 846,
-    846, 846, 851, 851, 856, 856, 856, 856, 856, 856, 856, 856,
-    856, 856, 856, 861, 861, 866, 866, 866, 871, 871, 876, 876,
-    880, 884, 888, 888, 892, 896, 900, 903, 906, 910, 913, 919,
-    923, 931, 935, 935, 939, 943, 948, 953, 965, 977, 981, 982,
-    994, 999, 1005, 1012, 1016, 1020, 1020, 1024, 1027, 1027, 1028, 1029,
-    1030, 1036, 1040, 1044, 1047, 1053, 1058, 1059, 1063, 1067, 1073, 1073,
-    1080, 1086, 1090, 1096, 1100, 1106, 1112, 1116, 1122, 1122, 1126, 1130,
-    1134, 1138, 1138, 1144, 1150, 1156, 1162, 1168, 1174, 1180, 1186, 1192,
-    1198, 1203, 1207, 1211, 1215, 1215, 1215, 1215, 1215, 1219, 1222, 1226,
-    1226, 1230, 1234, 1234, 1238, 1242, 1242, 1246, 1250, 1254, 1258, 1262,
-    1266, 1270, 1274, 1282, 1285, 1291, 1297, 1307, 1311, 1316, 1322, 1332,
-    1336, 1340, 1346, 1350, 1350, 1350, 1354, 1358, 1358, 1362, 1366, 1370,
-    1370, 1376, 1382, 1394, 1398, 1404, 1410, 1414, 1418, 1424, 1429, 1433,
-    1433, 1440, 1452, 1458, 1461, 1464, 1468, 1472, 1472, 1476, 1483, 1487,
-    1487, 1487, 1490, 1493, 1496, 1500, 1500, 1503, 1506, 1509, 1512, 1515,
-    1519, 1519, 1523, 1527, 1537, 1541, 1541, 1541, 1546, 1547, 1554, 1555,
-    1559, 1563, 1573, 1576, 1580, 1592, 1602, 1607, 1613, 1617, 1626, 1627,
-    1633, 1639, 1643, 1647, 1651, 1655, 1655, 1659, 1663, 1667, 1671, 1677,
-    1677, 1681, 1687, 1691, 1695, 1699, 1703, 1707, 1714, 1718, 1718, 1722,
-    1725, 1729, 1735, 1739, 1740, 1741, 1742, 1742, 1746, 1749, 1753, 1759,
-    1759, 1763, 1770, 1773, 1776, 1779, 1782, 1785, 1788, 1791, 1794, 1797,
-    1800, 1803, 1810, 1816, 1823, 1830, 1834, 1834, 1838, 1842, 1846, 1850,
-    1850, 1850, 1853, 1856, 1859, 1859, 1862, 1865, 1868, 1871, 1874, 1878,
-    1882, 1886, 1890, 1896, 1900, 1900, 1904, 1908, 1912, 1919, 1919, 1919,
-    1919, 1923, 1923, 1928, 1932, 1938, 1944, 1948, 1948, 1952, 1958, 1972,
-    1979, 1983, 1986, 1992, 1993, 1997, 2001, 2001, 2005, 2009, 2013, 2017,
-    2023, 2023, 2029, 2041, 2041, 2041, 2044, 2047, 2047, 2047, 2050, 2053,
-    2053, 2057, 2063, 2069, 2081, 2089, 2093, 2102, 2102, 2102, 2102, 2102,
-    2102, 2102, 2102, 2102, 2117, 2117, 2117, 2117, 2121, 2125, 2129, 2133,
-    2137, 2141, 2141, 2141, 2144, 2147, 2150, 2150, 2153, 2156, 2159, 2162,
-    2165, 2169, 2169, 2169, 2173, 2177, 2181, 2181, 2185, 2189, 2193, 2197,
-    2201, 2205, 2211, 2215, 2219, 2219, 2224, 2228, 2232, 2236, 2240, 2241,
-    2245, 2248, 2252, 2255, 2259, 2259, 2263, 2267, 2271, 2277, 2281, 2287,
-    2292, 2293, 2297, 2301, 2307, 2313, 2325, 2336, 2340, 2344, 2348, 2352,
-    2356, 2357, 2361, 2365, 2370, 2371, 2372, 2384, 2389, 2395, 2399, 2402,
-    2403, 2407, 2407, 2412, 2416, 2421, 2427, 2427, 2431, 2435, 2439, 2439,
-    2451, 2454, 2458, 2458, 2462, 2466, 2470, 2479, 2484, 2488, 2488, 2500,
-    2504, 2522, 2526, 2530, 2534, 2537, 2541, 2546, 2550, 2554, 2558, 2562,
-    2562, 2568, 2572, 2576, 2580, 2580, 2584, 2588, 2592, 2592, 2592, 2598,
-    2604, 2604, 2608, 2612, 2616, 2620, 2624, 2628, 2632, 2640, 2647, 2651,
-    2651, 2657, 2659, 2661, 2664, 2668, 2672, 2676, 2682, 2686, 2690, 2690,
-    2690, 2695, 2699, 2703, 2707, 2713, 2717, 2721, 2728, 2734, 2738, 2762,
-    2768, 2774, 2780, 2786, 2792, 2792, 2800, 2804, 2805, 2809, 2813, 2817,
-    2823, 2827, 2833, 2837, 2841, 2845, 2849, 2853, 2866, 2869, 2872, 2876,
-    2877, 2877, 2877, 2877, 2877, 2877, 2877, 2877, 2877, 2877, 2877, 2877,
-    2877, 2877, 2877, 2877, 2877, 2877, 2877, 2877, 2877, 2877, 2877, 2877,
-    2877, 2877, 2877, 2877, 2877, 2877, 2877, 2877, 2877, 2877, 2877, 2877,
-    2877, 2877, 2877, 2877, 2877, 2877, 2877, 2877, 2877, 2877, 2877, 2877,
-    2877, 2877, 2877, 2877, 2877, 2877, 2877, 2877, 2877, 2877, 2877, 2877,
-    2877, 2877, 2877, 2877, 2877,
+    584, 584, 587, 599, 603, 609, 612, 623, 627, 631, 635, 639,
+    642, 642, 646, 650, 654, 658, 662, 666, 673, 683, 683, 687,
+    696, 702, 706, 713, 719, 723, 723, 729, 741, 741, 741, 744,
+    747, 747, 747, 750, 753, 753, 757, 763, 769, 773, 777, 781,
+    781, 785, 789, 793, 797, 797, 801, 801, 805, 811, 817, 824,
+    828, 832, 832, 832, 832, 832, 832, 832, 832, 837, 837, 842,
+    842, 842, 847, 847, 852, 852, 852, 852, 852, 852, 852, 852,
+    852, 852, 852, 857, 857, 862, 862, 862, 867, 867, 872, 872,
+    876, 880, 884, 884, 888, 892, 896, 899, 902, 906, 909, 915,
+    919, 927, 931, 931, 935, 939, 944, 949, 961, 973, 977, 978,
+    990, 995, 1001, 1008, 1012, 1016, 1016, 1020, 1023, 1023, 1024, 1025,
+    1026, 1032, 1036, 1040, 1043, 1049, 1054, 1055, 1059, 1063, 1069, 1069,
+    1076, 1082, 1086, 1092, 1096, 1102, 1108, 1112, 1118, 1118, 1122, 1126,
+    1130, 1134, 1134, 1140, 1146, 1152, 1158, 1164, 1170, 1176, 1182, 1188,
+    1194, 1199, 1203, 1207, 1211, 1211, 1211, 1211, 1211, 1215, 1218, 1222,
+    1222, 1226, 1230, 1230, 1234, 1238, 1238, 1242, 1246, 1250, 1254, 1258,
+    1262, 1266, 1270, 1278, 1281, 1287, 1293, 1303, 1307, 1312, 1318, 1328,
+    1332, 1336, 1342, 1346, 1346, 1346, 1350, 1354, 1354, 1358, 1362, 1366,
+    1366, 1372, 1378, 1390, 1394, 1400, 1406, 1410, 1414, 1420, 1425, 1429,
+    1429, 1436, 1448, 1454, 1457, 1460, 1464, 1468, 1468, 1472, 1479, 1483,
+    1483, 1483, 1486, 1489, 1492, 1496, 1496, 1499, 1502, 1505, 1508, 1511,
+    1515, 1515, 1519, 1523, 1533, 1537, 1537, 1537, 1542, 1543, 1550, 1551,
+    1555, 1559, 1569, 1572, 1576, 1588, 1598, 1603, 1609, 1613, 1622, 1623,
+    1629, 1635, 1639, 1643, 1647, 1651, 1651, 1655, 1659, 1663, 1667, 1673,
+    1673, 1677, 1683, 1687, 1691, 1695, 1699, 1703, 1710, 1714, 1714, 1718,
+    1721, 1725, 1731, 1735, 1736, 1737, 1738, 1738, 1742, 1745, 1749, 1755,
+    1755, 1759, 1766, 1769, 1772, 1775, 1778, 1781, 1784, 1787, 1790, 1793,
+    1796, 1799, 1806, 1812, 1819, 1826, 1830, 1830, 1834, 1838, 1842, 1846,
+    1846, 1846, 1849, 1852, 1855, 1855, 1858, 1861, 1864, 1867, 1870, 1874,
+    1878, 1882, 1886, 1892, 1896, 1896, 1900, 1904, 1908, 1915, 1915, 1915,
+    1915, 1919, 1919, 1924, 1928, 1934, 1940, 1944, 1944, 1948, 1954, 1968,
+    1975, 1979, 1982, 1988, 1989, 1993, 1997, 1997, 2001, 2005, 2009, 2013,
+    2019, 2019, 2025, 2037, 2037, 2037, 2040, 2043, 2043, 2043, 2046, 2049,
+    2049, 2053, 2059, 2065, 2077, 2085, 2089, 2098, 2098, 2098, 2098, 2098,
+    2098, 2098, 2098, 2098, 2113, 2113, 2113, 2113, 2117, 2121, 2125, 2129,
+    2133, 2137, 2137, 2137, 2140, 2143, 2146, 2146, 2149, 2152, 2155, 2158,
+    2161, 2165, 2165, 2165, 2169, 2173, 2177, 2177, 2181, 2185, 2189, 2193,
+    2197, 2201, 2207, 2211, 2215, 2215, 2220, 2224, 2228, 2232, 2236, 2237,
+    2241, 2244, 2248, 2251, 2255, 2255, 2259, 2263, 2267, 2273, 2277, 2283,
+    2288, 2289, 2293, 2297, 2303, 2309, 2321, 2332, 2336, 2340, 2344, 2348,
+    2352, 2353, 2357, 2361, 2366, 2367, 2368, 2380, 2385, 2391, 2395, 2398,
+    2399, 2403, 2403, 2408, 2412, 2417, 2423, 2423, 2427, 2431, 2435, 2435,
+    2447, 2450, 2454, 2454, 2458, 2462, 2466, 2475, 2480, 2484, 2484, 2496,
+    2500, 2518, 2522, 2526, 2530, 2533, 2537, 2542, 2546, 2550, 2554, 2558,
+    2558, 2564, 2568, 2572, 2576, 2576, 2580, 2584, 2588, 2588, 2588, 2594,
+    2600, 2600, 2604, 2608, 2612, 2616, 2620, 2624, 2628, 2636, 2643, 2647,
+    2647, 2653, 2655, 2657, 2660, 2664, 2668, 2672, 2678, 2682, 2686, 2686,
+    2686, 2691, 2695, 2699, 2703, 2709, 2713, 2717, 2724, 2730, 2734, 2758,
+    2764, 2770, 2776, 2782, 2788, 2788, 2796, 2800, 2801, 2805, 2809, 2813,
+    2819, 2823, 2829, 2833, 2837, 2841, 2845, 2849, 2862, 2865, 2868, 2872,
+    2873, 2873, 2873, 2873, 2873, 2873, 2873, 2873, 2873, 2873, 2873, 2873,
+    2873, 2873, 2873, 2873, 2873, 2873, 2873, 2873, 2873, 2873, 2873, 2873,
+    2873, 2873, 2873, 2873, 2873, 2873, 2873, 2873, 2873, 2873, 2873, 2873,
+    2873, 2873, 2873, 2873, 2873, 2873, 2873, 2873, 2873, 2873, 2873, 2873,
+    2873, 2873, 2873, 2873, 2873, 2873, 2873, 2873, 2873, 2873, 2873, 2873,
+    2873, 2873, 2873, 2873, 2873,
 };
 
 } // namespace
@@ -1501,605 +1501,605 @@ extern const CssGrammarIndex kCssPropertyGrammarRoot[] = {
     426,   // bottom
     429,   // box-decoration-break
     432,   // box-shadow
-    433,   // box-shadow-blur
-    434,   // box-shadow-color
-    435,   // box-shadow-offset
-    438,   // box-shadow-position
-    441,   // box-shadow-spread
-    442,   // box-sizing
-    445,   // box-snap
-    452,   // break-after
-    452,   // break-before
-    467,   // break-inside
-    473,   // caption-side
-    478,   // caret
-    485,   // caret-animation
-    488,   // caret-color
-    495,   // caret-shape
-    500,   // clear
-    513,   // clip
-    523,   // clip-path
-    529,   // clip-rule
+    447,   // box-shadow-blur
+    448,   // box-shadow-color
+    449,   // box-shadow-offset
+    452,   // box-shadow-position
+    455,   // box-shadow-spread
+    456,   // box-sizing
+    459,   // box-snap
+    466,   // break-after
+    466,   // break-before
+    481,   // break-inside
+    487,   // caption-side
+    492,   // caret
+    499,   // caret-animation
+    502,   // caret-color
+    509,   // caret-shape
+    514,   // clear
+    527,   // clip
+    537,   // clip-path
+    543,   // clip-rule
     4,     // color
-    532,   // color-adjust
-    534,   // color-interpolation
-    534,   // color-interpolation-filters
-    538,   // color-scheme
-    546,   // column-count
-    549,   // column-fill
-    553,   // column-gap
-    557,   // column-height
-    560,   // column-rule
-    632,   // column-rule-break
-    636,   // column-rule-color
-    639,   // column-rule-inset
-    646,   // column-rule-inset-cap
-    647,   // column-rule-inset-cap-end
-    647,   // column-rule-inset-cap-start
-    647,   // column-rule-inset-end
-    646,   // column-rule-inset-junction
-    647,   // column-rule-inset-junction-end
-    647,   // column-rule-inset-junction-start
-    647,   // column-rule-inset-start
-    649,   // column-rule-style
-    652,   // column-rule-visibility-items
-    657,   // column-rule-width
-    660,   // column-span
+    546,   // color-adjust
+    548,   // color-interpolation
+    548,   // color-interpolation-filters
+    552,   // color-scheme
+    560,   // column-count
+    563,   // column-fill
+    567,   // column-gap
+    571,   // column-height
+    574,   // column-rule
+    646,   // column-rule-break
+    650,   // column-rule-color
+    653,   // column-rule-inset
+    660,   // column-rule-inset-cap
+    661,   // column-rule-inset-cap-end
+    661,   // column-rule-inset-cap-start
+    661,   // column-rule-inset-end
+    660,   // column-rule-inset-junction
+    661,   // column-rule-inset-junction-end
+    661,   // column-rule-inset-junction-start
+    661,   // column-rule-inset-start
+    663,   // column-rule-style
+    666,   // column-rule-visibility-items
+    671,   // column-rule-width
+    674,   // column-span
     229,   // column-width
-    665,   // column-wrap
-    669,   // columns
-    679,   // contain
-    690,   // contain-intrinsic-block-size
-    690,   // contain-intrinsic-height
-    690,   // contain-intrinsic-inline-size
-    695,   // contain-intrinsic-size
-    690,   // contain-intrinsic-width
-    701,   // container
-    708,   // container-name
-    711,   // container-type
-    718,   // content
-    740,   // content-visibility
-    744,   // continue
-    752,   // copy-into
-    762,   // corner
-    765,   // corner-block-end
-    768,   // corner-block-end-shape
-    765,   // corner-block-start
-    768,   // corner-block-start-shape
-    765,   // corner-bottom
-    769,   // corner-bottom-left
-    772,   // corner-bottom-left-shape
-    769,   // corner-bottom-right
-    772,   // corner-bottom-right-shape
-    768,   // corner-bottom-shape
-    769,   // corner-end-end
-    772,   // corner-end-end-shape
-    769,   // corner-end-start
-    772,   // corner-end-start-shape
-    765,   // corner-inline-end
-    768,   // corner-inline-end-shape
-    765,   // corner-inline-start
-    768,   // corner-inline-start-shape
-    765,   // corner-left
-    768,   // corner-left-shape
-    765,   // corner-right
-    768,   // corner-right-shape
-    773,   // corner-shape
-    769,   // corner-start-end
-    772,   // corner-start-end-shape
-    769,   // corner-start-start
-    772,   // corner-start-start-shape
-    765,   // corner-top
-    769,   // corner-top-left
-    772,   // corner-top-left-shape
-    769,   // corner-top-right
-    772,   // corner-top-right-shape
-    774,   // corner-top-shape
-    775,   // counter-increment
-    780,   // counter-reset
-    775,   // counter-set
-    789,   // cue
-    792,   // cue-after
-    792,   // cue-before
-    797,   // cursor
-    802,   // cx
-    802,   // cy
-    803,   // d
-    806,   // direction
-    809,   // display
-    824,   // dominant-baseline
-    827,   // dynamic-range-limit
-    832,   // empty-cells
-    835,   // event-trigger
-    840,   // event-trigger-name
-    843,   // event-trigger-source
-    850,   // field-sizing
-    853,   // fill
-    854,   // fill-break
+    679,   // column-wrap
+    683,   // columns
+    693,   // contain
+    704,   // contain-intrinsic-block-size
+    704,   // contain-intrinsic-height
+    704,   // contain-intrinsic-inline-size
+    709,   // contain-intrinsic-size
+    704,   // contain-intrinsic-width
+    715,   // container
+    722,   // container-name
+    725,   // container-type
+    732,   // content
+    754,   // content-visibility
+    758,   // continue
+    766,   // copy-into
+    776,   // corner
+    779,   // corner-block-end
+    782,   // corner-block-end-shape
+    779,   // corner-block-start
+    782,   // corner-block-start-shape
+    779,   // corner-bottom
+    783,   // corner-bottom-left
+    786,   // corner-bottom-left-shape
+    783,   // corner-bottom-right
+    786,   // corner-bottom-right-shape
+    782,   // corner-bottom-shape
+    783,   // corner-end-end
+    786,   // corner-end-end-shape
+    783,   // corner-end-start
+    786,   // corner-end-start-shape
+    779,   // corner-inline-end
+    782,   // corner-inline-end-shape
+    779,   // corner-inline-start
+    782,   // corner-inline-start-shape
+    779,   // corner-left
+    782,   // corner-left-shape
+    779,   // corner-right
+    782,   // corner-right-shape
+    787,   // corner-shape
+    783,   // corner-start-end
+    786,   // corner-start-end-shape
+    783,   // corner-start-start
+    786,   // corner-start-start-shape
+    779,   // corner-top
+    783,   // corner-top-left
+    786,   // corner-top-left-shape
+    783,   // corner-top-right
+    786,   // corner-top-right-shape
+    788,   // corner-top-shape
+    789,   // counter-increment
+    794,   // counter-reset
+    789,   // counter-set
+    803,   // cue
+    806,   // cue-after
+    806,   // cue-before
+    811,   // cursor
+    816,   // cx
+    816,   // cy
+    817,   // d
+    820,   // direction
+    823,   // display
+    838,   // dominant-baseline
+    841,   // dynamic-range-limit
+    846,   // empty-cells
+    849,   // event-trigger
+    854,   // event-trigger-name
+    857,   // event-trigger-source
+    864,   // field-sizing
+    867,   // fill
+    868,   // fill-break
     4,     // fill-color
-    858,   // fill-image
-    859,   // fill-opacity
-    860,   // fill-origin
-    867,   // fill-position
+    872,   // fill-image
+    873,   // fill-opacity
+    874,   // fill-origin
+    881,   // fill-position
     211,   // fill-repeat
-    529,   // fill-rule
+    543,   // fill-rule
     213,   // fill-size
     134,   // filter
-    868,   // flex
-    878,   // flex-basis
-    881,   // flex-direction
-    886,   // flex-flow
-    891,   // flex-grow
-    892,   // flex-line-count
-    891,   // flex-shrink
-    893,   // flex-wrap
-    900,   // float
-    915,   // float-defer
-    802,   // float-offset
-    919,   // float-reference
+    882,   // flex
+    892,   // flex-basis
+    895,   // flex-direction
+    900,   // flex-flow
+    905,   // flex-grow
+    906,   // flex-line-count
+    905,   // flex-shrink
+    907,   // flex-wrap
+    914,   // float
+    929,   // float-defer
+    816,   // float-offset
+    933,   // float-reference
     4,     // flood-color
-    859,   // flood-opacity
-    924,   // flow-from
-    927,   // flow-into
-    934,   // flow-tolerance
-    938,   // font
-    958,   // font-family
-    961,   // font-feature-settings
-    964,   // font-kerning
-    968,   // font-language-override
-    971,   // font-optical-sizing
-    974,   // font-palette
-    980,   // font-size
-    985,   // font-size-adjust
-    997,   // font-style
-    1005,  // font-synthesis
-    971,   // font-synthesis-position
-    971,   // font-synthesis-small-caps
-    1012,  // font-synthesis-style
-    971,   // font-synthesis-weight
-    1016,  // font-variant
-    1070,  // font-variant-alternates
-    1086,  // font-variant-caps
-    1094,  // font-variant-east-asian
-    1100,  // font-variant-emoji
-    1105,  // font-variant-ligatures
-    1113,  // font-variant-numeric
-    1121,  // font-variant-position
-    1125,  // font-variation-settings
-    1130,  // font-weight
-    1134,  // font-width
-    1145,  // footnote-display
-    1149,  // footnote-policy
-    1153,  // forced-color-adjust
-    1157,  // frame-sizing
-    1163,  // gap
-    1166,  // glyph-orientation-vertical
-    1172,  // grid
-    1193,  // grid-area
-    1198,  // grid-auto-columns
-    1199,  // grid-auto-flow
-    1198,  // grid-auto-rows
-    1204,  // grid-column
-    1194,  // grid-column-end
-    1194,  // grid-column-start
-    1204,  // grid-row
-    1194,  // grid-row-end
-    1194,  // grid-row-start
-    1209,  // grid-template
-    1227,  // grid-template-areas
-    1230,  // grid-template-columns
-    1230,  // grid-template-rows
-    1237,  // hanging-punctuation
+    873,   // flood-opacity
+    938,   // flow-from
+    941,   // flow-into
+    948,   // flow-tolerance
+    952,   // font
+    972,   // font-family
+    975,   // font-feature-settings
+    978,   // font-kerning
+    982,   // font-language-override
+    985,   // font-optical-sizing
+    988,   // font-palette
+    994,   // font-size
+    999,   // font-size-adjust
+    1011,  // font-style
+    1019,  // font-synthesis
+    985,   // font-synthesis-position
+    985,   // font-synthesis-small-caps
+    1026,  // font-synthesis-style
+    985,   // font-synthesis-weight
+    1030,  // font-variant
+    1084,  // font-variant-alternates
+    1100,  // font-variant-caps
+    1108,  // font-variant-east-asian
+    1114,  // font-variant-emoji
+    1119,  // font-variant-ligatures
+    1127,  // font-variant-numeric
+    1135,  // font-variant-position
+    1139,  // font-variation-settings
+    1144,  // font-weight
+    1148,  // font-width
+    1159,  // footnote-display
+    1163,  // footnote-policy
+    1167,  // forced-color-adjust
+    1171,  // frame-sizing
+    1177,  // gap
+    1180,  // glyph-orientation-vertical
+    1186,  // grid
+    1207,  // grid-area
+    1212,  // grid-auto-columns
+    1213,  // grid-auto-flow
+    1212,  // grid-auto-rows
+    1218,  // grid-column
+    1208,  // grid-column-end
+    1208,  // grid-column-start
+    1218,  // grid-row
+    1208,  // grid-row-end
+    1208,  // grid-row-start
+    1223,  // grid-template
+    1241,  // grid-template-areas
+    1244,  // grid-template-columns
+    1244,  // grid-template-rows
+    1251,  // hanging-punctuation
     229,   // height
-    1245,  // hyphenate-character
-    1248,  // hyphenate-limit-chars
-    1251,  // hyphenate-limit-last
-    1257,  // hyphenate-limit-lines
-    802,   // hyphenate-limit-zone
-    1260,  // hyphens
-    1264,  // image-animation
-    1269,  // image-orientation
-    1275,  // image-rendering
-    1281,  // image-resolution
-    1286,  // initial-letter
-    1296,  // initial-letter-align
-    1303,  // initial-letter-wrap
+    1259,  // hyphenate-character
+    1262,  // hyphenate-limit-chars
+    1265,  // hyphenate-limit-last
+    1271,  // hyphenate-limit-lines
+    816,   // hyphenate-limit-zone
+    1274,  // hyphens
+    1278,  // image-animation
+    1283,  // image-orientation
+    1289,  // image-rendering
+    1295,  // image-resolution
+    1300,  // initial-letter
+    1310,  // initial-letter-align
+    1317,  // initial-letter-wrap
     229,   // inline-size
-    1309,  // inline-sizing
-    971,   // input-security
-    1312,  // inset
-    1313,  // inset-block
+    1323,  // inline-sizing
+    985,   // input-security
+    1326,  // inset
+    1327,  // inset-block
     426,   // inset-block-end
     426,   // inset-block-start
-    1313,  // inset-inline
+    1327,  // inset-inline
     426,   // inset-inline-end
     426,   // inset-inline-start
-    1314,  // interactivity
-    1317,  // interest-delay
-    1318,  // interest-delay-end
-    1318,  // interest-delay-start
-    1321,  // interpolate-size
-    1324,  // isolation
-    1325,  // justify-content
-    1334,  // justify-items
-    1351,  // justify-self
+    1328,  // interactivity
+    1331,  // interest-delay
+    1332,  // interest-delay-end
+    1332,  // interest-delay-start
+    1335,  // interpolate-size
+    1338,  // isolation
+    1339,  // justify-content
+    1348,  // justify-items
+    1365,  // justify-self
     426,   // left
-    1363,  // letter-spacing
+    1377,  // letter-spacing
     4,     // lighting-color
-    1366,  // line-break
-    1372,  // line-clamp
-    1379,  // line-fit-edge
-    1382,  // line-grid
-    1385,  // line-height
-    1389,  // line-height-step
-    1390,  // line-padding
-    1391,  // line-snap
-    1395,  // link-parameters
-    1398,  // list-style
-    1405,  // list-style-image
-    1408,  // list-style-position
-    1411,  // list-style-type
-    1415,  // margin
-    1416,  // margin-block
-    1417,  // margin-block-end
-    1417,  // margin-block-start
-    1418,  // margin-bottom
-    1421,  // margin-break
-    1416,  // margin-inline
-    1417,  // margin-inline-end
-    1417,  // margin-inline-start
-    1418,  // margin-left
-    1418,  // margin-right
-    1418,  // margin-top
-    1425,  // margin-trim
-    1431,  // marker
-    1433,  // marker-end
-    1433,  // marker-mid
-    1436,  // marker-side
-    1433,  // marker-start
-    1439,  // mask
-    1461,  // mask-border
-    1479,  // mask-border-mode
+    1380,  // line-break
+    1386,  // line-clamp
+    1393,  // line-fit-edge
+    1396,  // line-grid
+    1399,  // line-height
+    1403,  // line-height-step
+    1404,  // line-padding
+    1405,  // line-snap
+    1409,  // link-parameters
+    1412,  // list-style
+    1419,  // list-style-image
+    1422,  // list-style-position
+    1425,  // list-style-type
+    1429,  // margin
+    1430,  // margin-block
+    1431,  // margin-block-end
+    1431,  // margin-block-start
+    1432,  // margin-bottom
+    1435,  // margin-break
+    1430,  // margin-inline
+    1431,  // margin-inline-end
+    1431,  // margin-inline-start
+    1432,  // margin-left
+    1432,  // margin-right
+    1432,  // margin-top
+    1439,  // margin-trim
+    1445,  // marker
+    1447,  // marker-end
+    1447,  // marker-mid
+    1450,  // marker-side
+    1447,  // marker-start
+    1453,  // mask
+    1475,  // mask-border
+    1493,  // mask-border-mode
     336,   // mask-border-outset
     338,   // mask-border-repeat
     325,   // mask-border-slice
     322,   // mask-border-source
     330,   // mask-border-width
-    1482,  // mask-clip
-    1485,  // mask-composite
-    1486,  // mask-image
-    1487,  // mask-mode
-    1488,  // mask-origin
-    867,   // mask-position
+    1496,  // mask-clip
+    1499,  // mask-composite
+    1500,  // mask-image
+    1501,  // mask-mode
+    1502,  // mask-origin
+    881,   // mask-position
     211,   // mask-repeat
     213,   // mask-size
-    1479,  // mask-type
-    1489,  // math-depth
-    1494,  // math-shift
-    1494,  // math-style
-    1497,  // max-block-size
-    1497,  // max-height
-    1497,  // max-inline-size
+    1493,  // mask-type
+    1503,  // math-depth
+    1508,  // math-shift
+    1508,  // math-style
+    1511,  // max-block-size
+    1511,  // max-height
+    1511,  // max-inline-size
     1,     // max-lines
-    1500,  // max-size
-    1497,  // max-width
+    1514,  // max-size
+    1511,  // max-width
     229,   // min-block-size
     229,   // min-height
     229,   // min-inline-size
-    1503,  // min-intrinsic-sizing
-    1508,  // min-size
+    1517,  // min-intrinsic-sizing
+    1522,  // min-size
     229,   // min-width
-    1511,  // mix-blend-mode
-    1514,  // nav-down
-    1514,  // nav-left
-    1514,  // nav-right
-    1514,  // nav-up
-    1522,  // object-fit
-    1444,  // object-position
-    1530,  // object-view-box
-    1533,  // offset
-    1549,  // offset-anchor
-    802,   // offset-distance
-    1552,  // offset-path
-    1557,  // offset-position
-    1561,  // offset-rotate
-    1566,  // opacity
-    1567,  // order
-    892,   // orphans
-    1568,  // outline
-    1575,  // outline-color
-    1390,  // outline-offset
-    1578,  // outline-style
+    1525,  // mix-blend-mode
+    1528,  // nav-down
+    1528,  // nav-left
+    1528,  // nav-right
+    1528,  // nav-up
+    1536,  // object-fit
+    1458,  // object-position
+    1544,  // object-view-box
+    1547,  // offset
+    1563,  // offset-anchor
+    816,   // offset-distance
+    1566,  // offset-path
+    1571,  // offset-position
+    1575,  // offset-rotate
+    1580,  // opacity
+    1581,  // order
+    906,   // orphans
+    1582,  // outline
+    1589,  // outline-color
+    1404,  // outline-offset
+    1592,  // outline-style
     7,     // outline-width
-    1581,  // overflow
-    971,   // overflow-anchor
-    1582,  // overflow-block
-    1588,  // overflow-clip-margin
-    1591,  // overflow-clip-margin-block
-    1591,  // overflow-clip-margin-block-end
-    1591,  // overflow-clip-margin-block-start
-    1591,  // overflow-clip-margin-bottom
-    1591,  // overflow-clip-margin-inline
-    1591,  // overflow-clip-margin-inline-end
-    1591,  // overflow-clip-margin-inline-start
-    1591,  // overflow-clip-margin-left
-    1591,  // overflow-clip-margin-right
-    1591,  // overflow-clip-margin-top
-    1582,  // overflow-inline
-    1594,  // overflow-wrap
-    1582,  // overflow-x
-    1582,  // overflow-y
-    1598,  // overlay
-    1601,  // overscroll-behavior
-    1606,  // overscroll-behavior-block
-    1606,  // overscroll-behavior-inline
-    1606,  // overscroll-behavior-x
-    1606,  // overscroll-behavior-y
-    1611,  // padding
-    1612,  // padding-block
-    1613,  // padding-block-end
-    1613,  // padding-block-start
-    1614,  // padding-bottom
-    1612,  // padding-inline
-    1613,  // padding-inline-end
-    1613,  // padding-inline-start
-    1614,  // padding-left
-    1614,  // padding-right
-    1614,  // padding-top
-    1615,  // page
-    1618,  // page-break-after
-    1618,  // page-break-before
-    1625,  // page-break-inside
-    1629,  // paint-order
+    1595,  // overflow
+    985,   // overflow-anchor
+    1596,  // overflow-block
+    1602,  // overflow-clip-margin
+    1605,  // overflow-clip-margin-block
+    1605,  // overflow-clip-margin-block-end
+    1605,  // overflow-clip-margin-block-start
+    1605,  // overflow-clip-margin-bottom
+    1605,  // overflow-clip-margin-inline
+    1605,  // overflow-clip-margin-inline-end
+    1605,  // overflow-clip-margin-inline-start
+    1605,  // overflow-clip-margin-left
+    1605,  // overflow-clip-margin-right
+    1605,  // overflow-clip-margin-top
+    1596,  // overflow-inline
+    1608,  // overflow-wrap
+    1596,  // overflow-x
+    1596,  // overflow-y
+    1612,  // overlay
+    1615,  // overscroll-behavior
+    1620,  // overscroll-behavior-block
+    1620,  // overscroll-behavior-inline
+    1620,  // overscroll-behavior-x
+    1620,  // overscroll-behavior-y
+    1625,  // padding
+    1626,  // padding-block
+    1627,  // padding-block-end
+    1627,  // padding-block-start
+    1628,  // padding-bottom
+    1626,  // padding-inline
+    1627,  // padding-inline-end
+    1627,  // padding-inline-start
+    1628,  // padding-left
+    1628,  // padding-right
+    1628,  // padding-top
+    1629,  // page
+    1632,  // page-break-after
+    1632,  // page-break-before
+    1639,  // page-break-inside
+    1643,  // paint-order
     254,   // path-length
-    1635,  // pause
-    1638,  // pause-after
-    1638,  // pause-before
+    1649,  // pause
+    1652,  // pause-after
+    1652,  // pause-before
     254,   // perspective
-    1444,  // perspective-origin
-    1646,  // place-content
-    1651,  // place-items
-    1656,  // place-self
-    1661,  // pointer-events
-    1673,  // pointer-timeline
-    1678,  // pointer-timeline-axis
-    1683,  // pointer-timeline-name
-    1686,  // position
-    1693,  // position-anchor
-    1699,  // position-area
-    1702,  // position-try
-    1707,  // position-try-fallbacks
-    1714,  // position-try-order
-    1717,  // position-visibility
-    1723,  // print-color-adjust
-    1726,  // quotes
-    1614,  // r
-    1733,  // reading-flow
-    1567,  // reading-order
-    1741,  // region-fragment
-    1744,  // resize
-    1751,  // rest
-    1638,  // rest-after
-    1638,  // rest-before
+    1458,  // perspective-origin
+    1660,  // place-content
+    1665,  // place-items
+    1670,  // place-self
+    1675,  // pointer-events
+    1687,  // pointer-timeline
+    1692,  // pointer-timeline-axis
+    1697,  // pointer-timeline-name
+    1700,  // position
+    1707,  // position-anchor
+    1713,  // position-area
+    1716,  // position-try
+    1721,  // position-try-fallbacks
+    1728,  // position-try-order
+    1731,  // position-visibility
+    1737,  // print-color-adjust
+    1740,  // quotes
+    1628,  // r
+    1747,  // reading-flow
+    1581,  // reading-order
+    1755,  // region-fragment
+    1758,  // resize
+    1765,  // rest
+    1652,  // rest-after
+    1652,  // rest-before
     426,   // right
-    1754,  // rotate
-    553,   // row-gap
-    1764,  // row-rule
-    632,   // row-rule-break
-    636,   // row-rule-color
-    1836,  // row-rule-inset
-    646,   // row-rule-inset-cap
-    647,   // row-rule-inset-cap-end
-    647,   // row-rule-inset-cap-start
-    647,   // row-rule-inset-end
-    646,   // row-rule-inset-junction
-    647,   // row-rule-inset-junction-end
-    647,   // row-rule-inset-junction-start
-    647,   // row-rule-inset-start
-    649,   // row-rule-style
-    652,   // row-rule-visibility-items
-    657,   // row-rule-width
-    1843,  // ruby-align
-    1848,  // ruby-merge
-    1852,  // ruby-overhang
-    1855,  // ruby-position
-    1862,  // rule
-    1864,  // rule-break
-    1866,  // rule-color
-    1868,  // rule-inset
-    640,   // rule-inset-cap
-    1870,  // rule-inset-end
-    644,   // rule-inset-junction
-    1872,  // rule-inset-start
-    1874,  // rule-overlap
-    1877,  // rule-style
-    1879,  // rule-visibility-items
-    1881,  // rule-width
-    1883,  // rx
-    1883,  // ry
-    1886,  // scale
-    971,   // scroll-axis-lock
-    1891,  // scroll-behavior
-    1894,  // scroll-initial-target
-    1897,  // scroll-margin
-    1898,  // scroll-margin-block
-    1390,  // scroll-margin-block-end
-    1390,  // scroll-margin-block-start
-    1390,  // scroll-margin-bottom
-    1898,  // scroll-margin-inline
-    1390,  // scroll-margin-inline-end
-    1390,  // scroll-margin-inline-start
-    1390,  // scroll-margin-left
-    1390,  // scroll-margin-right
-    1390,  // scroll-margin-top
-    1899,  // scroll-marker-group
-    1908,  // scroll-padding
-    1911,  // scroll-padding-block
-    1914,  // scroll-padding-block-end
-    1914,  // scroll-padding-block-start
-    1914,  // scroll-padding-bottom
-    1911,  // scroll-padding-inline
-    1914,  // scroll-padding-inline-end
-    1914,  // scroll-padding-inline-start
-    1914,  // scroll-padding-left
-    1914,  // scroll-padding-right
-    1914,  // scroll-padding-top
-    1917,  // scroll-snap-align
-    1922,  // scroll-snap-stop
-    1925,  // scroll-snap-type
-    1598,  // scroll-target-group
-    1938,  // scroll-timeline
-    1678,  // scroll-timeline-axis
-    1683,  // scroll-timeline-name
-    1943,  // scrollbar-color
-    1946,  // scrollbar-gutter
-    1951,  // scrollbar-width
-    1566,  // shape-image-threshold
-    1955,  // shape-inside
-    1614,  // shape-margin
-    1963,  // shape-outside
-    1614,  // shape-padding
-    1969,  // shape-rendering
-    1974,  // size
-    1977,  // slider-orientation
-    1983,  // spatial-navigation-action
-    1987,  // spatial-navigation-contain
-    1990,  // spatial-navigation-function
-    1993,  // speak
-    1997,  // speak-as
+    1768,  // rotate
+    567,   // row-gap
+    1778,  // row-rule
+    646,   // row-rule-break
+    650,   // row-rule-color
+    1850,  // row-rule-inset
+    660,   // row-rule-inset-cap
+    661,   // row-rule-inset-cap-end
+    661,   // row-rule-inset-cap-start
+    661,   // row-rule-inset-end
+    660,   // row-rule-inset-junction
+    661,   // row-rule-inset-junction-end
+    661,   // row-rule-inset-junction-start
+    661,   // row-rule-inset-start
+    663,   // row-rule-style
+    666,   // row-rule-visibility-items
+    671,   // row-rule-width
+    1857,  // ruby-align
+    1862,  // ruby-merge
+    1866,  // ruby-overhang
+    1869,  // ruby-position
+    1876,  // rule
+    1878,  // rule-break
+    1880,  // rule-color
+    1882,  // rule-inset
+    654,   // rule-inset-cap
+    1884,  // rule-inset-end
+    658,   // rule-inset-junction
+    1886,  // rule-inset-start
+    1888,  // rule-overlap
+    1891,  // rule-style
+    1893,  // rule-visibility-items
+    1895,  // rule-width
+    1897,  // rx
+    1897,  // ry
+    1900,  // scale
+    985,   // scroll-axis-lock
+    1905,  // scroll-behavior
+    1908,  // scroll-initial-target
+    1911,  // scroll-margin
+    1912,  // scroll-margin-block
+    1404,  // scroll-margin-block-end
+    1404,  // scroll-margin-block-start
+    1404,  // scroll-margin-bottom
+    1912,  // scroll-margin-inline
+    1404,  // scroll-margin-inline-end
+    1404,  // scroll-margin-inline-start
+    1404,  // scroll-margin-left
+    1404,  // scroll-margin-right
+    1404,  // scroll-margin-top
+    1913,  // scroll-marker-group
+    1922,  // scroll-padding
+    1925,  // scroll-padding-block
+    1928,  // scroll-padding-block-end
+    1928,  // scroll-padding-block-start
+    1928,  // scroll-padding-bottom
+    1925,  // scroll-padding-inline
+    1928,  // scroll-padding-inline-end
+    1928,  // scroll-padding-inline-start
+    1928,  // scroll-padding-left
+    1928,  // scroll-padding-right
+    1928,  // scroll-padding-top
+    1931,  // scroll-snap-align
+    1936,  // scroll-snap-stop
+    1939,  // scroll-snap-type
+    1612,  // scroll-target-group
+    1952,  // scroll-timeline
+    1692,  // scroll-timeline-axis
+    1697,  // scroll-timeline-name
+    1957,  // scrollbar-color
+    1960,  // scrollbar-gutter
+    1965,  // scrollbar-width
+    1580,  // shape-image-threshold
+    1969,  // shape-inside
+    1628,  // shape-margin
+    1977,  // shape-outside
+    1628,  // shape-padding
+    1983,  // shape-rendering
+    1988,  // size
+    1991,  // slider-orientation
+    1997,  // spatial-navigation-action
+    2001,  // spatial-navigation-contain
+    2004,  // spatial-navigation-function
+    2007,  // speak
+    2011,  // speak-as
     4,     // stop-color
-    859,   // stop-opacity
-    2005,  // string-set
-    853,   // stroke
-    2010,  // stroke-align
-    2014,  // stroke-alignment
-    854,   // stroke-break
-    2018,  // stroke-color
-    2019,  // stroke-dash-corner
-    2022,  // stroke-dash-justify
-    2031,  // stroke-dashadjust
-    2040,  // stroke-dasharray
-    2019,  // stroke-dashcorner
-    2043,  // stroke-dashoffset
-    858,   // stroke-image
-    2046,  // stroke-linecap
-    2050,  // stroke-linejoin
-    2059,  // stroke-miterlimit
-    859,   // stroke-opacity
-    860,   // stroke-origin
-    867,   // stroke-position
+    873,   // stop-opacity
+    2019,  // string-set
+    867,   // stroke
+    2024,  // stroke-align
+    2028,  // stroke-alignment
+    868,   // stroke-break
+    2032,  // stroke-color
+    2033,  // stroke-dash-corner
+    2036,  // stroke-dash-justify
+    2045,  // stroke-dashadjust
+    2054,  // stroke-dasharray
+    2033,  // stroke-dashcorner
+    2057,  // stroke-dashoffset
+    872,   // stroke-image
+    2060,  // stroke-linecap
+    2064,  // stroke-linejoin
+    2073,  // stroke-miterlimit
+    873,   // stroke-opacity
+    874,   // stroke-origin
+    881,   // stroke-position
     211,   // stroke-repeat
     213,   // stroke-size
-    2060,  // stroke-width
-    2063,  // tab-size
-    2066,  // table-layout
-    2069,  // text-align
-    2079,  // text-align-all
-    2088,  // text-align-last
-    2097,  // text-anchor
-    2101,  // text-autospace
-    2105,  // text-box
-    2112,  // text-box-edge
-    2115,  // text-box-trim
-    2120,  // text-combine-upright
-    2126,  // text-decoration
+    2074,  // stroke-width
+    2077,  // tab-size
+    2080,  // table-layout
+    2083,  // text-align
+    2093,  // text-align-all
+    2102,  // text-align-last
+    2111,  // text-anchor
+    2115,  // text-autospace
+    2119,  // text-box
+    2126,  // text-box-edge
+    2129,  // text-box-trim
+    2134,  // text-combine-upright
+    2140,  // text-decoration
     4,     // text-decoration-color
-    2135,  // text-decoration-inset
-    2138,  // text-decoration-line
-    1598,  // text-decoration-skip
-    2147,  // text-decoration-skip-box
-    2150,  // text-decoration-skip-ink
-    2154,  // text-decoration-skip-self
-    2162,  // text-decoration-skip-spaces
-    2168,  // text-decoration-style
-    2174,  // text-decoration-thickness
-    2179,  // text-emphasis
+    2149,  // text-decoration-inset
+    2152,  // text-decoration-line
+    1612,  // text-decoration-skip
+    2161,  // text-decoration-skip-box
+    2164,  // text-decoration-skip-ink
+    2168,  // text-decoration-skip-self
+    2176,  // text-decoration-skip-spaces
+    2182,  // text-decoration-style
+    2188,  // text-decoration-thickness
+    2193,  // text-emphasis
     4,     // text-emphasis-color
-    2184,  // text-emphasis-position
-    2191,  // text-emphasis-skip
-    2196,  // text-emphasis-style
-    2209,  // text-fit
-    2219,  // text-group-align
-    2226,  // text-indent
-    2230,  // text-justify
-    2238,  // text-orientation
-    2242,  // text-overflow
-    2248,  // text-rendering
-    2253,  // text-shadow
-    2256,  // text-size-adjust
-    2260,  // text-spacing
-    2266,  // text-spacing-trim
-    2269,  // text-transform
+    2198,  // text-emphasis-position
+    2205,  // text-emphasis-skip
+    2210,  // text-emphasis-style
+    2223,  // text-fit
+    2233,  // text-group-align
+    2240,  // text-indent
+    2244,  // text-justify
+    2252,  // text-orientation
+    2256,  // text-overflow
+    2262,  // text-rendering
+    2267,  // text-shadow
+    2270,  // text-size-adjust
+    2274,  // text-spacing
+    2280,  // text-spacing-trim
+    2283,  // text-transform
     426,   // text-underline-offset
-    2296,  // text-underline-position
-    2305,  // text-wrap
-    2310,  // text-wrap-mode
-    2313,  // text-wrap-style
-    2319,  // timeline-scope
-    2323,  // timeline-trigger
-    2332,  // timeline-trigger-activation-range
+    2310,  // text-underline-position
+    2319,  // text-wrap
+    2324,  // text-wrap-mode
+    2327,  // text-wrap-style
+    2333,  // timeline-scope
+    2337,  // timeline-trigger
+    2346,  // timeline-trigger-activation-range
     105,   // timeline-trigger-activation-range-end
     111,   // timeline-trigger-activation-range-start
-    2335,  // timeline-trigger-active-range
-    2338,  // timeline-trigger-active-range-end
-    2345,  // timeline-trigger-active-range-start
-    840,   // timeline-trigger-name
-    2352,  // timeline-trigger-source
+    2349,  // timeline-trigger-active-range
+    2352,  // timeline-trigger-active-range-end
+    2359,  // timeline-trigger-active-range-start
+    854,   // timeline-trigger-name
+    2366,  // timeline-trigger-source
     426,   // top
-    2359,  // touch-action
-    2373,  // transform
-    2376,  // transform-box
-    2382,  // transform-origin
-    2413,  // transform-style
-    2416,  // transition
-    2429,  // transition-behavior
-    2430,  // transition-delay
-    2431,  // transition-duration
-    2432,  // transition-property
+    2373,  // touch-action
+    2387,  // transform
+    2390,  // transform-box
+    2396,  // transform-origin
+    2427,  // transform-style
+    2430,  // transition
+    2443,  // transition-behavior
+    2444,  // transition-delay
+    2445,  // transition-duration
+    2446,  // transition-property
     118,   // transition-timing-function
-    2435,  // translate
-    2319,  // trigger-scope
-    2442,  // unicode-bidi
-    2449,  // user-select
-    2455,  // vector-effect
-    2462,  // vertical-align
-    2471,  // view-timeline
-    1678,  // view-timeline-axis
-    2479,  // view-timeline-inset
-    1683,  // view-timeline-name
-    708,   // view-transition-class
-    2483,  // view-transition-group
-    2488,  // view-transition-name
-    2147,  // view-transition-scope
-    2491,  // visibility
-    2496,  // voice-balance
-    2503,  // voice-duration
-    2506,  // voice-family
-    2511,  // voice-pitch
-    2511,  // voice-range
-    2526,  // voice-rate
-    2535,  // voice-stress
-    2541,  // voice-volume
-    2551,  // white-space
-    2563,  // white-space-collapse
-    2570,  // white-space-trim
-    892,   // widows
+    2449,  // translate
+    2333,  // trigger-scope
+    2456,  // unicode-bidi
+    2463,  // user-select
+    2469,  // vector-effect
+    2476,  // vertical-align
+    2485,  // view-timeline
+    1692,  // view-timeline-axis
+    2493,  // view-timeline-inset
+    1697,  // view-timeline-name
+    722,   // view-transition-class
+    2497,  // view-transition-group
+    2502,  // view-transition-name
+    2161,  // view-transition-scope
+    2505,  // visibility
+    2510,  // voice-balance
+    2517,  // voice-duration
+    2520,  // voice-family
+    2525,  // voice-pitch
+    2525,  // voice-range
+    2540,  // voice-rate
+    2549,  // voice-stress
+    2555,  // voice-volume
+    2565,  // white-space
+    2577,  // white-space-collapse
+    2584,  // white-space-trim
+    906,   // widows
     229,   // width
-    2576,  // will-change
-    2579,  // window-drag
-    2582,  // word-break
-    2589,  // word-space-transform
-    1363,  // word-spacing
-    2596,  // wrap-after
-    2596,  // wrap-before
-    2603,  // wrap-flow
-    2611,  // wrap-inside
-    2614,  // wrap-through
-    2617,  // writing-mode
-    802,   // x
-    802,   // y
-    2629,  // z-index
-    2633,  // zoom
+    2590,  // will-change
+    2593,  // window-drag
+    2596,  // word-break
+    2603,  // word-space-transform
+    1377,  // word-spacing
+    2610,  // wrap-after
+    2610,  // wrap-before
+    2617,  // wrap-flow
+    2625,  // wrap-inside
+    2628,  // wrap-through
+    2631,  // writing-mode
+    816,   // x
+    816,   // y
+    2643,  // z-index
+    2647,  // zoom
     0,     // -webkit-align-content
     0,     // -webkit-align-items
     0,     // -webkit-align-self
@@ -6106,7 +6106,7 @@ extern const CssShorthand kCssPropertyShorthand[PrCssProperty_Count] = {
     CssShorthand_Box,                       // border-width
     CssShorthand_None,                      // bottom
     CssShorthand_None,                      // box-decoration-break
-    CssShorthand_None,                      // box-shadow
+    CssShorthand_BoxShadow,                 // box-shadow
     CssShorthand_None,                      // box-shadow-blur
     CssShorthand_None,                      // box-shadow-color
     CssShorthand_None,                      // box-shadow-offset
@@ -6789,7 +6789,7 @@ extern const CssPropertySpan kCssPropertyLonghands[PrCssProperty_Count] = {
     { 0, 0 },      // align-items
     { 0, 0 },      // align-self
     { 0, 0 },      // alignment-baseline
-    { 352, 615 },  // all
+    { 357, 614 },  // all
     { 0, 0 },      // anchor-name
     { 0, 0 },      // anchor-scope
     { 163, 11 },   // animation
@@ -6814,7 +6814,7 @@ extern const CssPropertySpan kCssPropertyLonghands[PrCssProperty_Count] = {
     { 0, 0 },      // aspect-ratio
     { 0, 0 },      // backdrop-filter
     { 0, 0 },      // backface-visibility
-    { 204, 8 },    // background
+    { 209, 8 },    // background
     { 0, 0 },      // background-attachment
     { 0, 0 },      // background-blend-mode
     { 0, 0 },      // background-clip
@@ -6836,7 +6836,7 @@ extern const CssPropertySpan kCssPropertyLonghands[PrCssProperty_Count] = {
     { 0, 0 },      // baseline-source
     { 0, 0 },      // block-ellipsis
     { 0, 0 },      // block-size
-    { 337, 4 },    // block-step
+    { 342, 4 },    // block-step
     { 0, 0 },      // block-step-align
     { 0, 0 },      // block-step-insert
     { 0, 0 },      // block-step-round
@@ -6846,18 +6846,18 @@ extern const CssPropertySpan kCssPropertyLonghands[PrCssProperty_Count] = {
     { 0, 0 },      // bookmark-state
     { 108, 17 },   // border
     { 72, 6 },     // border-block
-    { 329, 2 },    // border-block-clip
+    { 334, 2 },    // border-block-clip
     { 48, 2 },     // border-block-color
     { 99, 3 },     // border-block-end
     { 0, 0 },      // border-block-end-clip
     { 0, 0 },      // border-block-end-color
-    { 226, 2 },    // border-block-end-radius
+    { 231, 2 },    // border-block-end-radius
     { 0, 0 },      // border-block-end-style
     { 0, 0 },      // border-block-end-width
     { 96, 3 },     // border-block-start
     { 0, 0 },      // border-block-start-clip
     { 0, 0 },      // border-block-start-color
-    { 224, 2 },    // border-block-start-radius
+    { 229, 2 },    // border-block-start-radius
     { 0, 0 },      // border-block-start-style
     { 0, 0 },      // border-block-start-width
     { 46, 2 },     // border-block-style
@@ -6866,12 +6866,12 @@ extern const CssPropertySpan kCssPropertyLonghands[PrCssProperty_Count] = {
     { 0, 0 },      // border-bottom-clip
     { 0, 0 },      // border-bottom-color
     { 0, 0 },      // border-bottom-left-radius
-    { 220, 2 },    // border-bottom-radius
+    { 225, 2 },    // border-bottom-radius
     { 0, 0 },      // border-bottom-right-radius
     { 0, 0 },      // border-bottom-style
     { 0, 0 },      // border-bottom-width
     { 0, 0 },      // border-boundary
-    { 325, 4 },    // border-clip
+    { 330, 4 },    // border-clip
     { 0, 0 },      // border-collapse
     { 20, 4 },     // border-color
     { 0, 0 },      // border-end-end-radius
@@ -6883,18 +6883,18 @@ extern const CssPropertySpan kCssPropertyLonghands[PrCssProperty_Count] = {
     { 0, 0 },      // border-image-source
     { 0, 0 },      // border-image-width
     { 78, 6 },     // border-inline
-    { 331, 2 },    // border-inline-clip
+    { 336, 2 },    // border-inline-clip
     { 54, 2 },     // border-inline-color
     { 105, 3 },    // border-inline-end
     { 0, 0 },      // border-inline-end-clip
     { 0, 0 },      // border-inline-end-color
-    { 230, 2 },    // border-inline-end-radius
+    { 235, 2 },    // border-inline-end-radius
     { 0, 0 },      // border-inline-end-style
     { 0, 0 },      // border-inline-end-width
     { 102, 3 },    // border-inline-start
     { 0, 0 },      // border-inline-start-clip
     { 0, 0 },      // border-inline-start-color
-    { 228, 2 },    // border-inline-start-radius
+    { 233, 2 },    // border-inline-start-radius
     { 0, 0 },      // border-inline-start-style
     { 0, 0 },      // border-inline-start-width
     { 52, 2 },     // border-inline-style
@@ -6902,15 +6902,15 @@ extern const CssPropertySpan kCssPropertyLonghands[PrCssProperty_Count] = {
     { 93, 3 },     // border-left
     { 0, 0 },      // border-left-clip
     { 0, 0 },      // border-left-color
-    { 222, 2 },    // border-left-radius
+    { 227, 2 },    // border-left-radius
     { 0, 0 },      // border-left-style
     { 0, 0 },      // border-left-width
     { 0, 0 },      // border-limit
-    { 212, 4 },    // border-radius
+    { 217, 4 },    // border-radius
     { 87, 3 },     // border-right
     { 0, 0 },      // border-right-clip
     { 0, 0 },      // border-right-color
-    { 218, 2 },    // border-right-radius
+    { 223, 2 },    // border-right-radius
     { 0, 0 },      // border-right-style
     { 0, 0 },      // border-right-width
     { 0, 0 },      // border-shape
@@ -6922,14 +6922,14 @@ extern const CssPropertySpan kCssPropertyLonghands[PrCssProperty_Count] = {
     { 0, 0 },      // border-top-clip
     { 0, 0 },      // border-top-color
     { 0, 0 },      // border-top-left-radius
-    { 216, 2 },    // border-top-radius
+    { 221, 2 },    // border-top-radius
     { 0, 0 },      // border-top-right-radius
     { 0, 0 },      // border-top-style
     { 0, 0 },      // border-top-width
     { 12, 4 },     // border-width
     { 0, 0 },      // bottom
     { 0, 0 },      // box-decoration-break
-    { 0, 0 },      // box-shadow
+    { 179, 5 },    // box-shadow
     { 0, 0 },      // box-shadow-blur
     { 0, 0 },      // box-shadow-color
     { 0, 0 },      // box-shadow-offset
@@ -6950,7 +6950,7 @@ extern const CssPropertySpan kCssPropertyLonghands[PrCssProperty_Count] = {
     { 0, 0 },      // clip-path
     { 0, 0 },      // clip-rule
     { 0, 0 },      // color
-    { 333, 1 },    // color-adjust
+    { 338, 1 },    // color-adjust
     { 0, 0 },      // color-interpolation
     { 0, 0 },      // color-interpolation-filters
     { 0, 0 },      // color-scheme
@@ -6958,18 +6958,18 @@ extern const CssPropertySpan kCssPropertyLonghands[PrCssProperty_Count] = {
     { 0, 0 },      // column-fill
     { 0, 0 },      // column-gap
     { 0, 0 },      // column-height
-    { 979, 3 },    // column-rule
+    { 983, 3 },    // column-rule
     { 0, 0 },      // column-rule-break
     { 0, 0 },      // column-rule-color
-    { 975, 4 },    // column-rule-inset
-    { 967, 2 },    // column-rule-inset-cap
+    { 979, 4 },    // column-rule-inset
+    { 971, 2 },    // column-rule-inset-cap
     { 0, 0 },      // column-rule-inset-cap-end
     { 0, 0 },      // column-rule-inset-cap-start
-    { 973, 2 },    // column-rule-inset-end
-    { 969, 2 },    // column-rule-inset-junction
+    { 977, 2 },    // column-rule-inset-end
+    { 973, 2 },    // column-rule-inset-junction
     { 0, 0 },      // column-rule-inset-junction-end
     { 0, 0 },      // column-rule-inset-junction-start
-    { 971, 2 },    // column-rule-inset-start
+    { 975, 2 },    // column-rule-inset-start
     { 0, 0 },      // column-rule-style
     { 0, 0 },      // column-rule-visibility-items
     { 0, 0 },      // column-rule-width
@@ -6992,28 +6992,28 @@ extern const CssPropertySpan kCssPropertyLonghands[PrCssProperty_Count] = {
     { 0, 0 },      // copy-into
     { 0, 0 },      // corner
     { 0, 0 },      // corner-block-end
-    { 319, 2 },    // corner-block-end-shape
+    { 324, 2 },    // corner-block-end-shape
     { 0, 0 },      // corner-block-start
-    { 317, 2 },    // corner-block-start-shape
+    { 322, 2 },    // corner-block-start-shape
     { 0, 0 },      // corner-bottom
     { 0, 0 },      // corner-bottom-left
     { 0, 0 },      // corner-bottom-left-shape
     { 0, 0 },      // corner-bottom-right
     { 0, 0 },      // corner-bottom-right-shape
-    { 313, 2 },    // corner-bottom-shape
+    { 318, 2 },    // corner-bottom-shape
     { 0, 0 },      // corner-end-end
     { 0, 0 },      // corner-end-end-shape
     { 0, 0 },      // corner-end-start
     { 0, 0 },      // corner-end-start-shape
     { 0, 0 },      // corner-inline-end
-    { 323, 2 },    // corner-inline-end-shape
+    { 328, 2 },    // corner-inline-end-shape
     { 0, 0 },      // corner-inline-start
-    { 321, 2 },    // corner-inline-start-shape
+    { 326, 2 },    // corner-inline-start-shape
     { 0, 0 },      // corner-left
-    { 315, 2 },    // corner-left-shape
+    { 320, 2 },    // corner-left-shape
     { 0, 0 },      // corner-right
-    { 311, 2 },    // corner-right-shape
-    { 305, 4 },    // corner-shape
+    { 316, 2 },    // corner-right-shape
+    { 310, 4 },    // corner-shape
     { 0, 0 },      // corner-start-end
     { 0, 0 },      // corner-start-end-shape
     { 0, 0 },      // corner-start-start
@@ -7023,11 +7023,11 @@ extern const CssPropertySpan kCssPropertyLonghands[PrCssProperty_Count] = {
     { 0, 0 },      // corner-top-left-shape
     { 0, 0 },      // corner-top-right
     { 0, 0 },      // corner-top-right-shape
-    { 309, 2 },    // corner-top-shape
+    { 314, 2 },    // corner-top-shape
     { 0, 0 },      // counter-increment
     { 0, 0 },      // counter-reset
     { 0, 0 },      // counter-set
-    { 297, 2 },    // cue
+    { 302, 2 },    // cue
     { 0, 0 },      // cue-after
     { 0, 0 },      // cue-before
     { 0, 0 },      // cursor
@@ -7054,7 +7054,7 @@ extern const CssPropertySpan kCssPropertyLonghands[PrCssProperty_Count] = {
     { 0, 0 },      // fill-rule
     { 0, 0 },      // fill-size
     { 0, 0 },      // filter
-    { 232, 3 },    // flex
+    { 237, 3 },    // flex
     { 0, 0 },      // flex-basis
     { 0, 0 },      // flex-direction
     { 142, 2 },    // flex-flow
@@ -7071,7 +7071,7 @@ extern const CssPropertySpan kCssPropertyLonghands[PrCssProperty_Count] = {
     { 0, 0 },      // flow-from
     { 0, 0 },      // flow-into
     { 0, 0 },      // flow-tolerance
-    { 235, 20 },   // font
+    { 240, 20 },   // font
     { 0, 0 },      // font-family
     { 0, 0 },      // font-feature-settings
     { 0, 0 },      // font-kerning
@@ -7081,12 +7081,12 @@ extern const CssPropertySpan kCssPropertyLonghands[PrCssProperty_Count] = {
     { 0, 0 },      // font-size
     { 0, 0 },      // font-size-adjust
     { 0, 0 },      // font-style
-    { 255, 4 },    // font-synthesis
+    { 260, 4 },    // font-synthesis
     { 0, 0 },      // font-synthesis-position
     { 0, 0 },      // font-synthesis-small-caps
     { 0, 0 },      // font-synthesis-style
     { 0, 0 },      // font-synthesis-weight
-    { 259, 7 },    // font-variant
+    { 264, 7 },    // font-variant
     { 0, 0 },      // font-variant-alternates
     { 0, 0 },      // font-variant-caps
     { 0, 0 },      // font-variant-east-asian
@@ -7102,19 +7102,19 @@ extern const CssPropertySpan kCssPropertyLonghands[PrCssProperty_Count] = {
     { 0, 0 },      // forced-color-adjust
     { 0, 0 },      // frame-sizing
     { 68, 2 },     // gap
-    { 296, 1 },    // glyph-orientation-vertical
-    { 277, 6 },    // grid
-    { 266, 4 },    // grid-area
+    { 301, 1 },    // glyph-orientation-vertical
+    { 282, 6 },    // grid
+    { 271, 4 },    // grid-area
     { 0, 0 },      // grid-auto-columns
     { 0, 0 },      // grid-auto-flow
     { 0, 0 },      // grid-auto-rows
-    { 272, 2 },    // grid-column
+    { 277, 2 },    // grid-column
     { 0, 0 },      // grid-column-end
     { 0, 0 },      // grid-column-start
-    { 270, 2 },    // grid-row
+    { 275, 2 },    // grid-row
     { 0, 0 },      // grid-row-end
     { 0, 0 },      // grid-row-start
-    { 274, 3 },    // grid-template
+    { 279, 3 },    // grid-template
     { 0, 0 },      // grid-template-areas
     { 0, 0 },      // grid-template-columns
     { 0, 0 },      // grid-template-rows
@@ -7144,7 +7144,7 @@ extern const CssPropertySpan kCssPropertyLonghands[PrCssProperty_Count] = {
     { 0, 0 },      // inset-inline-end
     { 0, 0 },      // inset-inline-start
     { 0, 0 },      // interactivity
-    { 303, 2 },    // interest-delay
+    { 308, 2 },    // interest-delay
     { 0, 0 },      // interest-delay-end
     { 0, 0 },      // interest-delay-start
     { 0, 0 },      // interpolate-size
@@ -7181,13 +7181,13 @@ extern const CssPropertySpan kCssPropertyLonghands[PrCssProperty_Count] = {
     { 0, 0 },      // margin-right
     { 0, 0 },      // margin-top
     { 0, 0 },      // margin-trim
-    { 334, 3 },    // marker
+    { 339, 3 },    // marker
     { 0, 0 },      // marker-end
     { 0, 0 },      // marker-mid
     { 0, 0 },      // marker-side
     { 0, 0 },      // marker-start
-    { 179, 14 },   // mask
-    { 193, 6 },    // mask-border
+    { 184, 14 },   // mask
+    { 198, 6 },    // mask-border
     { 0, 0 },      // mask-border-mode
     { 0, 0 },      // mask-border-outset
     { 0, 0 },      // mask-border-repeat
@@ -7210,13 +7210,13 @@ extern const CssPropertySpan kCssPropertyLonghands[PrCssProperty_Count] = {
     { 0, 0 },      // max-height
     { 0, 0 },      // max-inline-size
     { 0, 0 },      // max-lines
-    { 350, 2 },    // max-size
+    { 355, 2 },    // max-size
     { 0, 0 },      // max-width
     { 0, 0 },      // min-block-size
     { 0, 0 },      // min-height
     { 0, 0 },      // min-inline-size
     { 0, 0 },      // min-intrinsic-sizing
-    { 348, 2 },    // min-size
+    { 353, 2 },    // min-size
     { 0, 0 },      // min-width
     { 0, 0 },      // mix-blend-mode
     { 0, 0 },      // nav-down
@@ -7281,16 +7281,16 @@ extern const CssPropertySpan kCssPropertyLonghands[PrCssProperty_Count] = {
     { 0, 0 },      // page-break-inside
     { 0, 0 },      // paint-order
     { 0, 0 },      // path-length
-    { 299, 2 },    // pause
+    { 304, 2 },    // pause
     { 0, 0 },      // pause-after
     { 0, 0 },      // pause-before
     { 0, 0 },      // perspective
     { 0, 0 },      // perspective-origin
-    { 283, 2 },    // place-content
-    { 285, 2 },    // place-items
-    { 287, 2 },    // place-self
+    { 288, 2 },    // place-content
+    { 290, 2 },    // place-items
+    { 292, 2 },    // place-self
     { 0, 0 },      // pointer-events
-    { 344, 2 },    // pointer-timeline
+    { 349, 2 },    // pointer-timeline
     { 0, 0 },      // pointer-timeline-axis
     { 0, 0 },      // pointer-timeline-name
     { 0, 0 },      // position
@@ -7307,24 +7307,24 @@ extern const CssPropertySpan kCssPropertyLonghands[PrCssProperty_Count] = {
     { 0, 0 },      // reading-order
     { 0, 0 },      // region-fragment
     { 0, 0 },      // resize
-    { 301, 2 },    // rest
+    { 306, 2 },    // rest
     { 0, 0 },      // rest-after
     { 0, 0 },      // rest-before
     { 0, 0 },      // right
     { 0, 0 },      // rotate
     { 0, 0 },      // row-gap
-    { 994, 3 },    // row-rule
+    { 998, 3 },    // row-rule
     { 0, 0 },      // row-rule-break
     { 0, 0 },      // row-rule-color
-    { 990, 4 },    // row-rule-inset
-    { 982, 2 },    // row-rule-inset-cap
+    { 994, 4 },    // row-rule-inset
+    { 986, 2 },    // row-rule-inset-cap
     { 0, 0 },      // row-rule-inset-cap-end
     { 0, 0 },      // row-rule-inset-cap-start
-    { 988, 2 },    // row-rule-inset-end
-    { 984, 2 },    // row-rule-inset-junction
+    { 992, 2 },    // row-rule-inset-end
+    { 988, 2 },    // row-rule-inset-junction
     { 0, 0 },      // row-rule-inset-junction-end
     { 0, 0 },      // row-rule-inset-junction-start
-    { 986, 2 },    // row-rule-inset-start
+    { 990, 2 },    // row-rule-inset-start
     { 0, 0 },      // row-rule-style
     { 0, 0 },      // row-rule-visibility-items
     { 0, 0 },      // row-rule-width
@@ -7332,18 +7332,18 @@ extern const CssPropertySpan kCssPropertyLonghands[PrCssProperty_Count] = {
     { 0, 0 },      // ruby-merge
     { 0, 0 },      // ruby-overhang
     { 0, 0 },      // ruby-position
-    { 997, 6 },    // rule
-    { 1027, 2 },   // rule-break
-    { 1029, 2 },   // rule-color
-    { 1003, 8 },   // rule-inset
-    { 1011, 4 },   // rule-inset-cap
-    { 1023, 4 },   // rule-inset-end
-    { 1015, 4 },   // rule-inset-junction
-    { 1019, 4 },   // rule-inset-start
+    { 1001, 6 },   // rule
+    { 1031, 2 },   // rule-break
+    { 1033, 2 },   // rule-color
+    { 1007, 8 },   // rule-inset
+    { 1015, 4 },   // rule-inset-cap
+    { 1027, 4 },   // rule-inset-end
+    { 1019, 4 },   // rule-inset-junction
+    { 1023, 4 },   // rule-inset-start
     { 0, 0 },      // rule-overlap
-    { 1031, 2 },   // rule-style
-    { 1035, 2 },   // rule-visibility-items
-    { 1033, 2 },   // rule-width
+    { 1035, 2 },   // rule-style
+    { 1039, 2 },   // rule-visibility-items
+    { 1037, 2 },   // rule-width
     { 0, 0 },      // rx
     { 0, 0 },      // ry
     { 0, 0 },      // scale
@@ -7377,7 +7377,7 @@ extern const CssPropertySpan kCssPropertyLonghands[PrCssProperty_Count] = {
     { 0, 0 },      // scroll-snap-stop
     { 0, 0 },      // scroll-snap-type
     { 0, 0 },      // scroll-target-group
-    { 199, 2 },    // scroll-timeline
+    { 204, 2 },    // scroll-timeline
     { 0, 0 },      // scroll-timeline-axis
     { 0, 0 },      // scroll-timeline-name
     { 0, 0 },      // scrollbar-color
@@ -7389,7 +7389,7 @@ extern const CssPropertySpan kCssPropertyLonghands[PrCssProperty_Count] = {
     { 0, 0 },      // shape-outside
     { 0, 0 },      // shape-padding
     { 0, 0 },      // shape-rendering
-    { 346, 2 },    // size
+    { 351, 2 },    // size
     { 0, 0 },      // slider-orientation
     { 0, 0 },      // spatial-navigation-action
     { 0, 0 },      // spatial-navigation-contain
@@ -7422,12 +7422,12 @@ extern const CssPropertySpan kCssPropertyLonghands[PrCssProperty_Count] = {
     { 0, 0 },      // stroke-width
     { 0, 0 },      // tab-size
     { 0, 0 },      // table-layout
-    { 294, 2 },    // text-align
+    { 299, 2 },    // text-align
     { 0, 0 },      // text-align-all
     { 0, 0 },      // text-align-last
     { 0, 0 },      // text-anchor
     { 0, 0 },      // text-autospace
-    { 289, 2 },    // text-box
+    { 294, 2 },    // text-box
     { 0, 0 },      // text-box-edge
     { 0, 0 },      // text-box-trim
     { 0, 0 },      // text-combine-upright
@@ -7491,8 +7491,8 @@ extern const CssPropertySpan kCssPropertyLonghands[PrCssProperty_Count] = {
     { 0, 0 },      // unicode-bidi
     { 0, 0 },      // user-select
     { 0, 0 },      // vector-effect
-    { 341, 3 },    // vertical-align
-    { 201, 3 },    // view-timeline
+    { 346, 3 },    // vertical-align
+    { 206, 3 },    // view-timeline
     { 0, 0 },      // view-timeline-axis
     { 0, 0 },      // view-timeline-inset
     { 0, 0 },      // view-timeline-name
@@ -7509,7 +7509,7 @@ extern const CssPropertySpan kCssPropertyLonghands[PrCssProperty_Count] = {
     { 0, 0 },      // voice-rate
     { 0, 0 },      // voice-stress
     { 0, 0 },      // voice-volume
-    { 291, 3 },    // white-space
+    { 296, 3 },    // white-space
     { 0, 0 },      // white-space-collapse
     { 0, 0 },      // white-space-trim
     { 0, 0 },      // widows
@@ -7596,565 +7596,565 @@ extern const CssPropertySpan kCssPropertyLonghands[PrCssProperty_Count] = {
 };
 
 extern const CssPropertySpan kCssPropertyShorthands[PrCssProperty_Count] = {
-    { 1037, 1 },  // -webkit-box-align
-    { 1038, 1 },  // -webkit-box-flex
-    { 1039, 1 },  // -webkit-box-ordinal-group
-    { 1040, 1 },  // -webkit-box-orient
-    { 1041, 1 },  // -webkit-box-pack
-    { 1042, 1 },  // -webkit-line-clamp
-    { 1043, 1 },  // -webkit-text-fill-color
+    { 1041, 1 },  // -webkit-box-align
+    { 1042, 1 },  // -webkit-box-flex
+    { 1043, 1 },  // -webkit-box-ordinal-group
+    { 1044, 1 },  // -webkit-box-orient
+    { 1045, 1 },  // -webkit-box-pack
+    { 1046, 1 },  // -webkit-line-clamp
+    { 1047, 1 },  // -webkit-text-fill-color
     { 0, 0 },     // -webkit-text-stroke
-    { 1044, 2 },  // -webkit-text-stroke-color
-    { 1046, 2 },  // -webkit-text-stroke-width
-    { 1048, 1 },  // -webkit-user-select
-    { 1049, 1 },  // accent-color
-    { 1050, 2 },  // align-content
-    { 1052, 2 },  // align-items
-    { 1054, 2 },  // align-self
-    { 1056, 2 },  // alignment-baseline
+    { 1048, 2 },  // -webkit-text-stroke-color
+    { 1050, 2 },  // -webkit-text-stroke-width
+    { 1052, 1 },  // -webkit-user-select
+    { 1053, 1 },  // accent-color
+    { 1054, 2 },  // align-content
+    { 1056, 2 },  // align-items
+    { 1058, 2 },  // align-self
+    { 1060, 2 },  // alignment-baseline
     { 0, 0 },     // all
-    { 1058, 1 },  // anchor-name
-    { 1059, 1 },  // anchor-scope
+    { 1062, 1 },  // anchor-name
+    { 1063, 1 },  // anchor-scope
     { 0, 0 },     // animation
-    { 1060, 1 },  // animation-composition
-    { 1061, 1 },  // animation-delay
-    { 1062, 1 },  // animation-delay-end
-    { 1063, 1 },  // animation-delay-start
-    { 1064, 2 },  // animation-direction
-    { 1066, 2 },  // animation-duration
-    { 1068, 2 },  // animation-fill-mode
-    { 1070, 2 },  // animation-iteration-count
-    { 1072, 2 },  // animation-name
-    { 1074, 2 },  // animation-play-state
+    { 1064, 1 },  // animation-composition
+    { 1065, 1 },  // animation-delay
+    { 1066, 1 },  // animation-delay-end
+    { 1067, 1 },  // animation-delay-start
+    { 1068, 2 },  // animation-direction
+    { 1070, 2 },  // animation-duration
+    { 1072, 2 },  // animation-fill-mode
+    { 1074, 2 },  // animation-iteration-count
+    { 1076, 2 },  // animation-name
+    { 1078, 2 },  // animation-play-state
     { 0, 0 },     // animation-range
-    { 1076, 1 },  // animation-range-center
-    { 1077, 2 },  // animation-range-end
-    { 1079, 2 },  // animation-range-start
-    { 1081, 2 },  // animation-timeline
-    { 1083, 2 },  // animation-timing-function
-    { 1085, 1 },  // animation-trigger
-    { 1086, 1 },  // appearance
-    { 1087, 1 },  // aspect-ratio
-    { 1088, 1 },  // backdrop-filter
-    { 1089, 1 },  // backface-visibility
+    { 1080, 1 },  // animation-range-center
+    { 1081, 2 },  // animation-range-end
+    { 1083, 2 },  // animation-range-start
+    { 1085, 2 },  // animation-timeline
+    { 1087, 2 },  // animation-timing-function
+    { 1089, 1 },  // animation-trigger
+    { 1090, 1 },  // appearance
+    { 1091, 1 },  // aspect-ratio
+    { 1092, 1 },  // backdrop-filter
+    { 1093, 1 },  // backface-visibility
     { 0, 0 },     // background
-    { 1090, 2 },  // background-attachment
-    { 1092, 1 },  // background-blend-mode
-    { 1093, 2 },  // background-clip
-    { 1095, 2 },  // background-color
-    { 1097, 2 },  // background-image
-    { 1099, 2 },  // background-origin
-    { 1101, 2 },  // background-position
-    { 1103, 1 },  // background-position-block
-    { 1104, 1 },  // background-position-inline
-    { 1105, 1 },  // background-position-x
-    { 1106, 1 },  // background-position-y
-    { 1107, 2 },  // background-repeat
-    { 1109, 1 },  // background-repeat-block
-    { 1110, 1 },  // background-repeat-inline
-    { 1111, 1 },  // background-repeat-x
-    { 1112, 1 },  // background-repeat-y
-    { 1113, 2 },  // background-size
-    { 1115, 2 },  // baseline-shift
-    { 1117, 2 },  // baseline-source
-    { 1119, 1 },  // block-ellipsis
-    { 1120, 1 },  // block-size
+    { 1094, 2 },  // background-attachment
+    { 1096, 1 },  // background-blend-mode
+    { 1097, 2 },  // background-clip
+    { 1099, 2 },  // background-color
+    { 1101, 2 },  // background-image
+    { 1103, 2 },  // background-origin
+    { 1105, 2 },  // background-position
+    { 1107, 1 },  // background-position-block
+    { 1108, 1 },  // background-position-inline
+    { 1109, 1 },  // background-position-x
+    { 1110, 1 },  // background-position-y
+    { 1111, 2 },  // background-repeat
+    { 1113, 1 },  // background-repeat-block
+    { 1114, 1 },  // background-repeat-inline
+    { 1115, 1 },  // background-repeat-x
+    { 1116, 1 },  // background-repeat-y
+    { 1117, 2 },  // background-size
+    { 1119, 2 },  // baseline-shift
+    { 1121, 2 },  // baseline-source
+    { 1123, 1 },  // block-ellipsis
+    { 1124, 1 },  // block-size
     { 0, 0 },     // block-step
-    { 1121, 2 },  // block-step-align
-    { 1123, 2 },  // block-step-insert
-    { 1125, 2 },  // block-step-round
-    { 1127, 2 },  // block-step-size
-    { 1129, 1 },  // bookmark-label
-    { 1130, 1 },  // bookmark-level
-    { 1131, 1 },  // bookmark-state
+    { 1125, 2 },  // block-step-align
+    { 1127, 2 },  // block-step-insert
+    { 1129, 2 },  // block-step-round
+    { 1131, 2 },  // block-step-size
+    { 1133, 1 },  // bookmark-label
+    { 1134, 1 },  // bookmark-level
+    { 1135, 1 },  // bookmark-state
     { 0, 0 },     // border
     { 0, 0 },     // border-block
     { 0, 0 },     // border-block-clip
     { 0, 0 },     // border-block-color
     { 0, 0 },     // border-block-end
-    { 1132, 2 },  // border-block-end-clip
-    { 1134, 4 },  // border-block-end-color
+    { 1136, 2 },  // border-block-end-clip
+    { 1138, 4 },  // border-block-end-color
     { 0, 0 },     // border-block-end-radius
-    { 1138, 4 },  // border-block-end-style
-    { 1142, 4 },  // border-block-end-width
+    { 1142, 4 },  // border-block-end-style
+    { 1146, 4 },  // border-block-end-width
     { 0, 0 },     // border-block-start
-    { 1146, 2 },  // border-block-start-clip
-    { 1148, 4 },  // border-block-start-color
+    { 1150, 2 },  // border-block-start-clip
+    { 1152, 4 },  // border-block-start-color
     { 0, 0 },     // border-block-start-radius
-    { 1152, 4 },  // border-block-start-style
-    { 1156, 4 },  // border-block-start-width
+    { 1156, 4 },  // border-block-start-style
+    { 1160, 4 },  // border-block-start-width
     { 0, 0 },     // border-block-style
     { 0, 0 },     // border-block-width
     { 0, 0 },     // border-bottom
-    { 1160, 2 },  // border-bottom-clip
-    { 1162, 4 },  // border-bottom-color
-    { 1166, 4 },  // border-bottom-left-radius
+    { 1164, 2 },  // border-bottom-clip
+    { 1166, 4 },  // border-bottom-color
+    { 1170, 4 },  // border-bottom-left-radius
     { 0, 0 },     // border-bottom-radius
-    { 1170, 4 },  // border-bottom-right-radius
-    { 1174, 4 },  // border-bottom-style
-    { 1178, 4 },  // border-bottom-width
-    { 1182, 1 },  // border-boundary
+    { 1174, 4 },  // border-bottom-right-radius
+    { 1178, 4 },  // border-bottom-style
+    { 1182, 4 },  // border-bottom-width
+    { 1186, 1 },  // border-boundary
     { 0, 0 },     // border-clip
-    { 1183, 1 },  // border-collapse
+    { 1187, 1 },  // border-collapse
     { 0, 0 },     // border-color
-    { 1184, 3 },  // border-end-end-radius
-    { 1187, 3 },  // border-end-start-radius
+    { 1188, 3 },  // border-end-end-radius
+    { 1191, 3 },  // border-end-start-radius
     { 0, 0 },     // border-image
-    { 1190, 3 },  // border-image-outset
-    { 1193, 3 },  // border-image-repeat
-    { 1196, 3 },  // border-image-slice
-    { 1199, 3 },  // border-image-source
-    { 1202, 3 },  // border-image-width
+    { 1194, 3 },  // border-image-outset
+    { 1197, 3 },  // border-image-repeat
+    { 1200, 3 },  // border-image-slice
+    { 1203, 3 },  // border-image-source
+    { 1206, 3 },  // border-image-width
     { 0, 0 },     // border-inline
     { 0, 0 },     // border-inline-clip
     { 0, 0 },     // border-inline-color
     { 0, 0 },     // border-inline-end
-    { 1205, 2 },  // border-inline-end-clip
-    { 1207, 4 },  // border-inline-end-color
+    { 1209, 2 },  // border-inline-end-clip
+    { 1211, 4 },  // border-inline-end-color
     { 0, 0 },     // border-inline-end-radius
-    { 1211, 4 },  // border-inline-end-style
-    { 1215, 4 },  // border-inline-end-width
+    { 1215, 4 },  // border-inline-end-style
+    { 1219, 4 },  // border-inline-end-width
     { 0, 0 },     // border-inline-start
-    { 1219, 2 },  // border-inline-start-clip
-    { 1221, 4 },  // border-inline-start-color
+    { 1223, 2 },  // border-inline-start-clip
+    { 1225, 4 },  // border-inline-start-color
     { 0, 0 },     // border-inline-start-radius
-    { 1225, 4 },  // border-inline-start-style
-    { 1229, 4 },  // border-inline-start-width
+    { 1229, 4 },  // border-inline-start-style
+    { 1233, 4 },  // border-inline-start-width
     { 0, 0 },     // border-inline-style
     { 0, 0 },     // border-inline-width
     { 0, 0 },     // border-left
-    { 1233, 2 },  // border-left-clip
-    { 1235, 4 },  // border-left-color
+    { 1237, 2 },  // border-left-clip
+    { 1239, 4 },  // border-left-color
     { 0, 0 },     // border-left-radius
-    { 1239, 4 },  // border-left-style
-    { 1243, 4 },  // border-left-width
-    { 1247, 1 },  // border-limit
+    { 1243, 4 },  // border-left-style
+    { 1247, 4 },  // border-left-width
+    { 1251, 1 },  // border-limit
     { 0, 0 },     // border-radius
     { 0, 0 },     // border-right
-    { 1248, 2 },  // border-right-clip
-    { 1250, 4 },  // border-right-color
+    { 1252, 2 },  // border-right-clip
+    { 1254, 4 },  // border-right-color
     { 0, 0 },     // border-right-radius
-    { 1254, 4 },  // border-right-style
-    { 1258, 4 },  // border-right-width
-    { 1262, 1 },  // border-shape
-    { 1263, 1 },  // border-spacing
-    { 1264, 3 },  // border-start-end-radius
-    { 1267, 3 },  // border-start-start-radius
+    { 1258, 4 },  // border-right-style
+    { 1262, 4 },  // border-right-width
+    { 1266, 1 },  // border-shape
+    { 1267, 1 },  // border-spacing
+    { 1268, 3 },  // border-start-end-radius
+    { 1271, 3 },  // border-start-start-radius
     { 0, 0 },     // border-style
     { 0, 0 },     // border-top
-    { 1270, 2 },  // border-top-clip
-    { 1272, 4 },  // border-top-color
-    { 1276, 4 },  // border-top-left-radius
+    { 1274, 2 },  // border-top-clip
+    { 1276, 4 },  // border-top-color
+    { 1280, 4 },  // border-top-left-radius
     { 0, 0 },     // border-top-radius
-    { 1280, 4 },  // border-top-right-radius
-    { 1284, 4 },  // border-top-style
-    { 1288, 4 },  // border-top-width
+    { 1284, 4 },  // border-top-right-radius
+    { 1288, 4 },  // border-top-style
+    { 1292, 4 },  // border-top-width
     { 0, 0 },     // border-width
-    { 1292, 2 },  // bottom
-    { 1294, 1 },  // box-decoration-break
-    { 1295, 1 },  // box-shadow
-    { 1296, 1 },  // box-shadow-blur
-    { 1297, 1 },  // box-shadow-color
-    { 1298, 1 },  // box-shadow-offset
-    { 1299, 1 },  // box-shadow-position
-    { 1300, 1 },  // box-shadow-spread
-    { 1301, 1 },  // box-sizing
-    { 1302, 1 },  // box-snap
-    { 1303, 1 },  // break-after
-    { 1304, 1 },  // break-before
-    { 1305, 1 },  // break-inside
-    { 1306, 1 },  // caption-side
+    { 1296, 2 },  // bottom
+    { 1298, 1 },  // box-decoration-break
+    { 0, 0 },     // box-shadow
+    { 1299, 2 },  // box-shadow-blur
+    { 1301, 2 },  // box-shadow-color
+    { 1303, 2 },  // box-shadow-offset
+    { 1305, 2 },  // box-shadow-position
+    { 1307, 2 },  // box-shadow-spread
+    { 1309, 1 },  // box-sizing
+    { 1310, 1 },  // box-snap
+    { 1311, 1 },  // break-after
+    { 1312, 1 },  // break-before
+    { 1313, 1 },  // break-inside
+    { 1314, 1 },  // caption-side
     { 0, 0 },     // caret
-    { 1307, 2 },  // caret-animation
-    { 1309, 2 },  // caret-color
-    { 1311, 2 },  // caret-shape
-    { 1313, 1 },  // clear
-    { 1314, 1 },  // clip
-    { 1315, 1 },  // clip-path
-    { 1316, 1 },  // clip-rule
-    { 1317, 1 },  // color
+    { 1315, 2 },  // caret-animation
+    { 1317, 2 },  // caret-color
+    { 1319, 2 },  // caret-shape
+    { 1321, 1 },  // clear
+    { 1322, 1 },  // clip
+    { 1323, 1 },  // clip-path
+    { 1324, 1 },  // clip-rule
+    { 1325, 1 },  // color
     { 0, 0 },     // color-adjust
-    { 1318, 1 },  // color-interpolation
-    { 1319, 1 },  // color-interpolation-filters
-    { 1320, 1 },  // color-scheme
-    { 1321, 2 },  // column-count
-    { 1323, 1 },  // column-fill
-    { 1324, 2 },  // column-gap
-    { 1326, 2 },  // column-height
+    { 1326, 1 },  // color-interpolation
+    { 1327, 1 },  // color-interpolation-filters
+    { 1328, 1 },  // color-scheme
+    { 1329, 2 },  // column-count
+    { 1331, 1 },  // column-fill
+    { 1332, 2 },  // column-gap
+    { 1334, 2 },  // column-height
     { 0, 0 },     // column-rule
-    { 1328, 2 },  // column-rule-break
-    { 1330, 4 },  // column-rule-color
+    { 1336, 2 },  // column-rule-break
+    { 1338, 4 },  // column-rule-color
     { 0, 0 },     // column-rule-inset
     { 0, 0 },     // column-rule-inset-cap
-    { 1334, 7 },  // column-rule-inset-cap-end
-    { 1341, 7 },  // column-rule-inset-cap-start
+    { 1342, 7 },  // column-rule-inset-cap-end
+    { 1349, 7 },  // column-rule-inset-cap-start
     { 0, 0 },     // column-rule-inset-end
     { 0, 0 },     // column-rule-inset-junction
-    { 1348, 7 },  // column-rule-inset-junction-end
-    { 1355, 7 },  // column-rule-inset-junction-start
+    { 1356, 7 },  // column-rule-inset-junction-end
+    { 1363, 7 },  // column-rule-inset-junction-start
     { 0, 0 },     // column-rule-inset-start
-    { 1362, 4 },  // column-rule-style
-    { 1366, 2 },  // column-rule-visibility-items
-    { 1368, 4 },  // column-rule-width
-    { 1372, 1 },  // column-span
-    { 1373, 2 },  // column-width
-    { 1375, 1 },  // column-wrap
+    { 1370, 4 },  // column-rule-style
+    { 1374, 2 },  // column-rule-visibility-items
+    { 1376, 4 },  // column-rule-width
+    { 1380, 1 },  // column-span
+    { 1381, 2 },  // column-width
+    { 1383, 1 },  // column-wrap
     { 0, 0 },     // columns
-    { 1376, 1 },  // contain
-    { 1377, 1 },  // contain-intrinsic-block-size
-    { 1378, 2 },  // contain-intrinsic-height
-    { 1380, 1 },  // contain-intrinsic-inline-size
+    { 1384, 1 },  // contain
+    { 1385, 1 },  // contain-intrinsic-block-size
+    { 1386, 2 },  // contain-intrinsic-height
+    { 1388, 1 },  // contain-intrinsic-inline-size
     { 0, 0 },     // contain-intrinsic-size
-    { 1381, 2 },  // contain-intrinsic-width
+    { 1389, 2 },  // contain-intrinsic-width
     { 0, 0 },     // container
-    { 1383, 2 },  // container-name
-    { 1385, 2 },  // container-type
-    { 1387, 1 },  // content
-    { 1388, 1 },  // content-visibility
-    { 1389, 1 },  // continue
-    { 1390, 1 },  // copy-into
-    { 1391, 1 },  // corner
-    { 1392, 1 },  // corner-block-end
+    { 1391, 2 },  // container-name
+    { 1393, 2 },  // container-type
+    { 1395, 1 },  // content
+    { 1396, 1 },  // content-visibility
+    { 1397, 1 },  // continue
+    { 1398, 1 },  // copy-into
+    { 1399, 1 },  // corner
+    { 1400, 1 },  // corner-block-end
     { 0, 0 },     // corner-block-end-shape
-    { 1393, 1 },  // corner-block-start
+    { 1401, 1 },  // corner-block-start
     { 0, 0 },     // corner-block-start-shape
-    { 1394, 1 },  // corner-bottom
-    { 1395, 1 },  // corner-bottom-left
-    { 1396, 4 },  // corner-bottom-left-shape
-    { 1400, 1 },  // corner-bottom-right
-    { 1401, 4 },  // corner-bottom-right-shape
+    { 1402, 1 },  // corner-bottom
+    { 1403, 1 },  // corner-bottom-left
+    { 1404, 4 },  // corner-bottom-left-shape
+    { 1408, 1 },  // corner-bottom-right
+    { 1409, 4 },  // corner-bottom-right-shape
     { 0, 0 },     // corner-bottom-shape
-    { 1405, 1 },  // corner-end-end
-    { 1406, 3 },  // corner-end-end-shape
-    { 1409, 1 },  // corner-end-start
-    { 1410, 3 },  // corner-end-start-shape
-    { 1413, 1 },  // corner-inline-end
+    { 1413, 1 },  // corner-end-end
+    { 1414, 3 },  // corner-end-end-shape
+    { 1417, 1 },  // corner-end-start
+    { 1418, 3 },  // corner-end-start-shape
+    { 1421, 1 },  // corner-inline-end
     { 0, 0 },     // corner-inline-end-shape
-    { 1414, 1 },  // corner-inline-start
+    { 1422, 1 },  // corner-inline-start
     { 0, 0 },     // corner-inline-start-shape
-    { 1415, 1 },  // corner-left
+    { 1423, 1 },  // corner-left
     { 0, 0 },     // corner-left-shape
-    { 1416, 1 },  // corner-right
+    { 1424, 1 },  // corner-right
     { 0, 0 },     // corner-right-shape
     { 0, 0 },     // corner-shape
-    { 1417, 1 },  // corner-start-end
-    { 1418, 3 },  // corner-start-end-shape
-    { 1421, 1 },  // corner-start-start
-    { 1422, 3 },  // corner-start-start-shape
-    { 1425, 1 },  // corner-top
-    { 1426, 1 },  // corner-top-left
-    { 1427, 4 },  // corner-top-left-shape
-    { 1431, 1 },  // corner-top-right
-    { 1432, 4 },  // corner-top-right-shape
+    { 1425, 1 },  // corner-start-end
+    { 1426, 3 },  // corner-start-end-shape
+    { 1429, 1 },  // corner-start-start
+    { 1430, 3 },  // corner-start-start-shape
+    { 1433, 1 },  // corner-top
+    { 1434, 1 },  // corner-top-left
+    { 1435, 4 },  // corner-top-left-shape
+    { 1439, 1 },  // corner-top-right
+    { 1440, 4 },  // corner-top-right-shape
     { 0, 0 },     // corner-top-shape
-    { 1436, 1 },  // counter-increment
-    { 1437, 1 },  // counter-reset
-    { 1438, 1 },  // counter-set
+    { 1444, 1 },  // counter-increment
+    { 1445, 1 },  // counter-reset
+    { 1446, 1 },  // counter-set
     { 0, 0 },     // cue
-    { 1439, 2 },  // cue-after
-    { 1441, 2 },  // cue-before
-    { 1443, 1 },  // cursor
-    { 1444, 1 },  // cx
-    { 1445, 1 },  // cy
-    { 1446, 1 },  // d
+    { 1447, 2 },  // cue-after
+    { 1449, 2 },  // cue-before
+    { 1451, 1 },  // cursor
+    { 1452, 1 },  // cx
+    { 1453, 1 },  // cy
+    { 1454, 1 },  // d
     { 0, 0 },     // direction
-    { 1447, 1 },  // display
-    { 1448, 1 },  // dominant-baseline
-    { 1449, 1 },  // dynamic-range-limit
-    { 1450, 1 },  // empty-cells
-    { 1451, 1 },  // event-trigger
-    { 1452, 1 },  // event-trigger-name
-    { 1453, 1 },  // event-trigger-source
-    { 1454, 1 },  // field-sizing
-    { 1455, 1 },  // fill
-    { 1456, 1 },  // fill-break
-    { 1457, 1 },  // fill-color
-    { 1458, 1 },  // fill-image
-    { 1459, 1 },  // fill-opacity
-    { 1460, 1 },  // fill-origin
-    { 1461, 1 },  // fill-position
-    { 1462, 1 },  // fill-repeat
-    { 1463, 1 },  // fill-rule
-    { 1464, 1 },  // fill-size
-    { 1465, 1 },  // filter
+    { 1455, 1 },  // display
+    { 1456, 1 },  // dominant-baseline
+    { 1457, 1 },  // dynamic-range-limit
+    { 1458, 1 },  // empty-cells
+    { 1459, 1 },  // event-trigger
+    { 1460, 1 },  // event-trigger-name
+    { 1461, 1 },  // event-trigger-source
+    { 1462, 1 },  // field-sizing
+    { 1463, 1 },  // fill
+    { 1464, 1 },  // fill-break
+    { 1465, 1 },  // fill-color
+    { 1466, 1 },  // fill-image
+    { 1467, 1 },  // fill-opacity
+    { 1468, 1 },  // fill-origin
+    { 1469, 1 },  // fill-position
+    { 1470, 1 },  // fill-repeat
+    { 1471, 1 },  // fill-rule
+    { 1472, 1 },  // fill-size
+    { 1473, 1 },  // filter
     { 0, 0 },     // flex
-    { 1466, 2 },  // flex-basis
-    { 1468, 2 },  // flex-direction
+    { 1474, 2 },  // flex-basis
+    { 1476, 2 },  // flex-direction
     { 0, 0 },     // flex-flow
-    { 1470, 2 },  // flex-grow
-    { 1472, 1 },  // flex-line-count
-    { 1473, 2 },  // flex-shrink
-    { 1475, 2 },  // flex-wrap
-    { 1477, 1 },  // float
-    { 1478, 1 },  // float-defer
-    { 1479, 1 },  // float-offset
-    { 1480, 1 },  // float-reference
-    { 1481, 1 },  // flood-color
-    { 1482, 1 },  // flood-opacity
-    { 1483, 1 },  // flow-from
-    { 1484, 1 },  // flow-into
-    { 1485, 1 },  // flow-tolerance
+    { 1478, 2 },  // flex-grow
+    { 1480, 1 },  // flex-line-count
+    { 1481, 2 },  // flex-shrink
+    { 1483, 2 },  // flex-wrap
+    { 1485, 1 },  // float
+    { 1486, 1 },  // float-defer
+    { 1487, 1 },  // float-offset
+    { 1488, 1 },  // float-reference
+    { 1489, 1 },  // flood-color
+    { 1490, 1 },  // flood-opacity
+    { 1491, 1 },  // flow-from
+    { 1492, 1 },  // flow-into
+    { 1493, 1 },  // flow-tolerance
     { 0, 0 },     // font
-    { 1486, 2 },  // font-family
-    { 1488, 2 },  // font-feature-settings
-    { 1490, 2 },  // font-kerning
-    { 1492, 2 },  // font-language-override
-    { 1494, 2 },  // font-optical-sizing
-    { 1496, 2 },  // font-palette
-    { 1498, 2 },  // font-size
-    { 1500, 2 },  // font-size-adjust
-    { 1502, 2 },  // font-style
+    { 1494, 2 },  // font-family
+    { 1496, 2 },  // font-feature-settings
+    { 1498, 2 },  // font-kerning
+    { 1500, 2 },  // font-language-override
+    { 1502, 2 },  // font-optical-sizing
+    { 1504, 2 },  // font-palette
+    { 1506, 2 },  // font-size
+    { 1508, 2 },  // font-size-adjust
+    { 1510, 2 },  // font-style
     { 0, 0 },     // font-synthesis
-    { 1504, 2 },  // font-synthesis-position
-    { 1506, 2 },  // font-synthesis-small-caps
-    { 1508, 2 },  // font-synthesis-style
-    { 1510, 2 },  // font-synthesis-weight
+    { 1512, 2 },  // font-synthesis-position
+    { 1514, 2 },  // font-synthesis-small-caps
+    { 1516, 2 },  // font-synthesis-style
+    { 1518, 2 },  // font-synthesis-weight
     { 0, 0 },     // font-variant
-    { 1512, 3 },  // font-variant-alternates
-    { 1515, 3 },  // font-variant-caps
-    { 1518, 3 },  // font-variant-east-asian
-    { 1521, 3 },  // font-variant-emoji
-    { 1524, 3 },  // font-variant-ligatures
-    { 1527, 3 },  // font-variant-numeric
-    { 1530, 3 },  // font-variant-position
-    { 1533, 2 },  // font-variation-settings
-    { 1535, 2 },  // font-weight
-    { 1537, 2 },  // font-width
-    { 1539, 1 },  // footnote-display
-    { 1540, 1 },  // footnote-policy
-    { 1541, 1 },  // forced-color-adjust
-    { 1542, 1 },  // frame-sizing
+    { 1520, 3 },  // font-variant-alternates
+    { 1523, 3 },  // font-variant-caps
+    { 1526, 3 },  // font-variant-east-asian
+    { 1529, 3 },  // font-variant-emoji
+    { 1532, 3 },  // font-variant-ligatures
+    { 1535, 3 },  // font-variant-numeric
+    { 1538, 3 },  // font-variant-position
+    { 1541, 2 },  // font-variation-settings
+    { 1543, 2 },  // font-weight
+    { 1545, 2 },  // font-width
+    { 1547, 1 },  // footnote-display
+    { 1548, 1 },  // footnote-policy
+    { 1549, 1 },  // forced-color-adjust
+    { 1550, 1 },  // frame-sizing
     { 0, 0 },     // gap
     { 0, 0 },     // glyph-orientation-vertical
     { 0, 0 },     // grid
     { 0, 0 },     // grid-area
-    { 1543, 2 },  // grid-auto-columns
-    { 1545, 2 },  // grid-auto-flow
-    { 1547, 2 },  // grid-auto-rows
+    { 1551, 2 },  // grid-auto-columns
+    { 1553, 2 },  // grid-auto-flow
+    { 1555, 2 },  // grid-auto-rows
     { 0, 0 },     // grid-column
-    { 1549, 3 },  // grid-column-end
-    { 1552, 3 },  // grid-column-start
+    { 1557, 3 },  // grid-column-end
+    { 1560, 3 },  // grid-column-start
     { 0, 0 },     // grid-row
-    { 1555, 3 },  // grid-row-end
-    { 1558, 3 },  // grid-row-start
+    { 1563, 3 },  // grid-row-end
+    { 1566, 3 },  // grid-row-start
     { 0, 0 },     // grid-template
-    { 1561, 3 },  // grid-template-areas
-    { 1564, 3 },  // grid-template-columns
-    { 1567, 3 },  // grid-template-rows
-    { 1570, 1 },  // hanging-punctuation
-    { 1571, 2 },  // height
-    { 1573, 1 },  // hyphenate-character
-    { 1574, 1 },  // hyphenate-limit-chars
-    { 1575, 1 },  // hyphenate-limit-last
-    { 1576, 1 },  // hyphenate-limit-lines
-    { 1577, 1 },  // hyphenate-limit-zone
-    { 1578, 1 },  // hyphens
-    { 1579, 1 },  // image-animation
-    { 1580, 1 },  // image-orientation
-    { 1581, 1 },  // image-rendering
-    { 1582, 1 },  // image-resolution
-    { 1583, 1 },  // initial-letter
-    { 1584, 1 },  // initial-letter-align
-    { 1585, 1 },  // initial-letter-wrap
-    { 1586, 1 },  // inline-size
-    { 1587, 1 },  // inline-sizing
-    { 1588, 1 },  // input-security
+    { 1569, 3 },  // grid-template-areas
+    { 1572, 3 },  // grid-template-columns
+    { 1575, 3 },  // grid-template-rows
+    { 1578, 1 },  // hanging-punctuation
+    { 1579, 2 },  // height
+    { 1581, 1 },  // hyphenate-character
+    { 1582, 1 },  // hyphenate-limit-chars
+    { 1583, 1 },  // hyphenate-limit-last
+    { 1584, 1 },  // hyphenate-limit-lines
+    { 1585, 1 },  // hyphenate-limit-zone
+    { 1586, 1 },  // hyphens
+    { 1587, 1 },  // image-animation
+    { 1588, 1 },  // image-orientation
+    { 1589, 1 },  // image-rendering
+    { 1590, 1 },  // image-resolution
+    { 1591, 1 },  // initial-letter
+    { 1592, 1 },  // initial-letter-align
+    { 1593, 1 },  // initial-letter-wrap
+    { 1594, 1 },  // inline-size
+    { 1595, 1 },  // inline-sizing
+    { 1596, 1 },  // input-security
     { 0, 0 },     // inset
     { 0, 0 },     // inset-block
-    { 1589, 2 },  // inset-block-end
-    { 1591, 2 },  // inset-block-start
+    { 1597, 2 },  // inset-block-end
+    { 1599, 2 },  // inset-block-start
     { 0, 0 },     // inset-inline
-    { 1593, 2 },  // inset-inline-end
-    { 1595, 2 },  // inset-inline-start
-    { 1597, 1 },  // interactivity
+    { 1601, 2 },  // inset-inline-end
+    { 1603, 2 },  // inset-inline-start
+    { 1605, 1 },  // interactivity
     { 0, 0 },     // interest-delay
-    { 1598, 2 },  // interest-delay-end
-    { 1600, 2 },  // interest-delay-start
-    { 1602, 1 },  // interpolate-size
-    { 1603, 1 },  // isolation
-    { 1604, 2 },  // justify-content
-    { 1606, 2 },  // justify-items
-    { 1608, 2 },  // justify-self
-    { 1610, 2 },  // left
-    { 1612, 1 },  // letter-spacing
-    { 1613, 1 },  // lighting-color
-    { 1614, 1 },  // line-break
-    { 1615, 1 },  // line-clamp
-    { 1616, 1 },  // line-fit-edge
-    { 1617, 1 },  // line-grid
-    { 1618, 2 },  // line-height
-    { 1620, 1 },  // line-height-step
-    { 1621, 1 },  // line-padding
-    { 1622, 1 },  // line-snap
-    { 1623, 1 },  // link-parameters
+    { 1606, 2 },  // interest-delay-end
+    { 1608, 2 },  // interest-delay-start
+    { 1610, 1 },  // interpolate-size
+    { 1611, 1 },  // isolation
+    { 1612, 2 },  // justify-content
+    { 1614, 2 },  // justify-items
+    { 1616, 2 },  // justify-self
+    { 1618, 2 },  // left
+    { 1620, 1 },  // letter-spacing
+    { 1621, 1 },  // lighting-color
+    { 1622, 1 },  // line-break
+    { 1623, 1 },  // line-clamp
+    { 1624, 1 },  // line-fit-edge
+    { 1625, 1 },  // line-grid
+    { 1626, 2 },  // line-height
+    { 1628, 1 },  // line-height-step
+    { 1629, 1 },  // line-padding
+    { 1630, 1 },  // line-snap
+    { 1631, 1 },  // link-parameters
     { 0, 0 },     // list-style
-    { 1624, 2 },  // list-style-image
-    { 1626, 2 },  // list-style-position
-    { 1628, 2 },  // list-style-type
+    { 1632, 2 },  // list-style-image
+    { 1634, 2 },  // list-style-position
+    { 1636, 2 },  // list-style-type
     { 0, 0 },     // margin
     { 0, 0 },     // margin-block
-    { 1630, 2 },  // margin-block-end
-    { 1632, 2 },  // margin-block-start
-    { 1634, 2 },  // margin-bottom
-    { 1636, 1 },  // margin-break
+    { 1638, 2 },  // margin-block-end
+    { 1640, 2 },  // margin-block-start
+    { 1642, 2 },  // margin-bottom
+    { 1644, 1 },  // margin-break
     { 0, 0 },     // margin-inline
-    { 1637, 2 },  // margin-inline-end
-    { 1639, 2 },  // margin-inline-start
-    { 1641, 2 },  // margin-left
-    { 1643, 2 },  // margin-right
-    { 1645, 2 },  // margin-top
-    { 1647, 1 },  // margin-trim
+    { 1645, 2 },  // margin-inline-end
+    { 1647, 2 },  // margin-inline-start
+    { 1649, 2 },  // margin-left
+    { 1651, 2 },  // margin-right
+    { 1653, 2 },  // margin-top
+    { 1655, 1 },  // margin-trim
     { 0, 0 },     // marker
-    { 1648, 2 },  // marker-end
-    { 1650, 2 },  // marker-mid
-    { 1652, 1 },  // marker-side
-    { 1653, 2 },  // marker-start
+    { 1656, 2 },  // marker-end
+    { 1658, 2 },  // marker-mid
+    { 1660, 1 },  // marker-side
+    { 1661, 2 },  // marker-start
     { 0, 0 },     // mask
     { 0, 0 },     // mask-border
-    { 1655, 3 },  // mask-border-mode
-    { 1658, 3 },  // mask-border-outset
-    { 1661, 3 },  // mask-border-repeat
-    { 1664, 3 },  // mask-border-slice
-    { 1667, 3 },  // mask-border-source
-    { 1670, 3 },  // mask-border-width
-    { 1673, 2 },  // mask-clip
-    { 1675, 2 },  // mask-composite
-    { 1677, 2 },  // mask-image
-    { 1679, 2 },  // mask-mode
-    { 1681, 2 },  // mask-origin
-    { 1683, 2 },  // mask-position
-    { 1685, 2 },  // mask-repeat
-    { 1687, 2 },  // mask-size
-    { 1689, 1 },  // mask-type
-    { 1690, 1 },  // math-depth
-    { 1691, 1 },  // math-shift
-    { 1692, 1 },  // math-style
-    { 1693, 1 },  // max-block-size
-    { 1694, 2 },  // max-height
-    { 1696, 1 },  // max-inline-size
-    { 1697, 1 },  // max-lines
+    { 1663, 3 },  // mask-border-mode
+    { 1666, 3 },  // mask-border-outset
+    { 1669, 3 },  // mask-border-repeat
+    { 1672, 3 },  // mask-border-slice
+    { 1675, 3 },  // mask-border-source
+    { 1678, 3 },  // mask-border-width
+    { 1681, 2 },  // mask-clip
+    { 1683, 2 },  // mask-composite
+    { 1685, 2 },  // mask-image
+    { 1687, 2 },  // mask-mode
+    { 1689, 2 },  // mask-origin
+    { 1691, 2 },  // mask-position
+    { 1693, 2 },  // mask-repeat
+    { 1695, 2 },  // mask-size
+    { 1697, 1 },  // mask-type
+    { 1698, 1 },  // math-depth
+    { 1699, 1 },  // math-shift
+    { 1700, 1 },  // math-style
+    { 1701, 1 },  // max-block-size
+    { 1702, 2 },  // max-height
+    { 1704, 1 },  // max-inline-size
+    { 1705, 1 },  // max-lines
     { 0, 0 },     // max-size
-    { 1698, 2 },  // max-width
-    { 1700, 1 },  // min-block-size
-    { 1701, 2 },  // min-height
-    { 1703, 1 },  // min-inline-size
-    { 1704, 1 },  // min-intrinsic-sizing
+    { 1706, 2 },  // max-width
+    { 1708, 1 },  // min-block-size
+    { 1709, 2 },  // min-height
+    { 1711, 1 },  // min-inline-size
+    { 1712, 1 },  // min-intrinsic-sizing
     { 0, 0 },     // min-size
-    { 1705, 2 },  // min-width
-    { 1707, 1 },  // mix-blend-mode
-    { 1708, 1 },  // nav-down
-    { 1709, 1 },  // nav-left
-    { 1710, 1 },  // nav-right
-    { 1711, 1 },  // nav-up
-    { 1712, 1 },  // object-fit
-    { 1713, 1 },  // object-position
-    { 1714, 1 },  // object-view-box
+    { 1713, 2 },  // min-width
+    { 1715, 1 },  // mix-blend-mode
+    { 1716, 1 },  // nav-down
+    { 1717, 1 },  // nav-left
+    { 1718, 1 },  // nav-right
+    { 1719, 1 },  // nav-up
+    { 1720, 1 },  // object-fit
+    { 1721, 1 },  // object-position
+    { 1722, 1 },  // object-view-box
     { 0, 0 },     // offset
-    { 1715, 2 },  // offset-anchor
-    { 1717, 2 },  // offset-distance
-    { 1719, 2 },  // offset-path
-    { 1721, 2 },  // offset-position
-    { 1723, 2 },  // offset-rotate
-    { 1725, 1 },  // opacity
-    { 1726, 1 },  // order
-    { 1727, 1 },  // orphans
+    { 1723, 2 },  // offset-anchor
+    { 1725, 2 },  // offset-distance
+    { 1727, 2 },  // offset-path
+    { 1729, 2 },  // offset-position
+    { 1731, 2 },  // offset-rotate
+    { 1733, 1 },  // opacity
+    { 1734, 1 },  // order
+    { 1735, 1 },  // orphans
     { 0, 0 },     // outline
-    { 1728, 2 },  // outline-color
-    { 1730, 1 },  // outline-offset
-    { 1731, 2 },  // outline-style
-    { 1733, 2 },  // outline-width
+    { 1736, 2 },  // outline-color
+    { 1738, 1 },  // outline-offset
+    { 1739, 2 },  // outline-style
+    { 1741, 2 },  // outline-width
     { 0, 0 },     // overflow
-    { 1735, 1 },  // overflow-anchor
-    { 1736, 1 },  // overflow-block
-    { 1737, 1 },  // overflow-clip-margin
-    { 1738, 1 },  // overflow-clip-margin-block
-    { 1739, 1 },  // overflow-clip-margin-block-end
-    { 1740, 1 },  // overflow-clip-margin-block-start
-    { 1741, 1 },  // overflow-clip-margin-bottom
-    { 1742, 1 },  // overflow-clip-margin-inline
-    { 1743, 1 },  // overflow-clip-margin-inline-end
-    { 1744, 1 },  // overflow-clip-margin-inline-start
-    { 1745, 1 },  // overflow-clip-margin-left
-    { 1746, 1 },  // overflow-clip-margin-right
-    { 1747, 1 },  // overflow-clip-margin-top
-    { 1748, 1 },  // overflow-inline
-    { 1749, 1 },  // overflow-wrap
-    { 1750, 2 },  // overflow-x
-    { 1752, 2 },  // overflow-y
-    { 1754, 1 },  // overlay
+    { 1743, 1 },  // overflow-anchor
+    { 1744, 1 },  // overflow-block
+    { 1745, 1 },  // overflow-clip-margin
+    { 1746, 1 },  // overflow-clip-margin-block
+    { 1747, 1 },  // overflow-clip-margin-block-end
+    { 1748, 1 },  // overflow-clip-margin-block-start
+    { 1749, 1 },  // overflow-clip-margin-bottom
+    { 1750, 1 },  // overflow-clip-margin-inline
+    { 1751, 1 },  // overflow-clip-margin-inline-end
+    { 1752, 1 },  // overflow-clip-margin-inline-start
+    { 1753, 1 },  // overflow-clip-margin-left
+    { 1754, 1 },  // overflow-clip-margin-right
+    { 1755, 1 },  // overflow-clip-margin-top
+    { 1756, 1 },  // overflow-inline
+    { 1757, 1 },  // overflow-wrap
+    { 1758, 2 },  // overflow-x
+    { 1760, 2 },  // overflow-y
+    { 1762, 1 },  // overlay
     { 0, 0 },     // overscroll-behavior
-    { 1755, 1 },  // overscroll-behavior-block
-    { 1756, 1 },  // overscroll-behavior-inline
-    { 1757, 2 },  // overscroll-behavior-x
-    { 1759, 2 },  // overscroll-behavior-y
+    { 1763, 1 },  // overscroll-behavior-block
+    { 1764, 1 },  // overscroll-behavior-inline
+    { 1765, 2 },  // overscroll-behavior-x
+    { 1767, 2 },  // overscroll-behavior-y
     { 0, 0 },     // padding
     { 0, 0 },     // padding-block
-    { 1761, 2 },  // padding-block-end
-    { 1763, 2 },  // padding-block-start
-    { 1765, 2 },  // padding-bottom
+    { 1769, 2 },  // padding-block-end
+    { 1771, 2 },  // padding-block-start
+    { 1773, 2 },  // padding-bottom
     { 0, 0 },     // padding-inline
-    { 1767, 2 },  // padding-inline-end
-    { 1769, 2 },  // padding-inline-start
-    { 1771, 2 },  // padding-left
-    { 1773, 2 },  // padding-right
-    { 1775, 2 },  // padding-top
-    { 1777, 1 },  // page
-    { 1778, 1 },  // page-break-after
-    { 1779, 1 },  // page-break-before
-    { 1780, 1 },  // page-break-inside
-    { 1781, 1 },  // paint-order
-    { 1782, 1 },  // path-length
+    { 1775, 2 },  // padding-inline-end
+    { 1777, 2 },  // padding-inline-start
+    { 1779, 2 },  // padding-left
+    { 1781, 2 },  // padding-right
+    { 1783, 2 },  // padding-top
+    { 1785, 1 },  // page
+    { 1786, 1 },  // page-break-after
+    { 1787, 1 },  // page-break-before
+    { 1788, 1 },  // page-break-inside
+    { 1789, 1 },  // paint-order
+    { 1790, 1 },  // path-length
     { 0, 0 },     // pause
-    { 1783, 2 },  // pause-after
-    { 1785, 2 },  // pause-before
-    { 1787, 1 },  // perspective
-    { 1788, 1 },  // perspective-origin
+    { 1791, 2 },  // pause-after
+    { 1793, 2 },  // pause-before
+    { 1795, 1 },  // perspective
+    { 1796, 1 },  // perspective-origin
     { 0, 0 },     // place-content
     { 0, 0 },     // place-items
     { 0, 0 },     // place-self
-    { 1789, 1 },  // pointer-events
+    { 1797, 1 },  // pointer-events
     { 0, 0 },     // pointer-timeline
-    { 1790, 2 },  // pointer-timeline-axis
-    { 1792, 2 },  // pointer-timeline-name
-    { 1794, 1 },  // position
-    { 1795, 1 },  // position-anchor
-    { 1796, 1 },  // position-area
+    { 1798, 2 },  // pointer-timeline-axis
+    { 1800, 2 },  // pointer-timeline-name
+    { 1802, 1 },  // position
+    { 1803, 1 },  // position-anchor
+    { 1804, 1 },  // position-area
     { 0, 0 },     // position-try
-    { 1797, 2 },  // position-try-fallbacks
-    { 1799, 2 },  // position-try-order
-    { 1801, 1 },  // position-visibility
-    { 1802, 2 },  // print-color-adjust
-    { 1804, 1 },  // quotes
-    { 1805, 1 },  // r
-    { 1806, 1 },  // reading-flow
-    { 1807, 1 },  // reading-order
-    { 1808, 1 },  // region-fragment
-    { 1809, 1 },  // resize
+    { 1805, 2 },  // position-try-fallbacks
+    { 1807, 2 },  // position-try-order
+    { 1809, 1 },  // position-visibility
+    { 1810, 2 },  // print-color-adjust
+    { 1812, 1 },  // quotes
+    { 1813, 1 },  // r
+    { 1814, 1 },  // reading-flow
+    { 1815, 1 },  // reading-order
+    { 1816, 1 },  // region-fragment
+    { 1817, 1 },  // resize
     { 0, 0 },     // rest
-    { 1810, 2 },  // rest-after
-    { 1812, 2 },  // rest-before
-    { 1814, 2 },  // right
-    { 1816, 1 },  // rotate
-    { 1817, 2 },  // row-gap
+    { 1818, 2 },  // rest-after
+    { 1820, 2 },  // rest-before
+    { 1822, 2 },  // right
+    { 1824, 1 },  // rotate
+    { 1825, 2 },  // row-gap
     { 0, 0 },     // row-rule
-    { 1819, 2 },  // row-rule-break
-    { 1821, 4 },  // row-rule-color
+    { 1827, 2 },  // row-rule-break
+    { 1829, 4 },  // row-rule-color
     { 0, 0 },     // row-rule-inset
     { 0, 0 },     // row-rule-inset-cap
-    { 1825, 7 },  // row-rule-inset-cap-end
-    { 1832, 7 },  // row-rule-inset-cap-start
+    { 1833, 7 },  // row-rule-inset-cap-end
+    { 1840, 7 },  // row-rule-inset-cap-start
     { 0, 0 },     // row-rule-inset-end
     { 0, 0 },     // row-rule-inset-junction
-    { 1839, 7 },  // row-rule-inset-junction-end
-    { 1846, 7 },  // row-rule-inset-junction-start
+    { 1847, 7 },  // row-rule-inset-junction-end
+    { 1854, 7 },  // row-rule-inset-junction-start
     { 0, 0 },     // row-rule-inset-start
-    { 1853, 4 },  // row-rule-style
-    { 1857, 2 },  // row-rule-visibility-items
-    { 1859, 4 },  // row-rule-width
-    { 1863, 1 },  // ruby-align
-    { 1864, 1 },  // ruby-merge
-    { 1865, 1 },  // ruby-overhang
-    { 1866, 1 },  // ruby-position
+    { 1861, 4 },  // row-rule-style
+    { 1865, 2 },  // row-rule-visibility-items
+    { 1867, 4 },  // row-rule-width
+    { 1871, 1 },  // ruby-align
+    { 1872, 1 },  // ruby-merge
+    { 1873, 1 },  // ruby-overhang
+    { 1874, 1 },  // ruby-position
     { 0, 0 },     // rule
     { 0, 0 },     // rule-break
     { 0, 0 },     // rule-color
@@ -8163,195 +8163,195 @@ extern const CssPropertySpan kCssPropertyShorthands[PrCssProperty_Count] = {
     { 0, 0 },     // rule-inset-end
     { 0, 0 },     // rule-inset-junction
     { 0, 0 },     // rule-inset-start
-    { 1867, 1 },  // rule-overlap
+    { 1875, 1 },  // rule-overlap
     { 0, 0 },     // rule-style
     { 0, 0 },     // rule-visibility-items
     { 0, 0 },     // rule-width
-    { 1868, 1 },  // rx
-    { 1869, 1 },  // ry
-    { 1870, 1 },  // scale
-    { 1871, 1 },  // scroll-axis-lock
-    { 1872, 1 },  // scroll-behavior
-    { 1873, 1 },  // scroll-initial-target
+    { 1876, 1 },  // rx
+    { 1877, 1 },  // ry
+    { 1878, 1 },  // scale
+    { 1879, 1 },  // scroll-axis-lock
+    { 1880, 1 },  // scroll-behavior
+    { 1881, 1 },  // scroll-initial-target
     { 0, 0 },     // scroll-margin
     { 0, 0 },     // scroll-margin-block
-    { 1874, 2 },  // scroll-margin-block-end
-    { 1876, 2 },  // scroll-margin-block-start
-    { 1878, 2 },  // scroll-margin-bottom
+    { 1882, 2 },  // scroll-margin-block-end
+    { 1884, 2 },  // scroll-margin-block-start
+    { 1886, 2 },  // scroll-margin-bottom
     { 0, 0 },     // scroll-margin-inline
-    { 1880, 2 },  // scroll-margin-inline-end
-    { 1882, 2 },  // scroll-margin-inline-start
-    { 1884, 2 },  // scroll-margin-left
-    { 1886, 2 },  // scroll-margin-right
-    { 1888, 2 },  // scroll-margin-top
-    { 1890, 1 },  // scroll-marker-group
+    { 1888, 2 },  // scroll-margin-inline-end
+    { 1890, 2 },  // scroll-margin-inline-start
+    { 1892, 2 },  // scroll-margin-left
+    { 1894, 2 },  // scroll-margin-right
+    { 1896, 2 },  // scroll-margin-top
+    { 1898, 1 },  // scroll-marker-group
     { 0, 0 },     // scroll-padding
     { 0, 0 },     // scroll-padding-block
-    { 1891, 2 },  // scroll-padding-block-end
-    { 1893, 2 },  // scroll-padding-block-start
-    { 1895, 2 },  // scroll-padding-bottom
+    { 1899, 2 },  // scroll-padding-block-end
+    { 1901, 2 },  // scroll-padding-block-start
+    { 1903, 2 },  // scroll-padding-bottom
     { 0, 0 },     // scroll-padding-inline
-    { 1897, 2 },  // scroll-padding-inline-end
-    { 1899, 2 },  // scroll-padding-inline-start
-    { 1901, 2 },  // scroll-padding-left
-    { 1903, 2 },  // scroll-padding-right
-    { 1905, 2 },  // scroll-padding-top
-    { 1907, 1 },  // scroll-snap-align
-    { 1908, 1 },  // scroll-snap-stop
-    { 1909, 1 },  // scroll-snap-type
-    { 1910, 1 },  // scroll-target-group
+    { 1905, 2 },  // scroll-padding-inline-end
+    { 1907, 2 },  // scroll-padding-inline-start
+    { 1909, 2 },  // scroll-padding-left
+    { 1911, 2 },  // scroll-padding-right
+    { 1913, 2 },  // scroll-padding-top
+    { 1915, 1 },  // scroll-snap-align
+    { 1916, 1 },  // scroll-snap-stop
+    { 1917, 1 },  // scroll-snap-type
+    { 1918, 1 },  // scroll-target-group
     { 0, 0 },     // scroll-timeline
-    { 1911, 2 },  // scroll-timeline-axis
-    { 1913, 2 },  // scroll-timeline-name
-    { 1915, 1 },  // scrollbar-color
-    { 1916, 1 },  // scrollbar-gutter
-    { 1917, 1 },  // scrollbar-width
-    { 1918, 1 },  // shape-image-threshold
-    { 1919, 1 },  // shape-inside
-    { 1920, 1 },  // shape-margin
-    { 1921, 1 },  // shape-outside
-    { 1922, 1 },  // shape-padding
-    { 1923, 1 },  // shape-rendering
+    { 1919, 2 },  // scroll-timeline-axis
+    { 1921, 2 },  // scroll-timeline-name
+    { 1923, 1 },  // scrollbar-color
+    { 1924, 1 },  // scrollbar-gutter
+    { 1925, 1 },  // scrollbar-width
+    { 1926, 1 },  // shape-image-threshold
+    { 1927, 1 },  // shape-inside
+    { 1928, 1 },  // shape-margin
+    { 1929, 1 },  // shape-outside
+    { 1930, 1 },  // shape-padding
+    { 1931, 1 },  // shape-rendering
     { 0, 0 },     // size
-    { 1924, 1 },  // slider-orientation
-    { 1925, 1 },  // spatial-navigation-action
-    { 1926, 1 },  // spatial-navigation-contain
-    { 1927, 1 },  // spatial-navigation-function
-    { 1928, 1 },  // speak
-    { 1929, 1 },  // speak-as
-    { 1930, 1 },  // stop-color
-    { 1931, 1 },  // stop-opacity
-    { 1932, 1 },  // string-set
-    { 1933, 1 },  // stroke
-    { 1934, 1 },  // stroke-align
-    { 1935, 1 },  // stroke-alignment
-    { 1936, 1 },  // stroke-break
-    { 1937, 1 },  // stroke-color
-    { 1938, 1 },  // stroke-dash-corner
-    { 1939, 1 },  // stroke-dash-justify
-    { 1940, 1 },  // stroke-dashadjust
-    { 1941, 1 },  // stroke-dasharray
-    { 1942, 1 },  // stroke-dashcorner
-    { 1943, 1 },  // stroke-dashoffset
-    { 1944, 1 },  // stroke-image
-    { 1945, 1 },  // stroke-linecap
-    { 1946, 1 },  // stroke-linejoin
-    { 1947, 1 },  // stroke-miterlimit
-    { 1948, 1 },  // stroke-opacity
-    { 1949, 1 },  // stroke-origin
-    { 1950, 1 },  // stroke-position
-    { 1951, 1 },  // stroke-repeat
-    { 1952, 1 },  // stroke-size
-    { 1953, 1 },  // stroke-width
-    { 1954, 1 },  // tab-size
-    { 1955, 1 },  // table-layout
+    { 1932, 1 },  // slider-orientation
+    { 1933, 1 },  // spatial-navigation-action
+    { 1934, 1 },  // spatial-navigation-contain
+    { 1935, 1 },  // spatial-navigation-function
+    { 1936, 1 },  // speak
+    { 1937, 1 },  // speak-as
+    { 1938, 1 },  // stop-color
+    { 1939, 1 },  // stop-opacity
+    { 1940, 1 },  // string-set
+    { 1941, 1 },  // stroke
+    { 1942, 1 },  // stroke-align
+    { 1943, 1 },  // stroke-alignment
+    { 1944, 1 },  // stroke-break
+    { 1945, 1 },  // stroke-color
+    { 1946, 1 },  // stroke-dash-corner
+    { 1947, 1 },  // stroke-dash-justify
+    { 1948, 1 },  // stroke-dashadjust
+    { 1949, 1 },  // stroke-dasharray
+    { 1950, 1 },  // stroke-dashcorner
+    { 1951, 1 },  // stroke-dashoffset
+    { 1952, 1 },  // stroke-image
+    { 1953, 1 },  // stroke-linecap
+    { 1954, 1 },  // stroke-linejoin
+    { 1955, 1 },  // stroke-miterlimit
+    { 1956, 1 },  // stroke-opacity
+    { 1957, 1 },  // stroke-origin
+    { 1958, 1 },  // stroke-position
+    { 1959, 1 },  // stroke-repeat
+    { 1960, 1 },  // stroke-size
+    { 1961, 1 },  // stroke-width
+    { 1962, 1 },  // tab-size
+    { 1963, 1 },  // table-layout
     { 0, 0 },     // text-align
-    { 1956, 2 },  // text-align-all
-    { 1958, 2 },  // text-align-last
-    { 1960, 1 },  // text-anchor
-    { 1961, 1 },  // text-autospace
+    { 1964, 2 },  // text-align-all
+    { 1966, 2 },  // text-align-last
+    { 1968, 1 },  // text-anchor
+    { 1969, 1 },  // text-autospace
     { 0, 0 },     // text-box
-    { 1962, 2 },  // text-box-edge
-    { 1964, 2 },  // text-box-trim
-    { 1966, 1 },  // text-combine-upright
+    { 1970, 2 },  // text-box-edge
+    { 1972, 2 },  // text-box-trim
+    { 1974, 1 },  // text-combine-upright
     { 0, 0 },     // text-decoration
-    { 1967, 2 },  // text-decoration-color
-    { 1969, 1 },  // text-decoration-inset
-    { 1970, 2 },  // text-decoration-line
+    { 1975, 2 },  // text-decoration-color
+    { 1977, 1 },  // text-decoration-inset
+    { 1978, 2 },  // text-decoration-line
     { 0, 0 },     // text-decoration-skip
-    { 1972, 1 },  // text-decoration-skip-box
-    { 1973, 1 },  // text-decoration-skip-ink
-    { 1974, 1 },  // text-decoration-skip-self
-    { 1975, 1 },  // text-decoration-skip-spaces
-    { 1976, 2 },  // text-decoration-style
-    { 1978, 2 },  // text-decoration-thickness
+    { 1980, 1 },  // text-decoration-skip-box
+    { 1981, 1 },  // text-decoration-skip-ink
+    { 1982, 1 },  // text-decoration-skip-self
+    { 1983, 1 },  // text-decoration-skip-spaces
+    { 1984, 2 },  // text-decoration-style
+    { 1986, 2 },  // text-decoration-thickness
     { 0, 0 },     // text-emphasis
-    { 1980, 2 },  // text-emphasis-color
-    { 1982, 1 },  // text-emphasis-position
-    { 1983, 1 },  // text-emphasis-skip
-    { 1984, 2 },  // text-emphasis-style
-    { 1986, 1 },  // text-fit
-    { 1987, 1 },  // text-group-align
-    { 1988, 1 },  // text-indent
-    { 1989, 1 },  // text-justify
-    { 1990, 2 },  // text-orientation
-    { 1992, 1 },  // text-overflow
-    { 1993, 1 },  // text-rendering
-    { 1994, 1 },  // text-shadow
-    { 1995, 1 },  // text-size-adjust
+    { 1988, 2 },  // text-emphasis-color
+    { 1990, 1 },  // text-emphasis-position
+    { 1991, 1 },  // text-emphasis-skip
+    { 1992, 2 },  // text-emphasis-style
+    { 1994, 1 },  // text-fit
+    { 1995, 1 },  // text-group-align
+    { 1996, 1 },  // text-indent
+    { 1997, 1 },  // text-justify
+    { 1998, 2 },  // text-orientation
+    { 2000, 1 },  // text-overflow
+    { 2001, 1 },  // text-rendering
+    { 2002, 1 },  // text-shadow
+    { 2003, 1 },  // text-size-adjust
     { 0, 0 },     // text-spacing
-    { 1996, 1 },  // text-spacing-trim
-    { 1997, 1 },  // text-transform
-    { 1998, 1 },  // text-underline-offset
-    { 1999, 1 },  // text-underline-position
+    { 2004, 1 },  // text-spacing-trim
+    { 2005, 1 },  // text-transform
+    { 2006, 1 },  // text-underline-offset
+    { 2007, 1 },  // text-underline-position
     { 0, 0 },     // text-wrap
-    { 2000, 3 },  // text-wrap-mode
-    { 2003, 2 },  // text-wrap-style
-    { 2005, 1 },  // timeline-scope
+    { 2008, 3 },  // text-wrap-mode
+    { 2011, 2 },  // text-wrap-style
+    { 2013, 1 },  // timeline-scope
     { 0, 0 },     // timeline-trigger
     { 0, 0 },     // timeline-trigger-activation-range
-    { 2006, 1 },  // timeline-trigger-activation-range-end
-    { 2007, 1 },  // timeline-trigger-activation-range-start
+    { 2014, 1 },  // timeline-trigger-activation-range-end
+    { 2015, 1 },  // timeline-trigger-activation-range-start
     { 0, 0 },     // timeline-trigger-active-range
-    { 2008, 1 },  // timeline-trigger-active-range-end
-    { 2009, 1 },  // timeline-trigger-active-range-start
-    { 2010, 1 },  // timeline-trigger-name
-    { 2011, 1 },  // timeline-trigger-source
-    { 2012, 2 },  // top
-    { 2014, 1 },  // touch-action
-    { 2015, 1 },  // transform
-    { 2016, 1 },  // transform-box
-    { 2017, 1 },  // transform-origin
-    { 2018, 1 },  // transform-style
+    { 2016, 1 },  // timeline-trigger-active-range-end
+    { 2017, 1 },  // timeline-trigger-active-range-start
+    { 2018, 1 },  // timeline-trigger-name
+    { 2019, 1 },  // timeline-trigger-source
+    { 2020, 2 },  // top
+    { 2022, 1 },  // touch-action
+    { 2023, 1 },  // transform
+    { 2024, 1 },  // transform-box
+    { 2025, 1 },  // transform-origin
+    { 2026, 1 },  // transform-style
     { 0, 0 },     // transition
-    { 2019, 2 },  // transition-behavior
-    { 2021, 2 },  // transition-delay
-    { 2023, 2 },  // transition-duration
-    { 2025, 2 },  // transition-property
-    { 2027, 2 },  // transition-timing-function
-    { 2029, 1 },  // translate
-    { 2030, 1 },  // trigger-scope
+    { 2027, 2 },  // transition-behavior
+    { 2029, 2 },  // transition-delay
+    { 2031, 2 },  // transition-duration
+    { 2033, 2 },  // transition-property
+    { 2035, 2 },  // transition-timing-function
+    { 2037, 1 },  // translate
+    { 2038, 1 },  // trigger-scope
     { 0, 0 },     // unicode-bidi
-    { 2031, 1 },  // user-select
-    { 2032, 1 },  // vector-effect
+    { 2039, 1 },  // user-select
+    { 2040, 1 },  // vector-effect
     { 0, 0 },     // vertical-align
     { 0, 0 },     // view-timeline
-    { 2033, 2 },  // view-timeline-axis
-    { 2035, 2 },  // view-timeline-inset
-    { 2037, 2 },  // view-timeline-name
-    { 2039, 1 },  // view-transition-class
-    { 2040, 1 },  // view-transition-group
-    { 2041, 1 },  // view-transition-name
-    { 2042, 1 },  // view-transition-scope
-    { 2043, 1 },  // visibility
-    { 2044, 1 },  // voice-balance
-    { 2045, 1 },  // voice-duration
-    { 2046, 1 },  // voice-family
-    { 2047, 1 },  // voice-pitch
-    { 2048, 1 },  // voice-range
-    { 2049, 1 },  // voice-rate
-    { 2050, 1 },  // voice-stress
-    { 2051, 1 },  // voice-volume
+    { 2041, 2 },  // view-timeline-axis
+    { 2043, 2 },  // view-timeline-inset
+    { 2045, 2 },  // view-timeline-name
+    { 2047, 1 },  // view-transition-class
+    { 2048, 1 },  // view-transition-group
+    { 2049, 1 },  // view-transition-name
+    { 2050, 1 },  // view-transition-scope
+    { 2051, 1 },  // visibility
+    { 2052, 1 },  // voice-balance
+    { 2053, 1 },  // voice-duration
+    { 2054, 1 },  // voice-family
+    { 2055, 1 },  // voice-pitch
+    { 2056, 1 },  // voice-range
+    { 2057, 1 },  // voice-rate
+    { 2058, 1 },  // voice-stress
+    { 2059, 1 },  // voice-volume
     { 0, 0 },     // white-space
-    { 2052, 2 },  // white-space-collapse
-    { 2054, 2 },  // white-space-trim
-    { 2056, 1 },  // widows
-    { 2057, 2 },  // width
-    { 2059, 1 },  // will-change
-    { 2060, 1 },  // window-drag
-    { 2061, 1 },  // word-break
-    { 2062, 1 },  // word-space-transform
-    { 2063, 1 },  // word-spacing
-    { 2064, 1 },  // wrap-after
-    { 2065, 1 },  // wrap-before
-    { 2066, 1 },  // wrap-flow
-    { 2067, 1 },  // wrap-inside
-    { 2068, 1 },  // wrap-through
-    { 2069, 1 },  // writing-mode
-    { 2070, 1 },  // x
-    { 2071, 1 },  // y
-    { 2072, 1 },  // z-index
-    { 2073, 1 },  // zoom
+    { 2060, 2 },  // white-space-collapse
+    { 2062, 2 },  // white-space-trim
+    { 2064, 1 },  // widows
+    { 2065, 2 },  // width
+    { 2067, 1 },  // will-change
+    { 2068, 1 },  // window-drag
+    { 2069, 1 },  // word-break
+    { 2070, 1 },  // word-space-transform
+    { 2071, 1 },  // word-spacing
+    { 2072, 1 },  // wrap-after
+    { 2073, 1 },  // wrap-before
+    { 2074, 1 },  // wrap-flow
+    { 2075, 1 },  // wrap-inside
+    { 2076, 1 },  // wrap-through
+    { 2077, 1 },  // writing-mode
+    { 2078, 1 },  // x
+    { 2079, 1 },  // y
+    { 2080, 1 },  // z-index
+    { 2081, 1 },  // zoom
     { 0, 0 },     // -webkit-align-content
     { 0, 0 },     // -webkit-align-items
     { 0, 0 },     // -webkit-align-self
@@ -8481,80 +8481,81 @@ extern const PrCssProperty kCssPropertyRuns[] = {
     PrCssProperty_AnimationTimingFunction, PrCssProperty_AnimationDelay, PrCssProperty_AnimationIterationCount, PrCssProperty_AnimationDirection,
     PrCssProperty_AnimationFillMode, PrCssProperty_AnimationPlayState, PrCssProperty_AnimationName, PrCssProperty_AnimationTimeline,
     PrCssProperty_AnimationRangeStart, PrCssProperty_AnimationRangeEnd, PrCssProperty_TransitionProperty, PrCssProperty_TransitionDuration,
-    PrCssProperty_TransitionTimingFunction, PrCssProperty_TransitionDelay, PrCssProperty_TransitionBehavior, PrCssProperty_MaskImage,
-    PrCssProperty_MaskPosition, PrCssProperty_MaskSize, PrCssProperty_MaskRepeat, PrCssProperty_MaskOrigin,
-    PrCssProperty_MaskClip, PrCssProperty_MaskComposite, PrCssProperty_MaskMode, PrCssProperty_MaskBorderSource,
-    PrCssProperty_MaskBorderSlice, PrCssProperty_MaskBorderWidth, PrCssProperty_MaskBorderOutset, PrCssProperty_MaskBorderRepeat,
-    PrCssProperty_MaskBorderMode, PrCssProperty_MaskBorderSource, PrCssProperty_MaskBorderSlice, PrCssProperty_MaskBorderWidth,
-    PrCssProperty_MaskBorderOutset, PrCssProperty_MaskBorderRepeat, PrCssProperty_MaskBorderMode, PrCssProperty_ScrollTimelineName,
-    PrCssProperty_ScrollTimelineAxis, PrCssProperty_ViewTimelineName, PrCssProperty_ViewTimelineAxis, PrCssProperty_ViewTimelineInset,
-    PrCssProperty_BackgroundImage, PrCssProperty_BackgroundPosition, PrCssProperty_BackgroundSize, PrCssProperty_BackgroundRepeat,
-    PrCssProperty_BackgroundAttachment, PrCssProperty_BackgroundOrigin, PrCssProperty_BackgroundClip, PrCssProperty_BackgroundColor,
-    PrCssProperty_BorderTopLeftRadius, PrCssProperty_BorderTopRightRadius, PrCssProperty_BorderBottomRightRadius, PrCssProperty_BorderBottomLeftRadius,
-    PrCssProperty_BorderTopLeftRadius, PrCssProperty_BorderTopRightRadius, PrCssProperty_BorderTopRightRadius, PrCssProperty_BorderBottomRightRadius,
-    PrCssProperty_BorderBottomLeftRadius, PrCssProperty_BorderBottomRightRadius, PrCssProperty_BorderTopLeftRadius, PrCssProperty_BorderBottomLeftRadius,
-    PrCssProperty_BorderStartStartRadius, PrCssProperty_BorderStartEndRadius, PrCssProperty_BorderEndStartRadius, PrCssProperty_BorderEndEndRadius,
-    PrCssProperty_BorderStartStartRadius, PrCssProperty_BorderEndStartRadius, PrCssProperty_BorderStartEndRadius, PrCssProperty_BorderEndEndRadius,
-    PrCssProperty_FlexGrow, PrCssProperty_FlexShrink, PrCssProperty_FlexBasis, PrCssProperty_FontStyle,
+    PrCssProperty_TransitionTimingFunction, PrCssProperty_TransitionDelay, PrCssProperty_TransitionBehavior, PrCssProperty_BoxShadowColor,
+    PrCssProperty_BoxShadowOffset, PrCssProperty_BoxShadowBlur, PrCssProperty_BoxShadowSpread, PrCssProperty_BoxShadowPosition,
+    PrCssProperty_MaskImage, PrCssProperty_MaskPosition, PrCssProperty_MaskSize, PrCssProperty_MaskRepeat,
+    PrCssProperty_MaskOrigin, PrCssProperty_MaskClip, PrCssProperty_MaskComposite, PrCssProperty_MaskMode,
+    PrCssProperty_MaskBorderSource, PrCssProperty_MaskBorderSlice, PrCssProperty_MaskBorderWidth, PrCssProperty_MaskBorderOutset,
+    PrCssProperty_MaskBorderRepeat, PrCssProperty_MaskBorderMode, PrCssProperty_MaskBorderSource, PrCssProperty_MaskBorderSlice,
+    PrCssProperty_MaskBorderWidth, PrCssProperty_MaskBorderOutset, PrCssProperty_MaskBorderRepeat, PrCssProperty_MaskBorderMode,
+    PrCssProperty_ScrollTimelineName, PrCssProperty_ScrollTimelineAxis, PrCssProperty_ViewTimelineName, PrCssProperty_ViewTimelineAxis,
+    PrCssProperty_ViewTimelineInset, PrCssProperty_BackgroundImage, PrCssProperty_BackgroundPosition, PrCssProperty_BackgroundSize,
+    PrCssProperty_BackgroundRepeat, PrCssProperty_BackgroundAttachment, PrCssProperty_BackgroundOrigin, PrCssProperty_BackgroundClip,
+    PrCssProperty_BackgroundColor, PrCssProperty_BorderTopLeftRadius, PrCssProperty_BorderTopRightRadius, PrCssProperty_BorderBottomRightRadius,
+    PrCssProperty_BorderBottomLeftRadius, PrCssProperty_BorderTopLeftRadius, PrCssProperty_BorderTopRightRadius, PrCssProperty_BorderTopRightRadius,
+    PrCssProperty_BorderBottomRightRadius, PrCssProperty_BorderBottomLeftRadius, PrCssProperty_BorderBottomRightRadius, PrCssProperty_BorderTopLeftRadius,
+    PrCssProperty_BorderBottomLeftRadius, PrCssProperty_BorderStartStartRadius, PrCssProperty_BorderStartEndRadius, PrCssProperty_BorderEndStartRadius,
+    PrCssProperty_BorderEndEndRadius, PrCssProperty_BorderStartStartRadius, PrCssProperty_BorderEndStartRadius, PrCssProperty_BorderStartEndRadius,
+    PrCssProperty_BorderEndEndRadius, PrCssProperty_FlexGrow, PrCssProperty_FlexShrink, PrCssProperty_FlexBasis,
+    PrCssProperty_FontStyle, PrCssProperty_FontVariantLigatures, PrCssProperty_FontVariantCaps, PrCssProperty_FontVariantAlternates,
+    PrCssProperty_FontVariantNumeric, PrCssProperty_FontVariantEastAsian, PrCssProperty_FontVariantPosition, PrCssProperty_FontVariantEmoji,
+    PrCssProperty_FontWeight, PrCssProperty_FontWidth, PrCssProperty_FontSize, PrCssProperty_LineHeight,
+    PrCssProperty_FontFamily, PrCssProperty_FontFeatureSettings, PrCssProperty_FontKerning, PrCssProperty_FontLanguageOverride,
+    PrCssProperty_FontOpticalSizing, PrCssProperty_FontSizeAdjust, PrCssProperty_FontVariationSettings, PrCssProperty_FontPalette,
+    PrCssProperty_FontSynthesisWeight, PrCssProperty_FontSynthesisStyle, PrCssProperty_FontSynthesisSmallCaps, PrCssProperty_FontSynthesisPosition,
     PrCssProperty_FontVariantLigatures, PrCssProperty_FontVariantCaps, PrCssProperty_FontVariantAlternates, PrCssProperty_FontVariantNumeric,
-    PrCssProperty_FontVariantEastAsian, PrCssProperty_FontVariantPosition, PrCssProperty_FontVariantEmoji, PrCssProperty_FontWeight,
-    PrCssProperty_FontWidth, PrCssProperty_FontSize, PrCssProperty_LineHeight, PrCssProperty_FontFamily,
-    PrCssProperty_FontFeatureSettings, PrCssProperty_FontKerning, PrCssProperty_FontLanguageOverride, PrCssProperty_FontOpticalSizing,
-    PrCssProperty_FontSizeAdjust, PrCssProperty_FontVariationSettings, PrCssProperty_FontPalette, PrCssProperty_FontSynthesisWeight,
-    PrCssProperty_FontSynthesisStyle, PrCssProperty_FontSynthesisSmallCaps, PrCssProperty_FontSynthesisPosition, PrCssProperty_FontVariantLigatures,
-    PrCssProperty_FontVariantCaps, PrCssProperty_FontVariantAlternates, PrCssProperty_FontVariantNumeric, PrCssProperty_FontVariantEastAsian,
-    PrCssProperty_FontVariantPosition, PrCssProperty_FontVariantEmoji, PrCssProperty_GridRowStart, PrCssProperty_GridColumnStart,
-    PrCssProperty_GridRowEnd, PrCssProperty_GridColumnEnd, PrCssProperty_GridRowStart, PrCssProperty_GridRowEnd,
-    PrCssProperty_GridColumnStart, PrCssProperty_GridColumnEnd, PrCssProperty_GridTemplateRows, PrCssProperty_GridTemplateColumns,
-    PrCssProperty_GridTemplateAreas, PrCssProperty_GridTemplateRows, PrCssProperty_GridTemplateColumns, PrCssProperty_GridTemplateAreas,
-    PrCssProperty_GridAutoRows, PrCssProperty_GridAutoColumns, PrCssProperty_GridAutoFlow, PrCssProperty_AlignContent,
-    PrCssProperty_JustifyContent, PrCssProperty_AlignItems, PrCssProperty_JustifyItems, PrCssProperty_AlignSelf,
-    PrCssProperty_JustifySelf, PrCssProperty_TextBoxTrim, PrCssProperty_TextBoxEdge, PrCssProperty_WhiteSpaceCollapse,
-    PrCssProperty_TextWrapMode, PrCssProperty_WhiteSpaceTrim, PrCssProperty_TextAlignAll, PrCssProperty_TextAlignLast,
-    PrCssProperty_TextOrientation, PrCssProperty_CueBefore, PrCssProperty_CueAfter, PrCssProperty_PauseBefore,
-    PrCssProperty_PauseAfter, PrCssProperty_RestBefore, PrCssProperty_RestAfter, PrCssProperty_InterestDelayStart,
-    PrCssProperty_InterestDelayEnd, PrCssProperty_CornerTopLeftShape, PrCssProperty_CornerTopRightShape, PrCssProperty_CornerBottomRightShape,
-    PrCssProperty_CornerBottomLeftShape, PrCssProperty_CornerTopLeftShape, PrCssProperty_CornerTopRightShape, PrCssProperty_CornerTopRightShape,
-    PrCssProperty_CornerBottomRightShape, PrCssProperty_CornerBottomLeftShape, PrCssProperty_CornerBottomRightShape, PrCssProperty_CornerTopLeftShape,
-    PrCssProperty_CornerBottomLeftShape, PrCssProperty_CornerStartStartShape, PrCssProperty_CornerStartEndShape, PrCssProperty_CornerEndStartShape,
-    PrCssProperty_CornerEndEndShape, PrCssProperty_CornerStartStartShape, PrCssProperty_CornerEndStartShape, PrCssProperty_CornerStartEndShape,
-    PrCssProperty_CornerEndEndShape, PrCssProperty_BorderTopClip, PrCssProperty_BorderRightClip, PrCssProperty_BorderBottomClip,
-    PrCssProperty_BorderLeftClip, PrCssProperty_BorderBlockStartClip, PrCssProperty_BorderBlockEndClip, PrCssProperty_BorderInlineStartClip,
-    PrCssProperty_BorderInlineEndClip, PrCssProperty_PrintColorAdjust, PrCssProperty_MarkerStart, PrCssProperty_MarkerMid,
-    PrCssProperty_MarkerEnd, PrCssProperty_BlockStepSize, PrCssProperty_BlockStepInsert, PrCssProperty_BlockStepAlign,
-    PrCssProperty_BlockStepRound, PrCssProperty_BaselineSource, PrCssProperty_AlignmentBaseline, PrCssProperty_BaselineShift,
-    PrCssProperty_PointerTimelineName, PrCssProperty_PointerTimelineAxis, PrCssProperty_Width, PrCssProperty_Height,
-    PrCssProperty_MinWidth, PrCssProperty_MinHeight, PrCssProperty_MaxWidth, PrCssProperty_MaxHeight,
-    PrCssProperty_WebkitBoxAlign, PrCssProperty_WebkitBoxFlex, PrCssProperty_WebkitBoxOrdinalGroup, PrCssProperty_WebkitBoxOrient,
-    PrCssProperty_WebkitBoxPack, PrCssProperty_WebkitLineClamp, PrCssProperty_WebkitTextFillColor, PrCssProperty_WebkitTextStrokeColor,
-    PrCssProperty_WebkitTextStrokeWidth, PrCssProperty_WebkitUserSelect, PrCssProperty_AccentColor, PrCssProperty_AlignContent,
-    PrCssProperty_AlignItems, PrCssProperty_AlignSelf, PrCssProperty_AlignmentBaseline, PrCssProperty_AnchorName,
-    PrCssProperty_AnchorScope, PrCssProperty_AnimationComposition, PrCssProperty_AnimationDelayEnd, PrCssProperty_AnimationDelayStart,
-    PrCssProperty_AnimationDirection, PrCssProperty_AnimationDuration, PrCssProperty_AnimationFillMode, PrCssProperty_AnimationIterationCount,
-    PrCssProperty_AnimationName, PrCssProperty_AnimationPlayState, PrCssProperty_AnimationRangeCenter, PrCssProperty_AnimationRangeEnd,
-    PrCssProperty_AnimationRangeStart, PrCssProperty_AnimationTimeline, PrCssProperty_AnimationTimingFunction, PrCssProperty_AnimationTrigger,
-    PrCssProperty_Appearance, PrCssProperty_AspectRatio, PrCssProperty_BackdropFilter, PrCssProperty_BackfaceVisibility,
-    PrCssProperty_BackgroundAttachment, PrCssProperty_BackgroundBlendMode, PrCssProperty_BackgroundClip, PrCssProperty_BackgroundColor,
-    PrCssProperty_BackgroundImage, PrCssProperty_BackgroundOrigin, PrCssProperty_BackgroundPosition, PrCssProperty_BackgroundPositionBlock,
-    PrCssProperty_BackgroundPositionInline, PrCssProperty_BackgroundPositionX, PrCssProperty_BackgroundPositionY, PrCssProperty_BackgroundRepeat,
-    PrCssProperty_BackgroundRepeatBlock, PrCssProperty_BackgroundRepeatInline, PrCssProperty_BackgroundRepeatX, PrCssProperty_BackgroundRepeatY,
-    PrCssProperty_BackgroundSize, PrCssProperty_BaselineShift, PrCssProperty_BaselineSource, PrCssProperty_BlockEllipsis,
-    PrCssProperty_BlockSize, PrCssProperty_BlockStepAlign, PrCssProperty_BlockStepInsert, PrCssProperty_BlockStepRound,
-    PrCssProperty_BlockStepSize, PrCssProperty_BookmarkLabel, PrCssProperty_BookmarkLevel, PrCssProperty_BookmarkState,
-    PrCssProperty_BorderBlockEndClip, PrCssProperty_BorderBlockEndColor, PrCssProperty_BorderBlockEndStyle, PrCssProperty_BorderBlockEndWidth,
-    PrCssProperty_BorderBlockStartClip, PrCssProperty_BorderBlockStartColor, PrCssProperty_BorderBlockStartStyle, PrCssProperty_BorderBlockStartWidth,
-    PrCssProperty_BorderBottomClip, PrCssProperty_BorderBottomColor, PrCssProperty_BorderBottomLeftRadius, PrCssProperty_BorderBottomRightRadius,
-    PrCssProperty_BorderBottomStyle, PrCssProperty_BorderBottomWidth, PrCssProperty_BorderBoundary, PrCssProperty_BorderCollapse,
-    PrCssProperty_BorderEndEndRadius, PrCssProperty_BorderEndStartRadius, PrCssProperty_BorderImageOutset, PrCssProperty_BorderImageRepeat,
-    PrCssProperty_BorderImageSlice, PrCssProperty_BorderImageSource, PrCssProperty_BorderImageWidth, PrCssProperty_BorderInlineEndClip,
-    PrCssProperty_BorderInlineEndColor, PrCssProperty_BorderInlineEndStyle, PrCssProperty_BorderInlineEndWidth, PrCssProperty_BorderInlineStartClip,
-    PrCssProperty_BorderInlineStartColor, PrCssProperty_BorderInlineStartStyle, PrCssProperty_BorderInlineStartWidth, PrCssProperty_BorderLeftClip,
-    PrCssProperty_BorderLeftColor, PrCssProperty_BorderLeftStyle, PrCssProperty_BorderLeftWidth, PrCssProperty_BorderLimit,
-    PrCssProperty_BorderRightClip, PrCssProperty_BorderRightColor, PrCssProperty_BorderRightStyle, PrCssProperty_BorderRightWidth,
-    PrCssProperty_BorderShape, PrCssProperty_BorderSpacing, PrCssProperty_BorderStartEndRadius, PrCssProperty_BorderStartStartRadius,
-    PrCssProperty_BorderTopClip, PrCssProperty_BorderTopColor, PrCssProperty_BorderTopLeftRadius, PrCssProperty_BorderTopRightRadius,
-    PrCssProperty_BorderTopStyle, PrCssProperty_BorderTopWidth, PrCssProperty_Bottom, PrCssProperty_BoxDecorationBreak,
-    PrCssProperty_BoxShadow, PrCssProperty_BoxShadowBlur, PrCssProperty_BoxShadowColor, PrCssProperty_BoxShadowOffset,
+    PrCssProperty_FontVariantEastAsian, PrCssProperty_FontVariantPosition, PrCssProperty_FontVariantEmoji, PrCssProperty_GridRowStart,
+    PrCssProperty_GridColumnStart, PrCssProperty_GridRowEnd, PrCssProperty_GridColumnEnd, PrCssProperty_GridRowStart,
+    PrCssProperty_GridRowEnd, PrCssProperty_GridColumnStart, PrCssProperty_GridColumnEnd, PrCssProperty_GridTemplateRows,
+    PrCssProperty_GridTemplateColumns, PrCssProperty_GridTemplateAreas, PrCssProperty_GridTemplateRows, PrCssProperty_GridTemplateColumns,
+    PrCssProperty_GridTemplateAreas, PrCssProperty_GridAutoRows, PrCssProperty_GridAutoColumns, PrCssProperty_GridAutoFlow,
+    PrCssProperty_AlignContent, PrCssProperty_JustifyContent, PrCssProperty_AlignItems, PrCssProperty_JustifyItems,
+    PrCssProperty_AlignSelf, PrCssProperty_JustifySelf, PrCssProperty_TextBoxTrim, PrCssProperty_TextBoxEdge,
+    PrCssProperty_WhiteSpaceCollapse, PrCssProperty_TextWrapMode, PrCssProperty_WhiteSpaceTrim, PrCssProperty_TextAlignAll,
+    PrCssProperty_TextAlignLast, PrCssProperty_TextOrientation, PrCssProperty_CueBefore, PrCssProperty_CueAfter,
+    PrCssProperty_PauseBefore, PrCssProperty_PauseAfter, PrCssProperty_RestBefore, PrCssProperty_RestAfter,
+    PrCssProperty_InterestDelayStart, PrCssProperty_InterestDelayEnd, PrCssProperty_CornerTopLeftShape, PrCssProperty_CornerTopRightShape,
+    PrCssProperty_CornerBottomRightShape, PrCssProperty_CornerBottomLeftShape, PrCssProperty_CornerTopLeftShape, PrCssProperty_CornerTopRightShape,
+    PrCssProperty_CornerTopRightShape, PrCssProperty_CornerBottomRightShape, PrCssProperty_CornerBottomLeftShape, PrCssProperty_CornerBottomRightShape,
+    PrCssProperty_CornerTopLeftShape, PrCssProperty_CornerBottomLeftShape, PrCssProperty_CornerStartStartShape, PrCssProperty_CornerStartEndShape,
+    PrCssProperty_CornerEndStartShape, PrCssProperty_CornerEndEndShape, PrCssProperty_CornerStartStartShape, PrCssProperty_CornerEndStartShape,
+    PrCssProperty_CornerStartEndShape, PrCssProperty_CornerEndEndShape, PrCssProperty_BorderTopClip, PrCssProperty_BorderRightClip,
+    PrCssProperty_BorderBottomClip, PrCssProperty_BorderLeftClip, PrCssProperty_BorderBlockStartClip, PrCssProperty_BorderBlockEndClip,
+    PrCssProperty_BorderInlineStartClip, PrCssProperty_BorderInlineEndClip, PrCssProperty_PrintColorAdjust, PrCssProperty_MarkerStart,
+    PrCssProperty_MarkerMid, PrCssProperty_MarkerEnd, PrCssProperty_BlockStepSize, PrCssProperty_BlockStepInsert,
+    PrCssProperty_BlockStepAlign, PrCssProperty_BlockStepRound, PrCssProperty_BaselineSource, PrCssProperty_AlignmentBaseline,
+    PrCssProperty_BaselineShift, PrCssProperty_PointerTimelineName, PrCssProperty_PointerTimelineAxis, PrCssProperty_Width,
+    PrCssProperty_Height, PrCssProperty_MinWidth, PrCssProperty_MinHeight, PrCssProperty_MaxWidth,
+    PrCssProperty_MaxHeight, PrCssProperty_WebkitBoxAlign, PrCssProperty_WebkitBoxFlex, PrCssProperty_WebkitBoxOrdinalGroup,
+    PrCssProperty_WebkitBoxOrient, PrCssProperty_WebkitBoxPack, PrCssProperty_WebkitLineClamp, PrCssProperty_WebkitTextFillColor,
+    PrCssProperty_WebkitTextStrokeColor, PrCssProperty_WebkitTextStrokeWidth, PrCssProperty_WebkitUserSelect, PrCssProperty_AccentColor,
+    PrCssProperty_AlignContent, PrCssProperty_AlignItems, PrCssProperty_AlignSelf, PrCssProperty_AlignmentBaseline,
+    PrCssProperty_AnchorName, PrCssProperty_AnchorScope, PrCssProperty_AnimationComposition, PrCssProperty_AnimationDelayEnd,
+    PrCssProperty_AnimationDelayStart, PrCssProperty_AnimationDirection, PrCssProperty_AnimationDuration, PrCssProperty_AnimationFillMode,
+    PrCssProperty_AnimationIterationCount, PrCssProperty_AnimationName, PrCssProperty_AnimationPlayState, PrCssProperty_AnimationRangeCenter,
+    PrCssProperty_AnimationRangeEnd, PrCssProperty_AnimationRangeStart, PrCssProperty_AnimationTimeline, PrCssProperty_AnimationTimingFunction,
+    PrCssProperty_AnimationTrigger, PrCssProperty_Appearance, PrCssProperty_AspectRatio, PrCssProperty_BackdropFilter,
+    PrCssProperty_BackfaceVisibility, PrCssProperty_BackgroundAttachment, PrCssProperty_BackgroundBlendMode, PrCssProperty_BackgroundClip,
+    PrCssProperty_BackgroundColor, PrCssProperty_BackgroundImage, PrCssProperty_BackgroundOrigin, PrCssProperty_BackgroundPosition,
+    PrCssProperty_BackgroundPositionBlock, PrCssProperty_BackgroundPositionInline, PrCssProperty_BackgroundPositionX, PrCssProperty_BackgroundPositionY,
+    PrCssProperty_BackgroundRepeat, PrCssProperty_BackgroundRepeatBlock, PrCssProperty_BackgroundRepeatInline, PrCssProperty_BackgroundRepeatX,
+    PrCssProperty_BackgroundRepeatY, PrCssProperty_BackgroundSize, PrCssProperty_BaselineShift, PrCssProperty_BaselineSource,
+    PrCssProperty_BlockEllipsis, PrCssProperty_BlockSize, PrCssProperty_BlockStepAlign, PrCssProperty_BlockStepInsert,
+    PrCssProperty_BlockStepRound, PrCssProperty_BlockStepSize, PrCssProperty_BookmarkLabel, PrCssProperty_BookmarkLevel,
+    PrCssProperty_BookmarkState, PrCssProperty_BorderBlockEndClip, PrCssProperty_BorderBlockEndColor, PrCssProperty_BorderBlockEndStyle,
+    PrCssProperty_BorderBlockEndWidth, PrCssProperty_BorderBlockStartClip, PrCssProperty_BorderBlockStartColor, PrCssProperty_BorderBlockStartStyle,
+    PrCssProperty_BorderBlockStartWidth, PrCssProperty_BorderBottomClip, PrCssProperty_BorderBottomColor, PrCssProperty_BorderBottomLeftRadius,
+    PrCssProperty_BorderBottomRightRadius, PrCssProperty_BorderBottomStyle, PrCssProperty_BorderBottomWidth, PrCssProperty_BorderBoundary,
+    PrCssProperty_BorderCollapse, PrCssProperty_BorderEndEndRadius, PrCssProperty_BorderEndStartRadius, PrCssProperty_BorderImageOutset,
+    PrCssProperty_BorderImageRepeat, PrCssProperty_BorderImageSlice, PrCssProperty_BorderImageSource, PrCssProperty_BorderImageWidth,
+    PrCssProperty_BorderInlineEndClip, PrCssProperty_BorderInlineEndColor, PrCssProperty_BorderInlineEndStyle, PrCssProperty_BorderInlineEndWidth,
+    PrCssProperty_BorderInlineStartClip, PrCssProperty_BorderInlineStartColor, PrCssProperty_BorderInlineStartStyle, PrCssProperty_BorderInlineStartWidth,
+    PrCssProperty_BorderLeftClip, PrCssProperty_BorderLeftColor, PrCssProperty_BorderLeftStyle, PrCssProperty_BorderLeftWidth,
+    PrCssProperty_BorderLimit, PrCssProperty_BorderRightClip, PrCssProperty_BorderRightColor, PrCssProperty_BorderRightStyle,
+    PrCssProperty_BorderRightWidth, PrCssProperty_BorderShape, PrCssProperty_BorderSpacing, PrCssProperty_BorderStartEndRadius,
+    PrCssProperty_BorderStartStartRadius, PrCssProperty_BorderTopClip, PrCssProperty_BorderTopColor, PrCssProperty_BorderTopLeftRadius,
+    PrCssProperty_BorderTopRightRadius, PrCssProperty_BorderTopStyle, PrCssProperty_BorderTopWidth, PrCssProperty_Bottom,
+    PrCssProperty_BoxDecorationBreak, PrCssProperty_BoxShadowBlur, PrCssProperty_BoxShadowColor, PrCssProperty_BoxShadowOffset,
     PrCssProperty_BoxShadowPosition, PrCssProperty_BoxShadowSpread, PrCssProperty_BoxSizing, PrCssProperty_BoxSnap,
     PrCssProperty_BreakAfter, PrCssProperty_BreakBefore, PrCssProperty_BreakInside, PrCssProperty_CaptionSide,
     PrCssProperty_CaretAnimation, PrCssProperty_CaretColor, PrCssProperty_CaretShape, PrCssProperty_Clear,
@@ -8761,8 +8762,9 @@ extern const PrCssProperty kCssPropertyRuns[] = {
     PrCssProperty_All, PrCssProperty_Border, PrCssProperty_BorderStyle, PrCssProperty_BorderTop,
     PrCssProperty_All, PrCssProperty_Border, PrCssProperty_BorderWidth, PrCssProperty_BorderTop,
     PrCssProperty_All, PrCssProperty_Inset, PrCssProperty_All, PrCssProperty_All,
-    PrCssProperty_All, PrCssProperty_All, PrCssProperty_All, PrCssProperty_All,
-    PrCssProperty_All, PrCssProperty_All, PrCssProperty_All, PrCssProperty_All,
+    PrCssProperty_BoxShadow, PrCssProperty_All, PrCssProperty_BoxShadow, PrCssProperty_All,
+    PrCssProperty_BoxShadow, PrCssProperty_All, PrCssProperty_BoxShadow, PrCssProperty_All,
+    PrCssProperty_BoxShadow, PrCssProperty_All, PrCssProperty_All, PrCssProperty_All,
     PrCssProperty_All, PrCssProperty_All, PrCssProperty_All, PrCssProperty_All,
     PrCssProperty_Caret, PrCssProperty_All, PrCssProperty_Caret, PrCssProperty_All,
     PrCssProperty_Caret, PrCssProperty_All, PrCssProperty_All, PrCssProperty_All,

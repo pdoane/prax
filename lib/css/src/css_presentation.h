@@ -478,6 +478,7 @@ struct CssPresentation {
     RawArray<CssPresentationImageSpans> maskSpans;       // by index of the layer
     RawArray<PrLayoutLength> shapePoints;
     RawArray<PrLayoutFilter> filters;
+    RawArray<PrLayoutShadow> shadows;
 
     PrLayoutVec extent;                   // viewport of the last update
     PrLayoutNode canvasRoot;              // boxes of the root and the body when the canvas was last projected

@@ -59,14 +59,16 @@ constexpr PrCssProperty kDecorationProperties[] = {
 
 // Most elements declare no background, so the background's longhands are a group of their own, apart from the borders
 // and outlines that more elements declare. The corners' radii, which round the background, join it, since few elements
-// declare them either.
+// declare them either, and so do the box's shadows.
 constexpr PrCssProperty kBackgroundProperties[] = {
     PrCssProperty_BackgroundColor, PrCssProperty_BackgroundClip, PrCssProperty_BackgroundImage,
     PrCssProperty_BackgroundPosition, PrCssProperty_BackgroundSize, PrCssProperty_BackgroundRepeat,
     PrCssProperty_BackgroundAttachment, PrCssProperty_BackgroundOrigin, PrCssProperty_BorderTopLeftRadius,
     PrCssProperty_BorderTopRightRadius, PrCssProperty_BorderBottomRightRadius, PrCssProperty_BorderBottomLeftRadius,
     PrCssProperty_CornerTopLeftShape, PrCssProperty_CornerTopRightShape, PrCssProperty_CornerBottomRightShape,
-    PrCssProperty_CornerBottomLeftShape, PrCssProperty_BackgroundBlendMode,
+    PrCssProperty_CornerBottomLeftShape, PrCssProperty_BackgroundBlendMode, PrCssProperty_BoxShadowColor,
+    PrCssProperty_BoxShadowOffset, PrCssProperty_BoxShadowBlur, PrCssProperty_BoxShadowSpread,
+    PrCssProperty_BoxShadowPosition,
 };
 
 constexpr PrCssProperty kEffectProperties[] = {
@@ -172,7 +174,7 @@ extern const CssStyleGroupProperties kCssStyleGroupProperties[CssStyleGroup_Coun
     {kBoxProperties, 46},            // Box
     {kFlexProperties, 14},           // Flex
     {kDecorationProperties, 18},     // Decoration
-    {kBackgroundProperties, 17},     // Background
+    {kBackgroundProperties, 22},     // Background
     {kEffectProperties, 12},         // Effect
     {kCompositingProperties, 20},    // Compositing
     {kAnimationProperties, 14},      // Animation
@@ -344,11 +346,11 @@ extern const CssStyleSlot kCssStyleSlots[PrCssProperty_Count] = {
     {CssStyleGroup_Box, 6},             // bottom
     {CssStyleGroup_Fragmentation, 3},   // box-decoration-break
     {CssStyleGroup_Count, 0},           // box-shadow
-    {CssStyleGroup_Count, 0},           // box-shadow-blur
-    {CssStyleGroup_Count, 0},           // box-shadow-color
-    {CssStyleGroup_Count, 0},           // box-shadow-offset
-    {CssStyleGroup_Count, 0},           // box-shadow-position
-    {CssStyleGroup_Count, 0},           // box-shadow-spread
+    {CssStyleGroup_Background, 19},     // box-shadow-blur
+    {CssStyleGroup_Background, 17},     // box-shadow-color
+    {CssStyleGroup_Background, 18},     // box-shadow-offset
+    {CssStyleGroup_Background, 21},     // box-shadow-position
+    {CssStyleGroup_Background, 20},     // box-shadow-spread
     {CssStyleGroup_Box, 8},             // box-sizing
     {CssStyleGroup_Count, 0},           // box-snap
     {CssStyleGroup_Fragmentation, 1},   // break-after

@@ -2377,6 +2377,59 @@ PrLayoutMaskIndex maskOf(PrCssPresentation* r, const CssComputedStyle* style, co
     return index;
 }
 
+// Returns the shadows of a computed style's box-shadow longhands, from the top shadow down, interned by the tree
+// (css-borders-4/#box-shadow). box-shadow-offset is the coordinating list's base: each of its items is a shadow, or
+// none, and each other longhand's list repeats to its length (css-values-4/#linked-properties). A single offset length
+// is both offsets. A shadow's color is the current color unless it names one.
+PrLayoutShadowIndex shadowsOf(PrCssPresentation* r, const CssComputedStyle* style, const ColorTarget& target) {
+    CssValueRun offsets = cssComputedValue(style, PrCssProperty_BoxShadowOffset);
+    if (offsets.count == 0)
+        return kPrLayoutShadowNone;
+    CssValueRun colors = cssComputedValue(style, PrCssProperty_BoxShadowColor);
+    CssValueRun blurs = cssComputedValue(style, PrCssProperty_BoxShadowBlur);
+    CssValueRun spreads = cssComputedValue(style, PrCssProperty_BoxShadowSpread);
+    CssValueRun positions = cssComputedValue(style, PrCssProperty_BoxShadowPosition);
+    // Returns item `i` of a list, repeated to the base's length, or an empty run for an empty list.
+    auto itemOf = [](CssValueRun run, uint32_t i) {
+        CssListItems items = cssListItems(run);
+        return items.count != 0 ? cssListItem(run, items, i % items.count) : CssValueRun{run.values, 0, run.text};
+    };
+    auto pxAt = [](CssValueRun item) {
+        double px = 0;
+        return item.count != 0 && cssResolveLength(item, 0, 0, &px) ? float(px) : 0.0f;
+    };
+    r->shadows.clear();
+    CssListItems items = cssListItems(offsets);
+    for (uint32_t i = 0; i < items.count; ++i) {
+        CssValueRun offset = cssListItem(offsets, items, i);
+        if (offset.count == 0 || cssValueRunFirstKeyword(offset) == PrCssKeyword_None)
+            continue;
+        float lengths[2] = {0, 0};
+        uint32_t count = 0;
+        for (uint32_t k = 0; k < offset.count && count < 2; k += offset.values[k].next) {
+            double px = 0;
+            if (cssResolveLength(offset, k, 0, &px))
+                lengths[count++] = float(px);
+        }
+        if (count == 1)
+            lengths[1] = lengths[0];
+        PrColor color = target.context.current;
+        CssValueRun named = itemOf(colors, i);
+        if (named.count != 0)
+            cssResolveColor(named, 0, target.context, &color);
+        if (target.cap > 0)
+            color = prColorLimit(color, target.cap);
+        r->shadows.push(PrLayoutShadow{
+            .offset = PrVec2{lengths[0], lengths[1]},
+            .blur = prF32Max(pxAt(itemOf(blurs, i)), 0),
+            .spread = pxAt(itemOf(spreads, i)),
+            .color = prColor16FromColor(color),
+            .inset = cssValueRunFirstKeyword(itemOf(positions, i)) == PrCssKeyword_Inset,
+        });
+    }
+    return prLayoutShadowIntern(r->tree, r->shadows.data, r->shadows.count);
+}
+
 // Returns the filter list of a computed filter or backdrop-filter, interned by the tree
 // (filter-effects-1/#FilterProperty). If a URL names no filter element, the whole list is ignored and filters nothing,
 // though the box keeps its group.
@@ -2716,6 +2769,7 @@ PrLayoutStyleIndex project(PrCssPresentation* r, const CssComputedStyle* style, 
         decoration.borderStyle[side] = borderStyleOf(cssComputedValue(style, kBorderStyles[side]));
     }
     cornersOf(r, style, &decoration);
+    decoration.shadows = shadowsOf(r, style, ColorTarget{colors, cap});
     decoration.objectFit = objectFitOf(cssComputedValue(style, PrCssProperty_ObjectFit));
     CssValueRun objectPosition = cssComputedValue(style, PrCssProperty_ObjectPosition);
     if (objectPosition.count != 0)
@@ -5712,6 +5766,28 @@ bool snapsAsBorderWidth(PrCssProperty property) {
         property == PrCssProperty_OutlineOffset;
 }
 
+// Writes the resolved value of the color `computed`, its used value, and returns true, or returns false if it is not a
+// color that resolves: a keyword, currentcolor included, resolves to sRGB, written with rgb(), and a function that
+// reads the element resolves in its own space (cssom-1/#resolved-values).
+bool writeResolvedColor(PrTextBuffer* out, CssValueRun computed, const CssColorContext& context) {
+    CssColor color{};
+    bool resolvable = computed.count != 0 && (computed.values[0].kind == PrCssValueKind_Keyword ||
+        computed.values[0].kind == PrCssValueKind_Function);
+    if (!resolvable || !cssResolveColorComponents(computed, 0, context, &color))
+        return false;
+    CssValuePool pool{};
+    if (computed.values[0].kind == PrCssValueKind_Keyword) {
+        PrColor srgb = cssColorToSrgb(color);
+        auto channel = [](float c) { return uint8_t(prF32Clamp(c, 0, 1) * 255 + 0.5f); };
+        cssValuePoolAddColor(&pool, PrColor8{channel(srgb.r), channel(srgb.g), channel(srgb.b), channel(srgb.a)});
+    } else {
+        cssValuePoolAddColorComponents(&pool, color);
+    }
+    cssSerializeValues(out, cssValuePoolRun(&pool, CssValueSpan{0, pool.values.count}));
+    cssValuePoolReset(&pool);
+    return true;
+}
+
 // Serializes the resolved value of `property` (cssom-1/#resolved-values). For width and height, this is the used value
 // if the element generates a box that those properties apply to, which is every box except an inline box
 // (CSS2/#the-width-property). For transform-origin and perspective-origin, it is the used offset in pixels from the
@@ -5870,22 +5946,22 @@ void serializeResolved(PrTextBuffer* out, PrCssPresentation* r, const CssCompute
             at += computed.values[at].next + 1;
         computed = cssValueSubtree(computed, at);
     }
-    CssColor color{};
-    bool resolvable = computed.count != 0 && (computed.values[0].kind == PrCssValueKind_Keyword ||
-        computed.values[0].kind == PrCssValueKind_Function);
-    if (cssIsColorProperty(property) && resolvable &&
-            cssResolveColorComponents(computed, 0, cssStyleColorContext(style, colorEnvironmentOf(r, 0, nullptr)), &color)) {
-        CssValuePool pool{};
-        if (computed.values[0].kind == PrCssValueKind_Keyword) {
-            PrColor srgb = cssColorToSrgb(color);
-            auto channel = [](float c) { return uint8_t(prF32Clamp(c, 0, 1) * 255 + 0.5f); };
-            cssValuePoolAddColor(&pool, PrColor8{channel(srgb.r), channel(srgb.g), channel(srgb.b), channel(srgb.a)});
-        } else {
-            cssValuePoolAddColorComponents(&pool, color);
-        }
-        cssSerializeValues(out, cssValuePoolRun(&pool, CssValueSpan{0, pool.values.count}));
-        cssValuePoolReset(&pool);
+    CssColorContext context = cssStyleColorContext(style, colorEnvironmentOf(r, 0, nullptr));
+    if (cssIsColorProperty(property) && writeResolvedColor(out, computed, context))
         return;
+    // Each of box-shadow-color's colors resolves as a color property's does (css-borders-4/#box-shadow-color).
+    if (property == PrCssProperty_BoxShadowColor && computed.count != 0) {
+        CssListItems items = cssListItems(computed);
+        uint32_t start = out->size;
+        bool resolved = true;
+        for (uint32_t i = 0; i < items.count && resolved; ++i) {
+            if (i != 0)
+                prTextBufferAppend(out, ", ");
+            resolved = writeResolvedColor(out, cssListItem(computed, items, i), context);
+        }
+        if (resolved)
+            return;
+        out->size = start;
     }
     // drop-shadow()'s currentcolor resolves to the element's color, as a color property's does.
     bool filters = property == PrCssProperty_Filter || property == PrCssProperty_BackdropFilter;
@@ -7919,6 +7995,7 @@ void prCssPresentationDestroy(PrCssPresentation* PR_NULLABLE presentation) {
     r->maskSpans.reset();
     r->shapePoints.reset();
     r->filters.reset();
+    r->shadows.reset();
     for (uint32_t i = 0; i < r->imageFetches.count; ++i)
         r->imageFetches.data[i]->presentation = nullptr;
     r->imageFetches.reset();

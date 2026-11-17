@@ -3513,6 +3513,48 @@ TEST_CASE("a host that steps its own clock runs transitions frame by frame") {
     prHtmlPageDestroy(page);
 }
 
+TEST_CASE("a box-shadow transition moves offsets past zero and blends the shadow's colors") {
+    Page fonts("");
+    SteppedClock clock;
+    PrHtmlHost host = prHtmlHostDefault();
+    host.context = &clock;
+    host.now = steppedNow;
+    host.font = fonts.defaultFont;
+    host.shaper = fonts.shaper;
+    PrHtmlPage* page = prHtmlPageCreate(&host);
+    REQUIRE(prHtmlPageLoad(page, "<style>#a { box-shadow: black 15px 10px 5px 6px; transition: box-shadow 1s linear }"
+        "#a.moved { box-shadow: orange -15px -10px 25px -4px }</style><div id=a></div>", "about:blank", nullptr) ==
+        PrStatus_Ok);
+    PrCssPresentation* presentation = prHtmlPagePresentation(page);
+    PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(page));
+    PrDomElement* a = prDomNodeGetElementById(prDomDocumentAsNode(document), "a");
+    REQUIRE(a != nullptr);
+    auto shadow = [&] {
+        prHtmlPresentationUpdate(presentation, prLayoutVecFromPx(PrVec2{800, 600}));
+        PrLayoutTree* tree = prCssPresentationTree(presentation);
+        PrLayoutNode node = prCssPresentationLayoutNode(presentation, prDomElementAsNode(a));
+        PrLayoutStyle style = prLayoutStyleRecord(tree, prLayoutNodeStyle(tree, node));
+        PrLayoutGroupIndex group = style.groups[PrLayoutGroup_Decoration];
+        PrLayoutDecorationStyle decoration = prLayoutDecorationStyleRecord(tree, group);
+        REQUIRE(prLayoutShadowCount(tree, decoration.shadows) == 1);
+        return prLayoutShadowAt(tree, decoration.shadows, 0);
+    };
+    clock.now = 20;
+    runDue(page);
+    prDomElementSetAttribute(a, "class", "moved");
+    shadow();
+    clock.now = 770;
+    runDue(page);
+    // Three quarters of the way: the offsets and the spread have crossed zero, and the colors blend in sRGB.
+    PrLayoutShadow at = shadow();
+    CHECK(at.offset.x == doctest::Approx(-7.5).epsilon(0.01));
+    CHECK(at.offset.y == doctest::Approx(-5).epsilon(0.01));
+    CHECK(at.blur == doctest::Approx(20).epsilon(0.01));
+    CHECK(at.spread == doctest::Approx(-1.5).epsilon(0.01));
+    CHECK(sameColor(prColorFromColor16(at.color), PrColor{0.75f, 165.0f / 255 * 0.75f, 0, 1}));
+    prHtmlPageDestroy(page);
+}
+
 TEST_CASE("a host that observes its animations through events alone runs the frames they are seen in") {
     Observed all = observeAnimation(PrHtmlAnimationFrames_All);
     Observed observed = observeAnimation(PrHtmlAnimationFrames_Observed);
@@ -4709,6 +4751,49 @@ TEST_CASE("outline and background-clip project onto the decoration group, an out
     CHECK(page.decoration("c").outlineStyle == PrDrawBorderStyle_None);
     CHECK(page.decoration("c").outlineWidth.raw == 0);
     CHECK(page.decoration("c").backgroundClip == PrLayoutBackgroundBox_BorderBox);
+}
+
+TEST_CASE("box-shadow projects onto the decoration group as a list of shadows from the top one down") {
+    Page page("<div id=a style='color: lime; box-shadow: 1px 2px 3px 4px red, inset 0 0 5px'></div>"
+        "<div id=b style='box-shadow: none'></div><div id=c style='box-shadow: blue -1px 1px -3px'></div>");
+    PrLayoutTree* tree = prCssPresentationTree(page.presentation);
+    PrLayoutShadowIndex a = page.decoration("a").shadows;
+    REQUIRE(prLayoutShadowCount(tree, a) == 2);
+    PrLayoutShadow top = prLayoutShadowAt(tree, a, 0);
+    CHECK(top.offset.x == 1);
+    CHECK(top.offset.y == 2);
+    CHECK(top.blur == 3);
+    CHECK(top.spread == 4);
+    CHECK(!top.inset);
+    CHECK(sameColor(top.color, PrColor{1, 0, 0, 1}));
+    PrLayoutShadow inner = prLayoutShadowAt(tree, a, 1);
+    CHECK(inner.inset);
+    CHECK(inner.blur == 5);
+    // A shadow that names no color takes the current color.
+    CHECK(sameColor(inner.color, PrColor{0, 1, 0, 1}));
+    CHECK(page.decoration("b").shadows == kPrLayoutShadowNone);
+    // A negative blur radius is invalid and drops the declaration.
+    CHECK(page.decoration("c").shadows == kPrLayoutShadowNone);
+}
+
+TEST_CASE("box-shadow's longhands make a shadow of each offset, and their other lists repeat to the offsets' length") {
+    Page page("<div id=a style='box-shadow-offset: 2px, none, 1px 3px; box-shadow-color: red, blue; "
+        "box-shadow-position: inset'></div>");
+    PrLayoutTree* tree = prCssPresentationTree(page.presentation);
+    PrLayoutShadowIndex a = page.decoration("a").shadows;
+    REQUIRE(prLayoutShadowCount(tree, a) == 2);
+    // A single offset length is both offsets.
+    PrLayoutShadow first = prLayoutShadowAt(tree, a, 0);
+    CHECK(first.offset.x == 2);
+    CHECK(first.offset.y == 2);
+    CHECK(first.inset);
+    CHECK(sameColor(first.color, PrColor{1, 0, 0, 1}));
+    // The offset of none makes no shadow, and the color list repeats from its start for the third offset.
+    PrLayoutShadow second = prLayoutShadowAt(tree, a, 1);
+    CHECK(second.offset.x == 1);
+    CHECK(second.offset.y == 3);
+    CHECK(second.inset);
+    CHECK(sameColor(second.color, PrColor{1, 0, 0, 1}));
 }
 
 TEST_CASE("a calculation that folds into a length inside a function leaves the function's computed value whole") {

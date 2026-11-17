@@ -269,6 +269,7 @@ void countCompounds(LayoutStyles* c, const PrLayoutDecorationStyle& decoration, 
         countCompounds(c, length, delta);
     // The group holds its background layers in the same way as its compounds.
     layoutBackgroundsCount(&c->backgrounds, decoration.backgroundLayers, delta);
+    layoutEffectListsCountShadows(&c->effectLists, decoration.shadows, delta);
 }
 void countCompounds(LayoutStyles* c, const PrLayoutEffectStyle& effects, uint32_t delta) {
     countCompounds(c, effects.originX, delta);
@@ -956,6 +957,22 @@ uint32_t prLayoutBoxStyleCreate(PrLayoutTree* tree, const PrLayoutBoxStyle* box)
 
 PrLayoutBoxStyle prLayoutBoxStyleRecord(const PrLayoutTree* tree, uint32_t index) {
     return layoutTableAt(tree->styles->box, index);
+}
+
+PrLayoutShadowIndex prLayoutShadowIntern(PrLayoutTree* tree, const PrLayoutShadow* shadows, uint32_t count) {
+    return layoutEffectListsInternShadows(&tree->styles->effectLists, &tree->styles->compounds, shadows, count);
+}
+
+uint32_t prLayoutShadowCount(const PrLayoutTree* tree, PrLayoutShadowIndex index) {
+    if (index == kPrLayoutShadowNone)
+        return 0;
+    return layoutEffectAt(&tree->styles->effectLists, LayoutEffectKind_Shadow, index).shadowCount;
+}
+
+PrLayoutShadow prLayoutShadowAt(const PrLayoutTree* tree, PrLayoutShadowIndex index, uint32_t shadow) {
+    const LayoutEffectEntry& e = layoutEffectAt(&tree->styles->effectLists, LayoutEffectKind_Shadow, index);
+    PR_ASSERT(shadow < e.shadowCount);
+    return e.shadows[shadow];
 }
 
 PrLayoutDecorationStyle prLayoutDecorationStyleDefault(void) {

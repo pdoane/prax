@@ -420,6 +420,16 @@ TEST_CASE("background sets a list entry per layer, and its color from the final 
     CHECK(block.value("background") == "yellow");
 }
 
+TEST_CASE("box-shadow writes each shadow's blur and spread if the shadow wrote them, and none alone") {
+    Block written("box-shadow: -4px 4px 0 0 green, 1px 2px inset");
+    CHECK(written.value("box-shadow-blur") == "0px, 0px");
+    CHECK(written.value("box-shadow") == "green -4px 4px 0px 0px, 1px 2px inset");
+    Block blur("box-shadow: 4px -4px 0 inset");
+    CHECK(blur.value("box-shadow") == "4px -4px 0px inset");
+    Block none("box-shadow: none");
+    CHECK(none.value("box-shadow") == "none");
+}
+
 TEST_CASE("a side's radius shorthand sets its two corners, horizontal radii before the slash and vertical after") {
     Block both("border-top-radius: 1px 2px / 3px 4px");
     CHECK(both.value("border-top-left-radius") == "1px 3px");

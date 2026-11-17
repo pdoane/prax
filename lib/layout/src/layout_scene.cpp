@@ -53,8 +53,8 @@ bool matrixIsIdentity(const PrMatrix4& matrix) {
     return prMemEquals(&matrix, &kLayoutTransformIdentity.matrix, sizeof(PrMatrix4));
 }
 
-// Returns the area that the box of `node` and what it holds may draw over, in the space of its layer: its overflow and
-// its outline, or for an inline box, its block container's.
+// Returns the area that the box of `node` and what it holds may draw over, in the space of its layer: its overflow, its
+// outline and its outer shadows, or for an inline box, its block container's.
 PrRect inkOf(const LayoutTree* tree, LayoutNodeIndex node, const LayoutFragment* fragment) {
     PrLayoutRect ink = layoutRectUnion(layoutRectAt(kLayoutVecZero, fragment->extent), fragment->overflow);
     const PrLayoutDecorationStyle& decoration = layoutDecorationStyle(tree->styles, layoutTreeNode(tree, node).style);
@@ -63,6 +63,11 @@ PrRect inkOf(const LayoutTree* tree, LayoutNodeIndex node, const LayoutFragment*
         ink = layoutRectUnion(ink, PrLayoutRect{
             kLayoutUnitZero - outline, kLayoutUnitZero - outline,
             fragment->extent.x + outline, fragment->extent.y + outline,
+        });
+    PrLayoutUnit reach = prLayoutUnitFromPxCeil(layoutShadowsReach(&tree->styles->effectLists, decoration.shadows));
+    if (reach > kLayoutUnitZero)
+        ink = layoutRectUnion(ink, PrLayoutRect{
+            kLayoutUnitZero - reach, kLayoutUnitZero - reach, fragment->extent.x + reach, fragment->extent.y + reach,
         });
     return prLayoutRectToPx(ink);
 }

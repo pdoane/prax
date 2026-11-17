@@ -66,6 +66,8 @@ bool allowsNegative(PrCssProperty property) {
         case PrCssProperty_Y:
         case PrCssProperty_StrokeDashoffset:
         case PrCssProperty_MaskPosition:
+        case PrCssProperty_BoxShadowOffset:
+        case PrCssProperty_BoxShadowSpread:
         case PrCssProperty_Clip:
         case PrCssProperty_ClipPath:
             return true;
@@ -1787,6 +1789,36 @@ bool interpolable(PrCssProperty property, CssValueRun from, CssValueRun to, cons
 void interpolate(CssValuePool* out, PrCssProperty property, CssValueRun from, CssValueRun to, double progress,
     const CssColorContext& colors);
 
+// Interpolates the lists of shadow colors `from` and `to` of box-shadow-color color by color, as a color property's
+// color interpolates, into `out` unless it is null, and returns true, if the lists hold as many colors
+// (css-borders-4/#box-shadow-color). Sets `*between` to whether every pair of colors is equal or interpolates, and some
+// pair differs. Returns false, and writes nothing, for another property, and for lists of different lengths.
+bool shadowColorsBetween(CssValuePool* PR_NULLABLE out, PrCssProperty property, CssValueRun from, CssValueRun to,
+        double progress, const CssColorContext& colors, bool* between) {
+    if (property != PrCssProperty_BoxShadowColor)
+        return false;
+    CssListItems a = cssListItems(from);
+    CssListItems b = cssListItems(to);
+    if (a.count == 0 || a.count != b.count)
+        return false;
+    bool differs = false;
+    bool interpolates = true;
+    for (uint32_t i = 0; i < a.count; ++i) {
+        CssValueRun x = cssListItem(from, a, i);
+        CssValueRun y = cssListItem(to, b, i);
+        bool equal = cssValueRunEquals(x, y);
+        differs = differs || !equal;
+        interpolates = interpolates && (equal || interpolable(PrCssProperty_Color, x, y, colors));
+        if (out == nullptr)
+            continue;
+        if (i != 0)
+            cssValuePoolAdd(out, cssLiteralValue(','));
+        interpolate(out, PrCssProperty_Color, x, y, progress, colors);
+    }
+    *between = differs && interpolates;
+    return true;
+}
+
 // Interpolates the lists of gap decorations `from` and `to` of `property` item by item, into `out` unless it is null,
 // and returns true, if either holds more than one item or a repeat(): each repeat() of an integer is written out as the
 // items that it repeats, and the lists repeat to the least common multiple of their numbers of items
@@ -1845,6 +1877,8 @@ bool interpolable(PrCssProperty property, CssValueRun from, CssValueRun to, cons
     bool between = false;
     if (gapListsBetween(nullptr, property, from, to, 0, colors, &between))
         return between;
+    if (shadowColorsBetween(nullptr, property, from, to, 0, colors, &between))
+        return between;
     if (property == PrCssProperty_Visibility)
         return (from.count == 1 && cssValueIsKeyword(from.values, PrCssKeyword_Visible)) ||
             (to.count == 1 && cssValueIsKeyword(to.values, PrCssKeyword_Visible));
@@ -1885,6 +1919,8 @@ void interpolate(CssValuePool* out, PrCssProperty property, CssValueRun from, Cs
         const CssColorContext& colors) {
     bool between = false;
     if (gapListsBetween(out, property, from, to, progress, colors, &between))
+        return;
+    if (shadowColorsBetween(out, property, from, to, progress, colors, &between))
         return;
     // Visibility is visible between two values if either of them is visible (web-animations-1/#animating-visibility).
     if (property == PrCssProperty_Visibility) {

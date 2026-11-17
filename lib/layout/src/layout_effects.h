@@ -41,6 +41,8 @@ enum {
     LayoutEffectKind_Shape,
     LayoutEffectKind_Mask,
     LayoutEffectKind_Filter,
+    LayoutEffectKind_Shadow,
+    LayoutEffectKind_Count,
 };
 typedef uint8_t LayoutEffectKind;
 
@@ -53,6 +55,8 @@ struct LayoutEffectEntry {
     PrLayoutMask mask;
     PrLayoutFilter* PR_NULLABLE filters;
     uint32_t filterCount;
+    PrLayoutShadow* PR_NULLABLE shadows;
+    uint32_t shadowCount;
     PrLayoutColorStop* PR_NULLABLE stops;
     RawArray<uint8_t> key;             // the bytes that equal values share
     uint32_t hash;
@@ -70,7 +74,7 @@ struct LayoutEffectTable {
 
 // The shapes, masks and filter lists of a tree's styles, by LayoutEffectKind.
 struct LayoutEffectLists {
-    LayoutEffectTable tables[3];
+    LayoutEffectTable tables[LayoutEffectKind_Count];
 };
 
 // Prepares the tables with none at index 0 of each.
@@ -84,6 +88,16 @@ PrLayoutShapeIndex layoutEffectListsInternShape(LayoutEffectLists* lists, Layout
 PrLayoutMaskIndex layoutEffectListsInternMask(LayoutEffectLists* lists, LayoutCompounds* compounds, const PrLayoutMask& mask);
 PrLayoutFilterIndex layoutEffectListsInternFilter(LayoutEffectLists* lists, LayoutCompounds* compounds,
     const PrLayoutFilter* filters, uint32_t count);
+
+// Interns a box's shadows, as prLayoutShadowIntern defines.
+PrLayoutShadowIndex layoutEffectListsInternShadows(LayoutEffectLists* lists, LayoutCompounds* compounds,
+    const PrLayoutShadow* shadows, uint32_t count);
+
+// Adds `delta` to the references of the shadow list that a decoration group names.
+void layoutEffectListsCountShadows(LayoutEffectLists* lists, PrLayoutShadowIndex shadows, uint32_t delta);
+
+// Returns how far a box's outer shadows reach past its border box on any side, in pixels, or 0 for none.
+float layoutShadowsReach(const LayoutEffectLists* lists, PrLayoutShadowIndex shadows);
 
 // Returns the entry of `kind` at `index`.
 inline const LayoutEffectEntry& layoutEffectAt(const LayoutEffectLists* lists, LayoutEffectKind kind, uint32_t index) {
