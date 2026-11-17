@@ -453,6 +453,41 @@ TEST_CASE("a pass clears its target, and a draw covers what its vertices cover, 
     });
 }
 
+TEST_CASE("a pass of other attachments draws with the pipeline set in it, not the one that an earlier pass set") {
+    onEachBackend([](Fixture& f) {
+        PrGpuTexture layer = f.target(PrUVec2{8, 8}, PrGpuFormat_Rgba16F);
+        PrGpuTexture target = f.target(PrUVec2{8, 8});
+        PrGpuPipeline layerSolid = f.pipeline("quadVertex", "solid", PrGpuFormat_Rgba16F);
+        PrGpuPipeline solid = f.pipeline("quadVertex", "solid");
+        PrGpuCommands* commands = nullptr;
+        REQUIRE(prGpuCommandsBegin(f.device, nullptr, &commands));
+        PrGpuSubresources all{};
+        Push push = fill(0, 1, 0, 1);
+        prGpuCommandsSetPush(commands, &push, sizeof(push));
+        // The first pass leaves its pipeline set, which the second pass's attachments do not match.
+        prGpuCommandsTextureBarrier(commands, layer, all, PrGpuAccessFlag_ShaderRead, PrGpuAccessFlag_ColorAttachment);
+        PrGpuPassDesc first = prGpuPassDescColor(layer, PrGpuLoad_Clear, PrColor{0, 0, 0, 0});
+        PrGpuPass* pass = prGpuPassBegin(commands, &first);
+        prGpuCommandsSetPipeline(commands, layerSolid);
+        prGpuPassDraw(pass, 4, 1, 0, 0);
+        prGpuPassEnd(pass);
+        prGpuCommandsTextureBarrier(commands, target, all, PrGpuAccessFlag_ShaderRead, PrGpuAccessFlag_ColorAttachment);
+        PrGpuPassDesc second = prGpuPassDescColor(target, PrGpuLoad_Clear, PrColor{0, 0, 1, 1});
+        pass = prGpuPassBegin(commands, &second);
+        prGpuCommandsSetPipeline(commands, solid);
+        prGpuPassDraw(pass, 4, 1, 0, 0);
+        prGpuPassEnd(pass);
+        prGpuCommandsTextureBarrier(commands, target, all, PrGpuAccessFlag_ColorAttachment, PrGpuAccessFlag_ShaderRead);
+        gpuSubmitAndWait(commands);
+        Array<uint8_t> texels = f.read(target);
+        CHECK(near(texel(texels, 8, 4, 4), 0, 255, 0, 255));
+        prGpuPipelineDestroy(f.device, solid);
+        prGpuPipelineDestroy(f.device, layerSolid);
+        prGpuTextureDestroy(f.device, target);
+        prGpuTextureDestroy(f.device, layer);
+    });
+}
+
 TEST_CASE("a draw reads its push data and uniforms") {
     onEachBackend([](Fixture& f) {
         PrGpuTexture target = f.target(PrUVec2{4, 4});
