@@ -55,6 +55,18 @@ inline constexpr bool isSame = false;
 template <typename T>
 inline constexpr bool isSame<T, T> = true;
 
+// `A` if `condition` is true, and `B` otherwise.
+template <bool condition, typename A, typename B>
+struct ConditionalChoice {
+    using Type = A;
+};
+template <typename A, typename B>
+struct ConditionalChoice<false, A, B> {
+    using Type = B;
+};
+template <bool condition, typename A, typename B>
+using Conditional = typename ConditionalChoice<condition, A, B>::Type;
+
 // True for the integral types, bool and the character types included. MSVC has no __is_integral.
 template <typename T>
 inline constexpr bool isIntegral = false;

@@ -109,8 +109,9 @@ another must meet belongs to the context, so that no library owns it:
   builds the part from them on a root (`PrUiMemoType`). A round keeps the part's subtree while the inputs equal the
   last round's, and builds it again otherwise, or alone, from the context's copy of the inputs, when input reaches it
   inside a kept memo. Inputs are bytes by default, a struct of plain data with any text that it shows after it, and a
-  type that holds more says how to compare, copy and release them. The walk that computed the inputs runs in every
-  round, and what decides when a memo builds again is what its inputs hold.
+  type that holds more says how to compare, copy and release them, as the C++ layer's memos do. The walk that computed
+  the inputs runs in every round, and what decides when a memo builds again is what its inputs hold (Memos, under
+  Elements).
 - **Text editing.** A library's text controls share one edit (`pr/ui_text_edit.h`). In the simple form, the caller gives
   the text as a value in each round and takes the new text if it changed, and a text buffer holds the text only while
   the control is being edited. A caller whose text needs an edit stream, anchors or history across focus gives its own
@@ -131,3 +132,56 @@ A component library is opinionated, and its vocabulary is its own. `lib/layout` 
 substrate. A library built on it chooses the concepts it exposes, as each web component library does, and is not
 expected to match another library or CSS. An application reaches past its library to `lib/layout` and `lib/ui`
 directly for content the library does not provide, such as a 3D viewport.
+
+## Elements
+
+lib/ui's C++ layer (`pr/ui_element.h`) styles nodes directly, for views that a component library's widgets do not
+make, and composes with any library's widgets in one tree. A builder creates an element under a parent, and the
+element's chained calls write its style in the vocabulary of Tailwind CSS's utilities:
+`ui.div(row).flexRow().gap(8).px(12).rounded(6).bg(color)`.
+
+- **Immediate.** An element's node exists once `div` returns, so its chain asks about it as it goes: whether it was
+  clicked, or is under the pointer (`hover`). Events are queries on nodes, as they are for widgets, and nothing runs
+  after the build returns but the end of the last chain.
+- **Style is complete before children.** The builder turns an element's style into its record once the build creates
+  its next element, or returns (`prUiDefer`). So an element's children inherit its text properties as CSS's do. An
+  element styled again later opens again, and finds its record once more.
+- **Records.** An element's style is a part whose bytes are its properties in the order that its chain set them
+  (component_library.md, Records). An element unchanged since the last frame costs one comparison.
+- **Motion.** A transition moves an element's colors, opacity and transform toward new values over a duration, through
+  the context's tweens. An animation (`UiAnimation`) gives a value over time from a start, a delay and a duration, with
+  layout's timing and easing (pr/layout_animation.h), and keeps frames coming while it runs. A value that changes in
+  each round takes a style in each round.
+- **Resources.** A builder draws with resources that it shares with the builders before and after it (`UiResources`),
+  which an application keeps for as long as its font set: the fonts that it sets text in, and the paths that path data
+  describes, each parsed once. So a builder made again for a new context draws with fonts whose glyphs are cached
+  already, and paths whose rasters are.
+- **Paths.** A path element (`ui.path`) draws a path, such as an icon of Studio's set (`pr/studio_icon.h`) that the
+  resources parsed, as layout's path content: scaled from its view box to the size that its style gives it, in a
+  color, filled or stroked.
+
+### Memos
+
+A view is functions that walk the application's model in every round, over the part of it that the view shows, such as
+a list's rows in its scroll's window or an object's properties through its reflection, as immediate mode does. A
+function memoizes the part of its build that is worth it (`ui.memo`, the C++ form of `prUiMemo`): the part's inputs,
+as a struct that compares with a defaulted `==`, and a `build` that creates what they show on the part's root. The
+struct is often local to the function, beside the code that it memoizes, and its build sees nothing but its inputs. A
+widget is a function that memoizes itself, so its callers call a function and see no memo.
+
+- **Kept while unchanged.** A round keeps a memo's subtree, unbuilt, while its inputs equal the copy that the last
+  build kept, its root inherits the same text, and the context finds that nothing it owns has changed (What libraries
+  share, Keeping subtrees). A kept subtree costs a store for each of its nodes. Memos nest, and each decides on its own,
+  so input that reaches a memo inside a kept one builds that memo alone, from the inputs that it kept.
+- **The walk runs.** A memo saves building the elements of what its inputs show, and the walk that computed the inputs
+  runs as before. What decides when a memo builds again is what its inputs hold. A memo over a large part of the model,
+  whose walk would cost too much in every round, holds what tells that part's changes, such as a generation that the
+  model counts, and its kept subtree skips the walk as well. That is the code's choice where it measures one, not a
+  rule of the view.
+- **Results.** A build may return what happened to its part in the round, such as a click or an edit, and `memo`
+  returns it with the root (`UiResult`). A kept memo had nothing happen to it. The build around a memo with a result
+  depends on the memo's root, so that input that reaches the memo builds it too, and it reads the result.
+- **State.** What a memo keeps between rounds that its inputs do not hold, such as where a drag began, is retained state
+  on its root (`UiBuilder::state`), which a kept subtree keeps.
+- **Time.** An animation that a memo shows builds it again in each frame that the animation moves
+  (`prUiRequestMotion`), and a memo that reads the round's time builds again in each frame.
