@@ -1924,6 +1924,32 @@ struct Painter : LayoutWalkVisitor {
                 n.rendering == PrLayoutImageRendering_Auto ? PrDrawSampling_Linear : PrDrawSampling_Nearest);
             brush.image.limit = n.limit;
             prDrawListRect(into, drawn, {.brush = &brush, .edges = PrDrawEdges_Snapped});
+        } else if (n.contentKind == PrLayoutContentKind_Path) {
+            // The view box is scaled over the natural space as an image is.
+            PrVec2 extent = prLayoutVecToPx(space);
+            const PrLayoutPath& path = n.path;
+            float sx = path.viewBox.x > 0 ? extent.x / path.viewBox.x : 1;
+            float sy = path.viewBox.y > 0 ? extent.y / path.viewBox.y : 1;
+            PrAffine2 transform{
+                .a = placed.a * sx,
+                .b = placed.b * sx,
+                .c = placed.c * sy,
+                .d = placed.d * sy,
+                .e = placed.e,
+                .f = placed.f,
+            };
+            prDrawListPushTransformAffine2(into, transform);
+            if (path.strokeWidth > 0) {
+                PrDrawStroke stroke = prDrawStrokeDefault();
+                stroke.shape.width = path.strokeWidth;
+                stroke.shape.join = path.join;
+                stroke.shape.startCap = path.cap;
+                stroke.shape.endCap = path.cap;
+                prDrawListPath(into, path.path, path.rule, {.color = path.color, .stroke = &stroke});
+            } else {
+                prDrawListPath(into, path.path, path.rule, {.color = path.color});
+            }
+            prDrawListPopTransform(into);
         } else {
             PrDrawList* content = nullptr;
             if (n.contentKind == PrLayoutContentKind_DrawList) {

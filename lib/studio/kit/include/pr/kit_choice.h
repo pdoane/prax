@@ -42,7 +42,7 @@ typedef struct PrKitChoices {
 typedef struct PrKitChoice {
     PrUiKey key;                   // identity within the container, or 0 to match by position
     PrStringView label;
-    PrKitIconKind icon;
+    PrStudioIconKind icon;
     bool selected;
     bool disabled;
 } PrKitChoice;

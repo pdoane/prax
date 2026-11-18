@@ -52,7 +52,7 @@ PrLayoutNode bar(PrKit* kit, PrLayoutNode parent, PrKitBackground background, Pr
 }
 
 // Creates a small square button in a panel's header, and returns true if it was activated.
-bool headerButton(PrKit* kit, PrLayoutNode header, PrKitIconKind icon, bool selected) {
+bool headerButton(PrKit* kit, PrLayoutNode header, PrStudioIconKind icon, bool selected) {
     return prKitActivated(kit, prKitButton(kit, header, {.icon = icon, .selected = selected},
         {.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Xs}));
 }
@@ -213,7 +213,7 @@ void buildMenubar(PrKit* kit, PrLayoutNode parent, EditorState& editor) {
         prKitDivider(kit, menubar, {});
     }
     PrKitButtonStyle ghost{.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Sm};
-    PrKitButton search{.text = "Search", .icon = PrKitIconKind_Search};
+    PrKitButton search{.text = "Search", .icon = PrStudioIconKind_Search};
     PrLayoutNode searchButton = prKitButton(kit, menubar, search, ghost);
     if (prKitActivated(kit, searchButton))
         editor.paletteOpen = true;
@@ -229,18 +229,18 @@ struct CommandDef {
     const char* text;
     const char* category;
     const char* shortcut;
-    PrKitIconKind icon;
+    PrStudioIconKind icon;
 };
 
 constexpr CommandDef kCommands[] = {
-    {"New Scene", "File", "Cmd N", PrKitIconKind_Folder},
-    {"Open Scene...", "File", "Cmd O", PrKitIconKind_Folder},
-    {"Save", "File", "Cmd S", PrKitIconKind_Folder},
-    {"Undo", "Edit", "Cmd Z", PrKitIconKind_Undo},
-    {"Toggle Grid", "View", "Cmd '", PrKitIconKind_Grid},
-    {"Focus Selected", "View", "F", PrKitIconKind_Target},
-    {"Create Empty", "Entity", "Shift Cmd N", PrKitIconKind_Cube},
-    {"Build and Run", "Build", "Cmd B", PrKitIconKind_Play},
+    {"New Scene", "File", "Cmd N", PrStudioIconKind_Folder},
+    {"Open Scene...", "File", "Cmd O", PrStudioIconKind_Folder},
+    {"Save", "File", "Cmd S", PrStudioIconKind_Folder},
+    {"Undo", "Edit", "Cmd Z", PrStudioIconKind_Undo},
+    {"Toggle Grid", "View", "Cmd '", PrStudioIconKind_Grid},
+    {"Focus Selected", "View", "F", PrStudioIconKind_Target},
+    {"Create Empty", "Entity", "Shift Cmd N", PrStudioIconKind_Cube},
+    {"Build and Run", "Build", "Cmd B", PrStudioIconKind_Play},
 };
 
 // Declares the command palette over the screen while it is open. The palette's trigger is the root, which claims Cmd K
@@ -273,7 +273,7 @@ void buildPalette(PrKit* kit, PrLayoutNode root, EditorState& editor) {
 
 // Creates a button that shows the render mode, and the menu of modes that it opens.
 PrLayoutNode renderModeButton(PrKit* kit, PrLayoutNode parent, EditorState& editor, PrKitControlSize size) {
-    PrKitButton mode{.text = kRenderModes[editor.renderMode], .icon = PrKitIconKind_Cube};
+    PrKitButton mode{.text = kRenderModes[editor.renderMode], .icon = PrStudioIconKind_Cube};
     PrLayoutNode button = prKitButton(kit, parent, mode, {.variant = PrKitButtonVariant_Ghost, .size = size});
     if (prKitActivated(kit, button))
         prKitToggleOpen(kit, button);
@@ -293,13 +293,13 @@ void buildToolbar(PrKit* kit, PrLayoutNode parent, EditorState& editor) {
     PrLayoutNode toolbar = bar(kit, parent, PrKitBackground_Panel, PrKitRuleFlag_Bottom, kPrKitHeightLg, kPrKitSpace1);
     struct ToolDef {
         Tool tool;
-        PrKitIconKind icon;
+        PrStudioIconKind icon;
     };
     const ToolDef tools[] = {
-        {Tool_Select, PrKitIconKind_Cursor},
-        {Tool_Move, PrKitIconKind_Move},
-        {Tool_Rotate, PrKitIconKind_Rotate},
-        {Tool_Scale, PrKitIconKind_Scale},
+        {Tool_Select, PrStudioIconKind_Cursor},
+        {Tool_Move, PrStudioIconKind_Move},
+        {Tool_Rotate, PrStudioIconKind_Rotate},
+        {Tool_Scale, PrStudioIconKind_Scale},
     };
     for (const ToolDef& tool : tools) {
         if (prKitActivated(kit, prKitButton(kit, toolbar, {.icon = tool.icon, .selected = editor.tool == tool.tool},
@@ -310,26 +310,26 @@ void buildToolbar(PrKit* kit, PrLayoutNode parent, EditorState& editor) {
     const char* spaces[] = {"Local", "World"};
     segmented(kit, toolbar, spaces, 2, &editor.space, PrKitControlSize_Sm);
     prKitDivider(kit, toolbar, {});
-    if (prKitActivated(kit, prKitButton(kit, toolbar, {.icon = PrKitIconKind_Magnet, .selected = editor.snap},
+    if (prKitActivated(kit, prKitButton(kit, toolbar, {.icon = PrStudioIconKind_Magnet, .selected = editor.snap},
             {.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Md})))
         editor.snap = !editor.snap;
-    if (prKitActivated(kit, prKitButton(kit, toolbar, {.icon = PrKitIconKind_Grid, .selected = editor.grid},
+    if (prKitActivated(kit, prKitButton(kit, toolbar, {.icon = PrStudioIconKind_Grid, .selected = editor.grid},
             {.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Md})))
         editor.grid = !editor.grid;
     prKitLabel(kit, toolbar, {.text = "0.25m"}, kCaption);
     prKitSpacer(kit, toolbar, {});
     PrKitButton play{
         .text = (editor.playing ? "Pause" : "Play"),
-        .icon = PrKitIconKind(editor.playing ? PrKitIconKind_Pause : PrKitIconKind_Play),
+        .icon = PrStudioIconKind(editor.playing ? PrStudioIconKind_Pause : PrStudioIconKind_Play),
         .selected = editor.playing,
     };
     PrKitButtonStyle primary{.variant = PrKitButtonVariant_Primary, .size = PrKitControlSize_Sm};
     if (prKitActivated(kit, prKitButton(kit, toolbar, play, primary)))
         editor.playing = !editor.playing;
     PrKitButtonStyle small{.size = PrKitControlSize_Sm};
-    PrKitButton step{.icon = PrKitIconKind_Step};
+    PrKitButton step{.icon = PrStudioIconKind_Step};
     prKitButton(kit, toolbar, step, small);
-    PrKitButton stop{.icon = PrKitIconKind_Stop};
+    PrKitButton stop{.icon = PrStudioIconKind_Stop};
     if (prKitActivated(kit, prKitButton(kit, toolbar, stop, small)))
         editor.playing = false;
     prKitDivider(kit, toolbar, {});
@@ -369,10 +369,10 @@ void buildScenePanel(PrKit* kit, PrLayoutNode parent, EditorState& editor) {
     snprintf(count, sizeof count, "%zu", editor.nodes.size());
     PrLayoutNode header = prKitPanelHeader(kit, parent, {.title = "SCENE"});
     prKitBadge(kit, header, {.text = count}, {.variant = PrKitBadgeVariant_Accent});
-    if (headerButton(kit, header, PrKitIconKind_Plus, false))
+    if (headerButton(kit, header, PrStudioIconKind_Plus, false))
         editor.addEntity();
-    headerButton(kit, header, PrKitIconKind_Filter, false);
-    headerButton(kit, header, PrKitIconKind_DotsV, false);
+    headerButton(kit, header, PrStudioIconKind_Filter, false);
+    headerButton(kit, header, PrStudioIconKind_DotsV, false);
 
     sceneOrder(editor);
     PrKitTreeView content{
@@ -418,14 +418,16 @@ void buildScenePanel(PrKit* kit, PrLayoutNode parent, EditorState& editor) {
 
 struct AssetDef {
     const char* name;
-    PrKitIconKind icon;
+    PrStudioIconKind icon;
 };
 
 constexpr AssetDef kAssets[] = {
-    {"player_base", PrKitIconKind_Cube},  {"player_idle", PrKitIconKind_Script}, {"enemy_grunt", PrKitIconKind_Cube},
-    {"env_diffuse", PrKitIconKind_Image}, {"env_normal", PrKitIconKind_Image},   {"water_pbr", PrKitIconKind_Sphere},
-    {"footsteps", PrKitIconKind_Audio},   {"ambient_wind", PrKitIconKind_Audio}, {"controller", PrKitIconKind_Script},
-    {"enemy_ai", PrKitIconKind_Script},   {"level_01", PrKitIconKind_Folder},    {"light_probes", PrKitIconKind_Light},
+    {"player_base", PrStudioIconKind_Cube},   {"player_idle", PrStudioIconKind_Script},
+    {"enemy_grunt", PrStudioIconKind_Cube},   {"env_diffuse", PrStudioIconKind_Image},
+    {"env_normal", PrStudioIconKind_Image},   {"water_pbr", PrStudioIconKind_Sphere},
+    {"footsteps", PrStudioIconKind_Audio},    {"ambient_wind", PrStudioIconKind_Audio},
+    {"controller", PrStudioIconKind_Script},  {"enemy_ai", PrStudioIconKind_Script},
+    {"level_01", PrStudioIconKind_Folder},    {"light_probes", PrStudioIconKind_Light},
 };
 
 void buildAssetGrid(PrKit* kit, PrLayoutNode parent, EditorState& editor, uint32_t count) {
@@ -463,8 +465,8 @@ void buildAssetGrid(PrKit* kit, PrLayoutNode parent, EditorState& editor, uint32
 
 void buildProjectPanel(PrKit* kit, PrLayoutNode parent, EditorState& editor) {
     PrLayoutNode header = prKitPanelHeader(kit, parent, {.title = "PROJECT"});
-    headerButton(kit, header, PrKitIconKind_Plus, false);
-    headerButton(kit, header, PrKitIconKind_Filter, false);
+    headerButton(kit, header, PrStudioIconKind_Plus, false);
+    headerButton(kit, header, PrStudioIconKind_Filter, false);
     PrLayoutNode crumbs = bar(kit, parent, PrKitBackground_Panel, PrKitRuleFlag_Bottom, kPrKitHeightSm, kPrKitSpace2);
     const char* segments[] = {"Assets", "Models", "Textures"};
     for (uint32_t i = 0; i < 3; ++i) {
@@ -499,7 +501,7 @@ void buildViewport(PrKit* kit, PrLayoutNode parent, EditorState& editor) {
     PrLayoutNode header = prKitPanelHeader(kit, parent, {.title = "VIEWPORT"});
     const char* tabs[] = {"Scene", "Game", "Animator"};
     segmented(kit, header, tabs, 3, &editor.viewportTab, PrKitControlSize_Xs);
-    if (headerButton(kit, header, PrKitIconKind_Grid, editor.grid))
+    if (headerButton(kit, header, PrStudioIconKind_Grid, editor.grid))
         editor.grid = !editor.grid;
 
     // The grid fills the viewport, and a layer of chips sits over it in its corners.
@@ -581,17 +583,18 @@ void buildConsole(PrKit* kit, PrLayoutNode parent, EditorState& editor) {
 void buildInspector(PrKit* kit, PrLayoutNode parent, EditorState& editor) {
     SceneEntity* sel = editor.inspectorLocked ? editor.find(editor.lockedEntity) : selectedEntity(editor);
     PrLayoutNode header = prKitPanelHeader(kit, parent, {.title = "INSPECTOR"});
-    if (headerButton(kit, header, PrKitIconKind(editor.inspectorLocked ? PrKitIconKind_Lock : PrKitIconKind_Unlock),
+    if (headerButton(kit, header,
+            PrStudioIconKind(editor.inspectorLocked ? PrStudioIconKind_Lock : PrStudioIconKind_Unlock),
             editor.inspectorLocked)) {
         editor.inspectorLocked = !editor.inspectorLocked;
         editor.lockedEntity = editor.inspectorLocked && sel != nullptr ? sel->id : 0;
     }
-    headerButton(kit, header, PrKitIconKind_DotsV, false);
+    headerButton(kit, header, PrStudioIconKind_DotsV, false);
     PrLayoutNode identity = bar(kit, parent, PrKitBackground_None, PrKitRuleFlag_Bottom, kPrKitHeightLg, kPrKitSpace3);
     if (sel != nullptr) {
         prKitCheckbox(kit, identity, {.value = &sel->enabled}, {});
     }
-    prKitIcon(kit, identity, {.icon = PrKitIconKind_Cube},
+    prKitIcon(kit, identity, {.icon = PrStudioIconKind_Cube},
         {.size = 14, .tone = PrKitTone(sel != nullptr ? PrKitTone_Secondary : PrKitTone_Faint)});
     prKitLabel(kit, identity, {.text = sel != nullptr ? sel->name : "No selection"}, kBody);
     prKitSpacer(kit, identity, {});
@@ -625,7 +628,7 @@ void buildInspector(PrKit* kit, PrLayoutNode parent, EditorState& editor) {
     PrKitInspectorGroup meshGroup{.name = "Mesh Renderer", .open = &editor.openMesh};
     PrLayoutNode mesh = prKitInspectorGroup(kit, body, meshGroup);
     if (mesh != kPrLayoutNodeNone) {
-        PrKitAssetField meshField{.name = sel->meshAsset, .icon = PrKitIconKind_Cube, .kind = kDragAsset};
+        PrKitAssetField meshField{.name = sel->meshAsset, .icon = PrStudioIconKind_Cube, .kind = kDragAsset};
         PrLayoutNode meshRow = prKitInspectorRow(kit, mesh, {.label = "Mesh"}, {});
         PrLayoutNode field = prKitAssetField(kit, meshRow, meshField);
         uint64_t dropped = 0;
@@ -676,7 +679,7 @@ void buildInspector(PrKit* kit, PrLayoutNode parent, EditorState& editor) {
 
 void buildStatusBar(PrKit* kit, PrLayoutNode parent, EditorState& editor) {
     PrLayoutNode status = bar(kit, parent, PrKitBackground_Header, PrKitRuleFlag_Top, kPrKitHeightSm, kPrKitSpace4);
-    prKitIcon(kit, status, {.icon = PrKitIconKind_Check}, {.size = 10, .tone = PrKitTone_Success});
+    prKitIcon(kit, status, {.icon = PrStudioIconKind_Check}, {.size = 10, .tone = PrKitTone_Success});
     PrKitTextStyle success{.role = PrKitTextRole_Caption, .tone = PrKitTone_Success};
     prKitLabel(kit, status, {.text = "BUILD OK"}, success);
     char entities[24];

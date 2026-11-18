@@ -45,6 +45,34 @@ PrLayoutNode prLayoutTreeFrameReplaced(PrLayoutTree* tree, PrLayoutNode parent, 
 PrLayoutNode prLayoutTreeFrameSemiReplaced(PrLayoutTree* tree, PrLayoutNode parent, uint64_t key, PrLayoutStyleIndex style);
 PrLayoutNode prLayoutTreeFrameLineBreak(PrLayoutTree* tree, PrLayoutNode parent, uint64_t key, PrLayoutStyleIndex style);
 
+// Continues committed descendants of `node` as they were committed: each under its committed parent, with its committed
+// record, text, content and highlights, as though the frame created each of them again in preorder. This is how a
+// producer keeps a subtree that it knows is unchanged without declaring it: the cost is a store for each node, and the
+// commit and layout treat what it keeps as unchanged.
+//
+// The nodes continued are a range of the node's descendants in preorder. It starts at the first of them, if `after` is
+// none, and then `node` is the frame's last creation, which continued a committed node. Otherwise it starts after the
+// committed subtree of `after`, a descendant that the frame created, so that what the frame created under `after` in
+// its place does not change where the range starts. It ends at the end of the node's subtree, if `before` is none.
+// Otherwise it ends with `before`, a descendant that the frame continues with its committed record but whose
+// descendants it does not, so that the producer creates them, and then keeps the rest with `before` as `after`. So a
+// producer keeps a subtree but for the parts of it that changed, which it creates again in their places. The frame's
+// next creation follows the range.
+//
+// Returns the number of nodes continued, `before` aside, or kPrLayoutFrameKeepFailed, continuing nothing, if the frame
+// cannot continue them: if `node` continued no committed node, if a creation came between `node` and a first range, if
+// `after` or `before` is not where the range needs it, or if the frame created a node of the range already. The
+// producer then creates what it would have kept.
+uint32_t prLayoutTreeFrameKeepChildren(PrLayoutTree* tree, PrLayoutNode node, PrLayoutNode after, PrLayoutNode before);
+
+// What prLayoutTreeFrameKeepChildren returns when it continues nothing.
+PR_CONSTANT uint32_t kPrLayoutFrameKeepFailed = 0xffffffffu;
+
+// Returns the descendants that the frame's last prLayoutTreeFrameKeepChildren continued, in preorder, `before` aside,
+// and writes their number to `count`, so that a client that keeps data about nodes carries its own data for them
+// forward. The array is valid until the frame's next creation or keep.
+const PrLayoutNode* PR_NULLABLE prLayoutTreeFrameKept(const PrLayoutTree* tree, uint32_t* count);
+
 // Sets the record of a node that the frame created. A later call may set it again. The commit compares the last record
 // set with the committed node's record, so a caller that restyles a component's node costs only a store if the result
 // matches the previous frame. A text node's record may be kPrLayoutStyleNone, meaning its parent's.
@@ -59,6 +87,14 @@ uint32_t prLayoutTreeFrameRoots(const PrLayoutTree* tree, PrLayoutNode* PR_NULLA
 
 // Returns the parent that a node was created under in the open frame, or none for a node created with none.
 PrLayoutNode prLayoutTreeFrameParent(const PrLayoutTree* tree, PrLayoutNode node);
+
+// Returns the place of `node` among the open frame's creations, counting those continued by a keep
+// (prLayoutTreeFrameKeepChildren), or kPrLayoutFrameNotCreated if the frame has not created it. The frame creates in
+// preorder, so the nodes that it creates under a node while it creates the node's children follow the node.
+uint32_t prLayoutTreeFrameOrder(const PrLayoutTree* tree, PrLayoutNode node);
+
+// What prLayoutTreeFrameOrder returns for a node that the frame has not created.
+PR_CONSTANT uint32_t kPrLayoutFrameNotCreated = 0xffffffffu;
 
 // Sets the text of a text node, or the natural size or content of a replaced element, that the frame created, if it
 // differs from what the node holds. Each takes effect immediately, in the same way as the setters of pr/layout_tree.h.

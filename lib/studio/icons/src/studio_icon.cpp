@@ -1,23 +1,21 @@
-// Studio Kit's icons: the set's path data.
+// Studio's icons (pr/studio_icon.h).
 
-#pragma once
-
-#include "pr/kit_icon.h"
-
-PR_ASSUME_NONNULL_BEGIN
+#include "pr/studio_icon.h"
 
 namespace pr_impl {
 
+namespace {
+
 // One icon of the set: its name, its path data, and whether it is filled rather than stroked.
-struct KitIconData {
+struct IconData {
     const char* name;
     const char* path;
     bool filled;
 };
 
-// The set's icons, by PrKitIconKind: Lucide's glyphs, on a grid of 24 units, with circles, rectangles, lines and
+// The set's icons, by PrStudioIconKind: Lucide's glyphs, on a grid of 24 units, with circles, rectangles, lines and
 // polygons written as path commands.
-inline constexpr KitIconData kKitIconData[PrKitIconKind_Count] = {
+inline constexpr IconData kIconData[PrStudioIconKind_Count] = {
     {"none", "", false},
     {"chevron-up", "M18 15l-6-6-6 6", false},
     {"chevron-down", "M6 9l6 6 6-6", false},
@@ -189,11 +187,52 @@ inline constexpr KitIconData kKitIconData[PrKitIconKind_Count] = {
     {"info", "M2 12a10 10 0 1 1 20 0 10 10 0 0 1-20 0zM12 16v-4M12 8h.01", false},
     {"spinner", "M12 4a8 8 0 0 1 7.4 5", false},
     {"atlas", "M12 2 21 7v10L12 22 3 17V7zM3 7l9 5 9-5M7.5 4.5l9 15M16.5 4.5l-9 15", false},
+    {"calendar", "M8 2v4M16 2v4M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM3 10h18", false},
+    {"chart-column", "M3 3v16a2 2 0 0 0 2 2h16M18 17V9M13 17V5M8 17v-3", false},
+    {
+        "palette",
+        "M12 22a10 10 0 1 1 10-10c0 2.2-1.8 3-3.5 3H16a2 2 0 0 0-1.5 3.3A2 2 0 0 1 13 22zM13.5 6.5h.01M17.5 10.5h.01"
+            "M8.5 7.5h.01M6.5 12.5h.01",
+        false,
+    },
+    {
+        "flame",
+        "M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.4-.5-2-1-3-1.1-2.1-.2-4 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1"
+            "-14 0c0-1.2.4-2.3 1-3a2.5 2.5 0 0 0 2.5 2.5z",
+        false,
+    },
+    {
+        "sparkles",
+        "M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z",
+        false,
+    },
+    {"timer", "M10 2h4M12 14l3-3M12 22a8 8 0 1 0 0-16 8 8 0 0 0 0 16z", false},
+    {
+        "copy",
+        "M10 8h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2zM4 16a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h10"
+            "a2 2 0 0 1 2 2",
+        false,
+    },
+    {"lightbulb", "M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.3h6c0-1 .4-1.8 1-2.3A7 7 0 0 0 12 2z", false},
     {"window-minimize", "M3 12h18", false},
     {"window-maximize", "M3 3h18v18H3z", false},
     {"window-restore", "M3 7h14v14H3zM7 7V3h14v14h-4", false},
 };
 
+} // namespace
+
 } // namespace pr_impl
 
-PR_ASSUME_NONNULL_END
+using namespace pr_impl;
+
+PrStringView prStudioIconName(PrStudioIconKind icon) {
+    return icon < PrStudioIconKind_Count ? PrStringView(kIconData[icon].name) : PrStringView{};
+}
+
+PrStringView prStudioIconPathData(PrStudioIconKind icon) {
+    return icon < PrStudioIconKind_Count ? PrStringView(kIconData[icon].path) : PrStringView{};
+}
+
+bool prStudioIconIsFilled(PrStudioIconKind icon) {
+    return icon < PrStudioIconKind_Count && kIconData[icon].filled;
+}

@@ -1110,7 +1110,7 @@ PrLayoutNode textField(PrKit* kit, PrLayoutNode parent, const PrKitTextField& fi
         (ringed(*kit, node) ? PartFlag_Ring : 0) | (style.mono ? PartFlag_Mono : 0) | (style.bare ? PartFlag_Bare : 0));
     prLayoutTreeFrameSetStyle(kit->tree, node,
         partStyle(*kit, PartRecipe{.part = Part_TextFrame, .size = style.size, .state = look, .flags = flags}));
-    if (field.icon != PrKitIconKind_None)
+    if (field.icon != PrStudioIconKind_None)
         prKitIcon(kit, node, {.icon = field.icon},
             {.size = 12, .tone = PrKitTone(disabled ? PrKitTone_Faint : PrKitTone_Muted)});
     editedText(*kit, node, text, field.buffer, field.placeholder, style, disabled, false,
@@ -1121,7 +1121,7 @@ PrLayoutNode textField(PrKit* kit, PrLayoutNode parent, const PrKitTextField& fi
         prUiSetCursor(kit->ui, clear, PrAppCursor_Hand);
         prLayoutTreeFrameSetStyle(kit->tree, clear,
             partStyle(*kit, PartRecipe{.part = Part_TextClear, .state = pointerState(*kit, clear, false)}));
-        prKitIcon(kit, clear, {.icon = PrKitIconKind_Close}, {.size = 10, .tone = PrKitTone_Muted});
+        prKitIcon(kit, clear, {.icon = PrStudioIconKind_Close}, {.size = 10, .tone = PrKitTone_Muted});
         if (prUiActivated(kit->ui, clear)) {
             replaceText(*kit, node, field.buffer, "");
             prUiSetFocus(kit->ui, node);
@@ -1232,7 +1232,7 @@ struct GroupState {
     bool open;
 };
 
-PrLayoutNode assetAction(PrKit* kit, PrLayoutNode gutter, PrKitIconKind icon, PrKitTone tone) {
+PrLayoutNode assetAction(PrKit* kit, PrLayoutNode gutter, PrStudioIconKind icon, PrKitTone tone) {
     bool disabled = false;
     PrLayoutNode cell = control(*kit, gutter, 0, PrUiFlag_Pressable, &disabled);
     prLayoutTreeFrameSetStyle(kit->tree, cell,
@@ -1372,7 +1372,8 @@ PrLayoutNode prKitInspectorGroup(PrKit* kit, PrLayoutNode parent, PrKitInspector
     }));
     if (!disabled)
         prUiSetCursor(kit->ui, header, PrAppCursor_Hand);
-    prKitIcon(kit, header, {.icon = PrKitIconKind(shown ? PrKitIconKind_ChevronDown : PrKitIconKind_ChevronRight)},
+    prKitIcon(kit, header,
+        {.icon = PrStudioIconKind(shown ? PrStudioIconKind_ChevronDown : PrStudioIconKind_ChevronRight)},
         {.size = 10, .tone = PrKitTone_Muted});
     PrKitTextStyle name{.role = PrKitTextRole_Strong, .tone = PrKitTone_Secondary, .wrap = PrKitWrap_Clip};
     prKitLabel(kit, header, {.text = group.name}, name);
@@ -1422,17 +1423,17 @@ PrLayoutNode prKitAssetField(PrKit* kit, PrLayoutNode parent, PrKitAssetField fi
     else
         thumbStyle = partStyle(k, thumbPart);
     PrLayoutNode thumb = prLayoutTreeFrameElement(k.tree, node, 0, thumbStyle);
-    if (!tinted && field.icon != PrKitIconKind_None)
+    if (!tinted && field.icon != PrStudioIconKind_None)
         prKitIcon(kit, thumb, {.icon = field.icon}, {.size = 11, .tone = PrKitTone_Muted});
     PrKitTone tone = field.missing ? PrKitTone_Danger : field.empty || disabled ? PrKitTone_Faint : PrKitTone_Primary;
     textPart(k, node, 0, PartRecipe{.part = Part_AssetName, .tone = tone}, field.name);
     PrLayoutNode gutter = part(k, node, 0, PartRecipe{.part = Part_AssetGutter});
-    if (prKitActivated(kit, assetAction(kit, gutter, PrKitIconKind_Folder, PrKitTone_Muted)))
+    if (prKitActivated(kit, assetAction(kit, gutter, PrStudioIconKind_Folder, PrKitTone_Muted)))
         kitSignal(k, node, KitSignal_Browsed);
     if (!field.empty) {
-        if (prKitActivated(kit, assetAction(kit, gutter, PrKitIconKind_Target, PrKitTone_Muted)))
+        if (prKitActivated(kit, assetAction(kit, gutter, PrStudioIconKind_Target, PrKitTone_Muted)))
             kitSignal(k, node, KitSignal_Located);
-        if (prKitActivated(kit, assetAction(kit, gutter, PrKitIconKind_Close, PrKitTone_Danger)))
+        if (prKitActivated(kit, assetAction(kit, gutter, PrStudioIconKind_Close, PrKitTone_Danger)))
             kitSignal(k, node, KitSignal_Cleared);
     }
     return node;

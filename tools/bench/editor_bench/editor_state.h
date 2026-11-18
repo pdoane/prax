@@ -54,7 +54,7 @@ struct SceneEntity {
     std::string name;
     std::string typeLabel;
     std::string meshAsset;
-    PrKitIconKind icon = PrKitIconKind_Cube;
+    PrStudioIconKind icon = PrStudioIconKind_Cube;
     Vector3 position;
     Vector3 rotation;
     Vector3 scale = {1.0f, 1.0f, 1.0f};
@@ -174,7 +174,7 @@ struct CommandItem {
     const char* label;    // display name
     const char* category; // search group
     const char* shortcut; // the chord that activates it
-    PrKitIconKind icon;
+    PrStudioIconKind icon;
 };
 
 // Returns the command palette's entries in display order.

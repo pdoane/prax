@@ -8,6 +8,7 @@
 #include "pr/base.h"
 #include "pr/color.h"
 #include "pr/font_set.h"
+#include "pr/path_data.h"
 #include "pr/string_view.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -201,12 +202,16 @@ typedef struct PrKitLook {
 // ---------------------------------------------------------------------------------------------------------------------
 // Themes
 
-// What a kit draws with. `fonts` must outlive every kit that the theme is set on. Text is set in the family `ui`, or in
-// `mono` if its role's type is monospaced (PrKitType::mono).
+// What a kit draws with. `fonts` and `paths` must outlive every kit that the theme is set on. Text is set in the family
+// `ui`, or in `mono` if its role's type is monospaced (PrKitType::mono). The kit's icons are parsed into `paths`, which
+// an application keeps for its life, so that a kit made again for a new context, as a window's is when its device is
+// lost, draws the paths that the last one did, from what the renderer derived from them already; with none, each kit
+// parses its own.
 typedef struct PrKitTheme {
     PrKitPalette palette;
     PrKitType types[PrKitTextRole_Count];   // by PrKitTextRole
     PrFontSet* PR_NULLABLE fonts;
+    PrPathCache* PR_NULLABLE paths;
     PrFontFamily ui;
     PrFontFamily mono;
 } PrKitTheme;

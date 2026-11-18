@@ -169,3 +169,17 @@ TEST_CASE("path data written from commands reads back as the same commands") {
     CHECK(prRawStringView(&text) == "M 0.1 -0.0025 A 1 2 3 1 0 4 5");
     prRawStringReset(&text);
 }
+
+TEST_CASE("a cache gives the same path for the same data, parsed once, and another path for other data") {
+    PrPathCache* cache = prPathCacheCreate();
+    char data[] = "M0 0L10 10";
+    const PrPath* first = prPathCacheFind(cache, data);
+    CHECK(prPathVerbCount(first) == 2);
+    // The text is the key, not where it is stored.
+    char copy[] = "M0 0L10 10";
+    CHECK(prPathCacheFind(cache, copy) == first);
+    const PrPath* other = prPathCacheFind(cache, "M0 0L20 20");
+    CHECK(other != first);
+    CHECK(prPathId(other) != prPathId(first));
+    prPathCacheDestroy(cache);
+}

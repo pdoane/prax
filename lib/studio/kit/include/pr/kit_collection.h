@@ -151,7 +151,7 @@ PrLayoutNode prKitTileLabel(PrKit* kit, PrLayoutNode tile, PrKitLabel label);
 // The content of an empty list's notice: an icon, if any, above a title, above a hint, if any.
 typedef struct PrKitEmptyState {
     PrUiKey key;
-    PrKitIconKind icon;
+    PrStudioIconKind icon;
     PrStringView title;
     PrStringView hint;
 } PrKitEmptyState;
@@ -298,7 +298,7 @@ PrLayoutNode prKitTableRow(PrKit* kit, PrLayoutNode table, PrKitTableRow row);
 typedef struct PrKitTableCell {
     uint32_t column;
     PrStringView text;
-    PrKitIconKind icon;
+    PrStudioIconKind icon;
     PrKitTextRole role;
     PrKitTone tone;
 } PrKitTableCell;

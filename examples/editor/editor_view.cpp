@@ -73,7 +73,7 @@ PrLayoutNode scrolling(PrKit* kit, PrLayoutNode panel, PrKitEdges padding = {}) 
 }
 
 // Creates a ghost button with `icon` that shows `on` as selected, and returns true if it was activated.
-bool iconButton(PrKit* kit, PrLayoutNode parent, PrKitIconKind icon, bool on, PrKitButtonStyle style) {
+bool iconButton(PrKit* kit, PrLayoutNode parent, PrStudioIconKind icon, bool on, PrKitButtonStyle style) {
     return prKitActivated(kit, prKitButton(kit, parent, {.icon = icon, .selected = on}, style));
 }
 
@@ -106,7 +106,7 @@ struct CommandDef {
     const char* text;
     const char* shortcut;
     Command command;
-    PrKitIconKind icon;
+    PrStudioIconKind icon;
 };
 
 void run(EditorState& editor, Command command) {
@@ -129,18 +129,18 @@ struct MenuDef {
     uint32_t count;
 };
 
-constexpr CommandDef kEditMenu[] = {{"Command Palette...", "Cmd K", Command_Palette, PrKitIconKind_Search}};
+constexpr CommandDef kEditMenu[] = {{"Command Palette...", "Cmd K", Command_Palette, PrStudioIconKind_Search}};
 constexpr CommandDef kViewMenu[] = {
-    {"Grid", "Cmd '", Command_ToggleGrid, PrKitIconKind_Grid},
-    {"Snap", "Cmd ;", Command_ToggleSnap, PrKitIconKind_Magnet},
+    {"Grid", "Cmd '", Command_ToggleGrid, PrStudioIconKind_Grid},
+    {"Snap", "Cmd ;", Command_ToggleSnap, PrStudioIconKind_Magnet},
 };
 constexpr CommandDef kEntityMenu[] = {
-    {"Add Entity", "Shift Cmd N", Command_AddEntity, PrKitIconKind_Cube},
-    {"Delete Selected", "Del", Command_DeleteSelected, PrKitIconKind_Close},
+    {"Add Entity", "Shift Cmd N", Command_AddEntity, PrStudioIconKind_Cube},
+    {"Delete Selected", "Del", Command_DeleteSelected, PrStudioIconKind_Close},
 };
 constexpr CommandDef kRunMenu[] = {
-    {"Play", "Cmd P", Command_Play, PrKitIconKind_Play},
-    {"Clear Console", "Cmd L", Command_ClearConsole, PrKitIconKind_Close},
+    {"Play", "Cmd P", Command_Play, PrStudioIconKind_Play},
+    {"Clear Console", "Cmd L", Command_ClearConsole, PrStudioIconKind_Close},
 };
 
 template <uint32_t N>
@@ -180,7 +180,7 @@ void buildMenuBar(PrKit* kit, PrLayoutNode parent, EditorState& editor) {
         }
     }
     prKitSpacer(kit, menubar, {});
-    PrLayoutNode search = prKitButton(kit, menubar, {.text = "Search", .icon = PrKitIconKind_Search}, kGhostSm);
+    PrLayoutNode search = prKitButton(kit, menubar, {.text = "Search", .icon = PrStudioIconKind_Search}, kGhostSm);
     if (prKitActivated(kit, search))
         editor.paletteOpen = true;
     prKitTooltip(kit, search, {.text = "Command Palette", .shortcut = "Cmd K"});
@@ -225,14 +225,14 @@ void buildToolbar(PrKit* kit, PrLayoutNode parent, EditorState& editor) {
     PrLayoutNode toolbar = bar(kit, parent, PrKitBackground_Panel, PrKitRuleFlag_Bottom, kPrKitHeightLg, kPrKitSpace1);
     struct ToolDef {
         Tool tool;
-        PrKitIconKind icon;
+        PrStudioIconKind icon;
         const char* name;
     };
     constexpr ToolDef kTools[] = {
-        {Tool_Select, PrKitIconKind_Cursor, "Select"},
-        {Tool_Move, PrKitIconKind_Move, "Move"},
-        {Tool_Rotate, PrKitIconKind_Rotate, "Rotate"},
-        {Tool_Scale, PrKitIconKind_Scale, "Scale"},
+        {Tool_Select, PrStudioIconKind_Cursor, "Select"},
+        {Tool_Move, PrStudioIconKind_Move, "Move"},
+        {Tool_Rotate, PrStudioIconKind_Rotate, "Rotate"},
+        {Tool_Scale, PrStudioIconKind_Scale, "Scale"},
     };
     for (const ToolDef& tool : kTools) {
         PrLayoutNode button = prKitButton(kit, toolbar, {.icon = tool.icon, .selected = editor.tool == tool.tool}, kGhostMd);
@@ -244,14 +244,14 @@ void buildToolbar(PrKit* kit, PrLayoutNode parent, EditorState& editor) {
     const char* spaces[] = {"Local", "World"};
     segmented(kit, toolbar, spaces, 2, &editor.space);
     prKitDivider(kit, toolbar, {});
-    if (iconButton(kit, toolbar, PrKitIconKind_Magnet, editor.snap, kGhostMd))
+    if (iconButton(kit, toolbar, PrStudioIconKind_Magnet, editor.snap, kGhostMd))
         editor.snap = !editor.snap;
-    if (iconButton(kit, toolbar, PrKitIconKind_Grid, editor.grid, kGhostMd))
+    if (iconButton(kit, toolbar, PrStudioIconKind_Grid, editor.grid, kGhostMd))
         editor.grid = !editor.grid;
     prKitSpacer(kit, toolbar, {});
     PrKitButton play{
         .text = editor.playing ? "Pause" : "Play",
-        .icon = PrKitIconKind(editor.playing ? PrKitIconKind_Pause : PrKitIconKind_Play),
+        .icon = PrStudioIconKind(editor.playing ? PrStudioIconKind_Pause : PrStudioIconKind_Play),
         .selected = editor.playing,
     };
     if (prKitActivated(kit, prKitButton(kit, toolbar, play, {
@@ -259,7 +259,7 @@ void buildToolbar(PrKit* kit, PrLayoutNode parent, EditorState& editor) {
             .size = PrKitControlSize_Sm,
     })))
         editor.playing = !editor.playing;
-    if (prKitActivated(kit, prKitButton(kit, toolbar, {.icon = PrKitIconKind_Stop}, {.size = PrKitControlSize_Sm})))
+    if (prKitActivated(kit, prKitButton(kit, toolbar, {.icon = PrStudioIconKind_Stop}, {.size = PrKitControlSize_Sm})))
         editor.playing = false;
 }
 
@@ -319,7 +319,7 @@ void buildScenePanel(PrKit* kit, PrLayoutNode panel, EditorState& editor) {
     PrKitTextField filter{
         .text = editor.sceneFilter,
         .placeholder = "Filter",
-        .icon = PrKitIconKind_Search,
+        .icon = PrStudioIconKind_Search,
         .clearable = true,
     };
     PrLayoutNode field = prKitTextField(kit, actions, filter, {.size = PrKitControlSize_Sm});
@@ -327,7 +327,7 @@ void buildScenePanel(PrKit* kit, PrLayoutNode panel, EditorState& editor) {
     if (prKitTextChanged(kit, field, &changed))
         editor.sceneFilter = changed;
     prKitPlace(kit, field, {.flex = PrKitFlex_Fill});
-    PrLayoutNode add = prKitButton(kit, actions, {.icon = PrKitIconKind_Plus}, kGhostXs);
+    PrLayoutNode add = prKitButton(kit, actions, {.icon = PrStudioIconKind_Plus}, kGhostXs);
     if (prKitActivated(kit, add))
         editor.addEntity();
     prKitTooltip(kit, add, {.text = "Add Entity", .shortcut = "Shift Cmd N"});
@@ -378,14 +378,18 @@ void buildScenePanel(PrKit* kit, PrLayoutNode panel, EditorState& editor) {
 
 struct AssetDef {
     const char* name;
-    PrKitIconKind icon;
+    PrStudioIconKind icon;
 };
 
 constexpr AssetDef kAssets[] = {
-    {"player_base", PrKitIconKind_Cube},   {"enemy_grunt", PrKitIconKind_Cube},   {"crate", PrKitIconKind_Cube},
-    {"barrel", PrKitIconKind_Cube},        {"env_diffuse", PrKitIconKind_Image},  {"env_normal", PrKitIconKind_Image},
-    {"water_pbr", PrKitIconKind_Sphere},   {"footsteps", PrKitIconKind_Audio},    {"controller", PrKitIconKind_Script},
-    {"enemy_ai", PrKitIconKind_Script},    {"light_probes", PrKitIconKind_Light}, {"level_01", PrKitIconKind_Folder},
+    {"player_base", PrStudioIconKind_Cube},   {"enemy_grunt", PrStudioIconKind_Cube},
+    {"crate", PrStudioIconKind_Cube},
+    {"barrel", PrStudioIconKind_Cube},        {"env_diffuse", PrStudioIconKind_Image},
+    {"env_normal", PrStudioIconKind_Image},
+    {"water_pbr", PrStudioIconKind_Sphere},   {"footsteps", PrStudioIconKind_Audio},
+    {"controller", PrStudioIconKind_Script},
+    {"enemy_ai", PrStudioIconKind_Script},    {"light_probes", PrStudioIconKind_Light},
+    {"level_01", PrStudioIconKind_Folder},
 };
 
 void buildProjectPanel(PrKit* kit, PrLayoutNode panel, EditorState& editor) {
@@ -490,11 +494,11 @@ void paintViewport(void* context, PrVec2 size, PrDrawList* list) {
             prDrawListRect(list, PrRect{0, y, size.x, y + 1}, {.color = kGridLine});
     }
     for (const Entity& entity : editor.entities) {
-        if (!drawn(entity) || entity.icon == PrKitIconKind_Terrain)
+        if (!drawn(entity) || entity.icon == PrStudioIconKind_Terrain)
             continue;
         PrVec2 at = placeOf(entity, size);
         float r = scale * 0.6f;
-        if (entity.icon == PrKitIconKind_Sphere) {
+        if (entity.icon == PrStudioIconKind_Sphere) {
             solid(editor.renderMode, kWater,
                 [&](PrDrawPaint paint) { prDrawListEllipse(list, at, PrVec2{3 * scale, 2.2f * scale}, 0, paint); });
         } else if (entity.type == "Light") {
@@ -640,13 +644,13 @@ void buildInspector(PrKit* kit, PrLayoutNode panel, EditorState& editor) {
     PrLayoutNode identity = actionBar(kit, panel);
     if (entity != nullptr)
         prKitCheckbox(kit, identity, {.value = &entity->enabled}, {});
-    prKitIcon(kit, identity, {.icon = PrKitIconKind(entity != nullptr ? entity->icon : PrKitIconKind_Cube)},
+    prKitIcon(kit, identity, {.icon = PrStudioIconKind(entity != nullptr ? entity->icon : PrStudioIconKind_Cube)},
         {.size = 14, .tone = PrKitTone(entity != nullptr ? PrKitTone_Secondary : PrKitTone_Faint)});
     prKitLabel(kit, identity, {.text = entity != nullptr ? PrStringView(entity->name) : "No selection"}, kBody);
     prKitSpacer(kit, identity, {});
     if (entity != nullptr)
         prKitBadge(kit, identity, {.text = entity->type}, {.variant = PrKitBadgeVariant_Accent});
-    PrKitIconKind lock = PrKitIconKind(editor.inspectorLocked ? PrKitIconKind_Lock : PrKitIconKind_Unlock);
+    PrStudioIconKind lock = PrStudioIconKind(editor.inspectorLocked ? PrStudioIconKind_Lock : PrStudioIconKind_Unlock);
     if (iconButton(kit, identity, lock, editor.inspectorLocked, kGhostXs)) {
         editor.inspectorLocked = !editor.inspectorLocked;
         editor.lockedEntity = editor.inspectorLocked && entity != nullptr ? entity->id : 0;
@@ -668,7 +672,7 @@ void buildInspector(PrKit* kit, PrLayoutNode panel, EditorState& editor) {
     }
     PrLayoutNode mesh = prKitInspectorGroup(kit, body, {.name = "Mesh Renderer", .open = &editor.openMesh});
     if (mesh != kPrLayoutNodeNone) {
-        PrKitAssetField field{.name = entity->mesh, .icon = PrKitIconKind_Cube, .kind = kDragAsset};
+        PrKitAssetField field{.name = entity->mesh, .icon = PrStudioIconKind_Cube, .kind = kDragAsset};
         PrLayoutNode asset = prKitAssetField(kit, prKitInspectorRow(kit, mesh, {.label = "Mesh"}, {}), field);
         uint64_t dropped = 0;
         if (prKitDropped(kit, asset, &dropped) && dropped < countOf(kAssets))

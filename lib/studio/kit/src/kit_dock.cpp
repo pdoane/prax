@@ -729,7 +729,7 @@ void buildStrip(DockBuild& b, PrLayoutNode column, PrKitDockNode leaf) {
             PrKitTextStyle dirty{.role = PrKitTextRole_BodySmall, .tone = PrKitTone_Warning, .wrap = PrKitWrap_Nowrap};
             prKitLabel(kit, tab, {.text = "*"}, dirty);
         }
-        PrKitButton close{.icon = PrKitIconKind_Close};
+        PrKitButton close{.icon = PrStudioIconKind_Close};
         PrKitButtonStyle closeStyle{.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Xs};
         PrLayoutNode closer = prKitButton(kit, tab, close, closeStyle);
         if (prKitActivated(kit, closer))

@@ -73,7 +73,7 @@ struct ListScene {
         for (uint32_t i = 0; i < rows.count; ++i) {
             uint32_t index = rows.first + i;
             cells[index] = prKitListRow(f.kit, rows.view, {.index = index, .item = index, .selected = selected[index]});
-            prKitRowIcon(f.kit, cells[index], {.icon = PrKitIconKind_Cube});
+            prKitRowIcon(f.kit, cells[index], {.icon = PrStudioIconKind_Cube});
             prKitRowLabel(f.kit, cells[index], {.text = "Entity"}, PrKitTone_Primary);
             prKitRowMeta(f.kit, cells[index], {.text = "mesh"});
         }
@@ -156,7 +156,7 @@ struct TreeScene {
             uint32_t index = rows.first + i;
             uint64_t id = ids[index];
             nodes[index] = prKitTreeRow(f.kit, view, {.index = index, .item = id, .selected = id == selectedId});
-            prKitRowIcon(f.kit, nodes[index], {.icon = PrKitIconKind_Cube});
+            prKitRowIcon(f.kit, nodes[index], {.icon = PrStudioIconKind_Cube});
             prKitRowLabel(f.kit, nodes[index], {.text = "Entity"}, PrKitTone_Primary);
             if (items[index].depth == 0) {
                 uint32_t group = uint32_t(id / 10 - 1);
@@ -231,7 +231,7 @@ struct TableScene {
             order[i] = sort.column != kPrKitColumnNone && sort.descending ? kRows - 1 - i : i;
         for (uint32_t i = rows.first; i < rows.first + rows.count; ++i) {
             PrLayoutNode row = prKitTableRow(f.kit, view, {.index = i, .item = order[i], .selected = selected[i]});
-            cells[i][0] = prKitTableCell(f.kit, row, {.column = 0, .text = "Entity", .icon = PrKitIconKind_Cube});
+            cells[i][0] = prKitTableCell(f.kit, row, {.column = 0, .text = "Entity", .icon = PrStudioIconKind_Cube});
             cells[i][1] = prKitTableCell(f.kit, row, {.column = 1, .text = "mesh", .role = PrKitTextRole_Mono});
             cells[i][2] = prKitTableCell(f.kit, row, {.column = 2, .text = "12 KB", .role = PrKitTextRole_Mono});
         }
@@ -277,7 +277,7 @@ struct GridScene {
         rows = rowsOf(f, view);
         for (uint32_t i = rows.first; i < rows.first + rows.count; ++i) {
             tiles[i] = prKitListTile(f.kit, view, {.index = i, .item = i, .selected = selected[i]});
-            prKitTileIcon(f.kit, tiles[i], {.icon = PrKitIconKind_Cube}, PrColor{0, 0, 0, 0});
+            prKitTileIcon(f.kit, tiles[i], {.icon = PrStudioIconKind_Cube}, PrColor{0, 0, 0, 0});
             prKitTileLabel(f.kit, tiles[i], {.text = "Entity"});
         }
         if (prKitSelectionEdited(f.kit, view, &rows.edit))
@@ -657,7 +657,7 @@ TEST_CASE("an empty state shows its icon over its title and hint") {
     PrLayoutNode column = kPrLayoutNodeNone;
     f.build = [&](PrLayoutNode root) {
         column = prKitEmptyState(f.kit, root,
-            {.icon = PrKitIconKind_Search, .title = "NO ASSETS", .hint = "Clear the filter to see them all"});
+            {.icon = PrStudioIconKind_Search, .title = "NO ASSETS", .hint = "Clear the filter to see them all"});
     };
     f.frame();
     PrRect box = f.bounds(column);

@@ -2783,6 +2783,7 @@ TAGS = {
     "lib/webview": ("WebView",),
     "lib/mathml": ("MathMl",),
     "lib/studio/app": ("StudioApp", "StudioWindow"),
+    "lib/studio/icons": ("StudioIcon",),
 }
 
 # The vocabulary modules, whose headers declare names of several tags rather than of their own.

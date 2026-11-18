@@ -137,6 +137,7 @@ void releaseKind(LayoutTree* tree, LayoutTreeNode& n) {
         prDrawListRelease(replaced.content);
         prDrawImageRelease(replaced.image);
         prLayoutPainterRelease(replaced.painter);
+        prPathDestroy(const_cast<PrPath*>(replaced.path.path));
         replaced = LayoutReplaced{};
         tree->freeReplaced.push(n.replaced);
     }
@@ -1754,6 +1755,13 @@ void prLayoutNodeSetContent(PrLayoutTree* tree, PrLayoutNode replaced, const PrL
         prDrawImageRetain(image);
     prDrawImageRelease(r.image);
     r.image = image;
+    // The tree draws its own clone of a path, which keeps the path's id.
+    prPathDestroy(const_cast<PrPath*>(r.path.path));
+    r.path = PrLayoutPath{};
+    if (content->kind == PrLayoutContentKind_Path) {
+        r.path = content->path;
+        r.path.path = prPathClone(content->path.path);
+    }
     PrLayoutPainter painter = content->kind == PrLayoutContentKind_Painter ? content->painter : PrLayoutPainter{};
     PR_ASSERT(content->kind != PrLayoutContentKind_Painter || painter.paint != nullptr);
     // Content that measures sizes the element, so new content lays it out again.
@@ -1797,6 +1805,8 @@ PrLayoutContent prLayoutNodeContent(const PrLayoutTree* tree, PrLayoutNode repla
         content.image = n.image;
         content.limit = n.limit;
         content.rendering = n.rendering;
+    } else if (n.contentKind == PrLayoutContentKind_Path) {
+        content.path = n.path;
     }
     return content;
 }

@@ -32,6 +32,9 @@ struct StudioAppState {
 
     PrTextShaper* shaper;
 
+    // The paths of the kits' icons, which every window's kit draws (PrKitTheme::paths).
+    PrPathCache* paths;
+
     // The decoder for glyphs that are images, such as those of a bitmap emoji font, and the codecs that it uses.
     PrCompressCodec* PR_NULLABLE compress;
     PrImageCodec* PR_NULLABLE images;

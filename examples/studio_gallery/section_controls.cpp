@@ -35,10 +35,8 @@ constexpr PrKitTextAreaStyle kStyledLooks[] = {
 constexpr const char* kStyledNames[] = {"Plain", "Strong", "Italic", "Accent", "Heading"};
 
 // The tools of a tool row.
-constexpr PrKitIconKind kToolIcons[] = {
-    PrKitIconKind_Cursor, PrKitIconKind_Move, PrKitIconKind_Rotate,
-    PrKitIconKind_Scale,
-};
+constexpr PrStudioIconKind kToolIcons[] =
+    {PrStudioIconKind_Cursor, PrStudioIconKind_Move, PrStudioIconKind_Rotate, PrStudioIconKind_Scale};
 
 // A command of the file menu.
 struct MenuRow {
@@ -235,7 +233,7 @@ void buildContextMenu(PrKit* kit, PrLayoutNode section, MenuState& state) {
 void buildPalette(PrKit* kit, PrLayoutNode section, PaletteState& palette) {
     PrLayoutNode panel = demoPanel(kit, section, "COMMAND PALETTE", "UP . DOWN . ENTER", false);
     PrLayoutNode row = specimenRow(kit, panel, kPrKitSpace3, false);
-    PrLayoutNode trigger = prKitButton(kit, row, {.text = "Open Palette...", .icon = PrKitIconKind_Search}, {});
+    PrLayoutNode trigger = prKitButton(kit, row, {.text = "Open Palette...", .icon = PrStudioIconKind_Search}, {});
     if (prKitActivated(kit, trigger))
         prKitSetOpen(kit, trigger, true);
     prKitLabel(kit, row, {.text = "a modal at the top of the frame, over a list that the keys walk"}, kBodySecondary);
@@ -304,21 +302,21 @@ void sectionButtons(PrKit* kit, PrLayoutNode parent) {
     {
         PrLayoutNode panel = demoPanel(kit, section, "ICON BUTTONS", "SQUARE . LABELLED", false);
         PrLayoutNode row = specimenRow(kit, panel, kPrKitSpace3, false);
-        for (PrKitIconKind icon : kToolIcons)
+        for (PrStudioIconKind icon : kToolIcons)
             prKitButton(kit, row, {.icon = icon}, {});
-        prKitButton(kit, row, {.text = "Add Entity", .icon = PrKitIconKind_Plus}, {});
-        prKitButton(kit, row, {.text = "Search", .icon = PrKitIconKind_Search}, {});
+        prKitButton(kit, row, {.text = "Add Entity", .icon = PrStudioIconKind_Plus}, {});
+        prKitButton(kit, row, {.text = "Search", .icon = PrStudioIconKind_Search}, {});
     }
     {
         PrLayoutNode panel = demoPanel(kit, section, "TOOLTIPS", "HOVER . VERB . CHORD", false);
         PrLayoutNode row = specimenRow(kit, panel, kPrKitSpace3, false);
-        PrLayoutNode undo = prKitButton(kit, row, {.text = "Undo", .icon = PrKitIconKind_Undo}, {});
+        PrLayoutNode undo = prKitButton(kit, row, {.text = "Undo", .icon = PrStudioIconKind_Undo}, {});
         PrKitTooltip undoTip{.text = "Undo the last edit", .shortcut = "Cmd Z"};
         prKitTooltip(kit, undo, undoTip);
-        PrLayoutNode redo = prKitButton(kit, row, {.icon = PrKitIconKind_Redo}, {});
+        PrLayoutNode redo = prKitButton(kit, row, {.icon = PrStudioIconKind_Redo}, {});
         PrKitTooltip redoTip{.text = "Redo the last undone edit", .shortcut = "Cmd Shift Z"};
         prKitTooltip(kit, redo, redoTip);
-        PrLayoutNode trash = prKitButton(kit, row, {.icon = PrKitIconKind_Trash},
+        PrLayoutNode trash = prKitButton(kit, row, {.icon = PrStudioIconKind_Trash},
             {.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Md});
         PrKitTooltip trashTip{.text = "Delete selection", .shortcut = "Del"};
         prKitTooltip(kit, trash, trashTip);
@@ -327,7 +325,7 @@ void sectionButtons(PrKit* kit, PrLayoutNode parent) {
         PrLayoutNode panel = demoPanel(kit, section, "BUTTON GROUP", "SHARED BORDER", false);
         PrLayoutNode row = specimenRow(kit, panel, kPrKitSpace6, false);
         PrLayoutNode icons = prKitButtonGroup(kit, row, {});
-        for (PrKitIconKind icon : kToolIcons)
+        for (PrStudioIconKind icon : kToolIcons)
             prKitButton(kit, icons, {.icon = icon}, {});
         PrLayoutNode spaces = prKitButtonGroup(kit, row, {});
         PrKitButtonStyle small{.size = PrKitControlSize_Sm};
@@ -359,7 +357,7 @@ void sectionInputs(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
         PrKitTextField searchField{
             .text = inputs.search,
             .placeholder = "Search query",
-            .icon = PrKitIconKind_Search,
+            .icon = PrStudioIconKind_Search,
             .clearable = true,
             .selectOnFocus = true,
         };
@@ -409,7 +407,7 @@ void sectionInputs(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
             .field = {
                 .text = inputs.area,
                 .placeholder = "Area path",
-                .icon = PrKitIconKind_Search,
+                .icon = PrStudioIconKind_Search,
                 .selectOnFocus = true,
             },
             .suggestions = areas,
@@ -424,7 +422,7 @@ void sectionInputs(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
             .field = {
                 .text = inputs.revision,
                 .placeholder = "Branch, tag or commit",
-                .icon = PrKitIconKind_Branch,
+                .icon = PrStudioIconKind_Branch,
                 .selectOnFocus = true,
             },
             .suggestions = revisions,
@@ -638,9 +636,9 @@ void sectionInputs(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
             prKitLabel(kit, box, {.text = formatToBuffer(Span(value), "{}", counts[i])}, kMonoStrong);
             caption(kit, box, labels[i]);
         }
-        PrKitButton undoButton{.text = "Undo", .icon = PrKitIconKind_Undo, .disabled = !undoAvailable(undo)};
+        PrKitButton undoButton{.text = "Undo", .icon = PrStudioIconKind_Undo, .disabled = !undoAvailable(undo)};
         bool undoing = prKitActivated(kit, prKitButton(kit, readout, undoButton, {}));
-        PrKitButton redoButton{.text = "Redo", .icon = PrKitIconKind_Redo, .disabled = !redoAvailable(undo)};
+        PrKitButton redoButton{.text = "Redo", .icon = PrStudioIconKind_Redo, .disabled = !redoAvailable(undo)};
         bool redoing = prKitActivated(kit, prKitButton(kit, readout, redoButton, {}));
         if (undoing || redoing)
             undoStep(undo, redoing);
@@ -741,9 +739,9 @@ void sectionTabs(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
         };
         segmented(kit, row, modes, 4, &tabs.viewMode, {});
         const PrKitChoice shapes[] = {
-            {.icon = PrKitIconKind_Cube},
-            {.icon = PrKitIconKind_Sphere},
-            {.icon = PrKitIconKind_Light},
+            {.icon = PrStudioIconKind_Cube},
+            {.icon = PrStudioIconKind_Sphere},
+            {.icon = PrStudioIconKind_Light},
         };
         segmented(kit, row, shapes, 3, &tabs.shape, {});
     }
@@ -767,7 +765,7 @@ void sectionMenus(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
     {
         PrLayoutNode panel = demoPanel(kit, section, "POPOVER", "TRIGGER . FRAME", false);
         PrLayoutNode row = specimenRow(kit, panel, kPrKitSpace3, false);
-        PrKitButton layers{.text = "Layers", .icon = PrKitIconKind_ChevronDown};
+        PrKitButton layers{.text = "Layers", .icon = PrStudioIconKind_ChevronDown};
         PrLayoutNode trigger = prKitButton(kit, row, layers, {});
         if (prKitActivated(kit, trigger))
             prKitToggleOpen(kit, trigger);

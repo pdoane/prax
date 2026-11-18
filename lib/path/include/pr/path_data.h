@@ -63,6 +63,19 @@ void prPathDataMakeAbsolute(PrPathDataCommand* PR_NULLABLE commands, uint32_t co
 // if it is above zero.
 void prPathDataWrite(const PrPathDataCommand* PR_NULLABLE commands, uint32_t count, PrRawString* out);
 
+// A cache of the paths that path data describes, each parsed once and kept by the data's text, so that the same text
+// gives the same path, with the same id (prPathId), for as long as the cache lives. What a renderer derives from a path
+// it keys by the id, so drawing an icon's path from the cache in every frame reuses what was derived from it. A cache
+// is used from one thread.
+typedef struct PrPathCache PrPathCache;
+
+// Creates an empty cache, and destroys a cache with the paths that it parsed.
+PrPathCache* prPathCacheCreate(void);
+void prPathCacheDestroy(PrPathCache* PR_NULLABLE cache);
+
+// Returns the path that `data` describes (prPathAppendData), which the cache parses on its first use and owns.
+const PrPath* prPathCacheFind(PrPathCache* cache, PrStringView data);
+
 #if defined(__cplusplus)
 }
 #endif

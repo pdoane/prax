@@ -21,6 +21,7 @@ struct LayoutPreorderNode {
     uint64_t key;
     PrLayoutStyleIndex style;
     uint32_t generation;
+    uint32_t end;                   // the position after the node's last descendant
     PrLayoutNodeKind kind;
 };
 
@@ -98,8 +99,10 @@ struct LayoutFrame {
     RawArray<PrLayoutDuplicateKey> duplicates;
     RawArray<PrLayoutDuplicateKey> reported;
 
-    RawArray<LayoutFrameLinks> links;  // by LayoutNodeIndex
-    RawArray<LayoutNodeIndex> gone;    // scratch: the committed nodes the commit takes out of the tree
+    RawArray<PrLayoutNode> kept;          // the descendants that the last prLayoutTreeFrameKeepChildren continued
+    RawArray<LayoutPreorderRun> keptRuns; // the committed preorder positions that the frame's keeps continued
+    RawArray<LayoutFrameLinks> links;     // by LayoutNodeIndex
+    RawArray<LayoutNodeIndex> gone;       // scratch: the committed nodes the commit takes out of the tree
 };
 
 // Commits the open frame (pr/layout_frame.h). Sets the values held by its creations on the committed nodes they

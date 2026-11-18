@@ -73,6 +73,7 @@ PrStatus prStudioAppRun(const PrStudioAppDesc* desc) {
     s->app = platform;
     s->status = PrStatus_Ok;
     s->shaper = prTextShaperCreate(PrTextShaperBackend_Default);
+    s->paths = prPathCacheCreate();
     s->compress = prCompressCodecCreate(PrCompressCodecBackend_Default);
     s->images = s->compress != nullptr ? prImageCodecCreate(PrImageCodecBackend_Default, s->compress) : nullptr;
     s->glyphs = s->images != nullptr ? prDrawGlyphBitmapCreate(s->images) : nullptr;
@@ -84,6 +85,7 @@ PrStatus prStudioAppRun(const PrStudioAppDesc* desc) {
     prImageCodecDestroy(s->images);
     prCompressCodecDestroy(s->compress);
     prTextShaperDestroy(s->shaper);
+    prPathCacheDestroy(s->paths);
     prMemoryFree(s);
     return status;
 }

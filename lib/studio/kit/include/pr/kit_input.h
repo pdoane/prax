@@ -165,7 +165,7 @@ typedef struct PrKitTextField {
     PrStringView text;
     PrTextEditBuffer* PR_NULLABLE buffer; // holds the text instead of `text`, for a caller that owns a buffer
     PrStringView placeholder;             // shown faint while the text is empty
-    PrKitIconKind icon;                   // before the text, or none
+    PrStudioIconKind icon;                // before the text, or none
 
     // Earlier lines, oldest first, that Up and Down recall into the field, as a console's history.
     const PrStringView* PR_NULLABLE history;
@@ -292,7 +292,7 @@ PrLayoutNode prKitInspectorRow(PrKit* kit, PrLayoutNode parent, PrKitInspectorRo
 typedef struct PrKitAssetField {
     PrUiKey key;
     PrStringView name;
-    PrKitIconKind icon;
+    PrStudioIconKind icon;
     PrColor tint;
     uint64_t kind;
     bool missing;                   // the asset is unavailable

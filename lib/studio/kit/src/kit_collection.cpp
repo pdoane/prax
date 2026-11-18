@@ -672,7 +672,7 @@ PrLayoutNode rowOf(PrKit* kit, PrLayoutNode view, View& v, const PrKitRow& row, 
         // The disclosure's cell is reserved on leaves too, so that the cells after it line up down the tree.
         PrLayoutNode caret = cell(kit, node, 0, place->hasChildren);
         if (place->hasChildren) {
-            PrKitIconKind chevron = place->open ? PrKitIconKind_ChevronDown : PrKitIconKind_ChevronRight;
+            PrStudioIconKind chevron = place->open ? PrStudioIconKind_ChevronDown : PrStudioIconKind_ChevronRight;
             prKitIcon(kit, caret, {.icon = chevron}, {.size = kChevronSize, .tone = PrKitTone_Muted});
         }
         *disclosure = caret;
@@ -808,7 +808,7 @@ PrLayoutNode prKitEmptyState(PrKit* kit, PrLayoutNode parent, PrKitEmptyState em
     box.padding = prKitEdgesAll(kPrKitSpace8);
     box.place.flex = PrKitFlex_Fill;
     PrLayoutNode column = prKitBox(kit, parent, {.key = empty.key}, box);
-    if (empty.icon != PrKitIconKind_None)
+    if (empty.icon != PrStudioIconKind_None)
         prKitIcon(kit, column, {.icon = empty.icon}, {.size = 28, .tone = PrKitTone_Faint});
     PrKitTextStyle titleStyle{.role = PrKitTextRole_Caption};
     prKitLabel(kit, column, {.text = empty.title}, titleStyle);
@@ -883,7 +883,7 @@ PrKitDropZone prKitDropZone(PrKit* kit, PrLayoutNode node) {
 PrLayoutNode prKitVisibilityToggle(PrKit* kit, PrLayoutNode parent, PrKitVisibilityToggle toggle) {
     PrLayoutNode node = cell(kit, parent, toggle.key, true);
     if (toggle.hidden || toggle.revealed) {
-        PrKitIconKind eye = toggle.hidden ? PrKitIconKind_EyeOff : PrKitIconKind_Eye;
+        PrStudioIconKind eye = toggle.hidden ? PrStudioIconKind_EyeOff : PrStudioIconKind_Eye;
         prKitIcon(kit, node, {.icon = eye},
             {.size = kCellIconSize, .tone = PrKitTone(toggle.hidden ? PrKitTone_Secondary : PrKitTone_Faint)});
     }
@@ -916,7 +916,7 @@ PrLayoutNode prKitTable(PrKit* kit, PrLayoutNode parent, PrKitTable table, PrKit
         PrKitTextStyle labelStyle{.role = PrKitTextRole_Caption, .tone = tone};
         prKitLabel(kit, heading, {.text = c.label}, labelStyle);
         if (sorted) {
-            PrKitIconKind chevron = sort->descending ? PrKitIconKind_ChevronDown : PrKitIconKind_ChevronUp;
+            PrStudioIconKind chevron = sort->descending ? PrStudioIconKind_ChevronDown : PrStudioIconKind_ChevronUp;
             prKitIcon(kit, heading, {.icon = chevron}, {.size = kChevronSize, .tone = PrKitTone_Muted});
         }
         if (!c.sortable || sort == nullptr)
@@ -954,7 +954,7 @@ PrLayoutNode prKitTableCell(PrKit* kit, PrLayoutNode row, PrKitTableCell cell) {
     const View* v = kitContext<View>(*kit, row, KitContext_View);
     PR_ASSERT(v != nullptr && v->columns != nullptr && cell.column < v->columnCount);
     PrLayoutNode node = columnElement(kit, row, 0, v->columns[cell.column]);
-    if (cell.icon != PrKitIconKind_None)
+    if (cell.icon != PrStudioIconKind_None)
         prKitIcon(kit, node, {.icon = cell.icon}, {.size = kRowIconSize, .tone = PrKitTone_Muted});
     if (cell.text.size != 0) {
         PrKitTextStyle textStyle{.role = cell.role, .tone = cell.tone, .wrap = PrKitWrap_Nowrap};

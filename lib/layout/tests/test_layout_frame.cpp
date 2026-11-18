@@ -537,3 +537,122 @@ TEST_CASE("a run of a stacking list that a cached part replays paints in its own
     }
     CHECK(renders[3] == renders[0]);
 }
+
+TEST_CASE("a frame that keeps a node's children continues them as committed, and a frame after it sees them") {
+    Fixture f;
+    const Item abc[] = {{0, "a"}, {0, "b"}, {0, "c"}};
+    ListFrame first = declareList(f, abc);
+    layOut(f);
+    uint32_t box = f.style(block());
+
+    // The list keeps its rows, and a text after it is new.
+    prLayoutTreeBeginFrame(f.tree);
+    PrLayoutNode root = prLayoutTreeFrameElement(f.tree, kPrLayoutNodeNone, 0, box);
+    prLayoutTreeFrameText(f.tree, root, 0, "heading");
+    PrLayoutNode list = prLayoutTreeFrameElement(f.tree, root, 0, box);
+    CHECK(prLayoutTreeFrameKeepChildren(f.tree, list, kPrLayoutNodeNone, kPrLayoutNodeNone) == 6);
+    uint32_t count = 0;
+    const PrLayoutNode* kept = prLayoutTreeFrameKept(f.tree, &count);
+    REQUIRE(count == 6);
+    CHECK(kept[0] == first.rows[0]);
+    CHECK(kept[4] == first.rows[2]);
+    prLayoutTreeFrameText(f.tree, root, 0, "after");
+    layOut(f);
+    CHECK(list == first.list);
+    CHECK(shape(f.tree) == "[heading [[a] [b] [c]] after]");
+    PrLayoutTreeStats stats = prLayoutTreeStats(f.tree);
+    CHECK(stats.frameNodesKept == 9);
+    CHECK(stats.frameNodesMade == 1);
+    CHECK(stats.frameNodesGone == 0);
+    CHECK(verified(f.tree));
+
+    // A frame that declares the tree again after the keep continues every node.
+    ListFrame again = declareList(f, abc);
+    layOut(f);
+    CHECK(again.rows == first.rows);
+    CHECK(shape(f.tree) == "[heading [[a] [b] [c]]]");
+    CHECK(verified(f.tree));
+}
+
+TEST_CASE("a frame keeps no children of a node that continued no committed node, or after another creation") {
+    Fixture f;
+    const Item a[] = {{0, "a"}};
+    declareList(f, a);
+    layOut(f);
+    uint32_t box = f.style(block());
+    prLayoutTreeBeginFrame(f.tree);
+    PrLayoutNode root = prLayoutTreeFrameElement(f.tree, kPrLayoutNodeNone, 0, box);
+    PrLayoutNode made = prLayoutTreeFrameElement(f.tree, root, 77, box);
+    PrLayoutNode none = kPrLayoutNodeNone;
+    CHECK(prLayoutTreeFrameKeepChildren(f.tree, made, none, none) == kPrLayoutFrameKeepFailed);
+    prLayoutTreeFrameText(f.tree, root, 0, "heading");
+    PrLayoutNode list = prLayoutTreeFrameElement(f.tree, root, 0, box);
+    prLayoutTreeFrameElement(f.tree, list, 0, box);
+    CHECK(prLayoutTreeFrameKeepChildren(f.tree, list, none, none) == kPrLayoutFrameKeepFailed);
+    layOut(f);
+    CHECK(verified(f.tree));
+}
+
+TEST_CASE("the text that a frame keeps keeps its highlights, and text that it creates without them loses theirs") {
+    Fixture f;
+    uint32_t box = f.style(block());
+    PrLayoutHighlight highlight{.start = 0, .end = 1, .background = PrColor16{}};
+    PrLayoutNode texts[2] = {};
+    auto frame = [&](bool keep) {
+        prLayoutTreeBeginFrame(f.tree);
+        PrLayoutNode root = prLayoutTreeFrameElement(f.tree, kPrLayoutNodeNone, 0, box);
+        f.root = root;
+        for (uint32_t i = 0; i < 2; ++i) {
+            PrLayoutNode row = prLayoutTreeFrameElement(f.tree, root, 0, box);
+            if (keep && i == 0) {
+                CHECK(prLayoutTreeFrameKeepChildren(f.tree, row, kPrLayoutNodeNone, kPrLayoutNodeNone) == 1);
+                continue;
+            }
+            texts[i] = prLayoutTreeFrameText(f.tree, row, 0, "ab");
+            if (!keep)
+                prLayoutTreeFrameSetHighlights(f.tree, texts[i], &highlight, 1);
+        }
+        layOut(f);
+    };
+    frame(false);
+    CHECK(prLayoutNodeHighlights(f.tree, texts[0], nullptr, 0) == 1);
+    CHECK(prLayoutNodeHighlights(f.tree, texts[1], nullptr, 0) == 1);
+    frame(true);
+    CHECK(prLayoutNodeHighlights(f.tree, texts[0], nullptr, 0) == 1);
+    CHECK(prLayoutNodeHighlights(f.tree, texts[1], nullptr, 0) == 0);
+    CHECK(verified(f.tree));
+}
+
+TEST_CASE("a frame keeps a node's children around a part that it creates again, and the part may change shape") {
+    Fixture f;
+    const Item abc[] = {{0, "a"}, {0, "b"}, {0, "c"}};
+    ListFrame first = declareList(f, abc);
+    layOut(f);
+    uint32_t box = f.style(block());
+    auto frame = [&](Span<const char* const> texts) {
+        prLayoutTreeBeginFrame(f.tree);
+        PrLayoutNode root = prLayoutTreeFrameElement(f.tree, kPrLayoutNodeNone, 0, box);
+        prLayoutTreeFrameText(f.tree, root, 0, "heading");
+        PrLayoutNode list = prLayoutTreeFrameElement(f.tree, root, 0, box);
+        // Row a and its text are kept, row b is continued for its children to be created again, and row c is kept.
+        CHECK(prLayoutTreeFrameKeepChildren(f.tree, list, kPrLayoutNodeNone, first.rows[1]) == 2);
+        for (const char* text : texts)
+            prLayoutTreeFrameText(f.tree, first.rows[1], 0, text);
+        CHECK(prLayoutTreeFrameKeepChildren(f.tree, list, first.rows[1], kPrLayoutNodeNone) == 2);
+        layOut(f);
+    };
+    const char* const capital[] = {"B"};
+    frame(capital);
+    CHECK(shape(f.tree) == "[heading [[a] [B] [c]]]");
+    CHECK(prLayoutTreeStats(f.tree).frameNodesMade == 0);
+    CHECK(verified(f.tree));
+    // The part holds more nodes, and then none, and what it held is gone while the rest is kept.
+    const char* const two[] = {"x", "y"};
+    frame(two);
+    CHECK(shape(f.tree) == "[heading [[a] [x y] [c]]]");
+    CHECK(verified(f.tree));
+    frame(Span<const char* const>{});
+    CHECK(shape(f.tree) == "[heading [[a] [] [c]]]");
+    CHECK(prLayoutTreeStats(f.tree).frameNodesGone == 2);
+    CHECK(verified(f.tree));
+}

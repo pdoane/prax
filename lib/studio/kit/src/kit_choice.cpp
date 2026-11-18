@@ -483,7 +483,7 @@ PrLayoutNode checkRow(PrKit* kit, PrLayoutNode parent, const PrKitCheck& check, 
     };
     PrLayoutNode box = prLayoutTreeFrameElement(k.tree, row.node, 0, kitStyle(k, glyph, GlyphFlex{.atStart = rail}, fill));
     if (!rail && on)
-        prKitIcon(kit, box, {.icon = PrKitIconKind_Check}, {.size = 10, .tone = PrKitTone_Inverse});
+        prKitIcon(kit, box, {.icon = PrStudioIconKind_Check}, {.size = 10, .tone = PrKitTone_Inverse});
     if (rail) {
         // The knob eases along the track by its transform, which composites without a layout, and holds still at either
         // end.
@@ -555,7 +555,7 @@ PrLayoutNode prKitSegment(PrKit* kit, PrLayoutNode segmented, PrKitChoice choice
     KitDress dress = kitDress(k, cell, look);
     prLayoutTreeFrameSetStyle(k.tree, cell.node,
         kitStyle(k, SegmentBox{}, SegmentFlex{}, choiceFont(PrKitTextRole_BodySmall), dress.fill, dress.ink));
-    if (choice.icon != PrKitIconKind_None) {
+    if (choice.icon != PrStudioIconKind_None) {
         PrKitTone tone = cell.disabled ? PrKitTone_Faint : on ? PrKitTone_Primary : PrKitTone_Secondary;
         prKitIcon(kit, cell.node, {.icon = choice.icon}, {.size = 12, .tone = tone});
     }
@@ -593,7 +593,7 @@ PrLayoutNode prKitRadio(PrKit* kit, PrLayoutNode group, PrKitChoice choice) {
         prLayoutTreeFrameElement(k.tree, ring, 0,
             kitStyle(k, GlyphBox{.width = kPrKitSpace3, .height = kPrKitSpace3}, GlyphFlex{}, KitColors{.background = mark}));
     }
-    if (choice.icon != PrKitIconKind_None)
+    if (choice.icon != PrStudioIconKind_None)
         prKitIcon(kit, option.node, {.icon = choice.icon},
             {.size = 12, .tone = PrKitTone(option.disabled ? PrKitTone_Faint : PrKitTone_Secondary)});
     if (choice.label.size != 0)
@@ -835,7 +835,7 @@ PrLayoutNode prKitTabClose(PrKit* kit, PrLayoutNode tab) {
         kitDress(k, close, PrKitLookId_Quiet).fill);
     prLayoutTreeFrameSetStyle(k.tree, close.node, record);
     PrKitTone tone = close.over ? PrKitTone_Primary : PrKitTone_Muted;
-    prKitIcon(kit, close.node, {.icon = PrKitIconKind_Close}, {.size = 10, .tone = tone});
+    prKitIcon(kit, close.node, {.icon = PrStudioIconKind_Close}, {.size = 10, .tone = tone});
     return close.node;
 }
 
@@ -897,7 +897,8 @@ PrLayoutNode prKitSpinner(PrKit* kit, PrLayoutNode parent, PrKitSpinner spinner,
     float phase = phaseOf(prUiCurrentRound(k.ui)->time, kSpinSeconds);
     uint32_t step = uint32_t(phase * float(kSpinSteps)) % kSpinSteps;
     PrKitTone tone = disabledUnder(k, parent) ? PrKitTone_Faint : PrKitTone_Accent;
-    PrLayoutNode node = prKitIcon(kit, parent, {.key = spinner.key, .icon = PrKitIconKind_Spinner}, {.size = size, .tone = tone});
+    PrLayoutNode node =
+        prKitIcon(kit, parent, {.key = spinner.key, .icon = PrStudioIconKind_Spinner}, {.size = size, .tone = tone});
     prLayoutTreeFrameSetStyle(k.tree, node, kitStyle(k, SpinnerBox{.size = size}, KitFixed{}, SpinnerEffects{.step = step}));
     prUiRequestMotion(k.ui, node);
     return node;

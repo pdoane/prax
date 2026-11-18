@@ -178,6 +178,7 @@ struct LayoutReplaced {
     mutable PrDrawList* PR_NULLABLE content;
     PrLayoutPainter painter;
     const PrDrawImage* PR_NULLABLE image;
+    PrLayoutPath path;                // Path: its path the tree's clone, which it frees
     mutable PrLayoutVec painted;
     float limit;                      // Image: the brightest that the image paints (PrLayoutContent::limit)
     PrLayoutImageRendering rendering; // Image

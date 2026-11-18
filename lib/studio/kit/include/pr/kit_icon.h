@@ -1,4 +1,4 @@
-// Studio Kit's icons: Lucide's glyphs, drawn as paths at any size.
+// Studio Kit's icons: the glyphs of Studio's set (pr/studio_icon.h), drawn as paths at any size.
 
 #pragma once
 
@@ -13,11 +13,9 @@ PR_ASSUME_NONNULL_BEGIN
 extern "C" {
 #endif
 
-// Returns the icon's name, as Lucide names it.
-PrStringView prKitIconName(PrKitIconKind icon);
-
-// Returns true if the icon is filled rather than stroked.
-bool prKitIconFilled(PrKitIconKind icon);
+// The icon's path, on the set's grid of 24 units, for a path icon in a color of the caller's (PrKitPathIcon). The kit
+// owns the path, which lives as long as the kit.
+const PrPath* prKitIconPath(PrKit* kit, PrStudioIconKind icon);
 
 // How an icon is drawn: a square of `size` px, or 16 px for zero, in `tone`.
 PR_NO_PADDING_BEGIN
@@ -31,7 +29,7 @@ PR_NO_PADDING_END
 // An icon of the set.
 typedef struct PrKitIcon {
     PrUiKey key;
-    PrKitIconKind icon;
+    PrStudioIconKind icon;
 } PrKitIcon;
 
 // Creates an icon under `parent`.

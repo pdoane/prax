@@ -10,8 +10,11 @@ PR_ASSUME_NONNULL_BEGIN
 
 namespace pr_impl {
 
+// Returns the path of an icon of the set, which the kit makes on its first use and owns.
+const PrPath* kitIconPath(PrKit& kit, PrStudioIconKind icon);
+
 // Makes an icon of the set under `parent`: a square of `size` px, or 16 px for zero, that draws `icon` in `color`.
-PrLayoutNode kitIcon(PrKit& kit, PrLayoutNode parent, uint64_t key, PrKitIconKind icon, float size, PrColor color);
+PrLayoutNode kitIcon(PrKit& kit, PrLayoutNode parent, uint64_t key, PrStudioIconKind icon, float size, PrColor color);
 
 } // namespace pr_impl
 

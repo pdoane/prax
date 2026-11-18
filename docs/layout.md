@@ -113,6 +113,12 @@ layout commits it.
   parents through the tree's own edits and their marks, erases the committed nodes that no creation continued, sets
   the pending records, and takes the new preorder. A frame that creates the committed tree again marks nothing, and its
   layout costs the same as a layout after no change.
+- **A frame can keep a subtree without declaring it.** A producer that knows a subtree is unchanged creates its root
+  and keeps the root's committed descendants (`prLayoutTreeFrameKeepChildren`): each continues under its committed
+  parent with its committed record, text and highlights, as though the frame had created it again in preorder. The
+  committed preorder holds where each node's subtree ends, so the kept range is contiguous and costs a store for each
+  node. The commit and the layout see an unchanged subtree. The frame lists the kept nodes (`prLayoutTreeFrameKept`)
+  for a client that carries its own data for them.
 - **A frame is a mode of the tree.** Its creation calls take a key and match committed nodes, so they are separate
   from the retained-mode calls in `pr/layout_tree.h`, which create unkeyed nodes. C has no overloads, so the mode shows
   in the function names.
@@ -773,6 +779,11 @@ leaves them to the renderer.
 - Content is a draw list in the content's natural space, which painting fits to the content box by `object-fit` and
   `object-position`, in the decoration group, and clips to the content box. So content that only scales (an image, a
   canvas, a video frame) never depends on the box's size, and a recording of it stays independent of where the box is.
+- Content that is a path, such as an icon, is the path itself, with its view box, color and stroke. The tree keeps a
+  clone of the path, which shares its id, and paints it scaled from its view box over the natural space, as it paints
+  an image. What the renderer derives from a path it keys by the id, so a client that draws the same path in every
+  round, such as one that a cache of path data parsed once (`prPathCacheFind`), draws from what was derived from it
+  already, and the frame keeps content whose path and paint are unchanged.
 - Content that draws differently at another size, not just scaled, is a painter: a function that the tree calls with
   the content box's extent, on the thread that records the scene, and that draws the same for the same extent and
   client state. The tree keeps its drawing for that extent until the client invalidates it, and the from-scratch check

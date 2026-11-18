@@ -16,11 +16,11 @@
 #pragma once
 
 #include "pr/base.h"
-#include "pr/kit_icon_kind.h"
 #include "pr/kit_theme.h"
 #include "pr/layout_frame.h"
 #include "pr/layout_tree.h"
 #include "pr/path.h"
+#include "pr/studio_icon.h"
 #include "pr/ui.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -33,15 +33,17 @@ extern "C" {
 // Kits
 
 // The widgets of one theme, for one context. Callers read these fields and do not change them. prKitSetTheme changes
-// the theme, because the kit derives its fonts and the looks of its widgets from it. The kit parses an icon's path as
-// the icon is first drawn.
+// the theme, because the kit derives its fonts and the looks of its widgets from it. The kit finds an icon's path as
+// the icon is first drawn, in the theme's cache of paths (PrKitTheme::paths), or in a cache of its own if the theme has
+// none.
 typedef struct PrKit {
     PrUi* ui;                                               // the context that the kit creates in
     PrLayoutTree* tree;                                     // the context's tree
     PrKitTheme theme;
-    PrTextFont* PR_NULLABLE fonts[PrKitTextRole_Count];     // by PrKitTextRole
-    PrKitLook looks[PrKitLookId_Count];                     // by PrKitLookId
-    PrPath* PR_NULLABLE icons[PrKitIconKind_Count];         // by PrKitIconKind
+    PrTextFont* PR_NULLABLE fonts[PrKitTextRole_Count];      // by PrKitTextRole
+    PrKitLook looks[PrKitLookId_Count];                      // by PrKitLookId
+    const PrPath* PR_NULLABLE icons[PrStudioIconKind_Count]; // by PrStudioIconKind, as the kit has found them
+    PrPathCache* PR_NULLABLE paths;                          // the kit's own cache, if the theme has none
 } PrKit;
 
 // Creates a kit for `ui` with `theme`, which the kit copies. `ui` must outlive the kit.

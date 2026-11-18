@@ -11,6 +11,7 @@
 #include "pr/layout_worker.h"
 #include "pr/mem.h"
 #include "pr/memory.h"
+#include "pr/path_data.h"
 #include "pr/string_ops.h"
 #include "pr/text_harfbuzz.h"
 #include "pr/thread.h"
@@ -3504,4 +3505,56 @@ TEST_CASE("replaced content fills its content box's snapped edges") {
     CHECK(pixel(pixels, 40, 15, 1) == kBlack);
     CHECK(pixel(pixels, 40, 15, 4) == kBlack);
     CHECK(pixel(pixels, 40, 15, 5) == kClear);
+}
+
+TEST_CASE("a replaced element draws its clone of a path, scaled from the view box over its natural size") {
+    Fixture f;
+    PrLayoutNode root = f.element(kPrLayoutNodeNone, block());
+    PrLayoutBoxStyle square = block(48);
+    square.width = prLayoutLengthPx(48);
+    PrLayoutNaturalSize natural{.width = prLayoutUnitFromPx(24), .height = prLayoutUnitFromPx(24), .ratio = 1};
+    PrLayoutNode icon = replaced(f, root, square, natural);
+    PrPath* path = prPathCreate();
+    prPathAppendData(path, "M2 2L22 22");
+    PrLayoutContent content{};
+    content.kind = PrLayoutContentKind_Path;
+    content.path = PrLayoutPath{
+        .path = path,
+        .viewBox = PrVec2{24, 24},
+        .color = prColor16FromColor(PrColor{1, 0, 0, 1}),
+        .strokeWidth = 2,
+        .join = PrPathJoin_Round,
+        .cap = PrPathCap_Round,
+    };
+    prLayoutNodeSetContent(f.tree, icon, &content);
+    // The tree keeps its own clone, which shares the path's id, so the caller's path may go.
+    uint64_t id = prPathId(path);
+    prPathDestroy(path);
+    PrLayoutContent kept = prLayoutNodeContent(f.tree, icon);
+    REQUIRE(kept.kind == PrLayoutContentKind_Path);
+    CHECK(prPathId(kept.path.path) == id);
+    f.layout(px(100, 100));
+    PrDrawList* list = prDrawListCreate();
+    prLayoutTreePaint(f.tree, list);
+    // The path is drawn once, stroked, under a transform that scales its view box to the box's 48 px.
+    uint32_t paths = 0;
+    PrAffine2 scale{};
+    auto walk = [&](auto&& walkList, const PrDrawList* at) -> void {
+        const PrDrawCommand* commands = prDrawListCommands(at);
+        for (uint32_t i = 0; i < prDrawListCommandCount(at); ++i) {
+            const PrDrawCommand& c = commands[i];
+            if (c.kind == PrDrawCommandKind_Embed)
+                walkList(walkList, c.embed.list);
+            else if (c.kind == PrDrawCommandKind_PushTransformAffine2)
+                scale = prAffine2FromDAffine2(c.affine);
+            else if (c.kind == PrDrawCommandKind_Path)
+                ++paths;
+        }
+    };
+    walk(walk, list);
+    CHECK(paths == 1);
+    CHECK(scale.a == doctest::Approx(2));
+    CHECK(scale.d == doctest::Approx(2));
+    prDrawListRelease(list);
+    CHECK(verified(f.tree));
 }

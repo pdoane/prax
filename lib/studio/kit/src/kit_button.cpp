@@ -225,14 +225,14 @@ PrLayoutNode prKitButton(PrKit* kit, PrLayoutNode parent, PrKitButton button, Pr
     KitControl c = kitControl(k, parent, button.key, PrUiFlag_Pressable | PrUiFlag_Focusable, button.disabled);
     ButtonBox box{
         .size = style.size,
-        .square = button.text.size == 0 && button.icon != PrKitIconKind_None,
+        .square = button.text.size == 0 && button.icon != PrStudioIconKind_None,
         .grouped = inGroup(k, parent),
     };
     PrKitLookId look = buttonLook(style.variant, button.selected, c.disabled);
     KitDress dress = kitDress(k, c, look);
     prLayoutTreeFrameSetStyle(k.tree, c.node,
         kitStyle(k, box, ButtonFlex{}, buttonFont(style.size), dress.fill, dress.ink));
-    if (button.icon != PrKitIconKind_None)
+    if (button.icon != PrStudioIconKind_None)
         kitIcon(k, c.node, 0, button.icon, kIconSizes[style.size], k.looks[look].icon);
     if (button.text.size != 0)
         prLayoutTreeFrameText(k.tree, c.node, 0, button.text);
@@ -266,7 +266,7 @@ PrLayoutNode prKitChip(PrKit* kit, PrLayoutNode parent, PrKitChip chip) {
     PrKitLookId look = remove.disabled ? PrKitLookId_ButtonGhostDisabled : PrKitLookId_Plain;
     prLayoutTreeFrameSetStyle(k.tree, remove.node,
         kitStyle(k, RemoveBox{}, RemoveFlex{}, kitDress(k, remove, look).fill));
-    kitIcon(k, remove.node, 0, PrKitIconKind_Close, 10, k.looks[look].icon);
+    kitIcon(k, remove.node, 0, PrStudioIconKind_Close, 10, k.looks[look].icon);
     if (prUiActivated(k.ui, remove.node))
         kitSignal(k, node, KitSignal_Removed);
     return node;

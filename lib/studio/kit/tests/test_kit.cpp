@@ -4,6 +4,8 @@
 #include "pr/kit_icon.h"
 #include "pr/kit_panel.h"
 #include "pr/kit_text.h"
+#include "pr/mem.h"
+#include "pr/path_data.h"
 
 #include "studio/kit/src/kit.h"
 #include "tools/harness/kit_fixture.h"
@@ -49,7 +51,7 @@ TEST_CASE("a button is activated by a click, through the transparent overlay abo
     uint32_t activations = 0;
     f.build = [&](PrLayoutNode root) {
         PrLayoutNode row = prKitBox(f.kit, root, {}, {.direction = PrKitDirection_Row, .gap = kPrKitSpace4});
-        PrKitButton content{.text = "Save", .icon = PrKitIconKind_Check};
+        PrKitButton content{.text = "Save", .icon = PrStudioIconKind_Check};
         button = prKitButton(f.kit, row, content, {});
         activations += prKitActivated(f.kit, button) ? 1 : 0;
     };
@@ -95,7 +97,7 @@ TEST_CASE("a frame of the same widgets makes no record, lays nothing out and rec
         prKitPanelHeader(f.kit, panel, {.title = "SCENE", .meta = "23"});
         for (uint32_t i = 0; i < 10; ++i) {
             PrLayoutNode row = prKitBox(f.kit, panel, {}, {.direction = PrKitDirection_Row, .gap = kPrKitSpace3});
-            prKitIcon(f.kit, row, {.icon = PrKitIconKind_Cube}, {.size = 14, .tone = PrKitTone_Muted});
+            prKitIcon(f.kit, row, {.icon = PrStudioIconKind_Cube}, {.size = 14, .tone = PrKitTone_Muted});
             PrKitTextStyle style{.wrap = PrKitWrap_Clip};
             prKitLabel(f.kit, row, {.text = "Entity"}, style);
             prKitBadge(f.kit, row, {.text = "mesh"}, {.variant = PrKitBadgeVariant_Neutral});
@@ -204,7 +206,7 @@ TEST_CASE("an icon draws its path, and a label its text") {
     bool icon = true;
     f.build = [&](PrLayoutNode root) {
         if (icon)
-            prKitIcon(f.kit, root, {.icon = PrKitIconKind_Settings}, {.size = 24, .tone = PrKitTone_Primary});
+            prKitIcon(f.kit, root, {.icon = PrStudioIconKind_Settings}, {.size = 24, .tone = PrKitTone_Primary});
         else
             prKitLabel(f.kit, root, {.text = "Inspector"}, {});
     };
@@ -215,7 +217,7 @@ TEST_CASE("an icon draws its path, and a label its text") {
     uint32_t withLabel = f.paintedCommands();
     CHECK(withIcon > 1);
     CHECK(withLabel > 1);
-    CHECK(prKitIconName(PrKitIconKind_Settings).size != 0);
+    CHECK(prStudioIconName(PrStudioIconKind_Settings).size != 0);
     CHECK(kitVerified(f.tree));
 }
 
@@ -233,21 +235,27 @@ TEST_CASE("a fade from clear to a color keeps the color's channels, and only its
     CHECK(mid.r == doctest::Approx(0.25));
 }
 
-TEST_CASE("an icon keeps what it draws until that changes, and the tree holds it") {
+TEST_CASE("an icon keeps what it draws until that changes, and draws the tree's clone of its path") {
     KitFixture f;
     PrPath* path = prPathCreate();
+    prPathAppendData(path, "M2 2L22 22");
     PrColor color{1, 0, 0, 1};
     PrLayoutNode icon = kPrLayoutNodeNone;
     f.build = [&](PrLayoutNode root) {
         icon = prKitPathIcon(f.kit, root, {.path = path, .color = color}, {});
     };
     f.frame();
-    PrLayoutPainter first = prLayoutNodeContent(f.tree, icon).painter;
-    CHECK(first.release != nullptr);
+    PrLayoutContent first = prLayoutNodeContent(f.tree, icon);
+    REQUIRE(first.kind == PrLayoutContentKind_Path);
+    // The tree's clone keeps the path's id, which what the renderer derives from the path is keyed by.
+    CHECK(first.path.path != path);
+    CHECK(prPathId(first.path.path) == prPathId(path));
     f.frame();
-    CHECK(prLayoutNodeContent(f.tree, icon).painter.context == first.context);
+    CHECK(prLayoutNodeContent(f.tree, icon).path.path == first.path.path);
     color = PrColor{0, 1, 0, 1};
     f.frame();
-    CHECK(prLayoutNodeContent(f.tree, icon).painter.context != first.context);
+    PrLayoutContent changed = prLayoutNodeContent(f.tree, icon);
+    PrColor16 green = prColor16FromColor(color);
+    CHECK(prMemEquals(&changed.path.color, &green, sizeof green));
     prPathDestroy(path);
 }

@@ -14,34 +14,34 @@ struct LevelEntity {
     const char* name;
     const char* type;
     uint32_t depth;
-    PrKitIconKind icon;
+    PrStudioIconKind icon;
     bool open;
 };
 
 constexpr LevelEntity kLevelEntities[] = {
-    {"Level_01", "Scene", 0, PrKitIconKind_Folder, true},
-    {"Environment", "Group", 1, PrKitIconKind_Folder, true},
-    {"Terrain", "Mesh", 2, PrKitIconKind_Terrain, true},
-    {"Water", "Mesh", 2, PrKitIconKind_Sphere, true},
-    {"Sun", "Light", 2, PrKitIconKind_Light, true},
-    {"Sky Probe", "Light", 2, PrKitIconKind_Light, true},
-    {"Player", "Entity", 1, PrKitIconKind_Cube, true},
-    {"Camera Rig", "Camera", 2, PrKitIconKind_Camera, true},
-    {"Main Camera", "Camera", 3, PrKitIconKind_Camera, true},
-    {"Controller", "Script", 2, PrKitIconKind_Script, true},
-    {"Footsteps", "Audio", 2, PrKitIconKind_Audio, true},
-    {"Enemies", "Group", 1, PrKitIconKind_Folder, false},
-    {"Grunt_01", "Entity", 2, PrKitIconKind_Cube, true},
-    {"Grunt_02", "Entity", 2, PrKitIconKind_Cube, true},
-    {"Grunt_03", "Entity", 2, PrKitIconKind_Cube, true},
-    {"Props", "Group", 1, PrKitIconKind_Folder, true},
-    {"Crate_A", "Mesh", 2, PrKitIconKind_Cube, true},
-    {"Crate_B", "Mesh", 2, PrKitIconKind_Cube, true},
-    {"Barrel", "Mesh", 2, PrKitIconKind_Cube, true},
-    {"Lamp Post", "Mesh", 2, PrKitIconKind_Light, true},
-    {"UI", "Group", 1, PrKitIconKind_Folder, true},
-    {"HUD", "Canvas", 2, PrKitIconKind_Image, true},
-    {"Minimap", "Canvas", 2, PrKitIconKind_Image, true},
+    {"Level_01", "Scene", 0, PrStudioIconKind_Folder, true},
+    {"Environment", "Group", 1, PrStudioIconKind_Folder, true},
+    {"Terrain", "Mesh", 2, PrStudioIconKind_Terrain, true},
+    {"Water", "Mesh", 2, PrStudioIconKind_Sphere, true},
+    {"Sun", "Light", 2, PrStudioIconKind_Light, true},
+    {"Sky Probe", "Light", 2, PrStudioIconKind_Light, true},
+    {"Player", "Entity", 1, PrStudioIconKind_Cube, true},
+    {"Camera Rig", "Camera", 2, PrStudioIconKind_Camera, true},
+    {"Main Camera", "Camera", 3, PrStudioIconKind_Camera, true},
+    {"Controller", "Script", 2, PrStudioIconKind_Script, true},
+    {"Footsteps", "Audio", 2, PrStudioIconKind_Audio, true},
+    {"Enemies", "Group", 1, PrStudioIconKind_Folder, false},
+    {"Grunt_01", "Entity", 2, PrStudioIconKind_Cube, true},
+    {"Grunt_02", "Entity", 2, PrStudioIconKind_Cube, true},
+    {"Grunt_03", "Entity", 2, PrStudioIconKind_Cube, true},
+    {"Props", "Group", 1, PrStudioIconKind_Folder, true},
+    {"Crate_A", "Mesh", 2, PrStudioIconKind_Cube, true},
+    {"Crate_B", "Mesh", 2, PrStudioIconKind_Cube, true},
+    {"Barrel", "Mesh", 2, PrStudioIconKind_Cube, true},
+    {"Lamp Post", "Mesh", 2, PrStudioIconKind_Light, true},
+    {"UI", "Group", 1, PrStudioIconKind_Folder, true},
+    {"HUD", "Canvas", 2, PrStudioIconKind_Image, true},
+    {"Minimap", "Canvas", 2, PrStudioIconKind_Image, true},
 };
 
 struct LevelLog {
@@ -248,16 +248,16 @@ SceneEntity* selectedEntity(EditorState& editor) {
 
 const CommandItem* editorCommands(uint32_t* count) {
     static const CommandItem items[] = {
-        {"New Scene", "File", "Cmd N", PrKitIconKind_Folder},
-        {"Open Scene...", "File", "Cmd O", PrKitIconKind_Folder},
-        {"Save", "File", "Cmd S", PrKitIconKind_Folder},
-        {"Undo", "Edit", "Cmd Z", PrKitIconKind_Undo},
-        {"Duplicate Entity", "Edit", "Cmd D", PrKitIconKind_Script},
-        {"Toggle Grid", "View", "Cmd '", PrKitIconKind_Grid},
-        {"Focus Selected", "View", "F", PrKitIconKind_Target},
-        {"Create Empty", "Entity", "Shift Cmd N", PrKitIconKind_Cube},
-        {"Add Mesh Renderer", "Entity", nullptr, PrKitIconKind_Cube},
-        {"Build and Run", "Build", "Cmd B", PrKitIconKind_Play},
+        {"New Scene", "File", "Cmd N", PrStudioIconKind_Folder},
+        {"Open Scene...", "File", "Cmd O", PrStudioIconKind_Folder},
+        {"Save", "File", "Cmd S", PrStudioIconKind_Folder},
+        {"Undo", "Edit", "Cmd Z", PrStudioIconKind_Undo},
+        {"Duplicate Entity", "Edit", "Cmd D", PrStudioIconKind_Script},
+        {"Toggle Grid", "View", "Cmd '", PrStudioIconKind_Grid},
+        {"Focus Selected", "View", "F", PrStudioIconKind_Target},
+        {"Create Empty", "Entity", "Shift Cmd N", PrStudioIconKind_Cube},
+        {"Add Mesh Renderer", "Entity", nullptr, PrStudioIconKind_Cube},
+        {"Build and Run", "Build", "Cmd B", PrStudioIconKind_Play},
     };
     *count = countOf(items);
     return items;

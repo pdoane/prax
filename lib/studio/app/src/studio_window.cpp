@@ -414,6 +414,7 @@ PrAppOutput renderFrame(PrStudioWindow* w, const PrAppFrame* f) {
         w->desc.palette(w->desc.context, w, &f->preferences, &palette);
     if (!prMemEquals(&palette, &w->kit->theme.palette, sizeof palette)) {
         PrKitTheme theme = prKitThemeStudio(variant, w->studio->desc.fonts);
+        theme.paths = w->studio->paths;
         theme.palette = palette;
         prKitSetTheme(w->kit, &theme);
     }
@@ -532,6 +533,7 @@ PrStatus prStudioWindowCreate(PrStudioApp* app, const PrStudioWindowDesc* desc, 
     w->ui = prUiCreate(w->tree);
     // The first frame gives the kit its palette.
     PrKitTheme theme = prKitThemeStudio(PrKitThemeVariant_Dark, app->desc.fonts);
+    theme.paths = app->paths;
     w->kit = prKitCreate(w->ui, &theme);
     w->list = prDrawListCreate();
     PrAppWindowDesc windowDesc{

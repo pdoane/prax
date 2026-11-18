@@ -584,9 +584,9 @@ PrLayoutNode prKitMenuItem(PrKit* kit, PrLayoutNode menu, PrKitMenuItem item, Pr
         tone = PrKitTone_Danger;
     PrLayoutNode check = prLayoutTreeFrameElement(k.tree, row.node, 0, kitStyle(k, CheckBox{}, KitFixed{}));
     if (item.checked)
-        prKitIcon(kit, check, {.icon = PrKitIconKind_Check},
+        prKitIcon(kit, check, {.icon = PrStudioIconKind_Check},
             {.size = kItemIcon, .tone = PrKitTone(disabled ? PrKitTone_Faint : PrKitTone_Accent)});
-    if (item.icon != PrKitIconKind_None)
+    if (item.icon != PrStudioIconKind_None)
         prKitIcon(kit, row.node, {.icon = item.icon}, {.size = kItemIcon, .tone = tone});
     PrKitTextStyle text{.role = PrKitTextRole_Body, .tone = tone, .wrap = PrKitWrap_Nowrap};
     prKitLabel(kit, row.node, {.text = item.text}, text);
@@ -648,13 +648,13 @@ PrLayoutNode prKitSelect(PrKit* kit, PrLayoutNode parent, PrKitSelect select, Pr
     KitFont font{.role = PrKitTextRole(small ? PrKitTextRole_BodySmall : PrKitTextRole_Body), .wrap = PrKitWrap_Clip};
     KitInk ink{.color = disabled ? k.theme.palette.text4 : k.theme.palette.text1};
     prLayoutTreeFrameSetStyle(k.tree, field.node, kitStyle(k, box, RowFlex{.gap = kPrKitSpace3}, fill, font, ink));
-    if (select.icon != PrKitIconKind_None)
+    if (select.icon != PrStudioIconKind_None)
         prKitIcon(kit, field.node, {.icon = select.icon},
             {.size = kItemIcon, .tone = PrKitTone(disabled ? PrKitTone_Faint : PrKitTone_Secondary)});
     if (select.label.size != 0)
         prLayoutTreeFrameText(k.tree, field.node, 0, select.label);
     prKitSpacer(kit, field.node, {});
-    prKitIcon(kit, field.node, {.icon = PrKitIconKind_ChevronDown},
+    prKitIcon(kit, field.node, {.icon = PrStudioIconKind_ChevronDown},
         {.size = kItemIcon, .tone = PrKitTone(disabled ? PrKitTone_Faint : PrKitTone_Muted)});
     return field.node;
 }
@@ -807,7 +807,7 @@ PrLayoutNode prKitDragGhost(PrKit* kit, PrKitDragGhost ghost) {
     PrLayoutNode node = floating(*kit, floatKey(kit->ui, payload->source, FloatKind_Ghost, ghost.key),
         PrUiFlag_Transparent | PrUiFlag_SubtreeTransparent, viewport, at,
         PrVec2{kPrKitSpace6, kPrKitSpace6 - kPrKitHeightSm / 2}, FloatLook_Ghost, 0);
-    if (ghost.icon != PrKitIconKind_None)
+    if (ghost.icon != PrStudioIconKind_None)
         prKitIcon(kit, node, {.icon = ghost.icon}, {.size = kItemIcon, .tone = PrKitTone_Secondary});
     PrKitTextStyle text{.role = PrKitTextRole_BodySmall, .wrap = PrKitWrap_Nowrap};
     prKitLabel(kit, node, {.text = ghost.text}, text);
@@ -870,7 +870,7 @@ PrLayoutNode prKitDialog(PrKit* kit, PrLayoutNode trigger, PrKitDialog dialog, P
     PrKitTextStyle title{.role = PrKitTextRole_Heading, .wrap = PrKitWrap_Clip};
     prKitLabel(kit, header, {.text = dialog.title}, title);
     prKitSpacer(kit, header, {});
-    PrLayoutNode closer = prKitButton(kit, header, {.icon = PrKitIconKind_Close},
+    PrLayoutNode closer = prKitButton(kit, header, {.icon = PrStudioIconKind_Close},
         {.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Sm});
     if (prKitActivated(kit, closer))
         prKitSetOpen(kit, trigger, false);
@@ -901,7 +901,7 @@ PrLayoutNode prKitCommandPalette(PrKit* kit, PrLayoutNode trigger, PrKitCommandP
     RowBox searchBox{.height = kPrKitHeightXl, .padding = prKitEdgesXY(0, kPrKitSpace5), .rules = PrKitRuleFlag_Bottom};
     PrLayoutNode search =
         prLayoutTreeFrameElement(kit->tree, frame, 0, ruledRow(*kit, searchBox, kPrKitSpace4, PrColor{0, 0, 0, 0}));
-    prKitIcon(kit, search, {.icon = PrKitIconKind_Search}, {.size = 14, .tone = PrKitTone_Muted});
+    prKitIcon(kit, search, {.icon = PrStudioIconKind_Search}, {.size = 14, .tone = PrKitTone_Muted});
     PrLayoutNode queryField = kPrLayoutNodeNone;
     if (searchable) {
         PrKitTextField field{.text = palette.query, .placeholder = palette.prompt};
@@ -956,7 +956,7 @@ PrLayoutNode prKitCommandItem(PrKit* kit, PrLayoutNode list, PrKitCommandItem it
     RowBox box{.padding = prKitEdgesXY(kPrKitSpace2, kPrKitSpace5)};
     KitColors fill{.background = itemFill(k, itemState(k, row.node, disabled), selected)};
     prLayoutTreeFrameSetStyle(k.tree, row.node, kitStyle(k, box, RowFlex{.gap = kPrKitSpace4}, fill));
-    if (item.icon != PrKitIconKind_None)
+    if (item.icon != PrStudioIconKind_None)
         prKitIcon(kit, row.node, {.icon = item.icon},
             {.size = 14, .tone = PrKitTone(selected ? PrKitTone_Accent : PrKitTone_Muted)});
     PrKitTextStyle text{.tone = PrKitTone(disabled ? PrKitTone_Faint : PrKitTone_Primary), .wrap = PrKitWrap_Clip};

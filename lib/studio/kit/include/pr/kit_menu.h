@@ -92,8 +92,8 @@ PrLayoutNode prKitMenuLabel(PrKit* kit, PrLayoutNode menu, PrKitMenuLabel label)
 typedef struct PrKitMenuItem {
     PrUiKey key;
     PrStringView text;
-    PrStringView shortcut;          // shown in a key cap at the item's end; empty for none
-    PrKitIconKind icon;             // shown before the text
+    PrStringView shortcut;       // shown in a key cap at the item's end; empty for none
+    PrStudioIconKind icon;       // shown before the text
     bool checked;
     bool disabled;
 } PrKitMenuItem;
@@ -129,7 +129,7 @@ PrLayoutNode prKitMenuSeparator(PrKit* kit, PrLayoutNode menu, PrKitMenuSeparato
 typedef struct PrKitSelect {
     PrUiKey key;
     PrStringView label;
-    PrKitIconKind icon;
+    PrStudioIconKind icon;
     bool disabled;
 } PrKitSelect;
 
@@ -217,7 +217,7 @@ PrLayoutNode prKitTooltip(PrKit* kit, PrLayoutNode anchor, PrKitTooltip tooltip)
 typedef struct PrKitDragGhost {
     PrUiKey key;
     PrStringView text;
-    PrKitIconKind icon;
+    PrStudioIconKind icon;
 } PrKitDragGhost;
 
 // Creates the ghost of the payload in flight (prUiDragging), which follows the pointer, a little below and right of it,
@@ -305,7 +305,7 @@ typedef struct PrKitCommandItem {
     PrStringView text;
     PrStringView category;          // shown faint after the text; empty for none
     PrStringView shortcut;          // shown in a key cap at the item's end; empty for none
-    PrKitIconKind icon;
+    PrStudioIconKind icon;
     bool disabled;
 } PrKitCommandItem;
 

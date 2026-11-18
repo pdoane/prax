@@ -573,7 +573,7 @@ TEST_CASE("an asset field takes a dropped payload of its kind, and passes others
         source = prKitButton(f.kit, root, content, {});
         if (prUiIsPressed(f.ui, source, 0))
             prUiDragStart(f.ui, source, 4, kind, 42, 0);
-        PrKitAssetField ref{.name = "player.mesh", .icon = PrKitIconKind_Cube, .kind = 7};
+        PrKitAssetField ref{.name = "player.mesh", .icon = PrStudioIconKind_Cube, .kind = 7};
         field = prKitAssetField(f.kit, root, ref);
         uint64_t value = 0;
         if (prKitDropped(f.kit, field, &value)) {
@@ -640,7 +640,7 @@ TEST_CASE("a frame of the same inspector makes no node and lays nothing out") {
         prKitSlider(f.kit, dragRow, {.value = prKitScalarF32(&drag), .min = 0, .max = 1}, {});
         prKitNumberField(f.kit, dragRow, {.value = prKitScalarF32(&drag)}, {});
         prKitColorField(f.kit, prKitInspectorRow(f.kit, body, {.label = "Tint"}, {}), {.color = &tint}, {});
-        PrKitAssetField ref{.name = "player_pbr", .icon = PrKitIconKind_Sphere, .tint = tint, .kind = 1};
+        PrKitAssetField ref{.name = "player_pbr", .icon = PrStudioIconKind_Sphere, .tint = tint, .kind = 1};
         prKitAssetField(f.kit, prKitInspectorRow(f.kit, body, {.label = "Material"}, {}), ref);
     };
     f.frame();

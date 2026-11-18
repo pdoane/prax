@@ -46,7 +46,7 @@ struct WindowButtonFlex {
 
 // Creates one of the window's buttons, which the system acts on (PrAppTitleBarRegionKind). The program sees only the
 // pointer over it, which shows the button's hover.
-void windowButton(PrKit& kit, PrLayoutNode parent, float height, PrKitIconKind icon, PrKitLookId look,
+void windowButton(PrKit& kit, PrLayoutNode parent, float height, PrStudioIconKind icon, PrKitLookId look,
         PrAppTitleBarRegionKind kind) {
     KitControl c = kitControl(kit, parent, 0, PrUiFlag_Pressable, false);
     KitDress dress = kitDress(kit, c, look);
@@ -84,11 +84,13 @@ PrLayoutNode prKitTitleBar(PrKit* kit, PrLayoutNode parent, PrKitTitleBar titleB
         return content;
     prUiTitleBarRegion(k.ui, band, PrAppTitleBarRegionKind_Drag);
     if ((bar.flags & PrAppTitleBarFlag_ProgramButtons) != 0) {
-        PrKitIconKind maximize = titleBar.maximized ? PrKitIconKind_WindowRestore : PrKitIconKind_WindowMaximize;
-        windowButton(k, band, bar.height, PrKitIconKind_WindowMinimize, PrKitLookId_WindowButton,
+        PrStudioIconKind maximize =
+            titleBar.maximized ? PrStudioIconKind_WindowRestore : PrStudioIconKind_WindowMaximize;
+        windowButton(k, band, bar.height, PrStudioIconKind_WindowMinimize, PrKitLookId_WindowButton,
             PrAppTitleBarRegionKind_Minimize);
         windowButton(k, band, bar.height, maximize, PrKitLookId_WindowButton, PrAppTitleBarRegionKind_Maximize);
-        windowButton(k, band, bar.height, PrKitIconKind_Close, PrKitLookId_WindowClose, PrAppTitleBarRegionKind_Close);
+        windowButton(k, band, bar.height, PrStudioIconKind_Close, PrKitLookId_WindowClose,
+            PrAppTitleBarRegionKind_Close);
     }
     return content;
 }

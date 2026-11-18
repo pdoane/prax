@@ -282,14 +282,30 @@ enum {
     PrLayoutContentKind_Painter,    // a painter, drawn at the size that fitting the natural size gives it
     PrLayoutContentKind_Embed,      // a slot that the scene's player fills (PrLayoutScenePlayOptions)
     PrLayoutContentKind_Image,      // an image, stretched over the natural size
+    PrLayoutContentKind_Path,       // a path, scaled from its view box over the natural size
 };
 typedef uint8_t PrLayoutContentKind;
 
+// A path that a replaced element draws: the path, in the space of its view box, which is scaled over the content's
+// natural space; its color; and the width of its stroke in the view box's units, with its joins and caps, or zero to
+// fill it by its fill rule. The tree keeps a clone of the path, which shares its id (prPathId), so a path drawn from
+// the same source in every round, such as a cache of path data (prPathCacheFind), reuses what the renderer derived from
+// it.
+typedef struct PrLayoutPath {
+    const PrPath* path;
+    PrVec2 viewBox;
+    PrColor16 color;
+    float strokeWidth;
+    PrPathFillRule rule;
+    PrPathJoin join;
+    PrPathCap cap;
+} PrLayoutPath;
+
 // A replaced element's content. A draw list is in the content's natural coordinate space, with its origin at the top
-// left and its size the natural size; an axis with no natural size uses the content box's size. An image covers that
-// space. Painting maps the space onto the content box according to object-fit and object-position, and clips to the
-// content box. A painter draws at the size that the mapping gives the space, rather than being scaled to it, and the
-// tree caches its drawing until that size changes or the client calls prLayoutNodeInvalidateContent.
+// left and its size the natural size; an axis with no natural size uses the content box's size. An image and a path's
+// view box cover that space. Painting maps the space onto the content box according to object-fit and object-position,
+// and clips to the content box. A painter draws at the size that the mapping gives the space, rather than being scaled
+// to it, and the tree caches its drawing until that size changes or the client calls prLayoutNodeInvalidateContent.
 typedef struct PrLayoutContent {
     PrLayoutContentKind kind;
     union {
@@ -297,6 +313,7 @@ typedef struct PrLayoutContent {
         PrLayoutPainter painter;    // Painter: the tree retains a reference if the painter shares its context
         uint64_t embed;             // Embed: a nonzero id the player uses to look up what fills the slot
         const PrDrawImage* image;   // Image: the tree retains a reference
+        PrLayoutPath path;          // Path: the tree keeps a clone of the path
     };
 
     // Image: the brightest color that the image paints, as a multiple of SDR white, or zero for no limit

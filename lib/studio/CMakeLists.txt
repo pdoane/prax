@@ -1,3 +1,14 @@
+# Studio's icons: Lucide's glyphs as SVG path data, which Studio Kit and lib/ui's elements draw.
+pr_library(studio_icons INCLUDE icons/include
+    icons/src/studio_icon.cpp
+)
+target_link_libraries(pr_studio_icons PUBLIC prax::core)
+
+if (PR_DEVELOP)
+    pr_module_tests(studio_icons icons/tests/test_studio_icon.cpp)
+    target_link_libraries(studio_icons_tests PRIVATE prax::path)
+endif()
+
 # Studio Kit: the widgets of the Studio design system, over lib/ui and lib/layout.
 pr_library(studio_kit INCLUDE kit/include
     kit/src/kit.cpp
@@ -19,7 +30,8 @@ pr_library(studio_kit INCLUDE kit/include
     kit/src/kit_theme.cpp
     kit/src/kit_title_bar.cpp
 )
-target_link_libraries(pr_studio_kit PUBLIC prax::app prax::ui prax::layout prax::path prax::draw prax::text prax::text_edit
+target_link_libraries(pr_studio_kit PUBLIC prax::studio_icons prax::app prax::ui prax::layout prax::path prax::draw
+                                           prax::text prax::text_edit
                                            prax::geom prax::font prax::color
                                     PRIVATE prax::core_cpp prax::ui_cpp)
 
@@ -40,7 +52,7 @@ if (PR_DEVELOP)
         kit/tests/test_kit_menu.cpp
         kit/tests/test_kit_title_bar.cpp
     )
-    target_link_libraries(studio_kit_tests PRIVATE kit_fixture prax::app prax::text_edit prax::text prax::draw
+    target_link_libraries(studio_kit_tests PRIVATE kit_fixture prax::path prax::app prax::text_edit prax::text prax::draw
                                                    prax::layout prax::ui prax::ui_cpp prax::color)
 endif()
 

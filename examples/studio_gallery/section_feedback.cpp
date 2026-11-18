@@ -38,13 +38,13 @@ PrLayoutNode framed(PrKit* kit, PrLayoutNode parent) {
 struct TipButton {
     const char* label;
     const char* shortcut;
-    PrKitIconKind icon;
+    PrStudioIconKind icon;
 };
 
 constexpr TipButton kTipButtons[] = {
-    {"Move Tool", "W", PrKitIconKind_Move},           {"Rotate Tool", "E", PrKitIconKind_Rotate},
-    {"Scale Tool", "R", PrKitIconKind_Scale},         {"Toggle Visibility", "", PrKitIconKind_Eye},
-    {"Lock Selection", "", PrKitIconKind_Lock},
+    {"Move Tool", "W", PrStudioIconKind_Move},           {"Rotate Tool", "E", PrStudioIconKind_Rotate},
+    {"Scale Tool", "R", PrStudioIconKind_Scale},         {"Toggle Visibility", "", PrStudioIconKind_Eye},
+    {"Lock Selection", "", PrStudioIconKind_Lock},
 };
 
 // The console's seeded lines.
@@ -215,7 +215,7 @@ void sectionDialogs(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
             box.place.width = prKitPx(360);
             PrLayoutNode frame = card(kit, content, box);
             PrLayoutNode heading = prKitBox(kit, frame, {}, {.direction = PrKitDirection_Row, .gap = kPrKitSpace3});
-            prKitIcon(kit, heading, {.icon = PrKitIconKind_Info}, {.size = 16, .tone = PrKitTone_Accent});
+            prKitIcon(kit, heading, {.icon = PrStudioIconKind_Info}, {.size = 16, .tone = PrKitTone_Accent});
             prKitLabel(kit, heading, {.text = "A frame of the caller's own"}, kStrong);
             prKitLabel(kit, frame, {.text = "The modal places and dims; everything inside it is declared here."},
                 kBodySecondary);
@@ -243,7 +243,7 @@ void sectionStatus(PrKit* kit, PrLayoutNode parent) {
         prKitLabel(kit, at, {.text = text}, style);
     };
     PrLayoutNode build = prKitBox(kit, bar, {}, {.direction = PrKitDirection_Row, .gap = kPrKitSpace2});
-    prKitIcon(kit, build, {.icon = PrKitIconKind_Check}, {.size = 10, .tone = PrKitTone_Success});
+    prKitIcon(kit, build, {.icon = PrStudioIconKind_Check}, {.size = 10, .tone = PrKitTone_Success});
     status(build, "BUILD OK", PrKitTone_Success);
     const char* const items[] = {"Level_01.pr", "ENTITIES 248 . DRAW 1,412 . TRIS 2.4M", "60.00 fps"};
     for (const char* item : items) {
@@ -254,10 +254,10 @@ void sectionStatus(PrKit* kit, PrLayoutNode parent) {
     status(bar, "LINE 42 . COL 18", PrKitTone_Muted);
     prKitDivider(kit, bar, {});
     PrLayoutNode warn = prKitBox(kit, bar, {}, {.direction = PrKitDirection_Row, .gap = kPrKitSpace2});
-    prKitIcon(kit, warn, {.icon = PrKitIconKind_Alert}, {.size = 10, .tone = PrKitTone_Warning});
+    prKitIcon(kit, warn, {.icon = PrStudioIconKind_Alert}, {.size = 10, .tone = PrKitTone_Warning});
     status(warn, "2", PrKitTone_Warning);
     PrLayoutNode error = prKitBox(kit, bar, {}, {.direction = PrKitDirection_Row, .gap = kPrKitSpace2});
-    prKitIcon(kit, error, {.icon = PrKitIconKind_Alert}, {.size = 10, .tone = PrKitTone_Danger});
+    prKitIcon(kit, error, {.icon = PrStudioIconKind_Alert}, {.size = 10, .tone = PrKitTone_Danger});
     status(error, "1", PrKitTone_Danger);
     prKitDivider(kit, bar, {});
     status(bar, "UTF-8", PrKitTone_Muted);

@@ -85,5 +85,5 @@ if (PR_DEVELOP)
         tests/test_layout_writing_mode.cpp
     )
     target_compile_definitions(layout_tests PRIVATE PR_FONTS_DIR="${PR_TEST_FONTS_DIR}")
-    target_link_libraries(layout_tests PRIVATE prax::text prax::draw prax::font prax::locale prax::compress)
+    target_link_libraries(layout_tests PRIVATE prax::text prax::draw prax::font prax::locale prax::compress prax::path)
 endif()

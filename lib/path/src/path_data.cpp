@@ -2,9 +2,15 @@
 
 #include "pr/path_data.h"
 
+#include "pr/alloc.h"
 #include "pr/assert.h"
 #include "pr/float.h"
+#include "pr/hash.h"
+#include "pr/hash_index.h"
+#include "pr/memory.h"
 #include "pr/number_list.h"
+#include "pr/raw_array.h"
+#include "pr/raw_string.h"
 #include "pr/string_ops.h"
 
 namespace pr_impl {
@@ -285,7 +291,20 @@ void appendNumber(PrRawString* out, float value) {
     prRawStringAppend(out, PrStringView{text, prF32Format(value, text)});
 }
 
+// A path of a cache, and the text that it was parsed from.
+struct PathCacheEntry {
+    PrRawString text;
+    uint64_t hash;
+    PrPath* path;
+};
+
 } // namespace
+
+// The paths of a cache, and an index of them by the hash of their text.
+struct PathCache {
+    RawArray<PathCacheEntry> entries;
+    HashIndex index;
+};
 
 } // namespace pr_impl
 
@@ -469,4 +488,40 @@ void prPathDataWrite(const PrPathDataCommand* PR_NULLABLE commands, uint32_t cou
                 appendNumber(out, command.arguments[k]);
         }
     }
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Caches
+
+struct PrPathCache : PathCache {};
+
+PrPathCache* prPathCacheCreate(void) {
+    return allocZeroed<PrPathCache>();
+}
+
+void prPathCacheDestroy(PrPathCache* PR_NULLABLE cache) {
+    if (cache == nullptr)
+        return;
+    for (uint32_t i = 0; i < cache->entries.count; ++i) {
+        prRawStringReset(&cache->entries.data[i].text);
+        prPathDestroy(cache->entries.data[i].path);
+    }
+    cache->entries.reset();
+    cache->index.reset();
+    prMemoryFree(cache);
+}
+
+const PrPath* prPathCacheFind(PrPathCache* cache, PrStringView data) {
+    uint64_t hash = prHashBytes(data.data, data.size, 0x70617468ull);
+    uint32_t at = cache->index.find(uint32_t(hash), [&](uint32_t i) {
+        const PathCacheEntry& entry = cache->entries.data[i];
+        return entry.hash == hash && prRawStringView(&entry.text) == data;
+    });
+    if (at != kHashMissing)
+        return cache->entries.data[at].path;
+    PrPath* path = prPathCreate();
+    prPathAppendData(path, data);
+    cache->entries.push(PathCacheEntry{.text = prRawStringCopy(data), .hash = hash, .path = path});
+    cache->index.insert(uint32_t(hash), cache->entries.count - 1);
+    return path;
 }

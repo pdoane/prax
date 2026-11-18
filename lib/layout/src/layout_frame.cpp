@@ -5,6 +5,7 @@
 
 #include "pr/assert.h"
 #include "pr/hash_index.h"
+#include "pr/search.h"
 #include "pr/sort.h"
 
 #include "layout/src/layout_tree.h"
@@ -67,6 +68,11 @@ void markRelink(LayoutFrame& frame, LayoutNodeIndex parent) {
 // Appends the subtree of `root` to the committed preorder.
 void takeSubtree(LayoutTree* tree, LayoutNodeIndex root) {
     LayoutFrame& frame = tree->frame;
+    // Each node's end is known once the walk leaves it: after its last descendant, as it goes on to a next sibling or
+    // up past its parent.
+    auto leave = [&](LayoutNodeIndex node) {
+        frame.preorder.data[frame.preorderAt.data[node]].end = frame.preorder.count;
+    };
     for (LayoutNodeIndex node = root; node != kPrLayoutNodeNone;) {
         const LayoutTreeNode& n = tree->nodes.data[node];
         frame.preorderAt.data[node] = frame.preorder.count;
@@ -76,6 +82,7 @@ void takeSubtree(LayoutTree* tree, LayoutNodeIndex root) {
             .key = n.key,
             .style = n.style,
             .generation = n.generation,
+            .end = 0,
             .kind = n.kind,
         });
         if (n.first != kPrLayoutNodeNone) {
@@ -83,8 +90,11 @@ void takeSubtree(LayoutTree* tree, LayoutNodeIndex root) {
             continue;
         }
         LayoutNodeIndex at = node;
-        while (at != root && tree->nodes.data[at].next == kPrLayoutNodeNone)
+        leave(at);
+        while (at != root && tree->nodes.data[at].next == kPrLayoutNodeNone) {
             at = tree->nodes.data[at].parent;
+            leave(at);
+        }
         node = at == root ? kPrLayoutNodeNone : tree->nodes.data[at].next;
     }
 }
@@ -319,6 +329,44 @@ void relink(LayoutTree* tree, LayoutNodeIndex parent) {
     }
 }
 
+// Stamps the frame on the highlights of the text nodes that its keeps continued, as though it had set them again. The
+// runs are disjoint, so each highlight finds the run that may hold it by a search. A frame that creates in the
+// committed order keeps them in order already.
+void carryKeptHighlights(LayoutTree* tree) {
+    LayoutFrame& frame = tree->frame;
+    if (frame.keptRuns.count == 0 || tree->highlights.count == 0)
+        return;
+    bool ordered = true;
+    for (uint32_t i = 1; i < frame.keptRuns.count && ordered; ++i)
+        ordered = frame.keptRuns.data[i - 1].start < frame.keptRuns.data[i].start;
+    if (!ordered) {
+        sortItems(frame.keptRuns.span(), [](const LayoutPreorderRun& a, const LayoutPreorderRun& b) {
+            return a.start < b.start;
+        });
+    }
+    const LayoutPreorderRun* runs = frame.keptRuns.data;
+    uint32_t count = frame.keptRuns.count;
+    for (uint32_t i = 0; i < tree->highlights.count; ++i) {
+        LayoutHighlights& h = tree->highlights.data[i];
+        if (h.frame == 0 || h.frame == frame.frame)
+            continue;
+        uint32_t position = frame.preorderAt.data[h.node];
+        if (position >= frame.preorder.count || frame.preorder.data[position].node != h.node)
+            continue;
+        uint32_t run = partitionPoint(0, count, [&](uint32_t r) { return runs[r].start <= position; });
+        if (run != 0 && position < runs[run - 1].end)
+            h.frame = frame.frame;
+    }
+}
+
+// Returns true if two paths of content draw the same: the same path's verbs and points, as their ids say, drawn the
+// same way.
+bool samePath(const PrLayoutPath& a, const PrLayoutPath& b) {
+    return prPathId(a.path) == prPathId(b.path) && a.viewBox == b.viewBox &&
+        prMemEquals(&a.color, &b.color, sizeof a.color) && a.strokeWidth == b.strokeWidth && a.rule == b.rule &&
+        a.join == b.join && a.cap == b.cap;
+}
+
 } // namespace
 
 void layoutFrameCommit(LayoutTree* tree) {
@@ -327,6 +375,7 @@ void layoutFrameCommit(LayoutTree* tree) {
     frame.open = false;
     frame.reported.clear();
     frame.reported.append(frame.duplicates.span());
+    carryKeptHighlights(tree);
     layoutTreeExpireFrameMarks(tree, frame.frame);
     PrLayoutTreeStats& stats = tree->stats;
     uint32_t kept = frame.created.count - frame.made.count;
@@ -424,6 +473,8 @@ void layoutFrameReset(LayoutFrame& frame) {
     frame.reported.reset();
     frame.links.reset();
     frame.gone.reset();
+    frame.kept.reset();
+    frame.keptRuns.reset();
     frame.roots.reset();
     frame.openRoots.reset();
     frame.gathered.reset();
@@ -451,6 +502,7 @@ void prLayoutTreeBeginFrame(PrLayoutTree* tree) {
     frame.made.clear();
     frame.duplicates.clear();
     frame.jumps = 0;
+    frame.keptRuns.clear();
 }
 
 bool prLayoutTreeIsInFrame(const PrLayoutTree* tree) {
@@ -477,6 +529,74 @@ PrLayoutNode prLayoutTreeFrameSemiReplaced(PrLayoutTree* tree, PrLayoutNode pare
 
 PrLayoutNode prLayoutTreeFrameLineBreak(PrLayoutTree* tree, PrLayoutNode parent, uint64_t key, PrLayoutStyleIndex style) {
     return create(tree, parent, key, PrLayoutNodeKind_LineBreak, style);
+}
+
+uint32_t prLayoutTreeFrameKeepChildren(PrLayoutTree* tree, PrLayoutNode node, PrLayoutNode after, PrLayoutNode before) {
+    LayoutFrame& frame = tree->frame;
+    PR_ASSERT(frame.open);
+    LayoutNodeIndex index = layoutNodeIndex(tree, node);
+    PR_ASSERT(index != kPrLayoutNodeNone && created(frame, index));
+    // The node's descendants follow it in the committed preorder. The range starts at the first of them, which the
+    // cursor must be at, or after the committed subtree of `after`, which the frame created.
+    uint32_t at = frame.preorderAt.data[index];
+    if (at >= frame.preorder.count || frame.preorder.data[at].node != index)
+        return kPrLayoutFrameKeepFailed;
+    uint32_t end = frame.preorder.data[at].end;
+    // Returns the position of a committed descendant of the node, or the end of the node's subtree.
+    auto positionOf = [&](PrLayoutNode descendant) -> uint32_t {
+        LayoutNodeIndex d = layoutNodeIndex(tree, descendant);
+        uint32_t position = frame.preorderAt.data[d];
+        bool descends = position < frame.preorder.count && frame.preorder.data[position].node == d;
+        return descends && position > at && position < end ? position : end;
+    };
+    uint32_t start = at + 1;
+    if (after == kPrLayoutNodeNone) {
+        if (frame.cursor != start)
+            return kPrLayoutFrameKeepFailed;
+    } else {
+        uint32_t position = positionOf(after);
+        if (position == end || !created(frame, layoutNodeIndex(tree, after)))
+            return kPrLayoutFrameKeepFailed;
+        start = frame.preorder.data[position].end;
+    }
+    uint32_t stop = end;
+    if (before != kPrLayoutNodeNone) {
+        stop = positionOf(before);
+        if (stop == end || stop < start)
+            return kPrLayoutFrameKeepFailed;
+    }
+    // The frame continues `before` too, so the range must reach past it.
+    uint32_t last = before != kPrLayoutNodeNone ? stop + 1 : stop;
+    for (uint32_t i = start; i < last; ++i) {
+        if (created(frame, frame.preorder.data[i].node))
+            return kPrLayoutFrameKeepFailed;
+    }
+    if (frame.cursor != start)
+        moveCursor(frame, start);
+    if (last > frame.limit)
+        return kPrLayoutFrameKeepFailed;
+    // Each node continues as committed, as the inline case of a creation does.
+    uint32_t count = stop - start;
+    frame.created.reserve(frame.created.count + last - start);
+    frame.kept.clear();
+    frame.kept.reserve(count);
+    for (uint32_t i = start; i < last; ++i) {
+        const LayoutPreorderNode& p = frame.preorder.data[i];
+        frame.positions.data[p.node] = frame.created.count;
+        frame.created.data[frame.created.count++] =
+            LayoutCreation{.node = p.node, .parent = p.parent, .style = p.style, .committed = p.style};
+        if (i < stop)
+            frame.kept.data[frame.kept.count++] = PrLayoutNode(p.generation) << 32 | p.node;
+    }
+    frame.cursor = last;
+    if (stop > start)
+        frame.keptRuns.push(LayoutPreorderRun{start, stop});
+    return count;
+}
+
+const PrLayoutNode* PR_NULLABLE prLayoutTreeFrameKept(const PrLayoutTree* tree, uint32_t* count) {
+    *count = tree->frame.kept.count;
+    return tree->frame.kept.data;
 }
 
 void prLayoutTreeFrameSetStyle(PrLayoutTree* tree, PrLayoutNode node, PrLayoutStyleIndex style) {
@@ -507,6 +627,15 @@ PrLayoutNode prLayoutTreeFrameParent(const PrLayoutTree* tree, PrLayoutNode node
     return layoutNodeName(tree, frame.created.data[frame.positions.data[index]].parent);
 }
 
+uint32_t prLayoutTreeFrameOrder(const PrLayoutTree* tree, PrLayoutNode node) {
+    const LayoutFrame& frame = tree->frame;
+    PR_ASSERT(frame.open);
+    LayoutNodeIndex index = layoutNodeIndex(tree, node);
+    if (index == kPrLayoutNodeNone || index >= frame.positions.count || !created(frame, index))
+        return kPrLayoutFrameNotCreated;
+    return frame.positions.data[index];
+}
+
 void prLayoutTreeFrameSetText(PrLayoutTree* tree, PrLayoutNode text, PrStringView value) {
     PR_ASSERT(creationOf(tree, layoutNodeIndex(tree, text)).node != kPrLayoutNodeNone);
     prLayoutNodeSetText(tree, text, value);
@@ -528,7 +657,8 @@ void prLayoutTreeFrameSetContent(PrLayoutTree* tree, PrLayoutNode replaced, cons
             (was.painter.paint == content->painter.paint && was.painter.measure == content->painter.measure &&
                 was.painter.context == content->painter.context)) &&
         (content->kind != PrLayoutContentKind_Embed || was.embed == content->embed) &&
-        (content->kind != PrLayoutContentKind_Image || was.image == content->image);
+        (content->kind != PrLayoutContentKind_Image || was.image == content->image) &&
+        (content->kind != PrLayoutContentKind_Path || samePath(was.path, content->path));
     if (!same)
         prLayoutNodeSetContent(tree, replaced, content);
 }

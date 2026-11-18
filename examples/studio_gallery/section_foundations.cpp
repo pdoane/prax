@@ -357,7 +357,7 @@ void sectionIcons(PrKit* kit, PrLayoutNode parent) {
             "the draw atlas keeps its coverage, so a grid of them draws from the atlas after the first frame.");
     PrLayoutNode panel = demoPanel(kit, section, "ICON SET", "EVERY GLYPH", true);
     Grid grid = gridBegin(kit, panel, 8, 0, true);
-    for (PrKitIconKind icon = PrKitIconKind_None + 1; icon < PrKitIconKind_Count; ++icon) {
+    for (PrStudioIconKind icon = PrStudioIconKind_None + 1; icon < PrStudioIconKind_Count; ++icon) {
         PrKitBoxStyle cell{
             .justify = PrKitJustify_Center,
             .align = PrKitAlign_Center,
@@ -369,7 +369,7 @@ void sectionIcons(PrKit* kit, PrLayoutNode parent) {
         PrLayoutNode box = prKitBox(kit, gridCell(grid), {}, cell);
         prKitIcon(kit, box, {.icon = icon}, {.size = 18, .tone = PrKitTone_Secondary});
         PrKitTextStyle name{.role = PrKitTextRole_Meta, .wrap = PrKitWrap_Clip};
-        prKitLabel(kit, box, {.text = prKitIconName(icon)}, name);
+        prKitLabel(kit, box, {.text = prStudioIconName(icon)}, name);
     }
     gridEnd(grid);
     PrLayoutNode sizes = demoPanel(kit, section, "SIZES", "ANY SIZE", false);
@@ -379,12 +379,12 @@ void sectionIcons(PrKit* kit, PrLayoutNode parent) {
     for (float size : steps) {
         PrKitBoxStyle column{.align = PrKitAlign_Center, .gap = kPrKitSpace2};
         PrLayoutNode cell = prKitBox(kit, row, {}, column);
-        prKitIcon(kit, cell, {.icon = PrKitIconKind_Atlas}, {.size = size, .tone = PrKitTone_Accent});
+        prKitIcon(kit, cell, {.icon = PrStudioIconKind_Atlas}, {.size = size, .tone = PrKitTone_Accent});
         char label[8];
         prKitLabel(kit, cell, {.text = formatToBuffer(Span(label), "{}px", int(size))}, kMeta);
     }
     PrLayoutNode legend = prKitBox(kit, sizes, {}, {.direction = PrKitDirection_Row, .gap = kPrKitSpace3});
-    prKitLabel(kit, legend, {.text = "prKitIconName"}, kMonoStrong);
+    prKitLabel(kit, legend, {.text = "prStudioIconName"}, kMonoStrong);
     prKitLabel(kit, legend, {.text = "names every glyph the grid above loops over"}, kBodySecondary);
 }
 

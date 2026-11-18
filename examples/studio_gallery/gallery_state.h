@@ -72,7 +72,7 @@ struct AssetRow {
     const char* modified;
     uint64_t sizeBytes;
     uint64_t modifiedKey;           // larger is more recent
-    PrKitIconKind icon;
+    PrStudioIconKind icon;
 };
 
 // A command of the palette.
@@ -80,7 +80,7 @@ struct CommandItem {
     const char* label;
     const char* category;
     const char* PR_NULLABLE shortcut;
-    PrKitIconKind icon;
+    PrStudioIconKind icon;
 };
 
 // A node of the scene tree, flattened in preorder with its depth.
@@ -90,7 +90,7 @@ struct TreeNode {
     String badge;              // a status shown in place of the icon, or empty
     uint32_t depth = 0;
     uint32_t key = 0;               // the node's identity, which a move keeps
-    PrKitIconKind icon = PrKitIconKind_None;
+    PrStudioIconKind icon = PrStudioIconKind_None;
     PrKitTone badgeTone = PrKitTone_Muted;
     bool hasChildren = false;
     bool open = false;
@@ -184,7 +184,7 @@ struct InspectorState {
     uint32_t lighting = 0;
     PrColor tint = {.77f, .38f, .24f, 1.0f};
     PrColor emissive = {.24f, .38f, .77f, 1.0f};
-    PrKitIconKind meshIcon = PrKitIconKind_Cube;
+    PrStudioIconKind meshIcon = PrStudioIconKind_Cube;
     bool openTransform = true;
     bool openMesh = true;
     bool openRigidbody = false;
@@ -278,7 +278,7 @@ struct CollectionAsset {
     const char* type = "";
     uint64_t sizeBytes = 0;
     PrColor tint = {};
-    PrKitIconKind icon = PrKitIconKind_None;
+    PrStudioIconKind icon = PrStudioIconKind_None;
 };
 
 // The collection's assets, each view's selection and cursor, and what its context menu did.

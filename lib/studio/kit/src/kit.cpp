@@ -475,13 +475,15 @@ void prKitDestroy(PrKit* PR_NULLABLE kit) {
     prUiForget(kit->ui, kit);
     for (PrTextFont* font : kit->fonts)
         prTextFontRelease(font);
-    for (PrPath* path : kit->icons)
-        prPathDestroy(path);
+    prPathCacheDestroy(kit->paths);
     prMemoryFree(kit);
 }
 
 void prKitSetTheme(PrKit* kit, const PrKitTheme* theme) {
     prUiForget(kit->ui, kit);
+    // The icons that the kit found are the old cache's, which another cache does not hold.
+    if (theme->paths != kit->theme.paths)
+        prMemZero(kit->icons, sizeof kit->icons);
     kit->theme = *theme;
     makeFonts(*kit);
     makeLooks(*kit);

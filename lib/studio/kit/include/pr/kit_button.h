@@ -42,7 +42,7 @@ typedef struct PrKitButtonStyle {
 typedef struct PrKitButton {
     PrUiKey key;
     PrStringView text;
-    PrKitIconKind icon;
+    PrStudioIconKind icon;
     bool selected;
     bool disabled;
 } PrKitButton;

@@ -13,29 +13,29 @@ struct LevelEntity {
     const char* name;
     const char* type;
     uint32_t depth;
-    PrKitIconKind icon;
+    PrStudioIconKind icon;
     float x;
     float z;
     bool open;
 };
 
 constexpr LevelEntity kLevel[] = {
-    {"Environment", "Group", 0, PrKitIconKind_Folder, 0, 0, true},
-    {"Terrain", "Mesh", 1, PrKitIconKind_Terrain, 0, 0, true},
-    {"Pond", "Mesh", 1, PrKitIconKind_Sphere, -9, 6, true},
-    {"Sun", "Light", 1, PrKitIconKind_Light, 12, -11, true},
-    {"Player", "Entity", 0, PrKitIconKind_Cube, -2, 3, true},
-    {"Camera Rig", "Camera", 1, PrKitIconKind_Camera, -2, 7, true},
-    {"Controller", "Script", 1, PrKitIconKind_Script, -2, 3, true},
-    {"Enemies", "Group", 0, PrKitIconKind_Folder, 0, 0, true},
-    {"Grunt_01", "Entity", 1, PrKitIconKind_Cube, 7, -4, true},
-    {"Grunt_02", "Entity", 1, PrKitIconKind_Cube, 9, -1, true},
-    {"Grunt_03", "Entity", 1, PrKitIconKind_Cube, 5, -7, true},
-    {"Props", "Group", 0, PrKitIconKind_Folder, 0, 0, false},
-    {"Crate_A", "Mesh", 1, PrKitIconKind_Cube, -6, -3, true},
-    {"Crate_B", "Mesh", 1, PrKitIconKind_Cube, -5, -4.5f, true},
-    {"Barrel", "Mesh", 1, PrKitIconKind_Cube, -7.5f, -5, true},
-    {"Lamp Post", "Light", 1, PrKitIconKind_Light, 2, -2, true},
+    {"Environment", "Group", 0, PrStudioIconKind_Folder, 0, 0, true},
+    {"Terrain", "Mesh", 1, PrStudioIconKind_Terrain, 0, 0, true},
+    {"Pond", "Mesh", 1, PrStudioIconKind_Sphere, -9, 6, true},
+    {"Sun", "Light", 1, PrStudioIconKind_Light, 12, -11, true},
+    {"Player", "Entity", 0, PrStudioIconKind_Cube, -2, 3, true},
+    {"Camera Rig", "Camera", 1, PrStudioIconKind_Camera, -2, 7, true},
+    {"Controller", "Script", 1, PrStudioIconKind_Script, -2, 3, true},
+    {"Enemies", "Group", 0, PrStudioIconKind_Folder, 0, 0, true},
+    {"Grunt_01", "Entity", 1, PrStudioIconKind_Cube, 7, -4, true},
+    {"Grunt_02", "Entity", 1, PrStudioIconKind_Cube, 9, -1, true},
+    {"Grunt_03", "Entity", 1, PrStudioIconKind_Cube, 5, -7, true},
+    {"Props", "Group", 0, PrStudioIconKind_Folder, 0, 0, false},
+    {"Crate_A", "Mesh", 1, PrStudioIconKind_Cube, -6, -3, true},
+    {"Crate_B", "Mesh", 1, PrStudioIconKind_Cube, -5, -4.5f, true},
+    {"Barrel", "Mesh", 1, PrStudioIconKind_Cube, -7.5f, -5, true},
+    {"Lamp Post", "Light", 1, PrStudioIconKind_Light, 2, -2, true},
 };
 
 struct LevelLog {

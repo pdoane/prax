@@ -57,7 +57,7 @@ struct Entity {
     String name;
     String type;
     String mesh;
-    PrKitIconKind icon = PrKitIconKind_Cube;
+    PrStudioIconKind icon = PrStudioIconKind_Cube;
     Vector3 position;
     Vector3 rotation;
     Vector3 scale = {1.0f, 1.0f, 1.0f};

@@ -31,14 +31,14 @@ constexpr float kDragThreshold = 4;
 // An asset that the inspector's mesh field takes.
 struct AssetChip {
     const char* name;
-    PrKitIconKind icon;
+    PrStudioIconKind icon;
 };
 
 constexpr AssetChip kAssetChips[] = {
-    {"player_base.mesh", PrKitIconKind_Cube},
-    {"enemy_grunt.mesh", PrKitIconKind_Cube},
-    {"sky_dome.mesh", PrKitIconKind_Sphere},
-    {"terrain_patch.mesh", PrKitIconKind_Terrain},
+    {"player_base.mesh", PrStudioIconKind_Cube},
+    {"enemy_grunt.mesh", PrStudioIconKind_Cube},
+    {"sky_dome.mesh", PrStudioIconKind_Sphere},
+    {"terrain_patch.mesh", PrStudioIconKind_Terrain},
 };
 
 // The labels that the chip list adds, in turn.
@@ -149,7 +149,7 @@ void sectionInspector(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
         bar.box.padding = prKitEdgesXY(kPrKitSpace4, kPrKitSpace5);
         bar.box.place.flex = PrKitFlex_Fixed;
         PrLayoutNode identity = prKitPanel(kit, panel, {}, bar);
-        prKitIcon(kit, identity, {.icon = PrKitIconKind_Cube}, {.size = 14, .tone = PrKitTone_Secondary});
+        prKitIcon(kit, identity, {.icon = PrStudioIconKind_Cube}, {.size = 14, .tone = PrKitTone_Secondary});
         PrKitTextField name{.text = inspector.name};
         PrKitFieldStyle small{.size = PrKitControlSize_Sm};
         PrStringView text{};
@@ -179,7 +179,7 @@ void sectionInspector(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
         PrLayoutNode scale = prKitInspectorRow(kit, transform, {.label = "Scale"}, {});
         PrKitNumberRange positive{.step = 0.01, .min = 0, .hasMin = true};
         prKitVectorField(kit, scale, {.value = prKitScalarF32(inspector.scale), .count = 3, .range = positive}, {});
-        prKitIcon(kit, scale, {.icon = PrKitIconKind_Link}, {.size = 11, .tone = PrKitTone_Muted});
+        prKitIcon(kit, scale, {.icon = PrStudioIconKind_Link}, {.size = 11, .tone = PrKitTone_Muted});
     }
     PrKitInspectorGroup meshGroup{.name = "Mesh Renderer", .open = &inspector.openMesh};
     PrLayoutNode mesh = prKitInspectorGroup(kit, panel, meshGroup);
@@ -227,7 +227,7 @@ void sectionInspector(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
         foot.box.padding = prKitEdgesAll(kPrKitSpace4);
         foot.box.place.flex = PrKitFlex_Fixed;
         PrLayoutNode add = prKitPanel(kit, panel, {}, foot);
-        PrKitButton content{.text = "Add Component", .icon = PrKitIconKind_Plus};
+        PrKitButton content{.text = "Add Component", .icon = PrStudioIconKind_Plus};
         PrKitButtonStyle small{.size = PrKitControlSize_Sm};
         PrLayoutNode button = prKitButton(kit, add, content, small);
         prKitPlace(kit, button, {.flex = PrKitFlex_Fill});
@@ -247,11 +247,11 @@ void sectionInspector(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
     column.place.maxWidth = prKitPx(460);
     PrLayoutNode list = prKitBox(kit, references, {}, column);
     const PrKitAssetField fields[] = {
-        {.name = "player_base.mesh", .icon = PrKitIconKind_Cube},
+        {.name = "player_base.mesh", .icon = PrStudioIconKind_Cube},
         {.name = "player_pbr", .tint = inspector.tint},
-        {.name = "footsteps_grass_01.ogg", .icon = PrKitIconKind_Audio},
-        {.name = "enemy_grunt.mesh", .icon = PrKitIconKind_Alert, .missing = true},
-        {.name = "None", .icon = PrKitIconKind_Plus, .empty = true},
+        {.name = "footsteps_grass_01.ogg", .icon = PrStudioIconKind_Audio},
+        {.name = "enemy_grunt.mesh", .icon = PrStudioIconKind_Alert, .missing = true},
+        {.name = "None", .icon = PrStudioIconKind_Plus, .empty = true},
     };
     for (const PrKitAssetField& field : fields)
         prKitAssetField(kit, list, field);
@@ -284,7 +284,8 @@ void sectionToolbar(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
     strip.box.place.flex = PrKitFlex_Fixed;
     PrLayoutNode bar = prKitPanel(kit, panel, {}, strip);
     const char* const tips[] = {"Select", "Move", "Rotate", "Scale"};
-    const PrKitIconKind tools[] = {PrKitIconKind_Cursor, PrKitIconKind_Move, PrKitIconKind_Rotate, PrKitIconKind_Scale};
+    const PrStudioIconKind tools[] =
+        {PrStudioIconKind_Cursor, PrStudioIconKind_Move, PrStudioIconKind_Rotate, PrStudioIconKind_Scale};
     for (uint32_t i = 0; i < 4; ++i) {
         PrLayoutNode tool = prKitButton(kit, bar, {.icon = tools[i], .selected = i == toolbar.tool},
             {.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Md});
@@ -297,21 +298,21 @@ void sectionToolbar(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
     const PrKitChoice spaces[] = {{.label = "Local"}, {.label = "World"}};
     segmented(kit, bar, spaces, 2, &toolbar.space, {.size = PrKitControlSize_Sm});
     prKitDivider(kit, bar, {});
-    if (prKitActivated(kit, prKitButton(kit, bar, {.icon = PrKitIconKind_Magnet, .selected = toolbar.snap},
+    if (prKitActivated(kit, prKitButton(kit, bar, {.icon = PrStudioIconKind_Magnet, .selected = toolbar.snap},
             {.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Md})))
         toolbar.snap = !toolbar.snap;
-    if (prKitActivated(kit, prKitButton(kit, bar, {.icon = PrKitIconKind_Grid, .selected = toolbar.grid},
+    if (prKitActivated(kit, prKitButton(kit, bar, {.icon = PrStudioIconKind_Grid, .selected = toolbar.grid},
             {.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Md})))
         toolbar.grid = !toolbar.grid;
     prKitLabel(kit, bar, {.text = "0.25m"}, kCaption);
     prKitSpacer(kit, bar, {});
-    PrKitIconKind play = toolbar.playing ? PrKitIconKind_Pause : PrKitIconKind_Play;
+    PrStudioIconKind play = toolbar.playing ? PrStudioIconKind_Pause : PrStudioIconKind_Play;
     if (prKitActivated(kit, prKitButton(kit, bar, {.icon = play, .selected = toolbar.playing},
             {.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Md})))
         toolbar.playing = !toolbar.playing;
-    prKitButton(kit, bar, {.icon = PrKitIconKind_Step},
+    prKitButton(kit, bar, {.icon = PrStudioIconKind_Step},
         {.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Md});
-    if (prKitActivated(kit, prKitButton(kit, bar, {.icon = PrKitIconKind_Stop},
+    if (prKitActivated(kit, prKitButton(kit, bar, {.icon = PrStudioIconKind_Stop},
             {.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Md})))
         toolbar.playing = false;
 
@@ -327,7 +328,7 @@ void sectionToolbar(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
     for (uint32_t i = 0; i < 4; ++i) {
         PrKitBoxStyle cell{.align = PrKitAlign_Center, .gap = kPrKitSpace2};
         PrLayoutNode column = prKitBox(kit, row, {}, cell);
-        prKitButton(kit, column, {.icon = PrKitIconKind_Magnet, .selected = true},
+        prKitButton(kit, column, {.icon = PrStudioIconKind_Magnet, .selected = true},
             {.variant = PrKitButtonVariant_Ghost, .size = steps[i]});
         prKitLabel(kit, column, {.text = names[i]}, kCaption);
     }
@@ -425,7 +426,7 @@ void sectionTags(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
         if (prKitRemoved(kit, prKitChip(kit, row, {.label = state.chips[i], .removable = true})))
             removeAt = i;
     }
-    PrKitButton add{.text = "Tag", .icon = PrKitIconKind_Plus};
+    PrKitButton add{.text = "Tag", .icon = PrStudioIconKind_Plus};
     PrKitButtonStyle ghost{.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Xs};
     if (prKitActivated(kit, prKitButton(kit, row, add, ghost)))
         state.chips.push(kChipPool[state.chips.count() % countOf(kChipPool)]);

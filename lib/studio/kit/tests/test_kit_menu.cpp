@@ -56,7 +56,7 @@ struct MenuScene {
             PrKitMenuStyle style{.minWidth = 200};
             menu = prKitMenu(kit, popover, {}, style);
             prKitMenuLabel(kit, menu, {.text = "SCENE"});
-            PrKitMenuItem newScene{.text = "New Scene", .shortcut = "Cmd N", .icon = PrKitIconKind_Plus};
+            PrKitMenuItem newScene{.text = "New Scene", .shortcut = "Cmd N", .icon = PrStudioIconKind_Plus};
             items[0] = prKitMenuItem(kit, menu, newScene, {});
             prKitMenuSeparator(kit, menu, {});
             PrKitMenuItem grid{.text = "Grid", .checked = true};
@@ -209,7 +209,7 @@ TEST_CASE("a drag's ghost follows the pointer in the overlay, and is gone when t
         PrKitButton content{.text = "player_base.mesh"};
         source = prKitButton(f.kit, root, content, {});
         prUiDragStart(f.ui, source, 4, 7, 0, 0);
-        PrKitDragGhost look{.text = "player_base.mesh", .icon = PrKitIconKind_Cube};
+        PrKitDragGhost look{.text = "player_base.mesh", .icon = PrStudioIconKind_Cube};
         ghost = prKitDragGhost(f.kit, look);
     };
     f.frame();
@@ -485,7 +485,7 @@ TEST_CASE("a tooltip shows once the pointer has rested on its anchor for the del
     PrLayoutNode tip = kPrLayoutNodeNone;
     f.build = [&](PrLayoutNode root) {
         PrLayoutNode row = prKitBox(f.kit, root, {}, {.direction = PrKitDirection_Row, .gap = 0});
-        anchor = prKitButton(f.kit, row, {.icon = PrKitIconKind_Grid},
+        anchor = prKitButton(f.kit, row, {.icon = PrStudioIconKind_Grid},
             {.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Md});
         PrKitTooltip content{.text = "Show Grid", .shortcut = "G"};
         tip = prKitTooltip(f.kit, anchor, content);
@@ -620,7 +620,7 @@ TEST_CASE("a command palette's selection moves by Up and Down, and Enter runs th
         if (list != kPrLayoutNodeNone) {
             const char* names[] = {"New Scene", "Save", "Build and Run"};
             for (uint32_t i = 0; i < 3; ++i) {
-                PrKitCommandItem item{.text = names[i], .category = "File", .icon = PrKitIconKind_Script};
+                PrKitCommandItem item{.text = names[i], .category = "File", .icon = PrStudioIconKind_Script};
                 if (prKitActivated(f.kit, prKitCommandItem(f.kit, list, item))) {
                     ran = i;
                     ++runs;
@@ -714,7 +714,7 @@ TEST_CASE("a frame with an open palette and a shown tooltip that changes nothing
     PrLayoutNode anchor = kPrLayoutNodeNone;
     f.build = [&](PrLayoutNode root) {
         PrLayoutNode row = prKitBox(f.kit, root, {}, {.direction = PrKitDirection_Row, .gap = 0});
-        anchor = prKitButton(f.kit, row, {.icon = PrKitIconKind_Grid},
+        anchor = prKitButton(f.kit, row, {.icon = PrStudioIconKind_Grid},
             {.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Md});
         PrKitTooltip tip{.text = "Grid"};
         prKitTooltip(f.kit, anchor, tip);

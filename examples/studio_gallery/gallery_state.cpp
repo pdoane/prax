@@ -19,30 +19,30 @@ struct TreeSeed {
     const char* meta;
     const char* badge;
     uint32_t depth;
-    PrKitIconKind icon;
+    PrStudioIconKind icon;
     PrKitTone badgeTone;
     bool open;
     bool hidden;
 };
 
 constexpr TreeSeed kTreeSeeds[] = {
-    {"World", "", "", 0, PrKitIconKind_FolderOpen, PrKitTone_Muted, true, false},
-    {"Environment", "", "", 1, PrKitIconKind_Folder, PrKitTone_Muted, true, false},
-    {"Directional Light", "Light", "", 2, PrKitIconKind_Light, PrKitTone_Muted, false, false},
-    {"Sky Dome", "Mesh", "", 2, PrKitIconKind_Sphere, PrKitTone_Muted, false, false},
-    {"Fog Volume", "Volume", "W", 2, PrKitIconKind_Cube, PrKitTone_Warning, false, true},
-    {"Player", "", "", 1, PrKitIconKind_Cube, PrKitTone_Muted, true, false},
-    {"MainCamera", "Camera", "", 2, PrKitIconKind_Camera, PrKitTone_Muted, false, false},
-    {"PlayerMesh", "Mesh", "", 2, PrKitIconKind_Cube, PrKitTone_Muted, false, false},
-    {"Controller", "Script", "", 2, PrKitIconKind_Script, PrKitTone_Muted, false, false},
-    {"Level_01", "", "", 1, PrKitIconKind_Folder, PrKitTone_Muted, false, false},
-    {"Changes", "", "", 0, PrKitIconKind_FolderOpen, PrKitTone_Muted, true, false},
-    {"world.scene", "", "M", 1, PrKitIconKind_None, PrKitTone_Warning, false, false},
-    {"player.script", "", "A", 1, PrKitIconKind_None, PrKitTone_Success, false, false},
-    {"old_sky.mat", "", "D", 1, PrKitIconKind_None, PrKitTone_Danger, false, false},
-    {"level_01.scene", "was level_1.scene", "R", 1, PrKitIconKind_None, PrKitTone_Accent, false, false},
+    {"World", "", "", 0, PrStudioIconKind_FolderOpen, PrKitTone_Muted, true, false},
+    {"Environment", "", "", 1, PrStudioIconKind_Folder, PrKitTone_Muted, true, false},
+    {"Directional Light", "Light", "", 2, PrStudioIconKind_Light, PrKitTone_Muted, false, false},
+    {"Sky Dome", "Mesh", "", 2, PrStudioIconKind_Sphere, PrKitTone_Muted, false, false},
+    {"Fog Volume", "Volume", "W", 2, PrStudioIconKind_Cube, PrKitTone_Warning, false, true},
+    {"Player", "", "", 1, PrStudioIconKind_Cube, PrKitTone_Muted, true, false},
+    {"MainCamera", "Camera", "", 2, PrStudioIconKind_Camera, PrKitTone_Muted, false, false},
+    {"PlayerMesh", "Mesh", "", 2, PrStudioIconKind_Cube, PrKitTone_Muted, false, false},
+    {"Controller", "Script", "", 2, PrStudioIconKind_Script, PrKitTone_Muted, false, false},
+    {"Level_01", "", "", 1, PrStudioIconKind_Folder, PrKitTone_Muted, false, false},
+    {"Changes", "", "", 0, PrStudioIconKind_FolderOpen, PrKitTone_Muted, true, false},
+    {"world.scene", "", "M", 1, PrStudioIconKind_None, PrKitTone_Warning, false, false},
+    {"player.script", "", "A", 1, PrStudioIconKind_None, PrKitTone_Success, false, false},
+    {"old_sky.mat", "", "D", 1, PrStudioIconKind_None, PrKitTone_Danger, false, false},
+    {"level_01.scene", "was level_1.scene", "R", 1, PrStudioIconKind_None, PrKitTone_Accent, false, false},
     {
-        "a_very_long_component_name_that_overflows_the_row.scene", "+128 -64", "M", 1, PrKitIconKind_None,
+        "a_very_long_component_name_that_overflows_the_row.scene", "+128 -64", "M", 1, PrStudioIconKind_None,
         PrKitTone_Warning, false, false,
     },
 };
@@ -110,14 +110,14 @@ bool assetLess(const AssetRow& a, const AssetRow& b, AssetSort column, bool asce
 struct AssetKind {
     const char* type;
     const char* extension;
-    PrKitIconKind icon;
+    PrStudioIconKind icon;
 };
 
 constexpr AssetKind kAssetKinds[] = {
-    {"Mesh", "mesh", PrKitIconKind_Cube},      {"Texture", "ktx2", PrKitIconKind_Image},
-    {"Material", "material", PrKitIconKind_Sphere}, {"Script", "lua", PrKitIconKind_Script},
-    {"Audio", "ogg", PrKitIconKind_Audio},     {"Camera", "camera", PrKitIconKind_Camera},
-    {"Light", "light", PrKitIconKind_Light},
+    {"Mesh", "mesh", PrStudioIconKind_Cube},      {"Texture", "ktx2", PrStudioIconKind_Image},
+    {"Material", "material", PrStudioIconKind_Sphere}, {"Script", "lua", PrStudioIconKind_Script},
+    {"Audio", "ogg", PrStudioIconKind_Audio},     {"Camera", "camera", PrStudioIconKind_Camera},
+    {"Light", "light", PrStudioIconKind_Light},
 };
 
 // The words of the generated assets' names.
@@ -353,12 +353,12 @@ const PrDrawImage* galleryPicture(GalleryState& state) {
 
 const AssetRow* galleryAssets(uint32_t* count) {
     static const AssetRow kRows[] = {
-        {"player_base.mesh", "Mesh", "1.2 MB", "12:04", 1258291, 1204, PrKitIconKind_Cube},
-        {"env_diffuse.ktx2", "Texture", "8.4 MB", "11:58", 8808038, 1158, PrKitIconKind_Image},
-        {"footsteps_grass_01.ogg", "Audio", "340 KB", "10:21", 348160, 1021, PrKitIconKind_Audio},
-        {"level_01.pr", "Scene", "42 KB", "09:17", 43008, 917, PrKitIconKind_Folder},
-        {"controller.lua", "Script", "2.1 KB", "Yesterday", 2150, 0, PrKitIconKind_Script},
-        {"water_pbr.material", "Material", "620 B", "Yesterday", 620, 0, PrKitIconKind_Sphere},
+        {"player_base.mesh", "Mesh", "1.2 MB", "12:04", 1258291, 1204, PrStudioIconKind_Cube},
+        {"env_diffuse.ktx2", "Texture", "8.4 MB", "11:58", 8808038, 1158, PrStudioIconKind_Image},
+        {"footsteps_grass_01.ogg", "Audio", "340 KB", "10:21", 348160, 1021, PrStudioIconKind_Audio},
+        {"level_01.pr", "Scene", "42 KB", "09:17", 43008, 917, PrStudioIconKind_Folder},
+        {"controller.lua", "Script", "2.1 KB", "Yesterday", 2150, 0, PrStudioIconKind_Script},
+        {"water_pbr.material", "Material", "620 B", "Yesterday", 620, 0, PrStudioIconKind_Sphere},
     };
     *count = countOf(kRows);
     return kRows;
@@ -417,16 +417,16 @@ const PrStringView* galleryAnimationClips(uint32_t* count) {
 
 const CommandItem* galleryCommands(uint32_t* count) {
     static const CommandItem kItems[] = {
-        {"New Scene", "File", "Cmd N", PrKitIconKind_Folder},
-        {"Open Scene...", "File", "Cmd O", PrKitIconKind_Folder},
-        {"Save", "File", "Cmd S", PrKitIconKind_Folder},
-        {"Undo", "Edit", "Cmd Z", PrKitIconKind_Undo},
-        {"Duplicate Entity", "Edit", "Cmd D", PrKitIconKind_Script},
-        {"Toggle Gizmos", "View", "Cmd ;", PrKitIconKind_Eye},
-        {"Focus Selected", "View", "F", PrKitIconKind_Target},
-        {"Create Empty", "Entity", "Shift Cmd N", PrKitIconKind_Cube},
-        {"Add Mesh Renderer", "Entity", nullptr, PrKitIconKind_Cube},
-        {"Build and Run", "Build", "Cmd B", PrKitIconKind_Play},
+        {"New Scene", "File", "Cmd N", PrStudioIconKind_Folder},
+        {"Open Scene...", "File", "Cmd O", PrStudioIconKind_Folder},
+        {"Save", "File", "Cmd S", PrStudioIconKind_Folder},
+        {"Undo", "Edit", "Cmd Z", PrStudioIconKind_Undo},
+        {"Duplicate Entity", "Edit", "Cmd D", PrStudioIconKind_Script},
+        {"Toggle Gizmos", "View", "Cmd ;", PrStudioIconKind_Eye},
+        {"Focus Selected", "View", "F", PrStudioIconKind_Target},
+        {"Create Empty", "Entity", "Shift Cmd N", PrStudioIconKind_Cube},
+        {"Add Mesh Renderer", "Entity", nullptr, PrStudioIconKind_Cube},
+        {"Build and Run", "Build", "Cmd B", PrStudioIconKind_Play},
     };
     *count = countOf(kItems);
     return kItems;

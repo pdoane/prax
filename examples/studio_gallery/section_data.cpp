@@ -108,7 +108,8 @@ PrLayoutNode buildTree(PrKit* kit, PrLayoutNode parent, CollectionsState& collec
             prKitRowLabel(kit, row, {.text = asset.name}, PrKitTone_Primary);
             prKitRowMeta(kit, row, {.text = asset.type});
         } else {
-            PrKitIconKind folder = collections.treeRows[i].open ? PrKitIconKind_FolderOpen : PrKitIconKind_Folder;
+            PrStudioIconKind folder =
+                collections.treeRows[i].open ? PrStudioIconKind_FolderOpen : PrStudioIconKind_Folder;
             prKitRowIcon(kit, row, {.icon = folder});
             prKitRowLabel(kit, row, {.text = formatToBuffer(Span(label), "Group {}", collectionGroupOf(key))},
                 PrKitTone_Primary);
@@ -206,7 +207,7 @@ void sectionCollections(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
     region.box.place.height = prKitPx(140);
     region.box.place.flex = PrKitFlex_Fixed;
     prKitEmptyState(kit, prKitPanel(kit, empty, {}, region), {
-        .icon = PrKitIconKind_Search,
+        .icon = PrStudioIconKind_Search,
         .title = "No assets match the filter",
         .hint = "Clear the filter to see every asset again",
     });
@@ -257,7 +258,7 @@ void sectionTimeline(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
     for (const PrKitCheck& snap : snaps)
         prKitCheckbox(kit, bar, snap, {});
     prKitSpacer(kit, bar, {});
-    PrKitButton undo{.text = "Undo", .icon = PrKitIconKind_Undo, .disabled = !timeline.hasUndo};
+    PrKitButton undo{.text = "Undo", .icon = PrStudioIconKind_Undo, .disabled = !timeline.hasUndo};
     bool undone = prUiActivated(ui, prKitButton(kit, bar, undo, small));
     if (undone) {
         timeline.blocks = timeline.undo;

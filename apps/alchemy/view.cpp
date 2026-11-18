@@ -63,7 +63,7 @@ PrLayoutNode row(PrKit* kit, PrLayoutNode parent, float gap = kPrKitSpace3) {
 
 // A button that runs the command `id`, disabled while the command is and on while it is checked.
 PrLayoutNode commandButton(PrKit* kit, PrLayoutNode parent, Commands& commands, PrStringView id, PrStringView text,
-        PrKitIconKind icon, PrKitButtonVariant variant = PrKitButtonVariant_Ghost,
+        PrStudioIconKind icon, PrKitButtonVariant variant = PrKitButtonVariant_Ghost,
         PrKitControlSize size = PrKitControlSize_Sm) {
     PrCommandIndex index = prCommandRegistryFind(commands.registry, id);
     PrCommandStateFlags state = index != kPrCommandMissing ? prCommandRegistryState(commands.registry, index) : 0;
@@ -82,7 +82,7 @@ PrLayoutNode commandButton(PrKit* kit, PrLayoutNode parent, Commands& commands, 
 }
 
 // A small button of an icon alone, with a tooltip.
-PrLayoutNode iconButton(PrKit* kit, PrLayoutNode parent, PrKitIconKind icon, PrStringView tooltip, bool selected = false) {
+PrLayoutNode iconButton(PrKit* kit, PrLayoutNode parent, PrStudioIconKind icon, PrStringView tooltip, bool selected = false) {
     PrLayoutNode node = prKitButton(kit, parent, {.icon = icon, .selected = selected},
         {.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Sm});
     prKitTooltip(kit, node, {.text = tooltip});
@@ -178,14 +178,14 @@ void buildSource(PrKit* kit, PrLayoutNode parent, AppState& state, Commands& com
         };
         prKitImage(kit, thumbnail, {.image = image}, contain);
     } else {
-        prKitIcon(kit, thumbnail, {.icon = PrKitIconKind_Image}, {.size = 20, .tone = PrKitTone_Faint});
+        prKitIcon(kit, thumbnail, {.icon = PrStudioIconKind_Image}, {.size = 20, .tone = PrKitTone_Faint});
     }
     PrKitBoxStyle details{.gap = kPrKitSpace2, .place = {.flex = PrKitFlex_Fill}};
     PrLayoutNode column = prKitBox(kit, line, {}, details);
     prKitLabel(kit, column, {.text = prFilePathName(p.sourcePath)},
         textStyle(PrKitTextRole_BodySmall, PrKitTone_Secondary));
     PrLayoutNode actions = row(kit, column);
-    commandButton(kit, actions, commands, "alchemy.clearSource", "Clear", PrKitIconKind_None,
+    commandButton(kit, actions, commands, "alchemy.clearSource", "Clear", PrStudioIconKind_None,
         PrKitButtonVariant_Default, PrKitControlSize_Xs);
     PrLayoutNode menu = prKitContextMenu(kit, thumbnail, {}, {.minWidth = kMenuWidth});
     if (menu != kPrLayoutNodeNone) {
@@ -199,7 +199,7 @@ void buildPromptHeader(PrKit* kit, PrLayoutNode parent, AppState& state, Shell& 
     PrLayoutNode header = row(kit, parent);
     prKitLabel(kit, header, {.text = label}, textStyle(PrKitTextRole_Caption, PrKitTone_Muted));
     prKitSpacer(kit, header, {});
-    PrLayoutNode add = iconButton(kit, header, PrKitIconKind_Plus, "Insert an embedding");
+    PrLayoutNode add = iconButton(kit, header, PrStudioIconKind_Plus, "Insert an embedding");
     if (prKitActivated(kit, add))
         prKitToggleOpen(kit, add);
     PrLayoutNode popover = prKitPopover(kit, add, {}, {});
@@ -252,7 +252,7 @@ void buildLoras(PrKit* kit, PrLayoutNode parent, AppState& state) {
         };
         PrLayoutNode number = prKitNumberField(kit, line, weight, {.size = PrKitControlSize_Sm});
         prKitPlace(kit, number, {.width = prKitPx(64), .flex = PrKitFlex_Fixed});
-        PrLayoutNode remove = prKitButton(kit, line, {.icon = PrKitIconKind_Close},
+        PrLayoutNode remove = prKitButton(kit, line, {.icon = PrStudioIconKind_Close},
             {.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Sm});
         if (prKitActivated(kit, remove)) {
             loras.erase(i);
@@ -285,10 +285,10 @@ void buildDimensions(PrKit* kit, PrLayoutNode parent, AppState& state) {
         textStyle(PrKitTextRole_Caption, PrKitTone_Muted));
     prKitSpacer(kit, header, {});
     prKitLabel(kit, header, {.text = dimensionLabel(dims.size)}, textStyle(PrKitTextRole_Mono));
-    if (prKitActivated(kit, iconButton(kit, header, PrKitIconKind_Swap, "Swap width and height")))
+    if (prKitActivated(kit, iconButton(kit, header, PrStudioIconKind_Swap, "Swap width and height")))
         swapDimensions(dims);
     // The override suspends the ladder for two numbers, which keep the size that the ladder stood on.
-    if (prKitActivated(kit, iconButton(kit, header, PrKitIconKind_Scale, "Override the size", dims.customSize)))
+    if (prKitActivated(kit, iconButton(kit, header, PrStudioIconKind_Scale, "Override the size", dims.customSize)))
         setCustomSize(dims, !dims.customSize);
 
     if (dims.customSize) {
@@ -349,7 +349,7 @@ void buildSampling(PrKit* kit, PrLayoutNode parent, AppState& state) {
     captionedNumber(kit, numbers, "Guidance", prKitScalarF64(&p.cfg), 1, 30, 1);
     PrLayoutNode seed = field(kit, parent, "Seed");
     numberField(kit, seed, prKitScalarU64(&p.seed), 0, 9007199254740991.0);
-    PrKitIconKind lockIcon = p.seedLocked ? PrKitIconKind_Lock : PrKitIconKind_Unlock;
+    PrStudioIconKind lockIcon = p.seedLocked ? PrStudioIconKind_Lock : PrStudioIconKind_Unlock;
     if (prKitActivated(kit, iconButton(kit, seed, lockIcon, "Keep the seed for the next run", p.seedLocked)))
         p.seedLocked = !p.seedLocked;
 }
@@ -437,7 +437,7 @@ struct RecordBlock {
             PrLayoutNode line = row(kit, parent, kPrKitSpace2);
             PrKitBoxStyle fill{.place = {.flex = PrKitFlex_Fill}};
             prKitLabel(kit, prKitBox(kit, line, {}, fill), {.text = lines[i]}, wrapped());
-            if (prKitActivated(kit, iconButton(kit, line, PrKitIconKind_Plus, "Append this line to the prompt")))
+            if (prKitActivated(kit, iconButton(kit, line, PrStudioIconKind_Plus, "Append this line to the prompt")))
                 useRecorded(state, operation, lineWhat, i);
         }
     }
@@ -507,7 +507,7 @@ void buildOperation(PrKit* kit, PrLayoutNode card, AppState& state, const Proven
     PrKitBoxStyle lineStyle{.direction = PrKitDirection_Row, .align = PrKitAlign_Center, .gap = kPrKitSpace2};
     PrLayoutNode line = prKitBox(kit, card, {.key = prUiKeyIndex(kit->ui, card, operation)}, lineStyle);
     bool open = state.recordOpen[operation];
-    PrKitIconKind fold = open ? PrKitIconKind_ChevronDown : PrKitIconKind_ChevronRight;
+    PrStudioIconKind fold = open ? PrStudioIconKind_ChevronDown : PrStudioIconKind_ChevronRight;
     if (prKitActivated(kit, iconButton(kit, line, fold, open ? "Hide this run" : "Show this run")))
         state.recordOpen[operation] = !open;
     PrStringView mode = op.mode.isEmpty() ? PrStringView("?") : op.mode.view();
@@ -569,7 +569,7 @@ void buildRecord(PrKit* kit, PrLayoutNode stack, AppState& state, Commands& comm
     if (record != nullptr)
         prKitBadge(kit, header, {.text = format("{}", record->operations.count())}, {});
     prKitSpacer(kit, header, {});
-    if (prKitActivated(kit, iconButton(kit, header, PrKitIconKind_Close, "Close")))
+    if (prKitActivated(kit, iconButton(kit, header, PrStudioIconKind_Close, "Close")))
         runCommand(commands, "alchemy.toggleInfo");
     if (record == nullptr) {
         prKitLabel(kit, card, {.text = "This image has no record."},
@@ -616,18 +616,18 @@ void buildViewport(PrKit* kit, PrLayoutNode content, AppState& state, Commands& 
         .background = PrKitBackground_Header,
     };
     PrLayoutNode toolbar = prKitPanel(kit, content, {}, bar);
-    commandButton(kit, toolbar, commands, "alchemy.back", "", PrKitIconKind_ArrowLeft);
-    commandButton(kit, toolbar, commands, "alchemy.forward", "", PrKitIconKind_ArrowRight);
+    commandButton(kit, toolbar, commands, "alchemy.back", "", PrStudioIconKind_ArrowLeft);
+    commandButton(kit, toolbar, commands, "alchemy.forward", "", PrStudioIconKind_ArrowRight);
     prKitDivider(kit, toolbar, {});
-    commandButton(kit, toolbar, commands, "alchemy.useAsSource", "", PrKitIconKind_Image);
-    commandButton(kit, toolbar, commands, "alchemy.usePrompt", "", PrKitIconKind_Quote);
-    commandButton(kit, toolbar, commands, "alchemy.useSeed", "", PrKitIconKind_Hash);
-    commandButton(kit, toolbar, commands, "alchemy.useAspect", "", PrKitIconKind_Ratio);
-    commandButton(kit, toolbar, commands, "alchemy.useAll", "", PrKitIconKind_Asterisk);
+    commandButton(kit, toolbar, commands, "alchemy.useAsSource", "", PrStudioIconKind_Image);
+    commandButton(kit, toolbar, commands, "alchemy.usePrompt", "", PrStudioIconKind_Quote);
+    commandButton(kit, toolbar, commands, "alchemy.useSeed", "", PrStudioIconKind_Hash);
+    commandButton(kit, toolbar, commands, "alchemy.useAspect", "", PrStudioIconKind_Ratio);
+    commandButton(kit, toolbar, commands, "alchemy.useAll", "", PrStudioIconKind_Asterisk);
     prKitDivider(kit, toolbar, {});
-    commandButton(kit, toolbar, commands, "alchemy.togglePreview", "", PrKitIconKind_Eye);
-    commandButton(kit, toolbar, commands, "alchemy.toggleInfo", "", PrKitIconKind_Info);
-    commandButton(kit, toolbar, commands, "alchemy.deleteImage", "", PrKitIconKind_Trash);
+    commandButton(kit, toolbar, commands, "alchemy.togglePreview", "", PrStudioIconKind_Eye);
+    commandButton(kit, toolbar, commands, "alchemy.toggleInfo", "", PrStudioIconKind_Info);
+    commandButton(kit, toolbar, commands, "alchemy.deleteImage", "", PrStudioIconKind_Trash);
     prKitSpacer(kit, toolbar, {});
 
     const GalleryEntry* entry = gallerySelected(state.gallery);
@@ -669,12 +669,12 @@ void buildViewport(PrKit* kit, PrLayoutNode content, AppState& state, Commands& 
         prKitImage(kit, stack, {.image = shown}, fit);
     } else if (entry == nullptr) {
         prKitEmptyState(kit, stack, {
-            .icon = PrKitIconKind_Image,
+            .icon = PrStudioIconKind_Image,
             .title = "No images yet",
             .hint = "Connect to a ComfyUI server and generate one.",
         });
     } else if (imageCacheFailed(state.images, entry->path, ImageScale_Full)) {
-        prKitEmptyState(kit, stack, {.icon = PrKitIconKind_Alert, .title = "This image cannot be read"});
+        prKitEmptyState(kit, stack, {.icon = PrStudioIconKind_Alert, .title = "This image cannot be read"});
     }
     if (state.showInfo && entry != nullptr && !previewing)
         buildRecord(kit, stack, state, commands);
@@ -692,7 +692,7 @@ void buildBrowser(PrKit* kit, PrLayoutNode content, AppState& state, Commands& c
     Gallery& gallery = state.gallery;
     if (gallery.entries.isEmpty()) {
         prKitEmptyState(kit, content, {
-            .icon = PrKitIconKind_Folder,
+            .icon = PrStudioIconKind_Folder,
             .title = "The gallery is empty",
             .hint = gallery.dir,
         });
@@ -713,7 +713,7 @@ void buildBrowser(PrKit* kit, PrLayoutNode content, AppState& state, Commands& c
         if (image != nullptr)
             prKitTileImage(kit, tile, {.image = image}, {.hoverZoom = kTileHoverZoom});
         else
-            prKitTileIcon(kit, tile, {.icon = PrKitIconKind_Image}, PrColor{0, 0, 0, 0});
+            prKitTileIcon(kit, tile, {.icon = PrStudioIconKind_Image}, PrColor{0, 0, 0, 0});
         prKitTileLabel(kit, tile, {.text = entry.filename});
         // A secondary click acts on what it lands on: a press outside the selection replaces it, and a press inside a
         // selection of several leaves all of them for the menu to act on.
@@ -808,7 +808,7 @@ void buildServerDialog(PrKit* kit, PrLayoutNode trigger, AppState& state, View& 
     // Connecting to a changed address replaces the connection, so Disconnect shows only for the address in use.
     bool holding = state.connection != ConnectionState_Disconnected && state.server == state.connectedServer;
     PrKitButtonVariant variant = holding ? PrKitButtonVariant_Default : PrKitButtonVariant_Primary;
-    PrKitButton button{.text = holding ? "Disconnect" : "Connect", .icon = PrKitIconKind_Link};
+    PrKitButton button{.text = holding ? "Disconnect" : "Connect", .icon = PrStudioIconKind_Link};
     PrLayoutNode connection = prKitButton(kit, footer, button, {.variant = variant});
     if (prKitActivated(kit, connection)) {
         if (holding)
@@ -851,7 +851,7 @@ void buildImportDialog(PrKit* kit, PrLayoutNode trigger, AppState& state, View& 
         PrRawString chord = prCommandChordText(PrCommandChord{.key = 'V', .modifiers = PrAppModifierFlag_Super});
         String hint = format("Press {} to read the clipboard.", prRawStringView(&chord));
         prRawStringReset(&chord);
-        prKitEmptyState(kit, preview, {.icon = PrKitIconKind_Image, .title = "Nothing to import yet", .hint = hint});
+        prKitEmptyState(kit, preview, {.icon = PrStudioIconKind_Image, .title = "Nothing to import yet", .hint = hint});
     }
     String caption = state.import.message;
     if (caption.isEmpty() && image != nullptr) {
@@ -863,7 +863,7 @@ void buildImportDialog(PrKit* kit, PrLayoutNode trigger, AppState& state, View& 
         prKitLabel(kit, body, {.text = caption}, textStyle(PrKitTextRole_BodySmall, tone));
     }
     PrLayoutNode footer = prKitDialogFooter(kit, body);
-    PrLayoutNode paste = commandButton(kit, footer, commands, "alchemy.pasteImage", "Paste", PrKitIconKind_Image,
+    PrLayoutNode paste = commandButton(kit, footer, commands, "alchemy.pasteImage", "Paste", PrStudioIconKind_Image,
         PrKitButtonVariant_Default, PrKitControlSize_Md);
     // The dialog's chord applies while focus is in its body, which the first focusable of the dialog is not.
     prKitModalAutofocus(kit, paste);
@@ -941,9 +941,9 @@ void buildTitleBarRow(PrKit* kit, PrLayoutNode bar, View& view, Commands& comman
 
     PrLayoutNode run = row(kit, bar);
     prKitPlace(kit, run, {.flex = PrKitFlex_Fixed});
-    commandButton(kit, run, commands, "alchemy.generate", kRuns[state.mode], PrKitIconKind_Play,
+    commandButton(kit, run, commands, "alchemy.generate", kRuns[state.mode], PrStudioIconKind_Play,
         PrKitButtonVariant_Primary, PrKitControlSize_Sm);
-    commandButton(kit, run, commands, "alchemy.interrupt", "", PrKitIconKind_Stop, PrKitButtonVariant_Danger,
+    commandButton(kit, run, commands, "alchemy.interrupt", "", PrStudioIconKind_Stop, PrKitButtonVariant_Danger,
         PrKitControlSize_Sm);
 
     // The activity: the active job's stage and progress, or the last message while nothing runs.
@@ -973,7 +973,7 @@ void buildTitleBarRow(PrKit* kit, PrLayoutNode bar, View& view, Commands& comman
     PrKitTone tones[] = {PrKitTone_Muted, PrKitTone_Warning, PrKitTone_Success};
     PrKitTextStyle connection = textStyle(PrKitTextRole_Caption, tones[state.connection]);
     prKitLabel(kit, end, {.text = kStates[state.connection]}, connection);
-    view.server = prKitButton(kit, end, {.text = state.server, .icon = PrKitIconKind_Link},
+    view.server = prKitButton(kit, end, {.text = state.server, .icon = PrStudioIconKind_Link},
         {.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Xs});
     prKitTooltip(kit, view.server, {.text = "Configure the server"});
     if (prKitActivated(kit, view.server))
