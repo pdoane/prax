@@ -10,9 +10,12 @@
 
 name: CI
 
+# main is checked nightly rather than on each push: a pull request's run already checked what it merges, and one run
+# fills the account's macOS jobs, so a run per push to main would hold up the pull requests' runs. The nightly run
+# keeps main's compiler cache, the fallback of every pull request's, fresh and in use.
 on:
-  push:
-    branches: [main]
+  schedule:
+    - cron: '17 8 * * *'
   pull_request:
   workflow_dispatch:
 
