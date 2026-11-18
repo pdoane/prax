@@ -7,6 +7,7 @@
 #include "pr/alloc.h"
 #include "pr/assert.h"
 #include "pr/mem.h"
+#include "pr/posix_string.h"
 #include "pr/process_backend.h"
 #include "pr/string_ops.h"
 #include "pr/thread.h"
@@ -198,14 +199,6 @@ void setNonBlocking(int descriptor) {
     fcntl(descriptor, F_SETFL, fcntl(descriptor, F_GETFL) | O_NONBLOCK);
 }
 
-// A NUL-terminated copy of `text`.
-char* copyString(PrStringView text) {
-    char* copy = static_cast<char*>(prMemoryAlloc(text.size + 1));
-    prMemCopy(copy, text.data, text.size);
-    copy[text.size] = 0;
-    return copy;
-}
-
 // The window size of a pseudoterminal with `extent` columns and rows, which fill `pixelExtent` pixels. Each value is
 // clamped to 16 bits. The pixel size is zero if it is unknown.
 winsize terminalSize(PrUVec2 extent, PrUVec2 pixelExtent) {
@@ -262,22 +255,41 @@ bool sameName(const char* entry, PrStringView variable) {
     return true;
 }
 
+// Returns true if the name of the environment entry `entry`, which is NAME=value, is `name`, or starts with it if it
+// ends in `*` (PrProcessDesc::removed).
+bool removesName(const char* entry, PrStringView name) {
+    bool prefix = name.size != 0 && name.data[name.size - 1] == '*';
+    size_t length = prefix ? name.size - 1 : name.size;
+    for (size_t i = 0; i < length; ++i) {
+        // The entry's NUL and `=` match no byte of a name, so the comparison never reads past the entry's name.
+        if (entry[i] != name.data[i])
+            return false;
+    }
+    return prefix || entry[length] == '=';
+}
+
 // Appends the process's environment to `out`, followed by a null. It is the launcher's variables, except those that
-// `desc` sets, followed by the variables of `desc`. `owned` holds the copies of the variables of `desc`, which the
-// caller frees.
-void buildEnvironment(const PrProcessDesc* desc, RawArray<char*>* out, RawArray<char*>* owned) {
+// `desc` sets or removes, followed by the variables of `desc`. `owned` holds the copies of the variables of `desc`,
+// which the caller frees. Returns false if a variable of `desc` contains a NUL.
+bool buildEnvironment(const PrProcessDesc* desc, RawArray<char*>* out, RawArray<char*>* owned) {
     for (char** entry = environment(); *entry != nullptr; ++entry) {
-        bool replaced = false;
-        for (uint32_t i = 0; i < desc->environmentCount && !replaced; ++i)
-            replaced = sameName(*entry, desc->environment[i]);
-        if (!replaced)
+        bool dropped = false;
+        for (uint32_t i = 0; i < desc->environmentCount && !dropped; ++i)
+            dropped = sameName(*entry, desc->environment[i]);
+        for (uint32_t i = 0; i < desc->removedCount && !dropped; ++i)
+            dropped = removesName(*entry, desc->removed[i]);
+        if (!dropped)
             out->push(*entry);
     }
     for (uint32_t i = 0; i < desc->environmentCount; ++i) {
-        owned->push(copyString(desc->environment[i]));
-        out->push(owned->last());
+        char* variable = prPosixStringCopy(desc->environment[i]);
+        if (variable == nullptr)
+            return false;
+        owned->push(variable);
+        out->push(variable);
     }
     out->push(nullptr);
+    return true;
 }
 
 // Finds the file that `program` runs, as execvp does, and writes a copy of its path to `*resolved`. If `program`
@@ -285,7 +297,7 @@ void buildEnvironment(const PrProcessDesc* desc, RawArray<char*>* out, RawArray<
 // PATH in `envp`. The caller frees the copy. Returns false if no file is found.
 bool resolveProgram(PrStringView program, char* const* envp, char** resolved) {
     if (prStringFindByte(program, '/') < program.size) {
-        *resolved = copyString(program);
+        *resolved = prPosixStringCopy(program);
         return true;
     }
     PrStringView path = "/usr/bin:/bin";
@@ -730,8 +742,59 @@ PrStatus spawnOnPipes(const PrProcessDesc* desc, const int input[2], const int o
     return spawned == ENOMEM || spawned == EAGAIN ? PrStatus_Io : PrStatus_NotFound;
 }
 
+// The strings of a launch, NUL-terminated for the system's calls.
+struct LaunchStrings {
+    RawArray<char*> argv;           // the program and its arguments, then a null
+    RawArray<char*> variables;      // the environment, then a null, if the launch changes the launcher's
+    RawArray<char*> owned;          // the copies of the launch's variables, which `variables` holds
+    char* PR_NULLABLE directory;
+    char** envp;
+};
+
+void launchStringsReset(LaunchStrings* strings) {
+    for (char* argument : strings->argv.span())
+        prMemoryFree(argument);
+    for (char* variable : strings->owned.span())
+        prMemoryFree(variable);
+    strings->argv.reset();
+    strings->variables.reset();
+    strings->owned.reset();
+    prMemoryFree(strings->directory);
+    strings->directory = nullptr;
+}
+
+// Makes the strings of the launch that `desc` describes. Returns false, and makes none, if one contains a NUL.
+bool launchStringsMake(const PrProcessDesc* desc, LaunchStrings* out) {
+    bool made = true;
+    char* program = prPosixStringCopy(desc->program);
+    made = program != nullptr;
+    out->argv.push(program);
+    for (uint32_t i = 0; i < desc->argumentCount && made; ++i) {
+        char* argument = prPosixStringCopy(desc->arguments[i]);
+        made = argument != nullptr;
+        out->argv.push(argument);
+    }
+    out->argv.push(nullptr);
+    out->envp = environment();
+    if (made && (desc->environmentCount != 0 || desc->removedCount != 0)) {
+        made = buildEnvironment(desc, &out->variables, &out->owned);
+        out->envp = out->variables.data;
+    }
+    if (made && desc->directory.data != nullptr) {
+        out->directory = prPosixStringCopy(desc->directory);
+        made = out->directory != nullptr;
+    }
+    if (!made)
+        launchStringsReset(out);
+    return made;
+}
+
 // Starts the program on pipes or a terminal, and the thread that serves them.
 PrStatus launch(PrProcessLauncher*, const PrProcessDesc* desc, PrProcess* PR_NULLABLE* PR_NONNULL out) {
+    // The strings, before anything else is made.
+    LaunchStrings strings{};
+    if (!launchStringsMake(desc, &strings))
+        return PrStatus_InvalidData;
     PosixProcess* process = allocZeroed<PosixProcess>();
     processPipedInit(process, desc, notify);
     process->destroyFn = destroyProcess;
@@ -764,36 +827,18 @@ PrStatus launch(PrProcessLauncher*, const PrProcessDesc* desc, PrProcess* PR_NUL
         for (int* end : ends)
             closeEnd(end);
         freeProcess(process);
+        launchStringsReset(&strings);
         return PrStatus_Io;
     }
 
-    RawArray<char*> argv;
-    argv.push(copyString(desc->program));
-    for (uint32_t i = 0; i < desc->argumentCount; ++i)
-        argv.push(copyString(desc->arguments[i]));
-    argv.push(nullptr);
-    RawArray<char*> variables;
-    RawArray<char*> owned;
-    char** envp = environment();
-    if (desc->environmentCount != 0) {
-        buildEnvironment(desc, &variables, &owned);
-        envp = variables.data;
-    }
-    char* directory = desc->directory.data != nullptr ? copyString(desc->directory) : nullptr;
     pid_t pid = 0;
     PrStatus status = PrStatus_Ok;
-    if (onTerminal)
-        status = forkOnTerminal(terminalPath, argv.data, envp, directory, &pid);
-    else
-        status = spawnOnPipes(desc, input, output, error, argv.data, envp, directory, &pid);
-    for (uint32_t i = 0; i + 1 < argv.count; ++i)
-        prMemoryFree(argv.data[i]);
-    argv.reset();
-    for (char* variable : owned.span())
-        prMemoryFree(variable);
-    owned.reset();
-    variables.reset();
-    prMemoryFree(directory);
+    if (onTerminal) {
+        status = forkOnTerminal(terminalPath, strings.argv.data, strings.envp, strings.directory, &pid);
+    } else {
+        status = spawnOnPipes(desc, input, output, error, strings.argv.data, strings.envp, strings.directory, &pid);
+    }
+    launchStringsReset(&strings);
     closeEnd(&input[0]);
     closeEnd(&output[1]);
     closeEnd(&error[1]);

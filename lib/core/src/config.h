@@ -303,10 +303,12 @@
 #if !defined(PR_PLATFORM_ENVIRONMENT_VARIABLE) && defined(PR_CORE_WINDOWS_TARGET)
 #include "pr/core_windows_environment.h"
 #define PR_PLATFORM_ENVIRONMENT_VARIABLE(name) prCoreWindowsEnvironmentVariable(name)
+#define PR_PLATFORM_ENVIRONMENT_SET_VARIABLE(name, value) prCoreWindowsEnvironmentSetVariable(name, value)
 #define PR_PLATFORM_ENVIRONMENT_HOST_NAME() prCoreWindowsEnvironmentHostName()
 #elif !defined(PR_PLATFORM_ENVIRONMENT_VARIABLE) && defined(PR_CORE_POSIX_TARGET)
 #include "pr/core_posix_environment.h"
 #define PR_PLATFORM_ENVIRONMENT_VARIABLE(name) prCorePosixEnvironmentVariable(name)
+#define PR_PLATFORM_ENVIRONMENT_SET_VARIABLE(name, value) prCorePosixEnvironmentSetVariable(name, value)
 #define PR_PLATFORM_ENVIRONMENT_HOST_NAME() prCorePosixEnvironmentHostName()
 #endif
 

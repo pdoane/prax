@@ -99,7 +99,8 @@ that platform, and binds no group. A helper is not a backend: what it does has n
 library that includes it depends on core and on nothing that a program could replace. Its header and functions are
 named for the platform: `pr/windows_string.h` converts between UTF-8 and the UTF-16 of Windows' wide-character
 functions, `pr/apple_string.h` between UTF-8 and the CFString and NSString of Apple's frameworks and between paths and
-file URLs, and on the web `prWebString`, of `web_string.js`, makes a page's string of a view that a JavaScript library
-receives as its pointer and its size. A helper's header is C, as core's are, and may add C++ and Objective-C forms for
-those languages' callers. A helper calls the platform for what the platform does, as these call its own conversions,
-rather than reimplementing it.
+file URLs, `pr/posix_string.h` makes the NUL-terminated strings of the C functions of POSIX on the Unix-like targets,
+which include Apple's and the web, and on the web `prWebString`, of `web_string.js`, makes a page's string of a view
+that a JavaScript library receives as its pointer and its size. A helper's header is C, as core's are, and may add C++
+and Objective-C forms for those languages' callers. A helper calls the platform for what the platform does, as these
+call its own conversions, rather than reimplementing it.

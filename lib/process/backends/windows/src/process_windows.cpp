@@ -113,40 +113,67 @@ bool sameName(const wchar_t* entry, const wchar_t* variable) {
     return entryLength == length && CompareStringOrdinal(entry, length, variable, length, TRUE) == CSTR_EQUAL;
 }
 
-// Appends the process's environment block to `block`. It is the launcher's variables, except those that `desc` sets,
-// followed by the variables of `desc`. Each variable ends with a NUL, and one more NUL ends the block. Returns false,
-// and appends nothing, if a variable of `desc` does not widen.
+// Returns true if the name of the environment block entry `entry`, which is NAME=value in UTF-16, is `name`, or starts
+// with it if it ends in `*` (PrProcessDesc::removed). Names compare without case. A leading `=` is part of the name.
+bool removesName(const wchar_t* entry, const wchar_t* name) {
+    int length = lstrlenW(name);
+    bool prefix = length != 0 && name[length - 1] == L'*';
+    if (prefix)
+        --length;
+    int entryLength = entry[0] != 0 ? 1 : 0;
+    while (entry[entryLength] != 0 && entry[entryLength] != L'=')
+        ++entryLength;
+    if (prefix ? entryLength < length : entryLength != length)
+        return false;
+    return length == 0 || CompareStringOrdinal(entry, length, name, length, TRUE) == CSTR_EQUAL;
+}
+
+// Widens each of `count` strings of `strings` and appends the copies to `out`, which the caller frees. Returns false if
+// one does not widen.
+bool widenAll(const PrStringView* PR_NULLABLE strings, uint32_t count, RawArray<wchar_t*>* out) {
+    for (uint32_t i = 0; i < count; ++i) {
+        wchar_t* widened = prWindowsWidenCopy(strings[i], nullptr);
+        if (widened == nullptr)
+            return false;
+        out->push(widened);
+    }
+    return true;
+}
+
+// Appends the process's environment block to `block`. It is the launcher's variables, except those that `desc` sets or
+// removes, followed by the variables of `desc`. Each variable ends with a NUL, and one more NUL ends the block. Returns
+// false, and appends nothing, if a variable or a name of `desc` does not widen.
 bool buildEnvironment(const PrProcessDesc* desc, RawArray<wchar_t>* block) {
     RawArray<wchar_t*> variables;
-    for (uint32_t i = 0; i < desc->environmentCount; ++i) {
-        wchar_t* variable = prWindowsWidenCopy(desc->environment[i], nullptr);
-        if (variable == nullptr) {
-            for (wchar_t* widened : variables.span())
-                prMemoryFree(widened);
-            variables.reset();
-            return false;
+    RawArray<wchar_t*> removed;
+    bool widened = widenAll(desc->environment, desc->environmentCount, &variables) &&
+        widenAll(desc->removed, desc->removedCount, &removed);
+    if (widened) {
+        wchar_t* inherited = GetEnvironmentStringsW();
+        for (const wchar_t* entry = inherited; entry != nullptr && *entry != 0;) {
+            size_t length = size_t(lstrlenW(entry));
+            bool dropped = false;
+            for (uint32_t i = 0; i < variables.count && !dropped; ++i)
+                dropped = sameName(entry, variables.data[i]);
+            for (uint32_t i = 0; i < removed.count && !dropped; ++i)
+                dropped = removesName(entry, removed.data[i]);
+            if (!dropped)
+                block->append(entry, uint32_t(length + 1));
+            entry += length + 1;
         }
-        variables.push(variable);
+        if (inherited != nullptr)
+            FreeEnvironmentStringsW(inherited);
+        for (wchar_t* variable : variables.span())
+            block->append(variable, uint32_t(lstrlenW(variable)) + 1);
+        block->push(0);
     }
-    wchar_t* inherited = GetEnvironmentStringsW();
-    for (const wchar_t* entry = inherited; entry != nullptr && *entry != 0;) {
-        size_t length = size_t(lstrlenW(entry));
-        bool replaced = false;
-        for (uint32_t i = 0; i < variables.count && !replaced; ++i)
-            replaced = sameName(entry, variables.data[i]);
-        if (!replaced)
-            block->append(entry, uint32_t(length + 1));
-        entry += length + 1;
-    }
-    if (inherited != nullptr)
-        FreeEnvironmentStringsW(inherited);
-    for (wchar_t* variable : variables.span()) {
-        block->append(variable, uint32_t(lstrlenW(variable)) + 1);
+    for (wchar_t* variable : variables.span())
         prMemoryFree(variable);
-    }
+    for (wchar_t* name : removed.span())
+        prMemoryFree(name);
     variables.reset();
-    block->push(0);
-    return true;
+    removed.reset();
+    return widened;
 }
 
 // Makes a pipe whose parent's end is overlapped and whose child's end the child inherits. `inbound` is true for a pipe
@@ -397,7 +424,7 @@ PrStatus launch(PrProcessLauncher*, const PrProcessDesc* desc, PrProcess* PR_NUL
         directory = prWindowsWidenCopy(desc->directory, nullptr);
         converted = directory != nullptr;
     }
-    if (converted && desc->environmentCount != 0)
+    if (converted && (desc->environmentCount != 0 || desc->removedCount != 0))
         converted = buildEnvironment(desc, &environment);
     if (!converted) {
         line.reset();

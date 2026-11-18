@@ -77,9 +77,15 @@ typedef struct PrProcessDesc {
     PrStringView directory;     // the process's working directory, or the null view for the launcher's
 
     // Environment variables to set, each as NAME=value. Each replaces the launcher's variable of the same name, and the
-    // process inherits the launcher's other variables.
+    // process inherits the launcher's other variables, except those that `removed` names.
     const PrStringView* PR_NULLABLE environment;
     uint32_t environmentCount;
+
+    // Names of the launcher's variables that the process does not inherit. A name that ends in `*` is a prefix, which
+    // removes every variable whose name starts with the rest. Names compare as the platform compares them, so without
+    // case on Windows. A variable that `environment` sets is set regardless.
+    const PrStringView* PR_NULLABLE removed;
+    uint32_t removedCount;
 
     PrProcessStreams streams;
     PrProcessErrors errors;
@@ -127,9 +133,9 @@ PrProcessLauncher* PR_NULLABLE prProcessLauncherCreate(PrProcessBackend backend)
 void prProcessLauncherDestroy(PrProcessLauncher* PR_NULLABLE launcher);
 
 // Starts the program that `desc` names and writes its process to `*out`. Returns NotFound if the program cannot be
-// found or started, Io if the backend cannot make its pipes or terminal, InvalidData if it cannot convert a string of
-// `desc` to the system's, and NotSupported if the launcher cannot start programs, or cannot start them on a terminal.
-// On failure, `*out` is null.
+// found or started, Io if the backend cannot make its pipes or terminal, InvalidData if a string of `desc` holds a NUL
+// or does not convert to the system's, and NotSupported if the launcher cannot start programs, or cannot start them on
+// a terminal. On failure, `*out` is null.
 PrStatus prProcessLaunch(PrProcessLauncher* launcher, const PrProcessDesc* desc, PrProcess* PR_NULLABLE* PR_NONNULL out);
 
 // Ends the process if it is still running, as prProcessKill does, waits for it to exit, and frees it. The wake function

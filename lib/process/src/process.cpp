@@ -82,6 +82,17 @@ PrStatus prProcessLaunch(PrProcessLauncher* launcher, const PrProcessDesc* desc,
         PrStringView variable = desc->environment[i];
         PR_ASSERT(prStringFindByte(variable, '=') != 0 && prStringFindByte(variable, '=') < variable.size);
     }
+    // No system's strings hold a NUL, which would end them early.
+    auto hasNul = [](PrStringView text) { return prStringFindByte(text, '\0') != text.size; };
+    bool nul = hasNul(desc->program) || hasNul(desc->directory);
+    for (uint32_t i = 0; i < desc->argumentCount && !nul; ++i)
+        nul = hasNul(desc->arguments[i]);
+    for (uint32_t i = 0; i < desc->environmentCount && !nul; ++i)
+        nul = hasNul(desc->environment[i]);
+    for (uint32_t i = 0; i < desc->removedCount && !nul; ++i)
+        nul = hasNul(desc->removed[i]);
+    if (nul)
+        return PrStatus_InvalidData;
     PrStatus status = launcher->launchFn(launcher, desc, out);
     PR_ASSERT((status == PrStatus_Ok) == (*out != nullptr));
     return status;

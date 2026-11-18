@@ -2,6 +2,9 @@
 
 #include "pr/core_posix_file.h"
 
+#include "pr/memory.h"
+#include "pr/posix_string.h"
+
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -19,17 +22,6 @@ namespace {
 // Unmaps the bytes of a blob of a mapped file.
 void unmap(void* PR_NULLABLE, PrByteView bytes) {
     munmap(const_cast<uint8_t*>(bytes.data), bytes.size);
-}
-
-// Returns a copy of `path` with a terminator, which the caller frees, or null if memory runs out.
-char* PR_NULLABLE terminate(PrStringView path) {
-    char* terminated = static_cast<char*>(malloc(path.size + 1));
-    if (terminated == nullptr)
-        return nullptr;
-    if (path.size != 0)
-        memcpy(terminated, path.data, path.size);
-    terminated[path.size] = 0;
-    return terminated;
 }
 
 // Returns the directory that the XDG base directory variable `xdg` names, or else `suffix` under the user's home.
@@ -76,11 +68,11 @@ PrFileInfo infoOf(const struct stat& status) {
 using namespace pr_impl;
 
 PrBlob* PR_NULLABLE prCorePosixFileOpen(PrStringView path) {
-    char* terminated = terminate(path);
+    char* terminated = prPosixStringCopy(path);
     if (terminated == nullptr)
         return nullptr;
     int fd = open(terminated, O_RDONLY | O_CLOEXEC);
-    free(terminated);
+    prMemoryFree(terminated);
     if (fd < 0)
         return nullptr;
     struct stat info;
@@ -101,12 +93,12 @@ PrBlob* PR_NULLABLE prCorePosixFileOpen(PrStringView path) {
 
 bool prCorePosixFileInfo(PrStringView path, PrFileInfo* out) {
     *out = PrFileInfo{};
-    char* terminated = terminate(path);
+    char* terminated = prPosixStringCopy(path);
     if (terminated == nullptr)
         return false;
     struct stat status;
     bool found = stat(terminated, &status) == 0;
-    free(terminated);
+    prMemoryFree(terminated);
     if (found)
         *out = infoOf(status);
     return found;
@@ -116,11 +108,11 @@ bool prCorePosixFileSame(PrStringView a, PrStringView b) {
     struct stat found[2];
     PrStringView paths[2] = {a, b};
     for (int i = 0; i < 2; ++i) {
-        char* terminated = terminate(paths[i]);
+        char* terminated = prPosixStringCopy(paths[i]);
         if (terminated == nullptr)
             return false;
         bool read = stat(terminated, &found[i]) == 0;
-        free(terminated);
+        prMemoryFree(terminated);
         if (!read)
             return false;
     }
@@ -128,11 +120,11 @@ bool prCorePosixFileSame(PrStringView a, PrStringView b) {
 }
 
 bool prCorePosixFileEachEntry(PrStringView path, PrFileEntryFn fn, void* PR_NULLABLE context) {
-    char* terminated = terminate(path);
+    char* terminated = prPosixStringCopy(path);
     if (terminated == nullptr)
         return false;
     DIR* directory = opendir(terminated);
-    free(terminated);
+    prMemoryFree(terminated);
     if (directory == nullptr)
         return false;
     int fd = dirfd(directory);
@@ -155,10 +147,10 @@ bool prCorePosixFileWrite(PrStringView path, PrByteView bytes) {
     // The bytes go to a file in the same directory, which takes the path's name once it is complete.
     size_t capacity = path.size + 64;
     char* temporary = static_cast<char*>(malloc(capacity));
-    char* target = terminate(path);
+    char* target = prPosixStringCopy(path);
     if (temporary == nullptr || target == nullptr) {
         free(temporary);
-        free(target);
+        prMemoryFree(target);
         return false;
     }
     // mkstemp makes a file of a name that no other write uses.
@@ -185,23 +177,23 @@ bool prCorePosixFileWrite(PrStringView path, PrByteView bytes) {
             unlink(temporary);
     }
     free(temporary);
-    free(target);
+    prMemoryFree(target);
     return written;
 }
 
 bool prCorePosixFileRemove(PrStringView path) {
-    char* terminated = terminate(path);
+    char* terminated = prPosixStringCopy(path);
     if (terminated == nullptr)
         return false;
     // unlink refuses a directory, with EISDIR on Linux and EPERM on Apple's platforms, which rmdir removes if it is
     // empty.
     bool removed = unlink(terminated) == 0 || ((errno == EISDIR || errno == EPERM) && rmdir(terminated) == 0);
-    free(terminated);
+    prMemoryFree(terminated);
     return removed;
 }
 
 bool prCorePosixFileCreateDirectory(PrStringView path) {
-    char* terminated = terminate(path);
+    char* terminated = prPosixStringCopy(path);
     if (terminated == nullptr)
         return false;
     // Each directory from the root down is made, so that a parent exists before its child. A directory that exists may
@@ -214,13 +206,13 @@ bool prCorePosixFileCreateDirectory(PrStringView path) {
         char saved = terminated[i];
         terminated[i] = 0;
         if (mkdir(terminated, 0755) != 0 && errno != EEXIST && !(stat(terminated, &info) == 0 && S_ISDIR(info.st_mode))) {
-            free(terminated);
+            prMemoryFree(terminated);
             return false;
         }
         terminated[i] = saved;
     }
     bool exists = stat(terminated, &info) == 0 && S_ISDIR(info.st_mode);
-    free(terminated);
+    prMemoryFree(terminated);
     return exists;
 }
 

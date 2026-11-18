@@ -2,6 +2,8 @@
 
 #include "pr/core_posix_environment.h"
 
+#include "pr/memory.h"
+#include "pr/posix_string.h"
 #include "pr/utf8.h"
 
 #include <stdlib.h>
@@ -9,19 +11,30 @@
 #include <unistd.h>
 
 PrRawString prCorePosixEnvironmentVariable(PrStringView name) {
-    char* terminated = static_cast<char*>(malloc(name.size + 1));
+    char* terminated = prPosixStringCopy(name);
     if (terminated == nullptr)
         return prRawStringEmpty();
-    memcpy(terminated, name.data, name.size);
-    terminated[name.size] = 0;
     const char* value = getenv(terminated);
-    free(terminated);
+    prMemoryFree(terminated);
     if (value == nullptr)
         return prRawStringEmpty();
     PrStringView text{value, strlen(value)};
     if (prUtf8Validate(text) != text.size)
         return prRawStringEmpty();
     return prRawStringCopy(text);
+}
+
+bool prCorePosixEnvironmentSetVariable(PrStringView name, PrStringView value) {
+    char* terminatedName = prPosixStringCopy(name);
+    char* terminatedValue = value.data != nullptr ? prPosixStringCopy(value) : nullptr;
+    bool done = false;
+    if (terminatedName != nullptr && value.data == nullptr)
+        done = unsetenv(terminatedName) == 0;
+    else if (terminatedName != nullptr && terminatedValue != nullptr)
+        done = setenv(terminatedName, terminatedValue, 1) == 0;
+    prMemoryFree(terminatedName);
+    prMemoryFree(terminatedValue);
+    return done;
 }
 
 PrRawString prCorePosixEnvironmentHostName(void) {

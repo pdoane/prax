@@ -47,6 +47,20 @@ PrRawString prCoreWindowsEnvironmentVariable(PrStringView name) {
     return value;
 }
 
+bool prCoreWindowsEnvironmentSetVariable(PrStringView name, PrStringView value) {
+    wchar_t* wideName = prWindowsWidenCopy(name, nullptr);
+    wchar_t* wideValue = value.data != nullptr ? prWindowsWidenCopy(value, nullptr) : nullptr;
+    bool done = wideName != nullptr && (value.data == nullptr || wideValue != nullptr);
+    if (done) {
+        // Removing a variable that is not set fails with ERROR_ENVVAR_NOT_FOUND, and it is still not set.
+        done = SetEnvironmentVariableW(wideName, wideValue) != 0 ||
+            (value.data == nullptr && GetLastError() == ERROR_ENVVAR_NOT_FOUND);
+    }
+    prMemoryFree(wideName);
+    prMemoryFree(wideValue);
+    return done;
+}
+
 PrRawString prCoreWindowsEnvironmentHostName(void) {
     // The first call measures the name with its terminator, and the second reads it.
     DWORD count = 0;

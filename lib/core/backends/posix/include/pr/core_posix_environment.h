@@ -1,5 +1,5 @@
-// The POSIX backend of the environment, which reads its variables with getenv and the host name with gethostname. It is
-// the default binding of the environment on the Unix-like targets.
+// The POSIX backend of the environment, which reads its variables with getenv, changes them with setenv and unsetenv,
+// and reads the host name with gethostname. It is the default binding of the environment on the Unix-like targets.
 
 #pragma once
 
@@ -15,6 +15,10 @@ extern "C" {
 
 // Implements prEnvironmentVariable for `name`, which is not empty.
 PrRawString prCorePosixEnvironmentVariable(PrStringView name);
+
+// Implements prEnvironmentSetVariable for `name`, which is not empty and has no `=` or NUL, and `value`, which has no
+// NUL. The null view of `value` removes the variable (prEnvironmentRemoveVariable).
+bool prCorePosixEnvironmentSetVariable(PrStringView name, PrStringView value);
 
 // Implements prEnvironmentHostName.
 PrRawString prCorePosixEnvironmentHostName(void);

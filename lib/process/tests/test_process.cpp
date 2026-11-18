@@ -1,4 +1,5 @@
 #include "pr/atomic.h"
+#include "pr/environment.h"
 #include "pr/integer.h"
 #include "pr/mem.h"
 #include "pr/mutex.h"
@@ -213,6 +214,26 @@ TEST_CASE("process: backends are named, and Default creates the first that the b
     prProcessLauncherDestroy(launcher);
 }
 
+TEST_CASE("process: a string that holds a NUL is InvalidData, and nothing starts") {
+    const PrStringView nul{"a\0b", 3};
+    const PrStringView arguments[] = {nul};
+    const PrStringView environment[] = {PrStringView{"PRAX=a\0b", 8}};
+    const PrStringView removed[] = {nul};
+    PrProcessDesc descs[] = {
+        {.program = nul},
+        {.program = "sh", .arguments = arguments, .argumentCount = 1},
+        {.program = "sh", .directory = nul},
+        {.program = "sh", .environment = environment, .environmentCount = 1},
+        {.program = "sh", .removed = removed, .removedCount = 1},
+    };
+    Launcher l;
+    for (const PrProcessDesc& desc : descs) {
+        PrProcess* process = nullptr;
+        CHECK(prProcessLaunch(l.launcher, &desc, &process) == PrStatus_InvalidData);
+        CHECK(process == nullptr);
+    }
+}
+
 #if !defined(_WIN32)
 
 TEST_CASE("process: output arrives, and the exit status follows") {
@@ -390,6 +411,38 @@ TEST_CASE("process: the environment sets and replaces variables, and keeps the l
     REQUIRE(prProcessLaunch(l.launcher, &desc, &process) == PrStatus_Ok);
     CHECK(drain(process) == "one two|/elsewhere|path");
     prProcessDestroy(process);
+}
+
+TEST_CASE("process: the environment removes the launcher's variables by name and by prefix") {
+    prEnvironmentSetVariable("PRAX_PROCESS_REMOVED", "gone");
+    prEnvironmentSetVariable("PRAX_PROCESS_PREFIX_ONE", "gone");
+    prEnvironmentSetVariable("PRAX_PROCESS_PREFIXED", "kept");
+    prEnvironmentSetVariable("PRAX_PROCESS_REMOVEDX", "kept");
+    PrStringView arguments[] = {
+        "-c", "printf '%s|%s|%s|%s|%s' \"$PRAX_PROCESS_REMOVED\" \"$PRAX_PROCESS_PREFIX_ONE\" "
+            "\"$PRAX_PROCESS_PREFIXED\" \"$PRAX_PROCESS_REMOVEDX\" \"$PRAX_PROCESS_SET\"",
+    };
+    PrStringView environment[] = {"PRAX_PROCESS_SET=set"};
+    PrStringView removed[] = {"PRAX_PROCESS_REMOVED", "PRAX_PROCESS_PREFIX_*", "PRAX_PROCESS_SET"};
+    PrProcessDesc desc{
+        .program = "sh",
+        .arguments = arguments,
+        .argumentCount = 2,
+        .environment = environment,
+        .environmentCount = 1,
+        .removed = removed,
+        .removedCount = 3,
+        .errors = PrProcessErrors_Discard,
+    };
+    PrProcess* process = nullptr;
+    Launcher l;
+    REQUIRE(prProcessLaunch(l.launcher, &desc, &process) == PrStatus_Ok);
+    CHECK(drain(process) == "||kept|kept|set");
+    prProcessDestroy(process);
+    prEnvironmentRemoveVariable("PRAX_PROCESS_REMOVED");
+    prEnvironmentRemoveVariable("PRAX_PROCESS_PREFIX_ONE");
+    prEnvironmentRemoveVariable("PRAX_PROCESS_PREFIXED");
+    prEnvironmentRemoveVariable("PRAX_PROCESS_REMOVEDX");
 }
 
 TEST_CASE("process: a process on a terminal has it as its controlling terminal, at its extent") {
@@ -644,6 +697,35 @@ TEST_CASE("process: the environment sets and replaces variables, and keeps the l
     REQUIRE(prProcessLaunch(l.launcher, &desc, &process) == PrStatus_Ok);
     CHECK(drain(process) == "one two-elsewhere\r\npath\r\n");
     prProcessDestroy(process);
+}
+
+TEST_CASE("process: the environment removes the launcher's variables by name and by prefix") {
+    // Windows matches variable names without regard to case.
+    prEnvironmentSetVariable("PRAX_PROCESS_REMOVED", "gone");
+    prEnvironmentSetVariable("PRAX_PROCESS_PREFIX_ONE", "gone");
+    prEnvironmentSetVariable("PRAX_PROCESS_PREFIXED", "kept");
+    PrStringView arguments[] = {"/v:on", "/c", "echo [!PRAX_PROCESS_REMOVED!][!PRAX_PROCESS_PREFIX_ONE!][!PRAX_PROCESS_PREFIXED!][!PRAX_PROCESS_SET!]"};
+    PrStringView environment[] = {"PRAX_PROCESS_SET=set"};
+    PrStringView removed[] = {"prax_process_removed", "PRAX_PROCESS_PREFIX_*", "PRAX_PROCESS_SET"};
+    PrProcessDesc desc{
+        .program = "cmd",
+        .arguments = arguments,
+        .argumentCount = 3,
+        .environment = environment,
+        .environmentCount = 1,
+        .removed = removed,
+        .removedCount = 3,
+        .errors = PrProcessErrors_Discard,
+    };
+    PrProcess* process = nullptr;
+    Launcher l;
+    REQUIRE(prProcessLaunch(l.launcher, &desc, &process) == PrStatus_Ok);
+    // cmd leaves an undefined variable's reference as it is.
+    CHECK(drain(process) == "[!PRAX_PROCESS_REMOVED!][!PRAX_PROCESS_PREFIX_ONE!][kept][set]\r\n");
+    prProcessDestroy(process);
+    prEnvironmentRemoveVariable("PRAX_PROCESS_REMOVED");
+    prEnvironmentRemoveVariable("PRAX_PROCESS_PREFIX_ONE");
+    prEnvironmentRemoveVariable("PRAX_PROCESS_PREFIXED");
 }
 
 TEST_CASE("process: a receive function takes the output as it arrives, in order, and may answer it") {
