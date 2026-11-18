@@ -33,6 +33,7 @@ typedef void (*ContextFn)(void* context, Host& host);
 struct Host {
     PrFontSet* fonts = nullptr;
     PrTextShaper* shaper = nullptr;
+    PrPathCache* paths = nullptr;   // the paths of the kit's icons, which the host keeps across its contexts
     PrLayoutTree* tree = nullptr;
     PrUi* ui = nullptr;
     PrKit* kit = nullptr;

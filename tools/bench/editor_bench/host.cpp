@@ -52,7 +52,10 @@ bool hostOpen(Host& host) {
     if (prFontBundleInstall(host.fonts, &bundle, 1) == 0)
         return false;
     host.shaper = prTextHarfBuzzCreate();
-    createTree(host, prKitThemeStudio(PrKitThemeVariant_Dark, host.fonts));
+    host.paths = prPathCacheCreate();
+    PrKitTheme theme = prKitThemeStudio(PrKitThemeVariant_Dark, host.fonts);
+    theme.paths = host.paths;
+    createTree(host, theme);
     host.list = prDrawListCreate();
     return true;
 }
@@ -61,6 +64,7 @@ void hostClose(Host& host) {
     destroyTree(host);
     prDrawListRelease(host.list);
     prTextShaperDestroy(host.shaper);
+    prPathCacheDestroy(host.paths);
     prFontSetDestroy(host.fonts);
     host = Host{};
 }

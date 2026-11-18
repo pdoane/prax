@@ -1,18 +1,20 @@
 // Measures what the editor's frames cost after each kind of input: through the rounds that declare and lay out its
 // tree, the scene, playing the scene into a draw list, and preparing and rendering that list on the platform's device.
 //
-// ./dev.sh bench ui runs this beside ui_bench. The editor is a fixture of the benchmark's own (editor_view.h), an
-// editor as examples/editor once was, which stays as it is so that the measures compare from change to change while the
-// example evolves.
+// ./dev.sh bench ui runs this beside ui_bench. The editor is a fixture of the benchmark's own, in two forms over one
+// model: in Studio Kit's widgets (editor_view.h), an editor as examples/editor once was, which stays as it is so that
+// the measures compare from change to change while the example evolves, and in lib/ui's elements and components
+// (element_view.h). Each case runs on each form, its rows named "editor ..." and "elements ...".
 //
 // Each case is measured in a host of its own over frames at 1440 by 900 logical pixels at the case's pixel ratio, after
 // frames that settle the editor, and writes a row of JSON: one frame's whole cost, and each stage's cost in
 // instructions. The GPU's execution after each frame is waited for and not counted.
 //
-// Usage: editor_bench [case]
+// Usage: editor_bench [case | --screenshot DIR], where the case is named with its form, as "elements hover"
 //
 // If a case is named, only that case runs, repeatedly, for five minutes (harnessRepeat). This is for attaching a
-// profiler.
+// profiler. --screenshot writes each form's first state, settled, to DIR as editor.png and elements.png, so that a
+// person can see what the cases measure.
 
 #include "pr/assert.h"
 #include "pr/count_of.h"
@@ -24,9 +26,11 @@
 #include "pr/text_buffer.h"
 
 #include "tools/bench/editor_bench/editor_view.h"
+#include "tools/bench/editor_bench/element_view.h"
 #include "tools/bench/editor_bench/host.h"
 #include "tools/harness/harness.h"
 #include "tools/harness/harness_gpu.h"
+#include "tools/harness/harness_png.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -51,17 +55,20 @@ constexpr uint32_t kSettleFrames = 4;
 constexpr float kResizeStep = 3;
 constexpr uint32_t kResizeFrames = 64;
 
-// A case: the function that queues the input of each frame, which is `step` frames into the case, at `time`. A cold
-// case resets the host before each frame (hostReset), so each frame builds the editor from nothing while fonts, glyphs
-// and the device stay warm. A cold case's time includes the reset, and its stages do not. A resize case narrows the
-// viewport by a few logical pixels each frame, as dragging a window's edge does, so that no frame's width repeats the
-// last one's.
+// A case: the function that queues the input of each frame, which is `step` frames into the case, at `time`, and the
+// function that changes the model before it, if the case has one. An open case resets the host before each frame
+// (hostReset), so each frame builds the editor from nothing in a new context, as a window's first frame does, while
+// what the application keeps for its life, its fonts, glyphs, paths and device, stays warm. An open case's time
+// includes the reset, and its stages do not. A resize case narrows the viewport by a few logical pixels each frame, as
+// dragging a window's edge does, so that no frame's width repeats the last one's.
 struct BenchCase {
     const char* name;
     void (*input)(Host& host, uint32_t step, double time);
-    bool cold = false;
+    bool open = false;
     float pixelRatio = 2;           // target pixels per logical pixel: 2 as on a Mac, 1.5 as Windows often has
     bool resize = false;
+    void (*model)(EditorState& state, uint32_t step) = nullptr;
+    uint32_t warm = 0;              // the frames of the case that run before it is measured
 };
 
 // The stages of a frame, whose instructions each case sums over its runs. The host's frame is its rounds (routing,
@@ -114,28 +121,67 @@ void scrollScene(Host& host, uint32_t step, double time) {
 
 void nothing(Host&, uint32_t, double) {}
 
+// The entities that navigation selects in turn.
+constexpr EntityId kVisits[] = {7, 3, 9, 17, 22, 5};
+
+// The steps of navigation, each of which changes what the editor shows, as a user moving through it does.
+constexpr uint32_t kNavigationSteps = 8;
+
+// Moves through the editor: selects other entities, which the inspector shows, opens and closes its groups, switches
+// the viewport's tab, opens and closes the command palette, and shows and hides the log's warnings.
+void navigate(EditorState& state, uint32_t step) {
+    uint32_t visit = step / kNavigationSteps;
+    switch (step % kNavigationSteps) {
+        case 0: state.selected = kVisits[visit % countOf(kVisits)]; break;
+        case 1: state.openMesh = !state.openMesh; break;
+        case 2: state.openScript = !state.openScript; break;
+        case 3: state.viewportTab = (state.viewportTab + 1) % 3; break;
+        case 4: state.paletteOpen = !state.paletteOpen; break;
+        case 5: state.toggleLevel(PrKitLogLevel_Warning); break;
+        case 6: state.openRigidbody = !state.openRigidbody; break;
+        default: state.selected = kVisits[(visit + 3) % countOf(kVisits)]; break;
+    }
+}
+
 constexpr BenchCase kCases[] = {
-    {"editor unchanged", nothing},
-    {"editor pointer moved", movePointer},
-    {"editor hover", hoverTools},
-    {"editor select", selectRows},
-    {"editor scroll", scrollScene},
-    {"editor cold", nothing, true},
-    {"editor resize", nothing, false, 2, true},
-    {"editor unchanged (pixel ratio 1.5)", nothing, false, 1.5f},
-    {"editor hover (pixel ratio 1.5)", hoverTools, false, 1.5f},
-    {"editor scroll (pixel ratio 1.5)", scrollScene, false, 1.5f},
-    {"editor resize (pixel ratio 1.5)", nothing, false, 1.5f, true},
+    {"unchanged", nothing},
+    {"pointer moved", movePointer},
+    {"hover", hoverTools},
+    {"select", selectRows},
+    {"scroll", scrollScene},
+    {.name = "navigate", .input = nothing, .model = navigate, .warm = kNavigationSteps * uint32_t(countOf(kVisits))},
+    {"open", nothing, true},
+    {"resize", nothing, false, 2, true},
+    {"unchanged (pixel ratio 1.5)", nothing, false, 1.5f},
+    {"hover (pixel ratio 1.5)", hoverTools, false, 1.5f},
+    {"scroll (pixel ratio 1.5)", scrollScene, false, 1.5f},
+    {"resize (pixel ratio 1.5)", nothing, false, 1.5f, true},
 };
 
-void buildApp(void* context, PrKit* kit, PrLayoutNode root) {
+// The forms of the editor.
+enum {
+    Form_Kit,
+    Form_Elements,
+    Form_Count,
+};
+typedef uint32_t Form;
+
+constexpr const char* kFormNames[Form_Count] = {"editor", "elements"};
+
+void buildKit(void* context, PrKit* kit, PrLayoutNode root) {
     buildEditor(kit, root, *static_cast<EditorState*>(context));
+}
+
+void buildElements(void* context, PrKit*, PrLayoutNode root) {
+    buildElementEditor(*static_cast<ElementEditor*>(context), root);
 }
 
 // The host, the editor, the device that it renders on, and what the case in progress has counted.
 struct Run {
     Host host;
-    EditorState* state = nullptr;
+    EditorState* state = nullptr;   // the Kit form's model
+    ElementEditor* elements = nullptr;
+    EditorState* model = nullptr;   // the model of the form that runs
     PrAppDisplay display = kDisplay;
     PrVec2 extent = kExtent;        // the viewport, in logical pixels, which a resize case narrows
     PrGpuDevice* device = nullptr;
@@ -186,7 +232,7 @@ void runFrame(Run& r) {
     ++r.runs;
 }
 
-bool open(Run& r, float pixelRatio) {
+bool open(Run& r, float pixelRatio, Form form) {
     r.display.pixelRatio = pixelRatio;
     if (!hostOpen(r.host) || gpuDeviceCreate(PrGpuBackend_Default, nullptr, &r.device) != PrStatus_Ok ||
             prDrawFragmentCreate(r.device, nullptr, &r.renderer) != PrStatus_Ok)
@@ -197,12 +243,23 @@ bool open(Run& r, float pixelRatio) {
         PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_RenderTarget);
     if (prGpuTextureCreate(r.device, &desc, &r.target) != PrStatus_Ok)
         return false;
-    r.state = new EditorState{};
-    r.state->loadLevel();
-    r.host.build = buildApp;
-    r.host.context = r.state;
-    r.host.attach = editorAttach;
-    r.host.detach = editorDetach;
+    if (form == Form_Kit) {
+        r.state = new EditorState{};
+        r.state->loadLevel();
+        r.model = r.state;
+        r.host.build = buildKit;
+        r.host.context = r.state;
+        r.host.attach = editorAttach;
+        r.host.detach = editorDetach;
+    } else {
+        r.elements = new ElementEditor{};
+        r.elements->state.loadLevel();
+        r.model = &r.elements->state;
+        r.host.build = buildElements;
+        r.host.context = r.elements;
+        r.host.attach = elementAttach;
+        r.host.detach = elementDetach;
+    }
     for (uint32_t i = 0; i < kSettleFrames; ++i)
         runFrame(r);
     return true;
@@ -216,22 +273,61 @@ void close(Run& r) {
     prGpuDeviceDestroy(r.device);
     hostClose(r.host);
     delete r.state;
+    delete r.elements;
+}
+
+// Writes the frame that the run rendered last to `path`, as a PNG.
+bool screenshot(Run& r, const char* path) {
+    float ratio = r.display.pixelRatio;
+    PrUVec2 extent{uint32_t(r.extent.x * ratio), uint32_t(r.extent.y * ratio)};
+    std::vector<uint8_t> texels(size_t(extent.x) * extent.y * 4);
+    gpuTextureRead(r.device, r.target, PrGpuAccessFlag_ShaderRead, PrIVec2{0, 0},
+        PrPixels{texels.data(), size_t(extent.x) * 4, extent});
+    // The target is BGRA, and the PNG RGBA.
+    for (size_t i = 0; i < texels.size(); i += 4) {
+        uint8_t b = texels[i];
+        texels[i] = texels[i + 2];
+        texels[i + 2] = b;
+    }
+    return harnessWritePng(path, PrPixelView{texels.data(), size_t(extent.x) * 4, extent});
 }
 
 } // namespace
 
 int main(int argc, char** argv) {
     prCrashHandler();
-    if (argc > 2) {
-        fprintf(stderr, "usage: editor_bench [case]\n");
+    bool shots = argc == 3 && PrStringView(argv[1]) == "--screenshot";
+    if (argc > 2 && !shots) {
+        fprintf(stderr, "usage: editor_bench [form case | --screenshot DIR]\n");
         return 2;
     }
     PrStringView only = argc == 2 ? argv[1] : PrStringView{};
     static Run r;
+    if (shots) {
+        for (Form form = 0; form < Form_Count; ++form) {
+            if (!open(r, kDisplay.pixelRatio, form)) {
+                fprintf(stderr, "editor_bench: no fonts among its resources, or no GPU device\n");
+                return 1;
+            }
+            char path[512];
+            snprintf(path, sizeof path, "%s/%s.png", argv[2], kFormNames[form]);
+            if (!screenshot(r, path)) {
+                fprintf(stderr, "editor_bench: could not write %s\n", path);
+                return 1;
+            }
+            close(r);
+            r = Run{};
+        }
+        return 0;
+    }
     printf("[");
     bool first = true;
-    for (const BenchCase& c : kCases) {
-        if (only.data != nullptr && only != c.name)
+    for (uint32_t pass = 0; pass < Form_Count * countOf(kCases); ++pass) {
+        Form form = pass / uint32_t(countOf(kCases));
+        const BenchCase& c = kCases[pass % countOf(kCases)];
+        char name[96];
+        snprintf(name, sizeof name, "%s %s", kFormNames[form], c.name);
+        if (only.data != nullptr && only != PrStringView(name))
             continue;
         // Each case starts from the editor's first state, in a host of its own, so that what a case measures does not
         // depend on the cases before it, or on how many frames the harness ran them for.
@@ -239,18 +335,24 @@ int main(int argc, char** argv) {
             close(r);
             r = Run{};
         }
-        if (!open(r, c.pixelRatio)) {
+        if (!open(r, c.pixelRatio, form)) {
             fprintf(stderr, "editor_bench: no fonts among its resources, or no GPU device\n");
             return 1;
         }
         auto run = [&] {
-            if (c.cold)
+            if (c.open)
                 hostReset(r.host);
             if (c.resize)
                 r.extent.x = kExtent.x - kResizeStep * float(1 + r.step % kResizeFrames);
+            if (c.model != nullptr)
+                c.model(*r.model, r.step);
             c.input(r.host, r.step++, r.time);
             runFrame(r);
         };
+        // A case that warms runs its frames once first, so that what the application keeps for its life, such as its
+        // fonts, glyphs and paths, is warm, and the measure is of what the case changes.
+        for (uint32_t i = 0; i < c.warm; ++i)
+            run();
         if (only.data != nullptr)
             harnessRepeat(run);
         for (double& stage : r.stages)
@@ -261,7 +363,7 @@ int main(int argc, char** argv) {
         PrTextBuffer row{};
         harnessAppendFormat(&row, "%s\n  {\"name\": \"%s\", \"time\": %.6f, \"rounds\": %u, \"blocks\": %u, \"layers\": %u, "
             "\"commands\": %u, \"made\": %u",
-            first ? "" : ",", c.name, cost.millis, r.host.rounds, stats.blocksLaidOut, stats.layersRecorded,
+            first ? "" : ",", name, cost.millis, r.host.rounds, stats.blocksLaidOut, stats.layersRecorded,
             stats.commandsRecorded, stats.frameNodesMade);
         for (uint32_t s = 0; s < Stage_Count; ++s)
             harnessAppendFormat(&row, ", \"%s\": %.0f", kStageNames[s], r.stages[s] / double(r.runs));

@@ -185,3 +185,7 @@ widget is a function that memoizes itself, so its callers call a function and se
   on its root (`UiBuilder::state`), which a kept subtree keeps.
 - **Time.** An animation that a memo shows builds it again in each frame that the animation moves
   (`prUiRequestMotion`), and a memo that reads the round's time builds again in each frame.
+
+The word guess and crossword examples (`examples/word_guess`, `examples/crossword`) are built with elements. The editor benchmark
+(`tools/bench/editor_bench`) builds one editor with Studio Kit's widgets and again with elements and memos, over one
+model, and measures both.

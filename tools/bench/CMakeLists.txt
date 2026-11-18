@@ -129,17 +129,20 @@ target_compile_definitions(text_yoga_check PRIVATE PR_FONTS_DIR="${PR_TEST_FONTS
 pr_add_test(text_yoga_check COMMAND text_yoga_check)
 
 if (PR_JS)
-    # What the editor's frames cost, by stage, on the platform's device, over a fixture of the benchmark's own.
-    # ./dev.sh bench ui runs it.
+    # What the editor's frames cost, by stage, on the platform's device, over fixtures of the benchmark's own: the
+    # editor in Studio Kit's widgets, and in lib/ui's elements and components. ./dev.sh bench ui runs it.
     add_executable(editor_bench
         editor_bench/main.cpp
         editor_bench/host.cpp
         editor_bench/editor_state.cpp
         editor_bench/editor_view.cpp
+        editor_bench/element_view.cpp
+        editor_bench/element_widgets.cpp
         editor_bench/hud.cpp
     )
     target_include_directories(editor_bench PRIVATE ${PROJECT_SOURCE_DIR})
-    target_link_libraries(editor_bench PRIVATE prax::studio_kit prax::app harness prax::text prax::font_bundle
+    target_link_libraries(editor_bench PRIVATE prax::studio_kit prax::studio_icons prax::app harness harness_png prax::text
+                                               prax::font_bundle
                                                prax::draw prax::gpu prax::layout prax::ui
                                                prax::ui_cpp prax::font prax::color prax::core_cpp
                                                pr_warnings)

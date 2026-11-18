@@ -3,6 +3,7 @@
 #pragma once
 
 #include "pr/color.h"
+#include "pr/kit_button.h"
 #include "pr/kit_choice.h"
 #include "pr/kit_collection.h"
 #include "pr/kit_data.h"
@@ -168,6 +169,60 @@ struct EditorState {
 
 // Returns the entity that the selection names, or null.
 SceneEntity* selectedEntity(EditorState& editor);
+
+// --- Reflection ---
+//
+// What the model says of an entity's components and their properties, so that an inspector shows and edits any entity
+// from the descriptions alone, as an engine's reflection would let it.
+
+// What a property's value is: a float, a Vector3, a bool, an index of its choices as a uint32_t, a PrColor, or the name
+// of an asset as a std::string.
+enum {
+    PropertyKind_Float,
+    PropertyKind_Vector3,
+    PropertyKind_Bool,
+    PropertyKind_Enum,
+    PropertyKind_Color,
+    PropertyKind_Asset,
+};
+typedef uint8_t PropertyKind;
+
+// How an inspector prefers to show a property, beyond what its kind says: a float on a slider beside its number, or a
+// bool as a check box rather than a switch.
+enum {
+    PropertyHint_None,
+    PropertyHint_Slider,
+    PropertyHint_Check,
+};
+typedef uint8_t PropertyHint;
+
+// A property of a component: its name, its kind, how it is shown, its range and unit if it is a number, its choices if
+// it is an enumeration, and where its value is stored for an entity of the editor, as its kind says.
+struct PropertyInfo {
+    PrStringView name;
+    PropertyKind kind;
+    PropertyHint hint = PropertyHint_None;
+    float step = 0.01f;
+    float min = -1e9f;
+    float max = 1e9f;
+    PrStringView unit = {};
+    const PrStringView* PR_NULLABLE choices = nullptr;
+    uint32_t choiceCount = 0;
+    void* PR_NONNULL (*PR_NULLABLE at)(EditorState& editor, SceneEntity& entity) = nullptr;
+};
+
+// A component of an entity: its name, a badge if it shows one, whether the editor shows it open, and its properties.
+struct ComponentInfo {
+    PrStringView name;
+    PrStringView badge;
+    PrKitBadgeVariant badgeVariant;
+    bool EditorState::* open;
+    const PropertyInfo* properties;
+    uint32_t count;
+};
+
+// Returns the components of an entity, in the order that an inspector shows them, and writes their number to `count`.
+const ComponentInfo* entityComponents(uint32_t* count);
 
 // One command in the palette.
 struct CommandItem {

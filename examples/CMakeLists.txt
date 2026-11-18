@@ -166,3 +166,36 @@ pr_example(incremental
 )
 target_link_libraries(incremental PRIVATE prax::studio_app prax::font_bundle prax::app prax::studio_kit prax::draw prax::layout
                                           prax::text prax::html prax::dom prax::css prax::markdown prax::core_cpp)
+
+# The word guess game: six guesses at a hidden five-letter word, built with lib/ui's elements (pr/ui_element.h) in the
+# system's fonts, or on the web in a font that it packages. Its rules are a library of their own, which the game and
+# its tests link.
+add_library(word_guess_game STATIC word_guess/word_guess_game.cpp)
+target_include_directories(word_guess_game PUBLIC ${PROJECT_SOURCE_DIR})
+target_link_libraries(word_guess_game PUBLIC prax::core_cpp PRIVATE pr_warnings)
+pr_example(word_guess
+    word_guess/main.cpp
+    word_guess/word_guess_view.cpp
+    FONT_FILES "NotoSans[wdth,wght].ttf"
+)
+target_link_libraries(word_guess PRIVATE word_guess_game prax::studio_app prax::font prax::ui_cpp prax::core_cpp)
+if (PR_DEVELOP)
+    pr_module_tests(word_guess_game word_guess/tests/test_word_guess_game.cpp)
+endif()
+
+# The crossword: clued answers to fill in a grid, built with lib/ui's elements (pr/ui_element.h) with Studio Kit's
+# icons, in the system's fonts, or on the web in a font that it packages. Its rules and its puzzles are a library of
+# their own, which the game and its tests link.
+add_library(crossword_game STATIC crossword/crossword_game.cpp crossword/puzzles.cpp)
+target_include_directories(crossword_game PUBLIC ${PROJECT_SOURCE_DIR})
+target_link_libraries(crossword_game PUBLIC prax::core_cpp PRIVATE pr_warnings)
+pr_example(crossword
+    crossword/main.cpp
+    crossword/crossword_view.cpp
+    FONT_FILES "NotoSans[wdth,wght].ttf"
+)
+target_link_libraries(crossword PRIVATE crossword_game prax::studio_app prax::studio_icons prax::font prax::ui_cpp
+                                        prax::app prax::core_cpp)
+if (PR_DEVELOP)
+    pr_module_tests(crossword_game crossword/tests/test_crossword_game.cpp)
+endif()

@@ -86,6 +86,105 @@ size_t indexOf(const std::vector<SceneEntity>& nodes, EntityId id) {
     return nodes.size();
 }
 
+constexpr PrStringView kLightingChoices[] = {"realtime", "mixed", "baked"};
+
+constexpr PropertyInfo kTransform[] = {
+    {
+        .name = "Position",
+        .kind = PropertyKind_Vector3,
+        .step = 0.05f,
+        .at = [](EditorState&, SceneEntity& e) -> void* { return &e.position; },
+    },
+    {
+        .name = "Rotation",
+        .kind = PropertyKind_Vector3,
+        .step = 0.5f,
+        .at = [](EditorState&, SceneEntity& e) -> void* { return &e.rotation; },
+    },
+    {
+        .name = "Scale",
+        .kind = PropertyKind_Vector3,
+        .step = 0.01f,
+        .min = 0,
+        .at = [](EditorState&, SceneEntity& e) -> void* { return &e.scale; },
+    },
+};
+
+constexpr PropertyInfo kMeshRenderer[] = {
+    {.name = "Mesh", .kind = PropertyKind_Asset, .at = [](EditorState&, SceneEntity& e) -> void* { return &e.meshAsset; }},
+    {.name = "Tint", .kind = PropertyKind_Color, .at = [](EditorState& s, SceneEntity&) -> void* { return &s.tint; }},
+    {
+        .name = "Lighting",
+        .kind = PropertyKind_Enum,
+        .choices = kLightingChoices,
+        .choiceCount = 3,
+        .at = [](EditorState& s, SceneEntity&) -> void* { return &s.lighting; },
+    },
+    {
+        .name = "Cast Shadows",
+        .kind = PropertyKind_Bool,
+        .hint = PropertyHint_Check,
+        .at = [](EditorState&, SceneEntity& e) -> void* { return &e.castShadows; },
+    },
+    {
+        .name = "Receive Shadows",
+        .kind = PropertyKind_Bool,
+        .hint = PropertyHint_Check,
+        .at = [](EditorState&, SceneEntity& e) -> void* { return &e.receiveShadows; },
+    },
+};
+
+constexpr PropertyInfo kRigidbody[] = {
+    {
+        .name = "Mass",
+        .kind = PropertyKind_Float,
+        .step = 0.05f,
+        .min = 0,
+        .unit = "kg",
+        .at = [](EditorState&, SceneEntity& e) -> void* { return &e.mass; },
+    },
+    {
+        .name = "Drag",
+        .kind = PropertyKind_Float,
+        .hint = PropertyHint_Slider,
+        .step = 0.005f,
+        .min = 0,
+        .max = 1,
+        .at = [](EditorState& s, SceneEntity&) -> void* { return &s.drag; },
+    },
+    {.name = "Gravity", .kind = PropertyKind_Bool, .at = [](EditorState&, SceneEntity& e) -> void* { return &e.gravity; }},
+};
+
+constexpr PropertyInfo kControllerScript[] = {
+    {
+        .name = "Speed",
+        .kind = PropertyKind_Float,
+        .step = 0.05f,
+        .min = 0,
+        .at = [](EditorState& s, SceneEntity&) -> void* { return &s.scriptSpeed; },
+    },
+    {
+        .name = "Jump",
+        .kind = PropertyKind_Float,
+        .step = 0.05f,
+        .min = 0,
+        .at = [](EditorState& s, SceneEntity&) -> void* { return &s.scriptJump; },
+    },
+};
+
+template <uint32_t N>
+constexpr ComponentInfo component(PrStringView name, PrStringView badge, PrKitBadgeVariant variant,
+        bool EditorState::* open, const PropertyInfo (&properties)[N]) {
+    return ComponentInfo{name, badge, variant, open, properties, N};
+}
+
+constexpr ComponentInfo kComponents[] = {
+    component("Transform", "CORE", PrKitBadgeVariant_Accent, &EditorState::openTransform, kTransform),
+    component("Mesh Renderer", {}, PrKitBadgeVariant_Neutral, &EditorState::openMesh, kMeshRenderer),
+    component("Rigidbody", {}, PrKitBadgeVariant_Neutral, &EditorState::openRigidbody, kRigidbody),
+    component("Controller Script", "COMPILED", PrKitBadgeVariant_Success, &EditorState::openScript, kControllerScript),
+};
+
 } // namespace
 
 void FrameTiming::note(float cpu, float gpu) {
@@ -244,6 +343,11 @@ void EditorState::projectLogs() {
 
 SceneEntity* selectedEntity(EditorState& editor) {
     return editor.selected != 0 ? editor.find(editor.selected) : nullptr;
+}
+
+const ComponentInfo* entityComponents(uint32_t* count) {
+    *count = uint32_t(countOf(kComponents));
+    return kComponents;
 }
 
 const CommandItem* editorCommands(uint32_t* count) {
