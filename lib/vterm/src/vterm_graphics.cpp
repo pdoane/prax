@@ -778,14 +778,20 @@ bool placementGeometry(const Vterm* vterm, const GraphicsCommand& command, const
     uint32_t columns = command.columns;
     uint32_t rows = command.rows;
     if (columns != 0 && rows != 0) {
-        // Scale the image to fit its cells, centered, keeping its aspect ratio.
+        // The image fills its cells. A virtual placement's placeholders instead show it fit to its cells, centered,
+        // keeping its aspect ratio. A program that tiles an image a cell at a time relies on the filling, since its
+        // parts are rarely the cell's shape.
         double boxWidth = columns * cellWidth - offsetX;
         double boxHeight = rows * cellHeight - offsetY;
-        double scale = prF64Min(boxWidth / w, boxHeight / h);
-        width = w * scale;
-        height = h * scale;
-        offsetX += (boxWidth - width) / 2;
-        offsetY += (boxHeight - height) / 2;
+        width = boxWidth;
+        height = boxHeight;
+        if (placement->isVirtual) {
+            double scale = prF64Min(boxWidth / w, boxHeight / h);
+            width = w * scale;
+            height = h * scale;
+            offsetX += (boxWidth - width) / 2;
+            offsetY += (boxHeight - height) / 2;
+        }
     } else if (columns != 0) {
         width = columns * cellWidth - offsetX;
         height = h * width / w;

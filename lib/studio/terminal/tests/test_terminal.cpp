@@ -2185,6 +2185,69 @@ TEST_CASE("terminal: the placeholders of a virtual placement draw its image in t
     CHECK(near(t.pixel(t.cellCenter(2, 0)), background));
 }
 
+TEST_CASE("terminal: placements of an image's parts, one to a cell, tile it without seams") {
+    // As yazi places a preview: the image transmitted once, then each cell's part of it placed in that cell.
+    const PrStringView arguments[] = {"10"};
+    Term t("sleep", arguments);
+    t.settle();
+    // A box above the terminal puts its rows between pixels, as a window's layout can.
+    t.f.build = [&](PrLayoutNode root) {
+        PrLayoutTree* tree = t.f.tree;
+        PrLayoutBoxStyle box = prLayoutBoxStyleDefault();
+        box.display = PrLayoutDisplay_Block;
+        box.height = prLayoutLengthPx(10.5f);
+        PrLayoutStyle style = prLayoutStyleDefault();
+        style.groups[PrLayoutGroup_Box] = prLayoutBoxStyleIntern(tree, &box);
+        prLayoutTreeFrameElement(tree, root, 0, prLayoutStyleIntern(tree, &style));
+        box.height = prLayoutLengthPx(300);
+        style.groups[PrLayoutGroup_Box] = prLayoutBoxStyleIntern(tree, &box);
+        PrLayoutNode panel = prLayoutTreeFrameElement(tree, root, 1, prLayoutStyleIntern(tree, &style));
+        prTerminalFrame(t.terminal, t.f.kit, panel, PrTerminalBackground_View);
+    };
+    t.f.frame();
+    constexpr uint32_t kColumns = 3;
+    constexpr uint32_t kRows = 3;
+    // Each part is smaller than a cell, as yazi's are when it scales an image to its preview, and fills its cell.
+    PrUVec2 cell = cellPixelExtent(t.terminal);
+    PrUVec2 pixels{cell.x, cell.y * 3 / 4};
+    String red = "";
+    for (uint32_t i = 0; i < pixels.x * kColumns * pixels.y * kRows; ++i) {
+        red.append(char(kImageRed.r));
+        red.append(char(kImageRed.g));
+        red.append(char(kImageRed.b));
+    }
+    t.write(graphics(format("a=t,f=24,i=9,q=2,s={},v={}", pixels.x * kColumns, pixels.y * kRows), red));
+    for (uint32_t row = 0; row < kRows; ++row) {
+        for (uint32_t column = 0; column < kColumns; ++column) {
+            t.write(concat(format("\x1b[{};{}H", row + 2, column + 2),
+                graphics(format("a=p,i=9,p={},x={},y={},w={},h={},c=1,r=1,z=-1,C=1,q=2", row * kColumns + column + 1,
+                    column * pixels.x, row * pixels.y, pixels.x, pixels.y))));
+        }
+    }
+    // The cursor, which would draw over the last part, hides, as yazi hides it.
+    t.write("\x1b[?25l");
+    t.f.frame();
+    Array<uint8_t> rgba;
+    REQUIRE(t.f.render(&rgba));
+    PrVec2 first = t.cellCenter(1, 1);
+    PrVec2 extent = prTerminalCellExtent(t.terminal);
+    uint32_t left = uint32_t(prF32Ceil(first.x - extent.x / 2));
+    uint32_t top = uint32_t(prF32Ceil(first.y - extent.y / 2));
+    uint32_t right = uint32_t(prF32Floor(first.x - extent.x / 2 + extent.x * kColumns));
+    uint32_t bottom = uint32_t(prF32Floor(first.y - extent.y / 2 + extent.y * kRows));
+    uint32_t seams = 0;
+    for (uint32_t y = top; y < bottom; ++y) {
+        for (uint32_t x = left; x < right; ++x) {
+            uint32_t i = (y * KitFixture::kRenderWidth + x) * 4;
+            if (!near(PrColor8{rgba[i], rgba[i + 1], rgba[i + 2], rgba[i + 3]}, kImageRed)) {
+                if (seams++ < 4)
+                    MESSAGE(format("pixel {},{} is {},{},{},{}", x, y, rgba[i], rgba[i + 1], rgba[i + 2], rgba[i + 3]));
+            }
+        }
+    }
+    CHECK(seams == 0);
+}
+
 // A Windows pseudoconsole drops the graphics protocol's sequences.
 #if !defined(_WIN32)
 TEST_CASE("terminal: a program shows an image with the graphics protocol") {

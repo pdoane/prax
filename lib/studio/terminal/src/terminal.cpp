@@ -2029,9 +2029,11 @@ void drawImages(Terminal* terminal, PrDrawList* list, int64_t low, int64_t high)
             float(placement.sourceOrigin.x + placement.sourceExtent.x),
             float(placement.sourceOrigin.y + placement.sourceExtent.y),
         };
+        // Edges snap to target pixels, so that placements which tile an image, as programs that place it a cell at a
+        // time do, meet without seams where they share a pixel that each would cover in part.
         PrDrawBrush brush = prDrawBrushImage(prDrawSourceImage(image, source), destination, PrDrawSampling_Linear);
-        prDrawListPushClipRect(list, clip, PrDrawEdges_Antialiased);
-        prDrawListRect(list, destination, PrDrawPaint{.brush = &brush});
+        prDrawListPushClipRect(list, clip, PrDrawEdges_Snapped);
+        prDrawListRect(list, destination, PrDrawPaint{.brush = &brush, .edges = PrDrawEdges_Snapped});
         prDrawListPopClip(list);
     }
 }

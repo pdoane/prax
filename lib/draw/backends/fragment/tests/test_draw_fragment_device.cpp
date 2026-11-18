@@ -1466,6 +1466,84 @@ TEST_CASE("the fragment renderer draws a run of instances that read more texture
     });
 }
 
+TEST_CASE("the fragment renderer tiles an image from its snapped parts between pixels, as it draws the whole image") {
+    // As a terminal draws an image that a program places a cell at a time: each cell's part of the image is a source
+    // rect, drawn into the cell under a clip of the cell, and the cells abut between pixels. Snapped edges meet on a
+    // pixel's edge. Antialiased edges would each cover the shared pixel in part, which lets what is beneath show.
+    onEachTier([&](PrGpuDevice* gpuDevice) {
+        constexpr uint32_t kCellW = 8;
+        constexpr uint32_t kCellH = 18;
+        constexpr uint32_t kColumns = 3;
+        constexpr uint32_t kRows = 3;
+        constexpr uint32_t kW = kCellW * kColumns;
+        constexpr uint32_t kH = kCellH * kRows;
+        Array<uint8_t> texels(size_t(kW) * kH * 4);
+        for (uint32_t y = 0; y < kH; ++y) {
+            for (uint32_t x = 0; x < kW; ++x) {
+                uint8_t* t = texels.data() + (y * kW + x) * 4;
+                t[0] = uint8_t(x * 10);
+                t[1] = uint8_t(y * 4);
+                t[2] = 200;
+                t[3] = 255;
+            }
+        }
+        PrDrawImageDesc desc{
+            PrPixelView{texels.data(), kW * 4, {kW, kH}}, PrPixelFormat_Rgba8, PrDrawAlpha_Premultiplied,
+            PrColorSpace_Srgb,
+        };
+        const PrDrawImage* image = nullptr;
+        REQUIRE(prDrawImageCreate(&desc, &image) == PrStatus_Ok);
+        Device device(gpuDevice, 48, 80);
+        const PrVec2 origins[] = {{4, 4}, {4.5f, 4.5f}, {4.25f, 4.75f}};
+        constexpr PrDrawEdges edges = PrDrawEdges_Snapped;
+        for (PrVec2 origin : origins) {
+            CAPTURE(origin.x);
+            CAPTURE(origin.y);
+            PrDrawList* tiled = prDrawListCreate();
+            for (uint32_t row = 0; row < kRows; ++row) {
+                for (uint32_t column = 0; column < kColumns; ++column) {
+                    PrRect cell{
+                        origin.x + float(column * kCellW), origin.y + float(row * kCellH),
+                        origin.x + float((column + 1) * kCellW), origin.y + float((row + 1) * kCellH),
+                    };
+                    PrRect source{
+                        float(column * kCellW), float(row * kCellH), float((column + 1) * kCellW),
+                        float((row + 1) * kCellH),
+                    };
+                    PrDrawBrush brush = prDrawBrushImage(prDrawSourceImage(image, source), cell, PrDrawSampling_Linear);
+                    prDrawListPushClipRect(tiled, cell, edges);
+                    prDrawListRect(tiled, cell, {.brush = &brush, .edges = edges});
+                    prDrawListPopClip(tiled);
+                }
+            }
+            PrRect whole{origin.x, origin.y, origin.x + float(kW), origin.y + float(kH)};
+            PrDrawList* single = prDrawListCreate();
+            PrDrawBrush brush = prDrawBrushImage(prDrawSourceImage(image, PrRect{0, 0, float(kW), float(kH)}),
+                whole, PrDrawSampling_Linear);
+            prDrawListRect(single, whole, {.brush = &brush, .edges = edges});
+            Array<uint8_t> drawn = device.render(tiled);
+            Array<uint8_t> cpu = cpuRender(tiled, 48, 80);
+            Array<uint8_t> expected = cpuRender(single, 48, 80);
+            // The interior, a pixel in from the outer edges, where the tiles meet.
+            auto interior = [&](const Array<uint8_t>& pixels) {
+                Array<uint8_t> out;
+                for (uint32_t y = uint32_t(origin.y) + 1; y + 1 < uint32_t(origin.y) + kH; ++y) {
+                    for (uint32_t x = uint32_t(origin.x) + 1; x + 1 < uint32_t(origin.x) + kW; ++x) {
+                        for (uint32_t k = 0; k < 4; ++k)
+                            out.push(pixels[(y * 48 + x) * 4 + k]);
+                    }
+                }
+                return out;
+            };
+            CHECK(fractionDiffering(interior(cpu), interior(expected), 8) == 0);
+            CHECK(fractionDiffering(interior(drawn), interior(expected), 8) == 0);
+            prDrawListRelease(tiled);
+            prDrawListRelease(single);
+        }
+        prDrawImageRelease(image);
+    });
+}
+
 TEST_CASE("the fragment renderer samples a sub-rectangle with a gutter as the cpu backend samples its taps") {
     onEachTier([&](PrGpuDevice* gpuDevice) {
         // A motif of 8 texels repeated over 32: the texels around the middle 8 continue its tiles for Repeat, four

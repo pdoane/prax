@@ -370,12 +370,12 @@ TEST_CASE("vterm graphics: a placement id names one placement, which a put of th
     CHECK(t.placements().isEmpty());
 }
 
-TEST_CASE("vterm graphics: columns and rows scale the image, keeping its aspect, and offsets and a source rectangle") {
+TEST_CASE("vterm graphics: columns and rows scale the image, and offsets and a source rectangle") {
     Term t;
     t.write(command("a=t,i=1,f=24,s=40,v=20", solid(40, 20, 3, 0, 0, 0xff)));
     t.output();
-    // Columns and rows: the image is letterboxed into 4 columns by 3 rows (40 by 60 pixels). It shows at 40 by 20,
-    // centered vertically.
+    // Columns and rows: the image is stretched to fill 4 columns by 3 rows (40 by 60 pixels), as a program that tiles
+    // an image in parts of its own shape expects.
     t.write(command("a=p,i=1,c=4,r=3,C=1"));
     // Columns alone: 6 columns are 60 pixels, so the image is 30 pixels high and takes two rows.
     t.write(command("a=p,i=1,c=6,C=1"));
@@ -389,8 +389,9 @@ TEST_CASE("vterm graphics: columns and rows scale the image, keeping its aspect,
     CHECK(placed[0].columns == 4);
     CHECK(placed[0].endRow == 3);
     CHECK(placed[0].extent.x == doctest::Approx(4));
-    CHECK(placed[0].extent.y == doctest::Approx(1));
-    CHECK(placed[0].offset.y == doctest::Approx(1));
+    CHECK(placed[0].extent.y == doctest::Approx(3));
+    CHECK(placed[0].offset.x == doctest::Approx(0));
+    CHECK(placed[0].offset.y == doctest::Approx(0));
     CHECK(placed[1].columns == 6);
     CHECK(placed[1].endRow == 2);
     CHECK(placed[1].extent.y == doctest::Approx(1.5));

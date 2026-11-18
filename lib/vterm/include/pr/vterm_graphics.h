@@ -32,7 +32,8 @@ extern "C" {
 // - Image ids (i), image numbers (I) and placement ids (p). The terminal answers an image number with the id that it
 //   gave the image. A command that carries an id or a number is answered with OK or an error, as its `q` key allows.
 // - Placements at the cursor. A placement takes a source rectangle (x, y, w, h), an offset within the cell (X, Y), and
-//   a size in columns and rows (c, r). Without a size, the image shows at its own pixels, by the cell's pixel extent.
+//   a size in columns and rows (c, r). With both, the image fills its cells. With one, it keeps its aspect ratio along
+//   the other. Without a size, the image shows at its own pixels, by the cell's pixel extent.
 //   A placement has a z-index (z), and the cursor moves past it unless C=1.
 // - Virtual placements (U=1), which show through placeholder characters in the text. A placeholder is U+10EEEE, with
 //   the image id in its foreground color and the placement id in its underline color. Its diacritics give its row, its
