@@ -9,8 +9,8 @@ exclusions.
 
 `./dev.sh test` is the fast loop: lint, build and unit tests on the host. `./dev.sh ci` checks every target that the
 machine builds: the host in its default and debug builds, and on macOS, the web and the devices of iOS, tvOS and
-visionOS, whose tests are built and not run. The debug build is the one that checks the assertions. The unit tests
-read only what the build fetches (`cmake/test_data.cmake`).
+visionOS, whose tests are built and not run. The default and debug builds check the assertions, and the release
+build, which benchmarks measure, does not. The unit tests read only what the build fetches (`cmake/test_data.cmake`).
 
 A unit test is a test case. The build lists its test programs in `tests.json` (`pr_add_test`), most of them doctest
 binaries, and `./dev.sh` runs them several at once, the slowest first, with each binary running all of its cases in one

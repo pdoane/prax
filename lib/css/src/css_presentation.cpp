@@ -602,8 +602,11 @@ PrLayoutFlexStyle flexOf(PrCssPresentation* r, const CssComputedStyle* style) {
     }
     flex.grow = factorOf(cssComputedValue(style, PrCssProperty_FlexGrow), 0);
     flex.shrink = factorOf(cssComputedValue(style, PrCssProperty_FlexShrink), 1);
+    // Flex layout sizes a basis of content, auto, a content-based size or a length. A stretch basis sizes as content.
     CssValueRun basis = cssComputedValue(style, PrCssProperty_FlexBasis);
-    flex.basis = cssValueRunFirstKeyword(basis) == PrCssKeyword_Content ? prLayoutLengthContent() : lengthOf(r, basis);
+    PrCssKeyword basisKeyword = cssValueRunFirstKeyword(basis);
+    bool content = basisKeyword == PrCssKeyword_Content || basisKeyword == PrCssKeyword_Stretch;
+    flex.basis = content ? prLayoutLengthContent() : lengthOf(r, basis);
     CssValueRun order = cssComputedValue(style, PrCssProperty_Order);
     if (order.count == 1 && order.values[0].kind == PrCssValueKind_Integer)
         flex.order = int32_t(order.values[0].number);
@@ -1224,9 +1227,11 @@ bool isReplaced(const PrDomElement* element) {
     return cssBoxTraits(element).kind == CssBoxKind_Replaced;
 }
 
-// Returns true if `node` is laid out as a line break, as a br is.
+// Returns true if `node` is laid out as a line break, as a br is. The root element's box is blockified
+// (css-display-3/#root), so a br that is the document's element lays out as an element.
 bool isLineBreak(const PrDomNode* node) {
-    return traitsOf(node).kind == CssBoxKind_LineBreak;
+    bool root = node->parent != nullptr && node->parent->type == PrDomNodeType_Document;
+    return !root && traitsOf(node).kind == CssBoxKind_LineBreak;
 }
 
 // Returns true if `node` is a pseudo-element that the presentation generates.
@@ -3398,10 +3403,13 @@ bool own(PrCssPresentation* r) {
     return stale;
 }
 
-// Erases the boxes removed since the last update. No query reads them after that update.
+// Erases the boxes removed since the last update. No query reads them after that update. A box inside one that was
+// erased before it went with that box's subtree.
 void eraseTaken(PrCssPresentation* r) {
     for (uint32_t i = 0; i < r->erasing.count; ++i) {
         PrLayoutNode box = r->erasing.data[i];
+        if (!prLayoutNodeIsValid(r->tree, box))
+            continue;
         if (r->root == box)
             r->root = kPrLayoutNodeNone;
         prLayoutTreeErase(r->tree, box);

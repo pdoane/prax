@@ -786,6 +786,23 @@ def page_ranges(path):
     return ranges
 
 
+# A line in which core reports where a harness failed, as an assertion or a fatal error does (pr/assert.h): the
+# source's path and line, then the message. A backtrace follows it.
+FAILURE_SITE = re.compile(r"^\S+:\d+: ")
+
+
+def failure_of(stderr, returncode, last=True):
+    """Returns what a harness that failed printed about its failure: the line where core reports where it failed, or
+    else its last line of output, or its first if `last` is false, or its exit status if it printed nothing."""
+    diagnostics = stderr.strip().splitlines()
+    for line in diagnostics:
+        if FAILURE_SITE.match(line):
+            return line
+    if diagnostics:
+        return diagnostics[-1] if last else diagnostics[0]
+    return "process exited %d" % returncode
+
+
 def capture(shell, path, png):
     """Captures the page at `path` in the shell, as a PNG at `png`. Returns the failure, or the empty string."""
     try:
@@ -795,10 +812,8 @@ def capture(shell, path, png):
     note_verify(process.stderr)
     if process.returncode == TIMED_OUT:
         return "TIMEOUT"
-    diagnostics = process.stderr.strip().splitlines()
     if process.returncode != 0 or not os.path.exists(png):
-        return "ERROR: " + (diagnostics[-1] if diagnostics
-                            else "process exited %d" % process.returncode)
+        return "ERROR: " + failure_of(process.stderr, process.returncode)
     return ""
 
 
@@ -854,9 +869,7 @@ def compare_pages(shell, pairs, printed=None):
     found = [json.loads(line[len("REFTEST "):]) for line in process.stdout.splitlines()
              if line.startswith("REFTEST ")]
     if process.returncode != 0 or len(found) != len(pairs):
-        diagnostics = process.stderr.strip().splitlines()
-        failure = "ERROR: " + (diagnostics[-1] if diagnostics
-                               else "process exited %d" % process.returncode)
+        failure = "ERROR: " + failure_of(process.stderr, process.returncode)
         return [{"status": failure} for _ in pairs]
     # The shell answers each page's references in turn, in the order of the pages.
     order = [pair for left in dict.fromkeys(left for left, _ in pairs) for pair in pairs if pair[0] == left]
@@ -1114,8 +1127,7 @@ def run_page(shell, test, url):
     if test.harness is None:
         diagnostics = error.strip().splitlines()
         if returncode:
-            test.harness = "ERROR: " + (diagnostics[0] if diagnostics
-                                        else "process exited %d" % returncode)
+            test.harness = "ERROR: " + failure_of(error, returncode, last=False)
         elif not reported:
             test.harness = "INCOMPLETE: " + (diagnostics[0] if diagnostics
                                              else "harness did not complete")
@@ -1139,8 +1151,7 @@ def crash(shell, test):
         if process.returncode == TIMED_OUT:
             test.harness = "TIMEOUT"
         elif process.returncode != 0 and not any(XML_ERROR in line for line in diagnostics):
-            test.harness = "CRASH: " + (diagnostics[0] if diagnostics
-                                        else "process exited %d" % process.returncode)
+            test.harness = "CRASH: " + failure_of(process.stderr, process.returncode, last=False)
     except subprocess.TimeoutExpired:
         test.harness = "TIMEOUT"
     test.complete = test.harness is None

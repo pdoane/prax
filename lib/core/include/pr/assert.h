@@ -56,12 +56,23 @@ PR_ASSUME_NONNULL_END
 // cannot handle.
 #define PR_FATAL(message) PR_FAIL_AT(message)
 
-// Checks that `cond` holds, and ends the process if it does not. Under NDEBUG, `cond` is not evaluated but still counts
-// as a use, so a variable or function used only by assertions is not unused.
-#if !defined(PR_ASSERT)
+// 1 if PR_ASSERT checks its condition, and 0 otherwise: by default, 1 without NDEBUG and 0 with it. A build that
+// defines it as 1 checks assertions whatever NDEBUG says, as the default development build does (the CMake option
+// PR_ASSERTIONS). Code that only assertions need is compiled under `#if PR_ASSERTIONS`.
+#if !defined(PR_ASSERTIONS)
 #if defined(NDEBUG)
-#define PR_ASSERT(cond) ((void)(false && (cond)))
+#define PR_ASSERTIONS 0
 #else
+#define PR_ASSERTIONS 1
+#endif
+#endif
+
+// Checks that `cond` holds, and ends the process if it does not. Without assertions, `cond` is not evaluated but still
+// counts as a use, so a variable or function used only by assertions is not unused.
+#if !defined(PR_ASSERT)
+#if PR_ASSERTIONS
 #define PR_ASSERT(cond) ((cond) ? (void)0 : PR_FAIL_AT("assertion failed: " #cond))
+#else
+#define PR_ASSERT(cond) ((void)(false && (cond)))
 #endif
 #endif

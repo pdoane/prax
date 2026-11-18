@@ -135,10 +135,12 @@ class Base:
         """Returns the directory that holds the base's harnesses `targets`, in Release, and the targets that the base's
         build does not have, such as a harness that a later commit added or that needs a tool the base's build did not
         find. A commit's harnesses are kept by commit, so they are built once; the targets it lacks are kept beside
-        them, in `absent`. A directory's files can change, so its harnesses are built each time, and only what differs
-        is rebuilt."""
+        them, in `absent-targets`. A directory's files can change, so its harnesses are built each time, and only what
+        differs is rebuilt. Each harness comes with its resources, which it reads from <harness>.resources beside it."""
         bin = os.path.join(build.AB, "bin", self.sha or "directory")
-        absent_file = os.path.join(bin, "absent")
+        absent_file = os.path.join(bin, "absent-targets")
+        # The list of absent targets is written last, once every harness and its resources are in place, so a
+        # directory without it was left partway and is built again.
         if self.sha and os.path.exists(absent_file):
             with open(absent_file) as f:
                 absent = set(f.read().split())
@@ -155,6 +157,10 @@ class Base:
         os.makedirs(bin)
         for target in built:
             shutil.copy2(dev.executable(directory, target), bin)
+            # A program reads its resources, such as its fonts, from <program>.resources beside it.
+            resources = os.path.join(directory, target + ".resources")
+            if os.path.isdir(resources):
+                shutil.copytree(resources, os.path.join(bin, target + ".resources"))
         absent = sorted(set(targets) - set(built))
         with open(absent_file, "w") as f:
             f.write("\n".join(absent))

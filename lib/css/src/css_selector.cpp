@@ -1106,7 +1106,7 @@ PrCssSelectors* PR_NULLABLE parseCompiled(CssParser* parser, const CssTokenStrea
     return out;
 }
 
-#ifndef NDEBUG
+#if PR_ASSERTIONS
 // Returns true if two selector lists have the same records. Reading a list directly and compiling its parse must
 // produce the same records.
 bool selectorsEquals(const PrCssSelectors* a, const PrCssSelectors* b) {
@@ -1594,7 +1594,7 @@ PrCssSelectors* PR_NULLABLE cssParseSelectors(CssParser* parser, const CssTokenS
             directList(pool, ts->tokens, span, parser->match.engine, &list)) {
         PrCssSelectors* read = hold(pool, list);
         cssSelectorsSpecify(read, context->parent);
-#ifndef NDEBUG
+#if PR_ASSERTIONS
         PrCssSelectors* compiled = parseCompiled(parser, ts, span, context);
         PR_ASSERT(compiled != nullptr && selectorsEquals(read, compiled));
         cssSelectorsDestroy(compiled);

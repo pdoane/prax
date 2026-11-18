@@ -302,8 +302,11 @@ struct LayoutWalk {
 
     const LayoutTreeNode& nodeOf(const LayoutFragment* fragment) const { return layoutTreeNode(tree, fragment->node); }
 
+    // Returns true if the fragment of `node` is visible. An anonymous box or a line has no node, and is visible: what
+    // it holds is visible or hidden as its own nodes are.
     bool isVisible(LayoutNodeIndex node) const {
-        return layoutColorStyle(styles, layoutNodeStyle(tree, node)).visibility == PrLayoutVisibility_Visible;
+        return node == kPrLayoutNodeNone ||
+            layoutColorStyle(styles, layoutNodeStyle(tree, node)).visibility == PrLayoutVisibility_Visible;
     }
 
     // Sets `*out` to the float that the anchor `anchor` on the line at `at` names, at its offset, and returns true.
@@ -702,7 +705,7 @@ struct LayoutWalk {
         if (table)
             visitor.gridBackgrounds(fragment, offset);
         content(fragment, offset, LayoutPhase_Blocks);
-        if (table && (fragment->node == kPrLayoutNodeNone || isVisible(fragment->node)))
+        if (table && isVisible(fragment->node))
             visitor.gridBorders(fragment, offset);
     }
 

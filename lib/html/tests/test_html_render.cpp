@@ -4776,6 +4776,42 @@ TEST_CASE("box-shadow projects onto the decoration group as a list of shadows fr
     CHECK(page.decoration("c").shadows == kPrLayoutShadowNone);
 }
 
+TEST_CASE("anonymous boxes, replaced tables, fixed row backgrounds, stretch bases and br roots lay out and paint") {
+    auto paint = [](Page& page) {
+        PrDrawList* list = prDrawListCreate();
+        prLayoutTreePaint(prCssPresentationTree(page.presentation), list);
+        prDrawListRelease(list);
+    };
+    // An anonymous table inside a line, with a box out of flow in an anonymous row, paints its anonymous boxes as
+    // visible.
+    Page anonymous("<div>a<span style='display: table-cell'>b<div id=c style='position: absolute'>c</div></span>d</div>");
+    CHECK(anonymous.bounds("c").right > anonymous.bounds("c").left);
+    paint(anonymous);
+    // A replaced element that displays as a table is laid out and painted as a replaced box.
+    Page replaced("<img id=a style='display: table; width: 20px; height: 10px; border-radius: 2px'>");
+    CHECK(replaced.box("a").display == PrLayoutDisplay_Table);
+    paint(replaced);
+    // A row's fixed background, painted in its cells, closes each clip in the list that opened it.
+    Page track("<table><tr id=a style='background: linear-gradient(red, blue) fixed'><td>x</td></tr></table>");
+    CHECK(track.box("a").display == PrLayoutDisplay_TableRow);
+    paint(track);
+    // A stretch basis sizes as content.
+    Page stretch("<div style='display: flex'><div id=a style='flex: 0 1 stretch'>x</div></div>");
+    CHECK(stretch.flex("a").basis.bits == prLayoutLengthContent().bits);
+    // A br that is the document's element lays out as an element, as the viewport's root.
+    Page root("<p>a</p>");
+    PrDomNode* document = prDomDocumentAsNode(root.document);
+    PrDomElement* html = prDomDocumentElement(root.document);
+    REQUIRE(prDomNodeRemoveChild(document, prDomElementAsNode(html)) == PrStatus_Ok);
+    PrDomElement* br = nullptr;
+    REQUIRE(prDomElementCreate(root.document, "br", nullptr, &br) == PrStatus_Ok);
+    REQUIRE(prDomNodeAppendChild(document, prDomElementAsNode(br)) == PrStatus_Ok);
+    prHtmlPresentationUpdate(root.presentation, prLayoutVecFromPx(PrVec2{800, 600}));
+    PrLayoutTree* tree = prCssPresentationTree(root.presentation);
+    CHECK(prLayoutNodeKind(tree, prCssPresentationLayoutNode(root.presentation, prDomElementAsNode(br))) ==
+        PrLayoutNodeKind_Element);
+}
+
 TEST_CASE("box-shadow's longhands make a shadow of each offset, and their other lists repeat to the offsets' length") {
     Page page("<div id=a style='box-shadow-offset: 2px, none, 1px 3px; box-shadow-color: red, blue; "
         "box-shadow-position: inset'></div>");

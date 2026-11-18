@@ -1009,9 +1009,10 @@ struct Painter : LayoutWalkVisitor {
     // boxes. If the box `scrolls`, the layers attached to its content are left to the content's recording. A layer
     // fixed to the viewport is recorded as a segment of its own. If a transform applies to the box, a fixed layer is
     // recorded as a scrolling layer instead (css-transforms-1/#transform-rendering), and so is a fixed layer of a
-    // background that blends, which is one group.
+    // background that blends, which is one group. If `clip` is given, each layer paints within it as well; a fixed
+    // layer ends the batch, so no clip is open across one.
     void backgroundLayers(LayoutNodeIndex node, const LayoutBackground& layers, const LayoutBackgroundBoxes& boxes,
-            bool scrolls) {
+            bool scrolls, const PrRect* clip = nullptr) {
         // A transform is looked for only if a layer is fixed, since that search walks the box's ancestors.
         int8_t viewportFixed = -1;
         for (uint32_t i = layers.count; i-- > 0;) {
@@ -1021,9 +1022,17 @@ struct Painter : LayoutWalkVisitor {
             bool fixed = layer.attachment == PrLayoutBackgroundAttachment_Fixed;
             if (fixed && viewportFixed < 0)
                 viewportFixed = layers.blends || transformedAround(node) ? 0 : 1;
-            if (fixed && viewportFixed == 1)
-                fixedLayer(layer, boxes.boxes[layer.clip]);
-            else if (layoutBackgroundPaintLayer(&styles->compounds, layer, boxes, out()))
+            if (fixed && viewportFixed == 1) {
+                PrRect area = boxes.boxes[layer.clip];
+                fixedLayer(layer, clip != nullptr ? prRectIntersect(area, *clip) : area);
+                continue;
+            }
+            if (clip != nullptr)
+                prDrawListPushClipRect(out(), *clip, PrDrawEdges_Aliased);
+            bool painted = layoutBackgroundPaintLayer(&styles->compounds, layer, boxes, out());
+            if (clip != nullptr)
+                prDrawListPopClip(out());
+            if (painted)
                 recorded();
         }
     }
@@ -1444,7 +1453,8 @@ struct Painter : LayoutWalkVisitor {
             if (layoutDisplayIsTrack(box.display)) {
                 decorates = false;
                 borders = false;
-            } else if (layoutIsTable(box)) {
+            } else if (layoutIsTable(box) && (fragment->flags & LayoutFragmentFlag_Table) != 0) {
+                // A replaced element that displays as a table is laid out as a replaced box, which has no grid.
                 at = layoutRectMoved(layoutFragmentTableGrid(fragment).rect, PrLayoutVec{at.left, at.top});
                 borders = layoutTableStyle(styles, style).borderCollapse != PrLayoutBorderCollapse_Collapse;
             } else if (box.display == PrLayoutDisplay_TableCell) {
@@ -1712,11 +1722,7 @@ struct Painter : LayoutWalkVisitor {
         bool wasHeld = layers.blends && openBlending(boxes);
         LayoutBackgroundBoxes cellBoxes{.boxes = {clip, clip, clip}};
         backgroundColor(decoration.background, cellBoxes, PrLayoutBackgroundBox_BorderBox);
-        if (layers.count != 0) {
-            prDrawListPushClipRect(out(), clip, PrDrawEdges_Aliased);
-            backgroundLayers(node, layers, boxes, false);
-            prDrawListPopClip(out());
-        }
+        backgroundLayers(node, layers, boxes, false, &clip);
         if (layers.blends)
             closeBlending(wasHeld);
     }

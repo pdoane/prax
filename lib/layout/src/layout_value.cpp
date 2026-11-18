@@ -213,7 +213,7 @@ PrLayoutLength layoutCompoundsIntern(LayoutCompounds* compounds, const PrLayoutC
         return prLayoutLengthUnits(prLayoutUnitFromPxDouble(px));
     if (count == 1 && fitsPercent(nodes[0].value))
         return prLayoutLengthPercent(float(nodes[0].value));
-#if !defined(NDEBUG)
+#if PR_ASSERTIONS
     for (uint32_t i = 0; i < count; ++i) {
         const PrLayoutCalcNode& node = nodes[i];
         PrLayoutCalcNode made;

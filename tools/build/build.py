@@ -111,13 +111,16 @@ class Mode:
         return {"PR_BUILD": self.directory, "PR_SLOWDOWN": self.slowdown}
 
 
+# The cache entries of the default configuration, which is optimized and checks assertions (pr/assert.h).
+CHECKED = {"PR_ASSERTIONS": "ON"}
+
 MODES = {
-    "default": Mode("default", DEFAULT, "RelWithDebInfo"),
+    "default": Mode("default", DEFAULT, "RelWithDebInfo", cache=CHECKED),
     "debug": Mode("debug", DEBUG, "Debug"),
     "release": Mode("release", RELEASE, "Release"),
     "asan": Mode("asan", ASAN, "Debug", SANITIZE, ASAN_SLOWDOWN),
     "tsan": Mode("tsan", TSAN, "Debug", THREAD_SANITIZE),
-    "wasm": Mode("wasm", WASM, "RelWithDebInfo", wasm=True),
+    "wasm": Mode("wasm", WASM, "RelWithDebInfo", wasm=True, cache=CHECKED),
     "wasm-debug": Mode("wasm-debug", WASM_DEBUG, "Debug", wasm=True),
 }
 
@@ -130,7 +133,8 @@ def uikit_modes():
         for target, simulator in ((platform, False), (platform + "-sim", True)):
             for suffix, build_type in (("", "RelWithDebInfo"), ("-debug", "Debug")):
                 found[target + suffix] = Mode(target + suffix, os.path.join(dev.ROOT, "build-" + target + suffix),
-                                              build_type, platform=platform, simulator=simulator)
+                                              build_type, platform=platform, simulator=simulator,
+                                              cache=CHECKED if build_type == "RelWithDebInfo" else None)
     return found
 
 

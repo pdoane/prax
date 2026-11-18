@@ -18,8 +18,8 @@ USAGE = {
 ./dev.sh build [debug|release|asan|tsan] [wasm|PLATFORM|PLATFORM-sim] [--lean] [--configure | --keep-going]
                [--target NAME]...
     configure and build a configuration for a platform, the host's by default. The default configuration is optimized,
-    with debug symbols and without link-time optimization. `debug` builds without the optimizer and with the assertions.
-    `release` adds link-time optimization. `asan` is Debug with the address and undefined behavior sanitizers, and
+    with debug symbols and assertions (pr/assert.h), and without link-time optimization. `debug` builds without the
+    optimizer. `release` adds link-time optimization and checks no assertions, and is what benchmarks measure. `asan` is Debug with the address and undefined behavior sanitizers, and
     `tsan` is Debug with the thread sanitizer. `wasm` compiles to WebAssembly with Emscripten, which it fetches into
     third_party/emsdk. A PLATFORM of UIKit's, ios, tvos or visionos, compiles for that platform's devices with Xcode's
     SDK, on macOS, and PLATFORM-sim, as ios-sim, for its simulator. Each of these is in the default configuration or

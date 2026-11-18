@@ -85,6 +85,9 @@ endif()
 # The platform's build configuration (docs/platform.md).
 set(PR_USER_CONFIG "" CACHE FILEPATH "A header that binds platform facilities at compile time")
 option(PR_PLATFORM_MIMALLOC "Allocate with mimalloc where the build leaves memory to the default backends" OFF)
+# Assertions are checked without NDEBUG, as in a Debug build, and in every build with PR_ASSERTIONS, as in the
+# development build's default configuration (pr/assert.h).
+option(PR_ASSERTIONS "Check assertions whatever the build type" OFF)
 # The web runs a program on one thread unless its page has shared memory, which Prax does not ask of it.
 if (EMSCRIPTEN)
     set(PR_PLATFORM_THREADS_DEFAULT OFF)

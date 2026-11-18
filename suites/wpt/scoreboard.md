@@ -11,7 +11,7 @@ of a change to it is what the change did.
 | compat                           |       38/38 |       104/163 |   63.8% |
 | css/CSS2                         |       14/14 |          8/14 |   57.1% |
 | css/CSS2/abspos                  |       32/32 |         28/33 |   84.8% |
-| css/CSS2/backgrounds             |     336/336 |       329/336 |   97.9% |
+| css/CSS2/backgrounds             |     336/336 |       335/336 |   99.7% |
 | css/CSS2/bidi-text               |     105/105 |        94/105 |   89.5% |
 | css/CSS2/borders                 |     507/507 |       632/674 |   93.7% |
 | css/CSS2/box                     |         9/9 |           9/9 |  100.0% |
@@ -88,7 +88,7 @@ of a change to it is what the change did.
 | css/css-overscroll-behavior      |       11/12 |         78/96 |   81.2% |
 | css/css-page                     |     258/258 |       239/385 |   62.0% |
 | css/css-parser-api               |         1/1 |          5/71 |    7.0% |
-| css/css-position                 |     377/388 |     1393/1770 |   78.7% |
+| css/css-position                 |     377/388 |     1394/1770 |   78.7% |
 | css/css-properties-values-api    |     123/123 |      686/1393 |   49.2% |
 | css/css-pseudo                   |     339/342 |      700/1126 |   62.1% |
 | css/css-ruby                     |     178/178 |       118/247 |   47.7% |
@@ -133,7 +133,7 @@ of a change to it is what the change did.
 | web-animations/interfaces        |       45/47 |        80/834 |    9.5% |
 | web-animations/responsive        |       40/46 |         0/105 |    0.0% |
 | web-animations/timing-model      |       25/34 |         2/402 |    0.4% |
-| **total**                        | 32145/32468 | 154162/209314 |   73.6% |
+| **total**                        | 32145/32468 | 154169/209314 |   73.6% |
 
 ## dom
 

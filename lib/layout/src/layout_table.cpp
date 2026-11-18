@@ -2054,9 +2054,10 @@ void placeOutOfFlow(Table& t, LayoutNodeIndex container, LayoutLogicalOffset at,
             continue;
         LayoutStaticEdges edges = layoutStaticEdges(t.mode);
         LayoutLogicalOffset place = at;
-        const LayoutTreeNode& table = layoutTreeNode(t.state.tree, t.node);
-        if (rowBaseline >= kLayoutUnitZero &&
-                layoutMathStyle(t.state.styles, table.style).kind == PrLayoutMathKind_Table) {
+        // An anonymous table has no node, and is no MathML table.
+        bool math = t.node != kPrLayoutNodeNone &&
+            layoutMathStyle(t.state.styles, layoutTreeNode(t.state.tree, t.node).style).kind == PrLayoutMathKind_Table;
+        if (rowBaseline >= kLayoutUnitZero && math) {
             edges = layoutStaticEdgesAligned(t.mode, LayoutStaticAlign_Start, LayoutStaticAlign_Baseline, false, false);
             place.blockOffset += rowBaseline;
         }

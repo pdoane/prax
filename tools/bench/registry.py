@@ -135,7 +135,8 @@ BENCHES = [
     Bench("print", "a long generated document printed: paginated, its pages painted, and written as PDF and SVG",
           ["print_bench"], fetch=["fonts"], run=engine.print_document,
           sources=[os.path.join(TESTS, "html", "tests", "print_bench.cpp")]),
-    Bench("ui", "immediate-mode frames: trees declared whole every frame, unchanged, changed, scrolled and cold",
+    Bench("ui", "immediate-mode frames: trees declared whole every frame, unchanged, changed, scrolled and cold, and the "
+          "editor's frames in Studio Kit and in elements",
           ["ui_bench", "editor_bench"], fetch=["fonts"], run=engine.ui),
     Bench("text-edit", "editing a text of 100, 10,000 and 1,000,000 lines: at the caret, far away, and with undo; and moving a "
           "caret through layout",
