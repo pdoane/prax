@@ -1,5 +1,5 @@
 // Records in C++: group recipes declared as types, and the record of a part made from its recipes through the context's
-// memo (pr/ui.h, Records).
+// record cache (pr/ui.h, Records).
 //
 // A group recipe is a small struct of plain data -- no padding, no pointers, flags as bool -- that holds only what its
 // part varies in one group. Its type is its identity. It names its kind as `static constexpr PrLayoutGroup kKind`, and
@@ -136,20 +136,20 @@ PrLayoutStyleIndex uiStyle(PrUi* ui, const Owner& owner, const Groups&... groups
     if constexpr (sizeof...(Groups) == 0) {
         return 0;
     } else {
-        // The part's bytes, packed, so that the memo compares them at once.
+        // The part's bytes, packed, so that the cache compares them at once.
         constexpr uint32_t size = (uiRecipeSize<Groups>() + ...);
         uint8_t key[size > 0 ? size : 1];
         uint8_t* packed = key;
         (uiPack(packed, groups), ...);
         const void* type = uiTypeId<UiPartOf<Groups...>>();
         PrLayoutStyleIndex style = 0;
-        const void* kept = prUiMemoFind(ui, type, &owner, &style);
+        const void* kept = prUiRecordFind(ui, type, &owner, &style);
         if (kept != nullptr && prMemEquals(kept, key, size))
             return style;
         PrUiPart part{.type = type, .owner = &owner, .bytes = key, .size = size};
         PrLayoutStyle record = prLayoutStyleDefault();
         ((record.groups[Groups::kKind] = uiGroup(ui, owner, groups)), ...);
-        return prUiMemoKeep(ui, &part, prLayoutStyleIntern(prUiTree(ui), &record), 0);
+        return prUiRecordStore(ui, &part, prLayoutStyleIntern(prUiTree(ui), &record), 0);
     }
 }
 

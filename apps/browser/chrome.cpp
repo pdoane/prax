@@ -281,7 +281,7 @@ void buildAddress(Browser& b, PrLayoutNode toolbar, Tab& tab) {
         prUiSetFocus(b.ui, node);
         chrome.focusAddress = false;
     }
-    chrome.addressFocused = prUiFocus(b.ui) == node;
+    chrome.addressFocused = prUiIsFocused(b.ui, node);
     PrUiEvents events = prUiEvents(b.ui, node);
     for (uint32_t i = 0; i < events.count; ++i) {
         const PrAppEvent& e = events.events[i];

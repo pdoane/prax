@@ -123,7 +123,7 @@ void prUiTextView(PrUi* ui, const PrUiTextViewDesc* desc) {
     PrTextView* view = desc->view;
     TextViewState& state = stateOf(ui, desc->control);
     double time = prUiCurrentRound(ui)->time;
-    bool focused = prUiFocus(ui) == desc->control;
+    bool focused = prUiIsFocused(ui, desc->control);
     PrVec2 wheel{};
     if (prUiWheel(ui, desc->control, &wheel))
         prTextViewScrollBy(view, wheel);

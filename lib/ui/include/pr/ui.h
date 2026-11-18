@@ -117,6 +117,15 @@ uint32_t prUiFrame(PrUi* ui, const PrUiFrameDesc* desc, PrUiBuildFn build, void*
 // Returns the round being built. Valid only during a build.
 const PrUiRound* prUiCurrentRound(const PrUi* ui);
 
+// Called once the round's build returns, before the round ends.
+typedef void (*PrUiDeferFn)(void* PR_NULLABLE context, PrUi* ui);
+
+// Calls `fn` with `context` once the current build returns, before the context resolves the round and lays it out. A
+// library defers what it finishes only once the build has declared more, such as the record of a node whose style the
+// build writes after creating it. A call deferred again with the same function and context in one round runs once.
+// Calls run in the order deferred, and may create nodes and defer further calls. Call during a build.
+void prUiDefer(PrUi* ui, PrUiDeferFn fn, void* PR_NULLABLE context);
+
 // Returns the display and the user's preferences of the frame that runs, or of the last frame between frames. Before
 // the first frame they are prAppDisplayDefault and the neutral preferences.
 PrAppDisplay prUiDisplay(const PrUi* ui);
@@ -325,11 +334,20 @@ bool prUiSignaled(const PrUi* ui, PrLayoutNode node, const void* owner, uint32_t
 // yet.
 bool prUiPointer(const PrUi* ui, PrUiViewport* PR_NULLABLE viewport, PrVec2* out);
 
+// The axes of an extent that a build depends on.
+enum {
+    PrUiAxisFlag_X = 1u << 0,
+    PrUiAxisFlag_Y = 1u << 1,
+    PrUiAxisFlag_Both = PrUiAxisFlag_X | PrUiAxisFlag_Y,
+};
+typedef uint8_t PrUiAxisFlags;
+
 // Writes the extent of `node` at the last layout to `out`, in px, and returns true, or returns false if the node has no
-// extent yet, as before its first layout. A widget that fits what it shows to its box reads the box's extent this way.
-// If the round's layout gives the node another extent than the round read, the frame runs another round, as far as its
-// limit allows, so that the frame shows the node at its new extent. Call during a build.
-bool prUiExtent(PrUi* ui, PrLayoutNode node, PrVec2* out);
+// extent yet, as before its first layout. A widget that fits what it shows to its box reads the box's extent this way,
+// and depends on it along `axes`: if the round's layout gives the node another extent along them than the round read,
+// the frame runs another round, as far as its limit allows, so that the frame shows the node at its new extent, and a
+// tracked build that read it is kept only while the extent holds along them. Call during a build.
+bool prUiExtent(PrUi* ui, PrLayoutNode node, PrUiAxisFlags axes, PrVec2* out);
 
 // Maps `point`, in px of the node's viewport, into the node's own coordinates as of the last layout: px from the top
 // left of its first box, through every transform between them (prLayoutNodeLocalPoint). A widget measures a position
@@ -534,12 +552,16 @@ void prUiSetKeyRoot(PrUi* ui, PrLayoutNode node);
 // round. If the node is focusable and not disabled in that round, it receives focus. Otherwise focus is cleared.
 void prUiSetFocus(PrUi* ui, PrLayoutNode node);
 
+// Returns true if the node is the focused node (selectors-4/#the-focus-pseudo).
+bool prUiIsFocused(const PrUi* ui, PrLayoutNode node);
+
 // Returns true if the focused node is this node or one of its descendants.
 bool prUiIsFocusWithin(const PrUi* ui, PrLayoutNode node);
 
-// Returns true if focus should be drawn with a visible ring. A key press other than a modifier key's turns this on, and
-// a pointer press turns it off.
-bool prUiIsFocusVisible(const PrUi* ui);
+// Returns true if the node is the focused node and focus should be drawn with a visible ring
+// (selectors-4/#the-focus-visible-pseudo). A key press other than a modifier key's turns the ring on, and a pointer
+// press turns it off.
+bool prUiIsFocusVisible(const PrUi* ui, PrLayoutNode node);
 
 // Moves focus to the next focusable node in tree order, or to the previous one if `reverse` is true, wrapping at the
 // ends. The search is limited to the subtree of `scope`, or the whole tree if `scope` is kPrLayoutNodeNone. The move
@@ -604,13 +626,14 @@ void prUiEdit(PrUi* ui, PrLayoutNode control, PrUiEditPhase phase);
 //
 // A component library makes its nodes' records from group recipes of its own. A recipe is a small struct of plain data
 // that writes one kind of group (pr/layout_style.h). The context keeps the groups that recipes made, and finds each by
-// its recipe. It also keeps a memo of the records that the last frame's lookups returned, indexed by where in the round
-// each lookup was made, so a widget unchanged since the last frame costs one comparison of bytes. Every library on the
-// context shares the groups and the memo, and the context ages both by its rounds.
+// its recipe. It also keeps a cache of the records that the last frame's lookups returned, indexed by where in the
+// round each lookup was made, so a widget unchanged since the last frame costs one comparison of bytes. Every library
+// on the context shares the groups and the cache, and the context ages both by its rounds.
 //
 // A part is the recipes of one record. A recipe and a part are each identified by three things: their type, an address
 // that the library owns for each type; their owner, the object whose values the recipes read, such as a theme, or null;
-// and their bytes, which have no padding. Every part of one type has the same number of bytes.
+// and their bytes, which have no padding. Parts of one type may differ in their number of bytes, as when a library's
+// part is a stream of the properties that a caller set, if the bytes that begin a part say how many follow.
 
 // Writes the group of a recipe to `value`, which is the value of the recipe's kind (PrLayoutBoxStyle for a box group,
 // and so on) and starts as layout's default. `owner` and `bytes` are the recipe's.
@@ -643,25 +666,140 @@ typedef struct PrUiPart {
     uint32_t size;
 } PrUiPart;
 
-// Looks up a part of `type` and `owner` in the memo, at the position of the round's next lookup. The position is the
-// slot of the round's next creation (prLayoutTreeFrameCursor), with the number of lookups already made at that slot. A
-// round that declares the last frame's tree therefore meets the last frame's positions in order, whichever library made
-// each lookup.
+// Looks up a part of `type` and `owner` in the record cache, at the position of the round's next lookup. The position
+// is the slot of the round's next creation (prLayoutTreeFrameCursor), with the number of lookups already made at that
+// slot. A round that declares the last frame's tree therefore meets the last frame's positions in order, whichever
+// library made each lookup.
 //
 // If the last frame's lookup at this position was of a part of the same type and owner, writes its record to `out` and
 // returns that part's bytes, which stay valid until the next lookup. The caller compares them with its part's, which it
 // knows the size of. Otherwise, returns null. If the bytes differ, or the result is null, the caller makes the record
-// and passes it to prUiMemoKeep before its next lookup. Valid only during a build.
-const void* PR_NULLABLE prUiMemoFind(PrUi* ui, const void* type, const void* PR_NULLABLE owner, PrLayoutStyleIndex* out);
+// and passes it to prUiRecordStore before its next lookup. Valid only during a build.
+const void* PR_NULLABLE prUiRecordFind(PrUi* ui, const void* type, const void* PR_NULLABLE owner, PrLayoutStyleIndex* out);
 
-// Stores `style` as the record of `part` at the position of the last prUiMemoFind, which did not find it, and returns
+// Stores `style` as the record of `part` at the position of the last prUiRecordFind, which did not find it, and returns
 // `style`. `base` is a record whose index the part's bytes contain, as when the part restyles another record, or 0. The
-// memo holds a reference to `style` and to `base`, so each index names one record for as long as the entry can match.
-PrLayoutStyleIndex prUiMemoKeep(PrUi* ui, const PrUiPart* part, PrLayoutStyleIndex style, PrLayoutStyleIndex base);
+// cache holds a reference to `style` and to `base`, so each index names one record for as long as the entry can match.
+PrLayoutStyleIndex prUiRecordStore(PrUi* ui, const PrUiPart* part, PrLayoutStyleIndex style, PrLayoutStyleIndex base);
 
 // Releases the groups and the memo's records that `owner`'s recipes and parts made. A library calls it when the values
 // that its recipes read change, and before it destroys the owner. Call between rounds.
 void prUiForget(PrUi* ui, const void* owner);
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Keeping subtrees
+//
+// A library that knows a subtree is unchanged keeps it instead of creating it again: a round that keeps a node's
+// subtree declares it as the round that last built it did, and pays a store for each of its nodes, with no build, no
+// records and no layout. The library knows what its own build reads, such as the arguments of a component. The context
+// knows the rest.
+//
+// A tracked build owns its node and the nodes under it that no tracked build inside it owns. The context keeps a
+// subtree while what its build owns has not changed:
+//
+// - Nothing has reached what it owns since the round that built it: no routed input, no move of hover, focus or a
+//   payload's drop target into a node of it or out of it, no change of whether its focus is drawn, no scroll, no
+//   activation, and no tween, motion, repeating press or hover time that a query of the build read and that runs on.
+//   Routed input reaches the nodes above its node too, whose queries answer it.
+// - What its build read from outside what it owns holds: the contexts from nodes above it, with the same bytes from the
+//   same nodes; the state of each node that it does not own that a query asked about, which nothing has reached either;
+//   and the values that are no node's, such as the focused node, the pointer, a press or the carried payload. The node
+//   above it is disabled as it was.
+// - Its build changed nothing outside the subtree for the round: it created nothing under the overlay, and gave no
+//   signal, flags, cursor, context or state to a node outside it, or a signal to its own node.
+// - The display and the user's preferences are those of the round that built it, and no prUiForget came since.
+//
+// So a library's build asks the context about the state of nodes and of the round, and the context records what it
+// asked.
+//
+// A tracked build inside a kept subtree that changed is a part of it, which the round builds again in its place while
+// it keeps the rest, if the build's type has a rebuild (PrUiTrackType) and the build around it provided no context on a
+// node that it owns. A part that its library keeps is kept around its own parts in turn. So a change costs the parts
+// that it reached, and a store for each node of the rest.
+//
+// What a round keeps keeps its flags, cursors, key claims, drop targets and retained state, and the records, texts and
+// highlights that layout holds for it (prLayoutTreeFrameKeepChildren).
+
+// A type of tracked build: what a library gives the builds of one kind, each with a context of its own, so that a round
+// that keeps a subtree that holds a build decides on it and builds it again alone (prUiKeep). `holds` returns true if
+// what the library knows that the build read is unchanged, such as the library's own values that it showed, and
+// `rebuild` builds the node's children again, as the library's build of the node did, tracked, or keeps them
+// (prUiKeep). The context calls `rebuild` with the node created as the continuation of its committed node, with its
+// committed record. Either may be null: a build with no `holds` read nothing that the context does not know, and one
+// with no `rebuild` is built again with the build around it.
+typedef struct PrUiTrackType {
+    bool (*PR_NULLABLE holds)(void* PR_NULLABLE context, PrUi* ui, PrLayoutNode node);
+    void (*PR_NULLABLE rebuild)(void* PR_NULLABLE context, PrUi* ui, PrLayoutNode node);
+} PrUiTrackType;
+
+// Begins and ends a tracked build of the subtree of `node`, which the current round just created: the build of what the
+// round may keep in a later round. The build creates the node's children between the two calls, and records what it
+// reads from outside what it owns. Tracked builds nest, and a build ends before the one around it. `type` and `context`
+// are the library's for the build, and must outlive what the round may keep of it.
+void prUiTrackBegin(PrUi* ui, PrLayoutNode node, const PrUiTrackType* PR_NULLABLE type, void* PR_NULLABLE context);
+void prUiTrackEnd(PrUi* ui, PrLayoutNode node);
+
+// Keeps the subtree of `node`, which the current round just created as the continuation of a committed node, as the
+// last tracked build of the node made it, with the node's own record and flags, and returns true. A part of it that
+// changed, its library builds again in its place. Returns false, keeping nothing, if what the node's build owns may
+// have changed, or if a part may not be built alone; the caller then builds the node, tracked.
+bool prUiKeep(PrUi* ui, PrLayoutNode node);
+
+// Tells the context that a value that a library's build read changed, one that the context does not see, such as the
+// library's own state that it showed, so that the next round decides again on what it may keep (PrUiTrackType::holds).
+void prUiChanged(PrUi* ui);
+
+// Records that the tracked build being built depends on the state of `node`, as a query of the node's state does, so
+// that input or a change of state that reaches the node or a node under it builds it again. A build that reads what a
+// tracked build inside it reported, such as a memo's result, depends on that build's node.
+void prUiRead(PrUi* ui, PrLayoutNode node);
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Memos
+//
+// A build is code that walks the application's model in every round, over the part of it that the view shows, and
+// creates what it reads. It memoizes the part of itself that is worth it: the part's inputs, and a function that builds
+// the part from them on a root. A round keeps the part's subtree, unbuilt, while the inputs equal the last round's and
+// the context finds that nothing the part owns has changed (Keeping subtrees), and builds it again otherwise. Memos
+// nest, and each decides on its own, so input that reaches a memo inside a kept one builds that memo alone, from the
+// copy of its inputs that the context keeps.
+//
+// The build reads nothing but its inputs, and what the context answers for, because a kept memo's build does not run.
+// So the inputs hold all that it shows, and what decides when it builds again is what they hold. Inputs are bytes,
+// which the context compares and copies as bytes unless the memo's type says how: a struct of plain data, and after it
+// any text that it shows, which the build reads from the context's copy. A memo over a large part of the model, whose
+// walk would cost too much in every round, holds what tells that part's changes, such as a generation that the model
+// counts, and its kept subtree skips the walk as well.
+
+// What a type of memo does with its inputs. `build` builds the memo's part from `inputs` under `root`, a block element
+// with no record, which it gives one, and writes what happened to the part in the round, such as a click or an edit, to
+// `result` if it is not null. A memo built again alone, inside a kept one, builds with no result. `equal`, `copy` and
+// `destroy` compare inputs of `size` bytes, copy them to storage of that size, and release a copy; null compares and
+// copies bytes, and releases nothing.
+typedef struct PrUiMemoType {
+    void (*build)(void* PR_NULLABLE context, PrUi* ui, PrLayoutNode root, const void* inputs, void* PR_NULLABLE result);
+    bool (*PR_NULLABLE equal)(const void* a, const void* b, uint32_t size);
+    void (*PR_NULLABLE copy)(void* to, const void* from, uint32_t size);
+    void (*PR_NULLABLE destroy)(void* inputs);
+} PrUiMemoType;
+
+// A memo of a round: its type and the context that its build takes, which must outlive what the context keeps of it,
+// its inputs of `size` bytes, the result that its build writes if it has one, and its root's key, or 0.
+typedef struct PrUiMemoDesc {
+    const PrUiMemoType* type;
+    void* PR_NULLABLE context;
+    const void* inputs;
+    uint32_t size;
+    void* PR_NULLABLE result;
+    PrUiKey key;
+} PrUiMemoDesc;
+
+// Creates a memo's root under `parent`, and keeps its subtree as the last round built it if the inputs equal that
+// round's, or builds it (PrUiMemoType). Returns the root. A kept memo had nothing happen to it, and leaves its result
+// as the caller gave it, which the caller makes the result of nothing happening. The build around a memo with a result
+// depends on the memo's root (prUiRead), so that input that reaches the memo builds the build around it too, which
+// reads the result.
+PrLayoutNode prUiMemo(PrUi* ui, PrLayoutNode parent, const PrUiMemoDesc* desc);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Scrolling

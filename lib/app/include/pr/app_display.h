@@ -17,7 +17,8 @@ extern "C" {
 #endif
 
 // The properties of a display that layout, color resolution and rendering depend on. They take the whole struct, so
-// that a property added here reaches all of them.
+// that a property added here reaches all of them, and compare it as bytes.
+PR_NO_PADDING_BEGIN
 typedef struct PrAppDisplay {
     float pixelRatio;           // device pixels per logical pixel
 
@@ -28,8 +29,10 @@ typedef struct PrAppDisplay {
     float potentialHeadroom;
 
     PrColorSpace gamut;         // the RGB space closest to the display's primaries: Srgb, DisplayP3 or Rec2020
+    uint8_t _pad[3];
     PR_EQUALITY(PrAppDisplay)
 } PrAppDisplay;
+PR_NO_PADDING_END
 
 // Returns an SDR display with the sRGB gamut and one device pixel per logical pixel.
 PrAppDisplay prAppDisplayDefault(void);

@@ -40,7 +40,8 @@ PrStringView prAppContrastName(PrAppContrast contrast);
 // `accentColor` is the color that the user chose for controls and selections. It is transparent if the user chose none,
 // and the program then uses its own. `textScale` is the factor by which the user enlarges text independently of the
 // rest of the interface, such as 1.5 for 150%. It is separate from the display's scale (PrAppDisplay::pixelRatio),
-// which applies to everything.
+// which applies to everything. A context compares preferences as bytes.
+PR_NO_PADDING_BEGIN
 typedef struct PrAppUserPreferences {
     PrAppColorScheme colorScheme;
     PrAppContrast contrast;
@@ -50,6 +51,7 @@ typedef struct PrAppUserPreferences {
     float textScale;
     PR_EQUALITY(PrAppUserPreferences)
 } PrAppUserPreferences;
+PR_NO_PADDING_END
 
 // Returns the preferences of a user who changed no settings: a light scheme, no accent color, and a text scale of 1.
 PrAppUserPreferences prAppUserPreferencesDefault(void);

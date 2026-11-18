@@ -29,7 +29,7 @@ struct Reports {
 };
 
 // The owner of a recipe for a box of some width. It counts the groups that the recipe made and the lookups that the
-// memo missed.
+// record cache missed.
 struct Maker {
     mutable uint32_t made = 0;
     uint32_t missed = 0;
@@ -45,11 +45,11 @@ void makeBox(const void* owner, const void* bytes, void* value) {
 const char kWidthType = 0;
 const char kPartType = 0;
 
-// Returns the record of a box `width` px wide that `owner` makes, from the memo if the last frame made it at this place
-// in the round.
+// Returns the record of a box `width` px wide that `owner` makes, from the record cache if the last frame made it at
+// this place in the round.
 PrLayoutStyleIndex widthStyle(PrUi* ui, Maker& owner, float width) {
     PrLayoutStyleIndex style = 0;
-    const void* kept = prUiMemoFind(ui, &kPartType, &owner, &style);
+    const void* kept = prUiRecordFind(ui, &kPartType, &owner, &style);
     if (kept != nullptr && prMemEquals(kept, &width, sizeof width))
         return style;
     PrUiPart part{.type = &kPartType, .owner = &owner, .bytes = &width, .size = uint32_t(sizeof width)};
@@ -64,7 +64,7 @@ PrLayoutStyleIndex widthStyle(PrUi* ui, Maker& owner, float width) {
     };
     PrLayoutStyle record = prLayoutStyleDefault();
     record.groups[PrLayoutGroup_Box] = prUiGroup(ui, &recipe);
-    return prUiMemoKeep(ui, &part, prLayoutStyleIntern(prUiTree(ui), &record), 0);
+    return prUiRecordStore(ui, &part, prLayoutStyleIntern(prUiTree(ui), &record), 0);
 }
 
 // An application that counts the references to its sources, and a window of it.
@@ -85,6 +85,129 @@ struct CountingWindow : PrAppWindow {
         };
         counting.app.dataReleaseFn = [](PrApp* app, PrAppDataSource) {
             --reinterpret_cast<CountingApp*>(app)->references;
+        };
+    }
+};
+
+// A panel of rows, each a tracked build that its library builds again alone: a row's child is wider while the row is
+// hovered. The panel's build may provide a context, read the hover of a row's child, or leave its rows unrebuildable.
+struct PartsScene {
+    UiFixture f;
+    PrLayoutNode rows[3] = {};
+    PrLayoutNode leaves[3] = {};
+    uint32_t panelBuilds = 0;
+    uint32_t rowBuilds[3] = {};
+    bool provides = false;
+    bool readsLeaf = false;
+    bool rebuildable = true;
+    PrUiTrackType type{.holds = nullptr, .rebuild = rebuildRow};
+
+    static void rebuildRow(void* context, PrUi*, PrLayoutNode node) {
+        PartsScene& s = *static_cast<PartsScene*>(context);
+        for (uint32_t i = 0; i < 3; ++i) {
+            if (s.rows[i] == node)
+                s.buildRow(i);
+        }
+    }
+
+    void buildRow(uint32_t i) {
+        ++rowBuilds[i];
+        prUiTrackBegin(f.ui, rows[i], rebuildable ? &type : nullptr, this);
+        leaves[i] = f.box(rows[i], 0, 0, prUiIsHovered(f.ui, rows[i]) ? 20 : 10, 10);
+        prUiTrackEnd(f.ui, rows[i]);
+    }
+
+    PartsScene() {
+        f.build = [this] {
+            PrLayoutNode panel = f.box(f.root, 0, 0, 200, 200);
+            if (prUiKeep(f.ui, panel))
+                return;
+            ++panelBuilds;
+            prUiTrackBegin(f.ui, panel, nullptr, nullptr);
+            if (provides)
+                prUiProvide(f.ui, panel, &panelBuilds, 1, sizeof(int));
+            for (uint32_t i = 0; i < 3; ++i) {
+                rows[i] = f.box(panel, 0, float(i) * 40, 100, 30);
+                if (!prUiKeep(f.ui, rows[i]))
+                    buildRow(i);
+            }
+            if (readsLeaf)
+                prUiIsHovered(f.ui, leaves[1]);
+            prUiTrackEnd(f.ui, panel);
+        };
+    }
+};
+
+// A scene of memos in lib/ui's C API: a panel whose inputs are a count of rows and a title after them, and rows whose
+// inputs are a width, each wider while it is hovered, and each reporting whether it was clicked.
+struct MemoScene {
+    UiFixture f;
+    uint32_t panelBuilds = 0;
+    uint32_t rowBuilds = 0;
+    uint32_t rows = 3;
+    PrStringView title = "rows";
+    PrLayoutNode panel = kPrLayoutNodeNone;
+    PrLayoutNode rowNodes[4] = {};
+    uint32_t clicked = 0;
+
+    // A row's inputs, and the panel's, which its title's bytes follow.
+    PR_NO_PADDING_BEGIN
+    struct RowInputs {
+        float width;
+    };
+    struct PanelInputs {
+        uint32_t rows;
+        uint32_t titleSize;
+    };
+    PR_NO_PADDING_END
+
+    static void buildRow(void* context, PrUi* ui, PrLayoutNode root, const void* inputs, void* result) {
+        MemoScene& s = *static_cast<MemoScene*>(context);
+        ++s.rowBuilds;
+        const RowInputs& row = *static_cast<const RowInputs*>(inputs);
+        float width = prUiIsHovered(ui, root) ? row.width * 2 : row.width;
+        PrLayoutBoxStyle b = prLayoutBoxStyleDefault();
+        b.display = PrLayoutDisplay_Block;
+        b.width = prLayoutLengthPx(width);
+        b.height = prLayoutLengthPx(30);
+        prLayoutTreeFrameSetStyle(s.f.tree, root, s.f.styleOf(b));
+        prUiSetFlags(ui, root, PrUiFlag_Pressable);
+        if (result != nullptr)
+            *static_cast<bool*>(result) = prUiClicked(ui, root, 0);
+    }
+
+    static void buildPanel(void* context, PrUi* ui, PrLayoutNode root, const void* inputs, void*) {
+        MemoScene& s = *static_cast<MemoScene*>(context);
+        ++s.panelBuilds;
+        const PanelInputs& panel = *static_cast<const PanelInputs*>(inputs);
+        PrLayoutBoxStyle b = prLayoutBoxStyleDefault();
+        b.display = PrLayoutDisplay_Block;
+        prLayoutTreeFrameSetStyle(s.f.tree, root, s.f.styleOf(b));
+        // The title is read from the memo's copy of the inputs, after the struct.
+        const char* title = reinterpret_cast<const char*>(&panel + 1);
+        prLayoutTreeFrameText(s.f.tree, root, 0, PrStringView{title, panel.titleSize});
+        static constexpr PrUiMemoType kRow{.build = buildRow};
+        for (uint32_t i = 0; i < panel.rows; ++i) {
+            RowInputs row{.width = 100};
+            PrUiMemoDesc desc{.type = &kRow, .context = &s, .inputs = &row, .size = uint32_t(sizeof row)};
+            s.rowNodes[i] = prUiMemo(ui, root, &desc);
+        }
+    }
+
+    MemoScene() {
+        f.build = [this] {
+            static constexpr PrUiMemoType kPanel{.build = buildPanel};
+            uint8_t bytes[64];
+            PanelInputs inputs{.rows = rows, .titleSize = uint32_t(title.size)};
+            prMemCopy(bytes, &inputs, sizeof inputs);
+            prMemCopy(bytes + sizeof inputs, title.data, title.size);
+            PrUiMemoDesc desc{
+                .type = &kPanel,
+                .context = this,
+                .inputs = bytes,
+                .size = uint32_t(sizeof inputs + title.size),
+            };
+            panel = prUiMemo(f.ui, f.root, &desc);
         };
     }
 };
@@ -140,7 +263,7 @@ TEST_CASE("a round that reads a node's extent runs again if its layout changes t
     f.build = [&] {
         PrLayoutNode node = f.block(f.root, width, 40);
         PrVec2 extent{};
-        bool measured = prUiExtent(f.ui, node, &extent);
+        bool measured = prUiExtent(f.ui, node, PrUiAxisFlag_Both, &extent);
         read.push(measured ? extent.x : -1);
     };
     // The first round reads no extent, and the round after it reads the one that the first laid out.
@@ -563,15 +686,15 @@ TEST_CASE("a primary press focuses the innermost focusable node, and Tab steps t
     f.press(20, 20);
     f.frame();
     CHECK(prUiFocus(f.ui) == fields[0]);
-    CHECK_FALSE(prUiIsFocusVisible(f.ui));
+    CHECK_FALSE(prUiIsFocusVisible(f.ui, prUiFocus(f.ui)));
     // A modifier key alone does not show the focus.
     f.key(PrAppKey_Shift, PrAppModifierFlag_Shift);
     f.frame();
-    CHECK_FALSE(prUiIsFocusVisible(f.ui));
+    CHECK_FALSE(prUiIsFocusVisible(f.ui, prUiFocus(f.ui)));
     f.key(PrAppKey_Tab);
     f.frame();
     CHECK(prUiFocus(f.ui) == fields[1]);
-    CHECK(prUiIsFocusVisible(f.ui));
+    CHECK(prUiIsFocusVisible(f.ui, prUiFocus(f.ui)));
     f.key(PrAppKey_Tab);
     f.key(PrAppKey_Tab);
     f.frame();
@@ -1664,7 +1787,7 @@ TEST_CASE("records are found by place in the round and groups by recipe, apart f
     CHECK(styles[0] == styles[2]);
     CHECK(prLayoutStyleRecord(f.tree, styles[0]).groups[PrLayoutGroup_Box] !=
         prLayoutStyleRecord(f.tree, styles[1]).groups[PrLayoutGroup_Box]);
-    // The first frame has no committed tree to place its lookups by, so the memo keeps them from the second.
+    // The first frame has no committed tree to place its lookups by, so the record cache keeps them from the second.
     PrLayoutStyleIndex before[3] = {styles[0], styles[1], styles[2]};
     f.frame(1.0 / 60, 1);
     uint32_t missed = a.missed + b.missed;
@@ -1681,6 +1804,7 @@ TEST_CASE("records are found by place in the round and groups by recipe, apart f
 
 TEST_CASE("a key that a frame gives twice is outlined on both nodes in the next frame, and the outlines go with it") {
     UiFixture f;
+    f.allowsDuplicates = true;
     bool twice = true;
     PrLayoutNode rows[2] = {};
     f.build = [&] {
@@ -1708,4 +1832,259 @@ TEST_CASE("a key that a frame gives twice is outlined on both nodes in the next 
     f.frame();
     f.frame();
     CHECK(outlines() == 0);
+}
+
+TEST_CASE("a kept subtree keeps its flags and its claims, and input that reaches it builds it again") {
+    UiFixture f;
+    PrLayoutNode button = kPrLayoutNodeNone;
+    uint32_t builds = 0;
+    uint32_t clicks = 0;
+    uint32_t keys = 0;
+    f.build = [&] {
+        PrLayoutNode panel = f.box(f.root, 0, 0, 200, 200, PrUiFlag_Focusable);
+        if (prUiKeep(f.ui, panel))
+            return;
+        ++builds;
+        prUiTrackBegin(f.ui, panel, nullptr, nullptr);
+        button = f.box(panel, 10, 10, 50, 20, PrUiFlag_Pressable | PrUiFlag_Focusable);
+        clicks += prUiActivated(f.ui, button) ? 1 : 0;
+        keys += prUiKeyPressed(f.ui, panel, PrAppKey_Escape, 0) ? 1 : 0;
+        prUiTrackEnd(f.ui, panel);
+    };
+    f.frame();
+    f.frame();
+    f.frame();
+    CHECK(builds == 1);
+    CHECK(prLayoutNodeIsValid(f.tree, button));
+
+    // The press reaches the kept button, which takes it, so the round that routes it builds the panel.
+    f.press(20, 20);
+    f.frame();
+    CHECK(clicks == 1);
+    CHECK(prUiFocus(f.ui) == button);
+    f.move(400, 400);
+    f.frame();
+    uint32_t settled = builds;
+    f.frame();
+    CHECK(builds == settled);
+
+    // The panel's claim, kept, still takes the key from the focused button inside it.
+    f.key(PrAppKey_Escape);
+    f.frame();
+    CHECK(keys == 1);
+}
+
+TEST_CASE("a kept subtree builds again once a context that it read from above it changes") {
+    static const char kOwner = 0;
+    UiFixture f;
+    uint32_t builds = 0;
+    int value = 1;
+    int seen = 0;
+    f.build = [&] {
+        PrLayoutNode outer = f.box(f.root, 0, 0, 200, 200);
+        *static_cast<int*>(prUiProvide(f.ui, outer, &kOwner, 1, sizeof(int))) = value;
+        PrLayoutNode inner = f.box(outer, 0, 0, 100, 100);
+        if (prUiKeep(f.ui, inner))
+            return;
+        ++builds;
+        prUiTrackBegin(f.ui, inner, nullptr, nullptr);
+        PrLayoutNode leaf = f.box(inner, 0, 0, 10, 10);
+        seen = *static_cast<const int*>(prUiContext(f.ui, leaf, &kOwner, 1, nullptr));
+        prUiTrackEnd(f.ui, inner);
+    };
+    f.frame();
+    f.frame();
+    CHECK(builds == 1);
+    value = 2;
+    f.frame();
+    CHECK(builds == 2);
+    CHECK(seen == 2);
+    f.frame();
+    CHECK(builds == 2);
+}
+
+TEST_CASE("a subtree whose build created under the overlay is not kept") {
+    UiFixture f;
+    uint32_t builds = 0;
+    f.build = [&] {
+        PrLayoutNode panel = f.box(f.root, 0, 0, 200, 200);
+        if (prUiKeep(f.ui, panel))
+            return;
+        ++builds;
+        prUiTrackBegin(f.ui, panel, nullptr, nullptr);
+        f.box(prUiOverlay(f.ui), 0, 0, 10, 10);
+        prUiTrackEnd(f.ui, panel);
+    };
+    f.frame();
+    f.frame();
+    CHECK(builds == 2);
+}
+
+TEST_CASE("a subtree whose build read how long the pointer has rested on a node outside it is not kept") {
+    UiFixture f;
+    uint32_t builds = 0;
+    f.build = [&] {
+        PrLayoutNode anchor = f.box(f.root, 0, 0, 50, 50);
+        PrLayoutNode tip = f.box(f.root, 100, 0, 50, 50);
+        if (prUiKeep(f.ui, tip))
+            return;
+        ++builds;
+        prUiTrackBegin(f.ui, tip, nullptr, nullptr);
+        f.box(tip, 0, 0, 10, prUiHoverSeconds(f.ui, anchor) > 0.5 ? 20 : 10);
+        prUiTrackEnd(f.ui, tip);
+    };
+    f.frame();
+    f.frame();
+    CHECK(builds == 1);
+    // While the pointer rests on the anchor, each round builds the subtree, which reads the time.
+    f.move(10, 10);
+    f.frame(0.25);
+    uint32_t resting = builds;
+    f.frame(0.25);
+    f.frame(0.25);
+    CHECK(builds >= resting + 2);
+    // Once the pointer leaves, the build that saw it leave reads no time, and the next round keeps what it built.
+    f.move(400, 400);
+    f.frame();
+    uint32_t settled = builds;
+    f.frame();
+    CHECK(builds == settled);
+}
+
+TEST_CASE("a subtree whose build signaled its own node, or read the pointer, is built again in each round") {
+    static const char kOwner = 0;
+    UiFixture f;
+    uint32_t builds[2] = {};
+    bool signaled = false;
+    f.build = [&] {
+        for (uint32_t i = 0; i < 2; ++i) {
+            PrLayoutNode panel = f.box(f.root, 0, float(i) * 100, 200, 50);
+            if (!prUiKeep(f.ui, panel)) {
+                ++builds[i];
+                prUiTrackBegin(f.ui, panel, nullptr, nullptr);
+                f.box(panel, 0, 0, 10, 10);
+                if (i == 0) {
+                    prUiSignal(f.ui, panel, &kOwner, 1);
+                } else {
+                    PrVec2 pointer;
+                    prUiPointer(f.ui, nullptr, &pointer);
+                }
+                prUiTrackEnd(f.ui, panel);
+            }
+            if (i == 0)
+                signaled = prUiSignaled(f.ui, panel, &kOwner, 1);
+        }
+    };
+    f.frame();
+    f.frame();
+    CHECK(builds[0] == 2);
+    CHECK(signaled);
+    // The pointer's read keeps what it built while the pointer holds, and builds it again once the pointer moves.
+    CHECK(builds[1] == 1);
+    f.move(400, 400);
+    f.frame();
+    CHECK(builds[1] == 2);
+}
+
+TEST_CASE("a kept subtree builds again only the tracked builds inside it that changed, each in its place") {
+    PartsScene s;
+    s.f.frame();
+    s.f.frame();
+    CHECK(s.panelBuilds == 1);
+    // The pointer comes over the second row, which alone builds again, and then leaves it.
+    s.f.move(5, 45);
+    s.f.frame();
+    CHECK(s.panelBuilds == 1);
+    CHECK(s.rowBuilds[0] == 1);
+    CHECK(s.rowBuilds[1] == 2);
+    CHECK(s.rowBuilds[2] == 1);
+    CHECK(prLayoutNodeBounds(s.f.tree, s.leaves[1], PrLayoutCoordinates_Viewport).right.raw ==
+        prLayoutVecFromPx(PrVec2{20, 0}).x.raw);
+    s.f.move(400, 400);
+    s.f.frame();
+    s.f.frame();
+    CHECK(s.panelBuilds == 1);
+    CHECK(s.rowBuilds[1] == 3);
+    CHECK(s.rowBuilds[0] == 1);
+    CHECK(prLayoutTreeVerify(s.f.tree, nullptr));
+}
+
+TEST_CASE("a kept subtree builds again whole if its build read a part, provided a context, or a part cannot build") {
+    for (uint32_t which = 0; which < 3; ++which) {
+        PartsScene s;
+        s.readsLeaf = which == 0;
+        s.provides = which == 1;
+        s.rebuildable = which != 2;
+        s.f.frame();
+        s.f.frame();
+        CHECK(s.panelBuilds == 1);
+        s.f.move(5, 45);
+        s.f.frame();
+        CHECK(s.panelBuilds == 2);
+    }
+}
+
+TEST_CASE("a memo is kept while its inputs' bytes are unchanged, text after its struct included, and built otherwise") {
+    MemoScene s;
+    s.f.frame();
+    s.f.frame();
+    CHECK(s.panelBuilds == 1);
+    CHECK(s.rowBuilds == 3);
+    CHECK(prLayoutTreeStats(s.f.tree).frameNodesKept != 0);
+    // The title is part of the inputs, so a change of it builds the panel again, and its rows are kept.
+    s.title = "items";
+    s.f.frame();
+    CHECK(s.panelBuilds == 2);
+    CHECK(s.rowBuilds == 3);
+    s.rows = 4;
+    s.f.frame();
+    CHECK(s.panelBuilds == 3);
+    CHECK(s.rowBuilds == 4);
+    CHECK(prLayoutTreeVerify(s.f.tree, nullptr));
+}
+
+TEST_CASE("input that reaches a memo inside a kept one builds it alone, from the copy of its inputs") {
+    MemoScene s;
+    s.f.frame();
+    s.f.frame();
+    s.f.move(10, 45);
+    s.f.frame();
+    CHECK(s.panelBuilds == 1);
+    CHECK(s.rowBuilds == 4);
+    CHECK(prLayoutRectToPx(prLayoutNodeBounds(s.f.tree, s.rowNodes[1], PrLayoutCoordinates_Viewport)).right == 200);
+    CHECK(prLayoutTreeVerify(s.f.tree, nullptr));
+}
+
+TEST_CASE("a memo writes its result as it builds, and a kept memo leaves the caller's") {
+    UiFixture f;
+    // The build writes 1 for a click and 2 for none, and the caller gives 0, so that a kept memo's result shows.
+    static constexpr PrUiMemoType kButton{
+        .build = [](void*, PrUi* ui, PrLayoutNode root, const void*, void* result) {
+            PrLayoutBoxStyle b = prLayoutBoxStyleDefault();
+            b.display = PrLayoutDisplay_Block;
+            b.width = prLayoutLengthPx(50);
+            b.height = prLayoutLengthPx(20);
+            PrLayoutStyle record = prLayoutStyleDefault();
+            record.groups[PrLayoutGroup_Box] = prLayoutBoxStyleIntern(prUiTree(ui), &b);
+            prLayoutTreeFrameSetStyle(prUiTree(ui), root, prLayoutStyleIntern(prUiTree(ui), &record));
+            prUiSetFlags(ui, root, PrUiFlag_Pressable);
+            *static_cast<uint32_t*>(result) = prUiClicked(ui, root, 0) ? 1 : 2;
+        },
+    };
+    uint32_t last = 0;
+    bool clicked = false;
+    f.build = [&] {
+        uint32_t none = 0;
+        last = 0;
+        PrUiMemoDesc desc{.type = &kButton, .inputs = &none, .size = 4, .result = &last};
+        prUiMemo(f.ui, f.root, &desc);
+        clicked = clicked || last == 1;
+    };
+    f.frame();
+    CHECK(last == 2);
+    f.frame();
+    CHECK(last == 0);
+    f.press(10, 10);
+    f.frame();
+    CHECK(clicked);
 }

@@ -573,7 +573,7 @@ PrLayoutNode prUiTextEdit(PrUi* ui, const PrUiTextEditDesc* desc) {
     };
     double time = prUiCurrentRound(ui)->time;
     bool disabled = prUiIsDisabled(ui, desc->control);
-    bool focused = !disabled && prUiFocus(ui) == desc->control;
+    bool focused = !disabled && prUiIsFocused(ui, desc->control);
     state.changed = false;
     if (desc->buffer != nullptr) {
         if (state.view == nullptr || prTextEditViewBuffer(state.view) != desc->buffer) {

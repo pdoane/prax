@@ -240,7 +240,7 @@ PrLayoutNode hudSwitch(Hud* hud, PrLayoutNode parent, HudSwitch control) {
         prUiEdit(ui, node, PrUiEditPhase_Commit);
     }
     bool on = *control.value;
-    bool ring = prUiIsFocusVisible(ui) && prUiFocus(ui) == node;
+    bool ring = prUiIsFocusVisible(ui, node);
     PrColor background = on ? kLitFill : prUiIsHovered(ui, node) ? kHoverFill : kClear;
     prLayoutTreeFrameSetStyle(hud->tree, node, uiStyle(ui, *hud, SwitchBox{}, Type{}, Ink{.color = on ? kLit : kDim},
         Fill{background, ring ? kLit : kEdge}));

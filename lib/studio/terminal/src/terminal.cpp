@@ -2494,7 +2494,7 @@ void prTerminalFrame(PrTerminal* terminal, PrKit* kit, PrLayoutNode parent, PrTe
     // The screen fills the view's extent right of the gutter with whole cells, at least one column and one row. Before
     // the view's first layout, the screen keeps its columns and rows.
     PrVec2 extent{};
-    bool measured = prUiExtent(ui, node, &extent);
+    bool measured = prUiExtent(ui, node, PrUiAxisFlag_Both, &extent);
     const PrVec2 cell = terminal->drawer.metrics.cell;
     uint32_t columns = uint32_t(prF32Max(1, prF32Floor((extent.x - kGutterWidth) / cell.x)));
     uint32_t rows = uint32_t(prF32Max(1, prF32Floor(extent.y / cell.y)));

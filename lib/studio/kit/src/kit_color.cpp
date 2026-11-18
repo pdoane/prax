@@ -943,7 +943,7 @@ PrLayoutNode prKitColorField(PrKit* kit, PrLayoutNode parent, PrKitColorField fi
     PrUiFlags flags = PrUiFlag_Pressable | PrUiFlag_Focusable;
     bool disabled = kitSetFlags(*kit, node, field.disabled ? flags | PrUiFlag_Disabled : flags);
     uint8_t state = disabled || !prUiIsHovered(ui, node) ? 0 : 1;
-    bool ring = prUiIsFocusVisible(ui) && prUiFocus(ui) == node;
+    bool ring = prUiIsFocusVisible(ui, node);
     prLayoutTreeFrameSetStyle(kit->tree, node,
         kitStyle(*kit, FieldBox{.size = style.size}, PickerRowFlex{.gap = kPrKitSpace3}, RingFill{.ring = ring}));
     if (!disabled)

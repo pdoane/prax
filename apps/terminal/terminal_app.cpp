@@ -394,7 +394,7 @@ void buildWindow(TerminalWindow& w, PrLayoutNode root, PrVec2 extent) {
     prTerminalFrame(shown, w.kit, root, PrTerminalBackground_Parent);
     PrVec2 cell = prTerminalCellExtent(shown);
     PrVec2 view{};
-    bool measured = prUiExtent(w.ui, prTerminalNode(shown), &view);
+    bool measured = prUiExtent(w.ui, prTerminalNode(shown), PrUiAxisFlag_Both, &view);
     if (w.grid.x > 0 && w.grid.y > 0 && cell.x > 0 && cell.y > 0 && measured && w.appWindow != nullptr) {
         // The window is sized to fit the grid in whole cells from the screen's origin, and keeps the room that the
         // terminal's view leaves to the rest of the window, such as the tab strip.

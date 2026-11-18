@@ -598,7 +598,7 @@ uint8_t pointerState(const PrKit& kit, PrLayoutNode node, bool disabled) {
 }
 
 bool ringed(const PrKit& kit, PrLayoutNode node) {
-    return prUiIsFocusVisible(kit.ui) && prUiFocus(kit.ui) == node;
+    return prUiIsFocusVisible(kit.ui, node);
 }
 
 // Returns `flags`, with PrUiFlag_Disabled if `disabled` is true.
@@ -929,7 +929,7 @@ void scrub(const PrKit& kit, PrLayoutNode node, const PrKitNumber& number, const
 
 // Applies the round's key presses to `number`, each as its own gesture.
 void nudge(const PrKit& kit, PrLayoutNode node, const PrKitNumber& number, const NumberBounds& bounds) {
-    if (prUiFocus(kit.ui) != node)
+    if (!prUiIsFocused(kit.ui, node))
         return;
     static const PrAppKey kKeys[] = {PrAppKey_Up, PrAppKey_Down};
     static const PrAppModifierFlags kModifiers[] = {0, PrAppModifierFlag_Shift};
@@ -968,7 +968,7 @@ PrLayoutNode numberField(PrKit& kit, PrLayoutNode parent, const PrKitNumber& num
         commitEdit(kit, node, &state->live);
     }
     uint8_t look = PartState_Rest;
-    if (state->scrubbing || prUiFocus(kit.ui) == node)
+    if (state->scrubbing || prUiIsFocused(kit.ui, node))
         look = PartState_Active;
     else if (!disabled && prUiIsHovered(kit.ui, node))
         look = PartState_Hover;
@@ -1093,7 +1093,7 @@ PrLayoutNode textField(PrKit* kit, PrLayoutNode parent, const PrKitTextField& fi
     PrUiFlags editing = editFlags(PrUiFlag_Pressable | PrUiFlag_Focusable, field.disabled);
     PrLayoutNode node = control(*kit, parent, field.key, editing, &disabled);
     TextState* state = static_cast<TextState*>(prUiState(kit->ui, node, &kKitOwner, StateKey_Text, sizeof(TextState)));
-    bool focused = prUiFocus(kit->ui) == node;
+    bool focused = prUiIsFocused(kit->ui, node);
     *arrived = focused && !state->focused;
     state->focused = focused;
     if (!disabled) {
@@ -1154,7 +1154,7 @@ double sliderFractionAt(double low, double high, bool ratio, double value) {
 // Applies the round's key presses to a slider at `fraction` of its track, each as its own gesture.
 void sliderKeys(const PrKit& kit, PrLayoutNode node, const PrKitSlider& slider, double low, double high, bool ratio,
         double fraction) {
-    if (prUiFocus(kit.ui) != node)
+    if (!prUiIsFocused(kit.ui, node))
         return;
     double step = slider.step > 0 ? double(slider.step) : 0.01;
     struct Press {
@@ -1285,7 +1285,7 @@ PrLayoutNode prKitTextArea(PrKit* kit, PrLayoutNode parent, PrKitTextArea area, 
     PrLayoutNode node = control(k, parent, area.key, editing, &disabled);
     if (!disabled)
         prUiSetCursor(k.ui, node, PrAppCursor_Text);
-    bool focused = prUiFocus(k.ui) == node;
+    bool focused = prUiIsFocused(k.ui, node);
     uint8_t look = PartState_Active;
     if (!focused)
         look = pointerState(k, node, disabled) != PartState_Rest ? PartState_Hover : PartState_Rest;

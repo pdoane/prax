@@ -93,13 +93,13 @@ its own and lets layout store them, so that what a frame costs does not grow wit
 - The context finds a group by its recipe (`prUiGroup`). On a miss, the recipe makes the group, and layout creates it
   without hashing it (`prLayoutBoxStyleCreate` and the others). The context holds a reference to each group, and
   releases a group that no lookup has used for a while once no record names it (`prLayoutGroupReferences`).
-- A memo keyed by the lookup's place in the round keeps the part recipe of the last frame and its record
-  (`prUiMemoFind`, `prUiMemoKeep`). The place is the slot that the round's next creation continues
-  (`prLayoutTreeFrameCursor`). An unchanged widget costs one comparison of bytes, and the memo needs no identity of its
+- A record cache keyed by the lookup's place in the round keeps the part recipe of the last frame and its record
+  (`prUiRecordFind`, `prUiRecordStore`). The place is the slot that the round's next creation continues
+  (`prLayoutTreeFrameCursor`). An unchanged widget costs one comparison of bytes, and the cache needs no identity of its
   own: it is aligned wherever layout's matching is.
-- The groups and the memo belong to the context, so every library on it shares them, and the context ages them by its
-  rounds. A recipe names its owner, the object whose values it reads, such as a theme, so that two libraries' recipes
-  never meet. A library releases what its owner made when those values change (`prUiForget`).
+- The groups and the record cache belong to the context, so every library on it shares them, and the context ages
+  them by its rounds. A recipe names its owner, the object whose values it reads, such as a theme, so that two
+  libraries' recipes never meet. A library releases what its owner made when those values change (`prUiForget`).
 - A library written in C++ declares its recipes as types, and makes a part's record with `uiStyle` (`pr/ui_records.h`,
   lib/ui's C++ layer).
 - A value that changes in every round, such as a fade, makes a group in each round that it changes. A value that

@@ -54,6 +54,16 @@ struct UiSlot {
     uint32_t contextRound;
     uint32_t context;
 
+    // The first round whose build sees the latest change to the node's state, as a query about the node answers it
+    // (stateRound); for a tracked node, the first round whose build sees a change that a library asked for to a node
+    // that the build owns (changeRound, touchNode); the round that last kept the node's subtree, whole or around the
+    // parts that changed (keptRound); and the round whose build last tracked the node or kept it (trackRound).
+    uint32_t stateRound;
+    uint32_t changeRound;
+    uint32_t keptRound;
+    uint32_t trackRound;
+    mutable uint32_t readMark;      // the stamp of the last tracked build whose reads hold the node (trackNode)
+
     PrUiFlags flags;
     PrAppCursor cursor;
 };
@@ -63,7 +73,104 @@ struct UiContext {
     const void* owner;
     uint64_t key;
     void* data;
+    uint32_t size;
     uint32_t next;                  // the node's next context, or kUiNone
+    mutable uint32_t readMark;      // the stamp of the last tracked build whose reads hold the context
+};
+
+// The values of the context that are not a node's, which a build may read and which change apart from any node: the
+// focused node, the carried payload, the pointer's place, and the buttons' presses.
+enum : uint8_t {
+    UiGlobal_Focus,
+    UiGlobal_Payload,
+    UiGlobal_Pointer,
+    UiGlobal_Press,
+    UiGlobal_Count,
+};
+typedef uint8_t UiGlobal;
+typedef uint8_t UiGlobals;          // bits of UiGlobal
+
+// A context that a tracked build read from a node outside the tracked node (prUiTrackBegin): which context, the node
+// that provided it, and a hash of its bytes. `index` is the context's place in the round's contexts.
+struct UiContextRead {
+    const void* owner;
+    uint64_t key;
+    PrLayoutNode provider;
+    uint64_t hash;
+    uint32_t index;
+};
+
+// An extent of a node that the current round's build read from the last layout (prUiExtent).
+struct UiMeasured {
+    PrLayoutNode node;
+    PrLayoutVec extent;
+    PrUiAxisFlags axes;                  // the axes that the build depends on
+};
+
+// Returns true if `extent` differs from what `m` read along the axes that it depends on.
+bool extentMoved(const UiMeasured& m, PrLayoutVec extent) {
+    bool x = (m.axes & PrUiAxisFlag_X) && extent.x != m.extent.x;
+    bool y = (m.axes & PrUiAxisFlag_Y) && extent.y != m.extent.y;
+    return x || y;
+}
+
+// A tracked build in progress: its node, the number of the round's contexts when it began, which marks those provided
+// outside it, and where its own reads start in Ui::reads and Ui::nodeReads, and the tracked builds directly inside it
+// in Ui::inner. Its flags say what else it read or changed that decides whether a later round may keep what it built. A
+// round that keeps a node's subtree around its changed parts tracks the node as `keeping` while it builds the parts,
+// which records nothing for the node.
+struct UiTracking {
+    PrLayoutNode node;
+    uint32_t contexts;
+    uint32_t reads;
+    uint32_t nodes;
+    uint32_t extents;
+    uint32_t inner;
+    uint32_t stamp;                 // marks the contexts and the nodes among its reads (readMark)
+    const PrUiTrackType* PR_NULLABLE type;
+    void* PR_NULLABLE context;
+    UiGlobals globals;              // the global values that it read
+    bool outside;                   // it changed what is outside its node: created under the overlay, or signaled
+    bool disabled;                  // the node it was created under was disabled
+    bool timed;                     // it read a value that changes with time while nothing else does
+    bool provides;                  // it provided a context on a node that it owns
+    bool keeping;
+};
+
+// What a tracked build of a node read from outside what it owns, kept on the node, which decides whether a later round
+// can keep the node's subtree (prUiKeep): the contexts that it read from above the node, the nodes whose state it asked
+// for that it does not own, and the tracked builds directly inside it, in preorder, with what their library gave.
+struct UiKeepRecord {
+    uint32_t round;                 // the round that built the node's own part
+    uint32_t count;
+    uint32_t nodeCount;
+    uint32_t extentCount;
+    uint32_t innerCount;
+    UiContextRead* PR_NULLABLE reads;
+    PrLayoutNode* PR_NULLABLE nodes;
+    UiMeasured* PR_NULLABLE extents; // the extents that it read (prUiExtent), as the layout before it gave them
+    PrLayoutNode* PR_NULLABLE inner;
+    const PrUiTrackType* PR_NULLABLE type;
+    void* PR_NULLABLE context;
+
+    // The contexts that the builds of the whole subtree read from above the node, and the context's epoch (Ui::epoch)
+    // at which the whole subtree last held, or 0, so that a round in which nothing changed but a context decides on the
+    // subtree by its contexts alone.
+    uint32_t subtreeCount;
+    UiContextRead* PR_NULLABLE subtree;
+    uint64_t held;
+
+    UiGlobals globals;
+    bool outside;
+    bool disabled;
+    bool timed;
+    bool provides;
+};
+
+// A change at a known time to a node (prUiRequestMotionAt), which the first round at or after the time sees.
+struct UiMotion {
+    PrLayoutNode node;
+    double time;
 };
 
 // A block of the storage of the round's contexts.
@@ -97,12 +204,6 @@ struct UiTween {
 struct UiTitleBarPart {
     PrLayoutNode node;
     PrAppTitleBarRegionKind kind;
-};
-
-// An extent of a node that the current round's build read from the last layout (prUiExtent).
-struct UiMeasured {
-    PrLayoutNode node;
-    PrLayoutVec extent;
 };
 
 // A queued event, whose position is in px of `viewport`. Its text starts at `textStart` in the queue's text buffer.
@@ -217,30 +318,30 @@ struct UiGroups {
 // The number of rounds without a lookup after which a group is released.
 constexpr uint32_t kUiGroupAge = 64;
 
-// The number of lookups that the memo keeps for one slot of the preorder: the lookups that a round makes before its
+// The number of lookups that the cache keeps for one slot of the preorder: the lookups that a round makes before its
 // next creation.
-constexpr uint32_t kUiMemoCalls = 4;
+constexpr uint32_t kUiRecordCalls = 4;
 
-// What the memo holds for one lookup: the part's type, owner and bytes, and its record. The entry holds a reference to
-// its record and to its base.
-struct UiMemoEntry {
+// What the record cache holds for one lookup: the part's type, owner and bytes, and its record. The entry holds a
+// reference to its record and to its base.
+struct UiRecordEntry {
     const void* PR_NULLABLE type;   // null if the entry holds nothing
     const void* PR_NULLABLE owner;
-    uint32_t size;                  // the number of the part's bytes, which start at `offset` in UiMemo::bytes
+    uint32_t size;                  // the number of the part's bytes, which start at `offset` in UiRecordCache::bytes
     uint32_t offset;
     uint32_t capacity;              // the number of bytes reserved at `offset`
     PrLayoutStyleIndex style;
     PrLayoutStyleIndex base;
 };
 
-// The memo: the parts that the last frame's lookups named, and the records that they returned, indexed by where in the
-// round each lookup was made.
-struct UiMemo {
-    RawArray<UiMemoEntry> entries;     // by slot, kUiMemoCalls to a slot, then by the lookup's place among the slot's
+// The record cache: the parts that the last frame's lookups named, and the records that they returned, indexed by where
+// in the round each lookup was made.
+struct UiRecordCache {
+    RawArray<UiRecordEntry> entries; // by slot, kUiRecordCalls to a slot, then by the lookup's place at the slot
     RawArray<uint8_t> bytes;
     uint32_t slot;                  // the slot of the round's last lookup, or kPrLayoutFrameCursorEnd
     uint32_t calls;                 // the number of lookups made at `slot` before the last
-    uint32_t at;                    // the entry that prUiMemoKeep fills for the last lookup, or kUiNone
+    uint32_t at;                    // the entry that prUiRecordStore fills for the last lookup, or kUiNone
 };
 
 // The function that receives the edit gestures of the controls under a node (prUiSetEditSink).
@@ -253,6 +354,8 @@ struct UiEditSink {
 constexpr char kUiOwner = 0;
 enum : uint64_t {
     UiContextKey_EditSink = 1,
+    UiStateKey_Keep = 2,
+    UiStateKey_Memo = 3,
 };
 
 // The overlay's key, and the stack level that puts it above everything in flow.
@@ -269,6 +372,12 @@ constexpr uint32_t kUiDuplicatesShown = 8;
 constexpr float kUiDuplicateWidth = 2;
 constexpr PrColor kUiDuplicateBorder = {1, 0.25f, 0.25f, 1};
 constexpr PrColor kUiDuplicateFill = {1, 0.25f, 0.25f, 0.15f};
+
+// A call that the build deferred until it returns (prUiDefer).
+struct UiDeferred {
+    PrUiDeferFn fn;
+    void* PR_NULLABLE context;
+};
 
 // A context: the data it holds for the tree's nodes, its rounds, and the input that it routes.
 struct Ui {
@@ -305,9 +414,17 @@ struct Ui {
     uint32_t roundId;               // incremented as each round begins, starting at 1
     uint32_t built;                 // the round whose tree is committed, or 0 before the first round
     bool building;
+    RawArray<UiDeferred> deferred;  // the calls that the round's build deferred, in the order deferred
     bool roundDisables;             // the round has disabled a node, so its nodes resolve disabled through parents
     bool frameRequested;
     bool tweening;
+    uint32_t resetRound;            // the first round that may keep a subtree, after a change that every build reads
+
+    // Counts the changes that a kept subtree may have read but its contexts: of a node's state, of a global value, of
+    // what every build reads, of a library's values (prUiChanged), and the frames that erased nodes.
+    uint64_t epoch;
+    uint64_t nodesGone;             // the layout tree's count of nodes that frames erased, as of the last frame
+
     bool repeating;
     double frameTime;               // when the next frame is requested for, or zero (prUiRequestFrameAt)
     double time;
@@ -328,6 +445,15 @@ struct Ui {
     PrUiViewport pointerViewport;   // the viewport that `pointer` is in
     PrVec2 pointer;
     PrLayoutNode hovered;           // the node under the pointer, where the hover chain starts
+    PrLayoutNode lastHovered;       // the node where the previous round's hover chain started
+    PrLayoutNode lastFocus;         // the focused node as of the previous round's routing
+    PrLayoutNode lastDropOver;      // the drop target under the payload as of the previous round's routing
+    bool lastFocusVisible;          // and whether focus was drawn, the payload carried, the pointer where it was
+    bool lastCarried;
+    bool lastHasPointer;
+    PrVec2 lastPointer;
+    uint32_t globalRounds[UiGlobal_Count]; // the round that first saw each global value's latest change
+    RawArray<UiMotion> motions;
     UiButton buttons[kUiButtons];
     PrLayoutNode clicked[kUiButtons];
     bool pressedRound[kUiButtons];  // true if the button was pressed in the current round
@@ -386,7 +512,20 @@ struct Ui {
     // --- Records ---
 
     UiGroups groups;
-    UiMemo memo;
+    UiRecordCache records;
+
+    // --- Keeping ---
+
+    // The tracked builds in progress, innermost last, and the contexts that they read from outside themselves, each
+    // once for each build. Lookups record reads, so these change under a const context.
+    mutable RawArray<UiTracking> tracking;
+    mutable RawArray<UiContextRead> reads;
+    mutable RawArray<PrLayoutNode> nodeReads;
+    RawArray<UiMeasured> extentReads;
+    RawArray<UiContextRead> subtreeReads;  // scratch: gatherSubtreeReads
+    RawArray<PrLayoutNode> inner;
+    RawArray<PrLayoutNode> parts;   // scratch: the changed parts of the subtrees that prUiKeep keeps, as a stack
+    uint32_t trackStamp;
 
     // --- Overlay ---
 
@@ -492,6 +631,55 @@ bool within(const Ui* ui, PrLayoutNode node, PrLayoutNode ancestor) {
     return false;
 }
 
+// Returns true if a tracked build of the current round or of the round before it made or kept the node of `s`, so that
+// the build owns the nodes under it that no tracked build inside it owns.
+bool tracked(const Ui* ui, const UiSlot& s) {
+    return s.trackRound != 0 && (s.trackRound == ui->roundId || s.trackRound == ui->built);
+}
+
+// Returns the parent of `node`, in the open frame if `inFrame` is true, as when a build changes a node that it just
+// created, or in the committed tree.
+PrLayoutNode changeParent(const Ui* ui, PrLayoutNode node, bool inFrame) {
+    return inFrame ? prLayoutTreeFrameParent(ui->tree, node) : parentOf(ui, node);
+}
+
+// Records a change to the state of `node` that the build of `round` and later rounds see, as a query about the node
+// answers it, so that no round before the change keeps what a build that asked about the node made.
+void markState(Ui* ui, PrLayoutNode node, uint32_t round) {
+    if (node == kPrLayoutNodeNone || !prLayoutNodeIsValid(ui->tree, node))
+        return;
+    UiSlot& s = slotOf(ui, node);
+    if (s.stateRound < round) {
+        s.stateRound = round;
+        ++ui->epoch;
+    }
+}
+
+// Records a change that the queries of the node and of every node above it answer, as input routed to the node does,
+// which a node above it takes as its claim or its wheel.
+void markChain(Ui* ui, PrLayoutNode node, uint32_t round) {
+    for (PrLayoutNode at = node; at != kPrLayoutNodeNone; at = parentOf(ui, at))
+        markState(ui, at, round);
+}
+
+// Records a change to `node` that no query answers, which its library asked for (prUiRequestMotion and the like), on
+// the node and on the innermost tracked node at or above it, whose build owns it, so that no round before the change
+// keeps what that build made. The walk is in the open frame if `inFrame` is true, as when a build changes a node that
+// it just created.
+void touchNode(Ui* ui, PrLayoutNode node, uint32_t round, bool inFrame = false) {
+    if (node == kPrLayoutNodeNone || !prLayoutNodeIsValid(ui->tree, node))
+        return;
+    markState(ui, node, round);
+    for (PrLayoutNode at = node; at != kPrLayoutNodeNone; at = changeParent(ui, at, inFrame)) {
+        UiSlot* s = const_cast<UiSlot*>(findSlot(ui, at));
+        if (s != nullptr && tracked(ui, *s)) {
+            if (s->changeRound < round)
+                s->changeRound = round;
+            return;
+        }
+    }
+}
+
 // Returns the innermost node, starting at `node` and walking up its ancestors, that has `flag` and is not disabled, or
 // none.
 PrLayoutNode innermost(const Ui* ui, PrLayoutNode node, PrUiFlags flag) {
@@ -590,24 +778,67 @@ PrLayoutNode hitAt(const Ui* ui, PrUiViewport viewport, PrVec2 point) {
     return kPrLayoutNodeNone;
 }
 
-// Stamps the current round on the hover chain, from the node under the pointer up to the root.
+// Stamps the current round on the hover chain, from the node under the pointer up to the root. A move of the pointer to
+// another node changes the chain that it left and the one that it reached, as a carried payload's move to another drop
+// target does. What changes with time while the pointer rests reaches its node by the query that reads the time
+// (prUiHoverSeconds).
 void stampHover(Ui* ui) {
+    // The nodes that the chain reached change, and then those that it left, which the last round stamped and this one
+    // does not.
     for (PrLayoutNode at = ui->hovered; at != kPrLayoutNodeNone; at = parentOf(ui, at)) {
         UiSlot& s = slotOf(ui, at);
-        if (s.hoverRound + 1 != ui->roundId)
+        bool reached = s.hoverRound + 1 != ui->roundId;
+        if (reached)
             s.hoverSince = ui->time;
         s.hoverRound = ui->roundId;
+        if (reached)
+            markState(ui, at, ui->roundId);
+    }
+    for (PrLayoutNode at = ui->lastHovered; at != kPrLayoutNodeNone; at = parentOf(ui, at)) {
+        const UiSlot* s = findSlot(ui, at);
+        if (s == nullptr || s->hoverRound == ui->roundId)
+            break;
+        markState(ui, at, ui->roundId);
+    }
+    ui->lastHovered = ui->hovered;
+    if (ui->lastDropOver != ui->dropOver) {
+        markState(ui, ui->lastDropOver, ui->roundId);
+        markState(ui, ui->dropOver, ui->roundId);
+        ui->lastDropOver = ui->dropOver;
     }
 }
 
+// Stamps the current round on the focus chain. A change of focus changes the chain that focus left and the one that it
+// reached. What changes while focus holds reaches its node by itself: the input routed to it, and a caret's blink
+// (prUiRequestMotionAt).
 void stampFocus(Ui* ui) {
-    for (PrLayoutNode at = ui->focus; at != kPrLayoutNodeNone; at = parentOf(ui, at))
-        slotOf(ui, at).focusRound = ui->roundId;
+    // As for hover, the nodes that the chain reached and those that it left change, and so do the node that focus left
+    // and the one that it reached, which a query of focus on the node itself answers (prUiIsFocused).
+    for (PrLayoutNode at = ui->focus; at != kPrLayoutNodeNone; at = parentOf(ui, at)) {
+        UiSlot& s = slotOf(ui, at);
+        bool reached = s.focusRound + 1 != ui->roundId;
+        s.focusRound = ui->roundId;
+        if (reached)
+            markState(ui, at, ui->roundId);
+    }
+    for (PrLayoutNode at = ui->lastFocus; at != kPrLayoutNodeNone; at = parentOf(ui, at)) {
+        const UiSlot* s = findSlot(ui, at);
+        if (s == nullptr || s->focusRound == ui->roundId)
+            break;
+        markState(ui, at, ui->roundId);
+    }
+    if (ui->lastFocus != ui->focus) {
+        markState(ui, ui->lastFocus, ui->roundId);
+        markState(ui, ui->focus, ui->roundId);
+    }
+    ui->lastFocus = ui->focus;
 }
 
 void deliver(Ui* ui, PrLayoutNode node, const PrAppEvent& event) {
-    if (node != kPrLayoutNodeNone)
+    if (node != kPrLayoutNodeNone) {
         ui->routed.push(UiRouted{node, event});
+        markChain(ui, node, ui->roundId);
+    }
 }
 
 // Returns true if an event of this kind changes the answers to a round's queries, so that a second such event in the
@@ -1072,6 +1303,14 @@ void sweepStates(Ui* ui) {
         UiState& state = ui->states.data[i];
         if (state.data == nullptr || state.round == ui->roundId)
             continue;
+        // A state of a node in a subtree that the round kept is asked for as the round that built it asked.
+        if (state.round == ui->built) {
+            const UiSlot* s = findSlot(ui, state.node);
+            if (s != nullptr && s->keptRound == ui->roundId) {
+                state.round = ui->roundId;
+                continue;
+            }
+        }
         // Unlink the state from its node's list, if the node's slot still lists it.
         uint32_t slot = prLayoutNodeSlot(state.node);
         if (slot < ui->slots.count) {
@@ -1122,6 +1361,197 @@ UiState& stateOf(Ui* ui, PrLayoutNode node, const void* owner, uint64_t key, uin
     return ui->states.data[index];
 }
 
+// Returns the state of `node` for `owner` and `key` if the node has one, without asking for it.
+UiState* PR_NULLABLE findState(Ui* ui, PrLayoutNode node, const void* owner, uint64_t key) {
+    const UiSlot* s = findSlot(ui, node);
+    if (s == nullptr)
+        return nullptr;
+    for (uint32_t at = s->state; at != kUiNone; at = ui->states.data[at].next) {
+        UiState& state = ui->states.data[at];
+        if (state.node == node && state.owner == owner && state.key == key)
+            return &state;
+    }
+    return nullptr;
+}
+
+uint64_t contextHash(const UiContext& context) {
+    return prHashBytes(context.data, context.size, 0x636f6e74657874ull);
+}
+
+// Records that the innermost tracked build read the round's context `index`, which `provider` provided, if the context
+// was provided outside the tracked node. A context provided inside it is made again by any build of the node.
+void trackRead(const Ui* ui, uint32_t index, PrLayoutNode provider) {
+    const UiTracking& t = ui->tracking.last();
+    UiContext& context = ui->contexts.data[index];
+    if (t.keeping || index >= t.contexts || context.readMark == t.stamp)
+        return;
+    context.readMark = t.stamp;
+    ui->reads.push(UiContextRead{
+        .owner = context.owner,
+        .key = context.key,
+        .provider = provider,
+        .hash = contextHash(context),
+        .index = index,
+    });
+}
+
+// Records that the innermost tracked build read a value that changes with time, such as a tween's or how long the
+// pointer has rested, so that no later round keeps what it built. A read outside every tracked build is made again by
+// any build.
+void trackTime(const Ui* ui) {
+    if (ui->tracking.count != 0)
+        ui->tracking.last().timed = true;
+}
+
+// Records that the innermost tracked build read a global value, which keeps what it built only while the value holds.
+void trackGlobal(const Ui* ui, UiGlobal global) {
+    if (ui->tracking.count != 0)
+        ui->tracking.last().globals |= UiGlobals(1u << global);
+}
+
+// Returns the parent of `node` as the open frame created it, or as the committed tree holds a node that the frame has
+// not created yet.
+PrLayoutNode buildParent(const Ui* ui, PrLayoutNode node) {
+    if (prLayoutTreeFrameOrder(ui->tree, node) != kPrLayoutFrameNotCreated)
+        return prLayoutTreeFrameParent(ui->tree, node);
+    return parentOf(ui, node);
+}
+
+bool under(const Ui* ui, PrLayoutNode node, PrLayoutNode ancestor) {
+    if (!prLayoutNodeIsValid(ui->tree, node))
+        return false;
+    for (PrLayoutNode at = node; at != kPrLayoutNodeNone; at = buildParent(ui, at)) {
+        if (at == ancestor)
+            return true;
+    }
+    return false;
+}
+
+// Returns true if `node` is the node of the tracked build `t` or under it.
+bool inside(const Ui* ui, PrLayoutNode node, const UiTracking& t) {
+    return under(ui, node, t.node);
+}
+
+// Records that the innermost tracked build asked for the state of `node`, which keeps what the build made only while
+// the node's state has not changed (UiSlot::stateRound).
+void trackNode(const Ui* ui, PrLayoutNode node) {
+    if (ui->tracking.count == 0 || node == kPrLayoutNodeNone)
+        return;
+    const UiTracking& t = ui->tracking.last();
+    if (t.keeping)
+        return;
+    const UiSlot* s = findSlot(ui, node);
+    if (s != nullptr) {
+        if (s->readMark == t.stamp)
+            return;
+        s->readMark = t.stamp;
+    }
+    ui->nodeReads.push(node);
+}
+
+// Records that the innermost tracked build changed `node` for the round, which a round that keeps the build does not
+// change again, so a change outside the build's node keeps nothing that it built. The build's node is its own unless
+// `below`, as for a signal, which the code around the build reads.
+void trackWrite(const Ui* ui, PrLayoutNode node, bool below = false) {
+    if (ui->tracking.count == 0)
+        return;
+    UiTracking& t = ui->tracking.last();
+    if ((below && node == t.node) || !inside(ui, node, t))
+        t.outside = true;
+}
+
+// Copies `count` items of `size` bytes from `from` to the array at `*to`, which holds `*held` of them, growing it.
+void copyRecord(void** to, uint32_t* held, const void* from, uint32_t count, uint32_t size) {
+    if (count > *held || (count == 0 && *to != nullptr)) {
+        prMemoryFree(*to);
+        *to = count != 0 ? prMemoryAlloc(size_t(count) * size) : nullptr;
+    }
+    if (count != 0)
+        prMemCopy(*to, from, size_t(count) * size);
+    *held = count;
+}
+
+void destroyKeepRecord(void* data) {
+    UiKeepRecord& record = *static_cast<UiKeepRecord*>(data);
+    prMemoryFree(record.reads);
+    prMemoryFree(record.nodes);
+    prMemoryFree(record.extents);
+    prMemoryFree(record.inner);
+    prMemoryFree(record.subtree);
+}
+
+// Records the round in which each global value that a build may read first shows its latest change, from the values as
+// the round's input left them. A change of whether focus is drawn changes the focused chain (prUiIsFocusVisible).
+void stampGlobals(Ui* ui) {
+    auto changed = [&](UiGlobal global) {
+        ui->globalRounds[global] = ui->roundId;
+        ++ui->epoch;
+    };
+    if (ui->lastFocus != ui->focus)
+        changed(UiGlobal_Focus);
+    if (ui->lastFocusVisible != ui->focusVisible) {
+        markState(ui, ui->focus, ui->roundId);
+        ui->lastFocusVisible = ui->focusVisible;
+    }
+    if (ui->lastCarried != ui->payload.carried) {
+        changed(UiGlobal_Payload);
+        ui->lastCarried = ui->payload.carried;
+    }
+    if (ui->lastHasPointer != ui->hasPointer || !prMemEquals(&ui->lastPointer, &ui->pointer, sizeof ui->pointer)) {
+        changed(UiGlobal_Pointer);
+        ui->lastHasPointer = ui->hasPointer;
+        ui->lastPointer = ui->pointer;
+    }
+    for (uint32_t b = 0; b < kUiButtons; ++b) {
+        const UiButton& button = ui->buttons[b];
+        if (ui->pressedRound[b] || button.released || button.cancelled)
+            changed(UiGlobal_Press);
+    }
+}
+
+// Finds the context that `read` names, as the current round provides it to `node`, and writes its place in the round's
+// contexts to `index`. Returns false if it is gone, if another node provides it, or if its bytes changed.
+bool readHolds(Ui* ui, PrLayoutNode node, const UiContextRead& read, uint32_t* index) {
+    for (PrLayoutNode at = node; at != kPrLayoutNodeNone; at = prLayoutTreeFrameParent(ui->tree, at)) {
+        const UiSlot* s = findSlot(ui, at);
+        if (s == nullptr || s->contextRound != ui->roundId)
+            continue;
+        for (uint32_t c = s->context; c != kUiNone; c = ui->contexts.data[c].next) {
+            const UiContext& context = ui->contexts.data[c];
+            if (context.owner == read.owner && context.key == read.key) {
+                *index = c;
+                return at == read.provider && contextHash(context) == read.hash;
+            }
+        }
+    }
+    return false;
+}
+
+// Continues what the context holds for each node that layout just kept under a node (prLayoutTreeFrameKept), as the
+// last round built them: flags and cursors, and the mark that tells the round's end to carry their claims, drop targets
+// and retained state.
+void keepSlots(Ui* ui) {
+    uint32_t count = 0;
+    const PrLayoutNode* kept = prLayoutTreeFrameKept(ui->tree, &count);
+    for (uint32_t i = 0; i < count; ++i) {
+        PrLayoutNode at = kept[i];
+        uint32_t slot = prLayoutNodeSlot(at);
+        if (slot >= ui->slots.count || ui->slots.data[slot].node != at)
+            continue;
+        UiSlot& s = ui->slots.data[slot];
+        if (s.flagsRound == ui->built) {
+            s.flagsRound = ui->roundId;
+            s.disabledRound = ui->roundId;
+            ui->roundDisables = ui->roundDisables || s.disabled;
+        }
+        if (s.cursorRound == ui->built)
+            s.cursorRound = ui->roundId;
+        if (s.trackRound == ui->built)
+            s.trackRound = ui->roundId;
+        s.keptRound = ui->roundId;
+    }
+}
+
 // Releases the references that a kept group holds.
 void releaseGroup(Ui* ui, const UiGroupEntry& e) {
     prLayoutGroupRelease(ui->tree, e.kind, e.group);
@@ -1129,8 +1559,8 @@ void releaseGroup(Ui* ui, const UiGroupEntry& e) {
         prLayoutGroupRelease(ui->tree, e.kind, e.base);
 }
 
-// Releases the references that a memo entry holds, and empties it.
-void releaseMemoEntry(Ui* ui, UiMemoEntry& e) {
+// Releases the references that a record cache entry holds, and empties it.
+void releaseRecordEntry(Ui* ui, UiRecordEntry& e) {
     prLayoutStyleRelease(ui->tree, e.style);
     if (e.base != 0)
         prLayoutStyleRelease(ui->tree, e.base);
@@ -1263,6 +1693,9 @@ void setFlags(Ui* ui, PrLayoutNode node, PrUiFlags flags) {
 // Returns the round's overlay, which the first call in a round creates (prUiOverlay).
 PrLayoutNode overlayOf(Ui* ui) {
     PR_ASSERT(ui->building);
+    // What a tracked build creates under the overlay is outside its node, so the node's subtree cannot be kept alone.
+    if (ui->tracking.count != 0)
+        ui->tracking.last().outside = true;
     if (ui->overlayRound == ui->roundId)
         return ui->overlay;
     PrLayoutNode root = kPrLayoutNodeNone;
@@ -1470,10 +1903,20 @@ void beginRound(Ui* ui, uint32_t index, const PrUiFrameDesc* desc) {
     ui->nextActivations.clear();
     ui->hovered = ui->hasPointer ? hitAt(ui, ui->pointerViewport, ui->pointer) : kPrLayoutNodeNone;
     ui->portalOrder = 0;
-    // The memo's positions start again with the round's first lookup.
-    ui->memo.slot = kPrLayoutFrameCursorEnd;
-    ui->memo.calls = 0;
-    ui->memo.at = kUiNone;
+    // A change that was due by now reaches its node in this round.
+    uint32_t pending = 0;
+    for (uint32_t i = 0; i < ui->motions.count; ++i) {
+        UiMotion m = ui->motions.data[i];
+        if (m.time <= ui->time)
+            touchNode(ui, m.node, ui->roundId);
+        else
+            ui->motions.data[pending++] = m;
+    }
+    ui->motions.count = pending;
+    // The record cache's positions start again with the round's first lookup.
+    ui->records.slot = kPrLayoutFrameCursorEnd;
+    ui->records.calls = 0;
+    ui->records.at = kUiNone;
     ageGroups(ui);
 }
 
@@ -1566,6 +2009,17 @@ void endRound(Ui* ui) {
     }
     sweepStates(ui);
     sweepPortals(ui);
+    // A subtree that the round kept claims the keys and makes the drop targets that its build did.
+    for (uint32_t i = 0; i < ui->lastClaims.count; ++i) {
+        const UiSlot* s = findSlot(ui, ui->lastClaims.data[i].node);
+        if (s != nullptr && s->keptRound == ui->roundId)
+            ui->claims.push(ui->lastClaims.data[i]);
+    }
+    for (uint32_t i = 0; i < ui->lastDropTargets.count; ++i) {
+        const UiSlot* s = findSlot(ui, ui->lastDropTargets.data[i].node);
+        if (s != nullptr && s->keptRound == ui->roundId)
+            ui->dropTargets.push(ui->lastDropTargets.data[i]);
+    }
     RawArray<UiClaim> claims = ui->lastClaims;
     ui->lastClaims = ui->claims;
     ui->claims = claims;
@@ -1652,8 +2106,7 @@ PrLayoutVec extentOf(const Ui* ui, PrLayoutNode node) {
 bool remeasured(const Ui* ui) {
     for (uint32_t i = 0; i < ui->measured.count; ++i) {
         const UiMeasured& m = ui->measured.data[i];
-        PrLayoutVec extent = extentOf(ui, m.node);
-        if (extent.x != m.extent.x || extent.y != m.extent.y)
+        if (extentMoved(m, extentOf(ui, m.node)))
             return true;
     }
     return false;
@@ -1693,6 +2146,168 @@ void pasteRead(void* PR_NULLABLE context, PrStatus status, PrStringView text) {
         prAppWindowRequestFrame(ui->window);
 }
 
+// Lists `node` among the tracked builds directly inside the innermost tracked build, unless that build is a round's
+// keeping of its node, whose list holds.
+void listInner(Ui* ui, PrLayoutNode node) {
+    if (ui->tracking.count != 0 && !ui->tracking.last().keeping)
+        ui->inner.push(node);
+}
+
+// Returns the record of the last tracked build of `node`, or null.
+const UiKeepRecord* PR_NULLABLE keepRecord(Ui* ui, PrLayoutNode node) {
+    UiState* state = findState(ui, node, &kUiOwner, UiStateKey_Keep);
+    return state != nullptr ? static_cast<const UiKeepRecord*>(state->data) : nullptr;
+}
+
+// Returns true if what the tracked build of `node` owns has not changed since `record` was made, as the subtree of
+// `kept` is kept around it: the node's own part, what it read of other nodes and of the context's global values, and
+// the contexts that it read from above it. A context that a node of the subtree of `kept` provided is as it was,
+// because the build that provided it is kept too. If `node` is `kept`, the node was created in this round, under the
+// parent that the round gave it.
+bool ownHolds(Ui* ui, PrLayoutNode node, const UiKeepRecord& record, PrLayoutNode kept) {
+    const UiSlot* s = findSlot(ui, node);
+    if (record.round < ui->resetRound || record.outside || record.timed || s == nullptr ||
+            s->changeRound > record.round)
+        return false;
+    if (node == kept && disabledWithin(ui, prLayoutTreeFrameParent(ui->tree, node)) != record.disabled)
+        return false;
+    for (uint32_t g = 0; g < UiGlobal_Count; ++g) {
+        if ((record.globals & (1u << g)) && ui->globalRounds[g] > record.round)
+            return false;
+    }
+    for (uint32_t i = 0; i < record.nodeCount; ++i) {
+        PrLayoutNode read = record.nodes[i];
+        const UiSlot* r = findSlot(ui, read);
+        if (!prLayoutNodeIsValid(ui->tree, read) || (r != nullptr && r->stateRound > record.round))
+            return false;
+    }
+    for (uint32_t i = 0; i < record.extentCount; ++i) {
+        const UiMeasured& read = record.extents[i];
+        if (!prLayoutNodeIsValid(ui->tree, read.node))
+            return false;
+        if (extentMoved(read, extentOf(ui, read.node)))
+            return false;
+    }
+    // What the kept build read, the round reads too, so that a layout that changes it runs another round.
+    for (uint32_t i = 0; i < record.extentCount; ++i)
+        ui->measured.push(record.extents[i]);
+    for (uint32_t i = 0; i < record.count; ++i) {
+        UiContextRead read = record.reads[i];
+        if (node != kept && prLayoutNodeIsValid(ui->tree, read.provider) && within(ui, read.provider, kept))
+            continue;
+        if (!readHolds(ui, kept, read, &read.index))
+            return false;
+    }
+    return true;
+}
+
+// Returns true if each context that a build of the subtree of the record's node read from above the node holds, as the
+// subtree of `kept` is kept around it. A context that a node of the subtree of `kept` provided holds, as ownHolds says.
+bool subtreeReadsHold(Ui* ui, const UiKeepRecord& record, PrLayoutNode node, PrLayoutNode kept) {
+    for (uint32_t i = 0; i < record.subtreeCount; ++i) {
+        UiContextRead read = record.subtree[i];
+        if (node != kept && prLayoutNodeIsValid(ui->tree, read.provider) && within(ui, read.provider, kept))
+            continue;
+        if (!readHolds(ui, kept, read, &read.index))
+            return false;
+    }
+    return true;
+}
+
+// Returns true if nothing that the tracked build of `node` made has changed, as the subtree of `kept`, which holds it,
+// is kept: what it owns, what its library says it reads, and every tracked build inside it. A subtree that held at the
+// context's epoch holds while its contexts do.
+bool wholeHolds(Ui* ui, PrUi* pub, PrLayoutNode node, PrLayoutNode kept) {
+    UiKeepRecord* record = const_cast<UiKeepRecord*>(keepRecord(ui, node));
+    if (record == nullptr)
+        return false;
+    if (record->held == ui->epoch)
+        return subtreeReadsHold(ui, *record, node, kept);
+    if (!ownHolds(ui, node, *record, kept))
+        return false;
+    if (record->type != nullptr && record->type->holds != nullptr && !record->type->holds(record->context, pub, node))
+        return false;
+    for (uint32_t i = 0; i < record->innerCount; ++i) {
+        if (!wholeHolds(ui, pub, record->inner[i], kept))
+            return false;
+    }
+    record->held = ui->epoch;
+    return true;
+}
+
+// Returns true if `node` is `ancestor` or under it, as the open frame created it, or as the committed tree holds a node
+// that the frame has not created yet.
+bool under(const Ui* ui, PrLayoutNode node, PrLayoutNode ancestor);
+
+// Sets the contexts that the builds of the subtree of `node` read from above the node, from its own build's reads and
+// those of the tracked builds directly inside it.
+void gatherSubtreeReads(Ui* ui, PrLayoutNode node, UiKeepRecord& record) {
+    RawArray<UiContextRead>& reads = ui->subtreeReads;
+    reads.clear();
+    reads.append(record.reads, record.count);
+    for (uint32_t i = 0; i < record.innerCount; ++i) {
+        const UiKeepRecord* inner = keepRecord(ui, record.inner[i]);
+        for (uint32_t k = 0; inner != nullptr && k < inner->subtreeCount; ++k) {
+            const UiContextRead& read = inner->subtree[k];
+            if (prLayoutNodeIsValid(ui->tree, read.provider) && under(ui, read.provider, node))
+                continue;
+            bool known = false;
+            for (uint32_t j = 0; j < reads.count && !known; ++j) {
+                const UiContextRead& r = reads.data[j];
+                known = r.owner == read.owner && r.key == read.key && r.provider == read.provider;
+            }
+            if (!known)
+                reads.push(read);
+        }
+    }
+    copyRecord(reinterpret_cast<void**>(&record.subtree), &record.subtreeCount, reads.data, reads.count,
+        uint32_t(sizeof(UiContextRead)));
+}
+
+// What a memo's last build kept on its root: its type and context, and its copy of the inputs that it built from.
+struct UiMemoRecord {
+    const PrUiMemoType* PR_NULLABLE type;
+    void* PR_NULLABLE context;
+    void* PR_NULLABLE inputs;
+    uint32_t size;
+};
+
+void destroyMemoRecord(void* data) {
+    UiMemoRecord& record = *static_cast<UiMemoRecord*>(data);
+    if (record.inputs != nullptr && record.type->destroy != nullptr)
+        record.type->destroy(record.inputs);
+    prMemoryFree(record.inputs);
+}
+
+UiMemoRecord& memoRecordOf(Ui* ui, PrLayoutNode node) {
+    UiState& state = stateOf(ui, node, &kUiOwner, UiStateKey_Memo, uint32_t(sizeof(UiMemoRecord)));
+    state.destroy = destroyMemoRecord;
+    return *static_cast<UiMemoRecord*>(state.data);
+}
+
+void memoRebuild(void* PR_NULLABLE context, PrUi* ui, PrLayoutNode node);
+constexpr PrUiTrackType kMemoTrack{.holds = nullptr, .rebuild = memoRebuild};
+
+// Builds a memo's part on `node`, its root, tracked, so that a later round keeps it or builds it again alone. `pub` is
+// `ui`, as the memo's type takes it.
+void buildMemo(Ui* ui, PrUi* pub, PrLayoutNode node, const PrUiMemoType& type, void* PR_NULLABLE context,
+        const void* inputs, void* PR_NULLABLE result) {
+    prUiTrackBegin(pub, node, &kMemoTrack, ui);
+    type.build(context, pub, node, inputs, result);
+    prUiTrackEnd(pub, node);
+}
+
+// Keeps a memo inside a kept subtree around the memos inside it that changed, or builds it again from the copy of its
+// inputs that the context kept.
+void memoRebuild(void* PR_NULLABLE context, PrUi* pub, PrLayoutNode node) {
+    if (prUiKeep(pub, node))
+        return;
+    Ui* ui = static_cast<Ui*>(context);
+    const UiMemoRecord& record = memoRecordOf(ui, node);
+    PR_ASSERT(record.inputs != nullptr);
+    buildMemo(ui, pub, node, *record.type, record.context, record.inputs, nullptr);
+}
+
 } // namespace
 
 } // namespace pr_impl
@@ -1707,6 +2322,7 @@ PrUi* prUiCreate(PrLayoutTree* tree) {
     ui->tree = tree;
     ui->display = prAppDisplayDefault();
     ui->cursor = PrAppCursor_Arrow;
+    ui->epoch = 1;
     return ui;
 }
 
@@ -1727,6 +2343,7 @@ void prUiDestroy(PrUi* PR_NULLABLE ui) {
             state.destroy(state.data);
         prMemoryFree(state.data);
     }
+    ui->deferred.reset();
     ui->slots.reset();
     ui->states.reset();
     ui->freeStates.reset();
@@ -1745,6 +2362,14 @@ void prUiDestroy(PrUi* PR_NULLABLE ui) {
     ui->activations.reset();
     ui->nextActivations.reset();
     ui->contexts.reset();
+    ui->motions.reset();
+    ui->tracking.reset();
+    ui->reads.reset();
+    ui->nodeReads.reset();
+    ui->extentReads.reset();
+    ui->subtreeReads.reset();
+    ui->inner.reset();
+    ui->parts.reset();
     for (uint32_t i = 0; i < ui->blocks.count; ++i)
         prMemoryFree(ui->blocks.data[i].data);
     ui->blocks.reset();
@@ -1753,12 +2378,12 @@ void prUiDestroy(PrUi* PR_NULLABLE ui) {
     ui->groups.entries.reset();
     ui->groups.bytes.reset();
     ui->groups.index.reset();
-    for (uint32_t i = 0; i < ui->memo.entries.count; ++i) {
-        if (ui->memo.entries.data[i].type != nullptr)
-            releaseMemoEntry(ui, ui->memo.entries.data[i]);
+    for (uint32_t i = 0; i < ui->records.entries.count; ++i) {
+        if (ui->records.entries.data[i].type != nullptr)
+            releaseRecordEntry(ui, ui->records.entries.data[i]);
     }
-    ui->memo.entries.reset();
-    ui->memo.bytes.reset();
+    ui->records.entries.reset();
+    ui->records.bytes.reset();
     if (ui->overlayStyle != 0)
         prLayoutStyleRelease(ui->tree, ui->overlayStyle);
     for (uint32_t i = 0; i < ui->portals.count; ++i) {
@@ -1823,6 +2448,11 @@ void prUiPaste(PrUi* ui, PrLayoutNode control) {
 uint32_t prUiFrame(PrUi* ui, const PrUiFrameDesc* desc, PrUiBuildFn build, void* PR_NULLABLE context) {
     PR_ASSERT(!ui->building);
     PR_ASSERT(desc->display.pixelRatio > 0);
+    // Every build reads the display and the preferences, so no round keeps a subtree built before they changed.
+    if (ui->display != desc->display || ui->preferences != desc->preferences) {
+        ui->resetRound = ui->roundId + 1;
+        ++ui->epoch;
+    }
     ui->display = desc->display;
     ui->preferences = desc->preferences;
     ui->viewport = desc->extent;
@@ -1843,15 +2473,27 @@ uint32_t prUiFrame(PrUi* ui, const PrUiFrameDesc* desc, PrUiBuildFn build, void*
         routeQueue(ui);
         // The hover and focus chains reflect the pointer and focus as the round's input left them.
         stampHover(ui);
+        stampGlobals(ui);
         stampFocus(ui);
         groupRouted(ui);
         prLayoutTreeBeginFrame(ui->tree);
         ui->building = true;
         build(context, ui, &ui->round);
+        // The calls that the build deferred run in order, with those that they defer in turn.
+        for (uint32_t i = 0; i < ui->deferred.count; ++i) {
+            UiDeferred call = ui->deferred.data[i];
+            call.fn(call.context, ui);
+        }
+        ui->deferred.clear();
         outlineDuplicates(ui);
         ui->building = false;
         endRound(ui);
         layoutRound(ui, extent);
+        PrLayoutTreeStats stats = prLayoutTreeStats(ui->tree);
+        if (stats.frameNodesGone != ui->nodesGone || stats.blocksLaidOut != 0) {
+            ui->nodesGone = stats.frameNodesGone;
+            ++ui->epoch;
+        }
         ui->built = ui->roundId;
         settle = ui->transitioned || remeasured(ui);
         ++rounds;
@@ -1864,6 +2506,15 @@ uint32_t prUiFrame(PrUi* ui, const PrUiFrameDesc* desc, PrUiBuildFn build, void*
 const PrUiRound* prUiCurrentRound(const PrUi* ui) {
     PR_ASSERT(ui->building);
     return &ui->round;
+}
+
+void prUiDefer(PrUi* ui, PrUiDeferFn fn, void* PR_NULLABLE context) {
+    PR_ASSERT(ui->building);
+    for (uint32_t i = 0; i < ui->deferred.count; ++i) {
+        if (ui->deferred.data[i].fn == fn && ui->deferred.data[i].context == context)
+            return;
+    }
+    ui->deferred.push(UiDeferred{.fn = fn, .context = context});
 }
 
 PrAppDisplay prUiDisplay(const PrUi* ui) {
@@ -1881,6 +2532,7 @@ void prUiRequestFrame(PrUi* ui) {
 void prUiRequestMotion(PrUi* ui, PrLayoutNode node) {
     if (motionShows(ui, node))
         prUiRequestFrame(ui);
+    touchNode(ui, node, ui->roundId + 1, ui->building);
 }
 
 void prUiRequestFrameAt(PrUi* ui, double time) {
@@ -1891,6 +2543,7 @@ void prUiRequestFrameAt(PrUi* ui, double time) {
 void prUiRequestMotionAt(PrUi* ui, PrLayoutNode node, double time) {
     if (motionShows(ui, node))
         prUiRequestFrameAt(ui, time);
+    ui->motions.push(UiMotion{.node = node, .time = time});
 }
 
 PrUiKey prUiKey(const PrUi* ui, PrLayoutNode base, PrStringView name) {
@@ -1906,6 +2559,7 @@ PrUiKey prUiKeyIndex2(const PrUi* ui, PrLayoutNode base, uint64_t first, uint64_
 }
 
 void prUiSetFlags(PrUi* ui, PrLayoutNode node, PrUiFlags flags) {
+    trackWrite(ui, node);
     setFlags(ui, node, flags);
 }
 
@@ -1936,6 +2590,9 @@ PrLayoutNode prUiOverlay(PrUi* ui) {
 
 PrLayoutNode prUiPortal(PrUi* ui, PrUiKey key, const PrUiPortalDesc* desc, PrUiFlags flags) {
     PR_ASSERT(ui->building && key != 0);
+    // A portal is a root of its own, outside every tracked build's node, as the overlay is.
+    if (ui->tracking.count != 0)
+        ui->tracking.last().outside = true;
     UiPortal* found = nullptr;
     for (uint32_t i = 0; i < ui->portals.count && found == nullptr; ++i) {
         if (ui->portals.data[i].key == key)
@@ -2022,6 +2679,9 @@ uint32_t prUiViewports(const PrUi* ui, PrUiViewportInfo* PR_NULLABLE out, uint32
 }
 
 void* prUiProvide(PrUi* ui, PrLayoutNode node, const void* owner, uint64_t key, uint32_t size) {
+    trackWrite(ui, node);
+    if (ui->tracking.count != 0)
+        ui->tracking.last().provides = true;
     PR_ASSERT(ui->building);
     UiSlot& s = slotOf(ui, node);
     if (s.contextRound != ui->roundId) {
@@ -2031,7 +2691,7 @@ void* prUiProvide(PrUi* ui, PrLayoutNode node, const void* owner, uint64_t key, 
     for (uint32_t at = s.context; at != kUiNone; at = ui->contexts.data[at].next)
         PR_ASSERT(ui->contexts.data[at].owner != owner || ui->contexts.data[at].key != key);
     void* data = allocContext(ui, size);
-    ui->contexts.push(UiContext{.owner = owner, .key = key, .data = data, .next = s.context});
+    ui->contexts.push(UiContext{.owner = owner, .key = key, .data = data, .size = size, .next = s.context});
     slotOf(ui, node).context = ui->contexts.count - 1;
     return data;
 }
@@ -2048,6 +2708,8 @@ void* PR_NULLABLE prUiContext(const PrUi* ui, PrLayoutNode node, const void* own
             if (context.owner == owner && context.key == key) {
                 if (provider != nullptr)
                     *provider = at;
+                if (ui->tracking.count != 0)
+                    trackRead(ui, c, at);
                 return context.data;
             }
         }
@@ -2058,6 +2720,7 @@ void* PR_NULLABLE prUiContext(const PrUi* ui, PrLayoutNode node, const void* own
 }
 
 void prUiSignal(PrUi* ui, PrLayoutNode node, const void* owner, uint32_t signals) {
+    trackWrite(ui, node, true);
     PR_ASSERT(ui->building);
     UiSlot& s = slotOf(ui, node);
     if (s.signalRound != ui->roundId) {
@@ -2070,26 +2733,31 @@ void prUiSignal(PrUi* ui, PrLayoutNode node, const void* owner, uint32_t signals
 }
 
 bool prUiSignaled(const PrUi* ui, PrLayoutNode node, const void* owner, uint32_t signals) {
+    trackNode(ui, node);
     const UiSlot* s = findSlot(ui, node);
     return s != nullptr && s->signalRound == ui->roundId && s->signalOwner == owner && (s->signals & signals) != 0;
 }
 
 bool prUiPointer(const PrUi* ui, PrUiViewport* PR_NULLABLE viewport, PrVec2* out) {
+    trackGlobal(ui, UiGlobal_Pointer);
     if (viewport != nullptr)
         *viewport = ui->pointerViewport;
     *out = ui->pointer;
     return ui->hasPointer;
 }
 
-bool prUiExtent(PrUi* ui, PrLayoutNode node, PrVec2* out) {
+bool prUiExtent(PrUi* ui, PrLayoutNode node, PrUiAxisFlags axes, PrVec2* out) {
     PR_ASSERT(ui->building);
     PrLayoutVec extent = extentOf(ui, node);
-    ui->measured.push(UiMeasured{node, extent});
+    ui->measured.push(UiMeasured{node, extent, axes});
+    if (ui->tracking.count != 0 && !ui->tracking.last().keeping)
+        ui->extentReads.push(UiMeasured{node, extent, axes});
     *out = prLayoutVecToPx(extent);
     return extent.x.raw != 0 || extent.y.raw != 0;
 }
 
 bool prUiLocalPoint(const PrUi* ui, PrLayoutNode node, PrVec2 point, PrVec2* out) {
+    trackGlobal(ui, UiGlobal_Pointer);
     PrLayoutVec local{};
     if (!prLayoutNodeLocalPoint(ui->tree, node, prLayoutVecFromPx(point), &local))
         return false;
@@ -2098,16 +2766,22 @@ bool prUiLocalPoint(const PrUi* ui, PrLayoutNode node, PrVec2 point, PrVec2* out
 }
 
 bool prUiIsHovered(const PrUi* ui, PrLayoutNode node) {
+    trackNode(ui, node);
     const UiSlot* s = findSlot(ui, node);
     return s != nullptr && s->hoverRound == ui->roundId;
 }
 
 double prUiHoverSeconds(const PrUi* ui, PrLayoutNode node) {
+    trackNode(ui, node);
     const UiSlot* s = findSlot(ui, node);
-    return s != nullptr && s->hoverRound == ui->roundId ? ui->time - s->hoverSince : 0;
+    if (s == nullptr || s->hoverRound != ui->roundId)
+        return 0;
+    trackTime(ui);
+    return ui->time - s->hoverSince;
 }
 
 void prUiSetCursor(PrUi* ui, PrLayoutNode node, PrAppCursor cursor) {
+    trackWrite(ui, node);
     UiSlot& s = slotOf(ui, node);
     s.cursor = cursor;
     s.cursorRound = ui->roundId;
@@ -2144,22 +2818,27 @@ PrAppOutput prUiOutput(const PrUi* ui) {
 }
 
 bool prUiIsPressed(const PrUi* ui, PrLayoutNode node, uint8_t button) {
+    trackNode(ui, node);
     return button < kUiButtons && node != kPrLayoutNodeNone && ui->buttons[button].capture == node;
 }
 
 bool prUiClicked(const PrUi* ui, PrLayoutNode node, uint8_t button) {
+    trackNode(ui, node);
     return button < kUiButtons && node != kPrLayoutNodeNone && ui->clicked[button] == node;
 }
 
 PrAppModifierFlags prUiPressModifiers(const PrUi* ui, uint8_t button) {
+    trackGlobal(ui, UiGlobal_Press);
     return button < kUiButtons ? ui->buttons[button].modifiers : PrAppModifierFlags(0);
 }
 
 uint32_t prUiPressCount(const PrUi* ui, uint8_t button) {
+    trackGlobal(ui, UiGlobal_Press);
     return button < kUiButtons ? ui->buttons[button].presses : 0;
 }
 
 bool prUiPressedOutside(const PrUi* ui, PrLayoutNode node, uint8_t button) {
+    trackGlobal(ui, UiGlobal_Press);
     if (button >= kUiButtons || !ui->pressedRound[button])
         return false;
     const UiSlot* s = findSlot(ui, node);
@@ -2171,6 +2850,7 @@ uint32_t prUiPressRepeats(PrUi* ui, PrLayoutNode node, uint8_t button, double de
         return 0;
     UiButton& b = ui->buttons[button];
     ui->repeating = true;
+    trackTime(ui);
     auto ticks = [&](double at) -> double {
         double since = at - b.pressTime - delay;
         return since < 0 ? 0 : 1 + double(uint64_t(since / interval));
@@ -2182,6 +2862,7 @@ uint32_t prUiPressRepeats(PrUi* ui, PrLayoutNode node, uint8_t button, double de
 }
 
 bool prUiActivated(const PrUi* ui, PrLayoutNode node) {
+    trackNode(ui, node);
     if (node == kPrLayoutNodeNone || (prUiFlags(ui, node) & PrUiFlag_Disabled) != 0)
         return false;
     if (ui->clicked[0] == node || ui->keyActivated == node)
@@ -2196,9 +2877,11 @@ bool prUiActivated(const PrUi* ui, PrLayoutNode node) {
 void prUiActivate(PrUi* ui, PrLayoutNode node) {
     ui->nextActivations.push(node);
     ui->frameRequested = true;
+    touchNode(ui, node, ui->roundId + 1, ui->building);
 }
 
 bool prUiDrag(const PrUi* ui, PrLayoutNode node, uint8_t button, float threshold, PrUiDrag* out) {
+    trackNode(ui, node);
     *out = PrUiDrag{};
     if (button >= kUiButtons || node == kPrLayoutNodeNone || ui->buttons[button].node != node)
         return false;
@@ -2218,6 +2901,7 @@ bool prUiDrag(const PrUi* ui, PrLayoutNode node, uint8_t button, float threshold
 }
 
 bool prUiWheel(const PrUi* ui, PrLayoutNode node, PrVec2* out) {
+    trackNode(ui, node);
     for (uint32_t i = 0; i < ui->wheels.count; ++i) {
         if (ui->wheels.data[i].node == node) {
             *out = ui->wheels.data[i].delta;
@@ -2256,17 +2940,20 @@ void prUiDragStartContent(PrUi* ui, PrLayoutNode source, float threshold, const 
 }
 
 const PrUiPayload* PR_NULLABLE prUiDragging(const PrUi* ui) {
+    trackGlobal(ui, UiGlobal_Payload);
     if (ui->payload.carried)
         return &ui->payload.payload;
     return ui->dropEnded ? &ui->droppedPayload : nullptr;
 }
 
 bool prUiIsDropTarget(PrUi* ui, PrLayoutNode node, uint64_t kind) {
+    trackNode(ui, node);
     ui->dropTargets.push(UiDropTarget{.node = node, .kind = kind});
     return node != kPrLayoutNodeNone && ui->dropOver == node && ui->payload.payload.kind == kind;
 }
 
 const PrUiPayload* PR_NULLABLE prUiDropped(const PrUi* ui, PrLayoutNode node) {
+    trackNode(ui, node);
     return node != kPrLayoutNodeNone && ui->dropped == node ? &ui->droppedPayload : nullptr;
 }
 
@@ -2276,6 +2963,7 @@ const PrUiPayload* PR_NULLABLE prUiExportEnded(const PrUi* ui, PrAppDragOperatio
 }
 
 bool prUiKeyPressed(PrUi* ui, PrLayoutNode node, PrAppKey key, PrAppModifierFlags modifiers) {
+    trackNode(ui, node);
     PR_ASSERT(ui->building);
     PR_ASSERT((modifiers & PrAppModifierFlag_CapsLock) == 0);
     ui->claims.push(UiClaim{node, key, modifiers, false});
@@ -2284,6 +2972,7 @@ bool prUiKeyPressed(PrUi* ui, PrLayoutNode node, PrAppKey key, PrAppModifierFlag
 }
 
 bool prUiKeyCaptured(PrUi* ui, PrLayoutNode node, PrAppKey key, PrAppModifierFlags modifiers) {
+    trackNode(ui, node);
     PR_ASSERT(ui->building);
     PR_ASSERT((modifiers & PrAppModifierFlag_CapsLock) == 0);
     ui->claims.push(UiClaim{node, key, modifiers, true});
@@ -2292,6 +2981,7 @@ bool prUiKeyCaptured(PrUi* ui, PrLayoutNode node, PrAppKey key, PrAppModifierFla
 }
 
 PrUiEvents prUiEvents(const PrUi* ui, PrLayoutNode node) {
+    trackNode(ui, node);
     uint32_t first = 0;
     while (first < ui->routed.count && ui->routed.data[first].node != node)
         ++first;
@@ -2304,11 +2994,15 @@ PrUiEvents prUiEvents(const PrUi* ui, PrLayoutNode node) {
 }
 
 PrLayoutNode prUiFocus(const PrUi* ui) {
+    trackGlobal(ui, UiGlobal_Focus);
     return ui->focus;
 }
 
 void prUiSetKeyRoot(PrUi* ui, PrLayoutNode node) {
     PR_ASSERT(ui->building);
+    // The key root is the round's, which a kept build would not set again.
+    if (ui->tracking.count != 0)
+        ui->tracking.last().outside = true;
     ui->keyRoot = node;
 }
 
@@ -2322,13 +3016,20 @@ void prUiSetFocus(PrUi* ui, PrLayoutNode node) {
     ui->focusRequested = true;
 }
 
+bool prUiIsFocused(const PrUi* ui, PrLayoutNode node) {
+    trackNode(ui, node);
+    return node != kPrLayoutNodeNone && ui->focus == node;
+}
+
 bool prUiIsFocusWithin(const PrUi* ui, PrLayoutNode node) {
+    trackNode(ui, node);
     const UiSlot* s = findSlot(ui, node);
     return s != nullptr && s->focusRound == ui->roundId && ui->focus != kPrLayoutNodeNone;
 }
 
-bool prUiIsFocusVisible(const PrUi* ui) {
-    return ui->focusVisible;
+bool prUiIsFocusVisible(const PrUi* ui, PrLayoutNode node) {
+    trackNode(ui, node);
+    return node != kPrLayoutNodeNone && ui->focus == node && ui->focusVisible;
 }
 
 PrLayoutNode prUiFocusMove(PrUi* ui, PrLayoutNode scope, bool reverse) {
@@ -2369,6 +3070,7 @@ float prUiTween(PrUi* ui, PrLayoutNode node, const void* owner, uint64_t key, fl
     double eased = prLayoutEase(easing != nullptr ? easing : &linear, progress < 0 ? 0 : progress, false);
     t->value = float(double(t->from) + (double(target) - double(t->from)) * eased);
     ui->tweening = true;
+    trackTime(ui);
     return t->value;
 }
 
@@ -2424,44 +3126,44 @@ PrLayoutGroupIndex prUiGroup(PrUi* ui, const PrUiGroupRecipe* recipe) {
     return group;
 }
 
-const void* PR_NULLABLE prUiMemoFind(PrUi* ui, const void* type, const void* PR_NULLABLE owner, PrLayoutStyleIndex* out) {
+const void* PR_NULLABLE prUiRecordFind(PrUi* ui, const void* type, const void* PR_NULLABLE owner, PrLayoutStyleIndex* out) {
     PR_ASSERT(ui->building);
-    UiMemo& memo = ui->memo;
+    UiRecordCache& cache = ui->records;
     uint32_t slot = prLayoutTreeFrameCursor(ui->tree);
-    memo.calls = slot == memo.slot ? memo.calls + 1 : 0;
-    memo.slot = slot;
-    memo.at = kUiNone;
-    if (slot == kPrLayoutFrameCursorEnd || memo.calls >= kUiMemoCalls)
+    cache.calls = slot == cache.slot ? cache.calls + 1 : 0;
+    cache.slot = slot;
+    cache.at = kUiNone;
+    if (slot == kPrLayoutFrameCursorEnd || cache.calls >= kUiRecordCalls)
         return nullptr;
-    uint32_t at = slot * kUiMemoCalls + memo.calls;
-    while (memo.entries.count <= at)
-        memo.entries.push(UiMemoEntry{});
-    memo.at = at;
-    const UiMemoEntry& e = memo.entries.data[at];
+    uint32_t at = slot * kUiRecordCalls + cache.calls;
+    while (cache.entries.count <= at)
+        cache.entries.push(UiRecordEntry{});
+    cache.at = at;
+    const UiRecordEntry& e = cache.entries.data[at];
     if (e.type != type || e.owner != owner)
         return nullptr;
     *out = e.style;
-    return memo.bytes.data + e.offset;
+    return cache.bytes.data + e.offset;
 }
 
-PrLayoutStyleIndex prUiMemoKeep(PrUi* ui, const PrUiPart* part, PrLayoutStyleIndex style, PrLayoutStyleIndex base) {
-    UiMemo& memo = ui->memo;
-    if (memo.at == kUiNone)
+PrLayoutStyleIndex prUiRecordStore(PrUi* ui, const PrUiPart* part, PrLayoutStyleIndex style, PrLayoutStyleIndex base) {
+    UiRecordCache& cache = ui->records;
+    if (cache.at == kUiNone)
         return style;
-    UiMemoEntry& e = memo.entries.data[memo.at];
-    memo.at = kUiNone;
+    UiRecordEntry& e = cache.entries.data[cache.at];
+    cache.at = kUiNone;
     prLayoutStyleRetain(ui->tree, style);
     if (base != 0)
         prLayoutStyleRetain(ui->tree, base);
     if (e.type != nullptr)
-        releaseMemoEntry(ui, e);
+        releaseRecordEntry(ui, e);
     if (e.capacity < part->size) {
-        e.offset = memo.bytes.count;
+        e.offset = cache.bytes.count;
         e.capacity = part->size;
-        memo.bytes.reserve(memo.bytes.count + part->size);
-        memo.bytes.count += part->size;
+        cache.bytes.reserve(cache.bytes.count + part->size);
+        cache.bytes.count += part->size;
     }
-    prMemCopy(memo.bytes.data + e.offset, part->bytes, part->size);
+    prMemCopy(cache.bytes.data + e.offset, part->bytes, part->size);
     e.type = part->type;
     e.owner = part->owner;
     e.size = part->size;
@@ -2472,12 +3174,178 @@ PrLayoutStyleIndex prUiMemoKeep(PrUi* ui, const PrUiPart* part, PrLayoutStyleInd
 
 void prUiForget(PrUi* ui, const void* owner) {
     PR_ASSERT(!ui->building);
+    // The builds that read the owner's values read them again.
+    ui->resetRound = ui->roundId + 1;
+    ++ui->epoch;
     filterGroups(ui, [&](const UiGroupEntry& e) { return e.owner != owner; });
-    for (uint32_t i = 0; i < ui->memo.entries.count; ++i) {
-        UiMemoEntry& e = ui->memo.entries.data[i];
+    for (uint32_t i = 0; i < ui->records.entries.count; ++i) {
+        UiRecordEntry& e = ui->records.entries.data[i];
         if (e.type != nullptr && e.owner == owner)
-            releaseMemoEntry(ui, e);
+            releaseRecordEntry(ui, e);
     }
+}
+
+void prUiTrackBegin(PrUi* ui, PrLayoutNode node, const PrUiTrackType* PR_NULLABLE type, void* PR_NULLABLE context) {
+    PR_ASSERT(ui->building);
+    slotOf(ui, node).trackRound = ui->roundId;
+    ui->tracking.push(UiTracking{
+        .node = node,
+        .contexts = ui->contexts.count,
+        .reads = ui->reads.count,
+        .nodes = ui->nodeReads.count,
+        .extents = ui->extentReads.count,
+        .inner = ui->inner.count,
+        .stamp = ++ui->trackStamp,
+        .type = type,
+        .context = context,
+        .disabled = disabledWithin(ui, prLayoutTreeFrameParent(ui->tree, node)),
+    });
+}
+
+void prUiTrackEnd(PrUi* ui, PrLayoutNode node) {
+    PR_ASSERT(ui->building && ui->tracking.count != 0 && ui->tracking.last().node == node);
+    UiTracking t = ui->tracking.last();
+    ui->tracking.pop();
+    UiState& state = stateOf(ui, node, &kUiOwner, UiStateKey_Keep, uint32_t(sizeof(UiKeepRecord)));
+    state.destroy = destroyKeepRecord;
+    UiKeepRecord& record = *static_cast<UiKeepRecord*>(state.data);
+    copyRecord(reinterpret_cast<void**>(&record.reads), &record.count, ui->reads.data + t.reads,
+        ui->reads.count - t.reads, uint32_t(sizeof(UiContextRead)));
+    copyRecord(reinterpret_cast<void**>(&record.nodes), &record.nodeCount, ui->nodeReads.data + t.nodes,
+        ui->nodeReads.count - t.nodes, uint32_t(sizeof(PrLayoutNode)));
+    copyRecord(reinterpret_cast<void**>(&record.inner), &record.innerCount, ui->inner.data + t.inner,
+        ui->inner.count - t.inner, uint32_t(sizeof(PrLayoutNode)));
+    copyRecord(reinterpret_cast<void**>(&record.extents), &record.extentCount, ui->extentReads.data + t.extents,
+        ui->extentReads.count - t.extents, uint32_t(sizeof(UiMeasured)));
+    ui->reads.count = t.reads;
+    ui->nodeReads.count = t.nodes;
+    ui->extentReads.count = t.extents;
+    ui->inner.count = t.inner;
+    record.round = ui->roundId;
+    record.type = t.type;
+    record.context = t.context;
+    record.globals = t.globals;
+    record.outside = t.outside;
+    record.disabled = t.disabled;
+    record.timed = t.timed;
+    record.provides = t.provides;
+    record.held = 0;
+    gatherSubtreeReads(ui, node, record);
+    listInner(ui, node);
+}
+
+bool prUiKeep(PrUi* ui, PrLayoutNode node) {
+    PR_ASSERT(ui->building);
+    const UiKeepRecord* found = keepRecord(ui, node);
+    if (found == nullptr || !ownHolds(ui, node, *found, node))
+        return false;
+    // The record stays on the node, which the round keeps, so it holds while the parts build.
+    UiKeepRecord& record = *const_cast<UiKeepRecord*>(found);
+    // The tracked builds inside it that changed are the parts that the round builds again, each by its library, if the
+    // node's own part provided no context that a part would read, and each part's library can build it again. A subtree
+    // that held at the epoch has no parts while its contexts hold.
+    uint32_t parts = ui->parts.count;
+    bool held = record.held == ui->epoch;
+    if (held && !subtreeReadsHold(ui, record, node, node))
+        return false;
+    for (uint32_t i = 0; i < record.innerCount && !held; ++i) {
+        PrLayoutNode inner = record.inner[i];
+        if (wholeHolds(ui, ui, inner, node))
+            continue;
+        const UiKeepRecord* part = keepRecord(ui, inner);
+        if (record.provides || part == nullptr || part->type == nullptr || part->type->rebuild == nullptr) {
+            ui->parts.count = parts;
+            return false;
+        }
+        ui->parts.push(inner);
+    }
+    bool whole = ui->parts.count == parts;
+    if (whole)
+        record.held = ui->epoch;
+    if (whole && prLayoutTreeFrameKeepChildren(ui->tree, node, kPrLayoutNodeNone, kPrLayoutNodeNone) ==
+            kPrLayoutFrameKeepFailed)
+        return false;
+    // The node keeps its own record, flags and cursor as the round that built it gave them.
+    prLayoutTreeFrameSetStyle(ui->tree, node, prLayoutNodeStyle(ui->tree, node));
+    UiSlot& own = slotOf(ui, node);
+    if (own.flagsRound == ui->built)
+        setFlags(ui, node, own.flags);
+    if (own.cursorRound == ui->built)
+        own.cursorRound = ui->roundId;
+    own.keptRound = ui->roundId;
+    own.trackRound = ui->roundId;
+    if (whole) {
+        keepSlots(ui);
+        listInner(ui, node);
+        return true;
+    }
+    // The round keeps the node's subtree up to each part, and the part's library builds the part's children again,
+    // under the node's tracking as a keeping, which lists nothing new for the node.
+    ui->tracking.push(UiTracking{
+        .node = node,
+        .contexts = ui->contexts.count,
+        .reads = ui->reads.count,
+        .nodes = ui->nodeReads.count,
+        .extents = ui->extentReads.count,
+        .inner = ui->inner.count,
+        .stamp = ++ui->trackStamp,
+        .keeping = true,
+    });
+    PrLayoutNode after = kPrLayoutNodeNone;
+    uint32_t end = ui->parts.count;
+    for (uint32_t i = parts; i < end; ++i) {
+        PrLayoutNode part = ui->parts.data[i];
+        uint32_t kept = prLayoutTreeFrameKeepChildren(ui->tree, node, after, part);
+        PR_ASSERT(kept != kPrLayoutFrameKeepFailed);
+        keepSlots(ui);
+        const UiKeepRecord& built = *keepRecord(ui, part);
+        built.type->rebuild(built.context, ui, part);
+        after = part;
+    }
+    uint32_t kept = prLayoutTreeFrameKeepChildren(ui->tree, node, after, kPrLayoutNodeNone);
+    PR_ASSERT(kept != kPrLayoutFrameKeepFailed);
+    keepSlots(ui);
+    ui->tracking.pop();
+    ui->parts.count = parts;
+    // The parts read what they read in this round. The record's own part holds as it was.
+    gatherSubtreeReads(ui, node, *const_cast<UiKeepRecord*>(keepRecord(ui, node)));
+    listInner(ui, node);
+    return true;
+}
+
+void prUiChanged(PrUi* ui) {
+    ++ui->epoch;
+}
+
+void prUiRead(PrUi* ui, PrLayoutNode node) {
+    trackNode(ui, node);
+}
+
+PrLayoutNode prUiMemo(PrUi* ui, PrLayoutNode parent, const PrUiMemoDesc* desc) {
+    PR_ASSERT(ui->building);
+    const PrUiMemoType& type = *desc->type;
+    PrLayoutNode node = prUiElement(ui, parent, desc->key, 0, 0);
+    const UiMemoRecord& kept = memoRecordOf(ui, node);
+    bool same = kept.type == &type && kept.inputs != nullptr && kept.size == desc->size;
+    if (same && type.equal != nullptr)
+        same = type.equal(kept.inputs, desc->inputs, desc->size);
+    else if (same)
+        same = prMemEquals(kept.inputs, desc->inputs, desc->size);
+    if (!same || !prUiKeep(ui, node)) {
+        buildMemo(ui, ui, node, type, desc->context, desc->inputs, desc->result);
+        // The copy is made from the inputs that the build read, and replaces the last one once it is made.
+        void* copy = prMemoryAlloc(desc->size != 0 ? desc->size : 1);
+        if (type.copy != nullptr)
+            type.copy(copy, desc->inputs, desc->size);
+        else
+            prMemCopy(copy, desc->inputs, desc->size);
+        UiMemoRecord& record = memoRecordOf(ui, node);
+        destroyMemoRecord(&record);
+        record = UiMemoRecord{.type = &type, .context = desc->context, .inputs = copy, .size = desc->size};
+    }
+    if (desc->result != nullptr)
+        prUiRead(ui, node);
+    return node;
 }
 
 void prUiReveal(PrUi* ui, PrLayoutNode node) {

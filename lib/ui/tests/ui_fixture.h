@@ -25,6 +25,10 @@ struct UiFixture {
     PrUiViewport viewport = kPrUiViewportMain;     // the viewport that the queued input comes from
     Function<void()> build;
 
+    // True for a test whose frames give a key twice on purpose. Otherwise a frame that gives a key twice fails the
+    // test, since each key names one node of the tree (prLayoutTreeDuplicateKeys).
+    bool allowsDuplicates = false;
+
     UiFixture() {
         PrLayoutTreeDesc desc{.targetPixelRatio = 1};
         tree = prLayoutTreeCreate(&desc);
@@ -39,6 +43,14 @@ struct UiFixture {
     // Runs a frame of at most `rounds` rounds, `delta` seconds after the previous frame. Each round declares a root and
     // calls the test's build function. Returns the number of rounds run.
     uint32_t frame(double delta = 1.0 / 60, uint32_t rounds = 4) {
+        uint32_t ran = run(delta, rounds);
+        if (!allowsDuplicates)
+            CHECK(prLayoutTreeDuplicateKeys(tree, nullptr, 0) == 0);
+        return ran;
+    }
+
+    // Runs the frame that frame describes, and returns the number of rounds run.
+    uint32_t run(double delta, uint32_t rounds) {
         time += delta;
         PrUiFrameDesc desc{
             .time = time,

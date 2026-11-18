@@ -168,7 +168,7 @@ PrAppEvent toPage(const Browser& b, const Tab& tab, const PrAppEvent& e) {
 
 // Returns true while the keyboard goes to the page: the active tab shows a page, and nothing of the chrome has focus.
 bool pageHasKeys(Browser& b) {
-    return b.chrome.slot != kPrLayoutNodeNone && prUiFocus(b.ui) == kPrLayoutNodeNone;
+    return b.chrome.slot != kPrLayoutNodeNone && prUiIsFocused(b.ui, kPrLayoutNodeNone);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

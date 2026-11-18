@@ -395,7 +395,7 @@ ItemState itemState(PrKit& kit, PrLayoutNode node, bool disabled) {
         return ItemState_Rest;
     if (prUiIsPressed(kit.ui, node, 0))
         return ItemState_Press;
-    bool focused = prUiIsFocusVisible(kit.ui) && prUiFocus(kit.ui) == node;
+    bool focused = prUiIsFocusVisible(kit.ui, node);
     return prUiIsHovered(kit.ui, node) || focused ? ItemState_Hover : ItemState_Rest;
 }
 
@@ -641,7 +641,7 @@ PrLayoutNode prKitSelect(PrKit* kit, PrLayoutNode parent, PrKitSelect select, Pr
     SelectFill fill{
         .state = itemState(k, field.node, disabled),
         .open = open,
-        .ring = prUiIsFocusVisible(ui) && prUiFocus(ui) == field.node,
+        .ring = prUiIsFocusVisible(ui, field.node),
         .disabled = disabled,
     };
     bool small = style.size == PrKitControlSize_Xs || style.size == PrKitControlSize_Sm;

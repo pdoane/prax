@@ -96,7 +96,7 @@ struct Styled {
             const PrLayoutStyleIndex styles[] = {s->style(PrLayoutDisplay_Inline), s->style(PrLayoutDisplay_Inline, 1)};
             PrLayoutNode root = prLayoutTreeFrameElement(s->tree, kPrLayoutNodeNone, 0, block);
             s->control = prUiElement(s->ui, root, 0, block, PrUiFlag_Pressable | PrUiFlag_Focusable);
-            if (prUiFocus(s->ui) != s->control)
+            if (!prUiIsFocused(s->ui, s->control))
                 prUiSetFocus(s->ui, s->control);
             PrUiTextEditDesc edit{
                 .control = s->control,

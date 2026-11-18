@@ -198,7 +198,7 @@ void documentTree(const Round& r, PrLayoutNode parent, const Collection& collect
     ui.treeView = view;
     if (r.pageKeys && prUiIsFocusWithin(ui.ui, view))
         prUiSetFocus(ui.ui, kPrLayoutNodeNone);
-    else if (!r.pageKeys && prUiFocus(ui.ui) == kPrLayoutNodeNone)
+    else if (!r.pageKeys && prUiIsFocused(ui.ui, kPrLayoutNodeNone))
         prUiSetFocus(ui.ui, view);
 
     auto rowAt = [&](uint32_t i) {

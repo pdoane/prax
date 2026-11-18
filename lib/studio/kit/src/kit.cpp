@@ -301,7 +301,7 @@ KitControl kitControlFromNode(PrKit& kit, PrLayoutNode node, PrUiFlags flags, bo
     c.press = kitPressFactor(kit, node);
     c.over = prUiIsHovered(kit.ui, node);
     c.down = prUiIsPressed(kit.ui, node, 0);
-    c.ring = prUiIsFocusVisible(kit.ui) && prUiFocus(kit.ui) == node;
+    c.ring = prUiIsFocusVisible(kit.ui, node);
     return c;
 }
 
@@ -498,14 +498,14 @@ bool prKitRemoved(const PrKit* kit, PrLayoutNode node) {
 }
 
 void prKitPlace(PrKit* kit, PrLayoutNode node, PrKitPlace place) {
-    // The node's record with its box and flex groups placed, and the rest the record's own. The memo keys the placed
-    // record by the record it was placed from, to which its entry holds a reference.
+    // The node's record with its box and flex groups placed, and the rest the record's own. The record cache keys the
+    // placed record by the record it was placed from, to which its entry holds a reference.
     PrKit& k = *kit;
     PrLayoutTree* tree = k.tree;
     Placement key{.base = prLayoutTreeFrameStyle(tree, node), .place = place};
     const void* type = uiTypeId<Placement>();
     PrLayoutStyleIndex placed = 0;
-    const void* kept = prUiMemoFind(k.ui, type, &k, &placed);
+    const void* kept = prUiRecordFind(k.ui, type, &k, &placed);
     if (kept == nullptr || !prMemEquals(kept, &key, sizeof key)) {
         PrUiPart part{.type = type, .owner = &k, .bytes = &key, .size = uint32_t(sizeof key)};
         PrLayoutStyle record = prLayoutStyleRecord(tree, key.base);
@@ -513,7 +513,7 @@ void prKitPlace(PrKit* kit, PrLayoutNode node, PrKitPlace place) {
         PrLayoutGroupIndex& flex = record.groups[PrLayoutGroup_Flex];
         box = kitGroup(k, KitPlacedBox{.base = box, .place = place});
         flex = kitGroup(k, KitPlacedFlex{.base = flex, .place = place});
-        placed = prUiMemoKeep(k.ui, &part, prLayoutStyleIntern(tree, &record), key.base);
+        placed = prUiRecordStore(k.ui, &part, prLayoutStyleIntern(tree, &record), key.base);
     }
     prLayoutTreeFrameSetStyle(tree, node, placed);
 }

@@ -87,9 +87,30 @@ another must meet belongs to the context, so that no library owns it:
 - **Edit gestures.** A bound control reports the phases of each edit (`prUiEdit`) to the sink of the nearest node
   above it that set one (`prUiSetEditSink`), so the application records one undo entry for a gesture on any library's
   control.
-- **Records.** The context keeps the groups that libraries' recipes made and a memo of the last frame's records by
+- **Records.** The context keeps the groups that libraries' recipes made and a cache of the last frame's records by
   their place in the round (component_library.md, Records). It ages both by its rounds, so a library needs no call to
   begin a round.
+- **Keeping subtrees.** A library that knows what a subtree's build reads, such as a memo's inputs, can keep the
+  subtree instead of building it (`prUiKeep`), and the context answers for the rest. A tracked build
+  (`prUiTrackBegin`, `prUiTrackEnd`) owns its node and the nodes under it that no tracked build inside it owns, and
+  records what it read as the queries answer it: the state of each node that it asked about, which each node stamps
+  with the round of its latest change (routed input, which reaches the nodes above it too; a move of hover, focus or a
+  drop target; an activation; a scroll); the extents that it read, along the axes that it depends on (`prUiExtent`);
+  the contexts from above it, by provider and by a hash of their bytes; the values that are no node's, such as the
+  focused node or the pointer; whether it read a value that runs on with time (a tween, a repeating press,
+  `prUiHoverSeconds`); and the tracked builds directly inside it. It also records whether it changed anything outside
+  its node for the round, such as a creation under the overlay or in a portal, or a signal to a node above. A later
+  round keeps the subtree while what its build owns holds, and builds again in place each tracked build inside it that
+  changed, through the type that its library gave it (`PrUiTrackType`), so a change costs the parts that it reached. A
+  build that reads what a tracked build inside it reported depends on that build's node (`prUiRead`). A library tells
+  the context of a change to its own values that a build showed (`prUiChanged`). A kept subtree keeps its flags,
+  cursors, claims, drop targets and retained state, so input routes to it as before.
+- **Memos.** A build memoizes the part of itself that is worth it (`prUiMemo`): the part's inputs, and a function that
+  builds the part from them on a root (`PrUiMemoType`). A round keeps the part's subtree while the inputs equal the
+  last round's, and builds it again otherwise, or alone, from the context's copy of the inputs, when input reaches it
+  inside a kept memo. Inputs are bytes by default, a struct of plain data with any text that it shows after it, and a
+  type that holds more says how to compare, copy and release them. The walk that computed the inputs runs in every
+  round, and what decides when a memo builds again is what its inputs hold.
 - **Text editing.** A library's text controls share one edit (`pr/ui_text_edit.h`). In the simple form, the caller gives
   the text as a value in each round and takes the new text if it changed, and a text buffer holds the text only while
   the control is being edited. A caller whose text needs an edit stream, anchors or history across focus gives its own
