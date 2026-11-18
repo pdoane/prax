@@ -29,6 +29,10 @@ inline constexpr bool isConvertible = requires(void (*accept)(To), From (*make)(
 template <typename From>
 inline constexpr bool isConvertible<From, void> = true;
 
+// isConvertible as a concept, for a requirement on an expression's type.
+template <typename From, typename To>
+concept ConvertsTo = isConvertible<From, To>;
+
 // True if `T` is a class with no non-static data members, so that its size carries nothing.
 template <typename T>
 inline constexpr bool isEmpty = __is_empty(T);
@@ -150,6 +154,16 @@ template <typename T>
 constexpr T&& forward(RemoveReference<T>&& value) {
     return static_cast<T&&>(value);
 }
+
+// True if an lvalue `Fn` can be called with `Arguments` and its result converts to `Result`. A `Result` of void takes
+// any result, as a discarded one.
+//
+// The result's type is required as the call's, not by a nested requirement on the call: MSVC 14.52 holds a nested
+// requirement over a requires-expression's parameters satisfied only the first time it checks it.
+template <typename Result, typename Fn, typename... Arguments>
+inline constexpr bool isCallableAs = requires(Fn& fn, Arguments&&... arguments) {
+    { fn(forward<Arguments>(arguments)...) } -> ConvertsTo<Result>;
+};
 
 } // namespace pr
 

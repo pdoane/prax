@@ -54,6 +54,17 @@ static_assert(!isConstructible<Function<Unrelated()>, int (*)()>);
 static_assert(!isConstructible<Function<int(int)>, int (*)()>);
 static_assert(!isConstructible<Function<int()>, MoveOnly>);
 
+// A callable is callable as a signature if its result converts to the signature's, and whatever its result if the
+// signature returns nothing. A check gives the same answer when it is repeated.
+static_assert(isCallableAs<int, int (*)(int), int>);
+static_assert(isCallableAs<double, int (*)(int), int>);
+static_assert(isCallableAs<void, int (*)(int), int>);
+static_assert(!isCallableAs<Unrelated, int (*)(int), int>);
+static_assert(!isCallableAs<int, int (*)(int)>);
+static_assert(isCallableAs<int, int (*)(int), int>);
+static_assert(isCallableAs<double, int (*)(int), int>);
+static_assert(isConstructible<Function<double(int)>, int (*)(int)>);
+
 TEST_CASE("a function that returns nothing calls a callable that returns a value") {
     int calls = 0;
     Function<void()> counted = [&calls] { return ++calls; };

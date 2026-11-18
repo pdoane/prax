@@ -29,9 +29,7 @@ struct Function<Result(Arguments...)> {
 
     template <typename Fn>
     Function(Fn&& fn) requires(!isSame<Decay<Fn>, Function> && isConstructible<Decay<Fn>, const Decay<Fn>&> &&
-        requires(Decay<Fn>& held, Arguments&&... arguments) {
-            requires isConvertible<decltype(held(forward<Arguments>(arguments)...)), Result>;
-        }) {
+            isCallableAs<Result, Decay<Fn>, Arguments...>) {
         using Held = Decay<Fn>;
         // A function pointer can be null, and a null one makes an empty function. The pointer is compared, not `fn`,
         // which may name a function that is never null.

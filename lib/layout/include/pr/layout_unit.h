@@ -6,6 +6,7 @@
 #pragma once
 
 #include "pr/base.h"
+#include "pr/float.h"
 #include "pr/geom.h"
 #include "pr/vec.h"
 
@@ -51,15 +52,15 @@ static inline PrLayoutUnit prLayoutUnitFromPx(float px) {
 // prLayoutUnitFromPx does.
 static inline PrLayoutUnit prLayoutUnitFromPxFloorDouble(double px) {
     double scale = PR_VALUE_CAST(double, kPrLayoutUnitsPerPx);
-    return prLayoutUnitFromPxDouble(__builtin_floor(px * scale) / scale);
+    return prLayoutUnitFromPxDouble(prF64Floor(px * scale) / scale);
 }
 static inline PrLayoutUnit prLayoutUnitFromPxCeilDouble(double px) {
     double scale = PR_VALUE_CAST(double, kPrLayoutUnitsPerPx);
-    return prLayoutUnitFromPxDouble(__builtin_ceil(px * scale) / scale);
+    return prLayoutUnitFromPxDouble(prF64Ceil(px * scale) / scale);
 }
 static inline PrLayoutUnit prLayoutUnitFromPxRoundDouble(double px) {
     double scale = PR_VALUE_CAST(double, kPrLayoutUnitsPerPx);
-    return prLayoutUnitFromPxDouble(__builtin_round(px * scale) / scale);
+    return prLayoutUnitFromPxDouble(prF64Round(px * scale) / scale);
 }
 static inline PrLayoutUnit prLayoutUnitFromPxFloor(float px) {
     return prLayoutUnitFromPxFloorDouble(PR_VALUE_CAST(double, px));
