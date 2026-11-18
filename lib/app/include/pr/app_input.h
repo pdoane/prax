@@ -236,7 +236,7 @@ enum {
 typedef uint8_t PrAppScrollUnit;
 
 // The height of a line in logical pixels, for a program that scrolls by lines and has no line height of its own.
-static const float kPrAppScrollLineHeight = 40.0f;
+PR_CONSTANT float kPrAppScrollLineHeight = 40.0f;
 
 // The kinds of pointing device, as Pointer Events names them (pointerevents3/#dom-pointerevent-pointertype).
 enum {

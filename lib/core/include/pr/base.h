@@ -167,6 +167,17 @@ PR_ASSUME_NONNULL_BEGIN
 #define PR_VALUE_CAST(type, value) ((type)(value))
 #endif
 
+// Gives `Type`, a structure of a header that C and C++ share, a defaulted == in C++, which compares its members in
+// order, each with its own ==, and is placed among the members. It is a member, which C's linkage does not reach, as it
+// would a friend in an extern "C" block. So C++ compares a value that a caller built by its members, and the bytes that
+// its padding holds do not matter. Comparing a structure's bytes means the same only for a structure that has no
+// padding (PR_NO_PADDING_BEGIN), and differs from == for floats: bytes tell -0 from 0, and equate a NaN with itself.
+#if defined(__cplusplus)
+#define PR_EQUALITY(Type) constexpr bool operator==(const Type&) const = default;
+#else
+#define PR_EQUALITY(Type)
+#endif
+
 // Declares a function defined in a header that C and C++ share. The function is inline, and in C++ it is usable in
 // constant expressions. C compilers fold calls to such a function on constant arguments.
 #if defined(__cplusplus)

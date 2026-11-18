@@ -216,7 +216,7 @@ bool prFetchNetworkBackendIsBuilt(PrFetchNetworkBackend backend);
 
 // The engine's default User-Agent value (fetch/#default-user-agent-value), which a fetcher sends if its host gives
 // none.
-static const char kPrFetchDefaultUserAgent[] = "Mozilla/5.0 (compatible; Prax)";
+PR_CONSTANT char kPrFetchDefaultUserAgent[] = "Mozilla/5.0 (compatible; Prax)";
 
 // What a fetcher fetches with.
 typedef struct PrFetchNetworkDesc {

@@ -24,6 +24,7 @@ typedef struct PrColor {
     float b;
     float a;
 
+    PR_EQUALITY(PrColor)
 #if defined(__cplusplus)
     // Narrows the color as prColor16FromColor does, so that a color passes where a PrColor16 is expected.
     PR_CONSTEXPR operator PrColor16() const;
@@ -57,6 +58,11 @@ typedef struct PrColor16 {
 #if defined(__cplusplus)
     // Widens the color exactly, as prColorFromColor16 does.
     PR_CONSTEXPR operator PrColor() const;
+
+    // Compares the channels as floats. Written out, since a defaulted == does not compare a native 16-bit float.
+    constexpr bool operator==(const PrColor16& other) const {
+        return r == other.r && g == other.g && b == other.b && a == other.a;
+    }
 #endif
 } PrColor16;
 PR_NO_PADDING_END
@@ -79,6 +85,29 @@ PR_CONSTEXPR PrColor prColorFromColor16(PrColor16 color) {
         prFloat16ToFloat(color.a),
     };
     return wide;
+}
+
+// Returns the sRGB color that `hex` writes as 0xRRGGBB, opaque, as CSS writes #RRGGBB.
+PR_CONSTEXPR PrColor prColorFromHex(uint32_t hex) {
+    PrColor color = {
+        (float)((hex >> 16) & 0xff) / 255.0f, (float)((hex >> 8) & 0xff) / 255.0f, (float)(hex & 0xff) / 255.0f, 1.0f,
+    };
+    return color;
+}
+
+// Returns the sRGB color that `hex` writes as 0xRRGGBBAA, with straight alpha, as CSS writes #RRGGBBAA.
+PR_CONSTEXPR PrColor prColorFromHexAlpha(uint32_t hex) {
+    PrColor color = {
+        (float)(hex >> 24) / 255.0f, (float)((hex >> 16) & 0xff) / 255.0f, (float)((hex >> 8) & 0xff) / 255.0f,
+        (float)(hex & 0xff) / 255.0f,
+    };
+    return color;
+}
+
+// Returns `color` with its alpha replaced by `alpha`.
+PR_CONSTEXPR PrColor prColorWithAlpha(PrColor color, float alpha) {
+    PrColor result = {color.r, color.g, color.b, alpha};
+    return result;
 }
 
 #if defined(__cplusplus)
@@ -104,9 +133,9 @@ PR_CONSTEXPR PrColor16::operator PrColor() const {
 #endif
 
 // The weights of red, green and blue in a color's luminance.
-static const float kPrColorLuminanceRed = 0.2125f;
-static const float kPrColorLuminanceGreen = 0.7154f;
-static const float kPrColorLuminanceBlue = 0.0721f;
+PR_CONSTANT float kPrColorLuminanceRed = 0.2125f;
+PR_CONSTANT float kPrColorLuminanceGreen = 0.7154f;
+PR_CONSTANT float kPrColorLuminanceBlue = 0.0721f;
 
 // The channels of a color space, in order.
 enum {

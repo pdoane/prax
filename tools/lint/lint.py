@@ -479,16 +479,24 @@ def check_parallel_enums(report, path, text):
 MACRO_CONSTANT = re.compile(r"^#define\s+(PR_[A-Z0-9_]+)\s+\(?\s*-?\s*(?:0x[0-9a-fA-F]+|[0-9])", re.M)
 
 
+# A constant of a public header declared `static const` at file scope, which C++ reads as a variable rather than as
+# constexpr.
+STATIC_CONSTANT = re.compile(r"^static\s+const\s+[\w\s*]*?\b(k\w+)\s*(?:\[[^\]]*\])?\s*=", re.M)
+
+
 def check_macro_constants(report, path, text):
-    """A public header spells an integer constant as `enum { kPrX = n }` and a floating-point constant as
-    `PR_CONSTANT float kPrX`, which is constexpr in C++. A macro holds a value only if the preprocessor reads it, in an
-    #if."""
+    """A public header spells an integer constant as `enum { kPrX = n }` and any other constant as
+    `PR_CONSTANT float kPrX`, which is constexpr in C++, never as a static const. A macro holds a value only if the
+    preprocessor reads it, in an #if."""
     for match in MACRO_CONSTANT.finditer(text):
         name = match.group(1)
         if re.search(r"^#\s*(?:el)?if\b.*\b%s\b" % name, text, re.M):
             continue
         report.add(path, line_of(text, match.start()), "macro-constant",
                    "%s is a macro; a constant is an enum or a PR_CONSTANT" % name)
+    for match in STATIC_CONSTANT.finditer(mask_non_code(text)):
+        report.add(path, line_of(text, match.start()), "static-constant",
+                   "%s is static const; a constant is an enum or a PR_CONSTANT" % match.group(1))
 
 
 # The words that an array's `by` comment may use for its index if no type names the domain: positions in the data that
@@ -1800,10 +1808,36 @@ def is_managed_header(path):
     return any(posix(path).endswith("/lib/core/cpp/include/" + name) for name in MANAGED)
 
 
+def is_cpp_api_layer(path):
+    """Returns true for a file of a module's C++ layer, lib/<module>/cpp, other than core's toolkit, whose classes with
+    a constructor or destructor are the managed layer's. A C++ layer is an API for applications, whose classes own
+    their state as C++ classes do."""
+    match = re.search(r"/lib/([\w/]+)/cpp/", posix(path))
+    return match is not None and match.group(1) != "core"
+
+
+# The files of lib that use a C++ layer's API, by the C++ layer's headers that each includes. A C++ layer is for
+# applications, so a library uses one only where its approval here says why.
+CPP_LAYER_USERS = {
+    # Studio Kit declares its group recipes as types (component_library.md, Records).
+    "lib/studio/kit/src/kit.h": {"pr/ui_records.h"},
+}
+
+
+@functools.cache
+def cpp_layer_headers():
+    """Returns the public headers of the C++ layers other than core's toolkit, as they are included."""
+    found = set()
+    for header in glob.glob(os.path.join(ROOT, "lib", "**", "cpp", "include", "pr", "*.h"), recursive=True):
+        if is_cpp_api_layer(header):
+            found.add("pr/" + os.path.basename(header))
+    return found
+
+
 def check_destructors(report, path, text):
     """An implementation manages memory explicitly: an owner resets what it owns, and no type runs code when it goes
-    away. So a file of lib declares no destructor, except a header of the managed layer."""
-    if not is_implementation(path) or is_managed_header(path):
+    away. So a file of lib declares no destructor, except a header of the managed layer and a file of a C++ layer."""
+    if not is_implementation(path) or is_managed_header(path) or is_cpp_api_layer(path):
         return
     code = mask_non_code(text)
     for match in re.finditer(r"^[ \t]*(?:virtual[ \t]+)?(?:\w+::)?~[ \t]*(\w+)[ \t]*\([ \t]*\)", code, re.M):
@@ -1813,13 +1847,28 @@ def check_destructors(report, path, text):
 
 def check_managed_includes(report, path, text):
     """The managed layer is for applications and tests. A file of lib includes none of its headers, apart from the
-    headers of the layer itself."""
-    if not is_implementation(path) or is_managed_header(path):
+    headers of the layer itself and the files of a C++ layer, which is an API for applications."""
+    if not is_implementation(path) or is_managed_header(path) or is_cpp_api_layer(path):
         return
     for match in re.finditer(r'^[ \t]*#[ \t]*include[ \t]*"([^"]+)"', text, re.M):
         if match.group(1) in MANAGED:
             report.add(path, line_of(text, match.start()), "managed-include",
                        "%s is the managed layer's, which applications and tests use" % match.group(1))
+
+
+def check_cpp_layer_includes(report, path, text):
+    """A C++ layer is an API for applications and tests. A file of lib includes a C++ layer's headers only from its own
+    layer, or where CPP_LAYER_USERS approves it."""
+    if not is_implementation(path) or is_cpp_api_layer(path):
+        return
+    relative = posix(os.path.relpath(path, ROOT))
+    approved = CPP_LAYER_USERS.get(relative, set())
+    for match in re.finditer(r'^[ \t]*#[ \t]*include[ \t]*"([^"]+)"', text, re.M):
+        header = match.group(1)
+        if header in cpp_layer_headers() and header not in approved:
+            report.add(path, line_of(text, match.start()), "cpp-layer-include",
+                       "%s is a C++ layer's, which applications use; a library uses it only where CPP_LAYER_USERS "
+                       "approves" % header)
 
 
 ALIASES = ("u8", "u16", "u32", "u64", "i8", "i16", "i32", "i64", "f32", "f64",
@@ -3294,6 +3343,7 @@ def check_code_file(path):
         check_allocation(report, path, text)
         check_destructors(report, path, text)
         check_managed_includes(report, path, text)
+        check_cpp_layer_includes(report, path, text)
         check_stdlib(report, path, text)
         if header:
             check_namespace(report, path, text, False, namespace)

@@ -72,7 +72,7 @@ typedef uint32_t PrLayoutGroupIndex;
 typedef uint32_t PrLayoutStyleIndex;
 
 // No record: the record of a text node that has none of its own and takes its parent's (prLayoutNodeSetStyle).
-static const PrLayoutStyleIndex kPrLayoutStyleNone = 0xffffffffu;
+PR_CONSTANT PrLayoutStyleIndex kPrLayoutStyleNone = 0xffffffffu;
 
 PR_NO_PADDING_BEGIN
 // A style record: a group index of each kind.

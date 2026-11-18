@@ -21,7 +21,7 @@ typedef struct PrJson PrJson;
 typedef uint32_t PrJsonValueIndex;
 
 // The index that a lookup returns when there is no such value.
-static const PrJsonValueIndex kPrJsonMissing = 0xffffffffu;
+PR_CONSTANT PrJsonValueIndex kPrJsonMissing = 0xffffffffu;
 
 // How deep arrays and objects may nest.
 enum { kPrJsonMaxDepth = 1024 };

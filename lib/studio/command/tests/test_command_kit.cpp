@@ -1,4 +1,3 @@
-#include "pr/alloc.h"
 #include "pr/array.h"
 #include "pr/command.h"
 #include "pr/command_keymap.h"
@@ -38,10 +37,8 @@ struct Commands {
     ~Commands() {
         prCommandKeymapDestroy(keymap);
         prCommandRegistryDestroy(registry);
-        for (Entry* entry : entries) {
+        for (Entry* entry : entries)
             destroy(entry);
-            prMemoryFree(entry);
-        }
     }
 
     Commands() = default;
@@ -50,7 +47,7 @@ struct Commands {
 
     void add(const char* id, const char* title, const char* category, PrCommandFlags flags = 0,
             const PrCommandParam* params = nullptr, uint32_t paramCount = 0) {
-        entries.push(construct<Entry>(alloc<Entry>(), Entry{this, id}));
+        entries.push(create<Entry>(this, id));
         PrCommandDesc desc{
             .id = id,
             .title = title,

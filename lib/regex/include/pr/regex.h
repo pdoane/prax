@@ -34,7 +34,7 @@ typedef struct PrRegexGroup {
 } PrRegexGroup;
 
 // The start and the end of a group that took no part in a match.
-static const uint32_t kPrRegexGroupNone = 0xffffffffu;
+PR_CONSTANT uint32_t kPrRegexGroupNone = 0xffffffffu;
 
 // Compiles `pattern`, or frees a regex. Returns Syntax if the pattern does not parse, and Limit if its groups nest more
 // than 256 deep, a repetition counts past 1000, or its program would pass a million steps. On failure, sets `*out` to

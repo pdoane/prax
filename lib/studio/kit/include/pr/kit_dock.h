@@ -23,7 +23,7 @@ extern "C" {
 // Splits
 
 // The thickness in px of the band between two panes.
-static const float kPrKitSplitBand = 5.0f;
+PR_CONSTANT float kPrKitSplitBand = 5.0f;
 
 // The content of a split: panes that divide its box by weight. A pane's share of the box, less its bands, is its weight
 // divided by the total of the weights.
@@ -81,7 +81,7 @@ enum {
 typedef uint8_t PrKitDockEdge;
 
 // The payload kind of a panel's tab while it is dragged (prUiDragging). The payload's value is the panel.
-static const uint64_t kPrKitDockDragKind = 0x646f636b70616e6cull;
+PR_CONSTANT uint64_t kPrKitDockDragKind = 0x646f636b70616e6cull;
 
 // Creates a dock of one empty leaf, which is its root and its primary leaf.
 PrKitDock* prKitDockCreate(void);

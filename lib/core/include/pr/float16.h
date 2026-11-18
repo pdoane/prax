@@ -26,6 +26,9 @@ typedef struct PrFloat16 {
     PrFloat16Bits bits;
 
     constexpr operator float() const;
+
+    // Compares the values as floats, as a native 16-bit float compares.
+    constexpr bool operator==(const PrFloat16& other) const { return float(*this) == float(other); }
 } PrFloat16;
 #else
 #define PR_FLOAT16_NATIVE 0

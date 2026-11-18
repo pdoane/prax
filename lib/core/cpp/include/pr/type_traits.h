@@ -45,6 +45,10 @@ inline constexpr bool isEnum = __is_enum(T);
 template <typename T>
 using UnderlyingType = __underlying_type(T);
 
+// A `T` for an expression that is never evaluated, as decltype's and requires' are, as std::declval is.
+template <typename T>
+T&& declval();
+
 // True if `A` and `B` are the same type.
 template <typename A, typename B>
 inline constexpr bool isSame = false;

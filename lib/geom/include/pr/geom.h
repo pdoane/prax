@@ -18,6 +18,7 @@ typedef struct PrRect {
     float top;
     float right;
     float bottom;
+    PR_EQUALITY(PrRect)
 } PrRect;
 
 // An axis-aligned rectangle of integers by its edges, such as whole pixels or texels. It is empty if `right` <= `left`
@@ -27,6 +28,7 @@ typedef struct PrIRect {
     int32_t top;
     int32_t right;
     int32_t bottom;
+    PR_EQUALITY(PrIRect)
 } PrIRect;
 
 // The corners of a rectangle, clockwise from the top left.
@@ -143,7 +145,7 @@ PrRect prRectUnion(PrRect a, PrRect b);
 PrRect prRectIntersect(PrRect a, PrRect b);
 
 // The distance in pixels that an edge may be from a whole pixel and still lie on it.
-static const float kPrRectOnPixelTolerance = 1e-3f;
+PR_CONSTANT float kPrRectOnPixelTolerance = 1e-3f;
 
 // Returns true if every edge of `rect` lies within kPrRectOnPixelTolerance of a whole pixel.
 bool prRectIsOnPixels(PrRect rect);

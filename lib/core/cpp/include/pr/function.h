@@ -115,9 +115,9 @@ private:
         static void copyTo(void* to, const void* from) { construct<Held>(to, *of(from)); }
         static void moveTo(void* to, void* from) {
             construct<Held>(to, move(*of(from)));
-            destroy(of(from));
+            destruct(of(from));
         }
-        static void destroyAt(void* held) { destroy(of(held)); }
+        static void destroyAt(void* held) { destruct(of(held)); }
         static constexpr Operations kOperations = {call, copyTo, moveTo, destroyAt};
     };
 
@@ -137,7 +137,7 @@ private:
         static void moveTo(void* to, void* from) { *static_cast<Held**>(to) = of(from); }
         static void destroyAt(void* held) {
             Held* at = of(held);
-            destroy(at);
+            destruct(at);
             prMemoryFree(at);
         }
         static constexpr Operations kOperations = {call, copyTo, moveTo, destroyAt};

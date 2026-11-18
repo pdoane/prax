@@ -322,10 +322,10 @@ typedef uint8_t PrFontStyleFlags;
 
 // The heaviest weight that matching treats as normal. A style from kPrFontWeightNormal to this weight tries faces from
 // its weight up to this one first, then lighter faces, then heavier ones.
-static const float kPrFontSetWeightNormalMax = 500;
+PR_CONSTANT float kPrFontSetWeightNormalMax = 500;
 
 // The angle in degrees of an oblique that stands in for a requested italic, and the default angle of an oblique style.
-static const float kPrFontSetObliqueAngle = 14;
+PR_CONSTANT float kPrFontSetObliqueAngle = 14;
 
 // A style requested of the faces of a family, as the CSS font properties give it.
 typedef struct PrFontStyle {

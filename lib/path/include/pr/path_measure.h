@@ -74,7 +74,7 @@ bool prPathMeasureLineTransform(const PrPathMeasure* measure, float distance, Pr
 void prPathMeasureSegment(const PrPathMeasure* measure, float start, float end, PrPathPolyline* out);
 
 // How far apart two squared distances to the nearest point may be and still count as equal.
-static const float kPrPathMeasureTieTolerance = 1e-3f;
+PR_CONSTANT float kPrPathMeasureTieTolerance = 1e-3f;
 
 // Writes to `out` the point of the path nearest `point`, within `reach` of it. Among points whose squared distances
 // differ by no more than kPrPathMeasureTieTolerance, it is the one earliest along the path. Returns false if no point

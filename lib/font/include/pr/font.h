@@ -217,9 +217,9 @@ enum {
 typedef uint8_t PrFontSlope;
 
 // The normal and bold weights, and the normal width in percent.
-static const float kPrFontWeightNormal = 400;
-static const float kPrFontWeightBold = 700;
-static const float kPrFontWidthNormal = 100;
+PR_CONSTANT float kPrFontWeightNormal = 400;
+PR_CONSTANT float kPrFontWeightBold = 700;
+PR_CONSTANT float kPrFontWidthNormal = 100;
 
 // The properties of a font that matching reads. A property that a variation axis varies is a range.
 typedef struct PrFontInfo {

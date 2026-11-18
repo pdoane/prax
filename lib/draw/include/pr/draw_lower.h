@@ -134,7 +134,7 @@ typedef void (*PrDrawBorderEmitFn)(void* PR_NULLABLE context, const PrDrawBorder
 void prDrawBorderLower(const PrDrawBorder* border, float tolerance, PrDrawBorderEmitFn emit, void* PR_NULLABLE context);
 
 // The factor by which a shaded band scales its color channels.
-static const float kPrDrawBorderShade = 0.55f;
+PR_CONSTANT float kPrDrawBorderShade = 0.55f;
 
 // A band of one side of a border: the area between the contours at fractions `from` and `to` of the sides' widths, in
 // one color. A contour at a fraction is the outer shape inset by that fraction of each side's width.

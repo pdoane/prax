@@ -28,6 +28,7 @@ typedef struct PrAppDisplay {
     float potentialHeadroom;
 
     PrColorSpace gamut;         // the RGB space closest to the display's primaries: Srgb, DisplayP3 or Rec2020
+    PR_EQUALITY(PrAppDisplay)
 } PrAppDisplay;
 
 // Returns an SDR display with the sRGB gamut and one device pixel per logical pixel.

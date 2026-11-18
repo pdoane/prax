@@ -48,6 +48,7 @@ typedef struct PrAppUserPreferences {
     bool reducedTransparency;   // fewer translucent layers
     PrColor16 accentColor;
     float textScale;
+    PR_EQUALITY(PrAppUserPreferences)
 } PrAppUserPreferences;
 
 // Returns the preferences of a user who changed no settings: a light scheme, no accent color, and a text scale of 1.

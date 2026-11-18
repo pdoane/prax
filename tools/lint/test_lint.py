@@ -117,6 +117,7 @@ class ManagedLayer(unittest.TestCase):
         full = os.path.join(lint.ROOT, path)
         lint.check_destructors(report, full, source)
         lint.check_managed_includes(report, full, source)
+        lint.check_cpp_layer_includes(report, full, source)
         return [rule for _, _, rule, _ in report.problems]
 
     def test_an_implementation_declares_no_destructor(self):
@@ -126,6 +127,21 @@ class ManagedLayer(unittest.TestCase):
 
     def test_bitwise_not_and_comments_are_not_destructors(self):
         self.assertEqual(self.rules("lib/font/src/a.cpp", "    x = ~mask();\n    // ~A() in a comment\n"), [])
+
+    def test_a_cpp_layers_classes_may_destroy_and_cores_only_on_the_managed_list(self):
+        self.assertEqual(self.rules("lib/ui/cpp/src/a.cpp", "Owner::~Owner() {}\n"), [])
+        self.assertEqual(self.rules("lib/ui/cpp/include/pr/a.h", "struct A {\n    ~A();\n};\n"), [])
+        self.assertEqual(self.rules("lib/core/cpp/include/pr/a.h", "struct A {\n    ~A();\n};\n"), ["destructor"])
+
+    def test_a_library_includes_a_cpp_layers_headers_only_where_approved(self):
+        with patch.object(lint, "cpp_layer_headers", lambda: {"pr/ui_element.h"}), \
+                patch.object(lint, "CPP_LAYER_USERS", {"lib/font/src/b.cpp": {"pr/ui_element.h"}}):
+            include = '#include "pr/ui_element.h"\n'
+            self.assertEqual(self.rules("lib/font/src/a.cpp", include), ["cpp-layer-include"])
+            self.assertEqual(self.rules("lib/font/src/b.cpp", include), [])
+            self.assertEqual(self.rules("lib/ui/cpp/src/a.cpp", include), [])
+            self.assertEqual(self.rules("lib/ui/tests/test_a.cpp", include), [])
+            self.assertEqual(self.rules("examples/a/a.cpp", include), [])
 
     def test_tests_and_applications_may_destroy(self):
         self.assertEqual(self.rules("lib/font/tests/test_a.cpp", "struct A {\n    ~A() {}\n};\n"), [])
@@ -139,6 +155,12 @@ class ManagedLayer(unittest.TestCase):
             self.assertEqual(self.rules("lib/core/cpp/include/pr/string.h",
                                         '#include "pr/array.h"\n'), ["managed-include"])
             self.assertEqual(self.rules("lib/core/cpp/include/pr/array.h", "    ~Array() { reset(); }\n"), [])
+
+    def test_a_cpp_layer_includes_its_headers(self):
+        with patch.object(lint, "MANAGED", {"pr/array.h"}):
+            self.assertEqual(self.rules("lib/ui/cpp/include/pr/a.h", '#include "pr/array.h"\n'), [])
+            self.assertEqual(self.rules("lib/ui/cpp/src/a.cpp", '#include "pr/array.h"\n'), [])
+            self.assertEqual(self.rules("lib/ui/src/a.cpp", '#include "pr/array.h"\n'), ["managed-include"])
 
 
 class ApplicationIncludes(unittest.TestCase):
@@ -495,6 +517,13 @@ class Namespaces(unittest.TestCase):
                   '#define PR_THING(x) (x)\n')
         self.assertEqual(self.rules(lint.check_macro_constants, 'lib/core/include/pr/a.h', header),
                          [(1, 'macro-constant')])
+
+    def test_a_public_constant_is_no_static_const(self):
+        header = ('static const float kPrThingWidth = 2.0f;\nstatic const char kPrThingName[] = "a";\n'
+                  'PR_CONSTANT float kPrThingHeight = 2.0f;\nstatic const PrThing* prThingFind(void);\n'
+                  '// static const float kPrThingOld = 1;\n')
+        self.assertEqual(self.rules(lint.check_macro_constants, 'lib/core/include/pr/a.h', header),
+                         [(1, 'static-constant'), (2, 'static-constant')])
 
     def test_an_array_names_its_index_domain_by_a_type_or_a_known_word(self):
         header = ('struct A {\n'

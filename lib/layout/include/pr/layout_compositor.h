@@ -114,7 +114,7 @@ bool prLayoutCompositorScrollAt(PrLayoutCompositor* compositor, PrLayoutVec poin
 
 // The pause between a user's wheels, in milliseconds, after which the next wheel starts a new sequence. A wheel at
 // another point also starts one. A sequence is one gesture, and its first wheel decides whether the rest of it waits.
-static const double kPrLayoutWheelSequenceGap = 500.0;
+PR_CONSTANT double kPrLayoutWheelSequenceGap = 500.0;
 
 // Returns true if a user's wheel at `point`, in the presented scene's units, waits for the client, which may cancel it,
 // before anything scrolls. The first wheel of a sequence waits if the point is in the wheel region of the presented

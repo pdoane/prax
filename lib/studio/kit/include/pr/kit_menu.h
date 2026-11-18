@@ -196,7 +196,7 @@ PrLayoutNode prKitContextMenu(PrKit* kit, PrLayoutNode host, PrKitContextMenu me
 // Tooltips
 
 // The number of seconds that the pointer rests on an anchor before its tooltip shows.
-static const double kPrKitTooltipDelay = 0.5;
+PR_CONSTANT double kPrKitTooltipDelay = 0.5;
 
 // The content of a tooltip.
 typedef struct PrKitTooltip {

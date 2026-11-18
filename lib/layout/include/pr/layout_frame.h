@@ -89,7 +89,7 @@ uint32_t prLayoutTreeSlotCount(const PrLayoutTree* tree);
 uint32_t prLayoutTreeFrameCursor(const PrLayoutTree* tree);
 
 // The value of prLayoutTreeFrameCursor past the end of the committed preorder.
-static const uint32_t kPrLayoutFrameCursorEnd = 0xffffffffu;
+PR_CONSTANT uint32_t kPrLayoutFrameCursorEnd = 0xffffffffu;
 
 // A key that two creations of one frame gave. A key names one node of a frame, so the second creation is a caller's
 // error. `first` is the node that holds the key. `second` is the node of the later creation, which the frame created

@@ -19,8 +19,8 @@ extern "C" {
 #endif
 
 // The lowest and highest rates that a source plays at.
-static const double kPrAudioSourceMinRate = 0.25;
-static const double kPrAudioSourceMaxRate = 4;
+PR_CONSTANT double kPrAudioSourceMinRate = 0.25;
+PR_CONSTANT double kPrAudioSourceMaxRate = 4;
 
 // The sources that share one output.
 typedef struct PrAudioMixer PrAudioMixer;

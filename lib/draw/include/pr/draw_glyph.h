@@ -25,7 +25,7 @@ PrAffine2 prDrawGlyphTransform(const PrFontGlyphRun* run, uint32_t index);
 // The positions within a target pixel, along each axis, at which an upright glyph is drawn, and the largest em, in
 // target pixels, of a glyph drawn at them.
 enum { kPrDrawGlyphPhases = 4 };
-static const float kPrDrawGlyphMaxPhasedEm = 160;
+PR_CONSTANT float kPrDrawGlyphMaxPhasedEm = 160;
 
 // Where a glyph is drawn at a phase of a target pixel, as an atlas holds it.
 typedef struct PrDrawGlyphPlacement {

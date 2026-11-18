@@ -189,7 +189,7 @@ void prTextShapingPositions(const PrTextShaping* shaping, const PrTextShapingSeg
 
 // How far the width of a line may exceed its space and still fit, in px, which allows for the error of summing
 // advances.
-static const float kPrTextLineFitTolerance = 1.0f / 64;
+PR_CONSTANT float kPrTextLineFitTolerance = 1.0f / 64;
 
 // A range of the text that a call measures or breaks as one line.
 typedef struct PrTextShapingLine {

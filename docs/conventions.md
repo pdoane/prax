@@ -231,9 +231,12 @@ says what they must contain.
   (`kPrLayoutNodeNone`, `kLayoutFaceNone`). A lookup that finds nothing returns `k<Subject>Missing` (`kArrayMissing`,
   `kHashMissing`).
 - **Memory.** Use `alloc<T>`, `allocZeroed<T>`, and `prMemoryAlloc`/`prMemoryFree`. No `new`, `delete` or `<new>`, and
-  no constructors or destructors in the implementation (`lint.py`, `destructor`). Growable storage is a `RawArray`. Its
-  elements are copied as bytes, and its owner resets it. Text is a `PrRawString`. Storage with a known bound may
-  reserve address space instead (`pr/vmem.h`) if that is worth the overhead. Use indices and relative offsets instead
+  no constructors or destructors in the implementation (`lint.py`, `destructor`). A class of core's with a constructor
+  or destructor is the managed layer's, and lint.py lists its header (`MANAGED`). A module's C++ layer
+  (`lib/<module>/cpp`) is an API for applications, so its classes own their state with constructors and destructors,
+  and a library includes its headers only where lint.py approves (`cpp-layer-include`). Growable storage is a
+  `RawArray`. Its elements are copied as bytes, and its owner resets it. Text is a `PrRawString`. Storage with a known
+  bound may reserve address space instead (`pr/vmem.h`) if that is worth the overhead. Use indices and relative offsets instead
   of pointers, which keeps data relocatable and smaller. Examples, tools and tests may use core's managed layer instead
   (`Array`, `String`, `Map`, `Set`, `Function`, `Lock`, `Defer`), whose values construct, copy and destroy their
   contents. An implementation includes none of its headers (`managed-include`).

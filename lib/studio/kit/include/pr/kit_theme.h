@@ -222,27 +222,27 @@ PrKitTheme prKitThemeStudio(PrKitThemeVariant variant, PrFontSet* PR_NULLABLE fo
 // Measures
 
 // The spacing scale in px, on a base of two.
-static const float kPrKitSpace1 = 2.0f;
-static const float kPrKitSpace2 = 4.0f;
-static const float kPrKitSpace3 = 6.0f;
-static const float kPrKitSpace4 = 8.0f;
-static const float kPrKitSpace5 = 10.0f;
-static const float kPrKitSpace6 = 12.0f;
-static const float kPrKitSpace8 = 16.0f;
-static const float kPrKitSpace10 = 20.0f;
-static const float kPrKitSpace12 = 24.0f;
-static const float kPrKitSpace16 = 32.0f;
+PR_CONSTANT float kPrKitSpace1 = 2.0f;
+PR_CONSTANT float kPrKitSpace2 = 4.0f;
+PR_CONSTANT float kPrKitSpace3 = 6.0f;
+PR_CONSTANT float kPrKitSpace4 = 8.0f;
+PR_CONSTANT float kPrKitSpace5 = 10.0f;
+PR_CONSTANT float kPrKitSpace6 = 12.0f;
+PR_CONSTANT float kPrKitSpace8 = 16.0f;
+PR_CONSTANT float kPrKitSpace10 = 20.0f;
+PR_CONSTANT float kPrKitSpace12 = 24.0f;
+PR_CONSTANT float kPrKitSpace16 = 32.0f;
 
 // The heights of controls in px. The smallest height is for compact rows that take no input.
-static const float kPrKitHeightXxs = 14.0f;
-static const float kPrKitHeightXs = 18.0f;
-static const float kPrKitHeightSm = 22.0f;
-static const float kPrKitHeightMd = 26.0f;
-static const float kPrKitHeightLg = 30.0f;
-static const float kPrKitHeightXl = 36.0f;
+PR_CONSTANT float kPrKitHeightXxs = 14.0f;
+PR_CONSTANT float kPrKitHeightXs = 18.0f;
+PR_CONSTANT float kPrKitHeightSm = 22.0f;
+PR_CONSTANT float kPrKitHeightMd = 26.0f;
+PR_CONSTANT float kPrKitHeightLg = 30.0f;
+PR_CONSTANT float kPrKitHeightXl = 36.0f;
 
 // The radius of a control's corners in px, which the kit draws once layout rounds corners.
-static const float kPrKitRadius = 3.0f;
+PR_CONSTANT float kPrKitRadius = 3.0f;
 
 #if defined(__cplusplus)
 }

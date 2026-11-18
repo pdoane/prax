@@ -63,7 +63,7 @@ PrRect prPathPolylineBounds(const PrPathPolyline* polyline);
 // The smallest w that prPathPolylineProject keeps, relative to the largest w of a contour. Points nearer the eye are
 // cut away. Code that cuts a projected plane by hand uses the same fraction, so that its cut agrees with
 // prPathPolylineProject.
-static const float kPrPathPolylineNearPlane = 1e-4f;
+PR_CONSTANT float kPrPathPolylineNearPlane = 1e-4f;
 
 // Appends `polyline` to `out` as closed contours, placed on the z = 0 plane, mapped through `matrix` and divided by w.
 // Parts nearer the eye than kPrPathPolylineNearPlane are cut away, and the cut closes each contour it crosses.

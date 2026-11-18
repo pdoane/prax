@@ -197,7 +197,7 @@ struct Array {
         for (uint32_t i = index; i + removedCount < used; ++i)
             elements[i] = move(elements[i + removedCount]);
         for (uint32_t i = used - removedCount; i < used; ++i)
-            destroy(elements + i);
+            destruct(elements + i);
         used -= removedCount;
     }
 
@@ -231,7 +231,7 @@ struct Array {
         }
         uint32_t removed = used - kept;
         for (uint32_t i = kept; i < used; ++i)
-            destroy(elements + i);
+            destruct(elements + i);
         used = kept;
         return removed;
     }
@@ -259,7 +259,7 @@ struct Array {
     // Removes the last element. The array must not be empty.
     void pop() {
         PR_ASSERT(used != 0);
-        destroy(elements + --used);
+        destruct(elements + --used);
     }
 
     // Sets the count to `newCount`. Elements past the old count are made with no arguments, which zeroes a trivial
@@ -267,7 +267,7 @@ struct Array {
     void resize(uint32_t newCount) {
         if (newCount < used) {
             for (uint32_t i = newCount; i < used; ++i)
-                destroy(elements + i);
+                destruct(elements + i);
         } else {
             if (newCount > allocated)
                 reserve(newCount);
@@ -290,7 +290,7 @@ struct Array {
             T* moved = static_cast<T*>(prMemoryAlloc(size_t(grown) * sizeof(T)));
             for (uint32_t i = 0; i < used; ++i) {
                 construct<T>(moved + i, move(elements[i]));
-                destroy(elements + i);
+                destruct(elements + i);
             }
             if (elements != nullptr)
                 prMemoryFree(elements);
@@ -303,7 +303,7 @@ struct Array {
     void clear() {
         if constexpr (!isTriviallyDestructible<T>) {
             for (uint32_t i = 0; i < used; ++i)
-                destroy(elements + i);
+                destruct(elements + i);
         }
         used = 0;
     }

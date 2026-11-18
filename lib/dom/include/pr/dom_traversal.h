@@ -44,7 +44,7 @@ enum {
 typedef uint32_t PrDomNodeShowFlags;
 
 // Shows every node.
-static const PrDomNodeShowFlags kPrDomNodeShowAll = 0xFFFFFFFFu;
+PR_CONSTANT PrDomNodeShowFlags kPrDomNodeShowAll = 0xFFFFFFFFu;
 
 // Returns the filter's answer for `node`, which is a node of a type that whatToShow includes.
 typedef PrDomNodeFilterResult (*PrDomNodeFilterFn)(void* PR_NULLABLE context, PrDomNode* node);

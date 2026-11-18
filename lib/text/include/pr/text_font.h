@@ -39,7 +39,7 @@ typedef struct PrTextFontDesc {
 } PrTextFontDesc;
 
 // The match index that means no font, for a text font that has no face with a font.
-static const uint32_t kPrTextMatchNone = 0xffffffffu;
+PR_CONSTANT uint32_t kPrTextMatchNone = 0xffffffffu;
 
 // Creates a text font with one reference. The text font copies the description.
 PrTextFont* prTextFontCreate(const PrTextFontDesc* desc);

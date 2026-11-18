@@ -28,7 +28,7 @@ extern "C" {
 // Selection
 
 // The absent index of a row.
-static const uint32_t kPrKitRowNone = 0xffffffffu;
+PR_CONSTANT uint32_t kPrKitRowNone = 0xffffffffu;
 
 // How an edit's rows join the application's selection.
 enum {
@@ -240,7 +240,7 @@ PrLayoutNode prKitVisibilityToggle(PrKit* kit, PrLayoutNode parent, PrKitVisibil
 // Tables
 
 // The absent index of a column.
-static const uint32_t kPrKitColumnNone = 0xffffffffu;
+PR_CONSTANT uint32_t kPrKitColumnNone = 0xffffffffu;
 
 // A table's column: its heading, its width, and where its heading and cells sit. A column is `width` px wide, or with
 // Fill it is at least `width` px wide and shares the room that the other columns leave by `weight`. Columns wider than

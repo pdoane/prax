@@ -33,7 +33,7 @@ enum {
 typedef uint8_t PrPathSparseKind;
 
 // The `data` of a solid span.
-static const uint32_t kPrPathSparseSolid = 0xffffffffu;
+PR_CONSTANT uint32_t kPrPathSparseSolid = 0xffffffffu;
 
 // A rectangle of pixels in the result of a fill. `data` is kPrPathSparseSolid for a solid span. For an edge span, it is
 // the index of the first coverage byte of the span, or of the first float of its first tile.
