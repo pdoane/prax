@@ -732,7 +732,7 @@ PrLayoutNode prKitTabStrip(PrKit* kit, PrLayoutNode parent, PrKitTabStrip strip,
     }
     state.caret = kPrLayoutNodeNone;
     if (ours && prUiIsDropTarget(ui, node, context.payload)) {
-        state.caret = prLayoutTreeFrameElement(k.tree, node, kCaretKey,
+        state.caret = prLayoutTreeFrameElement(k.tree, node, kitKey(k, node, kCaretKey),
             kitStyle(k, CaretBox{.left = caret}, KitColors{.background = p.accent}));
     }
     uint32_t source = drop ? tabIndexOf(tabs, dropped->value) : tabs.order.count;
@@ -772,11 +772,13 @@ PrLayoutNode prKitTab(PrKit* kit, PrLayoutNode strip, PrKitTab tab) {
     KitTabs& tabs = *s.tabs;
     uint32_t at = tabIndexOf(tabs, tab.id);
     PR_ASSERT(at < tabs.order.count);
-    // A tab of a group has the same key in every window, so that it keeps its identity as it moves between strips.
-    PrUiKey key = prUiKeyIndex(ui, strip, tab.id);
+    // A tab of a group has the same layout key in every strip, which no parent composes, so that it keeps its identity
+    // as it moves between strips.
+    uint64_t key = kitKey(k, strip, kitItemKey(tab.id));
     if (s.group != 0)
-        key = prUiKeyIndex(ui, kPrLayoutNodeNone, prHashMixKeys(s.group, tab.id));
-    KitControl cell = kitControl(k, strip, key, PrUiFlag_Pressable | PrUiFlag_Focusable, tab.disabled);
+        key = prHashMixKeys(s.group, kitItemKey(tab.id));
+    KitControl cell = kitControlFromNode(k, prLayoutTreeFrameElement(k.tree, strip, key, 0),
+        PrUiFlag_Pressable | PrUiFlag_Focusable, tab.disabled);
     tabs.order.data[at].node = cell.node;
     tabs.order.data[at].round = tabs.round;
     if (prUiActivated(ui, cell.node))
@@ -825,7 +827,7 @@ PrLayoutNode prKitTab(PrKit* kit, PrLayoutNode strip, PrKitTab tab) {
 
 PrLayoutNode prKitTabLabel(PrKit* kit, PrLayoutNode tab, PrKitLabel label) {
     // The tab's style sets the font and the text color of its state, which the text takes.
-    return prLayoutTreeFrameText(kit->tree, tab, label.key, label.text);
+    return prLayoutTreeFrameText(kit->tree, tab, kitKey(*kit, tab, label.key), label.text);
 }
 
 PrLayoutNode prKitTabClose(PrKit* kit, PrLayoutNode tab) {
@@ -853,7 +855,7 @@ PrLayoutNode prKitProgress(PrKit* kit, PrLayoutNode parent, PrKitProgress progre
     const PrKitPalette& p = k.theme.palette;
     KitColors fill{.background = disabledUnder(k, parent) ? p.text4 : p.accent};
     PrLayoutStyleIndex barRecord = kitStyle(k, BarBox{.clips = true}, BarFlex{}, KitColors{.background = p.bg4});
-    PrLayoutNode bar = prLayoutTreeFrameElement(k.tree, parent, progress.key, barRecord);
+    PrLayoutNode bar = prLayoutTreeFrameElement(k.tree, parent, kitKey(k, parent, progress.key), barRecord);
     prUiSetFlags(k.ui, bar, PrUiFlag_SubtreeTransparent);
     if (!progress.indeterminate) {
         // The run is scaled to the fraction, which composites without a layout.
@@ -879,7 +881,8 @@ PrLayoutNode prKitMeter(PrKit* kit, PrLayoutNode parent, PrKitMeter meter, PrKit
     float span = high - meter.low;
     float fraction = span != 0 ? unitClamp((meter.value - meter.low) / span) : 0;
     uint32_t lit = uint32_t(fraction * float(kPrKitMeterSegments));
-    PrLayoutNode bar = prLayoutTreeFrameElement(k.tree, parent, meter.key, kitStyle(k, BarBox{}, BarFlex{.gap = 1}));
+    PrLayoutNode bar =
+        prLayoutTreeFrameElement(k.tree, parent, kitKey(k, parent, meter.key), kitStyle(k, BarBox{}, BarFlex{.gap = 1}));
     prUiSetFlags(k.ui, bar, PrUiFlag_SubtreeTransparent);
     PrColor on = disabled ? p.text4 : kitToneColor(k, style.tone);
     for (uint32_t i = 0; i < kPrKitMeterSegments; ++i) {

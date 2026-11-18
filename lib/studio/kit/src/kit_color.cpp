@@ -376,7 +376,7 @@ PrLayoutStyleIndex partStyle(PrKit& kit, Part part) {
 }
 
 PrLayoutNode part(PrKit& kit, PrLayoutNode parent, uint64_t key, Part part) {
-    return prLayoutTreeFrameElement(kit.tree, parent, key, partStyle(kit, part));
+    return prLayoutTreeFrameElement(kit.tree, parent, kitKey(kit, parent, key), partStyle(kit, part));
 }
 
 // A marker on an area, centered at `x` and `y`, fractions of the area's width and height: a ring for a plane, or a bar
@@ -939,7 +939,7 @@ PrLayoutNode prKitColorField(PrKit* kit, PrLayoutNode parent, PrKitColorField fi
     PR_ASSERT(field.color != nullptr);
     PrColor* color = field.color;
     PrUi* ui = kit->ui;
-    PrLayoutNode node = prLayoutTreeFrameElement(kit->tree, parent, field.key, 0);
+    PrLayoutNode node = prLayoutTreeFrameElement(kit->tree, parent, kitKey(*kit, parent, field.key), 0);
     PrUiFlags flags = PrUiFlag_Pressable | PrUiFlag_Focusable;
     bool disabled = kitSetFlags(*kit, node, field.disabled ? flags | PrUiFlag_Disabled : flags);
     uint8_t state = disabled || !prUiIsHovered(ui, node) ? 0 : 1;

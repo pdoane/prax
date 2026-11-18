@@ -338,7 +338,7 @@ PrLayoutNode prKitTimeline(PrKit* kit, PrLayoutNode parent, PrKitTimeline timeli
     float trackHeight = style.trackHeight > 0 ? style.trackHeight : kTrackHeight;
     bool editable = !t.readOnly && !prUiIsDisabled(ui, parent);
 
-    PrLayoutNode frame = prLayoutTreeFrameElement(k.tree, parent, t.key,
+    PrLayoutNode frame = prLayoutTreeFrameElement(k.tree, parent, kitKey(k, parent, t.key),
         kitStyle(k, FrameBox{}, FrameFlex{}, KitColors{.background = p.bg1}));
     TimelineAdd& add = kitProvide<TimelineAdd>(k, frame, KitContext_Timeline);
     PrUiFlags flags = PrUiFlag_Wheel;

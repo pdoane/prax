@@ -32,7 +32,8 @@ PrLayoutNode iconBox(PrKit& kit, PrLayoutNode parent, uint64_t key, const PrPath
         float size) {
     size = size > 0 ? size : 16;
     PrLayoutTree* tree = kit.tree;
-    PrLayoutNode node = prLayoutTreeFrameReplaced(tree, parent, key, kitStyle(kit, IconBox{.size = size}, KitFixed{}));
+    PrLayoutNode node = prLayoutTreeFrameReplaced(tree, parent, kitKey(kit, parent, key),
+        kitStyle(kit, IconBox{.size = size}, KitFixed{}));
     PrLayoutNaturalSize natural{.width = prLayoutUnitFromPx(size), .height = prLayoutUnitFromPx(size), .ratio = 1};
     prLayoutTreeFrameSetNaturalSize(tree, node, natural);
     PrLayoutContent content{};

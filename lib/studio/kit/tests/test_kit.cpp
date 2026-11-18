@@ -1,3 +1,4 @@
+#include "pr/hash.h"
 #include "pr/kit.h"
 #include "pr/kit_box.h"
 #include "pr/kit_button.h"
@@ -155,8 +156,7 @@ TEST_CASE("a widget that holds still keeps its record past the cache's age, when
         prKitBox(f.kit, root, {}, {});
         if (shifted)
             prKitBox(f.kit, root, {}, {});
-        label = prKitLabel(f.kit, root, {.key = prUiKey(f.kit->ui, root, "label"), .text = "Still"},
-            {.tone = PrKitTone_Accent});
+        label = prKitLabel(f.kit, root, {.key = prHashString("label", 0), .text = "Still"}, {.tone = PrKitTone_Accent});
     };
     f.frame();
     PrLayoutStyleIndex record = prLayoutNodeStyle(f.tree, label);

@@ -90,7 +90,7 @@ struct MessageBox {
 
 // Creates a node of `record` under `parent`, with `text` in it if it is not empty.
 PrLayoutNode part(PrKit& kit, PrLayoutNode parent, uint64_t key, PrLayoutStyleIndex record, PrStringView text) {
-    PrLayoutNode node = prLayoutTreeFrameElement(kit.tree, parent, key, record);
+    PrLayoutNode node = prLayoutTreeFrameElement(kit.tree, parent, kitKey(kit, parent, key), record);
     if (text.size != 0)
         prLayoutTreeFrameText(kit.tree, node, 0, text);
     return node;

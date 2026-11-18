@@ -613,8 +613,10 @@ PrRect boundsOf(PrKit& kit, PrLayoutNode node) {
     return prLayoutRectToPx(prLayoutNodeBounds(kit.tree, node, PrLayoutCoordinates_Viewport));
 }
 
+// Returns the key of the dock's part of kind `salt` for `item`, which differs from every other dock's, so that the
+// parts that the dock creates in the overlay keep apart.
 PrUiKey keyOf(const DockBuild& b, DockKey salt, uint64_t item) {
-    return prUiKeyIndex2(b.kit->ui, b.node, salt, item);
+    return prHashMixKeys(prHashMixKeys(kitIdentity(*b.kit, b.node), salt), item);
 }
 
 // Resolves a drop at `pointer` over a leaf's `content`, in the dock's `area`. Near the dock's border, the drop takes a
@@ -703,7 +705,9 @@ void buildStrip(DockBuild& b, PrLayoutNode column, PrKitDockNode leaf) {
     uint32_t base = b.dock->scratch.count;
     for (uint32_t i = 0; i < count; ++i) {
         PrKitDockPanelId panel = node.tabs.data[i];
-        PrLayoutNode tab = prUiElement(ui, strip, keyOf(b, DockKey_Tab, panel), 0, PrUiFlag_Pressable);
+        // A tab is keyed by the dock and its panel, and no strip, so that it keeps its node as it moves between leaves.
+        PrLayoutNode tab = prLayoutTreeFrameElement(b.kit->tree, strip, keyOf(b, DockKey_Tab, panel), 0);
+        prUiSetFlags(ui, tab, PrUiFlag_Pressable);
         b.dock->scratch.push(tab);
         if (prUiClicked(ui, tab, 0))
             node.active = i;
@@ -777,7 +781,11 @@ void buildLeaf(DockBuild& b, PrLayoutNode parent, PrKitDockNode leaf) {
         box.justify = PrKitJustify_Center;
         box.align = PrKitAlign_Center;
     }
-    PrLayoutNode content = prKitBox(kit, column, {.key = panel != 0 ? keyOf(b, DockKey_Content, panel) : 0}, box);
+    // A panel's content is keyed by the dock and the panel, and no leaf, so that it keeps its node and its subtree as
+    // the panel moves between leaves.
+    uint64_t contentKey = panel != 0 ? keyOf(b, DockKey_Content, panel) : 0;
+    PrLayoutNode content = kitBoxNodeKeyed(*kit, column, contentKey, false, box.overflow,
+        kitStyle(*kit, KitContainerBox{.style = box}, kitContainerFlex(box)));
     if (panel != 0) {
         b.dock->panes.push(PrKitDockPane{.panel = panel, .leaf = leaf, .content = content});
     } else {

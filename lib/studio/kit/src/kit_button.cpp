@@ -186,7 +186,7 @@ PrColor washOf(PrColor color, float alpha) {
 PrLayoutNode tag(PrKit& kit, PrLayoutNode parent, uint64_t key, PrStringView text, Tag tag, PrColor ink, KitColors colors) {
     PrLayoutStyleIndex record =
         kitStyle(kit, TagBox{.tag = tag}, TagFlex{.tag = tag}, tagFont(tag), KitInk{.color = ink}, colors);
-    PrLayoutNode node = prLayoutTreeFrameElement(kit.tree, parent, key, record);
+    PrLayoutNode node = prLayoutTreeFrameElement(kit.tree, parent, kitKey(kit, parent, key), record);
     if (text.size != 0)
         prLayoutTreeFrameText(kit.tree, node, 0, text);
     return node;

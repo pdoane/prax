@@ -697,21 +697,23 @@ public:
     UiBuilder(const UiBuilder&) = delete;
     UiBuilder& operator=(const UiBuilder&) = delete;
 
-    // Creates a block element or an inline element under `parent`, keyed by `key` if it is not zero.
+    // Creates a block element or an inline element under `parent`, keyed by `key` among the parent's children if it is
+    // not zero.
     UiElement div(PrLayoutNode parent, PrUiKey key = 0);
     UiElement span(PrLayoutNode parent, PrUiKey key = 0);
 
-    // Creates a replaced element under `parent`, keyed by `key` if it is not zero, a block box whose content the caller
-    // sets (prLayoutTreeFrameSetContent).
+    // Creates a replaced element under `parent`, keyed by `key` among the parent's children if it is not zero, a block
+    // box whose content the caller sets (prLayoutTreeFrameSetContent).
     UiElement replaced(PrLayoutNode parent, PrUiKey key = 0);
 
-    // Creates a replaced element under `parent` that draws `path` (PrLayoutPath), keyed by `key` if it is not zero. Its
-    // natural size is the path's view box in px, and its style sizes it as any element's does: `.size(14)` draws the
-    // path scaled to 14 px.
+    // Creates a replaced element under `parent` that draws `path` (PrLayoutPath), keyed by `key` among the parent's
+    // children if it is not zero. Its natural size is the path's view box in px, and its style sizes it as any
+    // element's does: `.size(14)` draws the path scaled to 14 px.
     UiElement path(PrLayoutNode parent, const UiPath& path, PrUiKey key = 0);
 
-    // Creates the root of a memo of `inputs` under `parent`, keyed by `key` if it is not zero, and keeps its subtree or
-    // builds it (Memos). Returns the root, or for a build that returns a result, the root and the result in a UiResult.
+    // Creates the root of a memo of `inputs` under `parent`, keyed by `key` among the parent's children if it is not
+    // zero, and keeps its subtree or builds it (Memos). Returns the root, or for a build that returns a result, the
+    // root and the result in a UiResult.
     template <typename C>
     UiMemoReturn<C> memo(PrLayoutNode parent, const C& inputs, PrUiKey key = 0) {
         if constexpr (isSame<UiMemoResult<C>, void>) {
@@ -722,11 +724,6 @@ public:
             return UiMemoReturn<C>{result, root};
         }
     }
-
-    // Returns a key for a child of `parent` from `index` or `name` (prUiKeyIndex, prUiKey), for elements whose siblings
-    // reorder or come and go.
-    PrUiKey key(PrLayoutNode parent, uint64_t index) const;
-    PrUiKey key(PrLayoutNode parent, PrStringView name) const;
 
     // The context that the builder creates elements on, what it draws with, its tree, and the time of the round being
     // built, in seconds.

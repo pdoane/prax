@@ -14,6 +14,7 @@
 #include "pr/command_kit.h"
 #include "pr/date_time.h"
 #include "pr/float.h"
+#include "pr/hash.h"
 #include "pr/kit_box.h"
 #include "pr/kit_button.h"
 #include "pr/kit_choice.h"
@@ -505,7 +506,7 @@ void buildStart(Browser& b, PrLayoutNode root) {
 // removes the visit. A middle click or a click with the command modifier opens the page in a new tab. `offset` is the
 // local time zone's offset at the visit. Returns true if the user asked to remove the visit.
 bool historyRow(Browser& b, PrLayoutNode list, const Visit& visit, int32_t offset) {
-    PrLayoutNode row = prKitBox(b.kit, list, {.key = prUiKey(b.kit->ui, list, visit.url)}, {
+    PrLayoutNode row = prKitBox(b.kit, list, {.key = prHashString(visit.url, 0)}, {
         .direction = PrKitDirection_Row,
         .align = PrKitAlign_Center,
         .gap = 4,

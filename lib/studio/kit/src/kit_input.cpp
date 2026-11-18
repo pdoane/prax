@@ -568,7 +568,7 @@ PrLayoutStyleIndex partStyle(PrKit& kit, PartRecipe recipe) {
 
 // Creates an element with a part's record under `parent`.
 PrLayoutNode part(PrKit& kit, PrLayoutNode parent, uint64_t key, PartRecipe recipe) {
-    return prLayoutTreeFrameElement(kit.tree, parent, key, partStyle(kit, recipe));
+    return prLayoutTreeFrameElement(kit.tree, parent, kitKey(kit, parent, key), partStyle(kit, recipe));
 }
 
 // Creates an element with a part's record that holds `text`.
@@ -608,7 +608,7 @@ PrUiFlags editFlags(PrUiFlags flags, bool disabled) {
 
 // Creates an element under `parent` that takes `flags`, and writes whether it is disabled to `disabled`.
 PrLayoutNode control(PrKit& kit, PrLayoutNode parent, uint64_t key, PrUiFlags flags, bool* disabled) {
-    PrLayoutNode node = prLayoutTreeFrameElement(kit.tree, parent, key, 0);
+    PrLayoutNode node = prLayoutTreeFrameElement(kit.tree, parent, kitKey(kit, parent, key), 0);
     *disabled = kitSetFlags(kit, node, flags);
     return node;
 }
@@ -1386,7 +1386,7 @@ PrLayoutNode prKitInspectorGroup(PrKit* kit, PrLayoutNode parent, PrKitInspector
 }
 
 PrLayoutNode prKitInspectorRow(PrKit* kit, PrLayoutNode parent, PrKitInspectorRow row, PrKitInspectorRowStyle style) {
-    PrLayoutNode node = prLayoutTreeFrameElement(kit->tree, parent, row.key, 0);
+    PrLayoutNode node = prLayoutTreeFrameElement(kit->tree, parent, kitKey(*kit, parent, row.key), 0);
     uint8_t state = prUiIsHovered(kit->ui, node) ? PartState_Hover : PartState_Rest;
     prLayoutTreeFrameSetStyle(kit->tree, node, partStyle(*kit, PartRecipe{.part = Part_RowFrame, .state = state}));
     PrLayoutNode cell = part(*kit, node, 0, PartRecipe{.part = Part_RowLabelCell});
@@ -1398,7 +1398,7 @@ PrLayoutNode prKitInspectorRow(PrKit* kit, PrLayoutNode parent, PrKitInspectorRo
 PrLayoutNode prKitAssetField(PrKit* kit, PrLayoutNode parent, PrKitAssetField field) {
     PrKit& k = *kit;
     bool inRow = isRow(k, parent);
-    PrLayoutNode node = prLayoutTreeFrameElement(k.tree, parent, field.key, 0);
+    PrLayoutNode node = prLayoutTreeFrameElement(k.tree, parent, kitKey(k, parent, field.key), 0);
     if (field.disabled)
         prUiSetFlags(k.ui, node, PrUiFlag_Disabled);
     bool disabled = prUiIsDisabled(k.ui, node);

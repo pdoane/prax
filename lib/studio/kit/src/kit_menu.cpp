@@ -150,16 +150,16 @@ struct Item {
 // Creates an item under `parent` that takes `flags`. The item is disabled if `disabled` is true, or if a container that
 // it is created under is. An enabled item shows the hand cursor.
 Item itemNode(PrKit& kit, PrLayoutNode parent, uint64_t key, PrUiFlags flags, bool disabled) {
-    PrLayoutNode node = prLayoutTreeFrameElement(kit.tree, parent, key, 0);
+    PrLayoutNode node = prLayoutTreeFrameElement(kit.tree, parent, kitKey(kit, parent, key), 0);
     bool off = kitSetFlags(kit, node, disabled ? flags | PrUiFlag_Disabled : flags);
     if (!off)
         prUiSetCursor(kit.ui, node, PrAppCursor_Hand);
     return Item{.node = node, .disabled = off};
 }
 
-// Returns the key of a node that floats from `from`. The key is unique in the tree.
-PrUiKey floatKey(const PrUi* ui, PrLayoutNode from, uint64_t kind, PrUiKey key) {
-    return prUiKeyIndex2(ui, from, kind, key);
+// Returns the key of a node that floats from `from`, which is unique among what floats.
+PrUiKey floatKey(const PrKit& kit, PrLayoutNode from, uint64_t kind, PrUiKey key) {
+    return prHashMixKeys(prHashMixKeys(kitIdentity(kit, from), kind), key);
 }
 
 PrRect boundsOf(PrKit& kit, PrLayoutNode node) {
@@ -543,7 +543,7 @@ PrLayoutNode prKitPopover(PrKit* kit, PrLayoutNode trigger, PrKitPopover popover
         state.portal = kPrLayoutNodeNone;
         return kPrLayoutNodeNone;
     }
-    PrLayoutNode node = floating(*kit, floatKey(kit->ui, trigger, FloatKind_Popover, popover.key), 0,
+    PrLayoutNode node = floating(*kit, floatKey(*kit, trigger, FloatKind_Popover, popover.key), 0,
         prUiNodeViewport(kit->ui, trigger), boundsOf(*kit, trigger), style.offset, FloatLook_Panel, style.minWidth);
     if (state.portal != node)
         prUiKeyPressed(kit->ui, node, PrAppKey_Escape, 0);
@@ -564,7 +564,7 @@ PrLayoutNode prKitMenu(PrKit* kit, PrLayoutNode parent, PrKitMenu menu, PrKitMen
 PrLayoutNode prKitMenuLabel(PrKit* kit, PrLayoutNode menu, PrKitMenuLabel label) {
     PrLayoutStyleIndex record = kitStyle(*kit, MenuLabelBox{}, KitFixed{}, KitFont{.role = PrKitTextRole_Caption},
         KitInk{.color = kit->theme.palette.text4});
-    PrLayoutNode node = prLayoutTreeFrameElement(kit->tree, menu, label.key, record);
+    PrLayoutNode node = prLayoutTreeFrameElement(kit->tree, menu, kitKey(*kit, menu, label.key), record);
     prLayoutTreeFrameText(kit->tree, node, 0, label.text);
     return node;
 }
@@ -613,7 +613,8 @@ PrLayoutNode prKitMenuItem(PrKit* kit, PrLayoutNode menu, PrKitMenuItem item, Pr
 
 PrLayoutNode prKitMenuSeparator(PrKit* kit, PrLayoutNode menu, PrKitMenuSeparator separator) {
     KitColors colors{.background = kit->theme.palette.line1};
-    return prLayoutTreeFrameElement(kit->tree, menu, separator.key, kitStyle(*kit, SeparatorBox{}, KitFixed{}, colors));
+    return prLayoutTreeFrameElement(kit->tree, menu, kitKey(*kit, menu, separator.key),
+        kitStyle(*kit, SeparatorBox{}, KitFixed{}, colors));
 }
 
 PrLayoutNode prKitSelect(PrKit* kit, PrLayoutNode parent, PrKitSelect select, PrKitChoiceStyle style) {
@@ -690,7 +691,7 @@ bool prKitStepped(const PrKit* kit, PrLayoutNode select, int32_t* step) {
 PrLayoutNode prKitMenuBar(PrKit* kit, PrLayoutNode parent, PrKitMenuBar bar) {
     const PrKitPalette& p = kit->theme.palette;
     KitColors colors = bar.plain ? KitColors{} : KitColors{.background = p.bg2, .border = p.line1};
-    PrLayoutNode node = prLayoutTreeFrameElement(kit->tree, parent, bar.key,
+    PrLayoutNode node = prLayoutTreeFrameElement(kit->tree, parent, kitKey(*kit, parent, bar.key),
         kitStyle(*kit, BarBox{.rule = !bar.plain}, BarFlex{}, colors));
     // The open menu passes to the item under the pointer before any item is created, so that only one menu is open in
     // the round. The items are those of the last round, whose handles the round's items continue.
@@ -769,7 +770,7 @@ PrLayoutNode prKitContextMenu(PrKit* kit, PrLayoutNode host, PrKitContextMenu me
         return kPrLayoutNodeNone;
     }
     PrRect at{state.point.x, state.point.y, state.point.x, state.point.y};
-    PrLayoutNode portal = floating(*kit, floatKey(kit->ui, host, FloatKind_Context, menu.key), 0, state.viewport, at,
+    PrLayoutNode portal = floating(*kit, floatKey(*kit, host, FloatKind_Context, menu.key), 0, state.viewport, at,
         PrVec2{}, FloatLook_Panel, 0);
     if (state.portal != portal)
         prUiKeyPressed(ui, portal, PrAppKey_Escape, 0);
@@ -787,7 +788,7 @@ PrLayoutNode prKitTooltip(PrKit* kit, PrLayoutNode anchor, PrKitTooltip tooltip)
         prUiRequestFrame(ui);
         return kPrLayoutNodeNone;
     }
-    PrLayoutNode node = floating(*kit, floatKey(kit->ui, anchor, FloatKind_Tooltip, tooltip.key),
+    PrLayoutNode node = floating(*kit, floatKey(*kit, anchor, FloatKind_Tooltip, tooltip.key),
         PrUiFlag_Transparent | PrUiFlag_SubtreeTransparent, prUiNodeViewport(ui, anchor), boundsOf(*kit, anchor),
         PrVec2{0, kPrKitSpace2}, FloatLook_Tooltip, 0);
     PrKitTextStyle text{.role = PrKitTextRole_BodySmall, .wrap = PrKitWrap_Nowrap, .preserve = true};
@@ -804,7 +805,7 @@ PrLayoutNode prKitDragGhost(PrKit* kit, PrKitDragGhost ghost) {
     if (payload == nullptr || !prUiPointer(kit->ui, &viewport, &pointer))
         return kPrLayoutNodeNone;
     PrRect at{pointer.x, pointer.y, pointer.x, pointer.y};
-    PrLayoutNode node = floating(*kit, floatKey(kit->ui, payload->source, FloatKind_Ghost, ghost.key),
+    PrLayoutNode node = floating(*kit, floatKey(*kit, payload->source, FloatKind_Ghost, ghost.key),
         PrUiFlag_Transparent | PrUiFlag_SubtreeTransparent, viewport, at,
         PrVec2{kPrKitSpace6, kPrKitSpace6 - kPrKitHeightSm / 2}, FloatLook_Ghost, 0);
     if (ghost.icon != PrStudioIconKind_None)
@@ -835,7 +836,7 @@ PrLayoutNode prKitModal(PrKit* kit, PrLayoutNode trigger, PrKitModal modal, PrKi
         .modal = true,
         .cover = kitStyle(*kit, KitColors{.background = kScrim}),
     };
-    PrLayoutNode node = prUiPortal(ui, floatKey(kit->ui, trigger, FloatKind_Modal, modal.key), &desc, 0);
+    PrLayoutNode node = prUiPortal(ui, floatKey(*kit, trigger, FloatKind_Modal, modal.key), &desc, 0);
     PrLayoutNode content =
         prUiElement(ui, node, 0, kitStyle(*kit, FlexBox{}, ColumnFlex{.fixed = true}), PrUiFlag_FocusScope);
     if (state.portal != content)

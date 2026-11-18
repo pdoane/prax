@@ -497,8 +497,7 @@ void pagePopups(Features& f, PrStudioWindow* window, PrLayoutNode parent) {
         PrLayoutNode menu = prKitMenu(kit, popover, {}, {});
         for (uint32_t i = 0; i < 5; ++i) {
             String text = format("Kit item {}", i + 1);
-            PrUiKey key = prUiKeyIndex(prStudioWindowUi(window), menu, i);
-            PrLayoutNode item = prKitMenuItem(kit, menu, {.key = key, .text = text}, {});
+            PrLayoutNode item = prKitMenuItem(kit, menu, {.text = text}, {});
             if (prKitActivated(kit, item))
                 logLine(f, format("kit item {} chosen", i + 1));
         }

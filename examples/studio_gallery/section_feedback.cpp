@@ -2,6 +2,7 @@
 
 #include "examples/studio_gallery/section_feedback.h"
 
+#include "pr/hash.h"
 #include "pr/kit_button.h"
 #include "pr/kit_choice.h"
 #include "pr/kit_data.h"
@@ -344,7 +345,7 @@ void sectionKeys(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
     const char* const labels[] = {"Transform", "Mesh Renderer", "Rigidbody"};
     for (uint32_t i = 0; i < 3; ++i) {
         const char* name = i == 2 && state.keys.duplicate ? names[0] : names[i];
-        PrUiKey key = prUiKey(kit->ui, rows, name);
+        PrUiKey key = prHashString(name, 0);
         PrKitPanelStyle row{.background = PrKitBackground_Raised};
         row.box.padding = prKitEdgesXY(kPrKitSpace3, kPrKitSpace4);
         PrLayoutNode card = prKitPanel(kit, rows, {.key = key}, row);

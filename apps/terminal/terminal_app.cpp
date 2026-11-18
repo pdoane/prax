@@ -5,6 +5,7 @@
 #include "pr/command_kit.h"
 #include "pr/count_of.h"
 #include "pr/float.h"
+#include "pr/hash.h"
 #include "pr/kit_button.h"
 #include "pr/layout_query.h"
 #include "pr/layout_tree.h"
@@ -371,7 +372,7 @@ void buildWindow(TerminalWindow& w, PrLayoutNode root, PrVec2 extent) {
         PrTerminalAlertFlags alerts = prTerminalAlerts(terminal);
         if (alerts != 0) {
             bool notified = (alerts & PrTerminalAlertFlag_Notification) != 0;
-            PrKitBadge badge{.key = prUiKey(w.ui, node, "alert"), .text = notified ? "new" : "bell"};
+            PrKitBadge badge{.key = prHashString("alert", 0), .text = notified ? "new" : "bell"};
             PrKitBadgeVariant variant = notified ? PrKitBadgeVariant_Accent : PrKitBadgeVariant_Warning;
             prKitBadge(w.kit, node, badge, {.variant = variant});
         }

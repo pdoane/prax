@@ -6,6 +6,7 @@
 #include "pr/command_kit.h"
 #include "pr/file.h"
 #include "pr/float.h"
+#include "pr/hash.h"
 #include "pr/kit_box.h"
 #include "pr/kit_button.h"
 #include "pr/kit_choice.h"
@@ -68,7 +69,7 @@ PrLayoutNode commandButton(PrKit* kit, PrLayoutNode parent, Commands& commands, 
     PrCommandIndex index = prCommandRegistryFind(commands.registry, id);
     PrCommandStateFlags state = index != kPrCommandMissing ? prCommandRegistryState(commands.registry, index) : 0;
     PrKitButton button{
-        .key = prUiKey(kit->ui, parent, id),
+        .key = prHashString(id, 0),
         .text = text,
         .icon = icon,
         .selected = (state & PrCommandStateFlag_Checked) != 0,
@@ -209,7 +210,7 @@ void buildPromptHeader(PrKit* kit, PrLayoutNode parent, AppState& state, Shell& 
     if (state.catalog.embeddings.isEmpty())
         prKitMenuItem(kit, menu, {.text = "No embeddings on the server", .disabled = true}, {});
     for (const String& embedding : state.catalog.embeddings) {
-        PrKitMenuItem item{.key = prUiKey(kit->ui, menu, embedding), .text = embeddingName(embedding)};
+        PrKitMenuItem item{.key = prHashString(embedding, 0), .text = embeddingName(embedding)};
         if (prKitActivated(kit, prKitMenuItem(kit, menu, item, {}))) {
             insertEmbedding(shell, target, embedding);
             prKitSetOpen(kit, add, false);
@@ -240,7 +241,7 @@ void buildLoras(PrKit* kit, PrLayoutNode parent, AppState& state) {
     for (uint32_t i = 0; i < loras.count();) {
         // An adapter's row is keyed by its name, so that its controls keep their state as the rows around it change.
         PrKitBoxStyle style{.direction = PrKitDirection_Row, .align = PrKitAlign_Center, .gap = kPrKitSpace3};
-        PrLayoutNode line = prKitBox(kit, parent, {.key = prUiKey(kit->ui, parent, loras[i].name)}, style);
+        PrLayoutNode line = prKitBox(kit, parent, {.key = prHashString(loras[i].name, 0)}, style);
         bool conflict = loraConflicts(state, loras[i].name);
         prKitLabel(kit, line, {.text = loras[i].name},
             textStyle(PrKitTextRole_BodySmall, conflict ? PrKitTone_Warning : PrKitTone_Primary));
@@ -505,7 +506,7 @@ String operationMeta(const ProvenanceOp& op) {
 // applies the group.
 void buildOperation(PrKit* kit, PrLayoutNode card, AppState& state, const ProvenanceOp& op, uint32_t operation) {
     PrKitBoxStyle lineStyle{.direction = PrKitDirection_Row, .align = PrKitAlign_Center, .gap = kPrKitSpace2};
-    PrLayoutNode line = prKitBox(kit, card, {.key = prUiKeyIndex(kit->ui, card, operation)}, lineStyle);
+    PrLayoutNode line = prKitBox(kit, card, {.key = prHashMixKeys(operation, 1)}, lineStyle);
     bool open = state.recordOpen[operation];
     PrStudioIconKind fold = open ? PrStudioIconKind_ChevronDown : PrStudioIconKind_ChevronRight;
     if (prKitActivated(kit, iconButton(kit, line, fold, open ? "Hide this run" : "Show this run")))
@@ -518,7 +519,7 @@ void buildOperation(PrKit* kit, PrLayoutNode card, AppState& state, const Proven
         return;
 
     PrKitBoxStyle bodyStyle{.gap = kPrKitSpace2, .padding = {.left = kPrKitSpace3}};
-    PrLayoutNode body = prKitBox(kit, card, {.key = prUiKeyIndex(kit->ui, card, operation + 1000)}, bodyStyle);
+    PrLayoutNode body = prKitBox(kit, card, {.key = prHashMixKeys(operation, 2)}, bodyStyle);
     RecordBlock block{kit, body, state, operation};
     block.prompt("Prompt", op.prompt, UseWhat_Prompt, UseWhat_PromptLine);
     block.prompt("Negative", op.negative, UseWhat_Negative, UseWhat_NegativeLine);

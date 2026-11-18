@@ -3,6 +3,7 @@
 #include "pr/command_kit.h"
 
 #include "pr/ascii.h"
+#include "pr/hash.h"
 #include "pr/string_ops.h"
 
 namespace pr_impl {
@@ -129,7 +130,7 @@ PrLayoutNode prCommandPalette(PrKit* kit, PrLayoutNode trigger, const PrCommandR
         PrCommandDesc command = prCommandRegistryCommand(registry, i);
         PrRawString shortcut = shortcutOf(keymap, command.id);
         PrKitCommandItem item{
-            .key = prUiKey(kit->ui, list, command.id),
+            .key = prHashString(command.id, 0),
             .text = command.title,
             .category = command.category,
             .shortcut = prRawStringView(&shortcut),

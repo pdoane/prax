@@ -138,10 +138,11 @@ PrLayoutNode prKitPlane(PrKit* kit, PrLayoutNode parent, PrKitPlane plane, PrKit
 }
 
 PrLayoutNode prKitSpacer(PrKit* kit, PrLayoutNode parent, PrKitSpacer spacer) {
-    return prLayoutTreeFrameElement(kit->tree, parent, spacer.key, kitStyle(*kit, KitShrinkable{}, KitGrow{}));
+    return prLayoutTreeFrameElement(kit->tree, parent, kitKey(*kit, parent, spacer.key),
+        kitStyle(*kit, KitShrinkable{}, KitGrow{}));
 }
 
 PrLayoutNode prKitDivider(PrKit* kit, PrLayoutNode parent, PrKitDivider divider) {
-    return prLayoutTreeFrameElement(kit->tree, parent, divider.key,
+    return prLayoutTreeFrameElement(kit->tree, parent, kitKey(*kit, parent, divider.key),
         kitStyle(*kit, DividerBox{}, DividerFlex{}, DividerFill{}));
 }

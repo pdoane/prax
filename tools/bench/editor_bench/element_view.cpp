@@ -7,6 +7,7 @@
 
 #include "pr/count_of.h"
 #include "pr/draw_list.h"
+#include "pr/hash.h"
 #include "pr/layout_frame.h"
 
 #include "tools/bench/editor_bench/element_widgets.h"
@@ -360,7 +361,7 @@ void buildScenePanel(ElementEditor& editor, PrLayoutNode parent) {
             .hidden = node.hidden,
             .selected = node.id == state.selected,
         };
-        UiResult<RowEvents> e = treeRow(ui, tree, row, ui.key(tree, node.id));
+        UiResult<RowEvents> e = treeRow(ui, tree, row, node.id);
         if (e.folded)
             fold = node.id;
         else if (e.hid)
@@ -684,14 +685,13 @@ void buildInspector(ElementEditor& editor, PrLayoutNode parent) {
         };
         // A group's header and rows are keyed by the component, so that a group that closes leaves the others as they
         // were.
-        if (groupHeader(ui, list, group, ui.key(list, uint64_t(c) * 2)).clicked) {
+        if (groupHeader(ui, list, group, prHashMixKeys(c, 1)).clicked) {
             open = !open;
             ++state.edits;
         }
         if (!open)
             continue;
-        UiElement rows = ui.div(list, ui.key(list, uint64_t(c) * 2 + 1)).flexCol().py(4).borderB(1).borderColor(kLine)
-            .shrink0();
+        UiElement rows = ui.div(list, prHashMixKeys(c, 2)).flexCol().py(4).borderB(1).borderColor(kLine) .shrink0();
         for (uint32_t i = 0; i < component.count; ++i) {
             const PropertyInfo& property = component.properties[i];
             void* at = property.at(state, *entity);

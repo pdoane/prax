@@ -203,7 +203,7 @@ struct CellFlex {
 
 // Creates a cell under `parent`, filled while it is hovered if it is pressable.
 PrLayoutNode cell(PrKit* kit, PrLayoutNode parent, uint64_t key, bool pressable) {
-    PrLayoutNode node = prLayoutTreeFrameElement(kit->tree, parent, key, 0);
+    PrLayoutNode node = prLayoutTreeFrameElement(kit->tree, parent, kitKey(*kit, parent, key), 0);
     bool disabled = pressable ? kitSetFlags(*kit, node, PrUiFlag_Pressable) : prUiIsDisabled(kit->ui, node);
     bool hover = pressable && prUiIsHovered(kit->ui, node) && !disabled;
     KitColors fill{.background = hover ? kit->theme.palette.bg3 : PrColor{0, 0, 0, 0}};
@@ -308,7 +308,7 @@ PrLayoutNode columnElement(PrKit* kit, PrLayoutNode parent, uint64_t key, const 
     bool fills = c.flex == PrKitFlex_Fill;
     ColumnFlex flex{.weight = fills ? (c.weight > 0 ? c.weight : 1) : 0, .align = c.align};
     ColumnBox box{.width = c.width, .fills = fills};
-    return prLayoutTreeFrameElement(kit->tree, parent, key, kitStyle(*kit, box, flex));
+    return prLayoutTreeFrameElement(kit->tree, parent, kitKey(*kit, parent, key), kitStyle(*kit, box, flex));
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -645,7 +645,7 @@ PrLayoutNode rowElement(PrKit& kit, PrLayoutNode view, View& v, uint32_t index, 
     RowKind kind = v.minWidth > 0 ? RowKind_Table : RowKind_List;
     PrUi* ui = kit.ui;
     PrLayoutTree* tree = kit.tree;
-    PrLayoutNode node = prLayoutTreeFrameElement(tree, v.content, prUiKeyIndex(kit.ui, view, item), 0);
+    PrLayoutNode node = prLayoutTreeFrameElement(tree, v.content, kitKey(kit, v.content, kitItemKey(item)), 0);
     bool disabled = kitSetFlags(kit, node, PrUiFlag_Pressable);
     bool hover = prUiIsHovered(ui, node) && !disabled;
     // A row is a target for payloads of the view's kind, and shows its zone under the pointer at the last layout.
@@ -748,7 +748,7 @@ PrLayoutNode prKitListTile(PrKit* kit, PrLayoutNode view, PrKitTile tile) {
     PR_ASSERT(tile.index >= v.first && tile.index < v.first + v.count);
     PrUi* ui = k.ui;
     PrLayoutTree* tree = k.tree;
-    PrLayoutNode node = prLayoutTreeFrameElement(tree, v.content, prUiKeyIndex(k.ui, view, tile.item), 0);
+    PrLayoutNode node = prLayoutTreeFrameElement(tree, v.content, kitKey(k, v.content, kitItemKey(tile.item)), 0);
     bool disabled = kitSetFlags(k, node, PrUiFlag_Pressable);
     bool hover = prUiIsHovered(ui, node) && !disabled;
     const PrKitPalette& p = k.theme.palette;

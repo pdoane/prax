@@ -1849,13 +1849,13 @@ void outlineDuplicates(Ui* ui) {
     }
 }
 
-// Returns the identity of `base` that the keys made under it mix: its key if it has one, its node otherwise, and 0 for
-// no base. The two kinds of identity are mixed with different values, so that a key never equals a node.
-uint64_t baseIdentity(const Ui* ui, PrLayoutNode base) {
-    if (base == kPrLayoutNodeNone)
+// Returns the identity of `parent` that the keys of its children mix: its key if it has one, its node otherwise, and 0
+// for no parent. The two kinds of identity are mixed with different values, so that a key never equals a node.
+uint64_t parentIdentity(const Ui* ui, PrLayoutNode parent) {
+    if (parent == kPrLayoutNodeNone)
         return 0;
-    uint64_t key = prLayoutNodeKey(ui->tree, base);
-    return key != 0 ? prHashMixKeys(key, 1) : prHashMixKeys(base, 2);
+    uint64_t key = prLayoutNodeKey(ui->tree, parent);
+    return key != 0 ? prHashMixKeys(key, 1) : prHashMixKeys(parent, 2);
 }
 
 // Releases the sources of the events that the last round routed.
@@ -2546,16 +2546,8 @@ void prUiRequestMotionAt(PrUi* ui, PrLayoutNode node, double time) {
     ui->motions.push(UiMotion{.node = node, .time = time});
 }
 
-PrUiKey prUiKey(const PrUi* ui, PrLayoutNode base, PrStringView name) {
-    return prHashMixKeys(baseIdentity(ui, base), prHashBytes(name.data, name.size, 0x6e616d65ull));
-}
-
-PrUiKey prUiKeyIndex(const PrUi* ui, PrLayoutNode base, uint64_t index) {
-    return prHashMixKeys(baseIdentity(ui, base), prHashMixKeys(index, 0x696e646578ull));
-}
-
-PrUiKey prUiKeyIndex2(const PrUi* ui, PrLayoutNode base, uint64_t first, uint64_t second) {
-    return prHashMixKeys(baseIdentity(ui, base), prHashMixKeys(prHashMixKeys(first, second), 0x696e64657832ull));
+uint64_t prUiLayoutKey(const PrUi* ui, PrLayoutNode parent, PrUiKey key) {
+    return key != 0 ? prHashMixKeys(parentIdentity(ui, parent), key) : 0;
 }
 
 void prUiSetFlags(PrUi* ui, PrLayoutNode node, PrUiFlags flags) {
@@ -2573,7 +2565,7 @@ PrUiFlags prUiFlags(const PrUi* ui, PrLayoutNode node) {
 }
 
 PrLayoutNode prUiElement(PrUi* ui, PrLayoutNode parent, PrUiKey key, PrLayoutStyleIndex style, PrUiFlags flags) {
-    PrLayoutNode node = prLayoutTreeFrameElement(ui->tree, parent, key, style);
+    PrLayoutNode node = prLayoutTreeFrameElement(ui->tree, parent, prUiLayoutKey(ui, parent, key), style);
     if (flags != 0)
         prUiSetFlags(ui, node, flags);
     return node;

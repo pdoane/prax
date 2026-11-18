@@ -142,5 +142,5 @@ PrLayoutNode prKitSwatch(PrKit* kit, PrLayoutNode parent, PrKitSwatch swatch, Pr
     PrKit& k = *kit;
     PrLayoutStyleIndex record = kitStyle(k, SwatchBox{.size = style.size}, KitFixed{},
         KitColors{.background = swatch.color, .border = k.theme.palette.line2});
-    return prLayoutTreeFrameElement(k.tree, parent, swatch.key, record);
+    return prLayoutTreeFrameElement(k.tree, parent, kitKey(k, parent, swatch.key), record);
 }

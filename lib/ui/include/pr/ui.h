@@ -151,31 +151,26 @@ void prUiRequestMotionAt(PrUi* ui, PrLayoutNode node, double time);
 // ---------------------------------------------------------------------------------------------------------------------
 // Node keys
 //
-// Most nodes need no key: left zero, a node is identified by its tree index among its parent's unkeyed children of its
-// kind. A key gives a node an identity that holds while its siblings change, for rows that reorder and panels that come
-// and go (pr/layout_frame.h). Every library on a context makes its keys with prUiKey and prUiKeyIndex. Keys made under
-// different bases differ, so one library's items never collide with another's, and an item of one library can be keyed
-// under a container of another.
+// A node is identified by its parent and its index among its parent's unkeyed children of its kind, which suits what
+// the build creates in the same place in every round. A key replaces the index: it identifies the node among its
+// parent's children, so it holds while its siblings change, for rows that reorder and panels that come and go
+// (pr/layout_frame.h). A node's identity is therefore its parent's and its own, and a node keeps it only while its
+// parent does: what is inside a container that comes and goes among its siblings follows the container, unless the
+// container has a key.
 //
-// A key that a frame gives twice is a caller's error. Layout makes the second node without the key and reports both
-// nodes (prLayoutTreeDuplicateKeys), and each round of the next frame outlines both in the overlay.
+// A key that a frame gives two children of one parent is a caller's error. Layout makes the second node without the key
+// and reports both nodes (prLayoutTreeDuplicateKeys), and each round of the next frame outlines both in the overlay.
 
-// A node's key, which prUiKey, prUiKeyIndex and prUiKeyIndex2 make. Zero is no key. Nonzero keys are unique in the
-// whole tree, so a number chosen for one parent collides with the same number chosen for another. A key made under a
-// base is local to that base, and a base of kPrLayoutNodeNone makes a key for the whole tree.
+// A node's identity among its parent's children, chosen by the caller: an id from the caller's data, a constant for a
+// part of a widget, or a hash of a name (prHashString). Zero is no key.
 typedef uint64_t PrUiKey;
 
-// Returns a key made from `name`, or from `index`, under the node `base`. Keys made under one base differ for different
-// names and indices, and keys made from one name differ for different bases. A base that has a key is identified by its
-// key. A base without one is identified by its node, which stays the same while layout matches the node from round to
-// round. A base of kPrLayoutNodeNone makes a key for the whole tree, for a node that keeps its identity wherever it is
-// created. The result is never zero.
-PrUiKey prUiKey(const PrUi* ui, PrLayoutNode base, PrStringView name);
-PrUiKey prUiKeyIndex(const PrUi* ui, PrLayoutNode base, uint64_t index);
-
-// Returns a key made from two numbers under the node `base`, for a library's several kinds of items of one base: the
-// kind and the item. It differs from the keys of prUiKey and prUiKeyIndex under the base.
-PrUiKey prUiKeyIndex2(const PrUi* ui, PrLayoutNode base, uint64_t first, uint64_t second);
+// Returns the key that layout gives a node created under `parent` with `key` (pr/layout_frame.h), which is unique in
+// the tree: `key` composed with the parent's identity, its own layout key if it has one and the parent itself
+// otherwise, which stays the same while layout matches it from round to round. Returns zero if `key` is zero. lib/ui's
+// own creations compose their keys with it, and a library that creates through layout's frame calls passes layout what
+// it returns.
+uint64_t prUiLayoutKey(const PrUi* ui, PrLayoutNode parent, PrUiKey key);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Nodes
@@ -210,7 +205,8 @@ void prUiAddFlags(PrUi* ui, PrLayoutNode node, PrUiFlags flags);
 // Returns the flags that the current round set on a node, or 0 if none were set.
 PrUiFlags prUiFlags(const PrUi* ui, PrLayoutNode node);
 
-// Creates an element with prLayoutTreeFrameElement and sets its input flags.
+// Creates an element with prLayoutTreeFrameElement, keyed by `key` among the parent's children (prUiLayoutKey), and
+// sets its input flags.
 PrLayoutNode prUiElement(PrUi* ui, PrLayoutNode parent, PrUiKey key, PrLayoutStyleIndex style, PrUiFlags flags);
 
 // Returns true if a node created in the current round is disabled, by its own flags or those of a node that it was
@@ -257,10 +253,10 @@ typedef struct PrUiPortalDesc {
     PrLayoutStyleIndex cover;
 } PrUiPortalDesc;
 
-// Creates the round's portal of `key`, which must be unique in the tree, with input `flags`, and returns the node that
-// holds its content. The node is as large as its content at the last layout, and the context places it. A portal whose
-// flags are transparent lets the pointer through its viewport too. Call during a build. A portal lasts while every
-// round creates it.
+// Creates the round's portal of `key`, which must be unique among the context's portals, with input `flags`, and
+// returns the node that holds its content. The node is as large as its content at the last layout, and the context
+// places it. A portal whose flags are transparent lets the pointer through its viewport too. Call during a build. A
+// portal lasts while every round creates it.
 PrLayoutNode prUiPortal(PrUi* ui, PrUiKey key, const PrUiPortalDesc* desc, PrUiFlags flags);
 
 // Returns the viewport that shows `node` in the committed tree, or the main viewport for a node that it does not show.

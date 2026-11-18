@@ -274,9 +274,14 @@ void kitPlaceFlex(PrLayoutFlexStyle& flex, const PrKitPlace& place) {
 }
 
 PrLayoutNode kitBoxNode(PrKit& kit, PrLayoutNode parent, PrKitBox box, PrKitOverflow overflow, PrLayoutStyleIndex style) {
-    PrLayoutNode node = prLayoutTreeFrameElement(kit.tree, parent, box.key, style);
+    return kitBoxNodeKeyed(kit, parent, kitKey(kit, parent, box.key), box.disabled, overflow, style);
+}
+
+PrLayoutNode kitBoxNodeKeyed(PrKit& kit, PrLayoutNode parent, uint64_t layoutKey, bool disabled, PrKitOverflow overflow,
+        PrLayoutStyleIndex style) {
+    PrLayoutNode node = prLayoutTreeFrameElement(kit.tree, parent, layoutKey, style);
     PrUiFlags flags = overflow == PrKitOverflow_Scroll || overflow == PrKitOverflow_ScrollY ? PrUiFlag_Scrollable : 0;
-    if (box.disabled)
+    if (disabled)
         flags |= PrUiFlag_Disabled;
     if (flags != 0)
         prUiSetFlags(kit.ui, node, flags);
@@ -284,7 +289,7 @@ PrLayoutNode kitBoxNode(PrKit& kit, PrLayoutNode parent, PrKitBox box, PrKitOver
 }
 
 KitControl kitControl(PrKit& kit, PrLayoutNode parent, uint64_t key, PrUiFlags flags, bool disabled) {
-    return kitControlFromNode(kit, prLayoutTreeFrameElement(kit.tree, parent, key, 0), flags, disabled);
+    return kitControlFromNode(kit, prLayoutTreeFrameElement(kit.tree, parent, kitKey(kit, parent, key), 0), flags, disabled);
 }
 
 KitControl kitControlFromNode(PrKit& kit, PrLayoutNode node, PrUiFlags flags, bool disabled) {

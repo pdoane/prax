@@ -766,7 +766,7 @@ void buildEditor(PrKit* kit, PrLayoutNode root, EditorState& editor) {
         }
     }
     buildStatusBar(kit, root, editor);
-    buildPalette(kit, prLayoutTreeRoot(kit->tree), editor);
+    buildPalette(kit, root, editor);
 }
 
 void editorAttach(void* context, editor_bench::Host& host) {

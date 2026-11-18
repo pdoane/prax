@@ -6,6 +6,7 @@
 #include "pr/count_of.h"
 #include "pr/draw_list.h"
 #include "pr/float.h"
+#include "pr/hash.h"
 #include "pr/kit_box.h"
 #include "pr/kit_button.h"
 #include "pr/kit_choice.h"
@@ -759,7 +760,7 @@ void buildEditor(PrKit* kit, PrLayoutNode root, EditorState& editor) {
     if (editor.dock == nullptr)
         editor.dock = makeDock();
     PrLayoutNode dock = prKitDockBuild(kit, root, {
-        .key = prUiKey(kit->ui, root, "dock"),
+        .key = prHashString("dock", 0),
         .dock = editor.dock,
         .describe = describePanel,
     });
@@ -776,7 +777,7 @@ void buildEditor(PrKit* kit, PrLayoutNode root, EditorState& editor) {
         }
     }
     buildStatusBar(kit, root, editor);
-    buildPalette(kit, prLayoutTreeRoot(kit->tree), editor);
+    buildPalette(kit, root, editor);
 }
 
 } // namespace editor

@@ -1,3 +1,4 @@
+#include "pr/hash.h"
 #include "pr/layout_query.h"
 #include "pr/mem.h"
 #include "pr/ui.h"
@@ -940,7 +941,7 @@ TEST_CASE("state is kept while every round asks for it, by owner and key, and mo
         PrLayoutNode list = f.box(f.root, 0, 0, 400, 400);
         counters.clear();
         for (uint64_t key : keys) {
-            PrLayoutNode row = f.box(list, 0, 0, 10, 10, 0, prUiKeyIndex(f.ui, list, key));
+            PrLayoutNode row = f.box(list, 0, 0, 10, 10, 0, key);
             if (!ask)
                 continue;
             int* kit = static_cast<int*>(prUiState(f.ui, row, &kitOwner, 7, sizeof(int)));
@@ -1499,35 +1500,81 @@ TEST_CASE("the node that holds a press keeps its cursor while the pointer leaves
     CHECK(prUiOutput(f.ui).cursor == PrAppCursor_Hand);
 }
 
-TEST_CASE("keys made under one base differ by name and index, and keys of one name differ by base") {
+TEST_CASE("a key is local to its parent, whose identity is its own key or its node, and holds from round to round") {
     UiFixture f;
-    PrUiKey keys[8] = {};
+    uint64_t keys[5] = {};
     f.build = [&] {
-        PrLayoutNode keyed = f.box(f.root, 0, 0, 10, 10, 0, prUiKey(f.ui, kPrLayoutNodeNone, "panel"));
-        PrLayoutNode unkeyed = f.box(f.root, 0, 0, 10, 10);
-        PrLayoutNode other = f.box(f.root, 0, 0, 10, 10);
-        keys[0] = prUiKey(f.ui, keyed, "row");
-        keys[1] = prUiKey(f.ui, unkeyed, "row");
-        keys[2] = prUiKey(f.ui, other, "row");
-        keys[3] = prUiKey(f.ui, keyed, "column");
-        keys[4] = prUiKeyIndex(f.ui, keyed, 1);
-        keys[5] = prUiKeyIndex(f.ui, keyed, 2);
-        keys[6] = prUiKeyIndex2(f.ui, keyed, 1, 2);
-        keys[7] = prUiKeyIndex2(f.ui, keyed, 2, 1);
+        PrLayoutNode panel = f.box(f.root, 0, 0, 10, 10, 0, 1);
+        PrLayoutNode other = f.box(f.root, 0, 0, 10, 10, 0, 2);
+        PrLayoutNode inside = f.box(panel, 0, 0, 10, 10);
+        keys[0] = prUiLayoutKey(f.ui, panel, 7);
+        keys[1] = prUiLayoutKey(f.ui, inside, 7);
+        keys[2] = prUiLayoutKey(f.ui, other, 7);
+        keys[3] = prUiLayoutKey(f.ui, panel, 8);
+        keys[4] = prUiLayoutKey(f.ui, panel, 0);
     };
     f.frame();
-    for (uint32_t i = 0; i < 8; ++i) {
-        CHECK(keys[i] != 0);
-        for (uint32_t j = i + 1; j < 8; ++j)
-            CHECK(keys[i] != keys[j]);
-    }
-    // A base's identity holds from round to round, so the keys made under it do too.
-    PrUiKey before[8];
-    for (uint32_t i = 0; i < 8; ++i)
+    // The same key under different parents names different nodes, keyed or not.
+    CHECK(keys[0] != 0);
+    CHECK(keys[1] != keys[0]);
+    CHECK(keys[2] != keys[0]);
+    CHECK(keys[3] != keys[0]);
+    CHECK(keys[4] == 0);
+    uint64_t before[5];
+    for (uint32_t i = 0; i < 5; ++i)
         before[i] = keys[i];
     f.frame();
-    for (uint32_t i = 0; i < 8; ++i)
+    for (uint32_t i = 0; i < 5; ++i)
         CHECK(keys[i] == before[i]);
+}
+
+TEST_CASE("a keyed container keeps its nodes and their state when an unkeyed sibling before it comes or goes") {
+    UiFixture f;
+    static const char owner = 0;
+    bool extra = false;
+    PrLayoutNode field = kPrLayoutNodeNone;
+    int* state = nullptr;
+    f.build = [&] {
+        PrLayoutNode form = f.box(f.root, 0, 0, 400, 400);
+        if (extra)
+            f.box(form, 0, 0, 10, 10);
+        // The panel's key keeps what is inside it, unkeyed, as the unkeyed box before it comes and goes.
+        PrLayoutNode panel = f.box(form, 0, 0, 100, 100, 0, 1);
+        field = f.box(panel, 0, 0, 10, 10);
+        state = static_cast<int*>(prUiState(f.ui, field, &owner, 0, sizeof(int)));
+    };
+    f.frame();
+    *state = 42;
+    PrLayoutNode before = field;
+    extra = true;
+    f.frame();
+    CHECK(field == before);
+    CHECK(*state == 42);
+    extra = false;
+    f.frame();
+    CHECK(field == before);
+    CHECK(*state == 42);
+}
+
+TEST_CASE("one key under two parents names two nodes, and one key twice under one parent is a duplicate") {
+    UiFixture f;
+    f.allowsDuplicates = true;
+    bool twice = false;
+    f.build = [&] {
+        PrLayoutNode left = f.box(f.root, 0, 0, 100, 100);
+        PrLayoutNode right = f.box(f.root, 0, 0, 100, 100);
+        f.box(left, 0, 0, 10, 10, 0, 2);
+        f.box(right, 0, 0, 10, 10, 0, 2);
+        if (twice)
+            f.box(right, 0, 0, 10, 10, 0, 2);
+    };
+    f.frame();
+    CHECK(prLayoutTreeDuplicateKeys(f.tree, nullptr, 0) == 0);
+    twice = true;
+    for (uint32_t i = 0; i < 2; ++i) {
+        f.frame();
+        CHECK(prLayoutTreeDuplicateKeys(f.tree, nullptr, 0) == 1);
+    }
 }
 
 TEST_CASE("the overlay covers the root above its content, lets the pointer through, and exists only while asked for") {
@@ -1583,7 +1630,7 @@ TEST_CASE("without a host, a popup floats in the overlay against its anchor, and
         };
         if (dialog)
             desc = PrUiPortalDesc{.kind = PrUiPortalKind_Dialog, .modal = true};
-        popup = prUiPortal(f.ui, prUiKey(f.ui, kPrLayoutNodeNone, "popup"), &desc, 0);
+        popup = prUiPortal(f.ui, prHashString("popup", 0), &desc, 0);
         shown = f.block(popup, 200, 100);
     };
     // The first layout gives the popup its extent, by which the next round places it above its anchor.
@@ -1656,7 +1703,7 @@ TEST_CASE("a host shows each portal in a viewport of its own, which the pointer 
     f.build = [&] {
         handle = f.box(f.root, 10, 10, 50, 50, PrUiFlag_Pressable);
         PrUiPortalDesc popup{.kind = PrUiPortalKind_Popup, .placement = {.anchor = PrRect{10, 10, 60, 60}}};
-        PrLayoutNode portal = prUiPortal(f.ui, prUiKey(f.ui, kPrLayoutNodeNone, "menu"), &popup, 0);
+        PrLayoutNode portal = prUiPortal(f.ui, prHashString("menu", 0), &popup, 0);
         item = f.block(portal, 100, 40, PrUiFlag_Pressable | PrUiFlag_Focusable);
         itemHovered = prUiIsHovered(f.ui, item);
         itemClicked = itemClicked || prUiClicked(f.ui, item, 0);
@@ -1808,7 +1855,7 @@ TEST_CASE("a key that a frame gives twice is outlined on both nodes in the next 
     bool twice = true;
     PrLayoutNode rows[2] = {};
     f.build = [&] {
-        PrUiKey key = prUiKey(f.ui, kPrLayoutNodeNone, "row");
+        PrUiKey key = prHashString("row", 0);
         rows[0] = f.box(f.root, 0, 0, 100, 20, 0, key);
         rows[1] = f.box(f.root, 0, 30, 100, 20, 0, twice ? key : 0);
     };

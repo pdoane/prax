@@ -8,8 +8,10 @@
 #pragma once
 
 #include "pr/base.h"
+#include "pr/byte_view.h"
 #include "pr/integer.h"
 #include "pr/mem.h"
+#include "pr/string_view.h"
 
 PR_ASSUME_NONNULL_BEGIN
 
@@ -69,6 +71,14 @@ static inline uint64_t prHashBytes(const void* PR_NULLABLE bytes, size_t size, u
     uint64_t high = 0;
     uint64_t low = prU64Mul128(a ^ p1, b ^ seed, &high);
     return prHashFold(low ^ p0 ^ size, high ^ p1);
+}
+
+// Returns the hash of the text that `text` views, or of the bytes that `bytes` views, with `seed` (prHashBytes).
+static inline uint64_t prHashString(PrStringView text, uint64_t seed) {
+    return prHashBytes(text.data, text.size, seed);
+}
+static inline uint64_t prHashByteView(PrByteView bytes, uint64_t seed) {
+    return prHashBytes(bytes.data, bytes.size, seed);
 }
 
 // Returns the hash of `pointer` and `salt`, for a table keyed by both. `salt` distinguishes keys that share an address.

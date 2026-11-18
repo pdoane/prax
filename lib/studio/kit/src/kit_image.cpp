@@ -47,7 +47,8 @@ PrLayoutNode prKitImage(PrKit* kit, PrLayoutNode parent, PrKitImage image, PrKit
     PR_ASSERT(style.fit <= PrKitImageFit_ScaleDown);
     PrLayoutTree* tree = kit->tree;
     ImageFill fill{.fit = style.fit, .alignX = style.alignX, .alignY = style.alignY};
-    PrLayoutNode node = prLayoutTreeFrameReplaced(tree, parent, image.key, kitStyle(*kit, KitBlock{}, KitFixed{}, fill));
+    PrLayoutNode node =
+        prLayoutTreeFrameReplaced(tree, parent, kitKey(*kit, parent, image.key), kitStyle(*kit, KitBlock{}, KitFixed{}, fill));
     PrUVec2 texels = prDrawImageExtent(image.image);
     PrLayoutNaturalSize natural{
         .width = prLayoutUnitFromPx(float(texels.x)),

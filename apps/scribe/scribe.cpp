@@ -7,6 +7,7 @@
 #include "pr/command_kit.h"
 #include "pr/count_of.h"
 #include "pr/float.h"
+#include "pr/hash.h"
 #if defined(SCRIBE_HAS_TREESITTER)
 #include "pr/syntax_treesitter_languages.h"
 #endif
@@ -200,7 +201,7 @@ void buildTerminalPanel(Scribe& s, PrLayoutNode root, PrVec2 extent) {
     PrVec2 screen{extent.x, prF32Max(extent.y - kTerminalHeaderHeight, 0)};
     // The terminal's view paints its own background, below the header.
     PrLayoutTree* tree = prUiTree(s.ui);
-    PrLayoutNode box = prUiElement(s.ui, root, prUiKey(s.ui, root, "terminal"), blockStyle(tree, screen), 0);
+    PrLayoutNode box = prUiElement(s.ui, root, prHashString("terminal", 0), blockStyle(tree, screen), 0);
     prTerminalFrame(terminal, s.kit, box, PrTerminalBackground_View);
 }
 

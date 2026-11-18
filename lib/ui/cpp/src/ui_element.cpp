@@ -694,7 +694,7 @@ UiElement UiBuilder::span(PrLayoutNode parent, PrUiKey key) {
 UiElement UiBuilder::replaced(PrLayoutNode parent, PrUiKey key) {
     State& b = *state_;
     closeOpen(b);
-    PrLayoutNode node = prLayoutTreeFrameReplaced(b.tree, parent, key, 0);
+    PrLayoutNode node = prLayoutTreeFrameReplaced(b.tree, parent, prUiLayoutKey(b.ui, parent, key), 0);
     openRoot(b, node, UiKind_Div);
     return UiElement(this, node);
 }
@@ -768,14 +768,6 @@ UiElement UiBuilder::memoBuild(PrLayoutNode parent, PrUiKey key, const PrUiMemoT
     if (b.built != node)
         keepRoot(b, node, memoRootOf(b, node));
     return UiElement(this, node);
-}
-
-PrUiKey UiBuilder::key(PrLayoutNode parent, uint64_t index) const {
-    return prUiKeyIndex(state_->ui, parent, index);
-}
-
-PrUiKey UiBuilder::key(PrLayoutNode parent, PrStringView name) const {
-    return prUiKey(state_->ui, parent, name);
 }
 
 UiResources::UiResources(PrFontSet* PR_NULLABLE set, PrFontFamily sans, PrFontFamily mono) :

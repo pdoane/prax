@@ -73,11 +73,12 @@ Most widgets leave the key out. A node with no key is matched by its parent and 
 unkeyed children of its kind, which suits content that does not move. A keyed node is matched by its key wherever a
 round creates it, which is what rows that reorder and panels that come and go need.
 
-- A key is a `PrUiKey`, and `prUiKey` and `prUiKeyIndex` are what make one, from a base and a local name or index. It
-  is unique in the tree, so a number is not a key.
-  The base is identified by its own key if it has one, and otherwise by its node, which layout keeps while it matches
-  the node. Items of a container make their keys under the container, so two containers never share one, whichever
-  libraries made them.
+- A key is a `PrUiKey`: an id from the caller's data, a constant for a part of a widget, or a hash of a name. It is
+  local to the node's parent, with which lib/ui composes it (`prUiLayoutKey`), so the same key under two parents names
+  two nodes. The parent is identified by its own key if it has one, and otherwise by its node, which layout keeps
+  while it matches the node. A library that creates through layout's frame calls composes its keys the same way, or
+  gives layout a key of its own that is unique in the tree, for a node that keeps its identity as it moves between
+  parents.
 - A key given twice in a frame is a caller's error. Layout creates the second node without the key and reports both
   nodes after the commit (`prLayoutTreeDuplicateKeys`), and lib/ui outlines both in the next frame.
 - A keyed node is where layout's matching aligns again after a node comes or goes. A library that caches by position

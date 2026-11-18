@@ -4,6 +4,7 @@
 
 #include "pr/alloc.h"
 #include "pr/assert.h"
+#include "pr/hash.h"
 #include "pr/layout_frame.h"
 #include "pr/layout_query.h"
 #include "pr/layout_unit.h"
@@ -267,7 +268,7 @@ void hudHint(Hud* hud, PrLayoutNode anchor, PrStringView text) {
     PrRect origin = boundsOf(*hud, overlay);
     HintBox box{.left = at.left - origin.left, .top = at.bottom - origin.top + kGap};
     PrLayoutStyleIndex style = uiStyle(ui, *hud, box, Type{}, Ink{.color = kLit}, Fill{kGlass, kEdge});
-    PrLayoutNode hint = prUiElement(ui, overlay, prUiKey(ui, anchor, "hud hint"), style, PrUiFlag_SubtreeTransparent);
+    PrLayoutNode hint = prUiElement(ui, overlay, prHashString("hud hint", 0), style, PrUiFlag_SubtreeTransparent);
     prLayoutTreeFrameText(hud->tree, hint, 0, text);
 }
 

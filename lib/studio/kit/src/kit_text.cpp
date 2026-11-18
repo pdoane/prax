@@ -40,13 +40,14 @@ PrLayoutStyleIndex labelStyle(PrKit& kit, const PrKitTextStyle& style) {
 using namespace pr_impl;
 
 PrLayoutNode prKitLabel(PrKit* kit, PrLayoutNode parent, PrKitLabel label, PrKitTextStyle style) {
-    PrLayoutNode node = prLayoutTreeFrameElement(kit->tree, parent, label.key, labelStyle(*kit, style));
+    PrLayoutNode node = prLayoutTreeFrameElement(kit->tree, parent, kitKey(*kit, parent, label.key), labelStyle(*kit, style));
     prLayoutTreeFrameText(kit->tree, node, 0, label.text);
     return node;
 }
 
 PrLayoutNode prKitText(PrKit* kit, PrLayoutNode parent, PrKitText text, PrKitTextStyle style) {
-    PrLayoutNode paragraph = prLayoutTreeFrameElement(kit->tree, parent, text.key, labelStyle(*kit, style));
+    PrLayoutNode paragraph =
+        prLayoutTreeFrameElement(kit->tree, parent, kitKey(*kit, parent, text.key), labelStyle(*kit, style));
     for (uint32_t i = 0; i < text.count; ++i) {
         const PrKitTextRun& run = text.runs[i];
         // A run is an inline box, layout's default, in its own role and tone.

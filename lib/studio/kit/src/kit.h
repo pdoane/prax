@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "pr/hash.h"
 #include "pr/hash_index.h"
 #include "pr/kit.h"
 #include "pr/kit_box.h"
@@ -196,6 +197,12 @@ void kitPlaceFlex(PrLayoutFlexStyle& flex, const PrKitPlace& place);
 // node with this.
 PrLayoutNode kitBoxNode(PrKit& kit, PrLayoutNode parent, PrKitBox box, PrKitOverflow overflow, PrLayoutStyleIndex style);
 
+// The same, for a box that layout keys by `layoutKey`: a key that kitKey composed, or a key of Kit's own that is unique
+// in the tree, which keeps the box's identity wherever it is created, as a dock panel's content keeps its node as the
+// panel moves between leaves.
+PrLayoutNode kitBoxNodeKeyed(PrKit& kit, PrLayoutNode parent, uint64_t layoutKey, bool disabled, PrKitOverflow overflow,
+    PrLayoutStyleIndex style);
+
 // ---------------------------------------------------------------------------------------------------------------------
 // Controls
 //
@@ -213,6 +220,23 @@ struct KitControl {
     bool ring;                      // the node has focus that the keyboard put there, which the control shows
     bool disabled;                  // by its content, or by a container it was made under
 };
+
+// Returns the key that layout gives a node that Kit creates under `parent` with `key` (prUiLayoutKey).
+inline uint64_t kitKey(const PrKit& kit, PrLayoutNode parent, PrUiKey key) {
+    return prUiLayoutKey(kit.ui, parent, key);
+}
+
+// Returns the key of an item among its siblings, such as a row by its item, which is never zero.
+inline PrUiKey kitItemKey(uint64_t item) {
+    return prHashMixKeys(item, 1);
+}
+
+// Returns an identity of `node` for what Kit creates outside it, such as in the overlay or a portal: its layout key if
+// it has one, and the node otherwise, which stays the same while layout matches it.
+inline uint64_t kitIdentity(const PrKit& kit, PrLayoutNode node) {
+    uint64_t key = prLayoutNodeKey(kit.tree, node);
+    return key != 0 ? prHashMixKeys(key, 1) : prHashMixKeys(node, 2);
+}
 
 // Makes a control under `parent`, keyed by `key`, that takes `flags` and is disabled if `disabled` is true or a
 // container it is made under is disabled. A pressable control shows the hand cursor while it is enabled.

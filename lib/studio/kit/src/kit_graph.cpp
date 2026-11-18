@@ -492,8 +492,8 @@ PrLayoutNode prKitGraph(PrKit* kit, PrLayoutNode parent, PrKitGraph graph, PrKit
     const PrKitPalette& p = k.theme.palette;
     bool editable = !prUiIsDisabled(ui, parent);
 
-    PrLayoutNode canvas = prLayoutTreeFrameElement(
-        tree, parent, g.key, kitStyle(k, CanvasBox{}, KitFixed{}, KitColors{.background = p.bgViewport}));
+    PrLayoutNode canvas = prLayoutTreeFrameElement(tree, parent, kitKey(k, parent, g.key),
+        kitStyle(k, CanvasBox{}, KitFixed{}, KitColors{.background = p.bgViewport}));
     // The round's requests, and each node's body, which the canvas provides to the queries after it.
     uint32_t size = uint32_t(sizeof(GraphRound) + sizeof(PrLayoutNode) * g.nodeCount);
     GraphRound& round = *static_cast<GraphRound*>(prUiProvide(ui, canvas, &kKitOwner, KitContext_Graph, size));
