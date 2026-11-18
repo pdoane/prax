@@ -371,9 +371,11 @@ struct Terminal {
     uint64_t copiedRevision;
 };
 
-PrColor8 color8Of(PrColor color) {
-    auto channel = [](float value) { return uint8_t(prF32Round(prF32Clamp(value, 0, 1) * 255)); };
-    return PrColor8{channel(color.r), channel(color.g), channel(color.b), 0xff};
+// Returns `color` as an opaque PrColor8, as the screen's colors are.
+PrColor8 opaque8Of(PrColor color) {
+    PrColor8 out = prColor8FromColor(color);
+    out.a = 0xff;
+    return out;
 }
 
 void wakeApp(void* PR_NULLABLE context) {
@@ -818,9 +820,9 @@ void updateTheme(Terminal* terminal) {
     terminal->palette = palette;
     terminal->hasPalette = true;
     terminal->drawer.colors.selection = palette.textSelection;
-    prVtermRoleSetColor(terminal->vterm, PrVtermColorRole_Foreground, color8Of(palette.text1));
-    prVtermRoleSetColor(terminal->vterm, PrVtermColorRole_Background, color8Of(palette.bg1));
-    prVtermRoleSetColor(terminal->vterm, PrVtermColorRole_Cursor, color8Of(palette.accent));
+    prVtermRoleSetColor(terminal->vterm, PrVtermColorRole_Foreground, opaque8Of(palette.text1));
+    prVtermRoleSetColor(terminal->vterm, PrVtermColorRole_Background, opaque8Of(palette.bg1));
+    prVtermRoleSetColor(terminal->vterm, PrVtermColorRole_Cursor, opaque8Of(palette.accent));
     rowsReset(terminal);
 }
 

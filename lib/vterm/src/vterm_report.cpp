@@ -5,6 +5,8 @@
 
 #include "pr/ascii.h"
 
+#include "vterm/src/vterm_sixel.h"
+
 namespace pr_impl {
 
 namespace {
@@ -241,6 +243,10 @@ void capabilityReport(Vterm* vterm, PrStringView hex) {
 } // namespace
 
 void vtermDeviceControl(Vterm* vterm, const VtermAction* action) {
+    if (action->marker == 0 && action->intermediateCount == 0 && action->final == 'q') {
+        vtermSixelCommand(vterm, action);
+        return;
+    }
     if (action->marker != 0 || action->intermediateCount != 1 || action->final != 'q')
         return;
     switch (action->intermediates[0]) {

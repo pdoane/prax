@@ -287,7 +287,7 @@ TEST_CASE("vterm: the alternate screen keeps the primary screen and its cursor, 
 TEST_CASE("vterm: queries are answered in the output") {
     Term term(10, 5);
     term.write("\x1b[c");
-    CHECK(term.output() == "\x1b[?62;21;22c");
+    CHECK(term.output() == "\x1b[?62;4;21;22c");
     term.write("\x1b[3;4H\x1b[6n");
     CHECK(term.output() == "\x1b[3;4R");
     term.write("\x1b[?2004h\x1b[?2004$p\x1b[?2027$p\x1b[?9999$p");

@@ -1,5 +1,5 @@
-// Images in a virtual terminal (pr/vterm.h). Programs send them with kitty's terminal graphics protocol, and the caller
-// draws them from their placements.
+// Images in a virtual terminal (pr/vterm.h). Programs send them with kitty's terminal graphics protocol, iTerm2's
+// inline images or sixel, and the caller draws them from their placements.
 //
 // One thread uses a terminal at a time.
 
@@ -47,6 +47,13 @@ extern "C" {
 // column, and moves it to the line that holds the first cell of its old line after the rewrap. A full reset removes
 // every image. The pixels of all images count toward the terminal's budget. Past the budget, the terminal frees images
 // least recently used first, starting with those that no placement shows.
+//
+// A program can also show images with iTerm2's inline images (OSC 1337 File, or a file in parts) or with sixel (a DCS
+// string whose final byte is `q`), which the terminal advertises in its primary device attributes and describes through
+// XTSMGRAPHICS. These images are part of the cells that they cover, as those protocols expect: writing or erasing any
+// of the cells removes the image, and so does a later such image that covers all of its cells. They show at z-index 0
+// and otherwise move and scroll as placements do. Sixel display mode (DECSET 80) and DECSET 8452 decide where a sixel
+// image shows and where the cursor goes.
 
 // The size of a cell in pixels. An image placed without a size in cells shows at one image pixel per screen pixel by
 // this extent. XTWINOPS reports it to programs, along with the screen's size in pixels. A terminal starts at 8 by 16

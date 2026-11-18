@@ -529,11 +529,6 @@ PrVec2 gutterAt(Term& t, uint32_t row) {
     return PrVec2{bounds.left + middle, bounds.top + (float(row) + 0.5f) * cell.y};
 }
 
-PrColor8 color8Of(PrColor color) {
-    auto channel = [](float value) { return uint8_t(value * 255 + 0.5f); };
-    return PrColor8{channel(color.r), channel(color.g), channel(color.b), 0xff};
-}
-
 // The sequence that opens a hyperlink to `uri` with `params` (OSC 8), and the one that closes it.
 String hyperlink(PrStringView uri, PrStringView params = "") {
     return concat("\x1b]8;", params, ";", uri, "\x1b\\");
@@ -801,7 +796,7 @@ TEST_CASE("terminal: a hyperlink under the pointer with the primary modifier und
     t.write(concat(hyperlink("https://example.com/real", "id=a"), "one", kHyperlinkEnd, " gap ",
         hyperlink("https://example.com/real", "id=a"), "three", kHyperlinkEnd, " https://example.com/text"));
     t.f.frame();
-    PrColor8 accent = color8Of(t.f.kit->theme.palette.accent);
+    PrColor8 accent = prColor8FromColor(t.f.kit->theme.palette.accent);
     CHECK_FALSE(cellHasColor(t, 10, 0, accent));
     t.move(t.cellCenter(1, 0), primaryModifier());
     t.f.frame();
@@ -841,7 +836,7 @@ TEST_CASE("terminal: a hyperlink at rest has a faint dotted underline, and text 
         return pixels;
     };
     CHECK(lowerHalf(0) != lowerHalf(1));
-    CHECK_FALSE(cellHasColor(t, 1, 1, color8Of(t.f.kit->theme.palette.accent)));
+    CHECK_FALSE(cellHasColor(t, 1, 1, prColor8FromColor(t.f.kit->theme.palette.accent)));
 }
 
 TEST_CASE("terminal: a hyperlink to a file that exists opens through the handler, and any other through the app") {
@@ -924,7 +919,7 @@ TEST_CASE("terminal: the view paints no background, and its owner's shows under 
     t.settle();
     t.f.frame();
     PrColor8 background = prVtermRoleColor(Locked(t.terminal), PrVtermColorRole_Background);
-    CHECK(near(color8Of(prTerminalBackground(t.terminal)), background));
+    CHECK(near(prColor8FromColor(prTerminalBackground(t.terminal)), background));
     // The view paints nothing over a blank cell, the gutter, or the partial cell past the last whole cell. The window's
     // clear shows there.
     PrVec2 blank = t.cellCenter(10, 5);
@@ -955,20 +950,20 @@ TEST_CASE("terminal: the view paints no background, and its owner's shows under 
     t.write("\x1b[?5h");
     t.f.frame();
     PrColor8 foreground = prVtermRoleColor(Locked(t.terminal), PrVtermColorRole_Foreground);
-    CHECK(near(color8Of(prTerminalBackground(t.terminal)), foreground));
+    CHECK(near(prColor8FromColor(prTerminalBackground(t.terminal)), foreground));
     CHECK(near(t.pixel(corner), foreground));
     t.write("\x1b[?5l\x1b]11;#ff00ff\x07");
     t.f.frame();
     PrColor8 magenta{0xff, 0x00, 0xff, 0xff};
-    CHECK(near(color8Of(prTerminalBackground(t.terminal)), magenta));
+    CHECK(near(prColor8FromColor(prTerminalBackground(t.terminal)), magenta));
     CHECK(near(t.pixel(corner), magenta));
     CHECK(near(t.pixel(blank), magenta));
     t.write("\x1b]111\x07");
     PrKitTheme light = prKitThemeStudio(PrKitThemeVariant_Light, t.f.fonts);
     prKitSetTheme(t.f.kit, &light);
     t.f.frame();
-    CHECK(near(color8Of(prTerminalBackground(t.terminal)), color8Of(light.palette.bg1)));
-    CHECK(near(t.pixel(gutter), color8Of(light.palette.bg1)));
+    CHECK(near(prColor8FromColor(prTerminalBackground(t.terminal)), prColor8FromColor(light.palette.bg1)));
+    CHECK(near(t.pixel(gutter), prColor8FromColor(light.palette.bg1)));
     CHECK(kitVerified(t.f.tree));
 }
 
@@ -1025,7 +1020,7 @@ TEST_CASE("terminal: a terminal that paints its background in its view shows it 
     CHECK(near(t.pixel(gutterAt(t, 5)), magenta));
     CHECK(near(t.pixel(PrVec2{panelExtent.x - 1, panelExtent.y - 1}), magenta));
     // Past the panel, the window's background shows.
-    CHECK(near(t.pixel(PrVec2{700, 500}), color8Of(t.f.kit->theme.palette.bg0)));
+    CHECK(near(t.pixel(PrVec2{700, 500}), prColor8FromColor(t.f.kit->theme.palette.bg0)));
     CHECK(kitVerified(t.f.tree));
 }
 
@@ -2099,8 +2094,8 @@ TEST_CASE("terminal: the gutter marks a command that succeeded in the theme's su
     t.f.frame();
     const PrKitPalette& palette = t.f.kit->theme.palette;
     CHECK(prTerminalScreenOrigin(t.terminal).x > 0);
-    CHECK(near(t.pixel(gutterAt(t, 0)), color8Of(palette.success)));
-    CHECK(near(t.pixel(gutterAt(t, 1)), color8Of(palette.danger)));
+    CHECK(near(t.pixel(gutterAt(t, 0)), prColor8FromColor(palette.success)));
+    CHECK(near(t.pixel(gutterAt(t, 1)), prColor8FromColor(palette.danger)));
     CHECK(near(t.pixel(gutterAt(t, 2)), prVtermRoleColor(Locked(t.terminal), PrVtermColorRole_Background)));
 }
 

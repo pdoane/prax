@@ -431,6 +431,21 @@ void applyBudget(Vterm* vterm, uint64_t kept) {
     }
 }
 
+// Adds `image`, whose pixels the store takes, to `store` as its newest image, and returns its key. Past the most
+// images, the oldest one is removed first. Then images past the budget are freed (applyBudget).
+uint64_t storeAdd(Vterm* vterm, VtermGraphicsStore* store, VtermStoredImage* image) {
+    VtermGraphics& graphics = vterm->graphics;
+    if (store->images.count >= kMaxImages)
+        imageRemove(vterm, store, 0);
+    image->key = ++graphics.clock;
+    image->used = image->key;
+    store->images.push(*image);
+    graphics.bytes += image->pixels.count;
+    applyBudget(vterm, image->key);
+    vtermRevise(vterm);
+    return image->key;
+}
+
 // Returns an id for the terminal to give an image. No image of the store has the id.
 uint32_t givenId(VtermGraphics* graphics, VtermGraphicsStore* store) {
     for (;;) {
@@ -466,71 +481,11 @@ void storeClip(VtermGraphicsStore* store, int64_t first, int64_t end) {
 
 // Transmission
 
-// Appends the bytes of a chunk's base64 `payload` to the load. Characters past the last whole group of four wait for
-// the next chunk. Returns false if the payload is not base64 or the load passes `limit` bytes.
-bool loadAppend(VtermGraphicsLoad* load, PrStringView payload, uint64_t limit) {
-    size_t at = 0;
-    if (load->carryCount != 0) {
-        while (load->carryCount < 4 && at < payload.size)
-            load->carry[load->carryCount++] = payload.data[at++];
-        if (load->carryCount < 4)
-            return true;
-        char decoded[3];
-        size_t size = 0;
-        if (!prBase64Decode(PrStringView{load->carry, 4}, decoded, sizeof(decoded), &size))
-            return false;
-        load->data.append(reinterpret_cast<const uint8_t*>(decoded), uint32_t(size));
-        load->carryCount = 0;
-    }
-    PrStringView rest{payload.data + at, payload.size - at};
-    size_t whole = rest.size / 4 * 4;
-    if (whole != 0) {
-        size_t capacity = prBase64DecodedCapacity(whole);
-        if (load->data.count + capacity > limit) {
-            load->tooLarge = true;
-            return false;
-        }
-        uint32_t start = load->data.count;
-        load->data.resize(uint32_t(start + capacity));
-        size_t size = 0;
-        if (!prBase64Decode(PrStringView{rest.data, whole}, reinterpret_cast<char*>(load->data.data + start), capacity, &size))
-            return false;
-        load->data.count = uint32_t(start + size);
-    }
-    for (size_t i = whole; i < rest.size; ++i)
-        load->carry[load->carryCount++] = rest.data[i];
-    load->tooLarge = load->data.count > limit;
-    return !load->tooLarge;
-}
-
-// Ends the load by decoding the characters that still wait. Returns false if they are not base64.
-bool loadFinish(VtermGraphicsLoad* load) {
-    if (load->carryCount == 0)
-        return true;
-    char decoded[3];
-    size_t size = 0;
-    bool decodedAll = prBase64Decode(PrStringView{load->carry, load->carryCount}, decoded, sizeof(decoded), &size);
-    load->carryCount = 0;
-    if (!decodedAll)
-        return false;
-    load->data.append(reinterpret_cast<const uint8_t*>(decoded), uint32_t(size));
-    return true;
-}
-
 // The error that answers a load that failed.
 PrStringView loadError(const VtermGraphicsLoad& load) {
     if (load.tooLarge)
         return "EFBIG:the data is larger than the storage quota";
     return "EINVAL:the data is not base64";
-}
-
-void loadDrop(VtermGraphicsLoad* load) {
-    load->active = false;
-    load->failed = false;
-    load->tooLarge = false;
-    load->control.clear();
-    load->data.clear();
-    load->carryCount = 0;
 }
 
 // Returns true if `path` is `directory` or is in it.
@@ -659,26 +614,7 @@ bool decodePng(Vterm* vterm, PrByteView bytes, VtermStoredImage* image) {
     static constexpr uint8_t kSignature[8] = {0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'};
     if (bytes.size < 8 || prMemCompare(bytes.data, kSignature, 8) != 0)
         return false;
-    PrImageDecoder* decoder = prImageDecoderCreate(vterm->graphics.imageCodec);
-    PrImageLimits limits = prImageLimitsDefault();
-    uint64_t pixels = uint64_t(kMaxImageSide) * kMaxImageSide;
-    if (limits.pixels > pixels)
-        limits.pixels = pixels;
-    PrImageSource source{};
-    source.memory = bytes;
-    bool ok = false;
-    if (prImageDecoderOpen(decoder, source, &limits) == PrStatus_Ok) {
-        PrUVec2 extent = prImageDecoderInfo(decoder)->extent;
-        if (extent.x != 0 && extent.y != 0 && extent.x <= kMaxImageSide && extent.y <= kMaxImageSide) {
-            image->extent = extent;
-            image->pixels.resize(extent.x * extent.y * 4);
-            PrPixels output{image->pixels.data, size_t(extent.x) * 4, extent};
-            ok = prImageDecoderReadRgba8(decoder, 0, PrImageAlpha_Straight, PrImageOrientation_Identity, output) ==
-                PrStatus_Ok;
-        }
-    }
-    prImageDecoderDestroy(decoder);
-    return ok;
+    return vtermGraphicsDecode(vterm, bytes, false, &image->extent, &image->pixels);
 }
 
 // Decodes the bytes of a transmission into `*image`. Returns OK or the error to answer.
@@ -915,19 +851,12 @@ void transmit(Vterm* vterm, const GraphicsCommand& command, RawArray<uint8_t>* d
     } else if (command.hasNumber) {
         id = givenId(&graphics, &store);
     }
-    if (store.images.count >= kMaxImages)
-        imageRemove(vterm, &store, 0);
     image.id = id;
     image.number = command.number;
-    image.key = ++graphics.clock;
-    image.used = image.key;
-    store.images.push(image);
-    graphics.bytes += image.pixels.count;
-    applyBudget(vterm, image.key);
-    vtermRevise(vterm);
+    uint64_t key = storeAdd(vterm, &store, &image);
     PrStringView result = "OK";
     if (command.action == 'T') {
-        VtermStoredImage* stored = imageFromKey(&store, image.key);
+        VtermStoredImage* stored = imageFromKey(&store, key);
         PR_ASSERT(stored != nullptr);
         result = put(vterm, command, stored);
         freeUnnamed(vterm, &store);
@@ -1130,23 +1059,23 @@ void run(Vterm* vterm, const GraphicsCommand& command, PrStringView payload) {
                 featureQuery(vterm, command);
                 return;
             }
-            loadDrop(&graphics.load);
+            vtermGraphicsLoadDrop(&graphics.load);
             if (command.medium == 'd') {
                 graphics.load.active = true;
                 graphics.load.control.append(command.control.data, uint32_t(command.control.size));
-                if (!loadAppend(&graphics.load, payload, graphics.budget))
+                if (!vtermGraphicsLoadAppend(&graphics.load, payload, graphics.budget))
                     graphics.load.failed = true;
                 if (command.more == 1)
                     return;
-                bool decoded = loadFinish(&graphics.load) && !graphics.load.failed;
+                bool decoded = vtermGraphicsLoadFinish(&graphics.load) && !graphics.load.failed;
                 if (!decoded) {
                     answer(vterm, command, command.id, loadError(graphics.load));
-                    loadDrop(&graphics.load);
+                    vtermGraphicsLoadDrop(&graphics.load);
                     return;
                 }
                 RawArray<uint8_t> data = graphics.load.data;
                 graphics.load.data = RawArray<uint8_t>{};
-                loadDrop(&graphics.load);
+                vtermGraphicsLoadDrop(&graphics.load);
                 transmit(vterm, command, &data, payload);
                 data.reset();
                 return;
@@ -1157,7 +1086,7 @@ void run(Vterm* vterm, const GraphicsCommand& command, PrStringView payload) {
             return;
         }
         case 'p': {
-            loadDrop(&graphics.load);
+            vtermGraphicsLoadDrop(&graphics.load);
             VtermStoredImage* image = imageOf(&activeStore(vterm), command);
             uint32_t id = image != nullptr ? image->id : command.id;
             PrStringView result = "ENOENT:no such image";
@@ -1169,11 +1098,11 @@ void run(Vterm* vterm, const GraphicsCommand& command, PrStringView payload) {
             return;
         }
         case 'd':
-            loadDrop(&graphics.load);
+            vtermGraphicsLoadDrop(&graphics.load);
             deleteCommand(vterm, command);
             return;
         default:
-            loadDrop(&graphics.load);
+            vtermGraphicsLoadDrop(&graphics.load);
             answer(vterm, command, command.id, "EINVAL:the action is not supported");
             return;
     }
@@ -1360,13 +1289,105 @@ void vtermGraphicsReset(VtermGraphics* graphics) {
     }
     graphics->load.control.reset();
     graphics->load.data.reset();
+    graphics->itermLoad.control.reset();
+    graphics->itermLoad.data.reset();
     graphics->bytes = 0;
 }
 
 void vtermGraphicsClear(Vterm* vterm) {
     for (VtermGraphicsStore& store : vterm->graphics.stores)
         storeReset(vterm, &store);
-    loadDrop(&vterm->graphics.load);
+    vtermGraphicsLoadDrop(&vterm->graphics.load);
+    vtermGraphicsLoadDrop(&vterm->graphics.itermLoad);
+}
+
+bool vtermGraphicsLoadAppend(VtermGraphicsLoad* load, PrStringView payload, uint64_t limit) {
+    size_t at = 0;
+    if (load->carryCount != 0) {
+        while (load->carryCount < 4 && at < payload.size)
+            load->carry[load->carryCount++] = payload.data[at++];
+        if (load->carryCount < 4)
+            return true;
+        char decoded[3];
+        size_t size = 0;
+        if (!prBase64Decode(PrStringView{load->carry, 4}, decoded, sizeof(decoded), &size))
+            return false;
+        load->data.append(reinterpret_cast<const uint8_t*>(decoded), uint32_t(size));
+        load->carryCount = 0;
+    }
+    PrStringView rest{payload.data + at, payload.size - at};
+    size_t whole = rest.size / 4 * 4;
+    if (whole != 0) {
+        size_t capacity = prBase64DecodedCapacity(whole);
+        if (load->data.count + capacity > limit) {
+            load->tooLarge = true;
+            return false;
+        }
+        uint32_t start = load->data.count;
+        load->data.resize(uint32_t(start + capacity));
+        size_t size = 0;
+        if (!prBase64Decode(PrStringView{rest.data, whole}, reinterpret_cast<char*>(load->data.data + start), capacity, &size))
+            return false;
+        load->data.count = uint32_t(start + size);
+    }
+    for (size_t i = whole; i < rest.size; ++i)
+        load->carry[load->carryCount++] = rest.data[i];
+    load->tooLarge = load->data.count > limit;
+    return !load->tooLarge;
+}
+
+bool vtermGraphicsLoadFinish(VtermGraphicsLoad* load) {
+    if (load->carryCount == 0)
+        return true;
+    char decoded[3];
+    size_t size = 0;
+    bool decodedAll = prBase64Decode(PrStringView{load->carry, load->carryCount}, decoded, sizeof(decoded), &size);
+    load->carryCount = 0;
+    if (!decodedAll)
+        return false;
+    load->data.append(reinterpret_cast<const uint8_t*>(decoded), uint32_t(size));
+    return true;
+}
+
+void vtermGraphicsLoadDrop(VtermGraphicsLoad* load) {
+    load->active = false;
+    load->failed = false;
+    load->tooLarge = false;
+    load->control.clear();
+    load->data.clear();
+    load->carryCount = 0;
+}
+
+bool vtermGraphicsDecode(Vterm* vterm, PrByteView bytes, bool oriented, PrUVec2* extent, RawArray<uint8_t>* pixels) {
+    if (vterm->graphics.imageCodec == nullptr)
+        return false;
+    PrImageDecoder* decoder = prImageDecoderCreate(vterm->graphics.imageCodec);
+    PrImageLimits limits = prImageLimitsDefault();
+    uint64_t most = uint64_t(kMaxImageSide) * kMaxImageSide;
+    if (limits.pixels > most)
+        limits.pixels = most;
+    PrImageSource source{};
+    source.memory = bytes;
+    bool ok = false;
+    if (prImageDecoderOpen(decoder, source, &limits) == PrStatus_Ok) {
+        const PrImageInfo* info = prImageDecoderInfo(decoder);
+        PrImageOrientation orientation = oriented ? info->orientation : PrImageOrientation_Identity;
+        PrUVec2 size = info->extent;
+        if (orientation >= PrImageOrientation_Transpose)
+            size = PrUVec2{size.y, size.x};
+        uint64_t bytesNeeded = uint64_t(size.x) * size.y * 4;
+        if (size.x != 0 && size.y != 0 && size.x <= kMaxImageSide && size.y <= kMaxImageSide &&
+                bytesNeeded <= vterm->graphics.budget) {
+            pixels->resize(uint32_t(bytesNeeded));
+            PrPixels output{pixels->data, size_t(size.x) * 4, size};
+            ok = prImageDecoderReadRgba8(decoder, 0, PrImageAlpha_Straight, orientation, output) == PrStatus_Ok;
+            *extent = size;
+        }
+    }
+    prImageDecoderDestroy(decoder);
+    if (!ok)
+        pixels->reset();
+    return ok;
 }
 
 void vtermGraphicsCommand(Vterm* vterm, PrStringView text) {
@@ -1382,20 +1403,20 @@ void vtermGraphicsCommand(Vterm* vterm, PrStringView text) {
         return;
     }
     // A later chunk of the load carries only `m` and `q`. The other keys come from the load's first chunk.
-    if (command.invalid || !loadAppend(&graphics.load, payload, graphics.budget))
+    if (command.invalid || !vtermGraphicsLoadAppend(&graphics.load, payload, graphics.budget))
         graphics.load.failed = true;
     if (command.more == 1)
         return;
     GraphicsCommand first = commandDefault();
     PrStringView firstControl{graphics.load.control.data, graphics.load.control.count};
     commandParse(firstControl, &first);
-    bool decoded = loadFinish(&graphics.load) && !graphics.load.failed;
+    bool decoded = vtermGraphicsLoadFinish(&graphics.load) && !graphics.load.failed;
     PrStringView error = loadError(graphics.load);
     RawArray<uint8_t> data = graphics.load.data;
     RawArray<char> keys = graphics.load.control;
     graphics.load.data = RawArray<uint8_t>{};
     graphics.load.control = RawArray<char>{};
-    loadDrop(&graphics.load);
+    vtermGraphicsLoadDrop(&graphics.load);
     first.control = PrStringView{keys.data, keys.count};
     if (decoded)
         transmit(vterm, first, &data, PrStringView{});
@@ -1403,6 +1424,96 @@ void vtermGraphicsCommand(Vterm* vterm, PrStringView text) {
         answer(vterm, first, first.id, error);
     data.reset();
     keys.reset();
+}
+
+bool vtermGraphicsShow(Vterm* vterm, VtermCellImage* image, VtermShowCursor cursor) {
+    VtermGraphics& graphics = vterm->graphics;
+    if (image->pixels.count > graphics.budget || !(image->size.x > 0) || !(image->size.y > 0)) {
+        image->pixels.reset();
+        return false;
+    }
+    auto cells = [](float size) {
+        // A size a hair past a whole number of cells is that number, so that rounding adds no cell.
+        float whole = prF32Ceil(size - 1e-4f);
+        return whole < 1 ? 1u : whole > float(kMaxPlacementCells) ? kMaxPlacementCells : uint32_t(whole);
+    };
+    uint32_t columns = cells(image->size.x);
+    uint32_t rows = cells(image->size.y);
+    VtermGraphicsStore& store = activeStore(vterm);
+    VtermStoredImage stored{.extent = image->extent, .pixels = image->pixels};
+    image->pixels = RawArray<uint8_t>{};
+    uint64_t key = storeAdd(vterm, &store, &stored);
+    VtermStoredPlacement placement{
+        .image = key,
+        .order = ++graphics.clock,
+        .line = screenTop(vterm, vterm->active) + image->row,
+        .column = image->column,
+        .sourceExtent = image->extent,
+        .extent = image->size,
+        .columns = columns,
+        .rows = rows,
+        .endRow = rows,
+        .inCells = true,
+    };
+    storeClip(&store, vterm->active == VtermScreenKind_Primary ? int64_t(vterm->scrollbackDropped) : 0, INT64_MAX);
+    // The image replaces the images that it covers whole, which it would hide.
+    for (uint32_t i = store.placements.count; i-- > 0;) {
+        const VtermStoredPlacement& old = store.placements.data[i];
+        bool within = old.line + old.firstRow >= placement.line && old.line + old.endRow <= placement.line + rows &&
+            old.column >= placement.column && old.column + old.columns <= placement.column + columns;
+        if (old.inCells && within)
+            store.placements.erase(i);
+    }
+    if (store.placements.count >= kMaxPlacements)
+        store.placements.erase(0);
+    store.placements.push(placement);
+    store.mayHaveCellImages = true;
+    freeUnnamed(vterm, &store);
+    vtermRevise(vterm);
+
+    VtermCursorState& state = vterm->cursor;
+    switch (cursor) {
+        case VtermShowCursor_After:
+            cursorPast(vterm, columns, rows);
+            break;
+        case VtermShowCursor_Below:
+            state.column = image->column;
+            state.wrapPending = false;
+            for (uint32_t i = 0; i < rows; ++i)
+                vtermIndex(vterm);
+            vterm->hasLastPrinted = false;
+            break;
+        default:
+            break;
+    }
+    return true;
+}
+
+void vtermGraphicsCellsWritten(Vterm* vterm, uint32_t row, uint32_t start, uint32_t end) {
+    VtermGraphicsStore& store = activeStore(vterm);
+    if (!store.mayHaveCellImages)
+        return;
+    int64_t line = screenTop(vterm, vterm->active) + row;
+    bool kept = false;
+    bool removed = false;
+    for (uint32_t i = store.placements.count; i-- > 0;) {
+        const VtermStoredPlacement& placement = store.placements.data[i];
+        if (!placement.inCells)
+            continue;
+        bool covered = line >= placement.line + placement.firstRow && line < placement.line + placement.endRow &&
+            start < placement.column + placement.columns && end > placement.column;
+        if (covered) {
+            store.placements.erase(i);
+            removed = true;
+        } else {
+            kept = true;
+        }
+    }
+    store.mayHaveCellImages = kept;
+    if (removed) {
+        freeUnnamed(vterm, &store);
+        vtermRevise(vterm);
+    }
 }
 
 void vtermGraphicsScroll(Vterm* vterm, uint32_t top, uint32_t bottom, int32_t delta, bool scrollback) {

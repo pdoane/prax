@@ -2094,6 +2094,7 @@ void vtermPrint(Vterm* vterm, uint32_t codePoint) {
     }
     vtermLineWrote(&line, cursor.column + width);
     vtermTouch(vterm, &line);
+    vtermGraphicsCellsWritten(vterm, cursor.row, cursor.column, cursor.column + width);
     vterm->hasLastPrinted = true;
     vterm->lastPrintedRow = cursor.row;
     vterm->lastPrintedColumn = cursor.column;
@@ -2174,6 +2175,7 @@ void vtermPrintAscii(Vterm* vterm, PrStringView text) {
         }
         vtermLineWrote(&line, column + count);
         vtermTouch(vterm, &line);
+        vtermGraphicsCellsWritten(vterm, cursor.row, column, column + count);
         vterm->hasLastPrinted = true;
         vterm->lastPrintedRow = cursor.row;
         vterm->lastPrintedColumn = column + count - 1;
@@ -2241,6 +2243,7 @@ void vtermErase(Vterm* vterm, uint32_t row, uint32_t start, uint32_t end) {
     if (start == 0 && end == vterm->columns)
         vtermLineClearMarks(&line);
     vtermTouch(vterm, &line);
+    vtermGraphicsCellsWritten(vterm, row, start, end);
 }
 
 void vtermInsertCells(Vterm* vterm, uint32_t count) {

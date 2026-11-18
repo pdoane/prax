@@ -1,4 +1,5 @@
 #include "pr/array.h"
+#include "pr/mem.h"
 #include "pr/span.h"
 #include "pr/string.h"
 #include "pr/string_ops.h"
@@ -210,6 +211,31 @@ TEST_CASE("vterm parser: a DCS and an APC carry their strings, and SOS and PM st
     CHECK(actions[4].kind == VtermActionKind_Escape);
     CHECK(actions[5].kind == VtermActionKind_Escape);
     CHECK(actions[6].text == "x");
+}
+
+TEST_CASE("vterm parser: a string up to the most bytes arrives whole, and a longer one is dropped") {
+    // Returns `head`, then `count` copies of `fill`, then `tail`.
+    auto build = [](PrStringView head, size_t count, char fill, PrStringView tail) {
+        Array<char> out(head.size + count + tail.size);
+        prMemCopy(out.data(), head.data, head.size);
+        prMemFill(out.data() + head.size, uint8_t(fill), count);
+        prMemCopy(out.data() + head.size + count, tail.data, tail.size);
+        return out;
+    };
+    // An image file of a few megabytes, as a program sends in one OSC 1337 or sixel DCS, fits.
+    constexpr size_t kPhoto = 6u << 20;
+    Array<char> photo = build("\x1b]1337;File=:", kPhoto, 'A', "\x07z");
+    Array<Parsed> actions = parse(PrStringView(photo.data(), photo.count()));
+    REQUIRE(actions.count() == 2);
+    CHECK(actions[0].kind == VtermActionKind_Osc);
+    CHECK(actions[0].text.count() == 11 + kPhoto);
+    CHECK(actions[1].text == "z");
+    // A string past the most is dropped, and what follows it parses.
+    Array<char> huge = build("\x1bPq", kVtermParserMaxStringBytes + 1, '~', "\x1b\\z");
+    actions = parse(PrStringView(huge.data(), huge.count()));
+    REQUIRE(actions.count() == 2);
+    CHECK(actions[0].kind == VtermActionKind_Escape);
+    CHECK(actions[1].text == "z");
 }
 
 TEST_CASE("vterm parser: parameters past the most are dropped, and a large value is clamped") {

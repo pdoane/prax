@@ -1,6 +1,7 @@
-// Tests the graphics protocol. They cover transmission (formats, media, chunks and compression), the answers,
-// placements and their geometry, how placements move with the text, deletion, the image budget, and the placeholders of
-// virtual placements.
+// Tests the images of a terminal. For kitty's graphics protocol, they cover transmission (formats, media, chunks and
+// compression), the answers, placements and their geometry, how placements move with the text, deletion, the image
+// budget, and the placeholders of virtual placements. For iTerm2's inline images and sixel images, they cover the
+// arguments and the data, the sizes, the cursor, and how the images belong to the cells that they cover.
 
 #include "pr/array.h"
 #include "pr/base64.h"
@@ -197,6 +198,28 @@ bool fileExists(PrStringView path) {
     return prFileInfo(path, &info) && info.kind == PrFileKind_Regular;
 }
 
+// An iTerm2 file command with the `arguments` and `file` in base64.
+String itermFile(PrStringView arguments, PrStringView file) {
+    return format("\x1b]1337;File={}:{}\x07", arguments, base64(file));
+}
+
+// The pixel at `x`, `y` of the image of `placement`.
+String pixelAt(const Term& t, const PrVtermPlacement& placement, uint32_t x, uint32_t y) {
+    PrVtermImage image{};
+    REQUIRE(prVtermImage(t.vterm, placement.image, &image));
+    REQUIRE(x < image.extent.x);
+    REQUIRE(y < image.extent.y);
+    const uint8_t* pixel = image.pixels + (size_t(y) * image.extent.x + x) * 4;
+    return String(PrStringView(reinterpret_cast<const char*>(pixel), 4));
+}
+
+// Returns true if the image of `placement` is `width` by `height` pixels.
+bool extentIs(const Term& t, const PrVtermPlacement& placement, uint32_t width, uint32_t height) {
+    PrVtermImage image{};
+    REQUIRE(prVtermImage(t.vterm, placement.image, &image));
+    return image.extent.x == width && image.extent.y == height;
+}
+
 } // namespace
 
 } // namespace pr_impl
@@ -210,7 +233,7 @@ TEST_CASE("vterm graphics: a terminal without a budget ignores the protocol, and
 
     Term t;
     t.write(format("{}\x1b[c", command("i=31,s=1,v=1,a=q,t=d,f=24", "\x01\x02\x03")));
-    CHECK(t.output() == format("{}\x1b[?62;21;22c", answer("i=31", "OK")));
+    CHECK(t.output() == format("{}\x1b[?62;4;21;22c", answer("i=31", "OK")));
     // A query stores nothing, so the id names no image.
     t.write(command("a=p,i=31"));
     CHECK(prStringStartsWith(t.output(), "\x1b_Gi=31;ENOENT:"));
@@ -761,4 +784,293 @@ TEST_CASE("vterm graphics: files are read only where the caller allows, and temp
     CHECK(t.output() == answer("i=4", "EBADF:Failed to read image file"));
     CHECK(fileExists(unnamed));
     prFileRemove(unnamed);
+}
+
+// iTerm2's inline images and sixel images
+
+TEST_CASE("iterm images: a file shows at its own size at the cursor, and the cursor moves past it") {
+    Term t;
+    t.write("\x1b[3;5H");
+    // 20 by 40 pixels are 2 by 2 cells of 10 by 20.
+    t.write(itermFile("inline=1", png(20, 40, 1, 2, 3)));
+    Array<PrVtermPlacement> placed = t.placements();
+    REQUIRE(placed.count() == 1);
+    CHECK(t.row(placed[0]) == 2);
+    CHECK(placed[0].column == 4);
+    CHECK(placed[0].columns == 2);
+    CHECK(placed[0].endRow == 2);
+    CHECK(placed[0].extent.x == doctest::Approx(2));
+    CHECK(placed[0].extent.y == doctest::Approx(2));
+    CHECK(placed[0].sourceExtent.x == 20);
+    CHECK(placed[0].sourceExtent.y == 40);
+    CHECK(firstPixel(t, placed[0]) == rgba(1, 2, 3, 0xff));
+    // As a kitty placement moves it: down to the last row, then past the last column.
+    CHECK(t.cursor().x == 6);
+    CHECK(t.cursor().y == 3);
+    CHECK(t.output().isEmpty());
+}
+
+TEST_CASE("iterm images: the width and height take cells, pixels, a percentage or auto, keeping the aspect ratio") {
+    String file = png(20, 40, 1, 2, 3);
+    struct Case {
+        const char* arguments;
+        float width;
+        float height;
+    };
+    const Case cases[] = {
+        // One size gives the other by the aspect ratio, which is 1 by 2 in pixels and 1 by 1 in cells.
+        {"width=4", 4, 4},
+        {"height=3", 3, 3},
+        {"width=30px", 3, 3},
+        {"width=25%", 5, 5},
+        {"height=50%", 5, 5},
+        // Both fit the image within them.
+        {"width=6;height=2", 2, 2},
+        {"width=2;height=6", 2, 2},
+        // Without the aspect ratio, the image takes both, and a missing one is the image's own.
+        {"width=6;height=2;preserveAspectRatio=0", 6, 2},
+        {"width=6;preserveAspectRatio=0", 6, 2},
+        {"width=auto;height=auto", 2, 2},
+        {"width=nonsense", 2, 2},
+    };
+    for (const Case& c : cases) {
+        CAPTURE(c.arguments);
+        Term t;
+        t.write(itermFile(format("inline=1;{}", c.arguments), file));
+        Array<PrVtermPlacement> placed = t.placements();
+        REQUIRE(placed.count() == 1);
+        CHECK(placed[0].extent.x == doctest::Approx(c.width));
+        CHECK(placed[0].extent.y == doctest::Approx(c.height));
+    }
+}
+
+TEST_CASE("iterm images: an image wider than the room to the screen's edge shrinks to fit it") {
+    Term t;
+    t.write("\x1b[1;17H");
+    t.write(itermFile("inline=1;width=8", png(20, 40, 1, 2, 3)));
+    Array<PrVtermPlacement> placed = t.placements();
+    REQUIRE(placed.count() == 1);
+    CHECK(placed[0].columns == 4);
+    CHECK(placed[0].extent.x == doctest::Approx(4));
+    CHECK(placed[0].extent.y == doctest::Approx(4));
+}
+
+TEST_CASE("iterm images: a download, a file that is not an image, and other commands show nothing") {
+    Term t;
+    t.write(itermFile("name=eC5wbmc=", png(20, 40, 1, 2, 3)));
+    t.write(itermFile("inline=0", png(20, 40, 1, 2, 3)));
+    t.write(itermFile("inline=1", "not an image"));
+    t.write("\x1b]1337;File=inline=1:not base64!\x07");
+    t.write("\x1b]1337;File=inline=1\x07");
+    t.write("\x1b]1337;SetMark\x07");
+    CHECK(t.placements().isEmpty());
+    CHECK(t.cursor().x == 0);
+    CHECK(t.cursor().y == 0);
+    // A size past the budget refuses the file.
+    Term small(1000);
+    small.write(itermFile("inline=1;size=2000", png(2, 2, 1, 2, 3)));
+    CHECK(small.placements().isEmpty());
+}
+
+TEST_CASE("iterm images: doNotMoveCursor leaves the cursor") {
+    Term t;
+    t.write("\x1b[2;3H");
+    t.write(itermFile("inline=1;doNotMoveCursor=1", png(20, 40, 1, 2, 3)));
+    REQUIRE(t.placements().count() == 1);
+    CHECK(t.cursor().x == 2);
+    CHECK(t.cursor().y == 1);
+}
+
+TEST_CASE("iterm images: a file in parts shows when it ends") {
+    Term t;
+    String encoded = base64(png(20, 40, 4, 5, 6));
+    t.write("\x1b]1337;MultipartFile=inline=1;width=4\x07");
+    // Parts split the base64 anywhere.
+    for (size_t at = 0; at < encoded.count(); at += 7) {
+        size_t count = encoded.count() - at < 7 ? encoded.count() - at : 7;
+        t.write(format("\x1b]1337;FilePart={}\x07", prStringSlice(encoded.view(), at, count)));
+    }
+    CHECK(t.placements().isEmpty());
+    t.write("\x1b]1337;FileEnd\x07");
+    Array<PrVtermPlacement> placed = t.placements();
+    REQUIRE(placed.count() == 1);
+    CHECK(placed[0].extent.x == doctest::Approx(4));
+    CHECK(firstPixel(t, placed[0]) == rgba(4, 5, 6, 0xff));
+    // Parts without a start, and an end without one, do nothing.
+    t.write("\x1b]1337;FilePart=AAAA\x07\x1b]1337;FileEnd\x07");
+    CHECK(t.placements().count() == 1);
+    // A part that is not base64 drops the file.
+    t.write("\x1b]1337;MultipartFile=inline=1\x07\x1b]1337;FilePart=!!!!\x07\x1b]1337;FileEnd\x07");
+    CHECK(t.placements().count() == 1);
+}
+
+TEST_CASE("cell images: writing or erasing a cell that an image covers removes the image") {
+    String file = png(20, 40, 1, 2, 3);
+    // Printing over the image, printing ASCII over it, erasing in the line, and erasing characters.
+    const char* writes[] = {"\x1b[2;2H\xc3\xa9", "\x1b[3;3Hx", "\x1b[2;1H\x1b[K", "\x1b[3;2H\x1b[2X"};
+    for (const char* write : writes) {
+        CAPTURE(write);
+        Term t;
+        t.write(concat("\x1b[2;2H", itermFile("inline=1", file)));
+        REQUIRE(t.placements().count() == 1);
+        t.write(write);
+        CHECK(t.placements().isEmpty());
+    }
+    // Writing beside the image keeps it.
+    Term t;
+    t.write(concat("\x1b[2;2H", itermFile("inline=1", file)));
+    t.write("\x1b[2;4Hx\x1b[1;1Hy\x1b[4;2Hz");
+    CHECK(t.placements().count() == 1);
+    // A kitty placement is not part of the cells.
+    t.write(command("a=T,f=24,s=10,v=20,i=7", solid(10, 20, 3, 1, 1, 1)));
+    t.write("\x1b[2;1Hxxxxxxxx");
+    REQUIRE(t.placements().count() == 1);
+    CHECK(t.placements()[0].sourceExtent.x == 10);
+}
+
+TEST_CASE("cell images: an image replaces the images whose cells it covers whole") {
+    Term t;
+    t.write(concat("\x1b[2;2H", itermFile("inline=1", png(10, 20, 1, 1, 1))));
+    t.write(concat("\x1b[2;4H", itermFile("inline=1", png(10, 20, 2, 2, 2))));
+    t.write(concat("\x1b[2;2H", itermFile("inline=1;doNotMoveCursor=1", png(20, 40, 3, 3, 3))));
+    // The third covers the first whole, and the second only beside it.
+    Array<PrVtermPlacement> placed = t.placements();
+    REQUIRE(placed.count() == 2);
+    CHECK(firstPixel(t, placed[0]) == rgba(2, 2, 2, 0xff));
+    CHECK(firstPixel(t, placed[1]) == rgba(3, 3, 3, 0xff));
+}
+
+TEST_CASE("sixel images: sixels draw columns of six pixels in the selected color") {
+    Term t;
+    t.write("\x1b[2;3H");
+    // Register 1 is red in RGB percentages. Each `~` sets all six pixels of a column, and `!` repeats a sixel. `-`
+    // moves to the next band, where `@` sets only the top pixel.
+    t.write("\x1bPq#1;2;100;0;0#1~~!2~-@@@@\x1b\\");
+    Array<PrVtermPlacement> placed = t.placements();
+    REQUIRE(placed.count() == 1);
+    CHECK(t.row(placed[0]) == 1);
+    CHECK(placed[0].column == 2);
+    CHECK(extentIs(t, placed[0], 4, 7));
+    CHECK(placed[0].extent.x == doctest::Approx(0.4));
+    CHECK(placed[0].extent.y == doctest::Approx(0.35));
+    CHECK(placed[0].columns == 1);
+    CHECK(placed[0].endRow == 1);
+    CHECK(pixelAt(t, placed[0], 0, 0) == rgba(0xff, 0, 0, 0xff));
+    CHECK(pixelAt(t, placed[0], 3, 5) == rgba(0xff, 0, 0, 0xff));
+    CHECK(pixelAt(t, placed[0], 3, 6) == rgba(0xff, 0, 0, 0xff));
+    // The cursor moves to the image's first column on the row below it.
+    CHECK(t.cursor().x == 2);
+    CHECK(t.cursor().y == 2);
+}
+
+TEST_CASE("sixel images: the background fills the raster and unset pixels, unless P2 makes them transparent") {
+    for (uint32_t transparent = 0; transparent < 2; ++transparent) {
+        CAPTURE(transparent);
+        Term t;
+        PrColor8 color = prVtermRoleColor(t.vterm, PrVtermColorRole_Background);
+        // A raster of 30 by 40 pixels, where the sixels set only the top of the first column.
+        t.write(format("\x1bP0;{};0q\"1;1;30;40#2;2;0;100;0#2@\x1b\\", transparent ? 1 : 0));
+        Array<PrVtermPlacement> placed = t.placements();
+        REQUIRE(placed.count() == 1);
+        CHECK(extentIs(t, placed[0], 30, 40));
+        CHECK(placed[0].columns == 3);
+        CHECK(placed[0].endRow == 2);
+        CHECK(pixelAt(t, placed[0], 0, 0) == rgba(0, 0xff, 0, 0xff));
+        String unset = transparent ? rgba(0, 0, 0, 0) : rgba(color.r, color.g, color.b, 0xff);
+        CHECK(pixelAt(t, placed[0], 0, 1) == unset);
+        CHECK(pixelAt(t, placed[0], 29, 39) == unset);
+    }
+}
+
+TEST_CASE("sixel images: colors are defined in HLS or RGB, and the first 16 registers start as the VT340's") {
+    Term t;
+    // HLS puts blue at 0 degrees, red at 120 and green at 240.
+    t.write("\x1bPq#1;1;120;50;100#1~#2;1;240;50;100#2~#3;1;0;50;100#3~#4;2;0;0;100#4~#13~#9;2;50;50;50#9~\x1b\\");
+    Array<PrVtermPlacement> placed = t.placements();
+    REQUIRE(placed.count() == 1);
+    CHECK(pixelAt(t, placed[0], 0, 0) == rgba(0xff, 0, 0, 0xff));
+    CHECK(pixelAt(t, placed[0], 1, 0) == rgba(0, 0xff, 0, 0xff));
+    CHECK(pixelAt(t, placed[0], 2, 0) == rgba(0, 0, 0xff, 0xff));
+    CHECK(pixelAt(t, placed[0], 3, 0) == rgba(0, 0, 0xff, 0xff));
+    // Register 13 is the VT340's 33, 60, 60 percent.
+    CHECK(pixelAt(t, placed[0], 4, 0) == rgba(84, 153, 153, 0xff));
+    CHECK(pixelAt(t, placed[0], 5, 0) == rgba(127, 127, 127, 0xff));
+    // Each image starts with the default registers.
+    t.write("\x1bPq#9~\x1b\\");
+    placed = t.placements();
+    REQUIRE(placed.count() == 2);
+    CHECK(pixelAt(t, placed[1], 0, 0) == rgba(84, 84, 153, 0xff));
+}
+
+TEST_CASE("sixel images: carriage returns overdraw a band, and the image grows past its raster") {
+    Term t;
+    // Register 1 draws the top three pixels of two columns, then `$` returns and register 2 draws the bottom three. The
+    // next band's four pixels pass the raster of 1 by 1.
+    t.write("\x1bPq\"1;1;1;1#1;2;100;0;0#2;2;0;0;100#1!2F$#2!2w-#1N\x1b\\");
+    Array<PrVtermPlacement> placed = t.placements();
+    REQUIRE(placed.count() == 1);
+    CHECK(extentIs(t, placed[0], 2, 10));
+    CHECK(pixelAt(t, placed[0], 1, 2) == rgba(0xff, 0, 0, 0xff));
+    CHECK(pixelAt(t, placed[0], 1, 3) == rgba(0, 0, 0xff, 0xff));
+    CHECK(pixelAt(t, placed[0], 0, 7) == rgba(0xff, 0, 0, 0xff));
+}
+
+TEST_CASE("sixel images: an image past the bottom scrolls the screen, and the cursor goes below it") {
+    Term t;
+    t.write("\x1b[10;1Htop");
+    // 45 pixels are three rows.
+    t.write("\x1b[9;2H\x1bPq\"1;1;10;45#1;2;100;0;0!10~\x1b\\");
+    Array<PrVtermPlacement> placed = t.onScreen();
+    REQUIRE(placed.count() == 1);
+    CHECK(t.row(placed[0]) == 6);
+    CHECK(placed[0].endRow == 3);
+    CHECK(t.cursor().x == 1);
+    CHECK(t.cursor().y == 9);
+}
+
+TEST_CASE("sixel images: display mode shows the image at the screen's top left, and the cursor stays") {
+    Term t;
+    t.write("\x1b[?80h\x1b[5;6H\x1bPq#1;2;100;0;0!30~\x1b\\");
+    Array<PrVtermPlacement> placed = t.placements();
+    REQUIRE(placed.count() == 1);
+    CHECK(t.row(placed[0]) == 0);
+    CHECK(placed[0].column == 0);
+    CHECK(t.cursor().x == 5);
+    CHECK(t.cursor().y == 4);
+    t.write("\x1b[?80$p");
+    CHECK(t.output() == "\x1b[?80;1$y");
+}
+
+TEST_CASE("sixel images: DECSET 8452 leaves the cursor past the image on its last row") {
+    Term t;
+    t.write("\x1b[?8452h\x1b[2;3H\x1bPq\"1;1;15;30#1;2;100;0;0!15~-!15~-!15~-!15~-!15~\x1b\\");
+    REQUIRE(t.placements().count() == 1);
+    CHECK(t.cursor().x == 4);
+    CHECK(t.cursor().y == 2);
+}
+
+TEST_CASE("sixel images: an image with nothing to show, or past the budget, shows nothing") {
+    Term t;
+    t.write("\x1bPq\x1b\\\x1bPq#1;2;100;0;0$-\x1b\\");
+    CHECK(t.placements().isEmpty());
+    Term small(100);
+    small.write("\x1bPq!20~\x1b\\");
+    CHECK(small.placements().isEmpty());
+    CHECK(small.cursor().y == 0);
+}
+
+TEST_CASE("sixel images: XTSMGRAPHICS reports the color registers and the largest image, the screen") {
+    Term t;
+    t.write("\x1b[?1;1;0S");
+    CHECK(t.output() == "\x1b[?1;0;256S");
+    t.write("\x1b[?1;3;1024S");
+    CHECK(t.output() == "\x1b[?1;0;256S");
+    t.write("\x1b[?2;1;0S");
+    CHECK(t.output() == "\x1b[?2;0;200;200S");
+    t.write("\x1b[?2;4;0S");
+    CHECK(t.output() == "\x1b[?2;0;200;200S");
+    t.write("\x1b[?1;9;0S");
+    CHECK(t.output() == "\x1b[?1;2;0S");
+    t.write("\x1b[?3;1;0S");
+    CHECK(t.output() == "\x1b[?3;1;0S");
 }

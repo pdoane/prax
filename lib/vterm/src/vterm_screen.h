@@ -310,6 +310,8 @@ struct VtermModes {
     bool alternateScroll;       // the wheel sends cursor keys while the alternate screen shows
     bool colorSchemeReports;    // a change of the color scheme is reported
     bool leftRightMargins;      // DECLRMM: DECSLRM sets the left and right margins
+    bool sixelDisplay;          // DECSDM: a sixel image shows at the screen's top left, and nothing scrolls
+    bool sixelCursorRight;      // a sixel image leaves the cursor past its last column, not below it
 };
 
 // A terminal.

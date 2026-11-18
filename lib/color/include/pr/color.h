@@ -42,6 +42,9 @@ typedef struct PrColor8 {
 // Returns `color` with each channel widened from [0, 255] to [0, 1].
 PrColor prColorFromColor8(PrColor8 color);
 
+// Returns `color` with each channel clamped to [0, 1] and narrowed to the nearest of [0, 255]. NaN narrows to 0.
+PrColor8 prColor8FromColor(PrColor color);
+
 // A color of four 16-bit float channels. It carries no color space and no alpha mode. A channel never holds -0 or NaN,
 // so equal colors have equal bits.
 PR_NO_PADDING_BEGIN

@@ -398,11 +398,6 @@ bool isLineWidth(PrCssProperty property) {
         property == PrCssProperty_OutlineWidth || property == PrCssProperty_ColumnRuleWidth;
 }
 
-PrColor8 color8Of(PrColor color) {
-    auto channel = [](float c) { return uint8_t(prF32Clamp(c, 0, 1) * 255 + 0.5f); };
-    return PrColor8{channel(color.r), channel(color.g), channel(color.b), channel(color.a)};
-}
-
 // Writes the context's element's accent color, and returns false if accent-color is auto or names AccentColor itself.
 bool accentOf(const CssColorContext& context, PrColor* out) {
     if (context.style == nullptr)
@@ -1742,7 +1737,7 @@ void computeFilter(CssValuePool* pool, CssValueRun specified, const CssStyleCont
                     cssValuePoolAdd(pool, cssKeywordValue(PrCssKeyword_Currentcolor));
                 else if (colorRun.values[0].kind == PrCssValueKind_Keyword && !readsElement(colorRun, false) &&
                         cssResolveColor(colorRun, 0, CssColorContext{.current = context.parentColor}, &named))
-                    cssValuePoolAddColor(pool, color8Of(named));
+                    cssValuePoolAddColor(pool, prColor8FromColor(named));
                 else
                     cssValuePoolAddRun(pool, colorRun);
                 for (uint32_t k = 0; k < 3; ++k) {
@@ -1885,7 +1880,7 @@ void computePaint(CssValuePool* pool, CssValueRun specified, const CssStyleConte
             cssValuePoolAdd(pool, cssKeywordValue(cssSystemColorComputed(keyword)));
         } else if (keyword != PrCssKeyword_Count &&
                 cssResolveColor(value, 0, CssColorContext{.current = context.parentColor}, &color)) {
-            cssValuePoolAddColor(pool, color8Of(color));
+            cssValuePoolAddColor(pool, prColor8FromColor(color));
         } else if (node->kind == PrCssValueKind_Function && !readsElement(value, false) &&
                 resolveColorValue(value, 0, CssColorContext{.current = context.parentColor}, &components)) {
             cssValuePoolAddColorComponents(pool, components);
@@ -2473,7 +2468,7 @@ void cssStyleComputeValue(CssValuePool* pool, PrCssProperty property, CssValueRu
         if (cssIsSystemColor(keyword))
             cssValuePoolAdd(pool, cssKeywordValue(cssSystemColorComputed(keyword)));
         else if (cssResolveColor(specified, 0, CssColorContext{.current = context.parentColor}, &color))
-            cssValuePoolAddColor(pool, color8Of(color));
+            cssValuePoolAddColor(pool, prColor8FromColor(color));
         else
             cssValuePoolAddRun(pool, specified);
     } else if (property == PrCssProperty_ZIndex && keyword == PrCssKeyword_Count) {

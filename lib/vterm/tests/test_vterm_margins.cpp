@@ -532,5 +532,5 @@ TEST_CASE("vterm margins: a resize rewraps only the lines that wrapped across th
 TEST_CASE("vterm margins: the primary device attributes report horizontal scrolling") {
     Term term(4, 1);
     term.write("\x1b[c");
-    CHECK(term.output() == "\x1b[?62;21;22c");
+    CHECK(term.output() == "\x1b[?62;4;21;22c");
 }

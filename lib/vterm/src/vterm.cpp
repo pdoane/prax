@@ -10,9 +10,11 @@
 #include "pr/string_ops.h"
 #include "pr/utf8.h"
 
+#include "vterm/src/vterm_iterm.h"
 #include "vterm/src/vterm_parser.h"
 #include "vterm/src/vterm_report.h"
 #include "vterm/src/vterm_screen.h"
+#include "vterm/src/vterm_sixel.h"
 
 namespace pr_impl {
 
@@ -660,6 +662,12 @@ ModeSetting decMode(Vterm* vterm, uint32_t mode, bool set, bool query) {
                     cursorRestore(vterm);
             }
             return ModeSetting_Reset;
+        case 80:
+            flag = &modes.sixelDisplay;
+            break;
+        case 8452:
+            flag = &modes.sixelCursorRight;
+            break;
         case 2004:
             flag = &modes.bracketedPaste;
             break;
@@ -927,6 +935,10 @@ void controlSequence(Vterm* vterm, const VtermAction* action) {
                 if (action->marker == '?')
                     eraseInDisplay(vterm, vtermParam(action, 0, 0));
                 return;
+            case 'S':
+                if (action->marker == '?')
+                    vtermSixelGraphicsAttributes(vterm, action);
+                return;
             case 'K':
                 if (action->marker == '?')
                     eraseInLine(vterm, vtermParam(action, 0, 0));
@@ -1052,9 +1064,9 @@ void controlSequence(Vterm* vterm, const VtermAction* action) {
             break;
         }
         case 'c':
-            // A VT220 (62) with horizontal scrolling (21), which is DECSLRM, and ANSI color (22).
+            // A VT220 (62) with sixel graphics (4), horizontal scrolling (21), which is DECSLRM, and ANSI color (22).
             if (vtermParam(action, 0, 0) == 0)
-                vtermPut(vterm, "\x1b[?62;21;22c");
+                vtermPut(vterm, "\x1b[?62;4;21;22c");
             break;
         case 'd':
             cursorToRelative(vterm, cursorColumnRelative(vterm), vtermParamCount(action, 0, 1) - 1);
@@ -1406,6 +1418,9 @@ void operatingSystemCommand(Vterm* vterm, const VtermAction* action) {
             break;
         case 133:
             promptMark(vterm, rest);
+            break;
+        case 1337:
+            vtermItermCommand(vterm, rest);
             break;
         case 104:
             colorsChanged(vterm);

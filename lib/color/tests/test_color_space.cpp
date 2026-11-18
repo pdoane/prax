@@ -57,6 +57,22 @@ TEST_CASE("every 8-bit channel survives a 16-bit float and back") {
     }
 }
 
+TEST_CASE("a color narrows to the nearest 8-bit channels, clamped, and every 8-bit channel survives the round trip") {
+    for (uint32_t code = 0; code < 256; ++code) {
+        PrColor8 color{uint8_t(code), uint8_t(255 - code), uint8_t(code / 2), uint8_t(code)};
+        PrColor8 back = prColor8FromColor(prColorFromColor8(color));
+        CHECK(back.r == color.r);
+        CHECK(back.g == color.g);
+        CHECK(back.b == color.b);
+        CHECK(back.a == color.a);
+    }
+    PrColor8 clamped = prColor8FromColor(PrColor{-0.5f, 1.5f, kPrF32Nan, 0.5f});
+    CHECK(clamped.r == 0);
+    CHECK(clamped.g == 255);
+    CHECK(clamped.b == 0);
+    CHECK(clamped.a == 128);
+}
+
 TEST_CASE("a color of 16-bit floats holds no -0 and no NaN, so equal colors have equal bits") {
     PrColor16 zero = prColor16FromColor(PrColor{0, 0, 0, 0});
     PrColor16 negative = prColor16FromColor(PrColor{-0.0f, -0.0f, kPrF32Nan, 0});

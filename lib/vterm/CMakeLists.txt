@@ -4,11 +4,13 @@ pr_library(vterm INCLUDE include
     src/vterm.cpp
     src/vterm_graphics.cpp
     src/vterm_input.cpp
+    src/vterm_iterm.cpp
     src/vterm_link.cpp
     src/vterm_notification.cpp
     src/vterm_parser.cpp
     src/vterm_report.cpp
     src/vterm_screen.cpp
+    src/vterm_sixel.cpp
 )
 target_link_libraries(pr_vterm PUBLIC prax::core prax::app prax::color prax::compress prax::image
                                PRIVATE prax::core_cpp prax::unicode)

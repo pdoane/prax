@@ -54,8 +54,9 @@ constexpr uint32_t kVtermParserMaxParamValue = 65535;
 // The value of a parameter that the sequence left empty.
 constexpr uint32_t kVtermParamNone = 0xffffffffu;
 
-// The most bytes of an OSC, a DCS or an APC string. The parser drops a longer string whole.
-constexpr uint32_t kVtermParserMaxStringBytes = 4u << 20;
+// The most bytes of an OSC, a DCS or an APC string. The parser drops a longer string whole. A string can hold an image,
+// as iTerm2's inline images and sixel do, so the limit fits a photo's file sent whole.
+constexpr uint32_t kVtermParserMaxStringBytes = 32u << 20;
 
 // An action, valid until the next call to the parser.
 struct VtermAction {
