@@ -161,8 +161,8 @@ void resize(PrWebView* view, PrUVec2 viewport) {
     [object layOut];
 }
 
-void show(PrWebView* view, const PrAppSurface* surface, PrRect clip, PrRect frame) {
-    if (surface->kind != PrAppSurfaceKind_NsView)
+void show(PrWebView* view, const PrSurface* surface, PrRect clip, PrRect frame) {
+    if (surface->kind != PrSurfaceKind_NsView)
         return;
     PrWebKitView* object = objectOf(view);
     NSView* host = (__bridge NSView*)surface->handle;

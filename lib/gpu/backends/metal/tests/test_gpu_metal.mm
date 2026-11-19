@@ -128,8 +128,15 @@ struct AppMetal {
 
 // Clears the swap chain's next drawable and presents it.
 PrGpuFence presentFrame(PrGpuDevice* device, PrGpuSwapChain* swapChain) {
-    PrGpuTexture texture{};
-    REQUIRE(prGpuSwapChainAcquire(swapChain, PrUVec2{32, 32}, &texture) == PrStatus_Ok);
+    PrGpuSwapChainFrame frame{};
+    REQUIRE(prGpuSwapChainAcquire(swapChain, PrUVec2{32, 32}, &frame) == PrStatus_Ok);
+    // A window's frame is one view of the whole texture, with no depth.
+    CHECK(frame.viewCount == 1);
+    CHECK(frame.views[0].viewport.right == 32);
+    CHECK(frame.views[0].viewport.bottom == 32);
+    CHECK(frame.views[0].layer == 0);
+    CHECK(frame.depth.id == 0);
+    PrGpuTexture texture = frame.color;
     PrGpuCommands* commands = nullptr;
     REQUIRE(prGpuCommandsBegin(device, nullptr, &commands));
     prGpuCommandsTextureBarrier(commands, texture, PrGpuSubresources{}, PrGpuAccessFlag_Discard,
@@ -213,6 +220,7 @@ TEST_CASE("metal draws into the application's pass, and says which of the pass's
     passDesc.nativeFormats.colorCount = 1;
     passDesc.nativeFormats.color[0] = PrGpuFormat_Rgba8;
     passDesc.nativeFormats.samples = 1;
+    passDesc.nativeFormats.viewCount = 1;
     passDesc.nativeExtent = PrUVec2{8, 8};
     PrGpuPass* pass = prGpuPassBegin(commands, &passDesc);
     Uniforms uniforms{.color = {1, 0, 0, 1}};
@@ -363,7 +371,7 @@ TEST_CASE("metal presents frames, with the transaction always unless threaded") 
         return;
     @autoreleasepool {
         NSView* view = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 32, 32)];
-        PrAppSurface surface{PrAppSurfaceKind_NsView, (__bridge void*)view};
+        PrSurface surface{PrSurfaceKind_NsView, (__bridge void*)view};
         PrGpuSwapChainDesc desc{.intent = PrGpuSwapChainIntent_Sdr};
         PrGpuSwapChain* transactional = nullptr;
         REQUIRE(prGpuSwapChainCreate(f.device, &surface, &desc, &transactional) == PrStatus_Ok);
@@ -377,7 +385,7 @@ TEST_CASE("metal presents frames, with the transaction always unless threaded") 
         prGpuSwapChainDestroy(transactional);
 
         NSView* threadedView = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 32, 32)];
-        PrAppSurface threadedSurface{PrAppSurfaceKind_NsView, (__bridge void*)threadedView};
+        PrSurface threadedSurface{PrSurfaceKind_NsView, (__bridge void*)threadedView};
         desc.flags = PrGpuSwapChainFlag_Threaded;
         PrGpuSwapChain* threaded = nullptr;
         REQUIRE(prGpuSwapChainCreate(f.device, &threadedSurface, &desc, &threaded) == PrStatus_Ok);
@@ -391,9 +399,101 @@ TEST_CASE("metal presents frames, with the transaction always unless threaded") 
     }
 }
 
+TEST_CASE("metal's swap chain waits for the display, or tears where it is asked to, and has no mode that replaces a frame") {
+    Fixture f;
+    if (f.device == nullptr)
+        return;
+    @autoreleasepool {
+        struct Case {
+            PrGpuSwapChainSync asked;
+            PrGpuSwapChainSync given;
+        };
+        const Case cases[] = {
+            {PrGpuSwapChainSync_Vsync, PrGpuSwapChainSync_Vsync},
+            {PrGpuSwapChainSync_Latest, PrGpuSwapChainSync_Vsync},
+            {PrGpuSwapChainSync_Immediate, PrGpuSwapChainSync_Immediate},
+        };
+        for (const Case& c : cases) {
+            NSView* view = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 32, 32)];
+            PrSurface surface{PrSurfaceKind_NsView, (__bridge void*)view};
+            PrGpuSwapChainDesc desc{.intent = PrGpuSwapChainIntent_Sdr, .sync = c.asked};
+            PrGpuSwapChain* swapChain = nullptr;
+            REQUIRE(prGpuSwapChainCreate(f.device, &surface, &desc, &swapChain) == PrStatus_Ok);
+            CHECK(prGpuSwapChainInfo(swapChain).sync == c.given);
+            CAMetalLayer* layer = (CAMetalLayer*)view.layer;
+            CHECK(layer.displaySyncEnabled == (c.given == PrGpuSwapChainSync_Vsync));
+            prGpuDeviceWait(f.device, presentFrame(f.device, swapChain));
+            prGpuSwapChainDestroy(swapChain);
+        }
+    }
+}
+
+TEST_CASE("metal captures a frame into the swap chain's own texture, from a view with no window to show it") {
+    Fixture f;
+    if (f.device == nullptr)
+        return;
+    @autoreleasepool {
+        // The view is in no window, so its layer shows nothing, as while the display sleeps.
+        NSView* view = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 32, 32)];
+        PrSurface surface{PrSurfaceKind_NsView, (__bridge void*)view};
+        PrGpuSwapChainDesc desc{.intent = PrGpuSwapChainIntent_Sdr};
+        PrGpuSwapChain* swapChain = nullptr;
+        REQUIRE(prGpuSwapChainCreate(f.device, &surface, &desc, &swapChain) == PrStatus_Ok);
+        CAMetalLayer* layer = (CAMetalLayer*)view.layer;
+        CHECK(layer.framebufferOnly);
+
+        struct Captured {
+            uint32_t calls = 0;
+            PrGpuFormat format = PrGpuFormat_None;
+            PrUVec2 extent{};
+            uint8_t first[4] = {};
+        } captured;
+        prGpuSwapChainRequestCapture(swapChain, [](void* PR_NULLABLE context, PrPixelView texels, PrGpuFormat format) {
+            Captured& c = *static_cast<Captured*>(context);
+            ++c.calls;
+            c.format = format;
+            c.extent = texels.extent;
+            if (texels.data != nullptr)
+                prMemCopy(c.first, texels.data, 4);
+        }, &captured);
+        PrGpuSwapChainFrame frame{};
+        REQUIRE(prGpuSwapChainAcquire(swapChain, PrUVec2{24, 16}, &frame) == PrStatus_Ok);
+        PrGpuTexture texture = frame.color;
+        CHECK(prGpuTextureDesc(f.device, texture).format == prGpuSwapChainInfo(swapChain).format);
+        PrGpuCommands* commands = nullptr;
+        REQUIRE(prGpuCommandsBegin(f.device, nullptr, &commands));
+        prGpuCommandsTextureBarrier(commands, texture, PrGpuSubresources{}, PrGpuAccessFlag_Discard,
+            PrGpuAccessFlag_ColorAttachment);
+        PrGpuPassDesc pass = prGpuPassDescColor(texture, PrGpuLoad_Clear, PrColor{0, 1, 0, 1});
+        prGpuPassEnd(prGpuPassBegin(commands, &pass));
+        prGpuCommandsTextureBarrier(commands, texture, PrGpuSubresources{}, PrGpuAccessFlag_ColorAttachment,
+            PrGpuAccessFlag_Present);
+        prGpuSwapChainPresent(swapChain, commands);
+        prGpuDeviceWait(f.device, prGpuCommandsSubmit(commands));
+        prGpuDeviceWaitIdle(f.device);
+        CHECK(captured.calls == 1);
+        CHECK(captured.format == PrGpuFormat_Bgra8);
+        CHECK(captured.extent.x == 24);
+        CHECK(captured.extent.y == 16);
+        CHECK(captured.first[0] == 0);
+        CHECK(captured.first[1] == 255);
+        CHECK(captured.first[2] == 0);
+        CHECK(captured.first[3] == 255);
+
+        // A request that no frame took calls nothing once it is cancelled.
+        prGpuSwapChainRequestCapture(swapChain, [](void* PR_NULLABLE context, PrPixelView, PrGpuFormat) {
+            ++static_cast<Captured*>(context)->calls;
+        }, &captured);
+        prGpuSwapChainCancelCapture(swapChain);
+        prGpuDeviceWaitIdle(f.device);
+        CHECK(captured.calls == 1);
+        prGpuSwapChainDestroy(swapChain);
+    }
+}
+
 #endif
 
-TEST_CASE("metal chooses half floats for HDR only on a display that shows past SDR white, whatever its gamut") {
+TEST_CASE("metal chooses half floats for HDR on a display that shows past SDR white, and for wide gamut on one past sRGB") {
     const PrGpuSwapChainInfo kSdr{PrGpuFormat_Bgra8, PrColorSpace_Srgb};
     const PrGpuSwapChainInfo kExtended{PrGpuFormat_Rgba16F, PrColorSpace_Srgb};
     struct Case {
@@ -409,14 +509,16 @@ TEST_CASE("metal chooses half floats for HDR only on a display that shows past S
         {PrGpuSwapChainIntent_Hdr, 2, PrColorSpace_Srgb, kExtended},
         {PrGpuSwapChainIntent_Hdr, 1, PrColorSpace_DisplayP3, kSdr},
         {PrGpuSwapChainIntent_Hdr, 16, PrColorSpace_DisplayP3, kExtended},
+        {PrGpuSwapChainIntent_WideGamut, 1, PrColorSpace_Srgb, kSdr},
+        {PrGpuSwapChainIntent_WideGamut, 16, PrColorSpace_Srgb, kSdr},
+        {PrGpuSwapChainIntent_WideGamut, 1, PrColorSpace_DisplayP3, kExtended},
+        {PrGpuSwapChainIntent_WideGamut, 16, PrColorSpace_Rec2020, kExtended},
     };
     for (const Case& c : cases) {
-        PrAppDisplay display = prAppDisplayDefault();
-        display.potentialHeadroom = c.potentialHeadroom;
-        display.gamut = c.gamut;
-        PrGpuSwapChainInfo info = gpuMetalSwapChainInfoFromDisplay(c.intent, display);
+        PrGpuSwapChainInfo info = gpuMetalSwapChainInfoFromDisplay(c.intent, GpuMetalDisplay{c.potentialHeadroom, c.gamut});
         CAPTURE(c.intent);
         CAPTURE(c.potentialHeadroom);
+        CAPTURE(c.gamut);
         CHECK(info.format == c.expected.format);
         CHECK(info.space == c.expected.space);
     }
@@ -431,7 +533,7 @@ TEST_CASE("metal's HDR swap chain reports what its layer and its textures hold, 
     @autoreleasepool {
         // A view outside a window is shown on the main screen.
         NSView* view = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 32, 32)];
-        PrAppSurface surface{PrAppSurfaceKind_NsView, (__bridge void*)view};
+        PrSurface surface{PrSurfaceKind_NsView, (__bridge void*)view};
         PrGpuSwapChainDesc desc{.intent = PrGpuSwapChainIntent_Hdr};
         PrGpuSwapChain* swapChain = nullptr;
         REQUIRE(prGpuSwapChainCreate(f.device, &surface, &desc, &swapChain) == PrStatus_Ok);
@@ -439,8 +541,9 @@ TEST_CASE("metal's HDR swap chain reports what its layer and its textures hold, 
         bool beyondSdr = screen != nil && screen.maximumPotentialExtendedDynamicRangeColorComponentValue > 1;
         CAMetalLayer* layer = (CAMetalLayer*)view.layer;
         for (int frame = 0; frame < 2; ++frame) {
-            PrGpuTexture texture{};
-            REQUIRE(prGpuSwapChainAcquire(swapChain, PrUVec2{32, 32}, &texture) == PrStatus_Ok);
+            PrGpuSwapChainFrame acquired{};
+            REQUIRE(prGpuSwapChainAcquire(swapChain, PrUVec2{32, 32}, &acquired) == PrStatus_Ok);
+            PrGpuTexture texture = acquired.color;
             PrGpuSwapChainInfo info = prGpuSwapChainInfo(swapChain);
             CHECK(info.format == (beyondSdr ? PrGpuFormat_Rgba16F : PrGpuFormat_Bgra8));
             CHECK(info.space == PrColorSpace_Srgb);

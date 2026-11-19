@@ -2,8 +2,8 @@
 //
 // The page's host element is the display. Its CSS size is the display's extent and work area, and the page's device
 // pixel ratio is the display's. Each window is a canvas in a frame that the backend adds to the host, and its surface
-// is a PrAppSurfaceKind_HtmlCanvas, the canvas's selector, which a GPU device presents to (pr/gpu_canvas2d.h). Frames
-// come from the page's animation frames.
+// is a PrSurfaceKind_HtmlCanvas, the canvas's selector, which a GPU device presents to (pr/gpu_canvas2d.h). Frames come
+// from the page's animation frames.
 //
 // The window of a Single application fills the host, which the page sizes, without a title bar, as on a phone or a
 // console. Its Fullscreen covers the machine's display, through the page's Fullscreen API.

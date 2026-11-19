@@ -6,7 +6,7 @@ pr_library(gpu INCLUDE include
     backends/shared/src/gpu_shared_ranges.cpp
     backends/shared/src/gpu_shared_upload.cpp
 )
-target_link_libraries(pr_gpu PUBLIC prax::core prax::geom prax::app prax::color prax::task PRIVATE prax::core_cpp)
+target_link_libraries(pr_gpu PUBLIC prax::core prax::geom prax::color prax::surface prax::task PRIVATE prax::core_cpp)
 pr_slang(pr_gpu backends/shared/src/gpu_shared_mipmaps.slang VARIABLE kGpuSharedMipmapShaders)
 # On Apple's platforms, any device copies a CVPixelBuffer that it does not import in place.
 if (APPLE)
@@ -20,12 +20,19 @@ pr_backend_shared(gpu metal SOURCES backends/shared/src/gpu_shared_metal.mm)
 set_source_files_properties(backends/shared/src/gpu_shared_metal.mm PROPERTIES COMPILE_OPTIONS -fno-objc-arc)
 if (PR_GPU_METAL OR PR_GPU_METAL4)
     target_link_libraries(pr_gpu PUBLIC "-framework Metal" "-framework QuartzCore" "-framework CoreVideo"
-                                 "-framework Foundation" "-framework CoreFoundation")
-    # A swap chain presents to an AppKit view on macOS, and to a UIKit view on UIKit's platforms.
+                                 "-framework Foundation" "-framework CoreFoundation" "-framework CoreGraphics")
+    # A swap chain presents to an AppKit view on macOS, and to a UIKit view on UIKit's platforms, and on visionOS to an
+    # immersive session's compositor.
     if (PR_MACOS)
         target_link_libraries(pr_gpu PUBLIC "-framework AppKit")
     elseif (PR_UIKIT)
         target_link_libraries(pr_gpu PUBLIC "-framework UIKit")
+    endif()
+    if (PR_VISIONOS)
+        target_sources(pr_gpu PRIVATE backends/shared/src/gpu_shared_metal_compositor.mm)
+        set_source_files_properties(backends/shared/src/gpu_shared_metal_compositor.mm
+            PROPERTIES COMPILE_OPTIONS -fno-objc-arc)
+        target_link_libraries(pr_gpu PUBLIC "-framework CompositorServices")
     endif()
 endif()
 pr_backend(gpu metal SHARED metal INCLUDE backends/metal/include SOURCES backends/metal/src/gpu_metal.mm)
@@ -96,7 +103,7 @@ if (PR_DEVELOP)
         tests/test_gpu_stress.cpp
         tests/test_gpu_c.c
     )
-    target_link_libraries(gpu_tests PRIVATE prax::gpu_select prax::task)
+    target_link_libraries(gpu_tests PRIVATE prax::gpu_select prax::surface prax::task)
     pr_slang(gpu_tests tests/test_gpu.slang VARIABLE kTestGpuShaders)
     pr_slang(gpu_tests tests/test_gpu_passes.slang VARIABLE kTestGpuPassShaders)
     # Each backend's own tests, which record into the application's command buffers and passes with the same shaders.
@@ -112,6 +119,10 @@ if (PR_DEVELOP)
     if (PR_GPU_VULKAN)
         target_sources(gpu_tests PRIVATE backends/vulkan/tests/test_gpu_vulkan.cpp
                                          backends/vulkan/tests/test_gpu_vulkan_memory.cpp)
+        if (APPLE)
+            target_sources(gpu_tests PRIVATE backends/vulkan/tests/test_gpu_vulkan_apple.mm)
+            set_source_files_properties(backends/vulkan/tests/test_gpu_vulkan_apple.mm PROPERTIES COMPILE_OPTIONS -fobjc-arc)
+        endif()
         target_include_directories(gpu_tests SYSTEM PRIVATE ${PR_VULKAN_HEADERS})
     endif()
     if (PR_GPU_D3D12)
@@ -122,7 +133,6 @@ if (PR_DEVELOP)
     endif()
     if (PR_GPU_MEMORY)
         target_sources(gpu_tests PRIVATE backends/memory/tests/test_gpu_memory.cpp)
-        target_link_libraries(gpu_tests PRIVATE prax::app)
     endif()
     if (PR_GPU_CANVAS2D)
         target_sources(gpu_tests PRIVATE backends/canvas2d/tests/test_gpu_canvas2d.cpp)

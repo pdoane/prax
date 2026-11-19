@@ -11,9 +11,10 @@ namespace pr_impl {
 // Returns the state of the window's frame now, for an event that the window delivers.
 PrAppFrame appKitFrameState(PrAppWindow* window);
 
-// Implement PrAppWindow::destroyFn and PrAppWindow::requestFrameFn.
+// Implement PrAppWindow::destroyFn, PrAppWindow::requestFrameFn and PrAppWindow::requestUnpacedFrameFn.
 void appKitWindowDestroy(PrAppWindow* window);
 void appKitRequestFrame(PrAppWindow* window);
+void appKitRequestUnpacedFrame(PrAppWindow* window);
 
 // Requests a frame at `time`, in the seconds of appKitUptime, or none if `time` is zero, as a window's output asks.
 void appKitRequestFrameAt(PrAppWindow* window, double time);

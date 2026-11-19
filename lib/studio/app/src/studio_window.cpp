@@ -63,7 +63,7 @@ bool openTarget(StudioAppState* app, StudioWindowTarget* target, PrAppWindow* ap
     if (target->swapChain != nullptr && target->generation == app->generation && target->transparent == transparent)
         return true;
     studioWindowTargetClose(app, target);
-    PrAppSurface surface{};
+    PrSurface surface{};
     PrGpuSwapChainFlags flags = transparent ? PrGpuSwapChainFlags(PrGpuSwapChainFlag_Transparent) : 0;
     PrGpuSwapChainDesc desc{.intent = intent, .flags = flags};
     target->transparent = transparent;
@@ -106,14 +106,30 @@ PrGpuTexture renderedFor(StudioAppState* app, StudioWindowTarget& target, PrUVec
     return target.rendered;
 }
 
+// Takes the texels of a frame that the swap chain captured, in the swap chain's format, as 8-bit RGBA with encoded sRGB
+// and premultiplied alpha, and gives them to the window's capture (prGpuCaptureToRgba8). A format that holds no sRGB,
+// as HDR10's, gives no pixels. Called on the device's thread.
+void captured(void* PR_NULLABLE context, PrPixelView texels, PrGpuFormat format) {
+    PrStudioWindow* w = static_cast<PrStudioWindow*>(context);
+    PrUVec2 extent = texels.extent;
+    RawArray<uint8_t> rgba;
+    rgba.resize(extent.x * extent.y * 4);
+    PrPixels pixels{rgba.data, size_t(extent.x) * 4, extent};
+    if (prGpuCaptureToRgba8(texels, format, pixels))
+        w->capture(w->captureContext, prPixelsView(pixels));
+    else
+        w->capture(w->captureContext, PrPixelView{});
+    rgba.reset();
+}
+
 // Renders `list` into the target's swap chain at `extent` target pixels and presents it, clearing to `canvas`, which is
 // premultiplied. A swap chain that holds more than 8-bit sRGB on a device without the display shader shows nothing.
 void render(StudioAppState* studio, StudioWindowTarget& target, PrDrawList* list, PrUVec2 extent, PrColor canvas,
         const PrAppDisplay& display) {
     PrGpuDevice* device = studio->device;
-    PrGpuTexture drawable{};
+    PrGpuSwapChainFrame frame{};
     PrGpuCommands* commands = nullptr;
-    if (prGpuSwapChainAcquire(target.swapChain, extent, &drawable) != PrStatus_Ok ||
+    if (prGpuSwapChainAcquire(target.swapChain, extent, &frame) != PrStatus_Ok ||
             !prGpuCommandsBegin(device, nullptr, &commands))
         return;
     PrPixelFormat direct = PrPixelFormat_Bgra8;
@@ -129,7 +145,7 @@ void render(StudioAppState* studio, StudioWindowTarget& target, PrDrawList* list
         prGpuTextureRelease(device, target.rendered);
         target.rendered = PrGpuTexture{};
     }
-    PrGpuTexture into = mapped ? renderedFor(studio, target, extent) : drawable;
+    PrGpuTexture into = mapped ? renderedFor(studio, target, extent) : frame.color;
     PrPixelFormat format = PrPixelFormat(mapped ? PrPixelFormat_RgbaF16 : direct);
     PrDrawTarget drawn{.extent = extent, .format = format, .commands = commands};
     prDrawFramePrepare(target.frame, list, &drawn);
@@ -144,15 +160,16 @@ void render(StudioAppState* studio, StudioWindowTarget& target, PrDrawList* list
     prGpuPassEnd(encoder);
     if (mapped) {
         prGpuCommandsTextureBarrier(commands, into, all, PrGpuAccessFlag_ColorAttachment, PrGpuAccessFlag_FragmentRead);
-        prGpuCommandsTextureBarrier(commands, drawable, all, PrGpuAccessFlag_Discard, PrGpuAccessFlag_ColorAttachment);
+        prGpuCommandsTextureBarrier(commands, frame.color, all, PrGpuAccessFlag_Discard,
+            PrGpuAccessFlag_ColorAttachment);
         PrGpuSwapChainInfo info = prGpuSwapChainInfo(target.swapChain);
-        PrGpuPassDesc shown = prGpuPassDescColor(drawable, PrGpuLoad_Discard, PrColor{});
+        PrGpuPassDesc shown = prGpuPassDescColor(frame.color, PrGpuLoad_Discard, PrColor{});
         encoder = prGpuPassBegin(commands, &shown);
         PrDrawDisplayDesc mapping{.target = info.space, .headroom = display.headroom, .gamut = display.gamut};
         prDrawDisplayDraw(shader, encoder, into, &mapping);
         prGpuPassEnd(encoder);
     }
-    prGpuCommandsTextureBarrier(commands, drawable, all, PrGpuAccessFlag_ColorAttachment, PrGpuAccessFlag_Present);
+    prGpuCommandsTextureBarrier(commands, frame.color, all, PrGpuAccessFlag_ColorAttachment, PrGpuAccessFlag_Present);
     prGpuSwapChainPresent(target.swapChain, commands);
     prGpuCommandsSubmit(commands);
 }
@@ -460,10 +477,19 @@ PrAppOutput renderFrame(PrStudioWindow* w, const PrAppFrame* f) {
 
     PrUVec2 extent{uint32_t(f->extent.x * ratio + 0.5f), uint32_t(f->extent.y * ratio + 0.5f)};
     PrTimePerf played = prTimePerfNow();
+    // A frame that takes a capture draws into the swap chain's own texture and is not presented, so another frame
+    // follows it.
+    bool capturing = w->capturePending && w->capture != nullptr;
+    if (capturing) {
+        w->capturePending = false;
+        prGpuSwapChainRequestCapture(w->target.swapChain, captured, w);
+    }
     if (extent.x != 0 && extent.y != 0) {
         PrColor clear{canvas.r * canvas.a, canvas.g * canvas.a, canvas.b * canvas.a, canvas.a};
         render(w->studio, w->target, w->list, extent, clear, f->display);
     }
+    if (capturing)
+        prAppWindowRequestFrame(w->appWindow);
     if (w->desc.drawn != nullptr)
         w->desc.drawn(w->desc.context, w, w->list, extent, canvas);
     PrAppOutput output = prUiOutput(w->ui);
@@ -580,6 +606,13 @@ void prStudioWindowDestroy(PrStudioWindow* PR_NULLABLE window) {
         window->closing = true;
     else
         destroyWindow(window);
+}
+
+void prStudioWindowCapture(PrStudioWindow* window, PrStudioWindowCaptureFn capture, void* PR_NULLABLE context) {
+    window->capture = capture;
+    window->captureContext = context;
+    window->capturePending = true;
+    prAppWindowRequestUnpacedFrame(window->appWindow);
 }
 
 PrStudioApp* prStudioWindowStudioApp(const PrStudioWindow* window) {

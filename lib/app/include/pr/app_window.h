@@ -7,12 +7,12 @@
 #include "pr/app_display.h"
 #include "pr/app_event.h"
 #include "pr/app_input.h"
-#include "pr/app_surface.h"
 #include "pr/app_user_preferences.h"
 #include "pr/base.h"
 #include "pr/geom.h"
 #include "pr/pixels.h"
 #include "pr/string_view.h"
+#include "pr/surface.h"
 #include "pr/vec.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -56,8 +56,8 @@ typedef uint8_t PrAppWindowDecoration;
 
 // What shows behind a window's content. With any backdrop but Opaque, the window composites its frames over the
 // backdrop with premultiplied alpha, so the program clears to transparent wherever the backdrop should show. Only a
-// transparent window shows a backdrop (PrAppWindowDesc::transparent), and its swap chain must present alpha
-// (PrGpuSwapChainFlag_Transparent).
+// transparent window shows a backdrop (PrAppWindowDesc::transparent), and what presents to its surface must present
+// alpha.
 enum {
     PrAppWindowBackdrop_Opaque,
     PrAppWindowBackdrop_Transparent,    // whatever is behind the window, unchanged
@@ -304,6 +304,11 @@ PrApp* prAppWindowApp(const PrAppWindow* window);
 // Requests a frame at the display's next refresh. Several requests before that refresh produce one frame.
 void prAppWindowRequestFrame(PrAppWindow* window);
 
+// Requests a frame that the display does not pace, as soon as the run loop takes it, which comes even while the display
+// refreshes nothing, as while it sleeps. A frame that must render whether or not it is shown, such as a capture, asks
+// for one. On a platform whose display never stops the frames, it is a request for a frame.
+void prAppWindowRequestUnpacedFrame(PrAppWindow* window);
+
 // Sets or returns the window's title. The setter copies the title, and the returned view is valid until the title
 // changes. The system shows the title in its window lists and to screen readers, even if a custom title bar draws it. A
 // change requests a frame.
@@ -423,7 +428,7 @@ void prAppWindowSetProgress(PrAppWindow* window, PrAppProgressState state, float
 void prAppWindowSetDocument(PrAppWindow* window, PrStringView path, bool edited);
 
 // Writes the window's native surface to `out`. The surface is valid until the window is destroyed.
-PrStatus prAppWindowSurface(const PrAppWindow* window, PrAppSurface* out);
+PrStatus prAppWindowSurface(const PrAppWindow* window, PrSurface* out);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Drags

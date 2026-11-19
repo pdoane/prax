@@ -3,19 +3,30 @@
 
 #pragma once
 
-#include "pr/app_display.h"
 #include "pr/gpu.h"
 
 PR_ASSUME_NONNULL_BEGIN
 
 namespace pr_impl {
 
-// Returns the format and the color space that a Metal layer presents for `intent` on `display`. HDR presents extended
-// sRGB, encoded, in half floats, which the layer shows past sRGB's gamut and past SDR white. On a display that never
-// shows past SDR white, HDR presents as SDR does, even if the display has a wide gamut. Wide color without high dynamic
-// range is not what the HDR intent asks for.
-inline PrGpuSwapChainInfo gpuMetalSwapChainInfoFromDisplay(PrGpuSwapChainIntent intent, const PrAppDisplay& display) {
-    if (intent == PrGpuSwapChainIntent_Hdr && display.potentialHeadroom > 1)
+// What a display can show, as the swap chain reads it from AppKit or UIKit: how many times SDR white its brightest
+// color can reach, and the widest gamut that it shows.
+struct GpuMetalDisplay {
+    float potentialHeadroom;
+    PrColorSpace gamut;
+};
+
+// Returns the format and the color space that a Metal layer presents for `intent` on `display`. HDR and wide gamut
+// present scRGB in half floats, which the layer shows past sRGB's gamut, and for HDR past SDR white. HDR does so on a
+// display that can show past SDR white, whatever its gamut, and wide gamut on a display of a gamut wider than sRGB's,
+// whatever its headroom. Elsewhere they present as SDR does.
+inline PrGpuSwapChainInfo gpuMetalSwapChainInfoFromDisplay(PrGpuSwapChainIntent intent, const GpuMetalDisplay& display) {
+    bool extended = false;
+    if (intent == PrGpuSwapChainIntent_Hdr)
+        extended = display.potentialHeadroom > 1;
+    else if (intent == PrGpuSwapChainIntent_WideGamut)
+        extended = display.gamut != PrColorSpace_Srgb;
+    if (extended)
         return PrGpuSwapChainInfo{PrGpuFormat_Rgba16F, PrColorSpace_Srgb};
     return PrGpuSwapChainInfo{PrGpuFormat_Bgra8, PrColorSpace_Srgb};
 }

@@ -59,6 +59,8 @@ struct PrApp {
     void (*PR_NULLABLE quitCancelFn)(PrApp* app);
     void (*PR_NULLABLE timerSetFn)(PrApp* app, uint64_t tag, double delay, double interval);
     void (*PR_NULLABLE timerCancelFn)(PrApp* app, uint64_t tag);
+    PrStatus (*PR_NULLABLE immersiveOpenFn)(PrApp* app);
+    void (*PR_NULLABLE immersiveCloseFn)(PrApp* app);
 
     // Displays
     uint32_t (*displaysFn)(const PrApp* app, PrAppDisplayInfo* PR_NULLABLE out, uint32_t capacity);
@@ -118,6 +120,7 @@ struct PrAppWindow {
     void (*destroyFn)(PrAppWindow* window);
     PrApp* PR_NONNULL (*PR_NONNULL appFn)(const PrAppWindow* window);
     void (*requestFrameFn)(PrAppWindow* window);
+    void (*PR_NULLABLE requestUnpacedFrameFn)(PrAppWindow* window);
     void (*setTitleFn)(PrAppWindow* window, PrStringView title);
     PrStringView (*titleFn)(const PrAppWindow* window);
     void (*PR_NULLABLE setExtentFn)(PrAppWindow* window, PrUVec2 extent);
@@ -152,7 +155,7 @@ struct PrAppWindow {
         void* PR_NULLABLE context);
     void (*dragStartFn)(PrAppWindow* window, const PrAppDragDesc* desc);
     void (*PR_NULLABLE dragPromiseEndFn)(PrAppWindow* window, uint32_t index, PrStatus status);
-    PrStatus (*surfaceFn)(const PrAppWindow* window, PrAppSurface* out);
+    PrStatus (*surfaceFn)(const PrAppWindow* window, PrSurface* out);
 };
 
 // The function table of a status item backend, placed at the start of the item's state.

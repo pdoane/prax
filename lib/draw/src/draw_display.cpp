@@ -33,8 +33,8 @@ constexpr float kPqWhite = 203.0f / 10000.0f;
 
 // How the shader encodes the colors that it writes, numbered as the shader numbers them.
 enum {
-    DisplayOutput_Encoded,      // extended sRGB, encoded
-    DisplayOutput_Linear,       // extended sRGB in linear light, which is scRGB
+    DisplayOutput_Encoded,      // scRGB
+    DisplayOutput_Linear,       // linear scRGB
     DisplayOutput_Pq,           // Rec. 2020's primaries, encoded with PQ
 };
 typedef uint32_t DisplayOutput;

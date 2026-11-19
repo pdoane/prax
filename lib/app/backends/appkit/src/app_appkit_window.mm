@@ -328,8 +328,8 @@ void requestAttention(PrAppWindow*) {
     [NSApp requestUserAttention:NSInformationalRequest];
 }
 
-PrStatus surface(const PrAppWindow* window, PrAppSurface* out) {
-    out->kind = PrAppSurfaceKind_NsView;
+PrStatus surface(const PrAppWindow* window, PrSurface* out) {
+    out->kind = PrSurfaceKind_NsView;
     out->handle = (__bridge void*)appKitObjectOf(window).view;
     return PrStatus_Ok;
 }
@@ -367,6 +367,10 @@ void appKitWindowDestroy(PrAppWindow* window) {
 
 void appKitRequestFrame(PrAppWindow* window) {
     [appKitObjectOf(window) requestFrame];
+}
+
+void appKitRequestUnpacedFrame(PrAppWindow* window) {
+    [appKitObjectOf(window) requestUnpacedFrame];
 }
 
 void appKitRequestFrameAt(PrAppWindow* window, double time) {
@@ -407,6 +411,7 @@ PrStatus appKitWindowCreate(PrApp* app, const PrAppWindowDesc* desc, PrAppWindow
     window->destroyFn = appKitWindowDestroy;
     window->appFn = windowApp;
     window->requestFrameFn = appKitRequestFrame;
+    window->requestUnpacedFrameFn = appKitRequestUnpacedFrame;
     window->setTitleFn = setTitle;
     window->titleFn = title;
     window->setExtentFn = setExtent;
@@ -1559,6 +1564,18 @@ using namespace pr_impl;
         [self.displayLink addToRunLoop:NSRunLoop.mainRunLoop forMode:NSRunLoopCommonModes];
     }
     self.displayLink.paused = NO;
+}
+// A timer of no delay delivers the frame, so the display link, which stops while the display sleeps, does not pace it.
+- (void)requestUnpacedFrame {
+    if (self.record == nullptr || !self.host.running || self.timer != nil)
+        return;
+    __weak PrAppKitWindow* weak = self;
+    self.timer = [NSTimer timerWithTimeInterval:0 repeats:NO block:^(NSTimer*) {
+        PrAppKitWindow* window = weak;
+        window.timer = nil;
+        [window frame];
+    }];
+    [NSRunLoop.mainRunLoop addTimer:self.timer forMode:NSRunLoopCommonModes];
 }
 - (void)requestFrameAt:(double)time {
     [self.frameTimer invalidate];

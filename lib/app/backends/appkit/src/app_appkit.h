@@ -152,6 +152,7 @@ PR_ASSUME_NONNULL_BEGIN
 - (void)frame;
 - (PrAppFrame)frameAt:(double)now;
 - (void)requestFrame;
+- (void)requestUnpacedFrame;
 - (void)requestFrameAt:(double)time;
 - (void)pointerAt:(PrVec2)position;
 - (void)pointerDown:(uint8_t)button;

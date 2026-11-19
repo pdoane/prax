@@ -25,7 +25,7 @@ void vulkanLogStall(uint64_t reached, uint64_t fence, uint32_t seconds);
 const char* PR_NULLABLE vulkanSurfaceExtension(void);
 
 // Creates a surface over a native one, for a swap chain that `desc` describes.
-VkResult vulkanSurfaceCreate(VulkanDevice* d, const PrAppSurface* surface, const PrGpuSwapChainDesc* desc,
+VkResult vulkanSurfaceCreate(VulkanDevice* d, const PrSurface* surface, const PrGpuSwapChainDesc* desc,
     VkSurfaceKHR PR_NULLABLE* PR_NONNULL out);
 
 #if defined(__APPLE__)

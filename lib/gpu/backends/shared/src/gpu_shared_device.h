@@ -93,10 +93,19 @@ struct GpuSharedPass : PrGpuPass {
     bool native;                        // records into a pass that the application has open
 };
 
-// A swap chain of a device.
+// A swap chain of a device, and the capture of a frame that the application requested (prGpuSwapChainRequestCapture):
+// the function that takes the frame's texels and its context, whether the next acquire takes the capture, and the
+// texture of the swap chain's own that the frame taking it draws into, which the frame's present reads back and
+// releases.
 struct GpuSharedSwapChain : PrGpuSwapChain {
     PrGpuDevice* device;
-    PrGpuSwapChainInfo info;
+    PrGpuSwapChainInfo info;            // the textures' format and color space, which change with the display
+    PrGpuSwapChainSync sync;            // the mode that the swap chain presents in, which is fixed
+
+    PrGpuCaptureFn PR_NULLABLE capture;
+    void* PR_NULLABLE captureContext;
+    bool captureRequested;
+    PrGpuTexture captureTexture;
 };
 
 // A shader library of a device, and its entry points, which it frees.
@@ -149,6 +158,18 @@ PrGpuAttachmentFormats gpuSharedPassFormats(const PrGpuPass* pass);
 PrUVec2 gpuSharedPassExtent(const PrGpuPass* pass);
 PrGpuDevice* gpuSharedSwapChainDevice(const PrGpuSwapChain* swapChain);
 PrGpuSwapChainInfo gpuSharedSwapChainInfo(const PrGpuSwapChain* swapChain);
+void gpuSharedSwapChainRequestCapture(PrGpuSwapChain* swapChain, PrGpuCaptureFn capture, void* PR_NULLABLE context);
+void gpuSharedSwapChainCancelCapture(PrGpuSwapChain* swapChain);
+
+// Takes a requested capture with the frame that acquires: writes a texture of the swap chain's format at `extent`,
+// which the swap chain makes for the frame, to `out`. Returns true if it took one, and the backend's acquire then
+// returns it in place of a texture of the surface, acquires nothing from the surface, and waits for nothing.
+bool gpuSharedSwapChainAcquireCapture(GpuSharedSwapChain* swapChain, PrUVec2 extent, PrGpuTexture* out);
+
+// Ends the frame that took a capture: records a read of its texture, which calls the capture's function once the
+// commands are done, and releases the texture. Returns true if the frame took a capture, and the backend's present then
+// presents nothing.
+bool gpuSharedSwapChainPresentCapture(GpuSharedSwapChain* swapChain, PrGpuCommands* commands);
 const PrGpuShaderEntry* gpuSharedLibraryEntries(const PrGpuShaderLibrary* library, uint32_t* count);
 
 // Returns the alignment of an allocation of a command buffer's stream for `usage`, which pr/gpu.h states.

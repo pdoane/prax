@@ -94,7 +94,7 @@ bool openDevice(Window& w) {
         return false;
     if (w.swapChain != nullptr)
         return true;
-    PrAppSurface surface{};
+    PrSurface surface{};
     PrGpuSwapChainDesc desc{.intent = PrGpuSwapChainIntent_Hdr};
     if (prAppWindowSurface(w.window, &surface) != PrStatus_Ok ||
             prGpuSwapChainCreate(w.device, &surface, &desc, &w.swapChain) != PrStatus_Ok ||
@@ -163,9 +163,9 @@ void record(Window& w, float width, float height, double seconds) {
 
 // Renders the list into the swap chain's texture at `extent` target pixels and presents it.
 void render(Window& w, PrUVec2 extent) {
-    PrGpuTexture drawable{};
+    PrGpuSwapChainFrame frame{};
     PrGpuCommands* commands = nullptr;
-    if (prGpuSwapChainAcquire(w.swapChain, extent, &drawable) != PrStatus_Ok ||
+    if (prGpuSwapChainAcquire(w.swapChain, extent, &frame) != PrStatus_Ok ||
             !prGpuCommandsBegin(w.device, nullptr, &commands))
         return;
     PrGpuSwapChainInfo info = prGpuSwapChainInfo(w.swapChain);
@@ -177,12 +177,12 @@ void render(Window& w, PrUVec2 extent) {
     PrDrawTarget target{.extent = extent, .format = format, .commands = commands};
     prDrawFramePrepare(w.frame, w.list, &target);
     PrGpuSubresources all{};
-    prGpuCommandsTextureBarrier(commands, drawable, all, PrGpuAccessFlag_Discard, PrGpuAccessFlag_ColorAttachment);
-    PrGpuPassDesc pass = prGpuPassDescColor(drawable, PrGpuLoad_Clear, PrColor{0, 0, 0, 1});
+    prGpuCommandsTextureBarrier(commands, frame.color, all, PrGpuAccessFlag_Discard, PrGpuAccessFlag_ColorAttachment);
+    PrGpuPassDesc pass = prGpuPassDescColor(frame.color, PrGpuLoad_Clear, PrColor{0, 0, 0, 1});
     PrGpuPass* encoder = prGpuPassBegin(commands, &pass);
     prDrawFrameRender(w.frame, encoder, PrIVec2{0, 0});
     prGpuPassEnd(encoder);
-    prGpuCommandsTextureBarrier(commands, drawable, all, PrGpuAccessFlag_ColorAttachment, PrGpuAccessFlag_Present);
+    prGpuCommandsTextureBarrier(commands, frame.color, all, PrGpuAccessFlag_ColorAttachment, PrGpuAccessFlag_Present);
     prGpuSwapChainPresent(w.swapChain, commands);
     prGpuCommandsSubmit(commands);
 }

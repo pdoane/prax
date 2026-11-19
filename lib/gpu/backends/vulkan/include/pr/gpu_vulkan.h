@@ -27,8 +27,8 @@
 //   holds every buffer and image, updated after it is bound. A handle is an index into one of the arrays.
 // - Push constants are kPrGpuMaxPushBytes at offset zero, readable by every stage.
 //
-// A swap chain for SDR holds Bgra8 in sRGB. One for HDR holds scRGB, Rgba16F in SrgbLinear, where the surface takes it,
-// and otherwise HDR10, Rgb10A2 in Rec2100Pq, where the surface takes that, and otherwise SDR.
+// A swap chain for SDR holds Bgra8 in sRGB. One for HDR or wide gamut holds linear scRGB, Rgba16F in SrgbLinear, where
+// the surface takes it, and otherwise HDR10, Rgb10A2 in Rec2100Pq, where the surface takes that, and otherwise SDR.
 //
 // An application that brings its own device shares three things with the backend, so that the backend's work runs
 // inside the application's frames without rebinding anything:

@@ -86,6 +86,7 @@ void require(FeatureChain& chain) {
     core.shaderStorageImageReadWithoutFormat = VK_TRUE;
     core.shaderStorageImageWriteWithoutFormat = VK_TRUE;
     chain.vulkan11.shaderDrawParameters = VK_TRUE;
+    chain.vulkan11.multiview = VK_TRUE;
     VkPhysicalDeviceVulkan12Features& v12 = chain.vulkan12;
     v12.descriptorIndexing = VK_TRUE;
     v12.runtimeDescriptorArray = VK_TRUE;
@@ -691,7 +692,8 @@ PrStatus initialize(GpuSharedDevice* device) {
     if (d->limits.timestampComputeAndGraphics)
         d->info.features |= PrGpuFeatureFlag_Timestamps;
     d->bindless = !o.slotsOnly;
-    d->info.features |= (d->bindless ? PrGpuFeatureFlag_Bindless : 0) | (d->localRead ? PrGpuFeatureFlag_TargetReads : 0);
+    d->info.features |= (d->bindless ? PrGpuFeatureFlag_Bindless : 0) | PrGpuFeatureFlag_Indirect |
+        (d->localRead ? PrGpuFeatureFlag_TargetReads : 0);
     d->info.maxTextureSize = d->limits.maxImageDimension2D;
     // Vulkan's flags for sample counts are the counts themselves. A float color format has the counts of the color
     // limit, and a depth format those of the depth limit.
@@ -700,6 +702,8 @@ PrStatus initialize(GpuSharedDevice* device) {
     d->info.storageOffsetAlignment = uint32_t(d->limits.minStorageBufferOffsetAlignment);
     if (d->info.storageOffsetAlignment < 16)
         d->info.storageOffsetAlignment = 16;
+    // Vulkan 1.1 has multiview, of at least six views.
+    d->info.maxViews = kPrGpuMaxViews;
     d->info.limits = PrGpuDeviceLimits{
         .resources = d->resources.count,
         .samplers = d->samplers.count,

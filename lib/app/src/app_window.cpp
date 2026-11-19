@@ -65,6 +65,13 @@ void prAppWindowRequestFrame(PrAppWindow* window) {
     window->requestFrameFn(window);
 }
 
+void prAppWindowRequestUnpacedFrame(PrAppWindow* window) {
+    if (window->requestUnpacedFrameFn != nullptr)
+        window->requestUnpacedFrameFn(window);
+    else
+        window->requestFrameFn(window);
+}
+
 void prAppWindowSetTitle(PrAppWindow* window, PrStringView title) {
     PR_ASSERT(prUtf8Validate(title) == title.size);
     window->setTitleFn(window, title);
@@ -209,7 +216,7 @@ void prAppWindowSetDocument(PrAppWindow* window, PrStringView path, bool edited)
         window->setDocumentFn(window, path, edited);
 }
 
-PrStatus prAppWindowSurface(const PrAppWindow* window, PrAppSurface* out) {
+PrStatus prAppWindowSurface(const PrAppWindow* window, PrSurface* out) {
     return window->surfaceFn(window, out);
 }
 

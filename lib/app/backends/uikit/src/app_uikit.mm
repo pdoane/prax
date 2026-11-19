@@ -11,6 +11,7 @@
 
 #include "app/backends/uikit/src/uikit_data.h"
 #include "app/backends/uikit/src/uikit_device.h"
+#include "app/backends/uikit/src/uikit_immersive.h"
 
 #import <QuartzCore/QuartzCore.h>
 
@@ -450,8 +451,8 @@ void dragStart(PrAppWindow* window, const PrAppDragDesc*) {
     [uiKitObjectOf(window).host deliver:event to:window];
 }
 
-PrStatus surface(const PrAppWindow* window, PrAppSurface* out) {
-    out->kind = PrAppSurfaceKind_UiView;
+PrStatus surface(const PrAppWindow* window, PrSurface* out) {
+    out->kind = PrSurfaceKind_UiView;
     out->handle = (__bridge void*)uiKitObjectOf(window).view;
     return PrStatus_Ok;
 }
@@ -1186,6 +1187,10 @@ PrApp* prAppUiKitCreate(const PrAppOptions* options) {
     app->lifecycleFn = lifecycle;
     app->timerSetFn = timerSet;
     app->timerCancelFn = timerCancel;
+#if TARGET_OS_VISION
+    app->immersiveOpenFn = uiKitImmersiveOpen;
+    app->immersiveCloseFn = uiKitImmersiveClose;
+#endif
     app->displaysFn = displays;
     app->displayInfoFn = displayInfo;
 #if !TARGET_OS_TV

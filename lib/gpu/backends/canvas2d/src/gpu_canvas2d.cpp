@@ -4,9 +4,9 @@
 #include "pr/gpu_canvas2d.h"
 
 #include "pr/alloc.h"
-#include "pr/app_surface.h"
 #include "pr/memory.h"
 #include "pr/raw_string.h"
+#include "pr/surface.h"
 
 #include "gpu/backends/shared/src/gpu_shared_memory.h"
 
@@ -101,10 +101,10 @@ void present(void* PR_NULLABLE context) {
     prGpuTextureNative(s->device, s->texture, PrGpuNativeKind_Canvas2d, &canvas);
 }
 
-PrStatus swapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const PrGpuSwapChainDesc* desc,
+PrStatus swapChainCreate(PrGpuDevice* device, const PrSurface* surface, const PrGpuSwapChainDesc* desc,
         PrGpuSwapChain* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;
-    if (surface->kind != PrAppSurfaceKind_HtmlCanvas)
+    if (surface->kind != PrSurfaceKind_HtmlCanvas)
         return PrStatus_NotSupported;
     SwapChain* s = allocZeroed<SwapChain>();
     static_cast<PrGpuSwapChain&>(*s) = kSwapChainFunctions;
@@ -126,7 +126,9 @@ void swapChainDestroy(PrGpuSwapChain* swapChain) {
 // The page paces its frames with its animation frames, so the swap chain has nothing to wait for.
 void swapChainWait(PrGpuSwapChain*) {}
 
-PrStatus swapChainAcquire(PrGpuSwapChain* swapChain, PrUVec2 extent, PrGpuTexture* out) {
+PrStatus swapChainAcquire(PrGpuSwapChain* swapChain, PrUVec2 extent, PrGpuSwapChainFrame* out) {
+    if (gpuSharedSwapChainAcquireCapture(static_cast<GpuSharedSwapChain*>(swapChain), extent, &out->color))
+        return PrStatus_Ok;
     SwapChain* s = static_cast<SwapChain*>(swapChain);
     PrGpuDevice* device = s->device;
     if (s->texture.id != 0) {
@@ -152,11 +154,13 @@ PrStatus swapChainAcquire(PrGpuSwapChain* swapChain, PrUVec2 extent, PrGpuTextur
         }
         gpuMemoryAdoptMirror(device, s->texture, canvas);
     }
-    *out = s->texture;
+    out->color = s->texture;
     return PrStatus_Ok;
 }
 
 void swapChainPresent(PrGpuSwapChain* swapChain, PrGpuCommands* commands) {
+    if (gpuSharedSwapChainPresentCapture(static_cast<GpuSharedSwapChain*>(swapChain), commands))
+        return;
     gpuMemoryRecordCall(commands, present, swapChain);
 }
 
@@ -168,6 +172,8 @@ constexpr PrGpuSwapChain kSwapChainFunctions = {
     .waitFn = swapChainWait,
     .acquireFn = swapChainAcquire,
     .presentFn = swapChainPresent,
+    .requestCaptureFn = gpuSharedSwapChainRequestCapture,
+    .cancelCaptureFn = gpuSharedSwapChainCancelCapture,
 };
 
 // Fails outside a web page, which has the canvases that the device draws into.

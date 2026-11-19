@@ -82,10 +82,10 @@ void printStats(Browser& b, PrTimePerf now) {
 // list. The chrome's panels cover the rest of the window. A swap chain that holds more than 8-bit sRGB takes the frame
 // through the display shader.
 void render(Browser& b, PrDrawList* PR_NULLABLE page, PrColor canvas) {
-    PrGpuTexture drawable{};
+    PrGpuSwapChainFrame frame{};
     PrGpuCommands* commands = nullptr;
     PrTimePerf began = prTimePerfNow();
-    if (b.extent.x == 0 || b.extent.y == 0 || prGpuSwapChainAcquire(b.swapChain, b.extent, &drawable) != PrStatus_Ok ||
+    if (b.extent.x == 0 || b.extent.y == 0 || prGpuSwapChainAcquire(b.swapChain, b.extent, &frame) != PrStatus_Ok ||
             !prGpuCommandsBegin(b.device, nullptr, &commands))
         return;
     PrTimePerf acquired = prTimePerfNow();
@@ -101,7 +101,7 @@ void render(Browser& b, PrDrawList* PR_NULLABLE page, PrColor canvas) {
             prGpuTextureCreate(b.device, &desc, &b.rendered);
         }
     }
-    PrGpuTexture target = mapped ? b.rendered : drawable;
+    PrGpuTexture target = mapped ? b.rendered : frame.color;
     PrPixelFormat format = PrPixelFormat(mapped ? PrPixelFormat_RgbaF16 : PrPixelFormat_Bgra8);
     if (page != nullptr) {
         PrDrawTarget into{.extent = b.pageExtent, .format = format, .commands = commands};
@@ -121,14 +121,15 @@ void render(Browser& b, PrDrawList* PR_NULLABLE page, PrColor canvas) {
     prGpuPassEnd(encoder);
     if (mapped) {
         prGpuCommandsTextureBarrier(commands, target, all, PrGpuAccessFlag_ColorAttachment, PrGpuAccessFlag_ShaderRead);
-        prGpuCommandsTextureBarrier(commands, drawable, all, PrGpuAccessFlag_Discard, PrGpuAccessFlag_ColorAttachment);
-        PrGpuPassDesc shown = prGpuPassDescColor(drawable, PrGpuLoad_Discard, PrColor{});
+        prGpuCommandsTextureBarrier(commands, frame.color, all, PrGpuAccessFlag_Discard,
+            PrGpuAccessFlag_ColorAttachment);
+        PrGpuPassDesc shown = prGpuPassDescColor(frame.color, PrGpuLoad_Discard, PrColor{});
         encoder = prGpuPassBegin(commands, &shown);
         PrDrawDisplayDesc mapping{.target = info.space, .headroom = b.shownOn.headroom, .gamut = b.shownOn.gamut};
         prDrawDisplayDraw(b.display, encoder, target, &mapping);
         prGpuPassEnd(encoder);
     }
-    prGpuCommandsTextureBarrier(commands, drawable, all, PrGpuAccessFlag_ColorAttachment, PrGpuAccessFlag_Present);
+    prGpuCommandsTextureBarrier(commands, frame.color, all, PrGpuAccessFlag_ColorAttachment, PrGpuAccessFlag_Present);
     prGpuSwapChainPresent(b.swapChain, commands);
     if (b.stats) {
         prGpuCommandsOnDone(commands, [](void* PR_NULLABLE context, double seconds) {
@@ -200,7 +201,7 @@ bool openDevice(Browser& b) {
     }
     if (b.swapChain != nullptr)
         return true;
-    PrAppSurface surface{};
+    PrSurface surface{};
     PrGpuSwapChainDesc swapChain{.intent = PrGpuSwapChainIntent_Hdr};
     if (prAppWindowSurface(b.window, &surface) != PrStatus_Ok ||
             prGpuSwapChainCreate(b.device, &surface, &swapChain, &b.swapChain) != PrStatus_Ok ||

@@ -139,7 +139,7 @@ third-party library. A development build (`PR_DEVELOP`), an examples build (`PR_
 | font hinter | `PR_FONT_FREETYPE` | FreeType | every platform | off |
 | system fonts | `PR_FONT_CORETEXT` | CoreText | Apple platforms | on |
 | system fonts | `PR_FONT_DIRECTWRITE` | DirectWrite | Windows | on |
-| gpu | `PR_GPU_METAL` | Metal 3 | macOS | on |
+| gpu | `PR_GPU_METAL` | Metal 3 | Apple platforms | on |
 | gpu | `PR_GPU_METAL4` | Metal 4, for experiments | macOS | on |
 | gpu | `PR_GPU_D3D12` | Direct3D 12 | Windows | on |
 | gpu | `PR_GPU_D3D11` | Direct3D 11, with slots and no bindless | Windows | on |
@@ -150,6 +150,7 @@ third-party library. A development build (`PR_DEVELOP`), an examples build (`PR_
 | http | `PR_HTTP_BUILTIN` | HTTP/1.1 over `lib/net` and `lib/tls` | every platform | on |
 | image codecs | `PR_IMAGE_BUILTIN` | Prax's codecs, for PNG, JPEG, GIF, WebP, ICO, TIFF, Radiance HDR, OpenEXR and EMJC | every platform | on |
 | image codecs | `PR_IMAGE_IMAGEIO` | ImageIO, for the formats that it decodes | Apple platforms | on |
+| immersive sessions | `PR_SURFACE_COMPOSITOR_SERVICES` | CompositorServices and ARKit | visionOS | on |
 | media | `PR_MEDIA_BUILTIN` | Prax | every platform | on |
 | media | `PR_MEDIA_APPLE` | AVFoundation | Apple platforms | on |
 | media | `PR_MEDIA_WEB` | a web page's video element | the web | on |

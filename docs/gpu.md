@@ -178,11 +178,27 @@ undefined value, so a renderer splits such draws, as `lib/draw`'s fragment rende
 
 ## Swap chains
 
-A swap chain presents to an application's surface (`pr/surface.h`), and its device chooses the format and color space
-of its textures for what the swap chain shows. SDR is 8-bit sRGB everywhere. For HDR, Metal presents extended sRGB in
-half floats, Direct3D 12 presents HDR10 to a display in HDR mode and scRGB elsewhere, and Vulkan presents scRGB where
-the surface takes it and HDR10 where it takes that. An application converts its colors for
-what `prGpuSwapChainInfo` reports, as the examples' presenter does.
+A swap chain presents to an application's surface (`pr/surface.h`), and its device chooses the format and color space of
+its textures for what the swap chain shows. SDR is 8-bit sRGB everywhere. For HDR, Metal presents scRGB in half
+floats, Direct3D 12 presents HDR10 to a display in HDR mode and linear scRGB elsewhere, and Vulkan presents linear scRGB
+where the surface takes it and HDR10 where it takes that. An application converts its colors for what
+`prGpuSwapChainInfo` reports, as the examples' presenter does.
+
+A frame (`prGpuSwapChainAcquire`) is a render target that is only drawn to, so that the compositor reads it fastest.
+A capture (`prGpuSwapChainRequestCapture`) draws the next frame into a texture of the swap chain's own instead, which
+the frame's present reads back and gives to the capture's function in the swap chain's format, and does not show that
+frame. `prGpuCaptureToRgba8` converts the texels to 8-bit RGBA.
+
+A swap chain's sync says when its frames reach the display (`PrGpuSwapChainSync`): each in turn at a vertical blank,
+the newest at a vertical blank, replacing a frame that waits, or at once, tearing. A swap chain reports the mode that it
+has (`PrGpuSwapChainInfo::sync`), which is vsync where the platform lacks the one asked for.
+
+| backend | vsync | latest | immediate |
+| --- | --- | --- | --- |
+| Metal and Metal 4 | always | never | on the Mac: the layer's `displaySyncEnabled` off |
+| Vulkan | `FIFO` | `MAILBOX`, where the surface has it | `IMMEDIATE`, where the surface has it |
+| Direct3D 12 and 11 | a sync interval of one | a sync interval of zero | tearing allowed, where the system allows it, to a window's own swap chain; latest elsewhere |
+| WebGPU, Canvas 2D | always | never | never |
 
 Without `PrGpuSwapChainFlag_Threaded`, a frame presents within the window's display transaction, so a window that is
 resized shows each frame at its size. Anchored at the top left, a Direct3D 12 swap chain's buffers only grow, so that a

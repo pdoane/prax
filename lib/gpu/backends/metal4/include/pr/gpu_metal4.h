@@ -3,10 +3,12 @@
 // The native objects cross this header as untyped pointers. A caller bridges them to their Objective-C types, such as
 // `id<MTLDevice>`.
 //
-// A swap chain for SDR holds Bgra8 in sRGB. A swap chain for HDR holds Rgba16F in extended sRGB, encoded, if the
-// window's display has EDR headroom, and the layer then presents colors past sRGB's gamut and past SDR white. On a
-// display without EDR headroom, an HDR swap chain holds what an SDR one does, whatever the display's gamut. A swap
-// chain follows its window's display: each acquire on the main thread checks the display again.
+// A swap chain for SDR holds Bgra8 in sRGB. A swap chain for HDR holds Rgba16F in scRGB, if the window's display has
+// EDR headroom, and the layer then presents colors past sRGB's gamut and past SDR white. On a display without EDR
+// headroom, an HDR swap chain holds what an SDR one does, whatever the display's gamut. A swap chain for wide gamut
+// holds Rgba16F in scRGB, without EDR, if the display's gamut is wider than sRGB's, and the layer then presents colors
+// past sRGB's gamut up to SDR white. Otherwise it holds what an SDR one does. A swap chain follows its window's
+// display: each acquire on the main thread checks the display again.
 //
 // Every resource of the device is in one residency set, which the device's queue holds. An application that submits its
 // own command buffers that use the device's resources adds the set to its queue (prGpuMetal4ResidencySet). A device has

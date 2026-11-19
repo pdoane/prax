@@ -186,6 +186,19 @@ PrGpuPipeline mipmapPipeline(GpuSharedDevice* device, PrGpuFormat format) {
     return pipeline;
 }
 
+// A capture's function and context, and the format of the texels that the read gives it.
+struct GpuSharedCapture {
+    PrGpuCaptureFn capture;
+    void* PR_NULLABLE context;
+    PrGpuFormat format;
+};
+
+void captureRead(void* PR_NULLABLE context, PrPixelView texels) {
+    GpuSharedCapture* c = static_cast<GpuSharedCapture*>(context);
+    c->capture(c->context, texels, c->format);
+    prMemoryFree(c);
+}
+
 } // namespace
 
 void gpuSharedDeviceInit(GpuSharedDevice* device) {
@@ -287,7 +300,59 @@ PrGpuDevice* gpuSharedSwapChainDevice(const PrGpuSwapChain* swapChain) {
 }
 
 PrGpuSwapChainInfo gpuSharedSwapChainInfo(const PrGpuSwapChain* swapChain) {
-    return static_cast<const GpuSharedSwapChain*>(swapChain)->info;
+    const GpuSharedSwapChain* sc = static_cast<const GpuSharedSwapChain*>(swapChain);
+    PrGpuSwapChainInfo info = sc->info;
+    info.sync = sc->sync;
+    return info;
+}
+
+void gpuSharedSwapChainRequestCapture(PrGpuSwapChain* swapChain, PrGpuCaptureFn capture, void* PR_NULLABLE context) {
+    GpuSharedSwapChain* s = static_cast<GpuSharedSwapChain*>(swapChain);
+    s->capture = capture;
+    s->captureContext = context;
+    s->captureRequested = true;
+}
+
+void gpuSharedSwapChainCancelCapture(PrGpuSwapChain* swapChain) {
+    GpuSharedSwapChain* s = static_cast<GpuSharedSwapChain*>(swapChain);
+    s->captureRequested = false;
+    if (s->captureTexture.id == 0) {
+        s->capture = nullptr;
+        s->captureContext = nullptr;
+    }
+}
+
+bool gpuSharedSwapChainAcquireCapture(GpuSharedSwapChain* swapChain, PrUVec2 extent, PrGpuTexture* out) {
+    if (!swapChain->captureRequested)
+        return false;
+    swapChain->captureRequested = false;
+    // The texture has the surface's format, so that every pipeline made for the swap chain draws into it.
+    PrGpuTextureDesc desc = prGpuTextureDesc2d(swapChain->info.format, extent,
+        PrGpuTextureUsageFlag_RenderTarget | PrGpuTextureUsageFlag_Sampled);
+    desc.name = "swap chain capture";
+    PrGpuTexture texture{};
+    if (prGpuTextureCreate(swapChain->device, &desc, &texture) != PrStatus_Ok)
+        return false;
+    swapChain->captureTexture = texture;
+    *out = texture;
+    return true;
+}
+
+bool gpuSharedSwapChainPresentCapture(GpuSharedSwapChain* swapChain, PrGpuCommands* commands) {
+    PrGpuTexture texture = swapChain->captureTexture;
+    if (texture.id == 0)
+        return false;
+    GpuSharedCapture* c = allocZeroed<GpuSharedCapture>();
+    *c = GpuSharedCapture{swapChain->capture, swapChain->captureContext, swapChain->info.format};
+    // The frame leaves the texture as it leaves a texture of the surface, in the accesses of Present.
+    prGpuCommandsReadTexture(commands, texture, PrGpuAccessFlag_Present, captureRead, c);
+    prGpuTextureRelease(swapChain->device, texture);
+    swapChain->captureTexture = PrGpuTexture{};
+    if (!swapChain->captureRequested) {
+        swapChain->capture = nullptr;
+        swapChain->captureContext = nullptr;
+    }
+    return true;
 }
 
 const PrGpuShaderEntry* gpuSharedLibraryEntries(const PrGpuShaderLibrary* library, uint32_t* count) {

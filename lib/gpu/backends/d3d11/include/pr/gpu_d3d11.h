@@ -12,7 +12,7 @@
 // memory or the command buffer's stream, and a copy out of a texture writes a buffer in Readback memory.
 //
 // A swap chain for SDR holds Bgra8 in sRGB. One for HDR holds HDR10, Rgb10A2 in Rec2100Pq, where the window's display
-// is in HDR mode and takes it, and scRGB, Rgba16F in SrgbLinear, elsewhere.
+// is in HDR mode and takes it, and linear scRGB, Rgba16F in SrgbLinear, elsewhere.
 
 #pragma once
 

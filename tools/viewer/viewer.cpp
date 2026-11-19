@@ -900,7 +900,7 @@ void browserShow(Viewer& v, uint32_t index) {
         source.at.left + source.docWidth * zoom,
         source.at.top + source.docHeight * zoom,
     };
-    PrAppSurface host{};
+    PrSurface host{};
     if (prAppWindowSurface(v.window, &host) == PrStatus_Ok)
         prWebViewShow(b.browser, &host, source.at, viewport);
 }
@@ -1122,7 +1122,7 @@ void updateDifference(Viewer& v, const std::string& first, const std::string& se
 bool openViewer(Viewer& v) {
     PrApp* app = v.app;
     PrAppWindow* window = v.window;
-    PrAppSurface surface{};
+    PrSurface surface{};
     PrGpuSwapChainDesc desc = swapChainDesc(false);
     if (gpuDeviceCreate(PrGpuBackend_Default, nullptr, &v.device) != PrStatus_Ok ||
             prAppWindowSurface(window, &surface) != PrStatus_Ok ||
@@ -1261,7 +1261,7 @@ PrAppOutput frame(void* context, PrAppWindow* window, const PrAppFrame* frame) {
     PrPixelFormat chosen = v.choices.hdr ? PrPixelFormat_RgbaF16 : PrPixelFormat_Bgra8;
     bool ready = v.panes[0]->rendersIn(chosen) && v.panes[1]->rendersIn(chosen);
     if (v.choices.hdr != v.swapChainHdr && ready) {
-        PrAppSurface surface{};
+        PrSurface surface{};
         PrGpuSwapChain* swapChain = nullptr;
         PrGpuSwapChainDesc desc = swapChainDesc(v.choices.hdr);
         if (prAppWindowSurface(window, &surface) == PrStatus_Ok &&
@@ -1384,9 +1384,10 @@ PrAppOutput frame(void* context, PrAppWindow* window, const PrAppFrame* frame) {
     prGpuCommandsOnDone(commands, frameDone, &v);
 
     // The drawable waits on the display, which paces the frames.
-    PrGpuTexture drawable{};
-    PrStatus acquired = prGpuSwapChainAcquire(v.swapChain, PrUVec2{width, height}, &drawable);
+    PrGpuSwapChainFrame swapFrame{};
+    PrStatus acquired = prGpuSwapChainAcquire(v.swapChain, PrUVec2{width, height}, &swapFrame);
     if (acquired == PrStatus_Ok) {
+        PrGpuTexture drawable = swapFrame.color;
         PrGpuSwapChainInfo info = prGpuSwapChainInfo(v.swapChain);
         prGpuCommandsTextureBarrier(commands, drawable, all, PrGpuAccessFlag_Discard, PrGpuAccessFlag_ColorAttachment);
         // A swap chain of 8-bit sRGB takes the frame as it is. Any other maps it to the display.

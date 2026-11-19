@@ -128,8 +128,9 @@ struct AppMetal {
 
 // Clears the swap chain's next drawable and presents it.
 PrGpuFence presentFrame(PrGpuDevice* device, PrGpuSwapChain* swapChain) {
-    PrGpuTexture texture{};
-    REQUIRE(prGpuSwapChainAcquire(swapChain, PrUVec2{32, 32}, &texture) == PrStatus_Ok);
+    PrGpuSwapChainFrame frame{};
+    REQUIRE(prGpuSwapChainAcquire(swapChain, PrUVec2{32, 32}, &frame) == PrStatus_Ok);
+    PrGpuTexture texture = frame.color;
     PrGpuCommands* commands = nullptr;
     REQUIRE(prGpuCommandsBegin(device, nullptr, &commands));
     prGpuCommandsTextureBarrier(commands, texture, PrGpuSubresources{}, PrGpuAccessFlag_Discard,
@@ -259,6 +260,7 @@ TEST_CASE("metal4 draws into the application's pass, and says which of the pass'
     passDesc.nativeFormats.colorCount = 1;
     passDesc.nativeFormats.color[0] = PrGpuFormat_Rgba8;
     passDesc.nativeFormats.samples = 1;
+    passDesc.nativeFormats.viewCount = 1;
     passDesc.nativeExtent = PrUVec2{8, 8};
     PrGpuPass* pass = prGpuPassBegin(commands, &passDesc);
     Uniforms uniforms{.color = {1, 0, 0, 1}};
@@ -334,7 +336,7 @@ TEST_CASE("metal4 presents frames, with the transaction only in a live resize un
         return;
     @autoreleasepool {
         NSView* view = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 32, 32)];
-        PrAppSurface surface{PrAppSurfaceKind_NsView, (__bridge void*)view};
+        PrSurface surface{PrSurfaceKind_NsView, (__bridge void*)view};
         PrGpuSwapChainDesc desc{.intent = PrGpuSwapChainIntent_Sdr};
         PrGpuSwapChain* transactional = nullptr;
         REQUIRE(prGpuSwapChainCreate(f.device, &surface, &desc, &transactional) == PrStatus_Ok);
@@ -348,7 +350,7 @@ TEST_CASE("metal4 presents frames, with the transaction only in a live resize un
         prGpuSwapChainDestroy(transactional);
 
         NSView* threadedView = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 32, 32)];
-        PrAppSurface threadedSurface{PrAppSurfaceKind_NsView, (__bridge void*)threadedView};
+        PrSurface threadedSurface{PrSurfaceKind_NsView, (__bridge void*)threadedView};
         desc.flags = PrGpuSwapChainFlag_Threaded;
         PrGpuSwapChain* threaded = nullptr;
         REQUIRE(prGpuSwapChainCreate(f.device, &threadedSurface, &desc, &threaded) == PrStatus_Ok);
@@ -369,7 +371,7 @@ TEST_CASE("metal4's HDR swap chain reports what its layer holds, for the display
     @autoreleasepool {
         // A view outside a window is shown on the main screen.
         NSView* view = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 32, 32)];
-        PrAppSurface surface{PrAppSurfaceKind_NsView, (__bridge void*)view};
+        PrSurface surface{PrSurfaceKind_NsView, (__bridge void*)view};
         PrGpuSwapChainDesc desc{.intent = PrGpuSwapChainIntent_Hdr};
         PrGpuSwapChain* swapChain = nullptr;
         REQUIRE(prGpuSwapChainCreate(f.device, &surface, &desc, &swapChain) == PrStatus_Ok);

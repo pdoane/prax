@@ -2,7 +2,7 @@
 pr_library(webview INCLUDE include
     src/webview.cpp
 )
-target_link_libraries(pr_webview PUBLIC prax::core prax::app prax::geom PRIVATE prax::core_cpp)
+target_link_libraries(pr_webview PUBLIC prax::core prax::app prax::geom prax::surface PRIVATE prax::core_cpp)
 
 if (PR_WEBVIEW_WEBKIT)
     target_sources(pr_webview PRIVATE backends/webkit/src/webview_webkit.mm)

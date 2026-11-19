@@ -23,6 +23,7 @@ static const float kPi = 3.14159265358979323846;
 // The encodings that DisplayOutput numbers.
 static const uint kOutputEncoded = 0;
 static const uint kOutputLinear = 1;
+static const uint kOutputPq = 2;
 
 // The weights of red, green and blue in a color's luminance, as color.h gives them.
 static const float3 kLuminance = float3(0.2125, 0.7154, 0.0721);
@@ -139,18 +140,23 @@ float4 wholeVertex(uint id : SV_VertexID) : SV_Position {
 
 [shader("fragment")]
 float4 convertPixel(float4 position : SV_Position) : SV_Target {
-    float3 color = frame.Load(int3(int2(position.xy), 0)).rgb;
+    float4 texel = frame.Load(int3(int2(position.xy), 0));
+    // The frame's colors are premultiplied, and the target's are too. The mappings take a color by itself, so the
+    // shader divides alpha out and multiplies it back in. PQ drives a display that composites nothing under the target,
+    // which shows the frame over black: its premultiplied color.
+    float alpha = arguments.output == kOutputPq ? 1 : texel.a;
+    float3 color = alpha > 0 ? texel.rgb / alpha : (float3)0;
     // Most of a frame's colors lie within sRGB and at or below SDR white. Such a color is inside every gamut that the
     // shader maps into and below the tone map's knee, so neither mapping changes it and the shader skips both.
     if (all(color >= 0) && all(color <= 1)) {
         if (arguments.output == kOutputEncoded)
-            return float4(color, 1);
+            return float4(color * alpha, alpha);
         if (arguments.output == kOutputLinear)
-            return float4(linearOf(color), 1);
+            return float4(linearOf(color) * alpha, alpha);
     }
     float3 light = gamutMapped(toneMapped(linearOf(color)));
     float3 c = arguments.output == kOutputEncoded  ? encodedOf(light)
                : arguments.output == kOutputLinear ? light
                                                    : pqOf(times(arguments.toOutput, light) * arguments.pqWhite);
-    return float4(c, 1);
+    return float4(c * alpha, alpha);
 }

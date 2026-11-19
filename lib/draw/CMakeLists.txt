@@ -120,6 +120,7 @@ if (PR_DEVELOP)
         target_sources(draw_tests PRIVATE
             backends/shared/tests/test_draw_shared_atlas.cpp
             backends/shared/tests/test_draw_shared_c.c
+            tests/test_draw_display.cpp
         )
     endif()
     if (PR_DRAW_TRIANGLES)

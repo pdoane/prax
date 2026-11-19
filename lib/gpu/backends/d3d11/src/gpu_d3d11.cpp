@@ -1755,6 +1755,7 @@ PrGpuPass* passBegin(PrGpuCommands* commands, const PrGpuPassDesc* desc) {
     static_cast<PrGpuPass&>(*pass) = kPassFunctions;
     pass->commands = c;
     pass->formats.samples = 1;
+    pass->formats.viewCount = 1;
     for (uint8_t i = 0; i < desc->colorCount; ++i) {
         const D3d11Resource& t = d->resources[desc->color[i].texture.id];
         pass->formats.color[pass->formats.colorCount++] = t.texture.format;
@@ -2533,7 +2534,12 @@ PrGpuFence commandsSubmit(PrGpuCommands* commands) {
         d->lost.store(true);
     // DXGI presents a frame once the work before it is done.
     for (uint32_t i = 0; i < c->presents.count && !d->lost.load(); ++i) {
-        HRESULT presented = c->presents.data[i]->swapChain->Present(1, 0);
+        // A sync interval of one waits for a vertical blank. With zero, the newest frame replaces a frame that waits,
+        // or presents at once where tearing is allowed.
+        const D3d11SwapChain* sc = c->presents.data[i];
+        const UINT interval = sc->sync == PrGpuSwapChainSync_Vsync ? 1 : 0;
+        const UINT flags = sc->sync == PrGpuSwapChainSync_Immediate ? DXGI_PRESENT_ALLOW_TEARING : 0;
+        HRESULT presented = sc->swapChain->Present(interval, flags);
         if (presented == DXGI_ERROR_DEVICE_REMOVED || presented == DXGI_ERROR_DEVICE_RESET)
             d->lost.store(true);
     }
@@ -2618,6 +2624,18 @@ void releaseSwapChainObjects(D3d11SwapChain* sc) {
     release(sc->swapChain);
 }
 
+// Returns true if the system presents frames that tear (DXGI_FEATURE_PRESENT_ALLOW_TEARING).
+bool tearingAllowed(IDXGIFactory6* factory) {
+    BOOL allowed = FALSE;
+    return SUCCEEDED(factory->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &allowed, sizeof(allowed))) && allowed;
+}
+
+// Returns the flags of a swap chain that presents in `sync`, which its buffers keep as they are resized.
+UINT swapChainFlagsOf(PrGpuSwapChainSync sync) {
+    return DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT |
+        (sync == PrGpuSwapChainSync_Immediate ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0);
+}
+
 // Returns true if the display that shows most of the window is in HDR mode, in which DXGI composes in HDR10.
 bool displayTakesHdr10(IDXGIFactory6* factory, HWND window) {
     HMONITOR monitor = MonitorFromWindow(window, MONITOR_DEFAULTTONEAREST);
@@ -2646,8 +2664,9 @@ bool presents(IDXGISwapChain3* swapChain, DXGI_COLOR_SPACE_TYPE space) {
 }
 
 // Returns the format and the color space that a swap chain's intent wants for the window's display. HDR presents HDR10
-// to a display in HDR mode, which then shows it without conversion, or scRGB there where the swap chain cannot present
-// HDR10. Elsewhere Windows composes in sRGB, and HDR presents 8-bit sRGB as SDR does, since nothing more would show.
+// to a display in HDR mode, which then shows it without conversion, or linear scRGB there where the swap chain cannot
+// present HDR10. Elsewhere Windows composes in sRGB, and HDR presents 8-bit sRGB as SDR does, since nothing more would
+// show.
 PrGpuSwapChainInfo infoFor(D3d11SwapChain* sc) {
     const PrGpuSwapChainInfo kSdr{PrGpuFormat_Bgra8, PrColorSpace_Srgb};
     if (!sc->hdr || !displayTakesHdr10(sc->displays, sc->window))
@@ -2661,8 +2680,7 @@ PrGpuSwapChainInfo infoFor(D3d11SwapChain* sc) {
 // reference to the buffers is released first, as resizing them needs. Returns false if DXGI refuses the format.
 bool takeInfo(D3d11SwapChain* sc, PrGpuSwapChainInfo info, UINT width, UINT height) {
     DXGI_FORMAT format = formatOf(info.format);
-    if (FAILED(sc->swapChain->ResizeBuffers(kSwapChainBuffers, width, height, format,
-            DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT)))
+    if (FAILED(sc->swapChain->ResizeBuffers(kSwapChainBuffers, width, height, format, swapChainFlagsOf(sc->sync))))
         return false;
     DXGI_COLOR_SPACE_TYPE space = DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709;
     if (info.space == PrColorSpace_Rec2100Pq)
@@ -2707,10 +2725,10 @@ PrUVec2 monitorExtent(HWND window) {
     };
 }
 
-PrStatus swapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const PrGpuSwapChainDesc* desc,
+PrStatus swapChainCreate(PrGpuDevice* device, const PrSurface* surface, const PrGpuSwapChainDesc* desc,
         PrGpuSwapChain* PR_NULLABLE* PR_NONNULL out) {
     D3d11Device* d = d3d11Of(device);
-    if (surface->kind != PrAppSurfaceKind_Hwnd || d->factory == nullptr)
+    if (surface->kind != PrSurfaceKind_Hwnd || d->factory == nullptr)
         return PrStatus_NotSupported;
     HWND window = static_cast<HWND>(surface->handle);
     // The swap chain begins in 8-bit sRGB, and takes the format that its intent wants for the window's display below.
@@ -2728,9 +2746,14 @@ PrStatus swapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const
     s.Scaling = desc->anchor == PrGpuSwapChainAnchor_Stretch ? DXGI_SCALING_STRETCH : DXGI_SCALING_NONE;
     s.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
     s.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
-    s.Flags = DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT;
-    IDXGISwapChain1* chain1 = nullptr;
     bool transparent = (desc->flags & PrGpuSwapChainFlag_Transparent) != 0;
+    // A frame that tears needs the system's support, and a swap chain of its own window rather than one that a
+    // composition shows. Without them, the newest frame replaces a frame that waits instead.
+    PrGpuSwapChainSync sync = desc->sync;
+    if (sync == PrGpuSwapChainSync_Immediate && (transparent || !tearingAllowed(d->factory)))
+        sync = PrGpuSwapChainSync_Latest;
+    s.Flags = swapChainFlagsOf(sync);
+    IDXGISwapChain1* chain1 = nullptr;
     if (transparent) {
         // A swap chain for composition takes only stretched scaling, and its visual shows the buffers unscaled.
         s.Scaling = DXGI_SCALING_STRETCH;
@@ -2752,6 +2775,7 @@ PrStatus swapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const
     static_cast<PrGpuSwapChain&>(*sc) = kSwapChainFunctions;
     sc->device = device;
     sc->info = info;
+    sc->sync = sync;
     sc->swapChain = native;
     sc->window = window;
     sc->hdr = desc->intent == PrGpuSwapChainIntent_Hdr;
@@ -2810,7 +2834,9 @@ void swapChainWait(PrGpuSwapChain* handle) {
     sc->waited = true;
 }
 
-PrStatus swapChainAcquire(PrGpuSwapChain* handle, PrUVec2 extent, PrGpuTexture* out) {
+PrStatus swapChainAcquire(PrGpuSwapChain* handle, PrUVec2 extent, PrGpuSwapChainFrame* out) {
+    if (gpuSharedSwapChainAcquireCapture(static_cast<GpuSharedSwapChain*>(handle), extent, &out->color))
+        return PrStatus_Ok;
     PrGpuDevice* device = static_cast<GpuSharedSwapChain*>(handle)->device;
     D3d11Device* d = d3d11Of(device);
     D3d11SwapChain* sc = static_cast<D3d11SwapChain*>(handle);
@@ -2847,11 +2873,13 @@ PrStatus swapChainAcquire(PrGpuSwapChain* handle, PrUVec2 extent, PrGpuTexture* 
     }
     d->resources[sc->buffer].texture.extent = PrGpuExtent{extent.x, extent.y, 1};
     sc->current = PrGpuTexture{sc->buffer};
-    *out = sc->current;
+    out->color = sc->current;
     return PrStatus_Ok;
 }
 
 void swapChainPresent(PrGpuSwapChain* handle, PrGpuCommands* commands) {
+    if (gpuSharedSwapChainPresentCapture(static_cast<GpuSharedSwapChain*>(handle), commands))
+        return;
     D3d11SwapChain* sc = static_cast<D3d11SwapChain*>(handle);
     if (sc->current.id == 0)
         return;
@@ -2980,6 +3008,8 @@ constexpr PrGpuSwapChain kSwapChainFunctions = {
     .waitFn = swapChainWait,
     .acquireFn = swapChainAcquire,
     .presentFn = swapChainPresent,
+    .requestCaptureFn = gpuSharedSwapChainRequestCapture,
+    .cancelCaptureFn = gpuSharedSwapChainCancelCapture,
 };
 
 constexpr PrGpuShaderLibrary kLibraryFunctions = {
@@ -3094,8 +3124,9 @@ PrGpuDevice* prGpuD3d11Create(const PrGpuD3d11Options* PR_NULLABLE options) {
     d->swapChainCreateFn = swapChainCreate;
     d->shaderTarget = PrGpuShaderTarget_Dxbc;
     d->info.backend = "Direct3D 11";
-    d->info.features = PrGpuFeatureFlag_TextureCompressionBc;
+    d->info.features = PrGpuFeatureFlag_TextureCompressionBc | PrGpuFeatureFlag_Indirect;
     d->info.maxTextureSize = D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION;
+    d->info.maxViews = 1;
     // Feature level 11_0 has 4 samples in every format that it renders to, and 8 in all but the widest.
     d->info.sampleCounts = 1 | 4;
     d->info.maxBufferSlots = kBufferSlots;

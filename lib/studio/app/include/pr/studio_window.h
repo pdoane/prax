@@ -36,6 +36,7 @@
 #include "pr/kit_theme.h"
 #include "pr/kit_title_bar.h"
 #include "pr/layout_tree.h"
+#include "pr/pixels.h"
 #include "pr/status.h"
 #include "pr/string_view.h"
 #include "pr/text.h"
@@ -164,6 +165,17 @@ PrStatus prStudioWindowCreate(PrStudioApp* app, const PrStudioWindowDesc* desc, 
 // Closes the window and frees it. During one of the window's own callbacks, the window closes once the callback
 // returns.
 void prStudioWindowDestroy(PrStudioWindow* PR_NULLABLE window);
+
+// Called on the GPU device's thread with the pixels of the window's frame that a capture took: 8-bit RGBA, encoded sRGB
+// with premultiplied alpha, clamped to [0, 1]. The pixels are valid only during the call. They are empty if the frame
+// could not be read.
+typedef void (*PrStudioWindowCaptureFn)(void* PR_NULLABLE context, PrPixelView rgba);
+
+// Captures the next frame that the window renders, as the GPU renders it: a frame that is laid out when the call comes,
+// or else the next. The frame renders into a texture of the swap chain's own and is not shown
+// (prGpuSwapChainRequestCapture), and the window draws another frame after it. The frame comes whether or not the
+// display shows the window, as while the display sleeps. A second request before the frame replaces the first.
+void prStudioWindowCapture(PrStudioWindow* window, PrStudioWindowCaptureFn capture, void* PR_NULLABLE context);
 
 // The Studio application and the platform's application that the window belongs to, the platform's window, and what the
 // window's kit draws with, while it runs.

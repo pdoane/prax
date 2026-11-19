@@ -1,6 +1,6 @@
 // The WebView2 backend of web views: Microsoft Edge WebView2, on Windows, where the system has the WebView2 runtime.
 //
-// A view shows over a host of PrAppSurfaceKind_Hwnd. While it is hidden, its page renders in a window of its own beyond
+// A view shows over a host of PrSurfaceKind_Hwnd. While it is hidden, its page renders in a window of its own beyond
 // the left edge of the desktop, which no one sees.
 
 #pragma once

@@ -2,6 +2,10 @@
 
 #include "gpu/backends/shared/src/gpu_shared_metal.h"
 
+#if TARGET_OS_VISION
+#include "gpu/backends/shared/src/gpu_shared_metal_compositor.h"
+#endif
+
 #include "pr/align.h"
 #include "pr/alloc.h"
 #include "pr/apple_string.h"
@@ -525,13 +529,12 @@ PrGpuExtent pipelineGroupSize(const PrGpuDevice* device, PrGpuPipeline pipeline)
 
 #if TARGET_OS_OSX
 
-// Returns the capabilities of the screen that shows most of the view's window, or of the main screen if the view is not
-// in a window. It reads AppKit, so it must be called on the main thread.
-PrAppDisplay displayOf(NSView* view) {
-    PrAppDisplay display = prAppDisplayDefault();
+// Returns what the screen that shows most of the view's window can show, or the main screen if the view is not in a
+// window. It reads AppKit, so it must be called on the main thread.
+GpuMetalDisplay displayOf(NSView* view) {
+    GpuMetalDisplay display{1.0f, PrColorSpace_Srgb};
     NSScreen* screen = view.window != nil ? view.window.screen : NSScreen.mainScreen;
     if (screen != nil) {
-        display.headroom = float(screen.maximumExtendedDynamicRangeColorComponentValue);
         display.potentialHeadroom = float(screen.maximumPotentialExtendedDynamicRangeColorComponentValue);
         if ([screen canRepresentDisplayGamut:NSDisplayGamutP3])
             display.gamut = PrColorSpace_DisplayP3;
@@ -541,22 +544,17 @@ PrAppDisplay displayOf(NSView* view) {
 
 #else
 
-// Returns the capabilities of the screen of the view's scene, or SDR until the view is in a window, and always on a
+// Returns what the screen of the view's scene can show: SDR in sRGB until the view is in a window, and always on a
 // television, whose layers show no extended range, and on visionOS, which has no screens. It reads UIKit, so it must be
 // called on the main thread.
-PrAppDisplay displayOf(UIView* view) {
-    PrAppDisplay display = prAppDisplayDefault();
-#if TARGET_OS_VISION
-    if (view.window != nil)
-        display.pixelRatio = float(view.traitCollection.displayScale);
+GpuMetalDisplay displayOf(UIView* view) {
+    GpuMetalDisplay display{1.0f, PrColorSpace_Srgb};
+#if TARGET_OS_TV || TARGET_OS_VISION
+    (void)view;
 #else
     UIScreen* screen = view.window.windowScene.screen;
     if (screen != nil) {
-        display.pixelRatio = float(view.traitCollection.displayScale);
-#if !TARGET_OS_TV
-        display.headroom = MAX(float(screen.currentEDRHeadroom), 1.0f);
-        display.potentialHeadroom = MAX(float(screen.potentialEDRHeadroom), display.headroom);
-#endif
+        display.potentialHeadroom = float(screen.potentialEDRHeadroom);
         if (view.traitCollection.displayGamut == UIDisplayGamutP3)
             display.gamut = PrColorSpace_DisplayP3;
     }
@@ -566,15 +564,18 @@ PrAppDisplay displayOf(UIView* view) {
 
 #endif
 
-// Makes the layer present `info`: half floats in extended sRGB, with EDR, or 8-bit sRGB.
-void layerTakeInfo(CAMetalLayer* layer, PrGpuSwapChainInfo info) {
+// Makes the layer present `info` for `intent`: half floats in scRGB, or 8-bit sRGB. Only HDR turns on EDR, which shows
+// past SDR white.
+void layerTakeInfo(CAMetalLayer* layer, PrGpuSwapChainInfo info, PrGpuSwapChainIntent intent) {
     bool extended = info.format == PrGpuFormat_Rgba16F;
     layer.pixelFormat = gpuMetalPixelFormat(info.format);
     CGColorSpaceRef space = CGColorSpaceCreateWithName(extended ? kCGColorSpaceExtendedSRGB : kCGColorSpaceSRGB);
     layer.colorspace = space;
     CGColorSpaceRelease(space);
-#if !TARGET_OS_TV
-    layer.wantsExtendedDynamicRangeContent = extended ? YES : NO;
+#if TARGET_OS_TV
+    (void)intent;
+#else
+    layer.wantsExtendedDynamicRangeContent = extended && intent == PrGpuSwapChainIntent_Hdr ? YES : NO;
 #endif
 }
 
@@ -582,8 +583,8 @@ void layerTakeInfo(CAMetalLayer* layer, PrGpuSwapChainInfo info) {
 
 // Returns the Metal layer that presents to the view of `surface`, which the view backs or hosts, set for `desc`, or nil
 // if the surface is not an AppKit view.
-CAMetalLayer* PR_NULLABLE layerOf(const PrAppSurface* surface, const PrGpuSwapChainDesc* desc) {
-    if (surface->kind != PrAppSurfaceKind_NsView)
+CAMetalLayer* PR_NULLABLE layerOf(const PrSurface* surface, const PrGpuSwapChainDesc* desc) {
+    if (surface->kind != PrSurfaceKind_NsView)
         return nil;
     NSView* view = (NSView*)surface->handle;
     // A view that backs itself with a Metal layer keeps that layer, so that AppKit asks the view to display as it
@@ -614,8 +615,8 @@ CAMetalLayer* PR_NULLABLE layerOf(const PrAppSurface* surface, const PrGpuSwapCh
 // Returns the Metal layer of the view of `surface`, set for `desc`, or nil if the surface is not a UIKit view whose
 // layer is a Metal layer, since a UIKit view keeps the layer that its class makes. UIKit sets the layer's gravity from
 // the view's content mode, and its scale from the view's, which follows the display once the view is in a window.
-CAMetalLayer* PR_NULLABLE layerOf(const PrAppSurface* surface, const PrGpuSwapChainDesc* desc) {
-    if (surface->kind != PrAppSurfaceKind_UiView)
+CAMetalLayer* PR_NULLABLE layerOf(const PrSurface* surface, const PrGpuSwapChainDesc* desc) {
+    if (surface->kind != PrSurfaceKind_UiView)
         return nil;
     UIView* view = (UIView*)surface->handle;
     if (![view.layer isKindOfClass:CAMetalLayer.class])
@@ -629,9 +630,13 @@ CAMetalLayer* PR_NULLABLE layerOf(const PrAppSurface* surface, const PrGpuSwapCh
 
 #endif
 
-PrStatus swapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const PrGpuSwapChainDesc* desc,
+PrStatus swapChainCreate(PrGpuDevice* device, const PrSurface* surface, const PrGpuSwapChainDesc* desc,
         PrGpuSwapChain* PR_NULLABLE* PR_NONNULL out) {
     GpuMetalDevice* d = gpuMetalDeviceFrom(device);
+#if TARGET_OS_VISION
+    if (surface->kind == PrSurfaceKind_CompositorServices)
+        return gpuMetalCompositorSwapChainCreate(device, surface, out);
+#endif
     @autoreleasepool {
         CAMetalLayer* layer = layerOf(surface, desc);
         if (layer == nil)
@@ -639,10 +644,20 @@ PrStatus swapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const
         decltype(GpuMetalSwapChain::view) view = (decltype(GpuMetalSwapChain::view))surface->handle;
         layer.device = d->device;
         PrGpuSwapChainInfo info = gpuMetalSwapChainInfoFromDisplay(desc->intent, displayOf(view));
-        layerTakeInfo(layer, info);
-        // The layer is readable, so that a frame can be copied or read back.
-        layer.framebufferOnly = NO;
+        layerTakeInfo(layer, info, desc->intent);
+        // A drawable is a render target alone, which the compositor reads fastest. A frame that is read back draws into
+        // the swap chain's own texture instead (prGpuSwapChainRequestCapture).
+        layer.framebufferOnly = YES;
         layer.presentsWithTransaction = (desc->flags & PrGpuSwapChainFlag_Threaded) == 0;
+        // A Mac's layer that does not wait for the display tears. Metal has no mode that replaces a frame that waits,
+        // and a layer of UIKit's platforms always waits.
+#if TARGET_OS_OSX
+        const PrGpuSwapChainSync sync =
+            desc->sync == PrGpuSwapChainSync_Immediate ? PrGpuSwapChainSync_Immediate : PrGpuSwapChainSync_Vsync;
+        layer.displaySyncEnabled = sync == PrGpuSwapChainSync_Vsync;
+#else
+        const PrGpuSwapChainSync sync = PrGpuSwapChainSync_Vsync;
+#endif
         // The compositor blends a layer that is not opaque by its premultiplied alpha.
         layer.opaque = (desc->flags & PrGpuSwapChainFlag_Transparent) == 0;
         // A device with a residency set does not rely on its encoders for residency, so its queue holds the layer's
@@ -653,6 +668,7 @@ PrStatus swapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const
         static_cast<PrGpuSwapChain&>(*sc) = *d->swapChainFunctions;
         sc->device = device;
         sc->info = info;
+        sc->sync = sync;
         sc->intent = desc->intent;
         sc->layer = [layer retain];
         sc->view = view;
@@ -778,6 +794,8 @@ void gpuMetalSwapChainDestroy(PrGpuSwapChain* handle) {
 void gpuMetalSwapChainWait(PrGpuSwapChain*) {}
 
 void gpuMetalSwapChainPresent(PrGpuSwapChain* handle, PrGpuCommands* commands) {
+    if (gpuSharedSwapChainPresentCapture(static_cast<GpuSharedSwapChain*>(handle), commands))
+        return;
     PrGpuDevice* device = static_cast<GpuSharedSwapChain*>(handle)->device;
     GpuMetalSwapChain* sc = static_cast<GpuMetalSwapChain*>(handle);
     if (sc->drawable == nil)
@@ -1148,19 +1166,22 @@ void gpuMetalRenderPipelineSet(const GpuMetalPipeline& p, id encoder) {
     [encoder setDepthBias:p.depthBias slopeScale:p.depthBiasSlope clamp:p.depthBiasClamp];
 }
 
-PrStatus gpuMetalSwapChainAcquire(PrGpuSwapChain* handle, PrUVec2 extent, PrGpuTexture* out) {
+PrStatus gpuMetalSwapChainAcquire(PrGpuSwapChain* handle, PrUVec2 extent, PrGpuSwapChainFrame* out) {
+    if (gpuSharedSwapChainAcquireCapture(static_cast<GpuSharedSwapChain*>(handle), extent, &out->color))
+        return PrStatus_Ok;
     GpuMetalDevice* d = gpuMetalDeviceFrom(static_cast<GpuSharedSwapChain*>(handle)->device);
     GpuMetalSwapChain* sc = static_cast<GpuMetalSwapChain*>(handle);
     @autoreleasepool {
         releaseDrawable(d, sc);
 
-        // An HDR swap chain follows its window's display, which changes if the window moves to another display or the
-        // display's mode changes, and on iOS once the view is in a window. AppKit and UIKit can be read only on the
-        // main thread, so an acquire on another thread keeps the choice that was last made on the main thread.
-        if (sc->intent == PrGpuSwapChainIntent_Hdr && [NSThread isMainThread]) {
+        // An HDR or wide gamut swap chain follows its window's display, which changes if the window moves to another
+        // display or the display's mode changes, and on iOS once the view is in a window. AppKit and UIKit can be read
+        // only on the main thread, so an acquire on another thread keeps the choice that was last made on the main
+        // thread.
+        if (sc->intent != PrGpuSwapChainIntent_Sdr && [NSThread isMainThread]) {
             PrGpuSwapChainInfo info = gpuMetalSwapChainInfoFromDisplay(sc->intent, displayOf(sc->view));
             if (info.format != sc->info.format || info.space != sc->info.space) {
-                layerTakeInfo(sc->layer, info);
+                layerTakeInfo(sc->layer, info, sc->intent);
                 sc->info = info;
             }
         }
@@ -1187,7 +1208,7 @@ PrStatus gpuMetalSwapChainAcquire(PrGpuSwapChain* handle, PrUVec2 extent, PrGpuT
         };
         sc->drawable = [drawable retain];
         sc->texture = PrGpuTexture{slot};
-        *out = sc->texture;
+        out->color = sc->texture;
         return PrStatus_Ok;
     }
 }
@@ -1431,6 +1452,13 @@ void gpuMetalPassChanged(GpuMetalPass* pass, PrGpuNativeStateFlags flags) {
         gpuMetalCommandsFrom(pass->commands)->changed |= flags;
 }
 
+MTLFunctionConstantValues* gpuMetalFunctionConstants(const GpuMetalDevice* d) {
+    MTLFunctionConstantValues* values = [[MTLFunctionConstantValues new] autorelease];
+    bool layered = d->layered;
+    [values setConstantValue:&layered type:MTLDataTypeBool atIndex:kGpuMetalLayeredConstant];
+    return values;
+}
+
 void gpuMetalDeviceInstall(GpuMetalDevice* d, PrGpuDeviceLimits limits) {
     gpuSharedDeviceInit(d);
     prMutexInit(&d->doneMutex);
@@ -1516,10 +1544,11 @@ void gpuMetalDeviceOpen(GpuMetalDevice* d, id<MTLDevice> device, GpuMetalDeviceF
     else
         d->adapter[size] = 0;
     d->info.adapter = PrStringView{d->adapter, strlen(d->adapter)};
-    // A pipeline reads its target with framebuffer fetch, which reads in raster order on Apple's GPUs. The iOS
-    // simulator's shader compiler has no framebuffer fetch. An Apple GPU samples ETC2 and EAC, from its second family
-    // the LDR profile of ASTC, and from its sixth the HDR profile. A GPU of the Mac's own families samples BC alone,
-    // and the device says whether an Apple GPU does. Every family places the channels that a texture is sampled with.
+    // A pipeline reads its target with framebuffer fetch, which reads in raster order on Apple's GPUs. The simulators'
+    // shader compiler has no framebuffer fetch, and their GPUs read no arguments from buffers. An Apple GPU samples
+    // ETC2 and EAC, from its second family the LDR profile of ASTC, and from its sixth the HDR profile. A GPU of the
+    // Mac's own families samples BC alone, and the device says whether an Apple GPU does. Every family places the
+    // channels that a texture is sampled with.
     d->info.features = PrGpuFeatureFlag_Timestamps | PrGpuFeatureFlag_TextureSwizzle |
         (bindless ? PrGpuFeatureFlag_Bindless : 0) |
         (device.supportsBCTextureCompression ? PrGpuFeatureFlag_TextureCompressionBc : 0) |
@@ -1527,8 +1556,16 @@ void gpuMetalDeviceOpen(GpuMetalDevice* d, id<MTLDevice> device, GpuMetalDeviceF
         ([device supportsFamily:MTLGPUFamilyApple2] ? PrGpuFeatureFlag_TextureCompressionAstc : 0) |
         ([device supportsFamily:MTLGPUFamilyApple6] ? PrGpuFeatureFlag_TextureCompressionAstcHdr : 0);
 #if !TARGET_OS_SIMULATOR
-    d->info.features |= PrGpuFeatureFlag_TargetReads | PrGpuFeatureFlag_OrderedTargetReads;
+    d->info.features |= PrGpuFeatureFlag_TargetReads | PrGpuFeatureFlag_OrderedTargetReads | PrGpuFeatureFlag_Indirect;
 #endif
+    // A device that cannot amplify vertices draws each view of a pass on its own, into its layer. The simulators of
+    // UIKit's platforms other than visionOS have no layers.
+#if TARGET_OS_SIMULATOR && !TARGET_OS_VISION
+    d->layered = false;
+#else
+    d->layered = true;
+#endif
+    d->info.maxViews = d->layered ? kPrGpuMaxViews : 1;
     d->info.sampleCounts = 1;
     for (uint32_t count = 2; count <= 16; count *= 2) {
         if ([device supportsTextureSampleCount:count])
@@ -1590,7 +1627,9 @@ PrStatus gpuMetalTextureWrap(GpuMetalDevice* d, id<MTLTexture> texture, PrGpuTex
     uint32_t slot = gpuMetalResourceAdd(d, GpuMetalSlot_Texture, t, t.gpuResourceID._impl);
     if (slot == 0)
         return PrStatus_Limit;
+    bool array = t.textureType == MTLTextureType2DArray;
     d->resources[slot].texture = PrGpuTextureDesc{
+        .kind = PrGpuTextureKind(array ? PrGpuTextureKind_2dArray : PrGpuTextureKind_2d),
         .format = gpuMetalFormatFromPixelFormat(t.pixelFormat),
         .usage = usage,
         .levels = uint8_t(t.mipmapLevelCount),

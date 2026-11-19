@@ -872,6 +872,12 @@ VkImageLayout vulkanLayoutFromAccess(PrGpuAccessFlags access) {
     return VK_IMAGE_LAYOUT_GENERAL;
 }
 
+VkImageLayout vulkanImageLayout(PrGpuAccessFlags access, bool presentable) {
+    if ((access & ~uint32_t(PrGpuAccessFlag_Discard)) == PrGpuAccessFlag_Present && !presentable)
+        return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    return vulkanLayoutFromAccess(access);
+}
+
 uint32_t vulkanSlotTake(VulkanDevice* d) {
     return d->resources.take();
 }
@@ -1052,11 +1058,12 @@ void vulkanUploadsRecord(VulkanDevice* d, VulkanCommands* c, VkCommandBuffer buf
     d->uploads.count = 0;
 }
 
-VkImageView vulkanAttachmentView(VulkanDevice* d, uint32_t slot, uint8_t level, uint16_t layer) {
+VkImageView vulkanAttachmentView(VulkanDevice* d, uint32_t slot, uint8_t level, uint16_t layer, uint8_t layers) {
     prMutexLock(&d->mutex);
     VulkanResource& r = vulkanResourceAt(d, slot);
     for (uint32_t i = 0; i < r.attachments.count; ++i) {
-        if (r.attachments.data[i].level == level && r.attachments.data[i].layer == layer) {
+        const VulkanAttachmentView& a = r.attachments.data[i];
+        if (a.level == level && a.layer == layer && a.layers == layers) {
             VkImageView view = r.attachments.data[i].view;
             prMutexUnlock(&d->mutex);
             return view;
@@ -1065,14 +1072,14 @@ VkImageView vulkanAttachmentView(VulkanDevice* d, uint32_t slot, uint8_t level, 
     VkImageViewCreateInfo info{};
     info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     info.image = r.image;
-    info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    info.viewType = layers > 1 ? VK_IMAGE_VIEW_TYPE_2D_ARRAY : VK_IMAGE_VIEW_TYPE_2D;
     info.format = vulkanFormat(r.textureDesc.format);
     info.subresourceRange.aspectMask = r.aspect;
     info.subresourceRange.baseMipLevel = r.firstLevel + level;
     info.subresourceRange.levelCount = 1;
     info.subresourceRange.baseArrayLayer = r.firstLayer + layer;
-    info.subresourceRange.layerCount = 1;
-    VulkanAttachmentView view{level, layer, VK_NULL_HANDLE};
+    info.subresourceRange.layerCount = layers;
+    VulkanAttachmentView view{level, layer, layers, VK_NULL_HANDLE};
     if (vulkanCheck(d, d->vk.CreateImageView(d->device, &info, nullptr, &view.view)))
         r.attachments.push(view);
     prMutexUnlock(&d->mutex);

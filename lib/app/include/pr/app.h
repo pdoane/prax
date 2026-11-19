@@ -10,6 +10,6 @@
 #include "pr/app_input.h"
 #include "pr/app_menu.h"
 #include "pr/app_shell.h"
-#include "pr/app_surface.h"
 #include "pr/app_user_preferences.h"
 #include "pr/app_window.h"
+#include "pr/surface.h"

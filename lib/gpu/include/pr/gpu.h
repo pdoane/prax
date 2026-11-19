@@ -24,7 +24,6 @@
 
 #pragma once
 
-#include "pr/app_surface.h"
 #include "pr/base.h"
 #include "pr/byte_view.h"
 #include "pr/color.h"
@@ -33,6 +32,7 @@
 #include "pr/raw_string.h"
 #include "pr/status.h"
 #include "pr/string_view.h"
+#include "pr/surface.h"
 #include "pr/task.h"
 #include "pr/vec.h"
 
@@ -78,6 +78,10 @@ enum {
     // The device samples the swizzled formats (PrGpuSwizzle) of each format that it samples, as the hardware places the
     // channels, with no work in a shader.
     PrGpuFeatureFlag_TextureSwizzle = 1u << 8,
+
+    // Draws and dispatches read their arguments from a buffer (prGpuPassDrawIndirect and the others). Without it, a
+    // renderer gives the arguments in the call.
+    PrGpuFeatureFlag_Indirect = 1u << 9,
 };
 typedef uint32_t PrGpuFeatureFlags;
 
@@ -152,6 +156,7 @@ typedef struct PrGpuDeviceInfo {
     PrStringView backend;           // the backend's name, for messages; an application's backend reports its own
     PrGpuFeatureFlags features;
     uint32_t maxTextureSize;        // the largest width or height of a 2D texture
+    uint8_t maxViews;               // the most views of a pass (PrGpuPassDesc::viewCount), at least one
 
     // The numbers of samples per texel that the device gives a texture that passes draw to, in any format that it
     // renders to, as the sum of the numbers. Each is a power of two, and 1 is always among them: a device that has 1, 2
@@ -1018,12 +1023,14 @@ typedef struct PrGpuStencilFace {
     PrGpuCompare compare;
 } PrGpuStencilFace;
 
-// The formats of a pass's attachments, which a graphics pipeline is compiled for and a pass must match.
+// The formats of a pass's attachments and the number of its views, which a graphics pipeline is compiled for and a pass
+// must match.
 typedef struct PrGpuAttachmentFormats {
     uint8_t colorCount;
     PrGpuFormat color[kPrGpuMaxColorAttachments];   // by color attachment
     PrGpuFormat depthStencil;                       // None for a pass without one
     uint8_t samples;                                // at least one
+    uint8_t viewCount;                              // at least one
 } PrGpuAttachmentFormats;
 
 // The formats of vertex attributes in vertex buffers, by the type and the number of their components, from the lowest
@@ -1128,13 +1135,13 @@ typedef struct PrGpuGraphicsPipelineDesc {
 } PrGpuGraphicsPipelineDesc;
 
 // Returns the defaults of a graphics pipeline over `library`: triangle lists, no culling, no depth or stencil test, no
-// blending, and one sample.
+// blending, one sample and one view.
 PrGpuGraphicsPipelineDesc prGpuGraphicsPipelineDescDefault(const PrGpuShaderLibrary* library);
 
 // Creates a pipeline for draws, or for dispatches of the compute entry point `compute` of `library`. Returns NotFound
 // if the library has no entry point by a name that the description gives, WrongType if an entry point is of the wrong
-// stage, and NotSupported for a state that the device does not have, or for an entry point that reaches resources by
-// handle on a device without PrGpuFeatureFlag_Bindless. On failure, `*out` is zero.
+// stage, and NotSupported for a state that the device does not have, such as more views than it draws, or for an entry
+// point that reaches resources by handle on a device without PrGpuFeatureFlag_Bindless. On failure, `*out` is zero.
 PrStatus prGpuPipelineCreateGraphics(PrGpuDevice* device, const PrGpuGraphicsPipelineDesc* desc, PrGpuPipeline* out);
 PrStatus prGpuPipelineCreateCompute(PrGpuDevice* device, const PrGpuShaderLibrary* library, PrStringView compute,
     PrStringView name, PrGpuPipeline* out);
@@ -1253,7 +1260,7 @@ void prGpuCommandsSetTexture(PrGpuCommands* commands, uint32_t slot, PrGpuTextur
 void prGpuCommandsSetRwTexture(PrGpuCommands* commands, uint32_t slot, PrGpuTexture texture);
 
 // Records dispatches outside any pass: `groups` groups of the pipeline's group size, or the groups that a
-// PrGpuDispatchIndirect at `offset` of `buffer` names.
+// PrGpuDispatchIndirect at `offset` of `buffer` names, which requires PrGpuFeatureFlag_Indirect.
 void prGpuCommandsDispatch(PrGpuCommands* commands, PrGpuExtent groups);
 void prGpuCommandsDispatchIndirect(PrGpuCommands* commands, PrGpuBuffer buffer, uint64_t offset);
 
@@ -1414,6 +1421,11 @@ typedef struct PrGpuAttachment {
 
 // The attachments of a pass of the device's own, and the values that the pass clears them to. Or, a pass that the
 // application has open in its native command buffer.
+//
+// A pass of several views draws each draw once for each view, as the views of a stereo display need. View i draws into
+// layer i of every attachment, which is a 2D array of at least `viewCount` layers whose `layer` is zero. A vertex
+// shader tells the views apart with pr/gpu.slang's prGpuView, and the pass's pipelines are compiled for its number of
+// views. Loads, stores and clears act on every view's layer.
 typedef struct PrGpuPassDesc {
     // A pass that the application began in the native command buffer that the commands record into, as the backend's
     // header describes it. `nativeFormats` are its attachment formats, and `nativeExtent` is its extent in target
@@ -1422,6 +1434,7 @@ typedef struct PrGpuPassDesc {
     PrGpuAttachmentFormats nativeFormats;
     PrUVec2 nativeExtent;
 
+    uint8_t viewCount;                                  // at least one, and at most the device's maxViews
     uint8_t colorCount;
     PrGpuAttachment color[kPrGpuMaxColorAttachments];   // by color attachment
     PrColor clearColor[kPrGpuMaxColorAttachments];      // the values that Clear writes, by color attachment
@@ -1433,8 +1446,8 @@ typedef struct PrGpuPassDesc {
     PrStringView name;                                  // a name for debuggers and captures, or empty
 } PrGpuPassDesc;
 
-// Returns a pass over one color attachment, which it loads as `load` says, clears to `clear` if it clears it, and
-// keeps.
+// Returns a pass of one view over one color attachment, which it loads as `load` says, clears to `clear` if it clears
+// it, and keeps.
 PrGpuPassDesc prGpuPassDescColor(PrGpuTexture texture, PrGpuLoad load, PrColor clear);
 
 // Begins a pass. The attachments of a pass of the device's own must be in the accesses of
@@ -1486,7 +1499,8 @@ void prGpuPassSetIndexBuffer(PrGpuPass* pass, PrGpuBuffer buffer, uint64_t offse
 void prGpuPassSetVertexBuffer(PrGpuPass* pass, uint32_t slot, PrGpuBuffer buffer, uint64_t offset);
 
 // Record draws with the pass's pipeline and root data, which are set through the pass's command buffer. An indirect
-// draw reads `count` arguments, `stride` bytes apart, from `buffer` at `offset`.
+// draw, which requires PrGpuFeatureFlag_Indirect, reads `count` arguments, `stride` bytes apart, from `buffer` at
+// `offset`.
 void prGpuPassDraw(PrGpuPass* pass, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex,
     uint32_t firstInstance);
 void prGpuPassDrawIndexed(PrGpuPass* pass, uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex,
@@ -1510,6 +1524,11 @@ enum {
     // platform presents such colors in for the display, as each backend documents, and for a display that shows no more
     // than sRGB, what SDR holds, so that an application draws no more than the display shows.
     PrGpuSwapChainIntent_Hdr,
+
+    // Colors past sRGB's gamut, no brighter than SDR white, where the window's display shows them. The textures hold
+    // what the platform presents such colors in for the display, as each backend documents, and for a display of sRGB's
+    // gamut, what SDR holds. The application keeps colors at or below SDR white.
+    PrGpuSwapChainIntent_WideGamut,
 };
 typedef uint8_t PrGpuSwapChainIntent;
 
@@ -1519,11 +1538,11 @@ enum {
     // While a window is being resized, it can show a frame at the wrong size.
     PrGpuSwapChainFlag_Threaded = 1 << 0,
 
-    // Presents the textures' alpha, with premultiplied colors, so that a window with a backdrop shows it where the
-    // alpha is less than one (PrAppWindowBackdrop). Without the flag, the window shows the textures as opaque. A window
-    // keeps the choice of its first swap chain: on Windows, a transparent swap chain on a window that has shown an
-    // opaque one shows that one's last frame through it. A window that may show a backdrop takes the flag from its
-    // first swap chain on.
+    // Presents the textures' alpha, with premultiplied colors, so that whatever is behind a window shows where the
+    // alpha is less than one. Without the flag, the window shows the textures as opaque. A window keeps the choice of
+    // its first swap chain: on Windows, a transparent swap chain on a window that has shown an opaque one shows that
+    // one's last frame through it. A window that may show what is behind it takes the flag from its first swap chain
+    // on.
     PrGpuSwapChainFlag_Transparent = 1 << 1,
 };
 typedef uint8_t PrGpuSwapChainFlags;
@@ -1540,20 +1559,38 @@ enum {
 };
 typedef uint8_t PrGpuSwapChainAnchor;
 
+// When a swap chain's frames reach the display.
+enum {
+    // At a vertical blank, each frame in turn: frames never tear, and a frame waits while the frames before it wait to
+    // be shown.
+    PrGpuSwapChainSync_Vsync,
+
+    // At a vertical blank, the newest frame, which replaces a frame that waits to be shown: frames never tear or wait,
+    // and those that the display has no blank for are never shown.
+    PrGpuSwapChainSync_Latest,
+
+    // As soon as the frame is done, whether or not the display is between blanks, so that a frame can tear where it
+    // replaces the one before partway down the display.
+    PrGpuSwapChainSync_Immediate,
+};
+typedef uint8_t PrGpuSwapChainSync;
+
 // What a swap chain shows, and how it presents.
 typedef struct PrGpuSwapChainDesc {
     PrGpuSwapChainIntent intent;
     PrGpuSwapChainFlags flags;
     PrGpuSwapChainAnchor anchor;
+    PrGpuSwapChainSync sync;
 } PrGpuSwapChainDesc;
 
 // The format and the color space of the textures that a swap chain presents, which its device chooses for the swap
 // chain's intent. They combine as follows:
 //
 // - Srgb on Bgra8: sRGB, encoded, in [0, 1]. A shader writes and blends the encoded values.
-// - Srgb on Rgba16F: extended sRGB, encoded. Values outside [0, 1] show colors past sRGB's gamut and, on a display with
+// - Srgb on Bgra8Srgb: sRGB in [0, 1], which a shader writes and blends in linear light, and the format encodes.
+// - Srgb on Rgba16F: scRGB. Values outside [0, 1] show colors past sRGB's gamut and, on a display with
 //   headroom, brighter than SDR white.
-// - SrgbLinear on Rgba16F: extended sRGB in linear light, which is scRGB.
+// - SrgbLinear on Rgba16F: linear scRGB.
 // - Rec2100Pq on Rgb10A2: HDR10. A shader writes Rec. 2100 colors encoded with PQ, and the display shows their
 //   absolute luminance.
 //
@@ -1561,13 +1598,17 @@ typedef struct PrGpuSwapChainDesc {
 typedef struct PrGpuSwapChainInfo {
     PrGpuFormat format;
     PrColorSpace space;
+
+    // When the frames reach the display: as the description asked, or Vsync where the platform lacks that, as each
+    // backend documents.
+    PrGpuSwapChainSync sync;
 } PrGpuSwapChainInfo;
 
 // Creates a swap chain that presents to `surface`, which must outlive it. Without PrGpuSwapChainFlag_Threaded, a frame
-// presents within the window's display transaction: from the thread that runs the window, during its frame
-// (PrAppHandler::frame), so that a resize shows each frame at the window's size. Returns NotSupported for a kind of
-// surface the device cannot present to, and Lost if the device is lost. On failure, `*out` is null.
-PrStatus prGpuSwapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const PrGpuSwapChainDesc* desc,
+// presents within the window's display transaction: from the thread that runs the window, while it draws a frame, so
+// that a resize shows each frame at the window's size. Returns NotSupported for a kind of surface the device cannot
+// present to, and Lost if the device is lost. On failure, `*out` is null.
+PrStatus prGpuSwapChainCreate(PrGpuDevice* device, const PrSurface* surface, const PrGpuSwapChainDesc* desc,
     PrGpuSwapChain* PR_NULLABLE* PR_NONNULL out);
 
 // Waits for the frames in flight, then frees the swap chain and the textures of its images.
@@ -1584,16 +1625,60 @@ PrGpuSwapChainInfo prGpuSwapChainInfo(const PrGpuSwapChain* swapChain);
 // only to acquire a texture, such as Metal, this returns at once.
 void prGpuSwapChainWait(PrGpuSwapChain* swapChain);
 
-// Acquires the texture that the next frame draws to, at `extent` in target pixels. The texture is a render target that
-// may be copied from, in the accesses of Discard until the frame draws to it. Returns InvalidState if the surface
-// cannot provide a texture now, such as while its window is hidden or the extent is empty, Limit for an extent larger
+// The most views that a frame has.
+enum { kPrGpuMaxViews = 4 };
+
+// What one view of a frame draws to: a viewport, in target pixels, of a layer of the frame's textures.
+typedef struct PrGpuView {
+    PrIRect viewport;
+    uint16_t layer;
+} PrGpuView;
+
+// The textures that a frame draws to, and its views. `color` is a render target, which is not copied, sampled or read
+// back. `depth` is the depth that the surface takes with the frame, or zero for a surface that takes none, as a window
+// does. A window's frame has one view, the whole of the only layer of its texture. An immersive surface's frame has a
+// view for each eye.
+typedef struct PrGpuSwapChainFrame {
+    PrGpuTexture color;
+    PrGpuTexture depth;
+    uint8_t viewCount;
+    PrGpuView views[kPrGpuMaxViews];
+} PrGpuSwapChainFrame;
+
+// Acquires the frame that the application draws next, at `extent` in target pixels, for a surface whose extent the
+// application chooses, as a window's. The compositor of an immersive surface chooses the extent, and `extent` is
+// ignored: such a frame is the one that the surface's session began (pr/surface.h). The frame's textures are in the
+// accesses of Discard until the frame draws to them. Returns InvalidState if the surface cannot provide a frame now,
+// such as while its window is hidden, the extent is empty or no session's frame is begun, Limit for an extent larger
 // than the device allows, and Lost if the device is lost. On failure, `*out` is zero.
-PrStatus prGpuSwapChainAcquire(PrGpuSwapChain* swapChain, PrUVec2 extent, PrGpuTexture* out);
+PrStatus prGpuSwapChainAcquire(PrGpuSwapChain* swapChain, PrUVec2 extent, PrGpuSwapChainFrame* out);
 
 // Presents the acquired texture once `commands` are done. The texture must be in the accesses of
 // PrGpuAccessFlag_Present by the end of the commands. The application submits `commands` after this call, and does not
 // use the texture again.
 void prGpuSwapChainPresent(PrGpuSwapChain* swapChain, PrGpuCommands* commands);
+
+// Called on the device's thread once the frame that a swap chain captured is done, with the frame's texels in `format`,
+// the swap chain's format when the frame acquired its texture. The texels are valid only during the call. They are
+// empty if the device was lost first.
+typedef void (*PrGpuCaptureFn)(void* PR_NULLABLE context, PrPixelView texels, PrGpuFormat format);
+
+// Captures the next frame that the swap chain acquires a texture for. That frame draws into a texture that the swap
+// chain makes, of the format and the extent that a texture of the surface would have, so every pipeline made for the
+// swap chain draws into it. The frame's acquire neither takes a texture from the surface nor waits for one, so a frame
+// is captured while the surface shows nothing, as while the display sleeps. The frame's present reads the texture back
+// and presents nothing, so the surface keeps the frame before it, and `capture` takes the texels once the frame's
+// commands are done. A second request before that frame replaces the first's function. Called on the thread that
+// acquires the swap chain's textures.
+void prGpuSwapChainRequestCapture(PrGpuSwapChain* swapChain, PrGpuCaptureFn capture, void* PR_NULLABLE context);
+
+// Drops a request that no frame has taken.
+void prGpuSwapChainCancelCapture(PrGpuSwapChain* swapChain);
+
+// Converts the texels of a captured frame (PrGpuCaptureFn) in `format` to 8-bit RGBA in `rgba`, which has the extent of
+// `texels`. The values keep their encoding and alpha, and each is clamped to [0, 1]. Returns false, and writes nothing,
+// for empty texels or a format other than Bgra8, Rgba8 and Rgba16F.
+bool prGpuCaptureToRgba8(PrPixelView texels, PrGpuFormat format, PrPixels rgba);
 
 #if defined(__cplusplus)
 }

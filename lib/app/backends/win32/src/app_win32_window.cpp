@@ -853,8 +853,8 @@ void setProgress(PrAppWindow* base, PrAppProgressState state, float progress) {
     win32ApplyTaskbar(window);
 }
 
-PrStatus surface(const PrAppWindow* base, PrAppSurface* out) {
-    out->kind = PrAppSurfaceKind_Hwnd;
+PrStatus surface(const PrAppWindow* base, PrSurface* out) {
+    out->kind = PrSurfaceKind_Hwnd;
     out->handle = static_cast<const Win32Window*>(base)->window;
     return PrStatus_Ok;
 }

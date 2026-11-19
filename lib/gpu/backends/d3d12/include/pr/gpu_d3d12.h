@@ -3,9 +3,10 @@
 // The native objects cross this header as untyped pointers. A caller casts them to their D3D12 types, such as
 // `ID3D12Device*`.
 //
-// A swap chain for SDR holds Bgra8 in sRGB. One for HDR holds HDR10, Rgb10A2 in Rec2100Pq, where the window's display
-// is in HDR mode and takes it, and scRGB, Rgba16F in SrgbLinear, elsewhere. The choice is made when the swap chain is
-// created.
+// A swap chain for SDR holds Bgra8 in sRGB. One for HDR or wide gamut holds HDR10, Rgb10A2 in Rec2100Pq, where the
+// window's display is in HDR mode and takes it, linear scRGB, Rgba16F in SrgbLinear, where the display is in HDR mode
+// and does not, and otherwise what SDR holds, since Windows composes in sRGB. A swap chain follows its window's
+// display: each acquire checks it again.
 //
 // Shaders reach every resource through the device's two shader-visible descriptor heaps, which the device binds on
 // every command list that it records into, its own and the application's, as it begins. An application that draws with

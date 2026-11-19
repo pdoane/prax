@@ -13,12 +13,12 @@
 
 #include "pr/align.h"
 #include "pr/alloc.h"
-#include "pr/app_surface.h"
 #include "pr/assert.h"
 #include "pr/mem.h"
 #include "pr/min_max.h"
 #include "pr/raw_array.h"
 #include "pr/raw_string.h"
+#include "pr/surface.h"
 
 #include "gpu/backends/shared/src/gpu_shared_device.h"
 
@@ -1185,6 +1185,7 @@ PrGpuPass* commandsPassBegin(PrGpuCommands* commands, const PrGpuPassDesc* desc)
     pass->commands = c;
     pass->formats.colorCount = desc->colorCount;
     pass->formats.samples = 1;
+    pass->formats.viewCount = 1;
     const PrGpuAttachment* first = desc->colorCount != 0 ? &desc->color[0] : &desc->depthStencil;
     if (first->texture.id != 0) {
         const PrGpuTextureDesc& t = d->resources[first->texture.id].texture;
@@ -1329,10 +1330,10 @@ struct WebgpuSwapChain : GpuSharedSwapChain {
 
 extern const PrGpuSwapChain kSwapChainFunctions;
 
-PrStatus swapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const PrGpuSwapChainDesc* desc,
+PrStatus swapChainCreate(PrGpuDevice* device, const PrSurface* surface, const PrGpuSwapChainDesc* desc,
         PrGpuSwapChain* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;
-    if (surface->kind != PrAppSurfaceKind_HtmlCanvas)
+    if (surface->kind != PrSurfaceKind_HtmlCanvas)
         return PrStatus_NotSupported;
     WebgpuSwapChain* s = allocZeroed<WebgpuSwapChain>();
     static_cast<PrGpuSwapChain&>(*s) = kSwapChainFunctions;
@@ -1358,7 +1359,9 @@ void swapChainDestroy(PrGpuSwapChain* swapChain) {
 // The page paces its frames with its animation frames, so the swap chain has nothing to wait for.
 void swapChainWait(PrGpuSwapChain*) {}
 
-PrStatus swapChainAcquire(PrGpuSwapChain* swapChain, PrUVec2 extent, PrGpuTexture* out) {
+PrStatus swapChainAcquire(PrGpuSwapChain* swapChain, PrUVec2 extent, PrGpuSwapChainFrame* out) {
+    if (gpuSharedSwapChainAcquireCapture(static_cast<GpuSharedSwapChain*>(swapChain), extent, &out->color))
+        return PrStatus_Ok;
     WebgpuSwapChain* s = static_cast<WebgpuSwapChain*>(swapChain);
     WebgpuDevice* d = webgpuOf(s->device);
     if (d->lost)
@@ -1380,12 +1383,14 @@ PrStatus swapChainAcquire(PrGpuSwapChain* swapChain, PrUVec2 extent, PrGpuTextur
     d->resources[s->texture].texture = prGpuTextureDesc2d(s->info.format, extent, PrGpuTextureUsageFlag_RenderTarget);
     prGpuWebgpuCanvasAcquire(d->page, s->canvas, s->texture, extent.x, extent.y);
     s->extent = extent;
-    out->id = s->texture;
+    out->color = PrGpuTexture{s->texture};
     return PrStatus_Ok;
 }
 
 // The page shows what the frame drew once the task that submitted it ends.
-void swapChainPresent(PrGpuSwapChain*, PrGpuCommands*) {}
+void swapChainPresent(PrGpuSwapChain* swapChain, PrGpuCommands* commands) {
+    gpuSharedSwapChainPresentCapture(static_cast<GpuSharedSwapChain*>(swapChain), commands);
+}
 
 // ---------------------------------------------------------------------------------------------------------------------
 // The functions
@@ -1442,6 +1447,8 @@ constexpr PrGpuSwapChain kSwapChainFunctions = {
     .waitFn = swapChainWait,
     .acquireFn = swapChainAcquire,
     .presentFn = swapChainPresent,
+    .requestCaptureFn = gpuSharedSwapChainRequestCapture,
+    .cancelCaptureFn = gpuSharedSwapChainCancelCapture,
 };
 
 } // namespace
@@ -1487,6 +1494,8 @@ PrGpuDevice* prGpuWebgpuCreate(const PrGpuDeviceOptions* PR_NULLABLE options) {
     d->shaderTarget = PrGpuShaderTarget_Wgsl;
     d->info.backend = "WebGPU";
     d->info.adapter = "WebGPU";
+    d->info.features = PrGpuFeatureFlag_Indirect;
+    d->info.maxViews = 1;
     d->info.maxBufferSlots = 4;
     d->info.maxRwBufferSlots = 4;
     d->info.maxTextureSlots = 8;

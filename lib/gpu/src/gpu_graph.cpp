@@ -553,6 +553,7 @@ bool isComplete(const PrGpuAttachment& attachment) {
 // a texture of one.
 bool passDesc(const GpuGraph* g, const Pass& pass, PrGpuPassDesc* out) {
     PrGpuPassDesc desc{
+        .viewCount = pass.desc.viewCount,
         .colorCount = pass.desc.colorCount,
         .depthStencil = attachmentOf(g, pass.desc.depthStencil),
         .stencilLoad = pass.desc.stencilLoad,
@@ -814,6 +815,7 @@ PrGpuBuffer prGpuGraphBuffer(const PrGpuGraph* graph, PrGpuGraphBuffer buffer) {
 
 PrGpuGraphPassDesc prGpuGraphPassDescColor(PrGpuGraphTexture texture, PrGpuLoad load, PrColor clear) {
     PrGpuGraphPassDesc desc{};
+    desc.viewCount = 1;
     desc.colorCount = 1;
     desc.color[0] = PrGpuGraphAttachment{.texture = texture, .load = load, .store = PrGpuStore_Keep};
     desc.clearColor[0] = clear;

@@ -16,7 +16,11 @@ int prTestGpuCApi(void) {
     };
     PrGpuBufferDesc buffer = {.size = 256, .memory = PrGpuMemory_Upload};
     PrGpuTexture none = {0};
-    PrGpuGraphPassDesc pass = {.colorCount = 1, .color = {{.load = PrGpuLoad_Clear, .store = PrGpuStore_Keep}}};
+    PrGpuGraphPassDesc pass = {
+        .viewCount = 1,
+        .colorCount = 1,
+        .color = {{.load = PrGpuLoad_Clear, .store = PrGpuStore_Keep}},
+    };
     PrGpuGraphOptions options = prGpuGraphOptionsDefault();
     prGpuDeviceDestroy(NULL);
     prGpuSwapChainDestroy(NULL);

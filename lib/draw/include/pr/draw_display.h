@@ -1,9 +1,11 @@
 // The display shader, which maps a frame that lib/draw rendered in half floats to a display.
 //
-// lib/draw renders extended sRGB, encoded, and leaves colors past the display to the application. The shader tone maps
-// each color for the display's headroom (prColorToneMap), maps it into the display's gamut up to the headroom
-// (prColorGamutMap), and encodes it as the target holds colors. The gamut map reads a table of the most chroma at each
-// lightness and hue (prColorGamutMaxChroma), which lies within a just noticeable difference of the CPU's search.
+// lib/draw renders scRGB, and leaves colors past the display to the application. The shader tone maps each color for
+// the display's headroom (prColorToneMap), maps it into the display's gamut up to the headroom (prColorGamutMap), and
+// encodes it as the target holds colors. Colors are premultiplied, in the frame as lib/draw renders them and in the
+// target, which carries the frame's alpha to a compositor. A PQ target shows the frame over black, opaque. The gamut
+// map reads a table of the most chroma at each lightness and hue (prColorGamutMaxChroma), which lies within a just
+// noticeable difference of the CPU's search.
 //
 // The application owns the pass that the shader draws in, and the target, such as a swap chain's texture.
 
@@ -25,8 +27,8 @@ typedef struct PrDrawDisplay PrDrawDisplay;
 
 // What a frame is mapped to.
 typedef struct PrDrawDisplayDesc {
-    // How the target holds colors: Srgb (extended sRGB, encoded), SrgbLinear (scRGB), or Rec2100Pq (HDR10's PQ in Rec.
-    // 2020's primaries, with SDR white at 203 cd/m²).
+    // How the target holds colors: Srgb (scRGB), SrgbLinear (linear scRGB), or Rec2100Pq (HDR10's PQ in Rec. 2020's
+    // primaries, with SDR white at 203 cd/m²).
     PrColorSpace target;
 
     float headroom;             // the display's headroom, as a multiple of SDR white; 1 or less for SDR

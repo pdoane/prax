@@ -3,9 +3,8 @@
 // Canvas 2D renderer does, or into its texels (PrGpuNativeKind_Pixels), as lib/draw's CPU renderer does. The device
 // keeps the two in step.
 //
-// A swap chain presents to a surface of PrAppSurfaceKind_HtmlCanvas. Its textures are that canvas itself, so what is
-// drawn through the canvas shows without a copy. They hold Rgba8 in sRGB for every intent, and the canvas shows them
-// opaque.
+// A swap chain presents to a surface of PrSurfaceKind_HtmlCanvas. Its textures are that canvas itself, so what is drawn
+// through the canvas shows without a copy. They hold Rgba8 in sRGB for every intent, and the canvas shows them opaque.
 //
 // A PrGpuCanvas is an index into `prGpuCanvases`, a table that the page's side of the backend keeps (gpu_canvas2d.js).
 // An entry either holds `canvas`, an OffscreenCanvas or a canvas element, and `context`, its 2D context, or it holds an

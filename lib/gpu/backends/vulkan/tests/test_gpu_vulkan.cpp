@@ -315,6 +315,7 @@ TEST_CASE("vulkan draws into the application's pass, and says which of the pass'
     passDesc.nativeFormats.colorCount = 1;
     passDesc.nativeFormats.color[0] = PrGpuFormat_Rgba8;
     passDesc.nativeFormats.samples = 1;
+    passDesc.nativeFormats.viewCount = 1;
     passDesc.nativeExtent = PrUVec2{8, 8};
     PrGpuPass* pass = prGpuPassBegin(commands, &passDesc);
     Uniforms uniforms{.color = {1, 0, 0, 1}};
@@ -406,7 +407,7 @@ TEST_CASE("vulkan presents frames to a window's swap chain, and resizes it") {
     HWND window = CreateWindowExW(0, type.lpszClassName, L"Vulkan test", WS_POPUP, 0, 0, 320, 240, nullptr, nullptr,
         type.hInstance, nullptr);
     REQUIRE(window != nullptr);
-    PrAppSurface surface{PrAppSurfaceKind_Hwnd, window};
+    PrSurface surface{PrSurfaceKind_Hwnd, window};
     PrGpuSwapChainDesc desc{.intent = PrGpuSwapChainIntent_Sdr};
     PrGpuSwapChain* swapChain = nullptr;
     REQUIRE(prGpuSwapChainCreate(f.device, &surface, &desc, &swapChain) == PrStatus_Ok);
@@ -415,8 +416,9 @@ TEST_CASE("vulkan presents frames to a window's swap chain, and resizes it") {
     for (PrUVec2 extent : extents) {
         SetWindowPos(window, nullptr, 0, 0, int(extent.x), int(extent.y), SWP_NOMOVE | SWP_NOZORDER);
         prGpuSwapChainWait(swapChain);
-        PrGpuTexture texture{};
-        REQUIRE(prGpuSwapChainAcquire(swapChain, extent, &texture) == PrStatus_Ok);
+        PrGpuSwapChainFrame frame{};
+        REQUIRE(prGpuSwapChainAcquire(swapChain, extent, &frame) == PrStatus_Ok);
+        PrGpuTexture texture = frame.color;
         CHECK(prGpuTextureExtent(f.device, texture).x == extent.x);
         PrGpuCommands* commands = nullptr;
         REQUIRE(prGpuCommandsBegin(f.device, nullptr, &commands));

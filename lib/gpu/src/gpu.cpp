@@ -5,6 +5,7 @@
 #include "pr/align.h"
 #include "pr/alloc.h"
 #include "pr/assert.h"
+#include "pr/float16.h"
 #include "pr/gpu_backend.h"
 #include "pr/integer.h"
 #include "pr/mem.h"
@@ -777,6 +778,7 @@ PrGpuGraphicsPipelineDesc prGpuGraphicsPipelineDescDefault(const PrGpuShaderLibr
     desc.stencilFront.compare = PrGpuCompare_Always;
     desc.stencilBack.compare = PrGpuCompare_Always;
     desc.formats.samples = 1;
+    desc.formats.viewCount = 1;
     for (PrGpuBlend& blend : desc.blend)
         blend.write = PrGpuColorWriteFlag_All;
     return desc;
@@ -785,6 +787,7 @@ PrGpuGraphicsPipelineDesc prGpuGraphicsPipelineDescDefault(const PrGpuShaderLibr
 PrStatus prGpuPipelineCreateGraphics(PrGpuDevice* device, const PrGpuGraphicsPipelineDesc* desc, PrGpuPipeline* out) {
     *out = PrGpuPipeline{};
     PR_ASSERT(desc->formats.colorCount <= kPrGpuMaxColorAttachments && desc->formats.samples >= 1);
+    PR_ASSERT(desc->formats.viewCount >= 1);
     const PrGpuShaderEntry* vertex = entryNamed(desc->library, desc->vertex);
     const PrGpuShaderEntry* fragment = desc->fragment.size != 0 ? entryNamed(desc->library, desc->fragment) : nullptr;
     if (vertex == nullptr || (desc->fragment.size != 0 && fragment == nullptr))
@@ -803,6 +806,8 @@ PrStatus prGpuPipelineCreateGraphics(PrGpuDevice* device, const PrGpuGraphicsPip
         PR_ASSERT(a.offset + prGpuVertexFormatSize(a.format) <= layout.buffers[a.buffer].stride);
         (void)a;
     }
+    if (desc->formats.viewCount > device->infoFn(device).maxViews)
+        return PrStatus_NotSupported;
     PrStatus refused = refusal(device);
     if (refused != PrStatus_Ok)
         return refused;
@@ -1032,6 +1037,7 @@ void prGpuCommandsGlobalBarrier(PrGpuCommands* commands, PrGpuAccessFlags before
 
 PrGpuPassDesc prGpuPassDescColor(PrGpuTexture texture, PrGpuLoad load, PrColor clear) {
     PrGpuPassDesc desc{};
+    desc.viewCount = 1;
     desc.colorCount = 1;
     desc.color[0] = PrGpuAttachment{.texture = texture, .load = load, .store = PrGpuStore_Keep};
     desc.clearColor[0] = clear;
@@ -1040,6 +1046,19 @@ PrGpuPassDesc prGpuPassDescColor(PrGpuTexture texture, PrGpuLoad load, PrColor c
 
 PrGpuPass* prGpuPassBegin(PrGpuCommands* commands, const PrGpuPassDesc* desc) {
     PR_ASSERT(desc->native != nullptr || desc->colorCount != 0 || desc->depthStencil.texture.id != 0);
+    PrGpuDevice* device = commands->deviceFn(commands);
+    uint8_t views = desc->native != nullptr ? desc->nativeFormats.viewCount : desc->viewCount;
+    PR_ASSERT(views >= 1 && views <= device->infoFn(device).maxViews);
+    if (desc->native == nullptr && views > 1) {
+        // Each view draws into its own layer of every attachment.
+        for (uint8_t i = 0; i <= desc->colorCount; ++i) {
+            const PrGpuAttachment& a = i < desc->colorCount ? desc->color[i] : desc->depthStencil;
+            if (a.texture.id == 0)
+                continue;
+            PrGpuTextureDesc t = device->textureDescFn(device, a.texture);
+            PR_ASSERT(a.layer == 0 && t.kind == PrGpuTextureKind_2dArray && t.extent.depth >= views);
+        }
+    }
     return commands->passBeginFn(commands, desc);
 }
 
@@ -1118,7 +1137,7 @@ void prGpuPassDrawIndexedIndirect(PrGpuPass* pass, PrGpuBuffer buffer, uint64_t 
 // ---------------------------------------------------------------------------------------------------------------------
 // Swap chains
 
-PrStatus prGpuSwapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const PrGpuSwapChainDesc* desc,
+PrStatus prGpuSwapChainCreate(PrGpuDevice* device, const PrSurface* surface, const PrGpuSwapChainDesc* desc,
         PrGpuSwapChain* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;
     PrStatus refused = refusal(device);
@@ -1140,20 +1159,66 @@ void prGpuSwapChainWait(PrGpuSwapChain* swapChain) {
     swapChain->waitFn(swapChain);
 }
 
-PrStatus prGpuSwapChainAcquire(PrGpuSwapChain* swapChain, PrUVec2 extent, PrGpuTexture* out) {
-    *out = PrGpuTexture{};
+PrStatus prGpuSwapChainAcquire(PrGpuSwapChain* swapChain, PrUVec2 extent, PrGpuSwapChainFrame* out) {
+    *out = PrGpuSwapChainFrame{};
     PrGpuDevice* device = swapChain->deviceFn(swapChain);
     PrStatus refused = refusal(device);
     if (refused != PrStatus_Ok)
         return refused;
-    if (extent.x == 0 || extent.y == 0)
-        return PrStatus_InvalidState;
-    if (extent.x > device->infoFn(device).maxTextureSize || extent.y > device->infoFn(device).maxTextureSize)
-        return PrStatus_Limit;
-    return swapChain->acquireFn(swapChain, extent, out);
+    if (!swapChain->compositorExtent) {
+        if (extent.x == 0 || extent.y == 0)
+            return PrStatus_InvalidState;
+        if (extent.x > device->infoFn(device).maxTextureSize || extent.y > device->infoFn(device).maxTextureSize)
+            return PrStatus_Limit;
+        // A window's frame: one view of the whole extent.
+        out->viewCount = 1;
+        out->views[0].viewport = PrIRect{0, 0, int32_t(extent.x), int32_t(extent.y)};
+    }
+    PrStatus status = swapChain->acquireFn(swapChain, extent, out);
+    if (status != PrStatus_Ok)
+        *out = PrGpuSwapChainFrame{};
+    return status;
 }
 
 void prGpuSwapChainPresent(PrGpuSwapChain* swapChain, PrGpuCommands* commands) {
     PR_ASSERT(prGpuCommandsDevice(commands) == swapChain->deviceFn(swapChain));
     swapChain->presentFn(swapChain, commands);
+}
+
+void prGpuSwapChainRequestCapture(PrGpuSwapChain* swapChain, PrGpuCaptureFn capture, void* PR_NULLABLE context) {
+    swapChain->requestCaptureFn(swapChain, capture, context);
+}
+
+void prGpuSwapChainCancelCapture(PrGpuSwapChain* swapChain) {
+    swapChain->cancelCaptureFn(swapChain);
+}
+
+bool prGpuCaptureToRgba8(PrPixelView texels, PrGpuFormat format, PrPixels rgba) {
+    bool known = format == PrGpuFormat_Bgra8 || format == PrGpuFormat_Rgba8 || format == PrGpuFormat_Rgba16F;
+    if (texels.data == nullptr || !known)
+        return false;
+    PR_ASSERT(rgba.extent.x == texels.extent.x && rgba.extent.y == texels.extent.y);
+    auto unit = [](float value) {
+        float clamped = value < 0 ? 0 : value > 1 ? 1 : value;
+        return uint8_t(clamped * 255 + 0.5f);
+    };
+    bool bgra = format == PrGpuFormat_Bgra8;
+    for (uint32_t y = 0; y < texels.extent.y; ++y) {
+        const uint8_t* from = texels.data + size_t(y) * texels.stride;
+        uint8_t* to = rgba.data + size_t(y) * rgba.stride;
+        for (uint32_t x = 0; x < texels.extent.x; ++x, to += 4) {
+            if (format == PrGpuFormat_Rgba16F) {
+                const PrFloat16* half = reinterpret_cast<const PrFloat16*>(from + x * 8);
+                for (uint32_t c = 0; c < 4; ++c)
+                    to[c] = unit(prFloat16ToFloat(half[c]));
+                continue;
+            }
+            const uint8_t* texel = from + x * 4;
+            to[0] = texel[bgra ? 2 : 0];
+            to[1] = texel[1];
+            to[2] = texel[bgra ? 0 : 2];
+            to[3] = texel[3];
+        }
+    }
+    return true;
 }

@@ -153,6 +153,7 @@ typedef struct PrGpuGraphAttachment {
 // The attachments of a pass that draws, and the values that the pass clears them to.
 typedef struct PrGpuGraphPassDesc {
     PrStringView name;                                      // a name for debuggers and captures, or empty
+    uint8_t viewCount;                                      // at least one (PrGpuPassDesc::viewCount)
     uint8_t colorCount;
     PrGpuGraphAttachment color[kPrGpuMaxColorAttachments];  // by color attachment
     PrColor clearColor[kPrGpuMaxColorAttachments];          // the values that Clear writes, by color attachment
@@ -163,8 +164,8 @@ typedef struct PrGpuGraphPassDesc {
     uint8_t clearStencil;
 } PrGpuGraphPassDesc;
 
-// Returns a pass over one color attachment, which it loads as `load` says, clears to `clear` if it clears it, and
-// keeps, as prGpuPassDescColor describes a pass of the device.
+// Returns a pass of one view over one color attachment, which it loads as `load` says, clears to `clear` if it clears
+// it, and keeps, as prGpuPassDescColor describes a pass of the device.
 PrGpuGraphPassDesc prGpuGraphPassDescColor(PrGpuGraphTexture texture, PrGpuLoad load, PrColor clear);
 
 // Called while the graph records, to record a pass's draws into `pass`, which the graph begins and ends.

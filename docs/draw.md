@@ -173,7 +173,7 @@ lowers both kinds to lists. Hinting applies only under a plain scale, and shapin
   and an image brush's `limit` caps its texels in the draw itself.
 - **Swap chains report their encoding.** A `gpu` swap chain is created for SDR or HDR (`PrGpuSwapChainIntent`), and
   its device chooses the format and the color space that the platform presents: 8-bit sRGB for SDR, and for HDR,
-  extended sRGB in half floats, scRGB, or HDR10's PQ on 10 bits (`PrGpuSwapChainInfo`). The swap chain converts no
+  scRGB in half floats, linear scRGB, or HDR10's PQ on 10 bits (`PrGpuSwapChainInfo`). The swap chain converts no
   colors, so an SDR render draws into it directly, and an HDR render draws into a texture of its own that the
   application converts into the swap chain's. An application's frame reports the display (`PrAppDisplay`), as
   [rendering.md](rendering.md#the-display-and-the-users-preferences) describes.

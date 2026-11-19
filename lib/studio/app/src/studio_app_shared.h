@@ -116,6 +116,12 @@ struct StudioWindowState {
     RawArray<StudioWindowPortal*> portals;
     RawArray<PrUiViewportInfo> viewports;
     PrAppOutput output;
+
+    // A capture that the application requested (prStudioWindowCapture): the function that takes it and its context, and
+    // whether the next frame takes it.
+    PrStudioWindowCaptureFn PR_NULLABLE capture;
+    void* PR_NULLABLE captureContext;
+    bool capturePending;
 };
 
 // Returns true if the application's device is ready and has a renderer. Otherwise frees a lost device, which includes

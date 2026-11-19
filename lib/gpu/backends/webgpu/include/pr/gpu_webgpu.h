@@ -19,7 +19,7 @@
 // is ready once the page's event loop finishes its creation, with or without a pool, and a wait returns at once. The
 // page's thread is the device's only thread.
 //
-// A swap chain presents to a page's canvas, which a surface of PrAppSurfaceKind_HtmlCanvas names, in 8-bit sRGB.
+// A swap chain presents to a page's canvas, which a surface of PrSurfaceKind_HtmlCanvas names, in 8-bit sRGB.
 
 #pragma once
 

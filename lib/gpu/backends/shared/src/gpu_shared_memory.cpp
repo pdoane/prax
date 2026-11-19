@@ -1071,6 +1071,7 @@ PrGpuPass* passBegin(PrGpuCommands* commands, const PrGpuPassDesc* desc) {
     pass->commands = c;
     pass->formats.colorCount = desc->colorCount;
     pass->formats.samples = 1;
+    pass->formats.viewCount = 1;
     for (uint8_t i = 0; i < desc->colorCount; ++i) {
         const PrGpuAttachment& a = desc->color[i];
         PrGpuTextureDesc t = textureOf(d, a.texture).desc;
@@ -1140,7 +1141,7 @@ void passDrawIndexedIndirect(PrGpuPass*, PrGpuBuffer, uint64_t, uint32_t, uint32
 // ---------------------------------------------------------------------------------------------------------------------
 // Swap chains, which the device lacks until its backend creates its own
 
-PrStatus swapChainCreate(PrGpuDevice*, const PrAppSurface*, const PrGpuSwapChainDesc*,
+PrStatus swapChainCreate(PrGpuDevice*, const PrSurface*, const PrGpuSwapChainDesc*,
         PrGpuSwapChain* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;
     return PrStatus_NotSupported;
@@ -1241,6 +1242,7 @@ PrGpuDevice* gpuMemoryCreate(PrStringView backend, const GpuMemoryMirror* PR_NUL
         .adapter = "memory",
         .backend = backend,
         .maxTextureSize = kMaxTextureSize,
+        .maxViews = 1,
         .sampleCounts = 1,
         .limits = limits,
         .storageOffsetAlignment = 16,

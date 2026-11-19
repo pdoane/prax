@@ -5,10 +5,11 @@
 // (pr/gpu.slang): resources, where an entry is a texture's MTLResourceID or a buffer's GPU address, and samplers, where
 // it is a sampler's MTLResourceID. A command buffer binds push data at buffer index 0, uniforms at 1, the resource heap
 // at 2 and the sampler heap at 3. Push data and uniforms go into the command buffer's stream. The slots follow at the
-// indices of GpuMetalBinding and GpuMetalTextureBinding, which pr/gpu.slang declares alike. Resources are untracked, so
-// a backend orders work by itself. A device with a residency set keeps every resource in it, and the queue holds the
-// set. A bindless device has one, because its shaders reach resources that no encoder binds. A device without a
-// residency set relies on its encoders, which make resident the resources that they bind to slots.
+// indices of GpuMetalBinding and GpuMetalTextureBinding, which pr/gpu.slang declares alike, and then a pass's view base
+// (GpuMetalView). Resources are untracked, so a backend orders work by itself. A device with a residency set keeps
+// every resource in it, and the queue holds the set. A bindless device has one, because its shaders reach resources
+// that no encoder binds. A device without a residency set relies on its encoders, which make resident the resources
+// that they bind to slots.
 //
 // A destroyed object is kept until every command buffer that began before its destruction is done, since any of them
 // may use it. A fence is reached once its submission and those before it are done and the functions that wait for the
@@ -58,8 +59,8 @@ constexpr uint32_t kGpuMetalRwBufferSlots = 8;
 constexpr uint32_t kGpuMetalTextureSlots = 16;
 constexpr uint32_t kGpuMetalRwTextureSlots = 8;
 
-// The buffer indices of root data, heaps and buffer slots, as pr/gpu.slang binds them, and of vertex buffers, which a
-// pipeline's vertex descriptor reads.
+// The buffer indices of root data, heaps, buffer slots and the view base, as pr/gpu.slang binds them, and of vertex
+// buffers, which a pipeline's vertex descriptor reads.
 enum {
     GpuMetalBinding_Push = 0,
     GpuMetalBinding_Uniforms = 1,
@@ -67,10 +68,24 @@ enum {
     GpuMetalBinding_Samplers = 3,
     GpuMetalBinding_Buffers = 4,
     GpuMetalBinding_RwBuffers = GpuMetalBinding_Buffers + kGpuMetalBufferSlots,
-    GpuMetalBinding_Vertices = GpuMetalBinding_RwBuffers + kGpuMetalRwBufferSlots,
+    GpuMetalBinding_View = GpuMetalBinding_RwBuffers + kGpuMetalRwBufferSlots,
+    GpuMetalBinding_Vertices,
     GpuMetalBinding_Count = GpuMetalBinding_Vertices + kPrGpuMaxVertexBuffers,
 };
 typedef uint32_t GpuMetalBinding;
+
+// The index of the function constant that turns on a vertex function's layer output, which cmake/shader_library.cmake
+// makes depend on it: above the indices that Slang gives a shader's own specialization constants. A device without
+// layered rendering compiles its pipelines without the output.
+constexpr NSUInteger kGpuMetalLayeredConstant = 0x7fff;
+
+// What a draw adds to the view and the layer that Metal's amplification gives it, as pr/gpu.slang's PrGpuViewBase reads
+// it. A pass that Metal amplifies has a zero base. A pass of several views on a device that cannot amplify them draws
+// each draw once for each view, with the view's base.
+struct GpuMetalView {
+    uint32_t view;
+    uint32_t layer;
+};
 
 // The texture indices of texture slots, as pr/gpu.slang binds them. A Texture slot's sampler is at the slot's own
 // sampler index.
@@ -200,8 +215,13 @@ struct GpuMetalLibrary : GpuSharedLibrary {
 
 // A drawable that presents with a command buffer.
 struct GpuMetalDrawable {
-    id drawable;                        // id<CAMetalDrawable>, retained
+    id PR_NULLABLE drawable;            // id<CAMetalDrawable>, retained, or nil for a compositor's drawable
     bool transactional;                 // presents within the window's display transaction
+
+    // A compositor's drawable, which is valid until its session ends the frame after the submission, and what encodes
+    // its present in the command buffer that draws it, just before it is committed.
+    void* PR_NULLABLE compositorDrawable;
+    void (*PR_NULLABLE encodePresent)(void* drawable, id commandBuffer);
 };
 
 struct GpuMetalPass;
@@ -235,6 +255,10 @@ struct GpuMetalPass : GpuSharedPass {
     PrGpuBuffer indexBuffer;
     uint64_t indexOffset;
     MTLIndexType indexType;
+    bool eachView;                      // true if each draw is drawn once for each view, since Metal cannot amplify
+
+    // On Metal 4, the address of the pass's view bases in the stream, kGpuMetalRootAlignment apart.
+    uint64_t viewBases;
 };
 
 // A swap chain over a Metal layer.
@@ -274,6 +298,8 @@ struct GpuMetalDevice : GpuSharedDevice {
     RawArray<PrGpuFence> doneAhead;                  // the fences that completed ahead of one before them, under
                                                      // doneMutex
     bool bindless;                                   // has PrGpuFeatureFlag_Bindless
+    bool layered;                                    // renders to the layers of an array within a pass
+    bool compositorPresents;                         // the backend encodes a GpuMetalDrawable's encodePresent
     id<MTLResidencySet> PR_NULLABLE residency;       // retained; null without GpuMetalDeviceFlag_Residency
     CVMetalTextureCacheRef PR_NULLABLE textureCache; // made the first time an image is imported, under `mutex`
     id<MTLBuffer> resourceHeap;                      // retained
@@ -394,7 +420,7 @@ void* gpuMetalStream(GpuMetalDevice* d, GpuMetalCommands* c, uint64_t size, uint
 void gpuMetalRenderPipelineSet(const GpuMetalPipeline& p, id encoder);
 
 // Acquires a swap chain's next drawable, at `extent`.
-PrStatus gpuMetalSwapChainAcquire(PrGpuSwapChain* handle, PrUVec2 extent, PrGpuTexture* out);
+PrStatus gpuMetalSwapChainAcquire(PrGpuSwapChain* handle, PrUVec2 extent, PrGpuSwapChainFrame* out);
 
 // Runs what a submission's completion does: reports an error, calls `dones` and frees them, and raises the device's
 // count of fences done. Called once for each fence, in any order.
@@ -452,6 +478,9 @@ void gpuMetalEncodeTextureCopy(id encoder, const GpuMetalTextureCopy& copy);
 // them.
 void gpuMetalPassChanged(GpuMetalPass* pass, PrGpuNativeStateFlags flags);
 
+// Returns the function constants that every pipeline of the device is compiled with.
+MTLFunctionConstantValues* gpuMetalFunctionConstants(const GpuMetalDevice* d);
+
 // Fills a device's shared state and the functions that the backends share. The backend's constructor calls
 // gpuMetalDeviceInstall. The backend's initialization calls gpuMetalDeviceOpen, which takes `device`, then creates the
 // queue and calls gpuMetalDeviceAddQueue, which takes the queue and adds the residency set to it.
@@ -487,6 +516,31 @@ void gpuMetalColorAttachmentFill(Attachment* PR_NONNULL a, PrGpuFormat format, c
         ((write & PrGpuColorWriteFlag_Alpha) ? MTLColorWriteMaskAlpha : 0);
 }
 
+// Returns true if Metal amplifies the vertices of a pass of `viewCount` views on the device. Without amplification, a
+// pass of several views draws each draw once for each view.
+inline bool gpuMetalAmplifies(const GpuMetalDevice* d, uint8_t viewCount) {
+    return viewCount > 1 && [d->device supportsVertexAmplificationCount:viewCount];
+}
+
+// Returns the vertex amplification that a pipeline of `viewCount` views is compiled for.
+inline NSUInteger gpuMetalAmplification(const GpuMetalDevice* d, uint8_t viewCount) {
+    return gpuMetalAmplifies(d, viewCount) ? viewCount : 1;
+}
+
+// Sets up the views of a pass on its encoder of either API: Metal's amplification, with each view mapped to its layer,
+// or else a draw for each view.
+template <typename Encoder>
+void gpuMetalPassViewsBegin(const GpuMetalDevice* d, Encoder encoder, GpuMetalPass* pass) {
+    uint8_t views = pass->formats.viewCount;
+    pass->eachView = views > 1 && !gpuMetalAmplifies(d, views);
+    if (!gpuMetalAmplifies(d, views))
+        return;
+    MTLVertexAmplificationViewMapping mappings[kPrGpuMaxViews];
+    for (uint8_t i = 0; i < views; ++i)
+        mappings[i] = MTLVertexAmplificationViewMapping{.viewportArrayIndexOffset = 0, .renderTargetArrayIndexOffset = i};
+    [encoder setVertexAmplificationCount:views viewMappings:mappings];
+}
+
 // Returns the load action of a load.
 inline MTLLoadAction gpuMetalLoadAction(PrGpuLoad load) {
     if (load == PrGpuLoad_Clear)
@@ -499,6 +553,11 @@ template <typename Descriptor>
 void gpuMetalPassAttachmentsFill(const GpuMetalDevice* d, Descriptor* PR_NONNULL rp, const PrGpuPassDesc* desc,
         GpuMetalPass* pass) {
     pass->formats.samples = 1;
+    // A pass is layered, even of one view, since a shader of views writes its layer (pr/gpu.slang), where the device
+    // has layers.
+    pass->formats.viewCount = desc->viewCount;
+    if (d->layered)
+        rp.renderTargetArrayLength = desc->viewCount;
     for (uint8_t i = 0; i < desc->colorCount; ++i) {
         const PrGpuAttachment& a = desc->color[i];
         MTLRenderPassColorAttachmentDescriptor* ca = rp.colorAttachments[i];

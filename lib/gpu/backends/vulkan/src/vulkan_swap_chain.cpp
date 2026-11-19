@@ -10,6 +10,7 @@
 
 #include "pr/alloc.h"
 #include "pr/assert.h"
+#include "pr/count_of.h"
 #include "pr/mem.h"
 
 #include "gpu/backends/vulkan/src/vulkan_platform.h"
@@ -119,6 +120,8 @@ PrStatus rebuild(VulkanDevice* d, VulkanSwapChain* s, VkExtent2D requested) {
     prMutexLock(&d->mutex);
     for (uint32_t i = 0; i < count; ++i) {
         uint32_t slot = vulkanTextureAdd(d, handles.data[i], &desc);
+        if (slot != 0)
+            vulkanResourceAt(d, slot).presentable = true;
         VkSemaphoreCreateInfo semaphoreInfo{};
         semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
         VkSemaphore rendered = VK_NULL_HANDLE;
@@ -160,7 +163,7 @@ void chooseFormat(VulkanDevice* d, VulkanSwapChain* s, PrGpuSwapChainIntent inte
         PrColorSpace_Srgb,
     };
     bool found = false;
-    if (intent == PrGpuSwapChainIntent_Hdr) {
+    if (intent != PrGpuSwapChainIntent_Sdr) {
         for (const Choice& choice : hdr) {
             for (uint32_t i = 0; i < formats.count && !found; ++i) {
                 if (formats.data[i].format == choice.format && formats.data[i].colorSpace == choice.space) {
@@ -185,7 +188,38 @@ void chooseFormat(VulkanDevice* d, VulkanSwapChain* s, PrGpuSwapChainIntent inte
     s->info.space = chosen.reported;
 }
 
-PrStatus swapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const PrGpuSwapChainDesc* desc,
+// Returns the present mode that gives `sync` where `surface` has it, or FIFO, which every surface has, and writes the
+// sync that the mode gives to `given`.
+VkPresentModeKHR presentModeOf(VulkanDevice* d, VkSurfaceKHR surface, PrGpuSwapChainSync sync, PrGpuSwapChainSync* given) {
+    *given = PrGpuSwapChainSync_Vsync;
+    VkPresentModeKHR wanted = VK_PRESENT_MODE_FIFO_KHR;
+    switch (sync) {
+        case PrGpuSwapChainSync_Vsync:
+            return VK_PRESENT_MODE_FIFO_KHR;
+        case PrGpuSwapChainSync_Latest:
+            wanted = VK_PRESENT_MODE_MAILBOX_KHR;
+            break;
+        case PrGpuSwapChainSync_Immediate:
+            wanted = VK_PRESENT_MODE_IMMEDIATE_KHR;
+            break;
+    }
+    if (d->vk.GetPhysicalDeviceSurfacePresentModesKHR == nullptr)
+        return VK_PRESENT_MODE_FIFO_KHR;
+    VkPresentModeKHR modes[8] = {};
+    uint32_t count = countOf(modes);
+    VkResult result = d->vk.GetPhysicalDeviceSurfacePresentModesKHR(d->physical, surface, &count, modes);
+    if (result != VK_SUCCESS && result != VK_INCOMPLETE)
+        return VK_PRESENT_MODE_FIFO_KHR;
+    for (uint32_t i = 0; i < count; ++i) {
+        if (modes[i] == wanted) {
+            *given = sync;
+            return wanted;
+        }
+    }
+    return VK_PRESENT_MODE_FIFO_KHR;
+}
+
+PrStatus swapChainCreate(PrGpuDevice* device, const PrSurface* surface, const PrGpuSwapChainDesc* desc,
         PrGpuSwapChain* PR_NULLABLE* PR_NONNULL out) {
     VulkanDevice* d = vulkanDevice(device);
     if (d->vk.CreateSwapchainKHR == nullptr || d->vk.GetPhysicalDeviceSurfaceSupportKHR == nullptr)
@@ -205,7 +239,7 @@ PrStatus swapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const
     static_cast<PrGpuSwapChain&>(*s) = kSwapChainFunctions;
     s->device = device;
     s->surface = native;
-    s->presentMode = VK_PRESENT_MODE_FIFO_KHR;
+    s->presentMode = presentModeOf(d, native, desc->sync, &s->sync);
     // A transparent swap chain presents premultiplied alpha where the surface composes it, and opaque elsewhere.
     s->compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
     if ((desc->flags & PrGpuSwapChainFlag_Transparent) != 0 &&
@@ -251,7 +285,9 @@ void swapChainWait(PrGpuSwapChain* swapChain) {
     s->waited = true;
 }
 
-PrStatus swapChainAcquire(PrGpuSwapChain* swapChain, PrUVec2 extent, PrGpuTexture* out) {
+PrStatus swapChainAcquire(PrGpuSwapChain* swapChain, PrUVec2 extent, PrGpuSwapChainFrame* out) {
+    if (gpuSharedSwapChainAcquireCapture(static_cast<GpuSharedSwapChain*>(swapChain), extent, &out->color))
+        return PrStatus_Ok;
     PrGpuDevice* device = static_cast<GpuSharedSwapChain*>(swapChain)->device;
     VulkanDevice* d = vulkanDevice(device);
     VulkanSwapChain* s = swapChainOf(swapChain);
@@ -277,13 +313,15 @@ PrStatus swapChainAcquire(PrGpuSwapChain* swapChain, PrUVec2 extent, PrGpuTextur
             return d->lost.load() ? PrStatus_Lost : PrStatus_InvalidState;
         }
         s->current = image;
-        *out = PrGpuTexture{s->images.data[image].slot};
+        out->color = PrGpuTexture{s->images.data[image].slot};
         return PrStatus_Ok;
     }
     return PrStatus_InvalidState;
 }
 
 void swapChainPresent(PrGpuSwapChain* swapChain, PrGpuCommands* commands) {
+    if (gpuSharedSwapChainPresentCapture(static_cast<GpuSharedSwapChain*>(swapChain), commands))
+        return;
     VulkanSwapChain* s = swapChainOf(swapChain);
     if (s->current == UINT32_MAX)
         return;
@@ -298,6 +336,8 @@ constexpr PrGpuSwapChain kSwapChainFunctions = {
     .waitFn = swapChainWait,
     .acquireFn = swapChainAcquire,
     .presentFn = swapChainPresent,
+    .requestCaptureFn = gpuSharedSwapChainRequestCapture,
+    .cancelCaptureFn = gpuSharedSwapChainCancelCapture,
 };
 
 } // namespace
