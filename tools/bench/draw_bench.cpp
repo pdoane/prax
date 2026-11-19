@@ -458,7 +458,7 @@ int main(int argc, char** argv) {
         }
         for (BenchTarget& target : targets) {
             if (device != nullptr)
-                prGpuTextureDestroy(device, target.texture);
+                prGpuTextureRelease(device, target.texture);
         }
     }
     prDrawListRelease(list);

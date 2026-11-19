@@ -8,6 +8,7 @@
 #include "pr/assert.h"
 #include "pr/integer.h"
 #include "pr/mem.h"
+#include "pr/min_max.h"
 #include "pr/search.h"
 #include "pr/thread.h"
 
@@ -77,7 +78,7 @@ void freeResource(GpuMetalDevice* d, uint32_t slot) {
     releaseImage(r);
     r = GpuMetalResource{};
     setHeapEntry(d->resourceHeap, slot, 0);
-    d->freeResources.push(slot);
+    d->resources.free(slot);
 }
 
 void freePipeline(GpuMetalDevice* d, uint32_t id) {
@@ -85,7 +86,7 @@ void freePipeline(GpuMetalDevice* d, uint32_t id) {
     [p.state release];
     [p.depthStencil release];
     p = GpuMetalPipeline{};
-    d->freePipelines.push(id);
+    d->pipelines.free(id);
 }
 
 // Makes a block of `length` bytes of shared memory, or one without a buffer if the device has no memory or slot for it.
@@ -286,7 +287,13 @@ PrStatus bufferCreate(PrGpuDevice* device, const PrGpuBufferDesc* desc, PrGpuBuf
     }
 }
 
-void bufferDestroy(PrGpuDevice* device, PrGpuBuffer buffer) {
+void bufferRetain(PrGpuDevice* device, PrGpuBuffer buffer) {
+    gpuMetalDeviceFrom(device)->resources.retain(buffer.id);
+}
+
+void bufferRelease(PrGpuDevice* device, PrGpuBuffer buffer) {
+    if (!gpuMetalDeviceFrom(device)->resources.release(buffer.id))
+        return;
     gpuMetalRetire(gpuMetalDeviceFrom(device), GpuMetalRetiredKind_Resource, buffer.id);
 }
 
@@ -394,7 +401,13 @@ PrStatus textureCreateView(PrGpuDevice* device, PrGpuTexture texture, PrGpuTextu
     }
 }
 
-void textureDestroy(PrGpuDevice* device, PrGpuTexture texture) {
+void textureRetain(PrGpuDevice* device, PrGpuTexture texture) {
+    gpuMetalDeviceFrom(device)->resources.retain(texture.id);
+}
+
+void textureRelease(PrGpuDevice* device, PrGpuTexture texture) {
+    if (!gpuMetalDeviceFrom(device)->resources.release(texture.id))
+        return;
     gpuSharedTextureForget(gpuMetalDeviceFrom(device), texture);
     gpuMetalRetire(gpuMetalDeviceFrom(device), GpuMetalRetiredKind_Resource, texture.id);
 }
@@ -431,7 +444,7 @@ PrStatus samplerCreate(PrGpuDevice* device, const PrGpuSamplerDesc* desc, PrGpuS
         if (sampler == nil)
             return PrStatus_Limit;
         prMutexLock(&d->mutex);
-        uint32_t slot = d->nextSampler < kGpuMetalMaxSamplers ? d->nextSampler++ : 0;
+        uint32_t slot = d->samplers.take();
         if (slot != 0) {
             d->samplers[slot] = sampler;
             setHeapEntry(d->samplerHeap, slot, sampler.gpuResourceID._impl);
@@ -479,7 +492,13 @@ void shaderLibraryDestroy(PrGpuShaderLibrary* library) {
     prMemoryFree(m);
 }
 
-void pipelineDestroy(PrGpuDevice* device, PrGpuPipeline pipeline) {
+void pipelineRetain(PrGpuDevice* device, PrGpuPipeline pipeline) {
+    gpuMetalDeviceFrom(device)->pipelines.retain(pipeline.id);
+}
+
+void pipelineRelease(PrGpuDevice* device, PrGpuPipeline pipeline) {
+    if (!gpuMetalDeviceFrom(device)->pipelines.release(pipeline.id))
+        return;
     gpuMetalRetire(gpuMetalDeviceFrom(device), GpuMetalRetiredKind_Pipeline, pipeline.id);
 }
 
@@ -904,17 +923,10 @@ MTLStages gpuMetalStages(PrGpuAccessFlags access) {
 // Puts an object into a new resource slot, adds it to the residency set and writes its heap entry. Returns zero if no
 // slot is left. The caller holds the mutex.
 uint32_t gpuMetalResourceAddLocked(GpuMetalDevice* d, GpuMetalSlot kind, id object, uint64_t entry) {
-    uint32_t slot = 0;
-    if (d->freeResources.count != 0) {
-        slot = d->freeResources.last();
-        d->freeResources.pop();
-    } else if (d->nextResource < kGpuMetalMaxResources) {
-        slot = d->nextResource++;
-    }
+    uint32_t slot = d->resources.take();
     if (slot == 0)
         return 0;
     GpuMetalResource& r = d->resources[slot];
-    r = GpuMetalResource{};
     r.kind = kind;
     r.object = [object retain];
     [d->residency addAllocation:object];
@@ -989,12 +1001,12 @@ void gpuMetalCommitResidency(GpuMetalDevice* d) {
 }
 
 id<MTLBuffer> gpuMetalBuffer(const GpuMetalDevice* d, uint32_t slot) {
-    PR_ASSERT(slot < kGpuMetalMaxResources && d->resources[slot].kind == GpuMetalSlot_Buffer);
+    PR_ASSERT(d->resources[slot].kind == GpuMetalSlot_Buffer);
     return d->resources[slot].object;
 }
 
 id<MTLTexture> gpuMetalTexture(const GpuMetalDevice* d, uint32_t slot) {
-    PR_ASSERT(slot < kGpuMetalMaxResources && d->resources[slot].kind == GpuMetalSlot_Texture);
+    PR_ASSERT(d->resources[slot].kind == GpuMetalSlot_Texture);
     return d->resources[slot].object;
 }
 
@@ -1020,13 +1032,7 @@ void gpuMetalWaitIdle(PrGpuDevice* device) {
 
 uint32_t gpuMetalPipelineAdd(GpuMetalDevice* d, const GpuMetalPipeline& pipeline) {
     prMutexLock(&d->mutex);
-    uint32_t id = 0;
-    if (d->freePipelines.count != 0) {
-        id = d->freePipelines.last();
-        d->freePipelines.pop();
-    } else if (d->nextPipeline < kGpuMetalMaxPipelines) {
-        id = d->nextPipeline++;
-    }
+    uint32_t id = d->pipelines.take();
     if (id != 0)
         d->pipelines[id] = pipeline;
     prMutexUnlock(&d->mutex);
@@ -1351,19 +1357,18 @@ void gpuMetalPassChanged(GpuMetalPass* pass, PrGpuNativeStateFlags flags) {
         gpuMetalCommandsFrom(pass->commands)->changed |= flags;
 }
 
-void gpuMetalDeviceInstall(GpuMetalDevice* d) {
+void gpuMetalDeviceInstall(GpuMetalDevice* d, PrGpuDeviceLimits limits) {
     gpuSharedDeviceInit(d);
     prMutexInit(&d->doneMutex);
     prConditionInit(&d->doneSignal);
     prMutexInit(&d->mutex);
-    d->resources =
-        static_cast<GpuMetalResource*>(prMemoryAllocZeroed(sizeof(GpuMetalResource) * kGpuMetalMaxResources));
-    d->samplers = static_cast<id<MTLSamplerState>*>(prMemoryAllocZeroed(sizeof(id) * kGpuMetalMaxSamplers));
-    d->pipelines =
-        static_cast<GpuMetalPipeline*>(prMemoryAllocZeroed(sizeof(GpuMetalPipeline) * kGpuMetalMaxPipelines));
-    d->nextResource = 1;
-    d->nextSampler = 1;
-    d->nextPipeline = 1;
+    limits = gpuSharedDeviceLimits(limits);
+    limits.resources = min(limits.resources, kGpuMetalMaxResources);
+    limits.samplers = min(limits.samplers, kGpuMetalMaxSamplers);
+    d->info.limits = limits;
+    d->resources.init(1, limits.resources);
+    d->samplers.init(1, limits.samplers);
+    d->pipelines.init(1, limits.pipelines);
     d->serial = 1;
     d->staging = GpuSharedStaging{
         .context = d,
@@ -1381,20 +1386,23 @@ void gpuMetalDeviceInstall(GpuMetalDevice* d) {
     d->waitIdleFn = gpuMetalWaitIdle;
     d->supportsFormatFn = supportsFormat;
     d->bufferCreateFn = bufferCreate;
-    d->bufferDestroyFn = bufferDestroy;
+    d->bufferRetainFn = bufferRetain;
+    d->bufferReleaseFn = bufferRelease;
     d->bufferDescFn = bufferDesc;
     d->bufferStorageHandleFn = bufferStorageHandle;
     d->bufferMapFn = bufferMap;
     d->bufferUploadFn = bufferUpload;
     d->textureCreateFn = textureCreate;
     d->textureCreateViewFn = textureCreateView;
-    d->textureDestroyFn = textureDestroy;
+    d->textureRetainFn = textureRetain;
+    d->textureReleaseFn = textureRelease;
     d->textureDescFn = textureDesc;
     d->textureStorageHandleFn = textureStorageHandle;
     d->textureUploadFn = textureUpload;
     d->samplerCreate = samplerCreate;
     d->shaderLibraryCreateFn = shaderLibraryCreate;
-    d->pipelineDestroyFn = pipelineDestroy;
+    d->pipelineRetainFn = pipelineRetain;
+    d->pipelineReleaseFn = pipelineRelease;
     d->pipelineGroupSizeFn = pipelineGroupSize;
     d->swapChainCreateFn = swapChainCreate;
     d->shaderTarget = PrGpuShaderTarget_Metal;
@@ -1417,9 +1425,10 @@ void gpuMetalDeviceOpen(GpuMetalDevice* d, id<MTLDevice> device, bool bindless) 
         rd.initialCapacity = 256;
         d->residency = [device newResidencySetWithDescriptor:rd error:nil];
     }
-    d->resourceHeap = [device newBufferWithLength:kGpuMetalMaxResources * sizeof(uint64_t)
+    // A heap has an entry for each slot, and slot zero, which is no object.
+    d->resourceHeap = [device newBufferWithLength:(d->resources.count + 1) * sizeof(uint64_t)
         options:MTLResourceStorageModeShared | MTLResourceHazardTrackingModeUntracked];
-    d->samplerHeap = [device newBufferWithLength:kGpuMetalMaxSamplers * sizeof(uint64_t)
+    d->samplerHeap = [device newBufferWithLength:(d->samplers.count + 1) * sizeof(uint64_t)
         options:MTLResourceStorageModeShared | MTLResourceHazardTrackingModeUntracked];
     [d->residency addAllocation:d->resourceHeap];
     [d->residency addAllocation:d->samplerHeap];
@@ -1439,8 +1448,6 @@ void gpuMetalDeviceOpen(GpuMetalDevice* d, id<MTLDevice> device, bool bindless) 
 #if !TARGET_OS_SIMULATOR
     d->info.features |= PrGpuFeatureFlag_TargetReads | PrGpuFeatureFlag_OrderedTargetReads;
 #endif
-    d->info.maxResourceHandles = bindless ? kGpuMetalMaxResources - 1 : 0;
-    d->info.maxSamplerHandles = bindless ? kGpuMetalMaxSamplers - 1 : 0;
 }
 
 void gpuMetalDeviceAddQueue(GpuMetalDevice* d, id queue) {
@@ -1456,24 +1463,22 @@ void gpuMetalDeviceReset(GpuMetalDevice* d) {
         gpuMetalCollect(d);
     for (uint32_t i = 0; i < d->held.count; ++i)
         [d->held.data[i].object release];
-    for (uint32_t i = 1; i < d->nextResource; ++i) {
+    for (uint32_t i = 1; i < d->resources.nextId; ++i) {
         [d->resources[i].object release];
         releaseImage(d->resources[i]);
     }
-    for (uint32_t i = 1; i < d->nextSampler; ++i)
+    for (uint32_t i = 1; i < d->samplers.nextId; ++i)
         [d->samplers[i] release];
-    for (uint32_t i = 1; i < d->nextPipeline; ++i) {
+    for (uint32_t i = 1; i < d->pipelines.nextId; ++i) {
         [d->pipelines[i].state release];
         [d->pipelines[i].depthStencil release];
     }
     prMutexUnlock(&d->mutex);
     if (d->residency != nil)
         [d->queue removeResidencySet:d->residency];
-    prMemoryFree(d->resources);
-    prMemoryFree(d->samplers);
-    prMemoryFree(d->pipelines);
-    d->freeResources.reset();
-    d->freePipelines.reset();
+    d->resources.reset();
+    d->samplers.reset();
+    d->pipelines.reset();
     d->inFlight.reset();
     d->retired.reset();
     d->held.reset();

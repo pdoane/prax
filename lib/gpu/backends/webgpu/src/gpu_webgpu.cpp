@@ -132,12 +132,10 @@ struct WebgpuPass;
 struct WebgpuDevice : GpuSharedDevice {
     uint32_t page;                      // the page's id of the GPUDevice, or zero before it is ready
     bool lost;
-    RawArray<WebgpuResource> resources; // by id, with an empty entry at zero
-    RawArray<uint32_t> freeIds;
+    GpuSharedTable<WebgpuResource> resources;
+    GpuSharedTable<PrGpuSamplerDesc> samplers;
+    GpuSharedTable<WebgpuPipeline> pipelines;
     RawArray<WebgpuRetired> retired;
-    RawArray<WebgpuPipeline> pipelines; // by id, with an empty entry at zero
-    RawArray<uint32_t> freePipelines;
-    uint32_t nextSampler;
     RawArray<uint32_t> freeBlocks;      // the buffers of kBlockSize stream blocks that no command buffer holds
     RawArray<WebgpuBlock> spentBlocks;  // the blocks of submitted work, by the fences in `spentFences`
     RawArray<PrGpuFence> spentFences;
@@ -204,15 +202,9 @@ void emitRegion(WebgpuCommands* c, const PrGpuTextureRegion& r) {
 
 // Returns a new resource id, or zero if the device has none left.
 uint32_t addResource(WebgpuDevice* d, const WebgpuResource& resource) {
-    uint32_t id = 0;
-    if (d->freeIds.count != 0) {
-        id = d->freeIds.last();
-        d->freeIds.pop();
-        d->resources.data[id] = resource;
-    } else {
-        id = d->resources.count;
-        d->resources.push(resource);
-    }
+    const uint32_t id = d->resources.take();
+    if (id != 0)
+        d->resources[id] = resource;
     return id;
 }
 
@@ -227,12 +219,12 @@ void collect(WebgpuDevice* d) {
             d->retired.data[kept++] = r;
             continue;
         }
-        WebgpuResource& resource = d->resources.data[r.id];
+        WebgpuResource& resource = d->resources[r.id];
         prMemoryFree(resource.shadow);
         resource = WebgpuResource{};
         if (d->page != 0)
             prGpuWebgpuResourceRelease(d->page, r.id);
-        d->freeIds.push(r.id);
+        d->resources.free(r.id);
     }
     d->retired.count = kept;
 }
@@ -252,15 +244,14 @@ bool removed(const GpuSharedDevice* device) {
 void destroyDevice(GpuSharedDevice* device) {
     WebgpuDevice* d = static_cast<WebgpuDevice*>(device);
     gpuSharedDeviceReset(d);
-    for (uint32_t i = 0; i < d->resources.count; ++i)
-        prMemoryFree(d->resources.data[i].shadow);
+    for (uint32_t id = d->resources.firstId; id < d->resources.nextId; ++id)
+        prMemoryFree(d->resources[id].shadow);
     if (d->page != 0)
         prGpuWebgpuRelease(d->page);
     d->resources.reset();
-    d->freeIds.reset();
-    d->retired.reset();
+    d->samplers.reset();
     d->pipelines.reset();
-    d->freePipelines.reset();
+    d->retired.reset();
     d->freeBlocks.reset();
     d->spentBlocks.reset();
     d->spentFences.reset();
@@ -328,11 +319,13 @@ PrStatus createBuffer(WebgpuDevice* d, const PrGpuBufferDesc* desc, bool stream,
     uint64_t size = alignUp(desc->size, 16);
     if (desc->memory != PrGpuMemory_Device)
         resource.shadow = static_cast<uint8_t*>(prMemoryAllocZeroed(size_t(size)));
-    uint32_t id = addResource(d, resource);
-    if (!prGpuWebgpuBufferCreate(d->page, id, size, stream ? kStreamMemory : desc->memory, resource.shadow)) {
+    const uint32_t id = addResource(d, resource);
+    if (id == 0 || !prGpuWebgpuBufferCreate(d->page, id, size, stream ? kStreamMemory : desc->memory, resource.shadow)) {
         prMemoryFree(resource.shadow);
-        d->resources.data[id] = WebgpuResource{};
-        d->freeIds.push(id);
+        if (id != 0) {
+            d->resources[id] = WebgpuResource{};
+            d->resources.free(id);
+        }
         return PrStatus_Limit;
     }
     out->id = id;
@@ -343,12 +336,18 @@ PrStatus bufferCreate(PrGpuDevice* device, const PrGpuBufferDesc* desc, PrGpuBuf
     return createBuffer(webgpuOf(device), desc, false, out);
 }
 
-void bufferDestroy(PrGpuDevice* device, PrGpuBuffer buffer) {
+void bufferRetain(PrGpuDevice* device, PrGpuBuffer buffer) {
+    webgpuOf(device)->resources.retain(buffer.id);
+}
+
+void bufferRelease(PrGpuDevice* device, PrGpuBuffer buffer) {
+    if (!webgpuOf(device)->resources.release(buffer.id))
+        return;
     retire(webgpuOf(device), buffer.id);
 }
 
 PrGpuBufferDesc bufferDesc(const PrGpuDevice* device, PrGpuBuffer buffer) {
-    return webgpuOf(device)->resources.data[buffer.id].buffer;
+    return webgpuOf(device)->resources[buffer.id].buffer;
 }
 
 // WebGPU has no bindless, so no handle reaches a buffer.
@@ -357,14 +356,14 @@ uint32_t bufferStorageHandle(const PrGpuDevice*, PrGpuBuffer buffer) {
 }
 
 void* bufferMap(const PrGpuDevice* device, PrGpuBuffer buffer) {
-    uint8_t* shadow = webgpuOf(device)->resources.data[buffer.id].shadow;
+    uint8_t* shadow = webgpuOf(device)->resources[buffer.id].shadow;
     PR_ASSERT(shadow != nullptr);
     return shadow;
 }
 
 void bufferUpload(PrGpuDevice* device, PrGpuBuffer buffer, uint64_t offset, const void* data, uint64_t size) {
     WebgpuDevice* d = webgpuOf(device);
-    WebgpuResource& r = d->resources.data[buffer.id];
+    WebgpuResource& r = d->resources[buffer.id];
     if (r.shadow != nullptr)
         prMemCopy(r.shadow + offset, data, size_t(size));
     // WebGPU writes whole words, so a write of any other size copies the words that it covers.
@@ -389,11 +388,13 @@ PrStatus textureCreate(PrGpuDevice* device, const PrGpuTextureDesc* desc, PrGpuT
     WebgpuDevice* d = webgpuOf(device);
     WebgpuResource resource{.kind = WebgpuKind_Texture, .texture = *desc};
     resource.texture.name = PrStringView{};
-    uint32_t id = addResource(d, resource);
+    const uint32_t id = addResource(d, resource);
+    if (id == 0)
+        return PrStatus_Limit;
     if (!prGpuWebgpuTextureCreate(d->page, id, desc->kind, desc->format, desc->usage, desc->levels, desc->samples,
             desc->extent.width, desc->extent.height, desc->extent.depth)) {
-        d->resources.data[id] = WebgpuResource{};
-        d->freeIds.push(id);
+        d->resources[id] = WebgpuResource{};
+        d->resources.free(id);
         return PrStatus_NotSupported;
     }
     out->id = id;
@@ -403,28 +404,36 @@ PrStatus textureCreate(PrGpuDevice* device, const PrGpuTextureDesc* desc, PrGpuT
 PrStatus textureCreateView(PrGpuDevice* device, PrGpuTexture texture, PrGpuTextureKind kind,
         PrGpuSubresources subresources, PrGpuTexture* out) {
     WebgpuDevice* d = webgpuOf(device);
-    PrGpuTextureDesc desc = d->resources.data[texture.id].texture;
+    PrGpuTextureDesc desc = d->resources[texture.id].texture;
     desc.kind = kind;
     desc.levels = subresources.levels;
     WebgpuResource resource{.kind = WebgpuKind_Texture, .texture = desc};
-    uint32_t id = addResource(d, resource);
+    const uint32_t id = addResource(d, resource);
+    if (id == 0)
+        return PrStatus_Limit;
     if (!prGpuWebgpuTextureCreateView(d->page, id, texture.id, kind, desc.format, subresources.firstLevel,
             subresources.levels, subresources.firstLayer, subresources.layers)) {
-        d->resources.data[id] = WebgpuResource{};
-        d->freeIds.push(id);
+        d->resources[id] = WebgpuResource{};
+        d->resources.free(id);
         return PrStatus_NotSupported;
     }
     out->id = id;
     return PrStatus_Ok;
 }
 
-void textureDestroy(PrGpuDevice* device, PrGpuTexture texture) {
+void textureRetain(PrGpuDevice* device, PrGpuTexture texture) {
+    webgpuOf(device)->resources.retain(texture.id);
+}
+
+void textureRelease(PrGpuDevice* device, PrGpuTexture texture) {
+    if (!webgpuOf(device)->resources.release(texture.id))
+        return;
     gpuSharedTextureForget(webgpuOf(device), texture);
     retire(webgpuOf(device), texture.id);
 }
 
 PrGpuTextureDesc textureDesc(const PrGpuDevice* device, PrGpuTexture texture) {
-    return webgpuOf(device)->resources.data[texture.id].texture;
+    return webgpuOf(device)->resources[texture.id].texture;
 }
 
 uint32_t textureStorageHandle(const PrGpuDevice*, PrGpuTexture texture) {
@@ -450,9 +459,14 @@ PrStatus samplerCreate(PrGpuDevice* device, const PrGpuSamplerDesc* desc, PrGpuS
         desc->magnify, desc->minify, desc->mip, desc->address[0], desc->address[1], desc->address[2],
         desc->maxAnisotropy, desc->compare, minLod, maxLod,
     };
-    uint32_t id = ++d->nextSampler;
-    if (!prGpuWebgpuSamplerCreate(d->page, id, words))
+    const uint32_t id = d->samplers.take();
+    if (id == 0)
         return PrStatus_Limit;
+    if (!prGpuWebgpuSamplerCreate(d->page, id, words)) {
+        d->samplers.free(id);
+        return PrStatus_Limit;
+    }
+    d->samplers[id] = *desc;
     out->id = id;
     return PrStatus_Ok;
 }
@@ -483,16 +497,11 @@ PrStatus shaderLibraryCreate(PrGpuDevice* device, PrGpuShaderEntry* entries, uin
     return PrStatus_Ok;
 }
 
+// Returns a new pipeline id, or zero if the device has none left.
 uint32_t addPipeline(WebgpuDevice* d, const WebgpuPipeline& pipeline) {
-    uint32_t id = 0;
-    if (d->freePipelines.count != 0) {
-        id = d->freePipelines.last();
-        d->freePipelines.pop();
-        d->pipelines.data[id] = pipeline;
-    } else {
-        id = d->pipelines.count;
-        d->pipelines.push(pipeline);
-    }
+    const uint32_t id = d->pipelines.take();
+    if (id != 0)
+        d->pipelines[id] = pipeline;
     return id;
 }
 
@@ -512,10 +521,12 @@ void pushFloat(RawArray<uint32_t>& words, float value) {
 // Creates the page's pipeline from words that gpu_webgpu.js's pipelineCreate decodes. Returns NotSupported if the page
 // cannot make it, as for shaders that reach resources by handle.
 PrStatus pipelineCreate(WebgpuDevice* d, const RawArray<uint32_t>& words, const WebgpuPipeline& pipeline, PrGpuPipeline* out) {
-    uint32_t id = addPipeline(d, pipeline);
+    const uint32_t id = addPipeline(d, pipeline);
+    if (id == 0)
+        return PrStatus_Limit;
     if (!prGpuWebgpuPipelineCreate(d->page, id, words.data, words.count)) {
-        d->pipelines.data[id] = WebgpuPipeline{};
-        d->freePipelines.push(id);
+        d->pipelines[id] = WebgpuPipeline{};
+        d->pipelines.free(id);
         return PrStatus_NotSupported;
     }
     out->id = id;
@@ -590,15 +601,21 @@ PrStatus computePipelineCreate(PrGpuDevice* device, const PrGpuShaderLibrary*, c
     return status;
 }
 
-void pipelineDestroy(PrGpuDevice* device, PrGpuPipeline pipeline) {
+void pipelineRetain(PrGpuDevice* device, PrGpuPipeline pipeline) {
+    webgpuOf(device)->pipelines.retain(pipeline.id);
+}
+
+void pipelineRelease(PrGpuDevice* device, PrGpuPipeline pipeline) {
+    if (!webgpuOf(device)->pipelines.release(pipeline.id))
+        return;
     WebgpuDevice* d = webgpuOf(device);
-    d->pipelines.data[pipeline.id] = WebgpuPipeline{};
-    d->freePipelines.push(pipeline.id);
+    d->pipelines[pipeline.id] = WebgpuPipeline{};
+    d->pipelines.free(pipeline.id);
     prGpuWebgpuPipelineRelease(d->page, pipeline.id);
 }
 
 PrGpuExtent pipelineGroupSize(const PrGpuDevice* device, PrGpuPipeline pipeline) {
-    return webgpuOf(device)->pipelines.data[pipeline.id].groupSize;
+    return webgpuOf(device)->pipelines[pipeline.id].groupSize;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -630,7 +647,7 @@ void reach(WebgpuDevice* d, PrGpuFence fence, double seconds) {
             d->spentBlocks.data[kept] = d->spentBlocks.data[i];
             d->spentFences.data[kept] = d->spentFences.data[i];
             ++kept;
-        } else if (d->resources.data[spent].buffer.size == kBlockSize) {
+        } else if (d->resources[spent].buffer.size == kBlockSize) {
             d->freeBlocks.push(spent);
         } else {
             retire(d, spent);
@@ -695,7 +712,7 @@ void* stream(PrGpuCommands* commands, uint64_t size, uint64_t alignment, PrGpuBu
     WebgpuDevice* d = deviceOfCommands(commands);
     WebgpuBlock* block = c->blocks.count != 0 ? &c->blocks.last() : nullptr;
     uint64_t at = block != nullptr ? alignUp(block->used, alignment) : 0;
-    if (block == nullptr || at + size > d->resources.data[block->buffer].buffer.size) {
+    if (block == nullptr || at + size > d->resources[block->buffer].buffer.size) {
         uint32_t id = 0;
         if (size <= kBlockSize && d->freeBlocks.count != 0) {
             id = d->freeBlocks.last();
@@ -725,7 +742,7 @@ void* stream(PrGpuCommands* commands, uint64_t size, uint64_t alignment, PrGpuBu
     block->used = at + size;
     buffer->id = block->buffer;
     *offset = at;
-    return d->resources.data[block->buffer].shadow + at;
+    return d->resources[block->buffer].shadow + at;
 }
 
 void* commandsStream(PrGpuCommands* commands, uint64_t size, PrGpuBufferUsageFlags usage, PrGpuBuffer* buffer, uint64_t* offset) {
@@ -911,14 +928,14 @@ PrGpuPass* commandsPassBegin(PrGpuCommands* commands, const PrGpuPassDesc* desc)
     pass->formats.samples = 1;
     const PrGpuAttachment* first = desc->colorCount != 0 ? &desc->color[0] : &desc->depthStencil;
     if (first->texture.id != 0) {
-        const PrGpuTextureDesc& t = d->resources.data[first->texture.id].texture;
+        const PrGpuTextureDesc& t = d->resources[first->texture.id].texture;
         pass->extent = PrUVec2{t.extent.width >> first->level, t.extent.height >> first->level};
         pass->formats.samples = t.samples;
     }
     emit(c, WebgpuOp_PassBegin);
     emit(c, desc->colorCount);
     for (uint32_t i = 0; i < desc->colorCount; ++i) {
-        pass->formats.color[i] = d->resources.data[desc->color[i].texture.id].texture.format;
+        pass->formats.color[i] = d->resources[desc->color[i].texture.id].texture.format;
         emitAttachment(c, desc->color[i]);
         emitFloat(c, desc->clearColor[i].r);
         emitFloat(c, desc->clearColor[i].g);
@@ -926,7 +943,7 @@ PrGpuPass* commandsPassBegin(PrGpuCommands* commands, const PrGpuPassDesc* desc)
         emitFloat(c, desc->clearColor[i].a);
     }
     if (desc->depthStencil.texture.id != 0)
-        pass->formats.depthStencil = d->resources.data[desc->depthStencil.texture.id].texture.format;
+        pass->formats.depthStencil = d->resources[desc->depthStencil.texture.id].texture.format;
     emitAttachment(c, desc->depthStencil);
     emit(c, desc->stencilLoad);
     emit(c, desc->stencilStore);
@@ -1098,9 +1115,10 @@ PrStatus swapChainAcquire(PrGpuSwapChain* swapChain, PrUVec2 extent, PrGpuTextur
     // The canvas's texture of each frame is new, so its id names it anew.
     if (s->texture == 0) {
         s->texture = addResource(d, WebgpuResource{.kind = WebgpuKind_Texture});
+        if (s->texture == 0)
+            return PrStatus_Limit;
     }
-    d->resources.data[s->texture].texture = prGpuTextureDesc2d(s->info.format, extent,
-        PrGpuTextureUsageFlag_RenderTarget);
+    d->resources[s->texture].texture = prGpuTextureDesc2d(s->info.format, extent, PrGpuTextureUsageFlag_RenderTarget);
     prGpuWebgpuCanvasAcquire(d->page, s->canvas, s->texture, extent.x, extent.y);
     s->extent = extent;
     out->id = s->texture;
@@ -1185,14 +1203,16 @@ PrGpuDevice* prGpuWebgpuCreate(const PrGpuDeviceOptions* PR_NULLABLE options) {
     d->waitIdleFn = waitIdle;
     d->supportsFormatFn = supportsFormat;
     d->bufferCreateFn = bufferCreate;
-    d->bufferDestroyFn = bufferDestroy;
+    d->bufferRetainFn = bufferRetain;
+    d->bufferReleaseFn = bufferRelease;
     d->bufferDescFn = bufferDesc;
     d->bufferStorageHandleFn = bufferStorageHandle;
     d->bufferMapFn = bufferMap;
     d->bufferUploadFn = bufferUpload;
     d->textureCreateFn = textureCreate;
     d->textureCreateViewFn = textureCreateView;
-    d->textureDestroyFn = textureDestroy;
+    d->textureRetainFn = textureRetain;
+    d->textureReleaseFn = textureRelease;
     d->textureDescFn = textureDesc;
     d->textureStorageHandleFn = textureStorageHandle;
     d->textureUploadFn = textureUpload;
@@ -1200,7 +1220,8 @@ PrGpuDevice* prGpuWebgpuCreate(const PrGpuDeviceOptions* PR_NULLABLE options) {
     d->shaderLibraryCreateFn = shaderLibraryCreate;
     d->graphicsPipelineCreateFn = graphicsPipelineCreate;
     d->computePipelineCreateFn = computePipelineCreate;
-    d->pipelineDestroyFn = pipelineDestroy;
+    d->pipelineRetainFn = pipelineRetain;
+    d->pipelineReleaseFn = pipelineRelease;
     d->pipelineGroupSizeFn = pipelineGroupSize;
     d->commandsBeginFn = commandsBegin;
     d->swapChainCreateFn = swapChainCreate;
@@ -1211,8 +1232,11 @@ PrGpuDevice* prGpuWebgpuCreate(const PrGpuDeviceOptions* PR_NULLABLE options) {
     d->info.maxRwBufferSlots = 4;
     d->info.maxTextureSlots = 8;
     d->info.maxRwTextureSlots = 4;
-    d->resources.push(WebgpuResource{});
-    d->pipelines.push(WebgpuPipeline{});
+    const PrGpuDeviceLimits limits = gpuSharedDeviceLimits(o.limits);
+    d->info.limits = limits;
+    d->resources.init(1, limits.resources);
+    d->samplers.init(1, limits.samplers);
+    d->pipelines.init(1, limits.pipelines);
     gpuSharedDeviceStartLater(d, o.ready, o.readyContext);
     // A page without WebGPU fails the creation at once.
     if (!prGpuWebgpuRequest(d))

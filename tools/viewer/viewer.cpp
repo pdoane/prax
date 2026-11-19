@@ -1664,8 +1664,8 @@ void shutdown(void* context, PrApp*) {
     v.comparer.reset();
     v.printer.reset();
     prDrawDisplayDestroy(v.displayShader);
-    prGpuTextureDestroy(v.device, v.difference);
-    prGpuTextureDestroy(v.device, v.frame);
+    prGpuTextureRelease(v.device, v.difference);
+    prGpuTextureRelease(v.device, v.frame);
     uiDestroy(v.ui);
     // The documents are released before the device, because a page's canvases keep their bitmaps on it.
     v.open.reset();

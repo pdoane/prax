@@ -413,7 +413,7 @@ void redrawBeneath(void* PR_NULLABLE context, PrGpuPass* pass, PrIRect area) {
 // Frees what the window made on its device, and the device.
 void closeDevice(Window& w) {
     if (w.device != nullptr)
-        prGpuTextureDestroy(w.device, w.background);
+        prGpuTextureRelease(w.device, w.background);
     pipelinesDestroy(w.pipelines);
     prDrawFrameDestroy(w.frame);
     prDrawRendererDestroy(w.renderer);
@@ -475,7 +475,7 @@ bool openDevice(Window& w) {
 PrGpuTexture textureFor(PrGpuDevice* device, PrGpuTexture* texture, PrGpuFormat format, PrUVec2 extent) {
     PrUVec2 held = texture->id != 0 ? prGpuTextureExtent(device, *texture) : PrUVec2{};
     if (texture->id == 0 || held.x != extent.x || held.y != extent.y) {
-        prGpuTextureDestroy(device, *texture);
+        prGpuTextureRelease(device, *texture);
         PrGpuTextureDesc desc = prGpuTextureDesc2d(format, extent,
             PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_RenderTarget);
         *texture = PrGpuTexture{};

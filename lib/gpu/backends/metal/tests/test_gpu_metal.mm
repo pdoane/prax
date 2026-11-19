@@ -110,7 +110,7 @@ struct Fixture {
         prGpuDeviceWait(device, prGpuCommandsSubmit(commands));
         Array<uint32_t> out(count);
         prMemCopy(out.data(), prGpuBufferMap(device, readback), size_t(count) * 4);
-        prGpuBufferDestroy(device, readback);
+        prGpuBufferRelease(device, readback);
         return out;
     }
 };
@@ -178,8 +178,8 @@ TEST_CASE("metal records into the application's command buffer, around the appli
     prGpuDeviceWait(f.device, fence);
     CHECK(prGpuDeviceIsComplete(f.device, fence));
     CHECK(f.words(output, 4) == Array<uint32_t>({0, 11, 9, 9}));
-    prGpuPipelineDestroy(f.device, pipeline);
-    prGpuBufferDestroy(f.device, output);
+    prGpuPipelineRelease(f.device, pipeline);
+    prGpuBufferRelease(f.device, output);
 }
 
 TEST_CASE("metal draws into the application's pass, and says which of the pass's state its draws changed") {
@@ -236,8 +236,8 @@ TEST_CASE("metal draws into the application's pass, and says which of the pass's
         PrPixels{reinterpret_cast<uint8_t*>(pixels), 8 * 4, PrUVec2{8, 8}});
     CHECK(pixels[0] == 0xff0000ffu);
     CHECK(pixels[7 * 8 + 7] == 0xffff0000u);
-    prGpuPipelineDestroy(f.device, pipeline);
-    prGpuTextureDestroy(f.device, target);
+    prGpuPipelineRelease(f.device, pipeline);
+    prGpuTextureRelease(f.device, target);
 }
 
 TEST_CASE("metal hands a native draw the pass's encoder, and draws after it with its own state again") {
@@ -277,8 +277,8 @@ TEST_CASE("metal hands a native draw the pass's encoder, and draws after it with
         PrPixels{reinterpret_cast<uint8_t*>(pixels), 8 * 4, PrUVec2{8, 8}});
     CHECK(pixels[7] == 0xff0000ffu);
     CHECK(pixels[7 * 8] == 0xffff0000u);
-    prGpuPipelineDestroy(f.device, pipeline);
-    prGpuTextureDestroy(f.device, target);
+    prGpuPipelineRelease(f.device, pipeline);
+    prGpuTextureRelease(f.device, target);
 }
 
 TEST_CASE("metal imports a CVPixelBuffer as a texture without copying it, and releases it once the texture is gone") {
@@ -321,7 +321,7 @@ TEST_CASE("metal imports a CVPixelBuffer as a texture without copying it, and re
     CHECK(read[0] == 0xff0000ffu);
     CHECK(read[4] == 0xffff0000u);
     CHECK(!released);
-    prGpuTextureDestroy(f.device, texture);
+    prGpuTextureRelease(f.device, texture);
     prGpuDeviceWaitIdle(f.device);
     CHECK(released);
 }

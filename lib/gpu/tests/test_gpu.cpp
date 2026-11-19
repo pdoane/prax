@@ -108,7 +108,7 @@ struct Fixture {
         gpuSubmitAndWait(commands);
         Array<uint8_t> bytes(size);
         prMemCopy(bytes.data(), prGpuBufferMap(device, readback), size_t(size));
-        prGpuBufferDestroy(device, readback);
+        prGpuBufferRelease(device, readback);
         return bytes;
     }
 
@@ -275,7 +275,7 @@ TEST_CASE("a device created on a pool refuses work until its creation runs, then
         // On a system without what the backend needs, the device is lost, and it refuses work.
         if (prGpuDeviceLostStatus(device) == PrStatus_Ok) {
             REQUIRE(prGpuTextureCreate(device, &desc, &texture) == PrStatus_Ok);
-            prGpuTextureDestroy(device, texture);
+            prGpuTextureRelease(device, texture);
         } else {
             CHECK(prGpuDeviceLostStatus(device) == PrStatus_NotSupported);
             CHECK(prGpuTextureCreate(device, &desc, &texture) == PrStatus_Lost);
@@ -302,10 +302,13 @@ TEST_CASE("a device reports its backend and limits") {
         CHECK(info.adapter.size != 0);
         CHECK(prUtf8Validate(info.adapter) == info.adapter.size);
         CHECK(info.maxTextureSize >= 16384);
-        if (f.bindless)
-            CHECK(info.maxResourceHandles > 1000);
-        else
-            CHECK(info.maxResourceHandles == 0);
+        // Each device holds what the default limits ask for, or less where its API allows less.
+        const PrGpuDeviceLimits defaults = prGpuDeviceLimitsDefault();
+        CHECK(info.limits.resources > 1000);
+        CHECK(info.limits.resources <= defaults.resources);
+        CHECK(info.limits.samplers > 100);
+        CHECK(info.limits.samplers <= defaults.samplers);
+        CHECK(info.limits.pipelines == defaults.pipelines);
         CHECK(info.maxBufferSlots >= 4);
         CHECK(info.maxRwBufferSlots >= 4);
         CHECK(info.maxTextureSlots >= 8);
@@ -335,7 +338,7 @@ TEST_CASE("a texture's texels are written and read back, clipped to the texture"
         gpuTextureRead(f.device, texture, PrGpuAccessFlag_ShaderRead, PrIVec2{3, 2}, PrPixels{corner, 8, {2, 2}});
         CHECK(near(corner, 44, 45, 46, 47, 0));
         CHECK(near(corner + 4, 0, 0, 0, 0, 0));
-        prGpuTextureDestroy(f.device, texture);
+        prGpuTextureRelease(f.device, texture);
     });
 }
 
@@ -352,8 +355,8 @@ TEST_CASE("a buffer is created zeroed, in device memory and in memory that the a
         Array<uint8_t> mapped;
         mapped.append(bytes, 4096);
         CHECK(mapped == Array<uint8_t>(4096));
-        prGpuBufferDestroy(f.device, upload);
-        prGpuBufferDestroy(f.device, device);
+        prGpuBufferRelease(f.device, upload);
+        prGpuBufferRelease(f.device, device);
     });
 }
 
@@ -392,8 +395,8 @@ TEST_CASE("uploads to one resource before a submission land as they would copied
         Array<uint8_t> texels = f.read(texture);
         CHECK(near(texel(texels, 2, 0, 0), 120, 120, 120, 120, 0));
         CHECK(near(texel(texels, 2, 1, 1), 200, 200, 200, 200, 0));
-        prGpuTextureDestroy(f.device, texture);
-        prGpuBufferDestroy(f.device, buffer);
+        prGpuTextureRelease(f.device, texture);
+        prGpuBufferRelease(f.device, buffer);
     });
 }
 
@@ -408,7 +411,7 @@ TEST_CASE("a large upload is staged in pieces and lands whole") {
             bytes[uint32_t(i)] = uint8_t(i * 7 + (i >> 20));
         prGpuBufferUpload(f.device, buffer, 0, bytes.data(), size);
         CHECK(f.read(buffer, size) == bytes);
-        prGpuBufferDestroy(f.device, buffer);
+        prGpuBufferRelease(f.device, buffer);
     });
 }
 
@@ -434,8 +437,8 @@ TEST_CASE("uploads land in order across the batches that fill their staging") {
         expected.append(second, sizeof(second));
         CHECK(f.read(small, 256) == expected);
         CHECK(f.read(large) == texels);
-        prGpuTextureDestroy(f.device, large);
-        prGpuBufferDestroy(f.device, small);
+        prGpuTextureRelease(f.device, large);
+        prGpuBufferRelease(f.device, small);
     });
 }
 
@@ -452,8 +455,8 @@ TEST_CASE("a pass clears its target, and a draw covers what its vertices cover, 
         CHECK(near(texel(texels, 8, 7, 3), 255, 0, 0, 255));
         CHECK(near(texel(texels, 8, 0, 4), 0, 0, 255, 255));
         CHECK(near(texel(texels, 8, 7, 7), 0, 0, 255, 255));
-        prGpuPipelineDestroy(f.device, solid);
-        prGpuTextureDestroy(f.device, target);
+        prGpuPipelineRelease(f.device, solid);
+        prGpuTextureRelease(f.device, target);
     });
 }
 
@@ -485,10 +488,10 @@ TEST_CASE("a pass of other attachments draws with the pipeline set in it, not th
         gpuSubmitAndWait(commands);
         Array<uint8_t> texels = f.read(target);
         CHECK(near(texel(texels, 8, 4, 4), 0, 255, 0, 255));
-        prGpuPipelineDestroy(f.device, solid);
-        prGpuPipelineDestroy(f.device, layerSolid);
-        prGpuTextureDestroy(f.device, target);
-        prGpuTextureDestroy(f.device, layer);
+        prGpuPipelineRelease(f.device, solid);
+        prGpuPipelineRelease(f.device, layerSolid);
+        prGpuTextureRelease(f.device, target);
+        prGpuTextureRelease(f.device, layer);
     });
 }
 
@@ -499,8 +502,8 @@ TEST_CASE("a draw reads its push data and uniforms") {
         const float tint[4] = {0.5f, 1, 0, 1};
         f.draw(target, tinted, fill(1, 1, 1, 1), PrGpuLoad_Clear, PrColor{}, tint);
         CHECK(near(texel(f.read(target), 4, 2, 2), 128, 255, 0, 255));
-        prGpuPipelineDestroy(f.device, tinted);
-        prGpuTextureDestroy(f.device, target);
+        prGpuPipelineRelease(f.device, tinted);
+        prGpuTextureRelease(f.device, target);
     });
 }
 
@@ -553,11 +556,11 @@ TEST_CASE("a shader samples a texture and pulls vertices from a buffer, both by 
         CHECK(near(texel(out, 4, 0, 0), 0, 255, 0, 255));
         CHECK(near(texel(out, 4, 1, 3), 0, 255, 0, 255));
         CHECK(near(texel(out, 4, 2, 0), 0, 0, 0, 0));
-        prGpuPipelineDestroy(f.device, pulled);
-        prGpuPipelineDestroy(f.device, sampled);
-        prGpuBufferDestroy(f.device, buffer);
-        prGpuTextureDestroy(f.device, target);
-        prGpuTextureDestroy(f.device, source);
+        prGpuPipelineRelease(f.device, pulled);
+        prGpuPipelineRelease(f.device, sampled);
+        prGpuBufferRelease(f.device, buffer);
+        prGpuTextureRelease(f.device, target);
+        prGpuTextureRelease(f.device, source);
     });
 }
 
@@ -595,9 +598,9 @@ TEST_CASE("a shader follows a handle that it reads from a buffer, to a buffer in
             PrGpuAccessFlag_ShaderRead);
         gpuSubmitAndWait(commands);
         CHECK(near(texel(f.read(target), 2, 1, 1), 0, 0, 255, 255));
-        prGpuBufferDestroy(f.device, names);
-        prGpuPipelineDestroy(f.device, followed);
-        prGpuTextureDestroy(f.device, target);
+        prGpuBufferRelease(f.device, names);
+        prGpuPipelineRelease(f.device, followed);
+        prGpuTextureRelease(f.device, target);
     });
 }
 
@@ -633,9 +636,9 @@ TEST_CASE("a dispatch writes a buffer that a copy reads after a barrier") {
         CHECK(words[0] == 0);
         CHECK(words[1] == 2);
         CHECK(words[255] == 510);
-        prGpuBufferDestroy(f.device, in);
-        prGpuBufferDestroy(f.device, out);
-        prGpuPipelineDestroy(f.device, doubled);
+        prGpuBufferRelease(f.device, in);
+        prGpuBufferRelease(f.device, out);
+        prGpuPipelineRelease(f.device, doubled);
     });
 }
 
@@ -708,9 +711,9 @@ TEST_CASE("a draw fetches its vertices and instances through the pipeline's vert
         CHECK(near(texel(out, 4, 2, 0), 255, 0, 0, 255));
         CHECK(near(texel(out, 4, 1, 3), 0, 0, 0, 0));
         CHECK(near(texel(out, 4, 3, 3), 0, 0, 0, 0));
-        prGpuPipelineDestroy(f.device, pipeline);
-        prGpuBufferDestroy(f.device, buffer);
-        prGpuTextureDestroy(f.device, target);
+        prGpuPipelineRelease(f.device, pipeline);
+        prGpuBufferRelease(f.device, buffer);
+        prGpuTextureRelease(f.device, target);
     });
 }
 
@@ -773,12 +776,12 @@ TEST_CASE("a shader samples a texture and pulls vertices from a buffer, both bou
         CHECK(near(texel(out, 4, 0, 0), 0, 255, 0, 255));
         CHECK(near(texel(out, 4, 1, 3), 0, 255, 0, 255));
         CHECK(near(texel(out, 4, 2, 0), 0, 0, 0, 0));
-        prGpuPipelineDestroy(f.device, pulled);
-        prGpuPipelineDestroy(f.device, sampled);
-        prGpuBufferDestroy(f.device, buffer);
-        prGpuTextureDestroy(f.device, half);
-        prGpuTextureDestroy(f.device, target);
-        prGpuTextureDestroy(f.device, source);
+        prGpuPipelineRelease(f.device, pulled);
+        prGpuPipelineRelease(f.device, sampled);
+        prGpuBufferRelease(f.device, buffer);
+        prGpuTextureRelease(f.device, half);
+        prGpuTextureRelease(f.device, target);
+        prGpuTextureRelease(f.device, source);
     });
 }
 
@@ -829,11 +832,11 @@ TEST_CASE("a dispatch reads a Buffer slot and writes RwBuffer and RwTexture slot
         Array<uint8_t> texels = f.read(written);
         CHECK(near(texel(texels, 8, 0, 0), 0, 0, 255, 255));
         CHECK(near(texel(texels, 8, 7, 7), 0, 0, 255, 255));
-        prGpuTextureDestroy(f.device, written);
-        prGpuBufferDestroy(f.device, in);
-        prGpuBufferDestroy(f.device, out);
-        prGpuPipelineDestroy(f.device, filled);
-        prGpuPipelineDestroy(f.device, doubled);
+        prGpuTextureRelease(f.device, written);
+        prGpuBufferRelease(f.device, in);
+        prGpuBufferRelease(f.device, out);
+        prGpuPipelineRelease(f.device, filled);
+        prGpuPipelineRelease(f.device, doubled);
     });
 }
 
@@ -851,8 +854,8 @@ TEST_CASE("a shader reads the target as the draws before it left it") {
         PrGpuPipeline inverted{};
         if ((prGpuDeviceInfo(f.device).features & PrGpuFeatureFlag_TargetReads) == 0) {
             CHECK(prGpuPipelineCreateGraphics(f.device, &desc, &inverted) == PrStatus_NotSupported);
-            prGpuPipelineDestroy(f.device, solid);
-            prGpuTextureDestroy(f.device, target);
+            prGpuPipelineRelease(f.device, solid);
+            prGpuTextureRelease(f.device, target);
             return;
         }
         REQUIRE(prGpuPipelineCreateGraphics(f.device, &desc, &inverted) == PrStatus_Ok);
@@ -880,9 +883,9 @@ TEST_CASE("a shader reads the target as the draws before it left it") {
         Array<uint8_t> texels = f.read(target);
         CHECK(near(texel(texels, 4, 0, 0), 0, 255, 255, 255));
         CHECK(near(texel(texels, 4, 3, 3), 255, 255, 255, 255));
-        prGpuPipelineDestroy(f.device, inverted);
-        prGpuPipelineDestroy(f.device, solid);
-        prGpuTextureDestroy(f.device, target);
+        prGpuPipelineRelease(f.device, inverted);
+        prGpuPipelineRelease(f.device, solid);
+        prGpuTextureRelease(f.device, target);
     });
 }
 
@@ -911,13 +914,13 @@ TEST_CASE("objects destroyed after their work is recorded live until it is done"
         prGpuCommandsTextureBarrier(commands, target, PrGpuSubresources{}, PrGpuAccessFlag_ColorAttachment,
             PrGpuAccessFlag_ShaderRead);
         // Destroyed before the submission, and new objects take no slot that the work still reads.
-        prGpuTextureDestroy(f.device, source);
-        prGpuPipelineDestroy(f.device, sampled);
+        prGpuTextureRelease(f.device, source);
+        prGpuPipelineRelease(f.device, sampled);
         PrGpuTexture other = f.target(PrUVec2{1, 1});
         gpuSubmitAndWait(commands);
         CHECK(near(texel(f.read(target), 4, 2, 2), 0, 255, 0, 255));
-        prGpuTextureDestroy(f.device, other);
-        prGpuTextureDestroy(f.device, target);
+        prGpuTextureRelease(f.device, other);
+        prGpuTextureRelease(f.device, target);
     });
 }
 
@@ -944,8 +947,8 @@ TEST_CASE("mip levels are filled with the average of the level before") {
         CHECK(prGpuTextureExtent(f.device, last).x == 1);
         Array<uint8_t> top = f.read(last);
         CHECK(near(top.data(), 128, 128, 128, 128, 2));
-        prGpuTextureDestroy(f.device, last);
-        prGpuTextureDestroy(f.device, texture);
+        prGpuTextureRelease(f.device, last);
+        prGpuTextureRelease(f.device, texture);
     });
 }
 
@@ -977,8 +980,8 @@ TEST_CASE("a command buffer reports its time and the texels that it read when it
         CHECK(read.seconds >= 0);
         REQUIRE(read.texels.count() == 3 * 2 * 4);
         CHECK(near(texel(read.texels, 3, 2, 1), 0, 0, 255, 255));
-        prGpuPipelineDestroy(f.device, solid);
-        prGpuTextureDestroy(f.device, target);
+        prGpuPipelineRelease(f.device, solid);
+        prGpuTextureRelease(f.device, target);
     });
 }
 
@@ -994,6 +997,6 @@ TEST_CASE("a lost device refuses new work, and stays safe to call") {
         PrGpuCommands* commands = nullptr;
         CHECK_FALSE(prGpuCommandsBegin(f.device, nullptr, &commands));
         CHECK(prGpuDeviceIsComplete(f.device, 1000));
-        prGpuTextureDestroy(f.device, texture);
+        prGpuTextureRelease(f.device, texture);
     });
 }

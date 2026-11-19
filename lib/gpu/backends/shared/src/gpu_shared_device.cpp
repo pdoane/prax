@@ -130,7 +130,7 @@ PrStatus importCopy(GpuSharedDevice* device, const PrGpuImportPixels& pixels, Pr
     prMutexLock(&device->mutex);
     device->importCopies.push(made.id);
     prMutexUnlock(&device->mutex);
-    prGpuTextureDestroy(device, *texture);
+    prGpuTextureRelease(device, *texture);
     *texture = made;
     return PrStatus_Ok;
 }
@@ -143,7 +143,7 @@ PrStatus textureImport(PrGpuDevice* base, const PrGpuImport* image, PrGpuRelease
         PrGpuTexture made{};
         PrStatus status = device->textureImportInPlace(device, image, release, context, &made);
         if (status == PrStatus_Ok) {
-            prGpuTextureDestroy(device, *texture);
+            prGpuTextureRelease(device, *texture);
             *texture = made;
         }
         return status;
@@ -206,13 +206,22 @@ void gpuSharedDeviceInit(GpuSharedDevice* device) {
 
 void gpuSharedDeviceReset(GpuSharedDevice* device) {
     for (uint32_t i = 0; i < device->mipmapPipelines.count; ++i)
-        device->pipelineDestroyFn(device, device->mipmapPipelines.data[i].pipeline);
+        device->pipelineReleaseFn(device, device->mipmapPipelines.data[i].pipeline);
     device->mipmapPipelines.reset();
     prGpuShaderLibraryDestroy(device->mipmapLibrary);
     device->mipmapLibrary = nullptr;
     device->samplers.reset();
     device->importCopies.reset();
     prMutexReset(&device->mutex);
+}
+
+PrGpuDeviceLimits gpuSharedDeviceLimits(PrGpuDeviceLimits asked) {
+    const PrGpuDeviceLimits defaults = prGpuDeviceLimitsDefault();
+    return PrGpuDeviceLimits{
+        .resources = asked.resources != 0 ? asked.resources : defaults.resources,
+        .samplers = asked.samplers != 0 ? asked.samplers : defaults.samplers,
+        .pipelines = asked.pipelines != 0 ? asked.pipelines : defaults.pipelines,
+    };
 }
 
 void gpuSharedDeviceStart(GpuSharedDevice* device, PrTaskPool* PR_NULLABLE pool, PrGpuDeviceReadyFn PR_NULLABLE ready,
@@ -315,8 +324,8 @@ void gpuSharedGenerateMipmaps(PrGpuCommands* commands, PrGpuTexture texture, PrG
         prGpuCommandsSetPipeline(commands, pipeline);
         prGpuPassDraw(p, 3, 1, 0, 0);
         prGpuPassEnd(p);
-        prGpuTextureDestroy(device, from);
-        prGpuTextureDestroy(device, into);
+        prGpuTextureRelease(device, from);
+        prGpuTextureRelease(device, into);
         prGpuCommandsTextureBarrier(commands, texture, PrGpuSubresources{.firstLevel = level, .levels = 1, .layers = 1},
             PrGpuAccessFlag_ColorAttachment, PrGpuAccessFlag_FragmentRead);
     }

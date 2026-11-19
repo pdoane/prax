@@ -4,8 +4,8 @@
 // that it loads for that device, so that devices of different drivers coexist and nothing links to an SDK.
 //
 // A resource's id is its slot in the bindless array of mutable descriptors, and a sampler's id its slot in the array of
-// samplers. The device's tables are indexed by slot, reserved as address space so that a slot's entry never moves while
-// other threads read it. A slot is reused only once every command buffer that could have used it is done.
+// samplers. The device's tables are indexed by slot, and never move while other threads read them. A slot is reused
+// only once every command buffer that could have used it is done.
 //
 // Every submission goes to the device's one queue and signals its timeline semaphore with the next fence. A thread of
 // the device's own waits for each command buffer in turn, then runs its callbacks, recycles what it held, and raises
@@ -18,7 +18,6 @@
 #include "pr/gpu_vulkan.h"
 #include "pr/mutex.h"
 #include "pr/raw_array.h"
-#include "pr/reserved_array.h"
 #include "pr/thread.h"
 
 #include "gpu/backends/shared/src/gpu_shared_device.h"
@@ -461,12 +460,9 @@ struct VulkanDevice : GpuSharedDevice {
 
     // Guards everything below.
     PrMutex mutex;
-    ReservedArray<VulkanResource> resources;    // by slot
-    RawArray<uint32_t> freeSlots;
-    uint32_t nextSlot;
-    RawArray<VulkanSampler> samplers;           // by slot less firstSampler
-    ReservedArray<VulkanPipeline> pipelines;    // by id less one
-    RawArray<uint32_t> freePipelines;
+    GpuSharedTable<VulkanResource> resources;   // by slot
+    GpuSharedTable<VulkanSampler> samplers;     // by slot
+    GpuSharedTable<VulkanPipeline> pipelines;
     RawArray<VulkanStreamChunk> freeChunks;
     RawArray<VulkanCommandSlot> freeCommandSlots;
     RawArray<VulkanCommands*> freeCommands;
@@ -496,12 +492,10 @@ struct VulkanDevice : GpuSharedDevice {
 
 // Returns the resource in `slot`, which must hold one.
 inline VulkanResource& vulkanResourceAt(VulkanDevice* d, uint32_t slot) {
-    PR_ASSERT(slot != 0 && slot < d->resources.count);
-    return d->resources.data[slot];
+    return d->resources[slot];
 }
 inline const VulkanResource& vulkanResourceAt(const VulkanDevice* d, uint32_t slot) {
-    PR_ASSERT(slot != 0 && slot < d->resources.count);
-    return d->resources.data[slot];
+    return d->resources[slot];
 }
 
 // Return the backend's state behind the interface's objects.

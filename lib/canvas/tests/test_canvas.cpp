@@ -396,7 +396,7 @@ TEST_CASE("a bitmap on a device is drawn by the renderer that presents it there,
     prDrawListRelease(list);
     prLayoutPainterRelease(presentation.painter);
     prCanvasDestroy(canvas);
-    prGpuTextureDestroy(device, target);
+    prGpuTextureRelease(device, target);
     prDrawRendererDestroy(renderer);
     prGpuDeviceDestroy(device);
 }

@@ -6,12 +6,13 @@
 // any data that it can read, including another resource, and turns it into the resource (pr/gpu.slang). Creating a
 // resource makes it visible to shaders.
 //
-// Every object may be destroyed as soon as the work that uses it is recorded. The device keeps what the object holds
-// until the work submitted before the destruction completes. So a renderer may create a texture, use it and destroy it
-// within one frame.
+// Buffers, textures and pipelines are reference counted, and the release of the last reference destroys one. Every
+// object may be destroyed as soon as the work that uses it is recorded. The device keeps what the object holds until
+// the work submitted before the destruction completes. So a renderer may create a texture, use it and release it within
+// one frame.
 //
 // Several threads may use a device at once, each recording its own command buffers. A command buffer is used by one
-// thread at a time. Creating and destroying objects, uploads and submissions are thread-safe.
+// thread at a time. Creating, retaining, releasing and destroying objects, uploads and submissions are thread-safe.
 //
 // The device tracks no resource states. A barrier names a resource's accesses before and after it, and the caller knows
 // them.
@@ -124,6 +125,18 @@ enum {
     kPrGpuMaxVertexAttributes = 16,
 };
 
+// The numbers of objects that a device holds at once: buffers and textures, views among them; samplers; and pipelines.
+// A device allocates its tables for them when it is created, and a creation past one returns Limit. With
+// PrGpuFeatureFlag_Bindless, they are also the numbers of handles that shaders reach resources and samplers by.
+typedef struct PrGpuDeviceLimits {
+    uint32_t resources;
+    uint32_t samplers;
+    uint32_t pipelines;
+} PrGpuDeviceLimits;
+
+// The limits that a device takes when its options ask for none: 65536 resources, 2048 samplers and 4096 pipelines.
+PrGpuDeviceLimits prGpuDeviceLimitsDefault(void);
+
 // What a device is and what it can do. The strings are valid while the device lives.
 typedef struct PrGpuDeviceInfo {
     PrStringView adapter;           // the adapter's name, as the system reports it
@@ -131,10 +144,8 @@ typedef struct PrGpuDeviceInfo {
     PrGpuFeatureFlags features;
     uint32_t maxTextureSize;        // the largest width or height of a 2D texture
 
-    // The number of handles that the device can give out at once, of resources and of samplers. Zero without
-    // PrGpuFeatureFlag_Bindless.
-    uint32_t maxResourceHandles;
-    uint32_t maxSamplerHandles;
+    // The objects that the device holds at once: what its options asked for, or less where its API allows less.
+    PrGpuDeviceLimits limits;
 
     // The number of slots of each kind that a command buffer binds (prGpuCommandsSetBuffer and the others).
     uint32_t maxBufferSlots;
@@ -165,9 +176,12 @@ typedef struct PrGpuDeviceOptions {
     // Called when the device's creation is done, or null for no call.
     PrGpuDeviceReadyFn PR_NULLABLE ready;
     void* PR_NULLABLE readyContext;
+
+    // The objects that the device holds at once. A limit of zero takes the default's (prGpuDeviceLimitsDefault).
+    PrGpuDeviceLimits limits;
 } PrGpuDeviceOptions;
 
-// Returns the default options: without validation.
+// Returns the default options: without validation, and with the default limits.
 PrGpuDeviceOptions prGpuDeviceOptionsDefault(void);
 
 // Waits for the device's creation and its work to finish, then frees the device. Every object of the device must be
@@ -319,8 +333,12 @@ typedef struct PrGpuBufferDesc {
 // for it, and Lost if the device is lost. On failure, `*out` is zero.
 PrStatus prGpuBufferCreate(PrGpuDevice* device, const PrGpuBufferDesc* desc, PrGpuBuffer* out);
 
-// Destroys the buffer. The work submitted before the call may still use it, and work submitted after must not.
-void prGpuBufferDestroy(PrGpuDevice* device, PrGpuBuffer buffer);
+// Take and drop a reference to the buffer. A buffer is created with one reference, and the release of its last destroys
+// it: the work submitted before that release may still use it, and work submitted after must not. Each holder of a
+// buffer, such as a graph that imports it, takes a reference of its own, so the creator releases its own whenever it is
+// done. Any thread retains and releases. Zero is ignored.
+void prGpuBufferRetain(PrGpuDevice* device, PrGpuBuffer buffer);
+void prGpuBufferRelease(PrGpuDevice* device, PrGpuBuffer buffer);
 
 // Returns the description that the buffer was created with.
 PrGpuBufferDesc prGpuBufferDesc(const PrGpuDevice* device, PrGpuBuffer buffer);
@@ -406,8 +424,11 @@ PrStatus prGpuTextureCreate(PrGpuDevice* device, const PrGpuTextureDesc* desc, P
 PrStatus prGpuTextureCreateView(PrGpuDevice* device, PrGpuTexture texture, PrGpuTextureKind kind,
     PrGpuSubresources subresources, PrGpuTexture* out);
 
-// Destroys the texture or view. The work submitted before the call may still use it, and work submitted after must not.
-void prGpuTextureDestroy(PrGpuDevice* device, PrGpuTexture texture);
+// Take and drop a reference to the texture or view, as buffers' references are taken and dropped (prGpuBufferRetain).
+// The release of the last destroys it: the work submitted before that release may still use it, and work submitted
+// after must not.
+void prGpuTextureRetain(PrGpuDevice* device, PrGpuTexture texture);
+void prGpuTextureRelease(PrGpuDevice* device, PrGpuTexture texture);
 
 // Returns the description that the texture was created with. A view reports the shape, the levels and the extent that
 // it covers.
@@ -819,8 +840,10 @@ PrStatus prGpuPipelineCreateGraphics(PrGpuDevice* device, const PrGpuGraphicsPip
 PrStatus prGpuPipelineCreateCompute(PrGpuDevice* device, const PrGpuShaderLibrary* library, PrStringView compute,
     PrStringView name, PrGpuPipeline* out);
 
-// Destroys the pipeline. The work submitted before the call may still use it.
-void prGpuPipelineDestroy(PrGpuDevice* device, PrGpuPipeline pipeline);
+// Take and drop a reference to the pipeline, as buffers' references are taken and dropped (prGpuBufferRetain). The
+// release of the last destroys it, and the work submitted before that release may still use it.
+void prGpuPipelineRetain(PrGpuDevice* device, PrGpuPipeline pipeline);
+void prGpuPipelineRelease(PrGpuDevice* device, PrGpuPipeline pipeline);
 
 // Returns the number of threads in each dimension of a group of the compute pipeline, as its shader declares them.
 PrGpuExtent prGpuPipelineGroupSize(const PrGpuDevice* device, PrGpuPipeline pipeline);

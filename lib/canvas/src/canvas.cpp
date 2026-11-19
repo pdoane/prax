@@ -487,7 +487,7 @@ PrColor clearColorOf(const CanvasContext* c) {
 void bitmapRelease(CanvasBitmap* PR_NULLABLE bitmap) {
     if (bitmap == nullptr || bitmap->references.fetchSub(1) != 1)
         return;
-    prGpuTextureDestroy(bitmap->device, bitmap->texture);
+    prGpuTextureRelease(bitmap->device, bitmap->texture);
     prMemoryFree(bitmap);
 }
 
@@ -1379,7 +1379,7 @@ void prCanvasDestroy(PrCanvas* PR_NULLABLE canvas) {
     prDrawImageRelease(canvas->snapshot);
     prDrawFrameDestroy(canvas->frame);
     if (canvas->scratch.id != 0)
-        prGpuTextureDestroy(canvas->device, canvas->scratch);
+        prGpuTextureRelease(canvas->device, canvas->scratch);
     prDrawListRelease(canvas->drawnList);
     prMemoryFree(canvas->pixels);
     bitmapRelease(canvas->bitmap);

@@ -63,7 +63,7 @@ void pipelinesDestroy(Pipelines* PR_NULLABLE pipelines) {
     if (pipelines == nullptr)
         return;
     for (const Pipeline& made : pipelines->made)
-        prGpuPipelineDestroy(pipelines->device, made.pipeline);
+        prGpuPipelineRelease(pipelines->device, made.pipeline);
     prGpuShaderLibraryDestroy(pipelines->library);
     delete pipelines;
 }

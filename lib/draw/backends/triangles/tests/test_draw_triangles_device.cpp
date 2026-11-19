@@ -41,7 +41,7 @@ struct Device {
     ~Device() {
         prDrawFrameDestroy(frame);
         prDrawRendererDestroy(renderer);
-        prGpuTextureDestroy(gpuDevice, texture);
+        prGpuTextureRelease(gpuDevice, texture);
         prGpuDeviceDestroy(gpuDevice);
     }
 
@@ -262,7 +262,7 @@ TEST_CASE("the triangles renderer draws the host's texture of straight texels as
     prDrawImageRelease(image);
     prDrawFrameDestroy(device.frame);
     device.frame = nullptr;
-    prGpuTextureDestroy(device.gpuDevice, texture);
+    prGpuTextureRelease(device.gpuDevice, texture);
 }
 
 TEST_CASE("triangles fills shapes with the coverage the cpu backend gives them") {

@@ -345,7 +345,7 @@ uint8_t* PR_NULLABLE streamTake(VulkanDevice* d, VulkanCommands* c, uint64_t siz
             prMutexUnlock(&d->mutex);
             return nullptr;
         }
-        VulkanResource& r = d->resources.data[taken];
+        VulkanResource& r = vulkanResourceAt(d, taken);
         r.kind = VulkanSlotKind_Buffer;
         r.buffer = buffer;
         r.memory = memory;
@@ -526,7 +526,7 @@ void commandsSetUniforms(PrGpuCommands* commands, const void* data, uint32_t siz
         return;
     }
     prMemCopy(bytes, data, size);
-    c->uniformBuffer = d->resources.data[slot].buffer;
+    c->uniformBuffer = vulkanResourceAt(d, slot).buffer;
     c->uniformOffset = offset;
     c->uniformSize = bytesSize;
     c->pushDirty[0] = c->pushDirty[1] = true;
@@ -561,7 +561,7 @@ void commandsSetTexture(PrGpuCommands* commands, uint32_t slot, PrGpuTexture tex
     }
     c->slots.samplers[slot] = VkDescriptorImageInfo{};
     if (sampler.id != 0)
-        c->slots.samplers[slot].sampler = d->samplers.data[sampler.id - d->firstSampler].sampler;
+        c->slots.samplers[slot].sampler = d->samplers[sampler.id].sampler;
     c->pushDirty[0] = c->pushDirty[1] = true;
 }
 
@@ -583,7 +583,7 @@ void commandsSetPipeline(PrGpuCommands* commands, PrGpuPipeline pipeline) {
     PrGpuDevice* device = static_cast<GpuSharedCommands*>(commands)->device;
     VulkanDevice* d = vulkanDevice(device);
     VulkanCommands* c = vulkanCommands(commands);
-    const VulkanPipeline& p = d->pipelines.data[pipeline.id - 1];
+    const VulkanPipeline& p = d->pipelines[pipeline.id];
     PR_ASSERT((p.bindPoint == VK_PIPELINE_BIND_POINT_GRAPHICS) == c->inPass);
     d->vk.CmdBindPipeline(c->buffer, p.bindPoint, p.pipeline);
     c->pipeline = pipeline.id;
@@ -1113,7 +1113,7 @@ void passSetVertexBuffer(PrGpuPass* pass, uint32_t slot, PrGpuBuffer buffer, uin
 
 // Prepares a draw: the target read of a pipeline that reads its target, and the push descriptors.
 void prepareDraw(VulkanDevice* d, VulkanCommands* c) {
-    if (c->pipeline != 0 && d->pipelines.data[c->pipeline - 1].readsTarget)
+    if (c->pipeline != 0 && d->pipelines[c->pipeline].readsTarget)
         prepareTargetRead(d, c);
     flushPush(d, c, 0);
 }

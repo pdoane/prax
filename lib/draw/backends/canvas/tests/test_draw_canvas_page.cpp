@@ -80,7 +80,7 @@ struct Renderers {
         gpuTextureRead(device, texture, PrGpuAccessFlag_ShaderRead, PrIVec2{0, 0},
             PrPixels{pixels.data(), size_t(extent.x) * 4, extent});
         prDrawFrameDestroy(frame);
-        prGpuTextureDestroy(device, texture);
+        prGpuTextureRelease(device, texture);
         return pixels;
     }
 
@@ -328,7 +328,7 @@ TEST_CASE("the canvas renderer draws images, textures and lists as sources") {
         }
     }
     prDrawListRelease(inner);
-    prGpuTextureDestroy(r.device, texture);
+    prGpuTextureRelease(r.device, texture);
     prDrawImageRelease(image);
 }
 

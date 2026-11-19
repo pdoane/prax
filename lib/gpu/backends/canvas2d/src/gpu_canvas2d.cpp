@@ -118,7 +118,7 @@ PrStatus swapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const
 
 void swapChainDestroy(PrGpuSwapChain* swapChain) {
     SwapChain* s = static_cast<SwapChain*>(swapChain);
-    prGpuTextureDestroy(s->device, s->texture);
+    prGpuTextureRelease(s->device, s->texture);
     prRawStringReset(&s->selector);
     prMemoryFree(s);
 }
@@ -132,7 +132,7 @@ PrStatus swapChainAcquire(PrGpuSwapChain* swapChain, PrUVec2 extent, PrGpuTextur
     if (s->texture.id != 0) {
         PrUVec2 held = prGpuTextureExtent(device, s->texture);
         if (held.x != extent.x || held.y != extent.y) {
-            prGpuTextureDestroy(device, s->texture);
+            prGpuTextureRelease(device, s->texture);
             s->texture = PrGpuTexture{};
         }
     }
@@ -146,7 +146,7 @@ PrStatus swapChainAcquire(PrGpuSwapChain* swapChain, PrUVec2 extent, PrGpuTextur
         PrStringView selector = prRawStringView(&s->selector);
         uint32_t canvas = prGpuCanvas2dAttach(selector.data, selector.size, extent.x, extent.y, s->transparent);
         if (canvas == 0) {
-            prGpuTextureDestroy(device, s->texture);
+            prGpuTextureRelease(device, s->texture);
             s->texture = PrGpuTexture{};
             return PrStatus_Lost;
         }
@@ -183,7 +183,7 @@ using namespace pr_impl;
 
 PrGpuDevice* prGpuCanvas2dCreate(const PrGpuDeviceOptions* PR_NULLABLE options) {
     PrGpuDeviceOptions o = options != nullptr ? *options : prGpuDeviceOptionsDefault();
-    GpuSharedDevice* device = static_cast<GpuSharedDevice*>(gpuMemoryCreate("canvas2d", &kCanvases));
+    GpuSharedDevice* device = static_cast<GpuSharedDevice*>(gpuMemoryCreate("canvas2d", &kCanvases, o.limits));
     device->inPlaceImports = 1u << PrGpuImportKind_WebImage;
     device->textureImportInPlace = textureImport;
     device->swapChainCreateFn = swapChainCreate;

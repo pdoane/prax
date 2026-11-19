@@ -48,8 +48,11 @@ a 3D renderer needs it.
   them. Each backend derives what its API needs from the accesses: Metal 3's chain of fences, Metal 4's stage
   barriers, and the sync, access and image layout of Direct3D 12's enhanced barriers and Vulkan's synchronization2. A
   texture begins in the accesses of `ShaderRead`.
-- **Lifetimes need no thought.** An object may be destroyed as soon as the work that uses it is recorded. The device
-  keeps it until every command buffer that began before the destruction is done.
+- **Lifetimes need no thought.** A buffer, a texture and a pipeline are reference counted: each holder takes a
+  reference of its own (`prGpuTextureRetain`), and the release of the last destroys the resource. So a library that
+  holds a resource of its caller's needs no promise about when its caller is done with it. A resource may be released
+  as soon as the work that uses it is recorded. The device keeps it until every command buffer that began before the
+  destruction is done.
 - **One timeline.** Each submission returns a fence, and fences rise in the order of submission. A command buffer that
   records into the application's native one is submitted through the device too, so the application never signals anything.
 - **Uploads are unbounded and ordered.** `prGpuBufferUpload` and `prGpuTextureUpload` take any amount of

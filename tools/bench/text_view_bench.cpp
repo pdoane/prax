@@ -197,7 +197,7 @@ struct Rendering {
         prDrawFrameDestroy(frame);
         prDrawRendererDestroy(renderer);
         if (texture.id != 0)
-            prGpuTextureDestroy(device, texture);
+            prGpuTextureRelease(device, texture);
         prGpuDeviceDestroy(device);
     }
 

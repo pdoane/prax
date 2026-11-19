@@ -30,6 +30,7 @@
 #include "pr/gpu_backend.h"
 #include "pr/integer.h"
 #include "pr/mem.h"
+#include "pr/min_max.h"
 #include "pr/mutex.h"
 #include "pr/raw_array.h"
 #include "pr/search.h"
@@ -57,12 +58,6 @@ extern const PrGpuPass kPassFunctions;
 extern const PrGpuSwapChain kSwapChainFunctions;
 extern const PrGpuShaderLibrary kLibraryFunctions;
 
-// The handles that a device gives out, of resources and of samplers, and the pipelines that it holds. Slot zero of each
-// is never used, so that zero is none.
-constexpr uint32_t kMaxResources = 1u << 16;
-constexpr uint32_t kMaxSamplers = 1024;
-constexpr uint32_t kMaxPipelines = 4096;
-
 // The number of slots of each kind. Buffer slots are root descriptors, which the root signature's 64 words hold beside
 // the push data, and texture slots are descriptor tables.
 constexpr uint32_t kBufferSlots = 4;
@@ -71,9 +66,13 @@ constexpr uint32_t kTextureSlots = 8;
 constexpr uint32_t kRwTextureSlots = 4;
 
 // The descriptors of the slots' tables, after the handles in each shader-visible heap, in blocks that a command buffer
-// takes and holds until its work is done. D3D12 allows no more than 2048 samplers in a shader-visible heap.
+// takes and holds until its work is done. Slot zero of the handles is never used, so that zero is none, and the handles
+// and the tables together are no more than the heap allows: a million descriptors at resource binding tier 2, and 2048
+// samplers.
 constexpr uint32_t kTableDescriptors = 1u << 14;
 constexpr uint32_t kTableSamplers = 1024;
+constexpr uint32_t kMaxResources = D3D12_MAX_SHADER_VISIBLE_DESCRIPTOR_HEAP_SIZE_TIER_2 - kTableDescriptors - 1;
+constexpr uint32_t kMaxSamplers = D3D12_MAX_SHADER_VISIBLE_SAMPLER_HEAP_SIZE - kTableSamplers - 1;
 constexpr uint32_t kTableBlock = 256;
 constexpr uint32_t kTableSamplerBlock = 64;
 
@@ -381,7 +380,6 @@ struct D3d12Device : GpuSharedDevice {
     ID3D12RootSignature* rootSignature;            // held
     ID3D12DescriptorHeap* resourceHeap;            // held
     ID3D12DescriptorHeap* samplerHeap;             // held
-    D3D12_SAMPLER_DESC samplerDescs[kMaxSamplers]; // by slot, which the slots' tables write again
     uint32_t resourceIncrement;
     uint32_t samplerIncrement;
     uint32_t colorIncrement;
@@ -407,15 +405,12 @@ struct D3d12Device : GpuSharedDevice {
     RawArray<D3d12Submission> pending;      // in the order of their fences
     bool stopping;
 
-    // The mutex guards everything below. The tables have fixed capacities, so that recording reads them without it.
+    // The mutex guards everything below, except the tables' references. The tables never move, so that recording reads
+    // them without it.
     PrMutex mutex;
-    D3d12Resource* resources;               // by slot
-    D3d12Pipeline* pipelines;               // by id
-    RawArray<uint32_t> freeResources;
-    uint32_t nextResource;
-    uint32_t nextSampler;
-    RawArray<uint32_t> freePipelines;
-    uint32_t nextPipeline;
+    GpuSharedTable<D3d12Resource> resources;        // by slot
+    GpuSharedTable<D3D12_SAMPLER_DESC> samplers;    // by slot, which the slots' tables write again
+    GpuSharedTable<D3d12Pipeline> pipelines;
     RawArray<uint32_t> freeTimestamps;
 
     PrGpuFence submitted;                   // the last fence that a submission returned
@@ -775,18 +770,15 @@ D3D12_GPU_DESCRIPTOR_HANDLE samplerTable(const D3d12Device* d, uint32_t index) {
     return handle;
 }
 
+// Returns the first descriptor of the slots' tables in the sampler heap or the resource heap: past slot zero and the
+// handles.
+uint32_t tableBase(const D3d12Device* d, bool samplers) {
+    return 1 + (samplers ? d->samplers.count : d->resources.count);
+}
+
 // Takes a free resource slot, or returns zero if none is left. The caller holds the mutex.
 uint32_t takeSlotLocked(D3d12Device* d) {
-    uint32_t slot = 0;
-    if (d->freeResources.count != 0) {
-        slot = d->freeResources.last();
-        d->freeResources.pop();
-    } else if (d->nextResource < kMaxResources) {
-        slot = d->nextResource++;
-    }
-    if (slot != 0)
-        d->resources[slot] = D3d12Resource{};
-    return slot;
+    return d->resources.take();
 }
 
 uint32_t takeSlot(D3d12Device* d) {
@@ -800,7 +792,7 @@ uint32_t takeSlot(D3d12Device* d) {
 void returnSlot(D3d12Device* d, uint32_t slot) {
     prMutexLock(&d->mutex);
     d->resources[slot] = D3d12Resource{};
-    d->freeResources.push(slot);
+    d->resources.free(slot);
     prMutexUnlock(&d->mutex);
 }
 
@@ -809,20 +801,20 @@ void freeResource(D3d12Device* d, uint32_t slot) {
     D3d12Resource& r = d->resources[slot];
     if (r.storage != 0) {
         d->resources[r.storage] = D3d12Resource{};
-        d->freeResources.push(r.storage);
+        d->resources.free(r.storage);
     }
     if (r.mapped != nullptr)
         r.resource->Unmap(0, nullptr);
     release(r.resource);
     r = D3d12Resource{};
-    d->freeResources.push(slot);
+    d->resources.free(slot);
 }
 
 void freePipeline(D3d12Device* d, uint32_t id) {
     D3d12Pipeline& p = d->pipelines[id];
     release(p.state);
     p = D3d12Pipeline{};
-    d->freePipelines.push(id);
+    d->pipelines.free(id);
 }
 
 // Returns a stream block that no work uses any more to the free blocks, or frees it if takeBlock made it for one
@@ -978,12 +970,12 @@ D3d12Block takeBlock(D3d12Device* d, uint64_t size) {
 }
 
 ID3D12Resource* resourceOf(const D3d12Device* d, uint32_t slot) {
-    PR_ASSERT(slot < kMaxResources && d->resources[slot].resource != nullptr);
+    PR_ASSERT(d->resources[slot].resource != nullptr);
     return d->resources[slot].resource;
 }
 
 const D3d12Resource& textureOf(const D3d12Device* d, uint32_t slot) {
-    PR_ASSERT(slot < kMaxResources && d->resources[slot].kind == D3d12Slot_Texture);
+    PR_ASSERT(d->resources[slot].kind == D3d12Slot_Texture);
     return d->resources[slot];
 }
 
@@ -1163,13 +1155,13 @@ void destroyDevice(GpuSharedDevice* device) {
             release(d->held.data[i].list.list);
         }
     }
-    for (uint32_t i = 1; i < d->nextResource; ++i) {
+    for (uint32_t i = d->resources.firstId; i < d->resources.nextId; ++i) {
         D3d12Resource& r = d->resources[i];
         if (r.mapped != nullptr)
             r.resource->Unmap(0, nullptr);
         release(r.resource);
     }
-    for (uint32_t i = 1; i < d->nextPipeline; ++i)
+    for (uint32_t i = d->pipelines.firstId; i < d->pipelines.nextId; ++i)
         release(d->pipelines[i].state);
     for (uint32_t i = 0; i < d->lists.count; ++i) {
         release(d->lists.data[i].allocator);
@@ -1180,10 +1172,9 @@ void destroyDevice(GpuSharedDevice* device) {
         release(d->attachmentHeaps.data[i].depth);
     }
     prMutexUnlock(&d->mutex);
-    prMemoryFree(d->resources);
-    prMemoryFree(d->pipelines);
-    d->freeResources.reset();
-    d->freePipelines.reset();
+    d->resources.reset();
+    d->samplers.reset();
+    d->pipelines.reset();
     d->freeTimestamps.reset();
     d->inFlight.reset();
     d->retired.reset();
@@ -1455,7 +1446,7 @@ PrStatus bufferCreate(PrGpuDevice* device, const PrGpuBufferDesc* desc, PrGpuBuf
     uint32_t slot = takeSlotLocked(d);
     uint32_t storageSlot = slot != 0 && storage ? takeSlotLocked(d) : 0;
     if (slot != 0 && storage && storageSlot == 0) {
-        d->freeResources.push(slot);
+        d->resources.free(slot);
         slot = 0;
     }
     prMutexUnlock(&d->mutex);
@@ -1480,7 +1471,13 @@ PrStatus bufferCreate(PrGpuDevice* device, const PrGpuBufferDesc* desc, PrGpuBuf
     return PrStatus_Ok;
 }
 
-void bufferDestroy(PrGpuDevice* device, PrGpuBuffer buffer) {
+void bufferRetain(PrGpuDevice* device, PrGpuBuffer buffer) {
+    d3d12Of(device)->resources.retain(buffer.id);
+}
+
+void bufferRelease(PrGpuDevice* device, PrGpuBuffer buffer) {
+    if (!d3d12Of(device)->resources.release(buffer.id))
+        return;
     retire(d3d12Of(device), D3d12RetiredKind_Resource, buffer.id);
 }
 
@@ -1597,7 +1594,7 @@ uint32_t addTexture(D3d12Device* d, ID3D12Resource* resource, const PrGpuTexture
     uint32_t slot = takeSlotLocked(d);
     uint32_t storageSlot = slot != 0 && storage ? takeSlotLocked(d) : 0;
     if (slot != 0 && storage && storageSlot == 0) {
-        d->freeResources.push(slot);
+        d->resources.free(slot);
         slot = 0;
     }
     prMutexUnlock(&d->mutex);
@@ -1685,7 +1682,13 @@ PrStatus textureCreateView(PrGpuDevice* device, PrGpuTexture texture, PrGpuTextu
     return PrStatus_Ok;
 }
 
-void textureDestroy(PrGpuDevice* device, PrGpuTexture texture) {
+void textureRetain(PrGpuDevice* device, PrGpuTexture texture) {
+    d3d12Of(device)->resources.retain(texture.id);
+}
+
+void textureRelease(PrGpuDevice* device, PrGpuTexture texture) {
+    if (!d3d12Of(device)->resources.release(texture.id))
+        return;
     gpuSharedTextureForget(d3d12Of(device), texture);
     retire(d3d12Of(device), D3d12RetiredKind_Resource, texture.id);
 }
@@ -1728,11 +1731,12 @@ PrStatus samplerCreate(PrGpuDevice* device, const PrGpuSamplerDesc* desc, PrGpuS
     s.MinLOD = desc->minLod;
     s.MaxLOD = desc->maxLod;
     prMutexLock(&d->mutex);
-    uint32_t slot = d->nextSampler < kMaxSamplers ? d->nextSampler++ : 0;
+    const uint32_t slot = d->samplers.take();
+    if (slot != 0)
+        d->samplers[slot] = s;
     prMutexUnlock(&d->mutex);
     if (slot == 0)
         return PrStatus_Limit;
-    d->samplerDescs[slot] = s;
     d->device->CreateSampler(&s, samplerDescriptor(d, slot));
     out->id = slot;
     return PrStatus_Ok;
@@ -1764,13 +1768,7 @@ void shaderLibraryDestroy(PrGpuShaderLibrary* library) {
 // Puts a pipeline into a new id, or returns zero if none is left.
 uint32_t addPipeline(D3d12Device* d, const D3d12Pipeline& pipeline) {
     prMutexLock(&d->mutex);
-    uint32_t id = 0;
-    if (d->freePipelines.count != 0) {
-        id = d->freePipelines.last();
-        d->freePipelines.pop();
-    } else if (d->nextPipeline < kMaxPipelines) {
-        id = d->nextPipeline++;
-    }
+    const uint32_t id = d->pipelines.take();
     if (id != 0)
         d->pipelines[id] = pipeline;
     prMutexUnlock(&d->mutex);
@@ -1910,7 +1908,13 @@ PrStatus computePipelineCreate(PrGpuDevice* device, const PrGpuShaderLibrary*, c
     return PrStatus_Ok;
 }
 
-void pipelineDestroy(PrGpuDevice* device, PrGpuPipeline pipeline) {
+void pipelineRetain(PrGpuDevice* device, PrGpuPipeline pipeline) {
+    d3d12Of(device)->pipelines.retain(pipeline.id);
+}
+
+void pipelineRelease(PrGpuDevice* device, PrGpuPipeline pipeline) {
+    if (!d3d12Of(device)->pipelines.release(pipeline.id))
+        return;
     retire(d3d12Of(device), D3d12RetiredKind_Pipeline, pipeline.id);
 }
 
@@ -2090,7 +2094,7 @@ uint32_t takeTable(D3d12Device* d, D3d12Commands* c, bool samplers, uint32_t cou
         prMutexUnlock(&d->mutex);
         if (oldest == 0) {
             d->lost.store(true);
-            return samplers ? kMaxSamplers : kMaxResources;
+            return tableBase(d, samplers);
         }
         wait(d, oldest);
     }
@@ -2126,8 +2130,10 @@ void writeTables(D3d12Device* d, D3d12Commands* c) {
         uint32_t first = takeTable(d, c, true, kTextureSlots);
         for (uint32_t i = 0; i < kTextureSlots; ++i) {
             // An unbound sampler is the one at slot zero, which no sampler takes: points, clamped.
-            D3D12_SAMPLER_DESC s = d->samplerDescs[c->samplers[i]];
-            if (c->samplers[i] == 0) {
+            D3D12_SAMPLER_DESC s{};
+            if (c->samplers[i] != 0) {
+                s = d->samplers[c->samplers[i]];
+            } else {
                 s.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
                 s.AddressU = s.AddressV = s.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
                 s.MaxAnisotropy = 1;
@@ -3257,11 +3263,11 @@ ID3D12CommandSignature* PR_NULLABLE createSignature(ID3D12Device* device, D3D12_
 bool createObjects(D3d12Device* d) {
     ID3D12Device10* device = d->device;
     D3D12_DESCRIPTOR_HEAP_DESC resources{
-        D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, kMaxResources + kTableDescriptors,
+        D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, tableBase(d, false) + kTableDescriptors,
         D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0,
     };
     D3D12_DESCRIPTOR_HEAP_DESC samplers{
-        D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, kMaxSamplers + kTableSamplers,
+        D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, tableBase(d, true) + kTableSamplers,
         D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0,
     };
     if (FAILED(device->CreateDescriptorHeap(&resources, IID_PPV_ARGS(&d->resourceHeap))) ||
@@ -3269,9 +3275,9 @@ bool createObjects(D3d12Device* d) {
             FAILED(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&d->fence))))
         return false;
     for (uint32_t i = 0; i < kTableDescriptors; i += kTableBlock)
-        d->freeTableBlocks.push(kMaxResources + i);
+        d->freeTableBlocks.push(tableBase(d, false) + i);
     for (uint32_t i = 0; i < kTableSamplers; i += kTableSamplerBlock)
-        d->freeTableSamplerBlocks.push(kMaxSamplers + i);
+        d->freeTableSamplerBlocks.push(tableBase(d, true) + i);
     d->resourceIncrement = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
     d->samplerIncrement = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
     d->colorIncrement = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
@@ -3457,11 +3463,13 @@ PrGpuDevice* prGpuD3d12Create(const PrGpuD3d12Options* PR_NULLABLE options) {
     prMutexInit(&d->doneMutex);
     prConditionInit(&d->doneSignal);
     prConditionInit(&d->pendingSignal);
-    d->resources = static_cast<D3d12Resource*>(prMemoryAllocZeroed(sizeof(D3d12Resource) * kMaxResources));
-    d->pipelines = static_cast<D3d12Pipeline*>(prMemoryAllocZeroed(sizeof(D3d12Pipeline) * kMaxPipelines));
-    d->nextResource = 1;
-    d->nextSampler = 1;
-    d->nextPipeline = 1;
+    PrGpuDeviceLimits limits = gpuSharedDeviceLimits(d->options.limits);
+    limits.resources = min(limits.resources, kMaxResources);
+    limits.samplers = min(limits.samplers, kMaxSamplers);
+    d->info.limits = limits;
+    d->resources.init(1, limits.resources);
+    d->samplers.init(1, limits.samplers);
+    d->pipelines.init(1, limits.pipelines);
     d->serial = 1;
     d->staging = GpuSharedStaging{
         .context = d,
@@ -3480,14 +3488,16 @@ PrGpuDevice* prGpuD3d12Create(const PrGpuD3d12Options* PR_NULLABLE options) {
     d->waitIdleFn = waitIdle;
     d->supportsFormatFn = supportsFormat;
     d->bufferCreateFn = bufferCreate;
-    d->bufferDestroyFn = bufferDestroy;
+    d->bufferRetainFn = bufferRetain;
+    d->bufferReleaseFn = bufferRelease;
     d->bufferDescFn = bufferDesc;
     d->bufferStorageHandleFn = bufferStorageHandle;
     d->bufferMapFn = bufferMap;
     d->bufferUploadFn = bufferUpload;
     d->textureCreateFn = textureCreate;
     d->textureCreateViewFn = textureCreateView;
-    d->textureDestroyFn = textureDestroy;
+    d->textureRetainFn = textureRetain;
+    d->textureReleaseFn = textureRelease;
     d->textureDescFn = textureDesc;
     d->textureStorageHandleFn = textureStorageHandle;
     d->textureUploadFn = textureUpload;
@@ -3495,7 +3505,8 @@ PrGpuDevice* prGpuD3d12Create(const PrGpuD3d12Options* PR_NULLABLE options) {
     d->shaderLibraryCreateFn = shaderLibraryCreate;
     d->graphicsPipelineCreateFn = graphicsPipelineCreate;
     d->computePipelineCreateFn = computePipelineCreate;
-    d->pipelineDestroyFn = pipelineDestroy;
+    d->pipelineRetainFn = pipelineRetain;
+    d->pipelineReleaseFn = pipelineRelease;
     d->pipelineGroupSizeFn = pipelineGroupSize;
     d->commandsBeginFn = commandsBegin;
     d->textureNativeFn = textureNative;
@@ -3505,8 +3516,6 @@ PrGpuDevice* prGpuD3d12Create(const PrGpuD3d12Options* PR_NULLABLE options) {
     d->nativeKinds = 1u << PrGpuNativeKind_D3d12;
     d->info.features = PrGpuFeatureFlag_TextureCompressionBc | PrGpuFeatureFlag_Bindless;
     d->info.maxTextureSize = D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION;
-    d->info.maxResourceHandles = kMaxResources - 1;
-    d->info.maxSamplerHandles = kMaxSamplers - 1;
     d->info.maxBufferSlots = kBufferSlots;
     d->info.maxRwBufferSlots = kRwBufferSlots;
     d->info.maxTextureSlots = kTextureSlots;

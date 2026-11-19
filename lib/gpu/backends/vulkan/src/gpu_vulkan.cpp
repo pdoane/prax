@@ -7,6 +7,7 @@
 #include "pr/assert.h"
 #include "pr/count_of.h"
 #include "pr/mem.h"
+#include "pr/min_max.h"
 
 #include "gpu/backends/vulkan/src/vulkan_commands.h"
 #include "gpu/backends/vulkan/src/vulkan_pipeline.h"
@@ -17,12 +18,6 @@
 namespace pr_impl {
 
 namespace {
-
-constexpr uint32_t kDefaultResourceHandles = 65536;
-constexpr uint32_t kDefaultSamplerHandles = 4096;
-
-// The most pipelines that a device holds at once.
-constexpr uint32_t kMaxPipelines = 65536;
 
 const char* const kValidationLayer = "VK_LAYER_KHRONOS_validation";
 
@@ -594,7 +589,9 @@ void destroy(GpuSharedDevice* device) {
     if (d->ownsInstance)
         d->vk.DestroyInstance(d->instance, nullptr);
     vulkanLoaderClose(d->loader);
-    d->freeSlots.reset();
+    d->resources.reset();
+    d->samplers.reset();
+    d->pipelines.reset();
     d->openSerials.reset();
     d->pending.reset();
     prConditionReset(&d->pendingSignal);
@@ -610,6 +607,7 @@ void destroy(GpuSharedDevice* device) {
 PrStatus initialize(GpuSharedDevice* device) {
     VulkanDevice* d = static_cast<VulkanDevice*>(device);
     const PrGpuVulkanOptions& o = d->options;
+    const PrGpuDeviceLimits limits = gpuSharedDeviceLimits(o.limits);
     d->loader = vulkanLoaderOpen(&d->vk.GetInstanceProcAddr);
     if (d->loader == nullptr)
         return PrStatus_NotSupported;
@@ -652,7 +650,8 @@ PrStatus initialize(GpuSharedDevice* device) {
         d->firstSampler = given.firstSampler;
         d->samplerCount = given.samplerCount;
     } else if (status == PrStatus_Ok) {
-        status = createDescriptors(d, o.resourceHandles, o.samplerHandles);
+        // The set's first slot of each array is never a handle.
+        status = createDescriptors(d, limits.resources + 1, limits.samplers + 1);
     }
     if (status == PrStatus_Ok)
         status = createTimelines(d);
@@ -662,16 +661,10 @@ PrStatus initialize(GpuSharedDevice* device) {
     d->allocate = o.allocate;
     d->free = o.free;
     d->memoryContext = o.memoryContext;
-    d->resources.prepare(d->firstResource + d->resourceCount);
-    d->resources.count = 0;
-    while (d->resources.count <= d->firstResource) {
-        VulkanResource empty{};
-        d->resources.push(empty);
-    }
-    d->nextSlot = d->firstResource + 1;
-    d->samplers.push(VulkanSampler{});
-    d->pipelines.prepare(kMaxPipelines);
-    d->pipelines.count = 0;
+    // A range's first slot is never a handle, and the device takes no more of a range than its limits allow.
+    d->resources.init(d->firstResource + 1, min(d->resourceCount - 1, limits.resources));
+    d->samplers.init(d->firstSampler + 1, min(d->samplerCount - 1, limits.samplers));
+    d->pipelines.init(1, limits.pipelines);
     d->nextSerial = 1;
 
     d->info.adapter = PrStringView{d->adapter, 0};
@@ -684,8 +677,11 @@ PrStatus initialize(GpuSharedDevice* device) {
     d->info.storageOffsetAlignment = uint32_t(d->limits.minStorageBufferOffsetAlignment);
     if (d->info.storageOffsetAlignment < 16)
         d->info.storageOffsetAlignment = 16;
-    d->info.maxResourceHandles = d->resourceCount - 1;
-    d->info.maxSamplerHandles = d->samplerCount - 1;
+    d->info.limits = PrGpuDeviceLimits{
+        .resources = d->resources.count,
+        .samplers = d->samplers.count,
+        .pipelines = d->pipelines.count,
+    };
     d->shaderTarget = d->localRead ? PrGpuShaderTarget_SpirvLocalRead : PrGpuShaderTarget_Spirv;
 
     prThreadStart(&d->completion, vulkanCompletionRun, d);
@@ -701,8 +697,6 @@ using namespace pr_impl;
 
 PrGpuVulkanOptions prGpuVulkanOptionsDefault(void) {
     PrGpuVulkanOptions options{};
-    options.resourceHandles = kDefaultResourceHandles;
-    options.samplerHandles = kDefaultSamplerHandles;
     options.adapter = vulkanEnvironment("PR_VULKAN_ADAPTER", -1);
     options.validation = vulkanEnvironment("PR_VULKAN_DEBUG", 0) != 0;
     return options;
@@ -776,7 +770,7 @@ void* prGpuVulkanQueue(const PrGpuDevice* device) {
 }
 
 uint64_t prGpuVulkanBuffer(const PrGpuDevice* device, PrGpuBuffer buffer) {
-    return reinterpret_cast<uint64_t>(vulkanDevice(device)->resources.data[buffer.id].buffer);
+    return reinterpret_cast<uint64_t>(vulkanResourceAt(vulkanDevice(device), buffer.id).buffer);
 }
 
 void* prGpuVulkanGetInstanceProcAddr(const PrGpuDevice* device) {

@@ -47,10 +47,9 @@ PR_ASSUME_NONNULL_BEGIN
 namespace pr_impl {
 
 // The handles that a device gives out, of resources and of samplers, and the pipelines that it holds. Slot zero of each
-// is never used, so that zero is none.
-constexpr uint32_t kGpuMetalMaxResources = 1u << 16;
+// is never used, so that zero is none. The most resources and samplers that Metal's argument buffers of tier 2 reach.
+constexpr uint32_t kGpuMetalMaxResources = 500000;
 constexpr uint32_t kGpuMetalMaxSamplers = 2048;
-constexpr uint32_t kGpuMetalMaxPipelines = 4096;
 
 // The number of slots of each kind.
 constexpr uint32_t kGpuMetalBufferSlots = 8;
@@ -281,16 +280,12 @@ struct GpuMetalDevice : GpuSharedDevice {
     const PrGpuCommands* commandsFunctions;
     const PrGpuSwapChain* swapChainFunctions;
 
-    // The mutex guards everything below. The tables have fixed capacities, so that recording reads them without it.
+    // The mutex guards everything below, except the tables' references. The tables never move, so that recording reads
+    // them without it.
     PrMutex mutex;
-    GpuMetalResource* resources;                          // by slot
-    id<MTLSamplerState> PR_NULLABLE* PR_NONNULL samplers; // by slot
-    GpuMetalPipeline* pipelines;                          // by id
-    RawArray<uint32_t> freeResources;
-    uint32_t nextResource;
-    uint32_t nextSampler;
-    RawArray<uint32_t> freePipelines;
-    uint32_t nextPipeline;
+    GpuSharedTable<GpuMetalResource> resources;           // by slot
+    GpuSharedTable<id<MTLSamplerState>> samplers;         // by slot
+    GpuSharedTable<GpuMetalPipeline> pipelines;
     bool residencyDirty;
 
     PrGpuFence submitted;                   // the last fence that a submission returned
@@ -448,7 +443,7 @@ void gpuMetalPassChanged(GpuMetalPass* pass, PrGpuNativeStateFlags flags);
 // gpuMetalDeviceInstall. The backend's initialization calls gpuMetalDeviceOpen, which takes `device`, then creates the
 // queue and calls gpuMetalDeviceAddQueue, which takes the queue and adds the residency set to it. A device without
 // `bindless` binds resources only to slots.
-void gpuMetalDeviceInstall(GpuMetalDevice* d);
+void gpuMetalDeviceInstall(GpuMetalDevice* d, PrGpuDeviceLimits limits);
 void gpuMetalDeviceOpen(GpuMetalDevice* d, id<MTLDevice> device, bool bindless);
 void gpuMetalDeviceAddQueue(GpuMetalDevice* d, id queue);
 

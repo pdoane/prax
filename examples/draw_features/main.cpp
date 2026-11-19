@@ -76,7 +76,7 @@ void announce(const Window& w) {
 // Frees what the window made on its device, and the device.
 void closeDevice(Window& w) {
     if (w.device != nullptr)
-        prGpuTextureDestroy(w.device, w.rendered);
+        prGpuTextureRelease(w.device, w.rendered);
     prDrawDisplayDestroy(w.display);
     prDrawFrameDestroy(w.frame);
     prDrawRendererDestroy(w.renderer);
@@ -138,7 +138,7 @@ bool openDevice(Window& w) {
 PrGpuTexture renderedFor(Window& w, PrUVec2 extent) {
     PrUVec2 held = w.rendered.id != 0 ? prGpuTextureExtent(w.device, w.rendered) : PrUVec2{};
     if (w.rendered.id == 0 || extent.x > held.x || extent.y > held.y) {
-        prGpuTextureDestroy(w.device, w.rendered);
+        prGpuTextureRelease(w.device, w.rendered);
         PrGpuTextureDesc desc = prGpuTextureDesc2d(PrGpuFormat_Rgba16F, extent,
             PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_RenderTarget);
         w.rendered = PrGpuTexture{};

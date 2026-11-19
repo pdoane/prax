@@ -94,7 +94,7 @@ void render(Browser& b, PrDrawList* PR_NULLABLE page, PrColor canvas) {
     if (mapped) {
         PrUVec2 held = b.rendered.id != 0 ? prGpuTextureExtent(b.device, b.rendered) : PrUVec2{};
         if (b.rendered.id == 0 || b.extent.x > held.x || b.extent.y > held.y) {
-            prGpuTextureDestroy(b.device, b.rendered);
+            prGpuTextureRelease(b.device, b.rendered);
             PrGpuTextureDesc desc = prGpuTextureDesc2d(
                 PrGpuFormat_Rgba16F, b.extent, PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_RenderTarget);
             b.rendered = PrGpuTexture{};
@@ -394,7 +394,7 @@ void shutdown(void* context, PrApp*) {
     Browser& b = *static_cast<Browser*>(context);
     tabsShutdown(b);
     if (b.device != nullptr)
-        prGpuTextureDestroy(b.device, b.rendered);
+        prGpuTextureRelease(b.device, b.rendered);
     prDrawDisplayDestroy(b.display);
     prDrawFrameDestroy(b.pageFrame);
     prDrawFrameDestroy(b.chromeFrame);

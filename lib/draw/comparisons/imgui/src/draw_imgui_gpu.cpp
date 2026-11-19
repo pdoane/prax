@@ -49,7 +49,7 @@ void dropUnusedTextures(ImGuiGpu* g) {
         if (g->textures.data[i].lastUsed == g->render)
             g->textures.data[kept++] = g->textures.data[i];
         else
-            prGpuTextureDestroy(g->device, g->textures.data[i].texture);
+            prGpuTextureRelease(g->device, g->textures.data[i].texture);
     }
     g->textures.count = kept;
 }
@@ -89,7 +89,7 @@ PrDrawFrame* createFrame(PrDrawRenderer* renderer) {
 void dropResources(PrDrawRenderer* renderer) {
     ImGuiGpu* g = static_cast<ImGuiGpu*>(renderer);
     for (uint32_t i = 0; i < g->textures.count; ++i)
-        prGpuTextureDestroy(g->device, g->textures.data[i].texture);
+        prGpuTextureRelease(g->device, g->textures.data[i].texture);
     g->textures.clear();
 }
 

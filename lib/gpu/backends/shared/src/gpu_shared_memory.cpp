@@ -125,11 +125,9 @@ struct Retired {
 struct Device : GpuSharedDevice {
     PrMutex mutex;
     const GpuMemoryMirror* PR_NULLABLE mirror;
-    RawArray<Buffer> buffers;          // at each buffer's id less one
-    RawArray<uint32_t> freeBuffers;
-    RawArray<Texture> textures;        // at each texture's id less one
-    RawArray<uint32_t> freeTextures;
-    uint32_t samplers;
+    GpuSharedTable<Buffer> buffers;
+    GpuSharedTable<Texture> textures;
+    GpuSharedTable<PrGpuSamplerDesc> samplers;
     PrGpuFence submitted;
     uint64_t serial;                   // the serial of the command buffer that began last
     RawArray<uint64_t> open;           // the serials of the command buffers that are not submitted yet
@@ -181,13 +179,11 @@ uint32_t levelSlices(const PrGpuTextureDesc& desc, uint32_t level) {
 }
 
 Texture& textureAt(Device* d, PrGpuTexture texture) {
-    PR_ASSERT(texture.id != 0 && texture.id <= d->textures.count);
-    return d->textures.data[texture.id - 1];
+    return d->textures[texture.id];
 }
 
 Buffer& bufferAt(Device* d, PrGpuBuffer buffer) {
-    PR_ASSERT(buffer.id != 0 && buffer.id <= d->buffers.count);
-    return d->buffers.data[buffer.id - 1];
+    return d->buffers[buffer.id];
 }
 
 // Returns a copy of the texture's entry, which the caller reads without the lock.
@@ -448,13 +444,13 @@ void destroy(GpuSharedDevice* device) {
     Device* d = deviceOf(device);
     gpuSharedDeviceReset(d);
     PR_ASSERT(d->open.count == 0 && d->retired.count == 0);
-    PR_ASSERT(d->buffers.count == d->freeBuffers.count && d->textures.count == d->freeTextures.count);
+    PR_ASSERT(d->buffers.freeIds.count == d->buffers.nextId - d->buffers.firstId &&
+        d->textures.freeIds.count == d->textures.nextId - d->textures.firstId);
     d->open.reset();
     d->retired.reset();
     d->buffers.reset();
-    d->freeBuffers.reset();
     d->textures.reset();
-    d->freeTextures.reset();
+    d->samplers.reset();
     prMutexReset(&d->mutex);
     prMemoryFree(d);
 }
@@ -495,34 +491,32 @@ PrStatus bufferCreate(PrGpuDevice* device, const PrGpuBufferDesc* desc, PrGpuBuf
     PrGpuBufferDesc kept = *desc;
     kept.name = PrStringView{};
     prMutexLock(&d->mutex);
-    uint32_t id = 0;
-    if (d->freeBuffers.count != 0) {
-        id = d->freeBuffers.last();
-        d->freeBuffers.pop();
-    } else {
-        d->buffers.push(Buffer{});
-        id = d->buffers.count;
-    }
-    d->buffers.data[id - 1] = Buffer{.desc = kept, .bytes = bytes};
+    const uint32_t id = d->buffers.take();
+    if (id != 0)
+        d->buffers[id] = Buffer{.desc = kept, .bytes = bytes};
     prMutexUnlock(&d->mutex);
+    if (id == 0) {
+        prMemoryFree(bytes);
+        return PrStatus_Limit;
+    }
     *out = PrGpuBuffer{id};
     return PrStatus_Ok;
 }
 
 // Frees a buffer's bytes and its slot. The caller holds the mutex.
 void freeBuffer(Device* d, uint32_t id) {
-    Buffer& b = d->buffers.data[id - 1];
+    Buffer& b = d->buffers[id];
     prMemoryFree(b.bytes);
     b = Buffer{};
-    d->freeBuffers.push(id);
+    d->buffers.free(id);
 }
 
 // Frees a texture's slot, and its memory once no view holds it. The caller holds the mutex.
 void freeTexture(Device* d, uint32_t id) {
-    Texture& t = d->textures.data[id - 1];
+    Texture& t = d->textures[id];
     Memory* memory = t.memory;
     t = Texture{};
-    d->freeTextures.push(id);
+    d->textures.free(id);
     if (--memory->references != 0)
         return;
     if (memory->mirror != 0)
@@ -564,7 +558,13 @@ void collect(Device* d) {
     d->retired.count = kept;
 }
 
-void bufferDestroy(PrGpuDevice* device, PrGpuBuffer buffer) {
+void bufferRetain(PrGpuDevice* device, PrGpuBuffer buffer) {
+    deviceOf(device)->buffers.retain(buffer.id);
+}
+
+void bufferRelease(PrGpuDevice* device, PrGpuBuffer buffer) {
+    if (!deviceOf(device)->buffers.release(buffer.id))
+        return;
     Device* d = deviceOf(device);
     prMutexLock(&d->mutex);
     PR_ASSERT(bufferAt(d, buffer).bytes != nullptr);
@@ -600,18 +600,12 @@ void bufferUpload(PrGpuDevice* device, PrGpuBuffer buffer, uint64_t offset, cons
 // ---------------------------------------------------------------------------------------------------------------------
 // Textures
 
-// Adds a texture or view to the table, and returns its id.
+// Adds a texture or view to the table, and returns its id, or zero if the table is full.
 uint32_t addTexture(Device* d, const Texture& texture) {
     prMutexLock(&d->mutex);
-    uint32_t id = 0;
-    if (d->freeTextures.count != 0) {
-        id = d->freeTextures.last();
-        d->freeTextures.pop();
-    } else {
-        d->textures.push(Texture{});
-        id = d->textures.count;
-    }
-    d->textures.data[id - 1] = texture;
+    const uint32_t id = d->textures.take();
+    if (id != 0)
+        d->textures[id] = texture;
     prMutexUnlock(&d->mutex);
     return id;
 }
@@ -635,7 +629,13 @@ PrStatus textureCreate(PrGpuDevice* device, const PrGpuTextureDesc* desc, PrGpuT
         size += memory->sliceBytes[level] * levelSlices(memory->desc, level);
     }
     memory->bytes = static_cast<uint8_t*>(prMemoryAllocZeroed(size));
-    *out = PrGpuTexture{addTexture(d, Texture{.memory = memory, .desc = memory->desc})};
+    const uint32_t id = addTexture(d, Texture{.memory = memory, .desc = memory->desc});
+    if (id == 0) {
+        prMemoryFree(memory->bytes);
+        prMemoryFree(memory);
+        return PrStatus_Limit;
+    }
+    *out = PrGpuTexture{id};
     return PrStatus_Ok;
 }
 
@@ -653,7 +653,12 @@ PrStatus textureCreateOverPixels(PrGpuDevice* device, PrGpuFormat format, PrPixe
     memory->bytes = pixels.data;
     memory->rowBytes[0] = pixels.stride;
     memory->sliceBytes[0] = pixels.stride * pixels.extent.y;
-    *out = PrGpuTexture{addTexture(d, Texture{.memory = memory, .desc = memory->desc})};
+    const uint32_t id = addTexture(d, Texture{.memory = memory, .desc = memory->desc});
+    if (id == 0) {
+        prMemoryFree(memory);
+        return PrStatus_Limit;
+    }
+    *out = PrGpuTexture{id};
     return PrStatus_Ok;
 }
 
@@ -681,11 +686,25 @@ PrStatus textureCreateView(PrGpuDevice* device, PrGpuTexture texture, PrGpuTextu
         .firstLevel = uint8_t(of.firstLevel + subresources.firstLevel),
         .firstLayer = uint16_t(of.firstLayer + subresources.firstLayer),
     };
-    *out = PrGpuTexture{addTexture(d, view)};
+    const uint32_t id = addTexture(d, view);
+    if (id == 0) {
+        // The texture holds its memory, so the view's reference is never the last.
+        prMutexLock(&d->mutex);
+        --of.memory->references;
+        prMutexUnlock(&d->mutex);
+        return PrStatus_Limit;
+    }
+    *out = PrGpuTexture{id};
     return PrStatus_Ok;
 }
 
-void textureDestroy(PrGpuDevice* device, PrGpuTexture texture) {
+void textureRetain(PrGpuDevice* device, PrGpuTexture texture) {
+    deviceOf(device)->textures.retain(texture.id);
+}
+
+void textureRelease(PrGpuDevice* device, PrGpuTexture texture) {
+    if (!deviceOf(device)->textures.release(texture.id))
+        return;
     Device* d = deviceOf(device);
     gpuSharedTextureForget(d, texture);
     prMutexLock(&d->mutex);
@@ -730,13 +749,16 @@ void textureUpload(PrGpuDevice* device, PrGpuTexture texture, const PrGpuTexture
     copyRegion(t, *region, static_cast<uint8_t*>(const_cast<void*>(data)), rowBytes, layerBytes, true);
 }
 
-// No shader samples, so a sampler is only its id.
-PrStatus samplerCreate(PrGpuDevice* device, const PrGpuSamplerDesc*, PrGpuSampler* out) {
+// No shader samples, so a sampler is only its id and its description.
+PrStatus samplerCreate(PrGpuDevice* device, const PrGpuSamplerDesc* desc, PrGpuSampler* out) {
     Device* d = deviceOf(device);
     prMutexLock(&d->mutex);
-    *out = PrGpuSampler{++d->samplers};
+    const uint32_t id = d->samplers.take();
+    if (id != 0)
+        d->samplers[id] = *desc;
     prMutexUnlock(&d->mutex);
-    return PrStatus_Ok;
+    *out = PrGpuSampler{id};
+    return id != 0 ? PrStatus_Ok : PrStatus_Limit;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -759,7 +781,9 @@ PrStatus computePipelineCreate(PrGpuDevice*, const PrGpuShaderLibrary*, const Pr
     return PrStatus_NotSupported;
 }
 
-void pipelineDestroy(PrGpuDevice*, PrGpuPipeline) {}
+// The device makes no pipelines: each is zero, which the interface never passes to a backend.
+void pipelineRetain(PrGpuDevice*, PrGpuPipeline) {}
+void pipelineRelease(PrGpuDevice*, PrGpuPipeline) {}
 
 PrGpuExtent pipelineGroupSize(const PrGpuDevice*, PrGpuPipeline) {
     return PrGpuExtent{};
@@ -1066,10 +1090,14 @@ constexpr PrGpuPass kPassFunctions = {
 
 } // namespace
 
-PrGpuDevice* gpuMemoryCreate(PrStringView backend, const GpuMemoryMirror* PR_NULLABLE mirror) {
+PrGpuDevice* gpuMemoryCreate(PrStringView backend, const GpuMemoryMirror* PR_NULLABLE mirror, PrGpuDeviceLimits limits) {
     Device* d = allocZeroed<Device>();
     gpuSharedDeviceInit(d);
     prMutexInit(&d->mutex);
+    limits = gpuSharedDeviceLimits(limits);
+    d->buffers.init(1, limits.resources);
+    d->textures.init(1, limits.resources);
+    d->samplers.init(1, limits.samplers);
     d->mirror = mirror;
     d->initialize = initialize;
     d->removed = removed;
@@ -1080,14 +1108,16 @@ PrGpuDevice* gpuMemoryCreate(PrStringView backend, const GpuMemoryMirror* PR_NUL
     d->waitIdleFn = waitIdle;
     d->supportsFormatFn = supportsFormat;
     d->bufferCreateFn = bufferCreate;
-    d->bufferDestroyFn = bufferDestroy;
+    d->bufferRetainFn = bufferRetain;
+    d->bufferReleaseFn = bufferRelease;
     d->bufferDescFn = bufferDesc;
     d->bufferStorageHandleFn = bufferStorageHandle;
     d->bufferMapFn = bufferMap;
     d->bufferUploadFn = bufferUpload;
     d->textureCreateFn = textureCreate;
     d->textureCreateViewFn = textureCreateView;
-    d->textureDestroyFn = textureDestroy;
+    d->textureRetainFn = textureRetain;
+    d->textureReleaseFn = textureRelease;
     d->textureDescFn = textureDesc;
     d->textureStorageHandleFn = textureStorageHandle;
     d->textureUploadFn = textureUpload;
@@ -1097,7 +1127,8 @@ PrGpuDevice* gpuMemoryCreate(PrStringView backend, const GpuMemoryMirror* PR_NUL
     d->shaderLibraryCreateFn = shaderLibraryCreate;
     d->graphicsPipelineCreateFn = graphicsPipelineCreate;
     d->computePipelineCreateFn = computePipelineCreate;
-    d->pipelineDestroyFn = pipelineDestroy;
+    d->pipelineRetainFn = pipelineRetain;
+    d->pipelineReleaseFn = pipelineRelease;
     d->pipelineGroupSizeFn = pipelineGroupSize;
     d->commandsBeginFn = commandsBegin;
     d->swapChainCreateFn = swapChainCreate;
@@ -1105,8 +1136,7 @@ PrGpuDevice* gpuMemoryCreate(PrStringView backend, const GpuMemoryMirror* PR_NUL
         .adapter = "memory",
         .backend = backend,
         .maxTextureSize = kMaxTextureSize,
-        .maxResourceHandles = UINT32_MAX,
-        .maxSamplerHandles = UINT32_MAX,
+        .limits = limits,
         .storageOffsetAlignment = 16,
     };
     d->nativeKinds = 1u << PrGpuNativeKind_Pixels | (mirror != nullptr ? 1u << mirror->kind : 0u);

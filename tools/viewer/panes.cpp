@@ -26,7 +26,7 @@ void releaseSlot(Slot& slot) {
     prDrawListRelease(slot.prepared);
     slot.prepared = nullptr;
     if (slot.device != nullptr)
-        prGpuTextureDestroy(slot.device, slot.texture);
+        prGpuTextureRelease(slot.device, slot.texture);
     slot.texture = PrGpuTexture{};
     slot.shown.clear();
 }
@@ -92,7 +92,7 @@ void compareRead(void* PR_NULLABLE context, PrPixelView texels) {
 PrStatus sizeTexture(PrGpuDevice* device, PrGpuTexture& texture, uint32_t width, uint32_t height, PrPixelFormat format) {
     if (fits(device, texture, width, height, format))
         return PrStatus_Ok;
-    prGpuTextureDestroy(device, texture);
+    prGpuTextureRelease(device, texture);
     texture = PrGpuTexture{};
     PrGpuTextureDesc desc = prGpuTextureDesc2d(prGpuFormatFromPixelFormat(format), PrUVec2{width, height},
         PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_RenderTarget);

@@ -49,7 +49,7 @@ TEST_CASE("d3d11 binds resources only to slots") {
     PrGpuDeviceInfo info = prGpuDeviceInfo(f.device);
     CHECK(info.backend == "Direct3D 11");
     CHECK((info.features & PrGpuFeatureFlag_Bindless) == 0);
-    CHECK(info.maxResourceHandles == 0);
+    CHECK(info.limits.resources == prGpuDeviceLimitsDefault().resources);
     CHECK(info.maxBufferSlots == 4);
     CHECK(info.maxTextureSlots == 8);
 }
@@ -70,6 +70,6 @@ TEST_CASE("d3d11 refuses a pipeline whose shaders reach resources by handle, and
     CHECK(pipeline.id == 0);
     desc.fragment = "slotSampled";
     REQUIRE(prGpuPipelineCreateGraphics(f.device, &desc, &pipeline) == PrStatus_Ok);
-    prGpuPipelineDestroy(f.device, pipeline);
+    prGpuPipelineRelease(f.device, pipeline);
     prGpuShaderLibraryDestroy(library);
 }

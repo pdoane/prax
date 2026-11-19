@@ -25,6 +25,7 @@
 #include "pr/atomic.h"
 #include "pr/gpu_backend.h"
 #include "pr/mem.h"
+#include "pr/min_max.h"
 #include "pr/mutex.h"
 #include "pr/raw_array.h"
 #include "pr/thread.h"
@@ -49,12 +50,6 @@ extern const PrGpuCommands kCommandsFunctions;
 extern const PrGpuPass kPassFunctions;
 extern const PrGpuSwapChain kSwapChainFunctions;
 extern const PrGpuShaderLibrary kLibraryFunctions;
-
-// The ids that a device gives out, of resources, samplers and pipelines. Id zero of each is never used, so that zero is
-// none.
-constexpr uint32_t kMaxResources = 1u << 16;
-constexpr uint32_t kMaxSamplers = 1024;
-constexpr uint32_t kMaxPipelines = 4096;
 
 // The number of slots of each kind, and the first register of the kinds that share a register type with another, as
 // pr/gpu.slang places them: Texture slots after the Buffer slots at t, and RwBuffer slots after the RwTexture slots at
@@ -298,16 +293,12 @@ struct D3d11Device : GpuSharedDevice {
     RawArray<D3d11Submission> pending;                  // in the order of their fences
     bool stopping;
 
-    // The mutex guards everything below. The tables have fixed capacities, so that recording reads them without it.
+    // The mutex guards everything below, except the tables' references. The tables never move, so that recording reads
+    // them without it.
     PrMutex mutex;
-    D3d11Resource* resources;                             // by id
-    D3d11Pipeline* pipelines;                             // by id
-    ID3D11SamplerState* PR_NULLABLE* PR_NONNULL samplers; // by id, held
-    RawArray<uint32_t> freeResources;
-    uint32_t nextResource;
-    uint32_t nextSampler;
-    RawArray<uint32_t> freePipelines;
-    uint32_t nextPipeline;
+    GpuSharedTable<D3d11Resource> resources;
+    GpuSharedTable<D3d11Pipeline> pipelines;
+    GpuSharedTable<ID3D11SamplerState*> samplers;       // held
     RawArray<uint32_t> uploadBuffers;                   // the ids of the Upload buffers
     RawArray<uint32_t> streamBlocks;                    // the ids of the free blocks of kStreamBlock bytes
     RawArray<D3d11Held> held;
@@ -523,16 +514,7 @@ D3D11_PRIMITIVE_TOPOLOGY topologyOf(PrGpuTopology topology) {
 
 // Takes a free resource id, or returns zero if none is left. The caller holds the mutex.
 uint32_t takeIdLocked(D3d11Device* d) {
-    uint32_t id = 0;
-    if (d->freeResources.count != 0) {
-        id = d->freeResources.last();
-        d->freeResources.pop();
-    } else if (d->nextResource < kMaxResources) {
-        id = d->nextResource++;
-    }
-    if (id != 0)
-        d->resources[id] = D3d11Resource{};
-    return id;
+    return d->resources.take();
 }
 
 // Releases what a resource holds. The caller holds the mutex.
@@ -561,7 +543,7 @@ void freeResource(D3d11Device* d, uint32_t id) {
             d->uploadBuffers.erase(at);
     }
     releaseResource(d->resources[id]);
-    d->freeResources.push(id);
+    d->resources.free(id);
 }
 
 void releasePipeline(D3d11Pipeline& p) {
@@ -596,7 +578,7 @@ void collect(D3d11Device* d) {
             freeResource(d, r.id);
         } else {
             releasePipeline(d->pipelines[r.id]);
-            d->freePipelines.push(r.id);
+            d->pipelines.free(r.id);
         }
     }
     d->retired.count = kept;
@@ -792,11 +774,11 @@ void destroyDevice(GpuSharedDevice* device) {
         prThreadJoin(&d->completion);
     }
     prMutexLock(&d->mutex);
-    for (uint32_t i = 1; i < d->nextResource; ++i)
+    for (uint32_t i = d->resources.firstId; i < d->resources.nextId; ++i)
         releaseResource(d->resources[i]);
-    for (uint32_t i = 1; i < d->nextPipeline; ++i)
+    for (uint32_t i = d->pipelines.firstId; i < d->pipelines.nextId; ++i)
         releasePipeline(d->pipelines[i]);
-    for (uint32_t i = 1; i < d->nextSampler; ++i)
+    for (uint32_t i = d->samplers.firstId; i < d->samplers.nextId; ++i)
         release(d->samplers[i]);
     prMutexUnlock(&d->mutex);
     for (uint32_t i = 0; i < d->clocks.count; ++i) {
@@ -804,11 +786,9 @@ void destroyDevice(GpuSharedDevice* device) {
         release(d->clocks.data[i].start);
         release(d->clocks.data[i].end);
     }
-    prMemoryFree(d->resources);
-    prMemoryFree(d->pipelines);
-    prMemoryFree(d->samplers);
-    d->freeResources.reset();
-    d->freePipelines.reset();
+    d->resources.reset();
+    d->pipelines.reset();
+    d->samplers.reset();
     d->uploadBuffers.reset();
     d->streamBlocks.reset();
     d->held.reset();
@@ -905,7 +885,13 @@ PrStatus bufferCreate(PrGpuDevice* device, const PrGpuBufferDesc* desc, PrGpuBuf
     return PrStatus_Ok;
 }
 
-void bufferDestroy(PrGpuDevice* device, PrGpuBuffer buffer) {
+void bufferRetain(PrGpuDevice* device, PrGpuBuffer buffer) {
+    d3d11Of(device)->resources.retain(buffer.id);
+}
+
+void bufferRelease(PrGpuDevice* device, PrGpuBuffer buffer) {
+    if (!d3d11Of(device)->resources.release(buffer.id))
+        return;
     retire(d3d11Of(device), D3d11RetiredKind_Resource, buffer.id);
 }
 
@@ -1163,7 +1149,13 @@ PrStatus textureCreateView(PrGpuDevice* device, PrGpuTexture texture, PrGpuTextu
     return PrStatus_Ok;
 }
 
-void textureDestroy(PrGpuDevice* device, PrGpuTexture texture) {
+void textureRetain(PrGpuDevice* device, PrGpuTexture texture) {
+    d3d11Of(device)->resources.retain(texture.id);
+}
+
+void textureRelease(PrGpuDevice* device, PrGpuTexture texture) {
+    if (!d3d11Of(device)->resources.release(texture.id))
+        return;
     gpuSharedTextureForget(d3d11Of(device), texture);
     retire(d3d11Of(device), D3d11RetiredKind_Resource, texture.id);
 }
@@ -1243,7 +1235,7 @@ PrStatus samplerCreate(PrGpuDevice* device, const PrGpuSamplerDesc* desc, PrGpuS
     if (FAILED(d->device->CreateSamplerState(&s, &sampler)))
         return PrStatus_Limit;
     prMutexLock(&d->mutex);
-    uint32_t id = d->nextSampler < kMaxSamplers ? d->nextSampler++ : 0;
+    const uint32_t id = d->samplers.take();
     if (id != 0)
         d->samplers[id] = sampler;
     prMutexUnlock(&d->mutex);
@@ -1281,13 +1273,7 @@ void shaderLibraryDestroy(PrGpuShaderLibrary* library) {
 // Puts a pipeline into a new id, or returns zero if none is left.
 uint32_t addPipeline(D3d11Device* d, const D3d11Pipeline& pipeline) {
     prMutexLock(&d->mutex);
-    uint32_t id = 0;
-    if (d->freePipelines.count != 0) {
-        id = d->freePipelines.last();
-        d->freePipelines.pop();
-    } else if (d->nextPipeline < kMaxPipelines) {
-        id = d->nextPipeline++;
-    }
+    const uint32_t id = d->pipelines.take();
     if (id != 0)
         d->pipelines[id] = pipeline;
     prMutexUnlock(&d->mutex);
@@ -1435,7 +1421,13 @@ PrStatus computePipelineCreate(PrGpuDevice* device, const PrGpuShaderLibrary*, c
     return PrStatus_Ok;
 }
 
-void pipelineDestroy(PrGpuDevice* device, PrGpuPipeline pipeline) {
+void pipelineRetain(PrGpuDevice* device, PrGpuPipeline pipeline) {
+    d3d11Of(device)->pipelines.retain(pipeline.id);
+}
+
+void pipelineRelease(PrGpuDevice* device, PrGpuPipeline pipeline) {
+    if (!d3d11Of(device)->pipelines.release(pipeline.id))
+        return;
     retire(d3d11Of(device), D3d11RetiredKind_Pipeline, pipeline.id);
 }
 
@@ -3050,12 +3042,12 @@ PrGpuDevice* prGpuD3d11Create(const PrGpuD3d11Options* PR_NULLABLE options) {
     prMutexInit(&d->doneMutex);
     prConditionInit(&d->doneSignal);
     prConditionInit(&d->pendingSignal);
-    d->resources = static_cast<D3d11Resource*>(prMemoryAllocZeroed(sizeof(D3d11Resource) * kMaxResources));
-    d->pipelines = static_cast<D3d11Pipeline*>(prMemoryAllocZeroed(sizeof(D3d11Pipeline) * kMaxPipelines));
-    d->samplers = static_cast<ID3D11SamplerState**>(prMemoryAllocZeroed(sizeof(ID3D11SamplerState*) * kMaxSamplers));
-    d->nextResource = 1;
-    d->nextSampler = 1;
-    d->nextPipeline = 1;
+    PrGpuDeviceLimits limits = gpuSharedDeviceLimits(d->options.limits);
+    limits.samplers = min(limits.samplers, uint32_t(D3D11_REQ_SAMPLER_OBJECT_COUNT_PER_DEVICE));
+    d->info.limits = limits;
+    d->resources.init(1, limits.resources);
+    d->pipelines.init(1, limits.pipelines);
+    d->samplers.init(1, limits.samplers);
     d->serial = 1;
 
     d->initialize = initializeDevice;
@@ -3067,14 +3059,16 @@ PrGpuDevice* prGpuD3d11Create(const PrGpuD3d11Options* PR_NULLABLE options) {
     d->waitIdleFn = waitIdle;
     d->supportsFormatFn = supportsFormat;
     d->bufferCreateFn = bufferCreate;
-    d->bufferDestroyFn = bufferDestroy;
+    d->bufferRetainFn = bufferRetain;
+    d->bufferReleaseFn = bufferRelease;
     d->bufferDescFn = bufferDesc;
     d->bufferStorageHandleFn = bufferStorageHandle;
     d->bufferMapFn = bufferMap;
     d->bufferUploadFn = bufferUpload;
     d->textureCreateFn = textureCreate;
     d->textureCreateViewFn = textureCreateView;
-    d->textureDestroyFn = textureDestroy;
+    d->textureRetainFn = textureRetain;
+    d->textureReleaseFn = textureRelease;
     d->textureDescFn = textureDesc;
     d->textureStorageHandleFn = textureStorageHandle;
     d->textureUploadFn = textureUpload;
@@ -3082,7 +3076,8 @@ PrGpuDevice* prGpuD3d11Create(const PrGpuD3d11Options* PR_NULLABLE options) {
     d->shaderLibraryCreateFn = shaderLibraryCreate;
     d->graphicsPipelineCreateFn = graphicsPipelineCreate;
     d->computePipelineCreateFn = computePipelineCreate;
-    d->pipelineDestroyFn = pipelineDestroy;
+    d->pipelineRetainFn = pipelineRetain;
+    d->pipelineReleaseFn = pipelineRelease;
     d->pipelineGroupSizeFn = pipelineGroupSize;
     d->commandsBeginFn = commandsBegin;
     d->swapChainCreateFn = swapChainCreate;

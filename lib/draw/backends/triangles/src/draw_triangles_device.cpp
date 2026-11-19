@@ -80,7 +80,7 @@ PrGpuPipeline pipelineFor(TrianglesDevice* d, PrGpuFormat format) {
 
 void destroyTextures(TrianglesDevice* d) {
     for (uint32_t i = 0; i < d->textures.count; ++i)
-        prGpuTextureDestroy(d->device, d->textures.data[i].texture);
+        prGpuTextureRelease(d->device, d->textures.data[i].texture);
     d->textures.clear();
     d->textureIds.clear();
 }
@@ -128,7 +128,7 @@ void trianglesDeviceDestroy(TrianglesDevice* PR_NULLABLE device) {
     d->textures.reset();
     d->textureIds.reset();
     for (uint32_t i = 0; i < d->pipelines.count; ++i)
-        prGpuPipelineDestroy(d->device, d->pipelines.data[i].pipeline);
+        prGpuPipelineRelease(d->device, d->pipelines.data[i].pipeline);
     d->pipelines.reset();
     prGpuShaderLibraryDestroy(d->library);
     prMemoryFree(d);
@@ -162,7 +162,7 @@ void trianglesDevicePrepare(TrianglesDevice* d, const TrianglesFrame* frame, PrG
                 break;
             case TrianglesTextureOp_Destroy:
                 if (at != kArrayMissing) {
-                    prGpuTextureDestroy(d->device, d->textures.data[at].texture);
+                    prGpuTextureRelease(d->device, d->textures.data[at].texture);
                     d->textures.data[at] = TrianglesOwnTexture{};
                     destroyed = true;
                 }

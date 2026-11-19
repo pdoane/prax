@@ -46,7 +46,7 @@ bool deviceRenderPixels(DeviceRender* render, const PrDrawList* list, PrUVec2 ex
         return false;
     PrGpuCommands* commands = nullptr;
     if (!prGpuCommandsBegin(render->device, nullptr, &commands)) {
-        prGpuTextureDestroy(render->device, texture);
+        prGpuTextureRelease(render->device, texture);
         return false;
     }
     PrDrawTarget target{.extent = extent, .format = PrPixelFormat_Rgba8, .commands = commands};
@@ -62,7 +62,7 @@ bool deviceRenderPixels(DeviceRender* render, const PrDrawList* list, PrUVec2 ex
     gpuSubmitAndWait(commands);
     PrPixels texels{rgba, size_t(extent.x) * 4, extent};
     gpuTextureRead(render->device, texture, PrGpuAccessFlag_ShaderRead, PrIVec2{0, 0}, texels);
-    prGpuTextureDestroy(render->device, texture);
+    prGpuTextureRelease(render->device, texture);
     return ok;
 }
 

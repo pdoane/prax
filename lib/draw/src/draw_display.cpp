@@ -119,7 +119,7 @@ PrGpuTexture createTable(PrGpuDevice* device, PrColorSpace gamut) {
 PrGpuPipeline pipelineFor(PrDrawDisplay* display, PrGpuFormat format) {
     if (display->pipeline.id != 0 && display->format == format)
         return display->pipeline;
-    prGpuPipelineDestroy(display->device, display->pipeline);
+    prGpuPipelineRelease(display->device, display->pipeline);
     PrGpuGraphicsPipelineDesc desc = prGpuGraphicsPipelineDescDefault(display->library);
     desc.vertex = "wholeVertex";
     desc.fragment = "convertPixel";
@@ -156,8 +156,8 @@ void prDrawDisplayDestroy(PrDrawDisplay* PR_NULLABLE display) {
     if (display == nullptr)
         return;
     for (PrGpuTexture table : display->tables)
-        prGpuTextureDestroy(display->device, table);
-    prGpuPipelineDestroy(display->device, display->pipeline);
+        prGpuTextureRelease(display->device, table);
+    prGpuPipelineRelease(display->device, display->pipeline);
     prGpuShaderLibraryDestroy(display->library);
     prMemoryFree(display);
 }

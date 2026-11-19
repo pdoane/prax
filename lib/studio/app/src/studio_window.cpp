@@ -97,7 +97,7 @@ PrGpuTexture renderedFor(StudioAppState* app, StudioWindowTarget& target, PrUVec
     PrGpuDevice* device = app->device;
     PrUVec2 held = target.rendered.id != 0 ? prGpuTextureExtent(device, target.rendered) : PrUVec2{};
     if (target.rendered.id == 0 || extent.x > held.x || extent.y > held.y) {
-        prGpuTextureDestroy(device, target.rendered);
+        prGpuTextureRelease(device, target.rendered);
         PrGpuTextureDesc desc = prGpuTextureDesc2d(PrGpuFormat_Rgba16F, extent,
             PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_RenderTarget);
         target.rendered = PrGpuTexture{};
@@ -126,7 +126,7 @@ void render(StudioAppState* studio, StudioWindowTarget& target, PrDrawList* list
     // If the swap chain changes to 8-bit sRGB, for example after a move to an SDR display, the half-float texture is
     // freed.
     if (!mapped && target.rendered.id != 0) {
-        prGpuTextureDestroy(device, target.rendered);
+        prGpuTextureRelease(device, target.rendered);
         target.rendered = PrGpuTexture{};
     }
     PrGpuTexture into = mapped ? renderedFor(studio, target, extent) : drawable;

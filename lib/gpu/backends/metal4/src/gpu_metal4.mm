@@ -799,8 +799,8 @@ PrGpuMetal4Options prGpuMetal4OptionsDefault(void) {
 
 PrGpuDevice* prGpuMetal4Create(const PrGpuMetal4Options* PR_NULLABLE options) {
     Device* d = allocZeroed<Device>();
-    gpuMetalDeviceInstall(d);
     d->options = options != nullptr ? *options : prGpuMetal4OptionsDefault();
+    gpuMetalDeviceInstall(d, d->options.limits);
     d->initialize = initializeDevice;
     d->destroy = destroyDevice;
     d->uploadsOpen = uploadsOpen;

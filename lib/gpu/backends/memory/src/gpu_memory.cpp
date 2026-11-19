@@ -9,7 +9,7 @@ using namespace pr_impl;
 
 PrGpuDevice* prGpuMemoryCreate(const PrGpuDeviceOptions* PR_NULLABLE options) {
     PrGpuDeviceOptions o = options != nullptr ? *options : prGpuDeviceOptionsDefault();
-    GpuSharedDevice* device = static_cast<GpuSharedDevice*>(gpuMemoryCreate("memory", nullptr));
+    GpuSharedDevice* device = static_cast<GpuSharedDevice*>(gpuMemoryCreate("memory", nullptr, o.limits));
     gpuSharedDeviceStart(device, o.pool, o.ready, o.readyContext);
     return device;
 }

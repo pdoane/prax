@@ -64,7 +64,7 @@ void releaseSlot(VulkanDevice* d, uint32_t slot) {
     VulkanResource& r = vulkanResourceAt(d, slot);
     r.attachments.reset();
     prMemZero(&r, sizeof(r));
-    d->freeSlots.push(slot);
+    d->resources.free(slot);
 }
 
 // Drops a reference to an image, and frees it with its last. Called with the device's mutex held.
@@ -304,7 +304,13 @@ PrStatus bufferCreate(PrGpuDevice* device, const PrGpuBufferDesc* desc, PrGpuBuf
     return PrStatus_Ok;
 }
 
-void bufferDestroy(PrGpuDevice* device, PrGpuBuffer buffer) {
+void bufferRetain(PrGpuDevice* device, PrGpuBuffer buffer) {
+    vulkanDevice(device)->resources.retain(buffer.id);
+}
+
+void bufferRelease(PrGpuDevice* device, PrGpuBuffer buffer) {
+    if (!vulkanDevice(device)->resources.release(buffer.id))
+        return;
     VulkanDevice* d = vulkanDevice(device);
     prMutexLock(&d->mutex);
     PR_ASSERT(vulkanResourceAt(d, buffer.id).kind == VulkanSlotKind_Buffer);
@@ -464,7 +470,13 @@ PrStatus textureCreateView(PrGpuDevice* device, PrGpuTexture texture, PrGpuTextu
     return status;
 }
 
-void textureDestroy(PrGpuDevice* device, PrGpuTexture texture) {
+void textureRetain(PrGpuDevice* device, PrGpuTexture texture) {
+    vulkanDevice(device)->resources.retain(texture.id);
+}
+
+void textureRelease(PrGpuDevice* device, PrGpuTexture texture) {
+    if (!vulkanDevice(device)->resources.release(texture.id))
+        return;
     VulkanDevice* d = vulkanDevice(device);
     gpuSharedTextureForget(d, texture);
     prMutexLock(&d->mutex);
@@ -480,7 +492,7 @@ PrGpuTextureDesc textureDesc(const PrGpuDevice* device, PrGpuTexture texture) {
 
 // Shaders write a texture through its storage image, in a slot of its own. A texture's native object is its VkImage.
 bool textureNative(PrGpuDevice* device, PrGpuTexture texture, PrGpuNativeKind, void* out) {
-    *static_cast<uint64_t*>(out) = reinterpret_cast<uint64_t>(vulkanDevice(device)->resources.data[texture.id].image);
+    *static_cast<uint64_t*>(out) = reinterpret_cast<uint64_t>(vulkanResourceAt(vulkanDevice(device), texture.id).image);
     return true;
 }
 
@@ -558,17 +570,18 @@ PrStatus samplerCreate(PrGpuDevice* device, const PrGpuSamplerDesc* desc, PrGpuS
     info.maxLod = desc->maxLod;
     info.borderColor = VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
     prMutexLock(&d->mutex);
-    if (d->samplers.count >= d->samplerCount) {
+    const uint32_t slot = d->samplers.take();
+    if (slot == 0) {
         prMutexUnlock(&d->mutex);
         return PrStatus_Limit;
     }
     VulkanSampler sampler{};
     if (!vulkanCheck(d, d->vk.CreateSampler(d->device, &info, nullptr, &sampler.sampler))) {
+        d->samplers.free(slot);
         prMutexUnlock(&d->mutex);
         return PrStatus_Limit;
     }
-    uint32_t slot = d->firstSampler + d->samplers.count;
-    d->samplers.push(sampler);
+    d->samplers[slot] = sampler;
     VkDescriptorImageInfo image{};
     image.sampler = sampler.sampler;
     VkWriteDescriptorSet write{};
@@ -798,20 +811,7 @@ void vulkanMemoryFree(VulkanDevice* d, VulkanMemory& memory) {
 }
 
 uint32_t vulkanSlotTake(VulkanDevice* d) {
-    uint32_t slot = 0;
-    if (d->freeSlots.count != 0) {
-        slot = d->freeSlots.last();
-        d->freeSlots.pop();
-    } else if (d->nextSlot < d->firstResource + d->resourceCount) {
-        slot = d->nextSlot++;
-        while (d->resources.count <= slot) {
-            VulkanResource empty{};
-            d->resources.push(empty);
-        }
-    }
-    if (slot != 0)
-        prMemZero(&d->resources.data[slot], sizeof(VulkanResource));
-    return slot;
+    return d->resources.take();
 }
 
 void vulkanSlotWriteBuffer(VulkanDevice* d, uint32_t slot, VkBuffer buffer) {
@@ -854,10 +854,10 @@ void vulkanRetireDone(VulkanDevice* d) {
         if (retired.kind == VulkanRetireKind_Slot) {
             freeSlot(d, retired.index);
         } else {
-            VulkanPipeline& pipeline = d->pipelines.data[retired.index - 1];
+            VulkanPipeline& pipeline = d->pipelines[retired.index];
             d->vk.DestroyPipeline(d->device, pipeline.pipeline, nullptr);
             prMemZero(&pipeline, sizeof(pipeline));
-            d->freePipelines.push(retired.index);
+            d->pipelines.free(retired.index);
         }
     }
     d->retired.count = kept;
@@ -1076,16 +1076,16 @@ PrStatus vulkanBufferWrap(VulkanDevice* d, VkBuffer buffer, const PrGpuBufferDes
 void vulkanResourcesReset(VulkanDevice* d) {
     d->openSerials.count = 0;
     vulkanRetireDone(d);
-    for (uint32_t slot = 1; slot < d->resources.count; ++slot) {
-        VulkanSlotKind kind = d->resources.data[slot].kind;
+    for (uint32_t slot = d->resources.firstId; slot < d->resources.nextId; ++slot) {
+        VulkanSlotKind kind = d->resources[slot].kind;
         if (kind == VulkanSlotKind_Buffer || kind == VulkanSlotKind_Texture)
             freeSlot(d, slot);
     }
-    for (uint32_t i = 0; i < d->samplers.count; ++i)
-        d->vk.DestroySampler(d->device, d->samplers.data[i].sampler, nullptr);
-    for (uint32_t i = 0; i < d->pipelines.count; ++i) {
-        if (d->pipelines.data[i].pipeline != VK_NULL_HANDLE)
-            d->vk.DestroyPipeline(d->device, d->pipelines.data[i].pipeline, nullptr);
+    for (uint32_t slot = d->samplers.firstId; slot < d->samplers.nextId; ++slot)
+        d->vk.DestroySampler(d->device, d->samplers[slot].sampler, nullptr);
+    for (uint32_t id = d->pipelines.firstId; id < d->pipelines.nextId; ++id) {
+        if (d->pipelines[id].pipeline != VK_NULL_HANDLE)
+            d->vk.DestroyPipeline(d->device, d->pipelines[id].pipeline, nullptr);
     }
     for (uint32_t i = 0; i < d->pages.count; ++i) {
         VulkanStagingPage& page = d->pages.data[i];
@@ -1099,8 +1099,6 @@ void vulkanResourcesReset(VulkanDevice* d) {
     d->pages.reset();
     d->uploads.reset();
     d->retired.reset();
-    d->freeSlots.reset();
-    d->freePipelines.reset();
     d->resources.reset();
     d->pipelines.reset();
 }
@@ -1114,14 +1112,16 @@ void vulkanResourceFunctions(VulkanDevice* d) {
     };
     d->supportsFormatFn = supportsFormat;
     d->bufferCreateFn = bufferCreate;
-    d->bufferDestroyFn = bufferDestroy;
+    d->bufferRetainFn = bufferRetain;
+    d->bufferReleaseFn = bufferRelease;
     d->bufferDescFn = bufferDesc;
     d->bufferStorageHandleFn = bufferStorageHandle;
     d->bufferMapFn = bufferMap;
     d->bufferUploadFn = bufferUpload;
     d->textureCreateFn = textureCreate;
     d->textureCreateViewFn = textureCreateView;
-    d->textureDestroyFn = textureDestroy;
+    d->textureRetainFn = textureRetain;
+    d->textureReleaseFn = textureRelease;
     d->textureDescFn = textureDesc;
     d->textureStorageHandleFn = textureStorageHandle;
     d->textureNativeFn = textureNative;

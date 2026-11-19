@@ -64,7 +64,7 @@ void studioAppWindowClosed(StudioAppState* app, StudioWindowState* window) {
 
 void studioWindowTargetClose(StudioAppState* app, StudioWindowTarget* target) {
     if (app->device != nullptr)
-        prGpuTextureDestroy(app->device, target->rendered);
+        prGpuTextureRelease(app->device, target->rendered);
     prDrawFrameDestroy(target->frame);
     prGpuSwapChainDestroy(target->swapChain);
     target->rendered = PrGpuTexture{};

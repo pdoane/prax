@@ -54,7 +54,7 @@ struct Window {
 // Frees what the window made on its device, and the device.
 void closeDevice(Window& w) {
     if (w.device != nullptr)
-        prGpuTextureDestroy(w.device, w.texture);
+        prGpuTextureRelease(w.device, w.texture);
     w.texture = PrGpuTexture{};
     w.frameSerial = 0;
     prDrawFrameDestroy(w.frame);

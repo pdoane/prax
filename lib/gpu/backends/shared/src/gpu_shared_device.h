@@ -14,6 +14,8 @@
 #include "pr/raw_array.h"
 #include "pr/thread.h"
 
+#include "gpu/backends/shared/src/gpu_shared_table.h"
+
 PR_ASSUME_NONNULL_BEGIN
 
 namespace pr_impl {
@@ -111,6 +113,10 @@ struct GpuSharedLibrary : PrGpuShaderLibrary {
 void gpuSharedDeviceInit(GpuSharedDevice* device);
 void gpuSharedDeviceReset(GpuSharedDevice* device);
 
+// Returns the limits that a device's options ask for, each zero replaced by the default's (prGpuDeviceLimitsDefault). A
+// backend whose API allows less lowers them, and sizes its tables by what it keeps.
+PrGpuDeviceLimits gpuSharedDeviceLimits(PrGpuDeviceLimits asked);
+
 // Starts the device's creation. The constructor calls it after filling the function table and the backend's
 // `initialize`, `removed` and `destroy`. It runs `initialize` as a job of `pool`, or during the call if `pool` is null,
 // then publishes the stage and calls `ready`.
@@ -133,7 +139,7 @@ inline bool gpuSharedDeviceIsReady(const GpuSharedDevice* device) {
 }
 
 // Forgets a texture that the device destroys, so that a later texture of the same id is not taken for an import's copy.
-// The backend's textureDestroyFn calls it.
+// The backend's textureReleaseFn calls it as it retires the texture.
 void gpuSharedTextureForget(GpuSharedDevice* device, PrGpuTexture texture);
 
 // The objects' functions that read the shared state.

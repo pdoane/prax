@@ -67,7 +67,7 @@ typedef void (*PrGpuVulkanFreeFn)(void* PR_NULLABLE context, uint64_t memory, ui
 
 // The application's bindless set and pipeline layout, and the ranges of the set's arrays that the backend writes. Slots
 // outside the ranges belong to the application. The first slot of each range is never a handle, so that zero stays no
-// resource.
+// resource, and the backend takes no more of a range than the options' limits allow.
 typedef struct PrGpuVulkanDescriptors {
     uint64_t set;                   // the application's VkDescriptorSet, bound at set 2 on each of its command buffers
     uint64_t pipelineLayout;        // the application's VkPipelineLayout
@@ -97,10 +97,6 @@ typedef struct PrGpuVulkanOptions {
     PrGpuVulkanFreeFn PR_NULLABLE free;
     void* PR_NULLABLE memoryContext;
 
-    // The number of handles of a device that the backend creates its own set for.
-    uint32_t resourceHandles;
-    uint32_t samplerHandles;
-
     // Picks an adapter for a device that the backend creates, by the order in which the system lists them. -1 picks the
     // first discrete adapter.
     int32_t adapter;
@@ -115,11 +111,14 @@ typedef struct PrGpuVulkanOptions {
     PrTaskPool* PR_NULLABLE pool;
     PrGpuDeviceReadyFn PR_NULLABLE ready;
     void* PR_NULLABLE readyContext;
+
+    // The objects that the device holds at once (PrGpuDeviceOptions).
+    PrGpuDeviceLimits limits;
 } PrGpuVulkanOptions;
 
-// Returns the default options: a device that the backend creates on the first discrete adapter, with 65536 resource
-// handles and 4096 sampler handles, without validation. The environment variable PR_VULKAN_DEBUG overrides that: 1
-// turns the layer on, and 0 turns it off. prGpuDeviceCreate turns the layer on where its options ask for validation.
+// Returns the default options: a device that the backend creates on the first discrete adapter, with the default limits
+// (prGpuDeviceLimitsDefault), without validation. The environment variable PR_VULKAN_DEBUG overrides that: 1 turns the
+// layer on, and 0 turns it off. prGpuDeviceCreate turns the layer on where its options ask for validation.
 // PR_VULKAN_ADAPTER picks an adapter by its index.
 PrGpuVulkanOptions prGpuVulkanOptionsDefault(void);
 

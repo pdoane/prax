@@ -276,7 +276,7 @@ void tearDown(Bench& b) {
     prFontSetDestroy(b.fonts);
     prFontSystemDestroy(b.system);
     if (b.device != nullptr)
-        prGpuTextureDestroy(b.device, b.target);
+        prGpuTextureRelease(b.device, b.target);
     prDrawFrameDestroy(b.frame);
     prDrawRendererDestroy(b.renderer);
     prGpuDeviceDestroy(b.device);

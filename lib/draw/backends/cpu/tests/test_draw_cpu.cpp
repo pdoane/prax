@@ -1535,7 +1535,7 @@ TEST_CASE("a group draws into the host's pixels, which keep each revision's cont
     CHECK(pixel(drawnOnce(second), 1, 1) == pixel(blended, 1, 1));
     prDrawListRelease(first);
     prDrawListRelease(second);
-    prGpuTextureDestroy(device, texture);
+    prGpuTextureRelease(device, texture);
     prDrawRendererDestroy(renderer);
     prGpuDeviceDestroy(device);
 }
@@ -1571,7 +1571,7 @@ TEST_CASE("a texture of the device draws as a source, read in place, and again a
     CHECK(pixel(t, 0, 0) == "0 255 0 255");
 
     prDrawListRelease(list);
-    prGpuTextureDestroy(device, texture);
+    prGpuTextureRelease(device, texture);
     prDrawRendererDestroy(renderer);
     prGpuDeviceDestroy(device);
 }

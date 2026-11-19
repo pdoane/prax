@@ -102,7 +102,7 @@ struct Fixture {
         prGpuDeviceWait(device, prGpuCommandsSubmit(commands));
         Array<uint32_t> out(count);
         prMemCopy(out.data(), prGpuBufferMap(device, readback), size_t(count) * 4);
-        prGpuBufferDestroy(device, readback);
+        prGpuBufferRelease(device, readback);
         return out;
     }
 };
@@ -184,8 +184,8 @@ TEST_CASE("d3d12 records into the application's command list, around the applica
     prGpuDeviceWait(f.device, fence);
     CHECK(prGpuDeviceIsComplete(f.device, fence));
     CHECK(f.words(output, 4) == Array<uint32_t>({0, 11, 9, 9}));
-    prGpuPipelineDestroy(f.device, pipeline);
-    prGpuBufferDestroy(f.device, output);
+    prGpuPipelineRelease(f.device, pipeline);
+    prGpuBufferRelease(f.device, output);
 }
 
 TEST_CASE("d3d12 draws into the application's pass, and says which of the pass's state its draws changed") {
@@ -241,8 +241,8 @@ TEST_CASE("d3d12 draws into the application's pass, and says which of the pass's
         PrPixels{reinterpret_cast<uint8_t*>(pixels), 8 * 4, PrUVec2{8, 8}});
     CHECK(pixels[0] == 0xff0000ffu);
     CHECK(pixels[7 * 8 + 7] == 0xffff0000u);
-    prGpuPipelineDestroy(f.device, pipeline);
-    prGpuTextureDestroy(f.device, target);
+    prGpuPipelineRelease(f.device, pipeline);
+    prGpuTextureRelease(f.device, target);
 }
 
 TEST_CASE("d3d12 hands a native draw the pass's command list, and draws after it with its own state again") {
@@ -281,6 +281,6 @@ TEST_CASE("d3d12 hands a native draw the pass's command list, and draws after it
         PrPixels{reinterpret_cast<uint8_t*>(pixels), 8 * 4, PrUVec2{8, 8}});
     CHECK(pixels[7] == 0xff0000ffu);
     CHECK(pixels[7 * 8] == 0xffff0000u);
-    prGpuPipelineDestroy(f.device, pipeline);
-    prGpuTextureDestroy(f.device, target);
+    prGpuPipelineRelease(f.device, pipeline);
+    prGpuTextureRelease(f.device, target);
 }

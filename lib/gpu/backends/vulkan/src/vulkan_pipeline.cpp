@@ -164,16 +164,9 @@ VkStencilOpState stencilOf(const PrGpuStencilFace& face, uint8_t readMask, uint8
 PrStatus pipelineAdd(VulkanDevice* d, VkPipeline pipeline, VkPipelineBindPoint bindPoint, PrGpuExtent groupSize,
         bool readsTarget, PrGpuPipeline* out) {
     prMutexLock(&d->mutex);
-    uint32_t id = 0;
-    if (d->freePipelines.count != 0) {
-        id = d->freePipelines.last();
-        d->freePipelines.pop();
-    } else if (d->pipelines.count < d->pipelines.capacity) {
-        d->pipelines.push(VulkanPipeline{});
-        id = d->pipelines.count;
-    }
+    const uint32_t id = d->pipelines.take();
     if (id != 0)
-        d->pipelines.data[id - 1] = VulkanPipeline{pipeline, bindPoint, groupSize, readsTarget};
+        d->pipelines[id] = VulkanPipeline{pipeline, bindPoint, groupSize, readsTarget};
     prMutexUnlock(&d->mutex);
     if (id == 0) {
         d->vk.DestroyPipeline(d->device, pipeline, nullptr);
@@ -387,7 +380,13 @@ PrStatus computePipelineCreate(PrGpuDevice* device, const PrGpuShaderLibrary* li
     return pipelineAdd(d, pipeline, VK_PIPELINE_BIND_POINT_COMPUTE, compute->groupSize, false, out);
 }
 
-void pipelineDestroy(PrGpuDevice* device, PrGpuPipeline pipeline) {
+void pipelineRetain(PrGpuDevice* device, PrGpuPipeline pipeline) {
+    vulkanDevice(device)->pipelines.retain(pipeline.id);
+}
+
+void pipelineRelease(PrGpuDevice* device, PrGpuPipeline pipeline) {
+    if (!vulkanDevice(device)->pipelines.release(pipeline.id))
+        return;
     VulkanDevice* d = vulkanDevice(device);
     prMutexLock(&d->mutex);
     vulkanRetire(d, VulkanRetired{VulkanRetireKind_Pipeline, pipeline.id, 0});
@@ -396,7 +395,7 @@ void pipelineDestroy(PrGpuDevice* device, PrGpuPipeline pipeline) {
 }
 
 PrGpuExtent pipelineGroupSize(const PrGpuDevice* device, PrGpuPipeline pipeline) {
-    return vulkanDevice(device)->pipelines.data[pipeline.id - 1].groupSize;
+    return vulkanDevice(device)->pipelines[pipeline.id].groupSize;
 }
 
 // The functions of the device's objects.
@@ -411,7 +410,8 @@ void vulkanPipelineFunctions(VulkanDevice* d) {
     d->shaderLibraryCreateFn = shaderLibraryCreate;
     d->graphicsPipelineCreateFn = graphicsPipelineCreate;
     d->computePipelineCreateFn = computePipelineCreate;
-    d->pipelineDestroyFn = pipelineDestroy;
+    d->pipelineRetainFn = pipelineRetain;
+    d->pipelineReleaseFn = pipelineRelease;
     d->pipelineGroupSizeFn = pipelineGroupSize;
 }
 

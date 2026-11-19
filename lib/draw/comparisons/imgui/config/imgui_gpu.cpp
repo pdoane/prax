@@ -64,7 +64,7 @@ PrGpuPipeline pipelineFor(ImGuiGpu* g, PrGpuFormat format) {
 
 void destroyTexture(ImGuiGpu* g, ImTextureData* tex) {
     if (tex->TexID != ImTextureID_Invalid)
-        prGpuTextureDestroy(g->device, PrGpuTexture{uint32_t(tex->TexID)});
+        prGpuTextureRelease(g->device, PrGpuTexture{uint32_t(tex->TexID)});
     tex->SetTexID(ImTextureID_Invalid);
     tex->SetStatus(ImTextureStatus_Destroyed);
 }
@@ -141,7 +141,7 @@ void imguiGpuShutdown() {
             destroyTexture(g, tex);
     }
     for (uint32_t i = 0; i < g->pipelines.count; ++i)
-        prGpuPipelineDestroy(g->device, g->pipelines.data[i].pipeline);
+        prGpuPipelineRelease(g->device, g->pipelines.data[i].pipeline);
     g->pipelines.reset();
     prGpuShaderLibraryDestroy(g->library);
     prMemoryFree(g);

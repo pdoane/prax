@@ -36,6 +36,9 @@ typedef struct PrGpuD3d11Options {
     PrTaskPool* PR_NULLABLE pool;
     PrGpuDeviceReadyFn PR_NULLABLE ready;
     void* PR_NULLABLE readyContext;
+
+    // The objects that the device holds at once (PrGpuDeviceOptions).
+    PrGpuDeviceLimits limits;
 } PrGpuD3d11Options;
 
 // Returns the default options: a device on the system's high-performance adapter, without the debug layer. The

@@ -46,8 +46,9 @@ struct GpuMemoryMirror {
 // Creates a memory device that reports `backend` as its backend's name. `backend` must live as long as the process. If
 // `mirror` is not null, the device keeps copies of its textures through it. The device's swap chains present to no
 // surface until the backend that created it sets a swap chain create of its own. The device's initialization always
-// succeeds unless the backend replaces `initialize`. The backend starts the creation (gpuSharedDeviceStart).
-PrGpuDevice* gpuMemoryCreate(PrStringView backend, const GpuMemoryMirror* PR_NULLABLE mirror);
+// succeeds unless the backend replaces `initialize`. Its tables hold the objects that `limits` allow
+// (PrGpuDeviceOptions). The backend starts the creation (gpuSharedDeviceStart).
+PrGpuDevice* gpuMemoryCreate(PrStringView backend, const GpuMemoryMirror* PR_NULLABLE mirror, PrGpuDeviceLimits limits);
 
 // Gives the texture `mirror`, a copy that the backend made itself, which holds what the texture holds. The copies must
 // hold the texture's format, and the texture must have no copy yet. The device frees the copy with the texture.

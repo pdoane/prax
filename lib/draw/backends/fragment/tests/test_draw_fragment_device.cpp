@@ -114,7 +114,7 @@ struct Device {
     ~Device() {
         prDrawFrameDestroy(frame);
         prDrawRendererDestroy(renderer);
-        prGpuTextureDestroy(gpuDevice, texture);
+        prGpuTextureRelease(gpuDevice, texture);
     }
 
     // Prepares and encodes the list in a pass over the texture, then reads the texture back.
@@ -350,7 +350,7 @@ TEST_CASE("the fragment renderer draws the host's texture as the cpu backend dra
         }
         prDrawFrameDestroy(device.frame);
         device.frame = nullptr;
-        prGpuTextureDestroy(device.gpuDevice, texture);
+        prGpuTextureRelease(device.gpuDevice, texture);
     });
 }
 
@@ -949,8 +949,8 @@ TEST_CASE("the fragment renderer reads what the host provides beneath a render a
         CHECK(prDrawFramePrepare(overTexture, panel, &part) == PrStatus_Ok);
         gpuSubmitAndWait(commands);
 
-        prGpuTextureDestroy(device.gpuDevice, second);
-        prGpuTextureDestroy(device.gpuDevice, backgroundTexture);
+        prGpuTextureRelease(device.gpuDevice, second);
+        prGpuTextureRelease(device.gpuDevice, backgroundTexture);
         prDrawFrameDestroy(overRedraw);
         prDrawFrameDestroy(overTexture);
         prDrawFrameDestroy(backgroundTarget);
@@ -1027,7 +1027,7 @@ TEST_CASE("the fragment renderer reads the host's texture alone beneath a backdr
         CHECK(fractionDiffering(drawn, expected, 2) == 0);
         CHECK(int(drawn[(8 * kSize + 8) * 4]) == 255 - 200);
         prDrawListRelease(list);
-        prGpuTextureDestroy(device.gpuDevice, host);
+        prGpuTextureRelease(device.gpuDevice, host);
     });
 }
 
@@ -1129,8 +1129,8 @@ TEST_CASE("the fragment renderer reads what lies beneath a turned group, as a te
         prDrawFrameDestroy(again);
         prDrawFrameDestroy(hostTarget);
         prDrawRendererDestroy(redraw);
-        prGpuTextureDestroy(device.gpuDevice, second);
-        prGpuTextureDestroy(device.gpuDevice, host);
+        prGpuTextureRelease(device.gpuDevice, second);
+        prGpuTextureRelease(device.gpuDevice, host);
         prDrawListRelease(list);
         prDrawListRelease(columns);
     });
@@ -1992,7 +1992,7 @@ TEST_CASE("the fragment renderer keeps colors past white in a half-float target,
         CHECK(near(colors[2], PrColor{limit, limit, limit, 1}));
         prDrawFrameDestroy(frame);
         prDrawRendererDestroy(renderer);
-        prGpuTextureDestroy(gpuDevice, texture);
+        prGpuTextureRelease(gpuDevice, texture);
         prDrawImageRelease(image);
         prDrawListRelease(list);
     });
@@ -2027,7 +2027,7 @@ TEST_CASE("the fragment renderer renders into a half-float target without a laye
         prDrawFrameDestroy(frame);
         prDrawListRelease(list);
         prDrawRendererDestroy(renderer);
-        prGpuTextureDestroy(gpuDevice, texture);
+        prGpuTextureRelease(gpuDevice, texture);
     });
 }
 
@@ -2111,7 +2111,7 @@ TEST_CASE("the fragment renderer renders colors past white into a half-float tar
         CHECK(brightest > 2.5f);
         prDrawFrameDestroy(frame);
         prDrawRendererDestroy(renderer);
-        prGpuTextureDestroy(gpuDevice, texture);
+        prGpuTextureRelease(gpuDevice, texture);
         prDrawListRelease(list);
     });
 }
@@ -2173,7 +2173,7 @@ TEST_CASE("the fragment renderer draws a group into the host's texture, which ke
         CHECK(pixel(device.render(second), 1, 1) == pixel(blended, 1, 1));
         prDrawListRelease(first);
         prDrawListRelease(second);
-        prGpuTextureDestroy(device.gpuDevice, held);
+        prGpuTextureRelease(device.gpuDevice, held);
     });
 }
 

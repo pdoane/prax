@@ -110,7 +110,7 @@ PrStatus prDrawRendererRenderPartPixels(PrDrawRenderer* renderer, const PrDrawLi
     if (status == PrStatus_Ok && !prGpuCommandsBegin(device, nullptr, &commands))
         status = PrStatus_Lost;
     if (status != PrStatus_Ok) {
-        prGpuTextureDestroy(device, texture);
+        prGpuTextureRelease(device, texture);
         return status;
     }
     PrDrawTarget target{.extent = pixels.extent, .format = format, .commands = commands};
@@ -131,6 +131,6 @@ PrStatus prDrawRendererRenderPartPixels(PrDrawRenderer* renderer, const PrDrawLi
     // submission.
     prGpuCommandsSubmit(commands);
     prDrawFrameDestroy(frame);
-    prGpuTextureDestroy(device, texture);
+    prGpuTextureRelease(device, texture);
     return status;
 }

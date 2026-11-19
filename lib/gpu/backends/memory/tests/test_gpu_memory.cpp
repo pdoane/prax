@@ -25,7 +25,9 @@ namespace {
 struct Device {
     PrGpuDevice* device = nullptr;
 
-    Device() : device(prGpuMemoryCreate(nullptr)) { REQUIRE(prGpuDeviceLostStatus(device) == PrStatus_Ok); }
+    explicit Device(const PrGpuDeviceOptions* PR_NULLABLE options = nullptr) : device(prGpuMemoryCreate(options)) {
+        REQUIRE(prGpuDeviceLostStatus(device) == PrStatus_Ok);
+    }
     ~Device() { prGpuDeviceDestroy(device); }
 
     PrGpuTexture texture(PrUVec2 extent, PrGpuFormat format = PrGpuFormat_Rgba8) {
@@ -92,7 +94,7 @@ TEST_CASE("a memory texture's texels are written and read back, clipped to the t
     Array<uint8_t> after = d.read(texture);
     CHECK(prMemEquals(&after[20], white, 4));
     CHECK(after[16] == 17);
-    prGpuTextureDestroy(d.device, texture);
+    prGpuTextureRelease(d.device, texture);
 }
 
 TEST_CASE("a memory pass clears its target to the color as the target's format holds it") {
@@ -118,9 +120,9 @@ TEST_CASE("a memory pass clears its target to the color as the target's format h
     PrFloat16 red{};
     prMemCopy(&red, halves.data(), 2);
     CHECK(prFloat16ToFloat(red) == 2.0f);
-    prGpuTextureDestroy(d.device, rgba);
-    prGpuTextureDestroy(d.device, bgra);
-    prGpuTextureDestroy(d.device, half);
+    prGpuTextureRelease(d.device, rgba);
+    prGpuTextureRelease(d.device, bgra);
+    prGpuTextureRelease(d.device, half);
 }
 
 TEST_CASE("a memory command buffer runs its work in order when it is submitted, after the uploads before it") {
@@ -146,8 +148,8 @@ TEST_CASE("a memory command buffer runs its work in order when it is submitted, 
     CHECK(done);
     CHECK(prGpuDeviceIsComplete(d.device, fence));
     CHECK(prMemEquals(bytes, sevens, 16));
-    prGpuBufferDestroy(d.device, source);
-    prGpuBufferDestroy(d.device, target);
+    prGpuBufferRelease(d.device, source);
+    prGpuBufferRelease(d.device, target);
 }
 
 TEST_CASE("a memory view covers its level and layer of the texture's memory") {
@@ -181,9 +183,9 @@ TEST_CASE("a memory view covers its level and layer of the texture's memory") {
     const uint8_t* texels = static_cast<const uint8_t*>(prGpuBufferMap(d.device, buffer));
     CHECK(texels[2] == 255);
     CHECK(texels[12 + 2] == 255);
-    prGpuTextureDestroy(d.device, view);
-    prGpuTextureDestroy(d.device, array);
-    prGpuBufferDestroy(d.device, buffer);
+    prGpuTextureRelease(d.device, view);
+    prGpuTextureRelease(d.device, array);
+    prGpuBufferRelease(d.device, buffer);
 }
 
 TEST_CASE("a memory pass draws through the application, in order with its clear, into the texels of its attachment") {
@@ -215,7 +217,7 @@ TEST_CASE("a memory pass draws through the application, in order with its clear,
     CHECK(drawn.cleared == 255);
     Array<uint8_t> texels = d.read(texture);
     CHECK(texels[12 + 1] == 255);
-    prGpuTextureDestroy(d.device, texture);
+    prGpuTextureRelease(d.device, texture);
 }
 
 TEST_CASE("a memory texture over the application's pixels draws and reads them in place, with their stride") {
@@ -238,7 +240,7 @@ TEST_CASE("a memory texture over the application's pixels draws and reads them i
     PrGpuTexture unmatched{};
     CHECK(prGpuTextureCreateOverPixels(d.device, PrGpuFormat_Rg8, PrPixels{pixels.data(), 16, {3, 3}},
         PrGpuTextureUsageFlag_RenderTarget, &unmatched) == PrStatus_NotSupported);
-    prGpuTextureDestroy(d.device, texture);
+    prGpuTextureRelease(d.device, texture);
 }
 
 TEST_CASE("a memory device presents to no surface") {
@@ -262,12 +264,12 @@ TEST_CASE("a memory texture destroyed after work that uses it is recorded lasts 
     }, &drawn);
     prGpuPassEnd(pass);
     // The texture's slot stays taken, so a texture made now does not reuse it.
-    prGpuTextureDestroy(d.device, texture);
+    prGpuTextureRelease(d.device, texture);
     PrGpuTexture made = d.texture(PrUVec2{2, 2});
     CHECK(made.id != texture.id);
     prGpuDeviceWait(d.device, prGpuCommandsSubmit(commands));
     CHECK(drawn == 255);
-    prGpuTextureDestroy(d.device, made);
+    prGpuTextureRelease(d.device, made);
 }
 
 TEST_CASE("a memory device imports pixels by copying them, and is done with them at once") {
@@ -284,7 +286,7 @@ TEST_CASE("a memory device imports pixels by copying them, and is done with them
     CHECK(prGpuTextureDesc(d.device, texture).usage == PrGpuTextureUsageFlag_Sampled);
     Array<uint8_t> read = d.read(texture);
     CHECK(prMemEquals(read.data(), texels, 8));
-    prGpuTextureDestroy(d.device, texture);
+    prGpuTextureRelease(d.device, texture);
 }
 
 TEST_CASE("a memory device runs work while another thread makes and destroys textures") {
@@ -310,7 +312,7 @@ TEST_CASE("a memory device runs work while another thread makes and destroys tex
             made.push(texture);
         }
         for (PrGpuTexture texture : made)
-            prGpuTextureDestroy(m.device, texture);
+            prGpuTextureRelease(m.device, texture);
     }, &maker);
     for (int i = 0; i < 2000; ++i) {
         PrGpuCommands* commands = nullptr;
@@ -322,8 +324,8 @@ TEST_CASE("a memory device runs work while another thread makes and destroys tex
     prThreadJoin(&thread);
     CHECK(!maker.failed);
     CHECK(d.read(target)[0] == 255);
-    prGpuTextureDestroy(d.device, source);
-    prGpuTextureDestroy(d.device, target);
+    prGpuTextureRelease(d.device, source);
+    prGpuTextureRelease(d.device, target);
 }
 
 TEST_CASE("an import that copies writes into the texture that it replaces, if the texture fits the image") {
@@ -354,5 +356,75 @@ TEST_CASE("an import that copies writes into the texture that it replaces, if th
         &texture) == PrStatus_NotSupported);
     CHECK(texture.id == held.id);
     CHECK(!released);
-    prGpuTextureDestroy(d.device, texture);
+    prGpuTextureRelease(d.device, texture);
+}
+
+TEST_CASE("a memory texture or buffer lives until the release of its last reference, which frees its slot") {
+    Device d;
+    PrGpuTexture texture = d.texture(PrUVec2{2, 2});
+    prGpuTextureRetain(d.device, texture);
+    prGpuTextureRelease(d.device, texture);
+    // The reference that the retain took keeps the texture, so its slot stays taken and its texels stay readable.
+    d.clear(texture, PrColor{0, 1, 0, 1});
+    CHECK(d.read(texture)[1] == 255);
+    PrGpuTexture other = d.texture(PrUVec2{2, 2});
+    CHECK(other.id != texture.id);
+    prGpuTextureRelease(d.device, other);
+    prGpuTextureRelease(d.device, texture);
+    // With no work open, the last release frees the slot, which the next texture takes.
+    PrGpuTexture next = d.texture(PrUVec2{2, 2});
+    CHECK(next.id == texture.id);
+    prGpuTextureRelease(d.device, next);
+
+    PrGpuBufferDesc desc{.size = 16, .memory = PrGpuMemory_Upload};
+    PrGpuBuffer buffer{};
+    REQUIRE(prGpuBufferCreate(d.device, &desc, &buffer) == PrStatus_Ok);
+    prGpuBufferRetain(d.device, buffer);
+    prGpuBufferRetain(d.device, buffer);
+    prGpuBufferRelease(d.device, buffer);
+    prGpuBufferRelease(d.device, buffer);
+    CHECK(prGpuBufferMap(d.device, buffer) != nullptr);
+    PrGpuBuffer taken{};
+    REQUIRE(prGpuBufferCreate(d.device, &desc, &taken) == PrStatus_Ok);
+    CHECK(taken.id != buffer.id);
+    prGpuBufferRelease(d.device, taken);
+    prGpuBufferRelease(d.device, buffer);
+    PrGpuBuffer again{};
+    REQUIRE(prGpuBufferCreate(d.device, &desc, &again) == PrStatus_Ok);
+    CHECK(again.id == buffer.id);
+    prGpuBufferRelease(d.device, again);
+}
+
+TEST_CASE("a device holds the objects that its limits allow, and refuses a creation past them") {
+    PrGpuDeviceOptions options = prGpuDeviceOptionsDefault();
+    options.limits = PrGpuDeviceLimits{.resources = 2, .samplers = 1};
+    Device d(&options);
+    const PrGpuDeviceLimits limits = prGpuDeviceInfo(d.device).limits;
+    CHECK(limits.resources == 2);
+    CHECK(limits.samplers == 1);
+    // A limit of zero takes the default's.
+    CHECK(limits.pipelines == prGpuDeviceLimitsDefault().pipelines);
+
+    PrGpuTexture first = d.texture(PrUVec2{2, 2});
+    PrGpuBufferDesc desc{.size = 16, .memory = PrGpuMemory_Upload};
+    PrGpuBuffer buffer{};
+    REQUIRE(prGpuBufferCreate(d.device, &desc, &buffer) == PrStatus_Ok);
+    PrGpuTexture second = d.texture(PrUVec2{2, 2});
+    PrGpuTextureDesc textureDesc = prGpuTextureDesc2d(PrGpuFormat_Rgba8, PrUVec2{2, 2}, PrGpuTextureUsageFlag_Sampled);
+    PrGpuTexture third{};
+    CHECK(prGpuTextureCreate(d.device, &textureDesc, &third) == PrStatus_Limit);
+    CHECK(third.id == 0);
+    // A released texture's id is free again once no work may use it.
+    prGpuTextureRelease(d.device, first);
+    REQUIRE(prGpuTextureCreate(d.device, &textureDesc, &third) == PrStatus_Ok);
+
+    PrGpuSampler sampler{};
+    PrGpuSamplerDesc linear = prGpuSamplerDescDefault(PrGpuFilter_Linear, PrGpuAddress_Clamp);
+    CHECK(prGpuSamplerIntern(d.device, &linear, &sampler) == PrStatus_Ok);
+    PrGpuSamplerDesc nearest = prGpuSamplerDescDefault(PrGpuFilter_Nearest, PrGpuAddress_Clamp);
+    CHECK(prGpuSamplerIntern(d.device, &nearest, &sampler) == PrStatus_Limit);
+
+    prGpuTextureRelease(d.device, second);
+    prGpuTextureRelease(d.device, third);
+    prGpuBufferRelease(d.device, buffer);
 }

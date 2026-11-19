@@ -140,6 +140,9 @@ struct PrGpuSwapChain {
 // PrGpuImportKind k. `shaderLibraryCreateFn` takes the entries whose code pr/gpu.h found for the backend, and the
 // library holds and frees them. The pipeline functions take entries that pr/gpu.h found and checked the stages of.
 //
+// A backend counts the references of each buffer, texture and pipeline. The release of the last retires the resource as
+// the backend retires what it destroys, so the device frees it once the work submitted before is done.
+//
 // A null `textureCreateOverPixelsFn` means that the device does not hand out PrGpuNativeKind_Pixels, and a null
 // `textureNativeFn` that it hands out no native objects. Either is called only with a kind that the device hands out.
 //
@@ -161,7 +164,8 @@ struct PrGpuDevice {
     bool (*supportsFormatFn)(const PrGpuDevice* device, PrGpuFormat format, PrGpuTextureUsageFlags usage);
 
     PrStatus (*bufferCreateFn)(PrGpuDevice* device, const PrGpuBufferDesc* desc, PrGpuBuffer* out);
-    void (*bufferDestroyFn)(PrGpuDevice* device, PrGpuBuffer buffer);
+    void (*bufferRetainFn)(PrGpuDevice* device, PrGpuBuffer buffer);
+    void (*bufferReleaseFn)(PrGpuDevice* device, PrGpuBuffer buffer);
     PrGpuBufferDesc (*bufferDescFn)(const PrGpuDevice* device, PrGpuBuffer buffer);
     uint32_t (*bufferStorageHandleFn)(const PrGpuDevice* device, PrGpuBuffer buffer);
     void* PR_NONNULL (*PR_NONNULL bufferMapFn)(const PrGpuDevice* device, PrGpuBuffer buffer);
@@ -170,7 +174,8 @@ struct PrGpuDevice {
     PrStatus (*textureCreateFn)(PrGpuDevice* device, const PrGpuTextureDesc* desc, PrGpuTexture* out);
     PrStatus (*textureCreateViewFn)(PrGpuDevice* device, PrGpuTexture texture, PrGpuTextureKind kind,
         PrGpuSubresources subresources, PrGpuTexture* out);
-    void (*textureDestroyFn)(PrGpuDevice* device, PrGpuTexture texture);
+    void (*textureRetainFn)(PrGpuDevice* device, PrGpuTexture texture);
+    void (*textureReleaseFn)(PrGpuDevice* device, PrGpuTexture texture);
     PrGpuTextureDesc (*textureDescFn)(const PrGpuDevice* device, PrGpuTexture texture);
     uint32_t (*textureStorageHandleFn)(const PrGpuDevice* device, PrGpuTexture texture);
     void (*textureUploadFn)(PrGpuDevice* device, PrGpuTexture texture, const PrGpuTextureRegion* region,
@@ -189,7 +194,8 @@ struct PrGpuDevice {
         const PrGpuShaderEntry* vertex, const PrGpuShaderEntry* PR_NULLABLE fragment, PrGpuPipeline* out);
     PrStatus (*computePipelineCreateFn)(PrGpuDevice* device, const PrGpuShaderLibrary* library,
         const PrGpuShaderEntry* compute, PrStringView name, PrGpuPipeline* out);
-    void (*pipelineDestroyFn)(PrGpuDevice* device, PrGpuPipeline pipeline);
+    void (*pipelineRetainFn)(PrGpuDevice* device, PrGpuPipeline pipeline);
+    void (*pipelineReleaseFn)(PrGpuDevice* device, PrGpuPipeline pipeline);
     PrGpuExtent (*pipelineGroupSizeFn)(const PrGpuDevice* device, PrGpuPipeline pipeline);
 
     bool (*commandsBeginFn)(PrGpuDevice* device, const PrGpuCommandsOptions* options,

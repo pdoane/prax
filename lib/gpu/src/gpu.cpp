@@ -109,7 +109,7 @@ void textureReadDone(void* PR_NULLABLE context, double) {
     if (!prGpuDeviceIsLost(r->device))
         texels = PrPixelView{static_cast<const uint8_t*>(prGpuBufferMap(r->device, r->buffer)), r->rowBytes, r->extent};
     r->read(r->context, texels);
-    prGpuBufferDestroy(r->device, r->buffer);
+    prGpuBufferRelease(r->device, r->buffer);
     prMemoryFree(r);
 }
 
@@ -175,8 +175,12 @@ using namespace pr_impl;
 // ---------------------------------------------------------------------------------------------------------------------
 // Devices
 
+PrGpuDeviceLimits prGpuDeviceLimitsDefault(void) {
+    return PrGpuDeviceLimits{.resources = 65536, .samplers = 2048, .pipelines = 4096};
+}
+
 PrGpuDeviceOptions prGpuDeviceOptionsDefault(void) {
-    return PrGpuDeviceOptions{};
+    return PrGpuDeviceOptions{.limits = prGpuDeviceLimitsDefault()};
 }
 
 void prGpuDeviceDestroy(PrGpuDevice* PR_NULLABLE device) {
@@ -305,9 +309,14 @@ PrStatus prGpuBufferCreate(PrGpuDevice* device, const PrGpuBufferDesc* desc, PrG
     return device->bufferCreateFn(device, desc, out);
 }
 
-void prGpuBufferDestroy(PrGpuDevice* device, PrGpuBuffer buffer) {
+void prGpuBufferRetain(PrGpuDevice* device, PrGpuBuffer buffer) {
     if (buffer.id != 0)
-        device->bufferDestroyFn(device, buffer);
+        device->bufferRetainFn(device, buffer);
+}
+
+void prGpuBufferRelease(PrGpuDevice* device, PrGpuBuffer buffer) {
+    if (buffer.id != 0)
+        device->bufferReleaseFn(device, buffer);
 }
 
 PrGpuBufferDesc prGpuBufferDesc(const PrGpuDevice* device, PrGpuBuffer buffer) {
@@ -379,10 +388,14 @@ PrStatus prGpuTextureCreateView(PrGpuDevice* device, PrGpuTexture texture, PrGpu
     return device->textureCreateViewFn(device, texture, kind, subresources, out);
 }
 
-void prGpuTextureDestroy(PrGpuDevice* device, PrGpuTexture texture) {
-    if (texture.id == 0)
-        return;
-    device->textureDestroyFn(device, texture);
+void prGpuTextureRetain(PrGpuDevice* device, PrGpuTexture texture) {
+    if (texture.id != 0)
+        device->textureRetainFn(device, texture);
+}
+
+void prGpuTextureRelease(PrGpuDevice* device, PrGpuTexture texture) {
+    if (texture.id != 0)
+        device->textureReleaseFn(device, texture);
 }
 
 PrGpuTextureDesc prGpuTextureDesc(const PrGpuDevice* device, PrGpuTexture texture) {
@@ -648,9 +661,14 @@ PrStatus prGpuPipelineCreateCompute(PrGpuDevice* device, const PrGpuShaderLibrar
     return device->computePipelineCreateFn(device, library, entry, name, out);
 }
 
-void prGpuPipelineDestroy(PrGpuDevice* device, PrGpuPipeline pipeline) {
+void prGpuPipelineRetain(PrGpuDevice* device, PrGpuPipeline pipeline) {
     if (pipeline.id != 0)
-        device->pipelineDestroyFn(device, pipeline);
+        device->pipelineRetainFn(device, pipeline);
+}
+
+void prGpuPipelineRelease(PrGpuDevice* device, PrGpuPipeline pipeline) {
+    if (pipeline.id != 0)
+        device->pipelineReleaseFn(device, pipeline);
 }
 
 PrGpuExtent prGpuPipelineGroupSize(const PrGpuDevice* device, PrGpuPipeline pipeline) {

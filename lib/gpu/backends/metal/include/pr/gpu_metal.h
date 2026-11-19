@@ -37,6 +37,9 @@ typedef struct PrGpuMetalOptions {
     PrTaskPool* PR_NULLABLE pool;
     PrGpuDeviceReadyFn PR_NULLABLE ready;
     void* PR_NULLABLE readyContext;
+
+    // The objects that the device holds at once (PrGpuDeviceOptions).
+    PrGpuDeviceLimits limits;
 } PrGpuMetalOptions;
 
 // Returns the default options: the system's default device, with a queue of the device's own.

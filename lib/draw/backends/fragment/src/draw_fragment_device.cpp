@@ -273,7 +273,7 @@ void trimPool(FragmentDevice* d) {
     for (uint32_t i = 0; i < d->pool.count; ++i) {
         FragmentPooledLayer& l = d->pool.data[i];
         if (l.texture.id != 0 && !l.taken && d->prepares - l.lastUsed > kLayerIdlePrepares) {
-            prGpuTextureDestroy(d->device, l.texture);
+            prGpuTextureRelease(d->device, l.texture);
             l = FragmentPooledLayer{};
         }
     }
@@ -671,7 +671,7 @@ void runRequests(FragmentDevice* d, const FragmentFrame* frame, PrGpuCommands* c
                 break;
             case FragmentTextureOp_Destroy:
                 if (at != kArrayMissing) {
-                    prGpuTextureDestroy(d->device, d->textures.data[at].texture);
+                    prGpuTextureRelease(d->device, d->textures.data[at].texture);
                     d->textures.data[at] = FragmentOwnTexture{};
                     destroyed = true;
                 }
@@ -812,9 +812,9 @@ void fragmentDeviceDestroy(FragmentDevice* PR_NULLABLE device) {
     FragmentDevice* d = device;
     fragmentDeviceDropResources(d);
     for (uint32_t i = 0; i < d->pipelines.count; ++i)
-        prGpuPipelineDestroy(d->device, d->pipelines.data[i].pipeline);
+        prGpuPipelineRelease(d->device, d->pipelines.data[i].pipeline);
     d->pipelines.reset();
-    prGpuTextureDestroy(d->device, d->blank);
+    prGpuTextureRelease(d->device, d->blank);
     prGpuShaderLibraryDestroy(d->library);
     prMemoryFree(d);
 }
@@ -964,10 +964,10 @@ void fragmentDeviceDropResources(FragmentDevice* d) {
     }
     d->frames.reset();
     for (uint32_t i = 0; i < d->pool.count; ++i)
-        prGpuTextureDestroy(d->device, d->pool.data[i].texture);
+        prGpuTextureRelease(d->device, d->pool.data[i].texture);
     d->pool.reset();
     for (uint32_t i = 0; i < d->textures.count; ++i)
-        prGpuTextureDestroy(d->device, d->textures.data[i].texture);
+        prGpuTextureRelease(d->device, d->textures.data[i].texture);
     d->textures.reset();
     d->textureIds.reset();
 }

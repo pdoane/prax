@@ -268,7 +268,7 @@ bool open(Run& r, float pixelRatio, Form form) {
 
 void close(Run& r) {
     if (r.device != nullptr)
-        prGpuTextureDestroy(r.device, r.target);
+        prGpuTextureRelease(r.device, r.target);
     prDrawFrameDestroy(r.drawFrame);
     prDrawRendererDestroy(r.renderer);
     prGpuDeviceDestroy(r.device);

@@ -36,7 +36,7 @@ struct Device {
     ~Device() {
         prDrawFrameDestroy(frame);
         prDrawRendererDestroy(renderer);
-        prGpuTextureDestroy(gpuDevice, texture);
+        prGpuTextureRelease(gpuDevice, texture);
         prGpuDeviceDestroy(gpuDevice);
     }
 

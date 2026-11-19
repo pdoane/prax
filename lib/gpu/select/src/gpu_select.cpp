@@ -97,6 +97,7 @@ PrGpuDevice* PR_NULLABLE create(PrGpuBackend backend, const PrGpuDeviceOptions& 
             metal.pool = o.pool;
             metal.ready = o.ready;
             metal.readyContext = o.readyContext;
+            metal.limits = o.limits;
             return prGpuMetalCreate(&metal);
         }
 #endif
@@ -110,6 +111,7 @@ PrGpuDevice* PR_NULLABLE create(PrGpuBackend backend, const PrGpuDeviceOptions& 
             metal.pool = o.pool;
             metal.ready = o.ready;
             metal.readyContext = o.readyContext;
+            metal.limits = o.limits;
             return prGpuMetal4Create(&metal);
         }
 #endif
@@ -123,6 +125,7 @@ PrGpuDevice* PR_NULLABLE create(PrGpuBackend backend, const PrGpuDeviceOptions& 
             vulkan.pool = o.pool;
             vulkan.ready = o.ready;
             vulkan.readyContext = o.readyContext;
+            vulkan.limits = o.limits;
             return prGpuVulkanCreate(&vulkan);
         }
 #endif
@@ -136,6 +139,7 @@ PrGpuDevice* PR_NULLABLE create(PrGpuBackend backend, const PrGpuDeviceOptions& 
             d3d12.pool = o.pool;
             d3d12.ready = o.ready;
             d3d12.readyContext = o.readyContext;
+            d3d12.limits = o.limits;
             return prGpuD3d12Create(&d3d12);
         }
 #endif
@@ -147,6 +151,7 @@ PrGpuDevice* PR_NULLABLE create(PrGpuBackend backend, const PrGpuDeviceOptions& 
             d3d11.pool = o.pool;
             d3d11.ready = o.ready;
             d3d11.readyContext = o.readyContext;
+            d3d11.limits = o.limits;
             return prGpuD3d11Create(&d3d11);
         }
 #endif
