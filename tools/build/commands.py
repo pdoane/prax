@@ -51,21 +51,26 @@ USAGE = {
     (.github/workflows/ci.yml). In CI, where third_party then holds what the run fetched and nothing else, it fails past
     a budget (FETCH_BUDGET). --key prints a hash of what decides what the run fetches, which changes when that does, as
     CI's cache of third_party is keyed""",
-    "example": """./dev.sh example [wasm|ios|PLATFORM-sim] <name> [args...]
-./dev.sh example wasm|ios|PLATFORM-sim <name> --screenshot <png> [--seconds S] [args...]
-    build an example under examples, and only what it needs, and run it with the arguments. `wasm` builds it for the
-    web, serves the checkout, and opens its page in the system's browser, with the arguments and the PR_ environment
-    variables in the page's query, until interrupted. --screenshot instead captures the page in headless Chrome, at 960x720, after it has run for S seconds
-    (4 by default), and prints what the page logged. PLATFORM-sim, as ios-sim, builds its bundle for the platform's
-    simulator, installs it on a simulator device of the platform, chosen as ./dev.sh test chooses it, and launches it
-    there, streaming its output until it exits or is interrupted. `ios` does the same on a connected iPhone or iPad,
-    the one that PR_IOS_DEVICE names or else the first, after signing the bundle with a provisioning profile of the
-    developer's team that lists the device. --screenshot instead captures the device's screen after S seconds and
+    "example": """./dev.sh example [debug|release|asan|tsan] [wasm|ios|PLATFORM-sim] <name> [args...]
+./dev.sh example [debug] wasm|ios|PLATFORM-sim <name> --screenshot <png> [--seconds S] [--viewport WxH[@SCALE]]
+                 [args...]
+    build an example under examples, and only what it needs, and run it with the arguments. A configuration builds it in
+    that configuration's build instead of the default build. wasm, ios and PLATFORM-sim accept debug and no other
+    configuration. `wasm` builds it for the web, serves the checkout, and opens its page in the system's browser, with
+    the arguments and the PR_ environment variables in the page's query, until interrupted. --screenshot instead
+    captures the page in headless Chrome after it has run for S seconds (4 by default), and prints what the page logged.
+    The page is 960x720 CSS pixels, unless --viewport gives its size and its pixels per CSS pixel: 960x640@2 matches a
+    native window of 960x640 on a display of two pixels per CSS pixel. PLATFORM-sim, as ios-sim, builds its bundle for
+    the platform's simulator, installs it on a simulator device of the platform, chosen as ./dev.sh test chooses it, and
+    launches it there, streaming its output until it exits or is interrupted. `ios` does the same on a connected iPhone
+    or iPad, the one that PR_IOS_DEVICE names or else the first, after signing the bundle with a provisioning profile of
+    the developer's team that lists the device. --screenshot instead captures the device's screen after S seconds and
     terminates the example""",
-    "app": """./dev.sh app [ios|PLATFORM-sim] <name> [args...]
-./dev.sh app ios|PLATFORM-sim <name> --screenshot <png> [--seconds S] [args...]
-    build an app under apps, and only what it needs, and run it with the arguments, or with `ios` or PLATFORM-sim
-    launch it on a device or a simulator device as ./dev.sh example does""",
+    "app": """./dev.sh app [debug|release|asan|tsan] [ios|PLATFORM-sim] <name> [args...]
+./dev.sh app [debug] ios|PLATFORM-sim <name> --screenshot <png> [--seconds S] [args...]
+    build an app under apps, and only what it needs, in the configuration named, as ./dev.sh example does, and run it
+    with the arguments, or with `ios` or PLATFORM-sim launch it on a device or a simulator device as ./dev.sh example
+    does""",
     "clean": """\
 ./dev.sh clean
     delete the build directories""",
@@ -149,7 +154,7 @@ def test(argv):
     command = ([sys.executable, builds.SIMULATOR_RUNNER, "--platform", chosen.platform, binary] if chosen.simulator
                else [binary])
     if chosen.wasm:
-        dev.run([emsdk.node(), binary, *args])
+        dev.run([emsdk.node(chosen.directory), binary, *args])
     elif module in NETWORK_MODULES:
         dev.python("tools.harness.net_peer", *command, *args)
     else:
@@ -313,46 +318,60 @@ def application_names(folder):
     return sorted(name for name in os.listdir(root) if os.path.isdir(os.path.join(root, name)))
 
 
-def capture_options(args, usage):
-    """Takes --screenshot and --seconds from the front of `args`, and returns the screenshot's path or None, the
-    seconds, and the arguments that follow them."""
+def capture_options(args, usage, viewport=None):
+    """Takes --screenshot and --seconds from the front of `args`, and --viewport too if `viewport` is a list, which
+    takes the viewport's width, height and scale. Returns the screenshot's path or None, the seconds, and the arguments
+    that follow them."""
     screenshot = None
     seconds = 4.0
-    while args[:1] in (["--screenshot"], ["--seconds"]):
+    options = ["--screenshot", "--seconds"] + (["--viewport"] if viewport is not None else [])
+    while args[:1] and args[0] in options:
         if len(args) < 2:
             dev.usage([], usage, 1)
         if args[0] == "--screenshot":
             screenshot = os.path.abspath(args[1])
-        else:
+        elif args[0] == "--seconds":
             seconds = float(args[1])
+        else:
+            size, _, scale = args[1].partition("@")
+            width, _, height = size.partition("x")
+            if not width.isdigit() or not height.isdigit():
+                dev.usage([], usage, 1)
+            viewport[:] = [int(width), int(height), float(scale or 1)]
         args = args[2:]
     return screenshot, seconds, args
 
 
 def run_application(folder, usage, argv, modes):
-    """Builds and runs the application under `folder`, examples or apps, that `argv` names, after the build's mode if
-    it names one of `modes`, with the arguments that follow. Returns the build's mode, or None for the host's, with the
-    name and the arguments, if the caller runs that mode itself."""
+    """Builds and runs the application under `folder`, examples or apps, that `argv` names, after a configuration of the
+    build if it names one, and a platform if it names one of `modes`, with the arguments that follow. Returns the name
+    in MODES of the build, with the application's name and the arguments, if the caller runs that build itself, or
+    None."""
     dev.usage(argv, usage, None if argv else 1)
-    mode = argv.pop(0) if argv[0] in modes else None
+    configuration = argv.pop(0) if argv[0] in builds.CONFIGURATIONS else None
     dev.usage(argv, usage, None if argv else 1)
+    platform = argv.pop(0) if argv[0] in modes else None
+    dev.usage(argv, usage, None if argv else 1)
+    mode = builds.mode_name(configuration, platform)
+    if mode is None:
+        dev.fail("there is no %s build for %s on %s" % (configuration, platform, builds.host_platform()))
     names = application_names(folder)
     if argv[0] not in names:
         dev.fail("no %s named %s; one of: %s" % (folder[:-1], argv[0], " ".join(names)))
     name, args = argv[0], argv[1:]
     if name in builds.EXAMPLE_CHECKOUTS:
         checkouts.fetch(*builds.EXAMPLE_CHECKOUTS[name])
-    if mode is None:
-        chosen = builds.build(targets=[name])
+    if platform is None:
+        chosen = builds.build(mode, targets=[name])
         dev.run([dev.executable(chosen.directory, name), *args])
         return None
-    if mode == "ios" or mode in builds.SIMULATOR_PLATFORMS:
+    if platform == "ios" or platform in builds.SIMULATOR_PLATFORMS:
         from tools.build import device, simulator
 
         screenshot, seconds, args = capture_options(args, usage)
         chosen = builds.build(mode, targets=[name])
         bundle = os.path.join(chosen.directory, name + ".app")
-        if mode == "ios":
+        if platform == "ios":
             status = device.launch(bundle, args, screenshot, seconds)
         else:
             status = simulator.launch(chosen.platform, bundle, args, screenshot, seconds)
@@ -370,12 +389,13 @@ def example(argv):
     chosen = run_application("examples", USAGE["example"], argv, ("wasm", "ios", *builds.SIMULATOR_PLATFORMS))
     if chosen is None:
         return
-    _, name, args = chosen
-    screenshot, seconds, args = capture_options(args, USAGE["example"])
-    chosen = builds.build("wasm", targets=[name])
+    mode, name, args = chosen
+    viewport = [960, 720, 1]
+    screenshot, seconds, args = capture_options(args, USAGE["example"], viewport)
+    chosen = builds.build(mode, targets=[name])
     page = os.path.join(chosen.directory, name + ".html")
     if screenshot:
-        capture_page(page, args, screenshot, seconds)
+        capture_page(page, args, screenshot, seconds, tuple(viewport))
     else:
         serve_page(page, args)
 
@@ -412,9 +432,13 @@ def serve_page(page, args):
 
 
 class ChromePage:
-    """A page of headless Chrome at 960x720, driven through the DevTools protocol, so that the page's animation frames
-    and media run as they do in a window. It keeps the messages that the page logs. Use it in a `with` statement, which
-    serves the checkout and stops Chrome at the end."""
+    """A page of headless Chrome at 960x720, or at `viewport`, a width, a height and the pixels of each CSS pixel,
+    driven through the DevTools protocol, so that the page's animation frames and media run as they do in a window. It
+    keeps the messages that the page logs. Use it in a `with` statement, which serves the checkout and stops Chrome at
+    the end."""
+
+    def __init__(self, viewport=(960, 720, 1)):
+        self.viewport = viewport
 
     def __enter__(self):
         import json
@@ -432,7 +456,8 @@ class ChromePage:
         self.serial = 0
         self.profile = tempfile.TemporaryDirectory()
         port = probe.free_port()
-        self.process = browsers.start([chrome.path(None), "--headless=new", "--window-size=960,720",
+        self.process = browsers.start([chrome.path(None), "--headless=new",
+                                       "--window-size=%d,%d" % self.viewport[:2],
                                        "--hide-scrollbars", "--autoplay-policy=no-user-gesture-required",
                                        "--remote-debugging-port=%d" % port] +
                                       browsers.chrome_arguments(self.profile.name) + ["about:blank"])
@@ -454,7 +479,8 @@ class ChromePage:
             self.call("Runtime.enable")
             self.call("Page.enable")
             self.call("Emulation.setDeviceMetricsOverride",
-                      {"width": 960, "height": 720, "deviceScaleFactor": 1, "mobile": False})
+                      {"width": self.viewport[0], "height": self.viewport[1],
+                       "deviceScaleFactor": self.viewport[2], "mobile": False})
         except BaseException:
             self.__exit__(None, None, None)
             raise
@@ -507,13 +533,13 @@ class ChromePage:
         self.call("Page.navigate", {"url": page_url(self.server, page, args)})
 
 
-def capture_page(page, args, png, seconds):
-    """Captures `page` in headless Chrome into `png` once it has run for `seconds`, in real time, and prints the
-    messages that the page logged."""
+def capture_page(page, args, png, seconds, viewport=(960, 720, 1)):
+    """Captures `page` in headless Chrome at `viewport` (ChromePage) into `png` once it has run for `seconds`, in real
+    time, and prints the messages that the page logged."""
     import base64
     import time
 
-    with ChromePage() as chrome:
+    with ChromePage(viewport) as chrome:
         chrome.open(page, args)
         deadline = time.monotonic() + seconds
         while time.monotonic() < deadline:

@@ -316,7 +316,7 @@ def configure(source, directory, build_type, flags="", out=None, wasm=False, pla
     entries = entries or {}
     if wasm:
         emsdk.fetch()
-        emsdk.environment()
+        emsdk.environment(directory)
     elif platform:
         uikit_sdk(platform, simulator)
     elif dev.WINDOWS:
@@ -342,7 +342,7 @@ def configure(source, directory, build_type, flags="", out=None, wasm=False, pla
         # The WebAssembly build's programs run under emsdk's Node.js, as the tests and their discovery run them.
         # Emscripten's toolchain finds Node.js only on the path. A simulator build's run on a simulator device.
         if wasm:
-            found.append("-DCMAKE_CROSSCOMPILING_EMULATOR=" + emsdk.node())
+            found.append("-DCMAKE_CROSSCOMPILING_EMULATOR=" + emsdk.node(directory))
         if simulator:
             found.append("-DCMAKE_CROSSCOMPILING_EMULATOR=" + simulator_runner(platform))
         found += ["-D%s=%s" % entry for entry in entries.items()]
@@ -382,7 +382,7 @@ def configure(source, directory, build_type, flags="", out=None, wasm=False, pla
           or "PR_DEVELOP:BOOL=ON" not in lines or "PR_APPS:BOOL=ON" not in lines
           or "PR_PLATFORM_MIMALLOC:BOOL=" + mimalloc not in lines
           or "CMAKE_BUILD_TYPE:STRING=" + build_type not in lines
-          or (wasm and not cached("CMAKE_CROSSCOMPILING_EMULATOR", emsdk.node()))
+          or (wasm and not cached("CMAKE_CROSSCOMPILING_EMULATOR", emsdk.node(directory)))
           or (simulator and not cached("CMAKE_CROSSCOMPILING_EMULATOR", simulator_runner(platform)))
           or (openssl and not cached("OPENSSL_ROOT_DIR", openssl))
           or not all(cached(name, value) for name, value in entries.items())):

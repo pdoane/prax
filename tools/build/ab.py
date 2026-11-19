@@ -14,6 +14,16 @@ from tools import dev
 from tools.build import build
 
 
+def link(source, target):
+    """Stages `source` at `target` as a hard link, as the build stages resources (cmake/stage_resources.cmake), or as a
+    copy where the file system links nothing."""
+    try:
+        os.link(source, target)
+    except OSError:
+        shutil.copy2(source, target)
+    return target
+
+
 def commit(base=None):
     """Returns the hash of the commit that an A/B compares with: `base`, or else HEAD where the tree has changes, and
     HEAD's parent where it has none. The scoreboards that suite runs write are not changes, so that the A/B of a second
@@ -157,10 +167,13 @@ class Base:
         os.makedirs(bin)
         for target in built:
             shutil.copy2(dev.executable(directory, target), bin)
-            # A program reads its resources, such as its fonts, from <program>.resources beside it.
+            # A program reads its resources, such as its fonts, from <program>.resources beside it. They are linked, as
+            # the build stages the working tree's, because reading a copy costs the process measurably fewer
+            # instructions than reading a link of a file that the build shares, which a comparison would count as a
+            # change.
             resources = os.path.join(directory, target + ".resources")
             if os.path.isdir(resources):
-                shutil.copytree(resources, os.path.join(bin, target + ".resources"))
+                shutil.copytree(resources, os.path.join(bin, target + ".resources"), copy_function=link)
         absent = sorted(set(targets) - set(built))
         with open(absent_file, "w") as f:
             f.write("\n".join(absent))

@@ -4,6 +4,10 @@ emsdk installs the release's compiler, its Node.js and its Python beside itself,
 configuration that Emscripten reads (.emscripten). The build reads it through EM_CONFIG, so nothing outside
 third_party/emsdk changes. The tests run under that Node.js, which CMake's Emscripten toolchain names as the emulator
 that runs a test.
+
+Emscripten keeps the system libraries and headers that it compiles in a cache, which by default lies in the release's
+directory and records the path of whoever filled it. Each build directory has its own instead (EM_CACHE), so that the
+builds of two worktrees, which share third_party, do not clear each other's.
 """
 
 import ast
@@ -45,15 +49,22 @@ def toolchain():
     return os.path.join(DIRECTORY, "upstream", "emscripten", "cmake", "Modules", "Platform", "Emscripten.cmake")
 
 
-def environment():
-    """Points Emscripten at the configuration that activating the release wrote, for this process and what it runs."""
+def cache(directory):
+    """The cache of Emscripten's compiled system libraries and headers for the build in `directory`."""
+    return os.path.join(directory, "emcache")
+
+
+def environment(directory):
+    """Points Emscripten at the configuration that activating the release wrote, and at the cache of the build in
+    `directory`, for this process and what it runs."""
     os.environ["EM_CONFIG"] = CONFIG
+    os.environ["EM_CACHE"] = cache(directory)
 
 
-def node():
-    """The Node.js that the release installed, which runs the build's programs. The configuration computes its path,
-    so Emscripten's own em-config reads it."""
-    environment()
+def node(directory):
+    """The Node.js that the release installed, which runs the programs of the build in `directory`. The configuration
+    computes its path, so Emscripten's own em-config reads it."""
+    environment(directory)
     found = dev.output([sys.executable, os.path.join(DIRECTORY, "upstream", "emscripten", "em-config.py"), "NODE_JS"])
     if not found:
         dev.fail("%s names no NODE_JS" % CONFIG)
