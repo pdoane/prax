@@ -645,9 +645,9 @@ PrStatus swapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const
         layer.presentsWithTransaction = (desc->flags & PrGpuSwapChainFlag_Threaded) == 0;
         // The compositor blends a layer that is not opaque by its premultiplied alpha.
         layer.opaque = (desc->flags & PrGpuSwapChainFlag_Transparent) == 0;
-        // A bindless device's shaders may reach a drawable by handle, so its queue holds the layer's drawables. On a
-        // slot-only device, which has no residency sets, a drawable is resident in the encoders that bind it.
-        if (d->bindless)
+        // A device with a residency set does not rely on its encoders for residency, so its queue holds the layer's
+        // drawables. Otherwise a drawable is resident in the encoders that bind it.
+        if (d->residency != nil)
             [d->queue addResidencySet:layer.residencySet];
         GpuMetalSwapChain* sc = allocZeroed<GpuMetalSwapChain>();
         static_cast<PrGpuSwapChain&>(*sc) = *d->swapChainFunctions;
@@ -768,7 +768,7 @@ void gpuMetalSwapChainDestroy(PrGpuSwapChain* handle) {
     GpuMetalSwapChain* sc = static_cast<GpuMetalSwapChain*>(handle);
     gpuMetalWaitIdle(device);
     releaseDrawable(d, sc);
-    if (d->bindless)
+    if (d->residency != nil)
         [d->queue removeResidencySet:sc->layer.residencySet];
     [sc->layer release];
     prMemoryFree(sc);
@@ -1015,8 +1015,8 @@ uint32_t gpuMetalResourceAdd(GpuMetalDevice* d, GpuMetalSlot kind, id object, ui
     return slot;
 }
 
-// Frees what the command buffers that are done held: retired objects, and the blocks, allocators and tables of their
-// recording. The caller holds the mutex.
+// Frees what the command buffers that are done held: retired objects, the blocks, allocators and tables of their
+// recording, and the staging blocks of their uploads. The caller holds the mutex.
 void gpuMetalCollect(GpuMetalDevice* d) {
     uint64_t done = d->done.load();
     uint32_t kept = 0;
@@ -1056,6 +1056,7 @@ void gpuMetalCollect(GpuMetalDevice* d) {
         }
     }
     d->held.count = kept;
+    gpuSharedStagingCollect(&d->staging, done);
 }
 
 // Retires an object, which is freed once the command buffers that began before now are done.
@@ -1489,11 +1490,13 @@ void gpuMetalDeviceInstall(GpuMetalDevice* d, PrGpuDeviceLimits limits) {
     d->info.storageOffsetAlignment = 16;
 }
 
-void gpuMetalDeviceOpen(GpuMetalDevice* d, id<MTLDevice> device, bool bindless) {
+void gpuMetalDeviceOpen(GpuMetalDevice* d, id<MTLDevice> device, GpuMetalDeviceFlags flags) {
+    bool bindless = (flags & GpuMetalDeviceFlag_Bindless) != 0;
+    PR_ASSERT(!bindless || (flags & GpuMetalDeviceFlag_Residency) != 0);
     d->device = device;
     d->bindless = bindless;
-    // Without bindless, the residency set stays null, and the calls that add to it and commit it do nothing.
-    if (bindless) {
+    // Without a residency set, the calls that add to it and commit it do nothing.
+    if ((flags & GpuMetalDeviceFlag_Residency) != 0) {
         MTLResidencySetDescriptor* rd = [[MTLResidencySetDescriptor new] autorelease];
         rd.initialCapacity = 256;
         d->residency = [device newResidencySetWithDescriptor:rd error:nil];
@@ -1526,6 +1529,11 @@ void gpuMetalDeviceOpen(GpuMetalDevice* d, id<MTLDevice> device, bool bindless) 
 #if !TARGET_OS_SIMULATOR
     d->info.features |= PrGpuFeatureFlag_TargetReads | PrGpuFeatureFlag_OrderedTargetReads;
 #endif
+    d->info.sampleCounts = 1;
+    for (uint32_t count = 2; count <= 16; count *= 2) {
+        if ([device supportsTextureSampleCount:count])
+            d->info.sampleCounts |= count;
+    }
 }
 
 void gpuMetalDeviceAddQueue(GpuMetalDevice* d, id queue) {

@@ -44,9 +44,10 @@ struct Fixture {
     PrGpuDevice* device = nullptr;
     PrGpuShaderLibrary* library = nullptr;
 
-    Fixture() {
+    explicit Fixture(bool slotsOnly = false) {
         PrGpuVulkanOptions options = prGpuVulkanOptionsDefault();
         options.validation = true;
+        options.slotsOnly = slotsOnly;
         // Without a pool, the device's creation is done when the constructor returns.
         device = prGpuVulkanCreate(&options);
         PrStatus status = prGpuDeviceLostStatus(device);
@@ -222,6 +223,54 @@ TEST_CASE("vulkan records into the application's command buffer, around the appl
     CHECK(f.words(output, 4) == Array<uint32_t>({0, 11, 9, 9}));
     prGpuPipelineRelease(f.device, pipeline);
     prGpuBufferRelease(f.device, output);
+}
+
+TEST_CASE("vulkan's device of slots only refuses an entry point that reaches a resource by handle, and runs the others") {
+    Fixture f(true);
+    if (f.device == nullptr)
+        return;
+    PrGpuDeviceInfo info = prGpuDeviceInfo(f.device);
+    CHECK((info.features & PrGpuFeatureFlag_Bindless) == 0);
+    CHECK(info.maxRwBufferSlots >= 4);
+    PrGpuPipeline pipeline{};
+    CHECK(prGpuPipelineCreateCompute(f.device, f.library, "fill", "fill", &pipeline) == PrStatus_NotSupported);
+    CHECK(pipeline.id == 0);
+    REQUIRE(prGpuPipelineCreateCompute(f.device, f.library, "slotFill", "slotFill", &pipeline) == PrStatus_Ok);
+    PrGpuBuffer output = f.buffer(16, PrGpuBufferUsageFlag_Storage);
+    PrGpuCommands* commands = nullptr;
+    REQUIRE(prGpuCommandsBegin(f.device, nullptr, &commands));
+    Push push{.count = 3, .scale = 11};
+    prGpuCommandsSetPipeline(commands, pipeline);
+    prGpuCommandsSetPush(commands, &push, sizeof(push));
+    prGpuCommandsSetRwBuffer(commands, 0, output, 0);
+    prGpuCommandsDispatch(commands, PrGpuExtent{1, 1, 1});
+    prGpuDeviceWait(f.device, prGpuCommandsSubmit(commands));
+    CHECK(f.words(output, 4) == Array<uint32_t>({0, 11, 22, 0}));
+
+    // A pipeline whose entry points reach no resource draws as on any device.
+    PrGpuPipeline upperHalf = f.upperHalf();
+    PrGpuTexture target = f.target();
+    REQUIRE(prGpuCommandsBegin(f.device, nullptr, &commands));
+    prGpuCommandsTextureBarrier(commands, target, PrGpuSubresources{}, PrGpuAccessFlag_ShaderRead,
+        PrGpuAccessFlag_ColorAttachment);
+    PrGpuPassDesc desc = prGpuPassDescColor(target, PrGpuLoad_Clear, PrColor{});
+    PrGpuPass* pass = prGpuPassBegin(commands, &desc);
+    Uniforms uniforms{{1, 0, 0, 1}};
+    prGpuCommandsSetPipeline(commands, upperHalf);
+    prGpuCommandsSetUniforms(commands, &uniforms, sizeof(uniforms));
+    prGpuPassDraw(pass, 4, 1, 0, 0);
+    prGpuPassEnd(pass);
+    prGpuCommandsTextureBarrier(commands, target, PrGpuSubresources{}, PrGpuAccessFlag_ColorAttachment,
+        PrGpuAccessFlag_ShaderRead);
+    gpuSubmitAndWait(commands);
+    uint8_t texels[8 * 8 * 4];
+    gpuTextureRead(f.device, target, PrGpuAccessFlag_ShaderRead, PrIVec2{0, 0}, PrPixels{texels, 32, {8, 8}});
+    CHECK(texels[0] == 255);
+    CHECK(texels[7 * 32] == 0);
+    prGpuTextureRelease(f.device, target);
+    prGpuPipelineRelease(f.device, upperHalf);
+    prGpuBufferRelease(f.device, output);
+    prGpuPipelineRelease(f.device, pipeline);
 }
 
 TEST_CASE("vulkan draws into the application's pass, and says which of the pass's state its draws changed") {

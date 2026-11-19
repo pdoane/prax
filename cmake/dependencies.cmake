@@ -89,27 +89,7 @@ pr_dependency(mimalloc
     SYSTEM
 )
 
-# Slang's compiler, which compiles the shaders at build time: the release's binaries for the host. PR_SLANGC names a
-# slangc to use instead.
-set(PR_SLANGC "" CACHE FILEPATH "The Slang compiler that builds the shaders, which the build fetches if this is empty")
-if (CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin")
-    set(PR_SLANG_ASSET macos-aarch64.zip)
-    set(PR_SLANG_HASH f6d6fe9cace17ee74836805786163d63ddf29ff1ff6c516b7eae59855af61cc3)
-elseif (CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows" AND CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "ARM64|arm64")
-    set(PR_SLANG_ASSET windows-aarch64.zip)
-    set(PR_SLANG_HASH 3b74b69e1924d359d3626949b3cde0f6e65068a7b5eb2457e83a351697fe4e71)
-elseif (CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows")
-    set(PR_SLANG_ASSET windows-x86_64.zip)
-    set(PR_SLANG_HASH dd0c4a86bd44cdb7e9cf712af0c8ebf2fff1bba19fa5e3c128ff87384e8ff17b)
-else()
-    set(PR_SLANG_ASSET linux-x86_64.tar.gz)
-    set(PR_SLANG_HASH a877b75c6ec515f5d8bf66ea4bae4f0a5ba85050b9540c2046670285808347e6)
-endif()
-pr_dependency(slang
-    URL https://github.com/shader-slang/slang/releases/download/v2026.22/slang-2026.22-${PR_SLANG_ASSET}
-    URL_HASH SHA256=${PR_SLANG_HASH}
-    SOURCE_SUBDIR none
-)
+include(${CMAKE_CURRENT_LIST_DIR}/slang.cmake)
 
 # The development build's dependencies: the test framework, and the implementations that the engine is compared with.
 

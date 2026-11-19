@@ -21,6 +21,17 @@ using namespace pr;
 
 namespace {
 
+// The number of passes in a row that the ordering tests record, each drawing a column of its own 4 texels wide.
+constexpr uint32_t kOrderedPasses = 64;
+
+// Returns push data that draws column `i` of kOrderedPasses in the color (r, g, b).
+Push orderedColumn(uint32_t i, float r, float g, float b) {
+    Push push = fill(r, g, b, 1);
+    push.rect[0] = -1 + 2 * float(i) / float(kOrderedPasses);
+    push.rect[2] = push.rect[0] + 2 / float(kOrderedPasses);
+    return push;
+}
+
 // Calls `test` with each backend that the build has and the tests run on, as onEachBackend chooses them.
 template <typename Test>
 void onEachBuilt(Test test) {
@@ -117,6 +128,42 @@ TEST_CASE("the gpu headers compile as C") {
     CHECK(prTestGpuCApi() == 0);
 }
 
+TEST_CASE("a library names each slot that its source declares, with its kind and its number") {
+    PrByteView library{kTestGpuShaders, sizeof(kTestGpuShaders)};
+    PrGpuShaderSlot slots[16];
+    uint32_t count = prGpuShaderLibrarySlots(library, slots, 16);
+    // A build without a backend compiles no target, which reflects nothing.
+    if (count == 0)
+        return;
+    struct Declared {
+        PrStringView name;
+        PrGpuSlotKind kind;
+        uint32_t slot;
+    };
+    const Declared declared[] = {
+        {"slotCorners", PrGpuSlotKind_Buffer, 1},
+        {"slotCube", PrGpuSlotKind_Texture, 5},
+        {"slotImage", PrGpuSlotKind_Texture, 2},
+        {"slotInput", PrGpuSlotKind_Buffer, 3},
+        {"slotOutput", PrGpuSlotKind_RwBuffer, 1},
+        {"slotWritten", PrGpuSlotKind_RwTexture, 2},
+    };
+    for (const Declared& d : declared) {
+        bool found = false;
+        for (uint32_t i = 0; i < count && i < 16; ++i) {
+            if (slots[i].name != d.name)
+                continue;
+            found = true;
+            CHECK(slots[i].kind == d.kind);
+            CHECK(slots[i].slot == d.slot);
+        }
+        CHECK_MESSAGE(found, d.name);
+    }
+    // Bytes that are not a library declare nothing.
+    const uint8_t junk[20] = {'P', 'R', 'S', 'L', 2};
+    CHECK(prGpuShaderLibrarySlots(PrByteView{junk, sizeof(junk)}, slots, 16) == 0);
+}
+
 TEST_CASE("a backend's name names it, in any case") {
     for (PrGpuBackend backend = 0; backend < PrGpuBackend_Count; ++backend)
         CHECK(PrGpuBackend(prBackendFromName(prGpuSelectInterface(), prBackendName(prGpuSelectInterface(), backend))) == backend);
@@ -189,6 +236,7 @@ TEST_CASE("a device reports its backend and limits") {
         CHECK(info.adapter.size != 0);
         CHECK(prUtf8Validate(info.adapter) == info.adapter.size);
         CHECK(info.maxTextureSize >= 16384);
+        CHECK((info.sampleCounts & 1) != 0);
         // Each device holds what the default limits ask for, or less where its API allows less.
         const PrGpuDeviceLimits defaults = prGpuDeviceLimitsDefault();
         CHECK(info.limits.resources > 1000);
@@ -203,6 +251,22 @@ TEST_CASE("a device reports its backend and limits") {
         CHECK(prGpuDeviceSupportsFormat(f.device, PrGpuFormat_Rgba8, PrGpuTextureUsageFlag_RenderTarget));
         CHECK_FALSE(prGpuDeviceSupportsFormat(f.device, PrGpuFormat_D32F, PrGpuTextureUsageFlag_RenderTarget));
     });
+}
+
+TEST_CASE("Metal, Metal 4 and Vulkan create a device of slots only wherever they create a device") {
+    if (!gpuTests())
+        return;
+    const PrGpuBackend backends[] = {PrGpuBackend_Metal, PrGpuBackend_Metal4, PrGpuBackend_Vulkan};
+    for (PrGpuBackend backend : backends) {
+        PrStringView name = prBackendName(prGpuSelectInterface(), backend);
+        CAPTURE(name);
+        Fixture bindless(backend, false);
+        if (bindless.device == nullptr)
+            continue;
+        Fixture slots(backend, true);
+        REQUIRE(slots.device != nullptr);
+        CHECK_FALSE(slots.bindless);
+    }
 }
 
 TEST_CASE("a texture's texels are written and read back, clipped to the texture") {
@@ -793,6 +857,111 @@ TEST_CASE("a shader reads the target as the draws before it left it") {
         prGpuPipelineRelease(f.device, inverted);
         prGpuPipelineRelease(f.device, solid);
         prGpuTextureRelease(f.device, target);
+    });
+}
+
+TEST_CASE("passes that keep a color attachment are in order on it without a barrier") {
+    onEachBackend([](Fixture& f) {
+        constexpr PrUVec2 kExtent{kOrderedPasses * 4, 64};
+        PrGpuTexture target = f.target(kExtent);
+        PrGpuPipeline solid = f.pipeline("quadVertex", "solid");
+
+        // Each pass keeps what the passes before it drew and draws its own column, in a value of its own.
+        PrGpuCommands* commands = nullptr;
+        REQUIRE(prGpuCommandsBegin(f.device, nullptr, &commands));
+        prGpuCommandsTextureBarrier(commands, target, PrGpuSubresources{}, PrGpuAccessFlag_ShaderRead,
+            PrGpuAccessFlag_ColorAttachment);
+        for (uint32_t i = 0; i < kOrderedPasses; ++i) {
+            PrGpuPassDesc desc = prGpuPassDescColor(target, i == 0 ? PrGpuLoad_Clear : PrGpuLoad_Keep, PrColor{0, 0, 0, 1});
+            PrGpuPass* pass = prGpuPassBegin(commands, &desc);
+            Push push = orderedColumn(i, float(i + 1) / 255, 1, 0);
+            prGpuCommandsSetPipeline(commands, solid);
+            prGpuCommandsSetPush(commands, &push, sizeof(push));
+            prGpuPassDraw(pass, 4, 1, 0, 0);
+            prGpuPassEnd(pass);
+        }
+        prGpuCommandsTextureBarrier(commands, target, PrGpuSubresources{}, PrGpuAccessFlag_ColorAttachment,
+            PrGpuAccessFlag_ShaderRead);
+        gpuSubmitAndWait(commands);
+
+        Array<uint8_t> texels = f.read(target);
+        uint32_t wrong = 0;
+        for (uint32_t y = 0; y < kExtent.y; ++y) {
+            for (uint32_t x = 0; x < kExtent.x; ++x)
+                wrong += near(texel(texels, kExtent.x, x, y), uint8_t(x / 4 + 1), 255, 0, 255, 0) ? 0 : 1;
+        }
+        CHECK(wrong == 0);
+        prGpuPipelineRelease(f.device, solid);
+        prGpuTextureRelease(f.device, target);
+    });
+}
+
+TEST_CASE("passes of depth alone that keep it are in order on it without a barrier") {
+    onEachBackend([](Fixture& f) {
+        constexpr PrUVec2 kExtent{kOrderedPasses * 4, 64};
+        PrGpuTextureDesc depthDesc = prGpuTextureDesc2d(PrGpuFormat_D32F, kExtent, PrGpuTextureUsageFlag_DepthStencil);
+        PrGpuTexture depth{};
+        REQUIRE(prGpuTextureCreate(f.device, &depthDesc, &depth) == PrStatus_Ok);
+        PrGpuTexture target = f.target(kExtent);
+        // Every draw is at depth 0. The passes of depth alone write it, and the last pass draws a color where the depth
+        // that they left equals it.
+        PrGpuGraphicsPipelineDesc writesDesc = f.description("quadVertex", "solid");
+        writesDesc.fragment = nullptr;
+        writesDesc.formats.colorCount = 0;
+        writesDesc.formats.color[0] = PrGpuFormat_None;
+        writesDesc.formats.depthStencil = PrGpuFormat_D32F;
+        writesDesc.depthTest = true;
+        writesDesc.depthWrite = true;
+        writesDesc.depthCompare = PrGpuCompare_Always;
+        PrGpuPipeline writes{};
+        REQUIRE(prGpuPipelineCreateGraphics(f.device, &writesDesc, &writes) == PrStatus_Ok);
+        PrGpuGraphicsPipelineDesc testedDesc = f.description("quadVertex", "solid");
+        testedDesc.formats.depthStencil = PrGpuFormat_D32F;
+        testedDesc.depthTest = true;
+        testedDesc.depthCompare = PrGpuCompare_Equal;
+        PrGpuPipeline tested{};
+        REQUIRE(prGpuPipelineCreateGraphics(f.device, &testedDesc, &tested) == PrStatus_Ok);
+
+        // Each pass keeps the depth that the passes before it wrote and writes its own column.
+        PrGpuCommands* commands = nullptr;
+        REQUIRE(prGpuCommandsBegin(f.device, nullptr, &commands));
+        prGpuCommandsTextureBarrier(commands, depth, PrGpuSubresources{}, PrGpuAccessFlag_ShaderRead,
+            PrGpuAccessFlag_DepthStencilWrite);
+        prGpuCommandsTextureBarrier(commands, target, PrGpuSubresources{}, PrGpuAccessFlag_ShaderRead,
+            PrGpuAccessFlag_ColorAttachment);
+        for (uint32_t i = 0; i < kOrderedPasses; ++i) {
+            PrGpuPassDesc desc{
+                .depthStencil = {.texture = depth, .load = PrGpuLoad(i == 0 ? PrGpuLoad_Clear : PrGpuLoad_Keep)},
+                .clearDepth = 1,
+            };
+            PrGpuPass* pass = prGpuPassBegin(commands, &desc);
+            Push push = orderedColumn(i, 0, 0, 0);
+            prGpuCommandsSetPipeline(commands, writes);
+            prGpuCommandsSetPush(commands, &push, sizeof(push));
+            prGpuPassDraw(pass, 4, 1, 0, 0);
+            prGpuPassEnd(pass);
+        }
+        PrGpuPassDesc desc = prGpuPassDescColor(target, PrGpuLoad_Clear, PrColor{0, 0, 0, 1});
+        desc.depthStencil = PrGpuAttachment{.texture = depth, .load = PrGpuLoad_Keep};
+        PrGpuPass* pass = prGpuPassBegin(commands, &desc);
+        Push push = fill(1, 1, 1, 1);
+        prGpuCommandsSetPipeline(commands, tested);
+        prGpuCommandsSetPush(commands, &push, sizeof(push));
+        prGpuPassDraw(pass, 4, 1, 0, 0);
+        prGpuPassEnd(pass);
+        prGpuCommandsTextureBarrier(commands, target, PrGpuSubresources{}, PrGpuAccessFlag_ColorAttachment,
+            PrGpuAccessFlag_ShaderRead);
+        gpuSubmitAndWait(commands);
+
+        Array<uint8_t> texels = f.read(target);
+        uint32_t wrong = 0;
+        for (uint32_t i = 0; i < kExtent.x * kExtent.y; ++i)
+            wrong += near(&texels[i * 4], 255, 255, 255, 255) ? 0 : 1;
+        CHECK(wrong == 0);
+        prGpuPipelineRelease(f.device, tested);
+        prGpuPipelineRelease(f.device, writes);
+        prGpuTextureRelease(f.device, target);
+        prGpuTextureRelease(f.device, depth);
     });
 }
 

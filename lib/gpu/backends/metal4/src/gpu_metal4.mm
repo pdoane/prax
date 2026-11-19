@@ -1,12 +1,17 @@
 // The Metal GPU backend on Metal 4, which is kept for experiments. The default Metal backend is pr/gpu_metal.h.
 //
 // One argument table per command buffer serves every encoder. Metal 4 has no setBytes, so the table points at push data
-// and uniforms in the stream. Metal snapshots the table at each draw and dispatch.
+// and uniforms in the stream. Metal snapshots the table at each draw and dispatch. A device created `slotsOnly` has no
+// bindless: its pipelines may not read the heaps, which their reflection shows. It keeps the residency set, because
+// Metal 4's encoders make nothing resident.
 //
 // Metal 4 orders nothing by itself. A barrier is a producer barrier on the command buffer's last encoder, which holds
 // the stages that it names of every later encoder in the queue until those stages of every encoder before are done. So
 // the last encoder stays open until the next one begins, and a barrier at the start of a command buffer goes on an
-// empty encoder. Dispatches and copies between two barriers share an encoder, and run concurrently.
+// empty encoder. Dispatches and copies between two barriers share an encoder, and run concurrently. Passes are in order
+// on their attachments without a barrier, so each pass of the device's own holds its fragment stage, where it loads,
+// draws and stores its attachments, until the fragment stages of the encoders before it in the queue are done. Its
+// vertex stage may still overlap them.
 //
 // The queue delivers feedback in order, on a serial queue.
 //
@@ -192,6 +197,15 @@ MTL4LibraryFunctionDescriptor* functionDescriptor(const PrGpuShaderLibrary* libr
     return f;
 }
 
+// Returns the options of a pipeline's compilation. A device without bindless asks for the reflection of the pipeline's
+// bindings, which shows whether its functions read the heaps.
+MTL4PipelineOptions* pipelineOptions(const Device* d) {
+    MTL4PipelineOptions* options = [[MTL4PipelineOptions new] autorelease];
+    if (!d->bindless)
+        options.shaderReflection = MTL4ShaderReflectionBindingInfo;
+    return options;
+}
+
 PrStatus graphicsPipelineCreate(PrGpuDevice* device, const PrGpuGraphicsPipelineDesc* desc,
         const PrGpuShaderEntry* vertex, const PrGpuShaderEntry* PR_NULLABLE fragment, PrGpuPipeline* out) {
     Device* d = deviceFrom(device);
@@ -211,11 +225,19 @@ PrStatus graphicsPipelineCreate(PrGpuDevice* device, const PrGpuGraphicsPipeline
             a.blendingState = blend.enabled ? MTL4BlendStateEnabled : MTL4BlendStateDisabled;
             gpuMetalColorAttachmentFill(a, desc->formats.color[i], blend);
         }
+        pd.options = pipelineOptions(d);
         NSError* error = nil;
         id<MTLRenderPipelineState> state =
             [d->compiler newRenderPipelineStateWithDescriptor:pd compilerTaskOptions:nil error:&error];
         if (state == nil) {
             NSLog(@"lib/gpu: Metal made no pipeline for %@: %@", pd.vertexFunctionDescriptor, error);
+            return PrStatus_NotSupported;
+        }
+        MTLRenderPipelineReflection* reflection = state.reflection;
+        bool readsHeaps = gpuMetalBindingsReadHeaps(reflection.vertexBindings) ||
+            gpuMetalBindingsReadHeaps(reflection.fragmentBindings);
+        if (!d->bindless && readsHeaps) {
+            [state release];
             return PrStatus_NotSupported;
         }
         GpuMetalPipeline p = gpuMetalPipelineFromDesc(d, desc);
@@ -239,11 +261,16 @@ PrStatus computePipelineCreate(PrGpuDevice* device, const PrGpuShaderLibrary* li
         pd.computeFunctionDescriptor = functionDescriptor(library, compute);
         if (name.size != 0)
             pd.label = prAppleNSString(name);
+        pd.options = pipelineOptions(d);
         NSError* error = nil;
         id<MTLComputePipelineState> state = [d->compiler newComputePipelineStateWithDescriptor:pd
             compilerTaskOptions:nil error:&error];
         if (state == nil) {
             NSLog(@"lib/gpu: Metal made no compute pipeline: %@", error);
+            return PrStatus_NotSupported;
+        }
+        if (!d->bindless && gpuMetalBindingsReadHeaps(state.reflection.bindings)) {
+            [state release];
             return PrStatus_NotSupported;
         }
         GpuMetalPipeline p{};
@@ -602,6 +629,8 @@ PrGpuPass* passBegin(PrGpuCommands* commands, const PrGpuPassDesc* desc) {
             gpuMetalPassAttachmentsFill(d, rp, desc, pass);
             endTail(c);
             pass->encoder = [[c->buffer renderCommandEncoderWithDescriptor:rp] retain];
+            [pass->encoder barrierAfterQueueStages:MTLStageFragment beforeStages:MTLStageFragment
+                visibilityOptions:MTL4VisibilityOptionDevice];
             if (desc->name.size != 0)
                 [pass->encoder setLabel:prAppleNSString(desc->name)];
         }
@@ -771,7 +800,10 @@ PrStatus initializeDevice(GpuSharedDevice* device) {
             [metal release];
             return PrStatus_NotSupported;
         }
-        gpuMetalDeviceOpen(d, metal, true);
+        GpuMetalDeviceFlags flags = GpuMetalDeviceFlag_Residency;
+        if (!o.slotsOnly)
+            flags |= GpuMetalDeviceFlag_Bindless;
+        gpuMetalDeviceOpen(d, metal, flags);
         d->feedback = dispatch_queue_create("lib/gpu feedback", DISPATCH_QUEUE_SERIAL);
         if (o.queue != nullptr) {
             gpuMetalDeviceAddQueue(d, [static_cast<id<MTL4CommandQueue>>(o.queue) retain]);

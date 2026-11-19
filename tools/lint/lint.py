@@ -746,6 +746,7 @@ WRAPPERS = {
     "lib/core/backends/windows/tests/test_core_windows_file.cpp": {"windows.h"},
     "lib/gpu/backends/d3d12/tests/test_gpu_d3d12.cpp": {"d3d12.h", "windows.h"},
     "lib/gpu/backends/vulkan/tests/test_gpu_vulkan.cpp": {"vulkan/vulkan_core.h", "windows.h"},
+    "lib/gpu/backends/vulkan/tests/test_gpu_vulkan_memory.cpp": {"vulkan/vulkan_core.h"},
     "lib/media/backends/windows/tests/test_media_windows.cpp": {"mfapi.h", "mfidl.h", "mfreadwrite.h", "objbase.h",
                                                                 "shlwapi.h", "windows.h"},
     "lib/process/tests/test_process.cpp": {"sys/resource.h", "unistd.h"},

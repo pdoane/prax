@@ -2,6 +2,7 @@
 pr_library(gpu INCLUDE include
     src/gpu.cpp
     backends/shared/src/gpu_shared_device.cpp
+    backends/shared/src/gpu_shared_ranges.cpp
     backends/shared/src/gpu_shared_upload.cpp
 )
 target_link_libraries(pr_gpu PUBLIC prax::core prax::geom prax::app prax::color prax::task PRIVATE prax::core_cpp)
@@ -35,6 +36,7 @@ set_source_files_properties(backends/metal4/src/gpu_metal4.mm PROPERTIES COMPILE
 pr_backend(gpu vulkan INCLUDE backends/vulkan/include SOURCES
     backends/vulkan/src/gpu_vulkan.cpp
     backends/vulkan/src/vulkan_commands.cpp
+    backends/vulkan/src/vulkan_memory.cpp
     backends/vulkan/src/vulkan_pipeline.cpp
     backends/vulkan/src/vulkan_platform.cpp
     backends/vulkan/src/vulkan_resources.cpp
@@ -86,11 +88,15 @@ pr_select(gpu INCLUDE select/include SOURCES select/src/gpu_select.cpp)
 if (PR_DEVELOP)
     pr_module_tests(gpu
         tests/test_gpu.cpp
-        tests/test_gpu_c.c
         tests/test_gpu_formats.cpp
+        tests/test_gpu_passes.cpp
+        backends/shared/tests/test_gpu_shared_ranges.cpp
+        tests/test_gpu_stress.cpp
+        tests/test_gpu_c.c
     )
     target_link_libraries(gpu_tests PRIVATE prax::gpu_select prax::task)
     pr_slang(gpu_tests tests/test_gpu.slang VARIABLE kTestGpuShaders)
+    pr_slang(gpu_tests tests/test_gpu_passes.slang VARIABLE kTestGpuPassShaders)
     # Each backend's own tests, which record into the application's command buffers and passes with the same shaders.
     pr_slang(gpu_tests tests/test_gpu_native.slang VARIABLE kTestGpuNativeShaders)
     if (PR_GPU_METAL)
@@ -102,7 +108,8 @@ if (PR_DEVELOP)
         set_source_files_properties(backends/metal4/tests/test_gpu_metal4.mm PROPERTIES COMPILE_OPTIONS -fobjc-arc)
     endif()
     if (PR_GPU_VULKAN)
-        target_sources(gpu_tests PRIVATE backends/vulkan/tests/test_gpu_vulkan.cpp)
+        target_sources(gpu_tests PRIVATE backends/vulkan/tests/test_gpu_vulkan.cpp
+                                         backends/vulkan/tests/test_gpu_vulkan_memory.cpp)
         target_include_directories(gpu_tests SYSTEM PRIVATE ${PR_VULKAN_HEADERS})
     endif()
     if (PR_GPU_D3D12)
@@ -117,5 +124,16 @@ if (PR_DEVELOP)
     endif()
     if (PR_GPU_CANVAS2D)
         target_sources(gpu_tests PRIVATE backends/canvas2d/tests/test_gpu_canvas2d.cpp)
+    endif()
+    # On the web, the same tests run again in a page, where they reach the page's WebGPU.
+    if (PR_GPU_WEBGPU)
+        pr_page_tests(gpu tests/test_gpu.cpp tests/test_gpu_formats.cpp tests/test_gpu_passes.cpp
+            tests/test_gpu_c.c)
+        target_link_libraries(gpu_page_tests PRIVATE prax::gpu_select prax::task)
+        target_compile_definitions(gpu_page_tests PRIVATE PR_GPU_TEST_WEBGPU)
+        # The shaders that gpu_tests compiles, which a target of the same directory shares.
+        target_sources(gpu_page_tests PRIVATE ${PROJECT_BINARY_DIR}/slang/gpu/tests/kTestGpuShaders.h
+                                              ${PROJECT_BINARY_DIR}/slang/gpu/tests/kTestGpuPassShaders.h)
+        target_include_directories(gpu_page_tests PRIVATE ${PROJECT_BINARY_DIR}/slang)
     endif()
 endif()

@@ -96,6 +96,11 @@ void vulkanLog(const char* prefix, const char* text) {
     fprintf(stderr, "%s%s\n", prefix, text);
 }
 
+void vulkanLogStall(uint64_t reached, uint64_t fence, uint32_t seconds) {
+    fprintf(stderr, "vulkan: the timeline is at %llu, and fence %llu is not reached after %u seconds\n",
+        static_cast<unsigned long long>(reached), static_cast<unsigned long long>(fence), seconds);
+}
+
 const char* PR_NULLABLE vulkanSurfaceExtension(void) {
 #if defined(_WIN32)
     return VK_KHR_WIN32_SURFACE_EXTENSION_NAME;

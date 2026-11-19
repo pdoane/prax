@@ -40,8 +40,19 @@ bool clip(PrIVec2 origin, PrUVec2 size, PrUVec2 extent, PrUVec2* at, PrUVec2* cl
     return true;
 }
 
+// The size of a shader library's header and of each of its slots (cmake/shader_library.cmake).
+constexpr uint64_t kLibraryHeaderBytes = 20;
+constexpr uint64_t kLibrarySlotBytes = 16;
+
 uint32_t readWord(const uint8_t* bytes, uint64_t at) {
     return prMemReadLeU32(bytes + at);
+}
+
+// Returns true if `size` bytes begin with the header of a shader library of the version that this file reads.
+bool libraryHeaderIsValid(const uint8_t* bytes, uint64_t size) {
+    constexpr uint32_t kMagic = 0x4C535250;
+    constexpr uint32_t kVersion = 3;
+    return size >= kLibraryHeaderBytes && readWord(bytes, 0) == kMagic && readWord(bytes, 4) == kVersion;
 }
 
 const PrGpuShaderEntry* PR_NULLABLE entryNamed(const PrGpuShaderLibrary* library, PrStringView name) {
@@ -653,13 +664,12 @@ PrStatus prGpuShaderLibraryCreate(PrGpuDevice* device, const void* bytes, uint64
         PrGpuShaderLibrary* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;
     const uint8_t* b = static_cast<const uint8_t*>(bytes);
-    constexpr uint32_t kMagic = 0x4C535250;
-    constexpr uint32_t kVersion = 2;
-    if (size < 16 || readWord(b, 0) != kMagic || readWord(b, 4) != kVersion)
+    if (!libraryHeaderIsValid(b, size))
         return PrStatus_InvalidData;
     uint32_t entryCount = readWord(b, 8);
     uint32_t targetCount = readWord(b, 12);
-    uint64_t targetsAt = 16 + uint64_t(entryCount) * 24;
+    uint32_t slotCount = readWord(b, 16);
+    uint64_t targetsAt = kLibraryHeaderBytes + uint64_t(entryCount) * 24 + uint64_t(slotCount) * kLibrarySlotBytes;
     uint64_t targetSize = 4 + uint64_t(entryCount) * 8;
     if (targetsAt + targetSize * targetCount > size)
         return PrStatus_InvalidData;
@@ -675,7 +685,7 @@ PrStatus prGpuShaderLibraryCreate(PrGpuDevice* device, const void* bytes, uint64
         return refused;
     PrGpuShaderEntry* entries = static_cast<PrGpuShaderEntry*>(prMemoryAlloc(sizeof(PrGpuShaderEntry) * entryCount));
     for (uint32_t i = 0; i < entryCount; ++i) {
-        uint64_t at = 16 + uint64_t(i) * 24;
+        uint64_t at = kLibraryHeaderBytes + uint64_t(i) * 24;
         uint64_t nameAt = readWord(b, at);
         uint64_t nameSize = readWord(b, at + 4);
         uint64_t codeAt = readWord(b, codesAt + uint64_t(i) * 8);
@@ -707,6 +717,34 @@ void prGpuShaderLibraryDestroy(PrGpuShaderLibrary* PR_NULLABLE library) {
     if (library == nullptr)
         return;
     library->destroyFn(library);
+}
+
+uint32_t prGpuShaderLibrarySlots(PrByteView library, PrGpuShaderSlot* PR_NULLABLE out, uint32_t capacity) {
+    const uint8_t* b = library.data;
+    uint64_t size = library.size;
+    if (b == nullptr || !libraryHeaderIsValid(b, size))
+        return 0;
+    uint32_t entryCount = readWord(b, 8);
+    uint32_t slotCount = readWord(b, 16);
+    uint64_t slotsAt = kLibraryHeaderBytes + uint64_t(entryCount) * 24;
+    if (slotsAt + uint64_t(slotCount) * kLibrarySlotBytes > size)
+        return 0;
+    for (uint32_t i = 0; i < slotCount; ++i) {
+        uint64_t at = slotsAt + uint64_t(i) * kLibrarySlotBytes;
+        uint64_t nameAt = readWord(b, at);
+        uint64_t nameSize = readWord(b, at + 4);
+        uint32_t kind = readWord(b, at + 8);
+        if (nameAt + nameSize > size || kind >= PrGpuSlotKind_Count)
+            return 0;
+        if (i < capacity) {
+            out[i] = PrGpuShaderSlot{
+                .name = {reinterpret_cast<const char*>(b + nameAt), size_t(nameSize)},
+                .kind = PrGpuSlotKind(kind),
+                .slot = readWord(b, at + 12),
+            };
+        }
+    }
+    return slotCount;
 }
 
 PrGpuBlend prGpuBlendPremultiplied(void) {

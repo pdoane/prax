@@ -153,6 +153,11 @@ typedef struct PrGpuDeviceInfo {
     PrGpuFeatureFlags features;
     uint32_t maxTextureSize;        // the largest width or height of a 2D texture
 
+    // The numbers of samples per texel that the device gives a texture that passes draw to, in any format that it
+    // renders to, as the sum of the numbers. Each is a power of two, and 1 is always among them: a device that has 1, 2
+    // and 4 samples reports 7.
+    uint32_t sampleCounts;
+
     // The objects that the device holds at once: what its options asked for, or less where its API allows less.
     PrGpuDeviceLimits limits;
 
@@ -174,8 +179,9 @@ typedef void (*PrGpuDeviceReadyFn)(void* PR_NULLABLE context, PrGpuDevice* devic
 typedef struct PrGpuDeviceOptions {
     bool validation;        // turns on the API's validation where it is installed
 
-    // Creates a device without PrGpuFeatureFlag_Bindless where the system has it, so that the slots alone are used and
-    // tested on any device.
+    // Creates a device without PrGpuFeatureFlag_Bindless where the system has it, so that a renderer's slot path runs
+    // and is tested beside its bindless path. A backend whose devices always have bindless creates none, and
+    // prGpuDeviceCreate returns null for it.
     bool slotsOnly;
 
     // The pool that runs the device's creation as a job, or null to create the device during the constructor. A
@@ -888,6 +894,29 @@ PrStatus prGpuShaderLibraryCreate(PrGpuDevice* device, const void* bytes, uint64
 // Destroys the library. Pipelines created from it keep what they need.
 void prGpuShaderLibraryDestroy(PrGpuShaderLibrary* PR_NULLABLE library);
 
+// The kinds of slot that a command buffer binds (prGpuCommandsSetBuffer and the others).
+enum {
+    PrGpuSlotKind_Buffer,
+    PrGpuSlotKind_RwBuffer,
+    PrGpuSlotKind_Texture,      // with its sampler
+    PrGpuSlotKind_RwTexture,
+    PrGpuSlotKind_Count,
+};
+typedef uint8_t PrGpuSlotKind;
+
+// A slot that a library's source declares (pr/gpu.slang's PR_GPU_BUFFER and the others), by the name of its variable. A
+// caller binds a resource that a shader reads by name at the slot that the source gave it, so it holds no number of its
+// own that could drift from the source's. The name is valid while the library's bytes are.
+typedef struct PrGpuShaderSlot {
+    PrStringView name;
+    PrGpuSlotKind kind;
+    uint32_t slot;
+} PrGpuShaderSlot;
+
+// Writes up to `capacity` of the slots that the source of a library's bytes declares to `out`, and returns how many it
+// declares. Returns zero for bytes that are not a library. Reads the bytes alone, so it needs no device.
+uint32_t prGpuShaderLibrarySlots(PrByteView library, PrGpuShaderSlot* PR_NULLABLE out, uint32_t capacity);
+
 // A compiled state of the GPU for draws or dispatches. Zero is no pipeline.
 typedef struct PrGpuPipeline {
     uint32_t id;
@@ -1071,7 +1100,7 @@ typedef struct PrGpuGraphicsPipelineDesc {
 
     PrGpuTopology topology;
     PrGpuCull cull;
-    bool frontClockwise;            // true if a clockwise triangle faces front, in a pass's target with y down
+    bool frontClockwise;            // true if a triangle faces front when its vertices run clockwise on the target
 
     // The depth test, and the bias added to the depth that a primitive writes.
     bool depthTest;
@@ -1204,10 +1233,12 @@ void prGpuCommandsSetPipeline(PrGpuCommands* commands, PrGpuPipeline pipeline);
 
 // Bind resources to the command buffer's slots for the draws and dispatches recorded after the call, as root data is
 // set. A slot is of one kind, numbered from zero below the device's maximum of its kind (PrGpuDeviceInfo), and is
-// shared by every stage of a pipeline. A shader declares the slots that it reads (pr/gpu.slang's PR_GPU_BUFFER and the
-// others). A zero buffer, texture or sampler unbinds it. Each draw or dispatch reads every resource that its pipeline's
-// shaders use, whether or not the run takes the code that uses it, so each must be bound then: a slot's buffer or
-// texture, and a Texture slot's sampler where a shader samples the texture.
+// shared by every stage of a pipeline. A shader's source declares its slots (pr/gpu.slang's PR_GPU_BUFFER and the
+// others). A zero buffer, texture or sampler unbinds it.
+//
+// Every entry point of a source has every slot that the source declares, whether or not its code reads the slot. So a
+// draw or dispatch needs each of those slots bound: a slot's buffer or texture, and a Texture slot's sampler if the
+// source samples the texture. Entry points that should not share slots are compiled from separate sources.
 //
 // A Buffer slot is read from `offset` bytes into the buffer, which is a multiple of the device's storageOffsetAlignment
 // (PrGpuDeviceInfo). An RwBuffer slot may also be written. The buffer of either has PrGpuBufferUsageFlag_Storage, or is
@@ -1321,6 +1352,14 @@ enum {
         PrGpuAccessFlag_ComputeRead,
     PrGpuAccessFlag_ShaderWrite = PrGpuAccessFlag_VertexWrite | PrGpuAccessFlag_FragmentWrite |
         PrGpuAccessFlag_ComputeWrite,
+
+    // Every access that writes a resource.
+    PrGpuAccessFlag_Write = PrGpuAccessFlag_ShaderWrite | PrGpuAccessFlag_CopyWrite | PrGpuAccessFlag_ColorAttachment |
+        PrGpuAccessFlag_DepthStencilWrite,
+
+    // Every access that a pass makes to its attachments.
+    PrGpuAccessFlag_Attachment = PrGpuAccessFlag_ColorAttachment | PrGpuAccessFlag_DepthStencilRead |
+        PrGpuAccessFlag_DepthStencilWrite,
 };
 typedef uint32_t PrGpuAccessFlags;
 
@@ -1338,7 +1377,9 @@ void prGpuCommandsGlobalBarrier(PrGpuCommands* commands, PrGpuAccessFlags before
 
 // Drawing to a set of attachments, recorded into a command buffer. A pass is either the device's own, which the device
 // begins and ends, or it wraps a pass that the application has open in its native command buffer. No barriers are
-// recorded in a pass.
+// recorded in a pass. Passes of the device's own are in order on their attachments: a pass loads and writes them after
+// the passes before it in the queue have written them, so passes that use a texture only as an attachment need no
+// barrier between them.
 typedef struct PrGpuPass PrGpuPass;
 
 // What a pass does with an attachment's contents when it begins.
@@ -1354,13 +1395,17 @@ enum {
     PrGpuStore_Keep,
     PrGpuStore_Discard,
     PrGpuStore_Resolve,     // resolves the samples into `resolve`, and discards them
+
+    // Resolves the samples into `resolve`, and keeps them, for a later pass that draws more over them and resolves
+    // again.
+    PrGpuStore_ResolveKeep,
 };
 typedef uint8_t PrGpuStore;
 
 // An attachment: a texture, or one level and layer of it, and what the pass does with it.
 typedef struct PrGpuAttachment {
     PrGpuTexture texture;
-    PrGpuTexture resolve;   // the target of PrGpuStore_Resolve, or zero
+    PrGpuTexture resolve;   // the target of PrGpuStore_Resolve and PrGpuStore_ResolveKeep, or zero
     uint8_t level;
     uint16_t layer;
     PrGpuLoad load;

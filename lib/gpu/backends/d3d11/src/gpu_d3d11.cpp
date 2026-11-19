@@ -2174,7 +2174,7 @@ void replayPassEnd(D3d11Replay& r) {
     D3d11Device* d = r.d;
     for (uint8_t i = 0; i < r.colorCount; ++i) {
         const PrGpuAttachment& a = r.color[i];
-        if (a.store != PrGpuStore_Resolve)
+        if (a.store != PrGpuStore_Resolve && a.store != PrGpuStore_ResolveKeep)
             continue;
         const D3d11Resource& from = d->resources[a.texture.id];
         const D3d11Resource& to = d->resources[a.resolve.id];
@@ -3096,6 +3096,8 @@ PrGpuDevice* prGpuD3d11Create(const PrGpuD3d11Options* PR_NULLABLE options) {
     d->info.backend = "Direct3D 11";
     d->info.features = PrGpuFeatureFlag_TextureCompressionBc;
     d->info.maxTextureSize = D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION;
+    // Feature level 11_0 has 4 samples in every format that it renders to, and 8 in all but the widest.
+    d->info.sampleCounts = 1 | 4;
     d->info.maxBufferSlots = kBufferSlots;
     d->info.maxRwBufferSlots = kRwBufferSlots;
     d->info.maxTextureSlots = kTextureSlots;

@@ -10,6 +10,7 @@
 #include "pr/min_max.h"
 
 #include "gpu/backends/vulkan/src/vulkan_commands.h"
+#include "gpu/backends/vulkan/src/vulkan_memory.h"
 #include "gpu/backends/vulkan/src/vulkan_pipeline.h"
 #include "gpu/backends/vulkan/src/vulkan_platform.h"
 #include "gpu/backends/vulkan/src/vulkan_resources.h"
@@ -101,6 +102,8 @@ void require(FeatureChain& chain) {
     chain.vulkan13.dynamicRendering = VK_TRUE;
     chain.vulkan13.synchronization2 = VK_TRUE;
     chain.vulkan13.maintenance4 = VK_TRUE;
+    // A fragment shader that discards its fragment demotes it to a helper invocation in SPIR-V.
+    chain.vulkan13.shaderDemoteToHelperInvocation = VK_TRUE;
     chain.mutableDescriptors.mutableDescriptorType = VK_TRUE;
 }
 
@@ -553,9 +556,15 @@ bool removed(const GpuSharedDevice* device) {
     return static_cast<const VulkanDevice*>(device)->lost.load();
 }
 
-// Vulkan has no call that removes a device, so the device only reports that it is lost and refuses new work.
+// Vulkan has no call that removes a device, so the device only reports that it is lost and refuses new work. The work
+// that it already has still runs, and the call waits for it, because the device's teardown takes a lost device's work
+// to be over.
 void simulateLoss(PrGpuDevice* device) {
-    vulkanDevice(device)->lost.store(true);
+    VulkanDevice* d = vulkanDevice(device);
+    d->lost.store(true);
+    prMutexLock(&d->mutex);
+    d->vk.DeviceWaitIdle(d->device);
+    prMutexUnlock(&d->mutex);
 }
 
 // Frees the device after its initialization succeeded or failed. What the initialization did not make is null.
@@ -580,6 +589,7 @@ void destroy(GpuSharedDevice* device) {
         vulkanCommandsReset(d);
         vulkanResourcesReset(d);
         prMutexUnlock(&d->mutex);
+        vulkanMemoryReset(d);
         d->vk.DestroySemaphore(d->device, d->timeline, nullptr);
         if (d->ownsDescriptors) {
             d->vk.DestroyPipelineLayout(d->device, d->layout, nullptr);
@@ -604,6 +614,7 @@ void destroy(GpuSharedDevice* device) {
     prConditionReset(&d->pendingSignal);
     prConditionReset(&d->reachedSignal);
     prMutexReset(&d->doneMutex);
+    prMutexReset(&d->memoryMutex);
     prMutexReset(&d->mutex);
     prMemoryFree(d);
 }
@@ -679,8 +690,13 @@ PrStatus initialize(GpuSharedDevice* device) {
         ++d->info.adapter.size;
     if (d->limits.timestampComputeAndGraphics)
         d->info.features |= PrGpuFeatureFlag_Timestamps;
-    d->info.features |= PrGpuFeatureFlag_Bindless | (d->localRead ? PrGpuFeatureFlag_TargetReads : 0);
+    d->bindless = !o.slotsOnly;
+    d->info.features |= (d->bindless ? PrGpuFeatureFlag_Bindless : 0) | (d->localRead ? PrGpuFeatureFlag_TargetReads : 0);
     d->info.maxTextureSize = d->limits.maxImageDimension2D;
+    // Vulkan's flags for sample counts are the counts themselves. A float color format has the counts of the color
+    // limit, and a depth format those of the depth limit.
+    d->info.sampleCounts = 1 | (d->limits.framebufferColorSampleCounts & d->limits.framebufferDepthSampleCounts &
+        (VK_SAMPLE_COUNT_2_BIT | VK_SAMPLE_COUNT_4_BIT | VK_SAMPLE_COUNT_8_BIT | VK_SAMPLE_COUNT_16_BIT));
     d->info.storageOffsetAlignment = uint32_t(d->limits.minStorageBufferOffsetAlignment);
     if (d->info.storageOffsetAlignment < 16)
         d->info.storageOffsetAlignment = 16;
@@ -720,6 +736,7 @@ PrGpuDevice* prGpuVulkanCreate(const PrGpuVulkanOptions* PR_NULLABLE options) {
         d->options.descriptors = &d->descriptors;
     }
     prMutexInit(&d->mutex);
+    prMutexInit(&d->memoryMutex);
     prMutexInit(&d->doneMutex);
     prConditionInit(&d->pendingSignal);
     prConditionInit(&d->reachedSignal);
@@ -743,6 +760,14 @@ PrGpuDevice* prGpuVulkanCreate(const PrGpuVulkanOptions* PR_NULLABLE options) {
 
 uint32_t prGpuVulkanValidationErrors(const PrGpuDevice* device) {
     return vulkanDevice(device)->validationErrors.load();
+}
+
+PrGpuVulkanMemoryInfo prGpuVulkanMemoryInfo(const PrGpuDevice* device) {
+    VulkanDevice* d = const_cast<VulkanDevice*>(vulkanDevice(device));
+    prMutexLock(&d->memoryMutex);
+    PrGpuVulkanMemoryInfo info = d->memoryInfo;
+    prMutexUnlock(&d->memoryMutex);
+    return info;
 }
 
 uint32_t prGpuVulkanDeviceExtensions(const char* const* PR_NULLABLE* PR_NONNULL out) {

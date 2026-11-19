@@ -3,6 +3,10 @@
 // A library is one SPIR-V module that holds every entry point, each named by its function. Pipelines are created with
 // the device's pipeline layout, dynamic rendering, and dynamic viewport, scissor, blend constants and stencil
 // reference. Vertex data is read by shaders, so pipelines have no vertex input.
+//
+// A device without bindless refuses a pipeline whose entry point reaches a resource by handle. The module says which
+// do: an entry point of SPIR-V 1.4 or later lists every global variable that it reaches, and the variables of the
+// bindless set are the ones that handles index.
 
 #include "gpu/backends/vulkan/src/vulkan_pipeline.h"
 
@@ -179,6 +183,60 @@ PrStatus pipelineAdd(VulkanDevice* d, VkPipeline pipeline, VkPipelineBindPoint b
 // ---------------------------------------------------------------------------------------------------------------------
 // Libraries
 
+// The parts of SPIR-V that spirvReadsHandles reads.
+constexpr uint32_t kSpirvHeaderWords = 5;
+constexpr uint32_t kSpirvOpEntryPoint = 15;
+constexpr uint32_t kSpirvOpDecorate = 71;
+constexpr uint32_t kSpirvDecorationDescriptorSet = 34;
+
+// Calls `visit` with each instruction of a SPIR-V module of `count` words: its opcode, its operands and their number.
+// Stops at an instruction that does not fit the module.
+template <typename Visit>
+void spirvEachInstruction(const uint32_t* words, size_t count, Visit visit) {
+    for (size_t at = kSpirvHeaderWords; at < count;) {
+        size_t length = words[at] >> 16;
+        if (length == 0 || length > count - at)
+            return;
+        visit(words[at] & 0xffff, words + at + 1, uint32_t(length - 1));
+        at += length;
+    }
+}
+
+// Sets `out[i]` to whether entry point `i` of a SPIR-V module reaches a variable of the bindless set. An entry point
+// that the module does not hold reaches none.
+void spirvReadsHandles(const uint32_t* words, size_t count, const PrGpuShaderEntry* entries, uint32_t entryCount, bool* out) {
+    RawArray<uint32_t> bindless{};  // the ids of the bindless set's variables
+    spirvEachInstruction(words, count, [&](uint32_t opcode, const uint32_t* operands, uint32_t operandCount) {
+        if (opcode == kSpirvOpDecorate && operandCount == 3 && operands[1] == kSpirvDecorationDescriptorSet &&
+                operands[2] == VulkanSet_Bindless)
+            bindless.push(operands[0]);
+    });
+    spirvEachInstruction(words, count, [&](uint32_t opcode, const uint32_t* operands, uint32_t operandCount) {
+        // An entry point's operands are its execution model, its id, its name and the ids of its variables. The name is
+        // terminated, and padded with zeros to a whole word.
+        if (opcode != kSpirvOpEntryPoint || operandCount < 3)
+            return;
+        const char* name = reinterpret_cast<const char*>(operands + 2);
+        size_t nameCapacity = size_t(operandCount - 2) * 4;
+        size_t nameSize = 0;
+        while (nameSize < nameCapacity && name[nameSize] != '\0')
+            ++nameSize;
+        if (nameSize == nameCapacity)
+            return;
+        uint32_t firstVariable = 2 + uint32_t(nameSize / 4) + 1;
+        bool reads = false;
+        for (uint32_t i = firstVariable; i < operandCount && !reads; ++i) {
+            for (uint32_t k = 0; k < bindless.count && !reads; ++k)
+                reads = bindless.data[k] == operands[i];
+        }
+        for (uint32_t i = 0; i < entryCount; ++i) {
+            if (entries[i].name == PrStringView{name, nameSize})
+                out[i] = reads;
+        }
+    });
+    bindless.reset();
+}
+
 // Every entry point shares the one module, which the library's bytes hold.
 PrStatus shaderLibraryCreate(PrGpuDevice* device, PrGpuShaderEntry* entries, uint32_t entryCount,
         PrGpuShaderLibrary* PR_NULLABLE* PR_NONNULL out) {
@@ -194,15 +252,20 @@ PrStatus shaderLibraryCreate(PrGpuDevice* device, PrGpuShaderEntry* entries, uin
     info.pCode = words;
     VkShaderModule module = VK_NULL_HANDLE;
     VkResult result = d->vk.CreateShaderModule(d->device, &info, nullptr, &module);
-    prMemoryFree(words);
-    if (!vulkanCheck(d, result))
+    if (!vulkanCheck(d, result)) {
+        prMemoryFree(words);
         return result == VK_ERROR_DEVICE_LOST ? PrStatus_Lost : PrStatus_InvalidData;
+    }
     VulkanLibrary* library = allocZeroed<VulkanLibrary>();
     static_cast<PrGpuShaderLibrary&>(*library) = kLibraryFunctions;
     library->device = device;
     library->entryCount = entryCount;
     library->entries = entries;
     library->module = module;
+    library->readsHandles = static_cast<bool*>(prMemoryAlloc(entryCount * sizeof(bool)));
+    prMemFill(library->readsHandles, 0, entryCount * sizeof(bool));
+    spirvReadsHandles(words, size_t(entries[0].codeSize) / 4, entries, entryCount, library->readsHandles);
+    prMemoryFree(words);
     *out = library;
     return PrStatus_Ok;
 }
@@ -212,12 +275,19 @@ void shaderLibraryDestroy(PrGpuShaderLibrary* library) {
     VulkanDevice* d = vulkanDevice(device);
     VulkanLibrary* l = static_cast<VulkanLibrary*>(library);
     d->vk.DestroyShaderModule(d->device, l->module, nullptr);
+    prMemoryFree(l->readsHandles);
     prMemoryFree(l->entries);
     prMemoryFree(l);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Pipelines
+
+// Returns true if the device runs an entry point of the library. A device without bindless runs only the entry points
+// that reach their resources through slots.
+bool runsEntry(const VulkanDevice* d, const VulkanLibrary* library, const PrGpuShaderEntry* entry) {
+    return d->bindless || !library->readsHandles[entry - library->entries];
+}
 
 PrStatus graphicsPipelineCreate(PrGpuDevice* device, const PrGpuGraphicsPipelineDesc* desc,
         const PrGpuShaderEntry* vertex, const PrGpuShaderEntry* PR_NULLABLE fragment, PrGpuPipeline* out) {
@@ -230,6 +300,8 @@ PrStatus graphicsPipelineCreate(PrGpuDevice* device, const PrGpuGraphicsPipeline
     for (const PrGpuShaderEntry* entry : entries) {
         if (entry == nullptr)
             continue;
+        if (!runsEntry(d, library, entry))
+            return PrStatus_NotSupported;
         entryName(entry, names[stageCount]);
         VkPipelineShaderStageCreateInfo& stage = stages[stageCount];
         stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -363,6 +435,8 @@ PrStatus graphicsPipelineCreate(PrGpuDevice* device, const PrGpuGraphicsPipeline
 PrStatus computePipelineCreate(PrGpuDevice* device, const PrGpuShaderLibrary* library, const PrGpuShaderEntry* compute,
         PrStringView name, PrGpuPipeline* out) {
     VulkanDevice* d = vulkanDevice(device);
+    if (!runsEntry(d, libraryOf(library), compute))
+        return PrStatus_NotSupported;
     char entry[kEntryNameMaxBytes];
     entryName(compute, entry);
     VkComputePipelineCreateInfo info{};

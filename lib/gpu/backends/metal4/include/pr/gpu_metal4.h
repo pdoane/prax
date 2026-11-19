@@ -9,7 +9,8 @@
 // chain follows its window's display: each acquire on the main thread checks the display again.
 //
 // Every resource of the device is in one residency set, which the device's queue holds. An application that submits its
-// own command buffers that use the device's resources adds the set to its queue (prGpuMetal4ResidencySet).
+// own command buffers that use the device's resources adds the set to its queue (prGpuMetal4ResidencySet). A device has
+// PrGpuFeatureFlag_Bindless unless it is created `slotsOnly`.
 
 #pragma once
 
@@ -27,6 +28,7 @@ typedef struct PrGpuMetal4Options {
     void* PR_NULLABLE device;   // the application's id<MTLDevice>; null for the system's default
     void* PR_NULLABLE queue;    // the application's id<MTL4CommandQueue> on the device; null to create one
     bool validation;            // labels objects for Metal's validation, which the environment turns on
+    bool slotsOnly;             // creates a device without PrGpuFeatureFlag_Bindless
 
     // The device's creation runs on `pool`, or during the call if it is null. `ready` is called once the creation is
     // done (PrGpuDeviceOptions).

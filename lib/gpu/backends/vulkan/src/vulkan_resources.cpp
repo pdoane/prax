@@ -1,4 +1,4 @@
-// The Vulkan backend's memory, resources and uploads, and the retirement of what the device destroys.
+// The Vulkan backend's resources and uploads, and the retirement of what the device destroys.
 //
 // A buffer or a texture takes a slot of the bindless array when it is created, and writes its descriptor there: a
 // buffer's storage buffer, which shaders read and write through, or a texture's sampled image in the read-only layout.
@@ -18,6 +18,7 @@
 #include "pr/mem.h"
 
 #include "gpu/backends/vulkan/src/vulkan_commands.h"
+#include "gpu/backends/vulkan/src/vulkan_memory.h"
 
 namespace pr_impl {
 
@@ -25,25 +26,6 @@ namespace {
 
 // The alignment of an upload within its staging block, which a copy into a texture of any format accepts.
 constexpr uint64_t kUploadAlignment = 16;
-
-// Returns the index of a memory type in `bits` with every property of `required`, preferring one that also has those of
-// `preferred`, or UINT32_MAX if none has them.
-uint32_t memoryType(const VulkanDevice* d, uint32_t bits, VkMemoryPropertyFlags required,
-        VkMemoryPropertyFlags preferred) {
-    uint32_t fallback = UINT32_MAX;
-    for (uint32_t i = 0; i < d->memoryProperties.memoryTypeCount; ++i) {
-        if ((bits & (1u << i)) == 0)
-            continue;
-        VkMemoryPropertyFlags flags = d->memoryProperties.memoryTypes[i].propertyFlags;
-        if ((flags & required) != required)
-            continue;
-        if ((flags & preferred) == preferred)
-            return i;
-        if (fallback == UINT32_MAX)
-            fallback = i;
-    }
-    return fallback;
-}
 
 void writeImage(VulkanDevice* d, uint32_t slot, VkImageView view, bool storage) {
     VkDescriptorImageInfo image{};
@@ -108,14 +90,11 @@ bool stagingMake(void* context, uint64_t size, GpuSharedStagingBlock* out) {
     VulkanStagingPage created{};
     if (!vulkanCheck(d, d->vk.CreateBuffer(d->device, &info, nullptr, &created.buffer)))
         return false;
-    VkMemoryRequirements requirements;
-    d->vk.GetBufferMemoryRequirements(d->device, created.buffer, &requirements);
     VkMemoryPropertyFlags mapped = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-    if (!vulkanMemoryAllocate(d, requirements, mapped, 0, &created.memory)) {
+    if (!vulkanMemoryBindBuffer(d, created.buffer, mapped, 0, VulkanMemoryPlace_Alone, &created.memory)) {
         d->vk.DestroyBuffer(d->device, created.buffer, nullptr);
         return false;
     }
-    d->vk.BindBufferMemory(d->device, created.buffer, created.memory.memory, created.memory.offset);
     uint32_t index = UINT32_MAX;
     for (uint32_t i = 0; i < d->pages.count && index == UINT32_MAX; ++i) {
         if (d->pages.data[i].buffer == VK_NULL_HANDLE)
@@ -273,8 +252,6 @@ PrStatus bufferCreate(PrGpuDevice* device, const PrGpuBufferDesc* desc, PrGpuBuf
     VkBuffer buffer = VK_NULL_HANDLE;
     if (!vulkanCheck(d, d->vk.CreateBuffer(d->device, &info, nullptr, &buffer)))
         return PrStatus_Limit;
-    VkMemoryRequirements requirements;
-    d->vk.GetBufferMemoryRequirements(d->device, buffer, &requirements);
     VkMemoryPropertyFlags required = 0;
     VkMemoryPropertyFlags preferred = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
     if (desc->memory == PrGpuMemory_Upload)
@@ -284,11 +261,10 @@ PrStatus bufferCreate(PrGpuDevice* device, const PrGpuBufferDesc* desc, PrGpuBuf
         preferred = VK_MEMORY_PROPERTY_HOST_CACHED_BIT;
     }
     VulkanMemory memory{};
-    if (!vulkanMemoryAllocate(d, requirements, required, preferred, &memory)) {
+    if (!vulkanMemoryBindBuffer(d, buffer, required, preferred, VulkanMemoryPlace_Pool, &memory)) {
         d->vk.DestroyBuffer(d->device, buffer, nullptr);
         return PrStatus_Limit;
     }
-    d->vk.BindBufferMemory(d->device, buffer, memory.memory, memory.offset);
     if (memory.mapped != nullptr)
         prMemZero(memory.mapped, size_t(info.size));
     vulkanName(d, VK_OBJECT_TYPE_BUFFER, uint64_t(buffer), desc->name);
@@ -400,14 +376,11 @@ PrStatus textureCreate(PrGpuDevice* device, const PrGpuTextureDesc* desc, PrGpuT
     VkImage image = VK_NULL_HANDLE;
     if (!vulkanCheck(d, d->vk.CreateImage(d->device, &info, nullptr, &image)))
         return PrStatus_Limit;
-    VkMemoryRequirements requirements;
-    d->vk.GetImageMemoryRequirements(d->device, image, &requirements);
     VulkanMemory memory{};
-    if (!vulkanMemoryAllocate(d, requirements, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 0, &memory)) {
+    if (!vulkanMemoryBindImage(d, image, &memory)) {
         d->vk.DestroyImage(d->device, image, nullptr);
         return PrStatus_Limit;
     }
-    d->vk.BindImageMemory(d->device, image, memory.memory, memory.offset);
     vulkanName(d, VK_OBJECT_TYPE_IMAGE, uint64_t(image), desc->name);
 
     VulkanImage* held = alloc<VulkanImage>();
@@ -897,52 +870,6 @@ VkImageLayout vulkanLayoutFromAccess(PrGpuAccessFlags access) {
     if ((access & ~reads) == 0)
         return VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL;
     return VK_IMAGE_LAYOUT_GENERAL;
-}
-
-bool vulkanMemoryAllocate(VulkanDevice* d, VkMemoryRequirements requirements, VkMemoryPropertyFlags required,
-        VkMemoryPropertyFlags preferred, VulkanMemory* out) {
-    *out = VulkanMemory{};
-    bool hostVisible = (required & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) != 0;
-    if (!hostVisible && d->allocate != nullptr) {
-        uint64_t memory = 0;
-        uint64_t offset = 0;
-        if (!d->allocate(d->memoryContext, requirements.size, requirements.alignment, requirements.memoryTypeBits,
-                &memory, &offset))
-            return false;
-        out->memory = reinterpret_cast<VkDeviceMemory>(memory);
-        out->offset = offset;
-        out->application = true;
-        return true;
-    }
-    uint32_t type = memoryType(d, requirements.memoryTypeBits, required, preferred);
-    if (type == UINT32_MAX)
-        return false;
-    VkMemoryAllocateInfo info{};
-    info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    info.allocationSize = requirements.size;
-    info.memoryTypeIndex = type;
-    if (!vulkanCheck(d, d->vk.AllocateMemory(d->device, &info, nullptr, &out->memory)))
-        return false;
-    if (hostVisible) {
-        void* mapped = nullptr;
-        if (!vulkanCheck(d, d->vk.MapMemory(d->device, out->memory, 0, VK_WHOLE_SIZE, 0, &mapped))) {
-            d->vk.FreeMemory(d->device, out->memory, nullptr);
-            *out = VulkanMemory{};
-            return false;
-        }
-        out->mapped = static_cast<uint8_t*>(mapped);
-    }
-    return true;
-}
-
-void vulkanMemoryFree(VulkanDevice* d, VulkanMemory& memory) {
-    if (memory.memory == VK_NULL_HANDLE)
-        return;
-    if (memory.application)
-        d->free(d->memoryContext, reinterpret_cast<uint64_t>(memory.memory), memory.offset);
-    else
-        d->vk.FreeMemory(d->device, memory.memory, nullptr);
-    memory = VulkanMemory{};
 }
 
 uint32_t vulkanSlotTake(VulkanDevice* d) {

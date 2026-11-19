@@ -833,7 +833,11 @@ PrStatus initializeDevice(GpuSharedDevice* device) {
             metal = MTLCreateSystemDefaultDevice();
         if (metal == nil)
             return PrStatus_NotSupported;
-        gpuMetalDeviceOpen(d, metal, [metal supportsFamily:MTLGPUFamilyMetal3] && !o.slotsOnly);
+        // Metal 3's encoders make resident what they bind, so only a bindless device keeps a residency set.
+        GpuMetalDeviceFlags flags = 0;
+        if ([metal supportsFamily:MTLGPUFamilyMetal3] && !o.slotsOnly)
+            flags = GpuMetalDeviceFlag_Bindless | GpuMetalDeviceFlag_Residency;
+        gpuMetalDeviceOpen(d, metal, flags);
         id<MTLCommandQueue> queue;
         if (o.queue != nullptr)
             queue = [static_cast<id<MTLCommandQueue>>(o.queue) retain];

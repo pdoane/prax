@@ -326,6 +326,35 @@ TEST_CASE("metal imports a CVPixelBuffer as a texture without copying it, and re
     CHECK(released);
 }
 
+TEST_CASE("metal frees the staging of an upload once the upload's work is done") {
+    Fixture f;
+    if (f.device == nullptr)
+        return;
+    // Each upload is larger than a staging block of the standard size, so it takes a block of its own, which the device
+    // frees and does not reuse.
+    constexpr uint32_t kSide = 2048;
+    constexpr uint32_t kUploads = 16;
+    constexpr NSUInteger kUploadBytes = NSUInteger(kSide) * kSide * 4;
+    Array<uint8_t> texels(kUploadBytes);
+    prMemZero(texels.data(), kUploadBytes);
+    PrGpuTextureDesc desc = prGpuTextureDesc2d(PrGpuFormat_Rgba8, PrUVec2{kSide, kSide}, PrGpuTextureUsageFlag_Sampled);
+    PrGpuTexture texture{};
+    REQUIRE(prGpuTextureCreate(f.device, &desc, &texture) == PrStatus_Ok);
+    PrGpuTextureRegion region = prGpuTextureRegion2d(PrUVec2{0, 0}, PrUVec2{kSide, kSide});
+    id<MTLDevice> device = (__bridge id<MTLDevice>)prGpuMetalDevice(f.device);
+    prGpuTextureUpload(f.device, texture, &region, texels.data(), kSide * 4, 0);
+    prGpuDeviceWaitIdle(f.device);
+    NSUInteger before = device.currentAllocatedSize;
+    for (uint32_t i = 0; i < kUploads; ++i) {
+        prGpuTextureUpload(f.device, texture, &region, texels.data(), kSide * 4, 0);
+        prGpuDeviceWaitIdle(f.device);
+    }
+    NSUInteger after = device.currentAllocatedSize;
+    // A device that kept each upload's staging would hold sixteen blocks more.
+    CHECK(after < before + 2 * kUploadBytes);
+    prGpuTextureRelease(f.device, texture);
+}
+
 #if TARGET_OS_OSX
 
 TEST_CASE("metal presents frames, with the transaction always unless threaded") {

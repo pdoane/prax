@@ -21,6 +21,7 @@
 #include "pr/thread.h"
 
 #include "gpu/backends/shared/src/gpu_shared_device.h"
+#include "gpu/backends/shared/src/gpu_shared_ranges.h"
 #include "gpu/backends/shared/src/gpu_shared_upload.h"
 
 // The backend calls Vulkan through the functions that it loads for each device, never through the loader's exports.
@@ -128,9 +129,9 @@ namespace pr_impl {
     X(DeviceWaitIdle) \
     X(EndCommandBuffer) \
     X(FreeMemory) \
-    X(GetBufferMemoryRequirements) \
+    X(GetBufferMemoryRequirements2) \
     X(GetDeviceQueue) \
-    X(GetImageMemoryRequirements) \
+    X(GetImageMemoryRequirements2) \
     X(GetQueryPoolResults) \
     X(GetSemaphoreCounterValue) \
     X(GetSwapchainImagesKHR) \
@@ -205,12 +206,54 @@ constexpr uint32_t kStreamChunkBytes = 1u << 20;
 // The frames that a swap chain has in flight.
 constexpr uint32_t kSwapChainFrames = 2;
 
-// Device memory: an allocation of the device's own, or a range of the application's.
+// Where the memory of a buffer or an image comes from.
+enum {
+    VulkanMemorySource_None,
+    VulkanMemorySource_Application,     // the application's functions (PrGpuVulkanOptions::allocate)
+    VulkanMemorySource_Dedicated,       // an allocation of the device's for this resource alone
+    VulkanMemorySource_Block,           // a range of a block of one of the device's pools
+};
+typedef uint8_t VulkanMemorySource;
+
+// What a pool's blocks hold. Buffers and images have pools of their own, so that no buffer shares a page of
+// bufferImageGranularity with an image. So have the buffers that the CPU maps, whose blocks are mapped whole.
+enum {
+    VulkanMemoryContent_Buffer,
+    VulkanMemoryContent_MappedBuffer,
+    VulkanMemoryContent_Image,
+    VulkanMemoryContent_Count,
+};
+typedef uint8_t VulkanMemoryContent;
+
+// The memory of one buffer or image: bytes of a VkDeviceMemory from `offset`.
 struct VulkanMemory {
     VkDeviceMemory memory;
     uint64_t offset;
+    uint64_t size;
     uint8_t* mapped;            // the bytes, for memory that the CPU maps, or null
-    bool application;           // true if allocated through the application's functions
+    VulkanMemorySource source;
+    uint8_t type;               // the memory type, for memory of the device's
+    VulkanMemoryContent content;
+    GpuSharedRangeIndex range;  // in the pool's ranges, for a range of a block
+};
+
+// A block of a pool: one allocation that the pool places many resources in.
+struct VulkanMemoryBlock {
+    VkDeviceMemory memory;      // null for an entry that holds no block
+    uint64_t size;
+    uint8_t* mapped;            // the block's bytes, in a pool of mapped buffers, or null
+    uint32_t resources;         // the resources placed in the block
+};
+
+// The blocks of one memory type that hold one kind of content, and their ranges.
+struct VulkanMemoryPool {
+    GpuSharedRanges ranges;
+    RawArray<VulkanMemoryBlock> blocks;     // by the block of a range
+    uint64_t bytes;                         // of the blocks
+
+    // The block that holds no resource and is kept, and the free range of its bytes, or UINT32_MAX and None.
+    uint32_t emptyBlock;
+    GpuSharedRangeIndex emptyRange;
 };
 
 // An image and its memory, held by the texture that made it and by each view of it, and freed with the last of them.
@@ -388,6 +431,7 @@ struct VulkanCommands : GpuSharedCommands {
 // A shader library: one SPIR-V module that holds every entry point.
 struct VulkanLibrary : GpuSharedLibrary {
     VkShaderModule module;
+    bool* readsHandles;             // by entry point: it reaches a variable of the bindless set
 };
 
 // An image of a swap chain, the texture that wraps it, and the semaphore that its present waits for.
@@ -437,11 +481,18 @@ struct VulkanDevice : GpuSharedDevice {
     VkPhysicalDeviceLimits limits;
     VkPhysicalDeviceMemoryProperties memoryProperties;
     bool localRead;                 // true if a draw reads its target as an input attachment
+    bool bindless;                  // has PrGpuFeatureFlag_Bindless
 
-    // Memory from the application, or the device's own.
+    // The application's functions for device memory, or null if the device allocates all of its memory.
     PrGpuVulkanAllocateFn PR_NULLABLE allocate;
     PrGpuVulkanFreeFn PR_NULLABLE free;
     void* PR_NULLABLE memoryContext;
+
+    // The device's own memory: a pool for each memory type and content, made when first used, and what the device holds
+    // in all. `memoryMutex` guards them. A thread that holds `mutex` too takes `memoryMutex` second.
+    PrMutex memoryMutex;
+    VulkanMemoryPool* PR_NULLABLE pools[VK_MAX_MEMORY_TYPES][VulkanMemoryContent_Count];
+    PrGpuVulkanMemoryInfo memoryInfo;
 
     // The bindless set and the pipeline layout, the application's or the device's own.
     bool ownsDescriptors;

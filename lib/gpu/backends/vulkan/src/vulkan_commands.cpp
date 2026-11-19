@@ -23,6 +23,8 @@
 #include "pr/integer.h"
 #include "pr/mem.h"
 
+#include "gpu/backends/vulkan/src/vulkan_memory.h"
+#include "gpu/backends/vulkan/src/vulkan_platform.h"
 #include "gpu/backends/vulkan/src/vulkan_resources.h"
 #include "gpu/backends/vulkan/src/vulkan_swap_chain.h"
 
@@ -327,14 +329,11 @@ uint8_t* PR_NULLABLE streamTake(VulkanDevice* d, VulkanCommands* c, uint64_t siz
         uint32_t taken = 0;
         bool made = vulkanCheck(d, d->vk.CreateBuffer(d->device, &info, nullptr, &buffer));
         if (made) {
-            VkMemoryRequirements requirements;
-            d->vk.GetBufferMemoryRequirements(d->device, buffer, &requirements);
-            made = vulkanMemoryAllocate(d, requirements,
+            made = vulkanMemoryBindBuffer(d, buffer,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &memory);
+                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VulkanMemoryPlace_Alone, &memory);
         }
         if (made) {
-            d->vk.BindBufferMemory(d->device, buffer, memory.memory, memory.offset);
             taken = vulkanSlotTake(d);
             made = taken != 0;
         }
@@ -822,7 +821,8 @@ VkAttachmentLoadOp loadOf(PrGpuLoad load) {
 }
 
 VkAttachmentStoreOp storeOf(PrGpuStore store) {
-    return store == PrGpuStore_Keep ? VK_ATTACHMENT_STORE_OP_STORE : VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    bool keeps = store == PrGpuStore_Keep || store == PrGpuStore_ResolveKeep;
+    return keeps ? VK_ATTACHMENT_STORE_OP_STORE : VK_ATTACHMENT_STORE_OP_DONT_CARE;
 }
 
 // Sets a pass's viewport to `viewport`, flipped so that clip space has y up.
@@ -852,8 +852,7 @@ VkRenderingAttachmentInfo attachmentOf(VulkanDevice* d, const PrGpuAttachment& a
     info.imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
     info.loadOp = loadOf(load);
     info.storeOp = storeOf(store);
-    if (store == PrGpuStore_Resolve && attachment.resolve.id != 0) {
-        info.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    if ((store == PrGpuStore_Resolve || store == PrGpuStore_ResolveKeep) && attachment.resolve.id != 0) {
         info.resolveMode = VK_RESOLVE_MODE_AVERAGE_BIT;
         info.resolveImageView = vulkanAttachmentView(d, attachment.resolve.id, attachment.level, attachment.layer);
         info.resolveImageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
@@ -1236,6 +1235,35 @@ constexpr PrGpuPass kPassFunctions = {
     .drawIndexedIndirectFn = passDrawIndexedIndirect,
 };
 
+// Waits until the timeline reaches `fence` or the device is lost. The wait is in slices, and between them the timeline
+// is read, because a driver may report a loss from one call and not from a wait that is under way. A validating device
+// reports a fence that the timeline has not reached after kStallSlices, once, with what the timeline has reached: a
+// submission that the driver accepted and never completes leaves no other trace.
+void waitForFence(VulkanDevice* d, PrGpuFence fence) {
+    constexpr uint64_t kSliceNanoseconds = 1000000000;
+    constexpr uint32_t kStallSlices = 10;
+    VkSemaphoreWaitInfo info{};
+    info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO;
+    info.semaphoreCount = 1;
+    info.pSemaphores = &d->timeline;
+    info.pValues = &fence;
+    for (uint32_t slices = 1; !d->lost.load(); ++slices) {
+        VkResult result = d->vk.WaitSemaphores(d->device, &info, kSliceNanoseconds);
+        if (result != VK_TIMEOUT) {
+            vulkanCheck(d, result);
+            return;
+        }
+        uint64_t reached = 0;
+        result = d->vk.GetSemaphoreCounterValue(d->device, d->timeline, &reached);
+        if (result != VK_SUCCESS) {
+            vulkanCheck(d, result);
+            return;
+        }
+        if (slices == kStallSlices && d->messenger != VK_NULL_HANDLE)
+            vulkanLogStall(reached, fence, kStallSlices);
+    }
+}
+
 } // namespace
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1297,14 +1325,7 @@ void vulkanCompletionRun(void* PR_NULLABLE context) {
         VulkanCommands* c = d->pending.data[0];
         d->pending.erase(0);
         prMutexUnlock(&d->doneMutex);
-        if (!d->lost.load()) {
-            VkSemaphoreWaitInfo info{};
-            info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO;
-            info.semaphoreCount = 1;
-            info.pSemaphores = &d->timeline;
-            info.pValues = &c->fence;
-            vulkanCheck(d, d->vk.WaitSemaphores(d->device, &info, UINT64_MAX));
-        }
+        waitForFence(d, c->fence);
         PrGpuFence fence = c->fence;
         retire(d, c, d->lost.load());
         prMutexLock(&d->doneMutex);

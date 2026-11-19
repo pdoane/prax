@@ -1,12 +1,16 @@
 // The Vulkan GPU backend.
 //
-// The backend needs Vulkan 1.3 with dynamic rendering, synchronization2, timeline semaphores and descriptor indexing,
-// with mutable descriptors and push descriptors.
+// The backend needs Vulkan 1.3 with dynamic rendering, synchronization2, timeline semaphores, descriptor indexing and
+// the demotion of fragments to helper invocations, with mutable descriptors and push descriptors.
 //
 // A pipeline that reads its target reads it through dynamic rendering local read if the device has it. Otherwise the
 // pipeline samples a copy of the target. The backend makes the copy before each draw that uses such a pipeline, so each
 // of those draws ends the rendering and begins it again. The two kinds of device run different SPIR-V, and a shader
 // library holds code for both.
+//
+// The backend allocates device memory in blocks and places its buffers and textures in them, so the number of resources
+// is not bounded by the number of allocations that a device allows. A large resource, or one that the device asks to be
+// alone, has an allocation of its own.
 //
 // The native objects cross this header as untyped pointers or 64-bit integers, and native enumerations as integers. A
 // caller casts them to their Vulkan types, such as `VkDevice` and `VkImageLayout`.
@@ -106,6 +110,10 @@ typedef struct PrGpuVulkanOptions {
     // the layer.
     bool validation;
 
+    // Creates a device without PrGpuFeatureFlag_Bindless, which refuses a pipeline whose entry point reaches a resource
+    // by handle. The device still writes its descriptors into the bindless set, which its shaders do not read.
+    bool slotsOnly;
+
     // The device's creation runs on `pool`, or during the call if it is null. `ready` is called once the creation is
     // done (PrGpuDeviceOptions).
     PrTaskPool* PR_NULLABLE pool;
@@ -129,6 +137,16 @@ PrGpuDevice* prGpuVulkanCreate(const PrGpuVulkanOptions* PR_NULLABLE options);
 // Returns the number of validation messages of error severity that the device's instance has reported. Always zero
 // without the validation layer. Tests check it after each case.
 uint32_t prGpuVulkanValidationErrors(const PrGpuDevice* device);
+
+// The device memory that a device allocated itself, which leaves out what the application's functions gave it.
+typedef struct PrGpuVulkanMemoryInfo {
+    uint32_t allocations;       // VkDeviceMemory objects, which a device limits (maxMemoryAllocationCount)
+    uint64_t allocatedBytes;    // the bytes of those allocations
+    uint64_t usedBytes;         // the bytes of them that buffers and textures occupy
+} PrGpuVulkanMemoryInfo;
+
+// Returns the device's memory as it is now. Safe from any thread.
+PrGpuVulkanMemoryInfo prGpuVulkanMemoryInfo(const PrGpuDevice* device);
 
 // Returns the device extensions that an application enables on a device that it creates for the backend, and a chain of
 // Vulkan feature structures, starting with a VkPhysicalDeviceFeatures2, to pass to vkCreateDevice. The strings and the

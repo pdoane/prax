@@ -76,7 +76,7 @@ TEST_CASE("a memory device holds textures in memory and runs no shaders") {
     CHECK_FALSE(prGpuDeviceSupportsFormat(d.device, PrGpuFormat_Rgba8, PrGpuTextureUsageFlag_Storage));
     CHECK_FALSE(prGpuDeviceSupportsFormat(d.device, PrGpuFormat_Bc7, PrGpuTextureUsageFlag_Sampled));
     // A library of any shaders has no code that the device runs.
-    const uint8_t library[16] = {'P', 'R', 'S', 'L', 2};
+    const uint8_t library[20] = {'P', 'R', 'S', 'L', 3};
     PrGpuShaderLibrary* shaders = nullptr;
     CHECK(prGpuShaderLibraryCreate(d.device, library, sizeof(library), &shaders) == PrStatus_NotSupported);
 }

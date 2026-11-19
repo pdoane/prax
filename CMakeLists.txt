@@ -267,13 +267,7 @@ pr_backend_option(PR_WEBVIEW_WEBVIEW2 "lib/webview's WebView2 backend" "${WIN32}
 include(lib/font_bundle/font_bundle.cmake)
 
 # The compiler of the shaders, and the shader libraries that it compiles for each backend.
-if (NOT PR_SLANGC)
-    pr_dependency_available(slang)
-    set(PR_SLANGC ${slang_SOURCE_DIR}/bin/slangc)
-    if (CMAKE_HOST_WIN32)
-        string(APPEND PR_SLANGC .exe)
-    endif()
-endif()
+pr_slangc(PR_SLANGC)
 if (APPLE)
     set(PR_SHADER_TARGETS metal)
     # A metallib runs on the platform that it was compiled for: macOS, or the devices or the simulator of a UIKit
@@ -315,6 +309,7 @@ if (PR_GPU_VULKAN)
         list(APPEND PR_SHADER_TARGETS spirv_local_read spirv)
     endif()
 endif()
+
 
 # Where the build's programs find the font bundles' files.
 set(PR_FONT_BUNDLE_DIR "${PROJECT_BINARY_DIR}/font_bundle")

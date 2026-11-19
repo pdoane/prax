@@ -148,6 +148,7 @@ function(pr_slang target source)
             -DSCRATCH=${PROJECT_BINARY_DIR}/slang/${directory}/${SLANG_VARIABLE} -DROOT=${PROJECT_SOURCE_DIR}
             -P ${PROJECT_SOURCE_DIR}/cmake/shader_library.cmake
         DEPENDS ${source} ${PROJECT_SOURCE_DIR}/cmake/shader_library.cmake
+            ${PROJECT_SOURCE_DIR}/cmake/shader_reflect.cmake
             ${PROJECT_SOURCE_DIR}/lib/gpu/include/pr/gpu.slang ${SLANG_DEPENDS}
         DEPFILE ${header}.d
         COMMENT "Compiling ${relative}"
@@ -294,8 +295,9 @@ function(pr_module_tests module)
     pr_add_tests(${module}_tests)
 endfunction()
 
-# A module's tests that need a web page, such as those that draw through a page's canvases: on the web, a page,
-# <module>_page_tests.html, that `./dev.sh test wasm` runs in headless Chrome. Each PRELOAD packages a file into the
+# A module's tests that need a web page, such as those that draw through a page's canvases or on its WebGPU: on the web,
+# a page, <module>_page_tests.html, that `./dev.sh test wasm` runs in headless Chrome. The page links the module where
+# it is a library, as an example's is not. Each PRELOAD packages a file into the
 # page as <host path>@<page path>, since a page reads no files of the host. Elsewhere, nothing is built.
 #
 #   pr_page_tests(<module> <source>... [PRELOAD <host path>@<page path>...])
@@ -306,10 +308,14 @@ function(pr_page_tests module)
     cmake_parse_arguments(PARSE_ARGV 1 PAGE "" "" "PRELOAD")
     set(name ${module}_page_tests)
     add_executable(${name} ${PAGE_UNPARSED_ARGUMENTS})
+    set(tested "")
     if (TARGET prax::${module})
         set(tested prax::${module})
-    else()
-        set(tested ${module})
+    elseif (TARGET ${module})
+        get_target_property(type ${module} TYPE)
+        if (NOT type STREQUAL "EXECUTABLE")
+            set(tested ${module})
+        endif()
     endif()
     target_link_libraries(${name} PRIVATE ${tested} prax::core_cpp test_main pr_warnings)
     # The page has no file system of the host's, which the tests under Node.js read and write.
@@ -320,7 +326,9 @@ function(pr_page_tests module)
     endif()
     set(shell ${PROJECT_SOURCE_DIR}/tools/harness/page_tests.html)
     set_target_properties(${name} PROPERTIES SUFFIX ".html" PR_WEB_PAGE TRUE)
-    target_link_options(${name} PRIVATE "--shell-file=${shell}" -sEXIT_RUNTIME=1)
+    # The tests wait for the page's work as they wait for a device's anywhere, so the program suspends while the page
+    # runs it (JSPI), which the WebGPU backend's waits use.
+    target_link_options(${name} PRIVATE "--shell-file=${shell}" -sEXIT_RUNTIME=1 -sJSPI)
     set_property(TARGET ${name} APPEND PROPERTY LINK_DEPENDS ${shell})
     pr_web_preload(${name} ${PAGE_PRELOAD})
 endfunction()

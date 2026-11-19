@@ -48,6 +48,10 @@ a 3D renderer needs it.
   them. Each backend derives what its API needs from the accesses: Metal 3's chain of fences, Metal 4's stage
   barriers, and the sync, access and image layout of Direct3D 12's enhanced barriers and Vulkan's synchronization2. A
   texture begins in the accesses of `ShaderRead`.
+- **Slots serve every device.** A device without `PrGpuFeatureFlag_Bindless`, such as Direct3D 11 or WebGPU, reaches
+  resources only through slots: a few buffers and textures of each kind that the command buffer binds before a draw.
+  A shader source declares its slots with literal numbers. Every entry point of a source has every slot that the
+  source declares, and a draw binds them all, so entry points that should not share slots are separate sources.
 - **Lifetimes need no thought.** A buffer, a texture and a pipeline are reference counted: each holder takes a
   reference of its own (`prGpuTextureRetain`), and the release of the last destroys the resource. So a library that
   holds a resource of its caller's needs no promise about when its caller is done with it. A resource may be released
@@ -151,6 +155,9 @@ refuses a pipeline of it, as a WebGPU device does.
 A device without bindless runs only the entry points that reach their resources through slots. A renderer that
 reaches resources by handle where it can compiles its source a second time for such devices, with a macro of its own
 (`DEFINES` of `pr_slang`) that turns its handles into slots, as `lib/draw`'s fragment renderer does.
+`PrGpuDeviceOptions::slotsOnly` creates such a device on a system that has bindless, on Metal, Metal 4 and Vulkan, so
+that a renderer's slot path runs and is tested on any of them. The device refuses a pipeline whose entry point reaches
+a resource by handle, as a device that lacks bindless does.
 
 `pr/gpu.slang` is the shaders' side of the interface. The source compiles once per backend with `PR_GPU_METAL`,
 `PR_GPU_VULKAN`, `PR_GPU_D3D12`, `PR_GPU_D3D11` or `PR_GPU_WEBGPU`, and the header hides what differs:
@@ -179,6 +186,32 @@ what `prGpuSwapChainInfo` reports, as the examples' presenter does.
 Without `PrGpuSwapChainFlag_Threaded`, a frame presents within the window's display transaction, so a window that is
 resized shows each frame at its size. Anchored at the top left, a Direct3D 12 swap chain's buffers only grow, so that a
 resize within them waits for no work and allocates nothing.
+
+## Device memory
+
+A device takes any number of buffers and textures, up to its handles. Vulkan limits a device's memory allocations, to
+4096 on many systems, so the Vulkan backend does not allocate for each resource. It allocates blocks and places
+resources in them (`vulkan_memory.h`, and `gpu_shared_ranges.h` for the bookkeeping, which any backend that places
+resources can share).
+
+- **Pools by memory type and content.** Buffers, the buffers that the CPU maps, and images each have their own blocks.
+  A buffer therefore never shares a page with an image, which `bufferImageGranularity` forbids, and only the blocks
+  of mapped buffers are mapped.
+- **Blocks grow with the pool**, from 8 MiB to 64 MiB, so a small application holds little and a large scene makes few
+  allocations.
+- **Some resources stand alone.** A resource larger than a quarter of the largest block has an allocation of its own.
+  So has one that the device requires an allocation for, and one that it prefers an allocation for while the device's
+  allocations are few. The stream's chunks and the staging's blocks stand alone too: the device keeps them, and in a
+  pool they would hold a scene's blocks after the scene is gone.
+- **Free ranges are found by size class**, in two levels of bins, so the cost of placing a resource does not grow with
+  the number of resources. A freed range merges with its free neighbors at once.
+- **Blocks go back.** A block that holds nothing is freed, except the smallest such block of each pool, which is kept
+  so that a resource made and destroyed repeatedly does not allocate each time.
+- **Mapped memory is mapped by the block**, once, because Vulkan maps an allocation only once.
+- **A frame allocates nothing.** Recording and submitting use the stream and the staging, which keep their memory.
+
+`prGpuVulkanMemoryInfo` reports the allocations, their bytes and the bytes in use. Direct3D 12 and Metal create each
+resource with memory of its own, which those APIs do not limit by count.
 
 ## Embedding
 
@@ -228,9 +261,14 @@ producer needs it.
 ## Testing
 
 `gpu_tests` runs every test on each backend that the build has and the system has a device for, with validation, and
-tests each backend's embedding with the same shaders: recording into the application's command buffers and drawing in its
+again on a device of slots only where the backend creates one. It uploads and copies blocks of every compressed format
+that a device has, samples them, and compares each texel with what the format's specification decodes. It tests each
+backend's embedding with the same shaders: recording into the application's command buffers and drawing in its
 passes. It runs under Metal's API validation, which it turns on with `MTL_DEBUG_LAYER` unless the environment sets it,
 and tests a window's swap chain on Vulkan and a view's on Metal. The renderers'
 tests compare their images with the `cpu` backend's ([draw.md](draw.md)), on the backend that `PR_BACKEND_GPU` chooses.
+On the web, `gpu_page_tests` runs the same tests in a page, on its WebGPU (`./dev.sh test wasm`), and any error of
+WebGPU's validation fails them. A page test waits for the device as a test does anywhere, because its program suspends
+while the page works (JSPI, `pr_page_tests`).
 `PR_D3D12_DEBUG=1` and `PR_VULKAN_DEBUG=1` turn on Direct3D 12's debug layer and Vulkan's validation layer for a device
 that is made without asking for validation, and write their errors to the standard error.

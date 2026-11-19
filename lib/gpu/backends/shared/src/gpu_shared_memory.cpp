@@ -1241,6 +1241,7 @@ PrGpuDevice* gpuMemoryCreate(PrStringView backend, const GpuMemoryMirror* PR_NUL
         .adapter = "memory",
         .backend = backend,
         .maxTextureSize = kMaxTextureSize,
+        .sampleCounts = 1,
         .limits = limits,
         .storageOffsetAlignment = 16,
     };

@@ -1491,6 +1491,7 @@ PrGpuDevice* prGpuWebgpuCreate(const PrGpuDeviceOptions* PR_NULLABLE options) {
     d->info.maxRwBufferSlots = 4;
     d->info.maxTextureSlots = 8;
     d->info.maxRwTextureSlots = 4;
+    d->info.sampleCounts = 1 | 4;   // WebGPU has textures of 1 and of 4 samples
     const PrGpuDeviceLimits limits = gpuSharedDeviceLimits(o.limits);
     d->info.limits = limits;
     d->resources.init(1, limits.resources);

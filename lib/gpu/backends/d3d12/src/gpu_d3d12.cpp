@@ -741,8 +741,7 @@ D3D12_BARRIER_ACCESS textureAccessOf(PrGpuAccessFlags access, D3D12_BARRIER_LAYO
         case D3D12_BARRIER_LAYOUT_PRESENT: return D3D12_BARRIER_ACCESS_NO_ACCESS;
         case D3D12_BARRIER_LAYOUT_UNORDERED_ACCESS: return D3D12_BARRIER_ACCESS_UNORDERED_ACCESS;
         case D3D12_BARRIER_LAYOUT_RENDER_TARGET: return D3D12_BARRIER_ACCESS_RENDER_TARGET;
-        case D3D12_BARRIER_LAYOUT_DEPTH_STENCIL_WRITE:
-            return D3D12_BARRIER_ACCESS_DEPTH_STENCIL_WRITE | D3D12_BARRIER_ACCESS_DEPTH_STENCIL_READ;
+        case D3D12_BARRIER_LAYOUT_DEPTH_STENCIL_WRITE: return D3D12_BARRIER_ACCESS_DEPTH_STENCIL_WRITE;
         case D3D12_BARRIER_LAYOUT_COPY_DEST: return D3D12_BARRIER_ACCESS_COPY_DEST;
         default: return accessOf(access & ~(PrGpuAccessFlag_IndexRead | PrGpuAccessFlag_IndirectRead));
     }
@@ -2736,7 +2735,7 @@ void passEnd(PrGpuPass* handle) {
     c->pass = nullptr;
     if (!pass->native) {
         for (uint8_t i = 0; i < pass->formats.colorCount; ++i) {
-            if (pass->color[i].store == PrGpuStore_Resolve)
+            if (pass->color[i].store == PrGpuStore_Resolve || pass->color[i].store == PrGpuStore_ResolveKeep)
                 resolve(d, c->list.list, pass->color[i]);
         }
         if (pass->named)
@@ -3540,6 +3539,8 @@ PrGpuDevice* prGpuD3d12Create(const PrGpuD3d12Options* PR_NULLABLE options) {
     d->info.features =
         PrGpuFeatureFlag_TextureCompressionBc | PrGpuFeatureFlag_Bindless | PrGpuFeatureFlag_TextureSwizzle;
     d->info.maxTextureSize = D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION;
+    // Feature level 11_0 has 4 samples in every format that it renders to, and 8 in all but the widest.
+    d->info.sampleCounts = 1 | 4;
     d->info.maxBufferSlots = kBufferSlots;
     d->info.maxRwBufferSlots = kRwBufferSlots;
     d->info.maxTextureSlots = kTextureSlots;

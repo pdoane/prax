@@ -2,10 +2,11 @@
 # as `const unsigned char <variable>[]`. pr_slang (build.cmake) runs it in CMake's script mode.
 #
 # A library holds every entry point of the source, each named by its function, with its stage and, for a compute shader,
-# its group size, which the reflection of the compiled code gives. It holds code for each target named, for the backend
-# that runs it: a metallib for Metal, a SPIR-V module for Vulkan, DXIL for Direct3D 12, DXBC for Direct3D 11, and WGSL
-# for WebGPU. The source is compiled once per target with PR_GPU_METAL, PR_GPU_VULKAN, PR_GPU_D3D12, PR_GPU_D3D11 or
-# PR_GPU_WEBGPU defined to 1.
+# its group size, and every slot that the source declares (pr/gpu.slang's PR_GPU_BUFFER and the others), named by its
+# variable, with its kind and its number, which the reflection of the compiled code gives. It holds code for each
+# target named, for the backend that runs it: a metallib for Metal, a SPIR-V module for Vulkan, DXIL for Direct3D 12,
+# DXBC for Direct3D 11, and WGSL for WebGPU. The source is compiled once per target with PR_GPU_METAL, PR_GPU_VULKAN,
+# PR_GPU_D3D12, PR_GPU_D3D11 or PR_GPU_WEBGPU defined to 1.
 #
 # Vulkan has two targets. `spirv` is the baseline, which does not read a pipeline's target. `spirv_local_read` is for
 # devices with dynamic rendering local read, and reads the target as an input attachment. It is compiled with
@@ -14,8 +15,9 @@
 #
 # The layout is the one that lib/gpu's prGpuShaderLibraryCreate reads. Every number is a little-endian 32-bit word.
 #
-#     header      the magic "PRSL", the version, the number of entry points, the number of targets
+#     header      the magic "PRSL", the version, the numbers of entry points, of targets and of slots
 #     entries     for each entry point: the offset and size of its name, its stage, and its group size (x, y, z)
+#     slots       for each slot: the offset and size of its name, its PrGpuSlotKind, and its number
 #     targets     for each target: its PrGpuShaderTarget, then for each entry point the offset and size of its code
 #     names, then the code, each blob aligned to 16 bytes
 #
@@ -23,10 +25,14 @@
 # blob.
 #
 #   cmake -DSLANGC=<path> -DTARGETS=<target>[|<target>...] -DVARIABLE=<name> [-DINCLUDES=<directory>[|...]]
-#         [-DDEFINES=<macro>[|...]] [-DMETAL_SDK=<sdk>] -DSOURCE=<path> -DHEADER=<path> -DSCRATCH=<directory>
-#         -DROOT=<directory> [-DDEPFILE=<path>] -P shader_library.cmake
+#         [-DDEFINES=<macro>[|...]] [-DMETAL_SDK=<sdk>] [-DPRECISE=ON] -DSOURCE=<path> -DHEADER=<path>
+#         -DSCRATCH=<directory> -DROOT=<directory> [-DDEPFILE=<path>] -P shader_library.cmake
 #
 # DEFINES names macros that every target compiles the source with, each defined to 1, beside the target's own.
+#
+# PRECISE compiles the floating-point arithmetic as it is written: Slang's precise mode, and Metal's compiler without
+# fast math. By default a compiler may fuse a multiply into an add, and reassociate, where its code allows, so two
+# libraries that compile the same arithmetic beside different code, as the binding tiers' do, may round it apart.
 #
 # ROOT is the directory that the header names the source relative to. METAL_SDK is the SDK that the metallib runs on:
 # macosx, the default, or the devices' or the simulator's SDK of a UIKit platform, as iphoneos or xrsimulator.
@@ -34,7 +40,7 @@
 cmake_minimum_required(VERSION 3.28)
 
 set(MAGIC 0x4C535250)
-set(VERSION 2)
+set(VERSION 3)
 
 # pr/gpu_backend.h's PrGpuShaderTarget, and the macro that each target defines for the source.
 set(TARGET_metal 1)
@@ -56,47 +62,14 @@ set(STAGE_vertex 0)
 set(STAGE_fragment 1)
 set(STAGE_compute 2)
 
+include(${CMAKE_CURRENT_LIST_DIR}/shader_reflect.cmake)
+
 string(REPLACE "|" ";" TARGETS "${TARGETS}")
 string(REPLACE "|" ";" INCLUDES "${INCLUDES}")
 string(REPLACE "|" ";" DEFINES "${DEFINES}")
 if (NOT EXISTS "${SLANGC}")
     message(FATAL_ERROR "shader_library: no slangc at ${SLANGC}")
 endif()
-
-# Runs a command, and fails with its output if it fails.
-function(run)
-    execute_process(COMMAND ${ARGN} RESULT_VARIABLE result OUTPUT_VARIABLE output ERROR_VARIABLE output)
-    if (NOT result EQUAL 0)
-        list(JOIN ARGN " " command)
-        message(FATAL_ERROR "${command}\n${output}")
-    endif()
-endfunction()
-
-# Appends to INPUTS the files that a Make-style dependency file lists.
-function(read_depfile path)
-    if (NOT EXISTS "${path}")
-        return()
-    endif()
-    file(READ "${path}" text)
-    string(REPLACE "\\\n" " " text "${text}")
-    string(FIND "${text}" ": " colon)
-    math(EXPR colon "${colon} + 2")
-    string(SUBSTRING "${text}" ${colon} -1 text)
-    # An escaped character stands for itself, and an escaped space is part of a name.
-    string(REPLACE "\\\\" "<backslash>" text "${text}")
-    string(REPLACE "\\ " "<space>" text "${text}")
-    string(REGEX REPLACE "\\\\(.)" "\\1" text "${text}")
-    string(REGEX REPLACE "[ \t\r\n]+" ";" text "${text}")
-    set(found ${INPUTS})
-    foreach (name IN LISTS text)
-        if (name)
-            string(REPLACE "<backslash>" "\\" name "${name}")
-            string(REPLACE "<space>" " " name "${name}")
-            list(APPEND found "${name}")
-        endif()
-    endforeach()
-    set(INPUTS ${found} PARENT_SCOPE)
-endfunction()
 
 # Runs slangc on the source for `target`, writing `output`, its reflection and its dependencies. An empty `output`
 # writes no code, for a target that compiles each entry point on its own. Sets REFLECTED to the reflection, and appends
@@ -110,6 +83,9 @@ function(slang target directory output name)
     endforeach()
     list(APPEND command -warnings-as-errors all -O2 -matrix-layout-row-major -reflection-json "${reflection}"
         -depfile "${depfile}" ${ARGN})
+    if (PRECISE)
+        list(APPEND command -fp-mode precise)
+    endif()
     if (output)
         list(APPEND command -o "${output}")
     endif()
@@ -150,6 +126,118 @@ function(entry_records reflected)
         endforeach()
     endif()
     set(RECORDS ${records} PARENT_SCOPE)
+endfunction()
+
+# pr/gpu.h's PrGpuSlotKind.
+set(SLOT_buffer 0)
+set(SLOT_rw_buffer 1)
+set(SLOT_texture 2)
+set(SLOT_rw_texture 3)
+
+# Sets SLOTS to (name, kind, number) for each slot that a reflection of `target` declares, each "<name>|<kind>|<slot>".
+# Each target numbers the slots in registers of its own (pr/gpu.slang), from which this
+# recovers the slots' numbers. A texture's sampler shares its texture's slot and is not listed.
+function(slot_records target reflected)
+    set(records "")
+    string(JSON count ERROR_VARIABLE missing LENGTH "${reflected}" parameters)
+    if (missing)
+        set(count 0)
+    endif()
+    if (count GREATER 0)
+        math(EXPR last "${count} - 1")
+        foreach (index RANGE ${last})
+            string(JSON parameter GET "${reflected}" parameters ${index})
+            string(JSON name GET "${parameter}" name)
+            string(JSON binding ERROR_VARIABLE single GET "${parameter}" bindings 0)
+            if (single)
+                string(JSON binding ERROR_VARIABLE unbound GET "${parameter}" binding)
+                if (unbound)
+                    continue()
+                endif()
+            endif()
+            string(JSON kind GET "${binding}" kind)
+            string(JSON space ERROR_VARIABLE none GET "${binding}" space)
+            if (none)
+                set(space 0)
+            endif()
+            string(JSON at ERROR_VARIABLE none GET "${binding}" index)
+            if (none OR kind STREQUAL "samplerState")
+                continue()
+            endif()
+            set(slot "")
+            if (target STREQUAL "metal")
+                # An RwTexture slot names its index in an attribute, which Slang's own numbering does not follow.
+                string(JSON declared ERROR_VARIABLE plain GET "${parameter}" userAttribs 0 arguments 0)
+                if (NOT plain)
+                    math(EXPR slot "${declared} - 16")
+                    set(slot_kind ${SLOT_rw_texture})
+                elseif (kind STREQUAL "constantBuffer" AND space EQUAL 1 AND at GREATER_EQUAL 4 AND at LESS 12)
+                    math(EXPR slot "${at} - 4")
+                    set(slot_kind ${SLOT_buffer})
+                elseif (kind STREQUAL "constantBuffer" AND space EQUAL 1 AND at GREATER_EQUAL 12)
+                    math(EXPR slot "${at} - 12")
+                    set(slot_kind ${SLOT_rw_buffer})
+                elseif (kind STREQUAL "shaderResource" AND space EQUAL 2)
+                    set(slot ${at})
+                    set(slot_kind ${SLOT_texture})
+                endif()
+            elseif (target MATCHES "^(spirv|spirv_local_read|wgsl)$")
+                # The Vulkan bindings of set 1, which WebGPU's group 1 shares.
+                if (kind STREQUAL "descriptorTableSlot" AND space EQUAL 1 AND at GREATER_EQUAL 2)
+                    if (at LESS 6)
+                        math(EXPR slot "${at} - 2")
+                        set(slot_kind ${SLOT_buffer})
+                    elseif (at LESS 10)
+                        math(EXPR slot "${at} - 6")
+                        set(slot_kind ${SLOT_rw_buffer})
+                    elseif (at LESS 26)
+                        math(EXPR odd "(${at} - 10) % 2")
+                        if (odd EQUAL 0)
+                            math(EXPR slot "(${at} - 10) / 2")
+                            set(slot_kind ${SLOT_texture})
+                        endif()
+                    else()
+                        math(EXPR slot "${at} - 26")
+                        set(slot_kind ${SLOT_rw_texture})
+                    endif()
+                endif()
+            elseif (target STREQUAL "dxil")
+                if (kind STREQUAL "shaderResource" AND space GREATER_EQUAL 1)
+                    set(slot ${at})
+                    set(slot_kind ${SLOT_buffer})
+                    if (space EQUAL 2)
+                        set(slot_kind ${SLOT_texture})
+                    endif()
+                elseif (kind STREQUAL "unorderedAccess" AND space GREATER_EQUAL 1)
+                    set(slot ${at})
+                    set(slot_kind ${SLOT_rw_buffer})
+                    if (space EQUAL 2)
+                        set(slot_kind ${SLOT_rw_texture})
+                    endif()
+                endif()
+            elseif (target STREQUAL "dxbc")
+                # Direct3D 11's one space of each kind, which the slots split (pr/gpu.slang).
+                if (kind STREQUAL "shaderResource" AND at LESS 4)
+                    set(slot ${at})
+                    set(slot_kind ${SLOT_buffer})
+                elseif (kind STREQUAL "shaderResource")
+                    math(EXPR slot "${at} - 4")
+                    set(slot_kind ${SLOT_texture})
+                elseif (kind STREQUAL "unorderedAccess" AND at LESS 4)
+                    set(slot ${at})
+                    set(slot_kind ${SLOT_rw_texture})
+                elseif (kind STREQUAL "unorderedAccess")
+                    math(EXPR slot "${at} - 4")
+                    set(slot_kind ${SLOT_rw_buffer})
+                endif()
+            endif()
+            if (NOT slot STREQUAL "")
+                list(APPEND records "${name}|${slot_kind}|${slot}")
+            endif()
+        endforeach()
+    endif()
+    list(SORT records)
+    set(SLOTS ${records} PARENT_SCOPE)
 endfunction()
 
 # Compiles the Metal target: one metallib that holds every entry point.
@@ -209,10 +297,17 @@ function(compile_metal directory)
     # The compiler takes visionOS's minimum in its target alone.
     set(minimum_xros -target air64-apple-xros26.0)
     set(minimum_xrsimulator -target air64-apple-xros26.0-simulator)
-    run(xcrun -sdk ${METAL_SDK} metal -std=metal4.0 ${minimum_${METAL_SDK}} -c "${source}" -o "${directory}/library.air")
+    set(math "")
+    if (PRECISE)
+        set(math -fno-fast-math)
+    endif()
+    run(xcrun -sdk ${METAL_SDK} metal -std=metal4.0 ${math} ${minimum_${METAL_SDK}} -c "${source}"
+        -o "${directory}/library.air")
     run(xcrun -sdk ${METAL_SDK} metallib "${directory}/library.air" -o "${directory}/library.metallib")
     entry_records("${REFLECTED}")
+    slot_records(metal "${REFLECTED}")
     set(RECORDS ${RECORDS} PARENT_SCOPE)
+    set(SLOTS ${SLOTS} PARENT_SCOPE)
     set(CODES "${directory}/library.metallib" PARENT_SCOPE)
     set(INPUTS ${INPUTS} PARENT_SCOPE)
 endfunction()
@@ -224,71 +319,11 @@ function(compile_spirv target directory)
     slang(${target} "${directory}" "${directory}/library.spv" spirv -target spirv
           -profile spirv_1_6+spvDerivativeControl -fvk-use-entrypoint-name -bindless-space-index 2)
     entry_records("${REFLECTED}")
+    slot_records(${target} "${REFLECTED}")
     set(RECORDS ${RECORDS} PARENT_SCOPE)
+    set(SLOTS ${SLOTS} PARENT_SCOPE)
     set(CODES "${directory}/library.spv" PARENT_SCOPE)
     set(INPUTS ${INPUTS} PARENT_SCOPE)
-endfunction()
-
-# Sets SIZE and ALIGNMENT to the size and the alignment of a reflected type as C lays it out under pr/gpu.slang's rules:
-# a scalar at its size, a 2-vector at twice its scalar's, a 4-vector at four times, and a structure at its largest
-# field's.
-function(c_layout type)
-    string(JSON kind GET "${type}" kind)
-    set(size 0)
-    set(alignment 1)
-    if (kind STREQUAL "scalar")
-        string(JSON scalar GET "${type}" scalarType)
-        set(size 4)
-        if (scalar MATCHES "^(float16|int16|uint16)$")
-            set(size 2)
-        elseif (scalar MATCHES "^(float64|int64|uint64)$")
-            set(size 8)
-        endif()
-        set(alignment ${size})
-    elseif (kind STREQUAL "vector")
-        string(JSON element GET "${type}" elementType)
-        string(JSON count GET "${type}" elementCount)
-        c_layout("${element}")
-        set(scalar ${SIZE})
-        math(EXPR size "${scalar} * ${count}")
-        if (count EQUAL 3)
-            math(EXPR alignment "${scalar} * 4")
-        else()
-            math(EXPR alignment "${scalar} * ${count}")
-        endif()
-    elseif (kind STREQUAL "matrix")
-        string(JSON element GET "${type}" elementType)
-        string(JSON columns GET "${type}" columnCount)
-        string(JSON rows GET "${type}" rowCount)
-        c_layout("{\"kind\": \"vector\", \"elementCount\": ${columns}, \"elementType\": ${element}}")
-        set(alignment ${ALIGNMENT})
-        math(EXPR size "${alignment} * ${rows}")
-    elseif (kind STREQUAL "array")
-        string(JSON element GET "${type}" elementType)
-        string(JSON count GET "${type}" elementCount)
-        c_layout("${element}")
-        math(EXPR size "${SIZE} * ${count}")
-        set(alignment ${ALIGNMENT})
-    elseif (kind STREQUAL "struct")
-        set(offset 0)
-        set(largest 1)
-        string(JSON count LENGTH "${type}" fields)
-        if (count GREATER 0)
-            math(EXPR last "${count} - 1")
-            foreach (index RANGE ${last})
-                string(JSON field GET "${type}" fields ${index} type)
-                c_layout("${field}")
-                math(EXPR offset "(${offset} + ${ALIGNMENT} - 1) / ${ALIGNMENT} * ${ALIGNMENT} + ${SIZE}")
-                if (ALIGNMENT GREATER largest)
-                    set(largest ${ALIGNMENT})
-                endif()
-            endforeach()
-        endif()
-        math(EXPR size "(${offset} + ${largest} - 1) / ${largest} * ${largest}")
-        set(alignment ${largest})
-    endif()
-    set(SIZE ${size} PARENT_SCOPE)
-    set(ALIGNMENT ${alignment} PARENT_SCOPE)
 endfunction()
 
 # Appends to PROBLEMS each field of a reflected structure, and each array, whose offset or stride in a constant buffer
@@ -379,6 +414,8 @@ function(compile_dxil directory)
     slang(dxil "${directory}" "" dxil -target hlsl -no-codegen)
     check_root_layout("${REFLECTED}")
     entry_records("${REFLECTED}")
+    slot_records(dxil "${REFLECTED}")
+    set(SLOTS ${SLOTS} PARENT_SCOPE)
     set(codes "")
     foreach (record IN LISTS RECORDS)
         string(REPLACE "|" ";" fields "${record}")
@@ -405,6 +442,8 @@ function(compile_dxbc directory)
     slang(dxbc "${directory}" "" dxbc -target hlsl -no-codegen)
     check_root_layout("${REFLECTED}")
     entry_records("${REFLECTED}")
+    slot_records(dxbc "${REFLECTED}")
+    set(SLOTS ${SLOTS} PARENT_SCOPE)
     set(codes "")
     foreach (record IN LISTS RECORDS)
         string(REPLACE "|" ";" fields "${record}")
@@ -437,6 +476,8 @@ endfunction()
 function(compile_wgsl directory)
     slang(wgsl "${directory}" "" wgsl -target wgsl -no-codegen)
     entry_records("${REFLECTED}")
+    slot_records(wgsl "${REFLECTED}")
+    set(SLOTS ${SLOTS} PARENT_SCOPE)
     set(codes "")
     foreach (record IN LISTS RECORDS)
         string(REPLACE "|" ";" fields "${record}")
@@ -450,6 +491,9 @@ function(compile_wgsl directory)
         slang(wgsl "${directory}" "${directory}/${name}.wgsl" "${name}" -target wgsl -entry "${name}" -stage ${option}
               -bindless-space-index 2)
         file(READ "${directory}/${name}.wgsl" code)
+        # Slang copies a varying's interpolation onto the field of a structure that a function takes, which has no
+        # location, and WGSL allows the attribute only beside one.
+        string(REGEX REPLACE "@interpolate\\([a-z, ]*\\) +([A-Za-z_])" "\\1" code "${code}")
         file(WRITE "${directory}/${name}.wgsl" "diagnostic(off, derivative_uniformity);\n${code}")
         list(APPEND codes "${directory}/${name}.wgsl")
     endforeach()
@@ -506,6 +550,7 @@ foreach (target IN LISTS TARGETS)
         string(FIND "${module}" "1100020028000000" READS_TARGET)
     elseif (target STREQUAL "spirv" AND DEFINED READS_TARGET AND READS_TARGET EQUAL -1)
         set(CODES ${CODES_spirv_local_read})
+        set(SLOTS ${SLOTS_spirv_local_read})
     elseif (target STREQUAL "spirv")
         compile_spirv(spirv "${scratch}")
     elseif (target STREQUAL "dxil")
@@ -519,14 +564,19 @@ foreach (target IN LISTS TARGETS)
     endif()
     if (NOT ENTRIES_SET)
         set(ENTRIES ${RECORDS})
+        set(SLOT_RECORDS ${SLOTS})
         set(ENTRIES_SET TRUE)
     elseif (NOT "${RECORDS}" STREQUAL "${ENTRIES}")
         message(FATAL_ERROR "${SOURCE}: the entry points differ between targets")
+    elseif (NOT "${SLOTS}" STREQUAL "${SLOT_RECORDS}")
+        message(FATAL_ERROR "${SOURCE}: the slots differ between targets: ${SLOTS} against ${SLOT_RECORDS}")
     endif()
     set(CODES_${target} ${CODES})
+    set(SLOTS_${target} ${SLOTS})
 endforeach()
 list(LENGTH ENTRIES entry_count)
 list(LENGTH TARGETS target_count)
+list(LENGTH SLOT_RECORDS slot_count)
 # A build with no backend compiles for no target, and its library is empty. The entry points are what the compiled code
 # reflects, so a library of no target has none.
 if (entry_count EQUAL 0 AND target_count GREATER 0)
@@ -535,7 +585,7 @@ endif()
 
 # The library's bytes, as hex: the tables, the names, then the blobs, each placed once however many entry points share
 # it.
-math(EXPR tables_size "16 + 24 * ${entry_count} + (4 + 8 * ${entry_count}) * ${target_count}")
+math(EXPR tables_size "20 + 24 * ${entry_count} + 16 * ${slot_count} + (4 + 8 * ${entry_count}) * ${target_count}")
 set(names "")
 set(entry_hex "")
 foreach (record IN LISTS ENTRIES)
@@ -554,6 +604,23 @@ foreach (record IN LISTS ENTRIES)
     foreach (value IN LISTS numbers)
         word(hex ${value})
         string(APPEND entry_hex "${hex}")
+    endforeach()
+    string(APPEND names "${name_hex}")
+endforeach()
+set(slot_hex "")
+foreach (record IN LISTS SLOT_RECORDS)
+    string(REPLACE "|" ";" fields "${record}")
+    list(GET fields 0 name)
+    list(GET fields 1 kind)
+    list(GET fields 2 slot)
+    string(HEX "${name}" name_hex)
+    string(LENGTH "${names}" names_length)
+    string(LENGTH "${name_hex}" name_length)
+    math(EXPR offset "${tables_size} + ${names_length} / 2")
+    math(EXPR name_length "${name_length} / 2")
+    foreach (value ${offset} ${name_length} ${kind} ${slot})
+        word(hex ${value})
+        string(APPEND slot_hex "${hex}")
     endforeach()
     string(APPEND names "${name_hex}")
 endforeach()
@@ -589,11 +656,11 @@ foreach (target IN LISTS TARGETS)
     endforeach()
 endforeach()
 set(library "")
-foreach (value ${MAGIC} ${VERSION} ${entry_count} ${target_count})
+foreach (value ${MAGIC} ${VERSION} ${entry_count} ${target_count} ${slot_count})
     word(hex ${value})
     string(APPEND library "${hex}")
 endforeach()
-string(APPEND library "${entry_hex}${target_hex}${blobs}")
+string(APPEND library "${entry_hex}${slot_hex}${target_hex}${blobs}")
 
 # The header: 24 bytes to a line.
 string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," bytes "${library}")
@@ -617,15 +684,5 @@ alignas(16) const unsigned char @VARIABLE@[] = {
 
 # The dependency file: the header, and every file that a compile read.
 if (DEPFILE)
-    list(REMOVE_DUPLICATES INPUTS)
-    list(SORT INPUTS)
-    string(REPLACE " " "\\ " escaped_header "${HEADER}")
-    set(text "${escaped_header}: \\\n")
-    foreach (name IN LISTS INPUTS)
-        string(REPLACE "\\" "/" name "${name}")
-        string(REPLACE " " "\\ " name "${name}")
-        string(APPEND text "    ${name} \\\n")
-    endforeach()
-    string(APPEND text "\n")
-    file(CONFIGURE OUTPUT "${DEPFILE}" CONTENT "${text}" @ONLY)
+    write_depfile("${DEPFILE}" "${HEADER}")
 endif()

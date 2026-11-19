@@ -84,7 +84,7 @@ constexpr PrBackendInterface kInterface{
 
 // Creates a device of `backend`, which is not Default, with `o` in place of the backend's own options where they
 // overlap. Returns null if the build does not include the backend, or if the backend creates no device with the
-// options, as for slotsOnly on a backend that always has bindless.
+// options, as for slotsOnly on a backend whose devices all have bindless.
 PrGpuDevice* PR_NULLABLE create(PrGpuBackend backend, const PrGpuDeviceOptions& o) {
     // A build without a backend has no use for the options.
     (void)o;
@@ -103,11 +103,9 @@ PrGpuDevice* PR_NULLABLE create(PrGpuBackend backend, const PrGpuDeviceOptions& 
 #endif
 #if defined(PR_GPU_HAS_METAL4)
         case PrGpuBackend_Metal4: {
-            // Metal 4 always has bindless, and its slots are tested beside it.
-            if (o.slotsOnly)
-                return nullptr;
             PrGpuMetal4Options metal = prGpuMetal4OptionsDefault();
             metal.validation = o.validation;
+            metal.slotsOnly = o.slotsOnly;
             metal.pool = o.pool;
             metal.ready = o.ready;
             metal.readyContext = o.readyContext;
@@ -117,11 +115,9 @@ PrGpuDevice* PR_NULLABLE create(PrGpuBackend backend, const PrGpuDeviceOptions& 
 #endif
 #if defined(PR_GPU_HAS_VULKAN)
         case PrGpuBackend_Vulkan: {
-            // Vulkan always has bindless, and its slots are tested beside it.
-            if (o.slotsOnly)
-                return nullptr;
             PrGpuVulkanOptions vulkan = prGpuVulkanOptionsDefault();
             vulkan.validation = vulkan.validation || o.validation;
+            vulkan.slotsOnly = o.slotsOnly;
             vulkan.pool = o.pool;
             vulkan.ready = o.ready;
             vulkan.readyContext = o.readyContext;

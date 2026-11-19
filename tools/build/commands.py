@@ -246,8 +246,8 @@ LISTED_ENTRIES = 10
 
 
 # The files that pin what a lean build fetches and choose which of it it fetches.
-FETCH_FILES = ("cmake/dependencies.cmake", "cmake/dependencies_tree_sitter.cmake", "cmake/test_data.cmake",
-               "cmake/lean.cmake", "lib/font_bundle/font_bundle.cmake")
+FETCH_FILES = ("cmake/dependencies.cmake", "cmake/dependencies_tree_sitter.cmake", "cmake/slang.cmake",
+               "cmake/test_data.cmake", "cmake/lean.cmake", "lib/font_bundle/font_bundle.cmake")
 
 
 def fetch_key(wasm):

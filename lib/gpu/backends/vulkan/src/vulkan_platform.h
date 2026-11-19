@@ -18,6 +18,9 @@ int32_t vulkanEnvironment(const char* name, int32_t fallback);
 // Writes a line to the standard error.
 void vulkanLog(const char* prefix, const char* text);
 
+// Writes that the device's timeline is at `reached` and has not reached `fence` after `seconds`.
+void vulkanLogStall(uint64_t reached, uint64_t fence, uint32_t seconds);
+
 // The instance extension that creates surfaces on this system, or null.
 const char* PR_NULLABLE vulkanSurfaceExtension(void);
 

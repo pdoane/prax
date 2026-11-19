@@ -6,8 +6,9 @@
 // it is a sampler's MTLResourceID. A command buffer binds push data at buffer index 0, uniforms at 1, the resource heap
 // at 2 and the sampler heap at 3. Push data and uniforms go into the command buffer's stream. The slots follow at the
 // indices of GpuMetalBinding and GpuMetalTextureBinding, which pr/gpu.slang declares alike. Resources are untracked, so
-// a backend orders work by itself. On a bindless device, every resource is in one residency set that the queue holds. A
-// device without bindless has no residency set, and its resources are resident in the encoders that bind them to slots.
+// a backend orders work by itself. A device with a residency set keeps every resource in it, and the queue holds the
+// set. A bindless device has one, because its shaders reach resources that no encoder binds. A device without a
+// residency set relies on its encoders, which make resident the resources that they bind to slots.
 //
 // A destroyed object is kept until every command buffer that began before its destruction is done, since any of them
 // may use it. A fence is reached once its submission and those before it are done and the functions that wait for the
@@ -90,6 +91,18 @@ constexpr uint64_t kGpuMetalRootAlignment = 256;
 #else
 constexpr uint64_t kGpuMetalRootAlignment = 16;
 #endif
+
+// How a device reaches its resources (gpuMetalDeviceOpen).
+enum {
+    // The device has PrGpuFeatureFlag_Bindless. Without it, the device binds resources only to slots, and refuses a
+    // pipeline that reads the heaps.
+    GpuMetalDeviceFlag_Bindless = 1u << 0,
+
+    // The device keeps its resources in a residency set. A bindless device needs one, and so does a device whose
+    // encoders do not make resident what they bind, as Metal 4's do not.
+    GpuMetalDeviceFlag_Residency = 1u << 1,
+};
+typedef uint8_t GpuMetalDeviceFlags;
 
 // What a resource slot holds.
 enum {
@@ -261,7 +274,7 @@ struct GpuMetalDevice : GpuSharedDevice {
     RawArray<PrGpuFence> doneAhead;                  // the fences that completed ahead of one before them, under
                                                      // doneMutex
     bool bindless;                                   // has PrGpuFeatureFlag_Bindless
-    id<MTLResidencySet> PR_NULLABLE residency;       // retained; null without bindless
+    id<MTLResidencySet> PR_NULLABLE residency;       // retained; null without GpuMetalDeviceFlag_Residency
     CVMetalTextureCacheRef PR_NULLABLE textureCache; // made the first time an image is imported, under `mutex`
     id<MTLBuffer> resourceHeap;                      // retained
     id<MTLBuffer> samplerHeap;                       // retained
@@ -421,7 +434,7 @@ uint32_t gpuMetalSlotsSetTexture(const GpuMetalDevice* d, GpuMetalCommands* c, u
 uint32_t gpuMetalSlotsSetRwTexture(const GpuMetalDevice* d, GpuMetalCommands* c, uint32_t slot, PrGpuTexture texture);
 
 // Returns whether a pipeline's functions, as Metal reflects their bindings, read the heaps, which only a bindless
-// device has.
+// device lets them read.
 bool gpuMetalBindingsReadHeaps(NSArray<id<MTLBinding>>* PR_NULLABLE bindings);
 
 // Encode copies on an encoder of either API that takes copies.
@@ -441,10 +454,9 @@ void gpuMetalPassChanged(GpuMetalPass* pass, PrGpuNativeStateFlags flags);
 
 // Fills a device's shared state and the functions that the backends share. The backend's constructor calls
 // gpuMetalDeviceInstall. The backend's initialization calls gpuMetalDeviceOpen, which takes `device`, then creates the
-// queue and calls gpuMetalDeviceAddQueue, which takes the queue and adds the residency set to it. A device without
-// `bindless` binds resources only to slots.
+// queue and calls gpuMetalDeviceAddQueue, which takes the queue and adds the residency set to it.
 void gpuMetalDeviceInstall(GpuMetalDevice* d, PrGpuDeviceLimits limits);
-void gpuMetalDeviceOpen(GpuMetalDevice* d, id<MTLDevice> device, bool bindless);
+void gpuMetalDeviceOpen(GpuMetalDevice* d, id<MTLDevice> device, GpuMetalDeviceFlags flags);
 void gpuMetalDeviceAddQueue(GpuMetalDevice* d, id queue);
 
 // Frees a device's shared state, whether its initialization succeeded or failed. The backend has freed its own.
@@ -496,9 +508,11 @@ void gpuMetalPassAttachmentsFill(const GpuMetalDevice* d, Descriptor* PR_NONNULL
         ca.loadAction = gpuMetalLoadAction(a.load);
         const PrColor& clear = desc->clearColor[i];
         ca.clearColor = MTLClearColorMake(double(clear.r), double(clear.g), double(clear.b), double(clear.a));
-        if (a.store == PrGpuStore_Resolve) {
+        if (a.store == PrGpuStore_Resolve || a.store == PrGpuStore_ResolveKeep) {
             ca.resolveTexture = gpuMetalTexture(d, a.resolve.id);
             ca.storeAction = MTLStoreActionMultisampleResolve;
+            if (a.store == PrGpuStore_ResolveKeep)
+                ca.storeAction = MTLStoreActionStoreAndMultisampleResolve;
         } else {
             ca.storeAction = a.store == PrGpuStore_Keep ? MTLStoreActionStore : MTLStoreActionDontCare;
         }

@@ -1,4 +1,4 @@
-// The Vulkan backend's memory, resources and uploads, and the retirement of what the device destroys.
+// The Vulkan backend's resources and uploads, and the retirement of what the device destroys.
 
 #pragma once
 
@@ -21,12 +21,6 @@ VkImageAspectFlags vulkanAspect(PrGpuFormat format);
 
 // Returns the layout of a texture in `access`.
 VkImageLayout vulkanLayoutFromAccess(PrGpuAccessFlags access);
-
-// Allocates memory for `requirements` with every property of `required`, preferring those of `preferred`, and maps
-// memory that the CPU sees. Returns false if no memory is left.
-bool vulkanMemoryAllocate(VulkanDevice* d, VkMemoryRequirements requirements, VkMemoryPropertyFlags required,
-    VkMemoryPropertyFlags preferred, VulkanMemory* out);
-void vulkanMemoryFree(VulkanDevice* d, VulkanMemory& memory);
 
 // Returns a free slot of the bindless array, or zero if none is left. Called with the device's mutex held.
 uint32_t vulkanSlotTake(VulkanDevice* d);
