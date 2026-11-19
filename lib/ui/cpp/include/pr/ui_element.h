@@ -715,10 +715,10 @@ public:
     template <typename C>
     UiMemoReturn<C> memo(PrLayoutNode parent, const C& inputs, PrUiKey key = 0) {
         if constexpr (isSame<UiMemoResult<C>, void>) {
-            return memoBuild(parent, key, kMemoType<C>, &inputs, nullptr);
+            return memoBuild(parent, key, MemoTypeOf<C>::kType, &inputs, nullptr);
         } else {
             UiMemoResult<C> result{};
-            UiElement root = memoBuild(parent, key, kMemoType<C>, &inputs, &result);
+            UiElement root = memoBuild(parent, key, MemoTypeOf<C>::kType, &inputs, &result);
             return UiMemoReturn<C>{result, root};
         }
     }
@@ -778,50 +778,43 @@ private:
     // Returns true if two memos' roots inherit the same text groups.
     static bool memoInherits(const MemoInputs& a, const MemoInputs& b) { return a.font == b.font && a.color == b.color; }
 
-    // The operations of a memo of inputs `C`, as lib/ui's memo calls them (PrUiMemoType), on MemoInputs. A memo whose
-    // build returns nothing is given no result.
+    // The type of memo of inputs `C`, as lib/ui's memo holds it (PrUiMemoType), and the operations that it calls on
+    // MemoInputs. A memo whose build returns nothing is given no result.
+    //
+    // The type is a static member of a class template, as pr::Function's operations are, not a member variable
+    // template: MSVC initializes a member variable template of this type at run time (C4268).
     template <typename C>
-    static void memoTypeBuild(void* PR_NULLABLE context, PrUi*, PrLayoutNode root, const void* inputs, void* PR_NULLABLE result) {
-        UiBuilder& ui = memoBegin(context, root);
-        const C& c = *static_cast<const C*>(static_cast<const MemoInputs*>(inputs)->inputs);
-        if constexpr (isSame<UiMemoResult<C>, void>) {
-            PR_ASSERT(result == nullptr);
-            c.build(ui, UiElement(&ui, root));
-        } else {
-            UiMemoResult<C> out = c.build(ui, UiElement(&ui, root));
-            if (result != nullptr)
-                *static_cast<UiMemoResult<C>*>(result) = out;
+    struct MemoTypeOf {
+        static void build(void* PR_NULLABLE context, PrUi*, PrLayoutNode root, const void* inputs, void* PR_NULLABLE result) {
+            UiBuilder& ui = memoBegin(context, root);
+            const C& c = *static_cast<const C*>(static_cast<const MemoInputs*>(inputs)->inputs);
+            if constexpr (isSame<UiMemoResult<C>, void>) {
+                PR_ASSERT(result == nullptr);
+                c.build(ui, UiElement(&ui, root));
+            } else {
+                UiMemoResult<C> out = c.build(ui, UiElement(&ui, root));
+                if (result != nullptr)
+                    *static_cast<UiMemoResult<C>*>(result) = out;
+            }
+            memoEnd(context, root);
         }
-        memoEnd(context, root);
-    }
-    template <typename C>
-    static bool memoTypeEqual(const void* a, const void* b, uint32_t) {
-        const MemoInputs& x = *static_cast<const MemoInputs*>(a);
-        const MemoInputs& y = *static_cast<const MemoInputs*>(b);
-        return memoInherits(x, y) && bool(*static_cast<const C*>(x.inputs) == *static_cast<const C*>(y.inputs));
-    }
-    template <typename C>
-    static void memoTypeCopy(void* to, const void* from, uint32_t) {
-        const MemoInputs& source = *static_cast<const MemoInputs*>(from);
-        *static_cast<MemoInputs*>(to) = MemoInputs{
-            .font = source.font,
-            .color = source.color,
-            .inputs = create<C>(*static_cast<const C*>(source.inputs)),
-        };
-    }
-    template <typename C>
-    static void memoTypeDestroy(void* inputs) {
-        destroy(static_cast<C*>(const_cast<void*>(static_cast<MemoInputs*>(inputs)->inputs)));
-    }
-
-    // The type of memo of inputs `C`, as lib/ui's memo holds it (PrUiMemoType). It holds functions, not lambdas, so
-    // that MSVC initializes it as a constant: it initializes a member template's lambdas at run time (C4268).
-    template <typename C>
-    static constexpr PrUiMemoType kMemoType = {
-        .build = memoTypeBuild<C>,
-        .equal = memoTypeEqual<C>,
-        .copy = memoTypeCopy<C>,
-        .destroy = memoTypeDestroy<C>,
+        static bool equal(const void* a, const void* b, uint32_t) {
+            const MemoInputs& x = *static_cast<const MemoInputs*>(a);
+            const MemoInputs& y = *static_cast<const MemoInputs*>(b);
+            return memoInherits(x, y) && bool(*static_cast<const C*>(x.inputs) == *static_cast<const C*>(y.inputs));
+        }
+        static void copy(void* to, const void* from, uint32_t) {
+            const MemoInputs& source = *static_cast<const MemoInputs*>(from);
+            *static_cast<MemoInputs*>(to) = MemoInputs{
+                .font = source.font,
+                .color = source.color,
+                .inputs = create<C>(*static_cast<const C*>(source.inputs)),
+            };
+        }
+        static void release(void* inputs) {
+            destroy(static_cast<C*>(const_cast<void*>(static_cast<MemoInputs*>(inputs)->inputs)));
+        }
+        static constexpr PrUiMemoType kType = {.build = build, .equal = equal, .copy = copy, .destroy = release};
     };
 
     // Creates a memo's root with lib/ui's memo (prUiMemo), and keeps its subtree or builds it from `inputs` of `type`,
