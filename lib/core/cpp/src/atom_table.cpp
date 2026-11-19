@@ -49,26 +49,6 @@ void grow(AtomTable* table) {
     }
 }
 
-// Returns storage for `size` bytes of text: in the page being filled, in the next page, or in a separate allocation.
-char* store(AtomTable* table, uint32_t size) {
-    if (size > kAtomPageSize) {
-        char* text = static_cast<char*>(prMemoryAlloc(size));
-        table->large.push(text);
-        table->largeBytes += size;
-        return text;
-    }
-    if (table->page == table->pages.count || table->used + size > kAtomPageSize) {
-        if (table->page != table->pages.count)
-            ++table->page;
-        if (table->page == table->pages.count)
-            table->pages.push(static_cast<char*>(prMemoryAlloc(kAtomPageSize)));
-        table->used = 0;
-    }
-    char* text = table->pages.data[table->page] + table->used;
-    table->used += size;
-    return text;
-}
-
 } // namespace
 
 Atom atomTableAdd(AtomTable* table, PrStringView text) {
@@ -80,11 +60,9 @@ Atom atomTableAdd(AtomTable* table, PrStringView text) {
     if (table->slots[slot].atom != kAtomNone)
         return table->slots[slot].atom;
 
-    char* stored = nullptr;
-    if (text.size != 0) {
-        stored = store(table, uint32_t(text.size));
-        prMemCopy(stored, text.data, text.size);
-    }
+    const char* stored = nullptr;
+    if (text.size != 0)
+        stored = table->text.copy(text.data, uint32_t(text.size));
     Atom atom = table->atoms.count;
     table->atoms.push(AtomEntry{stored, uint32_t(text.size), hash});
     table->slots[slot] = AtomSlot{hash, atom};
@@ -98,28 +76,19 @@ Atom atomTableFind(const AtomTable* table, PrStringView text) {
 }
 
 uint32_t atomTableBytes(const AtomTable* table) {
-    uint32_t paged = table->page < table->pages.count ? table->page * kAtomPageSize + table->used : 0;
-    return paged + table->largeBytes;
+    return uint32_t(table->text.used());
 }
 
 void atomTableClear(AtomTable* table) {
     table->atoms.count = 0;
     if (table->slots != nullptr)
         clearSlots(table->slots, table->mask + 1);
-    for (uint32_t i = 0; i < table->large.count; ++i)
-        prMemoryFree(table->large.data[i]);
-    table->large.count = 0;
-    table->largeBytes = 0;
-    table->page = 0;
-    table->used = 0;
+    table->text.clear();
 }
 
 void atomTableReset(AtomTable* table) {
     atomTableClear(table);
-    for (uint32_t i = 0; i < table->pages.count; ++i)
-        prMemoryFree(table->pages.data[i]);
-    table->pages.reset();
-    table->large.reset();
+    table->text.reset();
     table->atoms.reset();
     prMemoryFree(table->slots);
     table->slots = nullptr;

@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "pr/arena.h"
 #include "pr/atomic.h"
 #include "pr/draw_commands.h"
 #include "pr/draw_list.h"
@@ -27,9 +28,7 @@ struct DrawHeld {
 // Commands and all the data that they point to.
 struct DrawRecording {
     RawArray<PrDrawCommand> commands;
-    RawArray<uint8_t*> blocks;           // side storage, in blocks that never move
-    size_t blockUsed;                    // bytes used of the last block
-    size_t blockSize;                    // the last block's size
+    Arena side;                          // the data that commands point to, which stays in place until a clear
     RawArray<PrPath*> paths;             // the clones that commands point to
     RawArray<const PrDrawImage*> images; // holds one reference to each image
     RawArray<const PrFont*> fonts;

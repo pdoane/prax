@@ -3,7 +3,6 @@
 #include "pr/draw_list.h"
 #include "draw/src/draw_list.h"
 
-#include "pr/align.h"
 #include "pr/alloc.h"
 #include "pr/assert.h"
 #include "pr/atomic.h"
@@ -25,31 +24,7 @@ namespace pr_impl {
 
 namespace {
 
-// The size in bytes of a block of side storage. The data that commands point to lives there without moving.
-constexpr size_t kBlockBytes = 4096;
-
 constexpr PrRect kUnbounded{-kPrF32Infinity, -kPrF32Infinity, kPrF32Infinity, kPrF32Infinity};
-
-// Allocates `size` bytes of side storage, aligned for anything that a command points to.
-void* sideAlloc(DrawRecording& r, size_t size) {
-    size = alignUp(size, 16);
-    if (r.blocks.count == 0 || r.blockUsed + size > r.blockSize) {
-        size_t blockSize = size > kBlockBytes ? size : kBlockBytes;
-        r.blocks.push(static_cast<uint8_t*>(prMemoryAlloc(blockSize)));
-        r.blockSize = blockSize;
-        r.blockUsed = 0;
-    }
-    void* at = r.blocks.last() + r.blockUsed;
-    r.blockUsed += size;
-    return at;
-}
-
-template <typename T>
-T* sideCopy(DrawRecording& r, const T* items, uint32_t count) {
-    T* copy = static_cast<T*>(sideAlloc(r, sizeof(T) * count));
-    prMemCopy(copy, items, sizeof(T) * count);
-    return copy;
-}
 
 // Empties the recording. Releases its references and keeps the storage of its arrays.
 void clearRecording(DrawRecording& r) {
@@ -65,24 +40,20 @@ void clearRecording(DrawRecording& r) {
         prDrawFilterRelease(r.filters.data[i]);
     for (uint32_t i = 0; i < r.held.count; ++i)
         r.held.data[i].release(r.held.data[i].context);
-    for (uint32_t i = 0; i < r.blocks.count; ++i)
-        prMemoryFree(r.blocks.data[i]);
     r.commands.clear();
-    r.blocks.clear();
+    r.side.clear();
     r.paths.clear();
     r.images.clear();
     r.fonts.clear();
     r.lists.clear();
     r.filters.clear();
     r.held.clear();
-    r.blockUsed = 0;
-    r.blockSize = 0;
 }
 
 void resetRecording(DrawRecording& r) {
     clearRecording(r);
     r.commands.reset();
-    r.blocks.reset();
+    r.side.reset();
     r.paths.reset();
     r.images.reset();
     r.fonts.reset();
@@ -134,7 +105,7 @@ void holdBrush(DrawRecording& r, PrDrawBrush& brush) {
     for (uint32_t i = 0; brush.stops != nullptr && i < brush.stopCount; ++i)
         PR_ASSERT(brush.stops[i].hint >= 0 && brush.stops[i].hint < 1);
     if (brush.stops != nullptr && brush.stopCount != 0)
-        brush.stops = sideCopy(r, brush.stops, brush.stopCount);
+        brush.stops = r.side.copy(brush.stops, brush.stopCount);
     else
         brush.stopCount = 0;
     if (brush.kind == PrDrawBrushKind_Image)
@@ -142,7 +113,7 @@ void holdBrush(DrawRecording& r, PrDrawBrush& brush) {
 }
 
 const PrDrawBrush* copyBrush(DrawRecording& r, const PrDrawBrush* brush) {
-    PrDrawBrush* copy = sideCopy(r, brush, 1);
+    PrDrawBrush* copy = r.side.copy(brush, 1);
     holdBrush(r, *copy);
     return copy;
 }
@@ -189,16 +160,16 @@ bool strokesEqual(const PrDrawStroke& a, const PrDrawStroke& b) {
 }
 
 const PrDrawStroke* copyStroke(DrawRecording& r, const PrDrawStroke* stroke) {
-    PrDrawStroke* copy = sideCopy(r, stroke, 1);
+    PrDrawStroke* copy = r.side.copy(stroke, 1);
     PrPathStroke& shape = copy->shape;
     if (shape.dashes != nullptr && shape.dashCount != 0) {
-        shape.dashes = sideCopy(r, shape.dashes, shape.dashCount);
+        shape.dashes = r.side.copy(shape.dashes, shape.dashCount);
     } else {
         shape.dashes = nullptr;
         shape.dashCount = 0;
     }
     if (shape.profile != nullptr && shape.profileCount != 0) {
-        shape.profile = sideCopy(r, shape.profile, shape.profileCount);
+        shape.profile = r.side.copy(shape.profile, shape.profileCount);
     } else {
         shape.profile = nullptr;
         shape.profileCount = 0;
@@ -763,21 +734,21 @@ void recordGroup(DrawList* list, const PrDrawGroup* group) {
     DrawRecording& r = list->recording;
     c->composite = group->composite;
     c->blendMode = group->blendMode;
-    PrDrawGroup* copy = sideCopy(r, group, 1);
+    PrDrawGroup* copy = r.side.copy(group, 1);
     if (copy->projection != nullptr) {
         PR_ASSERT(!prRectIsEmpty(copy->bounds));
-        copy->projection = sideCopy(r, copy->projection, 1);
+        copy->projection = r.side.copy(copy->projection, 1);
     }
     if (copy->layer != nullptr) {
         PR_ASSERT(!prRectIsEmpty(copy->bounds) && copy->layer->drawn != nullptr);
-        copy->layer = sideCopy(r, copy->layer, 1);
+        copy->layer = r.side.copy(copy->layer, 1);
     }
     if (copy->filter != nullptr)
         holdFilter(r, copy->filter);
     if (copy->backdrop != nullptr)
         holdFilter(r, copy->backdrop);
     if (copy->mask != nullptr) {
-        PrDrawMask* mask = sideCopy(r, copy->mask, 1);
+        PrDrawMask* mask = r.side.copy(copy->mask, 1);
         withoutSelf(list, mask->brush);
         holdBrush(r, mask->brush);
         copy->mask = mask;
@@ -953,7 +924,7 @@ void prDrawListRect(PrDrawList* list, PrRect rect, PrDrawPaint paint) {
 
 void prDrawListCornerRect(PrDrawList* list, PrCornerRect shape, PrDrawPaint paint) {
     if (PrDrawCommand* c = addShape(list, PrDrawCommandKind_CornerRect, !prRectIsEmpty(shape.rect), paint))
-        c->cornerRect = sideCopy(list->recording, &shape, 1);
+        c->cornerRect = list->recording.side.copy(&shape, 1);
 }
 
 void prDrawListEllipse(PrDrawList* list, PrVec2 center, PrVec2 radii, float rotation, PrDrawPaint paint) {
@@ -1001,10 +972,10 @@ void prDrawListPolyline(PrDrawList* list, const PrPathPolyline* polyline, PrPath
         area = prPathPolylineContourEnd(polyline, i) - polyline->contours[i] >= 3;
     if (PrDrawCommand* c = addShape(list, PrDrawCommandKind_Polyline, area, paint)) {
         DrawRecording& r = list->recording;
-        PrPathPolyline* copy = sideCopy(r, polyline, 1);
-        copy->points = sideCopy(r, polyline->points, polyline->pointCount);
-        copy->contours = sideCopy(r, polyline->contours, polyline->contourCount);
-        copy->closed = sideCopy(r, polyline->closed, uint32_t(bitsetWords(polyline->contourCount)));
+        PrPathPolyline* copy = r.side.copy(polyline, 1);
+        copy->points = r.side.copy(polyline->points, polyline->pointCount);
+        copy->contours = r.side.copy(polyline->contours, polyline->contourCount);
+        copy->closed = r.side.copy(polyline->closed, uint32_t(bitsetWords(polyline->contourCount)));
         copy->pointCapacity = copy->pointCount;
         copy->contourCapacity = copy->contourCount;
         c->rule = rule;
@@ -1047,7 +1018,7 @@ void prDrawListBorder(PrDrawList* list, const PrDrawBorder* border, PrDrawPaint 
     PrDrawCommand* c = add(list, PrDrawCommandKind_Border, paint.edges);
     c->composite = paint.composite;
     c->blendMode = paint.blendMode;
-    PrDrawBorder* copy = sideCopy(r, border, 1);
+    PrDrawBorder* copy = r.side.copy(border, 1);
     for (uint32_t i = 0; i < 4; ++i) {
         if (copy->sides[i].brush != nullptr)
             copy->sides[i].brush = copyBrush(r, &brushes[i]);
@@ -1060,7 +1031,7 @@ void prDrawListDropShadow(PrDrawList* list, const PrDrawShadow* shadow, PrDrawPa
     if (prRectIsEmpty(shadow->shape.rect))
         return;
     if (PrDrawCommand* c = addPainting(list, PrDrawCommandKind_DropShadow, paint))
-        c->shadow = sideCopy(list->recording, shadow, 1);
+        c->shadow = list->recording.side.copy(shadow, 1);
 }
 
 void prDrawListInnerShadow(PrDrawList* list, const PrDrawShadow* shadow, PrDrawPaint paint) {
@@ -1068,7 +1039,7 @@ void prDrawListInnerShadow(PrDrawList* list, const PrDrawShadow* shadow, PrDrawP
     if (prRectIsEmpty(shadow->shape.rect))
         return;
     if (PrDrawCommand* c = addPainting(list, PrDrawCommandKind_InnerShadow, paint))
-        c->shadow = sideCopy(list->recording, shadow, 1);
+        c->shadow = list->recording.side.copy(shadow, 1);
 }
 
 void prDrawListDecoration(PrDrawList* list, const PrDrawDecoration* decoration, PrDrawPaint paint) {
@@ -1076,7 +1047,7 @@ void prDrawListDecoration(PrDrawList* list, const PrDrawDecoration* decoration, 
     if (!(decoration->length > 0 && decoration->thickness > 0))
         return;
     if (PrDrawCommand* c = addPainting(list, PrDrawCommandKind_Decoration, paint))
-        c->decoration = sideCopy(list->recording, decoration, 1);
+        c->decoration = list->recording.side.copy(decoration, 1);
 }
 
 void prDrawListNineSlice(PrDrawList* list, PrDrawSource source, const PrDrawNineSlice* slices, PrRect destination,
@@ -1090,7 +1061,7 @@ void prDrawListNineSlice(PrDrawList* list, PrDrawSource source, const PrDrawNine
         c->sampling = sampling;
         c->nineSlice.source = source;
         c->nineSlice.destination = destination;
-        c->nineSlice.slices = sideCopy(list->recording, slices, 1);
+        c->nineSlice.slices = list->recording.side.copy(slices, 1);
     }
 }
 
@@ -1106,21 +1077,21 @@ void prDrawListGlyphs(PrDrawList* list, const PrFontGlyphRun* run, PrVec2 origin
         return;
     if (PrDrawCommand* c = addShape(list, PrDrawCommandKind_Glyphs, true, paint)) {
         DrawRecording& r = list->recording;
-        PrFontGlyphRun* copy = sideCopy(r, run, 1);
-        PrFontGlyph* glyphs = sideCopy(r, run->glyphs, run->glyphCount);
+        PrFontGlyphRun* copy = r.side.copy(run, 1);
+        PrFontGlyph* glyphs = r.side.copy(run->glyphs, run->glyphCount);
         if (origin.x != 0 || origin.y != 0) {
             for (uint32_t i = 0; i < run->glyphCount; ++i)
                 glyphs[i].position = glyphs[i].position + origin;
         }
         copy->glyphs = glyphs;
         if (run->transforms != nullptr)
-            copy->transforms = sideCopy(r, run->transforms, run->glyphCount);
+            copy->transforms = r.side.copy(run->transforms, run->glyphCount);
         if (run->palette.colors != nullptr && run->palette.colorCount != 0)
-            copy->palette.colors = sideCopy(r, run->palette.colors, run->palette.colorCount);
+            copy->palette.colors = r.side.copy(run->palette.colors, run->palette.colorCount);
         else
             copy->palette.colorCount = 0;
         if (run->text.data != nullptr && run->text.size != 0 && run->text.size < UINT32_MAX) {
-            copy->text.data = sideCopy(r, run->text.data, uint32_t(run->text.size));
+            copy->text.data = r.side.copy(run->text.data, uint32_t(run->text.size));
         } else {
             copy->text = PrStringView{};
             copy->clusters = nullptr;
@@ -1128,7 +1099,7 @@ void prDrawListGlyphs(PrDrawList* list, const PrFontGlyphRun* run, PrVec2 origin
         if (copy->clusters != nullptr) {
             for (uint32_t i = 0; i < run->glyphCount; ++i)
                 PR_ASSERT(run->clusters[i] < run->text.size);
-            copy->clusters = sideCopy(r, run->clusters, run->glyphCount);
+            copy->clusters = r.side.copy(run->clusters, run->glyphCount);
         }
         holdFont(r, copy->font);
         c->glyphs = copy;
@@ -1185,7 +1156,7 @@ void prDrawListPushClipTargetRect(PrDrawList* list, PrRect targetRect, PrDrawEdg
 
 void prDrawListPushClipCornerRect(PrDrawList* list, PrCornerRect shape, PrDrawEdges edges) {
     PrDrawCommand* c = push(list, PrDrawCommandKind_PushClipCornerRect, PrDrawCommandKind_PushClipRect, edges);
-    c->cornerRect = sideCopy(list->recording, &shape, 1);
+    c->cornerRect = list->recording.side.copy(&shape, 1);
 }
 
 void prDrawListPushClipPath(PrDrawList* list, const PrPath* path, PrPathFillRule rule, PrDrawEdges edges) {

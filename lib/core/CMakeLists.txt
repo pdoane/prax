@@ -166,6 +166,7 @@ target_compile_features(pr_core PUBLIC cxx_std_20)
 
 # Core's C++ layer: the toolkit that every library's implementation is written with, and the C++ side of the platform.
 pr_library(core_cpp INCLUDE cpp/include
+    cpp/src/arena.cpp
     cpp/src/atom_table.cpp
     cpp/src/format.cpp
     cpp/src/hash_index.cpp
@@ -261,6 +262,7 @@ if (PR_DEVELOP)
     pr_module_tests(core_cpp
         cpp/tests/test_raw_array.cpp
         cpp/tests/test_array.cpp
+        cpp/tests/test_arena.cpp
         cpp/tests/test_atom_table.cpp
         cpp/tests/test_bitset.cpp
         cpp/tests/test_format.cpp

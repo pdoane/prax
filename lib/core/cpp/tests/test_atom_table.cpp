@@ -24,7 +24,7 @@ TEST_CASE("an atom table answers one atom for each text, whose text stays where 
     for (int i = 0; i < 3000; ++i)
         texts.push(format("text-{}", i));
     String longText;
-    for (uint32_t i = 0; i < kAtomPageSize + 10; ++i)
+    for (uint32_t i = 0; i < kArenaLargestPage + 10; ++i)
         longText.append('x');
     texts.push(move(longText));
     texts.push("");
@@ -41,14 +41,14 @@ TEST_CASE("an atom table answers one atom for each text, whose text stays where 
         CHECK(atomTableText(&table, atoms[i]).data == where[i]);
     }
     CHECK(atoms[0] != atoms[1]);
-    CHECK(atomTableBytes(&table) >= kAtomPageSize + 10);
+    CHECK(atomTableBytes(&table) >= kArenaLargestPage + 10);
 
     // Clearing forgets every atom and keeps the pages for reuse.
-    uint32_t pages = table.pages.count;
+    uint32_t pages = table.text.pages.count;
     atomTableClear(&table);
     CHECK(atomTableFind(&table, "text-0") == kAtomNone);
     CHECK(atomTableBytes(&table) == 0);
     CHECK(atomTableAdd(&table, "again") == 0);
-    CHECK(table.pages.count == pages);
+    CHECK(table.text.pages.count == pages);
     atomTableReset(&table);
 }
