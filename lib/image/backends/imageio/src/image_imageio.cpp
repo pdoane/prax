@@ -36,6 +36,8 @@ constexpr ImageioType kTypes[] = {
     {"image/heif", "public.heif"},
     {"image/webp", "org.webmproject.webp"},
     {"image/avif", "public.avif"},
+    {"image/vnd.radiance", "public.radiance"},
+    {"image/x-exr", "com.ilm.openexr-image"},
 };
 
 // The bytes from the start of an image from which ImageIO tells its format.
@@ -118,7 +120,7 @@ PrStatus frameInfo(PrImageReader* reader, uint32_t frame, PrImageFrameInfo* info
     return PrStatus_Ok;
 }
 
-PrStatus read(PrImageReader* reader, uint32_t frame, PrPixels output) {
+PrStatus read(PrImageReader* reader, uint32_t frame, uint32_t, PrPixels output) {
     ImageioReader* imageio = static_cast<ImageioReader*>(reader);
     CGImageRef image = CGImageSourceCreateImageAtIndex(imageio->source, frame, nullptr);
     if (image == nullptr)

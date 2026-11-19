@@ -37,8 +37,9 @@ typedef struct PrZipEntry {
 } PrZipEntry;
 
 // Creates an archive that decompresses with the codecs of `compress` and has nothing open. `compress` must outlive the
-// archive. The archive keeps its storage from one open to the next.
-PrZip* prZipCreate(const PrCompressCodecSet* compress);
+// archive. Without a set, the archive reads the entries that are stored as they are, and a deflated entry is
+// NotSupported. The archive keeps its storage from one open to the next.
+PrZip* prZipCreate(const PrCompressCodecSet* PR_NULLABLE compress);
 
 // Closes the open bytes, if any, and frees the archive.
 void prZipDestroy(PrZip* PR_NULLABLE archive);
@@ -59,9 +60,15 @@ PrZipEntry prZipEntry(const PrZip* archive, uint32_t index);
 // Returns the index of the entry named `name`, compared byte for byte, or the entry count if there is none.
 uint32_t prZipFind(const PrZip* archive, PrStringView name);
 
+// Reports the bytes of entry `index` as the archive holds them, in the open bytes: the entry's own bytes if its method
+// is Stored, and otherwise its compressed bytes. A caller reads a stored entry in place this way, without a copy, and
+// learns where in the archive the entry lies. The entry's checksum is not checked. Returns InvalidData, and the null
+// view, if the entry's local header or its bytes lie outside the archive.
+PrStatus prZipEntryData(const PrZip* archive, uint32_t index, PrByteView* out);
+
 // Reads every byte of entry `index` into `out`. `capacity` must be at least the entry's size. Returns NotSupported for
-// an encrypted entry or a method other than Stored and Deflated, and InvalidData if the entry is corrupt or its
-// checksum does not match.
+// an encrypted entry, for a method other than Stored and Deflated, and for a deflated entry of an archive without a
+// set, and InvalidData if the entry is corrupt or its checksum does not match.
 PrStatus prZipRead(const PrZip* archive, uint32_t index, uint8_t* PR_NULLABLE out, size_t capacity);
 
 #if defined(__cplusplus)

@@ -27,6 +27,10 @@ void destroyDecoder(PrCompressDecoder* decoder) {
     prMemoryFree(deflate);
 }
 
+void reset(PrCompressDecoder* decoder) {
+    prDeflateDecoderReset(static_cast<DeflateCodecDecoder*>(decoder)->decoder);
+}
+
 PrStatus read(PrCompressDecoder* decoder, PrByteView input, bool final, uint8_t* PR_NULLABLE output, size_t capacity,
         PrCompressRead* out) {
     DeflateCodecDecoder* deflate = static_cast<DeflateCodecDecoder*>(decoder);
@@ -47,6 +51,7 @@ PrStatus read(PrCompressDecoder* decoder, PrByteView input, bool final, uint8_t*
 PrStatus createDecoder(const PrCompressCodec*, PrCompressFormat, PrCompressDecoder* PR_NULLABLE* PR_NONNULL out) {
     DeflateCodecDecoder* decoder = allocZeroed<DeflateCodecDecoder>();
     decoder->destroyFn = destroyDecoder;
+    decoder->resetFn = reset;
     decoder->readFn = read;
     decoder->decoder = prDeflateDecoderCreate();
     *out = decoder;

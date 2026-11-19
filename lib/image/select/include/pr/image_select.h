@@ -26,8 +26,9 @@ enum {
 typedef uint8_t PrImageCodecBackend;
 
 // Returns the descriptor of the codecs of the format of the media type `type`, or null for a format that Prax does not
-// have: "image/png", "image/jpeg", "image/gif", "image/x-icon", "image/tiff" or "image/x-emjc". The environment chooses
-// one with PR_BACKEND_IMAGE_<FORMAT>, such as PR_BACKEND_IMAGE_PNG.
+// have: "image/png", "image/jpeg", "image/gif", "image/webp", "image/x-icon", "image/tiff", "image/vnd.radiance",
+// "image/x-exr" or "image/x-emjc". The environment chooses one with PR_BACKEND_IMAGE_<FORMAT>, such as
+// PR_BACKEND_IMAGE_PNG.
 const PrBackendInterface* PR_NULLABLE prImageCodecSelectInterface(PrStringView type);
 
 // Creates a codec of the format of `type` with `backend`. Default is the backend that the format's variable chooses, or

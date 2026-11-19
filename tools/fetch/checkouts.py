@@ -16,6 +16,7 @@ import os
 import shutil
 import tempfile
 import urllib.request
+import zipfile
 
 from tools import dev
 
@@ -90,6 +91,65 @@ class Files:
         if stamp_file:
             with open(stamp_file, "w") as f:
                 f.write(self.stamp[1] + "\n")
+
+
+class Captures:
+    """The pages of a checkout, each a path under `checkout`, captured into `directory` by tools/pages/pages.py with
+    what they load from other origins, so that they load the same on every run and without the network. A capture is
+    made once, and again only when the `stamp` changes, since what a server answers can change while the pin does
+    not."""
+
+    def __init__(self, directory, checkout, pages, stamp):
+        self.directory = directory
+        self.checkout = checkout
+        self.pages = pages
+        self.stamp = stamp
+
+    def fetch(self):
+        directory = os.path.join(THIRD_PARTY, self.directory)
+        stamp_file = os.path.join(directory, self.stamp[0])
+        try:
+            with open(stamp_file) as f:
+                current = f.read().strip()
+        except FileNotFoundError:
+            current = None
+        if current != self.stamp[1]:
+            shutil.rmtree(directory, ignore_errors=True)
+            os.makedirs(directory)
+            with open(stamp_file, "w") as f:
+                f.write(self.stamp[1] + "\n")
+        missing = [page for page in self.pages
+                   if not os.path.exists(os.path.join(directory, os.path.splitext(page)[0] + ".json"))]
+        if missing:
+            print("capturing %d pages of %s" % (len(missing), self.checkout), flush=True)
+            dev.python("tools.pages.pages", "local", os.path.join(THIRD_PARTY, self.checkout), directory, *missing)
+
+
+class Zip:
+    """The `names` of a ZIP archive at `url`, whose SHA-256 is `digest`, extracted into `directory`. The archive is
+    fetched only while a file is missing, and kept nowhere."""
+
+    def __init__(self, directory, url, digest, names):
+        self.directory = directory
+        self.url = url
+        self.digest = digest
+        self.names = names
+
+    def fetch(self):
+        directory = os.path.join(THIRD_PARTY, self.directory)
+        if all(os.path.exists(os.path.join(directory, name)) for name in self.names):
+            return
+        print("fetching %s" % self.directory, flush=True)
+        os.makedirs(directory, exist_ok=True)
+        archive = os.path.join(directory, "archive.zip")
+        download(self.url, archive, self.digest)
+        try:
+            with zipfile.ZipFile(archive) as files:
+                for name in self.names:
+                    with files.open(name) as source, open(os.path.join(directory, name), "wb") as out:
+                        shutil.copyfileobj(source, out)
+        finally:
+            os.remove(archive)
 
 
 class Captures:
@@ -217,6 +277,16 @@ PRINCE_SAMPLES = {
 ESCTEST2_COMMIT = "2798f12149a19c3295e9b4853ab2da4b2eff1b2b"
 # Fred Wang's MathFonts, which holds math fonts as web fonts and Mozilla's MathML torture test, whose formulas stand
 # beside images of TeX's setting of them. The commit is of the site's branch (gh-pages), which holds the built fonts.
+# libwebp's test data: the conformance vectors of VP8, and images of the container's and the lossless format's features
+# and of their invalid forms, which the webp suite decodes with lib/image and with libwebp.
+LIBWEBP_TEST_DATA_COMMIT = "06ddd96e276c2c638a72d39d3c0f340afd61978c"
+# The OpenEXR project's test images: every layout, channel type and compression of the file format, and invalid and
+# truncated files, which the exr suite decodes with lib/image and with OpenEXR.
+OPENEXR_IMAGES_COMMIT = "e38ffb0790f62f05a6f083a6fa4cac150b3b7452"
+# The files of the Silesia corpus.
+SILESIA_FILES = ("dickens", "mozilla", "mr", "nci", "ooffice", "osdb", "reymont", "samba", "sao", "webster", "xml",
+                 "x-ray")
+
 MATHFONTS_COMMIT = "9182b146cb64ac1a5e9cb92a09cd79612ca95d1c"
 
 UCD = "https://www.unicode.org/Public/17.0.0/ucd/"
@@ -570,7 +640,70 @@ CHECKOUTS = {
     "webfeatures": lambda: [Files("web-features", [
         (web_features_version() + ".json", NPM + "web-features@%s/data.json" % web_features_version())])],
     # The RFCs that generators read. A published RFC never changes, so its number pins it.
-    "rfcs": lambda: [Files("rfc", [("rfc7932.txt", "https://www.rfc-editor.org/rfc/rfc7932.txt")])],
+    # The Silesia corpus, the usual set of files that compressors are compared on: twelve of text, executables,
+    # databases and images, 212 MB in all, which the compression benchmark encodes and decodes (./dev.sh bench
+    # compress-corpus). The archive has no versions, so its digest pins it.
+    "silesia": lambda: [Zip("silesia", "https://sun.aei.polsl.pl/~sdeor/corpus/silesia.zip",
+                            "0626e25f45c0ffb5dc801f13b7c82a3b75743ba07e3a71835a41e3d9f63c77af", SILESIA_FILES)],
+    # The real pages the benchmarks read, which are whatever is in third_party/pages. Unlike a corpus that a suite
+    # reads, this one is meant to move, but only when asked: `./dev.sh pages roll` (or `./dev.sh fetch pages`) takes
+    # the day's pages from the sources that tools/pages/pages.py names and drops the oldest, so the set rolls forward
+    # and nothing can be tuned to it. Every page taken is also kept in third_party/pages-corpus, which only grows. A
+    # benchmark run takes pages only if there are none, so that it stays quick and needs no network. The pages are a
+    # benchmark's inputs, so a comparison across a roll reports that its workload changed (tools/bench/perf.py).
+    "pages": lambda: [Pages()],
+    # Long documents the document benchmark loads, scrolls and navigates. The Vulkan specification moves with each
+    # release; a benchmark records the hash of the copy it read, so runs compare only on the same one.
+    "docs": lambda: [Files("docs", [("vulkan.html",
+                                     "https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html")])],
+    # The video example's video (examples/video): a ginger cat on a side table, from the Internet Archive under the
+    # Public Domain Mark 1.0 (archive.org/details/the-table-and-the-kitten). H.264 High in MP4, 720 by 1280, BT.709,
+    # 30 seconds, which every platform's media backend and every browser plays.
+    "videos": lambda: [Files("videos", [
+        ("cat.mp4", "https://archive.org/download/the-table-and-the-kitten/The%20Table%20And%20The%20Kitten.mp4"),
+    ])],
+    # The named character references, which html-parsing provides as one JSON file.
+    "entities": lambda: [Files("html", [("entities.json", "https://html.spec.whatwg.org/entities.json")])],
+    # The Encoding Standard's encodings, with their labels, and its indexes, for the charset generator.
+    "encodings": lambda: [Files("encoding", [
+        (name + ".json", "https://raw.githubusercontent.com/whatwg/encoding/%s/%s.json" % (ENCODING_COMMIT, name))
+        for name in ("encodings", "indexes")], ("commit", ENCODING_COMMIT))],
+    # The Unicode Character Database files that the generators read, at one version, UTS #46's mapping table and
+    # conformance tests for that version, and UAX #31's revision for that version, whose Table 5 lists the scripts in
+    # modern use.
+    "unicode": lambda: [Files("unicode", [
+        (path.split("/")[-1], UCD + path) for path in (
+            "extracted/DerivedBidiClass.txt", "extracted/DerivedJoiningType.txt", "BidiBrackets.txt", "BidiMirroring.txt",
+            "BidiTest.txt",
+            "BidiCharacterTest.txt", "LineBreak.txt", "auxiliary/LineBreakTest.txt", "EastAsianWidth.txt",
+            "extracted/DerivedGeneralCategory.txt", "auxiliary/GraphemeBreakProperty.txt",
+            "auxiliary/GraphemeBreakTest.txt",
+            "auxiliary/WordBreakProperty.txt", "auxiliary/WordBreakTest.txt",
+            "emoji/emoji-data.txt", "DerivedCoreProperties.txt", "PropList.txt",
+            "UnicodeData.txt", "SpecialCasing.txt", "CaseFolding.txt", "Scripts.txt", "ScriptExtensions.txt",
+            "VerticalOrientation.txt",
+            "PropertyValueAliases.txt", "CompositionExclusions.txt", "NormalizationTest.txt")] + [
+        ("IdnaMappingTable.txt", "https://www.unicode.org/Public/17.0.0/idna/IdnaMappingTable.txt"),
+        ("IdnaTestV2.txt", "https://www.unicode.org/Public/17.0.0/idna/IdnaTestV2.txt"),
+        ("tr31-45.html", "https://www.unicode.org/reports/tr31/tr31-45.html"),
+    ])],
+    # Unicode CLDR, for the language generator: its supplemental data (likely subtags, populations), each locale's
+    # delimiters, and the copies of the IANA Language Subtag Registry and ISO 639-3's code table it keeps, which neither
+    # authority publishes at a versioned URL.
+    "cldr": lambda: [Git("cldr", "https://github.com/unicode-org/cldr.git", CLDR_COMMIT, "common/supplemental",
+                         "common/main", "tools/cldr-code/src/main/resources/org/unicode/cldr/util/data")],
+    # The web-features data, at the version that tools/suite/wpt/web_features.txt rules on and states.
+    "webfeatures": lambda: [Files("web-features", [
+        (web_features_version() + ".json", NPM + "web-features@%s/data.json" % web_features_version())])],
+    # The RFCs that generators read. A published RFC never changes, so its number pins it.
+    "rfcs": lambda: [Files("rfc", [(name, "https://www.rfc-editor.org/rfc/" + name)
+                                   for name in ("rfc7932.txt", "rfc6386.txt", "rfc9649.txt")])],
+    # webmproject/libwebp-test-data: the corpus of the webp suite (tools/suite/webp.py).
+    "libwebp_test_data": lambda: [Git("libwebp-test-data", "https://github.com/webmproject/libwebp-test-data.git",
+                                      LIBWEBP_TEST_DATA_COMMIT)],
+    # AcademySoftwareFoundation/openexr-images: the corpus of the exr suite (tools/suite/exr.py).
+    "openexr_images": lambda: [Git("openexr-images", "https://github.com/AcademySoftwareFoundation/openexr-images.git",
+                                   OPENEXR_IMAGES_COMMIT)],
     # MathML Core's operator dictionary, the operators that stretch along the inline axis, the combining characters
     # that stand for spacing accents, and the glyph assemblies built from Unicode characters, for the MathML generator,
     # with MathML 3's dictionary, the last that lists the accent property, at its dated Recommendation.

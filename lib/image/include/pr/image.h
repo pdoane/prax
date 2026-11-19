@@ -59,9 +59,10 @@ typedef uint8_t PrImageAlpha;
 
 // The source of the meaning of the color channels.
 enum {
-    PrImageColorEncoding_Unknown,   // none: the color is uncharacterized
-    PrImageColorEncoding_Named,     // a PrColorSpace
-    PrImageColorEncoding_Icc,       // an ICC profile
+    PrImageColorEncoding_Unknown,        // none: the color is uncharacterized
+    PrImageColorEncoding_Named,          // a PrColorSpace
+    PrImageColorEncoding_Icc,            // an ICC profile
+    PrImageColorEncoding_Chromaticities, // linear light in the RGB space of a PrColorChromaticities
 };
 typedef uint8_t PrImageColorEncoding;
 
@@ -70,10 +71,12 @@ typedef struct PrImageColor {
     PrImageColorEncoding encoding;
     PrColorSpace space;                     // Named
     PrByteView profile;                     // Icc: the bytes of an ICC profile
+    PrColorChromaticities chromaticities;   // Chromaticities: the primaries and white
 } PrImageColor;
 
 // Interleaved channels: the channels of `model` in order, then alpha if there is one. The space of a Named color has
-// `model` as its model, except that an RGB space also accepts Gray.
+// `model` as its model, except that an RGB space also accepts Gray. A color of chromaticities is RGB or Gray, whose
+// gray is the luminance of the space.
 typedef struct PrImageFormat {
     PrColorModel model;
     PrImageSample sample;
@@ -94,19 +97,33 @@ enum {
 };
 typedef uint8_t PrImageOrientation;
 
+// How the mip levels of an image relate to its extent. A mip chain's levels each halve the one before, rounded down or
+// up as the image says. A rip map has a level of every combination of a reduction across and a reduction down: its
+// levels are in rows of `levelColumns`, one row for each height and one column for each width, from the full extent.
+enum {
+    PrImageLevels_Mip,
+    PrImageLevels_Rip,
+};
+typedef uint8_t PrImageLevels;
+
 // The frame index that reads the still image that an animation may carry apart from its frames.
 enum { kPrImageFrameCover = 0xffffffffu };
 
-// An image as a reader reports it, in its stored orientation.
+// An image as a reader reports it, in its stored orientation. Each frame has `levelCount` mip levels, the first of the
+// image's extent, laid out as `levels` says, and each of the extent that prImageDecoderLevelExtent gives. A mip chain's
+// levels are each half the one before, rounded down, unless the reader reports their extents itself.
 typedef struct PrImageInfo {
     PrUVec2 extent;
     PrImageFormat format;
     PrImageOrientation orientation;
     PrVec2 pixelsPerMeter;  // the physical resolution, or zero if the image has none
     uint32_t frameCount;
+    uint32_t levelCount;    // the mip levels of each frame, at least one
     uint32_t playCount;     // the number of times the frames play, or zero for forever
     uint64_t workingBytes;  // the most bytes that a reader allocates, including the input that it keeps
     bool hasCover;          // true if kPrImageFrameCover reads a still image apart from the frames
+    PrImageLevels levels;
+    uint32_t levelColumns;  // a rip map's levels across, and one for a mip chain
 } PrImageInfo;
 
 // One frame of an image.
@@ -211,6 +228,17 @@ PrStatus prImageDecoderFrameInfo(PrImageDecoder* decoder, uint32_t frame, PrImag
 // Decodes all of `frame`, in stored orientation, into `output`, which must have the format and size of the image.
 // Returns OutOfRange for a frame that the image does not have. After a failure, the pixels are unspecified.
 PrStatus prImageDecoderRead(PrImageDecoder* decoder, uint32_t frame, PrPixels output);
+
+// Returns the extent of mip level `level` of an image of `extent` whose levels each halve the one before, rounded down.
+PrUVec2 prImageLevelExtent(PrUVec2 extent, uint32_t level);
+
+// Returns the extent of mip level `level` of the open image, which it must have.
+PrUVec2 prImageDecoderLevelExtent(const PrImageDecoder* decoder, uint32_t level);
+
+// Decodes mip level `level` of `frame`, as prImageDecoderRead decodes the first, into `output`, which must have the
+// format of the image and the extent of the level. Returns OutOfRange for a frame or a level that the image does not
+// have.
+PrStatus prImageDecoderReadLevel(PrImageDecoder* decoder, uint32_t frame, uint32_t level, PrPixels output);
 
 // Decodes `frame` as sRGB Rgba8 with `alpha`, straight or premultiplied, and applies `orientation` to its stored
 // pixels. Passing the orientation of the image gives the displayed image, and Identity gives the stored one. The width

@@ -241,7 +241,7 @@ TEST_CASE("each codec decodes what each other codec of its format encodes") {
     const Array<uint8_t> input = text(200000);
     const PrCompressFormat formats[] = {
         PrCompressFormat_Deflate, PrCompressFormat_Zlib, PrCompressFormat_Gzip, PrCompressFormat_Brotli,
-        PrCompressFormat_Lzfse,
+        PrCompressFormat_Lzfse, PrCompressFormat_Zstd,
     };
     for (PrCompressFormat format : formats) {
         PrCompressFormat bare = format;

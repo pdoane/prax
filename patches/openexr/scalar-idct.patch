@@ -1,0 +1,32 @@
+diff --git a/src/lib/OpenEXRCore/internal_dwa_simd.h b/src/lib/OpenEXRCore/internal_dwa_simd.h
+--- a/src/lib/OpenEXRCore/internal_dwa_simd.h
++++ b/src/lib/OpenEXRCore/internal_dwa_simd.h
+@@ -2344,27 +2344,6 @@ initializeFuncs (void)
+     dctInverse8x8_5 = dctInverse8x8_scalar_5;
+     dctInverse8x8_6 = dctInverse8x8_scalar_6;
+     dctInverse8x8_7 = dctInverse8x8_scalar_7;
+-    if (avx)
+-    {
+-        dctInverse8x8_0 = dctInverse8x8_avx_0;
+-        dctInverse8x8_1 = dctInverse8x8_avx_1;
+-        dctInverse8x8_2 = dctInverse8x8_avx_2;
+-        dctInverse8x8_3 = dctInverse8x8_avx_3;
+-        dctInverse8x8_4 = dctInverse8x8_avx_4;
+-        dctInverse8x8_5 = dctInverse8x8_avx_5;
+-        dctInverse8x8_6 = dctInverse8x8_avx_6;
+-        dctInverse8x8_7 = dctInverse8x8_avx_7;
+-    }
+-    else if (sse2)
+-    {
+-        dctInverse8x8_0 = dctInverse8x8_sse2_0;
+-        dctInverse8x8_1 = dctInverse8x8_sse2_1;
+-        dctInverse8x8_2 = dctInverse8x8_sse2_2;
+-        dctInverse8x8_3 = dctInverse8x8_sse2_3;
+-        dctInverse8x8_4 = dctInverse8x8_sse2_4;
+-        dctInverse8x8_5 = dctInverse8x8_sse2_5;
+-        dctInverse8x8_6 = dctInverse8x8_sse2_6;
+-        dctInverse8x8_7 = dctInverse8x8_sse2_7;
+-    }
++    (void) sse2;
+ #endif
+ }

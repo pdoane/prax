@@ -254,6 +254,27 @@ constexpr double kJzD = -0.56;
 constexpr double kJzD0 = 1.6295499532821566e-11;
 constexpr double kJzP = 1.7 * 2523 / 32;
 
+// The chromaticities of each PrColorPrimaries: Rec. ITU-R BT.709, SMPTE EG 432-1 with D65, Adobe RGB (1998), ISO
+// 22028-2, Rec. ITU-R BT.2020, SMPTE ST 2065-1, Academy S-2014-004, and CIE XYZ with the equal-energy white.
+constexpr PrVec2 kD65White = {0.3127f, 0.3290f};
+constexpr PrVec2 kAcesWhite = {0.32168f, 0.33767f};
+constexpr PrColorChromaticities kPrimaries[] = {
+    {{0.64f, 0.33f}, {0.30f, 0.60f}, {0.15f, 0.06f}, kD65White},
+    {{0.680f, 0.320f}, {0.265f, 0.690f}, {0.150f, 0.060f}, kD65White},
+    {{0.64f, 0.33f}, {0.21f, 0.71f}, {0.15f, 0.06f}, kD65White},
+    {{0.734699f, 0.265301f}, {0.159597f, 0.840403f}, {0.036598f, 0.000105f}, {0.3457f, 0.3585f}},
+    {{0.708f, 0.292f}, {0.170f, 0.797f}, {0.131f, 0.046f}, kD65White},
+    {{0.7347f, 0.2653f}, {0.0f, 1.0f}, {0.0001f, -0.0770f}, kAcesWhite},
+    {{0.713f, 0.293f}, {0.165f, 0.830f}, {0.128f, 0.044f}, kAcesWhite},
+    {{1.0f, 0.0f}, {0.0f, 1.0f}, {0.0f, 0.0f}, {1.0f / 3, 1.0f / 3}},
+};
+
+static_assert(sizeof(kPrimaries) == PrColorPrimaries_Count * sizeof(PrColorChromaticities));
+
+// The Bradford transform from XYZ to the cone responses that chromatic adaptation scales, and its inverse.
+constexpr PrDMatrix3 kBradford = {{{0.8951, 0.2664, -0.1614}, {-0.7502, 1.7135, 0.0367}, {0.0389, -0.0685, 1.0296}}};
+constexpr PrDMatrix3 kBradfordInverse = inverse(kBradford);
+
 // The D50 white, and the constants of Lab's lightness curve.
 constexpr double kD50[3] = {0.3457 / 0.3585, 1.0, (1.0 - 0.3457 - 0.3585) / 0.3585};
 constexpr double kLabKappa = 24389.0 / 27;
@@ -715,6 +736,114 @@ void prColorConvert(PrColorSpace from, PrColorSpace to, const double* in, double
     double xyz[3];
     toXyzD65(from, in, xyz);
     fromXyzD65(to, xyz, out);
+}
+
+PrColorChromaticities prColorPrimariesChromaticities(PrColorPrimaries primaries) {
+    PR_ASSERT(primaries < PrColorPrimaries_Count);
+    return kPrimaries[primaries];
+}
+
+PrColorPrimaries prColorSpacePrimaries(PrColorSpace space) {
+    switch (space) {
+        case PrColorSpace_Srgb:
+        case PrColorSpace_SrgbLinear:
+            return PrColorPrimaries_Rec709;
+        case PrColorSpace_DisplayP3:
+        case PrColorSpace_DisplayP3Linear:
+            return PrColorPrimaries_DisplayP3;
+        case PrColorSpace_A98Rgb:
+            return PrColorPrimaries_A98Rgb;
+        case PrColorSpace_ProPhotoRgb:
+            return PrColorPrimaries_ProPhotoRgb;
+        case PrColorSpace_Rec2020:
+        case PrColorSpace_Rec2100Pq:
+        case PrColorSpace_Rec2100Hlg:
+        case PrColorSpace_Rec2100Linear:
+            return PrColorPrimaries_Rec2020;
+        default:
+            return PrColorPrimaries_Count;
+    }
+}
+
+PrColorPrimaries prColorPrimariesFromChromaticities(const PrColorChromaticities* chromaticities, float tolerance) {
+    for (PrColorPrimaries primaries = 0; primaries < PrColorPrimaries_Count; ++primaries) {
+        const PrColorChromaticities& known = kPrimaries[primaries];
+        const PrVec2 a[4] = {chromaticities->red, chromaticities->green, chromaticities->blue, chromaticities->white};
+        const PrVec2 b[4] = {known.red, known.green, known.blue, known.white};
+        bool near = true;
+        for (uint32_t i = 0; i < 4; ++i)
+            near = near && prF32Abs(a[i].x - b[i].x) <= tolerance && prF32Abs(a[i].y - b[i].y) <= tolerance;
+        if (near)
+            return primaries;
+    }
+    return PrColorPrimaries_Count;
+}
+
+bool prColorChromaticitiesToXyz(const PrColorChromaticities* chromaticities, PrDMatrix3* out) {
+    // Each primary's column is its xyz, scaled so that the columns sum to the white's XYZ.
+    const PrVec2 points[4] = {chromaticities->red, chromaticities->green, chromaticities->blue, chromaticities->white};
+    for (const PrVec2& point : points) {
+        if (!prF32IsFinite(point.x) || !prF32IsFinite(point.y))
+            return false;
+    }
+    PrVec2 white = chromaticities->white;
+    if (!(white.y > 0))
+        return false;
+    PrDMatrix3 primaries{};
+    for (uint32_t i = 0; i < 3; ++i) {
+        primaries.m[0][i] = double(points[i].x);
+        primaries.m[1][i] = double(points[i].y);
+        primaries.m[2][i] = 1 - double(points[i].x) - double(points[i].y);
+    }
+    // The determinant is twice the area of the primaries' triangle in xy, and one of nearly no area is collinear.
+    const double (&p)[3][3] = primaries.m;
+    double det = p[0][0] * (p[1][1] * p[2][2] - p[1][2] * p[2][1]) - p[0][1] * (p[1][0] * p[2][2] - p[1][2] * p[2][0]) +
+        p[0][2] * (p[1][0] * p[2][1] - p[1][1] * p[2][0]);
+    PrDMatrix3 inverted{};
+    if (!(prF64Abs(det) > 1e-6) || !prDMatrix3Invert(&primaries, &inverted))
+        return false;
+    double whiteXyz[3] =
+        {double(white.x) / double(white.y), 1, (1 - double(white.x) - double(white.y)) / double(white.y)};
+    double scale[3];
+    multiply(inverted, whiteXyz, scale);
+    for (uint32_t row = 0; row < 3; ++row) {
+        for (uint32_t i = 0; i < 3; ++i)
+            out->m[row][i] = primaries.m[row][i] * scale[i];
+    }
+    return true;
+}
+
+bool prColorChromaticitiesMatrix(const PrColorChromaticities* from, const PrColorChromaticities* to, PrDMatrix3* out) {
+    PrDMatrix3 fromXyz{};
+    PrDMatrix3 toXyz{};
+    PrDMatrix3 xyzTo{};
+    if (!prColorChromaticitiesToXyz(from, &fromXyz) || !prColorChromaticitiesToXyz(to, &toXyz) ||
+            !prDMatrix3Invert(&toXyz, &xyzTo))
+        return false;
+    // Bradford adaptation scales the cone responses of the source white to those of the destination white.
+    double sourceWhite[3] = {
+        double(from->white.x) / double(from->white.y), 1,
+        (1 - double(from->white.x) - double(from->white.y)) / double(from->white.y),
+    };
+    double targetWhite[3] = {
+        double(to->white.x) / double(to->white.y), 1,
+        (1 - double(to->white.x) - double(to->white.y)) / double(to->white.y),
+    };
+    double sourceCone[3];
+    double targetCone[3];
+    multiply(kBradford, sourceWhite, sourceCone);
+    multiply(kBradford, targetWhite, targetCone);
+    PrDMatrix3 scale{};
+    for (uint32_t i = 0; i < 3; ++i) {
+        if (sourceCone[i] == 0)
+            return false;
+        scale.m[i][i] = targetCone[i] / sourceCone[i];
+    }
+    PrDMatrix3 adapt = prDMatrix3Concat(&kBradford, &scale);
+    adapt = prDMatrix3Concat(&adapt, &kBradfordInverse);
+    PrDMatrix3 result = prDMatrix3Concat(&fromXyz, &adapt);
+    *out = prDMatrix3Concat(&result, &xyzTo);
+    return true;
 }
 
 PrColor prColorHdrResolve(const PrColorHdr* color, float headroom) {

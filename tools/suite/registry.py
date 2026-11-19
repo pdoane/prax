@@ -68,6 +68,11 @@ SUITES = [
           ("markdown_spec",)),
     Suite("markdown-dom", ("commonmark", "cmark_gfm"), ("commonmark-spec/spec.txt", "cmark-gfm/test/spec.txt"),
           ("tools.suite.markdown.markdown_dom",), ("markdown_dom",)),
+    # libwebp's test data, decoded by lib/webp beside libwebp.
+    Suite("webp", ("libwebp_test_data",), ("libwebp-test-data/.git",), ("tools.suite.webp",), ("webp_compare",)),
+    # OpenEXR's test images, and images that OpenEXR's encoder writes in every compression, decoded by lib/exr beside
+    # OpenEXR's core library.
+    Suite("exr", ("openexr_images",), ("openexr-images/.git",), ("tools.suite.exr",), ("exr_compare",)),
     # esctest needs termios, and a Windows pseudoconsole would rewrite the sequences that it tests.
     Suite("esctest", ("esctest",), ("esctest2/esctest",), ("tools.suite.esctest",), ("vterm_esctest",),
           "esctest runs on a POSIX pseudoterminal" if sys.platform == "win32" else None),

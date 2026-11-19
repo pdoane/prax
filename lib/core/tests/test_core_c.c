@@ -38,6 +38,7 @@
 #include "pr/pixels.h"
 #include "pr/random.h"
 #include "pr/raw_string.h"
+#include "pr/sha1.h"
 #include "pr/status.h"
 #include "pr/string_ops.h"
 #include "pr/text_buffer.h"

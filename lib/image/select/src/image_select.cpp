@@ -2,14 +2,18 @@
 
 #include "pr/image_select.h"
 
+#include "pr/assert.h"
 #include "pr/count_of.h"
 #if defined(PR_IMAGE_HAS_BUILTIN)
 #include "pr/image_emjc.h"
+#include "pr/image_exr.h"
 #include "pr/image_gif.h"
+#include "pr/image_hdr.h"
 #include "pr/image_ico.h"
 #include "pr/image_jpeg.h"
 #include "pr/image_png.h"
 #include "pr/image_tiff.h"
+#include "pr/image_webp.h"
 #endif
 #if defined(PR_IMAGE_HAS_IMAGEIO)
 #include "pr/image_imageio.h"
@@ -32,20 +36,38 @@ constexpr uint64_t kWithImageio = kBuiltin | 1u << PrImageCodecBackend_ImageIO;
 constexpr uint64_t kWithImageio = kBuiltin;
 #endif
 
-// A format that Prax has: its media type, and the descriptor of its codecs.
+// The formats that Prax has.
+enum {
+    ImageKind_Png,
+    ImageKind_Jpeg,
+    ImageKind_Gif,
+    ImageKind_Webp,
+    ImageKind_Ico,
+    ImageKind_Tiff,
+    ImageKind_Hdr,
+    ImageKind_Exr,
+    ImageKind_Emjc,
+};
+typedef uint8_t ImageKind;
+
+// A format that Prax has: its media type, its kind, and the descriptor of its codecs.
 struct ImageSelectFormat {
     PrStringView type;
+    ImageKind kind;
     PrBackendInterface interface;
 };
 
 // The formats, in the order of a set of every format. ImageIO does not decode EMJC.
 constexpr ImageSelectFormat kFormats[] = {
-    {"image/png", {.name = "image_png", .names = kNames, .count = 3, .built = kWithImageio}},
-    {"image/jpeg", {.name = "image_jpeg", .names = kNames, .count = 3, .built = kWithImageio}},
-    {"image/gif", {.name = "image_gif", .names = kNames, .count = 3, .built = kWithImageio}},
-    {"image/x-icon", {.name = "image_ico", .names = kNames, .count = 3, .built = kWithImageio}},
-    {"image/tiff", {.name = "image_tiff", .names = kNames, .count = 3, .built = kWithImageio}},
-    {"image/x-emjc", {.name = "image_emjc", .names = kNames, .count = 3, .built = kBuiltin}},
+    {"image/png", ImageKind_Png, {.name = "image_png", .names = kNames, .count = 3, .built = kWithImageio}},
+    {"image/jpeg", ImageKind_Jpeg, {.name = "image_jpeg", .names = kNames, .count = 3, .built = kWithImageio}},
+    {"image/gif", ImageKind_Gif, {.name = "image_gif", .names = kNames, .count = 3, .built = kWithImageio}},
+    {"image/webp", ImageKind_Webp, {.name = "image_webp", .names = kNames, .count = 3, .built = kWithImageio}},
+    {"image/x-icon", ImageKind_Ico, {.name = "image_ico", .names = kNames, .count = 3, .built = kWithImageio}},
+    {"image/tiff", ImageKind_Tiff, {.name = "image_tiff", .names = kNames, .count = 3, .built = kWithImageio}},
+    {"image/vnd.radiance", ImageKind_Hdr, {.name = "image_hdr", .names = kNames, .count = 3, .built = kWithImageio}},
+    {"image/x-exr", ImageKind_Exr, {.name = "image_exr", .names = kNames, .count = 3, .built = kWithImageio}},
+    {"image/x-emjc", ImageKind_Emjc, {.name = "image_emjc", .names = kNames, .count = 3, .built = kBuiltin}},
 };
 
 const ImageSelectFormat* PR_NULLABLE formatOf(PrStringView type) {
@@ -57,15 +79,20 @@ const ImageSelectFormat* PR_NULLABLE formatOf(PrStringView type) {
 }
 
 #if defined(PR_IMAGE_HAS_BUILTIN)
-PrImageCodec* createBuiltin(uint32_t format, const PrCompressCodecSet* compress) {
-    switch (format) {
-        case 0: return prImagePngCreate(compress);
-        case 1: return prImageJpegCreate();
-        case 2: return prImageGifCreate();
-        case 3: return prImageIcoCreate();
-        case 4: return prImageTiffCreate();
-        default: return prImageEmjcCreate(compress);
+PrImageCodec* PR_NULLABLE createBuiltin(ImageKind kind, const PrCompressCodecSet* compress) {
+    switch (kind) {
+        case ImageKind_Png: return prImagePngCreate(compress);
+        case ImageKind_Jpeg: return prImageJpegCreate();
+        case ImageKind_Gif: return prImageGifCreate();
+        case ImageKind_Webp: return prImageWebpCreate();
+        case ImageKind_Ico: return prImageIcoCreate();
+        case ImageKind_Tiff: return prImageTiffCreate();
+        case ImageKind_Hdr: return prImageHdrCreate();
+        case ImageKind_Exr: return prImageExrCreate(compress);
+        case ImageKind_Emjc: return prImageEmjcCreate(compress);
     }
+    PR_ASSERT(false && "a format of kFormats");
+    return nullptr;
 }
 #endif
 
@@ -107,7 +134,7 @@ PrImageCodec* PR_NULLABLE prImageCodecCreate(PrImageCodecBackend backend, PrStri
         return nullptr;
     switch (backend) {
 #if defined(PR_IMAGE_HAS_BUILTIN)
-        case PrImageCodecBackend_Builtin: return createBuiltin(uint32_t(format - kFormats), compress);
+        case PrImageCodecBackend_Builtin: return createBuiltin(format->kind, compress);
 #endif
 #if defined(PR_IMAGE_HAS_IMAGEIO)
         case PrImageCodecBackend_ImageIO: return prImageImageIOCreate(type);

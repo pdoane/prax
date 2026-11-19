@@ -277,6 +277,42 @@ def image_decode(args):
 
 
 # ----------------------------------------------------------------------------------------------------------------------
+# exr
+
+# The images of OpenEXR's test images that the exr benchmark writes again in each compression, and the compressions,
+# by the names that the harness reads.
+EXR_IMAGES = os.path.join(common.ROOT, "third_party", "openexr-images")
+EXR_SOURCES = ("ScanLines/Desk.exr", "ScanLines/StillLife.exr", "ScanLines/Tree.exr", "ScanLines/Cannon.exr")
+EXR_COMPRESSIONS = ("none", "rle", "zips", "zip", "piz", "pxr24", "b44", "b44a", "dwaa", "dwab")
+
+
+def exr_options(parser):
+    parser.add_argument("cases", nargs="*", help="cases by a word of the name, as piz or Desk; every case by default")
+
+
+def exr(args):
+    """Runs exr_compare over each image in each compression and groups its rows by engine: lib/exr's filed as prax,
+    beside OpenEXR's core library's, filed as openexr. Each row is one engine's cost of decoding one file. The files are
+    written by OpenEXR's encoder under the build, once, from OpenEXR's test images."""
+    harness = common.binary(args.bin, "exr_compare")
+    cache = os.path.join(args.bin, "exr_streams")
+    os.makedirs(cache, exist_ok=True)
+    sources = [os.path.join(EXR_IMAGES, source) for source in EXR_SOURCES]
+    if not all(os.path.exists(source) for source in sources):
+        sys.exit("OpenEXR's test images are missing; run ./dev.sh fetch openexr_images")
+    paths = []
+    for source in sources:
+        stem = os.path.splitext(os.path.basename(source))[0]
+        for compression in EXR_COMPRESSIONS:
+            path = os.path.join(cache, "%s.%s.scanlines.exr" % (stem, compression))
+            if not os.path.exists(path):
+                subprocess.run([harness, "--encode", compression, "scanlines", source, path], check=True)
+            if not args.cases or any(word in os.path.basename(path) for word in args.cases):
+                paths.append(path)
+    return by_engine(args, "exr_compare", ["--bench"] + paths), sources
+
+
+# ----------------------------------------------------------------------------------------------------------------------
 # numbers
 
 def numbers_options(parser):
@@ -307,10 +343,26 @@ def compress_options(parser):
 
 def compress(args):
     """Runs compress_bench and groups its rows by engine. Each row is one engine's cost of decoding one stream:
-    lib/compress's rows are filed as prax, beside those of Apple's libcompression, filed as apple, on Apple's
-    platforms."""
+    lib/compress's rows are filed as prax, beside those of each format's reference library, filed as zlib, brotli and
+    zstd, and of Apple's libcompression, filed as apple, on Apple's platforms."""
     inputs = [arg for path in COMPRESS_INPUTS for arg in ("--input", path)]
     return by_engine(args, "compress_bench", inputs + ["--small", str(COMPRESS_SMALL)] + args.cases), []
+
+
+# The Silesia corpus, which the corpus benchmark encodes and decodes, and where it keeps the reference encoders' streams
+# between runs: under the build, since they are what that build's references wrote.
+SILESIA = os.path.join(common.ROOT, "third_party", "silesia")
+
+
+def compress_corpus(args):
+    """Runs compress_bench over the Silesia corpus, encoding as well as decoding, and groups its rows by engine as
+    compress does. The rows named "all <case>" are each engine's totals over the corpus."""
+    from tools.fetch import checkouts
+    paths = [os.path.join(SILESIA, name) for name in checkouts.SILESIA_FILES]
+    cache = os.path.join(args.bin, "compress_streams")
+    os.makedirs(cache, exist_ok=True)
+    inputs = [arg for path in paths for arg in ("--input", path)]
+    return by_engine(args, "compress_bench", inputs + ["--encode", "--cache", cache] + args.cases), paths
 
 
 # ----------------------------------------------------------------------------------------------------------------------

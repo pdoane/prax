@@ -84,6 +84,9 @@ PR_CONSTEXPR uint32_t prMemReadBeU32(const uint8_t* bytes) {
     return (PR_VALUE_CAST(uint32_t, bytes[0]) << 24) | (PR_VALUE_CAST(uint32_t, bytes[1]) << 16) |
         (PR_VALUE_CAST(uint32_t, bytes[2]) << 8) | bytes[3];
 }
+PR_CONSTEXPR uint64_t prMemReadBeU64(const uint8_t* bytes) {
+    return (PR_VALUE_CAST(uint64_t, prMemReadBeU32(bytes)) << 32) | PR_VALUE_CAST(uint64_t, prMemReadBeU32(bytes + 4));
+}
 PR_CONSTEXPR uint16_t prMemReadLeU16(const uint8_t* bytes) {
     return PR_VALUE_CAST(uint16_t, bytes[0] | (bytes[1] << 8));
 }
@@ -107,6 +110,10 @@ PR_CONSTEXPR void prMemWriteLeU16(uint8_t* bytes, uint16_t value) {
 PR_CONSTEXPR void prMemWriteLeU32(uint8_t* bytes, uint32_t value) {
     prMemWriteLeU16(bytes, PR_VALUE_CAST(uint16_t, value));
     prMemWriteLeU16(bytes + 2, PR_VALUE_CAST(uint16_t, value >> 16));
+}
+PR_CONSTEXPR void prMemWriteLeU64(uint8_t* bytes, uint64_t value) {
+    prMemWriteLeU32(bytes, PR_VALUE_CAST(uint32_t, value));
+    prMemWriteLeU32(bytes + 4, PR_VALUE_CAST(uint32_t, value >> 32));
 }
 
 #if defined(__cplusplus)

@@ -35,7 +35,7 @@ PrStatus frameInfo(PrImageReader* reader, uint32_t frame, PrImageFrameInfo* info
     return PrStatus_Ok;
 }
 
-PrStatus read(PrImageReader* reader, uint32_t frame, PrPixels output) {
+PrStatus read(PrImageReader* reader, uint32_t frame, uint32_t, PrPixels output) {
     GifReader* gif = static_cast<GifReader*>(reader);
     if (!gif->hasFrames)
         return PrStatus_InvalidData;

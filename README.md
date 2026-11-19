@@ -31,7 +31,7 @@ The libraries, by area. The first comment of each library's `CMakeLists.txt` say
 | System | `app`, `gpu`, `audio`, `media`, `process` |
 | Networking | `net`, `tls`, `http`, `websocket`, `fetch`, `xhr`, `url`, `mime` |
 | Data | `json`, `xml`, `compress`, `image`, `color`, `geom`, `charset`, `locale`, `unicode`, `html_entity` |
-| Formats | `png`, `jpeg`, `gif`, `ico`, `tiff`, `emjc`, `deflate`, `brotli`, `lzfse`, `zip`, and `entropy`, which their coders share |
+| Formats | `png`, `jpeg`, `gif`, `webp`, `ico`, `tiff`, `hdr`, `exr`, `emjc`, `deflate`, `brotli`, `lzfse`, `lz4`, `zstd`, `zip`, and `entropy`, which their coders share |
 | Text | `font`, `font_bundle`, `text`, `text_edit`, `text_view`, `syntax`, `regex`, `text_diff` |
 | Graphics | `path`, `draw`, `canvas`, `lottie` |
 | Documents | `css`, `dom`, `layout`, `html`, `svg`, `mathml`, `tex`, `markdown` |
@@ -126,7 +126,7 @@ third-party library. A development build (`PR_DEVELOP`), an examples build (`PR_
 | audio | `PR_AUDIO_MEMORY` | output kept in memory, for a run without a device | every platform | on |
 | audio | `PR_AUDIO_APPLE` | Core Audio | Apple platforms | on |
 | audio | `PR_AUDIO_WINDOWS` | WASAPI | Windows | on |
-| compression | `PR_COMPRESS_BUILTIN` | Prax's codecs, for Deflate, Brotli and LZFSE | every platform | on |
+| compression | `PR_COMPRESS_BUILTIN` | Prax's codecs, for Deflate, Brotli, LZFSE, LZ4 and Zstandard | every platform | on |
 | compression | `PR_COMPRESS_APPLE` | Apple's Compression library, for Deflate, Brotli and LZFSE | Apple platforms | on |
 | draw renderer | `PR_DRAW_CPU` | CPU renderer | every platform | on |
 | draw renderer | `PR_DRAW_CANVAS` | the browser's Canvas 2D | the web | on |
@@ -148,7 +148,7 @@ third-party library. A development build (`PR_DEVELOP`), an examples build (`PR_
 | gpu | `PR_GPU_WEBGPU` | WebGPU, with slots and no bindless | the web | on |
 | gpu | `PR_GPU_CANVAS2D` | memory and a web page's canvases, without shaders | the web | on |
 | http | `PR_HTTP_BUILTIN` | HTTP/1.1 over `lib/net` and `lib/tls` | every platform | on |
-| image codecs | `PR_IMAGE_BUILTIN` | Prax's codecs, for PNG, JPEG, GIF, ICO, TIFF and EMJC | every platform | on |
+| image codecs | `PR_IMAGE_BUILTIN` | Prax's codecs, for PNG, JPEG, GIF, WebP, ICO, TIFF, Radiance HDR, OpenEXR and EMJC | every platform | on |
 | image codecs | `PR_IMAGE_IMAGEIO` | ImageIO, for the formats that it decodes | Apple platforms | on |
 | media | `PR_MEDIA_BUILTIN` | Prax | every platform | on |
 | media | `PR_MEDIA_APPLE` | AVFoundation | Apple platforms | on |

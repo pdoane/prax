@@ -1,8 +1,8 @@
 // The interface that compression backends implement. Callers use the functions of pr/compress.h, which call these. Only
 // backends include this header.
 //
-// A codec codes the bare formats: Deflate, Brotli and LZFSE. A set frames zlib and gzip itself, around the Deflate of
-// its first codec that codes Deflate, so a set never asks a codec for them.
+// A codec codes the bare formats: Deflate, Brotli, LZFSE, LZ4 and Zstandard. A set frames zlib and gzip itself, around
+// the Deflate of its first codec that codes Deflate, so a set never asks a codec for them.
 
 #pragma once
 
@@ -16,9 +16,11 @@ extern "C" {
 #endif
 
 // The functions of a decoder's backend, at the start of its state. Each implements the function of pr/compress.h that
-// it is named for.
+// it is named for. A null `setWindowLimitFn` means that the decoder's format bounds its own window.
 struct PrCompressDecoder {
     void (*destroyFn)(PrCompressDecoder* decoder);
+    void (*resetFn)(PrCompressDecoder* decoder);
+    void (*PR_NULLABLE setWindowLimitFn)(PrCompressDecoder* decoder, size_t limit);
     PrStatus (*readFn)(PrCompressDecoder* decoder, PrByteView input, bool final, uint8_t* PR_NULLABLE output,
         size_t capacity, PrCompressRead* out);
 

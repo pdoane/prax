@@ -24,6 +24,10 @@ void destroyDecoder(PrCompressDecoder* decoder) {
     prMemoryFree(lzfse);
 }
 
+void reset(PrCompressDecoder* decoder) {
+    prLzfseDecoderReset(static_cast<LzfseCodecDecoder*>(decoder)->decoder);
+}
+
 PrStatus read(PrCompressDecoder* decoder, PrByteView input, bool final, uint8_t* PR_NULLABLE output, size_t capacity,
         PrCompressRead* out) {
     LzfseCodecDecoder* lzfse = static_cast<LzfseCodecDecoder*>(decoder);
@@ -37,6 +41,7 @@ PrStatus read(PrCompressDecoder* decoder, PrByteView input, bool final, uint8_t*
 PrStatus createDecoder(const PrCompressCodec*, PrCompressFormat, PrCompressDecoder* PR_NULLABLE* PR_NONNULL out) {
     LzfseCodecDecoder* decoder = allocZeroed<LzfseCodecDecoder>();
     decoder->destroyFn = destroyDecoder;
+    decoder->resetFn = reset;
     decoder->readFn = read;
     decoder->decoder = prLzfseDecoderCreate();
     *out = decoder;

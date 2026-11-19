@@ -56,6 +56,11 @@ bool validColor(const PrImageFormat& format) {
             return model != PrColorModel_Count && (format.model == model ||
                 (format.model == PrColorModel_Gray && model == PrColorModel_Rgb));
         }
+        case PrImageColorEncoding_Chromaticities: {
+            PrDMatrix3 toXyz{};
+            return (format.model == PrColorModel_Rgb || format.model == PrColorModel_Gray) &&
+                prColorChromaticitiesToXyz(&color.chromaticities, &toXyz);
+        }
         default:
             return false;
     }
@@ -333,7 +338,39 @@ bool colorEquals(const PrImageColor& a, const PrImageColor& b) {
     if (a.encoding == PrImageColorEncoding_Icc) {
         return a.profile.size == b.profile.size && prMemEquals(a.profile.data, b.profile.data, a.profile.size);
     }
+    if (a.encoding == PrImageColorEncoding_Chromaticities) {
+        return prMemEquals(&a.chromaticities, &b.chromaticities, sizeof(a.chromaticities));
+    }
     return true;
+}
+
+// The linear RGB of chromaticities as a named space: the matrix to linear sRGB from them, or from linear sRGB to them,
+// and linear sRGB, which a color of chromaticities converts through. A named color stays as it is.
+struct ChromaticSpace {
+    PrColorSpace space;
+    bool matrix;
+    PrDMatrix3 transform;
+};
+
+ChromaticSpace chromaticSpace(const PrImageColor& color, bool from) {
+    if (color.encoding != PrImageColorEncoding_Chromaticities)
+        return ChromaticSpace{.space = color.space};
+    PrColorChromaticities srgb = prColorPrimariesChromaticities(PrColorPrimaries_Rec709);
+    ChromaticSpace out{.space = PrColorSpace_SrgbLinear, .matrix = true};
+    const PrColorChromaticities* source = from ? &color.chromaticities : &srgb;
+    const PrColorChromaticities* target = from ? &srgb : &color.chromaticities;
+    bool made = prColorChromaticitiesMatrix(source, target, &out.transform);
+    PR_ASSERT(made);
+    return out;
+}
+
+void transform(const PrDMatrix3& matrix, double* c) {
+    double x = c[0];
+    double y = c[1];
+    double z = c[2];
+    c[0] = matrix.m[0][0] * x + matrix.m[0][1] * y + matrix.m[0][2] * z;
+    c[1] = matrix.m[1][0] * x + matrix.m[1][1] * y + matrix.m[1][2] * z;
+    c[2] = matrix.m[2][0] * x + matrix.m[2][1] * y + matrix.m[2][2] * z;
 }
 
 } // namespace
@@ -361,8 +398,11 @@ PrStatus imageConvert(PrPixelView source, const PrImageFormat& from, PrPixels de
     const bool equalModel = from.model == to.model;
     const bool replicateGray = from.model == PrColorModel_Gray && to.model == PrColorModel_Rgb;
     const bool cmyk = from.model == PrColorModel_Cmyk && to.model == PrColorModel_Rgb;
-    const bool namedModels = colorChannels(from.model) == 3 && colorChannels(to.model) == 3 &&
-        from.color.encoding == PrImageColorEncoding_Named && to.color.encoding == PrImageColorEncoding_Named;
+    const bool fromKnown = from.color.encoding == PrImageColorEncoding_Named ||
+        from.color.encoding == PrImageColorEncoding_Chromaticities;
+    const bool toKnown = to.color.encoding == PrImageColorEncoding_Named ||
+        to.color.encoding == PrImageColorEncoding_Chromaticities;
+    const bool namedModels = colorChannels(from.model) == 3 && colorChannels(to.model) == 3 && fromKnown && toKnown;
     // A source that an ICC profile describes converts through the profile to a named space, whatever its model. A
     // profile that the engine does not read is not supported.
     PrColorProfile* profile = nullptr;
@@ -397,8 +437,10 @@ PrStatus imageConvert(PrPixelView source, const PrImageFormat& from, PrPixels de
         return PrStatus_NotSupported;
     }
     const bool changeSpace = !equalColor || (!equalModel && !replicateGray);
-    PrColorSpace fromSpace = from.color.space;
-    PrColorSpace toSpace = to.color.space;
+    const ChromaticSpace fromChromatic = chromaticSpace(from.color, true);
+    const ChromaticSpace toChromatic = chromaticSpace(to.color, false);
+    PrColorSpace fromSpace = fromChromatic.space;
+    PrColorSpace toSpace = toChromatic.space;
     if (changeSpace) {
         if (from.color.encoding == PrImageColorEncoding_Unknown && !cmyk) {
             if ((policy & PrImageConversionFlag_AssumeSrgb) == 0 ||
@@ -430,7 +472,7 @@ PrStatus imageConvert(PrPixelView source, const PrImageFormat& from, PrPixels de
     // Converting eight bits to eight bits in one space needs no floating point. Premultiplying and unpremultiplying
     // round the exact quotient half up.
     const bool eightBit = from.sample == PrImageSample_U8 && to.sample == PrImageSample_U8 && !cmyk &&
-        !(changeSpace && fromSpace != toSpace);
+        !(changeSpace && (fromSpace != toSpace || fromChromatic.matrix || toChromatic.matrix));
     for (uint32_t y = 0; y < source.extent.y; ++y) {
         const uint8_t* input = source.data + size_t(y) * source.stride;
         uint8_t* output = destination.data + size_t(y) * destination.stride;
@@ -463,11 +505,23 @@ PrStatus imageConvert(PrPixelView source, const PrImageFormat& from, PrPixels de
                     channels[c] = (1.0 - channels[c]) * black;
                 }
             }
-            if (changeSpace && fromSpace != toSpace) {
+            if (changeSpace) {
                 if (from.model == PrColorModel_Gray && equalModel) {
                     channels[1] = channels[2] = channels[0];
                 }
-                prColorConvert(fromSpace, toSpace, channels, channels);
+                if (fromChromatic.matrix)
+                    transform(fromChromatic.transform, channels);
+                if (fromSpace != toSpace)
+                    prColorConvert(fromSpace, toSpace, channels, channels);
+                if (toChromatic.matrix)
+                    transform(toChromatic.transform, channels);
+                if (to.model == PrColorModel_Gray && equalModel && toChromatic.matrix) {
+                    // A gray of chromaticities is the luminance of its RGB.
+                    PrDMatrix3 toXyz{};
+                    prColorChromaticitiesToXyz(&to.color.chromaticities, &toXyz);
+                    channels[0] =
+                        toXyz.m[1][0] * channels[0] + toXyz.m[1][1] * channels[1] + toXyz.m[1][2] * channels[2];
+                }
             }
             if (to.alpha == PrImageAlpha_Premultiplied) {
                 for (uint32_t c = 0; c < destinationChannels; ++c) {

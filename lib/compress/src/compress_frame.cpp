@@ -358,6 +358,15 @@ FrameStep readFrame(FrameDecoder& d, FrameSpan& span, bool final, PrStatus* stat
     }
 }
 
+void resetFrame(PrCompressDecoder* decoder) {
+    FrameDecoder* frame = static_cast<FrameDecoder*>(decoder);
+    prCompressDecoderDestroy(frame->inner);
+    frame->inner = nullptr;
+    frame->phase = frame->format == PrCompressFormat_Zlib ? FramePhase_ZlibHeader : FramePhase_GzipHeader;
+    frame->headerSize = frame->headerCrc = frame->heldSize = 0;
+    frame->flushing = false;
+}
+
 void destroyFrame(PrCompressDecoder* decoder) {
     FrameDecoder* frame = static_cast<FrameDecoder*>(decoder);
     prCompressDecoderDestroy(frame->inner);
@@ -394,6 +403,7 @@ PrStatus compressFrameDecoderCreate(PrCompressFormat format, const PrCompressCod
     PR_ASSERT(compressIsFramed(format));
     FrameDecoder* decoder = allocZeroed<FrameDecoder>();
     decoder->destroyFn = destroyFrame;
+    decoder->resetFn = resetFrame;
     decoder->readFn = readFrameStream;
     decoder->codec = codec;
     decoder->format = format;

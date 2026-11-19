@@ -257,3 +257,58 @@ TEST_CASE("gamut mapping reaches the limit's white, which a display's headroom r
     CHECK(below.r == 0.0f);
     CHECK(below.g == 0.0f);
 }
+
+TEST_CASE("chromaticities give the matrix of their RGB to XYZ, which a named space's matches") {
+    PrColorChromaticities srgb = prColorPrimariesChromaticities(prColorSpacePrimaries(PrColorSpace_SrgbLinear));
+    PrDMatrix3 toXyz{};
+    REQUIRE(prColorChromaticitiesToXyz(&srgb, &toXyz));
+    const double red[3] = {1, 0, 0};
+    double xyz[3];
+    prColorConvert(PrColorSpace_SrgbLinear, PrColorSpace_XyzD65, red, xyz);
+    for (uint32_t i = 0; i < 3; ++i)
+        CHECK(toXyz.m[i][0] == doctest::Approx(xyz[i]).epsilon(1e-4));
+    // The white is XYZ with a Y of 1, whose row of luminance sums to 1.
+    CHECK(toXyz.m[1][0] + toXyz.m[1][1] + toXyz.m[1][2] == doctest::Approx(1));
+
+    // Primaries on a line have no matrix, and a white of no luminance none either.
+    PrColorChromaticities line = srgb;
+    line.blue = PrVec2{(line.red.x + line.green.x) / 2, (line.red.y + line.green.y) / 2};
+    CHECK(!prColorChromaticitiesToXyz(&line, &toXyz));
+    PrColorChromaticities dark = srgb;
+    dark.white.y = 0;
+    CHECK(!prColorChromaticitiesToXyz(&dark, &toXyz));
+    // CIE XYZ's primaries include one of no luminance.
+    PrColorChromaticities xyzPrimaries = prColorPrimariesChromaticities(PrColorPrimaries_Xyz);
+    REQUIRE(prColorChromaticitiesToXyz(&xyzPrimaries, &toXyz));
+    CHECK(toXyz.m[0][0] == doctest::Approx(1));
+    CHECK(toXyz.m[1][1] == doctest::Approx(1));
+    CHECK(toXyz.m[2][2] == doctest::Approx(1));
+}
+
+TEST_CASE("chromaticities convert between RGB spaces with Bradford adaptation of their whites") {
+    // ACEScg to linear sRGB, as Academy TB-2014-004 gives it with Bradford adaptation from the ACES white to D65.
+    const double expected[3][3] = {
+        {1.70505, -0.62179, -0.08326},
+        {-0.13026, 1.14080, -0.01055},
+        {-0.02400, -0.12897, 1.15297},
+    };
+    PrColorChromaticities ap1 = prColorPrimariesChromaticities(PrColorPrimaries_AcesAp1);
+    PrColorChromaticities srgb = prColorPrimariesChromaticities(PrColorPrimaries_Rec709);
+    PrDMatrix3 matrix{};
+    REQUIRE(prColorChromaticitiesMatrix(&ap1, &srgb, &matrix));
+    for (uint32_t row = 0; row < 3; ++row) {
+        for (uint32_t column = 0; column < 3; ++column)
+            CHECK(matrix.m[row][column] == doctest::Approx(expected[row][column]).epsilon(2e-3));
+    }
+    // White maps to white.
+    double white = matrix.m[0][0] + matrix.m[0][1] + matrix.m[0][2];
+    CHECK(white == doctest::Approx(1).epsilon(1e-6));
+
+    // Chromaticities near a standard set's name them, and others none.
+    CHECK(prColorPrimariesFromChromaticities(&ap1, 1e-4f) == PrColorPrimaries_AcesAp1);
+    PrColorChromaticities shifted = ap1;
+    shifted.red.x += 0.01f;
+    CHECK(prColorPrimariesFromChromaticities(&shifted, 1e-4f) == PrColorPrimaries_Count);
+    CHECK(prColorSpacePrimaries(PrColorSpace_Rec2100Pq) == PrColorPrimaries_Rec2020);
+    CHECK(prColorSpacePrimaries(PrColorSpace_Oklab) == PrColorPrimaries_Count);
+}

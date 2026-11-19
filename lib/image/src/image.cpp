@@ -62,10 +62,19 @@ bool packedBytes(const PrImageFormat& format, uint32_t width, uint32_t height, s
     return true;
 }
 
-// Checks that the information a backend reported for an image is possible and within the limits.
-PrStatus validateInfo(const PrImageInfo& info, const PrImageLimits& limits) {
+// The most levels that an image has: those of a rip map of 2^31 pixels to a side.
+constexpr uint32_t kMaxLevels = 32 * 32;
+
+// Checks that the information a backend reported for an image is possible and within the limits. A reader that reports
+// its levels' extents may have levels of any extent, and any other has levels that halve.
+PrStatus validateInfo(const PrImageInfo& info, const PrImageLimits& limits, bool levelExtents) {
     size_t bytes = 0;
-    if (info.orientation > PrImageOrientation_Rotate270 || info.frameCount == 0 ||
+    const bool halving = info.levels == PrImageLevels_Mip && info.levelCount <= 32 &&
+        (info.extent.x >> (info.levelCount - 1) != 0 || info.extent.y >> (info.levelCount - 1) != 0);
+    const bool rip = info.levels == PrImageLevels_Rip && info.levelColumns != 0 && info.levelCount % info.levelColumns == 0;
+    if (info.orientation > PrImageOrientation_Rotate270 || info.frameCount == 0 || info.levelCount == 0 ||
+            info.levelCount > kMaxLevels || info.levels > PrImageLevels_Rip || (!levelExtents && !halving) ||
+            (info.levels == PrImageLevels_Rip && !rip) || (info.levels == PrImageLevels_Mip && info.levelColumns != 1) ||
             !(info.pixelsPerMeter.x >= 0 && info.pixelsPerMeter.x <= 1e30f) ||
             !(info.pixelsPerMeter.y >= 0 && info.pixelsPerMeter.y <= 1e30f) ||
             !packedBytes(info.format, info.extent.x, info.extent.y, &bytes))
@@ -79,6 +88,12 @@ PrStatus validateInfo(const PrImageInfo& info, const PrImageLimits& limits) {
 
 bool hasFrame(const PrImageInfo& info, uint32_t frame) {
     return frame < info.frameCount || (frame == kPrImageFrameCover && info.hasCover);
+}
+
+PrUVec2 levelExtent(const ImageDecoder& data, uint32_t level) {
+    if (data.reader->levelExtentFn != nullptr)
+        return data.reader->levelExtentFn(data.reader, level);
+    return prImageLevelExtent(data.info.extent, level);
 }
 
 } // namespace
@@ -225,7 +240,14 @@ PrStatus prImageDecoderOpen(PrImageDecoder* decoder, PrImageSource source, const
     data->source.stream.size = size;
     status = codec->decoderOpenFn(codec, set, &data->source, &data->limits, &data->reader, &data->info);
     if (usable(status)) {
-        PrStatus validation = validateInfo(data->info, data->limits);
+        // A reader that reports no levels has one, a mip chain of itself.
+        if (data->info.levelCount == 0)
+            data->info.levelCount = 1;
+        if (data->info.levelColumns == 0)
+            data->info.levelColumns = 1;
+        PrStatus validation = PrStatus_InvalidData;
+        if (data->reader != nullptr)
+            validation = validateInfo(data->info, data->limits, data->reader->levelExtentFn != nullptr);
         if (data->reader == nullptr)
             status = PrStatus_InvalidData;
         else if (validation != PrStatus_Ok)
@@ -256,15 +278,30 @@ PrStatus prImageDecoderFrameInfo(PrImageDecoder* decoder, uint32_t frame, PrImag
 }
 
 PrStatus prImageDecoderRead(PrImageDecoder* decoder, uint32_t frame, PrPixels output) {
-    PR_ASSERT(output.extent.x == decoder->info.extent.x && output.extent.y == decoder->info.extent.y);
-    PR_ASSERT(size_t(output.extent.x) * imagePixelBytes(decoder->info.format) <= output.stride);
-    if (!hasFrame(decoder->info, frame))
+    return prImageDecoderReadLevel(decoder, frame, 0, output);
+}
+
+PrUVec2 prImageLevelExtent(PrUVec2 extent, uint32_t level) {
+    const PrUVec2 size{level < 32 ? extent.x >> level : 0, level < 32 ? extent.y >> level : 0};
+    return PrUVec2{size.x != 0 ? size.x : 1, size.y != 0 ? size.y : 1};
+}
+
+PrUVec2 prImageDecoderLevelExtent(const PrImageDecoder* decoder, uint32_t level) {
+    PR_ASSERT(decoder->reader != nullptr && level < decoder->info.levelCount);
+    return levelExtent(*decoder, level);
+}
+
+PrStatus prImageDecoderReadLevel(PrImageDecoder* decoder, uint32_t frame, uint32_t level, PrPixels output) {
+    if (!hasFrame(decoder->info, frame) || level >= decoder->info.levelCount)
         return PrStatus_OutOfRange;
+    const PrUVec2 extent = levelExtent(*decoder, level);
+    PR_ASSERT(output.extent.x == extent.x && output.extent.y == extent.y);
+    PR_ASSERT(size_t(output.extent.x) * imagePixelBytes(decoder->info.format) <= output.stride);
     size_t required = 0;
     packedBytes(decoder->info.format, output.extent.x, output.extent.y, &required);
     if (required > decoder->limits.outputBytes)
         return PrStatus_Limit;
-    return decoder->reader->readFn(decoder->reader, frame, output);
+    return decoder->reader->readFn(decoder->reader, frame, level, output);
 }
 
 PrStatus prImageDecoderReadRgba8(PrImageDecoder* decoder, uint32_t frame, PrImageAlpha alpha,

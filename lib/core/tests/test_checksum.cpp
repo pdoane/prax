@@ -1,7 +1,6 @@
 #include "pr/array.h"
 #include "pr/checksum.h"
 #include "pr/mem.h"
-#include "pr/string.h"
 #include "pr/string_ops.h"
 
 #include "tools/harness/test.h"
@@ -28,27 +27,6 @@ TEST_CASE("CRC-32 and Adler-32 match published check values") {
     CHECK(prAdler32Update(1, bytes("Wikipedia")) == 0x11e60398);
 }
 
-TEST_CASE("SHA-1 matches the digests of rfc 3174 and FIPS 180") {
-    auto hex = [](PrStringView text) {
-        uint8_t digest[kPrSha1Bytes];
-        prSha1Digest(bytes(text), digest);
-        String out;
-        for (uint8_t byte : digest) {
-            out.append("0123456789abcdef"[byte >> 4]);
-            out.append("0123456789abcdef"[byte & 15]);
-        }
-        return out;
-    };
-    CHECK(hex("") == "da39a3ee5e6b4b0d3255bfef95601890afd80709");
-    CHECK(hex("abc") == "a9993e364706816aba3e25717850c26c9cd0d89d");
-    // 56 bytes, whose padding needs a second block.
-    CHECK(hex("abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq") ==
-        "84983e441c3bd26ebaae4aa1f95129e5e54670f1");
-    Array<char> million(1000000);
-    prMemFill(million.data(), 'a', million.count());
-    CHECK(hex(PrStringView(million.data(), million.count())) == "34aa973cd4c4daa4f61eeb2bdbad27316534016f");
-}
-
 TEST_CASE("checksum updates retain state across arbitrary chunk boundaries") {
     Array<uint8_t> data(100000);
     prMemFill(data.data(), 0xff, data.count());
@@ -70,6 +48,40 @@ TEST_CASE("checksum updates retain state across arbitrary chunk boundaries") {
     CHECK(adler == ((slowHigh << 16) | slowLow));
     CHECK(prCrc32Update(crc, {}) == crc);
     CHECK(prAdler32Update(adler, {}) == adler);
+}
+
+TEST_CASE("CRC-32 of long inputs matches the bytewise definition at every length and alignment") {
+    // Lengths past the lanes of a long input, and around the steps of 8, 16 and 64 bytes, from starts that are not
+    // aligned.
+    Array<uint8_t> data(70000);
+    uint32_t state = 7;
+    for (uint8_t& value : data) {
+        state = state * 1103515245u + 12345u;
+        value = uint8_t(state >> 16);
+    }
+    auto slow = [](const uint8_t* bytes, size_t size) {
+        uint32_t crc = 0xffffffffu;
+        for (size_t i = 0; i < size; ++i) {
+            crc ^= bytes[i];
+            for (uint32_t bit = 0; bit < 8; ++bit)
+                crc = (crc & 1) != 0 ? 0xedb88320u ^ (crc >> 1) : crc >> 1;
+        }
+        return ~crc;
+    };
+    const uint32_t sizes[] = {
+        1, 7, 8, 15, 16, 17, 63, 64, 65, 127, 128, 200, 4095, 4096, 4097, 4100, 6000, 65536,
+        69990,
+    };
+    for (uint32_t start = 0; start < 4; ++start) {
+        for (uint32_t size : sizes) {
+            CAPTURE(start);
+            CAPTURE(size);
+            CHECK(prCrc32Update(0, {data.data() + start, size}) == slow(data.data() + start, size));
+        }
+    }
+    // A checksum continued from another, over a long input.
+    const uint32_t first = prCrc32Update(0, {data.data(), 5000});
+    CHECK(prCrc32Update(first, {data.data() + 5000, 60000}) == slow(data.data(), 65000));
 }
 
 TEST_CASE("adler-32 weighs each byte by its distance from the end") {

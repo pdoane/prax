@@ -94,6 +94,23 @@ and Taffy round their results to whole pixels after a layout. The engine does no
 - The other engines' rows are recorded with the engine's, so a comparison of runs shows whether their rows held still,
   which shows whether the machine and the harness did.
 
+## Comparing with other compressors
+
+`compress` and `compress-corpus` run lib/compress's built-in codec, and the format libraries that it adapts (`lib/zstd`,
+`lib/lz4`), beside each format's reference library, which the
+build fetches as a release and links into the harness alone (`tools/bench/compress_bench.cpp`): zlib, Brotli and
+Zstandard, and Apple's libcompression on Apple's platforms. `compress` decodes a stylesheet, a font and a small input,
+and runs on every change. `compress-corpus` runs over the Silesia corpus (`./dev.sh fetch silesia`), and encodes as
+well: each of lib/compress's levels beside the reference's level of the same name, zlib's 1, 6 and 9 and Zstandard's 1,
+3 and 9, with the bytes that each wrote. It also computes CRC-32, Adler-32 and XXH64 beside zlib's and Zstandard's.
+
+- Every engine decodes the same streams, which the reference encoders write. A stream that an encoder writes is
+  decoded by the other side before it is measured, so a row is only measured once both agree.
+- The streams of the slowest reference encoders, Brotli's quality 11 above all, take minutes over the corpus, so they
+  are kept under the build (`compress_streams`) and written once.
+- The rows named `all <case>` are each engine's totals over the corpus. Engines compare on cycles, as other engines do
+  (above), and a row's `bytes` gives its throughput. An encode row's `size` is what it wrote.
+
 ## Comparing with other terminals
 
 The `vterm` benchmark compares `lib/vterm` with libvterm, which the build fetches as a release. Both engines are

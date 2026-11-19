@@ -701,6 +701,7 @@ WRAPPERS = {
     "lib/core/platform/apple/tests/test_apple_string.mm": {"Foundation/Foundation.h"},
     "lib/core/platform/windows/src/windows_string.cpp": {"windows.h"},
     "lib/core/quickjs_cpp/src/quickjs_callback.cpp": {"stdio.h"},
+    "lib/core/src/checksum.cpp": {"arm_acle.h", "immintrin.h"},
     "lib/draw/comparisons/coregraphics/src/draw_coregraphics.cpp": {"CoreGraphics/CoreGraphics.h",
                                                                     "CoreText/CoreText.h"},
     "lib/font/backends/coretext/src/font_coretext.cpp": {"CoreText/CoreText.h"},
@@ -2316,6 +2317,11 @@ THIRD_PARTY = {
     "vterm.h": ("tools/bench/vterm_bench/libvterm_engine.cpp",),
     "cmark-gfm.h": ("tools/suite/markdown/cmark_gfm_reference.cpp",),
     "cmark-gfm-core-extensions.h": ("tools/suite/markdown/cmark_gfm_reference.cpp",),
+    "zstd.h": ("tools/suite/zstd/tests/*.cpp", "tools/bench/compress_bench.cpp"),
+    "zlib.h": ("tools/bench/compress_bench.cpp",),
+    "brotli/decode.h": ("tools/bench/compress_bench.cpp",),
+    "brotli/encode.h": ("tools/bench/compress_bench.cpp",),
+    "common/xxhash.h": ("tools/bench/compress_bench.cpp",),
     "hb.h": ("lib/text/backends/harfbuzz/src/text_harfbuzz.cpp",),
     "tree_sitter/api.h": ("lib/syntax/backends/treesitter/src/syntax_treesitter.cpp",),
     "freetype/freetype.h": ("lib/font/backends/freetype/src/font_freetype.cpp", "lib/font/tests/test_font.cpp",
@@ -2573,9 +2579,14 @@ def check_private_includes(report, path, text):
             continue
         report.add(path, line_of(text, match.start()), "private-include",
                    "%s reaches into %s's implementation; include its public headers" % (relative, module[:-1]))
-    # A module's tests are as private as its implementation, with no library that shares them.
+    # A module's tests are as private as its implementation, with no library that shares them, except that a codec's
+    # tests read the fixtures of the format library that it adapts: lib/<interface>/backends/<format>/tests reads
+    # lib/<format>/tests.
+    codec = re.match(r"lib/\w+/backends/(\w+)/tests/", relative)
     for match in re.finditer(r'^#include "((?:[\w]+/)+?)tests/[^"]+"', text, re.M):
         module = "lib/" + match.group(1)
+        if codec is not None and module == "lib/%s/" % codec.group(1):
+            continue
         if not relative.startswith(module):
             report.add(path, line_of(text, match.start()), "private-include",
                        "%s reaches into %s's tests; what they share with others belongs in tools" % (relative,
@@ -2691,13 +2702,13 @@ def check_backend_includes(report, path, text):
     """A backend reaches its interface, and every other module, through the public API. It includes public headers,
     which include core's C++ layer, never another module's implementation, except what its interface's backends share
     (lib/<interface>/backends/shared). A backend's tests also reach what its interface's tests share with them
-    (lib/<interface>/tests), as the interface's own tests run on every backend, and what every test shares
-    (tools/harness)."""
+    (lib/<interface>/tests), as the interface's own tests run on every backend, the fixtures of the format library
+    that a codec adapts (lib/<format>/tests), and what every test shares (tools/harness)."""
     own = backend_of(path)[len("lib/"):] + "/"
     interface = own.split("/")[0]
     allowed = ("pr/", own, interface + "/backends/shared/")
     if "/tests/" in os.path.relpath(path, ROOT).replace(os.sep, "/"):
-        allowed += (interface + "/tests/", "tools/harness/")
+        allowed += (interface + "/tests/", own.split("/")[2] + "/tests/", "tools/harness/")
     for match in re.finditer(r'^#include "([^"]+)"', text, re.M):
         header = match.group(1)
         if not (header.startswith(allowed) or header in THIRD_PARTY):
@@ -2789,7 +2800,7 @@ TAGS = {
     "lib/core": ("Adler32", "Ascii", "Base64", "Blob", "ByteView", "Condition", "Core", "Crash", "Crc32", "DateTime",
                  "DVec2", "Environment", "F32", "F64", "Fail", "File", "Float16", "Hash", "IVec2", "Mem", "Memory",
                  "Mutex", "Pixel", "Pixels", "Random", "RawString", "Resource", "Sha1", "Status", "String",
-                 "TextBuffer", "Thread", "Time", "U64", "UVec2", "Utf8", "Vec2", "Vec3", "Vmem"),
+                 "TextBuffer", "Thread", "Time", "U64", "UVec2", "Utf8", "Vec2", "Vec3", "Vmem", "Xxh64"),
     "lib/geom": ("Affine2", "Affine4", "Corner", "DAffine2", "DMatrix3", "DMatrix4", "IRect", "Matrix3", "Matrix4",
                  "Rect"),
     "lib/locale": ("Language", "Locale", "Region", "Script"),
@@ -2916,6 +2927,7 @@ def check_function_names(report, paths, texts):
 FORMAT_WORDS = {
     "lib/font": ("sfnt", "cff", "colr", "glyf", "hvgl", "woff"),
     "lib/image": ("png", "gif", "jpeg", "ico", "tiff", "emjc"),
+    "lib/webp": ("vp8", "vp8l"),
     "lib/compress": ("inflate", "deflate", "brotli", "lzfse"),
 }
 

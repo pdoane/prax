@@ -1,4 +1,4 @@
-// ZIP archives: the files in an archive in memory, read through a compression backend.
+// ZIP archives: the files in an archive in memory, read through a set of compression codecs.
 
 #include "pr/zip.h"
 
@@ -29,7 +29,7 @@ struct ZipRecord {
 };
 
 struct ZipArchive {
-    const PrCompressCodecSet* compress;
+    const PrCompressCodecSet* PR_NULLABLE compress;
     PrByteView bytes;
     RawArray<ZipRecord> records;
 };
@@ -136,7 +136,7 @@ using namespace pr_impl;
 // C opaque types
 struct PrZip : ZipArchive {};
 
-PrZip* prZipCreate(const PrCompressCodecSet* compress) {
+PrZip* prZipCreate(const PrCompressCodecSet* PR_NULLABLE compress) {
     PrZip* z = allocZeroed<PrZip>();
     z->compress = compress;
     return z;
@@ -180,19 +180,31 @@ uint32_t prZipFind(const PrZip* archive, PrStringView name) {
     return archive->records.count;
 }
 
-PrStatus prZipRead(const PrZip* archive, uint32_t index, uint8_t* PR_NULLABLE out, size_t capacity) {
+PrStatus prZipEntryData(const PrZip* archive, uint32_t index, PrByteView* out) {
+    PR_ASSERT(index < archive->records.count);
+    *out = PrByteView{};
     const ZipRecord& record = archive->records.data[index];
-    PrZipMethod method = record.entry.method;
-    if (record.entry.encrypted || (method != PrZipMethod_Stored && method != PrZipMethod_Deflated))
-        return PrStatus_NotSupported;
-    PR_ASSERT(capacity >= record.entry.size);
     const uint8_t* b = archive->bytes.data;
     if (!inside(*archive, record.local, kLocalSize) || read32(b + record.local) != kLocalEntry)
         return PrStatus_InvalidData;
     uint64_t data = record.local + kLocalSize + read16(b + record.local + 26) + read16(b + record.local + 28);
     if (!inside(*archive, data, record.entry.compressedSize))
         return PrStatus_InvalidData;
-    PrByteView input{b + data, size_t(record.entry.compressedSize)};
+    *out = PrByteView{b + data, size_t(record.entry.compressedSize)};
+    return PrStatus_Ok;
+}
+
+PrStatus prZipRead(const PrZip* archive, uint32_t index, uint8_t* PR_NULLABLE out, size_t capacity) {
+    const ZipRecord& record = archive->records.data[index];
+    PrZipMethod method = record.entry.method;
+    if (record.entry.encrypted || (method != PrZipMethod_Stored && method != PrZipMethod_Deflated))
+        return PrStatus_NotSupported;
+    if (method == PrZipMethod_Deflated && archive->compress == nullptr)
+        return PrStatus_NotSupported;
+    PR_ASSERT(capacity >= record.entry.size);
+    PrByteView input{};
+    if (prZipEntryData(archive, index, &input) != PrStatus_Ok)
+        return PrStatus_InvalidData;
     if (record.entry.method == PrZipMethod_Stored) {
         if (record.entry.compressedSize != record.entry.size)
             return PrStatus_InvalidData;

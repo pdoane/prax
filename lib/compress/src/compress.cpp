@@ -79,18 +79,18 @@ void prCompressCodecSetDestroy(PrCompressCodecSet* PR_NULLABLE set) {
 }
 
 bool prCompressCodecSetDecodes(const PrCompressCodecSet* set, PrCompressFormat format) {
-    PR_ASSERT(format <= PrCompressFormat_Lzfse);
+    PR_ASSERT(format < PrCompressFormat_Count);
     return decoderOf(*set, format) != nullptr;
 }
 
 bool prCompressCodecSetEncodes(const PrCompressCodecSet* set, PrCompressFormat format) {
-    PR_ASSERT(format <= PrCompressFormat_Lzfse);
+    PR_ASSERT(format < PrCompressFormat_Count);
     return encoderOf(*set, format) != nullptr;
 }
 
 PrStatus prCompressDecoderCreate(const PrCompressCodecSet* set, PrCompressFormat format,
         PrCompressDecoder* PR_NULLABLE* PR_NONNULL out) {
-    PR_ASSERT(format <= PrCompressFormat_Lzfse);
+    PR_ASSERT(format < PrCompressFormat_Count);
     *out = nullptr;
     const PrCompressCodec* codec = decoderOf(*set, format);
     if (codec == nullptr)
@@ -107,6 +107,15 @@ PrStatus prCompressDecoderCreate(const PrCompressCodecSet* set, PrCompressFormat
 void prCompressDecoderDestroy(PrCompressDecoder* PR_NULLABLE decoder) {
     if (decoder != nullptr)
         decoder->destroyFn(decoder);
+}
+
+void prCompressDecoderReset(PrCompressDecoder* decoder) {
+    decoder->resetFn(decoder);
+}
+
+void prCompressDecoderSetWindowLimit(PrCompressDecoder* decoder, size_t limit) {
+    if (decoder->setWindowLimitFn != nullptr)
+        decoder->setWindowLimitFn(decoder, limit);
 }
 
 PrStatus prCompressDecoderRead(PrCompressDecoder* decoder, PrByteView input, bool final,
@@ -130,7 +139,7 @@ PrStatus prCompressCodecSetDecode(const PrCompressCodecSet* set, PrCompressForma
 }
 
 size_t prCompressCodecSetEncodeBound(const PrCompressCodecSet* set, PrCompressFormat format, size_t size) {
-    PR_ASSERT(format <= PrCompressFormat_Lzfse);
+    PR_ASSERT(format < PrCompressFormat_Count);
     const PrCompressCodec* codec = encoderOf(*set, format);
     if (codec == nullptr)
         return 0;
@@ -141,7 +150,7 @@ size_t prCompressCodecSetEncodeBound(const PrCompressCodecSet* set, PrCompressFo
 
 PrStatus prCompressCodecSetEncode(const PrCompressCodecSet* set, PrCompressFormat format, PrCompressLevel level,
         PrByteView input, uint8_t* output, size_t* written) {
-    PR_ASSERT(format <= PrCompressFormat_Lzfse && level <= PrCompressLevel_Small);
+    PR_ASSERT(format < PrCompressFormat_Count && level < PrCompressLevel_Count);
     PR_ASSERT(input.data != nullptr || input.size == 0);
     *written = 0;
     const PrCompressCodec* codec = encoderOf(*set, format);

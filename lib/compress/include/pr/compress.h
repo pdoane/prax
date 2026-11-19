@@ -36,6 +36,9 @@ enum {
     PrCompressFormat_Gzip,      // Deflate framed as gzip, whose members decode as one stream
     PrCompressFormat_Brotli,    // Brotli (rfc 7932)
     PrCompressFormat_Lzfse,     // LZFSE, Apple's LZ77 with finite state entropy coding, and its LZVN blocks
+    PrCompressFormat_Lz4,       // one LZ4 block, without a frame: it ends where its input ends, and has no checksum
+    PrCompressFormat_Zstd,      // Zstandard (rfc 8878): frames, whose contents decode as one stream
+    PrCompressFormat_Count,
 };
 typedef uint8_t PrCompressFormat;
 
@@ -44,6 +47,7 @@ enum {
     PrCompressLevel_Fast,
     PrCompressLevel_Default,
     PrCompressLevel_Small,
+    PrCompressLevel_Count,
 };
 typedef uint8_t PrCompressLevel;
 
@@ -93,6 +97,17 @@ PrStatus prCompressDecoderCreate(const PrCompressCodecSet* set, PrCompressFormat
 
 // Frees the decoder.
 void prCompressDecoderDestroy(PrCompressDecoder* PR_NULLABLE decoder);
+
+// Starts a new stream in the decoder's format, keeping its storage and its window limit, so that one decoder decodes
+// many streams without making its state again.
+void prCompressDecoderReset(PrCompressDecoder* decoder);
+
+// Holds the stream's window, the output that its matches may reach back over and that the decoder keeps, to `limit`
+// bytes: a stream that names a larger window is InvalidData, so that a stream cannot make the decoder take more memory
+// than its caller allows. It is set before the first read, and stays across resets. Zstandard's window is the stream's
+// to choose, up to 128M by default, as the reference decoder's is. Every other format bounds its own: Deflate's at 32K,
+// Brotli's at 16M, and LZFSE's and LZ4's at their block, and the limit does not change them.
+void prCompressDecoderSetWindowLimit(PrCompressDecoder* decoder, size_t limit);
 
 // Decodes as much of `input` as it can into up to `capacity` bytes at `output`, and writes the result to `*out`.
 // `final` means no input follows `input`.

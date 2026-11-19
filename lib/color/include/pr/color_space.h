@@ -5,6 +5,7 @@
 
 #include "pr/base.h"
 #include "pr/color.h"
+#include "pr/geom.h"
 #include "pr/raw_string.h"
 #include "pr/string_view.h"
 
@@ -50,6 +51,27 @@ PrColor prColorFromHwb(double hue, double whiteness, double blackness, double al
 // to D50, and the other spaces to D65, with Bradford adaptation between the two. A hue is 0 if the chroma leaves it
 // undefined. `in` and `out` may be the same.
 void prColorConvert(PrColorSpace from, PrColorSpace to, const double in[PR_NONNULL 3], double out[PR_NONNULL 3]);
+
+// Returns the chromaticities of `primaries`.
+PrColorChromaticities prColorPrimariesChromaticities(PrColorPrimaries primaries);
+
+// Returns the primaries of the RGB space `space`, or PrColorPrimaries_Count if `space` is not RGB. The Rec2100 spaces
+// have Rec2020's.
+PrColorPrimaries prColorSpacePrimaries(PrColorSpace space);
+
+// Returns the primaries whose chromaticities each lie within `tolerance` of those of `chromaticities` in x and in y, or
+// PrColorPrimaries_Count if none do.
+PrColorPrimaries prColorPrimariesFromChromaticities(const PrColorChromaticities* chromaticities, float tolerance);
+
+// Writes the matrix that converts the linear RGB of `chromaticities` to CIE XYZ relative to their own white, which it
+// takes to XYZ with a Y of 1. Its middle row is the luminance of each primary. Returns false, and writes nothing, for
+// chromaticities that are not finite, whose white has no luminance, or whose primaries are collinear in xy.
+bool prColorChromaticitiesToXyz(const PrColorChromaticities* chromaticities, PrDMatrix3* out);
+
+// Writes the matrix that converts the linear RGB of `from` to the linear RGB of `to`, adapting the white of `from` to
+// that of `to` by the Bradford transform. Returns false, and writes nothing, if either is degenerate as
+// prColorChromaticitiesToXyz describes.
+bool prColorChromaticitiesMatrix(const PrColorChromaticities* from, const PrColorChromaticities* to, PrDMatrix3* out);
 
 // Returns the color for a display of `headroom` stops: the first color at or below the first color's headroom, the
 // second at or above the second's, and between them the two colors' weighted geometric mean in absolute XYZ, with SDR

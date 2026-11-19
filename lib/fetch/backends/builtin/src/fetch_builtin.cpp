@@ -797,6 +797,20 @@ bool lookUp(BuiltinFetch* fetch, const RawArray<PrFetchHeader>& sent) {
     return answered;
 }
 
+// A content coding (rfc 9110 8.4.1), and the format of its stream.
+struct FetchCoding {
+    PrStringView name;
+    PrCompressFormat format;
+};
+
+// The content codings that a fetch decodes, in the order that a request names them.
+constexpr FetchCoding kCodings[] = {
+    {"gzip", PrCompressFormat_Gzip},
+    {"deflate", PrCompressFormat_Zlib},
+    {"br", PrCompressFormat_Brotli},
+    {"zstd", PrCompressFormat_Zstd},
+};
+
 // Sends the fetch's request for `current`, its current URL, or answers it from the cache.
 void request(BuiltinFetch* fetch, const PrUrl* current) {
     BuiltinFetcher* fetcher = fetcherOf(fetch);
@@ -812,8 +826,18 @@ void request(BuiltinFetch* fetch, const PrUrl* current) {
     if (headersFind(&fetch->sent, "accept").data == nullptr)
         headersAdd(&fetch->sent, "Accept", acceptOf(fetch->destination));
     if (headersFind(&fetch->sent, "accept-encoding").data == nullptr && fetcher->compress != nullptr) {
-        bool brotli = prCompressCodecSetDecodes(fetcher->compress, PrCompressFormat_Brotli);
-        headersAdd(&fetch->sent, "Accept-Encoding", brotli ? "gzip, deflate, br" : "gzip, deflate");
+        // The codings that the set decodes, of those that chooseDecoder knows.
+        PrTextBuffer codings{};
+        for (const FetchCoding& coding : kCodings) {
+            if (!prCompressCodecSetDecodes(fetcher->compress, coding.format))
+                continue;
+            if (codings.size != 0)
+                prTextBufferAppend(&codings, ", ");
+            prTextBufferAppend(&codings, coding.name);
+        }
+        if (codings.size != 0)
+            headersAdd(&fetch->sent, "Accept-Encoding", prTextBufferView(&codings));
+        prTextBufferReset(&codings);
     }
     RawArray<PrFetchHeader> sent{};
     headersView(&fetch->sent, &sent);
@@ -855,9 +879,15 @@ void chooseDecoder(BuiltinFetch* fetch) {
         format = PrCompressFormat_Zlib;
     else if (prAsciiEqualsFold(coding, "br"))
         format = PrCompressFormat_Brotli;
+    else if (prAsciiEqualsFold(coding, "zstd"))
+        format = PrCompressFormat_Zstd;
     else
         return;
     prCompressDecoderCreate(fetcher->compress, format, &fetch->decoder);
+    // A zstd content coding's window is at most 8 MB (rfc 9659 3), which bounds what a response can make the decoder
+    // keep.
+    if (fetch->decoder != nullptr && format == PrCompressFormat_Zstd)
+        prCompressDecoderSetWindowLimit(fetch->decoder, size_t(8) << 20);
 }
 
 // Answers a revalidation that the server answered with 304. The cached entry takes the 304's headers in place of its

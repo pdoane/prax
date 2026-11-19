@@ -8,11 +8,28 @@ target_link_libraries(image_bench PRIVATE prax::compress_select prax::image_sele
 # ./dev.sh bench numbers runs.
 pr_harness(number_bench prax::core_cpp number_bench.cpp)
 
-# What decoding a compressed stream costs in lib/compress's built-in codec and, on Apple's platforms, in
-# libcompression, which ./dev.sh bench compress runs.
+# The reference libraries of Deflate and Brotli, which compress_bench compares lib/compress with, built from their
+# sources for the development build alone: zlib without its gzip file functions, and Brotli's decoder and encoder.
+# Zstandard's is tools/suite/zstd's.
+pr_dependency_available(zlib brotli)
+add_library(zlib_reference STATIC
+    ${zlib_SOURCE_DIR}/adler32.c ${zlib_SOURCE_DIR}/compress.c ${zlib_SOURCE_DIR}/crc32.c ${zlib_SOURCE_DIR}/deflate.c
+    ${zlib_SOURCE_DIR}/infback.c ${zlib_SOURCE_DIR}/inffast.c ${zlib_SOURCE_DIR}/inflate.c
+    ${zlib_SOURCE_DIR}/inftrees.c ${zlib_SOURCE_DIR}/trees.c ${zlib_SOURCE_DIR}/uncompr.c ${zlib_SOURCE_DIR}/zutil.c)
+target_include_directories(zlib_reference SYSTEM PUBLIC ${zlib_SOURCE_DIR})
+file(GLOB brotli_sources ${brotli_SOURCE_DIR}/c/common/*.c ${brotli_SOURCE_DIR}/c/dec/*.c ${brotli_SOURCE_DIR}/c/enc/*.c)
+add_library(brotli_reference STATIC ${brotli_sources})
+target_include_directories(brotli_reference SYSTEM PUBLIC ${brotli_SOURCE_DIR}/c/include)
+pr_third_party(zlib_reference brotli_reference)
+
+# What decoding and encoding cost in lib/compress's built-in codec, beside the reference libraries and, on Apple's
+# platforms, libcompression, which ./dev.sh bench compress and compress-corpus run.
 pr_harness(compress_bench prax::compress compress_bench.cpp)
+target_link_libraries(compress_bench PRIVATE prax::compress_select zlib_reference brotli_reference zstd_reference)
+# zlib's input is const, as its streams only read it.
+target_compile_definitions(compress_bench PRIVATE ZLIB_CONST)
 if (APPLE)
-    target_link_libraries(compress_bench PRIVATE prax::compress_select compression)
+    target_link_libraries(compress_bench PRIVATE compression)
 endif()
 
 # What formatting costs with pr/format.h's format strings and with the standard library's <format>, which ./dev.sh

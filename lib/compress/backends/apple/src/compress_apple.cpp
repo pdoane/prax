@@ -20,9 +20,22 @@ struct AppleCodec : PrCompressCodec {
 
 struct AppleDecoder : PrCompressDecoder {
     compression_stream stream;
+    compression_algorithm algorithm;
     bool done;
     bool failed;
 };
+
+// Returns the library's algorithm of the bare `format`, which the library codes. Its "zlib" is bare Deflate.
+compression_algorithm algorithmOf(PrCompressFormat format) {
+    switch (format) {
+        case PrCompressFormat_Deflate: return COMPRESSION_ZLIB;
+        case PrCompressFormat_Brotli: return COMPRESSION_BROTLI;
+        case PrCompressFormat_Lzfse: return COMPRESSION_LZFSE;
+        default: break;
+    }
+    PR_ASSERT(false && "a format that the library codes");
+    return COMPRESSION_LZFSE;
+}
 
 void destroyCodec(PrCompressCodec* codec) {
     prMemoryFree(static_cast<AppleCodec*>(codec));
@@ -36,6 +49,15 @@ void destroyDecoder(PrCompressDecoder* decoder) {
     AppleDecoder* apple = static_cast<AppleDecoder*>(decoder);
     compression_stream_destroy(&apple->stream);
     prMemoryFree(apple);
+}
+
+// Starts a new stream with a new stream of the library's, which has no reset of its own.
+void reset(PrCompressDecoder* decoder) {
+    AppleDecoder* apple = static_cast<AppleDecoder*>(decoder);
+    compression_stream_destroy(&apple->stream);
+    apple->failed = compression_stream_init(&apple->stream, COMPRESSION_STREAM_DECODE, apple->algorithm) !=
+        COMPRESSION_STATUS_OK;
+    apple->done = false;
 }
 
 PrStatus read(PrCompressDecoder* decoder, PrByteView input, bool final, uint8_t* PR_NULLABLE output, size_t capacity,
@@ -97,7 +119,9 @@ PrStatus createDecoder(const PrCompressCodec* codec, PrCompressFormat, PrCompres
         return PrStatus_NotSupported;
     }
     decoder->destroyFn = destroyDecoder;
+    decoder->resetFn = reset;
     decoder->readFn = read;
+    decoder->algorithm = static_cast<const AppleCodec*>(codec)->algorithm;
     // Given more input than its stream holds, the library reads past the stream's end.
     decoder->readsPastEnd = true;
     *out = decoder;
@@ -152,10 +176,6 @@ PrCompressCodec* prCompressAppleCreate(PrCompressFormat format) {
     codec->encodeBoundFn = encodeBound;
     codec->encodeFn = encode;
     codec->format = format;
-    switch (format) {
-        case PrCompressFormat_Deflate: codec->algorithm = COMPRESSION_ZLIB; break;
-        case PrCompressFormat_Brotli: codec->algorithm = COMPRESSION_BROTLI; break;
-        default: codec->algorithm = COMPRESSION_LZFSE; break;
-    }
+    codec->algorithm = algorithmOf(format);
     return codec;
 }

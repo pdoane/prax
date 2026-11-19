@@ -124,7 +124,7 @@ struct FakeCodec {
         return PrStatus_Ok;
     }
 
-    static PrStatus decode(PrImageReader* reader, uint32_t, PrPixels output) {
+    static PrStatus decode(PrImageReader* reader, uint32_t, uint32_t, PrPixels output) {
         ++static_cast<FakeReader*>(reader)->fake->decodes;
         for (uint32_t y = 0; y < output.extent.y; ++y) {
             for (uint32_t x = 0; x < output.extent.x; ++x) {

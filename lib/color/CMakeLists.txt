@@ -4,7 +4,7 @@ pr_library(color INCLUDE include
     src/color_profile.cpp
     src/color_space.cpp
 )
-target_link_libraries(pr_color PUBLIC prax::core PRIVATE prax::core_cpp prax::geom)
+target_link_libraries(pr_color PUBLIC prax::core prax::geom PRIVATE prax::core_cpp)
 
 if (PR_DEVELOP)
     pr_module_tests(color

@@ -128,10 +128,11 @@ set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
 # that depends on it.
 set(CMAKE_LINK_LIBRARIES_STRATEGY REORDER_FREELY)
 
-# An x86-64 build targets x86-64-v3, whose F16C converts a half float in an instruction, as arm64 does. Every target
-# builds for it, the third-party ones included.
+# An x86-64 build targets x86-64-v3, whose F16C converts a half float in an instruction, as arm64 does, and the
+# carry-less multiplication that every processor of that level has, which CRC-32 folds with. Every target builds for it,
+# the third-party ones included. MSVC's intrinsics need no option.
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64")
-    add_compile_options($<IF:$<C_COMPILER_ID:MSVC>,/arch:AVX2,-march=x86-64-v3>)
+    add_compile_options($<IF:$<C_COMPILER_ID:MSVC>,/arch:AVX2,-march=x86-64-v3> $<$<NOT:$<C_COMPILER_ID:MSVC>>:-mpclmul>)
 endif()
 
 # MSVC reads sources as UTF-8, preprocesses as the standard says, and lets an object hold more sections than its

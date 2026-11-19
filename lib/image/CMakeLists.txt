@@ -17,19 +17,26 @@ target_sources(pr_image PRIVATE
 # Prax's own codecs, one for each format, which the build includes together.
 pr_backend(image builtin INCLUDE backends/png/include SOURCES
     backends/emjc/src/image_emjc.cpp
+    backends/exr/src/image_exr.cpp
     backends/gif/src/image_gif.cpp
+    backends/hdr/src/image_hdr.cpp
     backends/ico/src/image_ico.cpp
     backends/jpeg/src/image_jpeg.cpp
     backends/png/src/image_png.cpp
     backends/tiff/src/image_tiff.cpp
+    backends/webp/src/image_webp.cpp
 )
 if (PR_IMAGE_BUILTIN)
     pr_headers(pr_image PUBLIC backends/emjc/include)
+    pr_headers(pr_image PUBLIC backends/exr/include)
     pr_headers(pr_image PUBLIC backends/gif/include)
+    pr_headers(pr_image PUBLIC backends/hdr/include)
     pr_headers(pr_image PUBLIC backends/ico/include)
     pr_headers(pr_image PUBLIC backends/jpeg/include)
     pr_headers(pr_image PUBLIC backends/tiff/include)
-    target_link_libraries(pr_image PRIVATE prax::emjc prax::gif prax::ico prax::jpeg prax::png prax::tiff)
+    pr_headers(pr_image PUBLIC backends/webp/include)
+    target_link_libraries(pr_image PRIVATE prax::emjc prax::exr prax::gif prax::hdr prax::ico prax::jpeg prax::png
+                                           prax::tiff prax::webp)
 endif()
 
 # The codec of Apple's ImageIO, which a program chooses over Prax's own for a format.
@@ -50,11 +57,14 @@ if (PR_DEVELOP)
         backends/shared/tests/test_image_codecs.cpp
         backends/shared/tests/test_image_codecs_c.c
         backends/emjc/tests/test_image_emjc.cpp
+        backends/exr/tests/test_image_exr.cpp
         backends/gif/tests/test_image_gif.cpp
+        backends/hdr/tests/test_image_hdr.cpp
         backends/ico/tests/test_image_ico.cpp
         backends/jpeg/tests/test_image_jpeg.cpp
         backends/png/tests/test_image_png.cpp
         backends/tiff/tests/test_image_tiff.cpp
+        backends/webp/tests/test_image_webp.cpp
     )
     target_link_libraries(image_tests PRIVATE harness_codecs prax::color prax::compress)
     if (PR_IMAGE_IMAGEIO)

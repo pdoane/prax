@@ -14,13 +14,17 @@ extern "C" {
 
 // The functions of a reader's backend, at the start of its state: an open image, which the codec's `decoderOpenFn`
 // creates. `closeFn` implements prImageDecoderClose and frees the reader, `frameInfoFn` implements
-// prImageDecoderFrameInfo, and `readFn` implements prImageDecoderRead, decoding into pixels of the format and extent
-// that the reader reported. A reader may keep the source and the limits that it was opened with until it is closed, and
-// it enforces the limits.
+// prImageDecoderFrameInfo, and `readFn` implements prImageDecoderReadLevel, decoding into pixels of the format that the
+// reader reported and of the extent of the level. A reader may keep the source and the limits that it was opened with
+// until it is closed, and it enforces the limits. A reader that reports no levels has one.
+//
+// `levelExtentFn` gives the extent of each level of a reader whose levels do not each halve the one before, rounded
+// down, and is null for any other.
 struct PrImageReader {
     void (*closeFn)(PrImageReader* reader);
     PrStatus (*frameInfoFn)(PrImageReader* reader, uint32_t frame, PrImageFrameInfo* info);
-    PrStatus (*readFn)(PrImageReader* reader, uint32_t frame, PrPixels output);
+    PrStatus (*readFn)(PrImageReader* reader, uint32_t frame, uint32_t level, PrPixels output);
+    PrUVec2 (*PR_NULLABLE levelExtentFn)(const PrImageReader* reader, uint32_t level);
 };
 
 // The functions of a codec's backend, at the start of its state. A null `destroyFn` means that there is nothing to

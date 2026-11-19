@@ -23,17 +23,18 @@ enum {
 };
 typedef uint8_t PrCompressCodecBackend;
 
-// Returns the descriptor of the codecs of the bare `format`: Deflate, Brotli or LZFSE. The environment chooses one with
-// PR_BACKEND_COMPRESS_DEFLATE, PR_BACKEND_COMPRESS_BROTLI or PR_BACKEND_COMPRESS_LZFSE.
+// Returns the descriptor of the codecs of the bare `format`: Deflate, Brotli, LZFSE, LZ4 or Zstandard. The environment
+// chooses one with PR_BACKEND_COMPRESS_<FORMAT>, such as PR_BACKEND_COMPRESS_DEFLATE.
 const PrBackendInterface* prCompressCodecSelectInterface(PrCompressFormat format);
 
 // Creates a codec of the bare `format` with `backend`. Default is the backend that the format's variable chooses, or
 // else Prax's own, so that a program codes each format the same way on every platform. Returns null if the build does
-// not include the backend. For Default, it also returns null if the variable is not valid (prBackendFromEnvironment).
+// not include the backend, or the backend does not code the format, as Apple's codes no LZ4 or Zstandard. For Default,
+// it also returns null if the variable is not valid (prBackendFromEnvironment).
 PrCompressCodec* PR_NULLABLE prCompressCodecCreate(PrCompressCodecBackend backend, PrCompressFormat format);
 
-// Creates a set of a codec of each bare format, Deflate, Brotli and LZFSE, with its Default backend, leaving out a
-// format that no backend of the build codes. Returns null if a variable is not valid.
+// Creates a set of a codec of each bare format, with its Default backend, leaving out a format that no backend of the
+// build codes. Returns null if a variable is not valid.
 PrCompressCodecSet* PR_NULLABLE prCompressCodecSetCreateDefault(void);
 
 #if defined(__cplusplus)

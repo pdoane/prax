@@ -16,6 +16,7 @@ pr_library(core INCLUDE include
     src/random.cpp
     src/status.cpp
     src/raw_string.cpp
+    src/sha1.cpp
     src/text_buffer.cpp
     src/thread.cpp
     src/time.cpp
@@ -23,6 +24,7 @@ pr_library(core INCLUDE include
     src/utf8.cpp
     src/vec.cpp
     src/vmem.cpp
+    src/xxh64.cpp
 )
 # Every implementation includes internal headers by their path under lib, as "<module>/src/<name>.h".
 target_include_directories(pr_core PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/lib>)
@@ -233,11 +235,13 @@ if (PR_DEVELOP)
         tests/test_random.cpp
         tests/test_resource.cpp
         tests/test_raw_string.cpp
+        tests/test_sha1.cpp
         tests/test_string_ops.cpp
         tests/test_string_view.cpp
         tests/test_thread.cpp
         tests/test_date_time.cpp
         tests/test_utf8.cpp
+        tests/test_xxh64.cpp
     )
     target_compile_definitions(core_tests PRIVATE PR_CORE_TEST_DIR="${CMAKE_CURRENT_BINARY_DIR}/core_tests_files")
     pr_resources(core_tests ${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures@fixtures)

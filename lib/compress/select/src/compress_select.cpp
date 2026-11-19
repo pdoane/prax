@@ -3,10 +3,13 @@
 #include "pr/compress_select.h"
 
 #include "pr/assert.h"
+#include "pr/count_of.h"
 #if defined(PR_COMPRESS_HAS_BUILTIN)
 #include "pr/compress_brotli.h"
 #include "pr/compress_deflate.h"
+#include "pr/compress_lz4.h"
 #include "pr/compress_lzfse.h"
+#include "pr/compress_zstd.h"
 #endif
 #if defined(PR_COMPRESS_HAS_APPLE)
 #include "pr/compress_apple.h"
@@ -36,16 +39,28 @@ constexpr PrBackendInterface kDeflate{.name = "compress_deflate", .names = kName
 constexpr PrBackendInterface kBrotli{.name = "compress_brotli", .names = kNames, .count = 3, .built = kBuilt};
 constexpr PrBackendInterface kLzfse{.name = "compress_lzfse", .names = kNames, .count = 3, .built = kBuilt};
 
+// LZ4 and Zstandard have only Prax's codecs.
+constexpr uint64_t kBuiltinOnly = kBuilt & (1u << PrCompressCodecBackend_Builtin);
+constexpr PrBackendInterface kLz4{.name = "compress_lz4", .names = kNames, .count = 3, .built = kBuiltinOnly};
+constexpr PrBackendInterface kZstd{.name = "compress_zstd", .names = kNames, .count = 3, .built = kBuiltinOnly};
+
 // The bare formats, in the order of a set of every format.
-constexpr PrCompressFormat kBare[] = {PrCompressFormat_Deflate, PrCompressFormat_Brotli, PrCompressFormat_Lzfse};
+constexpr PrCompressFormat kBare[] = {
+    PrCompressFormat_Deflate, PrCompressFormat_Brotli, PrCompressFormat_Lzfse, PrCompressFormat_Lz4,
+    PrCompressFormat_Zstd,
+};
 
 #if defined(PR_COMPRESS_HAS_BUILTIN)
-PrCompressCodec* createBuiltin(PrCompressFormat format) {
+PrCompressCodec* PR_NULLABLE createBuiltin(PrCompressFormat format) {
     switch (format) {
         case PrCompressFormat_Deflate: return prCompressDeflateCreate();
         case PrCompressFormat_Brotli: return prCompressBrotliCreate();
-        default: return prCompressLzfseCreate();
+        case PrCompressFormat_Lzfse: return prCompressLzfseCreate();
+        case PrCompressFormat_Lz4: return prCompressLz4Create();
+        case PrCompressFormat_Zstd: return prCompressZstdCreate();
     }
+    PR_ASSERT(false && "a bare format");
+    return nullptr;
 }
 #endif
 
@@ -68,10 +83,12 @@ const PrBackendInterface* prCompressCodecSelectInterface(PrCompressFormat format
     switch (format) {
         case PrCompressFormat_Deflate: return &kDeflate;
         case PrCompressFormat_Brotli: return &kBrotli;
-        default:
-            PR_ASSERT(format == PrCompressFormat_Lzfse);
-            return &kLzfse;
+        case PrCompressFormat_Lzfse: return &kLzfse;
+        case PrCompressFormat_Lz4: return &kLz4;
+        case PrCompressFormat_Zstd: return &kZstd;
     }
+    PR_ASSERT(false && "a bare format");
+    return &kDeflate;
 }
 
 PrCompressCodec* PR_NULLABLE prCompressCodecCreate(PrCompressCodecBackend backend, PrCompressFormat format) {
@@ -83,6 +100,8 @@ PrCompressCodec* PR_NULLABLE prCompressCodecCreate(PrCompressCodecBackend backen
         if (backend == PrCompressCodecBackend_Default)
             backend = defaultBackend();
     }
+    if (!prBackendIsBuilt(prCompressCodecSelectInterface(format), backend))
+        return nullptr;
     switch (backend) {
 #if defined(PR_COMPRESS_HAS_BUILTIN)
         case PrCompressCodecBackend_Builtin: return createBuiltin(format);
@@ -96,7 +115,7 @@ PrCompressCodec* PR_NULLABLE prCompressCodecCreate(PrCompressCodecBackend backen
 
 PrCompressCodecSet* PR_NULLABLE prCompressCodecSetCreateDefault(void) {
     // A format with no backend in the build is left out.
-    PrCompressCodec* codecs[3] = {};
+    PrCompressCodec* codecs[countOf(kBare)] = {};
     uint32_t count = 0;
     for (PrCompressFormat format : kBare) {
         if (!prBackendIsBuilt(prCompressCodecSelectInterface(format), PrCompressCodecBackend_Default))

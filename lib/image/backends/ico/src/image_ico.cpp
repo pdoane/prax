@@ -36,7 +36,7 @@ PrStatus frameInfo(PrImageReader* reader, uint32_t frame, PrImageFrameInfo* info
     return PrStatus_Ok;
 }
 
-PrStatus read(PrImageReader* reader, uint32_t frame, PrPixels output) {
+PrStatus read(PrImageReader* reader, uint32_t frame, uint32_t, PrPixels output) {
     IcoReader* ico = static_cast<IcoReader*>(reader);
     if (ico->png != nullptr)
         return prImageDecoderRead(ico->png, frame, output);

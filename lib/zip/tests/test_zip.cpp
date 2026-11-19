@@ -60,6 +60,13 @@ TEST_CASE("an archive's entries read stored and deflated") {
     REQUIRE(deflated == 1);
     CHECK(prZipEntry(archive, deflated).method == PrZipMethod_Deflated);
     CHECK(prZipFind(archive, "missing") == 2);
+    // A stored entry's bytes are read where the archive holds them.
+    PrByteView data{};
+    REQUIRE(prZipEntryData(archive, 0, &data) == PrStatus_Ok);
+    CHECK(data.data == kArchive + 40);
+    CHECK(PrStringView{reinterpret_cast<const char*>(data.data), data.size} == "plain bytes");
+    REQUIRE(prZipEntryData(archive, deflated, &data) == PrStatus_Ok);
+    CHECK(data.size == prZipEntry(archive, deflated).compressedSize);
     PrStatus status = PrStatus_NotFound;
     CHECK(read(archive, 0, &status) == "plain bytes");
     CHECK(status == PrStatus_Ok);
@@ -87,6 +94,17 @@ TEST_CASE("bytes that are not an archive, or an entry whose checksum is wrong, a
     CHECK(status == PrStatus_InvalidData);
     prZipDestroy(archive);
     prCompressCodecSetDestroy(compress);
+}
+
+TEST_CASE("an archive without a set reads its stored entries, and no deflated one") {
+    PrZip* archive = prZipCreate(nullptr);
+    REQUIRE(prZipOpen(archive, kArchive) == PrStatus_Ok);
+    PrStatus status = PrStatus_NotFound;
+    CHECK(read(archive, 0, &status) == "plain bytes");
+    CHECK(status == PrStatus_Ok);
+    read(archive, 1, &status);
+    CHECK(status == PrStatus_NotSupported);
+    prZipDestroy(archive);
 }
 
 TEST_CASE("the public header compiles as C") {

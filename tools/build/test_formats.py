@@ -16,8 +16,8 @@ from tools.suite import corpus
 
 # The format libraries, and the codecs of the platform, by the prefix of their public functions.
 FORMATS = (
-    "prBrotli", "prCompressApple", "prDeflate", "prEmjc", "prGif", "prIco", "prImageImageIO", "prJpeg", "prLzfse",
-    "prPng", "prTiff", "prZip",
+    "prBrotli", "prCompressApple", "prDeflate", "prEmjc", "prExr", "prGif", "prHdr", "prIco", "prImageImageIO",
+    "prJpeg", "prLz4", "prLzfse", "prPng", "prTiff", "prWebp", "prZip", "prZstd",
 )
 
 # The formats that the terminal names (apps/terminal/main.cpp).

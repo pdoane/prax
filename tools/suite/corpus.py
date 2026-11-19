@@ -187,9 +187,9 @@ class Data:
                                                   ("deferred", self.deferred), ("skip", self.skip))
                 for key in sorted(entries) if key not in keys and key not in files]
 
-    def write_scoreboard(self, rows):
+    def write_scoreboard(self, rows, notes=()):
         """Writes the scoreboard: a row for each part of the suite, from (name, passed, count), and their total, each
-        with its pass rate."""
+        with its pass rate. `notes` are lines that follow the table, for what the run counts apart from its parts."""
         rows = list(rows)
         total = (TOTAL, sum(r[1] for r in rows), sum(r[2] for r in rows))
         cells = [(name, "%d/%d" % (passed, count), "%.1f%%" % pass_rate(passed, count))
@@ -200,6 +200,8 @@ class Data:
                  "The cases that a plain run passes, by part of the suite, and the rate. The run writes this table, and",
                  "the diff of a change to it is what the change did.", ""]
         lines += table(("Part", "Cases", "Passing"), cells)
+        if notes:
+            lines += ["", *notes]
         os.makedirs(self.directory, exist_ok=True)
         with open(self.path(SCOREBOARD), "w", encoding="utf-8", newline="\n") as f:
             f.write("\n".join(lines) + "\n")

@@ -178,3 +178,53 @@ pr_dependency(taffy
     URL_HASH SHA256=0e61a69c6b4f1722df706f9985bc5ec6c0813ba9f43630451cb5cffaef5382e0
     SOURCE_SUBDIR none
 )
+
+# Zstandard v1.5.7, the reference implementation, whose encoder writes the frames that tools/suite/zstd decodes with
+# lib/zstd and whose decoder it compares that with.
+pr_dependency(zstd
+    URL https://github.com/facebook/zstd/releases/download/v1.5.7/zstd-1.5.7.tar.gz
+    URL_HASH SHA256=eb33e51f49a15e023950cd7825ca74a4a2b43db8354825ac24fc1b7ee09e6fa3
+    SOURCE_SUBDIR none
+)
+
+# zlib 1.3.1 and Brotli 1.2.0, the reference implementations of Deflate and Brotli, which the compression benchmark
+# (tools/bench) compares lib/compress's encoders and decoders with.
+pr_dependency(zlib
+    URL https://github.com/madler/zlib/releases/download/v1.3.1/zlib-1.3.1.tar.gz
+    URL_HASH SHA256=9a93b2b7dfdac77ceba5a558a580e74667dd6fede4585b91eefb60f03b72df23
+    SOURCE_SUBDIR none
+)
+pr_dependency(brotli
+    URL https://github.com/google/brotli/archive/refs/tags/v1.2.0.tar.gz
+    URL_HASH SHA256=816c96e8e8f193b40151dad7e8ff37b1221d019dbcb9c35cd3fadbfe6477dfec
+    DOWNLOAD_NAME brotli-1.2.0.tar.gz
+    SOURCE_SUBDIR none
+)
+
+# libwebp v1.6.0, the reference WebP codec: its decoders, which tools/suite/webp compares lib/webp's decoder with,
+# and its encoders, which write the images of each feature that the comparison decodes.
+pr_dependency(libwebp
+    URL https://github.com/webmproject/libwebp/archive/refs/tags/v1.6.0.tar.gz
+    URL_HASH SHA256=93a852c2b3efafee3723efd4636de855b46f9fe1efddd607e1f42f60fc8f2136
+    SOURCE_SUBDIR none
+)
+
+# OpenEXR v3.3.15, the reference implementation of OpenEXR: its core library's decoders, which tools/suite/exr compares
+# lib/exr's decoder with, and its encoders, which write the files of each compression that the comparison
+# decodes. libdeflate v1.18 is the Deflate library that OpenEXR's build compiles into the core library at that version.
+# The change in patches/openexr makes DWA decoding use the scalar inverse DCT on every processor. OpenEXR otherwise
+# chooses an SSE2 or AVX version on x86, whose results differ from the scalar version's in the last bits.
+pr_patch_arguments(PR_OPENEXR_PATCH openexr ${PROJECT_SOURCE_DIR}/patches/openexr)
+pr_dependency(openexr
+    URL https://github.com/AcademySoftwareFoundation/openexr/archive/refs/tags/v3.3.15.tar.gz
+    URL_HASH SHA256=21bd9e029185f4da7f6a662be18a13ccaf698d5c9bd8964c40e0a4227cbc7e1b
+    DOWNLOAD_NAME openexr-3.3.15.tar.gz
+    ${PR_OPENEXR_PATCH}
+    SOURCE_SUBDIR none
+)
+pr_dependency(libdeflate
+    URL https://github.com/ebiggers/libdeflate/archive/refs/tags/v1.18.tar.gz
+    URL_HASH SHA256=225d982bcaf553221c76726358d2ea139bb34913180b20823c782cede060affd
+    DOWNLOAD_NAME libdeflate-1.18.tar.gz
+    SOURCE_SUBDIR none
+)

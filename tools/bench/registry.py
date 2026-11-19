@@ -171,10 +171,19 @@ BENCHES = [
           "floats, padded text and log lines, into a buffer and into a string",
           ["format_bench"], run=engine.format_strings, options=engine.format_options,
           sources=[os.path.join(common.ROOT, "tools", "bench", "format_bench.cpp")]),
-    Bench("compress", "streams decoded by lib/compress's built-in codec and by Apple's libcompression: Deflate, "
-          "Brotli and LZFSE, of text, a font and a small input",
+    Bench("compress", "streams decoded by lib/compress's built-in codec, by each format's reference library and by "
+          "Apple's libcompression: Deflate, gzip, Brotli, LZFSE and Zstandard, of text, a font and a small input",
           ["compress_bench"], fetch=["css", "fonts"], run=engine.compress, options=engine.compress_options,
           sources=[os.path.join(common.ROOT, "tools", "bench", "compress_bench.cpp")]),
+    Bench("compress-corpus", "the Silesia corpus encoded and decoded by lib/compress's built-in codec and by the "
+          "reference zlib, Brotli and Zstandard: each level's speed and size, and each decoder's speed",
+          ["compress_bench"], fetch=["silesia"], run=engine.compress_corpus, options=engine.compress_options,
+          sources=[os.path.join(common.ROOT, "tools", "bench", "compress_bench.cpp")]),
+    Bench("exr", "decoding OpenEXR's test images of scan lines in each of the file format's compressions with lib/exr "
+          "and with OpenEXR's core library", ["exr_compare"], fetch=["openexr_images"], run=engine.exr,
+          options=engine.exr_options,
+          sources=[os.path.join(common.ROOT, "tools", "suite", "exr", name)
+                   for name in ("exr_compare.cpp", "exr_reference.cpp")]),
     Bench("image-decode", "decoding the PNG and JPEG images of WPT's images directory",
           ["image_bench"], fetch=["wpt"], run=engine.image_decode, options=engine.image_decode_options,
           sources=[os.path.join(common.ROOT, "tools", "bench", "image_bench.cpp")]),

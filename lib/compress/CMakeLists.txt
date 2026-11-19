@@ -11,11 +11,15 @@ pr_backend(compress builtin INCLUDE backends/deflate/include SOURCES
     backends/deflate/src/compress_deflate.cpp
     backends/brotli/src/compress_brotli.cpp
     backends/lzfse/src/compress_lzfse.cpp
+    backends/lz4/src/compress_lz4.cpp
+    backends/zstd/src/compress_zstd.cpp
 )
 if (PR_COMPRESS_BUILTIN)
     pr_headers(pr_compress PUBLIC backends/brotli/include)
     pr_headers(pr_compress PUBLIC backends/lzfse/include)
-    target_link_libraries(pr_compress PRIVATE prax::deflate prax::brotli prax::lzfse)
+    pr_headers(pr_compress PUBLIC backends/lz4/include)
+    pr_headers(pr_compress PUBLIC backends/zstd/include)
+    target_link_libraries(pr_compress PRIVATE prax::deflate prax::brotli prax::lzfse prax::lz4 prax::zstd)
 endif()
 
 # The codec of Apple's Compression library, which a program chooses over Prax's own for a format.

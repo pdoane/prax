@@ -4,6 +4,7 @@
 
 #include "pr/base.h"
 #include "pr/float16.h"
+#include "pr/vec.h"
 
 PR_ASSUME_NONNULL_BEGIN
 
@@ -210,6 +211,32 @@ enum {
     PrColorHueMethod_Decreasing,
 };
 typedef uint8_t PrColorHueMethod;
+
+// An RGB space of linear light by its primaries and white: the CIE 1931 xy chromaticities of (1, 0, 0), (0, 1, 0), (0,
+// 0, 1) and (1, 1, 1). A white of luminance 1 is SDR white.
+typedef struct PrColorChromaticities {
+    PrVec2 red;
+    PrVec2 green;
+    PrVec2 blue;
+    PrVec2 white;
+} PrColorChromaticities;
+
+// Standard primaries and whites. Rec709 is sRGB's, and Rec2020 is that of Rec. ITU-R BT.2020 and BT.2100, each with the
+// D65 white. DisplayP3 is DCI-P3's primaries with the D65 white. A98Rgb is Adobe RGB (1998)'s, and ProPhotoRgb is ROMM
+// RGB's with the D50 white. AcesAp0 and AcesAp1 are the ACES primaries of SMPTE ST 2065-1 and of ACEScg (Academy
+// S-2014-004), with the ACES white. Xyz is the space of CIE XYZ tristimulus values, whose white is equal energy.
+enum {
+    PrColorPrimaries_Rec709,
+    PrColorPrimaries_DisplayP3,
+    PrColorPrimaries_A98Rgb,
+    PrColorPrimaries_ProPhotoRgb,
+    PrColorPrimaries_Rec2020,
+    PrColorPrimaries_AcesAp0,
+    PrColorPrimaries_AcesAp1,
+    PrColorPrimaries_Xyz,
+    PrColorPrimaries_Count,
+};
+typedef uint8_t PrColorPrimaries;
 
 // A color that depends on the display: two extended sRGB colors, each for a display of a headroom, and colors between
 // them for the headrooms between. A headroom is in stops: the base-2 logarithm of the display's brightest color as a

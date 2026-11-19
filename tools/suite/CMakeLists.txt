@@ -16,3 +16,6 @@ target_link_libraries(reftest PRIVATE prax::compress_select prax::image_select h
 
 add_subdirectory(markdown)
 add_subdirectory(lottie)
+add_subdirectory(zstd)
+add_subdirectory(webp)
+add_subdirectory(exr)

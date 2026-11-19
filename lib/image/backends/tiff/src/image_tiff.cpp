@@ -38,7 +38,7 @@ PrStatus frameInfo(PrImageReader*, uint32_t, PrImageFrameInfo* info) {
     return PrStatus_Ok;
 }
 
-PrStatus read(PrImageReader* reader, uint32_t, PrPixels output) {
+PrStatus read(PrImageReader* reader, uint32_t, uint32_t, PrPixels output) {
     return prTiffDecoderRead(static_cast<TiffReader*>(reader)->tiff, output);
 }
 

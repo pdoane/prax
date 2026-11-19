@@ -53,6 +53,9 @@ constexpr uint8_t kLzfse[] = {
     0x00, 0x00, 0x00, 0x00, 0x62, 0x76, 0x78, 0x24,
 };
 
+// "abc" as an LZ4 block of one sequence of literals.
+constexpr uint8_t kLz4[] = {0x30, 'a', 'b', 'c'};
+
 String expected() {
     String text;
     for (int i = 0; i < 20; ++i)
@@ -110,14 +113,17 @@ TEST_CASE("each format decodes whole") {
     CHECK(text == expected());
     CHECK(decode(PrCompressFormat_Lzfse, kLzfse, sizeof(kLzfse) - 1, &text) == PrStatus_Truncated);
     CHECK(decode(PrCompressFormat_Lzfse, kZlib, sizeof(kZlib), &text) == PrStatus_InvalidData);
+    CHECK(decode(PrCompressFormat_Lz4, kLz4, sizeof(kLz4), &text) == PrStatus_Ok);
+    CHECK(text == "abc");
 }
 
-TEST_CASE("the set of every codec decodes every format and encodes the Deflate ones") {
-    for (PrCompressFormat format = PrCompressFormat_Deflate; format <= PrCompressFormat_Lzfse; ++format) {
+TEST_CASE("the set of every codec decodes every format and encodes the Deflate ones and Zstandard") {
+    for (PrCompressFormat format = 0; format < PrCompressFormat_Count; ++format) {
         CAPTURE(format);
+        const bool encodes = format < PrCompressFormat_Brotli || format == PrCompressFormat_Zstd;
         CHECK(prCompressCodecSetDecodes(codecs(), format));
-        CHECK(prCompressCodecSetEncodes(codecs(), format) == (format < PrCompressFormat_Brotli));
-        CHECK((prCompressCodecSetEncodeBound(codecs(), format, 100) != 0) == (format < PrCompressFormat_Brotli));
+        CHECK(prCompressCodecSetEncodes(codecs(), format) == encodes);
+        CHECK((prCompressCodecSetEncodeBound(codecs(), format, 100) != 0) == encodes);
     }
     uint8_t out[16];
     size_t written = 0;
@@ -210,4 +216,65 @@ TEST_CASE("a zlib stream that needs a preset dictionary is not supported") {
     const uint8_t header[] = {0x78, 0xbb, 0x00, 0x00, 0x00, 0x01};
     String text;
     CHECK(decode(PrCompressFormat_Zlib, header, sizeof(header), &text) == PrStatus_NotSupported);
+}
+
+TEST_CASE("a decoder decodes another stream after a reset") {
+    const PrCompressFormat formats[] = {PrCompressFormat_Zlib, PrCompressFormat_Gzip, PrCompressFormat_Zstd};
+    const String input = expected();
+    const PrByteView bytes{reinterpret_cast<const uint8_t*>(input.data()), input.count()};
+    for (PrCompressFormat format : formats) {
+        CAPTURE(format);
+        uint8_t packed[1024];
+        size_t size = 0;
+        REQUIRE(prCompressCodecSetEncodeBound(codecs(), format, bytes.size) <= sizeof(packed));
+        REQUIRE(prCompressCodecSetEncode(codecs(), format, PrCompressLevel_Default, bytes, packed, &size) ==
+            PrStatus_Ok);
+        PrCompressDecoder* decoder = nullptr;
+        REQUIRE(prCompressDecoderCreate(codecs(), format, &decoder) == PrStatus_Ok);
+        for (int round = 0; round < 3; ++round) {
+            uint8_t out[1024];
+            PrCompressRead read{};
+            REQUIRE(prCompressDecoderRead(decoder, PrByteView{packed, size}, true, out, sizeof(out), &read) ==
+                PrStatus_Ok);
+            CHECK(read.progress == PrCompressProgress_Done);
+            CHECK(PrStringView{reinterpret_cast<const char*>(out), read.written} == input.view());
+            prCompressDecoderReset(decoder);
+        }
+        prCompressDecoderDestroy(decoder);
+    }
+}
+
+TEST_CASE("a window limit refuses a Zstandard frame of a larger window") {
+    // Over a megabyte, so that the frame names a window of 512K rather than its size.
+    String input;
+    uint32_t state = 1;
+    while (input.count() < 1100000) {
+        state = state * 1103515245u + 12345u;
+        input.append(char('a' + (state >> 16) % 26));
+    }
+    const PrByteView bytes{reinterpret_cast<const uint8_t*>(input.data()), input.count()};
+    Array<uint8_t> frame(uint32_t(prCompressCodecSetEncodeBound(codecs(), PrCompressFormat_Zstd, bytes.size)));
+    size_t size = 0;
+    REQUIRE(prCompressCodecSetEncode(codecs(), PrCompressFormat_Zstd, PrCompressLevel_Fast, bytes, frame.data(),
+        &size) == PrStatus_Ok);
+    Array<uint8_t> room(uint32_t(bytes.size));
+    const size_t limits[] = {size_t(256) << 10, size_t(512) << 10};
+    for (size_t limit : limits) {
+        CAPTURE(limit);
+        PrCompressDecoder* decoder = nullptr;
+        REQUIRE(prCompressDecoderCreate(codecs(), PrCompressFormat_Zstd, &decoder) == PrStatus_Ok);
+        prCompressDecoderSetWindowLimit(decoder, limit);
+        // In pieces, so that the decoder keeps the window itself.
+        PrCompressRead read{};
+        PrStatus status = prCompressDecoderRead(decoder, PrByteView{frame.data(), size / 2}, false, room.data(),
+            room.count(), &read);
+        const size_t at = read.consumed;
+        const size_t written = read.written;
+        if (status == PrStatus_Ok) {
+            status = prCompressDecoderRead(decoder, PrByteView{frame.data() + at, size - at}, true,
+                room.data() + written, room.count() - written, &read);
+        }
+        CHECK(status == (limit < (size_t(512) << 10) ? PrStatus_InvalidData : PrStatus_Ok));
+        prCompressDecoderDestroy(decoder);
+    }
 }

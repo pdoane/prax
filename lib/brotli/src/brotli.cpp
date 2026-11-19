@@ -74,6 +74,37 @@ constexpr uint8_t kCopyExtra[24] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4,
 constexpr uint8_t kCommandInsert[11] = {0, 0, 0, 0, 8, 8, 0, 16, 8, 16, 16};
 constexpr uint8_t kCommandCopy[11] = {0, 8, 0, 8, 0, 8, 16, 0, 16, 8, 16};
 
+// What each insert-and-copy length symbol encodes: the bases and extra bits of its insert and copy lengths, and whether
+// it reuses the last distance. By symbol, the 704 of them padded to a power of two, so that a symbol is masked into
+// range.
+struct CommandCode {
+    uint32_t insertBase;
+    uint32_t copyBase;
+    uint8_t insertExtra;
+    uint8_t copyExtra;
+    bool distanceZero;
+};
+
+struct CommandCodes {
+    CommandCode codes[1024];
+};
+
+constexpr CommandCodes commandCodes() {
+    CommandCodes out{};
+    for (uint32_t symbol = 0; symbol < 704; ++symbol) {
+        const uint32_t range = symbol >> 6;
+        const uint32_t insertCode = kCommandInsert[range] + ((symbol >> 3) & 7);
+        const uint32_t copyCode = kCommandCopy[range] + (symbol & 7);
+        out.codes[symbol] = CommandCode{
+            kInsertBase[insertCode], kCopyBase[copyCode], kInsertExtra[insertCode],
+            kCopyExtra[copyCode], range < 2,
+        };
+    }
+    return out;
+}
+
+constexpr CommandCodes kCommandCodes = commandCodes();
+
 // The order in which a complex prefix code stores the code lengths of the code length alphabet (rfc 7932 3.5).
 constexpr uint8_t kCodeLengthOrder[kCodeLengthAlphabet] = {
     1, 2, 3,  4,  0,  5,  17, 6,  16,
@@ -209,6 +240,7 @@ struct BrotliState {
     uint32_t distanceTrees;
     RawArray<uint8_t> literalMap;      // for each literal block type and context
     RawArray<uint8_t> distanceMap;     // for each distance block type and context
+    bool singleTree[256];              // by literal block type: every context has the same code
 
     // The context map being read.
     RawArray<uint8_t>* PR_NULLABLE map;
@@ -299,6 +331,29 @@ inline bool readSymbol(BitReader& r, const PrefixEntry* table, uint32_t& symbol)
     drop(r, entry.length);
     symbol = entry.value;
     return true;
+}
+
+// Loads the reader to at least 56 bits, from input with eight bytes left.
+inline void fillFast(BitReader& r) {
+    r.bits |= prMemReadLeU64(r.data + r.at) << r.count;
+    r.at += (63 - r.count) >> 3;
+    r.count |= 56;
+}
+
+// Takes `count` bits from a reader that holds them.
+inline uint32_t take(BitReader& r, uint32_t count) {
+    const uint32_t value = uint32_t(r.bits & ((uint64_t(1) << count) - 1));
+    drop(r, count);
+    return value;
+}
+
+// Reads a symbol with `table` from a reader that holds at least kCodeMaxLength bits.
+inline uint32_t decodeSymbol(BitReader& r, const PrefixEntry* table) {
+    PrefixEntry entry = table[r.bits & (kRootSize - 1)];
+    if (entry.subBits != 0)
+        entry = table[entry.value + ((r.bits >> kRootBits) & ((1u << entry.subBits) - 1))];
+    drop(r, entry.length);
+    return entry.value;
 }
 
 // Each byte with its bits in reverse order, built at compile time.
@@ -826,6 +881,13 @@ void nextCode(BrotliState& d) {
 // Reads the literal context map, then the distance context map, and then the prefix codes.
 void endMap(BrotliState& d) {
     if (d.map == &d.literalMap) {
+        for (uint32_t type = 0; type < d.types[BrotliCategory_Literal]; ++type) {
+            const uint8_t* contexts = d.literalMap.data + kLiteralContexts * type;
+            bool single = true;
+            for (uint32_t c = 1; c < kLiteralContexts && single; ++c)
+                single = contexts[c] == contexts[0];
+            d.singleTree[type] = single;
+        }
         d.category = 1;
         d.phase = BrotliPhase_TreeCount;
         return;
@@ -859,17 +921,32 @@ BrotliStep readLiterals(BrotliState& d, BitReader& r, BrotliOutput& out) {
     uint8_t* ring = d.ring;
     const uint64_t mask = d.ringSize - 1;
     uint64_t position = d.position;
-    uint8_t p1 = byteBack(d, 1);
-    uint8_t p2 = byteBack(d, 2);
+    // The loops read with a copy of the reader, which the compiler keeps in registers: a byte stored to the ring could
+    // be any byte of `r`.
+    BitReader br = r;
     uint32_t done = 0;
-    for (; done < count; ++done) {
-        uint32_t literal = 0;
-        if (!readSymbol(r, tables + slots[map[lookup[p1] | lookup[256 + p2]]], literal))
-            break;
-        ring[position++ & mask] = uint8_t(literal);
-        p2 = p1;
-        p1 = uint8_t(literal);
+    if (d.singleTree[type]) {
+        // Every context has the same code, so no literal needs its context.
+        const PrefixEntry* table = tables + slots[map[0]];
+        for (; done < count; ++done) {
+            uint32_t literal = 0;
+            if (!readSymbol(br, table, literal))
+                break;
+            ring[position++ & mask] = uint8_t(literal);
+        }
+    } else {
+        uint8_t p1 = byteBack(d, 1);
+        uint8_t p2 = byteBack(d, 2);
+        for (; done < count; ++done) {
+            uint32_t literal = 0;
+            if (!readSymbol(br, tables + slots[map[lookup[p1] | lookup[256 + p2]]], literal))
+                break;
+            ring[position++ & mask] = uint8_t(literal);
+            p2 = p1;
+            p1 = uint8_t(literal);
+        }
     }
+    r = br;
     d.position = position;
     d.insertLeft -= done;
     d.metaLeft -= done;
@@ -888,20 +965,44 @@ BrotliStep readCommand(BrotliState& d, BitReader& r) {
     const BrotliSlot slot = BrotliSlot_Codes + d.literalTrees + d.current[BrotliCategory_Command];
     if (!readSymbol(r, tableOf(d, slot), symbol))
         return BrotliStep_Input;
-    const uint32_t range = symbol >> 6;
-    const uint32_t insertCode = kCommandInsert[range] + ((symbol >> 3) & 7);
-    const uint32_t copyCode = kCommandCopy[range] + (symbol & 7);
-    if (!readBits(r, kInsertExtra[insertCode], insertExtra) || !readBits(r, kCopyExtra[copyCode], copyExtra))
+    const CommandCode& c = kCommandCodes.codes[symbol & 1023];
+    if (!readBits(r, c.insertExtra, insertExtra) || !readBits(r, c.copyExtra, copyExtra))
         return BrotliStep_Input;
     if (switched)
         --d.blockLeft[BrotliCategory_Command];
-    d.insertLeft = kInsertBase[insertCode] + insertExtra;
-    d.copyLength = kCopyBase[copyCode] + copyExtra;
-    d.distanceZero = range < 2;
+    d.insertLeft = c.insertBase + insertExtra;
+    d.copyLength = c.copyBase + copyExtra;
+    d.distanceZero = c.distanceZero;
     if (d.insertLeft > d.metaLeft)
         return BrotliStep_Invalid;
     d.phase = BrotliPhase_Literals;
     return BrotliStep_Ok;
+}
+
+// Sets `*distance` to the distance that the distance code `code` names, reading its extra bits (rfc 7932 4): one of the
+// last distances, or one of the last two adjusted by up to three, which is zero or less if it is no distance; one of
+// the direct distances; or one with extra bits. Returns false if the input ends first.
+inline bool codeDistance(const BrotliState& d, BitReader& r, uint32_t code, int64_t* distance) {
+    if (code < 16) {
+        static constexpr uint8_t kBack[16] = {0, 1, 2, 3, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1};
+        static constexpr int8_t kDelta[16] = {0, 0, 0, 0, -1, 1, -2, 2, -3, 3, -1, 1, -2, 2, -3, 3};
+        *distance = int64_t(d.distances[(d.distanceAt - kBack[code]) & 3]) + kDelta[code];
+        return true;
+    }
+    if (code < 16 + d.direct) {
+        *distance = code - 15;
+        return true;
+    }
+    const uint32_t offsetCode = code - d.direct - 16;
+    const uint32_t bits = 1 + (offsetCode >> (d.postfix + 1));
+    uint32_t extra = 0;
+    if (!readBits(r, bits, extra))
+        return false;
+    const uint32_t high = offsetCode >> d.postfix;
+    const uint32_t low = offsetCode & ((1u << d.postfix) - 1);
+    const int64_t offset = (int64_t(2 + (high & 1)) << bits) - 4;
+    *distance = ((offset + extra) << d.postfix) + low + d.direct + 1;
+    return true;
 }
 
 BrotliStep readDistance(BrotliState& d, BitReader& r) {
@@ -917,26 +1018,10 @@ BrotliStep readDistance(BrotliState& d, BitReader& r) {
     if (!readSymbol(r, tableOf(d, slot), code))
         return BrotliStep_Input;
     int64_t distance = 0;
-    if (code < 16) {
-        // The last distances, and the last two distances adjusted by up to three (rfc 7932 4).
-        static constexpr uint8_t kBack[16] = {0, 1, 2, 3, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1};
-        static constexpr int8_t kDelta[16] = {0, 0, 0, 0, -1, 1, -2, 2, -3, 3, -1, 1, -2, 2, -3, 3};
-        distance = int64_t(d.distances[(d.distanceAt - kBack[code]) & 3]) + kDelta[code];
-        if (distance <= 0)
-            return BrotliStep_Invalid;
-    } else if (code < 16 + d.direct) {
-        distance = code - 15;
-    } else {
-        const uint32_t offsetCode = code - d.direct - 16;
-        const uint32_t bits = 1 + (offsetCode >> (d.postfix + 1));
-        uint32_t extra = 0;
-        if (!readBits(r, bits, extra))
-            return BrotliStep_Input;
-        const uint32_t high = offsetCode >> d.postfix;
-        const uint32_t low = offsetCode & ((1u << d.postfix) - 1);
-        const int64_t offset = (int64_t(2 + (high & 1)) << bits) - 4;
-        distance = ((offset + extra) << d.postfix) + low + d.direct + 1;
-    }
+    if (!codeDistance(d, r, code, &distance))
+        return BrotliStep_Input;
+    if (distance <= 0)
+        return BrotliStep_Invalid;
     if (switched)
         --d.blockLeft[BrotliCategory_Distance];
     if (distance > int64_t(UINT32_MAX))
@@ -992,6 +1077,199 @@ BrotliStep readCopy(BrotliState& d, BrotliOutput& out) {
     if (d.copyLeft == 0)
         endCommand(d);
     return BrotliStep_Ok;
+}
+
+// Copies `count` bytes from `from` to `to`, where the source is at least 16 bytes after the destination, from the
+// ring's previous lap, 16 bytes at a time, and may write kCopySlack bytes past them.
+inline void copyAhead(uint8_t* to, const uint8_t* from, uint32_t count) {
+    for (uint32_t k = 0; k < count; k += 16)
+        prMemCopy(to + k, from + k, 16);
+}
+
+// The input that a command reads apart from its literals, rounded up: a block switch, the insert-and-copy length code
+// and its extra bits, then another block switch and the distance code and its extra bits, and the eight bytes that a
+// load of the reader reads beyond what it takes. The distance's part of it, for after the literals.
+constexpr size_t kCommandInput = 48;
+constexpr size_t kDistanceInput = 24;
+
+// Decodes literals of the current block type into `ring` from `position`, up to `count` of them, while the input has
+// room for a load of the reader, which then holds the longest code. Returns how many it decoded.
+inline uint32_t fastLiterals(const BrotliState& d, BitReader& r, uint8_t* ring, uint64_t mask, uint64_t position,
+        uint32_t count) {
+    const uint32_t type = d.current[BrotliCategory_Literal];
+    const uint8_t* map = d.literalMap.data + kLiteralContexts * type;
+    const PrefixEntry* tables = d.tables.data;
+    const uint32_t* slots = d.slots.data + BrotliSlot_Codes;
+    uint64_t at = position;
+    uint32_t done = 0;
+    if (d.singleTree[type]) {
+        const PrefixEntry* table = tables + slots[map[0]];
+        for (; done < count; ++done) {
+            if (r.count < kCodeMaxLength) {
+                if (r.size - r.at < 8)
+                    break;
+                fill(r, kCodeMaxLength);
+            }
+            ring[at++ & mask] = uint8_t(decodeSymbol(r, table));
+        }
+        return done;
+    }
+    const uint8_t* lookup = kBrotliContextLookup + 512 * d.modes[type];
+    uint8_t p1 = at >= 1 ? ring[(at - 1) & mask] : 0;
+    uint8_t p2 = at >= 2 ? ring[(at - 2) & mask] : 0;
+    for (; done < count; ++done) {
+        if (r.count < kCodeMaxLength) {
+            if (r.size - r.at < 8)
+                break;
+            fill(r, kCodeMaxLength);
+        }
+        const uint8_t literal = uint8_t(decodeSymbol(r, tables + slots[map[lookup[p1] | lookup[256 + p2]]]));
+        ring[at++ & mask] = literal;
+        p2 = p1;
+        p1 = literal;
+    }
+    return done;
+}
+
+// Decodes whole commands, as readCommand, readLiterals, readDistance and readCopy do one after another, with the reader
+// and the position in registers. It runs while the input holds what a command reads, and the ring has room for each
+// command's output without growing or flushing. A command that cannot go on leaves the steps to: literals that the
+// input or the ring has no room for, or with a block switch among them; a distance that the input has no room for; a
+// word; a copy that the ring has no room for; or the end of the meta-block. It decodes at least one command, unless the
+// stream is invalid.
+BrotliStep decodeCommands(BrotliState& d, BitReader& r) {
+    uint8_t* ring = d.ring;
+    const uint64_t mask = d.ringSize - 1;
+    // Output up to `limit` needs no flush, nor the ring to grow.
+    const uint64_t limit = d.ringSize < d.windowMax ? d.ringSize : d.flushed + d.ringSize;
+    const uint64_t reachLimit = d.windowMax - 16;
+    // What the loop reads of the meta-block's header, which only a block switch changes: the table of the commands'
+    // code, and the context map row of the distances' codes.
+    const bool commandSwitched = d.types[BrotliCategory_Command] >= 2;
+    const bool literalSwitched = d.types[BrotliCategory_Literal] >= 2;
+    const bool distanceSwitched = d.types[BrotliCategory_Distance] >= 2;
+    const BrotliSlot distanceCodes = BrotliSlot_Codes + d.literalTrees + d.types[BrotliCategory_Command];
+    const PrefixEntry* commandTable = tableOf(d, BrotliSlot_Codes + d.literalTrees + d.current[BrotliCategory_Command]);
+    uint32_t distanceRow = kDistanceContexts * d.current[BrotliCategory_Distance];
+    BitReader br = r;
+    uint64_t position = d.position;
+    uint32_t metaLeft = d.metaLeft;
+    BrotliStep result = BrotliStep_Ok;
+    // The command's fields go to `d` only where the loop leaves the command to the steps.
+    auto leave = [&](BrotliPhase phase, uint32_t insertLeft, uint32_t copyLength, bool distanceZero) {
+        d.phase = phase;
+        d.insertLeft = insertLeft;
+        d.copyLength = copyLength;
+        d.distanceZero = distanceZero;
+    };
+    while (br.size - br.at >= kCommandInput) {
+        if (commandSwitched) {
+            if (d.blockLeft[BrotliCategory_Command] == 0) {
+                switchBlock(d, br, BrotliCategory_Command);
+                commandTable = tableOf(d, BrotliSlot_Codes + d.literalTrees + d.current[BrotliCategory_Command]);
+            }
+            --d.blockLeft[BrotliCategory_Command];
+        }
+        fillFast(br);
+        const CommandCode& c = kCommandCodes.codes[decodeSymbol(br, commandTable) & 1023];
+        const uint32_t insert = c.insertBase + take(br, c.insertExtra);
+        fillFast(br);
+        const uint32_t copyLength = c.copyBase + take(br, c.copyExtra);
+        if (insert > metaLeft) {
+            result = BrotliStep_Invalid;
+            break;
+        }
+        if (insert != 0) {
+            if (position + insert > limit || (literalSwitched && d.blockLeft[BrotliCategory_Literal] < insert)) {
+                leave(BrotliPhase_Literals, insert, copyLength, c.distanceZero);
+                break;
+            }
+            const uint32_t done = fastLiterals(d, br, ring, mask, position, insert);
+            position += done;
+            metaLeft -= done;
+            if (literalSwitched)
+                d.blockLeft[BrotliCategory_Literal] -= done;
+            if (done < insert) {
+                leave(BrotliPhase_Literals, insert - done, copyLength, c.distanceZero);
+                break;
+            }
+        }
+        if (metaLeft == 0) {
+            d.phase = BrotliPhase_MetaEnd;
+            break;
+        }
+
+        int64_t distance = 0;
+        bool remember = false;
+        if (c.distanceZero) {
+            distance = d.distances[d.distanceAt & 3];
+        } else {
+            if (br.size - br.at < kDistanceInput) {
+                leave(BrotliPhase_Distance, 0, copyLength, false);
+                break;
+            }
+            if (distanceSwitched) {
+                if (d.blockLeft[BrotliCategory_Distance] == 0) {
+                    switchBlock(d, br, BrotliCategory_Distance);
+                    distanceRow = kDistanceContexts * d.current[BrotliCategory_Distance];
+                }
+                --d.blockLeft[BrotliCategory_Distance];
+            }
+            const uint32_t context = copyLength > 4 ? 3 : copyLength - 2;
+            const uint32_t tree = d.distanceMap.data[distanceRow + context];
+            fillFast(br);
+            const uint32_t code = decodeSymbol(br, tableOf(d, distanceCodes + tree));
+            fillFast(br);
+            codeDistance(d, br, code, &distance);
+            if (distance <= 0 || distance > int64_t(UINT32_MAX)) {
+                result = BrotliStep_Invalid;
+                break;
+            }
+            remember = code != 0;
+        }
+        // A distance beyond the window is a word, which the steps write.
+        if (uint64_t(distance) > (position < reachLimit ? position : reachLimit)) {
+            d.position = position;
+            d.metaLeft = metaLeft;
+            leave(BrotliPhase_Distance, 0, copyLength, false);
+            result = useDistance(d, uint32_t(distance), remember);
+            break;
+        }
+        if (copyLength > metaLeft) {
+            result = BrotliStep_Invalid;
+            break;
+        }
+        if (remember)
+            d.distances[++d.distanceAt & 3] = uint32_t(distance);
+
+        // A copy whose source and destination do not wrap. The source is before the destination, or in the ring's
+        // previous lap, after it.
+        const uint32_t to = uint32_t(position & mask);
+        const uint32_t from = uint32_t((position - uint64_t(distance)) & mask);
+        if (position + copyLength + kCopySlack > limit || to + copyLength > d.ringSize ||
+                (from > to && from + copyLength > d.ringSize)) {
+            leave(BrotliPhase_Copy, 0, copyLength, false);
+            d.distance = uint32_t(distance);
+            d.copyLeft = copyLength;
+            break;
+        }
+        if (from < to)
+            copyForward(ring + to, uint32_t(distance), copyLength);
+        else
+            copyAhead(ring + to, ring + from, copyLength);
+        position += copyLength;
+        metaLeft -= copyLength;
+        if (metaLeft == 0) {
+            d.phase = BrotliPhase_MetaEnd;
+            break;
+        }
+    }
+    r = br;
+    d.position = position;
+    d.metaLeft = metaLeft;
+    if (result == BrotliStep_Invalid)
+        d.phase = BrotliPhase_Invalid;
+    return result;
 }
 
 // Copies or skips whole bytes: first those that the reader holds, then those of the input. Returns the number of bytes
@@ -1204,6 +1482,8 @@ BrotliStep step(BrotliState& d, BitReader& r, BrotliOutput& out) {
         case BrotliPhase_CodeLengths:
             return readCodeLengths(d, r);
         case BrotliPhase_Command:
+            if (r.size - r.at >= kCommandInput)
+                return decodeCommands(d, r);
             return readCommand(d, r);
         case BrotliPhase_Literals:
             return readLiterals(d, r, out);
