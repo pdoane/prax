@@ -1038,14 +1038,6 @@ bool removed(const GpuSharedDevice* device) {
     return isLostNow(static_cast<const D3d12Device*>(device));
 }
 
-// Removes the device through ID3D12Device5, as D3D12 removes a device after a hang, so that the loss takes the path
-// that a real one takes.
-void simulateLoss(PrGpuDevice* device) {
-    D3d12Device* d = d3d12Of(device);
-    d->device->RemoveDevice();
-    d->lost.store(true);
-}
-
 bool isComplete(const PrGpuDevice* device, PrGpuFence fence) {
     const D3d12Device* d = d3d12Of(device);
     return isLostNow(d) || d->done.load() >= fence;
@@ -1071,6 +1063,14 @@ void waitIdle(PrGpuDevice* device) {
     PrGpuFence fence = d->submitted;
     prMutexUnlock(&d->mutex);
     wait(device, fence);
+}
+
+// Marks this device lost and leaves the ID3D12Device in place. Direct3D 12 creates one ID3D12Device per adapter in a
+// process, so removing it would also lose every other device on the adapter.
+void simulateLoss(PrGpuDevice* device) {
+    D3d12Device* d = d3d12Of(device);
+    waitIdle(device);
+    d->lost.store(true);
 }
 
 // Waits for each submission's fence in order, then calls its functions with the seconds that its timestamps measured,

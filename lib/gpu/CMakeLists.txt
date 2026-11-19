@@ -1,6 +1,7 @@
 # GPUs: the interface, and the backends that the build turns on.
 pr_library(gpu INCLUDE include
     src/gpu.cpp
+    src/gpu_graph.cpp
     backends/shared/src/gpu_shared_device.cpp
     backends/shared/src/gpu_shared_ranges.cpp
     backends/shared/src/gpu_shared_upload.cpp
@@ -89,6 +90,7 @@ if (PR_DEVELOP)
     pr_module_tests(gpu
         tests/test_gpu.cpp
         tests/test_gpu_formats.cpp
+        tests/test_gpu_graph.cpp
         tests/test_gpu_passes.cpp
         backends/shared/tests/test_gpu_shared_ranges.cpp
         tests/test_gpu_stress.cpp
@@ -127,7 +129,7 @@ if (PR_DEVELOP)
     endif()
     # On the web, the same tests run again in a page, where they reach the page's WebGPU.
     if (PR_GPU_WEBGPU)
-        pr_page_tests(gpu tests/test_gpu.cpp tests/test_gpu_formats.cpp tests/test_gpu_passes.cpp
+        pr_page_tests(gpu tests/test_gpu.cpp tests/test_gpu_formats.cpp tests/test_gpu_graph.cpp tests/test_gpu_passes.cpp
             tests/test_gpu_c.c)
         target_link_libraries(gpu_page_tests PRIVATE prax::gpu_select prax::task)
         target_compile_definitions(gpu_page_tests PRIVATE PR_GPU_TEST_WEBGPU)

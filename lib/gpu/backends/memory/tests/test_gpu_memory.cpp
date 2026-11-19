@@ -6,6 +6,7 @@
 #include "pr/array.h"
 #include "pr/float16.h"
 #include "pr/gpu.h"
+#include "pr/gpu_graph.h"
 #include "pr/gpu_memory.h"
 #include "pr/mem.h"
 #include "pr/thread.h"
@@ -427,4 +428,39 @@ TEST_CASE("a device holds the objects that its limits allow, and refuses a creat
     prGpuTextureRelease(d.device, second);
     prGpuTextureRelease(d.device, third);
     prGpuBufferRelease(d.device, buffer);
+}
+
+TEST_CASE("a graph holds a reference to what it imports until it records the frame, or until a frame that it never "
+        "recorded ends") {
+    Device d;
+    PrGpuGraph* graph = prGpuGraphCreate(d.device, nullptr);
+    PrGpuTexture texture = d.texture(PrUVec2{2, 2});
+    prGpuGraphBegin(graph);
+    PrGpuGraphTexture imported = prGpuGraphImportTexture(graph, texture, PrGpuAccessFlag_ShaderRead);
+    prGpuTextureRelease(d.device, texture);
+    CHECK(prGpuGraphTexture(graph, imported).id == texture.id);
+    PrGpuTexture during = d.texture(PrUVec2{2, 2});
+    CHECK(during.id != texture.id);
+    prGpuTextureRelease(d.device, during);
+    // The recording drops the graph's reference, the last, which frees the slot once the work that the recording
+    // recorded has run.
+    PrGpuCommands* commands = nullptr;
+    REQUIRE(prGpuCommandsBegin(d.device, nullptr, &commands));
+    prGpuGraphRecord(graph, commands);
+    prGpuDeviceWait(d.device, prGpuCommandsSubmit(commands));
+    PrGpuTexture after = d.texture(PrUVec2{2, 2});
+    CHECK(after.id == texture.id);
+
+    // A frame that is never recorded drops its references as the next frame begins.
+    prGpuGraphBegin(graph);
+    prGpuGraphImportTexture(graph, after, PrGpuAccessFlag_ShaderRead);
+    prGpuTextureRelease(d.device, after);
+    PrGpuTexture held = d.texture(PrUVec2{2, 2});
+    CHECK(held.id != after.id);
+    prGpuTextureRelease(d.device, held);
+    prGpuGraphBegin(graph);
+    PrGpuTexture freed = d.texture(PrUVec2{2, 2});
+    CHECK(freed.id == after.id);
+    prGpuTextureRelease(d.device, freed);
+    prGpuGraphDestroy(graph);
 }

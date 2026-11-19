@@ -53,8 +53,9 @@ a 3D renderer needs it.
   A shader source declares its slots with literal numbers. Every entry point of a source has every slot that the
   source declares, and a draw binds them all, so entry points that should not share slots are separate sources.
 - **Lifetimes need no thought.** A buffer, a texture and a pipeline are reference counted: each holder takes a
-  reference of its own (`prGpuTextureRetain`), and the release of the last destroys the resource. So a library that
-  holds a resource of its caller's needs no promise about when its caller is done with it. A resource may be released
+  reference of its own (`prGpuTextureRetain`), and the release of the last destroys the resource. A graph holds what it
+  imports for the frame. So a library that holds a resource of its caller's needs no promise about when its caller is
+  done with it. A resource may be released
   as soon as the work that uses it is recorded. The device keeps it until every command buffer that began before the
   destruction is done.
 - **One timeline.** Each submission returns a fence, and fences rise in the order of submission. A command buffer that
@@ -257,6 +258,49 @@ which needs no device.
 An imported image must hold what it shows when it is imported. A producer whose GPU work may still be writing the image
 will pass a point on its own timeline for the device to wait for, as an event of the native API and a value, once a
 producer needs it.
+
+## Render graph
+
+The device tracks no states, so something above it must know each resource's accesses. A render graph
+(`pr/gpu_graph.h`) is that knowledge for one frame. A frame declares its passes and the resources that each one uses,
+and the graph records them into a command buffer. It is optional: a renderer that knows its own accesses records its
+barriers itself, as `lib/draw` does. `lib/render` adds the passes of its views to a graph that the application builds
+([render.md](render.md#building-a-frame)).
+
+- **A frame builds its graph again each time**, in plain code. The graph keeps nothing from one frame to the next
+  except the device textures that it lends. Callbacks are C functions with a context, and the graph gives out memory
+  that lives for the frame, so that a pass keeps its context there.
+- **The graph holds the resources whose accesses change during a frame.** A frame imports its own textures and buffers
+  with the accesses that they are in, and names the accesses to leave each result in. A resource that every pass only
+  reads is bound without the graph.
+- **A texture of the frame has no device texture until the graph records.** The frame describes it, and the graph
+  lends it a device texture from the first recorded pass that uses it to the last. A pass asks for the device texture
+  in its callback.
+- **Results decide what is recorded.** A pass is recorded if it writes a resource that is left, if a recorded pass
+  uses what it wrote or follows it, or if it declares no write, because its effects are then unknown to the graph.
+  Every other pass is skipped.
+- **Barriers are recorded just before the pass that needs them**, never earlier. A texture is tracked as a whole. A
+  buffer is tracked by byte ranges: writes of ranges that do not overlap, in the same accesses, need no barrier
+  between them. The graph records no barrier inside one pass or one work.
+- **Fewer barriers and less memory conflict, and a priority chooses.** A device texture keeps its accesses from frame
+  to frame, and returns to the graph after the last pass that uses it. Favoring barriers, a frame's texture takes a
+  free device texture that is already in the accesses of its first use, so a texture that every frame uses alike needs
+  no barrier, and the graph makes another device texture rather than disturb one that is left in a write. Favoring
+  memory, a frame's texture takes any free device texture of its description and pays the barrier. Under either
+  priority, a device texture that was left in a read is taken before a new one is made: it matches no first use, and a
+  new texture would need the same barrier.
+- **Dependencies come from the declared uses.** Of two passes that use the same bytes of a resource, where either one
+  writes them, the later added follows the earlier. A pass may also be declared to follow another, for an effect that
+  the graph cannot see. The recorded order keeps every dependency.
+- **Passes are recorded in the order that they were added.** That order already keeps the dependencies that the uses
+  make. A pass that is declared to follow a later added pass is recorded after it: each pass recorded is the earliest
+  added whose dependencies are all recorded. So the order is deterministic and depends only on the frame's graph, and
+  the frame that builds the graph decides which passes sit next to each other.
+- **Misuse is reported, not fatal.** The graph lists what it finds: a pass that reads and writes one resource, a read
+  of a frame's texture that no pass has written, a cycle of passes that follow each other, and a texture, buffer or
+  pass of an earlier frame. It records what it can, and the application reads the list.
+- **A lost device is safe.** The graph then lends no texture, and it does not record a pass that uses a resource
+  without a device object, so no callback sees a zero texture that it declared.
 
 ## Testing
 

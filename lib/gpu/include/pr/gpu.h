@@ -15,7 +15,7 @@
 // thread at a time. Creating, retaining, releasing and destroying objects, uploads and submissions are thread-safe.
 //
 // The device tracks no resource states. A barrier names a resource's accesses before and after it, and the caller knows
-// them.
+// them. A render graph (pr/gpu_graph.h) knows them for a frame's passes, and records the barriers.
 //
 // A device can be lost: the system takes the GPU away, as when its driver resets after a hang. A lost device never
 // comes back. Every call on it and its objects stays safe. The calls that make something new fail with Lost, recorded
