@@ -16,6 +16,7 @@
 #include "pr/app_surface.h"
 #include "pr/assert.h"
 #include "pr/mem.h"
+#include "pr/min_max.h"
 #include "pr/raw_array.h"
 #include "pr/raw_string.h"
 
@@ -24,7 +25,9 @@
 #include <emscripten/emscripten.h>
 
 // The page's side of the backend (gpu_webgpu.js). Every id is the device's index of the object, and zero is none.
-extern "C" bool prGpuWebgpuRequest(void* device);
+extern "C" bool prGpuWebgpuWaits();
+extern "C" bool prGpuWebgpuRequest(void* device, bool wait);
+extern "C" void prGpuWebgpuWait(uint32_t device);
 extern "C" void prGpuWebgpuRelease(uint32_t device);
 extern "C" void prGpuWebgpuSimulateLoss(uint32_t device);
 extern "C" bool prGpuWebgpuBufferCreate(uint32_t device, uint32_t id, uint64_t size, uint32_t memory, uint8_t* shadow);
@@ -47,6 +50,8 @@ extern "C" void prGpuWebgpuCanvasRelease(uint32_t device, uint32_t canvas);
 extern "C" void prGpuWebgpuCanvasAcquire(uint32_t device, uint32_t canvas, uint32_t id, uint32_t width, uint32_t height);
 
 namespace pr_impl {
+
+using namespace pr;
 
 namespace {
 
@@ -77,11 +82,200 @@ enum {
     WebgpuOp_Dispatch,              // x, y, z
     WebgpuOp_DispatchIndirect,      // buffer, offset
     WebgpuOp_CopyBuffer,            // source, offset (2), target, offset (2), size (2)
-    WebgpuOp_CopyBufferToTexture,   // buffer, offset (2), row bytes, rows, texture, region (8)
-    WebgpuOp_CopyTextureToBuffer,   // texture, region (8), buffer, offset (2), row bytes, rows
+    WebgpuOp_CopyBufferToTexture,   // buffer, offset (2), row bytes, rows, block height, texture, region (8)
+    WebgpuOp_CopyTextureToBuffer,   // texture, region (8), buffer, offset (2), row bytes, rows, block height
     WebgpuOp_CopyTexture,           // source, region (8), target, region (8)
 };
 typedef uint32_t WebgpuOp;
+
+// The page's texture formats (GPUTextureFormat) that the backend uses, in the order of gpu_webgpu.js's names of them.
+// ASTC's follow WebgpuFormat_Astc, two to a block size, Unorm and then Srgb, in the order of PrGpuFormat's block sizes.
+enum : uint32_t {
+    WebgpuFormat_None,
+    WebgpuFormat_R8Unorm,
+    WebgpuFormat_Rg8Unorm,
+    WebgpuFormat_R16Unorm,
+    WebgpuFormat_Rg16Unorm,
+    WebgpuFormat_Rgba8Unorm,
+    WebgpuFormat_Rgba8UnormSrgb,
+    WebgpuFormat_Bgra8Unorm,
+    WebgpuFormat_Bgra8UnormSrgb,
+    WebgpuFormat_Rgb10A2Unorm,
+    WebgpuFormat_Rg11B10Ufloat,
+    WebgpuFormat_R16Float,
+    WebgpuFormat_Rg16Float,
+    WebgpuFormat_Rgba16Float,
+    WebgpuFormat_R32Float,
+    WebgpuFormat_Rg32Float,
+    WebgpuFormat_Rgba32Float,
+    WebgpuFormat_R8Uint,
+    WebgpuFormat_R16Uint,
+    WebgpuFormat_R32Uint,
+    WebgpuFormat_Rg32Uint,
+    WebgpuFormat_Rgba32Uint,
+    WebgpuFormat_Depth16Unorm,
+    WebgpuFormat_Depth32Float,
+    WebgpuFormat_Depth32FloatStencil8,
+    WebgpuFormat_Bc1,
+    WebgpuFormat_Bc1Srgb,
+    WebgpuFormat_Bc2,
+    WebgpuFormat_Bc2Srgb,
+    WebgpuFormat_Bc3,
+    WebgpuFormat_Bc3Srgb,
+    WebgpuFormat_Bc4,
+    WebgpuFormat_Bc4Snorm,
+    WebgpuFormat_Bc5,
+    WebgpuFormat_Bc5Snorm,
+    WebgpuFormat_Bc6HUfloat,
+    WebgpuFormat_Bc6HSfloat,
+    WebgpuFormat_Bc7,
+    WebgpuFormat_Bc7Srgb,
+    WebgpuFormat_Etc2Rgb8,
+    WebgpuFormat_Etc2Rgb8Srgb,
+    WebgpuFormat_Etc2Rgb8A1,
+    WebgpuFormat_Etc2Rgb8A1Srgb,
+    WebgpuFormat_Etc2Rgba8,
+    WebgpuFormat_Etc2Rgba8Srgb,
+    WebgpuFormat_EacR11,
+    WebgpuFormat_EacR11Snorm,
+    WebgpuFormat_EacRg11,
+    WebgpuFormat_EacRg11Snorm,
+    WebgpuFormat_Astc,
+};
+typedef uint32_t WebgpuFormat;
+
+// Returns the page's format of `format`, or none if the page has none. WebGPU places no channels otherwise, so a
+// swizzled format has the format that stores it, which a device without PrGpuFeatureFlag_TextureSwizzle never samples.
+WebgpuFormat webgpuFormatOf(PrGpuFormat format) {
+    const PrGpuFormat stored = prGpuFormatStored(format);
+    if (prGpuFormatFamily(stored) == PrGpuFormatFamily_Astc) {
+        const uint32_t size = (prGpuFormatPlain(stored) - PrGpuFormat_Astc4x4) / kPrGpuAstcFormatsPerBlockSize;
+        return WebgpuFormat_Astc + size * 2 + (prGpuFormatIsSrgb(stored) ? 1 : 0);
+    }
+    switch (stored) {
+        case PrGpuFormat_R8:
+            return WebgpuFormat_R8Unorm;
+        case PrGpuFormat_Rg8:
+            return WebgpuFormat_Rg8Unorm;
+        case PrGpuFormat_R16:
+            return WebgpuFormat_R16Unorm;
+        case PrGpuFormat_Rg16:
+            return WebgpuFormat_Rg16Unorm;
+        case PrGpuFormat_Rgba8:
+            return WebgpuFormat_Rgba8Unorm;
+        case PrGpuFormat_Rgba8Srgb:
+            return WebgpuFormat_Rgba8UnormSrgb;
+        case PrGpuFormat_Bgra8:
+            return WebgpuFormat_Bgra8Unorm;
+        case PrGpuFormat_Bgra8Srgb:
+            return WebgpuFormat_Bgra8UnormSrgb;
+        case PrGpuFormat_Rgb10A2:
+            return WebgpuFormat_Rgb10A2Unorm;
+        case PrGpuFormat_Rg11B10F:
+            return WebgpuFormat_Rg11B10Ufloat;
+        case PrGpuFormat_R16F:
+            return WebgpuFormat_R16Float;
+        case PrGpuFormat_Rg16F:
+            return WebgpuFormat_Rg16Float;
+        case PrGpuFormat_Rgba16F:
+            return WebgpuFormat_Rgba16Float;
+        case PrGpuFormat_R32F:
+            return WebgpuFormat_R32Float;
+        case PrGpuFormat_Rg32F:
+            return WebgpuFormat_Rg32Float;
+        case PrGpuFormat_Rgba32F:
+            return WebgpuFormat_Rgba32Float;
+        case PrGpuFormat_R8Uint:
+            return WebgpuFormat_R8Uint;
+        case PrGpuFormat_R16Uint:
+            return WebgpuFormat_R16Uint;
+        case PrGpuFormat_R32Uint:
+            return WebgpuFormat_R32Uint;
+        case PrGpuFormat_Rg32Uint:
+            return WebgpuFormat_Rg32Uint;
+        case PrGpuFormat_Rgba32Uint:
+            return WebgpuFormat_Rgba32Uint;
+        case PrGpuFormat_D16:
+            return WebgpuFormat_Depth16Unorm;
+        case PrGpuFormat_D32F:
+            return WebgpuFormat_Depth32Float;
+        case PrGpuFormat_D32FS8:
+            return WebgpuFormat_Depth32FloatStencil8;
+        case PrGpuFormat_Bc1:
+            return WebgpuFormat_Bc1;
+        case PrGpuFormat_Bc1Srgb:
+            return WebgpuFormat_Bc1Srgb;
+        case PrGpuFormat_Bc2:
+            return WebgpuFormat_Bc2;
+        case PrGpuFormat_Bc2Srgb:
+            return WebgpuFormat_Bc2Srgb;
+        case PrGpuFormat_Bc3:
+            return WebgpuFormat_Bc3;
+        case PrGpuFormat_Bc3Srgb:
+            return WebgpuFormat_Bc3Srgb;
+        case PrGpuFormat_Bc4:
+            return WebgpuFormat_Bc4;
+        case PrGpuFormat_Bc4Snorm:
+            return WebgpuFormat_Bc4Snorm;
+        case PrGpuFormat_Bc5:
+            return WebgpuFormat_Bc5;
+        case PrGpuFormat_Bc5Snorm:
+            return WebgpuFormat_Bc5Snorm;
+        case PrGpuFormat_Bc6HUfloat:
+            return WebgpuFormat_Bc6HUfloat;
+        case PrGpuFormat_Bc6HSfloat:
+            return WebgpuFormat_Bc6HSfloat;
+        case PrGpuFormat_Bc7:
+            return WebgpuFormat_Bc7;
+        case PrGpuFormat_Bc7Srgb:
+            return WebgpuFormat_Bc7Srgb;
+        case PrGpuFormat_Etc2Rgb8:
+            return WebgpuFormat_Etc2Rgb8;
+        case PrGpuFormat_Etc2Rgb8Srgb:
+            return WebgpuFormat_Etc2Rgb8Srgb;
+        case PrGpuFormat_Etc2Rgb8A1:
+            return WebgpuFormat_Etc2Rgb8A1;
+        case PrGpuFormat_Etc2Rgb8A1Srgb:
+            return WebgpuFormat_Etc2Rgb8A1Srgb;
+        case PrGpuFormat_Etc2Rgba8:
+            return WebgpuFormat_Etc2Rgba8;
+        case PrGpuFormat_Etc2Rgba8Srgb:
+            return WebgpuFormat_Etc2Rgba8Srgb;
+        case PrGpuFormat_EacR11:
+            return WebgpuFormat_EacR11;
+        case PrGpuFormat_EacR11Snorm:
+            return WebgpuFormat_EacR11Snorm;
+        case PrGpuFormat_EacRg11:
+            return WebgpuFormat_EacRg11;
+        case PrGpuFormat_EacRg11Snorm:
+            return WebgpuFormat_EacRg11Snorm;
+        default:
+            return WebgpuFormat_None;
+    }
+}
+
+// Returns the format of a canvas that the page prefers.
+PrGpuFormat formatOfCanvas(WebgpuFormat format) {
+    switch (format) {
+        case WebgpuFormat_Rgba8Unorm:
+            return PrGpuFormat_Rgba8;
+        case WebgpuFormat_Rgba16Float:
+            return PrGpuFormat_Rgba16F;
+        default:
+            return PrGpuFormat_Bgra8;
+    }
+}
+
+// The optional features of WebGPU that a device has, as gpu_webgpu.js's prGpuWebgpuFeatureNames lists them.
+enum {
+    WebgpuFeature_Timestamps = 1u << 0,
+    WebgpuFeature_Float32Filterable = 1u << 1,      // textures of 32-bit floats are filtered
+    WebgpuFeature_CompressionBc = 1u << 2,
+    WebgpuFeature_CompressionAstc = 1u << 3,
+    WebgpuFeature_Rg11B10Renderable = 1u << 4,
+    WebgpuFeature_CompressionEtc2 = 1u << 5,
+};
+typedef uint32_t WebgpuFeatures;
 
 // What a resource is: a free entry, a buffer, a texture, or a view of a texture.
 enum {
@@ -101,10 +295,11 @@ struct WebgpuResource {
     uint8_t* PR_NULLABLE shadow;
 };
 
-// A resource that was destroyed, kept until the device reaches `fence` with no command buffer open.
+// A resource or a pipeline that was destroyed, kept until the device reaches `fence` with no command buffer open.
 struct WebgpuRetired {
     uint32_t id;
     PrGpuFence fence;
+    bool pipeline;
 };
 
 // A pipeline: whether it dispatches, and its group size if so.
@@ -131,7 +326,10 @@ struct WebgpuPass;
 
 struct WebgpuDevice : GpuSharedDevice {
     uint32_t page;                      // the page's id of the GPUDevice, or zero before it is ready
+    bool waits;                         // the program suspends to wait for the page (prGpuWebgpuWaits)
     bool lost;
+    uint32_t errors;                    // the validation errors that the page reported
+    WebgpuFeatures webgpuFeatures;
     GpuSharedTable<WebgpuResource> resources;
     GpuSharedTable<PrGpuSamplerDesc> samplers;
     GpuSharedTable<WebgpuPipeline> pipelines;
@@ -189,14 +387,17 @@ void emit64(WebgpuCommands* c, uint64_t value) {
     c->words.push(uint32_t(value >> 32));
 }
 
-void emitRegion(WebgpuCommands* c, const PrGpuTextureRegion& r) {
+// Emits a region of a texture of `format`, with its extent in whole blocks: WebGPU names a copy's extent so, and the
+// blocks reach past a level that ends inside its last ones.
+void emitRegion(WebgpuCommands* c, const PrGpuTextureRegion& r, PrGpuFormat format) {
+    PrGpuFormatBlock block = prGpuFormatBlock(format);
     emit(c, r.level);
     emit(c, r.firstLayer);
     emit(c, r.x);
     emit(c, r.y);
     emit(c, r.z);
-    emit(c, r.extent.width);
-    emit(c, r.extent.height);
+    emit(c, alignUp(r.extent.width, uint32_t(block.width)));
+    emit(c, alignUp(r.extent.height, uint32_t(block.height)));
     emit(c, r.extent.depth);
 }
 
@@ -219,6 +420,13 @@ void collect(WebgpuDevice* d) {
             d->retired.data[kept++] = r;
             continue;
         }
+        if (r.pipeline) {
+            d->pipelines[r.id] = WebgpuPipeline{};
+            if (d->page != 0)
+                prGpuWebgpuPipelineRelease(d->page, r.id);
+            d->pipelines.free(r.id);
+            continue;
+        }
         WebgpuResource& resource = d->resources[r.id];
         prMemoryFree(resource.shadow);
         resource = WebgpuResource{};
@@ -229,13 +437,21 @@ void collect(WebgpuDevice* d) {
     d->retired.count = kept;
 }
 
-void retire(WebgpuDevice* d, uint32_t id) {
-    d->retired.push(WebgpuRetired{id, d->submitted + 1});
+void retire(WebgpuDevice* d, uint32_t id, bool pipeline = false) {
+    d->retired.push(WebgpuRetired{id, d->submitted + 1, pipeline});
     collect(d);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 // The device
+
+// Requests the page's device and waits for it, in a program that suspends.
+PrStatus initialize(GpuSharedDevice* device) {
+    WebgpuDevice* d = static_cast<WebgpuDevice*>(device);
+    if (!prGpuWebgpuRequest(d, true))
+        return PrStatus_NotSupported;
+    return d->page != 0 ? PrStatus_Ok : PrStatus_NotSupported;
+}
 
 bool removed(const GpuSharedDevice* device) {
     return static_cast<const WebgpuDevice*>(device)->lost;
@@ -272,33 +488,47 @@ bool isComplete(const PrGpuDevice* device, PrGpuFence fence) {
     return d->lost || d->reached >= fence;
 }
 
-// The page's thread reaches fences only between its tasks, so no call can wait for one.
-void wait(PrGpuDevice*, PrGpuFence) {}
+// The page's thread reaches fences only between its tasks. A program that suspends waits for the page to reach the
+// fence, and any other returns at once.
+void wait(PrGpuDevice* device, PrGpuFence fence) {
+    WebgpuDevice* d = webgpuOf(device);
+    while (d->waits && !d->lost && d->reached < fence)
+        prGpuWebgpuWait(d->page);
+}
 
-void waitIdle(PrGpuDevice*) {}
+void waitIdle(PrGpuDevice* device) {
+    wait(device, webgpuOf(device)->submitted);
+}
 
-bool supportsFormat(const PrGpuDevice*, PrGpuFormat format, PrGpuTextureUsageFlags usage) {
+// A shader samples a texture with a filter, so a format of 32-bit floats is sampled only where the device filters it.
+bool supportsFormat(const PrGpuDevice* device, PrGpuFormat format, PrGpuTextureUsageFlags usage) {
+    WebgpuFeatures features = webgpuOf(device)->webgpuFeatures;
+    const PrGpuTextureUsageFlags written = PrGpuTextureUsageFlag_DepthStencil | PrGpuTextureUsageFlag_Storage;
+    // The page has a family of blocks as a feature, and no format for ASTC's HDR profile.
+    constexpr WebgpuFeatures kFamilyFeatures[PrGpuFormatFamily_Count] = {
+        0, WebgpuFeature_CompressionBc, WebgpuFeature_CompressionEtc2, WebgpuFeature_CompressionAstc, 0,
+    };
+    if (webgpuFormatOf(format) == WebgpuFormat_None)
+        return false;
+    if (prGpuFormatIsCompressed(format))
+        return usage == PrGpuTextureUsageFlag_Sampled && (features & kFamilyFeatures[prGpuFormatFamily(format)]) != 0;
     switch (format) {
-        case PrGpuFormat_Rgb10A2:
         case PrGpuFormat_Rg11B10F:
-        case PrGpuFormat_R8Uint:
-        case PrGpuFormat_R16Uint:
-        case PrGpuFormat_Bc1:
-        case PrGpuFormat_Bc1Srgb:
-        case PrGpuFormat_Bc3:
-        case PrGpuFormat_Bc3Srgb:
-        case PrGpuFormat_Bc4:
-        case PrGpuFormat_Bc5:
-        case PrGpuFormat_Bc6HUfloat:
-        case PrGpuFormat_Bc7:
-        case PrGpuFormat_Bc7Srgb:
-        case PrGpuFormat_Astc4x4:
-        case PrGpuFormat_Astc4x4Srgb:
-            return false;
+            return (usage & written) == 0 &&
+                ((usage & PrGpuTextureUsageFlag_RenderTarget) == 0 || (features & WebgpuFeature_Rg11B10Renderable) != 0);
+        case PrGpuFormat_R32F:
+        case PrGpuFormat_Rg32F:
+        case PrGpuFormat_Rgba32F:
+            return (usage & PrGpuTextureUsageFlag_DepthStencil) == 0 &&
+                ((usage & PrGpuTextureUsageFlag_Sampled) == 0 || (features & WebgpuFeature_Float32Filterable) != 0);
         case PrGpuFormat_D16:
         case PrGpuFormat_D32F:
         case PrGpuFormat_D32FS8:
             return (usage & (PrGpuTextureUsageFlag_RenderTarget | PrGpuTextureUsageFlag_Storage)) == 0;
+        // The formats of 16-bit unsigned values are a feature of the page's that the device does not ask for.
+        case PrGpuFormat_R16:
+        case PrGpuFormat_Rg16:
+            return false;
         default:
             return (usage & PrGpuTextureUsageFlag_DepthStencil) == 0;
     }
@@ -366,10 +596,11 @@ void bufferUpload(PrGpuDevice* device, PrGpuBuffer buffer, uint64_t offset, cons
     WebgpuResource& r = d->resources[buffer.id];
     if (r.shadow != nullptr)
         prMemCopy(r.shadow + offset, data, size_t(size));
-    // WebGPU writes whole words, so a write of any other size copies the words that it covers.
+    // WebGPU writes whole words, so a write of any other size to a buffer with a copy in the program copies the words
+    // that it covers, and the page merges the bytes of any other buffer into its words.
     uint64_t first = offset & ~uint64_t(3);
     uint64_t end = alignUp(offset + size, 4);
-    if (first == offset && end == offset + size) {
+    if ((first == offset && end == offset + size) || r.shadow == nullptr) {
         prGpuWebgpuBufferWrite(d->page, buffer.id, offset, data, size);
         return;
     }
@@ -391,8 +622,8 @@ PrStatus textureCreate(PrGpuDevice* device, const PrGpuTextureDesc* desc, PrGpuT
     const uint32_t id = addResource(d, resource);
     if (id == 0)
         return PrStatus_Limit;
-    if (!prGpuWebgpuTextureCreate(d->page, id, desc->kind, desc->format, desc->usage, desc->levels, desc->samples,
-            desc->extent.width, desc->extent.height, desc->extent.depth)) {
+    if (!prGpuWebgpuTextureCreate(d->page, id, desc->kind, webgpuFormatOf(desc->format), desc->usage, desc->levels,
+            desc->samples, desc->extent.width, desc->extent.height, desc->extent.depth)) {
         d->resources[id] = WebgpuResource{};
         d->resources.free(id);
         return PrStatus_NotSupported;
@@ -404,15 +635,24 @@ PrStatus textureCreate(PrGpuDevice* device, const PrGpuTextureDesc* desc, PrGpuT
 PrStatus textureCreateView(PrGpuDevice* device, PrGpuTexture texture, PrGpuTextureKind kind,
         PrGpuSubresources subresources, PrGpuTexture* out) {
     WebgpuDevice* d = webgpuOf(device);
+    // A view reports what it covers: its levels from the first, each level's extent, and its layers. Zero levels or
+    // layers cover every one from the first.
     PrGpuTextureDesc desc = d->resources[texture.id].texture;
+    uint32_t levels = subresources.levels != 0 ? subresources.levels : desc.levels - subresources.firstLevel;
+    uint32_t layers = subresources.layers != 0 ? subresources.layers : desc.extent.depth - subresources.firstLayer;
+    if (desc.kind == PrGpuTextureKind_3d)
+        layers = 1;
     desc.kind = kind;
-    desc.levels = subresources.levels;
+    desc.levels = uint8_t(levels);
+    desc.extent.width = max(desc.extent.width >> subresources.firstLevel, 1u);
+    desc.extent.height = max(desc.extent.height >> subresources.firstLevel, 1u);
+    desc.extent.depth = kind == PrGpuTextureKind_3d ? max(desc.extent.depth >> subresources.firstLevel, 1u) : layers;
     WebgpuResource resource{.kind = WebgpuKind_Texture, .texture = desc};
     const uint32_t id = addResource(d, resource);
     if (id == 0)
         return PrStatus_Limit;
-    if (!prGpuWebgpuTextureCreateView(d->page, id, texture.id, kind, desc.format, subresources.firstLevel,
-            subresources.levels, subresources.firstLayer, subresources.layers)) {
+    if (!prGpuWebgpuTextureCreateView(d->page, id, texture.id, kind, webgpuFormatOf(desc.format),
+            subresources.firstLevel, levels, subresources.firstLayer, layers)) {
         d->resources[id] = WebgpuResource{};
         d->resources.free(id);
         return PrStatus_NotSupported;
@@ -440,13 +680,29 @@ uint32_t textureStorageHandle(const PrGpuDevice*, PrGpuTexture texture) {
     return texture.id;
 }
 
+// Returns the rows of blocks from one layer of a copy's bytes to the next, which WebGPU names in rows: as many as
+// `layerBytes` holds, or the region's own rows where layers follow one another.
+uint32_t rowsPerLayer(PrGpuFormat format, const PrGpuTextureRegion& region, uint32_t rowBytes, uint32_t layerBytes) {
+    uint32_t blockHeight = prGpuFormatBlock(format).height;
+    uint32_t rows = (region.extent.height + blockHeight - 1) / blockHeight;
+    return layerBytes != 0 && rowBytes != 0 ? layerBytes / rowBytes : rows;
+}
+
 void textureUpload(PrGpuDevice* device, PrGpuTexture texture, const PrGpuTextureRegion* region, const void* data,
         uint32_t rowBytes, uint32_t layerBytes) {
     WebgpuDevice* d = webgpuOf(device);
-    uint32_t rows = rowBytes != 0 ? layerBytes / rowBytes : 0;
-    uint64_t size = uint64_t(layerBytes) * region->extent.depth;
+    PrGpuFormat format = d->resources[texture.id].texture.format;
+    uint32_t rows = rowsPerLayer(format, *region, rowBytes, layerBytes);
+    uint32_t blockHeight = prGpuFormatBlock(format).height;
+    uint32_t lastRows = (region->extent.height + blockHeight - 1) / blockHeight;
+    // The bytes reach the last row of the last layer, which need not run a whole `rowBytes`.
+    uint32_t lastRow = prGpuFormatBlock(format).bytes *
+        ((region->extent.width + prGpuFormatBlock(format).width - 1) / prGpuFormatBlock(format).width);
+    uint64_t size = uint64_t(rowBytes) * rows * (region->extent.depth - 1) + uint64_t(rowBytes) * (lastRows - 1) + lastRow;
+    PrGpuFormatBlock block = prGpuFormatBlock(format);
     prGpuWebgpuTextureWrite(d->page, texture.id, region->level, region->x, region->y, region->z + region->firstLayer,
-        region->extent.width, region->extent.height, region->extent.depth, data, rowBytes, rows, size);
+        alignUp(region->extent.width, uint32_t(block.width)), alignUp(region->extent.height, uint32_t(block.height)),
+        region->extent.depth, data, rowBytes, rows, size);
 }
 
 PrStatus samplerCreate(PrGpuDevice* device, const PrGpuSamplerDesc* desc, PrGpuSampler* out) {
@@ -561,7 +817,7 @@ PrStatus graphicsPipelineCreate(PrGpuDevice* device, const PrGpuGraphicsPipeline
     words.push(desc->formats.colorCount);
     for (uint32_t i = 0; i < desc->formats.colorCount; ++i) {
         const PrGpuBlend& b = desc->blend[i];
-        words.push(desc->formats.color[i]);
+        words.push(webgpuFormatOf(desc->formats.color[i]));
         words.push(b.enabled);
         words.push(b.colorSource);
         words.push(b.colorTarget);
@@ -571,7 +827,7 @@ PrStatus graphicsPipelineCreate(PrGpuDevice* device, const PrGpuGraphicsPipeline
         words.push(b.alphaOp);
         words.push(b.write != 0 ? b.write : PrGpuColorWriteFlag_All);
     }
-    words.push(desc->formats.depthStencil);
+    words.push(webgpuFormatOf(desc->formats.depthStencil));
     words.push(desc->formats.samples);
     const PrGpuVertexLayout& layout = desc->vertexLayout;
     words.push(layout.bufferCount);
@@ -601,6 +857,7 @@ PrStatus computePipelineCreate(PrGpuDevice* device, const PrGpuShaderLibrary*, c
     return status;
 }
 
+// Work recorded before the release may still use the pipeline, so its id is retired as a resource's is.
 void pipelineRetain(PrGpuDevice* device, PrGpuPipeline pipeline) {
     webgpuOf(device)->pipelines.retain(pipeline.id);
 }
@@ -608,10 +865,7 @@ void pipelineRetain(PrGpuDevice* device, PrGpuPipeline pipeline) {
 void pipelineRelease(PrGpuDevice* device, PrGpuPipeline pipeline) {
     if (!webgpuOf(device)->pipelines.release(pipeline.id))
         return;
-    WebgpuDevice* d = webgpuOf(device);
-    d->pipelines[pipeline.id] = WebgpuPipeline{};
-    d->pipelines.free(pipeline.id);
-    prGpuWebgpuPipelineRelease(d->page, pipeline.id);
+    retire(webgpuOf(device), pipeline.id, true);
 }
 
 PrGpuExtent pipelineGroupSize(const PrGpuDevice* device, PrGpuPipeline pipeline) {
@@ -845,11 +1099,12 @@ void commandsCopyTexture(PrGpuCommands* commands, PrGpuTexture source, const PrG
         PrGpuTexture target, const PrGpuTextureRegion* targetRegion) {
     gpuSharedCheckOutsidePass(commands);
     WebgpuCommands* c = commandsOf(commands);
+    const GpuSharedTable<WebgpuResource>& resources = deviceOfCommands(commands)->resources;
     emit(c, WebgpuOp_CopyTexture);
     emit(c, source.id);
-    emitRegion(c, *sourceRegion);
+    emitRegion(c, *sourceRegion, resources[source.id].texture.format);
     emit(c, target.id);
-    emitRegion(c, *targetRegion);
+    emitRegion(c, *targetRegion, resources[target.id].texture.format);
 }
 
 void commandsCopyBufferToTexture(PrGpuCommands* commands, PrGpuBuffer source, uint64_t sourceOffset, uint32_t rowBytes,
@@ -860,9 +1115,11 @@ void commandsCopyBufferToTexture(PrGpuCommands* commands, PrGpuBuffer source, ui
     emit(c, source.id);
     emit64(c, sourceOffset);
     emit(c, rowBytes);
-    emit(c, rowBytes != 0 ? layerBytes / rowBytes : 0);
+    PrGpuFormat format = deviceOfCommands(commands)->resources[target.id].texture.format;
+    emit(c, rowsPerLayer(format, *targetRegion, rowBytes, layerBytes));
+    emit(c, prGpuFormatBlock(format).height);
     emit(c, target.id);
-    emitRegion(c, *targetRegion);
+    emitRegion(c, *targetRegion, format);
 }
 
 void commandsCopyTextureToBuffer(PrGpuCommands* commands, PrGpuTexture source, const PrGpuTextureRegion* sourceRegion,
@@ -870,12 +1127,14 @@ void commandsCopyTextureToBuffer(PrGpuCommands* commands, PrGpuTexture source, c
     gpuSharedCheckOutsidePass(commands);
     WebgpuCommands* c = commandsOf(commands);
     emit(c, WebgpuOp_CopyTextureToBuffer);
+    PrGpuFormat format = deviceOfCommands(commands)->resources[source.id].texture.format;
     emit(c, source.id);
-    emitRegion(c, *sourceRegion);
+    emitRegion(c, *sourceRegion, format);
     emit(c, target.id);
     emit64(c, targetOffset);
     emit(c, rowBytes);
-    emit(c, rowBytes != 0 ? layerBytes / rowBytes : 0);
+    emit(c, rowsPerLayer(format, *sourceRegion, rowBytes, layerBytes));
+    emit(c, prGpuFormatBlock(format).height);
 }
 
 void commandsOnDone(PrGpuCommands* commands, PrGpuDoneFn done, void* PR_NULLABLE context) {
@@ -1106,11 +1365,11 @@ PrStatus swapChainAcquire(PrGpuSwapChain* swapChain, PrUVec2 extent, PrGpuTextur
         return PrStatus_Lost;
     if (s->canvas == 0) {
         PrStringView selector = prRawStringView(&s->selector);
-        uint32_t format = PrGpuFormat_Bgra8;
+        WebgpuFormat format = WebgpuFormat_Bgra8Unorm;
         s->canvas = prGpuWebgpuCanvasAttach(d->page, selector.data, selector.size, extent.x, extent.y, s->transparent, &format);
         if (s->canvas == 0)
             return PrStatus_Lost;
-        s->info.format = PrGpuFormat(format);
+        s->info.format = formatOfCanvas(format);
     }
     // The canvas's texture of each frame is new, so its id names it anew.
     if (s->texture == 0) {
@@ -1237,24 +1496,43 @@ PrGpuDevice* prGpuWebgpuCreate(const PrGpuDeviceOptions* PR_NULLABLE options) {
     d->resources.init(1, limits.resources);
     d->samplers.init(1, limits.samplers);
     d->pipelines.init(1, limits.pipelines);
-    gpuSharedDeviceStartLater(d, o.ready, o.readyContext);
-    // A page without WebGPU fails the creation at once.
-    if (!prGpuWebgpuRequest(d))
-        gpuSharedDeviceFinish(d, PrStatus_NotSupported);
+    // A program that suspends makes the device as the other backends do, as a job of the pool or during the call.
+    // Elsewhere, the page's event loop finishes the creation, and a page without WebGPU fails it at once.
+    d->waits = prGpuWebgpuWaits();
+    if (d->waits) {
+        d->initialize = initialize;
+        gpuSharedDeviceStart(d, o.pool, o.ready, o.readyContext);
+    } else {
+        gpuSharedDeviceStartLater(d, o.ready, o.readyContext);
+        if (!prGpuWebgpuRequest(d, false))
+            gpuSharedDeviceFinish(d, PrStatus_NotSupported);
+    }
     return d;
 }
 
+uint32_t prGpuWebgpuValidationErrors(const PrGpuDevice* device) {
+    return webgpuOf(device)->errors;
+}
+
 EMSCRIPTEN_KEEPALIVE void prGpuWebgpuCreated(void* device, uint32_t page, uint32_t maxTextureSize,
-        uint32_t storageOffsetAlignment, bool timestamps) {
+        uint32_t storageOffsetAlignment, uint32_t features) {
     WebgpuDevice* d = static_cast<WebgpuDevice*>(device);
     d->page = page;
     if (page != 0) {
         d->info.maxTextureSize = maxTextureSize;
         d->info.storageOffsetAlignment = storageOffsetAlignment > 16 ? storageOffsetAlignment : 16;
     }
-    if (timestamps)
+    d->webgpuFeatures = features;
+    if ((features & WebgpuFeature_Timestamps) != 0)
         d->info.features |= PrGpuFeatureFlag_Timestamps;
-    gpuSharedDeviceFinish(d, page != 0 ? PrStatus_Ok : PrStatus_NotSupported);
+    if ((features & WebgpuFeature_CompressionBc) != 0)
+        d->info.features |= PrGpuFeatureFlag_TextureCompressionBc;
+    if ((features & WebgpuFeature_CompressionAstc) != 0)
+        d->info.features |= PrGpuFeatureFlag_TextureCompressionAstc;
+    if ((features & WebgpuFeature_CompressionEtc2) != 0)
+        d->info.features |= PrGpuFeatureFlag_TextureCompressionEtc2;
+    if (!d->waits)
+        gpuSharedDeviceFinish(d, page != 0 ? PrStatus_Ok : PrStatus_NotSupported);
 }
 
 EMSCRIPTEN_KEEPALIVE void prGpuWebgpuReached(void* device, double fence, double seconds) {
@@ -1265,4 +1543,8 @@ EMSCRIPTEN_KEEPALIVE void prGpuWebgpuLost(void* device) {
     WebgpuDevice* d = static_cast<WebgpuDevice*>(device);
     d->lost = true;
     reach(d, d->submitted, 0);
+}
+
+EMSCRIPTEN_KEEPALIVE void prGpuWebgpuError(void* device) {
+    ++static_cast<WebgpuDevice*>(device)->errors;
 }

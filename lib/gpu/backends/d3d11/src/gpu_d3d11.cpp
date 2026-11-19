@@ -147,7 +147,7 @@ struct D3d11Pipeline {
     // The number of vertex buffers that the pipeline reads, and their strides. Direct3D 11 takes the strides with the
     // buffers, not with the pipeline.
     uint8_t vertexBufferCount;
-    UINT vertexStrides[kPrGpuMaxVertexBuffers];         // by vertex buffer
+    UINT vertexStrides[kPrGpuMaxVertexBuffers]; // by vertex buffer
 };
 
 // An object that waits to be freed until every command buffer that began before `serial` is done.
@@ -362,9 +362,11 @@ DXGI_FORMAT vertexFormatOf(PrGpuVertexFormat format) {
 }
 
 DXGI_FORMAT formatOf(PrGpuFormat format) {
-    switch (format) {
+    switch (prGpuFormatStored(format)) {
         case PrGpuFormat_R8: return DXGI_FORMAT_R8_UNORM;
         case PrGpuFormat_Rg8: return DXGI_FORMAT_R8G8_UNORM;
+        case PrGpuFormat_R16: return DXGI_FORMAT_R16_UNORM;
+        case PrGpuFormat_Rg16: return DXGI_FORMAT_R16G16_UNORM;
         case PrGpuFormat_Rgba8: return DXGI_FORMAT_R8G8B8A8_UNORM;
         case PrGpuFormat_Rgba8Srgb: return DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
         case PrGpuFormat_Bgra8: return DXGI_FORMAT_B8G8R8A8_UNORM;
@@ -387,11 +389,16 @@ DXGI_FORMAT formatOf(PrGpuFormat format) {
         case PrGpuFormat_D32FS8: return DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
         case PrGpuFormat_Bc1: return DXGI_FORMAT_BC1_UNORM;
         case PrGpuFormat_Bc1Srgb: return DXGI_FORMAT_BC1_UNORM_SRGB;
+        case PrGpuFormat_Bc2: return DXGI_FORMAT_BC2_UNORM;
+        case PrGpuFormat_Bc2Srgb: return DXGI_FORMAT_BC2_UNORM_SRGB;
         case PrGpuFormat_Bc3: return DXGI_FORMAT_BC3_UNORM;
         case PrGpuFormat_Bc3Srgb: return DXGI_FORMAT_BC3_UNORM_SRGB;
         case PrGpuFormat_Bc4: return DXGI_FORMAT_BC4_UNORM;
+        case PrGpuFormat_Bc4Snorm: return DXGI_FORMAT_BC4_SNORM;
         case PrGpuFormat_Bc5: return DXGI_FORMAT_BC5_UNORM;
+        case PrGpuFormat_Bc5Snorm: return DXGI_FORMAT_BC5_SNORM;
         case PrGpuFormat_Bc6HUfloat: return DXGI_FORMAT_BC6H_UF16;
+        case PrGpuFormat_Bc6HSfloat: return DXGI_FORMAT_BC6H_SF16;
         case PrGpuFormat_Bc7: return DXGI_FORMAT_BC7_UNORM;
         case PrGpuFormat_Bc7Srgb: return DXGI_FORMAT_BC7_UNORM_SRGB;
         default: return DXGI_FORMAT_UNKNOWN;
@@ -736,7 +743,7 @@ bool supportsFormat(const PrGpuDevice* device, PrGpuFormat format, PrGpuTextureU
     const D3d11Device* d = d3d11Of(device);
     if (formatOf(format) == DXGI_FORMAT_UNKNOWN)
         return false;
-    bool compressed = format >= PrGpuFormat_Bc1;
+    bool compressed = prGpuFormatIsCompressed(format);
     if (compressed && (usage & ~PrGpuTextureUsageFlag_Sampled))
         return false;
     bool depth = prGpuFormatIsDepthStencil(format);
@@ -1176,6 +1183,18 @@ UINT subresourceOf(const D3d11Resource& r, uint32_t level, uint32_t layer) {
     return D3D11CalcSubresource(mip, slice, r.resourceLevels);
 }
 
+// Returns the box of `region` in a texture of `format`, rounded out to whole blocks. Direct3D 11 requires the box of a
+// compressed format to cover whole blocks, even at a mip level that ends inside a block.
+D3D11_BOX boxOf(PrGpuFormat format, const PrGpuTextureRegion& region, bool is3d) {
+    PrGpuFormatBlock b = prGpuFormatBlock(format);
+    uint32_t width = alignUp(region.extent.width, uint32_t(b.width));
+    uint32_t height = alignUp(region.extent.height, uint32_t(b.height));
+    return D3D11_BOX{
+        region.x, region.y, is3d ? region.z : 0, region.x + width, region.y + height,
+        is3d ? region.z + region.extent.depth : 1,
+    };
+}
+
 // Writes texels into a texture through the immediate context, which orders the write before the work submitted after
 // it. The caller holds the context mutex.
 void writeTexels(D3d11Device* d, const D3d11Resource& r, const PrGpuTextureRegion* region, const uint8_t* data,
@@ -1185,10 +1204,7 @@ void writeTexels(D3d11Device* d, const D3d11Resource& r, const PrGpuTextureRegio
     uint32_t rows = (region->extent.height + b.height - 1) / b.height;
     uint64_t imageBytes = layerBytes != 0 ? layerBytes : uint64_t(rowBytes) * rows;
     uint32_t images = is3d ? 1 : region->extent.depth;
-    D3D11_BOX box{
-        region->x, region->y, is3d ? region->z : 0, region->x + region->extent.width,
-        region->y + region->extent.height, is3d ? region->z + region->extent.depth : 1,
-    };
+    D3D11_BOX box = boxOf(r.texture.format, *region, is3d);
     for (uint32_t i = 0; i < images; ++i) {
         UINT subresource = subresourceOf(r, region->level, is3d ? 0 : region->firstLayer + i);
         d->context->UpdateSubresource(r.resource, subresource, &box, data + i * imageBytes, rowBytes, UINT(imageBytes));
@@ -2191,14 +2207,11 @@ void replayReadTexture(D3d11Replay& r, const D3d11CopyBufferTextureOp& op) {
         .rowSize = (region.extent.width + b.width - 1) / b.width * b.bytes,
         .depth = is3d ? region.extent.depth : 1,
     };
-    D3D11_BOX box{
-        region.x, region.y, is3d ? region.z : 0, region.x + region.extent.width, region.y + region.extent.height,
-        is3d ? region.z + region.extent.depth : 1,
-    };
+    D3D11_BOX box = boxOf(t.texture.format, region, is3d);
     if (is3d) {
         D3D11_TEXTURE3D_DESC s{};
-        s.Width = region.extent.width;
-        s.Height = region.extent.height;
+        s.Width = box.right - box.left;
+        s.Height = box.bottom - box.top;
         s.Depth = region.extent.depth;
         s.MipLevels = 1;
         s.Format = t.format;
@@ -2209,8 +2222,8 @@ void replayReadTexture(D3d11Replay& r, const D3d11CopyBufferTextureOp& op) {
         d->context->CopySubresourceRegion(readback.staging3d, 0, 0, 0, 0, t.resource, subresourceOf(t, region.level, 0), &box);
     } else {
         D3D11_TEXTURE2D_DESC s{};
-        s.Width = region.extent.width;
-        s.Height = region.extent.height;
+        s.Width = box.right - box.left;
+        s.Height = box.bottom - box.top;
         s.MipLevels = 1;
         s.ArraySize = images;
         s.Format = t.format;
@@ -2235,9 +2248,7 @@ void replayCopyTexture(D3d11Replay& r, const D3d11CopyTextureOp& op) {
     const PrGpuTextureRegion& s = op.sourceRegion;
     const PrGpuTextureRegion& t = op.targetRegion;
     uint32_t images = is3d ? 1 : s.extent.depth;
-    D3D11_BOX box{
-        s.x, s.y, is3d ? s.z : 0, s.x + s.extent.width, s.y + s.extent.height, is3d ? s.z + s.extent.depth : 1,
-    };
+    D3D11_BOX box = boxOf(from.texture.format, s, is3d);
     for (uint32_t i = 0; i < images; ++i) {
         d->context->CopySubresourceRegion(to.resource, subresourceOf(to, t.level, t.firstLayer + i), t.x, t.y,
             is3d ? t.z : 0, from.resource, subresourceOf(from, s.level, s.firstLayer + i), &box);

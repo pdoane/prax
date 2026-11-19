@@ -14,48 +14,11 @@
 #if defined(PR_GPU_HAS_COREVIDEO)
 #include "gpu/src/gpu_corevideo.h"
 #endif
+#include "gpu/src/gpu_formats.h"
 
 namespace pr_impl {
 
 namespace {
-
-// The block of each format, by PrGpuFormat.
-constexpr PrGpuFormatBlock kFormatBlocks[PrGpuFormat_Count] = {
-    {0, 0, 0},      // None
-    {1, 1, 1},      // R8
-    {1, 1, 2},      // Rg8
-    {1, 1, 4},      // Rgba8
-    {1, 1, 4},      // Rgba8Srgb
-    {1, 1, 4},      // Bgra8
-    {1, 1, 4},      // Bgra8Srgb
-    {1, 1, 4},      // Rgb10A2
-    {1, 1, 4},      // Rg11B10F
-    {1, 1, 2},      // R16F
-    {1, 1, 4},      // Rg16F
-    {1, 1, 8},      // Rgba16F
-    {1, 1, 4},      // R32F
-    {1, 1, 8},      // Rg32F
-    {1, 1, 16},     // Rgba32F
-    {1, 1, 1},      // R8Uint
-    {1, 1, 2},      // R16Uint
-    {1, 1, 4},      // R32Uint
-    {1, 1, 8},      // Rg32Uint
-    {1, 1, 16},     // Rgba32Uint
-    {1, 1, 2},      // D16
-    {1, 1, 4},      // D32F
-    {1, 1, 8},      // D32FS8
-    {4, 4, 8},      // Bc1
-    {4, 4, 8},      // Bc1Srgb
-    {4, 4, 16},     // Bc3
-    {4, 4, 16},     // Bc3Srgb
-    {4, 4, 8},      // Bc4
-    {4, 4, 16},     // Bc5
-    {4, 4, 16},     // Bc6HUfloat
-    {4, 4, 16},     // Bc7
-    {4, 4, 16},     // Bc7Srgb
-    {4, 4, 16},     // Astc4x4
-    {4, 4, 16},     // Astc4x4Srgb
-};
 
 // The alignment of the rows of a texture's texels in a buffer that a copy reads or writes, which every API accepts.
 constexpr uint32_t kRowAlignment = 256;
@@ -239,11 +202,91 @@ void prGpuDeviceWaitIdle(PrGpuDevice* device) {
 
 PrGpuFormatBlock prGpuFormatBlock(PrGpuFormat format) {
     PR_ASSERT(format != PrGpuFormat_None && format < PrGpuFormat_Count);
-    return kFormatBlocks[format];
+    return kGpuFormats[format].block;
+}
+
+PrGpuFormatFamily prGpuFormatFamily(PrGpuFormat format) {
+    PR_ASSERT(format < PrGpuFormat_Count);
+    return kGpuFormats[format].family;
+}
+
+bool prGpuFormatIsCompressed(PrGpuFormat format) {
+    return prGpuFormatFamily(format) != PrGpuFormatFamily_Plain;
+}
+
+PrGpuFeatureFlags prGpuFormatFamilyFeature(PrGpuFormatFamily family) {
+    constexpr PrGpuFeatureFlags kFeatures[PrGpuFormatFamily_Count] = {
+        0, PrGpuFeatureFlag_TextureCompressionBc, PrGpuFeatureFlag_TextureCompressionEtc2,
+        PrGpuFeatureFlag_TextureCompressionAstc, PrGpuFeatureFlag_TextureCompressionAstcHdr,
+    };
+    return kFeatures[family];
+}
+
+PrGpuFormat prGpuFormatSrgb(PrGpuFormat format) {
+    PR_ASSERT(format < PrGpuFormat_Count);
+    return kGpuFormats[format].srgb != PrGpuFormat_None ? kGpuFormats[format].srgb : format;
+}
+
+PrGpuFormat prGpuFormatPlain(PrGpuFormat format) {
+    PR_ASSERT(format < PrGpuFormat_Count);
+    return kGpuFormats[format].plain != PrGpuFormat_None ? kGpuFormats[format].plain : format;
+}
+
+bool prGpuFormatIsSrgb(PrGpuFormat format) {
+    return prGpuFormatPlain(format) != format;
+}
+
+PrGpuFormat prGpuFormatAstc(PrUVec2 block) {
+    for (const GpuFormatInfo& info : kGpuFormats) {
+        if (info.family == PrGpuFormatFamily_Astc && info.plain == PrGpuFormat_None && info.block.width == block.x &&
+                info.block.height == block.y)
+            return info.format;
+    }
+    return PrGpuFormat_None;
+}
+
+uint32_t prGpuFormatRowBytes(PrGpuFormat format, uint32_t width) {
+    PrGpuFormatBlock block = prGpuFormatBlock(format);
+    return (width + block.width - 1) / block.width * block.bytes;
+}
+
+uint32_t prGpuFormatRows(PrGpuFormat format, uint32_t height) {
+    PrGpuFormatBlock block = prGpuFormatBlock(format);
+    return (height + block.height - 1) / block.height;
+}
+
+uint64_t prGpuFormatLevelBytes(PrGpuFormat format, PrUVec2 extent) {
+    return uint64_t(prGpuFormatRowBytes(format, extent.x)) * prGpuFormatRows(format, extent.y);
+}
+
+PrGpuSwizzle prGpuFormatSwizzle(PrGpuFormat format) {
+    PR_ASSERT(format < PrGpuFormat_Count);
+    return kGpuFormats[format].swizzle;
+}
+
+PrGpuFormat prGpuFormatStored(PrGpuFormat format) {
+    PR_ASSERT(format < PrGpuFormat_Count);
+    return kGpuFormats[format].stored != PrGpuFormat_None ? kGpuFormats[format].stored : format;
+}
+
+PrGpuFormat prGpuFormatSwizzled(PrGpuFormat stored, PrGpuSwizzle swizzle) {
+    if (swizzle == PrGpuSwizzle_None)
+        return stored;
+    for (const GpuFormatInfo& info : kGpuFormats) {
+        if (info.stored == stored && info.swizzle == swizzle && stored != PrGpuFormat_None)
+            return info.format;
+    }
+    return PrGpuFormat_None;
 }
 
 bool prGpuFormatIsDepthStencil(PrGpuFormat format) {
-    return format == PrGpuFormat_D16 || format == PrGpuFormat_D32F || format == PrGpuFormat_D32FS8;
+    PR_ASSERT(format < PrGpuFormat_Count);
+    return (kGpuFormats[format].flags & kGpuFormatDepthStencil) != 0;
+}
+
+bool prGpuFormatFilters(PrGpuFormat format) {
+    PR_ASSERT(format < PrGpuFormat_Count);
+    return (kGpuFormats[format].flags & kGpuFormatFilters) != 0;
 }
 
 PrGpuFormat prGpuFormatFromPixelFormat(PrPixelFormat format) {
@@ -268,7 +311,7 @@ PrGpuFormat prGpuFormatFromPixelFormat(PrPixelFormat format) {
 }
 
 bool prGpuFormatToPixelFormat(PrGpuFormat format, PrPixelFormat* out) {
-    switch (format) {
+    switch (prGpuFormatStored(format)) {
         case PrGpuFormat_Rgba8:
         case PrGpuFormat_Rgba8Srgb:
             *out = PrPixelFormat_Rgba8;
@@ -359,9 +402,75 @@ uint8_t prGpuMipLevels(PrUVec2 extent) {
     return levels;
 }
 
+bool prGpuTextureRecordMake(const PrGpuTextureDesc* desc, PrGpuTextureLayout layout, PrGpuTextureRecord* out) {
+    *out = PrGpuTextureRecord{};
+    const PrGpuExtent& extent = desc->extent;
+    if (desc->samples != 1 || layout >= PrGpuTextureLayout_Count || desc->format == PrGpuFormat_None ||
+            desc->format >= PrGpuFormat_Count || desc->kind > PrGpuTextureKind_3d || extent.width == 0 ||
+            extent.height == 0 || extent.depth == 0 || extent.width > kPrGpuTextureRecordMaxSide ||
+            extent.height > kPrGpuTextureRecordMaxSide || extent.depth > kPrGpuTextureRecordMaxDepth ||
+            desc->levels == 0 || desc->levels > kPrGpuTextureRecordMaxLevels)
+        return false;
+    out->words[0] = uint32_t(layout) | uint32_t(desc->kind) << 8 | uint32_t(desc->format) << 12 | (extent.depth - 1) << 20;
+    out->words[1] = (extent.width - 1) | (extent.height - 1) << 14 | uint32_t(desc->levels - 1) << 28;
+    return true;
+}
+
+bool prGpuTextureRecordRead(PrGpuTextureRecord record, PrGpuTextureDesc* desc, PrGpuTextureLayout* layout) {
+    *desc = PrGpuTextureDesc{};
+    *layout = PrGpuTextureLayout_DeviceOptimal;
+    uint32_t storedLayout = record.words[0] & 0xFF;
+    uint32_t kind = record.words[0] >> 8 & 0xF;
+    uint32_t format = record.words[0] >> 12 & 0xFF;
+    if (storedLayout >= PrGpuTextureLayout_Count || kind > PrGpuTextureKind_3d || format == PrGpuFormat_None ||
+            format >= PrGpuFormat_Count || (record.words[0] >> 31) != 0)
+        return false;
+    *layout = PrGpuTextureLayout(storedLayout);
+    *desc = PrGpuTextureDesc{
+        .kind = PrGpuTextureKind(kind),
+        .format = PrGpuFormat(format),
+        .usage = PrGpuTextureUsageFlag_Sampled,
+        .levels = uint8_t((record.words[1] >> 28) + 1),
+        .samples = 1,
+        .extent = {
+            (record.words[1] & 0x3FFF) + 1, (record.words[1] >> 14 & 0x3FFF) + 1, (record.words[0] >> 20 & 0x7FF) + 1,
+        },
+    };
+    return true;
+}
+
+uint64_t prGpuTextureRecordBytes(PrGpuTextureRecord record) {
+    PrGpuTextureDesc desc;
+    PrGpuTextureLayout layout;
+    if (!prGpuTextureRecordRead(record, &desc, &layout) || layout == PrGpuTextureLayout_DeviceOptimal)
+        return 0;
+    bool volume = desc.kind == PrGpuTextureKind_3d;
+    uint64_t bytes = 0;
+    for (uint32_t level = 0; level < desc.levels; ++level) {
+        uint32_t width = desc.extent.width >> level != 0 ? desc.extent.width >> level : 1;
+        uint32_t height = desc.extent.height >> level != 0 ? desc.extent.height >> level : 1;
+        uint32_t depth = desc.extent.depth;
+        if (volume)
+            depth = depth >> level != 0 ? depth >> level : 1;
+        uint64_t row = prGpuFormatRowBytes(desc.format, width);
+        if (layout == PrGpuTextureLayout_LinearPitch256)
+            row = alignUp(row, uint64_t(kRowAlignment));
+        bytes += row * prGpuFormatRows(desc.format, height) * depth;
+    }
+    return bytes;
+}
+
 bool prGpuDeviceSupportsFormat(const PrGpuDevice* device, PrGpuFormat format, PrGpuTextureUsageFlags usage) {
-    return format != PrGpuFormat_None && format < PrGpuFormat_Count && created(device) &&
-        device->supportsFormatFn(device, format, usage);
+    if (format == PrGpuFormat_None || format >= PrGpuFormat_Count || !created(device))
+        return false;
+    // A swizzled format is its stored format, sampled, on a device that places the channels.
+    if (prGpuFormatSwizzle(format) != PrGpuSwizzle_None) {
+        if ((device->infoFn(device).features & PrGpuFeatureFlag_TextureSwizzle) == 0 ||
+                (usage & ~PrGpuTextureUsageFlag_Sampled) != 0)
+            return false;
+        format = prGpuFormatStored(format);
+    }
+    return device->supportsFormatFn(device, format, usage);
 }
 
 PrStatus prGpuTextureCreate(PrGpuDevice* device, const PrGpuTextureDesc* desc, PrGpuTexture* out) {
@@ -375,6 +484,14 @@ PrStatus prGpuTextureCreate(PrGpuDevice* device, const PrGpuTextureDesc* desc, P
     if (desc->kind != PrGpuTextureKind_3d && (desc->extent.width > device->infoFn(device).maxTextureSize ||
             desc->extent.height > device->infoFn(device).maxTextureSize))
         return PrStatus_Limit;
+    // Direct3D and WebGPU take only whole blocks in the first level, so no device takes less.
+    PrGpuFormatBlock block = kGpuFormats[desc->format].block;
+    if (desc->extent.width % block.width != 0 || desc->extent.height % block.height != 0)
+        return PrStatus_NotSupported;
+    // A backend places the channels of a swizzled format only where the device does.
+    if (prGpuFormatSwizzle(desc->format) != PrGpuSwizzle_None &&
+            !prGpuDeviceSupportsFormat(device, desc->format, desc->usage))
+        return PrStatus_NotSupported;
     return device->textureCreateFn(device, desc, out);
 }
 
@@ -505,8 +622,15 @@ void prGpuTextureUpload(PrGpuDevice* device, PrGpuTexture texture, const PrGpuTe
     PR_ASSERT(texture.id != 0);
     if (region->extent.width == 0 || region->extent.height == 0 || region->extent.depth == 0)
         return;
-    if (takesWork(device))
-        device->textureUploadFn(device, texture, region, data, rowBytes, layerBytes);
+    if (!takesWork(device))
+        return;
+    PrGpuFormatBlock block = kGpuFormats[prGpuTextureDesc(device, texture).format].block;
+    uint32_t rows = (region->extent.height + block.height - 1) / block.height;
+    PR_ASSERT(rowBytes >= (region->extent.width + block.width - 1) / block.width * block.bytes);
+    PR_ASSERT(layerBytes % rowBytes == 0);
+    if (layerBytes == 0)
+        layerBytes = rowBytes * rows;
+    device->textureUploadFn(device, texture, region, data, rowBytes, layerBytes);
 }
 
 void prGpuTextureWrite(PrGpuDevice* device, PrGpuTexture texture, PrIVec2 origin, PrPixelView texels) {
@@ -516,7 +640,7 @@ void prGpuTextureWrite(PrGpuDevice* device, PrGpuTexture texture, PrIVec2 origin
     PrUVec2 from{};
     if (!clip(origin, texels.extent, PrUVec2{desc.extent.width, desc.extent.height}, &at, &size, &from))
         return;
-    uint32_t bytes = kFormatBlocks[desc.format].bytes;
+    uint32_t bytes = kGpuFormats[desc.format].block.bytes;
     PrGpuTextureRegion region = prGpuTextureRegion2d(at, size);
     const uint8_t* first = texels.data + from.y * texels.stride + size_t(from.x) * bytes;
     prGpuTextureUpload(device, texture, &region, first, uint32_t(texels.stride), uint32_t(texels.stride * size.y));
@@ -828,7 +952,7 @@ void prGpuCommandsReadTexture(PrGpuCommands* commands, PrGpuTexture texture, uin
     PrGpuDevice* device = prGpuCommandsDevice(commands);
     PrGpuTextureDesc desc = prGpuTextureDesc(device, texture);
     PrUVec2 extent{desc.extent.width, desc.extent.height};
-    uint32_t rowBytes = alignUp(extent.x * kFormatBlocks[desc.format].bytes, kRowAlignment);
+    uint32_t rowBytes = alignUp(extent.x * kGpuFormats[desc.format].block.bytes, kRowAlignment);
     PrGpuBuffer buffer = recordRead(commands, texture, access, PrUVec2{0, 0}, extent, rowBytes);
     if (buffer.id == 0) {
         read(context, PrPixelView{});

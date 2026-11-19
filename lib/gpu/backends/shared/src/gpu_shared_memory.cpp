@@ -58,7 +58,7 @@ struct Memory {
 
 // A texture or a view: the memory that it covers from `firstLevel` and `firstLayer`, and the description that it
 // reports.
-struct Texture {
+struct MemoryTexture {
     Memory* PR_NULLABLE memory;     // null for a free slot
     PrGpuTextureDesc desc;
     uint8_t firstLevel;
@@ -74,6 +74,7 @@ enum {
     OpKind_Clear,
     OpKind_NativeDraw,
     OpKind_Call,
+    OpKind_GenerateMipmaps,
     OpKind_Done,
 };
 typedef uint8_t OpKind;
@@ -126,7 +127,7 @@ struct Device : GpuSharedDevice {
     PrMutex mutex;
     const GpuMemoryMirror* PR_NULLABLE mirror;
     GpuSharedTable<Buffer> buffers;
-    GpuSharedTable<Texture> textures;
+    GpuSharedTable<MemoryTexture> textures;
     GpuSharedTable<PrGpuSamplerDesc> samplers;
     PrGpuFence submitted;
     uint64_t serial;                   // the serial of the command buffer that began last
@@ -178,7 +179,7 @@ uint32_t levelSlices(const PrGpuTextureDesc& desc, uint32_t level) {
     return desc.kind == PrGpuTextureKind_3d ? levelSize(desc.extent.depth, level) : desc.extent.depth;
 }
 
-Texture& textureAt(Device* d, PrGpuTexture texture) {
+MemoryTexture& textureAt(Device* d, PrGpuTexture texture) {
     return d->textures[texture.id];
 }
 
@@ -187,15 +188,15 @@ Buffer& bufferAt(Device* d, PrGpuBuffer buffer) {
 }
 
 // Returns a copy of the texture's entry, which the caller reads without the lock.
-Texture textureOf(Device* d, PrGpuTexture texture) {
+MemoryTexture textureOf(Device* d, PrGpuTexture texture) {
     prMutexLock(&d->mutex);
-    Texture t = textureAt(d, texture);
+    MemoryTexture t = textureAt(d, texture);
     prMutexUnlock(&d->mutex);
     return t;
 }
 
 // Returns the first byte of row `y` of slice `slice` at `level` of the texture, in the texture's own terms.
-uint8_t* texelRow(const Texture& t, uint32_t level, uint32_t slice, uint32_t y) {
+uint8_t* texelRow(const MemoryTexture& t, uint32_t level, uint32_t slice, uint32_t y) {
     const Memory& m = *t.memory;
     uint32_t memoryLevel = t.firstLevel + level;
     uint32_t memorySlice = m.desc.kind == PrGpuTextureKind_3d ? slice : t.firstLayer + slice;
@@ -204,7 +205,7 @@ uint8_t* texelRow(const Texture& t, uint32_t level, uint32_t slice, uint32_t y) 
 }
 
 // Returns the pixels of one level and slice of the texture.
-PrPixels pixelsOf(const Texture& t, uint32_t level, uint32_t slice) {
+PrPixels pixelsOf(const MemoryTexture& t, uint32_t level, uint32_t slice) {
     return PrPixels{
         .data = texelRow(t, level, slice, 0),
         .stride = t.memory->rowBytes[t.firstLevel + level],
@@ -213,13 +214,13 @@ PrPixels pixelsOf(const Texture& t, uint32_t level, uint32_t slice) {
 }
 
 // The first slice of a region: its depth offset in a 3D texture, and its first layer in any other.
-uint32_t firstSlice(const Texture& t, const PrGpuTextureRegion& region) {
+uint32_t firstSlice(const MemoryTexture& t, const PrGpuTextureRegion& region) {
     return t.memory->desc.kind == PrGpuTextureKind_3d ? region.z : region.firstLayer;
 }
 
 // Copies the texels of `region` of `t` to or from rows `rowBytes` apart and slices `layerBytes` apart. `toTexture` says
 // which direction. A zero `rowBytes` or `layerBytes` lays out the rows or slices tightly.
-void copyRegion(const Texture& t, const PrGpuTextureRegion& region, uint8_t* other, uint32_t rowBytes,
+void copyRegion(const MemoryTexture& t, const PrGpuTextureRegion& region, uint8_t* other, uint32_t rowBytes,
         uint32_t layerBytes, bool toTexture) {
     size_t width = size_t(region.extent.width) * texelBytes(t.desc.format);
     size_t rows = rowBytes != 0 ? rowBytes : width;
@@ -279,8 +280,103 @@ void encodeTexel(PrGpuFormat format, PrColor color, uint8_t* out) {
     }
 }
 
+// Reads one texel of `format` as a color, as a sampler reads it: a Srgb format's texel is decoded to linear.
+PrColor decodeTexel(PrGpuFormat format, const uint8_t* texel) {
+    uint32_t count = 4;
+    if (format == PrGpuFormat_R8 || format == PrGpuFormat_R16F || format == PrGpuFormat_R32F)
+        count = 1;
+    else if (format == PrGpuFormat_Rg8 || format == PrGpuFormat_Rg16F || format == PrGpuFormat_Rg32F)
+        count = 2;
+    float channels[4] = {0, 0, 0, 1};
+    for (uint32_t c = 0; c < count; ++c) {
+        switch (format) {
+            case PrGpuFormat_R16F:
+            case PrGpuFormat_Rg16F:
+            case PrGpuFormat_Rgba16F: {
+                PrFloat16 half{};
+                prMemCopy(&half, texel + c * 2, 2);
+                channels[c] = prFloat16ToFloat(half);
+                break;
+            }
+            case PrGpuFormat_R32F:
+            case PrGpuFormat_Rg32F:
+            case PrGpuFormat_Rgba32F:
+                prMemCopy(&channels[c], texel + c * 4, 4);
+                break;
+            default:
+                channels[c] = float(texel[c]) / 255;
+                break;
+        }
+    }
+    if (format == PrGpuFormat_Bgra8 || format == PrGpuFormat_Bgra8Srgb) {
+        float blue = channels[0];
+        channels[0] = channels[2];
+        channels[2] = blue;
+    }
+    if (format == PrGpuFormat_Rgba8Srgb || format == PrGpuFormat_Bgra8Srgb) {
+        for (int c = 0; c < 3; ++c)
+            channels[c] = prColorTransferDecode(PrColorTransfer_Srgb, channels[c]);
+    }
+    return PrColor{channels[0], channels[1], channels[2], channels[3]};
+}
+
+// Returns true if encodeTexel and decodeTexel read and write texels of `format`.
+bool codesTexels(PrGpuFormat format) {
+    switch (format) {
+        case PrGpuFormat_R8:
+        case PrGpuFormat_Rg8:
+        case PrGpuFormat_Rgba8:
+        case PrGpuFormat_Rgba8Srgb:
+        case PrGpuFormat_Bgra8:
+        case PrGpuFormat_Bgra8Srgb:
+        case PrGpuFormat_R16F:
+        case PrGpuFormat_Rg16F:
+        case PrGpuFormat_Rgba16F:
+        case PrGpuFormat_R32F:
+        case PrGpuFormat_Rg32F:
+        case PrGpuFormat_Rgba32F:
+            return true;
+        default:
+            return false;
+    }
+}
+
+// Fills each level of each layer of a 2D texture past the first with the level above it filtered down: a texel is the
+// mean of the texels above it that its area covers, in linear values, as a linear sampler at its center reads them.
+void generateMipmaps(const MemoryTexture& t) {
+    PrGpuFormat format = t.desc.format;
+    if (!codesTexels(format) || t.desc.kind != PrGpuTextureKind_2d)
+        return;
+    uint32_t bytes = texelBytes(format);
+    for (uint32_t layer = 0; layer < t.desc.extent.depth; ++layer) {
+        for (uint32_t level = 1; level < t.desc.levels; ++level) {
+            PrPixels above = pixelsOf(t, level - 1, layer);
+            PrPixels below = pixelsOf(t, level, layer);
+            for (uint32_t y = 0; y < below.extent.y; ++y) {
+                uint32_t y0 = y * 2 < above.extent.y ? y * 2 : above.extent.y - 1;
+                uint32_t y1 = y0 + 1 < above.extent.y ? y0 + 1 : y0;
+                for (uint32_t x = 0; x < below.extent.x; ++x) {
+                    uint32_t x0 = x * 2 < above.extent.x ? x * 2 : above.extent.x - 1;
+                    uint32_t x1 = x0 + 1 < above.extent.x ? x0 + 1 : x0;
+                    const uint32_t xs[2] = {x0, x1};
+                    const uint32_t ys[2] = {y0, y1};
+                    PrColor sum{};
+                    for (uint32_t row : ys) {
+                        for (uint32_t column : xs) {
+                            PrColor c = decodeTexel(format, above.data + row * above.stride + size_t(column) * bytes);
+                            sum = PrColor{sum.r + c.r, sum.g + c.g, sum.b + c.b, sum.a + c.a};
+                        }
+                    }
+                    PrColor mean{sum.r / 4, sum.g / 4, sum.b / 4, sum.a / 4};
+                    encodeTexel(format, mean, below.data + y * below.stride + size_t(x) * bytes);
+                }
+            }
+        }
+    }
+}
+
 // Fills one level and layer of the texture with `color`.
-void clearTexture(const Texture& t, uint8_t level, uint16_t layer, PrColor color) {
+void clearTexture(const MemoryTexture& t, uint8_t level, uint16_t layer, PrColor color) {
     uint8_t texel[16];
     encodeTexel(t.desc.format, color, texel);
     uint32_t bytes = texelBytes(t.desc.format);
@@ -309,7 +405,7 @@ void syncTexels(Device* d, Memory& m) {
         d->mirror->read(m.mirror, memoryPixels(m), m.desc.format);
         m.held = Held_Both;
     } else if (m.held == Held_Cleared) {
-        Texture whole{.memory = &m, .desc = m.desc};
+        MemoryTexture whole{.memory = &m, .desc = m.desc};
         clearTexture(whole, 0, 0, m.cleared);
         m.held = Held_Texels;
     }
@@ -348,16 +444,16 @@ Memory& memoryAt(Device* d, PrGpuTexture texture) {
 }
 
 // Returns the texture, with its texels up to date for work on the texels that may change them.
-Texture& writableTexture(Device* d, PrGpuTexture texture) {
-    Texture& t = textureAt(d, texture);
+MemoryTexture& writableTexture(Device* d, PrGpuTexture texture) {
+    MemoryTexture& t = textureAt(d, texture);
     syncTexels(d, *t.memory);
     wroteTexels(*t.memory);
     return t;
 }
 
 // Returns the texture, with its texels up to date for work on the texels that only reads them.
-Texture& readableTexture(Device* d, PrGpuTexture texture) {
-    Texture& t = textureAt(d, texture);
+MemoryTexture& readableTexture(Device* d, PrGpuTexture texture) {
+    MemoryTexture& t = textureAt(d, texture);
     syncTexels(d, *t.memory);
     return t;
 }
@@ -371,8 +467,8 @@ void run(Device* d, const Op& op) {
                 size_t(op.size));
             break;
         case OpKind_CopyTexture: {
-            Texture& from = readableTexture(d, op.texture);
-            Texture& to = writableTexture(d, op.targetTexture);
+            MemoryTexture& from = readableTexture(d, op.texture);
+            MemoryTexture& to = writableTexture(d, op.targetTexture);
             size_t width = size_t(op.region.extent.width) * texelBytes(from.desc.format);
             uint32_t fromFirst = firstSlice(from, op.region);
             uint32_t toFirst = firstSlice(to, op.targetRegion);
@@ -408,7 +504,7 @@ void run(Device* d, const Op& op) {
         }
         case OpKind_NativeDraw: {
             if (op.nativeKind == PrGpuNativeKind_Pixels) {
-                Texture t = writableTexture(d, op.texture);
+                MemoryTexture t = writableTexture(d, op.texture);
                 PrGpuNativePixels target{pixelsOf(t, op.region.level, op.region.firstLayer), t.desc.format};
                 prMutexUnlock(&d->mutex);
                 op.draw(op.context, &target);
@@ -428,6 +524,9 @@ void run(Device* d, const Op& op) {
             prMutexUnlock(&d->mutex);
             op.call(op.context);
             prMutexLock(&d->mutex);
+            break;
+        case OpKind_GenerateMipmaps:
+            generateMipmaps(writableTexture(d, op.texture));
             break;
         case OpKind_Done:
             prMutexUnlock(&d->mutex);
@@ -513,9 +612,9 @@ void freeBuffer(Device* d, uint32_t id) {
 
 // Frees a texture's slot, and its memory once no view holds it. The caller holds the mutex.
 void freeTexture(Device* d, uint32_t id) {
-    Texture& t = d->textures[id];
+    MemoryTexture& t = d->textures[id];
     Memory* memory = t.memory;
-    t = Texture{};
+    t = MemoryTexture{};
     d->textures.free(id);
     if (--memory->references != 0)
         return;
@@ -601,7 +700,7 @@ void bufferUpload(PrGpuDevice* device, PrGpuBuffer buffer, uint64_t offset, cons
 // Textures
 
 // Adds a texture or view to the table, and returns its id, or zero if the table is full.
-uint32_t addTexture(Device* d, const Texture& texture) {
+uint32_t addTexture(Device* d, const MemoryTexture& texture) {
     prMutexLock(&d->mutex);
     const uint32_t id = d->textures.take();
     if (id != 0)
@@ -629,7 +728,7 @@ PrStatus textureCreate(PrGpuDevice* device, const PrGpuTextureDesc* desc, PrGpuT
         size += memory->sliceBytes[level] * levelSlices(memory->desc, level);
     }
     memory->bytes = static_cast<uint8_t*>(prMemoryAllocZeroed(size));
-    const uint32_t id = addTexture(d, Texture{.memory = memory, .desc = memory->desc});
+    const uint32_t id = addTexture(d, MemoryTexture{.memory = memory, .desc = memory->desc});
     if (id == 0) {
         prMemoryFree(memory->bytes);
         prMemoryFree(memory);
@@ -653,7 +752,7 @@ PrStatus textureCreateOverPixels(PrGpuDevice* device, PrGpuFormat format, PrPixe
     memory->bytes = pixels.data;
     memory->rowBytes[0] = pixels.stride;
     memory->sliceBytes[0] = pixels.stride * pixels.extent.y;
-    const uint32_t id = addTexture(d, Texture{.memory = memory, .desc = memory->desc});
+    const uint32_t id = addTexture(d, MemoryTexture{.memory = memory, .desc = memory->desc});
     if (id == 0) {
         prMemoryFree(memory);
         return PrStatus_Limit;
@@ -666,7 +765,7 @@ PrStatus textureCreateView(PrGpuDevice* device, PrGpuTexture texture, PrGpuTextu
         PrGpuSubresources subresources, PrGpuTexture* out) {
     Device* d = deviceOf(device);
     prMutexLock(&d->mutex);
-    Texture of = textureAt(d, texture);
+    MemoryTexture of = textureAt(d, texture);
     ++of.memory->references;
     prMutexUnlock(&d->mutex);
     uint8_t levels = subresources.levels != 0 ? subresources.levels : uint8_t(of.desc.levels - subresources.firstLevel);
@@ -680,7 +779,7 @@ PrStatus textureCreateView(PrGpuDevice* device, PrGpuTexture texture, PrGpuTextu
     else
         desc.extent.depth =
             subresources.layers != 0 ? subresources.layers : of.desc.extent.depth - subresources.firstLayer;
-    Texture view{
+    MemoryTexture view{
         .memory = of.memory,
         .desc = desc,
         .firstLevel = uint8_t(of.firstLevel + subresources.firstLevel),
@@ -706,9 +805,9 @@ void textureRelease(PrGpuDevice* device, PrGpuTexture texture) {
     if (!deviceOf(device)->textures.release(texture.id))
         return;
     Device* d = deviceOf(device);
+    PR_ASSERT(textureOf(d, texture).memory != nullptr);
     gpuSharedTextureForget(d, texture);
     prMutexLock(&d->mutex);
-    PR_ASSERT(textureAt(d, texture).memory != nullptr);
     retire(d, texture.id, true);
     prMutexUnlock(&d->mutex);
 }
@@ -729,7 +828,7 @@ bool textureNative(PrGpuDevice* device, PrGpuTexture texture, PrGpuNativeKind ki
     if (kind == PrGpuNativeKind_Pixels) {
         // A texture that only shaders sample is never drawn into, so its texels are only read.
         bool drawn = (textureAt(d, texture).desc.usage & PrGpuTextureUsageFlag_RenderTarget) != 0;
-        Texture t = drawn ? writableTexture(d, texture) : readableTexture(d, texture);
+        MemoryTexture t = drawn ? writableTexture(d, texture) : readableTexture(d, texture);
         *static_cast<PrGpuNativePixels*>(out) = PrGpuNativePixels{pixelsOf(t, 0, 0), t.desc.format};
     } else {
         uint32_t mirror = syncMirror(d, memoryAt(d, texture));
@@ -744,7 +843,7 @@ void textureUpload(PrGpuDevice* device, PrGpuTexture texture, const PrGpuTexture
         uint32_t rowBytes, uint32_t layerBytes) {
     Device* d = deviceOf(device);
     prMutexLock(&d->mutex);
-    Texture t = writableTexture(d, texture);
+    MemoryTexture t = writableTexture(d, texture);
     prMutexUnlock(&d->mutex);
     copyRegion(t, *region, static_cast<uint8_t*>(const_cast<void*>(data)), rowBytes, layerBytes, true);
 }
@@ -911,6 +1010,12 @@ void commandsCopyBufferToTexture(PrGpuCommands* commands, PrGpuBuffer source, ui
     });
 }
 
+// Filters the levels on the CPU, as the memory device has no shaders to filter them with.
+void commandsGenerateMipmaps(PrGpuCommands* commands, PrGpuTexture texture, PrGpuAccessFlags) {
+    gpuSharedCheckOutsidePass(commands);
+    record(commands, Op{.kind = OpKind_GenerateMipmaps, .texture = texture});
+}
+
 void commandsCopyTextureToBuffer(PrGpuCommands* commands, PrGpuTexture source,
         const PrGpuTextureRegion* sourceRegion, PrGpuBuffer target, uint64_t targetOffset, uint32_t rowBytes,
         uint32_t layerBytes) {
@@ -1059,7 +1164,7 @@ constexpr PrGpuCommands kCommandsFunctions = {
     .copyTextureFn = commandsCopyTexture,
     .copyBufferToTextureFn = commandsCopyBufferToTexture,
     .copyTextureToBufferFn = commandsCopyTextureToBuffer,
-    .generateMipmapsFn = gpuSharedGenerateMipmaps,
+    .generateMipmapsFn = commandsGenerateMipmaps,
     .onDoneFn = commandsOnDone,
     .pushGroupFn = commandsPushGroup,
     .popGroupFn = commandsPopGroup,

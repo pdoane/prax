@@ -6,7 +6,7 @@
 #include "pr/task_backend.h"
 #include "pr/utf8.h"
 
-#include "gpu/tests/kTestGpuShaders.h"
+#include "gpu/tests/gpu_fixture.h"
 #include "tools/harness/harness_gpu.h"
 
 #include "tools/harness/test.h"
@@ -20,163 +20,6 @@ namespace pr_impl {
 using namespace pr;
 
 namespace {
-
-// The push data of the test shaders (test_gpu.slang).
-struct Push {
-    float color[4];
-    uint32_t texture;
-    uint32_t sampler;
-    uint32_t buffer;
-    uint32_t output;
-    float rect[4];
-};
-
-// A device, the test shaders on it, and a target to draw into.
-struct Fixture {
-    PrGpuDevice* device = nullptr;
-    PrGpuShaderLibrary* library = nullptr;
-    bool bindless = false;          // the device has PrGpuFeatureFlag_Bindless
-
-    // A device that runs no shaders, such as a memory device, has no fixture, because the tests draw and dispatch. So
-    // has a backend that has no device of slots only.
-    Fixture(PrGpuBackend backend, bool slotsOnly) {
-        PrGpuDeviceOptions options{.validation = true, .slotsOnly = slotsOnly};
-        if (gpuDeviceCreate(backend, &options, &device) != PrStatus_Ok)
-            return;
-        bindless = (prGpuDeviceInfo(device).features & PrGpuFeatureFlag_Bindless) != 0;
-        PrStatus status = prGpuShaderLibraryCreate(device, kTestGpuShaders, sizeof(kTestGpuShaders), &library);
-        if (status == PrStatus_NotSupported) {
-            prGpuDeviceDestroy(device);
-            device = nullptr;
-            return;
-        }
-        REQUIRE(status == PrStatus_Ok);
-    }
-
-    ~Fixture() {
-        prGpuShaderLibraryDestroy(library);
-        prGpuDeviceDestroy(device);
-    }
-
-    PrGpuTexture target(PrUVec2 extent, PrGpuFormat format = PrGpuFormat_Rgba8) {
-        PrGpuTextureDesc desc = prGpuTextureDesc2d(
-            format, extent, PrGpuTextureUsageFlag_RenderTarget | PrGpuTextureUsageFlag_Sampled);
-        PrGpuTexture texture{};
-        REQUIRE(prGpuTextureCreate(device, &desc, &texture) == PrStatus_Ok);
-        return texture;
-    }
-
-    PrGpuPipeline pipeline(const char* vertex, const char* fragment, PrGpuFormat format = PrGpuFormat_Rgba8,
-            PrGpuTopology topology = PrGpuTopology_TriangleStrip, bool readsTarget = false) {
-        PrGpuGraphicsPipelineDesc desc = description(vertex, fragment, format, topology, readsTarget);
-        PrGpuPipeline p{};
-        REQUIRE(prGpuPipelineCreateGraphics(device, &desc, &p) == PrStatus_Ok);
-        return p;
-    }
-
-    PrGpuGraphicsPipelineDesc description(const char* vertex, const char* fragment,
-            PrGpuFormat format = PrGpuFormat_Rgba8,
-            PrGpuTopology topology = PrGpuTopology_TriangleStrip, bool readsTarget = false) {
-        PrGpuGraphicsPipelineDesc desc = prGpuGraphicsPipelineDescDefault(library);
-        desc.vertex = vertex;
-        desc.fragment = fragment;
-        desc.topology = topology;
-        desc.formats.colorCount = 1;
-        desc.formats.color[0] = format;
-        desc.readsTarget = readsTarget;
-        return desc;
-    }
-
-    // Returns the texels of a texture of 8-bit RGBA that its passes left.
-    Array<uint8_t> read(PrGpuTexture texture, uint32_t access = PrGpuAccessFlag_ShaderRead) {
-        PrUVec2 extent = prGpuTextureExtent(device, texture);
-        Array<uint8_t> texels(extent.x * extent.y * 4);
-        gpuTextureRead(device, texture, access, PrIVec2{0, 0}, PrPixels{texels.data(), size_t(extent.x) * 4, extent});
-        return texels;
-    }
-
-    // Returns the bytes of a buffer, copied through a readback buffer.
-    Array<uint8_t> read(PrGpuBuffer buffer, uint64_t size) {
-        PrGpuBufferDesc desc{.size = size, .memory = PrGpuMemory_Readback};
-        PrGpuBuffer readback{};
-        REQUIRE(prGpuBufferCreate(device, &desc, &readback) == PrStatus_Ok);
-        PrGpuCommands* commands = nullptr;
-        REQUIRE(prGpuCommandsBegin(device, nullptr, &commands));
-        prGpuCommandsBufferBarrier(commands, buffer, PrGpuAccessFlag_ShaderRead | PrGpuAccessFlag_ShaderWrite,
-            PrGpuAccessFlag_CopyRead);
-        prGpuCommandsCopyBuffer(commands, buffer, 0, readback, 0, size);
-        gpuSubmitAndWait(commands);
-        Array<uint8_t> bytes(size);
-        prMemCopy(bytes.data(), prGpuBufferMap(device, readback), size_t(size));
-        prGpuBufferRelease(device, readback);
-        return bytes;
-    }
-
-    // Draws a quad over the whole target with the pipeline and push data, into a pass that loads as `load` says and
-    // clears to `clear`, and leaves the target to be sampled.
-    void draw(PrGpuTexture target, PrGpuPipeline pipeline, Push push, PrGpuLoad load = PrGpuLoad_Clear,
-            PrColor clear = PrColor{0, 0, 0, 0}, const float* uniforms = nullptr) {
-        PrGpuCommands* commands = nullptr;
-        REQUIRE(prGpuCommandsBegin(device, nullptr, &commands));
-        PrGpuSubresources all{};
-        prGpuCommandsTextureBarrier(commands, target, all, PrGpuAccessFlag_ShaderRead, PrGpuAccessFlag_ColorAttachment);
-        PrGpuPassDesc desc = prGpuPassDescColor(target, load, clear);
-        PrGpuPass* pass = prGpuPassBegin(commands, &desc);
-        prGpuCommandsSetPipeline(commands, pipeline);
-        prGpuCommandsSetPush(commands, &push, sizeof(push));
-        if (uniforms != nullptr)
-            prGpuCommandsSetUniforms(commands, uniforms, sizeof(float) * 4);
-        prGpuPassDraw(pass, 4, 1, 0, 0);
-        prGpuPassEnd(pass);
-        prGpuCommandsTextureBarrier(commands, target, all, PrGpuAccessFlag_ColorAttachment, PrGpuAccessFlag_ShaderRead);
-        gpuSubmitAndWait(commands);
-    }
-};
-
-// Push data that draws `color` over the whole target.
-Push fill(float r, float g, float b, float a) {
-    return Push{.color = {r, g, b, a}, .rect = {-1, 1, 1, -1}};
-}
-
-// Returns the texel at (x, y) of 8-bit RGBA texels `width` wide.
-const uint8_t* texel(const Array<uint8_t>& texels, uint32_t width, uint32_t x, uint32_t y) {
-    return &texels[(y * width + x) * 4];
-}
-
-bool near(const uint8_t* t, uint8_t r, uint8_t g, uint8_t b, uint8_t a, int tolerance = 1) {
-    auto close = [&](uint8_t x, uint8_t y) { return (x > y ? x - y : y - x) <= tolerance; };
-    return close(t[0], r) && close(t[1], g) && close(t[2], b) && close(t[3], a);
-}
-
-// Runs `test` on a fixture for each backend that the build has and the system has a device for, and again on a device
-// of slots only where the backend makes one. A run without the platform's GPU (harness::gpuTests) tests the memory
-// backend alone.
-template <typename Test>
-void onEachBackend(Test test) {
-    const bool slotModes[] = {false, true};
-    for (PrGpuBackend backend = PrGpuBackend_Default + 1; backend < PrGpuBackend_Count; ++backend) {
-        if (!gpuTests() && backend != PrGpuBackend_Memory)
-            continue;
-        for (bool slotsOnly : slotModes) {
-            Fixture f(backend, slotsOnly);
-            if (f.device == nullptr)
-                continue;
-            PrStringView name = prBackendName(prGpuSelectInterface(), backend);
-            CAPTURE(name);
-            CAPTURE(slotsOnly);
-            test(f);
-        }
-    }
-}
-
-// Runs `test` as onEachBackend does, on the devices that have PrGpuFeatureFlag_Bindless.
-template <typename Test>
-void onEachBindless(Test test) {
-    onEachBackend([&](Fixture& f) {
-        if (f.bindless)
-            test(f);
-    });
-}
 
 // Calls `test` with each backend that the build has and the tests run on, as onEachBackend chooses them.
 template <typename Test>
@@ -219,6 +62,50 @@ struct HeldPool : PrTaskPool {
         return run.count();
     }
 };
+
+// The colors of a test cube's faces, by layer.
+constexpr uint8_t kFaceColors[6][4] = {
+    {255, 0, 0, 255}, {0, 255, 0, 255}, {0, 0, 255, 255}, {255, 255, 0, 255}, {0, 255, 255, 255}, {255, 0, 255, 255},
+};
+
+// The direction along the axis of each face of a cube, by layer.
+constexpr float kFaceAxes[6][3] = {{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
+
+// The directions in which the columns and the rows of each face of a cube run, by layer.
+constexpr float kFaceColumns[6][3] = {{0, 0, -1}, {0, 0, 1}, {1, 0, 0}, {1, 0, 0}, {1, 0, 0}, {-1, 0, 0}};
+constexpr float kFaceRows[6][3] = {{0, -1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}, {0, -1, 0}, {0, -1, 0}};
+
+// Returns the color that a shader samples from `cube` along `direction` at the level of detail `lod`, without
+// filtering: by handle on a device with bindless, and through a slot on any other.
+Array<uint8_t> sampleCube(Fixture& f, PrGpuTexture cube, const float* direction, float lod) {
+    PrGpuSampler nearest{};
+    PrGpuSamplerDesc samplerDesc = prGpuSamplerDescDefault(PrGpuFilter_Nearest, PrGpuAddress_Clamp);
+    REQUIRE(prGpuSamplerIntern(f.device, &samplerDesc, &nearest) == PrStatus_Ok);
+    PrGpuTexture target = f.target(PrUVec2{1, 1});
+    PrGpuPipeline pipeline = f.pipeline("quadVertex", f.bindless ? "cubeSampled" : "slotCubeSampled");
+    Push push = fill(direction[0], direction[1], direction[2], lod);
+    push.texture = cube.id;
+    push.sampler = nearest.id;
+    PrGpuCommands* commands = nullptr;
+    REQUIRE(prGpuCommandsBegin(f.device, nullptr, &commands));
+    if (!f.bindless)
+        prGpuCommandsSetTexture(commands, 5, cube, nearest);
+    prGpuCommandsTextureBarrier(commands, target, PrGpuSubresources{}, PrGpuAccessFlag_ShaderRead,
+        PrGpuAccessFlag_ColorAttachment);
+    PrGpuPassDesc desc = prGpuPassDescColor(target, PrGpuLoad_Clear, PrColor{});
+    PrGpuPass* pass = prGpuPassBegin(commands, &desc);
+    prGpuCommandsSetPipeline(commands, pipeline);
+    prGpuCommandsSetPush(commands, &push, sizeof(push));
+    prGpuPassDraw(pass, 4, 1, 0, 0);
+    prGpuPassEnd(pass);
+    prGpuCommandsTextureBarrier(commands, target, PrGpuSubresources{}, PrGpuAccessFlag_ColorAttachment,
+        PrGpuAccessFlag_ShaderRead);
+    gpuSubmitAndWait(commands);
+    Array<uint8_t> out = f.read(target);
+    prGpuPipelineRelease(f.device, pipeline);
+    prGpuTextureRelease(f.device, target);
+    return out;
+}
 
 } // namespace
 
@@ -338,6 +225,26 @@ TEST_CASE("a texture's texels are written and read back, clipped to the texture"
         gpuTextureRead(f.device, texture, PrGpuAccessFlag_ShaderRead, PrIVec2{3, 2}, PrPixels{corner, 8, {2, 2}});
         CHECK(near(corner, 44, 45, 46, 47, 0));
         CHECK(near(corner + 4, 0, 0, 0, 0, 0));
+        prGpuTextureRelease(f.device, texture);
+    });
+}
+
+TEST_CASE("an upload reads rows that lie any distance apart, whether or not it is a multiple of a texel's bytes") {
+    onEachBackend([](Fixture& f) {
+        PrGpuTexture texture = f.target(PrUVec2{2, 3});
+        // Rows of two texels, 11 bytes apart.
+        uint8_t rows[11 * 2 + 8];
+        prMemFill(rows, 0xee, sizeof(rows));
+        Array<uint8_t> expected(2 * 3 * 4);
+        for (uint32_t y = 0; y < 3; ++y) {
+            for (uint32_t i = 0; i < 8; ++i) {
+                rows[y * 11 + i] = uint8_t(1 + y * 8 + i);
+                expected[y * 8 + i] = uint8_t(1 + y * 8 + i);
+            }
+        }
+        PrGpuTextureRegion region = prGpuTextureRegion2d(PrUVec2{0, 0}, PrUVec2{2, 3});
+        prGpuTextureUpload(f.device, texture, &region, rows, 11, 0);
+        CHECK(f.read(texture) == expected);
         prGpuTextureRelease(f.device, texture);
     });
 }
@@ -949,6 +856,120 @@ TEST_CASE("mip levels are filled with the average of the level before") {
         CHECK(near(top.data(), 128, 128, 128, 128, 2));
         prGpuTextureRelease(f.device, last);
         prGpuTextureRelease(f.device, texture);
+    });
+}
+
+TEST_CASE("a cube's faces and levels are uploaded, drawn to, viewed, copied and sampled along a direction") {
+    onEachBackend([](Fixture& f) {
+        PrGpuTextureDesc desc{
+            .kind = PrGpuTextureKind_Cube,
+            .format = PrGpuFormat_Rgba8,
+            .usage = PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_RenderTarget,
+            .levels = 3,
+            .samples = 1,
+            .extent = {4, 4, 6},
+        };
+        PrGpuTexture cube{};
+        REQUIRE(prGpuTextureCreate(f.device, &desc, &cube) == PrStatus_Ok);
+        CHECK(prGpuTextureDesc(f.device, cube).kind == PrGpuTextureKind_Cube);
+        CHECK(prGpuTextureDesc(f.device, cube).extent.depth == 6);
+
+        // The first level takes one face at a time, each of its face's color. The first texel of each face is white,
+        // which tells where the face's rows and columns lie.
+        for (uint16_t face = 0; face < 6; ++face) {
+            uint8_t texels[4 * 4 * 4];
+            for (uint32_t i = 0; i < 16; ++i)
+                prMemCopy(texels + i * 4, kFaceColors[face], 4);
+            prMemFill(texels, 255, 4);
+            PrGpuTextureRegion region{.firstLayer = face, .extent = {4, 4, 1}};
+            prGpuTextureUpload(f.device, cube, &region, texels, 16, 64);
+        }
+        // The second level takes all six faces in one upload, each half as bright as in the first.
+        uint8_t second[6 * 2 * 2 * 4];
+        for (uint32_t face = 0; face < 6; ++face) {
+            for (uint32_t i = 0; i < 4; ++i) {
+                for (uint32_t channel = 0; channel < 4; ++channel)
+                    second[(face * 4 + i) * 4 + channel] = kFaceColors[face][channel] / 2;
+            }
+        }
+        PrGpuTextureRegion all{.level = 1, .extent = {2, 2, 6}};
+        prGpuTextureUpload(f.device, cube, &all, second, 8, 16);
+
+        // The third level is drawn: a pass clears one face of it at a time.
+        PrGpuCommands* commands = nullptr;
+        REQUIRE(prGpuCommandsBegin(f.device, nullptr, &commands));
+        PrGpuSubresources third{.firstLevel = 2, .levels = 1};
+        prGpuCommandsTextureBarrier(commands, cube, third, PrGpuAccessFlag_ShaderRead | PrGpuAccessFlag_Discard,
+            PrGpuAccessFlag_ColorAttachment);
+        for (uint16_t face = 0; face < 6; ++face) {
+            const uint8_t* color = kFaceColors[face];
+            PrColor clear{float(color[0]) / 1020, float(color[1]) / 1020, float(color[2]) / 1020, 1};
+            PrGpuPassDesc passDesc = prGpuPassDescColor(cube, PrGpuLoad_Clear, clear);
+            passDesc.color[0].level = 2;
+            passDesc.color[0].layer = face;
+            PrGpuPass* pass = prGpuPassBegin(commands, &passDesc);
+            CHECK(prGpuPassExtent(pass) == PrUVec2{1, 1});
+            prGpuPassEnd(pass);
+        }
+        prGpuCommandsTextureBarrier(commands, cube, third, PrGpuAccessFlag_ColorAttachment, PrGpuAccessFlag_ShaderRead);
+        gpuSubmitAndWait(commands);
+
+        // A direction along a face's axis samples that face, at each level.
+        for (uint32_t face = 0; face < 6; ++face) {
+            CAPTURE(face);
+            const uint8_t* color = kFaceColors[face];
+            // The first texel lies three quarters of the way from the face's center against its columns and its rows,
+            // and the last as far along them.
+            float firstTexel[3];
+            float lastTexel[3];
+            for (uint32_t axis = 0; axis < 3; ++axis) {
+                float along = 0.75f * (kFaceColumns[face][axis] + kFaceRows[face][axis]);
+                firstTexel[axis] = kFaceAxes[face][axis] - along;
+                lastTexel[axis] = kFaceAxes[face][axis] + along;
+            }
+            CHECK(near(sampleCube(f, cube, firstTexel, 0).data(), 255, 255, 255, 255));
+            CHECK(near(sampleCube(f, cube, lastTexel, 0).data(), color[0], color[1], color[2], 255));
+            Array<uint8_t> half = sampleCube(f, cube, kFaceAxes[face], 1);
+            CHECK(near(half.data(), color[0] / 2, color[1] / 2, color[2] / 2, 127));
+            Array<uint8_t> quarter = sampleCube(f, cube, kFaceAxes[face], 2);
+            CHECK(near(quarter.data(), color[0] / 4, color[1] / 4, color[2] / 4, 255, 2));
+        }
+
+        // A view of one level of one face is a 2D texture, and a view of one level of every face is a cube.
+        PrGpuTexture face{};
+        REQUIRE(prGpuTextureCreateView(f.device, cube, PrGpuTextureKind_2d,
+            PrGpuSubresources{.firstLevel = 1, .levels = 1, .firstLayer = 3, .layers = 1}, &face) == PrStatus_Ok);
+        CHECK(prGpuTextureDesc(f.device, face).kind == PrGpuTextureKind_2d);
+        CHECK(prGpuTextureExtent(f.device, face) == PrUVec2{2, 2});
+        Array<uint8_t> viewed = f.read(face);
+        REQUIRE(viewed.count() == 2 * 2 * 4);
+        CHECK(near(texel(viewed, 2, 1, 1), 127, 127, 0, 127));
+        PrGpuTexture level{};
+        REQUIRE(prGpuTextureCreateView(f.device, cube, PrGpuTextureKind_Cube,
+            PrGpuSubresources{.firstLevel = 1, .levels = 1}, &level) == PrStatus_Ok);
+        CHECK(prGpuTextureDesc(f.device, level).kind == PrGpuTextureKind_Cube);
+        CHECK(prGpuTextureDesc(f.device, level).levels == 1);
+        CHECK(near(sampleCube(f, level, kFaceAxes[1], 0).data(), 0, 127, 0, 127));
+
+        // A copy reads one level of a range of faces into a buffer.
+        PrGpuBufferDesc bufferDesc{.size = 2 * 2 * 2 * 4, .memory = PrGpuMemory_Readback};
+        PrGpuBuffer readback{};
+        REQUIRE(prGpuBufferCreate(f.device, &bufferDesc, &readback) == PrStatus_Ok);
+        REQUIRE(prGpuCommandsBegin(f.device, nullptr, &commands));
+        PrGpuSubresources secondLevel{.firstLevel = 1, .levels = 1};
+        prGpuCommandsTextureBarrier(commands, cube, secondLevel, PrGpuAccessFlag_ShaderRead, PrGpuAccessFlag_CopyRead);
+        PrGpuTextureRegion faces{.level = 1, .firstLayer = 4, .extent = {2, 2, 2}};
+        prGpuCommandsCopyTextureToBuffer(commands, cube, &faces, readback, 0, 8, 16);
+        prGpuCommandsTextureBarrier(commands, cube, secondLevel, PrGpuAccessFlag_CopyRead, PrGpuAccessFlag_ShaderRead);
+        gpuSubmitAndWait(commands);
+        const uint8_t* copied = static_cast<const uint8_t*>(prGpuBufferMap(f.device, readback));
+        CHECK(near(copied, 0, 127, 127, 127));
+        CHECK(near(copied + 16, 127, 0, 127, 127));
+
+        prGpuBufferRelease(f.device, readback);
+        prGpuTextureRelease(f.device, level);
+        prGpuTextureRelease(f.device, face);
+        prGpuTextureRelease(f.device, cube);
     });
 }
 

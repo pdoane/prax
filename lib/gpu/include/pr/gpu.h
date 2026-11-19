@@ -54,21 +54,30 @@ typedef uint64_t PrGpuFence;
 // Features that not every device has.
 enum {
     PrGpuFeatureFlag_Timestamps = 1u << 0,              // command buffers report their GPU time
+
+    // The device samples the block-compressed formats of a family (PrGpuFormatFamily): every format of the family, but
+    // for a format that prGpuDeviceSupportsFormat refuses, which is the answer for one format.
     PrGpuFeatureFlag_TextureCompressionBc = 1u << 1,
-    PrGpuFeatureFlag_TextureCompressionAstc = 1u << 2,
+    PrGpuFeatureFlag_TextureCompressionEtc2 = 1u << 2,
+    PrGpuFeatureFlag_TextureCompressionAstc = 1u << 3,      // the Unorm and Srgb formats: the LDR profile
+    PrGpuFeatureFlag_TextureCompressionAstcHdr = 1u << 4,   // the Hdr formats
 
     // A fragment shader that reads the target (pr/gpu.slang's prGpuTarget) reads what the fragments before it in the
     // same draw wrote, in the order of the draw's primitives. Only a device with PrGpuFeatureFlag_TargetReads has it.
-    PrGpuFeatureFlag_OrderedTargetReads = 1u << 3,
+    PrGpuFeatureFlag_OrderedTargetReads = 1u << 5,
 
     // Shaders reach resources by handle, from any data that they read (pr/gpu.slang's prGpuGet and prGpuLoad). Without
     // it, shaders reach only the resources bound to the command buffer's slots (prGpuCommandsSetBuffer and the others),
     // which every device has.
-    PrGpuFeatureFlag_Bindless = 1u << 4,
+    PrGpuFeatureFlag_Bindless = 1u << 6,
 
     // A graphics pipeline reads the pass's target (PrGpuGraphicsPipelineDesc::readsTarget). Without it, such a pipeline
     // is not supported, and a renderer reads what earlier draws left from a texture of its own.
-    PrGpuFeatureFlag_TargetReads = 1u << 5,
+    PrGpuFeatureFlag_TargetReads = 1u << 7,
+
+    // The device samples the swizzled formats (PrGpuSwizzle) of each format that it samples, as the hardware places the
+    // channels, with no work in a shader.
+    PrGpuFeatureFlag_TextureSwizzle = 1u << 8,
 };
 typedef uint32_t PrGpuFeatureFlags;
 
@@ -225,52 +234,224 @@ void prGpuDeviceWaitIdle(PrGpuDevice* device);
 // ---------------------------------------------------------------------------------------------------------------------
 // Formats
 
-// The formats of texels. A format's components are named from the lowest address or the lowest bits. A Srgb format
-// converts from sRGB's encoding to linear light where a shader reads it, and back where a pass writes or blends it.
-// Every other color format holds what a shader writes unchanged, so blending acts on the values as written.
+// The formats of texels. A format's components are named from the lowest address or the lowest bits, as Metal and
+// Direct3D name them. An unsuffixed format holds unsigned normalized values, Snorm signed normalized ones, Uint and
+// Sint integers, and F floats. A Srgb format converts from sRGB's encoding to linear values where a shader reads it,
+// and back where a pass writes or blends it. Every other color format holds what a shader writes unchanged, so blending
+// acts on the values as written.
+//
+// A swizzled format, named for its PrGpuSwizzle after the format that it stores its texels in, is that format sampled
+// with its channels placed otherwise. It is only sampled, and only on a device with PrGpuFeatureFlag_TextureSwizzle.
+//
+// The values are fixed, since records of textures store them (PrGpuTextureRecord): a format is added at the end of the
+// enumeration, never between two. A device that has no format of the set refuses it (prGpuDeviceSupportsFormat).
 enum {
     PrGpuFormat_None,
 
+    // 8 bits a channel
     PrGpuFormat_R8,
+    PrGpuFormat_R8Snorm,
+    PrGpuFormat_R8Uint,
+    PrGpuFormat_R8Sint,
+    PrGpuFormat_R8Srgb,
+    PrGpuFormat_R8Alpha,
+    PrGpuFormat_R8Luminance,
+    PrGpuFormat_R8Intensity,
+    PrGpuFormat_R8Mask,
     PrGpuFormat_Rg8,
+    PrGpuFormat_Rg8Snorm,
+    PrGpuFormat_Rg8Uint,
+    PrGpuFormat_Rg8Sint,
+    PrGpuFormat_Rg8Srgb,
+    PrGpuFormat_Rg8LuminanceAlpha,
     PrGpuFormat_Rgba8,
+    PrGpuFormat_Rgba8Snorm,
+    PrGpuFormat_Rgba8Uint,
+    PrGpuFormat_Rgba8Sint,
     PrGpuFormat_Rgba8Srgb,
     PrGpuFormat_Bgra8,
     PrGpuFormat_Bgra8Srgb,
-    PrGpuFormat_Rgb10A2,
-    PrGpuFormat_Rg11B10F,
-    PrGpuFormat_R16F,
-    PrGpuFormat_Rg16F,
-    PrGpuFormat_Rgba16F,
-    PrGpuFormat_R32F,
-    PrGpuFormat_Rg32F,
-    PrGpuFormat_Rgba32F,
-    PrGpuFormat_R8Uint,
-    PrGpuFormat_R16Uint,
-    PrGpuFormat_R32Uint,
-    PrGpuFormat_Rg32Uint,
-    PrGpuFormat_Rgba32Uint,
 
+    // 16 bits a channel
+    PrGpuFormat_R16,
+    PrGpuFormat_R16Snorm,
+    PrGpuFormat_R16Uint,
+    PrGpuFormat_R16Sint,
+    PrGpuFormat_R16F,
+    PrGpuFormat_R16Alpha,
+    PrGpuFormat_R16Luminance,
+    PrGpuFormat_R16Intensity,
+    PrGpuFormat_R16Mask,
+    PrGpuFormat_R16FAlpha,
+    PrGpuFormat_R16FLuminance,
+    PrGpuFormat_R16FIntensity,
+    PrGpuFormat_R16FMask,
+    PrGpuFormat_Rg16,
+    PrGpuFormat_Rg16Snorm,
+    PrGpuFormat_Rg16Uint,
+    PrGpuFormat_Rg16Sint,
+    PrGpuFormat_Rg16F,
+    PrGpuFormat_Rg16LuminanceAlpha,
+    PrGpuFormat_Rg16FLuminanceAlpha,
+    PrGpuFormat_Rgba16,
+    PrGpuFormat_Rgba16Snorm,
+    PrGpuFormat_Rgba16Uint,
+    PrGpuFormat_Rgba16Sint,
+    PrGpuFormat_Rgba16F,
+
+    // 32 bits a channel
+    PrGpuFormat_R32Uint,
+    PrGpuFormat_R32Sint,
+    PrGpuFormat_R32F,
+    PrGpuFormat_R32FAlpha,
+    PrGpuFormat_R32FLuminance,
+    PrGpuFormat_R32FIntensity,
+    PrGpuFormat_R32FMask,
+    PrGpuFormat_Rg32Uint,
+    PrGpuFormat_Rg32Sint,
+    PrGpuFormat_Rg32F,
+    PrGpuFormat_Rg32FLuminanceAlpha,
+    PrGpuFormat_Rgba32Uint,
+    PrGpuFormat_Rgba32Sint,
+    PrGpuFormat_Rgba32F,
+
+    // Packed into 16 or 32 bits
+    PrGpuFormat_B5G6R5,
+    PrGpuFormat_Bgr5A1,
+    PrGpuFormat_Bgra4,
+    PrGpuFormat_Rgb10A2,
+    PrGpuFormat_Rgb10A2Uint,
+    PrGpuFormat_Bgr10A2,
+    PrGpuFormat_Rg11B10F,
+    PrGpuFormat_Rgb9E5F,        // RGB of 9 bits each that share an exponent of 5
+
+    // Depth and stencil
     PrGpuFormat_D16,
+    PrGpuFormat_D24S8,
     PrGpuFormat_D32F,
     PrGpuFormat_D32FS8,
+    PrGpuFormat_S8,
 
-    // Block-compressed formats, with PrGpuFeatureFlag_TextureCompressionBc or _Astc.
-    PrGpuFormat_Bc1,
+    // Block-compressed formats, which a device samples and does nothing else with. Their texels are stored as rows of
+    // blocks from the first row of texels, and a level whose extent is not a multiple of the block's has whole blocks
+    // that reach past it.
+
+    // BC, with PrGpuFeatureFlag_TextureCompressionBc: blocks of 4 by 4 texels.
+    PrGpuFormat_Bc1,            // RGB with one bit of alpha, in 8 bytes
     PrGpuFormat_Bc1Srgb,
-    PrGpuFormat_Bc3,
+    PrGpuFormat_Bc2,            // RGB as Bc1, and four bits of alpha a texel
+    PrGpuFormat_Bc2Srgb,
+    PrGpuFormat_Bc3,            // RGB as Bc1, and alpha as Bc4
     PrGpuFormat_Bc3Srgb,
-    PrGpuFormat_Bc4,
-    PrGpuFormat_Bc5,
-    PrGpuFormat_Bc6HUfloat,
-    PrGpuFormat_Bc7,
+    PrGpuFormat_Bc4,            // one channel, in 8 bytes
+    PrGpuFormat_Bc4Snorm,
+    PrGpuFormat_Bc4Alpha,
+    PrGpuFormat_Bc4Luminance,
+    PrGpuFormat_Bc4Intensity,
+    PrGpuFormat_Bc4Mask,
+    PrGpuFormat_Bc5,            // two channels, each as Bc4
+    PrGpuFormat_Bc5Snorm,
+    PrGpuFormat_Bc5LuminanceAlpha,
+    PrGpuFormat_Bc6HUfloat,     // RGB of half floats, without a sign
+    PrGpuFormat_Bc6HSfloat,     // and with one
+    PrGpuFormat_Bc7,            // RGBA
     PrGpuFormat_Bc7Srgb,
+
+    // ETC2 and EAC, with PrGpuFeatureFlag_TextureCompressionEtc2: blocks of 4 by 4 texels.
+    PrGpuFormat_Etc2Rgb8,       // RGB, in 8 bytes. ETC1's blocks are blocks of it
+    PrGpuFormat_Etc2Rgb8Srgb,
+    PrGpuFormat_Etc2Rgb8A1,     // RGB with one bit of alpha, in 8 bytes
+    PrGpuFormat_Etc2Rgb8A1Srgb,
+    PrGpuFormat_Etc2Rgba8,      // RGB as Etc2Rgb8 after alpha as EAC, of 8 bits
+    PrGpuFormat_Etc2Rgba8Srgb,
+    PrGpuFormat_EacR11,         // one channel of 11 bits, in 8 bytes
+    PrGpuFormat_EacR11Snorm,
+    PrGpuFormat_EacR11Alpha,
+    PrGpuFormat_EacR11Luminance,
+    PrGpuFormat_EacR11Intensity,
+    PrGpuFormat_EacR11Mask,
+    PrGpuFormat_EacRg11,        // two channels, each as EacR11
+    PrGpuFormat_EacRg11Snorm,
+    PrGpuFormat_EacRg11LuminanceAlpha,
+
+    // ASTC, in 16 bytes a block, by the texels of a block: three formats of each, in the order Unorm, Srgb and Hdr.
+    // Unorm and Srgb read blocks of the LDR profile, with PrGpuFeatureFlag_TextureCompressionAstc. Hdr reads blocks of
+    // either profile as floats, with PrGpuFeatureFlag_TextureCompressionAstcHdr.
     PrGpuFormat_Astc4x4,
     PrGpuFormat_Astc4x4Srgb,
+    PrGpuFormat_Astc4x4Hdr,
+    PrGpuFormat_Astc5x4,
+    PrGpuFormat_Astc5x4Srgb,
+    PrGpuFormat_Astc5x4Hdr,
+    PrGpuFormat_Astc5x5,
+    PrGpuFormat_Astc5x5Srgb,
+    PrGpuFormat_Astc5x5Hdr,
+    PrGpuFormat_Astc6x5,
+    PrGpuFormat_Astc6x5Srgb,
+    PrGpuFormat_Astc6x5Hdr,
+    PrGpuFormat_Astc6x6,
+    PrGpuFormat_Astc6x6Srgb,
+    PrGpuFormat_Astc6x6Hdr,
+    PrGpuFormat_Astc8x5,
+    PrGpuFormat_Astc8x5Srgb,
+    PrGpuFormat_Astc8x5Hdr,
+    PrGpuFormat_Astc8x6,
+    PrGpuFormat_Astc8x6Srgb,
+    PrGpuFormat_Astc8x6Hdr,
+    PrGpuFormat_Astc8x8,
+    PrGpuFormat_Astc8x8Srgb,
+    PrGpuFormat_Astc8x8Hdr,
+    PrGpuFormat_Astc10x5,
+    PrGpuFormat_Astc10x5Srgb,
+    PrGpuFormat_Astc10x5Hdr,
+    PrGpuFormat_Astc10x6,
+    PrGpuFormat_Astc10x6Srgb,
+    PrGpuFormat_Astc10x6Hdr,
+    PrGpuFormat_Astc10x8,
+    PrGpuFormat_Astc10x8Srgb,
+    PrGpuFormat_Astc10x8Hdr,
+    PrGpuFormat_Astc10x10,
+    PrGpuFormat_Astc10x10Srgb,
+    PrGpuFormat_Astc10x10Hdr,
+    PrGpuFormat_Astc12x10,
+    PrGpuFormat_Astc12x10Srgb,
+    PrGpuFormat_Astc12x10Hdr,
+    PrGpuFormat_Astc12x12,
+    PrGpuFormat_Astc12x12Srgb,
+    PrGpuFormat_Astc12x12Hdr,
 
     PrGpuFormat_Count,
 };
 typedef uint8_t PrGpuFormat;
+
+// The number of block sizes of ASTC, and of formats of each.
+enum {
+    kPrGpuAstcBlockSizes = 14,
+    kPrGpuAstcFormatsPerBlockSize = 3,
+};
+
+// Where a swizzled format places the channels that it stores, as the red, green, blue and alpha that a shader reads.
+enum {
+    PrGpuSwizzle_None,              // as stored
+    PrGpuSwizzle_Alpha,             // (0, 0, 0, R)
+    PrGpuSwizzle_Luminance,         // (R, R, R, 1)
+    PrGpuSwizzle_Intensity,         // (R, R, R, R)
+    PrGpuSwizzle_Mask,              // (1, 1, 1, R)
+    PrGpuSwizzle_LuminanceAlpha,    // (R, R, R, G)
+    PrGpuSwizzle_Count,
+};
+typedef uint8_t PrGpuSwizzle;
+
+// The families of formats, which a device has as a whole or not at all.
+enum {
+    PrGpuFormatFamily_Plain,    // texels that are not compressed, which every device has in part
+    PrGpuFormatFamily_Bc,
+    PrGpuFormatFamily_Etc2,
+    PrGpuFormatFamily_Astc,
+    PrGpuFormatFamily_AstcHdr,
+    PrGpuFormatFamily_Count,
+};
+typedef uint8_t PrGpuFormatFamily;
 
 // The size of a block of a format: the texels that one block covers on each axis, and its bytes. A format that is not
 // block-compressed has blocks of one texel.
@@ -283,8 +464,49 @@ typedef struct PrGpuFormatBlock {
 // Returns the block of `format`, which is not None.
 PrGpuFormatBlock prGpuFormatBlock(PrGpuFormat format);
 
+// Returns the family of `format`, and whether it is block-compressed: of any family but Plain.
+PrGpuFormatFamily prGpuFormatFamily(PrGpuFormat format);
+bool prGpuFormatIsCompressed(PrGpuFormat format);
+
+// Returns the feature that a device with the formats of `family` reports, or zero for Plain.
+PrGpuFeatureFlags prGpuFormatFamilyFeature(PrGpuFormatFamily family);
+
+// Return the format that reads `format`'s texels as sRGB encoded, and the one that reads them as they are stored, or
+// `format` itself if it has no such form.
+PrGpuFormat prGpuFormatSrgb(PrGpuFormat format);
+PrGpuFormat prGpuFormatPlain(PrGpuFormat format);
+
+// Returns true if `format` is a Srgb format.
+bool prGpuFormatIsSrgb(PrGpuFormat format);
+
+// Returns the ASTC format of blocks of `block` texels, Unorm, or None if ASTC has no such block. Its Srgb and Hdr forms
+// follow it.
+PrGpuFormat prGpuFormatAstc(PrUVec2 block);
+
+// Return the bytes of one row of blocks of a level of `width` texels, the rows of blocks of a level of `height` texels,
+// and the bytes of a level of `extent` texels with nothing between its rows.
+uint32_t prGpuFormatRowBytes(PrGpuFormat format, uint32_t width);
+uint32_t prGpuFormatRows(PrGpuFormat format, uint32_t height);
+uint64_t prGpuFormatLevelBytes(PrGpuFormat format, PrUVec2 extent);
+
+// Returns the swizzle of `format`, None for a format that is not swizzled.
+PrGpuSwizzle prGpuFormatSwizzle(PrGpuFormat format);
+
+// Returns the format that `format` stores its texels in: the format that a swizzled one is named after, and otherwise
+// `format` itself.
+PrGpuFormat prGpuFormatStored(PrGpuFormat format);
+
+// Returns the format that stores its texels in `stored` and reads them with `swizzle`, `stored` itself for None, or
+// None if no format does: the swizzles of one channel are of R8, R16, R16F, R32F, Bc4 and EacR11, and LuminanceAlpha is
+// of Rg8, Rg16, Rg16F, Rg32F, Bc5 and EacRg11.
+PrGpuFormat prGpuFormatSwizzled(PrGpuFormat stored, PrGpuSwizzle swizzle);
+
 // Returns true if `format` holds depth, stencil or both.
 bool prGpuFormatIsDepthStencil(PrGpuFormat format);
+
+// Returns true if every device that renders to `format` also filters it linearly, so that the device can make its mip
+// levels from the first (prGpuCommandsGenerateMipmaps).
+bool prGpuFormatFilters(PrGpuFormat format);
 
 // Return the texture format that holds a pixel format's pixels as they are laid out in memory, and the pixel format of
 // a texture format's texels, or None for a texture format that no pixel format matches. Neither converts colors: a Srgb
@@ -369,7 +591,11 @@ enum {
 };
 typedef uint8_t PrGpuTextureUsageFlags;
 
-// The shape of a texture. A layer is one element of an array, and a cube has six layers, one for each face.
+// The shape of a texture. A layer is one element of an array, and a cube has six layers, one for each face: the faces
+// toward +x, -x, +y, -y, +z and -z, in that order. A shader samples a cube along a direction, and the face that the
+// direction's largest component names holds the texel. A face's columns and rows run as the cube maps of every API run.
+// On the four faces around the y axis, rows run toward -y, and columns run toward -z on the face toward +x, +x on +z,
+// +z on -x, and -x on -z. On the faces toward +y and -y, columns run toward +x, and rows toward +z and -z.
 enum {
     PrGpuTextureKind_2d,
     PrGpuTextureKind_2dArray,
@@ -403,6 +629,45 @@ PrGpuTextureDesc prGpuTextureDesc2d(PrGpuFormat format, PrUVec2 extent, PrGpuTex
 // Returns the number of levels of a full mip chain of a texture of `extent`, down to one texel.
 uint8_t prGpuMipLevels(PrUVec2 extent);
 
+// How the bytes of a texture that a record describes are laid out.
+enum {
+    PrGpuTextureLayout_DeviceOptimal,   // as the device keeps a texture: nothing reads its bytes
+    PrGpuTextureLayout_Linear,          // levels from the first, each its layers' rows of blocks with nothing between
+    PrGpuTextureLayout_LinearPitch256,  // the same, with each row at a multiple of 256 bytes, as a copy takes them
+    PrGpuTextureLayout_Count,
+};
+typedef uint8_t PrGpuTextureLayout;
+
+// A texture's description in 64 bits, with no pointer, to store ahead of the texture's bytes: in a file, or in a table
+// that says what every texture of a scene is before any is read. From the lowest bit, the first word holds the layout
+// in 8 bits, the kind in 4, the format in 8, and in 11 the extent's depth less one, which is the depth of a 3D texture
+// and the layers of any other. The second holds the width less one and the height less one in 14 bits each, and the
+// levels less one in 4. The bits that are left are zero. A PrGpuFormat and a PrGpuTextureKind keep their values, so a
+// stored record stays what it was.
+typedef struct PrGpuTextureRecord {
+    uint32_t words[2];
+} PrGpuTextureRecord;
+
+// The most that a record holds.
+enum {
+    kPrGpuTextureRecordMaxSide = 16384,
+    kPrGpuTextureRecordMaxDepth = 2048,
+    kPrGpuTextureRecordMaxLevels = 16,
+};
+
+// Makes the record of a texture of `desc` whose bytes are laid out as `layout`. A record holds neither a texture's
+// uses, its samples nor its name. Returns false for a description that a record does not hold: of more than one sample,
+// or past the most that a record holds.
+bool prGpuTextureRecordMake(const PrGpuTextureDesc* desc, PrGpuTextureLayout layout, PrGpuTextureRecord* out);
+
+// Returns the description that `record` holds, of one sample, for a texture that is sampled, and its layout in
+// `*layout`. Returns false for a record that prGpuTextureRecordMake did not make: its description is then zero.
+bool prGpuTextureRecordRead(PrGpuTextureRecord record, PrGpuTextureDesc* desc, PrGpuTextureLayout* layout);
+
+// Returns the bytes of every level and layer of the texture that `record` describes, in its layout, or zero for the
+// device's own.
+uint64_t prGpuTextureRecordBytes(PrGpuTextureRecord record);
+
 // The levels and layers that a view or a barrier covers. A zero `levels` or `layers` covers every one from the first.
 typedef struct PrGpuSubresources {
     uint8_t firstLevel;
@@ -415,8 +680,11 @@ typedef struct PrGpuSubresources {
 bool prGpuDeviceSupportsFormat(const PrGpuDevice* device, PrGpuFormat format, PrGpuTextureUsageFlags usage);
 
 // Creates a texture as `desc` describes, with undefined contents, in the accesses of PrGpuAccessFlag_ShaderRead for the
-// work submitted after the call. Returns Limit if the device has no memory or handle left for it, or the extent is
-// larger than the device allows, and Lost if the device is lost. On failure, `*out` is zero.
+// work submitted after the call. The first level of a texture of a block-compressed format is whole blocks: its extent
+// is a multiple of the block's, which some devices require, and the levels after it are as small as those of any
+// texture. Returns Limit if the device has no memory or handle left for it, or the extent is larger than the device
+// allows, NotSupported for a first level that is not whole blocks, and Lost if the device is lost. On failure, `*out`
+// is zero.
 PrStatus prGpuTextureCreate(PrGpuDevice* device, const PrGpuTextureDesc* desc, PrGpuTexture* out);
 
 // Creates a view of `subresources` of `texture`, of shape `kind`. A view has handles and may be an attachment, and it
@@ -588,10 +856,12 @@ typedef struct PrGpuTextureRegion {
 // Returns the region of a 2D texture's first level at `origin`, `extent` texels in size.
 PrGpuTextureRegion prGpuTextureRegion2d(PrUVec2 origin, PrUVec2 extent);
 
-// Copies texels from `data` into `region` of `texture`. `rowBytes` is the distance between rows of blocks in `data`,
-// and `layerBytes` between layers or depth slices. The command buffers submitted after the call read the new texels,
-// and the upload waits for the work submitted before it. Several uploads to one texture before a submission land in
-// order. The device copies `data` before the call returns.
+// Copies texels from `data` into `region` of `texture`. `rowBytes` is the distance between rows of blocks in `data`. It
+// is at least the bytes of one row of the region's blocks, and need not be a multiple of a block's bytes, so the rows
+// of an image in memory are uploaded at their stride. `layerBytes` is the distance between layers or depth slices: a
+// multiple of `rowBytes`, or zero for layers that follow one another. The command buffers submitted after the call read
+// the new texels, and the upload waits for the work submitted before it. Several uploads to one texture before a
+// submission land in order. The device copies `data` before the call returns.
 //
 // The texture is in the accesses of PrGpuAccessFlag_ShaderRead before and after the upload: work that left it in any
 // other access ends with a barrier to them.
@@ -981,8 +1251,11 @@ typedef struct PrGpuDispatchIndirect {
 } PrGpuDispatchIndirect;
 
 // Records copies outside any pass. A texture region names one level and a range of layers, and the buffer's bytes are
-// laid out as `rowBytes` and `layerBytes` say. Copies are ordered with other work only by barriers: the source is in
-// PrGpuAccessFlag_CopyRead and the target in PrGpuAccessFlag_CopyWrite.
+// laid out as `rowBytes` and `layerBytes` say: rows of blocks `rowBytes` apart, a multiple of the bytes of the format's
+// block, and layers `layerBytes` apart, a multiple of `rowBytes`, or zero for layers that follow one another. Copies
+// are ordered with other work only by barriers: the source is in PrGpuAccessFlag_CopyRead and the target in
+// PrGpuAccessFlag_CopyWrite. A copy into a texture reads from an Upload buffer, and a copy from a texture writes to a
+// Readback buffer.
 void prGpuCommandsCopyBuffer(PrGpuCommands* commands, PrGpuBuffer source, uint64_t sourceOffset, PrGpuBuffer target,
     uint64_t targetOffset, uint64_t size);
 void prGpuCommandsCopyTexture(PrGpuCommands* commands, PrGpuTexture source, const PrGpuTextureRegion* sourceRegion,

@@ -57,7 +57,13 @@ a 3D renderer needs it.
   records into the application's native one is submitted through the device too, so the application never signals anything.
 - **Uploads are unbounded and ordered.** `prGpuBufferUpload` and `prGpuTextureUpload` take any amount of
   data, which the device stages and copies in a command buffer of its own ahead of the next submission. Several
-  uploads to one resource land as if copied in order.
+  uploads to one resource land as if copied in order. A texture upload reads rows that lie any distance apart, as an
+  image in memory has them, because the device packs them as it stages them. A copy between a buffer and a texture
+  has no such step, so its rows lie a whole number of blocks apart.
+- **A texture is levels of layers.** A cube is six layers, the faces toward +x, -x, +y, -y, +z and -z, laid out as
+  every API lays out a cube map. An upload, a copy, a barrier and an attachment each name the levels and layers that
+  they touch, and a view (`prGpuTextureCreateView`) is a texture of its own over some of them: one face of one level
+  as a 2D texture to read back, or one level of every face as a cube to sample while a pass draws to the next level.
 - **The stream always succeeds.** A command buffer allocates per-frame data from a stream of upload memory that is
   reclaimed once its work completes, and grows as recording needs it. Running out of memory loses the device, which
   hosts already handle.
@@ -66,6 +72,72 @@ a 3D renderer needs it.
   creation leaves the device lost, so an application recovers from it as from a loss.
 - **Device loss** is a state, not an error path. A lost device refuses new work, completes every fence, and reads back
   zeros. The application destroys every object and makes them again on a new device.
+
+## Formats
+
+`PrGpuFormat` is one set for every device, and its values never change, because a texture's record stores its format
+(`PrGpuTextureRecord`): a format joins the set at its end. Its formats that are not compressed are grouped by the bits
+of a channel, each with its normalized, signed, integer, float and sRGB forms where the APIs have them, and each
+swizzled format beside the format that stores it. Packed formats, depth and stencil follow, and then the families of
+block-compressed formats. `tools/gen/gen_gpu.py` generates each format's properties (`lib/gpu/src/gpu_formats.h`)
+from a list in the enumeration's order, which it checks against pr/gpu.h.
+
+A device has the formats that its API gives it. A backend maps the formats that it has to its API's and refuses the
+rest, and `prGpuDeviceSupportsFormat` answers for a format and its uses, so a format of the set that no backend has yet
+is refused everywhere until one does.
+
+## Compressed formats
+
+`PrGpuFormat` holds every block-compressed format that the graphics APIs share, in families that a device has as a
+whole: a feature flag reports each, and `prGpuDeviceSupportsFormat` answers for one format from what the device
+itself reports. A compressed format is only sampled.
+
+| family | formats | feature |
+| --- | --- | --- |
+| BC | BC1, BC2, BC3 and BC7, each with an sRGB form; BC4, BC5 and BC6H, unsigned and signed | `TextureCompressionBc` |
+| ETC2 | ETC2 RGB8, RGB8A1 and RGBA8, each with an sRGB form; EAC R11 and RG11, unsigned and signed | `TextureCompressionEtc2` |
+| ASTC | the fourteen block sizes from 4x4 to 12x12, each with an sRGB form | `TextureCompressionAstc` |
+| ASTC HDR | the same block sizes, read as floats | `TextureCompressionAstcHdr` |
+
+| backend | BC | ETC2 | ASTC | ASTC HDR |
+| --- | --- | --- | --- | --- |
+| Metal | where the device says (`supportsBCTextureCompression`): every Mac, and newer Apple GPUs elsewhere | an Apple GPU | an Apple GPU from the A8 | an Apple GPU from the A13 |
+| Direct3D 12 and 11 | always | never | never | never |
+| Vulkan | `textureCompressionBC` | `textureCompressionETC2` | `textureCompressionASTC_LDR` | `textureCompressionASTC_HDR`; each format is then asked of the physical device |
+| WebGPU | `texture-compression-bc` | `texture-compression-etc2` | `texture-compression-astc` | never: WebGPU has no such formats |
+| memory, Canvas 2D | never | never | never | never |
+
+A texture's first level is whole blocks, because Direct3D and WebGPU take nothing else, and a device refuses any other
+extent as NotSupported. A level of blocks is rows of whole blocks, and the last blocks of a smaller level reach past
+it where its extent is not a multiple of the block's. `prGpuFormatBlock` gives a format's block, and
+`prGpuFormatRowBytes`, `prGpuFormatRows` and `prGpuFormatLevelBytes` size a level's rows, so that an upload, a copy
+and a file's level are sized in one place. An upload's rows may lie any distance apart, and a copy's lie a whole
+number of blocks apart.
+
+## Swizzled formats
+
+A swizzled format stores its texels in another format and is sampled with its channels placed otherwise, by the
+hardware: Alpha (0, 0, 0, R), Luminance (R, R, R, 1), Intensity (R, R, R, R) and Mask (1, 1, 1, R) of R8, R16, R16F,
+R32F, BC4 and EAC R11, and LuminanceAlpha (R, R, R, G) of Rg8, Rg16, Rg16F, Rg32F, BC5 and EAC RG11. A format of one
+or two channels then serves where a texture of gray, or of gray and alpha, would otherwise take four. They are
+optional, a device's feature (`TextureSwizzle`), and no backend emulates them in a shader, so that a shader reads a
+texture the same way on every device: a device without the feature refuses them, and a caller chooses a format of four
+channels there. `prGpuFormatSwizzle` and `prGpuFormatStored` take a swizzled format apart, and `prGpuFormatSwizzled`
+puts one together. A swizzled format is of the family and the block of the format that it stores, and is only sampled.
+
+| backend | swizzled formats |
+| --- | --- |
+| Metal and Metal 4 | always: the texture's swizzle (`MTLTextureSwizzleChannels`), which its views keep |
+| Vulkan | always: the image view's component mapping |
+| Direct3D 12 | always: the shader resource view's component mapping |
+| Direct3D 11, WebGPU, memory, Canvas 2D | never |
+
+## Texture records
+
+A texture's description also packs into 64 bits with no pointer (`PrGpuTextureRecord`): its layout, kind, format, extent
+and levels, to store ahead of the texture's bytes, in a file or in a table that says what every texture of a scene is
+before any is read. `prGpuTextureRecordBytes` gives the bytes of its levels in a layout that a file stores. `lib/gpu`
+knows nothing of image files.
 
 ## Shaders
 

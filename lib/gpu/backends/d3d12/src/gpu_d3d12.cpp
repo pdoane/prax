@@ -171,7 +171,7 @@ struct D3d12Pipeline {
     // The number of vertex buffers that the pipeline reads, and their strides. D3D12 takes the strides with the
     // buffers, not with the pipeline.
     uint8_t vertexBufferCount;
-    uint32_t vertexStrides[kPrGpuMaxVertexBuffers];     // by vertex buffer
+    uint32_t vertexStrides[kPrGpuMaxVertexBuffers]; // by vertex buffer
 };
 
 // A batch of uploads, and the buffers that it wrote.
@@ -484,9 +484,11 @@ DXGI_FORMAT vertexFormatOf(PrGpuVertexFormat format) {
 }
 
 DXGI_FORMAT formatOf(PrGpuFormat format) {
-    switch (format) {
+    switch (prGpuFormatStored(format)) {
         case PrGpuFormat_R8: return DXGI_FORMAT_R8_UNORM;
         case PrGpuFormat_Rg8: return DXGI_FORMAT_R8G8_UNORM;
+        case PrGpuFormat_R16: return DXGI_FORMAT_R16_UNORM;
+        case PrGpuFormat_Rg16: return DXGI_FORMAT_R16G16_UNORM;
         case PrGpuFormat_Rgba8: return DXGI_FORMAT_R8G8B8A8_UNORM;
         case PrGpuFormat_Rgba8Srgb: return DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
         case PrGpuFormat_Bgra8: return DXGI_FORMAT_B8G8R8A8_UNORM;
@@ -509,11 +511,16 @@ DXGI_FORMAT formatOf(PrGpuFormat format) {
         case PrGpuFormat_D32FS8: return DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
         case PrGpuFormat_Bc1: return DXGI_FORMAT_BC1_UNORM;
         case PrGpuFormat_Bc1Srgb: return DXGI_FORMAT_BC1_UNORM_SRGB;
+        case PrGpuFormat_Bc2: return DXGI_FORMAT_BC2_UNORM;
+        case PrGpuFormat_Bc2Srgb: return DXGI_FORMAT_BC2_UNORM_SRGB;
         case PrGpuFormat_Bc3: return DXGI_FORMAT_BC3_UNORM;
         case PrGpuFormat_Bc3Srgb: return DXGI_FORMAT_BC3_UNORM_SRGB;
         case PrGpuFormat_Bc4: return DXGI_FORMAT_BC4_UNORM;
+        case PrGpuFormat_Bc4Snorm: return DXGI_FORMAT_BC4_SNORM;
         case PrGpuFormat_Bc5: return DXGI_FORMAT_BC5_UNORM;
+        case PrGpuFormat_Bc5Snorm: return DXGI_FORMAT_BC5_SNORM;
         case PrGpuFormat_Bc6HUfloat: return DXGI_FORMAT_BC6H_UF16;
+        case PrGpuFormat_Bc6HSfloat: return DXGI_FORMAT_BC6H_SF16;
         case PrGpuFormat_Bc7: return DXGI_FORMAT_BC7_UNORM;
         case PrGpuFormat_Bc7Srgb: return DXGI_FORMAT_BC7_UNORM_SRGB;
         default: return DXGI_FORMAT_UNKNOWN;
@@ -529,8 +536,7 @@ PrGpuFormat gpuFormatOf(DXGI_FORMAT format) {
 }
 
 bool isSrgb(PrGpuFormat format) {
-    return format == PrGpuFormat_Rgba8Srgb || format == PrGpuFormat_Bgra8Srgb || format == PrGpuFormat_Bc1Srgb ||
-        format == PrGpuFormat_Bc3Srgb || format == PrGpuFormat_Bc7Srgb || format == PrGpuFormat_Astc4x4Srgb;
+    return prGpuFormatIsSrgb(format);
 }
 
 // The format of a texture's resource: typeless for depth, which shader resource views read in a color format, and for
@@ -1108,7 +1114,7 @@ bool supportsFormat(const PrGpuDevice* device, PrGpuFormat format, PrGpuTextureU
     const D3d12Device* d = d3d12Of(device);
     if (formatOf(format) == DXGI_FORMAT_UNKNOWN)
         return false;
-    bool compressed = format >= PrGpuFormat_Bc1;
+    bool compressed = prGpuFormatIsCompressed(format);
     if (compressed && (usage & ~PrGpuTextureUsageFlag_Sampled))
         return false;
     bool depth = prGpuFormatIsDepthStencil(format);
@@ -1499,13 +1505,29 @@ void* bufferMap(const PrGpuDevice* device, PrGpuBuffer buffer) {
 // ---------------------------------------------------------------------------------------------------------------------
 // Textures
 
+// Returns where a view of `format` places its channels when a shader samples it.
+UINT componentMappingOf(PrGpuFormat format) {
+    constexpr UINT kZero = D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_0;
+    constexpr UINT kOne = D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_1;
+    constexpr UINT kRed = D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0;
+    constexpr UINT kGreen = D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_1;
+    switch (prGpuFormatSwizzle(format)) {
+        case PrGpuSwizzle_Alpha: return D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(kZero, kZero, kZero, kRed);
+        case PrGpuSwizzle_Luminance: return D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(kRed, kRed, kRed, kOne);
+        case PrGpuSwizzle_Intensity: return D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(kRed, kRed, kRed, kRed);
+        case PrGpuSwizzle_Mask: return D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(kOne, kOne, kOne, kRed);
+        case PrGpuSwizzle_LuminanceAlpha: return D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(kRed, kRed, kRed, kGreen);
+        default: return D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+    }
+}
+
 // Returns the shader resource view of a texture or view.
 D3D12_SHADER_RESOURCE_VIEW_DESC textureViewOf(const D3d12Resource& r) {
     const PrGpuTextureDesc& t = r.texture;
     bool array = r.resourceLayers > 1 || r.firstLayer != 0;
     D3D12_SHADER_RESOURCE_VIEW_DESC s{};
     s.Format = shaderFormatOf(t.format);
-    s.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+    s.Shader4ComponentMapping = componentMappingOf(t.format);
     switch (t.kind) {
         case PrGpuTextureKind_3d:
             s.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE3D;
@@ -3514,7 +3536,9 @@ PrGpuDevice* prGpuD3d12Create(const PrGpuD3d12Options* PR_NULLABLE options) {
     d->shaderTarget = PrGpuShaderTarget_Dxil;
     d->info.backend = "Direct3D 12";
     d->nativeKinds = 1u << PrGpuNativeKind_D3d12;
-    d->info.features = PrGpuFeatureFlag_TextureCompressionBc | PrGpuFeatureFlag_Bindless;
+    // A shader resource view places the channels that it is sampled with.
+    d->info.features =
+        PrGpuFeatureFlag_TextureCompressionBc | PrGpuFeatureFlag_Bindless | PrGpuFeatureFlag_TextureSwizzle;
     d->info.maxTextureSize = D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION;
     d->info.maxBufferSlots = kBufferSlots;
     d->info.maxRwBufferSlots = kRwBufferSlots;

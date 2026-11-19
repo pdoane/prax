@@ -385,6 +385,7 @@ PrStatus createDevice(VulkanDevice* d) {
     core.fillModeNonSolid = supported.features.features.fillModeNonSolid;
     core.dualSrcBlend = supported.features.features.dualSrcBlend;
     core.textureCompressionBC = supported.features.features.textureCompressionBC;
+    core.textureCompressionETC2 = supported.features.features.textureCompressionETC2;
     core.textureCompressionASTC_LDR = supported.features.features.textureCompressionASTC_LDR;
     core.shaderInt64 = supported.features.features.shaderInt64;
     core.shaderInt16 = supported.features.features.shaderInt16;
@@ -414,11 +415,17 @@ PrStatus createDevice(VulkanDevice* d) {
     loadDevice(d);
     d->vk.GetDeviceQueue(d->device, d->queueFamily, 0, &d->queue);
 
+    // Every view places the channels that it is sampled with.
     PrGpuFeatureFlags& features = d->info.features;
+    features |= PrGpuFeatureFlag_TextureSwizzle;
     if (core.textureCompressionBC)
         features |= PrGpuFeatureFlag_TextureCompressionBc;
+    if (core.textureCompressionETC2)
+        features |= PrGpuFeatureFlag_TextureCompressionEtc2;
     if (core.textureCompressionASTC_LDR)
         features |= PrGpuFeatureFlag_TextureCompressionAstc;
+    if (enabled.vulkan13.textureCompressionASTC_HDR)
+        features |= PrGpuFeatureFlag_TextureCompressionAstcHdr;
     return PrStatus_Ok;
 }
 

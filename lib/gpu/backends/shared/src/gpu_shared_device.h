@@ -139,7 +139,7 @@ inline bool gpuSharedDeviceIsReady(const GpuSharedDevice* device) {
 }
 
 // Forgets a texture that the device destroys, so that a later texture of the same id is not taken for an import's copy.
-// The backend's textureReleaseFn calls it as it retires the texture.
+// The backend's textureReleaseFn calls it for the release that retires the texture.
 void gpuSharedTextureForget(GpuSharedDevice* device, PrGpuTexture texture);
 
 // The objects' functions that read the shared state.

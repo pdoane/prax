@@ -166,6 +166,21 @@ VkImageViewType viewTypeOf(PrGpuTextureKind kind) {
     }
 }
 
+// Returns where a view of `format` places its channels when a shader samples it.
+VkComponentMapping componentsOf(PrGpuFormat format) {
+    constexpr VkComponentSwizzle kZero = VK_COMPONENT_SWIZZLE_ZERO;
+    constexpr VkComponentSwizzle kOne = VK_COMPONENT_SWIZZLE_ONE;
+    constexpr VkComponentSwizzle kRed = VK_COMPONENT_SWIZZLE_R;
+    switch (prGpuFormatSwizzle(format)) {
+        case PrGpuSwizzle_Alpha: return VkComponentMapping{kZero, kZero, kZero, kRed};
+        case PrGpuSwizzle_Luminance: return VkComponentMapping{kRed, kRed, kRed, kOne};
+        case PrGpuSwizzle_Intensity: return VkComponentMapping{kRed, kRed, kRed, kRed};
+        case PrGpuSwizzle_Mask: return VkComponentMapping{kOne, kOne, kOne, kRed};
+        case PrGpuSwizzle_LuminanceAlpha: return VkComponentMapping{kRed, kRed, kRed, VK_COMPONENT_SWIZZLE_G};
+        default: return VkComponentMapping{};
+    }
+}
+
 VkResult createView(VulkanDevice* d, VkImage image, PrGpuFormat format, VkImageViewType type, uint32_t firstLevel,
         uint32_t levels, uint32_t firstLayer, uint32_t layers, VkImageView* out) {
     VkImageViewCreateInfo info{};
@@ -173,6 +188,7 @@ VkResult createView(VulkanDevice* d, VkImage image, PrGpuFormat format, VkImageV
     info.image = image;
     info.viewType = type;
     info.format = vulkanFormat(format);
+    info.components = componentsOf(format);
     // A view that shaders read takes the depth of a format with depth and stencil.
     VkImageAspectFlags aspect = vulkanAspect(format);
     if ((aspect & VK_IMAGE_ASPECT_DEPTH_BIT) != 0)
@@ -510,21 +526,26 @@ void textureUpload(PrGpuDevice* device, PrGpuTexture texture, const PrGpuTexture
     uint32_t blockRows = (region->extent.height + block.height - 1) / block.height;
     uint32_t blockColumns = (region->extent.width + block.width - 1) / block.width;
     uint32_t packedRow = blockColumns * block.bytes;
-    PR_ASSERT(rowBytes >= packedRow && rowBytes % block.bytes == 0);
-    uint64_t images = region->extent.depth;
-    uint64_t imageBytes = layerBytes != 0 ? layerBytes : uint64_t(rowBytes) * blockRows;
-    uint64_t size = imageBytes * (images - 1) + uint64_t(rowBytes) * (blockRows - 1) + packedRow;
+    PR_ASSERT(rowBytes >= packedRow);
+    uint32_t images = region->extent.depth;
+    uint64_t imageBytes = uint64_t(packedRow) * blockRows;
     prMutexLock(&d->mutex);
+    // Staging holds the texels with rows packed, so that the caller's rows may lie any distance apart: a copy from a
+    // buffer counts the distance in texels.
     uint64_t at = 0;
-    uint8_t* staging = stage(d, size, &at);
+    uint8_t* staging = stage(d, imageBytes * images, &at);
     if (staging != nullptr) {
-        prMemCopy(staging, data, size_t(size));
+        const uint8_t* from = static_cast<const uint8_t*>(data);
+        for (uint32_t image = 0; image < images; ++image) {
+            for (uint32_t y = 0; y < blockRows; ++y) {
+                prMemCopy(staging + image * imageBytes + uint64_t(y) * packedRow,
+                    from + uint64_t(image) * layerBytes + uint64_t(y) * rowBytes, packedRow);
+            }
+        }
         VulkanUpload upload{};
         upload.offset = at;
         upload.target = texture.id;
         upload.region = *region;
-        upload.rowTexels = rowBytes / block.bytes * block.width;
-        upload.imageRows = uint32_t(imageBytes / rowBytes) * block.height;
         d->uploads.push(upload);
     }
     prMutexUnlock(&d->mutex);
@@ -602,7 +623,7 @@ bool supportsFormat(const PrGpuDevice* device, PrGpuFormat format, PrGpuTextureU
     const VulkanDevice* d = vulkanDevice(device);
     if (vulkanFormat(format) == VK_FORMAT_UNDEFINED)
         return false;
-    bool compressed = format >= PrGpuFormat_Bc1;
+    bool compressed = prGpuFormatIsCompressed(format);
     if (compressed && (usage & ~PrGpuTextureUsageFlag_Sampled))
         return false;
     bool depth = prGpuFormatIsDepthStencil(format);
@@ -652,11 +673,15 @@ void vulkanName(VulkanDevice* d, VkObjectType type, uint64_t handle, PrStringVie
 }
 
 VkFormat vulkanFormat(PrGpuFormat format) {
-    switch (format) {
+    switch (prGpuFormatStored(format)) {
         case PrGpuFormat_R8:
             return VK_FORMAT_R8_UNORM;
         case PrGpuFormat_Rg8:
             return VK_FORMAT_R8G8_UNORM;
+        case PrGpuFormat_R16:
+            return VK_FORMAT_R16_UNORM;
+        case PrGpuFormat_Rg16:
+            return VK_FORMAT_R16G16_UNORM;
         case PrGpuFormat_Rgba8:
             return VK_FORMAT_R8G8B8A8_UNORM;
         case PrGpuFormat_Rgba8Srgb:
@@ -701,24 +726,134 @@ VkFormat vulkanFormat(PrGpuFormat format) {
             return VK_FORMAT_BC1_RGBA_UNORM_BLOCK;
         case PrGpuFormat_Bc1Srgb:
             return VK_FORMAT_BC1_RGBA_SRGB_BLOCK;
+        case PrGpuFormat_Bc2:
+            return VK_FORMAT_BC2_UNORM_BLOCK;
+        case PrGpuFormat_Bc2Srgb:
+            return VK_FORMAT_BC2_SRGB_BLOCK;
         case PrGpuFormat_Bc3:
             return VK_FORMAT_BC3_UNORM_BLOCK;
         case PrGpuFormat_Bc3Srgb:
             return VK_FORMAT_BC3_SRGB_BLOCK;
         case PrGpuFormat_Bc4:
             return VK_FORMAT_BC4_UNORM_BLOCK;
+        case PrGpuFormat_Bc4Snorm:
+            return VK_FORMAT_BC4_SNORM_BLOCK;
         case PrGpuFormat_Bc5:
             return VK_FORMAT_BC5_UNORM_BLOCK;
+        case PrGpuFormat_Bc5Snorm:
+            return VK_FORMAT_BC5_SNORM_BLOCK;
         case PrGpuFormat_Bc6HUfloat:
             return VK_FORMAT_BC6H_UFLOAT_BLOCK;
+        case PrGpuFormat_Bc6HSfloat:
+            return VK_FORMAT_BC6H_SFLOAT_BLOCK;
         case PrGpuFormat_Bc7:
             return VK_FORMAT_BC7_UNORM_BLOCK;
         case PrGpuFormat_Bc7Srgb:
             return VK_FORMAT_BC7_SRGB_BLOCK;
+        case PrGpuFormat_Etc2Rgb8:
+            return VK_FORMAT_ETC2_R8G8B8_UNORM_BLOCK;
+        case PrGpuFormat_Etc2Rgb8Srgb:
+            return VK_FORMAT_ETC2_R8G8B8_SRGB_BLOCK;
+        case PrGpuFormat_Etc2Rgb8A1:
+            return VK_FORMAT_ETC2_R8G8B8A1_UNORM_BLOCK;
+        case PrGpuFormat_Etc2Rgb8A1Srgb:
+            return VK_FORMAT_ETC2_R8G8B8A1_SRGB_BLOCK;
+        case PrGpuFormat_Etc2Rgba8:
+            return VK_FORMAT_ETC2_R8G8B8A8_UNORM_BLOCK;
+        case PrGpuFormat_Etc2Rgba8Srgb:
+            return VK_FORMAT_ETC2_R8G8B8A8_SRGB_BLOCK;
+        case PrGpuFormat_EacR11:
+            return VK_FORMAT_EAC_R11_UNORM_BLOCK;
+        case PrGpuFormat_EacR11Snorm:
+            return VK_FORMAT_EAC_R11_SNORM_BLOCK;
+        case PrGpuFormat_EacRg11:
+            return VK_FORMAT_EAC_R11G11_UNORM_BLOCK;
+        case PrGpuFormat_EacRg11Snorm:
+            return VK_FORMAT_EAC_R11G11_SNORM_BLOCK;
         case PrGpuFormat_Astc4x4:
             return VK_FORMAT_ASTC_4x4_UNORM_BLOCK;
         case PrGpuFormat_Astc4x4Srgb:
             return VK_FORMAT_ASTC_4x4_SRGB_BLOCK;
+        case PrGpuFormat_Astc4x4Hdr:
+            return VK_FORMAT_ASTC_4x4_SFLOAT_BLOCK;
+        case PrGpuFormat_Astc5x4:
+            return VK_FORMAT_ASTC_5x4_UNORM_BLOCK;
+        case PrGpuFormat_Astc5x4Srgb:
+            return VK_FORMAT_ASTC_5x4_SRGB_BLOCK;
+        case PrGpuFormat_Astc5x4Hdr:
+            return VK_FORMAT_ASTC_5x4_SFLOAT_BLOCK;
+        case PrGpuFormat_Astc5x5:
+            return VK_FORMAT_ASTC_5x5_UNORM_BLOCK;
+        case PrGpuFormat_Astc5x5Srgb:
+            return VK_FORMAT_ASTC_5x5_SRGB_BLOCK;
+        case PrGpuFormat_Astc5x5Hdr:
+            return VK_FORMAT_ASTC_5x5_SFLOAT_BLOCK;
+        case PrGpuFormat_Astc6x5:
+            return VK_FORMAT_ASTC_6x5_UNORM_BLOCK;
+        case PrGpuFormat_Astc6x5Srgb:
+            return VK_FORMAT_ASTC_6x5_SRGB_BLOCK;
+        case PrGpuFormat_Astc6x5Hdr:
+            return VK_FORMAT_ASTC_6x5_SFLOAT_BLOCK;
+        case PrGpuFormat_Astc6x6:
+            return VK_FORMAT_ASTC_6x6_UNORM_BLOCK;
+        case PrGpuFormat_Astc6x6Srgb:
+            return VK_FORMAT_ASTC_6x6_SRGB_BLOCK;
+        case PrGpuFormat_Astc6x6Hdr:
+            return VK_FORMAT_ASTC_6x6_SFLOAT_BLOCK;
+        case PrGpuFormat_Astc8x5:
+            return VK_FORMAT_ASTC_8x5_UNORM_BLOCK;
+        case PrGpuFormat_Astc8x5Srgb:
+            return VK_FORMAT_ASTC_8x5_SRGB_BLOCK;
+        case PrGpuFormat_Astc8x5Hdr:
+            return VK_FORMAT_ASTC_8x5_SFLOAT_BLOCK;
+        case PrGpuFormat_Astc8x6:
+            return VK_FORMAT_ASTC_8x6_UNORM_BLOCK;
+        case PrGpuFormat_Astc8x6Srgb:
+            return VK_FORMAT_ASTC_8x6_SRGB_BLOCK;
+        case PrGpuFormat_Astc8x6Hdr:
+            return VK_FORMAT_ASTC_8x6_SFLOAT_BLOCK;
+        case PrGpuFormat_Astc8x8:
+            return VK_FORMAT_ASTC_8x8_UNORM_BLOCK;
+        case PrGpuFormat_Astc8x8Srgb:
+            return VK_FORMAT_ASTC_8x8_SRGB_BLOCK;
+        case PrGpuFormat_Astc8x8Hdr:
+            return VK_FORMAT_ASTC_8x8_SFLOAT_BLOCK;
+        case PrGpuFormat_Astc10x5:
+            return VK_FORMAT_ASTC_10x5_UNORM_BLOCK;
+        case PrGpuFormat_Astc10x5Srgb:
+            return VK_FORMAT_ASTC_10x5_SRGB_BLOCK;
+        case PrGpuFormat_Astc10x5Hdr:
+            return VK_FORMAT_ASTC_10x5_SFLOAT_BLOCK;
+        case PrGpuFormat_Astc10x6:
+            return VK_FORMAT_ASTC_10x6_UNORM_BLOCK;
+        case PrGpuFormat_Astc10x6Srgb:
+            return VK_FORMAT_ASTC_10x6_SRGB_BLOCK;
+        case PrGpuFormat_Astc10x6Hdr:
+            return VK_FORMAT_ASTC_10x6_SFLOAT_BLOCK;
+        case PrGpuFormat_Astc10x8:
+            return VK_FORMAT_ASTC_10x8_UNORM_BLOCK;
+        case PrGpuFormat_Astc10x8Srgb:
+            return VK_FORMAT_ASTC_10x8_SRGB_BLOCK;
+        case PrGpuFormat_Astc10x8Hdr:
+            return VK_FORMAT_ASTC_10x8_SFLOAT_BLOCK;
+        case PrGpuFormat_Astc10x10:
+            return VK_FORMAT_ASTC_10x10_UNORM_BLOCK;
+        case PrGpuFormat_Astc10x10Srgb:
+            return VK_FORMAT_ASTC_10x10_SRGB_BLOCK;
+        case PrGpuFormat_Astc10x10Hdr:
+            return VK_FORMAT_ASTC_10x10_SFLOAT_BLOCK;
+        case PrGpuFormat_Astc12x10:
+            return VK_FORMAT_ASTC_12x10_UNORM_BLOCK;
+        case PrGpuFormat_Astc12x10Srgb:
+            return VK_FORMAT_ASTC_12x10_SRGB_BLOCK;
+        case PrGpuFormat_Astc12x10Hdr:
+            return VK_FORMAT_ASTC_12x10_SFLOAT_BLOCK;
+        case PrGpuFormat_Astc12x12:
+            return VK_FORMAT_ASTC_12x12_UNORM_BLOCK;
+        case PrGpuFormat_Astc12x12Srgb:
+            return VK_FORMAT_ASTC_12x12_SRGB_BLOCK;
+        case PrGpuFormat_Astc12x12Hdr:
+            return VK_FORMAT_ASTC_12x12_SFLOAT_BLOCK;
         default:
             return VK_FORMAT_UNDEFINED;
     }
@@ -948,8 +1083,6 @@ void vulkanUploadsRecord(VulkanDevice* d, VulkanCommands* c, VkCommandBuffer buf
 
         VkBufferImageCopy copy{};
         copy.bufferOffset = upload.offset;
-        copy.bufferRowLength = upload.rowTexels;
-        copy.bufferImageHeight = upload.imageRows;
         if ((target.aspect & VK_IMAGE_ASPECT_DEPTH_BIT) != 0)
             copy.imageSubresource.aspectMask = VkImageAspectFlags(VK_IMAGE_ASPECT_DEPTH_BIT);
         else

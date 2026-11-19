@@ -249,9 +249,8 @@ bool supportsFormat(const PrGpuDevice* device, PrGpuFormat format, PrGpuTextureU
     const GpuMetalDevice* d = gpuMetalDeviceFrom(device);
     if (gpuMetalPixelFormat(format) == MTLPixelFormatInvalid)
         return false;
-    bool bc = format >= PrGpuFormat_Bc1 && format <= PrGpuFormat_Bc7Srgb;
-    bool compressed = format >= PrGpuFormat_Bc1;
-    if (bc && !d->device.supportsBCTextureCompression)
+    bool compressed = prGpuFormatIsCompressed(format);
+    if (compressed && (d->info.features & prGpuFormatFamilyFeature(prGpuFormatFamily(format))) == 0)
         return false;
     if (compressed && (usage & ~PrGpuTextureUsageFlag_Sampled))
         return false;
@@ -310,6 +309,22 @@ void* bufferMap(const PrGpuDevice* device, PrGpuBuffer buffer) {
     return gpuMetalBuffer(gpuMetalDeviceFrom(device), buffer.id).contents;
 }
 
+// Returns where a texture of `format` places its channels when a shader samples it.
+MTLTextureSwizzleChannels textureSwizzle(PrGpuFormat format) {
+    constexpr MTLTextureSwizzle kZero = MTLTextureSwizzleZero;
+    constexpr MTLTextureSwizzle kOne = MTLTextureSwizzleOne;
+    constexpr MTLTextureSwizzle kRed = MTLTextureSwizzleRed;
+    switch (prGpuFormatSwizzle(format)) {
+        case PrGpuSwizzle_Alpha: return MTLTextureSwizzleChannelsMake(kZero, kZero, kZero, kRed);
+        case PrGpuSwizzle_Luminance: return MTLTextureSwizzleChannelsMake(kRed, kRed, kRed, kOne);
+        case PrGpuSwizzle_Intensity: return MTLTextureSwizzleChannelsMake(kRed, kRed, kRed, kRed);
+        case PrGpuSwizzle_Mask: return MTLTextureSwizzleChannelsMake(kOne, kOne, kOne, kRed);
+        case PrGpuSwizzle_LuminanceAlpha: return MTLTextureSwizzleChannelsMake(kRed, kRed, kRed,
+            MTLTextureSwizzleGreen);
+        default: return MTLTextureSwizzleChannelsDefault;
+    }
+}
+
 MTLTextureUsage textureUsage(PrGpuTextureUsageFlags usage) {
     // No texture asks for MTLTextureUsagePixelFormatView, which would keep the GPU from compressing it. A view keeps
     // its texture's pixel format or swaps sRGB for linear, and neither needs it.
@@ -344,6 +359,7 @@ PrStatus textureCreate(PrGpuDevice* device, const PrGpuTextureDesc* desc, PrGpuT
         td.storageMode = MTLStorageModePrivate;
         td.hazardTrackingMode = MTLHazardTrackingModeUntracked;
         td.usage = textureUsage(desc->usage);
+        td.swizzle = textureSwizzle(desc->format);
         id<MTLTexture> texture = [d->device newTextureWithDescriptor:td];
         if (texture == nil)
             return PrStatus_Limit;
@@ -379,7 +395,7 @@ PrStatus textureCreateView(PrGpuDevice* device, PrGpuTexture texture, PrGpuTextu
             layers = uint16_t(layerCount - subresources.firstLayer);
         id<MTLTexture> view = [t newTextureViewWithPixelFormat:t.pixelFormat
             textureType:textureType(kind, desc.samples) levels:NSMakeRange(subresources.firstLevel, levels)
-            slices:NSMakeRange(subresources.firstLayer, layers)];
+            slices:NSMakeRange(subresources.firstLayer, layers) swizzle:textureSwizzle(desc.format)];
         if (view == nil)
             return PrStatus_Limit;
         uint32_t slot = gpuMetalResourceAdd(d, GpuMetalSlot_Texture, view, view.gpuResourceID._impl);
@@ -771,9 +787,11 @@ void gpuMetalSwapChainPresent(PrGpuSwapChain* handle, PrGpuCommands* commands) {
 }
 
 MTLPixelFormat gpuMetalPixelFormat(PrGpuFormat format) {
-    switch (format) {
+    switch (prGpuFormatStored(format)) {
         case PrGpuFormat_R8: return MTLPixelFormatR8Unorm;
         case PrGpuFormat_Rg8: return MTLPixelFormatRG8Unorm;
+        case PrGpuFormat_R16: return MTLPixelFormatR16Unorm;
+        case PrGpuFormat_Rg16: return MTLPixelFormatRG16Unorm;
         case PrGpuFormat_Rgba8: return MTLPixelFormatRGBA8Unorm;
         case PrGpuFormat_Rgba8Srgb: return MTLPixelFormatRGBA8Unorm_sRGB;
         case PrGpuFormat_Bgra8: return MTLPixelFormatBGRA8Unorm;
@@ -796,15 +814,70 @@ MTLPixelFormat gpuMetalPixelFormat(PrGpuFormat format) {
         case PrGpuFormat_D32FS8: return MTLPixelFormatDepth32Float_Stencil8;
         case PrGpuFormat_Bc1: return MTLPixelFormatBC1_RGBA;
         case PrGpuFormat_Bc1Srgb: return MTLPixelFormatBC1_RGBA_sRGB;
+        case PrGpuFormat_Bc2: return MTLPixelFormatBC2_RGBA;
+        case PrGpuFormat_Bc2Srgb: return MTLPixelFormatBC2_RGBA_sRGB;
         case PrGpuFormat_Bc3: return MTLPixelFormatBC3_RGBA;
         case PrGpuFormat_Bc3Srgb: return MTLPixelFormatBC3_RGBA_sRGB;
         case PrGpuFormat_Bc4: return MTLPixelFormatBC4_RUnorm;
+        case PrGpuFormat_Bc4Snorm: return MTLPixelFormatBC4_RSnorm;
         case PrGpuFormat_Bc5: return MTLPixelFormatBC5_RGUnorm;
+        case PrGpuFormat_Bc5Snorm: return MTLPixelFormatBC5_RGSnorm;
         case PrGpuFormat_Bc6HUfloat: return MTLPixelFormatBC6H_RGBUfloat;
+        case PrGpuFormat_Bc6HSfloat: return MTLPixelFormatBC6H_RGBFloat;
         case PrGpuFormat_Bc7: return MTLPixelFormatBC7_RGBAUnorm;
         case PrGpuFormat_Bc7Srgb: return MTLPixelFormatBC7_RGBAUnorm_sRGB;
+        case PrGpuFormat_Etc2Rgb8: return MTLPixelFormatETC2_RGB8;
+        case PrGpuFormat_Etc2Rgb8Srgb: return MTLPixelFormatETC2_RGB8_sRGB;
+        case PrGpuFormat_Etc2Rgb8A1: return MTLPixelFormatETC2_RGB8A1;
+        case PrGpuFormat_Etc2Rgb8A1Srgb: return MTLPixelFormatETC2_RGB8A1_sRGB;
+        case PrGpuFormat_Etc2Rgba8: return MTLPixelFormatEAC_RGBA8;
+        case PrGpuFormat_Etc2Rgba8Srgb: return MTLPixelFormatEAC_RGBA8_sRGB;
+        case PrGpuFormat_EacR11: return MTLPixelFormatEAC_R11Unorm;
+        case PrGpuFormat_EacR11Snorm: return MTLPixelFormatEAC_R11Snorm;
+        case PrGpuFormat_EacRg11: return MTLPixelFormatEAC_RG11Unorm;
+        case PrGpuFormat_EacRg11Snorm: return MTLPixelFormatEAC_RG11Snorm;
         case PrGpuFormat_Astc4x4: return MTLPixelFormatASTC_4x4_LDR;
         case PrGpuFormat_Astc4x4Srgb: return MTLPixelFormatASTC_4x4_sRGB;
+        case PrGpuFormat_Astc4x4Hdr: return MTLPixelFormatASTC_4x4_HDR;
+        case PrGpuFormat_Astc5x4: return MTLPixelFormatASTC_5x4_LDR;
+        case PrGpuFormat_Astc5x4Srgb: return MTLPixelFormatASTC_5x4_sRGB;
+        case PrGpuFormat_Astc5x4Hdr: return MTLPixelFormatASTC_5x4_HDR;
+        case PrGpuFormat_Astc5x5: return MTLPixelFormatASTC_5x5_LDR;
+        case PrGpuFormat_Astc5x5Srgb: return MTLPixelFormatASTC_5x5_sRGB;
+        case PrGpuFormat_Astc5x5Hdr: return MTLPixelFormatASTC_5x5_HDR;
+        case PrGpuFormat_Astc6x5: return MTLPixelFormatASTC_6x5_LDR;
+        case PrGpuFormat_Astc6x5Srgb: return MTLPixelFormatASTC_6x5_sRGB;
+        case PrGpuFormat_Astc6x5Hdr: return MTLPixelFormatASTC_6x5_HDR;
+        case PrGpuFormat_Astc6x6: return MTLPixelFormatASTC_6x6_LDR;
+        case PrGpuFormat_Astc6x6Srgb: return MTLPixelFormatASTC_6x6_sRGB;
+        case PrGpuFormat_Astc6x6Hdr: return MTLPixelFormatASTC_6x6_HDR;
+        case PrGpuFormat_Astc8x5: return MTLPixelFormatASTC_8x5_LDR;
+        case PrGpuFormat_Astc8x5Srgb: return MTLPixelFormatASTC_8x5_sRGB;
+        case PrGpuFormat_Astc8x5Hdr: return MTLPixelFormatASTC_8x5_HDR;
+        case PrGpuFormat_Astc8x6: return MTLPixelFormatASTC_8x6_LDR;
+        case PrGpuFormat_Astc8x6Srgb: return MTLPixelFormatASTC_8x6_sRGB;
+        case PrGpuFormat_Astc8x6Hdr: return MTLPixelFormatASTC_8x6_HDR;
+        case PrGpuFormat_Astc8x8: return MTLPixelFormatASTC_8x8_LDR;
+        case PrGpuFormat_Astc8x8Srgb: return MTLPixelFormatASTC_8x8_sRGB;
+        case PrGpuFormat_Astc8x8Hdr: return MTLPixelFormatASTC_8x8_HDR;
+        case PrGpuFormat_Astc10x5: return MTLPixelFormatASTC_10x5_LDR;
+        case PrGpuFormat_Astc10x5Srgb: return MTLPixelFormatASTC_10x5_sRGB;
+        case PrGpuFormat_Astc10x5Hdr: return MTLPixelFormatASTC_10x5_HDR;
+        case PrGpuFormat_Astc10x6: return MTLPixelFormatASTC_10x6_LDR;
+        case PrGpuFormat_Astc10x6Srgb: return MTLPixelFormatASTC_10x6_sRGB;
+        case PrGpuFormat_Astc10x6Hdr: return MTLPixelFormatASTC_10x6_HDR;
+        case PrGpuFormat_Astc10x8: return MTLPixelFormatASTC_10x8_LDR;
+        case PrGpuFormat_Astc10x8Srgb: return MTLPixelFormatASTC_10x8_sRGB;
+        case PrGpuFormat_Astc10x8Hdr: return MTLPixelFormatASTC_10x8_HDR;
+        case PrGpuFormat_Astc10x10: return MTLPixelFormatASTC_10x10_LDR;
+        case PrGpuFormat_Astc10x10Srgb: return MTLPixelFormatASTC_10x10_sRGB;
+        case PrGpuFormat_Astc10x10Hdr: return MTLPixelFormatASTC_10x10_HDR;
+        case PrGpuFormat_Astc12x10: return MTLPixelFormatASTC_12x10_LDR;
+        case PrGpuFormat_Astc12x10Srgb: return MTLPixelFormatASTC_12x10_sRGB;
+        case PrGpuFormat_Astc12x10Hdr: return MTLPixelFormatASTC_12x10_HDR;
+        case PrGpuFormat_Astc12x12: return MTLPixelFormatASTC_12x12_LDR;
+        case PrGpuFormat_Astc12x12Srgb: return MTLPixelFormatASTC_12x12_sRGB;
+        case PrGpuFormat_Astc12x12Hdr: return MTLPixelFormatASTC_12x12_HDR;
         default: return MTLPixelFormatInvalid;
     }
 }
@@ -1441,10 +1514,15 @@ void gpuMetalDeviceOpen(GpuMetalDevice* d, id<MTLDevice> device, bool bindless) 
         d->adapter[size] = 0;
     d->info.adapter = PrStringView{d->adapter, strlen(d->adapter)};
     // A pipeline reads its target with framebuffer fetch, which reads in raster order on Apple's GPUs. The iOS
-    // simulator's shader compiler has no framebuffer fetch.
-    d->info.features = PrGpuFeatureFlag_Timestamps | PrGpuFeatureFlag_TextureCompressionAstc |
+    // simulator's shader compiler has no framebuffer fetch. An Apple GPU samples ETC2 and EAC, from its second family
+    // the LDR profile of ASTC, and from its sixth the HDR profile. A GPU of the Mac's own families samples BC alone,
+    // and the device says whether an Apple GPU does. Every family places the channels that a texture is sampled with.
+    d->info.features = PrGpuFeatureFlag_Timestamps | PrGpuFeatureFlag_TextureSwizzle |
         (bindless ? PrGpuFeatureFlag_Bindless : 0) |
-        (device.supportsBCTextureCompression ? PrGpuFeatureFlag_TextureCompressionBc : 0);
+        (device.supportsBCTextureCompression ? PrGpuFeatureFlag_TextureCompressionBc : 0) |
+        ([device supportsFamily:MTLGPUFamilyApple1] ? PrGpuFeatureFlag_TextureCompressionEtc2 : 0) |
+        ([device supportsFamily:MTLGPUFamilyApple2] ? PrGpuFeatureFlag_TextureCompressionAstc : 0) |
+        ([device supportsFamily:MTLGPUFamilyApple6] ? PrGpuFeatureFlag_TextureCompressionAstcHdr : 0);
 #if !TARGET_OS_SIMULATOR
     d->info.features |= PrGpuFeatureFlag_TargetReads | PrGpuFeatureFlag_OrderedTargetReads;
 #endif

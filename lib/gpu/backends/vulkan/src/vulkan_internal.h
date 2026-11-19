@@ -300,8 +300,6 @@ struct VulkanUpload {
     uint64_t targetOffset;      // in a buffer
     uint64_t size;              // the bytes, for a buffer
     PrGpuTextureRegion region;  // for a texture
-    uint32_t rowTexels;         // the source's rows and images, in texels
-    uint32_t imageRows;
 };
 
 // The kinds of what is retired.

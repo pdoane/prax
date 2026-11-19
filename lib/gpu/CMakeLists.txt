@@ -87,6 +87,7 @@ if (PR_DEVELOP)
     pr_module_tests(gpu
         tests/test_gpu.cpp
         tests/test_gpu_c.c
+        tests/test_gpu_formats.cpp
     )
     target_link_libraries(gpu_tests PRIVATE prax::gpu_select prax::task)
     pr_slang(gpu_tests tests/test_gpu.slang VARIABLE kTestGpuShaders)

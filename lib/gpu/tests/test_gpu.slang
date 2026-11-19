@@ -84,6 +84,14 @@ float4 sampled(VertexOut input) : SV_Target {
     return texture.SampleLevel(sampler, input.uv, 0);
 }
 
+// The cube that the push data names, sampled along the direction in the push data's color, at the level of detail in
+// that color's alpha.
+[shader("fragment")]
+float4 cubeSampled(VertexOut input) : SV_Target {
+    TextureCube<float4> cube = prGpuGet<TextureCube<float4>>(push.texture);
+    return cube.SampleLevel(prGpuGet<SamplerState>(push.sampler), push.color.xyz, push.color.w);
+}
+
 // The color that the buffer names, through a second buffer: the first buffer holds the handle of a buffer and the
 // offset of the color's four floats in it.
 [shader("fragment")]
@@ -115,6 +123,7 @@ PR_GPU_TEXTURE(Texture2D<float4>, slotImage, 2);
 PR_GPU_BUFFER(ByteAddressBuffer, slotInput, 3);
 PR_GPU_RW_BUFFER(RWByteAddressBuffer, slotOutput, 1);
 PR_GPU_RW_TEXTURE(WTexture2D<float4>, slotWritten, 2);
+PR_GPU_TEXTURE(TextureCube<float4>, slotCube, 5);
 
 // A triangle whose corners are read from a Buffer slot.
 [shader("vertex")]
@@ -129,6 +138,12 @@ VertexOut slotPulled(uint vertex : SV_VertexID) {
 [shader("fragment")]
 float4 slotSampled(VertexOut input) : SV_Target {
     return slotImage.SampleLevel(slotImageSampler, input.uv, 0);
+}
+
+// A cube in a Texture slot, sampled as `cubeSampled` samples its cube.
+[shader("fragment")]
+float4 slotCubeSampled(VertexOut input) : SV_Target {
+    return slotCube.SampleLevel(slotCubeSampler, push.color.xyz, push.color.w);
 }
 
 // Each word of a Buffer slot, doubled, into an RwBuffer slot.
