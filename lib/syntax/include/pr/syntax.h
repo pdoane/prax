@@ -5,9 +5,12 @@
 // buffer's edit stream, and is asked for the spans of the categories in a range, so the cost of each follows the edits
 // and the range that is shown. What a category looks like is the host's decision.
 //
-// A registry holds the languages that a host links, finds them by name or by file, and gives each category name one
-// number across its languages, so that a host maps names to looks once. One thread uses a registry, and everything made
-// with it, at a time.
+// A registry holds the languages that a host links, finds them by name or by media type, and gives each category name
+// one number across its languages, so that a host maps names to looks once. One thread uses a registry, and everything
+// made with it, at a time.
+//
+// A resource's language is the language of its media type. The registry reads no file names: what a resource's name
+// tells about its text reaches the registry through the media type that a classifier gives it (pr/mime_sniff.h).
 
 #pragma once
 
@@ -57,10 +60,12 @@ struct PrSyntaxLanguage {
     // such as `^(js|javascript)$`, or empty for none. The names are lowercased before they are matched.
     PrStringView namePattern;
 
-    const PrStringView* PR_NULLABLE extensions; // without the dot, such as "js"
-    uint32_t extensionCount;
-    const PrStringView* PR_NULLABLE fileNames;  // whole names that imply the language, such as "Makefile"
-    uint32_t fileNameCount;
+    // The media types of the texts that the language reads, each an essence, such as "application/json", or a
+    // structured syntax suffix (RFC 6839), such as "+json", which covers every type whose subtype ends in it. A
+    // language of none is one that only an injection reaches, by its name.
+    const PrStringView* PR_NULLABLE mediaTypes;
+    uint32_t mediaTypeCount;
+
     PrSyntaxTreeCreateFn create;
 };
 
@@ -71,15 +76,21 @@ struct PrSyntaxLanguage {
 PrSyntaxRegistry* prSyntaxRegistryCreate(void);
 void prSyntaxRegistryDestroy(PrSyntaxRegistry* PR_NULLABLE registry);
 
-// Adds `language`, which must outlive the registry. A language added later wins a name, an extension or a file name
-// that an earlier one has.
+// Adds `language`, which must outlive the registry. A language added later wins a name or a media type that an earlier
+// one has.
 void prSyntaxRegistryAdd(PrSyntaxRegistry* registry, const PrSyntaxLanguage* language);
 
 // Returns the language of `name`, or the language whose name pattern matches `name`, in any case, or null.
 const PrSyntaxLanguage* PR_NULLABLE prSyntaxRegistryFind(const PrSyntaxRegistry* registry, PrStringView name);
 
-// Returns the language of the file at `path`, by its whole file name and then by its extension, in any case, or null.
-const PrSyntaxLanguage* PR_NULLABLE prSyntaxRegistryFromPath(const PrSyntaxRegistry* registry, PrStringView path);
+// The number of languages, and each, in the order that they were added.
+uint32_t prSyntaxRegistryLanguageCount(const PrSyntaxRegistry* registry);
+const PrSyntaxLanguage* prSyntaxRegistryLanguage(const PrSyntaxRegistry* registry, uint32_t index);
+
+// Returns the language of the media type `type`, in any case, or null. `type` is an essence or a whole type, whose
+// parameters do not matter, such as a type that a classifier gives a resource (pr/mime_sniff.h). A language that lists
+// the essence wins over one that lists its structured syntax suffix, so glTF's `model/gltf+json` reads as JSON.
+const PrSyntaxLanguage* PR_NULLABLE prSyntaxRegistryFromMediaType(const PrSyntaxRegistry* registry, PrStringView type);
 
 // Returns the category of `name`, which the registry adds if it has no such category. Two names that differ name two
 // categories, so `function.method` is not `function`.

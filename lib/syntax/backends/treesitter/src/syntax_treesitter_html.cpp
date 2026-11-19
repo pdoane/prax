@@ -10,14 +10,14 @@
 using namespace pr_impl;
 
 const PrSyntaxLanguage* prSyntaxTreeSitterHtml(void) {
-    static const PrStringView kExtensions[] = {"html", "htm", "xhtml"};
+    static const PrStringView kMediaTypes[] = {"text/html", "application/xhtml+xml"};
     static const PrSyntaxLanguage* language = nullptr;
     if (language == nullptr) {
         PrSyntaxTreeSitterDesc desc{
             .name = "html",
             .namePattern = "^html$",
-            .extensions = kExtensions,
-            .extensionCount = countOf(kExtensions),
+            .mediaTypes = kMediaTypes,
+            .mediaTypeCount = countOf(kMediaTypes),
             .grammar = tree_sitter_html(),
             .highlights = kTreeSitterHighlights,
             .injections = kTreeSitterInjections,

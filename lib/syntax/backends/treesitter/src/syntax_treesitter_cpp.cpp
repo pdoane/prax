@@ -10,15 +10,14 @@
 using namespace pr_impl;
 
 const PrSyntaxLanguage* prSyntaxTreeSitterCpp(void) {
-    static const PrStringView kExtensions[] =
-        {"cpp", "cc", "cxx", "c++", "h", "hpp", "hh", "hxx", "h++", "inl", "ipp", "tpp", "cppm", "ixx"};
+    static const PrStringView kMediaTypes[] = {"text/x-c++src", "text/x-c++hdr", "text/x-chdr"};
     static const PrSyntaxLanguage* language = nullptr;
     if (language == nullptr) {
         PrSyntaxTreeSitterDesc desc{
             .name = "cpp",
             .namePattern = "^(cc|cpp|cxx|c\\+\\+|h|hpp)$",
-            .extensions = kExtensions,
-            .extensionCount = countOf(kExtensions),
+            .mediaTypes = kMediaTypes,
+            .mediaTypeCount = countOf(kMediaTypes),
             .grammar = tree_sitter_cpp(),
             .highlights = kTreeSitterHighlights,
             .injections = kTreeSitterInjections,

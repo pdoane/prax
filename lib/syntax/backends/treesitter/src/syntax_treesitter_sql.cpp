@@ -10,14 +10,14 @@
 using namespace pr_impl;
 
 const PrSyntaxLanguage* prSyntaxTreeSitterSql(void) {
-    static const PrStringView kExtensions[] = {"sql"};
+    static const PrStringView kMediaTypes[] = {"application/sql"};
     static const PrSyntaxLanguage* language = nullptr;
     if (language == nullptr) {
         PrSyntaxTreeSitterDesc desc{
             .name = "sql",
             .namePattern = "^sql$",
-            .extensions = kExtensions,
-            .extensionCount = countOf(kExtensions),
+            .mediaTypes = kMediaTypes,
+            .mediaTypeCount = countOf(kMediaTypes),
             .grammar = tree_sitter_sql(),
             .highlights = kTreeSitterHighlights,
             .injections = kTreeSitterInjections,

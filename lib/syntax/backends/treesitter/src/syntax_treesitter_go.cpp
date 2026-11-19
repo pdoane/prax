@@ -10,14 +10,14 @@
 using namespace pr_impl;
 
 const PrSyntaxLanguage* prSyntaxTreeSitterGo(void) {
-    static const PrStringView kExtensions[] = {"go"};
+    static const PrStringView kMediaTypes[] = {"text/x-go"};
     static const PrSyntaxLanguage* language = nullptr;
     if (language == nullptr) {
         PrSyntaxTreeSitterDesc desc{
             .name = "go",
             .namePattern = "^(go|golang)$",
-            .extensions = kExtensions,
-            .extensionCount = countOf(kExtensions),
+            .mediaTypes = kMediaTypes,
+            .mediaTypeCount = countOf(kMediaTypes),
             .grammar = tree_sitter_go(),
             .highlights = kTreeSitterHighlights,
             .injections = kTreeSitterInjections,

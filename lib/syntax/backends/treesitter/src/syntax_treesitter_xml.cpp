@@ -10,14 +10,14 @@
 using namespace pr_impl;
 
 const PrSyntaxLanguage* prSyntaxTreeSitterXml(void) {
-    static const PrStringView kExtensions[] = {"xml", "svg", "xsd", "xslt", "xsl", "rng"};
+    static const PrStringView kMediaTypes[] = {"application/xml", "text/xml", "+xml"};
     static const PrSyntaxLanguage* language = nullptr;
     if (language == nullptr) {
         PrSyntaxTreeSitterDesc desc{
             .name = "xml",
             .namePattern = "^(xml|svg|xsd|xslt|xsl|rng)$",
-            .extensions = kExtensions,
-            .extensionCount = countOf(kExtensions),
+            .mediaTypes = kMediaTypes,
+            .mediaTypeCount = countOf(kMediaTypes),
             .grammar = tree_sitter_xml(),
             .highlights = kTreeSitterHighlights,
             .injections = kTreeSitterInjections,

@@ -88,7 +88,7 @@ pr_library(studio_text_editor INCLUDE text_editor/include
 target_link_libraries(pr_studio_text_editor PUBLIC prax::app prax::layout prax::process prax::studio_command
                                                    prax::studio_kit prax::syntax prax::text prax::text_diff
                                                    prax::text_edit prax::text_view
-                                            PRIVATE prax::core_cpp prax::color prax::dap prax::lsp prax::ui)
+                                            PRIVATE prax::core_cpp prax::color prax::dap prax::lsp prax::mime prax::ui)
 
 if (PR_DEVELOP)
     pr_module_tests(studio_text_editor

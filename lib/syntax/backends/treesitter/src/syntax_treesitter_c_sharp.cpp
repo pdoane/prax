@@ -10,14 +10,14 @@
 using namespace pr_impl;
 
 const PrSyntaxLanguage* prSyntaxTreeSitterCSharp(void) {
-    static const PrStringView kExtensions[] = {"cs", "csx"};
+    static const PrStringView kMediaTypes[] = {"text/x-csharp"};
     static const PrSyntaxLanguage* language = nullptr;
     if (language == nullptr) {
         PrSyntaxTreeSitterDesc desc{
             .name = "csharp",
             .namePattern = "^(cs|csharp|c#)$",
-            .extensions = kExtensions,
-            .extensionCount = countOf(kExtensions),
+            .mediaTypes = kMediaTypes,
+            .mediaTypeCount = countOf(kMediaTypes),
             .grammar = tree_sitter_c_sharp(),
             .highlights = kTreeSitterHighlights,
             .injections = kTreeSitterInjections,

@@ -10,17 +10,14 @@
 using namespace pr_impl;
 
 const PrSyntaxLanguage* prSyntaxTreeSitterDockerfile(void) {
-    static const PrStringView kExtensions[] = {"dockerfile", "containerfile"};
-    static const PrStringView kFileNames[] = {"Dockerfile", "Containerfile"};
+    static const PrStringView kMediaTypes[] = {"text/x-dockerfile"};
     static const PrSyntaxLanguage* language = nullptr;
     if (language == nullptr) {
         PrSyntaxTreeSitterDesc desc{
             .name = "dockerfile",
             .namePattern = "^(dockerfile|docker|containerfile)$",
-            .extensions = kExtensions,
-            .extensionCount = countOf(kExtensions),
-            .fileNames = kFileNames,
-            .fileNameCount = countOf(kFileNames),
+            .mediaTypes = kMediaTypes,
+            .mediaTypeCount = countOf(kMediaTypes),
             .grammar = tree_sitter_dockerfile(),
             .highlights = kTreeSitterHighlights,
             .injections = kTreeSitterInjections,

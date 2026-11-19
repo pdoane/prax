@@ -10,14 +10,14 @@
 using namespace pr_impl;
 
 const PrSyntaxLanguage* prSyntaxTreeSitterSlang(void) {
-    static const PrStringView kExtensions[] = {"slang"};
+    static const PrStringView kMediaTypes[] = {"text/x-slang"};
     static const PrSyntaxLanguage* language = nullptr;
     if (language == nullptr) {
         PrSyntaxTreeSitterDesc desc{
             .name = "slang",
             .namePattern = "^slang$",
-            .extensions = kExtensions,
-            .extensionCount = countOf(kExtensions),
+            .mediaTypes = kMediaTypes,
+            .mediaTypeCount = countOf(kMediaTypes),
             .grammar = tree_sitter_slang(),
             .highlights = kTreeSitterHighlights,
             .injections = kTreeSitterInjections,

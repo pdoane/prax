@@ -3,7 +3,7 @@
 pr_library(syntax INCLUDE include
     src/syntax.cpp
 )
-target_link_libraries(pr_syntax PUBLIC prax::core prax::text_edit PRIVATE prax::core_cpp prax::regex)
+target_link_libraries(pr_syntax PUBLIC prax::core prax::text_edit PRIVATE prax::core_cpp prax::mime prax::regex)
 
 # Adds the tree-sitter grammar of `language` to the syntax library, if PR_SYNTAX_LANGUAGES names it: a library of the
 # grammar's generated parser, in DIRECTORY/src, its source in the backend (syntax_treesitter_<language>.cpp), and a
@@ -80,8 +80,16 @@ if (PR_SYNTAX_TREESITTER)
     set(PR_SYNTAX_GENERATED ${CMAKE_CURRENT_BINARY_DIR}/generated)
     target_include_directories(pr_syntax PRIVATE ${PR_SYNTAX_GENERATED})
 
-    # The languages that the backend builds in, every one by default (cmake/dependencies_tree_sitter.cmake).
-    set(PR_SYNTAX_LANGUAGES "${PR_SYNTAX_LANGUAGES_ALL}" CACHE STRING "The tree-sitter languages that lib/syntax builds in")
+    # The languages that the backend builds in: those that PR_SYNTAX_LANGUAGES_ONLY names, or every one
+    # (cmake/dependencies_tree_sitter.cmake). The cache holds only a choice, so a build follows the languages that the
+    # tree adds.
+    set(PR_SYNTAX_LANGUAGES_ONLY "" CACHE STRING
+        "The tree-sitter languages that lib/syntax builds in, or empty for every one")
+    if (PR_SYNTAX_LANGUAGES_ONLY)
+        set(PR_SYNTAX_LANGUAGES ${PR_SYNTAX_LANGUAGES_ONLY})
+    else()
+        set(PR_SYNTAX_LANGUAGES ${PR_SYNTAX_LANGUAGES_ALL})
+    endif()
     pr_syntax_sources_available(${PR_SYNTAX_LANGUAGES})
 
     pr_syntax_grammar(bash DIRECTORY ${bash}
@@ -98,12 +106,17 @@ if (PR_SYNTAX_TREESITTER)
         INJECTIONS ${cpp}/queries/injections.scm)
     pr_syntax_grammar(css DIRECTORY ${css}
         HIGHLIGHTS ${css}/queries/highlights.scm)
+    # CUDA is C++'s dialect, a grammar of its own, whose queries build on C++'s.
+    pr_syntax_grammar(cuda DIRECTORY ${cuda}
+        HIGHLIGHTS ${c}/queries/highlights.scm ${cpp}/queries/highlights.scm ${cuda}/queries/highlights.scm)
     pr_syntax_grammar(dart DIRECTORY ${dart}
         HIGHLIGHTS ${dart}/queries/highlights.scm)
     pr_syntax_grammar(diff DIRECTORY ${diff}
         HIGHLIGHTS ${diff}/queries/highlights.scm)
     pr_syntax_grammar(dockerfile DIRECTORY ${dockerfile}
         HIGHLIGHTS ${dockerfile}/queries/highlights.scm)
+    pr_syntax_grammar(fish DIRECTORY ${fish}
+        HIGHLIGHTS ${fish}/queries/highlights.scm)
     pr_syntax_grammar(glsl DIRECTORY ${glsl}
         HIGHLIGHTS ${c}/queries/highlights.scm ${glsl}/queries/highlights.scm)
     pr_syntax_grammar(go DIRECTORY ${go}
@@ -115,6 +128,8 @@ if (PR_SYNTAX_TREESITTER)
     pr_syntax_grammar(html DIRECTORY ${html}
         HIGHLIGHTS ${html}/queries/highlights.scm
         INJECTIONS ${html}/queries/injections.scm)
+    pr_syntax_grammar(ini DIRECTORY ${ini}
+        HIGHLIGHTS ${ini}/queries/highlights.scm)
     pr_syntax_grammar(java DIRECTORY ${java}
         HIGHLIGHTS ${java}/queries/highlights.scm)
     pr_syntax_grammar(javascript DIRECTORY ${javascript}
@@ -146,8 +161,12 @@ if (PR_SYNTAX_TREESITTER)
         INJECTIONS ${php}/queries/injections.scm ${php}/queries/injections-text.scm)
     pr_syntax_grammar(powershell DIRECTORY ${powershell}
         HIGHLIGHTS ${powershell}/queries/highlights.scm)
+    pr_syntax_grammar(proto DIRECTORY ${proto}
+        HIGHLIGHTS ${proto}/queries/highlights.scm)
     pr_syntax_grammar(python DIRECTORY ${python}
         HIGHLIGHTS ${python}/queries/highlights.scm)
+    pr_syntax_grammar(regex DIRECTORY ${regex}
+        HIGHLIGHTS ${regex}/queries/highlights.scm)
     pr_syntax_grammar(ruby DIRECTORY ${ruby}
         HIGHLIGHTS ${ruby}/queries/highlights.scm)
     pr_syntax_grammar(rust DIRECTORY ${rust}
@@ -157,6 +176,9 @@ if (PR_SYNTAX_TREESITTER)
         HIGHLIGHTS ${nvim}/c/highlights.scm ${nvim}/slang/highlights.scm)
     pr_syntax_grammar(sql DIRECTORY ${sql}
         HIGHLIGHTS ${sql}/queries/highlights.scm)
+    pr_syntax_grammar(starlark DIRECTORY ${starlark}
+        HIGHLIGHTS ${starlark}/queries/highlights.scm
+        INJECTIONS ${starlark}/queries/injections.scm)
     pr_syntax_grammar(swift DIRECTORY ${swift}
         HIGHLIGHTS ${swift}/queries/highlights.scm
         INJECTIONS ${swift}/queries/injections.scm)
@@ -173,12 +195,16 @@ if (PR_SYNTAX_TREESITTER)
     pr_syntax_grammar(typescript DIRECTORY ${typescript}/typescript
         HIGHLIGHTS ${javascript}/queries/highlights.scm ${typescript}/queries/highlights.scm
         INJECTIONS ${javascript}/queries/injections.scm)
+    pr_syntax_grammar(usd DIRECTORY ${usd}
+        HIGHLIGHTS ${usd}/queries/highlights.scm)
     pr_syntax_grammar(wgsl DIRECTORY ${wgsl}
         HIGHLIGHTS ${wgsl}/queries/highlights.scm)
     pr_syntax_grammar(xml DIRECTORY ${xml}/xml
         HIGHLIGHTS ${xml}/queries/xml/highlights.scm)
     pr_syntax_grammar(yaml DIRECTORY ${yaml}
         HIGHLIGHTS ${yaml}/queries/highlights.scm)
+    pr_syntax_grammar(zig DIRECTORY ${zig}
+        HIGHLIGHTS ${zig}/queries/highlights.scm)
 endif()
 
 if (PR_DEVELOP)
@@ -191,6 +217,8 @@ if (PR_DEVELOP)
             backends/treesitter/tests/test_syntax_treesitter.cpp
             backends/treesitter/tests/test_syntax_treesitter_c.c
         )
+        # The tests reach each language by the media type that the classifier gives a file of it.
+        target_link_libraries(syntax_tests PRIVATE prax::mime)
         # The tests check the languages that the build builds in.
         list(JOIN PR_SYNTAX_LANGUAGES "," built)
         target_compile_definitions(syntax_tests PRIVATE PR_SYNTAX_LANGUAGES_BUILT=",${built},")

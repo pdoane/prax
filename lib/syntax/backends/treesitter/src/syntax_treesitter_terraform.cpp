@@ -10,14 +10,14 @@
 using namespace pr_impl;
 
 const PrSyntaxLanguage* prSyntaxTreeSitterTerraform(void) {
-    static const PrStringView kExtensions[] = {"tf", "tfvars"};
+    static const PrStringView kMediaTypes[] = {"text/x-terraform"};
     static const PrSyntaxLanguage* language = nullptr;
     if (language == nullptr) {
         PrSyntaxTreeSitterDesc desc{
             .name = "terraform",
             .namePattern = "^(terraform|tf)$",
-            .extensions = kExtensions,
-            .extensionCount = countOf(kExtensions),
+            .mediaTypes = kMediaTypes,
+            .mediaTypeCount = countOf(kMediaTypes),
             .grammar = tree_sitter_terraform(),
             .highlights = kTreeSitterHighlights,
             .injections = kTreeSitterInjections,

@@ -10,14 +10,14 @@
 using namespace pr_impl;
 
 const PrSyntaxLanguage* prSyntaxTreeSitterLua(void) {
-    static const PrStringView kExtensions[] = {"lua"};
+    static const PrStringView kMediaTypes[] = {"text/x-lua"};
     static const PrSyntaxLanguage* language = nullptr;
     if (language == nullptr) {
         PrSyntaxTreeSitterDesc desc{
             .name = "lua",
             .namePattern = "^lua$",
-            .extensions = kExtensions,
-            .extensionCount = countOf(kExtensions),
+            .mediaTypes = kMediaTypes,
+            .mediaTypeCount = countOf(kMediaTypes),
             .grammar = tree_sitter_lua(),
             .highlights = kTreeSitterHighlights,
             .injections = kTreeSitterInjections,

@@ -4,6 +4,7 @@
 #include "pr/array.h"
 #include "pr/count_of.h"
 #include "pr/float.h"
+#include "pr/mime_sniff.h"
 #include "pr/min_max.h"
 #include "pr/string.h"
 #include "pr/string_ops.h"
@@ -36,6 +37,12 @@ namespace {
 // languages that every build of the tests builds in, which a lean build names (cmake/lean.cmake).
 bool built(PrStringView language) {
     return prStringContains(PR_SYNTAX_LANGUAGES_BUILT, format(",{},", language));
+}
+
+// Returns the language of the media type that the classifier gives `text`, the content of the file at `path`, or null.
+const PrSyntaxLanguage* PR_NULLABLE classified(const PrSyntaxRegistry* registry, PrStringView path, PrStringView text) {
+    PrMimeFormatInfo info = prMimeFormatInfo(prMimeSniff(prStringBytes(text), path));
+    return prSyntaxRegistryFromMediaType(registry, info.type);
 }
 
 // A registry of the built-in languages, and the syntax tree of a buffer in one of them.
@@ -355,7 +362,7 @@ TEST_CASE("Python and XML name their parts") {
     CHECK(xml.at("<!-- note") == "comment");
 }
 
-TEST_CASE("each built-in language is found by its file, and its queries name a part of a line") {
+TEST_CASE("each built-in language is found by its file's classification, and its queries name a part of a line") {
     struct Case {
         const char* language;   // the language, as PR_SYNTAX_LANGUAGES names it
         const char* path;
@@ -370,14 +377,17 @@ TEST_CASE("each built-in language is found by its file, and its queries name a p
         {"cmake", "CMakeLists.txt", "add_library(core STATIC a.c)\n", "add_library", "function.builtin"},
         {"cpp", "point.h", "namespace a { class Point {}; }\n", "namespace", "keyword"},
         {"css", "page.css", "a { color: red; }\n", "color", "property"},
+        {"cuda", "add.cu", "__global__ void add(int* a) { a[0] = 1; }\n", "__global__", "keyword.modifier"},
         {"dart", "main.dart", "class Point { final int x = 0; }\n", "class", "keyword"},
         {"diff", "fix.diff", "--- a/x\n+++ b/x\n@@ -1 +1 @@\n-old\n+new\n", "new", "diff.plus"},
         {"dockerfile", "Dockerfile", "FROM alpine:3\nRUN echo hi\n", "FROM", "keyword"},
+        {"fish", "config.fish", "function greet\n    echo hi\nend\n", "function", "keyword"},
         {"glsl", "blur.frag", "uniform vec4 color;\nvoid main() {}\n", "uniform", "type.qualifier"},
         {"go", "main.go", "package main\nfunc main() {}\n", "func", "keyword"},
         {"hcl", "site.hcl", "block \"a\" { count = 1 }\n", "1", "number"},
         {"hlsl", "blur.hlsl", "cbuffer Frame : register(b0) { float4 color; };\n", "cbuffer", "type"},
         {"html", "page.html", "<p class=\"a\">text</p>\n", "p class", "tag"},
+        {"ini", ".editorconfig", "[*.md]\nindent_size = 2\n", "indent_size", "property"},
         {"java", "Point.java", "public class Point { int x; }\n", "public", "keyword"},
         {"javascript", "app.js", "const answer = 42;\n", "const", "keyword"},
         {"json", "data.json", "{\"key\": true}\n", "true", "constant.builtin"},
@@ -388,19 +398,23 @@ TEST_CASE("each built-in language is found by its file, and its queries name a p
         {"objc", "view.m", "@interface View : NSObject\n@end\n", "@interface", "keyword"},
         {"php", "index.php", "<?php echo $name; ?>\n", "name;", "variable"},
         {"powershell", "build.ps1", "function Get-Thing { param($Name) }\n", "function", "keyword"},
+        {"proto", "point.proto", "syntax = \"proto3\";\nmessage Point { int32 x = 1; }\n", "message", "keyword.type"},
         {"python", "area.py", "def area(radius):\n    return radius\n", "def", "keyword"},
         {"ruby", "point.rb", "class Point\nend\n", "class", "keyword"},
         {"rust", "main.rs", "fn main() { let x = 1; }\n", "fn", "keyword"},
         {"slang", "blur.slang", "struct Frame { float4 color; };\n", "struct", "keyword.type"},
         {"sql", "query.sql", "SELECT id FROM users;\n", "SELECT", "keyword"},
+        {"starlark", "BUILD.bazel", "cc_library(name = \"core\")  # target\n", "# target", "comment"},
         {"swift", "main.swift", "func area() -> Int { return 1 }\n", "func", "keyword.function"},
         {"terraform", "main.tf", "resource \"aws_s3_bucket\" \"b\" { count = 1 }\n", "1", "number"},
         {"toml", "Cargo.toml", "[package]\nname = \"a\"\n", "name", "type"},
         {"tsx", "view.tsx", "const v = <div>{x}</div>;\n", "div", "tag"},
         {"typescript", "main.ts", "let x: number = 1;\n", "number", "type.builtin"},
+        {"usd", "cube.usda", "#usda 1.0\ndef Xform \"World\" { double size = 2.0 }\n", "def", "keyword.function"},
         {"wgsl", "blur.wgsl", "fn main() -> f32 { return 1.0; }\n", "fn", "keyword.function"},
         {"xml", "feed.xml", "<root kind=\"x\"/>\n", "root", "tag"},
         {"yaml", "config.yaml", "name: a\n", "name", "property"},
+        {"zig", "main.zig", "const std = @import(\"std\");\n", "const", "keyword"},
     };
     PrSyntaxRegistry* registry = prSyntaxRegistryCreate();
     prSyntaxTreeSitterAddLanguages(registry);
@@ -409,10 +423,82 @@ TEST_CASE("each built-in language is found by its file, and its queries name a p
             continue;
         String path = c.path;
         CAPTURE(path);
-        const PrSyntaxLanguage* language = prSyntaxRegistryFromPath(registry, c.path);
+        const PrSyntaxLanguage* language = classified(registry, c.path, c.text);
         REQUIRE(language != nullptr);
         Parsed h(language, c.text);
         CHECK(h.at(c.needle) == c.category);
+    }
+    prSyntaxRegistryDestroy(registry);
+}
+
+TEST_CASE("each built-in language is the language of a format that the classifier identifies") {
+    // The languages that only an injection reaches, by name.
+    const PrStringView kInjected[] = {"markdown_inline", "regex"};
+    PrSyntaxRegistry* registry = prSyntaxRegistryCreate();
+    prSyntaxTreeSitterAddLanguages(registry);
+    Array<const PrSyntaxLanguage*> reached;
+    for (uint32_t i = 0; i < PrMimeFormat_Count; ++i) {
+        PrStringView type = prMimeFormatInfo(PrMimeFormat(i)).type;
+        const PrSyntaxLanguage* language = prSyntaxRegistryFromMediaType(registry, type);
+        if (language != nullptr)
+            reached.push(language);
+    }
+    for (uint32_t i = 0; i < prSyntaxRegistryLanguageCount(registry); ++i) {
+        const PrSyntaxLanguage* language = prSyntaxRegistryLanguage(registry, i);
+        String name = language->name;
+        CAPTURE(name);
+        bool injected = false;
+        for (PrStringView only : kInjected)
+            injected = injected || language->name == only;
+        CHECK(injected == (reached.find(language) == kArrayMissing));
+    }
+    prSyntaxRegistryDestroy(registry);
+}
+
+TEST_CASE("a media type's essence or its structured syntax suffix gives its language") {
+    struct Case {
+        const char* language;   // the language, as PR_SYNTAX_LANGUAGES names it
+        const char* type;
+    };
+    const Case cases[] = {
+        {"json", "model/gltf+json"},
+        {"json", "application/manifest+json"},
+        {"xml", "image/svg+xml"},
+        {"html", "application/xhtml+xml"},
+        {"markdown", "text/markdown; charset=utf-8"},
+        {"usd", "model/vnd.usda"},
+        {"javascript", "text/javascript"},
+        {"yaml", "application/yaml"},
+    };
+    PrSyntaxRegistry* registry = prSyntaxRegistryCreate();
+    prSyntaxTreeSitterAddLanguages(registry);
+    for (const Case& c : cases) {
+        if (!built(c.language))
+            continue;
+        String type = c.type;
+        CAPTURE(type);
+        const PrSyntaxLanguage* language = prSyntaxRegistryFromMediaType(registry, c.type);
+        REQUIRE(language != nullptr);
+        CHECK(language->name == c.language);
+    }
+    CHECK(prSyntaxRegistryFromMediaType(registry, "text/plain") == nullptr);
+    prSyntaxRegistryDestroy(registry);
+}
+
+TEST_CASE("JavaScript's regular expressions inject their grammar, and JSON with comments names its parts") {
+    PrSyntaxRegistry* registry = prSyntaxRegistryCreate();
+    prSyntaxTreeSitterAddLanguages(registry);
+    if (built("regex") && built("javascript")) {
+        PrStringView text = "const re = /^[a-z]+(\\d{2})$/;\n";
+        Parsed h(classified(registry, "match.js", text), text);
+        CHECK(h.at("-z]") == "operator");
+        CHECK(h.at("\\d") == "escape");
+    }
+    if (built("json")) {
+        PrStringView text = "{\n  // strict\n  \"strict\": true\n}\n";
+        Parsed json(classified(registry, "tsconfig.jsonc", text), text);
+        CHECK(json.at("// strict") == "comment");
+        CHECK(json.at("true") == "constant.builtin");
     }
     prSyntaxRegistryDestroy(registry);
 }

@@ -10,14 +10,14 @@
 using namespace pr_impl;
 
 const PrSyntaxLanguage* prSyntaxTreeSitterPowerShell(void) {
-    static const PrStringView kExtensions[] = {"ps1", "psm1", "psd1"};
+    static const PrStringView kMediaTypes[] = {"text/x-powershell"};
     static const PrSyntaxLanguage* language = nullptr;
     if (language == nullptr) {
         PrSyntaxTreeSitterDesc desc{
             .name = "powershell",
             .namePattern = "^(powershell|pwsh|ps1)$",
-            .extensions = kExtensions,
-            .extensionCount = countOf(kExtensions),
+            .mediaTypes = kMediaTypes,
+            .mediaTypeCount = countOf(kMediaTypes),
             .grammar = tree_sitter_powershell(),
             .highlights = kTreeSitterHighlights,
             .injections = kTreeSitterInjections,

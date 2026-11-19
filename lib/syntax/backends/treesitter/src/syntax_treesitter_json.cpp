@@ -10,14 +10,14 @@
 using namespace pr_impl;
 
 const PrSyntaxLanguage* prSyntaxTreeSitterJson(void) {
-    static const PrStringView kExtensions[] = {"json"};
+    static const PrStringView kMediaTypes[] = {"application/json", "+json"};
     static const PrSyntaxLanguage* language = nullptr;
     if (language == nullptr) {
         PrSyntaxTreeSitterDesc desc{
             .name = "json",
             .namePattern = "^json$",
-            .extensions = kExtensions,
-            .extensionCount = countOf(kExtensions),
+            .mediaTypes = kMediaTypes,
+            .mediaTypeCount = countOf(kMediaTypes),
             .grammar = tree_sitter_json(),
             .highlights = kTreeSitterHighlights,
             .injections = kTreeSitterInjections,

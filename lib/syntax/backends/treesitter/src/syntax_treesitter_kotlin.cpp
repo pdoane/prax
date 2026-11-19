@@ -10,14 +10,14 @@
 using namespace pr_impl;
 
 const PrSyntaxLanguage* prSyntaxTreeSitterKotlin(void) {
-    static const PrStringView kExtensions[] = {"kt", "kts"};
+    static const PrStringView kMediaTypes[] = {"text/x-kotlin"};
     static const PrSyntaxLanguage* language = nullptr;
     if (language == nullptr) {
         PrSyntaxTreeSitterDesc desc{
             .name = "kotlin",
             .namePattern = "^(kotlin|kt)$",
-            .extensions = kExtensions,
-            .extensionCount = countOf(kExtensions),
+            .mediaTypes = kMediaTypes,
+            .mediaTypeCount = countOf(kMediaTypes),
             .grammar = tree_sitter_kotlin(),
             .highlights = kTreeSitterHighlights,
             .injections = kTreeSitterInjections,

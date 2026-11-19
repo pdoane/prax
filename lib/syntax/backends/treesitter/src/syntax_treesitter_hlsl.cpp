@@ -10,14 +10,14 @@
 using namespace pr_impl;
 
 const PrSyntaxLanguage* prSyntaxTreeSitterHlsl(void) {
-    static const PrStringView kExtensions[] = {"hlsl", "hlsli", "fx", "fxh"};
+    static const PrStringView kMediaTypes[] = {"text/x-hlsl"};
     static const PrSyntaxLanguage* language = nullptr;
     if (language == nullptr) {
         PrSyntaxTreeSitterDesc desc{
             .name = "hlsl",
             .namePattern = "^hlsl$",
-            .extensions = kExtensions,
-            .extensionCount = countOf(kExtensions),
+            .mediaTypes = kMediaTypes,
+            .mediaTypeCount = countOf(kMediaTypes),
             .grammar = tree_sitter_hlsl(),
             .highlights = kTreeSitterHighlights,
             .injections = kTreeSitterInjections,

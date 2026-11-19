@@ -10,14 +10,14 @@
 using namespace pr_impl;
 
 const PrSyntaxLanguage* prSyntaxTreeSitterJavaScript(void) {
-    static const PrStringView kExtensions[] = {"js", "mjs", "cjs", "jsx"};
+    static const PrStringView kMediaTypes[] = {"text/javascript", "application/javascript"};
     static const PrSyntaxLanguage* language = nullptr;
     if (language == nullptr) {
         PrSyntaxTreeSitterDesc desc{
             .name = "javascript",
             .namePattern = "^(js|javascript)$",
-            .extensions = kExtensions,
-            .extensionCount = countOf(kExtensions),
+            .mediaTypes = kMediaTypes,
+            .mediaTypeCount = countOf(kMediaTypes),
             .grammar = tree_sitter_javascript(),
             .highlights = kTreeSitterHighlights,
             .injections = kTreeSitterInjections,

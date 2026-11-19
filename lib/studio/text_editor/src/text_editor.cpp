@@ -18,6 +18,7 @@
 #include "pr/layout_query.h"
 #include "pr/lsp.h"
 #include "pr/mem.h"
+#include "pr/mime_sniff.h"
 #include "pr/raw_array.h"
 #include "pr/raw_string.h"
 #include "pr/string_ops.h"
@@ -75,6 +76,7 @@ struct TextEditorDocument {
     PrRawString path;               // null for a text of no file
     bool crlf;                      // the file ended its lines with CR LF, which saving restores
     uint64_t savedVersion;          // the version of the text that the file holds
+    PrRawString mediaType;          // the media type of the text, whose language is `language`
     PrTextEditBuffer* buffer;
     PrTextEditHistory* history;
     PrTextView* view;
@@ -1508,7 +1510,7 @@ void registerCommands(TextEditor* e) {
         TextEditorDocument* young = editor.shown;
         if (young == nullptr || prRawStringIsEmpty(&young->path) || young->loading)
             return;
-        // The saved text is a document of no file of its own, which the file's name gives the same language.
+        // The saved text is a document of no file of its own, of the media type and so the language of the document.
         PrBlob* file = prFileOpen(prRawStringView(&young->path));
         if (file == nullptr) {
             setStatus(&editor, "the saved file cannot be read");
@@ -1516,7 +1518,7 @@ void registerCommands(TextEditor* e) {
         }
         PrTextEditorDocumentDesc desc{
             .text = prStringFromBytes(prBlobBytes(file)),
-            .name = prRawStringView(&young->path),
+            .mediaType = prRawStringView(&young->mediaType),
             .readOnly = true,
         };
         PrTextEditorDocument* saved = nullptr;
@@ -2078,6 +2080,7 @@ void freeDocument(TextEditorDocument* document) {
     prTextEditHistoryDestroy(document->history);
     prTextEditBufferDestroy(document->buffer);
     prRawStringReset(&document->path);
+    prRawStringReset(&document->mediaType);
     document->source.reset();
     document->piece.reset();
     document->spans.reset();
@@ -2443,9 +2446,14 @@ PrStatus prTextEditorDocumentCreate(PrTextEditor* editor, const PrTextEditorDocu
     document->view = prTextViewCreate(document->buffer);
     document->savedVersion = prTextEditBufferVersion(document->buffer);
     document->spansVersion = UINT64_MAX;
-    PrStringView name = desc->path.isEmpty() ? desc->name : desc->path;
-    if (editor->languages != nullptr && name.size != 0)
-        document->language = prSyntaxRegistryFromPath(editor->languages, name);
+    PrStringView type = desc->mediaType;
+    if (type.isEmpty()) {
+        PrByteView bytes = file != nullptr ? prBlobBytes(file) : prStringBytes(desc->text);
+        type = prMimeFormatInfo(prMimeSniff(bytes, desc->path.isEmpty() ? desc->name : desc->path)).type;
+    }
+    document->mediaType = prRawStringCopy(type);
+    if (editor->languages != nullptr)
+        document->language = prSyntaxRegistryFromMediaType(editor->languages, type);
     if (document->language != nullptr)
         document->syntax = prSyntaxTreeCreate(document->language, editor->languages, document->buffer);
     document->file = file;

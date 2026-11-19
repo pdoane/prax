@@ -10,14 +10,14 @@
 using namespace pr_impl;
 
 const PrSyntaxLanguage* prSyntaxTreeSitterHcl(void) {
-    static const PrStringView kExtensions[] = {"hcl"};
+    static const PrStringView kMediaTypes[] = {"text/x-hcl"};
     static const PrSyntaxLanguage* language = nullptr;
     if (language == nullptr) {
         PrSyntaxTreeSitterDesc desc{
             .name = "hcl",
             .namePattern = "^hcl$",
-            .extensions = kExtensions,
-            .extensionCount = countOf(kExtensions),
+            .mediaTypes = kMediaTypes,
+            .mediaTypeCount = countOf(kMediaTypes),
             .grammar = tree_sitter_hcl(),
             .highlights = kTreeSitterHighlights,
             .injections = kTreeSitterInjections,

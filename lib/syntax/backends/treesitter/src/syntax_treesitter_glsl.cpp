@@ -10,15 +10,14 @@
 using namespace pr_impl;
 
 const PrSyntaxLanguage* prSyntaxTreeSitterGlsl(void) {
-    static const PrStringView kExtensions[] =
-        {"glsl", "vert", "frag", "geom", "comp", "tesc", "tese", "mesh", "task", "rgen", "rchit", "rmiss", "vsh", "fsh"};
+    static const PrStringView kMediaTypes[] = {"text/x-glsl"};
     static const PrSyntaxLanguage* language = nullptr;
     if (language == nullptr) {
         PrSyntaxTreeSitterDesc desc{
             .name = "glsl",
             .namePattern = "^glsl$",
-            .extensions = kExtensions,
-            .extensionCount = countOf(kExtensions),
+            .mediaTypes = kMediaTypes,
+            .mediaTypeCount = countOf(kMediaTypes),
             .grammar = tree_sitter_glsl(),
             .highlights = kTreeSitterHighlights,
             .injections = kTreeSitterInjections,

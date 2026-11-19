@@ -10,14 +10,14 @@
 using namespace pr_impl;
 
 const PrSyntaxLanguage* prSyntaxTreeSitterRust(void) {
-    static const PrStringView kExtensions[] = {"rs"};
+    static const PrStringView kMediaTypes[] = {"text/x-rust"};
     static const PrSyntaxLanguage* language = nullptr;
     if (language == nullptr) {
         PrSyntaxTreeSitterDesc desc{
             .name = "rust",
             .namePattern = "^(rs|rust)$",
-            .extensions = kExtensions,
-            .extensionCount = countOf(kExtensions),
+            .mediaTypes = kMediaTypes,
+            .mediaTypeCount = countOf(kMediaTypes),
             .grammar = tree_sitter_rust(),
             .highlights = kTreeSitterHighlights,
             .injections = kTreeSitterInjections,

@@ -23,11 +23,9 @@ extern "C" {
 // A tree-sitter grammar and its queries, in the forms that tree-sitter's own tools read.
 typedef struct PrSyntaxTreeSitterDesc {
     PrStringView name;
-    PrStringView namePattern;       // as PrSyntaxLanguage::namePattern, the grammar's injection-regex
-    const PrStringView* PR_NULLABLE extensions;
-    uint32_t extensionCount;
-    const PrStringView* PR_NULLABLE fileNames;
-    uint32_t fileNameCount;
+    PrStringView namePattern;                   // as PrSyntaxLanguage::namePattern, the grammar's injection-regex
+    const PrStringView* PR_NULLABLE mediaTypes; // as PrSyntaxLanguage::mediaTypes
+    uint32_t mediaTypeCount;
 
     // The grammar's TSLanguage, which must outlive the language, of an ABI that the built tree-sitter reads.
     const void* grammar;

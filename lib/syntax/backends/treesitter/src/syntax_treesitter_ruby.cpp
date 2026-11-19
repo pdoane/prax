@@ -10,17 +10,14 @@
 using namespace pr_impl;
 
 const PrSyntaxLanguage* prSyntaxTreeSitterRuby(void) {
-    static const PrStringView kExtensions[] = {"rb", "rake", "gemspec"};
-    static const PrStringView kFileNames[] = {"Rakefile", "Gemfile"};
+    static const PrStringView kMediaTypes[] = {"text/x-ruby"};
     static const PrSyntaxLanguage* language = nullptr;
     if (language == nullptr) {
         PrSyntaxTreeSitterDesc desc{
             .name = "ruby",
             .namePattern = "^(ruby|rb)$",
-            .extensions = kExtensions,
-            .extensionCount = countOf(kExtensions),
-            .fileNames = kFileNames,
-            .fileNameCount = countOf(kFileNames),
+            .mediaTypes = kMediaTypes,
+            .mediaTypeCount = countOf(kMediaTypes),
             .grammar = tree_sitter_ruby(),
             .highlights = kTreeSitterHighlights,
             .injections = kTreeSitterInjections,

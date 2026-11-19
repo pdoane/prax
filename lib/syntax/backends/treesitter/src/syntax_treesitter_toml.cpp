@@ -10,14 +10,14 @@
 using namespace pr_impl;
 
 const PrSyntaxLanguage* prSyntaxTreeSitterToml(void) {
-    static const PrStringView kExtensions[] = {"toml"};
+    static const PrStringView kMediaTypes[] = {"application/toml"};
     static const PrSyntaxLanguage* language = nullptr;
     if (language == nullptr) {
         PrSyntaxTreeSitterDesc desc{
             .name = "toml",
             .namePattern = "^toml$",
-            .extensions = kExtensions,
-            .extensionCount = countOf(kExtensions),
+            .mediaTypes = kMediaTypes,
+            .mediaTypeCount = countOf(kMediaTypes),
             .grammar = tree_sitter_toml(),
             .highlights = kTreeSitterHighlights,
             .injections = kTreeSitterInjections,

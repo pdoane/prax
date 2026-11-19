@@ -10,14 +10,14 @@
 using namespace pr_impl;
 
 const PrSyntaxLanguage* prSyntaxTreeSitterC(void) {
-    static const PrStringView kExtensions[] = {"c"};
+    static const PrStringView kMediaTypes[] = {"text/x-csrc", "text/x-c"};
     static const PrSyntaxLanguage* language = nullptr;
     if (language == nullptr) {
         PrSyntaxTreeSitterDesc desc{
             .name = "c",
             .namePattern = "^c$",
-            .extensions = kExtensions,
-            .extensionCount = countOf(kExtensions),
+            .mediaTypes = kMediaTypes,
+            .mediaTypeCount = countOf(kMediaTypes),
             .grammar = tree_sitter_c(),
             .highlights = kTreeSitterHighlights,
             .injections = kTreeSitterInjections,

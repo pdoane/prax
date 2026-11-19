@@ -38,6 +38,11 @@ pr_dependency(tree_sitter_css
     URL_HASH SHA256=03965344d8c0435dc54fb45b281578420bb7db8b99df4d34e7e74105a274cb79
     SOURCE_SUBDIR none
 )
+pr_dependency(tree_sitter_cuda
+    URL https://github.com/tree-sitter-grammars/tree-sitter-cuda/archive/v0.21.1.tar.gz
+    URL_HASH SHA256=8cb5f44b706cbefcb5b5bdad7cc7f8fd3e49aa14c37693895fd9f198c56ba4d9
+    SOURCE_SUBDIR none
+)
 pr_dependency(tree_sitter_dart
     URL https://github.com/UserNobody14/tree-sitter-dart/archive/0038280b774b65c1b89ba7fec50624d8baed9fe1.tar.gz
     URL_HASH SHA256=7d9f51b4ff20756a21935ce69a2386e6db1e2fda325835d41790e745270e0db8
@@ -51,6 +56,11 @@ pr_dependency(tree_sitter_diff
 pr_dependency(tree_sitter_dockerfile
     URL https://github.com/camdencheek/tree-sitter-dockerfile/archive/v0.2.0.tar.gz
     URL_HASH SHA256=8cbdf50838cc55e841aa9585a1a09e5b8c41454ae30ce0a93a7bd71adb140818
+    SOURCE_SUBDIR none
+)
+pr_dependency(tree_sitter_fish
+    URL https://github.com/ram02z/tree-sitter-fish/archive/3.6.0.tar.gz
+    URL_HASH SHA256=474fba2baf00794b672f58ef9d875891fc05b207479657e70966c0789260747e
     SOURCE_SUBDIR none
 )
 pr_dependency(tree_sitter_glsl
@@ -76,6 +86,11 @@ pr_dependency(tree_sitter_hlsl
 pr_dependency(tree_sitter_html
     URL https://github.com/tree-sitter/tree-sitter-html/archive/v0.23.2.tar.gz
     URL_HASH SHA256=21fa4f2d4dcb890ef12d09f4979a0007814f67f1c7294a9b17b0108a09e45ef7
+    SOURCE_SUBDIR none
+)
+pr_dependency(tree_sitter_ini
+    URL https://github.com/justinmk/tree-sitter-ini/archive/v1.3.0.tar.gz
+    URL_HASH SHA256=0b2320d705337d9e5c09259e631832745847e23fd04d2e7b1ce2ffd5aa95eace
     SOURCE_SUBDIR none
 )
 pr_dependency(tree_sitter_java
@@ -128,9 +143,19 @@ pr_dependency(tree_sitter_powershell
     URL_HASH SHA256=ef50282d95bb66fac71e0ae65308358a5f4bd1da1606cb01149b201eb92c42c5
     SOURCE_SUBDIR none
 )
+pr_dependency(tree_sitter_proto
+    URL https://github.com/coder3101/tree-sitter-proto/archive/18366491f37d43d6d5d02cbb1e79b650b5728145.tar.gz
+    URL_HASH SHA256=f59f82e1763939a2edb5d348d81f0f672d940c9d1944edcc22a837d58a05f219
+    SOURCE_SUBDIR none
+)
 pr_dependency(tree_sitter_python
     URL https://github.com/tree-sitter/tree-sitter-python/archive/v0.25.0.tar.gz
     URL_HASH SHA256=4609a3665a620e117acf795ff01b9e965880f81745f287a16336f4ca86cf270c
+    SOURCE_SUBDIR none
+)
+pr_dependency(tree_sitter_regex
+    URL https://github.com/tree-sitter/tree-sitter-regex/archive/v0.25.0.tar.gz
+    URL_HASH SHA256=853200795c4cf856eba9de3f4f9abb370d22aef4fb32e8911e210bb7e4253087
     SOURCE_SUBDIR none
 )
 pr_dependency(tree_sitter_ruby
@@ -148,6 +173,11 @@ pr_dependency(tree_sitter_slang
     URL_HASH SHA256=81c5ca98baa698071294d5d7f71c11e77000501a3c0f7a8cd0fec08e117c09ff
     SOURCE_SUBDIR none
 )
+pr_dependency(tree_sitter_starlark
+    URL https://github.com/tree-sitter-grammars/tree-sitter-starlark/archive/v1.3.0.tar.gz
+    URL_HASH SHA256=31c58a540d738a17b366f2046da298b66dfa0695bcbfa207f61fa63cfe5c03ed
+    SOURCE_SUBDIR none
+)
 pr_dependency(tree_sitter_swift
     URL https://github.com/alex-pinkus/tree-sitter-swift/archive/0.7.4-with-generated-files.tar.gz
     URL_HASH SHA256=bf4d34383638f41cde398f4678dea72cdcda8442c7cfd13944f4bb63e9a96f70
@@ -163,6 +193,11 @@ pr_dependency(tree_sitter_typescript
     URL_HASH SHA256=2c4ce711ae8d1218a3b2f899189298159d672870b5b34dff5d937bed2f3e8983
     SOURCE_SUBDIR none
 )
+pr_dependency(tree_sitter_usd
+    URL https://github.com/ColinKennedy/tree-sitter-usd/archive/7bbe1e8dc991bd488e6a96f7931316f55a401589.tar.gz
+    URL_HASH SHA256=c5b1cf2508eb5b7e7a6ed97bdf8a7c3eba92808398e2f0ec77bb93b7f83da8e5
+    SOURCE_SUBDIR none
+)
 pr_dependency(tree_sitter_wgsl
     URL https://github.com/szebniok/tree-sitter-wgsl/archive/40259f3c77ea856841a4e0c4c807705f3e4a2b65.tar.gz
     URL_HASH SHA256=ddd4a41dacb45e8c58a304312cb68994a8be65b6681c5402ef4492a05df7c407
@@ -176,6 +211,11 @@ pr_dependency(tree_sitter_xml
 pr_dependency(tree_sitter_yaml
     URL https://github.com/tree-sitter-grammars/tree-sitter-yaml/archive/v0.7.2.tar.gz
     URL_HASH SHA256=aeaff5731bb8b66c7054c8aed33cd5edea5f4cd2ac71654f3f6c2ba2073d8fac
+    SOURCE_SUBDIR none
+)
+pr_dependency(tree_sitter_zig
+    URL https://github.com/tree-sitter-grammars/tree-sitter-zig/archive/v1.1.2.tar.gz
+    URL_HASH SHA256=612d67059faa90ec7691e5d786d70d8f7c2c8b15b83de901b9b801122ad4cf25
     SOURCE_SUBDIR none
 )
 
@@ -194,14 +234,15 @@ pr_dependency(nvim_treesitter
     SOURCE_SUBDIR none
 )
 
-# The tree-sitter languages, each a grammar of lib/syntax (pr_syntax_grammar), which PR_SYNTAX_LANGUAGES chooses from.
-set(PR_SYNTAX_LANGUAGES_ALL bash c c_sharp cmake cpp css dart diff dockerfile glsl go hcl hlsl html java javascript json
-    kotlin lua make markdown markdown_inline objc php powershell python ruby rust slang sql swift terraform toml tsx
-    typescript wgsl xml yaml)
+# The tree-sitter languages, each a grammar of lib/syntax (pr_syntax_grammar), which PR_SYNTAX_LANGUAGES_ONLY chooses from.
+set(PR_SYNTAX_LANGUAGES_ALL bash c c_sharp cmake cpp css cuda dart diff dockerfile fish glsl go hcl hlsl html ini java
+    javascript json kotlin lua make markdown markdown_inline objc php powershell proto python regex ruby rust slang sql
+    starlark swift terraform toml tsx typescript usd wgsl xml yaml zig)
 
 # The sources that each language's grammar and queries come from, where they are not its own grammar alone: the
 # grammars that hold another grammar or whose queries build on another's, and nvim-treesitter's queries (nvim).
 set(_pr_syntax_sources_cpp cpp c)
+set(_pr_syntax_sources_cuda cuda cpp c)
 set(_pr_syntax_sources_glsl glsl c)
 set(_pr_syntax_sources_hcl hcl nvim)
 set(_pr_syntax_sources_hlsl hlsl nvim)
@@ -219,7 +260,7 @@ macro(pr_syntax_sources_available)
     set(_pr_syntax_fetched "")
     foreach (_pr_language IN ITEMS ${ARGN})
         if (NOT _pr_language IN_LIST PR_SYNTAX_LANGUAGES_ALL)
-            message(FATAL_ERROR "PR_SYNTAX_LANGUAGES: no tree-sitter language named ${_pr_language}")
+            message(FATAL_ERROR "PR_SYNTAX_LANGUAGES_ONLY: no tree-sitter language named ${_pr_language}")
         endif()
         if (DEFINED _pr_syntax_sources_${_pr_language})
             set(_pr_syntax_need ${_pr_syntax_sources_${_pr_language}})

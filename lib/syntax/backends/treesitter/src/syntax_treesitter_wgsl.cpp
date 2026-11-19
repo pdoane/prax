@@ -10,14 +10,14 @@
 using namespace pr_impl;
 
 const PrSyntaxLanguage* prSyntaxTreeSitterWgsl(void) {
-    static const PrStringView kExtensions[] = {"wgsl"};
+    static const PrStringView kMediaTypes[] = {"text/wgsl"};
     static const PrSyntaxLanguage* language = nullptr;
     if (language == nullptr) {
         PrSyntaxTreeSitterDesc desc{
             .name = "wgsl",
             .namePattern = "^wgsl$",
-            .extensions = kExtensions,
-            .extensionCount = countOf(kExtensions),
+            .mediaTypes = kMediaTypes,
+            .mediaTypeCount = countOf(kMediaTypes),
             .grammar = tree_sitter_wgsl(),
             .highlights = kTreeSitterHighlights,
             .injections = kTreeSitterInjections,

@@ -10,14 +10,14 @@
 using namespace pr_impl;
 
 const PrSyntaxLanguage* prSyntaxTreeSitterCss(void) {
-    static const PrStringView kExtensions[] = {"css"};
+    static const PrStringView kMediaTypes[] = {"text/css"};
     static const PrSyntaxLanguage* language = nullptr;
     if (language == nullptr) {
         PrSyntaxTreeSitterDesc desc{
             .name = "css",
             .namePattern = "^css$",
-            .extensions = kExtensions,
-            .extensionCount = countOf(kExtensions),
+            .mediaTypes = kMediaTypes,
+            .mediaTypeCount = countOf(kMediaTypes),
             .grammar = tree_sitter_css(),
             .highlights = kTreeSitterHighlights,
             .injections = kTreeSitterInjections,

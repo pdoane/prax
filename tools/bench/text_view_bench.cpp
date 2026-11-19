@@ -23,6 +23,7 @@
 #include "pr/layout_scene.h"
 #include "pr/layout_style.h"
 #include "pr/layout_tree.h"
+#include "pr/mime_sniff.h"
 #include "pr/string_view.h"
 #include "pr/syntax.h"
 #include "pr/syntax_treesitter_languages.h"
@@ -328,7 +329,8 @@ int measureFile(const char* path) {
     });
     b.registry = prSyntaxRegistryCreate();
     prSyntaxTreeSitterAddLanguages(b.registry);
-    const PrSyntaxLanguage* language = prSyntaxRegistryFromPath(b.registry, path);
+    PrStringView type = prMimeFormatInfo(prMimeSniff(mapping, path)).type;
+    const PrSyntaxLanguage* language = prSyntaxRegistryFromMediaType(b.registry, type);
     if (language != nullptr) {
         b.syntax = prSyntaxTreeCreate(language, b.registry, b.buffer);
         printf("highlighting as %.*s\n", int(language->name.size), language->name.data);

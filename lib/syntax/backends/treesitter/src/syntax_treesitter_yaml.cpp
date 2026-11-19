@@ -10,14 +10,14 @@
 using namespace pr_impl;
 
 const PrSyntaxLanguage* prSyntaxTreeSitterYaml(void) {
-    static const PrStringView kExtensions[] = {"yaml", "yml"};
+    static const PrStringView kMediaTypes[] = {"application/yaml", "+yaml"};
     static const PrSyntaxLanguage* language = nullptr;
     if (language == nullptr) {
         PrSyntaxTreeSitterDesc desc{
             .name = "yaml",
             .namePattern = "^(yaml|yml)$",
-            .extensions = kExtensions,
-            .extensionCount = countOf(kExtensions),
+            .mediaTypes = kMediaTypes,
+            .mediaTypeCount = countOf(kMediaTypes),
             .grammar = tree_sitter_yaml(),
             .highlights = kTreeSitterHighlights,
             .injections = kTreeSitterInjections,

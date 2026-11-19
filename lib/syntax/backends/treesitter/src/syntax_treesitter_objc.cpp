@@ -10,14 +10,14 @@
 using namespace pr_impl;
 
 const PrSyntaxLanguage* prSyntaxTreeSitterObjC(void) {
-    static const PrStringView kExtensions[] = {"m", "mm"};
+    static const PrStringView kMediaTypes[] = {"text/x-objcsrc"};
     static const PrSyntaxLanguage* language = nullptr;
     if (language == nullptr) {
         PrSyntaxTreeSitterDesc desc{
             .name = "objc",
             .namePattern = "^(objc|objectivec|objective-c)$",
-            .extensions = kExtensions,
-            .extensionCount = countOf(kExtensions),
+            .mediaTypes = kMediaTypes,
+            .mediaTypeCount = countOf(kMediaTypes),
             .grammar = tree_sitter_objc(),
             .highlights = kTreeSitterHighlights,
             .injections = kTreeSitterInjections,

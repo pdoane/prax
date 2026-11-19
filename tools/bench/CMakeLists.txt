@@ -49,7 +49,7 @@ target_compile_definitions(text_edit_bench PRIVATE PR_FONTS_DIR="${PROJECT_SOURC
 # What a windowed view costs at each size of document, which ./dev.sh bench text-view runs.
 pr_harness(text_view_bench prax::text_view text_view_bench.cpp)
 target_link_libraries(text_view_bench PRIVATE prax::draw_select prax::gpu_select prax::draw prax::font prax::gpu
-                                              prax::syntax prax::layout prax::text)
+                                              prax::layout prax::mime prax::syntax prax::text)
 target_compile_definitions(text_view_bench PRIVATE PR_FONTS_DIR="${PROJECT_SOURCE_DIR}/third_party/fonts")
 
 # The vterm benchmark (./dev.sh bench vterm), which writes the same program output to lib/vterm and to libvterm.

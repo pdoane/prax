@@ -10,14 +10,14 @@
 using namespace pr_impl;
 
 const PrSyntaxLanguage* prSyntaxTreeSitterMarkdown(void) {
-    static const PrStringView kExtensions[] = {"md", "markdown"};
+    static const PrStringView kMediaTypes[] = {"text/markdown"};
     static const PrSyntaxLanguage* language = nullptr;
     if (language == nullptr) {
         PrSyntaxTreeSitterDesc desc{
             .name = "markdown",
             .namePattern = "^(markdown|md)$",
-            .extensions = kExtensions,
-            .extensionCount = countOf(kExtensions),
+            .mediaTypes = kMediaTypes,
+            .mediaTypeCount = countOf(kMediaTypes),
             .grammar = tree_sitter_markdown(),
             .highlights = kTreeSitterHighlights,
             .injections = kTreeSitterInjections,

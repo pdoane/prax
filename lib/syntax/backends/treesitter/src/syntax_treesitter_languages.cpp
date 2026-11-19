@@ -9,14 +9,17 @@
 #include "pr/syntax_treesitter_cmake.h"
 #include "pr/syntax_treesitter_cpp.h"
 #include "pr/syntax_treesitter_css.h"
+#include "pr/syntax_treesitter_cuda.h"
 #include "pr/syntax_treesitter_dart.h"
 #include "pr/syntax_treesitter_diff.h"
 #include "pr/syntax_treesitter_dockerfile.h"
+#include "pr/syntax_treesitter_fish.h"
 #include "pr/syntax_treesitter_glsl.h"
 #include "pr/syntax_treesitter_go.h"
 #include "pr/syntax_treesitter_hcl.h"
 #include "pr/syntax_treesitter_hlsl.h"
 #include "pr/syntax_treesitter_html.h"
+#include "pr/syntax_treesitter_ini.h"
 #include "pr/syntax_treesitter_java.h"
 #include "pr/syntax_treesitter_javascript.h"
 #include "pr/syntax_treesitter_json.h"
@@ -28,19 +31,24 @@
 #include "pr/syntax_treesitter_objc.h"
 #include "pr/syntax_treesitter_php.h"
 #include "pr/syntax_treesitter_powershell.h"
+#include "pr/syntax_treesitter_proto.h"
 #include "pr/syntax_treesitter_python.h"
+#include "pr/syntax_treesitter_regex.h"
 #include "pr/syntax_treesitter_ruby.h"
 #include "pr/syntax_treesitter_rust.h"
 #include "pr/syntax_treesitter_slang.h"
 #include "pr/syntax_treesitter_sql.h"
+#include "pr/syntax_treesitter_starlark.h"
 #include "pr/syntax_treesitter_swift.h"
 #include "pr/syntax_treesitter_terraform.h"
 #include "pr/syntax_treesitter_toml.h"
 #include "pr/syntax_treesitter_tsx.h"
 #include "pr/syntax_treesitter_typescript.h"
+#include "pr/syntax_treesitter_usd.h"
 #include "pr/syntax_treesitter_wgsl.h"
 #include "pr/syntax_treesitter_xml.h"
 #include "pr/syntax_treesitter_yaml.h"
+#include "pr/syntax_treesitter_zig.h"
 
 using namespace pr_impl;
 
@@ -63,6 +71,9 @@ void prSyntaxTreeSitterAddLanguages(PrSyntaxRegistry* registry) {
 #if defined(PR_SYNTAX_HAS_CSS)
     prSyntaxRegistryAdd(registry, prSyntaxTreeSitterCss());
 #endif
+#if defined(PR_SYNTAX_HAS_CUDA)
+    prSyntaxRegistryAdd(registry, prSyntaxTreeSitterCuda());
+#endif
 #if defined(PR_SYNTAX_HAS_DART)
     prSyntaxRegistryAdd(registry, prSyntaxTreeSitterDart());
 #endif
@@ -71,6 +82,9 @@ void prSyntaxTreeSitterAddLanguages(PrSyntaxRegistry* registry) {
 #endif
 #if defined(PR_SYNTAX_HAS_DOCKERFILE)
     prSyntaxRegistryAdd(registry, prSyntaxTreeSitterDockerfile());
+#endif
+#if defined(PR_SYNTAX_HAS_FISH)
+    prSyntaxRegistryAdd(registry, prSyntaxTreeSitterFish());
 #endif
 #if defined(PR_SYNTAX_HAS_GLSL)
     prSyntaxRegistryAdd(registry, prSyntaxTreeSitterGlsl());
@@ -86,6 +100,9 @@ void prSyntaxTreeSitterAddLanguages(PrSyntaxRegistry* registry) {
 #endif
 #if defined(PR_SYNTAX_HAS_HTML)
     prSyntaxRegistryAdd(registry, prSyntaxTreeSitterHtml());
+#endif
+#if defined(PR_SYNTAX_HAS_INI)
+    prSyntaxRegistryAdd(registry, prSyntaxTreeSitterIni());
 #endif
 #if defined(PR_SYNTAX_HAS_JAVA)
     prSyntaxRegistryAdd(registry, prSyntaxTreeSitterJava());
@@ -120,8 +137,14 @@ void prSyntaxTreeSitterAddLanguages(PrSyntaxRegistry* registry) {
 #if defined(PR_SYNTAX_HAS_POWERSHELL)
     prSyntaxRegistryAdd(registry, prSyntaxTreeSitterPowerShell());
 #endif
+#if defined(PR_SYNTAX_HAS_PROTO)
+    prSyntaxRegistryAdd(registry, prSyntaxTreeSitterProto());
+#endif
 #if defined(PR_SYNTAX_HAS_PYTHON)
     prSyntaxRegistryAdd(registry, prSyntaxTreeSitterPython());
+#endif
+#if defined(PR_SYNTAX_HAS_REGEX)
+    prSyntaxRegistryAdd(registry, prSyntaxTreeSitterRegex());
 #endif
 #if defined(PR_SYNTAX_HAS_RUBY)
     prSyntaxRegistryAdd(registry, prSyntaxTreeSitterRuby());
@@ -134,6 +157,9 @@ void prSyntaxTreeSitterAddLanguages(PrSyntaxRegistry* registry) {
 #endif
 #if defined(PR_SYNTAX_HAS_SQL)
     prSyntaxRegistryAdd(registry, prSyntaxTreeSitterSql());
+#endif
+#if defined(PR_SYNTAX_HAS_STARLARK)
+    prSyntaxRegistryAdd(registry, prSyntaxTreeSitterStarlark());
 #endif
 #if defined(PR_SYNTAX_HAS_SWIFT)
     prSyntaxRegistryAdd(registry, prSyntaxTreeSitterSwift());
@@ -150,6 +176,9 @@ void prSyntaxTreeSitterAddLanguages(PrSyntaxRegistry* registry) {
 #if defined(PR_SYNTAX_HAS_TYPESCRIPT)
     prSyntaxRegistryAdd(registry, prSyntaxTreeSitterTypeScript());
 #endif
+#if defined(PR_SYNTAX_HAS_USD)
+    prSyntaxRegistryAdd(registry, prSyntaxTreeSitterUsd());
+#endif
 #if defined(PR_SYNTAX_HAS_WGSL)
     prSyntaxRegistryAdd(registry, prSyntaxTreeSitterWgsl());
 #endif
@@ -158,5 +187,8 @@ void prSyntaxTreeSitterAddLanguages(PrSyntaxRegistry* registry) {
 #endif
 #if defined(PR_SYNTAX_HAS_YAML)
     prSyntaxRegistryAdd(registry, prSyntaxTreeSitterYaml());
+#endif
+#if defined(PR_SYNTAX_HAS_ZIG)
+    prSyntaxRegistryAdd(registry, prSyntaxTreeSitterZig());
 #endif
 }

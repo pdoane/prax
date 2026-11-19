@@ -10,14 +10,14 @@
 using namespace pr_impl;
 
 const PrSyntaxLanguage* prSyntaxTreeSitterPython(void) {
-    static const PrStringView kExtensions[] = {"py", "pyi"};
+    static const PrStringView kMediaTypes[] = {"text/x-python"};
     static const PrSyntaxLanguage* language = nullptr;
     if (language == nullptr) {
         PrSyntaxTreeSitterDesc desc{
             .name = "python",
             .namePattern = "^(py|python)$",
-            .extensions = kExtensions,
-            .extensionCount = countOf(kExtensions),
+            .mediaTypes = kMediaTypes,
+            .mediaTypeCount = countOf(kMediaTypes),
             .grammar = tree_sitter_python(),
             .highlights = kTreeSitterHighlights,
             .injections = kTreeSitterInjections,

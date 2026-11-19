@@ -125,12 +125,17 @@ PrStringView prTextEditorStatus(const PrTextEditor* editor);
 // A text that the editor holds: a file's, or a text of no file.
 typedef struct PrTextEditorDocument PrTextEditorDocument;
 
-// What a document holds. A document of a file streams in over the frames that follow, and its language is its file's. A
-// document of `text` streams in as a file does, and `name`, a file name, chooses its language, or empty for none.
+// What a document holds. A document of a file streams in over the frames that follow. A document of `text` streams in
+// as a file does. The document's language is the language of its media type (prSyntaxRegistryFromMediaType).
 typedef struct PrTextEditorDocumentDesc {
     PrStringView path;                          // the file, or empty for a text of no file
     PrStringView text;
-    PrStringView name;
+    PrStringView name;                          // the file name of a text of no file, or empty
+
+    // The media type of the text, as the host's classification gives it, or empty for the editor to classify the text
+    // by its first bytes and by its file's path or `name` (pr/mime_sniff.h).
+    PrStringView mediaType;
+
     bool readOnly;                              // the document refuses its user's edits
 } PrTextEditorDocumentDesc;
 

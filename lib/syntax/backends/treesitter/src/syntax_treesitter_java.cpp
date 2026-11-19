@@ -10,14 +10,14 @@
 using namespace pr_impl;
 
 const PrSyntaxLanguage* prSyntaxTreeSitterJava(void) {
-    static const PrStringView kExtensions[] = {"java"};
+    static const PrStringView kMediaTypes[] = {"text/x-java"};
     static const PrSyntaxLanguage* language = nullptr;
     if (language == nullptr) {
         PrSyntaxTreeSitterDesc desc{
             .name = "java",
             .namePattern = "^java$",
-            .extensions = kExtensions,
-            .extensionCount = countOf(kExtensions),
+            .mediaTypes = kMediaTypes,
+            .mediaTypeCount = countOf(kMediaTypes),
             .grammar = tree_sitter_java(),
             .highlights = kTreeSitterHighlights,
             .injections = kTreeSitterInjections,

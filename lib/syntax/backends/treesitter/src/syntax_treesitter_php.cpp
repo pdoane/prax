@@ -10,14 +10,14 @@
 using namespace pr_impl;
 
 const PrSyntaxLanguage* prSyntaxTreeSitterPhp(void) {
-    static const PrStringView kExtensions[] = {"php", "phtml"};
+    static const PrStringView kMediaTypes[] = {"text/x-php", "application/x-php"};
     static const PrSyntaxLanguage* language = nullptr;
     if (language == nullptr) {
         PrSyntaxTreeSitterDesc desc{
             .name = "php",
             .namePattern = "^php$",
-            .extensions = kExtensions,
-            .extensionCount = countOf(kExtensions),
+            .mediaTypes = kMediaTypes,
+            .mediaTypeCount = countOf(kMediaTypes),
             .grammar = tree_sitter_php(),
             .highlights = kTreeSitterHighlights,
             .injections = kTreeSitterInjections,

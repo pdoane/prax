@@ -61,14 +61,31 @@ struct TreeSitterQuery {
     uint32_t languageCapture;               // @injection.language, or UINT32_MAX
 };
 
+// Copies of a list of names, and views of them, which a language's fields point to.
+struct OwnedNames {
+    RawArray<PrRawString> names;
+    RawArray<PrStringView> views;
+
+    void copy(const PrStringView* PR_NULLABLE from, uint32_t count) {
+        for (uint32_t i = 0; i < count; ++i)
+            names.push(prRawStringCopy(from[i]));
+        for (uint32_t i = 0; i < names.count; ++i)
+            views.push(prRawStringView(&names.data[i]));
+    }
+
+    void reset() {
+        for (uint32_t i = 0; i < names.count; ++i)
+            prRawStringReset(&names.data[i]);
+        names.reset();
+        views.reset();
+    }
+};
+
 // A language over a grammar.
 struct TreeSitterLanguage : PrSyntaxLanguage {
     PrRawString ownName;
     PrRawString ownNamePattern;
-    RawArray<PrRawString> ownExtensions;
-    RawArray<PrRawString> ownFileNames;
-    RawArray<PrStringView> extensionViews;
-    RawArray<PrStringView> fileNameViews;
+    OwnedNames ownMediaTypes;
     const TSLanguage* grammar;
     TreeSitterQuery highlights;
     TreeSitterQuery injections;
@@ -964,18 +981,9 @@ const PrSyntaxLanguage* prSyntaxTreeSitterLanguageCreate(const PrSyntaxTreeSitte
     l->name = prRawStringView(&l->ownName);
     l->ownNamePattern = prRawStringCopy(desc->namePattern);
     l->namePattern = prRawStringView(&l->ownNamePattern);
-    for (uint32_t i = 0; i < desc->extensionCount; ++i)
-        l->ownExtensions.push(prRawStringCopy(desc->extensions[i]));
-    for (uint32_t i = 0; i < desc->fileNameCount; ++i)
-        l->ownFileNames.push(prRawStringCopy(desc->fileNames[i]));
-    for (uint32_t i = 0; i < l->ownExtensions.count; ++i)
-        l->extensionViews.push(prRawStringView(&l->ownExtensions.data[i]));
-    for (uint32_t i = 0; i < l->ownFileNames.count; ++i)
-        l->fileNameViews.push(prRawStringView(&l->ownFileNames.data[i]));
-    l->extensions = l->extensionViews.data;
-    l->extensionCount = l->extensionViews.count;
-    l->fileNames = l->fileNameViews.data;
-    l->fileNameCount = l->fileNameViews.count;
+    l->ownMediaTypes.copy(desc->mediaTypes, desc->mediaTypeCount);
+    l->mediaTypes = l->ownMediaTypes.views.data;
+    l->mediaTypeCount = l->ownMediaTypes.views.count;
     l->create = treeCreate;
     l->grammar = static_cast<const TSLanguage*>(desc->grammar);
     compileQuery(l->highlights, l->grammar, desc->highlights);
@@ -991,13 +999,6 @@ void prSyntaxTreeSitterLanguageDestroy(const PrSyntaxLanguage* PR_NULLABLE langu
     resetQuery(l->injections);
     prRawStringReset(&l->ownName);
     prRawStringReset(&l->ownNamePattern);
-    for (uint32_t i = 0; i < l->ownExtensions.count; ++i)
-        prRawStringReset(&l->ownExtensions.data[i]);
-    for (uint32_t i = 0; i < l->ownFileNames.count; ++i)
-        prRawStringReset(&l->ownFileNames.data[i]);
-    l->ownExtensions.reset();
-    l->ownFileNames.reset();
-    l->extensionViews.reset();
-    l->fileNameViews.reset();
+    l->ownMediaTypes.reset();
     prMemoryFree(l);
 }

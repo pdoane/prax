@@ -10,17 +10,14 @@
 using namespace pr_impl;
 
 const PrSyntaxLanguage* prSyntaxTreeSitterCMake(void) {
-    static const PrStringView kExtensions[] = {"cmake"};
-    static const PrStringView kFileNames[] = {"CMakeLists.txt"};
+    static const PrStringView kMediaTypes[] = {"text/x-cmake"};
     static const PrSyntaxLanguage* language = nullptr;
     if (language == nullptr) {
         PrSyntaxTreeSitterDesc desc{
             .name = "cmake",
             .namePattern = "^cmake$",
-            .extensions = kExtensions,
-            .extensionCount = countOf(kExtensions),
-            .fileNames = kFileNames,
-            .fileNameCount = countOf(kFileNames),
+            .mediaTypes = kMediaTypes,
+            .mediaTypeCount = countOf(kMediaTypes),
             .grammar = tree_sitter_cmake(),
             .highlights = kTreeSitterHighlights,
             .injections = kTreeSitterInjections,

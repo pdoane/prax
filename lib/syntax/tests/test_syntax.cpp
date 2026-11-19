@@ -61,22 +61,20 @@ PrSyntaxTree* digitCreate(const PrSyntaxLanguage*, PrSyntaxRegistry* registry, P
     return h;
 }
 
-const PrStringView kDigitExtensions[] = {"num", "dig"};
-const PrStringView kDigitFileNames[] = {"Numbers"};
+const PrStringView kDigitMediaTypes[] = {"text/x-digits", "+digits"};
+const PrStringView kOtherMediaTypes[] = {"application/vnd.count+digits", "text/x-digits"};
 
 const PrSyntaxLanguage kDigits{
     .name = "digits",
-    .extensions = kDigitExtensions,
-    .extensionCount = 2,
-    .fileNames = kDigitFileNames,
-    .fileNameCount = 1,
+    .mediaTypes = kDigitMediaTypes,
+    .mediaTypeCount = 2,
     .create = digitCreate,
 };
 
 const PrSyntaxLanguage kOther{
     .name = "other",
-    .extensions = kDigitExtensions,
-    .extensionCount = 1,
+    .mediaTypes = kOtherMediaTypes,
+    .mediaTypeCount = 2,
     .create = digitCreate,
 };
 
@@ -90,20 +88,35 @@ TEST_CASE("the public header compiles as C") {
     CHECK(prTestSyntaxCApi() == 0);
 }
 
-TEST_CASE("a registry finds a language by name, by file name and by extension, in any case") {
+TEST_CASE("a registry finds a language by name, in any case, and lists its languages in order") {
     PrSyntaxRegistry* registry = prSyntaxRegistryCreate();
     CHECK(prSyntaxRegistryFind(registry, "digits") == nullptr);
+    CHECK(prSyntaxRegistryLanguageCount(registry) == 0);
     prSyntaxRegistryAdd(registry, &kDigits);
-    CHECK(prSyntaxRegistryFind(registry, "Digits") == &kDigits);
-    CHECK(prSyntaxRegistryFromPath(registry, "/a/b/Numbers") == &kDigits);
-    CHECK(prSyntaxRegistryFromPath(registry, "c:\\x\\file.DIG") == &kDigits);
-    CHECK(prSyntaxRegistryFromPath(registry, "file.txt") == nullptr);
-    CHECK(prSyntaxRegistryFromPath(registry, ".num") == nullptr);
-    CHECK(prSyntaxRegistryFromPath(registry, "num") == nullptr);
-    // A language added later wins what both claim.
     prSyntaxRegistryAdd(registry, &kOther);
-    CHECK(prSyntaxRegistryFromPath(registry, "a.num") == &kOther);
-    CHECK(prSyntaxRegistryFromPath(registry, "a.dig") == &kDigits);
+    CHECK(prSyntaxRegistryFind(registry, "Digits") == &kDigits);
+    CHECK(prSyntaxRegistryFind(registry, "other") == &kOther);
+    REQUIRE(prSyntaxRegistryLanguageCount(registry) == 2);
+    CHECK(prSyntaxRegistryLanguage(registry, 0) == &kDigits);
+    CHECK(prSyntaxRegistryLanguage(registry, 1) == &kOther);
+    prSyntaxRegistryDestroy(registry);
+}
+
+TEST_CASE("a registry finds a language by a media type's essence, and then by its structured syntax suffix") {
+    PrSyntaxRegistry* registry = prSyntaxRegistryCreate();
+    prSyntaxRegistryAdd(registry, &kDigits);
+    CHECK(prSyntaxRegistryFromMediaType(registry, "Text/X-Digits") == &kDigits);
+    CHECK(prSyntaxRegistryFromMediaType(registry, " text/x-digits ; charset=utf-8") == &kDigits);
+    CHECK(prSyntaxRegistryFromMediaType(registry, "model/scene+digits") == &kDigits);
+    CHECK(prSyntaxRegistryFromMediaType(registry, "text/plain") == nullptr);
+    CHECK(prSyntaxRegistryFromMediaType(registry, "+digits") == nullptr);
+    CHECK(prSyntaxRegistryFromMediaType(registry, "") == nullptr);
+    // An essence that one language lists wins over a suffix that another lists, and a language added later wins an
+    // essence that both list.
+    prSyntaxRegistryAdd(registry, &kOther);
+    CHECK(prSyntaxRegistryFromMediaType(registry, "application/vnd.count+digits") == &kOther);
+    CHECK(prSyntaxRegistryFromMediaType(registry, "model/scene+digits") == &kDigits);
+    CHECK(prSyntaxRegistryFromMediaType(registry, "text/x-digits") == &kOther);
     prSyntaxRegistryDestroy(registry);
 }
 

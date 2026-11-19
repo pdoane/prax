@@ -10,14 +10,14 @@
 using namespace pr_impl;
 
 const PrSyntaxLanguage* prSyntaxTreeSitterTypeScript(void) {
-    static const PrStringView kExtensions[] = {"ts", "mts", "cts"};
+    static const PrStringView kMediaTypes[] = {"text/x-typescript"};
     static const PrSyntaxLanguage* language = nullptr;
     if (language == nullptr) {
         PrSyntaxTreeSitterDesc desc{
             .name = "typescript",
             .namePattern = "^(ts|typescript)$",
-            .extensions = kExtensions,
-            .extensionCount = countOf(kExtensions),
+            .mediaTypes = kMediaTypes,
+            .mediaTypeCount = countOf(kMediaTypes),
             .grammar = tree_sitter_typescript(),
             .highlights = kTreeSitterHighlights,
             .injections = kTreeSitterInjections,

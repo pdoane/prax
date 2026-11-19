@@ -10,14 +10,14 @@
 using namespace pr_impl;
 
 const PrSyntaxLanguage* prSyntaxTreeSitterDiff(void) {
-    static const PrStringView kExtensions[] = {"diff", "patch"};
+    static const PrStringView kMediaTypes[] = {"text/x-diff", "text/x-patch"};
     static const PrSyntaxLanguage* language = nullptr;
     if (language == nullptr) {
         PrSyntaxTreeSitterDesc desc{
             .name = "diff",
             .namePattern = "^(diff|patch)$",
-            .extensions = kExtensions,
-            .extensionCount = countOf(kExtensions),
+            .mediaTypes = kMediaTypes,
+            .mediaTypeCount = countOf(kMediaTypes),
             .grammar = tree_sitter_diff(),
             .highlights = kTreeSitterHighlights,
             .injections = kTreeSitterInjections,

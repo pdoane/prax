@@ -6,8 +6,10 @@
 #include "pr/ascii.h"
 #include "pr/assert.h"
 #include "pr/atom_table.h"
+#include "pr/mime.h"
 #include "pr/raw_array.h"
 #include "pr/regex.h"
+#include "pr/string_ops.h"
 #include "pr/syntax_backend.h"
 
 namespace pr_impl {
@@ -75,33 +77,37 @@ const PrSyntaxLanguage* PR_NULLABLE prSyntaxRegistryFind(const PrSyntaxRegistry*
     return nullptr;
 }
 
-const PrSyntaxLanguage* PR_NULLABLE prSyntaxRegistryFromPath(const PrSyntaxRegistry* registry, PrStringView path) {
-    size_t slash = path.size;
-    while (slash > 0 && path.data[slash - 1] != '/' && path.data[slash - 1] != '\\')
-        --slash;
-    PrStringView file{path.data + slash, path.size - slash};
-    for (uint32_t i = registry->languages.count; i-- > 0;) {
-        const PrSyntaxLanguage* language = registry->languages.data[i];
-        for (uint32_t k = 0; k < language->fileNameCount; ++k) {
-            if (prAsciiEqualsFold(language->fileNames[k], file))
-                return language;
-        }
-    }
-    size_t dot = file.size;
-    while (dot > 0 && file.data[dot - 1] != '.')
-        --dot;
-    // A name that starts with its only dot, as a hidden file's does, has no extension.
-    if (dot <= 1)
+uint32_t prSyntaxRegistryLanguageCount(const PrSyntaxRegistry* registry) {
+    return registry->languages.count;
+}
+
+const PrSyntaxLanguage* prSyntaxRegistryLanguage(const PrSyntaxRegistry* registry, uint32_t index) {
+    PR_ASSERT(index < registry->languages.count);
+    return registry->languages.data[index];
+}
+
+const PrSyntaxLanguage* PR_NULLABLE prSyntaxRegistryFromMediaType(const PrSyntaxRegistry* registry, PrStringView type) {
+    PrStringView essence = prMimeTypeEssence(type);
+    if (essence.size == 0)
         return nullptr;
-    PrStringView extension{file.data + dot, file.size - dot};
+    // The suffix of a structured syntax is the last `+` of the subtype and what follows it.
+    size_t slash = prStringFindByte(essence, '/');
+    size_t plus = prStringFindLastByte(essence, '+');
+    PrStringView suffix = plus != essence.size && slash < plus ? prStringFrom(essence, plus) : PrStringView{};
+    const PrSyntaxLanguage* bySuffix = nullptr;
     for (uint32_t i = registry->languages.count; i-- > 0;) {
         const PrSyntaxLanguage* language = registry->languages.data[i];
-        for (uint32_t k = 0; k < language->extensionCount; ++k) {
-            if (prAsciiEqualsFold(language->extensions[k], extension))
-                return language;
+        for (uint32_t k = 0; k < language->mediaTypeCount; ++k) {
+            PrStringView listed = language->mediaTypes[k];
+            if (!prStringStartsWith(listed, "+")) {
+                if (prAsciiEqualsFold(listed, essence))
+                    return language;
+            } else if (bySuffix == nullptr && prAsciiEqualsFold(listed, suffix)) {
+                bySuffix = language;
+            }
         }
     }
-    return nullptr;
+    return bySuffix;
 }
 
 PrSyntaxCategory prSyntaxRegistryCategoryIntern(PrSyntaxRegistry* registry, PrStringView name) {

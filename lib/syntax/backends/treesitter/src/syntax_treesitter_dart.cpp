@@ -10,14 +10,14 @@
 using namespace pr_impl;
 
 const PrSyntaxLanguage* prSyntaxTreeSitterDart(void) {
-    static const PrStringView kExtensions[] = {"dart"};
+    static const PrStringView kMediaTypes[] = {"application/vnd.dart"};
     static const PrSyntaxLanguage* language = nullptr;
     if (language == nullptr) {
         PrSyntaxTreeSitterDesc desc{
             .name = "dart",
             .namePattern = "^dart$",
-            .extensions = kExtensions,
-            .extensionCount = countOf(kExtensions),
+            .mediaTypes = kMediaTypes,
+            .mediaTypeCount = countOf(kMediaTypes),
             .grammar = tree_sitter_dart(),
             .highlights = kTreeSitterHighlights,
             .injections = kTreeSitterInjections,
