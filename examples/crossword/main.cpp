@@ -102,7 +102,7 @@ int main(int argc, char** argv) {
             crosswordOf(context).ui = create<UiBuilder>(builder);
             return true;
         },
-        .build = [](void* context, PrStudioWindow* window, PrLayoutNode root, PrVec2 extent) {
+        .build = [](void* context, PrStudioWindow*, PrLayoutNode root, PrVec2 extent) {
             Crossword& c = crosswordOf(context);
             buildCrossword(c.app, *c.ui, root, extent);
         },
