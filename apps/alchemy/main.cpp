@@ -153,7 +153,7 @@ void drawn(void* context, PrStudioWindow* window, const PrDrawList* list, PrUVec
 
 // The services go in the reverse of their making: the client lets go of the loop, the sources on the loop go on it, and
 // the pool finishes its decodes and surveys before the state that they write to.
-void closeServices(void* context, PrStudioWindow*) {
+void closeServices(void* context, PrStudioWindow*, PrStatus) {
     Alchemy& a = alchemyOf(context);
     a.app.store(nullptr);
     if (a.shell.app != nullptr)

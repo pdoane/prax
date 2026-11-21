@@ -839,7 +839,7 @@ int main() {
             buildApp(&exampleOf(context).stream, prStudioWindowKit(window), root);
         },
         .laidOut = laidOut,
-        .close = [](void* context, PrStudioWindow*) {
+        .close = [](void* context, PrStudioWindow*, PrStatus) {
             Stream& s = exampleOf(context).stream;
             closeStream(s);
             prTextFontRelease(s.font);

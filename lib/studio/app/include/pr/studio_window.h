@@ -90,8 +90,14 @@ typedef bool (*PrStudioWindowLaidOutFn)(void* PR_NULLABLE context, PrStudioWindo
 typedef void (*PrStudioWindowDrawnFn)(void* PR_NULLABLE context, PrStudioWindow* window, const PrDrawList* list,
     PrUVec2 extent, PrColor canvas);
 
-// Called as the window closes, after its last frame and before its kit is freed, whether or not it opened.
-typedef void (*PrStudioWindowCloseFn)(void* PR_NULLABLE context, PrStudioWindow* window);
+// Called when the window stops drawing, with why, and again with Ok once it draws again. The window draws with the
+// application's GPU device and a swap chain of its own. When either cannot be made, as while the device is lost, the
+// window keeps trying at each frame and stays open. The device's first creation is not a stop.
+typedef void (*PrStudioWindowDrawStatusFn)(void* PR_NULLABLE context, PrStudioWindow* window, PrStatus status);
+
+// Called as the window closes, after its last frame and before its kit is freed, whether or not it opened. `status` is
+// Ok unless the window could not open: InvalidState if the application's open refused.
+typedef void (*PrStudioWindowCloseFn)(void* PR_NULLABLE context, PrStudioWindow* window, PrStatus status);
 
 // How long a frame took, by its phases, in milliseconds: waiting for the swap chain, running the rounds, taking the
 // tree's scene, playing it into the draw list, and rendering the list. The gap is the time since the last frame ended,
@@ -152,6 +158,7 @@ typedef struct PrStudioWindowDesc {
     PrStudioWindowTitleBarFn PR_NULLABLE titleBar;  // the content of a Custom title bar, or null for an empty one
     PrStudioWindowLaidOutFn PR_NULLABLE laidOut;
     PrStudioWindowDrawnFn PR_NULLABLE drawn;
+    PrStudioWindowDrawStatusFn PR_NULLABLE drawStatus;
     PrStudioWindowCloseFn PR_NULLABLE close;
     PrStudioWindowTraceFn PR_NULLABLE trace;
     void* PR_NULLABLE context;

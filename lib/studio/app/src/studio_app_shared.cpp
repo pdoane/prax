@@ -36,8 +36,10 @@ void studioAppOpen(StudioAppState* app) {
 }
 
 bool studioAppMakeDevice(StudioAppState* app) {
-    if (app->device != nullptr && prGpuDeviceIsLost(app->device))
+    if (app->device != nullptr && prGpuDeviceIsLost(app->device)) {
+        app->deviceStatus = prGpuDeviceLostStatus(app->device);
         studioAppCloseDevice(app);
+    }
     if (app->device == nullptr) {
         PrGpuDeviceOptions options = prGpuDeviceOptionsDefault();
         options.pool = app->desc.pool;
@@ -48,18 +50,30 @@ bool studioAppMakeDevice(StudioAppState* app) {
         };
         options.readyContext = app;
         app->device = prGpuDeviceCreate(PrGpuBackend_Default, &options);
+        if (app->device == nullptr) {
+            app->deviceStatus = PrStatus_NotSupported;
+            return false;
+        }
     }
-    if (app->device == nullptr || !prGpuDeviceIsReady(app->device) || prGpuDeviceIsLost(app->device))
+    if (!prGpuDeviceIsReady(app->device))
         return false;
+    if (prGpuDeviceIsLost(app->device)) {
+        app->deviceStatus = prGpuDeviceLostStatus(app->device);
+        return false;
+    }
     if (prTextureCacheDevice(app->textures) == nullptr)
         prTextureCacheSetDevice(app->textures, app->device);
     if (app->renderer == nullptr) {
         PrDrawRendererOptions options = prDrawRendererOptionsDefault();
         options.glyphDecoder = app->glyphs;
-        if (prDrawRendererCreate(PrDrawRendererBackend_Default, app->device, &options, &app->renderer) != PrStatus_Ok)
+        PrStatus status = prDrawRendererCreate(PrDrawRendererBackend_Default, app->device, &options, &app->renderer);
+        if (status != PrStatus_Ok) {
+            app->deviceStatus = status;
             return false;
+        }
         ++app->generation;
     }
+    app->deviceStatus = PrStatus_Ok;
     return true;
 }
 

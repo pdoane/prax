@@ -116,7 +116,7 @@ int main(int argc, char** argv) {
             buildScribe(runOf(context).scribe, root, extent);
         },
         .laidOut = [](void* context, PrStudioWindow*) { return afterLayout(runOf(context).scribe); },
-        .close = [](void* context, PrStudioWindow*) {
+        .close = [](void* context, PrStudioWindow*, PrStatus) {
             Scribe& s = runOf(context).scribe;
             if (s.editor != nullptr)
                 closeEditor(s);

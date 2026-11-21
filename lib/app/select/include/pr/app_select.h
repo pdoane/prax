@@ -29,7 +29,8 @@ typedef uint8_t PrAppBackend;
 const PrBackendInterface* prAppSelectInterface(void);
 
 // Creates an application of `backend`. Null options mean the defaults. Returns null if the build does not include the
-// backend. For Default, it also returns null if PR_BACKEND_APP is not valid (prBackendFromEnvironment).
+// backend, or if the backend cannot run where the program runs, as the web backend cannot outside a page. For Default,
+// it also returns null if PR_BACKEND_APP is not valid (prBackendFromEnvironment).
 PrApp* PR_NULLABLE prAppCreate(PrAppBackend backend, const PrAppOptions* PR_NULLABLE options);
 
 #if defined(__cplusplus)

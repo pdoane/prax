@@ -56,8 +56,8 @@ typedef struct PrAppWebOptions {
 PrAppWebOptions prAppWebOptionsDefault(void);
 
 // Creates an application whose windows are canvases in the page. A null `web` means the defaults. The page is never
-// headless.
-PrApp* prAppWebCreate(const PrAppOptions* options, const PrAppWebOptions* PR_NULLABLE web);
+// headless. Returns null if the program runs in no page, as under Node.js.
+PrApp* PR_NULLABLE prAppWebCreate(const PrAppOptions* options, const PrAppWebOptions* PR_NULLABLE web);
 
 // Shows the host on the machine's whole display, or returns it to the page, or returns true while it shows there. The
 // application is one that prAppWebCreate created. DisplaysChanged follows the host's change of extent.

@@ -108,7 +108,7 @@ int main(int argc, char** argv) {
             Crossword& c = crosswordOf(context);
             buildCrossword(c.app, *c.ui, root, extent);
         },
-        .close = [](void* context, PrStudioWindow*) {
+        .close = [](void* context, PrStudioWindow*, PrStatus) {
             destroy(crosswordOf(context).ui);
             crosswordOf(context).ui = nullptr;
         },

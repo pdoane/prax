@@ -318,7 +318,7 @@ int main(int argc, char** argv) {
         .open = open,
         .build = build,
         .laidOut = laidOut,
-        .close = [](void* context, PrStudioWindow*) {
+        .close = [](void* context, PrStudioWindow*, PrStatus) {
             if (appOf(context).editor != nullptr)
                 closeEditor(appOf(context));
         },

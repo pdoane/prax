@@ -256,7 +256,7 @@ int main(int argc, char** argv) {
         .build = buildControl,
         .titleBar = titleBar,
         // The control window is the application, so closing it quits, whatever other windows are open or hidden.
-        .close = [](void* context, PrStudioWindow*) {
+        .close = [](void* context, PrStudioWindow*, PrStatus) {
             Features& f = featuresOf(context);
             f.control = nullptr;
             prStudioAppStop(f.app);

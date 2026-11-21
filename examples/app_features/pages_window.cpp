@@ -165,7 +165,7 @@ void openOverlay(Features& f) {
             return false;
         },
         .build = buildOverlay,
-        .close = [](void* context, PrStudioWindow*) { featuresOf(context).overlay = nullptr; },
+        .close = [](void* context, PrStudioWindow*, PrStatus) { featuresOf(context).overlay = nullptr; },
         .context = &f,
     };
     created(f, "overlay", prStudioWindowCreate(f.app, &desc, &f.overlay));
@@ -206,7 +206,7 @@ void openPopup(Features& f) {
             return logWindowEvent(featuresOf(context), "popup", *e);
         },
         .build = buildPopup,
-        .close = [](void* context, PrStudioWindow*) { featuresOf(context).popup = nullptr; },
+        .close = [](void* context, PrStudioWindow*, PrStatus) { featuresOf(context).popup = nullptr; },
         .context = &f,
     };
     created(f, "popup", prStudioWindowCreate(f.app, &desc, &f.popup));
@@ -239,7 +239,7 @@ void openDialog(Features& f) {
         .modal = f.modal,
         .event = logDialogEvent,
         .build = buildDialog,
-        .close = [](void* context, PrStudioWindow*) { featuresOf(context).dialog = nullptr; },
+        .close = [](void* context, PrStudioWindow*, PrStatus) { featuresOf(context).dialog = nullptr; },
         .context = &f,
     };
     created(f, "dialog", prStudioWindowCreate(f.app, &desc, &f.dialog));
@@ -269,7 +269,7 @@ void openBorderless(Features& f) {
         .placement = PrAppWindowPlacement_Center,
         .event = logDialogEvent,
         .build = buildBorderless,
-        .close = [](void* context, PrStudioWindow*) { featuresOf(context).borderless = nullptr; },
+        .close = [](void* context, PrStudioWindow*, PrStatus) { featuresOf(context).borderless = nullptr; },
         .context = &f,
     };
     created(f, "borderless", prStudioWindowCreate(f.app, &desc, &f.borderless));
@@ -287,7 +287,7 @@ void openBackdrop(Features& f) {
         .transparent = true,
         .build = buildBackdrop,
         .titleBar = titleBar,
-        .close = [](void* context, PrStudioWindow*) { featuresOf(context).backdrop = nullptr; },
+        .close = [](void* context, PrStudioWindow*, PrStatus) { featuresOf(context).backdrop = nullptr; },
         .context = &f,
     };
     created(f, "backdrop", prStudioWindowCreate(f.app, &desc, &f.backdrop));
@@ -305,7 +305,7 @@ void openSecond(Features& f, const PrAppDisplayPosition* PR_NULLABLE at) {
         },
         .build = buildSecond,
         .titleBar = titleBar,
-        .close = [](void* context, PrStudioWindow*) {
+        .close = [](void* context, PrStudioWindow*, PrStatus) {
             Features& f = featuresOf(context);
             f.second = nullptr;
             // The tabs of a window that closes go back to the control window.

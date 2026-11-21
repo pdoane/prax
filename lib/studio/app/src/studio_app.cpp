@@ -16,7 +16,7 @@ namespace {
 bool start(void* context, PrApp*) {
     PrStudioApp* s = static_cast<PrStudioApp*>(context);
     if (!studioAppMakeDevice(s) && !studioAppCreatingDevice(s) && s->desc.pool == nullptr) {
-        s->status = PrStatus_NotSupported;
+        s->status = s->deviceStatus;
         return false;
     }
     if (s->desc.window != nullptr) {

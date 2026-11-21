@@ -105,7 +105,7 @@ int main(int argc, char** argv) {
             WordGuess& w = wordGuessOf(context);
             buildWordGuess(w.app, *w.ui, root);
         },
-        .close = [](void* context, PrStudioWindow*) {
+        .close = [](void* context, PrStudioWindow*, PrStatus) {
             destroy(wordGuessOf(context).ui);
             wordGuessOf(context).ui = nullptr;
         },

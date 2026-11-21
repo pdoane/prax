@@ -58,6 +58,10 @@ struct StudioAppState {
     PrDrawDisplay* PR_NULLABLE display;
     uint32_t generation;
 
+    // Ok, or why there is nothing to render with, from a failure until the device renders again: through the creation
+    // of the device that replaces a lost one, and not through the first.
+    PrStatus deviceStatus;
+
     RawArray<PrStudioWindow*> windows;  // in the order they opened
 };
 
@@ -96,7 +100,8 @@ struct StudioWindowPortal {
 struct StudioWindowState {
     PrStudioApp* studio;
     PrStudioWindowDesc desc;
-    PrStatus status;                // Ok, or why the window closed
+    PrStatus status;                // Ok, or why the window could not open
+    PrStatus drawStatus;            // Ok, or why the window does not draw, as the application last heard
     bool initial;                   // the window of the application's description, whose failure fails the run
     PrVec2 extent;                  // of the viewport, in px
     PrAppTitleBar titleBar;         // as the frame that runs reports it
@@ -140,7 +145,7 @@ void studioAppOpen(StudioAppState* app);
 
 // Returns true if the application's device is ready and has a renderer. Otherwise frees a lost device, which includes
 // one whose creation failed, with everything that the application and its windows made on it, and creates another.
-// Makes the renderer once the device is ready. A window renders only if this returns true.
+// Makes the renderer once the device is ready. Keeps deviceStatus. A window renders only if this returns true.
 bool studioAppMakeDevice(StudioAppState* app);
 
 // Returns true while the application's device is being created. The end of the creation wakes the application.

@@ -47,7 +47,7 @@ int main() {
         .build = [](void* context, PrStudioWindow* window, PrLayoutNode root, PrVec2) {
             buildEditor(prStudioWindowKit(window), root, stateOf(context));
         },
-        .close = [](void* context, PrStudioWindow*) { hudDestroy(stateOf(context).hud); },
+        .close = [](void* context, PrStudioWindow*, PrStatus) { hudDestroy(stateOf(context).hud); },
         .context = &state,
     };
     // The program decodes every format that Prax has.

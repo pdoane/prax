@@ -56,6 +56,7 @@ extern "C" int prAppWebNotify(const char* PR_NULLABLE title, size_t titleSize, c
 extern "C" void prAppWebSetPointerLock(const char* PR_NULLABLE selector, size_t selectorSize, bool locked, bool raw);
 extern "C" void prAppWebOpenFiles(uint32_t id, bool multiple, const char* PR_NULLABLE accept, size_t acceptSize);
 extern "C" void prAppWebReadFile(uint32_t id, uint32_t key, uint32_t index, double offset, double size);
+extern "C" bool prAppWebHasPage();
 extern "C" void prAppWebFileSetRelease(uint32_t key);
 extern "C" void prAppWebListenForServices(bool listen);
 extern "C" int prAppWebLifecycle(void);
@@ -1798,7 +1799,9 @@ PrAppWebOptions prAppWebOptionsDefault(void) {
     return PrAppWebOptions{};
 }
 
-PrApp* prAppWebCreate(const PrAppOptions* options, const PrAppWebOptions* PR_NULLABLE web) {
+PrApp* PR_NULLABLE prAppWebCreate(const PrAppOptions* options, const PrAppWebOptions* PR_NULLABLE web) {
+    if (!prAppWebHasPage())
+        return nullptr;
     WebApp* app = allocZeroed<WebApp>();
     app->destroyFn = destroy;
     app->runFn = run;

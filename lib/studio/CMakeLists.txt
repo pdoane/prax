@@ -161,4 +161,5 @@ if (PR_DEVELOP)
         app/tests/test_studio_app.cpp
         app/tests/test_studio_app_c.c
     )
+    target_link_libraries(studio_app_tests PRIVATE prax::font)
 endif()

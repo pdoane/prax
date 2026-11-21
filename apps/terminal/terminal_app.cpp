@@ -186,7 +186,7 @@ TerminalWindow* PR_NULLABLE newWindow(TerminalApp& app, const PrAppDisplayPositi
         .build = [](void* context, PrStudioWindow*, PrLayoutNode root, PrVec2 extent) {
             buildWindow(windowOf(context), root, extent);
         },
-        .close = [](void* context, PrStudioWindow*) {
+        .close = [](void* context, PrStudioWindow*, PrStatus) {
             TerminalWindow* closing = static_cast<TerminalWindow*>(context);
             closeWindow(*closing);
             delete closing;

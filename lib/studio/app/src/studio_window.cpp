@@ -54,33 +54,42 @@ void build(void* context, PrUi*, const PrUiRound*) {
 }
 
 // Makes the target's swap chain for `appWindow` with `intent`, presenting alpha if `transparent`, and its frame, on the
-// application's device, which is made again first if it was lost. Returns false until there is a device to render with.
-bool openTarget(StudioAppState* app, StudioWindowTarget* target, PrAppWindow* appWindow, PrGpuSwapChainIntent intent,
+// application's device, which is ready (studioAppMakeDevice). Returns why if the swap chain cannot be made.
+PrStatus openTarget(StudioAppState* app, StudioWindowTarget* target, PrAppWindow* appWindow, PrGpuSwapChainIntent intent,
         bool transparent) {
-    if (!studioAppMakeDevice(app))
-        return false;
     // Presenting alpha costs the compositor a blend, so that a change to or from it makes the swap chain again.
     if (target->swapChain != nullptr && target->generation == app->generation && target->transparent == transparent)
-        return true;
+        return PrStatus_Ok;
     studioWindowTargetClose(app, target);
     PrSurface surface{};
     PrGpuSwapChainFlags flags = transparent ? PrGpuSwapChainFlags(PrGpuSwapChainFlag_Transparent) : 0;
     PrGpuSwapChainDesc desc{.intent = intent, .flags = flags};
     target->transparent = transparent;
-    if (prAppWindowSurface(appWindow, &surface) != PrStatus_Ok ||
-            prGpuSwapChainCreate(app->device, &surface, &desc, &target->swapChain) != PrStatus_Ok) {
+    PrStatus status = prAppWindowSurface(appWindow, &surface);
+    if (status == PrStatus_Ok)
+        status = prGpuSwapChainCreate(app->device, &surface, &desc, &target->swapChain);
+    if (status != PrStatus_Ok) {
         studioWindowTargetClose(app, target);
-        return false;
+        return status;
     }
     target->frame = prDrawFrameCreate(app->renderer);
     target->generation = app->generation;
-    return true;
+    return PrStatus_Ok;
 }
 
 // Makes the window's swap chain with the desc's intent. A window over a backdrop presents alpha.
-bool openSwapChain(PrStudioWindow* w) {
+PrStatus openSwapChain(PrStudioWindow* w) {
     bool transparent = w->backdrop != PrAppWindowBackdrop_Opaque;
     return openTarget(w->studio, &w->target, w->appWindow, w->desc.intent, transparent);
+}
+
+// Tells the application when the window stops drawing, and when it draws again.
+void reportDrawStatus(PrStudioWindow* w, PrStatus status) {
+    if (status == w->drawStatus)
+        return;
+    w->drawStatus = status;
+    if (w->desc.drawStatus != nullptr)
+        w->desc.drawStatus(w->desc.context, w, status);
 }
 
 // Returns true if the swap chain holds more than 8-bit sRGB, which the list then renders into a texture of its own for.
@@ -231,7 +240,10 @@ PrAppOutput portalFrame(void* context, PrAppWindow*, const PrAppFrame* f) {
     s->dropOperation = output.dropOperation;
     if (w->closing)
         return output;
-    if (!openTarget(w->studio, &s->target, s->appWindow, w->desc.intent, false))
+    // A window draws nothing while the device is being created, and the end of the creation asks it for a frame.
+    if (!studioAppMakeDevice(w->studio))
+        return output;
+    if (openTarget(w->studio, &s->target, s->appWindow, w->desc.intent, false) != PrStatus_Ok)
         return output;
     prGpuSwapChainWait(s->target.swapChain);
     s->drawn = prLayoutNodeDrawingRevision(w->tree, s->info.root);
@@ -379,7 +391,7 @@ void freeWindow(PrStudioWindow* w) {
 // Closes the window after the application's `close`, and frees it. The portals' windows close first.
 void destroyWindow(PrStudioWindow* w) {
     if (w->desc.close != nullptr)
-        w->desc.close(w->desc.context, w);
+        w->desc.close(w->desc.context, w, w->status);
     while (w->portals.count != 0)
         destroyPortal(w, w->portals.count - 1);
     studioWindowCloseDevice(w);
@@ -419,8 +431,14 @@ PrAppOutput renderFrame(PrStudioWindow* w, const PrAppFrame* f) {
     // A lost device is created again, with everything on it. A window draws nothing while the device is being created,
     // and the end of the creation asks it for a frame (studioAppMakeDevice). The frame draws from the model, as every
     // frame does.
-    if (!openSwapChain(w))
+    if (!studioAppMakeDevice(w->studio)) {
+        reportDrawStatus(w, w->studio->deviceStatus);
         return PrAppOutput{};
+    }
+    PrStatus status = openSwapChain(w);
+    reportDrawStatus(w, status);
+    if (status != PrStatus_Ok)
+        return {};
     // Waiting first lets the frame read the latest input, and then wait for nothing once it is built.
     prGpuSwapChainWait(w->target.swapChain);
     // The window's images realize in the application's cache, which is on the device that the window renders on. If
@@ -560,6 +578,7 @@ PrStatus prStudioWindowCreate(PrStudioApp* app, const PrStudioWindowDesc* desc, 
     w->studio = app;
     w->desc = *desc;
     w->status = PrStatus_Ok;
+    w->drawStatus = PrStatus_Ok;
     w->output.cursor = PrAppCursor_Arrow;
     PrLayoutTreeDesc treeDesc{.shaper = app->shaper};
     w->tree = prLayoutTreeCreate(&treeDesc);
