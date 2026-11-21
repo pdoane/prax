@@ -163,7 +163,7 @@ void textEditorDebugDestroy(TextEditorDebugSession* session) {
     if (session->process != nullptr) {
         prDapClientDisconnect(session->client);
         double end = prTimeMonotonicMilliseconds() + kExitPatience;
-        while (!prProcessInfo(session->process).exited && prTimeMonotonicMilliseconds() < end) {
+        while (!prProcessState(session->process).exited && prTimeMonotonicMilliseconds() < end) {
             if (!textEditorDebugPump(session))
                 prThreadSleep(1);
         }
@@ -203,7 +203,7 @@ PrTextEditorDebugState textEditorDebugState(const TextEditorDebugSession* sessio
         return PrTextEditorDebugState_Failed;
     PrDapClientState state = prDapClientState(session->client);
     // An adapter that exits has ended its session, whatever the client last heard.
-    if (prProcessInfo(session->process).exited && state != PrDapClientState_Failed)
+    if (prProcessState(session->process).exited && state != PrDapClientState_Failed)
         return state == PrDapClientState_Terminated ? PrTextEditorDebugState_Ended : PrTextEditorDebugState_Failed;
     switch (state) {
         case PrDapClientState_Initializing:

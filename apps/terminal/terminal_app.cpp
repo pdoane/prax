@@ -343,8 +343,8 @@ void serviceTabs(TerminalApp& app) {
     for (uint32_t i = app.tabs.count(); i-- > 0;) {
         if (i >= app.tabs.count())
             continue;
-        PrProcessInfo info = prTerminalProcessInfo(app.tabs[i].terminal);
-        if (info.exited && info.outputEnded)
+        PrProcessState state = prTerminalProcessState(app.tabs[i].terminal);
+        if (state.exited && state.outputEnded)
             closeTab(app, app.tabs[i].terminal);
     }
 }

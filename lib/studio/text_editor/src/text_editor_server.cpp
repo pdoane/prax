@@ -77,7 +77,7 @@ void textEditorServerDestroy(TextEditorServer* server) {
     if (server->process != nullptr) {
         prLspClientShutdown(server->client);
         double end = prTimeMonotonicMilliseconds() + kExitPatience;
-        while (!prProcessInfo(server->process).exited && prTimeMonotonicMilliseconds() < end) {
+        while (!prProcessState(server->process).exited && prTimeMonotonicMilliseconds() < end) {
             if (!textEditorServerPump(server))
                 prThreadSleep(1);
             // A server that stopped answering is asked to exit all the same, by the end of its input.
@@ -106,7 +106,7 @@ bool textEditorServerPump(TextEditorServer* server) {
 }
 
 PrTextEditorServerState textEditorServerState(const TextEditorServer* server) {
-    if (server->process == nullptr || prProcessInfo(server->process).exited)
+    if (server->process == nullptr || prProcessState(server->process).exited)
         return PrTextEditorServerState_Failed;
     switch (prLspClientState(server->client)) {
         case PrLspClientState_Initializing: return PrTextEditorServerState_Starting;

@@ -29,6 +29,7 @@
 #include <crt_externs.h>
 #include <libproc.h>
 #include <sys/event.h>
+#include <sys/sysctl.h>
 #endif
 #if defined(__linux__)
 #include <sys/syscall.h>
@@ -652,47 +653,153 @@ void resizeTerminal(PrProcess* base, PrUVec2 extent, PrUVec2 pixelExtent) {
     ioctl(process->terminal, TIOCSWINSZ, &size);
 }
 
-// Returns a copy of the directory `path`, or the null string if it is empty or not UTF-8.
-PrRawString directoryCopy(PrStringView path) {
-    if (path.size == 0 || prUtf8Validate(path) != path.size)
+// Returns a copy of `text`, or the null string if it is empty or not UTF-8.
+PrRawString textCopy(PrStringView text) {
+    if (text.size == 0 || prUtf8Validate(text) != text.size)
         return prRawStringNull();
-    return prRawStringCopy(path);
+    return prRawStringCopy(text);
 }
 
-PrRawString terminalForegroundDirectory(const PrProcess* base) {
+// Returns the text of `bytes` up to its first NUL, or all of it if it has none.
+PrStringView textUntilNul(const char* bytes, size_t size) {
+    size_t length = 0;
+    while (length < size && bytes[length] != 0)
+        ++length;
+    return PrStringView{bytes, length};
+}
+
+// Writes the `count` NUL-terminated strings at the start of `bytes` to `info`'s arguments. Stops early at the end of
+// `bytes`.
+void readArguments(const char* bytes, size_t size, uint32_t count, PrProcessInfo* info) {
+    RawArray<PrRawString> arguments;
+    size_t at = 0;
+    while (at < size && arguments.count < count) {
+        PrStringView argument = textUntilNul(bytes + at, size - at);
+        arguments.push(argument.size == 0 ? prRawStringEmpty() : textCopy(argument));
+        at += argument.size + 1;
+    }
+    info->argumentCount = arguments.count;
+    info->arguments = arguments.data;
+}
+
+#if defined(__APPLE__)
+
+// Writes the arguments of process `id` to `info`, from the kernel's copy of the process's start: the count of
+// arguments, the path that it was started by, NULs that align what follows, the arguments, and the environment.
+void readArgumentsOf(pid_t id, PrProcessInfo* info) {
+    int maxBytes = 0;
+    size_t sizeOfMax = sizeof(maxBytes);
+    int maxName[2] = {CTL_KERN, KERN_ARGMAX};
+    if (sysctl(maxName, 2, &maxBytes, &sizeOfMax, nullptr, 0) != 0 || maxBytes <= int(sizeof(int)))
+        return;
+    char* bytes = static_cast<char*>(prMemoryAlloc(size_t(maxBytes)));
+    size_t size = size_t(maxBytes);
+    int name[3] = {CTL_KERN, KERN_PROCARGS2, id};
+    if (sysctl(name, 3, bytes, &size, nullptr, 0) == 0 && size > sizeof(int)) {
+        int count = 0;
+        prMemCopy(&count, bytes, sizeof(count));
+        size_t at = sizeof(count);
+        at += textUntilNul(bytes + at, size - at).size;
+        while (at < size && bytes[at] == 0)
+            ++at;
+        if (count > 0)
+            readArguments(bytes + at, size - at, uint32_t(count), info);
+    }
+    prMemoryFree(bytes);
+}
+
+// Writes the parts of process `id` that `flags` names to `info`. The working directory's query also tells whether the
+// process exists, so it is made whatever `flags` names.
+PrStatus readInfo(pid_t id, PrProcessInfoFlags flags, PrProcessInfo* info) {
+    proc_vnodepathinfo paths{};
+    if (proc_pidinfo(id, PROC_PIDVNODEPATHINFO, 0, &paths, sizeof(paths)) != int(sizeof(paths)))
+        return errno == ESRCH ? PrStatus_NotFound : PrStatus_NotSupported;
+    if ((flags & PrProcessInfoFlag_Directory) != 0)
+        info->directory = textCopy(textUntilNul(paths.pvi_cdir.vip_path, sizeof(paths.pvi_cdir.vip_path)));
+    if ((flags & PrProcessInfoFlag_Executable) != 0) {
+        char path[PROC_PIDPATHINFO_MAXSIZE];
+        int length = proc_pidpath(id, path, sizeof(path));
+        if (length > 0)
+            info->executable = textCopy(PrStringView{path, size_t(length)});
+    }
+    if ((flags & PrProcessInfoFlag_Arguments) != 0)
+        readArgumentsOf(id, info);
+    return PrStatus_Ok;
+}
+
+#elif defined(__linux__)
+
+// Writes /proc/<id>/<entry> to `path`, NUL-terminated.
+void procPath(pid_t id, const char* entry, char (&path)[64]) {
+    char digits[16];
+    size_t count = 0;
+    for (uint32_t value = uint32_t(id); value != 0; value /= 10)
+        digits[count++] = char('0' + value % 10);
+    size_t at = 0;
+    for (const char* c = "/proc/"; *c != 0; ++c)
+        path[at++] = *c;
+    while (count != 0)
+        path[at++] = digits[--count];
+    path[at++] = '/';
+    for (const char* c = entry; *c != 0 && at + 1 < sizeof(path); ++c)
+        path[at++] = *c;
+    path[at] = 0;
+}
+
+// Returns the target of the link /proc/<id>/<entry>, or the null string.
+PrRawString procLink(pid_t id, const char* entry) {
+    char link[64];
+    procPath(id, entry, link);
+    char target[4096];
+    ssize_t size = readlink(link, target, sizeof(target));
+    if (size <= 0 || size_t(size) >= sizeof(target))
+        return prRawStringNull();
+    return textCopy(PrStringView{target, size_t(size)});
+}
+
+// Writes the parts of process `id` that `flags` names to `info`. The process's directory in /proc tells whether it
+// exists.
+PrStatus readInfo(pid_t id, PrProcessInfoFlags flags, PrProcessInfo* info) {
+    char path[64];
+    procPath(id, "", path);
+    if (access(path, F_OK) != 0)
+        return errno == ENOENT ? PrStatus_NotFound : PrStatus_NotSupported;
+    if ((flags & PrProcessInfoFlag_Arguments) != 0) {
+        procPath(id, "cmdline", path);
+        int file = open(path, O_RDONLY | O_CLOEXEC);
+        if (file < 0)
+            return errno == ENOENT ? PrStatus_NotFound : PrStatus_NotSupported;
+        RawArray<char> bytes;
+        char chunk[4096];
+        ssize_t got = 0;
+        while ((got = read(file, chunk, sizeof(chunk))) > 0)
+            bytes.append(chunk, uint32_t(got));
+        close(file);
+        readArguments(bytes.data, bytes.count, UINT32_MAX, info);
+        bytes.reset();
+    }
+    if ((flags & PrProcessInfoFlag_Executable) != 0)
+        info->executable = procLink(id, "exe");
+    if ((flags & PrProcessInfoFlag_Directory) != 0)
+        info->directory = procLink(id, "cwd");
+    return PrStatus_Ok;
+}
+
+#else
+
+PrStatus readInfo(pid_t, PrProcessInfoFlags, PrProcessInfo*) {
+    return PrStatus_NotSupported;
+}
+
+#endif
+
+PrStatus terminalForegroundInfo(const PrProcess* base, PrProcessInfoFlags flags, PrProcessInfo* out) {
     const PosixProcess* process = static_cast<const PosixProcess*>(base);
     pid_t leader = tcgetpgrp(process->terminal);
     if (leader <= 0)
-        return prRawStringNull();
-#if defined(__APPLE__)
-    proc_vnodepathinfo info{};
-    int size = proc_pidinfo(leader, PROC_PIDVNODEPATHINFO, 0, &info, sizeof(info));
-    if (size != int(sizeof(info)))
-        return prRawStringNull();
-    const char* path = info.pvi_cdir.vip_path;
-    size_t length = 0;
-    while (length < sizeof(info.pvi_cdir.vip_path) && path[length] != 0)
-        ++length;
-    return directoryCopy(PrStringView{path, length});
-#elif defined(__linux__)
-    // /proc/<leader>/cwd is a link to the directory.
-    char link[32] = "/proc/";
-    size_t at = 6;
-    char digits[16];
-    size_t count = 0;
-    for (uint32_t id = uint32_t(leader); id != 0; id /= 10)
-        digits[count++] = char('0' + id % 10);
-    while (count != 0)
-        link[at++] = digits[--count];
-    prMemCopy(link + at, "/cwd", 5);
-    char path[4096];
-    ssize_t size = readlink(link, path, sizeof(path));
-    if (size <= 0 || size_t(size) >= sizeof(path))
-        return prRawStringNull();
-    return directoryCopy(PrStringView{path, size_t(size)});
-#else
-    return prRawStringNull();
-#endif
+        return PrStatus_NotFound;
+    out->id = uint32_t(leader);
+    return readInfo(leader, flags, out);
 }
 
 // Starts `argv` with posix_spawn over the child's ends of `input`, `output` and `error`, and writes its id to `*pid`.
@@ -851,10 +958,11 @@ PrStatus launch(PrProcessLauncher*, const PrProcessDesc* desc, PrProcess* PR_NUL
     }
 
     process->pid = pid;
+    process->id = uint32_t(pid);
     process->exitWatch = watchExit(pid);
     if (onTerminal) {
         process->terminalResizeFn = resizeTerminal;
-        process->terminalForegroundDirectoryFn = terminalForegroundDirectory;
+        process->terminalForegroundInfoFn = terminalForegroundInfo;
     }
     process->input = input[1];
     process->outputs[PrProcessStream_Output] = output[0];

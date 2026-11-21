@@ -511,7 +511,7 @@ void resizeProcess(Terminal* terminal, PrUVec2 extent) {
     PrUVec2 pixels{extent.x * cell.x, extent.y * cell.y};
     bool same = extent.x == terminal->processExtent.x && extent.y == terminal->processExtent.y &&
         pixels.x == terminal->processPixels.x && pixels.y == terminal->processPixels.y;
-    if (same || terminal->process == nullptr || prProcessInfo(terminal->process).exited)
+    if (same || terminal->process == nullptr || prProcessState(terminal->process).exited)
         return;
     terminal->processExtent = extent;
     terminal->processPixels = pixels;
@@ -743,17 +743,17 @@ void service(Terminal* terminal, PrAppWindow* PR_NULLABLE holder) {
     PrVterm* vterm = terminal->vterm;
     terminal->wakePending = false;
     if (terminal->process != nullptr) {
-        PrProcessInfo info = prProcessInfo(terminal->process);
-        if (info.exited && info.outputEnded && !terminal->exitShown) {
+        PrProcessState state = prProcessState(terminal->process);
+        if (state.exited && state.outputEnded && !terminal->exitShown) {
             terminal->exitShown = true;
             PrRawString message = prRawStringNull();
             prRawStringAppend(&message, "\r\n\x1b[0;2m[");
-            if (info.signaled) {
+            if (state.signaled) {
                 prRawStringAppend(&message, "ended by signal ");
-                prRawStringAppendU64(&message, uint64_t(info.code), 10);
+                prRawStringAppendU64(&message, uint64_t(state.code), 10);
             } else {
                 prRawStringAppend(&message, "exited with code ");
-                prRawStringAppendU64(&message, uint64_t(uint32_t(info.code)), 10);
+                prRawStringAppendU64(&message, uint64_t(uint32_t(state.code)), 10);
             }
             prRawStringAppend(&message, "]\x1b[0m\r\n");
             PrStringView text = prRawStringView(&message);
@@ -892,8 +892,12 @@ PrRawString workingDirectory(const Terminal* terminal) {
     PrRawString path = prRawStringNull();
     if (prUrlToFilePath(prVtermWorkingDirectory(terminal->vterm), &path))
         return path;
-    if (terminal->process != nullptr && !prProcessInfo(terminal->process).exited) {
-        path = prProcessTerminalForegroundDirectory(terminal->process);
+    if (terminal->process != nullptr && !prProcessState(terminal->process).exited) {
+        PrProcessInfo info{};
+        prProcessTerminalForegroundInfo(terminal->process, PrProcessInfoFlag_Directory, &info);
+        path = info.directory;
+        info.directory = prRawStringNull();
+        prProcessInfoReset(&info);
         if (!prRawStringIsNull(&path))
             return path;
     }
@@ -2649,8 +2653,20 @@ PrRawString prTerminalWorkingDirectory(const PrTerminal* terminal) {
     return directory;
 }
 
-PrProcessInfo prTerminalProcessInfo(const PrTerminal* terminal) {
-    return terminal->process != nullptr ? prProcessInfo(terminal->process) : PrProcessInfo{};
+PrProcessState prTerminalProcessState(const PrTerminal* terminal) {
+    return terminal->process != nullptr ? prProcessState(terminal->process) : PrProcessState{};
+}
+
+uint32_t prTerminalProcessId(const PrTerminal* terminal) {
+    return terminal->process != nullptr ? prProcessId(terminal->process) : 0;
+}
+
+PrStatus prTerminalForegroundInfo(const PrTerminal* terminal, PrProcessInfoFlags flags, PrProcessInfo* out) {
+    if (terminal->process == nullptr) {
+        *out = PrProcessInfo{};
+        return PrStatus_InvalidState;
+    }
+    return prProcessTerminalForegroundInfo(terminal->process, flags, out);
 }
 
 bool prTerminalLaunched(const PrTerminal* terminal) {

@@ -198,8 +198,17 @@ PrStringView prTerminalTitle(const PrTerminal* terminal);
 // program started in the launcher's directory. The caller releases the string with prRawStringReset.
 PrRawString prTerminalWorkingDirectory(const PrTerminal* terminal);
 
-// Whether the program exited, and how. A program that has not started, or failed to start, has not exited.
-PrProcessInfo prTerminalProcessInfo(const PrTerminal* terminal);
+// What has become of the program so far (prProcessState). A program that has not started, or failed to start, has not
+// exited.
+PrProcessState prTerminalProcessState(const PrTerminal* terminal);
+
+// The system's id of the program's process, or 0 if it has not started.
+uint32_t prTerminalProcessId(const PrTerminal* terminal);
+
+// The parts that `flags` names of what runs in the foreground of the pseudoterminal, as prProcessTerminalForegroundInfo
+// reports it: the program, or a job that it moved into the foreground, as a shell does. Returns InvalidState if the
+// program has not started. The caller releases `*out` with prProcessInfoReset either way.
+PrStatus prTerminalForegroundInfo(const PrTerminal* terminal, PrProcessInfoFlags flags, PrProcessInfo* out);
 
 // Returns true once the terminal tried to start its program, in the first frame that measured the view.
 bool prTerminalLaunched(const PrTerminal* terminal);

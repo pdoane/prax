@@ -17,8 +17,8 @@ extern "C" {
 // only if its desc asks for it.
 //
 // A process on a terminal runs on a pseudoconsole (ConPTY), which translates console output to terminal escape
-// sequences. A pseudoconsole does not report its foreground program, so prProcessTerminalForegroundDirectory returns
-// the null string. A pseudoconsole has no pixel size, so prProcessTerminalResize ignores `pixelExtent`.
+// sequences. A pseudoconsole does not report its foreground program, so prProcessTerminalForegroundInfo returns
+// NotSupported. A pseudoconsole has no pixel size, so prProcessTerminalResize ignores `pixelExtent`.
 //
 // prProcessKill calls TerminateProcess, and the process exits with 1.
 PrProcessLauncher* prProcessWindowsCreate(void);

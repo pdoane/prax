@@ -4,7 +4,7 @@
 // process's pipes or pseudoterminal, so writing never blocks the caller, and output can be read as it arrives.
 //
 // One thread uses a process at a time, with these exceptions. The wake and receive functions run on a thread of the
-// backend. prProcessWrite and prProcessInfo are safe on any thread while the process lives, so a receive function can
+// backend. prProcessWrite and prProcessState are safe on any thread while the process lives, so a receive function can
 // reply to what it receives.
 
 #pragma once
@@ -63,7 +63,7 @@ typedef void (*PrProcessWakeFn)(void* PR_NULLABLE context);
 // Called on a thread of the backend with the bytes of `stream` as they arrive, instead of holding them for
 // prProcessRead. Calls are in order and never overlap. The bytes are valid only during the call. The backend reads no
 // more output while the function runs, so a slow receiver makes the program wait, as an unread pipe does. The function
-// may write to `process` and read its info, but must not destroy it.
+// may write to `process` and read its state, but must not destroy it.
 typedef void (*PrProcessReceiveFn)(void* PR_NULLABLE context, PrProcess* process, PrProcessStream stream, PrByteView bytes);
 
 // What to start.
@@ -100,13 +100,33 @@ typedef struct PrProcessDesc {
     void* PR_NULLABLE receiveContext;
 } PrProcessDesc;
 
-// What became of a process.
-typedef struct PrProcessInfo {
+// What has become of a process so far.
+typedef struct PrProcessState {
     bool outputEnded;           // the process's output ended, and every byte of it was read or received
     bool exited;
     bool signaled;              // the process was ended by a signal, whose number `code` holds, rather than exiting
     int32_t code;               // the status that the process exited with, once `exited` is true
+} PrProcessState;
+
+// What the system reports of a running process. A string that the backend cannot read, or that is not UTF-8, is the
+// null string. prProcessInfoReset frees the strings.
+typedef struct PrProcessInfo {
+    uint32_t id;                        // the system's id of the process
+    uint32_t argumentCount;
+    PrRawString* PR_NULLABLE arguments; // the arguments that the process started with, its name first
+    PrRawString executable;             // the path of the program's file
+    PrRawString directory;              // the working directory
 } PrProcessInfo;
+
+// The parts of PrProcessInfo that a call reads, beyond the id, which it always reads. A part that is not read is the
+// null string, or no arguments. The arguments cost the most to read.
+enum {
+    PrProcessInfoFlag_Executable = 1 << 0,
+    PrProcessInfoFlag_Arguments = 1 << 1,
+    PrProcessInfoFlag_Directory = 1 << 2,
+    PrProcessInfoFlag_All = PrProcessInfoFlag_Executable | PrProcessInfoFlag_Arguments | PrProcessInfoFlag_Directory,
+};
+typedef uint8_t PrProcessInfoFlags;
 
 // The library's backends of launchers, which the build turns on (README.md), and Default, the first that the build has.
 enum {
@@ -158,8 +178,11 @@ void prProcessCloseInput(PrProcess* process);
 // waits for its reader.
 size_t prProcessRead(PrProcess* process, PrProcessStream stream, uint8_t* PR_NULLABLE output, size_t capacity);
 
-// Returns what became of the process. Safe on any thread while the process lives.
-PrProcessInfo prProcessInfo(const PrProcess* process);
+// Returns what has become of the process so far. Safe on any thread while the process lives.
+PrProcessState prProcessState(const PrProcess* process);
+
+// Returns the system's id of the process. It stays the process's until the process is destroyed, even after it exits.
+uint32_t prProcessId(const PrProcess* process);
 
 // Ends the process at once, without letting it clean up. A process that already exited is left as it is. A backend's
 // own header says how it ends one.
@@ -170,11 +193,15 @@ void prProcessKill(PrProcess* process);
 // the size changed, by SIGWINCH on POSIX. A backend whose terminals have no pixel size ignores `pixelExtent`.
 void prProcessTerminalResize(PrProcess* process, PrUVec2 extent, PrUVec2 pixelExtent);
 
-// Returns the working directory of the leader of the foreground process group on the process's terminal. That leader is
-// the process itself, unless it moved a job into the foreground, as a shell does. Returns the null string if the
-// process was not started on a terminal, if the leader has exited, or if the backend cannot read the directory. The
-// caller releases the string with prRawStringReset.
-PrRawString prProcessTerminalForegroundDirectory(const PrProcess* process);
+// Writes to `*out` the parts that `flags` names of what the system reports of the leader of the foreground process
+// group on the process's terminal. That leader is the process itself, unless it moved a job into the foreground, as a
+// shell does. Returns NotSupported if the process was not started on a terminal or the backend cannot tell what runs on
+// it, and NotFound if the leader has exited. On failure, `*out` is zeroed. The caller releases it with
+// prProcessInfoReset either way.
+PrStatus prProcessTerminalForegroundInfo(const PrProcess* process, PrProcessInfoFlags flags, PrProcessInfo* out);
+
+// Frees the strings of `info` and zeroes it.
+void prProcessInfoReset(PrProcessInfo* info);
 
 #if defined(__cplusplus)
 }

@@ -187,11 +187,11 @@ void buildTerminalPanel(Scribe& s, PrLayoutNode root, PrVec2 extent) {
     if (!s.terminalShown || terminal == nullptr)
         return;
     String header = format("Terminal {} of {}: {}", s.terminal + 1, s.terminals.count(), prTerminalTitle(terminal));
-    PrProcessInfo info = prTerminalProcessInfo(terminal);
+    PrProcessState state = prTerminalProcessState(terminal);
     PrVtermShellInfo shell = prTerminalShellInfo(terminal);
     if (prTerminalLaunchStatus(terminal) != PrStatus_Ok)
         header.append("  (cannot start)");
-    else if (info.exited)
+    else if (state.exited)
         header.append("  (exited)");
     else if (shell.state != PrVtermShellState_Running && shell.lastStatus == PrVtermCommandStatus_Failed)
         header.append(format("  (last command exited with {})", shell.lastExitCode));

@@ -529,6 +529,7 @@ PrStatus launch(PrProcessLauncher*, const PrProcessDesc* desc, PrProcess* PR_NUL
     }
     CloseHandle(started.hThread);
     process->handle = started.hProcess;
+    process->id = started.dwProcessId;
     if (onTerminal)
         process->terminalResizeFn = resizeTerminal;
     process->wakeEvent = CreateEventW(nullptr, FALSE, FALSE, nullptr);

@@ -62,18 +62,22 @@ size_t readProcess(PrProcess* base, PrProcessStream stream, uint8_t* PR_NULLABLE
     return taken;
 }
 
-PrProcessInfo infoOf(const PrProcess* base) {
+uint32_t idOf(const PrProcess* base) {
+    return static_cast<const ProcessPiped*>(base)->id;
+}
+
+PrProcessState stateOf(const PrProcess* base) {
     ProcessPiped* process = const_cast<ProcessPiped*>(static_cast<const ProcessPiped*>(base));
     prMutexLock(&process->mutex);
     const ProcessReceived& output = process->received[PrProcessStream_Output];
-    PrProcessInfo info{
+    PrProcessState state{
         .outputEnded = output.ended && output.start == output.bytes.count,
         .exited = process->exited,
         .signaled = process->signaled,
         .code = process->code,
     };
     prMutexUnlock(&process->mutex);
-    return info;
+    return state;
 }
 
 } // namespace
@@ -82,7 +86,8 @@ void processPipedInit(ProcessPiped* process, const PrProcessDesc* desc, ProcessP
     process->writeFn = writeProcess;
     process->closeInputFn = closeInput;
     process->readFn = readProcess;
-    process->infoFn = infoOf;
+    process->stateFn = stateOf;
+    process->idFn = idOf;
     process->notify = notify;
     process->wake = desc->wake;
     process->wakeContext = desc->wakeContext;

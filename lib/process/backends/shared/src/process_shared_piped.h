@@ -36,6 +36,7 @@ using ProcessPipedNotifyFn = void (*)(ProcessPiped* process);
 // `mutex` guards the fields after it, which the caller's thread and the backend's thread reach. The caller's thread
 // alone reaches the fields before it.
 struct ProcessPiped : PrProcess {
+    uint32_t id;                    // the system's id of the process, which the backend sets once it starts
     ProcessPipedNotifyFn notify;
     PrProcessWakeFn PR_NULLABLE wake;
     void* PR_NULLABLE wakeContext;

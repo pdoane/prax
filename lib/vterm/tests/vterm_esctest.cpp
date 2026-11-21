@@ -55,9 +55,9 @@ int relay(PrProcess* process, PrVterm* vterm, Wake* signal) {
             prProcessWrite(process, output);
             prVtermOutputConsume(vterm, output.size);
         }
-        PrProcessInfo info = prProcessInfo(process);
-        if (info.outputEnded && info.exited)
-            return info.signaled ? 128 + info.code : info.code;
+        PrProcessState state = prProcessState(process);
+        if (state.outputEnded && state.exited)
+            return state.signaled ? 128 + state.code : state.code;
         prMutexLock(&signal->mutex);
         if (!signal->pending)
             prConditionWaitFor(&signal->condition, &signal->mutex, kPollMillis);

@@ -152,10 +152,13 @@ struct FakeLauncher {
         };
         p.closeInputFn = [](PrProcess*) {};
         p.readFn = [](PrProcess*, PrProcessStream, uint8_t* PR_NULLABLE, size_t) { return size_t(0); };
-        p.infoFn = [](const PrProcess*) { return PrProcessInfo{}; };
+        p.stateFn = [](const PrProcess*) { return PrProcessState{}; };
         p.killFn = [](PrProcess*) {};
         p.terminalResizeFn = [](PrProcess*, PrUVec2, PrUVec2) {};
-        p.terminalForegroundDirectoryFn = [](const PrProcess*) { return prRawStringNull(); };
+        p.idFn = [](const PrProcess*) { return uint32_t(0); };
+        p.terminalForegroundInfoFn = [](const PrProcess*, PrProcessInfoFlags, PrProcessInfo*) -> PrStatus {
+            return PrStatus_NotSupported;
+        };
     }
 
     ~FakeLauncher() { prMutexReset(&mutex); }
@@ -682,7 +685,7 @@ TEST_CASE("terminal: a program that cannot start says so on the screen, and has 
     t.settle();
     CHECK(prTerminalLaunchStatus(t.terminal) == PrStatus_NotFound);
     CHECK(t.shows("[cannot start pr-no-such-program]"));
-    CHECK_FALSE(prTerminalProcessInfo(t.terminal).exited);
+    CHECK_FALSE(prTerminalProcessState(t.terminal).exited);
 }
 
 TEST_CASE("terminal: typed text reaches the program, whose terminal echoes it") {
@@ -701,9 +704,39 @@ TEST_CASE("terminal: the program sets the title, and its exit shows on the scree
     Term t("sh", arguments);
     t.frameUntil([&] { return t.shows("[exited with code 3]"); });
     CHECK(prTerminalTitle(t.terminal) == "Greeting");
-    PrProcessInfo info = prTerminalProcessInfo(t.terminal);
-    CHECK(info.exited);
-    CHECK(info.code == 3);
+    PrProcessState state = prTerminalProcessState(t.terminal);
+    CHECK(state.exited);
+    CHECK(state.code == 3);
+}
+
+TEST_CASE("terminal: the program's process id, and what runs in the foreground") {
+    const PrStringView arguments[] = {"-c", "echo ready; sleep 5"};
+    Term t("sh", arguments, nullptr, "/");
+    t.frameUntil([&] { return t.shows("ready"); });
+    uint32_t id = prTerminalProcessId(t.terminal);
+    CHECK(id != 0);
+    PrProcessInfo info{};
+    PrStatus status = prTerminalForegroundInfo(t.terminal, PrProcessInfoFlag_Directory, &info);
+#if defined(_WIN32)
+    // A pseudoconsole does not report its foreground program.
+    CHECK(status == PrStatus_NotSupported);
+#else
+    // The shell runs sleep without a job of its own, so the shell's group is in the foreground.
+    REQUIRE(status == PrStatus_Ok);
+    CHECK(info.id == id);
+    CHECK(prRawStringView(&info.directory) == "/");
+    CHECK(info.argumentCount == 0);
+#endif
+    prProcessInfoReset(&info);
+
+    // A program that cannot start has no process.
+    Term missing("pr-no-such-program", {});
+    missing.settle();
+    CHECK(prTerminalProcessId(missing.terminal) == 0);
+    PrProcessInfo none{};
+    CHECK(prTerminalForegroundInfo(missing.terminal, PrProcessInfoFlag_All, &none) == PrStatus_InvalidState);
+    CHECK(prRawStringIsNull(&none.directory));
+    prProcessInfoReset(&none);
 }
 
 TEST_CASE("terminal: a double click selects a word, a triple click a line, and a drag with Alt a block") {

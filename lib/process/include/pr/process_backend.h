@@ -26,10 +26,11 @@ struct PrProcess {
     void (*writeFn)(PrProcess* process, PrByteView bytes);
     void (*closeInputFn)(PrProcess* process);
     size_t (*readFn)(PrProcess* process, PrProcessStream stream, uint8_t* PR_NULLABLE output, size_t capacity);
-    PrProcessInfo (*infoFn)(const PrProcess* process);
+    PrProcessState (*stateFn)(const PrProcess* process);
     void (*killFn)(PrProcess* process);
     void (*terminalResizeFn)(PrProcess* process, PrUVec2 extent, PrUVec2 pixelExtent);
-    PrRawString (*terminalForegroundDirectoryFn)(const PrProcess* process);
+    uint32_t (*idFn)(const PrProcess* process);
+    PrStatus (*terminalForegroundInfoFn)(const PrProcess* process, PrProcessInfoFlags flags, PrProcessInfo* out);
 };
 
 #if defined(__cplusplus)

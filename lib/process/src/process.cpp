@@ -4,6 +4,7 @@
 
 #include "pr/ascii.h"
 #include "pr/assert.h"
+#include "pr/memory.h"
 #include "pr/process_backend.h"
 #include "pr/string_ops.h"
 
@@ -116,8 +117,12 @@ size_t prProcessRead(PrProcess* process, PrProcessStream stream, uint8_t* PR_NUL
     return process->readFn(process, stream, output, capacity);
 }
 
-PrProcessInfo prProcessInfo(const PrProcess* process) {
-    return process->infoFn(process);
+PrProcessState prProcessState(const PrProcess* process) {
+    return process->stateFn(process);
+}
+
+uint32_t prProcessId(const PrProcess* process) {
+    return process->idFn(process);
 }
 
 void prProcessKill(PrProcess* process) {
@@ -130,8 +135,21 @@ void prProcessTerminalResize(PrProcess* process, PrUVec2 extent, PrUVec2 pixelEx
     process->terminalResizeFn(process, extent, pixelExtent);
 }
 
-PrRawString prProcessTerminalForegroundDirectory(const PrProcess* process) {
-    if (process->terminalForegroundDirectoryFn == nullptr)
-        return prRawStringNull();
-    return process->terminalForegroundDirectoryFn(process);
+PrStatus prProcessTerminalForegroundInfo(const PrProcess* process, PrProcessInfoFlags flags, PrProcessInfo* out) {
+    *out = PrProcessInfo{};
+    if (process->terminalForegroundInfoFn == nullptr)
+        return PrStatus_NotSupported;
+    PrStatus status = process->terminalForegroundInfoFn(process, flags, out);
+    if (status != PrStatus_Ok)
+        prProcessInfoReset(out);
+    return status;
+}
+
+void prProcessInfoReset(PrProcessInfo* info) {
+    prRawStringReset(&info->executable);
+    for (uint32_t i = 0; i < info->argumentCount; ++i)
+        prRawStringReset(&info->arguments[i]);
+    prMemoryFree(info->arguments);
+    prRawStringReset(&info->directory);
+    *info = PrProcessInfo{};
 }

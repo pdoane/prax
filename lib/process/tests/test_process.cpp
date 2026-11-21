@@ -58,8 +58,8 @@ String drain(PrProcess* process, PrProcessStream stream = PrProcessStream_Output
         uint8_t chunk[4096];
         size_t got = prProcessRead(process, stream, chunk, sizeof(chunk));
         text.append(PrStringView{reinterpret_cast<const char*>(chunk), got});
-        PrProcessInfo info = prProcessInfo(process);
-        if (got == 0 && info.exited && info.outputEnded)
+        PrProcessState state = prProcessState(process);
+        if (got == 0 && state.exited && state.outputEnded)
             break;
         if (got == 0)
             prThreadSleep(1);
@@ -74,13 +74,13 @@ String drain(PrProcess* process, PrProcessStream stream = PrProcessStream_Output
     return text;
 }
 
-PrProcessInfo waitForExit(PrProcess* process) {
+PrProcessState waitForExit(PrProcess* process) {
     double end = prTimeMonotonicMilliseconds() + kPatience;
-    while (!prProcessInfo(process).exited) {
+    while (!prProcessState(process).exited) {
         prThreadSleep(1);
         REQUIRE(prTimeMonotonicMilliseconds() < end);
     }
-    return prProcessInfo(process);
+    return prProcessState(process);
 }
 
 void countWake(void* PR_NULLABLE context) {
@@ -168,7 +168,7 @@ void receive(void* PR_NULLABLE context, PrProcess* process, PrProcessStream stre
 // Starts `script` under sh with a receive function, on pipes or a terminal. Waits for the process to exit and its
 // output to end. A process that takes longer than kPatience is destroyed before the test fails, so that its reads end
 // before `received` does.
-PrProcessInfo receiveFrom(Launcher& l, PrStringView script, PrProcessStreams streams, Received* received,
+PrProcessState receiveFrom(Launcher& l, PrStringView script, PrProcessStreams streams, Received* received,
         Atomic<uint32_t>* wakes, PrProcess** out) {
     PrStringView arguments[] = {"-c", script};
     PrProcessDesc desc{
@@ -185,17 +185,17 @@ PrProcessInfo receiveFrom(Launcher& l, PrStringView script, PrProcessStreams str
     };
     REQUIRE(prProcessLaunch(l.launcher, &desc, out) == PrStatus_Ok);
     double end = prTimeMonotonicMilliseconds() + kPatience;
-    PrProcessInfo info = prProcessInfo(*out);
-    while (!info.exited || !info.outputEnded) {
+    PrProcessState state = prProcessState(*out);
+    while (!state.exited || !state.outputEnded) {
         prThreadSleep(1);
         if (prTimeMonotonicMilliseconds() >= end) {
             prProcessDestroy(*out);
             *out = nullptr;
             FAIL("the process did not end in time");
         }
-        info = prProcessInfo(*out);
+        state = prProcessState(*out);
     }
-    return info;
+    return state;
 }
 
 } // namespace
@@ -251,10 +251,10 @@ TEST_CASE("process: output arrives, and the exit status follows") {
     const PrStringView arguments[] = {"-c", "printf hello; exit 3"};
     PrProcess* process = l.start("sh", arguments);
     CHECK(drain(process) == "hello");
-    PrProcessInfo info = prProcessInfo(process);
-    CHECK(info.exited);
-    CHECK(!info.signaled);
-    CHECK(info.code == 3);
+    PrProcessState state = prProcessState(process);
+    CHECK(state.exited);
+    CHECK(!state.signaled);
+    CHECK(state.code == 3);
     prProcessDestroy(process);
 }
 
@@ -266,7 +266,7 @@ TEST_CASE("process: input reaches the process, and closing it ends what the proc
     prProcessCloseInput(process);
     prProcessWrite(process, PrByteView{reinterpret_cast<const uint8_t*>("dropped"), 7});
     CHECK(drain(process) == "one\ntwo\n");
-    CHECK(prProcessInfo(process).code == 0);
+    CHECK(prProcessState(process).code == 0);
     prProcessDestroy(process);
 }
 
@@ -326,9 +326,9 @@ TEST_CASE("process: a killed process ends by its signal") {
     const PrStringView arguments[] = {"30"};
     PrProcess* process = l.start("sleep", arguments);
     prProcessKill(process);
-    PrProcessInfo info = waitForExit(process);
-    CHECK(info.signaled);
-    CHECK(info.code == 9);
+    PrProcessState state = waitForExit(process);
+    CHECK(state.signaled);
+    CHECK(state.code == 9);
     prProcessDestroy(process);
 }
 
@@ -366,10 +366,10 @@ TEST_CASE("process: a receive function takes the output as it arrives, in order,
     Received received;
     Atomic<uint32_t> wakes{};
     PrProcess* process = nullptr;
-    PrProcessInfo info = receiveFrom(l, "printf ready; read line; printf \"got $line\"; exit 4",
+    PrProcessState state = receiveFrom(l, "printf ready; read line; printf \"got $line\"; exit 4",
         PrProcessStreams_Pipes, &received, &wakes, &process);
     CHECK(received.taken() == "readygot hello");
-    CHECK(info.code == 4);
+    CHECK(state.code == 4);
     // Nothing is held for prProcessRead. Only the end of the output and the exit wake the caller.
     uint8_t chunk[16];
     CHECK(prProcessRead(process, PrProcessStream_Output, chunk, sizeof(chunk)) == 0);
@@ -398,9 +398,9 @@ TEST_CASE("process: what a receive function writes during a flood reaches a prog
     received.answerAfter = 256 * 1024;
     Atomic<uint32_t> wakes{};
     PrProcess* process = nullptr;
-    PrProcessInfo info = receiveFrom(l, "stty -echo; printf ready; yes & read line; kill $!; wait; test \"$line\" = hello",
+    PrProcessState state = receiveFrom(l, "stty -echo; printf ready; yes & read line; kill $!; wait; test \"$line\" = hello",
         PrProcessStreams_Terminal, &received, &wakes, &process);
-    CHECK(info.code == 0);
+    CHECK(state.code == 0);
     CHECK(received.taken().count() > received.answerAfter);
     prProcessDestroy(process);
 }
@@ -465,7 +465,7 @@ TEST_CASE("process: a process on a terminal has it as its controlling terminal, 
     PrProcess* process = startOnTerminal(l, "sh", arguments);
     // The terminal ends each line with CR LF.
     CHECK(drain(process) == "24 80\r\ncontrolled\r\n");
-    CHECK(prProcessInfo(process).code == 0);
+    CHECK(prProcessState(process).code == 0);
     prProcessDestroy(process);
 }
 
@@ -550,9 +550,9 @@ TEST_CASE("process: a program's exit is seen while a job that it left holds its 
     Launcher l;
     const PrStringView arguments[] = {"-c", "sleep 30 & exit 4"};
     PrProcess* process = l.start("sh", arguments);
-    PrProcessInfo info = waitForExit(process);
-    CHECK(info.code == 4);
-    CHECK_FALSE(info.outputEnded);
+    PrProcessState state = waitForExit(process);
+    CHECK(state.code == 4);
+    CHECK_FALSE(state.outputEnded);
     prProcessDestroy(process);
 }
 
@@ -563,7 +563,7 @@ TEST_CASE("process: a program on a terminal exits while a job that it left holds
     const PrStringView arguments[] = {"-c", "trap '' HUP; sleep 30 & echo started; exit 4"};
     PrProcess* process = startOnTerminal(l, "sh", arguments);
     CHECK(drain(process) == "started\r\n");
-    CHECK(prProcessInfo(process).code == 4);
+    CHECK(prProcessState(process).code == 4);
     prProcessDestroy(process);
 }
 
@@ -588,7 +588,7 @@ TEST_CASE("process: destroying a process whose terminal holds all the output it 
     prProcessDestroy(process);
 }
 
-TEST_CASE("process: a terminal's foreground directory is its foreground job's, and the shell's once the job ends") {
+TEST_CASE("process: a terminal's foreground process is its foreground job, and the shell once the job ends") {
     Launcher l;
     const PrStringView arguments[] = {"-i"};
     PrProcess* process = startOnTerminal(l, "sh", arguments, "/");
@@ -603,28 +603,63 @@ TEST_CASE("process: a terminal's foreground directory is its foreground job's, a
     String expected = prStringSlice(read, start, prStringFind(rest(), ":\r\n"));
     REQUIRE(!expected.isEmpty());
 
-    // Returns the foreground directory once it equals `directory`, or its last value if the wait times out.
+    struct Foreground {
+        uint32_t id = 0;
+        String directory;
+        Array<String> arguments;
+        bool executable = false;
+    };
+    // Returns the foreground process once its directory is `directory`, or as it last was if the wait times out.
     auto waitFor = [&](PrStringView directory) {
         double end = prTimeMonotonicMilliseconds() + kPatience;
         for (;;) {
-            PrRawString found = prProcessTerminalForegroundDirectory(process);
-            String text = String::adopt(found);
-            if (text == directory || prTimeMonotonicMilliseconds() >= end)
-                return text;
+            PrProcessInfo info{};
+            Foreground found;
+            if (prProcessTerminalForegroundInfo(process, PrProcessInfoFlag_All, &info) == PrStatus_Ok) {
+                found.id = info.id;
+                found.directory = String(prRawStringView(&info.directory));
+                for (uint32_t i = 0; i < info.argumentCount; ++i)
+                    found.arguments.push(String(prRawStringView(&info.arguments[i])));
+                found.executable = !prRawStringIsNull(&info.executable);
+            }
+            prProcessInfoReset(&info);
+            if (found.directory == directory || prTimeMonotonicMilliseconds() >= end)
+                return found;
             prThreadSleep(2);
         }
     };
-    CHECK(waitFor(expected) == expected);
+    Foreground foreground = waitFor(expected);
+    CHECK(foreground.directory == expected);
+    CHECK(foreground.id != prProcessId(process));
+    CHECK(foreground.executable);
+    REQUIRE(foreground.arguments.count() == 3);
+    CHECK(foreground.arguments[1] == "-c");
+    CHECK(prStringContains(foreground.arguments[2], "sleep 5"));
+    // A call reads only the parts that it asks for.
+    PrProcessInfo directory{};
+    REQUIRE(prProcessTerminalForegroundInfo(process, PrProcessInfoFlag_Directory, &directory) == PrStatus_Ok);
+    CHECK(directory.id == foreground.id);
+    CHECK(prRawStringView(&directory.directory) == expected);
+    CHECK(prRawStringIsNull(&directory.executable));
+    CHECK(directory.argumentCount == 0);
+    prProcessInfoReset(&directory);
     // Control-C ends the job, and the shell's process group is in the foreground again.
     prProcessWrite(process, PrByteView{reinterpret_cast<const uint8_t*>("\x03"), 1});
-    CHECK(waitFor("/") == "/");
+    Foreground shell = waitFor("/");
+    CHECK(shell.directory == "/");
+    CHECK(shell.id == prProcessId(process));
+    REQUIRE(shell.arguments.count() == 2);
+    CHECK(shell.arguments[1] == "-i");
     prProcessDestroy(process);
 
     // A process over pipes has no terminal.
     const PrStringView pipedArguments[] = {"5"};
     PrProcess* piped = l.start("sleep", pipedArguments);
-    PrRawString none = prProcessTerminalForegroundDirectory(piped);
-    CHECK(prRawStringIsNull(&none));
+    CHECK(prProcessId(piped) != 0);
+    PrProcessInfo none{};
+    CHECK(prProcessTerminalForegroundInfo(piped, PrProcessInfoFlag_All, &none) == PrStatus_NotSupported);
+    CHECK(prRawStringIsNull(&none.directory));
+    prProcessInfoReset(&none);
     prProcessDestroy(piped);
 }
 
@@ -637,7 +672,7 @@ TEST_CASE("process: writing to a process that stopped reading drops the input") 
     for (int i = 0; i < 10; ++i)
         prProcessWrite(process, input);
     waitForExit(process);
-    CHECK(prProcessInfo(process).code == 0);
+    CHECK(prProcessState(process).code == 0);
     prProcessDestroy(process);
 }
 
@@ -651,10 +686,10 @@ TEST_CASE("process: output arrives, and the exit status follows") {
     const PrStringView arguments[] = {"/c", "echo hello& exit 3"};
     PrProcess* process = l.start("cmd", arguments);
     CHECK(drain(process) == "hello\r\n");
-    PrProcessInfo info = prProcessInfo(process);
-    CHECK(info.exited);
-    CHECK(!info.signaled);
-    CHECK(info.code == 3);
+    PrProcessState state = prProcessState(process);
+    CHECK(state.exited);
+    CHECK(!state.signaled);
+    CHECK(state.code == 3);
     prProcessDestroy(process);
 }
 
@@ -666,7 +701,7 @@ TEST_CASE("process: input reaches the process, and closing it ends what the proc
     prProcessCloseInput(process);
     prProcessWrite(process, PrByteView{reinterpret_cast<const uint8_t*>("dropped"), 7});
     CHECK(drain(process) == "one\r\ntwo\r\n");
-    CHECK(prProcessInfo(process).code == 0);
+    CHECK(prProcessState(process).code == 0);
     prProcessDestroy(process);
 }
 
@@ -684,9 +719,9 @@ TEST_CASE("process: a killed process exits with 1") {
     const PrStringView arguments[] = {"/c", "set /p line="};
     PrProcess* process = l.start("cmd", arguments);
     prProcessKill(process);
-    PrProcessInfo info = waitForExit(process);
-    CHECK(!info.signaled);
-    CHECK(info.code == 1);
+    PrProcessState state = waitForExit(process);
+    CHECK(!state.signaled);
+    CHECK(state.code == 1);
     prProcessDestroy(process);
 }
 
@@ -756,14 +791,14 @@ TEST_CASE("process: a receive function takes the output as it arrives, in order,
     PrProcess* process = nullptr;
     REQUIRE(prProcessLaunch(l.launcher, &desc, &process) == PrStatus_Ok);
     double end = prTimeMonotonicMilliseconds() + kPatience;
-    PrProcessInfo info = prProcessInfo(process);
-    while (!info.exited || !info.outputEnded) {
+    PrProcessState state = prProcessState(process);
+    while (!state.exited || !state.outputEnded) {
         prThreadSleep(1);
         REQUIRE(prTimeMonotonicMilliseconds() < end);
-        info = prProcessInfo(process);
+        state = prProcessState(process);
     }
     CHECK(received.taken() == "readygot hello\r\n");
-    CHECK(info.code == 4);
+    CHECK(state.code == 4);
     uint8_t chunk[16];
     CHECK(prProcessRead(process, PrProcessStream_Output, chunk, sizeof(chunk)) == 0);
     CHECK(wakes.load() <= 2);
@@ -775,7 +810,7 @@ TEST_CASE("process: a program on a terminal writes to it, and its output ends on
     const PrStringView arguments[] = {"/c", "echo hello& exit 3"};
     PrProcess* process = startOnTerminal(l, "cmd", arguments);
     CHECK(prStringContains(drain(process), "hello\r\n"));
-    CHECK(prProcessInfo(process).code == 3);
+    CHECK(prProcessState(process).code == 3);
     prProcessDestroy(process);
 }
 
@@ -798,7 +833,7 @@ TEST_CASE("process: a program on a terminal goes on running once its input is cl
     prProcessCloseInput(process);
     prProcessWrite(process, PrByteView{reinterpret_cast<const uint8_t*>("dropped\r"), 8});
     CHECK(prStringContains(drain(process), "alive"));
-    CHECK(prProcessInfo(process).code == 5);
+    CHECK(prProcessState(process).code == 5);
     prProcessDestroy(process);
 }
 
@@ -825,12 +860,14 @@ TEST_CASE("process: destroying a process whose terminal holds all the output it 
     CHECK(prTimeMonotonicMilliseconds() - before < 5000);
 }
 
-TEST_CASE("process: a terminal's foreground directory is the null string, which a pseudoconsole does not report") {
+TEST_CASE("process: a terminal's foreground process is not supported, as a pseudoconsole does not report it") {
     Launcher l;
     const PrStringView arguments[] = {"/c", "set /p line="};
     PrProcess* process = startOnTerminal(l, "cmd", arguments);
-    PrRawString none = prProcessTerminalForegroundDirectory(process);
-    CHECK(prRawStringIsNull(&none));
+    CHECK(prProcessId(process) != 0);
+    PrProcessInfo none{};
+    CHECK(prProcessTerminalForegroundInfo(process, PrProcessInfoFlag_All, &none) == PrStatus_NotSupported);
+    prProcessInfoReset(&none);
     prProcessDestroy(process);
 }
 
