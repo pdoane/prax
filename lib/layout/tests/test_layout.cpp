@@ -81,7 +81,7 @@ static_assert(sizeof(PrLayoutFontStyle) == 56);
 static_assert(sizeof(PrLayoutBoxStyle) == 112);
 static_assert(sizeof(PrLayoutEffectStyle) == 132);
 static_assert(sizeof(PrLayoutColorStyle) == 12);
-static_assert(sizeof(PrLayoutDecorationStyle) == 156);
+static_assert(sizeof(PrLayoutDecorationStyle) == 168);
 static_assert(sizeof(PrLayoutFlexStyle) == 32);
 static_assert(sizeof(PrLayoutTableStyle) == 32);
 static_assert(sizeof(PrLayoutFragmentationStyle) == 16);

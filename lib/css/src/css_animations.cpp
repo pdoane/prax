@@ -333,12 +333,17 @@ PrLayoutComputedTiming cssAnimationComputedTiming(const PrCssAnimation* animatio
 }
 
 void cssAnimationEffectChanged(PrCssKeyframeEffect* effect) {
-    effect->computed = false;
+    effect->computed = cssEffectHasEndpoints(effect);
     if (effect->target == nullptr)
         return;
     CssRoot* root = cssDocumentRoot(effect->document);
     if (root->presentationHooks != nullptr)
         root->presentationHooks->effectChanged(root->presentation, effect->target);
+}
+
+bool cssEffectHasEndpoints(const PrCssKeyframeEffect* effect) {
+    return effect->animation != nullptr && effect->animation->kind == PrCssAnimationKind_Transition &&
+        effect->keyframes == nullptr;
 }
 
 void cssAnimationIndexEffect(PrCssKeyframeEffect* effect) {

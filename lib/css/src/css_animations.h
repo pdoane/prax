@@ -105,8 +105,9 @@ struct CssKeyframeEffect {
     CssValueList defaultEasing;            // a CSS animation's animation-timing-function, for each keyframe
 
     // The keyframes computed for the target's style, in order of offset, and of appearance among equal offsets, with
-    // the values they refer to. A transition's are its endpoints, which it sets itself. `computed` is false until they
-    // are computed, and after the effect or the target's style changes.
+    // the values they refer to. A transition's are its endpoints, which it sets itself (cssEffectHasEndpoints).
+    // `computed` is false until they are computed, and after the effect or the target's style changes, but for
+    // endpoints, which stay computed.
     CssValuePool values;
     RawArray<CssAnimateKeyframe> frames;
     bool computed;
@@ -235,8 +236,13 @@ double cssAnimationCurrentTime(const PrCssAnimation* animation);
 // Returns the timing of the animation's effect at its current time. The animation has an effect.
 PrLayoutComputedTiming cssAnimationComputedTiming(const PrCssAnimation* animation);
 
-// Forgets the effect's computed keyframes, and restyles its target in the document's presentation.
+// Forgets the effect's computed keyframes, unless they are a transition's endpoints (cssEffectHasEndpoints), and
+// restyles its target in the document's presentation.
 void cssAnimationEffectChanged(PrCssKeyframeEffect* effect);
+
+// Returns true if the effect's keyframes are a transition's endpoints, which the transition sets as it starts. They
+// stay computed: no change to the effect or to its target's style computes them again (PrCssKeyframeEffect::computed).
+bool cssEffectHasEndpoints(const PrCssKeyframeEffect* effect);
 
 // Lists the effect with its target in the document's index while the effect has an animation and a target, or takes it
 // out.

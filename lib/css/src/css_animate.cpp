@@ -368,7 +368,7 @@ void computeKeyframes(PrCssKeyframeEffect* effect, KeyframeContext& context) {
 // accumulates is composited onto `underlying` before the keyframes interpolate. Returns false if no keyframe gives the
 // property.
 bool addEffectValue(CssValuePool* out, const PrCssKeyframeEffect* effect, PrCssProperty property, double progress,
-        CssValueRun underlying, CssValueRun base, const CssColorContext& colors) {
+        CssValueRun underlying, CssValueRun base, const CssInterpolationContext& interpolation) {
     struct Frame {
         double offset;
         CssValueRun value;
@@ -394,7 +394,7 @@ bool addEffectValue(CssValuePool* out, const PrCssKeyframeEffect* effect, PrCssP
         };
         if (k.composite != PrCssComposite_Replace) {
             uint32_t start = composited.values.count;
-            cssComposite(&composited, property, underlying, frame.value, k.composite, colors);
+            cssComposite(&composited, property, underlying, frame.value, k.composite, interpolation);
             frame.composited = CssValueSpan{start, composited.values.count - start};
             frame.pooled = true;
         }
@@ -435,7 +435,7 @@ bool addEffectValue(CssValuePool* out, const PrCssKeyframeEffect* effect, PrCssP
     double local = span > 0 ? (progress - from.offset) / span : 1;
     CssValueRun easing = from.easing.count != 0 ? from.easing : listRun(effect->defaultEasing);
     PrLayoutEasing eased = easing.count != 0 ? cssEasing(easing) : prLayoutEasingLinear();
-    cssInterpolate(out, property, from.value, to.value, prLayoutEase(&eased, local, false), colors);
+    cssInterpolate(out, property, from.value, to.value, prLayoutEase(&eased, local, false), interpolation);
     cssValuePoolReset(&composited);
     return true;
 }
@@ -559,13 +559,14 @@ bool hasEndpoints(const PrCssAnimation* animation) {
 }
 
 // Appends the transition's value now, over nothing: a transition replaces the value below it.
-void addTransitionValue(CssValuePool* out, const PrCssAnimation* animation, const CssColorContext& colors) {
+void addTransitionValue(CssValuePool* out, const PrCssAnimation* animation,
+        const CssInterpolationContext& interpolation) {
     const PrCssKeyframeEffect* effect = animation->effect;
     PrLayoutComputedTiming timing = cssAnimationComputedTiming(animation);
     double progress = prF64IsNan(timing.progress) ? 0 : timing.progress;
     CssValueRun from = cssValuePoolRun(&effect->values, effect->frames.data[0].value);
     CssValueRun to = cssValuePoolRun(&effect->values, effect->frames.data[1].value);
-    cssInterpolate(out, animation->property, from, to, progress, colors);
+    cssInterpolate(out, animation->property, from, to, progress, interpolation);
 }
 
 // Returns the last item of the target's transition-property list that names `property`, or -1 if none does
@@ -615,7 +616,8 @@ PrStringView animationName(CssValueRun item) {
 
 // Starts, reverses and cancels the target's transitions (css-transitions-1/#starting).
 void restyleTransitions(PrCssPresentation* presentation, const PrDomNode* target, const CssComputedStyle* PR_NULLABLE oldBase,
-        const CssComputedStyle* PR_NULLABLE old, const CssComputedStyle* base, const CssColorContext& colors) {
+        const CssComputedStyle* PR_NULLABLE old, const CssComputedStyle* base,
+        const CssInterpolationContext& interpolation) {
     CssValueRun properties = cssComputedValue(base, PrCssProperty_TransitionProperty);
     CssListItems propertyItems = cssListItems(properties);
     CssValueRun durations = cssComputedValue(base, PrCssProperty_TransitionDuration);
@@ -647,7 +649,7 @@ void restyleTransitions(PrCssPresentation* presentation, const PrDomNode* target
             value.text.count = 0;
             CssValueRun start{};
             if (running != nullptr && hasEndpoints(running)) {
-                addTransitionValue(&value, running, colors);
+                addTransitionValue(&value, running, interpolation);
                 start = cssValuePoolRun(&value, CssValueSpan{0, value.values.count});
             } else {
                 start = cssComputedValue(old != nullptr ? old : oldBase, property);
@@ -658,7 +660,7 @@ void restyleTransitions(PrCssPresentation* presentation, const PrDomNode* target
             // (css-transitions-2/#transition-behavior-property).
             CssValueRun behavior = cssListItem(behaviors, behaviorItems, uint32_t(item));
             bool discrete = behavior.count == 1 && cssValueIsKeyword(behavior.values, PrCssKeyword_AllowDiscrete);
-            bool starts = duration + delay > 0 && (cssInterpolable(property, start, end, colors) ||
+            bool starts = duration + delay > 0 && (cssInterpolable(property, start, end, interpolation) ||
                 (discrete && !cssValueRunEquals(start, end)));
             if (!starts) {
                 if (running != nullptr)
@@ -830,8 +832,8 @@ void restyleAnimations(PrCssPresentation* presentation, const PrDomNode* target,
 void cssAnimateRestyled(PrCssPresentation* presentation, const PrDomNode* target,
         const CssComputedStyle* PR_NULLABLE oldBase, const CssComputedStyle* PR_NULLABLE old, const CssComputedStyle* base,
         const CssAnimateContext& context, const CssColorEnvironment& environment) {
-    CssColorContext colors = cssStyleColorContext(base, environment);
-    restyleTransitions(presentation, target, oldBase, old, base, colors);
+    CssInterpolationContext interpolation = cssStyleInterpolationContext(base, environment);
+    restyleTransitions(presentation, target, oldBase, old, base, interpolation);
     restyleAnimations(presentation, target, base, displaysNone(base));
     // Every effect that targets the target computes its keyframes for its new style.
     RawArray<PrCssKeyframeEffect*> stack;
@@ -843,7 +845,7 @@ void cssAnimateRestyled(PrCssPresentation* presentation, const PrDomNode* target
         for (uint32_t i = 0; i < stack.count; ++i) {
             PrCssKeyframeEffect* effect = stack.data[i];
             PrCssAnimation* a = effect->animation;
-            if (a->kind == PrCssAnimationKind_Transition && effect->keyframes == nullptr)
+            if (cssEffectHasEndpoints(effect))
                 continue;
             computeKeyframes(effect, keyframes);
             a->composited = a->owner == presentation && compositedEffect(a, base);
@@ -860,7 +862,7 @@ const CssComputedStyle* cssAnimateApply(PrCssPresentation* presentation, const P
     a.scratch.text.count = 0;
     a.overridden.clear();
     a.overrides.clear();
-    CssColorContext colors = cssStyleColorContext(base, environment);
+    CssInterpolationContext interpolation = cssStyleInterpolationContext(base, environment);
     bool inheritsReset = false;
     RawArray<PrCssKeyframeEffect*> stack;
     stackOf(presentation, target, stack);
@@ -897,7 +899,7 @@ const CssComputedStyle* cssAnimateApply(PrCssPresentation* presentation, const P
                     underlying = cssValuePoolRun(&held, CssValueSpan{0, held.values.count});
                 }
                 uint32_t start = a.scratch.values.count;
-                if (addEffectValue(&a.scratch, effect, property, timing.progress, underlying, under, colors))
+                if (addEffectValue(&a.scratch, effect, property, timing.progress, underlying, under, interpolation))
                     override(a, property, CssValueSpan{start, a.scratch.values.count - start});
                 cssValuePoolReset(&held);
             }
@@ -1072,7 +1074,7 @@ void cssAnimateForget(PrCssPresentation* presentation, const PrDomNode* target) 
     RawArray<PrCssAnimation*> owned;
     for (uint32_t i = 0; i < effects->count; ++i) {
         PrCssKeyframeEffect* effect = effects->data[i];
-        effect->computed = effect->animation->kind == PrCssAnimationKind_Transition && effect->keyframes == nullptr;
+        effect->computed = cssEffectHasEndpoints(effect);
         if (effect->animation->owner == presentation)
             owned.push(effect->animation);
     }

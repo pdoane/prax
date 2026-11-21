@@ -2065,7 +2065,77 @@ struct Painter : LayoutWalkVisitor {
     // is an atomic inline, floats or is out of flow, whose content does not take the decoration of the boxes outside it
     // (css-text-decor-3/#line-decoration). Records the underlines and overlines if `under`, which paint below the text,
     // and the lines through it otherwise. Each line spans the fragment, placed by the metrics of its first font, in the
-    // frame that snaps its glyphs.
+    // frame that snaps its glyphs. Where a text fragment falls along the text that a decorating box's lines span
+    // (PrLayoutDecorationStyle): the length of that text before the fragment, and its whole length.
+    struct TextSpan {
+        float before = 0;
+        float total = 0;
+        bool found = false;
+    };
+
+    // Returns true if the node `node` is `box` or inside it.
+    bool inside(LayoutNodeIndex node, LayoutNodeIndex box) const {
+        for (LayoutNodeIndex n = node; n != kPrLayoutNodeNone; n = layoutTreeNode(tree, n).parent) {
+            if (n == box)
+                return true;
+        }
+        return false;
+    }
+
+    // Adds the text fragments of `box` in the lines of the block fragment `block` to `span`. A line on its own, if
+    // `perLine`, starts the span again, and the line of `text` ends it. The box's text in a block in the flow of
+    // `block` is a span of its own, which replaces `span` if it holds `text`, since a block breaks the box's lines.
+    void addSpan(const LayoutFragment* block, LayoutNodeIndex box, const LayoutFragment* text, bool perLine,
+            TextSpan* span) const {
+        for (uint32_t i = 0; i < block->childCount && !(perLine && span->found); ++i) {
+            const LayoutFragment* child = block->children[i].fragment;
+            // An anonymous block box has no node, and is in flow.
+            bool flows = child->node == kPrLayoutNodeNone || (!layoutIsAtomicInline(tree, child->node) &&
+                !layoutIsOutOfFlow(tree, child->node) && !layoutIsFloat(tree, child->node));
+            if (child->kind == LayoutFragmentKind_Box && flows) {
+                TextSpan inner;
+                addSpan(child, box, text, perLine, &inner);
+                if (inner.found) {
+                    *span = inner;
+                    return;
+                }
+                continue;
+            }
+            if (child->kind != LayoutFragmentKind_Line)
+                continue;
+            if (perLine)
+                *span = TextSpan{};
+            for (uint32_t k = 0; k < child->childCount; ++k) {
+                const LayoutFragment* piece = child->children[k].fragment;
+                if (piece->kind != LayoutFragmentKind_Text || !inside(piece->node, box))
+                    continue;
+                if (piece == text) {
+                    span->before = span->total;
+                    span->found = true;
+                }
+                span->total += layoutTextLength(tree, piece);
+            }
+        }
+    }
+
+    // Returns where the text fragment `text` falls along the text of the decorating box `box`, in the block that holds
+    // the box's lines: the box itself if it is a block, and otherwise the nearest block around it.
+    TextSpan spanOf(LayoutNodeIndex box, const LayoutFragment* text) const {
+        TextSpan span;
+        const LayoutFragment* block = nullptr;
+        for (LayoutNodeIndex n = box; n != kPrLayoutNodeNone && block == nullptr; n = layoutTreeNode(tree, n).parent) {
+            const LayoutFragment* placed = layoutCachePlaced(tree->cache, n);
+            if (placed != nullptr && placed->kind == LayoutFragmentKind_Box)
+                block = placed;
+        }
+        if (block == nullptr)
+            return span;
+        PrLayoutStyleIndex style = layoutTreeNode(tree, box).style;
+        bool perLine = layoutFragmentationStyle(styles, style).boxDecorationBreak == PrLayoutBoxDecorationBreak_Clone;
+        addSpan(block, box, text, perLine, &span);
+        return span;
+    }
+
     void decorate(const LayoutFragment* fragment, PrLayoutVec at, bool under) {
         const LayoutFragmentText& text = fragment->text;
         if (text.glyphCount == 0 || text.rangeCount == 0 || fragment->turn != LayoutTextTurn_None ||
@@ -2086,6 +2156,26 @@ struct Painter : LayoutWalkVisitor {
                 n = layoutTreeNode(tree, n).parent) {
             const PrLayoutDecorationStyle& d = layoutDecorationStyle(styles, layoutTreeNode(tree, n).style);
             PrLayoutTextDecorationLines lines = PrLayoutTextDecorationLines(d.textDecorationLine & wanted);
+            // The part of the fragment that the box's lines span, from the fragment's start: all of it, unless the box
+            // insets its lines. The ends of the box's text move by the insets, which the fragment's own ends do not.
+            float from = 0;
+            float to = length;
+            const PrLayoutLength* inset = d.textDecorationInset;
+            uint64_t zero = prLayoutLengthPx(0).bits;
+            bool insets = lines != 0 && (inset[0].bits != zero || inset[1].bits != zero);
+            if (insets) {
+                TextSpan span = spanOf(n, fragment);
+                PrLayoutUnit base = prLayoutUnitFromPx(span.total);
+                float start = prLayoutUnitToPx(layoutResolve(styles, inset[0], base));
+                float end = span.total - prLayoutUnitToPx(layoutResolve(styles, inset[1], base));
+                float fragmentEnd = span.before + length;
+                float lo = span.before == 0 ? start : prF32Max(start, span.before);
+                float hi = fragmentEnd >= span.total ? end : prF32Min(end, fragmentEnd);
+                from = lo - span.before;
+                to = hi - span.before;
+                if (!span.found || !(to > from))
+                    lines = 0;
+            }
             for (PrLayoutTextDecorationLines line = 1; lines != 0 && line <= PrLayoutTextDecorationLine_LineThrough;
                     line = PrLayoutTextDecorationLines(line << 1)) {
                 if ((lines & line) == 0)
@@ -2102,13 +2192,28 @@ struct Painter : LayoutWalkVisitor {
                     thickness = prLayoutUnitToPx(d.textDecorationThickness);
                 thickness = thickness > 1 ? thickness : 1;
                 float center = metrics.underlinePosition * size;
+                bool offsetGiven = (d.textUnderline & PrLayoutTextUnderlineFlag_Offset) != 0;
+                if (line == PrLayoutTextDecorationLine_Underline && offsetGiven) {
+                    // The offset is from the font's underline top, or else from the baseline.
+                    float top = 0;
+                    if ((d.textUnderline & PrLayoutTextUnderlineFlag_FromFont) != 0)
+                        top = (metrics.underlinePosition - metrics.underlineThickness / 2) * size;
+                    center = top + prLayoutUnitToPx(d.textUnderlineOffset) + thickness / 2;
+                }
                 if (line == PrLayoutTextDecorationLine_Overline)
                     center = -metrics.ascent * size + thickness / 2;
                 else if (line == PrLayoutTextDecorationLine_LineThrough)
                     center = metrics.strikeoutPosition * size;
+                // A straight line covers whole pixels, with its top edge on one, as the baseline is, so that lines that
+                // meet or overlap are as solid as one.
+                if (d.textDecorationStyle != PrDrawDecorationStyle_Wavy) {
+                    thickness = prF32Max(prF32Round(thickness), 1);
+                    float top = prF32Round(baseline + center - thickness / 2);
+                    center = top + thickness / 2 - baseline;
+                }
                 PrDrawDecoration drawn{
-                    .origin = PrVec2{offset.x, baseline + center},
-                    .length = length,
+                    .origin = PrVec2{offset.x + from, baseline + center},
+                    .length = to - from,
                     .thickness = thickness,
                     .style = d.textDecorationStyle,
                     .wavelength = thickness * 4,

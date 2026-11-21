@@ -50,17 +50,17 @@ of a change to it is what the change did.
 | css/compositing                  |       81/81 |       212/233 |   90.9% |
 | css/css-align                    |     296/296 |     4036/5364 |   75.2% |
 | css/css-anchor-position          |     521/526 |   10380/13918 |   74.5% |
-| css/css-animations               |     206/207 |     1189/1509 |   78.7% |
-| css/css-backgrounds              |     858/859 |     6343/6946 |   91.3% |
+| css/css-animations               |     206/207 |     1194/1509 |   79.1% |
+| css/css-backgrounds              |     858/859 |     6345/6946 |   91.3% |
 | css/css-borders                  |     181/181 |     1421/1670 |   85.0% |
 | css/css-box                      |     148/148 |      959/1132 |   84.7% |
 | css/css-break                    |   1250/1250 |      996/1915 |   52.0% |
-| css/css-cascade                  |     157/157 |      815/1120 |   72.7% |
+| css/css-cascade                  |     157/157 |      817/1122 |   72.8% |
 | css/css-color                    |     376/376 |   11597/12968 |   89.4% |
 | css/css-color-adjust             |       36/36 |       169/191 |   88.4% |
 | css/css-color-hdr                |         4/4 |        65/116 |   56.0% |
 | css/css-conditional              |     466/467 |     2480/3459 |   71.6% |
-| css/css-contain                  |     570/583 |       590/973 |   60.6% |
+| css/css-contain                  |     572/583 |       591/973 |   60.7% |
 | css/css-content                  |       78/78 |       284/322 |   88.1% |
 | css/css-counter-styles           |     259/259 |       399/402 |   99.2% |
 | css/css-display                  |     249/249 |       550/776 |   70.8% |
@@ -90,7 +90,7 @@ of a change to it is what the change did.
 | css/css-parser-api               |         1/1 |          5/71 |    7.0% |
 | css/css-position                 |     377/388 |     1656/1770 |   93.5% |
 | css/css-properties-values-api    |     123/123 |      686/1393 |   49.2% |
-| css/css-pseudo                   |     339/342 |      702/1126 |   62.3% |
+| css/css-pseudo                   |     339/342 |      706/1126 |   62.6% |
 | css/css-ruby                     |     178/178 |       118/247 |   47.7% |
 | css/css-scroll-anchoring         |       78/78 |         89/98 |   90.8% |
 | css/css-scroll-snap              |     180/197 |       366/838 |   43.6% |
@@ -103,15 +103,15 @@ of a change to it is what the change did.
 | css/css-syntax                   |       50/50 |       376/446 |   84.3% |
 | css/css-tables                   |     340/340 |      940/1113 |   84.4% |
 | css/css-text                     |   1866/1877 |     4591/6185 |   74.2% |
-| css/css-text-decor               |     365/365 |     1366/1693 |   80.6% |
+| css/css-text-decor               |     365/365 |     1399/1693 |   82.6% |
 | css/css-transforms               |     912/922 |     5518/6326 |   87.2% |
-| css/css-transitions              |     142/142 |     3104/3453 |   89.8% |
+| css/css-transitions              |     142/142 |     3178/3453 |   92.0% |
 | css/css-typed-om                 |     370/372 |    9291/12919 |   71.9% |
 | css/css-ui                       |   1076/1076 |     2336/2899 |   80.5% |
 | css/css-values                   |     512/512 |    5620/10374 |   54.1% |
 | css/css-variables                |     249/249 |       580/774 |   74.9% |
 | css/css-view-transitions         |     454/494 |     1195/1753 |   68.1% |
-| css/css-viewport                 |     135/137 |       510/690 |   73.9% |
+| css/css-viewport                 |     135/137 |       519/695 |   74.6% |
 | css/css-will-change              |       53/53 |       186/221 |   84.1% |
 | css/css-writing-modes            |   1234/1234 |     1294/1555 |   83.2% |
 | css/css-zoom                     |         1/1 |           1/1 |  100.0% |
@@ -132,8 +132,8 @@ of a change to it is what the change did.
 | web-animations/crashtests        |       39/39 |         39/39 |  100.0% |
 | web-animations/interfaces        |       46/47 |       702/868 |   80.8% |
 | web-animations/responsive        |       46/46 |        81/105 |   77.1% |
-| web-animations/timing-model      |       29/34 |       372/400 |   93.0% |
-| **total**                        | 32310/32468 | 171726/213956 |   80.2% |
+| web-animations/timing-model      |       29/34 |       373/400 |   93.2% |
+| **total**                        | 32312/32468 | 171857/213963 |   80.3% |
 
 ## dom
 

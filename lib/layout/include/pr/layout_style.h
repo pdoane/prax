@@ -688,6 +688,13 @@ enum {
 };
 typedef uint8_t PrLayoutTextDecorationLines;
 
+// How an underline is placed (css-text-decor-4/#underline-offset).
+enum {
+    PrLayoutTextUnderlineFlag_FromFont = 1u << 0,   // text-underline-position is from-font
+    PrLayoutTextUnderlineFlag_Offset = 1u << 1,     // text-underline-offset is a length, not auto
+};
+typedef uint8_t PrLayoutTextUnderlineFlags;
+
 PR_NO_PADDING_BEGIN
 // What paints a box's background, border and outline, and places a replaced box's content in its content box. Sides are
 // indexed by PrRectSide. Not inherited, and read by painting. An outline is drawn around the border box,
@@ -709,7 +716,15 @@ PR_NO_PADDING_BEGIN
 // A box's text decoration lines are drawn across the text of the box and of its in-flow content, other than the content
 // of atomic inlines and of boxes out of flow (css-text-decor-3/#line-decoration), in their color, style and thickness,
 // or the thickness that the text's font gives where `textDecorationThickness` is zero. The lines are placed by the
-// metrics of each text's font. Underlines and overlines paint below the text, and lines through it above.
+// metrics of each text's font. An underline with an offset of its own (css-text-decor-4/#underline-offset) has its top
+// that far below the font's underline top if its position is from-font, and below the alphabetic baseline otherwise.
+// Underlines and overlines paint below the text, and lines through it above.
+//
+// A box's lines start and end inset by `textDecorationInset` from the ends of its text
+// (css-text-decor-4/#text-decoration-inset-property), which a negative inset extends past. The text is the box's text
+// in line order, a whole if its box-decoration-break slices it and each line on its own if it clones, and a percentage
+// is of the length of that text. Auto is a sixteenth of the font size of the box, which parts the lines of adjacent
+// boxes.
 typedef struct PrLayoutDecorationStyle {
     PrColor16 background;
     PrColor16 borderColor[PrRectSide_Count];
@@ -718,6 +733,7 @@ typedef struct PrLayoutDecorationStyle {
     PrColor16 textDecorationColor;
     PrLayoutLength objectPositionX;     // where fitted content sits (css-images-3/#the-object-position)
     PrLayoutLength objectPositionY;
+    PrLayoutLength textDecorationInset[2];  // at the start and at the end of the box's lines
 
     // The radii of the corners (css-backgrounds-3/#border-radius), ordered as PrLayoutShape::radii: horizontal then
     // vertical for each corner from the top left clockwise. A percentage is of the border box's width or height.
@@ -731,6 +747,7 @@ typedef struct PrLayoutDecorationStyle {
     PrLayoutUnit outlineOffset;
     PrLayoutUnit columnRuleWidth;
     PrLayoutUnit textDecorationThickness;
+    PrLayoutUnit textUnderlineOffset;   // if textUnderline has PrLayoutTextUnderlineFlag_Offset
     PrLayoutBackgroundIndex backgroundLayers;
     PrLayoutShadowIndex shadows;        // box-shadow (css-backgrounds-3/#box-shadow)
     PrDrawBorderStyle borderStyle[PrRectSide_Count];
@@ -741,7 +758,7 @@ typedef struct PrLayoutDecorationStyle {
     PrDrawBorderStyle columnRuleStyle;
     PrLayoutTextDecorationLines textDecorationLine;
     PrDrawDecorationStyle textDecorationStyle;
-    uint8_t _pad[1];
+    PrLayoutTextUnderlineFlags textUnderline;
 } PrLayoutDecorationStyle;
 PR_NO_PADDING_END
 

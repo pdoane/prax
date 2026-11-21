@@ -1034,22 +1034,25 @@ bool takesSides(PrCssProperty property) {
         property == PrCssProperty_MaskBorderOutset;
 }
 
-// Returns true if `property` is a corner's radius: a horizontal radius, then a vertical one that is the horizontal one
-// if it is not given (css-backgrounds-3/#border-radius).
-bool isCorner(PrCssProperty property) {
+// Returns true if `property` takes a pair of values, the second of which is the first if it is not given: a corner's
+// horizontal and vertical radii (css-backgrounds-3/#border-radius), and text-decoration-inset's start and end
+// (css-text-decor-4/#text-decoration-inset-property).
+bool takesPair(PrCssProperty property) {
     return property == PrCssProperty_BorderTopLeftRadius || property == PrCssProperty_BorderTopRightRadius ||
-        property == PrCssProperty_BorderBottomRightRadius || property == PrCssProperty_BorderBottomLeftRadius;
+        property == PrCssProperty_BorderBottomRightRadius || property == PrCssProperty_BorderBottomLeftRadius ||
+        property == PrCssProperty_TextDecorationInset;
 }
 
-// Appends `run`, a corner's radius, with both of its radii.
-void addBothRadii(CssValuePool* out, CssValueRun run) {
+// Appends `run`, the value of a property that takesPair, with both values of its pair.
+void addBothOfPair(CssValuePool* out, CssValueRun run) {
     cssValuePoolAddRun(out, run);
     if (run.count != 0 && run.values[0].next == run.count)
         cssValuePoolAddRun(out, run);
 }
 
-// Appends `run`, a corner's radius, as its computed value serializes: one radius if its two are equal.
-void addFewestRadii(CssValuePool* out, CssValueRun run) {
+// Appends `run`, the value of a property that takesPair, as its computed value serializes: one value if its two are
+// equal.
+void addFewestOfPair(CssValuePool* out, CssValueRun run) {
     uint32_t second = run.count != 0 ? run.values[0].next : 0;
     if (second != 0 && second < run.count && cssValueRunEquals(cssValueSubtree(run, 0), cssValueSubtree(run, second)))
         cssValuePoolAddRun(out, cssValueSubtree(run, 0));
@@ -1232,7 +1235,7 @@ void addWithoutCommas(CssValuePool* out, CssValueRun run) {
 // Returns true if `property` is combined in a form of its own (normalized), and its result is written back in the form
 // of a computed value (addCombined).
 bool reshapes(PrCssProperty property) {
-    return takesSides(property) || isCorner(property) || property == PrCssProperty_Clip ||
+    return takesSides(property) || takesPair(property) || property == PrCssProperty_Clip ||
         property == PrCssProperty_ClipPath;
 }
 
@@ -1262,23 +1265,23 @@ CssValueRun normalized(PrCssProperty property, CssValueRun run, CssValuePool* sc
         addWithoutCommas(scratch, run);
     else if (property == PrCssProperty_ClipPath)
         addClipPathInsets(scratch, run, true);
-    else if (isCorner(property))
-        addBothRadii(scratch, run);
+    else if (takesPair(property))
+        addBothOfPair(scratch, run);
     else
         return run;
     return cssValuePoolRun(scratch, CssValueSpan{0, scratch->values.count});
 }
 
 // Appends `run`, the result of combining, in the form of a computed value. A property that takesSides is written in its
-// fewest values, and a corner's radii as one radius if they are equal. A clip path's inset() is written in its fewest
-// values, and a radius of its circle() or ellipse() that went below zero is clamped to zero.
+// fewest values, and a pair (takesPair) as one value if its two are equal. A clip path's inset() is written in its
+// fewest values, and a radius of its circle() or ellipse() that went below zero is clamped to zero.
 void addCombined(CssValuePool* out, PrCssProperty property, CssValueRun run) {
     if (takesSides(property)) {
         addFewestSides(out, run);
         return;
     }
-    if (isCorner(property)) {
-        addFewestRadii(out, run);
+    if (takesPair(property)) {
+        addFewestOfPair(out, run);
         return;
     }
     if (property != PrCssProperty_ClipPath) {
@@ -2137,6 +2140,123 @@ void combine(CssValuePool* out, PrCssProperty property, CssValueRun underlying, 
     cssValuePoolReset(&mixed);
 }
 
+// Gives `pool` the length that text-decoration-inset's auto stands for in a font of `fontSize` px, and points `a` or
+// `b` at it, if one of them is auto and the other is not (w3c/csswg-drafts#13036). Auto with auto stays auto.
+void insetAutoAsLength(PrCssProperty property, CssValueRun* a, CssValueRun* b, double fontSize, CssValuePool* pool) {
+    if (property != PrCssProperty_TextDecorationInset)
+        return;
+    auto isAuto = [](CssValueRun run) { return run.count == 1 && cssValueIsKeyword(run.values, PrCssKeyword_Auto); };
+    bool aAuto = isAuto(*a);
+    if (aAuto == isAuto(*b))
+        return;
+    cssValuePoolAdd(pool, cssNumberValue(PrCssValueKind_Dimension, PrCssUnit_Px, cssTextDecorationInsetAuto(fontSize)));
+    *(aAuto ? a : b) = cssValuePoolRun(pool, CssValueSpan{0, 1});
+}
+
+bool interpolableValues(PrCssProperty property, CssValueRun from, CssValueRun to, const CssColorContext& colors) {
+    if (isFilterList(property))
+        return !cssValueRunEquals(from, to) && addFiltersBetween(nullptr, from, to, 0, colors);
+    if (isImageList(property))
+        return addImagesBetween(nullptr, from, to, 0, colors);
+    if (isTrackList(property)) {
+        TrackItems a;
+        TrackItems b;
+        return !cssValueRunEquals(from, to) && trackListsCombine(from, to, &a, &b);
+    }
+    if (!reshapes(property))
+        return interpolable(property, from, to, colors);
+    if (hasKeywordRadius(property, from) || hasKeywordRadius(property, to))
+        return false;
+    CssValuePool x{};
+    CssValuePool y{};
+    bool result = interpolable(property, normalized(property, from, &x), normalized(property, to, &y), colors);
+    cssValuePoolReset(&x);
+    cssValuePoolReset(&y);
+    return result;
+}
+
+void interpolateValues(CssValuePool* out, PrCssProperty property, CssValueRun from, CssValueRun to, double progress,
+        const CssColorContext& colors) {
+    if (cssIsCornerShape(property)) {
+        cssCornerShapeInterpolate(out, from, to, progress);
+        return;
+    }
+    if (isFilterList(property)) {
+        if (!addFiltersBetween(out, from, to, progress, colors))
+            cssValuePoolAddRun(out, progress < 0.5 ? from : to);
+        return;
+    }
+    if (isImageList(property)) {
+        if (!addImagesBetween(out, from, to, progress, colors))
+            cssValuePoolAddRun(out, progress < 0.5 ? from : to);
+        return;
+    }
+    if (isTrackList(property)) {
+        TrackItems a;
+        TrackItems b;
+        TrackOp op{.property = property, .progress = progress, .add = false, .first = progress < 0.5};
+        if (trackListsCombine(from, to, &a, &b))
+            addTrackItems(out, op, a, b);
+        else
+            cssValuePoolAddRun(out, progress < 0.5 ? from : to);
+        return;
+    }
+    if (!reshapes(property)) {
+        interpolate(out, property, from, to, progress, colors);
+        return;
+    }
+    // A pair that interpolates only discretely keeps the values as they are written.
+    if (!interpolableValues(property, from, to, colors)) {
+        cssValuePoolAddRun(out, progress < 0.5 ? from : to);
+        return;
+    }
+    CssValuePool x{};
+    CssValuePool y{};
+    CssValuePool between{};
+    interpolate(&between, property, normalized(property, from, &x), normalized(property, to, &y), progress, colors);
+    addCombined(out, property, cssValuePoolRun(&between, CssValueSpan{0, between.values.count}));
+    cssValuePoolReset(&x);
+    cssValuePoolReset(&y);
+    cssValuePoolReset(&between);
+}
+
+void compositeValues(CssValuePool* out, PrCssProperty property, CssValueRun underlying, CssValueRun value,
+        PrCssComposite composite, const CssColorContext& colors) {
+    if (isFilterList(property)) {
+        if (composite == PrCssComposite_Replace)
+            cssValuePoolAddRun(out, value);
+        else
+            addFiltersComposite(out, underlying, value, composite == PrCssComposite_Accumulate, colors);
+        return;
+    }
+    // Track sizes add as their numbers do, for add and accumulate alike.
+    if (isTrackList(property)) {
+        TrackItems a;
+        TrackItems b;
+        if (composite != PrCssComposite_Replace && trackListsCombine(underlying, value, &a, &b))
+            addTrackItems(out, TrackOp{.property = property, .progress = 0, .add = true, .first = false}, a, b);
+        else
+            cssValuePoolAddRun(out, value);
+        return;
+    }
+    if (!reshapes(property)) {
+        combine(out, property, underlying, value, composite, colors);
+        return;
+    }
+    if (hasKeywordRadius(property, underlying) || hasKeywordRadius(property, value)) {
+        cssValuePoolAddRun(out, value);
+        return;
+    }
+    CssValuePool x{};
+    CssValuePool y{};
+    CssValuePool combined{};
+    combine(&combined, property, normalized(property, underlying, &x), normalized(property, value, &y), composite, colors);
+    addCombined(out, property, cssValuePoolRun(&combined, CssValueSpan{0, combined.values.count}));
+    cssValuePoolReset(&x);
+    cssValuePoolReset(&y);
+    cssValuePoolReset(&combined);
+}
+
 } // namespace
 
 CssListItems cssListItems(CssValueRun run) {
@@ -2255,71 +2375,28 @@ PrLayoutTransformList cssTransformFunctions(CssValueRun translate, CssValueRun r
     return out;
 }
 
-bool cssInterpolable(PrCssProperty property, CssValueRun from, CssValueRun to, const CssColorContext& colors) {
-    if (isFilterList(property))
-        return !cssValueRunEquals(from, to) && addFiltersBetween(nullptr, from, to, 0, colors);
-    if (isImageList(property))
-        return addImagesBetween(nullptr, from, to, 0, colors);
-    if (isTrackList(property)) {
-        TrackItems a;
-        TrackItems b;
-        return !cssValueRunEquals(from, to) && trackListsCombine(from, to, &a, &b);
-    }
-    if (!reshapes(property))
-        return interpolable(property, from, to, colors);
-    if (hasKeywordRadius(property, from) || hasKeywordRadius(property, to))
-        return false;
-    CssValuePool x{};
-    CssValuePool y{};
-    bool result = interpolable(property, normalized(property, from, &x), normalized(property, to, &y), colors);
-    cssValuePoolReset(&x);
-    cssValuePoolReset(&y);
+CssInterpolationContext cssStyleInterpolationContext(const CssComputedStyle* style,
+        const CssColorEnvironment& environment) {
+    return CssInterpolationContext{
+        .colors = cssStyleColorContext(style, environment),
+        .fontSize = cssStyleFontSize(style),
+    };
+}
+
+bool cssInterpolable(PrCssProperty property, CssValueRun from, CssValueRun to, const CssInterpolationContext& context) {
+    CssValuePool lengths{};
+    insetAutoAsLength(property, &from, &to, context.fontSize, &lengths);
+    bool result = interpolableValues(property, from, to, context.colors);
+    cssValuePoolReset(&lengths);
     return result;
 }
 
 void cssInterpolate(CssValuePool* out, PrCssProperty property, CssValueRun from, CssValueRun to, double progress,
-        const CssColorContext& colors) {
-    if (cssIsCornerShape(property)) {
-        cssCornerShapeInterpolate(out, from, to, progress);
-        return;
-    }
-    if (isFilterList(property)) {
-        if (!addFiltersBetween(out, from, to, progress, colors))
-            cssValuePoolAddRun(out, progress < 0.5 ? from : to);
-        return;
-    }
-    if (isImageList(property)) {
-        if (!addImagesBetween(out, from, to, progress, colors))
-            cssValuePoolAddRun(out, progress < 0.5 ? from : to);
-        return;
-    }
-    if (isTrackList(property)) {
-        TrackItems a;
-        TrackItems b;
-        TrackOp op{.property = property, .progress = progress, .add = false, .first = progress < 0.5};
-        if (trackListsCombine(from, to, &a, &b))
-            addTrackItems(out, op, a, b);
-        else
-            cssValuePoolAddRun(out, progress < 0.5 ? from : to);
-        return;
-    }
-    if (!reshapes(property)) {
-        interpolate(out, property, from, to, progress, colors);
-        return;
-    }
-    // A pair that interpolates only discretely keeps the values as they are written.
-    if (!cssInterpolable(property, from, to, colors)) {
-        cssValuePoolAddRun(out, progress < 0.5 ? from : to);
-        return;
-    }
-    CssValuePool x{};
-    CssValuePool y{};
-    CssValuePool between{};
-    interpolate(&between, property, normalized(property, from, &x), normalized(property, to, &y), progress, colors);
-    addCombined(out, property, cssValuePoolRun(&between, CssValueSpan{0, between.values.count}));
-    cssValuePoolReset(&x);
-    cssValuePoolReset(&y);
-    cssValuePoolReset(&between);
+        const CssInterpolationContext& context) {
+    CssValuePool lengths{};
+    insetAutoAsLength(property, &from, &to, context.fontSize, &lengths);
+    interpolateValues(out, property, from, to, progress, context.colors);
+    cssValuePoolReset(&lengths);
 }
 
 PrCssComposite cssCompositeFromValue(CssValueRun item) {
@@ -2333,40 +2410,11 @@ PrCssComposite cssCompositeFromValue(CssValueRun item) {
 }
 
 void cssComposite(CssValuePool* out, PrCssProperty property, CssValueRun underlying, CssValueRun value,
-        PrCssComposite composite, const CssColorContext& colors) {
-    if (isFilterList(property)) {
-        if (composite == PrCssComposite_Replace)
-            cssValuePoolAddRun(out, value);
-        else
-            addFiltersComposite(out, underlying, value, composite == PrCssComposite_Accumulate, colors);
-        return;
-    }
-    // Track sizes add as their numbers do, for add and accumulate alike.
-    if (isTrackList(property)) {
-        TrackItems a;
-        TrackItems b;
-        if (composite != PrCssComposite_Replace && trackListsCombine(underlying, value, &a, &b))
-            addTrackItems(out, TrackOp{.property = property, .progress = 0, .add = true, .first = false}, a, b);
-        else
-            cssValuePoolAddRun(out, value);
-        return;
-    }
-    if (!reshapes(property)) {
-        combine(out, property, underlying, value, composite, colors);
-        return;
-    }
-    if (hasKeywordRadius(property, underlying) || hasKeywordRadius(property, value)) {
-        cssValuePoolAddRun(out, value);
-        return;
-    }
-    CssValuePool x{};
-    CssValuePool y{};
-    CssValuePool combined{};
-    combine(&combined, property, normalized(property, underlying, &x), normalized(property, value, &y), composite, colors);
-    addCombined(out, property, cssValuePoolRun(&combined, CssValueSpan{0, combined.values.count}));
-    cssValuePoolReset(&x);
-    cssValuePoolReset(&y);
-    cssValuePoolReset(&combined);
+        PrCssComposite composite, const CssInterpolationContext& context) {
+    CssValuePool lengths{};
+    insetAutoAsLength(property, &underlying, &value, context.fontSize, &lengths);
+    compositeValues(out, property, underlying, value, composite, context.colors);
+    cssValuePoolReset(&lengths);
 }
 
 } // namespace pr_impl

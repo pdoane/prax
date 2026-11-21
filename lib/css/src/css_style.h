@@ -459,6 +459,12 @@ PrTextBreakStyle cssTextBreakStyle(const CssComputedStyle* style);
 double cssStyleFontSize(const CssComputedStyle* style);
 float cssStyleFontWeight(const CssComputedStyle* style);
 
+// Returns the length in px that text-decoration-inset: auto stands for in a font of `fontSize` px: a twentieth of the
+// size, from 1px to 2px (css-text-decor-4/#text-decoration-inset-property). That is the smallest gap that shows between
+// the lines of two adjacent decorated elements, growing a little with the text. It is a computed length, so it does not
+// depend on the target's pixel ratio.
+double cssTextDecorationInsetAuto(double fontSize);
+
 // Returns the percentage that a font-width keyword names (css-fonts-4/#font-width-prop), or 100 for normal and any
 // other keyword.
 double cssFontWidthOfKeyword(PrCssKeyword keyword);

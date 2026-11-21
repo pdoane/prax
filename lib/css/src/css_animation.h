@@ -44,9 +44,20 @@ PrLayoutEasing cssEasing(CssValueRun easing);
 PrLayoutTransformList cssTransformFunctions(CssValueRun translate, CssValueRun rotate, CssValueRun scale,
     CssValueRun transform);
 
+// What an element's computed values interpolate and combine in: its colors, and its font size in px, which a keyword
+// that animates as a length resolves against.
+struct CssInterpolationContext {
+    CssColorContext colors;
+    double fontSize;
+};
+
+// Returns the context that the values of a computed style interpolate in, with its colors in `environment`.
+CssInterpolationContext cssStyleInterpolationContext(const CssComputedStyle* style,
+    const CssColorEnvironment& environment);
+
 // Returns true if the computed values `from` and `to` of `property` differ and interpolate other than discretely. A
 // transition between them requires both (css-transitions-1/#starting).
-bool cssInterpolable(PrCssProperty property, CssValueRun from, CssValueRun to, const CssColorContext& colors);
+bool cssInterpolable(PrCssProperty property, CssValueRun from, CssValueRun to, const CssInterpolationContext& context);
 
 // Appends the computed value of `property` at `progress` between the computed values `from` and `to`
 // (css-values-4/#interpolation).
@@ -60,13 +71,16 @@ bool cssInterpolable(PrCssProperty property, CssValueRun from, CssValueRun to, c
 //   the initial values of the other list's functions, and none stands for the empty list.
 // - Basic shapes interpolate argument by argument if their kinds and reference boxes agree. An inset() interpolates
 //   with every inset and radius written out. A circle or ellipse sized by an extent keyword interpolates discretely.
-// - A property of one to four sides, and a clip's rect(), interpolate side by side.
+// - A property of one to four sides, and a clip's rect(), interpolate side by side, and a pair of values, as a corner's
+//   radii or text-decoration-inset's ends, value by value, with a missing second value the first.
+// - text-decoration-inset's auto interpolates with a length as the length that it stands for in the context's font
+//   (cssTextDecorationInsetAuto), and with auto stays auto (w3c/csswg-drafts#13036).
 //
 // Any other pair interpolates discretely, as does every pair of a property whose animation type is discrete
 // (kCssPropertyDiscrete): the result is `from` below a progress of one half, and `to` from one half on
-// (web-animations-1/#discrete). Colors resolve in `colors`, the element's.
+// (web-animations-1/#discrete). Colors resolve in the context's, the element's.
 void cssInterpolate(CssValuePool* out, PrCssProperty property, CssValueRun from, CssValueRun to, double progress,
-    const CssColorContext& colors);
+    const CssInterpolationContext& context);
 
 // Returns the operation that an item of a computed animation-composition names
 // (css-animations-2/#animation-composition).
@@ -80,9 +94,10 @@ PrCssComposite cssCompositeFromValue(CssValueRun item);
 // scales add less one. The functions of transform lists accumulate argument by argument if the lists have the same
 // shape. The functions of filter lists that pair by name sum argument by argument, one-based for a function that does
 // nothing at an amount of one (filter-effects-1/#accumulation). Any other pair, and every pair of a discrete property,
-// gives `value`, as replace does. Colors resolve in `colors`.
+// gives `value`, as replace does. text-decoration-inset's auto combines with a length as it interpolates with one.
+// Colors resolve in the context's.
 void cssComposite(CssValuePool* out, PrCssProperty property, CssValueRun underlying, CssValueRun value,
-    PrCssComposite composite, const CssColorContext& colors);
+    PrCssComposite composite, const CssInterpolationContext& context);
 
 } // namespace pr_impl
 

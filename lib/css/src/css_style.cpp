@@ -2724,6 +2724,10 @@ float cssStyleFontWeight(const CssComputedStyle* style) {
     return run.count == 1 ? float(run.values[0].number) : 400;
 }
 
+double cssTextDecorationInsetAuto(double fontSize) {
+    return prF64Min(prF64Max(fontSize / 20, 1), 2);
+}
+
 double cssFontWidthOfKeyword(PrCssKeyword keyword) {
     switch (keyword) {
         case PrCssKeyword_UltraCondensed: return 50;

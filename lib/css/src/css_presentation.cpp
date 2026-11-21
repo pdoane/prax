@@ -2824,6 +2824,29 @@ PrLayoutStyleIndex project(PrCssPresentation* r, const CssComputedStyle* style, 
         CssValueRun thickness = cssComputedValue(style, PrCssProperty_TextDecorationThickness);
         if (thickness.count != 0 && thickness.values[0].kind != PrCssValueKind_Keyword)
             decoration.textDecorationThickness = prLayoutUnitFromPxDouble(pxOf(thickness));
+        // A percentage offset is of the font size (css-text-decor-4/#underline-offset).
+        CssValueRun position = cssComputedValue(style, PrCssProperty_TextUnderlinePosition);
+        for (uint32_t i = 0; i < position.count; ++i) {
+            if (cssValueIsKeyword(position.values + i, PrCssKeyword_FromFont))
+                decoration.textUnderline |= PrLayoutTextUnderlineFlag_FromFont;
+        }
+        // One inset is both ends.
+        CssValueRun inset = cssComputedValue(style, PrCssProperty_TextDecorationInset);
+        for (uint32_t end = 0, at = 0; end < 2 && inset.count != 0; ++end) {
+            CssValueRun value = cssValueSubtree(inset, at);
+            PrLayoutLength length = lengthOf(r, value);
+            if (cssValueRunFirstKeyword(value) == PrCssKeyword_Auto)
+                length = prLayoutLengthPx(float(cssTextDecorationInsetAuto(cssStyleFontSize(style))));
+            decoration.textDecorationInset[end] = length;
+            if (at + inset.values[at].next < inset.count)
+                at += inset.values[at].next;
+        }
+        double offset = 0;
+        if (cssResolveLength(cssComputedValue(style, PrCssProperty_TextUnderlineOffset), 0, cssStyleFontSize(style),
+                &offset)) {
+            decoration.textUnderline |= PrLayoutTextUnderlineFlag_Offset;
+            decoration.textUnderlineOffset = prLayoutUnitFromPxDouble(offset);
+        }
     }
     // A column rule of style none has no width (css-multicol-1/#crw).
     if (style->groups[CssStyleGroup_Fragmentation] != r->styles.initial[CssStyleGroup_Fragmentation]) {

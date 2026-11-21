@@ -985,6 +985,8 @@ PrLayoutDecorationStyle prLayoutDecorationStyleDefault(void) {
     decoration.objectPositionY = prLayoutLengthPercent(50);
     for (PrLayoutLength& length : decoration.radii)
         length = prLayoutLengthPx(0);
+    for (PrLayoutLength& length : decoration.textDecorationInset)
+        length = prLayoutLengthPx(0);
     for (float& shape : decoration.cornerShapes)
         shape = 1;
     decoration.objectFit = PrLayoutObjectFit_Fill;

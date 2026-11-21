@@ -855,7 +855,8 @@ STYLE_GROUPS = [
          "is a target, and the cursor that it shows."),
         [
             "color", "accent-color", "caret-color", "color-scheme", "dynamic-range-limit", "image-rendering",
-            "image-orientation", "visibility", "interactivity", "pointer-events", "cursor",
+            "image-orientation", "visibility", "interactivity", "pointer-events", "cursor", "text-underline-position",
+            "text-underline-offset",
         ]),
     StyleGroup(
         "Box", False, "read by layout",
@@ -884,7 +885,7 @@ STYLE_GROUPS = [
             "border-top-color", "border-right-color", "border-bottom-color", "border-left-color", "border-top-style",
             "border-right-style", "border-bottom-style", "border-left-style", "object-fit", "object-position",
             "outline-color", "outline-style", "outline-width", "outline-offset", "text-decoration-line",
-            "text-decoration-style", "text-decoration-color", "text-decoration-thickness",
+            "text-decoration-style", "text-decoration-color", "text-decoration-thickness", "text-decoration-inset",
         ]),
     StyleGroup(
         "Background", False, "read by painting: the background's color and layers, corners, and shadows",
@@ -1048,10 +1049,10 @@ NOT_COMPUTED = {
     "stroke-alignment", "stroke-break", "stroke-color", "stroke-dash-corner", "stroke-dash-justify",
     "stroke-dashadjust", "stroke-dashcorner", "stroke-image", "stroke-origin", "stroke-position", "stroke-repeat",
     "stroke-size", "tab-size", "text-autospace", "text-box-edge", "text-box-trim", "text-combine-upright",
-    "text-decoration-inset", "text-decoration-skip", "text-decoration-skip-box", "text-decoration-skip-ink",
+    "text-decoration-skip", "text-decoration-skip-box", "text-decoration-skip-ink",
     "text-decoration-skip-self", "text-decoration-skip-spaces", "text-emphasis-color", "text-emphasis-position",
     "text-emphasis-skip", "text-emphasis-style", "text-fit", "text-group-align", "text-shadow", "text-size-adjust",
-    "text-spacing", "text-spacing-trim", "text-underline-offset", "text-underline-position", "text-wrap-style",
+    "text-spacing", "text-spacing-trim", "text-wrap-style",
     "timeline-scope", "timeline-trigger", "timeline-trigger-activation-range", "timeline-trigger-activation-range-end",
     "timeline-trigger-activation-range-start", "timeline-trigger-active-range", "timeline-trigger-active-range-end",
     "timeline-trigger-active-range-start", "timeline-trigger-name", "timeline-trigger-source", "touch-action",

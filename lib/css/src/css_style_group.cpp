@@ -23,6 +23,7 @@ constexpr PrCssProperty kColorProperties[] = {
     PrCssProperty_Color, PrCssProperty_AccentColor, PrCssProperty_CaretColor, PrCssProperty_ColorScheme,
     PrCssProperty_DynamicRangeLimit, PrCssProperty_ImageRendering, PrCssProperty_ImageOrientation,
     PrCssProperty_Visibility, PrCssProperty_Interactivity, PrCssProperty_PointerEvents, PrCssProperty_Cursor,
+    PrCssProperty_TextUnderlinePosition, PrCssProperty_TextUnderlineOffset,
 };
 
 constexpr PrCssProperty kBoxProperties[] = {
@@ -54,7 +55,7 @@ constexpr PrCssProperty kDecorationProperties[] = {
     PrCssProperty_BorderBottomStyle, PrCssProperty_BorderLeftStyle, PrCssProperty_ObjectFit,
     PrCssProperty_ObjectPosition, PrCssProperty_OutlineColor, PrCssProperty_OutlineStyle, PrCssProperty_OutlineWidth,
     PrCssProperty_OutlineOffset, PrCssProperty_TextDecorationLine, PrCssProperty_TextDecorationStyle,
-    PrCssProperty_TextDecorationColor, PrCssProperty_TextDecorationThickness,
+    PrCssProperty_TextDecorationColor, PrCssProperty_TextDecorationThickness, PrCssProperty_TextDecorationInset,
 };
 
 // Most elements declare no background, so the background's longhands are a group of their own, apart from the borders
@@ -170,10 +171,10 @@ constexpr PrCssProperty kFragmentationProperties[] = {
 
 extern const CssStyleGroupProperties kCssStyleGroupProperties[CssStyleGroup_Count] = {
     {kFontProperties, 22},           // Font
-    {kColorProperties, 11},          // Color
+    {kColorProperties, 13},          // Color
     {kBoxProperties, 46},            // Box
     {kFlexProperties, 14},           // Flex
-    {kDecorationProperties, 18},     // Decoration
+    {kDecorationProperties, 19},     // Decoration
     {kBackgroundProperties, 22},     // Background
     {kEffectProperties, 12},         // Effect
     {kCompositingProperties, 20},    // Compositing
@@ -849,7 +850,7 @@ extern const CssStyleSlot kCssStyleSlots[PrCssProperty_Count] = {
     {CssStyleGroup_Count, 0},           // text-combine-upright
     {CssStyleGroup_Count, 0},           // text-decoration
     {CssStyleGroup_Decoration, 16},     // text-decoration-color
-    {CssStyleGroup_Count, 0},           // text-decoration-inset
+    {CssStyleGroup_Decoration, 18},     // text-decoration-inset
     {CssStyleGroup_Decoration, 14},     // text-decoration-line
     {CssStyleGroup_Count, 0},           // text-decoration-skip
     {CssStyleGroup_Count, 0},           // text-decoration-skip-box
@@ -875,8 +876,8 @@ extern const CssStyleSlot kCssStyleSlots[PrCssProperty_Count] = {
     {CssStyleGroup_Count, 0},           // text-spacing
     {CssStyleGroup_Count, 0},           // text-spacing-trim
     {CssStyleGroup_Font, 21},           // text-transform
-    {CssStyleGroup_Count, 0},           // text-underline-offset
-    {CssStyleGroup_Count, 0},           // text-underline-position
+    {CssStyleGroup_Color, 12},          // text-underline-offset
+    {CssStyleGroup_Color, 11},          // text-underline-position
     {CssStyleGroup_Count, 0},           // text-wrap
     {CssStyleGroup_Font, 14},           // text-wrap-mode
     {CssStyleGroup_Count, 0},           // text-wrap-style
