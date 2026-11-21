@@ -546,7 +546,9 @@ bool prUiKeyRepeated(const PrUi* ui);
 
 // The input events routed to a node in the current round, in order. Pointer events go to the node that captured the
 // pointer, or otherwise to the node under the pointer, with their positions in px of the viewport of the press or of
-// the node. Key and text events go to the focused node. The array is valid until the build returns.
+// the node. A node that the pointer leaves, for a node outside it or for outside the window, receives a PointerLeave. A
+// node that captured the pointer receives it once the release lets go, if the pointer is then outside it. Key and text
+// events go to the focused node. The array is valid until the build returns.
 typedef struct PrUiEvents {
     const PrAppEvent* PR_NULLABLE events;
     uint32_t count;

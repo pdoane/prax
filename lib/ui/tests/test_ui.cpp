@@ -1474,6 +1474,49 @@ TEST_CASE("a pointer that leaves the window hovers nothing until it comes back")
     CHECK(hovered);
 }
 
+TEST_CASE("a node that the pointer leaves receives a leave, unless it captured the pointer") {
+    UiFixture f;
+    PrLayoutNode outer = kPrLayoutNodeNone;
+    PrLayoutNode inner = kPrLayoutNodeNone;
+    uint32_t outerLeaves = 0;
+    uint32_t innerLeaves = 0;
+    auto leaves = [&](PrLayoutNode node) {
+        uint32_t count = 0;
+        PrUiEvents events = prUiEvents(f.ui, node);
+        for (uint32_t i = 0; i < events.count; ++i)
+            count += events.events[i].kind == PrAppEventKind_PointerLeave ? 1 : 0;
+        return count;
+    };
+    f.build = [&] {
+        outer = f.box(f.root, 0, 0, 100, 100, PrUiFlag_Pressable);
+        inner = f.box(outer, 0, 0, 50, 50, PrUiFlag_Pressable);
+        outerLeaves += leaves(outer);
+        innerLeaves += leaves(inner);
+    };
+    f.frame();
+    f.move(10, 10);
+    f.frame();
+    // Moving from a node to its ancestor leaves the node and not the ancestor, which still holds the pointer.
+    f.move(80, 80);
+    f.frame();
+    CHECK(innerLeaves == 1);
+    CHECK(outerLeaves == 0);
+    // Leaving the window leaves the node under the pointer.
+    f.push(PrAppEvent{.kind = PrAppEventKind_PointerLeave, .pointer = {.position = PrVec2{80, 80}}});
+    f.frame();
+    CHECK(outerLeaves == 1);
+    // A press captures the pointer, which moves out without leaving the node, until the release lets go of it.
+    f.move(10, 10);
+    f.frame();
+    f.down(10, 10);
+    f.move(200, 200);
+    f.frame();
+    CHECK(innerLeaves == 1);
+    f.up(200, 200);
+    f.frame();
+    CHECK(innerLeaves == 2);
+}
+
 TEST_CASE("a pointer cancel ends a press without a click") {
     UiFixture f;
     PrLayoutNode node = kPrLayoutNodeNone;

@@ -1177,6 +1177,25 @@ void trackModifiers(Ui* ui, const PrAppEvent& e) {
     ui->modifiers = held;
 }
 
+// Returns true if a button's press captured the pointer for the node.
+bool captures(const Ui* ui, PrLayoutNode node) {
+    for (const UiButton& button : ui->buttons) {
+        if (button.capture == node)
+            return true;
+    }
+    return false;
+}
+
+// Delivers a leave, at the pointer, to the node that the pointer was over and is no longer over, unless the node
+// captured the pointer, which it keeps until the release.
+void leave(Ui* ui, PrLayoutNode left, PrLayoutNode now, const PrAppEvent& e) {
+    if (left == kPrLayoutNodeNone || within(ui, now, left) || captures(ui, left))
+        return;
+    PrAppEvent leaving = e;
+    leaving.kind = PrAppEventKind_PointerLeave;
+    deliver(ui, left, leaving);
+}
+
 // Routes one event from `viewport` against the committed tree.
 void route(Ui* ui, PrUiViewport viewport, const PrAppEvent& raw) {
     trackModifiers(ui, raw);
@@ -1184,6 +1203,7 @@ void route(Ui* ui, PrUiViewport viewport, const PrAppEvent& raw) {
     PrAppEvent e = raw;
     PrVec2 position{};
     bool shown = false;
+    PrLayoutNode left = ui->hovered;
     if (prAppEventPosition(&raw, &position)) {
         PrUiViewport over = viewport;
         PrVec2 at = position;
@@ -1193,6 +1213,8 @@ void route(Ui* ui, PrUiViewport viewport, const PrAppEvent& raw) {
         ui->pointer = at;
         ui->hovered = shown ? hitAt(ui, over, at) : kPrLayoutNodeNone;
         prAppEventSetPosition(&e, at);
+        if (e.kind != PrAppEventKind_PointerLeave)
+            leave(ui, left, ui->hovered, e);
     }
     switch (e.kind) {
         case PrAppEventKind_PointerMove: {
@@ -1270,7 +1292,10 @@ void route(Ui* ui, PrUiViewport viewport, const PrAppEvent& raw) {
             else
                 deliver(ui, ui->hovered, e);
             endDrag(b, true);
+            // A node that held the pointer leaves it as the release lets go, if the pointer is outside it.
+            PrLayoutNode released = b.capture;
             b.capture = kPrLayoutNodeNone;
+            leave(ui, released, ui->hovered, atPress(ui, b, viewport, raw));
             break;
         }
         case PrAppEventKind_PointerCancel: {
@@ -1321,6 +1346,7 @@ void route(Ui* ui, PrUiViewport viewport, const PrAppEvent& raw) {
             if (viewport != ui->pointerViewport)
                 break;
             ui->hasPointer = false;
+            leave(ui, left, kPrLayoutNodeNone, e);
             ui->hovered = kPrLayoutNodeNone;
             break;
         case PrAppEventKind_Scroll:
