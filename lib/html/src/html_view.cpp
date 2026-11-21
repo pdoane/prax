@@ -1867,6 +1867,15 @@ PrLayoutPainter prHtmlViewPainter(PrHtmlView* view) {
     return PrLayoutPainter{.context = view, .paint = paint, .measure = measure};
 }
 
+PrLayoutPainter prHtmlViewViewportPainter(PrHtmlView* view) {
+    auto paint = [](void* PR_NULLABLE context, PrVec2 extent, PrDrawList* list) {
+        PrHtmlView* v = static_cast<PrHtmlView*>(context);
+        prHtmlViewSetViewport(v, extent);
+        prHtmlViewPaint(v, list);
+    };
+    return PrLayoutPainter{.context = view, .paint = paint};
+}
+
 void prHtmlViewPrepare(PrHtmlView* view) {
     PrCssPresentation* presentation = presentationOf(view);
     if (presentation == nullptr || prHtmlPageIsRenderBlocked(view->page))
