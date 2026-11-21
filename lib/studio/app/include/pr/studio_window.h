@@ -145,9 +145,10 @@ typedef struct PrStudioWindowDesc {
     PrAppPopupPlacement popup;
 
     // What the window's swap chain shows. Sdr, the zero value, suits a window whose colors are all in sRGB. Hdr shows
-    // colors outside sRGB's gamut and brighter than SDR white, as a color picker or a wide-gamut image needs. On a
-    // display that can show them, Hdr costs textures of half floats: each image of the swap chain, and a texture of the
-    // window's size that the list renders into.
+    // colors outside sRGB's gamut and brighter than SDR white, as a color picker or a wide-gamut image needs. WideGamut
+    // shows colors outside sRGB's gamut, and maps brighter ones down to SDR white. On a display that can show them, Hdr
+    // and WideGamut cost textures of half floats: each image of the swap chain, and a texture of the window's size that
+    // the list renders into.
     PrGpuSwapChainIntent intent;
 
     PrStudioWindowOpenFn PR_NULLABLE open;

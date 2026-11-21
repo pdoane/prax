@@ -64,6 +64,7 @@ PrStatus openTarget(StudioAppState* app, StudioWindowTarget* target, PrAppWindow
     PrSurface surface{};
     PrGpuSwapChainFlags flags = transparent ? PrGpuSwapChainFlags(PrGpuSwapChainFlag_Transparent) : 0;
     PrGpuSwapChainDesc desc{.intent = intent, .flags = flags};
+    target->intent = intent;
     target->transparent = transparent;
     PrStatus status = prAppWindowSurface(appWindow, &surface);
     if (status == PrStatus_Ok)
@@ -115,9 +116,9 @@ PrGpuTexture renderedFor(StudioAppState* app, StudioWindowTarget& target, PrUVec
     return target.rendered;
 }
 
-// Takes the texels of a frame that the swap chain captured, in the swap chain's format, as 8-bit RGBA with encoded sRGB
-// and premultiplied alpha, and gives them to the window's capture (prGpuCaptureToRgba8). A format that holds no sRGB,
-// as HDR10's, gives no pixels. Called on the device's thread.
+// Receives the texels of a frame that the swap chain captured, in the swap chain's format. Converts them to 8-bit RGBA
+// with encoded sRGB and premultiplied alpha, and passes them to the window's capture callback (prGpuCaptureToRgba8). A
+// format that holds no sRGB, such as the HDR10 format, yields no pixels. Called on the device's thread.
 void captured(void* PR_NULLABLE context, PrPixelView texels, PrGpuFormat format) {
     PrStudioWindow* w = static_cast<PrStudioWindow*>(context);
     PrUVec2 extent = texels.extent;
@@ -174,7 +175,9 @@ void render(StudioAppState* studio, StudioWindowTarget& target, PrDrawList* list
         PrGpuSwapChainInfo info = prGpuSwapChainInfo(target.swapChain);
         PrGpuPassDesc shown = prGpuPassDescColor(frame.color, PrGpuLoad_Discard, PrColor{});
         encoder = prGpuPassBegin(commands, &shown);
-        PrDrawDisplayDesc mapping{.target = info.space, .headroom = display.headroom, .gamut = display.gamut};
+        // Only HDR shows past SDR white.
+        float headroom = target.intent == PrGpuSwapChainIntent_Hdr ? display.headroom : 1;
+        PrDrawDisplayDesc mapping{.target = info.space, .headroom = headroom, .gamut = display.gamut};
         prDrawDisplayDraw(shader, encoder, into, &mapping);
         prGpuPassEnd(encoder);
     }

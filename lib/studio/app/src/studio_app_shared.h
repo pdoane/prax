@@ -72,6 +72,7 @@ struct StudioWindowTarget {
     PrGpuSwapChain* PR_NULLABLE swapChain;
     PrDrawFrame* PR_NULLABLE frame;
     uint32_t generation;
+    PrGpuSwapChainIntent intent;
     bool transparent;
     PrGpuTexture rendered;
 };
