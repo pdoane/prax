@@ -4,9 +4,12 @@
 pr_library(image INCLUDE include
     src/convert.cpp
     src/image.cpp
+    src/image_exif.cpp
     src/image_process.cpp
+    src/image_texture_source.cpp
 )
-target_link_libraries(pr_image PUBLIC prax::core prax::color prax::compress PRIVATE prax::core_cpp)
+target_link_libraries(pr_image PUBLIC prax::core prax::color prax::compress prax::texture
+                               PRIVATE prax::core_cpp)
 
 # What the codecs share: an image's input in memory, the meaning of color code points, and Exif metadata.
 target_sources(pr_image PRIVATE
@@ -22,6 +25,7 @@ pr_backend(image builtin INCLUDE backends/png/include SOURCES
     backends/hdr/src/image_hdr.cpp
     backends/ico/src/image_ico.cpp
     backends/jpeg/src/image_jpeg.cpp
+    backends/ktx/src/image_ktx.cpp
     backends/png/src/image_png.cpp
     backends/tiff/src/image_tiff.cpp
     backends/webp/src/image_webp.cpp
@@ -33,10 +37,11 @@ if (PR_IMAGE_BUILTIN)
     pr_headers(pr_image PUBLIC backends/hdr/include)
     pr_headers(pr_image PUBLIC backends/ico/include)
     pr_headers(pr_image PUBLIC backends/jpeg/include)
+    pr_headers(pr_image PUBLIC backends/ktx/include)
     pr_headers(pr_image PUBLIC backends/tiff/include)
     pr_headers(pr_image PUBLIC backends/webp/include)
-    target_link_libraries(pr_image PRIVATE prax::emjc prax::exr prax::gif prax::hdr prax::ico prax::jpeg prax::png
-                                           prax::tiff prax::webp)
+    target_link_libraries(pr_image PRIVATE prax::emjc prax::exr prax::gif prax::hdr prax::ico prax::jpeg prax::ktx
+                                           prax::png prax::tiff prax::webp)
 endif()
 
 # The codec of Apple's ImageIO, which a program chooses over Prax's own for a format.
@@ -62,14 +67,17 @@ if (PR_DEVELOP)
         backends/hdr/tests/test_image_hdr.cpp
         backends/ico/tests/test_image_ico.cpp
         backends/jpeg/tests/test_image_jpeg.cpp
+        backends/ktx/tests/test_image_ktx.cpp
         backends/png/tests/test_image_png.cpp
         backends/tiff/tests/test_image_tiff.cpp
         backends/webp/tests/test_image_webp.cpp
     )
-    target_link_libraries(image_tests PRIVATE harness_codecs prax::color prax::compress)
+    target_sources(image_tests PRIVATE tests/test_image_texture_source.cpp)
+    target_link_libraries(image_tests PRIVATE harness_codecs prax::color prax::compress prax::compress_select
+                                              prax::gpu prax::image_select prax::texture)
     if (PR_IMAGE_IMAGEIO)
         target_sources(image_tests PRIVATE backends/imageio/tests/test_image_imageio.cpp)
-        target_link_libraries(image_tests PRIVATE prax::compress_select prax::image_select "-framework ImageIO"
-                                                  "-framework CoreGraphics" "-framework CoreFoundation")
+        target_link_libraries(image_tests PRIVATE "-framework ImageIO" "-framework CoreGraphics"
+                                                  "-framework CoreFoundation")
     endif()
 endif()

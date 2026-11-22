@@ -3,6 +3,7 @@
 #include "pr/image_process.h"
 
 #include "pr/assert.h"
+#include "pr/color_space.h"
 #include "pr/float.h"
 #include "pr/float16.h"
 #include "pr/mem.h"
@@ -98,6 +99,105 @@ void blurLine(float* values, uint32_t count, size_t stride, float sigma, PrImage
         values[i * stride] = in[i + uint32_t(pad)];
 }
 
+// The lobes of the resampling filter.
+constexpr float kLobes = 3;
+
+// The filter's weight at `x` source pixels from the sample, at the filter's scale.
+float lanczos(float x) {
+    x = prF32Abs(x);
+    if (x < 1e-6f)
+        return 1;
+    if (x >= kLobes)
+        return 0;
+    float pi = kPrF32Pi * x;
+    return kLobes * prF32Sin(pi) * prF32Sin(pi / kLobes) / (pi * pi);
+}
+
+// The linear value of each 8-bit sRGB code. The values rise with the code, so a search finds the code of a value.
+struct SrgbTable {
+    float linear[256];
+
+    SrgbTable() {
+        for (uint32_t i = 0; i < 256; ++i)
+            linear[i] = prColorTransferDecode(PrColorTransfer_Srgb, float(i) / 255);
+    }
+
+    // Returns the code whose linear value is nearest to `value`.
+    uint8_t encode(float value) const {
+        if (value <= 0)
+            return 0;
+        if (value >= 1)
+            return 255;
+        uint32_t low = 0;
+        uint32_t high = 255;
+        while (high - low > 1) {
+            uint32_t middle = (low + high) / 2;
+            if (linear[middle] <= value)
+                low = middle;
+            else
+                high = middle;
+        }
+        return value - linear[low] <= linear[high] - value ? uint8_t(low) : uint8_t(high);
+    }
+};
+
+const SrgbTable& srgbTable() {
+    static const SrgbTable table;
+    return table;
+}
+
+// The source pixels that one output pixel reads along an axis. They are `count` pixels starting at `first`. `weights`
+// is the index of their first weight.
+struct Taps {
+    uint32_t first;
+    uint32_t count;
+    uint32_t weights;
+};
+
+// Writes the taps and the weights of each of `to` output pixels along an axis of `from` source pixels. The weights of
+// an output pixel sum to one. A tap beyond the edge adds its weight to that of the edge pixel. Returns the greatest
+// number of taps of any output pixel.
+uint32_t tapsOf(uint32_t from, uint32_t to, RawArray<Taps>& taps, RawArray<float>& weights) {
+    float scale = float(from) / float(to);
+    float widen = scale > 1 ? scale : 1;
+    float support = kLobes * widen;
+    uint32_t most = 0;
+    taps.resize(to);
+    for (uint32_t i = 0; i < to; ++i) {
+        float center = (float(i) + 0.5f) * scale;
+        int32_t low = int32_t(prF32Floor(center - support));
+        int32_t high = int32_t(prF32Ceil(center + support));
+        int32_t first = low < 0 ? 0 : low < int32_t(from) ? low : int32_t(from) - 1;
+        int32_t last = high > int32_t(from) ? int32_t(from) : high <= first ? first + 1 : high;
+        Taps& tap = taps.data[i];
+        tap.first = uint32_t(first);
+        tap.count = uint32_t(last - first);
+        tap.weights = weights.count;
+        for (uint32_t k = 0; k < tap.count; ++k)
+            weights.push(0.0f);
+        float sum = 0;
+        for (int32_t j = low; j < high; ++j) {
+            float weight = lanczos((float(j) + 0.5f - center) / widen);
+            int32_t at = j < first ? first : j >= last ? last - 1 : j;
+            weights.data[tap.weights + uint32_t(at - first)] += weight;
+            sum += weight;
+        }
+        // If every weight is zero because the sample lies between pixels, the sample reads its nearest pixel.
+        if (prF32Abs(sum) < 1e-6f) {
+            uint32_t nearest = uint32_t(center) < from ? uint32_t(center) : from - 1;
+            weights.count = tap.weights;
+            tap.first = nearest;
+            tap.count = 1;
+            weights.push(1.0f);
+            sum = 1;
+        }
+        for (uint32_t k = 0; k < tap.count; ++k)
+            weights.data[tap.weights + k] /= sum;
+        most = tap.count > most ? tap.count : most;
+    }
+    return most;
+}
+
 } // namespace
 
 } // namespace pr_impl
@@ -159,6 +259,83 @@ void prImageMipLevel(PrPixelView above, PrPixels out, PrPixelFormat format) {
             }
         }
     }
+}
+
+void prImageResize(PrPixelView source, PrPixels output) {
+    PR_ASSERT(source.extent.x > 0 && source.extent.y > 0 && output.extent.x > 0 && output.extent.y > 0);
+    const SrgbTable& table = srgbTable();
+    RawArray<Taps> across;
+    RawArray<Taps> down;
+    RawArray<float> weights;
+    tapsOf(source.extent.x, output.extent.x, across, weights);
+    uint32_t window = tapsOf(source.extent.y, output.extent.y, down, weights);
+
+    // A ring of source rows, resampled across in premultiplied linear light. Each row is in the slot of its row number
+    // modulo the size of the ring. The rows that an output row reads are consecutive and fit in the ring, and they only
+    // move down.
+    uint32_t width = output.extent.x * 4;
+    RawArray<float> ring;
+    RawArray<int64_t> held;
+    RawArray<float> line;
+    ring.resize(uint32_t(size_t(window) * width));
+    held.resize(window);
+    line.resize(uint32_t(size_t(source.extent.x) * 4));
+    for (uint32_t i = 0; i < window; ++i)
+        held.data[i] = -1;
+    RawArray<float> sum;
+    sum.resize(width);
+
+    for (uint32_t y = 0; y < output.extent.y; ++y) {
+        const Taps& vertical = down.data[y];
+        for (uint32_t k = 0; k < width; ++k)
+            sum.data[k] = 0;
+        for (uint32_t t = 0; t < vertical.count; ++t) {
+            uint32_t row = vertical.first + t;
+            float* resampled = ring.data + size_t(row % window) * width;
+            if (held.data[row % window] != int64_t(row)) {
+                held.data[row % window] = row;
+                const uint8_t* in = source.data + size_t(row) * source.stride;
+                for (uint32_t x = 0; x < source.extent.x; ++x) {
+                    float alpha = float(in[x * 4 + 3]) / 255;
+                    line.data[x * 4 + 0] = table.linear[in[x * 4 + 0]] * alpha;
+                    line.data[x * 4 + 1] = table.linear[in[x * 4 + 1]] * alpha;
+                    line.data[x * 4 + 2] = table.linear[in[x * 4 + 2]] * alpha;
+                    line.data[x * 4 + 3] = alpha;
+                }
+                for (uint32_t x = 0; x < output.extent.x; ++x) {
+                    const Taps& horizontal = across.data[x];
+                    float pixel[4] = {0, 0, 0, 0};
+                    for (uint32_t h = 0; h < horizontal.count; ++h) {
+                        float weight = weights.data[horizontal.weights + h];
+                        const float* from = line.data + size_t(horizontal.first + h) * 4;
+                        for (uint32_t c = 0; c < 4; ++c)
+                            pixel[c] += from[c] * weight;
+                    }
+                    for (uint32_t c = 0; c < 4; ++c)
+                        resampled[x * 4 + c] = pixel[c];
+                }
+            }
+            float weight = weights.data[vertical.weights + t];
+            for (uint32_t k = 0; k < width; ++k)
+                sum.data[k] += resampled[k] * weight;
+        }
+        uint8_t* out = output.data + size_t(y) * output.stride;
+        for (uint32_t x = 0; x < output.extent.x; ++x) {
+            const float* pixel = sum.data + size_t(x) * 4;
+            float alpha = prF32Clamp(pixel[3], 0, 1);
+            float divide = alpha > 0 ? 1 / alpha : 0;
+            for (uint32_t c = 0; c < 3; ++c)
+                out[x * 4 + c] = table.encode(pixel[c] * divide);
+            out[x * 4 + 3] = uint8_t(alpha * 255 + 0.5f);
+        }
+    }
+    sum.reset();
+    line.reset();
+    held.reset();
+    ring.reset();
+    weights.reset();
+    down.reset();
+    across.reset();
 }
 
 void prImageNoise(float seed, PrImageNoise* out) {

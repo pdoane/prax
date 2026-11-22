@@ -52,12 +52,11 @@ a 3D renderer needs it.
   resources only through slots: a few buffers and textures of each kind that the command buffer binds before a draw.
   A shader source declares its slots with literal numbers. Every entry point of a source has every slot that the
   source declares, and a draw binds them all, so entry points that should not share slots are separate sources.
-- **Lifetimes need no thought.** A buffer, a texture and a pipeline are reference counted: each holder takes a
-  reference of its own (`prGpuTextureRetain`), and the release of the last destroys the resource. A graph holds what it
-  imports for the frame. So a library that holds a resource of its caller's needs no promise about when its caller is
-  done with it. A resource may be released
-  as soon as the work that uses it is recorded. The device keeps it until every command buffer that began before the
-  destruction is done.
+- **Lifetimes need no thought.** A buffer, a texture and a pipeline are reference counted: each holder takes a reference
+  of its own (`prGpuTextureRetain`), and the release of the last destroys the resource. A graph holds what it imports
+  for the frame, and lib/draw holds a host's texture while a frame draws it. So a library that holds a resource of its
+  caller's needs no promise about when its caller is done with it. A resource may be released as soon as the work that
+  uses it is recorded. The device keeps it until every command buffer that began before the destruction is done.
 - **One timeline.** Each submission returns a fence, and fences rise in the order of submission. A command buffer that
   records into the application's native one is submitted through the device too, so the application never signals anything.
 - **Uploads are unbounded and ordered.** `prGpuBufferUpload` and `prGpuTextureUpload` take any amount of
@@ -69,6 +68,7 @@ a 3D renderer needs it.
   every API lays out a cube map. An upload, a copy, a barrier and an attachment each name the levels and layers that
   they touch, and a view (`prGpuTextureCreateView`) is a texture of its own over some of them: one face of one level
   as a 2D texture to read back, or one level of every face as a cube to sample while a pass draws to the next level.
+  A view may also read the texture through the other sRGB form of its format ([Format views](#format-views)).
 - **The stream always succeeds.** A command buffer allocates per-frame data from a stream of upload memory that is
   reclaimed once its work completes, and grows as recording needs it. Running out of memory loses the device, which
   hosts already handle.
@@ -137,12 +137,52 @@ puts one together. A swizzled format is of the family and the block of the forma
 | Direct3D 12 | always: the shader resource view's component mapping |
 | Direct3D 11, WebGPU, memory, Canvas 2D | never |
 
+## Format views
+
+The Srgb form and the plain form of a format store the same bits. They differ only in whether a shader reads the bits
+through the sRGB transfer function. A view (`PrGpuTextureViewDesc::format`) reads a texture through either form. One
+texture can therefore serve a consumer that wants linear values, such as a material's color, and a consumer that wants
+the values as stored, such as lib/draw's encoded colors. A view's format is None for the texture's own format, or the
+other sRGB form of that format (`prGpuFormatSrgb`, `prGpuFormatPlain`). Any other format is a caller's error.
+
+A view is a texture in its own right (`prGpuTextureCreateView`). On a device with bindless, the view's id is the handle
+that a shader samples the view through. The view binds to a slot as any texture does, and its description reports its
+format. The view shares the texture's memory. It may outlive the release of the texture, and it keeps the memory alive,
+so a consumer that holds only the view still reads valid texels.
+
+A texture that is viewed through its other form is created with `PrGpuTextureUsageFlag_SrgbViews`. Several APIs decide
+at creation whether a texture may be read as another format, and on some devices such a texture loses the compression of
+its memory. `prGpuDeviceSupportsFormat` with the flag reports whether the device creates such a texture of a format. The
+format must have both forms, the device must support both, and the device must support views through the other form.
+Otherwise `prGpuDeviceSupportsFormat` returns false, and `prGpuTextureCreate` returns NotSupported for the flag. Every
+compressed family of color has both forms, and so do Rgba8 and Bgra8. R8 and Rg8 have Srgb forms (`R8Srgb`, `Rg8Srgb`)
+on Apple GPUs under Metal and on Vulkan devices that report them. They have no Srgb forms on Direct3D or WebGPU.
+
+| backend | at creation | the view |
+| --- | --- | --- |
+| Metal and Metal 4 | nothing: a texture is read through its other sRGB form without `MTLTextureUsagePixelFormatView` | `newTextureViewWithPixelFormat:` |
+| Vulkan | `VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT`, with the two forms as the image's format list (`VkImageFormatListCreateInfo`), so that a driver keeps the compression that it can | an image view of the other form |
+| Direct3D 12 | the two forms as the resource's castable formats, on a device with relaxed format casting (`RelaxedFormatCastingSupported`). The resource creation functions of enhanced barriers take the castable formats | a shader resource view of the other form |
+| Direct3D 11 | the format family's typeless form | a shader resource view of the typed form |
+| WebGPU | the other form in `viewFormats`. WebGPU allows only the other sRGB form of the format there | `createView` with the other form |
+| memory | nothing | the same texels, read through the other form |
+| Canvas 2D | not supported, because it has no shaders | — |
+
+**Levels follow the texture's own form.** `prGpuCommandsGenerateMipmaps` renders each level through the format that the
+texture was created with, whichever form a shader later samples the texture through. A texture created in the Srgb form
+averages in linear light. A texture created in the plain form averages the values as stored. A texture that serves both
+linear color and encoded color is created in its Srgb form, so that its levels are correct for color.
+
 ## Texture records
 
 A texture's description also packs into 64 bits with no pointer (`PrGpuTextureRecord`): its layout, kind, format, extent
 and levels, to store ahead of the texture's bytes, in a file or in a table that says what every texture of a scene is
 before any is read. `prGpuTextureRecordBytes` gives the bytes of its levels in a layout that a file stores. `lib/gpu`
-knows nothing of image files.
+knows nothing of image files. `lib/texture` describes a source's bits before any is read (`prTextureSourceDesc`,
+[texture.md](texture.md)). The description is in the GPU format that the source's chain ends in, and it fills a record.
+`lib/ktx` reports how many bytes from the start of a KTX 2.0 file describe the file's texture (`prKtxInfoBytes`): the
+first 80 bytes, and the parts before the level data that those bytes locate. A caller therefore fetches only the head of
+a file to learn what its texture is.
 
 ## Shaders
 
@@ -323,12 +363,21 @@ barriers itself, as `lib/draw` does. `lib/render` adds the passes of its views t
 `gpu_tests` runs every test on each backend that the build has and the system has a device for, with validation, and
 again on a device of slots only where the backend creates one. It uploads and copies blocks of every compressed format
 that a device has, samples them, and compares each texel with what the format's specification decodes. It tests each
-backend's embedding with the same shaders: recording into the application's command buffers and drawing in its
-passes. It runs under Metal's API validation, which it turns on with `MTL_DEBUG_LAYER` unless the environment sets it,
-and tests a window's swap chain on Vulkan and a view's on Metal. The renderers'
-tests compare their images with the `cpu` backend's ([draw.md](draw.md)), on the backend that `PR_BACKEND_GPU` chooses.
-On the web, `gpu_page_tests` runs the same tests in a page, on its WebGPU (`./dev.sh test wasm`), and any error of
-WebGPU's validation fails them. A page test waits for the device as a test does anywhere, because its program suspends
-while the page works (JSPI, `pr_page_tests`).
-`PR_D3D12_DEBUG=1` and `PR_VULKAN_DEBUG=1` turn on Direct3D 12's debug layer and Vulkan's validation layer for a device
-that is made without asking for validation, and write their errors to the standard error.
+backend's embedding with the same shaders: recording into the application's command buffers and drawing in its passes.
+It runs under Metal's API validation, which it turns on with `MTL_DEBUG_LAYER` unless the environment sets it, and tests
+a window's swap chain on Vulkan and a view's on Metal. The renderers' tests compare their images with the `cpu`
+backend's ([draw.md](draw.md)), on the backend that `PR_BACKEND_GPU` chooses. On the web, `gpu_page_tests` runs
+the same tests in a page, on its WebGPU (`./dev.sh test wasm`), and any error of WebGPU's validation fails them. A page
+test waits for the device as a test does anywhere, because its program suspends while the page works (JSPI,
+`pr_page_tests`). `PR_D3D12_DEBUG=1` and `PR_VULKAN_DEBUG=1` turn on Direct3D 12's debug layer and
+Vulkan's validation layer for a device that is made without asking for validation, and write their errors to the
+standard error.
+
+On macOS, the Vulkan backend runs on KosmicKrisp, Mesa's Vulkan driver over Metal.
+
+- **A wait for a fence ends if the device is lost.** The backend waits in slices and reads the timeline between slices,
+  so a loss that the driver reports only through the timeline ends the wait. Once a wait passes ten seconds, a
+  validating device writes the fence and the value that the timeline has reached. A timeline that stands still below a
+  submitted fence, with no device loss, means that the driver dropped work that it accepted.
+- **The device renders nothing under `MTL_SHADER_VALIDATION=1`.** Every texture reads back as zeros. The tests that
+  compare pixels therefore fail on Vulkan under that variable, and only under it.

@@ -35,11 +35,12 @@ PrJpegLimits prJpegLimitsDefault(void);
 
 // A JPEG image, as its frame header and its segments describe it. The decoded pixels are interleaved 8-bit samples of
 // `components`: gray, RGB, or CMYK, which an Adobe segment's transform turns from YCbCr or YCCK. The views are of the
-// file's bytes.
+// file's bytes, but for a profile in more than one segment, which the decoder joins and holds.
 typedef struct PrJpegInfo {
     PrUVec2 extent;
     uint32_t components;    // 1, 3 or 4
     PrByteView exif;        // the Exif data of an APP1 segment, a TIFF structure, or empty
+    PrByteView profile;     // the ICC profile of the APP2 segments that carry it, joined in their order, or empty
     PrVec2 pixelsPerMeter;  // the JFIF segment's density, or zero if it gives an aspect ratio alone
     uint64_t workingBytes;  // the most bytes that the decoder holds, including those its caller holds for it
 } PrJpegInfo;
@@ -62,8 +63,20 @@ void prJpegDecoderDestroy(PrJpegDecoder* PR_NULLABLE decoder);
 // Returns what the decoder's image is.
 const PrJpegInfo* prJpegDecoderInfo(const PrJpegDecoder* decoder);
 
-// Decodes the image into `output`, of its extent. Returns InvalidData if it does not decode.
-PrStatus prJpegDecoderRead(PrJpegDecoder* decoder, PrPixels output);
+// The number of reductions that a decoder offers. Reduction `r` divides the image's extent by 2 to the power `r`,
+// rounded up. Reduction 0 is the whole image, and reduction 3 is an eighth of it.
+enum { kPrJpegReductionCount = 4 };
+
+// Returns the extent of an image of `extent` decoded at `reduction`.
+PrUVec2 prJpegReducedExtent(PrUVec2 extent, uint32_t reduction);
+
+// Decodes the image at `reduction` into `output`, which has the extent that prJpegReducedExtent returns.
+//
+// A reduced decode transforms only the lowest frequencies of each block, at the block's reduced size (T.81 A.3.3). At
+// an eighth, it takes only the block's average, so the decode costs little more than the entropy decoding.
+//
+// Returns InvalidData if the image does not decode.
+PrStatus prJpegDecoderRead(PrJpegDecoder* decoder, uint32_t reduction, PrPixels output);
 
 #if defined(__cplusplus)
 }

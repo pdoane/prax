@@ -38,6 +38,7 @@ uint32_t sampleBytes(PrImageSample sample) {
         case PrImageSample_F16:
             return 2;
         case PrImageSample_F32:
+        case PrImageSample_U32:
             return 4;
         default:
             return 0;
@@ -90,6 +91,11 @@ double readSample(const uint8_t* source, PrImageSample sample) {
         prMemCopy(&value, source, sizeof(value));
         return double(value);
     }
+    if (sample == PrImageSample_U32) {
+        uint32_t value = 0;
+        prMemCopy(&value, source, sizeof(value));
+        return value / 4294967295.0;
+    }
     uint16_t value = 0;
     prMemCopy(&value, source, sizeof(value));
     if (sample == PrImageSample_U16) {
@@ -119,6 +125,11 @@ void writeSample(uint8_t* out, PrImageSample sample, double value) {
     }
     if (sample == PrImageSample_U16) {
         const uint16_t converted = uint16_t(clampUnit(value) * 65535.0 + 0.5);
+        prMemCopy(out, &converted, sizeof(converted));
+        return;
+    }
+    if (sample == PrImageSample_U32) {
+        const uint32_t converted = uint32_t(clampUnit(value) * 4294967295.0 + 0.5);
         prMemCopy(out, &converted, sizeof(converted));
         return;
     }

@@ -1,4 +1,6 @@
+#include "pr/array.h"
 #include "pr/jpeg.h"
+#include "pr/string.h"
 
 #include "tools/harness/test.h"
 
@@ -76,7 +78,7 @@ TEST_CASE("a gray baseline image decodes to its samples, one channel a pixel") {
     CHECK(info->exif.size == 0);
     CHECK(info->workingBytes >= sizeof(kGray8x8BaselineBytes));
     uint8_t out[8 * 10] = {};
-    REQUIRE(prJpegDecoderRead(decoder, PrPixels{.data = out, .stride = 10, .extent = PrUVec2{8, 8}}) == PrStatus_Ok);
+    REQUIRE(prJpegDecoderRead(decoder, 0, PrPixels{.data = out, .stride = 10, .extent = PrUVec2{8, 8}}) == PrStatus_Ok);
     for (uint32_t y = 0; y < 8; ++y) {
         for (uint32_t x = 0; x < 8; ++x)
             CHECK(out[y * 10 + x] == kGray8x8BaselinePixels[(y * 8 + x) * 4]);
@@ -104,4 +106,49 @@ TEST_CASE("a file cut before its scans end is truncated") {
 
 TEST_CASE("the public header compiles as C") {
     CHECK(prTestJpegCApi() == 0);
+}
+
+TEST_CASE("an ICC profile split across APP2 segments is joined in chunk order, and inconsistent chunks give no profile") {
+    // Returns the gray image with an APP2 segment for each chunk after SOI. Each segment holds the number, the count
+    // and the bytes of its chunk.
+    struct Chunk {
+        uint8_t number;
+        uint8_t count;
+        const char* bytes;
+    };
+    auto withChunks = [](const Chunk* chunks, uint32_t n) {
+        Array<uint8_t> out;
+        out.append(kGray8x8BaselineBytes, 2);
+        for (uint32_t i = 0; i < n; ++i) {
+            size_t size = 0;
+            while (chunks[i].bytes[size] != 0)
+                ++size;
+            uint32_t length = uint32_t(2 + 12 + 2 + size);
+            const uint8_t head[] = {0xFF, 0xE2, uint8_t(length >> 8), uint8_t(length)};
+            out.append(head, 4);
+            out.append(reinterpret_cast<const uint8_t*>("ICC_PROFILE"), 12);
+            out.push(chunks[i].number);
+            out.push(chunks[i].count);
+            out.append(reinterpret_cast<const uint8_t*>(chunks[i].bytes), uint32_t(size));
+        }
+        out.append(kGray8x8BaselineBytes + 2, uint32_t(sizeof(kGray8x8BaselineBytes) - 2));
+        return out;
+    };
+    auto profileOf = [](const Array<uint8_t>& bytes) {
+        PrJpegDecoder* decoder = nullptr;
+        REQUIRE(prJpegDecoderCreate(PrByteView{bytes.data(), bytes.count()}, nullptr, bytes.count(), &decoder) ==
+            PrStatus_Ok);
+        PrByteView profile = prJpegDecoderInfo(decoder)->profile;
+        String text(PrStringView{reinterpret_cast<const char*>(profile.data), profile.size});
+        prJpegDecoderDestroy(decoder);
+        return text;
+    };
+    const Chunk split[] = {{2, 2, "world"}, {1, 2, "hello "}};
+    CHECK(profileOf(withChunks(split, 2)) == "hello world");
+    const Chunk whole[] = {{1, 1, "whole"}};
+    CHECK(profileOf(withChunks(whole, 1)) == "whole");
+    const Chunk missing[] = {{1, 3, "a"}, {3, 3, "c"}};
+    CHECK(profileOf(withChunks(missing, 2)).isEmpty());
+    const Chunk differing[] = {{1, 2, "a"}, {2, 3, "b"}};
+    CHECK(profileOf(withChunks(differing, 2)).isEmpty());
 }

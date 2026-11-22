@@ -11,6 +11,7 @@
 #include "pr/image_hdr.h"
 #include "pr/image_ico.h"
 #include "pr/image_jpeg.h"
+#include "pr/image_ktx.h"
 #include "pr/image_png.h"
 #include "pr/image_tiff.h"
 #include "pr/image_webp.h"
@@ -46,6 +47,7 @@ enum {
     ImageKind_Tiff,
     ImageKind_Hdr,
     ImageKind_Exr,
+    ImageKind_Ktx,
     ImageKind_Emjc,
 };
 typedef uint8_t ImageKind;
@@ -57,7 +59,7 @@ struct ImageSelectFormat {
     PrBackendInterface interface;
 };
 
-// The formats, in the order of a set of every format. ImageIO does not decode EMJC.
+// The formats, in the order that a set of every format holds them. ImageIO does not decode KTX 2.0 or EMJC.
 constexpr ImageSelectFormat kFormats[] = {
     {"image/png", ImageKind_Png, {.name = "image_png", .names = kNames, .count = 3, .built = kWithImageio}},
     {"image/jpeg", ImageKind_Jpeg, {.name = "image_jpeg", .names = kNames, .count = 3, .built = kWithImageio}},
@@ -67,6 +69,7 @@ constexpr ImageSelectFormat kFormats[] = {
     {"image/tiff", ImageKind_Tiff, {.name = "image_tiff", .names = kNames, .count = 3, .built = kWithImageio}},
     {"image/vnd.radiance", ImageKind_Hdr, {.name = "image_hdr", .names = kNames, .count = 3, .built = kWithImageio}},
     {"image/x-exr", ImageKind_Exr, {.name = "image_exr", .names = kNames, .count = 3, .built = kWithImageio}},
+    {"image/ktx2", ImageKind_Ktx, {.name = "image_ktx", .names = kNames, .count = 3, .built = kBuiltin}},
     {"image/x-emjc", ImageKind_Emjc, {.name = "image_emjc", .names = kNames, .count = 3, .built = kBuiltin}},
 };
 
@@ -89,6 +92,7 @@ PrImageCodec* PR_NULLABLE createBuiltin(ImageKind kind, const PrCompressCodecSet
         case ImageKind_Tiff: return prImageTiffCreate();
         case ImageKind_Hdr: return prImageHdrCreate();
         case ImageKind_Exr: return prImageExrCreate(compress);
+        case ImageKind_Ktx: return prImageKtxCreate(compress);
         case ImageKind_Emjc: return prImageEmjcCreate(compress);
     }
     PR_ASSERT(false && "a format of kFormats");

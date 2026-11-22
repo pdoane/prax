@@ -181,6 +181,14 @@ pr_dependency(brotli
     SOURCE_SUBDIR none
 )
 
+# Basis Universal 1.50.0.2, the reference transcoder and encoder for the ETC1S and UASTC textures of KTX 2.0 files.
+# tools/suite/basis compares the decoders of lib/basis with it.
+pr_dependency(basis_universal
+    URL https://github.com/BinomialLLC/basis_universal/archive/refs/tags/v1_50_0_2.tar.gz
+    URL_HASH SHA256=0ef344cc7e3373ca9c15de2bd80512ea4ea17e09ed895febdf9e70f6c789bc27
+    SOURCE_SUBDIR none
+)
+
 # libwebp v1.6.0, the reference WebP codec: its decoders, which tools/suite/webp compares lib/webp's decoder with,
 # and its encoders, which write the images of each feature that the comparison decodes.
 pr_dependency(libwebp

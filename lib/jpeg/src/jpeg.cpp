@@ -4,6 +4,7 @@
 
 #include "pr/alloc.h"
 #include "pr/assert.h"
+#include "pr/float.h"
 #include "pr/mem.h"
 #include "pr/memory.h"
 
@@ -48,6 +49,13 @@ struct Component {
     uint32_t downsampledWidth;
     uint32_t downsampledHeight;
     int32_t dcPrediction;
+
+    // The size at which the inverse transform writes each block of the component, across and down. It is the block size
+    // of the decode, scaled up by the subsampling of the component as far as a whole block. A reduction then decodes a
+    // subsampled component at as much of the resolution of the frame as its blocks hold.
+    uint32_t blockWidth;
+    uint32_t blockHeight;
+
     uint8_t id;
     uint8_t h;
     uint8_t v;
@@ -74,7 +82,19 @@ struct Jpeg {
     int32_t adobeTransform;
     bool progressive;
     bool frame;
+
+    // The size at which the inverse transform writes each block: 8 for the full extent, down to 1 at an eighth. The
+    // extent that the decode writes is the extent of the frame at that scale.
+    uint32_t blockSize;
+    uint32_t outWidth;
+    uint32_t outHeight;
 };
+
+// Returns the number of samples that `length` samples become when each block of 8 samples is written as `blockSize`
+// samples, rounded up.
+uint32_t scaled(uint32_t length, uint32_t blockSize) {
+    return uint32_t((uint64_t(length) * blockSize + 7) / 8);
+}
 
 // The entropy-coded bit stream of one scan. Bytes are read through the 0xFF00 stuffing that the format inserts. If the
 // data stops, at a marker or at the end of the input, the fill supplies zero bits so that every read terminates.
@@ -608,13 +628,78 @@ void inverseTransform(const int16_t* block, const uint16_t* quant, uint8_t* out,
     }
 }
 
+// The basis of a reduced inverse transform of `size` samples to a block. The entry at [x][u] is half the normalization
+// of frequency u times the cosine of that frequency at sample x. Frequency u of the 8-point transform, sampled at the
+// centers of the `size` samples of a block, is the cosine of (2x + 1)uπ / 2·size. The reduced block is therefore the
+// reconstruction of the full block at those points (T.81 A.3.3).
+struct ReducedBasis {
+    float weights[8][8];
+
+    explicit ReducedBasis(uint32_t size) {
+        for (uint32_t x = 0; x < size; ++x) {
+            for (uint32_t u = 0; u < size; ++u) {
+                float normal = u == 0 ? 0.70710678f : 1.0f;
+                weights[x][u] = 0.5f * normal * prF32Cos(float(2 * x + 1) * float(u) * kPrF32Pi / float(2 * size));
+            }
+        }
+    }
+};
+
+// Converts the lowest `width` by `height` frequencies of the dequantized block to `width` by `height` samples, and
+// applies the level shift of the format. A block of one sample is the average of the block.
+void reducedTransform(const int16_t* block, const uint16_t* quant, const ReducedBasis& across, const ReducedBasis& down,
+        uint32_t width, uint32_t height, uint8_t* out, size_t stride) {
+    if (width == 1 && height == 1) {
+        out[0] = clampSample(descale(int64_t(block[0]) * quant[0], 3) + 128);
+        return;
+    }
+    // The pass over the rows of frequencies writes, for each row v, its sum at each sample x.
+    float rows[8][8];
+    for (uint32_t v = 0; v < height; ++v) {
+        for (uint32_t x = 0; x < width; ++x) {
+            float sum = 0;
+            for (uint32_t u = 0; u < width; ++u)
+                sum += across.weights[x][u] * float(int32_t(block[v * 8 + u]) * int32_t(quant[v * 8 + u]));
+            rows[v][x] = sum;
+        }
+    }
+    for (uint32_t y = 0; y < height; ++y) {
+        uint8_t* line = out + size_t(y) * stride;
+        for (uint32_t x = 0; x < width; ++x) {
+            float sum = 0;
+            for (uint32_t v = 0; v < height; ++v)
+                sum += down.weights[y][v] * rows[v][x];
+            line[x] = clampSample(int64_t(prF32Round(sum)) + 128);
+        }
+    }
+}
+
+// Returns the size at which a component writes its blocks along one axis. `factor` is the sampling factor of the
+// component on that axis, `largest` is the largest factor on that axis, and `blockSize` is the block size of the
+// decode. The size is finer than `blockSize` by as much as the component is subsampled, up to a whole block. A factor
+// that does not divide `largest` keeps `blockSize`.
+uint32_t componentBlockSize(uint32_t blockSize, uint32_t factor, uint32_t largest) {
+    if (largest % factor != 0)
+        return blockSize;
+    uint32_t size = blockSize * (largest / factor);
+    return size < 8 ? size : 8;
+}
+
 void transformComponent(const Jpeg& jpeg, Component& component) {
-    const size_t stride = size_t(component.blocksPerLineForMcu) * 8;
+    const uint32_t width = component.blockWidth;
+    const uint32_t height = component.blockHeight;
+    const size_t stride = size_t(component.blocksPerLineForMcu) * width;
+    const bool full = width == 8 && height == 8;
+    const ReducedBasis across(full ? 0 : width);
+    const ReducedBasis down(full ? 0 : height);
     for (uint32_t row = 0; row < component.blocksPerColumnForMcu; ++row) {
         for (uint32_t column = 0; column < component.blocksPerLineForMcu; ++column) {
             const int16_t* block = blockAt(component, row, column);
-            uint8_t* out = component.samples + size_t(row) * 8 * stride + size_t(column) * 8;
-            inverseTransform(block, jpeg.quant[component.quantIndex], out, stride);
+            uint8_t* out = component.samples + size_t(row) * height * stride + size_t(column) * width;
+            if (full)
+                inverseTransform(block, jpeg.quant[component.quantIndex], out, stride);
+            else
+                reducedTransform(block, jpeg.quant[component.quantIndex], across, down, width, height, out, stride);
         }
     }
 }
@@ -624,19 +709,25 @@ void transformComponent(const Jpeg& jpeg, Component& component) {
 // and one. Each pair of output columns mixes the two nearest sums the same way. Any other ratio repeats the nearest
 // sample. At the frame edge, the edge row and column repeat, which leaves the outermost samples unmixed.
 void upsampleRow(const Component& component, const Jpeg& jpeg, uint32_t y, uint8_t* out) {
-    const size_t stride = size_t(component.blocksPerLineForMcu) * 8;
-    const uint32_t sourceWidth = component.downsampledWidth;
-    const uint32_t lastRow = component.downsampledHeight - 1;
-    const bool halfWidth = component.h * 2 == jpeg.maxH;
-    const bool halfHeight = component.v * 2 == jpeg.maxV;
-    const bool fullWidth = component.h == jpeg.maxH;
-    const bool fullHeight = component.v == jpeg.maxV;
+    const size_t stride = size_t(component.blocksPerLineForMcu) * component.blockWidth;
+    const uint32_t sourceWidth = scaled(component.downsampledWidth, component.blockWidth);
+    const uint32_t lastRow = scaled(component.downsampledHeight, component.blockHeight) - 1;
+    const uint32_t width = jpeg.outWidth;
+    // The component's samples to the output's, across and down, as fractions.
+    const uint32_t acrossSamples = component.h * component.blockWidth;
+    const uint32_t acrossOutput = jpeg.maxH * jpeg.blockSize;
+    const uint32_t downSamples = component.v * component.blockHeight;
+    const uint32_t downOutput = jpeg.maxV * jpeg.blockSize;
+    const bool halfWidth = acrossSamples * 2 == acrossOutput;
+    const bool halfHeight = downSamples * 2 == downOutput;
+    const bool fullWidth = acrossSamples == acrossOutput;
+    const bool fullHeight = downSamples == downOutput;
 
     if (!(fullWidth || halfWidth) || !(fullHeight || halfHeight)) {
-        const uint32_t row = uint32_t(uint64_t(y) * component.v / jpeg.maxV);
+        const uint32_t row = uint32_t(uint64_t(y) * downSamples / downOutput);
         const uint8_t* line = component.samples + size_t(row < lastRow ? row : lastRow) * stride;
-        for (uint32_t x = 0; x < jpeg.width; ++x) {
-            const uint32_t source = uint32_t(uint64_t(x) * component.h / jpeg.maxH);
+        for (uint32_t x = 0; x < width; ++x) {
+            const uint32_t source = uint32_t(uint64_t(x) * acrossSamples / acrossOutput);
             out[x] = line[source < sourceWidth ? source : sourceWidth - 1];
         }
         return;
@@ -661,7 +752,7 @@ void upsampleRow(const Component& component, const Jpeg& jpeg, uint32_t y, uint8
     // to the plane.
     if (!halfWidth) {
         const uint32_t bias = halfHeight && (y & 1) == 0 ? 1 : 2;
-        for (uint32_t x = 0; x < jpeg.width; ++x) {
+        for (uint32_t x = 0; x < width; ++x) {
             const uint32_t source = x < sourceWidth ? x : sourceWidth - 1;
             out[x] = uint8_t((nearLine[source] * nearWeight + farLine[source] * farWeight + bias) >> 2);
         }
@@ -672,9 +763,9 @@ void upsampleRow(const Component& component, const Jpeg& jpeg, uint32_t y, uint8
     uint32_t current = nearLine[0] * nearWeight + farLine[0] * farWeight;
     uint32_t previous = current;
     uint32_t next = sourceWidth > 1 ? nearLine[1] * nearWeight + farLine[1] * farWeight : current;
-    for (uint32_t x = 0; x < sourceWidth && x * 2 < jpeg.width; ++x) {
+    for (uint32_t x = 0; x < sourceWidth && x * 2 < width; ++x) {
         out[x * 2] = uint8_t((current * 3 + previous + leftBias) >> 4);
-        if (x * 2 + 1 < jpeg.width) {
+        if (x * 2 + 1 < width) {
             out[x * 2 + 1] = uint8_t((current * 3 + next + rightBias) >> 4);
         }
         previous = current;
@@ -710,7 +801,7 @@ bool componentsAreRgb(const Jpeg& jpeg) {
 
 // Writes canonical native rows, upsampling each component to full resolution.
 void writePixels(const Jpeg& jpeg, uint8_t* pixels) {
-    size_t rowSize = size_t(jpeg.width) + 8;
+    size_t rowSize = size_t(jpeg.outWidth) + 8;
     uint8_t* storage = static_cast<uint8_t*>(prMemoryAlloc(rowSize * jpeg.componentCount));
     uint8_t* rows[kMaxComponents] = {};
     for (uint32_t index = 0; index < jpeg.componentCount; ++index) {
@@ -719,12 +810,12 @@ void writePixels(const Jpeg& jpeg, uint8_t* pixels) {
     const bool rgb = jpeg.componentCount == 3 && componentsAreRgb(jpeg);
     const bool ycck = jpeg.componentCount == 4 && jpeg.adobeTransform == 2;
     const bool inverted = jpeg.componentCount == 4 && jpeg.adobeTransform >= 0;
-    for (uint32_t y = 0; y < jpeg.height; ++y) {
+    for (uint32_t y = 0; y < jpeg.outHeight; ++y) {
         for (uint32_t index = 0; index < jpeg.componentCount; ++index) {
             upsampleRow(jpeg.components[index], jpeg, y, rows[index]);
         }
-        uint8_t* out = pixels + size_t(y) * jpeg.width * jpeg.componentCount;
-        for (uint32_t x = 0; x < jpeg.width; ++x) {
+        uint8_t* out = pixels + size_t(y) * jpeg.outWidth * jpeg.componentCount;
+        for (uint32_t x = 0; x < jpeg.outWidth; ++x) {
             uint8_t* pixel = out + size_t(x) * jpeg.componentCount;
             if (jpeg.componentCount == 4) {
                 if (ycck) {
@@ -966,6 +1057,51 @@ bool hasSegment(uint8_t marker) {
     return marker != 0x00 && marker != 0x01 && !(marker >= 0xD0 && marker <= 0xD9);
 }
 
+// The largest number of chunks that an ICC profile is split into. The number of a chunk is one byte.
+constexpr uint32_t kMaxProfileChunks = 255;
+
+// Writes the chunks of the ICC profile in the APP2 segments of `bytes` to `chunks`, indexed by their numbers from 1,
+// and returns their count. Returns zero if the image has no profile or if its chunks do not agree: a count that differs
+// between chunks, a number that is past the count or appears twice, or a number that is missing (ICC.1:2022 B.4).
+uint32_t profileChunks(PrByteView bytes, PrByteView chunks[PR_NONNULL kMaxProfileChunks + 1]) {
+    const uint8_t tag[12] = {'I', 'C', 'C', '_', 'P', 'R', 'O', 'F', 'I', 'L', 'E', 0};
+    uint32_t total = 0;
+    uint32_t seen = 0;
+    for (uint32_t i = 0; i <= kMaxProfileChunks; ++i)
+        chunks[i] = PrByteView{};
+    size_t at = 2;
+    while (at + 4 <= bytes.size) {
+        if (bytes.data[at] != 0xFF) {
+            at += 1;
+            continue;
+        }
+        const uint8_t marker = bytes.data[at + 1];
+        at += 2;
+        if (marker == 0xDA || marker == 0xD9)
+            break;
+        if (!hasSegment(marker))
+            continue;
+        if (at + 2 > bytes.size)
+            break;
+        const uint32_t length = prMemReadBeU16(bytes.data + at);
+        if (length < 2 || size_t(length) > bytes.size - at)
+            break;
+        const uint8_t* segment = bytes.data + at + 2;
+        uint32_t size = length - 2;
+        if (marker == 0xE2 && size > sizeof(tag) + 2 && prMemEquals(segment, tag, sizeof(tag))) {
+            uint32_t number = segment[sizeof(tag)];
+            uint32_t count = segment[sizeof(tag) + 1];
+            if (count == 0 || number == 0 || number > count || (total != 0 && count != total) || chunks[number].data != nullptr)
+                return 0;
+            total = count;
+            chunks[number] = PrByteView{segment + sizeof(tag) + 2, size - sizeof(tag) - 2};
+            seen += 1;
+        }
+        at += length;
+    }
+    return total != 0 && seen == total ? total : 0;
+}
+
 bool decode(Jpeg& jpeg, const uint8_t* bytes, size_t size, uint8_t* pixels, size_t pixelsSize) {
     size_t at = 2;
     bool scanned = false;
@@ -999,8 +1135,17 @@ bool decode(Jpeg& jpeg, const uint8_t* bytes, size_t size, uint8_t* pixels, size
         const uint32_t segmentSize = length - 2;
         at += length;
         if (marker == 0xC0 || marker == 0xC1 || marker == 0xC2) {
-            if (!readFrame(jpeg, segment, segmentSize, marker) ||
-                    uint64_t(jpeg.width) * uint64_t(jpeg.height) * jpeg.componentCount != uint64_t(pixelsSize) ||
+            if (!readFrame(jpeg, segment, segmentSize, marker)) {
+                return false;
+            }
+            jpeg.outWidth = scaled(jpeg.width, jpeg.blockSize);
+            jpeg.outHeight = scaled(jpeg.height, jpeg.blockSize);
+            for (uint32_t index = 0; index < jpeg.componentCount; ++index) {
+                Component& component = jpeg.components[index];
+                component.blockWidth = componentBlockSize(jpeg.blockSize, component.h, jpeg.maxH);
+                component.blockHeight = componentBlockSize(jpeg.blockSize, component.v, jpeg.maxV);
+            }
+            if (uint64_t(jpeg.outWidth) * jpeg.outHeight * jpeg.componentCount != uint64_t(pixelsSize) ||
                     !allocatePlanes(jpeg)) {
                 return false;
             }
@@ -1192,8 +1337,8 @@ struct JpegDecoder {
     PrJpegInfo info;
     PrByteView bytes;
     uint8_t* scratch;
-    size_t rowBytes;
-    size_t pixelsSize;
+    size_t pixelsSize;                  // the size of the image at its full extent, which the scratch holds
+    uint8_t* PR_NULLABLE profile;       // the joined chunks of an ICC profile that is in more than one segment
 };
 
 } // namespace pr_impl
@@ -1230,10 +1375,28 @@ PrStatus prJpegDecoderCreate(PrByteView bytes, const PrJpegLimits* PR_NULLABLE l
     if (status != PrStatus_Ok && status != PrStatus_Truncated)
         return status;
     PrJpegDecoder* decoder = allocZeroed<PrJpegDecoder>();
+    // A profile in one segment is read in place. A profile in more than one segment is joined. The limit on metadata
+    // bounds both.
+    PrByteView chunks[kMaxProfileChunks + 1];
+    uint32_t count = profileChunks(bytes, chunks);
+    if (count == 1) {
+        info.profile = chunks[1];
+    } else if (count > 1) {
+        size_t size = 0;
+        for (uint32_t i = 1; i <= count; ++i)
+            size += chunks[i].size;
+        decoder->profile = static_cast<uint8_t*>(prMemoryAlloc(size));
+        size_t at = 0;
+        for (uint32_t i = 1; i <= count; ++i) {
+            prMemCopy(decoder->profile + at, chunks[i].data, chunks[i].size);
+            at += chunks[i].size;
+        }
+        info.profile = PrByteView{decoder->profile, size};
+        info.workingBytes += size;
+    }
     decoder->info = info;
     decoder->bytes = bytes;
-    decoder->rowBytes = size_t(info.extent.x) * info.components;
-    decoder->pixelsSize = decoder->rowBytes * info.extent.y;
+    decoder->pixelsSize = size_t(info.extent.x) * info.components * info.extent.y;
     decoder->scratch = static_cast<uint8_t*>(prMemoryAlloc(decoder->pixelsSize));
     *out = decoder;
     return status;
@@ -1243,6 +1406,7 @@ void prJpegDecoderDestroy(PrJpegDecoder* PR_NULLABLE decoder) {
     if (decoder == nullptr)
         return;
     prMemoryFree(decoder->scratch);
+    prMemoryFree(decoder->profile);
     prMemoryFree(decoder);
 }
 
@@ -1250,21 +1414,29 @@ const PrJpegInfo* prJpegDecoderInfo(const PrJpegDecoder* decoder) {
     return &decoder->info;
 }
 
-PrStatus prJpegDecoderRead(PrJpegDecoder* decoder, PrPixels output) {
-    PR_ASSERT(output.extent.x == decoder->info.extent.x && output.extent.y == decoder->info.extent.y);
-    PR_ASSERT(output.stride >= decoder->rowBytes);
+PrUVec2 prJpegReducedExtent(PrUVec2 extent, uint32_t reduction) {
+    PR_ASSERT(reduction < kPrJpegReductionCount);
+    uint32_t blockSize = 8u >> reduction;
+    return PrUVec2{scaled(extent.x, blockSize), scaled(extent.y, blockSize)};
+}
+
+PrStatus prJpegDecoderRead(PrJpegDecoder* decoder, uint32_t reduction, PrPixels output) {
+    PR_ASSERT(reduction < kPrJpegReductionCount);
+    const PrUVec2 extent = prJpegReducedExtent(decoder->info.extent, reduction);
+    const size_t rowBytes = size_t(extent.x) * decoder->info.components;
+    PR_ASSERT(output.extent.x == extent.x && output.extent.y == extent.y);
+    PR_ASSERT(output.stride >= rowBytes);
     Jpeg jpeg = {};
     jpeg.adobeTransform = -1;
-    const bool ok = decode(jpeg, decoder->bytes.data, decoder->bytes.size, decoder->scratch, decoder->pixelsSize);
+    jpeg.blockSize = 8u >> reduction;
+    const bool ok = decode(jpeg, decoder->bytes.data, decoder->bytes.size, decoder->scratch, rowBytes * extent.y);
     for (Component& component : jpeg.components) {
         prMemoryFree(component.coefficients);
         prMemoryFree(component.samples);
     }
     if (!ok)
         return PrStatus_InvalidData;
-    for (uint32_t row = 0; row < output.extent.y; ++row) {
-        prMemCopy(output.data + size_t(row) * output.stride, decoder->scratch + size_t(row) * decoder->rowBytes,
-            decoder->rowBytes);
-    }
+    for (uint32_t row = 0; row < output.extent.y; ++row)
+        prMemCopy(output.data + size_t(row) * output.stride, decoder->scratch + size_t(row) * rowBytes, rowBytes);
     return PrStatus_Ok;
 }

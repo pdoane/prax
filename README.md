@@ -31,9 +31,9 @@ The libraries, by area. The first comment of each library's `CMakeLists.txt` say
 | System | `app`, `gpu`, `audio`, `media`, `process` |
 | Networking | `net`, `tls`, `http`, `websocket`, `fetch`, `xhr`, `url`, `mime` |
 | Data | `json`, `xml`, `compress`, `image`, `color`, `geom`, `charset`, `locale`, `unicode`, `html_entity` |
-| Formats | `png`, `jpeg`, `gif`, `webp`, `ico`, `tiff`, `hdr`, `exr`, `emjc`, `deflate`, `brotli`, `lzfse`, `lz4`, `zstd`, `zip`, and `entropy`, which their coders share |
+| Formats | `png`, `jpeg`, `gif`, `webp`, `ico`, `tiff`, `hdr`, `exr`, `ktx`, `basis`, `emjc`, `deflate`, `brotli`, `lzfse`, `lz4`, `zstd`, `zip`, and `entropy`, which their coders share |
 | Text | `font`, `font_bundle`, `text`, `text_edit`, `text_view`, `syntax`, `regex`, `text_diff` |
-| Graphics | `path`, `draw`, `canvas`, `lottie` |
+| Graphics | `path`, `texture`, `draw`, `canvas`, `lottie` |
 | Documents | `css`, `dom`, `layout`, `html`, `svg`, `mathml`, `tex`, `markdown` |
 | Developer tools | `lsp`, `dap`, `vterm` |
 | Interface | `ui`, `studio/kit`, `studio/command`, `studio/text_editor`, `studio/terminal` |

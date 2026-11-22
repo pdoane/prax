@@ -1,5 +1,7 @@
+#include "pr/array.h"
 #include "pr/image.h"
 #include "pr/image_backend.h"
+#include "pr/image_exif.h"
 #include "pr/mem.h"
 
 #include "tools/harness/test.h"
@@ -67,7 +69,7 @@ struct FakeCodec {
     mutable uint32_t decodes = 0;
     bool rereadPrefix = false;
     PrStatus openResult = PrStatus_Ok;
-    PrImageInfo info = {{2, 2}, rgbaFormat(), PrImageOrientation_Identity, {0, 0}, 1, 1, 0, false};
+    PrImageInfo info = {.extent = {2, 2}, .format = rgbaFormat(), .frameCount = 1, .playCount = 1};
 
     PrImageCodecSet* set = nullptr;
 
@@ -153,11 +155,98 @@ struct FakeCodec {
     }
 };
 
+// Builds a TIFF structure of Exif data, in either byte order. The first directory has the maker and model of the camera
+// and a pointer to an Exif directory. The Exif directory has the capture settings.
+struct ExifBytes {
+    bool bigEndian;
+    Array<uint8_t> bytes;
+
+    void putU16(uint32_t at, uint32_t v) {
+        bytes[at + (bigEndian ? 0 : 1)] = uint8_t(v >> 8);
+        bytes[at + (bigEndian ? 1 : 0)] = uint8_t(v);
+    }
+    void putU32(uint32_t at, uint32_t v) {
+        for (uint32_t i = 0; i < 4; ++i)
+            bytes[at + (bigEndian ? i : 3 - i)] = uint8_t(v >> (24 - 8 * i));
+    }
+    void entry(uint32_t at, uint32_t tag, uint32_t type, uint32_t count, uint32_t value) {
+        putU16(at, tag);
+        putU16(at + 2, type);
+        putU32(at + 4, count);
+        putU32(at + 8, value);
+    }
+    void text(uint32_t at, const char* t) {
+        for (uint32_t i = 0; t[i] != 0; ++i)
+            bytes[at + i] = uint8_t(t[i]);
+    }
+
+    explicit ExifBytes(bool big) : bigEndian(big), bytes(512, 0) {
+        bytes[0] = bytes[1] = big ? 'M' : 'I';
+        putU16(2, 42);
+        putU32(4, 8);
+        // The first directory is at offset 8. It has Make and Model, whose texts are at offsets 300 and 320, and a
+        // pointer to the Exif directory at offset 100.
+        putU16(8, 3);
+        entry(10, 0x010F, 2, 6, 300);
+        entry(22, 0x0110, 2, 12, 320);
+        entry(34, 0x8769, 4, 1, 100);
+        text(300, "SONY ");
+        text(320, "ILCE-7M4");
+        // The Exif directory has an exposure of 1/250 s, f/2.8, ISO 400, a capture time, 35 mm, and a lens.
+        putU16(100, 6);
+        entry(102, 0x829A, 5, 1, 400);
+        entry(114, 0x829D, 5, 1, 408);
+        entry(126, 0x8827, 3, 1, 0);
+        putU16(126 + 8, 400);
+        entry(138, 0x9003, 2, 20, 340);
+        entry(150, 0x920A, 5, 1, 416);
+        entry(162, 0xA434, 2, 14, 360);
+        putU32(400, 1);
+        putU32(404, 250);
+        putU32(408, 28);
+        putU32(412, 10);
+        putU32(416, 35);
+        putU32(420, 1);
+        text(340, "2024:05:06 07:08:09");
+        text(360, "FE 35mm F1.8");
+    }
+};
+
 } // namespace
 
 } // namespace pr_impl
 
 using namespace pr_impl;
+
+TEST_CASE("Exif data in either byte order gives a photograph's capture settings, and a broken offset leaves its value out") {
+    const bool orders[] = {false, true};
+    for (bool big : orders) {
+        CAPTURE(big);
+        ExifBytes exif(big);
+        PrImageCapture capture{};
+        REQUIRE(prImageExifCapture(PrByteView{exif.bytes.data(), exif.bytes.count()}, &capture));
+        CHECK(String(capture.make) == "SONY");
+        CHECK(String(capture.model) == "ILCE-7M4");
+        CHECK(String(capture.lens) == "FE 35mm F1.8");
+        CHECK(String(capture.taken) == "2024:05:06 07:08:09");
+        CHECK(capture.exposure[0] == 1);
+        CHECK(capture.exposure[1] == 250);
+        CHECK(capture.fNumber == doctest::Approx(2.8f));
+        CHECK(capture.iso == 400);
+        CHECK(capture.focalLength == 35);
+    }
+    // A pointer past the end leaves its value out. Data that is not a TIFF structure gives nothing.
+    ExifBytes broken(false);
+    broken.putU32(22 + 8, 5000);
+    broken.putU32(34 + 8, 5000);
+    PrImageCapture capture{};
+    CHECK(prImageExifCapture(PrByteView{broken.bytes.data(), broken.bytes.count()}, &capture));
+    CHECK(String(capture.make) == "SONY");
+    CHECK(capture.model[0] == 0);
+    CHECK(capture.iso == 0);
+    const uint8_t junk[] = {'X', 'X', 0, 42, 0, 0, 0, 8};
+    CHECK(!prImageExifCapture(PrByteView{junk, sizeof junk}, &capture));
+}
 
 TEST_CASE("the public header compiles as C") {
     CHECK(prTestImageCApi() == 0);

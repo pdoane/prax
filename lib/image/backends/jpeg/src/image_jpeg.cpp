@@ -13,15 +13,64 @@ namespace pr_impl {
 
 namespace {
 
-// An open JPEG: the decoder, and the bytes of the file that it reads.
+// Returns the meaning of the image's color. It is the image's ICC profile, or uncharacterized if the image has none.
+PrImageColor colorOf(const PrJpegInfo& info) {
+    if (info.profile.size != 0)
+        return PrImageColor{.encoding = PrImageColorEncoding_Icc, .profile = info.profile};
+    return PrImageColor{.encoding = PrImageColorEncoding_Unknown};
+}
+
+// One preview of a JPEG: a reduced decode of the image, or the thumbnail that its Exif data embeds.
+struct JpegPreview {
+    uint32_t reduction;     // reduction of the image, or zero for the thumbnail
+    PrUVec2 extent;
+};
+
+// The maximum number of previews of one JPEG. They are the reductions to a quarter and to an eighth, and the thumbnail.
+constexpr uint32_t kMaxPreviews = 3;
+
+// An open JPEG. It holds the decoder, the bytes of the file that the decoder reads, the decoder of the embedded
+// thumbnail, and the previews, largest first.
 struct JpegReader : PrImageReader {
     uint8_t* bytes;
     PrJpegDecoder* jpeg;
+    PrJpegDecoder* PR_NULLABLE thumbnail;
     PrStatus openStatus;    // Ok, or Truncated for a file that ends early
+    JpegPreview previews[kMaxPreviews];
 };
+
+// The smallest reduction that is a preview. Half the extent saves too little over the image to be worth a decode.
+constexpr uint32_t kFirstPreviewReduction = 2;
+
+// Returns the decoder of the thumbnail in `exif`, or null if the image has no thumbnail that can stand for it. A
+// thumbnail stands for the image if it decodes whole, has the image's components, is at most half its extent, and has
+// its aspect ratio to within one texel. Cameras letterbox some thumbnails, and those do not show the same picture. An
+// image with an ICC profile has no thumbnail, because the thumbnail carries no profile of its own.
+PrJpegDecoder* PR_NULLABLE thumbnailOpen(PrByteView thumbnail, const PrJpegInfo& image, const PrJpegLimits& limits,
+        uint64_t held) {
+    if (thumbnail.size == 0 || image.profile.size != 0)
+        return nullptr;
+    PrJpegDecoder* decoder = nullptr;
+    PrStatus status = prJpegDecoderCreate(thumbnail, &limits, held, &decoder);
+    if (decoder == nullptr)
+        return nullptr;
+    const PrJpegInfo& info = *prJpegDecoderInfo(decoder);
+    uint64_t across = uint64_t(info.extent.x) * image.extent.y;
+    uint64_t down = uint64_t(info.extent.y) * image.extent.x;
+    uint64_t skew = across > down ? across - down : down - across;
+    bool same = status == PrStatus_Ok && info.components == image.components && info.extent.x != 0 &&
+        info.extent.x * 2 <= image.extent.x && info.extent.y * 2 <= image.extent.y &&
+        skew <= (image.extent.x > image.extent.y ? image.extent.x : image.extent.y);
+    if (!same) {
+        prJpegDecoderDestroy(decoder);
+        return nullptr;
+    }
+    return decoder;
+}
 
 void close(PrImageReader* reader) {
     JpegReader* jpeg = static_cast<JpegReader*>(reader);
+    prJpegDecoderDestroy(jpeg->thumbnail);
     prJpegDecoderDestroy(jpeg->jpeg);
     prMemoryFree(jpeg->bytes);
     prMemoryFree(jpeg);
@@ -34,7 +83,20 @@ PrStatus frameInfo(PrImageReader*, uint32_t, PrImageFrameInfo* info) {
 
 PrStatus read(PrImageReader* reader, uint32_t, uint32_t, PrPixels output) {
     JpegReader* jpeg = static_cast<JpegReader*>(reader);
-    PrStatus status = prJpegDecoderRead(jpeg->jpeg, output);
+    PrStatus status = prJpegDecoderRead(jpeg->jpeg, 0, output);
+    return status == PrStatus_Ok ? jpeg->openStatus : status;
+}
+
+PrUVec2 previewExtent(const PrImageReader* reader, uint32_t preview) {
+    return static_cast<const JpegReader*>(reader)->previews[preview].extent;
+}
+
+PrStatus readPreview(PrImageReader* reader, uint32_t preview, PrPixels output) {
+    JpegReader* jpeg = static_cast<JpegReader*>(reader);
+    uint32_t reduction = jpeg->previews[preview].reduction;
+    if (reduction == 0)
+        return prJpegDecoderRead(jpeg->thumbnail, 0, output);
+    PrStatus status = prJpegDecoderRead(jpeg->jpeg, reduction, output);
     return status == PrStatus_Ok ? jpeg->openStatus : status;
 }
 
@@ -90,18 +152,43 @@ PrStatus open(const PrImageCodec*, const PrImageCodecSet*, const PrImageSource* 
             .model = model,
             .sample = PrImageSample_U8,
             .alpha = PrImageAlpha_None,
-            .color = PrImageColor{.encoding = PrImageColorEncoding_Unknown},
+            .color = colorOf(jpegInfo),
         },
         .orientation = exif.orientation,
         .pixelsPerMeter = pixelsPerMeter,
         .frameCount = 1,
         .playCount = 1,
         .workingBytes = jpegInfo.workingBytes,
+        .exif = jpegInfo.exif,
     };
     JpegReader* reader = allocZeroed<JpegReader>();
     reader->closeFn = close;
     reader->frameInfoFn = frameInfo;
     reader->readFn = read;
+    reader->previewExtentFn = previewExtent;
+    reader->readPreviewFn = readPreview;
+    // Each reduction, starting at a quarter, is a preview if it makes the image smaller than the previous reduction
+    // does. A small image reaches its least extent before an eighth.
+    PrUVec2 above = prJpegReducedExtent(jpegInfo.extent, kFirstPreviewReduction - 1);
+    for (uint32_t reduction = kFirstPreviewReduction; reduction < kPrJpegReductionCount; ++reduction) {
+        PrUVec2 extent = prJpegReducedExtent(jpegInfo.extent, reduction);
+        if (extent == above)
+            continue;
+        reader->previews[info->previewCount++] = JpegPreview{reduction, extent};
+        above = extent;
+    }
+    // The thumbnail is inserted by its size, so that the previews stay largest first.
+    reader->thumbnail = thumbnailOpen(exif.thumbnail, jpegInfo, jpegLimits, size + sizeof(JpegReader));
+    if (reader->thumbnail != nullptr) {
+        PrUVec2 extent = prJpegDecoderInfo(reader->thumbnail)->extent;
+        uint32_t at = 0;
+        while (at < info->previewCount && reader->previews[at].extent.x >= extent.x)
+            ++at;
+        for (uint32_t i = info->previewCount; i > at; --i)
+            reader->previews[i] = reader->previews[i - 1];
+        reader->previews[at] = JpegPreview{0, extent};
+        ++info->previewCount;
+    }
     reader->bytes = bytes;
     reader->jpeg = jpeg;
     reader->openStatus = status;

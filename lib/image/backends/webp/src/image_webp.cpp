@@ -99,6 +99,7 @@ PrStatus open(const PrImageCodec*, const PrImageCodecSet*, const PrImageSource* 
         .frameCount = webpInfo.frameCount,
         .playCount = webpInfo.playCount,
         .workingBytes = webpInfo.workingBytes,
+        .exif = webpInfo.exif,
     };
     WebpReader* reader = allocZeroed<WebpReader>();
     reader->closeFn = close;

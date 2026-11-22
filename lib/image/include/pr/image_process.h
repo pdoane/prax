@@ -32,6 +32,14 @@ void prImageBlur(PrPixels pixels, PrPixelFormat format, PrVec2 sigma, PrImageEdg
 // or column.
 void prImageMipLevel(PrPixelView above, PrPixels out, PrPixelFormat format);
 
+// Resamples `source` to the size of `output` with a three-lobe Lanczos filter. Both are nonempty Rgba8 images of sRGB
+// color with straight alpha.
+//
+// For a reduction, the filter is widened by the reduction ratio, so that it averages every source pixel. The filter
+// runs in linear light, which keeps the brightness of fine detail. It runs on premultiplied color, so the color of
+// transparent pixels does not bleed into their neighbors. Pixels beyond an edge repeat the edge.
+void prImageResize(PrPixelView source, PrPixels output);
+
 // The number of points in the lattice of Perlin turbulence.
 enum { kPrImageNoiseLattice = 256 };
 

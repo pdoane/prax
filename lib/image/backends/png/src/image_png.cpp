@@ -115,6 +115,7 @@ PrStatus open(const PrImageCodec* imageCodec, const PrImageCodecSet*, const PrIm
         .playCount = pngInfo.playCount,
         .workingBytes = pngInfo.workingBytes,
         .hasCover = pngInfo.hasCover,
+        .exif = pngInfo.exif,
     };
     PngReader* reader = allocZeroed<PngReader>();
     reader->closeFn = close;

@@ -75,6 +75,7 @@ PrStatus validateInfo(const PrImageInfo& info, const PrImageLimits& limits, bool
     if (info.orientation > PrImageOrientation_Rotate270 || info.frameCount == 0 || info.levelCount == 0 ||
             info.levelCount > kMaxLevels || info.levels > PrImageLevels_Rip || (!levelExtents && !halving) ||
             (info.levels == PrImageLevels_Rip && !rip) || (info.levels == PrImageLevels_Mip && info.levelColumns != 1) ||
+            (info.faceCount != 1 && info.faceCount != 6) || info.frameCount % info.faceCount != 0 ||
             !(info.pixelsPerMeter.x >= 0 && info.pixelsPerMeter.x <= 1e30f) ||
             !(info.pixelsPerMeter.y >= 0 && info.pixelsPerMeter.y <= 1e30f) ||
             !packedBytes(info.format, info.extent.x, info.extent.y, &bytes))
@@ -86,6 +87,24 @@ PrStatus validateInfo(const PrImageInfo& info, const PrImageLimits& limits, bool
     return PrStatus_Ok;
 }
 
+// Returns true if the reader's previews are valid. Each preview is no larger than the image on either axis and is
+// smaller on at least one axis. The previews are ordered from the largest to the smallest.
+bool validPreviews(const PrImageReader& reader, const PrImageInfo& info) {
+    if (info.previewCount == 0)
+        return true;
+    if (reader.previewExtentFn == nullptr || reader.readPreviewFn == nullptr || info.previewCount > kMaxLevels)
+        return false;
+    PrUVec2 above = info.extent;
+    for (uint32_t i = 0; i < info.previewCount; ++i) {
+        PrUVec2 extent = reader.previewExtentFn(&reader, i);
+        if (extent.x == 0 || extent.y == 0 || extent.x > above.x || extent.y > above.y ||
+                (extent.x == above.x && extent.y == above.y))
+            return false;
+        above = extent;
+    }
+    return true;
+}
+
 bool hasFrame(const PrImageInfo& info, uint32_t frame) {
     return frame < info.frameCount || (frame == kPrImageFrameCover && info.hasCover);
 }
@@ -94,6 +113,62 @@ PrUVec2 levelExtent(const ImageDecoder& data, uint32_t level) {
     if (data.reader->levelExtentFn != nullptr)
         return data.reader->levelExtentFn(data.reader, level);
     return prImageLevelExtent(data.info.extent, level);
+}
+
+// Reads one picture of the open image in the image's own format. The picture is the frame or the preview at `index`.
+typedef PrStatus (*PictureReadFn)(PrImageDecoder* decoder, uint32_t index, PrPixels output);
+
+// Decodes the picture that `read` reads at `index` as sRGB Rgba8 with `alpha`. The picture has `extent` pixels as
+// stored. The function applies `orientation` to the stored pixels. `state` is the state of the decoder `handle`.
+PrStatus readRgba8(PrImageDecoder* handle, const ImageDecoder& state, PictureReadFn read, uint32_t index, PrUVec2 extent,
+        PrImageAlpha alpha, PrImageOrientation orientation, PrPixels output) {
+    const PrImageInfo& info = state.info;
+    PR_ASSERT(alpha == PrImageAlpha_Straight || alpha == PrImageAlpha_Premultiplied);
+    PR_ASSERT(orientation <= PrImageOrientation_Rotate270);
+    const bool swaps = prImageOrientationSwapsAxes(orientation);
+    PR_ASSERT(output.extent.x == (swaps ? extent.y : extent.x));
+    PR_ASSERT(output.extent.y == (swaps ? extent.x : extent.y));
+    PR_ASSERT(size_t(output.extent.x) * 4 <= output.stride);
+    PrImageFormat format{};
+    format.model = PrColorModel_Rgb;
+    format.sample = PrImageSample_U8;
+    format.alpha = alpha;
+    format.color.encoding = PrImageColorEncoding_Named;
+    format.color.space = PrColorSpace_Srgb;
+    size_t rgbaSize = 0;
+    if (!packedBytes(format, extent.x, extent.y, &rgbaSize))
+        return PrStatus_Limit;
+    if (info.format.alpha == PrImageAlpha_Independent)
+        return PrStatus_NotSupported;
+    size_t nativeSize = 0;
+    if (!packedBytes(info.format, extent.x, extent.y, &nativeSize))
+        return PrStatus_InvalidData;
+    bool orient = orientation != PrImageOrientation_Identity;
+    uint64_t available = state.limits.workingBytes - info.workingBytes;
+    if (rgbaSize > state.limits.outputBytes || nativeSize > available)
+        return PrStatus_Limit;
+    available -= nativeSize;
+    if (orient && rgbaSize > available)
+        return PrStatus_Limit;
+
+    uint8_t* native = static_cast<uint8_t*>(prMemoryAlloc(nativeSize));
+    const PrPixels stored{native, nativeSize / extent.y, extent};
+    PrStatus status = read(handle, index, stored);
+    if (!usable(status)) {
+        prMemoryFree(native);
+        return status;
+    }
+    bool truncated = status == PrStatus_Truncated;
+    uint8_t* converted = orient ? static_cast<uint8_t*>(prMemoryAlloc(rgbaSize)) : nullptr;
+    const PrPixels destination = orient ? PrPixels{converted, size_t(extent.x) * 4, extent} : output;
+    status = imageConvert(prPixelsView(stored), info.format, destination, format,
+        PrImageConversionFlag_AssumeSrgb | PrImageConversionFlag_ApproximateCmyk);
+    if (usable(status) && orient)
+        prImageOrient(PrPixelView{converted, size_t(extent.x) * 4, extent}, 4, orientation, output);
+    if (orient)
+        prMemoryFree(converted);
+    prMemoryFree(native);
+    return status == PrStatus_Ok && truncated ? PrStatus_Truncated : status;
 }
 
 } // namespace
@@ -240,14 +315,18 @@ PrStatus prImageDecoderOpen(PrImageDecoder* decoder, PrImageSource source, const
     data->source.stream.size = size;
     status = codec->decoderOpenFn(codec, set, &data->source, &data->limits, &data->reader, &data->info);
     if (usable(status)) {
-        // A reader that reports no levels has one, a mip chain of itself.
+        // A reader that reports no levels or faces has one of each. The image is its own mip chain and is not a cube.
         if (data->info.levelCount == 0)
             data->info.levelCount = 1;
         if (data->info.levelColumns == 0)
             data->info.levelColumns = 1;
+        if (data->info.faceCount == 0)
+            data->info.faceCount = 1;
         PrStatus validation = PrStatus_InvalidData;
         if (data->reader != nullptr)
             validation = validateInfo(data->info, data->limits, data->reader->levelExtentFn != nullptr);
+        if (validation == PrStatus_Ok && !validPreviews(*data->reader, data->info))
+            validation = PrStatus_InvalidData;
         if (data->reader == nullptr)
             status = PrStatus_InvalidData;
         else if (validation != PrStatus_Ok)
@@ -304,57 +383,36 @@ PrStatus prImageDecoderReadLevel(PrImageDecoder* decoder, uint32_t frame, uint32
     return decoder->reader->readFn(decoder->reader, frame, level, output);
 }
 
+PrUVec2 prImageDecoderPreviewExtent(const PrImageDecoder* decoder, uint32_t preview) {
+    PR_ASSERT(decoder->reader != nullptr && preview < decoder->info.previewCount);
+    return decoder->reader->previewExtentFn(decoder->reader, preview);
+}
+
+PrStatus prImageDecoderReadPreview(PrImageDecoder* decoder, uint32_t preview, PrPixels output) {
+    if (decoder->reader == nullptr || preview >= decoder->info.previewCount)
+        return PrStatus_OutOfRange;
+    PR_ASSERT(output.extent == prImageDecoderPreviewExtent(decoder, preview));
+    PR_ASSERT(size_t(output.extent.x) * imagePixelBytes(decoder->info.format) <= output.stride);
+    size_t required = 0;
+    packedBytes(decoder->info.format, output.extent.x, output.extent.y, &required);
+    if (required > decoder->limits.outputBytes)
+        return PrStatus_Limit;
+    return decoder->reader->readPreviewFn(decoder->reader, preview, output);
+}
+
+PrStatus prImageDecoderReadPreviewRgba8(PrImageDecoder* decoder, uint32_t preview, PrImageAlpha alpha,
+        PrImageOrientation orientation, PrPixels output) {
+    if (decoder->reader == nullptr || preview >= decoder->info.previewCount)
+        return PrStatus_OutOfRange;
+    PrUVec2 extent = prImageDecoderPreviewExtent(decoder, preview);
+    return readRgba8(decoder, *decoder, prImageDecoderReadPreview, preview, extent, alpha, orientation, output);
+}
+
 PrStatus prImageDecoderReadRgba8(PrImageDecoder* decoder, uint32_t frame, PrImageAlpha alpha,
         PrImageOrientation orientation, PrPixels output) {
-    const PrImageInfo& info = decoder->info;
-    PR_ASSERT(alpha == PrImageAlpha_Straight || alpha == PrImageAlpha_Premultiplied);
-    PR_ASSERT(orientation <= PrImageOrientation_Rotate270);
-    const bool swaps = prImageOrientationSwapsAxes(orientation);
-    PR_ASSERT(output.extent.x == (swaps ? info.extent.y : info.extent.x));
-    PR_ASSERT(output.extent.y == (swaps ? info.extent.x : info.extent.y));
-    PR_ASSERT(size_t(output.extent.x) * 4 <= output.stride);
-    PrImageFormat format{};
-    format.model = PrColorModel_Rgb;
-    format.sample = PrImageSample_U8;
-    format.alpha = alpha;
-    format.color.encoding = PrImageColorEncoding_Named;
-    format.color.space = PrColorSpace_Srgb;
-    size_t rgbaSize = 0;
-    if (!packedBytes(format, info.extent.x, info.extent.y, &rgbaSize))
-        return PrStatus_Limit;
-    if (!hasFrame(info, frame))
+    if (!hasFrame(decoder->info, frame))
         return PrStatus_OutOfRange;
-    if (info.format.alpha == PrImageAlpha_Independent)
-        return PrStatus_NotSupported;
-    size_t nativeSize = 0;
-    if (!packedBytes(info.format, info.extent.x, info.extent.y, &nativeSize))
-        return PrStatus_InvalidData;
-    bool orient = orientation != PrImageOrientation_Identity;
-    uint64_t available = decoder->limits.workingBytes - info.workingBytes;
-    if (rgbaSize > decoder->limits.outputBytes || nativeSize > available)
-        return PrStatus_Limit;
-    available -= nativeSize;
-    if (orient && rgbaSize > available)
-        return PrStatus_Limit;
-
-    uint8_t* native = static_cast<uint8_t*>(prMemoryAlloc(nativeSize));
-    const PrPixels stored{native, nativeSize / info.extent.y, info.extent};
-    PrStatus status = prImageDecoderRead(decoder, frame, stored);
-    if (!usable(status)) {
-        prMemoryFree(native);
-        return status;
-    }
-    bool truncated = status == PrStatus_Truncated;
-    uint8_t* converted = orient ? static_cast<uint8_t*>(prMemoryAlloc(rgbaSize)) : nullptr;
-    const PrPixels destination = orient ? PrPixels{converted, size_t(info.extent.x) * 4, info.extent} : output;
-    status = imageConvert(prPixelsView(stored), info.format, destination, format,
-        PrImageConversionFlag_AssumeSrgb | PrImageConversionFlag_ApproximateCmyk);
-    if (usable(status) && orient)
-        prImageOrient(PrPixelView{converted, size_t(info.extent.x) * 4, info.extent}, 4, orientation, output);
-    if (orient)
-        prMemoryFree(converted);
-    prMemoryFree(native);
-    return status == PrStatus_Ok && truncated ? PrStatus_Truncated : status;
+    return readRgba8(decoder, *decoder, prImageDecoderRead, frame, decoder->info.extent, alpha, orientation, output);
 }
 
 uint32_t prImageFormatSize(const PrImageFormat* format) {
