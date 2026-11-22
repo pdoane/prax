@@ -402,13 +402,17 @@ def run_runner(name, directory, out, extra, label):
         os.remove(out)
     started = time.monotonic()
     # The runner runs in its own session, so that a run past the deadline is stopped together with the harnesses that
-    # it started.
+    # it started. Windows has no sessions to signal. On Windows, taskkill stops the runner's process tree by its id.
     process = subprocess.Popen([sys.executable, "-m", RUNNER, name, "--bin", directory, "--out", out] + extra,
                                cwd=common.ROOT, start_new_session=True)
     try:
         status = process.wait(DEADLINE)
     except subprocess.TimeoutExpired:
-        os.killpg(process.pid, signal.SIGKILL)
+        if sys.platform == "win32":
+            subprocess.run(["taskkill", "/T", "/F", "/PID", str(process.pid)], stdout=subprocess.DEVNULL,
+                           stderr=subprocess.DEVNULL)
+        else:
+            os.killpg(process.pid, signal.SIGKILL)
         process.wait()
         print("%-10s %-12s stopped after %ds" % (name, label, DEADLINE), file=sys.stderr, flush=True)
         return None

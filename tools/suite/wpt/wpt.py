@@ -90,7 +90,9 @@ from tools.suite import reftest
 from tools.suite.wpt import web_features
 from tools.suite.wpt import wpt_serve
 
-WPT = os.path.join(corpus.ROOT, "third_party", "wpt")
+# The real path of the checkout. The base runner of an A/B reaches third_party through a link, and the paths of the
+# tests through that link can exceed Windows' limit of 260 characters.
+WPT = os.path.realpath(os.path.join(corpus.ROOT, "third_party", "wpt"))
 CSS = os.path.join(WPT, "css")
 # The suites, each with the directories of the checkout that it runs. A directory belongs to the suite of the standard
 # that it tests, so a suite is a family of specs, not a directory of WPT's.

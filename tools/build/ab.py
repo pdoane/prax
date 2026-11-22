@@ -198,10 +198,12 @@ class Base:
 
     def runner(self):
         """Returns the directory of the base's tools and suites, which runs the base's harnesses: a base runs with its
-        own runner, which speaks to its own harnesses. A commit's are kept by commit."""
+        own runner, which speaks to its own harnesses. A commit's are kept by commit, in a directory named by a short
+        prefix of the commit's id. The name is short because the runner reaches the checkouts under third_party through
+        its link, and the longest path through the link must stay within Windows' limit of 260 characters."""
         if self.directory:
             return self.directory
-        directory = os.path.join(build.AB, "runner", self.sha)
+        directory = os.path.join(build.AB, "runner", self.sha[:12])
         if not os.path.isdir(os.path.join(directory, "tools")):
             os.makedirs(directory, exist_ok=True)
             extract(self.sha, ["tools", "suites"], directory)
