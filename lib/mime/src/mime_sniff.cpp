@@ -220,6 +220,83 @@ constexpr NamedFormat kFileNames[] = {
     {".gitmodules", PrMimeFormat_Ini},
 };
 
+// The extensions that name a binary format by convention, without the dot. A signature identifies these formats, so the
+// extensions name them only if the bytes are not read.
+constexpr NamedFormat kBinaryExtensions[] = {
+    {"png", PrMimeFormat_Png},
+    {"apng", PrMimeFormat_Apng},
+    {"jpg", PrMimeFormat_Jpeg},
+    {"jpeg", PrMimeFormat_Jpeg},
+    {"jpe", PrMimeFormat_Jpeg},
+    {"jfif", PrMimeFormat_Jpeg},
+    {"gif", PrMimeFormat_Gif},
+    {"webp", PrMimeFormat_Webp},
+    {"bmp", PrMimeFormat_Bmp},
+    {"dib", PrMimeFormat_Bmp},
+    {"ico", PrMimeFormat_Ico},
+    {"cur", PrMimeFormat_Ico},
+    {"tif", PrMimeFormat_Tiff},
+    {"tiff", PrMimeFormat_Tiff},
+    {"ktx", PrMimeFormat_Ktx},
+    {"ktx2", PrMimeFormat_Ktx2},
+    {"dds", PrMimeFormat_Dds},
+    {"hdr", PrMimeFormat_Hdr},
+    {"exr", PrMimeFormat_Exr},
+    {"psd", PrMimeFormat_Psd},
+    {"avif", PrMimeFormat_Avif},
+    {"heic", PrMimeFormat_Heif},
+    {"heif", PrMimeFormat_Heif},
+    {"hif", PrMimeFormat_Heif},
+    {"jxl", PrMimeFormat_Jxl},
+    {"qoi", PrMimeFormat_Qoi},
+    {"astc", PrMimeFormat_Astc},
+    {"pvr", PrMimeFormat_Pvr},
+    {"emjc", PrMimeFormat_Emjc},
+    {"pnm", PrMimeFormat_Pnm},
+    {"pbm", PrMimeFormat_Pnm},
+    {"pgm", PrMimeFormat_Pnm},
+    {"ppm", PrMimeFormat_Pnm},
+    {"ttf", PrMimeFormat_Ttf},
+    {"otf", PrMimeFormat_Otf},
+    {"ttc", PrMimeFormat_Ttc},
+    {"woff", PrMimeFormat_Woff},
+    {"woff2", PrMimeFormat_Woff2},
+    {"zip", PrMimeFormat_Zip},
+    {"tar", PrMimeFormat_Tar},
+    {"7z", PrMimeFormat_SevenZip},
+    {"rar", PrMimeFormat_Rar},
+    {"gz", PrMimeFormat_Gzip},
+    {"zst", PrMimeFormat_Zstd},
+    {"xz", PrMimeFormat_Xz},
+    {"bz2", PrMimeFormat_Bzip2},
+    {"lz4", PrMimeFormat_Lz4},
+    {"glb", PrMimeFormat_Glb},
+    {"usdc", PrMimeFormat_Usdc},
+    {"usdz", PrMimeFormat_Usdz},
+    {"drc", PrMimeFormat_Draco},
+    {"ply", PrMimeFormat_Ply},
+    {"fbx", PrMimeFormat_Fbx},
+    {"pdf", PrMimeFormat_Pdf},
+    {"wav", PrMimeFormat_Wav},
+    {"aiff", PrMimeFormat_Aiff},
+    {"aif", PrMimeFormat_Aiff},
+    {"flac", PrMimeFormat_Flac},
+    {"ogg", PrMimeFormat_Ogg},
+    {"mp3", PrMimeFormat_Mp3},
+    {"mid", PrMimeFormat_Midi},
+    {"midi", PrMimeFormat_Midi},
+    {"m4a", PrMimeFormat_M4a},
+    {"mp4", PrMimeFormat_Mp4},
+    {"m4v", PrMimeFormat_Mp4},
+    {"mov", PrMimeFormat_QuickTime},
+    {"webm", PrMimeFormat_Webm},
+    {"mkv", PrMimeFormat_Matroska},
+    {"avi", PrMimeFormat_Avi},
+    {"wasm", PrMimeFormat_Wasm},
+    {"exe", PrMimeFormat_Pe},
+    {"dll", PrMimeFormat_Pe},
+};
+
 // The extensions that imply a format, without the dot.
 constexpr NamedFormat kExtensions[] = {
     {"html", PrMimeFormat_Html},
@@ -667,21 +744,32 @@ PrMimeFormat sniffShebang(PrStringView text) {
     return PrMimeFormat_None;
 }
 
-// Returns the text format that `name`, a file name or a path, implies by its last part, or None. A last part that
-// starts with its only dot, as a hidden file's does, has no extension.
-PrMimeFormat formatOfName(PrStringView name) {
+// Returns the last part of `name`, a file name or a path. Writes the extension of that part, without the dot, to
+// `extension`. The extension is empty if the part has no dot, or if its only dot begins it, as in the name of a hidden
+// file.
+PrStringView lastPart(PrStringView name, PrStringView* extension) {
     size_t slash = prStringFindLastByte(name, '/');
+#if defined(_WIN32)
+    size_t backslash = prStringFindLastByte(name, '\\');
+    if (backslash != name.size && (slash == name.size || backslash > slash))
+        slash = backslash;
+#endif
     PrStringView last = slash == name.size ? name : prStringFrom(name, slash + 1);
+    size_t dot = prStringFindLastByte(last, '.');
+    *extension = dot == last.size || dot == 0 ? PrStringView{} : prStringFrom(last, dot + 1);
+    return last;
+}
+
+// Returns the text format that `name`, a file name or a path, implies by its last part, or None.
+PrMimeFormat formatOfName(PrStringView name) {
+    PrStringView extension;
+    PrStringView last = lastPart(name, &extension);
     for (const NamedFormat& file : kFileNames) {
         if (last == file.name)
             return file.format;
     }
-    size_t dot = prStringFindLastByte(last, '.');
-    if (dot == last.size || dot == 0)
-        return PrMimeFormat_None;
-    PrStringView extension = prStringFrom(last, dot + 1);
     for (const NamedFormat& known : kExtensions) {
-        if (prAsciiEqualsFold(extension, known.name))
+        if (!extension.isEmpty() && prAsciiEqualsFold(extension, known.name))
             return known.format;
     }
     return PrMimeFormat_None;
@@ -759,4 +847,14 @@ PrMimeFormat prMimeFormatFromName(PrStringView name) {
             return PrMimeFormat(i);
     }
     return PrMimeFormat_Count;
+}
+
+PrMimeFormat prMimeFormatOfFileName(PrStringView name) {
+    PrStringView extension;
+    lastPart(name, &extension);
+    for (const NamedFormat& known : kBinaryExtensions) {
+        if (!extension.isEmpty() && prAsciiEqualsFold(extension, known.name))
+            return known.format;
+    }
+    return formatOfName(name);
 }

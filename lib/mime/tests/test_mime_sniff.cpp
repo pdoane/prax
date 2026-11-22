@@ -208,3 +208,20 @@ TEST_CASE("every format has a name of its own that finds it") {
     CHECK(prMimeFormatInfo(PrMimeFormat_Usda).text);
     CHECK(!prMimeFormatInfo(PrMimeFormat_Usdc).text);
 }
+
+TEST_CASE("a file name gives a format by its extension in any letter case, or by a conventional whole name") {
+    auto named = [](PrStringView name) { return prMimeFormatInfo(prMimeFormatOfFileName(name)).name; };
+    CHECK(named("photo.JPG") == "jpeg");
+    CHECK(named("shots/IMG_0001.heic") == "heif");
+    CHECK(named("scan.tif") == "tiff");
+    CHECK(named("backup.tar.gz") == "gzip");
+    CHECK(named("src/main.rs") == "rust");
+    CHECK(named("build/Makefile") == "make");
+    CHECK(named(".bashrc") == "shell");
+    // A name without an extension, or whose only dot begins it, names nothing by its extension.
+    CHECK(named("notes") == prMimeFormatInfo(PrMimeFormat_None).name);
+    CHECK(named(".png") == prMimeFormatInfo(PrMimeFormat_None).name);
+#if defined(_WIN32)
+    CHECK(named("C:\\Users\\photos\\cat.webp") == "webp");
+#endif
+}

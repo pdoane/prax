@@ -200,6 +200,13 @@ PrMimeFormatInfo prMimeFormatInfo(PrMimeFormat format);
 // Returns the format whose name is `name`, as PrMimeFormatInfo::name spells it, or Count if none is.
 PrMimeFormat prMimeFormatFromName(PrStringView name);
 
+// Returns the format that a file name or path implies by convention, without reading the file. The format comes from
+// the extension of the last path component, compared without regard to ASCII case, such as `.JPG`. It can also come
+// from a conventional whole file name, such as `Makefile`. Returns None if the name implies no format.
+//
+// A name can be wrong. If the bytes are available, prMimeSniff identifies them more reliably.
+PrMimeFormat prMimeFormatOfFileName(PrStringView name);
+
 #if defined(__cplusplus)
 }
 #endif
