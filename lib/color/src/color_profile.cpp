@@ -6,6 +6,7 @@
 #include "pr/integer.h"
 #include "pr/mem.h"
 #include "pr/memory.h"
+#include "pr/utf8.h"
 
 namespace pr_impl {
 
@@ -77,6 +78,38 @@ struct ColorProfile {
     // The lookup tables, by intent. Null where a profile has none.
     bool hasLut[4];
     Lut luts[4];
+};
+
+// The text of a description while it is written. A reader appends code points to it.
+struct Description {
+    char* PR_NULLABLE out;
+    size_t capacity;
+    size_t size;
+    size_t kept;            // the size without the trailing spaces
+    bool ended;             // set once a NUL or the capacity ended the text
+
+    // Appends `c`. Skips a control character, and a space before any text.
+    void push(uint32_t c) {
+        if (ended)
+            return;
+        if (c == 0) {
+            ended = true;
+            return;
+        }
+        if (c < 0x20 || (c >= 0x7f && c < 0xa0) || (c == ' ' && size == 0))
+            return;
+        char bytes[kPrUtf8MaxBytes];
+        uint32_t count = prUtf8Encode(c, bytes);
+        if (size + count > capacity) {
+            ended = true;
+            return;
+        }
+        if (out != nullptr)
+            prMemCopy(out + size, bytes, count);
+        size += count;
+        if (c != ' ')
+            kept = size;
+    }
 };
 
 // Returns the offset and size of the tag `name`, or false if the profile has none.
@@ -537,4 +570,63 @@ PrColorSpace prColorProfileNamedSpace(const PrColorProfile* profile) {
             return space;
     }
     return PrColorSpace_Count;
+}
+
+size_t prColorProfileDescription(PrByteView bytes, char* PR_NULLABLE out, size_t capacity) {
+    if (bytes.size < 132 || bytes.size > 0xffffffffu || prMemReadBeU32(bytes.data + 36) != signature("acsp"))
+        return 0;
+    uint32_t size = uint32_t(bytes.size);
+    uint32_t offset = 0;
+    uint32_t length = 0;
+    if (!findTag(bytes.data, size, signature("desc"), &offset, &length) || length < 12)
+        return 0;
+    const uint8_t* tag = bytes.data + offset;
+    Description text{.out = out, .capacity = capacity};
+    uint32_t kind = prMemReadBeU32(tag);
+    if (kind == signature("desc")) {
+        // An ASCII count and its text, which ends in a NUL.
+        uint32_t count = prMemReadBeU32(tag + 8);
+        count = count < length - 12 ? count : length - 12;
+        for (uint32_t i = 0; i < count; ++i)
+            text.push(tag[12 + i]);
+    } else if (kind == signature("text")) {
+        for (uint32_t i = 8; i < length; ++i)
+            text.push(tag[i]);
+    } else if (kind == signature("mluc") && length >= 16) {
+        // Records of a language, a country, and UTF-16 text. The English record is used, or else the first record.
+        uint32_t records = prMemReadBeU32(tag + 8);
+        uint32_t recordSize = prMemReadBeU32(tag + 12);
+        uint32_t chosen = records;
+        for (uint32_t i = 0; i < records && recordSize >= 12; ++i) {
+            uint64_t at = 16 + uint64_t(i) * recordSize;
+            if (at + 12 > length)
+                break;
+            if (chosen == records)
+                chosen = i;
+            if (tag[at] == 'e' && tag[at + 1] == 'n') {
+                chosen = i;
+                break;
+            }
+        }
+        if (chosen != records) {
+            const uint8_t* record = tag + 16 + uint64_t(chosen) * recordSize;
+            uint32_t textSize = prMemReadBeU32(record + 4);
+            uint32_t textAt = prMemReadBeU32(record + 8);
+            if (textAt <= length && textSize <= length - textAt) {
+                for (uint32_t i = 0; i + 1 < textSize; i += 2) {
+                    uint32_t unit = prMemReadBeU16(tag + textAt + i);
+                    if (unit >= 0xd800 && unit < 0xdc00 && i + 3 < textSize) {
+                        uint32_t low = prMemReadBeU16(tag + textAt + i + 2);
+                        if (low >= 0xdc00 && low < 0xe000) {
+                            text.push(0x10000 + ((unit - 0xd800) << 10) + (low - 0xdc00));
+                            i += 2;
+                            continue;
+                        }
+                    }
+                    text.push(unit >= 0xd800 && unit < 0xe000 ? 0xfffd : unit);
+                }
+            }
+        }
+    }
+    return text.kept;
 }

@@ -210,3 +210,66 @@ TEST_CASE("bytes that are no profile the engine reads are invalid data") {
     CHECK(prColorProfileCreate(bytes, &profile) == PrStatus_InvalidData);
     prColorProfileDestroy(nullptr);
 }
+
+TEST_CASE("a profile's description is read from a version 2 description tag, version 4 localized text, or plain text") {
+    auto describe = [](const ProfileBytes& p, size_t capacity = 64) {
+        Array<uint8_t> bytes = p.build();
+        char out[64];
+        size_t size = prColorProfileDescription(PrByteView{bytes.data(), bytes.count()}, out, capacity);
+        return String(PrStringView{out, size});
+    };
+    // Version 2: an ASCII count and text. The text ends at its NUL, and its spaces are trimmed.
+    ProfileBytes v2{"RGB ", "XYZ "};
+    Array<uint8_t> desc;
+    ProfileBytes::text(desc, "desc");
+    ProfileBytes::putU32(desc, 0);
+    const char ascii[] = "  sRGB IEC61966-2.1 \0junk";
+    ProfileBytes::putU32(desc, sizeof ascii - 1);
+    for (size_t i = 0; i + 1 < sizeof ascii; ++i)
+        desc.push(uint8_t(ascii[i]));
+    v2.tag("desc", move(desc));
+    CHECK(describe(v2) == "sRGB IEC61966-2.1");
+    CHECK(describe(v2, 4) == "sRGB");
+
+    // Version 4: the English record of several, in UTF-16.
+    ProfileBytes v4{"RGB ", "XYZ "};
+    Array<uint8_t> mluc;
+    ProfileBytes::text(mluc, "mluc");
+    ProfileBytes::putU32(mluc, 0);
+    ProfileBytes::putU32(mluc, 2);
+    ProfileBytes::putU32(mluc, 12);
+    const char* const languages[] = {"deDE", "enUS"};
+    const char16_t* const texts[] = {u"Anzeige", u"Display P3 \u00e9"};
+    uint32_t at = 16 + 2 * 12;
+    for (uint32_t i = 0; i < 2; ++i) {
+        uint32_t units = 0;
+        while (texts[i][units] != 0)
+            ++units;
+        for (uint32_t k = 0; k < 4; ++k)
+            mluc.push(uint8_t(languages[i][k]));
+        ProfileBytes::putU32(mluc, units * 2);
+        ProfileBytes::putU32(mluc, at);
+        at += units * 2;
+    }
+    for (const char16_t* t : texts) {
+        for (uint32_t k = 0; t[k] != 0; ++k)
+            ProfileBytes::putU16(mluc, t[k]);
+    }
+    v4.tag("desc", move(mluc));
+    CHECK(describe(v4) == "Display P3 \xc3\xa9");
+    // A cut never splits a character.
+    CHECK(describe(v4, 12) == "Display P3");
+
+    ProfileBytes plain{"GRAY", "XYZ "};
+    Array<uint8_t> text;
+    ProfileBytes::text(text, "text");
+    ProfileBytes::putU32(text, 0);
+    for (const char* c = "Gray 2.2"; *c != 0; ++c)
+        text.push(uint8_t(*c));
+    plain.tag("desc", move(text));
+    CHECK(describe(plain) == "Gray 2.2");
+
+    ProfileBytes none{"RGB ", "XYZ "};
+    none.tag("rTRC", gammaElement(1));
+    CHECK(describe(none).isEmpty());
+}

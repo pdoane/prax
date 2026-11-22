@@ -57,6 +57,16 @@ void prColorProfileToXyzD50(const PrColorProfile* profile, PrColorIntent intent,
 // through a matching profile converts as its space does.
 PrColorSpace prColorProfileNamedSpace(const PrColorProfile* profile);
 
+// Writes the description of the ICC profile in `bytes` to `out` as UTF-8, and returns its size in bytes. The
+// description is the text of the profile's 'desc' tag. Returns zero if the profile has none.
+//
+// The call writes at most `capacity` bytes and never part of a character. The tag may be a version 2 text description,
+// a version 4 localized text, or plain text. For localized text, English is preferred. The text ends at its first NUL.
+// Control characters and surrounding spaces are removed.
+//
+// The profile need not be one that prColorProfileCreate accepts. The call reads only the header and the tag.
+size_t prColorProfileDescription(PrByteView bytes, char* PR_NULLABLE out, size_t capacity);
+
 #if defined(__cplusplus)
 }
 #endif
