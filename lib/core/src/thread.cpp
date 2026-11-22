@@ -6,6 +6,10 @@
 
 #include "core/src/config.h"
 
+#if PR_THREAD_SANITIZER
+#include <sanitizer/tsan_interface.h>
+#endif
+
 #if !defined(PR_PLATFORM_THREAD_START)
 #error "a target without a default for the group binds PR_PLATFORM_THREAD_START"
 #endif
@@ -66,3 +70,13 @@ void prConditionSignal(PrCondition* condition) {
 void prConditionBroadcast(PrCondition* condition) {
     PR_PLATFORM_CONDITION_BROADCAST(condition);
 }
+
+#if PR_THREAD_SANITIZER
+void prThreadSanitizerSend(const void* address) {
+    __tsan_release(const_cast<void*>(address));
+}
+
+void prThreadSanitizerReceive(const void* address) {
+    __tsan_acquire(const_cast<void*>(address));
+}
+#endif

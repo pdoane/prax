@@ -64,6 +64,25 @@ void prConditionSignal(PrCondition* condition);
 // Wakes the threads waiting on the condition.
 void prConditionBroadcast(PrCondition* condition);
 
+// PR_THREAD_HANDOFF_SEND(address) and PR_THREAD_HANDOFF_RECEIVE(address) tell ThreadSanitizer that one thread hands
+// work to another through code that the sanitizer does not see, such as a system framework that calls a completion
+// handler on a thread of its own. The sending thread calls SEND after its last write to the memory that it hands over,
+// and before the framework can run the handler. The handler calls RECEIVE with the same address before it reads that
+// memory. The address only names the handoff: any address that is unique to the handoff serves. In a build without
+// ThreadSanitizer (PR_THREAD_SANITIZER), the macros do nothing.
+//
+// Use the macros only where the framework guarantees the order. They state an order to the sanitizer. They do not
+// create one.
+#if PR_THREAD_SANITIZER
+void prThreadSanitizerSend(const void* address);
+void prThreadSanitizerReceive(const void* address);
+#define PR_THREAD_HANDOFF_SEND(address) prThreadSanitizerSend(address)
+#define PR_THREAD_HANDOFF_RECEIVE(address) prThreadSanitizerReceive(address)
+#else
+#define PR_THREAD_HANDOFF_SEND(address) ((void)0)
+#define PR_THREAD_HANDOFF_RECEIVE(address) ((void)0)
+#endif
+
 #if defined(__cplusplus)
 }
 #endif

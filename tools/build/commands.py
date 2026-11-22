@@ -112,7 +112,7 @@ def unit_tests(mode=None, lean=False, keep_going=False):
     """Builds and runs every unit test of the build that `mode` names, or with `lean` its lean form, then the tools'
     tests against its harnesses. With `keep_going`, the build reports every error (builds.build)."""
     chosen = builds.build(mode, lean=lean, keep_going=keep_going)
-    if not unit_runner.run(chosen.directory, os.cpu_count() or 4, TEST_TIMEOUT):
+    if not unit_runner.run(chosen.directory, os.cpu_count() or 4, TEST_TIMEOUT, slowdown=chosen.slowdown):
         sys.exit(1)
     if chosen.wasm:
         for name in sorted(os.listdir(chosen.directory)):
@@ -132,7 +132,7 @@ def test(argv):
     if argv[0].startswith("-"):
         # doctest's options choose the cases of every binary.
         chosen = builds.build(mode)
-        if not unit_runner.run(chosen.directory, os.cpu_count() or 4, TEST_TIMEOUT, argv):
+        if not unit_runner.run(chosen.directory, os.cpu_count() or 4, TEST_TIMEOUT, argv, chosen.slowdown):
             sys.exit(1)
         return
     # One module's tests build only their binary, <module>_tests.

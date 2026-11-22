@@ -48,8 +48,9 @@ SANITIZE = "-fsanitize=address" if dev.WINDOWS else "-fsanitize=address,undefine
                                                     "-fno-sanitize-recover=all"
 THREAD_SANITIZE = None if dev.WINDOWS else "-fsanitize=thread -fno-omit-frame-pointer"
 
-# How many times longer the sanitizer build's harnesses take, for the runners' deadlines.
+# How many times longer each sanitizer build's harnesses take, for the runners' deadlines.
 ASAN_SLOWDOWN = 4
+TSAN_SLOWDOWN = 8
 
 
 class UikitPlatform:
@@ -119,7 +120,7 @@ MODES = {
     "debug": Mode("debug", DEBUG, "Debug"),
     "release": Mode("release", RELEASE, "Release"),
     "asan": Mode("asan", ASAN, "Debug", SANITIZE, ASAN_SLOWDOWN),
-    "tsan": Mode("tsan", TSAN, "Debug", THREAD_SANITIZE),
+    "tsan": Mode("tsan", TSAN, "Debug", THREAD_SANITIZE, TSAN_SLOWDOWN),
     "wasm": Mode("wasm", WASM, "RelWithDebInfo", wasm=True, cache=CHECKED),
     "wasm-debug": Mode("wasm-debug", WASM_DEBUG, "Debug", wasm=True),
 }
@@ -375,8 +376,9 @@ def configure(source, directory, build_type, flags="", out=None, wasm=False, pla
                 stderr=out)
     elif lines is None:
         dev.run(["cmake", "-S", source, "-B", directory, "-G", "Ninja", "-DCMAKE_BUILD_TYPE=" + build_type,
-                 "-DCMAKE_C_FLAGS=" + flags, "-DCMAKE_CXX_FLAGS=" + flags, "-DCMAKE_EXE_LINKER_FLAGS=" + flags,
-                 *options()], stdout=out, stderr=out)
+                 "-DCMAKE_C_FLAGS=" + flags, "-DCMAKE_CXX_FLAGS=" + flags, "-DCMAKE_OBJC_FLAGS=" + flags,
+                 "-DCMAKE_OBJCXX_FLAGS=" + flags, "-DCMAKE_EXE_LINKER_FLAGS=" + flags, *options()], stdout=out,
+                stderr=out)
     # A configure that was stopped before it generated leaves a cache and no build.ninja, which CMake finishes.
     elif (not os.path.exists(os.path.join(directory, "build.ninja"))
           or "PR_DEVELOP:BOOL=ON" not in lines or "PR_APPS:BOOL=ON" not in lines

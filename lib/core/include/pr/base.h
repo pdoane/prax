@@ -92,6 +92,18 @@
 #define PR_ADDRESS_SANITIZER 0
 #endif
 
+// Defined as 1 if the build checks memory accesses with ThreadSanitizer, and 0 otherwise.
+#if defined(__SANITIZE_THREAD__)
+#define PR_THREAD_SANITIZER 1
+#elif defined(__has_feature)
+#if __has_feature(thread_sanitizer)
+#define PR_THREAD_SANITIZER 1
+#endif
+#endif
+#if !defined(PR_THREAD_SANITIZER)
+#define PR_THREAD_SANITIZER 0
+#endif
+
 // Implicit padding is an error for records between PR_NO_PADDING_BEGIN and PR_NO_PADDING_END. Every byte of such a
 // record is a named field, so hashing or comparing its bytes is meaningful. A nested record needs its own pair.
 #if defined(_MSC_VER)

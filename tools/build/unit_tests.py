@@ -74,14 +74,19 @@ class Result:
         self.cases = counts
 
 
-def run_test(test, filters, case_timeout):
-    """Runs one test's program, with doctest's `filters` if it is a doctest binary, and returns its Result."""
+def run_test(test, filters, case_timeout, slowdown):
+    """Runs one test's program, with doctest's `filters` if it is a doctest binary, and returns its Result. The
+    program's own limit is `slowdown` times longer, as `case_timeout` already is."""
     command = test["command"] + (filters if test["kind"] == "doctest" else [])
     environment = dict(os.environ)
     environment.update(test["environment"])
     environment["PR_TEST_CASE_TIMEOUT"] = str(case_timeout)
+    # Under a sanitizer, the allocator cannot reserve its address ranges where it asks, and says so on the standard
+    # error, which some tests compare. The warning says nothing about the program under test.
+    if slowdown > 1:
+        environment.setdefault("MIMALLOC_SHOW_ERRORS", "0")
     start = time.monotonic()
-    limit = test["timeout"] or PROGRAM_TIMEOUT
+    limit = (test["timeout"] or PROGRAM_TIMEOUT) * slowdown
     try:
         done = subprocess.run(command, cwd=test["directory"], env=environment, stdout=subprocess.PIPE,
                               stderr=subprocess.STDOUT, timeout=limit)
@@ -107,10 +112,12 @@ def load(path, default):
         return default
 
 
-def run(directory, jobs, case_timeout, filters=()):
+def run(directory, jobs, case_timeout, filters=(), slowdown=1):
     """Runs the unit tests of the build in `directory`, `jobs` programs at a time, giving each test case
-    `case_timeout` seconds. With doctest's `filters`, such as -tc=<name>, runs only the cases that they choose. Returns
-    true if every test passed."""
+    `case_timeout` seconds. With doctest's `filters`, such as -tc=<name>, runs only the cases that they choose. A
+    build that runs `slowdown` times slower, as a sanitizer's does, has every limit that many times longer. Returns true
+    if every test passed."""
+    case_timeout *= slowdown
     tests = load(os.path.join(directory, "tests.json"), None)
     if tests is None:
         raise SystemExit("no tests.json in %s; configure the build" % directory)
@@ -125,7 +132,7 @@ def run(directory, jobs, case_timeout, filters=()):
     results = []
     width = max(len(test["name"]) for test in tests)
     with concurrent.futures.ThreadPoolExecutor(max_workers=jobs) as pool:
-        futures = [pool.submit(run_test, test, filters, case_timeout) for test in tests]
+        futures = [pool.submit(run_test, test, filters, case_timeout, slowdown) for test in tests]
         for future in concurrent.futures.as_completed(futures):
             result = future.result()
             results.append(result)
