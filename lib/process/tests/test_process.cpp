@@ -126,6 +126,8 @@ struct Received {
     uint32_t calls = 0;
     bool answered = false;
     size_t answerAfter = 0;         // the bytes past "ready" that arrive before the answer
+    size_t ready = SIZE_MAX;        // where "ready" starts in the text, once it has arrived
+    size_t searched = 0;            // the bytes of the text that the search for "ready" has passed
 
     Received() { prMutexInit(&mutex); }
     ~Received() { prMutexReset(&mutex); }
@@ -147,8 +149,16 @@ void receive(void* PR_NULLABLE context, PrProcess* process, PrProcessStream stre
     received->text.append(prStringFromBytes(bytes));
     received->calls += stream == PrProcessStream_Output ? 1 : 1000000;
     PrStringView text = received->text;
-    size_t ready = prStringFind(text, "ready");
-    bool answer = !received->answered && ready != text.size && text.size >= ready + 5 + received->answerAfter;
+    // Only what arrived since the last search is searched, with the end of what came before, which may start the word,
+    // so that a flood of output is searched once.
+    if (received->ready == SIZE_MAX) {
+        size_t from = received->searched > 4 ? received->searched - 4 : 0;
+        size_t found = prStringFindFrom(text, "ready", from);
+        received->ready = found != text.size ? found : SIZE_MAX;
+        received->searched = text.size;
+    }
+    size_t ready = received->ready;
+    bool answer = !received->answered && ready != SIZE_MAX && text.size >= ready + 5 + received->answerAfter;
     received->answered = received->answered || answer;
     prMutexUnlock(&received->mutex);
     if (answer)

@@ -159,37 +159,6 @@ TEST_CASE("an animated webp composes its frames in order, and again from the sta
     prWebpDecoderDestroy(decoder);
 }
 
-TEST_CASE("a webp that ends early opens truncated or not at all, and never reads past its end") {
-    for (const Vector& vector : vectors()) {
-        CAPTURE(vector.name);
-        for (uint32_t size = 0; size < vector.bytes.count(); ++size) {
-            CAPTURE(size);
-            // A copy of exactly the bytes kept, so that a read past them is a read past the allocation.
-            const Array<uint8_t> bytes = copyBytes(PrByteView{vector.bytes.data(), size});
-            Array<uint8_t> pixels;
-            const PrStatus status = readAll(bytes.span(), &pixels);
-            CHECK(status != PrStatus_Ok);
-        }
-    }
-}
-
-TEST_CASE("a webp with any byte changed decodes or fails, and never reads past its end") {
-    const uint8_t kFlips[] = {0xFF, 0x01, 0x80};
-    for (const Vector& vector : vectors()) {
-        CAPTURE(vector.name);
-        for (uint32_t at = 0; at < vector.bytes.count(); ++at) {
-            for (uint8_t flip : kFlips) {
-                CAPTURE(at);
-                const Array<uint8_t> bytes = patched(vector.bytes, at, uint8_t(vector.bytes[at] ^ flip));
-                Array<uint8_t> pixels;
-                const PrStatus status = readAll(bytes.span(), &pixels);
-                if (status == PrStatus_Ok)
-                    CHECK(pixels.count() % 4 == 0);
-            }
-        }
-    }
-}
-
 TEST_CASE("a webp's container is checked") {
     const Vector& lossless = named("lossless gradient");
     // A RIFF file of another form is no WebP.

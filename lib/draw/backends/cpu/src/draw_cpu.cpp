@@ -1191,8 +1191,12 @@ void pushGroup(Renderer& r, const PrDrawCommand& c) {
         int32_t reach = reachAt(scale);
         CpuPlacement placement{};
         placement.transform = frame.localToDevice.affine;
-        CpuTarget beneath = seenThrough(r, r.frames.count, frame.parent);
-        frame.under = resampleUnder(r, beneath, placement, r.frames.count, prIRectOutset(box, reach));
+        if (g->backdrop != nullptr || prDrawFilterReadsBackdrop(g->filter)) {
+            CpuTarget beneath = seenThrough(r, r.frames.count, frame.parent);
+            frame.under = resampleUnder(r, beneath, placement, r.frames.count, prIRectOutset(box, reach));
+        } else {
+            frame.under = CpuTarget{nullptr, 0, PrIRect{0, 0, 0, 0}, r.target.format, false, PrIRect{0, 0, 0, 0}};
+        }
         r.transforms.push(frame.xform);
     } else {
         if (g->filter != nullptr)

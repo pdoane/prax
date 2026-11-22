@@ -12,6 +12,8 @@
 #include "pr/sort.h"
 #include "pr/string.h"
 
+#include "tools/harness/font_tables.h"
+
 #include "tools/harness/test.h"
 
 using namespace harness;
@@ -48,81 +50,6 @@ const PrFont* wptFont(PrStringView name) {
     prCompressCodecSetDestroy(codec);
     REQUIRE(status == PrStatus_Ok);
     return font;
-}
-
-uint32_t be32(const uint8_t* bytes) {
-    return uint32_t(bytes[0]) << 24 | uint32_t(bytes[1]) << 16 | uint32_t(bytes[2]) << 8 | bytes[3];
-}
-
-uint16_t be16(const uint8_t* bytes) {
-    return uint16_t(bytes[0] << 8 | bytes[1]);
-}
-
-void put16(Array<uint8_t>& out, uint32_t value) {
-    out.push(uint8_t(value >> 8));
-    out.push(uint8_t(value));
-}
-
-void put32(Array<uint8_t>& out, uint32_t value) {
-    put16(out, value >> 16);
-    put16(out, value);
-}
-
-void set16(Array<uint8_t>& out, uint32_t at, uint32_t value) {
-    out[at] = uint8_t(value >> 8);
-    out[at + 1] = uint8_t(value);
-}
-
-// Returns the bytes of table `tag` of a single font file, or empty if it has none.
-Array<uint8_t> tableOf(const Array<uint8_t>& font, uint32_t tag) {
-    uint16_t count = be16(font.data() + 4);
-    for (uint16_t i = 0; i < count; ++i) {
-        const uint8_t* record = font.data() + 12 + i * 16;
-        if (be32(record) == tag) {
-            Array<uint8_t> table;
-            table.append(font.data() + be32(record + 8), be32(record + 12));
-            return table;
-        }
-    }
-    return {};
-}
-
-// Returns the single font file `font` with table `tag` replaced by `table`, or added if it has none.
-Array<uint8_t> withTable(const Array<uint8_t>& font, uint32_t tag, const Array<uint8_t>& table) {
-    struct Table {
-        uint32_t tag;
-        Array<uint8_t> bytes;
-    };
-    Array<Table> tables;
-    uint16_t count = be16(font.data() + 4);
-    for (uint16_t i = 0; i < count; ++i) {
-        const uint8_t* record = font.data() + 12 + i * 16;
-        if (be32(record) != tag)
-            tables.push(Table{be32(record), tableOf(font, be32(record))});
-    }
-    tables.push(Table{tag, table});
-    // The tags are distinct, so that the order is the same whether or not the sort is stable.
-    sortItems(tables.span(), [](const Table& a, const Table& b) { return a.tag < b.tag; });
-    Array<uint8_t> out;
-    out.append(font.data(), 4);
-    put16(out, tables.count());
-    put16(out, 0);
-    put16(out, 0);
-    put16(out, 0);
-    uint32_t offset = 12 + tables.count() * 16;
-    for (const Table& t : tables) {
-        put32(out, t.tag);
-        put32(out, 0);
-        put32(out, offset);
-        put32(out, t.bytes.count());
-        offset += alignUp(t.bytes.count(), 4);
-    }
-    for (const Table& t : tables) {
-        out.append(t.bytes.span());
-        while (out.count() % 4 != 0)
-            out.push(0);
-    }
-    return out;
 }
 
 // Stretches and returns the glyphs, checking that a call with too little room writes only what fits.
@@ -651,7 +578,7 @@ TEST_CASE("a cut-in kern applies between the correction heights that bound the h
     prFontRelease(font);
 }
 
-TEST_CASE("a truncated MATH table reads what is left and falls back for the rest") {
+TEST_CASE("a MATH table cut short reads what is left and falls back for the rest") {
     Array<uint8_t> bytes = newCmBytes();
     Array<uint8_t> math = tableOf(bytes, kMath);
     REQUIRE(math.count() > 1000);
@@ -668,43 +595,5 @@ TEST_CASE("a truncated MATH table reads what is left and falls back for the rest
         CHECK(c.radicalDegreeBottomRaisePercent == doctest::Approx(0.6));
         CHECK(prFontMathGlyphVariantCount(font, 9, PrFontMathAxis_Vertical) == 0);
         prFontRelease(font);
-    }
-    // Offsets past the end, and every length of the table, read without fault. The glyphs are those of the tests above,
-    // and one past the font.
-    Array<uint32_t> sizes({0, 1, 4, 9, 10, 11, 100, 213, 214, 215});
-    for (uint32_t size = 300; size < math.count(); size += 997)
-        sizes.push(size);
-    sizes.push(math.count() - 1);
-    Array<uint8_t> outOfRange = math;
-    for (uint32_t at = 4; at < 10; at += 2)
-        set16(outOfRange, at, 0xFFF0);
-    const uint16_t glyphs[] = {9, 71, 1006, 2981, 0xFFFF};
-    const PrFontMathAxis axes[] = {PrFontMathAxis_Horizontal, PrFontMathAxis_Vertical};
-    for (uint32_t size : sizes) {
-        CAPTURE(size);
-        Array<uint8_t> cut;
-        cut.append(math.data(), min(size, math.count()));
-        const Array<uint8_t>* const tables[] = {&cut, &outOfRange};
-        for (const Array<uint8_t>* table : tables) {
-            const PrFont* font = fromBytes(withTable(bytes, kMath, *table));
-            CHECK(prFontMathConstants(font)->scriptScriptPercentScaleDown > 0);
-            for (uint16_t glyph : glyphs) {
-                prFontMathGlyphItalicsCorrection(font, glyph);
-                prFontMathGlyphTopAccentAttachment(font, glyph);
-                prFontMathGlyphIsExtendedShape(font, glyph);
-                prFontMathGlyphKern(font, glyph, PrFontMathCorner_BottomRight, 0.5f);
-                prFontMathGlyphPreferredAdvance(font, glyph);
-                for (PrFontMathAxis axis : axes) {
-                    uint32_t parts = prFontMathGlyphPartCount(font, glyph, axis);
-                    for (uint32_t i = 0; i < parts; ++i)
-                        prFontMathGlyphPart(font, glyph, axis, i);
-                    PrFontMathStretchInfo info{};
-                    PrFontGlyph out[64];
-                    uint32_t count = prFontMathGlyphStretch(font, glyph, axis, 20, &info, out, 64);
-                    CHECK(count < 0x10000);
-                }
-            }
-            prFontRelease(font);
-        }
     }
 }

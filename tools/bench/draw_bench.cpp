@@ -36,6 +36,7 @@
 
 #include "examples/draw_features/drawing.h"
 #include "examples/draw_features/features.h"
+#include "examples/draw_features/limits.h"
 #include "examples/draw_features/workloads.h"
 #include "tools/harness/draw_renderers.h"
 #include "tools/harness/harness.h"
@@ -62,7 +63,9 @@ struct Collection {
     const Array<Drawing>& (*drawings)();
 };
 
-constexpr Collection kCollections[] = {{"Features", allFeatures}, {"Workloads", workloadDrawings}};
+constexpr Collection kCollections[] = {
+    {"Features", allFeatures}, {"Workloads", workloadDrawings}, {"Limits", limitDrawings},
+};
 constexpr float kWidth = 1100;
 constexpr float kHeight = 800;
 

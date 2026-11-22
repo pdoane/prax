@@ -176,6 +176,11 @@ endif()
 # loads none of it.
 if (APPLE)
     add_link_options(LINKER:-dead_strip_dylibs)
+    # A program exports nothing: no library loads it or looks up its symbols. Without exports, the linker binds the weak
+    # definitions that C++ emits for inline functions and templates within the program, rather than leaving dyld to
+    # coalesce each of them at launch, which in a Debug build costs a large program tens of milliseconds every time it
+    # starts.
+    add_link_options("$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:LINKER:-no_exported_symbols>")
 endif()
 
 # Emscripten's programs get 8 MB of stack, as the platforms' main threads do, and a heap that grows. WebAssembly's

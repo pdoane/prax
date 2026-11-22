@@ -540,28 +540,12 @@ PrRect recordingBounds(const DrawRecording& r) {
     return commandsBounds(r.commands.data, r.commands.count);
 }
 
-// Returns true if a filter reads what lies beneath the group.
-bool readsBackdrop(const PrDrawFilter* PR_NULLABLE filter) {
-    if (filter == nullptr)
-        return false;
-    const PrDrawFilterNode* nodes = prDrawFilterNodes(filter);
-    for (uint32_t i = 0; i < prDrawFilterNodeCount(filter); ++i) {
-        const PrDrawFilterNode& n = nodes[i];
-        if (n.inputs[0] == PrDrawFilterInput_Backdrop || n.inputs[1] == PrDrawFilterInput_Backdrop)
-            return true;
-        for (uint32_t k = 0; n.kind == PrDrawFilterKind_Merge && k < n.merge.inputCount; ++k) {
-            if (n.merge.inputs[k] == PrDrawFilterInput_Backdrop)
-                return true;
-        }
-    }
-    return false;
-}
-
 // Returns true if any group among the commands, or in the lists that they play, reads what lies beneath it.
 bool commandsReadBackdrop(const PrDrawCommand* commands, uint32_t count) {
     for (uint32_t i = 0; i < count; ++i) {
         const PrDrawCommand& c = commands[i];
-        if (c.kind == PrDrawCommandKind_PushGroup && (c.group->backdrop != nullptr || readsBackdrop(c.group->filter)))
+        bool group = c.kind == PrDrawCommandKind_PushGroup;
+        if (group && (c.group->backdrop != nullptr || prDrawFilterReadsBackdrop(c.group->filter)))
             return true;
         if (c.kind == PrDrawCommandKind_Embed && prDrawListReadsBackdrop(c.embed.list))
             return true;

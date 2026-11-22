@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
-"""Compares lib/webp's decoder with libwebp's over libwebp's test data.
+"""Compares lib/webp's decoder with libwebp's over libwebp's test data, and over files that libwebp's encoders write.
 
-The corpus is the `libwebp_test_data` checkout, whose files are the conformance vectors of VP8 and images of the
-container's and the lossless format's features. The webp_compare harness decodes each file with both decoders
+The corpora are the `libwebp_test_data` checkout, whose files are the conformance vectors of VP8 and images of the
+container's and the lossless format's features, and the written part: files that libwebp's encoders write for each
+feature, lossless, lossy, with alpha and animated, which the harness writes under the build's directory once
+(tools/suite/webp/webp_written.h). The webp_compare harness decodes each file with both decoders
 (tools/suite/webp/webp_compare.cpp): every frame as Rgba8, as libwebp's WebPDecodeRGBA and its animation decoder give
 them, and a still lossy image's planes.
 
-A case is one file, and its key is its path under its corpus's part, as libwebp-test-data/test.webp. It passes if the
+A case is one file, and its key is its path under its corpus's part, as libwebp-test-data/test.webp or
+written/lossy/64x48.q75.m4.f1s60h0.g4.p0.n50.webp, whose name gives the settings that wrote it. It passes if the
 two decoders agree that it decodes or that it does not, and if lib/webp's frames, durations and play count are
 libwebp's, byte for byte, and its planes of a lossy image are too. An image that says it has no alpha is opaque, and its
 alpha is not compared; the notes count the pixels whose alpha libwebp decodes as other than opaque there.
@@ -29,8 +32,9 @@ BATCH = 16
 PARTS = (("libwebp-test-data", os.path.join("libwebp-test-data")),)
 
 
-def cases():
-    """Returns each case's key and the path of its file, by part."""
+def cases(binary):
+    """Returns each case's key and the path of its file, by part. The written part's files are written under the
+    harness's directory once."""
     found = []
     for part, directory in PARTS:
         root = os.path.join(corpus.ROOT, "third_party", directory)
@@ -41,6 +45,15 @@ def cases():
                     path = os.path.join(walk, name)
                     files.append((part + "/" + os.path.relpath(path, root).replace(os.sep, "/"), path))
         found.append((part, sorted(files)))
+    written = os.path.join(os.path.dirname(binary), "webp_written")
+    if os.path.exists(binary) and not os.path.isdir(written):
+        subprocess.run([binary, "--write", written], check=True)
+    files = []
+    for walk, _, names in os.walk(written):
+        for name in names:
+            path = os.path.join(walk, name)
+            files.append(("written/" + os.path.relpath(path, written).replace(os.sep, "/"), path))
+    found.append(("written", sorted(files)))
     return found
 
 
@@ -80,8 +93,8 @@ def main():
     ap.add_argument("--time", action="store_true", help="print what each decoder takes for each file")
     args = ap.parse_args()
     suite = corpus.Data("webp")
-    parts = cases()
-    if not any(files for _, files in parts):
+    parts = cases(args.binary)
+    if not parts[0][1]:
         sys.exit("WebP corpora missing; run ./dev.sh fetch libwebp_test_data")
     keys = [key for _, files in parts for key, _ in files]
     chosen = [(part, [(key, path) for key, path in files if suite.runs(key, args.match)]) for part, files in parts]

@@ -10,6 +10,7 @@ import subprocess
 import sys
 
 from tools.bench import common
+from tools.bench import gen_limits
 
 def by_engine(args, harness, extra):
     """Runs a harness whose rows each name the engine that measured them, and returns the rows by engine, without that
@@ -49,6 +50,18 @@ def frame(args):
 
 def lists(args):
     return {"prax": common.run_json([common.binary(args.bin, "list_bench")], "list_bench")}, []
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+# limits
+
+def limits(args):
+    """Each row is a document of suites/prax-limits, drawn or printed whole. The documents are written into the build
+    from their generator, which is the run's input: a change to it is a change to what the rows measure."""
+    harness = common.binary(args.bin, "limits_bench")
+    paths = gen_limits.write(os.path.join(os.path.dirname(harness), "prax-limits"))
+    rows = common.run_json([harness, *paths], "limits_bench")
+    return {"prax": rows}, [os.path.join(common.ROOT, "tools", "bench", "gen_limits.py")]
 
 
 # ----------------------------------------------------------------------------------------------------------------------

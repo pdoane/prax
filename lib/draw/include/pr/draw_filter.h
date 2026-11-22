@@ -282,6 +282,10 @@ uint32_t prDrawFilterNodeCount(const PrDrawFilter* filter);
 const PrDrawFilterNode* prDrawFilterNodes(const PrDrawFilter* filter);
 PrRect prDrawFilterRegion(const PrDrawFilter* filter);
 
+// Returns true if a node of the graph reads what lies beneath the group (PrDrawFilterInput_Backdrop). A filter that
+// does not leaves a backend free to skip gathering it.
+bool prDrawFilterReadsBackdrop(const PrDrawFilter* PR_NULLABLE filter);
+
 // Returns how far the graph may move the content that it reads, in the group's space. A group's layer extends this far
 // beyond the region that the graph produces.
 PrRect prDrawFilterOutset(const PrDrawFilter* filter);

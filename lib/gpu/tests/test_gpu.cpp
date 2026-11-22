@@ -392,7 +392,8 @@ TEST_CASE("uploads to one resource before a submission land as they would copied
 
 TEST_CASE("a large upload is staged in pieces and lands whole") {
     onEachBackend([](Fixture& f) {
-        const uint64_t size = uint64_t(40) << 20;
+        // Larger than two staging blocks of every backend, and no multiple of a block.
+        const uint64_t size = (uint64_t(9) << 20) + 4100;
         PrGpuBufferDesc desc{.size = size};
         PrGpuBuffer buffer{};
         REQUIRE(prGpuBufferCreate(f.device, &desc, &buffer) == PrStatus_Ok);

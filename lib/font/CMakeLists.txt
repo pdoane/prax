@@ -60,10 +60,9 @@ if (PR_DEVELOP)
         tests/test_font_subset.cpp
         tests/test_font_subset_c.c
         tests/test_hvgl.cpp
-        tests/test_outline.cpp
         tests/test_woff.cpp
     )
-    target_link_libraries(font_tests PRIVATE prax::compress_select prax::image_select prax::path freetype)
+    target_link_libraries(font_tests PRIVATE prax::compress_select prax::image_select prax::path)
     target_compile_definitions(font_tests PRIVATE PR_FONTS_DIR="${PR_TEST_FONTS_DIR}")
     if (PR_FONT_FREETYPE)
         target_sources(font_tests PRIVATE

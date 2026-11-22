@@ -111,6 +111,7 @@ bool netPeerOpen(NetPeer* out) {
         return false;
     PrStringView text = prStringFromBytes(prBlobBytes(ports));
     out->tcpEcho = portOf(text, "tcp_echo");
+    out->tcpEchoIpv4 = portOf(text, "tcp_echo_ipv4");
     out->tlsEcho = portOf(text, "tls_echo");
     out->tlsTruncating = portOf(text, "tls_truncating");
     out->tlsExpired = portOf(text, "tls_expired");

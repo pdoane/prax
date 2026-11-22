@@ -13,10 +13,15 @@ import tempfile
 import unittest
 import zlib
 
+from tools.harness import shards
 from tools.suite.wpt import wpt
 
 
 SHELL = wpt.SHELL
+
+# The tests wait on pages that run in real time, so they run as programs of their own beside each other.
+SHARDS = 3
+load_tests = shards.load_tests
 
 
 def box(kind, payload):
@@ -1026,7 +1031,7 @@ class HtmlHostTests(unittest.TestCase):
                 "<video id=looping autoplay loop muted src=clip.mp4></video>"
                 "<video id=once autoplay muted src=clip.mp4></video><script>"
                 "looping.addEventListener('playing', () => print('looping plays'), {once: true});"
-                "once.addEventListener('ended', () => print('once ended', looping.paused));</script>")
+                "once.addEventListener('ended', () => print('once ended', looping.paused));</script>", "--virtual-time")
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(sorted(result.stdout.splitlines()), ["looping plays", "once ended false"])
 

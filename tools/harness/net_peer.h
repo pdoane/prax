@@ -20,6 +20,7 @@ using namespace pr;
 // trust.
 struct NetPeer {
     uint16_t tcpEcho;
+    uint16_t tcpEchoIpv4;       // echoes on 127.0.0.1 alone, where every other server listens on ::1 too
     uint16_t tlsEcho;
     uint16_t tlsTruncating;
     uint16_t tlsExpired;

@@ -296,41 +296,6 @@ TEST_CASE("ISO-2022-JP escapes to the state that each code point needs, and back
     CHECK(encoded(PrCharset_Iso2022Jp, "\x1B") == "&#65533;");
 }
 
-TEST_CASE("what a charset decodes from one or two bytes encodes back to bytes that decode the same") {
-    for (PrCharset charset = PrCharset_None + 1; charset < PrCharset_Count; ++charset) {
-        if (prCharsetOutput(charset) != charset || charset == PrCharset_Utf8 || charset == PrCharset_Iso2022Jp)
-            continue;
-        String name = prCharsetName(charset);
-        CAPTURE(name);
-        uint32_t checked = 0;
-        for (uint32_t first = 0x80; first < 0x100; ++first) {
-            for (uint32_t second = 0; second < 0x100; second += first < 0x81 ? 0x100 : 1) {
-                String bytes;
-                bytes.append(char(first));
-                if (first >= 0x81)
-                    bytes.append(char(second));
-                String text = decoded(charset, bytes);
-                uint32_t codePoint = 0;
-                // Only bytes that decode whole, to one code point, round trip.
-                if (prUtf8Decode(text, 0, &codePoint) != text.count() || codePoint == kPrUtf8Replacement)
-                    continue;
-                String back = encoded(charset, text);
-                CAPTURE(text);
-                if (prStringContains(back, "&#")) {
-                    // Big5 does not encode its Hong Kong extensions, gb18030 does not encode U+E5E5, and Shift_JIS does
-                    // not encode its user-defined area.
-                    CHECK((charset == PrCharset_Big5 || charset == PrCharset_Gb18030 || charset == PrCharset_Gbk ||
-                        (charset == PrCharset_ShiftJis && codePoint >= 0xe000 && codePoint < 0xe758)));
-                    continue;
-                }
-                CHECK(decoded(charset, back) == text);
-                ++checked;
-            }
-        }
-        CHECK(checked > 0);
-    }
-}
-
 TEST_CASE("charsets work through the C API") {
     CHECK(prTestCharsetC());
 }

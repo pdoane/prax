@@ -14,6 +14,11 @@
 // OpenEXR decodes it, as a file of one part in COMPRESSION, the value of the compression attribute, and LAYOUT, which
 // is scanlines, tiles, mip or rip.
 //
+// `exr_compare --make CHANNELS WIDTH HEIGHT COMPRESSION LAYOUT <output>` writes an image of one part and one level,
+// made here, of rgba (RGBA halves with a float depth and a uint id), chroma (luminance with chroma subsampled 2 by 2)
+// or layers (layers of color, of a float alpha, and of perceptually linear channels), with smooth values and some
+// noise.
+//
 // `exr_compare --bench <path>...` writes a row of the benchmark for each file and engine: {"engine": "prax" or
 // "openexr", "name": the file's name and its first part's compression, "time": milliseconds, "counts": ...}, the cost
 // of decoding every level of every part, measured as the harness measures a benchmark (harnessMeasure).
@@ -24,6 +29,9 @@
 #include "pr/array.h"
 #include "pr/count_of.h"
 #include "pr/file.h"
+#include "pr/float16.h"
+#include "pr/integer.h"
+#include "pr/mem.h"
 #include "pr/string_view.h"
 #include "pr/text_buffer.h"
 
@@ -77,6 +85,137 @@ void run(const char* path) {
     prTextBufferReset(&bytes);
 }
 
+// A sequence of pseudo-random numbers, the same on every run.
+struct Sequence {
+    uint32_t state = 0x2545F491u;
+
+    uint32_t next() {
+        state ^= state << 13;
+        state ^= state >> 17;
+        state ^= state << 5;
+        return state;
+    }
+};
+
+// Returns a smooth value at pixel (x, y) of channel `channel`, with some noise.
+float value(uint32_t channel, uint32_t x, uint32_t y, Sequence& noise) {
+    float base = float((x * (channel + 3) + y * 7) % 97) / 40.0f + float(channel) * 0.25f;
+    return base + float(noise.next() % 64) / 4096.0f;
+}
+
+// Adds a plane of `pixel` named `name` to `level`, of the level's extent sampled at `sampling`, with smooth values. A
+// perceptually linear plane says so in its pLinear.
+void addPlane(exr::Level* level, const char* name, uint32_t pixel, uint32_t sampling, Sequence& noise, bool linear = false) {
+    exr::Plane plane;
+    plane.name = name;
+    plane.pixel = pixel;
+    plane.linear = linear;
+    plane.xSampling = sampling;
+    plane.ySampling = sampling;
+    plane.sampleBytes = pixel == 1 ? 2 : 4;
+    plane.width = level->width / sampling;
+    plane.height = level->height / sampling;
+    plane.samples.resize(plane.width * plane.height * plane.sampleBytes);
+    uint32_t channel = level->planes.count();
+    for (uint32_t y = 0; y < plane.height; ++y) {
+        for (uint32_t x = 0; x < plane.width; ++x) {
+            uint8_t* at = plane.samples.data() + (size_t(y) * plane.width + x) * plane.sampleBytes;
+            float f = value(channel, x, y, noise);
+            if (pixel == 0) {
+                uint32_t u = uint32_t(f * 1000);
+                prMemCopy(at, &u, 4);
+            } else if (pixel == 1) {
+                PrFloat16 h = prFloat16FromFloat(f);
+                prMemCopy(at, &h, 2);
+            } else {
+                prMemCopy(at, &f, 4);
+            }
+        }
+    }
+    level->planes.push(static_cast<exr::Plane&&>(plane));
+}
+
+// The channels of a test image.
+enum {
+    Channels_Rgba,          // RGBA halves with a float depth and a uint id
+    Channels_Chroma,        // luminance with chroma subsampled 2 by 2
+    Channels_Layers,        // layers of color, of a float alpha, and of perceptually linear channels
+};
+typedef uint8_t Channels;
+
+// An image of one part and one level of `width` by `height` pixels, of `channels`.
+exr::Image makeImage(uint32_t width, uint32_t height, Channels channels) {
+    Sequence noise;
+    exr::Level level;
+    level.width = width;
+    level.height = height;
+    if (channels == Channels_Chroma) {
+        addPlane(&level, "BY", 1, 2, noise);
+        addPlane(&level, "RY", 1, 2, noise);
+        addPlane(&level, "Y", 1, 1, noise);
+    } else if (channels == Channels_Layers) {
+        addPlane(&level, "diffuse.B", 1, 1, noise);
+        addPlane(&level, "diffuse.G", 1, 1, noise);
+        addPlane(&level, "diffuse.R", 1, 1, noise);
+        addPlane(&level, "mask.A", 2, 1, noise);
+        addPlane(&level, "spec.R", 2, 1, noise, true);
+        addPlane(&level, "spec.Y", 1, 1, noise, true);
+    } else {
+        addPlane(&level, "A", 1, 1, noise);
+        addPlane(&level, "B", 1, 1, noise);
+        addPlane(&level, "G", 1, 1, noise);
+        addPlane(&level, "R", 1, 1, noise);
+        addPlane(&level, "Z", 2, 1, noise);
+        addPlane(&level, "id", 0, 1, noise);
+    }
+    exr::Part part;
+    part.displayWidth = width;
+    part.displayHeight = height;
+    part.levels.push(static_cast<exr::Level&&>(level));
+    exr::Image image;
+    image.parts.push(static_cast<exr::Part&&>(part));
+    return image;
+}
+
+// Returns the decimal number that `text` starts with, or zero.
+uint32_t numberOf(const char* text) {
+    uint64_t value = 0;
+    prU64ParsePrefix(text, PrStringView(text).size, &value, 10);
+    return value > UINT32_MAX ? 0 : uint32_t(value);
+}
+
+// Returns the layout that `name` names: scanlines, tiles, mip or rip.
+exr::Layout layoutOf(PrStringView name) {
+    if (name == "tiles")
+        return exr::Layout_Tiles;
+    if (name == "mip")
+        return exr::Layout_MipTiles;
+    if (name == "rip")
+        return exr::Layout_RipTiles;
+    return exr::Layout_ScanLines;
+}
+
+// Returns the value of the compression attribute that `name` names, or zero, no compression.
+uint32_t compressionOf(PrStringView name) {
+    for (uint32_t i = 0; i < countOf(kCompressions); ++i) {
+        if (name == kCompressions[i])
+            return i;
+    }
+    return 0;
+}
+
+// Writes the image of `channels`, rgba, chroma or layers, of `width` by `height` pixels, in the compression and the
+// layout, to `output`.
+int make(const char* channels, uint32_t width, uint32_t height, const char* compression, const char* layout, const char* output) {
+    PrStringView kind(channels);
+    Channels chosen = kind == "chroma" ? Channels_Chroma : kind == "layers" ? Channels_Layers : Channels_Rgba;
+    exr::Image image = makeImage(width, height, chosen);
+    Array<uint8_t> written = exr::encode(image, compressionOf(compression), layoutOf(layout));
+    if (written.count() == 0 || !prFileWrite(PrStringView(output), PrByteView{written.data(), written.count()}))
+        return 1;
+    return 0;
+}
+
 int encode(const char* compression, const char* layout, const char* input, const char* output) {
     PrTextBuffer bytes = {};
     if (!harnessReadFile(&bytes, input))
@@ -84,21 +223,8 @@ int encode(const char* compression, const char* layout, const char* input, const
     const PrByteView file = {reinterpret_cast<const uint8_t*>(bytes.data), bytes.size};
     exr::Image image;
     int result = 1;
-    exr::Layout chosen = exr::Layout_ScanLines;
-    PrStringView name(layout);
-    if (name == "tiles")
-        chosen = exr::Layout_Tiles;
-    else if (name == "mip")
-        chosen = exr::Layout_MipTiles;
-    else if (name == "rip")
-        chosen = exr::Layout_RipTiles;
-    uint32_t value = 0;
-    for (uint32_t i = 0; i < countOf(kCompressions); ++i) {
-        if (PrStringView(compression) == kCompressions[i])
-            value = i;
-    }
     if (exr::referenceImage(file, &image)) {
-        Array<uint8_t> written = exr::encode(image, value, chosen);
+        Array<uint8_t> written = exr::encode(image, compressionOf(compression), layoutOf(layout));
         if (written.count() != 0 && prFileWrite(PrStringView(output), PrByteView{written.data(), written.count()}))
             result = 0;
     }
@@ -175,6 +301,8 @@ int main(int argc, char** argv) {
         return repeat(argv[2], argv[3]);
     if (argc == 6 && PrStringView(argv[1]) == "--encode")
         return encode(argv[2], argv[3], argv[4], argv[5]);
+    if (argc == 8 && PrStringView(argv[1]) == "--make")
+        return make(argv[2], numberOf(argv[3]), numberOf(argv[4]), argv[5], argv[6], argv[7]);
     if (argc >= 2 && PrStringView(argv[1]) == "--bench") {
         for (int i = 2; i < argc; ++i)
             bench(argv[i]);

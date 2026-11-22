@@ -99,50 +99,6 @@ double combined(const PrPath* a, const PrPath* b, PrPathPolylineOp op, PrPathFil
     return result;
 }
 
-// Returns the winding number of a polygon path around a point, counted by the crossings of a ray toward +x.
-int winding(const PrPath* path, PrVec2 p) {
-    int w = 0;
-    const PrPathVerb* verbs = prPathVerbs(path);
-    const PrVec2* points = prPathPoints(path);
-    uint32_t at = 0;
-    uint32_t start = 0;
-    for (uint32_t i = 0; i < prPathVerbCount(path); ++i) {
-        if (verbs[i] == PrPathVerb_Move) {
-            start = at++;
-        } else if (verbs[i] == PrPathVerb_Line) {
-            ++at;
-        } else if (verbs[i] == PrPathVerb_Close) {
-            for (uint32_t k = start; k < at; ++k) {
-                PrVec2 a = points[k];
-                PrVec2 b = points[k + 1 < at ? k + 1 : start];
-                if ((a.y <= p.y) == (b.y <= p.y))
-                    continue;
-                float x = a.x + (p.y - a.y) / (b.y - a.y) * (b.x - a.x);
-                if (x > p.x)
-                    w += b.y > a.y ? 1 : -1;
-            }
-        }
-    }
-    return w;
-}
-
-PrPath* randomPolygon(uint32_t& state, uint32_t count) {
-    auto next = [&] {
-        state = state * 1664525u + 1013904223u;
-        return float(state >> 8) / float(1u << 24);
-    };
-    PrPath* path = prPathCreate();
-    for (uint32_t i = 0; i < count; ++i) {
-        PrVec2 p{next() * 100, next() * 100};
-        if (i == 0)
-            prPathMoveTo(path, p);
-        else
-            prPathLineTo(path, p);
-    }
-    prPathClose(path);
-    return path;
-}
-
 } // namespace
 
 } // namespace pr_impl
@@ -302,53 +258,6 @@ TEST_CASE("a region grows and shrinks by its joins") {
     prPathDestroy(ell);
     prPathDestroy(out);
     prPathDestroy(square);
-}
-
-TEST_CASE("random self-intersecting polygons combine as their windings say") {
-    uint32_t state = 7;
-    const PrPathPolylineOp ops[] = {
-        PrPathPolylineOp_Union, PrPathPolylineOp_Intersect, PrPathPolylineOp_Difference,
-        PrPathPolylineOp_Xor,
-    };
-    for (uint32_t trial = 0; trial < 12; ++trial) {
-        PrPath* a = randomPolygon(state, 12 + trial);
-        PrPath* b = randomPolygon(state, 9 + trial);
-        PrPathFillRule rule = trial % 2 == 0 ? PrPathFillRule_NonZero : PrPathFillRule_EvenOdd;
-        for (PrPathPolylineOp op : ops) {
-            PrPath* out = prPathCreate();
-            combinePaths(a, rule, b, rule, op, 0.01f, out);
-            uint32_t wrong = 0;
-            for (uint32_t y = 0; y < 50; ++y) {
-                for (uint32_t x = 0; x < 50; ++x) {
-                    PrVec2 p{float(x) * 2 + 0.37f, float(y) * 2 + 0.61f};
-                    auto in = [&](int w) {
-                        return rule == PrPathFillRule_NonZero ? w != 0 : (w & 1) != 0;
-                    };
-                    bool ia = in(winding(a, p));
-                    bool ib = in(winding(b, p));
-                    bool expected;
-                    if (op == PrPathPolylineOp_Union)
-                        expected = ia || ib;
-                    else if (op == PrPathPolylineOp_Intersect)
-                        expected = ia && ib;
-                    else if (op == PrPathPolylineOp_Difference)
-                        expected = ia && !ib;
-                    else
-                        expected = ia != ib;
-                    int w = winding(out, p);
-                    // The result winds once around what it covers, in either direction.
-                    CHECK((w == 0 || w == 1 || w == -1));
-                    wrong += (w != 0) != expected ? 1 : 0;
-                }
-            }
-            CAPTURE(trial);
-            CAPTURE(int(op));
-            CHECK(wrong == 0);
-            prPathDestroy(out);
-        }
-        prPathDestroy(a);
-        prPathDestroy(b);
-    }
 }
 
 TEST_CASE("a contour of no area leaves nothing where it is intersected") {

@@ -68,11 +68,19 @@ SUITES = [
           ("markdown_spec",)),
     Suite("markdown-dom", ("commonmark", "cmark_gfm"), ("commonmark-spec/spec.txt", "cmark-gfm/test/spec.txt"),
           ("tools.suite.markdown.markdown_dom",), ("markdown_dom",)),
+    # lib/zstd beside Zstandard's reference library, each decoding what the other encodes.
+    Suite("zstd", (), (), ("tools.suite.zstd",), ("zstd_compare",)),
     # libwebp's test data, decoded by lib/webp beside libwebp.
     Suite("webp", ("libwebp_test_data",), ("libwebp-test-data/.git",), ("tools.suite.webp",), ("webp_compare",)),
     # OpenEXR's test images, and images that OpenEXR's encoder writes in every compression, decoded by lib/exr beside
     # OpenEXR's core library.
     Suite("exr", ("openexr_images",), ("openexr-images/.git",), ("tools.suite.exr",), ("exr_compare",)),
+    # lib/font's readers beside FreeType, over the build's test fonts.
+    Suite("font-freetype", (), (), ("tools.suite.font_freetype",), ("font_compare",)),
+    # Our damaged inputs: decoders given each byte changed and each prefix (suites/prax-decoders).
+    Suite("prax-decoders", (), (), ("tools.suite.prax.decoders",), ("decoder_check",)),
+    # Our shapes: lib/path's fills and combinations over random polygons and curves (suites/prax-paths).
+    Suite("prax-paths", (), (), ("tools.suite.prax.paths",), ("path_check",)),
     # esctest needs termios, and a Windows pseudoconsole would rewrite the sequences that it tests.
     Suite("esctest", ("esctest",), ("esctest2/esctest",), ("tools.suite.esctest",), ("vterm_esctest",),
           "esctest runs on a POSIX pseudoterminal" if sys.platform == "win32" else None),

@@ -13,9 +13,6 @@
 
 #include "font/src/sfnt.h"
 
-#include "freetype/freetype.h"
-#include "freetype/ftadvanc.h"
-#include "freetype/tttables.h"
 #include "tools/harness/test.h"
 
 using namespace harness;
@@ -259,99 +256,6 @@ TEST_CASE("the public headers compile as C") {
     CHECK(prTestFontCApi() == 0);
 }
 
-TEST_CASE("the Unicode cmap subtable is the one FreeType chooses, and maps every code point as FreeType does") {
-    const char* names[] = {
-        "Arimo-Regular.ttf",    "BungeeSpice.ttf",     "ColrTestGlyphs.ttf", "Cousine-Regular.ttf",
-        "noto_handwriting-cff2_colr_1.otf", "KalniaGlaze.ttf", "Literata.ttf",   "Nabla.ttf",
-        "NotoColorEmoji.subset.multiple_size_tables.ttf",  "NotoFlagsSbix.ttf", "NotoSans[wdth,wght].ttf",  "NotoSansArabic[wdth,wght].ttf",
-        "NotoSansDevanagari[wdth,wght].ttf", "NotoSansJP-VF.otf", "RobotoFlex.ttf", "Tinos-Regular.ttf",
-        "Twemoji.ttf",         "TwemojiSmileySbix.ttf",
-    };
-    FT_Library library = nullptr;
-    REQUIRE(FT_Init_FreeType(&library) == 0);
-    for (const char* name : names) {
-        CAPTURE(name);
-        Array<uint8_t> bytes = fontFile(name);
-        FT_Face face = nullptr;
-        REQUIRE(FT_New_Memory_Face(library, bytes.data(), FT_Long(bytes.count()), 0, &face) == 0);
-        REQUIRE(face->charmap != nullptr);
-        Sfnt sfnt{};
-        REQUIRE(sfntOpen(bytes.data(), bytes.count(), 0, &sfnt));
-        SfntCmap cmap{};
-        REQUIRE(sfntCmapUnicode(sfnt, &cmap));
-        CHECK(cmap.format == uint16_t(FT_Get_CMap_Format(face->charmap)));
-        uint32_t differ = 0;
-        uint32_t first = 0;
-        for (uint32_t c = 0; c <= 0x10ffff; ++c) {
-            if (FT_Get_Char_Index(face, c) != sfntCmapGlyph(cmap, c) && differ++ == 0)
-                first = c;
-        }
-        CAPTURE(first);
-        CHECK(differ == 0);
-        FT_Done_Face(face);
-    }
-    FT_Done_FreeType(library);
-}
-
-TEST_CASE("variation sequences map as FreeType maps them") {
-    const char* const names[] = {
-        "NewCMMath-Regular.otf", "NotoSansJP-VF.otf", "cmap14_font1.otf", "NotoSansMongolian-Regular.ttf",
-        "NotoColorEmoji.subset.multiple_size_tables.ttf", "NotoSansMath-Regular.ttf", "NotoSans[wdth,wght].ttf",
-    };
-    FT_Library library = nullptr;
-    REQUIRE(FT_Init_FreeType(&library) == 0);
-    uint32_t listed = 0;
-    for (const char* name : names) {
-        String path = format("{}/{}", PR_FONTS_DIR, name);
-        CAPTURE(path);
-        Array<uint8_t> bytes = readFile(path);
-        FT_Face face = nullptr;
-        REQUIRE(FT_New_Memory_Face(library, bytes.data(), FT_Long(bytes.count()), 0, &face) == 0);
-        const PrFont* font = fromBytes(bytes);
-        uint32_t differ = 0;
-        uint32_t firstBase = 0;
-        uint32_t firstSelector = 0;
-        auto check = [&](uint32_t base, uint32_t selector) {
-            int isDefault = FT_Face_GetCharVariantIsDefault(face, base, selector);
-            FT_UInt glyph = FT_Face_GetCharVariantIndex(face, base, selector);
-            PrFontSequenceMapping expected = PrFontSequenceMapping_None;
-            if (isDefault == 1 && glyph != 0)
-                expected = PrFontSequenceMapping_Default;
-            else if (isDefault == 0 && glyph != 0)
-                expected = PrFontSequenceMapping_Variant;
-            uint16_t expectedGlyph = expected != PrFontSequenceMapping_None ? uint16_t(glyph) : 0;
-            PrFontSequenceGlyph found = prFontVariationSequenceGlyph(font, base, selector);
-            if ((found.mapping != expected || found.glyph != expectedGlyph) && differ++ == 0) {
-                firstBase = base;
-                firstSelector = selector;
-            }
-        };
-        // FreeType returns each list in a buffer of the face's, which its next list reuses, so the selectors are copied
-        // before their code points are asked for.
-        Array<FT_UInt32> selectors;
-        for (FT_UInt32* at = FT_Face_GetVariantSelectors(face); at != nullptr && *at != 0; ++at)
-            selectors.push(*at);
-        for (uint32_t s = 0; s < selectors.count(); ++s) {
-            FT_UInt32* bases = FT_Face_GetCharsOfVariant(face, selectors[s]);
-            for (uint32_t b = 0; bases != nullptr && bases[b] != 0; ++b, ++listed) {
-                // The code points beside a listed one, which the font may not list.
-                check(bases[b], selectors[s]);
-                check(bases[b] + 1, selectors[s]);
-                check(bases[b] - 1, selectors[s]);
-            }
-            check('A', selectors[s]);
-        }
-        check('A', 0xFE00);
-        CAPTURE(firstBase);
-        CAPTURE(firstSelector);
-        CHECK(differ == 0);
-        prFontRelease(font);
-        FT_Done_Face(face);
-    }
-    CHECK(listed > 0);
-    FT_Done_FreeType(library);
-}
-
 // New Computer Modern Math gives the script capitals a roundhand form after U+FE01, and the empty set a variant form
 // after U+FE00.
 TEST_CASE("a variation sequence maps to its own glyph, its base's glyph, or nothing") {
@@ -512,39 +416,6 @@ TEST_CASE("a variation sequences subtable at the limits of its records maps what
     REQUIRE(sfntOpen(shorter.data(), shorter.count(), 0, &sfnt));
     CHECK_FALSE(sfntCmapSequencesOpen(sfnt, &sequences));
     CHECK(sequences.subtable.data == nullptr);
-}
-
-TEST_CASE("a font's design advances are FreeType's unhinted ones") {
-    const char* names[] = {
-        "Arimo-Regular.ttf",           "Cousine-Regular.ttf",     "noto_handwriting-cff2_colr_1.otf", "Literata.ttf",
-        "NotoSans[wdth,wght].ttf",        "NotoSansJP-VF.otf",  "NotoSansArabic[wdth,wght].ttf",  "RobotoFlex.ttf",
-        "Tinos-Regular.ttf",           "Twemoji.ttf",     "NotoColorEmoji.subset.multiple_size_tables.ttf",  "TwemojiSmileySbix.ttf",
-    };
-    FT_Library library = nullptr;
-    REQUIRE(FT_Init_FreeType(&library) == 0);
-    for (const char* name : names) {
-        CAPTURE(name);
-        Array<uint8_t> bytes = fontFile(name);
-        FT_Face face = nullptr;
-        REQUIRE(FT_New_Memory_Face(library, bytes.data(), FT_Long(bytes.count()), 0, &face) == 0);
-        const PrFont* font = nullptr;
-        REQUIRE(prFontCreate(BlobRef::adopt(prBlobCopy(bytes)), 0, nullptr, &font) == PrStatus_Ok);
-        bool scalable = FT_IS_SCALABLE(face) && FT_Set_Char_Size(face, 0, FT_F26Dot6(face->units_per_EM) << 6, 72, 72) == 0;
-        uint32_t differ = 0;
-        uint32_t first = 0;
-        for (FT_Long g = 0; scalable && g < face->num_glyphs; ++g) {
-            FT_Fixed advance = 0;
-            FT_Get_Advance(face, FT_UInt(g), FT_LOAD_NO_HINTING | FT_LOAD_NO_BITMAP | FT_LOAD_NO_AUTOHINT, &advance);
-            float expected = float(advance) / 65536.0f / float(face->units_per_EM);
-            if (prFontGlyphAdvance(font, uint16_t(g), 0) != expected && differ++ == 0)
-                first = uint32_t(g);
-        }
-        CAPTURE(first);
-        CHECK(differ == 0);
-        prFontRelease(font);
-        FT_Done_Face(face);
-    }
-    FT_Done_FreeType(library);
 }
 
 TEST_CASE("a single font has one face, and bytes that are not a font none") {

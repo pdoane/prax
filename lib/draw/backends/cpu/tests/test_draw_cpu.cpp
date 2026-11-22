@@ -1056,44 +1056,6 @@ TEST_CASE("a backdrop reads what the pixels held beneath the list") {
     prDrawListRelease(list);
 }
 
-TEST_CASE("a list source larger than the largest texture still draws, at the largest size") {
-    PrDrawList* drawn = prDrawListCreate();
-    prDrawListRect(drawn, PrRect{0, 0, 1, 1}, {.color = PrColor{1, 0, 0, 1}});
-    PrDrawSource source = prDrawSourceList(drawn, PrRect{0, 0, 1, 1});
-    PrDrawBrush brush = prDrawBrushImage(source, PrRect{0, 0, 20000, 20000}, PrDrawSampling_Linear);
-    PrDrawList* list = prDrawListCreate();
-    prDrawListRect(list, PrRect{0, 0, 4, 4}, {.brush = &brush});
-    Target t = target(4, 4);
-    render(t, list);
-    CHECK(pixel(t, 2, 2) == "255 0 0 255");
-    prDrawListRelease(list);
-    prDrawListRelease(drawn);
-}
-
-TEST_CASE("a group whose filter reaches far draws at a lower resolution, in bounded memory") {
-    PrDrawFilterBuilder* builder = prDrawFilterBuilderCreate();
-    PrDrawFilterNode blur{};
-    blur.kind = PrDrawFilterKind_Blur;
-    blur.inputs[0] = PrDrawFilterInput_Source;
-    blur.blur.sigma = PrVec2{100000, 100000};
-    prDrawFilterBuilderAdd(builder, &blur);
-    const PrDrawFilter* filter = nullptr;
-    filter = prDrawFilterCreate(builder);
-    prDrawFilterBuilderDestroy(builder);
-    PrDrawList* list = prDrawListCreate();
-    PrDrawGroup group = prDrawGroupDefault();
-    group.filter = filter;
-    prDrawListPushGroup(list, &group);
-    prDrawListRect(list, PrRect{0, 0, 64, 64}, {.color = kBlack});
-    prDrawListPopGroup(list);
-    Target t = target(64, 64);
-    CHECK(render(t, list) == PrStatus_Ok);
-    // A blur this wide spreads the square to almost nothing.
-    CHECK(t.bytes[(32 * 64 + 32) * 4 + 3] <= 2);
-    prDrawListRelease(list);
-    prDrawFilterRelease(filter);
-}
-
 TEST_CASE("transforms compose in doubles, so a shape far down and moved back keeps a quarter pixel") {
     PrDrawList* far = prDrawListCreate();
     prDrawListPushTransformDAffine2(far, prDAffine2Translate(0, 8000000.25));

@@ -1,12 +1,15 @@
 """`./dev.sh lint`, `rewrap`, `includes`, `layout` and `prose`: the conventions that a compiler cannot check, and the
 tools that fix what they can."""
 
+import os
+import re
 import subprocess
 import sys
 import tempfile
 
 from tools import dev
 from tools.fetch import checkouts
+from tools.harness import shards
 
 USAGE = {
     "lint": """\
@@ -80,11 +83,28 @@ def beside(work):
     sys.exit(status or linted)
 
 
-def tools_tests(env=None):
-    """Runs the tools' tests, which drive the harnesses and catch what only a page can reach. They run beside lint, and
-    read what the build fetches and the specifications that lint fetches (sources). What checks the runners against a
-    corpus is a suite's (tools/suite/registry.py)."""
-    dev.run([sys.executable, "-m", "unittest", "discover", "-q", "-s", "tools", "-t", ".", "-p", "test_*.py"], env=env)
+def tools_tests(env):
+    """The tools' tests as programs of the unit tests' run (tools/build/unit_tests.py), one for each module of tests so
+    that they run beside each other, with `env` added to their environment. They drive the harnesses and catch what only
+    a page can reach, and read what the build fetches and the specifications that lint fetches (sources). What checks
+    the runners against a corpus is a suite's (tools/suite/registry.py)."""
+    environment = {name: str(value) for name, value in env.items()}
+    tests = []
+    for directory, _, files in sorted(os.walk(os.path.join(dev.ROOT, "tools"))):
+        for name in sorted(files):
+            if not (name.startswith("test_") and name.endswith(".py")):
+                continue
+            module = os.path.relpath(os.path.join(directory, name[:-3]), dev.ROOT).replace(os.sep, ".")
+            # A module that declares its shards runs as that many programs (tools/harness/shards.py).
+            with open(os.path.join(directory, name), encoding="utf-8") as f:
+                declared = re.search(r"^SHARDS = (\d+)$", f.read(), re.M)
+            count = int(declared.group(1)) if declared else 1
+            for index in range(count):
+                shard = dict(environment, **({shards.VARIABLE: "%d/%d" % (index, count)} if count > 1 else {}))
+                tests.append({"name": module + ("[%d/%d]" % (index + 1, count) if count > 1 else ""),
+                              "kind": "unittest", "directory": dev.ROOT, "pass": "", "timeout": 0,
+                              "command": [sys.executable, "-m", "unittest", "-q", module], "environment": shard})
+    return tests
 
 
 def lint(argv):

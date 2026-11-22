@@ -247,7 +247,8 @@ TEST_CASE("a failed handshake, a broken frame or an abrupt end closes without a 
         CHECK(opened == (PrStringView(path) == "/bad-frame" || PrStringView(path) == "/abort"));
     }
     Probe refused{.closeAfter = 100};
-    run(&fixture, &refused, urlOf("ws", fixture.peer.closed, "/echo"));
+    // At 127.0.0.1 alone, where localhost would be refused at ::1 too, which takes Windows two seconds an address.
+    run(&fixture, &refused, format("ws://127.0.0.1:{}/echo", fixture.peer.closed));
     CHECK(refused.events == Array<PrWebSocketEvent>({PrWebSocketEvent_Close}));
     CHECK(refused.close.error == PrNetError_Refused);
     reset(&fixture);

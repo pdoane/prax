@@ -91,6 +91,7 @@ add_library(draw_features_drawings STATIC
     draw_features/features_paint.cpp
     draw_features/features_shapes.cpp
     draw_features/features_text.cpp
+    draw_features/limits.cpp
     draw_features/workloads.cpp
 )
 target_include_directories(draw_features_drawings PUBLIC ${PROJECT_SOURCE_DIR})

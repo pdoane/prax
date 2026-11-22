@@ -7,8 +7,9 @@ harness drives (tools/harness/net_peer.py), are a test each.
 
 Each program's output is kept until it ends, and then printed whole: a line for a program that passes, and everything
 that it printed for one that fails, so that what programs print at once never interleaves. The programs that took
-longest the last time start first, so that none is left to run alone at the end. The run's last line counts the cases
-that doctest's summaries count.
+longest the last time start first, so that none is left to run alone at the end. PR_TEST_TIMES names a directory
+that keeps those times past the build, as CI's cache does. A doctest binary times its cases, and the run ends with
+the slowest of them, then a line that counts the cases that doctest's summaries count.
 """
 
 import concurrent.futures
@@ -16,6 +17,7 @@ import json
 import os
 import re
 import subprocess
+import sys
 import time
 
 # A program that is not a doctest binary, or one that hangs outside its cases, ends after this many seconds unless its
@@ -28,6 +30,11 @@ DOCTEST_SUMMARY = re.compile(r"\[doctest\] test cases:\s*(\d+)\s*\|\s*(\d+) pass
 DOCTEST_BLOCK = re.compile(r"^={20,}$", re.MULTILINE)
 DOCTEST_CASE = re.compile(r"^TEST CASE:\s+(.+?)\s*$", re.MULTILINE)
 DOCTEST_ERROR = re.compile(r"\b(?:ERROR|CRASHED|THREW|exception)\b")
+# The line that doctest's --duration writes as each case ends: its seconds and its name.
+DOCTEST_DURATION = re.compile(r"^([0-9.]+) s: (.+?)\s*$", re.MULTILINE)
+# The number of the slowest cases that a run lists at its end, and the least that a listed case takes, in seconds.
+SLOWEST = 12
+SLOWEST_SECONDS = 0.1
 TIMED_OUT = re.compile(r'^TIMEOUT: the test case "(.+)" ran longer', re.MULTILINE)
 UNITTEST_RAN = re.compile(r"^Ran (\d+) tests? in", re.MULTILINE)
 UNITTEST_FAILED = re.compile(r"^(?:FAIL|ERROR): (\S+ \(.+?\))", re.MULTILINE)
@@ -72,12 +79,14 @@ class Result:
         # A case that fails in each of its subcases is named once.
         self.failures = list(dict.fromkeys(failures))
         self.cases = counts
+        self.durations = [(float(found.group(1)), found.group(2)) for found in DOCTEST_DURATION.finditer(output)]
 
 
 def run_test(test, filters, case_timeout, slowdown):
     """Runs one test's program, with doctest's `filters` if it is a doctest binary, and returns its Result. The
     program's own limit is `slowdown` times longer, as `case_timeout` already is."""
-    command = test["command"] + (filters if test["kind"] == "doctest" else [])
+    # A doctest binary times each case, so that a run can name its slowest.
+    command = test["command"] + (filters + ["--duration=true"] if test["kind"] == "doctest" else [])
     environment = dict(os.environ)
     environment.update(test["environment"])
     environment["PR_TEST_CASE_TIMEOUT"] = str(case_timeout)
@@ -112,19 +121,24 @@ def load(path, default):
         return default
 
 
-def run(directory, jobs, case_timeout, filters=(), slowdown=1):
-    """Runs the unit tests of the build in `directory`, `jobs` programs at a time, giving each test case
-    `case_timeout` seconds. With doctest's `filters`, such as -tc=<name>, runs only the cases that they choose. A
-    build that runs `slowdown` times slower, as a sanitizer's does, has every limit that many times longer. Returns true
-    if every test passed."""
+def run(directory, jobs, case_timeout, filters=(), slowdown=1, extra=()):
+    """Runs the unit tests of the build in `directory`, with the programs `extra` (as tests.json describes them), `jobs`
+    programs at a time, giving each test case `case_timeout` seconds. With doctest's `filters`, such as -tc=<name>, runs
+    only the doctest binaries' cases that they choose. A build that runs `slowdown` times slower, as a sanitizer's does,
+    has every limit that many times longer. Returns true if every test passed."""
     case_timeout *= slowdown
     tests = load(os.path.join(directory, "tests.json"), None)
     if tests is None:
         raise SystemExit("no tests.json in %s; configure the build" % directory)
+    tests += extra
     filters = list(filters)
     if filters:
         tests = [test for test in tests if test["kind"] == "doctest"]
-    times_path = os.path.join(directory, "test_times.json")
+    # The times of the last run, kept in the build or, where PR_TEST_TIMES names a directory that outlives the build as
+    # CI's cache does, in a file of the build's own there.
+    kept = os.environ.get("PR_TEST_TIMES")
+    times_path = (os.path.join(kept, os.path.basename(os.path.normpath(directory)) + ".json") if kept
+                  else os.path.join(directory, "test_times.json"))
     times = load(times_path, {})
     tests.sort(key=lambda test: -times.get(test["name"], 0))
 
@@ -147,6 +161,7 @@ def run(directory, jobs, case_timeout, filters=(), slowdown=1):
 
     for result in results:
         times[result.test["name"]] = round(result.seconds, 2)
+    os.makedirs(os.path.dirname(times_path), exist_ok=True)
     with open(times_path, "w", encoding="utf-8") as f:
         json.dump(times, f, indent=1, sort_keys=True)
 
@@ -163,11 +178,22 @@ def run(directory, jobs, case_timeout, filters=(), slowdown=1):
         summary = "%d test cases: %d passed, %d failed" % (totals[0] + totals[1], totals[0], totals[1])
     else:
         summary = "%d test cases: %d passed, %d failed, %d skipped" % (sum(totals), totals[0], totals[1], totals[2])
-    print("\n%s, in %d programs and %.0fs" % (summary, len(results), time.monotonic() - start))
+    # The slowest cases, which are where a run's time goes once no program stands out.
+    slowest = sorted(((seconds, result.test["name"], name) for result in results for seconds, name in result.durations
+                      if seconds >= SLOWEST_SECONDS), reverse=True)[:SLOWEST]
+    if slowest:
+        print("\nslowest cases:")
+        for seconds, program, name in slowest:
+            print("  %6.2fs  %s: %s" % (seconds, program, name))
+    # The programs' time added up, beside the run's, shows how much of the run waits on its slowest program.
+    print("\n%s, in %d programs and %.0fs (%.0fs of programs)" % (summary, len(results), time.monotonic() - start,
+                                                            sum(result.seconds for result in results)))
     if failing:
         print("failed:")
         for result in failing:
             for name in result.failures:
                 print("    %s: %s" % (result.test["name"], name))
         print("each failure's output is in %s" % log_path)
+    # What runs after this prints to the same stream, and must come after the summary.
+    sys.stdout.flush()
     return not failed

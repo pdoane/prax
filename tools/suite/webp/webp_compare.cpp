@@ -11,6 +11,9 @@
 // A file that one decoder refuses has no bytes compared. "time" is present with --time: what one decode of every frame
 // takes with each decoder, measured as the harness measures a benchmark (harnessMeasure).
 //
+// `webp_compare --write <directory>` writes the files that libwebp's encoders write for each feature under the
+// directory (webp_written.h), which the suite's written part decodes.
+//
 // `webp_compare --repeat ENGINE <path>` decodes the file with one decoder, prax or libwebp, over and over for
 // kHarnessRepeatSeconds, for ./dev.sh profile to sample.
 
@@ -20,6 +23,7 @@
 
 #include "tools/harness/harness.h"
 #include "tools/suite/webp/webp_reference.h"
+#include "tools/suite/webp/webp_written.h"
 
 using namespace harness;
 using namespace pr;
@@ -116,6 +120,8 @@ int repeat(const char* engine, const char* path) {
 int main(int argc, char** argv) {
     if (argc == 4 && PrStringView(argv[1]) == "--repeat")
         return repeat(argv[2], argv[3]);
+    if (argc == 3 && PrStringView(argv[1]) == "--write")
+        return webp::writeAll(argv[2]) ? 0 : 1;
     bool times = false;
     int first = 1;
     if (first < argc && PrStringView(argv[first]) == "--time") {

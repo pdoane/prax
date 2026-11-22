@@ -112,14 +112,14 @@ def unit_tests(mode=None, lean=False, keep_going=False):
     """Builds and runs every unit test of the build that `mode` names, or with `lean` its lean form, then the tools'
     tests against its harnesses. With `keep_going`, the build reports every error (builds.build)."""
     chosen = builds.build(mode, lean=lean, keep_going=keep_going)
-    if not unit_runner.run(chosen.directory, os.cpu_count() or 4, TEST_TIMEOUT, slowdown=chosen.slowdown):
+    # The tools' tests drive the host's harnesses, and run beside the build's own.
+    extra = [] if chosen.wasm or chosen.simulator else lint.tools_tests(chosen.environment())
+    if not unit_runner.run(chosen.directory, os.cpu_count() or 4, TEST_TIMEOUT, slowdown=chosen.slowdown, extra=extra):
         sys.exit(1)
     if chosen.wasm:
         for name in sorted(os.listdir(chosen.directory)):
             if name.endswith("_page_tests.html"):
                 run_page_tests(os.path.join(chosen.directory, name), [])
-    elif not chosen.simulator:
-        lint.tools_tests(chosen.environment())
 
 
 def test(argv):

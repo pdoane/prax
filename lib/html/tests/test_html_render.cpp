@@ -205,10 +205,10 @@ PrDomElement* byId(Page& page, const char* id) {
     return element;
 }
 
-// Updates the page and checks that the cached state matches a full recomputation.
+// Updates the presentation. A case about incremental work checks it against a full recomputation (verified); the WPT
+// suites' --verify runs check every page's.
 PrCssPresentationStats update(Page& page) {
     prHtmlPresentationUpdate(page.presentation, prLayoutVecFromPx(PrVec2{800, 600}));
-    CHECK(verified(page.presentation));
     return prCssPresentationStats(page.presentation);
 }
 

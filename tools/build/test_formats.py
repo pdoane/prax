@@ -32,11 +32,14 @@ def carried(path):
     nm = shutil.which("nm")
     if nm is None or not os.path.exists(path):
         return None
-    symbols = subprocess.run([nm, path], capture_output=True, text=True, check=True).stdout
-    # A stripped binary names none of Prax's functions.
-    if not re.search(r"\b_?pr[A-Z]", symbols):
+    symbols = subprocess.run([nm, "-j", path], capture_output=True, text=True, check=True).stdout
+    # The names of Prax's C functions, read once: a stripped binary has none.
+    names = set(re.findall(r"^_?(pr[A-Z]\w*)$", symbols, re.M))
+    if not names:
         return None
-    return {prefix for prefix in FORMATS if re.search(r"\b_?%s[A-Z]" % prefix, symbols)}
+    # A prefix names its format's functions, whose names go on with a capital.
+    named = re.compile(r"(%s)[A-Z]" % "|".join(FORMATS))
+    return {match.group(1) for match in map(named.match, names) if match}
 
 
 class FormatsTest(unittest.TestCase):

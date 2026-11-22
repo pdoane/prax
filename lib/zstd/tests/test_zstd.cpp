@@ -657,24 +657,22 @@ String repeated() {
 
 // Bytes of xorshift32 from a seed of one.
 String noise(size_t size) {
-    String out;
+    Array<char> bytes(size);
     uint32_t x = 1;
     for (size_t i = 0; i < size; ++i) {
         x ^= x << 13;
         x ^= x >> 17;
         x ^= x << 5;
-        out.append(1, char(uint8_t(x)));
+        bytes.data()[i] = char(uint8_t(x));
     }
-    return out;
+    return String(PrStringView{bytes.data(), size});
 }
 
 // 300,000 bytes of 'a' and 1,000 of 'b'.
 String runs() {
     String out;
-    for (int i = 0; i < 300000; ++i)
-        out.append(1, 'a');
-    for (int i = 0; i < 1000; ++i)
-        out.append(1, 'b');
+    out.append(300000, 'a');
+    out.append(1000, 'b');
     return out;
 }
 
@@ -710,15 +708,17 @@ Decoded decode(PrByteView input, size_t inputChunk, size_t outputChunk, int64_t 
         size_t written = 0;
         Outcome result = readOutcome(d, PrByteView{input.data + at, size}, at + size == input.size, &consumed,
             output.data(), outputChunk, &written);
-        REQUIRE(consumed <= size);
-        REQUIRE(written <= outputChunk);
+        // Checked in place, since a check that doctest records on every read costs more than the read.
+        if (consumed > size || written > outputChunk)
+            FAIL("a read consumed or wrote past what it was given");
         decoded.text.append(chars(output.data(), written));
         at += consumed;
         decoded.result = result;
         if (result != Outcome_Input && result != Outcome_Output)
             break;
         // A read makes progress.
-        REQUIRE((consumed != 0 || written != 0 || result == Outcome_Input));
+        if (consumed == 0 && written == 0 && result != Outcome_Input)
+            FAIL("a read made no progress");
     }
     decoded.consumed = at;
     prZstdDecoderDestroy(d);
@@ -929,52 +929,6 @@ TEST_CASE("zstd decodes frames one after another, and skips skippable ones") {
     CHECK(resultOf(view(followed)) == Outcome_Truncated);
     append(followed, "!!!");
     CHECK(resultOf(view(followed)) == Outcome_Invalid);
-}
-
-TEST_CASE("zstd reports every proper prefix of a stream as truncated") {
-    const PrByteView streams[] = {
-        STREAM(kZstdTextL19), STREAM(kZstdNoiseL3), STREAM(kZstdRunsL3), STREAM(kZstdTextL1),
-        STREAM(kZstdEmptyL3)
-    };
-    for (PrByteView stream : streams) {
-        for (size_t size = 0; size < stream.size; ++size) {
-            CAPTURE(size);
-            PrByteView prefix{stream.data, size};
-            CHECK(decode(prefix, size + 1, 4096).result == Outcome_Truncated);
-            CHECK(decode(prefix, 3, 100).result == Outcome_Truncated);
-            CHECK(resultOf(prefix) == Outcome_Truncated);
-        }
-    }
-}
-
-TEST_CASE("zstd stays in bounds on corrupt streams") {
-    // A corrupt stream fails or decodes to something, which with a checksum is what it decoded to before.
-    const PrByteView originals[] = {
-        STREAM(kZstdTextL19), STREAM(kZstdRepeatedL19), STREAM(kZstdRepeatedL3W10),
-        STREAM(kZstdTextL1)
-    };
-    for (PrByteView original : originals) {
-        Decoded expected = decodeInto(original, 300000);
-        REQUIRE(expected.result == Outcome_Done);
-        Array<uint8_t> bytes;
-        append(bytes, original);
-        uint32_t step = bytes.count() / 300 > 1 ? bytes.count() / 300 : 1;
-        bool checked = original.data != kZstdTextL1;
-        for (uint32_t at = 0; at < bytes.count(); at += step) {
-            const uint8_t kFlips[] = {0x01, 0x80, 0xff};
-            for (uint8_t flip : kFlips) {
-                bytes[at] ^= flip;
-                Decoded pieces = decode(view(bytes), 37, 1000);
-                Decoded whole = decodeInto(view(bytes), 300000);
-                if (checked) {
-                    CAPTURE(at);
-                    CHECK((pieces.result != Outcome_Done || pieces.text == expected.text));
-                    CHECK((whole.result != Outcome_Done || whole.text == expected.text));
-                }
-                bytes[at] ^= flip;
-            }
-        }
-    }
 }
 
 TEST_CASE("zstd fills an output that is too small, and a decoder stays ended until it is reset") {

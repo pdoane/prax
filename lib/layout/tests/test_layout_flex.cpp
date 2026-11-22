@@ -175,82 +175,6 @@ PrLayoutNode span(TextStage& s, PrLayoutNode parent, PrLayoutLength offset = prL
     return node;
 }
 
-// The kinds of chain that a sweep builds. Each level is a container of two items, one of which is the next level, so
-// that the number of nodes grows by a constant per level.
-enum {
-    Chain_Columns,          // single-line columns of auto height, their items stretched
-    Chain_Alternating,      // rows and columns in turn
-    Chain_Wrapped,          // columns, each level's chain item a block wrapping the next column
-    Chain_Percentages,      // rows of auto height whose chain item's child is half its stretched height
-    Chain_Fitted,           // columns whose items are at flex-start, so that each level's width is its content's
-    Chain_Orthogonal,       // columns, each in the other writing mode from its parent's, so that each is an orthogonal
-                            // item, main-inline in its parent
-    Chain_WrappedColumns,   // multi-line columns, each level's leaf wider than the next level, which its line stretches
-};
-typedef uint8_t Chain;
-
-// The work of a cold layout of a chain `depth` levels deep, and of a layout after its deepest leaf changes.
-struct Sweep {
-    uint32_t nodes;
-    PrLayoutTreeStats cold;
-    PrLayoutTreeStats change;
-};
-
-Sweep sweep(Chain chain, uint32_t depth) {
-    Stage s;
-    PrLayoutNode parent = s.root;
-    PrLayoutNode leaf = kPrLayoutNodeNone;
-    uint32_t nodes = 1;
-    for (uint32_t level = 0; level < depth; ++level) {
-        bool row = chain == Chain_Percentages || (chain == Chain_Alternating && level % 2 == 1);
-        Styled box = flexBox(row ? PrLayoutFlexDirection_Row : PrLayoutFlexDirection_Column);
-        if (chain == Chain_Fitted)
-            box.flex.alignItems = PrLayoutAlignment_FlexStart;
-        if (chain == Chain_WrappedColumns)
-            box.flex.wrap = PrLayoutFlexWrap_Wrap;
-        PrLayoutFontStyle font = s.font;
-        if (chain == Chain_Orthogonal && level % 2 == 1)
-            font.writingMode = PrLayoutWritingMode_VerticalRl;
-        PrLayoutNode container = s.f.element(parent, box.box, nullptr, nullptr, &font, &box.flex);
-        ++nodes;
-        PrLayoutBoxStyle leafBox = block(10);
-        if (chain == Chain_WrappedColumns)
-            leafBox.width = prLayoutLengthPx(float(10 * (depth - level)));
-        leaf = s.add(container, leafBox);
-        ++nodes;
-        if (chain == Chain_Wrapped) {
-            parent = s.add(container, block());
-            ++nodes;
-        } else if (chain == Chain_Percentages) {
-            PrLayoutBoxStyle half = block();
-            half.height = prLayoutLengthPercent(50);
-            PrLayoutNode item = s.add(container, block());
-            parent = s.add(item, half);
-            nodes += 2;
-        } else {
-            parent = container;
-        }
-    }
-    s.layout();
-    Sweep out{nodes, s.stats(), {}};
-    prLayoutNodeSetStyle(s.f.tree, leaf, s.style(Styled{block(12), prLayoutFlexStyleDefault()}));
-    s.layout();
-    out.change = s.stats();
-    return out;
-}
-
-// Returns true if `work` at 32 levels is within 15% of linear growth from `work` at 16, per node.
-template <typename Of>
-bool linear(Chain chain, Of work) {
-    Sweep half = sweep(chain, 16);
-    Sweep whole = sweep(chain, 32);
-    double perHalf = double(work(half)) / double(half.nodes);
-    double perWhole = double(work(whole)) / double(whole.nodes);
-    CAPTURE(work(half));
-    CAPTURE(work(whole));
-    return perWhole <= perHalf * 1.15 + 0.01;
-}
-
 // Creates flex items `width` wide that neither grow nor shrink, each holding a word, under `parent`.
 Array<PrLayoutNode> fixedItems(Stage& s, PrLayoutNode parent, Span<const float> widths) {
     Array<PrLayoutNode> out;
@@ -936,25 +860,6 @@ TEST_CASE("a stretched item's fixed-size image and scroll container are reused, 
     CHECK(layouts(false, prLayoutLengthPercent(50)) == 2);
     CHECK(layouts(true, prLayoutLengthPx(20)) == 1);
     CHECK(layouts(true, prLayoutLengthPercent(50)) == 2);
-}
-
-TEST_CASE("the work of laying out a chain of flex containers grows linearly with its nodes") {
-    const Chain chains[] = {
-        Chain_Columns,    Chain_Alternating, Chain_Wrapped,
-        Chain_Percentages, Chain_Fitted,     Chain_Orthogonal, Chain_WrappedColumns,
-    };
-    for (Chain chain : chains) {
-        CAPTURE(int(chain));
-        CHECK(linear(chain, [](const Sweep& w) { return w.cold.blocksLaidOut; }));
-        CHECK(linear(chain, [](const Sweep& w) { return w.cold.measuresComputed; }));
-        CHECK(linear(chain, [](const Sweep& w) { return w.cold.measuresReused; }));
-        CHECK(linear(chain, [](const Sweep& w) { return w.cold.flexItemsFlexed; }));
-        CHECK(linear(chain, [](const Sweep& w) { return w.change.blocksLaidOut; }));
-        CHECK(linear(chain, [](const Sweep& w) { return w.change.measuresComputed; }));
-        // No chain asks a box for more measurements than it keeps: a container solved for its size finds no baselines,
-        // which would ask its items for their used sizes.
-        CHECK(sweep(chain, 32).cold.measuresReplaced == 0);
-    }
 }
 
 TEST_CASE("justify-content places a line's free space, and its distributed values fall back where the items overflow") {

@@ -19,3 +19,8 @@ add_subdirectory(lottie)
 add_subdirectory(zstd)
 add_subdirectory(webp)
 add_subdirectory(exr)
+add_subdirectory(prax)
+# FreeType is in the build when a font backend or the font tests need it.
+if (TARGET freetype)
+    add_subdirectory(font)
+endif()

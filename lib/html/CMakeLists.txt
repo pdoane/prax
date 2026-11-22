@@ -147,14 +147,6 @@ if (PR_DEVELOP)
                                                          prax::svg_quickjs prax::mathml_quickjs prax::url_quickjs
                                                          prax::webidl_quickjs_cpp Threads::Threads)
         target_compile_definitions(html_quickjs_tests PRIVATE PR_FONTS_DIR="${PR_TEST_FONTS_DIR}")
-        # The host scripts' tests drive the native pr_shell of this build, which PR_BUILD names to them
-        # (tools/suite/corpus.py). A build for another platform, as the web's and the iOS simulator's are, runs pr_shell
-        # through its emulator, so it has no such tests.
-        if (NOT CMAKE_CROSSCOMPILING)
-            pr_add_test(html_host_scripts COMMAND ${Python3_EXECUTABLE} -m tools.shell.test_shell
-                        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR} ENVIRONMENT "PR_BUILD=$<TARGET_FILE_DIR:pr_shell>"
-                        TIMEOUT 60)
-        endif()
         pr_add_test(html_js_timers COMMAND pr_shell --html ${CMAKE_CURRENT_SOURCE_DIR}/tests/timers.html
                     PASS "timer host tests passed" TIMEOUT 10)
     endif()

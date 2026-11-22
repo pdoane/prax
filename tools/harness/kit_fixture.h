@@ -25,6 +25,7 @@
 #include "pr/layout_query.h"
 #include "pr/layout_scene.h"
 #include "pr/layout_tree.h"
+#include "pr/mem.h"
 #include "pr/string.h"
 #include "pr/string_view.h"
 #include "pr/text_harfbuzz.h"
@@ -225,8 +226,12 @@ struct KitFixture {
             PrColor fill = this->canvas();
             auto channel = [&](float value) { return uint8_t(value * fill.a * 255 + 0.5f); };
             uint8_t clear[4] = {channel(fill.r), channel(fill.g), channel(fill.b), uint8_t(fill.a * 255 + 0.5f)};
-            for (uint32_t i = 0; i < rgba->count(); ++i)
-                (*rgba)[i] = clear[i % 4];
+            // One pixel, then the filled part copied after itself until it covers the target.
+            uint8_t* out = rgba->data();
+            size_t size = rgba->count();
+            prMemCopy(out, clear, 4);
+            for (size_t filled = 4; filled < size; filled *= 2)
+                prMemCopy(out + filled, out, filled < size - filled ? filled : size - filled);
         }
         PrPixels pixels{rgba->data(), size_t(kRenderWidth) * 4, {kRenderWidth, kRenderHeight}};
         bool rendered = prDrawRendererRenderPixels(renderer, list, pixels, PrPixelFormat_Rgba8) == PrStatus_Ok;

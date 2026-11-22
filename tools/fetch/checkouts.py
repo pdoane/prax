@@ -746,8 +746,8 @@ CHECKOUTS = {
 
 
 def fetch(*names, pages_args=()):
-    """Fetches the checkouts named, or every one. The real pages take `pages_args`, as --if-empty."""
-    for name in names or CHECKOUTS:
+    """Fetches the checkouts named, and nothing if none is named. The real pages take `pages_args`, as --if-empty."""
+    for name in names:
         if name not in CHECKOUTS:
             dev.fail("no checkout named %s; one of: %s" % (name, " ".join(CHECKOUTS)))
         for part in CHECKOUTS[name]():

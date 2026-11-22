@@ -206,12 +206,16 @@ struct Pdf {
         PrStringView data = prStringHead(prStringFrom(body, start), end - start);
         if (!prStringContains(body, "/FlateDecode"))
             return data;
-        Array<uint8_t> out(1 << 22);
-        PrCompressRead read{};
+        // Most streams are small, so the output starts small and grows until the stream fits.
         PrByteView input = prStringBytes(data);
-        REQUIRE(prCompressCodecSetDecode(codec, PrCompressFormat_Zlib, input, out.data(), out.count(), &read) ==
-            PrStatus_Ok);
-        return PrStringView{reinterpret_cast<const char*>(out.data()), read.written};
+        for (size_t capacity = 4 * input.size + 256;; capacity *= 2) {
+            Array<uint8_t> out(static_cast<uint32_t>(capacity));
+            PrCompressRead read{};
+            REQUIRE(prCompressCodecSetDecode(codec, PrCompressFormat_Zlib, input, out.data(), out.count(), &read) ==
+                PrStatus_Ok);
+            if (read.progress != PrCompressProgress_Output)
+                return PrStringView{reinterpret_cast<const char*>(out.data()), read.written};
+        }
     }
 
     // Returns the content stream of the first page.

@@ -1446,7 +1446,20 @@ TEST_CASE("terminal: a terminal that has no title is named for its program, with
 }
 
 TEST_CASE("terminal: a terminal of no program runs the user's shell") {
+#if defined(_WIN32)
     Term t("", {});
+#else
+    // The user's shell is the one that SHELL names, and it reads its startup files from an empty home, so that the test
+    // runs no startup files of the developer's.
+    String home = subfolder("home-default");
+    String homeVariable = concat("HOME=", home);
+    PrStringView environment[] = {"SHELL=/bin/sh", homeVariable};
+    auto setup = [&](PrTerminalDesc* desc) {
+        desc->environment = environment;
+        desc->environmentCount = uint32_t(countOf(environment));
+    };
+    Term t("", {}, nullptr, {}, setup);
+#endif
     t.focus();
     t.f.frame();
     // The echoed command does not contain the number that it computes. On Windows, the shell is cmd.

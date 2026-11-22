@@ -19,6 +19,10 @@ inline constexpr bool isTriviallyCopyable = __is_trivially_copyable(T);
 template <typename T>
 inline constexpr bool isTriviallyDestructible = __is_trivially_destructible(T);
 
+// True if making a `T` with no arguments runs no code, so that a value-initialized `T` is zeroed bytes.
+template <typename T>
+inline constexpr bool isTriviallyDefaultConstructible = __is_trivially_constructible(T);
+
 // True if a `T` can be made from `Arguments`.
 template <typename T, typename... Arguments>
 inline constexpr bool isConstructible = __is_constructible(T, Arguments...);

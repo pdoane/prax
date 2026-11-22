@@ -48,13 +48,4 @@ if (PR_DEVELOP)
         tests/test_webview.cpp
         tests/test_webview_c.c
     )
-    # A backend's tests run its engine under an application's event loop.
-    if (PR_WEBVIEW_WEBKIT)
-        target_sources(webview_tests PRIVATE backends/webkit/tests/test_webview_webkit.mm)
-        set_source_files_properties(backends/webkit/tests/test_webview_webkit.mm PROPERTIES COMPILE_OPTIONS -fobjc-arc)
-    endif()
-    if (PR_WEBVIEW_WEBVIEW2)
-        target_sources(webview_tests PRIVATE backends/webview2/tests/test_webview_webview2.cpp)
-    endif()
-    target_link_libraries(webview_tests PRIVATE prax::app prax::app_select)
 endif()

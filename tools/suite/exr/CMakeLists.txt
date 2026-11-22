@@ -51,11 +51,6 @@ target_include_directories(exr_reference PUBLIC ${PROJECT_SOURCE_DIR} ${PROJECT_
 target_link_libraries(exr_reference PUBLIC prax::core_cpp PRIVATE harness_codecs openexr_reference prax::exr
                                     pr_warnings)
 
-# lib/exr's decoder beside OpenEXR's over files of each compression and layout, which the unit tests run.
-add_executable(exr_reference_tests tests/test_exr_reference.cpp)
-target_link_libraries(exr_reference_tests PRIVATE exr_reference prax::core_cpp test_main pr_warnings)
-pr_add_tests(exr_reference_tests)
-
 # The harness of the exr suite (tools/suite/exr.py) and of the exr benchmark, over files.
 pr_harness(exr_compare exr_reference exr_compare.cpp)
 target_link_libraries(exr_compare PRIVATE prax::core_cpp)

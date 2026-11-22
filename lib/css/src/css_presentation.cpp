@@ -7114,6 +7114,40 @@ CssAppearance appearanceOf(PrCssSheetAppearance appearance) {
     }
 }
 
+// The user agent's sheets, parsed once for the process. A host gives every presentation the same few sheets, and once
+// parsed their rules are only read: no rule set or object retains them, and no change reaches them. So presentations on
+// every thread share them, and they live as long as the process. A sheet is found by its text, which a host may build
+// at run time.
+struct UserAgentSheets {
+    struct Entry {
+        PrRawString source;
+        uint64_t hash;
+        CssSheetData* data;
+    };
+
+    PrMutex mutex;
+    RawArray<Entry> entries;
+
+    UserAgentSheets() { prMutexInit(&mutex); }
+};
+
+const CssSheetData* userAgentSheet(PrStringView source) {
+    static UserAgentSheets sheets;
+    uint64_t hash = prHashBytes(source.data, source.size, 0);
+    prMutexLock(&sheets.mutex);
+    for (const UserAgentSheets::Entry& entry : sheets.entries.span()) {
+        if (entry.hash == hash && prRawStringView(&entry.source) == source) {
+            prMutexUnlock(&sheets.mutex);
+            return entry.data;
+        }
+    }
+    CssSheetData* data = cssSheetDataCreate();
+    cssSheetDataParse(data, source, nullptr, CssOrigin_UserAgent);
+    sheets.entries.push(UserAgentSheets::Entry{prRawStringCopy(source), hash, data});
+    prMutexUnlock(&sheets.mutex);
+    return data;
+}
+
 } // namespace
 
 void cssPresentationRuleChanged(PrCssPresentation* presentation, const CssRuleData* rule) {
@@ -7880,10 +7914,8 @@ PrCssPresentation* prCssPresentationCreate(const PrCssPresentationDesc* desc) {
     r->shaper = desc->shaper;
     for (uint32_t i = 0; i < desc->userAgentSheetCount; ++i) {
         const PrCssUserAgentSheet& sheet = desc->userAgentSheets[i];
-        CssSheetData* data = cssSheetDataCreate();
-        cssSheetDataParse(data, sheet.source, nullptr, CssOrigin_UserAgent);
         r->userAgent.push(CssParsedUserAgentSheet{
-            .data = data,
+            .data = userAgentSheet(sheet.source),
             .conditions = sheet.conditions,
             .appearance = appearanceOf(sheet.appearance),
         });
@@ -7991,8 +8023,6 @@ void prCssPresentationDestroy(PrCssPresentation* PR_NULLABLE presentation) {
     r->prefetched.reset();
     r->tasks.reset();
     cssStyleTableReset(&r->styles);
-    for (uint32_t i = 0; i < r->userAgent.count; ++i)
-        cssSheetDataRelease(r->userAgent.data[i].data);
     r->userAgent.reset();
     r->calc.reset();
     r->gridTracks.reset();

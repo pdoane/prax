@@ -1,0 +1,2 @@
+# Fonts of the build's test fonts, each with the tables that its case cuts (suites/prax-decoders/README.md).
+NewCMMath-Regular.otf MATH

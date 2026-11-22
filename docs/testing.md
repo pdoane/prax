@@ -35,6 +35,10 @@ What tests a runner against a corpus is a suite. Then run the suites for the are
 | Unicode's algorithms (`lib/unicode`): bidi, normalization, segmentation, IDNA | `unicode` |
 | shell, runner, anything every page uses | every `*-wpt` suite, `wpt-runner` |
 | font bundles | `font-coverage` |
+| font files: character maps, variation sequences, advances, outlines | `font-freetype` |
+| Zstandard (`lib/zstd`), each way against the reference library | `zstd` |
+| decoders of compressed streams, images and fonts, given damaged input | `prax-decoders`, and under `asan` |
+| paths: tessellation, sparse rasterization, combination | `prax-paths` |
 | SVG, Lottie rendering | `resvg`, `lottie-web`, `skottie`, `rlottie`, `lottie-ios` |
 | the build, a library's public headers or its links | `./dev.sh package` |
 | invalidation, caching, rendering cost | the `*-wpt` suites with `--verify`, and `./dev.sh pages invalidation` |

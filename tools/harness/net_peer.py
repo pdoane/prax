@@ -1,8 +1,8 @@
 """The peer of the network's tests: TCP, TLS and HTTP servers that a test binary connects to.
 
 `python3 -m tools.harness.net_peer <binary> [arguments]` makes certificates for this run with the openssl command,
-starts each server on a port of its own on 127.0.0.1, and runs the binary with PR_NET_PEER set to a directory. The
-directory holds `ports`, a line of a server's name and port for each server, and the trusted CA's certificate as
+starts each server on a port of its own on 127.0.0.1 and ::1, and runs the binary with PR_NET_PEER set to a directory.
+The directory holds `ports`, a line of a server's name and port for each server, and the trusted CA's certificate as
 `ca.der`. The peer exits with the binary's status.
 
 Each echo server echoes what it reads until the client asks it to end, by sending `<bye>` last, or ends itself. Then
@@ -570,12 +570,26 @@ def serve_comfy(connection):
     ComfyHttp(connection, connection.getpeername(), None)
 
 
-def listen():
+def listen(ipv6=True):
+    """Returns the sockets of a server on a port of its own: on 127.0.0.1, and on ::1 at the same port if `ipv6` and the
+    machine has it. A client that resolves localhost to ::1 first then connects on its first attempt. On Windows, an
+    attempt that a port refuses takes two seconds, which the attempt at ::1 of every connection to localhost would cost
+    without it."""
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server.bind(("127.0.0.1", 0))
     server.listen(16)
-    return server
+    servers = [server]
+    if ipv6 and socket.has_ipv6:
+        other = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+        try:
+            other.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
+            other.bind(("::1", server.getsockname()[1]))
+            other.listen(16)
+            servers.append(other)
+        except OSError:
+            other.close()
+    return servers
 
 
 def closed_port():
@@ -627,6 +641,8 @@ def main():
 
         servers = {
             "tcp_echo": (None, serve_tcp),
+            # On 127.0.0.1 alone, so that a client that tries ::1 first is refused there and goes on to 127.0.0.1.
+            "tcp_echo_ipv4": (None, serve_tcp),
             "tls_echo": (tls_context(directory, "leaf"), serve_tls),
             "tls_truncating": (tls_context(directory, "leaf"), serve_truncating),
             "tls_expired": (tls_context(directory, "expired"), serve_tls),
@@ -639,9 +655,10 @@ def main():
         }
         ports = []
         for name, (context, handle) in servers.items():
-            server = listen()
-            ports.append((name, server.getsockname()[1]))
-            threading.Thread(target=accept, args=(server, context, handle), daemon=True).start()
+            listening = listen(ipv6=name != "tcp_echo_ipv4")
+            ports.append((name, listening[0].getsockname()[1]))
+            for server in listening:
+                threading.Thread(target=accept, args=(server, context, handle), daemon=True).start()
         ports.append(("closed", closed_port()))
         with open(os.path.join(directory, "ports"), "w") as out:
             for name, port in ports:

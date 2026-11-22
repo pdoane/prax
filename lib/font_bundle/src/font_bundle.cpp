@@ -4,6 +4,7 @@
 
 #include "pr/count_of.h"
 #include "pr/locale_common.h"
+#include "pr/mutex.h"
 #include "pr/raw_array.h"
 #include "pr/resource.h"
 #include "pr/string_ops.h"
@@ -329,23 +330,51 @@ bool bundleFileIsAdded(const RawArray<BundleFile>& files, const char* file) {
     return files.data[bundleFileIndex(files, file)].added;
 }
 
-// Adds the font of the bundle's file `file`, the resource font_bundle/<file>, to `set`. Returns false if it does not
-// load.
-bool add(PrFontSet* set, const char* file) {
+// The fonts of the bundles' files, created once for the process: a font only reads its file, so every set that installs
+// a bundle shares its fonts. Each holds a reference for as long as the process lives. A file that does not load is
+// remembered too, with no font.
+struct BundleFonts {
+    struct Entry {
+        const char* file;
+        const PrFont* PR_NULLABLE font;
+    };
+
+    PrMutex mutex;
+    RawArray<Entry> entries;
+
+    BundleFonts() { prMutexInit(&mutex); }
+};
+
+// Returns the font of the bundle's file `file`, the resource font_bundle/<file>, or null if it does not load.
+const PrFont* PR_NULLABLE bundleFont(const char* file) {
+    static BundleFonts fonts;
+    prMutexLock(&fonts.mutex);
+    for (const BundleFonts::Entry& entry : fonts.entries.span()) {
+        if (PrStringView(entry.file) == file) {
+            prMutexUnlock(&fonts.mutex);
+            return entry.font;
+        }
+    }
     PrRawString name = prRawStringCopy("font_bundle/");
     prRawStringAppend(&name, file);
     const PrFont* PR_NULLABLE font = nullptr;
     PrBlob* resource = prResourceOpen(prRawStringView(&name));
     prRawStringReset(&name);
-    if (resource == nullptr)
-        return false;
-    PrStatus status = prFontCreate(resource, 0, nullptr, &font);
+    if (resource != nullptr && prFontCreate(resource, 0, nullptr, &font) != PrStatus_Ok)
+        font = nullptr;
     prBlobRelease(resource);
-    if (status != PrStatus_Ok)
+    fonts.entries.push(BundleFonts::Entry{file, font});
+    prMutexUnlock(&fonts.mutex);
+    return font;
+}
+
+// Adds the font of the bundle's file `file` to `set`. Returns false if it does not load.
+bool add(PrFontSet* set, const char* file) {
+    const PrFont* PR_NULLABLE font = bundleFont(file);
+    if (font == nullptr)
         return false;
     PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
     prFontSetAdd(set, &descriptor, font);
-    prFontRelease(font);
     return true;
 }
 

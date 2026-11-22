@@ -85,8 +85,8 @@ TEST_CASE("net: a name that resolves to several addresses connects to the one th
     Fixture fixture{};
     if (!open(&fixture))
         return;
-    // The peer listens on 127.0.0.1 alone, so a resolver that gives ::1 first is refused there.
-    Target target{"localhost", fixture.peer.tcpEcho};
+    // The server listens on 127.0.0.1 alone, so a resolver that gives ::1 first is refused there.
+    Target target{"localhost", fixture.peer.tcpEchoIpv4};
     NetProbe probe{};
     NetProbeScript script{
         .open = openTcp,

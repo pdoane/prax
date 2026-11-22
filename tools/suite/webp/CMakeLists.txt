@@ -16,12 +16,6 @@ target_include_directories(webp_reference PUBLIC ${PROJECT_SOURCE_DIR} ${PROJECT
 target_link_libraries(webp_reference PUBLIC prax::core_cpp PRIVATE libwebp_reference prax::webp
                                      pr_warnings)
 
-# lib/webp's decoder beside libwebp's over images of each feature, which the unit tests run.
-add_executable(webp_reference_tests tests/test_webp_reference.cpp)
-target_link_libraries(webp_reference_tests PRIVATE harness_codecs webp_reference prax::image prax::core_cpp test_main
-                                                   pr_warnings)
-pr_add_tests(webp_reference_tests)
-
 # The harness of the webp suite (tools/suite/webp.py), over files.
-pr_harness(webp_compare webp_reference webp_compare.cpp)
+pr_harness(webp_compare webp_reference webp_compare.cpp webp_written.cpp webp_written.h)
 target_link_libraries(webp_compare PRIVATE prax::core_cpp)

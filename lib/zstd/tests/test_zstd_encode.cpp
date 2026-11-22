@@ -59,24 +59,22 @@ String repeated() {
 
 // Bytes of xorshift32 from a seed of one.
 String noise(size_t size) {
-    String out;
+    Array<char> bytes(size);
     uint32_t x = 1;
     for (size_t i = 0; i < size; ++i) {
         x ^= x << 13;
         x ^= x >> 17;
         x ^= x << 5;
-        out.append(1, char(uint8_t(x)));
+        bytes.data()[i] = char(uint8_t(x));
     }
-    return out;
+    return String(PrStringView{bytes.data(), size});
 }
 
 // 300,000 bytes of 'a' and 1,000 of 'b'.
 String runs() {
     String out;
-    for (int i = 0; i < 300000; ++i)
-        out.append(1, 'a');
-    for (int i = 0; i < 1000; ++i)
-        out.append(1, 'b');
+    out.append(300000, 'a');
+    out.append(1000, 'b');
     return out;
 }
 

@@ -186,3 +186,9 @@ if ((APPLE OR WIN32) AND PR_EXAMPLES)
 
                                              prax::draw prax::gpu pr_warnings)
 endif()
+
+# The documents of suites/prax-limits, whose content multiplies or runs long, drawn and printed, which ./dev.sh bench
+# limits runs.
+pr_harness(limits_bench prax::html limits_bench.cpp)
+target_link_libraries(limits_bench PRIVATE prax::dom prax::draw prax::font prax::layout prax::lottie prax::svg prax::text)
+target_compile_definitions(limits_bench PRIVATE PR_FONTS_DIR="${PROJECT_SOURCE_DIR}/third_party/fonts")

@@ -66,31 +66,6 @@ TEST_CASE("a standalone SVG document has its style sheets, selectors and inline 
     prDomDocumentRelease(document);
 }
 
-TEST_CASE("use elements that multiply each other's content draw a bounded number of elements") {
-    // Each level uses the one below it ten times, so the last level is a million rectangles.
-    String source = "<svg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'><defs>"
-        "<rect id='l0' width='1' height='1'/>";
-    for (int level = 1; level <= 6; ++level) {
-        formatTo(source, "<g id='l{}'>", level);
-        for (int i = 0; i < 10; ++i)
-            formatTo(source, "<use href='#l{}'/>", level - 1);
-        source.append("</g>");
-    }
-    source.append("</defs><use href='#l6'/></svg>");
-    PrDomDocument* document = prDomParseXml(source, "image/svg+xml", nullptr);
-    PrSvgElement* root = prSvgElementQuery(prDomElementAsEventTarget(prDomDocumentElement(document)));
-    PrDrawList* list = prDrawListCreate();
-    prSvgElementDraw(root, PrVec2{100, 100}, nullptr, list);
-    uint32_t rects = 0;
-    for (uint32_t i = 0; i < prDrawListCommandCount(list); ++i)
-        rects += prDrawListCommands(list)[i].kind != PrDrawCommandKind_PushTransformAffine2 &&
-            prDrawListCommands(list)[i].kind != PrDrawCommandKind_PopTransform;
-    CHECK(rects > 0);
-    CHECK(rects <= 100000);
-    prDrawListRelease(list);
-    prDomDocumentRelease(document);
-}
-
 TEST_CASE("a fill resolves for the display's headroom, beyond the sRGB gamut") {
     PrDomDocument* document = prDomParseXml("<svg xmlns='http://www.w3.org/2000/svg'><rect width='10' height='10' "
         "fill='color-hdr(color(rec2100-linear 1 1 1) 0, color(rec2100-linear 4 4 4) 2)'/></svg>", "image/svg+xml", nullptr);

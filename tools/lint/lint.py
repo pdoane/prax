@@ -744,7 +744,6 @@ WRAPPERS = {
     "tools/harness/net_peer.cpp": {"stdlib.h"},
     "tools/viewer/source_pdf.cpp": {"CoreGraphics/CoreGraphics.h"},
     # The tests that check a backend against the facility that it wraps, which they reach directly.
-    "lib/app/backends/win32/tests/test_app_win32.cpp": {"windows.h"},
     "lib/core/backends/windows/tests/test_core_windows_file.cpp": {"windows.h"},
     "lib/gpu/backends/d3d12/tests/test_gpu_d3d12.cpp": {"d3d12.h", "windows.h"},
     "lib/gpu/backends/vulkan/tests/test_gpu_vulkan.cpp": {"vulkan/vulkan_core.h", "windows.h"},
@@ -2320,7 +2319,7 @@ THIRD_PARTY = {
     "vterm.h": ("tools/bench/vterm_bench/libvterm_engine.cpp",),
     "cmark-gfm.h": ("tools/suite/markdown/cmark_gfm_reference.cpp",),
     "cmark-gfm-core-extensions.h": ("tools/suite/markdown/cmark_gfm_reference.cpp",),
-    "zstd.h": ("tools/suite/zstd/tests/*.cpp", "tools/bench/compress_bench.cpp"),
+    "zstd.h": ("tools/suite/zstd/zstd_compare.cpp", "tools/bench/compress_bench.cpp"),
     "zlib.h": ("tools/bench/compress_bench.cpp",),
     "brotli/decode.h": ("tools/bench/compress_bench.cpp",),
     "brotli/encode.h": ("tools/bench/compress_bench.cpp",),
@@ -2330,15 +2329,15 @@ THIRD_PARTY = {
     "basisu_gpu_texture.h": ("tools/suite/basis/tests/*.cpp",),
     "hb.h": ("lib/text/backends/harfbuzz/src/text_harfbuzz.cpp",),
     "tree_sitter/api.h": ("lib/syntax/backends/treesitter/src/syntax_treesitter.cpp",),
-    "freetype/freetype.h": ("lib/font/backends/freetype/src/font_freetype.cpp", "lib/font/tests/test_font.cpp",
-                            "lib/font/tests/test_outline.cpp", "lib/draw/comparisons/imgui/src/draw_imgui.cpp"),
-    "freetype/ftadvanc.h": ("lib/font/tests/test_font.cpp",),
-    "freetype/ftmm.h": ("lib/font/backends/freetype/src/font_freetype.cpp", "lib/font/tests/test_outline.cpp",
+    "freetype/freetype.h": ("lib/font/backends/freetype/src/font_freetype.cpp", "tools/suite/font/font_compare.cpp",
+                            "lib/draw/comparisons/imgui/src/draw_imgui.cpp"),
+    "freetype/ftadvanc.h": ("tools/suite/font/font_compare.cpp",),
+    "freetype/ftmm.h": ("lib/font/backends/freetype/src/font_freetype.cpp", "tools/suite/font/font_compare.cpp",
                          "lib/draw/comparisons/imgui/src/draw_imgui.cpp"),
     "freetype/ftmodapi.h": ("lib/font/backends/freetype/src/font_freetype.cpp",),
-    "freetype/ftoutln.h": ("lib/font/backends/freetype/src/font_freetype.cpp",),
+    "freetype/ftoutln.h": ("lib/font/backends/freetype/src/font_freetype.cpp", "tools/suite/font/font_compare.cpp"),
     "freetype/ftsizes.h": ("lib/font/backends/freetype/src/font_freetype.cpp",),
-    "freetype/tttables.h": ("lib/font/backends/freetype/src/font_freetype.cpp", "lib/font/tests/test_font.cpp"),
+    "freetype/tttables.h": ("lib/font/backends/freetype/src/font_freetype.cpp",),
 }
 
 INCLUDE = re.compile(r'^\s*#\s*include\s*([<"])([^>"]+)[>"]')

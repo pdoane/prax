@@ -9,6 +9,7 @@
 #include "pr/base.h"
 #include "pr/byte_view.h"
 #include "pr/construct.h"
+#include "pr/mem.h"
 #include "pr/memory.h"
 #include "pr/raw_array.h"
 #include "pr/span.h"
@@ -134,8 +135,12 @@ struct Array {
         PR_ASSERT(itemsCount <= 0xffffffffu - used && !holds(items));
         if (itemsCount > allocated - used)
             reserve(used + itemsCount);
-        for (uint32_t i = 0; i < itemsCount; ++i)
-            construct<T>(elements + used + i, items[i]);
+        if constexpr (isTriviallyCopyable<T>) {
+            prMemCopy(elements + used, items, size_t(itemsCount) * sizeof(T));
+        } else {
+            for (uint32_t i = 0; i < itemsCount; ++i)
+                construct<T>(elements + used + i, items[i]);
+        }
         used += itemsCount;
     }
     template <typename Item>
@@ -266,13 +271,20 @@ struct Array {
     // type; elements past the new count are destroyed.
     void resize(uint32_t newCount) {
         if (newCount < used) {
-            for (uint32_t i = newCount; i < used; ++i)
-                destruct(elements + i);
+            if constexpr (!isTriviallyDestructible<T>) {
+                for (uint32_t i = newCount; i < used; ++i)
+                    destruct(elements + i);
+            }
         } else {
             if (newCount > allocated)
                 reserve(newCount);
-            for (uint32_t i = used; i < newCount; ++i)
-                construct<T>(elements + i);
+            if constexpr (isTriviallyDefaultConstructible<T>) {
+                if (newCount > used)
+                    prMemZero(elements + used, size_t(newCount - used) * sizeof(T));
+            } else {
+                for (uint32_t i = used; i < newCount; ++i)
+                    construct<T>(elements + i);
+            }
         }
         used = newCount;
     }

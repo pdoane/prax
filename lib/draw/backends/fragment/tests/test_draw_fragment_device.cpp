@@ -1717,32 +1717,6 @@ TEST_CASE("the fragment renderer filters a rotated group in the group's own spac
     });
 }
 
-TEST_CASE("the fragment renderer draws a group whose filter reaches far at a lower resolution, as cpu does") {
-    onEachTier([&](PrGpuDevice* gpuDevice) {
-        PrDrawFilterBuilder* builder = prDrawFilterBuilderCreate();
-        PrDrawFilterNode blur{};
-        blur.kind = PrDrawFilterKind_Blur;
-        blur.inputs[0] = PrDrawFilterInput_Source;
-        blur.blur.sigma = PrVec2{2000, 2000};
-        prDrawFilterBuilderAdd(builder, &blur);
-        const PrDrawFilter* filter = nullptr;
-        filter = prDrawFilterCreate(builder);
-        prDrawFilterBuilderDestroy(builder);
-        PrDrawList* list = prDrawListCreate();
-        PrDrawGroup group = prDrawGroupDefault();
-        group.filter = filter;
-        prDrawListPushGroup(list, &group);
-        prDrawListRect(list, PrRect{0, 0, 64, 64}, {.color = PrColor{0, 0, 0, 1}});
-        prDrawListPopGroup(list);
-        Device device(gpuDevice, 64, 64);
-        Array<uint8_t> drawn = device.render(list);
-        Array<uint8_t> expected = cpuRender(list, 64, 64);
-        CHECK(fractionDiffering(drawn, expected, 4) <= 0.01);
-        prDrawListRelease(list);
-        prDrawFilterRelease(filter);
-    });
-}
-
 TEST_CASE("the fragment renderer composites a projected group's layer through the projection, as the cpu backend does") {
     onEachTier([&](PrGpuDevice* gpuDevice) {
         Device device(gpuDevice, 128, 128);

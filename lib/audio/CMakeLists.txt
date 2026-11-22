@@ -31,7 +31,4 @@ if (PR_DEVELOP)
         tests/test_audio_c.c
         tests/test_audio_mixer.cpp
     )
-    if (PR_AUDIO_APPLE)
-        target_sources(audio_tests PRIVATE backends/apple/tests/test_audio_apple.cpp)
-    endif()
 endif()

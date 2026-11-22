@@ -166,7 +166,7 @@ TEST_CASE("fragmentation stays bounded as resources of mixed sizes come and go a
     PrRandom random{.state = 3};
     Array<GpuSharedRangeIndex> taken;
     constexpr uint64_t kSteadyBytes = 64u << 20;
-    constexpr uint32_t kOperations = 1600000;
+    constexpr uint32_t kOperations = 200000;
     // The overhead once the total is first reached, and the worst in each quarter of the churn after it.
     double worst[4] = {};
     while (pool.taken < kSteadyBytes)

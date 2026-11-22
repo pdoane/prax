@@ -69,8 +69,9 @@ String decode(PrByteView input, size_t inputChunk, size_t outputChunk) {
         size_t consumed = 0, written = 0;
         const Outcome status = readStream(parser, {input.data + at, size}, at + size == input.size, &consumed,
             output.data(), output.count(), &written);
-        CHECK(consumed <= size);
-        CHECK(written <= output.count());
+        // Checked in place, since a check that doctest records on every read costs more than the read.
+        if (consumed > size || written > output.count())
+            FAIL("a read consumed or wrote past what it was given");
         result.append(PrStringView{reinterpret_cast<const char*>(output.data()), written});
         at += consumed;
         if (status == Outcome_Done || status == Outcome_Invalid) {
@@ -78,7 +79,8 @@ String decode(PrByteView input, size_t inputChunk, size_t outputChunk) {
             CHECK(at == input.size);
             break;
         }
-        REQUIRE((consumed || written));
+        if (consumed == 0 && written == 0)
+            FAIL("a read made no progress");
     }
     prDeflateDecoderDestroy(parser);
     return result;

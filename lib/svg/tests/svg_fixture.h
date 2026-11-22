@@ -61,6 +61,7 @@ struct Drawing {
     PrDrawList* list = nullptr;
     Array<Drawn> commands;
     PrVec2 extent{};
+    mutable Array<uint8_t> rendered;    // the list rendered over white, once a pixel is asked for
 
     // Draws the document `source` in a viewport of `viewport`, with `options`, or the defaults if null.
     explicit Drawing(PrStringView source, PrVec2 viewport = PrVec2{100, 100},
@@ -98,17 +99,20 @@ struct Drawing {
     Array<const Drawn*> fills() const { return filtered(false); }
     Array<const Drawn*> strokes() const { return filtered(true); }
 
-    // Returns the color of the pixel at `x`, `y` of the drawing rendered on the CPU over white, as "r g b".
+    // Returns the color of the pixel at `x`, `y` of the drawing rendered on the CPU over white, as "r g b". The drawing
+    // is rendered once, on the first pixel asked for.
     String pixel(uint32_t x, uint32_t y) const {
         uint32_t width = uint32_t(extent.x);
-        uint32_t height = uint32_t(extent.y);
-        Array<uint8_t> bytes(width * height * 4);
-        prMemFill(bytes.data(), 255, bytes.count());
-        PrDrawRenderer* renderer = prDrawCpuCreate(nullptr);
-        prDrawRendererRenderPixels(renderer, list, PrPixels{bytes.data(), size_t(width) * 4, {width, height}},
-            PrPixelFormat_Rgba8);
-        prDrawRendererDestroy(renderer);
-        const uint8_t* p = bytes.data() + (size_t(y) * width + x) * 4;
+        if (rendered.isEmpty()) {
+            uint32_t height = uint32_t(extent.y);
+            rendered.resize(width * height * 4);
+            prMemFill(rendered.data(), 255, rendered.count());
+            PrDrawRenderer* renderer = prDrawCpuCreate(nullptr);
+            prDrawRendererRenderPixels(renderer, list, PrPixels{rendered.data(), size_t(width) * 4, {width, height}},
+                PrPixelFormat_Rgba8);
+            prDrawRendererDestroy(renderer);
+        }
+        const uint8_t* p = rendered.data() + (size_t(y) * width + x) * 4;
         return format("{} {} {}", p[0], p[1], p[2]);
     }
 

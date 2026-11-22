@@ -69,6 +69,8 @@ jobs:
           BRANCH: ${{ github.head_ref || github.ref_name }}
         run: |
           echo "CCACHE_DIR=$RUNNER_TEMP/ccache" >> "$GITHUB_ENV"
+          # The unit tests' times of the last run, kept with the compiler cache, so that the slowest start first.
+          echo "PR_TEST_TIMES=$RUNNER_TEMP/ccache/test-times" >> "$GITHUB_ENV"
           echo "CCACHE_KEY=ccache-$RUNNER_OS-$PLATFORM-$CONFIGURATION-$BRANCH" >> "$GITHUB_ENV"
 
       - uses: actions/setup-python@v6

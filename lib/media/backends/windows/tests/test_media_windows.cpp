@@ -113,6 +113,12 @@ Array<uint8_t> encodeMovie() {
     return bytes;
 }
 
+// The movie, encoded once for the binary: the system's encoder takes long to start.
+const Array<uint8_t>& movie() {
+    static const Array<uint8_t> bytes = encodeMovie();
+    return bytes;
+}
+
 // Asks for the frame at `seconds` until the decoder answers the frame that shows there, for up to five seconds. A
 // decoder answers the last frame that it decoded until it catches up.
 bool waitForFrame(PrMediaDecoder* decoder, double seconds, PrMediaFrame* out) {
@@ -146,7 +152,7 @@ using namespace pr_impl;
 TEST_CASE("the Media Foundation codec reads a movie from memory and decodes the frame that shows at each time") {
     PrMediaCodec* codec = prMediaWindowsCreate();
     REQUIRE(codec != nullptr);
-    Array<uint8_t> bytes = encodeMovie();
+    const Array<uint8_t>& bytes = movie();
     REQUIRE(!bytes.isEmpty());
     PrMediaDecoder* decoder = nullptr;
     PrMediaInfo info{};
@@ -207,7 +213,7 @@ TEST_CASE("the Media Foundation codec decodes for a thread in a single-threaded 
     prThreadStart(&thread, [](void* context) {
         CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
         PrMediaCodec* codec = prMediaWindowsCreate();
-        Array<uint8_t> bytes = encodeMovie();
+        const Array<uint8_t>& bytes = movie();
         PrMediaDecoder* decoder = nullptr;
         PrMediaInfo info{};
         if (prMediaDecoderCreate(codec, BlobRef::adopt(prBlobCopy(bytes)), &decoder, &info) == PrStatus_Ok) {

@@ -391,33 +391,6 @@ TEST_CASE("a zig-zag's ridges are bounded, whatever the file asks for") {
     prDrawListRelease(list);
 }
 
-TEST_CASE("precomps that multiply each other's layers draw a bounded number of layers") {
-    // Each composition holds ten precomps of the one before it, so the last draws a million solids.
-    auto layers = [](PrStringView ref) {
-        String out("");
-        for (int i = 0; i < 10; ++i) {
-            out.append(concat(i != 0 ? ", " : "", R"({"ty": 0, "refId": ")", ref,
-                R"(", "w": 10, "h": 10, "ip": 0, "op": 60, "st": 0, "ks": {}})"));
-        }
-        return out;
-    };
-    String assets = R"({"id": "c0", "w": 10, "h": 10, "layers": [
-        {"ty": 1, "ip": 0, "op": 60, "st": 0, "sw": 10, "sh": 10, "sc": "#00ff00", "ks": {}}]})";
-    for (int level = 1; level <= 6; ++level)
-        assets.append(concat(R"(, {"id": "c)", format("{}", level), R"(", "w": 10, "h": 10, "layers": [)",
-            layers(format("c{}", level - 1)), "]}"));
-    PrLottieAnimation* animation = read(concat(R"({"w": 100, "h": 100, "fr": 30, "ip": 0, "op": 60, "assets": [)",
-        assets, R"(], "layers": [)", layers("c6"), "]}"));
-    PrDrawList* list = prDrawListCreate();
-    uint32_t solids = 0;
-    for (const PrDrawCommand& c : render(animation, 0, list))
-        solids += c.kind == PrDrawCommandKind_Rect;
-    CHECK(solids > 0);
-    CHECK(solids <= 100000);
-    prDrawListRelease(list);
-    prLottieAnimationDestroy(animation);
-}
-
 TEST_CASE("a composition that holds precomps of itself draws its other layers once") {
     PrLottieAnimation* animation = read(R"({"w": 100, "h": 100, "fr": 30, "ip": 0, "op": 60,
         "assets": [{"id": "loop", "w": 10, "h": 10, "layers": [

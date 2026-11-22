@@ -1,0 +1,6 @@
+# Cases in which lib/font is right and FreeType is wrong. An entry lists its cases, a key per line, as
+# <check>/<font>, followed by the indented reason: what the font holds and why FreeType loses.
+
+outlines/NewCMMath-Regular.otf
+    The font's CFF charstrings place points on half units, as glyph 156 (Ucircumflex) starts at (526.5, 779), which
+    fontTools reads too. FreeType's CFF driver gives its unhinted outline in whole units, (526, 779).

@@ -30,6 +30,7 @@
 
 #include "examples/draw_features/drawing.h"
 #include "examples/draw_features/features.h"
+#include "examples/draw_features/limits.h"
 #include "examples/draw_features/workloads.h"
 
 namespace {
@@ -279,6 +280,7 @@ int main(int argc, char** argv) {
     requestDevice(w);
     w.drawings.append(allFeatures().span());
     w.drawings.append(workloadDrawings().span());
+    w.drawings.append(limitDrawings().span());
     for (uint32_t i = 0; argc > 1 && i < w.drawings.count(); ++i) {
         if (prStringContains(w.drawings[i].name, argv[1])) {
             w.drawing = i;

@@ -161,6 +161,10 @@ BENCHES = [
     Bench("long-doc", "a long specification in the browser example: load, scroll, hover, navigate, restyle, resize",
           ["doc_bench"], fetch=["docs", "fonts"], run=engine.long_doc, options=engine.long_doc_options,
           sources=[os.path.join(common.ROOT, "tools", "bench", "doc_bench.cpp")]),
+    Bench("limits", "the documents of suites/prax-limits, whose content multiplies or runs long: SVG uses and Lottie "
+          "precomps that multiply, long tables and flex and grid containers printed, and deep chains of flex boxes",
+          ["limits_bench"], fetch=["fonts"], run=engine.limits,
+          sources=[os.path.join(common.ROOT, "tools", "bench", "limits_bench.cpp")]),
     Bench("draw", "recording and rendering draw_features' drawings on a renderer of lib/draw",
           ["draw_bench"], fetch=["fonts"], run=engine.draw, options=engine.draw_options),
     Bench("numbers", "numbers converted to text and back in lib/core and in the standard library's <charconv>: "

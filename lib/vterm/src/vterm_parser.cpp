@@ -105,16 +105,16 @@ bool collect(VtermParser* parser, uint8_t byte) {
     return true;
 }
 
-// Appends a byte to the string in progress. Drops the string once it passes kVtermParserMaxStringBytes.
-void stringPut(VtermParser* parser, uint8_t byte) {
+// Appends bytes to the string in progress. Drops the string once it passes kVtermParserMaxStringBytes.
+void stringPut(VtermParser* parser, PrStringView bytes) {
     if (parser->stringOverflowed)
         return;
-    if (parser->string.count >= kVtermParserMaxStringBytes) {
+    if (bytes.size > kVtermParserMaxStringBytes - parser->string.count) {
         parser->stringOverflowed = true;
         parser->string.reset();
         return;
     }
-    parser->string.push(char(byte));
+    parser->string.append(bytes.data, uint32_t(bytes.size));
 }
 
 // Makes the sequence in progress the parser's action of `kind`, with the final byte `final`.
@@ -388,8 +388,19 @@ VtermAction* vtermParserNext(VtermParser* parser, PrStringView text, size_t* at)
             case VtermParserState_DcsString:
             case VtermParserState_ApcString:
             case VtermParserState_IgnoredString: {
-                ++*at;
                 bool ignored = parser->state == VtermParserState_IgnoredString;
+                if (byte >= 0x20) {
+                    // The string's bytes up to the next control are taken at once: a string may be an image of
+                    // megabytes.
+                    size_t end = *at + 1;
+                    while (end < size && bytes[end] >= 0x20)
+                        ++end;
+                    if (!ignored)
+                        stringPut(parser, PrStringView{text.data + *at, end - *at});
+                    *at = end;
+                    continue;
+                }
+                ++*at;
                 if (byte == kEscape || (byte == kBell && parser->state == VtermParserState_OscString)) {
                     // ESC begins the string terminator, ST. The escape state then reads its `\` as a sequence that does
                     // nothing. A string ends at any escape, as in xterm.
@@ -415,9 +426,7 @@ VtermAction* vtermParserNext(VtermParser* parser, PrStringView text, size_t* at)
                     parser->state = VtermParserState_Ground;
                     continue;
                 }
-                if (byte < 0x20 || ignored)
-                    continue;
-                stringPut(parser, byte);
+                // Any other control is not part of the string.
                 continue;
             }
         }

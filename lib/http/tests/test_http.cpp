@@ -376,7 +376,8 @@ TEST_CASE("http: a refused connection fails, and a URL that is not http is not s
     if (!open(&fixture))
         return;
     Probe refused{};
-    run(&fixture, &refused, urlOf(fixture.peer.closed, "/"));
+    // At 127.0.0.1 alone, where localhost would be refused at ::1 too, which takes Windows two seconds an address.
+    run(&fixture, &refused, format("http://127.0.0.1:{}/", fixture.peer.closed));
     CHECK(refused.events.count() == 1);
     CHECK(refused.events.last() == PrHttpEvent_Fail);
     CHECK(refused.error == PrNetError_Refused);

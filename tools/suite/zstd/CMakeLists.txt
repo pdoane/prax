@@ -9,8 +9,6 @@ target_include_directories(zstd_reference SYSTEM PUBLIC ${zstd_SOURCE_DIR}/lib)
 target_compile_definitions(zstd_reference PRIVATE ZSTD_DISABLE_ASM)
 pr_third_party(zstd_reference)
 
-# lib/zstd's decoder over frames that the reference encoder writes, beside the reference decoder, and the reference
-# decoder over frames that lib/zstd's encoder writes.
-add_executable(zstd_reference_tests tests/test_zstd_reference.cpp)
-target_link_libraries(zstd_reference_tests PRIVATE zstd_reference prax::zstd prax::core_cpp test_main pr_warnings)
-pr_add_tests(zstd_reference_tests)
+# The harness of the zstd suite (tools/suite/zstd.py): lib/zstd beside the reference library, both ways.
+pr_harness(zstd_compare prax::zstd zstd_compare.cpp)
+target_link_libraries(zstd_compare PRIVATE zstd_reference prax::core_cpp)

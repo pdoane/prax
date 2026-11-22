@@ -738,72 +738,6 @@ TEST_CASE("a table does not break between rows that a cell spans") {
     CHECK(b.f.bounds(rows[2]).top > 500);
 }
 
-TEST_CASE("a long table with collapsed borders is sized once, and lays out and paints on each page its own rows") {
-    Book b;
-    auto element = [&](PrLayoutNode parent, const PrLayoutBoxStyle& box, const PrLayoutTableStyle* table,
-            const PrLayoutDecorationStyle* decoration) {
-        PrLayoutStyle record = prLayoutStyleDefault();
-        record.groups[PrLayoutGroup_Box] = prLayoutBoxStyleIntern(b.f.tree, &box);
-        if (table != nullptr)
-            record.groups[PrLayoutGroup_Table] = prLayoutTableStyleIntern(b.f.tree, table);
-        if (decoration != nullptr)
-            record.groups[PrLayoutGroup_Decoration] = prLayoutDecorationStyleIntern(b.f.tree, decoration);
-        return prLayoutNodeCreateElement(b.f.tree, parent, prLayoutStyleIntern(b.f.tree, &record));
-    };
-    PrLayoutBoxStyle tableBox = block();
-    tableBox.display = PrLayoutDisplay_Table;
-    tableBox.width = prLayoutLengthPx(300);
-    PrLayoutTableStyle collapse = prLayoutTableStyleDefault();
-    collapse.borderCollapse = PrLayoutBorderCollapse_Collapse;
-    PrLayoutNode table = element(b.root, tableBox, &collapse, nullptr);
-    PrLayoutBoxStyle groupBox = prLayoutBoxStyleDefault();
-    groupBox.display = PrLayoutDisplay_TableRowGroup;
-    PrLayoutBoxStyle rowBox = prLayoutBoxStyleDefault();
-    rowBox.display = PrLayoutDisplay_TableRow;
-    PrLayoutBoxStyle cellBox = prLayoutBoxStyleDefault();
-    cellBox.display = PrLayoutDisplay_TableCell;
-    cellBox.height = prLayoutLengthPx(18);
-    PrLayoutDecorationStyle bordered = prLayoutDecorationStyleDefault();
-    for (uint32_t side = 0; side < PrRectSide_Count; ++side) {
-        cellBox.border[side] = prLayoutUnitFromPx(2);
-        bordered.borderStyle[side] = PrDrawBorderStyle_Solid;
-        bordered.borderColor[side] = prColor16FromColor(PrColor{0, 0, 0, 1});
-    }
-    PrLayoutBoxStyle headBox = prLayoutBoxStyleDefault();
-    headBox.display = PrLayoutDisplay_TableHeaderGroup;
-    PrLayoutNode head = element(table, headBox, nullptr, nullptr);
-    PrLayoutNode headRow = element(head, rowBox, nullptr, nullptr);
-    for (int c = 0; c < 3; ++c)
-        element(headRow, cellBox, nullptr, &bordered);
-    PrLayoutNode body = element(table, groupBox, nullptr, nullptr);
-    constexpr uint32_t kRows = 1000;
-    for (uint32_t i = 0; i < kRows; ++i) {
-        PrLayoutNode row = element(body, rowBox, nullptr, nullptr);
-        for (int c = 0; c < 3; ++c)
-            element(row, cellBox, nullptr, &bordered);
-    }
-    b.layout();
-    REQUIRE(b.pages() > 40);
-    // The table is sized a bounded number of times, and each page places its header row and the body rows on it.
-    PrLayoutTreeStats stats = prLayoutTreeStats(b.f.tree);
-    CHECK(stats.tableRowsSized >= kRows + 1);
-    CHECK(stats.tableRowsSized <= 2 * (kRows + 1));
-    CHECK(stats.tableRowsPlaced <= 2 * (kRows + 1) + 2 * b.pages());
-    uint32_t first = 0;
-    const uint32_t pages[] = {0u, 1u, b.pages() / 2, b.pages() - 2};
-    for (uint32_t page : pages) {
-        PrDrawList* list = prDrawListCreate();
-        prLayoutTreePaintPage(b.f.tree, page, list);
-        uint32_t drawn = commandsDrawn(list);
-        prDrawListRelease(list);
-        if (page == 0)
-            first = drawn;
-        // A page draws the border segments of its own rows, about 7 for each of its 20 rows, and none of the rest.
-        CHECK(drawn < 300);
-        CHECK(drawn <= first + 20);
-    }
-}
-
 TEST_CASE("a table row taller than a page breaks inside, and its cells continue on the next page") {
     Book b;
     auto element = [&](PrLayoutNode parent, PrLayoutDisplay display) {
@@ -839,43 +773,6 @@ TEST_CASE("a table row taller than a page breaks inside, and its cells continue 
     CHECK(b.f.bounds(boxes[2]).top == 550);
     CHECK(b.f.bounds(small).top == 50);
     CHECK(b.f.bounds(after).top == 700);
-}
-
-TEST_CASE("a long flex or grid container lays out its items once, and places on each page the items there") {
-    const PrLayoutDisplay displays[] = {PrLayoutDisplay_Flex, PrLayoutDisplay_Grid};
-    for (PrLayoutDisplay display : displays) {
-        CAPTURE(int(display));
-        Book b;
-        PrLayoutBoxStyle containerBox = block();
-        containerBox.display = display;
-        PrLayoutFlexStyle flex = prLayoutFlexStyleDefault();
-        flex.direction = PrLayoutFlexDirection_Column;
-        PrLayoutStyle containerRecord = prLayoutStyleDefault();
-        containerRecord.groups[PrLayoutGroup_Box] = prLayoutBoxStyleIntern(b.f.tree, &containerBox);
-        containerRecord.groups[PrLayoutGroup_Flex] = prLayoutFlexStyleIntern(b.f.tree, &flex);
-        PrLayoutNode container =
-            prLayoutNodeCreateElement(b.f.tree, b.root, prLayoutStyleIntern(b.f.tree, &containerRecord));
-        constexpr uint32_t kItems = 1000;
-        PrLayoutStyle record = prLayoutStyleDefault();
-        PrLayoutBoxStyle content = block(20);
-        content.width = prLayoutLengthPx(100);
-        record.groups[PrLayoutGroup_Box] = prLayoutBoxStyleIntern(b.f.tree, &content);
-        PrLayoutStyleIndex style = prLayoutStyleIntern(b.f.tree, &record);
-        Array<PrLayoutNode> items;
-        for (uint32_t i = 0; i < kItems; ++i) {
-            PrLayoutNode item = prLayoutNodeCreateReplaced(b.f.tree, container, style);
-            prLayoutNodeSetNaturalSize(b.f.tree, item, natural(100, 20));
-            items.push(item);
-        }
-        b.layout();
-        // Each page area holds 20 items.
-        REQUIRE(b.pages() == kItems / 20);
-        CHECK(b.f.bounds(items[20]).top == 500 + 50);
-        CHECK(b.f.bounds(items[kItems - 1]).top == 500 * (kItems / 20 - 1) + 50 + 19 * 20);
-        PrLayoutTreeStats stats = prLayoutTreeStats(b.f.tree);
-        CHECK(stats.flexLaidOut + stats.gridsLaidOut <= 2);
-        CHECK(stats.boxFragmentsMade < 3 * kItems);
-    }
 }
 
 TEST_CASE("a page paints the floats and the boxes out of flow on it") {

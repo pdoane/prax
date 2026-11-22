@@ -8,6 +8,7 @@ corpus. What the engine decides about the cases, and the scores, are the suite's
 """
 
 import argparse
+import concurrent.futures
 import fnmatch
 import json
 import math
@@ -338,6 +339,38 @@ def outcomes(args, passed):
     for title, rows in (("lost", lost), ("gained", gained), ("moved", moved)):
         for key, was, now in rows:
             print("  %-7s %s  %s -> %s" % (title, key, "-" if was is None else was, "-" if now is None else now))
+
+
+class Check:
+    """A case that a harness checks by the words that it is given, and answers with a line of JSON, {"ok": <bool>,
+    "detail": <text>}, whose detail says what went wrong when the check fails (check_cases)."""
+
+    def __init__(self, key, words):
+        self.key = key
+        self.label = ""
+        self.words = list(words)
+
+
+def check_cases(args, data, parts, batch=1):
+    """Runs the checks of `parts`, a list of (name, checks), through the harness `args.binary`, `batch` checks to a run
+    of it and as many runs at once as the machine has cores, and returns the run's exit status (compare)."""
+    width = max(len(case.key) for _, cases in parts for case in cases)
+
+    def answer(_, chosen):
+        def run(start):
+            some = chosen[start:start + batch]
+            return answers([args.binary] + [word for case in some for word in case.words], b"", len(some))
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count() or 4) as pool:
+            return [got for part in pool.map(run, range(0, len(chosen), batch)) for got in part]
+
+    def show(case, why, got, cut):
+        detail = got["detail"] if got else ""
+        if cut is not None and len(detail) > cut:
+            detail = detail[:cut] + "..."
+        print("  %s  %s%s" % (case.key.ljust(width), why, "\n      " + detail if detail else ""))
+
+    return compare(parts, args, data, width, answer, lambda case, got: got["ok"], show)
 
 
 def report_parts(args, data, parts):

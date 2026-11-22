@@ -279,7 +279,7 @@ bool cssRuleSubjectFeatures(const CssRuleData* rule, RawArray<uint32_t>* out);
 // `appearance` nor a custom property, because the cascade decides the used appearance before it applies the sheet's
 // declarations.
 struct CssParsedUserAgentSheet {
-    CssSheetData* data;
+    const CssSheetData* data;     // parsed once for the process, and shared by every presentation
     PrCssSheetConditions conditions;
     CssAppearance appearance;
 };

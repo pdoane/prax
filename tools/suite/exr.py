@@ -1,15 +1,20 @@
 #!/usr/bin/env python3
-"""Compares lib/exr's decoder with OpenEXR's core library over the OpenEXR project's test images, and
-files that OpenEXR's encoder writes in every compression.
+"""Compares lib/exr's decoder with OpenEXR's core library over the OpenEXR project's test images, and files that
+OpenEXR's encoder writes in every compression and layout.
 
 The corpora are the `openexr_images` checkout, whose files are images of each layout, channel type and compression of
-the file format, and damaged files of its fuzzing, and the recompressed part: some of the checkout's images written
-again by OpenEXR's encoder in scan lines and in tiles, in each of its compressions, under the build's directory. The
+the file format, and damaged files of its fuzzing; the recompressed part: some of the checkout's images written again
+by OpenEXR's encoder in scan lines and in tiles, in each of its compressions; and the written part: images that the
+harness makes, of channels of each pixel type, subsampled chroma and layers, which OpenEXR's encoder writes in scan
+lines, tiles, mip chains and rip maps, in each of its compressions (WRITTEN). The last two are written under the
+build's directory. The
 exr_compare harness decodes each file with both decoders (tools/suite/exr/exr_compare.cpp): every channel of every
 level of every part, in the form that it is stored in.
 
 A case is one file, and its key is its path under its corpus's part, as openexr-images/ScanLines/Desk.exr, or for the
-recompressed part the source's name, the compression and the layout, as recompressed/Desk.piz.tiles.exr. It passes if
+recompressed part the source's name, the compression and the layout, as recompressed/Desk.piz.tiles.exr, and for the
+written part the image's channels and extent, the compression and the layout, as
+written/chroma.84x70.piz.scanlines.exr. It passes if
 the two decoders agree that it decodes or that it does not, and if every sample that both decode is OpenEXR's, bit for
 bit. A file whose only parts are deep data, which lib/exr does not read, passes if lib/exr refuses it as
 NotSupported. The samples of a data window outside its display window, which lib/exr's first level does not hold,
@@ -35,6 +40,12 @@ SOURCES = ("ScanLines/Desk.exr", "ScanLines/Tree.exr", "TestImages/WideColorGamu
            "MultiView/Balls.exr")
 COMPRESSIONS = ("none", "rle", "zips", "zip", "piz", "pxr24", "b44", "b44a", "dwaa", "dwab")
 LAYOUTS = ("scanlines", "tiles")
+
+# The images that the written part makes, by their channels and extent, and the layouts that each is written in, in
+# every compression: extents that leave partial blocks and tiles, subsampled chroma, layers, and levels of whole tiles,
+# since OpenEXR's encoder writes the partial tiles of a level past the first at the extent that they have in the first.
+WRITTEN = (("rgba", 83, 71, ("scanlines",)), ("chroma", 84, 70, ("scanlines",)), ("rgba", 150, 97, ("tiles",)),
+           ("rgba", 256, 128, ("mip", "rip")), ("layers", 77, 45, ("scanlines", "tiles")))
 
 
 def is_image(directory, name):
@@ -74,6 +85,19 @@ def cases(binary):
                     if os.path.exists(path):
                         files.append(("recompressed/" + name, path))
     found.append(("recompressed", sorted(files)))
+    files = []
+    if os.path.exists(binary):
+        os.makedirs(streams, exist_ok=True)
+        for channels, width, height, layouts in WRITTEN:
+            for compression in COMPRESSIONS:
+                for layout in layouts:
+                    name = "%s.%dx%d.%s.%s.exr" % (channels, width, height, compression, layout)
+                    path = os.path.join(streams, name)
+                    if not os.path.exists(path):
+                        subprocess.run([binary, "--make", channels, str(width), str(height), compression, layout, path])
+                    if os.path.exists(path):
+                        files.append(("written/" + name, path))
+    found.append(("written", sorted(files)))
     return found
 
 
@@ -104,7 +128,7 @@ def main():
     args = ap.parse_args()
     suite = corpus.Data("exr")
     parts = cases(args.binary)
-    if not any(files for _, files in parts[:-1]):
+    if not parts[0][1]:
         sys.exit("OpenEXR corpora missing; run ./dev.sh fetch openexr_images")
     keys = [key for _, files in parts for key, _ in files]
     chosen = [(part, [(key, path) for key, path in files if suite.runs(key, args.match)]) for part, files in parts]

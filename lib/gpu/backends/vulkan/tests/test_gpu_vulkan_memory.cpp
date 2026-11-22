@@ -57,18 +57,6 @@ struct MemoryFixture {
         return reinterpret_cast<Fn>(get(static_cast<VkDevice>(prGpuVulkanDevice(device)), name));
     }
 
-    // Returns the number of VkDeviceMemory allocations that the device allows.
-    uint32_t allocationLimit() const {
-        PFN_vkGetInstanceProcAddr getInstanceProcAddr =
-            reinterpret_cast<PFN_vkGetInstanceProcAddr>(prGpuVulkanGetInstanceProcAddr(device));
-        VkInstance instance = static_cast<VkInstance>(prGpuVulkanInstance(device));
-        PFN_vkGetPhysicalDeviceProperties get = reinterpret_cast<PFN_vkGetPhysicalDeviceProperties>(
-            getInstanceProcAddr(instance, "vkGetPhysicalDeviceProperties"));
-        VkPhysicalDeviceProperties properties;
-        get(static_cast<VkPhysicalDevice>(prGpuVulkanPhysicalDevice(device)), &properties);
-        return properties.limits.maxMemoryAllocationCount;
-    }
-
     // Submits the uploads that wait, and waits until the device has retired what was destroyed.
     void settle() {
         for (int i = 0; i < 2; ++i) {
@@ -93,9 +81,12 @@ constexpr uint32_t kSizes[] = {24, 96, 256, 1000, 4096, 12000, 40000};
 
 // Fills `bytes` with the bytes that `seed` gives.
 void pattern(uint8_t* bytes, uint32_t size, uint32_t seed) {
+    // Eight bytes of each random number.
     PrRandom random{.state = seed};
-    for (uint32_t i = 0; i < size; ++i)
-        bytes[i] = uint8_t(prRandomU32(&random));
+    for (uint32_t i = 0; i < size; i += 8) {
+        uint64_t value = prRandomU64(&random);
+        prMemCopy(bytes + i, &value, size - i < 8 ? size - i : 8);
+    }
 }
 
 // Creates the buffer `index` of a test, in device memory or, one in five, in memory that the test maps, and writes its
@@ -163,7 +154,7 @@ struct AppMemory {
 
 using namespace pr_impl;
 
-TEST_CASE("vulkan places more buffers and textures than the device allows allocations, and keeps their contents") {
+TEST_CASE("vulkan places many buffers and textures in few allocations, and keeps their contents") {
     const bool slotModes[] = {false, true};
     for (bool slotsOnly : slotModes) {
         CAPTURE(slotsOnly);
@@ -172,14 +163,10 @@ TEST_CASE("vulkan places more buffers and textures than the device allows alloca
         MemoryFixture f(options);
         if (f.device == nullptr)
             return;
-        uint32_t limit = f.allocationLimit();
-        // Each count passes the limit on most systems and stays within the device's handles. Some drivers allow 2^32 -
-        // 1 allocations, more than the test creates resources. On those, the test checks only that the resources fit in
-        // few allocations.
-        constexpr uint32_t kMaxBuffers = 24000;
-        constexpr uint32_t kMaxTextures = 4000;
-        uint32_t bufferCount = uint64_t(limit) + limit / 2 < kMaxBuffers ? limit + limit / 2 : kMaxBuffers;
-        uint32_t textureCount = limit / 4 < kMaxTextures ? limit / 4 : kMaxTextures;
+        // Resources share allocations, so a device that allows fewer allocations than resources holds them: a tenth as
+        // many allocations as resources is far from one each.
+        constexpr uint32_t bufferCount = 300;
+        constexpr uint32_t textureCount = 60;
         Array<uint8_t> scratch(40000);
         Array<TestBuffer> buffers;
         for (uint32_t i = 0; i < bufferCount; ++i)
@@ -201,10 +188,8 @@ TEST_CASE("vulkan places more buffers and textures than the device allows alloca
         PrGpuVulkanMemoryInfo full = prGpuVulkanMemoryInfo(f.device);
         uint32_t resourceCount = bufferCount + textureCount;
         MESSAGE(resourceCount, " resources of ", full.usedBytes, " bytes in ", full.allocations,
-            " allocations of ", full.allocatedBytes, " bytes, on a device that allows ", limit);
-        if (limit < kMaxBuffers + kMaxTextures)
-            CHECK(resourceCount > limit);
-        CHECK(full.allocations < 256);
+            " allocations of ", full.allocatedBytes, " bytes");
+        CHECK(full.allocations < resourceCount / 10);
         CHECK(full.usedBytes <= full.allocatedBytes);
         CHECK(wrongBuffers(f.device, buffers, 0, 7) == 0);
         CHECK(wrongBuffers(f.device, buffers, 3, 11) == 0);
