@@ -232,11 +232,11 @@ JSValue blobSlice(JSContext* ctx, JSValueConst blobObject, int argc, JSValueCons
 }
 
 enum {
-    BlobRead_Text,
-    BlobRead_ArrayBuffer,
-    BlobRead_Bytes,
+    BlobReading_Text,
+    BlobReading_ArrayBuffer,
+    BlobReading_Bytes,
 };
-typedef uint8_t BlobRead;
+typedef uint8_t BlobReading;
 
 // text(), arrayBuffer() and bytes(), selected by the magic. A blob's bytes are all here, so each settles at once.
 JSValue blobRead(JSContext* ctx, JSValueConst blobObject, int, JSValueConst*, int magic) {
@@ -249,9 +249,9 @@ JSValue blobRead(JSContext* ctx, JSValueConst blobObject, int, JSValueConst*, in
     }
     PrByteView bytes = prFetchBlobBytes(blob);
     JSValue value = JS_UNDEFINED;
-    if (magic == BlobRead_ArrayBuffer) {
+    if (magic == BlobReading_ArrayBuffer) {
         value = JS_NewArrayBufferCopy(ctx, bytes.data, bytes.size);
-    } else if (magic == BlobRead_Bytes) {
+    } else if (magic == BlobReading_Bytes) {
         value = JS_NewUint8ArrayCopy(ctx, bytes.data, bytes.size);
     } else {
         PrCharsetDecoder decoder = prCharsetDecoderMake(PrCharset_Utf8, 0);
@@ -284,9 +284,9 @@ constexpr JSCFunctionListEntry kBlobProto[] = {
     PR_JS_GET("size", blobSize),
     PR_JS_GET("type", blobType),
     PR_JS_METHOD("slice", 0, blobSlice),
-    PR_JS_MAGIC("text", 0, blobRead, BlobRead_Text),
-    PR_JS_MAGIC("arrayBuffer", 0, blobRead, BlobRead_ArrayBuffer),
-    PR_JS_MAGIC("bytes", 0, blobRead, BlobRead_Bytes),
+    PR_JS_MAGIC("text", 0, blobRead, BlobReading_Text),
+    PR_JS_MAGIC("arrayBuffer", 0, blobRead, BlobReading_ArrayBuffer),
+    PR_JS_MAGIC("bytes", 0, blobRead, BlobReading_Bytes),
 };
 
 constexpr JSCFunctionListEntry kFileProto[] = {

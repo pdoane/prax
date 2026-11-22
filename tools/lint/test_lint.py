@@ -580,6 +580,11 @@ class PrivateIncludes(unittest.TestCase):
         self.assertEqual(self.problems('tools/shell/page_host.cpp', '#include "url/src/url_record.h"\n'),
                          ['private-include'])
 
+    def test_an_application_reaches_its_own_tests(self):
+        include = '#include "apps/scribe/tests/address_fixture.h"\n'
+        self.assertEqual(self.problems('apps/scribe/tests/test_scribe_address.cpp', include), [])
+        self.assertEqual(self.problems('apps/browser/tests/test_history.cpp', include), ['private-include'])
+
     def test_the_web_libraries_share_their_implementations(self):
         self.assertEqual(self.problems('lib/html/src/html.cpp', '#include "dom/src/dom_node.h"\n'), [])
 

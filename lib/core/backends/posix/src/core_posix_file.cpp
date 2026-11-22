@@ -4,6 +4,7 @@
 
 #include "pr/memory.h"
 #include "pr/posix_string.h"
+#include "pr/thread.h"
 
 #include <dirent.h>
 #include <errno.h>
@@ -14,6 +15,36 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
+
+#if defined(__linux__) && !defined(__EMSCRIPTEN__)
+#include <poll.h>
+#include <sys/inotify.h>
+#include <sys/syscall.h>
+#elif defined(__APPLE__)
+#include <sys/event.h>
+#endif
+
+#if defined(__linux__) && !defined(__EMSCRIPTEN__)
+// A watch on a directory: the inotify instance that watches the directory, the pipe that stops the thread when it is
+// written, and the thread. The thread polls both.
+struct PrFileWatch {
+    PrThread thread;
+    int notify;
+    int stop[2];
+    PrFileWatchFn fn;
+    void* PR_NULLABLE context;
+};
+#elif defined(__APPLE__)
+// A watch on a directory: the kqueue that watches the descriptor of the directory, and the thread. The queue has a user
+// event that stops the thread. The thread waits on the queue.
+struct PrFileWatch {
+    PrThread thread;
+    int queue;
+    int directory;
+    PrFileWatchFn fn;
+    void* PR_NULLABLE context;
+};
+#endif
 
 namespace pr_impl {
 
@@ -60,6 +91,166 @@ PrFileInfo infoOf(const struct stat& status) {
     info.modified = prTimeSystemFromUnix(int64_t(modified.tv_sec), uint32_t(modified.tv_nsec));
     return info;
 }
+
+// Returns true if `path` names a regular file, following any links.
+bool isRegular(const char* path) {
+    struct stat status;
+    return stat(path, &status) == 0 && S_ISREG(status.st_mode);
+}
+
+// Returns true if `path` names anything, a dangling link included.
+bool exists(const char* path) {
+    struct stat status;
+    return lstat(path, &status) == 0;
+}
+
+// Writes all of `size` bytes of `data` to `fd`. Returns false if a write fails.
+bool writeAll(int fd, const uint8_t* data, size_t size) {
+    while (size != 0) {
+        ssize_t wrote = write(fd, data, size);
+        if (wrote < 0 && errno == EINTR)
+            continue;
+        if (wrote <= 0)
+            return false;
+        data += wrote;
+        size -= size_t(wrote);
+    }
+    return true;
+}
+
+// Copies the regular file `from` to `to`, a path that names nothing. Copies the contents, the permissions and the time
+// of the last change. Removes any part of a copy that fails.
+PrStatus copyTo(const char* from, const char* to) {
+    int source = open(from, O_RDONLY | O_CLOEXEC);
+    if (source < 0)
+        return errno == ENOENT ? PrStatus_NotFound : PrStatus_Io;
+    struct stat status;
+    if (fstat(source, &status) != 0 || !S_ISREG(status.st_mode)) {
+        close(source);
+        return PrStatus_NotFound;
+    }
+    int target = open(to, O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, status.st_mode & 0777);
+    if (target < 0) {
+        int error = errno;
+        close(source);
+        return error == EEXIST ? PrStatus_NotAllowed : PrStatus_Io;
+    }
+    constexpr size_t kChunk = 1u << 20;
+    uint8_t* buffer = static_cast<uint8_t*>(malloc(kChunk));
+    bool copied = buffer != nullptr;
+    while (copied) {
+        ssize_t got = read(source, buffer, kChunk);
+        if (got < 0 && errno == EINTR)
+            continue;
+        if (got <= 0) {
+            copied = got == 0;
+            break;
+        }
+        copied = writeAll(target, buffer, size_t(got));
+    }
+    free(buffer);
+    close(source);
+#if defined(__APPLE__)
+    struct timespec times[2] = {status.st_atimespec, status.st_mtimespec};
+#else
+    struct timespec times[2] = {status.st_atim, status.st_mtim};
+#endif
+    copied = copied && futimens(target, times) == 0;
+    copied = close(target) == 0 && copied;
+    if (!copied)
+        unlink(to);
+    return copied ? PrStatus_Ok : PrStatus_Io;
+}
+
+// Renames the file `from` to `to`, a path that names nothing, on one volume. Returns 0, or the error that stopped the
+// rename.
+int renameExclusive(const char* from, const char* to) {
+#if defined(__APPLE__)
+    if (renamex_np(from, to, RENAME_EXCL) == 0)
+        return 0;
+    if (errno != ENOTSUP)
+        return errno;
+#elif defined(__linux__) && defined(SYS_renameat2)
+    if (syscall(SYS_renameat2, AT_FDCWD, from, AT_FDCWD, to, 1u /* RENAME_NOREPLACE */) == 0)
+        return 0;
+    if (errno != ENOSYS && errno != EINVAL)
+        return errno;
+#endif
+    // A file system without an exclusive rename gets a plain rename. A plain rename would replace a file that was made
+    // at `to` after the caller looked for one.
+    return rename(from, to) == 0 ? 0 : errno;
+}
+
+// Moves the regular file `from` to `to`, a path that names nothing. On one volume, the move is a rename. Across
+// volumes, the move is a copy, and the original is removed after the copy.
+PrStatus moveTo(const char* from, const char* to) {
+    int error = renameExclusive(from, to);
+    if (error == 0)
+        return PrStatus_Ok;
+    if (error != EXDEV)
+        return error == EEXIST ? PrStatus_NotAllowed : PrStatus_Io;
+    PrStatus copied = copyTo(from, to);
+    if (copied != PrStatus_Ok)
+        return copied;
+    if (unlink(from) == 0)
+        return PrStatus_Ok;
+    // The original stays, so the copy goes, and the file is where it was.
+    unlink(to);
+    return PrStatus_Io;
+}
+
+// Runs `op` with `from` and `to` as NUL-terminated paths. `from` names a regular file, and `to` names nothing.
+PrStatus withPaths(PrStringView from, PrStringView to, PrStatus (*op)(const char* from, const char* to)) {
+    char* source = prPosixStringCopy(from);
+    char* target = prPosixStringCopy(to);
+    PrStatus status = PrStatus_NotFound;
+    if (source != nullptr && target != nullptr && isRegular(source))
+        status = exists(target) ? PrStatus_NotAllowed : op(source, target);
+    prMemoryFree(source);
+    prMemoryFree(target);
+    return status;
+}
+
+#if defined(__linux__) && !defined(__EMSCRIPTEN__)
+void runWatch(void* PR_NULLABLE context) {
+    PrFileWatch* watch = static_cast<PrFileWatch*>(context);
+    // The events are drained, but their kinds and names are not read. The callback reads the directory again.
+    alignas(struct inotify_event) char events[4096];
+    for (;;) {
+        struct pollfd fds[2] = {
+            {.fd = watch->stop[0], .events = POLLIN, .revents = 0}, {.fd = watch->notify, .events = POLLIN, .revents = 0},
+        };
+        int ready = poll(fds, 2, -1);
+        if (ready < 0 && errno == EINTR)
+            continue;
+        if (ready < 0 || fds[0].revents != 0)
+            return;
+        if ((fds[1].revents & POLLIN) == 0)
+            return;
+        bool drained = false;
+        while (read(watch->notify, events, sizeof events) > 0)
+            drained = true;
+        if (drained)
+            watch->fn(watch->context);
+    }
+}
+#elif defined(__APPLE__)
+// The identity of the user event that stops a watch's thread.
+constexpr uintptr_t kStopEvent = 1;
+
+void runWatch(void* PR_NULLABLE context) {
+    PrFileWatch* watch = static_cast<PrFileWatch*>(context);
+    for (;;) {
+        struct kevent event;
+        int got = kevent(watch->queue, nullptr, 0, &event, 1, nullptr);
+        if (got < 0 && errno == EINTR)
+            continue;
+        if (got <= 0 || event.filter == EVFILT_USER)
+            return;
+        watch->fn(watch->context);
+    }
+}
+#endif
 
 } // namespace
 
@@ -216,6 +407,102 @@ bool prCorePosixFileCreateDirectory(PrStringView path) {
     return exists;
 }
 
+PrStatus prCorePosixFileMove(PrStringView from, PrStringView to) {
+    return withPaths(from, to, moveTo);
+}
+
+PrStatus prCorePosixFileCopy(PrStringView from, PrStringView to) {
+    return withPaths(from, to, copyTo);
+}
+
+PrFileWatch* PR_NULLABLE prCorePosixFileWatchCreate(PrStringView path, PrFileWatchFn fn, void* PR_NULLABLE context) {
+#if defined(__linux__) && !defined(__EMSCRIPTEN__)
+    char* terminated = prPosixStringCopy(path);
+    if (terminated == nullptr)
+        return nullptr;
+    int notify = inotify_init1(IN_NONBLOCK | IN_CLOEXEC);
+    uint32_t mask = IN_CREATE | IN_DELETE | IN_MOVED_FROM | IN_MOVED_TO | IN_CLOSE_WRITE | IN_DELETE_SELF |
+        IN_MOVE_SELF | IN_ONLYDIR;
+    bool watching = notify >= 0 && inotify_add_watch(notify, terminated, mask) >= 0;
+    prMemoryFree(terminated);
+    int stop[2] = {-1, -1};
+    if (!watching || pipe2(stop, O_CLOEXEC) != 0) {
+        if (notify >= 0)
+            close(notify);
+        return nullptr;
+    }
+    PrFileWatch* watch = static_cast<PrFileWatch*>(prMemoryAllocZeroed(sizeof(PrFileWatch)));
+    watch->notify = notify;
+    watch->stop[0] = stop[0];
+    watch->stop[1] = stop[1];
+    watch->fn = fn;
+    watch->context = context;
+    prThreadStart(&watch->thread, runWatch, watch);
+    return watch;
+#elif defined(__APPLE__)
+    char* terminated = prPosixStringCopy(path);
+    if (terminated == nullptr)
+        return nullptr;
+    // O_EVTONLY asks for events alone, so the descriptor does not keep the directory's volume from unmounting.
+    int directory = open(terminated, O_EVTONLY | O_DIRECTORY | O_CLOEXEC);
+    prMemoryFree(terminated);
+    if (directory < 0)
+        return nullptr;
+    int queue = kqueue();
+    if (queue < 0) {
+        close(directory);
+        return nullptr;
+    }
+    // A directory is written when its entries are added, removed or renamed.
+    struct kevent events[2];
+    EV_SET(&events[0], uintptr_t(directory), EVFILT_VNODE, EV_ADD | EV_CLEAR,
+        NOTE_WRITE | NOTE_DELETE | NOTE_RENAME | NOTE_EXTEND | NOTE_ATTRIB | NOTE_REVOKE, 0, nullptr);
+    EV_SET(&events[1], kStopEvent, EVFILT_USER, EV_ADD | EV_CLEAR, 0, 0, nullptr);
+    if (kevent(queue, events, 2, nullptr, 0, nullptr) != 0) {
+        close(queue);
+        close(directory);
+        return nullptr;
+    }
+    PrFileWatch* watch = static_cast<PrFileWatch*>(prMemoryAllocZeroed(sizeof(PrFileWatch)));
+    watch->queue = queue;
+    watch->directory = directory;
+    watch->fn = fn;
+    watch->context = context;
+    prThreadStart(&watch->thread, runWatch, watch);
+    return watch;
+#else
+    // A target that has no watches.
+    (void)path;
+    (void)fn;
+    (void)context;
+    return nullptr;
+#endif
+}
+
+void prCorePosixFileWatchDestroy(PrFileWatch* watch) {
+#if defined(__linux__) && !defined(__EMSCRIPTEN__)
+    char byte = 0;
+    while (write(watch->stop[1], &byte, 1) < 0 && errno == EINTR) {
+    }
+    prThreadJoin(&watch->thread);
+    close(watch->notify);
+    close(watch->stop[0]);
+    close(watch->stop[1]);
+    prMemoryFree(watch);
+#elif defined(__APPLE__)
+    struct kevent stop;
+    EV_SET(&stop, kStopEvent, EVFILT_USER, 0, NOTE_TRIGGER, 0, nullptr);
+    kevent(watch->queue, &stop, 1, nullptr, 0, nullptr);
+    prThreadJoin(&watch->thread);
+    close(watch->queue);
+    close(watch->directory);
+    prMemoryFree(watch);
+#else
+    // No watch is created, so none is destroyed.
+    (void)watch;
+#endif
+}
+
 PrRawString prCorePosixFileUserDirectory(PrFileUserDirectory directory) {
     switch (directory) {
         case PrFileUserDirectory_Home: {
@@ -290,3 +577,4 @@ size_t prCorePosixFileStreamRead(PrFileStream, void* out, size_t capacity) {
         return got > 0 ? size_t(got) : 0;
     }
 }
+

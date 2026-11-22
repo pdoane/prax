@@ -8,6 +8,7 @@
 #include "pr/blob.h"
 #include "pr/byte_view.h"
 #include "pr/raw_string.h"
+#include "pr/status.h"
 #include "pr/string_view.h"
 #include "pr/text_buffer.h"
 #include "pr/time.h"
@@ -77,6 +78,44 @@ bool prFileRemove(PrStringView path);
 // exists after the call.
 bool prFileCreateDirectory(PrStringView path);
 
+// Moves the regular file at `from` to `to`. Both paths are UTF-8. The call never replaces a file at `to`.
+//
+// On one volume, the file is renamed. Across volumes, the file is copied as prFileCopy copies it, and the original is
+// removed only after the copy is complete. A failure therefore leaves the original in place and no partial copy.
+//
+// Returns Ok once the file is at `to` and gone from `from`. Returns NotFound if there is no regular file at `from`,
+// NotAllowed if something already exists at `to`, and Io for any other failure.
+PrStatus prFileMove(PrStringView from, PrStringView to);
+
+// Copies the regular file at `from` to `to`. Both paths are UTF-8. The copy has the file's contents and its
+// modification time. The call never replaces a file at `to`. A copy that fails is removed, so `to` holds the whole copy
+// or nothing.
+//
+// Returns Ok once the copy is complete. Returns NotFound if there is no regular file at `from`, NotAllowed if something
+// already exists at `to`, and Io for any other failure.
+PrStatus prFileCopy(PrStringView from, PrStringView to);
+
+// A watch on the entries of a directory.
+typedef struct PrFileWatch PrFileWatch;
+
+// Called when the entries of the watched directory may have changed. It runs on the watch's own thread, and it must not
+// call the watch.
+//
+// A change is a file that was added, removed or renamed. That includes a file that was replaced whole, as prFileWrite
+// replaces it. A file that was written in place is reported only if the platform reports it. Apple's platforms do not.
+//
+// One call may stand for several changes, and a call may come when nothing changed. The caller reads the directory
+// again to learn what changed.
+typedef void (*PrFileWatchFn)(void* PR_NULLABLE context);
+
+// Watches the directory at the UTF-8 `path`, and calls `fn` with `context` when its entries change. The directories
+// under it are not watched. Returns null if the directory cannot be watched. A platform without watches or without
+// threads always returns null.
+PrFileWatch* PR_NULLABLE prFileWatchCreate(PrStringView path, PrFileWatchFn fn, void* PR_NULLABLE context);
+
+// Stops the watch and frees it. The callback does not run after this returns.
+void prFileWatchDestroy(PrFileWatch* PR_NULLABLE watch);
+
 // The directories that the platform names for the user. Applications share the cache and data directories, and each
 // application keeps its files in a directory of its own under them.
 enum {
@@ -140,6 +179,11 @@ PrStringView prFilePathExtension(PrStringView path);
 
 // Appends `part` to the path in `path`, after a separator unless the path is empty or already ends in one.
 void prFilePathAppend(PrTextBuffer* path, PrStringView part);
+
+// Returns the size of the root that begins `path`, or zero if `path` has no root. A root is a separator. On Windows and
+// the web, it may also be two separators, which begin a UNC path, or a drive letter and a colon with an optional
+// separator after them. A path with a root names the same file for every base on the same drive.
+size_t prFilePathRootSize(PrStringView path);
 
 // Returns true if prFilePathAbsolute ignores the base for `path`. On Windows, `path` begins with a drive letter and a
 // colon, or with two separators. Elsewhere, it begins with a separator.

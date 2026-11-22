@@ -4,6 +4,7 @@
 
 #include "pr/mem.h"
 #include "pr/memory.h"
+#include "pr/thread.h"
 #include "pr/windows_string.h"
 
 #define NOMINMAX
@@ -11,6 +12,16 @@
 #include <windows.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+// A watch on a directory: the change notification of the directory, the event that stops the thread, and the thread.
+// The thread waits on both.
+struct PrFileWatch {
+    PrThread thread;
+    HANDLE change;
+    HANDLE stop;
+    PrFileWatchFn fn;
+    void* PR_NULLABLE context;
+};
 
 namespace pr_impl {
 
@@ -79,6 +90,80 @@ bool renameOver(HANDLE file, const wchar_t* target) {
     }
     free(info);
     return renamed;
+}
+
+// Returns true if the NUL-terminated `path` names a regular file. Returns false if it names nothing, a directory or a
+// device.
+bool isRegular(const wchar_t* path) {
+    DWORD attributes = GetFileAttributesW(path);
+    return attributes != INVALID_FILE_ATTRIBUTES && (attributes & (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_DEVICE)) == 0;
+}
+
+// Returns true if the NUL-terminated `path` names anything.
+bool exists(const wchar_t* path) {
+    return GetFileAttributesW(path) != INVALID_FILE_ATTRIBUTES;
+}
+
+// Returns the status of a move or a copy that failed with `error`.
+PrStatus failureOf(DWORD error) {
+    return error == ERROR_FILE_EXISTS || error == ERROR_ALREADY_EXISTS ? PrStatus_NotAllowed : PrStatus_Io;
+}
+
+// Copies the regular file `from` to `to`, a path that names nothing. Removes any part of a copy that fails. Windows
+// copies the time of the last change with the contents.
+PrStatus copyTo(const wchar_t* from, const wchar_t* to) {
+    if (CopyFileExW(from, to, nullptr, nullptr, nullptr, COPY_FILE_FAIL_IF_EXISTS))
+        return PrStatus_Ok;
+    // A copy that failed because a file is at `to` made nothing to remove.
+    PrStatus status = failureOf(GetLastError());
+    if (status != PrStatus_NotAllowed)
+        DeleteFileW(to);
+    return status;
+}
+
+// Moves the regular file `from` to `to`, a path that names nothing. On one volume, the move is a rename. Across
+// volumes, the move is a copy, and the original is removed after the copy.
+PrStatus moveTo(const wchar_t* from, const wchar_t* to) {
+    // Without MOVEFILE_REPLACE_EXISTING, a file at `to` stops the move. Without MOVEFILE_COPY_ALLOWED, a move to
+    // another volume fails. The copy below makes that move, so that a failed copy leaves the original.
+    if (MoveFileExW(from, to, 0))
+        return PrStatus_Ok;
+    DWORD error = GetLastError();
+    if (error != ERROR_NOT_SAME_DEVICE)
+        return failureOf(error);
+    PrStatus copied = copyTo(from, to);
+    if (copied != PrStatus_Ok)
+        return copied;
+    if (DeleteFileW(from))
+        return PrStatus_Ok;
+    // The original stays, so the copy goes, and the file is where it was.
+    DeleteFileW(to);
+    return PrStatus_Io;
+}
+
+// Runs `op` with `from` and `to` as wide paths. `from` names a regular file, and `to` names nothing.
+PrStatus withPaths(PrStringView from, PrStringView to, PrStatus (*op)(const wchar_t* from, const wchar_t* to)) {
+    wchar_t* source = prWindowsWidenCopy(from, nullptr);
+    wchar_t* target = prWindowsWidenCopy(to, nullptr);
+    PrStatus status = PrStatus_NotFound;
+    if (source != nullptr && target != nullptr && isRegular(source))
+        status = exists(target) ? PrStatus_NotAllowed : op(source, target);
+    prMemoryFree(source);
+    prMemoryFree(target);
+    return status;
+}
+
+void runWatch(void* PR_NULLABLE context) {
+    PrFileWatch* watch = static_cast<PrFileWatch*>(context);
+    HANDLE handles[2] = {watch->stop, watch->change};
+    for (;;) {
+        DWORD woken = WaitForMultipleObjects(2, handles, FALSE, INFINITE);
+        if (woken != WAIT_OBJECT_0 + 1)
+            return;
+        watch->fn(watch->context);
+        if (!FindNextChangeNotification(watch->change))
+            return;
+    }
 }
 
 } // namespace
@@ -263,6 +348,48 @@ bool prCoreWindowsFileCreateDirectory(PrStringView path) {
     return attributes != INVALID_FILE_ATTRIBUTES && (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
 }
 
+PrStatus prCoreWindowsFileMove(PrStringView from, PrStringView to) {
+    return withPaths(from, to, moveTo);
+}
+
+PrStatus prCoreWindowsFileCopy(PrStringView from, PrStringView to) {
+    return withPaths(from, to, copyTo);
+}
+
+PrFileWatch* PR_NULLABLE prCoreWindowsFileWatchCreate(PrStringView path, PrFileWatchFn fn, void* PR_NULLABLE context) {
+    wchar_t* wide = prWindowsWidenCopy(path, nullptr);
+    if (wide == nullptr)
+        return nullptr;
+    // The name filters cover files that are added, removed and renamed. The last write and size filters cover files
+    // that are written in place.
+    DWORD filter = FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_DIR_NAME | FILE_NOTIFY_CHANGE_LAST_WRITE |
+        FILE_NOTIFY_CHANGE_SIZE;
+    HANDLE change = FindFirstChangeNotificationW(wide, FALSE, filter);
+    prMemoryFree(wide);
+    if (change == INVALID_HANDLE_VALUE)
+        return nullptr;
+    HANDLE stop = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+    if (stop == nullptr) {
+        FindCloseChangeNotification(change);
+        return nullptr;
+    }
+    PrFileWatch* watch = static_cast<PrFileWatch*>(prMemoryAllocZeroed(sizeof(PrFileWatch)));
+    watch->change = change;
+    watch->stop = stop;
+    watch->fn = fn;
+    watch->context = context;
+    prThreadStart(&watch->thread, runWatch, watch);
+    return watch;
+}
+
+void prCoreWindowsFileWatchDestroy(PrFileWatch* watch) {
+    SetEvent(watch->stop);
+    prThreadJoin(&watch->thread);
+    FindCloseChangeNotification(watch->change);
+    CloseHandle(watch->stop);
+    prMemoryFree(watch);
+}
+
 PrRawString prCoreWindowsFileUserDirectory(PrFileUserDirectory directory) {
     switch (directory) {
         case PrFileUserDirectory_Home:
@@ -317,3 +444,4 @@ size_t prCoreWindowsFileStreamRead(PrFileStream, void* out, size_t capacity) {
         return 0;
     return got;
 }
+

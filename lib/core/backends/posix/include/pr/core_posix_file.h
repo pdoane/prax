@@ -34,6 +34,14 @@ bool prCorePosixFileWrite(PrStringView path, PrByteView bytes);
 bool prCorePosixFileRemove(PrStringView path);
 bool prCorePosixFileCreateDirectory(PrStringView path);
 
+// Implement prFileMove and prFileCopy.
+PrStatus prCorePosixFileMove(PrStringView from, PrStringView to);
+PrStatus prCorePosixFileCopy(PrStringView from, PrStringView to);
+
+// Implement prFileWatchCreate and prFileWatchDestroy. Each watch runs a thread of its own.
+PrFileWatch* PR_NULLABLE prCorePosixFileWatchCreate(PrStringView path, PrFileWatchFn fn, void* PR_NULLABLE context);
+void prCorePosixFileWatchDestroy(PrFileWatch* watch);
+
 // Return one of the user's directories, and the working directory, as prFileUserDirectory and prFileWorkingDirectory
 // do.
 PrRawString prCorePosixFileUserDirectory(PrFileUserDirectory directory);

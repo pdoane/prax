@@ -35,6 +35,14 @@ bool prCoreWindowsFileWrite(PrStringView path, PrByteView bytes);
 bool prCoreWindowsFileRemove(PrStringView path);
 bool prCoreWindowsFileCreateDirectory(PrStringView path);
 
+// Implement prFileMove and prFileCopy.
+PrStatus prCoreWindowsFileMove(PrStringView from, PrStringView to);
+PrStatus prCoreWindowsFileCopy(PrStringView from, PrStringView to);
+
+// Implement prFileWatchCreate and prFileWatchDestroy. Each watch runs a thread of its own.
+PrFileWatch* PR_NULLABLE prCoreWindowsFileWatchCreate(PrStringView path, PrFileWatchFn fn, void* PR_NULLABLE context);
+void prCoreWindowsFileWatchDestroy(PrFileWatch* watch);
+
 // Return one of the user's directories, and the working directory, as prFileUserDirectory and prFileWorkingDirectory
 // do.
 PrRawString prCoreWindowsFileUserDirectory(PrFileUserDirectory directory);

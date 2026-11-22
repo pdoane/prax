@@ -681,8 +681,9 @@ WRAPPERS = {
     "lib/core/backends/posix/src/core_posix_environment.cpp": {"stdlib.h", "string.h", "unistd.h"},
     "lib/core/backends/posix/src/core_posix_fail.cpp": {"TargetConditionals.h", "execinfo.h", "signal.h", "stdio.h",
                                                         "stdlib.h", "string.h", "unistd.h"},
-    "lib/core/backends/posix/src/core_posix_file.cpp": {"dirent.h", "errno.h", "fcntl.h", "stdio.h", "stdlib.h",
-                                                        "string.h", "sys/mman.h", "sys/stat.h", "unistd.h"},
+    "lib/core/backends/posix/src/core_posix_file.cpp": {"dirent.h", "errno.h", "fcntl.h", "poll.h", "stdio.h",
+                                                        "stdlib.h", "string.h", "sys/event.h", "sys/inotify.h",
+                                                        "sys/mman.h", "sys/stat.h", "sys/syscall.h", "unistd.h"},
     "lib/core/backends/posix/src/core_posix_random.cpp": {"stdlib.h", "unistd.h"},
     "lib/core/backends/posix/src/core_posix_resource.cpp": {"limits.h", "unistd.h"},
     "lib/core/backends/posix/src/core_posix_thread.cpp": {"errno.h", "pthread.h", "stdlib.h", "time.h", "unistd.h"},
@@ -702,6 +703,7 @@ WRAPPERS = {
     "lib/core/platform/windows/src/windows_string.cpp": {"windows.h"},
     "lib/core/quickjs_cpp/src/quickjs_callback.cpp": {"stdio.h"},
     "lib/core/src/checksum.cpp": {"arm_acle.h", "immintrin.h"},
+    "lib/core/src/thread.cpp": {"sanitizer/tsan_interface.h"},
     "lib/draw/comparisons/coregraphics/src/draw_coregraphics.cpp": {"CoreGraphics/CoreGraphics.h",
                                                                     "CoreText/CoreText.h"},
     "lib/font/backends/coretext/src/font_coretext.cpp": {"CoreText/CoreText.h"},
@@ -2323,6 +2325,9 @@ THIRD_PARTY = {
     "brotli/decode.h": ("tools/bench/compress_bench.cpp",),
     "brotli/encode.h": ("tools/bench/compress_bench.cpp",),
     "common/xxhash.h": ("tools/bench/compress_bench.cpp",),
+    "basisu_transcoder.h": ("tools/suite/basis/tests/*.cpp",),
+    "basisu_comp.h": ("tools/suite/basis/tests/*.cpp",),
+    "basisu_gpu_texture.h": ("tools/suite/basis/tests/*.cpp",),
     "hb.h": ("lib/text/backends/harfbuzz/src/text_harfbuzz.cpp",),
     "tree_sitter/api.h": ("lib/syntax/backends/treesitter/src/syntax_treesitter.cpp",),
     "freetype/freetype.h": ("lib/font/backends/freetype/src/font_freetype.cpp", "lib/font/tests/test_font.cpp",
@@ -2562,6 +2567,10 @@ def check_backend_names(report, paths, texts):
 # The libraries that may include each other's implementation headers: the web engine's, for now.
 SHARED_IMPLEMENTATION = ("lib/css/", "lib/dom/", "lib/html/", "lib/mathml/", "lib/svg/", "lib/xhr/")
 
+# The directories of applications. An application's files include each other by their paths from the root, such as
+# apps/<name>/<header>.
+APPLICATIONS = ("examples/", "apps/")
+
 
 def check_private_includes(report, path, text):
     """A library reaches another through its public headers, never through its implementation (`<module>/src/`) or its
@@ -2582,10 +2591,12 @@ def check_private_includes(report, path, text):
                    "%s reaches into %s's implementation; include its public headers" % (relative, module[:-1]))
     # A module's tests are as private as its implementation, with no library that shares them, except that a codec's
     # tests read the fixtures of the format library that it adapts: lib/<interface>/backends/<format>/tests reads
-    # lib/<format>/tests.
+    # lib/<format>/tests. An application's tests are private in the same way. An application includes them by their
+    # paths from the root.
     codec = re.match(r"lib/\w+/backends/(\w+)/tests/", relative)
     for match in re.finditer(r'^#include "((?:[\w]+/)+?)tests/[^"]+"', text, re.M):
-        module = "lib/" + match.group(1)
+        owner = match.group(1)
+        module = owner if owner.startswith(APPLICATIONS) else "lib/" + owner
         if codec is not None and module == "lib/%s/" % codec.group(1):
             continue
         if not relative.startswith(module):
@@ -3318,6 +3329,36 @@ def check_module_dependencies(report):
                            "%s links %s, but includes none of its headers" % (target.name, linked))
 
 
+# The format libraries. Each holds the API of one format (docs/conventions.md, "Formats").
+FORMAT_LIBRARIES = ("basis", "exr", "hdr", "ktx", "lz4", "webp", "zstd")
+
+# The interfaces that read formats. Their backends adapt the format libraries.
+FORMAT_INTERFACES = ("compress", "image", "texture")
+
+
+def check_format_dependencies(report):
+    """Only the backends of an interface reach a format. A file of an interface in FORMAT_INTERFACES that is outside
+    the interface's backends/ includes no header of a format library. The interface's own sources then depend on no
+    format, and a program carries only the adapters that it creates."""
+    graph = modules.targets(ROOT)
+    owners = modules.header_owners(ROOT, graph)
+    for name in FORMAT_INTERFACES:
+        target = graph.get(name)
+        if target is None:
+            continue
+        for path in sorted(modules.files(ROOT, target)):
+            if "/backends/" in posix(path):
+                continue
+            with open(path, encoding="utf-8") as f:
+                text = f.read()
+            for match in re.finditer(r'^#include "pr/([^"]+)"', text, re.M):
+                owner = owners.get(match.group(1))
+                if owner in FORMAT_LIBRARIES:
+                    report.add(path, line_of(text, match.start()), "format-dependency",
+                               "%s includes pr/%s, a header of the format library %s, outside its backends" %
+                               (name, match.group(1), owner))
+
+
 def is_test(path):
     """Returns true for a unit test, its fixture, or a program beside them, such as a conformance runner."""
     return "/tests/" in posix(path)
@@ -3569,6 +3610,7 @@ def main():
     check_function_names(report, public_headers, texts)
     check_unique_names(report, code_files("lib/**/*.[ch]", "lib/**/*.cpp", "lib/**/*.mm"))
     check_module_dependencies(report)
+    check_format_dependencies(report)
 
     # Every text file of the working tree, tracked or new, has the line endings that .gitattributes keeps. A file whose
     # extension .gitattributes marks binary is not text, whatever its bytes.

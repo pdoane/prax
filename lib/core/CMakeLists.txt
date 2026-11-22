@@ -15,6 +15,7 @@ pr_library(core INCLUDE include
     src/pixels.cpp
     src/random.cpp
     src/status.cpp
+    src/string_ops.cpp
     src/raw_string.cpp
     src/sha1.cpp
     src/text_buffer.cpp
@@ -222,6 +223,7 @@ endif()
 if (PR_DEVELOP)
     pr_module_tests(core
         tests/test_base64.cpp
+        tests/test_blob.cpp
         tests/test_byte_view.cpp
         tests/test_checksum.cpp
         tests/test_core_c.c

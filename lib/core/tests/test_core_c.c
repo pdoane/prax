@@ -47,6 +47,7 @@
 #include "pr/utf8.h"
 #include "pr/vec.h"
 #include "pr/vmem.h"
+#include "pr/xxh64.h"
 
 int prTestCoreCApi(void);
 

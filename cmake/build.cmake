@@ -7,14 +7,15 @@
 # (C4244, C4245, C4267, C4018, C4389), which MSVC reports where a closed set's enum constant converts to the set's
 # integer type; shadowing (C4456, C4457, C4458); and the flow analysis that guesses at uninitialized variables and
 # unreachable code (C4701, C4703, C4702). Negating an unsigned value (C4146), truncating a constant in a cast (C4310),
-# adding constants of different enums (C5054), and an array rvalue decaying in C (C4223) are deliberate.
+# adding constants of different enums (C5054), an array rvalue decaying in C (C4223), and padding a structure to the
+# alignment that a field requests (C4324) are deliberate.
 #
 # A development build makes every warning an error, the linker's too. A build that includes Prax as a dependency keeps
 # the warnings, because a newer compiler's new warnings must not break a consumer's build.
 add_library(pr_warnings INTERFACE)
 target_compile_options(pr_warnings INTERFACE
     $<$<C_COMPILER_ID:MSVC>:/W4 /wd4190 /wd4201 /wd4200 /wd4244 /wd4245 /wd4267 /wd4018 /wd4389 /wd4456 /wd4457
-        /wd4458 /wd4701 /wd4703 /wd4702 /wd4146 /wd4310 /wd5054 /wd4223>
+        /wd4458 /wd4701 /wd4703 /wd4702 /wd4146 /wd4310 /wd5054 /wd4223 /wd4324>
     $<$<AND:$<NOT:$<C_COMPILER_ID:MSVC>>,$<COMPILE_LANGUAGE:C,CXX,OBJCXX>>:-Wall -Wshadow -Wconversion
         -Wsign-conversion -Wimplicit-fallthrough -Wcast-align -Wcast-qual -Wundef -Wdouble-promotion
         -Wmissing-prototypes -Wunreachable-code -Wformat=2 -Wunused-parameter>

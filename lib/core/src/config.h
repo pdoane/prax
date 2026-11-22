@@ -104,6 +104,18 @@
 #if defined(PR_PLATFORM_FILE_OPEN) != defined(PR_PLATFORM_FILE_WORKING_DIRECTORY)
 #error "PR_PLATFORM_FILE_OPEN and PR_PLATFORM_FILE_WORKING_DIRECTORY are defined together or not at all"
 #endif
+#if defined(PR_PLATFORM_FILE_OPEN) != defined(PR_PLATFORM_FILE_MOVE)
+#error "PR_PLATFORM_FILE_OPEN and PR_PLATFORM_FILE_MOVE are defined together or not at all"
+#endif
+#if defined(PR_PLATFORM_FILE_OPEN) != defined(PR_PLATFORM_FILE_COPY)
+#error "PR_PLATFORM_FILE_OPEN and PR_PLATFORM_FILE_COPY are defined together or not at all"
+#endif
+#if defined(PR_PLATFORM_FILE_OPEN) != defined(PR_PLATFORM_FILE_WATCH_CREATE)
+#error "PR_PLATFORM_FILE_OPEN and PR_PLATFORM_FILE_WATCH_CREATE are defined together or not at all"
+#endif
+#if defined(PR_PLATFORM_FILE_OPEN) != defined(PR_PLATFORM_FILE_WATCH_DESTROY)
+#error "PR_PLATFORM_FILE_OPEN and PR_PLATFORM_FILE_WATCH_DESTROY are defined together or not at all"
+#endif
 #if defined(PR_PLATFORM_VMEM_RESERVE) != defined(PR_PLATFORM_VMEM_COMMIT)
 #error "PR_PLATFORM_VMEM_RESERVE and PR_PLATFORM_VMEM_COMMIT are defined together or not at all"
 #endif
@@ -235,6 +247,10 @@
 #define PR_PLATFORM_FILE_WRITE(path, bytes) prCoreWindowsFileWrite(path, bytes)
 #define PR_PLATFORM_FILE_REMOVE(path) prCoreWindowsFileRemove(path)
 #define PR_PLATFORM_FILE_CREATE_DIRECTORY(path) prCoreWindowsFileCreateDirectory(path)
+#define PR_PLATFORM_FILE_MOVE(from, to) prCoreWindowsFileMove(from, to)
+#define PR_PLATFORM_FILE_COPY(from, to) prCoreWindowsFileCopy(from, to)
+#define PR_PLATFORM_FILE_WATCH_CREATE(path, fn, context) prCoreWindowsFileWatchCreate(path, fn, context)
+#define PR_PLATFORM_FILE_WATCH_DESTROY(watch) prCoreWindowsFileWatchDestroy(watch)
 #define PR_PLATFORM_FILE_USER_DIRECTORY(directory) prCoreWindowsFileUserDirectory(directory)
 #define PR_PLATFORM_FILE_WORKING_DIRECTORY() prCoreWindowsFileWorkingDirectory()
 #define PR_PLATFORM_FILE_STREAM_WRITE(stream, bytes) prCoreWindowsFileStreamWrite(stream, bytes)
@@ -248,6 +264,10 @@
 #define PR_PLATFORM_FILE_WRITE(path, bytes) prCorePosixFileWrite(path, bytes)
 #define PR_PLATFORM_FILE_REMOVE(path) prCorePosixFileRemove(path)
 #define PR_PLATFORM_FILE_CREATE_DIRECTORY(path) prCorePosixFileCreateDirectory(path)
+#define PR_PLATFORM_FILE_MOVE(from, to) prCorePosixFileMove(from, to)
+#define PR_PLATFORM_FILE_COPY(from, to) prCorePosixFileCopy(from, to)
+#define PR_PLATFORM_FILE_WATCH_CREATE(path, fn, context) prCorePosixFileWatchCreate(path, fn, context)
+#define PR_PLATFORM_FILE_WATCH_DESTROY(watch) prCorePosixFileWatchDestroy(watch)
 #define PR_PLATFORM_FILE_USER_DIRECTORY(directory) prCorePosixFileUserDirectory(directory)
 #define PR_PLATFORM_FILE_WORKING_DIRECTORY() prCorePosixFileWorkingDirectory()
 #define PR_PLATFORM_FILE_STREAM_WRITE(stream, bytes) prCorePosixFileStreamWrite(stream, bytes)

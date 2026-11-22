@@ -23,6 +23,22 @@ TEST_CASE("comparison orders by bytes, then a prefix first") {
     CHECK(prStringCompare("", "") == 0);
 }
 
+TEST_CASE("natural order compares runs of digits as numbers, and letters without regard to case") {
+    CHECK(prStringCompareNatural("img2.png", "img10.png") < 0);
+    CHECK(prStringCompareNatural("img10.png", "img2.png") > 0);
+    CHECK(prStringCompareNatural("Beach.jpg", "apple.jpg") > 0);
+    CHECK(prStringCompareNatural("apple.jpg", "Beach.jpg") < 0);
+    CHECK(prStringCompareNatural("a", "a1") < 0);
+    CHECK(prStringCompareNatural("x", "x") == 0);
+    // Numbers longer than any integer still order by their value.
+    CHECK(prStringCompareNatural("a99999999999999999999999", "a100000000000000000000000") < 0);
+    // Texts that differ only in leading zeros or in case order by that difference, so only equal texts compare equal.
+    CHECK(prStringCompareNatural("a1", "a01") < 0);
+    CHECK(prStringCompareNatural("a01", "a1") > 0);
+    CHECK(prStringCompareNatural("A1", "a1") < 0);
+    CHECK(prStringCompareNatural("a1", "A1") > 0);
+}
+
 TEST_CASE("trimming drops whitespace at the ends and nothing inside") {
     CHECK(prStringTrim("  a b\t\n") == "a b");
     CHECK(prStringTrim("   ") == "");

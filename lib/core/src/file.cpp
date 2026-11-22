@@ -5,6 +5,7 @@
 #include "pr/ascii.h"
 #include "pr/assert.h"
 #include "pr/string_ops.h"
+#include "pr/thread.h"
 #include "pr/utf8.h"
 
 #include "core/src/config.h"
@@ -139,6 +140,25 @@ bool prFileCreateDirectory(PrStringView path) {
     return path.size != 0 && PR_PLATFORM_FILE_CREATE_DIRECTORY(path);
 }
 
+PrStatus prFileMove(PrStringView from, PrStringView to) {
+    return from.size != 0 && to.size != 0 ? PR_PLATFORM_FILE_MOVE(from, to) : PrStatus_NotFound;
+}
+
+PrStatus prFileCopy(PrStringView from, PrStringView to) {
+    return from.size != 0 && to.size != 0 ? PR_PLATFORM_FILE_COPY(from, to) : PrStatus_NotFound;
+}
+
+PrFileWatch* PR_NULLABLE prFileWatchCreate(PrStringView path, PrFileWatchFn fn, void* PR_NULLABLE context) {
+    if (path.size == 0 || !prThreadSupported())
+        return nullptr;
+    return PR_PLATFORM_FILE_WATCH_CREATE(path, fn, context);
+}
+
+void prFileWatchDestroy(PrFileWatch* PR_NULLABLE watch) {
+    if (watch != nullptr)
+        PR_PLATFORM_FILE_WATCH_DESTROY(watch);
+}
+
 PrRawString prFileUserDirectory(PrFileUserDirectory directory) {
     PR_ASSERT(directory < PrFileUserDirectory_Count);
     return PR_PLATFORM_FILE_USER_DIRECTORY(directory);
@@ -188,6 +208,10 @@ void prFilePathAppend(PrTextBuffer* path, PrStringView part) {
     if (path->size != 0 && !isSeparator(path->data[path->size - 1]))
         prTextBufferAppendChar(path, '/');
     prTextBufferAppend(path, part);
+}
+
+size_t prFilePathRootSize(PrStringView path) {
+    return rootLength(path);
 }
 
 bool prFilePathIsAbsolute(PrStringView path) {

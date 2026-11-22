@@ -3,6 +3,7 @@
 #include "pr/sort.h"
 #include "pr/string.h"
 #include "pr/string_ops.h"
+#include "pr/thread.h"
 #include "pr/time.h"
 
 #include "tools/harness/test.h"
@@ -32,6 +33,32 @@ struct ListedEntry {
 // Returns the absolute form of `path` under `base`, which prFilePathAbsolute makes.
 String absolute(PrStringView path, PrStringView base = "") {
     return String::adopt(prFilePathAbsolute(path, base));
+}
+
+// What the callback of a watch counts, under a lock, and the condition that the callback signals.
+struct Watched {
+    PrMutex mutex;
+    PrCondition changed;
+    uint32_t calls;
+};
+
+void watchCalled(void* PR_NULLABLE context) {
+    Watched& watched = *static_cast<Watched*>(context);
+    prMutexLock(&watched.mutex);
+    ++watched.calls;
+    prConditionSignal(&watched.changed);
+    prMutexUnlock(&watched.mutex);
+}
+
+// Waits up to five seconds for the watch to call back more than `seen` times, and returns the number of calls.
+uint32_t waitForCall(Watched& watched, uint32_t seen) {
+    prMutexLock(&watched.mutex);
+    PrTimePerf start = prTimePerfNow();
+    while (watched.calls <= seen && prTimePerfMilliseconds(start, prTimePerfNow()) < 5000)
+        prConditionWaitFor(&watched.changed, &watched.mutex, 100);
+    uint32_t calls = watched.calls;
+    prMutexUnlock(&watched.mutex);
+    return calls;
 }
 
 } // namespace
@@ -207,6 +234,18 @@ TEST_CASE("a part appends to a path after one separator") {
     prTextBufferReset(&path);
 }
 
+TEST_CASE("a path's root is its leading separator, or on Windows a drive or the start of a UNC path") {
+    CHECK(prFilePathRootSize("") == 0);
+    CHECK(prFilePathRootSize("dir/notes.txt") == 0);
+    CHECK(prFilePathRootSize("/notes.txt") == 1);
+#if defined(_WIN32)
+    CHECK(prFilePathRootSize("\\notes.txt") == 1);
+    CHECK(prFilePathRootSize("C:\\dir") == 3);
+    CHECK(prFilePathRootSize("c:notes.txt") == 2);
+    CHECK(prFilePathRootSize("\\\\server\\share") == 2);
+#endif
+}
+
 TEST_CASE("a path is absolute if it has a root of its own") {
     CHECK_FALSE(prFilePathIsAbsolute(""));
     CHECK_FALSE(prFilePathIsAbsolute("notes.txt"));
@@ -259,4 +298,73 @@ TEST_CASE("an absolute path is normalized from its text, and a relative one is u
     String drive = absolute("\\x");
     CHECK(prStringSlice(drive, 1, drive.count() - 1) == ":/x");
 #endif
+}
+
+TEST_CASE("a file moves or copies to an unused name with its contents, and never replaces an existing file") {
+    REQUIRE(prFileCreateDirectory(pathOf("moved/into")));
+    String original = pathOf("moved/original.txt");
+    String moved = pathOf("moved/into/moved.txt");
+    String copied = pathOf("moved/copied.txt");
+    String taken = pathOf("moved/taken.txt");
+    REQUIRE(prFileWrite(original, bytesOf("contents")));
+    REQUIRE(prFileWrite(taken, bytesOf("other")));
+
+    CHECK(prFileCopy(original, copied) == PrStatus_Ok);
+    CHECK(prFileCopy(original, taken) == PrStatus_NotAllowed);
+    CHECK(prFileCopy(pathOf("moved/missing.txt"), pathOf("moved/never.txt")) == PrStatus_NotFound);
+    CHECK(prFileCopy(pathOf("moved/into"), pathOf("moved/never.txt")) == PrStatus_NotFound);
+    PrFileInfo source{};
+    PrFileInfo copy{};
+    REQUIRE(prFileInfo(original, &source));
+    REQUIRE(prFileInfo(copied, &copy));
+    CHECK(copy.size == source.size);
+    // The copy keeps the time of the original's last change, as coarsely as the file system records it.
+    double apart = prTimeSystemMilliseconds(source.modified, copy.modified);
+    CHECK(apart > -2000.0);
+    CHECK(apart < 2000.0);
+
+    CHECK(prFileMove(original, taken) == PrStatus_NotAllowed);
+    CHECK(prFileMove(original, pathOf("moved/into")) == PrStatus_NotAllowed);
+    CHECK(prFileMove(original, moved) == PrStatus_Ok);
+    CHECK(prFileMove(original, pathOf("moved/again.txt")) == PrStatus_NotFound);
+    PrBlob* blobs[3] = {prFileOpen(moved), prFileOpen(copied), prFileOpen(taken)};
+    PrStringView expected[3] = {"contents", "contents", "other"};
+    for (uint32_t i = 0; i < 3; ++i) {
+        REQUIRE(blobs[i] != nullptr);
+        CHECK(contentsOf(prBlobBytes(blobs[i])) == expected[i]);
+        prBlobRelease(blobs[i]);
+    }
+
+    CHECK(prFileRemove(moved));
+    CHECK(prFileRemove(copied));
+    CHECK(prFileRemove(taken));
+    CHECK(prFileRemove(pathOf("moved/into")));
+    CHECK(prFileRemove(pathOf("moved")));
+}
+
+TEST_CASE("a watch calls back when a file is added to its directory, renamed in it or removed from it") {
+    REQUIRE(prFileCreateDirectory(pathOf("watched")));
+    Watched watched{};
+    prMutexInit(&watched.mutex);
+    prConditionInit(&watched.changed);
+    PrFileWatch* watch = prFileWatchCreate(pathOf("watched"), watchCalled, &watched);
+#if defined(_WIN32) || defined(__APPLE__) || (defined(__linux__) && !defined(__EMSCRIPTEN__))
+    REQUIRE(watch != nullptr);
+#endif
+    CHECK(prFileWatchCreate(pathOf("watched/missing"), watchCalled, &watched) == nullptr);
+    if (watch != nullptr) {
+        REQUIRE(prFileWrite(pathOf("watched/added.txt"), bytesOf("x")));
+        uint32_t added = waitForCall(watched, 0);
+        CHECK(added > 0);
+        REQUIRE(prFileMove(pathOf("watched/added.txt"), pathOf("watched/renamed.txt")) == PrStatus_Ok);
+        uint32_t renamed = waitForCall(watched, added);
+        CHECK(renamed > added);
+        REQUIRE(prFileRemove(pathOf("watched/renamed.txt")));
+        CHECK(waitForCall(watched, renamed) > renamed);
+        prFileWatchDestroy(watch);
+    }
+    prFileWatchDestroy(nullptr);
+    prConditionReset(&watched.changed);
+    prMutexReset(&watched.mutex);
+    CHECK(prFileRemove(pathOf("watched")));
 }

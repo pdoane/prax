@@ -111,6 +111,15 @@ static inline int prStringCompare(PrStringView a, PrStringView b) {
     return a.size < b.size ? -1 : a.size > b.size ? 1 : 0;
 }
 
+// Compares `a` and `b` the way people sort names. Returns a negative number, zero or a positive number.
+//
+// A run of ASCII digits compares by its numeric value, so "img2" orders before "img10". ASCII letters compare without
+// regard to case. All other bytes compare as prStringCompare compares them.
+//
+// Two texts that are equal by these rules, such as "a01" and "A1", are ordered by their leading zeros, fewer first, and
+// then by prStringCompare. Only identical texts compare equal.
+int prStringCompareNatural(PrStringView a, PrStringView b);
+
 // Returns `text` without ASCII whitespace at either end.
 PR_CONSTEXPR PrStringView prStringTrim(PrStringView text) {
     size_t start = 0;
