@@ -33,8 +33,8 @@ extern "C" void prGpuWebgpuSimulateLoss(uint32_t device);
 extern "C" bool prGpuWebgpuBufferCreate(uint32_t device, uint32_t id, uint64_t size, uint32_t memory, uint8_t* shadow);
 extern "C" void prGpuWebgpuResourceRelease(uint32_t device, uint32_t id);
 extern "C" void prGpuWebgpuBufferWrite(uint32_t device, uint32_t id, uint64_t offset, const void* data, uint64_t size);
-extern "C" bool prGpuWebgpuTextureCreate(uint32_t device, uint32_t id, uint32_t kind, uint32_t format, uint32_t usage,
-    uint32_t levels, uint32_t samples, uint32_t width, uint32_t height, uint32_t depth);
+extern "C" bool prGpuWebgpuTextureCreate(uint32_t device, uint32_t id, uint32_t kind, uint32_t format,
+    uint32_t viewFormat, uint32_t usage, uint32_t levels, uint32_t samples, uint32_t width, uint32_t height, uint32_t depth);
 extern "C" bool prGpuWebgpuTextureCreateView(uint32_t device, uint32_t id, uint32_t texture, uint32_t kind, uint32_t format,
     uint32_t firstLevel, uint32_t levels, uint32_t firstLayer, uint32_t layers);
 extern "C" void prGpuWebgpuTextureWrite(uint32_t device, uint32_t id, uint32_t level, uint32_t x, uint32_t y, uint32_t z,
@@ -622,8 +622,16 @@ PrStatus textureCreate(PrGpuDevice* device, const PrGpuTextureDesc* desc, PrGpuT
     const uint32_t id = addResource(d, resource);
     if (id == 0)
         return PrStatus_Limit;
-    if (!prGpuWebgpuTextureCreate(d->page, id, desc->kind, webgpuFormatOf(desc->format), desc->usage, desc->levels,
-            desc->samples, desc->extent.width, desc->extent.height, desc->extent.depth)) {
+    // A texture viewed through its other sRGB form names that form among its view formats.
+    WebgpuFormat viewFormat = WebgpuFormat_None;
+    if ((desc->usage & PrGpuTextureUsageFlag_SrgbViews) != 0) {
+        PrGpuFormat other = prGpuFormatPlain(desc->format);
+        if (other == desc->format)
+            other = prGpuFormatSrgb(desc->format);
+        viewFormat = webgpuFormatOf(other);
+    }
+    if (!prGpuWebgpuTextureCreate(d->page, id, desc->kind, webgpuFormatOf(desc->format), viewFormat, desc->usage,
+            desc->levels, desc->samples, desc->extent.width, desc->extent.height, desc->extent.depth)) {
         d->resources[id] = WebgpuResource{};
         d->resources.free(id);
         return PrStatus_NotSupported;
@@ -632,9 +640,11 @@ PrStatus textureCreate(PrGpuDevice* device, const PrGpuTextureDesc* desc, PrGpuT
     return PrStatus_Ok;
 }
 
-PrStatus textureCreateView(PrGpuDevice* device, PrGpuTexture texture, PrGpuTextureKind kind,
-        PrGpuSubresources subresources, PrGpuTexture* out) {
+PrStatus textureCreateView(PrGpuDevice* device, PrGpuTexture texture, const PrGpuTextureViewDesc* viewDesc,
+        PrGpuTexture* out) {
     WebgpuDevice* d = webgpuOf(device);
+    PrGpuTextureKind kind = viewDesc->kind;
+    PrGpuSubresources subresources = viewDesc->subresources;
     // A view reports what it covers: its levels from the first, each level's extent, and its layers. Zero levels or
     // layers cover every one from the first.
     PrGpuTextureDesc desc = d->resources[texture.id].texture;
@@ -643,6 +653,7 @@ PrStatus textureCreateView(PrGpuDevice* device, PrGpuTexture texture, PrGpuTextu
     if (desc.kind == PrGpuTextureKind_3d)
         layers = 1;
     desc.kind = kind;
+    desc.format = viewDesc->format;
     desc.levels = uint8_t(levels);
     desc.extent.width = max(desc.extent.width >> subresources.firstLevel, 1u);
     desc.extent.height = max(desc.extent.height >> subresources.firstLevel, 1u);
@@ -1477,6 +1488,7 @@ PrGpuDevice* prGpuWebgpuCreate(const PrGpuDeviceOptions* PR_NULLABLE options) {
     d->bufferUploadFn = bufferUpload;
     d->textureCreateFn = textureCreate;
     d->textureCreateViewFn = textureCreateView;
+    d->srgbViews = true;
     d->textureRetainFn = textureRetain;
     d->textureReleaseFn = textureRelease;
     d->textureDescFn = textureDesc;

@@ -1049,8 +1049,10 @@ TEST_CASE("a pass of several views draws each draw, direct or indirect, into eac
             for (uint16_t layer = 0; layer < views; ++layer) {
                 CAPTURE(layer);
                 PrGpuTexture view{};
-                REQUIRE(prGpuTextureCreateView(f.device, target, PrGpuTextureKind_2d,
-                    PrGpuSubresources{.levels = 1, .firstLayer = layer, .layers = 1}, &view) == PrStatus_Ok);
+                REQUIRE(prGpuTextureCreateView(f.device, target, PrGpuTextureViewDesc{
+                    .kind = PrGpuTextureKind_2d,
+                    .subresources = PrGpuSubresources{.levels = 1, .firstLayer = layer, .layers = 1},
+                }, &view) == PrStatus_Ok);
                 Array<uint8_t> texels = f.read(view);
                 uint8_t red = uint8_t(layer * 85);
                 CHECK(near(texel(texels, 4, 3, 0), red, 255, 0, 255));
@@ -1118,8 +1120,10 @@ TEST_CASE("mip levels are filled with the average of the level before") {
         prGpuCommandsGenerateMipmaps(commands, texture, PrGpuAccessFlag_ShaderRead);
         gpuSubmitAndWait(commands);
         PrGpuTexture last{};
-        REQUIRE(prGpuTextureCreateView(f.device, texture, PrGpuTextureKind_2d,
-            PrGpuSubresources{.firstLevel = 2, .levels = 1, .layers = 1}, &last) == PrStatus_Ok);
+        REQUIRE(prGpuTextureCreateView(f.device, texture, PrGpuTextureViewDesc{
+            .kind = PrGpuTextureKind_2d,
+            .subresources = PrGpuSubresources{.firstLevel = 2, .levels = 1, .layers = 1},
+        }, &last) == PrStatus_Ok);
         CHECK(prGpuTextureExtent(f.device, last).x == 1);
         Array<uint8_t> top = f.read(last);
         CHECK(near(top.data(), 128, 128, 128, 128, 2));
@@ -1206,16 +1210,20 @@ TEST_CASE("a cube's faces and levels are uploaded, drawn to, viewed, copied and 
 
         // A view of one level of one face is a 2D texture, and a view of one level of every face is a cube.
         PrGpuTexture face{};
-        REQUIRE(prGpuTextureCreateView(f.device, cube, PrGpuTextureKind_2d,
-            PrGpuSubresources{.firstLevel = 1, .levels = 1, .firstLayer = 3, .layers = 1}, &face) == PrStatus_Ok);
+        REQUIRE(prGpuTextureCreateView(f.device, cube, PrGpuTextureViewDesc{
+            .kind = PrGpuTextureKind_2d,
+            .subresources = PrGpuSubresources{.firstLevel = 1, .levels = 1, .firstLayer = 3, .layers = 1},
+        }, &face) == PrStatus_Ok);
         CHECK(prGpuTextureDesc(f.device, face).kind == PrGpuTextureKind_2d);
         CHECK(prGpuTextureExtent(f.device, face) == PrUVec2{2, 2});
         Array<uint8_t> viewed = f.read(face);
         REQUIRE(viewed.count() == 2 * 2 * 4);
         CHECK(near(texel(viewed, 2, 1, 1), 127, 127, 0, 127));
         PrGpuTexture level{};
-        REQUIRE(prGpuTextureCreateView(f.device, cube, PrGpuTextureKind_Cube,
-            PrGpuSubresources{.firstLevel = 1, .levels = 1}, &level) == PrStatus_Ok);
+        REQUIRE(prGpuTextureCreateView(f.device, cube, PrGpuTextureViewDesc{
+            .kind = PrGpuTextureKind_Cube,
+            .subresources = PrGpuSubresources{.firstLevel = 1, .levels = 1},
+        }, &level) == PrStatus_Ok);
         CHECK(prGpuTextureDesc(f.device, level).kind == PrGpuTextureKind_Cube);
         CHECK(prGpuTextureDesc(f.device, level).levels == 1);
         CHECK(near(sampleCube(f, level, kFaceAxes[1], 0).data(), 0, 127, 0, 127));

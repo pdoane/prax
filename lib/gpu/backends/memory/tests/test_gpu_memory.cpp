@@ -153,6 +153,43 @@ TEST_CASE("a memory command buffer runs its work in order when it is submitted, 
     prGpuBufferRelease(d.device, target);
 }
 
+TEST_CASE("a memory texture written through its Srgb form encodes the values, and through its plain form keeps them") {
+    Device d;
+    PrGpuTextureUsageFlags usage = PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_RenderTarget;
+    CHECK(prGpuDeviceSupportsFormat(d.device, PrGpuFormat_Rgba8Srgb, usage | PrGpuTextureUsageFlag_SrgbViews));
+    CHECK_FALSE(prGpuDeviceSupportsFormat(d.device, PrGpuFormat_Rgba16F, usage | PrGpuTextureUsageFlag_SrgbViews));
+    PrGpuTextureDesc desc =
+        prGpuTextureDesc2d(PrGpuFormat_Rgba8Srgb, PrUVec2{2, 2}, usage | PrGpuTextureUsageFlag_SrgbViews);
+    PrGpuTexture texture{};
+    REQUIRE(prGpuTextureCreate(d.device, &desc, &texture) == PrStatus_Ok);
+    PrGpuTexture plain{};
+    REQUIRE(prGpuTextureCreateView(d.device, texture, PrGpuTextureViewDesc{.format = PrGpuFormat_Rgba8}, &plain) ==
+        PrStatus_Ok);
+    CHECK(prGpuTextureDesc(d.device, plain).format == PrGpuFormat_Rgba8);
+    // Half of linear light encodes to 188 through the Srgb form, and is stored as 128 through the plain form.
+    PrGpuBufferDesc readback{.size = 16, .memory = PrGpuMemory_Readback};
+    PrGpuBuffer buffer{};
+    REQUIRE(prGpuBufferCreate(d.device, &readback, &buffer) == PrStatus_Ok);
+    const PrGpuTexture through[2] = {texture, plain};
+    const uint8_t stored[2] = {188, 128};
+    for (uint32_t i = 0; i < 2; ++i) {
+        d.clear(through[i], PrColor{0.5f, 0.5f, 0.5f, 1});
+        PrGpuCommands* commands = nullptr;
+        REQUIRE(prGpuCommandsBegin(d.device, nullptr, &commands));
+        PrGpuTextureRegion region{.extent = {2, 2, 1}};
+        prGpuCommandsCopyTextureToBuffer(commands, texture, &region, buffer, 0, 8, 0);
+        prGpuDeviceWait(d.device, prGpuCommandsSubmit(commands));
+        const uint8_t* texels = static_cast<const uint8_t*>(prGpuBufferMap(d.device, buffer));
+        CHECK(texels[0] == stored[i]);
+        CHECK(texels[3] == 255);
+    }
+    // The view keeps the memory after the release of its texture.
+    prGpuTextureRelease(d.device, texture);
+    d.clear(plain, PrColor{1, 1, 1, 1});
+    prGpuTextureRelease(d.device, plain);
+    prGpuBufferRelease(d.device, buffer);
+}
+
 TEST_CASE("a memory view covers its level and layer of the texture's memory") {
     Device d;
     PrGpuTextureDesc desc{
@@ -166,8 +203,10 @@ TEST_CASE("a memory view covers its level and layer of the texture's memory") {
     PrGpuTexture array{};
     REQUIRE(prGpuTextureCreate(d.device, &desc, &array) == PrStatus_Ok);
     PrGpuTexture view{};
-    REQUIRE(prGpuTextureCreateView(d.device, array, PrGpuTextureKind_2d,
-        PrGpuSubresources{.firstLevel = 1, .levels = 1, .firstLayer = 1, .layers = 1}, &view) == PrStatus_Ok);
+    REQUIRE(prGpuTextureCreateView(d.device, array, PrGpuTextureViewDesc{
+        .kind = PrGpuTextureKind_2d,
+        .subresources = PrGpuSubresources{.firstLevel = 1, .levels = 1, .firstLayer = 1, .layers = 1},
+    }, &view) == PrStatus_Ok);
     PrGpuTextureDesc viewed = prGpuTextureDesc(d.device, view);
     CHECK(viewed.extent.width == 2);
     CHECK(viewed.extent.depth == 1);

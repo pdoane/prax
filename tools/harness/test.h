@@ -20,10 +20,16 @@ using namespace pr;
 
 // Whether the tests that need the platform's GPU run. A machine without one, such as a hosted runner of CI, sets the
 // environment variable PR_TEST_NO_GPU, and those tests skip: what stands in for the GPU there runs them too slowly to
-// be worth it, and the CPU renderer's tests check most of what they draw. A web build's tests skip them too, because
-// the page creates its GPU devices asynchronously and the tests wait for theirs. A test skips with
-// doctest::skip(!gpuTests()), or a TEST_SUITE_BEGIN with that decorator for a file of them.
+// be worth it, and the CPU renderer's tests check most of what they draw. On the web, the tests run in a page that has
+// WebGPU, which is where the page tests run (pr_page_tests). They skip under Node.js, which has no GPU. A test skips
+// with doctest::skip(!gpuTests()), or a TEST_SUITE_BEGIN with that decorator for a file of them.
 bool gpuTests();
+
+// Turns on the validation of the GPU APIs that read it from the environment. It applies to the devices that the binary
+// creates after the call. For Metal, it sets MTL_DEBUG_LAYER unless the environment already sets the variable. A device
+// of any other API validates by its options (PrGpuDeviceOptions::validation). Metal's validation ends the process at
+// the first error.
+void gpuValidation();
 
 // A word that is this test binary's own among those that run at once, for a file that must be where others' are.
 String runTag();

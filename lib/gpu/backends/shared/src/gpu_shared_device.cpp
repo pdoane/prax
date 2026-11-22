@@ -378,10 +378,14 @@ void gpuSharedGenerateMipmaps(PrGpuCommands* commands, PrGpuTexture texture, PrG
     for (uint8_t level = 1; level < desc.levels; ++level) {
         PrGpuTexture from{};
         PrGpuTexture into{};
-        prGpuTextureCreateView(device, texture, PrGpuTextureKind_2d,
-            PrGpuSubresources{.firstLevel = uint8_t(level - 1), .levels = 1, .layers = 1}, &from);
-        prGpuTextureCreateView(device, texture, PrGpuTextureKind_2d,
-            PrGpuSubresources{.firstLevel = level, .levels = 1, .layers = 1}, &into);
+        prGpuTextureCreateView(device, texture, PrGpuTextureViewDesc{
+            .kind = PrGpuTextureKind_2d,
+            .subresources = PrGpuSubresources{.firstLevel = uint8_t(level - 1), .levels = 1, .layers = 1},
+        }, &from);
+        prGpuTextureCreateView(device, texture, PrGpuTextureViewDesc{
+            .kind = PrGpuTextureKind_2d,
+            .subresources = PrGpuSubresources{.firstLevel = level, .levels = 1, .layers = 1},
+        }, &into);
         PrGpuPassDesc pass = prGpuPassDescColor(into, PrGpuLoad_Discard, PrColor{});
         pass.name = "mip level";
         prGpuCommandsSetTexture(commands, 0, from, sampler);

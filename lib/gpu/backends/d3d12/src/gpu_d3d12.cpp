@@ -1661,9 +1661,12 @@ PrStatus textureCreate(PrGpuDevice* device, const PrGpuTextureDesc* desc, PrGpuT
         rd.Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
     if (desc->usage & PrGpuTextureUsageFlag_Storage)
         rd.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+    // A texture viewed through both sRGB forms may be cast to either.
+    DXGI_FORMAT castable[2] = {formatOf(prGpuFormatPlain(desc->format)), formatOf(prGpuFormatSrgb(desc->format))};
+    UINT castableCount = (desc->usage & PrGpuTextureUsageFlag_SrgbViews) != 0 ? 2 : 0;
     ID3D12Resource* resource = nullptr;
     if (FAILED(d->device->CreateCommittedResource3(&heap, D3D12_HEAP_FLAG_NONE, &rd,
-            D3D12_BARRIER_LAYOUT_SHADER_RESOURCE, nullptr, nullptr, 0, nullptr, IID_PPV_ARGS(&resource))))
+            D3D12_BARRIER_LAYOUT_SHADER_RESOURCE, nullptr, nullptr, castableCount, castable, IID_PPV_ARGS(&resource))))
         return PrStatus_Limit;
     nameObject(resource, desc->name);
     uint16_t layers = desc->kind == PrGpuTextureKind_3d ? 1 : uint16_t(desc->extent.depth);
@@ -1676,16 +1679,18 @@ PrStatus textureCreate(PrGpuDevice* device, const PrGpuTextureDesc* desc, PrGpuT
     return PrStatus_Ok;
 }
 
-PrStatus textureCreateView(PrGpuDevice* device, PrGpuTexture texture, PrGpuTextureKind kind,
-        PrGpuSubresources subresources, PrGpuTexture* out) {
+PrStatus textureCreateView(PrGpuDevice* device, PrGpuTexture texture, const PrGpuTextureViewDesc* viewDesc,
+        PrGpuTexture* out) {
     D3d12Device* d = d3d12Of(device);
+    PrGpuSubresources subresources = viewDesc->subresources;
     const D3d12Resource& t = textureOf(d, texture.id);
     PrGpuTextureDesc desc = t.texture;
     uint8_t levels = subresources.levels != 0 ? subresources.levels : uint8_t(desc.levels - subresources.firstLevel);
     uint32_t layerCount = desc.kind == PrGpuTextureKind_3d ? 1 : desc.extent.depth;
     uint16_t layers = subresources.layers != 0 ? subresources.layers : uint16_t(layerCount - subresources.firstLayer);
     PrGpuTextureDesc v = desc;
-    v.kind = kind;
+    v.kind = viewDesc->kind;
+    v.format = viewDesc->format;
     v.levels = levels;
     uint32_t width = desc.extent.width >> subresources.firstLevel;
     uint32_t height = desc.extent.height >> subresources.firstLevel;
@@ -3488,6 +3493,10 @@ PrStatus initializeDevice(GpuSharedDevice* device) {
     d->info.adapter = PrStringView{d->adapter, strlen(d->adapter)};
     if (d->timestampTicks != nullptr)
         d->info.features |= PrGpuFeatureFlag_Timestamps;
+    // A resource lists the formats that its views may cast it to if the device relaxes format casting.
+    D3D12_FEATURE_DATA_D3D12_OPTIONS12 options12{};
+    d->srgbViews = SUCCEEDED(d->device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS12, &options12,
+        sizeof(options12))) && options12.RelaxedFormatCastingSupported;
     return PrStatus_Ok;
 }
 

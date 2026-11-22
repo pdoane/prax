@@ -163,8 +163,10 @@ TEST_CASE("threads create, upload and fill mip levels while another draws frames
                 colorOf(loader.index, t, color);
                 uint8_t last = uint8_t(prGpuMipLevels(PrUVec2{sideOf(t), sideOf(t)}) - 1);
                 PrGpuTexture level{};
-                REQUIRE(prGpuTextureCreateView(f.device, loader.textures[t], PrGpuTextureKind_2d,
-                    PrGpuSubresources{.firstLevel = last, .levels = 1, .layers = 1}, &level) == PrStatus_Ok);
+                REQUIRE(prGpuTextureCreateView(f.device, loader.textures[t], PrGpuTextureViewDesc{
+                    .kind = PrGpuTextureKind_2d,
+                    .subresources = PrGpuSubresources{.firstLevel = last, .levels = 1, .layers = 1},
+                }, &level) == PrStatus_Ok);
                 if (!near(f.read(level).data(), color[0], color[1], color[2], color[3], 2))
                     ++wrongTextures;
                 prGpuTextureRelease(f.device, level);

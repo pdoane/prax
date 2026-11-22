@@ -104,6 +104,8 @@ void commit(Device* d, id<MTL4CommandBuffer> buffer, PrGpuFence fence, GpuMetalD
         gpuMetalSubmissionDone(owner, fence, dones, doneCount, feedback.error, seconds);
     }];
     id<MTL4CommandBuffer> list[1] = {buffer};
+    // Metal calls the handler on a thread of its own, after the commit.
+    PR_THREAD_HANDOFF_SEND(dones);
     [static_cast<id<MTL4CommandQueue>>(d->queue) commit:list count:1 options:options];
 }
 

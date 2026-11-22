@@ -373,6 +373,17 @@ PrStatus textureCreate(PrGpuDevice* device, const PrGpuTextureDesc* desc, PrGpuT
     if (desc->kind == PrGpuTextureKind_Cube || desc->kind == PrGpuTextureKind_CubeArray)
         info.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
     info.usage = imageUsageOf(desc->usage);
+    // A texture viewed through both sRGB forms lists both formats, so that a driver keeps what compression it can for
+    // them.
+    VkFormat forms[2] = {vulkanFormat(prGpuFormatPlain(desc->format)), vulkanFormat(prGpuFormatSrgb(desc->format))};
+    VkImageFormatListCreateInfo formats{};
+    if ((desc->usage & PrGpuTextureUsageFlag_SrgbViews) != 0) {
+        formats.sType = VK_STRUCTURE_TYPE_IMAGE_FORMAT_LIST_CREATE_INFO;
+        formats.viewFormatCount = 2;
+        formats.pViewFormats = forms;
+        info.pNext = &formats;
+        info.flags |= VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
+    }
     VkImage image = VK_NULL_HANDLE;
     if (!vulkanCheck(d, d->vk.CreateImage(d->device, &info, nullptr, &image)))
         return PrStatus_Limit;
@@ -414,9 +425,10 @@ PrStatus textureCreate(PrGpuDevice* device, const PrGpuTextureDesc* desc, PrGpuT
     return status;
 }
 
-PrStatus textureCreateView(PrGpuDevice* device, PrGpuTexture texture, PrGpuTextureKind kind,
-        PrGpuSubresources subresources, PrGpuTexture* out) {
+PrStatus textureCreateView(PrGpuDevice* device, PrGpuTexture texture, const PrGpuTextureViewDesc* viewDesc,
+        PrGpuTexture* out) {
     VulkanDevice* d = vulkanDevice(device);
+    PrGpuSubresources subresources = viewDesc->subresources;
     prMutexLock(&d->mutex);
     const VulkanResource& parent = vulkanResourceAt(d, texture.id);
     PR_ASSERT(parent.kind == VulkanSlotKind_Texture);
@@ -436,7 +448,8 @@ PrStatus textureCreateView(PrGpuDevice* device, PrGpuTexture texture, PrGpuTextu
     }
     uint32_t width = desc.extent.width >> subresources.firstLevel;
     uint32_t height = desc.extent.height >> subresources.firstLevel;
-    desc.kind = kind;
+    desc.kind = viewDesc->kind;
+    desc.format = viewDesc->format;
     desc.levels = levels;
     desc.extent.width = width != 0 ? width : 1;
     desc.extent.height = height != 0 ? height : 1;
@@ -1187,6 +1200,7 @@ void vulkanResourceFunctions(VulkanDevice* d) {
     d->bufferUploadFn = bufferUpload;
     d->textureCreateFn = textureCreate;
     d->textureCreateViewFn = textureCreateView;
+    d->srgbViews = true;
     d->textureRetainFn = textureRetain;
     d->textureReleaseFn = textureRelease;
     d->textureDescFn = textureDesc;

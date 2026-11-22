@@ -482,6 +482,12 @@ bool prGpuDeviceSupportsFormat(const PrGpuDevice* device, PrGpuFormat format, Pr
             return false;
         format = prGpuFormatStored(format);
     }
+    if ((usage & PrGpuTextureUsageFlag_SrgbViews) != 0) {
+        usage &= PrGpuTextureUsageFlags(~PrGpuTextureUsageFlag_SrgbViews);
+        PrGpuFormat other = prGpuFormatIsSrgb(format) ? prGpuFormatPlain(format) : prGpuFormatSrgb(format);
+        if (!device->srgbViews || other == format || !device->supportsFormatFn(device, other, usage))
+            return false;
+    }
     return device->supportsFormatFn(device, format, usage);
 }
 
@@ -500,21 +506,28 @@ PrStatus prGpuTextureCreate(PrGpuDevice* device, const PrGpuTextureDesc* desc, P
     PrGpuFormatBlock block = kGpuFormats[desc->format].block;
     if (desc->extent.width % block.width != 0 || desc->extent.height % block.height != 0)
         return PrStatus_NotSupported;
-    // A backend places the channels of a swizzled format only where the device does.
-    if (prGpuFormatSwizzle(desc->format) != PrGpuSwizzle_None &&
-            !prGpuDeviceSupportsFormat(device, desc->format, desc->usage))
+    // A backend places the channels of a swizzled format only if the device supports the format. The same holds for a
+    // view of a texture through its other sRGB form.
+    bool checked = prGpuFormatSwizzle(desc->format) != PrGpuSwizzle_None ||
+        (desc->usage & PrGpuTextureUsageFlag_SrgbViews) != 0;
+    if (checked && !prGpuDeviceSupportsFormat(device, desc->format, desc->usage))
         return PrStatus_NotSupported;
     return device->textureCreateFn(device, desc, out);
 }
 
-PrStatus prGpuTextureCreateView(PrGpuDevice* device, PrGpuTexture texture, PrGpuTextureKind kind,
-        PrGpuSubresources subresources, PrGpuTexture* out) {
+PrStatus prGpuTextureCreateView(PrGpuDevice* device, PrGpuTexture texture, PrGpuTextureViewDesc desc, PrGpuTexture* out) {
     *out = PrGpuTexture{};
     PR_ASSERT(texture.id != 0);
     PrStatus refused = refusal(device);
     if (refused != PrStatus_Ok)
         return refused;
-    return device->textureCreateViewFn(device, texture, kind, subresources, out);
+    PrGpuTextureViewDesc view = desc;
+    PrGpuTextureDesc of = device->textureDescFn(device, texture);
+    if (view.format == PrGpuFormat_None)
+        view.format = of.format;
+    PR_ASSERT(view.format == of.format || ((of.usage & PrGpuTextureUsageFlag_SrgbViews) != 0 &&
+        (view.format == prGpuFormatSrgb(of.format) || view.format == prGpuFormatPlain(of.format))));
+    return device->textureCreateViewFn(device, texture, &view, out);
 }
 
 void prGpuTextureRetain(PrGpuDevice* device, PrGpuTexture texture) {

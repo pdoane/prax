@@ -711,7 +711,7 @@ uint32_t addTexture(Device* d, const MemoryTexture& texture) {
 
 PrStatus textureCreate(PrGpuDevice* device, const PrGpuTextureDesc* desc, PrGpuTexture* out) {
     Device* d = deviceOf(device);
-    if (!supportsFormat(device, desc->format, desc->usage) || desc->samples != 1)
+    if (!prGpuDeviceSupportsFormat(device, desc->format, desc->usage) || desc->samples != 1)
         return PrStatus_NotSupported;
     if (desc->levels > kMaxLevels)
         return PrStatus_Limit;
@@ -761,16 +761,19 @@ PrStatus textureCreateOverPixels(PrGpuDevice* device, PrGpuFormat format, PrPixe
     return PrStatus_Ok;
 }
 
-PrStatus textureCreateView(PrGpuDevice* device, PrGpuTexture texture, PrGpuTextureKind kind,
-        PrGpuSubresources subresources, PrGpuTexture* out) {
+PrStatus textureCreateView(PrGpuDevice* device, PrGpuTexture texture, const PrGpuTextureViewDesc* viewDesc,
+        PrGpuTexture* out) {
     Device* d = deviceOf(device);
+    PrGpuSubresources subresources = viewDesc->subresources;
     prMutexLock(&d->mutex);
     MemoryTexture of = textureAt(d, texture);
     ++of.memory->references;
     prMutexUnlock(&d->mutex);
     uint8_t levels = subresources.levels != 0 ? subresources.levels : uint8_t(of.desc.levels - subresources.firstLevel);
+    // A view of the other sRGB form reads the same bytes through that form.
     PrGpuTextureDesc desc = of.desc;
-    desc.kind = kind;
+    desc.kind = viewDesc->kind;
+    desc.format = viewDesc->format;
     desc.levels = levels;
     desc.extent.width = levelSize(of.desc.extent.width, subresources.firstLevel);
     desc.extent.height = levelSize(of.desc.extent.height, subresources.firstLevel);
@@ -1222,6 +1225,7 @@ PrGpuDevice* gpuMemoryCreate(PrStringView backend, const GpuMemoryMirror* PR_NUL
     d->bufferUploadFn = bufferUpload;
     d->textureCreateFn = textureCreate;
     d->textureCreateViewFn = textureCreateView;
+    d->srgbViews = true;
     d->textureRetainFn = textureRetain;
     d->textureReleaseFn = textureRelease;
     d->textureDescFn = textureDesc;

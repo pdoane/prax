@@ -599,6 +599,7 @@ enum {
     PrGpuTextureUsageFlag_Storage = 1u << 1,        // read and written by shaders without a sampler
     PrGpuTextureUsageFlag_RenderTarget = 1u << 2,   // a color attachment of passes
     PrGpuTextureUsageFlag_DepthStencil = 1u << 3,   // the depth and stencil attachment of passes
+    PrGpuTextureUsageFlag_SrgbViews = 1u << 4,      // a view may read it through its format's other sRGB form
 };
 typedef uint8_t PrGpuTextureUsageFlags;
 
@@ -687,21 +688,36 @@ typedef struct PrGpuSubresources {
     uint16_t layers;
 } PrGpuSubresources;
 
-// Returns true if `device` can create textures of `format` with every use in `usage`.
+// Returns true if `device` can create textures of `format` with every use in `usage`. With
+// PrGpuTextureUsageFlag_SrgbViews, the format has a Srgb form and a plain form, and the device creates textures of
+// either that a view reads through the other.
 bool prGpuDeviceSupportsFormat(const PrGpuDevice* device, PrGpuFormat format, PrGpuTextureUsageFlags usage);
 
 // Creates a texture as `desc` describes, with undefined contents, in the accesses of PrGpuAccessFlag_ShaderRead for the
 // work submitted after the call. The first level of a texture of a block-compressed format is whole blocks: its extent
 // is a multiple of the block's, which some devices require, and the levels after it are as small as those of any
 // texture. Returns Limit if the device has no memory or handle left for it, or the extent is larger than the device
-// allows, NotSupported for a first level that is not whole blocks, and Lost if the device is lost. On failure, `*out`
-// is zero.
+// allows, NotSupported for a first level that is not whole blocks or for PrGpuTextureUsageFlag_SrgbViews on a format
+// that the device does not view so (prGpuDeviceSupportsFormat), and Lost if the device is lost. On failure, `*out` is
+// zero.
 PrStatus prGpuTextureCreate(PrGpuDevice* device, const PrGpuTextureDesc* desc, PrGpuTexture* out);
 
-// Creates a view of `subresources` of `texture`, of shape `kind`. A view has handles and may be an attachment, and it
-// shares its texture's memory. A view may outlive the destruction of its texture, which keeps the memory.
-PrStatus prGpuTextureCreateView(PrGpuDevice* device, PrGpuTexture texture, PrGpuTextureKind kind,
-    PrGpuSubresources subresources, PrGpuTexture* out);
+// A view of a texture: its shape, the format that shaders read its texels through, and the levels and layers that it
+// covers. A format of None means the texture's own format. A texture created with PrGpuTextureUsageFlag_SrgbViews may
+// also be viewed through the other sRGB form of its format (prGpuFormatSrgb, prGpuFormatPlain), which has the same
+// bits. No other format is valid.
+typedef struct PrGpuTextureViewDesc {
+    PrGpuTextureKind kind;
+    PrGpuFormat format;
+    PrGpuSubresources subresources;
+} PrGpuTextureViewDesc;
+
+// Creates a view of `texture`. A view is a texture in its own right. Its id is the handle that shaders sample it
+// through. It binds to slots, and it can be an attachment. A view shares the memory of its texture, so a write through
+// one is visible through the other. A view may outlive its texture, and it keeps the memory alive.
+//
+// Returns Limit if the device has no handle left, and Lost if the device is lost. On failure, `*out` is zero.
+PrStatus prGpuTextureCreateView(PrGpuDevice* device, PrGpuTexture texture, PrGpuTextureViewDesc desc, PrGpuTexture* out);
 
 // Take and drop a reference to the texture or view, as buffers' references are taken and dropped (prGpuBufferRetain).
 // The release of the last destroys it: the work submitted before that release may still use it, and work submitted
@@ -709,8 +725,8 @@ PrStatus prGpuTextureCreateView(PrGpuDevice* device, PrGpuTexture texture, PrGpu
 void prGpuTextureRetain(PrGpuDevice* device, PrGpuTexture texture);
 void prGpuTextureRelease(PrGpuDevice* device, PrGpuTexture texture);
 
-// Returns the description that the texture was created with. A view reports the shape, the levels and the extent that
-// it covers.
+// Returns the description that the texture was created with. A view reports the shape, the format, the levels and the
+// extent that it covers.
 PrGpuTextureDesc prGpuTextureDesc(const PrGpuDevice* device, PrGpuTexture texture);
 
 // Returns the extent of the texture's first level in two dimensions.

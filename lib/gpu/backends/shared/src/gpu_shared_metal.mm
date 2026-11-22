@@ -331,7 +331,8 @@ MTLTextureSwizzleChannels textureSwizzle(PrGpuFormat format) {
 
 MTLTextureUsage textureUsage(PrGpuTextureUsageFlags usage) {
     // No texture asks for MTLTextureUsagePixelFormatView, which would keep the GPU from compressing it. A view keeps
-    // its texture's pixel format or swaps sRGB for linear, and neither needs it.
+    // the pixel format of its texture, or swaps the sRGB form for the other form (PrGpuTextureUsageFlag_SrgbViews).
+    // Metal needs the usage for neither.
     MTLTextureUsage u = 0;
     if (usage & PrGpuTextureUsageFlag_Sampled)
         u |= MTLTextureUsageShaderRead;
@@ -380,9 +381,11 @@ PrStatus textureCreate(PrGpuDevice* device, const PrGpuTextureDesc* desc, PrGpuT
     }
 }
 
-PrStatus textureCreateView(PrGpuDevice* device, PrGpuTexture texture, PrGpuTextureKind kind,
-        PrGpuSubresources subresources, PrGpuTexture* out) {
+PrStatus textureCreateView(PrGpuDevice* device, PrGpuTexture texture, const PrGpuTextureViewDesc* viewDesc,
+        PrGpuTexture* out) {
     GpuMetalDevice* d = gpuMetalDeviceFrom(device);
+    PrGpuTextureKind kind = viewDesc->kind;
+    PrGpuSubresources subresources = viewDesc->subresources;
     @autoreleasepool {
         id<MTLTexture> t = gpuMetalTexture(d, texture.id);
         PrGpuTextureDesc desc = d->resources[texture.id].texture;
@@ -397,9 +400,9 @@ PrStatus textureCreateView(PrGpuDevice* device, PrGpuTexture texture, PrGpuTextu
             layers = subresources.layers;
         else
             layers = uint16_t(layerCount - subresources.firstLayer);
-        id<MTLTexture> view = [t newTextureViewWithPixelFormat:t.pixelFormat
+        id<MTLTexture> view = [t newTextureViewWithPixelFormat:gpuMetalPixelFormat(viewDesc->format)
             textureType:textureType(kind, desc.samples) levels:NSMakeRange(subresources.firstLevel, levels)
-            slices:NSMakeRange(subresources.firstLayer, layers) swizzle:textureSwizzle(desc.format)];
+            slices:NSMakeRange(subresources.firstLayer, layers) swizzle:textureSwizzle(viewDesc->format)];
         if (view == nil)
             return PrStatus_Limit;
         uint32_t slot = gpuMetalResourceAdd(d, GpuMetalSlot_Texture, view, view.gpuResourceID._impl);
@@ -410,6 +413,7 @@ PrStatus textureCreateView(PrGpuDevice* device, PrGpuTexture texture, PrGpuTextu
         v = desc;
         v.name = PrStringView{};
         v.kind = kind;
+        v.format = viewDesc->format;
         v.levels = levels;
         uint32_t width = desc.extent.width >> subresources.firstLevel;
         uint32_t height = desc.extent.height >> subresources.firstLevel;
@@ -1219,6 +1223,8 @@ void gpuMetalSubmissionDone(GpuMetalDevice* d, PrGpuFence fence, GpuMetalDone* P
         NSLog(@"lib/gpu: Metal reported an error from a command buffer: %@", error);
         d->lost.store(true);
     }
+    // The thread that committed the work wrote what the functions read (the commit functions of the backends).
+    PR_THREAD_HANDOFF_RECEIVE(dones);
     for (uint32_t i = 0; i < doneCount; ++i)
         dones[i].done(dones[i].context, seconds);
     prMemoryFree(dones);
@@ -1496,6 +1502,7 @@ void gpuMetalDeviceInstall(GpuMetalDevice* d, PrGpuDeviceLimits limits) {
     d->bufferUploadFn = bufferUpload;
     d->textureCreateFn = textureCreate;
     d->textureCreateViewFn = textureCreateView;
+    d->srgbViews = true;
     d->textureRetainFn = textureRetain;
     d->textureReleaseFn = textureRelease;
     d->textureDescFn = textureDesc;

@@ -1,6 +1,9 @@
-// The main() of every module's tests: the crash handler, then doctest's run of the binary's tests, which a watchdog
-// times case by case. It takes core's declarations only, so that each binary links the core that it tests, and the
-// watchdog is the standard library's, since a configured core may have no threads of its own.
+// The main() of every module's tests: the crash handler, then doctest's run of the binary's tests. A watchdog times the
+// run case by case. The run ends with the calls that the tests registered (atTestRunEnd). main() takes only the
+// declarations of core, so that each binary links the core that it tests. The watchdog uses the standard library,
+// because a configured core may have no threads of its own.
+
+#include "tools/harness/test_main.h"
 
 #include "pr/assert.h"
 
@@ -14,6 +17,7 @@
 #include <mutex>
 #include <string>
 #include <thread>
+#include <vector>
 
 using namespace pr;
 
@@ -25,6 +29,14 @@ constexpr bool kWatchdog = false;
 #else
 constexpr bool kWatchdog = true;
 #endif
+
+// A call that atTestRunEnd registered.
+struct RunEnd {
+    void (*fn)(void* PR_NULLABLE context);
+    void* PR_NULLABLE context;
+};
+
+std::vector<RunEnd> gRunEnds;
 
 // Ends the run once a test case takes longer than PR_TEST_CASE_TIMEOUT seconds, after naming the case on standard
 // error, so that a case that hangs is reported as itself rather than as its binary's time running out. A run without
@@ -102,7 +114,13 @@ struct Watchdog : doctest::IReporter {
 
     void report_query(const doctest::QueryData&) override {}
     void test_run_start() override {}
-    void test_run_end(const doctest::TestRunStats&) override {}
+    void test_run_end(const doctest::TestRunStats&) override {
+        while (!gRunEnds.empty()) {
+            RunEnd end = gRunEnds.back();
+            gRunEnds.pop_back();
+            end.fn(end.context);
+        }
+    }
     void test_case_reenter(const doctest::TestCaseData&) override {}
     void test_case_exception(const doctest::TestCaseException&) override {}
     void subcase_start(const doctest::SubcaseSignature&) override {}
@@ -115,6 +133,14 @@ struct Watchdog : doctest::IReporter {
 REGISTER_LISTENER("watchdog", 1, Watchdog);
 
 } // namespace
+
+namespace harness {
+
+void atTestRunEnd(void (*fn)(void* PR_NULLABLE context), void* PR_NULLABLE context) {
+    gRunEnds.push_back(RunEnd{fn, context});
+}
+
+} // namespace harness
 
 int main(int argc, char** argv) {
     prCrashHandler();

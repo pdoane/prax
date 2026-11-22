@@ -6,12 +6,16 @@
 #include "pr/environment.h"
 #include "pr/file.h"
 
+#include <cstdlib>
 #include <filesystem>
 #include <string>
 #include <system_error>
 
 #if defined(_WIN32)
 #include <process.h>
+#elif defined(__EMSCRIPTEN__)
+#include <emscripten/em_asm.h>
+#include <unistd.h>
 #else
 #include <unistd.h>
 #endif
@@ -40,12 +44,19 @@ namespace harness {
 
 bool gpuTests() {
 #if defined(__EMSCRIPTEN__)
-    return false;
+    // A page that has WebGPU, where the page tests run, and not Node.js.
+    return EM_ASM_INT({ return typeof navigator !== "undefined" && navigator.gpu ? 1 : 0; }) != 0;
 #else
     PrRawString value = prEnvironmentVariable("PR_TEST_NO_GPU");
     bool set = !prRawStringIsEmpty(&value);
     prRawStringReset(&value);
     return !set;
+#endif
+}
+
+void gpuValidation() {
+#if defined(__APPLE__)
+    setenv("MTL_DEBUG_LAYER", "1", 0);
 #endif
 }
 

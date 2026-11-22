@@ -692,7 +692,8 @@ TEST_CASE("a device samples the blocks of each compressed format that it has, as
             PrGpuTexture second{};
             PrGpuSubresources secondLevel{.firstLevel = 1, .levels = 1};
             PrGpuTextureKind flat = PrGpuTextureKind_2d;
-            REQUIRE(prGpuTextureCreateView(f.device, uploaded, flat, secondLevel, &second) == PrStatus_Ok);
+            REQUIRE(prGpuTextureCreateView(f.device, uploaded,
+                PrGpuTextureViewDesc{.kind = flat, .subresources = secondLevel}, &second) == PrStatus_Ok);
             CHECK(mismatches(format, halfBlocks.data(), kHalfColumns, half, sample(f, second), tolerance) == 0);
             prGpuTextureRelease(f.device, second);
             prGpuTextureRelease(f.device, uploaded);
@@ -717,7 +718,8 @@ TEST_CASE("a device samples the blocks of each compressed format that it has, as
                 PrGpuAccessFlag_ShaderRead);
             gpuSubmitAndWait(commands);
             CHECK(mismatches(format, blocks.data(), kColumns, extent, sample(f, copied), tolerance) == 0);
-            REQUIRE(prGpuTextureCreateView(f.device, copied, flat, secondLevel, &second) == PrStatus_Ok);
+            REQUIRE(prGpuTextureCreateView(f.device, copied,
+                PrGpuTextureViewDesc{.kind = flat, .subresources = secondLevel}, &second) == PrStatus_Ok);
             CHECK(mismatches(format, halfBlocks.data(), kHalfColumns, half, sample(f, second), tolerance) == 0);
             prGpuTextureRelease(f.device, second);
             prGpuBufferRelease(f.device, buffer);
@@ -773,7 +775,8 @@ TEST_CASE("a device that places channels samples each swizzled format as its swi
             CHECK(mismatches(format, texels.data(), extent.x, extent, sample(f, texture), 1) == 0);
             // A view reads the texture's texels as the texture does.
             PrGpuTexture view{};
-            REQUIRE(prGpuTextureCreateView(f.device, texture, PrGpuTextureKind_2d, PrGpuSubresources{}, &view) ==
+            REQUIRE(prGpuTextureCreateView(f.device, texture,
+                PrGpuTextureViewDesc{.kind = PrGpuTextureKind_2d, .subresources = PrGpuSubresources{}}, &view) ==
                 PrStatus_Ok);
             CHECK(mismatches(format, texels.data(), extent.x, extent, sample(f, view), 1) == 0);
             prGpuTextureRelease(f.device, view);
@@ -782,6 +785,61 @@ TEST_CASE("a device that places channels samples each swizzled format as its swi
         }
         // Every device that places channels has R8.
         CHECK(drawn >= (swizzles ? 5u : 0u));
+    });
+}
+
+TEST_CASE("a texture sampled through its Srgb form decodes its bits, and through its plain form reads them as stored") {
+    onEachBackend([](Fixture& f) {
+        const PrGpuFormat formats[] = {PrGpuFormat_Rgba8, PrGpuFormat_Bgra8, PrGpuFormat_R8, PrGpuFormat_Rg8};
+        constexpr PrGpuTextureUsageFlags kUsage = PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_SrgbViews;
+        // A format that has only one form has no other form to view it through.
+        CHECK_FALSE(prGpuDeviceSupportsFormat(f.device, PrGpuFormat_Rgba16F, kUsage));
+        CHECK_FALSE(prGpuDeviceSupportsFormat(f.device, PrGpuFormat_R8Luminance, kUsage));
+        uint32_t drawn = 0;
+        for (PrGpuFormat plain : formats) {
+            const PrGpuFormat forms[2] = {plain, prGpuFormatSrgb(plain)};
+            for (PrGpuFormat format : forms) {
+                CAPTURE(uint32_t(format));
+                PrGpuFormat other = format == plain ? prGpuFormatSrgb(plain) : plain;
+                PrGpuTextureDesc desc = prGpuTextureDesc2d(format, PrUVec2{4, 2}, kUsage);
+                PrGpuTexture texture{};
+                if (!prGpuDeviceSupportsFormat(f.device, format, kUsage)) {
+                    CHECK(prGpuTextureCreate(f.device, &desc, &texture) == PrStatus_NotSupported);
+                    continue;
+                }
+                // The channels of each texel hold eighths, taken from the index of the texel.
+                uint32_t bytes = prGpuFormatBlock(format).bytes;
+                Array<uint8_t> data(8 * bytes);
+                for (uint32_t i = 0; i < 8; ++i) {
+                    for (uint32_t c = 0; c < bytes; ++c)
+                        data[i * bytes + c] = c == 3 ? 255 : uint8_t(i * 32);
+                }
+                REQUIRE(prGpuTextureCreate(f.device, &desc, &texture) == PrStatus_Ok);
+                PrGpuTextureRegion region = prGpuTextureRegion2d(PrUVec2{0, 0}, PrUVec2{4, 2});
+                prGpuTextureUpload(f.device, texture, &region, data.data(), 4 * bytes, uint32_t(data.count()));
+                PrGpuTexture view{};
+                REQUIRE(prGpuTextureCreateView(f.device, texture, PrGpuTextureViewDesc{.format = other}, &view) ==
+                    PrStatus_Ok);
+                CHECK(prGpuTextureDesc(f.device, view).format == other);
+                const PrGpuTexture through[2] = {texture, view};
+                for (PrGpuTexture read : through) {
+                    bool decodes = prGpuFormatIsSrgb(prGpuTextureDesc(f.device, read).format);
+                    Array<uint8_t> drawnTexels = sample(f, read);
+                    uint32_t wrong = 0;
+                    for (uint32_t i = 0; i < 8; ++i) {
+                        float value = float(i * 32) / 255.0f;
+                        float expected = decodes ? srgbToLinear(value) : value;
+                        wrong += prF32Abs(float(drawnTexels[i * 4]) - expected * 255.0f) > 1.5f ? 1 : 0;
+                    }
+                    CHECK(wrong == 0);
+                }
+                prGpuTextureRelease(f.device, view);
+                prGpuTextureRelease(f.device, texture);
+                ++drawn;
+            }
+        }
+        // Every device that views a format through its other form has Rgba8 and Bgra8 in both.
+        CHECK((drawn == 0 || drawn >= 4));
     });
 }
 

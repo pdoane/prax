@@ -94,6 +94,8 @@ void commit(Device* d, id<MTLCommandBuffer> buffer, PrGpuFence fence, GpuMetalDo
         double seconds = done.error == nil ? done.GPUEndTime - done.GPUStartTime : 0;
         gpuMetalSubmissionDone(owner, fence, dones, doneCount, done.error, seconds);
     }];
+    // Metal calls the handler on a thread of its own, after the commit.
+    PR_THREAD_HANDOFF_SEND(dones);
     [buffer commit];
 }
 

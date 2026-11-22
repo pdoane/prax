@@ -148,6 +148,10 @@ struct PrGpuSwapChain {
 // A backend counts the references of each buffer, texture and pipeline. The release of the last retires the resource as
 // the backend retires what it destroys, so the device frees it once the work submitted before is done.
 //
+// `supportsFormatFn` never sees PrGpuTextureUsageFlag_SrgbViews. `srgbViews` says that the device takes the flag for
+// every format that it supports in both sRGB forms. Such a device creates a texture with the flag and views it through
+// the other form. The format of a view is never None.
+//
 // A null `textureCreateOverPixelsFn` means that the device does not hand out PrGpuNativeKind_Pixels, and a null
 // `textureNativeFn` that it hands out no native objects. Either is called only with a kind that the device hands out.
 //
@@ -167,6 +171,7 @@ struct PrGpuDevice {
     void (*waitFn)(PrGpuDevice* device, PrGpuFence fence);
     void (*waitIdleFn)(PrGpuDevice* device);
     bool (*supportsFormatFn)(const PrGpuDevice* device, PrGpuFormat format, PrGpuTextureUsageFlags usage);
+    bool srgbViews;
 
     PrStatus (*bufferCreateFn)(PrGpuDevice* device, const PrGpuBufferDesc* desc, PrGpuBuffer* out);
     void (*bufferRetainFn)(PrGpuDevice* device, PrGpuBuffer buffer);
@@ -177,8 +182,8 @@ struct PrGpuDevice {
     void (*bufferUploadFn)(PrGpuDevice* device, PrGpuBuffer buffer, uint64_t offset, const void* data, uint64_t size);
 
     PrStatus (*textureCreateFn)(PrGpuDevice* device, const PrGpuTextureDesc* desc, PrGpuTexture* out);
-    PrStatus (*textureCreateViewFn)(PrGpuDevice* device, PrGpuTexture texture, PrGpuTextureKind kind,
-        PrGpuSubresources subresources, PrGpuTexture* out);
+    PrStatus (*textureCreateViewFn)(PrGpuDevice* device, PrGpuTexture texture, const PrGpuTextureViewDesc* desc,
+        PrGpuTexture* out);
     void (*textureRetainFn)(PrGpuDevice* device, PrGpuTexture texture);
     void (*textureReleaseFn)(PrGpuDevice* device, PrGpuTexture texture);
     PrGpuTextureDesc (*textureDescFn)(const PrGpuDevice* device, PrGpuTexture texture);

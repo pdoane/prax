@@ -405,9 +405,26 @@ DXGI_FORMAT formatOf(PrGpuFormat format) {
     }
 }
 
-// The format of a texture's resource: typeless for depth, which shader resource views read in a color format, and for
-// sRGB that shaders write, whose unordered access views take the linear format.
+// Returns the typeless format of the family of `format` if `format` has both sRGB forms, or UNKNOWN otherwise.
+DXGI_FORMAT typelessOf(PrGpuFormat format) {
+    switch (prGpuFormatPlain(format)) {
+        case PrGpuFormat_Rgba8: return DXGI_FORMAT_R8G8B8A8_TYPELESS;
+        case PrGpuFormat_Bgra8: return DXGI_FORMAT_B8G8R8A8_TYPELESS;
+        case PrGpuFormat_Bc1: return DXGI_FORMAT_BC1_TYPELESS;
+        case PrGpuFormat_Bc2: return DXGI_FORMAT_BC2_TYPELESS;
+        case PrGpuFormat_Bc3: return DXGI_FORMAT_BC3_TYPELESS;
+        case PrGpuFormat_Bc7: return DXGI_FORMAT_BC7_TYPELESS;
+        default: return DXGI_FORMAT_UNKNOWN;
+    }
+}
+
+// Returns the format of the resource of a texture. The format is typeless in three cases. Depth is typeless because
+// shader resource views read it in a color format. sRGB that shaders write is typeless because its unordered access
+// views take the linear format. A texture viewed through both sRGB forms is typeless because each view names its own
+// form.
 DXGI_FORMAT resourceFormatOf(PrGpuFormat format, PrGpuTextureUsageFlags usage) {
+    if ((usage & PrGpuTextureUsageFlag_SrgbViews) != 0)
+        return typelessOf(format);
     switch (format) {
         case PrGpuFormat_D16: return DXGI_FORMAT_R16_TYPELESS;
         case PrGpuFormat_D32F: return DXGI_FORMAT_R32_TYPELESS;
@@ -1129,16 +1146,18 @@ PrStatus textureCreate(PrGpuDevice* device, const PrGpuTextureDesc* desc, PrGpuT
     return PrStatus_Ok;
 }
 
-PrStatus textureCreateView(PrGpuDevice* device, PrGpuTexture texture, PrGpuTextureKind kind,
-        PrGpuSubresources subresources, PrGpuTexture* out) {
+PrStatus textureCreateView(PrGpuDevice* device, PrGpuTexture texture, const PrGpuTextureViewDesc* viewDesc,
+        PrGpuTexture* out) {
     D3d11Device* d = d3d11Of(device);
+    PrGpuSubresources subresources = viewDesc->subresources;
     const D3d11Resource& t = d->resources[texture.id];
     PrGpuTextureDesc desc = t.texture;
     uint8_t levels = subresources.levels != 0 ? subresources.levels : uint8_t(desc.levels - subresources.firstLevel);
     uint32_t layerCount = desc.kind == PrGpuTextureKind_3d ? 1 : desc.extent.depth;
     uint16_t layers = subresources.layers != 0 ? subresources.layers : uint16_t(layerCount - subresources.firstLayer);
     PrGpuTextureDesc v = desc;
-    v.kind = kind;
+    v.kind = viewDesc->kind;
+    v.format = viewDesc->format;
     v.levels = levels;
     uint32_t width = desc.extent.width >> subresources.firstLevel;
     uint32_t height = desc.extent.height >> subresources.firstLevel;
@@ -3108,6 +3127,7 @@ PrGpuDevice* prGpuD3d11Create(const PrGpuD3d11Options* PR_NULLABLE options) {
     d->bufferUploadFn = bufferUpload;
     d->textureCreateFn = textureCreate;
     d->textureCreateViewFn = textureCreateView;
+    d->srgbViews = true;
     d->textureRetainFn = textureRetain;
     d->textureReleaseFn = textureRelease;
     d->textureDescFn = textureDesc;
