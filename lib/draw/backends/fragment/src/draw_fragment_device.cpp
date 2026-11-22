@@ -637,10 +637,9 @@ void copySnapshot(FragmentDevice* d, const FragmentFrame* frame, const FragmentF
     prGpuCommandsTextureBarrier(commands, snapshot, all, PrGpuAccessFlag_CopyWrite, PrGpuAccessFlag_FragmentRead);
 }
 
-// Carries out the frame's texture requests: textures created and written by uploads, which the frame's commands read,
-// and the levels of mipmapped ones filled in `commands`.
-void runRequests(FragmentDevice* d, const FragmentFrame* frame, PrGpuCommands* commands) {
-    bool destroyed = false;
+// Carries out the frame's texture requests. The requests create textures and upload texels to them. The frame's
+// commands read those textures.
+void runRequests(FragmentDevice* d, const FragmentFrame* frame) {
     for (uint32_t i = 0; i < frame->requestCount; ++i) {
         const FragmentTextureRequest& q = frame->requests[i];
         uint32_t at = textureIndex(d, q.texture);
@@ -649,10 +648,6 @@ void runRequests(FragmentDevice* d, const FragmentFrame* frame, PrGpuCommands* c
                 PrGpuTextureDesc desc = prGpuTextureDesc2d(gpuFormatOf(q.format), q.texels.extent,
                     PrGpuTextureUsageFlag_Sampled);
                 desc.name = "fragment texture";
-                if (q.mipmapped) {
-                    desc.usage |= PrGpuTextureUsageFlag_RenderTarget;
-                    desc.levels = prGpuMipLevels(q.texels.extent);
-                }
                 PrGpuTexture texture{};
                 if (q.texels.extent.x == 0 || q.texels.extent.y == 0 ||
                         prGpuTextureCreate(d->device, &desc, &texture) != PrStatus_Ok)
@@ -660,8 +655,6 @@ void runRequests(FragmentDevice* d, const FragmentFrame* frame, PrGpuCommands* c
                 prGpuTextureWrite(d->device, texture, PrIVec2{0, 0}, q.texels);
                 d->textureIds.insert(q.texture, d->textures.count);
                 d->textures.push(FragmentOwnTexture{q.texture, texture});
-                if (q.mipmapped)
-                    prGpuCommandsGenerateMipmaps(commands, texture, PrGpuAccessFlag_ShaderRead);
                 break;
             }
             case FragmentTextureOp_Update:
@@ -669,25 +662,7 @@ void runRequests(FragmentDevice* d, const FragmentFrame* frame, PrGpuCommands* c
                     prGpuTextureWrite(d->device, d->textures.data[at].texture,
                         PrIVec2{int32_t(q.origin.x), int32_t(q.origin.y)}, q.texels);
                 break;
-            case FragmentTextureOp_Destroy:
-                if (at != kArrayMissing) {
-                    prGpuTextureRelease(d->device, d->textures.data[at].texture);
-                    d->textures.data[at] = FragmentOwnTexture{};
-                    destroyed = true;
-                }
-                break;
-            default:
-                break;
         }
-    }
-    if (destroyed) {
-        uint32_t kept = 0;
-        for (uint32_t i = 0; i < d->textures.count; ++i) {
-            if (d->textures.data[i].texture.id != 0)
-                d->textures.data[kept++] = d->textures.data[i];
-        }
-        d->textures.count = kept;
-        d->textureIds.rebuild(kept, [&](uint32_t i) { return uint64_t(d->textures.data[i].id); });
     }
 }
 
@@ -827,7 +802,7 @@ void fragmentDevicePrepare(FragmentDevice* d, const FragmentFrame* frame, PrGpuC
         PrPixelFormat format, const PrDrawBeneath* PR_NULLABLE beneath) {
     PrGpuFormat target = gpuFormatOf(format);
     prGpuCommandsPushGroup(commands, "fragment prepare");
-    runRequests(d, frame, commands);
+    runRequests(d, frame);
     // The frame's layers, which replace those that it last drew with.
     ++d->prepares;
     FragmentFrameState* state = stateOf(d, frame);
@@ -842,15 +817,14 @@ void fragmentDevicePrepare(FragmentDevice* d, const FragmentFrame* frame, PrGpuC
     // The beneath layer is the host's texture.
     PrGpuTexture hostBeneath;
     if (beneath != nullptr && beneath->kind == PrDrawBeneathKind_Texture)
-        hostBeneath = PrGpuTexture{uint32_t(beneath->texture)};
+        hostBeneath = beneath->texture;
     else
         hostBeneath = PrGpuTexture{};
     uint32_t beneathId = frame->beneath != 0 ? frame->layers[frame->beneath - 1].texture : 0;
     state->hostLayers.clear();
     for (uint32_t i = 0; i < frame->layerCount; ++i) {
         const FragmentLayer& l = frame->layers[i];
-        PrGpuTexture hostLayer =
-            l.hostTexture != 0 ? PrGpuTexture{uint32_t(frame->hostTextures[l.hostTexture - 1])} : PrGpuTexture{};
+        PrGpuTexture hostLayer = l.hostTexture != 0 ? frame->hostTextures[l.hostTexture - 1] : PrGpuTexture{};
         bool host = (i + 1 == frame->beneath && hostBeneath.id != 0) || hostLayer.id != 0;
         state->layers.push(host ? kArrayMissing : takeLayer(d, l, layerFormat(frame, i, target)));
         state->hostLayers.push(hostLayer);
@@ -861,8 +835,7 @@ void fragmentDevicePrepare(FragmentDevice* d, const FragmentFrame* frame, PrGpuC
     for (uint32_t i = 0; i < frame->textureCount; ++i) {
         uint32_t id = frame->textures[i].texture;
         uint32_t hostIndex = frame->textures[i].hostTexture;
-        PrGpuTexture texture =
-            hostIndex != 0 ? PrGpuTexture{uint32_t(frame->hostTextures[hostIndex - 1])} : PrGpuTexture{};
+        PrGpuTexture texture = hostIndex != 0 ? frame->hostTextures[hostIndex - 1] : PrGpuTexture{};
         if (texture.id == 0 && id == beneathId && beneathId != 0)
             texture = hostBeneath;
         if (texture.id == 0) {

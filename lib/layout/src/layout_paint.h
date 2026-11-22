@@ -276,6 +276,10 @@ struct LayoutPaintCache {
     uint32_t paints;                // number of paints made, including the one in progress
 };
 
+// Forgets every recording of the tree's paints and the asks that they wait for, so that the next paint draws every
+// image again from the tree's textures (LayoutTree::textures).
+void layoutTreeForgetTextures(LayoutTree* tree);
+
 // Frees the memory that the cache holds.
 void layoutPaintCacheReset(LayoutPaintCache& cache);
 

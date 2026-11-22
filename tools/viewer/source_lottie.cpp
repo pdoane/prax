@@ -73,13 +73,14 @@ struct LottieSource {
 };
 
 std::shared_ptr<LottieSource> loadLottie(const fs::path& path, const fs::path& settings, PrTextShaper* shaper,
-        PrFontHinting hinting, PrFontHinter* PR_NULLABLE hinter) {
+        PrFontHinting hinting, PrFontHinter* PR_NULLABLE hinter, PrTextureCache* PR_NULLABLE textures) {
     std::string json = readFile(path);
     Beside beside{path.parent_path(), {}};
     PrCompressCodecSet* compressCodec = prCompressCodecSetCreateDefault();
     PrImageCodecSet* imageCodec = prImageCodecSetCreateDefault(compressCodec);
     PrLottieOptions options{};
     options.codec = imageCodec;
+    options.textures = textures;
     options.load = loadBeside;
     options.loadContext = &beside;
     std::shared_ptr<LottieSource> lottie = std::make_shared<LottieSource>();

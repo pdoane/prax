@@ -3,6 +3,7 @@
 #include "pr/draw_list.h"
 #include "pr/draw_transform.h"
 #include "pr/float.h"
+#include "pr/float16.h"
 #include "pr/string.h"
 #include "pr/string_ops.h"
 #include "pr/vec.h"
@@ -454,56 +455,78 @@ TEST_CASE("an embed moved by an offset is one command, and its bounds move with 
     prDrawListRelease(outer);
 }
 
-TEST_CASE("images keep their pixels and convert other spaces to extended sRGB") {
-    const uint8_t pixels[8] = {255, 0, 0, 255, 0, 255, 0, 128};
-    PrDrawImageDesc desc{PrPixelView{pixels, 8, {2, 1}}, PrPixelFormat_Rgba8, PrDrawAlpha_Straight, PrColorSpace_Srgb};
-    const PrDrawImage* image = nullptr;
-    REQUIRE(prDrawImageCreate(&desc, &image) == PrStatus_Ok);
-    CHECK(prDrawImageFormat(image) == PrPixelFormat_Rgba8);
-    CHECK(prDrawImagePixels(image).data[7] == 128);
-    const PrDrawImage* p3 = nullptr;
-    desc.space = PrColorSpace_DisplayP3;
-    REQUIRE(prDrawImageCreate(&desc, &p3) == PrStatus_Ok);
-    CHECK(prDrawImageFormat(p3) == PrPixelFormat_RgbaF16);
-    CHECK(prDrawImageId(p3) != prDrawImageId(image));
-    // Pixels too large to address are refused before anything is read.
-    const PrDrawImage* none = nullptr;
-    desc.space = PrColorSpace_Srgb;
-    desc.pixels.extent.x = 0xffffffffu;
-    desc.pixels.extent.y = 0xffffffffu;
-    desc.pixels.stride = SIZE_MAX;
-    CHECK(prDrawImageCreate(&desc, &none) == PrStatus_Limit);
-    CHECK(none == nullptr);
-
+TEST_CASE("a list holds a texture source until it is emptied or freed") {
+    const uint8_t texel[4] = {255, 255, 255, 255};
+    const PrTextureSource* image =
+        prTextureSourceCreateCopy(PrPixelView{texel, 4, {1, 1}}, PrPixelFormat_Rgba8, PrTextureAlpha_None);
     PrDrawList* list = prDrawListCreate();
-    PrDrawSource source = prDrawSourceImage(image, PrRect{0, 0, 2, 1});
-    PrDrawBrush brush = prDrawBrushImage(source, PrRect{0, 0, 20, 10}, PrDrawSampling_Linear);
-    prDrawListRect(list, PrRect{0, 0, 20, 10}, {.brush = &brush});
-    prDrawImageRelease(image);
-    // The list holds the brush's image.
-    CHECK(prDrawImageExtent(prDrawListCommands(list)[0].brush->image.source.image).x == 2);
+    prDrawListHoldSource(list, image);
+    prDrawListHoldSource(list, image);
+    CHECK(prTextureSourceReferences(image) == 3);
+    prDrawListClear(list);
+    CHECK(prTextureSourceReferences(image) == 1);
+    prDrawListHoldSource(list, image);
+    CHECK(prTextureSourceReferences(image) == 2);
     prDrawListRelease(list);
-    prDrawImageRelease(p3);
+    CHECK(prTextureSourceReferences(image) == 1);
+    prTextureSourceRelease(image);
 }
 
-TEST_CASE("an oriented copy of an image keeps its format and arranges its pixels") {
-    const uint8_t pixels[8] = {255, 0, 0, 255, 0, 255, 0, 128};
-    PrDrawImageDesc desc{PrPixelView{pixels, 8, {2, 1}}, PrPixelFormat_Rgba8, PrDrawAlpha_Straight, PrColorSpace_Srgb};
-    const PrDrawImage* image = nullptr;
-    REQUIRE(prDrawImageCreate(&desc, &image) == PrStatus_Ok);
-    const PrDrawImage* turned = prDrawImageCreateOriented(image, PrImageOrientation_Rotate90);
-    CHECK(prDrawImageExtent(turned).x == 1);
-    CHECK(prDrawImageExtent(turned).y == 2);
-    CHECK(prDrawImageFormat(turned) == PrPixelFormat_Rgba8);
-    CHECK(prDrawImageAlpha(turned) == PrDrawAlpha_Straight);
-    CHECK(prDrawImageId(turned) != prDrawImageId(image));
-    // A quarter turn clockwise puts the left pixel on top.
-    PrPixelView view = prDrawImagePixels(turned);
-    CHECK(view.data[0] == 255);
-    CHECK(view.data[view.stride + 1] == 255);
-    CHECK(view.data[view.stride + 3] == 128);
-    prDrawImageRelease(turned);
-    prDrawImageRelease(image);
+TEST_CASE("the draw source of a texture region draws the rect of the region within the host's texture") {
+    // A slot of a shared page, of 2 by 1 texels at (40, 8).
+    PrTextureRegion region{
+        .texture = PrTexture{.texture = PrGpuTexture{7}, .alpha = PrTextureAlpha_Premultiplied},
+        .extent = PrUVec2{256, 256},
+        .rect = PrRect{40, 8, 42, 9},
+    };
+    PrDrawSource source = prDrawSourceRegion(&region, PrRect{0, 0, 2, 1}, 0);
+    CHECK(source.kind == PrDrawSourceKind_Texture);
+    CHECK(source.texture.id == 7);
+    CHECK(source.alpha == PrTextureAlpha_Premultiplied);
+    CHECK(source.extent.x == 256);
+    CHECK(source.rect.left == 40.0f);
+    CHECK(source.rect.right == 42.0f);
+    CHECK(source.rect.top == 8.0f);
+    CHECK(prDrawSourceTexels(source).x == 2);
+    CHECK(prDrawSourceTexels(source).y == 1);
+    PrDrawList* list = prDrawListCreate();
+    PrDrawBrush brush = prDrawBrushImage(source, PrRect{0, 0, 20, 10}, PrDrawSampling_Linear);
+    prDrawListRect(list, PrRect{0, 0, 20, 10}, {.brush = &brush});
+    CHECK(prDrawListCommands(list)[0].brush->image.source.texture.id == 7);
+    prDrawListRelease(list);
+}
+
+TEST_CASE("an upright image brush shows the stored texels turned as the orientation of the image says") {
+    // A quarter turn clockwise, as EXIF's orientation 6 says, of an image of 2 by 1 stored texels in a slot at (40, 8).
+    PrTextureDesc desc = prTextureDesc2d(PrGpuFormat_Rgba8, PrUVec2{2, 1}, PrTextureAlpha_Straight);
+    desc.orientation = PrTextureOrientationFlag_Transpose | PrTextureOrientationFlag_FlipX;
+    PrUVec2 shown = prTextureDescDisplayedExtent(&desc);
+    CHECK(shown.x == 1);
+    CHECK(shown.y == 2);
+    PrTextureRegion region{
+        .texture = PrTexture{.texture = PrGpuTexture{7}},
+        .extent = PrUVec2{256, 256},
+        .rect = PrRect{40, 8, 42, 9},
+    };
+    PrDrawBrush brush =
+        prDrawBrushImage(prDrawSourceRegion(&region, PrRect{0, 0, 1, 2}, desc.orientation), PrRect{10, 20, 20, 40},
+            PrDrawSampling_Linear);
+    prDrawBrushImageUpright(&brush, desc.orientation, region.rect);
+    CHECK(brush.image.source.rect.left == 40.0f);
+    CHECK(brush.image.source.rect.right == 42.0f);
+    CHECK(brush.image.source.rect.top == 8.0f);
+    CHECK(brush.image.source.rect.bottom == 9.0f);
+    // The tile spans the stored texels, and the transform turns it onto the destination: the left texel shows on top,
+    // and the right one below it.
+    const PrRect& tile = brush.image.tiles.tile;
+    PrVec2 left = prAffine2MapPoint(brush.transform,
+        PrVec2{tile.left + (tile.right - tile.left) / 4, tile.top + (tile.bottom - tile.top) / 2});
+    PrVec2 right = prAffine2MapPoint(brush.transform,
+        PrVec2{tile.left + (tile.right - tile.left) * 3 / 4, tile.top + (tile.bottom - tile.top) / 2});
+    CHECK(left.x == doctest::Approx(15));
+    CHECK(left.y == doctest::Approx(25));
+    CHECK(right.x == doctest::Approx(15));
+    CHECK(right.y == doctest::Approx(35));
 }
 
 TEST_CASE("a filter builder numbers its nodes in order") {
@@ -608,13 +631,7 @@ TEST_CASE("a convolution's default divisor is its kernel's sum, and 1 for a kern
 
 TEST_CASE("pixels written cover their image wherever the clips are") {
     PrDrawList* list = prDrawListCreate();
-    uint8_t pixels[4 * 4 * 4] = {};
-    PrDrawImageDesc desc{
-        PrPixelView{pixels, 16, {4, 4}}, PrPixelFormat_Rgba8, PrDrawAlpha_Premultiplied,
-        PrColorSpace_Srgb,
-    };
-    const PrDrawImage* image = nullptr;
-    REQUIRE(prDrawImageCreate(&desc, &image) == PrStatus_Ok);
+    PrDrawSource image = prDrawSourceTexture(PrTexture{.texture = PrGpuTexture{7}}, PrUVec2{4, 4}, PrRect{0, 0, 4, 4});
     prDrawListPushTransformAffine2(list, PrAffine2{2, 0, 0, 2, 100, 100});
     prDrawListPushClipRect(list, PrRect{0, 0, 1, 1}, PrDrawEdges_Antialiased);
     prDrawListWritePixels(list, image, PrIVec2{10, 20});
@@ -625,7 +642,6 @@ TEST_CASE("pixels written cover their image wherever the clips are") {
     CHECK(bounds.top == 20.0f);
     CHECK(bounds.right == 14.0f);
     CHECK(bounds.bottom == 24.0f);
-    prDrawImageRelease(image);
     prDrawListRelease(list);
 }
 

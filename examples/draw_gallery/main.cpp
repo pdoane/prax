@@ -30,6 +30,7 @@
 #include "pr/status.h"
 #include "pr/task.h"
 #include "pr/text.h"
+#include "pr/texture_cache.h"
 #include "pr/time.h"
 
 #include "examples/draw_gallery/scenes.h"
@@ -65,6 +66,7 @@ struct Window {
     PrDrawDisplay* display = nullptr;
 
     PrTaskPool* pool = nullptr;
+    PrTextureCache* PR_NULLABLE textures = nullptr;  // on `device`
 
     // The frames since the last report, and their time on the CPU. The device's thread adds each frame's time on the
     // GPU once its work is done.
@@ -89,6 +91,10 @@ void closeDevice(Window& w) {
     prDrawDisplayDestroy(w.display);
     prDrawFrameDestroy(w.frame);
     prDrawRendererDestroy(w.renderer);
+    // The scenes draw from the cache, which is destroyed with the device.
+    scenesSetTextures(nullptr);
+    prTextureCacheDestroy(w.textures);
+    w.textures = nullptr;
     prGpuSwapChainDestroy(w.swapChain);
     prGpuDeviceDestroy(w.device);
     w.rendered = PrGpuTexture{};
@@ -128,6 +134,11 @@ bool openDevice(Window& w) {
         return true;
     PrSurface surface{};
     PrGpuSwapChainDesc desc{.intent = PrGpuSwapChainIntent_Hdr};
+    // The window's images realize on its pool, in a cache on its device.
+    PrTextureCacheDesc textures = prTextureCacheDescDefault(w.device);
+    textures.tasks = w.pool;
+    w.textures = prTextureCacheCreate(&textures);
+    scenesSetTextures(w.textures);
     if (prAppWindowSurface(w.window, &surface) != PrStatus_Ok ||
             prGpuSwapChainCreate(w.device, &surface, &desc, &w.swapChain) != PrStatus_Ok ||
             prDrawRendererCreate(PrDrawRendererBackend_Default, w.device, nullptr, &w.renderer) != PrStatus_Ok) {
@@ -205,6 +216,7 @@ void render(Window& w, PrUVec2 extent, const PrAppDisplay& display) {
         .commands = commands,
     };
     prDrawFramePrepare(w.frame, w.list, &into);
+    prTextureCacheTrim(w.textures);
     // The half floats rest in the accesses of shader reads between frames, and the drawable holds nothing yet.
     PrGpuSubresources all{};
     prGpuCommandsTextureBarrier(commands, target, all, mapped ? PrGpuAccessFlag_ShaderRead : PrGpuAccessFlag_Discard,

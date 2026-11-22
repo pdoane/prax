@@ -5,7 +5,10 @@
 #include "pr/draw_glyph.h"
 #include "pr/image_select.h"
 #include "pr/string.h"
+#include "pr/svg_glyph.h"
 #include "pr/vec.h"
+
+#include "tools/harness/harness_textures.h"
 
 #include "tools/harness/test.h"
 
@@ -110,8 +113,9 @@ TEST_CASE("a TIFF image in an sbix strike draws through the image codec") {
 
     PrCompressCodecSet* compressCodec = prCompressCodecSetCreateDefault();
     PrImageCodecSet* imageCodec = prImageCodecSetCreateDefault(compressCodec);
-    PrDrawGlyphDecoder* decoder = prDrawGlyphBitmapCreate(imageCodec);
+    PrDrawGlyphDecoder* decoder = prSvgGlyphDecoderCreate(imageCodec, nullptr, harnessMemoryTextures());
     PrDrawCpuOptions options = prDrawCpuOptionsDefault();
+    options.device = harnessMemoryDevice();
     options.glyphDecoder = decoder;
     PrDrawRenderer* renderer = prDrawCpuCreate(&options);
     // The image's 32 pixels at 32 pixels per em fill an em above the baseline: 40 to 72 across, 8 to 40 down.

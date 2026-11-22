@@ -70,7 +70,7 @@ PrStatus prDrawFramePreparePart(PrDrawFrame* frame, const PrDrawList* list, cons
     PR_ASSERT(prDrawListDepth(list) == 0);
     PR_ASSERT(target->commands != nullptr);
     PR_ASSERT(target->beneath == nullptr || target->beneath->kind != PrDrawBeneathKind_Texture ||
-        target->beneath->texture != 0);
+        target->beneath->texture.id != 0);
     PR_ASSERT(target->beneath == nullptr || target->beneath->kind != PrDrawBeneathKind_Draw || target->beneath->draw != nullptr);
     if (target->extent.x > kPrDrawRenderMaxSize || target->extent.y > kPrDrawRenderMaxSize)
         return PrStatus_Limit;

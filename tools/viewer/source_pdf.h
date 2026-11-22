@@ -4,6 +4,7 @@
 #pragma once
 
 #include "pr/draw_list.h"
+#include "pr/texture_cache.h"
 #include "pr/vec.h"
 
 #include <filesystem>
@@ -21,7 +22,7 @@ namespace viewer {
 // it draws at another ratio or no longer shows them.
 struct PdfSource;
 bool pdfRasterized();
-std::shared_ptr<PdfSource> loadPdf(const std::filesystem::path& path);
+std::shared_ptr<PdfSource> loadPdf(const std::filesystem::path& path, PrTextureCache* PR_NULLABLE textures);
 void drawPdf(PdfSource& pdf, PrDrawList* list, float width, float height, float pixelRatio);
 PrVec2 pdfScroll(const PdfSource& pdf);
 void pdfScrollTo(PdfSource& pdf, PrVec2 offset);

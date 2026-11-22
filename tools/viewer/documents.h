@@ -160,8 +160,10 @@ Reference pdfReference(const std::string& name, const std::filesystem::path& pat
 
 // Loads the source that shows the printed document at `path` in `format`: a PDF source where the platform rasterizes
 // PDFs, and for SVG, a page of the document's files (PageHost::documentFiles) printed as pages (pagesPage). Returns
-// null for a PDF that the system's browser shows instead.
-std::shared_ptr<Loaded> loadPrinted(const std::filesystem::path& path, PrDrawWriterBackend format);
+// null for a PDF that the system's browser shows instead. The source's images realize in `textures`, a cache on the
+// device of the renderer that draws the source. The cache must outlive the source.
+std::shared_ptr<Loaded> loadPrinted(const std::filesystem::path& path, PrDrawWriterBackend format,
+    PrTextureCache* PR_NULLABLE textures);
 
 // Returns the document's references: the browser's, then its own.
 std::vector<Reference> referencesOf(const Document& document);
@@ -175,10 +177,10 @@ bool print(const Reference& reference);
 
 // Loads the source with its own shaper, of the kind that `text` names, which sets its text, and with its fonts hinted
 // as `text` says. A source that the engine prints (prints) renders for `media`, and any other ignores it. The source is
-// presented by `renderer`, or by a renderer in memory without one, and `renderer` must outlive it. A source that does
-// not load draws nothing.
+// presented by `renderer`, or by a renderer in memory if `renderer` is null. Its images realize in `textures`, a cache
+// on that renderer's device. Both must outlive the source. A source that does not load draws nothing.
 std::shared_ptr<Loaded> load(const Source& source, TextBackends text, page_host::Media media,
-    PrDrawRenderer* PR_NULLABLE renderer);
+    PrDrawRenderer* PR_NULLABLE renderer, PrTextureCache* PR_NULLABLE textures);
 
 // Brings the source to `time` in seconds, and returns its frame at that time, as its format numbers frames. Returns a
 // negative value for a source whose format has no frames. A still source ignores the time.

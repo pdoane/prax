@@ -12,6 +12,9 @@ namespace drawings {
 // Returns the workloads, in the order that they are shown.
 const Array<Drawing>& workloadDrawings();
 
+// Releases the images that the workloads created. A workload drawn afterward creates its images again.
+void releaseWorkloadImages();
+
 } // namespace drawings
 
 PR_ASSUME_NONNULL_END

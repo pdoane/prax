@@ -28,12 +28,12 @@ struct DrawHeld {
 // Commands and all the data that they point to.
 struct DrawRecording {
     RawArray<PrDrawCommand> commands;
-    Arena side;                          // the data that commands point to, which stays in place until a clear
-    RawArray<PrPath*> paths;             // the clones that commands point to
-    RawArray<const PrDrawImage*> images; // holds one reference to each image
+    Arena side;                              // the data that commands point to, which stays in place until a clear
+    RawArray<PrPath*> paths;                 // the clones that commands point to
     RawArray<const PrFont*> fonts;
     RawArray<const PrDrawList*> lists;
     RawArray<const PrDrawFilter*> filters;
+    RawArray<const PrTextureSource*> sources;
     RawArray<DrawHeld> held;
 };
 

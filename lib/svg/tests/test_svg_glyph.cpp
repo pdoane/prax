@@ -9,6 +9,8 @@
 #include "pr/svg_glyph.h"
 #include "pr/vec.h"
 
+#include "tools/harness/harness_textures.h"
+
 #include "tools/harness/test.h"
 
 using namespace harness;
@@ -99,7 +101,9 @@ constexpr uint32_t kSize = 100;
 
 Array<uint8_t> render(const PrDrawList* list) {
     Array<uint8_t> bytes(kSize * kSize * 4);
-    PrDrawRenderer* renderer = prDrawCpuCreate(nullptr);
+    PrDrawCpuOptions options = prDrawCpuOptionsDefault();
+    options.device = harnessMemoryDevice();
+    PrDrawRenderer* renderer = prDrawCpuCreate(&options);
     PrPixels into{bytes.data(), size_t(kSize) * 4, {kSize, kSize}};
     REQUIRE(prDrawRendererRenderPixels(renderer, list, into, PrPixelFormat_Rgba8) == PrStatus_Ok);
     prDrawRendererDestroy(renderer);
@@ -155,7 +159,7 @@ TEST_CASE("an SVG glyph draws as the same glyph's color layers do, in the same p
     Array<PrFontPaletteColor> overrides;
     for (uint32_t i = 0; i < prFontPaletteEntryCount(font); ++i)
         overrides.push(PrFontPaletteColor{i, PrColor{0.1f, 0.3f + 0.6f * float(i % 2), 0.9f, 1}});
-    PrDrawGlyphDecoder* decoder = prSvgGlyphDecoderCreate(nullptr, nullptr);
+    PrDrawGlyphDecoder* decoder = prSvgGlyphDecoderCreate(nullptr, nullptr, nullptr);
     const bool recolorings[] = {false, true};
     for (bool recolored : recolorings) {
         CAPTURE(recolored);
@@ -174,7 +178,8 @@ TEST_CASE("an SVG glyph draws as the same glyph's color layers do, in the same p
 
         PrDrawList* document = prDrawListCreate();
         prDrawListPushTransformAffine2(document, prDrawGlyphTransform(&run, 0));
-        REQUIRE(prDrawGlyphDecoderDecode(decoder, font, glyph, 70, &palette, PrColor{0, 0, 0, 1}, document));
+        REQUIRE(prDrawGlyphDecoderDecode(decoder, font, glyph, 70, &palette, PrColor{0, 0, 0, 1}, document) ==
+            PrDrawGlyphDecoded_Kept);
         prDrawListPopTransform(document);
         Ink drawn = inkOf(render(document));
         CHECK(drawn.coverage == doctest::Approx(expected.coverage).epsilon(0.05));
@@ -192,18 +197,20 @@ TEST_CASE("an SVG glyph draws as the same glyph's color layers do, in the same p
 
 TEST_CASE("a glyph with no document is an image, and without an image codec nothing") {
     const PrFont* sans = load("NotoSans[wdth,wght].ttf");
-    PrDrawGlyphDecoder* decoder = prSvgGlyphDecoderCreate(nullptr, nullptr);
+    PrDrawGlyphDecoder* decoder = prSvgGlyphDecoderCreate(nullptr, nullptr, nullptr);
     PrDrawList* list = prDrawListCreate();
-    CHECK_FALSE(prDrawGlyphDecoderDecode(decoder, sans, prFontCodePointGlyph(sans, 'A'), 70, nullptr,
-        PrColor{0, 0, 0, 1}, list));
+    CHECK(prDrawGlyphDecoderDecode(decoder, sans, prFontCodePointGlyph(sans, 'A'), 70, nullptr,
+        PrColor{0, 0, 0, 1}, list) == PrDrawGlyphDecoded_None);
     CHECK(prDrawListCommandCount(list) == 0);
     prDrawGlyphDecoderDestroy(decoder);
-    // With an image codec, a bitmap glyph draws its strike's image.
+    // With an image codec and a cache, a bitmap glyph draws the image of its strike. The glyph cache keeps the picture
+    // once the image's texture has arrived. A cache with no task pool realizes the texture during the ask.
     PrCompressCodecSet* compressCodec = prCompressCodecSetCreateDefault();
     PrImageCodecSet* imageCodec = prImageCodecSetCreateDefault(compressCodec);
-    decoder = prSvgGlyphDecoderCreate(imageCodec, compressCodec);
+    decoder = prSvgGlyphDecoderCreate(imageCodec, compressCodec, harnessMemoryTextures());
     const PrFont* smiley = load("TwemojiSmileySbix.ttf");
-    CHECK(prDrawGlyphDecoderDecode(decoder, smiley, 2, 64, nullptr, PrColor{0, 0, 0, 1}, list));
+    CHECK(prDrawGlyphDecoderDecode(decoder, smiley, 2, 64, nullptr, PrColor{0, 0, 0, 1}, list) ==
+        PrDrawGlyphDecoded_Kept);
     CHECK(prDrawListCommandCount(list) != 0);
     prDrawListRelease(list);
     prDrawGlyphDecoderDestroy(decoder);
@@ -230,13 +237,14 @@ TEST_CASE("a gzip-compressed document draws as it does uncompressed, and not wit
     CHECK(packed.document.data[0] == 0x1f);
 
     PrCompressCodecSet* compressCodec = prCompressCodecSetCreateDefault();
-    PrDrawGlyphDecoder* decoder = prSvgGlyphDecoderCreate(nullptr, compressCodec);
-    PrDrawGlyphDecoder* plain = prSvgGlyphDecoderCreate(nullptr, nullptr);
+    PrDrawGlyphDecoder* decoder = prSvgGlyphDecoderCreate(nullptr, compressCodec, nullptr);
+    PrDrawGlyphDecoder* plain = prSvgGlyphDecoderCreate(nullptr, nullptr, nullptr);
     PrAffine2 place = prAffine2Concat(prAffine2Scale(PrVec2{70, 70}), prAffine2Translate(PrVec2{10, 85}));
     auto draw = [&](PrDrawGlyphDecoder* with, const PrFont* from, bool* decoded) {
         PrDrawList* list = prDrawListCreate();
         prDrawListPushTransformAffine2(list, place);
-        *decoded = prDrawGlyphDecoderDecode(with, from, glyph, 70, nullptr, PrColor{0, 0, 0, 1}, list);
+        *decoded = prDrawGlyphDecoderDecode(with, from, glyph, 70, nullptr, PrColor{0, 0, 0, 1}, list) !=
+            PrDrawGlyphDecoded_None;
         prDrawListPopTransform(list);
         Ink ink = inkOf(render(list));
         prDrawListRelease(list);

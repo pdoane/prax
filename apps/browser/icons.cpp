@@ -6,6 +6,7 @@
 #include "apps/browser/icons.h"
 
 #include "pr/fetch_load.h"
+#include "pr/image_texture_source.h"
 #include "pr/string.h"
 
 namespace browser {
@@ -32,9 +33,9 @@ void postToCache(void* PR_NULLABLE cache, PrFetchTaskFn fn, void* PR_NULLABLE co
 // Decodes the icon that arrived, and finishes its load with the image, or with none.
 void iconFetched(void* PR_NULLABLE context, const PrFetchResponse* response) {
     IconLoad* icon = static_cast<IconLoad*>(context);
-    const PrDrawImage* image = nullptr;
+    const PrTextureSource* image = nullptr;
     if (response->status == PrStatus_Ok && prFetchIsOkStatus(response->responseStatus))
-        prDrawImageCreateFromBytes(icon->browser->images, response->body, &image, nullptr);
+        prImageTextureSourceOpenBytes(response->body, icon->browser->images, nullptr, PrImageTextureColor_Srgb, &image);
     prCacheLoadFinish(icon->load, image);
     prFetchLoadDestroy(icon->fetch);
     delete icon;
@@ -63,7 +64,7 @@ void cancelIcon(void* PR_NULLABLE, void* PR_NULLABLE state) {
 }
 
 void releaseIcon(void* PR_NULLABLE, const void* image) {
-    prDrawImageRelease(static_cast<const PrDrawImage*>(image));
+    prTextureSourceRelease(static_cast<const PrTextureSource*>(image));
 }
 
 void wakeWindow(void* PR_NULLABLE context) {
@@ -84,10 +85,10 @@ PrCache* iconsCreate(Browser& b) {
     return prCacheCreate(&desc);
 }
 
-const PrDrawImage* PR_NULLABLE iconsGet(Browser& b, const String& url) {
+const PrTextureSource* PR_NULLABLE iconsGet(Browser& b, const String& url) {
     if (url.isEmpty())
         return nullptr;
-    return static_cast<const PrDrawImage*>(prCacheValue(b.icons, url));
+    return static_cast<const PrTextureSource*>(prCacheValue(b.icons, url));
 }
 
 } // namespace browser

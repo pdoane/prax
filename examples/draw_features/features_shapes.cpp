@@ -605,7 +605,7 @@ void transforms3d(PrDrawList* list, float width, float height, double) {
     PrMatrix4 tilt = prMatrix4Rotate(PrVec3{1, 0, 0}, 1.2f);
     m = staged(PrVec2{width * 0.82f, height * 0.38f}, 300, tilt);
     PrDrawBrush floor = prDrawBrushDefault(PrDrawBrushKind_Image);
-    floor.image.source = prDrawSourceImage(smallTile(), PrRect{0, 0, 16, 16});
+    floor.image.source = imageSource(smallTile(), PrRect{0, 0, 16, 16}, PrDrawSampling_Mipmap);
     floor.image.tiles.tile = PrRect{0, 0, 40, 40};
     floor.image.tiles.x = PrDrawExtend_Repeat;
     floor.image.tiles.y = PrDrawExtend_Repeat;

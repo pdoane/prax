@@ -81,6 +81,7 @@ PrHtmlHost pageHost(Tab& tab) {
     host.media = b.media;
     host.mixer = b.mixer;
     host.renderer = b.renderer;
+    host.textures = b.textures;
     host.compress = b.compress;
     host.localStorage = b.localStorage;
     host.sessionStorage = b.sessionStorage;

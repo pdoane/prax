@@ -5,6 +5,7 @@
 
 #include "pr/draw_list.h"
 #include "pr/text.h"
+#include "pr/texture_cache.h"
 
 PR_ASSUME_NONNULL_BEGIN
 
@@ -33,6 +34,11 @@ struct Scene {
 // Gets the scenes ready to draw, with their text shaped by `shaper` in the fonts of the Complete bundle among the
 // program's resources (font_bundle/<file>). `shaper` must outlive the scenes' use.
 void scenesOpen(PrTextShaper* shaper);
+
+// Sets the cache that realizes the scenes' images, or null for none. The cache must be on the device of the renderer
+// that draws the scenes. It must outlive the scenes' use of it, or stay valid until the next call replaces it. Without
+// a cache, the images draw nothing.
+void scenesSetTextures(PrTextureCache* PR_NULLABLE textures);
 
 // Frees the images and fonts that the scenes made.
 void scenesClose();

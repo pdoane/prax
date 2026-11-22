@@ -4,7 +4,8 @@ pr_library(canvas INCLUDE include
     src/canvas_path.cpp
     src/canvas_text.cpp
 )
-target_link_libraries(pr_canvas PUBLIC prax::css prax::dom prax::draw prax::font prax::geom prax::gpu prax::layout prax::path
+target_link_libraries(pr_canvas PUBLIC prax::texture prax::css prax::dom prax::draw prax::font prax::geom prax::gpu
+                                       prax::layout prax::path
                                        prax::text prax::color prax::locale
                                 PRIVATE prax::core_cpp)
 

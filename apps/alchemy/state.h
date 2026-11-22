@@ -7,7 +7,6 @@
 #include "pr/array.h"
 #include "pr/base.h"
 #include "pr/compress.h"
-#include "pr/draw_image.h"
 #include "pr/hash.h"
 #include "pr/hash_key.h"
 #include "pr/image.h"
@@ -18,6 +17,7 @@
 #include "pr/string.h"
 #include "pr/string_view.h"
 #include "pr/task.h"
+#include "pr/texture.h"
 
 #include "apps/alchemy/comfy_client.h"
 #include "apps/alchemy/dimensions.h"
@@ -209,7 +209,7 @@ struct ModelSurvey {
 // last paste found if it found no image.
 struct ImportPrompt {
     bool open = false;
-    const PrDrawImage* PR_NULLABLE image = nullptr;
+    const PrTextureSource* PR_NULLABLE image = nullptr;
     String message;
 };
 
@@ -276,7 +276,7 @@ struct AppState {
     Map<uint64_t, ModelFolder> folderTags;
 
     // The latest latent preview, the prompt that it belongs to, and the size of the image that it stands for.
-    const PrDrawImage* PR_NULLABLE preview = nullptr;
+    const PrTextureSource* PR_NULLABLE preview = nullptr;
     String previewPromptId;
     DimensionSize previewSize;
 

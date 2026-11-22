@@ -128,7 +128,12 @@ struct CpuTextureLevel {
     uint32_t width;
     uint32_t height;
     PrPixelFormat format;       // Rgba8, or RgbaF16
+    bool opaque;                // true if every texel's alpha is 1, whatever the alpha channel stores
 };
+
+// Reads the texel at (x, y) as premultiplied RGBA into the four floats at `out`. The texel must be inside the level.
+// Every read of a level goes through this function, so that an opaque level's stored alpha is never used.
+void cpuReadTexel(const CpuTextureLevel& level, uint32_t x, uint32_t y, float* out);
 
 // An image or list in the form that the backend samples, with its mip levels once they are requested.
 struct CpuTexture {
@@ -136,6 +141,7 @@ struct CpuTexture {
     PrRect region;              // List: the area of its space that the texture holds
     bool fromList;              // true if it holds what a list draws instead of an image's texels
     bool ready;                 // List: true if it was rendered in this render. Pixels: true once converted
+    uint8_t borrowed;           // how many of its first levels are the caller's texels, read in place and not owned
     uint64_t lastUsed;          // the render that last used the texture
     RawArray<CpuTextureLevel> levels;
 };
@@ -147,13 +153,16 @@ struct CpuTextureCache {
     uint64_t render;
 };
 
-// Returns the image's texture, which is created on first use. An image in half floats keeps them.
-CpuTexture* cpuTextureFromImage(CpuTextureCache& cache, const PrDrawImage* image);
+// Returns true if the backend samples `pixels` of `format` and `alpha` as they are. Pixels without alpha qualify. Their
+// level is opaque (CpuTextureLevel::opaque).
+bool cpuSamplesInPlace(PrPixelView pixels, PrPixelFormat format, PrTextureAlpha alpha);
 
-// Returns a texture of the pixels of a texture of the caller's, cached under `key`, which must differ from every
-// image's id. The pixels are converted once per render, because what the texture holds may change between renders.
-CpuTexture* cpuTextureFromPixels(CpuTextureCache& cache, uint64_t key, PrPixelView pixels, PrPixelFormat format,
-    PrDrawAlpha alpha);
+// Returns a texture for the pixels of a texture that the caller owns. It is cached under `key` for one render, because
+// the contents of the caller's texture may change between renders. `levels` are the mip levels, starting with the
+// first. The caller passes more than one level only for pixels that the backend samples in place (cpuSamplesInPlace).
+// Such pixels are read in place. Any other pixels are converted once per render.
+CpuTexture* cpuTextureFromPixels(CpuTextureCache& cache, uint64_t key, const PrPixelView* levels, uint32_t levelCount,
+    PrPixelFormat format, PrTextureAlpha alpha);
 
 // Returns a list's texture of an area of its space at a size, in `format`. The caller renders the texture unless it is
 // ready.

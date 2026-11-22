@@ -1,10 +1,10 @@
 #include "pr/array.h"
-#include "pr/draw_image.h"
 #include "pr/kit_box.h"
 #include "pr/kit_button.h"
 #include "pr/kit_collection.h"
 #include "pr/layout_unit.h"
 #include "pr/mem.h"
+#include "pr/texture.h"
 
 #include "tools/harness/kit_fixture.h"
 
@@ -766,12 +766,9 @@ TEST_CASE("a tile's image fills its thumbnail in place of its icon") {
     KitFixture f;
     Array<uint8_t> pixels(16 * 8 * 4);
     prMemFill(pixels.data(), 255, pixels.count());
-    PrDrawImageDesc desc{
-        PrPixelView{pixels.data(), 16 * 4, {16, 8}}, PrPixelFormat_Rgba8, PrDrawAlpha_Straight,
-        PrColorSpace_Srgb,
-    };
-    const PrDrawImage* image = nullptr;
-    REQUIRE(prDrawImageCreate(&desc, &image) == PrStatus_Ok);
+    const PrTextureSource* image =
+        prTextureSourceCreateCopy(PrPixelView{pixels.data(), 16 * 4, {16, 8}}, PrPixelFormat_Rgba8,
+            PrTextureAlpha_Straight);
     PrLayoutNode tile = kPrLayoutNodeNone;
     f.build = [&](PrLayoutNode root) {
         PrKitListViewStyle style{
@@ -798,20 +795,14 @@ TEST_CASE("a tile's image fills its thumbnail in place of its icon") {
     CHECK(kitVerified(f.tree));
     f.build = {};
     f.frame();
-    prDrawImageRelease(image);
+    prTextureSourceRelease(image);
 }
 
 TEST_CASE("a tile's image grows inside its thumbnail under the pointer, and a tile answers a secondary click") {
     KitFixture f;
     uint8_t pixels[4] = {255, 0, 0, 255};
-    PrDrawImageDesc desc{
-        .pixels = {pixels, 4, {1, 1}},
-        .format = PrPixelFormat_Rgba8,
-        .alpha = PrDrawAlpha_Straight,
-        .space = PrColorSpace_Srgb,
-    };
-    const PrDrawImage* image = nullptr;
-    REQUIRE(prDrawImageCreate(&desc, &image) == PrStatus_Ok);
+    const PrTextureSource* image =
+        prTextureSourceCreateCopy({pixels, 4, {1, 1}}, PrPixelFormat_Rgba8, PrTextureAlpha_Straight);
     PrLayoutNode tile = kPrLayoutNodeNone;
     bool secondary = false;
     f.build = [&](PrLayoutNode root) {
@@ -849,7 +840,7 @@ TEST_CASE("a tile's image grows inside its thumbnail under the pointer, and a ti
 
     f.build = {};
     f.frame();
-    prDrawImageRelease(image);
+    prTextureSourceRelease(image);
 }
 
 TEST_CASE("in a grid, Up and Down move the lead by a row of tiles, and Left and Right by a tile") {

@@ -258,11 +258,11 @@ void dumpCommand(PrRawString* out, const PrDrawCommand& command) {
         }
         case PrDrawCommandKind_NineSlice:
             appendText(out, "nine-slice");
-            if (command.nineSlice.source.kind == PrDrawSourceKind_Image) {
-                appendNumber(out, float(prDrawImageExtent(command.nineSlice.source.image).x));
-                appendNumber(out, float(prDrawImageExtent(command.nineSlice.source.image).y));
+            if (command.nineSlice.source.kind == PrDrawSourceKind_Texture) {
+                appendNumber(out, float(command.nineSlice.source.extent.x));
+                appendNumber(out, float(command.nineSlice.source.extent.y));
             } else {
-                appendText(out, command.nineSlice.source.kind == PrDrawSourceKind_List ? " list" : " texture");
+                appendText(out, " list");
             }
             appendRect(out, command.nineSlice.source.rect);
             appendNumbers(out, command.nineSlice.slices->slices, 4);

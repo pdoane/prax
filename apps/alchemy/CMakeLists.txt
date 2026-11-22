@@ -13,9 +13,9 @@ add_library(alchemy_studio STATIC
     state.cpp
 )
 target_include_directories(alchemy_studio PUBLIC ${PROJECT_SOURCE_DIR})
-target_link_libraries(alchemy_studio PUBLIC prax::json prax::image prax::compress prax::net prax::http prax::websocket
-                                            prax::draw prax::task prax::cache prax::studio_kit prax::core_cpp
-                                     PRIVATE prax::png pr_warnings)
+target_link_libraries(alchemy_studio PUBLIC prax::png prax::json prax::image prax::compress prax::net prax::http prax::websocket
+                                            prax::texture prax::task prax::studio_kit prax::core_cpp
+                                     PRIVATE pr_warnings)
 
 # The application: alchemy's interface over the library, composed in main().
 pr_app(alchemy

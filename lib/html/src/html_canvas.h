@@ -20,6 +20,10 @@ struct HtmlCanvas {
     PrCanvas* PR_NULLABLE context;    // the 2D context, which the state owns
     PrHtmlCanvasContextMode mode;
     PrHtmlWindow* PR_NULLABLE queued;                   // the window that will show the bitmap, or null
+
+    // The transparent bitmap that a canvas without a context provides as an image source. It is created on first use.
+    // The state keeps `blank` while its extent equals the canvas's size, so that every use draws the same texture.
+    const PrTextureSource* PR_NULLABLE blank;
 };
 
 // Returns the canvas element's state, creating it if it has none.

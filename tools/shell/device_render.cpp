@@ -14,6 +14,7 @@ namespace shell {
 
 struct DeviceRender {
     PrGpuDevice* device;
+    PrTextureCache* textures;
     PrDrawRenderer* renderer;
     PrDrawFrame* frame;
 };
@@ -26,7 +27,8 @@ DeviceRender* PR_NULLABLE deviceRenderCreate(PrDrawRendererBackend backend) {
         prGpuDeviceDestroy(device);
         return nullptr;
     }
-    return new DeviceRender{device, renderer, prDrawFrameCreate(renderer)};
+    PrTextureCacheDesc textures = prTextureCacheDescDefault(device);
+    return new DeviceRender{device, prTextureCacheCreate(&textures), renderer, prDrawFrameCreate(renderer)};
 }
 
 void deviceRenderDestroy(DeviceRender* PR_NULLABLE render) {
@@ -34,8 +36,17 @@ void deviceRenderDestroy(DeviceRender* PR_NULLABLE render) {
         return;
     prDrawFrameDestroy(render->frame);
     prDrawRendererDestroy(render->renderer);
+    prTextureCacheDestroy(render->textures);
     prGpuDeviceDestroy(render->device);
     delete render;
+}
+
+PrTextureCache* deviceRenderTextures(DeviceRender* render) {
+    return render->textures;
+}
+
+PrDrawRenderer* deviceRenderRenderer(DeviceRender* render) {
+    return render->renderer;
 }
 
 bool deviceRenderPixels(DeviceRender* render, const PrDrawList* list, PrUVec2 extent, uint8_t* rgba) {

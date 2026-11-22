@@ -1,4 +1,5 @@
-// Every feature drawing, in the order that they are shown, and the release of what the drawings created.
+// Every feature drawing, in the order that they are shown, and the release of what the drawings and the workloads
+// created.
 
 #include "examples/draw_features/features.h"
 
@@ -10,6 +11,7 @@
 #include "examples/draw_features/features_paint.h"
 #include "examples/draw_features/features_shapes.h"
 #include "examples/draw_features/features_text.h"
+#include "examples/draw_features/workloads.h"
 
 namespace drawings {
 
@@ -30,6 +32,7 @@ const Array<Drawing>& allFeatures() {
 }
 
 void releaseDrawings() {
+    releaseWorkloadImages();
     releaseDrawingImages();
     releaseDrawingText();
     releaseDrawingFonts();

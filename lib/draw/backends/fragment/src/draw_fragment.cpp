@@ -50,9 +50,6 @@ constexpr float kSparseTolerance = 0.05f;
 // The width of the band that antialiases a tessellated edge, in target pixels.
 constexpr float kFringe = 1;
 
-// The number of consecutive builds in which a texture goes unused before it is destroyed.
-constexpr uint64_t kIdleBuilds = 8;
-
 // How far a shadow's blur reaches, in sigmas.
 constexpr float kShadowReach = 4;
 
@@ -70,18 +67,6 @@ constexpr float kMapCells = 64;
 
 // ---------------------------------------------------------------------------------------------------------------------
 // State
-
-struct CachedImage {
-    uint64_t id;
-    bool mipmapped;
-    uint32_t texture;
-    uint64_t lastUsed;
-};
-
-// Returns an image's key among the cached images, made from its id and whether it has mip levels.
-uint64_t imageKey(uint64_t id, bool mipmapped) {
-    return id << 1 | (mipmapped ? 1 : 0);
-}
 
 // A gradient's ramp for a color, which this build wrote into its frame.
 struct CachedRamp {
@@ -152,8 +137,6 @@ struct Fragment {
     uint32_t pagesCreated;                 // number of atlas pages whose textures the host has
     uint64_t build;
     uint32_t nextTexture;
-    RawArray<CachedImage> images;
-    KeyIndex imageIndex;                // `images`, by imageKey
     RawArray<CachedRamp> ramps;         // this build's ramps; the list's brushes stay put until the build ends
     HashIndex rampIndex;                // `ramps`, by the inputs that decide their colors
     HashIndex tableIndex;               // this build's texture table, by its entries
@@ -167,13 +150,6 @@ struct Fragment {
     PrPathPolyline combined;
     PrPathPolyline cut;
     PrPathPolyline landed;                  // where a projected group's layer lands (prDrawProjectionQuad)
-};
-
-// The offset of a Create request's texels in the texel storage. It is used until the build ends and the storage stops
-// moving.
-struct PendingTexels {
-    uint32_t request;
-    size_t offset;
 };
 
 // The storage that one frame's arrays point into. A backend keeps the storage of destroyed frames for the next frames.
@@ -195,16 +171,14 @@ struct FrameStorage {
     RawArray<PrDrawRampPiece> rampPieces;
     RawArray<PrColor16> rampColors;
     RawArray<FragmentTexture> textures;
-    RawArray<PrDrawTextureId> hostTextures;
+    RawArray<PrGpuTexture> hostTextures;
     RawArray<FragmentLayer> layers;
     RawArray<FragmentPass> passes;
     RawArray<FragmentFilter> filters;
     RawArray<float> filterData;
     RawArray<FragmentTextureRequest> requests;
-    RawArray<uint8_t> texels;
-    RawArray<PendingTexels> pending;
-    uint32_t pathFills;                 // number of paths whose coverage the build prepared
-    uint32_t beneath;                   // the layer beneath the target, as its index plus one, or zero
+    uint32_t pathFills;                      // number of paths whose coverage the build prepared
+    uint32_t beneath;                        // the layer beneath the target, as its index plus one, or zero
 };
 
 // The clips in force. They are the intersection of the rectangle clips, in target pixels, and the pixels that it
@@ -343,54 +317,6 @@ uint64_t colorBits(PrColor16 c) {
 
 void request(Walk& w, const FragmentTextureRequest& r) {
     w.b->requests.push(r);
-}
-
-// Returns the texture of the image, premultiplied, with every mip level if `mipmapped`, which the device fills. An
-// image in half floats keeps them, and any other is Rgba8. The texture is created the first time a build draws the
-// image. Returns 0 for an image with no pixels.
-uint32_t textureOfImage(Walk& w, const PrDrawImage* image, bool mipmapped = false) {
-    Fragment* f = w.f;
-    uint64_t id = prDrawImageId(image);
-    uint64_t key = imageKey(id, mipmapped);
-    uint32_t found = f->imageIndex.find(key, [&](uint32_t i) {
-        return imageKey(f->images.data[i].id, f->images.data[i].mipmapped);
-    });
-    if (found != kHashMissing) {
-        CachedImage& cached = f->images.data[found];
-        cached.lastUsed = f->build;
-        return cached.texture;
-    }
-    uint32_t width = prDrawImageExtent(image).x;
-    uint32_t height = prDrawImageExtent(image).y;
-    if (width == 0 || height == 0)
-        return 0;
-    bool half = prDrawImageFormat(image) == PrPixelFormat_RgbaF16;
-    PrPixelFormat format = half ? PrPixelFormat_RgbaF16 : PrPixelFormat_Rgba8;
-    size_t stride = size_t(width) * prPixelFormatSize(format);
-    size_t size = stride * height;
-    size_t offset = w.b->texels.count;
-    // The frame's texels are addressed in 32 bits. An image beyond that limit draws nothing.
-    if (size > UINT32_MAX - offset)
-        return 0;
-    w.b->texels.reserve(uint32_t(offset + size));
-    w.b->texels.count = uint32_t(offset + size);
-    uint8_t* texels = w.b->texels.data + offset;
-    prMemZero(texels, size);
-    PrPixels pixels{texels, stride, {width, height}};
-    prDrawImageWritePixels(image, pixels, format, PrIVec2{0, 0});
-    uint32_t texture = ++f->nextTexture;
-    uint32_t index = w.b->requests.count;
-    request(w, FragmentTextureRequest{
-        .op = FragmentTextureOp_Create,
-        .format = format,
-        .mipmapped = mipmapped,
-        .texture = texture,
-        .texels = PrPixelView{nullptr, stride, {width, height}},
-    });
-    w.b->pending.push(PendingTexels{index, offset});
-    f->imageIndex.insert(key, f->images.count);
-    f->images.push(CachedImage{id, mipmapped, texture, f->build});
-    return texture;
 }
 
 // Returns the index of the gradient's ramp for the color. The ramp is written into the frame the first time this build
@@ -592,36 +518,40 @@ constexpr uint32_t kListTextureMaxSize = 8192;
 // A source as a texture: the texture's size, and the source's rectangle of its texels.
 struct SourceTexture {
     uint32_t texture;
-    PrDrawTextureId hostTexture;               // the host's texture, instead of `texture`, or zero
+    PrGpuTexture hostTexture;                  // the host's texture, instead of `texture`, or zero
     float width;
     float height;
     PrRect texels;
-    PrDrawAlpha alpha;
+    FragmentAlpha alpha;
 };
+
+// Returns how a texture of `alpha` holds its alpha, as an Image paint reads it.
+FragmentAlpha fragmentAlphaOf(PrTextureAlpha alpha) {
+    switch (alpha) {
+        case PrTextureAlpha_None: return FragmentAlpha_Opaque;
+        case PrTextureAlpha_Straight: return FragmentAlpha_Straight;
+        default: return FragmentAlpha_Premultiplied;
+    }
+}
 
 FragmentLayer& layerRecord(Walk& w, uint32_t texture);
 void mipmapLayer(Walk& w, uint32_t texture);
 
-// Gets the source as a texture: an image's texels, the host's texture, or a list's area rendered into a layer the size
-// of `tile` at `scale` pixels per unit along each axis. An image or a list sampled by Mipmap gets every mip level. A
-// host texture has the levels that the host gave it. Returns false if the source has no texture.
+// Gets the source as a texture: the host's texture, or a list's area rendered into a layer the size of `tile` at
+// `scale` pixels per unit along each axis. A list sampled by Mipmap gets every mip level. A host texture has the levels
+// that the host gave it. Returns false if the source has no texture.
 bool sourceTexture(Walk& w, const PrDrawSource& source, PrRect tile, PrVec2 scale, PrDrawSampling sampling,
         SourceTexture* out) {
     bool mipmapped = (sampling & PrDrawSamplingFlag_Kind) == PrDrawSampling_Mipmap;
     if (source.kind == PrDrawSourceKind_Texture) {
         *out = SourceTexture{
-            0, source.texture, float(source.extent.x), float(source.extent.y), source.rect,
-            source.alpha,
+            .hostTexture = source.texture,
+            .width = float(source.extent.x),
+            .height = float(source.extent.y),
+            .texels = source.rect,
+            .alpha = fragmentAlphaOf(source.alpha),
         };
         return true;
-    }
-    if (source.kind == PrDrawSourceKind_Image) {
-        uint32_t texture = textureOfImage(w, source.image, mipmapped);
-        *out = SourceTexture{
-            texture, 0, float(prDrawImageExtent(source.image).x),
-            float(prDrawImageExtent(source.image).y), source.rect, PrDrawAlpha_Premultiplied,
-        };
-        return texture != 0;
     }
     if (source.kind != PrDrawSourceKind_List || source.list == nullptr || !(scale.x > 0) || !(scale.y > 0) ||
             !prF32IsFinite(scale.x) || !prF32IsFinite(scale.y))
@@ -650,7 +580,13 @@ bool sourceTexture(Walk& w, const PrDrawSource& source, PrRect tile, PrVec2 scal
         mipmapLayer(w, texture);
     else
         layerRecord(w, texture).exact = true;
-    *out = SourceTexture{texture, 0, width, height, PrRect{0, 0, width, height}, PrDrawAlpha_Premultiplied};
+    *out = SourceTexture{
+        .texture = texture,
+        .width = width,
+        .height = height,
+        .texels = PrRect{0, 0, width, height},
+        .alpha = FragmentAlpha_Premultiplied,
+    };
     return true;
 }
 
@@ -659,7 +595,7 @@ bool sourceTexture(Walk& w, const PrDrawSource& source, PrRect tile, PrVec2 scal
 // opaque texture whose taps can land on no texel, since the samplers' transparent texels would read as opaque. A copy
 // that is filtered on its own (PrDrawTileFlag_Clamped) is read as a tile that extends by Pad. The shader leaves the
 // gaps between such copies empty.
-FragmentImageRead imageRead(PrDrawSampling sampling, PrDrawAlpha alpha, const PrDrawTiles& tiles,
+FragmentImageRead imageRead(PrDrawSampling sampling, FragmentAlpha alpha, const PrDrawTiles& tiles,
         PrRect texels, float width, float height) {
     PrDrawSampling kind = PrDrawSampling(sampling & PrDrawSamplingFlag_Kind);
     if (kind == PrDrawSampling_Nearest)
@@ -675,7 +611,7 @@ FragmentImageRead imageRead(PrDrawSampling sampling, PrDrawAlpha alpha, const Pr
     for (uint32_t axis = 0; axis < 2; ++axis) {
         bool wraps = modes[axis] == PrDrawExtend_Repeat || modes[axis] == PrDrawExtend_Reflect;
         bool transparent = modes[axis] == PrDrawExtend_None || (wraps && spaced[axis]);
-        if (alpha == PrDrawAlpha_Opaque && transparent)
+        if (alpha == FragmentAlpha_Opaque && transparent)
             return FragmentImageRead_Texels;
         // Pad within a part of the texture stays exact only for a bilinear filter of the first level, whose taps beyond
         // the clamped point have no weight.
@@ -687,7 +623,7 @@ FragmentImageRead imageRead(PrDrawSampling sampling, PrDrawAlpha alpha, const Pr
 
 // Returns the source's texture as the frame's instances and records name it. A host texture takes an entry of its own.
 uint32_t tableOfSource(Walk& w, const SourceTexture& source) {
-    if (source.hostTexture == 0)
+    if (source.hostTexture.id == 0)
         return tableOf(w, source.texture);
     w.b->hostTextures.push(source.hostTexture);
     FragmentTexture entry{};
@@ -1922,28 +1858,35 @@ void drawNineSlice(Walk& w, const PrDrawCommand& c) {
     rects.reset();
 }
 
-// Draws the image's texels at a device point, over the target regardless of the clip. The texels are blended instead of
-// replacing the target's pixels.
+// Draws the source's texels at a device point, over the target regardless of the clip. The texels are blended instead
+// of replacing the target's pixels.
 void writePixels(Walk& w, const PrDrawCommand& c) {
-    const PrDrawImage* image = c.writePixels.image;
-    uint32_t texture = textureOfImage(w, image);
+    const PrDrawSource& source = c.writePixels.source;
     PrIRect into = targetBox(w);
-    if (texture == 0 || prIRectIsEmpty(into))
+    SourceTexture texture{};
+    if (!prDrawSourceIsValid(source) || prIRectIsEmpty(into) ||
+            !sourceTexture(w, source, source.rect, PrVec2{1, 1}, PrDrawSampling_Nearest, &texture))
         return;
-    float width = float(prDrawImageExtent(image).x);
-    float height = float(prDrawImageExtent(image).y);
+    PrUVec2 extent = prDrawSourceTexels(source);
+    float width = float(extent.x);
+    float height = float(extent.y);
     FragmentPaint r{};
     r.brush = prMatrix3FromAffine2(prAffine2Identity());
     r.kind = FragmentPaintKind_Image;
     r.sampling = PrDrawSampling_Nearest;
-    r.read = FragmentImageRead_Sampler;
+    PrDrawTiles tiles{
+        .tile = prRectFromIRect(prIRectAt(c.writePixels.origin, extent)),
+        .x = PrDrawExtend_None,
+        .y = PrDrawExtend_None,
+    };
+    r.read = imageRead(PrDrawSampling_Nearest, texture.alpha, tiles, texture.texels, texture.width, texture.height);
+    r.alpha = texture.alpha;
     r.tileX = PrDrawExtend_None;
     r.tileY = PrDrawExtend_None;
-    r.tile = prRectFromIRect(prIRectAt(c.writePixels.origin, prDrawImageExtent(image)));
-    r.texels = PrRect{0, 0, width, height};
-    r.wholeX = 1;
-    r.wholeY = 1;
-    r.texture = tableOf(w, texture);
+    r.tile = tiles.tile;
+    r.texels = texture.texels;
+    setWhole(r, texture.texels, texture.width, texture.height);
+    r.texture = tableOfSource(w, texture);
     float white[4] = {1, 1, 1, 1};
     Ink ink = inkOf(w, r, white);
     Clip everywhere{};
@@ -3798,7 +3741,7 @@ void runCommands(Walk& w, const PrDrawCommand* commands, uint32_t count) {
 // ---------------------------------------------------------------------------------------------------------------------
 // Builds
 
-// Adds the requests for the images that went unused too long, and points the requests to their texels.
+// Adds the requests for the atlas's pages.
 void finishRequests(Walk& w) {
     Fragment* f = w.f;
     uint32_t size = w.f->atlasSize;
@@ -3825,25 +3768,6 @@ void finishRequests(Walk& w) {
         });
     }
     f->pagesCreated = prDrawAtlasPageCount(f->atlas);
-    uint32_t kept = 0;
-    for (uint32_t i = 0; i < f->images.count; ++i) {
-        const CachedImage& image = f->images.data[i];
-        if (f->build - image.lastUsed < kIdleBuilds) {
-            f->images.data[kept++] = image;
-            continue;
-        }
-        request(w, FragmentTextureRequest{
-            .op = FragmentTextureOp_Destroy,
-            .format = PrPixelFormat_Rgba8,
-            .texture = image.texture,
-        });
-    }
-    f->images.count = kept;
-    f->imageIndex.rebuild(kept, [&](uint32_t i) { return imageKey(f->images.data[i].id, f->images.data[i].mipmapped); });
-    for (uint32_t i = 0; i < w.b->pending.count; ++i) {
-        const PendingTexels& pending = w.b->pending.data[i];
-        w.b->requests.data[pending.request].texels.data = w.b->texels.data + pending.offset;
-    }
 }
 
 void describe(const FrameStorage* b, uint32_t width, uint32_t height, FragmentFrame* out) {
@@ -3924,8 +3848,6 @@ Fragment* fragmentCreate(const PrDrawFragmentOptions& o) {
 
 void fragmentDestroy(Fragment* f) {
     resizePrepared(f, 0);
-    f->images.reset();
-    f->imageIndex.reset();
     f->tableIndex.reset();
     f->layerIndex.reset();
     f->ramps.reset();
@@ -3950,8 +3872,6 @@ void fragmentDestroy(Fragment* f) {
 // draws with.
 void fragmentForgetResources(Fragment* f) {
     resizePrepared(f, f->prepared.count);
-    f->images.clear();
-    f->imageIndex.index.clear();
     prDrawAtlasClear(f->atlas);
     f->pageTextures.clear();
     f->pagesCreated = 0;
@@ -3981,8 +3901,6 @@ void storageDestroy(FrameStorage* b) {
     b->filters.reset();
     b->filterData.reset();
     b->requests.reset();
-    b->texels.reset();
-    b->pending.reset();
     prMemoryFree(b);
 }
 
@@ -4018,8 +3936,6 @@ void fragmentBuild(Fragment* f, const PrDrawList* list, const PrDrawPart& part, 
     b->filters.clear();
     b->filterData.clear();
     b->requests.clear();
-    b->texels.clear();
-    b->pending.clear();
     b->pathFills = 0;
     b->beneath = 0;
     ++f->build;
@@ -4100,12 +4016,34 @@ struct FragmentRenderer : PrDrawRenderer {
     Fragment* fragment;
 };
 
-// A frame: the data that the build produced, and the storage that it points into.
+// A frame: the data that the build produced, the storage that it points into, and a reference to each of the host's
+// textures that it draws, held until the frame is prepared again or destroyed.
 struct FragmentDrawFrame : PrDrawFrame {
     FragmentRenderer* renderer;
     FrameStorage* storage;
     FragmentFrame built;
+    RawArray<PrGpuTexture> held;
 };
+
+// Releases the frame's first `count` references to the host's textures.
+void releaseHostTextures(FragmentDrawFrame* frame, uint32_t count) {
+    for (uint32_t i = 0; i < count; ++i)
+        prGpuTextureRelease(frame->renderer->device, frame->held.data[i]);
+    frame->held.erase(0, count);
+}
+
+// Replaces the references that the frame holds with references to the host's textures that its build reads. The new
+// references are taken before the old ones are released. A texture that only the frame held therefore stays alive if
+// the frame draws it again.
+void holdHostTextures(FragmentDrawFrame* frame) {
+    uint32_t old = frame->held.count;
+    for (uint32_t i = 0; i < frame->built.hostTextureCount; ++i) {
+        PrGpuTexture texture = frame->built.hostTextures[i];
+        prGpuTextureRetain(frame->renderer->device, texture);
+        frame->held.push(texture);
+    }
+    releaseHostTextures(frame, old);
+}
 
 PrGpuDevice* rendererDevice(const PrDrawRenderer* renderer) {
     return static_cast<const FragmentRenderer*>(renderer)->device;
@@ -4116,6 +4054,8 @@ void destroyFrame(PrDrawFrame* handle) {
     FragmentRenderer* r = frame->renderer;
     fragmentDeviceReleaseFrame(r->state, &frame->built);
     storageDestroy(frame->storage);
+    releaseHostTextures(frame, frame->held.count);
+    frame->held.reset();
     prMemoryFree(frame);
 }
 
@@ -4123,6 +4063,7 @@ PrStatus prepare(PrDrawFrame* handle, const PrDrawList* list, const PrDrawPart* 
     FragmentDrawFrame* frame = static_cast<FragmentDrawFrame*>(handle);
     FragmentRenderer* r = frame->renderer;
     fragmentBuild(r->fragment, list, *part, *target, frame->storage, &frame->built);
+    holdHostTextures(frame);
     fragmentDevicePrepare(r->state, &frame->built, target->commands, target->format, target->beneath);
     return PrStatus_Ok;
 }
@@ -4172,8 +4113,7 @@ void stats(const PrDrawFrame* handle, PrDrawStats* out) {
         uint64_t(f.filterCount) * sizeof(FragmentFilter) + uint64_t(f.filterDataCount) * 4;
     for (uint32_t i = 0; i < f.requestCount; ++i) {
         const FragmentTextureRequest& r = f.requests[i];
-        if (r.op != FragmentTextureOp_Destroy)
-            bytes += uint64_t(r.texels.extent.x) * r.texels.extent.y * prPixelFormatSize(r.format);
+        bytes += uint64_t(r.texels.extent.x) * r.texels.extent.y * prPixelFormatSize(r.format);
     }
     out->uploadBytes = bytes;
 }

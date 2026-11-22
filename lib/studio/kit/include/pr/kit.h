@@ -21,6 +21,7 @@
 #include "pr/layout_tree.h"
 #include "pr/path.h"
 #include "pr/studio_icon.h"
+#include "pr/texture_cache.h"
 #include "pr/ui.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -39,6 +40,7 @@ extern "C" {
 typedef struct PrKit {
     PrUi* ui;                                               // the context that the kit creates in
     PrLayoutTree* tree;                                     // the context's tree
+    PrTextureCache* PR_NULLABLE textures;                   // the cache for the widgets' images (prKitSetTextures)
     PrKitTheme theme;
     PrTextFont* PR_NULLABLE fonts[PrKitTextRole_Count];      // by PrKitTextRole
     PrKitLook looks[PrKitLookId_Count];                      // by PrKitLookId
@@ -51,6 +53,15 @@ PrKit* prKitCreate(PrUi* ui, const PrKitTheme* theme);
 
 // Destroys the kit and the records and fonts that it made.
 void prKitDestroy(PrKit* PR_NULLABLE kit);
+
+// Sets the texture cache that the widgets' images are drawn from, or null for none. The cache must be on the device of
+// the renderer that draws the context's tree. It must outlive the kit, or stay valid until the next call replaces it.
+// Without a cache, images draw nothing. The tree draws its images from the same cache (prLayoutTreeSetTextures).
+void prKitSetTextures(PrKit* kit, PrTextureCache* PR_NULLABLE textures);
+
+// Returns the texture cache that the widgets' images are drawn from, or null for none. A view in the kit's window that
+// samples images asks the same cache, so the view and the widgets share one texture for an image.
+PrTextureCache* PR_NULLABLE prKitTextures(const PrKit* kit);
 
 // Sets the kit's theme, which the kit copies. Call between rounds. The next round declares every widget in the new
 // theme.

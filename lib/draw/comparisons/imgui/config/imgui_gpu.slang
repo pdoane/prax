@@ -1,4 +1,5 @@
-// Dear ImGui's shaders on lib/gpu: the vertex color times the texture's sample. A vertex shader reads its vertex from
+// Dear ImGui's shaders on lib/gpu: the vertex color times the straight color of the texture's sample. There is one
+// fragment shader for each alpha that a texture's texels have (ImGuiGpuAlpha). A vertex shader reads its vertex from
 // the draw data's vertices, which Buffer slot 0 binds. Texture slot 0 binds the draw's texture and sampler.
 
 #include "pr/gpu.slang"
@@ -39,7 +40,23 @@ VertexOut imguiVertex(uint index : SV_VertexID) {
     return o;
 }
 
+// The fragment shader for a texture of straight texels, such as Dear ImGui's own textures.
 [shader("fragment")]
 float4 imguiFragment(VertexOut i) : SV_Target {
     return i.color * source.Sample(sourceSampler, i.uv);
+}
+
+// The fragment shader for a texture of premultiplied texels, which divides the sample's color by its alpha.
+[shader("fragment")]
+float4 imguiFragmentPremultiplied(VertexOut i) : SV_Target {
+    float4 texel = source.Sample(sourceSampler, i.uv);
+    if (texel.a > 0)
+        texel.rgb /= texel.a;
+    return i.color * texel;
+}
+
+// The fragment shader for a texture without alpha, which reads the sample's alpha as one whatever the texture stores.
+[shader("fragment")]
+float4 imguiFragmentOpaque(VertexOut i) : SV_Target {
+    return i.color * float4(source.Sample(sourceSampler, i.uv).rgb, 1);
 }

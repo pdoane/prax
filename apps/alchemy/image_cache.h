@@ -1,18 +1,20 @@
-// The image cache: the gallery's files decoded into images that a frame draws, at full size for the viewport and as
-// thumbnails for the browser.
+// The image cache: the texture sources of the gallery's files. A texture catalog names the sources by their paths.
 //
-// A request starts a decode on the task pool and returns null until it lands. The cache's pump adopts the decodes that
-// landed, on the thread that builds the frames, and frees the images that no frame has asked for in a while. A
-// thumbnail is the image halved until it fits kThumbnailMaxEdge, so a grid of hundreds of images stays small.
+// A request returns the source of a file once the catalog has opened it. A widget draws the source, and the window's
+// texture cache reads the texels that the widget shows. A thumbnail reads a preview of about its own size, so a grid of
+// hundreds of images stays small. The viewport reads the full image (pr/texture_cache.h). The cache keeps no pixels. A
+// source holds its file's path.
+//
+// A cache is used from the thread that builds the frames.
 
 #pragma once
 
 #include "pr/base.h"
-#include "pr/draw_image.h"
 #include "pr/function.h"
 #include "pr/image.h"
 #include "pr/string.h"
 #include "pr/task.h"
+#include "pr/texture.h"
 
 #include <stdint.h>
 
@@ -22,44 +24,34 @@ namespace alchemy {
 
 using namespace pr;
 
-// The longest edge of a thumbnail, in pixels.
-constexpr uint32_t kThumbnailMaxEdge = 256;
-
-// The sizes that the cache keeps an image at.
-enum {
-    ImageScale_Full,
-    ImageScale_Thumbnail,
-};
-typedef uint8_t ImageScale;
-
-// The decoded images of files, by path and scale.
+// The sources of image files, by path.
 struct ImageCache;
 
-// Creates a cache that decodes on `pool` with `codec`, which must outlive it, and calls `wake` from the pool's threads
-// when a decode lands. Freeing waits for the decodes in flight.
-ImageCache* imageCacheCreate(PrTaskPool* pool, PrImageCodecSet* codec, Function<void()> wake);
+// Creates a cache that opens files on `pool` with `codec`. Both must outlive the cache. The cache calls `wake` from a
+// thread of the pool when a file opens. Destroying the cache blocks until the opens in flight complete.
+ImageCache* imageCacheCreate(PrTaskPool* pool, const PrImageCodecSet* codec, Function<void()> wake);
 void imageCacheDestroy(ImageCache* PR_NULLABLE cache);
 
-// Returns the image of the file at `path` at `scale`, or null while it decodes or if it cannot be decoded. The first
-// request starts the decode. The image stays valid until the next pump.
-const PrDrawImage* PR_NULLABLE imageCacheGet(ImageCache* cache, PrStringView path, ImageScale scale);
+// Returns the image of the file at `path`, or null while the file opens or if it does not open. The first request
+// starts the open. The image stays valid until the next pump.
+const PrTextureSource* PR_NULLABLE imageCacheGet(ImageCache* cache, PrStringView path);
 
-// Returns true if the file at `path` could not be decoded.
-bool imageCacheFailed(ImageCache* cache, PrStringView path, ImageScale scale);
+// Returns true if the file at `path` did not open as an image.
+bool imageCacheFailed(ImageCache* cache, PrStringView path);
 
-// Forgets the file at `path`, so that a later request decodes it again, as after the file changes.
+// Forgets the file at `path`, for example after the file changes. A later request opens it again.
 void imageCacheForget(ImageCache* cache, PrStringView path);
 
-// Adopts the decodes that landed, and frees the images that the frames before have not asked for. Returns true if a
-// decode landed, which the next frame shows. Called once per frame, before the build.
-bool imageCachePump(ImageCache* cache);
+// Releases the images that the last frame's requests returned. Called once per frame, before the build.
+void imageCachePump(ImageCache* cache);
 
-// Returns an image decoded from `bytes`, which the caller releases, or null if the codec cannot read them.
-const PrDrawImage* PR_NULLABLE imageDecode(PrImageCodecSet* codec, const void* bytes, size_t size);
+// Returns an image decoded from `bytes`, or null if the codec cannot read them. The image keeps a copy of the bytes.
+// The caller releases it.
+const PrTextureSource* PR_NULLABLE imageDecode(const PrImageCodecSet* codec, const void* bytes, size_t size);
 
-// Returns a copy of `image` halved until it fits `maxEdge`, which the caller releases, or a new reference to `image` if
-// it already fits or is not in 8 bits.
-const PrDrawImage* imageShrink(const PrDrawImage* image, uint32_t maxEdge);
+// Reads the first level of the image as Rgba8 into `out`. `out` must have the image's extent. The pixels have `alpha`,
+// or are opaque if the image is opaque. Returns false if the image cannot be read.
+bool imageReadRgba8(const PrTextureSource* image, PrTextureAlpha alpha, PrPixels out);
 
 } // namespace alchemy
 

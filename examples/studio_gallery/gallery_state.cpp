@@ -299,10 +299,10 @@ GalleryState::GalleryState() {
 GalleryState::~GalleryState() {
     prTextEditHistoryDestroy(inputs.styledHistory);
     prTextEditBufferDestroy(inputs.styled);
-    prDrawImageRelease(picture);
+    prTextureSourceRelease(picture);
 }
 
-const PrDrawImage* galleryPicture(GalleryState& state) {
+const PrTextureSource* galleryPicture(GalleryState& state) {
     if (state.picture != nullptr)
         return state.picture;
     constexpr uint32_t kWidth = 512;
@@ -341,13 +341,9 @@ const PrDrawImage* galleryPicture(GalleryState& state) {
             texel[3] = 255;
         }
     }
-    PrDrawImageDesc desc{
-        PrPixelView{pixels.data(), kWidth * 4, {kWidth, kHeight}}, PrPixelFormat_Rgba8,
-        PrDrawAlpha_Straight, PrColorSpace_Srgb,
-    };
-    const PrDrawImage* image = nullptr;
-    if (prDrawImageCreate(&desc, &image) == PrStatus_Ok)
-        state.picture = image;
+    state.picture =
+        prTextureSourceCreateCopy(PrPixelView{pixels.data(), kWidth * 4, {kWidth, kHeight}}, PrPixelFormat_Rgba8,
+            PrTextureAlpha_None);
     return state.picture;
 }
 

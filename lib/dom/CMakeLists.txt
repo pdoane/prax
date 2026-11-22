@@ -27,9 +27,9 @@ pr_library(dom INCLUDE include
     src/dom_resource.cpp
     src/dom_xml.cpp
 )
-target_link_libraries(pr_dom PUBLIC prax::core prax::url prax::xml prax::layout prax::draw
+target_link_libraries(pr_dom PUBLIC prax::core prax::url prax::xml prax::layout prax::texture
                                     prax::task prax::color prax::text_edit
-                             PRIVATE prax::core_cpp prax::charset prax::unicode prax::compress prax::image)
+                             PRIVATE prax::core_cpp prax::charset prax::unicode prax::compress)
 
 if (PR_JS)
     pr_library(dom_quickjs INCLUDE quickjs/include

@@ -27,6 +27,7 @@
 #include "pr/svg_glyph.h"
 #include "pr/task.h"
 #include "pr/text.h"
+#include "pr/texture_cache.h"
 
 #include "examples/draw_features/drawing.h"
 #include "examples/draw_features/features.h"
@@ -68,6 +69,7 @@ struct Window {
     PrDrawDisplay* display = nullptr;
 
     PrTaskPool* pool = nullptr;
+    PrTextureCache* PR_NULLABLE textures = nullptr;  // on `device`
 };
 
 void announce(const Window& w) {
@@ -81,6 +83,10 @@ void closeDevice(Window& w) {
     prDrawDisplayDestroy(w.display);
     prDrawFrameDestroy(w.frame);
     prDrawRendererDestroy(w.renderer);
+    prDrawGlyphDecoderDestroy(w.glyphDecoder);
+    w.glyphDecoder = nullptr;
+    prTextureCacheDestroy(w.textures);
+    w.textures = nullptr;
     prGpuSwapChainDestroy(w.swapChain);
     prGpuDeviceDestroy(w.device);
     w.rendered = PrGpuTexture{};
@@ -122,6 +128,11 @@ bool openDevice(Window& w) {
         return true;
     PrSurface surface{};
     PrGpuSwapChainDesc desc{.intent = PrGpuSwapChainIntent_Hdr};
+    // The window's images, and its glyphs' images, realize on its pool, in a cache on its device.
+    PrTextureCacheDesc textures = prTextureCacheDescDefault(w.device);
+    textures.tasks = w.pool;
+    w.textures = prTextureCacheCreate(&textures);
+    w.glyphDecoder = prSvgGlyphDecoderCreate(w.imageCodec, w.compressCodec, w.textures);
     PrDrawRendererOptions options = prDrawRendererOptionsDefault();
     options.glyphDecoder = w.glyphDecoder;
     if (prAppWindowSurface(w.window, &surface) != PrStatus_Ok ||
@@ -173,6 +184,7 @@ void render(Window& w, PrUVec2 extent, const PrAppDisplay& display) {
         .commands = commands,
     };
     prDrawFramePrepare(w.frame, w.list, &into);
+    prTextureCacheTrim(w.textures);
     // The half floats rest in the accesses of shader reads between frames, and the drawable holds nothing yet.
     PrGpuSubresources all{};
     prGpuCommandsTextureBarrier(commands, target, all, mapped ? PrGpuAccessFlag_ShaderRead : PrGpuAccessFlag_Discard,
@@ -218,7 +230,7 @@ PrAppOutput frame(void* context, PrAppWindow*, const PrAppFrame* f) {
     String caption = format("{} of {}: {}{}. Left and Right turn, Space pauses.", w.drawing + 1, w.drawings.count(),
         drawing.name, w.paused ? ", paused" : "");
     label(caption, PrVec2{12, f->extent.y - 10}, 13, kInk);
-    drawDrawing(drawing, w.list, w.shaper, nullptr, f->display, f->extent.x, f->extent.y - kCaptionHeight, w.clock);
+    drawDrawing(drawing, w.list, w.shaper, nullptr, f->display, w.textures, f->extent.x, f->extent.y - kCaptionHeight, w.clock);
     prDrawListPopTransform(w.list);
 
     PrUVec2 extent{uint32_t(f->extent.x * ratio + 0.5f), uint32_t(f->extent.y * ratio + 0.5f)};
@@ -276,7 +288,6 @@ int main(int argc, char** argv) {
     w.pool = prTaskPoolCreate(PrTaskPoolBackend_Default, 1);
     w.compressCodec = prCompressCodecSetCreateDefault();
     w.imageCodec = prImageCodecSetCreateDefault(w.compressCodec);
-    w.glyphDecoder = prSvgGlyphDecoderCreate(w.imageCodec, w.compressCodec);
     requestDevice(w);
     w.drawings.append(allFeatures().span());
     w.drawings.append(workloadDrawings().span());

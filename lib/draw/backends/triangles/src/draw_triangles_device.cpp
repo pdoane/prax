@@ -21,8 +21,10 @@ struct TrianglesOwnTexture {
     PrGpuTexture texture;
 };
 
+// A pipeline that draws into targets of one format from textures whose texels have one alpha.
 struct TrianglesPipeline {
     PrGpuFormat format;
+    PrTextureAlpha alpha;
     PrGpuPipeline pipeline;
 };
 
@@ -47,16 +49,27 @@ uint32_t textureIndex(const TrianglesDevice* d, uint32_t id) {
     return at != kHashMissing ? at : kArrayMissing;
 }
 
-// Returns the pipeline that draws into targets of `format`, created on first use, or zero if the device cannot create
-// it. Color blends by source alpha and one minus source alpha, and alpha by one and one minus source alpha.
-PrGpuPipeline pipelineFor(TrianglesDevice* d, PrGpuFormat format) {
+// Returns the name of the fragment shader that reads a straight color from texels of `alpha`.
+PrStringView fragmentShader(PrTextureAlpha alpha) {
+    switch (alpha) {
+        case PrTextureAlpha_None: return "trianglesFragmentOpaque";
+        case PrTextureAlpha_Straight: return "trianglesFragmentStraight";
+        case PrTextureAlpha_Premultiplied: break;
+    }
+    return "trianglesFragmentPremultiplied";
+}
+
+// Returns the pipeline that draws into targets of `format` from textures whose texels have `alpha`, created on first
+// use, or zero if the device cannot create it. Color blends by source alpha and one minus source alpha, and alpha by
+// one and one minus source alpha.
+PrGpuPipeline pipelineFor(TrianglesDevice* d, PrGpuFormat format, PrTextureAlpha alpha) {
     for (uint32_t i = 0; i < d->pipelines.count; ++i) {
-        if (d->pipelines.data[i].format == format)
+        if (d->pipelines.data[i].format == format && d->pipelines.data[i].alpha == alpha)
             return d->pipelines.data[i].pipeline;
     }
     PrGpuGraphicsPipelineDesc desc = prGpuGraphicsPipelineDescDefault(d->library);
     desc.vertex = "trianglesVertex";
-    desc.fragment = "trianglesFragment";
+    desc.fragment = fragmentShader(alpha);
     desc.vertexLayout = PrGpuVertexLayout{
         .bufferCount = 1,
         .attributeCount = 3,
@@ -74,7 +87,7 @@ PrGpuPipeline pipelineFor(TrianglesDevice* d, PrGpuFormat format) {
     desc.name = "triangles";
     PrGpuPipeline pipeline{};
     prGpuPipelineCreateGraphics(d->device, &desc, &pipeline);
-    d->pipelines.push(TrianglesPipeline{format, pipeline});
+    d->pipelines.push(TrianglesPipeline{.format = format, .alpha = alpha, .pipeline = pipeline});
     return pipeline;
 }
 
@@ -135,8 +148,6 @@ void trianglesDeviceDestroy(TrianglesDevice* PR_NULLABLE device) {
 }
 
 void trianglesDevicePrepare(TrianglesDevice* d, const TrianglesFrame* frame, PrGpuCommands*) {
-    // The entry of a destroyed texture is emptied, and the remaining entries are compacted once the requests are done.
-    bool destroyed = false;
     for (uint32_t i = 0; i < frame->requestCount; ++i) {
         const TrianglesTextureRequest& q = frame->requests[i];
         uint32_t at = textureIndex(d, q.texture);
@@ -160,32 +171,18 @@ void trianglesDevicePrepare(TrianglesDevice* d, const TrianglesFrame* frame, PrG
                     prGpuTextureWrite(d->device, d->textures.data[at].texture,
                         PrIVec2{int32_t(q.origin.x), int32_t(q.origin.y)}, q.texels);
                 break;
-            case TrianglesTextureOp_Destroy:
-                if (at != kArrayMissing) {
-                    prGpuTextureRelease(d->device, d->textures.data[at].texture);
-                    d->textures.data[at] = TrianglesOwnTexture{};
-                    destroyed = true;
-                }
-                break;
-            default:
-                break;
         }
-    }
-    if (destroyed) {
-        uint32_t kept = 0;
-        for (uint32_t i = 0; i < d->textures.count; ++i) {
-            if (d->textures.data[i].texture.id != 0)
-                d->textures.data[kept++] = d->textures.data[i];
-        }
-        d->textures.count = kept;
-        d->textureIds.rebuild(kept, [&](uint32_t i) { return uint64_t(d->textures.data[i].id); });
     }
 }
 
 void trianglesDeviceRender(TrianglesDevice* d, const TrianglesFrame* frame, PrGpuPass* pass, PrIVec2 origin) {
     if (frame->drawCount == 0 || frame->extent.x == 0 || frame->extent.y == 0)
         return;
-    PrGpuPipeline pipeline = pipelineFor(d, prGpuPassFormats(pass).color[0]);
+    PrGpuFormat format = prGpuPassFormats(pass).color[0];
+    // The pipeline in effect. It starts as the pipeline for the textures that the requests create, and changes when a
+    // draw needs another.
+    PrTextureAlpha alpha = PrTextureAlpha_Premultiplied;
+    PrGpuPipeline pipeline = pipelineFor(d, format, alpha);
     if (pipeline.id == 0)
         return;
     PrGpuCommands* commands = prGpuPassCommands(pass);
@@ -209,7 +206,7 @@ void trianglesDeviceRender(TrianglesDevice* d, const TrianglesFrame* frame, PrGp
     prGpuPassSetVertexBuffer(pass, 0, buffer, offsets[0]);
     for (uint32_t i = 0; i < frame->drawCount; ++i) {
         const TrianglesDraw& draw = frame->draws[i];
-        PrGpuTexture texture = draw.hostTexture != 0 ? PrGpuTexture{uint32_t(draw.hostTexture)} : PrGpuTexture{};
+        PrGpuTexture texture = draw.hostTexture;
         uint32_t at = texture.id == 0 ? textureIndex(d, draw.texture) : kArrayMissing;
         if (at != kArrayMissing)
             texture = d->textures.data[at].texture;
@@ -223,6 +220,14 @@ void trianglesDeviceRender(TrianglesDevice* d, const TrianglesFrame* frame, PrGp
         if (texture.id == 0 || draw.indexCount == 0 || scissor.right <= scissor.left || scissor.bottom <= scissor.top)
             continue;
         prGpuPassSetScissor(pass, scissor);
+        if (draw.alpha != alpha) {
+            PrGpuPipeline other = pipelineFor(d, format, draw.alpha);
+            if (other.id == 0)
+                continue;
+            alpha = draw.alpha;
+            prGpuCommandsSetPipeline(commands, other);
+            prGpuCommandsSetPush(commands, &push, sizeof(push));
+        }
         prGpuCommandsSetTexture(commands, 0, texture, PrGpuSampler{d->samplers[draw.sampler]});
         prGpuPassDrawIndexed(pass, draw.indexCount, 1, draw.indexOffset, 0, 0);
     }

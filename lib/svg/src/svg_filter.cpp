@@ -1106,7 +1106,7 @@ void svgFilterFree(SvgFilter& filter) {
     for (uint32_t i = 0; i < filter.primitiveCount; ++i) {
         const SvgPrimitive& p = filter.primitives[i];
         if (p.kind == SvgPrimitiveKind_Image) {
-            prDrawImageRelease(p.image.picture.raster);
+            prTextureSourceRelease(p.image.picture.raster);
             svgImageRelease(p.image.picture.svg);
         }
     }

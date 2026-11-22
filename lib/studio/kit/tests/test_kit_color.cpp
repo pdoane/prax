@@ -180,6 +180,44 @@ TEST_CASE("the OKLCH plane sets perceptual lightness across, and keeps a color t
     CHECK(kitVerified(f.tree));
 }
 
+TEST_CASE("the OKLCH plane keeps its drawing until the texture cache moves to another device or is taken away") {
+    KitFixture f;
+    PickerScene scene(f);
+    f.frame();
+    scene.choose(PrKitColorMode_Oklch);
+    // The plane's drawing is the content of its first child.
+    auto drawing = [&] {
+        PrLayoutContent content = prLayoutNodeContent(f.tree, scene.child(scene.plane(), 0));
+        REQUIRE(content.kind == PrLayoutContentKind_DrawList);
+        return content.list;
+    };
+    const PrDrawList* first = drawing();
+    f.frame();
+    CHECK(drawing() == first);
+    // A move of the cache to another device invalidates the region that the drawing embeds. The drawing is therefore
+    // made again, and then kept.
+    prTextureCacheSetDevice(f.textures, f.memory);
+    f.frame();
+    const PrDrawList* moved = drawing();
+    CHECK(moved != first);
+    f.frame();
+    CHECK(drawing() == moved);
+    // Without a cache, the drawing lacks its image, so no frame keeps it.
+    prKitSetTextures(f.kit, nullptr);
+    f.frame();
+    const PrDrawList* bare = drawing();
+    CHECK(bare != moved);
+    f.frame();
+    CHECK(drawing() != bare);
+    // With the cache again, the drawing is complete and is kept.
+    prKitSetTextures(f.kit, f.textures);
+    f.frame();
+    const PrDrawList* restored = drawing();
+    f.frame();
+    CHECK(drawing() == restored);
+    CHECK(kitVerified(f.tree));
+}
+
 TEST_CASE("on a P3 display, the OKLCH plane picks a color past sRGB that P3 holds") {
     KitFixture f;
     f.display.gamut = PrColorSpace_DisplayP3;

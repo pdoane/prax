@@ -1,5 +1,4 @@
 #include "pr/draw_cpu.h"
-#include "pr/draw_image.h"
 #include "pr/draw_list.h"
 #include "pr/draw_renderer.h"
 #include "pr/layout_animation.h"
@@ -14,6 +13,7 @@
 #include "pr/path_data.h"
 #include "pr/string_ops.h"
 #include "pr/text_harfbuzz.h"
+#include "pr/texture.h"
 #include "pr/thread.h"
 
 #include "layout/src/layout_tree.h"
@@ -260,6 +260,59 @@ void appendDecorations(const PrDrawList* list, PrDrawTransform transform, bool& 
             default: break;
         }
     }
+}
+
+// An image of opaque red texels whose reads wait until the test completes them.
+struct LaterImage {
+    PrUVec2 extent{};
+    Array<PrTextureRead*> waiting;
+
+    static void read(void* PR_NULLABLE context, PrTextureRead* read) {
+        static_cast<LaterImage*>(context)->waiting.push(read);
+    }
+
+    // Returns a source of `size` texels.
+    const PrTextureSource* source(PrUVec2 size) {
+        extent = size;
+        PrTextureSourceDesc desc{
+            .texture = prTextureDesc2d(PrGpuFormat_Rgba8, size, PrTextureAlpha_None),
+            .read = read,
+            .context = this,
+        };
+        return prTextureSourceCreate(&desc);
+    }
+
+    // Completes the reads that wait.
+    void arrive() {
+        Array<PrTextureRead*> reads = waiting;
+        waiting.clear();
+        const uint8_t red[4] = {255, 0, 0, 255};
+        for (PrTextureRead* read : reads) {
+            uint8_t* storage = prTextureReadStorage(read);
+            for (uint32_t i = 0; i < extent.x * extent.y; ++i)
+                prMemCopy(storage + size_t(i) * 4, red, 4);
+            prTextureReadComplete(read, PrStatus_Ok);
+        }
+    }
+};
+
+// Renders `list` onto `width` by `height` RGBA pixels, on the memory device of the tests' textures.
+Array<uint8_t> renderList(PrDrawList* list, uint32_t width, uint32_t height) {
+    Array<uint8_t> bytes(size_t(width) * height * 4);
+    PrDrawRenderer* renderer = harnessMemoryRenderer();
+    PrPixels into{bytes.data(), size_t(width) * 4, {width, height}};
+    REQUIRE(prDrawRendererRenderPixels(renderer, list, into, PrPixelFormat_Rgba8) == PrStatus_Ok);
+    prDrawRendererDestroy(renderer);
+    return bytes;
+}
+
+// Paints the tree, from the texture cache that it has, and renders the paint onto `width` by `height` RGBA pixels.
+Array<uint8_t> renderPaint(PrLayoutTree* tree, uint32_t width, uint32_t height) {
+    PrDrawList* list = prDrawListCreate();
+    prLayoutTreePaint(tree, list);
+    Array<uint8_t> bytes = renderList(list, width, height);
+    prDrawListRelease(list);
+    return bytes;
 }
 
 } // namespace
@@ -1456,9 +1509,8 @@ TEST_CASE("an image's content covers its natural size, which object-fit and obje
     Fixture f;
     // An image of a red texel beside a blue one, in a natural size twice as wide as it is tall.
     const uint8_t texels[8] = {255, 0, 0, 255, 0, 0, 255, 255};
-    PrDrawImageDesc desc{PrPixelView{texels, 8, {2, 1}}, PrPixelFormat_Rgba8, PrDrawAlpha_Straight, PrColorSpace_Srgb};
-    const PrDrawImage* image = nullptr;
-    REQUIRE(prDrawImageCreate(&desc, &image) == PrStatus_Ok);
+    const PrTextureSource* image =
+        prTextureSourceCreateCopy(PrPixelView{texels, 8, {2, 1}}, PrPixelFormat_Rgba8, PrTextureAlpha_Straight);
     PrLayoutNode root = f.element(kPrLayoutNodeNone, block());
     PrLayoutBoxStyle box = block();
     box.width = prLayoutLengthPx(40);
@@ -1475,7 +1527,7 @@ TEST_CASE("an image's content covers its natural size, which object-fit and obje
     content.image = image;
     prLayoutNodeSetContent(f.tree, left, &content);
     prLayoutNodeSetContent(f.tree, right, &content);
-    prDrawImageRelease(image);
+    prTextureSourceRelease(image);
     CHECK(prLayoutNodeContent(f.tree, left).image == image);
     f.layout(px(40, 80));
     Array<uint8_t> pixels = render(f.tree, 40, 80);
@@ -1483,6 +1535,157 @@ TEST_CASE("an image's content covers its natural size, which object-fit and obje
     CHECK(pixel(pixels, 40, 10, 20) == "255 0 0 255");
     CHECK(pixel(pixels, 40, 30, 60) == "0 0 255 255");
     CHECK(verified(f.tree));
+}
+
+TEST_CASE("a paint leaves out an image whose texture is pending, and is recorded again only once the texture arrives") {
+    Fixture f;
+    PrTextureCache* cache = harnessTextureCacheCreate(harnessMemoryDevice());
+    prLayoutTreeSetTextures(f.tree, cache);
+    LaterImage later;
+    const PrTextureSource* image = later.source({4, 4});
+    // A replaced box of the image, above a box with the image as its background.
+    PrLayoutNode root = f.element(kPrLayoutNodeNone, block());
+    PrLayoutBoxStyle box = block();
+    box.width = prLayoutLengthPx(4);
+    box.height = prLayoutLengthPx(4);
+    PrLayoutNode shown = replaced(f, root, box, natural(4, 4));
+    PrLayoutContent content{};
+    content.kind = PrLayoutContentKind_Image;
+    content.image = image;
+    prLayoutNodeSetContent(f.tree, shown, &content);
+    PrLayoutBackgroundLayer layer = prLayoutBackgroundLayerDefault();
+    layer.kind = PrLayoutImageKind_Image;
+    layer.image = image;
+    layer.natural = natural(4, 4);
+    backgroundBox(f, root, 4, 4, &layer, 1);
+    prTextureSourceRelease(image);
+    f.layout(px(8, 8));
+
+    Array<uint8_t> pixels = renderPaint(f.tree, 8, 8);
+    CHECK(prLayoutTreePaintsPending(f.tree));
+    CHECK(prLayoutTreeStats(f.tree).layersRecorded != 0);
+    CHECK(pixel(pixels, 8, 1, 1) == "0 0 0 0");
+    CHECK(pixel(pixels, 8, 1, 5) == "0 0 0 0");
+    uint32_t reads = later.waiting.count();
+    CHECK(reads != 0);
+
+    // A paint before the texture arrives keeps the recordings, and starts no other read.
+    pixels = renderPaint(f.tree, 8, 8);
+    CHECK(prLayoutTreePaintsPending(f.tree));
+    CHECK(prLayoutTreeStats(f.tree).layersRecorded == 0);
+    CHECK(pixel(pixels, 8, 1, 1) == "0 0 0 0");
+    CHECK(later.waiting.count() == reads);
+    CHECK(verified(f.tree));
+
+    // The recordings that wait are not compared with what the arrived texture draws.
+    later.arrive();
+    CHECK(verified(f.tree));
+    pixels = renderPaint(f.tree, 8, 8);
+    CHECK(!prLayoutTreePaintsPending(f.tree));
+    CHECK(prLayoutTreeStats(f.tree).layersRecorded != 0);
+    CHECK(pixel(pixels, 8, 1, 1) == "255 0 0 255");
+    CHECK(pixel(pixels, 8, 1, 5) == "255 0 0 255");
+    CHECK(pixel(pixels, 8, 5, 1) == "0 0 0 0");
+    CHECK(verified(f.tree));
+
+    // A paint with nothing pending is not recorded again.
+    pixels = renderPaint(f.tree, 8, 8);
+    CHECK(prLayoutTreeStats(f.tree).layersRecorded == 0);
+    CHECK(pixel(pixels, 8, 1, 1) == "255 0 0 255");
+    prLayoutTreeSetTextures(f.tree, nullptr);
+    prTextureCacheDestroy(cache);
+}
+
+TEST_CASE("a tree without a texture cache draws no image, and its paint is not pending") {
+    Fixture f;
+    const uint8_t texels[4] = {255, 0, 0, 255};
+    const PrTextureSource* image =
+        prTextureSourceCreateCopy(PrPixelView{texels, 4, {1, 1}}, PrPixelFormat_Rgba8, PrTextureAlpha_None);
+    PrLayoutNode root = f.element(kPrLayoutNodeNone, block());
+    PrLayoutBoxStyle box = block();
+    box.width = prLayoutLengthPx(4);
+    box.height = prLayoutLengthPx(4);
+    PrLayoutNode shown = replaced(f, root, box, natural(4, 4));
+    PrLayoutContent content{};
+    content.kind = PrLayoutContentKind_Image;
+    content.image = image;
+    prLayoutNodeSetContent(f.tree, shown, &content);
+    PrLayoutBackgroundLayer layer = prLayoutBackgroundLayerDefault();
+    layer.kind = PrLayoutImageKind_Image;
+    layer.image = image;
+    layer.natural = natural(4, 4);
+    backgroundBox(f, root, 4, 4, &layer, 1);
+    prTextureSourceRelease(image);
+    f.layout(px(8, 8));
+    Array<uint8_t> pixels = renderPaint(f.tree, 8, 8);
+    CHECK(!prLayoutTreePaintsPending(f.tree));
+    CHECK(pixel(pixels, 8, 1, 1) == "0 0 0 0");
+    CHECK(pixel(pixels, 8, 1, 5) == "0 0 0 0");
+    CHECK(verified(f.tree));
+}
+
+TEST_CASE("a paint holds the source of each image that it draws, and so keeps the image's texture in the cache") {
+    Fixture f;
+    // A cache with a budget of zero evicts, at each trim, every texture whose source only the cache holds.
+    PrTextureCacheDesc desc = prTextureCacheDescDefault(harnessMemoryDevice());
+    desc.budget = 0;
+    PrTextureCache* cache = prTextureCacheCreate(&desc);
+    prLayoutTreeSetTextures(f.tree, cache);
+    const uint8_t red[4] = {255, 0, 0, 255};
+    const uint8_t blue[4] = {0, 0, 255, 255};
+    const PrTextureSource* content =
+        prTextureSourceCreateCopy(PrPixelView{red, 4, {1, 1}}, PrPixelFormat_Rgba8, PrTextureAlpha_None);
+    const PrTextureSource* backdrop =
+        prTextureSourceCreateCopy(PrPixelView{blue, 4, {1, 1}}, PrPixelFormat_Rgba8, PrTextureAlpha_None);
+    PrLayoutNode root = f.element(kPrLayoutNodeNone, block());
+    PrLayoutBoxStyle box = block();
+    box.width = prLayoutLengthPx(4);
+    box.height = prLayoutLengthPx(4);
+    PrLayoutNode shown = replaced(f, root, box, natural(4, 4));
+    PrLayoutContent image{};
+    image.kind = PrLayoutContentKind_Image;
+    image.image = content;
+    prLayoutNodeSetContent(f.tree, shown, &image);
+    PrLayoutBackgroundLayer layer = prLayoutBackgroundLayerDefault();
+    layer.kind = PrLayoutImageKind_Image;
+    layer.image = backdrop;
+    layer.natural = natural(4, 4);
+    PrLayoutNode backed = backgroundBox(f, root, 4, 4, &layer, 1);
+    // The test keeps its reference to the background's image, to count the image's references.
+    prTextureSourceRelease(content);
+    f.layout(px(8, 8));
+    PrDrawList* kept = prDrawListCreate();
+    prLayoutTreePaint(f.tree, kept);
+    CHECK(prTextureCacheInfo(cache).textures == 2);
+
+    // The tree lets go of the content's image and of the box with the background, and its next paints draw neither.
+    PrLayoutContent none{};
+    prLayoutNodeSetContent(f.tree, shown, &none);
+    prLayoutTreeErase(f.tree, backed);
+    f.layout(px(8, 8));
+    for (uint32_t i = 0; i < 2; ++i) {
+        Array<uint8_t> pixels = renderPaint(f.tree, 8, 8);
+        CHECK(pixel(pixels, 8, 1, 1) == "0 0 0 0");
+        CHECK(pixel(pixels, 8, 1, 5) == "0 0 0 0");
+        prTextureCacheTrim(cache);
+    }
+
+    // The kept paint still holds the content's image, so the trims did not evict its texture, and it draws both images.
+    CHECK(prTextureCacheInfo(cache).textures == 2);
+    Array<uint8_t> pixels = renderList(kept, 8, 8);
+    CHECK(pixel(pixels, 8, 1, 1) == "255 0 0 255");
+    CHECK(pixel(pixels, 8, 1, 5) == "0 0 255 255");
+
+    // Freeing the kept paint lets go of both images. Only the cache then holds the content's image.
+    uint32_t held = prTextureSourceReferences(backdrop);
+    prDrawListRelease(kept);
+    CHECK(prTextureSourceReferences(backdrop) < held);
+    prTextureCacheTrim(cache);
+    prTextureCacheTrim(cache);
+    CHECK(prTextureCacheInfo(cache).textures == 1);
+    prTextureSourceRelease(backdrop);
+    prLayoutTreeSetTextures(f.tree, nullptr);
+    prTextureCacheDestroy(cache);
 }
 
 TEST_CASE("a background is painted within the box background-clip names, and an outline outside the border box") {
@@ -1814,9 +2017,8 @@ TEST_CASE("the root's background layers cover the canvas, placed by the root's b
 TEST_CASE("an image background repeats its texels at its natural size") {
     Fixture f;
     const uint8_t texels[8] = {255, 0, 0, 255, 0, 0, 255, 255};
-    PrDrawImageDesc desc{PrPixelView{texels, 8, {2, 1}}, PrPixelFormat_Rgba8, PrDrawAlpha_Straight, PrColorSpace_Srgb};
-    const PrDrawImage* image = nullptr;
-    REQUIRE(prDrawImageCreate(&desc, &image) == PrStatus_Ok);
+    const PrTextureSource* image =
+        prTextureSourceCreateCopy(PrPixelView{texels, 8, {2, 1}}, PrPixelFormat_Rgba8, PrTextureAlpha_Straight);
     PrLayoutBackgroundLayer layer = prLayoutBackgroundLayerDefault();
     layer.kind = PrLayoutImageKind_Image;
     layer.image = image;
@@ -1825,7 +2027,7 @@ TEST_CASE("an image background repeats its texels at its natural size") {
     layer.repeatY = PrLayoutBackgroundRepeat_NoRepeat;
     PrLayoutNode root = f.element(kPrLayoutNodeNone, block());
     backgroundBox(f, root, 40, 20, &layer, 1);
-    prDrawImageRelease(image);
+    prTextureSourceRelease(image);
     f.layout(px(40, 40));
     Array<uint8_t> pixels = render(f.tree, 40, 40);
     CHECK(pixel(pixels, 40, 5, 5) == "255 0 0 255");

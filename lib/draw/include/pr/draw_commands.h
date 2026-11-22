@@ -102,8 +102,8 @@ struct PrDrawCommand {
             const PrDrawNineSlice* slices;
         } nineSlice;                            // NineSlice
         struct {
-            const PrDrawImage* image;
-            PrIVec2 origin;                  // the target point of the image's top left
+            PrDrawSource source;             // a Texture source
+            PrIVec2 origin;                  // the target point of the top left of the source's rect
         } writePixels;                          // WritePixels
         const PrFontGlyphRun* glyphs;           // Glyphs
         struct {

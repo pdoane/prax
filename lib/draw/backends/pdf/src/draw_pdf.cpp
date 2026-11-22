@@ -51,7 +51,7 @@ struct PdfFont {
 
 // An image that the document holds once, however many times it is drawn.
 struct PdfImage {
-    uint64_t id;
+    DrawSharedImageKey key;
     uint32_t object;
 };
 
@@ -172,7 +172,7 @@ struct PdfWriter : PrDrawWriter {
     RawArray<PdfFont> fonts;
     KeyIndex fontIndex;
     RawArray<PdfImage> images;
-    KeyIndex imageIndex;
+    HashIndex imageIndex;               // `images`, by the hash of the key
     RawArray<PdfState> states;
     RawArray<uint32_t> patterns;        // by pattern: its object
     RawArray<uint32_t> forms;           // by form: its object
@@ -863,13 +863,19 @@ void pdfStroke(void* PR_NULLABLE context, const PrPath* path, const PrDrawStroke
 }
 
 // Returns the index of the image's object, which is written the first time that the image is drawn.
-uint32_t imageObject(PdfWriter& p, const PrDrawImage* image) {
-    uint64_t id = prDrawImageId(image);
-    uint32_t found = p.imageIndex.find(id, [&](uint32_t at) { return p.images.data[at].id; });
+uint32_t imageObject(PdfWriter& p, const DrawSharedImage& image) {
+    const DrawSharedImageKey& key = image.key;
+    uint32_t hash = drawSharedImageKeyHash(key);
+    uint32_t found = kHashMissing;
+    if (key.texture.id != 0) {
+        found = p.imageIndex.find(hash, [&](uint32_t at) {
+            return drawSharedImageKeyEquals(p.images.data[at].key, key);
+        });
+    }
     if (found != kHashMissing)
         return found;
     found = p.images.count;
-    PrUVec2 extent = prDrawImageExtent(image);
+    PrUVec2 extent = image.pixels.extent;
     RawArray<uint8_t> rgba;
     bool translucent = drawSharedImageRgba8(image, rgba);
     uint32_t pixels = extent.x * extent.y;
@@ -908,16 +914,17 @@ uint32_t imageObject(PdfWriter& p, const PrDrawImage* image) {
     writeStream(p, object, PrStringView{dictionary.data, dictionary.size}, rgb.data, pixels * 3);
     prTextBufferReset(&dictionary);
     rgb.reset();
-    p.images.push(PdfImage{id, object});
-    p.imageIndex.insert(id, found);
+    p.images.push(PdfImage{.key = key, .object = object});
+    if (key.texture.id != 0)
+        p.imageIndex.insert(hash, found);
     return found;
 }
 
-void pdfImage(void* PR_NULLABLE context, const PrDrawImage* image, PrRect source, PrRect destination,
+void pdfImage(void* PR_NULLABLE context, const DrawSharedImage& image, PrRect source, PrRect destination,
         PrAffine2 transform, float opacity) {
     PdfWriter& p = *static_cast<PdfWriter*>(context);
     uint32_t index = imageObject(p, image);
-    PrUVec2 extent = prDrawImageExtent(image);
+    PrUVec2 extent = image.pixels.extent;
     float sx = (destination.right - destination.left) / (source.right - source.left);
     float sy = (destination.bottom - destination.top) / (source.bottom - source.top);
     if (!prF32IsFinite(sx) || !prF32IsFinite(sy))
@@ -2596,6 +2603,6 @@ PrDrawWriter* prDrawPdfCreate(const PrDrawWriterOptions* PR_NULLABLE options) {
         .pushMark = pdfPushMark,
         .popMark = pdfPopMark,
     };
-    drawSharedWalkerInit(p->walker, ops, p->options.glyphDecoder, p->options.rasterScale);
+    drawSharedWalkerInit(p->walker, ops, p->options.device, p->options.glyphDecoder, p->options.rasterScale);
     return p;
 }

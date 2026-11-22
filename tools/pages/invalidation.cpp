@@ -37,6 +37,7 @@
 #include "pr/text_harfbuzz.h"
 
 #include "tools/harness/harness.h"
+#include "tools/harness/harness_textures.h"
 #include "tools/shell/page_host.h"
 
 #include <memory>
@@ -237,6 +238,8 @@ int main(int argc, char** argv) {
     }
     std::unique_ptr<PrTextShaper, decltype(&prTextShaperDestroy)> shaper(prTextHarfBuzzCreate(), prTextShaperDestroy);
     PageHost host(shaper.get(), nullptr, nullptr);
+    // The pages' images draw. They are realized in memory when they are first drawn.
+    host.setTextures(harnessMemoryTextures());
     if (restyleThreads >= 0)
         host.setRestyleThreads(uint32_t(restyleThreads));
     host.disableScripts();

@@ -41,21 +41,17 @@ Array<Caption>& pendingCaptions() {
     return captions;
 }
 
-const PrDrawImage* cachedCard = nullptr;
-const PrDrawImage* cachedFrame = nullptr;
-const PrDrawImage* cachedTile = nullptr;
-const PrDrawImage* cachedDecoded = nullptr;
+const PrTextureSource* cachedCard = nullptr;
+const PrTextureSource* cachedFrame = nullptr;
+const PrTextureSource* cachedTile = nullptr;
+const PrTextureSource* cachedDecoded = nullptr;
 PrDrawList* cachedMotif = nullptr;
 
-const PrDrawImage* imageOf(const Array<uint8_t>& rgba, uint32_t width, uint32_t height,
-        PrDrawAlpha alpha = PrDrawAlpha_Straight) {
-    PrDrawImageDesc desc{
-        PrPixelView{rgba.data(), size_t(width) * 4, {width, height}}, PrPixelFormat_Rgba8, alpha,
-        PrColorSpace_Srgb,
-    };
-    const PrDrawImage* image = nullptr;
-    prDrawImageCreate(&desc, &image);
-    return image;
+// Returns an image that holds a copy of the pixels. The library makes the image once and keeps it for every drawing
+// that shows the pixels.
+const PrTextureSource* imageOf(const Array<uint8_t>& rgba, uint32_t width, uint32_t height,
+        PrTextureAlpha alpha = PrTextureAlpha_Straight) {
+    return prTextureSourceCreateCopy(PrPixelView{rgba.data(), size_t(width) * 4, {width, height}}, PrPixelFormat_Rgba8, alpha);
 }
 
 void put(Array<uint8_t>& rgba, uint32_t width, uint32_t x, uint32_t y, uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
@@ -112,6 +108,7 @@ PrTextGlyphBuffer* glyphBuffer;
 PrTextShaper* currentShaper = nullptr;
 PrFontHinter* currentHinter = nullptr;
 PrAppDisplay currentDisplay = prAppDisplayDefault();
+PrTextureCache* currentTextures = nullptr;
 
 // Returns the key that names a derivation of a file among the loaded fonts.
 String keyOf(const char* file, const PrFontDerivation& d) {
@@ -152,15 +149,17 @@ void drawCaptions(PrDrawList* list) {
 } // namespace
 
 void drawDrawing(const Drawing& drawing, PrDrawList* list, PrTextShaper* shaper, PrFontHinter* PR_NULLABLE hinter,
-        const PrAppDisplay& display, float width, float height, double time) {
+        const PrAppDisplay& display, PrTextureCache* PR_NULLABLE textures, float width, float height, double time) {
     currentShaper = shaper;
     currentHinter = hinter;
     currentDisplay = display;
+    currentTextures = textures;
     drawing.draw(list, width, height, time);
     drawCaptions(list);
     currentShaper = nullptr;
     currentHinter = nullptr;
     currentDisplay = prAppDisplayDefault();
+    currentTextures = nullptr;
 }
 
 PrTextShaper* drawingShaper() {
@@ -175,17 +174,32 @@ const PrAppDisplay& drawingDisplay() {
     return currentDisplay;
 }
 
+PrTextureCache* PR_NULLABLE drawingTextures() {
+    return currentTextures;
+}
+
+PrDrawSource imageSource(const PrTextureSource* image, PrRect rect, PrDrawSampling sampling) {
+    PrTextureCacheFlags flags = PrTextureCacheFlags(
+        (sampling & PrDrawSamplingFlag_Kind) == PrDrawSampling_Mipmap ? PrTextureCacheFlag_Levels : 0);
+    PrTextureRegion realized{};
+    if (currentTextures == nullptr ||
+            prTextureCacheWait(currentTextures, image, prTextureCacheAskEncoded(flags), &realized) !=
+            PrTextureCacheState_Ready)
+        return PrDrawSource{};
+    return prDrawSourceRegion(&realized, rect, 0);
+}
+
 void caption(PrRect band, PrStringView text) {
     pendingCaptions().push(Caption{band, text, true, 11, kGray});
 }
 
-const PrDrawImage* testCard() {
+const PrTextureSource* testCard() {
     if (cachedCard == nullptr)
         cachedCard = imageOf(testCardPixels(), kTestCardSize, kTestCardSize);
     return cachedCard;
 }
 
-const PrDrawImage* frameImage() {
+const PrTextureSource* frameImage() {
     if (cachedFrame != nullptr)
         return cachedFrame;
     // A frame with 12-pixel corners marked with dots, striped edges and a soft center.
@@ -213,7 +227,7 @@ const PrDrawImage* frameImage() {
     return cachedFrame;
 }
 
-const PrDrawImage* smallTile() {
+const PrTextureSource* smallTile() {
     if (cachedTile != nullptr)
         return cachedTile;
     const uint32_t size = kSmallTileSize;
@@ -231,7 +245,7 @@ const PrDrawImage* smallTile() {
     return cachedTile;
 }
 
-const PrDrawImage* PR_NULLABLE decodedCard() {
+const PrTextureSource* PR_NULLABLE decodedCard() {
     if (cachedDecoded != nullptr)
         return cachedDecoded;
     Array<uint8_t> rgba = testCardPixels();
@@ -249,7 +263,7 @@ const PrDrawImage* PR_NULLABLE decodedCard() {
     if (prImageDecoderOpen(decoder, source, nullptr) == PrStatus_Ok &&
             prImageDecoderReadRgba8(decoder, 0, PrImageAlpha_Premultiplied, PrImageOrientation_Identity,
                 PrPixels{decoded.data(), kTestCardSize * 4, {kTestCardSize, kTestCardSize}}) == PrStatus_Ok)
-        cachedDecoded = imageOf(decoded, kTestCardSize, kTestCardSize, PrDrawAlpha_Premultiplied);
+        cachedDecoded = imageOf(decoded, kTestCardSize, kTestCardSize, PrTextureAlpha_Premultiplied);
     prImageDecoderDestroy(decoder);
     prImageCodecSetDestroy(imageCodec);
     prCompressCodecSetDestroy(compressCodec);
@@ -273,10 +287,10 @@ PrDrawList* motif() {
 }
 
 void releaseDrawingImages() {
-    prDrawImageRelease(cachedCard);
-    prDrawImageRelease(cachedFrame);
-    prDrawImageRelease(cachedTile);
-    prDrawImageRelease(cachedDecoded);
+    prTextureSourceRelease(cachedCard);
+    prTextureSourceRelease(cachedFrame);
+    prTextureSourceRelease(cachedTile);
+    prTextureSourceRelease(cachedDecoded);
     prDrawListRelease(cachedMotif);
     cachedCard = cachedFrame = cachedTile = cachedDecoded = nullptr;
     cachedMotif = nullptr;

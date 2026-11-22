@@ -346,7 +346,7 @@ void strokedAndPainted(PrDrawList* list, float width, float, double) {
     drawText(list, brushed, "Sunset", cellOrigin(4));
 
     PrDrawBrush tiles = prDrawBrushDefault(PrDrawBrushKind_Image);
-    tiles.image.source = prDrawSourceImage(testCard(), PrRect{0, 0, 64, 64});
+    tiles.image.source = imageSource(testCard(), PrRect{0, 0, 64, 64});
     tiles.image.tiles.tile = PrRect{0, 0, 32, 32};
     tiles.image.tiles.x = PrDrawExtend_Repeat;
     tiles.image.tiles.y = PrDrawExtend_Repeat;

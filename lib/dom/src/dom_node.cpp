@@ -263,8 +263,7 @@ void releaseNode(PrDomNode* node) {
                 prRawStringReset(&element->state->prefix);
                 prRawStringReset(&element->state->returnValue);
                 prRawStringReset(&element->state->imageUrl);
-                prDrawImageRelease(element->state->picture);
-                prDrawImageRelease(element->state->storedPicture);
+                prTextureSourceRelease(element->state->picture);
                 prLayoutPainterRelease(element->state->vector);
                 if (DomSlot* slot = element->state->slot) {
                     slot->assigned.reset();

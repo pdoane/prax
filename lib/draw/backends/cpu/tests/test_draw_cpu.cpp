@@ -1,15 +1,18 @@
 #include "pr/array.h"
+#include "pr/color_space.h"
 #include "pr/draw_cpu.h"
 #include "pr/draw_filter.h"
 #include "pr/float.h"
 #include "pr/gpu.h"
 #include "pr/gpu_select.h"
+#include "pr/mem.h"
 #include "pr/min_max.h"
 #include "pr/span.h"
 #include "pr/string.h"
 #include "pr/vec.h"
 
 #include "tools/harness/harness_gpu.h"
+#include "tools/harness/harness_textures.h"
 
 #include "tools/harness/test.h"
 
@@ -22,6 +25,22 @@ namespace pr_impl {
 namespace {
 
 using namespace pr;
+
+// Returns a cpu renderer on the memory device that the tests' textures are on (harnessMemoryDevice).
+PrDrawRenderer* memoryRenderer() {
+    PrDrawCpuOptions options = prDrawCpuOptionsDefault();
+    options.device = harnessMemoryDevice();
+    return prDrawCpuCreate(&options);
+}
+
+// Creates a texture of Rgba8 texels on the shared memory device. The caller releases the texture.
+PrGpuTexture memoryTexture(PrPixelView texels) {
+    PrGpuTextureDesc desc = prGpuTextureDesc2d(PrGpuFormat_Rgba8, texels.extent, PrGpuTextureUsageFlag_Sampled);
+    PrGpuTexture texture{};
+    REQUIRE(prGpuTextureCreate(harnessMemoryDevice(), &desc, &texture) == PrStatus_Ok);
+    prGpuTextureWrite(harnessMemoryDevice(), texture, PrIVec2{0, 0}, texels);
+    return texture;
+}
 
 // Records a rectangle filled with the source placed over it.
 void drawImageRect(PrDrawList* list, const PrDrawSource& source, PrRect destination, PrDrawSampling sampling) {
@@ -44,7 +63,7 @@ Target target(uint32_t width, uint32_t height, PrPixelFormat format = PrPixelFor
 }
 
 PrStatus render(Target& t, const PrDrawList* list) {
-    PrDrawRenderer* renderer = prDrawCpuCreate(nullptr);
+    PrDrawRenderer* renderer = memoryRenderer();
     PrStatus status = prDrawRendererRenderPixels(renderer, list, t.pixels, t.format);
     prDrawRendererDestroy(renderer);
     return status;
@@ -227,7 +246,7 @@ TEST_CASE("a part of a list renders as its commands do in place") {
     PrDrawTransform root = prDrawTransformFromAffine2(prAffine2Identity());
     PrDrawPart part{.first = 2, .count = 3, .transform = prDrawTransformPush(&root, &commands[0])};
     Target t = target(8, 1);
-    PrDrawRenderer* renderer = prDrawCpuCreate(nullptr);
+    PrDrawRenderer* renderer = memoryRenderer();
     CHECK(prDrawRendererRenderPartPixels(renderer, list, &part, t.pixels, t.format) == PrStatus_Ok);
     prDrawRendererDestroy(renderer);
     CHECK(alphaRow(t, 0) == "0 0 0 0 128 128 0 0");
@@ -419,7 +438,7 @@ TEST_CASE("blend modes mix the colors before compositing") {
 }
 
 TEST_CASE("a render larger than the limit is refused") {
-    PrDrawRenderer* renderer = prDrawCpuCreate(nullptr);
+    PrDrawRenderer* renderer = memoryRenderer();
     PrDrawList* list = prDrawListCreate();
     PrGpuDevice* device = prDrawRendererDevice(renderer);
     PrGpuCommands* commands = nullptr;
@@ -470,13 +489,14 @@ TEST_CASE("a gradient brush paints each pixel at its center's parameter") {
 TEST_CASE("an image maps its texels onto the destination") {
     Target t = target(4, 2);
     const uint8_t texels[8] = {255, 0, 0, 255, 0, 0, 255, 255};
-    PrDrawImageDesc desc{PrPixelView{texels, 8, {2, 1}}, PrPixelFormat_Rgba8, PrDrawAlpha_Straight, PrColorSpace_Srgb};
-    const PrDrawImage* image = nullptr;
-    REQUIRE(prDrawImageCreate(&desc, &image) == PrStatus_Ok);
+    const PrTextureSource* image =
+        prTextureSourceCreateCopy(PrPixelView{texels, 8, {2, 1}}, PrPixelFormat_Rgba8, PrTextureAlpha_Straight);
     PrDrawList* list = prDrawListCreate();
-    PrDrawSource source = prDrawSourceImage(image, PrRect{0, 0, 2, 1});
+    PrDrawSource source = harnessMemoryImage(image, PrRect{0, 0, 2, 1});
     drawImageRect(list, source, PrRect{0, 0, 4, 2}, PrDrawSampling_Nearest);
-    prDrawImageRelease(image);
+    // The list keeps the image's region in the cache after the test lets go of the image.
+    prDrawListHoldSource(list, image);
+    prTextureSourceRelease(image);
     render(t, list);
     CHECK(pixel(t, 1, 1) == "255 0 0 255");
     CHECK(pixel(t, 2, 0) == "0 0 255 255");
@@ -486,16 +506,12 @@ TEST_CASE("an image maps its texels onto the destination") {
 TEST_CASE("copies filtered on their own read their own edge texels, and paint nothing between them") {
     // Red and blue texels, magnified so that the filter at each copy's edge reaches past it.
     const uint8_t texels[8] = {255, 0, 0, 255, 0, 0, 255, 255};
-    PrDrawImageDesc desc{
-        PrPixelView{texels, 8, {2, 1}}, PrPixelFormat_Rgba8, PrDrawAlpha_Premultiplied,
-        PrColorSpace_Srgb,
-    };
-    const PrDrawImage* image = nullptr;
-    REQUIRE(prDrawImageCreate(&desc, &image) == PrStatus_Ok);
+    const PrTextureSource* image =
+        prTextureSourceCreateCopy(PrPixelView{texels, 8, {2, 1}}, PrPixelFormat_Rgba8, PrTextureAlpha_Premultiplied);
     auto draw = [&](PrDrawTileFlags flags, float spacing) {
         Target t = target(12, 1);
         PrDrawList* list = prDrawListCreate();
-        PrDrawBrush brush = prDrawBrushImage(prDrawSourceImage(image, PrRect{0, 0, 2, 1}), PrRect{0, 0, 4, 1},
+        PrDrawBrush brush = prDrawBrushImage(harnessMemoryImage(image, PrRect{0, 0, 2, 1}), PrRect{0, 0, 4, 1},
             PrDrawSampling_Linear);
         brush.image.tiles.x = PrDrawExtend_Repeat;
         brush.image.tiles.spacing = PrVec2{spacing, 0};
@@ -517,7 +533,7 @@ TEST_CASE("copies filtered on their own read their own edge texels, and paint no
     CHECK(pixel(spaced, 3, 0) == "0 0 255 255");
     CHECK(pixel(spaced, 4, 0) == "0 0 0 0");
     CHECK(pixel(spaced, 6, 0) == "255 0 0 255");
-    prDrawImageRelease(image);
+    prTextureSourceRelease(image);
 }
 
 TEST_CASE("an embedded list plays as if its commands were recorded in its place, moved by its offset") {
@@ -689,24 +705,70 @@ TEST_CASE("a filter moves a group's contents") {
 TEST_CASE("written pixels ignore transforms, clips and compositing") {
     Target t = target(3, 1);
     const uint8_t texels[4] = {10, 20, 30, 40};
-    PrDrawImageDesc desc{
-        PrPixelView{texels, 4, {1, 1}}, PrPixelFormat_Rgba8, PrDrawAlpha_Premultiplied,
-        PrColorSpace_Srgb,
-    };
-    const PrDrawImage* image = nullptr;
-    REQUIRE(prDrawImageCreate(&desc, &image) == PrStatus_Ok);
+    const PrTextureSource* image =
+        prTextureSourceCreateCopy(PrPixelView{texels, 4, {1, 1}}, PrPixelFormat_Rgba8, PrTextureAlpha_Premultiplied);
     PrDrawList* list = prDrawListCreate();
     prDrawListClearRect(list, PrRect{0, 0, 64, 64}, kWhite);
     prDrawListPushTransformAffine2(list, prAffine2Scale(PrVec2{5, 5}));
     prDrawListPushClipRect(list, PrRect{0, 0, 0.1f, 0.1f}, PrDrawEdges_Antialiased);
-    prDrawListWritePixels(list, image, PrIVec2{1, 0});
+    prDrawListWritePixels(list, harnessMemoryImage(image, PrRect{0, 0, 1, 1}), PrIVec2{1, 0});
     prDrawListPopClip(list);
     prDrawListPopTransform(list);
-    prDrawImageRelease(image);
+    prDrawListHoldSource(list, image);
+    prTextureSourceRelease(image);
     render(t, list);
     CHECK(pixel(t, 1, 0) == "10 20 30 40");
     CHECK(pixel(t, 2, 0) == "255 255 255 255");
     prDrawListRelease(list);
+}
+
+TEST_CASE("a write of pixels takes only the whole texels of its rect that lie inside the texture") {
+    const uint8_t texels[8] = {10, 20, 30, 40, 50, 60, 70, 80};
+    PrGpuTexture texture = memoryTexture(PrPixelView{texels, 8, {2, 1}});
+    auto write = [&](PrRect rect) {
+        Target t = target(4, 1);
+        PrDrawList* list = prDrawListCreate();
+        prDrawListClearRect(list, PrRect{0, 0, 4, 1}, kWhite);
+        PrTexture drawn{.texture = texture, .alpha = PrTextureAlpha_Premultiplied};
+        prDrawListWritePixels(list, prDrawSourceTexture(drawn, PrUVec2{2, 1}, rect), PrIVec2{0, 0});
+        render(t, list);
+        prDrawListRelease(list);
+        return t;
+    };
+    // A rect that starts one texel before the texture and ends one texel past it writes the two texels between.
+    Target past = write(PrRect{-1, 0, 3, 1});
+    CHECK(pixel(past, 0, 0) == "255 255 255 255");
+    CHECK(pixel(past, 1, 0) == "10 20 30 40");
+    CHECK(pixel(past, 2, 0) == "50 60 70 80");
+    CHECK(pixel(past, 3, 0) == "255 255 255 255");
+    // A rect that starts between texels starts at the texel that holds its top left, here the one before the texture.
+    Target between = write(PrRect{-0.5f, 0, 1.5f, 1});
+    CHECK(pixel(between, 0, 0) == "255 255 255 255");
+    CHECK(pixel(between, 1, 0) == "10 20 30 40");
+    CHECK(pixel(between, 2, 0) == "255 255 255 255");
+    // A rect that misses the texture writes nothing.
+    Target missed = write(PrRect{2, 0, 4, 1});
+    CHECK(pixel(missed, 0, 0) == "255 255 255 255");
+    prGpuTextureRelease(harnessMemoryDevice(), texture);
+}
+
+TEST_CASE("a texture without alpha draws opaque, whatever its alpha channel stores") {
+    // Red with a stored alpha of zero, and blue with a stored alpha of a half.
+    const uint8_t texels[8] = {255, 0, 0, 0, 0, 0, 255, 128};
+    PrGpuTexture texture = memoryTexture(PrPixelView{texels, 8, {2, 1}});
+    PrTexture drawn{.texture = texture, .alpha = PrTextureAlpha_None};
+    PrDrawSource source = prDrawSourceTexture(drawn, PrUVec2{2, 1}, PrRect{0, 0, 2, 1});
+    Target t = target(4, 2);
+    PrDrawList* list = prDrawListCreate();
+    drawImageRect(list, source, PrRect{0, 0, 4, 1}, PrDrawSampling_Nearest);
+    prDrawListWritePixels(list, source, PrIVec2{0, 1});
+    render(t, list);
+    CHECK(pixel(t, 0, 0) == "255 0 0 255");
+    CHECK(pixel(t, 3, 0) == "0 0 255 255");
+    CHECK(pixel(t, 0, 1) == "255 0 0 255");
+    CHECK(pixel(t, 1, 1) == "0 0 255 255");
+    prDrawListRelease(list);
+    prGpuTextureRelease(harnessMemoryDevice(), texture);
 }
 
 TEST_CASE("nothing draws under a transform that collapses as it composes, until its pop") {
@@ -1348,16 +1410,10 @@ TEST_CASE("a half-float render keeps colors past white through paint, groups and
     prDrawListRect(list, PrRect{8, 0, 16, 8}, {.brush = &gradient});
     PrFloat16 texels[4 * 4];
     for (uint32_t i = 0; i < 16; ++i)
-        texels[i] = prFloat16FromFloat(i % 4 < 3 ? 2.0f : 1.0f);
-    PrDrawImageDesc desc{
-        .pixels = PrPixelView{reinterpret_cast<const uint8_t*>(texels), 16, {2, 2}},
-        .format = PrPixelFormat_RgbaF16,
-        .alpha = PrDrawAlpha_Premultiplied,
-        .space = PrColorSpace_Srgb,
-    };
-    const PrDrawImage* image = nullptr;
-    REQUIRE(prDrawImageCreate(&desc, &image) == PrStatus_Ok);
-    drawImageRect(list, prDrawSourceImage(image, PrRect{0, 0, 2, 2}), PrRect{16, 0, 24, 8}, PrDrawSampling_Nearest);
+        texels[i] = prFloat16FromFloat(i % 4 < 3 ? prColorTransferDecode(PrColorTransfer_Srgb, 2) : 1.0f);
+    const PrTextureSource* image = prTextureSourceCreateCopy(PrPixelView{reinterpret_cast<const uint8_t*>(texels), 16, {2, 2}},
+        PrPixelFormat_RgbaF16, PrTextureAlpha_Premultiplied);
+    drawImageRect(list, harnessMemoryImage(image, PrRect{0, 0, 2, 2}), PrRect{16, 0, 24, 8}, PrDrawSampling_Nearest);
     PrDrawGroup half = prDrawGroupDefault();
     half.opacity = 0.5f;
     prDrawListPushGroup(list, &half);
@@ -1380,7 +1436,7 @@ TEST_CASE("a half-float render keeps colors past white through paint, groups and
     constexpr uint32_t kWidth = 48;
     Array<PrFloat16> wide(size_t(kWidth) * 8 * 4);
     PrPixels pixels{reinterpret_cast<uint8_t*>(wide.data()), size_t(kWidth) * 8, {kWidth, 8}};
-    PrDrawRenderer* renderer = prDrawCpuCreate(nullptr);
+    PrDrawRenderer* renderer = memoryRenderer();
     auto at = [&](uint32_t column) {
         const PrFloat16* p = wide.data() + (size_t(4) * kWidth + column * 8 + 4) * 4;
         return PrColor(PrColor16{p[0], p[1], p[2], p[3]});
@@ -1413,7 +1469,7 @@ TEST_CASE("a half-float render keeps colors past white through paint, groups and
 
     // An image brush with a limit scales its texels down to it in linear light.
     PrDrawList* limited = prDrawListCreate();
-    PrDrawBrush capped = prDrawBrushImage(prDrawSourceImage(image, PrRect{0, 0, 2, 2}), PrRect{0, 0, 48, 8},
+    PrDrawBrush capped = prDrawBrushImage(harnessMemoryImage(image, PrRect{0, 0, 2, 2}), PrRect{0, 0, 48, 8},
         PrDrawSampling_Nearest);
     capped.image.limit = 1.5f;
     prDrawListRect(limited, PrRect{0, 0, 48, 8}, {.brush = &capped});
@@ -1430,7 +1486,7 @@ TEST_CASE("a half-float render keeps colors past white through paint, groups and
     CHECK(pixel(t, 4, 4) == "255 255 128 255");
     prDrawRendererDestroy(renderer);
     prDrawFilterRelease(filter);
-    prDrawImageRelease(image);
+    prTextureSourceRelease(image);
     prDrawListRelease(list);
 }
 
@@ -1447,12 +1503,7 @@ TEST_CASE("a group draws into the host's pixels, which keep each revision's cont
     REQUIRE(prGpuTextureCreateOverPixels(device, PrGpuFormat_Rgba8, held.pixels,
         PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_RenderTarget, &texture) == PrStatus_Ok);
     uint64_t drawn = 0;
-    PrDrawGroupLayer layer{
-        .texture = prDrawGpuTexture(texture),
-        .extent = {4, 4},
-        .drawn = &drawn,
-        .sampling = PrDrawSampling_Nearest,
-    };
+    PrDrawGroupLayer layer{.texture = texture, .extent = {4, 4}, .drawn = &drawn, .sampling = PrDrawSampling_Nearest};
     // A list of revisions `first` to `last` of a group whose bounds cover the target. Revision 1 replaces the pixels
     // with red, and each later one draws half-opaque blue over the left half, which would darken if it drew twice.
     auto list = [&](uint64_t first, uint64_t last) {
@@ -1517,8 +1568,8 @@ TEST_CASE("a texture of the device draws as a source, read in place, and again a
     prGpuTextureWrite(device, texture, PrIVec2{0, 0}, PrPixelView{bgra, 8, PrUVec2{2, 1}});
 
     PrDrawList* list = prDrawListCreate();
-    PrDrawSource source = prDrawSourceTexture(prDrawGpuTexture(texture), PrUVec2{2, 1}, PrRect{0, 0, 2, 1},
-        PrDrawAlpha_Opaque);
+    PrDrawSource source =
+        prDrawSourceTexture(PrTexture{.texture = texture, .alpha = PrTextureAlpha_None}, PrUVec2{2, 1}, PrRect{0, 0, 2, 1});
     PrDrawBrush brush = prDrawBrushImage(source, PrRect{0, 0, 4, 2}, PrDrawSampling_Nearest);
     prDrawListRect(list, PrRect{0, 0, 4, 2}, {.brush = &brush});
     Target t = target(4, 2);
@@ -1536,4 +1587,58 @@ TEST_CASE("a texture of the device draws as a source, read in place, and again a
     prGpuTextureRelease(device, texture);
     prDrawRendererDestroy(renderer);
     prGpuDeviceDestroy(device);
+}
+
+// A solid color that a test can change. Its source makes the texels again for each read, and counts the reads.
+struct Painted {
+    uint8_t color[4];
+    uint32_t reads;
+
+    // Returns a source of the color over `extent`. Each read of the source takes the color as it is at the time of the
+    // read.
+    const PrTextureSource* source(PrUVec2 extent) {
+        PrTextureSourceDesc desc{
+            .texture = prTextureDesc2d(PrGpuFormat_Rgba8, extent, PrTextureAlpha_Premultiplied),
+            .read = [](void* PR_NULLABLE context, PrTextureRead* read) {
+                Painted* held = static_cast<Painted*>(context);
+                ++held->reads;
+                const PrTextureDesc* texture = prTextureSourceDesc(prTextureReadSource(read));
+                size_t size = prTextureReadSize(texture, prTextureReadInfo(read));
+                uint8_t* texels = prTextureReadStorage(read);
+                for (size_t i = 0; i < size; i += 4)
+                    prMemCopy(texels + i, held->color, 4);
+                prTextureReadComplete(read, PrStatus_Ok);
+            },
+            .context = this,
+        };
+        return prTextureSourceCreate(&desc);
+    }
+};
+
+TEST_CASE("an owner that changes the texels of a callback source provides a new source, which the renderer draws") {
+    Painted painted{{255, 0, 0, 255}, 0};
+    PrDrawRenderer* renderer = memoryRenderer();
+    Target t = target(8, 8);
+    auto draw = [&](const PrTextureSource* image) {
+        PrDrawList* list = prDrawListCreate();
+        drawImageRect(list, harnessMemoryImage(image, PrRect{0, 0, 2, 2}), PrRect{0, 0, 8, 8}, PrDrawSampling_Nearest);
+        REQUIRE(prDrawRendererRenderPixels(renderer, list, t.pixels, t.format) == PrStatus_Ok);
+        prDrawListRelease(list);
+    };
+    const PrTextureSource* first = painted.source(PrUVec2{2, 2});
+    draw(first);
+    CHECK(pixel(t, 3, 3) == "255 0 0 255");
+    // A source is immutable, so the owner provides its changed texels as another source, and the renderer reads that
+    // source. The old source is freed with its last reference.
+    painted.color[0] = 0;
+    painted.color[2] = 255;
+    const PrTextureSource* changed = painted.source(PrUVec2{2, 2});
+    prTextureSourceRelease(first);
+    draw(changed);
+    CHECK(pixel(t, 3, 3) == "0 0 255 255");
+    CHECK(painted.reads == 2);
+    draw(changed);
+    CHECK(painted.reads == 2);
+    prTextureSourceRelease(changed);
+    prDrawRendererDestroy(renderer);
 }

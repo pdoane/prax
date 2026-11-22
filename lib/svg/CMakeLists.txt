@@ -17,7 +17,7 @@ pr_library(svg INCLUDE include
     src/svg_text.cpp
     src/svg_tree.cpp
 )
-target_link_libraries(pr_svg PUBLIC prax::dom prax::css  prax::draw prax::text prax::font prax::layout
+target_link_libraries(pr_svg PUBLIC prax::texture prax::dom prax::css  prax::draw prax::text prax::font prax::layout
                                     prax::color prax::compress prax::image
                              PRIVATE prax::core_cpp prax::mathml prax::path prax::url prax::geom prax::unicode prax::locale)
 
@@ -47,8 +47,9 @@ if (PR_DEVELOP)
     )
     # An SVG document stands alone, as the XML parser creates it. Text is shaped with kb, and what a test reads as
     # pixels is rendered on the CPU.
-    target_link_libraries(svg_tests PRIVATE prax::compress_select prax::image_select prax::css prax::dom prax::draw
-                                            prax::font prax::geom prax::path prax::text
+    target_link_libraries(svg_tests PRIVATE prax::compress_select prax::image_select prax::texture prax::css prax::dom
+                                            prax::draw prax::font prax::geom
+                                            prax::path prax::text
                                            )
     target_compile_definitions(svg_tests PRIVATE PR_FONTS_DIR="${PR_TEST_FONTS_DIR}")
     # lib/draw's SVG writer, read back.

@@ -298,7 +298,7 @@ void sectionImages(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
     PrLayoutNode section = sectionFrame(kit, parent, "21", "Images", "One wide picture in four bounded frames.",
         "A fit places the picture inside the box that layout already sized; it never sizes the box. The "
             "alignment slides the picture within the box, which moves the part of a cropped picture that shows.");
-    const PrDrawImage* picture = galleryPicture(state);
+    const PrTextureSource* picture = galleryPicture(state);
     struct Specimen {
         const char* title;
         const char* tags;

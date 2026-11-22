@@ -4,8 +4,8 @@
 
 #include "pr/base.h"
 #include "pr/cache.h"
-#include "pr/draw_image.h"
 #include "pr/string.h"
+#include "pr/texture.h"
 
 #include "apps/browser/browser.h"
 
@@ -21,7 +21,7 @@ PrCache* iconsCreate(Browser& b);
 
 // Returns the image of the icon at `url`, or null while it loads, if it cannot be shown, or if `url` is empty. The
 // image is valid until the next pump of the cache.
-const PrDrawImage* PR_NULLABLE iconsGet(Browser& b, const String& url);
+const PrTextureSource* PR_NULLABLE iconsGet(Browser& b, const String& url);
 
 } // namespace browser
 

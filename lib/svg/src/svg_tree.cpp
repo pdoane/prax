@@ -279,7 +279,7 @@ void placeAfter(SvgTree* tree, SvgNodeIndex index, SvgNodeIndex after) {
 
 // Releases the references that a picture holds.
 void releasePicture(const SvgPicture& picture) {
-    prDrawImageRelease(picture.raster);
+    prTextureSourceRelease(picture.raster);
     svgImageRelease(picture.svg);
 }
 
@@ -2104,6 +2104,7 @@ bool sameSubtree(const SvgTree* tree, SvgNodeIndex root, const SvgTree* expected
 uint32_t svgTreeBuild(SvgTree* tree, const PrDomElement* element, SvgRoot root, const SvgBuild& build) {
     svgTreeReset(tree);
     ++tree->update;
+    tree->textures = build.options != nullptr ? build.options->textures : nullptr;
     SvgBuilder b{
         .tree = tree,
         .build = &build,
@@ -2320,6 +2321,7 @@ bool svgTreeNoteIds(const SvgTree* tree, SvgChanges* changes) {
 
 SvgUpdate svgTreeUpdate(SvgTree* tree, const PrDomElement* element, SvgChanges* changes, const SvgBuild& build) {
     SvgUpdate result{};
+    tree->textures = build.options != nullptr ? build.options->textures : nullptr;
     bool whole = changes->all || !isLive(tree, 0);
     // An ID that names another element than it did builds again what reads it.
     if (!whole && changes->ids) {
@@ -2415,6 +2417,7 @@ void svgChangesReset(SvgChanges* changes) {
 
 SvgResourceIndex svgTreeResourceFor(SvgTree* tree, const PrDomElement* from, PrStringView url, SvgResourceKind kind,
         const SvgBuild& build) {
+    tree->textures = build.options != nullptr ? build.options->textures : nullptr;
     SvgBuilder b{
         .tree = tree,
         .build = &build,
@@ -2430,6 +2433,7 @@ SvgResourceIndex svgTreeResourceFor(SvgTree* tree, const PrDomElement* from, PrS
 }
 
 bool svgTreeUpdateResources(SvgTree* tree, const PrDomNode* document, SvgChanges* changes, const SvgBuild& build) {
+    tree->textures = build.options != nullptr ? build.options->textures : nullptr;
     bool changed = false;
     SvgBuilder b{
         .tree = tree,

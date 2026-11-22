@@ -995,7 +995,7 @@ void appleColorEmoji(PrDrawList* list, float, float, double) {
 // Draws Nabla, whose color glyphs are both COLR layers and SVG documents, each way in two of its palettes.
 void svgGlyphs(PrDrawList* list, float, float, double) {
     if (svgDecoder == nullptr)
-        svgDecoder = prSvgGlyphDecoderCreate(nullptr, nullptr);
+        svgDecoder = prSvgGlyphDecoderCreate(nullptr, nullptr, nullptr);
     const PrFont* nabla = fontNamed("Nabla.ttf");
     label("Nabla: its COLR layers, then the same glyphs drawn from its SVG documents, in two palettes", PrVec2{30, 30}, 12, kInk);
     float y = 140;

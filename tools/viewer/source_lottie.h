@@ -6,6 +6,7 @@
 #include "pr/draw_list.h"
 #include "pr/font.h"
 #include "pr/text.h"
+#include "pr/texture_cache.h"
 #include "pr/vec.h"
 
 #include <filesystem>
@@ -22,7 +23,7 @@ namespace viewer {
 // the page of a player in tools/suite/lottie that plays it in the browser.
 struct LottieSource;
 std::shared_ptr<LottieSource> loadLottie(const std::filesystem::path& path, const std::filesystem::path& settings,
-    PrTextShaper* shaper, PrFontHinting hinting, PrFontHinter* PR_NULLABLE hinter);
+    PrTextShaper* shaper, PrFontHinting hinting, PrFontHinter* PR_NULLABLE hinter, PrTextureCache* PR_NULLABLE textures);
 PrVec2 lottieSize(const LottieSource& lottie);
 double lottieFrameAt(const LottieSource& lottie, double time);
 void drawLottie(LottieSource& lottie, PrDrawList* list, PrVec2 viewport, double frame);

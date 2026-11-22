@@ -26,14 +26,18 @@
 #include "pr/draw_glyph.h"
 #include "pr/font_hinter.h"
 #include "pr/font_set.h"
+#include "pr/gpu_memory.h"
 #include "pr/image.h"
 #include "pr/image_select.h"
+#include "pr/image_texture_source.h"
 #include "pr/lottie.h"
 #include "pr/lottie_archive.h"
 #include "pr/string_ops.h"
 #include "pr/svg.h"
+#include "pr/svg_glyph.h"
 #include "pr/svg_render.h"
 #include "pr/text.h"
+#include "pr/texture_cache.h"
 #include "pr/time.h"
 #include "pr/url_data.h"
 
@@ -63,7 +67,7 @@ struct Image {
 };
 
 // Reads the PNG at `path` as straight RGBA. Returns false if it cannot be read.
-bool readPng(PrImageCodecSet* imageCodec, const std::string& path, Image* out) {
+bool readPng(const PrImageCodecSet* imageCodec, const std::string& path, Image* out) {
     PrTextBuffer bytes = {};
     if (!harnessReadFile(&bytes, path.c_str()))
         return false;
@@ -119,14 +123,15 @@ struct Documents {
 // against. An SVG image is in secure static mode, whose own images load only from data: URLs, so its loader has no
 // documents.
 struct Images {
-    PrCompressCodecSet* compressCodec;
-    PrImageCodecSet* imageCodec;
+    const PrCompressCodecSet* compressCodec;
+    const PrImageCodecSet* imageCodec;
     Documents* PR_NULLABLE documents;
+    PrTextureCache* textures;           // the cache on the renderer's device that realizes the images
 };
 
 // Replaces `bytes` with what they decompress to, if they are gzip, as an svgz file is. Returns false if they do not
 // decompress.
-bool gunzip(PrCompressCodecSet* codec, std::string* bytes) {
+bool gunzip(const PrCompressCodecSet* codec, std::string* bytes) {
     if (bytes->size() < 2 || uint8_t((*bytes)[0]) != 0x1f || uint8_t((*bytes)[1]) != 0x8b)
         return true;
     PrByteView input{reinterpret_cast<const uint8_t*>(bytes->data()), bytes->size()};
@@ -163,6 +168,7 @@ bool decodeImage(const Images& images, std::string bytes, PrStringView fragment,
         PrSvgElement* svg = root != nullptr ? prSvgElementQuery(prDomElementAsEventTarget(root)) : nullptr;
         Images secure{images.compressCodec, images.imageCodec, nullptr};
         PrSvgDrawOptions options = prSvgDrawOptionsDefault();
+        options.textures = images.textures;
         options.loadImage = loadImage;
         options.loadContext = &secure;
         if (svg != nullptr)
@@ -171,7 +177,8 @@ bool decodeImage(const Images& images, std::string bytes, PrStringView fragment,
         return out->svg != nullptr;
     }
     PrByteView view{reinterpret_cast<const uint8_t*>(bytes.data()), bytes.size()};
-    return prDrawImageCreateFromBytes(images.imageCodec, view, &out->raster, nullptr) == PrStatus_Ok;
+    return prImageTextureSourceOpenBytes(view, images.imageCodec, nullptr, PrImageTextureColor_Srgb, &out->raster) ==
+        PrStatus_Ok;
 }
 
 // Loads an image that a reference names (PrSvgLoadImageFn): a data: URL, or a file beside the document that names it.
@@ -259,8 +266,9 @@ PrFontSet* lottieFonts() {
 // Records the Lottie animation at `frame`, counted from its in point, fitted and centered in `width` by `height` over
 // the suite's background, with its text set in the suite's fonts and shaped by `shaper`. The animation is a JSON file,
 // or a dotLottie archive's first animation.
-PrStatus recordLottie(PrCompressCodecSet* compressCodec, PrImageCodecSet* imageCodec, const SuiteRender& suite,
-        PrTextShaper* shaper, const std::string& path, float width, float height, double frame, PrDrawList* list) {
+PrStatus recordLottie(const PrCompressCodecSet* compressCodec, const PrImageCodecSet* imageCodec, PrTextureCache* textures,
+        const SuiteRender& suite, PrTextShaper* shaper, const std::string& path, float width, float height, double frame,
+        PrDrawList* list) {
     PrTextBuffer source = {};
     if (!harnessReadFile(&source, path.c_str()))
         return PrStatus_NotFound;
@@ -268,6 +276,7 @@ PrStatus recordLottie(PrCompressCodecSet* compressCodec, PrImageCodecSet* imageC
     files.directory = path.substr(0, path.find_last_of('/') + 1);
     PrLottieOptions options{};
     options.codec = imageCodec;
+    options.textures = textures;
     options.load = loadLottieFile;
     options.loadContext = &files;
     options.fonts = suite.fonts != nullptr ? suite.fonts : lottieFonts();
@@ -305,9 +314,9 @@ PrStatus recordLottie(PrCompressCodecSet* compressCodec, PrImageCodecSet* imageC
 
 // Renders the document onto transparent pixels of the given size, as straight RGBA. `time` is a time in seconds for an
 // SVG document, and a frame for a Lottie animation.
-PrStatus render(PrDrawRenderer* renderer, PrCompressCodecSet* compressCodec, PrImageCodecSet* imageCodec,
-        const SuiteRender& suite, PrTextShaper* shaper, const std::string& path, uint32_t width,
-        uint32_t height, double time, std::vector<uint8_t>* rgba) {
+PrStatus render(PrDrawRenderer* renderer, const PrCompressCodecSet* compressCodec, const PrImageCodecSet* imageCodec,
+        PrTextureCache* textures, const SuiteRender& suite, PrTextShaper* shaper, const std::string& path,
+        uint32_t width, uint32_t height, double time, std::vector<uint8_t>* rgba) {
     rgba->assign(size_t(width) * height * 4, 0);
     if (path.ends_with(".png")) {
         Image image;
@@ -321,7 +330,7 @@ PrStatus render(PrDrawRenderer* renderer, PrCompressCodecSet* compressCodec, PrI
     if (path.ends_with(".json") || path.ends_with(".lottie")) {
         PrDrawList* list = prDrawListCreate();
         PrStatus status =
-            recordLottie(compressCodec, imageCodec, suite, shaper, path, float(width), float(height), time, list);
+            recordLottie(compressCodec, imageCodec, textures, suite, shaper, path, float(width), float(height), time, list);
         PrPixels pixels{rgba->data(), size_t(width) * 4, {width, height}};
         if (status == PrStatus_Ok)
             status = prDrawRendererRenderPixels(renderer, list, pixels, PrPixelFormat_Bgra8);
@@ -339,8 +348,9 @@ PrStatus render(PrDrawRenderer* renderer, PrCompressCodecSet* compressCodec, PrI
     PrSvgElement* svg = root != nullptr ? prSvgElementQuery(prDomElementAsEventTarget(root)) : nullptr;
     PrStatus status = PrStatus_NotSupported;
     PrDrawList* list = prDrawListCreate();
-    Images images{compressCodec, imageCodec, &documents};
+    Images images{compressCodec, imageCodec, &documents, textures};
     PrSvgDrawOptions options{};
+    options.textures = textures;
     options.fonts = suite.fonts;
     options.shaper = shaper;
     options.load = loadReferenced;
@@ -393,8 +403,14 @@ int main(int argc, char** argv) {
     prFontSetSetHinting(lottieFonts(), hinting, hinter);
     PrCompressCodecSet* compressCodec = prCompressCodecSetCreateDefault();
     PrImageCodecSet* imageCodec = prImageCodecSetCreateDefault(compressCodec);
+    // The renderer, its images and the images of its glyphs are on one memory device. The device's cache realizes each
+    // image when it is first asked for, so that a render draws every image.
+    PrGpuDevice* memory = prGpuMemoryCreate(nullptr);
+    PrTextureCacheDesc texturesDesc = prTextureCacheDescDefault(memory);
+    PrTextureCache* textures = prTextureCacheCreate(&texturesDesc);
     PrDrawCpuOptions options = prDrawCpuOptionsDefault();
-    PrDrawGlyphDecoder* glyphDecoder = prDrawGlyphBitmapCreate(imageCodec);
+    options.device = memory;
+    PrDrawGlyphDecoder* glyphDecoder = prSvgGlyphDecoderCreate(imageCodec, compressCodec, textures);
     options.glyphDecoder = glyphDecoder;
     // Glyphs are drawn at an atlas's phases, so that runs that a document splits differently from its reference draw
     // alike, as reftests expect.
@@ -402,6 +418,8 @@ int main(int argc, char** argv) {
     PrDrawRenderer* renderer = prDrawCpuCreate(&options);
     HarnessCase test = {};
     while (harnessReadCase(&test)) {
+        // Each case is a frame of the cache. The trim may evict what earlier cases drew and nothing holds now.
+        prTextureCacheTrim(textures);
         std::vector<std::string> paths;
         PrStringView input = prTextBufferView(&test.input);
         size_t start = 0;
@@ -425,7 +443,7 @@ int main(int argc, char** argv) {
                 return 1;
             reference.width = width;
             reference.height = height;
-            status = render(renderer, compressCodec, imageCodec, suite, textShaper, paths[1], width, height, time,
+            status = render(renderer, compressCodec, imageCodec, textures, suite, textShaper, paths[1], width, height, time,
                 &reference.rgba);
             if (status != PrStatus_Ok)
                 reference.rgba.clear();
@@ -437,7 +455,7 @@ int main(int argc, char** argv) {
         std::vector<uint8_t> rendered;
         PrTimePerf started = prTimePerfNow();
         if (status == PrStatus_Ok)
-            status = render(renderer, compressCodec, imageCodec, suite, textShaper, paths[0], reference.width,
+            status = render(renderer, compressCodec, imageCodec, textures, suite, textShaper, paths[0], reference.width,
                 reference.height, time, &rendered);
         double ms = prTimePerfMilliseconds(started, prTimePerfNow());
         prTextBufferAppend(&out, "{\"status\":");
@@ -469,6 +487,8 @@ int main(int argc, char** argv) {
     harnessCaseReset(&test);
     prDrawRendererDestroy(renderer);
     prDrawGlyphDecoderDestroy(glyphDecoder);
+    prTextureCacheDestroy(textures);
+    prGpuDeviceDestroy(memory);
     prImageCodecSetDestroy(imageCodec);
     prCompressCodecSetDestroy(compressCodec);
     prTextShaperDestroy(textShaper);

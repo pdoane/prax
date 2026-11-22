@@ -5,9 +5,11 @@ target_include_directories(browser_model PUBLIC ${PROJECT_SOURCE_DIR})
 target_link_libraries(browser_model PUBLIC prax::json prax::core_cpp PRIVATE prax::url pr_warnings)
 
 pr_app(browser main.cpp browser.cpp chrome.cpp commands.cpp icons.cpp tab.cpp)
-target_link_libraries(browser PRIVATE prax::compress_select prax::image_select prax::app_select prax::draw_select
-                                      prax::gpu_select browser_model prax::app
-                                      prax::html_quickjs prax::url_quickjs prax::xhr_quickjs
+target_link_libraries(browser PRIVATE prax::compress_select prax::image_select prax::gpu_select prax::draw_select
+                                      prax::app_select prax::texture browser_model
+                                      prax::app
+                                      prax::html_quickjs
+                                      prax::url_quickjs prax::xhr_quickjs
                                       prax::charset_quickjs prax::svg_quickjs prax::mathml_quickjs
                                       prax::studio_kit prax::studio_command prax::ui
                                       prax::text prax::font

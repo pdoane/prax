@@ -1,6 +1,7 @@
-// The triangles renderer's shaders, as draw_triangles_frame.h specifies them: the vertex color times the texture's
-// sample. The pipeline's vertex layout reads the frame's vertices. The fragment shader samples the draw's texture,
-// which Texture slot 0 holds with its sampler.
+// The triangles renderer's shaders, as draw_triangles_frame.h specifies them: the vertex color times the straight color
+// of the texture's sample. There is one fragment shader for each alpha that a texture's texels have (PrTextureAlpha).
+// The pipeline's vertex layout reads the frame's vertices. A fragment shader samples the draw's texture, which Texture
+// slot 0 holds with its sampler.
 
 #include "pr/gpu.slang"
 
@@ -34,7 +35,23 @@ VertexOut trianglesVertex(Vertex v) {
     return o;
 }
 
+// The fragment shader for a texture of premultiplied texels, which divides the sample's color by its alpha.
 [shader("fragment")]
-float4 trianglesFragment(VertexOut i) : SV_Target {
+float4 trianglesFragmentPremultiplied(VertexOut i) : SV_Target {
+    float4 texel = drawTexture.Sample(drawTextureSampler, i.uv);
+    if (texel.a > 0)
+        texel.rgb /= texel.a;
+    return i.color * texel;
+}
+
+// The fragment shader for a texture of straight texels.
+[shader("fragment")]
+float4 trianglesFragmentStraight(VertexOut i) : SV_Target {
     return i.color * drawTexture.Sample(drawTextureSampler, i.uv);
+}
+
+// The fragment shader for a texture without alpha, which reads the sample's alpha as one whatever the texture stores.
+[shader("fragment")]
+float4 trianglesFragmentOpaque(VertexOut i) : SV_Target {
+    return i.color * float4(drawTexture.Sample(drawTextureSampler, i.uv).rgb, 1);
 }

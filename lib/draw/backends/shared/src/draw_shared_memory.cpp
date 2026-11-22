@@ -100,6 +100,84 @@ PrGpuDevice* PR_NULLABLE drawMemoryDevice(PrGpuDevice* PR_NULLABLE device, bool*
     return device;
 }
 
+bool drawMemoryReadSource(PrGpuDevice* device, const PrDrawSource& source, PrPixelFormat format, PrPixels out) {
+    PrGpuNativePixels native{};
+    PrPixelFormat from{};
+    if (source.kind != PrDrawSourceKind_Texture ||
+            !prGpuTextureNative(device, source.texture, PrGpuNativeKind_Pixels, &native) ||
+            !prGpuFormatToPixelFormat(prGpuFormatPlain(native.format), &from))
+        return false;
+    int32_t left = int32_t(prF32Floor(source.rect.left));
+    int32_t top = int32_t(prF32Floor(source.rect.top));
+    uint32_t fromBytes = prPixelFormatSize(from);
+    uint32_t toBytes = prPixelFormatSize(format);
+    for (uint32_t y = 0; y < out.extent.y; ++y) {
+        int32_t sy = top + int32_t(y);
+        for (uint32_t x = 0; x < out.extent.x; ++x) {
+            int32_t sx = left + int32_t(x);
+            float c[4] = {0, 0, 0, 0};
+            if (sx >= 0 && sy >= 0 && uint32_t(sx) < native.pixels.extent.x && uint32_t(sy) < native.pixels.extent.y) {
+                const uint8_t* p = native.pixels.data + size_t(sy) * native.pixels.stride + size_t(sx) * fromBytes;
+                if (from == PrPixelFormat_RgbaF16) {
+                    PrFloat16 wide[4];
+                    prMemCopy(wide, p, sizeof(wide));
+                    for (uint32_t k = 0; k < 4; ++k)
+                        c[k] = prFloat16ToFloat(wide[k]);
+                } else {
+                    bool bgra = from == PrPixelFormat_Bgra8;
+                    c[0] = float(p[bgra ? 2 : 0]) / 255;
+                    c[1] = float(p[1]) / 255;
+                    c[2] = float(p[bgra ? 0 : 2]) / 255;
+                    c[3] = float(p[3]) / 255;
+                }
+                if (source.alpha == PrTextureAlpha_None)
+                    c[3] = 1;
+                c[3] = prF32Clamp(c[3], 0, 1);
+                if (source.alpha == PrTextureAlpha_Straight) {
+                    for (uint32_t k = 0; k < 3; ++k)
+                        c[k] *= c[3];
+                }
+            }
+            uint8_t* o = out.data + size_t(y) * out.stride + size_t(x) * toBytes;
+            if (format == PrPixelFormat_RgbaF16) {
+                PrFloat16 wide[4];
+                for (uint32_t k = 0; k < 4; ++k)
+                    wide[k] = prFloat16FromFloat(c[k]);
+                prMemCopy(o, wide, sizeof(wide));
+            } else {
+                bool bgra = format == PrPixelFormat_Bgra8;
+                const float ordered[4] = {bgra ? c[2] : c[0], c[1], bgra ? c[0] : c[2], c[3]};
+                for (uint32_t k = 0; k < 4; ++k)
+                    o[k] = uint8_t(prF32Clamp(ordered[k], 0, 1) * 255 + 0.5f);
+            }
+        }
+    }
+    return true;
+}
+
+void drawMemoryWriteSource(PrGpuDevice* device, const PrDrawSource& source, PrPixels target, PrPixelFormat format,
+        PrIVec2 origin) {
+    PrUVec2 extent = prDrawSourceTexels(source);
+    PrIRect landed = prIRectIntersect(prIRectAt(origin, extent),
+        PrIRect{0, 0, int32_t(target.extent.x), int32_t(target.extent.y)});
+    if (prIRectIsEmpty(landed))
+        return;
+    uint32_t bytes = prPixelFormatSize(format);
+    size_t stride = size_t(extent.x) * bytes;
+    RawArray<uint8_t> read;
+    read.resize(uint32_t(stride * extent.y));
+    if (!drawMemoryReadSource(device, source, format, PrPixels{read.data, stride, extent})) {
+        read.reset();
+        return;
+    }
+    size_t count = size_t(prIRectWidth(landed)) * bytes;
+    for (int32_t y = landed.top; y < landed.bottom; ++y) {
+        prMemCopy(target.data + size_t(y) * target.stride + size_t(landed.left) * bytes,
+            read.data + size_t(y - origin.y) * stride + size_t(landed.left - origin.x) * bytes, count);
+    }
+    read.reset();
+}
+
 DrawMemoryFrame* drawMemoryFrameCreate(PrDrawRenderer* renderer, DrawMemoryRenderFn render, bool halfFloat) {
     DrawMemoryFrame* frame = allocZeroed<DrawMemoryFrame>();
     frame->destroyFn = destroyFrame;

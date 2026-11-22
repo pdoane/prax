@@ -5,7 +5,6 @@
 
 #include "pr/array.h"
 #include "pr/color.h"
-#include "pr/draw_image.h"
 #include "pr/kit_choice.h"
 #include "pr/kit_collection.h"
 #include "pr/kit_graph.h"
@@ -16,6 +15,7 @@
 #include "pr/string.h"
 #include "pr/string_view.h"
 #include "pr/text_edit.h"
+#include "pr/texture.h"
 
 #include <stdint.h>
 
@@ -389,7 +389,7 @@ struct GalleryState {
 
     TimelineState timeline;
     GraphState graph;
-    const PrDrawImage* PR_NULLABLE picture = nullptr;   // the images section's picture, made on first use
+    const PrTextureSource* PR_NULLABLE picture = nullptr;   // the images section's picture, made on first use
 
     GalleryState();
     ~GalleryState();
@@ -399,7 +399,7 @@ struct GalleryState {
 
 // Returns the picture that the images section fits into its frames: a landscape twice as wide as it is tall, with a sun
 // toward its right, so that each crop shows a different part of it.
-const PrDrawImage* galleryPicture(GalleryState& state);
+const PrTextureSource* galleryPicture(GalleryState& state);
 
 // Returns the asset table's rows, and writes their count.
 const AssetRow* galleryAssets(uint32_t* count);

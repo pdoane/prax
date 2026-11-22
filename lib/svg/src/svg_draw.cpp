@@ -108,6 +108,33 @@ PrVec2 ellipseRadii(PrVec2 viewport, const SvgEllipseShape& s) {
     return radiiOf(viewport, s.rx, s.ry, s.rxAuto, s.ryAuto);
 }
 
+// Writes the region of the raster's texture. The drawing waits for the texture, because the drawing of an SVG is kept.
+// Returns false if the raster has no texture.
+bool rasterRegion(const SvgDrawer& d, const PrTextureSource* raster, PrTextureRegion* out) {
+    *out = PrTextureRegion{};
+    return d.tree->textures != nullptr &&
+        prTextureCacheWait(d.tree->textures, raster, prTextureCacheAskEncoded(0), out) == PrTextureCacheState_Ready;
+}
+
+// Writes a brush that shows the raster upright, placed and repeated as `tiles` specifies. `list` is the list that the
+// brush is drawn on. `list` holds the raster, so that the texture cache keeps the region while the list may draw it.
+// Returns false if the raster has no texture.
+bool rasterBrush(const SvgDrawer& d, const PrTextureSource* raster, const PrDrawTiles& tiles, PrDrawSampling sampling,
+        PrDrawList* list, PrDrawBrush* out) {
+    PrTextureRegion region{};
+    if (!rasterRegion(d, raster, &region))
+        return false;
+    const PrTextureDesc& desc = *prTextureSourceDesc(raster);
+    PrUVec2 texels = prTextureDescDisplayedExtent(&desc);
+    PrRect shown{0, 0, float(texels.x), float(texels.y)};
+    *out = prDrawBrushImage(prDrawSourceRegion(&region, shown, desc.orientation), tiles.tile, sampling);
+    out->image.tiles = tiles;
+    // The orientation applies to the finished tiles, because it swaps the axes that repeat.
+    prDrawBrushImageUpright(out, desc.orientation, region.rect);
+    prDrawListHoldSource(list, raster);
+    return true;
+}
+
 // The default object size, which an image with no natural size of its own takes (SVG2/embedded.html#Placement).
 constexpr PrVec2 kDefaultObjectSize{300, 150};
 
@@ -115,7 +142,7 @@ constexpr PrVec2 kDefaultObjectSize{300, 150};
 // width over height, or zero for none.
 PrSvgNaturalSize naturalOf(const SvgPicture& picture) {
     if (picture.raster != nullptr) {
-        PrUVec2 extent = prDrawImageExtent(picture.raster);
+        PrUVec2 extent = prTextureDescDisplayedExtent(prTextureSourceDesc(picture.raster));
         float ratio = extent.y != 0 ? float(extent.x) / float(extent.y) : 0;
         return PrSvgNaturalSize{float(extent.x), float(extent.y), ratio};
     }
@@ -672,11 +699,10 @@ void drawImage(SvgDrawer& d, const SvgImageShape& image) {
     if (image.clips)
         prDrawListPushClipRect(d.list, box, PrDrawEdges_Antialiased);
     if (image.picture.raster != nullptr) {
-        PrUVec2 texels = prDrawImageExtent(image.picture.raster);
-        PrDrawBrush brush = prDrawBrushImage(
-            prDrawSourceImage(image.picture.raster, PrRect{0, 0, float(texels.x), float(texels.y)}), area,
-            image.sampling);
-        prDrawListRect(d.list, area, {.brush = &brush});
+        PrDrawBrush brush{};
+        PrDrawTiles tiles{.tile = area, .x = PrDrawExtend_Pad, .y = PrDrawExtend_Pad};
+        if (rasterBrush(d, image.picture.raster, tiles, image.sampling, d.list, &brush))
+            prDrawListRect(d.list, area, {.brush = &brush});
     } else {
         svgImageDrawRendering(image.picture.svg, area, d.list);
     }
@@ -1159,7 +1185,7 @@ LayerResult imageLayer(SvgDrawer& d, SvgNodeIndex index, const SvgEffects& maski
         return LayerResult_Drawn;
     PrSvgNaturalSize natural{-1, -1, 0};
     if (layer.kind == SvgMaskLayerKind_Image && layer.picture.raster != nullptr) {
-        PrUVec2 texels = prDrawImageExtent(layer.picture.raster);
+        PrUVec2 texels = prTextureDescDisplayedExtent(prTextureSourceDesc(layer.picture.raster));
         natural = PrSvgNaturalSize{
             float(texels.x), float(texels.y), texels.y != 0 ? float(texels.x) / float(texels.y) : 0,
         };
@@ -1232,14 +1258,18 @@ LayerResult imageLayer(SvgDrawer& d, SvgNodeIndex index, const SvgEffects& maski
             repeats[axis] = PrCssKeyword_NoRepeat;
         }
     }
-    PrRect tile = prRectAt(at, size);
+    PrDrawTiles tiles{.tile = prRectAt(at, size), .spacing = spacing, .flags = PrDrawTileFlag_Clamped};
+    tiles.x = repeats[0] == PrCssKeyword_NoRepeat ? PrDrawExtend_None : PrDrawExtend_Repeat;
+    tiles.y = repeats[1] == PrCssKeyword_NoRepeat ? PrDrawExtend_None : PrDrawExtend_Repeat;
     // A raster image is sampled as it is. A gradient and an SVG image are drawn at the tile's size.
+    PrDrawList* list = prDrawListCreate();
     PrDrawList* source = nullptr;
     PrDrawBrush brush{};
     if (layer.kind == SvgMaskLayerKind_Image && layer.picture.raster != nullptr) {
-        PrUVec2 texels = prDrawImageExtent(layer.picture.raster);
-        PrRect rect{0, 0, float(texels.x), float(texels.y)};
-        brush = prDrawBrushImage(prDrawSourceImage(layer.picture.raster, rect), tile, PrDrawSampling_Linear);
+        if (!rasterBrush(d, layer.picture.raster, tiles, PrDrawSampling_Linear, list, &brush)) {
+            prDrawListRelease(list);
+            return LayerResult_Ignored;
+        }
     } else {
         source = prDrawListCreate();
         PrRect own{0, 0, size.x, size.y};
@@ -1247,15 +1277,12 @@ LayerResult imageLayer(SvgDrawer& d, SvgNodeIndex index, const SvgEffects& maski
             prLayoutGradientDraw(&layer.gradient, own, own, source);
         else
             svgImageDrawRendering(layer.picture.svg, own, source);
-        brush = prDrawBrushImage(prDrawSourceList(source, own), tile, PrDrawSampling_Linear);
+        brush = prDrawBrushImage(prDrawSourceList(source, own), tiles.tile, PrDrawSampling_Linear);
+        brush.image.tiles = tiles;
     }
-    brush.image.tiles.spacing = spacing;
-    brush.image.tiles.x = repeats[0] == PrCssKeyword_NoRepeat ? PrDrawExtend_None : PrDrawExtend_Repeat;
-    brush.image.tiles.y = repeats[1] == PrCssKeyword_NoRepeat ? PrDrawExtend_None : PrDrawExtend_Repeat;
-    brush.image.tiles.flags = PrDrawTileFlag_Clamped;
-    out->list = prDrawListCreate();
-    prDrawListRect(out->list, painted, PrDrawPaint{.brush = &brush});
+    prDrawListRect(list, painted, PrDrawPaint{.brush = &brush});
     prDrawListRelease(source);
+    out->list = list;
     return LayerResult_Drawn;
 }
 

@@ -36,10 +36,9 @@ PrAffine4 colorMatrix(const float rows[3][3]) {
 // The nodes and the data that they point to. A builder owns them while it builds, and the filter owns them afterward.
 struct Graph {
     RawArray<PrDrawFilterNode> nodes;
-    RawArray<float*> floats;             // tables and kernels, one allocation each
-    RawArray<PrDrawFilterInput*> inputs; // merge inputs
-    RawArray<PrDrawColorStop*> stops;    // progressive blur brushes' stops
-    RawArray<const PrDrawImage*> images; // holds one reference to each image
+    RawArray<float*> floats;                 // tables and kernels, one allocation each
+    RawArray<PrDrawFilterInput*> inputs;     // merge inputs
+    RawArray<PrDrawColorStop*> stops;        // progressive blur brushes' stops
     RawArray<const PrDrawList*> lists;
     PrRect region;
 };
@@ -62,15 +61,12 @@ void releaseGraph(Graph& g) {
         prMemoryFree(g.inputs.data[i]);
     for (uint32_t i = 0; i < g.stops.count; ++i)
         prMemoryFree(g.stops.data[i]);
-    for (uint32_t i = 0; i < g.images.count; ++i)
-        prDrawImageRelease(g.images.data[i]);
     for (uint32_t i = 0; i < g.lists.count; ++i)
         drawListRelease(g.lists.data[i]);
     g.nodes.reset();
     g.floats.reset();
     g.inputs.reset();
     g.stops.reset();
-    g.images.reset();
     g.lists.reset();
 }
 
@@ -99,12 +95,10 @@ uint32_t inputCount(PrDrawFilterKind kind) {
     }
 }
 
-// Takes a reference to the source's image or list, which the graph holds.
+// Takes a reference to the list of a List source, which the graph holds. A Texture source needs no reference, because
+// the host owns the texture and keeps it.
 void holdSource(Graph& g, const PrDrawSource& source) {
-    if (source.kind == PrDrawSourceKind_Image && source.image != nullptr) {
-        prDrawImageRetain(source.image);
-        g.images.push(source.image);
-    } else if (source.kind == PrDrawSourceKind_List && source.list != nullptr) {
+    if (source.kind == PrDrawSourceKind_List && source.list != nullptr) {
         drawListRetain(source.list);
         g.lists.push(source.list);
     }

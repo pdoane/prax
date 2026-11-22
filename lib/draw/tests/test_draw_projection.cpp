@@ -1,10 +1,10 @@
 #include "pr/draw_commands.h"
 #include "pr/draw_filter.h"
-#include "pr/draw_image.h"
 #include "pr/draw_list.h"
 #include "pr/draw_projection.h"
 #include "pr/float.h"
 #include "pr/string_ops.h"
+#include "pr/texture.h"
 #include "pr/vec.h"
 
 #include "tools/harness/test.h"
@@ -195,15 +195,8 @@ TEST_CASE("a projected group is copied, dumped and bounded by its projected plan
     prDrawListPushGroup(list, &group);
     // Contents far outside the plane's bounds, and pixels written into the layer, do not reach the list's bounds.
     prDrawListRect(list, PrRect{-1000, -1000, 1000, 1000}, {.color = PrColor{1, 0, 0, 1}});
-    const uint8_t texels[4] = {255, 0, 0, 255};
-    PrDrawImageDesc desc{
-        PrPixelView{texels, 4, {1, 1}}, PrPixelFormat_Rgba8, PrDrawAlpha_Premultiplied,
-        PrColorSpace_Srgb,
-    };
-    const PrDrawImage* image = nullptr;
-    REQUIRE(prDrawImageCreate(&desc, &image) == PrStatus_Ok);
+    PrDrawSource image = prDrawSourceTexture(PrTexture{.texture = PrGpuTexture{7}}, PrUVec2{1, 1}, PrRect{0, 0, 1, 1});
     prDrawListWritePixels(list, image, PrIVec2{500, 500});
-    prDrawImageRelease(image);
     prDrawListPopGroup(list);
     seen.m[0][0] = 0;
     prDrawListFreeze(list);

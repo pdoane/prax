@@ -9,6 +9,7 @@
 #include "pr/draw_triangles.h"
 #include "pr/geom.h"
 #include "pr/pixels.h"
+#include "pr/texture.h"
 #include "pr/vec.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -40,14 +41,16 @@ typedef uint8_t TrianglesSampler;
 
 // A run of the frame's indices, drawn as triangles with one texture, sampler and scissor, regardless of winding.
 //
-// A pixel's color is the interpolated vertex color times the texture sampled at the interpolated uv. The color blends
-// over the target by source alpha and one minus source alpha, and the alpha by one and one minus source alpha. On a
-// target that holds premultiplied values, the result is premultiplied. Pixels outside `scissor` are left alone.
+// A pixel's color is the interpolated vertex color times the texture's straight color sampled at the interpolated uv.
+// The color blends over the target by source alpha and one minus source alpha, and the alpha by one and one minus
+// source alpha. On a target that holds premultiplied values, the result is premultiplied. Pixels outside `scissor` are
+// left alone.
 struct TrianglesDraw {
-    PrDrawTextureId hostTexture;           // the host's texture, sampled as straight alpha, or zero to use `texture`
-    uint32_t texture;                      // the number of a texture that the requests created
+    PrGpuTexture hostTexture;               // the host's texture, or zero to use `texture`
+    uint32_t texture;                       // the number of a texture that the requests created
+    PrTextureAlpha alpha;                   // how the sample becomes a straight color
     TrianglesSampler sampler;
-    PrIRect scissor;                  // within the target
+    PrIRect scissor;                        // within the target
     uint32_t indexOffset;
     uint32_t indexCount;
 };
@@ -56,17 +59,17 @@ struct TrianglesDraw {
 enum {
     TrianglesTextureOp_Create,    // creates a texture of the texels' size, holding them
     TrianglesTextureOp_Update,    // replaces the texels of a region
-    TrianglesTextureOp_Destroy,   // destroys the texture
 };
 typedef uint8_t TrianglesTextureOp;
 
-// A change to a texture. A texture is 8-bit RGBA with straight alpha, sRGB-encoded, and is sampled without conversion.
-// Textures are named by numbers, and a number is never reused. A texture is destroyed only after it has gone unused for
-// several prepares, so that the requests of the next frame never change the textures that a frame draws with.
+// A change to a texture. A texture is 8-bit RGBA with premultiplied alpha, sRGB-encoded, and is sampled without
+// conversion. Textures are named by numbers, and a number is never reused. A texture lives until the renderer drops its
+// resources.
 struct TrianglesTextureRequest {
     TrianglesTextureOp op;
     uint32_t texture;                       // the texture's number
     PrUVec2 origin;                         // Update: the region's top left
+
     PrPixelView texels;                     // Create: the size and the texels; Update: the region's texels
 };
 

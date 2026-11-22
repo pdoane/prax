@@ -10,7 +10,7 @@ pr_library(lottie INCLUDE include
     src/lottie_shape.cpp
     src/lottie_text.cpp
 )
-target_link_libraries(pr_lottie PUBLIC prax::draw prax::text prax::compress prax::font prax::image
+target_link_libraries(pr_lottie PUBLIC prax::texture prax::draw prax::text prax::compress prax::font prax::image
                                 PRIVATE prax::core_cpp prax::zip prax::path prax::geom prax::unicode prax::json prax::color
                                         prax::locale)
 if (PR_JS)

@@ -172,7 +172,7 @@ void buildSource(PrKit* kit, PrLayoutNode parent, AppState& state, Commands& com
         .place = {.width = prKitPx(kSourceThumbnail), .height = prKitPx(kSourceThumbnail), .flex = PrKitFlex_Fixed},
     };
     PrLayoutNode thumbnail = prKitBox(kit, line, {}, frame);
-    if (const PrDrawImage* image = imageCacheGet(state.images, p.sourcePath, ImageScale_Thumbnail)) {
+    if (const PrTextureSource* image = imageCacheGet(state.images, p.sourcePath)) {
         PrKitImageStyle contain{
             .fit = PrKitImageFit_Contain,
             .place = {.width = prKitPercent(100), .height = prKitPercent(100)},
@@ -632,14 +632,14 @@ void buildViewport(PrKit* kit, PrLayoutNode content, AppState& state, Commands& 
     prKitSpacer(kit, toolbar, {});
 
     const GalleryEntry* entry = gallerySelected(state.gallery);
-    const PrDrawImage* image = entry != nullptr ? imageCacheGet(state.images, entry->path, ImageScale_Full) : nullptr;
+    const PrTextureSource* image = entry != nullptr ? imageCacheGet(state.images, entry->path) : nullptr;
     const Job* job = activeJob(state);
     bool previewing = state.showPreview && state.preview != nullptr && job != nullptr &&
         job->promptId == state.previewPromptId;
     if (entry != nullptr) {
         String label = entry->filename;
         if (image != nullptr) {
-            PrUVec2 extent = prDrawImageExtent(image);
+            PrUVec2 extent = prTextureDescDisplayedExtent(prTextureSourceDesc(image));
             formatTo(label, "  {} x {}", extent.x, extent.y);
         }
         prKitLabel(kit, toolbar, {.text = label}, textStyle(PrKitTextRole_Mono, PrKitTone_Muted));
@@ -661,7 +661,7 @@ void buildViewport(PrKit* kit, PrLayoutNode content, AppState& state, Commands& 
         .align = PrKitAlign_Center,
         .place = {.width = prKitPercent(100), .height = prKitPercent(100)},
     });
-    const PrDrawImage* shown = previewing ? state.preview : image;
+    const PrTextureSource* shown = previewing ? state.preview : image;
     PrKitImageStyle fit{
         .fit = PrKitImageFit(previewing ? PrKitImageFit_Contain : PrKitImageFit_ScaleDown),
         .place = {.width = prKitPercent(100), .height = prKitPercent(100)},
@@ -674,7 +674,7 @@ void buildViewport(PrKit* kit, PrLayoutNode content, AppState& state, Commands& 
             .title = "No images yet",
             .hint = "Connect to a ComfyUI server and generate one.",
         });
-    } else if (imageCacheFailed(state.images, entry->path, ImageScale_Full)) {
+    } else if (imageCacheFailed(state.images, entry->path)) {
         prKitEmptyState(kit, stack, {.icon = PrStudioIconKind_Alert, .title = "This image cannot be read"});
     }
     if (state.showInfo && entry != nullptr && !previewing)
@@ -710,7 +710,7 @@ void buildBrowser(PrKit* kit, PrLayoutNode content, AppState& state, Commands& c
         PrKitTile item{.index = i, .item = hashKey(entry.filename), .selected = gallery.selected[i] != 0};
         PrLayoutNode tile = prKitListTile(kit, view, item);
         // The thumbnail is an icon until the cache has decoded the image.
-        const PrDrawImage* image = imageCacheGet(state.images, entry.path, ImageScale_Thumbnail);
+        const PrTextureSource* image = imageCacheGet(state.images, entry.path);
         if (image != nullptr)
             prKitTileImage(kit, tile, {.image = image}, {.hoverZoom = kTileHoverZoom});
         else
@@ -841,7 +841,7 @@ void buildImportDialog(PrKit* kit, PrLayoutNode trigger, AppState& state, View& 
         .background = PrKitBackground_Viewport,
     };
     PrLayoutNode preview = prKitPanel(kit, body, {}, stage);
-    const PrDrawImage* image = state.import.image;
+    const PrTextureSource* image = state.import.image;
     if (image != nullptr) {
         PrKitImageStyle fit{
             .fit = PrKitImageFit_ScaleDown,
@@ -856,7 +856,7 @@ void buildImportDialog(PrKit* kit, PrLayoutNode trigger, AppState& state, View& 
     }
     String caption = state.import.message;
     if (caption.isEmpty() && image != nullptr) {
-        PrUVec2 extent = prDrawImageExtent(image);
+        PrUVec2 extent = prTextureSourceDesc(image)->extent;
         caption = format("{} x {}", extent.x, extent.y);
     }
     if (!caption.isEmpty()) {

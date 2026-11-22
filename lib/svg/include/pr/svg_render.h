@@ -13,6 +13,7 @@
 #include "pr/string_view.h"
 #include "pr/svg.h"
 #include "pr/text.h"
+#include "pr/texture_cache.h"
 #include "pr/vec.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -36,8 +37,8 @@ typedef PrDomDocument* PR_NULLABLE (*PrSvgLoadFn)(void* PR_NULLABLE context, PrD
 // An image that a reference names, as the host decodes it: a raster image or an SVG image. Exactly one of the two is
 // set.
 typedef struct PrSvgLoadedImage {
-    const PrDrawImage* PR_NULLABLE raster;  // arranged as its orientation displays it
-    const PrSvgImage* PR_NULLABLE svg;      // created with the fragment of the reference (prSvgImageCreate)
+    const PrTextureSource* PR_NULLABLE raster; // shown as its orientation displays it
+    const PrSvgImage* PR_NULLABLE svg;         // created with the fragment of the reference (prSvgImageCreate)
 } PrSvgLoadedImage;
 
 // Loads the image that a reference in `from` names, such as an image element's href. `url` is the reference as written,
@@ -76,6 +77,13 @@ typedef struct PrSvgDrawOptions {
     // The HDR headroom of the display, in stops, which colors that depend on it resolve for (css-color-hdr-1). Zero is
     // an SDR display.
     float headroom;
+
+    // The texture cache that raster images are drawn from, or null. The cache must be on the device of the renderer
+    // that draws the tree's drawings, and it must outlive the drawings. Without a cache, raster images draw nothing. A
+    // drawing waits for the textures of its raster images, because the drawing of an SVG is kept. The list that
+    // receives a drawing holds the rasters that the drawing draws. A caller that keeps the list must draw the tree
+    // again after the cache moves to another device (prTextureCacheGeneration).
+    PrTextureCache* PR_NULLABLE textures;
 } PrSvgDrawOptions;
 
 // Returns options with no services, no custom properties, and the initial value of the color property.

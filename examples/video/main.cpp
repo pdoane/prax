@@ -23,6 +23,7 @@
 #include "pr/resource.h"
 #include "pr/status.h"
 #include "pr/task.h"
+#include "pr/texture.h"
 
 namespace {
 
@@ -144,8 +145,8 @@ void record(Window& w, float width, float height, double seconds) {
 
     PrDrawShadow shadow{.shape = shape, .offset = PrVec2{0, 10}, .sigma = 16};
     prDrawListDropShadow(list, &shadow, {.color = PrColor{0, 0, 0, 0.6f}});
-    PrDrawSource source = prDrawSourceTexture(prDrawGpuTexture(w.texture), extent,
-        PrRect{0, 0, float(extent.x), float(extent.y)}, PrDrawAlpha_Opaque);
+    PrDrawSource source = prDrawSourceTexture(PrTexture{.texture = w.texture, .alpha = PrTextureAlpha_None}, extent,
+        PrRect{0, 0, float(extent.x), float(extent.y)});
     PrDrawBrush brush = prDrawBrushImage(source, area, PrDrawSampling_Linear);
     prDrawListCornerRect(list, shape, {.brush = &brush});
 

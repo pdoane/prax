@@ -276,20 +276,28 @@ void drawContent(LottieRender& r, const LottieLayer& layer, double frame) {
             if (layer.comp == kLottieNone)
                 break;
             const LottieImage& image = a.images.data[layer.comp];
-            if (image.image == nullptr)
+            PrTextureRegion region{};
+            if (image.image == nullptr || a.textures == nullptr ||
+                    prTextureCacheWait(a.textures, image.image, prTextureCacheAskEncoded(0), &region) !=
+                    PrTextureCacheState_Ready)
                 break;
             // An image whose size differs from its asset's size covers the asset's size, centered and clipped to it.
-            float w = float(prDrawImageExtent(image.image).x);
-            float h = float(prDrawImageExtent(image.image).y);
+            const PrTextureDesc& desc = *prTextureSourceDesc(image.image);
+            PrUVec2 shown = prTextureDescDisplayedExtent(&desc);
+            float w = float(shown.x);
+            float h = float(shown.y);
             float scale = prF32Max(image.width / w, image.height / h);
             float dx = (image.width - w * scale) / 2;
             float dy = (image.height - h * scale) / 2;
-            PrDrawSource source = prDrawSourceImage(image.image, PrRect{0, 0, w, h});
+            PrDrawSource source = prDrawSourceRegion(&region, PrRect{0, 0, w, h}, desc.orientation);
             PrRect placed{dx, dy, dx + w * scale, dy + h * scale};
             PrDrawBrush brush = prDrawBrushImage(source, placed, PrDrawSampling_Linear);
+            prDrawBrushImageUpright(&brush, desc.orientation, region.rect);
             prDrawListPushClipRect(r.list, PrRect{0, 0, image.width, image.height}, PrDrawEdges_Antialiased);
             prDrawListRect(r.list, placed, {.brush = &brush});
             prDrawListPopClip(r.list);
+            // The texture cache keeps the region while the list that draws it holds the image.
+            prDrawListHoldSource(r.list, image.image);
             break;
         }
         case LottieLayerKind_Precomp: {

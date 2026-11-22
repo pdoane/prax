@@ -231,10 +231,8 @@ PrAppOutput portalFrame(void* context, PrAppWindow*, const PrAppFrame* f) {
     s->dropOperation = output.dropOperation;
     if (w->closing)
         return output;
-    if (!openTarget(w->studio, &s->target, s->appWindow, w->desc.intent, false)) {
-        output.wantsFrame = studioAppCreatingDevice(w->studio);
+    if (!openTarget(w->studio, &s->target, s->appWindow, w->desc.intent, false))
         return output;
-    }
     prGpuSwapChainWait(s->target.swapChain);
     s->drawn = prLayoutNodeDrawingRevision(w->tree, s->info.root);
     float ratio = f->display.pixelRatio;
@@ -418,12 +416,17 @@ bool open(void* context, PrAppWindow*, const PrAppFrame* first) {
 PrAppOutput renderFrame(PrStudioWindow* w, const PrAppFrame* f) {
     PrTimePerf started = prTimePerfNow();
     w->backdrop = f->backdrop;
-    // A lost device is created again, with everything on it. Frames continue while the device is being created. The
-    // frame draws from the model, as every frame does.
+    // A lost device is created again, with everything on it. A window draws nothing while the device is being created,
+    // and the end of the creation asks it for a frame (studioAppMakeDevice). The frame draws from the model, as every
+    // frame does.
     if (!openSwapChain(w))
-        return PrAppOutput{.wantsFrame = studioAppCreatingDevice(w->studio)};
+        return PrAppOutput{};
     // Waiting first lets the frame read the latest input, and then wait for nothing once it is built.
     prGpuSwapChainWait(w->target.swapChain);
+    // The window's images realize in the application's cache, which is on the device that the window renders on. If
+    // this frame begins a frame of the application, the cache is trimmed before anything in the frame asks it for an
+    // image.
+    studioAppBeginWindowFrame(w->studio, w);
 
     PrKitThemeVariant variant = variantOf(f->preferences.colorScheme);
     PrKitPalette palette = prKitPaletteStudio(variant);
@@ -561,6 +564,7 @@ PrStatus prStudioWindowCreate(PrStudioApp* app, const PrStudioWindowDesc* desc, 
     PrKitTheme theme = prKitThemeStudio(PrKitThemeVariant_Dark, app->desc.fonts);
     theme.paths = app->paths;
     w->kit = prKitCreate(w->ui, &theme);
+    prKitSetTextures(w->kit, app->textures);
     w->list = prDrawListCreate();
     PrAppWindowDesc windowDesc{
         .title = desc->title,

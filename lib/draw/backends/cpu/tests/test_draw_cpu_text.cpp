@@ -4,7 +4,11 @@
 #include "pr/draw_glyph.h"
 #include "pr/file.h"
 #include "pr/image_select.h"
+#include "pr/image_texture_source.h"
 #include "pr/string.h"
+#include "pr/svg_glyph.h"
+
+#include "tools/harness/harness_textures.h"
 
 #include "tools/harness/test.h"
 
@@ -22,11 +26,14 @@ const PrFont* load(const char* name) {
     return font;
 }
 
-// Renders the list onto `size` by `size` transparent RGBA pixels, reading images with the decoders if they are given.
+// Renders the list onto `size` by `size` transparent RGBA pixels on the tests' memory device, reading glyphs' images
+// with the codec if it is given.
 Array<uint8_t> render(const PrDrawList* list, uint32_t size, PrImageCodecSet* imageCodec = nullptr) {
     Array<uint8_t> bytes(size_t(size) * size * 4);
     PrDrawCpuOptions options = prDrawCpuOptionsDefault();
-    PrDrawGlyphDecoder* decoder = imageCodec != nullptr ? prDrawGlyphBitmapCreate(imageCodec) : nullptr;
+    options.device = harnessMemoryDevice();
+    PrDrawGlyphDecoder* decoder =
+        imageCodec != nullptr ? prSvgGlyphDecoderCreate(imageCodec, nullptr, harnessMemoryTextures()) : nullptr;
     options.glyphDecoder = decoder;
     PrDrawRenderer* renderer = prDrawCpuCreate(&options);
     PrPixels into{bytes.data(), size_t(size) * 4, {size, size}};
@@ -153,8 +160,9 @@ TEST_CASE("a bitmap glyph that mirrors another glyph's image draws it reflected"
     REQUIRE(glyph < prFontGlyphCount(font));
     PrCompressCodecSet* compressCodec = prCompressCodecSetCreateDefault();
     PrImageCodecSet* imageCodec = prImageCodecSetCreateDefault(compressCodec);
-    const PrDrawImage* decoded = nullptr;
-    REQUIRE(prDrawImageCreateFromBytes(imageCodec, image.bytes, &decoded, nullptr) == PrStatus_Ok);
+    const PrTextureSource* decoded = nullptr;
+    REQUIRE(prImageTextureSourceOpenBytes(image.bytes, imageCodec, nullptr, PrImageTextureColor_Srgb, &decoded) ==
+        PrStatus_Ok);
     // The glyph at its strike's size, a pixel of the image to a pixel of the target, with the image at the origin.
     const uint32_t width = image.extent.x;
     const uint32_t height = image.extent.y;
@@ -163,11 +171,15 @@ TEST_CASE("a bitmap glyph that mirrors another glyph's image draws it reflected"
         image.pixelsPerEm, 0, 0, image.pixelsPerEm,
         -image.bounds.left * image.pixelsPerEm, -image.bounds.top * image.pixelsPerEm,
     });
-    REQUIRE(prDrawGlyphImage(imageCodec, font, glyph, 64, list));
+    PrDrawGlyphDecoder* decoder = prSvgGlyphDecoderCreate(imageCodec, nullptr, harnessMemoryTextures());
+    REQUIRE(prDrawGlyphDecoderDecode(decoder, font, glyph, 64, nullptr, PrColor{0, 0, 0, 1}, list) ==
+        PrDrawGlyphDecoded_Kept);
+    prDrawGlyphDecoderDestroy(decoder);
     prDrawListPopTransform(list);
     PrDrawList* plain = prDrawListCreate();
     const PrRect whole{0, 0, float(width), float(height)};
-    PrDrawBrush brush = prDrawBrushImage(prDrawSourceImage(decoded, whole), whole, PrDrawSampling_Mipmap);
+    PrDrawBrush brush = prDrawBrushImage(harnessMemoryImage(decoded, whole, PrTextureCacheFlag_Levels), whole,
+        PrDrawSampling_Mipmap);
     prDrawListRect(plain, whole, {.brush = &brush});
     const uint32_t size = width > height ? width : height;
     const Array<uint8_t> drawn = render(list, size);
@@ -185,7 +197,7 @@ TEST_CASE("a bitmap glyph that mirrors another glyph's image draws it reflected"
     CHECK(differing == 0);
     prDrawListRelease(plain);
     prDrawListRelease(list);
-    prDrawImageRelease(decoded);
+    prTextureSourceRelease(decoded);
     prImageCodecSetDestroy(imageCodec);
     prCompressCodecSetDestroy(compressCodec);
     prFontRelease(font);

@@ -69,6 +69,12 @@ typedef struct PrDrawWriterOptions {
     const PrImageCodecSet* PR_NULLABLE images;      // encodes the images of a format that embeds them encoded, as PNG;
                                                     // without it, such a format writes no images
     PrDrawGlyphDecoder* PR_NULLABLE glyphDecoder;   // draws the glyphs that are pictures; without it, they draw nothing
+
+    // The memory device (pr/gpu_memory.h) that holds the textures that the pages draw. The writer reads the textures
+    // from it and rasterizes on it. If it is null, the writer rasterizes on a device of its own, and the pages draw no
+    // textures.
+    PrGpuDevice* PR_NULLABLE device;
+
     float rasterScale;                              // the target pixels per px at which a writer rasterizes what its
                                                     // format cannot draw, finite and above zero
 } PrDrawWriterOptions;

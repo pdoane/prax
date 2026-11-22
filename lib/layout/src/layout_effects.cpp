@@ -8,7 +8,6 @@
 
 #include "layout/src/layout_effects.h"
 
-#include "pr/draw_image.h"
 #include "pr/draw_list.h"
 #include "pr/float.h"
 #include "pr/hash.h"
@@ -217,7 +216,7 @@ void copyInto(LayoutEffectEntry& entry, LayoutEffectKind kind, const PrLayoutSha
 // compounds.
 void releaseImage(const PrLayoutBackgroundLayer& image) {
     if (image.kind == PrLayoutImageKind_Image)
-        prDrawImageRelease(image.image);
+        prTextureSourceRelease(image.image);
     else if (image.kind == PrLayoutImageKind_List)
         prDrawListRelease(image.list);
     else if (image.kind == PrLayoutImageKind_Painter)
@@ -592,7 +591,8 @@ PrDrawComposite layerOperator(PrDrawComposite composite) {
 // Returns the natural size of an image, or `fallback` in an axis in which it has none.
 PrVec2 naturalOf(const PrLayoutBackgroundLayer& image, PrVec2 fallback) {
     if (image.kind == PrLayoutImageKind_Image) {
-        PrUVec2 texels = prDrawImageExtent(image.image);
+        const PrTextureDesc& desc = *prTextureSourceDesc(image.image);
+        PrUVec2 texels = image.upright ? prTextureDescDisplayedExtent(&desc) : desc.extent;
         return PrVec2{float(texels.x), float(texels.y)};
     }
     if (image.kind == PrLayoutImageKind_Gradient)
@@ -606,9 +606,10 @@ PrVec2 naturalOf(const PrLayoutBackgroundLayer& image, PrVec2 fallback) {
 // Draws a mask border into a list of its own (css-masking-1/#masking-with-the-mask-border-image): the nine pieces of
 // its image placed in the border image area, the border box grown by the outsets, as border-image places them
 // (css-backgrounds-3/#border-image-process). The middle masks nothing unless the slices fill it. `border` is the box's
-// border box and `widths` its border's widths.
-bool drawBorder(const LayoutCompounds* compounds, const PrLayoutMaskBorder& b, PrRect border, const float* widths,
-        DrawnLayer* out) {
+// border box and `widths` its border's widths. Returns false, with no list, if the border masks nothing. That happens
+// if its area is empty or its image has nothing to draw, for example while the image's texture has not arrived.
+bool drawBorder(LayoutTextures* textures, const LayoutCompounds* compounds, const PrLayoutMaskBorder& b, PrRect border,
+        const float* widths, DrawnLayer* out) {
     out->mode = b.mode;
     out->space = PrColorSpace_Srgb;
     auto edgeOf = [&](PrLayoutBorderImageKind kind, PrLayoutLength length, float number, float base, uint32_t side) -> float {
@@ -653,8 +654,15 @@ bool drawBorder(const LayoutCompounds* compounds, const PrLayoutMaskBorder& b, P
     slices.vertical = b.vertical;
     slices.center = b.fill;
     PrDrawList* drawn = nullptr;
-    PrDrawSource source = layoutImageSource(compounds, b.image, natural, &drawn);
     out->list = prDrawListCreate();
+    PrDrawSource source = layoutImageSource(textures, compounds, b.image, natural, out->list, &drawn);
+    if (!prDrawSourceIsValid(source)) {
+        // A border whose image has nothing to draw masks nothing, as a border without an image does.
+        prDrawListRelease(drawn);
+        prDrawListRelease(out->list);
+        out->list = nullptr;
+        return false;
+    }
     prDrawListNineSlice(out->list, source, &slices, area, PrDrawSampling_Linear, PrDrawPaint{.color = PR_COLOR16(1, 1, 1, 1)});
     if (!b.fill) {
         // The middle is opaque white, which masks nothing.
@@ -671,8 +679,8 @@ bool drawBorder(const LayoutCompounds* compounds, const PrLayoutMaskBorder& b, P
 
 // Draws a mask layer of an image into a list of its own, placed as a background layer in `boxes`. A layer that is not
 // clipped paints over `ink`.
-void drawImageLayer(const LayoutCompounds* compounds, const PrLayoutMaskLayer& layer, LayoutBackgroundBoxes boxes,
-        PrRect ink, DrawnLayer* out) {
+void drawImageLayer(LayoutTextures* textures, const LayoutCompounds* compounds, const PrLayoutMaskLayer& layer,
+        LayoutBackgroundBoxes boxes, PrRect ink, DrawnLayer* out) {
     out->mode = layer.mode == PrLayoutMaskMode_Luminance ? PrDrawMaskMode_Luminance : PrDrawMaskMode_Alpha;
     out->space = PrColorSpace_Srgb;
     boxes.area = layer.unclipped ? ink : PrRect{};
@@ -682,7 +690,7 @@ void drawImageLayer(const LayoutCompounds* compounds, const PrLayoutMaskLayer& l
     PrLayoutBackgroundLayer image = layer.image;
     image.attachment = PrLayoutBackgroundAttachment_Scroll;
     out->list = prDrawListCreate();
-    layoutBackgroundPaintLayer(compounds, image, boxes, out->list);
+    layoutBackgroundPaintLayer(textures, compounds, image, boxes, out->list);
 }
 
 // Combines the drawn layers, from the top layer down, and a border, into one mask (css-masking-1/#layering): each
@@ -770,14 +778,14 @@ bool resolveMask(const LayoutTree* tree, PrLayoutMaskIndex index, const LayoutBa
                 drawn.list = nullptr;
             }
         } else {
-            drawImageLayer(&styles->compounds, layer, boxes, ink, &drawn);
+            drawImageLayer(tree->textures, &styles->compounds, layer, boxes, ink, &drawn);
         }
         layers.push(drawn);
         operators.push(layerOperator(layer.composite));
     }
     DrawnLayer drawnBorder{};
     bool bordered = draws && mask.border.image.kind != PrLayoutImageKind_None &&
-        drawBorder(&styles->compounds, mask.border, border, widths, &drawnBorder);
+        drawBorder(tree->textures, &styles->compounds, mask.border, border, widths, &drawnBorder);
     DrawnLayer combined{};
     if (draws && (layers.count != 0 || bordered))
         draws = combine(layers, operators, bordered ? &drawnBorder : nullptr, &combined);

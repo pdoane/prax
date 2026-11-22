@@ -195,14 +195,15 @@ Reference pdfReference(const std::string& name, const fs::path& path) {
     return Reference{name, Source{.type = SourceType_Pdf, .path = path}};
 }
 
-std::shared_ptr<Loaded> loadPrinted(const fs::path& path, PrDrawWriterBackend format) {
+std::shared_ptr<Loaded> loadPrinted(const fs::path& path, PrDrawWriterBackend format,
+        PrTextureCache* PR_NULLABLE textures) {
     if (format == PrDrawWriterBackend_Svg) {
         Source pages{.path = pagesPage(page_host::PageHost::documentFiles(path))};
-        return load(pages, TextBackends{}, page_host::Media_Print, nullptr);
+        return load(pages, TextBackends{}, page_host::Media_Print, nullptr, textures);
     }
     if (!pdfDrawn())
         return nullptr;
-    return load(Source{.type = SourceType_Pdf, .path = path}, TextBackends{}, page_host::Media_Screen, nullptr);
+    return load(Source{.type = SourceType_Pdf, .path = path}, TextBackends{}, page_host::Media_Screen, nullptr, textures);
 }
 
 std::vector<Reference> referencesOf(const Document& document) {
@@ -239,7 +240,7 @@ bool print(const Reference& reference) {
 }
 
 std::shared_ptr<Loaded> load(const Source& source, TextBackends text, page_host::Media media,
-        PrDrawRenderer* PR_NULLABLE renderer) {
+        PrDrawRenderer* PR_NULLABLE renderer, PrTextureCache* PR_NULLABLE textures) {
     std::shared_ptr<Loaded> loaded = std::make_shared<Loaded>();
     loaded->source = source;
     loaded->shaper.reset(prTextShaperCreate(text.shaper));
@@ -247,16 +248,16 @@ std::shared_ptr<Loaded> load(const Source& source, TextBackends text, page_host:
     switch (source.type) {
         case SourceType_Page:
             loaded->html = loadHtml(source.path, source.query, source.settings, source.capture, source.scripts, media,
-                textShaper, text.hinting, hinterOf(text.hinting), renderer);
+                textShaper, text.hinting, hinterOf(text.hinting), renderer, textures);
             break;
         case SourceType_Lottie:
-            loaded->lottie = loadLottie(source.path, source.settings, textShaper, text.hinting, hinterOf(text.hinting));
+            loaded->lottie = loadLottie(source.path, source.settings, textShaper, text.hinting, hinterOf(text.hinting), textures);
             break;
         case SourceType_Rlottie:
             loaded->rlottie = loadRlottie(source.path);
             break;
         case SourceType_Pdf:
-            loaded->pdf = loadPdf(source.path);
+            loaded->pdf = loadPdf(source.path, textures);
             break;
     }
     return loaded;

@@ -1,4 +1,5 @@
 #include "pr/array.h"
+#include "pr/atomic.h"
 #include "pr/color_space.h"
 #include "pr/draw_cpu.h"
 #include "pr/draw_filter.h"
@@ -7,12 +8,15 @@
 #include "pr/float.h"
 #include "pr/gpu.h"
 #include "pr/gpu_select.h"
+#include "pr/mem.h"
 #include "pr/min_max.h"
 #include "pr/span.h"
 #include "pr/string.h"
+#include "pr/thread.h"
 #include "pr/vec.h"
 
 #include "tools/harness/harness_gpu.h"
+#include "tools/harness/harness_textures.h"
 
 #include "tools/harness/test.h"
 
@@ -91,10 +95,12 @@ void copyTexture(PrGpuCommands* commands, PrGpuTexture from, PrGpuTexture to) {
     prGpuCommandsTextureBarrier(commands, to, all, PrGpuAccessFlag_CopyWrite, PrGpuAccessFlag_ShaderRead);
 }
 
-// A renderer on a device, and a target that it renders into.
+// A renderer on a device, a target that it renders into, and the texture cache on the device that realizes the images
+// of its lists.
 struct Device {
     PrGpuDevice* gpuDevice;
     PrDrawRenderer* renderer = nullptr;
+    PrTextureCache* textures = nullptr;
     PrGpuTexture texture{};
     PrDrawFrame* frame = nullptr;
     uint32_t width;
@@ -106,6 +112,7 @@ struct Device {
         options.paths = paths;
         options.embeds = embeds;
         renderer = createRenderer(gpuDevice, &options);
+        textures = harnessTextureCacheCreate(gpuDevice);
         PrGpuTextureDesc desc = prGpuTextureDesc2d(prGpuFormatFromPixelFormat(PrPixelFormat_Rgba8), PrUVec2{w, h},
             PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_RenderTarget);
         REQUIRE(prGpuTextureCreate(gpuDevice, &desc, &texture) == PrStatus_Ok);
@@ -114,6 +121,7 @@ struct Device {
     ~Device() {
         prDrawFrameDestroy(frame);
         prDrawRendererDestroy(renderer);
+        prTextureCacheDestroy(textures);
         prGpuTextureRelease(gpuDevice, texture);
     }
 
@@ -146,15 +154,24 @@ struct Device {
     }
 };
 
-// Returns the list rendered by the cpu backend onto transparent pixels, which the test compares the device's render
-// with.
+// Returns the list rendered by the cpu backend onto transparent pixels, on the tests' memory device
+// (harnessMemoryDevice). A test compares the device's render with the result.
 Array<uint8_t> cpuRender(const PrDrawList* list, uint32_t width, uint32_t height) {
     Array<uint8_t> pixels(size_t(width) * height * 4);
-    PrDrawRenderer* renderer = prDrawCpuCreate(nullptr);
+    PrDrawCpuOptions options = prDrawCpuOptionsDefault();
+    options.device = harnessMemoryDevice();
+    PrDrawRenderer* renderer = prDrawCpuCreate(&options);
     PrPixels into{pixels.data(), size_t(width) * 4, {width, height}};
     REQUIRE(prDrawRendererRenderPixels(renderer, list, into, PrPixelFormat_Rgba8) == PrStatus_Ok);
     prDrawRendererDestroy(renderer);
     return pixels;
+}
+
+// Returns a source of `rect` of the image's texels in `textures`, with every mip level for Mipmap sampling.
+PrDrawSource imageIn(PrTextureCache* textures, const PrTextureSource* image, PrRect rect,
+        PrDrawSampling sampling = PrDrawSampling_Linear) {
+    bool levels = (sampling & PrDrawSamplingFlag_Kind) == PrDrawSampling_Mipmap;
+    return harnessImageSource(textures, image, rect, levels ? PrTextureCacheFlag_Levels : 0);
 }
 
 double inked(const Array<uint8_t>& pixels) {
@@ -176,6 +193,75 @@ double fractionDiffering(const Array<uint8_t>& a, const Array<uint8_t>& b, int t
         }
     }
     return double(differing) / double(a.count() / 4);
+}
+
+// The texels of an image that a brush tiles, and the gap between the tiles.
+struct TiledTexels {
+    PrRect texels;
+    PrVec2 spacing;
+};
+
+// Checks that the renderer on `gpuDevice` samples an image as the cpu backend does. It draws each of `tiled` with each
+// of `modes` on both axes, by every sampling and tile flag.
+void checkImageSampling(PrGpuDevice* gpuDevice, Span<const TiledTexels> tiled, Span<const PrDrawExtend> modes) {
+    // A gradient of texels with a hard diagonal, which each sampling filters differently.
+    Array<uint8_t> texels(12 * 10 * 4);
+    for (uint32_t y = 0; y < 10; ++y) {
+        for (uint32_t x = 0; x < 12; ++x) {
+            uint8_t* t = texels.data() + (y * 12 + x) * 4;
+            t[0] = uint8_t(x * 21);
+            t[1] = uint8_t(y * 25);
+            t[2] = x > y ? 200 : 20;
+            t[3] = 255;
+        }
+    }
+    const PrTextureSource* image =
+        prTextureSourceCreateCopy(PrPixelView{texels.data(), 48, {12, 10}}, PrPixelFormat_Rgba8,
+            PrTextureAlpha_Premultiplied);
+    Device device(gpuDevice, 96, 96);
+    const PrDrawTileFlags kFlagSets[] = {0, PrDrawTileFlag_Clamped};
+    const PrDrawSampling samplings[] = {
+        PrDrawSampling_Nearest, PrDrawSampling_Linear, PrDrawSampling_Cubic, PrDrawSampling_Mipmap,
+    };
+    for (PrDrawSampling sampling : samplings) {
+        for (PrDrawExtend mode : modes) {
+            for (PrDrawTileFlags flags : kFlagSets) {
+                for (const TiledTexels& c : tiled) {
+                    CAPTURE(int(sampling));
+                    CAPTURE(int(mode));
+                    CAPTURE(int(flags));
+                    CAPTURE(c.texels.left);
+                    CAPTURE(c.spacing.x);
+                    auto record = [&](PrTextureCache* textures) {
+                        PrDrawList* list = prDrawListCreate();
+                        PrDrawBrush brush = prDrawBrushDefault(PrDrawBrushKind_Image);
+                        // Magnified along x, and minified along y, so that mipmaps apply in y.
+                        brush.transform = prAffine2Concat(prAffine2Scale(PrVec2{1.7f, 0.3f}), prAffine2Rotate(0.2f));
+                        brush.image.source = imageIn(textures, image, c.texels, sampling);
+                        brush.image.tiles.tile = PrRect{3, 2, 23, 18};
+                        brush.image.tiles.spacing = c.spacing;
+                        brush.image.tiles.x = brush.image.tiles.y = mode;
+                        brush.image.tiles.flags = flags;
+                        brush.image.sampling = sampling;
+                        prDrawListRect(list, PrRect{0, 0, 96, 96}, {.brush = &brush});
+                        return list;
+                    };
+                    PrDrawList* list = record(device.textures);
+                    PrDrawList* cpuList = record(harnessMemoryTextures());
+                    Array<uint8_t> drawn = device.render(list);
+                    Array<uint8_t> expected = cpuRender(cpuList, 96, 96);
+                    prDrawListRelease(cpuList);
+                    // The hardware's anisotropic filter picks its levels and taps by its own approximation of the
+                    // footprint. The cpu backend takes the footprint's minor axis, with even taps along its major axis,
+                    // as texel reads do.
+                    bool approximate = sampling == PrDrawSampling_Mipmap;
+                    CHECK(fractionDiffering(drawn, expected, approximate ? 32 : 2) <= 0.002);
+                    prDrawListRelease(list);
+                }
+            }
+        }
+    }
+    prTextureSourceRelease(image);
 }
 
 const PrFont* load(const char* name) {
@@ -320,33 +406,31 @@ TEST_CASE("the fragment renderer draws the host's texture as the cpu backend dra
             PrGpuTextureUsageFlag_Sampled);
         PrGpuTexture texture{};
         REQUIRE(prGpuTextureCreate(device.gpuDevice, &desc, &texture) == PrStatus_Ok);
-        PrPixels upload{texels.data(), 32, {8, 8}};
-        prGpuTextureWrite(device.gpuDevice, texture, PrIVec2{0, 0}, prPixelsView(upload));
-        const PrDrawAlpha alphas[] = {PrDrawAlpha_Straight, PrDrawAlpha_Opaque};
-        for (PrDrawAlpha alpha : alphas) {
+        const PrTextureAlpha alphas[] = {PrTextureAlpha_Straight, PrTextureAlpha_None, PrTextureAlpha_Premultiplied};
+        for (PrTextureAlpha alpha : alphas) {
             CAPTURE(int(alpha));
-            PrDrawImageDesc imageDesc{
-                PrPixelView{texels.data(), 32, {8, 8}}, PrPixelFormat_Rgba8, alpha,
-                PrColorSpace_Srgb,
-            };
-            const PrDrawImage* image = nullptr;
-            REQUIRE(prDrawImageCreate(&imageDesc, &image) == PrStatus_Ok);
+            // Premultiplied texels hold the red multiplied by its alpha.
+            for (uint32_t i = 0; i < 64; ++i)
+                texels[i * 4] = i % 8 < 4 ? (alpha == PrTextureAlpha_Premultiplied ? 128 : 255) : 0;
+            PrPixels upload{texels.data(), 32, {8, 8}};
+            prGpuTextureWrite(device.gpuDevice, texture, PrIVec2{0, 0}, prPixelsView(upload));
+            const PrTextureSource* image =
+                prTextureSourceCreateCopy(PrPixelView{texels.data(), 32, {8, 8}}, PrPixelFormat_Rgba8, alpha);
             auto draw = [&](PrDrawSource source) {
                 PrDrawList* list = prDrawListCreate();
                 PrDrawBrush brush = prDrawBrushImage(source, PrRect{4, 4, 60, 28}, PrDrawSampling_Nearest);
                 prDrawListRect(list, PrRect{4, 4, 60, 28}, {.brush = &brush});
                 return list;
             };
-            PrDrawList* fromTexture =
-                draw(prDrawSourceTexture(prDrawGpuTexture(texture), prGpuTextureExtent(device.gpuDevice, texture),
-                    PrRect{0, 0, 8, 8}, alpha));
-            PrDrawList* fromImage = draw(prDrawSourceImage(image, PrRect{0, 0, 8, 8}));
+            PrDrawList* fromTexture = draw(prDrawSourceTexture(PrTexture{.texture = texture, .alpha = alpha},
+                prGpuTextureExtent(device.gpuDevice, texture), PrRect{0, 0, 8, 8}));
+            PrDrawList* fromImage = draw(harnessMemoryImage(image, PrRect{0, 0, 8, 8}));
             Array<uint8_t> drawn = device.render(fromTexture);
             Array<uint8_t> expected = cpuRender(fromImage, 64, 32);
             CHECK(fractionDiffering(drawn, expected, 2) == 0);
             prDrawListRelease(fromTexture);
             prDrawListRelease(fromImage);
-            prDrawImageRelease(image);
+            prTextureSourceRelease(image);
         }
         prDrawFrameDestroy(device.frame);
         device.frame = nullptr;
@@ -504,25 +588,28 @@ TEST_CASE("the fragment renderer tiles an image brush in the shader") {
                 t[3] = 255;
             }
         }
-        PrDrawImageDesc desc{
-            PrPixelView{texels.data(), 64, {16, 16}}, PrPixelFormat_Rgba8, PrDrawAlpha_Premultiplied,
-            PrColorSpace_Srgb,
-        };
-        const PrDrawImage* image = nullptr;
-        REQUIRE(prDrawImageCreate(&desc, &image) == PrStatus_Ok);
+        const PrTextureSource* image =
+            prTextureSourceCreateCopy(PrPixelView{texels.data(), 64, {16, 16}}, PrPixelFormat_Rgba8,
+                PrTextureAlpha_Premultiplied);
         const PrDrawExtend modes[] = {PrDrawExtend_None, PrDrawExtend_Repeat, PrDrawExtend_Reflect};
         for (PrDrawExtend mode : modes) {
             CAPTURE(int(mode));
-            PrDrawList* list = prDrawListCreate();
-            PrDrawBrush brush = prDrawBrushDefault(PrDrawBrushKind_Image);
-            brush.image.source = prDrawSourceImage(image, PrRect{0, 0, 16, 16});
-            brush.image.tiles.tile = PrRect{8, 8, 24, 24};
-            brush.image.tiles.spacing = PrVec2{4, 4};
-            brush.image.tiles.x = brush.image.tiles.y = mode;
-            brush.image.sampling = PrDrawSampling_Nearest;
-            prDrawListRect(list, PrRect{0, 0, 64, 64}, {.brush = &brush});
+            auto record = [&](PrTextureCache* textures) {
+                PrDrawList* list = prDrawListCreate();
+                PrDrawBrush brush = prDrawBrushDefault(PrDrawBrushKind_Image);
+                brush.image.source = imageIn(textures, image, PrRect{0, 0, 16, 16});
+                brush.image.tiles.tile = PrRect{8, 8, 24, 24};
+                brush.image.tiles.spacing = PrVec2{4, 4};
+                brush.image.tiles.x = brush.image.tiles.y = mode;
+                brush.image.sampling = PrDrawSampling_Nearest;
+                prDrawListRect(list, PrRect{0, 0, 64, 64}, {.brush = &brush});
+                return list;
+            };
+            PrDrawList* list = record(device.textures);
+            PrDrawList* cpuList = record(harnessMemoryTextures());
             Array<uint8_t> drawn = device.render(list);
-            Array<uint8_t> expected = cpuRender(list, 64, 64);
+            Array<uint8_t> expected = cpuRender(cpuList, 64, 64);
+            prDrawListRelease(cpuList);
             CHECK(fractionDiffering(drawn, expected, 8) <= 0.01);
             // After the backend drops the resources that it created on the device, the next frame recreates them.
             prDrawFrameDestroy(device.frame);
@@ -531,7 +618,7 @@ TEST_CASE("the fragment renderer tiles an image brush in the shader") {
             CHECK(device.render(list) == drawn);
             prDrawListRelease(list);
         }
-        prDrawImageRelease(image);
+        prTextureSourceRelease(image);
     });
 }
 
@@ -889,7 +976,7 @@ TEST_CASE("the fragment renderer reads what the host provides beneath a render a
         endPass(pass, &backgroundPass);
         PrDrawBeneath texture{};
         texture.kind = PrDrawBeneathKind_Texture;
-        texture.texture = prDrawGpuTexture(backgroundTexture);
+        texture.texture = backgroundTexture;
         texture.extent = prGpuTextureExtent(device.gpuDevice, backgroundTexture);
         texture.origin = PrIVec2{kAt, 0};
         PrDrawTarget part{.extent = {kPanel, kPanel}, .format = PrPixelFormat_Rgba8, .commands = commands};
@@ -998,7 +1085,7 @@ TEST_CASE("the fragment renderer reads the host's texture alone beneath a backdr
         REQUIRE(prGpuCommandsBegin(device.gpuDevice, nullptr, &commands));
         PrDrawBeneath beneath{};
         beneath.kind = PrDrawBeneathKind_Texture;
-        beneath.texture = prDrawGpuTexture(host);
+        beneath.texture = host;
         beneath.extent = prGpuTextureExtent(device.gpuDevice, host);
         PrDrawTarget prepared{
             .extent = {kSize, kSize},
@@ -1084,7 +1171,7 @@ TEST_CASE("the fragment renderer reads what lies beneath a turned group, as a te
         endPass(pass, &hostPass);
         PrDrawBeneath texture{};
         texture.kind = PrDrawBeneathKind_Texture;
-        texture.texture = prDrawGpuTexture(host);
+        texture.texture = host;
         texture.extent = prGpuTextureExtent(device.gpuDevice, host);
         PrDrawBeneath drawn{};
         drawn.kind = PrDrawBeneathKind_Draw;
@@ -1360,74 +1447,35 @@ TEST_CASE("the fragment renderer draws small paths from the atlas as the cpu bac
     });
 }
 
-TEST_CASE("the fragment renderer samples images as the cpu backend does, by every sampling, tile mode and tile flag") {
+TEST_CASE("the fragment renderer samples a whole image whose tiles cover the plane as the cpu backend does") {
     onEachTier([&](PrGpuDevice* gpuDevice) {
-        // A gradient of texels with a hard diagonal, which each sampling filters differently.
-        Array<uint8_t> texels(12 * 10 * 4);
-        for (uint32_t y = 0; y < 10; ++y) {
-            for (uint32_t x = 0; x < 12; ++x) {
-                uint8_t* t = texels.data() + (y * 12 + x) * 4;
-                t[0] = uint8_t(x * 21);
-                t[1] = uint8_t(y * 25);
-                t[2] = x > y ? 200 : 20;
-                t[3] = 255;
-            }
-        }
-        PrDrawImageDesc desc{
-            PrPixelView{texels.data(), 48, {12, 10}}, PrPixelFormat_Rgba8, PrDrawAlpha_Premultiplied,
-            PrColorSpace_Srgb,
-        };
-        const PrDrawImage* image = nullptr;
-        REQUIRE(prDrawImageCreate(&desc, &image) == PrStatus_Ok);
-        Device device(gpuDevice, 96, 96);
-        // Each case samples a part of the image, which texel reads serve, and the whole image, which the samplers
-        // serve, as spaced tiles and as tiles that abut.
-        struct Case {
-            PrRect texels;
-            PrVec2 spacing;
-        };
-        const Case cases[] = {
-            {PrRect{1, 1, 11, 9}, PrVec2{2, 3}}, {PrRect{0, 0, 12, 10}, PrVec2{2, 3}},
-            {PrRect{0, 0, 12, 10}, PrVec2{0, 0}},
-        };
-        const PrDrawTileFlags kFlagSets[] = {0, PrDrawTileFlag_Clamped};
-        const PrDrawSampling samplings[] = {
-            PrDrawSampling_Nearest, PrDrawSampling_Linear, PrDrawSampling_Cubic, PrDrawSampling_Mipmap,
-        };
+        // Tiles that abut and pad, repeat or reflect need no sampler that is transparent past the texture's edge.
+        const TiledTexels whole[] = {{PrRect{0, 0, 12, 10}, PrVec2{0, 0}}};
+        const PrDrawExtend modes[] = {PrDrawExtend_Pad, PrDrawExtend_Repeat, PrDrawExtend_Reflect};
+        checkImageSampling(gpuDevice, whole, modes);
+    });
+}
+
+// The renderer filters past the edge of a tile with a sampler that is transparent outside its texture
+// (PrGpuAddress_Border). WebGPU has no such sampler, so the cases that need one do not run on the web.
+#if defined(__EMSCRIPTEN__)
+constexpr bool kBorderSamplers = false;
+#else
+constexpr bool kBorderSamplers = true;
+#endif
+
+// A case's own skip replaces the suite's, so it repeats the suite's condition (harness::gpuTests).
+TEST_CASE("the fragment renderer samples images whose tiles leave gaps as the cpu backend does" *
+        doctest::skip(!kBorderSamplers || !gpuTests())) {
+    onEachTier([&](PrGpuDevice* gpuDevice) {
+        // A part of the image, and the whole image as spaced tiles, in every tile mode.
+        const TiledTexels spaced[] = {{PrRect{1, 1, 11, 9}, PrVec2{2, 3}}, {PrRect{0, 0, 12, 10}, PrVec2{2, 3}}};
         const PrDrawExtend modes[] = {PrDrawExtend_None, PrDrawExtend_Pad, PrDrawExtend_Repeat, PrDrawExtend_Reflect};
-        for (PrDrawSampling sampling : samplings) {
-            for (PrDrawExtend mode : modes) {
-                for (PrDrawTileFlags flags : kFlagSets) {
-                    for (const Case& c : cases) {
-                        CAPTURE(int(sampling));
-                        CAPTURE(int(mode));
-                        CAPTURE(int(flags));
-                        CAPTURE(c.texels.left);
-                        CAPTURE(c.spacing.x);
-                        PrDrawList* list = prDrawListCreate();
-                        PrDrawBrush brush = prDrawBrushDefault(PrDrawBrushKind_Image);
-                        // Magnified along x, and minified along y, so that mipmaps apply in y.
-                        brush.transform = prAffine2Concat(prAffine2Scale(PrVec2{1.7f, 0.3f}), prAffine2Rotate(0.2f));
-                        brush.image.source = prDrawSourceImage(image, c.texels);
-                        brush.image.tiles.tile = PrRect{3, 2, 23, 18};
-                        brush.image.tiles.spacing = c.spacing;
-                        brush.image.tiles.x = brush.image.tiles.y = mode;
-                        brush.image.tiles.flags = flags;
-                        brush.image.sampling = sampling;
-                        prDrawListRect(list, PrRect{0, 0, 96, 96}, {.brush = &brush});
-                        Array<uint8_t> drawn = device.render(list);
-                        Array<uint8_t> expected = cpuRender(list, 96, 96);
-                        // The hardware's anisotropic filter picks its levels and taps by its own approximation of the
-                        // footprint. The cpu backend takes the footprint's minor axis, with even taps along its major
-                        // axis, as texel reads do.
-                        bool approximate = sampling == PrDrawSampling_Mipmap;
-                        CHECK(fractionDiffering(drawn, expected, approximate ? 32 : 2) <= 0.002);
-                        prDrawListRelease(list);
-                    }
-                }
-            }
-        }
-        prDrawImageRelease(image);
+        checkImageSampling(gpuDevice, spaced, modes);
+        // The whole image as tiles that abut. The tiles do not extend past the first tile.
+        const TiledTexels whole[] = {{PrRect{0, 0, 12, 10}, PrVec2{0, 0}}};
+        const PrDrawExtend none[] = {PrDrawExtend_None};
+        checkImageSampling(gpuDevice, whole, none);
     });
 }
 
@@ -1436,7 +1484,7 @@ TEST_CASE("the fragment renderer draws a run of instances that read more texture
         // Twelve images, each a pattern of its own, drawn in one run of instances. Through slots, the run takes several
         // draws, each binding the textures that its instances read.
         constexpr uint32_t kImages = 12;
-        const PrDrawImage* images[kImages] = {};
+        const PrTextureSource* images[kImages] = {};
         for (uint32_t i = 0; i < kImages; ++i) {
             uint8_t texels[4 * 4 * 4];
             for (uint32_t t = 0; t < 16; ++t) {
@@ -1445,25 +1493,37 @@ TEST_CASE("the fragment renderer draws a run of instances that read more texture
                 texels[t * 4 + 2] = uint8_t(255 - i * 20);
                 texels[t * 4 + 3] = 255;
             }
-            PrDrawImageDesc desc{
-                PrPixelView{texels, 16, {4, 4}}, PrPixelFormat_Rgba8, PrDrawAlpha_Premultiplied, PrColorSpace_Srgb,
-            };
-            REQUIRE(prDrawImageCreate(&desc, &images[i]) == PrStatus_Ok);
+            images[i] = prTextureSourceCreateCopy(PrPixelView{texels, 16, {4, 4}}, PrPixelFormat_Rgba8,
+                PrTextureAlpha_Premultiplied);
         }
         Device device(gpuDevice, 96, 64);
-        PrDrawList* list = prDrawListCreate();
-        for (uint32_t i = 0; i < kImages; ++i) {
-            PrRect cell{float(i % 6) * 16, float(i / 6) * 32, float(i % 6) * 16 + 16, float(i / 6) * 32 + 32};
-            PrDrawBrush brush = prDrawBrushImage(prDrawSourceImage(images[i], PrRect{0, 0, 4, 4}), cell,
-                PrDrawSampling_Linear);
-            prDrawListRect(list, cell, {.brush = &brush});
-        }
+        // Each image is a texture of its own, so a draw binds every image that it draws. Images packed into the slots
+        // of a page would share one texture.
+        PrTextureCacheDesc separate = prTextureCacheDescDefault(gpuDevice);
+        separate.pack = PrTextureCachePack_Never;
+        PrTextureCache* textures = prTextureCacheCreate(&separate);
+        auto record = [&](PrTextureCache* in) {
+            PrDrawList* list = prDrawListCreate();
+            for (uint32_t i = 0; i < kImages; ++i) {
+                PrRect cell{float(i % 6) * 16, float(i / 6) * 32, float(i % 6) * 16 + 16, float(i / 6) * 32 + 32};
+                PrDrawBrush brush = prDrawBrushImage(imageIn(in, images[i], PrRect{0, 0, 4, 4}), cell,
+                    PrDrawSampling_Linear);
+                prDrawListRect(list, cell, {.brush = &brush});
+            }
+            return list;
+        };
+        PrDrawList* list = record(textures);
+        PrDrawList* cpuList = record(harnessMemoryTextures());
         Array<uint8_t> drawn = device.render(list);
-        Array<uint8_t> expected = cpuRender(list, 96, 64);
+        Array<uint8_t> expected = cpuRender(cpuList, 96, 64);
+        prDrawListRelease(cpuList);
         CHECK(fractionDiffering(drawn, expected, 2) <= 0.002);
         prDrawListRelease(list);
-        for (const PrDrawImage* image : images)
-            prDrawImageRelease(image);
+        prDrawFrameDestroy(device.frame);
+        device.frame = nullptr;
+        prTextureCacheDestroy(textures);
+        for (const PrTextureSource* image : images)
+            prTextureSourceRelease(image);
     });
 }
 
@@ -1488,43 +1548,46 @@ TEST_CASE("the fragment renderer tiles an image from its snapped parts between p
                 t[3] = 255;
             }
         }
-        PrDrawImageDesc desc{
-            PrPixelView{texels.data(), kW * 4, {kW, kH}}, PrPixelFormat_Rgba8, PrDrawAlpha_Premultiplied,
-            PrColorSpace_Srgb,
-        };
-        const PrDrawImage* image = nullptr;
-        REQUIRE(prDrawImageCreate(&desc, &image) == PrStatus_Ok);
+        const PrTextureSource* image = prTextureSourceCreateCopy(PrPixelView{texels.data(), kW * 4, {kW, kH}},
+            PrPixelFormat_Rgba8, PrTextureAlpha_Premultiplied);
         Device device(gpuDevice, 48, 80);
         const PrVec2 origins[] = {{4, 4}, {4.5f, 4.5f}, {4.25f, 4.75f}};
         constexpr PrDrawEdges edges = PrDrawEdges_Snapped;
         for (PrVec2 origin : origins) {
             CAPTURE(origin.x);
             CAPTURE(origin.y);
-            PrDrawList* tiled = prDrawListCreate();
-            for (uint32_t row = 0; row < kRows; ++row) {
-                for (uint32_t column = 0; column < kColumns; ++column) {
-                    PrRect cell{
-                        origin.x + float(column * kCellW), origin.y + float(row * kCellH),
-                        origin.x + float((column + 1) * kCellW), origin.y + float((row + 1) * kCellH),
-                    };
-                    PrRect source{
-                        float(column * kCellW), float(row * kCellH), float((column + 1) * kCellW),
-                        float((row + 1) * kCellH),
-                    };
-                    PrDrawBrush brush = prDrawBrushImage(prDrawSourceImage(image, source), cell, PrDrawSampling_Linear);
-                    prDrawListPushClipRect(tiled, cell, edges);
-                    prDrawListRect(tiled, cell, {.brush = &brush, .edges = edges});
-                    prDrawListPopClip(tiled);
+            auto recordTiled = [&](PrTextureCache* textures) {
+                PrDrawList* list = prDrawListCreate();
+                for (uint32_t row = 0; row < kRows; ++row) {
+                    for (uint32_t column = 0; column < kColumns; ++column) {
+                        PrRect cell{
+                            origin.x + float(column * kCellW), origin.y + float(row * kCellH),
+                            origin.x + float((column + 1) * kCellW), origin.y + float((row + 1) * kCellH),
+                        };
+                        PrRect source{
+                            float(column * kCellW), float(row * kCellH), float((column + 1) * kCellW),
+                            float((row + 1) * kCellH),
+                        };
+                        PrDrawBrush brush =
+                            prDrawBrushImage(imageIn(textures, image, source), cell, PrDrawSampling_Linear);
+                        prDrawListPushClipRect(list, cell, edges);
+                        prDrawListRect(list, cell, {.brush = &brush, .edges = edges});
+                        prDrawListPopClip(list);
+                    }
                 }
-            }
+                return list;
+            };
             PrRect whole{origin.x, origin.y, origin.x + float(kW), origin.y + float(kH)};
             PrDrawList* single = prDrawListCreate();
-            PrDrawBrush brush = prDrawBrushImage(prDrawSourceImage(image, PrRect{0, 0, float(kW), float(kH)}),
-                whole, PrDrawSampling_Linear);
+            PrDrawSource all = imageIn(harnessMemoryTextures(), image, PrRect{0, 0, float(kW), float(kH)});
+            PrDrawBrush brush = prDrawBrushImage(all, whole, PrDrawSampling_Linear);
             prDrawListRect(single, whole, {.brush = &brush, .edges = edges});
+            PrDrawList* tiled = recordTiled(device.textures);
+            PrDrawList* cpuTiled = recordTiled(harnessMemoryTextures());
             Array<uint8_t> drawn = device.render(tiled);
-            Array<uint8_t> cpu = cpuRender(tiled, 48, 80);
+            Array<uint8_t> cpu = cpuRender(cpuTiled, 48, 80);
             Array<uint8_t> expected = cpuRender(single, 48, 80);
+            prDrawListRelease(cpuTiled);
             // The interior, a pixel in from the outer edges, where the tiles meet.
             auto interior = [&](const Array<uint8_t>& pixels) {
                 Array<uint8_t> out;
@@ -1541,7 +1604,7 @@ TEST_CASE("the fragment renderer tiles an image from its snapped parts between p
             prDrawListRelease(tiled);
             prDrawListRelease(single);
         }
-        prDrawImageRelease(image);
+        prTextureSourceRelease(image);
     });
 }
 
@@ -1559,32 +1622,35 @@ TEST_CASE("the fragment renderer samples a sub-rectangle with a gutter as the cp
                 t[3] = 255;
             }
         }
-        PrDrawImageDesc desc{
-            PrPixelView{texels.data(), 128, {32, 32}}, PrPixelFormat_Rgba8, PrDrawAlpha_Premultiplied,
-            PrColorSpace_Srgb,
-        };
-        const PrDrawImage* image = nullptr;
-        REQUIRE(prDrawImageCreate(&desc, &image) == PrStatus_Ok);
+        const PrTextureSource* image =
+            prTextureSourceCreateCopy(PrPixelView{texels.data(), 128, {32, 32}}, PrPixelFormat_Rgba8,
+                PrTextureAlpha_Premultiplied);
         Device device(gpuDevice, 96, 96);
         const PrDrawSampling samplings[] = {PrDrawSampling_Linear, PrDrawSampling_Cubic, PrDrawSampling_Mipmap};
         for (PrDrawSampling sampling : samplings) {
             CAPTURE(int(sampling));
-            PrDrawList* list = prDrawListCreate();
-            PrDrawBrush brush = prDrawBrushDefault(PrDrawBrushKind_Image);
-            brush.transform = prAffine2Concat(prAffine2Scale(PrVec2{1.7f, 0.6f}), prAffine2Rotate(0.2f));
-            brush.image.source = prDrawSourceImage(image, PrRect{8, 8, 16, 16});
-            brush.image.tiles.tile = PrRect{3, 2, 19, 18};
-            brush.image.tiles.x = brush.image.tiles.y = PrDrawExtend_Repeat;
-            brush.image.sampling = PrDrawSampling(sampling | PrDrawSamplingFlag_Gutter);
-            prDrawListRect(list, PrRect{0, 0, 96, 96}, {.brush = &brush});
+            auto record = [&](PrTextureCache* textures) {
+                PrDrawList* list = prDrawListCreate();
+                PrDrawBrush brush = prDrawBrushDefault(PrDrawBrushKind_Image);
+                brush.transform = prAffine2Concat(prAffine2Scale(PrVec2{1.7f, 0.6f}), prAffine2Rotate(0.2f));
+                brush.image.source = imageIn(textures, image, PrRect{8, 8, 16, 16}, sampling);
+                brush.image.tiles.tile = PrRect{3, 2, 19, 18};
+                brush.image.tiles.x = brush.image.tiles.y = PrDrawExtend_Repeat;
+                brush.image.sampling = PrDrawSampling(sampling | PrDrawSamplingFlag_Gutter);
+                prDrawListRect(list, PrRect{0, 0, 96, 96}, {.brush = &brush});
+                return list;
+            };
+            PrDrawList* list = record(device.textures);
+            PrDrawList* cpuList = record(harnessMemoryTextures());
             Array<uint8_t> drawn = device.render(list);
-            Array<uint8_t> expected = cpuRender(list, 96, 96);
+            Array<uint8_t> expected = cpuRender(cpuList, 96, 96);
+            prDrawListRelease(cpuList);
             // As for the whole image, the hardware's anisotropic filter differs from cpu's in its levels and taps.
             bool approximate = sampling == PrDrawSampling_Mipmap;
             CHECK(fractionDiffering(drawn, expected, approximate ? 32 : 2) <= 0.002);
             prDrawListRelease(list);
         }
-        prDrawImageRelease(image);
+        prTextureSourceRelease(image);
     });
 }
 
@@ -1657,19 +1723,7 @@ TEST_CASE("the fragment renderer draws a list source as a texture at its scale i
         PrDrawList* list = prDrawListCreate();
         prDrawListPushTransformAffine2(list, prAffine2Scale(PrVec2{1.3f, 1.3f}));
         prDrawListPushGroup(list, &masked);
-        Array<uint8_t> texels(8 * 8 * 4);
-        for (uint8_t& texel : texels)
-            texel = 200;
-        PrDrawImageDesc desc{
-            PrPixelView{texels.data(), 32, {8, 8}}, PrPixelFormat_Rgba8, PrDrawAlpha_Premultiplied,
-            PrColorSpace_Srgb,
-        };
-        const PrDrawImage* image = nullptr;
-        REQUIRE(prDrawImageCreate(&desc, &image) == PrStatus_Ok);
-        PrDrawSource source = prDrawSourceImage(image, PrRect{0, 0, 8, 8});
-        PrDrawBrush brush = prDrawBrushImage(source, photo, PrDrawSampling_Cubic);
-        prDrawListRect(list, photo, {.brush = &brush});
-        prDrawImageRelease(image);
+        prDrawListRect(list, photo, {.color = PrColor{1, 1, 1, 200.0f / 255}});
         prDrawListPopGroup(list);
         prDrawListPopTransform(list);
         Device device(gpuDevice, 100, 100);
@@ -1909,17 +1963,13 @@ TEST_CASE("the fragment renderer keeps colors past white in a half-float target,
         PrFloat16 texels[4 * 4];
         for (uint32_t i = 0; i < 4; ++i) {
             for (uint32_t k = 0; k < 4; ++k)
-                texels[i * 4 + k] = prFloat16FromFloat(k < 3 ? 2.0f : 1.0f);
+                texels[i * 4 + k] = prFloat16FromFloat(k < 3 ? prColorTransferDecode(PrColorTransfer_Srgb, 2) : 1.0f);
         }
-        PrDrawImageDesc desc{
-            .pixels = PrPixelView{reinterpret_cast<const uint8_t*>(texels), 16, {2, 2}},
-            .format = PrPixelFormat_RgbaF16,
-            .alpha = PrDrawAlpha_Premultiplied,
-            .space = PrColorSpace_Srgb,
-        };
-        const PrDrawImage* image = nullptr;
-        REQUIRE(prDrawImageCreate(&desc, &image) == PrStatus_Ok);
-        PrDrawBrush brush = prDrawBrushImage(prDrawSourceImage(image, PrRect{0, 0, 2, 2}), PrRect{32, 0, 48, 8},
+        const PrTextureSource* image =
+            prTextureSourceCreateCopy(PrPixelView{reinterpret_cast<const uint8_t*>(texels), 16, {2, 2}},
+                PrPixelFormat_RgbaF16, PrTextureAlpha_Premultiplied);
+        PrTextureCache* textures = harnessTextureCacheCreate(gpuDevice);
+        PrDrawBrush brush = prDrawBrushImage(imageIn(textures, image, PrRect{0, 0, 2, 2}), PrRect{32, 0, 48, 8},
             PrDrawSampling_Nearest);
         prDrawListRect(list, PrRect{32, 0, 48, 8}, {.brush = &brush});
 
@@ -1966,8 +2016,9 @@ TEST_CASE("the fragment renderer keeps colors past white in a half-float target,
         CHECK(near(colors[2], PrColor{limit, limit, limit, 1}));
         prDrawFrameDestroy(frame);
         prDrawRendererDestroy(renderer);
+        prTextureCacheDestroy(textures);
         prGpuTextureRelease(gpuDevice, texture);
-        prDrawImageRelease(image);
+        prTextureSourceRelease(image);
         prDrawListRelease(list);
     });
 }
@@ -2098,12 +2149,7 @@ TEST_CASE("the fragment renderer draws a group into the host's texture, which ke
         PrGpuTexture held{};
         REQUIRE(prGpuTextureCreate(device.gpuDevice, &desc, &held) == PrStatus_Ok);
         uint64_t drawn = 0;
-        PrDrawGroupLayer layer{
-            .texture = prDrawGpuTexture(held),
-            .extent = {4, 4},
-            .drawn = &drawn,
-            .sampling = PrDrawSampling_Nearest,
-        };
+        PrDrawGroupLayer layer{.texture = held, .extent = {4, 4}, .drawn = &drawn, .sampling = PrDrawSampling_Nearest};
         // A list of revisions `first` to `last` of a group whose bounds cover the target. Revision 1 replaces the
         // texture's texels with red, and each later one draws half-opaque blue over the left half, which would darken
         // if it drew twice.
@@ -2218,23 +2264,19 @@ TEST_CASE("the fragment renderer paints a gradient's hard stops as the cpu backe
     });
 }
 
-TEST_CASE("the fragment renderer uploads an image, glyphs and small paths' coverage once") {
+TEST_CASE("the fragment renderer uploads the coverage of glyphs and small paths once, and draws the host's textures") {
     onEachTier([&](PrGpuDevice* gpuDevice) {
         Device device(gpuDevice, 64, 64);
         const PrFont* font = load("NotoSans[wdth,wght].ttf");
         uint8_t texels[4] = {255, 0, 0, 255};
-        PrDrawImageDesc desc{
-            PrPixelView{texels, 4, {1, 1}}, PrPixelFormat_Rgba8, PrDrawAlpha_Premultiplied,
-            PrColorSpace_Srgb,
-        };
-        const PrDrawImage* image = nullptr;
-        REQUIRE(prDrawImageCreate(&desc, &image) == PrStatus_Ok);
+        const PrTextureSource* image = prTextureSourceCreateCopy(PrPixelView{texels, 4, {1, 1}}, PrPixelFormat_Rgba8,
+            PrTextureAlpha_Premultiplied);
         PrPath* path = prPathCreate();
         prPathMoveTo(path, PrVec2{4, 4});
         prPathLineTo(path, PrVec2{20, 12});
         prPathLineTo(path, PrVec2{4, 20});
         PrDrawList* list = prDrawListCreate();
-        PrDrawBrush brush = prDrawBrushImage(prDrawSourceImage(image, PrRect{0, 0, 1, 1}), PrRect{0, 0, 16, 16},
+        PrDrawBrush brush = prDrawBrushImage(imageIn(device.textures, image, PrRect{0, 0, 1, 1}), PrRect{0, 0, 16, 16},
             PrDrawSampling_Nearest);
         prDrawListRect(list, PrRect{0, 0, 16, 16}, {.brush = &brush});
         PrFontGlyph glyphs[2] = {{prFontCodePointGlyph(font, 'H'), {20, 30}}, {prFontCodePointGlyph(font, 'i'), {40, 30}}};
@@ -2258,8 +2300,105 @@ TEST_CASE("the fragment renderer uploads an image, glyphs and small paths' cover
         CHECK(second.primitives == first.primitives);
         prPathDestroy(path);
         prDrawListRelease(list);
-        prDrawImageRelease(image);
+        prTextureSourceRelease(image);
         prFontRelease(font);
+    });
+}
+
+TEST_CASE("an image of blocks that the device samples draws from its blocks, read as the plain form") {
+    TierDevice tier;
+    REQUIRE(gpuDeviceCreate(PrGpuBackend_Default, nullptr, &tier.device) == PrStatus_Ok);
+    PrTextureSourceDesc desc{
+        .texture = prTextureDesc2d(PrGpuFormat_Bc1Srgb, PrUVec2{8, 8}, PrTextureAlpha_Straight),
+        .read = [](void* PR_NULLABLE, PrTextureRead* read) {
+            const PrTextureDesc* texture = prTextureSourceDesc(prTextureReadSource(read));
+            prMemZero(prTextureReadStorage(read), prTextureReadSize(texture, prTextureReadInfo(read)));
+            prTextureReadComplete(read, PrStatus_Ok);
+        },
+    };
+    const PrTextureSource* image = prTextureSourceCreate(&desc);
+    PrTextureCache* textures = harnessTextureCacheCreate(tier.device);
+    PrTextureRegion region{};
+    PrTextureCacheState state = prTextureCacheRealize(textures, image, prTextureCacheAskEncoded(0), &region);
+    if (prGpuDeviceSupportsFormat(tier.device, PrGpuFormat_Bc1, PrGpuTextureUsageFlag_Sampled)) {
+        REQUIRE(state == PrTextureCacheState_Ready);
+        CHECK(prGpuTextureDesc(tier.device, region.texture.texture).format == PrGpuFormat_Bc1);
+        CHECK(region.texture.alpha == PrTextureAlpha_Straight);
+        Device device(tier.device, 16, 16);
+        PrDrawList* list = prDrawListCreate();
+        PrDrawBrush brush = prDrawBrushImage(prDrawSourceRegion(&region, PrRect{0, 0, 8, 8}, 0), PrRect{0, 0, 16, 16},
+            PrDrawSampling_Linear);
+        prDrawListRect(list, PrRect{0, 0, 16, 16}, {.brush = &brush});
+        // Zeroed BC1 blocks decode to opaque black.
+        Array<uint8_t> drawn = device.render(list);
+        CHECK(drawn[(8 * 16 + 8) * 4 + 3] == 255);
+        CHECK(drawn[(8 * 16 + 8) * 4] == 0);
+        prDrawListRelease(list);
+    } else {
+        // If the device does not sample the blocks and nothing decodes them, the image does not realize.
+        CHECK(state == PrTextureCacheState_Failed);
+    }
+    prTextureCacheDestroy(textures);
+    prTextureSourceRelease(image);
+}
+
+TEST_CASE("a frame draws more distinct images than one draw can bind, from the page that the cache packs them into") {
+    onEachTier([&](PrGpuDevice* gpuDevice) {
+        // More distinct images than the slots that a draw binds. Each image is a color of its own, drawn over one cell.
+        const uint32_t slots = prGpuDeviceInfo(gpuDevice).maxTextureSlots;
+        const uint32_t count = (slots != 0 ? slots : 16) * 2 + 3;
+        Array<const PrTextureSource*> images;
+        for (uint32_t i = 0; i < count; ++i) {
+            uint8_t texels[6 * 5 * 4];
+            for (uint32_t t = 0; t < 30; ++t) {
+                texels[t * 4] = uint8_t(i * 7);
+                texels[t * 4 + 1] = uint8_t(255 - i * 5);
+                texels[t * 4 + 2] = uint8_t(t * 8);
+                texels[t * 4 + 3] = 255;
+            }
+            images.push(prTextureSourceCreateCopy(PrPixelView{texels, 24, {6, 5}}, PrPixelFormat_Rgba8,
+                PrTextureAlpha_Premultiplied));
+        }
+        const PrTextureCachePack packs[] =
+            {PrTextureCachePack_Auto, PrTextureCachePack_Always, PrTextureCachePack_Never};
+        for (PrTextureCachePack pack : packs) {
+            CAPTURE(int(pack));
+            Device device(gpuDevice, 128, 128);
+            PrTextureCacheDesc desc = prTextureCacheDescDefault(gpuDevice);
+            desc.pack = pack;
+            PrTextureCache* textures = prTextureCacheCreate(&desc);
+            auto record = [&](PrTextureCache* in) {
+                PrDrawList* list = prDrawListCreate();
+                for (uint32_t i = 0; i < count; ++i) {
+                    PrRect cell{float(i % 12) * 10, float(i / 12) * 10, float(i % 12) * 10 + 10, float(i / 12) * 10 + 10};
+                    PrDrawBrush brush = prDrawBrushImage(imageIn(in, images[i], PrRect{0, 0, 6, 5}), cell,
+                        PrDrawSampling_Linear);
+                    prDrawListRect(list, cell, {.brush = &brush});
+                }
+                return list;
+            };
+            PrDrawList* list = record(textures);
+            PrDrawList* cpuList = record(harnessMemoryTextures());
+            Array<uint8_t> drawn = device.render(list);
+            Array<uint8_t> expected = cpuRender(cpuList, 128, 128);
+            CHECK(fractionDiffering(drawn, expected, 2) <= 0.002);
+            // A GPU device packs small images by default, on either tier, so that a page's draws bind one texture for
+            // them all.
+            bool packed = pack != PrTextureCachePack_Never;
+            PrTextureCacheInfo info = prTextureCacheInfo(textures);
+            CHECK(info.slots == (packed ? count : 0));
+            CHECK(info.textures == (packed ? 0 : count));
+            CHECK(info.pages == (packed ? 1u : 0u));
+            if (packed)
+                CHECK(device.stats().draws < count);
+            prDrawListRelease(cpuList);
+            prDrawListRelease(list);
+            prDrawFrameDestroy(device.frame);
+            device.frame = nullptr;
+            prTextureCacheDestroy(textures);
+        }
+        for (const PrTextureSource* image : images)
+            prTextureSourceRelease(image);
     });
 }
 

@@ -1,17 +1,18 @@
 // The part of the Dear ImGui draw backend that every platform shares: the Dear ImGui context, the fonts in its atlas,
-// and the recording of a list into a Dear ImGui frame. Each platform's source creates the renderer's state, uploads its
-// images, and draws a frame with Dear ImGui's renderer for its device, through the functions that its header declares.
+// and the recording of a list into a Dear ImGui frame. Each platform's source creates the renderer's state, names the
+// host's textures for Dear ImGui, and draws a frame with Dear ImGui's renderer for its device, through the functions
+// that its header declares.
 
 #pragma once
 
 #include "pr/base.h"
-#include "pr/draw_image.h"
 #include "pr/draw_list.h"
 #include "pr/draw_renderer.h"
 #include "pr/draw_renderer_backend.h"
 #include "pr/font.h"
 #include "pr/pixels.h"
 #include "pr/raw_array.h"
+#include "pr/texture.h"
 
 #include "imgui.h"
 
@@ -40,9 +41,6 @@ struct ImGuiFrame : PrDrawFrame {
     ImGuiBackend* renderer;
     ImDrawData data;
 };
-
-// Writes the image's pixels as Dear ImGui's renderer blends them: Rgba8 with straight alpha.
-void imguiImagePixels(const PrDrawImage* image, PrPixels pixels);
 
 // Deletes the draw lists that the frame holds. The backend's context is current.
 void imguiFrameClear(ImGuiFrame* frame);

@@ -14,13 +14,8 @@ PR_ASSUME_NONNULL_BEGIN
 
 namespace pr_impl {
 
-// Returns the texture through which the renderer samples the image, and writes its extent to `extent`. The image is
-// uploaded on first use, before the commands submitted after the call. Returns ImTextureID_Invalid if the device cannot
-// create the texture.
-ImTextureID imguiImageTexture(ImGuiBackend* imgui, const PrDrawImage* image, PrUVec2* extent);
-
-// Returns the texture through which the renderer samples the host's texture.
-ImTextureID imguiHostTexture(ImGuiBackend* imgui, PrDrawTextureId texture);
+// Returns the texture id through which the renderer samples the host's texture, whose texels have `alpha`.
+ImTextureID imguiHostTexture(PrGpuTexture texture, PrTextureAlpha alpha);
 
 // Creates the renderer's state on `device`, with the backend's new context current. Returns null if the renderer cannot
 // start on the device.

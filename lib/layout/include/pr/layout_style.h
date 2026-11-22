@@ -1054,6 +1054,11 @@ typedef uint8_t PrLayoutBackgroundSize;
 typedef struct PrLayoutBackgroundLayer {
     PrLayoutImageKind kind;
     PrLayoutImageRendering rendering;           // Image and List
+
+    // Image: true if the image is shown with its orientation applied (PrTextureDesc::orientation), and false if it is
+    // shown as its stored texels. The natural size of the image is the size of what is shown.
+    bool upright;
+
     PrLayoutBackgroundRepeat repeatX;
     PrLayoutBackgroundRepeat repeatY;
     PrLayoutBackgroundAttachment attachment;
@@ -1091,7 +1096,7 @@ typedef struct PrLayoutBackgroundLayer {
     const PrLayoutFilter* PR_NULLABLE filters;
 
     union {
-        const PrDrawImage* image;               // Image: the tree retains a reference
+        const PrTextureSource* image;           // Image: the tree retains a reference
         PrDrawList* list;                       // List: in its natural space; the tree freezes and retains it
         PrLayoutGradient gradient;              // Gradient: the tree copies its stops
 

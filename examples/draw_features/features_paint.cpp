@@ -253,7 +253,7 @@ void brushSpaces(PrDrawList* list, float width, float height, double) {
 }
 
 void images(PrDrawList* list, float width, float height, double) {
-    const PrDrawImage* card = testCard();
+    const PrTextureSource* card = testCard();
     Grid grid{width, height, 4, 3};
     PrRect whole{0, 0, 64, 64};
     // Upscaled by each sampling.
@@ -283,16 +283,16 @@ void images(PrDrawList* list, float width, float height, double) {
     drawImage(list, card, whole, inset(c, 20), PrDrawSampling_Linear, 1);
     // Decoded through lib/image, and as the brush of a shape other than its rectangle.
     c = grid.at(9, 10);
-    if (const PrDrawImage* decoded = decodedCard())
+    if (const PrTextureSource* decoded = decodedCard())
         drawImage(list, decoded, whole, squareIn(c, 180), PrDrawSampling_Linear, 1);
     c = grid.at(10, 10);
     PrRect rounded = squareIn(c, 180);
-    PrDrawSource cardSource = prDrawSourceImage(card, whole);
+    PrDrawSource cardSource = imageSource(card, whole);
     PrDrawBrush cardBrush = prDrawBrushImage(cardSource, rounded, PrDrawSampling_Linear);
     prDrawListCornerRect(list, prCornerRectRound(rounded, 40), {.brush = &cardBrush});
     c = grid.at(11, 10);
     PrRect offset{c.left + 0.5f, c.top + 0.5f, c.left + 128.5f, c.top + 128.5f};
-    PrDrawBrush nearest = prDrawBrushImage(prDrawSourceImage(card, whole), offset, PrDrawSampling_Nearest);
+    PrDrawBrush nearest = prDrawBrushImage(imageSource(card, whole), offset, PrDrawSampling_Nearest);
     prDrawListRect(list, offset, {.brush = &nearest, .edges = PrDrawEdges_Aliased});
     const char* captions[] = {
         "nearest",
@@ -313,13 +313,13 @@ void images(PrDrawList* list, float width, float height, double) {
 }
 
 void imageBrushes(PrDrawList* list, float width, float height, double) {
-    const PrDrawImage* tile = smallTile();
+    const PrTextureSource* tile = smallTile();
     Grid grid{width, height, 4, 2};
     PrDrawExtend modes[] = {PrDrawExtend_None, PrDrawExtend_Pad, PrDrawExtend_Repeat, PrDrawExtend_Reflect};
     for (uint32_t i = 0; i < 8; ++i) {
         PrRect c = grid.at(i, 20);
         PrDrawBrush brush = prDrawBrushDefault(PrDrawBrushKind_Image);
-        brush.image.source = prDrawSourceImage(tile, PrRect{0, 0, 16, 16});
+        brush.image.source = imageSource(tile, PrRect{0, 0, 16, 16});
         PrVec2 center = prRectCenter(c);
         brush.image.tiles.tile = PrRect{center.x - 24, center.y - 24, center.x + 24, center.y + 24};
         brush.image.tiles.x = modes[i % 4];
@@ -340,7 +340,7 @@ void imageBrushes(PrDrawList* list, float width, float height, double) {
 }
 
 void nineSlices(PrDrawList* list, float width, float height, double) {
-    const PrDrawImage* frame = frameImage();
+    const PrTextureSource* frame = frameImage();
     Grid grid{width, height, 4, 2};
     PrDrawSliceMode modes[] = {
         PrDrawSliceMode_Stretch, PrDrawSliceMode_Repeat,
@@ -460,12 +460,14 @@ void writePixels(PrDrawList* list, float width, float height, double) {
     prDrawListRect(list, c, {.color = kGold});
     prDrawListPushTransformAffine2(list, prAffine2Scale(PrVec2{3, 3}));
     prDrawListPushClipRect(list, PrRect{0, 0, 10, 10}, PrDrawEdges_Antialiased);
-    prDrawListWritePixels(list, testCard(), PrIVec2{int32_t(c.left) + 20, int32_t(c.top) + 20});
+    prDrawListWritePixels(list, imageSource(testCard(), PrRect{0, 0, float(kTestCardSize), float(kTestCardSize)}),
+        PrIVec2{int32_t(c.left) + 20, int32_t(c.top) + 20});
     prDrawListPopClip(list);
     prDrawListPopTransform(list);
     c = grid.at(1, 40);
     prDrawListRect(list, c, {.color = kBlue});
-    prDrawListWritePixels(list, smallTile(), PrIVec2{int32_t(c.left) + 40, int32_t(c.top) + 40});
+    prDrawListWritePixels(list, imageSource(smallTile(), PrRect{0, 0, float(kSmallTileSize), float(kSmallTileSize)}),
+        PrIVec2{int32_t(c.left) + 40, int32_t(c.top) + 40});
     drawImage(list, testCard(), PrRect{0, 0, 64, 64}, PrRect{c.left + 100, c.top + 40, c.left + 164, c.top + 104},
         PrDrawSampling_Nearest, 1);
     grid.captionAt(0, "written under a 3x scale and a clip, which it ignores", 40);

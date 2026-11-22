@@ -60,8 +60,21 @@ float prDrawGlyphPixelsPerEm(const PrFontGlyphRun* run, uint32_t index, PrAffine
 
 // A glyph decoder draws the glyphs that a font holds as pictures, such as SVG documents (prFontGlyphSvg) and images in
 // bitmap strikes (prFontGlyphImage). It is an interface so that a module that builds on lib/draw can draw them: lib/svg
-// draws SVG documents (prSvgGlyphDecoderCreate). One thread uses a decoder at a time.
+// draws both (prSvgGlyphDecoderCreate). A decoder that draws images draws them as textures on the device of the
+// renderer that it serves. It realizes those textures through its host's texture cache. One thread uses a decoder at a
+// time.
 typedef struct PrDrawGlyphDecoder PrDrawGlyphDecoder;
+
+// What a decoder drew of a glyph.
+enum {
+    PrDrawGlyphDecoded_None,        // nothing: the glyph has no picture that the decoder draws
+    PrDrawGlyphDecoded_Kept,        // its picture, which stays valid while the glyph cache keeps it
+
+    // The glyph's picture, valid for this use alone. The picture draws textures that the decoder asks its cache for in
+    // each use, or textures that the decoder is waiting for. The glyph cache asks the decoder again in the next use.
+    PrDrawGlyphDecoded_Use,
+};
+typedef uint8_t PrDrawGlyphDecoded;
 
 // Frees the decoder.
 void prDrawGlyphDecoderDestroy(PrDrawGlyphDecoder* PR_NULLABLE decoder);
@@ -69,17 +82,9 @@ void prDrawGlyphDecoderDestroy(PrDrawGlyphDecoder* PR_NULLABLE decoder);
 // Appends the glyph's picture to `list`, in ems with y down from the glyph's origin, for drawing at a size at which an
 // em covers `pixelsPerEm` target pixels. The picture is the glyph's SVG document if the font has one, and otherwise its
 // image from the strike for that size. An SVG document takes its colors from the palette's entries, and its text color
-// from `foreground`. Returns false, and appends nothing, for a glyph with no picture that the decoder draws.
-bool prDrawGlyphDecoderDecode(PrDrawGlyphDecoder* decoder, const PrFont* font, uint16_t glyph, float pixelsPerEm,
-    const PrFontPalette* PR_NULLABLE palette, PrColor foreground, PrDrawList* list);
-
-// Appends the glyph's image from the strike for `pixelsPerEm` (prFontGlyphImage) to `list`, decoded by `codec`, in ems
-// with y down from the glyph's origin. Returns false for a glyph with no image, or an image the codec cannot decode.
-bool prDrawGlyphImage(const PrImageCodecSet* codec, const PrFont* font, uint16_t glyph, float pixelsPerEm, PrDrawList* list);
-
-// Creates a decoder that draws the images of glyphs with no SVG document (prDrawGlyphImage), decoded by `codec`. The
-// codec outlives the decoder.
-PrDrawGlyphDecoder* prDrawGlyphBitmapCreate(const PrImageCodecSet* codec);
+// from `foreground`. Returns what it drew, and appends nothing for None.
+PrDrawGlyphDecoded prDrawGlyphDecoderDecode(PrDrawGlyphDecoder* decoder, const PrFont* font, uint16_t glyph,
+    float pixelsPerEm, const PrFontPalette* PR_NULLABLE palette, PrColor foreground, PrDrawList* list);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Glyph cache

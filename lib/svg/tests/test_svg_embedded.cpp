@@ -3,21 +3,24 @@
 
 #include "pr/array.h"
 #include "pr/css.h"
-#include "pr/draw_image.h"
 #include "pr/map.h"
 #include "pr/mem.h"
 #include "pr/string.h"
 #include "pr/string_ops.h"
 #include "pr/svg.h"
+#include "pr/texture.h"
 
 #include "svg/tests/svg_fixture.h"
+#include "tools/harness/harness_textures.h"
+
+using namespace harness;
 
 namespace pr_impl {
 
 namespace {
 
-// The images that the tests' documents name: a raster 40 by 20 named `flag.png`, and SVG documents by name. A name's
-// fragment reaches the SVG image that it names.
+// The images that the tests' documents reference. `flag.png` is a 40 by 20 raster. `turned.png` is a raster that its
+// orientation transposes. SVG documents are found by name. The fragment of a name selects the SVG image that it names.
 struct Images {
     Map<String, String> svgs;
     uint32_t loads = 0;
@@ -33,13 +36,19 @@ bool loadImage(void* PR_NULLABLE context, PrDomDocument* from, PrStringView url,
     if (name == "flag.png") {
         Array<uint8_t> pixels(40 * 20 * 4);
         prMemFill(pixels.data(), 0xff, pixels.count());
-        PrDrawImageDesc desc{
-            .pixels = {pixels.data(), 40 * 4, {40, 20}},
-            .format = PrPixelFormat_Rgba8,
-            .alpha = PrDrawAlpha_Straight,
-            .space = PrColorSpace_Srgb,
-        };
-        return prDrawImageCreate(&desc, &out->raster) == PrStatus_Ok;
+        out->raster = prTextureSourceCreateCopy(PrPixelView{pixels.data(), 40 * 4, {40, 20}}, PrPixelFormat_Rgba8,
+            PrTextureAlpha_Straight);
+        return true;
+    }
+    if (name == "turned.png") {
+        // The stored texels are 4 by 2: an opaque row over a transparent row. Transposed, the image displays as 2 by 4,
+        // with an opaque column to the left of a transparent column.
+        uint8_t texels[4 * 2 * 4] = {};
+        prMemFill(texels, 0xff, 4 * 4);
+        PrTextureDesc desc = prTextureDesc2d(PrGpuFormat_Rgba8, PrUVec2{4, 2}, PrTextureAlpha_Straight);
+        desc.orientation = PrTextureOrientationFlag_Transpose;
+        out->raster = prTextureSourceCreatePixels(&desc, PrPixelView{texels, 4 * 4, {4, 2}});
+        return true;
     }
     const String* found = images->svgs.get(name);
     if (found == nullptr)
@@ -51,6 +60,7 @@ bool loadImage(void* PR_NULLABLE context, PrDomDocument* from, PrStringView url,
     PrSvgDrawOptions options = prSvgDrawOptionsDefault();
     options.loadImage = loadImage;
     options.loadContext = context;
+    options.textures = harnessMemoryTextures();
     out->svg = root != nullptr ? prSvgImageCreate(root, fragment, &options) : nullptr;
     prDomDocumentRelease(document);
     return out->svg != nullptr;
@@ -64,6 +74,7 @@ struct Embedded {
     Embedded() {
         options.loadImage = loadImage;
         options.loadContext = &images;
+        options.textures = harnessMemoryTextures();
         // The flag 40 by 20 in quarters, with a viewBox of its size.
         images.svgs["flag.svg"] = "<svg xmlns='http://www.w3.org/2000/svg' width='40' height='20' viewBox='0 0 40 20'>"
             "<rect width='20' height='10' fill='blue'/><rect id='orange' x='20' width='20' "
@@ -232,6 +243,29 @@ TEST_CASE("the element that an SVG image's fragment names matches :target") {
     REQUIRE(whole.commands.count() == 1);
     CHECK(named.commands[0].color.r == doctest::Approx(1));
     CHECK(whole.commands[0].color.r == doctest::Approx(0));
+}
+
+TEST_CASE("a mask image with a transposing orientation repeats along the axes of the displayed image") {
+    Embedded e;
+    // Each displayed texel of the mask covers ten pixels. The mask repeats horizontally and not vertically.
+    Drawing drawing(svgDocument("<rect width='100' height='100' fill='#0000ff' "
+        "style='mask-image: url(turned.png); mask-size: 20px 40px; mask-repeat: repeat-x'/>"),
+        PrVec2{100, 100}, &e.options);
+    Array<uint8_t> bytes(100 * 100 * 4, 255);
+    PrDrawRenderer* renderer = harnessMemoryRenderer();
+    REQUIRE(prDrawRendererRenderPixels(renderer, drawing.list, PrPixels{bytes.data(), 100 * 4, {100, 100}},
+        PrPixelFormat_Rgba8) == PrStatus_Ok);
+    prDrawRendererDestroy(renderer);
+    // The rectangle is blue where the mask is opaque. Where the mask is transparent, the white beneath shows.
+    auto masked = [&](uint32_t x, uint32_t y) { return bytes[(y * 100 + x) * 4] > 215; };
+    auto shown = [&](uint32_t x, uint32_t y) { return bytes[(y * 100 + x) * 4] < 40; };
+    CHECK(shown(4, 20));
+    CHECK(masked(15, 20));
+    CHECK(shown(24, 20));
+    CHECK(masked(35, 20));
+    CHECK(shown(84, 35));
+    CHECK(masked(4, 60));
+    CHECK(masked(24, 60));
 }
 
 TEST_CASE("an image that does not load draws nothing, and its href names an image only") {

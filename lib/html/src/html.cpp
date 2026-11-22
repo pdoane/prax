@@ -954,12 +954,23 @@ void prHtmlImageElementSetHeight(PrHtmlImageElement* element, uint32_t value) {
     htmlSetReflectedUnsigned(element, "height", value);
 }
 
+void prHtmlImageElementDecode(PrHtmlImageElement* element, const PrHtmlPromise* promise) {
+    // The promise rejects at once if the document is not fully active (html/#dom-img-decode).
+    PrHtmlWindow* window = prHtmlDocumentDefaultView(element->document);
+    if (window == nullptr || !htmlWindowIsFullyActive(window)) {
+        promise->settle(promise->context, "EncodingError");
+        promise->release(promise->context);
+        return;
+    }
+    htmlImageWaitDecode(window, element, promise);
+}
+
 bool prHtmlImageElementImageSource(PrHtmlImageElement* element, PrCanvasImageSource* out) {
     *out = PrCanvasImageSource{};
     const DomElementState* state = element->state;
     if (state == nullptr || state->image != PrDomImageState_CompletelyAvailable || state->picture == nullptr)
         return false;
-    prDrawImageRetain(state->picture);
+    prTextureSourceRetain(state->picture);
     *out = PrCanvasImageSource{
         .image = state->picture,
         .extent = PrVec2{float(state->naturalWidth), float(state->naturalHeight)},
@@ -1237,7 +1248,7 @@ uint32_t prHtmlMediaElementRanges(PrHtmlMediaElement* element, PrHtmlMediaRanges
     return 1;
 }
 
-void prHtmlMediaElementPlay(PrHtmlMediaElement* element, const PrHtmlPlayPromise* promise) {
+void prHtmlMediaElementPlay(PrHtmlMediaElement* element, const PrHtmlPromise* promise) {
     HtmlMedia* media = mediaOf(element);
     if (media->window == nullptr) {
         // An element that no window runs has no resource to play.

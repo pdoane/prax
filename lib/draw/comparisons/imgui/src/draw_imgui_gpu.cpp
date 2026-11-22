@@ -3,11 +3,9 @@
 #include "draw/comparisons/imgui/src/draw_imgui_gpu.h"
 
 #include "pr/alloc.h"
-#include "pr/draw_image.h"
 #include "pr/draw_renderer_backend.h"
 #include "pr/mem.h"
-#include "pr/pixels.h"
-#include "pr/raw_array.h"
+#include "pr/texture.h"
 
 #include "draw/comparisons/imgui/config/imgui_gpu.h"
 
@@ -17,17 +15,8 @@ namespace pr_impl {
 
 namespace {
 
-// An image uploaded for the renderer to sample. It has straight alpha, which is what the renderer blends.
-struct CachedTexture {
-    uint64_t id;
-    PrGpuTexture texture;
-    PrUVec2 extent;
-    uint64_t lastUsed;
-};
-
 struct ImGuiGpu : ImGuiBackend {
     PrGpuDevice* device;
-    RawArray<CachedTexture> textures;
 };
 
 PrGpuDevice* rendererDevice(const PrDrawRenderer* renderer) {
@@ -41,19 +30,6 @@ void destroyFrame(PrDrawFrame* handle) {
     prMemoryFree(frame);
 }
 
-// Drops the images that the render did not use. The device keeps a destroyed texture until the work that reads it is
-// done.
-void dropUnusedTextures(ImGuiGpu* g) {
-    uint32_t kept = 0;
-    for (uint32_t i = 0; i < g->textures.count; ++i) {
-        if (g->textures.data[i].lastUsed == g->render)
-            g->textures.data[kept++] = g->textures.data[i];
-        else
-            prGpuTextureRelease(g->device, g->textures.data[i].texture);
-    }
-    g->textures.count = kept;
-}
-
 PrStatus prepare(PrDrawFrame* handle, const PrDrawList* list, const PrDrawPart* part, const PrDrawTarget* target) {
     ImGuiFrame* frame = static_cast<ImGuiFrame*>(handle);
     ImGuiGpu* g = static_cast<ImGuiGpu*>(frame->renderer);
@@ -61,7 +37,6 @@ PrStatus prepare(PrDrawFrame* handle, const PrDrawList* list, const PrDrawPart* 
     imguiFrameClear(frame);
     ++g->render;
     imguiRecord(g, frame, list, *part, target);
-    dropUnusedTextures(g);
     return PrStatus_Ok;
 }
 
@@ -86,18 +61,9 @@ PrDrawFrame* createFrame(PrDrawRenderer* renderer) {
     return frame;
 }
 
-void dropResources(PrDrawRenderer* renderer) {
-    ImGuiGpu* g = static_cast<ImGuiGpu*>(renderer);
-    for (uint32_t i = 0; i < g->textures.count; ++i)
-        prGpuTextureRelease(g->device, g->textures.data[i].texture);
-    g->textures.clear();
-}
-
 void destroyBackend(PrDrawRenderer* renderer) {
     ImGuiGpu* g = static_cast<ImGuiGpu*>(renderer);
     ImGui::SetCurrentContext(g->context);
-    dropResources(renderer);
-    g->textures.reset();
     imguiGpuShutdown();
     imguiContextDestroy(g);
     prMemoryFree(g);
@@ -105,38 +71,13 @@ void destroyBackend(PrDrawRenderer* renderer) {
 
 } // namespace
 
-// The texture is written by an upload, which the frame's commands, submitted after it, see. It is created once and kept
-// for as long as renders use it.
-ImTextureID imguiImageTexture(ImGuiBackend* imgui, const PrDrawImage* image, PrUVec2* extent) {
-    ImGuiGpu* g = static_cast<ImGuiGpu*>(imgui);
-    uint64_t key = prDrawImageId(image);
-    for (uint32_t i = 0; i < g->textures.count; ++i) {
-        if (g->textures.data[i].id == key) {
-            g->textures.data[i].lastUsed = g->render;
-            *extent = g->textures.data[i].extent;
-            return imguiGpuTexture(g->textures.data[i].texture);
-        }
+ImTextureID imguiHostTexture(PrGpuTexture texture, PrTextureAlpha alpha) {
+    switch (alpha) {
+        case PrTextureAlpha_None: return imguiGpuTexture(texture, ImGuiGpuAlpha_Opaque);
+        case PrTextureAlpha_Straight: return imguiGpuTexture(texture, ImGuiGpuAlpha_Straight);
+        case PrTextureAlpha_Premultiplied: break;
     }
-    PrUVec2 size = prDrawImageExtent(image);
-    if (size.x == 0 || size.y == 0)
-        return ImTextureID_Invalid;
-    PrGpuTextureDesc desc = prGpuTextureDesc2d(PrGpuFormat_Rgba8, size, PrGpuTextureUsageFlag_Sampled);
-    desc.name = "imgui image";
-    PrGpuTexture texture{};
-    if (prGpuTextureCreate(g->device, &desc, &texture) != PrStatus_Ok)
-        return ImTextureID_Invalid;
-    size_t row = size_t(size.x) * 4;
-    uint8_t* pixels = static_cast<uint8_t*>(prMemoryAlloc(row * size.y));
-    imguiImagePixels(image, PrPixels{pixels, row, size});
-    prGpuTextureWrite(g->device, texture, PrIVec2{0, 0}, PrPixelView{pixels, row, size});
-    prMemoryFree(pixels);
-    g->textures.push(CachedTexture{key, texture, size, g->render});
-    *extent = size;
-    return imguiGpuTexture(texture);
-}
-
-ImTextureID imguiHostTexture(ImGuiBackend*, PrDrawTextureId texture) {
-    return ImTextureID(texture);
+    return imguiGpuTexture(texture, ImGuiGpuAlpha_Premultiplied);
 }
 
 ImGuiBackend* PR_NULLABLE imguiDeviceCreate(PrGpuDevice* device) {
@@ -148,7 +89,6 @@ ImGuiBackend* PR_NULLABLE imguiDeviceCreate(PrGpuDevice* device) {
     g->frameCreateFn = createFrame;
     g->name = "imgui";
     g->deviceFn = rendererDevice;
-    g->dropResourcesFn = dropResources;
     return g;
 }
 

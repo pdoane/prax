@@ -11,6 +11,7 @@
 #include "pr/font.h"
 #include "pr/geom.h"
 #include "pr/path_stroke.h"
+#include "pr/texture.h"
 #include "pr/vec.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -27,9 +28,6 @@ typedef struct PrDrawCommand PrDrawCommand;
 
 // The transform that commands play under (draw_transform.h).
 typedef struct PrDrawTransform PrDrawTransform;
-
-// Pixels that commands draw from (draw_image.h).
-typedef struct PrDrawImage PrDrawImage;
 
 // An immutable graph of filter steps (draw_filter.h).
 typedef struct PrDrawFilter PrDrawFilter;
@@ -152,57 +150,60 @@ typedef struct PrDrawColorStop {
 } PrDrawColorStop;
 PR_NO_PADDING_END
 
-// How an image's alpha relates to its color channels.
+// How a gradient's stops mix their alpha with their color.
 enum {
     PrDrawAlpha_Premultiplied,
     PrDrawAlpha_Straight,
-    PrDrawAlpha_Opaque,         // every pixel is opaque, whatever its alpha channel holds
 };
 typedef uint8_t PrDrawAlpha;
 
-// A texture of the host's, as Dear ImGui names a texture. It names a texture on the device of the renderer that renders
-// the list (prDrawGpuTexture). Zero names no texture.
-typedef uint64_t PrDrawTextureId;
-
 // What a source draws from.
 enum {
-    PrDrawSourceKind_Image,
     PrDrawSourceKind_List,
     PrDrawSourceKind_Texture,
 };
 typedef uint8_t PrDrawSourceKind;
 
-// What an image brush, a nine-slice or a filter's image draws from. Its kind decides which member of the union it uses.
+// What an image brush, a nine-slice or a filter's image draws from. The kind decides which member of the union is used.
 //
-// - Image: an image's texels.
 // - List: an area of what a list draws, in the list's own space. A backend renders the area once into a layer at the
 //   target scale, and samples the layer as an image.
-// - Texture: the texels of the host's texture. The texture is on the device of the backend that renders the list, in
-//   a format the backend samples, and `alpha` says how its alpha relates to its color. `extent` is its size in texels.
-//   The host keeps it alive and unchanged until the frames that draw it are done. Its mip levels are the ones the host
-//   gave it.
+// - Texture: the texels of a texture (PrTexture) within `rect`, in their stored orientation. `alpha` is the texture's
+//   alpha, and `extent` is its size in texels. The texture is on the device of the backend that renders the list, in a
+//   format that the backend samples. A backend samples only the rect. The rect may span the texture, or be a part of a
+//   texture that others share, such as a texture cache's region (pr/texture_cache.h). The values are sRGB encoded, as a
+//   sampler reads them. The texture has the mip levels that it was created with. The host keeps it alive and unchanged
+//   until the frames that draw it are done.
 PR_NO_PADDING_BEGIN
 typedef struct PrDrawSource {
     PrDrawSourceKind kind;
-    PrDrawAlpha alpha;                          // Texture
+    PrTextureAlpha alpha;                       // Texture
     uint8_t _pad[6];
     PrRect rect;                                // texels, or for List an area of what the list draws
     PrUVec2 extent;                             // Texture
     union {
-        const PrDrawImage* image;               // Image
         const PrDrawList* list;                 // List: frozen
-        PrDrawTextureId texture;                // Texture
+        PrGpuTexture texture;                   // Texture
+        uint64_t _size;                         // keeps the union of 8 bytes where a pointer has 4
     };
 } PrDrawSource;
 PR_NO_PADDING_END
 
 // Returns a source of each kind. A list source freezes the list.
-PrDrawSource prDrawSourceImage(const PrDrawImage* image, PrRect rect);
 PrDrawSource prDrawSourceList(PrDrawList* list, PrRect rect);
-PrDrawSource prDrawSourceTexture(PrDrawTextureId texture, PrUVec2 extent, PrRect rect, PrDrawAlpha alpha);
+PrDrawSource prDrawSourceTexture(PrTexture texture, PrUVec2 extent, PrRect rect);
+
+// Returns a Texture source of `rect` of the picture that `region` holds. `rect` is in the texels of the picture's
+// source, as `orientation` displays them. Pass zero for a rect in stored texels, and the source's orientation for a
+// brush that prDrawBrushImageUpright then turns upright. A region may hold a preview, which is the same picture in
+// fewer texels. The rect is scaled to the texels that the region holds (prTextureRegionRect).
+PrDrawSource prDrawSourceRegion(const PrTextureRegion* region, PrRect rect, PrTextureOrientationFlags orientation);
 
 // Returns true if the source names an object of its kind and its rect has nonzero area.
 bool prDrawSourceIsValid(PrDrawSource source);
+
+// Returns the texels that a source's rect spans, rounded to whole texels.
+PrUVec2 prDrawSourceTexels(PrDrawSource source);
 
 // How the copies of a repeated source are filtered.
 enum {
@@ -312,6 +313,16 @@ PrDrawBrush prDrawBrushDefault(PrDrawBrushKind kind);
 // Returns an image brush that places `source` on `destination`, in the command's space, and extends its edge texels
 // beyond it. Its opacity is one.
 PrDrawBrush prDrawBrushImage(PrDrawSource source, PrRect destination, PrDrawSampling sampling);
+
+// Makes an image brush show its source upright. `orientation` says how the stored texels are displayed
+// (PrTextureOrientationFlags). `region` is the rect of the texture's texels that hold the picture, which the source's
+// rect lies within.
+//
+// Before the call, the source's rect is in displayed texels, within the region. After the call, it is in stored texels.
+// The call also changes the brush's transform and tiles, so that the displayed texels span the tile.
+//
+// A brush of another kind is left unchanged, and so is any brush if `orientation` is zero.
+void prDrawBrushImageUpright(PrDrawBrush* brush, PrTextureOrientationFlags orientation, PrRect region);
 
 // Returns a gradient brush over `stops`, in user space with the identity transform. The brush pads past its ends and
 // interpolates in sRGB, with hues taking the shorter way. Its opacity is one.
@@ -533,7 +544,7 @@ PrDrawMask prDrawMaskFromList(PrDrawList* list, PrRect area, PrDrawMaskMode mode
 // texture. On a device, each renderer's commands draw what it claimed, so work submitted after them sees it. In memory,
 // the host draws a texture from one thread at a time.
 typedef struct PrDrawGroupLayer {
-    PrDrawTextureId texture;        // drawn into and sampled, in a format that the renderer draws layers in
+    PrGpuTexture texture;           // drawn into and sampled, in a format that the renderer draws layers in
     PrUVec2 extent;                 // in texels
     uint64_t* drawn;                // read and raised atomically
     uint64_t revision;

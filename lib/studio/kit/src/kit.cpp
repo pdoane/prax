@@ -484,6 +484,15 @@ void prKitDestroy(PrKit* PR_NULLABLE kit) {
     prMemoryFree(kit);
 }
 
+void prKitSetTextures(PrKit* kit, PrTextureCache* PR_NULLABLE textures) {
+    kit->textures = textures;
+    prLayoutTreeSetTextures(kit->tree, textures);
+}
+
+PrTextureCache* PR_NULLABLE prKitTextures(const PrKit* kit) {
+    return kit->textures;
+}
+
 void prKitSetTheme(PrKit* kit, const PrKitTheme* theme) {
     prUiForget(kit->ui, kit);
     // The icons that the kit found are the old cache's, which another cache does not hold.

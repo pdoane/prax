@@ -188,9 +188,11 @@ struct HtmlElementEvent {
     bool error;
 };
 
-// The codecs that an SVG image decodes the images that it names with.
+// What an SVG image uses to load the images that it references. `images` are the codecs that decode them. `textures` is
+// the cache that realizes them.
 struct HtmlSvgImageLoader {
     const PrImageCodecSet* PR_NULLABLE images;
+    PrTextureCache* PR_NULLABLE textures;
 };
 
 // A browsing context (html/#browsing-context), which hosts a window.
@@ -200,8 +202,8 @@ struct HtmlPage {
     DomXmlBuilder xml;          // the parse that an XML load runs, whose parser is null outside one
     PrHtmlHost host;
 
-    // What the SVG images that the page shows load their images with: the host's codecs, which outlive the images
-    // (loadSecureImage).
+    // The loader for the SVG images that the page shows. It holds the host's codecs and the window's textures. Both
+    // outlive the builds of the SVG images (loadSecureImage).
     HtmlSvgImageLoader svgImages;
 
     DomDocumentHost documentHost;                 // the host through which the window's document fetches and queues
@@ -393,6 +395,28 @@ bool htmlPresentationUpdate(PrCssPresentation* presentation, PrLayoutVec extent,
 // Starts a load whose input arrives in pieces, as prHtmlPageBeginLoad does, without dropping the page's document load
 // (prHtmlPageNavigate), which calls it as its response arrives.
 PrStatus htmlPageBeginStreamedLoad(PrHtmlPage* page, PrStringView url, const PrHtmlResponseHeaders* PR_NULLABLE headers);
+
+// Settles the images that the window waits for. An image whose realization has arrived is decoded, and its decode()
+// promises resolve. An image whose realization failed becomes broken and fires an error event, and its promises reject.
+// The promises also reject for an image whose request broke or changed. A rendering update calls this function.
+void htmlImagesShow(PrHtmlWindow* window);
+
+// Starts to wait for the decode of the element's current request. A non-null `promise` settles with the decode. The
+// decode settles once the request has decoded or broken, either in a task or in a rendering update (htmlImagesShow).
+void htmlImageWaitDecode(PrHtmlWindow* window, PrDomElement* element, const PrHtmlPromise* PR_NULLABLE promise);
+
+// Queues a task that settles the decodes that the window waits for. Does nothing if no decode waits or if the task is
+// already queued.
+void htmlImagesQueue(PrHtmlWindow* window);
+
+// Returns true if a frame can settle a decode that the window waits for. That is the case if a texture has arrived in
+// the window's cache since the decodes were last checked (htmlImagesShow). A decode that waits for a read requests no
+// frame. The host of the cache runs the page when a texture arrives (PrTextureCacheDesc::arrived).
+bool htmlImagesWantFrame(const PrHtmlWindow* window);
+
+// Stops waiting for the decodes of a window whose document is discarded. Their promises reject, and their requests fire
+// no event.
+void htmlImagesDrop(PrHtmlWindow* window);
 
 } // namespace pr_impl
 

@@ -2,7 +2,7 @@
 
 #include "tools/viewer/source_pdf.h"
 
-#include "pr/draw_image.h"
+#include "pr/texture.h"
 
 #include "tools/viewer/documents.h"
 #include "tools/viewer/zoom.h"
@@ -25,13 +25,14 @@ namespace fs = std::filesystem;
 // The document, its pages' boxes in the stack and the stack's extent, each page's raster at `ratio`, or null for a page
 // not drawn there, and the viewport's scroll offset and the extent that it was last drawn at.
 struct PdfSource {
+    PrTextureCache* PR_NULLABLE textures = nullptr;     // the cache that realizes the pages' rasters
 #if defined(__APPLE__)
     CGPDFDocumentRef document = nullptr;
 #endif
     std::vector<PrRect> boxes;
     PrVec2 size{0, 0};
     float ratio = 0;
-    std::vector<const PrDrawImage*> rasters;
+    std::vector<const PrTextureSource*> rasters;
     PrVec2 scroll{0, 0};
     PrVec2 port{0, 0};
 
@@ -39,8 +40,8 @@ struct PdfSource {
     PdfSource(const PdfSource&) = delete;
     PdfSource& operator=(const PdfSource&) = delete;
     ~PdfSource() {
-        for (const PrDrawImage* raster : rasters)
-            prDrawImageRelease(raster);
+        for (const PrTextureSource* raster : rasters)
+            prTextureSourceRelease(raster);
 #if defined(__APPLE__)
         CGPDFDocumentRelease(document);
 #endif
@@ -55,7 +56,7 @@ namespace {
 constexpr float kPxPerPoint = 96.0f / 72;
 
 // Rasterizes page `index` of the document, from 0, `width` by `height` pixels over white.
-const PrDrawImage* PR_NULLABLE rasterize(CGPDFDocumentRef document, size_t index, uint32_t width, uint32_t height) {
+const PrTextureSource* PR_NULLABLE rasterize(CGPDFDocumentRef document, size_t index, uint32_t width, uint32_t height) {
     CGPDFPageRef page = CGPDFDocumentGetPage(document, index + 1);
     if (page == nullptr || width == 0 || height == 0)
         return nullptr;
@@ -74,10 +75,7 @@ const PrDrawImage* PR_NULLABLE rasterize(CGPDFDocumentRef document, size_t index
     CGContextDrawPDFPage(context, page);
     CGContextRelease(context);
     const PrPixelView view{pixels.data(), size_t(width) * 4, {width, height}};
-    PrDrawImageDesc desc{view, PrPixelFormat_Rgba8, PrDrawAlpha_Premultiplied, PrColorSpace_Srgb};
-    const PrDrawImage* image = nullptr;
-    prDrawImageCreate(&desc, &image);
-    return image;
+    return prTextureSourceCreateCopy(view, PrPixelFormat_Rgba8, PrTextureAlpha_Premultiplied);
 }
 
 #endif
@@ -92,7 +90,7 @@ bool pdfRasterized() {
 #endif
 }
 
-std::shared_ptr<PdfSource> loadPdf(const fs::path& path) {
+std::shared_ptr<PdfSource> loadPdf(const fs::path& path, PrTextureCache* PR_NULLABLE textures) {
 #if defined(__APPLE__)
     std::string name = path.string();
     CFURLRef url = prAppleFileUrlCreate(name);
@@ -103,6 +101,7 @@ std::shared_ptr<PdfSource> loadPdf(const fs::path& path) {
     if (document == nullptr)
         return nullptr;
     std::shared_ptr<PdfSource> pdf = std::make_shared<PdfSource>();
+    pdf->textures = textures;
     pdf->document = document;
     std::vector<PrVec2> extents;
     for (size_t i = 1; i <= CGPDFDocumentGetNumberOfPages(document); ++i) {
@@ -125,6 +124,7 @@ std::shared_ptr<PdfSource> loadPdf(const fs::path& path) {
     return pdf;
 #else
     (void)path;
+    (void)textures;
     return nullptr;
 #endif
 }
@@ -132,8 +132,8 @@ std::shared_ptr<PdfSource> loadPdf(const fs::path& path) {
 void drawPdf(PdfSource& pdf, PrDrawList* list, float width, float height, float pixelRatio) {
     // The rasters are of the ratio that the last draw used, so a draw at another ratio rasterizes again.
     if (pixelRatio != pdf.ratio) {
-        for (const PrDrawImage*& raster : pdf.rasters) {
-            prDrawImageRelease(raster);
+        for (const PrTextureSource*& raster : pdf.rasters) {
+            prTextureSourceRelease(raster);
             raster = nullptr;
         }
         pdf.ratio = pixelRatio;
@@ -146,7 +146,7 @@ void drawPdf(PdfSource& pdf, PrDrawList* list, float width, float height, float 
         PrRect box = pdf.boxes[i];
         bool shown = box.bottom + at.y > 0 && box.top + at.y < height && box.right + at.x > 0 && box.left + at.x < width;
         if (!shown) {
-            prDrawImageRelease(pdf.rasters[i]);
+            prTextureSourceRelease(pdf.rasters[i]);
             pdf.rasters[i] = nullptr;
             continue;
         }
@@ -160,10 +160,17 @@ void drawPdf(PdfSource& pdf, PrDrawList* list, float width, float height, float 
         if (pdf.rasters[i] == nullptr)
             continue;
         PrRect placed{box.left + at.x, box.top + at.y, box.right + at.x, box.bottom + at.y};
-        PrUVec2 extent = prDrawImageExtent(pdf.rasters[i]);
-        PrDrawSource source = prDrawSourceImage(pdf.rasters[i], PrRect{0, 0, float(extent.x), float(extent.y)});
+        PrUVec2 extent = prTextureSourceDesc(pdf.rasters[i])->extent;
+        PrTextureRegion region{};
+        if (pdf.textures == nullptr ||
+                prTextureCacheWait(pdf.textures, pdf.rasters[i], prTextureCacheAskEncoded(0), &region) !=
+                PrTextureCacheState_Ready)
+            continue;
+        PrDrawSource source = prDrawSourceRegion(&region, PrRect{0, 0, float(extent.x), float(extent.y)}, 0);
         PrDrawBrush brush = prDrawBrushImage(source, placed, PrDrawSampling_Linear);
         prDrawListRect(list, placed, {.brush = &brush});
+        // A later draw may release the raster while a pane still renders this list, so the list holds it.
+        prDrawListHoldSource(list, pdf.rasters[i]);
     }
 }
 

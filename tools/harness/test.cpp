@@ -44,8 +44,9 @@ namespace harness {
 
 bool gpuTests() {
 #if defined(__EMSCRIPTEN__)
-    // A page that has WebGPU, where the page tests run, and not Node.js.
-    return EM_ASM_INT({ return typeof navigator !== "undefined" && navigator.gpu ? 1 : 0; }) != 0;
+    // A page whose WebGPU has an adapter, which the page asks for before the program starts (page_tests.html). Node.js
+    // and a page without an adapter run no GPU tests.
+    return EM_ASM_INT({ return Module.hasWebgpuAdapter ? 1 : 0; }) != 0;
 #else
     PrRawString value = prEnvironmentVariable("PR_TEST_NO_GPU");
     bool set = !prRawStringIsEmpty(&value);

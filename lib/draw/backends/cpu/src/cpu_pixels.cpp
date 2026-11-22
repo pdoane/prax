@@ -285,9 +285,16 @@ void withOperator(PrDrawComposite op, F f) {
 // ---------------------------------------------------------------------------------------------------------------------
 // Textures
 
-void releaseTexture(CpuTexture* texture) {
-    for (uint32_t i = 0; i < texture->levels.count; ++i)
+// Frees the levels that the texture owns, and empties its levels.
+void releaseLevels(CpuTexture* texture) {
+    for (uint32_t i = texture->borrowed; i < texture->levels.count; ++i)
         prMemoryFree(texture->levels.data[i].data);
+    texture->levels.clear();
+    texture->borrowed = 0;
+}
+
+void releaseTexture(CpuTexture* texture) {
+    releaseLevels(texture);
     texture->levels.reset();
     prMemoryFree(texture);
 }
@@ -303,7 +310,7 @@ CpuTexture* newTexture(CpuTextureCache& cache, uint64_t key, bool fromList) {
 
 // Converts pixels of `format`, whose alpha means what `alpha` says, to a level of premultiplied RGBA. The level holds
 // half floats for pixels in half floats, and otherwise 8 bits, clamped.
-void convertPixels(PrPixelView source, PrPixelFormat format, PrDrawAlpha alpha, CpuTextureLevel& level) {
+void convertPixels(PrPixelView source, PrPixelFormat format, PrTextureAlpha alpha, CpuTextureLevel& level) {
     uint32_t width = source.extent.x;
     uint32_t height = source.extent.y;
     const uint8_t* pixels = source.data;
@@ -331,11 +338,11 @@ void convertPixels(PrPixelView source, PrPixelFormat format, PrDrawAlpha alpha, 
                 c[2] = float(p[bgra ? 0 : 2]) / 255;
                 c[3] = float(p[3]) / 255;
             }
-            if (alpha == PrDrawAlpha_Opaque)
+            if (alpha == PrTextureAlpha_None)
                 c[3] = 1;
             c[3] = prF32Clamp(c[3], 0, 1);
             bool half = level.format == PrPixelFormat_RgbaF16;
-            if (alpha != PrDrawAlpha_Premultiplied) {
+            if (alpha != PrTextureAlpha_Premultiplied) {
                 for (uint32_t i = 0; i < 3; ++i)
                     c[i] = (half ? c[i] : prF32Clamp(c[i], 0, 1)) * c[3];
             }
@@ -344,17 +351,13 @@ void convertPixels(PrPixelView source, PrPixelFormat format, PrDrawAlpha alpha, 
     }
 }
 
-void convertImage(const PrDrawImage* image, CpuTextureLevel& level) {
-    convertPixels(prDrawImagePixels(image), prDrawImageFormat(image), prDrawImageAlpha(image), level);
-}
-
 // Returns the texel at (x, y), or transparent if either index is -1.
 void texel(const CpuTextureLevel& level, int32_t x, int32_t y, float out[4]) {
     if (x < 0 || y < 0) {
         out[0] = out[1] = out[2] = out[3] = 0;
         return;
     }
-    cpuReadPixel(level.data + (size_t(y) * level.width + uint32_t(x)) * cpuPixelBytes(level.format), level.format, out);
+    cpuReadTexel(level, uint32_t(x), uint32_t(y), out);
 }
 
 // How a sampler maps to texels: from the source's origin, repeating as the tile modes specify. A pixel's footprint: the
@@ -961,23 +964,20 @@ void cpuCompositePixels(uint8_t* p, PrPixelFormat format, const uint8_t* source,
 // ---------------------------------------------------------------------------------------------------------------------
 // Textures
 
-CpuTexture* cpuTextureFromImage(CpuTextureCache& cache, const PrDrawImage* image) {
-    uint64_t key = prDrawImageId(image);
-    uint32_t found = cache.images.find(key, [&](uint32_t i) { return cache.textures.data[i]->key; });
-    if (found != kHashMissing) {
-        cache.textures.data[found]->lastUsed = cache.render;
-        return cache.textures.data[found];
-    }
-    cache.images.insert(key, cache.textures.count);
-    CpuTexture* texture = newTexture(cache, key, false);
-    CpuTextureLevel level{};
-    convertImage(image, level);
-    texture->levels.push(level);
-    return texture;
+void cpuReadTexel(const CpuTextureLevel& level, uint32_t x, uint32_t y, float* out) {
+    PR_ASSERT(x < level.width && y < level.height);
+    cpuReadPixel(level.data + (size_t(y) * level.width + x) * cpuPixelBytes(level.format), level.format, out);
+    if (level.opaque)
+        out[3] = 1;
 }
 
-CpuTexture* cpuTextureFromPixels(CpuTextureCache& cache, uint64_t key, PrPixelView pixels, PrPixelFormat format,
-        PrDrawAlpha alpha) {
+bool cpuSamplesInPlace(PrPixelView pixels, PrPixelFormat format, PrTextureAlpha alpha) {
+    return (format == PrPixelFormat_Rgba8 || format == PrPixelFormat_RgbaF16) && alpha != PrTextureAlpha_Straight &&
+        pixels.stride == size_t(pixels.extent.x) * cpuPixelBytes(format);
+}
+
+CpuTexture* cpuTextureFromPixels(CpuTextureCache& cache, uint64_t key, const PrPixelView* levels, uint32_t levelCount,
+        PrPixelFormat format, PrTextureAlpha alpha) {
     uint32_t found = cache.images.find(key, [&](uint32_t i) { return cache.textures.data[i]->key; });
     CpuTexture* texture = nullptr;
     if (found != kHashMissing) {
@@ -985,16 +985,31 @@ CpuTexture* cpuTextureFromPixels(CpuTextureCache& cache, uint64_t key, PrPixelVi
         if (texture->lastUsed == cache.render && texture->ready)
             return texture;
         texture->lastUsed = cache.render;
-        for (uint32_t i = 0; i < texture->levels.count; ++i)
-            prMemoryFree(texture->levels.data[i].data);
-        texture->levels.clear();
+        releaseLevels(texture);
     } else {
         cache.images.insert(key, cache.textures.count);
         texture = newTexture(cache, key, false);
     }
-    CpuTextureLevel level{};
-    convertPixels(pixels, format, alpha, level);
-    texture->levels.push(level);
+    // Texels that the backend samples as they are stored are read in place, with the mip levels that the texture has.
+    // The texels of a texture cache on the device are stored in such a form.
+    PrPixelView first = levels[0];
+    if (cpuSamplesInPlace(first, format, alpha)) {
+        for (uint32_t i = 0; i < levelCount; ++i) {
+            PR_ASSERT(cpuSamplesInPlace(levels[i], format, alpha));
+            texture->levels.push(CpuTextureLevel{
+                .data = const_cast<uint8_t*>(levels[i].data),
+                .width = levels[i].extent.x,
+                .height = levels[i].extent.y,
+                .format = format,
+                .opaque = alpha == PrTextureAlpha_None,
+            });
+        }
+        texture->borrowed = uint8_t(levelCount);
+    } else {
+        CpuTextureLevel level{};
+        convertPixels(first, format, alpha, level);
+        texture->levels.push(level);
+    }
     texture->ready = true;
     return texture;
 }
@@ -1029,6 +1044,7 @@ void cpuPrepareMips(CpuTexture& texture, PrDrawSampling sampling) {
         level.width = above.width > 1 ? above.width / 2 : 1;
         level.height = above.height > 1 ? above.height / 2 : 1;
         level.format = above.format;
+        level.opaque = above.opaque;
         const uint32_t bytes = cpuPixelBytes(level.format);
         level.data = static_cast<uint8_t*>(prMemoryAlloc(size_t(level.width) * level.height * bytes));
         prImageMipLevel(PrPixelView{above.data, size_t(above.width) * bytes, {above.width, above.height}},

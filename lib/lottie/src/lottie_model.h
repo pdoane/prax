@@ -476,7 +476,7 @@ struct LottieComp {
 struct LottieImage {
     float width;
     float height;
-    const PrDrawImage* PR_NULLABLE image;   // null if the image could not be read
+    const PrTextureSource* PR_NULLABLE image;   // null if the image could not be read
 };
 
 // An animation's model. Everything lives in arrays that the animation owns, and records refer to each other by index.
@@ -491,6 +491,7 @@ struct LottieAnimation {
 
     RawArray<LottieNode> nodes;            // the root first
     RawArray<LottieImage> images;
+    PrTextureCache* PR_NULLABLE textures;  // the cache that realizes the images (PrLottieOptions::textures)
     RawArray<LottieComp> comps;            // the root first
     RawArray<LottieLayer> layers;
     RawArray<LottieItem> items;

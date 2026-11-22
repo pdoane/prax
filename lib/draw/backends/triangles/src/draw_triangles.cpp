@@ -49,9 +49,6 @@ constexpr float kClipTolerance = 0.1f;
 // The width of the band that antialiases an edge, in target pixels.
 constexpr float kFringe = 1;
 
-// The number of consecutive builds in which a texture goes unused before it is destroyed.
-constexpr uint64_t kIdleBuilds = 8;
-
 // The white block at the corner of the first atlas texture, in texels.
 constexpr uint32_t kWhiteSize = 4;
 
@@ -67,12 +64,6 @@ constexpr float kShadowBand = 2.8f;
 
 // ---------------------------------------------------------------------------------------------------------------------
 // State
-
-struct CachedImage {
-    uint64_t id;
-    uint32_t texture;
-    uint64_t lastUsed;
-};
 
 // A gradient's colors for a color, the points where the colors turn, and the rays that cut a conic gradient.
 struct CachedRamp {
@@ -96,8 +87,6 @@ struct Triangles {
     PrPathPolyline polyline;
     uint64_t build;
     uint32_t nextTexture;
-    RawArray<CachedImage> images;
-    KeyIndex imageIndex;                // `images`, by id
     RawArray<CachedRamp*> ramps;        // owned; the first `rampCount` belong to this build
     uint32_t rampCount;                 // valid until the build ends, while the list's brushes stay put
     HashIndex rampIndex;                // this build's ramps, by the inputs that decide their colors
@@ -219,72 +208,32 @@ void request(Walk& w, const TrianglesTextureRequest& r) {
     w.b->requests.push(r);
 }
 
-// Returns the texture of the image, which is created with straight texels the first time a build draws the image.
-// Returns 0 for an image with no pixels.
-uint32_t textureOfImage(Walk& w, const PrDrawImage* image) {
-    Triangles* t = w.t;
-    uint64_t id = prDrawImageId(image);
-    uint32_t found = t->imageIndex.find(id, [&](uint32_t i) { return t->images.data[i].id; });
-    if (found != kHashMissing) {
-        t->images.data[found].lastUsed = t->build;
-        return t->images.data[found].texture;
-    }
-    uint32_t width = prDrawImageExtent(image).x;
-    uint32_t height = prDrawImageExtent(image).y;
-    if (width == 0 || height == 0)
-        return 0;
-    size_t size = size_t(width) * height * 4;
-    size_t offset = w.b->texels.count;
-    // The frame's texels are addressed in 32 bits. An image beyond that limit draws nothing.
-    if (size > UINT32_MAX - offset)
-        return 0;
-    w.b->texels.reserve(uint32_t(offset + size));
-    w.b->texels.count = uint32_t(offset + size);
-    uint8_t* bytes = w.b->texels.data + offset;
-    // Premultiplied as the list's images are read, then converted to straight alpha.
-    PrPixels pixels{bytes, size_t(width) * 4, {width, height}};
-    prDrawImageWritePixels(image, pixels, PrPixelFormat_Rgba8, PrIVec2{0, 0});
-    for (size_t i = 0; i < size; i += 4) {
-        uint32_t a = bytes[i + 3];
-        for (uint32_t k = 0; k < 3; ++k)
-            bytes[i + k] = uint8_t(a == 0 ? 0 : (bytes[i + k] * 255 + a / 2) / a);
-    }
-    uint32_t texture = newTexture(t);
-    uint32_t index = w.b->requests.count;
-    request(w, TrianglesTextureRequest{
-        TrianglesTextureOp_Create, texture, {0, 0},
-        PrPixelView{nullptr, size_t(width) * 4, {width, height}},
-    });
-    w.b->pending.push(PendingTexels{index, offset});
-    t->imageIndex.insert(id, t->images.count);
-    t->images.push(CachedImage{id, texture, t->build});
-    return texture;
-}
-
-// Returns true if the source samples texels, of an image or the host's texture, instead of playing a list.
+// Returns true if the source samples the host's texture, instead of playing a list.
 bool sampled(const PrDrawSource& source) {
-    return source.kind == PrDrawSourceKind_Image || source.kind == PrDrawSourceKind_Texture;
+    return source.kind == PrDrawSourceKind_Texture;
 }
 
-// A texture that a draw samples: a texture that the requests created, or a host texture.
+// A texture that a draw samples: a texture that the requests created, or a host texture, and the alpha of its texels.
 struct DrawTexture {
     uint32_t texture;
-    PrDrawTextureId hostTexture;
+    PrGpuTexture hostTexture;
+    PrTextureAlpha alpha;
 
-    bool exists() const { return texture != 0 || hostTexture != 0; }
+    bool exists() const { return texture != 0 || hostTexture.id != 0; }
 };
 
-// Returns the texture of a sampled source.
-DrawTexture textureOfSource(Walk& w, const PrDrawSource& source) {
-    if (source.kind == PrDrawSourceKind_Image)
-        return DrawTexture{textureOfImage(w, source.image), 0};
-    return DrawTexture{0, source.texture};
+// Returns the texture of an atlas page. It holds premultiplied texels, like every texture that the requests create.
+DrawTexture textureOfPage(Walk& w, uint32_t page) {
+    return DrawTexture{.texture = pageTexture(w.t, page), .alpha = PrTextureAlpha_Premultiplied};
 }
 
-// Returns the size in texels of a sampled source's image or texture.
+// Returns the texture of a sampled source.
+DrawTexture textureOfSource(const PrDrawSource& source) {
+    return DrawTexture{.hostTexture = source.texture, .alpha = source.alpha};
+}
+
+// Returns the size in texels of a sampled source's texture.
 PrVec2 sourceSize(const PrDrawSource& source) {
-    if (source.kind == PrDrawSourceKind_Image)
-        return PrVec2{float(prDrawImageExtent(source.image).x), float(prDrawImageExtent(source.image).y)};
     return PrVec2{float(source.extent.x), float(source.extent.y)};
 }
 
@@ -294,10 +243,18 @@ PrVec2 sourceSize(const PrDrawSource& source) {
 // Continues the last draw if it has the same texture, sampler and scissor, and starts one otherwise.
 void useDraw(Walk& w, DrawTexture texture, TrianglesSampler sampler, const PrIRect& clip) {
     RawArray<TrianglesDraw>& draws = w.b->draws;
-    TrianglesDraw draw{texture.hostTexture, texture.texture, sampler, clip, w.b->indices.count, 0};
+    TrianglesDraw draw{
+        .hostTexture = texture.hostTexture,
+        .texture = texture.texture,
+        .alpha = texture.alpha,
+        .sampler = sampler,
+        .scissor = clip,
+        .indexOffset = w.b->indices.count,
+    };
     if (draws.count != 0) {
         TrianglesDraw& last = draws.last();
-        bool same = last.hostTexture == draw.hostTexture && last.texture == draw.texture && last.sampler == sampler &&
+        bool same = last.hostTexture.id == draw.hostTexture.id && last.texture == draw.texture &&
+            last.alpha == draw.alpha && last.sampler == sampler &&
             last.scissor.left == clip.left && last.scissor.top == clip.top &&
             last.scissor.right == clip.right && last.scissor.bottom == clip.bottom;
         if (same)
@@ -524,7 +481,7 @@ bool makePaint(Walk& w, const PrDrawBrush* PR_NULLABLE brush, PrColor color, PrR
     out->color = color;
     out->alpha = opacityOf(w);
     out->brush = brush;
-    out->texture = DrawTexture{pageTexture(w.t, 0), 0};
+    out->texture = textureOfPage(w, 0);
     out->sampler = TrianglesSampler_LinearClamp;
     out->clampUv = false;
     out->clipTile = false;
@@ -539,7 +496,7 @@ bool makePaint(Walk& w, const PrDrawBrush* PR_NULLABLE brush, PrColor color, PrR
         const PrRect& tile = tiles.tile;
         if (!sampled(source) || !(tile.right > tile.left && tile.bottom > tile.top))
             return false;
-        DrawTexture texture = textureOfSource(w, source);
+        DrawTexture texture = textureOfSource(source);
         if (!texture.exists())
             return false;
         // One sampler serves both axes, chosen by the horizontal mode.
@@ -1674,7 +1631,7 @@ void drawImageRects(Walk& w, const PrDrawCommand& c, const PrDrawImageRect* rect
         }
         return;
     }
-    DrawTexture texture = textureOfSource(w, source);
+    DrawTexture texture = textureOfSource(source);
     if (!texture.exists())
         return;
     // The paint's brush space is the image's texels.
@@ -1729,21 +1686,28 @@ void drawNineSlice(Walk& w, const PrDrawCommand& c) {
 // Draws the image's texels at a device point, over the target regardless of the clip. The texels are blended instead of
 // replacing the target's pixels.
 void writePixels(Walk& w, const PrDrawCommand& c) {
-    const PrDrawImage* image = c.writePixels.image;
-    uint32_t texture = textureOfImage(w, image);
-    if (texture == 0 || prIRectIsEmpty(w.target))
+    const PrDrawSource& source = c.writePixels.source;
+    if (!prDrawSourceIsValid(source) || prIRectIsEmpty(w.target))
         return;
+    PrUVec2 extent = prDrawSourceTexels(source);
+    PrVec2 size = sourceSize(source);
     float x0 = float(c.writePixels.origin.x);
     float y0 = float(c.writePixels.origin.y);
-    float x1 = x0 + float(prDrawImageExtent(image).x);
-    float y1 = y0 + float(prDrawImageExtent(image).y);
-    useDraw(w, DrawTexture{texture, 0}, TrianglesSampler_NearestClamp, w.target);
+    float x1 = x0 + float(extent.x);
+    float y1 = y0 + float(extent.y);
+    useDraw(w, textureOfSource(source), TrianglesSampler_NearestClamp, w.target);
+    // The source's rect, in the texture's uv.
+    const PrRect& r = source.rect;
+    float u0 = r.left / size.x;
+    float v0 = r.top / size.y;
+    float u1 = (r.left + float(extent.x)) / size.x;
+    float v1 = (r.top + float(extent.y)) / size.y;
     uint32_t base = w.b->vertices.count;
     uint32_t white = 0xffffffffu;
-    w.b->vertices.push(TrianglesVertex{{x0, y0}, {0, 0}, white});
-    w.b->vertices.push(TrianglesVertex{{x1, y0}, {1, 0}, white});
-    w.b->vertices.push(TrianglesVertex{{x1, y1}, {1, 1}, white});
-    w.b->vertices.push(TrianglesVertex{{x0, y1}, {0, 1}, white});
+    w.b->vertices.push(TrianglesVertex{{x0, y0}, {u0, v0}, white});
+    w.b->vertices.push(TrianglesVertex{{x1, y0}, {u1, v0}, white});
+    w.b->vertices.push(TrianglesVertex{{x1, y1}, {u1, v1}, white});
+    w.b->vertices.push(TrianglesVertex{{x0, y1}, {u0, v1}, white});
     uint32_t indices[6] = {base, base + 1, base + 2, base, base + 2, base + 3};
     addIndices(w, indices, 6);
 }
@@ -1775,7 +1739,7 @@ bool drawAtlasGlyph(Walk& w, const PrDrawCommand& c, uint32_t index, const Paint
         {float(g.texel.x + g.extent.x) / size, float(g.texel.y + g.extent.y) / size},
         {float(g.texel.x) / size, float(g.texel.y + g.extent.y) / size},
     };
-    useDraw(w, DrawTexture{pageTexture(w.t, g.page), 0}, TrianglesSampler_LinearClamp, clipOf(w));
+    useDraw(w, textureOfPage(w, g.page), TrianglesSampler_LinearClamp, clipOf(w));
     if (outlined(w)) {
         Paint quad = paint;
         quad.kind = paint.kind == PaintKind_Image ? PaintKind_Solid : paint.kind;
@@ -2013,7 +1977,7 @@ void runCommands(Walk& w, const PrDrawCommand* commands, uint32_t count) {
 // ---------------------------------------------------------------------------------------------------------------------
 // Builds
 
-// Adds the requests for the atlas pages that changed, and for the images that went unused too long.
+// Adds the requests for the atlas pages that changed.
 void finishRequests(Walk& w) {
     Triangles* t = w.t;
     uint32_t size = t->atlasSize;
@@ -2030,7 +1994,7 @@ void finishRequests(Walk& w) {
         uint32_t top = uint32_t(region.top);
         uint32_t width = prIRectWidth(region);
         uint32_t height = prIRectHeight(region);
-        // The coverage, as white with that alpha.
+        // The coverage, as white with that alpha, premultiplied.
         size_t offset = w.b->texels.count;
         size_t bytes = size_t(width) * height * 4;
         w.b->texels.reserve(uint32_t(offset + bytes));
@@ -2040,29 +2004,19 @@ void finishRequests(Walk& w) {
         for (uint32_t y = 0; y < height; ++y) {
             const uint8_t* row = from.data + size_t(top + y) * from.stride + left;
             for (uint32_t x = 0; x < width; ++x, to += 4) {
-                to[0] = to[1] = to[2] = 0xff;
-                to[3] = row[x];
+                to[0] = to[1] = to[2] = to[3] = row[x];
             }
         }
         w.b->pending.push(PendingTexels{w.b->requests.count, offset});
         TrianglesTextureOp op = create ? TrianglesTextureOp_Create : TrianglesTextureOp_Update;
         request(w, TrianglesTextureRequest{
-            op, texture, {left, top},
-            PrPixelView{nullptr, size_t(width) * 4, {width, height}},
+            .op = op,
+            .texture = texture,
+            .origin = {left, top},
+            .texels = PrPixelView{nullptr, size_t(width) * 4, {width, height}},
         });
     }
     t->pagesCreated = prDrawAtlasPageCount(t->atlas);
-    uint32_t kept = 0;
-    for (uint32_t i = 0; i < t->images.count; ++i) {
-        const CachedImage& image = t->images.data[i];
-        if (t->build - image.lastUsed < kIdleBuilds) {
-            t->images.data[kept++] = image;
-            continue;
-        }
-        request(w, TrianglesTextureRequest{TrianglesTextureOp_Destroy, image.texture, {0, 0}, {}});
-    }
-    t->images.count = kept;
-    t->imageIndex.rebuild(kept, [&](uint32_t i) { return t->images.data[i].id; });
     // The texel storage has stopped growing.
     for (uint32_t i = 0; i < w.b->pending.count; ++i) {
         const PendingTexels& pending = w.b->pending.data[i];
@@ -2072,15 +2026,15 @@ void finishRequests(Walk& w) {
 
 void describe(const FrameStorage* b, uint32_t width, uint32_t height, TrianglesFrame* out) {
     *out = TrianglesFrame{
-        {width, height},
-        b->requests.data,
-        b->requests.count,
-        b->vertices.data,
-        b->vertices.count,
-        b->indices.data,
-        b->indices.count,
-        b->draws.data,
-        b->draws.count,
+        .extent = {width, height},
+        .requests = b->requests.data,
+        .requestCount = b->requests.count,
+        .vertices = b->vertices.data,
+        .vertexCount = b->vertices.count,
+        .indices = b->indices.data,
+        .indexCount = b->indices.count,
+        .draws = b->draws.data,
+        .drawCount = b->draws.count,
     };
 }
 
@@ -2113,8 +2067,6 @@ Triangles* trianglesCreate(const PrDrawTrianglesOptions& o) {
 void trianglesDestroy(Triangles* t) {
     prDrawAtlasDestroy(t->atlas);
     t->pageTextures.reset();
-    t->images.reset();
-    t->imageIndex.reset();
     for (uint32_t i = 0; i < t->ramps.count; ++i)
         prMemoryFree(t->ramps.data[i]);
     t->ramps.reset();
@@ -2137,8 +2089,6 @@ void trianglesDestroy(Triangles* t) {
 // draws with.
 void trianglesForgetResources(Triangles* t) {
     forgetPages(t);
-    t->images.clear();
-    t->imageIndex.index.clear();
 }
 
 void storageDestroy(FrameStorage* b) {
@@ -2199,12 +2149,36 @@ struct TrianglesRenderer : PrDrawRenderer {
     Triangles* triangles;
 };
 
-// A frame: the data that the build produced, and the storage that it points into.
+// A frame: the data that the build produced, the storage that it points into, and a reference to each of the host's
+// textures that it draws, held until the frame is prepared again or destroyed.
 struct TrianglesDrawFrame : PrDrawFrame {
     TrianglesRenderer* renderer;
     FrameStorage* storage;
     TrianglesFrame built;
+    RawArray<PrGpuTexture> held;
 };
+
+// Releases the frame's first `count` references to the host's textures.
+void releaseHostTextures(TrianglesDrawFrame* frame, uint32_t count) {
+    for (uint32_t i = 0; i < count; ++i)
+        prGpuTextureRelease(frame->renderer->device, frame->held.data[i]);
+    frame->held.erase(0, count);
+}
+
+// Replaces the references that the frame holds with references to the host's textures that its draws read. The new
+// references are taken before the old ones are released. A texture that only the frame held therefore stays alive if
+// the frame draws it again.
+void holdHostTextures(TrianglesDrawFrame* frame) {
+    uint32_t old = frame->held.count;
+    for (uint32_t i = 0; i < frame->built.drawCount; ++i) {
+        PrGpuTexture texture = frame->built.draws[i].hostTexture;
+        if (texture.id == 0 || (frame->held.count != old && frame->held.last().id == texture.id))
+            continue;
+        prGpuTextureRetain(frame->renderer->device, texture);
+        frame->held.push(texture);
+    }
+    releaseHostTextures(frame, old);
+}
 
 PrGpuDevice* rendererDevice(const PrDrawRenderer* renderer) {
     return static_cast<const TrianglesRenderer*>(renderer)->device;
@@ -2212,6 +2186,8 @@ PrGpuDevice* rendererDevice(const PrDrawRenderer* renderer) {
 
 void destroyFrame(PrDrawFrame* handle) {
     TrianglesDrawFrame* frame = static_cast<TrianglesDrawFrame*>(handle);
+    releaseHostTextures(frame, frame->held.count);
+    frame->held.reset();
     storageDestroy(frame->storage);
     prMemoryFree(frame);
 }
@@ -2220,6 +2196,7 @@ PrStatus prepare(PrDrawFrame* handle, const PrDrawList* list, const PrDrawPart* 
     TrianglesDrawFrame* frame = static_cast<TrianglesDrawFrame*>(handle);
     TrianglesRenderer* r = frame->renderer;
     trianglesBuild(r->triangles, list, *part, target->extent.x, target->extent.y, frame->storage, &frame->built);
+    holdHostTextures(frame);
     trianglesDevicePrepare(r->state, &frame->built, target->commands);
     return PrStatus_Ok;
 }

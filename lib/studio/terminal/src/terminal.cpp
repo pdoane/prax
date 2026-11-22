@@ -6,7 +6,6 @@
 #include "pr/assert.h"
 #include "pr/atomic.h"
 #include "pr/compress.h"
-#include "pr/draw_image.h"
 #include "pr/file.h"
 #include "pr/float.h"
 #include "pr/image.h"
@@ -22,6 +21,7 @@
 #include "pr/raw_array.h"
 #include "pr/raw_string.h"
 #include "pr/string_ops.h"
+#include "pr/texture.h"
 #include "pr/thread.h"
 #include "pr/time.h"
 #include "pr/ui.h"
@@ -137,7 +137,7 @@ struct TerminalRow {
 // `drawing` is the number of the last drawing that showed it (Terminal::drawings).
 struct TerminalImage {
     uint64_t key;
-    const PrDrawImage* image;
+    const PrTextureSource* image;
     uint32_t drawing;
 };
 
@@ -161,6 +161,12 @@ struct TerminalShown {
     uint64_t jumpLine;
     uint32_t composition;       // the revision of the input method's composition
 
+    // `textures` is the texture cache whose regions the images of the drawing embed. `texturesGeneration` is the
+    // generation of the cache when the drawing was made. The regions are invalid in another cache, and after the cache
+    // moves to another device.
+    const PrTextureCache* PR_NULLABLE textures;
+    uint64_t texturesGeneration;
+
     // Whether the drawing is in the blink phase that hides blinking text, and whether any of its rows has blinking
     // text. The phase matters only if a row has blinking text.
     bool blinkHidden;
@@ -174,7 +180,8 @@ bool isSame(const TerminalShown& a, const TerminalShown& b) {
     bool jump = a.hasJump == b.hasJump && a.jumpLine == b.jumpLine;
     return a.revision == b.revision && a.top == b.top && selection && link && a.extent.x == b.extent.x &&
         a.extent.y == b.extent.y && a.focused == b.focused && a.cursorOn == b.cursorOn &&
-        a.generation == b.generation && a.flash == b.flash && jump && a.composition == b.composition;
+        a.generation == b.generation && a.flash == b.flash && jump && a.composition == b.composition &&
+        a.textures == b.textures && a.texturesGeneration == b.texturesGeneration;
 }
 
 // A line of the view copied from the screen. `line` points into `cells` and `codePoints`.
@@ -576,7 +583,7 @@ void launchProcess(Terminal* terminal, PrUVec2 extent) {
 
 void imagesReset(Terminal* terminal) {
     for (TerminalImage& image : terminal->images.span())
-        prDrawImageRelease(image.image);
+        prTextureSourceRelease(image.image);
     terminal->images.clear();
 }
 
@@ -1955,7 +1962,7 @@ void drawGutter(const Terminal* terminal, PrDrawList* list) {
 
 // The drawing image for the screen image `key`, which the snapshot made, or null if there is none. Marks it as shown by
 // the current drawing, so that imagesTrim keeps it.
-const PrDrawImage* PR_NULLABLE drawImageOf(Terminal* terminal, uint64_t key) {
+const PrTextureSource* PR_NULLABLE drawImageOf(Terminal* terminal, uint64_t key) {
     for (TerminalImage& image : terminal->images.span()) {
         if (image.key == key) {
             image.drawing = terminal->drawings;
@@ -1975,15 +1982,13 @@ void imageMake(Terminal* terminal, uint64_t key) {
     PrVtermImage pixels{};
     if (!prVtermImage(terminal->vterm, key, &pixels))
         return;
-    PrDrawImageDesc desc{
-        .pixels = PrPixelView{pixels.pixels, size_t(pixels.extent.x) * 4, pixels.extent},
-        .format = PrPixelFormat_Rgba8,
-        .alpha = PrDrawAlpha_Straight,
-        .space = PrColorSpace_Srgb,
-    };
-    const PrDrawImage* image = nullptr;
-    if (prDrawImageCreate(&desc, &image) == PrStatus_Ok)
-        terminal->images.push(TerminalImage{.key = key, .image = image, .drawing = terminal->drawings});
+    // The screen's image may change or be removed once the lock is released, so the drawing's image keeps a copy of its
+    // pixels.
+    const PrTextureSource* image = prTextureSourceCreateCopy(PrPixelView{
+        pixels.pixels, size_t(pixels.extent.x) * 4,
+        pixels.extent,
+    }, PrPixelFormat_Rgba8, PrTextureAlpha_Straight);
+    terminal->images.push(TerminalImage{.key = key, .image = image, .drawing = terminal->drawings});
 }
 
 // Frees the drawing images that the drawing just recorded did not show.
@@ -1991,15 +1996,17 @@ void imagesTrim(Terminal* terminal) {
     for (uint32_t i = terminal->images.count; i-- > 0;) {
         const TerminalImage& image = terminal->images.data[i];
         if (image.drawing != terminal->drawings) {
-            prDrawImageRelease(image.image);
+            prTextureSourceRelease(image.image);
             terminal->images.erase(i);
         }
     }
 }
 
 // Records the image placements in the view whose z-index is from `low` to `high`, exclusive. Each is clipped to its
-// cells and to the screen.
-void drawImages(Terminal* terminal, PrDrawList* list, int64_t low, int64_t high) {
+// cells and to the screen. Returns false if a placement was left out because there is no texture cache or its texture
+// did not arrive. The caller must not keep such a drawing.
+bool drawImages(Terminal* terminal, PrDrawList* list, int64_t low, int64_t high) {
+    bool complete = true;
     const TerminalSnapshot& snapshot = terminal->snapshot;
     const PrVec2 cell = terminal->drawer.metrics.cell;
     uint32_t topIndex = snapshot.topIndex;
@@ -2016,9 +2023,17 @@ void drawImages(Terminal* terminal, PrDrawList* list, int64_t low, int64_t high)
         };
         if (clip.left >= clip.right || clip.top >= clip.bottom)
             continue;
-        const PrDrawImage* image = drawImageOf(terminal, placement.image);
+        const PrTextureSource* image = drawImageOf(terminal, placement.image);
+        // The image holds its pixels in memory, so its texture is an upload. The drawing waits for that upload.
+        PrTextureRegion region{};
+        PrTextureCache* textures = terminal->kit != nullptr ? terminal->kit->textures : nullptr;
         if (image == nullptr)
             continue;
+        if (textures == nullptr ||
+                prTextureCacheWait(textures, image, prTextureCacheAskEncoded(0), &region) != PrTextureCacheState_Ready) {
+            complete = false;
+            continue;
+        }
         PrRect destination{
             left + placement.offset.x * cell.x, top + placement.offset.y * cell.y,
             left + (placement.offset.x + placement.extent.x) * cell.x,
@@ -2031,11 +2046,13 @@ void drawImages(Terminal* terminal, PrDrawList* list, int64_t low, int64_t high)
         };
         // Edges snap to target pixels, so that placements which tile an image, as programs that place it a cell at a
         // time do, meet without seams where they share a pixel that each would cover in part.
-        PrDrawBrush brush = prDrawBrushImage(prDrawSourceImage(image, source), destination, PrDrawSampling_Linear);
+        PrDrawBrush brush =
+            prDrawBrushImage(prDrawSourceRegion(&region, source, 0), destination, PrDrawSampling_Linear);
         prDrawListPushClipRect(list, clip, PrDrawEdges_Snapped);
         prDrawListRect(list, destination, PrDrawPaint{.brush = &brush, .edges = PrDrawEdges_Snapped});
         prDrawListPopClip(list);
     }
+    return complete;
 }
 
 // Copies what the frame draws from the screen into the snapshot. That is the view's lines whose revisions changed, the
@@ -2180,6 +2197,9 @@ void draw(Terminal* terminal, PrLayoutNode screen, PrVec2 extent, double time) {
     if (terminal->hasJump)
         shown.jumpLine = terminal->jumpLine;
     shown.composition = terminal->compositionRevision;
+    shown.textures = terminal->kit->textures;
+    if (shown.textures != nullptr)
+        shown.texturesGeneration = prTextureCacheGeneration(shown.textures);
     PrLayoutTree* tree = terminal->kit->tree;
     bool drawn = prLayoutNodeContent(tree, screen).kind == PrLayoutContentKind_DrawList;
     bool same = terminal->hasShown && isSame(shown, terminal->shown) &&
@@ -2239,13 +2259,15 @@ void draw(Terminal* terminal, PrLayoutNode screen, PrVec2 extent, double time) {
     // over the text. They are recorded in the view's list, not in the rows' drawings, so that a row's cached drawing
     // stays valid while the images over it change.
     ++terminal->drawings;
-    drawImages(terminal, list, INT64_MIN, kPrVtermImageUnderBackgrounds);
+    bool complete = drawImages(terminal, list, INT64_MIN, kPrVtermImageUnderBackgrounds);
     for (uint32_t row = 0; row < shownRows; ++row)
         prDrawListEmbed(list, terminal->rows.data[row].backgrounds, PrDVec2{0, double(row) * double(m.cell.y)});
-    drawImages(terminal, list, kPrVtermImageUnderBackgrounds, 0);
+    complete = drawImages(terminal, list, kPrVtermImageUnderBackgrounds, 0) && complete;
     for (uint32_t row = 0; row < shownRows; ++row)
         prDrawListEmbed(list, terminal->rows.data[row].list, PrDVec2{0, double(row) * double(m.cell.y)});
-    drawImages(terminal, list, 0, INT64_MAX);
+    complete = drawImages(terminal, list, 0, INT64_MAX) && complete;
+    // A drawing that lacks an image is not kept, so the next frame draws again.
+    terminal->hasShown = complete;
     imagesTrim(terminal);
     if (terminal->composing)
         drawComposition(terminal, list);

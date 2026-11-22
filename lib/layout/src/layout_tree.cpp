@@ -5,7 +5,6 @@
 
 #include "pr/alloc.h"
 #include "pr/bitset.h"
-#include "pr/draw_image.h"
 #include "pr/draw_list.h"
 #include "pr/mem.h"
 #include "pr/raw_string.h"
@@ -135,7 +134,7 @@ void releaseKind(LayoutTree* tree, LayoutTreeNode& n) {
     if (n.kind == PrLayoutNodeKind_Replaced) {
         LayoutReplaced& replaced = tree->replaced.data[n.replaced];
         prDrawListRelease(replaced.content);
-        prDrawImageRelease(replaced.image);
+        prTextureSourceRelease(replaced.image);
         prLayoutPainterRelease(replaced.painter);
         prPathDestroy(const_cast<PrPath*>(replaced.path.path));
         replaced = LayoutReplaced{};
@@ -1372,6 +1371,7 @@ using namespace pr_impl;
 PrLayoutTree* prLayoutTreeCreate(const PrLayoutTreeDesc* desc) {
     PrLayoutTree* tree = allocZeroed<PrLayoutTree>();
     tree->styles = layoutStylesCreate(desc->font, desc->shaper, desc->targetPixelRatio);
+    tree->textures = allocZeroed<LayoutTextures>();
     tree->nodes.emplace() = LayoutTreeNode{};
     layoutCacheInit(tree->cache);
     return tree;
@@ -1388,6 +1388,8 @@ void prLayoutTreeDestroy(PrLayoutTree* PR_NULLABLE tree) {
         releaseKind(t, n);
     }
     t->nodes.reset();
+    layoutTexturesReset(t->textures);
+    prMemoryFree(t->textures);
     t->firstLines.reset();
     t->firstLineIndex.reset();
     for (uint32_t i = 0; i < t->highlights.count; ++i) {
@@ -1440,6 +1442,18 @@ void prLayoutTreeSetTargetPixelRatio(PrLayoutTree* tree, float ratio) {
 
 float prLayoutTreeTargetPixelRatio(const PrLayoutTree* tree) {
     return tree->styles->targetPixelRatio;
+}
+
+void prLayoutTreeSetTextures(PrLayoutTree* tree, PrTextureCache* PR_NULLABLE textures) {
+    if (tree->textures->cache == textures)
+        return;
+    tree->textures->cache = textures;
+    // Every recording draws its images again, from the new cache's textures.
+    layoutTreeForgetTextures(tree);
+}
+
+bool prLayoutTreePaintsPending(const PrLayoutTree* tree) {
+    return tree->textures->waiting.count != 0;
 }
 
 void prLayoutTreeSetCanvasColor(PrLayoutTree* tree, PrColor16 color) {
@@ -1749,11 +1763,11 @@ void prLayoutNodeSetContent(PrLayoutTree* tree, PrLayoutNode replaced, const PrL
         prDrawListFreeze(list);
         prDrawListRetain(list);
     }
-    const PrDrawImage* image = content->kind == PrLayoutContentKind_Image ? content->image : nullptr;
+    const PrTextureSource* image = content->kind == PrLayoutContentKind_Image ? content->image : nullptr;
     PR_ASSERT(content->kind != PrLayoutContentKind_Image || image != nullptr);
     if (image != nullptr)
-        prDrawImageRetain(image);
-    prDrawImageRelease(r.image);
+        prTextureSourceRetain(image);
+    prTextureSourceRelease(r.image);
     r.image = image;
     // The tree draws its own clone of a path, which keeps the path's id.
     prPathDestroy(const_cast<PrPath*>(r.path.path));
@@ -1772,6 +1786,8 @@ void prLayoutNodeSetContent(PrLayoutTree* tree, PrLayoutNode replaced, const PrL
     r.painter = painter;
     r.limit = image != nullptr ? content->limit : 0;
     r.rendering = image != nullptr ? content->rendering : PrLayoutImageRendering_Auto;
+    r.priority = image != nullptr ? content->priority : PrTextureCachePriority(PrTextureCachePriority_Normal);
+    r.upright = image != nullptr && content->upright;
     prDrawListRelease(r.content);
     r.contentKind = content->kind;
     r.content = list;
@@ -1805,6 +1821,8 @@ PrLayoutContent prLayoutNodeContent(const PrLayoutTree* tree, PrLayoutNode repla
         content.image = n.image;
         content.limit = n.limit;
         content.rendering = n.rendering;
+        content.priority = n.priority;
+        content.upright = n.upright;
     } else if (n.contentKind == PrLayoutContentKind_Path) {
         content.path = n.path;
     }

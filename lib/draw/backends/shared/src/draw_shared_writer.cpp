@@ -121,20 +121,15 @@ PrRect rasterize(DrawSharedWalker& w, const PrDrawList* list, uint32_t first, ui
     PrPixels pixels{w.pixels.data, stride, extent};
     if (prDrawRendererRenderPartPixels(w.cpu, list, &part, pixels, PrPixelFormat_Rgba8) != PrStatus_Ok)
         return kEmpty;
-    PrDrawImageDesc desc{
+    DrawSharedImage image{
         .pixels = PrPixelView{w.pixels.data, stride, extent},
         .format = PrPixelFormat_Rgba8,
-        .alpha = PrDrawAlpha_Premultiplied,
-        .space = PrColorSpace_Srgb,
+        .alpha = PrTextureAlpha_Premultiplied,
     };
-    const PrDrawImage* image = nullptr;
-    if (prDrawImageCreate(&desc, &image) != PrStatus_Ok)
-        return kEmpty;
     PrRect placed{
         float(area.left) / scale, float(area.top) / scale, float(area.right) / scale, float(area.bottom) / scale,
     };
     w.ops.image(w.ops.context, image, PrRect{0, 0, float(extent.x), float(extent.y)}, placed, prAffine2Identity(), 1);
-    prDrawImageRelease(image);
     return placed;
 }
 
@@ -223,12 +218,49 @@ bool borderIsNative(const DrawSharedWalker& w, const PrDrawBorder* border) {
     return true;
 }
 
+// Writes to `out` the image of the whole texels that the rect of a Texture source touches, and to `texels` the source's
+// rect relative to that image. Returns false if the walker's device does not hold the texture's texels in memory, or if
+// the rect touches no texel.
+bool textureImage(const DrawSharedWalker& w, const PrDrawSource& source, DrawSharedImage* out, PrRect* texels) {
+    PrGpuNativePixels native{};
+    PrPixelFormat format{};
+    if (source.kind != PrDrawSourceKind_Texture || source.texture.id == 0 ||
+            !prGpuTextureNative(prDrawRendererDevice(w.cpu), source.texture, PrGpuNativeKind_Pixels, &native) ||
+            !prGpuFormatToPixelFormat(prGpuFormatPlain(native.format), &format))
+        return false;
+    PrIRect whole{0, 0, int32_t(native.pixels.extent.x), int32_t(native.pixels.extent.y)};
+    const PrRect& r = source.rect;
+    PrIRect touched = prIRectIntersect(PrIRect{
+        int32_t(prF32Floor(r.left)), int32_t(prF32Floor(r.top)), int32_t(prF32Ceil(r.right)),
+        int32_t(prF32Ceil(r.bottom)),
+    }, whole);
+    if (prIRectIsEmpty(touched))
+        return false;
+    uint32_t bytes = prPixelFormatSize(format);
+    *out = DrawSharedImage{
+        .key = DrawSharedImageKey{.texture = source.texture, .rect = touched, .alpha = source.alpha},
+        .pixels = PrPixelView{
+            native.pixels.data + size_t(touched.top) * native.pixels.stride + size_t(touched.left) * bytes,
+            native.pixels.stride, {uint32_t(prIRectWidth(touched)), uint32_t(prIRectHeight(touched))},
+        },
+        .format = format,
+        .alpha = source.alpha,
+    };
+    *texels = PrRect{
+        r.left - float(touched.left), r.top - float(touched.top), r.right - float(touched.left),
+        r.bottom - float(touched.top),
+    };
+    return true;
+}
+
 // Draws an image brush over the shape as the image clipped to the shape, if the brush is an image's texels placed once
 // over a tile that holds the whole shape. Returns false if the brush is not such a brush.
 bool drawImageBrush(DrawSharedWalker& w, const PrDrawCommand& c, const PrDrawTransform& t) {
     const PrDrawBrush* brush = c.brush;
     const PrDrawImageFill& fill = brush->image;
-    if (c.stroke != nullptr || fill.source.kind != PrDrawSourceKind_Image || fill.source.image == nullptr)
+    DrawSharedImage image{};
+    PrRect texels{};
+    if (c.stroke != nullptr || !textureImage(w, fill.source, &image, &texels))
         return false;
     PrAffine2 brushToUser;
     PrRect bounds = prDrawFillBounds(&c);
@@ -249,7 +281,7 @@ bool drawImageBrush(DrawSharedWalker& w, const PrDrawCommand& c, const PrDrawTra
     prDrawShapePath(&c, w.path);
     w.ops.pushClip(w.ops.context, w.path, c.rule, t.affine);
     float opacity = prFloat16ToFloat(c.color.a);
-    w.ops.image(w.ops.context, fill.source.image, fill.source.rect, tile, prAffine2Concat(brushToUser, t.affine), opacity);
+    w.ops.image(w.ops.context, image, texels, tile, prAffine2Concat(brushToUser, t.affine), opacity);
     w.ops.popClip(w.ops.context);
     return true;
 }
@@ -524,11 +556,11 @@ PrColor drawSharedClamp(PrColor color) {
     };
 }
 
-bool drawSharedImageRgba8(const PrDrawImage* image, RawArray<uint8_t>& out) {
-    PrUVec2 extent = prDrawImageExtent(image);
-    PrPixelView pixels = prDrawImagePixels(image);
-    PrPixelFormat format = prDrawImageFormat(image);
-    PrDrawAlpha alpha = prDrawImageAlpha(image);
+bool drawSharedImageRgba8(const DrawSharedImage& image, RawArray<uint8_t>& out) {
+    PrUVec2 extent = image.pixels.extent;
+    PrPixelView pixels = image.pixels;
+    PrPixelFormat format = image.format;
+    PrTextureAlpha alpha = image.alpha;
     out.resize(extent.x * extent.y * 4);
     bool translucent = false;
     for (uint32_t y = 0; y < extent.y; ++y) {
@@ -548,10 +580,10 @@ bool drawSharedImageRgba8(const PrDrawImage* image, RawArray<uint8_t>& out) {
                 c[2] = float(p[bgra ? 0 : 2]) / 255;
                 c[3] = float(p[3]) / 255;
             }
-            if (alpha == PrDrawAlpha_Opaque)
+            if (alpha == PrTextureAlpha_None)
                 c[3] = 1;
             c[3] = prF32Clamp(c[3], 0, 1);
-            if (alpha == PrDrawAlpha_Premultiplied && c[3] > 0) {
+            if (alpha == PrTextureAlpha_Premultiplied && c[3] > 0) {
                 for (uint32_t k = 0; k < 3; ++k)
                     c[k] /= c[3];
             }
@@ -613,11 +645,12 @@ void drawSharedGradientStops(const PrDrawBrush* brush, PrColor color, RawArray<D
     colors.reset();
 }
 
-void drawSharedWalkerInit(DrawSharedWalker& walker, const DrawSharedWriterOps& ops,
+void drawSharedWalkerInit(DrawSharedWalker& walker, const DrawSharedWriterOps& ops, PrGpuDevice* PR_NULLABLE device,
         PrDrawGlyphDecoder* PR_NULLABLE glyphDecoder, float rasterScale) {
     walker = DrawSharedWalker{};
     walker.ops = ops;
     PrDrawCpuOptions cpu = prDrawCpuOptionsDefault();
+    cpu.device = device;
     cpu.glyphDecoder = glyphDecoder;
     walker.cpu = prDrawCpuCreate(&cpu);
     walker.rasterScale = rasterScale;

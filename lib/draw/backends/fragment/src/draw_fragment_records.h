@@ -217,7 +217,7 @@ struct FragmentPaint {
     uint32_t groupMask;             // FragmentMaskFlags of its group's mask
     uint32_t groupMaskTexture;      // the group mask's layer, an index into the frame's textures plus one
 
-    // Image: PrDrawAlpha of the texels. Texels read straight are premultiplied per tap, and texels that the sampler
+    // Image: FragmentAlpha of the texels. Texels read straight are premultiplied per tap, and texels that the sampler
     // filters straight are premultiplied after filtering, so a transparent texel's color bleeds into its neighbors'.
     uint32_t alpha;
 

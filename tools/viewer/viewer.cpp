@@ -115,6 +115,10 @@ constexpr float kWindowHeight = 800;
 // document draws nothing, as between a printed document's pages.
 constexpr PrColor kBackdrop{0.12f, 0.12f, 0.13f, 1};
 
+// The renderer configuration that draws a reference that the engine draws. It is the cpu renderer, which is the first
+// configuration. A reference's images realize in this configuration's texture cache.
+constexpr uint32_t kReferenceConfig = 0;
+
 // Returns the swap chain that the viewer presents with, for SDR or for HDR.
 PrGpuSwapChainDesc swapChainDesc(bool hdr) {
     return {
@@ -226,7 +230,8 @@ int renderAll(const char* directory, const Collection& documents, const char* wh
         uint32_t height = uint32_t(std::lround(size.y * pixelRatio));
         // Each renderer configuration renders a load of its own, presented where its renderer renders.
         auto recordFor = [&](uint32_t config) {
-            std::shared_ptr<Loaded> loaded = load(document.source, text, media, configs[config].renderer);
+            std::shared_ptr<Loaded> loaded =
+                load(document.source, text, media, configs[config].renderer, configs[config].textures);
             record(list, *loaded, size.x, size.y, pixelRatio, time);
             return loaded;
         };
@@ -282,6 +287,8 @@ int renderAll(const char* directory, const Collection& documents, const char* wh
             std::printf("%s %s\n", ok ? "wrote" : "FAILED", printed.printed.path.string().c_str());
             failures += ok ? 0 : 1;
         }
+        // The document's loads are gone, so the caches may evict its images.
+        trimConfigs();
     }
     prDrawListRelease(list);
     releaseSlot(slot);
@@ -926,7 +933,8 @@ Opened& shownDocument(Viewer& v) {
             bool drawn = reference.url.empty() && !printed;
             std::shared_ptr<Loaded> loaded;
             if (drawn)
-                loaded = load(reference.source, TextBackends{}, page_host::Media_Screen, nullptr);
+                loaded = load(reference.source, TextBackends{}, page_host::Media_Screen, nullptr,
+                    v.configs[kReferenceConfig].textures);
             v.open->loaded.push_back(std::move(loaded));
             v.open->prints.push_back(printed ? v.printer->ask(reference) : nullptr);
         }
@@ -953,8 +961,8 @@ std::shared_ptr<Loaded> paneDocument(Viewer& v, Opened& document, uint32_t index
     page_host::Media media = paneMedia(choice, listed.source);
     if (pane.loaded == nullptr || pane.text != choice.text || pane.config != choice.config || pane.media != media) {
         pane = PaneLoad{
-            choice.text, choice.config, media,
-            load(listed.source, choice.text, media, v.configs[choice.config].renderer),
+            choice.text, choice.config, media, load(listed.source, choice.text, media,
+                v.configs[choice.config].renderer, v.configs[choice.config].textures),
         };
         // A load opens at the top of the document, and the other pane follows it there.
         v.choices.scroll = PrVec2{0, 0};
@@ -1014,7 +1022,7 @@ BrowserPrint& browserPrint(Viewer& v, Opened& document, const std::string& url) 
     }
     BrowserPrint& print = *document.browserPrint;
     if (print.state == PrintState_Printed && print.loaded == nullptr && pdfDrawn())
-        print.loaded = loadPrinted(print.path, PrDrawWriterBackend_Pdf);
+        print.loaded = loadPrinted(print.path, PrDrawWriterBackend_Pdf, v.configs[kReferenceConfig].textures);
     return print;
 }
 
@@ -1029,7 +1037,7 @@ std::shared_ptr<Loaded> shownReference(Viewer& v, Opened& document, const PaneCh
     const std::shared_ptr<PrintJob>& job = document.prints[choice.reference];
     bool pdf = reference.printed.format == PrDrawWriterBackend_Pdf;
     if (loaded == nullptr && job != nullptr && job->state == PrintState_Printed && (!pdf || pdfDrawn()))
-        loaded = loadPrinted(reference.printed.path, reference.printed.format);
+        loaded = loadPrinted(reference.printed.path, reference.printed.format, v.configs[kReferenceConfig].textures);
     return loaded;
 }
 
@@ -1082,8 +1090,7 @@ void showPane(Viewer& v, uint32_t index, float pixelRatio) {
     source.output = PaneOutput{format, v.display, v.preferences};
     source.background = kBackdrop;
     source.backToBack = v.choices.backToBack;
-    // A reference that the engine draws draws with the cpu renderer, which is the first.
-    source.config = prax ? choice.config : 0;
+    source.config = prax ? choice.config : kReferenceConfig;
     source.loaded = shown;
     if (shown == nullptr)
         source.url = referenceUrl(v, document, choice);
@@ -1252,6 +1259,10 @@ PrAppOutput frame(void* context, PrAppWindow* window, const PrAppFrame* frame) {
     PrApp* app = v.app;
     if (v.swapChain == nullptr || !(frame->extent.x > 0 && frame->extent.y > 0))
         return {};
+    // The panes render on their own threads and share the configurations' texture caches, so a frame of the caches is a
+    // frame of the viewer. A document holds its images while it is open, so a trim takes only what closed documents
+    // leave behind.
+    trimConfigs();
     float pixelRatio = frame->display.pixelRatio;
     uint32_t width = uint32_t(std::lround(frame->extent.x * pixelRatio));
     uint32_t height = uint32_t(std::lround(frame->extent.y * pixelRatio));
@@ -1390,30 +1401,18 @@ PrAppOutput frame(void* context, PrAppWindow* window, const PrAppFrame* frame) {
         PrGpuTexture drawable = swapFrame.color;
         PrGpuSwapChainInfo info = prGpuSwapChainInfo(v.swapChain);
         prGpuCommandsTextureBarrier(commands, drawable, all, PrGpuAccessFlag_Discard, PrGpuAccessFlag_ColorAttachment);
-        // A swap chain of 8-bit sRGB takes the frame as it is. Any other maps it to the display.
-        bool mapped = v.swapChainHdr && (info.format != PrGpuFormat_Bgra8 || info.space != PrColorSpace_Srgb);
-        if (mapped && v.displayShader == nullptr)
+        // The swap chain's textures are only render targets, so the frame is drawn into them and mapped to the display.
+        // A swap chain of 8-bit sRGB takes the frame's values unchanged.
+        if (v.displayShader == nullptr)
             prDrawDisplayCreate(v.device, &v.displayShader);
-        if (mapped && v.displayShader != nullptr) {
-            PrGpuPassDesc shown = prGpuPassDescColor(drawable, PrGpuLoad_Clear, PrColor{0, 0, 0, 1});
-            PrGpuPass* mapPass = prGpuPassBegin(commands, &shown);
+        PrGpuPassDesc shown = prGpuPassDescColor(drawable, PrGpuLoad_Clear, kBackdrop);
+        PrGpuPass* mapPass = prGpuPassBegin(commands, &shown);
+        if (v.displayShader != nullptr) {
             PrDrawDisplayDesc mapping{.target = info.space, .headroom = v.display.headroom, .gamut = v.display.gamut};
             prDrawDisplayDraw(v.displayShader, mapPass, v.frame, &mapping);
-            prGpuPassEnd(mapPass);
-            prGpuCommandsTextureBarrier(commands, drawable, all, PrGpuAccessFlag_ColorAttachment,
-                PrGpuAccessFlag_Present);
-        } else {
-            // The window shows the swap chain's texture past the frame while it resizes, which the backdrop fills.
-            PrGpuPassDesc backdrop = prGpuPassDescColor(drawable, PrGpuLoad_Clear, kBackdrop);
-            prGpuPassEnd(prGpuPassBegin(commands, &backdrop));
-            prGpuCommandsTextureBarrier(commands, drawable, all, PrGpuAccessFlag_ColorAttachment,
-                PrGpuAccessFlag_CopyWrite);
-            prGpuCommandsTextureBarrier(commands, v.frame, all, PrGpuAccessFlag_ShaderRead, PrGpuAccessFlag_CopyRead);
-            PrGpuTextureRegion region = prGpuTextureRegion2d(PrUVec2{0, 0}, PrUVec2{width, height});
-            prGpuCommandsCopyTexture(commands, v.frame, &region, drawable, &region);
-            prGpuCommandsTextureBarrier(commands, v.frame, all, PrGpuAccessFlag_CopyRead, PrGpuAccessFlag_ShaderRead);
-            prGpuCommandsTextureBarrier(commands, drawable, all, PrGpuAccessFlag_CopyWrite, PrGpuAccessFlag_Present);
         }
+        prGpuPassEnd(mapPass);
+        prGpuCommandsTextureBarrier(commands, drawable, all, PrGpuAccessFlag_ColorAttachment, PrGpuAccessFlag_Present);
         prGpuSwapChainPresent(v.swapChain, commands);
     }
     // A pane that waits for its reference's print shows nothing yet, which is not its settled render.

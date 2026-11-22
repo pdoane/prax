@@ -315,6 +315,7 @@ struct GlyphEntry {
     GlyphKey key;
     PrDrawList* PR_NULLABLE list;           // null for a glyph that does not paint itself
     uint64_t lastUsed;
+    bool perUse;                            // the decoder drew it for one use (PrDrawGlyphDecoded_Use)
 };
 
 struct DrawGlyphCache {
@@ -334,22 +335,18 @@ uint32_t hashOf(const GlyphKey& key) {
     return uint32_t(prHashBytes(&key, sizeof(key), 0));
 }
 
-// The decoder of the images of bitmap strikes (prDrawGlyphBitmapCreate).
-struct BitmapDecoder : PrDrawGlyphDecoder {
-    const PrImageCodecSet* codec;
-};
-
-void destroyBitmapDecoder(PrDrawGlyphDecoder* decoder) {
-    prMemoryFree(decoder);
-}
-
-bool decodeBitmap(PrDrawGlyphDecoder* decoder, const PrFont* font, uint16_t glyph, float pixelsPerEm,
-        const PrFontPalette* PR_NULLABLE, PrColor, PrDrawList* list) {
-    PrFontGlyphSvg svg{};
-    if (prFontGlyphSvg(font, glyph, &svg))
-        return false;
-    BitmapDecoder* bitmap = static_cast<BitmapDecoder*>(decoder);
-    return prDrawGlyphImage(bitmap->codec, font, glyph, pixelsPerEm, list);
+// Returns a list of the decoder's picture of the glyph, or null if the decoder draws nothing. Sets `perUse` to true if
+// the picture is valid for this use alone (PrDrawGlyphDecoded_Use).
+PrDrawList* PR_NULLABLE decodedList(DrawGlyphCache& cache, const PrFont* font, uint16_t glyph, float pixelsPerEm,
+        const PrFontPalette* PR_NULLABLE palette, PrColor foreground, bool* perUse) {
+    PrDrawList* list = prDrawListCreate();
+    PrDrawGlyphDecoded decoded = prDrawGlyphDecoderDecode(cache.decoder, font, glyph, pixelsPerEm, palette, foreground, list);
+    *perUse = decoded == PrDrawGlyphDecoded_Use;
+    if (decoded == PrDrawGlyphDecoded_None || prDrawListCommandCount(list) == 0) {
+        prDrawListRelease(list);
+        return nullptr;
+    }
+    return list;
 }
 
 } // namespace
@@ -440,36 +437,9 @@ void prDrawGlyphDecoderDestroy(PrDrawGlyphDecoder* PR_NULLABLE decoder) {
         decoder->destroyFn(decoder);
 }
 
-bool prDrawGlyphDecoderDecode(PrDrawGlyphDecoder* decoder, const PrFont* font, uint16_t glyph, float pixelsPerEm,
-        const PrFontPalette* PR_NULLABLE palette, PrColor foreground, PrDrawList* list) {
+PrDrawGlyphDecoded prDrawGlyphDecoderDecode(PrDrawGlyphDecoder* decoder, const PrFont* font, uint16_t glyph,
+        float pixelsPerEm, const PrFontPalette* PR_NULLABLE palette, PrColor foreground, PrDrawList* list) {
     return decoder->decodeFn(decoder, font, glyph, pixelsPerEm, palette, foreground, list);
-}
-
-bool prDrawGlyphImage(const PrImageCodecSet* codec, const PrFont* font, uint16_t glyph, float pixelsPerEm, PrDrawList* list) {
-    PrFontGlyphImage image{};
-    const PrDrawImage* decoded = nullptr;
-    if (!prFontGlyphImage(font, glyph, pixelsPerEm, &image) ||
-            prDrawImageCreateFromBytes(codec, image.bytes, &decoded, nullptr) != PrStatus_Ok)
-        return false;
-    PrRect whole{0, 0, float(prDrawImageExtent(decoded).x), float(prDrawImageExtent(decoded).y)};
-    PrDrawSource drawn = prDrawSourceImage(decoded, whole);
-    PrDrawBrush brush = prDrawBrushImage(drawn, image.bounds, PrDrawSampling_Mipmap);
-    // A mirrored image reflects about the vertical line through the middle of its bounds.
-    if (image.mirrored)
-        prDrawListPushTransformAffine2(list, PrAffine2{-1, 0, 0, 1, image.bounds.left + image.bounds.right, 0});
-    prDrawListRect(list, image.bounds, {.brush = &brush});
-    if (image.mirrored)
-        prDrawListPopTransform(list);
-    prDrawImageRelease(decoded);
-    return true;
-}
-
-PrDrawGlyphDecoder* prDrawGlyphBitmapCreate(const PrImageCodecSet* codec) {
-    BitmapDecoder* decoder = allocZeroed<BitmapDecoder>();
-    decoder->destroyFn = destroyBitmapDecoder;
-    decoder->decodeFn = decodeBitmap;
-    decoder->codec = codec;
-    return decoder;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -532,21 +502,25 @@ PrDrawList* PR_NULLABLE prDrawGlyphCacheList(PrDrawGlyphCache* cache, const PrFo
     uint32_t found = cache->index.find(
         hash, [&](uint32_t i) { return prMemEquals(&cache->entries.data[i].key, &key, sizeof(key)); });
     if (found != kHashMissing) {
-        cache->entries.data[found].lastUsed = cache->use;
-        return cache->entries.data[found].list;
-    }
-    PrDrawList* list = nullptr;
-    if (layered) {
-        list = drawGlyphList(font, glyph, palette, foreground);
-    } else {
-        list = prDrawListCreate();
-        if (!prDrawGlyphDecoderDecode(cache->decoder, font, glyph, pixelsPerEm, palette, foreground, list)) {
-            prDrawListRelease(list);
-            list = nullptr;
+        GlyphEntry& entry = cache->entries.data[found];
+        // A picture that is valid for one use is decoded again in the next use.
+        if (!entry.perUse || entry.lastUsed == cache->use) {
+            entry.lastUsed = cache->use;
+            return entry.list;
         }
+        prDrawListRelease(entry.list);
+        entry.list = decodedList(*cache, font, glyph, pixelsPerEm, palette, foreground, &entry.perUse);
+        entry.lastUsed = cache->use;
+        return entry.list;
     }
+    bool perUse = false;
+    PrDrawList* list = nullptr;
+    if (layered)
+        list = drawGlyphList(font, glyph, palette, foreground);
+    else
+        list = decodedList(*cache, font, glyph, pixelsPerEm, palette, foreground, &perUse);
     cache->index.insert(hash, cache->entries.count);
-    cache->entries.push(GlyphEntry{key, list, cache->use});
+    cache->entries.push(GlyphEntry{key, list, cache->use, perUse});
     return list;
 }
 

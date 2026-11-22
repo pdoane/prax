@@ -44,10 +44,12 @@ constexpr float kTolerance = 0.05f;
 // The colors per unit of a gradient's parameter in a ramp's pieces that mix nonlinearly.
 constexpr uint32_t kRampResolution = 256;
 
+// A Blend2D image of a texture's texels, as the last render that drew the texture read them.
 struct CachedImage {
-    uint64_t id;
+    uint64_t key;               // the texture and the alpha that its texels were read with (imageKey)
     BLImageCore image;
-    uint64_t lastUsed;
+    uint64_t read;              // the render that read the texels
+    bool held;                  // false if the texture's texels could not be read
 };
 
 struct Blend2dBackend : PrDrawRenderer {
@@ -55,7 +57,7 @@ struct Blend2dBackend : PrDrawRenderer {
     bool ownsDevice;                    // true if the renderer created its device, and frees it
     PrDrawBlend2dOptions options;
     RawArray<CachedImage> images;
-    KeyIndex imageIndex;                // `images`, by id
+    KeyIndex imageIndex;                // `images`, by key
     PrDrawGlyphCache* glyphs;
     uint64_t render;
 };
@@ -370,33 +372,44 @@ void endPaint(Renderer& r, const PrDrawCommand&) {
 // ---------------------------------------------------------------------------------------------------------------------
 // Images
 
-// Returns a Blend2D image of the image's pixels, premultiplied BGRA. It is created once and kept for as long as renders
-// use it.
-const BLImageCore* imageOf(Blend2dBackend* b2, const PrDrawImage* image) {
-    uint64_t id = prDrawImageId(image);
-    uint32_t found = b2->imageIndex.find(id, [&](uint32_t i) { return b2->images.data[i].id; });
-    if (found != kHashMissing) {
-        b2->images.data[found].lastUsed = b2->render;
-        return &b2->images.data[found].image;
+// Returns the key of the image of a Texture source's texture. Texels read with another alpha are another image.
+uint64_t imageKey(const PrDrawSource& source) {
+    return uint64_t(source.texture.id) | uint64_t(source.alpha) << 32;
+}
+
+// Returns a Blend2D image of the texels of a Texture source's texture, premultiplied BGRA, or null if the texels cannot
+// be read. Each render reads the texels once, when it first draws the texture, because a host may change a texture
+// between renders.
+const BLImageCore* PR_NULLABLE imageOf(Blend2dBackend* b2, const PrDrawSource& source) {
+    uint64_t key = imageKey(source);
+    uint32_t found = b2->imageIndex.find(key, [&](uint32_t i) { return b2->images.data[i].key; });
+    if (found == kHashMissing) {
+        found = b2->images.count;
+        CachedImage& added = b2->images.emplace();
+        added = CachedImage{.key = key};
+        bl_image_init(&added.image);
+        b2->imageIndex.insert(key, found);
     }
-    uint32_t index = b2->images.count;
-    CachedImage& cached = b2->images.emplace();
-    cached = CachedImage{id, {}, b2->render};
-    bl_image_init(&cached.image);
-    uint32_t width = prDrawImageExtent(image).x;
-    uint32_t height = prDrawImageExtent(image).y;
-    bl_image_create(&cached.image, int(width), int(height), BL_FORMAT_PRGB32);
-    BLImageData data{};
-    bl_image_make_mutable(&cached.image, &data);
-    PrPixels pixels{static_cast<uint8_t*>(data.pixel_data), size_t(data.stride), {width, height}};
-    prDrawImageWritePixels(image, pixels, PrPixelFormat_Bgra8, PrIVec2{0, 0});
-    b2->imageIndex.insert(id, index);
-    return &cached.image;
+    CachedImage& cached = b2->images.data[found];
+    if (cached.read != b2->render) {
+        cached.read = b2->render;
+        cached.held = false;
+        PrUVec2 extent = source.extent;
+        BLImageData data{};
+        if (bl_image_create(&cached.image, int(extent.x), int(extent.y), BL_FORMAT_PRGB32) == BL_SUCCESS &&
+                bl_image_make_mutable(&cached.image, &data) == BL_SUCCESS) {
+            PrPixels pixels{static_cast<uint8_t*>(data.pixel_data), size_t(data.stride), extent};
+            PrDrawSource whole = source;
+            whole.rect = PrRect{0, 0, float(extent.x), float(extent.y)};
+            cached.held = drawMemoryReadSource(b2->device, whole, PrPixelFormat_Bgra8, pixels);
+        }
+    }
+    return cached.held ? &cached.image : nullptr;
 }
 
 // Returns the image of an image source, or null for a list source.
 const BLImageCore* PR_NULLABLE sourceImage(Renderer& r, const PrDrawSource& source) {
-    return source.kind == PrDrawSourceKind_Image ? imageOf(r.b2, source.image) : nullptr;
+    return source.kind == PrDrawSourceKind_Texture ? imageOf(r.b2, source) : nullptr;
 }
 
 // Returns Blend2D's extend mode for a tile mode on each axis. None extends in the same way as Pad.
@@ -803,7 +816,7 @@ void writePixels(Renderer& r, const PrDrawCommand& c) {
     if (r.pixels == nullptr)
         return;
     bl_context_flush(&r.targets.data[0]->context, BL_CONTEXT_FLUSH_SYNC);
-    prDrawImageWritePixels(c.writePixels.image, *r.pixels, PrPixelFormat_Bgra8, c.writePixels.origin);
+    drawMemoryWriteSource(r.b2->device, c.writePixels.source, *r.pixels, PrPixelFormat_Bgra8, c.writePixels.origin);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1272,13 +1285,13 @@ void destroyBackend(PrDrawRenderer* renderer) {
 void endRender(Blend2dBackend* b2) {
     uint32_t kept = 0;
     for (uint32_t i = 0; i < b2->images.count; ++i) {
-        if (b2->images.data[i].lastUsed == b2->render)
+        if (b2->images.data[i].read == b2->render)
             b2->images.data[kept++] = b2->images.data[i];
         else
             bl_image_destroy(&b2->images.data[i].image);
     }
     b2->images.count = kept;
-    b2->imageIndex.rebuild(kept, [&](uint32_t i) { return b2->images.data[i].id; });
+    b2->imageIndex.rebuild(kept, [&](uint32_t i) { return b2->images.data[i].key; });
     prDrawGlyphCacheEnd(b2->glyphs);
 }
 

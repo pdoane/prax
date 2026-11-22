@@ -103,7 +103,7 @@ struct CanvasGradient {
 // A pattern (html/#canvaspattern): an image, repeated as `repetition` says, under its own transform.
 struct CanvasPattern {
     uint32_t references;
-    const PrDrawImage* image;                   // the pattern holds a reference
+    const PrTextureSource* image;               // the pattern holds a reference
     PrVec2 extent;                              // the image's extent in CSS pixels
     PrCanvasRepetition repetition;
     PrDAffine2 transform;
@@ -119,7 +119,7 @@ void gradientRelease(CanvasGradient* PR_NULLABLE gradient) {
 void patternRelease(CanvasPattern* PR_NULLABLE pattern) {
     if (pattern == nullptr || --pattern->references != 0)
         return;
-    prDrawImageRelease(pattern->image);
+    prTextureSourceRelease(pattern->image);
     prMemoryFree(pattern);
 }
 
@@ -192,7 +192,6 @@ struct CanvasBitmap {
     uint64_t drawn;                             // read and raised atomically (PrDrawGroupLayer)
     PrGpuDevice* device;
     PrGpuTexture texture;
-    PrDrawTextureId id;                         // the texture's id
 };
 
 // Drawing that is recorded and waits to be drawn into the bitmap: a frozen list, and its revision.
@@ -226,11 +225,12 @@ struct CanvasContext {
     PrPixelFormat format;
     uint8_t* PR_NULLABLE pixels;
     bool originClean;
-    uint64_t version;                           // raised by every change to what the bitmap shows
-    const PrDrawImage* PR_NULLABLE snapshot;    // the pixels as an image, until they next change
+    uint64_t version;                            // raised by every change to what the bitmap shows
+    const PrTextureSource* PR_NULLABLE snapshot; // the pixels as an image, until they next change
 
     CanvasBitmap* PR_NULLABLE bitmap;
     PrGpuDevice* PR_NULLABLE device;
+    PrTextureCache* PR_NULLABLE textures;       // the cache on `device` that realizes the images that the context draws
     bool pixelsCurrent;
 
     // The renderer that presents the context, on `device`, which draws the segments into the bitmap when its pixels are
@@ -462,7 +462,7 @@ void touched(CanvasContext* c) {
 // Records that the bitmap's pixels changed (touched), which makes the snapshot stale.
 void changed(CanvasContext* c) {
     touched(c);
-    prDrawImageRelease(c->snapshot);
+    prTextureSourceRelease(c->snapshot);
     c->snapshot = nullptr;
 }
 
@@ -576,7 +576,7 @@ void paintShown(void* PR_NULLABLE context, PrVec2 extent, PrDrawList* list) {
     prDrawListPushTransformAffine2(list, prAffine2Scale(PrVec2{extent.x / size.x, extent.y / size.y}));
     uint64_t newest = shown->segments.count != 0 ? shown->segments.last().revision : 0;
     PrDrawGroupLayer layer{
-        .texture = bitmap->id,
+        .texture = bitmap->texture,
         .extent = bitmap->extent,
         .drawn = &bitmap->drawn,
         .revision = newest,
@@ -642,7 +642,7 @@ void flush(CanvasContext* c) {
     prDrawListRelease(c->drawnList);
     c->drawnList = list;
     dropDrawn(c);
-    prDrawImageRelease(c->snapshot);
+    prTextureSourceRelease(c->snapshot);
     c->snapshot = nullptr;
 }
 
@@ -720,7 +720,6 @@ void allocateBitmap(CanvasContext* c, PrUVec2 extent) {
             bitmap->format = c->format;
             bitmap->device = c->device;
             bitmap->texture = texture;
-            bitmap->id = prDrawGpuTexture(texture);
             c->bitmap = bitmap;
             c->pixels = static_cast<uint8_t*>(prMemoryAlloc(strideOf(c) * extent.y));
         }
@@ -864,20 +863,38 @@ bool gradientBrush(const CanvasGradient& g, PrDAffine2 transform, PrDrawBrush* o
     return true;
 }
 
-// Writes the brush of a pattern, from the pattern's space through its own transform and then `transform`. Returns false
-// if the pattern is under a transform that collapses the plane, where it paints nothing.
-bool patternBrush(const CanvasPattern& p, PrDAffine2 transform, PrDrawSampling sampling, PrDrawBrush* out) {
-    PrDAffine2 mapped = prDAffine2Concat(p.transform, transform);
-    if (!invertible(mapped))
+// Writes the region of the image's texture. The context waits for the texture, because its bitmap keeps what it draws.
+// The pending list holds the image, so that the texture cache keeps the region while the list may draw it. Returns
+// false if the image has no texture.
+bool regionOf(const CanvasContext* c, const PrTextureSource* image, PrTextureRegion* out) {
+    if (c->textures == nullptr ||
+            prTextureCacheWait(c->textures, image, prTextureCacheAskEncoded(0), out) != PrTextureCacheState_Ready)
         return false;
-    PrUVec2 pixels = prDrawImageExtent(p.image);
-    PrDrawSource source = prDrawSourceImage(p.image, PrRect{0, 0, float(pixels.x), float(pixels.y)});
+    prDrawListHoldSource(c->pending, image);
+    return true;
+}
+
+// Writes the brush of a pattern, from the pattern's space through its own transform and then `transform`. Returns false
+// if the pattern's image has no texture, or if the pattern is under a transform that collapses the plane. Such a
+// pattern paints nothing.
+bool patternBrush(const CanvasContext* c, const CanvasPattern& p, PrDAffine2 transform, PrDrawSampling sampling,
+        PrDrawBrush* out) {
+    PrDAffine2 mapped = prDAffine2Concat(p.transform, transform);
+    PrTextureRegion region{};
+    if (!invertible(mapped) || !regionOf(c, p.image, &region))
+        return false;
+    const PrTextureDesc& desc = *prTextureSourceDesc(p.image);
+    PrUVec2 pixels = prTextureDescDisplayedExtent(&desc);
+    PrDrawSource source = prDrawSourceRegion(&region, PrRect{0, 0, float(pixels.x), float(pixels.y)}, desc.orientation);
     *out = prDrawBrushImage(source, PrRect{0, 0, p.extent.x, p.extent.y}, sampling);
     bool repeatX = p.repetition == PrCanvasRepetition_Repeat || p.repetition == PrCanvasRepetition_RepeatX;
     bool repeatY = p.repetition == PrCanvasRepetition_Repeat || p.repetition == PrCanvasRepetition_RepeatY;
     out->image.tiles.x = repeatX ? PrDrawExtend_Repeat : PrDrawExtend_None;
     out->image.tiles.y = repeatY ? PrDrawExtend_Repeat : PrDrawExtend_None;
     out->transform = affineOf(mapped);
+    // The orientation applies to the finished brush. It swaps the axes that repeat, and it is concatenated with the
+    // brush's transform.
+    prDrawBrushImageUpright(out, desc.orientation, region.rect);
     return true;
 }
 
@@ -897,7 +914,7 @@ void paintOf(const CanvasContext* c, PrCanvasStyleRole role, PrDAffine2 brushTra
     if (style.kind == PrCanvasStyleKind_Gradient)
         brushed = gradientBrush(*style.gradient, brushTransform, &out->brush);
     else if (style.kind == PrCanvasStyleKind_Pattern)
-        brushed = patternBrush(*style.pattern, brushTransform, samplingOf(s), &out->brush);
+        brushed = patternBrush(c, *style.pattern, brushTransform, samplingOf(s), &out->brush);
     if (brushed) {
         out->brush.opacity = float(s.globalAlpha);
         out->paint.brush = &out->brush;
@@ -1155,6 +1172,36 @@ void drawText(CanvasContext* c, PrStringView source, double x, double y, const d
         });
 }
 
+// Returns a source that holds a copy of the bitmap's pixels. Half-float pixels hold encoded values, as a target does.
+// They are decoded to the linear values that a source of floats holds.
+const PrTextureSource* snapshotOf(PrPixelView pixels, PrPixelFormat format, PrTextureAlpha alpha) {
+    if (format != PrPixelFormat_RgbaF16)
+        return prTextureSourceCreateCopy(pixels, format, alpha);
+    PrUVec2 extent = pixels.extent;
+    size_t stride = size_t(extent.x) * 8;
+    uint8_t* linear = static_cast<uint8_t*>(prMemoryAlloc(stride * extent.y));
+    bool premultiplied = alpha == PrTextureAlpha_Premultiplied;
+    for (uint32_t y = 0; y < extent.y; ++y) {
+        for (uint32_t x = 0; x < extent.x; ++x) {
+            PrFloat16 texel[4];
+            prMemCopy(texel, pixels.data + y * pixels.stride + x * 8, sizeof(texel));
+            float a = alpha == PrTextureAlpha_None ? 1 : prF32Clamp(prFloat16ToFloat(texel[3]), 0, 1);
+            for (uint32_t k = 0; k < 3; ++k) {
+                float c = prFloat16ToFloat(texel[k]);
+                if (premultiplied)
+                    c = a > 0 ? c / a : 0;
+                float decoded = prColorTransferDecode(PrColorTransfer_Srgb, prF32Abs(c));
+                decoded = c < 0 ? -decoded : decoded;
+                texel[k] = prFloat16FromFloat(premultiplied ? decoded * a : decoded);
+            }
+            prMemCopy(linear + y * stride + x * 8, texel, sizeof(texel));
+        }
+    }
+    const PrTextureSource* source = prTextureSourceCreateCopy(PrPixelView{linear, stride, extent}, format, alpha);
+    prMemoryFree(linear);
+    return source;
+}
+
 } // namespace
 
 } // namespace pr_impl
@@ -1240,7 +1287,7 @@ PrStatus prCanvasGradientAddColorStop(PrCanvasGradient* gradient, double offset,
 PrCanvasPattern* prCanvasPatternCreate(const PrCanvasImageSource* source, PrCanvasRepetition repetition) {
     PrCanvasPattern* pattern = allocZeroed<PrCanvasPattern>();
     pattern->references = 1;
-    prDrawImageRetain(source->image);
+    prTextureSourceRetain(source->image);
     pattern->image = source->image;
     pattern->extent = source->extent;
     pattern->repetition = repetition;
@@ -1355,6 +1402,7 @@ PrCanvas* prCanvasCreate(const PrCanvasDesc* desc) {
     c->pending = prDrawListCreate();
     c->renderer = desc->renderer;
     c->device = desc->renderer != nullptr ? prDrawRendererDevice(desc->renderer) : nullptr;
+    c->textures = desc->textures;
     c->textSourceFn = desc->textSource;
     c->textSourceContext = desc->textSourceContext;
     PrCssFont* font = nullptr;
@@ -1376,7 +1424,7 @@ void prCanvasDestroy(PrCanvas* PR_NULLABLE canvas) {
     discard(canvas);
     prDrawListRelease(canvas->pending);
     segmentsReset(&canvas->segments);
-    prDrawImageRelease(canvas->snapshot);
+    prTextureSourceRelease(canvas->snapshot);
     prDrawFrameDestroy(canvas->frame);
     if (canvas->scratch.id != 0)
         prGpuTextureRelease(canvas->device, canvas->scratch);
@@ -1409,24 +1457,16 @@ uint64_t prCanvasVersion(const PrCanvas* canvas) {
     return canvas->version;
 }
 
-const PrDrawImage* PR_NULLABLE prCanvasSnapshot(PrCanvas* canvas) {
+const PrTextureSource* PR_NULLABLE prCanvasSnapshot(PrCanvas* canvas) {
     readPixels(canvas);
     canvas->notified = false;
     if (canvas->pixels == nullptr)
         return nullptr;
     if (canvas->snapshot == nullptr) {
-        PrDrawImageDesc desc{
-            .pixels = prPixelsView(pixelsOf(canvas)),
-            .format = canvas->format,
-            .alpha = PrDrawAlpha(canvas->settings.alpha ? PrDrawAlpha_Premultiplied : PrDrawAlpha_Opaque),
-            .space = PrColorSpace_Srgb,
-        };
-        const PrDrawImage* image = nullptr;
-        if (prDrawImageCreate(&desc, &image) != PrStatus_Ok)
-            return nullptr;
-        canvas->snapshot = image;
+        PrTextureAlpha alpha = canvas->settings.alpha ? PrTextureAlpha_Premultiplied : PrTextureAlpha_None;
+        canvas->snapshot = snapshotOf(prPixelsView(pixelsOf(canvas)), canvas->format, alpha);
     }
-    prDrawImageRetain(canvas->snapshot);
+    prTextureSourceRetain(canvas->snapshot);
     return canvas->snapshot;
 }
 
@@ -1821,14 +1861,19 @@ void prCanvasDrawImage(PrCanvas* canvas, const PrCanvasImageSource* source,
     double destTop = dy + (top - sy) * scaleY;
     double destRight = dx + (right - sx) * scaleX;
     double destBottom = dy + (bottom - sy) * scaleY;
-    // The source's CSS pixels map onto its image's pixels.
-    PrUVec2 pixels = prDrawImageExtent(source->image);
+    // The source's CSS pixels map onto the pixels of its image as the image's orientation displays them.
+    PrTextureRegion region{};
+    if (!regionOf(canvas, source->image, &region))
+        return;
+    const PrTextureDesc& desc = *prTextureSourceDesc(source->image);
+    PrUVec2 pixels = prTextureDescDisplayedExtent(&desc);
     float texelsX = float(pixels.x) / source->extent.x;
     float texelsY = float(pixels.y) / source->extent.y;
     PrRect texels{float(left) * texelsX, float(top) * texelsY, float(right) * texelsX, float(bottom) * texelsY};
     PrRect destination{float(destLeft), float(destTop), float(destRight), float(destBottom)};
     PrDrawSampling sampling = PrDrawSampling(samplingOf(canvas->state) | PrDrawSamplingFlag_Gutter);
-    PrDrawBrush brush = prDrawBrushImage(prDrawSourceImage(source->image, texels), destination, sampling);
+    PrDrawBrush brush = prDrawBrushImage(prDrawSourceRegion(&region, texels, desc.orientation), destination, sampling);
+    prDrawBrushImageUpright(&brush, desc.orientation, region.rect);
     brush.opacity = float(canvas->state.globalAlpha);
     PrDrawPaint paint{.color = PrColor{1, 1, 1, float(canvas->state.globalAlpha)}, .brush = &brush};
     drawPainted(canvas, paint, canvas->state.transform,

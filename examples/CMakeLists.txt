@@ -65,7 +65,8 @@ pr_example(draw_gallery
     draw_gallery/scenes.cpp
     FONT_FILES "NotoSans[wdth,wght].ttf" "NotoSerif[wdth,wght].ttf" "NotoSansJP-VF.otf"
 )
-target_link_libraries(draw_gallery PRIVATE prax::app_select prax::draw_select prax::gpu_select prax::app prax::draw
+target_link_libraries(draw_gallery PRIVATE prax::gpu_select prax::texture prax::app prax::draw prax::draw_select
+                                           prax::app_select
                                            prax::gpu prax::task
                                    prax::font prax::locale prax::text prax::core_cpp)
 
@@ -75,8 +76,10 @@ pr_example(video
     video/main.cpp
     DATA ${PROJECT_SOURCE_DIR}/third_party/videos/cat.mp4
 )
-target_link_libraries(video PRIVATE prax::app_select prax::draw_select prax::gpu_select prax::app prax::draw prax::gpu
-                                    prax::media prax::task prax::core_cpp)
+target_link_libraries(video PRIVATE prax::gpu_select prax::texture prax::app prax::draw prax::draw_select
+                                    prax::app_select prax::gpu
+                                    prax::media
+                                    prax::task prax::core_cpp)
 
 # The feature drawings: a captioned drawing of each feature of lib/draw's list, and dense workloads that measure its
 # renderers. They are a library of their own, which the application and draw_bench link. Their fonts are the files of
@@ -96,17 +99,19 @@ add_library(draw_features_drawings STATIC
 )
 target_include_directories(draw_features_drawings PUBLIC ${PROJECT_SOURCE_DIR})
 pr_resources(draw_features_drawings ${PROJECT_SOURCE_DIR}/third_party/fonts@fonts)
-target_link_libraries(draw_features_drawings PUBLIC prax::compress_select prax::image_select prax::app prax::draw
-                                                    prax::font prax::text prax::core_cpp
+target_link_libraries(draw_features_drawings PUBLIC prax::compress_select prax::image_select prax::texture prax::app
+                                                    prax::draw prax::font prax::text
+                                                    prax::core_cpp
                                              PRIVATE prax::color prax::compress prax::image prax::path prax::svg
                                                      pr_warnings)
 
 # The feature drawings in a window, rendered on the GPU and mapped to the display, with the glyphs that are pictures
 # decoded by lib/svg's decoder.
 pr_example(draw_features draw_features/main.cpp)
-target_link_libraries(draw_features PRIVATE prax::compress_select prax::image_select prax::app_select prax::draw_select
-                                            prax::gpu_select draw_features_drawings
-                                            prax::app prax::draw prax::gpu
+target_link_libraries(draw_features PRIVATE prax::compress_select prax::image_select prax::gpu_select prax::texture
+                                            draw_features_drawings prax::app
+                                            prax::draw
+                                            prax::draw_select prax::app_select prax::gpu
                                             prax::svg prax::task prax::text prax::core_cpp)
 
 # The editor example: Studio Kit's widgets and a HUD library of its own over an editor's model, composed in one tree.
@@ -156,8 +161,8 @@ pr_example(studio_gallery
     FONT_BUNDLES Complete
 )
 target_link_libraries(studio_gallery PRIVATE prax::compress_select prax::image_select prax::studio_app prax::font_bundle
-                                             prax::text_edit prax::studio_kit
-                                             prax::draw
+                                             prax::text_edit
+                                             prax::studio_kit prax::texture
                                              prax::layout prax::ui prax::color prax::core_cpp)
 
 # The perspective example: Kit panels standing in 3D over a background that the application draws with its own
@@ -169,9 +174,10 @@ pr_example(perspective
     DATA ${CMAKE_CURRENT_SOURCE_DIR}/perspective/picture.png
 )
 pr_slang(perspective perspective/perspective_gpu.slang VARIABLE kPerspectiveShaders)
-target_link_libraries(perspective PRIVATE prax::compress_select prax::image_select prax::app_select prax::draw_select
-                                          prax::gpu_select prax::app prax::studio_kit
-                                          prax::draw
+target_link_libraries(perspective PRIVATE prax::compress_select prax::image_select prax::gpu_select prax::texture
+                                          prax::app prax::studio_kit prax::draw
+                                          prax::draw_select
+                                          prax::app_select
                                           prax::gpu prax::layout prax::task prax::text prax::font_bundle
                                           prax::image prax::compress prax::core_cpp)
 

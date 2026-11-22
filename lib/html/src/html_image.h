@@ -4,8 +4,10 @@
 
 #pragma once
 
+#include "pr/image.h"
 #include "pr/raw_string.h"
 #include "pr/string_view.h"
+#include "pr/texture.h"
 
 PR_ASSUME_NONNULL_BEGIN
 

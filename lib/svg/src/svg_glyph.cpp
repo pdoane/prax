@@ -11,6 +11,7 @@
 #include "pr/dom_xml.h"
 #include "pr/draw_commands.h"
 #include "pr/draw_glyph_backend.h"
+#include "pr/image_texture_source.h"
 #include "pr/integer.h"
 #include "pr/raw_array.h"
 #include "pr/string_ops.h"
@@ -27,6 +28,19 @@ constexpr uint32_t kDocumentCacheSize = 8;
 // The largest document that the decoder inflates, as a multiple of its compressed size.
 constexpr size_t kMaxInflation = 64;
 
+// The number of glyph images whose sources the decoder keeps. The decoder drops the least recently used image first. A
+// dropped source stays alive until every use of the glyph cache that can draw it has released it.
+constexpr uint32_t kImageCacheSize = 64;
+
+// A glyph's image from a bitmap strike, opened as a source. The font, the glyph and the strike are its key.
+struct OpenedImage {
+    uint64_t font;
+    uint16_t glyph;
+    float strike;
+    const PrTextureSource* PR_NULLABLE source;  // null for an image that did not open
+    uint64_t used;
+};
+
 // A document parsed from a font, keyed by the font and the document's index in it.
 struct ParsedDocument {
     uint64_t font;
@@ -38,7 +52,9 @@ struct ParsedDocument {
 struct SvgDecoder : PrDrawGlyphDecoder {
     const PrImageCodecSet* PR_NULLABLE imageCodec;
     const PrCompressCodecSet* PR_NULLABLE compressCodec;
+    PrTextureCache* PR_NULLABLE textures;
     RawArray<ParsedDocument> documents;
+    RawArray<OpenedImage> images;
     uint64_t clock;
     RawArray<uint8_t> inflated;
     RawArray<char> text;                       // the palette's custom properties, with names and values end to end
@@ -162,21 +178,87 @@ void destroyDecoder(PrDrawGlyphDecoder* decoder) {
     for (uint32_t i = 0; i < d->documents.count; ++i)
         prDomDocumentRelease(d->documents.data[i].document);
     d->documents.reset();
+    for (const OpenedImage& image : d->images.span())
+        prTextureSourceRelease(image.source);
+    d->images.reset();
     d->inflated.reset();
     d->text.reset();
     d->properties.reset();
     prMemoryFree(d);
 }
 
-bool decode(PrDrawGlyphDecoder* decoder, const PrFont* font, uint16_t glyph, float pixelsPerEm,
+// Returns the source of the glyph's image, or null if the image does not open. The image is opened once, and the
+// decoder keeps its source in `images`.
+const PrTextureSource* PR_NULLABLE imageSourceOf(SvgDecoder& d, const PrFont* font, uint16_t glyph,
+        const PrFontGlyphImage& image) {
+    uint64_t id = prFontId(font);
+    ++d.clock;
+    for (OpenedImage& opened : d.images.span()) {
+        if (opened.font == id && opened.glyph == glyph && opened.strike == image.pixelsPerEm) {
+            opened.used = d.clock;
+            return opened.source;
+        }
+    }
+    const PrTextureSource* source = nullptr;
+    prImageTextureSourceOpenBytes(image.bytes, d.imageCodec, nullptr, PrImageTextureColor_Srgb, &source);
+    if (d.images.count == kImageCacheSize) {
+        uint32_t oldest = 0;
+        for (uint32_t i = 1; i < d.images.count; ++i) {
+            if (d.images.data[i].used < d.images.data[oldest].used)
+                oldest = i;
+        }
+        // A use holds the source while it draws the glyph's region, so the source is destroyed only after every use has
+        // released it.
+        prTextureSourceRelease(d.images.data[oldest].source);
+        d.images.erase(oldest);
+    }
+    d.images.push(OpenedImage{id, glyph, image.pixelsPerEm, source, d.clock});
+    return source;
+}
+
+// Draws the glyph's image from the strike for `pixelsPerEm` (prFontGlyphImage), in ems with y down from the glyph's
+// origin. The picture holds the image's source, so that the texture cache keeps the region while the picture may draw
+// it. The glyph cache keeps the picture only once the image's own texture has arrived. A picture of a preview, or of an
+// image that has not arrived, is for one use. The next use asks for the texture again.
+PrDrawGlyphDecoded decodeImage(SvgDecoder& d, const PrFont* font, uint16_t glyph, float pixelsPerEm, PrDrawList* list) {
+    PrFontGlyphImage image{};
+    if (d.imageCodec == nullptr || d.textures == nullptr || !prFontGlyphImage(font, glyph, pixelsPerEm, &image))
+        return PrDrawGlyphDecoded_None;
+    const PrTextureSource* source = imageSourceOf(d, font, glyph, image);
+    if (source == nullptr)
+        return PrDrawGlyphDecoded_None;
+    // A glyph is drawn at many sizes, so its texture has every mip level.
+    PrTextureRegion region{};
+    PrTextureCacheState state =
+        prTextureCacheRealize(d.textures, source, prTextureCacheAskEncoded(PrTextureCacheFlag_Levels), &region);
+    if (state == PrTextureCacheState_Failed)
+        return PrDrawGlyphDecoded_None;
+    if (state == PrTextureCacheState_Pending)
+        return PrDrawGlyphDecoded_Use;
+    const PrTextureDesc& desc = *prTextureSourceDesc(source);
+    PrUVec2 extent = prTextureDescDisplayedExtent(&desc);
+    PrDrawSource drawn = prDrawSourceRegion(&region, PrRect{0, 0, float(extent.x), float(extent.y)}, desc.orientation);
+    PrDrawBrush brush = prDrawBrushImage(drawn, image.bounds, PrDrawSampling_Mipmap);
+    prDrawBrushImageUpright(&brush, desc.orientation, region.rect);
+    // A mirrored image reflects about the vertical line through the middle of its bounds.
+    if (image.mirrored)
+        prDrawListPushTransformAffine2(list, PrAffine2{-1, 0, 0, 1, image.bounds.left + image.bounds.right, 0});
+    prDrawListRect(list, image.bounds, {.brush = &brush});
+    if (image.mirrored)
+        prDrawListPopTransform(list);
+    prDrawListHoldSource(list, source);
+    return state == PrTextureCacheState_Ready ? PrDrawGlyphDecoded_Kept : PrDrawGlyphDecoded_Use;
+}
+
+PrDrawGlyphDecoded decode(PrDrawGlyphDecoder* decoder, const PrFont* font, uint16_t glyph, float pixelsPerEm,
         const PrFontPalette* PR_NULLABLE palette, PrColor foreground, PrDrawList* list) {
     SvgDecoder& d = *static_cast<SvgDecoder*>(decoder);
     PrFontGlyphSvg svg{};
     if (!prFontGlyphSvg(font, glyph, &svg))
-        return d.imageCodec != nullptr && prDrawGlyphImage(d.imageCodec, font, glyph, pixelsPerEm, list);
+        return decodeImage(d, font, glyph, pixelsPerEm, list);
     PrDomDocument* document = documentOf(d, font, svg);
     if (document == nullptr)
-        return false;
+        return PrDrawGlyphDecoded_None;
     // The glyph is the element whose id is "glyph" followed by the glyph's id.
     RawArray<char> name;
     appendText(name, "glyph");
@@ -185,19 +267,20 @@ bool decode(PrDrawGlyphDecoder* decoder, const PrFont* font, uint16_t glyph, flo
     name.reset();
     PrSvgElement* drawn = element != nullptr ? prSvgElementQuery(prDomElementAsEventTarget(element)) : nullptr;
     if (drawn == nullptr)
-        return false;
+        return PrDrawGlyphDecoded_None;
     paletteProperties(d, font, palette);
     PrSvgDrawOptions options{};
     options.properties = d.properties.data;
     options.propertyCount = d.properties.count;
     options.color = foreground;
     options.hasColor = true;
+    options.textures = d.textures;
     uint32_t before = prDrawListCommandCount(list);
     float em = 1 / svg.scale;
     prDrawListPushTransformAffine2(list, prAffine2Scale(PrVec2{svg.scale, svg.scale}));
     prSvgElementDrawInPlace(drawn, PrVec2{em, em}, &options, list);
     prDrawListPopTransform(list);
-    return prDrawListCommandCount(list) > before + 2;
+    return prDrawListCommandCount(list) > before + 2 ? PrDrawGlyphDecoded_Kept : PrDrawGlyphDecoded_None;
 }
 
 } // namespace
@@ -207,11 +290,12 @@ bool decode(PrDrawGlyphDecoder* decoder, const PrFont* font, uint16_t glyph, flo
 using namespace pr_impl;
 
 PrDrawGlyphDecoder* prSvgGlyphDecoderCreate(const PrImageCodecSet* PR_NULLABLE imageCodec,
-        const PrCompressCodecSet* PR_NULLABLE compressCodec) {
+        const PrCompressCodecSet* PR_NULLABLE compressCodec, PrTextureCache* PR_NULLABLE textures) {
     SvgDecoder* decoder = allocZeroed<SvgDecoder>();
     decoder->destroyFn = destroyDecoder;
     decoder->decodeFn = decode;
     decoder->imageCodec = imageCodec;
     decoder->compressCodec = compressCodec;
+    decoder->textures = textures;
     return decoder;
 }

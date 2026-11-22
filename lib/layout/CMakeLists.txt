@@ -46,7 +46,8 @@ pr_library(layout INCLUDE include
     src/layout_walk.cpp
     src/layout_worker.cpp
 )
-target_link_libraries(pr_layout PUBLIC prax::draw prax::text prax::geom prax::font prax::unicode prax::path prax::color
+target_link_libraries(pr_layout PUBLIC prax::texture prax::draw prax::text prax::geom prax::font prax::unicode
+                                       prax::path prax::color
                                        prax::locale PRIVATE prax::core_cpp)
 
 if (PR_DEVELOP)
@@ -85,6 +86,7 @@ if (PR_DEVELOP)
         tests/test_layout_writing_mode.cpp
     )
     target_compile_definitions(layout_tests PRIVATE PR_FONTS_DIR="${PR_TEST_FONTS_DIR}")
-    target_link_libraries(layout_tests PRIVATE prax::compress_select prax::text prax::draw prax::font prax::locale
-                                               prax::path)
+    target_link_libraries(layout_tests PRIVATE prax::compress_select prax::texture prax::text prax::draw prax::font
+                                               prax::locale prax::path
+                                              )
 endif()

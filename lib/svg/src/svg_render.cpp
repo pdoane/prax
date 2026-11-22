@@ -108,7 +108,7 @@ bool loadedImage(void* PR_NULLABLE, const PrDomElement* element, PrStringView, S
     if (state == nullptr || state->image != PrDomImageState_CompletelyAvailable)
         return false;
     if (state->picture != nullptr) {
-        prDrawImageRetain(state->picture);
+        prTextureSourceRetain(state->picture);
         out->raster = state->picture;
         return true;
     }
@@ -196,6 +196,7 @@ SvgBuild buildOf(const SvgContent* content, PrSvgDrawOptions* options) {
     *options = prSvgDrawOptionsDefault();
     options->fonts = presentation->fonts;
     options->shaper = presentation->shaper;
+    options->textures = presentation->textures;
     return SvgBuild{
         .source = {presentationStyle, presentationStyleUnder, presentationPseudoStyleUnder, presentation},
         .images = {loadedImage, nullptr},
@@ -373,6 +374,7 @@ SvgBuild referencesBuildOf(const SvgReferences* references, PrSvgDrawOptions* op
     *options = prSvgDrawOptionsDefault();
     options->fonts = presentation->fonts;
     options->shaper = presentation->shaper;
+    options->textures = presentation->textures;
     return SvgBuild{
         .source = {presentationStyle, presentationStyleUnder, presentationPseudoStyleUnder, presentation},
         .images = {loadedImage, nullptr},

@@ -6,9 +6,9 @@ the diff of a change to it is what the change did.
 | Part         |   Cases | Passing |
 |--------------|--------:|--------:|
 | DotLottie    |   25/30 |   83.3% |
-| Issues       | 381/467 |   81.5% |
+| Issues       | 390/467 |   83.5% |
 | LottieFiles  |   84/95 |   88.4% |
 | Nonanimating |   35/60 |   58.3% |
 | TypeFace     | 138/145 |   95.1% |
 | lottie-ios   |   87/90 |   96.6% |
-| **total**    | 750/887 |   84.5% |
+| **total**    | 759/887 |   85.5% |

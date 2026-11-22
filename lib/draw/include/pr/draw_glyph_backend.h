@@ -16,7 +16,7 @@ extern "C" {
 // pr/draw_glyph.h that it is named for. A null `destroyFn` means that there is nothing to free.
 struct PrDrawGlyphDecoder {
     void (*PR_NULLABLE destroyFn)(PrDrawGlyphDecoder* decoder);
-    bool (*decodeFn)(PrDrawGlyphDecoder* decoder, const PrFont* font, uint16_t glyph, float pixelsPerEm,
+    PrDrawGlyphDecoded (*decodeFn)(PrDrawGlyphDecoder* decoder, const PrFont* font, uint16_t glyph, float pixelsPerEm,
         const PrFontPalette* PR_NULLABLE palette, PrColor foreground, PrDrawList* list);
 };
 

@@ -22,7 +22,6 @@
 #include "pr/compress.h"
 #include "pr/draw.h"
 #include "pr/draw_display.h"
-#include "pr/draw_image.h"
 #include "pr/draw_renderer.h"
 #include "pr/fetch.h"
 #include "pr/font_set.h"
@@ -45,6 +44,7 @@
 #include "pr/string.h"
 #include "pr/task.h"
 #include "pr/text.h"
+#include "pr/texture.h"
 #include "pr/thread.h"
 #include "pr/time.h"
 #include "pr/tls.h"
@@ -258,6 +258,10 @@ struct Browser {
     PrDrawRenderer* PR_NULLABLE renderer = nullptr;
     PrDrawFrame* PR_NULLABLE pageFrame = nullptr;
     PrDrawFrame* PR_NULLABLE chromeFrame = nullptr;
+
+    // The cache on `device` that realizes the images of the pages and the chrome. It realizes images on `pool` and
+    // requests a frame when an image arrives.
+    PrTextureCache* PR_NULLABLE textures = nullptr;
     PrGpuTexture rendered{};        // the half floats that a frame renders into if the swap chain holds more than 8-bit
                                     // sRGB
     PrDrawDisplay* PR_NULLABLE display = nullptr;

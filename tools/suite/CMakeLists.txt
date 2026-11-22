@@ -9,8 +9,8 @@ target_link_libraries(suite_render PUBLIC prax::font PRIVATE prax::core_cpp prax
 # tools/suite/reftest.py.
 pr_harness(reftest prax::svg reftest.cpp)
 target_compile_definitions(reftest PRIVATE PR_ROOT_DIR="${PROJECT_SOURCE_DIR}")
-target_link_libraries(reftest PRIVATE prax::compress_select prax::image_select harness_png prax::dom prax::draw
-                                      draw_compare
+target_link_libraries(reftest PRIVATE prax::compress_select prax::image_select prax::texture prax::gpu harness_png
+                                      prax::dom prax::draw draw_compare
                                       suite_render prax::image prax::compress prax::lottie
                                       prax::font prax::text prax::url)
 

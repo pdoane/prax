@@ -313,12 +313,12 @@ void svgStroke(void* PR_NULLABLE context, const PrPath* path, const PrDrawStroke
     prTextBufferAppend(&s.body, "/>\n");
 }
 
-void svgImage(void* PR_NULLABLE context, const PrDrawImage* image, PrRect source, PrRect destination,
+void svgImage(void* PR_NULLABLE context, const DrawSharedImage& image, PrRect source, PrRect destination,
         PrAffine2 transform, float opacity) {
     SvgWriter& s = *static_cast<SvgWriter*>(context);
     if (s.options.images == nullptr)
         return;
-    PrUVec2 extent = prDrawImageExtent(image);
+    PrUVec2 extent = image.pixels.extent;
     drawSharedImageRgba8(image, s.rgba);
     PrPixelView pixels{s.rgba.data, size_t(extent.x) * 4, extent};
     size_t size = 0;
@@ -580,6 +580,6 @@ PrDrawWriter* prDrawSvgCreate(const PrDrawWriterOptions* PR_NULLABLE options) {
         .pushMark = svgPushMark,
         .popMark = svgPopMark,
     };
-    drawSharedWalkerInit(s->walker, ops, s->options.glyphDecoder, s->options.rasterScale);
+    drawSharedWalkerInit(s->walker, ops, s->options.device, s->options.glyphDecoder, s->options.rasterScale);
     return s;
 }

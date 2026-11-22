@@ -7,7 +7,6 @@
 #include "layout/src/layout_background.h"
 
 #include "pr/draw_filter.h"
-#include "pr/draw_image.h"
 #include "pr/draw_list.h"
 #include "pr/float.h"
 #include "pr/geom.h"
@@ -40,7 +39,7 @@ void backgroundKey(RawArray<uint8_t>& key, const PrLayoutBackgroundLayer* layers
         const PrLayoutBackgroundLayer& l = layers[i];
         uint8_t bytes[] = {
             l.kind,   l.rendering, l.repeatX, l.repeatY,   l.attachment,
-            l.origin, l.clip,      l.size,    l.blendMode, l.composite,
+            l.origin, l.clip,      l.size,    l.blendMode, l.composite, uint8_t(l.upright),
         };
         appendKey(key, bytes);
         uint32_t words[] = {l.sizeX.bits, l.sizeY.bits, l.positionX.bits, l.positionY.bits};
@@ -95,9 +94,9 @@ void countLayers(LayoutCompounds* compounds, const PrLayoutBackgroundLayer* laye
             layoutSourceCount(l.filters[f].source, delta);
         if (l.kind == PrLayoutImageKind_Image) {
             if (delta == 1)
-                prDrawImageRetain(l.image);
+                prTextureSourceRetain(l.image);
             else
-                prDrawImageRelease(l.image);
+                prTextureSourceRelease(l.image);
         } else if (l.kind == PrLayoutImageKind_List) {
             if (delta == 1)
                 prDrawListRetain(l.list);
@@ -551,14 +550,35 @@ PrDrawSampling samplingOf(const PrLayoutBackgroundLayer& layer) {
 }
 
 // Returns the source of a layer's image drawn at `size`, before its filter list. A list that the source reads may be
-// written to `drawn`, which the caller releases.
-PrDrawSource unfilteredSource(const LayoutCompounds* PR_NULLABLE compounds, const PrLayoutBackgroundLayer& layer,
-        PrVec2 size, PrDrawList* PR_NULLABLE* PR_NONNULL drawn) {
+// written to `drawn`, which the caller releases. For an Image layer, the list that draws the region of the texture
+// holds a reference to the image (prDrawListHoldSource). That list is `into` if the returned source is a region, and
+// the list written to `drawn` otherwise.
+PrDrawSource unfilteredSource(LayoutTextures* PR_NULLABLE textures, const LayoutCompounds* PR_NULLABLE compounds,
+        const PrLayoutBackgroundLayer& layer, PrVec2 size, PrDrawList* into, PrDrawList* PR_NULLABLE* PR_NONNULL drawn) {
     PrRect own{0, 0, size.x, size.y};
     switch (layer.kind) {
         case PrLayoutImageKind_Image: {
-            PrUVec2 texels = prDrawImageExtent(layer.image);
-            return prDrawSourceImage(layer.image, PrRect{0, 0, float(texels.x), float(texels.y)});
+            // An image whose texture has not arrived draws nothing.
+            PrTextureRegion region{};
+            if (!layoutTextureOf(textures, layer.image, prTextureCacheAskEncoded(0), &region))
+                return PrDrawSource{};
+            const PrTextureDesc& desc = *prTextureSourceDesc(layer.image);
+            PrUVec2 texels = desc.extent;
+            if (!layer.upright || desc.orientation == 0) {
+                prDrawListHoldSource(into, layer.image);
+                return prDrawSourceRegion(&region, PrRect{0, 0, float(texels.x), float(texels.y)}, 0);
+            }
+            // If the orientation turns or mirrors the image, the image is drawn upright into a list of its displayed
+            // size. Every use of the source reads that list.
+            PrUVec2 shown = prTextureDescDisplayedExtent(&desc);
+            PrRect displayed{0, 0, float(shown.x), float(shown.y)};
+            PrDrawBrush brush = prDrawBrushImage(prDrawSourceRegion(&region, displayed, desc.orientation), displayed,
+                samplingOf(layer));
+            prDrawBrushImageUpright(&brush, desc.orientation, region.rect);
+            *drawn = prDrawListCreate();
+            prDrawListHoldSource(*drawn, layer.image);
+            prDrawListRect(*drawn, displayed, {.brush = &brush});
+            return prDrawSourceList(*drawn, displayed);
         }
         case PrLayoutImageKind_List: {
             float width = hasWidth(layer.natural) ? prLayoutUnitToPx(layer.natural.width) : size.x;
@@ -619,9 +639,33 @@ bool isEmpty(PrRect r) {
     return !(r.right > r.left && r.bottom > r.top);
 }
 
-// Records one layer. Returns true if it drew.
-bool paintLayer(const LayoutCompounds* compounds, const PrLayoutBackgroundLayer& layer,
-        const LayoutBackgroundBoxes& boxes, PrDrawList* list) {
+// Adds `ask` for `image` to the asks that the tree waits for, unless it is already among them. The caller passes an ask
+// whose version has not arrived. `arrivals` is the cache's count of arrivals before the ask was made.
+void waitFor(LayoutTextures& textures, const PrTextureSource* image, PrTextureCacheAsk ask, uint64_t arrivals) {
+    RawArray<LayoutTextureAsk>& waiting = textures.waiting;
+    for (uint32_t i = 0; i < waiting.count; ++i) {
+        const PrTextureCacheAsk& other = waiting.data[i].ask;
+        if (waiting.data[i].image == image && other.flags == ask.flags && other.values == ask.values &&
+                other.alpha == ask.alpha && other.channels == ask.channels && other.priority == ask.priority &&
+                other.detail == ask.detail)
+            return;
+    }
+    if (waiting.count == 0)
+        textures.arrivals = arrivals;
+    prTextureSourceRetain(image);
+    waiting.push(LayoutTextureAsk{image, ask});
+}
+
+// Empties the asks that the tree waits for, and releases their images.
+void stopWaiting(LayoutTextures& textures) {
+    for (uint32_t i = 0; i < textures.waiting.count; ++i)
+        prTextureSourceRelease(textures.waiting.data[i].image);
+    textures.waiting.clear();
+}
+
+// Records one layer. Returns true if it drew. A layer whose image has not arrived draws nothing.
+bool paintLayer(LayoutTextures* PR_NULLABLE textures, const LayoutCompounds* compounds,
+        const PrLayoutBackgroundLayer& layer, const LayoutBackgroundBoxes& boxes, PrDrawList* list) {
     if (layer.kind == PrLayoutImageKind_None)
         return false;
     PrRect area = boxes.boxes[layer.origin];
@@ -672,7 +716,11 @@ bool paintLayer(const LayoutCompounds* compounds, const PrLayoutBackgroundLayer&
         return true;
     }
     PrDrawList* drawn = nullptr;
-    PrDrawSource source = layoutImageSource(compounds, layer, size, &drawn);
+    PrDrawSource source = layoutImageSource(textures, compounds, layer, size, list, &drawn);
+    if (!prDrawSourceIsValid(source)) {
+        prDrawListRelease(drawn);
+        return false;
+    }
     PrDrawSampling sampling = samplingOf(layer);
     PrDrawBrush brush = prDrawBrushImage(source, tile, sampling);
     brush.image.tiles.spacing = PrVec2{x.spacing, y.spacing};
@@ -794,7 +842,7 @@ void layoutBackgroundsReset(LayoutBackgrounds* backgrounds) {
             continue;
         for (uint32_t l = 0; l < b.count; ++l) {
             if (b.layers[l].kind == PrLayoutImageKind_Image)
-                prDrawImageRelease(b.layers[l].image);
+                prTextureSourceRelease(b.layers[l].image);
             else if (b.layers[l].kind == PrLayoutImageKind_List)
                 prDrawListRelease(b.layers[l].list);
             else if (b.layers[l].kind == PrLayoutImageKind_Painter)
@@ -844,16 +892,65 @@ void layoutBackgroundRound(LayoutBackgroundBoxes& boxes, const PrCornerRect& bor
     }
 }
 
-bool layoutBackgroundPaintLayer(const LayoutCompounds* compounds, const PrLayoutBackgroundLayer& layer,
-        const LayoutBackgroundBoxes& boxes, PrDrawList* list) {
+bool layoutBackgroundPaintLayer(LayoutTextures* PR_NULLABLE textures, const LayoutCompounds* compounds,
+        const PrLayoutBackgroundLayer& layer, const LayoutBackgroundBoxes& boxes, PrDrawList* list) {
     if (!boxes.rounded || !isEmpty(boxes.area))
-        return paintLayer(compounds, layer, boxes, list);
+        return paintLayer(textures, compounds, layer, boxes, list);
     // The layer is clipped to the curve of its box as well as to the box. The clip is recorded whether or not the layer
     // paints, so the layer counts as recorded.
     prDrawListPushClipCornerRect(list, boxes.shapes[layer.clip], PrDrawEdges_Snapped);
-    paintLayer(compounds, layer, boxes, list);
+    paintLayer(textures, compounds, layer, boxes, list);
     prDrawListPopClip(list);
     return true;
+}
+
+bool layoutTextureOf(LayoutTextures* PR_NULLABLE textures, const PrTextureSource* image, PrTextureCacheAsk ask,
+        PrTextureRegion* out) {
+    *out = PrTextureRegion{};
+    if (textures == nullptr || textures->cache == nullptr)
+        return false;
+    // The count of arrivals is read before the ask. An arrival after the ask then makes the cache's count differ from
+    // `arrivals`.
+    uint64_t arrivals = prTextureCacheArrivals(textures->cache);
+    PrTextureCacheState state = prTextureCacheRealize(textures->cache, image, ask, out);
+    if (state == PrTextureCacheState_Pending || state == PrTextureCacheState_Partial)
+        waitFor(*textures, image, ask, arrivals);
+    return state == PrTextureCacheState_Ready || state == PrTextureCacheState_Partial;
+}
+
+bool layoutTexturesRefresh(LayoutTextures* textures) {
+    if (textures->cache == nullptr)
+        return false;
+    if (prTextureCacheGeneration(textures->cache) != textures->generation)
+        return true;
+    RawArray<LayoutTextureAsk>& waiting = textures->waiting;
+    if (waiting.count == 0)
+        return false;
+    if (prTextureCacheArrivals(textures->cache) != textures->arrivals)
+        return true;
+    uint32_t kept = 0;
+    for (uint32_t i = 0; i < waiting.count; ++i) {
+        LayoutTextureAsk entry = waiting.data[i];
+        PrTextureRegion region{};
+        if (prTextureCacheRealize(textures->cache, entry.image, entry.ask, &region) == PrTextureCacheState_Failed) {
+            prTextureSourceRelease(entry.image);
+            continue;
+        }
+        waiting.data[kept++] = entry;
+    }
+    waiting.count = kept;
+    return false;
+}
+
+void layoutTexturesForget(LayoutTextures* textures) {
+    stopWaiting(*textures);
+    if (textures->cache != nullptr)
+        textures->generation = prTextureCacheGeneration(textures->cache);
+}
+
+void layoutTexturesReset(LayoutTextures* textures) {
+    stopWaiting(*textures);
+    textures->waiting.reset();
 }
 
 void layoutImageTakeFilters(PrLayoutBackgroundLayer& image, PrLayoutFilter* PR_NULLABLE filters, uint32_t* next) {
@@ -866,14 +963,22 @@ void layoutImageTakeFilters(PrLayoutBackgroundLayer& image, PrLayoutFilter* PR_N
     *next += image.filterCount;
 }
 
-PrDrawSource layoutImageSource(const LayoutCompounds* PR_NULLABLE compounds, const PrLayoutBackgroundLayer& layer,
-        PrVec2 size, PrDrawList* PR_NULLABLE* PR_NONNULL drawn) {
+PrDrawSource layoutImageSource(LayoutTextures* PR_NULLABLE textures, const LayoutCompounds* PR_NULLABLE compounds,
+        const PrLayoutBackgroundLayer& layer, PrVec2 size, PrDrawList* into, PrDrawList* PR_NULLABLE* PR_NONNULL drawn) {
     *drawn = nullptr;
-    PrDrawSource source = unfilteredSource(compounds, layer, size, drawn);
     if (layer.filterCount == 0)
-        return source;
-    PrRect own{0, 0, size.x, size.y};
+        return unfilteredSource(textures, compounds, layer, size, into, drawn);
+    // The filtered list draws the unfiltered source. If that source is a region of a texture, the filtered list holds
+    // the image.
     PrDrawList* filtered = prDrawListCreate();
+    PrDrawSource source = unfilteredSource(textures, compounds, layer, size, filtered, drawn);
+    if (!prDrawSourceIsValid(source)) {
+        prDrawListRelease(filtered);
+        prDrawListRelease(*drawn);
+        *drawn = nullptr;
+        return PrDrawSource{};
+    }
+    PrRect own{0, 0, size.x, size.y};
     const PrDrawFilter* filter = imageFilterOf(layer, own);
     if (filter != nullptr) {
         PrDrawGroup group = prDrawGroupDefault();

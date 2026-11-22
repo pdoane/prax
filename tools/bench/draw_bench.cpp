@@ -10,11 +10,12 @@
 // benchmarks measure theirs, after a render that warms the caches that a steady frame finds warm (fonts, glyph lists,
 // textures).
 //
-// `draw_bench [--renderer NAME]... [--collection WORD]... [--pixel-ratio <pixels>] [--shaper NAME] [DRAWING]...`
-// measures the named renderers, the collections whose names contain the words, and the drawings named by number or by a
-// word of the name, shaping text with the named shaper. By default it measures every feature drawing on the viewer's
-// default renderer at a pixel ratio of 2, shaping with HarfBuzz. The collections are draw_features' drawings: its
-// features and its workloads (examples/draw_features).
+// `draw_bench [--renderer NAME]... [--collection WORD]... [--pixel-ratio <pixels>] [--shaper NAME] [--slots] [--pack
+// auto|never|always] [DRAWING]...` measures the named renderers, the collections whose names contain the words, and the
+// drawings named by number or by a word of the name. --shaper names the shaper that shapes the text. --slots measures
+// on a device of the slots tier. --pack says how the texture caches pack images. By default, draw_bench measures every
+// feature drawing on the viewer's default renderer at a pixel ratio of 2, and shapes with HarfBuzz. The collections are
+// the drawings of draw_features: its features and its workloads (examples/draw_features).
 //
 // A renderer on a device renders each drawing twice, each in a row of its own: to 8 bits, and to half floats (`kHdr`),
 // whose rows end in "hdr". A renderer in memory renders to 8 bits. A row on a device also has a draw measure. It
@@ -152,13 +153,14 @@ bool named(const Drawing& drawing, uint32_t index, const std::vector<const char*
     return false;
 }
 
-// Records the drawing into the list at the collections' size, at time zero, with its text shaped by `shaper`.
-void record(PrDrawList* list, const Drawing& drawing, PrTextShaper* shaper, float pixelRatio) {
+// Records the drawing into the list at the collections' size, at time zero, with its text shaped by `shaper` and its
+// images realized in `textures`.
+void record(PrDrawList* list, const Drawing& drawing, PrTextShaper* shaper, float pixelRatio, PrTextureCache* textures) {
     prDrawListClear(list);
     prDrawListPushTransformAffine2(list, PrAffine2{pixelRatio, 0, 0, pixelRatio, 0, 0});
     PrAppDisplay display = prAppDisplayDefault();
     display.pixelRatio = pixelRatio;
-    drawDrawing(drawing, list, shaper, nullptr, display, kWidth, kHeight, 0);
+    drawDrawing(drawing, list, shaper, nullptr, display, textures, kWidth, kHeight, 0);
     prDrawListPopTransform(list);
 }
 
@@ -330,6 +332,8 @@ int main(int argc, char** argv) {
     float pixelRatio = 2;
     const char* images = nullptr;
     PrTextShaperBackend shaper = PrTextShaperBackend_Default;
+    PrGpuDeviceOptions deviceOptions = prGpuDeviceOptionsDefault();
+    PrTextureCachePack pack = PrTextureCachePack_Auto;
     for (int i = 1; i < argc; ++i) {
         if (std::strcmp(argv[i], "--renderer") == 0 && i + 1 < argc)
             configNames.push_back(argv[++i]);
@@ -337,7 +341,15 @@ int main(int argc, char** argv) {
             collectionNames.push_back(argv[++i]);
         else if (std::strcmp(argv[i], "--images") == 0 && i + 1 < argc)
             images = argv[++i];
-        else if (std::strcmp(argv[i], "--pixel-ratio") == 0 && i + 1 < argc)
+        else if (std::strcmp(argv[i], "--slots") == 0)
+            deviceOptions.slotsOnly = true;
+        else if (std::strcmp(argv[i], "--pack") == 0 && i + 1 < argc) {
+            ++i;
+            if (std::strcmp(argv[i], "never") == 0)
+                pack = PrTextureCachePack_Never;
+            else if (std::strcmp(argv[i], "always") == 0)
+                pack = PrTextureCachePack_Always;
+        } else if (std::strcmp(argv[i], "--pixel-ratio") == 0 && i + 1 < argc)
             pixelRatio = std::strtof(argv[++i], nullptr);
         else if (std::strcmp(argv[i], "--shaper") == 0 && i + 1 < argc &&
                 prTextShaperBackendIsBuilt(prTextShaperBackendFromName(argv[i + 1])))
@@ -348,8 +360,8 @@ int main(int argc, char** argv) {
     if (collectionNames.empty())
         collectionNames.push_back("features");
     PrGpuDevice* device = nullptr;
-    gpuDeviceCreate(PrGpuBackend_Default, nullptr, &device);
-    std::vector<RendererConfig> configs = createConfigs(device);
+    gpuDeviceCreate(PrGpuBackend_Default, &deviceOptions, &device);
+    std::vector<RendererConfig> configs = createConfigs(device, pack);
     if (configNames.empty() && !configs.empty())
         configNames.push_back(configs[defaultConfig(configs)].name);
     PrCompressCodecSet* compressCodec = images != nullptr ? prCompressCodecSetCreateDefault() : nullptr;
@@ -380,12 +392,13 @@ int main(int argc, char** argv) {
                 prTextShaperDestroy);
             PrColor clear = drawingCanvas(drawing);
             std::vector<uint8_t> backgroundPixels = pixelsOf(clear, size_t(width) * height);
+            // A list draws the textures of one device. The drawing is therefore recorded once for each cache that a
+            // requested renderer draws from. The first recording is measured. An unmeasured recording precedes it and
+            // realizes the drawing's images, so that neither the measured recording nor a render measures their
+            // decoding. This matches a host whose images arrived before the frame.
             Times recordTimes{};
-            HarnessCounters recorded = measure([&] {
-                double started = nowMillis();
-                record(list, drawing, textShaper.get(), pixelRatio);
-                return Times{nowMillis() - started, 0};
-            }, &recordTimes);
+            HarnessCounters recorded{};
+            PrTextureCache* recordedFor = nullptr;
             bool first = true;
             for (const RendererConfig& config : configs) {
                 bool asked = false;
@@ -393,6 +406,21 @@ int main(int argc, char** argv) {
                     asked = asked || std::strcmp(n, config.name) == 0;
                 if (!asked)
                     continue;
+                if (recordedFor == nullptr) {
+                    record(list, drawing, textShaper.get(), pixelRatio, config.textures);
+                    // An image's ask returns once its texture is ready, while the device may still be finishing the
+                    // upload, which would count in the measure. The device settles first.
+                    prGpuDeviceWaitIdle(prTextureCacheDevice(config.textures));
+                    recorded = measure([&] {
+                        double started = nowMillis();
+                        record(list, drawing, textShaper.get(), pixelRatio, config.textures);
+                        return Times{nowMillis() - started, 0};
+                    }, &recordTimes);
+                    recordedFor = config.textures;
+                } else if (recordedFor != config.textures) {
+                    record(list, drawing, textShaper.get(), pixelRatio, config.textures);
+                    recordedFor = config.textures;
+                }
                 for (BenchTarget& target : targets) {
                     bool onDevice = prDrawRendererDevice(config.renderer) == target.device;
                     if (!onDevice && target.output.format != PrPixelFormat_Bgra8)
@@ -458,6 +486,8 @@ int main(int argc, char** argv) {
                     std::fflush(stdout);
                 }
             }
+            // The drawing's rows are written, so the caches may evict its images.
+            trimConfigs();
         }
         for (BenchTarget& target : targets) {
             if (device != nullptr)

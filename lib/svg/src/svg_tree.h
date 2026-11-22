@@ -175,7 +175,7 @@ struct SvgViewportShape {
 // An image that an image element shows: a raster image, or an SVG image, which is drawn as a vector. The holder holds a
 // reference to it.
 struct SvgPicture {
-    const PrDrawImage* PR_NULLABLE raster;  // arranged as its orientation displays it
+    const PrTextureSource* PR_NULLABLE raster;  // shown as its orientation displays it
     const SvgImage* PR_NULLABLE svg;
 };
 
@@ -644,6 +644,7 @@ struct SvgReference {
 // The nodes of an svg element's content and the resources that they draw with. An array whose items keep their indices
 // has a list of the slots that are free, which new items take first.
 struct SvgTree {
+    PrTextureCache* PR_NULLABLE textures;  // the cache that realizes rasters (PrSvgDrawOptions::textures)
     RawArray<SvgNode> nodes;               // by SvgNodeIndex; the first is the root
     RawArray<SvgNodeIndex> freeNodes;
     HashIndex elements;                 // the nodes that are their elements' own, by element

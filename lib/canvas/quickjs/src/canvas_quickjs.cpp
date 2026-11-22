@@ -633,7 +633,7 @@ Usability imageSourceOf(JSContext* ctx, JSValueConst value, PrCanvasImageSource*
         if (state != PrDomImageState_CompletelyAvailable || !prHtmlImageElementImageSource(image, out))
             return Usability_Bad;
         if (out->extent.x == 0 || out->extent.y == 0) {
-            prDrawImageRelease(out->image);
+            prTextureSourceRelease(out->image);
             *out = PrCanvasImageSource{};
             return Usability_Bad;
         }
@@ -1051,7 +1051,7 @@ JSValue createPattern(JSContext* ctx, JSValueConst canvasContext, int argc, JSVa
     // [LegacyNullToEmptyString] repetition, where the empty string is repeat.
     StringArgument repetition = {ctx};
     if (!repetition.readNullable(argv[1])) {
-        prDrawImageRelease(source.image);
+        prTextureSourceRelease(source.image);
         return JS_EXCEPTION;
     }
     if (usability == Usability_Broken)
@@ -1067,11 +1067,11 @@ JSValue createPattern(JSContext* ctx, JSValueConst canvasContext, int argc, JSVa
         }
     }
     if (!known) {
-        prDrawImageRelease(source.image);
+        prTextureSourceRelease(source.image);
         return jsDomExceptionThrow(ctx, "SyntaxError");
     }
     PrCanvasPattern* pattern = prCanvasPatternCreate(&source, mode);
-    prDrawImageRelease(source.image);
+    prTextureSourceRelease(source.image);
     return newPattern(ctx, pattern);
 }
 
@@ -1223,7 +1223,7 @@ JSValue drawImage(JSContext* ctx, JSValueConst canvasContext, int argc, JSValueC
         return JS_EXCEPTION;
     double n[8];
     if (!readNumbers(ctx, argc, argv, 1, count - 1, n)) {
-        prDrawImageRelease(source.image);
+        prTextureSourceRelease(source.image);
         return JS_EXCEPTION;
     }
     if (usability == Usability_Broken)
@@ -1252,7 +1252,7 @@ JSValue drawImage(JSContext* ctx, JSValueConst canvasContext, int argc, JSValueC
         dh = n[7];
     }
     prCanvasDrawImage(canvas, &source, sx, sy, sw, sh, dx, dy, dw, dh);
-    prDrawImageRelease(source.image);
+    prTextureSourceRelease(source.image);
     return JS_UNDEFINED;
 }
 

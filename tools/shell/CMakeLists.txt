@@ -5,8 +5,9 @@ if (PR_JS)
     add_library(page_host STATIC page_host.cpp)
     target_include_directories(page_host PUBLIC ${PROJECT_SOURCE_DIR})
     pr_font_bundle_resources(page_host Standard14 Complete)
-    target_link_libraries(page_host PUBLIC prax::compress_select prax::image_select prax::draw_select prax::app
-                                           prax::audio prax::draw prax::layout prax::media
+    target_link_libraries(page_host PUBLIC prax::compress_select prax::image_select prax::texture prax::app prax::audio
+                                           prax::draw prax::draw_select prax::layout
+                                           prax::media
                                     PRIVATE prax::core_quickjs_cpp prax::html_quickjs
                                             prax::svg_quickjs prax::mathml_quickjs prax::url_quickjs
                                             prax::xhr_quickjs
@@ -27,7 +28,7 @@ if (PR_JS)
     # The fragment renderer on the platform's device, which pr_shell renders with when asked.
     add_library(device_render STATIC device_render.cpp)
     target_include_directories(device_render PUBLIC ${PROJECT_SOURCE_DIR})
-    target_link_libraries(device_render PUBLIC prax::gpu_select prax::draw prax::draw_select PRIVATE prax::gpu
+    target_link_libraries(device_render PUBLIC prax::gpu_select prax::draw prax::draw_select prax::texture PRIVATE prax::gpu
                                                pr_warnings)
     target_link_libraries(pr_shell PRIVATE device_render)
 endif()

@@ -11,7 +11,7 @@ namespace drawings {
 // Returns every feature drawing, in the order that they are shown.
 const Array<Drawing>& allFeatures();
 
-// Releases what the drawings created.
+// Releases what the feature drawings and the workloads created.
 void releaseDrawings();
 
 } // namespace drawings

@@ -8,6 +8,7 @@
 #include "pr/count_of.h"
 #include "pr/draw_lower.h"
 #include "pr/float.h"
+#include "pr/image_texture_source.h"
 #include "pr/json.h"
 #include "pr/memory.h"
 #include "pr/search.h"
@@ -1195,11 +1196,11 @@ uint32_t compNode(Parser& p, uint32_t object, uint32_t comp) {
 }
 
 // Reads the image asset's pixels from its `p` as a data URL, or from the file that it names by `u` then `p`.
-const PrDrawImage* PR_NULLABLE readImage(const Parser& p, uint32_t asset, const PrLottieOptions& options) {
+const PrTextureSource* PR_NULLABLE readImage(const Parser& p, uint32_t asset, const PrLottieOptions& options) {
     PrStringView path = text(p, asset, "p");
     if (path.data == nullptr || options.codec == nullptr)
         return nullptr;
-    const PrDrawImage* image = nullptr;
+    const PrTextureSource* image = nullptr;
     if (prStringStartsWith(path, "data:")) {
         size_t comma = prStringFindByte(path, ',');
         if (comma == path.size || !prStringContains(prStringSlice(path, 0, comma), ";base64"))
@@ -1208,7 +1209,8 @@ const PrDrawImage* PR_NULLABLE readImage(const Parser& p, uint32_t asset, const 
         size_t size = prBase64DecodedCapacity(encoded.size);
         char* bytes = static_cast<char*>(prMemoryAlloc(size != 0 ? size : 1));
         if (prBase64Decode(encoded, bytes, size, &size))
-            prDrawImageCreateFromBytes(options.codec, PrByteView{reinterpret_cast<const uint8_t*>(bytes), size}, &image, nullptr);
+            prImageTextureSourceOpenBytes(PrByteView{reinterpret_cast<const uint8_t*>(bytes), size}, options.codec,
+                nullptr, PrImageTextureColor_Srgb, &image);
         prMemoryFree(bytes);
         return image;
     }
@@ -1221,12 +1223,13 @@ const PrDrawImage* PR_NULLABLE readImage(const Parser& p, uint32_t asset, const 
     joined.append(path.data, uint32_t(path.size));
     PrByteView bytes{};
     if (options.load(options.loadContext, PrStringView{joined.data, joined.count}, &bytes))
-        prDrawImageCreateFromBytes(options.codec, bytes, &image, nullptr);
+        prImageTextureSourceOpenBytes(bytes, options.codec, nullptr, PrImageTextureColor_Srgb, &image);
     joined.reset();
     return image;
 }
 
 PrStatus lottieParse(PrStringView json, const PrLottieOptions& options, LottieAnimation& a) {
+    a.textures = options.textures;
     Parser p{};
     p.a = &a;
     p.closed = -1;
@@ -1277,6 +1280,10 @@ PrStatus lottieParse(PrStringView json, const PrLottieOptions& options, LottieAn
             if (member(p, e, "p") == kPrJsonMissing)
                 continue;
             LottieImage image{float(number(p, e, "w", 0)), float(number(p, e, "h", 0)), readImage(p, e, options)};
+            // The realization of the image starts as the animation loads, so that the first frame need not wait for it.
+            PrTextureRegion started{};
+            if (image.image != nullptr && options.textures != nullptr)
+                prTextureCacheRealize(options.textures, image.image, prTextureCacheAskEncoded(0), &started);
             a.images.push(image);
             imageIds.push(text(p, e, "id"));
             continue;
@@ -1320,7 +1327,7 @@ void lottieReset(LottieAnimation& a) {
     lottieExpressionsDestroy(a.expressions);
     a.expressions = nullptr;
     for (uint32_t i = 0; i < a.images.count; ++i)
-        prDrawImageRelease(a.images.data[i].image);
+        prTextureSourceRelease(a.images.data[i].image);
     a.images.reset();
     a.comps.reset();
     a.layers.reset();

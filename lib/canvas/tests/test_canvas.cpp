@@ -10,6 +10,7 @@
 #include "pr/string.h"
 
 #include "tools/harness/harness_gpu.h"
+#include "tools/harness/harness_textures.h"
 
 #include "tools/harness/test.h"
 
@@ -27,20 +28,28 @@ namespace {
 struct MemoryCanvas {
     PrGpuDevice* device = nullptr;
     PrDrawRenderer* renderer = nullptr;    // the CPU renderer on `device`, which presents the context
+    PrTextureCache* textures = nullptr;    // the cache on `device` that realizes the images that the context draws
     PrCanvas* handle;
 
     explicit MemoryCanvas(uint32_t width = 100, uint32_t height = 50,
             PrCanvasSettings settings = prCanvasSettingsDefault()) {
         REQUIRE(gpuDeviceCreate(PrGpuBackend_Memory, nullptr, &device) == PrStatus_Ok);
+        textures = harnessTextureCacheCreate(device);
         PrDrawCpuOptions cpu = prDrawCpuOptionsDefault();
         cpu.device = device;
         renderer = prDrawCpuCreate(&cpu);
-        PrCanvasDesc desc{.extent = PrUVec2{width, height}, .settings = settings, .renderer = renderer};
+        PrCanvasDesc desc{
+            .extent = PrUVec2{width, height},
+            .settings = settings,
+            .renderer = renderer,
+            .textures = textures,
+        };
         handle = prCanvasCreate(&desc);
     }
     ~MemoryCanvas() {
         prCanvasDestroy(handle);
         prDrawRendererDestroy(renderer);
+        prTextureCacheDestroy(textures);
         prGpuDeviceDestroy(device);
     }
 
@@ -296,7 +305,7 @@ TEST_CASE("drawImage draws a source rectangle into a destination rectangle") {
     MemoryCanvas source(10, 10);
     prCanvasSetStyleColor(source.handle, PrCanvasStyleRole_Fill, "#0f0");
     prCanvasFillRect(source.handle, 0, 0, 5, 10);
-    const PrDrawImage* image = prCanvasSnapshot(source.handle);
+    const PrTextureSource* image = prCanvasSnapshot(source.handle);
     REQUIRE(image != nullptr);
     MemoryCanvas canvas;
     prCanvasSetImageSmoothingEnabled(canvas.handle, false);
@@ -308,7 +317,37 @@ TEST_CASE("drawImage draws a source rectangle into a destination rectangle") {
     PrCanvasImageSource tainted{.image = image, .extent = PrVec2{10, 10}, .originClean = false};
     prCanvasDrawImage(canvas.handle, &tainted, 0, 0, 10, 10, 0, 0, 10, 10);
     CHECK(!prCanvasIsOriginClean(canvas.handle));
-    prDrawImageRelease(image);
+    prTextureSourceRelease(image);
+}
+
+TEST_CASE("a pattern of an image with a transposing orientation repeats along the axes of the displayed image") {
+    // The stored texels are 4 by 2: a red row over a blue row. Transposed, the image displays as 2 by 4, with a red
+    // column to the left of a blue column.
+    uint8_t texels[4 * 2 * 4] = {};
+    for (uint32_t i = 0; i < 8; ++i) {
+        texels[i * 4] = i < 4 ? 255 : 0;
+        texels[i * 4 + 2] = i < 4 ? 0 : 255;
+        texels[i * 4 + 3] = 255;
+    }
+    PrTextureDesc desc = prTextureDesc2d(PrGpuFormat_Rgba8, PrUVec2{4, 2}, PrTextureAlpha_None);
+    desc.orientation = PrTextureOrientationFlag_Transpose;
+    const PrTextureSource* image = prTextureSourceCreatePixels(&desc, PrPixelView{texels, 4 * 4, {4, 2}});
+    MemoryCanvas canvas;
+    prCanvasSetImageSmoothingEnabled(canvas.handle, false);
+    PrCanvasImageSource from{.image = image, .extent = PrVec2{2, 4}, .originClean = true};
+    PrCanvasPattern* pattern = prCanvasPatternCreate(&from, PrCanvasRepetition_RepeatX);
+    // The pattern's transform makes each displayed texel ten pixels wide and tall.
+    prCanvasPatternSetTransform(pattern, PrDAffine2{10, 0, 0, 10, 0, 0});
+    prCanvasSetStylePattern(canvas.handle, PrCanvasStyleRole_Fill, pattern);
+    prCanvasFillRect(canvas.handle, 0, 0, 100, 50);
+    CHECK(canvas.pixel(5, 20) == "255,0,0,255");
+    CHECK(canvas.pixel(15, 20) == "0,0,255,255");
+    // The image repeats horizontally every twenty pixels. It does not repeat vertically, so it ends at forty pixels.
+    CHECK(canvas.pixel(25, 20) == "255,0,0,255");
+    CHECK(canvas.pixel(35, 20) == "0,0,255,255");
+    CHECK(canvas.pixel(5, 45) == "0,0,0,0");
+    prCanvasPatternRelease(pattern);
+    prTextureSourceRelease(image);
 }
 
 TEST_CASE("setting the extent clears the bitmap and resets the state") {

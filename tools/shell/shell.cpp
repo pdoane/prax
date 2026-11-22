@@ -137,6 +137,7 @@ constexpr PrVec2 kDefaultViewport = {800, 600};
 // for the process, which a served shell renders many pages in.
 struct Renderers {
     PrDrawRenderer* cpu = nullptr;
+    PrTextureCache* PR_NULLABLE cpuTextures = nullptr;  // on the cpu renderer's device. The caller owns it.
     DeviceRender* device = nullptr;
     PrDrawRendererBackend deviceBackend = PrDrawRendererBackend_Default;   // the backend of `device`, once it was tried
 
@@ -147,16 +148,52 @@ struct Renderers {
     }
 };
 
-// Renders `list` into `pixels`, `extent` of RGBA, with the renderer of `backend` on the device. Returns false if there
-// is no device that it renders on.
-bool renderOnDevice(Renderers& r, PrDrawRendererBackend backend, const PrDrawList* list, PrUVec2 extent, uint8_t* pixels) {
+// Returns the device's renderer of `backend`, or null if there is no device that it renders on. Creating the renderer
+// of another backend frees the previous renderer and its texture cache, so no page that realized its images in that
+// cache may remain.
+DeviceRender* PR_NULLABLE deviceRenderer(Renderers& r, PrDrawRendererBackend backend) {
     if (r.deviceBackend != backend) {
         deviceRenderDestroy(r.device);
         r.device = deviceRenderCreate(backend);
         r.deviceBackend = backend;
     }
+    return r.device;
+}
+
+// Returns the texture cache on the device that the renderer of `backend` renders on, or null if there is none. A page
+// realizes its images in the cache of the renderer that draws it, because a renderer draws only the textures of its own
+// device.
+PrTextureCache* PR_NULLABLE texturesOf(Renderers& r, PrDrawRendererBackend backend) {
+    if (backend == PrDrawRendererBackend_Cpu)
+        return r.cpuTextures;
+    DeviceRender* device = deviceRenderer(r, backend);
+    return device != nullptr ? deviceRenderTextures(device) : nullptr;
+}
+
+// Returns the renderer of `backend`, or null if there is none. A page makes its canvas bitmaps on the device of the
+// renderer that draws it, for the same reason.
+PrDrawRenderer* PR_NULLABLE rendererOf(Renderers& r, PrDrawRendererBackend backend) {
+    if (backend == PrDrawRendererBackend_Cpu)
+        return r.cpu;
+    DeviceRender* device = deviceRenderer(r, backend);
+    return device != nullptr ? deviceRenderRenderer(device) : nullptr;
+}
+
+// Marks the end of a run in the renderers' texture caches, so that the images of the run's pages may be evicted once
+// the pages are gone (prTextureCacheTrim).
+void trimTextures(Renderers& r) {
+    if (r.cpuTextures != nullptr)
+        prTextureCacheTrim(r.cpuTextures);
+    if (r.device != nullptr)
+        prTextureCacheTrim(deviceRenderTextures(r.device));
+}
+
+// Renders `list` into `pixels`, `extent` of RGBA, with the renderer of `backend` on the device. Returns false if there
+// is no device that it renders on.
+bool renderOnDevice(Renderers& r, PrDrawRendererBackend backend, const PrDrawList* list, PrUVec2 extent, uint8_t* pixels) {
+    DeviceRender* device = deviceRenderer(r, backend);
     // A page draws its canvas opaque, so the device's premultiplied pixels are the same straight.
-    return r.device != nullptr && deviceRenderPixels(r.device, list, extent, pixels);
+    return device != nullptr && deviceRenderPixels(device, list, extent, pixels);
 }
 
 // A page's rendering in the viewport, on white, as straight RGBA.
@@ -540,8 +577,9 @@ bool writeAudio(const PrAudioOutput* output, const std::string& path) {
     return prFileWrite(path, prStringBytes(file));
 }
 
-// Applies the arguments of a run to the host, loading its pages and running its scripts in order.
-void parse(PageHost& host, const std::vector<std::string>& args, Run& run) {
+// Applies the arguments of a run to the host, loading its pages and running its scripts in order. Each page realizes
+// its images in the texture cache of the run's renderer, so --renderer comes before the run's pages.
+void parse(PageHost& host, const std::vector<std::string>& args, Run& run, Renderers& renderers) {
     for (size_t i = 0; run.ok && i < args.size(); ++i) {
         const std::string& option = args[i];
         bool takesTwo = option == "--resolve";
@@ -651,11 +689,17 @@ void parse(PageHost& host, const std::vector<std::string>& args, Run& run) {
                 run.viewport = PrVec2{float(width), float(height)};
                 host.setViewport(run.viewport);
             } else if (option == "--renderer") {
-                run.renderer = PrDrawRendererBackend(prBackendFromName(prDrawRendererSelectInterface(), value));
-                run.ok = run.renderer != PrDrawRendererBackend_Default &&
-                    prBackendIsBuilt(prDrawRendererSelectInterface(), run.renderer);
-                if (!run.ok)
+                PrDrawRendererBackend renderer =
+                    PrDrawRendererBackend(prBackendFromName(prDrawRendererSelectInterface(), value));
+                run.ok = renderer != PrDrawRendererBackend_Default && prBackendIsBuilt(prDrawRendererSelectInterface(), renderer);
+                if (!run.ok) {
                     fprintf(stderr, "--renderer names no renderer of lib/draw that the build has: %s\n", value.c_str());
+                } else if (renderer != run.renderer && !run.requests.empty()) {
+                    // The pages loaded so far hold textures on the device of the renderer that was chosen before.
+                    fprintf(stderr, "--renderer must come before the pages of the run\n");
+                    run.ok = false;
+                }
+                run.renderer = renderer;
             } else if (option == "--pixel-ratio") {
                 char* end = nullptr;
                 run.pixelRatio = strtof(value.c_str(), &end);
@@ -667,6 +711,10 @@ void parse(PageHost& host, const std::vector<std::string>& args, Run& run) {
                 std::string page = value;
                 if (std::filesystem::path(page).extension() == ".json")
                     run.ok = host.addCapture(value, &page);
+                // The page and its references draw with the run's renderer, so their images realize on its device, and
+                // their canvases are bitmaps there.
+                host.setTextures(texturesOf(renderers, run.renderer));
+                host.setRenderer(rendererOf(renderers, run.renderer));
                 // A page that is captured, or compared with references, waits until it is ready, as a reftest does.
                 page_host::Capture capture = page_host::Capture_None;
                 if (!run.screenshot.empty() || !run.references.empty() || !run.write.empty() || !run.pdf.empty() ||
@@ -774,8 +822,9 @@ int serve(PageHost& host, const Run& settings, Renderers& renderers) {
         harnessCaptureBegin(capture);
         host.reset();
         host.setViewport(run.viewport);
-        parse(host, args, run);
+        parse(host, args, run, renderers);
         int status = run.ok ? finish(host, run, renderers) : 1;
+        trimTextures(renderers);
         std::string written;
         std::string failed;
         harnessCaptureEnd(capture, &written, &failed);
@@ -855,6 +904,12 @@ int main(int argc, char** argv) {
     PrGpuDevice* memory = nullptr;
     gpuDeviceCreate(PrGpuBackend_Memory, nullptr, &memory);
     std::unique_ptr<PrGpuDevice, decltype(&prGpuDeviceDestroy)> memoryOwner(memory, prGpuDeviceDestroy);
+    // The images of the pages that the cpu renderer draws realize on the memory device too. Each image is realized in
+    // the call that first asks for it, so that a capture draws it. The pages that a renderer on the platform's device
+    // draws realize their images in that device's cache (texturesOf).
+    PrTextureCacheDesc texturesDesc = prTextureCacheDescDefault(memory);
+    PrTextureCache* textures = memory != nullptr ? prTextureCacheCreate(&texturesDesc) : nullptr;
+    std::unique_ptr<PrTextureCache, decltype(&prTextureCacheDestroy)> texturesOwner(textures, prTextureCacheDestroy);
     Renderers renderers;
     // Glyphs are drawn at the phases that the fragment backend's atlas holds them at, so that runs that a page splits
     // differently from its reference draw alike, as reftests expect.
@@ -862,6 +917,7 @@ int main(int argc, char** argv) {
     cpuOptions.glyphPhases = true;
     cpuOptions.device = memory;
     renderers.cpu = prDrawCpuCreate(&cpuOptions);
+    renderers.cpuTextures = textures;
     PageHost host(shaper.get(), mediaCodec.get(), mixer);
     host.setRenderer(renderers.cpu);
     if (pacedAudio)
@@ -870,7 +926,7 @@ int main(int argc, char** argv) {
     host.setHinting(hinting, hinting != PrFontHinting_None ? prFontHinterCreate(PrFontHinterBackend_Default) : nullptr);
     Run run;
     run.started = prTimePerfNow();
-    parse(host, args, run);
+    parse(host, args, run, renderers);
     int status = !run.ok ? 1 : run.serve ? serve(host, run, renderers) : finish(host, run, renderers);
     if (!audioPath.empty() && audio == PrAudioOutputBackend_Memory && audioOutput != nullptr) {
         // The output stops here because the pages that play on it live until the host goes.

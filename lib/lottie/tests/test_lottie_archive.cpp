@@ -5,7 +5,11 @@
 #include "pr/lottie_archive.h"
 #include "pr/string_ops.h"
 
+#include "tools/harness/harness_textures.h"
+
 #include "tools/harness/test.h"
+
+using namespace harness;
 
 namespace pr_impl {
 
@@ -68,6 +72,7 @@ TEST_CASE("a dotLottie archive's animation reads, with the images it names from 
     CHECK(prLottieArchiveAnimationId(archive, 0) == "only");
     PrLottieOptions options{};
     options.codec = imageCodec;
+    options.textures = harnessMemoryTextures();
     PrLottieAnimation* animation = nullptr;
     REQUIRE(prLottieAnimationCreateFromArchive(archive, 0, &options, &animation) == PrStatus_Ok);
     PrDrawList* list = prDrawListCreate();

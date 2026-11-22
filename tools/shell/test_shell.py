@@ -802,9 +802,9 @@ class HtmlHostTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / "pages").mkdir()
-            # A PNG header of 3 by 2 pixels, which is all that the engine reads of the file. The image without a source
-            # fails in a task before the fetched images arrive.
-            (root / "pages" / "a.png").write_bytes(b"\x89PNG\r\n\x1a\n\0\0\0\rIHDR\0\0\0\x03\0\0\0\x02")
+            # A valid PNG of 3 by 2 pixels, which the engine decodes. The image without a source fails in a task before
+            # the fetched images arrive.
+            (root / "pages" / "a.png").write_bytes(png(3, 2))
             result = self.run_page(root,
                 "<img src=a.png onload=\"print('load', naturalWidth, naturalHeight, "
                 "complete)\"><img src=missing.png onerror=\"print('error', "

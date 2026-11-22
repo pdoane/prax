@@ -20,6 +20,7 @@
 #include "pr/layout_style.h"
 #include "pr/raw_string.h"
 #include "pr/string_view.h"
+#include "pr/texture_cache.h"
 #include "pr/vec.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -54,6 +55,20 @@ void prLayoutTreeDestroy(PrLayoutTree* PR_NULLABLE tree);
 // lays the tree out again at its next layout.
 void prLayoutTreeSetTargetPixelRatio(PrLayoutTree* tree, float ratio);
 float prLayoutTreeTargetPixelRatio(const PrLayoutTree* tree);
+
+// Sets the texture cache that the tree's paints draw images from, or null for none. The cache must be on the device of
+// the renderer that draws the paints. It must stay valid until the tree is destroyed or another call replaces it.
+// Without a cache, images draw nothing.
+//
+// A paint leaves out an image whose texture has not arrived (prLayoutTreePaintsPending). The tree keeps that paint
+// until the cache reports an arrival (prTextureCacheArrivals), and the next paint then records the image. Each paint in
+// between asks for the texture again, so a trim of the cache does not cancel its realization.
+void prLayoutTreeSetTextures(PrLayoutTree* tree, PrTextureCache* PR_NULLABLE textures);
+
+// Returns true if the last paint left out an image, or drew a preview of one, because its texture had not arrived. The
+// host paints again when the texture arrives (PrTextureCacheDesc::arrived). An image whose texture failed is not
+// pending.
+bool prLayoutTreePaintsPending(const PrLayoutTree* tree);
 
 // Sets or returns the color of the canvas beneath the viewport's root, straight alpha, which is transparent until it is
 // set. The canvas shows it wherever the root's background does not cover it, as a document's canvas shows the Canvas
@@ -309,11 +324,11 @@ typedef struct PrLayoutPath {
 typedef struct PrLayoutContent {
     PrLayoutContentKind kind;
     union {
-        PrDrawList* list;           // DrawList: the tree freezes it and retains a reference
-        PrLayoutPainter painter;    // Painter: the tree retains a reference if the painter shares its context
-        uint64_t embed;             // Embed: a nonzero id the player uses to look up what fills the slot
-        const PrDrawImage* image;   // Image: the tree retains a reference
-        PrLayoutPath path;          // Path: the tree keeps a clone of the path
+        PrDrawList* list;             // DrawList: the tree freezes it and retains a reference
+        PrLayoutPainter painter;      // Painter: the tree retains a reference if the painter shares its context
+        uint64_t embed;               // Embed: a nonzero id the player uses to look up what fills the slot
+        const PrTextureSource* image; // Image: the tree retains a reference
+        PrLayoutPath path;            // Path: the tree keeps a clone of the path
     };
 
     // Image: the brightest color that the image paints, as a multiple of SDR white, or zero for no limit
@@ -321,6 +336,13 @@ typedef struct PrLayoutContent {
     float limit;
 
     PrLayoutImageRendering rendering;   // Image
+
+    // Image: how soon the image's texture is needed (PrTextureCacheAsk::priority).
+    PrTextureCachePriority priority;
+
+    // Image: true if the image is shown with its orientation applied (PrTextureDesc::orientation), and false if it is
+    // shown as its stored texels.
+    bool upright;
 
     // A number that the client changes whenever the content draws something else while its other members stay the same,
     // as a painter's drawing does. Content set again at another revision is drawn again.

@@ -80,6 +80,7 @@ typedef struct PrCssPresentationDesc {
     PrTextFont* font;
     PrTextShaper* shaper;
     PrDomAgent* agent;
+    PrTextureCache* PR_NULLABLE textures;   // the cache for images, on the renderer's device; if null, no image draws
     const PrCssUserAgentSheet* PR_NULLABLE userAgentSheets;
     uint32_t userAgentSheetCount;
     PrCssPresentationEmbedding embedding;

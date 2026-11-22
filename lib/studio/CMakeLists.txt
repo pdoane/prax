@@ -30,7 +30,8 @@ pr_library(studio_kit INCLUDE kit/include
     kit/src/kit_theme.cpp
     kit/src/kit_title_bar.cpp
 )
-target_link_libraries(pr_studio_kit PUBLIC prax::studio_icons prax::app prax::ui prax::layout prax::path prax::draw
+target_link_libraries(pr_studio_kit PUBLIC prax::studio_icons prax::texture prax::app prax::ui prax::layout prax::path
+                                           prax::draw
                                            prax::text prax::text_edit
                                            prax::geom prax::font prax::color
                                     PRIVATE prax::core_cpp prax::ui_cpp)
@@ -52,9 +53,11 @@ if (PR_DEVELOP)
         kit/tests/test_kit_menu.cpp
         kit/tests/test_kit_title_bar.cpp
     )
-    target_link_libraries(studio_kit_tests PRIVATE kit_fixture prax::path prax::app prax::text_edit prax::text
+    target_link_libraries(studio_kit_tests PRIVATE prax::gpu_select prax::texture kit_fixture prax::path prax::app
+                                                   prax::text_edit
+                                                   prax::text
                                                    prax::draw
-                                                   prax::layout prax::ui prax::ui_cpp prax::color)
+                                                   prax::layout prax::ui prax::ui_cpp prax::color prax::gpu)
 endif()
 
 # Studio's commands: an application's verbs, their key bindings, and the scopes, menu items and command palette that
@@ -119,7 +122,8 @@ pr_embed(pr_studio_terminal terminal/shell VARIABLE kTerminalShellScripts FILES
     bash/prax.bash
     fish/vendor_conf.d/prax-shell-integration.fish
 )
-target_link_libraries(pr_studio_terminal PUBLIC prax::app prax::color prax::layout prax::process prax::studio_kit
+target_link_libraries(pr_studio_terminal PUBLIC prax::texture prax::app prax::color prax::layout prax::process
+                                                prax::studio_kit
                                                 prax::text prax::vterm
                                          PRIVATE prax::core_cpp prax::compress prax::draw prax::image prax::ui
                                                  prax::url)
@@ -145,9 +149,9 @@ pr_library(studio_app INCLUDE app/include
     app/src/studio_window.cpp
 )
 target_link_libraries(pr_studio_app PUBLIC prax::app prax::color prax::draw prax::font prax::gpu
-                                           prax::layout prax::studio_kit prax::task prax::text prax::ui
+                                           prax::layout prax::studio_kit prax::task prax::text prax::texture prax::ui
                                     PRIVATE prax::core_cpp prax::app_select prax::compress prax::draw_select prax::gpu_select
-                                            prax::image)
+                                            prax::image prax::svg)
 
 if (PR_DEVELOP)
     pr_module_tests(studio_app

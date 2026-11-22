@@ -1,6 +1,6 @@
-#include "pr/draw_image.h"
 #include "pr/kit_choice.h"
 #include "pr/kit_image.h"
+#include "pr/texture.h"
 
 #include "tools/harness/app_drag_window.h"
 #include "tools/harness/kit_fixture.h"
@@ -105,14 +105,8 @@ TEST_CASE("clicking a tab selects it") {
 TEST_CASE("a tab holds what its caller creates under it, in order") {
     KitFixture f;
     uint8_t pixels[16 * 16 * 4] = {};
-    PrDrawImageDesc desc{
-        .pixels = PrPixelView{pixels, 16 * 4, {16, 16}},
-        .format = PrPixelFormat_Rgba8,
-        .alpha = PrDrawAlpha_Straight,
-        .space = PrColorSpace_Srgb,
-    };
-    const PrDrawImage* image = nullptr;
-    REQUIRE(prDrawImageCreate(&desc, &image) == PrStatus_Ok);
+    const PrTextureSource* image =
+        prTextureSourceCreateCopy(PrPixelView{pixels, 16 * 4, {16, 16}}, PrPixelFormat_Rgba8, PrTextureAlpha_Straight);
     PrLayoutNode tab = kPrLayoutNodeNone;
     PrLayoutNode close = kPrLayoutNodeNone;
     TestTabs t(1);
@@ -128,7 +122,7 @@ TEST_CASE("a tab holds what its caller creates under it, in order") {
     CHECK(f.bounds(childOf(f, tab, 1)).left > f.bounds(first).right);
     CHECK(prLayoutNodeLastChild(f.tree, tab) == close);
     CHECK(kitVerified(f.tree));
-    prDrawImageRelease(image);
+    prTextureSourceRelease(image);
 }
 
 TEST_CASE("the arrow keys move a focused tab strip's focus and select the tab they reach, stopping at the ends") {

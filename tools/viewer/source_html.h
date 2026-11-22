@@ -60,7 +60,8 @@ std::string htmlBrowserUrl(const std::filesystem::path& path, const std::string&
 struct HtmlSource;
 std::shared_ptr<HtmlSource> loadHtml(const std::filesystem::path& path, const std::string& query,
     const std::filesystem::path& settings, const std::filesystem::path& capture, bool scripts, page_host::Media media,
-    PrTextShaper* shaper, PrFontHinting hinting, PrFontHinter* PR_NULLABLE hinter, PrDrawRenderer* PR_NULLABLE renderer);
+    PrTextShaper* shaper, PrFontHinting hinting, PrFontHinter* PR_NULLABLE hinter, PrDrawRenderer* PR_NULLABLE renderer,
+    PrTextureCache* PR_NULLABLE textures);
 void htmlAt(HtmlSource& html, double time);
 void drawHtml(HtmlSource& html, PrDrawList* list, float width, float height, const PrAppDisplay& display,
     const PrAppUserPreferences& preferences);

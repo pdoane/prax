@@ -30,7 +30,7 @@ pr_library(html INCLUDE include
     src/html_window.cpp
     src/html_xml.cpp
 )
-target_link_libraries(pr_html PUBLIC prax::text_edit prax::unicode prax::audio
+target_link_libraries(pr_html PUBLIC prax::texture prax::text_edit prax::unicode prax::audio
                                       prax::app prax::color prax::canvas prax::gpu prax::charset prax::css prax::dom
                                       prax::fetch prax::svg prax::url prax::image prax::media prax::draw prax::layout
                                      prax::markdown prax::storage prax::task
@@ -82,7 +82,7 @@ if (PR_DEVELOP)
     endif()
     # Rendering sets text with HarfBuzz in the fonts the checkout holds. The fetches of a browsing context run on a
     # network whose loop is a thread of its own.
-    target_link_libraries(html_tests PRIVATE prax::compress_select prax::image_select prax::app prax::css prax::text
+    target_link_libraries(html_tests PRIVATE prax::texture prax::compress_select prax::image_select prax::app prax::css prax::text
                                              prax::image prax::compress
                                              prax::draw prax::dom prax::font prax::layout
                                              prax::markdown html_test_fetch prax::task prax::locale

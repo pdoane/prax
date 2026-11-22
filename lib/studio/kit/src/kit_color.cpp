@@ -5,7 +5,6 @@
 #include "pr/ascii.h"
 #include "pr/assert.h"
 #include "pr/color_space.h"
-#include "pr/draw_image.h"
 #include "pr/draw_list.h"
 #include "pr/float.h"
 #include "pr/hash.h"
@@ -16,6 +15,7 @@
 #include "pr/kit_text.h"
 #include "pr/mem.h"
 #include "pr/raw_array.h"
+#include "pr/texture.h"
 
 #include "studio/kit/src/kit.h"
 
@@ -469,7 +469,8 @@ PR_NO_PADDING_END
 // Drawings
 
 // Sets the drawing of a replaced element `extent` px in size, which `draw` makes, unless `*drawn` is `key` and the
-// element holds a drawing already. Writes `key` to `*drawn`.
+// element holds a drawing already. `draw` returns true if the drawing is complete. A complete drawing is kept, and
+// `key` is written to `*drawn`. An incomplete drawing is made again in the next round.
 template <typename Draw>
 void setDrawing(PrKit& kit, PrLayoutNode node, PrVec2 extent, uint64_t key, uint64_t* drawn, Draw draw) {
     PrLayoutNaturalSize natural{
@@ -482,13 +483,21 @@ void setDrawing(PrKit& kit, PrLayoutNode node, PrVec2 extent, uint64_t key, uint
     if (*drawn == key && held.kind == PrLayoutContentKind_DrawList)
         return;
     PrDrawList* list = prDrawListCreate();
-    draw(list);
+    bool complete = draw(list);
     PrLayoutContent content{};
     content.kind = PrLayoutContentKind_DrawList;
     content.list = list;
     prLayoutTreeFrameSetContent(kit.tree, node, &content);
     prDrawListRelease(list);
-    *drawn = key;
+    // The complement never equals the key, so the next round draws again.
+    *drawn = complete ? key : ~key;
+}
+
+// Returns the key of a drawing that embeds a region of the kit's texture cache, from the key of what the drawing shows.
+// The regions of a cache become invalid when it moves to another device, so the key names the cache and its generation.
+uint64_t regionKey(const PrKit& kit, uint64_t key) {
+    uint64_t generation = kit.textures != nullptr ? prTextureCacheGeneration(kit.textures) : 0;
+    return prHashMixKeys(prHashMixKeys(key, uint64_t(reinterpret_cast<uintptr_t>(kit.textures))), generation);
 }
 
 // Fills `rect` with a gradient of `stops` along the line from `from` to `to`.
@@ -533,32 +542,42 @@ struct Sampled {
 // Draws a perceptual plane over `extent`: an image of its samples, each the nearest color that `gamut` holds, and a
 // line along the edge of the gamut. If the gamut is wider than sRGB, a dashed line marks where sRGB ends inside it. The
 // image holds half floats, so that colors past sRGB reach a target that shows them.
-void drawSampled(PrKit& kit, PrDrawList* list, PrVec2 extent, Sampled plane, PrColorSpace gamut) {
+//
+// Returns true if the image was drawn. Returns false if the kit has no texture cache or the image's texture did not
+// arrive. The drawing then lacks the image, and the caller must not keep it.
+bool drawSampled(PrKit& kit, PrDrawList* list, PrVec2 extent, Sampled plane, PrColorSpace gamut) {
     RawArray<PrFloat16> pixels;
     pixels.resize(kSamples * kSamples * 4);
     for (uint32_t y = 0; y < kSamples; ++y) {
         float up = 1 - (float(y) + 0.5f) / kSamples;
         for (uint32_t x = 0; x < kSamples; ++x) {
             PrColor color = shown(plane.at((float(x) + 0.5f) / kSamples, up), 1, gamut);
+            // A source of floats holds linear values, so the colors are decoded from extended sRGB.
             PrFloat16* texel = pixels.data + (y * kSamples + x) * 4;
-            texel[0] = prFloat16FromFloat(color.r);
-            texel[1] = prFloat16FromFloat(color.g);
-            texel[2] = prFloat16FromFloat(color.b);
+            const float encoded[3] = {color.r, color.g, color.b};
+            for (uint32_t k = 0; k < 3; ++k) {
+                float linear = prColorTransferDecode(PrColorTransfer_Srgb, prF32Abs(encoded[k]));
+                texel[k] = prFloat16FromFloat(encoded[k] < 0 ? -linear : linear);
+            }
             texel[3] = prFloat16FromFloat(1);
         }
     }
-    PrDrawImageDesc desc{
+    const PrTextureSource* image = prTextureSourceCreateCopy(
         PrPixelView{reinterpret_cast<const uint8_t*>(pixels.data), kSamples * 8, {kSamples, kSamples}},
-        PrPixelFormat_RgbaF16, PrDrawAlpha_Straight, PrColorSpace_Srgb,
-    };
-    const PrDrawImage* image = nullptr;
+        PrPixelFormat_RgbaF16, PrTextureAlpha_Straight);
     PrRect rect{0, 0, extent.x, extent.y};
-    if (prDrawImageCreate(&desc, &image) == PrStatus_Ok) {
-        PrDrawBrush brush = prDrawBrushImage(prDrawSourceImage(image, PrRect{0, 0, float(kSamples), float(kSamples)}),
+    // The plane's drawing is kept, so the drawing waits for the image's texture. The drawing holds the image while it
+    // draws the image's region.
+    PrTextureRegion region{};
+    bool drawn = kit.textures != nullptr &&
+        prTextureCacheWait(kit.textures, image, prTextureCacheAskEncoded(0), &region) == PrTextureCacheState_Ready;
+    if (drawn) {
+        PrDrawBrush brush = prDrawBrushImage(prDrawSourceRegion(&region, PrRect{0, 0, float(kSamples), float(kSamples)}, 0),
             rect, PrDrawSampling_Linear);
         prDrawListRect(list, rect, {.brush = &brush});
-        prDrawImageRelease(image);
+        prDrawListHoldSource(list, image);
     }
+    prTextureSourceRelease(image);
     pixels.reset();
     // An edge is where each column, walked up, first leaves a gamut.
     auto edge = [&](PrColorSpace space, const PrDrawStroke& stroke) {
@@ -588,6 +607,7 @@ void drawSampled(PrKit& kit, PrDrawList* list, PrVec2 extent, Sampled plane, PrC
         dashed.shape.dashCount = 2;
         edge(PrColorSpace_Srgb, dashed);
     }
+    return drawn;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -679,14 +699,16 @@ void planeRow(PrKit& kit, PrLayoutNode node, PickerState& s, PrColor* color, boo
     // A drawing is made again for another hue or mode, or on a display of another gamut.
     uint64_t gamutKey = uint64_t(s.gamut) << 8;
     uint64_t key = prHashBytes(&hue, sizeof hue, (s.tab + 1) | gamutKey);
+    // The perceptual plane draws a region of the texture cache.
+    if (perceptual)
+        key = regionKey(kit, key);
     setDrawing(kit, plane.fill, planeExtent, key, &s.drawn[0], [&](PrDrawList* list) {
-        if (perceptual) {
-            drawSampled(kit, list, planeExtent, Sampled{.skyline = false, .hue = hue}, s.gamut);
-            return;
-        }
+        if (perceptual)
+            return drawSampled(kit, list, planeExtent, Sampled{.skyline = false, .hue = hue}, s.gamut);
         PrRect rect{0, 0, planeExtent.x, planeExtent.y};
         fillGradient(list, rect, PrVec2{0, 0}, PrVec2{planeExtent.x, 0}, PrColor{1, 1, 1, 1}, srgbOfHsv(hue, 100, 100, 1));
         fillGradient(list, rect, PrVec2{0, 0}, PrVec2{0, planeExtent.y}, PrColor{0, 0, 0, 0}, PrColor{0, 0, 0, 1});
+        return true;
     });
     if (perceptual)
         marker(kit, plane.node, s.oklch.lightness, 1 - s.oklch.chroma / kMaxChroma, false);
@@ -706,6 +728,7 @@ void planeRow(PrKit& kit, PrLayoutNode node, PickerState& s, PrColor* color, boo
             stops[i] = PrDrawColorStop{.offset = place, .color = at};
         }
         fillStops(list, PrRect{0, 0, stripExtent.x, stripExtent.y}, PrVec2{0, 0}, PrVec2{0, stripExtent.y}, stops, kStops);
+        return true;
     });
     marker(kit, hues.node, 0, hue / 360, true);
 
@@ -717,6 +740,7 @@ void planeRow(PrKit& kit, PrLayoutNode node, PickerState& s, PrColor* color, boo
             PrColor clear = solid;
             clear.a = 0;
             fillGradient(list, rect, PrVec2{0, 0}, PrVec2{0, stripExtent.y}, solid, clear);
+            return true;
         });
         marker(kit, alpha.node, 0, 1 - clampUnit(s.alpha), true);
     }
@@ -731,8 +755,8 @@ void rampPlane(PrKit& kit, PrLayoutNode node, PickerState& s) {
         s.rampChroma = (1 - plane.at.y) * kMaxChroma;
     }
     PrVec2 extent{kPickerWidth - 2, kPlaneSize - 2};
-    setDrawing(kit, plane.fill, extent, 0x5c71 | uint64_t(s.gamut) << 16, &s.drawn[0],
-        [&](PrDrawList* list) { drawSampled(kit, list, extent, Sampled{.skyline = true}, s.gamut); });
+    setDrawing(kit, plane.fill, extent, regionKey(kit, 0x5c71 | uint64_t(s.gamut) << 16), &s.drawn[0],
+        [&](PrDrawList* list) { return drawSampled(kit, list, extent, Sampled{.skyline = true}, s.gamut); });
     marker(kit, plane.node, s.rampHue / 360, 1 - s.rampChroma / kMaxChroma, false);
 }
 

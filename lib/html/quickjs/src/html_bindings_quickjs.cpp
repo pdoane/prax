@@ -563,18 +563,52 @@ JSValue contentDocument(JSContext* ctx, JSValueConst frameObject) {
     return jsWrapAs(ctx, prJsDomDocumentClass, JS_UNDEFINED, document, false);
 }
 
+// The resolving functions of a pending JS promise. An element settles the promise through a PrHtmlPromise.
+struct EnginePromise {
+    JSContext* ctx;
+    JsCallback* resolve;
+    JsCallback* reject;
+};
+
+void settlePromise(void* PR_NULLABLE context, PrStringView rejection) {
+    EnginePromise* promise = static_cast<EnginePromise*>(context);
+    JSContext* ctx = promise->ctx;
+    JSValue argument = rejection.data != nullptr ? jsDomExceptionNew(ctx, rejection) : JS_UNDEFINED;
+    JsCallback* callback = rejection.data != nullptr ? promise->reject : promise->resolve;
+    JSValue result = JS_Call(ctx, callback->value, JS_UNDEFINED, 1, &argument);
+    JS_FreeValue(ctx, result);
+    JS_FreeValue(ctx, argument);
+}
+
+void releasePromise(void* PR_NULLABLE context) {
+    EnginePromise* promise = static_cast<EnginePromise*>(context);
+    jsCallbackRelease(promise->resolve);
+    jsCallbackRelease(promise->reject);
+    prMemoryFree(promise);
+}
+
 // ---------------------------------------------------------------------------------------------------------------------
 // HTMLImageElement (html/#htmlimageelement)
 
-// html/#dom-img-decode: the image is fetched whenever its source changes, so the promise settles immediately.
+// Implements decode() (html/#dom-img-decode). The returned promise settles once the current request decodes, breaks or
+// changes.
 JSValue imageDecode(JSContext* ctx, JSValueConst imageObject, int, JSValueConst*) {
     PrHtmlImageElement* image = jsThis<PrHtmlImageElement>(ctx, imageObject, htmlImageElementClass);
     if (image == nullptr)
         return JS_EXCEPTION;
-    bool available = prHtmlImageElementState(image) == PrDomImageState_CompletelyAvailable;
-    JSValue value = available ? JS_UNDEFINED : jsDomExceptionNew(ctx, "EncodingError");
-    JSValue promise = jsSettledPromise(ctx, value, !available);
-    JS_FreeValue(ctx, value);
+    JSValue functions[2];
+    JSValue promise = JS_NewPromiseCapability(ctx, functions);
+    if (JS_IsException(promise))
+        return promise;
+    EnginePromise* decode = alloc<EnginePromise>();
+    *decode = EnginePromise{
+        ctx, jsCallbackCreate(ctx, functions[0], JS_UNDEFINED),
+        jsCallbackCreate(ctx, functions[1], JS_UNDEFINED),
+    };
+    JS_FreeValue(ctx, functions[0]);
+    JS_FreeValue(ctx, functions[1]);
+    PrHtmlPromise callback = {decode, settlePromise, releasePromise};
+    prHtmlImageElementDecode(image, &callback);
     return promise;
 }
 
@@ -903,30 +937,6 @@ JSValue mediaStartDate(JSContext* ctx, JSValueConst object, int, JSValueConst*) 
     return result;
 }
 
-// The functions of a pending play promise, which the element settles.
-struct PlayPromise {
-    JSContext* ctx;
-    JsCallback* resolve;
-    JsCallback* reject;
-};
-
-void settlePlay(void* PR_NULLABLE context, PrStringView rejection) {
-    PlayPromise* promise = static_cast<PlayPromise*>(context);
-    JSContext* ctx = promise->ctx;
-    JSValue argument = rejection.data != nullptr ? jsDomExceptionNew(ctx, rejection) : JS_UNDEFINED;
-    JsCallback* callback = rejection.data != nullptr ? promise->reject : promise->resolve;
-    JSValue result = JS_Call(ctx, callback->value, JS_UNDEFINED, 1, &argument);
-    JS_FreeValue(ctx, result);
-    JS_FreeValue(ctx, argument);
-}
-
-void releasePlay(void* PR_NULLABLE context) {
-    PlayPromise* promise = static_cast<PlayPromise*>(context);
-    jsCallbackRelease(promise->resolve);
-    jsCallbackRelease(promise->reject);
-    prMemoryFree(promise);
-}
-
 // html/#dom-media-play
 JSValue mediaPlay(JSContext* ctx, JSValueConst mediaObject, int, JSValueConst*) {
     PrHtmlMediaElement* media = mediaThis(ctx, mediaObject);
@@ -936,14 +946,14 @@ JSValue mediaPlay(JSContext* ctx, JSValueConst mediaObject, int, JSValueConst*) 
     JSValue promise = JS_NewPromiseCapability(ctx, functions);
     if (JS_IsException(promise))
         return promise;
-    PlayPromise* play = alloc<PlayPromise>();
-    *play = PlayPromise{
+    EnginePromise* play = alloc<EnginePromise>();
+    *play = EnginePromise{
         ctx, jsCallbackCreate(ctx, functions[0], JS_UNDEFINED),
         jsCallbackCreate(ctx, functions[1], JS_UNDEFINED),
     };
     JS_FreeValue(ctx, functions[0]);
     JS_FreeValue(ctx, functions[1]);
-    PrHtmlPlayPromise callback = {play, settlePlay, releasePlay};
+    PrHtmlPromise callback = {play, settlePromise, releasePromise};
     prHtmlMediaElementPlay(media, &callback);
     return promise;
 }

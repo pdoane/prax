@@ -646,7 +646,7 @@ void uiPrepare(Ui* ui, PrGpuCommands* commands, PrUVec2 extent, PrPixelFormat fo
         PrUVec2 size = prGpuTextureExtent(ui->device, image.texture);
         PrRect all{0, 0, float(size.x), float(size.y)};
         PrDrawSource source =
-            prDrawSourceTexture(prDrawGpuTexture(image.texture), size, all, PrDrawAlpha_Premultiplied);
+            prDrawSourceTexture(PrTexture{.texture = image.texture, .alpha = PrTextureAlpha_Premultiplied}, size, all);
         PrDrawSampling sampling = image.nearest ? PrDrawSampling_Nearest : PrDrawSampling_Linear;
         prDrawListPushClipRect(list, image.clip, PrDrawEdges_Aliased);
         PrDrawBrush brush = prDrawBrushImage(source, image.destination, sampling);

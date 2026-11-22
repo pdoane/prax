@@ -242,6 +242,14 @@ enum : uint32_t {
 };
 typedef uint8_t FragmentFilterFlags;
 
+// How the texels of an Image paint's texture hold alpha.
+enum : uint32_t {
+    FragmentAlpha_Premultiplied,
+    FragmentAlpha_Straight,
+    FragmentAlpha_Opaque,             // every texel is opaque, whatever its alpha channel holds
+};
+typedef uint32_t FragmentAlpha;
+
 // The weights of the red, green and blue channels in the luminance of a color (kPrColorLuminanceRed and the others).
 PR_FRAGMENT_CONSTANT float kFragmentLuminanceRed = 0.2125f;
 PR_FRAGMENT_CONSTANT float kFragmentLuminanceGreen = 0.7154f;
@@ -253,8 +261,6 @@ PR_FRAGMENT_PUBLIC(PrDrawExtend_Repeat, 1)
 PR_FRAGMENT_PUBLIC(PrDrawExtend_Reflect, 2)
 PR_FRAGMENT_PUBLIC(PrDrawExtend_None, 3)
 PR_FRAGMENT_PUBLIC(PrDrawTileFlag_Clamped, 1)
-PR_FRAGMENT_PUBLIC(PrDrawAlpha_Straight, 1)
-PR_FRAGMENT_PUBLIC(PrDrawAlpha_Opaque, 2)
 PR_FRAGMENT_PUBLIC(PrDrawStrokeMapping_Plain, 0)
 PR_FRAGMENT_PUBLIC(PrDrawStrokeMapping_Along, 1)
 PR_FRAGMENT_PUBLIC(PrDrawStrokeMapping_Across, 2)

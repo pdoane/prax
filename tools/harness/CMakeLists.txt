@@ -56,7 +56,8 @@ target_link_libraries(draw_compare PUBLIC prax::core PRIVATE prax::core_cpp pr_w
 if (PR_TOOLS)
     add_library(draw_renderers STATIC draw_renderers.cpp)
     target_include_directories(draw_renderers PUBLIC ${PROJECT_SOURCE_DIR})
-    target_link_libraries(draw_renderers PUBLIC prax::compress_select prax::image_select prax::draw prax::gpu
+    target_link_libraries(draw_renderers PUBLIC prax::compress_select prax::image_select prax::texture prax::draw
+                                                prax::gpu
                                          PRIVATE draw_blend2d draw_imgui prax::svg
                                                  prax::core_cpp pr_warnings)
     if (APPLE)
@@ -71,7 +72,7 @@ endif()
 add_library(kit_fixture INTERFACE kit_fixture.h)
 target_include_directories(kit_fixture INTERFACE ${PROJECT_SOURCE_DIR})
 pr_font_bundle_resources(kit_fixture FROM ${PR_TEST_FONTS_DIR} Complete NotoMono NerdFontSymbols)
-target_link_libraries(kit_fixture INTERFACE prax::compress_select prax::image_select prax::draw_select prax::studio_kit
-                                            prax::font_bundle prax::font prax::text
-                                            prax::draw
-                                            prax::layout prax::ui prax::compress prax::image harness_png doctest::doctest)
+target_link_libraries(kit_fixture INTERFACE prax::compress_select prax::image_select prax::studio_kit prax::font_bundle
+                                            prax::font prax::text prax::draw prax::draw_select
+                                            prax::layout prax::ui prax::compress prax::image prax::svg prax::texture
+                                            prax::gpu harness_png doctest::doctest)

@@ -178,7 +178,7 @@ void buildTabs(Browser& b, PrLayoutNode root) {
         Tab& tab = *each;
         // A tab shows its page's icon, if it has one, its label, and its close control.
         PrLayoutNode node = prKitTab(b.kit, strip, {.id = tabId(tab)});
-        if (const PrDrawImage* image = iconsGet(b, tab.info.iconUrl)) {
+        if (const PrTextureSource* image = iconsGet(b, tab.info.iconUrl)) {
             PrKitImageStyle icon{
                 .fit = PrKitImageFit_Contain,
                 .place = {.width = prKitPx(kTabIconSize), .height = prKitPx(kTabIconSize), .flex = PrKitFlex_Fixed},

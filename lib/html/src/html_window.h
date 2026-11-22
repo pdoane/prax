@@ -77,6 +77,19 @@ struct HtmlIdleRequest {
     bool endless;       // true if an idle callback made the request, which a loop of callbacks can repeat forever
 };
 
+// An image whose decode the window waits for. The window holds `element` (domNodeHold). `generation` and `url` identify
+// the request that is decoded. `available` is true if that request was available when the wait began. `promise` is the
+// decode() promise that waits for the decode, if any. `events` is the page whose load event waits for the decode, along
+// with the event of the element's request, or null if no event waits.
+struct HtmlImageDecode {
+    PrDomElement* element;
+    uint32_t generation;
+    PrRawString url;
+    bool available;
+    PrHtmlPromise promise;              // `settle` is null if there is no promise
+    PrHtmlPage* PR_NULLABLE events;
+};
+
 // The Window of a browsing context (html/#the-window-object). It is reference counted (DomCountedTarget): its page
 // holds a reference while the window is its page's, and the script objects of the window and of its members hold
 // references too, so that a window that its page has closed outlives the objects that name it.
@@ -120,6 +133,14 @@ struct HtmlWindow : DomCountedTarget {
     // The canvases whose bitmaps changed since they were last shown, which the next rendering update shows. Each holds
     // its element (domNodeHold).
     RawArray<PrDomElement*> canvases;
+
+    // `textures` is the cache that realizes the images of the window's document, or null (PrHtmlHost::textures).
+    // `imageDecodes` are the images whose realizations or decode() promises the following rendering updates settle
+    // (htmlImagesShow).
+    PrTextureCache* PR_NULLABLE textures;
+    RawArray<HtmlImageDecode> imageDecodes;
+    uint64_t decodeArrivals;                  // the arrivals of `textures` when `imageDecodes` were last checked
+    bool decodesQueued;                       // true if a task that settles `imageDecodes` is queued (htmlImagesQueue)
     RawArray<HtmlTimer> timers;               // in the order in which they were set
     RawArray<HtmlTask> tasks;                 // in the order in which they were queued
     uint32_t taskHead;                        // the first task that has not run

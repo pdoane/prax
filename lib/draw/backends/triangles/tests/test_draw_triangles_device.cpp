@@ -11,6 +11,7 @@
 #include "pr/vec.h"
 
 #include "tools/harness/harness_gpu.h"
+#include "tools/harness/harness_textures.h"
 
 #include "tools/harness/test.h"
 
@@ -27,20 +28,24 @@ using namespace pr;
 struct Device {
     PrGpuDevice* gpuDevice = nullptr;
     PrDrawRenderer* renderer = nullptr;
+    PrTextureCache* textures = nullptr;     // on the device; the renderer divides its premultiplied texels by alpha
     PrGpuTexture texture{};
     PrDrawFrame* frame = nullptr;
 
     Device(uint32_t width, uint32_t height) {
         REQUIRE(gpuDeviceCreate(PrGpuBackend_Default, nullptr, &gpuDevice) == PrStatus_Ok);
         REQUIRE(prDrawTrianglesCreate(gpuDevice, nullptr, &renderer) == PrStatus_Ok);
-        PrGpuTextureDesc desc = prGpuTextureDesc2d(PrGpuFormat_Rgba8, PrUVec2{width, height},
+        PrTextureCacheDesc desc = prTextureCacheDescDefault(gpuDevice);
+        textures = prTextureCacheCreate(&desc);
+        PrGpuTextureDesc target = prGpuTextureDesc2d(PrGpuFormat_Rgba8, PrUVec2{width, height},
             PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_RenderTarget);
-        REQUIRE(prGpuTextureCreate(gpuDevice, &desc, &texture) == PrStatus_Ok);
+        REQUIRE(prGpuTextureCreate(gpuDevice, &target, &texture) == PrStatus_Ok);
     }
 
     ~Device() {
         prDrawFrameDestroy(frame);
         prDrawRendererDestroy(renderer);
+        prTextureCacheDestroy(textures);
         prGpuTextureRelease(gpuDevice, texture);
         prGpuDeviceDestroy(gpuDevice);
     }
@@ -85,7 +90,9 @@ struct Device {
 // with.
 Array<uint8_t> cpuRender(const PrDrawList* list, uint32_t width, uint32_t height) {
     Array<uint8_t> pixels(size_t(width) * height * 4);
-    PrDrawRenderer* renderer = prDrawCpuCreate(nullptr);
+    PrDrawCpuOptions options = prDrawCpuOptionsDefault();
+    options.device = harnessMemoryDevice();
+    PrDrawRenderer* renderer = prDrawCpuCreate(&options);
     PrPixels into{pixels.data(), size_t(width) * 4, {width, height}};
     REQUIRE(prDrawRendererRenderPixels(renderer, list, into, PrPixelFormat_Rgba8) == PrStatus_Ok);
     prDrawRendererDestroy(renderer);
@@ -232,21 +239,17 @@ TEST_CASE("the triangles renderer draws the host's texture of straight texels as
     REQUIRE(prGpuTextureCreate(device.gpuDevice, &desc, &texture) == PrStatus_Ok);
     PrPixels upload{texels.data(), 16, {4, 4}};
     prGpuTextureWrite(device.gpuDevice, texture, PrIVec2{0, 0}, prPixelsView(upload));
-    PrDrawImageDesc imageDesc{
-        PrPixelView{texels.data(), 16, {4, 4}}, PrPixelFormat_Rgba8, PrDrawAlpha_Straight,
-        PrColorSpace_Srgb,
-    };
-    const PrDrawImage* image = nullptr;
-    REQUIRE(prDrawImageCreate(&imageDesc, &image) == PrStatus_Ok);
+    const PrTextureSource* image =
+        prTextureSourceCreateCopy(PrPixelView{texels.data(), 16, {4, 4}}, PrPixelFormat_Rgba8, PrTextureAlpha_Straight);
     auto draw = [&](PrDrawSource source) {
         PrDrawList* list = prDrawListCreate();
         PrDrawBrush brush = prDrawBrushImage(source, PrRect{0, 0, 32, 16}, PrDrawSampling_Nearest);
         prDrawListRect(list, PrRect{0, 0, 32, 16}, {.brush = &brush});
         return list;
     };
-    PrDrawList* fromTexture = draw(prDrawSourceTexture(prDrawGpuTexture(texture), prGpuTextureExtent(device.gpuDevice, texture),
-        PrRect{0, 0, 4, 4}, PrDrawAlpha_Straight));
-    PrDrawList* fromImage = draw(prDrawSourceImage(image, PrRect{0, 0, 4, 4}));
+    PrDrawList* fromTexture = draw(prDrawSourceTexture(PrTexture{.texture = texture, .alpha = PrTextureAlpha_Straight},
+        prGpuTextureExtent(device.gpuDevice, texture), PrRect{0, 0, 4, 4}));
+    PrDrawList* fromImage = draw(harnessMemoryImage(image, PrRect{0, 0, 4, 4}));
     Array<uint8_t> drawn = device.render(fromTexture);
     Array<uint8_t> expected = cpuRender(fromImage, 32, 16);
     const uint32_t rows[] = {4, 12};
@@ -259,7 +262,30 @@ TEST_CASE("the triangles renderer draws the host's texture of straight texels as
     }
     prDrawListRelease(fromTexture);
     prDrawListRelease(fromImage);
-    prDrawImageRelease(image);
+    prTextureSourceRelease(image);
+    prDrawFrameDestroy(device.frame);
+    device.frame = nullptr;
+    prGpuTextureRelease(device.gpuDevice, texture);
+}
+
+TEST_CASE("the triangles renderer draws a host texture without alpha as opaque, whatever its alpha channel stores") {
+    Device device(8, 8);
+    // Red texels with a stored alpha of zero.
+    const uint8_t texels[2 * 2 * 4] = {255, 0, 0, 0, 255, 0, 0, 0, 255, 0, 0, 0, 255, 0, 0, 0};
+    PrGpuTextureDesc desc = prGpuTextureDesc2d(PrGpuFormat_Rgba8, PrUVec2{2, 2}, PrGpuTextureUsageFlag_Sampled);
+    PrGpuTexture texture{};
+    REQUIRE(prGpuTextureCreate(device.gpuDevice, &desc, &texture) == PrStatus_Ok);
+    prGpuTextureWrite(device.gpuDevice, texture, PrIVec2{0, 0}, PrPixelView{texels, 8, {2, 2}});
+    PrDrawList* list = prDrawListCreate();
+    PrTexture opaque{.texture = texture, .alpha = PrTextureAlpha_None};
+    PrDrawSource source = prDrawSourceTexture(opaque, PrUVec2{2, 2}, PrRect{0, 0, 2, 2});
+    PrDrawBrush brush = prDrawBrushImage(source, PrRect{0, 0, 8, 8}, PrDrawSampling_Nearest);
+    prDrawListRect(list, PrRect{0, 0, 8, 8}, {.brush = &brush});
+    Array<uint8_t> drawn = device.render(list);
+    CHECK(at(drawn, 8, 4, 4)[0] == 255);
+    CHECK(at(drawn, 8, 4, 4)[1] == 0);
+    CHECK(at(drawn, 8, 4, 4)[3] == 255);
+    prDrawListRelease(list);
     prDrawFrameDestroy(device.frame);
     device.frame = nullptr;
     prGpuTextureRelease(device.gpuDevice, texture);
@@ -511,7 +537,7 @@ TEST_CASE("triangles draws nothing for a projected group and its contents") {
     prDrawListRelease(list);
 }
 
-TEST_CASE("triangles uploads its atlas and images once") {
+TEST_CASE("the triangles renderer uploads its atlas once, and draws the host's textures") {
     Device h(32, 32);
     PrDrawList* list = prDrawListCreate();
     prDrawListRect(list, PrRect{0, 0, 8, 8}, {.color = PrColor{0, 0, 0, 1}});
@@ -523,13 +549,9 @@ TEST_CASE("triangles uploads its atlas and images once") {
     CHECK(geometry < first);
 
     uint8_t texels[4 * 4] = {255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255, 255, 255, 255, 255};
-    PrDrawImageDesc target{
-        PrPixelView{texels, 8, {2, 2}}, PrPixelFormat_Rgba8, PrDrawAlpha_Premultiplied,
-        PrColorSpace_Srgb,
-    };
-    const PrDrawImage* image = nullptr;
-    REQUIRE(prDrawImageCreate(&target, &image) == PrStatus_Ok);
-    PrDrawSource source = prDrawSourceImage(image, PrRect{0, 0, 2, 2});
+    const PrTextureSource* image =
+        prTextureSourceCreateCopy(PrPixelView{texels, 8, {2, 2}}, PrPixelFormat_Rgba8, PrTextureAlpha_Premultiplied);
+    PrDrawSource source = harnessImageSource(h.textures, image, PrRect{0, 0, 2, 2});
     prDrawListClear(list);
     PrDrawBrush brush = prDrawBrushImage(source, PrRect{0, 0, 32, 32}, PrDrawSampling_Nearest);
     prDrawListRect(list, PrRect{0, 0, 32, 32}, {.brush = &brush});
@@ -538,9 +560,10 @@ TEST_CASE("triangles uploads its atlas and images once") {
     CHECK(at(drawn, 32, 4, 4)[0] == 255);
     CHECK(at(drawn, 32, 28, 4)[1] == 255);
     CHECK(at(drawn, 32, 4, 28)[2] == 255);
+    // The image is the host's texture, so the frames upload none of its texels.
     h.render(list);
-    CHECK(h.stats().uploadBytes < withImage);
-    prDrawImageRelease(image);
+    CHECK(h.stats().uploadBytes <= withImage);
+    prTextureSourceRelease(image);
     prDrawListRelease(list);
 }
 

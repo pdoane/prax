@@ -109,6 +109,9 @@ void render(Browser& b, PrDrawList* PR_NULLABLE page, PrColor canvas) {
     }
     PrDrawTarget window{.extent = b.extent, .format = format, .commands = commands};
     prDrawFramePrepare(b.chromeFrame, b.chromeList, &window);
+    // This frame is also a frame of the cache. The trim may evict a texture that no frame has drawn since the last trim
+    // and that nothing else holds.
+    prTextureCacheTrim(b.textures);
     PrGpuSubresources all{};
     prGpuCommandsTextureBarrier(commands, target, all, mapped ? PrGpuAccessFlag_ShaderRead : PrGpuAccessFlag_Discard,
         PrGpuAccessFlag_ColorAttachment);
@@ -203,6 +206,17 @@ bool openDevice(Browser& b) {
         return true;
     PrSurface surface{};
     PrGpuSwapChainDesc swapChain{.intent = PrGpuSwapChainIntent_Hdr};
+    // If an image arrives after a frame drew without it, the cache requests a frame that draws it.
+    PrTextureCacheDesc textures = prTextureCacheDescDefault(b.device);
+    textures.tasks = b.pool;
+    textures.arrived = [](void* PR_NULLABLE context) {
+        Browser& arrived = *static_cast<Browser*>(context);
+        arrived.frameWanted.store(true);
+        prAppWake(arrived.app);
+    };
+    textures.arrivedContext = &b;
+    b.textures = prTextureCacheCreate(&textures);
+    prKitSetTextures(b.kit, b.textures);
     if (prAppWindowSurface(b.window, &surface) != PrStatus_Ok ||
             prGpuSwapChainCreate(b.device, &surface, &swapChain, &b.swapChain) != PrStatus_Ok ||
             prDrawRendererCreate(PrDrawRendererBackend_Default, b.device, nullptr, &b.renderer) != PrStatus_Ok ||
@@ -384,7 +398,7 @@ bool start(void* context, PrApp* app) {
     return true;
 }
 
-// A wake from a tab's thread asks for a frame, if one asked for it since the last.
+// A wake from a tab's thread or from the texture cache asks for a frame, if one asked for it since the last.
 void appEvent(void* context, PrApp*, const PrAppEvent* e) {
     Browser& b = *static_cast<Browser*>(context);
     if (e->kind == PrAppEventKind_Wake && b.window != nullptr && b.frameWanted.exchange(false))
@@ -400,6 +414,8 @@ void shutdown(void* context, PrApp*) {
     prDrawFrameDestroy(b.pageFrame);
     prDrawFrameDestroy(b.chromeFrame);
     prDrawRendererDestroy(b.renderer);
+    prKitSetTextures(b.kit, nullptr);
+    prTextureCacheDestroy(b.textures);
     prGpuSwapChainDestroy(b.swapChain);
     prGpuDeviceDestroy(b.device);
 }

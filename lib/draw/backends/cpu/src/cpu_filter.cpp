@@ -680,7 +680,7 @@ void imageNode(Evaluation& e, const PrDrawFilterNode& node, Image& out) {
         x = x < 0 ? 0 : x >= int32_t(level.width) ? int32_t(level.width) - 1 : x;
         y = y < 0 ? 0 : y >= int32_t(level.height) ? int32_t(level.height) - 1 : y;
         float texel[4];
-        cpuReadPixel(level.data + (size_t(y) * level.width + uint32_t(x)) * cpuPixelBytes(level.format), level.format, texel);
+        cpuReadTexel(level, uint32_t(x), uint32_t(y), texel);
         return texel[c];
     };
     for (uint32_t y = 0; y < e.height; ++y) {

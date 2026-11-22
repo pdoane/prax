@@ -15,10 +15,29 @@ namespace pr {
 
 namespace {
 
+// A pipeline that draws into targets of one format from textures whose texels have one alpha.
 struct ImGuiGpuPipeline {
     PrGpuFormat format;
+    ImGuiGpuAlpha alpha;
     PrGpuPipeline pipeline;
 };
+
+// The fragment shader that reads a straight color from texels of each alpha.
+constexpr PrStringView kFragmentShaders[ImGuiGpuAlpha_Count] = {    // by ImGuiGpuAlpha
+    "imguiFragment", "imguiFragmentPremultiplied", "imguiFragmentOpaque",
+};
+
+// A texture id holds a texture's id in its low 32 bits, and the alpha of its texels above them. The id of a texture of
+// Dear ImGui's own is therefore the texture's id alone, because ImGuiGpuAlpha_Straight is zero.
+constexpr uint32_t kTextureAlphaShift = 32;
+
+PrGpuTexture textureOf(ImTextureID id) {
+    return PrGpuTexture{uint32_t(id)};
+}
+
+ImGuiGpuAlpha alphaOf(ImTextureID id) {
+    return ImGuiGpuAlpha(id >> kTextureAlphaShift);
+}
 
 struct ImGuiGpu {
     PrGpuDevice* device;
@@ -41,16 +60,17 @@ ImGuiGpu* backendOf() {
     return static_cast<ImGuiGpu*>(ImGui::GetIO().BackendRendererUserData);
 }
 
-// Returns the pipeline that draws into targets of `format`, created on first use, or zero if the device cannot create
-// it. Color blends by source alpha and one minus source alpha, and alpha by one and one minus source alpha.
-PrGpuPipeline pipelineFor(ImGuiGpu* g, PrGpuFormat format) {
+// Returns the pipeline that draws into targets of `format` from textures whose texels have `alpha`, created on first
+// use, or zero if the device cannot create it. Color blends by source alpha and one minus source alpha, and alpha by
+// one and one minus source alpha.
+PrGpuPipeline pipelineFor(ImGuiGpu* g, PrGpuFormat format, ImGuiGpuAlpha alpha) {
     for (uint32_t i = 0; i < g->pipelines.count; ++i) {
-        if (g->pipelines.data[i].format == format)
+        if (g->pipelines.data[i].format == format && g->pipelines.data[i].alpha == alpha)
             return g->pipelines.data[i].pipeline;
     }
     PrGpuGraphicsPipelineDesc desc = prGpuGraphicsPipelineDescDefault(g->library);
     desc.vertex = "imguiVertex";
-    desc.fragment = "imguiFragment";
+    desc.fragment = kFragmentShaders[alpha];
     desc.formats.colorCount = 1;
     desc.formats.color[0] = format;
     desc.blend[0] = prGpuBlendPremultiplied();
@@ -58,13 +78,13 @@ PrGpuPipeline pipelineFor(ImGuiGpu* g, PrGpuFormat format) {
     desc.name = "imgui";
     PrGpuPipeline pipeline{};
     prGpuPipelineCreateGraphics(g->device, &desc, &pipeline);
-    g->pipelines.push(ImGuiGpuPipeline{format, pipeline});
+    g->pipelines.push(ImGuiGpuPipeline{.format = format, .alpha = alpha, .pipeline = pipeline});
     return pipeline;
 }
 
 void destroyTexture(ImGuiGpu* g, ImTextureData* tex) {
     if (tex->TexID != ImTextureID_Invalid)
-        prGpuTextureRelease(g->device, PrGpuTexture{uint32_t(tex->TexID)});
+        prGpuTextureRelease(g->device, textureOf(tex->TexID));
     tex->SetTexID(ImTextureID_Invalid);
     tex->SetStatus(ImTextureStatus_Destroyed);
 }
@@ -83,10 +103,10 @@ void updateTexture(ImGuiGpu* g, ImTextureData* tex) {
             static_cast<const uint8_t*>(tex->GetPixels()), size_t(tex->Width) * 4,
             {uint32_t(tex->Width), uint32_t(tex->Height)},
         });
-        tex->SetTexID(ImTextureID(texture.id));
+        tex->SetTexID(imguiGpuTexture(texture, ImGuiGpuAlpha_Straight));
         tex->SetStatus(ImTextureStatus_OK);
     } else if (tex->Status == ImTextureStatus_WantUpdates) {
-        PrGpuTexture texture{uint32_t(tex->TexID)};
+        PrGpuTexture texture = textureOf(tex->TexID);
         for (const ImTextureRect& r : tex->Updates) {
             prGpuTextureWrite(g->device, texture, PrIVec2{r.x, r.y}, PrPixelView{
                 static_cast<const uint8_t*>(tex->GetPixelsAt(r.x, r.y)),
@@ -154,8 +174,8 @@ void imguiGpuShutdown() {
     platform.DrawCallback_SetSamplerNearest = nullptr;
 }
 
-ImTextureID imguiGpuTexture(PrGpuTexture texture) {
-    return ImTextureID(texture.id);
+ImTextureID imguiGpuTexture(PrGpuTexture texture, ImGuiGpuAlpha alpha) {
+    return ImTextureID(texture.id) | ImTextureID(alpha) << kTextureAlphaShift;
 }
 
 void imguiGpuRender(ImDrawData* data, PrGpuPass* pass) {
@@ -171,7 +191,11 @@ void imguiGpuRender(ImDrawData* data, PrGpuPass* pass) {
                 updateTexture(g, tex);
         }
     }
-    PrGpuPipeline pipeline = pipelineFor(g, prGpuPassFormats(pass).color[0]);
+    // The pipeline in effect. It starts as the pipeline for Dear ImGui's own textures, and changes when a draw needs
+    // another.
+    PrGpuFormat format = prGpuPassFormats(pass).color[0];
+    ImGuiGpuAlpha alpha = ImGuiGpuAlpha_Straight;
+    PrGpuPipeline pipeline = pipelineFor(g, format, alpha);
     if (pipeline.id == 0)
         return;
     // The vertices, which the vertex shader reads through Buffer slot 0, then the indices, in one buffer of the stream.
@@ -228,9 +252,20 @@ void imguiGpuRender(ImDrawData* data, PrGpuPass* pass) {
             ImTextureID texture = cmd.GetTexID();
             if (right <= left || bottom <= top || cmd.ElemCount == 0 || texture == ImTextureID_Invalid)
                 continue;
+            ImGuiGpuAlpha wanted = alphaOf(texture);
+            if (wanted >= ImGuiGpuAlpha_Count)
+                continue;
+            if (wanted != alpha) {
+                PrGpuPipeline other = pipelineFor(g, format, wanted);
+                if (other.id == 0)
+                    continue;
+                alpha = wanted;
+                prGpuCommandsSetPipeline(commands, other);
+                prGpuCommandsSetBuffer(commands, 0, buffer, offsets[0]);
+            }
             prGpuPassSetScissor(pass, PrIRect{int32_t(left), int32_t(top), int32_t(right), int32_t(bottom)});
             push.offset = uint32_t((listVertices + cmd.VtxOffset) * sizeof(ImDrawVert));
-            prGpuCommandsSetTexture(commands, 0, PrGpuTexture{uint32_t(texture)}, PrGpuSampler{g->sampler});
+            prGpuCommandsSetTexture(commands, 0, textureOf(texture), PrGpuSampler{g->sampler});
             prGpuCommandsSetPush(commands, &push, sizeof(push));
             prGpuPassDrawIndexed(pass, cmd.ElemCount, 1, uint32_t(listIndices + cmd.IdxOffset), 0, 0);
         }

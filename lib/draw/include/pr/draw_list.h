@@ -14,7 +14,6 @@
 #include "pr/base.h"
 #include "pr/color.h"
 #include "pr/draw.h"
-#include "pr/draw_image.h"
 #include "pr/geom.h"
 #include "pr/path.h"
 #include "pr/path_polyline.h"
@@ -36,6 +35,10 @@ void prDrawListRelease(PrDrawList* PR_NULLABLE list);
 // Holds a resource of the host's that the list's commands draw, such as the texture of a Texture source, until the list
 // is emptied or freed, which calls `release` with `context` on the thread that does it. The list must not be frozen.
 void prDrawListHold(PrDrawList* list, void (*PR_NONNULL release)(void* PR_NULLABLE context), void* PR_NULLABLE context);
+
+// Holds a reference to `source` until the list is emptied or freed. A producer calls this for the source of each
+// texture region that a command draws, so that the texture cache keeps the region. The list must not be frozen.
+void prDrawListHoldSource(PrDrawList* list, const PrTextureSource* source);
 
 // Empties the list and keeps the storage. The list must not be frozen.
 void prDrawListClear(PrDrawList* list);
@@ -81,9 +84,9 @@ void prDrawListDecoration(PrDrawList* list, const PrDrawDecoration* decoration, 
 void prDrawListNineSlice(PrDrawList* list, PrDrawSource source, const PrDrawNineSlice* slices, PrRect destination,
     PrDrawSampling sampling, PrDrawPaint paint);
 
-// Records a command that replaces the target's pixels with the image's pixels, with the image's top left at the target
-// point `origin`. Transforms, clips and compositing do not apply.
-void prDrawListWritePixels(PrDrawList* list, const PrDrawImage* image, PrIVec2 origin);
+// Records a command that replaces the target's pixels with the texels of `source`, which is a Texture source. The top
+// left of the source's rect goes to the target point `origin`. Transforms, clips and compositing do not apply.
+void prDrawListWritePixels(PrDrawList* list, PrDrawSource source, PrIVec2 origin);
 
 // Records a run of glyphs, each placed at its position from `origin`, filled or stroked as `paint` says. Each glyph
 // composites on its own. A filled color glyph paints its own colors, times the paint's alpha: its color's alpha, or its

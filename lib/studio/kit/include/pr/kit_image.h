@@ -1,9 +1,11 @@
-// Studio Kit's images: pictures fitted into the boxes that they are placed in.
+// Studio Kit's images: pictures fitted into their boxes. A picture is an image's texture source, or a texture on the
+// GPU device that renders the window, such as the color of a 3D view.
 
 #pragma once
 
-#include "pr/draw_image.h"
+#include "pr/draw.h"
 #include "pr/kit.h"
+#include "pr/texture.h"
 
 PR_ASSUME_NONNULL_BEGIN
 
@@ -21,10 +23,11 @@ enum {
 };
 typedef uint8_t PrKitImageFit;
 
-// The content of an image widget: the image that it shows.
+// The content of an image widget: the image that it shows. The image is shown upright, as its orientation says
+// (PrTextureDesc::orientation).
 typedef struct PrKitImage {
     PrUiKey key;
-    const PrDrawImage* image;
+    const PrTextureSource* image;
 } PrKitImage;
 
 // The style of an image widget: the image fitted into its box as `fit` says, at `alignX` and `alignY` in the room that
@@ -39,6 +42,22 @@ typedef struct PrKitImageStyle {
 
 // Creates an image widget under `parent`.
 PrLayoutNode prKitImage(PrKit* kit, PrLayoutNode parent, PrKitImage image, PrKitImageStyle style);
+
+// The content of a texture widget: a texture of `extent` texels on the device that renders the window's list.
+//
+// The widget draws the texture's texels as they are when the list renders. A texture that the application renders into
+// every frame therefore shows each frame's texels. `revision` is a number that the application changes when the texels
+// change and nothing else does, so that the window draws another frame.
+typedef struct PrKitTexture {
+    PrUiKey key;
+    PrTexture texture;
+    PrUVec2 extent;
+    uint64_t revision;
+} PrKitTexture;
+
+// Creates a texture widget under `parent`. It is styled as an image widget is. The texture is fitted into its box and
+// clipped to it. It is layered, scrolled and clipped with the rest of the tree, as any image is.
+PrLayoutNode prKitTexture(PrKit* kit, PrLayoutNode parent, PrKitTexture texture, PrKitImageStyle style);
 
 #if defined(__cplusplus)
 }

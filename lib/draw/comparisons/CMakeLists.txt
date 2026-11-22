@@ -25,7 +25,7 @@ add_library(draw_imgui STATIC
     imgui/src/draw_imgui_gpu.cpp
 )
 pr_headers(draw_imgui PUBLIC imgui/include)
-target_link_libraries(draw_imgui PUBLIC prax::draw prax::gpu
+target_link_libraries(draw_imgui PUBLIC prax::texture prax::draw prax::gpu
                                  PRIVATE prax::core_cpp imgui prax::font freetype prax::path pr_warnings)
 
 if (APPLE)

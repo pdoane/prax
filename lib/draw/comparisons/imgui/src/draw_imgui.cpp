@@ -19,7 +19,6 @@
 #include "pr/alloc.h"
 #include "pr/draw_commands.h"
 #include "pr/draw_glyph.h"
-#include "pr/draw_image.h"
 #include "pr/draw_lower.h"
 #include "pr/draw_projection.h"
 #include "pr/draw_transform.h"
@@ -27,6 +26,7 @@
 #include "pr/mem.h"
 #include "pr/path_measure.h"
 #include "pr/raw_array.h"
+#include "pr/texture.h"
 #include "pr/vec.h"
 
 #include "draw/comparisons/imgui/src/draw_imgui_gpu.h"
@@ -283,22 +283,13 @@ void drawBorderPiece(void* PR_NULLABLE context, const PrDrawBorderPiece* piece,
 // ---------------------------------------------------------------------------------------------------------------------
 // Images
 
-// Draws the source's texels over each rectangle, under the current transform. Dear ImGui tints them with the vertex
-// color times the texels, as they are stored. A list source is left out.
+// Draws the source's texels over each rectangle, under the current transform. Dear ImGui tints them: it draws the
+// vertex color times the texels' straight color. A list source is left out.
 void drawImageRects(Walk& w, const PrDrawSource& source, PrColor color, const PrDrawImageRect* rects, uint32_t count) {
-    if (source.kind == PrDrawSourceKind_List)
+    PrUVec2 extent = source.extent;
+    if (source.kind == PrDrawSourceKind_List || source.texture.id == 0 || extent.x == 0 || extent.y == 0)
         return;
-    ImTextureID texture = ImTextureID_Invalid;
-    PrUVec2 extent{};
-    if (source.kind == PrDrawSourceKind_Image) {
-        texture = imguiImageTexture(w.imgui, source.image, &extent);
-    } else if (source.texture != 0) {
-        texture = imguiHostTexture(w.imgui, source.texture);
-        extent = source.extent;
-    }
-    if (texture == ImTextureID_Invalid || extent.x == 0 || extent.y == 0)
-        return;
-    ImTextureRef ref(texture);
+    ImTextureRef ref(imguiHostTexture(source.texture, source.alpha));
     float width = float(extent.x);
     float height = float(extent.y);
     PrAffine2 t = w.transforms.last().affine;
@@ -590,19 +581,6 @@ void dropUnusedFonts(ImGuiBackend* imgui) {
 }
 
 } // namespace
-
-// Premultiplied as the list's images are read, then converted to straight alpha.
-void imguiImagePixels(const PrDrawImage* image, PrPixels pixels) {
-    prDrawImageWritePixels(image, pixels, PrPixelFormat_Rgba8, PrIVec2{0, 0});
-    for (uint32_t y = 0; y < pixels.extent.y; ++y) {
-        uint8_t* row = pixels.data + y * pixels.stride;
-        for (uint32_t x = 0; x < pixels.extent.x * 4; x += 4) {
-            uint32_t a = row[x + 3];
-            for (uint32_t k = 0; k < 3; ++k)
-                row[x + k] = uint8_t(a == 0 ? 0 : (row[x + k] * 255 + a / 2) / a);
-        }
-    }
-}
 
 void imguiFrameClear(ImGuiFrame* frame) {
     for (ImDrawList* list : frame->data.CmdLists)

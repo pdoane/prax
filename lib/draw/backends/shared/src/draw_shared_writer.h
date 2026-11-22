@@ -5,9 +5,9 @@
 
 #include "pr/draw_commands.h"
 #include "pr/draw_glyph.h"
-#include "pr/draw_image.h"
 #include "pr/draw_renderer.h"
 #include "pr/draw_transform.h"
+#include "pr/hash.h"
 #include "pr/path.h"
 #include "pr/path_polyline.h"
 #include "pr/raw_array.h"
@@ -34,9 +34,39 @@ void drawSharedAppendHex(PrTextBuffer& out, uint64_t value, uint32_t bytes);
 // Returns the straight-alpha color clamped to [0, 1], as a format without extended range holds it.
 PrColor drawSharedClamp(PrColor color);
 
+// The texels of a texture that an image holds, and the alpha that they are read with. Two images with equal keys hold
+// the same texels, so a format embeds them once.
+PR_NO_PADDING_BEGIN
+struct DrawSharedImageKey {
+    PrGpuTexture texture;       // zero for texels that are not drawn again; a zero key matches no other key
+    PrIRect rect;               // in texels of the texture
+    PrTextureAlpha alpha;
+    uint8_t _pad[3];
+};
+PR_NO_PADDING_END
+
+// Returns true if the keys name the same texels of the same texture, read with the same alpha.
+inline bool drawSharedImageKeyEquals(const DrawSharedImageKey& a, const DrawSharedImageKey& b) {
+    return a.texture.id == b.texture.id && a.alpha == b.alpha && a.rect.left == b.rect.left &&
+        a.rect.top == b.rect.top && a.rect.right == b.rect.right && a.rect.bottom == b.rect.bottom;
+}
+
+// Returns the hash of the key, for a hash index.
+inline uint32_t drawSharedImageKeyHash(const DrawSharedImageKey& key) {
+    return uint32_t(prHashBytes(&key, sizeof(key), 0));
+}
+
+// An image that a writer embeds: texels in memory, of a texture on the writer's device or of what it rasterized.
+struct DrawSharedImage {
+    DrawSharedImageKey key;
+    PrPixelView pixels;
+    PrPixelFormat format;       // Rgba8, Bgra8 or RgbaF16
+    PrTextureAlpha alpha;
+};
+
 // Writes the image's pixels to `out` as straight-alpha sRGB Rgba8, clamped to [0, 1]. Returns true if any pixel is not
 // opaque.
-bool drawSharedImageRgba8(const PrDrawImage* image, RawArray<uint8_t>& out);
+bool drawSharedImageRgba8(const DrawSharedImage& image, RawArray<uint8_t>& out);
 
 // A color of a gradient at an offset along its parameter, as a format's stops hold it.
 struct DrawSharedStop {
@@ -88,7 +118,7 @@ struct DrawSharedWriterOps {
         const DrawSharedPaint* paint);
 
     // Draws the texels of `source` stretched over `destination`, with the image's alpha, times `opacity`.
-    void (*image)(void* PR_NULLABLE context, const PrDrawImage* image, PrRect source, PrRect destination,
+    void (*image)(void* PR_NULLABLE context, const DrawSharedImage& image, PrRect source, PrRect destination,
         PrAffine2 transform, float opacity);
 
     // Draws a run whose glyphs are outlines, filled, or stroked by `stroke` as `stroke` describes.
@@ -136,8 +166,10 @@ struct DrawSharedWalker {
     PrVec2 page;
 };
 
-// Prepares a walker that calls `ops`, and rasterizes with a renderer that decodes picture glyphs with `glyphDecoder`.
-void drawSharedWalkerInit(DrawSharedWalker& walker, const DrawSharedWriterOps& ops,
+// Prepares a walker that calls `ops`. The walker rasterizes with a renderer on `device`, or on a device of its own if
+// `device` is null. The renderer decodes picture glyphs with `glyphDecoder`. The walker reads the textures that the
+// pages draw from `device`.
+void drawSharedWalkerInit(DrawSharedWalker& walker, const DrawSharedWriterOps& ops, PrGpuDevice* PR_NULLABLE device,
     PrDrawGlyphDecoder* PR_NULLABLE glyphDecoder, float rasterScale);
 
 // Frees what the walker holds.

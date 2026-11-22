@@ -54,8 +54,8 @@ typedef struct PrStudioAppDesc {
     // Options for the platform application (prAppCreate), or null for the defaults.
     const PrAppOptions* PR_NULLABLE options;
 
-    // The pool that runs the device's creation, or null to create the device as the run starts (PrGpuDeviceOptions).
-    // The program owns the pool, which must outlive the run.
+    // The task pool that creates the device and loads the images that the windows draw. If it is null, the device is
+    // created when the run starts (PrGpuDeviceOptions), and each image is loaded in the frame that first draws it.
     PrTaskPool* PR_NULLABLE pool;
 
     // The image codecs that decode the windows' images and the fonts' image glyphs, such as a bitmap emoji font's, and

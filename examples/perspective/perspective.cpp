@@ -19,15 +19,16 @@
 #include "pr/compress.h"
 #include "pr/compress_select.h"
 #include "pr/draw_filter.h"
-#include "pr/draw_image.h"
 #include "pr/draw_renderer.h"
 #include "pr/draw_select.h"
 #include "pr/float.h"
 #include "pr/font_bundle.h"
 #include "pr/gpu.h"
 #include "pr/gpu_select.h"
+#include "pr/hash.h"
 #include "pr/image.h"
 #include "pr/image_select.h"
+#include "pr/image_texture_source.h"
 #include "pr/kit_box.h"
 #include "pr/kit_button.h"
 #include "pr/kit_choice.h"
@@ -43,6 +44,7 @@
 #include "pr/status.h"
 #include "pr/task.h"
 #include "pr/text.h"
+#include "pr/texture_cache.h"
 
 #include "examples/perspective/perspective_gpu.h"
 
@@ -129,8 +131,17 @@ constexpr float kBottom[3] = {0.20f, 0.09f, 0.24f};
 
 // The example's state: the panels' values, which panel is in front, and what the panels' painters draw with.
 struct Panels {
-    const PrDrawImage* picture = nullptr;
-    const PrDrawFilter* frosted = nullptr;      // the blur that a panel's background applies to what lies beneath it
+    const PrTextureSource* picture = nullptr;
+    PrTextureCache* PR_NULLABLE textures = nullptr; // the cache on the window's device that realizes the picture
+
+    // The tree keeps the picture's drawing, which embeds a region of the cache. `pictureEpoch` advances whenever the
+    // drawing must be made again for a reason that the cache's generation does not show: the window set another cache,
+    // or a paint could not draw the picture (`pictureMissed`).
+    uint64_t pictureEpoch = 0;
+    bool pictureMissed = false;
+
+    const PrDrawFilter* frosted = nullptr;          // the blur that a panel's background applies to what lies beneath
+                                                    // it
     PrColor glass{};
     PrColor rim{};
     float sliders[kPanels] = {0.35f, 0.5f, 0.65f, 0.8f};
@@ -158,16 +169,42 @@ void paintGlass(void* context, PrVec2 size, PrDrawList* list) {
     prDrawListCornerRect(list, shape, {.color = p.rim, .stroke = &rim});
 }
 
+// Sets the cache that the picture realizes in, or none. The picture's drawing is made again in the next round.
+void setTextures(Panels& p, PrTextureCache* PR_NULLABLE textures) {
+    p.textures = textures;
+    ++p.pictureEpoch;
+}
+
+// Returns the revision of the picture's drawing (PrLayoutContent::revision). It changes when the regions of the cache
+// become invalid, and after a paint that could not draw the picture, so that the tree paints the picture again.
+uint64_t pictureRevision(Panels& p) {
+    if (p.pictureMissed) {
+        p.pictureMissed = false;
+        ++p.pictureEpoch;
+    }
+    uint64_t generation = p.textures != nullptr ? prTextureCacheGeneration(p.textures) : 0;
+    return prHashMixKeys(generation, p.pictureEpoch);
+}
+
 // Draws the picture so that it covers the box, centered, with rounded corners.
 void paintPicture(void* context, PrVec2 size, PrDrawList* list) {
-    const Panels& p = *static_cast<const Panels*>(context);
+    Panels& p = *static_cast<Panels*>(context);
     if (p.picture == nullptr)
         return;
-    PrUVec2 natural = prDrawImageExtent(p.picture);
+    // The painter's drawing is kept, so the painter waits for the picture's texture. A drawing without the picture must
+    // not be kept, so the next round requests another drawing.
+    PrTextureRegion region{};
+    if (p.textures == nullptr ||
+            prTextureCacheWait(p.textures, p.picture, prTextureCacheAskEncoded(PrTextureCacheFlag_Levels), &region) !=
+            PrTextureCacheState_Ready) {
+        p.pictureMissed = true;
+        return;
+    }
+    PrUVec2 natural = prTextureSourceDesc(p.picture)->extent;
     float fit = prF32Max(size.x / float(natural.x), size.y / float(natural.y));
     PrVec2 drawn{float(natural.x) * fit, float(natural.y) * fit};
     PrRect at{(size.x - drawn.x) / 2, (size.y - drawn.y) / 2, (size.x + drawn.x) / 2, (size.y + drawn.y) / 2};
-    PrDrawSource source = prDrawSourceImage(p.picture, PrRect{0, 0, float(natural.x), float(natural.y)});
+    PrDrawSource source = prDrawSourceRegion(&region, PrRect{0, 0, float(natural.x), float(natural.y)}, 0);
     PrDrawBrush brush = prDrawBrushImage(source, at, PrDrawSampling_Mipmap);
     prDrawListCornerRect(list, prCornerRectRound(PrRect{0, 0, size.x, size.y}, 6), {.brush = &brush});
 }
@@ -220,6 +257,7 @@ void buildPanel(PrKit* kit, PrLayoutNode row, uint32_t index, Panels& p, const P
     PrLayoutContent painted{.kind = PrLayoutContentKind_Painter};
     painted.painter.paint = paintPicture;
     painted.painter.context = &p;
+    painted.revision = pictureRevision(p);
     prLayoutTreeFrameSetContent(tree, picture, &painted);
     PrKitTextStyle body{.tone = PrKitTone_Secondary};
     prKitLabel(kit, content, {.text = text.body}, body);
@@ -325,7 +363,9 @@ bool openPanels(Panels& p) {
         return false;
     PrCompressCodecSet* compress = prCompressCodecSetCreateDefault();
     PrImageCodecSet* images = prImageCodecSetCreateDefault(compress);
-    bool read = prDrawImageCreateFromBytes(images, prBlobBytes(picture), &p.picture, nullptr) == PrStatus_Ok;
+    bool read =
+        prImageTextureSourceOpenBytes(prBlobBytes(picture), images, nullptr, PrImageTextureColor_Srgb, &p.picture) ==
+        PrStatus_Ok;
     prImageCodecSetDestroy(images);
     prCompressCodecSetDestroy(compress);
     prBlobRelease(picture);
@@ -333,7 +373,7 @@ bool openPanels(Panels& p) {
 }
 
 void closePanels(Panels& p) {
-    prDrawImageRelease(p.picture);
+    prTextureSourceRelease(p.picture);
     prDrawFilterRelease(p.frosted);
     p.picture = nullptr;
     p.frosted = nullptr;
@@ -358,6 +398,7 @@ struct Window {
     PrApp* app = nullptr;
     PrAppWindow* window = nullptr;
     PrTaskPool* pool = nullptr;
+    PrTextureCache* PR_NULLABLE textures = nullptr;  // on `device`
     PrGpuDevice* device = nullptr;
     PrGpuSwapChain* swapChain = nullptr;
     PrDrawRenderer* renderer = nullptr;
@@ -417,6 +458,10 @@ void closeDevice(Window& w) {
     pipelinesDestroy(w.pipelines);
     prDrawFrameDestroy(w.frame);
     prDrawRendererDestroy(w.renderer);
+    // The panels draw from the cache, which is destroyed with the device.
+    setTextures(w.panels, nullptr);
+    prTextureCacheDestroy(w.textures);
+    w.textures = nullptr;
     prGpuSwapChainDestroy(w.swapChain);
     prGpuDeviceDestroy(w.device);
     w.background = PrGpuTexture{};
@@ -459,6 +504,11 @@ bool openDevice(Window& w) {
         return true;
     PrSurface surface{};
     PrGpuSwapChainDesc desc{.intent = PrGpuSwapChainIntent_Sdr};
+    // The window's images realize on its pool, in a cache on its device.
+    PrTextureCacheDesc textures = prTextureCacheDescDefault(w.device);
+    textures.tasks = w.pool;
+    w.textures = prTextureCacheCreate(&textures);
+    setTextures(w.panels, w.textures);
     if (prAppWindowSurface(w.window, &surface) != PrStatus_Ok ||
             prGpuSwapChainCreate(w.device, &surface, &desc, &w.swapChain) != PrStatus_Ok ||
             prDrawRendererCreate(PrDrawRendererBackend_Default, w.device, nullptr, &w.renderer) != PrStatus_Ok ||
@@ -506,7 +556,7 @@ void render(Window& w, PrUVec2 extent) {
         prGpuCommandsTextureBarrier(commands, background, all, PrGpuAccessFlag_ColorAttachment,
             PrGpuAccessFlag_ShaderRead);
         beneath.kind = PrDrawBeneathKind_Texture;
-        beneath.texture = prDrawGpuTexture(background);
+        beneath.texture = background;
         beneath.extent = extent;
     } else {
         beneath.kind = PrDrawBeneathKind_Draw;
@@ -517,6 +567,7 @@ void render(Window& w, PrUVec2 extent) {
     prGpuFormatToPixelFormat(format, &pixels);
     PrDrawTarget into{.extent = extent, .format = pixels, .commands = commands, .beneath = &beneath};
     prDrawFramePrepare(w.frame, w.list, &into);
+    prTextureCacheTrim(w.textures);
     prGpuCommandsTextureBarrier(commands, frame.color, all, PrGpuAccessFlag_Discard, PrGpuAccessFlag_ColorAttachment);
     PrGpuPassDesc main = prGpuPassDescColor(frame.color, PrGpuLoad_Clear, PrColor{0, 0, 0, 1});
     PrGpuPass* pass = prGpuPassBegin(commands, &main);

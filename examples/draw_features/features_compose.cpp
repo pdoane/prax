@@ -244,7 +244,7 @@ void groups(PrDrawList* list, float width, float height, double) {
 
 void masks(PrDrawList* list, float width, float height, double) {
     Grid grid{width, height, 3, 2};
-    const PrDrawImage* card = testCard();
+    const PrTextureSource* card = testCard();
     // An alpha mask fading left to right, and its inversion.
     for (uint32_t i = 0; i < 2; ++i) {
         PrRect c = grid.at(i, 20);

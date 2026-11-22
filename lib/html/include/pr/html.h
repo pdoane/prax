@@ -442,6 +442,16 @@ PrDomDocument* PR_NULLABLE prHtmlIFrameElementContentDocument(PrHtmlIFrameElemen
 //
 // An image loads when its source changes, and fires a load or error event in a separate task.
 
+// A promise that a method of an element returns, such as play() (html/#dom-media-play) or decode()
+// (html/#dom-img-decode). The element settles the promise once. It resolves the promise if `rejection` is the null
+// view. Otherwise it rejects the promise with the DOMException that `rejection` names. The element releases the promise
+// after it settles it. If the element is destroyed first, it releases the promise without settling it.
+typedef struct PrHtmlPromise {
+    void* PR_NULLABLE context;
+    void (*PR_NONNULL settle)(void* PR_NULLABLE context, PrStringView rejection);
+    void (*PR_NONNULL release)(void* PR_NULLABLE context);
+} PrHtmlPromise;
+
 // An HTMLImageElement as each interface it inherits from.
 PR_HANDLE_UPCAST(HtmlImageElement, HtmlElement, HtmlElement)
 PR_HANDLE_UPCAST(HtmlImageElement, DomElement, Element)
@@ -472,6 +482,11 @@ uint32_t prHtmlImageElementHeight(const PrHtmlImageElement* element);
 // Sets the width or height content attribute, as a reflected non-negative integer.
 void prHtmlImageElementSetWidth(PrHtmlImageElement* element, uint32_t value);
 void prHtmlImageElementSetHeight(PrHtmlImageElement* element, uint32_t value);
+
+// Decodes the image (html/#dom-img-decode). Resolves `promise` once the current request is completely available and its
+// image has decoded. Rejects `promise` with an EncodingError if the request is broken or changes. If the decode fails
+// after the image's dimensions were read, the image becomes broken and fires an error event (PrHtmlHost::textures).
+void prHtmlImageElementDecode(PrHtmlImageElement* element, const PrHtmlPromise* promise);
 
 // Writes the image of the current request, as its orientation displays it, as a source that a canvas context draws
 // (html/#canvasimagesource), with one reference to the image for the caller. Returns false, and writes no image, if the
@@ -697,15 +712,6 @@ enum {
 };
 typedef uint8_t PrHtmlMediaRanges;
 
-// The promise that play() returns (html/#dom-media-play). The element settles it once: resolved if `rejection` is the
-// null view, and otherwise rejected with the DOMException that `rejection` names. The element releases the promise
-// after settling it, or releases it unsettled if the element is destroyed first.
-typedef struct PrHtmlPlayPromise {
-    void* PR_NULLABLE context;
-    void (*PR_NONNULL settle)(void* PR_NULLABLE context, PrStringView rejection);
-    void (*PR_NONNULL release)(void* PR_NULLABLE context);
-} PrHtmlPlayPromise;
-
 // Returns the code of the element's error, or None if there is no error (html/#dom-media-error).
 PrHtmlMediaError prHtmlMediaElementError(const PrHtmlMediaElement* element);
 
@@ -764,7 +770,7 @@ uint32_t prHtmlMediaElementRanges(PrHtmlMediaElement* element, PrHtmlMediaRanges
 
 // Starts playback, and takes ownership of `promise` (html/#dom-media-play). A failure that the element reports settles
 // the promise immediately. The element reports NotSupported if its source is not supported.
-void prHtmlMediaElementPlay(PrHtmlMediaElement* element, const PrHtmlPlayPromise* promise);
+void prHtmlMediaElementPlay(PrHtmlMediaElement* element, const PrHtmlPromise* promise);
 
 // Pauses playback (html/#dom-media-pause).
 void prHtmlMediaElementPause(PrHtmlMediaElement* element);

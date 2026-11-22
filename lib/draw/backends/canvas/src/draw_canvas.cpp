@@ -13,7 +13,6 @@
 #include "pr/assert.h"
 #include "pr/draw_commands.h"
 #include "pr/draw_filter.h"
-#include "pr/draw_image.h"
 #include "pr/draw_lower.h"
 #include "pr/draw_renderer_backend.h"
 #include "pr/draw_transform.h"
@@ -22,6 +21,7 @@
 #include "pr/memory.h"
 #include "pr/path_polyline.h"
 #include "pr/raw_array.h"
+#include "pr/texture.h"
 
 // The page's side of the backend (draw_canvas.js). The page keeps a renderer's caches between plays. A play draws into
 // one canvas between Begin and End. Each call draws on the play's top surface: the canvas itself, or a layer, mask or
@@ -29,7 +29,7 @@
 // canvas. Colors are straight sRGB in [0, 1].
 //
 // A path is passed as its verbs (PrPathVerb) and points, or as a polyline's points, contours and closed bits. A source
-// is eight words: a kind (CanvasSource) followed by its operands. Each stop is five floats: offset, r, g, b and a. Each
+// is words: a kind (CanvasSource) followed by its operands. Each stop is five floats: offset, r, g, b and a. Each
 // filter is floats: a kind (CanvasFilter) followed by its operands.
 extern "C" uint32_t prDrawCanvasOpen(void);
 extern "C" void prDrawCanvasClose(uint32_t renderer);
@@ -69,8 +69,8 @@ extern "C" void prDrawCanvasPushList(uint32_t width, uint32_t height);
 extern "C" uint32_t prDrawCanvasPopList(void);
 extern "C" void prDrawCanvasDrawImage(const uint32_t* source, float sx, float sy, float sw, float sh, float dx,
     float dy, float dw, float dh, uint32_t sampling);
-extern "C" void prDrawCanvasPutPixels(const uint8_t* texels, size_t stride, uint32_t width, uint32_t height,
-    int32_t x, int32_t y, uint32_t flags);
+extern "C" void prDrawCanvasWritePixels(const uint32_t* source, uint32_t sx, uint32_t sy, uint32_t width,
+    uint32_t height, int32_t x, int32_t y);
 
 namespace pr_impl {
 
@@ -78,22 +78,14 @@ namespace {
 
 // The kinds of source, numbered as the page reads them. Each comment lists the source's operands.
 enum {
-    // id (two words, low first), pointer, stride, width, height and flags: an image's texels, which the page caches by
-    // the image's id
-    CanvasSource_Image,
     CanvasSource_Texture,   // the canvas of a texture (PrGpuCanvas)
     CanvasSource_List,      // the index of a list that the play drew (prDrawCanvasPopList)
-    CanvasSource_Pixels,    // pointer, stride, width, height and flags: texels that only this call uses
+    CanvasSource_Pixels,    // pointer, stride, width and height: premultiplied RGBA texels that only this call uses
 };
 typedef uint32_t CanvasSource;
 
-// How 8-bit texels are laid out, and what their alpha means.
-enum {
-    CanvasPixels_Bgra = 1u << 0,        // BGRA, not RGBA
-    CanvasPixels_Straight = 1u << 1,    // straight alpha, not premultiplied
-    CanvasPixels_Opaque = 1u << 2,      // every texel is opaque, whatever its alpha holds
-};
-typedef uint32_t CanvasPixels;
+// The most words in a source: its kind and its operands.
+constexpr uint32_t kSourceMaxWords = 5;
 
 // The kinds of filter, numbered as the page reads them.
 enum {
@@ -151,7 +143,7 @@ struct CanvasBackend : PrDrawRenderer {
     uint32_t serial;
 
     RawArray<float> operands;         // stops and filters for the call being made
-    RawArray<uint8_t> scratchTexels;  // texels for the call being made (CanvasSource_Pixels, or an image's copy)
+    RawArray<uint8_t> scratchTexels;  // texels for the call being made (CanvasSource_Pixels)
     PrPath* path;
     PrPath* extra;
     PrPathPolyline fill;
@@ -281,7 +273,7 @@ PrIRect deviceBox(PrAffine2 m, PrRect r) {
 // A source resolved for a call: its words, the rect of the texels that the source covers, and the extent of all of its
 // texels.
 struct Source {
-    uint32_t words[8];
+    uint32_t words[kSourceMaxWords];
     PrRect texels;
     PrUVec2 extent;
 };
@@ -290,37 +282,6 @@ struct Source {
 uint8_t* scratchTexelsFor(CanvasBackend* backend, size_t size) {
     backend->scratchTexels.resize(uint32_t(size));
     return backend->scratchTexels.data;
-}
-
-// Resolves an image to its own texels if they have 8 bits a channel, or else to a copy of them in Rgba8.
-void imageSource(CanvasBackend* backend, const PrDrawImage* image, Source* out) {
-    PrPixelView pixels = prDrawImagePixels(image);
-    PrPixelFormat format = prDrawImageFormat(image);
-    PrDrawAlpha alpha = prDrawImageAlpha(image);
-    uint64_t id = prDrawImageId(image);
-    CanvasPixels flags = 0;
-    if (alpha == PrDrawAlpha_Straight)
-        flags = CanvasPixels_Straight;
-    else if (alpha == PrDrawAlpha_Opaque)
-        flags = CanvasPixels_Opaque;
-    const uint8_t* texels = pixels.data;
-    size_t stride = pixels.stride;
-    if (format == PrPixelFormat_Bgra8) {
-        flags |= CanvasPixels_Bgra;
-    } else if (format != PrPixelFormat_Rgba8) {
-        stride = size_t(pixels.extent.x) * 4;
-        uint8_t* copy = scratchTexelsFor(backend, stride * pixels.extent.y);
-        prDrawImageWritePixels(image, PrPixels{copy, stride, pixels.extent}, PrPixelFormat_Rgba8, PrIVec2{0, 0});
-        texels = copy;
-        flags = 0;
-    }
-    *out = Source{
-        .words = {
-            CanvasSource_Image, uint32_t(id), uint32_t(id >> 32), uint32_t(uintptr_t(texels)), uint32_t(stride),
-            pixels.extent.x, pixels.extent.y, flags,
-        },
-        .extent = pixels.extent,
-    };
 }
 
 // Draws an area of a list into a surface of the play, at `scale` target pixels per unit of `tile` along each axis. A
@@ -357,13 +318,9 @@ bool resolveSource(Walk& w, const PrDrawSource& source, PrRect tile, PrVec2 scal
     if (!prDrawSourceIsValid(source))
         return false;
     switch (source.kind) {
-        case PrDrawSourceKind_Image:
-            imageSource(w.backend, source.image, out);
-            out->texels = source.rect;
-            return true;
         case PrDrawSourceKind_Texture: {
             PrGpuCanvas canvas = 0;
-            if (!prGpuTextureNative(w.backend->device, PrGpuTexture{uint32_t(source.texture)}, PrGpuNativeKind_Canvas2d, &canvas))
+            if (!prGpuTextureNative(w.backend->device, source.texture, PrGpuNativeKind_Canvas2d, &canvas))
                 return false;
             *out = Source{.words = {CanvasSource_Texture, canvas}, .texels = source.rect, .extent = source.extent};
             return true;
@@ -554,7 +511,9 @@ void brushPixels(Walk& w, const PrDrawBrush* brush, PrColor color, PrAffine2 fro
     }
     s.pieces.reset();
     s.colors.reset();
-    const uint32_t source[8] = {CanvasSource_Pixels, uint32_t(uintptr_t(texels)), uint32_t(stride), width, height, 0};
+    const uint32_t source[kSourceMaxWords] = {
+        CanvasSource_Pixels, uint32_t(uintptr_t(texels)), uint32_t(stride), width, height,
+    };
     const uint32_t outset[4] = {};
     prDrawCanvasPattern(source, 0, 0, float(width), float(height), PrDrawExtend_None, PrDrawExtend_None, outset, 1, 0, 0, 1,
         float(box.left), float(box.top), CanvasSampling_Nearest);
@@ -952,12 +911,22 @@ void drawNineSlice(Walk& w, const PrDrawCommand& c) {
     }
 }
 
+// Replaces the target's pixels, from the command's target point, with the whole texels in the rect of the command's
+// source. The transforms, the clips and the compositing state do not apply.
 void writePixels(Walk& w, const PrDrawCommand& c) {
     Source source{};
-    imageSource(w.backend, c.writePixels.image, &source);
-    // The words of the image's source after its kind and id: pointer, stride, width, height and flags.
-    prDrawCanvasPutPixels(reinterpret_cast<const uint8_t*>(uintptr_t(source.words[3])), source.words[4],
-        source.words[5], source.words[6], c.writePixels.origin.x, c.writePixels.origin.y, source.words[7]);
+    const PrDrawSource& texels = c.writePixels.source;
+    if (!resolveSource(w, texels, texels.rect, PrVec2{1, 1}, &source))
+        return;
+    // The rect's whole texels that the texture holds. A rect may start between texels or reach past the texture.
+    PrIVec2 first{int32_t(prF32Floor(source.texels.left)), int32_t(prF32Floor(source.texels.top))};
+    PrIRect held = prIRectIntersect(prIRectAt(first, prDrawSourceTexels(texels)),
+        PrIRect{0, 0, int32_t(source.extent.x), int32_t(source.extent.y)});
+    if (prIRectIsEmpty(held))
+        return;
+    prDrawCanvasWritePixels(source.words, uint32_t(held.left), uint32_t(held.top), uint32_t(prIRectWidth(held)),
+        uint32_t(prIRectHeight(held)), c.writePixels.origin.x + (held.left - first.x),
+        c.writePixels.origin.y + (held.top - first.y));
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

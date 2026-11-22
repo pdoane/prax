@@ -30,6 +30,17 @@ constexpr PrColor kWhite{1, 1, 1, 1};
 // Text
 
 PrTextShaper* textShaper = nullptr;
+PrTextureCache* textureCache = nullptr;
+
+// Returns a source of `rect` of the image's texels. The texels come from the image's texture in the scenes' cache. A
+// scene waits for the texture, because a scene is drawn whole. Without a texture, the source draws nothing.
+PrDrawSource imageSource(const PrTextureSource* image, PrRect rect) {
+    PrTextureRegion region{};
+    if (textureCache == nullptr ||
+            prTextureCacheWait(textureCache, image, prTextureCacheAskEncoded(0), &region) != PrTextureCacheState_Ready)
+        return PrDrawSource{};
+    return prDrawSourceRegion(&region, rect, 0);
+}
 PrTextGlyphBuffer* glyphBuffer = nullptr;
 
 // A font of the bundle at a design point, loaded once for each.
@@ -162,9 +173,9 @@ PrDrawStroke strokeOf(float width, PrPathJoin join = PrPathJoin_Miter, PrPathCap
 
 // Records the image's texels in `source` drawn over `destination`, at `opacity`, as a rectangle filled with the image's
 // brush.
-void drawImage(PrDrawList* list, const PrDrawImage* image, PrRect source, PrRect destination, PrDrawSampling sampling,
+void drawImage(PrDrawList* list, const PrTextureSource* image, PrRect source, PrRect destination, PrDrawSampling sampling,
         float opacity) {
-    PrDrawSource from = prDrawSourceImage(image, source);
+    PrDrawSource from = imageSource(image, source);
     PrDrawBrush brush = prDrawBrushImage(from, destination, sampling);
     brush.opacity = opacity;
     prDrawListRect(list, destination, {.brush = &brush});
@@ -195,9 +206,9 @@ typedef uint8_t FishColoring;
 
 constexpr PrColor kFishColorings[FishColoring_Count] = {{1, 1, 1, 1}, {1, .84f, .55f, 1}, {.015f, .075f, .06f, .24f}};
 
-const PrDrawImage* cachedFish[FishColoring_Count] = {};
-const PrDrawImage* cachedWater = nullptr;
-const PrDrawImage* cachedSkin = nullptr;
+const PrTextureSource* cachedFish[FishColoring_Count] = {};
+const PrTextureSource* cachedWater = nullptr;
+const PrTextureSource* cachedSkin = nullptr;
 
 PrColor fade(PrColor color, float alpha) {
     color.a *= alpha;
@@ -214,14 +225,9 @@ PrAffine2 turn(float angle, PrVec2 at, float sx = 1, float sy = 1) {
     return PrAffine2{c * sx, s * sx, -s * sy, c * sy, at.x, at.y};
 }
 
-const PrDrawImage* imageOf(const Array<uint8_t>& premultiplied, uint32_t width, uint32_t height) {
-    PrDrawImageDesc desc{
-        PrPixelView{premultiplied.data(), size_t(width) * 4, {width, height}}, PrPixelFormat_Rgba8,
-        PrDrawAlpha_Premultiplied, PrColorSpace_Srgb,
-    };
-    const PrDrawImage* image = nullptr;
-    prDrawImageCreate(&desc, &image);
-    return image;
+const PrTextureSource* imageOf(const Array<uint8_t>& premultiplied, uint32_t width, uint32_t height) {
+    return prTextureSourceCreateCopy(PrPixelView{premultiplied.data(), size_t(width) * 4, {width, height}},
+        PrPixelFormat_Rgba8, PrTextureAlpha_Premultiplied);
 }
 
 void put(Array<uint8_t>& pixels, uint32_t width, uint32_t x, uint32_t y, PrColor c) {
@@ -233,7 +239,7 @@ void put(Array<uint8_t>& pixels, uint32_t width, uint32_t x, uint32_t y, PrColor
 }
 
 // Returns a koi seen from above, 64 by 64, in `coloring`.
-const PrDrawImage* fish(FishColoring coloring = FishColoring_Plain) {
+const PrTextureSource* fish(FishColoring coloring = FishColoring_Plain) {
     if (cachedFish[coloring] != nullptr)
         return cachedFish[coloring];
     PrColor by = kFishColorings[coloring];
@@ -268,7 +274,7 @@ const PrDrawImage* fish(FishColoring coloring = FishColoring_Plain) {
 }
 
 // Returns faint wavy lines on transparency, 32 by 32, which tile.
-const PrDrawImage* water() {
+const PrTextureSource* water() {
     if (cachedWater != nullptr)
         return cachedWater;
     Array<uint8_t> pixels(32 * 32 * 4);
@@ -288,7 +294,7 @@ const PrDrawImage* water() {
 }
 
 // Returns a gilded frame, 32 by 32, for a nine-slice.
-const PrDrawImage* skin() {
+const PrTextureSource* skin() {
     if (cachedSkin != nullptr)
         return cachedSkin;
     Array<uint8_t> pixels(32 * 32 * 4);
@@ -478,7 +484,7 @@ void gauges(const Stage& s) {
 // Draws a frame of the gilded nine-slice around the area.
 void theatreFrame(const Stage& s, PrRect area) {
     PrDrawNineSlice slices{{8, 8, 8, 8}, {18, 18, 18, 18}, PrDrawSliceMode_Repeat, PrDrawSliceMode_Repeat, false};
-    PrDrawSource source = prDrawSourceImage(skin(), PrRect{0, 0, 32, 32});
+    PrDrawSource source = imageSource(skin(), PrRect{0, 0, 32, 32});
     prDrawListNineSlice(s.list, source, &slices, area, PrDrawSampling_Linear, {.color = kWhite});
 }
 
@@ -614,7 +620,7 @@ void koi(const Stage& s) {
         {.color = PrColor{.68f, .74f, .62f, 1}});
     prDrawListEllipse(s.list, pond, PrVec2{337, 237}, -.06f, {.color = pondColor});
     // Ripples: the water tiled at twice its size, drifting.
-    PrDrawSource ripples = prDrawSourceImage(water(), PrRect{0, 0, 32, 32});
+    PrDrawSource ripples = imageSource(water(), PrRect{0, 0, 32, 32});
     PrDrawBrush brush = prDrawBrushImage(ripples, PrRect{0, 0, 32, 32}, PrDrawSampling_Nearest);
     brush.image.tiles.x = PrDrawExtend_Repeat;
     brush.image.tiles.y = PrDrawExtend_Repeat;
@@ -692,7 +698,7 @@ void koi(const Stage& s) {
     s.capsule(lens, lens, 114, PrColor{.71f, .65f, .42f, 1});
     s.capsule(lens, lens, 108, pondColor);
     // The lens magnifies part of a fish, spread over its bounds.
-    PrDrawSource detail = prDrawSourceImage(fish(), PrRect{17 + 2 * prF32Sin(t * .4f), 7 + 2 * prF32Cos(t * .5f), 0, 0});
+    PrDrawSource detail = imageSource(fish(), PrRect{17 + 2 * prF32Sin(t * .4f), 7 + 2 * prF32Cos(t * .5f), 0, 0});
     detail.rect.right = detail.rect.left + 28;
     detail.rect.bottom = detail.rect.top + 28;
     PrDrawBrush magnified = prDrawBrushImage(detail, PrRect{0, 0, 1, 1}, PrDrawSampling_Nearest);
@@ -1791,13 +1797,17 @@ void scenesOpen(PrTextShaper* shaper) {
     glyphBuffer = prTextGlyphBufferCreate();
 }
 
+void scenesSetTextures(PrTextureCache* PR_NULLABLE textures) {
+    textureCache = textures;
+}
+
 void scenesClose() {
-    for (const PrDrawImage*& image : cachedFish) {
-        prDrawImageRelease(image);
+    for (const PrTextureSource*& image : cachedFish) {
+        prTextureSourceRelease(image);
         image = nullptr;
     }
-    prDrawImageRelease(cachedWater);
-    prDrawImageRelease(cachedSkin);
+    prTextureSourceRelease(cachedWater);
+    prTextureSourceRelease(cachedSkin);
     cachedWater = cachedSkin = nullptr;
     for (LoadedFont& loaded : loadedFonts())
         prFontRelease(loaded.font);

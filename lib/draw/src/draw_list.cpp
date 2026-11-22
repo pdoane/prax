@@ -30,23 +30,23 @@ constexpr PrRect kUnbounded{-kPrF32Infinity, -kPrF32Infinity, kPrF32Infinity, kP
 void clearRecording(DrawRecording& r) {
     for (uint32_t i = 0; i < r.paths.count; ++i)
         prPathDestroy(r.paths.data[i]);
-    for (uint32_t i = 0; i < r.images.count; ++i)
-        prDrawImageRelease(r.images.data[i]);
     for (uint32_t i = 0; i < r.fonts.count; ++i)
         prFontRelease(r.fonts.data[i]);
     for (uint32_t i = 0; i < r.lists.count; ++i)
         drawListRelease(r.lists.data[i]);
     for (uint32_t i = 0; i < r.filters.count; ++i)
         prDrawFilterRelease(r.filters.data[i]);
+    for (uint32_t i = 0; i < r.sources.count; ++i)
+        prTextureSourceRelease(r.sources.data[i]);
     for (uint32_t i = 0; i < r.held.count; ++i)
         r.held.data[i].release(r.held.data[i].context);
     r.commands.clear();
     r.side.clear();
     r.paths.clear();
-    r.images.clear();
     r.fonts.clear();
     r.lists.clear();
     r.filters.clear();
+    r.sources.clear();
     r.held.clear();
 }
 
@@ -55,10 +55,10 @@ void resetRecording(DrawRecording& r) {
     r.commands.reset();
     r.side.reset();
     r.paths.reset();
-    r.images.reset();
     r.fonts.reset();
     r.lists.reset();
     r.filters.reset();
+    r.sources.reset();
     r.held.reset();
 }
 
@@ -66,11 +66,6 @@ const PrPath* holdPath(DrawRecording& r, const PrPath* path) {
     PrPath* clone = prPathClone(path);
     r.paths.push(clone);
     return clone;
-}
-
-void holdImage(DrawRecording& r, const PrDrawImage* image) {
-    prDrawImageRetain(image);
-    r.images.push(image);
 }
 
 void holdFont(DrawRecording& r, const PrFont* font) {
@@ -92,11 +87,10 @@ void holdFilter(DrawRecording& r, const PrDrawFilter* filter) {
     r.filters.push(filter);
 }
 
-// Takes a reference to the source's image or list.
+// Takes a reference to the list of a List source. A Texture source needs no reference, because the host owns the
+// texture and keeps it.
 void holdSource(DrawRecording& r, const PrDrawSource& source) {
-    if (source.kind == PrDrawSourceKind_Image && source.image != nullptr)
-        holdImage(r, source.image);
-    else if (source.kind == PrDrawSourceKind_List && source.list != nullptr)
+    if (source.kind == PrDrawSourceKind_List && source.list != nullptr)
         holdList(r, source.list);
 }
 
@@ -340,7 +334,7 @@ PrRect commandsBounds(const PrDrawCommand* commands, uint32_t count) {
                 break;
             case PrDrawCommandKind_WritePixels: {
                 // Placed in target pixels, regardless of the transforms and clips.
-                PrIRect box = prIRectAt(c.writePixels.origin, prDrawImageExtent(c.writePixels.image));
+                PrIRect box = prIRectAt(c.writePixels.origin, prDrawSourceTexels(c.writePixels.source));
                 bounds = prRectUnion(bounds, prRectFromIRect(box));
                 painting = false;
                 break;
@@ -883,6 +877,12 @@ void prDrawListHold(PrDrawList* list, void (*release)(void* PR_NULLABLE context)
     list->recording.held.push(DrawHeld{release, context});
 }
 
+void prDrawListHoldSource(PrDrawList* list, const PrTextureSource* source) {
+    PR_ASSERT(!list->frozen);
+    prTextureSourceRetain(source);
+    list->recording.sources.push(source);
+}
+
 void prDrawListClear(PrDrawList* list) {
     changed(list);
     clearRecording(list->recording);
@@ -1049,10 +1049,10 @@ void prDrawListNineSlice(PrDrawList* list, PrDrawSource source, const PrDrawNine
     }
 }
 
-void prDrawListWritePixels(PrDrawList* list, const PrDrawImage* image, PrIVec2 origin) {
-    holdImage(list->recording, image);
+void prDrawListWritePixels(PrDrawList* list, PrDrawSource source, PrIVec2 origin) {
+    PR_ASSERT(source.kind == PrDrawSourceKind_Texture);
     PrDrawCommand* c = add(list, PrDrawCommandKind_WritePixels, PrDrawEdges_Antialiased);
-    c->writePixels.image = image;
+    c->writePixels.source = source;
     c->writePixels.origin = origin;
 }
 

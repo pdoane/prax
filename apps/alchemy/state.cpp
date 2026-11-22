@@ -191,7 +191,7 @@ Job* findJob(AppState& state, PrStringView promptId) {
 }
 
 void dropPreview(AppState& state) {
-    prDrawImageRelease(state.preview);
+    prTextureSourceRelease(state.preview);
     state.preview = nullptr;
     state.previewPromptId.clear();
 }
@@ -565,13 +565,13 @@ bool generate(AppState& state) {
         return true;
     }
     s.sourceBytes = readFile(s.sampling.sourcePath);
-    const PrDrawImage* source = imageDecode(state.codec, s.sourceBytes.data(), s.sourceBytes.count());
+    const PrTextureSource* source = imageDecode(state.codec, s.sourceBytes.data(), s.sourceBytes.count());
     if (source == nullptr) {
         setStatus(state, format("Could not read {}.", prFilePathName(s.sampling.sourcePath)));
         return false;
     }
-    PrUVec2 extent = prDrawImageExtent(source);
-    prDrawImageRelease(source);
+    PrUVec2 extent = prTextureDescDisplayedExtent(prTextureSourceDesc(source));
+    prTextureSourceRelease(source);
     s.sourceSize = {extent.x, extent.y};
     uint64_t tag = state.nextTag++;
     Array<uint8_t> bytes = s.sourceBytes;
@@ -588,13 +588,13 @@ void interruptRun(AppState& state) {
 
 void pumpEvents(AppState& state, double dt) {
     adoptSurveys(state);
-    const PrDrawImage* preview = nullptr;
+    const PrTextureSource* preview = nullptr;
     String previewPrompt;
     ComfyEvent event;
     while (comfyPoll(state.client, &event)) {
         // Only the newest frame of a preview is decoded.
         if (event.kind == ComfyEventKind_Preview) {
-            prDrawImageRelease(preview);
+            prTextureSourceRelease(preview);
             preview = imageDecode(state.codec, event.bytes.data(), event.bytes.count());
             const Job* job = activeJob(state);
             previewPrompt = job != nullptr ? job->promptId : String();
@@ -610,7 +610,7 @@ void pumpEvents(AppState& state, double dt) {
         const Job* job = findJob(state, previewPrompt);
         state.previewSize = job != nullptr ? job->output : DimensionSize{};
     } else {
-        prDrawImageRelease(preview);
+        prTextureSourceRelease(preview);
     }
     for (uint32_t i = 0; i < state.held.count();) {
         if (applyEvent(state, state.held[i].event)) {
@@ -891,7 +891,7 @@ void openImport(AppState& state) {
 }
 
 void closeImport(AppState& state) {
-    prDrawImageRelease(state.import.image);
+    prTextureSourceRelease(state.import.image);
     state.import = ImportPrompt{};
 }
 
@@ -901,18 +901,10 @@ void stageImport(AppState& state, PrPixelView pixels) {
         state.import.message = "The clipboard holds no image.";
         return;
     }
-    PrDrawImageDesc desc{
-        .pixels = pixels,
-        .format = PrPixelFormat_Rgba8,
-        .alpha = PrDrawAlpha_Straight,
-        .space = PrColorSpace_Srgb,
-    };
-    const PrDrawImage* image = nullptr;
-    if (prDrawImageCreate(&desc, &image) != PrStatus_Ok) {
-        state.import.message = "The clipboard's image is too large.";
-        return;
-    }
-    prDrawImageRelease(state.import.image);
+    // The clipboard's pixels become invalid when the call returns, so the import keeps a copy. The import encodes the
+    // copy when the user confirms it.
+    const PrTextureSource* image = prTextureSourceCreateCopy(pixels, PrPixelFormat_Rgba8, PrTextureAlpha_Straight);
+    prTextureSourceRelease(state.import.image);
     state.import.image = image;
     state.import.message.clear();
 }
@@ -920,7 +912,14 @@ void stageImport(AppState& state, PrPixelView pixels) {
 bool confirmImport(AppState& state) {
     if (state.import.image == nullptr)
         return false;
-    PrPixelView pixels = prDrawImagePixels(state.import.image);
+    PrUVec2 extent = prTextureSourceDesc(state.import.image)->extent;
+    Array<uint8_t> rgba(size_t(extent.x) * extent.y * 4);
+    PrPixels read{rgba.data(), size_t(extent.x) * 4, extent};
+    PrPixelView pixels = prPixelsView(read);
+    if (!imageReadRgba8(state.import.image, PrTextureAlpha_Straight, read)) {
+        state.import.message = "The image could not be read.";
+        return false;
+    }
     size_t size = 0;
     prImageCodecSetEncode(state.codec, "image/png", pixels, nullptr, 0, &size);
     Array<uint8_t> png(static_cast<uint32_t>(size));

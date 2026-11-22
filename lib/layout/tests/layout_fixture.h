@@ -19,6 +19,8 @@
 #include "pr/string_view.h"
 #include "pr/text_harfbuzz.h"
 
+#include "tools/harness/harness_textures.h"
+
 #include "tools/harness/test.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -345,12 +347,16 @@ inline Array<PrLayoutSceneScroll> treeScrolls(const PrLayoutTree* tree, const Pr
     return scrolls;
 }
 
-// Renders the tree onto `width` by `height` RGBA pixels.
+// Renders the tree onto `width` by `height` RGBA pixels, on the tests' memory device. The tree's images realize in the
+// tests' texture cache on that device (harnessMemoryTextures).
 inline Array<uint8_t> render(PrLayoutTree* tree, uint32_t width, uint32_t height) {
+    prLayoutTreeSetTextures(tree, harnessMemoryTextures());
     PrDrawList* list = prDrawListCreate();
     prLayoutTreePaint(tree, list);
     Array<uint8_t> bytes(size_t(width) * height * 4);
-    PrDrawRenderer* renderer = prDrawCpuCreate(nullptr);
+    PrDrawCpuOptions options = prDrawCpuOptionsDefault();
+    options.device = harnessMemoryDevice();
+    PrDrawRenderer* renderer = prDrawCpuCreate(&options);
     PrPixels into{bytes.data(), size_t(width) * 4, {width, height}};
     REQUIRE(prDrawRendererRenderPixels(renderer, list, into, PrPixelFormat_Rgba8) == PrStatus_Ok);
     prDrawRendererDestroy(renderer);

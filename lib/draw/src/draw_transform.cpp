@@ -189,24 +189,32 @@ const PrDrawCommand* prDrawTransformSnap(const PrDrawTransform* transform, const
         default:
             return command;
     }
-    // An image brush's tile in the command's space snaps its start, and its far edge where it does not repeat.
+    // The tile of an image brush in the command's space snaps at its start. Its far edge snaps too along an axis that
+    // pads, and otherwise the tile keeps its size. The tile snaps where the brush's transform places it, if the
+    // transform only moves or mirrors the tile or turns it by quarter turns. The brush of an upright image has such a
+    // transform (prDrawBrushImageUpright).
     const PrDrawBrush* brush = command->brush;
     PrRect tile{};
-    bool tiled = brush != nullptr && brush->kind == PrDrawBrushKind_Image && brush->space == PrDrawBrushSpace_User &&
-        brush->transform.a == 1 && brush->transform.b == 0 && brush->transform.c == 0 &&
-        brush->transform.d == 1 && brush->transform.e == 0 && brush->transform.f == 0;
+    bool tiled = brush != nullptr && brush->kind == PrDrawBrushKind_Image && brush->space == PrDrawBrushSpace_User;
+    const PrAffine2 t = tiled ? brush->transform : prAffine2Identity();
+    bool straight = t.b == 0 && t.c == 0 && prF32Abs(t.a) == 1 && prF32Abs(t.d) == 1;
+    bool turned = t.a == 0 && t.d == 0 && prF32Abs(t.b) == 1 && prF32Abs(t.c) == 1;
+    PrAffine2 back{};
+    tiled = tiled && (straight || turned) && prAffine2Invert(t, &back);
     if (tiled) {
         const PrRect& exact = brush->image.tiles.tile;
-        PrRect snapped = snapRect(s, a, exact, axes);
-        bool padX = brush->image.tiles.x == PrDrawExtend_Pad;
-        bool padY = brush->image.tiles.y == PrDrawExtend_Pad;
-        tile = PrRect{
-            snapped.left, snapped.top, padX ? snapped.right : snapped.left + (exact.right - exact.left),
-            padY ? snapped.bottom : snapped.top + (exact.bottom - exact.top),
+        PrRect placed = prAffine2MapRect(t, exact);
+        PrRect snapped = snapRect(s, a, placed, axes);
+        bool padX = (turned ? brush->image.tiles.y : brush->image.tiles.x) == PrDrawExtend_Pad;
+        bool padY = (turned ? brush->image.tiles.x : brush->image.tiles.y) == PrDrawExtend_Pad;
+        PrRect shifted{
+            snapped.left, snapped.top, padX ? snapped.right : snapped.left + (placed.right - placed.left),
+            padY ? snapped.bottom : snapped.top + (placed.bottom - placed.top),
         };
+        tile = sameRect(shifted, placed) ? exact : prAffine2MapRect(back, shifted);
         tiled = !sameRect(tile, exact);
-        moved = moved || tiled;
     }
+    moved = moved || tiled;
     if (!moved)
         return command;
     storage->command = *command;

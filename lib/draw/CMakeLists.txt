@@ -7,7 +7,6 @@ pr_library(draw INCLUDE include
     src/draw_filter.cpp
     src/draw_glyph.cpp
     src/identity.cpp
-    src/draw_image.cpp
     src/draw_list.cpp
     src/draw_lower.cpp
     src/draw_projection.cpp
@@ -17,8 +16,8 @@ pr_library(draw INCLUDE include
     src/draw_writer.cpp
     backends/shared/src/draw_shared_memory.cpp
 )
-target_link_libraries(pr_draw PUBLIC prax::path prax::font prax::image prax::geom prax::gpu prax::color prax::compress
-                                     prax::task
+target_link_libraries(pr_draw PUBLIC prax::path prax::font prax::image prax::texture prax::geom prax::gpu prax::color
+                                     prax::compress prax::task
                               PRIVATE prax::core_cpp)
 # The display shader, which maps a frame of lib/draw's colors to a display (pr/draw_display.h).
 pr_slang(pr_draw src/draw_display.slang VARIABLE kDrawDisplayShaders)
@@ -86,10 +85,11 @@ if (PR_DEVELOP)
         tests/test_draw_writer.cpp
     )
     target_compile_definitions(draw_tests PRIVATE PR_FONTS_DIR="${PR_TEST_FONTS_DIR}")
-    target_link_libraries(draw_tests PRIVATE prax::compress_select prax::image_select prax::draw_select prax::gpu_select
-                                             draw_compare prax::path prax::color
+    target_link_libraries(draw_tests PRIVATE prax::compress_select prax::image_select prax::gpu_select prax::texture
+                                             prax::draw_select draw_compare prax::path
+                                             prax::color
                                              prax::image prax::compress
-                                             prax::font prax::gpu prax::task)
+                                             prax::font prax::gpu prax::task prax::svg)
     if (PR_DRAW_CPU)
         target_sources(draw_tests PRIVATE
             backends/cpu/tests/test_draw_cpu.cpp
@@ -134,5 +134,18 @@ if (PR_DEVELOP)
             backends/fragment/tests/test_draw_fragment_c.c
             backends/fragment/tests/test_draw_fragment_device.cpp
         )
+    endif()
+    # On the web, the GPU renderers also run their tests in a page, on the page's WebGPU.
+    if (TARGET draw_page_tests)
+        if (PR_DRAW_TRIANGLES)
+            target_sources(draw_page_tests PRIVATE backends/triangles/tests/test_draw_triangles_c.c
+                                                  backends/triangles/tests/test_draw_triangles_device.cpp)
+        endif()
+        if (PR_DRAW_FRAGMENT)
+            target_sources(draw_page_tests PRIVATE backends/fragment/tests/test_draw_fragment_c.c
+                                                  backends/fragment/tests/test_draw_fragment_device.cpp)
+        endif()
+        target_compile_definitions(draw_page_tests PRIVATE PR_FONTS_DIR="/fonts")
+        target_link_libraries(draw_page_tests PRIVATE draw_compare prax::color prax::image prax::compress)
     endif()
 endif()

@@ -15,6 +15,18 @@ var Module = {
     printErr: text => console.error(text),
     onExit: status => console.log("pr-page-tests-exit " + status),
     onAbort: reason => console.log("pr-page-tests-exit 1 " + reason),
+    // The tests that draw on the GPU run only if the page's WebGPU has an adapter (harness::gpuTests). A browser may
+    // have WebGPU and no adapter, as headless Chrome on a machine without a GPU does, and an adapter is answered for
+    // later, so the program starts once the answer is in hasWebgpuAdapter.
+    preRun: [() => {
+        addRunDependency("webgpu-adapter");
+        const request = typeof navigator !== "undefined" && navigator.gpu ? navigator.gpu.requestAdapter() :
+            Promise.resolve(null);
+        request.catch(() => null).then(adapter => {
+            Module.hasWebgpuAdapter = adapter != null;
+            removeRunDependency("webgpu-adapter");
+        });
+    }],
 };
 for (const [name, value] of new URLSearchParams(location.search)) {
     if (name !== "arg")

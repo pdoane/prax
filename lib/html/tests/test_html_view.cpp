@@ -17,11 +17,18 @@
 #include "pr/layout_page.h"
 #include "pr/layout_style.h"
 #include "pr/layout_tree.h"
+#include "pr/mem.h"
 #include "pr/string_ops.h"
 #include "pr/text_harfbuzz.h"
+#include "pr/texture.h"
+#include "pr/time.h"
 
+#include "dom/src/dom_node.h"
 #include "html/src/html_focus.h"
+#include "html/src/html_image.h"
+#include "html/src/html_page.h"
 #include "html/tests/support/html_test_fetch.h"
+#include "tools/harness/harness_textures.h"
 
 #include "tools/harness/test.h"
 
@@ -53,7 +60,7 @@ bool verified(PrCssPresentation* presentation) {
 // Renders `list` onto 40 by 40 RGBA pixels.
 Array<uint8_t> presentation(PrDrawList* list) {
     Array<uint8_t> drawn(size_t(40) * 40 * 4);
-    PrDrawRenderer* cpu = prDrawCpuCreate(nullptr);
+    PrDrawRenderer* cpu = harnessMemoryRenderer();
     PrPixels into{drawn.data(), 40 * 4, {40, 40}};
     prDrawRendererRenderPixels(cpu, list, into, PrPixelFormat_Rgba8);
     prDrawRendererDestroy(cpu);
@@ -98,6 +105,7 @@ struct Viewed {
     PrFontSet* fonts = prFontSetCreate(nullptr);
     PrTextShaper* shaper = prTextHarfBuzzCreate();
     PrTextFont* defaultFont = nullptr;
+    PrDrawRenderer* renderer = harnessMemoryRenderer();
     PrHtmlPage* page = nullptr;
     PrLayoutCompositor* compositor = nullptr;
     PrHtmlView* view = nullptr;
@@ -118,7 +126,7 @@ struct Viewed {
     // loads at `url`.
     explicit Viewed(PrStringView html, PrImageCodecSet* PR_NULLABLE images = nullptr,
             const Array<uint8_t>* PR_NULLABLE resource = nullptr, bool holds = false,
-            const char* url = "about:blank") : resource(resource) {
+            const char* url = "about:blank", PrTextureCache* PR_NULLABLE textures = nullptr) : resource(resource) {
         String path = format("{}/Tinos-Regular.ttf", PR_FONTS_DIR);
         const PrFont* font = nullptr;
         REQUIRE(prFontCreate(openFile(path), 0, nullptr, &font) == PrStatus_Ok);
@@ -139,6 +147,8 @@ struct Viewed {
         host.font = defaultFont;
         host.shaper = shaper;
         host.images = images;
+        host.renderer = renderer;
+        host.textures = textures != nullptr ? textures : harnessMemoryTextures();
         if (resource != nullptr)
             host.fetcher = fetcher.fetcher;
         if (!holds)
@@ -167,6 +177,7 @@ struct Viewed {
         prHtmlViewDestroy(view);
         prLayoutCompositorDestroy(compositor);
         prHtmlPageDestroy(page);
+        prDrawRendererDestroy(renderer);
         prTextFontRelease(defaultFont);
         prTextShaperDestroy(shaper);
         prFontSetDestroy(fonts);
@@ -1718,7 +1729,7 @@ TEST_CASE("an img is a replaced box, sized by its image and drawing it, as the h
         PrDrawList* list = prDrawListCreate();
         prHtmlViewPaint(page.view, list);
         Array<uint8_t> drawn(size_t(40) * 40 * 4);
-        PrDrawRenderer* cpu = prDrawCpuCreate(nullptr);
+        PrDrawRenderer* cpu = harnessMemoryRenderer();
         PrPixels into{drawn.data(), 40 * 4, {40, 40}};
         REQUIRE(prDrawRendererRenderPixels(cpu, list, into, PrPixelFormat_Rgba8) == PrStatus_Ok);
         prDrawRendererDestroy(cpu);
@@ -1741,6 +1752,220 @@ TEST_CASE("an img is a replaced box, sized by its image and drawing it, as the h
         page.settle();
         CHECK(prCssElementGetBoundingClientRect(page.byId("i")).width == 4.0);
         CHECK(verified(prHtmlPagePresentation(page.page)));
+    }
+    prImageCodecSetDestroy(images);
+    prCompressCodecSetDestroy(compress);
+}
+
+TEST_CASE("the load event of an img fires after its decode finishes on the cache's task pool") {
+    PrCompressCodecSet* compress = prCompressCodecSetCreateDefault();
+    PrImageCodecSet* images = prImageCodecSetCreateDefault(compress);
+    Array<uint8_t> red(4 * 2 * 4, 255);
+    PrPixelView pixels{red.data(), 16, {4, 2}};
+    size_t size = 0;
+    REQUIRE(prImageCodecSetEncode(images, "image/png", pixels, nullptr, 0, &size) == PrStatus_Ok);
+    Array<uint8_t> png(size);
+    REQUIRE(prImageCodecSetEncode(images, "image/png", pixels, png.data(), size, &size) == PrStatus_Ok);
+    PrTaskPool* pool = prTaskPoolCreate(PrTaskPoolBackend_Builtin, 1);
+    PrTextureCacheDesc desc = prTextureCacheDescDefault(harnessMemoryDevice());
+    desc.tasks = pool;
+    PrTextureCache* textures = prTextureCacheCreate(&desc);
+    {
+        Viewed page("<img id=i src=http://test/a.png>", images, &png, true, "about:blank", textures);
+        // The load listener records how many textures the cache had realized as the event fired.
+        struct Loaded {
+            PrTextureCache* textures;
+            int32_t realized = -1;
+        } loaded{textures};
+        PrDomEventListener listener{
+            .invoke = [](void* PR_NULLABLE context, PrDomEvent*) {
+                Loaded* l = static_cast<Loaded*>(context);
+                PrTextureCacheInfo info = prTextureCacheInfo(l->textures);
+                l->realized = int32_t(info.textures + info.slots);
+            },
+            .context = &loaded,
+        };
+        prDomEventTargetAddEventListener(prDomElementAsEventTarget(page.byId("i")), "load", &listener, nullptr);
+        page.answer();
+        // The decode finishes on the thread pool and posts the task that fires the event. A round with no task
+        // therefore waits for that post. The loop is bounded by time and not by a number of rounds, because the decode
+        // takes as long as the test machine needs.
+        PrTimePerf start = prTimePerfNow();
+        while (loaded.realized < 0 && prTimePerfMilliseconds(start, prTimePerfNow()) < 10000) {
+            if (!page.runNextTask()) {
+                prTextureCacheWaitAll(textures);
+                prDomAgentWait(prHtmlPageAgent(page.page), 10);
+            }
+        }
+        CHECK(loaded.realized == 1);
+        PrHtmlImageElement* image = prHtmlImageElementQuery(prDomElementAsEventTarget(page.byId("i")));
+        REQUIRE(image != nullptr);
+        CHECK(prHtmlImageElementState(image) == PrDomImageState_CompletelyAvailable);
+        CHECK(prHtmlImageElementNaturalWidth(image) == 4);
+    }
+    prTextureCacheDestroy(textures);
+    prTaskPoolDestroy(pool);
+    prImageCodecSetDestroy(images);
+    prCompressCodecSetDestroy(compress);
+}
+
+// An opaque white picture of 4 by 2 texels with a preview of 2 by 1. The preview reads at once. The picture's own read
+// waits until the test completes it.
+struct PreviewedPicture {
+    PrTextureRead* PR_NULLABLE waiting = nullptr;
+    const PrTextureSource* source = nullptr;
+
+    PreviewedPicture() {
+        const uint8_t white[2 * 4] = {255, 255, 255, 255, 255, 255, 255, 255};
+        const PrTextureSource* preview =
+            prTextureSourceCreateCopy(PrPixelView{white, 2 * 4, {2, 1}}, PrPixelFormat_Rgba8, PrTextureAlpha_None);
+        PrTextureSourceDesc desc{
+            .texture = prTextureDesc2d(PrGpuFormat_Rgba8, PrUVec2{4, 2}, PrTextureAlpha_None),
+            .read = [](void* PR_NULLABLE context, PrTextureRead* read) {
+                static_cast<PreviewedPicture*>(context)->waiting = read;
+            },
+            .previews = &preview,
+            .previewCount = 1,
+            .context = this,
+        };
+        source = prTextureSourceCreate(&desc);
+        prTextureSourceRelease(preview);
+    }
+
+    ~PreviewedPicture() { prTextureSourceRelease(source); }
+
+    // Completes the picture's read.
+    void complete() {
+        PrTextureRead* read = waiting;
+        waiting = nullptr;
+        prMemFill(prTextureReadStorage(read), 255, 4 * 2 * 4);
+        prTextureReadComplete(read, PrStatus_Ok);
+    }
+};
+
+TEST_CASE("decode() of an img stays pending while the cache has only a preview of the picture") {
+    PrCompressCodecSet* compress = prCompressCodecSetCreateDefault();
+    PrImageCodecSet* images = prImageCodecSetCreateDefault(compress);
+    Array<uint8_t> red(4 * 2 * 4, 255);
+    PrPixelView pixels{red.data(), 16, {4, 2}};
+    size_t size = 0;
+    REQUIRE(prImageCodecSetEncode(images, "image/png", pixels, nullptr, 0, &size) == PrStatus_Ok);
+    Array<uint8_t> png(size);
+    REQUIRE(prImageCodecSetEncode(images, "image/png", pixels, png.data(), size, &size) == PrStatus_Ok);
+    PrTextureCache* textures = harnessTextureCacheCreate(harnessMemoryDevice());
+    {
+        PreviewedPicture picture;
+        Viewed page("<img id=i src=http://test/a.png>", images, &png, false, "about:blank", textures);
+        page.fetcher.settle(prHtmlPageAgent(page.page));
+        while (page.runNextTask()) {
+        }
+        PrDomElement* element = page.byId("i");
+        PrHtmlImageElement* image = prHtmlImageElementQuery(prDomElementAsEventTarget(element));
+        REQUIRE(image != nullptr);
+        REQUIRE(prHtmlImageElementState(image) == PrDomImageState_CompletelyAvailable);
+        // The element shows the picture in place of the PNG. The PNG has the same extent and no preview. The cache
+        // holds the preview's texture, which is the state after an ask that shows few texels.
+        prTextureSourceRetain(picture.source);
+        prTextureSourceRelease(element->state->picture);
+        element->state->picture = picture.source;
+        PrTextureCacheAsk few = prTextureCacheAskEncoded(0);
+        few.detail = 1;
+        PrTextureRegion region{};
+        REQUIRE(prTextureCacheRealize(textures, picture.source, few, &region) == PrTextureCacheState_Ready);
+        struct Settled {
+            bool settled = false;
+            bool rejected = false;
+        } settled;
+        PrHtmlPromise promise{
+            .context = &settled,
+            .settle = [](void* PR_NULLABLE context, PrStringView rejection) {
+                Settled* s = static_cast<Settled*>(context);
+                s->settled = true;
+                s->rejected = rejection.size != 0;
+            },
+            .release = [](void* PR_NULLABLE) {},
+        };
+        prHtmlImageElementDecode(image, &promise);
+        // A decode that waits for a read requests no frame, so the page goes idle.
+        while (page.runNextTask()) {
+        }
+        // The picture's read is under way, and an ask for the picture gets the preview. Neither a task nor a rendering
+        // update settles the decode as done or failed.
+        REQUIRE(picture.waiting != nullptr);
+        CHECK(prTextureCacheRealize(textures, picture.source, prTextureCacheAskEncoded(0), &region) ==
+            PrTextureCacheState_Partial);
+        PrHtmlWindow* window = prHtmlPageWindow(page.page);
+        htmlImagesShow(window);
+        CHECK(!settled.settled);
+        CHECK(prHtmlImageElementState(image) == PrDomImageState_CompletelyAvailable);
+        // Once the picture's texture arrives, the page has work again, and its rendering update resolves the promise.
+        picture.complete();
+        while (page.runNextTask()) {
+        }
+        CHECK(settled.settled);
+        CHECK(!settled.rejected);
+        CHECK(prTextureCacheRealize(textures, picture.source, prTextureCacheAskEncoded(0), &region) ==
+            PrTextureCacheState_Ready);
+    }
+    prTextureCacheDestroy(textures);
+    prImageCodecSetDestroy(images);
+    prCompressCodecSetDestroy(compress);
+}
+
+TEST_CASE("an img whose image fails to decode after its header is broken, fires an error event and rejects decode()") {
+    PrCompressCodecSet* compress = prCompressCodecSetCreateDefault();
+    PrImageCodecSet* images = prImageCodecSetCreateDefault(compress);
+    // A 4 by 2 PNG whose header reads but whose pixels do not, because its compressed data is cut short.
+    Array<uint8_t> red(4 * 2 * 4, 255);
+    PrPixelView pixels{red.data(), 16, {4, 2}};
+    size_t size = 0;
+    REQUIRE(prImageCodecSetEncode(images, "image/png", pixels, nullptr, 0, &size) == PrStatus_Ok);
+    Array<uint8_t> png(size);
+    REQUIRE(prImageCodecSetEncode(images, "image/png", pixels, png.data(), size, &size) == PrStatus_Ok);
+    uint32_t width = 0;
+    uint32_t height = 0;
+    REQUIRE(htmlImageSize(prStringFromBytes(PrByteView{png.data(), png.count()}), &width, &height));
+    CHECK(width == 4);
+    Array<uint8_t> cut;
+    cut.append(PrByteView{png.data(), 33});
+    const uint8_t garbage[24] = {0, 0, 0, 12, 'I', 'D', 'A', 'T', 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 0, 0, 0, 0};
+    cut.append(PrByteView{garbage, sizeof(garbage)});
+    {
+        Viewed page("<style>body { margin: 0 } img { display: block }</style>"
+            "<img id=i src=http://test/broken.png onerror=\"this.dataset.failed = 1\">", images, &cut);
+        PrDomAgent* agent = prHtmlPageAgent(page.page);
+        page.fetcher.settle(agent);
+        page.settle();
+        PrHtmlImageElement* image = prHtmlImageElementQuery(prDomElementAsEventTarget(page.byId("i")));
+        REQUIRE(image != nullptr);
+        // The request is broken (html/#img-error). It is complete, it has no natural size, and its box is empty.
+        CHECK(prHtmlImageElementState(image) == PrDomImageState_Broken);
+        CHECK(prHtmlImageElementComplete(image));
+        CHECK(prHtmlImageElementNaturalWidth(image) == 0);
+        CHECK(prCssElementGetBoundingClientRect(page.byId("i")).width == 0.0);
+        // decode() of a broken request rejects with an EncodingError (html/#dom-img-decode).
+        struct Settled {
+            bool settled = false;
+            bool rejected = false;
+            bool released = false;
+        } settled;
+        PrHtmlPromise promise{
+            .context = &settled,
+            .settle = [](void* PR_NULLABLE context, PrStringView rejection) {
+                Settled* s = static_cast<Settled*>(context);
+                s->settled = true;
+                s->rejected = rejection == "EncodingError";
+            },
+            .release = [](void* PR_NULLABLE context) { static_cast<Settled*>(context)->released = true; },
+        };
+        prHtmlImageElementDecode(image, &promise);
+        // The promise settles in a task.
+        CHECK(!settled.settled);
+        while (page.runNextTask()) {
+        }
+        CHECK(settled.settled);
+        CHECK(settled.rejected);
+        CHECK(settled.released);
     }
     prImageCodecSetDestroy(images);
     prCompressCodecSetDestroy(compress);
@@ -1821,11 +2046,12 @@ TEST_CASE("an img is sized and drawn as its image's orientation displays it, unl
             PrLayoutNode node = prCssPresentationLayoutNode(presentation, prDomElementAsNode(page.byId("i")));
             return prLayoutNodeContent(prCssPresentationTree(presentation), node);
         };
+        // The content is the stored image. It shows upright, as its orientation displays it.
         PrLayoutContent oriented = content();
         REQUIRE(oriented.kind == PrLayoutContentKind_Image);
-        CHECK(prDrawImageExtent(oriented.image).x == 2);
-        CHECK(prDrawImagePixels(oriented.image).data[0] == 255);
-        CHECK(prDrawImagePixels(oriented.image).data[4] == 255);
+        CHECK(oriented.upright);
+        CHECK(prTextureSourceDesc(oriented.image)->extent.x == 4);
+        CHECK(prTextureDescDisplayedExtent(prTextureSourceDesc(oriented.image)).x == 2);
         CHECK(prCssElementGetBoundingClientRect(page.byId("i")).width == 2.0);
         CHECK(prCssElementGetBoundingClientRect(page.byId("i")).height == 4.0);
         PrHtmlImageElement* img = prHtmlImageElementQuery(prDomElementAsEventTarget(page.byId("i")));
@@ -1835,14 +2061,44 @@ TEST_CASE("an img is sized and drawn as its image's orientation displays it, unl
         prDomElementSetAttribute(page.byId("i"), "style", "image-orientation: none");
         PrLayoutContent unoriented = content();
         REQUIRE(unoriented.kind == PrLayoutContentKind_Image);
-        CHECK(prDrawImageExtent(unoriented.image).x == 4);
-        CHECK(prDrawImagePixels(unoriented.image).data[0] == 255);
-        CHECK(prDrawImagePixels(unoriented.image).data[4] == 0);
+        CHECK(!unoriented.upright);
+        CHECK(unoriented.image == oriented.image);
         CHECK(prCssElementGetBoundingClientRect(page.byId("i")).width == 4.0);
         CHECK(prCssElementGetBoundingClientRect(page.byId("i")).height == 2.0);
 
         prDomElementSetAttribute(page.byId("i"), "style", "");
         CHECK(content().image == oriented.image);
+    }
+    prImageCodecSetDestroy(images);
+    prCompressCodecSetDestroy(compress);
+}
+
+TEST_CASE("a video without video data takes its poster's natural size, as displayed in the poster's orientation") {
+    PrCompressCodecSet* compress = prCompressCodecSetCreateDefault();
+    PrImageCodecSet* images = prImageCodecSetCreateDefault(compress);
+    Array<uint8_t> stored(4 * 2 * 4, 255);
+    PrPixelView pixels{stored.data(), 16, {4, 2}};
+    size_t size = 0;
+    REQUIRE(prImageCodecSetEncode(images, "image/png", pixels, nullptr, 0, &size) == PrStatus_Ok);
+    Array<uint8_t> png(size);
+    REQUIRE(prImageCodecSetEncode(images, "image/png", pixels, png.data(), size, &size) == PrStatus_Ok);
+    // A quarter turn clockwise displays the 4 by 2 poster as 2 by 4.
+    Array<uint8_t> turned = withOrientation(png, 6);
+    {
+        Viewed page("<style>video { display: block }</style><video id=v poster=http://test/turned.png></video>", images, &turned);
+        page.fetcher.settle(prHtmlPageAgent(page.page));
+        prHtmlViewUpdate(page.view);
+        page.settle();
+        const DomElementState* state = page.byId("v")->state;
+        REQUIRE(state != nullptr);
+        REQUIRE(state->picture != nullptr);
+        CHECK(prTextureSourceDesc(state->picture)->extent.x == 4);
+        CHECK(state->naturalWidth == 2);
+        CHECK(state->naturalHeight == 4);
+        CHECK(prTextureSourceDesc(state->picture)->orientation ==
+            (PrTextureOrientationFlag_Transpose | PrTextureOrientationFlag_FlipX));
+        CHECK(prCssElementGetBoundingClientRect(page.byId("v")).width == 2.0);
+        CHECK(prCssElementGetBoundingClientRect(page.byId("v")).height == 4.0);
     }
     prImageCodecSetDestroy(images);
     prCompressCodecSetDestroy(compress);
@@ -3036,7 +3292,7 @@ TEST_CASE("a paged view lays its document out in the page boxes that its @page r
     PrDrawList* list = prDrawListCreate();
     prHtmlViewPaintPage(v.view, 0, list);
     Array<uint8_t> drawn(size_t(200) * 300 * 4);
-    PrDrawRenderer* cpu = prDrawCpuCreate(nullptr);
+    PrDrawRenderer* cpu = harnessMemoryRenderer();
     PrPixels into{drawn.data(), 200 * 4, {200, 300}};
     prDrawRendererRenderPixels(cpu, list, into, PrPixelFormat_Rgba8);
     prDrawRendererDestroy(cpu);
@@ -3117,7 +3373,7 @@ TEST_CASE("a paged view prints and previews each page on its sheet, with its mar
     // Returns the RGBA pixels of `list` drawn into `width` by `height` px.
     auto render = [](PrDrawList* list, uint32_t width, uint32_t height) {
         Array<uint8_t> drawn(size_t(width) * height * 4);
-        PrDrawRenderer* cpu = prDrawCpuCreate(nullptr);
+        PrDrawRenderer* cpu = harnessMemoryRenderer();
         PrPixels into{drawn.data(), size_t(width) * 4, {width, height}};
         prDrawRendererRenderPixels(cpu, list, into, PrPixelFormat_Rgba8);
         prDrawRendererDestroy(cpu);
@@ -3258,7 +3514,7 @@ TEST_CASE("a paged view keeps a heading on the page of the content after it") {
         PrDrawList* list = prDrawListCreate();
         prHtmlViewPaintPage(v.view, page, list);
         Array<uint8_t> drawn(size_t(200) * 300 * 4);
-        PrDrawRenderer* cpu = prDrawCpuCreate(nullptr);
+        PrDrawRenderer* cpu = harnessMemoryRenderer();
         PrPixels into{drawn.data(), 200 * 4, {200, 300}};
         prDrawRendererRenderPixels(cpu, list, into, PrPixelFormat_Rgba8);
         prDrawRendererDestroy(cpu);
@@ -3291,7 +3547,7 @@ TEST_CASE("a paged view draws the content of its pages' margin boxes, with the p
         PrDrawList* list = prDrawListCreate();
         prHtmlViewPaintPage(v.view, index, list);
         Array<uint8_t> drawn(size_t(200) * 300 * 4);
-        PrDrawRenderer* cpu = prDrawCpuCreate(nullptr);
+        PrDrawRenderer* cpu = harnessMemoryRenderer();
         PrPixels into{drawn.data(), 200 * 4, {200, 300}};
         prDrawRendererRenderPixels(cpu, list, into, PrPixelFormat_Rgba8);
         prDrawRendererDestroy(cpu);

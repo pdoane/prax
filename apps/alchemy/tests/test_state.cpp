@@ -114,7 +114,7 @@ TEST_CASE("a paste of no image says so and keeps what was staged") {
     Fixture f;
     static const uint8_t kPixels[] = {1, 2, 3, 255};
     stageImport(f.state, PrPixelView{kPixels, 4, PrUVec2{1, 1}});
-    const PrDrawImage* staged = f.state.import.image;
+    const PrTextureSource* staged = f.state.import.image;
     stageImport(f.state, PrPixelView{nullptr, 0, PrUVec2{0, 0}});
     CHECK(f.state.import.image == staged);
     CHECK(!f.state.import.message.isEmpty());

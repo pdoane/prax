@@ -3,7 +3,9 @@
 
 #include "examples/draw_features/workloads.h"
 
+#include "pr/array.h"
 #include "pr/string.h"
+#include "pr/texture.h"
 
 #include "examples/draw_features/drawing.h"
 
@@ -416,6 +418,42 @@ void icons(PrDrawList* list, float, float, double) {
         prPathDestroy(path);
 }
 
+// The distinct images of the thumbnails workload, each made on first use and kept until releaseWorkloadImages.
+constexpr uint32_t kThumbnails = 256;
+const PrTextureSource* thumbnailImages[kThumbnails] = {};
+
+// Returns the thumbnail at `index`. It is a gradient in a hue of its own, with a stripe that its index places.
+const PrTextureSource* thumbnail(uint32_t index) {
+    constexpr uint32_t kSide = 40;
+    const PrTextureSource*& image = thumbnailImages[index % kThumbnails];
+    if (image != nullptr)
+        return image;
+    PrColor tint = paletteColor(index);
+    Array<uint8_t> rgba(kSide * kSide * 4);
+    for (uint32_t y = 0; y < kSide; ++y) {
+        for (uint32_t x = 0; x < kSide; ++x) {
+            float shade = .4f + .6f * float(x + y) / float(2 * kSide);
+            bool stripe = (x + index) % 16 < 3;
+            uint8_t* t = &rgba[(y * kSide + x) * 4];
+            t[0] = stripe ? 255 : uint8_t(tint.r * shade * 255);
+            t[1] = stripe ? 255 : uint8_t(tint.g * shade * 255);
+            t[2] = stripe ? 255 : uint8_t(tint.b * shade * 255);
+            t[3] = 255;
+        }
+    }
+    image = prTextureSourceCreateCopy(PrPixelView{rgba.data(), size_t(kSide) * 4, {kSide, kSide}}, PrPixelFormat_Rgba8,
+        PrTextureAlpha_None);
+    return image;
+}
+
+// Draws a grid of distinct small images, as a photo gallery or an image-heavy page shows them. The grid has more
+// distinct images than a draw on the slots tier binds.
+void thumbnails(PrDrawList* list, float, float, double) {
+    cells(kArea, PrVec2{40, 40}, 4, [&](PrRect r, uint32_t i, uint32_t, uint32_t) {
+        drawImage(list, thumbnail(i), PrRect{0, 0, 40, 40}, r, PrDrawSampling_Linear, 1);
+    });
+}
+
 // Draws elements faded by opacity groups, as a transition shows them.
 void opacityGroups(PrDrawList* list, float, float, double time) {
     cells(kArea, PrVec2{80, 40}, 8, [&](PrRect r, uint32_t i, uint32_t, uint32_t) {
@@ -529,6 +567,7 @@ const Array<Drawing>& workloadDrawings() {
         {"Rounded clips", "Cards clipped to their rounded corners.", roundedClips},
         {"Shadows", "Cards with drop shadows, some with inner shadows.", shadows},
         {"Icons", "Small images and small paths, alternating.", icons},
+        {"Thumbnails", "A grid of distinct small images, more than one draw can bind on the slots tier.", thumbnails},
         {"Opacity groups", "Buttons faded by opacity groups.", opacityGroups},
         {"Gradients", "Buttons filled with linear and radial gradients.", gradients},
         {"Interface", "A settings window, drawn as a tree of views paints it.", interface},
@@ -538,6 +577,13 @@ const Array<Drawing>& workloadDrawings() {
         },
     });
     return workloads;
+}
+
+void releaseWorkloadImages() {
+    for (const PrTextureSource*& image : thumbnailImages) {
+        prTextureSourceRelease(image);
+        image = nullptr;
+    }
 }
 
 } // namespace drawings

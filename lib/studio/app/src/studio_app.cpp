@@ -48,7 +48,8 @@ void event(void* context, PrApp*, const PrAppEvent* e) {
         s->desc.event(s->desc.context, s, e);
 }
 
-// Calls the application's shutdown, and then closes the windows that are still open, newest first, and the device.
+// Calls the application's shutdown callback. Then closes the windows that are still open, newest first. Finally frees
+// the device and the texture cache on it.
 void shutdown(void* context, PrApp*) {
     PrStudioApp* s = static_cast<PrStudioApp*>(context);
     s->stopping = true;
@@ -56,7 +57,7 @@ void shutdown(void* context, PrApp*) {
         s->desc.shutdown(s->desc.context, s);
     while (s->windows.count != 0)
         prStudioWindowDestroy(s->windows.data[s->windows.count - 1]);
-    studioAppCloseDevice(s);
+    studioAppClose(s);
 }
 
 } // namespace
@@ -75,12 +76,13 @@ PrStatus prStudioAppRun(const PrStudioAppDesc* desc) {
     s->status = PrStatus_Ok;
     s->shaper = prTextShaperCreate(PrTextShaperBackend_Default);
     s->paths = prPathCacheCreate();
-    s->glyphs = desc->images != nullptr ? prDrawGlyphBitmapCreate(desc->images) : nullptr;
+    s->compress = desc->compress;
+    s->images = desc->images;
+    studioAppOpen(s);
     prAppRun(platform, {.context = s, .start = start, .event = event, .shutdown = shutdown});
     PrStatus status = s->status;
     prAppDestroy(platform);
     s->windows.reset();
-    prDrawGlyphDecoderDestroy(s->glyphs);
     prTextShaperDestroy(s->shaper);
     prPathCacheDestroy(s->paths);
     prMemoryFree(s);

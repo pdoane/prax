@@ -14,6 +14,7 @@
 #include "pr/string_view.h"
 
 #include "layout/src/layout_anchor.h"
+#include "layout/src/layout_background.h"
 #include "layout/src/layout_cache.h"
 #include "layout/src/layout_fragment.h"
 #include "layout/src/layout_frame.h"
@@ -177,11 +178,13 @@ struct LayoutReplaced {
     PrLayoutContentKind contentKind;
     mutable PrDrawList* PR_NULLABLE content;
     PrLayoutPainter painter;
-    const PrDrawImage* PR_NULLABLE image;
+    const PrTextureSource* PR_NULLABLE image;
     PrLayoutPath path;                // Path: its path the tree's clone, which it frees
     mutable PrLayoutVec painted;
     float limit;                      // Image: the brightest that the image paints (PrLayoutContent::limit)
     PrLayoutImageRendering rendering; // Image
+    PrTextureCachePriority priority;  // Image: PrLayoutContent::priority
+    bool upright;                     // Image: PrLayoutContent::upright
     uint64_t embed;                   // Embed: its id
     uint64_t revision;                // PrLayoutContent::revision
 
@@ -224,6 +227,7 @@ struct LayoutRootReader {
 // A layout tree.
 struct LayoutTree {
     LayoutStyles* styles;           // owned by the tree
+    LayoutTextures* textures;       // owned by the tree, and changed by paints of a const tree
 
     // --- Nodes ---
 

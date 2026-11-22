@@ -120,24 +120,20 @@ inline PrIRect fragmentInstancePixels(const FragmentInstance& i, PrVec2 offset, 
 enum {
     FragmentTextureOp_Create,     // creates a texture of the texels' size, holding them
     FragmentTextureOp_Update,     // replaces the texels of a region
-    FragmentTextureOp_Destroy,    // destroys the texture
 };
 typedef uint8_t FragmentTextureOp;
 
-// A change to a texture. Textures are named by numbers, and a number is never reused. A texture is destroyed only after
-// it has gone unused for several prepares.
+// A change to a texture. Textures are named by numbers, and a number is never reused. A texture lives until the
+// renderer drops its resources.
 struct FragmentTextureRequest {
     FragmentTextureOp op;
 
     // Create: Rgba8 or RgbaF16, premultiplied and read without conversion, or R8 for coverage.
     PrPixelFormat format;
 
-    // Create: true if the texture has every mip level down to one texel, which the driver fills from the first level by
-    // the device's filter.
-    bool mipmapped;
-
     uint32_t texture;                       // the texture's number
     PrUVec2 origin;                         // Update: the region's top left
+
     PrPixelView texels;                     // Create: the size and the texels; Update: the region's texels
 };
 
@@ -150,7 +146,7 @@ struct FragmentFrame {
     uint32_t requestCount;
     const FragmentTexture* PR_NULLABLE textures;
     uint32_t textureCount;
-    const PrDrawTextureId* PR_NULLABLE hostTextures;  // the host's textures that the frame reads
+    const PrGpuTexture* PR_NULLABLE hostTextures;  // the host's textures that the frame reads
     uint32_t hostTextureCount;
 
     // The gradients' ramps. A ramp's table holds its colors at the kFragmentRampResolution + 1 even steps of the

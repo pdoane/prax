@@ -14,12 +14,12 @@
 
 #include "pr/audio_mixer.h"
 #include "pr/dom.h"
-#include "pr/draw_image.h"
 #include "pr/html.h"
 #include "pr/html_media_source.h"
 #include "pr/media.h"
 #include "pr/raw_array.h"
 #include "pr/string_view.h"
+#include "pr/texture.h"
 
 #include "dom/src/dom_event.h"
 #include "html/src/html_window.h"
@@ -33,6 +33,9 @@ namespace pr_impl {
 // is a part of its element (DomPartTarget).
 struct HtmlTrackList : DomPartTarget {};
 
+// A decoded video frame on a device, which the element's painter and the draw lists that it recorded share.
+struct HtmlMediaFrame;
+
 // The state of a media element (html/#media-element). The element owns the state, which is created when it is first
 // needed and destroyed with the element. A task or timer of the state holds the element (domNodeHold) until the task or
 // timer is done. Otherwise the state does not hold the element.
@@ -44,7 +47,7 @@ struct HtmlMedia {
     HtmlTrackList videoTracks;
     PrRawString currentSrc;               // html/#dom-media-currentsrc
     PrRawString errorMessage;             // html/#dom-mediaerror-message
-    RawArray<PrHtmlPlayPromise> promises; // html/#list-of-pending-play-promises
+    RawArray<PrHtmlPromise> promises;     // html/#list-of-pending-play-promises
     RawArray<double> played;              // html/#dom-media-played: each range's start and end, in order
     double position;                      // html/#official-playback-position, in seconds, at `since`
     double since;                         // the value of prTimeMonotonicMilliseconds at which `position` was taken
@@ -69,9 +72,11 @@ struct HtmlMedia {
     bool preservesPitch;
     bool loadedData;                     // true once loadeddata has fired, until the next load
 
-    // What a video element shows: the decoded frame and the poster frame (html/#poster-frame), each as an image, the
-    // serial of the frame (PrMediaFrame::serial), and the generation of the poster's fetch, so that the result of an
-    // earlier fetch is dropped.
+    // What a video element shows. `frame` is the decoded frame as a texture on the device of the window's texture
+    // cache, and `frameSerial` is its serial (PrMediaFrame::serial). `frameGeneration` is the generation of the cache
+    // when the texture was made: a later generation means that the cache moved to another device, and the frame is
+    // imported again. `poster` is the poster frame (html/#poster-frame), an image that the cache realizes. `posters`
+    // counts the fetches of the poster, so that the result of an earlier fetch is dropped.
     PrMediaDecoder* PR_NULLABLE decoder;     // the resource of the current load, or null
     PrAudioSource* PR_NULLABLE source;       // plays the audio of `decoder`, or null if nothing does
 
@@ -80,9 +85,10 @@ struct HtmlMedia {
     PrHtmlMediaSource* PR_NULLABLE mediaSource;
     double playableEnd;
     bool seekWaits;                          // a seek waits for the media source to buffer its position
-    const PrDrawImage* PR_NULLABLE frame;
-    const PrDrawImage* PR_NULLABLE poster;
+    HtmlMediaFrame* PR_NULLABLE frame;
+    const PrTextureSource* PR_NULLABLE poster;
     uint64_t frameSerial;
+    uint64_t frameGeneration;
     uint32_t posters;
     bool showPoster;                     // html/#show-poster-flag
 
@@ -123,7 +129,7 @@ void htmlMediaLoad(HtmlMedia* media);
 double htmlMediaCurrentTime(HtmlMedia* media);
 void htmlMediaSeek(HtmlMedia* media, double seconds);
 bool htmlMediaEnded(HtmlMedia* media);
-void htmlMediaPlay(HtmlMedia* media, const PrHtmlPlayPromise& promise);
+void htmlMediaPlay(HtmlMedia* media, const PrHtmlPromise& promise);
 void htmlMediaPause(HtmlMedia* media);
 void htmlMediaSetRate(HtmlMedia* media, double rate, bool isDefault);
 void htmlMediaSetVolume(HtmlMedia* media, double volume, bool muted);

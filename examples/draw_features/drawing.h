@@ -10,6 +10,7 @@
 #include "pr/font.h"
 #include "pr/min_max.h"
 #include "pr/text.h"
+#include "pr/texture_cache.h"
 #include "pr/vec.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -56,13 +57,22 @@ constexpr float kCaptionBand = 16;
 
 // Draws the drawing for `display`, with its text shaped by `shaper` and its hinted fonts hinted by `hinter`, or drawn
 // in their design outlines without one, and the captions of its cases over what it draws, without the drawing's state.
+// Its images realize in `textures`, a cache on the device of the renderer that draws the list. Without a cache, the
+// images draw nothing.
 void drawDrawing(const Drawing& drawing, PrDrawList* list, PrTextShaper* shaper, PrFontHinter* PR_NULLABLE hinter,
-    const PrAppDisplay& display, float width, float height, double time);
+    const PrAppDisplay& display, PrTextureCache* PR_NULLABLE textures, float width, float height, double time);
 
-// Returns the shaper and the hinter of the drawing that is being drawn, and the display that it is drawn for.
+// Returns the shaper and the hinter of the drawing that is being drawn, the display that it is drawn for, and the cache
+// that its images realize in.
 PrTextShaper* drawingShaper();
 PrFontHinter* PR_NULLABLE drawingHinter();
 const PrAppDisplay& drawingDisplay();
+PrTextureCache* PR_NULLABLE drawingTextures();
+
+// Returns a source of `rect` of the image's texels, in the image's stored orientation. The texels come from the image's
+// texture in the drawing's cache. The drawing waits for the texture, because a drawing is drawn whole. If `sampling` is
+// Mipmap, the texture has every mip level. Without a texture, the source draws nothing.
+PrDrawSource imageSource(const PrTextureSource* image, PrRect rect, PrDrawSampling sampling = PrDrawSampling_Linear);
 
 // Captions a case with the text, centered in `band` on a baseline just above the band's bottom. The text shrinks if it
 // would not fit. Captions are in the drawing's space.
@@ -165,19 +175,19 @@ inline PrPath* star(PrVec2 center, float radius, uint32_t points, uint32_t step)
 
 // Records the image's texels in `source` drawn over `destination`, at `opacity`, as a rectangle filled with the image's
 // brush.
-inline void drawImage(PrDrawList* list, const PrDrawImage* image, PrRect source, PrRect destination,
+inline void drawImage(PrDrawList* list, const PrTextureSource* image, PrRect source, PrRect destination,
         PrDrawSampling sampling, float opacity) {
-    PrDrawSource from = prDrawSourceImage(image, source);
+    PrDrawSource from = imageSource(image, source, sampling);
     PrDrawBrush brush = prDrawBrushImage(from, destination, sampling);
     brush.opacity = opacity;
     prDrawListRect(list, destination, {.brush = &brush});
 }
 
 // Records the whole image as a nine-slice over `destination`.
-inline void drawNineSlice(PrDrawList* list, const PrDrawImage* image, const PrDrawNineSlice* slices,
+inline void drawNineSlice(PrDrawList* list, const PrTextureSource* image, const PrDrawNineSlice* slices,
         PrRect destination, PrDrawSampling sampling, PrColor tint) {
-    PrRect whole{0, 0, float(prDrawImageExtent(image).x), float(prDrawImageExtent(image).y)};
-    PrDrawSource from = prDrawSourceImage(image, whole);
+    PrRect whole{0, 0, float(prTextureSourceDesc(image)->extent.x), float(prTextureSourceDesc(image)->extent.y)};
+    PrDrawSource from = imageSource(image, whole, sampling);
     prDrawListNineSlice(list, from, slices, destination, sampling, {.color = tint});
 }
 
@@ -198,13 +208,13 @@ constexpr uint32_t kFrameImageSize = 48;
 constexpr uint32_t kSmallTileSize = 16;
 
 // Images that the drawings share, created once: a colorful test card, a nine-slice frame and a checker with a dot.
-const PrDrawImage* testCard();
-const PrDrawImage* frameImage();
-const PrDrawImage* smallTile();
+const PrTextureSource* testCard();
+const PrTextureSource* frameImage();
+const PrTextureSource* smallTile();
 
 // Returns the test card encoded as a PNG and decoded back through lib/image, created once. Returns null if lib/image
 // cannot read it.
-const PrDrawImage* PR_NULLABLE decodedCard();
+const PrTextureSource* PR_NULLABLE decodedCard();
 
 // Returns a list of a small motif within (0, 0) to (40, 40).
 PrDrawList* motif();

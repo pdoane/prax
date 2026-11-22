@@ -45,11 +45,6 @@ typedef struct PrDrawFrame PrDrawFrame;
 // while preparing, once for each region that backdrops read.
 typedef void (*PrDrawBeneathFn)(void* PR_NULLABLE context, PrGpuPass* pass, PrIRect area);
 
-// Returns the texture id of a texture on the renderer's device.
-static inline PrDrawTextureId prDrawGpuTexture(PrGpuTexture texture) {
-    return texture.id;
-}
-
 // Where a render finds what lies beneath it.
 enum {
     PrDrawBeneathKind_Color,        // a solid color
@@ -67,7 +62,7 @@ typedef struct PrDrawBeneath {
 
     // Texture: sampled with the render's pixel (0, 0) at `origin`, `extent` texels in size. It is not the texture that
     // the render's pass draws into. The host keeps it alive and unchanged until the render's commands are done.
-    PrDrawTextureId texture;
+    PrGpuTexture texture;
     PrUVec2 extent;
     PrIVec2 origin;
 

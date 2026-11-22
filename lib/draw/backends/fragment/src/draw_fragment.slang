@@ -517,15 +517,15 @@ struct ImageSource {
     uint tileX;
     uint tileY;
     uint sampling;
-    uint alpha;                 // PrDrawAlpha of the texels
+    uint alpha;                 // FragmentAlpha of the texels
     bool2 whole;                // whether `texels` spans the texture whole along each axis
 };
 
 // Returns a filtered color, premultiplied as the source's alpha says.
 float4 premultiplied(float4 c, uint alpha) {
-    if (alpha == PrDrawAlpha_Opaque)
+    if (alpha == FragmentAlpha_Opaque)
         c.a = 1;
-    else if (alpha == PrDrawAlpha_Straight)
+    else if (alpha == FragmentAlpha_Straight)
         c.rgb *= c.a;
     return c;
 }
@@ -665,7 +665,7 @@ struct ImageLevel {
     uint level;
     TapAxis x;
     TapAxis y;
-    uint alpha;                 // PrDrawAlpha of the texels
+    uint alpha;                 // FragmentAlpha of the texels
 };
 
 // A texel, premultiplied, or transparent for a tap outside the texels.

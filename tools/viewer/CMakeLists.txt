@@ -22,9 +22,9 @@ if ((APPLE OR WIN32) AND PR_JS)
         PR_TEX_TESTS_DIR="${PROJECT_SOURCE_DIR}/lib/tex/tests"
         PR_THIRD_PARTY_DIR="${PROJECT_SOURCE_DIR}/third_party"
         PR_VIEWER_CACHE_DIR="${PROJECT_BINARY_DIR}/viewer-cache")
-    target_link_libraries(viewer_documents PUBLIC prax::compress_select prax::image_select prax::draw_select prax::draw
-                                                  draw_compare draw_renderers suite_render
-                                                  prax::text
+    target_link_libraries(viewer_documents PUBLIC prax::compress_select prax::image_select prax::texture prax::draw
+                                                  prax::draw_select draw_compare draw_renderers
+                                                  suite_render prax::text
                                                   prax::app prax::lottie prax::font
                                                   page_host
                                            PRIVATE prax::core_cpp prax::gpu prax::json prax::html prax::css
