@@ -79,6 +79,9 @@ void setExtent(PrAppWindow* window, PrUVec2 extent) {
     if (!object.host.headless)
         size = clampedToScreen(object.window, size, object.window.styleMask);
     [object.window setContentSize:size];
+    // AppKit resizes a window about its bottom left corner. A popup is placed again, because its placement depends on
+    // its size.
+    [object place];
 }
 
 // The extent limits as AppKit holds them: a greatest extent of zero is unlimited.

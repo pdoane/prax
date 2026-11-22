@@ -273,6 +273,19 @@ struct PrAppEvent {
 // Returns a Scroll event's delta in logical pixels, given the height of a line.
 PrVec2 prAppEventScrollPixels(const PrAppEvent* event, float lineHeight);
 
+// A step through a history of places, such as a browser's back and forward.
+enum {
+    PrAppNavigation_None,
+    PrAppNavigation_Back,
+    PrAppNavigation_Forward,
+};
+typedef int8_t PrAppNavigation;
+
+// Returns the history step that `event` asks for, by the platform's conventions. A press of a mouse's back or forward
+// button asks for that step. The start of a horizontal swipe between pages asks for Back if it moves the content to the
+// right, and for Forward otherwise. Any other event returns None.
+PrAppNavigation prAppEventNavigation(const PrAppEvent* event);
+
 // Returns or replaces the text of a keyboard or input event. For any other event, the getter returns an empty view and
 // the setter does nothing.
 PrStringView prAppEventText(const PrAppEvent* event);

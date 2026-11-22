@@ -58,6 +58,21 @@ PrVec2 prAppEventScrollPixels(const PrAppEvent* event, float lineHeight) {
     return PrVec2{event->scroll.delta.x * lineHeight, event->scroll.delta.y * lineHeight};
 }
 
+PrAppNavigation prAppEventNavigation(const PrAppEvent* event) {
+    if (event->kind == PrAppEventKind_PointerDown) {
+        if (event->pointer.button == kPrAppPointerButtonBack)
+            return PrAppNavigation_Back;
+        if (event->pointer.button == kPrAppPointerButtonForward)
+            return PrAppNavigation_Forward;
+        return PrAppNavigation_None;
+    }
+    bool swipe = event->kind == PrAppEventKind_Gesture && event->gesture.kind == PrAppGestureKind_Swipe &&
+        event->gesture.phase == PrAppGesturePhase_Begin;
+    if (!swipe || event->gesture.swipe.x == 0)
+        return PrAppNavigation_None;
+    return event->gesture.swipe.x > 0 ? PrAppNavigation_Back : PrAppNavigation_Forward;
+}
+
 PrStringView prAppEventText(const PrAppEvent* event) {
     if (isKeyboardEvent(event->kind))
         return event->keyboard.text;

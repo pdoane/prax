@@ -315,7 +315,9 @@ void prAppWindowRequestUnpacedFrame(PrAppWindow* window);
 void prAppWindowSetTitle(PrAppWindow* window, PrStringView title);
 PrStringView prAppWindowTitle(const PrAppWindow* window);
 
-// Resizes the window's content in place, clamped to the screen and to the extent limits.
+// Resizes the window's content in place. The extent is clamped to the screen and to the window's extent limits. A popup
+// is placed again for its new extent, by its placement against its anchor. A popup that is centered on its anchor, or
+// flipped above it, therefore moves when it changes size.
 void prAppWindowSetExtent(PrAppWindow* window, PrUVec2 extent);
 
 // Sets the minimum and maximum extent to which the user can resize the content. A zero component leaves that axis

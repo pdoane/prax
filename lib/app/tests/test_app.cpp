@@ -294,6 +294,29 @@ TEST_CASE("a scroll resolves to pixels by its unit") {
     CHECK(resolved.y == -40.0f);
 }
 
+TEST_CASE("the back and forward mouse buttons and a horizontal swipe map to back and forward navigation") {
+    auto pressed = [](uint8_t button, PrAppEventKind kind = PrAppEventKind_PointerDown) {
+        PrAppEvent event{.kind = kind, .pointer = {.button = button}};
+        return prAppEventNavigation(&event);
+    };
+    CHECK(pressed(kPrAppPointerButtonBack) == PrAppNavigation_Back);
+    CHECK(pressed(kPrAppPointerButtonForward) == PrAppNavigation_Forward);
+    CHECK(pressed(0) == PrAppNavigation_None);
+    CHECK(pressed(kPrAppPointerButtonBack, PrAppEventKind_PointerUp) == PrAppNavigation_None);
+    auto swiped = [](PrVec2 swipe, PrAppGesturePhase phase = PrAppGesturePhase_Begin) {
+        PrAppEvent event{.kind = PrAppEventKind_Gesture};
+        event.gesture = {.kind = PrAppGestureKind_Swipe, .phase = phase, .swipe = swipe};
+        return prAppEventNavigation(&event);
+    };
+    CHECK(swiped(PrVec2{1, 0}) == PrAppNavigation_Back);
+    CHECK(swiped(PrVec2{-1, 0}) == PrAppNavigation_Forward);
+    CHECK(swiped(PrVec2{0, 1}) == PrAppNavigation_None);
+    CHECK(swiped(PrVec2{1, 0}, PrAppGesturePhase_Cancel) == PrAppNavigation_None);
+    PrAppEvent magnify{.kind = PrAppEventKind_Gesture};
+    magnify.gesture = {.kind = PrAppGestureKind_Magnify, .swipe = PrVec2{1, 0}};
+    CHECK(prAppEventNavigation(&magnify) == PrAppNavigation_None);
+}
+
 TEST_CASE("an event placed in a view has the view's position and lengths, and a scroll by lines keeps its delta") {
     PrAppEvent move{
         .kind = PrAppEventKind_PointerMove,

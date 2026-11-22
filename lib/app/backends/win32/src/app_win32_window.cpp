@@ -424,10 +424,44 @@ PrStringView title(const PrAppWindow* base) {
     return prRawStringView(&static_cast<const Win32Window*>(base)->titleText);
 }
 
+// Moves a popup to the position that its placement gives against its parent, within the work area of the parent.
+void placePopup(Win32Window* window) {
+    Win32Window* parent = window->parent;
+    if (window->role != PrAppWindowRole_Popup || parent == nullptr || appOf(window)->headless)
+        return;
+    Win32Monitor monitor{};
+    if (!win32MonitorOf(MonitorFromWindow(parent->window, MONITOR_DEFAULTTONEAREST), &monitor))
+        return;
+    float scale = float(parent->dpi) / 96.0f;
+    POINT origin{0, 0};
+    ClientToScreen(parent->window, &origin);
+    const PrRect& a = window->popup.anchor;
+    PrRect anchor{
+        float(origin.x) + a.left * scale, float(origin.y) + a.top * scale, float(origin.x) + a.right * scale,
+        float(origin.y) + a.bottom * scale,
+    };
+    PrAppPopupPlacement placement = window->popup;
+    placement.offset = PrVec2{placement.offset.x * scale, placement.offset.y * scale};
+    RECT client{};
+    GetClientRect(window->window, &client);
+    PrVec2 extent{float(client.right - client.left), float(client.bottom - client.top)};
+    PrRect work{
+        float(monitor.work.left), float(monitor.work.top), float(monitor.work.right),
+        float(monitor.work.bottom),
+    };
+    bool rightToLeft = (GetWindowLongPtrW(parent->window, GWL_EXSTYLE) & WS_EX_LAYOUTRTL) != 0;
+    placement.anchor = anchor;
+    PrRect placed = prAppPopupRect(&placement, extent, work,
+        PrAppLayoutDirection(rightToLeft ? PrAppLayoutDirection_RightToLeft : PrAppLayoutDirection_LeftToRight));
+    SetWindowPos(window->window, nullptr, int(placed.left), int(placed.top), int(placed.right - placed.left),
+        int(placed.bottom - placed.top), SWP_NOZORDER | SWP_NOACTIVATE);
+}
+
 void setExtent(PrAppWindow* base, PrUVec2 extent) {
     Win32Window* window = static_cast<Win32Window*>(base);
     window->extent = extent;
     placeWindow(window, Placement_Keep);
+    placePopup(window);
 }
 
 void setExtentLimits(PrAppWindow* base, PrUVec2 minExtent, PrUVec2 maxExtent) {
@@ -708,39 +742,6 @@ void keepAspectRatio(Win32Window* window, WPARAM edge, RECT* rect) {
         rect->left = rect->right - wanted - borderWidth;
     else
         rect->right = rect->left + wanted + borderWidth;
-}
-
-// Moves a popup to where its placement puts it against its parent, within the parent's work area.
-void placePopup(Win32Window* window) {
-    Win32Window* parent = window->parent;
-    if (window->role != PrAppWindowRole_Popup || parent == nullptr || appOf(window)->headless)
-        return;
-    Win32Monitor monitor{};
-    if (!win32MonitorOf(MonitorFromWindow(parent->window, MONITOR_DEFAULTTONEAREST), &monitor))
-        return;
-    float scale = float(parent->dpi) / 96.0f;
-    POINT origin{0, 0};
-    ClientToScreen(parent->window, &origin);
-    const PrRect& a = window->popup.anchor;
-    PrRect anchor{
-        float(origin.x) + a.left * scale, float(origin.y) + a.top * scale, float(origin.x) + a.right * scale,
-        float(origin.y) + a.bottom * scale,
-    };
-    PrAppPopupPlacement placement = window->popup;
-    placement.offset = PrVec2{placement.offset.x * scale, placement.offset.y * scale};
-    RECT client{};
-    GetClientRect(window->window, &client);
-    PrVec2 extent{float(client.right - client.left), float(client.bottom - client.top)};
-    PrRect work{
-        float(monitor.work.left), float(monitor.work.top), float(monitor.work.right),
-        float(monitor.work.bottom),
-    };
-    bool rightToLeft = (GetWindowLongPtrW(parent->window, GWL_EXSTYLE) & WS_EX_LAYOUTRTL) != 0;
-    placement.anchor = anchor;
-    PrRect placed = prAppPopupRect(&placement, extent, work,
-        PrAppLayoutDirection(rightToLeft ? PrAppLayoutDirection_RightToLeft : PrAppLayoutDirection_LeftToRight));
-    SetWindowPos(window->window, nullptr, int(placed.left), int(placed.top), int(placed.right - placed.left),
-        int(placed.bottom - placed.top), SWP_NOZORDER | SWP_NOACTIVATE);
 }
 
 void setPopupPlacement(PrAppWindow* base, const PrAppPopupPlacement* placement) {
