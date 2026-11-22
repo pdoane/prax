@@ -184,6 +184,7 @@ struct LayoutReplaced {
     float limit;                      // Image: the brightest that the image paints (PrLayoutContent::limit)
     PrLayoutImageRendering rendering; // Image
     PrTextureCachePriority priority;  // Image: PrLayoutContent::priority
+    bool still;                       // Image: PrLayoutContent::still
     bool upright;                     // Image: PrLayoutContent::upright
     uint64_t embed;                   // Embed: its id
     uint64_t revision;                // PrLayoutContent::revision

@@ -8081,8 +8081,10 @@ void prCssPresentationSetJobBudget(PrCssPresentation* presentation, double milli
 
 bool prCssPresentationIsCurrent(const PrCssPresentation* presentation) {
     // The listeners that make the wheel wait over the whole viewport are found as each job starts, since the window's
-    // are not the document's to report.
+    // are not the document's to report. A texture that arrived for a paint that waits, or the next picture of an image
+    // that plays, makes the paint stale.
     return !presentation->changed && !presentation->layoutStale && !presentation->sceneStale &&
+        !prLayoutTreeTexturesStale(presentation->tree) &&
         viewportWheelEvents(presentation) == prLayoutTreeViewportWheelEvents(presentation->tree);
 }
 

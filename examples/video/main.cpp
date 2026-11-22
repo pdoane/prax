@@ -6,16 +6,24 @@
 // (PrDrawSourceKind_Texture), fitted to the window, under rounded corners and over a shadow, with the video's progress
 // beneath it. Space pauses the clock, and Escape quits.
 //
+// T shows the video as the fill of text instead. A frame's texture is a source that a brush paints with, and a brush
+// fills glyphs as it fills any shape, so the letters are windows onto the video.
+//
 // Usage: video [FILE]. FILE is the video to play. Without it, the example plays its own video, the resource cat.mp4
 // (./dev.sh fetch videos). On the web, the page's query passes the arguments. PR_BACKEND_RENDERER chooses the renderer.
 
 #include "pr/app.h"
 #include "pr/app_select.h"
+#include "pr/array.h"
+#include "pr/atomic.h"
+#include "pr/blob_ref.h"
+#include "pr/draw_host_texture.h"
 #include "pr/draw_list.h"
 #include "pr/draw_renderer.h"
 #include "pr/draw_select.h"
 #include "pr/file.h"
 #include "pr/float.h"
+#include "pr/font.h"
 #include "pr/gpu.h"
 #include "pr/gpu_select.h"
 #include "pr/media.h"
@@ -23,6 +31,7 @@
 #include "pr/resource.h"
 #include "pr/status.h"
 #include "pr/task.h"
+#include "pr/text.h"
 #include "pr/texture.h"
 
 namespace {
@@ -32,6 +41,7 @@ using namespace pr;
 // The window, the device that it renders on, and the video that it plays.
 struct Window {
     PrApp* app = nullptr;
+    Atomic<PrApp*> wakes;           // the application, for the thread that creates the device
     PrAppWindow* window = nullptr;
     PrTaskPool* pool = nullptr;
     PrGpuDevice* device = nullptr;
@@ -46,17 +56,29 @@ struct Window {
     double clock = 0;
     bool paused = false;
 
-    // The texture of the frame that is shown, and that frame's serial.
-    PrGpuTexture texture{};
+    // The frame that is shown, as a host texture, and that frame's serial.
+    PrDrawHostTexture* shown = nullptr;
     uint64_t frameSerial = 0;
     bool reported = false;          // true once the example has printed whether frames are imported or copied
+
+    // The text that the video fills while `lettered` is set, and what shapes it: a heavy font, the shaper and its
+    // glyphs.
+    bool lettered = false;
+    const PrFont* font = nullptr;
+    PrTextShaper* shaper = nullptr;
+    PrTextGlyphBuffer* glyphs = nullptr;
 };
+
+// The text that the video fills.
+constexpr PrStringView kLetters = "PRAX";
 
 // Frees what the window made on its device, and the device.
 void closeDevice(Window& w) {
-    if (w.device != nullptr)
-        prGpuTextureRelease(w.device, w.texture);
-    w.texture = PrGpuTexture{};
+    // The list holds the frame that it drew, so it is emptied before the device goes.
+    if (w.list != nullptr)
+        prDrawListClear(w.list);
+    prDrawHostTextureRelease(w.shown);
+    w.shown = nullptr;
     w.frameSerial = 0;
     prDrawFrameDestroy(w.frame);
     prDrawRendererDestroy(w.renderer);
@@ -74,12 +96,15 @@ void requestDevice(Window& w) {
         return;
     PrGpuDeviceOptions options = prGpuDeviceOptionsDefault();
     options.pool = w.pool;
+    // The window draws nothing until the device is ready, and asks for no frame. The end of the creation wakes the
+    // application, which asks the window for a frame.
+    options.ready = [](void* PR_NULLABLE context, PrGpuDevice*) {
+        // A creation that ends before the application starts needs no wake: the window's first frame finds the device.
+        if (PrApp* app = static_cast<Window*>(context)->wakes.load())
+            prAppWake(app);
+    };
+    options.readyContext = &w;
     w.device = prGpuDeviceCreate(PrGpuBackend_Default, &options);
-}
-
-// Returns true while the device is being created.
-bool creatingDevice(const Window& w) {
-    return w.device != nullptr && !prGpuDeviceIsReady(w.device);
 }
 
 // Returns true if the window can render. Frees a lost device, which includes one whose creation failed, with everything
@@ -109,12 +134,13 @@ bool openDevice(Window& w) {
     return true;
 }
 
-// Makes the window's texture show a decoded frame that has not been shown yet. The device imports the frame's image in
-// place if it can, and otherwise copies its texels into the same texture.
+// Makes the window's host texture show a decoded frame that has not been shown yet. The device imports the frame's
+// image in place if it can, and otherwise copies its texels. No list draws the last frame by now, so the import goes
+// into the same texture.
 void showFrame(Window& w, const PrMediaFrame& f) {
-    if (f.serial == w.frameSerial && w.texture.id != 0)
+    if (f.serial == w.frameSerial && w.shown != nullptr)
         return;
-    if (prGpuTextureImport(w.device, &f.image, nullptr, nullptr, &w.texture) != PrStatus_Ok)
+    if (prDrawHostTextureImport(w.device, &f.image, PrTextureAlpha_None, &w.shown) != PrStatus_Ok)
         return;
     w.frameSerial = f.serial;
     if (!w.reported) {
@@ -124,13 +150,61 @@ void showFrame(Window& w, const PrMediaFrame& f) {
     }
 }
 
+// Records the text with the video as its fill. The text is as wide as the window allows, and the video covers the
+// text's box, cropped to the box's shape, so that the letters show the middle of the picture.
+void recordLetters(Window& w, float width, float height) {
+    PrDrawList* list = w.list;
+    if (w.font == nullptr)
+        return;
+    // The text is shaped at a size of 100 to learn its width, and again at the size that fits.
+    PrTextRun run{};
+    run.font = w.font;
+    run.text = kLetters;
+    run.pixelsPerEm = 100;
+    if (prTextShaperShape(w.shaper, &run, w.glyphs) != PrStatus_Ok)
+        return;
+    Array<PrFontGlyph> glyphs;
+    glyphs.resize(prTextGlyphBufferGlyphCount(w.glyphs));
+    float advance = prTextGlyphBufferPlace(w.glyphs, 100, PrVec2{0, 0}, glyphs.data(), nullptr).x;
+    if (!(advance > 0))
+        return;
+    float size = 100 * (width - 96) / advance;
+    run.pixelsPerEm = size;
+    if (!(size > 0) || prTextShaperShape(w.shaper, &run, w.glyphs) != PrStatus_Ok)
+        return;
+    // The capitals stand on the baseline and reach about seven tenths of the size above it.
+    float capHeight = size * 0.72f;
+    PrVec2 origin{48, (height + capHeight) / 2};
+    prTextGlyphBufferPlace(w.glyphs, size, origin, glyphs.data(), nullptr);
+    PrRect box{origin.x, origin.y - capHeight, width - 48, origin.y};
+    // The picture covers the box and keeps its shape.
+    PrUVec2 extent = prDrawHostTextureExtent(w.shown);
+    float scale = prF32Max((box.right - box.left) / float(extent.x), (box.bottom - box.top) / float(extent.y));
+    PrVec2 middle{(box.left + box.right) / 2, (box.top + box.bottom) / 2};
+    PrRect area{
+        middle.x - float(extent.x) * scale / 2, middle.y - float(extent.y) * scale / 2,
+        middle.x + float(extent.x) * scale / 2, middle.y + float(extent.y) * scale / 2,
+    };
+    PrDrawBrush brush = prDrawBrushImage(prDrawSourceHostTexture(list, w.shown), area, PrDrawSampling_Linear);
+    PrFontGlyphRun drawn{};
+    drawn.font = w.font;
+    drawn.size = size;
+    drawn.glyphs = glyphs.data();
+    drawn.glyphCount = glyphs.count();
+    prDrawListGlyphs(list, &drawn, PrVec2{}, {.brush = &brush});
+}
+
 // Records the frame: the video fitted to the window over its shadow, under rounded corners, and its progress beneath.
 void record(Window& w, float width, float height, double seconds) {
     PrDrawList* list = w.list;
     prDrawListRect(list, PrRect{0, 0, width, height}, {.color = PrColor{0.09f, 0.08f, 0.1f, 1}});
-    if (w.texture.id == 0)
+    if (w.shown == nullptr)
         return;
-    PrUVec2 extent = prGpuTextureExtent(w.device, w.texture);
+    if (w.lettered) {
+        recordLetters(w, width, height);
+        return;
+    }
+    PrUVec2 extent = prDrawHostTextureExtent(w.shown);
     float margin = 32;
     float bar = 24;
     float scale = prF32Min((width - 2 * margin) / float(extent.x), (height - 2 * margin - bar) / float(extent.y));
@@ -145,8 +219,7 @@ void record(Window& w, float width, float height, double seconds) {
 
     PrDrawShadow shadow{.shape = shape, .offset = PrVec2{0, 10}, .sigma = 16};
     prDrawListDropShadow(list, &shadow, {.color = PrColor{0, 0, 0, 0.6f}});
-    PrDrawSource source = prDrawSourceTexture(PrTexture{.texture = w.texture, .alpha = PrTextureAlpha_None}, extent,
-        PrRect{0, 0, float(extent.x), float(extent.y)});
+    PrDrawSource source = prDrawSourceHostTexture(list, w.shown);
     PrDrawBrush brush = prDrawBrushImage(source, area, PrDrawSampling_Linear);
     prDrawListCornerRect(list, shape, {.brush = &brush});
 
@@ -194,9 +267,8 @@ bool open(void*, PrAppWindow*, const PrAppFrame*) {
 
 PrAppOutput frame(void* context, PrAppWindow*, const PrAppFrame* f) {
     Window& w = *static_cast<Window*>(context);
-    // Frames continue while the device is being created.
     if (!openDevice(w))
-        return PrAppOutput{.wantsFrame = creatingDevice(w)};
+        return PrAppOutput{};
     prGpuSwapChainWait(w.swapChain);
     if (!w.paused)
         w.clock += f->delta;
@@ -204,13 +276,14 @@ PrAppOutput frame(void* context, PrAppWindow*, const PrAppFrame* f) {
     double seconds = w.clock;
     if (prF64IsFinite(w.info.duration) && w.info.duration > 0)
         seconds = prF64FloorMod(w.clock, w.info.duration);
+    // The list lets go of the frame that it drew before the next frame is imported.
+    prDrawListClear(w.list);
     PrMediaFrame decoded{};
     if (prMediaDecoderFrame(w.decoder, seconds, &decoded))
         showFrame(w, decoded);
 
     // The list is in logical pixels, and its transform takes them to the display's target pixels.
     float ratio = f->display.pixelRatio;
-    prDrawListClear(w.list);
     prDrawListPushTransformAffine2(w.list, prAffine2Scale(PrVec2{ratio, ratio}));
     record(w, f->extent.x, f->extent.y, seconds);
     prDrawListPopTransform(w.list);
@@ -230,6 +303,8 @@ void event(void* context, PrAppWindow*, const PrAppEvent* e) {
         return;
     if (e->keyboard.key == ' ')
         w.paused = !w.paused;
+    else if (e->keyboard.key == 't' || e->keyboard.key == 'T')
+        w.lettered = !w.lettered;
     else if (e->keyboard.key == PrAppKey_Escape)
         prAppStop(w.app);
 }
@@ -238,6 +313,7 @@ void event(void* context, PrAppWindow*, const PrAppEvent* e) {
 bool start(void* context, PrApp* app) {
     Window& w = *static_cast<Window*>(context);
     w.app = app;
+    w.wakes.store(app);
     PrAppWindowDesc desc{
         .title = "Prax Video",
         .extent = {960, 720},
@@ -246,7 +322,12 @@ bool start(void* context, PrApp* app) {
     return prAppWindowCreate(app, &desc, &w.window) == PrStatus_Ok;
 }
 
-void appEvent(void*, PrApp*, const PrAppEvent*) {}
+// A wake asks the window for a frame, which takes up the device that became ready.
+void appEvent(void* context, PrApp*, const PrAppEvent* e) {
+    Window& w = *static_cast<Window*>(context);
+    if (e->kind == PrAppEventKind_Wake && w.window != nullptr)
+        prAppWindowRequestFrame(w.window);
+}
 
 void shutdown(void* context, PrApp*) {
     Window& w = *static_cast<Window*>(context);
@@ -254,6 +335,9 @@ void shutdown(void* context, PrApp*) {
     prMediaDecoderDestroy(w.decoder);
     prMediaCodecDestroy(w.codec);
     prDrawListRelease(w.list);
+    prTextGlyphBufferDestroy(w.glyphs);
+    prTextShaperDestroy(w.shaper);
+    prFontRelease(w.font);
 }
 
 } // namespace
@@ -296,6 +380,21 @@ int main(int argc, char** argv) {
         return 1;
     }
     w.list = prDrawListCreate();
+    // The text that the video fills is set in the heaviest weight of the example's font, so that the letters show much
+    // of the picture.
+    w.shaper = prTextShaperCreate(PrTextShaperBackend_Default);
+    w.glyphs = prTextGlyphBufferCreate();
+    const PrFont* base = nullptr;
+    if (BlobRef resource = BlobRef::adopt(prResourceOpen("font_bundle/NotoSans[wdth,wght].ttf"))) {
+        if (prFontCreate(resource, 0, nullptr, &base) == PrStatus_Ok) {
+            const PrFontVariation heavy{PR_FONT_TAG('w', 'g', 'h', 't'), 900};
+            PrFontDerivation derivation = prFontDerivationDefault();
+            derivation.variations = &heavy;
+            derivation.variationCount = 1;
+            w.font = prFontCreateDerived(base, &derivation);
+            prFontRelease(base);
+        }
+    }
 
     PrApp* app = prAppCreate(PrAppBackend_Default, nullptr);
     prAppRun(app, {.context = &w, .start = start, .event = appEvent, .shutdown = shutdown});

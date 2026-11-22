@@ -22,6 +22,7 @@
 #include "pr/color.h"
 #include "pr/draw.h"
 #include "pr/draw_filter.h"
+#include "pr/draw_host_texture.h"
 #include "pr/font.h"
 #include "pr/font_set.h"
 #include "pr/geom.h"
@@ -923,6 +924,11 @@ typedef struct PrLayoutPainter {
 // Adds or releases a reference to the painter's context, if the painter shares it.
 void prLayoutPainterRetain(PrLayoutPainter painter);
 void prLayoutPainterRelease(PrLayoutPainter painter);
+
+// Returns a painter that draws `texture` over the box that it is shown in, sampled linearly. The painter shares the
+// texture, so the tree holds a reference to it while it uses the painter, and so does each list that the painter draws
+// into. The painter itself holds none: the caller keeps the texture until it has given the painter to the tree.
+PrLayoutPainter prLayoutPainterHostTexture(PrDrawHostTexture* texture);
 
 // What an image is (css-images-3/#image-values): nothing, a decoded image, a draw list, a gradient, or a painter. A
 // decoded image and a draw list cover their natural size. A gradient and a painter draw at whatever size they are

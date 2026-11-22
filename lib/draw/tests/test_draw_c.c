@@ -1,4 +1,5 @@
 #include "pr/draw_commands.h"
+#include "pr/draw_host_texture.h"
 #include "pr/draw_list.h"
 #include "pr/draw_projection.h"
 #include "pr/draw_renderer.h"

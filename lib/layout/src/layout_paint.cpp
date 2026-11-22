@@ -1826,7 +1826,8 @@ struct Painter : LayoutWalkVisitor {
     // a preview of about the box's size. If the rendering is Auto, the image is minified from mip levels if the cache
     // made them. Returns false if no texture of the image has arrived. The caller holds the image on the list that it
     // records the brush into.
-    bool imageBrush(const LayoutReplaced& n, PrRect covered, PrDrawBrush* out) const {
+    bool imageBrush(const LayoutReplaced& n, PrRect covered, PrDrawBrush* out,
+            const PrTextureSource* PR_NULLABLE* PR_NONNULL picture) const {
         const PrTextureDesc& desc = *prTextureSourceDesc(n.image);
         PrUVec2 texels = n.upright ? prTextureDescDisplayedExtent(&desc) : desc.extent;
         float ratio = tree->styles->targetPixelRatio > 0 ? tree->styles->targetPixelRatio : 1;
@@ -1837,7 +1838,7 @@ struct Painter : LayoutWalkVisitor {
         ask.priority = n.priority;
         ask.detail = uint32_t(prF32Ceil(prF32Max(prF32Max(shown.x, shown.y), 1)));
         PrTextureRegion region{};
-        if (!layoutTextureOf(tree->textures, n.image, ask, &region))
+        if (!layoutTextureOf(tree->textures, n.image, ask, !n.still, &region, picture))
             return false;
         bool minified = smooth && region.levelCount > 1;
         PrDrawSampling sampling = PrDrawSampling_Nearest;
@@ -1919,9 +1920,12 @@ struct Painter : LayoutWalkVisitor {
         if (n.contentKind == PrLayoutContentKind_Image) {
             PrVec2 extent = prLayoutVecToPx(space);
             PrRect drawn{placed.e, placed.f, placed.e + extent.x * placed.a, placed.f + extent.y * placed.d};
+            // The list holds the source whose texture the brush draws: the image, or the picture of it that shows.
             PrDrawBrush brush{};
-            if (imageBrush(n, drawn, &brush)) {
-                prDrawListHoldSource(into, n.image);
+            const PrTextureSource* picture = nullptr;
+            if (imageBrush(n, drawn, &brush, &picture)) {
+                prDrawListHoldSource(into, picture);
+                prTextureSourceRelease(picture);
                 prDrawListRect(into, drawn, {.brush = &brush, .edges = PrDrawEdges_Snapped});
             }
         } else if (n.contentKind == PrLayoutContentKind_Path) {

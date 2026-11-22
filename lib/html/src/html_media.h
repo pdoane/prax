@@ -14,6 +14,7 @@
 
 #include "pr/audio_mixer.h"
 #include "pr/dom.h"
+#include "pr/draw_host_texture.h"
 #include "pr/html.h"
 #include "pr/html_media_source.h"
 #include "pr/media.h"
@@ -32,9 +33,6 @@ namespace pr_impl {
 // (html/#texttracklist), an AudioTrackList (html/#audiotracklist) or a VideoTrackList (html/#videotracklist). The list
 // is a part of its element (DomPartTarget).
 struct HtmlTrackList : DomPartTarget {};
-
-// A decoded video frame on a device, which the element's painter and the draw lists that it recorded share.
-struct HtmlMediaFrame;
 
 // The state of a media element (html/#media-element). The element owns the state, which is created when it is first
 // needed and destroyed with the element. A task or timer of the state holds the element (domNodeHold) until the task or
@@ -72,7 +70,7 @@ struct HtmlMedia {
     bool preservesPitch;
     bool loadedData;                     // true once loadeddata has fired, until the next load
 
-    // What a video element shows. `frame` is the decoded frame as a texture on the device of the window's texture
+    // What a video element shows. `frame` is the decoded frame as a host texture on the device of the window's texture
     // cache, and `frameSerial` is its serial (PrMediaFrame::serial). `frameGeneration` is the generation of the cache
     // when the texture was made: a later generation means that the cache moved to another device, and the frame is
     // imported again. `poster` is the poster frame (html/#poster-frame), an image that the cache realizes. `posters`
@@ -85,7 +83,7 @@ struct HtmlMedia {
     PrHtmlMediaSource* PR_NULLABLE mediaSource;
     double playableEnd;
     bool seekWaits;                          // a seek waits for the media source to buffer its position
-    HtmlMediaFrame* PR_NULLABLE frame;
+    PrDrawHostTexture* PR_NULLABLE frame;
     const PrTextureSource* PR_NULLABLE poster;
     uint64_t frameSerial;
     uint64_t frameGeneration;

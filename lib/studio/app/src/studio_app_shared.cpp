@@ -95,7 +95,9 @@ void studioAppClose(StudioAppState* app) {
     app->device = nullptr;
 }
 
-void studioAppBeginWindowFrame(StudioAppState* app, StudioWindowState* window) {
+void studioAppBeginWindowFrame(StudioAppState* app, StudioWindowState* window, double time) {
+    // The images that change over time, such as animated ones, play on the clock of the frames.
+    prTextureCacheSetTime(app->textures, time);
     if (app->textures != nullptr && window->framed) {
         uint64_t cancelled = prTextureCacheInfo(app->textures).cancelled;
         prTextureCacheTrim(app->textures);

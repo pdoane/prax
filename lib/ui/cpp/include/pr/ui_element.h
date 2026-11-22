@@ -793,6 +793,7 @@ struct UiEdit {
 // An image that an element draws (PrLayoutContent). `rendering` says how the picture is sampled when it is scaled.
 // `limit` is the brightest color that it paints, as a multiple of SDR white, or zero for no limit. `priority` says how
 // soon its texture is needed. `upright` shows the picture as its orientation says, instead of as its texels are stored.
+// `still` shows the first picture of an image that changes over time, such as an animated GIF, and does not play it.
 //
 // If the element shows fewer texels than the picture has, it draws a preview of the picture. It also draws a preview
 // while the picture loads (PrTextureCacheAsk::detail).
@@ -802,6 +803,7 @@ struct UiImage {
     float limit = 0;
     PrTextureCachePriority priority = PrTextureCachePriority_Normal;
     bool upright = true;
+    bool still = false;
 };
 
 // What builders draw with, which outlives them: the fonts that they set text in, the families of a font set by UiFamily

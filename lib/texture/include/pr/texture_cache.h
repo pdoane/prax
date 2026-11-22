@@ -176,6 +176,16 @@ void prTextureCacheSetDevice(PrTextureCache* cache, PrGpuDevice* PR_NULLABLE dev
 // the generation when it draws them. If the generation has changed, the regions are invalid, and the host draws again.
 uint64_t prTextureCacheGeneration(const PrTextureCache* cache);
 
+// Sets the time of the frame that the host draws, in seconds on the host's clock. The cache plays the sources that
+// change over time (PrTextureSourceDesc::frame), such as animated images, on this clock (prTextureCachePlay). The cache
+// reports an arrival when a source that it plays shows another picture, so that the host draws again. A cache whose
+// time was never set plays nothing.
+void prTextureCacheSetTime(PrTextureCache* cache, double time);
+
+// Returns the earliest time at which a source that the cache plays shows another picture, or zero if there is none. The
+// host draws a frame at that time.
+double prTextureCacheNextFrame(const PrTextureCache* cache);
+
 // Returns the number of realizations that have arrived since the cache was created. A consumer that kept a drawing made
 // while an ask was Pending or Partial records the count with it. If the count has changed, a texture has arrived, and
 // the consumer asks and draws again.
@@ -191,6 +201,22 @@ uint64_t prTextureCacheArrivals(const PrTextureCache* cache);
 // A consumer that draws a Partial region asks again after the cache reports an arrival.
 PrTextureCacheState prTextureCacheRealize(PrTextureCache* cache, const PrTextureSource* source,
     PrTextureCacheAsk ask, PrTextureRegion* out);
+
+// Asks as prTextureCacheRealize does, and plays a source that changes over time: the answer is the region of the
+// picture that the source shows at the cache's time, marked as playing. While that picture is being realized, the
+// answer is the last picture that was answered with. A still source, and any source in a cache without a time, is
+// answered as prTextureCacheRealize answers it.
+//
+// `*picture` is the source whose texture the region is: the picture that shows, or `source` itself. The caller holds a
+// reference to it. A consumer that keeps a drawing of the region keeps the picture for as long, as a draw list does
+// (prDrawListHoldSource), so that the cache keeps the texture, and then releases its own reference. `*picture` is null
+// if the answer has no region.
+//
+// A source plays while consumers ask for it, and for a second of the cache's time after the last ask.
+// prTextureCacheRealize does not play: it answers with a source's first picture, which is what a row of thumbnails
+// shows.
+PrTextureCacheState prTextureCachePlay(PrTextureCache* cache, const PrTextureSource* source, PrTextureCacheAsk ask,
+    PrTextureRegion* out, const PrTextureSource* PR_NULLABLE* PR_NONNULL picture);
 
 // Asks as prTextureCacheRealize does, at High priority, and blocks the calling thread until the version that the ask
 // needs arrives or fails. Returns Ready or Failed.

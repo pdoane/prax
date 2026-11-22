@@ -1030,6 +1030,22 @@ void prLayoutPainterRelease(PrLayoutPainter painter) {
         painter.release(painter.context);
 }
 
+PrLayoutPainter prLayoutPainterHostTexture(PrDrawHostTexture* texture) {
+    return PrLayoutPainter{
+        .context = texture,
+        .paint = [](void* PR_NULLABLE context, PrVec2 extent, PrDrawList* list) {
+            PrRect box{0, 0, extent.x, extent.y};
+            PrDrawSource source = prDrawSourceHostTexture(list, static_cast<PrDrawHostTexture*>(context));
+            PrDrawBrush brush = prDrawBrushImage(source, box, PrDrawSampling_Linear);
+            prDrawListRect(list, box, {.brush = &brush});
+        },
+        .retain = [](void* PR_NULLABLE context) { prDrawHostTextureRetain(static_cast<PrDrawHostTexture*>(context)); },
+        .release = [](void* PR_NULLABLE context) {
+            prDrawHostTextureRelease(static_cast<PrDrawHostTexture*>(context));
+        },
+    };
+}
+
 PrLayoutGradient prLayoutGradientDefault(void) {
     PrLayoutGradient gradient{};
     gradient.kind = PrLayoutGradientKind_Linear;

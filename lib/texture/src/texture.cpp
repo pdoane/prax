@@ -1096,6 +1096,20 @@ const PrTextureSource* prTextureSourcePreview(const PrTextureSource* source, uin
     return source->previews[index];
 }
 
+bool prTextureSourcePlays(const PrTextureSource* source) {
+    return source->desc.frame != nullptr;
+}
+
+void prTextureSourceFrameAt(const PrTextureSource* source, double time, PrTextureFrame* out) {
+    *out = PrTextureFrame{};
+    if (source->desc.frame != nullptr)
+        source->desc.frame(source->desc.context, time, out);
+    if (out->source == nullptr) {
+        prTextureSourceRetain(source);
+        out->source = source;
+    }
+}
+
 PrStatus prTextureSourceReformat(const PrTextureSource* source, PrGpuFormat format,
         const PrTextureSource* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;

@@ -23,6 +23,7 @@ if (PR_DEVELOP)
         tests/test_texture.cpp
         tests/test_texture_cache.cpp
         tests/test_texture_cache_detail.cpp
+        tests/test_texture_cache_plays.cpp
         tests/test_texture_catalog.cpp
         tests/test_texture_compute.cpp
         tests/test_texture_cache_asks.cpp

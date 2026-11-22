@@ -250,6 +250,9 @@ int main(int argc, char** argv) {
     b.pool = prTaskPoolCreate(PrTaskPoolBackend_Default, 1);
     PrGpuDeviceOptions device = prGpuDeviceOptionsDefault();
     device.pool = b.pool;
+    // The window draws nothing until the device is ready, and asks for no frame. The end of the creation asks for one.
+    device.ready = [](void* PR_NULLABLE context, PrGpuDevice*) { browserWantFrame(*static_cast<Browser*>(context)); };
+    device.readyContext = &b;
     b.device = prGpuDeviceCreate(PrGpuBackend_Default, &device);
     openShared(b);
     openChrome(b);

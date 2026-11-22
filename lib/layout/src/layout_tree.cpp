@@ -1490,6 +1490,14 @@ void prLayoutTreeSetTextures(PrLayoutTree* tree, PrTextureCache* PR_NULLABLE tex
     layoutTreeForgetTextures(tree);
 }
 
+bool prLayoutTreeTexturesStale(const PrLayoutTree* tree) {
+    const LayoutTextures& textures = *tree->textures;
+    if (textures.cache == nullptr)
+        return false;
+    return prTextureCacheGeneration(textures.cache) != textures.generation ||
+        (textures.waiting.count != 0 && prTextureCacheArrivals(textures.cache) != textures.arrivals);
+}
+
 bool prLayoutTreePaintsPending(const PrLayoutTree* tree) {
     return tree->textures->waiting.count != 0;
 }
@@ -1865,6 +1873,7 @@ void prLayoutNodeSetContent(PrLayoutTree* tree, PrLayoutNode replaced, const PrL
     r.limit = image != nullptr ? content->limit : 0;
     r.rendering = image != nullptr ? content->rendering : PrLayoutImageRendering_Auto;
     r.priority = image != nullptr ? content->priority : PrTextureCachePriority(PrTextureCachePriority_Normal);
+    r.still = image != nullptr && content->still;
     r.upright = image != nullptr && content->upright;
     prDrawListRelease(r.content);
     r.contentKind = content->kind;
@@ -1900,6 +1909,7 @@ PrLayoutContent prLayoutNodeContent(const PrLayoutTree* tree, PrLayoutNode repla
         content.limit = n.limit;
         content.rendering = n.rendering;
         content.priority = n.priority;
+        content.still = n.still;
         content.upright = n.upright;
     } else if (n.contentKind == PrLayoutContentKind_Path) {
         content.path = n.path;

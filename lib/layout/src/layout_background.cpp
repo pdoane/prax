@@ -574,12 +574,14 @@ PrDrawSource unfilteredSource(LayoutTextures* PR_NULLABLE textures, const Layout
             PrTextureCacheAsk ask = prTextureCacheAskEncoded(smooth ? PrTextureCacheFlag_Levels : 0);
             ask.detail = uint32_t(prF32Ceil(prF32Max(prF32Max(shownPixels.x, shownPixels.y), 1)));
             PrTextureRegion region{};
-            if (!layoutTextureOf(textures, layer.image, ask, &region))
+            const PrTextureSource* held = nullptr;
+            if (!layoutTextureOf(textures, layer.image, ask, true, &region, &held))
                 return PrDrawSource{};
             if (!layer.upright || desc.orientation == 0) {
                 if (smooth && region.levelCount > 1)
                     *sampling = PrDrawSampling_Mipmap;
-                prDrawListHoldSource(into, layer.image);
+                prDrawListHoldSource(into, held);
+                prTextureSourceRelease(held);
                 return prDrawSourceRegion(&region, PrRect{0, 0, float(texels.x), float(texels.y)}, 0);
             }
             // If the orientation turns or mirrors the image, the image is drawn upright into a list of its displayed
@@ -590,7 +592,8 @@ PrDrawSource unfilteredSource(LayoutTextures* PR_NULLABLE textures, const Layout
                 samplingOf(layer));
             prDrawBrushImageUpright(&brush, desc.orientation, region.rect);
             *drawn = prDrawListCreate();
-            prDrawListHoldSource(*drawn, layer.image);
+            prDrawListHoldSource(*drawn, held);
+            prTextureSourceRelease(held);
             prDrawListRect(*drawn, displayed, {.brush = &brush});
             return prDrawSourceList(*drawn, displayed);
         }
@@ -655,11 +658,13 @@ bool isEmpty(PrRect r) {
 
 // Adds `ask` for `image` to the asks that the tree waits for, unless it is already among them. The caller passes an ask
 // whose version has not arrived. `arrivals` is the cache's count of arrivals before the ask was made.
-void waitFor(LayoutTextures& textures, const PrTextureSource* image, PrTextureCacheAsk ask, uint64_t arrivals) {
+void waitFor(LayoutTextures& textures, const PrTextureSource* image, PrTextureCacheAsk ask, bool plays,
+        uint64_t arrivals) {
     RawArray<LayoutTextureAsk>& waiting = textures.waiting;
     for (uint32_t i = 0; i < waiting.count; ++i) {
         const PrTextureCacheAsk& other = waiting.data[i].ask;
-        if (waiting.data[i].image == image && other.flags == ask.flags && other.values == ask.values &&
+        if (waiting.data[i].image == image && waiting.data[i].plays == plays && other.flags == ask.flags &&
+                other.values == ask.values &&
                 other.alpha == ask.alpha && other.channels == ask.channels && other.priority == ask.priority &&
                 other.detail == ask.detail)
             return;
@@ -667,7 +672,7 @@ void waitFor(LayoutTextures& textures, const PrTextureSource* image, PrTextureCa
     if (waiting.count == 0)
         textures.arrivals = arrivals;
     prTextureSourceRetain(image);
-    waiting.push(LayoutTextureAsk{image, ask});
+    waiting.push(LayoutTextureAsk{image, ask, plays});
 }
 
 // Empties the asks that the tree waits for, and releases their images.
@@ -919,16 +924,28 @@ bool layoutBackgroundPaintLayer(LayoutTextures* PR_NULLABLE textures, const Layo
 }
 
 bool layoutTextureOf(LayoutTextures* PR_NULLABLE textures, const PrTextureSource* image, PrTextureCacheAsk ask,
-        PrTextureRegion* out) {
+        bool plays, PrTextureRegion* out, const PrTextureSource* PR_NULLABLE* PR_NONNULL held) {
     *out = PrTextureRegion{};
+    *held = nullptr;
     if (textures == nullptr || textures->cache == nullptr)
         return false;
     // The count of arrivals is read before the ask. An arrival after the ask then makes the cache's count differ from
     // `arrivals`.
     uint64_t arrivals = prTextureCacheArrivals(textures->cache);
-    PrTextureCacheState state = prTextureCacheRealize(textures->cache, image, ask, out);
-    if (state == PrTextureCacheState_Pending || state == PrTextureCacheState_Partial)
-        waitFor(*textures, image, ask, arrivals);
+    PrTextureCacheState state = PrTextureCacheState_Pending;
+    if (plays) {
+        state = prTextureCachePlay(textures->cache, image, ask, out, held);
+    } else {
+        state = prTextureCacheRealize(textures->cache, image, ask, out);
+        if (state == PrTextureCacheState_Ready || state == PrTextureCacheState_Partial) {
+            prTextureSourceRetain(image);
+            *held = image;
+        }
+    }
+    // A picture of an image that plays is waited for as a pending one is: the tree records again when the cache reports
+    // an arrival, which it does when the image shows another picture.
+    if (state == PrTextureCacheState_Pending || state == PrTextureCacheState_Partial || out->playing)
+        waitFor(*textures, image, ask, plays, arrivals);
     return state == PrTextureCacheState_Ready || state == PrTextureCacheState_Partial;
 }
 
@@ -945,8 +962,17 @@ bool layoutTexturesRefresh(LayoutTextures* textures) {
     uint32_t kept = 0;
     for (uint32_t i = 0; i < waiting.count; ++i) {
         LayoutTextureAsk entry = waiting.data[i];
+        // The ask is made again as it was made, which keeps a realization from being cancelled and an image playing.
         PrTextureRegion region{};
-        if (prTextureCacheRealize(textures->cache, entry.image, entry.ask, &region) == PrTextureCacheState_Failed) {
+        PrTextureCacheState state = PrTextureCacheState_Pending;
+        if (entry.plays) {
+            const PrTextureSource* picture = nullptr;
+            state = prTextureCachePlay(textures->cache, entry.image, entry.ask, &region, &picture);
+            prTextureSourceRelease(picture);
+        } else {
+            state = prTextureCacheRealize(textures->cache, entry.image, entry.ask, &region);
+        }
+        if (state == PrTextureCacheState_Failed) {
             prTextureSourceRelease(entry.image);
             continue;
         }

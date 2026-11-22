@@ -6,6 +6,7 @@ pr_library(draw INCLUDE include
     src/draw_display.cpp
     src/draw_filter.cpp
     src/draw_glyph.cpp
+    src/draw_host_texture.cpp
     src/identity.cpp
     src/draw_list.cpp
     src/draw_lower.cpp
@@ -78,6 +79,7 @@ if (PR_DEVELOP)
     pr_module_tests(draw
         tests/test_compare.cpp
         tests/test_draw_c.c
+        tests/test_draw_host_texture.cpp
         tests/test_draw_list.cpp
         tests/test_draw_lower.cpp
         tests/test_draw_projection.cpp

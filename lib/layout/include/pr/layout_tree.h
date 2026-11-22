@@ -65,6 +65,11 @@ float prLayoutTreeTargetPixelRatio(const PrLayoutTree* tree);
 // between asks for the texture again, so a trim of the cache does not cancel its realization.
 void prLayoutTreeSetTextures(PrLayoutTree* tree, PrTextureCache* PR_NULLABLE textures);
 
+// Returns true if the tree's next paint records again because of its textures: the cache moved to another device, or
+// reported an arrival while a recording waits for one. An arrival is a texture that was on its way, or the next picture
+// of an image that plays. A host that paints only when something changed paints when this returns true.
+bool prLayoutTreeTexturesStale(const PrLayoutTree* tree);
+
 // Returns true if the last paint left out an image, or drew a preview of one, because its texture had not arrived. The
 // host paints again when the texture arrives (PrTextureCacheDesc::arrived). An image whose texture failed is not
 // pending.
@@ -354,6 +359,10 @@ typedef struct PrLayoutContent {
 
     // Image: how soon the image's texture is needed (PrTextureCacheAsk::priority).
     PrTextureCachePriority priority;
+
+    // Image: true to show the first picture of an image that changes over time, such as an animated GIF, and not to
+    // play it (prTextureCachePlay).
+    bool still;
 
     // Image: true if the image is shown with its orientation applied (PrTextureDesc::orientation), and false if it is
     // shown as its stored texels.

@@ -4,15 +4,48 @@
 
 #include "pr/alloc.h"
 #include "pr/assert.h"
+#include "pr/atomic.h"
 #include "pr/color_space.h"
 #include "pr/float16.h"
 #include "pr/mem.h"
 #include "pr/memory.h"
+#include "pr/mutex.h"
 #include "pr/texture_backend.h"
 
 namespace pr_impl {
 
 namespace {
+
+// The duration, in milliseconds, below which a frame is too short to show, and the duration that it shows for instead.
+// Many files state no duration, or one too short to show, and are made to play at that rate.
+constexpr uint32_t kShortestFrame = 20;
+constexpr uint32_t kDefaultFrame = 100;
+
+// What the frames of an animated image share: when each frame ends, the time at which the animation began, and a
+// decoder that stays open between reads. A GIF and an animated PNG store a frame as its difference from the frames
+// before it, so a decoder that reads the frames in order composes each from the last, and one that starts over composes
+// from the first. `mutex` guards the start, the decoder and the bytes that the decoder reads.
+struct ImageFrames {
+    Atomic<uint32_t> references;
+    uint32_t count;
+    uint32_t playCount;                     // the number of times that the frames play, or zero for forever
+    uint64_t* ends;                         // when each frame ends, in milliseconds from the start of a play
+    PrMutex mutex;
+    bool started;
+    double start;                           // the time of the first ask, in seconds
+    PrBlob* PR_NULLABLE bytes;
+    PrImageDecoder* PR_NULLABLE decoder;
+};
+
+void framesRelease(ImageFrames* PR_NULLABLE frames) {
+    if (frames == nullptr || frames->references.fetchSub(1) != 1)
+        return;
+    prImageDecoderDestroy(frames->decoder);
+    prBlobRelease(frames->bytes);
+    prMutexReset(&frames->mutex);
+    prMemoryFree(frames->ends);
+    prMemoryFree(frames);
+}
 
 // The state of a source that decodes an image. It holds the image's bytes, the codec, the limits within which the image
 // opens, and the image's info as the codec reported it when the source was created.
@@ -28,6 +61,11 @@ struct ImageTexture {
     PrTextureSample sample;
     PrTextureDesc desc;
     uint32_t preview;           // codec preview index plus one, or zero if the source reads the image
+
+    // An animated image: what its frames share, and the frame that this source reads. `frames` is null for a still
+    // image and for a preview.
+    ImageFrames* PR_NULLABLE frames;
+    uint32_t frame;
 };
 
 // A read in progress: the source, and the PrTextureRead that it completes.
@@ -168,6 +206,30 @@ PrStatus decodeLevel(const ImageTexture& image, PrImageDecoder* decoder, uint32_
     return status;
 }
 
+// Decodes frame `image.frame` of an animated image into `read`, with the decoder that the frames share. `blob` holds
+// the image's bytes, which the decoder keeps reading.
+PrStatus decodeFrame(const ImageTexture& image, PrBlob* blob, PrTextureRead* read) {
+    ImageFrames& frames = *image.frames;
+    prMutexLock(&frames.mutex);
+    PrStatus status = PrStatus_Ok;
+    if (frames.decoder == nullptr) {
+        status = imageOpen(image.codec, prBlobBytes(blob), image.limits, &frames.decoder);
+        if (status == PrStatus_Ok) {
+            prBlobRetain(blob);
+            frames.bytes = blob;
+        }
+    }
+    if (status == PrStatus_Ok && prImageDecoderInfo(frames.decoder)->frameCount != image.image.frameCount)
+        status = PrStatus_InvalidData;
+    if (status == PrStatus_Ok) {
+        const PrTextureReadDesc& asked = *prTextureReadInfo(read);
+        uint8_t* out = prTextureReadStorage(read) + prTextureReadOffset(&image.desc, &asked, 0, 0);
+        status = decodeLevel(image, frames.decoder, 0, image.frame, out);
+    }
+    prMutexUnlock(&frames.mutex);
+    return status == PrStatus_Truncated ? PrStatus_InvalidData : status;
+}
+
 // Decodes the levels and layers that `read` asks for from `bytes`. `bytes` is the image's bytes from a second read of
 // the blob.
 PrStatus decodeRead(const ImageTexture& image, PrByteView bytes, PrTextureRead* read) {
@@ -201,7 +263,10 @@ void sourceRead(void* PR_NULLABLE context, PrTextureRead* read) {
         ImageRead held = *static_cast<ImageRead*>(context);
         prMemoryFree(context);
         PrStatus status = prBlobReadStatus(blob);
-        if (status == PrStatus_Ok)
+        // A frame after the first of an animation is read with the decoder that the frames share.
+        if (status == PrStatus_Ok && held.image->frames != nullptr && held.image->frame != 0)
+            status = decodeFrame(*held.image, prBlobReadBlob(blob), held.read);
+        else if (status == PrStatus_Ok)
             status = decodeRead(*held.image, prBlobBytes(prBlobReadBlob(blob)), held.read);
         prBlobReadDestroy(blob);
         prTextureReadComplete(held.read, status);
@@ -213,6 +278,7 @@ void sourceRead(void* PR_NULLABLE context, PrTextureRead* read) {
 void sourceRelease(void* PR_NULLABLE context) {
     ImageTexture* image = static_cast<ImageTexture*>(context);
     prBlobSourceRelease(image->bytes);
+    framesRelease(image->frames);
     prMemoryFree(image);
 }
 
@@ -231,12 +297,49 @@ const PrTextureSource* sourceOf(const ImageTexture& image) {
     return sourceWithPreviews(image, nullptr, 0);
 }
 
+// Says which frame of an animated image shows at `time` (PrTextureSourceFrameFn). The animation begins at the time of
+// the first ask. Its frames play in turn, as often as the image says, and then the last frame stays.
+void sourceFrame(void* PR_NULLABLE context, double time, PrTextureFrame* out) {
+    const ImageTexture& image = *static_cast<const ImageTexture*>(context);
+    ImageFrames& frames = *image.frames;
+    prMutexLock(&frames.mutex);
+    if (!frames.started) {
+        frames.started = true;
+        frames.start = time;
+    }
+    double start = frames.start;
+    prMutexUnlock(&frames.mutex);
+    uint64_t total = frames.ends[frames.count - 1];
+    double elapsed = time > start ? (time - start) * 1000 : 0;
+    uint64_t plays = uint64_t(elapsed / double(total));
+    uint32_t index = frames.count - 1;
+    bool last = frames.playCount != 0 && plays >= frames.playCount;
+    if (!last) {
+        double within = elapsed - double(plays) * double(total);
+        index = 0;
+        while (index + 1 < frames.count && double(frames.ends[index]) <= within)
+            ++index;
+        out->next = start + (double(plays) * double(total) + double(frames.ends[index])) / 1000;
+    }
+    out->serial = uint64_t(index) + 1;
+    // The source itself is the first frame.
+    if (index != 0) {
+        ImageTexture frame = image;
+        frame.frame = index;
+        out->source = sourceOf(frame);
+    }
+}
+
 // Returns a texture source over a copy of `image`, with `previews`. The copy retains the image's bytes.
 const PrTextureSource* sourceWithPreviews(const ImageTexture& image,
         const PrTextureSource* PR_NONNULL const* PR_NULLABLE previews, uint32_t previewCount) {
     ImageTexture* held = allocZeroed<ImageTexture>();
     *held = image;
     prBlobSourceRetain(image.bytes);
+    if (image.frames != nullptr)
+        image.frames->references.fetchAdd(1);
+    // The source of a whole animated image changes over time. A frame and a preview are still.
+    bool animated = image.frames != nullptr && image.frame == 0 && image.preview == 0;
     PrGpuFormat formats[4];
     uint32_t count = 0;
     for (PrGpuFormat format : kDecoded) {
@@ -251,6 +354,7 @@ const PrTextureSource* sourceWithPreviews(const ImageTexture& image,
         .formatCount = count,
         .previews = previews,
         .previewCount = previewCount,
+        .frame = animated ? sourceFrame : nullptr,
         .release = sourceRelease,
         .context = held,
     };
@@ -270,6 +374,7 @@ const PrTextureSource* sourceWithDecoderPreviews(const ImageTexture& image, cons
         for (uint32_t i = 0; i < count; ++i) {
             uint32_t codecPreview = image.image.previewCount - 1 - i;
             ImageTexture preview = image;
+            preview.frames = nullptr;
             preview.preview = codecPreview + 1;
             preview.desc.extent = prImageDecoderPreviewExtent(decoder, codecPreview);
             previews[i] = sourceOf(preview);
@@ -373,7 +478,25 @@ PrStatus sourceCreate(const PrBlobSource* bytes, const PrBlob* blob, const PrIma
     // For PrImageTextureColor_Srgb, 8-bit values are sRGB values.
     if (color == PrImageTextureColor_Srgb && image.desc.format == PrGpuFormat_Rgba8)
         image.desc.format = PrGpuFormat_Rgba8Srgb;
+    // A 2D image of several frames is an animation. Its frames show for the durations that the image states.
+    if (image.desc.kind == PrGpuTextureKind_2d && info.faceCount == 1 && info.frameCount > 1) {
+        ImageFrames* frames = allocZeroed<ImageFrames>();
+        frames->references.storeRelaxed(1);
+        prMutexInit(&frames->mutex);
+        frames->count = info.frameCount;
+        frames->playCount = info.playCount;
+        frames->ends = static_cast<uint64_t*>(prMemoryAlloc(info.frameCount * sizeof(uint64_t)));
+        uint64_t end = 0;
+        for (uint32_t frame = 0; frame < info.frameCount; ++frame) {
+            PrImageFrameInfo timing{};
+            prImageDecoderFrameInfo(decoder, frame, &timing);
+            end += timing.durationMs < kShortestFrame ? kDefaultFrame : timing.durationMs;
+            frames->ends[frame] = end;
+        }
+        image.frames = frames;
+    }
     *out = sourceWithDecoderPreviews(image, decoder);
+    framesRelease(image.frames);
     prImageDecoderDestroy(decoder);
     return PrStatus_Ok;
 }

@@ -804,6 +804,7 @@ UiElement UiBuilder::image(PrLayoutNode parent, const UiImage& image, PrUiKey ke
     content.limit = image.limit;
     content.rendering = image.rendering;
     content.priority = image.priority;
+    content.still = image.still;
     content.upright = image.upright;
     prLayoutTreeFrameSetContent(tree, element, &content);
     return element;

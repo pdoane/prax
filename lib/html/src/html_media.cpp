@@ -2,7 +2,6 @@
 
 #include "pr/alloc.h"
 #include "pr/ascii.h"
-#include "pr/atomic.h"
 #include "pr/draw.h"
 #include "pr/float.h"
 #include "pr/gpu.h"
@@ -19,28 +18,7 @@
 
 namespace pr_impl {
 
-// `texture` is on `device`, and holds the frame with premultiplied alpha. The device outlives the frame.
-struct HtmlMediaFrame {
-    Atomic<uint32_t> references;
-    PrGpuDevice* device;
-    PrGpuTexture texture;
-    PrUVec2 extent;
-};
-
 namespace {
-
-// Adds or drops a reference to a frame (PrLayoutPainter). The last release frees the frame's texture.
-void frameRetain(void* PR_NULLABLE data) {
-    static_cast<HtmlMediaFrame*>(data)->references.fetchAdd(1);
-}
-
-void frameRelease(void* PR_NULLABLE data) {
-    HtmlMediaFrame* frame = static_cast<HtmlMediaFrame*>(data);
-    if (frame == nullptr || frame->references.fetchSub(1) != 1)
-        return;
-    prGpuTextureRelease(frame->device, frame->texture);
-    prMemoryFree(frame);
-}
 
 // The maximum time between two timeupdate events while a media element plays (html/#event-media-timeupdate).
 constexpr double kTimeUpdateMilliseconds = 250;
@@ -269,7 +247,7 @@ void closeResource(HtmlMedia* media) {
     media->playableEnd = kPrF64Infinity;
     media->seekWaits = false;
     media->decoder = nullptr;
-    frameRelease(media->frame);
+    prDrawHostTextureRelease(media->frame);
     media->frame = nullptr;
     media->frameSerial = 0;
 }
@@ -279,23 +257,6 @@ void closeResource(HtmlMedia* media) {
 bool showsPoster(const HtmlMedia* media) {
     bool data = media->frame != nullptr && media->readyState >= PrHtmlMediaReadyState_HaveCurrentData;
     return !data || (media->showPoster && media->paused && media->poster != nullptr);
-}
-
-// Draws the frame over the rectangle from the origin to `extent` (PrLayoutPaintFn). The list holds the frame.
-void paintFrame(void* PR_NULLABLE context, PrVec2 extent, PrDrawList* list) {
-    HtmlMediaFrame* frame = static_cast<HtmlMediaFrame*>(context);
-    PrRect texels{0, 0, float(frame->extent.x), float(frame->extent.y)};
-    PrTextureRegion region{
-        .texture = PrTexture{frame->texture, PrTextureAlpha_Premultiplied},
-        .extent = frame->extent,
-        .levelCount = 1,
-        .rect = texels,
-    };
-    PrRect box{0, 0, extent.x, extent.y};
-    PrDrawBrush brush = prDrawBrushImage(prDrawSourceRegion(&region, texels, 0), box, PrDrawSampling_Linear);
-    prDrawListRect(list, box, {.brush = &brush});
-    frameRetain(frame);
-    prDrawListHold(list, frameRelease, frame);
 }
 
 // Decodes the frame at the playback position into the video's frame. Returns false if the frame that shows there is not
@@ -316,17 +277,13 @@ bool decodeFrame(HtmlMedia* media) {
     uint64_t generation = prTextureCacheGeneration(textures);
     if (media->frame != nullptr && frame.serial == media->frameSerial && generation == media->frameGeneration)
         return frame.current;
-    PrGpuTexture texture{};
-    if (prGpuTextureImport(device, &frame.image, nullptr, nullptr, &texture) != PrStatus_Ok)
+    // A frame of an earlier device is not imported into: its texture is on that device.
+    if (media->frame != nullptr && prDrawHostTextureDevice(media->frame) != device) {
+        prDrawHostTextureRelease(media->frame);
+        media->frame = nullptr;
+    }
+    if (prDrawHostTextureImport(device, &frame.image, PrTextureAlpha_Premultiplied, &media->frame) != PrStatus_Ok)
         return frame.current;
-    PrGpuTextureDesc made = prGpuTextureDesc(device, texture);
-    HtmlMediaFrame* shown = allocZeroed<HtmlMediaFrame>();
-    shown->references.storeRelaxed(1);
-    shown->device = device;
-    shown->texture = texture;
-    shown->extent = PrUVec2{made.extent.width, made.extent.height};
-    frameRelease(media->frame);
-    media->frame = shown;
     media->frameSerial = frame.serial;
     media->frameGeneration = generation;
     return frame.current;
@@ -339,7 +296,7 @@ void showPicture(HtmlMedia* media) {
     DomElementState* state = domElementState(media->element);
     // The poster is an image, which is the element's picture. A frame is drawn by the element's painter.
     const PrTextureSource* picture = showsPoster(media) ? media->poster : nullptr;
-    HtmlMediaFrame* frame = showsPoster(media) ? nullptr : media->frame;
+    PrDrawHostTexture* frame = showsPoster(media) ? nullptr : media->frame;
     PrUVec2 natural{media->videoWidth, media->videoHeight};
     if ((natural.x == 0 || natural.y == 0) && media->poster != nullptr)
         natural = prTextureDescDisplayedExtent(prTextureSourceDesc(media->poster));
@@ -356,13 +313,8 @@ void showPicture(HtmlMedia* media) {
     prLayoutPainterRelease(state->vector);
     state->vector = PrLayoutPainter{};
     if (frame != nullptr) {
-        frameRetain(frame);
-        state->vector = PrLayoutPainter{
-            .context = frame,
-            .paint = paintFrame,
-            .retain = frameRetain,
-            .release = frameRelease,
-        };
+        prDrawHostTextureRetain(frame);
+        state->vector = prLayoutPainterHostTexture(frame);
         state->vectorRevision = media->frameSerial ^ media->frameGeneration << 48;
         state->vectorNatural = prLayoutNaturalSizeNone();
         state->vectorNatural.width = prLayoutUnitFromPx(float(natural.x));
@@ -1276,7 +1228,7 @@ void htmlMediaSourceTracksChanging(HtmlMedia* media) {
     media->source = nullptr;
     prMediaDecoderDestroy(media->decoder);
     media->decoder = nullptr;
-    frameRelease(media->frame);
+    prDrawHostTextureRelease(media->frame);
     media->frame = nullptr;
     media->frameSerial = 0;
 }

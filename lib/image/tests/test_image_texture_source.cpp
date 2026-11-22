@@ -11,6 +11,8 @@
 #include "pr/mem.h"
 #include "pr/texture.h"
 
+#include "tools/harness/animated_gif.h"
+
 #include "tools/harness/test.h"
 
 namespace pr_impl {
@@ -303,3 +305,85 @@ TEST_CASE("an image source reports the orientation stored in its file, and a tex
 }
 
 TEST_SUITE_END();
+
+TEST_CASE("an animated image is a source that changes over time: its frames show in turn, each for its duration") {
+    Codecs codecs;
+    Array<uint8_t> gif = animatedGif(3, 50, true);
+    const PrTextureSource* source = nullptr;
+    REQUIRE(prImageTextureSourceOpenBytes(PrByteView{gif.data(), gif.count()}, codecs.images, nullptr,
+        PrImageTextureColor_Srgb, &source) == PrStatus_Ok);
+    CHECK(prTextureSourcePlays(source));
+    CHECK(prTextureSourceDesc(source)->extent == PrUVec2{4, 2});
+    // The animation begins at the time of the first ask. The source itself is the first frame, which is red.
+    PrTextureFrame first{};
+    prTextureSourceFrameAt(source, 10, &first);
+    CHECK(first.source == source);
+    CHECK(first.next == doctest::Approx(10.5));
+    Array<uint8_t> texels;
+    REQUIRE(readAll(first.source, &texels) == PrStatus_Ok);
+    CHECK(texels[0] == 255);
+    CHECK(texels[1] == 0);
+    // Half a second later the second frame shows, a still source with the same description. It is green.
+    PrTextureFrame second{};
+    prTextureSourceFrameAt(source, 10.6, &second);
+    CHECK(second.source != source);
+    CHECK(second.serial != first.serial);
+    CHECK(!prTextureSourcePlays(second.source));
+    CHECK(prTextureSourceDesc(second.source)->extent == PrUVec2{4, 2});
+    CHECK(second.next == doctest::Approx(11.0));
+    REQUIRE(readAll(second.source, &texels) == PrStatus_Ok);
+    CHECK(texels[0] == 0);
+    CHECK(texels[1] == 255);
+    // The frames read in order, and a frame reads again after a later one.
+    PrTextureFrame third{};
+    prTextureSourceFrameAt(source, 11.2, &third);
+    REQUIRE(readAll(third.source, &texels) == PrStatus_Ok);
+    CHECK(texels[2] == 255);
+    REQUIRE(readAll(second.source, &texels) == PrStatus_Ok);
+    CHECK(texels[1] == 255);
+    // After the last frame, the first shows again.
+    PrTextureFrame again{};
+    prTextureSourceFrameAt(source, 11.6, &again);
+    CHECK(again.source == source);
+    CHECK(again.serial == first.serial);
+    CHECK(again.next == doctest::Approx(12.0));
+    prTextureSourceRelease(again.source);
+    prTextureSourceRelease(third.source);
+    prTextureSourceRelease(second.source);
+    prTextureSourceRelease(first.source);
+    prTextureSourceRelease(source);
+}
+
+TEST_CASE("an animation that plays once stays on its last frame, a frame too short to show takes a tenth of a second, "
+        "and an image of one frame is still") {
+    Codecs codecs;
+    Array<uint8_t> once = animatedGif(2, 1, false);
+    const PrTextureSource* source = nullptr;
+    REQUIRE(prImageTextureSourceOpenBytes(PrByteView{once.data(), once.count()}, codecs.images, nullptr,
+        PrImageTextureColor_Srgb, &source) == PrStatus_Ok);
+    PrTextureFrame frame{};
+    prTextureSourceFrameAt(source, 5, &frame);
+    CHECK(frame.next == doctest::Approx(5.1));
+    prTextureSourceRelease(frame.source);
+    prTextureSourceFrameAt(source, 5.15, &frame);
+    CHECK(frame.source != source);
+    CHECK(frame.next == doctest::Approx(5.2));
+    uint64_t last = frame.serial;
+    prTextureSourceRelease(frame.source);
+    // Once the frames have played, the last one stays, and nothing follows it.
+    prTextureSourceFrameAt(source, 9, &frame);
+    CHECK(frame.serial == last);
+    CHECK(frame.next == 0);
+    prTextureSourceRelease(frame.source);
+    prTextureSourceRelease(source);
+
+    Array<uint8_t> still = animatedGif(1, 50, true);
+    REQUIRE(prImageTextureSourceOpenBytes(PrByteView{still.data(), still.count()}, codecs.images, nullptr,
+        PrImageTextureColor_Srgb, &source) == PrStatus_Ok);
+    CHECK(!prTextureSourcePlays(source));
+    prTextureSourceFrameAt(source, 1, &frame);
+    CHECK(frame.source == source);
+    CHECK(frame.next == 0);
+    prTextureSourceRelease(frame.source);
+    prTextureSourceRelease(source);
+}

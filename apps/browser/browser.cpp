@@ -244,10 +244,11 @@ bool open(void* context, PrAppWindow* window, const PrAppFrame* first) {
 // chrome over a blank page.
 PrAppOutput frame(void* context, PrAppWindow*, const PrAppFrame* f) {
     Browser& b = *static_cast<Browser*>(context);
-    // Frames continue while the device is being created.
     if (!openDevice(b))
-        return PrAppOutput{.wantsFrame = b.device != nullptr && !prGpuDeviceIsReady(b.device)};
+        return PrAppOutput{};
     prGpuSwapChainWait(b.swapChain);
+    // The images that change over time, such as animated ones, play on the clock of the frames.
+    prTextureCacheSetTime(b.textures, f->time);
     tabsRefresh(b);
     prCachePump(b.icons);
     if (f->preferences.colorScheme != b.scheme) {
@@ -303,6 +304,10 @@ PrAppOutput frame(void* context, PrAppWindow*, const PrAppFrame* f) {
     // The pointer shows the document's cursor wherever the page takes the pointer, and the chrome's elsewhere. The page
     // sees the window at its zoom.
     PrAppOutput output = prUiOutput(b.ui);
+    // An image that plays shows its next picture at a known time. The window draws a frame then.
+    double next = prTextureCacheNextFrame(b.textures);
+    if (next != 0 && (output.frameTime == 0 || next < output.frameTime))
+        output.frameTime = next;
     if (view != nullptr) {
         bool pagePointer = b.pageButtons != 0 || overPage(b, b.pointer);
         PrVec2 origin{b.chrome.page.left, b.chrome.page.top};

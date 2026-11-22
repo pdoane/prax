@@ -94,6 +94,23 @@ A preview costs much less to read than the picture, and its texture is smaller.
 
 The cache applies both rules from the detail that an ask states. A consumer does not choose a preview itself.
 
+## Sources that change over time
+
+A source may show a picture that changes: an animated image, or a video. Such a source has a function that says what
+it shows at a time (`PrTextureSourceDesc::frame`, `prTextureSourceFrameAt`). The answer is a picture, which is a still
+source of its own with the same description, a serial that names the picture, and the time at which the source shows
+another.
+
+- **The source itself is the first picture.** A consumer that does not play the source reads it as any still source,
+  and shows that picture.
+- **The provider keeps the timing.** An animated image begins at the time of the first ask and plays its frames for
+  the durations that its file states, as often as the file says. A frame that the file gives less than 20 ms shows for
+  100 ms.
+- **Pictures that are read in order read fastest.** A GIF and an animated PNG store a frame as its difference from the
+  frames before it. The frames of an image share one decoder, which composes each frame from the last.
+
+A consumer does not call the function itself. The cache plays such sources for every consumer ([Playing](#playing)).
+
 ## Formats
 
 A format set (`PrTextureFormatSet`) is an ordered list of formats. A format (`PrTextureFormat`) makes sources of the
@@ -196,6 +213,32 @@ A realization that has started is not cancelled. Its read runs to completion.
   saves a binding and a draw call for each. A device with bindless reaches every texture by handle, so the cache does
   not pack there, and every source keeps hardware sampling and its mip levels. A memory device reads texels in place,
   so the cache does not pack there either.
+
+### Playing
+
+The host gives the cache the time of each frame that it draws (`prTextureCacheSetTime`). A consumer that plays asks
+with `prTextureCachePlay`. The answer for a source that changes over time is the region of the picture that the source
+shows at that time, marked as playing (`PrTextureRegion::playing`), and the source of that picture.
+
+- **A consumer that plays has no code for animation.** Layout asks this way for an image element and a CSS background,
+  and draws the region with its own sampling, fit and tiling, as it draws any image.
+- **A drawing holds the picture that it draws.** The answer names the picture's source. A draw list that draws the
+  region holds it, so the cache keeps the texture for as long as the list draws it.
+- **A picture shows until a newer one has arrived.** The cache realizes the picture that is due, on its pool or inside
+  the ask, and answers with the last picture meanwhile. A source that moves on before a picture arrives skips it.
+- **The host draws when a picture is due.** The cache reports an arrival when a playing source shows another picture,
+  which makes a consumer that keeps a drawing ask and draw again, and it reports the time of the next picture
+  (`prTextureCacheNextFrame`), at which the host draws a frame.
+- **A picture that is due starts at once.** Its realization is not held back by the pool's limit, so the end of a
+  frame cannot cancel it.
+- **A source that nothing asks for stops.** A source plays while consumers ask for it, and for a second after the last
+  ask: a consumer that records on another thread asks less often than the host's frames end.
+- **Pictures that are past are freed at once.** They are not asked for again, so a trim frees their textures whatever
+  the budget, once no drawing holds them.
+- **`prTextureCacheRealize` does not play.** It answers with the source's first picture, which is what a row of
+  thumbnails shows.
+
+A cache whose time was never set plays nothing, and answers with each source's first picture.
 
 ### Cost
 

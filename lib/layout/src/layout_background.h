@@ -21,6 +21,7 @@ namespace pr_impl {
 struct LayoutTextureAsk {
     const PrTextureSource* image;       // the tree's textures hold a reference
     PrTextureCacheAsk ask;
+    bool plays;                         // the ask plays an image that changes over time
 };
 
 // The textures that a tree's paints draw images from: its host's cache (prLayoutTreeSetTextures), and the asks that the
@@ -124,9 +125,17 @@ bool layoutBackgroundPaintLayer(LayoutTextures* PR_NULLABLE textures, const Layo
 // Asks the cache for a texture of `image` as `ask` describes. Returns true and writes the region of the texture to
 // `out` if a texture has arrived. That texture is the version that the ask needs, or a smaller version while the needed
 // one is on its way. If the needed version has not arrived, the ask joins the asks that the tree waits for. Without a
-// cache, no image arrives. The caller holds the image on the list that draws the region (prDrawListHoldSource).
+// cache, no image arrives.
+//
+// If `plays` is set, an image that changes over time, such as an animated one, plays: the region is of the picture that
+// the image shows at the time of the cache, and the ask stays among the asks that the tree waits for, so that the tree
+// records again when the image shows another picture.
+//
+// `*held` is the source whose texture the region is, with a reference for the caller: the image, or the picture of it
+// that shows. The caller makes the list that draws the region hold it (prDrawListHoldSource), and releases its own
+// reference. It is null if the function returns false.
 bool layoutTextureOf(LayoutTextures* PR_NULLABLE textures, const PrTextureSource* image, PrTextureCacheAsk ask,
-    PrTextureRegion* out);
+    bool plays, PrTextureRegion* out, const PrTextureSource* PR_NULLABLE* PR_NONNULL held);
 
 // Returns true if the tree's recordings are stale: the cache moved to another device, or a texture arrived while a
 // recording waited for one. Otherwise makes each waiting ask again, because a trim of the cache cancels a queued

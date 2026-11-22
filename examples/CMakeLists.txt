@@ -74,12 +74,13 @@ target_link_libraries(draw_gallery PRIVATE prax::gpu_select prax::texture prax::
 # where it can. ./dev.sh fetch videos fetches the example's video into third_party/videos.
 pr_example(video
     video/main.cpp
+    FONT_FILES "NotoSans[wdth,wght].ttf"
     DATA ${PROJECT_SOURCE_DIR}/third_party/videos/cat.mp4
 )
 target_link_libraries(video PRIVATE prax::gpu_select prax::texture prax::app prax::draw prax::draw_select
                                     prax::app_select prax::gpu
                                     prax::media
-                                    prax::task prax::core_cpp)
+                                    prax::font prax::text prax::task prax::core_cpp)
 
 # The feature drawings: a captioned drawing of each feature of lib/draw's list, and dense workloads that measure its
 # renderers. They are a library of their own, which the application and draw_bench link. Their fonts are the files of

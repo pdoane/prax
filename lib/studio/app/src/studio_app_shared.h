@@ -167,7 +167,7 @@ void studioAppClose(StudioAppState* app);
 //
 // A window that draws no frame asks for nothing. If the trim cancels a realization, such a window may be the one that
 // waits for it, so each of them is asked for a frame, in which it asks again.
-void studioAppBeginWindowFrame(StudioAppState* app, StudioWindowState* window);
+void studioAppBeginWindowFrame(StudioAppState* app, StudioWindowState* window, double time);
 
 // Removes a window that closed from its application, which stops if the window was its last and its description says
 // so.

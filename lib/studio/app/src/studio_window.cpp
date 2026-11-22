@@ -426,7 +426,7 @@ PrAppOutput renderFrame(PrStudioWindow* w, const PrAppFrame* f) {
     // The window's images realize in the application's cache, which is on the device that the window renders on. If
     // this frame begins a frame of the application, the cache is trimmed before anything in the frame asks it for an
     // image.
-    studioAppBeginWindowFrame(w->studio, w);
+    studioAppBeginWindowFrame(w->studio, w, f->time);
 
     PrKitThemeVariant variant = variantOf(f->preferences.colorScheme);
     PrKitPalette palette = prKitPaletteStudio(variant);
@@ -496,6 +496,10 @@ PrAppOutput renderFrame(PrStudioWindow* w, const PrAppFrame* f) {
     if (w->desc.drawn != nullptr)
         w->desc.drawn(w->desc.context, w, w->list, extent, canvas);
     PrAppOutput output = prUiOutput(w->ui);
+    // An image that plays shows its next picture at a known time. The window draws a frame then.
+    double next = prTextureCacheNextFrame(w->studio->textures);
+    if (next != 0 && (output.frameTime == 0 || next < output.frameTime))
+        output.frameTime = next;
     w->output = output;
     showPortals(w);
     PrTimePerf end = prTimePerfNow();

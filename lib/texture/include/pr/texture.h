@@ -149,6 +149,26 @@ enum {
     kPrTextureSourceMaxPreviews = 16,
 };
 
+// What a source that changes over time shows at one time: an animation's frame, or a video's.
+//
+// `source` is the picture, a still source with the description of the source that it is a picture of. The caller holds
+// a reference to it. `serial` names the picture among the pictures of its source: two answers with the same serial are
+// the same picture. `next` is the time at which the source shows another picture, on the clock of the times that the
+// source is asked with, or zero if it shows this picture from then on.
+typedef struct PrTextureFrame {
+    const PrTextureSource* source;
+    uint64_t serial;
+    double next;
+} PrTextureFrame;
+
+// Writes what a source shows at `time`, in seconds on the caller's clock, to `*out`. A null `out->source` stands for
+// the source itself, which is the first picture of an animation. The provider keeps what it needs between calls, such
+// as the time at which an animation began. Any thread may call it.
+//
+// Pictures that are read in order read fastest: a format that stores a picture as its difference from the one before
+// composes them as it goes.
+typedef void (*PrTextureSourceFrameFn)(void* PR_NULLABLE context, double time, PrTextureFrame* out);
+
 // How a source's provider serves reads.
 enum {
     // The provider fills the texture of a read into a texture (PrTextureReadDesc::device). It writes the texture on the
@@ -182,6 +202,11 @@ typedef struct PrTextureSourceDesc {
     // alpha and orientation. The source retains its previews. At most kPrTextureSourceMaxPreviews.
     const PrTextureSource* PR_NONNULL const* PR_NULLABLE previews;
     uint32_t previewCount;
+
+    // The function that says what the source shows at a time, for a source whose picture changes: an animated image, or
+    // a video. It is null for a still source. The source's own description and reads are those of its first picture,
+    // which is what a consumer that does not play it shows.
+    PrTextureSourceFrameFn PR_NULLABLE frame;
 
     PrTextureSourceReleaseFn PR_NULLABLE release;
     void* PR_NULLABLE context;
@@ -232,6 +257,13 @@ bool prTextureSourceProduces(const PrTextureSource* source, PrGpuFormat format);
 // (PrTextureCacheAsk::detail).
 uint32_t prTextureSourcePreviewCount(const PrTextureSource* source);
 const PrTextureSource* prTextureSourcePreview(const PrTextureSource* source, uint32_t index);
+
+// Returns true if the source's picture changes over time (PrTextureSourceDesc::frame).
+bool prTextureSourcePlays(const PrTextureSource* source);
+
+// Writes what the source shows at `time` to `*out` (PrTextureSourceFrameFn). `out->source` is never null: it is the
+// source itself for the first picture, and for a still source. The caller releases it.
+void prTextureSourceFrameAt(const PrTextureSource* source, double time, PrTextureFrame* out);
 
 // Creates a source of the same texture in `format` and writes it to `*out`. If `format` is the source's own format, the
 // result is the source itself, with a new reference. Otherwise the format's library creates a source that decodes or
@@ -457,6 +489,10 @@ typedef struct PrTextureRegion {
     uint32_t levelCount;        // the mip levels of the texture. A consumer minifies from them if there are several.
     PrRect rect;                // in texels of the texture
     PrUVec2 source;             // the extent of the source's first level, or zero if the rect is in the source's texels
+
+    // True if the region is of a picture of a source that plays (prTextureCachePlay). A later ask may answer with
+    // another picture, so a consumer that keeps a drawing of the region asks again when the cache reports an arrival.
+    bool playing;
 } PrTextureRegion;
 
 // Converts `rect` from the texels of the source to the texels of the region's version, and returns it relative to the

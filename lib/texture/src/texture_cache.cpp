@@ -67,6 +67,7 @@ enum : uint8_t {
     CacheList_None,
     CacheList_Recent,       // arrived entries that a trim may evict, oldest first
     CacheList_Held,         // arrived entries that were held by something else when a trim came to evict them
+    CacheList_Passing,      // arrived pictures of sources that change over time, which a trim evicts once they are past
     CacheList_Failed,
     CacheList_Count,
 };
@@ -80,6 +81,7 @@ struct CacheEntry {
     PrStatus status;                    // the status of a failed realization
     bool asked;                         // true if an ask found the entry pending
     bool started;                       // pending and in flight. A pending entry that has not started is in the queue.
+    bool passing;                       // of a picture of a source that changes over time, which is not asked for again
     PrTextureCachePriority priority;    // the highest priority of the asks of a waiting entry
     uint8_t version;                    // the preview of `source` that it realizes, or the preview count for the source
     CacheList list;                     // the list that a settled entry is in
@@ -109,6 +111,23 @@ struct CacheEntries {
 struct CacheHolders {
     uint64_t source;                    // id of the source
     uint32_t entries;
+};
+
+// The time, in seconds of the cache's clock, for which a source plays after the last ask for it.
+constexpr double kPlayedFor = 1;
+
+// A source that changes over time and that a consumer has asked for within the last kPlayedFor seconds. `current` is
+// the picture that the source shows at the cache's time. `shown` is the last picture that an ask was answered with
+// whole, which asks are answered with until `current` has arrived, however many pictures the source shows meanwhile.
+// The player holds a reference to each. `serial` is the source's serial of `current`, and `next` the time at which the
+// source shows another picture, or zero.
+struct CachePlayer {
+    const PrTextureSource* source;
+    const PrTextureSource* PR_NULLABLE current;
+    const PrTextureSource* PR_NULLABLE shown;
+    uint64_t serial;
+    double next;
+    double askedAt;                     // the cache's time at the last ask for the source
 };
 
 struct TextureCache;
@@ -152,6 +171,13 @@ struct TextureCache {
     uint64_t realizations;
     Atomic<uint64_t> arrivals;      // number of realizations that have arrived; a consumer reads it without the lock
     bool srgbViews;                 // true if the device views textures through their other sRGB form
+
+    // The sources that the cache plays, indexed by source id, and the time of the host's frame, once the host has set
+    // one.
+    RawArray<CachePlayer> players;
+    HashIndex playerIndex;
+    double time;
+    bool timed;
 };
 
 namespace {
@@ -971,12 +997,15 @@ void touch(TextureCache& c, CacheEntry* entry) {
     entry->lastAsked = c.trims;
     if (entry->list == CacheList_Recent || entry->list == CacheList_Held)
         enlist(c, entry, CacheList_Recent, true);
+    else if (entry->list == CacheList_Passing)
+        enlist(c, entry, CacheList_Passing, true);
 }
 
 // Returns the entry of version `version` of `source` for `ask`, which has not arrived. Creates the entry and adds it to
 // the queue if the cache does not have it. Marks the entry as asked for in this frame, and raises its priority to the
 // priority of the ask if that is higher.
-CacheEntry* waitingEntry(TextureCache& c, const PrTextureSource* source, const PrTextureCacheAsk& ask, uint32_t version) {
+CacheEntry* waitingEntry(TextureCache& c, const PrTextureSource* source, const PrTextureCacheAsk& ask, uint32_t version,
+        bool passing = false) {
     PrTextureCacheAsk resolved = askFor(source, ask, version);
     uint64_t key = keyOf(c, source, resolved, version);
     CacheEntry* entry = entryOf(c, key);
@@ -985,6 +1014,7 @@ CacheEntry* waitingEntry(TextureCache& c, const PrTextureSource* source, const P
         *entry = CacheEntry{
             .key = key,
             .state = PrTextureCacheState_Pending,
+            .passing = passing,
             .priority = resolved.priority,
             .version = uint8_t(version),
             .ask = resolved,
@@ -1145,7 +1175,7 @@ void finish(CacheJob* job, PrStatus status, PrTexture texture) {
             c.bytes += entry->bytes;
             ++c.textures;
         }
-        enlist(c, entry, CacheList_Recent, true);
+        enlist(c, entry, entry->passing ? CacheList_Passing : CacheList_Recent, true);
         c.arrivals.fetchAdd(1);
     } else {
         if (texture.texture.id != 0)
@@ -1217,8 +1247,25 @@ void stopAll(TextureCache& c) {
         prConditionWait(&c.settled, &c.lock);
 }
 
-// Frees every entry and every page. No realization waits or is in flight.
+// Frees every entry and every page. No realization waits or is in flight. Stops playing the source at `at`, and
+// releases the pictures that the player holds.
+void stopPlayer(TextureCache& c, uint32_t at) {
+    CachePlayer player = c.players.data[at];
+    uint32_t last = c.players.count - 1;
+    c.playerIndex.erase(KeyIndex::hashOf(prTextureSourceId(player.source)), at);
+    if (at != last) {
+        c.playerIndex.relocate(KeyIndex::hashOf(prTextureSourceId(c.players.data[last].source)), last, at);
+        c.players.data[at] = c.players.data[last];
+    }
+    c.players.count = last;
+    prTextureSourceRelease(player.shown);
+    prTextureSourceRelease(player.current);
+    prTextureSourceRelease(player.source);
+}
+
 void freeAll(TextureCache& c) {
+    while (c.players.count != 0)
+        stopPlayer(c, c.players.count - 1);
     while (c.entries.count != 0)
         removeEntry(c, c.entries.data[c.entries.count - 1]);
     for (CachePage* page : c.pages.span()) {
@@ -1280,6 +1327,128 @@ bool levelsFrom(TextureCache& c, CacheEntry* entry, const CacheEntry& plain) {
     return true;
 }
 
+// Answers an ask for one still source: the region of the smallest version that has arrived with the detail that the ask
+// needs, or of a smaller version while that one is realized. Starts what is missing. An ask for levels of a version
+// that the cache holds without them makes them from that texture at once (levelsFrom). `passing` says that the source
+// is a picture of a source that changes over time. Called with the lock held.
+PrTextureCacheState answer(TextureCache& c, const PrTextureSource* source, PrTextureCacheAsk ask, bool passing,
+        PrTextureRegion* out) {
+    // A picture that is due starts at once. A realization that has started is not cancelled by the trim of a frame in
+    // which its consumer, which may record on another thread, has not asked yet.
+    if (passing)
+        ask.priority = PrTextureCachePriority_High;
+    uint32_t count = prTextureSourcePreviewCount(source);
+    uint32_t need = versionFor(source, ask.detail);
+    for (uint32_t version = need; version <= count; ++version) {
+        CacheEntry* ready = readyEntry(c, source, ask, version);
+        if (ready != nullptr) {
+            touch(c, ready);
+            *out = regionFor(*ready, ask);
+            return PrTextureCacheState_Ready;
+        }
+    }
+    CacheEntry* entry = waitingEntry(c, source, ask, need, passing);
+    if (entry->state == PrTextureCacheState_Pending && !entry->started && (entry->ask.flags & PrTextureCacheFlag_Levels) != 0) {
+        const CacheEntry* plain = entryOf(c, siblingOf(entry->key));
+        if (plain != nullptr && plain->state == PrTextureCacheState_Ready && plain->page == 0 &&
+                plain->region.levelCount == 1 && levelsFrom(c, entry, *plain)) {
+            touch(c, entry);
+            *out = regionFor(*entry, ask);
+            return PrTextureCacheState_Ready;
+        }
+    }
+    PrTextureCacheState state = entry->state;
+    if (state == PrTextureCacheState_Pending) {
+        entry->asked = true;
+        for (uint32_t version = need; version-- > 0;) {
+            CacheEntry* smaller = readyEntry(c, source, ask, version);
+            if (smaller != nullptr) {
+                touch(c, smaller);
+                *out = regionFor(*smaller, ask);
+                state = PrTextureCacheState_Partial;
+                break;
+            }
+        }
+        // The smallest preview arrives long before the needed version, so the consumer has something to show. A cache
+        // without a pool realizes inside the ask. There the preview would only delay the needed version.
+        if (state == PrTextureCacheState_Pending && need != 0 && c.desc.tasks != nullptr)
+            waitingEntry(c, source, ask, 0, passing)->asked = true;
+    }
+    return state;
+}
+
+// Returns the position of the player of `source`, which is created if the cache does not play the source yet.
+uint32_t playerOf(TextureCache& c, const PrTextureSource* source) {
+    uint64_t id = prTextureSourceId(source);
+    uint32_t at = c.playerIndex.find(KeyIndex::hashOf(id), [&](uint32_t i) {
+        return prTextureSourceId(c.players.data[i].source) == id;
+    });
+    if (at != kHashMissing)
+        return at;
+    prTextureSourceRetain(source);
+    c.playerIndex.insert(KeyIndex::hashOf(id), c.players.count);
+    c.players.push(CachePlayer{.source = source});
+    return c.players.count - 1;
+}
+
+// Asks the player's source what it shows at the cache's time, if the time of its next picture has come. A new picture
+// becomes the player's current one.
+void advance(TextureCache& c, CachePlayer& player) {
+    if (player.current != nullptr && (player.next == 0 || c.time < player.next))
+        return;
+    PrTextureFrame frame{};
+    prTextureSourceFrameAt(player.source, c.time, &frame);
+    player.next = frame.next;
+    if (player.current != nullptr && frame.serial == player.serial) {
+        prTextureSourceRelease(frame.source);
+        return;
+    }
+    prTextureSourceRelease(player.current);
+    player.current = frame.source;
+    player.serial = frame.serial;
+}
+
+// Answers an ask for a source that changes over time: the region of the picture that the source shows at the cache's
+// time. While that picture is being realized, the answer is the last picture that an ask was answered with, and before
+// any, the source's own first picture. Writes the source of the answer's region to `*picture`, with a reference for the
+// caller, or null if the answer has no region. Called with the lock held.
+PrTextureCacheState play(TextureCache& c, const PrTextureSource* source, const PrTextureCacheAsk& ask,
+        PrTextureRegion* out, const PrTextureSource* PR_NULLABLE* PR_NONNULL picture) {
+    // The player is read by position after each call that may add an entry. No call here adds a player.
+    uint32_t at = playerOf(c, source);
+    c.players.data[at].askedAt = c.time;
+    advance(c, c.players.data[at]);
+    const PrTextureSource* current = c.players.data[at].current;
+    const PrTextureSource* answered = current;
+    PrTextureCacheState state = answer(c, current, ask, current != source, out);
+    if (state == PrTextureCacheState_Ready) {
+        CachePlayer& player = c.players.data[at];
+        if (player.shown != current) {
+            prTextureSourceRetain(current);
+            prTextureSourceRelease(player.shown);
+            player.shown = current;
+        }
+    } else {
+        const PrTextureSource* last = c.players.data[at].shown != nullptr ? c.players.data[at].shown : source;
+        PrTextureRegion earlier{};
+        PrTextureCacheState had = PrTextureCacheState_Pending;
+        if (last != current)
+            had = answer(c, last, ask, last != source, &earlier);
+        bool better = had == PrTextureCacheState_Partial && state != PrTextureCacheState_Partial;
+        if (had == PrTextureCacheState_Ready || better) {
+            *out = earlier;
+            state = had;
+            answered = last;
+        }
+    }
+    if (state == PrTextureCacheState_Ready || state == PrTextureCacheState_Partial) {
+        prTextureSourceRetain(answered);
+        *picture = answered;
+    }
+    out->playing = true;
+    return state;
+}
+
 } // namespace
 
 } // namespace pr_impl
@@ -1324,6 +1493,8 @@ void prTextureCacheDestroy(PrTextureCache* PR_NULLABLE cache) {
     cache->holderIndex.reset();
     cache->queue.reset();
     cache->pages.reset();
+    cache->players.reset();
+    cache->playerIndex.reset();
     prMutexReset(&cache->lock);
     prConditionReset(&cache->settled);
     prMemoryFree(cache);
@@ -1346,6 +1517,33 @@ uint64_t prTextureCacheGeneration(const PrTextureCache* cache) {
     return cache->generation;
 }
 
+void prTextureCacheSetTime(PrTextureCache* cache, double time) {
+    TextureCache& c = *cache;
+    prMutexLock(&c.lock);
+    c.time = time;
+    c.timed = true;
+    // A source whose next picture is due is asked what it shows when a consumer next asks for it. The arrival makes the
+    // consumers that keep drawings ask.
+    bool due = false;
+    for (const CachePlayer& player : c.players.span())
+        due = due || (player.next != 0 && time >= player.next);
+    if (due)
+        c.arrivals.fetchAdd(1);
+    prMutexUnlock(&c.lock);
+}
+
+double prTextureCacheNextFrame(const PrTextureCache* cache) {
+    PrMutex* lock = const_cast<PrMutex*>(&cache->lock);
+    prMutexLock(lock);
+    double next = 0;
+    for (const CachePlayer& player : cache->players.span()) {
+        if (player.next != 0 && (next == 0 || player.next < next))
+            next = player.next;
+    }
+    prMutexUnlock(lock);
+    return next;
+}
+
 uint64_t prTextureCacheArrivals(const PrTextureCache* cache) {
     return cache->arrivals.load();
 }
@@ -1358,48 +1556,8 @@ PrTextureCacheState prTextureCacheRealize(PrTextureCache* cache, const PrTexture
     // Only the host changes the device, and no thread asks during that call, so the read needs no lock.
     if (c.desc.device == nullptr)
         return PrTextureCacheState_Pending;
-    uint32_t count = prTextureSourcePreviewCount(source);
-    uint32_t need = versionFor(source, ask.detail);
     prMutexLock(&c.lock);
-    // The smallest version that has arrived with the detail that the ask needs.
-    for (uint32_t version = need; version <= count; ++version) {
-        CacheEntry* ready = readyEntry(c, source, ask, version);
-        if (ready != nullptr) {
-            touch(c, ready);
-            *out = regionFor(*ready, ask);
-            prMutexUnlock(&c.lock);
-            return PrTextureCacheState_Ready;
-        }
-    }
-    CacheEntry* entry = waitingEntry(c, source, ask, need);
-    // An ask for levels of a version that the cache holds without them makes them from that texture at once.
-    if (entry->state == PrTextureCacheState_Pending && !entry->started && (entry->ask.flags & PrTextureCacheFlag_Levels) != 0) {
-        const CacheEntry* plain = entryOf(c, siblingOf(entry->key));
-        if (plain != nullptr && plain->state == PrTextureCacheState_Ready && plain->page == 0 &&
-                plain->region.levelCount == 1 && levelsFrom(c, entry, *plain)) {
-            touch(c, entry);
-            *out = regionFor(*entry, ask);
-            prMutexUnlock(&c.lock);
-            return PrTextureCacheState_Ready;
-        }
-    }
-    PrTextureCacheState state = entry->state;
-    if (state == PrTextureCacheState_Pending) {
-        entry->asked = true;
-        for (uint32_t version = need; version-- > 0;) {
-            CacheEntry* smaller = readyEntry(c, source, ask, version);
-            if (smaller != nullptr) {
-                touch(c, smaller);
-                *out = regionFor(*smaller, ask);
-                state = PrTextureCacheState_Partial;
-                break;
-            }
-        }
-        // The smallest preview arrives long before the needed version, so the consumer has something to show. A cache
-        // without a pool realizes inside the ask. There the preview would only delay the needed version.
-        if (state == PrTextureCacheState_Pending && need != 0 && c.desc.tasks != nullptr)
-            waitingEntry(c, source, ask, 0)->asked = true;
-    }
+    PrTextureCacheState state = answer(c, source, ask, false, out);
     RawArray<CacheJob*> jobs;
     pump(c, &jobs);
     bool ran = jobs.count != 0 && c.desc.tasks == nullptr;
@@ -1408,6 +1566,38 @@ PrTextureCacheState prTextureCacheRealize(PrTextureCache* cache, const PrTexture
     // Without a pool, the realizations ran in the call, so the ask's answer has changed.
     if (ran)
         return prTextureCacheRealize(cache, source, ask, out);
+    return state;
+}
+
+PrTextureCacheState prTextureCachePlay(PrTextureCache* cache, const PrTextureSource* source, PrTextureCacheAsk ask,
+        PrTextureRegion* out, const PrTextureSource* PR_NULLABLE* PR_NONNULL picture) {
+    PR_ASSERT(ask.alpha == PrTextureAlpha_Straight || ask.alpha == PrTextureAlpha_Premultiplied);
+    TextureCache& c = *cache;
+    *out = PrTextureRegion{};
+    *picture = nullptr;
+    if (c.desc.device == nullptr)
+        return PrTextureCacheState_Pending;
+    prMutexLock(&c.lock);
+    PrTextureCacheState state;
+    if (c.timed && prTextureSourcePlays(source)) {
+        state = play(c, source, ask, out, picture);
+    } else {
+        state = answer(c, source, ask, false, out);
+        if (state == PrTextureCacheState_Ready || state == PrTextureCacheState_Partial) {
+            prTextureSourceRetain(source);
+            *picture = source;
+        }
+    }
+    RawArray<CacheJob*> jobs;
+    pump(c, &jobs);
+    bool ran = jobs.count != 0 && c.desc.tasks == nullptr;
+    prMutexUnlock(&c.lock);
+    launch(c, &jobs);
+    // Without a pool, the realizations ran in the call, so the ask's answer has changed.
+    if (ran) {
+        prTextureSourceRelease(*picture);
+        return prTextureCachePlay(cache, source, ask, out, picture);
+    }
     return state;
 }
 
@@ -1474,6 +1664,23 @@ void prTextureCacheTrim(PrTextureCache* cache) {
         if (entry == nullptr)
             break;
         enlist(c, entry, isHeld(c, *entry) ? CacheList_Held : CacheList_Recent, isHeld(c, *entry));
+    }
+    // A source that no consumer has asked for in the last second of the cache's time stops playing. A consumer that
+    // records on another thread asks less often than the host's frames end, so one frame without an ask is not enough.
+    for (uint32_t at = c.players.count; at-- > 0;) {
+        if (c.time - c.players.data[at].askedAt > kPlayedFor)
+            stopPlayer(c, at);
+    }
+    // A picture of such a source is not asked for again once the source shows another. Its texture goes as soon as no
+    // drawing holds its source, whatever the budget. A picture that a drawing still holds is checked again later.
+    for (uint32_t checked = 0; checked < kHeldChecks; ++checked) {
+        CacheEntry* entry = c.lists[CacheList_Passing].oldest;
+        if (entry == nullptr || entry->lastAsked == current)
+            break;
+        if (isHeld(c, *entry))
+            enlist(c, entry, CacheList_Passing, true);
+        else
+            removeEntry(c, entry);
     }
     // While the cache is over its budget, it evicts the textures that no ask of this frame wants, least recently asked
     // for first. A texture whose source something else holds stays, because a drawing may name its region.
