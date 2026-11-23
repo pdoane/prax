@@ -3,7 +3,7 @@
 #include "apps/alchemy/view.h"
 
 #include "pr/array.h"
-#include "pr/command_kit.h"
+#include "pr/command_ui.h"
 #include "pr/file.h"
 #include "pr/float.h"
 #include "pr/hash.h"
@@ -11,6 +11,7 @@
 #include "pr/kit_button.h"
 #include "pr/kit_choice.h"
 #include "pr/kit_collection.h"
+#include "pr/kit_command.h"
 #include "pr/kit_image.h"
 #include "pr/kit_input.h"
 #include "pr/kit_menu.h"
@@ -62,24 +63,15 @@ PrLayoutNode row(PrKit* kit, PrLayoutNode parent, float gap = kPrKitSpace3) {
     return prKitBox(kit, parent, {}, style);
 }
 
-// A button that runs the command `id`, disabled while the command is and on while it is checked.
+// The style of Alchemy's toolbar buttons, which most of its command buttons take.
+constexpr PrKitButtonStyle kToolStyle{.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Sm};
+
+// Creates a button that runs the command `id` (prKitRegistryButton). The button is keyed by `id` and shows `text`,
+// `icon` or both.
 PrLayoutNode commandButton(PrKit* kit, PrLayoutNode parent, Commands& commands, PrStringView id, PrStringView text,
-        PrStudioIconKind icon, PrKitButtonVariant variant = PrKitButtonVariant_Ghost,
-        PrKitControlSize size = PrKitControlSize_Sm) {
-    PrCommandIndex index = prCommandRegistryFind(commands.registry, id);
-    PrCommandStateFlags state = index != kPrCommandMissing ? prCommandRegistryState(commands.registry, index) : 0;
-    PrKitButton button{
-        .key = prHashString(id, 0),
-        .text = text,
-        .icon = icon,
-        .selected = (state & PrCommandStateFlag_Checked) != 0,
-        .disabled = index == kPrCommandMissing || (state & PrCommandStateFlag_Disabled) != 0,
-    };
-    PrLayoutNode node = prKitButton(kit, parent, button, {.variant = variant, .size = size});
-    prCommandTooltip(kit, node, commands.registry, commands.keymap, id);
-    if (prKitActivated(kit, node))
-        runCommand(commands, id);
-    return node;
+        PrStudioIconKind icon, PrKitButtonStyle style = kToolStyle) {
+    PrKitButton button{.key = prHashString(id, 0), .text = text, .icon = icon};
+    return prKitRegistryButton(kit, parent, commands.registry, commands.keymap, id, button, style);
 }
 
 // A small button of an icon alone, with a tooltip.
@@ -187,11 +179,11 @@ void buildSource(PrKit* kit, PrLayoutNode parent, AppState& state, Commands& com
         textStyle(PrKitTextRole_BodySmall, PrKitTone_Secondary));
     PrLayoutNode actions = row(kit, column);
     commandButton(kit, actions, commands, "alchemy.clearSource", "Clear", PrStudioIconKind_None,
-        PrKitButtonVariant_Default, PrKitControlSize_Xs);
+        {.size = PrKitControlSize_Xs});
     PrLayoutNode menu = prKitContextMenu(kit, thumbnail, {}, {.minWidth = kMenuWidth});
     if (menu != kPrLayoutNodeNone) {
-        prCommandMenuItem(kit, menu, commands.registry, commands.keymap, "alchemy.revealSource", {});
-        prCommandMenuItem(kit, menu, commands.registry, commands.keymap, "alchemy.clearSource", {});
+        prKitRegistryMenuItem(kit, menu, commands.registry, commands.keymap, "alchemy.revealSource", {});
+        prKitRegistryMenuItem(kit, menu, commands.registry, commands.keymap, "alchemy.clearSource", {});
     }
 }
 
@@ -589,7 +581,7 @@ void buildImageMenu(PrKit* kit, PrLayoutNode host, Commands& commands) {
     if (menu == kPrLayoutNodeNone)
         return;
     const auto item = [&](const char* id, PrKitMenuItemVariant variant = PrKitMenuItemVariant_Default) {
-        prCommandMenuItem(kit, menu, commands.registry, commands.keymap, id, {.variant = variant});
+        prKitRegistryMenuItem(kit, menu, commands.registry, commands.keymap, id, {.variant = variant});
     };
     item("alchemy.useAsSource");
     item("alchemy.copyImage");
@@ -772,7 +764,7 @@ void buildMenus(PrKit* kit, PrLayoutNode bar, Commands& commands) {
             if (id == nullptr)
                 prKitMenuSeparator(kit, list, {});
             else
-                prCommandMenuItem(kit, list, commands.registry, commands.keymap, id, {});
+                prKitRegistryMenuItem(kit, list, commands.registry, commands.keymap, id, {});
         }
     }
 }
@@ -864,8 +856,7 @@ void buildImportDialog(PrKit* kit, PrLayoutNode trigger, AppState& state, View& 
         prKitLabel(kit, body, {.text = caption}, textStyle(PrKitTextRole_BodySmall, tone));
     }
     PrLayoutNode footer = prKitDialogFooter(kit, body);
-    PrLayoutNode paste = commandButton(kit, footer, commands, "alchemy.pasteImage", "Paste", PrStudioIconKind_Image,
-        PrKitButtonVariant_Default, PrKitControlSize_Md);
+    PrLayoutNode paste = commandButton(kit, footer, commands, "alchemy.pasteImage", "Paste", PrStudioIconKind_Image, {});
     // The dialog's chord applies while focus is in its body, which the first focusable of the dialog is not.
     prKitModalAutofocus(kit, paste);
     prKitSpacer(kit, footer, {});
@@ -933,7 +924,7 @@ void buildTitleBarRow(PrKit* kit, PrLayoutNode bar, View& view, Commands& comman
         prKitSetOpen(kit, menus, true);
         commands.shell->paletteRequested = false;
     }
-    PrLayoutNode list = prCommandPalette(kit, menus, commands.registry, commands.keymap, view.paletteQuery);
+    PrLayoutNode list = prKitRegistryPalette(kit, menus, commands.registry, commands.keymap, view.paletteQuery);
     PrStringView query{};
     if (list == kPrLayoutNodeNone)
         view.paletteQuery.clear();
@@ -943,9 +934,9 @@ void buildTitleBarRow(PrKit* kit, PrLayoutNode bar, View& view, Commands& comman
     PrLayoutNode run = row(kit, bar);
     prKitPlace(kit, run, {.flex = PrKitFlex_Fixed});
     commandButton(kit, run, commands, "alchemy.generate", kRuns[state.mode], PrStudioIconKind_Play,
-        PrKitButtonVariant_Primary, PrKitControlSize_Sm);
-    commandButton(kit, run, commands, "alchemy.interrupt", "", PrStudioIconKind_Stop, PrKitButtonVariant_Danger,
-        PrKitControlSize_Sm);
+        {.variant = PrKitButtonVariant_Primary, .size = PrKitControlSize_Sm});
+    commandButton(kit, run, commands, "alchemy.interrupt", "", PrStudioIconKind_Stop,
+        {.variant = PrKitButtonVariant_Danger, .size = PrKitControlSize_Sm});
 
     // The activity: the active job's stage and progress, or the last message while nothing runs.
     side.justify = PrKitJustify_End;

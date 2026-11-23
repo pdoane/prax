@@ -26,12 +26,13 @@
 #include "pr/assert.h"
 #include "pr/command.h"
 #include "pr/command_keymap.h"
-#include "pr/command_kit.h"
+#include "pr/command_ui.h"
 #include "pr/compress_select.h"
 #include "pr/count_of.h"
 #include "pr/file.h"
 #include "pr/font_bundle.h"
 #include "pr/image_select.h"
+#include "pr/kit_command.h"
 #include "pr/kit_menu.h"
 #include "pr/kit_text.h"
 #include "pr/layout_query.h"
@@ -239,7 +240,7 @@ void build(void* context, PrStudioWindow*, PrLayoutNode root, PrVec2 extent) {
             if (id.isEmpty())
                 prKitMenuSeparator(m.kit, list, {});
             else
-                prCommandMenuItem(m.kit, list, m.commands, m.keymap, id, {});
+                prKitRegistryMenuItem(m.kit, list, m.commands, m.keymap, id, {});
         }
     }
     float height = extent.y - kStatusHeight - m.menuHeight;

@@ -35,10 +35,6 @@ void commandsDestroy(Browser& b);
 // changed.
 void commandRun(Browser& b, PrStringView id);
 
-// Returns true if the command `id` is enabled, or checked.
-bool commandIsEnabled(const Browser& b, PrStringView id);
-bool commandIsChecked(const Browser& b, PrStringView id);
-
 // Returns the title of the command `id`.
 PrStringView commandTitle(const Browser& b, PrStringView id);
 

@@ -1,10 +1,9 @@
-// Commands in an interface: scopes of key bindings, and Studio Kit's menu items and command palette.
+// Studio Kit's entry points of commands: menu items, buttons, tooltips and the command palette.
 
-#include "pr/command_kit.h"
+#include "pr/kit_command.h"
 
-#include "pr/ascii.h"
+#include "pr/command_ui.h"
 #include "pr/hash.h"
-#include "pr/string_ops.h"
 
 namespace pr_impl {
 
@@ -17,7 +16,7 @@ void runFromEntryPoint(const PrCommandRegistry* registry, PrCommandIndex index) 
     prCommandRegistryRun(registry, prCommandRegistryCommand(registry, index).id, nullptr, nullptr);
 }
 
-// Returns true if an entry point may offer the command: it exists and takes no required parameter.
+// Returns true if an entry point may offer the command. The command must exist and take no required parameter.
 bool isOffered(const PrCommandRegistry* registry, PrCommandIndex index) {
     return index != kPrCommandMissing && prCommandRegistryIsDirect(registry, index);
 }
@@ -41,26 +40,7 @@ bool isListed(const PrCommandRegistry* registry, PrCommandIndex index, PrStringV
 
 using namespace pr_impl;
 
-void prCommandScope(PrUi* ui, PrLayoutNode node, const PrCommandRegistry* registry, const PrCommandKeymap* keymap,
-        PrStringView context) {
-    for (uint32_t i = 0; i < prCommandKeymapCount(keymap); ++i) {
-        PrCommandBinding binding = prCommandKeymapBinding(keymap, i);
-        if (binding.context != context)
-            continue;
-        PrCommandIndex index = prCommandRegistryFind(registry, binding.commandId);
-        if (!isOffered(registry, index))
-            continue;
-        bool pressed;
-        if (binding.kind == PrCommandBindingKind_Override)
-            pressed = prUiKeyCaptured(ui, node, binding.chord.key, binding.chord.modifiers);
-        else
-            pressed = prUiKeyPressed(ui, node, binding.chord.key, binding.chord.modifiers);
-        if (pressed)
-            runFromEntryPoint(registry, index);
-    }
-}
-
-PrLayoutNode prCommandMenuItem(PrKit* kit, PrLayoutNode menu, const PrCommandRegistry* registry,
+PrLayoutNode prKitRegistryMenuItem(PrKit* kit, PrLayoutNode menu, const PrCommandRegistry* registry,
         const PrCommandKeymap* keymap, PrStringView commandId, PrKitMenuItemStyle style) {
     PrCommandIndex index = prCommandRegistryFind(registry, commandId);
     if (index == kPrCommandMissing)
@@ -81,7 +61,22 @@ PrLayoutNode prCommandMenuItem(PrKit* kit, PrLayoutNode menu, const PrCommandReg
     return node;
 }
 
-PrLayoutNode prCommandTooltip(PrKit* kit, PrLayoutNode anchor, const PrCommandRegistry* registry,
+PrLayoutNode prKitRegistryButton(PrKit* kit, PrLayoutNode parent, const PrCommandRegistry* registry,
+        const PrCommandKeymap* keymap, PrStringView commandId, PrKitButton button, PrKitButtonStyle style) {
+    PrCommandIndex index = prCommandRegistryFind(registry, commandId);
+    if (index == kPrCommandMissing)
+        return kPrLayoutNodeNone;
+    PrCommandStateFlags state = prCommandRegistryState(registry, index);
+    button.selected = (state & PrCommandStateFlag_Checked) != 0;
+    button.disabled = (state & PrCommandStateFlag_Disabled) != 0 || !isOffered(registry, index);
+    PrLayoutNode node = prKitButton(kit, parent, button, style);
+    prKitRegistryTooltip(kit, node, registry, keymap, commandId);
+    if (prKitActivated(kit, node))
+        runFromEntryPoint(registry, index);
+    return node;
+}
+
+PrLayoutNode prKitRegistryTooltip(PrKit* kit, PrLayoutNode anchor, const PrCommandRegistry* registry,
         const PrCommandKeymap* keymap, PrStringView commandId) {
     PrCommandIndex index = prCommandRegistryFind(registry, commandId);
     if (index == kPrCommandMissing)
@@ -96,23 +91,7 @@ PrLayoutNode prCommandTooltip(PrKit* kit, PrLayoutNode anchor, const PrCommandRe
     return node;
 }
 
-bool prCommandMatches(PrStringView query, PrStringView title, PrStringView category) {
-    size_t at = 0;
-    while (at < query.size) {
-        while (at < query.size && query.data[at] == ' ')
-            ++at;
-        size_t end = at;
-        while (end < query.size && query.data[end] != ' ')
-            ++end;
-        PrStringView word = prStringSlice(query, at, end - at);
-        if (word.size != 0 && !prAsciiContainsFold(title, word) && !prAsciiContainsFold(category, word))
-            return false;
-        at = end;
-    }
-    return true;
-}
-
-PrLayoutNode prCommandPalette(PrKit* kit, PrLayoutNode trigger, const PrCommandRegistry* registry,
+PrLayoutNode prKitRegistryPalette(PrKit* kit, PrLayoutNode trigger, const PrCommandRegistry* registry,
         const PrCommandKeymap* keymap, PrStringView query) {
     uint32_t count = 0;
     for (PrCommandIndex i = 0; i < prCommandRegistryCount(registry); ++i)
@@ -121,7 +100,7 @@ PrLayoutNode prCommandPalette(PrKit* kit, PrLayoutNode trigger, const PrCommandR
     PrLayoutNode list = prKitCommandPalette(kit, trigger, palette);
     if (list == kPrLayoutNodeNone)
         return list;
-    // The command that the palette runs, which runs once the list is built, so that it changes nothing that the list
+    // The command that the palette runs. It runs after the list is built, so that it changes nothing that the list
     // reads.
     PrCommandIndex chosen = kPrCommandMissing;
     for (PrCommandIndex i = 0; i < prCommandRegistryCount(registry); ++i) {

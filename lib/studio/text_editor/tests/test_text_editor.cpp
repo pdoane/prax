@@ -4,7 +4,7 @@
 #include "pr/array.h"
 #include "pr/command.h"
 #include "pr/command_keymap.h"
-#include "pr/command_kit.h"
+#include "pr/command_ui.h"
 #include "pr/file.h"
 #include "pr/kit_box.h"
 #include "pr/layout_query.h"

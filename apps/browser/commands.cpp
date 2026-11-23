@@ -409,14 +409,6 @@ void commandRun(Browser& b, PrStringView id) {
     prCommandRegistryRun(b.commands, id, nullptr, nullptr);
 }
 
-bool commandIsEnabled(const Browser& b, PrStringView id) {
-    return (prCommandRegistryState(b.commands, indexOf(b, id)) & PrCommandStateFlag_Disabled) == 0;
-}
-
-bool commandIsChecked(const Browser& b, PrStringView id) {
-    return (prCommandRegistryState(b.commands, indexOf(b, id)) & PrCommandStateFlag_Checked) != 0;
-}
-
 PrStringView commandTitle(const Browser& b, PrStringView id) {
     return prCommandRegistryCommand(b.commands, indexOf(b, id)).title;
 }

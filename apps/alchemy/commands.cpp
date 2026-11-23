@@ -563,7 +563,6 @@ constexpr CommandSpec kSpecs[] = {
         .run = [](Shell& s, const PrCommandArgs*) { s.state->showInfo = !s.state->showInfo; },
         .state = [](Shell& s) { return checkedIf(s.state->showInfo); },
         .chord = "I",
-        .context = kContextGallery,
     },
     {
         .id = "alchemy.togglePreview",
@@ -572,7 +571,6 @@ constexpr CommandSpec kSpecs[] = {
         .run = [](Shell& s, const PrCommandArgs*) { s.state->showPreview = !s.state->showPreview; },
         .state = [](Shell& s) { return checkedIf(s.state->showPreview); },
         .chord = "P",
-        .context = kContextGallery,
     },
     {
         .id = "view.fullscreen",

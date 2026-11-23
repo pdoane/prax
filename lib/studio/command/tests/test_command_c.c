@@ -1,6 +1,6 @@
 #include "pr/command.h"
 #include "pr/command_keymap.h"
-#include "pr/command_kit.h"
+#include "pr/command_ui.h"
 
 int prTestCommandCApi(void);
 

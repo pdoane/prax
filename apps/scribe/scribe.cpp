@@ -4,10 +4,11 @@
 #include "apps/scribe/scribe.h"
 
 #include "pr/color.h"
-#include "pr/command_kit.h"
+#include "pr/command_ui.h"
 #include "pr/count_of.h"
 #include "pr/float.h"
 #include "pr/hash.h"
+#include "pr/kit_command.h"
 #if defined(SCRIBE_HAS_TREESITTER)
 #include "pr/syntax_treesitter_languages.h"
 #endif
@@ -252,7 +253,7 @@ bool buildMenus(Scribe& s, PrLayoutNode root) {
             if (id.isEmpty())
                 prKitMenuSeparator(s.kit, list, {});
             else
-                prCommandMenuItem(s.kit, list, s.commands, s.keymap, id, {});
+                prKitRegistryMenuItem(s.kit, list, s.commands, s.keymap, id, {});
         }
     }
     return open;
@@ -456,7 +457,7 @@ void buildScribe(Scribe& s, PrLayoutNode root, PrVec2 extent) {
         prKitSetOpen(s.kit, root, true);
         s.paletteRequested = false;
     }
-    PrLayoutNode list = prCommandPalette(s.kit, root, s.commands, s.keymap, s.paletteQuery);
+    PrLayoutNode list = prKitRegistryPalette(s.kit, root, s.commands, s.keymap, s.paletteQuery);
     PrStringView query{};
     if (list == kPrLayoutNodeNone) {
         s.paletteQuery.clear();

@@ -17,6 +17,7 @@ pr_library(studio_kit INCLUDE kit/include
     kit/src/kit_choice.cpp
     kit/src/kit_collection.cpp
     kit/src/kit_color.cpp
+    kit/src/kit_command.cpp
     kit/src/kit_data.cpp
     kit/src/kit_image.cpp
     kit/src/kit_timeline.cpp
@@ -30,7 +31,8 @@ pr_library(studio_kit INCLUDE kit/include
     kit/src/kit_theme.cpp
     kit/src/kit_title_bar.cpp
 )
-target_link_libraries(pr_studio_kit PUBLIC prax::studio_icons prax::texture prax::app prax::ui prax::layout prax::path
+target_link_libraries(pr_studio_kit PUBLIC prax::studio_command prax::studio_icons prax::texture prax::app prax::ui
+                                           prax::layout prax::path
                                            prax::draw
                                            prax::text prax::text_edit
                                            prax::geom prax::font prax::color
@@ -43,6 +45,7 @@ if (PR_DEVELOP)
         kit/tests/test_kit_choice.cpp
         kit/tests/test_kit_collection.cpp
         kit/tests/test_kit_color.cpp
+        kit/tests/test_kit_command.cpp
         kit/tests/test_kit_data.cpp
         kit/tests/test_kit_image.cpp
         kit/tests/test_kit_timeline.cpp
@@ -53,7 +56,8 @@ if (PR_DEVELOP)
         kit/tests/test_kit_menu.cpp
         kit/tests/test_kit_title_bar.cpp
     )
-    target_link_libraries(studio_kit_tests PRIVATE prax::gpu_select prax::texture kit_fixture prax::path prax::app
+    target_link_libraries(studio_kit_tests PRIVATE prax::studio_command prax::gpu_select prax::texture kit_fixture
+                                                   prax::path prax::app
                                                    prax::text_edit
                                                    prax::text
                                                    prax::draw
@@ -65,18 +69,17 @@ endif()
 pr_library(studio_command INCLUDE command/include
     command/src/command.cpp
     command/src/command_keymap.cpp
-    command/src/command_kit.cpp
+    command/src/command_ui.cpp
 )
-target_link_libraries(pr_studio_command PUBLIC prax::json prax::app prax::ui prax::studio_kit
+target_link_libraries(pr_studio_command PUBLIC prax::json prax::app prax::ui
                                         PRIVATE prax::core_cpp)
 
 if (PR_DEVELOP)
     pr_module_tests(studio_command
         command/tests/test_command.cpp
         command/tests/test_command_c.c
-        command/tests/test_command_kit.cpp
     )
-    target_link_libraries(studio_command_tests PRIVATE kit_fixture prax::json prax::studio_kit)
+    target_link_libraries(studio_command_tests PRIVATE prax::json)
 endif()
 
 # Studio's text editor: documents of files in windowed views, colored by their syntax, with the commands of a code

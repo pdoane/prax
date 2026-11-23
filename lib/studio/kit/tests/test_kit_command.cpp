@@ -1,9 +1,10 @@
 #include "pr/array.h"
 #include "pr/command.h"
 #include "pr/command_keymap.h"
-#include "pr/command_kit.h"
+#include "pr/command_ui.h"
 #include "pr/construct.h"
 #include "pr/kit_box.h"
+#include "pr/kit_command.h"
 #include "pr/kit_input.h"
 #include "pr/kit_menu.h"
 #include "pr/memory.h"
@@ -103,7 +104,7 @@ uint32_t childCount(const PrLayoutTree* tree, PrLayoutNode node) {
 
 using namespace pr_impl;
 
-TEST_CASE("a scope runs the command of a chord while focus is within it, and the innermost scope wins") {
+TEST_CASE("a scope runs the command bound to a chord while focus is within the scope, and the innermost scope wins") {
     KitFixture f;
     Commands c;
     c.add("app.save", "Save", "File");
@@ -125,7 +126,7 @@ TEST_CASE("a scope runs the command of a chord while focus is within it, and the
     f.key('S', kPrCommandPrimaryModifier);
     f.frame();
     CHECK(c.runs == Array<String>({"app.save"}));
-    // With focus in the panel, the panel's scope takes it, and a chord that only the root binds reaches the root.
+    // With focus in the panel, the panel's scope takes the chord. A chord that only the root binds reaches the root.
     f.click(f.center(field));
     f.frame();
     REQUIRE(prUiIsFocusWithin(f.ui, panel));
@@ -137,7 +138,7 @@ TEST_CASE("a scope runs the command of a chord while focus is within it, and the
     CHECK(c.runs == Array<String>({"panel.save", "app.save"}));
 }
 
-TEST_CASE("an override takes a chord that a focused text field claims, and a normal binding does not") {
+TEST_CASE("an override binding runs on a chord that a focused text field claims, and a normal binding does not") {
     KitFixture f;
     Commands c;
     c.add("image.delete", "Delete Image", "Image");
@@ -162,7 +163,7 @@ TEST_CASE("an override takes a chord that a focused text field claims, and a nor
     CHECK(text == "abc");
 }
 
-TEST_CASE("a disabled command's chord is taken and does nothing, and a command with a required parameter is unbound") {
+TEST_CASE("the chord of a disabled command runs nothing, and a chord runs no command that has a required parameter") {
     KitFixture f;
     Commands c;
     const PrCommandParam required[] = {{.name = "name", .kind = PrCommandParamKind_String, .required = true}};
@@ -185,7 +186,60 @@ TEST_CASE("a disabled command's chord is taken and does nothing, and a command w
     CHECK(c.runs.count() == 1);
 }
 
-TEST_CASE("a command's menu item shows its title, chord and check, and runs it") {
+TEST_CASE("a press on the empty space of a scope focuses the scope, so its chords apply without a focusable control") {
+    KitFixture f;
+    Commands c;
+    c.add("app.help", "Help", "");
+    c.add("panel.next", "Next", "");
+    c.bind("F1", "app.help");
+    c.bind("Right", "panel.next", "panel");
+    PrLayoutNode panel = kPrLayoutNodeNone;
+    PrLayoutNode inner = kPrLayoutNodeNone;
+    f.build = [&](PrLayoutNode root) {
+        // A panel below the root, padded around a box that takes nothing. A key starts at the root while nothing is
+        // focused.
+        panel = prKitBox(f.kit, root, {}, {.padding = {20, 20, 20, 20}});
+        prCommandScope(f.ui, panel, c.registry, c.keymap, "");
+        inner = prKitBox(f.kit, panel, {}, {.padding = {20, 20, 20, 20}});
+        prCommandScope(f.ui, inner, c.registry, c.keymap, "panel");
+    };
+    f.frame();
+    // With nothing focused, a key starts at the root, above both scopes.
+    f.key(PrAppKey_F1);
+    f.frame();
+    CHECK(c.runs.isEmpty());
+    // A press in the inner box's space focuses it, and keys then reach both scopes.
+    f.click(f.center(inner));
+    f.frame();
+    CHECK(prUiFocus(f.ui) == inner);
+    f.key(PrAppKey_Right);
+    f.frame();
+    f.key(PrAppKey_F1);
+    f.frame();
+    CHECK(c.runs == Array<String>({"panel.next", "app.help"}));
+}
+
+TEST_CASE("a held chord runs its command on each key repeat, unless the command is flagged to run once per press") {
+    KitFixture f;
+    Commands c;
+    c.add("view.next", "Next", "");
+    c.add("file.delete", "Delete", "", PrCommandFlag_Once);
+    c.bind("Right", "view.next");
+    c.bind("Delete", "file.delete");
+    f.build = [&](PrLayoutNode root) { prCommandScope(f.ui, root, c.registry, c.keymap, ""); };
+    f.frame();
+    const PrAppKey keys[] = {PrAppKey_Right, PrAppKey_Delete};
+    for (PrAppKey key : keys) {
+        f.push(PrAppEvent{.kind = PrAppEventKind_KeyDown, .keyboard = {.key = key}});
+        f.push(PrAppEvent{.kind = PrAppEventKind_KeyDown, .keyboard = {.key = key, .repeat = true}});
+        f.push(PrAppEvent{.kind = PrAppEventKind_KeyDown, .keyboard = {.key = key, .repeat = true}});
+        f.push(PrAppEvent{.kind = PrAppEventKind_KeyUp, .keyboard = {.key = key}});
+        f.frame();
+    }
+    CHECK(c.runs == Array<String>({"view.next", "view.next", "view.next", "file.delete"}));
+}
+
+TEST_CASE("the menu item of a command shows the command's title, chord and check, and a click runs the command") {
     KitFixture f;
     Commands c;
     c.add("view.grid", "Show Grid", "View");
@@ -201,8 +255,8 @@ TEST_CASE("a command's menu item shows its title, chord and check, and runs it")
         if (popover == kPrLayoutNodeNone)
             return;
         PrLayoutNode menu = prKitMenu(f.kit, popover, {}, {});
-        item = prCommandMenuItem(f.kit, menu, c.registry, c.keymap, "view.grid", {});
-        missing = prCommandMenuItem(f.kit, menu, c.registry, c.keymap, "view.none", {});
+        item = prKitRegistryMenuItem(f.kit, menu, c.registry, c.keymap, "view.grid", {});
+        missing = prKitRegistryMenuItem(f.kit, menu, c.registry, c.keymap, "view.none", {});
     };
     f.frame();
     prKitSetOpen(f.kit, trigger, true);
@@ -216,7 +270,99 @@ TEST_CASE("a command's menu item shows its title, chord and check, and runs it")
     CHECK_FALSE(prKitIsOpen(f.kit, trigger));
 }
 
-TEST_CASE("the command palette lists the commands that match its query, and runs the one activated") {
+TEST_CASE("the button of a command runs the command, and the button of a disabled command does nothing") {
+    KitFixture f;
+    Commands c;
+    c.add("go.back", "Back", "Go");
+    c.bind("Cmd [", "go.back");
+    PrLayoutNode button = kPrLayoutNodeNone;
+    PrLayoutNode missing = kPrLayoutNodeNone;
+    f.build = [&](PrLayoutNode root) {
+        button = prKitRegistryButton(f.kit, root, c.registry, c.keymap, "go.back", {.icon = PrStudioIconKind_ArrowLeft}, {});
+        missing =
+            prKitRegistryButton(f.kit, root, c.registry, c.keymap, "go.none", {.icon = PrStudioIconKind_ArrowLeft}, {});
+    };
+    f.frame();
+    REQUIRE(button != kPrLayoutNodeNone);
+    CHECK(missing == kPrLayoutNodeNone);
+    f.click(f.center(button));
+    f.frame();
+    CHECK(c.runs == Array<String>({"go.back"}));
+    c.disabled = true;
+    f.frame();
+    f.click(f.center(button));
+    f.frame();
+    CHECK(c.runs.count() == 1);
+}
+
+TEST_CASE("the button of a command shows the given text, icon and style, the same as a Kit button") {
+    KitFixture f;
+    Commands c;
+    c.add("view.zoomReset", "Actual Size", "View");
+    c.add("go.back", "Back", "Go");
+    PrKitButtonStyle small{.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Sm};
+    PrKitButtonStyle large{.size = PrKitControlSize_Lg};
+    PrLayoutNode text = kPrLayoutNodeNone;
+    PrLayoutNode textShown = kPrLayoutNodeNone;
+    PrLayoutNode both = kPrLayoutNodeNone;
+    PrLayoutNode bothShown = kPrLayoutNodeNone;
+    PrLayoutNode icon = kPrLayoutNodeNone;
+    f.build = [&](PrLayoutNode root) {
+        PrLayoutNode row = prKitBox(f.kit, root, {}, {.direction = PrKitDirection_Row, .align = PrKitAlign_Start});
+        text = prKitRegistryButton(f.kit, row, c.registry, c.keymap, "view.zoomReset", {.text = "150%"}, small);
+        textShown = prKitButton(f.kit, row, {.text = "150%"}, small);
+        PrKitButton back{.text = "Back", .icon = PrStudioIconKind_ArrowLeft};
+        both = prKitRegistryButton(f.kit, row, c.registry, c.keymap, "go.back", back, large);
+        bothShown = prKitButton(f.kit, row, back, large);
+        icon = prKitRegistryButton(f.kit, row, c.registry, c.keymap, "go.back", {.icon = PrStudioIconKind_ArrowLeft}, small);
+    };
+    f.frame();
+    auto size = [&](PrLayoutNode node) {
+        PrRect box = f.bounds(node);
+        return PrVec2{box.right - box.left, box.bottom - box.top};
+    };
+    CHECK(size(text).x == size(textShown).x);
+    CHECK(size(text).y == size(textShown).y);
+    CHECK(size(both).x == size(bothShown).x);
+    CHECK(size(both).y == size(bothShown).y);
+    // A small button of text is wider than the square of a small icon, and a large button is taller than both.
+    CHECK(size(text).x > size(icon).x);
+    CHECK(size(text).y == size(icon).y);
+    CHECK(size(both).y > size(text).y);
+    f.click(f.center(text));
+    f.frame();
+    f.click(f.center(both));
+    f.frame();
+    CHECK(c.runs == Array<String>({"view.zoomReset", "go.back"}));
+}
+
+TEST_CASE("the button of a command shows the command's checked state as its selection, not the given button's "
+        "selection") {
+    KitFixture f;
+    Commands c;
+    c.add("view.grid", "Show Grid", "View");
+    c.checked = true;
+    Array<uint8_t> checked;
+    Array<uint8_t> unchecked;
+    f.build = [&](PrLayoutNode root) {
+        PrKitButton grid{.text = "Grid", .selected = !c.checked};
+        prKitRegistryButton(f.kit, root, c.registry, c.keymap, "view.grid", grid, {});
+    };
+    f.frame();
+    REQUIRE(f.render(&checked));
+    c.checked = false;
+    f.frame();
+    REQUIRE(f.render(&unchecked));
+    // The button that a Kit draws for the same content and selection.
+    Array<uint8_t> shown;
+    f.build = [&](PrLayoutNode root) { prKitButton(f.kit, root, {.text = "Grid", .selected = true}, {}); };
+    f.frame();
+    REQUIRE(f.render(&shown));
+    CHECK(checked == shown);
+    CHECK(unchecked != shown);
+}
+
+TEST_CASE("the command palette lists the commands that match its query, and runs the command that is activated") {
     KitFixture f;
     Commands c;
     const PrCommandParam required[] = {{.name = "name", .kind = PrCommandParamKind_String, .required = true}};
@@ -230,7 +376,7 @@ TEST_CASE("the command palette lists the commands that match its query, and runs
     PrLayoutNode list = kPrLayoutNodeNone;
     f.build = [&](PrLayoutNode root) {
         trigger = root;
-        list = prCommandPalette(f.kit, trigger, c.registry, c.keymap, query);
+        list = prKitRegistryPalette(f.kit, trigger, c.registry, c.keymap, query);
         if (list != kPrLayoutNodeNone)
             taken(f.kit, list, query);
     };
@@ -239,7 +385,7 @@ TEST_CASE("the command palette lists the commands that match its query, and runs
     f.frame();
     f.frame();
     REQUIRE(list != kPrLayoutNodeNone);
-    // Every command that an entry point runs and the palette does not hide.
+    // The list has every command that an entry point can run and that the palette does not hide.
     CHECK(childCount(f.tree, list) == 3);
     f.type("file");
     f.frame();

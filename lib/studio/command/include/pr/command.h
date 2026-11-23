@@ -52,6 +52,7 @@ typedef struct PrCommandParam {
 enum {
     PrCommandFlag_Hidden = 1u << 0,     // left out of the command palette; key bindings and callers still run it
     PrCommandFlag_Query = 1u << 1,      // reads and reports, and changes nothing
+    PrCommandFlag_Once = 1u << 2,       // a chord runs it once for each press, and not again as the held key repeats
 };
 typedef uint8_t PrCommandFlags;
 

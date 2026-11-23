@@ -11,13 +11,14 @@
 
 #include "pr/array.h"
 #include "pr/command_keymap.h"
-#include "pr/command_kit.h"
+#include "pr/command_ui.h"
 #include "pr/date_time.h"
 #include "pr/float.h"
 #include "pr/hash.h"
 #include "pr/kit_box.h"
 #include "pr/kit_button.h"
 #include "pr/kit_choice.h"
+#include "pr/kit_command.h"
 #include "pr/kit_image.h"
 #include "pr/kit_input.h"
 #include "pr/kit_menu.h"
@@ -126,32 +127,19 @@ PrStudioIconKind addressIcon(const String& url) {
 // ---------------------------------------------------------------------------------------------------------------------
 // Parts of the chrome
 
-// The style of a toolbar's buttons.
-PrKitButtonStyle toolStyle() {
-    return PrKitButtonStyle{.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Md};
-}
+// `kToolStyle` is the style of the toolbar's buttons. `kSmallStyle` is the style of the smaller buttons elsewhere in
+// the chrome, such as New Tab and the favorites.
+constexpr PrKitButtonStyle kToolStyle{.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Md};
+constexpr PrKitButtonStyle kSmallStyle{.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Sm};
 
-// Creates a button that runs the command `id`, with a tooltip that names the command and its shortcut. The button is
-// selected while the command is checked, and disabled while the command is.
-PrLayoutNode commandButton(Browser& b, PrLayoutNode parent, PrKitButton button, PrKitButtonStyle style, PrStringView id) {
-    button.selected = commandIsChecked(b, id);
-    button.disabled = !commandIsEnabled(b, id);
-    PrLayoutNode node = prKitButton(b.kit, parent, button, style);
-    String shortcut = commandShortcut(b, id);
-    prKitTooltip(b.kit, node, {.text = commandTitle(b, id), .shortcut = shortcut});
-    if (prKitActivated(b.kit, node))
-        commandRun(b, id);
-    return node;
-}
-
-// Creates a toolbar's icon button that runs the command `id`.
-PrLayoutNode toolButton(Browser& b, PrLayoutNode toolbar, PrStudioIconKind icon, PrStringView id) {
-    return commandButton(b, toolbar, {.icon = icon}, toolStyle(), id);
+// Creates a button that runs the browser's command `id` (prKitRegistryButton).
+PrLayoutNode commandButton(Browser& b, PrLayoutNode parent, PrStringView id, PrKitButton button, PrKitButtonStyle style) {
+    return prKitRegistryButton(b.kit, parent, b.commands, b.keymap, id, button, style);
 }
 
 // Creates a menu item that runs the command `id`.
 void commandItem(Browser& b, PrLayoutNode menu, PrStringView id) {
-    prCommandMenuItem(b.kit, menu, b.commands, b.keymap, id, {});
+    prKitRegistryMenuItem(b.kit, menu, b.commands, b.keymap, id, {});
 }
 
 // Returns true if a press asks a link in the chrome, such as a favorite, to open in a new tab rather than the active
@@ -209,8 +197,7 @@ void buildTabs(Browser& b, PrLayoutNode root) {
     }
     // A click or a key in the strip may have chosen another tab.
     tabsShowActive(b);
-    PrKitButtonStyle small{.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Sm};
-    PrLayoutNode plus = commandButton(b, row, {.icon = PrStudioIconKind_Plus}, small, kCommandNewTab);
+    PrLayoutNode plus = commandButton(b, row, kCommandNewTab, {.icon = PrStudioIconKind_Plus}, kSmallStyle);
     prKitPlace(b.kit, plus, {.margin = {0, 0, 4, 0}});
 
     if (duplicating != nullptr) {
@@ -337,7 +324,7 @@ void buildAddress(Browser& b, PrLayoutNode toolbar, Tab& tab) {
 // The menu of the browser's commands, which the button at the end of the toolbar opens.
 void buildMenu(Browser& b, PrLayoutNode toolbar) {
     PrKitButton button{.icon = PrStudioIconKind_More};
-    PrLayoutNode trigger = prKitButton(b.kit, toolbar, button, toolStyle());
+    PrLayoutNode trigger = prKitButton(b.kit, toolbar, button, kToolStyle);
     if (prKitActivated(b.kit, trigger))
         prKitToggleOpen(b.kit, trigger);
     PrLayoutNode popover = prKitPopover(b.kit, trigger, {}, {.offset = PrVec2{-200, 4}, .minWidth = 230});
@@ -371,15 +358,14 @@ void buildToolbar(Browser& b, PrLayoutNode root, Tab& tab) {
         .rules = PrKitRuleFlag_Bottom,
     };
     PrLayoutNode toolbar = prKitPanel(b.kit, stack, {}, style);
-    toolButton(b, toolbar, PrStudioIconKind_ArrowLeft, kCommandBack);
-    toolButton(b, toolbar, PrStudioIconKind_ArrowRight, kCommandForward);
-    toolButton(b, toolbar, PrStudioIconKind_Restart, kCommandReload);
+    commandButton(b, toolbar, kCommandBack, {.icon = PrStudioIconKind_ArrowLeft}, kToolStyle);
+    commandButton(b, toolbar, kCommandForward, {.icon = PrStudioIconKind_ArrowRight}, kToolStyle);
+    commandButton(b, toolbar, kCommandReload, {.icon = PrStudioIconKind_Restart}, kToolStyle);
     buildAddress(b, toolbar, tab);
-    toolButton(b, toolbar, PrStudioIconKind_Star, kCommandToggleFavorite);
+    commandButton(b, toolbar, kCommandToggleFavorite, {.icon = PrStudioIconKind_Star}, kToolStyle);
     if (tab.zoom != 1) {
         String percent = format("{}%", int(prF32Round(tab.zoom * 100)));
-        PrKitButtonStyle small{.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Sm};
-        commandButton(b, toolbar, {.text = percent}, small, kCommandZoomReset);
+        commandButton(b, toolbar, kCommandZoomReset, {.text = percent}, kSmallStyle);
     }
     buildMenu(b, toolbar);
     if (!loading)
@@ -415,10 +401,7 @@ void buildFavorites(Browser& b, PrLayoutNode root) {
         const Favorite& favorite = b.favorites[i];
         String label = shortened(favoriteLabel(favorite), kMaxLabel);
         PrKitButton button{.text = label};
-        PrLayoutNode node = prKitButton(b.kit, bar, button, {
-            .variant = PrKitButtonVariant_Ghost,
-            .size = PrKitControlSize_Sm,
-        });
+        PrLayoutNode node = prKitButton(b.kit, bar, button, kSmallStyle);
         prKitTooltip(b.kit, node, {.text = favorite.url});
         if (opensInNewTab(b, node))
             tabsLoad(b, favorite.url, TabTarget_New);
@@ -494,11 +477,9 @@ void buildStart(Browser& b, PrLayoutNode root) {
             const Visit& visit = b.history[b.history.count() - 1 - i];
             startLink(b, section, visit.title, visit.url, row);
         }
-        PrKitButton all{.text = "Show Full History"};
-        PrLayoutNode more = prKitButton(b.kit, section, all, {.variant = PrKitButtonVariant_Ghost});
+        PrKitButtonStyle ghost{.variant = PrKitButtonVariant_Ghost};
+        PrLayoutNode more = commandButton(b, section, kCommandShowHistory, {.text = "Show Full History"}, ghost);
         prKitPlace(b.kit, more, {.align = PrKitAlign_Start});
-        if (prKitActivated(b.kit, more))
-            commandRun(b, kCommandShowHistory);
     }
 }
 
@@ -546,8 +527,7 @@ bool historyRow(Browser& b, PrLayoutNode list, const Visit& visit, int32_t offse
         removing = prKitActivated(b.kit, prKitMenuItem(b.kit, menu, remove, {.variant = PrKitMenuItemVariant_Danger}));
     }
     PrKitButton close{.icon = PrStudioIconKind_Close};
-    PrLayoutNode remove =
-        prKitButton(b.kit, row, close, {.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Sm});
+    PrLayoutNode remove = prKitButton(b.kit, row, close, kSmallStyle);
     prKitTooltip(b.kit, remove, {.text = "Remove from History"});
     return removing || prKitActivated(b.kit, remove);
 }

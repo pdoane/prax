@@ -2,7 +2,7 @@
 
 #include "apps/terminal/terminal_app.h"
 
-#include "pr/command_kit.h"
+#include "pr/command_ui.h"
 #include "pr/count_of.h"
 #include "pr/float.h"
 #include "pr/hash.h"

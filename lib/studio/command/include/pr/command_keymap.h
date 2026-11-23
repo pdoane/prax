@@ -2,8 +2,8 @@
 //
 // A keymap is a table and nothing more. It knows nothing of focus or of the commands that its ids name. A context is a
 // name that the application gives a region of its interface, such as "parameters" for a panel; the empty context is the
-// application's own, which applies everywhere. A scope (pr/command_kit.h) puts a context's bindings on a node, so that
-// a chord applies while focus is within that node, and the innermost scope that binds a chord takes it.
+// application's own, which applies everywhere. A scope (pr/command_ui.h) puts a context's bindings on a node. A chord
+// then applies while focus is within that node, and the innermost scope that binds a chord takes it.
 //
 // A keymap is used from one thread at a time.
 
