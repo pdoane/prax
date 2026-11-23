@@ -248,10 +248,11 @@ TEST_CASE("an icon keeps what it draws until that changes, and draws the tree's 
     PrLayoutContent first = prLayoutNodeContent(f.tree, icon);
     REQUIRE(first.kind == PrLayoutContentKind_Path);
     // The tree's clone keeps the path's id, which what the renderer derives from the path is keyed by.
-    CHECK(first.path.path != path);
-    CHECK(prPathId(first.path.path) == prPathId(path));
+    REQUIRE(first.path.partCount == 1);
+    CHECK(first.path.parts[0].path != path);
+    CHECK(prPathId(first.path.parts[0].path) == prPathId(path));
     f.frame();
-    CHECK(prLayoutNodeContent(f.tree, icon).path.path == first.path.path);
+    CHECK(prLayoutNodeContent(f.tree, icon).path.parts[0].path == first.path.parts[0].path);
     color = PrColor{0, 1, 0, 1};
     f.frame();
     PrLayoutContent changed = prLayoutNodeContent(f.tree, icon);

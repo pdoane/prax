@@ -7,6 +7,7 @@
 #include "pr/bitset.h"
 #include "pr/draw_list.h"
 #include "pr/mem.h"
+#include "pr/memory.h"
 #include "pr/raw_string.h"
 #include "pr/search.h"
 #include "pr/sort.h"
@@ -25,6 +26,13 @@ namespace {
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Nodes
+
+// Frees the tree's copy of a content's path parts, and the clones of their paths.
+void freePathParts(const PrLayoutPath& path) {
+    for (uint32_t i = 0; i < path.partCount; ++i)
+        prPathDestroy(const_cast<PrPath*>(path.parts[i].path));
+    prMemoryFree(const_cast<PrLayoutPathPart*>(path.parts));
+}
 
 LayoutTreeNode& nodeAt(LayoutTree* tree, LayoutNodeIndex node) {
     PR_ASSERT(node != kPrLayoutNodeNone && node < tree->nodes.count && tree->nodes.data[node].live);
@@ -136,7 +144,7 @@ void releaseKind(LayoutTree* tree, LayoutTreeNode& n) {
         prDrawListRelease(replaced.content);
         prTextureSourceRelease(replaced.image);
         prLayoutPainterRelease(replaced.painter);
-        prPathDestroy(const_cast<PrPath*>(replaced.path.path));
+        freePathParts(replaced.path);
         replaced = LayoutReplaced{};
         tree->freeReplaced.push(n.replaced);
     }
@@ -1831,12 +1839,20 @@ void prLayoutNodeSetContent(PrLayoutTree* tree, PrLayoutNode replaced, const PrL
         prTextureSourceRetain(image);
     prTextureSourceRelease(r.image);
     r.image = image;
-    // The tree draws its own clone of a path, which keeps the path's id.
-    prPathDestroy(const_cast<PrPath*>(r.path.path));
+    // The tree draws its own clones of the paths. A clone keeps the id of its path.
+    freePathParts(r.path);
     r.path = PrLayoutPath{};
     if (content->kind == PrLayoutContentKind_Path) {
         r.path = content->path;
-        r.path.path = prPathClone(content->path.path);
+        uint32_t count = content->path.partCount;
+        PrLayoutPathPart* parts = nullptr;
+        if (count != 0)
+            parts = static_cast<PrLayoutPathPart*>(prMemoryAlloc(sizeof(PrLayoutPathPart) * count));
+        for (uint32_t i = 0; i < count; ++i) {
+            parts[i] = content->path.parts[i];
+            parts[i].path = prPathClone(content->path.parts[i].path);
+        }
+        r.path.parts = parts;
     }
     PrLayoutPainter painter = content->kind == PrLayoutContentKind_Painter ? content->painter : PrLayoutPainter{};
     PR_ASSERT(content->kind != PrLayoutContentKind_Painter || painter.paint != nullptr);

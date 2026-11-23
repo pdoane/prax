@@ -36,13 +36,14 @@ PrLayoutNode iconBox(PrKit& kit, PrLayoutNode parent, uint64_t key, const PrPath
         kitStyle(kit, IconBox{.size = size}, KitFixed{}));
     PrLayoutNaturalSize natural{.width = prLayoutUnitFromPx(size), .height = prLayoutUnitFromPx(size), .ratio = 1};
     prLayoutTreeFrameSetNaturalSize(tree, node, natural);
+    PrLayoutPathPart part{.path = path, .strokeWidth = stroked ? kPrStudioIconStrokeWidth : 0};
     PrLayoutContent content{};
     content.kind = PrLayoutContentKind_Path;
     content.path = PrLayoutPath{
-        .path = path,
+        .parts = &part,
+        .partCount = 1,
         .viewBox = PrVec2{kPrStudioIconGrid, kPrStudioIconGrid},
         .color = prColor16FromColor(color),
-        .strokeWidth = stroked ? kPrStudioIconStrokeWidth : 0,
         .rule = PrPathFillRule_NonZero,
         .join = PrPathJoin_Round,
         .cap = PrPathCap_Round,

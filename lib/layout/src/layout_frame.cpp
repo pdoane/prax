@@ -359,12 +359,18 @@ void carryKeptHighlights(LayoutTree* tree) {
     }
 }
 
-// Returns true if two paths of content draw the same: the same path's verbs and points, as their ids say, drawn the
-// same way.
+// Returns true if two paths of content draw the same. Their parts must have the same paths and stroke widths, in the
+// same order. Two paths with the same id (prPathId) have the same verbs and points. The view box, color, fill rule,
+// join and cap must match too.
 bool samePath(const PrLayoutPath& a, const PrLayoutPath& b) {
-    return prPathId(a.path) == prPathId(b.path) && a.viewBox == b.viewBox &&
-        prMemEquals(&a.color, &b.color, sizeof a.color) && a.strokeWidth == b.strokeWidth && a.rule == b.rule &&
-        a.join == b.join && a.cap == b.cap;
+    if (a.partCount != b.partCount || !(a.viewBox == b.viewBox) || !prMemEquals(&a.color, &b.color, sizeof a.color) ||
+            a.rule != b.rule || a.join != b.join || a.cap != b.cap)
+        return false;
+    for (uint32_t i = 0; i < a.partCount; ++i) {
+        if (prPathId(a.parts[i].path) != prPathId(b.parts[i].path) || a.parts[i].strokeWidth != b.parts[i].strokeWidth)
+            return false;
+    }
+    return true;
 }
 
 } // namespace

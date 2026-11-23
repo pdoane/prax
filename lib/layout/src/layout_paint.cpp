@@ -1939,15 +1939,18 @@ struct Painter : LayoutWalkVisitor {
                 .f = placed.f,
             };
             prDrawListPushTransformAffine2(into, transform);
-            if (path.strokeWidth > 0) {
-                PrDrawStroke stroke = prDrawStrokeDefault();
-                stroke.shape.width = path.strokeWidth;
-                stroke.shape.join = path.join;
-                stroke.shape.startCap = path.cap;
-                stroke.shape.endCap = path.cap;
-                prDrawListPath(into, path.path, path.rule, {.color = path.color, .stroke = &stroke});
-            } else {
-                prDrawListPath(into, path.path, path.rule, {.color = path.color});
+            for (uint32_t i = 0; i < path.partCount; ++i) {
+                const PrLayoutPathPart& part = path.parts[i];
+                if (part.strokeWidth > 0) {
+                    PrDrawStroke stroke = prDrawStrokeDefault();
+                    stroke.shape.width = part.strokeWidth;
+                    stroke.shape.join = path.join;
+                    stroke.shape.startCap = path.cap;
+                    stroke.shape.endCap = path.cap;
+                    prDrawListPath(into, part.path, path.rule, {.color = path.color, .stroke = &stroke});
+                } else {
+                    prDrawListPath(into, part.path, path.rule, {.color = path.color});
+                }
             }
             prDrawListPopTransform(into);
         } else {

@@ -307,16 +307,25 @@ enum {
 };
 typedef uint8_t PrLayoutContentKind;
 
-// A path that a replaced element draws: the path, in the space of its view box, which is scaled over the content's
-// natural space; its color; and the width of its stroke in the view box's units, with its joins and caps, or zero to
-// fill it by its fill rule. The tree keeps a clone of the path, which shares its id (prPathId), so a path drawn from
-// the same source in every round, such as a cache of path data (prPathCacheFind), reuses what the renderer derived from
-// it.
-typedef struct PrLayoutPath {
+// One part of a replaced element's paths: a path in the space of the view box, and its stroke width in the view box's
+// units. A width of zero fills the path.
+typedef struct PrLayoutPathPart {
     const PrPath* path;
+    float strokeWidth;
+} PrLayoutPathPart;
+
+// The paths that a replaced element draws, such as an icon made of several strokes and fills. The parts paint in order,
+// in one color. They are in the space of a view box, which is scaled over the content's natural space. The fill rule
+// applies to the parts that fill, and the joins and caps apply to the parts that stroke.
+//
+// The tree keeps its own copy of the parts, with a clone of each path. A clone shares its path's id (prPathId). Paths
+// that come from the same source in every round, such as a cache of path data (prPathCacheFind), therefore reuse what
+// the renderer derived from them.
+typedef struct PrLayoutPath {
+    const PrLayoutPathPart* parts;
+    uint32_t partCount;
     PrVec2 viewBox;
     PrColor16 color;
-    float strokeWidth;
     PrPathFillRule rule;
     PrPathJoin join;
     PrPathCap cap;

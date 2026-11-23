@@ -461,8 +461,9 @@ TEST_CASE("a path element draws a path that its resources parse once, sized by i
     f.frame();
     PrLayoutContent content = prLayoutNodeContent(f.tree, icon);
     REQUIRE(content.kind == PrLayoutContentKind_Path);
-    CHECK(prPathId(content.path.path) == prPathId(path));
-    CHECK(content.path.strokeWidth == 2);
+    REQUIRE(content.path.partCount == 1);
+    CHECK(prPathId(content.path.parts[0].path) == prPathId(path));
+    CHECK(content.path.parts[0].strokeWidth == 2);
     PrRect bounds = prLayoutRectToPx(prLayoutNodeBounds(f.tree, icon, PrLayoutCoordinates_Viewport));
     CHECK(width(bounds) == 14);
 }

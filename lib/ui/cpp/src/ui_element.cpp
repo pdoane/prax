@@ -708,13 +708,15 @@ UiElement UiBuilder::path(PrLayoutNode parent, const UiPath& path, PrUiKey key) 
         .ratio = path.viewBox.y > 0 ? path.viewBox.x / path.viewBox.y : 0,
     };
     prLayoutTreeFrameSetNaturalSize(tree, element, natural);
+    // The tree copies the part when the content is set.
+    PrLayoutPathPart part{.path = path.path, .strokeWidth = path.strokeWidth};
     PrLayoutContent content{};
     content.kind = PrLayoutContentKind_Path;
     content.path = PrLayoutPath{
-        .path = path.path,
+        .parts = &part,
+        .partCount = 1,
         .viewBox = path.viewBox,
         .color = prColor16FromColor(path.color),
-        .strokeWidth = path.strokeWidth,
         .rule = path.rule,
         .join = path.join,
         .cap = path.cap,

@@ -3885,11 +3885,12 @@ TEST_CASE("a replaced element draws its clone of a path, scaled from the view bo
     prPathAppendData(path, "M2 2L22 22");
     PrLayoutContent content{};
     content.kind = PrLayoutContentKind_Path;
+    PrLayoutPathPart part{.path = path, .strokeWidth = 2};
     content.path = PrLayoutPath{
-        .path = path,
+        .parts = &part,
+        .partCount = 1,
         .viewBox = PrVec2{24, 24},
         .color = prColor16FromColor(PrColor{1, 0, 0, 1}),
-        .strokeWidth = 2,
         .join = PrPathJoin_Round,
         .cap = PrPathCap_Round,
     };
@@ -3899,7 +3900,8 @@ TEST_CASE("a replaced element draws its clone of a path, scaled from the view bo
     prPathDestroy(path);
     PrLayoutContent kept = prLayoutNodeContent(f.tree, icon);
     REQUIRE(kept.kind == PrLayoutContentKind_Path);
-    CHECK(prPathId(kept.path.path) == id);
+    REQUIRE(kept.path.partCount == 1);
+    CHECK(prPathId(kept.path.parts[0].path) == id);
     f.layout(px(100, 100));
     PrDrawList* list = prDrawListCreate();
     prLayoutTreePaint(f.tree, list);
