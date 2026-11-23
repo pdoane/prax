@@ -21,7 +21,7 @@ target_compile_options(basis_reference PRIVATE $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:
 # The inputs are the KTX 2.0 textures of Khronos's sample assets and textures that the reference encoder writes.
 add_executable(basis_reference_tests tests/test_basis_reference.cpp)
 target_compile_definitions(basis_reference_tests PRIVATE PR_ROOT_DIR="${PROJECT_SOURCE_DIR}")
-target_link_libraries(basis_reference_tests PRIVATE prax::compress_select basis_reference prax::basis prax::ktx
+target_link_libraries(basis_reference_tests PRIVATE prax::compress_select basis_reference prax::gpu prax::ktx
                                                     prax::core_cpp harness
                                                     test_main pr_warnings)
 pr_add_tests(basis_reference_tests)

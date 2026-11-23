@@ -1,6 +1,6 @@
 // The textures that tests draw images with. The tests that render in memory share one memory device. The caches hold
-// lib/draw's colors (PrTextureCacheValues_Encoded) and realize in the call that asks, so that the list of a test draws
-// its images at once.
+// lib/draw's colors (PrTextureValues_Encoded) and realize in the call that asks, so that the list of a test draws its
+// images at once.
 
 #pragma once
 

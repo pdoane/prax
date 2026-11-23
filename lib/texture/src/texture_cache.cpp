@@ -202,10 +202,10 @@ static_assert(kPrTextureSourceMaxPreviews < 1u << kVersionBits);
 // channels.
 uint64_t keyOf(const TextureCache& c, const PrTextureSource* source, const PrTextureCacheAsk& ask, uint32_t version) {
     const PrTextureDesc& desc = *prTextureSourceDesc(source);
-    PrTextureCacheValues values = ask.values;
-    if (values == PrTextureCacheValues_Encoded && !holdsFloats(desc.format))
-        values = c.srgbViews ? PrTextureCacheValues_Color : PrTextureCacheValues_Data;
-    uint32_t single = values == PrTextureCacheValues_Data ? singleChannel(ask.channels) : 4;
+    PrTextureValues values = ask.values;
+    if (values == PrTextureValues_Encoded && !holdsFloats(desc.format))
+        values = c.srgbViews ? PrTextureValues_Color : PrTextureValues_Data;
+    uint32_t single = values == PrTextureValues_Data ? singleChannel(ask.channels) : 4;
     uint32_t premultiplied = desc.alpha != PrTextureAlpha_None && ask.alpha == PrTextureAlpha_Premultiplied ? 1 : 0;
     uint32_t code = ((ask.flags & PrTextureCacheFlag_Levels) != 0 ? 1 : 0) | uint32_t(values) << 1 |
         premultiplied << 3 | (single < 4 ? single + 1 : 0) << 4;
@@ -373,20 +373,8 @@ const PrTextureSource* createEncoded(const PrTextureSource* floats, PrTextureAlp
 struct CacheChain {
     const PrTextureSource* PR_NULLABLE source;
     PrTextureUploadFlags flags;
-    PrStatus status;                // NotSupported, or the failure of a reformat, if `source` is null
+    PrStatus status;                // NotSupported, or the failure of an answer, if `source` is null
 };
-
-// The block formats that Basis Universal textures transcode to, in order of preference. A texture of one channel takes
-// the formats of one channel first.
-constexpr PrGpuFormat kTranscodeTargets[] = {
-    PrGpuFormat_Astc4x4, PrGpuFormat_Bc7, PrGpuFormat_EacR11, PrGpuFormat_Bc4, PrGpuFormat_EacRg11, PrGpuFormat_Bc5,
-    PrGpuFormat_Etc2Rgba8, PrGpuFormat_Bc3, PrGpuFormat_Etc2Rgb8, PrGpuFormat_Bc1,
-};
-
-// Returns true if `format` holds one channel.
-bool isSingle(PrGpuFormat format) {
-    return format == PrGpuFormat_Bc4 || format == PrGpuFormat_EacR11;
-}
 
 // Returns the one channel that `channels` names, 0 to 3, or 4 if it names none or several.
 uint8_t singleChannel(PrTextureChannelFlags channels) {
@@ -397,40 +385,14 @@ uint8_t singleChannel(PrTextureChannelFlags channels) {
     return 4;
 }
 
-// Returns the channel that an ask reads alone, 0 to 3, or 4 if there is none. Only data is kept in fewer channels than
-// it has.
-uint8_t singleChannelOf(const PrTextureCacheAsk& ask) {
-    return ask.values == PrTextureCacheValues_Data ? singleChannel(ask.channels) : 4;
-}
-
-// Returns true if the device samples textures of `format` whose first level is `extent`. A device takes blocks only in
-// a first level of whole blocks.
-bool samples(const PrGpuDevice* device, PrGpuFormat format, PrUVec2 extent) {
+// Returns true if `device` samples textures of `format` whose first level is `extent`. A device takes blocks only in a
+// first level of whole blocks. It is the samples function of the cache's needs, whose context is the device.
+bool samples(void* PR_NULLABLE context, PrGpuFormat format, PrUVec2 extent) {
+    const PrGpuDevice* device = static_cast<const PrGpuDevice*>(context);
     if (format == PrGpuFormat_None || !prGpuDeviceSupportsFormat(device, format, PrGpuTextureUsageFlag_Sampled))
         return false;
     PrGpuFormatBlock block = prGpuFormatBlock(format);
     return extent.x % block.width == 0 && extent.y % block.height == 0;
-}
-
-// Returns the format in which blocks of `blocks` are sampled for `values`. A format of one channel is sampled through
-// its Luminance form. That form reads the value as gray, which matches the decoded pixels. Color takes the Srgb form.
-// The result is None if color is asked of a format that has no Srgb form.
-PrGpuFormat sampledFormat(PrGpuFormat blocks, PrTextureCacheValues values) {
-    PrGpuFormat plain = prGpuFormatPlain(blocks);
-    PrGpuFormat format = isSingle(plain) ? prGpuFormatSwizzled(plain, PrGpuSwizzle_Luminance) : plain;
-    if (values != PrTextureCacheValues_Color)
-        return format;
-    PrGpuFormat encoded = prGpuFormatSrgb(format);
-    return encoded != format ? encoded : PrGpuFormat_None;
-}
-
-// Returns the form of `plain` that `source` produces. It is the plain form itself, its Srgb form, or None if the source
-// produces neither.
-PrGpuFormat producedForm(const PrTextureSource* source, PrGpuFormat plain) {
-    if (prTextureSourceProduces(source, plain))
-        return plain;
-    PrGpuFormat srgb = prGpuFormatSrgb(plain);
-    return srgb != plain && prTextureSourceProduces(source, srgb) ? srgb : PrGpuFormat_None;
 }
 
 // Returns a chain of `source` relabeled as `format`, which holds the same bits.
@@ -444,85 +406,15 @@ CacheChain relabel(const PrTextureSource* source, PrGpuFormat format) {
     return CacheChain{.source = prTextureSourceCreateConvert(source, &convert)};
 }
 
-// Returns true if blocks with alpha `alpha` serve an ask. Blocks keep their alpha, and a consumer of straight alpha
-// cannot take premultiplied blocks.
-bool blocksServe(PrTextureAlpha alpha, const PrTextureCacheAsk& ask) {
-    return !(alpha == PrTextureAlpha_Premultiplied && ask.alpha == PrTextureAlpha_Straight);
-}
-
-// Returns the chain of the blocks of a source that the device samples for the ask. They are the source's own blocks, or
-// the blocks that the source transcodes to. Returns a chain without a source if no blocks serve the ask.
-CacheChain blocksChain(const TextureCache& c, const PrTextureSource* source, const PrTextureCacheAsk& ask,
-        bool transcodes) {
-    const PrTextureDesc& desc = *prTextureSourceDesc(source);
-    if (prGpuFormatIsCompressed(desc.format) && blocksServe(desc.alpha, ask)) {
-        PrGpuFormat sampled = sampledFormat(desc.format, ask.values);
-        if (samples(c.desc.device, sampled, desc.extent))
-            return relabel(source, sampled);
-    }
-    if (!transcodes)
-        return CacheChain{.status = PrStatus_NotSupported};
-    uint8_t single = singleChannelOf(ask);
-    PrGpuFormat order[countOf(kTranscodeTargets)];
-    uint32_t count = 0;
-    for (PrGpuFormat target : kTranscodeTargets) {
-        if (single < 4 && isSingle(target))
-            order[count++] = target;
-    }
-    for (PrGpuFormat target : kTranscodeTargets) {
-        if (!(single < 4 && isSingle(target)))
-            order[count++] = target;
-    }
-    for (uint32_t i = 0; i < count; ++i) {
-        PrGpuFormat target = producedForm(source, order[i]);
-        if (target == PrGpuFormat_None || target == desc.format)
-            continue;
-        PrGpuFormat sampled = sampledFormat(target, ask.values);
-        if (!samples(c.desc.device, sampled, desc.extent))
-            continue;
-        const PrTextureSource* transcoded = nullptr;
-        PrStatus status = prTextureSourceReformat(source, target, &transcoded);
-        if (status != PrStatus_Ok)
-            return CacheChain{.status = status};
-        if (!blocksServe(prTextureSourceDesc(transcoded)->alpha, ask)) {
-            prTextureSourceRelease(transcoded);
-            continue;
-        }
-        CacheChain chain = relabel(transcoded, sampled);
-        prTextureSourceRelease(transcoded);
-        return chain;
-    }
-    return CacheChain{.status = PrStatus_NotSupported};
-}
-
-// Returns a source of the pixels of `source`. It is `source` itself if its format is pixels, and otherwise a source of
-// the first pixel format that `source` decodes to. Returns null if `source` decodes to no pixels.
-const PrTextureSource* PR_NULLABLE decodedPixels(const PrTextureSource* source) {
-    if (isPixels(prTextureSourceDesc(source)->format)) {
-        prTextureSourceRetain(source);
-        return source;
-    }
-    const PrGpuFormat decoded[] = {PrGpuFormat_Rgba8, PrGpuFormat_Rgba8Srgb, PrGpuFormat_Rgba16F, PrGpuFormat_Rgba32F};
-    for (PrGpuFormat candidate : decoded) {
-        const PrTextureSource* pixels = nullptr;
-        if (prTextureSourceProduces(source, candidate) &&
-                prTextureSourceReformat(source, candidate, &pixels) == PrStatus_Ok)
-            return pixels;
-    }
-    return nullptr;
-}
-
-// Returns the chain for data of which the ask reads only channel `single`. The chain holds that channel in the one
-// channel of R8. The texture is R8 read as red. On a device with swizzled formats it is the Luminance form of R8, or
-// the Intensity form for alpha. The device does not render to a swizzled format, so the levels of a swizzled chain are
-// generated here. Returns a chain without a source if the device keeps the pixels in four channels instead.
-CacheChain singleChain(const TextureCache& c, const PrTextureSource* source, const PrTextureSource* pixels,
-        uint8_t single, bool levels) {
-    // If the source decodes red alone, the chain reads red alone.
-    if (single == 0 && prTextureSourceProduces(source, PrGpuFormat_R8)) {
-        CacheChain chain{.flags = PrTextureUploadFlag_MakesLevels};
-        chain.status = prTextureSourceReformat(source, PrGpuFormat_R8, &chain.source);
-        return chain;
+// Returns the chain for data of which the ask reads only channel `single`, from `pixels`, the source's answer. An
+// answer in R8 holds the channel already. Otherwise the chain holds that channel in the one channel of R8. The texture
+// is R8 read as red. On a device with swizzled formats it is the Luminance form of R8, or the Intensity form for alpha.
+// The device does not render to a swizzled format, so the levels of a swizzled chain are generated here. Returns a
+// chain without a source if the device keeps the pixels in four channels instead.
+CacheChain singleChain(const TextureCache& c, const PrTextureSource* pixels, uint8_t single, bool levels) {
+    if (single == 0 && prGpuFormatPlain(prTextureSourceDesc(pixels)->format) == PrGpuFormat_R8) {
+        prTextureSourceRetain(pixels);
+        return CacheChain{.source = pixels, .flags = PrTextureUploadFlag_MakesLevels};
     }
     bool swizzles = (prGpuDeviceInfo(c.desc.device).features & PrGpuFeatureFlag_TextureSwizzle) != 0;
     if (single != 0 && !swizzles)
@@ -543,28 +435,25 @@ CacheChain singleChain(const TextureCache& c, const PrTextureSource* source, con
     return chain;
 }
 
-// Returns the chain of the pixels of a source for the ask, in the alpha of the ask. The format is R8 for data of one
-// channel, Rgba8 or its Srgb form for values of 8 bits, and Rgba16F for floats.
-CacheChain pixelsChain(const TextureCache& c, const PrTextureSource* source, const PrTextureCacheAsk& ask, bool levels) {
-    const PrTextureSource* pixels = decodedPixels(source);
-    if (pixels == nullptr)
-        return CacheChain{.status = PrStatus_NotSupported};
+// Returns the chain of `pixels`, the source's answer, for the ask, in the alpha of the ask. The format is R8 for data
+// of one channel, Rgba8 or its Srgb form for values of 8 bits, and Rgba16F for floats.
+CacheChain pixelsChain(const TextureCache& c, const PrTextureSource* pixels, const PrTextureCacheAsk& ask, bool levels) {
     const PrTextureDesc& desc = *prTextureSourceDesc(pixels);
     PrTextureAlpha alpha = desc.alpha == PrTextureAlpha_None ? PrTextureAlpha(PrTextureAlpha_None) : ask.alpha;
     CacheChain chain{.flags = PrTextureUploadFlag_MakesLevels};
-    if (holdsFloats(desc.format) && ask.values == PrTextureCacheValues_Encoded) {
+    if (holdsFloats(desc.format) && ask.values == PrTextureValues_Encoded) {
         chain.source = createEncoded(pixels, alpha);
     } else if (holdsFloats(desc.format)) {
         PrTextureConvertDesc convert = prTextureConvertDescDefault(PrGpuFormat_Rgba16F);
         convert.alpha = alpha;
         chain.source = prTextureSourceCreateConvert(pixels, &convert);
     } else {
-        uint8_t single = singleChannelOf(ask);
+        uint8_t single = ask.values == PrTextureValues_Data ? singleChannel(ask.channels) : 4;
         if (single < 4)
-            chain = singleChain(c, source, pixels, single, levels);
+            chain = singleChain(c, pixels, single, levels);
         if (chain.source == nullptr && chain.status == PrStatus_Ok) {
             // Values of 8 bits keep their encoding. The form of the format says only how a sampler reads them.
-            PrGpuFormat target = ask.values == PrTextureCacheValues_Color ? PrGpuFormat_Rgba8Srgb : PrGpuFormat_Rgba8;
+            PrGpuFormat target = ask.values == PrTextureValues_Color ? PrGpuFormat_Rgba8Srgb : PrGpuFormat_Rgba8;
             const PrTextureSource* relabeled = pixels;
             prTextureSourceRetain(relabeled);
             if (prGpuFormatIsSrgb(desc.format) != prGpuFormatIsSrgb(target)) {
@@ -583,14 +472,14 @@ CacheChain pixelsChain(const TextureCache& c, const PrTextureSource* source, con
             prTextureSourceRelease(relabeled);
         }
     }
-    prTextureSourceRelease(pixels);
     return chain;
 }
 
-// Returns the chain that realizes `source` for `ask`. Blocks that the device samples stay blocks. The exception is an
-// ask that needs levels that the texture lacks, if the blocks decode. The cache then keeps the pixels, so that the
-// device generates the levels. Levels do more for a minified texture than blocks save. A texture of several levels
-// transcodes to blocks that the device samples. Anything else realizes as pixels.
+// Returns the chain that realizes `source` for `ask`. The source answers the ask's need with the form that serves it
+// (prTextureSourceAnswer): blocks that the device samples stay blocks, and the cache relabels them to the form in which
+// the ask samples them. The exception is an ask that needs levels that the texture lacks. The need then asks for
+// pixels, and a source whose blocks decode answers with pixels, so that the device generates the levels. Levels do more
+// for a minified texture than blocks save. Pixels take the format and alpha of the ask.
 CacheChain chainOf(const TextureCache& c, const PrTextureSource* source, const PrTextureCacheAsk& ask) {
     const PrTextureDesc& desc = *prTextureSourceDesc(source);
     if (desc.kind != PrGpuTextureKind_2d) {
@@ -598,16 +487,33 @@ CacheChain chainOf(const TextureCache& c, const PrTextureSource* source, const P
         return CacheChain{.source = source};
     }
     bool levels = (ask.flags & PrTextureCacheFlag_Levels) != 0;
-    bool decodes = producedForm(source, PrGpuFormat_Rgba8) != PrGpuFormat_None || isPixels(desc.format);
-    bool chained = levels && desc.levelCount == 1 && prGpuMipLevels(desc.extent) > 1;
-    if (!(decodes && chained)) {
-        CacheChain blocks = blocksChain(c, source, ask, !chained);
-        if (blocks.source != nullptr || blocks.status != PrStatus_NotSupported)
-            return blocks;
+    const PrTextureNeed need{
+        .samples = samples,
+        .context = c.desc.device,
+        .values = ask.values,
+        .alpha = ask.alpha,
+        .channels = ask.channels,
+        .pixels = levels && desc.levelCount == 1 && prGpuMipLevels(desc.extent) > 1,
+    };
+    const PrTextureSource* answer = nullptr;
+    PrStatus status = prTextureSourceAnswer(source, &need, &answer);
+    if (status != PrStatus_Ok)
+        return CacheChain{.status = status};
+    const PrTextureDesc& answered = *prTextureSourceDesc(answer);
+    CacheChain chain{};
+    if (prGpuFormatIsCompressed(answered.format)) {
+        if (prTextureNeedTakesBlocks(&need, answered.format, answered.alpha, answered.extent))
+            chain = relabel(answer, prTextureNeedSampledFormat(&need, answered.format));
+        else
+            chain.status = PrStatus_NotSupported;
+    } else if (isPixels(answered.format)) {
+        chain = pixelsChain(c, answer, ask, levels);
+        if (!levels)
+            chain.flags = 0;
+    } else {
+        chain.status = PrStatus_NotSupported;
     }
-    CacheChain chain = pixelsChain(c, source, ask, levels);
-    if (!levels)
-        chain.flags = 0;
+    prTextureSourceRelease(answer);
     return chain;
 }
 
@@ -967,8 +873,8 @@ PrTextureCacheAsk askFor(const PrTextureSource* source, PrTextureCacheAsk ask, u
     // A texture that its source writes on the device, as a compute shader does, is in the source's own format: a Srgb
     // form is not writable. Encoded color is read as stored, so it needs no Srgb form.
     bool written = source->desc.usage != 0 && !holdsFloats(source->desc.texture.format);
-    if (written && ask.values == PrTextureCacheValues_Encoded)
-        ask.values = PrTextureCacheValues_Data;
+    if (written && ask.values == PrTextureValues_Encoded)
+        ask.values = PrTextureValues_Data;
     if ((ask.flags & PrTextureCacheFlag_Levels) != 0 && ask.detail != 0) {
         PrUVec2 extent = prTextureSourceDesc(versionOf(source, version))->extent;
         if ((extent.x > extent.y ? extent.x : extent.y) <= ask.detail)
@@ -1053,7 +959,7 @@ CacheEntry* waitingEntry(TextureCache& c, const PrTextureSource* source, const P
 // entry has that view.
 PrTextureRegion regionFor(const CacheEntry& entry, const PrTextureCacheAsk& ask) {
     PrTextureRegion region = entry.region;
-    if (ask.values == PrTextureCacheValues_Encoded && entry.plain.id != 0)
+    if (ask.values == PrTextureValues_Encoded && entry.plain.id != 0)
         region.texture.texture = entry.plain;
     return region;
 }
@@ -1459,11 +1365,7 @@ using namespace pr_impl;
 struct PrTextureCache : TextureCache {};
 
 PrTextureCacheAsk prTextureCacheAskEncoded(PrTextureCacheFlags flags) {
-    return PrTextureCacheAsk{
-        .flags = flags,
-        .values = PrTextureCacheValues_Encoded,
-        .alpha = PrTextureAlpha_Premultiplied,
-    };
+    return PrTextureCacheAsk{.flags = flags, .values = PrTextureValues_Encoded, .alpha = PrTextureAlpha_Premultiplied};
 }
 
 PrTextureCacheDesc prTextureCacheDescDefault(PrGpuDevice* PR_NULLABLE device) {

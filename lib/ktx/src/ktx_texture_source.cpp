@@ -12,33 +12,6 @@ namespace pr_impl {
 
 namespace {
 
-// The PrGpuFormat of each block format, indexed by PrBasisBlocks. The table ends before the ASTC formats.
-constexpr PrGpuFormat kBlockFormats[] = {
-    PrGpuFormat_None, PrGpuFormat_Bc1, PrGpuFormat_Bc2, PrGpuFormat_Bc3, PrGpuFormat_Bc4, PrGpuFormat_Bc4Snorm,
-    PrGpuFormat_Bc5, PrGpuFormat_Bc5Snorm, PrGpuFormat_Bc6HUfloat, PrGpuFormat_Bc6HSfloat, PrGpuFormat_Bc7,
-    PrGpuFormat_Etc2Rgb8, PrGpuFormat_Etc2Rgb8A1, PrGpuFormat_Etc2Rgba8, PrGpuFormat_EacR11, PrGpuFormat_EacR11Snorm,
-    PrGpuFormat_EacRg11, PrGpuFormat_EacRg11Snorm,
-};
-
-// Returns the PrGpuFormat that holds blocks of `blocks` as they are stored.
-PrGpuFormat blockFormat(PrBasisBlocks blocks) {
-    if (blocks < PrBasisBlocks_Astc4x4)
-        return kBlockFormats[blocks];
-    // PrBasisBlocks has two profiles for each ASTC block size. PrGpuFormat has three formats for each block size, and
-    // the format of the HDR profile is the last of the three.
-    uint32_t index = uint32_t(blocks) - PrBasisBlocks_Astc4x4;
-    return PrGpuFormat(PrGpuFormat_Astc4x4 + index / 2 * kPrGpuAstcFormatsPerBlockSize + (index % 2 != 0 ? 2 : 0));
-}
-
-// Returns the block format that the PrGpuFormat `format` holds, or None.
-PrBasisBlocks blocksOf(PrGpuFormat format) {
-    for (uint32_t blocks = PrBasisBlocks_Bc1; blocks < PrBasisBlocks_Count; ++blocks) {
-        if (blockFormat(PrBasisBlocks(blocks)) == format)
-            return PrBasisBlocks(blocks);
-    }
-    return PrBasisBlocks_None;
-}
-
 // The state of a source that reads a texture from a file. It holds the file's bytes, the codec, the texture's
 // description from the file, and the description of the texture that the source produces.
 struct KtxSource {
@@ -80,7 +53,7 @@ PrTextureDesc descOf(const PrKtxInfo& ktx) {
     else if (ktx.layerCount > 1)
         desc.kind = PrGpuTextureKind_2dArray;
     if (ktx.payload == PrKtxPayload_Blocks)
-        desc.format = blockFormat(ktx.blocks);
+        desc.format = ktx.blocks;
     else if (ktx.payload == PrKtxPayload_Pixels && (ktx.sample == PrKtxSample_F16 || ktx.sample == PrKtxSample_F32))
         desc.format = PrGpuFormat_Rgba32F;
     else
@@ -108,9 +81,9 @@ PrStatus readLevel(const KtxSource& source, const PrKtxTexture* texture, uint32_
     const PrKtxInfo& info = source.ktx;
     PrGpuFormat format = prGpuFormatPlain(source.desc.format);
     if (prGpuFormatIsCompressed(format)) {
-        if (info.payload == PrKtxPayload_Blocks && format == blockFormat(info.blocks))
+        if (info.payload == PrKtxPayload_Blocks && format == info.blocks)
             return prKtxTextureReadBlocks(texture, layer, level, out, size);
-        return prKtxTextureTranscode(texture, layer, level, blocksOf(format), out, size);
+        return prKtxTextureTranscode(texture, layer, level, format, out, size);
     }
     constexpr PrTextureSample kSamples[] = {
         PrTextureSample_U8, PrTextureSample_U16, PrTextureSample_F16, PrTextureSample_F32,
@@ -184,46 +157,105 @@ void sourceRelease(void* PR_NULLABLE context) {
 
 const PrTextureSource* sourceOf(const KtxSource& source);
 
+// Returns true if a source of `ktx` produces `format`: the blocks that the file stores or transcodes to, and the pixels
+// that it decodes to, each in the form of the texture's transfer function.
+bool produces(const PrKtxInfo& ktx, PrGpuFormat format) {
+    if (ktx.payload == PrKtxPayload_Blocks && format == formOf(ktx, ktx.blocks))
+        return true;
+    for (uint32_t i = 0; i < ktx.transcodeCount; ++i) {
+        if (format == formOf(ktx, ktx.transcodes[i]))
+            return true;
+    }
+    if (!decodes(ktx))
+        return false;
+    return format == formOf(ktx, PrGpuFormat_R8) || format == formOf(ktx, PrGpuFormat_Rgba8) ||
+        format == PrGpuFormat_Rgba16F || format == PrGpuFormat_Rgba32F;
+}
+
 PrStatus sourceReformat(void* PR_NULLABLE context, PrGpuFormat format, const PrTextureSource* PR_NULLABLE* PR_NONNULL out) {
     KtxSource source = *static_cast<const KtxSource*>(context);
+    if (!produces(source.ktx, format))
+        return PrStatus_NotSupported;
     source.desc.format = format;
     *out = sourceOf(source);
     return PrStatus_Ok;
 }
 
-// Returns a texture source over a copy of `source`. The copy retains the file's bytes. The source's formats are the
-// blocks that the file stores or transcodes to, and the pixels that it decodes to. The format of `source` is one of
-// them.
+// The block formats that Basis Universal textures transcode to, in order of preference. A need of one channel takes the
+// formats of one channel first.
+constexpr PrGpuFormat kTranscodeTargets[] = {
+    PrGpuFormat_Astc4x4, PrGpuFormat_Bc7, PrGpuFormat_EacR11, PrGpuFormat_Bc4, PrGpuFormat_EacRg11, PrGpuFormat_Bc5,
+    PrGpuFormat_Etc2Rgba8, PrGpuFormat_Bc3, PrGpuFormat_Etc2Rgb8, PrGpuFormat_Bc1,
+};
+
+// Returns true if `format` holds one channel.
+bool isSingle(PrGpuFormat format) {
+    return format == PrGpuFormat_Bc4 || format == PrGpuFormat_EacR11;
+}
+
+// Writes to `*out` the source of `held` in `format`, or `own` if that is its own format.
+PrStatus answerIn(const KtxSource& held, const PrTextureSource* own, PrGpuFormat format,
+        const PrTextureSource* PR_NULLABLE* PR_NONNULL out) {
+    if (format == held.desc.format) {
+        prTextureSourceRetain(own);
+        *out = own;
+        return PrStatus_Ok;
+    }
+    KtxSource source = held;
+    source.desc.format = format;
+    *out = sourceOf(source);
+    return PrStatus_Ok;
+}
+
+// Answers a need with the stored blocks if the need takes them, or else with the blocks of the first target of
+// kTranscodeTargets that the texture transcodes to and the need takes, the targets of one channel first for a need of
+// one channel. A need of pixels takes pixels if the texture decodes, and otherwise its stored blocks: the transcodes
+// serve a texture of several levels, whose levels the device need not make. The pixels are those of the source's own
+// format if it is pixels, or else Rgba8 in the form of the texture's transfer function, or R8 for a need of the red
+// channel of data alone.
+PrStatus sourceAnswer(void* PR_NULLABLE context, const PrTextureSource* own, const PrTextureNeed* need,
+        const PrTextureSource* PR_NULLABLE* PR_NONNULL out) {
+    const KtxSource& held = *static_cast<const KtxSource*>(context);
+    const PrKtxInfo& ktx = held.ktx;
+    const PrUVec2 extent = held.desc.extent;
+    const PrTextureAlpha alpha = held.desc.alpha;
+    const bool pixels = need->pixels && decodes(ktx);
+    if (!pixels) {
+        if (ktx.payload == PrKtxPayload_Blocks && prTextureNeedTakesBlocks(need, formOf(ktx, ktx.blocks), alpha, extent))
+            return answerIn(held, own, formOf(ktx, ktx.blocks), out);
+        const bool single = prTextureNeedSingleChannel(need) < 4;
+        for (uint32_t pass = 0; !need->pixels && pass < 2; ++pass) {
+            for (PrGpuFormat target : kTranscodeTargets) {
+                // The first pass takes the targets of one channel for a need of one channel, and the second the rest.
+                if ((pass == 0) != (single && isSingle(target)))
+                    continue;
+                const PrGpuFormat format = formOf(ktx, target);
+                if (produces(ktx, format) && format != formOf(ktx, ktx.blocks) &&
+                        prTextureNeedTakesBlocks(need, format, alpha, extent))
+                    return answerIn(held, own, format, out);
+            }
+        }
+    }
+    if (!decodes(ktx))
+        return PrStatus_NotSupported;
+    if (prTextureNeedSingleChannel(need) == 0 && formOf(ktx, PrGpuFormat_R8) == PrGpuFormat_R8)
+        return answerIn(held, own, PrGpuFormat_R8, out);
+    if (!prGpuFormatIsCompressed(held.desc.format))
+        return answerIn(held, own, held.desc.format, out);
+    return answerIn(held, own, formOf(ktx, PrGpuFormat_Rgba8), out);
+}
+
+// Returns a texture source over a copy of `source`. The copy retains the file's bytes. The format of `source` is one
+// that the file produces.
 const PrTextureSource* sourceOf(const KtxSource& source) {
     KtxSource* held = allocZeroed<KtxSource>();
     *held = source;
     prBlobSourceRetain(source.bytes);
-    const PrKtxInfo& ktx = source.ktx;
-    PrGpuFormat formats[kPrTextureSourceMaxFormats];
-    uint32_t count = 0;
-    auto add = [&](PrGpuFormat plain) {
-        PrGpuFormat format = formOf(ktx, plain);
-        if (format != source.desc.format && count < kPrTextureSourceMaxFormats)
-            formats[count++] = format;
-    };
-    if (ktx.payload == PrKtxPayload_Blocks)
-        add(blockFormat(ktx.blocks));
-    for (uint32_t blocks = PrBasisBlocks_Bc1; blocks < PrBasisBlocks_Count; ++blocks) {
-        if ((ktx.transcodes >> blocks & 1) != 0)
-            add(blockFormat(PrBasisBlocks(blocks)));
-    }
-    if (decodes(ktx)) {
-        add(PrGpuFormat_R8);
-        add(PrGpuFormat_Rgba8);
-        add(PrGpuFormat_Rgba16F);
-        add(PrGpuFormat_Rgba32F);
-    }
     PrTextureSourceDesc desc{
         .texture = source.desc,
         .read = sourceRead,
         .reformat = sourceReformat,
-        .formats = formats,
-        .formatCount = count,
+        .answer = sourceAnswer,
         .release = sourceRelease,
         .context = held,
     };
@@ -240,10 +272,9 @@ PrStatus sourceCreate(const PrBlobSource* bytes, const PrBlob* blob, const PrCom
         return status;
     PrKtxInfo ktx = *prKtxTextureInfo(texture);
     prKtxTextureDestroy(texture);
-    uint64_t pixels = uint64_t(ktx.extent.x) * ktx.extent.y;
-    if (pixels > limits.pixels || ktx.inflatedBytes > limits.workingBytes)
-        return PrStatus_Limit;
     KtxSource source{.bytes = bytes, .codec = codec, .ktx = ktx, .desc = descOf(ktx)};
+    if (!prTextureLimitsAdmit(&limits, &source.desc))
+        return PrStatus_Limit;
     *out = sourceOf(source);
     return PrStatus_Ok;
 }

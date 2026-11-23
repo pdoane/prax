@@ -85,9 +85,6 @@ namespace {
 // The value of PngAnimation::at before the first frame is composed.
 constexpr uint32_t kNoFrame = 0xffffffffu;
 
-// The maximum decoded pixel count. Larger images are rejected before allocation.
-constexpr uint64_t kMaxPixels = 64u * 1024u * 1024u;
-
 // The largest number of bytes of expanded profile text that a raw Exif profile is read from, whatever the metadata
 // limit.
 constexpr size_t kPngProfileTextMaxBytes = 1u << 20;
@@ -163,8 +160,7 @@ bool readHeader(Png& png, const Chunk& chunk) {
     const bool compression = chunk.data[10] == 0;
     const bool filter = chunk.data[11] == 0;
     return png.width != 0 && png.height != 0 && depthAllowed(png.colorType, png.depth) &&
-        compression && filter && (chunk.data[12] == 0 || chunk.data[12] == 1) &&
-        uint64_t(png.width) * uint64_t(png.height) <= kMaxPixels;
+        compression && filter && (chunk.data[12] == 0 || chunk.data[12] == 1);
 }
 
 // Reads the physical pixel dimensions chunk, which records how many pixels fill one unit of length. The meter is the

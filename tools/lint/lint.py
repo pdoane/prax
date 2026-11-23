@@ -2326,7 +2326,7 @@ THIRD_PARTY = {
     "common/xxhash.h": ("tools/bench/compress_bench.cpp",),
     "basisu_transcoder.h": ("tools/suite/basis/tests/*.cpp",),
     "basisu_comp.h": ("tools/suite/basis/tests/*.cpp",),
-    "basisu_gpu_texture.h": ("tools/suite/basis/tests/*.cpp",),
+    "basisu_gpu_texture.h": ("tools/suite/basis/tests/*.cpp", "tools/suite/bc/tests/*.cpp", "tools/suite/etc2/tests/*.cpp"),
     "hb.h": ("lib/text/backends/harfbuzz/src/text_harfbuzz.cpp",),
     "tree_sitter/api.h": ("lib/syntax/backends/treesitter/src/syntax_treesitter.cpp",),
     "freetype/freetype.h": ("lib/font/backends/freetype/src/font_freetype.cpp", "tools/suite/font/font_compare.cpp",
@@ -3329,7 +3329,7 @@ def check_module_dependencies(report):
 
 
 # The format libraries. Each holds the API of one format (docs/conventions.md, "Formats").
-FORMAT_LIBRARIES = ("basis", "exr", "hdr", "ktx", "lz4", "webp", "zstd")
+FORMAT_LIBRARIES = ("basis", "bc", "etc2", "exr", "hdr", "ktx", "lz4", "webp", "zstd")
 
 # The interfaces that read formats. Their backends adapt the format libraries.
 FORMAT_INTERFACES = ("compress", "image", "texture")

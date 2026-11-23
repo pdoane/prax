@@ -19,7 +19,6 @@ struct TextureSource {
     mutable Atomic<uint32_t> references;    // mutable because holders retain and release a const source
     uint64_t id;
     PrTextureSourceDesc desc;
-    PrGpuFormat formats[kPrTextureSourceMaxFormats];
     const PrTextureSource* PR_NULLABLE previews[kPrTextureSourceMaxPreviews];
 
     // The watcher that is told when the source is released, or null. A catalog is a watcher. It names the source

@@ -20,7 +20,8 @@ namespace pr_impl {
 namespace {
 
 // A source of bits in memory. It produces the formats that a test lists, each with its own texels, and it counts its
-// reads.
+// reads. It answers a need with its own blocks if the need takes them, with R8 for a need of the red channel of data if
+// it lists R8, and otherwise with its own pixels or the first pixels that it lists.
 struct FakeSource {
     PrTextureDesc desc{};
     Array<PrGpuFormat> formats;
@@ -40,6 +41,11 @@ struct FakeSource {
     static PrStatus reformat(void* PR_NULLABLE context, PrGpuFormat format,
             const PrTextureSource* PR_NULLABLE* PR_NONNULL out) {
         FakeSource* fake = static_cast<FakeSource*>(context);
+        bool listed = false;
+        for (PrGpuFormat other : fake->formats)
+            listed = listed || other == format;
+        if (!listed)
+            return PrStatus_NotSupported;
         PrTextureDesc desc = fake->desc;
         desc.format = format;
         PrTextureSourceDesc made{.texture = desc, .read = read, .context = fake};
@@ -47,13 +53,38 @@ struct FakeSource {
         return PrStatus_Ok;
     }
 
+    static PrStatus answer(void* PR_NULLABLE context, const PrTextureSource* own, const PrTextureNeed* need,
+            const PrTextureSource* PR_NULLABLE* PR_NONNULL out) {
+        FakeSource* fake = static_cast<FakeSource*>(context);
+        const PrTextureDesc& desc = fake->desc;
+        if (prTextureNeedTakesBlocks(need, desc.format, desc.alpha, desc.extent) ||
+                (!prGpuFormatIsCompressed(desc.format) && prTextureNeedSingleChannel(need) != 0)) {
+            prTextureSourceRetain(own);
+            *out = own;
+            return PrStatus_Ok;
+        }
+        for (PrGpuFormat format : fake->formats) {
+            if (format == PrGpuFormat_R8 && prTextureNeedSingleChannel(need) == 0)
+                return reformat(context, format, out);
+        }
+        if (!prGpuFormatIsCompressed(desc.format)) {
+            prTextureSourceRetain(own);
+            *out = own;
+            return PrStatus_Ok;
+        }
+        for (PrGpuFormat format : fake->formats) {
+            if (!prGpuFormatIsCompressed(format))
+                return reformat(context, format, out);
+        }
+        return PrStatus_NotSupported;
+    }
+
     const PrTextureSource* source() {
         PrTextureSourceDesc made{
             .texture = desc,
             .read = read,
             .reformat = reformat,
-            .formats = formats.begin(),
-            .formatCount = formats.count(),
+            .answer = answer,
             .context = this,
         };
         return prTextureSourceCreate(&made);
@@ -82,7 +113,7 @@ FakeSource pixels(PrUVec2 extent, uint32_t levels = 1, PrGpuFormat format = PrGp
 }
 
 // Returns an ask for every level in straight alpha, with `values` and `channels`. lib/render makes asks of this form.
-PrTextureCacheAsk askOf(PrTextureCacheValues values, PrTextureChannelFlags channels = 0) {
+PrTextureCacheAsk askOf(PrTextureValues values, PrTextureChannelFlags channels = 0) {
     return PrTextureCacheAsk{
         .flags = PrTextureCacheFlag_Levels,
         .values = values,
@@ -135,8 +166,8 @@ TEST_CASE("color gets the Srgb form of the pixels, and data gets their stored va
     PrTextureCache* cache = cacheOn(device);
     PrTextureRegion color{};
     PrTextureRegion data{};
-    PrGpuTextureDesc colorDesc = realized(cache, source, askOf(PrTextureCacheValues_Color), &color);
-    PrGpuTextureDesc dataDesc = realized(cache, source, askOf(PrTextureCacheValues_Data), &data);
+    PrGpuTextureDesc colorDesc = realized(cache, source, askOf(PrTextureValues_Color), &color);
+    PrGpuTextureDesc dataDesc = realized(cache, source, askOf(PrTextureValues_Data), &data);
     CHECK(colorDesc.format == PrGpuFormat_Rgba8Srgb);
     CHECK(dataDesc.format == PrGpuFormat_Rgba8);
     CHECK(color.texture.texture.id != data.texture.texture.id);
@@ -159,7 +190,7 @@ TEST_CASE("encoded 8-bit values share the color texture through its plain form, 
     // First the color of a material, with every level. Then the encoded color of a drawing, with one level and
     // premultiplied alpha.
     PrTextureRegion color{};
-    CHECK(realized(cache, source, askOf(PrTextureCacheValues_Color), &color).format == PrGpuFormat_Rgba8Srgb);
+    CHECK(realized(cache, source, askOf(PrTextureValues_Color), &color).format == PrGpuFormat_Rgba8Srgb);
     PrTextureRegion drawn{};
     REQUIRE(prTextureCacheRealize(cache, source, prTextureCacheAskEncoded(0), &drawn) == PrTextureCacheState_Ready);
     PrGpuTextureDesc plain = prGpuTextureDesc(device, drawn.texture.texture);
@@ -170,7 +201,7 @@ TEST_CASE("encoded 8-bit values share the color texture through its plain form, 
     CHECK(fake.reads == 1);
     // Data is read as stored, and its levels average the stored values. It therefore has a texture of its own.
     PrTextureRegion data{};
-    CHECK(realized(cache, source, askOf(PrTextureCacheValues_Data), &data).format == PrGpuFormat_Rgba8);
+    CHECK(realized(cache, source, askOf(PrTextureValues_Data), &data).format == PrGpuFormat_Rgba8);
     CHECK(prTextureCacheInfo(cache).textures == 2);
     prTextureCacheDestroy(cache);
     prTextureSourceRelease(source);
@@ -185,17 +216,17 @@ TEST_CASE("data whose consumer reads one channel is realized as that channel alo
     FakeSource fake = pixels({4, 4});
     const PrTextureSource* source = fake.source();
     // Red alone decodes to R8, and the device generates its levels.
-    PrGpuTextureDesc red = realized(cache, source, askOf(PrTextureCacheValues_Data, PrTextureChannelFlag_R));
+    PrGpuTextureDesc red = realized(cache, source, askOf(PrTextureValues_Data, PrTextureChannelFlag_R));
     CHECK(red.format == PrGpuFormat_R8);
     CHECK(red.levels == 3);
     // On a device with swizzled formats, green alone is R8 that a sampler reads as gray. Its levels are generated on
     // the CPU, because no device renders to a swizzled format.
     bool swizzles = (prGpuDeviceInfo(device).features & PrGpuFeatureFlag_TextureSwizzle) != 0;
-    PrGpuTextureDesc green = realized(cache, source, askOf(PrTextureCacheValues_Data, PrTextureChannelFlag_G));
+    PrGpuTextureDesc green = realized(cache, source, askOf(PrTextureValues_Data, PrTextureChannelFlag_G));
     CHECK(green.format == (swizzles ? PrGpuFormat_R8Luminance : PrGpuFormat_Rgba8));
     CHECK(green.levels == 3);
     // Color of one channel keeps its four channels.
-    PrGpuTextureDesc color = realized(cache, source, askOf(PrTextureCacheValues_Color, PrTextureChannelFlag_R));
+    PrGpuTextureDesc color = realized(cache, source, askOf(PrTextureValues_Color, PrTextureChannelFlag_R));
     CHECK(color.format == PrGpuFormat_Rgba8Srgb);
     prTextureCacheDestroy(cache);
     prTextureSourceRelease(source);
@@ -207,8 +238,8 @@ TEST_CASE("floats become 16-bit floats of the same values, for color as for data
     const PrTextureSource* source = fake.source();
     PrGpuDevice* device = prGpuMemoryCreate(nullptr);
     PrTextureCache* cache = cacheOn(device);
-    const PrTextureCacheValues values[2] = {PrTextureCacheValues_Data, PrTextureCacheValues_Color};
-    for (PrTextureCacheValues value : values) {
+    const PrTextureValues values[2] = {PrTextureValues_Data, PrTextureValues_Color};
+    for (PrTextureValues value : values) {
         PrGpuTextureDesc desc = realized(cache, source, askOf(value));
         CHECK(desc.format == PrGpuFormat_Rgba16F);
         CHECK(desc.levels == 2);
@@ -227,8 +258,8 @@ TEST_CASE("data gets pixels of a Srgb form in the plain form, with their bits un
     PrTextureCache* cache = cacheOn(device);
     PrTextureRegion data{};
     PrTextureRegion color{};
-    CHECK(realized(cache, source, askOf(PrTextureCacheValues_Data), &data).format == PrGpuFormat_Rgba8);
-    CHECK(realized(cache, source, askOf(PrTextureCacheValues_Color), &color).format == PrGpuFormat_Rgba8Srgb);
+    CHECK(realized(cache, source, askOf(PrTextureValues_Data), &data).format == PrGpuFormat_Rgba8);
+    CHECK(realized(cache, source, askOf(PrTextureValues_Color), &color).format == PrGpuFormat_Rgba8Srgb);
     PrGpuNativePixels first{};
     PrGpuNativePixels second{};
     REQUIRE(prGpuTextureNative(device, data.texture.texture, PrGpuNativeKind_Pixels, &first));
@@ -255,27 +286,14 @@ TEST_CASE("blocks that the device samples are kept, and blocks that the device c
     // On a device that does not sample the blocks, the blocks are decoded to pixels.
     PrGpuDevice* memory = prGpuMemoryCreate(nullptr);
     PrTextureCache* memoryCache = cacheOn(memory);
-    CHECK(realized(memoryCache, source, askOf(PrTextureCacheValues_Color)).format == PrGpuFormat_Rgba8Srgb);
+    CHECK(realized(memoryCache, source, askOf(PrTextureValues_Color)).format == PrGpuFormat_Rgba8Srgb);
     prTextureCacheDestroy(memoryCache);
     PrGpuDevice* device = blockDevice();
     PrTextureCache* cache = device != nullptr ? cacheOn(device) : nullptr;
     if (device != nullptr && prGpuDeviceSupportsFormat(device, PrGpuFormat_Bc7Srgb, PrGpuTextureUsageFlag_Sampled)) {
-        PrGpuTextureDesc kept = realized(cache, source, askOf(PrTextureCacheValues_Color));
+        PrGpuTextureDesc kept = realized(cache, source, askOf(PrTextureValues_Color));
         CHECK(kept.format == PrGpuFormat_Bc7Srgb);
         CHECK(kept.levels == 4);
-    }
-    prTextureSourceRelease(source);
-
-    // For an ask of one channel, a texture that transcodes to blocks of one channel takes those blocks first. They are
-    // read as gray.
-    FakeSource basis = pixels({8, 8}, 4);
-    basis.formats.push(PrGpuFormat_Bc7);
-    basis.formats.push(PrGpuFormat_Bc4);
-    source = basis.source();
-    if (device != nullptr && prGpuDeviceSupportsFormat(device, PrGpuFormat_Bc4Luminance, PrGpuTextureUsageFlag_Sampled)) {
-        CHECK(realized(cache, source, askOf(PrTextureCacheValues_Data, PrTextureChannelFlag_G)).format ==
-            PrGpuFormat_Bc4Luminance);
-        CHECK(realized(cache, source, askOf(PrTextureCacheValues_Data)).format == PrGpuFormat_Bc7);
     }
     prTextureCacheDestroy(cache);
     prTextureSourceRelease(source);

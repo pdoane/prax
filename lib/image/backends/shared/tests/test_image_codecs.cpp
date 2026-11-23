@@ -75,6 +75,26 @@ TEST_CASE("png dimensions come from the IHDR chunk") {
     CHECK(size.height == 7);
 }
 
+TEST_CASE("png, gif and jpeg headers past 64 megapixels open within limits that admit them") {
+    // 8193 by 8193 is just over 64 megapixels. Only the caller's limits bound an image.
+    PrImageLimits limits = prImageLimitsDefault();
+    limits.pixels = UINT64_MAX;
+    limits.outputBytes = UINT64_MAX;
+    limits.workingBytes = UINT64_MAX;
+    limits.work = UINT64_MAX;
+    const Array<uint8_t> headers[3] = {pngHeader(8193, 8193), gifHeader(8193, 8193), jpegHeader(0xC0, 8193, 8193)};
+    for (const Array<uint8_t>& header : headers) {
+        PrImageSource source{};
+        source.memory = header;
+        PrImageDecoder* decoder = nullptr;
+        const PrStatus status = testDecoderOpen(testCodec(), source, &limits, &decoder);
+        CHECK((status == PrStatus_Ok || status == PrStatus_Truncated));
+        if (decoder != nullptr)
+            CHECK(prImageDecoderInfo(decoder)->extent == PrUVec2{8193, 8193});
+        prImageDecoderDestroy(decoder);
+    }
+}
+
 TEST_CASE("a png that declares no size reads as none") {
     Size size;
     Array<uint8_t> zero = pngHeader(0, 16);

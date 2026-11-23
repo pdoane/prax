@@ -30,6 +30,11 @@ typedef uint8_t PrPixelFormat;
 // Returns the number of bytes that one pixel of the format occupies.
 uint32_t prPixelFormatSize(PrPixelFormat format);
 
+// Returns the 8-bit value of the unsigned channel `value` of `bits` bits, from 1 to 32. A channel of fewer than 8 bits
+// widens by repeating its bits from the high end into the low bits, so that zero is 0 and all ones is 255. A channel of
+// more than 8 bits keeps its high 8 bits. Codecs widen and narrow packed channels by it.
+uint8_t prPixelChannel8(uint32_t value, uint32_t bits);
+
 // Rows of pixels in memory that the structure does not own. Row `y` starts at `data + y * stride`. If a call does not
 // imply the format, the format is passed beside the pixels.
 typedef struct PrPixels {

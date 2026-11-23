@@ -19,6 +19,14 @@ namespace pr_impl {
 
 namespace {
 
+// Returns true if `source` reformats to `format`.
+bool produces(const PrTextureSource* source, PrGpuFormat format) {
+    const PrTextureSource* other = nullptr;
+    const bool made = prTextureSourceReformat(source, format, &other) == PrStatus_Ok;
+    prTextureSourceRelease(other);
+    return made;
+}
+
 // The codecs that the tests decode and encode images with.
 struct Codecs {
     PrCompressCodecSet* compress = prCompressCodecSetCreateDefault();
@@ -222,30 +230,43 @@ TEST_CASE("an image source decodes the pixels of its image, and fails for bytes 
 TEST_CASE("an image over the limits is refused from its header when it opens, before any decoding") {
     Codecs codecs;
     const uint8_t texels[4] = {1, 2, 3, 255};
-    // A PNG whose header states 9000 by 9000 texels, which is more than a texture admits by default. Its data holds one
-    // texel, so it never decodes.
-    Array<uint8_t> file = codecs.png({1, 1}, texels);
-    const uint8_t extent[8] = {0, 0, 0x23, 0x28, 0, 0, 0x23, 0x28};
-    prMemCopy(file.begin() + 16, extent, sizeof(extent));
-    uint32_t crc = prCrc32Update(0, PrByteView{file.begin() + 12, 17});
-    const uint8_t checked[4] = {uint8_t(crc >> 24), uint8_t(crc >> 16), uint8_t(crc >> 8), uint8_t(crc)};
-    prMemCopy(file.begin() + 29, checked, sizeof(checked));
-    CountedBytes large(static_cast<Array<uint8_t>&&>(file));
+    // A PNG whose header states a width of one past the default extent, and a height of one, is past the limits on one
+    // side alone. One whose width is the extent opens, though its data holds one texel, so it never decodes.
+    auto statingWidth = [&](uint32_t width) {
+        Array<uint8_t> file = codecs.png({1, 1}, texels);
+        const uint8_t extent[8] = {
+            uint8_t(width >> 24), uint8_t(width >> 16), uint8_t(width >> 8), uint8_t(width),
+            0, 0, 0, 1,
+        };
+        prMemCopy(file.begin() + 16, extent, sizeof(extent));
+        uint32_t crc = prCrc32Update(0, PrByteView{file.begin() + 12, 17});
+        const uint8_t checked[4] = {uint8_t(crc >> 24), uint8_t(crc >> 16), uint8_t(crc >> 8), uint8_t(crc)};
+        prMemCopy(file.begin() + 29, checked, sizeof(checked));
+        return file;
+    };
+    const uint32_t most = prTextureLimitsDefault().extent;
+    CountedBytes wide(statingWidth(most + 1));
     const PrTextureSource* source = nullptr;
-    CHECK(sourceOf(codecs, large.source, &source) == PrStatus_Limit);
+    CHECK(sourceOf(codecs, wide.source, &source) == PrStatus_Limit);
     CHECK(source == nullptr);
+    CountedBytes widest(statingWidth(most));
+    REQUIRE(sourceOf(codecs, widest.source, &source) == PrStatus_Ok);
+    CHECK(prTextureSourceDesc(source)->extent == PrUVec2{most, 1});
+    prTextureSourceRelease(source);
 
-    // The limits of a texture also bound the image, within the limits of the image library.
+    // The extent bounds each side of the image.
     const uint8_t clear[16] = {};
     CountedBytes small(codecs.png({2, 2}, clear));
-    PrTextureLimits limits = prTextureLimitsDefault();
-    limits.pixels = 3;
+    PrTextureLimits limits{.extent = 1};
     CHECK(prImageTextureSourceOpen(small.source, codecs.images, &limits, PrImageTextureColor_Stored, &source) ==
         PrStatus_Limit);
-    limits.pixels = 4;
+    limits.extent = 2;
     REQUIRE(prImageTextureSourceOpen(small.source, codecs.images, &limits, PrImageTextureColor_Stored, &source) ==
         PrStatus_Ok);
     prTextureSourceRelease(source);
+    CountedBytes row(codecs.png({3, 1}, clear));
+    CHECK(prImageTextureSourceOpen(row.source, codecs.images, &limits, PrImageTextureColor_Stored, &source) ==
+        PrStatus_Limit);
 }
 
 TEST_CASE("a float image decodes to floats with its stored values, whatever chromaticities it states") {
@@ -291,8 +312,8 @@ TEST_CASE("an image source reports the orientation stored in its file, and a tex
     const PrTextureSource* source = nullptr;
     REQUIRE(sourceOf(codecs, png.source, &source) == PrStatus_Ok);
     CHECK(prTextureSourceDesc(source)->orientation == 0);
-    CHECK(prTextureSourceProduces(source, PrGpuFormat_Rgba32F));
-    CHECK(!prTextureSourceProduces(source, PrGpuFormat_Bc7));
+    CHECK(produces(source, PrGpuFormat_Rgba32F));
+    CHECK(!produces(source, PrGpuFormat_Bc7));
     prTextureSourceRelease(source);
     // A texture format of the codec opens what the codec decodes, chosen by the media type of the bytes.
     PrTextureFormat* format = prImageTextureFormatCreate(codecs.images, PrImageTextureColor_Stored);

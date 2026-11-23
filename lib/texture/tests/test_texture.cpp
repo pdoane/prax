@@ -151,10 +151,16 @@ TEST_CASE("a source of an application's bits is read on demand, and releases its
     bits.texels.append(PrByteView{texels, sizeof(texels)});
     const PrTextureSource* source = bits.source(PrGpuFormat_Rgba8, PrUVec2{2, 1});
     CHECK(prTextureSourceDesc(source)->format == PrGpuFormat_Rgba8);
-    CHECK(prTextureSourceProduces(source, PrGpuFormat_Rgba8));
-    CHECK(!prTextureSourceProduces(source, PrGpuFormat_Rgba16F));
-    CHECK(prTextureSourceFormats(source, nullptr, 0) == 0);
     const PrTextureSource* other = nullptr;
+    // A source without an answer function answers every need with itself.
+    const PrTextureNeed need{
+        .samples = [](void* PR_NULLABLE, PrGpuFormat, PrUVec2) { return false; },
+        .values = PrTextureValues_Color,
+        .alpha = PrTextureAlpha_Straight,
+    };
+    REQUIRE(prTextureSourceAnswer(source, &need, &other) == PrStatus_Ok);
+    CHECK(other == source);
+    prTextureSourceRelease(other);
     CHECK(prTextureSourceReformat(source, PrGpuFormat_Bc7, &other) == PrStatus_NotSupported);
     CHECK(other == nullptr);
     REQUIRE(prTextureSourceReformat(source, PrGpuFormat_Rgba8, &other) == PrStatus_Ok);

@@ -11,9 +11,6 @@
 namespace pr_impl {
 namespace {
 
-// The maximum decoded pixel count. Larger frames are rejected before allocation.
-constexpr uint64_t kMaxPixels = 64u * 1024u * 1024u;
-
 constexpr uint32_t kMaxComponents = 4;
 constexpr uint32_t kBlockSamples = 64;
 constexpr uint32_t kTableCount = 4;
@@ -853,7 +850,7 @@ bool readFrame(Jpeg& jpeg, const uint8_t* segment, uint32_t size, uint8_t marker
     jpeg.width = prMemReadBeU16(segment + 3);
     jpeg.componentCount = segment[5];
     if (jpeg.width == 0 || jpeg.height == 0 || jpeg.componentCount == 0 || jpeg.componentCount > kMaxComponents ||
-            uint64_t(jpeg.width) * uint64_t(jpeg.height) > kMaxPixels || size < 6 + jpeg.componentCount * 3) {
+            size < 6 + jpeg.componentCount * 3) {
         return false;
     }
     jpeg.maxH = 1;
@@ -890,9 +887,9 @@ bool allocatePlanes(Jpeg& jpeg) {
         component.blocksPerLineForMcu = jpeg.mcusPerLine * component.h;
         component.blocksPerColumnForMcu = jpeg.mcusPerColumn * component.v;
         const uint64_t blocks = uint64_t(component.blocksPerLineForMcu) * uint64_t(component.blocksPerColumnForMcu);
-        if (blocks * kBlockSamples > kMaxPixels * 4) {
+        // The caller's limits bound the planes. A plane that the address space cannot hold does not decode.
+        if (blocks * kBlockSamples * sizeof(int16_t) > SIZE_MAX)
             return false;
-        }
         prMemoryFree(component.coefficients);
         prMemoryFree(component.samples);
         component.coefficients = static_cast<int16_t*>(

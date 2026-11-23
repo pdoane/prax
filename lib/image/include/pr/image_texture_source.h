@@ -41,16 +41,18 @@ typedef uint8_t PrImageTextureColor;
 // With Stored color, the format is Rgba8 for 8-bit and 16-bit samples, and Rgba32F for floats and 32-bit integers. The
 // source can also decode to the others of Rgba8, Rgba16F and Rgba32F, and to R8 with the gray or red channel
 // (prTextureSourceReformat). The values are not converted. An image whose channels are not gray or RGB, such as CMYK,
-// decodes only to Rgba8Srgb, which the codec converts to.
+// decodes only to Rgba8Srgb, which the codec converts to. The source answers a need (prTextureSourceAnswer) with its
+// own pixels, or with R8 for a need of the red channel of data alone.
 //
 // A 2D image with one level has the previews that its codec reads (prTextureSourcePreview, prImageDecoderReadPreview).
 // For a JPEG, these are the thumbnail that the file embeds and the decodes at a quarter and an eighth of its extent. A
 // consumer that shows a thumbnail of such an image reads a preview and never decodes the image. An image without
 // previews is read whole.
 //
-// Returns the failure of reading the bytes, NotSupported if the codec does not recognize them, Limit if the image is
-// past `limits` or the image library's limits (prImageLimitsDefault), or InvalidData if the image does not open. A null
-// `limits` means the defaults. On failure, `*out` is null.
+// Returns the failure of reading the bytes, NotSupported if the codec does not recognize them, Limit if a side of the
+// image or its layers are past `limits`, or InvalidData if the image does not open. An image within `limits` opens
+// whatever its size in bytes: the limits that the codec checks follow from the extent. A null `limits` means the
+// defaults. On failure, `*out` is null.
 PrStatus prImageTextureSourceOpen(const PrBlobSource* bytes, const PrImageCodecSet* codec,
     const PrTextureLimits* PR_NULLABLE limits, PrImageTextureColor color, const PrTextureSource* PR_NULLABLE* PR_NONNULL out);
 

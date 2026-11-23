@@ -95,20 +95,23 @@ constexpr PrTextureSample kSamples[] = {
 // The formats that an image decodes to.
 constexpr PrGpuFormat kDecoded[] = {PrGpuFormat_R8, PrGpuFormat_Rgba8, PrGpuFormat_Rgba16F, PrGpuFormat_Rgba32F};
 
-// Returns the limits within which the image of a texture with `limits` opens. A decoder checks them against the header
-// before it decodes. The texture's budget sets the limits. The image library's defaults do not, because they bound the
-// images of a page. The input, the working bytes and the output each take up to the texture's working bytes. The pixels
-// of one frame take up to the texture's pixels. The work scales with the texture's pixels. An image as large as the
-// texture admits therefore opens. The other limits are the library's defaults.
-PrImageLimits imageLimits(const PrTextureLimits& limits) {
+// Returns the larger of `a` and `b`.
+uint64_t larger(uint64_t a, uint64_t b) {
+    return a > b ? a : b;
+}
+
+// Returns the limits within which the image of `inputBytes` bytes of a texture with `limits` opens. A frame has the
+// pixels of a square of the extent, of the widest pixels, four 32-bit floats. A decoder holds the input and a few such
+// frames, and takes a few steps for each sample. The image library's defaults are the least of each, which covers the
+// state of the decoder of a small image. An image whose sides are within the extent therefore opens and reads.
+PrImageLimits imageLimits(const PrTextureLimits& limits, uint64_t inputBytes) {
     PrImageLimits image = prImageLimitsDefault();
-    image.inputBytes = limits.workingBytes;
-    image.pixels = limits.pixels;
-    image.workingBytes = limits.workingBytes;
-    image.outputBytes = limits.workingBytes;
-    // The steps of a decode, which are a few for each sample of each pixel.
-    const uint64_t work = limits.pixels * 64;
-    image.work = work > image.work ? work : image.work;
+    const uint64_t pixels = uint64_t(limits.extent) * limits.extent;
+    image.inputBytes = larger(image.inputBytes, inputBytes);
+    image.pixels = pixels;
+    image.workingBytes = larger(image.workingBytes, inputBytes + pixels * 16 * 8);
+    image.outputBytes = larger(image.outputBytes, pixels * 16);
+    image.work = larger(image.work, pixels * 64);
     return image;
 }
 
@@ -286,10 +289,42 @@ const PrTextureSource* sourceOf(const ImageTexture& image);
 const PrTextureSource* sourceWithPreviews(const ImageTexture& image,
     const PrTextureSource* PR_NONNULL const* PR_NULLABLE previews, uint32_t previewCount);
 
+// Returns true if a source of `image` produces `format`: its own format, or for an image whose pixels the codec does
+// not convert, the other formats that it decodes to (kDecoded).
+bool produces(const ImageTexture& image, PrGpuFormat format) {
+    if (format == image.desc.format)
+        return true;
+    if (image.converted || image.wide)
+        return false;
+    for (PrGpuFormat decoded : kDecoded) {
+        if (decoded == format)
+            return true;
+    }
+    return false;
+}
+
 PrStatus sourceReformat(void* PR_NULLABLE context, PrGpuFormat format, const PrTextureSource* PR_NULLABLE* PR_NONNULL out) {
     ImageTexture image = *static_cast<const ImageTexture*>(context);
+    if (!produces(image, format))
+        return PrStatus_NotSupported;
     image.desc.format = format;
     *out = sourceOf(image);
+    return PrStatus_Ok;
+}
+
+// Answers a need with the image's own pixels, or with R8 for a need of the red channel of data alone.
+PrStatus sourceAnswer(void* PR_NULLABLE context, const PrTextureSource* own, const PrTextureNeed* need,
+        const PrTextureSource* PR_NULLABLE* PR_NONNULL out) {
+    const ImageTexture& image = *static_cast<const ImageTexture*>(context);
+    if (prTextureNeedSingleChannel(need) == 0 && image.desc.format != PrGpuFormat_R8 && produces(image, PrGpuFormat_R8)) {
+        ImageTexture red = image;
+        red.desc.format = PrGpuFormat_R8;
+        red.frames = nullptr;
+        *out = sourceOf(red);
+        return PrStatus_Ok;
+    }
+    prTextureSourceRetain(own);
+    *out = own;
     return PrStatus_Ok;
 }
 
@@ -340,18 +375,11 @@ const PrTextureSource* sourceWithPreviews(const ImageTexture& image,
         image.frames->references.fetchAdd(1);
     // The source of a whole animated image changes over time. A frame and a preview are still.
     bool animated = image.frames != nullptr && image.frame == 0 && image.preview == 0;
-    PrGpuFormat formats[4];
-    uint32_t count = 0;
-    for (PrGpuFormat format : kDecoded) {
-        if (format != image.desc.format && !image.converted && !image.wide)
-            formats[count++] = format;
-    }
     PrTextureSourceDesc desc{
         .texture = image.desc,
         .read = sourceRead,
         .reformat = sourceReformat,
-        .formats = formats,
-        .formatCount = count,
+        .answer = sourceAnswer,
         .previews = previews,
         .previewCount = previewCount,
         .frame = animated ? sourceFrame : nullptr,
@@ -409,7 +437,7 @@ bool isSrgb(const PrImageColor& color) {
 PrStatus sourceCreate(const PrBlobSource* bytes, const PrBlob* blob, const PrImageCodecSet* codec,
         const PrTextureLimits& limits, PrImageTextureColor color, const PrTextureSource* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;
-    PrImageLimits imageBounds = imageLimits(limits);
+    PrImageLimits imageBounds = imageLimits(limits, prBlobBytes(blob).size);
     PrImageDecoder* decoder = nullptr;
     PrStatus status = imageOpen(codec, prBlobBytes(blob), imageBounds, &decoder);
     if (status != PrStatus_Ok)
@@ -479,6 +507,10 @@ PrStatus sourceCreate(const PrBlobSource* bytes, const PrBlob* blob, const PrIma
     if (color == PrImageTextureColor_Srgb && image.desc.format == PrGpuFormat_Rgba8)
         image.desc.format = PrGpuFormat_Rgba8Srgb;
     // A 2D image of several frames is an animation. Its frames show for the durations that the image states.
+    if (!prTextureLimitsAdmit(&limits, &image.desc)) {
+        prImageDecoderDestroy(decoder);
+        return PrStatus_Limit;
+    }
     if (image.desc.kind == PrGpuTextureKind_2d && info.faceCount == 1 && info.frameCount > 1) {
         ImageFrames* frames = allocZeroed<ImageFrames>();
         frames->references.storeRelaxed(1);

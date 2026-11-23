@@ -784,21 +784,28 @@ struct TilesRead {
     PrTextureRead* reads[];
 };
 
-// Returns a source of the pixels of `source` in a plain format. It is `source` itself if its format is plain, and
-// otherwise a source of a format that `source` decodes to. Returns null if `source` decodes to no plain format.
+// Samples no format: a need of it takes pixels alone.
+bool samplesNothing(void* PR_NULLABLE, PrGpuFormat, PrUVec2) {
+    return false;
+}
+
+// Returns a source of the pixels of `source` in a plain format: the source's answer to a need of pixels of its stored
+// values in every channel. Returns null if `source` decodes to no plain format.
 const PrTextureSource* PR_NULLABLE tilePixels(const PrTextureSource* source) {
-    if (isPlain(prTextureSourceDesc(source)->format)) {
-        prTextureSourceRetain(source);
-        return source;
+    const PrTextureNeed need{
+        .samples = samplesNothing,
+        .values = PrTextureValues_Data,
+        .alpha = PrTextureAlpha_Straight,
+        .pixels = true,
+    };
+    const PrTextureSource* pixels = nullptr;
+    if (prTextureSourceAnswer(source, &need, &pixels) != PrStatus_Ok)
+        return nullptr;
+    if (!isPlain(prTextureSourceDesc(pixels)->format)) {
+        prTextureSourceRelease(pixels);
+        return nullptr;
     }
-    const PrGpuFormat decoded[] = {PrGpuFormat_Rgba8, PrGpuFormat_Rgba8Srgb, PrGpuFormat_Rgba16F, PrGpuFormat_Rgba32F};
-    for (PrGpuFormat candidate : decoded) {
-        const PrTextureSource* pixels = nullptr;
-        if (prTextureSourceProduces(source, candidate) &&
-                prTextureSourceReformat(source, candidate, &pixels) == PrStatus_Ok)
-            return pixels;
-    }
-    return nullptr;
+    return pixels;
 }
 
 // The tile texels along one axis that a resampling reads for one cell texel. They are `count` texels starting at
@@ -965,8 +972,40 @@ size_t prTextureLevelSize(const PrTextureDesc* desc, uint32_t level) {
 }
 
 PrTextureLimits prTextureLimitsDefault(void) {
-    uint64_t pixels = uint64_t(8192) * 8192;
-    return PrTextureLimits{.pixels = pixels, .workingBytes = pixels * 64};
+    return PrTextureLimits{.extent = 16384};
+}
+
+bool prTextureLimitsAdmit(const PrTextureLimits* limits, const PrTextureDesc* desc) {
+    const uint32_t most = limits->extent;
+    return desc->extent.x <= most && desc->extent.y <= most && desc->depth <= most && desc->layerCount <= most;
+}
+
+uint32_t prTextureNeedSingleChannel(const PrTextureNeed* need) {
+    if (need->values != PrTextureValues_Data)
+        return 4;
+    for (uint32_t c = 0; c < 4; ++c) {
+        if (need->channels == PrTextureChannelFlags(1u << c))
+            return c;
+    }
+    return 4;
+}
+
+PrGpuFormat prTextureNeedSampledFormat(const PrTextureNeed* need, PrGpuFormat format) {
+    const PrGpuFormat plain = prGpuFormatPlain(format);
+    const bool single = plain == PrGpuFormat_Bc4 || plain == PrGpuFormat_EacR11;
+    const PrGpuFormat sampled = single ? prGpuFormatSwizzled(plain, PrGpuSwizzle_Luminance) : plain;
+    if (need->values != PrTextureValues_Color)
+        return sampled;
+    const PrGpuFormat encoded = prGpuFormatSrgb(sampled);
+    return encoded != sampled ? encoded : PrGpuFormat_None;
+}
+
+bool prTextureNeedTakesBlocks(const PrTextureNeed* need, PrGpuFormat format, PrTextureAlpha alpha, PrUVec2 extent) {
+    const bool premultiplied = alpha == PrTextureAlpha_Premultiplied && need->alpha == PrTextureAlpha_Straight;
+    if (!prGpuFormatIsCompressed(format) || premultiplied)
+        return false;
+    const PrGpuFormat sampled = prTextureNeedSampledFormat(need, format);
+    return sampled != PrGpuFormat_None && need->samples(need->context, sampled, extent);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -974,17 +1013,13 @@ PrTextureLimits prTextureLimitsDefault(void) {
 
 const PrTextureSource* prTextureSourceCreate(const PrTextureSourceDesc* desc) {
     PR_ASSERT(desc->texture.levelCount >= 1 && desc->texture.levelCount <= kPrTextureMaxLevels);
-    PR_ASSERT(desc->texture.layerCount >= 1 && desc->formatCount <= kPrTextureSourceMaxFormats);
-    PR_ASSERT(desc->formatCount == 0 || desc->reformat != nullptr);
+    PR_ASSERT(desc->texture.layerCount >= 1);
     PR_ASSERT(desc->previewCount <= kPrTextureSourceMaxPreviews);
     PR_ASSERT(desc->usage == 0 || (desc->flags & PrTextureSourceFlag_FillsTextures) != 0);
     PrTextureSource* source = allocZeroed<PrTextureSource>();
     source->references.storeRelaxed(1);
     source->id = gNextSourceId.fetchAdd(1) + 1;
     source->desc = *desc;
-    if (desc->formatCount != 0)
-        prMemCopy(source->formats, desc->formats, desc->formatCount * sizeof(PrGpuFormat));
-    source->desc.formats = source->formats;
     for (uint32_t i = 0; i < desc->previewCount; ++i) {
         prTextureSourceRetain(desc->previews[i]);
         source->previews[i] = desc->previews[i];
@@ -1071,22 +1106,6 @@ uint64_t prTextureSourceId(const PrTextureSource* source) {
     return source->id;
 }
 
-uint32_t prTextureSourceFormats(const PrTextureSource* source, PrGpuFormat* PR_NULLABLE out, uint32_t capacity) {
-    for (uint32_t i = 0; i < source->desc.formatCount && i < capacity; ++i)
-        out[i] = source->formats[i];
-    return source->desc.formatCount;
-}
-
-bool prTextureSourceProduces(const PrTextureSource* source, PrGpuFormat format) {
-    if (format == source->desc.texture.format)
-        return true;
-    for (uint32_t i = 0; i < source->desc.formatCount; ++i) {
-        if (source->formats[i] == format)
-            return true;
-    }
-    return false;
-}
-
 uint32_t prTextureSourcePreviewCount(const PrTextureSource* source) {
     return source->desc.previewCount;
 }
@@ -1118,9 +1137,25 @@ PrStatus prTextureSourceReformat(const PrTextureSource* source, PrGpuFormat form
         *out = source;
         return PrStatus_Ok;
     }
-    if (!prTextureSourceProduces(source, format))
+    if (source->desc.reformat == nullptr)
         return PrStatus_NotSupported;
     PrStatus status = source->desc.reformat(source->desc.context, format, out);
+    if (status != PrStatus_Ok) {
+        prTextureSourceRelease(*out);
+        *out = nullptr;
+    }
+    return status;
+}
+
+PrStatus prTextureSourceAnswer(const PrTextureSource* source, const PrTextureNeed* need,
+        const PrTextureSource* PR_NULLABLE* PR_NONNULL out) {
+    *out = nullptr;
+    if (source->desc.answer == nullptr) {
+        prTextureSourceRetain(source);
+        *out = source;
+        return PrStatus_Ok;
+    }
+    PrStatus status = source->desc.answer(source->desc.context, source, need, out);
     if (status != PrStatus_Ok) {
         prTextureSourceRelease(*out);
         *out = nullptr;

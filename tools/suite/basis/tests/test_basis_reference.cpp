@@ -7,8 +7,8 @@
 // blocks must be equal too. Both transcode ETC1S to blocks of BC1, BC3, BC4 and BC5, by different means. Those blocks
 // are decoded, and the test compares the error that each implementation's blocks leave against the pixels.
 
-#include "pr/basis.h"
 #include "pr/compress_select.h"
+#include "pr/gpu.h"
 #include "pr/ktx.h"
 #include "pr/mem.h"
 
@@ -146,8 +146,17 @@ struct BlockComparison {
 };
 
 // Transcodes every level of every layer and face of `file` to `target` with lib/ktx, if lib/ktx offers the target, and
-// to `format` with the reference. Compares the blocks, starting at byte `from` of each block.
-BlockComparison compareBlocks(const Bytes& file, PrBasisBlocks target, basist::transcoder_texture_format format,
+// to `format` with the reference. Compares the blocks, starting at byte `from` of each block. Returns true if the
+// texture of `info` transcodes to `target`.
+bool transcodesTo(const PrKtxInfo& info, PrGpuFormat target) {
+    for (uint32_t i = 0; i < info.transcodeCount; ++i) {
+        if (info.transcodes[i] == target)
+            return true;
+    }
+    return false;
+}
+
+BlockComparison compareBlocks(const Bytes& file, PrGpuFormat target, basist::transcoder_texture_format format,
         size_t from = 0) {
     BlockComparison result;
     PrKtxTexture* texture = openTexture(file);
@@ -157,10 +166,10 @@ BlockComparison compareBlocks(const Bytes& file, PrBasisBlocks target, basist::t
     if (texture != nullptr) {
         PrKtxInfo info = *prKtxTextureInfo(texture);
         uint32_t frameCount = info.layerCount * info.faceCount;
-        for (uint32_t level = 0; (info.transcodes >> target & 1) != 0 && level < info.levelCount; ++level) {
+        for (uint32_t level = 0; transcodesTo(info, target) && level < info.levelCount; ++level) {
             PrUVec2 extent = prKtxLevelExtent(info.extent, level);
-            size_t size = prBasisBlocksSize(extent, target);
-            size_t blockBytes = prBasisBlocksBytes(target);
+            size_t size = size_t(prGpuFormatLevelBytes(target, extent));
+            size_t blockBytes = prGpuFormatBlock(target).bytes;
             Bytes ours(size);
             Bytes theirs(size);
             for (uint32_t frame = 0; frame < frameCount; ++frame) {
@@ -237,19 +246,19 @@ struct BlockQuality {
 // decodes both sets of blocks, and adds the error of each against the decoded pixels to `*quality`. Only the channels
 // that the target holds are compared: red, green and blue for BC1, red for BC4, all four for BC3, and red and alpha for
 // BC5, whose second value the reference decodes into alpha.
-void addQuality(const Bytes& file, PrBasisBlocks target, basist::transcoder_texture_format format, BlockQuality* quality) {
+void addQuality(const Bytes& file, PrGpuFormat target, basist::transcoder_texture_format format, BlockQuality* quality) {
     PrKtxTexture* texture = openTexture(file);
     basist::ktx2_transcoder reference;
     REQUIRE(reference.init(file.data(), uint32_t(file.size())));
     REQUIRE(reference.start_transcoding());
     if (texture != nullptr) {
         PrKtxInfo info = *prKtxTextureInfo(texture);
-        bool two = target == PrBasisBlocks_Bc3 || target == PrBasisBlocks_Bc5;
+        bool two = target == PrGpuFormat_Bc3 || target == PrGpuFormat_Bc5;
         size_t blockBytes = two ? 16 : 8;
-        for (uint32_t level = 0; (info.transcodes >> target & 1) != 0 && level < info.levelCount; ++level) {
+        for (uint32_t level = 0; transcodesTo(info, target) && level < info.levelCount; ++level) {
             PrUVec2 extent = prKtxLevelExtent(info.extent, level);
             uint32_t blocksX = (extent.x + 3) / 4;
-            size_t size = prBasisBlocksSize(extent, target);
+            size_t size = size_t(prGpuFormatLevelBytes(target, extent));
             Bytes blocks[2] = {Bytes(size), Bytes(size)};
             Bytes pixels(size_t(extent.x) * extent.y * 4);
             REQUIRE(prKtxTextureTranscode(texture, 0, level, target, blocks[0].data(), size) == PrStatus_Ok);
@@ -265,15 +274,15 @@ void addQuality(const Bytes& file, PrBasisBlocks target, basist::transcoder_text
                     // pixels.
                     uint8_t texels[64];
                     bool held[4] = {false, false, false, false};
-                    if (target == PrBasisBlocks_Bc1 || target == PrBasisBlocks_Bc3) {
+                    if (target == PrGpuFormat_Bc1 || target == PrGpuFormat_Bc3) {
                         decodeBc1(at + (two ? 8 : 0), texels);
                         held[0] = held[1] = held[2] = true;
                     }
-                    if (target != PrBasisBlocks_Bc1) {
-                        decodeBc4(at, target == PrBasisBlocks_Bc3 ? 3 : 0, texels);
-                        held[target == PrBasisBlocks_Bc3 ? 3 : 0] = true;
+                    if (target != PrGpuFormat_Bc1) {
+                        decodeBc4(at, target == PrGpuFormat_Bc3 ? 3 : 0, texels);
+                        held[target == PrGpuFormat_Bc3 ? 3 : 0] = true;
                     }
-                    if (target == PrBasisBlocks_Bc5) {
+                    if (target == PrGpuFormat_Bc5) {
                         decodeBc4(at + 8, 3, texels);
                         held[3] = true;
                     }
@@ -300,26 +309,26 @@ void addQuality(const Bytes& file, PrBasisBlocks target, basist::transcoder_text
 
 // The targets that ETC1S transcodes to, and the reference's name for each.
 struct Target {
-    PrBasisBlocks blocks;
+    PrGpuFormat blocks;
     basist::transcoder_texture_format format;
     const char* name;
 };
 const Target kEtc1sTargets[] = {
-    {PrBasisBlocks_Bc1, basist::transcoder_texture_format::cTFBC1_RGB, "BC1"},
-    {PrBasisBlocks_Bc3, basist::transcoder_texture_format::cTFBC3_RGBA, "BC3"},
-    {PrBasisBlocks_Bc4, basist::transcoder_texture_format::cTFBC4_R, "BC4"},
-    {PrBasisBlocks_Bc5, basist::transcoder_texture_format::cTFBC5_RG, "BC5"},
+    {PrGpuFormat_Bc1, basist::transcoder_texture_format::cTFBC1_RGB, "BC1"},
+    {PrGpuFormat_Bc3, basist::transcoder_texture_format::cTFBC3_RGBA, "BC3"},
+    {PrGpuFormat_Bc4, basist::transcoder_texture_format::cTFBC4_R, "BC4"},
+    {PrGpuFormat_Bc5, basist::transcoder_texture_format::cTFBC5_RG, "BC5"},
 };
 
 // The targets for which ETC1S transcodes to exactly the reference's blocks. For BC3, only the color of each block
 // equals the reference's.
 const Target kExactTargets[] = {
-    {PrBasisBlocks_Etc2Rgb8, basist::transcoder_texture_format::cTFETC1_RGB, "ETC2 RGB8"},
-    {PrBasisBlocks_Etc2Rgba8, basist::transcoder_texture_format::cTFETC2_RGBA, "ETC2 RGBA8"},
-    {PrBasisBlocks_EacR11, basist::transcoder_texture_format::cTFETC2_EAC_R11, "EAC R11"},
-    {PrBasisBlocks_EacRg11, basist::transcoder_texture_format::cTFETC2_EAC_RG11, "EAC RG11"},
-    {PrBasisBlocks_Bc1, basist::transcoder_texture_format::cTFBC1_RGB, "BC1"},
-    {PrBasisBlocks_Bc3, basist::transcoder_texture_format::cTFBC3_RGBA, "BC3's color"},
+    {PrGpuFormat_Etc2Rgb8, basist::transcoder_texture_format::cTFETC1_RGB, "ETC2 RGB8"},
+    {PrGpuFormat_Etc2Rgba8, basist::transcoder_texture_format::cTFETC2_RGBA, "ETC2 RGBA8"},
+    {PrGpuFormat_EacR11, basist::transcoder_texture_format::cTFETC2_EAC_R11, "EAC R11"},
+    {PrGpuFormat_EacRg11, basist::transcoder_texture_format::cTFETC2_EAC_RG11, "EAC RG11"},
+    {PrGpuFormat_Bc1, basist::transcoder_texture_format::cTFBC1_RGB, "BC1"},
+    {PrGpuFormat_Bc3, basist::transcoder_texture_format::cTFBC3_RGBA, "BC3's color"},
 };
 
 // Adds the quality of each target that the ETC1S texture in `file` transcodes to. Each target has its own element of
@@ -436,11 +445,11 @@ void checkFile(const Bytes& file, uint64_t* texels) {
     CHECK(comparison.different == 0);
     *texels += comparison.texels;
     // The BC7 blocks that UASTC transcodes to equal the reference's.
-    BlockComparison bc7 = compareBlocks(file, PrBasisBlocks_Bc7, basist::transcoder_texture_format::cTFBC7_RGBA);
+    BlockComparison bc7 = compareBlocks(file, PrGpuFormat_Bc7, basist::transcoder_texture_format::cTFBC7_RGBA);
     CHECK(bc7.different == 0);
     gBc7Blocks += bc7.blocks;
     BlockComparison astc =
-        compareBlocks(file, PrBasisBlocks_Astc4x4, basist::transcoder_texture_format::cTFASTC_4x4_RGBA);
+        compareBlocks(file, PrGpuFormat_Astc4x4, basist::transcoder_texture_format::cTFASTC_4x4_RGBA);
     CHECK(astc.different == 0);
     gAstcBlocks += astc.blocks;
     // The ETC2, EAC and BC1 blocks that ETC1S transcodes to equal the reference's, for each target that the texture
@@ -576,13 +585,13 @@ TEST_CASE("the basis decoders match the reference transcoder on the textures of 
         CHECK(comparison.decoded);
         CHECK(comparison.different == 0);
         exact += comparison.decoded && comparison.different == 0 ? 1 : 0;
-        BlockComparison blocks = compareBlocks(file, PrBasisBlocks_Bc7, basist::transcoder_texture_format::cTFBC7_RGBA);
+        BlockComparison blocks = compareBlocks(file, PrGpuFormat_Bc7, basist::transcoder_texture_format::cTFBC7_RGBA);
         CHECK(blocks.different == 0);
         bc7.blocks += blocks.blocks;
         bc7.different += blocks.different;
         bc7.ours += blocks.ours;
         bc7.reference += blocks.reference;
-        blocks = compareBlocks(file, PrBasisBlocks_Astc4x4, basist::transcoder_texture_format::cTFASTC_4x4_RGBA);
+        blocks = compareBlocks(file, PrGpuFormat_Astc4x4, basist::transcoder_texture_format::cTFASTC_4x4_RGBA);
         CHECK(blocks.different == 0);
         astc.blocks += blocks.blocks;
         astc.different += blocks.different;
@@ -633,70 +642,4 @@ TEST_CASE("the basis decoders match the reference transcoder on the textures of 
         etc1s.referenceInstructions / double(etc1s.texels) << "; UASTC: " <<
         uastc.oursInstructions / double(uastc.texels) << ", the reference's: " <<
         uastc.referenceInstructions / double(uastc.texels));
-}
-
-TEST_CASE("the block decoders decode blocks of random bits to the same texels as the reference unpackers") {
-    // Each block format, the reference's name for it, and the number of channels that it has. The two decoders are
-    // compared in those channels.
-    struct Format {
-        uint32_t vkFormat;
-        PrBasisBlocks blocks;
-        uint32_t blockBytes;
-        basisu::texture_format reference;
-        uint32_t channels;
-        const char* name;
-    };
-    const Format kFormats[] = {
-        {133, PrBasisBlocks_Bc1, 8, basisu::texture_format::cBC1, 4, "BC1"},
-        {137, PrBasisBlocks_Bc3, 16, basisu::texture_format::cBC3, 4, "BC3"},
-        {139, PrBasisBlocks_Bc4, 8, basisu::texture_format::cBC4, 1, "BC4"},
-        {141, PrBasisBlocks_Bc5, 16, basisu::texture_format::cBC5, 2, "BC5"},
-        {145, PrBasisBlocks_Bc7, 16, basisu::texture_format::cBC7, 4, "BC7"},
-        {147, PrBasisBlocks_Etc2Rgb8, 8, basisu::texture_format::cETC2_RGB, 3, "ETC2 RGB8"},
-        {151, PrBasisBlocks_Etc2Rgba8, 16, basisu::texture_format::cETC2_RGBA, 4, "ETC2 RGBA8"},
-        {153, PrBasisBlocks_EacR11, 8, basisu::texture_format::cETC2_R11_EAC, 1, "EAC R11"},
-        {155, PrBasisBlocks_EacRg11, 16, basisu::texture_format::cETC2_RG11_EAC, 2, "EAC RG11"},
-    };
-    const uint32_t kBlocks = 200000;
-    uint64_t state = 0x9E3779B97F4A7C15ull;
-    for (const Format& format : kFormats) {
-        Bytes blocks(size_t(kBlocks) * format.blockBytes);
-        for (uint8_t& byte : blocks) {
-            state = state * 6364136223846793005ull + 1442695040888963407ull;
-            byte = uint8_t(state >> 56);
-        }
-        // The reference reads the colors of BC3 as it reads the colors of BC1. A BC1 block has four colors only if its
-        // first endpoint is the greater. A BC3 block always has four.
-        for (uint32_t i = 0; format.vkFormat == 137 && i < kBlocks; ++i) {
-            uint8_t* block = &blocks[size_t(i) * 16];
-            if ((block[8] | block[9] << 8) <= (block[10] | block[11] << 8)) {
-                std::swap(block[8], block[10]);
-                std::swap(block[9], block[11]);
-            }
-        }
-        REQUIRE(prBasisBlocksDecodes(format.blocks));
-        uint32_t compared = 0;
-        uint32_t different = 0;
-        for (uint32_t i = 0; i < kBlocks; ++i) {
-            basisu::color_rgba reference[16];
-            for (basisu::color_rgba& texel : reference)
-                texel = basisu::color_rgba(0, 0, 0, 255);
-            // The reference has no decoder of the modes that ETC2 adds to ETC1, nor of a BC7 block of no mode.
-            if (!basisu::unpack_block(format.reference, &blocks[size_t(i) * format.blockBytes], reference))
-                continue;
-            ++compared;
-            uint8_t texels[64];
-            prBasisBlockDecode(format.blocks, &blocks[size_t(i) * format.blockBytes], texels);
-            bool same = true;
-            for (uint32_t t = 0; t < 16; ++t) {
-                const uint8_t* pixel = &texels[t * 4];
-                for (uint32_t c = 0; c < format.channels; ++c)
-                    same = same && pixel[c] == reference[t][c];
-            }
-            different += same ? 0 : 1;
-        }
-        printf("%-10s  %6u blocks compared, %u differ\n", format.name, compared, different);
-        CHECK(compared > 1000);
-        CHECK(different == 0);
-    }
 }

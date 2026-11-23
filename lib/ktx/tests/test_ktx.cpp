@@ -2,9 +2,11 @@
 // and of blocks that the tests build. They read textures as pixels and as blocks, and transcode them to blocks.
 
 #include "pr/array.h"
-#include "pr/basis.h"
+#include "pr/bc.h"
 #include "pr/compress.h"
 #include "pr/compress_select.h"
+#include "pr/etc2.h"
+#include "pr/gpu.h"
 #include "pr/ktx.h"
 #include "pr/mem.h"
 
@@ -89,7 +91,7 @@ void checkLevels(const uint8_t* file, size_t size, const uint8_t* expected) {
     CHECK(info.levelCount == 4);
     CHECK(info.layerCount == 1);
     CHECK(info.faceCount == 1);
-    CHECK(info.blocks == PrBasisBlocks_None);
+    CHECK(info.blocks == PrGpuFormat_None);
     CHECK(info.channels == 4);
     CHECK(info.sample == PrKtxSample_U8);
     CHECK(info.alpha == PrKtxAlpha_Straight);
@@ -265,7 +267,7 @@ TEST_CASE("ktx reads the blocks of a GPU block format as stored, and reads no pi
     REQUIRE(texture != nullptr);
     const PrKtxInfo& info = *prKtxTextureInfo(texture);
     CHECK(info.payload == PrKtxPayload_Blocks);
-    CHECK(info.blocks == PrBasisBlocks_Astc4x4);
+    CHECK(info.blocks == PrGpuFormat_Astc4x4);
     CHECK_FALSE(info.blocksDecode);
     CHECK(info.color == PrKtxColor_Srgb);
     CHECK(prKtxTextureBlocksSize(texture, 0) == 32);
@@ -286,31 +288,31 @@ TEST_CASE("ktx reads the blocks of every BC, ETC2, EAC and ASTC format as stored
         "not know") {
     struct Format {
         uint32_t vkFormat;
-        PrBasisBlocks blocks;
+        PrGpuFormat blocks;
         PrUVec2 block;
         uint32_t bytes;
     };
     const Format kFormats[] = {
-        {131, PrBasisBlocks_Bc1, {4, 4}, 8}, {134, PrBasisBlocks_Bc1, {4, 4}, 8}, {135, PrBasisBlocks_Bc2, {4, 4}, 16},
-        {136, PrBasisBlocks_Bc2, {4, 4}, 16}, {137, PrBasisBlocks_Bc3, {4, 4}, 16}, {139, PrBasisBlocks_Bc4, {4, 4}, 8},
-        {140, PrBasisBlocks_Bc4Snorm, {4, 4}, 8}, {141, PrBasisBlocks_Bc5, {4, 4}, 16},
-        {142, PrBasisBlocks_Bc5Snorm, {4, 4}, 16}, {143, PrBasisBlocks_Bc6HUfloat, {4, 4}, 16},
-        {144, PrBasisBlocks_Bc6HSfloat, {4, 4}, 16}, {145, PrBasisBlocks_Bc7, {4, 4}, 16},
-        {147, PrBasisBlocks_Etc2Rgb8, {4, 4}, 8}, {148, PrBasisBlocks_Etc2Rgb8, {4, 4}, 8},
-        {149, PrBasisBlocks_Etc2Rgb8A1, {4, 4}, 8}, {152, PrBasisBlocks_Etc2Rgba8, {4, 4}, 16},
-        {153, PrBasisBlocks_EacR11, {4, 4}, 8}, {154, PrBasisBlocks_EacR11Snorm, {4, 4}, 8},
-        {155, PrBasisBlocks_EacRg11, {4, 4}, 16}, {156, PrBasisBlocks_EacRg11Snorm, {4, 4}, 16},
-        {157, PrBasisBlocks_Astc4x4, {4, 4}, 16}, {160, PrBasisBlocks_Astc5x4, {5, 4}, 16},
-        {167, PrBasisBlocks_Astc8x5, {8, 5}, 16}, {173, PrBasisBlocks_Astc10x5, {10, 5}, 16},
-        {183, PrBasisBlocks_Astc12x12, {12, 12}, 16}, {184, PrBasisBlocks_Astc12x12, {12, 12}, 16},
-        {1000066000, PrBasisBlocks_Astc4x4Hdr, {4, 4}, 16}, {1000066008, PrBasisBlocks_Astc10x5Hdr, {10, 5}, 16},
-        {1000066013, PrBasisBlocks_Astc12x12Hdr, {12, 12}, 16},
+        {131, PrGpuFormat_Bc1, {4, 4}, 8}, {134, PrGpuFormat_Bc1, {4, 4}, 8}, {135, PrGpuFormat_Bc2, {4, 4}, 16},
+        {136, PrGpuFormat_Bc2, {4, 4}, 16}, {137, PrGpuFormat_Bc3, {4, 4}, 16}, {139, PrGpuFormat_Bc4, {4, 4}, 8},
+        {140, PrGpuFormat_Bc4Snorm, {4, 4}, 8}, {141, PrGpuFormat_Bc5, {4, 4}, 16},
+        {142, PrGpuFormat_Bc5Snorm, {4, 4}, 16}, {143, PrGpuFormat_Bc6HUfloat, {4, 4}, 16},
+        {144, PrGpuFormat_Bc6HSfloat, {4, 4}, 16}, {145, PrGpuFormat_Bc7, {4, 4}, 16},
+        {147, PrGpuFormat_Etc2Rgb8, {4, 4}, 8}, {148, PrGpuFormat_Etc2Rgb8, {4, 4}, 8},
+        {149, PrGpuFormat_Etc2Rgb8A1, {4, 4}, 8}, {152, PrGpuFormat_Etc2Rgba8, {4, 4}, 16},
+        {153, PrGpuFormat_EacR11, {4, 4}, 8}, {154, PrGpuFormat_EacR11Snorm, {4, 4}, 8},
+        {155, PrGpuFormat_EacRg11, {4, 4}, 16}, {156, PrGpuFormat_EacRg11Snorm, {4, 4}, 16},
+        {157, PrGpuFormat_Astc4x4, {4, 4}, 16}, {160, PrGpuFormat_Astc5x4, {5, 4}, 16},
+        {167, PrGpuFormat_Astc8x5, {8, 5}, 16}, {173, PrGpuFormat_Astc10x5, {10, 5}, 16},
+        {183, PrGpuFormat_Astc12x12, {12, 12}, 16}, {184, PrGpuFormat_Astc12x12, {12, 12}, 16},
+        {1000066000, PrGpuFormat_Astc4x4Hdr, {4, 4}, 16}, {1000066008, PrGpuFormat_Astc10x5Hdr, {10, 5}, 16},
+        {1000066013, PrGpuFormat_Astc12x12Hdr, {12, 12}, 16},
     };
     for (const Format& format : kFormats) {
         CAPTURE(format.vkFormat);
-        CHECK(prBasisBlocksExtent(format.blocks).x == format.block.x);
-        CHECK(prBasisBlocksExtent(format.blocks).y == format.block.y);
-        CHECK(prBasisBlocksBytes(format.blocks) == format.bytes);
+        CHECK(prGpuFormatBlock(format.blocks).width == format.block.x);
+        CHECK(prGpuFormatBlock(format.blocks).height == format.block.y);
+        CHECK(prGpuFormatBlock(format.blocks).bytes == format.bytes);
         // Three blocks by two. The last block of each row and the last row of blocks are cut short.
         KtxSpec spec = kRgba8;
         spec.vkFormat = format.vkFormat;
@@ -318,7 +320,7 @@ TEST_CASE("ktx reads the blocks of every BC, ETC2, EAC and ASTC format as stored
         Array<uint8_t> blocks;
         for (uint32_t i = 0; i < format.bytes * 6; ++i)
             blocks.push(uint8_t(i * 7 + format.vkFormat));
-        CHECK(prBasisBlocksSize(spec.extent, format.blocks) == blocks.count());
+        CHECK(size_t(prGpuFormatLevelBytes(format.blocks, spec.extent)) == blocks.count());
         Array<uint8_t> file = buildKtx(spec, blocks);
         PrKtxTexture* texture = textureOpen(file.data(), file.count());
         REQUIRE(texture != nullptr);
@@ -387,28 +389,64 @@ TEST_CASE("ktx decodes BC and ETC2 blocks to pixels, in the channels that each f
     }
 }
 
+TEST_CASE("ktx decodes signed BC4, signed EAC and BC6H blocks to floats") {
+    // A BC4 block whose ends are 127 and -127, with every texel at the first end, and a BC6H block of mode 11 whose
+    // endpoints are zero.
+    const uint8_t bc4[8] = {0x7f, 0x81, 0, 0, 0, 0, 0, 0};
+    const uint8_t bc6[16] = {0x03};
+    KtxSpec spec = kRgba8;
+    spec.extent = {4, 4};
+    spec.vkFormat = 140;
+    PrKtxInfo info{};
+    Level level = readFirst(buildKtx(spec, bytesOf(bc4, sizeof(bc4))), &info);
+    CHECK(info.blocksDecode);
+    CHECK(info.sample == PrKtxSample_F32);
+    CHECK(info.channels == 1);
+    REQUIRE(level.status == PrStatus_Ok);
+    float value = 0;
+    prMemCopy(&value, level.pixels.data(), 4);
+    CHECK(value == 1.0f);
+    // EAC R11 signed, of a base of 100 and no multiplier: every texel is 797 over 1023.
+    const uint8_t eac[8] = {100, 0, 0, 0, 0, 0, 0, 0};
+    spec.vkFormat = 154;
+    level = readFirst(buildKtx(spec, bytesOf(eac, sizeof(eac))), &info);
+    CHECK(info.blocksDecode);
+    CHECK(info.sample == PrKtxSample_F32);
+    REQUIRE(level.status == PrStatus_Ok);
+    prMemCopy(&value, level.pixels.data(), 4);
+    CHECK(value == 797.0f / 1023.0f);
+    spec.vkFormat = 143;
+    level = readFirst(buildKtx(spec, bytesOf(bc6, sizeof(bc6))), &info);
+    CHECK(info.blocksDecode);
+    CHECK(info.sample == PrKtxSample_F16);
+    REQUIRE(level.status == PrStatus_Ok);
+    CHECK(level.pixels[0] == 0);
+    CHECK(level.pixels[1] == 0);
+}
+
 TEST_CASE("ktx transcodes UASTC to BC7 blocks and ASTC 4x4 blocks, and to no other block format") {
     PrKtxTexture* texture = textureOpen(kKtxUastc, sizeof(kKtxUastc));
     REQUIRE(texture != nullptr);
     const PrKtxInfo& info = *prKtxTextureInfo(texture);
-    CHECK(info.transcodes == (uint64_t(1) << PrBasisBlocks_Bc7 | uint64_t(1) << PrBasisBlocks_Astc4x4));
-    CHECK(prBasisBlocksSize({12, 8}, PrBasisBlocks_Bc7) == 96);
-    CHECK(prBasisBlocksSize({1, 1}, PrBasisBlocks_Bc1) == 8);
-    CHECK(prBasisBlocksSize({12, 8}, PrBasisBlocks_None) == 0);
+    REQUIRE(info.transcodeCount == 2);
+    CHECK(info.transcodes[0] == PrGpuFormat_Bc7);
+    CHECK(info.transcodes[1] == PrGpuFormat_Astc4x4);
+    CHECK(size_t(prGpuFormatLevelBytes(PrGpuFormat_Bc7, PrUVec2{12, 8})) == 96);
+    CHECK(size_t(prGpuFormatLevelBytes(PrGpuFormat_Bc1, PrUVec2{1, 1})) == 8);
     uint8_t blocks[96] = {};
     for (uint32_t level = 0; level < info.levelCount; ++level) {
         CAPTURE(level);
-        size_t size = prBasisBlocksSize(prKtxLevelExtent(info.extent, level), PrBasisBlocks_Bc7);
-        CHECK(prKtxTextureTranscode(texture, 0, level, PrBasisBlocks_Bc7, blocks, size) == PrStatus_Ok);
+        size_t size = size_t(prGpuFormatLevelBytes(PrGpuFormat_Bc7, prKtxLevelExtent(info.extent, level)));
+        CHECK(prKtxTextureTranscode(texture, 0, level, PrGpuFormat_Bc7, blocks, size) == PrStatus_Ok);
         // A BC7 block begins with the bit of its mode. There are eight modes, so the first byte is not zero.
         CHECK(blocks[0] != 0);
     }
     // An ASTC 4x4 block is a block of one color, or it has a block mode whose bits 0 and 1 are not both zero. That
     // holds for any number of subsets and for one plane or two.
-    REQUIRE(prKtxTextureTranscode(texture, 0, 0, PrBasisBlocks_Astc4x4, blocks, 96) == PrStatus_Ok);
+    REQUIRE(prKtxTextureTranscode(texture, 0, 0, PrGpuFormat_Astc4x4, blocks, 96) == PrStatus_Ok);
     for (uint32_t block = 0; block < 6; ++block)
         CHECK(((blocks[block * 16] & 3) != 0 || prMemReadLeU16(blocks + block * 16) == 0xFDFC));
-    CHECK(prKtxTextureTranscode(texture, 0, 0, PrBasisBlocks_Bc1, blocks, 48) == PrStatus_NotSupported);
+    CHECK(prKtxTextureTranscode(texture, 0, 0, PrGpuFormat_Bc1, blocks, 48) == PrStatus_NotSupported);
     prKtxTextureDestroy(texture);
 }
 
@@ -416,11 +454,11 @@ TEST_CASE("ktx transcodes ETC1S with alpha to ETC2 RGBA8 blocks, with exact colo
     PrKtxTexture* texture = textureOpen(kKtxEtc1s, sizeof(kKtxEtc1s));
     REQUIRE(texture != nullptr);
     uint8_t blocks[96] = {};
-    REQUIRE(prKtxTextureTranscode(texture, 0, 0, PrBasisBlocks_Etc2Rgba8, blocks, 96) == PrStatus_Ok);
+    REQUIRE(prKtxTextureTranscode(texture, 0, 0, PrGpuFormat_Etc2Rgba8, blocks, 96) == PrStatus_Ok);
     uint32_t worst = 0;
     for (uint32_t block = 0; block < 6; ++block) {
         uint8_t texels[64];
-        prBasisBlockDecode(PrBasisBlocks_Etc2Rgba8, blocks + block * 16, texels);
+        prEtc2Decode(PrEtc2Format_Rgba8, blocks + block * 16, texels);
         for (uint32_t i = 0; i < 16; ++i) {
             uint32_t x = block % 3 * 4 + i % 4;
             uint32_t y = block / 3 * 4 + i / 4;
@@ -435,8 +473,8 @@ TEST_CASE("ktx transcodes ETC1S with alpha to ETC2 RGBA8 blocks, with exact colo
     // The EAC values lie within a few steps of the four values of an ETC1S block.
     CHECK(worst <= 4);
     // A texture of color and alpha has neither one value nor two, so it does not transcode to EAC R11.
-    CHECK(prKtxTextureTranscode(texture, 0, 0, PrBasisBlocks_EacR11, blocks, 48) == PrStatus_NotSupported);
-    CHECK(prKtxTextureTranscode(texture, 0, 0, PrBasisBlocks_EacRg11, blocks, 96) == PrStatus_NotSupported);
+    CHECK(prKtxTextureTranscode(texture, 0, 0, PrGpuFormat_EacR11, blocks, 48) == PrStatus_NotSupported);
+    CHECK(prKtxTextureTranscode(texture, 0, 0, PrGpuFormat_EacRg11, blocks, 96) == PrStatus_NotSupported);
     prKtxTextureDestroy(texture);
 }
 
@@ -444,13 +482,15 @@ TEST_CASE("ktx transcodes ETC1S with alpha to BC3 blocks, with colors and alpha 
     PrKtxTexture* texture = textureOpen(kKtxEtc1s, sizeof(kKtxEtc1s));
     REQUIRE(texture != nullptr);
     const PrKtxInfo& info = *prKtxTextureInfo(texture);
-    CHECK(info.transcodes == (1u << PrBasisBlocks_Bc3 | 1u << PrBasisBlocks_Etc2Rgba8));
+    REQUIRE(info.transcodeCount == 2);
+    CHECK(info.transcodes[0] == PrGpuFormat_Etc2Rgba8);
+    CHECK(info.transcodes[1] == PrGpuFormat_Bc3);
     uint8_t blocks[96] = {};
-    REQUIRE(prKtxTextureTranscode(texture, 0, 0, PrBasisBlocks_Bc3, blocks, 96) == PrStatus_Ok);
+    REQUIRE(prKtxTextureTranscode(texture, 0, 0, PrGpuFormat_Bc3, blocks, 96) == PrStatus_Ok);
     uint32_t worst[2] = {0, 0};
     for (uint32_t block = 0; block < 6; ++block) {
         uint8_t texels[64];
-        prBasisBlockDecode(PrBasisBlocks_Bc3, blocks + block * 16, texels);
+        prBcDecode(PrBcFormat_Bc3, blocks + block * 16, texels);
         // The color block of BC3 has four colors, so its first end is the greater.
         CHECK(prMemReadLeU16(blocks + block * 16 + 8) > prMemReadLeU16(blocks + block * 16 + 10));
         for (uint32_t i = 0; i < 16; ++i) {
@@ -469,7 +509,7 @@ TEST_CASE("ktx transcodes ETC1S with alpha to BC3 blocks, with colors and alpha 
     // therefore places the four colors of an ETC1S block less finely than BC4 places its values.
     CHECK(worst[0] <= 24);
     CHECK(worst[1] <= 2);
-    CHECK(prKtxTextureTranscode(texture, 0, 0, PrBasisBlocks_Bc1, blocks, 48) == PrStatus_NotSupported);
+    CHECK(prKtxTextureTranscode(texture, 0, 0, PrGpuFormat_Bc1, blocks, 48) == PrStatus_NotSupported);
     prKtxTextureDestroy(texture);
 }
 
@@ -530,7 +570,7 @@ TEST_CASE("ktx describes a texture from the bytes before the level data, and the
         CHECK(read.faceCount == full.faceCount);
         CHECK(read.levelCount == full.levelCount);
         CHECK(read.blocks == full.blocks);
-        CHECK(read.transcodes == full.transcodes);
+        CHECK(read.transcodeCount == full.transcodeCount);
         CHECK(pixelBytes(read) == pixelBytes(full));
         uint8_t pixels[12 * 8 * 4];
         PrPixels output{pixels, size_t(full.extent.x) * pixelBytes(full), full.extent};

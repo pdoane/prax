@@ -7,6 +7,8 @@
 #include "pr/mem.h"
 #include "pr/texture.h"
 
+#include "ktx/tests/ktx_fixture.h"
+
 #include "tools/harness/test.h"
 
 namespace pr_impl {
@@ -79,6 +81,14 @@ const PrTextureSource* sourceOf(const PrBlobSource* bytes) {
     return source;
 }
 
+// Returns true if `source` reformats to `format`.
+bool produces(const PrTextureSource* source, PrGpuFormat format) {
+    const PrTextureSource* other = nullptr;
+    const bool made = prTextureSourceReformat(source, format, &other) == PrStatus_Ok;
+    prTextureSourceRelease(other);
+    return made;
+}
+
 // Reads every level and layer of `source` into `out`. Returns the status of the read.
 PrStatus readAll(const PrTextureSource* source, Array<uint8_t>* out) {
     PrTextureReadDesc desc = prTextureReadDescAll(prTextureSourceDesc(source));
@@ -97,6 +107,29 @@ constexpr uint8_t kWhiteBc7[32] = {
     0xC0, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x01, 0, 0, 0, 0, 0, 0, 0,
     0xC0, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x01, 0, 0, 0, 0, 0, 0, 0,
 };
+
+// The formats that a test's consumer samples, at any extent.
+struct Sampled {
+    Array<PrGpuFormat> formats;
+
+    static bool samples(void* PR_NULLABLE context, PrGpuFormat format, PrUVec2) {
+        for (PrGpuFormat sampled : static_cast<const Sampled*>(context)->formats) {
+            if (sampled == format)
+                return true;
+        }
+        return false;
+    }
+};
+
+// Returns the format of the answer of `source` to `need`, or None if it does not answer.
+PrGpuFormat answered(const PrTextureSource* source, const PrTextureNeed& need) {
+    const PrTextureSource* answer = nullptr;
+    if (prTextureSourceAnswer(source, &need, &answer) != PrStatus_Ok)
+        return PrGpuFormat_None;
+    PrGpuFormat format = prTextureSourceDesc(answer)->format;
+    prTextureSourceRelease(answer);
+    return format;
+}
 
 } // namespace
 
@@ -124,7 +157,7 @@ TEST_CASE("a KTX file of pixels is a texture source of its levels, and the level
     REQUIRE(readAll(source, &read) == PrStatus_Ok);
     REQUIRE(read.count() == 84);
     CHECK(prMemEquals(read.begin(), texels, sizeof(texels)));
-    CHECK(prTextureSourceProduces(source, PrGpuFormat_Rgba16F));
+    CHECK(produces(source, PrGpuFormat_Rgba16F));
     const PrTextureSource* floats = nullptr;
     REQUIRE(prTextureSourceReformat(source, PrGpuFormat_Rgba32F, &floats) == PrStatus_Ok);
     CHECK(prTextureSourceDesc(floats)->format == PrGpuFormat_Rgba32F);
@@ -136,7 +169,7 @@ TEST_CASE("a KTX file of pixels is a texture source of its levels, and the level
     prTextureSourceRelease(source);
 }
 
-TEST_CASE("a KTX file of blocks is a texture source of the blocks, and decodes to pixels if lib/basis decodes the format") {
+TEST_CASE("a KTX file of blocks is a texture source of the blocks, and decodes to pixels if lib/bc decodes the format") {
     const uint32_t sizes[2] = {16, 16};
     CountedBytes bc7(ktxFile(145, PrUVec2{4, 4}, 2, kWhiteBc7, sizes));
     const PrTextureSource* source = sourceOf(bc7.source);
@@ -160,8 +193,8 @@ TEST_CASE("a KTX file of blocks is a texture source of the blocks, and decodes t
     CountedBytes srgb(ktxFile(146, PrUVec2{4, 4}, 2, kWhiteBc7, sizes, true));
     source = sourceOf(srgb.source);
     CHECK(prTextureSourceDesc(source)->format == PrGpuFormat_Bc7Srgb);
-    CHECK(!prTextureSourceProduces(source, PrGpuFormat_Rgba8));
-    CHECK(prTextureSourceProduces(source, PrGpuFormat_Rgba16F));
+    CHECK(!produces(source, PrGpuFormat_Rgba8));
+    CHECK(produces(source, PrGpuFormat_Rgba16F));
     REQUIRE(prTextureSourceReformat(source, PrGpuFormat_Rgba8Srgb, &pixels) == PrStatus_Ok);
     REQUIRE(readAll(pixels, &read) == PrStatus_Ok);
     for (uint32_t i = 0; i < 64; ++i)
@@ -173,7 +206,7 @@ TEST_CASE("a KTX file of blocks is a texture source of the blocks, and decodes t
     const uint32_t block = 16;
     CountedBytes astc(ktxFile(157, PrUVec2{4, 4}, 1, kWhiteBc7, &block));
     source = sourceOf(astc.source);
-    CHECK(!prTextureSourceProduces(source, PrGpuFormat_Rgba8));
+    CHECK(!produces(source, PrGpuFormat_Rgba8));
     CHECK(prTextureSourceReformat(source, PrGpuFormat_Rgba8, &pixels) == PrStatus_NotSupported);
     prTextureSourceRelease(source);
 }
@@ -251,6 +284,86 @@ TEST_CASE("a KTX source reads the bytes from its provider again for each read, a
         prGpuDeviceDestroy(device);
     }
     CHECK(bytes.reads == 3);
+    prTextureSourceRelease(source);
+}
+
+TEST_CASE("a KTX file past the limits' extent on one side is refused, and one at the extent opens") {
+    uint8_t texels[5 * 4 * 4] = {};
+    const uint32_t size = sizeof(texels);
+    CountedBytes bytes(ktxFile(37, PrUVec2{5, 4}, 1, texels, &size));
+    PrTextureLimits limits{.extent = 4};
+    const PrTextureSource* source = nullptr;
+    CHECK(prKtxTextureSourceOpen(bytes.source, nullptr, &limits, &source) == PrStatus_Limit);
+    CHECK(source == nullptr);
+    limits.extent = 5;
+    REQUIRE(prKtxTextureSourceOpen(bytes.source, nullptr, &limits, &source) == PrStatus_Ok);
+    Array<uint8_t> read;
+    CHECK(readAll(source, &read) == PrStatus_Ok);
+    prTextureSourceRelease(source);
+}
+
+TEST_CASE("a Basis Universal texture answers with the first transcode target that the consumer samples, or pixels") {
+    Array<uint8_t> file;
+    file.append(PrByteView{kKtxUastc, sizeof(kKtxUastc)});
+    CountedBytes bytes(static_cast<Array<uint8_t>&&>(file));
+    const PrTextureSource* source = sourceOf(bytes.source);
+    Sampled sampled;
+    PrTextureNeed need{
+        .samples = Sampled::samples,
+        .context = &sampled,
+        .values = PrTextureValues_Data,
+        .alpha = PrTextureAlpha_Straight,
+    };
+    // Nothing sampled: the decoded pixels.
+    CHECK(answered(source, need) == PrGpuFormat_Rgba8);
+    sampled.formats.push(PrGpuFormat_Bc7);
+    CHECK(answered(source, need) == PrGpuFormat_Bc7);
+    // ASTC 4x4 comes before BC7.
+    sampled.formats.push(PrGpuFormat_Astc4x4);
+    CHECK(answered(source, need) == PrGpuFormat_Astc4x4);
+    // A need of pixels takes the decoded pixels, so that the consumer makes the levels.
+    need.pixels = true;
+    CHECK(answered(source, need) == PrGpuFormat_Rgba8);
+    // Color needs a Srgb form of the blocks.
+    need.pixels = false;
+    need.values = PrTextureValues_Color;
+    sampled.formats.clear();
+    sampled.formats.push(PrGpuFormat_Bc7);
+    CHECK(answered(source, need) == PrGpuFormat_Rgba8);
+    sampled.formats.push(PrGpuFormat_Bc7Srgb);
+    CHECK(answered(source, need) == PrGpuFormat_Bc7);
+    prTextureSourceRelease(source);
+}
+
+TEST_CASE("a KTX texture of blocks answers with them if the consumer samples them, and with pixels otherwise") {
+    const uint32_t sizes[2] = {16, 16};
+    CountedBytes bc7(ktxFile(145, PrUVec2{4, 4}, 2, kWhiteBc7, sizes));
+    const PrTextureSource* source = sourceOf(bc7.source);
+    Sampled sampled;
+    PrTextureNeed need{
+        .samples = Sampled::samples,
+        .context = &sampled,
+        .values = PrTextureValues_Data,
+        .alpha = PrTextureAlpha_Straight,
+    };
+    CHECK(answered(source, need) == PrGpuFormat_Rgba8);
+    sampled.formats.push(PrGpuFormat_Bc7);
+    CHECK(answered(source, need) == PrGpuFormat_Bc7);
+    // A need of the red channel of data alone takes R8 when it takes pixels.
+    sampled.formats.clear();
+    need.channels = PrTextureChannelFlag_R;
+    CHECK(answered(source, need) == PrGpuFormat_R8);
+    prTextureSourceRelease(source);
+
+    // Blocks that do not decode serve only a consumer that samples them.
+    const uint32_t block = 16;
+    CountedBytes astc(ktxFile(157, PrUVec2{4, 4}, 1, kWhiteBc7, &block));
+    source = sourceOf(astc.source);
+    need.channels = 0;
+    CHECK(answered(source, need) == PrGpuFormat_None);
+    sampled.formats.push(PrGpuFormat_Astc4x4);
+    need.pixels = true;
+    CHECK(answered(source, need) == PrGpuFormat_Astc4x4);
     prTextureSourceRelease(source);
 }
 

@@ -24,6 +24,8 @@ lib/core (PrBlobSource)   lib/color   lib/gpu   lib/mime   lib/task
                                      every image codec
 ```
 
+- **The containers of GPU textures share the block formats.** `lib/ktx` describes and decodes its blocks with
+  `lib/bc` and `lib/etc2`, which depend on no GPU interface.
 - **Only a format's library reaches the format.** `lib/ktx` makes the sources of KTX 2.0 files, and `lib/image` makes
   the sources of every image that an image codec decodes. `lib/texture` includes no format's header (`lint.py`,
   `format-dependency`).

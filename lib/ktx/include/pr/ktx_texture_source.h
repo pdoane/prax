@@ -27,6 +27,11 @@ extern "C" {
 // - Rgba8, Rgba16F and Rgba32F, if the levels decode to pixels;
 // - R8, with the gray or red channel.
 //
+// The source answers a need (prTextureSourceAnswer) with the file's blocks if the consumer takes them, or else with the
+// first transcode target that it takes, in the order ASTC 4x4, BC7, EAC R11, BC4, EAC RG11, BC5, ETC2 RGBA8, BC3, ETC2
+// RGB8 and BC1, with the targets of one channel first for a need of one channel of data. It answers with pixels if no
+// blocks serve, and for a need of pixels if the levels decode.
+//
 // A file that ends before its level data still opens, because the bytes before the levels describe the whole texture
 // (prKtxInfoBytes). Reads of the missing levels fail.
 //

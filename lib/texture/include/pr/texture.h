@@ -5,9 +5,10 @@
 // again at any time, for example after a GPU device is lost.
 //
 // The simplest source is a function that fills the bits (prTextureSourceCreate). Other sources wrap a source and change
-// its format. A format's library decodes or transcodes encoded bytes (prTextureSourceReformat). This library converts
-// pixels (prTextureSourceCreateConvert) and makes mip levels (prTextureSourceCreateMips). A chain of sources is a load
-// pipeline, and its consumer sees one source.
+// its format. A format's library decodes or transcodes encoded bytes (prTextureSourceReformat), and chooses the form in
+// which a consumer samples them (prTextureSourceAnswer). This library converts pixels (prTextureSourceCreateConvert)
+// and makes mip levels (prTextureSourceCreateMips). A chain of sources is a load pipeline, and its consumer sees one
+// source.
 //
 // A read goes into memory or into a texture on a device (PrTextureReadDesc). A source that reaches the device by a path
 // of its own, such as the device's file I/O, fills the texture itself. For every other source, the library reads the
@@ -107,14 +108,72 @@ PrUVec2 prTextureLevelExtent(PrUVec2 extent, uint32_t level);
 // slices of a 3D texture follow one another.
 size_t prTextureLevelSize(const PrTextureDesc* desc, uint32_t level);
 
-// Limits on the textures that a format opens.
+// Limits on the textures that a format opens: the most texels on a side, as a GPU bounds a texture by its largest side.
+// The extent bounds the width and height of the first level, the depth of a 3D texture, and the layers, counting each
+// face of a cube. A texture past it is Limit, and a format opens and reads any texture within it.
 typedef struct PrTextureLimits {
-    uint64_t pixels;                    // the most texels in the first level
-    uint64_t workingBytes;              // the most bytes that a read holds at once, such as a level that it inflates
+    uint16_t extent;
 } PrTextureLimits;
 
-// Returns limits that admit a texture of 8192 by 8192 texels.
+// Returns limits of the largest side of a texture of Metal and Direct3D: 16384 texels.
 PrTextureLimits prTextureLimitsDefault(void);
+
+// Returns true if a texture of `desc` is within `limits` on every axis and in its layers.
+bool prTextureLimitsAdmit(const PrTextureLimits* limits, const PrTextureDesc* desc);
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Needs
+
+// How a consumer reads a texture's values. This decides the texture's format, the form in which it samples blocks
+// (prTextureNeedSampledFormat), and how the mip levels that a consumer makes are filtered.
+enum {
+    // Color that a shader reads as stored, encoded with sRGB's transfer function. lib/draw blends encoded color. On a
+    // device that views a texture through both of its sRGB forms (PrGpuTextureUsageFlag_SrgbViews), 8-bit values share
+    // the texture of a Color ask, and the region names it through its plain form. On other devices they are stored in a
+    // plain format, and made levels average the encoded values. Floats are stored as half floats in extended sRGB,
+    // mirrored below zero.
+    PrTextureValues_Encoded,
+
+    // Color that a shader reads in linear light, such as a material's base color. 8-bit values are stored in a format's
+    // Srgb form, which a sampler decodes. Floats are stored as linear half floats. Made levels average in linear light.
+    PrTextureValues_Color,
+
+    // Data that a shader reads as stored, such as normals or roughness. Values are stored in a plain format, and floats
+    // as half floats. Made levels average the stored values.
+    PrTextureValues_Data,
+};
+typedef uint8_t PrTextureValues;
+
+// Returns true if a consumer samples textures of `format` whose first level is `extent`. It is called with the need's
+// `context`. A consumer that samples on a device answers for the device: the texture cache asks the device whether it
+// samples the format, and a device takes blocks only in a first level of whole blocks. A consumer that converts
+// offline, such as a tool that writes BC7, answers for the formats that it writes.
+typedef bool (*PrTextureSamplesFn)(void* PR_NULLABLE context, PrGpuFormat format, PrUVec2 extent);
+
+// What a consumer needs of a source (prTextureSourceAnswer): the formats that it samples, how it reads the values, the
+// alpha that it takes, the channels that it reads, and whether it needs pixels. A consumer needs pixels to make the
+// levels that a texture lacks, which a device makes only from texels that it renders to.
+typedef struct PrTextureNeed {
+    PrTextureSamplesFn samples;
+    void* PR_NULLABLE context;          // passed to `samples`
+    PrTextureValues values;
+    PrTextureAlpha alpha;               // Straight or Premultiplied
+    PrTextureChannelFlags channels;     // the channels that the consumer reads, or zero for all of them
+    bool pixels;
+} PrTextureNeed;
+
+// Returns the one channel that a need reads alone, 0 to 3, or 4 if it reads several. Only data is read in fewer
+// channels than it has. A source of one channel of data may answer in R8.
+uint32_t prTextureNeedSingleChannel(const PrTextureNeed* need);
+
+// Returns the form in which a need samples blocks of `format`: its swizzled Luminance form for a format of one channel,
+// which reads the value as gray as decoded pixels do, and the Srgb form of that for color. Returns None for color of a
+// format without a Srgb form. A source chooses blocks by it, and the texture cache relabels blocks to it.
+PrGpuFormat prTextureNeedSampledFormat(const PrTextureNeed* need, PrGpuFormat format);
+
+// Returns true if a need samples blocks of `format` at `extent` in their sampled form (prTextureNeedSampledFormat), and
+// blocks of alpha `alpha`: a consumer of straight alpha does not take premultiplied blocks, which keep their alpha.
+bool prTextureNeedTakesBlocks(const PrTextureNeed* need, PrGpuFormat format, PrTextureAlpha alpha, PrUVec2 extent);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Sources
@@ -135,19 +194,22 @@ typedef struct PrTextureRead PrTextureRead;
 // has no storage. The provider writes the levels and layers to the read's texture instead.
 typedef void (*PrTextureSourceReadFn)(void* PR_NULLABLE context, PrTextureRead* read);
 
-// Creates a source of the same texture in `format`, which is one of PrTextureSourceDesc::formats. It is called with the
-// source's `context`. Returns the status that prTextureSourceReformat reports.
+// Creates a source of the same texture in `format`, another format than the source's own. It is called with the
+// source's `context`. Returns NotSupported for a format that the provider does not produce, and otherwise the status
+// that prTextureSourceReformat reports.
 typedef PrStatus (*PrTextureSourceReformatFn)(void* PR_NULLABLE context, PrGpuFormat format,
     const PrTextureSource* PR_NULLABLE* PR_NONNULL out);
+
+// Writes to `*out` a source of the same texture as `source` in the form that serves `need` (prTextureSourceAnswer). It
+// is called with the source's `context`.
+typedef PrStatus (*PrTextureSourceAnswerFn)(void* PR_NULLABLE context, const PrTextureSource* source,
+    const PrTextureNeed* need, const PrTextureSource* PR_NULLABLE* PR_NONNULL out);
 
 // Called with the source's `context` when the last reference to the source is released, on the releasing thread.
 typedef void (*PrTextureSourceReleaseFn)(void* PR_NULLABLE context);
 
-// The largest number of other formats and of previews that a source has.
-enum {
-    kPrTextureSourceMaxFormats = 32,
-    kPrTextureSourceMaxPreviews = 16,
-};
+// The largest number of previews that a source has.
+enum { kPrTextureSourceMaxPreviews = 16 };
 
 // What a source that changes over time shows at one time: an animation's frame, or a video's.
 //
@@ -191,11 +253,13 @@ typedef struct PrTextureSourceDesc {
 
     PrTextureSourceReadFn read;
 
-    // The other formats that the source can produce by decoding or transcoding, and the function that creates a source
-    // in one of them. At most kPrTextureSourceMaxFormats. `texture.format` is not listed.
+    // The function that creates a source of the texture in another format that the source produces by decoding or
+    // transcoding, or null for a source of one format.
     PrTextureSourceReformatFn PR_NULLABLE reformat;
-    const PrGpuFormat* PR_NULLABLE formats;
-    uint32_t formatCount;
+
+    // The function that chooses the form that serves a need, or null for a source whose own form serves every need that
+    // it serves at all, as a source of pixels does.
+    PrTextureSourceAnswerFn PR_NULLABLE answer;
 
     // Smaller versions of the same picture, smallest first. Each is a source with one level that reads faster than this
     // source. Examples are an embedded thumbnail and a reduced decode. Each preview has this source's kind, layers,
@@ -212,7 +276,7 @@ typedef struct PrTextureSourceDesc {
     void* PR_NULLABLE context;
 } PrTextureSourceDesc;
 
-// Creates a source. The source copies `desc->formats` and retains `desc->previews`. The caller holds the one reference.
+// Creates a source. The source retains `desc->previews`. The caller holds the one reference.
 const PrTextureSource* prTextureSourceCreate(const PrTextureSourceDesc* desc);
 
 // Creates a source that keeps a copy of `pixels`. `desc` describes a 2D texture with one level and one layer, in a
@@ -241,14 +305,6 @@ uint32_t prTextureSourceReferences(const PrTextureSource* source);
 // Returns a number that identifies the source. No other source in the process ever has the same number.
 uint64_t prTextureSourceId(const PrTextureSource* source);
 
-// Writes up to `capacity` of the source's other formats to `out` and returns their number. These are the formats that
-// the source produces directly, by transcoding to other blocks or decoding to pixels of another precision. The source's
-// own format is not among them.
-uint32_t prTextureSourceFormats(const PrTextureSource* source, PrGpuFormat* PR_NULLABLE out, uint32_t capacity);
-
-// Returns true if `format` is the source's own format or one of its other formats.
-bool prTextureSourceProduces(const PrTextureSource* source, PrGpuFormat format);
-
 // Return the number of the source's previews, and the preview at `index`. Previews are ordered smallest first. A
 // preview is valid while the source is.
 //
@@ -269,6 +325,20 @@ void prTextureSourceFrameAt(const PrTextureSource* source, double time, PrTextur
 // result is the source itself, with a new reference. Otherwise the format's library creates a source that decodes or
 // transcodes to `format`. Returns NotSupported if the source does not produce `format`. On failure, `*out` is null.
 PrStatus prTextureSourceReformat(const PrTextureSource* source, PrGpuFormat format,
+    const PrTextureSource* PR_NULLABLE* PR_NONNULL out);
+
+// Writes to `*out` a source of the same texture in the form that serves `need`, which the source's format library
+// chooses. The form is one of:
+//
+// - blocks that the need takes (prTextureNeedTakesBlocks): the source's own blocks, or blocks that it transcodes to,
+//   unless the need asks for pixels and the blocks decode;
+// - pixels of a format that this library converts: R8, Rg8, Rgba8, Bgra8, their Srgb forms, or floats. A source may
+//   answer a need that reads one channel of data in R8.
+//
+// The answer is the source itself, with a new reference, if its own form serves. A source without an answer function
+// answers with itself. The consumer relabels and converts the answer as it samples (pr/texture_cache.h). Returns
+// NotSupported if no form that the source produces serves the need. On failure, `*out` is null.
+PrStatus prTextureSourceAnswer(const PrTextureSource* source, const PrTextureNeed* need,
     const PrTextureSource* PR_NULLABLE* PR_NONNULL out);
 
 // ---------------------------------------------------------------------------------------------------------------------

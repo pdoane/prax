@@ -10,9 +10,8 @@
 
 #include "pr/basis_uastc.h"
 
+#include "pr/bc.h"
 #include "pr/mem.h"
-
-#include "basis/src/bc7_patterns.h"
 
 namespace pr_impl {
 
@@ -910,16 +909,17 @@ bool prBasisUastcTranscodeBc7(const uint8_t* block, uint8_t* out) {
     } else if (mode.subsets == 3 || unpacked.mode == 7) {
         partition =
             unpacked.mode == 7 ? kToBc7PatternsMode7[unpacked.patternIndex] : kToBc7Patterns3[unpacked.patternIndex];
-        pattern = kBc7Patterns3[partition];
+        const PrBcPartition bc7 = prBcPartition(3, partition);
+        pattern = bc7.subsets;
         subsets = 3;
-        anchors[0] = kBc7Anchors3Second[partition];
-        anchors[1] = kBc7Anchors3Third[partition];
+        anchors[0] = bc7.anchors[1];
+        anchors[1] = bc7.anchors[2];
         bc7Mode = 2;
     } else {
         partition = kToBc7Patterns2[unpacked.patternIndex][0];
         if (kToBc7Patterns2[unpacked.patternIndex][1] != 0)
             pattern ^= 0x55555555u;
-        anchors[0] = kBc7Anchors2[partition];
+        anchors[0] = prBcPartition(2, partition).anchors[1];
         bc7Mode = unpacked.mode == 2 ? 1 : unpacked.mode == 4 ? 3 : 7;
     }
     uint32_t source[3] = {0, 0, 0};

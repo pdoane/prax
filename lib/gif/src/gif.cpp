@@ -10,9 +10,6 @@
 namespace pr_impl {
 namespace {
 
-// The maximum decoded pixel count. Larger logical screens are rejected before allocation.
-constexpr uint64_t kMaxPixels = 64u * 1024u * 1024u;
-
 // The number of codes that twelve bits address, at which an LZW dictionary stops growing, and those twelve bits, the
 // longest code (gif89a appendix F).
 constexpr uint32_t kMaxCodes = 4096;
@@ -117,7 +114,7 @@ bool readScreen(const uint8_t* bytes, size_t size, Screen& screen) {
         at += size_t(screen.paletteCount) * 3;
     }
     screen.blocks = at;
-    return screen.width != 0 && screen.height != 0 && uint64_t(screen.width) * uint64_t(screen.height) <= kMaxPixels;
+    return screen.width != 0 && screen.height != 0;
 }
 
 // Collects frames from the block chain until reaching `limit` or the trailer. Returns false for a malformed block,
@@ -177,7 +174,7 @@ bool readFrames(const uint8_t* bytes, size_t size, Screen& screen, uint32_t limi
             frame.palette = screen.palette;
             frame.paletteCount = screen.paletteCount;
         }
-        if (at >= size || uint64_t(frame.width) * uint64_t(frame.height) > kMaxPixels) {
+        if (at >= size) {
             return false;
         }
         frame.data = at;

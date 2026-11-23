@@ -10,5 +10,9 @@ int prTestTextureCApi(void) {
     PrTextureConvertDesc convert = prTextureConvertDescDefault(PrGpuFormat_Rgba8Srgb);
     result |= convert.channels[3] != 3 || convert.format != PrGpuFormat_Rgba8Srgb;
     result |= prTexturePixelSize(PrTextureChannels_Rgba, PrTextureSample_U16) != 8;
+    PrTextureLimits limits = prTextureLimitsDefault();
+    PrUVec2 past = {(uint32_t)limits.extent + 1u, 1};
+    PrTextureDesc desc = prTextureDesc2d(PrGpuFormat_Rgba8, past, PrTextureAlpha_None);
+    result |= prTextureLimitsAdmit(&limits, &desc) || limits.extent != 16384;
     return result;
 }

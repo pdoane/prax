@@ -3,9 +3,12 @@
 // views, and a 3D renderer. Two consumers that read an image the same way share one texture.
 //
 // Asking. A consumer asks for a source each time it samples it (prTextureCacheRealize). The ask states what the
-// consumer reads (PrTextureCacheAsk). To realize a source is to create its texture: the cache chooses the format,
-// creates the texture and reads the source's bits into it (prTextureUpload). The first ask queues the realization.
-// Later asks return the region of the texture once it has arrived.
+// consumer reads (PrTextureCacheAsk). To realize a source is to create its texture: the source answers the ask's need
+// on the cache's device with the form that serves it (prTextureSourceAnswer), the cache samples that form as the ask
+// reads it, creates the texture and reads the bits into it (prTextureUpload). The cache relabels blocks to their
+// sampled form, keeps one channel of data in R8 or its swizzled forms, converts pixels to the ask's format and alpha,
+// and has the device make the levels that an ask needs. The first ask queues the realization. Later asks return the
+// region of the texture once it has arrived.
 //
 // Detail. An ask states how many texels the consumer shows (PrTextureCacheAsk::detail). A source may have previews,
 // which are smaller versions of its picture (prTextureSourcePreview). The cache realizes the smallest version that has
@@ -65,26 +68,6 @@ enum {
 };
 typedef uint8_t PrTextureCacheFlags;
 
-// How a consumer reads a texture's values. This decides the texture's format and how the cache filters the mip levels
-// that it makes.
-enum {
-    // Color that a shader reads as stored, encoded with sRGB's transfer function. lib/draw blends encoded color. On a
-    // device that views a texture through both of its sRGB forms (PrGpuTextureUsageFlag_SrgbViews), 8-bit values share
-    // the texture of a Color ask, and the region names it through its plain form. On other devices they are stored in a
-    // plain format, and made levels average the encoded values. Floats are stored as half floats in extended sRGB,
-    // mirrored below zero.
-    PrTextureCacheValues_Encoded,
-
-    // Color that a shader reads in linear light, such as a material's base color. 8-bit values are stored in a format's
-    // Srgb form, which a sampler decodes. Floats are stored as linear half floats. Made levels average in linear light.
-    PrTextureCacheValues_Color,
-
-    // Data that a shader reads as stored, such as normals or roughness. Values are stored in a plain format, and floats
-    // as half floats. Made levels average the stored values.
-    PrTextureCacheValues_Data,
-};
-typedef uint8_t PrTextureCacheValues;
-
 // How soon a consumer needs a texture. The cache starts waiting realizations in this order.
 enum {
     PrTextureCachePriority_Normal,
@@ -101,7 +84,7 @@ typedef uint8_t PrTextureCachePriority;
 // - A Data ask that reads one channel may be stored in one channel, apart from asks that read more.
 typedef struct PrTextureCacheAsk {
     PrTextureCacheFlags flags;
-    PrTextureCacheValues values;
+    PrTextureValues values;
     PrTextureAlpha alpha;               // Straight or Premultiplied. The texture of an opaque source stays None.
     PrTextureChannelFlags channels;     // the channels that the consumer reads, or zero for all of them
     PrTextureCachePriority priority;

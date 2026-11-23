@@ -1,6 +1,6 @@
 // The BC7 patterns. A pattern gives the subset of each texel of a block of two or three subsets. The anchor tables give
-// the texel of each subset whose index is stored with one bit fewer. The BC7 decoder and the transcoder to BC7 read the
-// same tables.
+// the texel of each subset whose index is stored with one bit fewer. The decoders read them here, and other libraries
+// through prBcPartition.
 //
 // BC7 - https://learn.microsoft.com/en-us/windows/win32/direct3d11/bc7-format
 

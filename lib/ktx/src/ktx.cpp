@@ -11,6 +11,9 @@
 #include "pr/assert.h"
 #include "pr/basis_etc1s.h"
 #include "pr/basis_uastc.h"
+#include "pr/bc.h"
+#include "pr/etc2.h"
+#include "pr/float16.h"
 #include "pr/mem.h"
 
 namespace pr_impl {
@@ -50,7 +53,7 @@ struct Level {
 // A Vulkan format that the reader accepts. It is pixels with `channels` channels of type `sample`, or blocks.
 struct VkFormat {
     uint32_t value;
-    PrBasisBlocks blocks;
+    PrGpuFormat blocks;
     uint8_t channels;
     PrKtxSample sample;
     bool bgr;
@@ -58,56 +61,56 @@ struct VkFormat {
 };
 
 constexpr VkFormat kFormats[] = {
-    {9, PrBasisBlocks_None, 1, PrKtxSample_U8},                      // R8_UNORM
-    {15, PrBasisBlocks_None, 1, PrKtxSample_U8},                     // R8_SRGB
-    {16, PrBasisBlocks_None, 2, PrKtxSample_U8},                     // R8G8_UNORM
-    {22, PrBasisBlocks_None, 2, PrKtxSample_U8},                     // R8G8_SRGB
-    {23, PrBasisBlocks_None, 3, PrKtxSample_U8},                     // R8G8B8_UNORM
-    {29, PrBasisBlocks_None, 3, PrKtxSample_U8},                     // R8G8B8_SRGB
-    {30, PrBasisBlocks_None, 3, PrKtxSample_U8, true},               // B8G8R8_UNORM
-    {36, PrBasisBlocks_None, 3, PrKtxSample_U8, true},               // B8G8R8_SRGB
-    {37, PrBasisBlocks_None, 4, PrKtxSample_U8},                     // R8G8B8A8_UNORM
-    {43, PrBasisBlocks_None, 4, PrKtxSample_U8},                     // R8G8B8A8_SRGB
-    {44, PrBasisBlocks_None, 4, PrKtxSample_U8, true},               // B8G8R8A8_UNORM
-    {50, PrBasisBlocks_None, 4, PrKtxSample_U8, true},               // B8G8R8A8_SRGB
-    {70, PrBasisBlocks_None, 1, PrKtxSample_U16},                    // R16_UNORM
-    {76, PrBasisBlocks_None, 1, PrKtxSample_F16},                    // R16_SFLOAT
-    {77, PrBasisBlocks_None, 2, PrKtxSample_U16},                    // R16G16_UNORM
-    {83, PrBasisBlocks_None, 2, PrKtxSample_F16},                    // R16G16_SFLOAT
-    {84, PrBasisBlocks_None, 3, PrKtxSample_U16},                    // R16G16B16_UNORM
-    {90, PrBasisBlocks_None, 3, PrKtxSample_F16},                    // R16G16B16_SFLOAT
-    {91, PrBasisBlocks_None, 4, PrKtxSample_U16},                    // R16G16B16A16_UNORM
-    {97, PrBasisBlocks_None, 4, PrKtxSample_F16},                    // R16G16B16A16_SFLOAT
-    {100, PrBasisBlocks_None, 1, PrKtxSample_F32},                   // R32_SFLOAT
-    {103, PrBasisBlocks_None, 2, PrKtxSample_F32},                   // R32G32_SFLOAT
-    {106, PrBasisBlocks_None, 3, PrKtxSample_F32},                   // R32G32B32_SFLOAT
-    {109, PrBasisBlocks_None, 4, PrKtxSample_F32},                   // R32G32B32A32_SFLOAT
-    {131, PrBasisBlocks_Bc1, 3, PrKtxSample_U8},                     // BC1_RGB_UNORM_BLOCK
-    {132, PrBasisBlocks_Bc1, 3, PrKtxSample_U8},                     // BC1_RGB_SRGB_BLOCK
-    {133, PrBasisBlocks_Bc1, 3, PrKtxSample_U8, false, true},        // BC1_RGBA_UNORM_BLOCK
-    {134, PrBasisBlocks_Bc1, 3, PrKtxSample_U8, false, true},        // BC1_RGBA_SRGB_BLOCK
-    {135, PrBasisBlocks_Bc2, 3, PrKtxSample_U8, false, true},        // BC2_UNORM_BLOCK
-    {136, PrBasisBlocks_Bc2, 3, PrKtxSample_U8, false, true},        // BC2_SRGB_BLOCK
-    {137, PrBasisBlocks_Bc3, 3, PrKtxSample_U8, false, true},        // BC3_UNORM_BLOCK
-    {138, PrBasisBlocks_Bc3, 3, PrKtxSample_U8, false, true},        // BC3_SRGB_BLOCK
-    {139, PrBasisBlocks_Bc4, 1, PrKtxSample_U8},                     // BC4_UNORM_BLOCK
-    {140, PrBasisBlocks_Bc4Snorm, 1, PrKtxSample_U8},                // BC4_SNORM_BLOCK
-    {141, PrBasisBlocks_Bc5, 3, PrKtxSample_U8},                     // BC5_UNORM_BLOCK
-    {142, PrBasisBlocks_Bc5Snorm, 3, PrKtxSample_U8},                // BC5_SNORM_BLOCK
-    {143, PrBasisBlocks_Bc6HUfloat, 3, PrKtxSample_F16},             // BC6H_UFLOAT_BLOCK
-    {144, PrBasisBlocks_Bc6HSfloat, 3, PrKtxSample_F16},             // BC6H_SFLOAT_BLOCK
-    {145, PrBasisBlocks_Bc7, 3, PrKtxSample_U8, false, true},        // BC7_UNORM_BLOCK
-    {146, PrBasisBlocks_Bc7, 3, PrKtxSample_U8, false, true},        // BC7_SRGB_BLOCK
-    {147, PrBasisBlocks_Etc2Rgb8, 3, PrKtxSample_U8},                // ETC2_R8G8B8_UNORM_BLOCK
-    {148, PrBasisBlocks_Etc2Rgb8, 3, PrKtxSample_U8},                // ETC2_R8G8B8_SRGB_BLOCK
-    {149, PrBasisBlocks_Etc2Rgb8A1, 3, PrKtxSample_U8, false, true}, // ETC2_R8G8B8A1_UNORM_BLOCK
-    {150, PrBasisBlocks_Etc2Rgb8A1, 3, PrKtxSample_U8, false, true}, // ETC2_R8G8B8A1_SRGB_BLOCK
-    {151, PrBasisBlocks_Etc2Rgba8, 3, PrKtxSample_U8, false, true},  // ETC2_R8G8B8A8_UNORM_BLOCK
-    {152, PrBasisBlocks_Etc2Rgba8, 3, PrKtxSample_U8, false, true},  // ETC2_R8G8B8A8_SRGB_BLOCK
-    {153, PrBasisBlocks_EacR11, 1, PrKtxSample_U8},                  // EAC_R11_UNORM_BLOCK
-    {154, PrBasisBlocks_EacR11Snorm, 1, PrKtxSample_U8},             // EAC_R11_SNORM_BLOCK
-    {155, PrBasisBlocks_EacRg11, 3, PrKtxSample_U8},                 // EAC_R11G11_UNORM_BLOCK
-    {156, PrBasisBlocks_EacRg11Snorm, 3, PrKtxSample_U8},            // EAC_R11G11_SNORM_BLOCK
+    {9, PrGpuFormat_None, 1, PrKtxSample_U8},                      // R8_UNORM
+    {15, PrGpuFormat_None, 1, PrKtxSample_U8},                     // R8_SRGB
+    {16, PrGpuFormat_None, 2, PrKtxSample_U8},                     // R8G8_UNORM
+    {22, PrGpuFormat_None, 2, PrKtxSample_U8},                     // R8G8_SRGB
+    {23, PrGpuFormat_None, 3, PrKtxSample_U8},                     // R8G8B8_UNORM
+    {29, PrGpuFormat_None, 3, PrKtxSample_U8},                     // R8G8B8_SRGB
+    {30, PrGpuFormat_None, 3, PrKtxSample_U8, true},               // B8G8R8_UNORM
+    {36, PrGpuFormat_None, 3, PrKtxSample_U8, true},               // B8G8R8_SRGB
+    {37, PrGpuFormat_None, 4, PrKtxSample_U8},                     // R8G8B8A8_UNORM
+    {43, PrGpuFormat_None, 4, PrKtxSample_U8},                     // R8G8B8A8_SRGB
+    {44, PrGpuFormat_None, 4, PrKtxSample_U8, true},               // B8G8R8A8_UNORM
+    {50, PrGpuFormat_None, 4, PrKtxSample_U8, true},               // B8G8R8A8_SRGB
+    {70, PrGpuFormat_None, 1, PrKtxSample_U16},                    // R16_UNORM
+    {76, PrGpuFormat_None, 1, PrKtxSample_F16},                    // R16_SFLOAT
+    {77, PrGpuFormat_None, 2, PrKtxSample_U16},                    // R16G16_UNORM
+    {83, PrGpuFormat_None, 2, PrKtxSample_F16},                    // R16G16_SFLOAT
+    {84, PrGpuFormat_None, 3, PrKtxSample_U16},                    // R16G16B16_UNORM
+    {90, PrGpuFormat_None, 3, PrKtxSample_F16},                    // R16G16B16_SFLOAT
+    {91, PrGpuFormat_None, 4, PrKtxSample_U16},                    // R16G16B16A16_UNORM
+    {97, PrGpuFormat_None, 4, PrKtxSample_F16},                    // R16G16B16A16_SFLOAT
+    {100, PrGpuFormat_None, 1, PrKtxSample_F32},                   // R32_SFLOAT
+    {103, PrGpuFormat_None, 2, PrKtxSample_F32},                   // R32G32_SFLOAT
+    {106, PrGpuFormat_None, 3, PrKtxSample_F32},                   // R32G32B32_SFLOAT
+    {109, PrGpuFormat_None, 4, PrKtxSample_F32},                   // R32G32B32A32_SFLOAT
+    {131, PrGpuFormat_Bc1, 3, PrKtxSample_U8},                     // BC1_RGB_UNORM_BLOCK
+    {132, PrGpuFormat_Bc1, 3, PrKtxSample_U8},                     // BC1_RGB_SRGB_BLOCK
+    {133, PrGpuFormat_Bc1, 3, PrKtxSample_U8, false, true},        // BC1_RGBA_UNORM_BLOCK
+    {134, PrGpuFormat_Bc1, 3, PrKtxSample_U8, false, true},        // BC1_RGBA_SRGB_BLOCK
+    {135, PrGpuFormat_Bc2, 3, PrKtxSample_U8, false, true},        // BC2_UNORM_BLOCK
+    {136, PrGpuFormat_Bc2, 3, PrKtxSample_U8, false, true},        // BC2_SRGB_BLOCK
+    {137, PrGpuFormat_Bc3, 3, PrKtxSample_U8, false, true},        // BC3_UNORM_BLOCK
+    {138, PrGpuFormat_Bc3, 3, PrKtxSample_U8, false, true},        // BC3_SRGB_BLOCK
+    {139, PrGpuFormat_Bc4, 1, PrKtxSample_U8},                     // BC4_UNORM_BLOCK
+    {140, PrGpuFormat_Bc4Snorm, 1, PrKtxSample_F32},               // BC4_SNORM_BLOCK
+    {141, PrGpuFormat_Bc5, 3, PrKtxSample_U8},                     // BC5_UNORM_BLOCK
+    {142, PrGpuFormat_Bc5Snorm, 3, PrKtxSample_F32},               // BC5_SNORM_BLOCK
+    {143, PrGpuFormat_Bc6HUfloat, 3, PrKtxSample_F16},             // BC6H_UFLOAT_BLOCK
+    {144, PrGpuFormat_Bc6HSfloat, 3, PrKtxSample_F16},             // BC6H_SFLOAT_BLOCK
+    {145, PrGpuFormat_Bc7, 3, PrKtxSample_U8, false, true},        // BC7_UNORM_BLOCK
+    {146, PrGpuFormat_Bc7, 3, PrKtxSample_U8, false, true},        // BC7_SRGB_BLOCK
+    {147, PrGpuFormat_Etc2Rgb8, 3, PrKtxSample_U8},                // ETC2_R8G8B8_UNORM_BLOCK
+    {148, PrGpuFormat_Etc2Rgb8, 3, PrKtxSample_U8},                // ETC2_R8G8B8_SRGB_BLOCK
+    {149, PrGpuFormat_Etc2Rgb8A1, 3, PrKtxSample_U8, false, true}, // ETC2_R8G8B8A1_UNORM_BLOCK
+    {150, PrGpuFormat_Etc2Rgb8A1, 3, PrKtxSample_U8, false, true}, // ETC2_R8G8B8A1_SRGB_BLOCK
+    {151, PrGpuFormat_Etc2Rgba8, 3, PrKtxSample_U8, false, true},  // ETC2_R8G8B8A8_UNORM_BLOCK
+    {152, PrGpuFormat_Etc2Rgba8, 3, PrKtxSample_U8, false, true},  // ETC2_R8G8B8A8_SRGB_BLOCK
+    {153, PrGpuFormat_EacR11, 1, PrKtxSample_U8},                  // EAC_R11_UNORM_BLOCK
+    {154, PrGpuFormat_EacR11Snorm, 1, PrKtxSample_F32},            // EAC_R11_SNORM_BLOCK
+    {155, PrGpuFormat_EacRg11, 3, PrKtxSample_U8},                 // EAC_R11G11_UNORM_BLOCK
+    {156, PrGpuFormat_EacRg11Snorm, 3, PrKtxSample_F32},           // EAC_R11G11_SNORM_BLOCK
 };
 
 // The ASTC formats are consecutive, ordered by block size. The LDR formats start at kAstcFirst, with a UNORM and then
@@ -129,8 +132,9 @@ bool findFormat(uint32_t vkFormat, VkFormat* out) {
     bool hdr = vkFormat >= kAstcHdrFirst && vkFormat < kAstcHdrFirst + kAstcBlockSizes;
     if (!ldr && !hdr)
         return false;
+    // PrGpuFormat has three formats of each block size: Unorm, Srgb and Hdr.
     uint32_t size = ldr ? (vkFormat - kAstcFirst) / 2 : vkFormat - kAstcHdrFirst;
-    PrBasisBlocks blocks = PrBasisBlocks(PrBasisBlocks_Astc4x4 + 2 * size + (hdr ? 1 : 0));
+    PrGpuFormat blocks = PrGpuFormat(PrGpuFormat_Astc4x4 + size * kPrGpuAstcFormatsPerBlockSize + (hdr ? 2 : 0));
     PrKtxSample sample = hdr ? PrKtxSample_F16 : PrKtxSample_U8;
     *out = VkFormat{vkFormat, blocks, 3, sample, false, true};
     return true;
@@ -196,25 +200,114 @@ uint64_t imageSize(const KtxTexture& ktx, uint32_t level) {
     if (ktx.info.payload == PrKtxPayload_Pixels)
         return uint64_t(extent.x) * extent.y * ktx.pixelChannels * sampleBytes(ktx.info.sample);
     // UASTC's blocks are of ASTC's size.
-    return prBasisBlocksSize(extent, ktx.info.payload == PrKtxPayload_Uastc ? PrBasisBlocks_Astc4x4 : ktx.info.blocks);
+    PrGpuFormat blocks = ktx.info.payload == PrKtxPayload_Uastc ? PrGpuFormat(PrGpuFormat_Astc4x4) : ktx.info.blocks;
+    return prGpuFormatLevelBytes(blocks, extent);
 }
 
-// Returns a bit for each PrBasisBlocks that the texture transcodes to. Returns zero if the texture does not hold a
-// Basis Universal format.
-uint64_t transcodesOf(const KtxTexture& ktx) {
-    // UASTC transcodes to BC7 and ASTC 4x4. The exception is a texture of two values that are not in red and green,
-    // where the decoded pixels have them.
-    if (ktx.info.payload == PrKtxPayload_Uastc && ktx.channels != Channels_RrrG)
-        return uint64_t(1) << PrBasisBlocks_Bc7 | uint64_t(1) << PrBasisBlocks_Astc4x4;
-    // ETC1S transcodes to the ETC2 and BC formats that have its channels. The entries are for color, color with alpha,
-    // one value, and two values. One value is also gray as color.
-    constexpr uint64_t kEtc1sTranscodes[] = {
-        1u << PrBasisBlocks_Etc2Rgb8 | 1u << PrBasisBlocks_Bc1,
-        1u << PrBasisBlocks_Etc2Rgba8 | 1u << PrBasisBlocks_Bc3,
-        1u << PrBasisBlocks_EacR11 | 1u << PrBasisBlocks_Etc2Rgb8 | 1u << PrBasisBlocks_Bc4 | 1u << PrBasisBlocks_Bc1,
-        1u << PrBasisBlocks_EacRg11 | 1u << PrBasisBlocks_Bc5,
+// Writes the block formats that the texture transcodes to into `info`. A texture that does not hold a Basis Universal
+// format transcodes to none.
+void setTranscodes(const KtxTexture& ktx, PrKtxInfo* info) {
+    struct Targets {
+        uint32_t count;
+        PrGpuFormat formats[kPrKtxMaxTranscodes];
     };
-    return ktx.info.payload == PrKtxPayload_Etc1s ? kEtc1sTranscodes[ktx.channels] : 0;
+    // UASTC transcodes to BC7 and ASTC 4x4. The exception is a texture of two values that are not in red and green,
+    // where the decoded pixels have them. ETC1S transcodes to the ETC2 and BC formats that have its channels. The
+    // entries are for color, color with alpha, one value, and two values. One value is also gray as color.
+    constexpr Targets kUastc = {2, {PrGpuFormat_Bc7, PrGpuFormat_Astc4x4}};
+    constexpr Targets kEtc1s[] = {
+        {2, {PrGpuFormat_Etc2Rgb8, PrGpuFormat_Bc1}},
+        {2, {PrGpuFormat_Etc2Rgba8, PrGpuFormat_Bc3}},
+        {4, {PrGpuFormat_EacR11, PrGpuFormat_Etc2Rgb8, PrGpuFormat_Bc4, PrGpuFormat_Bc1}},
+        {2, {PrGpuFormat_EacRg11, PrGpuFormat_Bc5}},
+    };
+    Targets targets{};
+    if (ktx.info.payload == PrKtxPayload_Uastc && ktx.channels != Channels_RrrG)
+        targets = kUastc;
+    else if (ktx.info.payload == PrKtxPayload_Etc1s)
+        targets = kEtc1s[ktx.channels];
+    info->transcodeCount = targets.count;
+    for (uint32_t i = 0; i < targets.count; ++i)
+        info->transcodes[i] = targets.formats[i];
+}
+
+// Returns true if the texture transcodes to `target`.
+bool transcodesTo(const PrKtxInfo& info, PrGpuFormat target) {
+    for (uint32_t i = 0; i < info.transcodeCount; ++i) {
+        if (info.transcodes[i] == target)
+            return true;
+    }
+    return false;
+}
+
+// Returns true if `format` is a BC format, and writes its lib/bc format to `*out`.
+bool bcFormatOf(PrGpuFormat format, PrBcFormat* out) {
+    switch (format) {
+        case PrGpuFormat_Bc1: *out = PrBcFormat_Bc1; return true;
+        case PrGpuFormat_Bc2: *out = PrBcFormat_Bc2; return true;
+        case PrGpuFormat_Bc3: *out = PrBcFormat_Bc3; return true;
+        case PrGpuFormat_Bc4: *out = PrBcFormat_Bc4; return true;
+        case PrGpuFormat_Bc4Snorm: *out = PrBcFormat_Bc4Snorm; return true;
+        case PrGpuFormat_Bc5: *out = PrBcFormat_Bc5; return true;
+        case PrGpuFormat_Bc5Snorm: *out = PrBcFormat_Bc5Snorm; return true;
+        case PrGpuFormat_Bc6HUfloat: *out = PrBcFormat_Bc6HUfloat; return true;
+        case PrGpuFormat_Bc6HSfloat: *out = PrBcFormat_Bc6HSfloat; return true;
+        case PrGpuFormat_Bc7: *out = PrBcFormat_Bc7; return true;
+        default: return false;
+    }
+}
+
+// Returns true if `format` is an ETC2 or EAC format, and writes its lib/etc2 format to `*out`.
+bool etc2FormatOf(PrGpuFormat format, PrEtc2Format* out) {
+    switch (format) {
+        case PrGpuFormat_Etc2Rgb8: *out = PrEtc2Format_Rgb8; return true;
+        case PrGpuFormat_Etc2Rgb8A1: *out = PrEtc2Format_Rgb8A1; return true;
+        case PrGpuFormat_Etc2Rgba8: *out = PrEtc2Format_Rgba8; return true;
+        case PrGpuFormat_EacR11: *out = PrEtc2Format_R11; return true;
+        case PrGpuFormat_EacR11Snorm: *out = PrEtc2Format_R11Snorm; return true;
+        case PrGpuFormat_EacRg11: *out = PrEtc2Format_Rg11; return true;
+        case PrGpuFormat_EacRg11Snorm: *out = PrEtc2Format_Rg11Snorm; return true;
+        default: return false;
+    }
+}
+
+// Returns true if lib/bc or lib/etc2 decodes blocks of `format`.
+bool decodesBlocks(PrGpuFormat format) {
+    PrBcFormat bc = PrBcFormat_Bc1;
+    PrEtc2Format etc2 = PrEtc2Format_Rgb8;
+    if (bcFormatOf(format, &bc))
+        return prBcFormatDecodes(bc);
+    return etc2FormatOf(format, &etc2) && prEtc2FormatDecodes(etc2);
+}
+
+// Returns true if blocks of `format`, which decodesBlocks accepts, decode to floats.
+bool decodesToFloats(PrGpuFormat format) {
+    PrBcFormat bc = PrBcFormat_Bc1;
+    PrEtc2Format etc2 = PrEtc2Format_Rgb8;
+    if (bcFormatOf(format, &bc))
+        return prBcFormatTexels(bc) == PrBcTexels_F32;
+    return etc2FormatOf(format, &etc2) && prEtc2FormatTexels(etc2) == PrEtc2Texels_F32;
+}
+
+// Decodes the block of `format` at `block`, which decodesToFloats accepts, to 16 texels of RGBA floats.
+void decodeBlockF32(PrGpuFormat format, const uint8_t* block, float* texels) {
+    PrBcFormat bc = PrBcFormat_Bc1;
+    PrEtc2Format etc2 = PrEtc2Format_Rgb8;
+    if (bcFormatOf(format, &bc))
+        prBcDecodeF32(bc, block, texels);
+    else if (etc2FormatOf(format, &etc2))
+        prEtc2DecodeF32(etc2, block, texels);
+}
+
+// Decodes the block of `format` at `block`, which decodesBlocks accepts and which decodes to 8-bit texels, to 16 texels
+// of 8-bit RGBA.
+void decodeBlock(PrGpuFormat format, const uint8_t* block, uint8_t* texels) {
+    PrBcFormat bc = PrBcFormat_Bc1;
+    PrEtc2Format etc2 = PrEtc2Format_Rgb8;
+    if (bcFormatOf(format, &bc))
+        prBcDecode(bc, block, texels);
+    else if (etc2FormatOf(format, &etc2))
+        prEtc2Decode(etc2, block, texels);
 }
 
 // Returns the inflated bytes of `level` in `*out`. If the level is stored without supercompression, `*out` is a view of
@@ -346,10 +439,10 @@ bool decodeEtc1s(const KtxTexture& ktx, PrByteView level, uint32_t index, PrPixe
 }
 
 // Transcodes the UASTC blocks of an image of `extent` at `source` to blocks of `target`, BC7 or ASTC 4x4, at `out`.
-bool transcodeUastc(const uint8_t* source, PrUVec2 extent, PrBasisBlocks target, uint8_t* out) {
+bool transcodeUastc(const uint8_t* source, PrUVec2 extent, PrGpuFormat target, uint8_t* out) {
     size_t count = size_t((extent.x + 3) / 4) * ((extent.y + 3) / 4);
     bool (*transcode)(const uint8_t*, uint8_t*) =
-        target == PrBasisBlocks_Astc4x4 ? prBasisUastcTranscodeAstc : prBasisUastcTranscodeBc7;
+        target == PrGpuFormat_Astc4x4 ? prBasisUastcTranscodeAstc : prBasisUastcTranscodeBc7;
     for (size_t i = 0; i < count; ++i) {
         if (!transcode(source + i * 16, out + i * 16))
             return false;
@@ -360,10 +453,10 @@ bool transcodeUastc(const uint8_t* source, PrUVec2 extent, PrBasisBlocks target,
 // Transcodes the ETC1S slices of image `index` to blocks of `target` at `out`. `level` is the bytes of the level that
 // holds the slices, and `extent` is the extent of the image. Color becomes BC1 or ETC2 RGB8. Color with alpha becomes
 // BC3 or ETC2 RGBA8. One value becomes BC4 or EAC R11. Two values become BC5 or EAC RG11.
-bool transcodeEtc1s(const KtxTexture& ktx, PrByteView level, uint32_t index, PrUVec2 extent, PrBasisBlocks target,
+bool transcodeEtc1s(const KtxTexture& ktx, PrByteView level, uint32_t index, PrUVec2 extent, PrGpuFormat target,
         uint8_t* out) {
     PrBasisEtc1sImage image = prBasisEtc1sImage(ktx.etc1s, index);
-    bool two = prBasisBlocksBytes(target) == 16;
+    bool two = prGpuFormatBlock(target).bytes == 16;
     if (image.colorSize == 0 || image.colorOffset > level.size || image.colorSize > level.size - image.colorOffset)
         return false;
     if (two && (image.alphaSize == 0 || image.alphaOffset > level.size ||
@@ -385,28 +478,28 @@ bool transcodeEtc1s(const KtxTexture& ktx, PrByteView level, uint32_t index, PrU
     };
     Half halves[2] = {};
     switch (target) {
-        case PrBasisBlocks_Bc1:
+        case PrGpuFormat_Bc1:
             halves[0] = {color, PrBasisEtc1sTarget_Bc1, 3};
             break;
-        case PrBasisBlocks_Bc4:
+        case PrGpuFormat_Bc4:
             halves[0] = {color, PrBasisEtc1sTarget_Bc4, 1};
             break;
-        case PrBasisBlocks_Bc3:
+        case PrGpuFormat_Bc3:
             halves[0] = {alpha, PrBasisEtc1sTarget_Bc4, 1, 1};
             halves[1] = {color, PrBasisEtc1sTarget_Bc3Color, 3};
             break;
-        case PrBasisBlocks_Bc5:
+        case PrGpuFormat_Bc5:
             halves[0] = {color, PrBasisEtc1sTarget_Bc4, 1};
             halves[1] = {alpha, PrBasisEtc1sTarget_Bc4, 1, 1};
             break;
-        case PrBasisBlocks_Etc2Rgb8:
+        case PrGpuFormat_Etc2Rgb8:
             halves[0] = {color, PrBasisEtc1sTarget_Etc1, 3};
             break;
-        case PrBasisBlocks_Etc2Rgba8:
+        case PrGpuFormat_Etc2Rgba8:
             halves[0] = {alpha, PrBasisEtc1sTarget_EacAlpha, 1};
             halves[1] = {color, PrBasisEtc1sTarget_Etc1, 3};
             break;
-        case PrBasisBlocks_EacR11:
+        case PrGpuFormat_EacR11:
             halves[0] = {color, PrBasisEtc1sTarget_EacR11, 1};
             break;
         default:
@@ -422,23 +515,45 @@ bool transcodeEtc1s(const KtxTexture& ktx, PrByteView level, uint32_t index, PrU
     return true;
 }
 
+// Writes the first `channels` floats of `texel` at `to` as samples of `sample`, F16 or F32.
+void storeFloats(const float* texel, uint32_t channels, PrKtxSample sample, uint8_t* to) {
+    for (uint32_t c = 0; c < channels; ++c) {
+        if (sample == PrKtxSample_F16) {
+            const PrFloat16 half = prFloat16FromFloat(texel[c]);
+            prMemCopy(to + c * 2, &half, 2);
+        } else {
+            prMemCopy(to + c * 4, &texel[c], 4);
+        }
+    }
+}
+
 // Decodes the blocks at `blocks` of a block texture into pixels in the format of the texture's info. The pixels are red
-// alone, red, green and blue, or red, green, blue and alpha.
+// alone, red, green and blue, or red, green, blue and alpha, of 8 bits for a format of 8-bit texels and of floats for
+// the signed and float formats.
 void decodeBlocks(const KtxTexture& ktx, const uint8_t* blocks, PrPixels output) {
     uint32_t blocksX = (output.extent.x + 3) / 4;
     uint32_t blocksY = (output.extent.y + 3) / 4;
     uint32_t bytes = pixelBytes(ktx);
-    uint32_t blockBytes = prBasisBlocksBytes(ktx.info.blocks);
+    uint32_t blockBytes = prGpuFormatBlock(ktx.info.blocks).bytes;
+    const bool floats = decodesToFloats(ktx.info.blocks);
     for (uint32_t blockY = 0; blockY < blocksY; ++blockY) {
         for (uint32_t blockX = 0; blockX < blocksX; ++blockX, blocks += blockBytes) {
             uint8_t texels[64];
-            prBasisBlockDecode(ktx.info.blocks, blocks, texels);
+            float values[64];
+            if (floats)
+                decodeBlockF32(ktx.info.blocks, blocks, values);
+            else
+                decodeBlock(ktx.info.blocks, blocks, texels);
             uint32_t width = output.extent.x - blockX * 4 < 4 ? output.extent.x - blockX * 4 : 4;
             uint32_t height = output.extent.y - blockY * 4 < 4 ? output.extent.y - blockY * 4 : 4;
             for (uint32_t y = 0; y < height; ++y) {
                 uint8_t* to = output.data + (size_t(blockY) * 4 + y) * output.stride + size_t(blockX) * 4 * bytes;
-                for (uint32_t x = 0; x < width; ++x, to += bytes)
-                    prMemCopy(to, texels + (y * 4 + x) * 4, bytes);
+                for (uint32_t x = 0; x < width; ++x, to += bytes) {
+                    if (floats)
+                        storeFloats(values + (y * 4 + x) * 4, ktx.info.channels, ktx.info.sample, to);
+                    else
+                        prMemCopy(to, texels + (y * 4 + x) * 4, bytes);
+                }
             }
         }
     }
@@ -455,7 +570,7 @@ typedef uint8_t ReadAs;
 // Reads `level` of `frame` of the texture in the form that `as` selects. ReadAs_Pixels decodes into `output`.
 // ReadAs_Blocks copies the blocks to `blocks`. ReadAs_Transcode writes blocks of `target` at `blocks`.
 PrStatus readLevel(const KtxTexture& ktx, uint32_t frame, uint32_t level, ReadAs as, PrPixels output,
-        uint8_t* PR_NULLABLE blocks, PrBasisBlocks target) {
+        uint8_t* PR_NULLABLE blocks, PrGpuFormat target) {
     PR_ASSERT(frame < ktx.info.layerCount * ktx.info.faceCount && level < ktx.info.levelCount);
     PR_ASSERT(ktx.info.payload != PrKtxPayload_Etc1s || ktx.etc1s != nullptr);
     uint8_t* storage = nullptr;
@@ -582,9 +697,9 @@ PrStatus readTexture(PrByteView bytes, KtxTexture* out) {
         VkFormat found = {};
         if (!findFormat(vkFormat, &found))
             return PrStatus_NotSupported;
-        if (info.scheme == PrKtxScheme_BasisLz || (found.blocks != PrBasisBlocks_None && !hasHeight))
+        if (info.scheme == PrKtxScheme_BasisLz || (found.blocks != PrGpuFormat_None && !hasHeight))
             return PrStatus_InvalidData;
-        info.payload = found.blocks != PrBasisBlocks_None ? PrKtxPayload_Blocks : PrKtxPayload_Pixels;
+        info.payload = found.blocks != PrGpuFormat_None ? PrKtxPayload_Blocks : PrKtxPayload_Pixels;
         info.blocks = found.blocks;
         texture.pixelChannels = found.channels;
         texture.pixelsBgr = found.bgr;
@@ -632,8 +747,8 @@ PrStatus readTexture(PrByteView bytes, KtxTexture* out) {
     }
     if (info.scheme == PrKtxScheme_Zstd || info.scheme == PrKtxScheme_Zlib)
         info.inflatedBytes = texture.levels[0].inflatedSize;
-    info.blocksDecode = info.payload == PrKtxPayload_Blocks && prBasisBlocksDecodes(info.blocks);
-    info.transcodes = transcodesOf(texture);
+    info.blocksDecode = info.payload == PrKtxPayload_Blocks && decodesBlocks(info.blocks);
+    setTranscodes(texture, &info);
     return truncated ? PrStatus_Truncated : PrStatus_Ok;
 }
 
@@ -715,27 +830,29 @@ uint64_t prKtxTextureSharedBytes(const PrKtxTexture* texture) {
 
 size_t prKtxTextureBlocksSize(const PrKtxTexture* texture, uint32_t level) {
     PR_ASSERT(level < texture->info.levelCount);
-    return prBasisBlocksSize(prKtxLevelExtent(texture->info.extent, level), texture->info.blocks);
+    if (texture->info.blocks == PrGpuFormat_None)
+        return 0;
+    return size_t(prGpuFormatLevelBytes(texture->info.blocks, prKtxLevelExtent(texture->info.extent, level)));
 }
 
 PrStatus prKtxTextureRead(const PrKtxTexture* texture, uint32_t frame, uint32_t level, PrPixels output) {
     PR_ASSERT(output.extent == prKtxLevelExtent(texture->info.extent, level));
     if (texture->info.payload == PrKtxPayload_Blocks && !texture->info.blocksDecode)
         return PrStatus_NotSupported;
-    return readLevel(*texture, frame, level, ReadAs_Pixels, output, nullptr, PrBasisBlocks_None);
+    return readLevel(*texture, frame, level, ReadAs_Pixels, output, nullptr, PrGpuFormat_None);
 }
 
 PrStatus prKtxTextureReadBlocks(const PrKtxTexture* texture, uint32_t frame, uint32_t level, uint8_t* out, size_t size) {
     if (texture->info.payload != PrKtxPayload_Blocks)
         return PrStatus_NotSupported;
     PR_ASSERT(size == prKtxTextureBlocksSize(texture, level));
-    return readLevel(*texture, frame, level, ReadAs_Blocks, PrPixels{}, out, PrBasisBlocks_None);
+    return readLevel(*texture, frame, level, ReadAs_Blocks, PrPixels{}, out, PrGpuFormat_None);
 }
 
-PrStatus prKtxTextureTranscode(const PrKtxTexture* texture, uint32_t frame, uint32_t level, PrBasisBlocks target,
+PrStatus prKtxTextureTranscode(const PrKtxTexture* texture, uint32_t frame, uint32_t level, PrGpuFormat target,
         uint8_t* out, size_t size) {
-    if (target >= PrBasisBlocks_Count || (texture->info.transcodes >> target & 1) == 0)
+    if (!transcodesTo(texture->info, target))
         return PrStatus_NotSupported;
-    PR_ASSERT(size == prBasisBlocksSize(prKtxLevelExtent(texture->info.extent, level), target));
+    PR_ASSERT(size == size_t(prGpuFormatLevelBytes(target, prKtxLevelExtent(texture->info.extent, level))));
     return readLevel(*texture, frame, level, ReadAs_Transcode, PrPixels{}, out, target);
 }

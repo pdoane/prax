@@ -1,17 +1,17 @@
 // KTX 2.0, the container format for GPU textures. A file holds the mip levels of the layers and faces of a texture. The
-// levels are blocks of a format that a GPU samples (pr/basis.h), pixels, or one of the two Basis Universal formats,
-// which transcode to GPU blocks. A block texture decodes to pixels if the Basis Universal library decodes its blocks. A
-// texture in a Basis Universal format also decodes to pixels. A level that is supercompressed with Zstandard or zlib
-// inflates through the compression codec that the texture is given.
+// levels are blocks of a format that a GPU samples (pr/gpu.h), pixels, or one of the two Basis Universal formats, which
+// transcode to GPU blocks. A block texture decodes to pixels if lib/bc or lib/etc2 decodes its blocks. A texture in a
+// Basis Universal format also decodes to pixels. A level that is supercompressed with Zstandard or zlib inflates
+// through the compression codec that the texture is given.
 //
 // KTX File Format Specification, version 2 - https://registry.khronos.org/KTX/specs/2.0/ktxspec.v2.html
 
 #pragma once
 
 #include "pr/base.h"
-#include "pr/basis.h"
 #include "pr/byte_view.h"
 #include "pr/compress.h"
+#include "pr/gpu.h"
 #include "pr/pixels.h"
 #include "pr/status.h"
 #include "pr/vec.h"
@@ -28,6 +28,7 @@ extern "C" {
 enum {
     kPrKtxHeaderBytes = 80,
     kPrKtxMaxLevels = 32,
+    kPrKtxMaxTranscodes = 4,
 };
 
 // Returns true if `bytes` begin with the identifier of a KTX 2.0 file.
@@ -101,9 +102,12 @@ typedef struct PrKtxInfo {
     uint32_t levelCount;        // at least one
     PrKtxPayload payload;
     PrKtxScheme scheme;
-    PrBasisBlocks blocks;       // block format of a block texture, None for any other
+    PrGpuFormat blocks;         // the plain form of the block format of a block texture, None for any other
     bool blocksDecode;          // true if the texture's blocks decode to pixels
-    uint64_t transcodes;        // one bit for each PrBasisBlocks that prKtxTextureTranscode can produce
+
+    // The plain forms of the block formats that prKtxTextureTranscode produces.
+    PrGpuFormat transcodes[kPrKtxMaxTranscodes];
+    uint32_t transcodeCount;
     uint8_t channels;
     PrKtxSample sample;
     PrKtxAlpha alpha;
@@ -130,9 +134,9 @@ typedef struct PrKtxTexture PrKtxTexture;
 // Supercompressed levels inflate through `codec`, which must outlive the texture. Without a codec, those levels are
 // NotSupported. Returns InvalidData if the structure of the file does not follow the specification. Returns
 // NotSupported for a texture that the library does not read: a volume, a format that is not a Basis Universal format,
-// pixels or blocks of PrBasisBlocks, a supercompression scheme that the specification does not define, or an animation
-// whose frames depend on other frames. Returns Truncated if the file ends before its levels do. The rest of the file is
-// still read. `*out` is the texture if the status is Ok or Truncated, and null otherwise.
+// pixels, BC, ETC2, EAC or ASTC blocks, a supercompression scheme that the specification does not define, or an
+// animation whose frames depend on other frames. Returns Truncated if the file ends before its levels do. The rest of
+// the file is still read. `*out` is the texture if the status is Ok or Truncated, and null otherwise.
 PrStatus prKtxTextureCreate(PrByteView bytes, const PrCompressCodecSet* PR_NULLABLE codec,
     PrKtxTexture* PR_NULLABLE* PR_NONNULL out);
 
@@ -166,12 +170,12 @@ PrStatus prKtxTextureRead(const PrKtxTexture* texture, uint32_t frame, uint32_t 
 PrStatus prKtxTextureReadBlocks(const PrKtxTexture* texture, uint32_t frame, uint32_t level, uint8_t* out, size_t size);
 
 // Transcodes `level` of `frame` of a texture in a Basis Universal format to blocks of `target` at `out`, without
-// decoding the level to pixels. `target` is one of the texture's `transcodes`. `out` has room for prBasisBlocksSize
-// bytes for the extent of the level. The blocks are in rows, as prKtxTextureReadBlocks writes them. Color becomes BC1
-// or ETC2 RGB8. Color with alpha becomes BC3 or ETC2 RGBA8. One value becomes BC4 or EAC R11. Two values become BC5 or
-// EAC RG11. UASTC becomes BC7 or ASTC 4x4. Returns NotSupported if `target` is not among the texture's `transcodes`.
-// Otherwise it fails as prKtxTextureRead does.
-PrStatus prKtxTextureTranscode(const PrKtxTexture* texture, uint32_t frame, uint32_t level, PrBasisBlocks target,
+// decoding the level to pixels. `target` is one of the texture's `transcodes`. `out` has room for the bytes of the
+// level in `target` (prGpuFormatLevelBytes). The blocks are in rows, as prKtxTextureReadBlocks writes them. Color
+// becomes BC1 or ETC2 RGB8. Color with alpha becomes BC3 or ETC2 RGBA8. One value becomes BC4 or EAC R11. Two values
+// become BC5 or EAC RG11. UASTC becomes BC7 or ASTC 4x4. Returns NotSupported if `target` is not among the texture's
+// `transcodes`. Otherwise it fails as prKtxTextureRead does.
+PrStatus prKtxTextureTranscode(const PrKtxTexture* texture, uint32_t frame, uint32_t level, PrGpuFormat target,
     uint8_t* out, size_t size);
 
 #if defined(__cplusplus)
