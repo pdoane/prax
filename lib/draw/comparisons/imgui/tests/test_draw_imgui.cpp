@@ -8,6 +8,7 @@
 #include "pr/vec.h"
 
 #include "tools/harness/harness_gpu.h"
+#include "tools/harness/test_gpu.h"
 
 #include "tools/harness/test.h"
 
@@ -26,7 +27,8 @@ struct Device {
     PrDrawFrame* frame = nullptr;
 
     Device(uint32_t width, uint32_t height) {
-        REQUIRE(gpuDeviceCreate(PrGpuBackend_Default, nullptr, &gpuDevice) == PrStatus_Ok);
+        gpuDevice = testGpuDevice();
+        REQUIRE(gpuDevice != nullptr);
         REQUIRE(prDrawImGuiCreate(gpuDevice, &renderer));
         PrGpuTextureDesc desc = prGpuTextureDesc2d(PrGpuFormat_Rgba8, PrUVec2{width, height},
             PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_RenderTarget);
@@ -37,7 +39,6 @@ struct Device {
         prDrawFrameDestroy(frame);
         prDrawRendererDestroy(renderer);
         prGpuTextureRelease(gpuDevice, texture);
-        prGpuDeviceDestroy(gpuDevice);
     }
 
     // Prepares and encodes the list in a pass over the texture, then reads the texture back.

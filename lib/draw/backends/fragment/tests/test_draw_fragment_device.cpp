@@ -17,6 +17,7 @@
 
 #include "tools/harness/harness_gpu.h"
 #include "tools/harness/harness_textures.h"
+#include "tools/harness/test_gpu.h"
 
 #include "tools/harness/test.h"
 
@@ -30,15 +31,6 @@ namespace {
 
 using namespace pr;
 
-// A device of the platform's GPU, destroyed with the object.
-struct TierDevice {
-    PrGpuDevice* PR_NULLABLE device = nullptr;
-
-    ~TierDevice() {
-        prGpuDeviceDestroy(device);
-    }
-};
-
 // Runs `test` with a device of the platform's GPU on each binding tier that the platform has (pr/gpu.h): a device with
 // bindless where the GPU has it, and a device of slots alone where the backend makes one
 // (PrGpuDeviceOptions::slotsOnly). A GPU without bindless, such as the iOS simulator's, runs the test once, on its
@@ -47,16 +39,14 @@ template <typename Test>
 void onEachTier(Test test) {
     const bool tiers[] = {false, true};
     for (bool slotsOnly : tiers) {
-        TierDevice tier;
-        PrGpuDeviceOptions options = prGpuDeviceOptionsDefault();
-        options.slotsOnly = slotsOnly;
-        REQUIRE(gpuDeviceCreate(PrGpuBackend_Default, &options, &tier.device) == PrStatus_Ok);
-        bool bindless = (prGpuDeviceInfo(tier.device).features & PrGpuFeatureFlag_Bindless) != 0;
+        PrGpuDevice* device = testGpuDevice(slotsOnly);
+        REQUIRE(device != nullptr);
+        bool bindless = (prGpuDeviceInfo(device).features & PrGpuFeatureFlag_Bindless) != 0;
         // The device is of the other tier, which the other run covers.
         if (bindless == slotsOnly)
             continue;
         CAPTURE(bindless);
-        test(tier.device);
+        test(device);
     }
 }
 
@@ -2305,9 +2295,9 @@ TEST_CASE("the fragment renderer uploads the coverage of glyphs and small paths 
     });
 }
 
-TEST_CASE("an image of blocks that the device samples draws from its blocks, read as the plain form") {
-    TierDevice tier;
-    REQUIRE(gpuDeviceCreate(PrGpuBackend_Default, nullptr, &tier.device) == PrStatus_Ok);
+TEST_CASE("an image in a block format that the device samples is drawn from its blocks, in the format's plain form") {
+    PrGpuDevice* gpuDevice = testGpuDevice();
+    REQUIRE(gpuDevice != nullptr);
     PrTextureSourceDesc desc{
         .texture = prTextureDesc2d(PrGpuFormat_Bc1Srgb, PrUVec2{8, 8}, PrTextureAlpha_Straight),
         .read = [](void* PR_NULLABLE, PrTextureRead* read) {
@@ -2317,14 +2307,14 @@ TEST_CASE("an image of blocks that the device samples draws from its blocks, rea
         },
     };
     const PrTextureSource* image = prTextureSourceCreate(&desc);
-    PrTextureCache* textures = harnessTextureCacheCreate(tier.device);
+    PrTextureCache* textures = harnessTextureCacheCreate(gpuDevice);
     PrTextureRegion region{};
     PrTextureCacheState state = prTextureCacheRealize(textures, image, prTextureCacheAskEncoded(0), &region);
-    if (prGpuDeviceSupportsFormat(tier.device, PrGpuFormat_Bc1, PrGpuTextureUsageFlag_Sampled)) {
+    if (prGpuDeviceSupportsFormat(gpuDevice, PrGpuFormat_Bc1, PrGpuTextureUsageFlag_Sampled)) {
         REQUIRE(state == PrTextureCacheState_Ready);
-        CHECK(prGpuTextureDesc(tier.device, region.texture.texture).format == PrGpuFormat_Bc1);
+        CHECK(prGpuTextureDesc(gpuDevice, region.texture.texture).format == PrGpuFormat_Bc1);
         CHECK(region.texture.alpha == PrTextureAlpha_Straight);
-        Device device(tier.device, 16, 16);
+        Device device(gpuDevice, 16, 16);
         PrDrawList* list = prDrawListCreate();
         PrDrawBrush brush = prDrawBrushImage(prDrawSourceRegion(&region, PrRect{0, 0, 8, 8}, 0), PrRect{0, 0, 16, 16},
             PrDrawSampling_Linear);
