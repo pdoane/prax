@@ -7,7 +7,9 @@
 
 PR_ASSUME_NONNULL_BEGIN
 
-namespace pr_impl {
+namespace harness {
+
+using namespace pr;
 
 // What a test document holds.
 struct PsdLayout {
@@ -104,6 +106,6 @@ inline Array<uint8_t> psdFile(const PsdLayout& layout, const Array<uint8_t>& col
     return out;
 }
 
-} // namespace pr_impl
+} // namespace harness
 
 PR_ASSUME_NONNULL_END

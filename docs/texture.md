@@ -96,22 +96,60 @@ A preview costs much less to read than the picture, and its texture is smaller.
 
 The cache applies both rules from the detail that an ask states. A consumer does not choose a preview itself.
 
-## Sources that change over time
+## Sources that change
 
-A source may show a picture that changes: an animated image, or a video. Such a source has a function that says what
-it shows at a time (`PrTextureSourceDesc::frame`, `prTextureSourceFrameAt`). The answer is a picture, which is a still
-source of its own with the same description, a serial that names the picture, and the time at which the source shows
-another.
+A source may show a picture that changes: an animated image, an image whose bytes are still arriving, or a video. Such
+a source has a function that says what it shows at a time on a timeline (`PrTextureSourceDesc::show`,
+`prTextureSourceShow`). The answer is a picture, which is a still source of its own with the same description, a serial
+that names the picture, whether the picture is complete or an approximation, and when the source shows another.
 
-- **The source itself is the first picture.** A consumer that does not play the source reads it as any still source,
-  and shows that picture.
-- **The provider keeps the timing.** An animated image begins at the time of the first ask and plays its frames for
-  the durations that its file states, as often as the file says. A frame that the file gives less than 20 ms shows for
+- **Time is an input.** The time is seconds since the start of a timeline that the consumer owns
+  (`PrTextureTimeline`). The source keeps no start time and nothing of any playback, so one source shows on any number
+  of timelines at once, each paused, seeked or played at its own rate.
+- **A change is a time, a notification, or never.** The answer gives the time at which the picture changes, says
+  whether the source notifies its notifier (`PrTextureSourceDesc::notifier`) when it shows another, or both, as a video
+  does whose frame at a time has not decoded yet. A source that says neither is never asked again.
+- **The source itself is the picture of a consumer that does not play it.** That is an animation's first frame, and the
+  picture of all of an image's bytes.
+- **The provider keeps the timing of its file.** An animated image starts at time zero and plays its frames for the
+  durations that its file states, as often as the file says. A frame that the file gives less than 20 ms shows for
   100 ms.
 - **Pictures that are read in order read fastest.** A GIF and an animated PNG store a frame as its difference from the
-  frames before it. The frames of an image share one decoder, which composes each frame from the last.
+  frames before it. The frames of an image keep a few decoders open, and a read takes the one that last decoded the
+  nearest frame before its own, so that playbacks at different times each keep a decoder moving forward. No two reads
+  share a decoder at once.
 
 A consumer does not call the function itself. The cache plays such sources for every consumer ([Playing](#playing)).
+
+## Bytes that arrive
+
+A resource's bytes may still be arriving: from the network, or from a host that feeds them (`PrBlobFeed`, in
+`pr/blob.h`). A blob source of such bytes says how many have arrived and whether they are complete or failed
+(`prBlobSourceProgress`), and notifies its notifier as that changes. The bytes that have arrived never change, and stay
+readable if the rest fail.
+
+- **A source opens as soon as its bytes describe it.** A format set tries the bytes that have arrived each time they
+  have doubled, and every byte at the end (`prTextureFormatSetOpen`). A format that needs every byte, as KTX and DDS do,
+  waits for them.
+- **An image shows revisions as its bytes arrive.** The source of an image that opened early changes
+  ([Sources that change](#sources-that-change)). Its bytes go to a decoder that keeps its state from one piece to
+  the next (`prImageDecoderAppend`): each byte is decoded once, so the work of an image is proportional to its bytes
+  and its pixels, however small the pieces. A revision is a snapshot of what the decoder holds, taken when a consumer
+  asks after the decoder changed, so revisions follow the consumer's frames, not the arrival of the bytes. A revision
+  is not complete, so the cache answers it as Partial. Once the bytes are complete, the source shows itself, the image
+  of every byte, and never changes again.
+- **Each revision is a picture of its own.** No texels change under a held region. The cache frees superseded
+  revisions as it frees an animation's past frames, and there is at most one revision for each frame that a consumer
+  draws.
+- **An ask that does not play sees the image arriving too.** `prTextureCacheRealize` answers a source that notifies
+  with what it shows at the start of a timeline, Partial until it is complete, and no realization waits for bytes.
+- **A failure keeps the last revision.** Bytes that fail, or that end before the image does, leave the last revision
+  as the picture that stays, with the failure (`PrTextureShow::status`, `prTextureCacheStatus`).
+- **What a revision shows is the codec's.** PNG decodes the rows that have arrived, and an interlaced PNG fills each
+  block from the passes so far. A sequential JPEG decodes the rows of blocks that have arrived, and a progressive one
+  the whole picture at the precision of its scans so far. GIF draws the pixels of the frame that is arriving, and an
+  animation plays the frames that have begun; an animated PNG plays its frames as each becomes whole. WebP, and every
+  format without a streaming decoder, shows nothing until its bytes are complete.
 
 ## Formats
 
@@ -146,6 +184,8 @@ caller chooses for bytes from an archive or the network.
 - **The catalog does not keep sources alive.** A source lives while a consumer or a cache holds it. When the last
   holder releases it, the catalog forgets the name, and a later ask opens the resource again.
 - **A changed resource is forgotten explicitly** (`prTextureCatalogForget`). The next ask opens it as a new source.
+- **Bytes that arrive open as they arrive** ([Bytes that arrive](#bytes-that-arrive)). A name is Pending until the bytes
+  describe the source, and the open completes on the thread that delivers them.
 
 ## The cache
 
@@ -219,8 +259,20 @@ A realization that has started is not cancelled. Its read runs to completion.
 ### Playing
 
 The host gives the cache the time of each frame that it draws (`prTextureCacheSetTime`). A consumer that plays asks
-with `prTextureCachePlay`. The answer for a source that changes over time is the region of the picture that the source
-shows at that time, marked as playing (`PrTextureRegion::playing`), and the source of that picture.
+with `prTextureCachePlay` and the timeline that it plays on. The answer for a source whose picture changes is the region
+of the picture that the source shows at the timeline's time then, marked as playing (`PrTextureRegion::playing`), and
+the source of that picture.
+
+- **The consumer owns the timeline.** A widget pauses or seeks its own, and asks with it as it is now. A consumer that
+  keeps none passes null and plays on the cache's own timeline of the source, which starts at the first such ask.
+- **The source is asked only when its answer may have changed.** That is when the timeline reaches the time that the
+  last answer gave, when the timeline moves back before it, or when the source has notified. A notification is an
+  arrival, so the consumers ask again. A source whose answer says it never changes costs an ask nothing but the
+  lookup, and adds nothing to the host's frames.
+- **Timelines share pictures.** Two timelines that show the same picture of a source, by its serial, share one picture
+  and one texture.
+- **An approximation is Partial.** A picture that the source says is not complete is answered as Partial, as a smaller
+  version is, so a consumer treats an image that is arriving as it treats one whose preview shows.
 
 - **A consumer that plays has no code for animation.** Layout asks this way for an image element and a CSS background,
   and draws the region with its own sampling, fit and tiling, as it draws any image.
@@ -237,10 +289,12 @@ shows at that time, marked as playing (`PrTextureRegion::playing`), and the sour
   ask: a consumer that records on another thread asks less often than the host's frames end.
 - **Pictures that are past are freed at once.** They are not asked for again, so a trim frees their textures whatever
   the budget, once no drawing holds them.
-- **`prTextureCacheRealize` does not play.** It answers with the source's first picture, which is what a row of
+- **`prTextureCacheRealize` does not play.** It answers with the source's own picture, which is what a row of
   thumbnails shows.
+- **Device loss keeps the playback.** What the cache learned of the sources that it plays stays when it moves to
+  another device, so each shows the same picture there.
 
-A cache whose time was never set plays nothing, and answers with each source's first picture.
+A cache whose time was never set is at time zero.
 
 ### Cost
 

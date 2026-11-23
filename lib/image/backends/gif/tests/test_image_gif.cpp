@@ -333,9 +333,9 @@ TEST_CASE("a gif whose blocks end early holds the frames read before them") {
 
 TEST_CASE("a gif whose lzw stream names an unbuilt code is refused") {
     const Vector& vector = named("87a global table");
-    // The first byte of the coded data holds the clear code and the low bits of the next code. Setting all its bits
-    // names a code that the dictionary has no entry for.
-    const uint32_t data = vector.bytes.count() - 9;
+    // The first byte of the coded data, after its sub-block's length, holds the clear code and the low bits of the next
+    // code. Setting all its bits names a code that the dictionary has no entry for.
+    const uint32_t data = vector.bytes.count() - 8;
     const Array<uint8_t> bytes = patched(vector, data, 0xFF);
     Array<uint8_t> pixels(size_t(vector.width) * vector.height * 4);
     CHECK(!decodeFrame(bytes.data(), bytes.count(), Orientation_FromImage, 0, pixels.data(), pixels.count()));

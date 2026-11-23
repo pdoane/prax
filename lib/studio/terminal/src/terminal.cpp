@@ -2007,8 +2007,8 @@ void imagesTrim(Terminal* terminal) {
 }
 
 // Records the image placements in the view whose z-index is from `low` to `high`, exclusive. Each is clipped to its
-// cells and to the screen. Returns false if a placement was left out because there is no texture cache or its texture
-// did not arrive. The caller must not keep such a drawing.
+// cells and to the screen. Returns false if a placement was left out or approximated because there is no texture cache
+// or its texture had not arrived. The caller must not keep such a drawing, and draws again in a later frame.
 bool drawImages(Terminal* terminal, PrDrawList* list, int64_t low, int64_t high) {
     bool complete = true;
     const TerminalSnapshot& snapshot = terminal->snapshot;
@@ -2028,16 +2028,18 @@ bool drawImages(Terminal* terminal, PrDrawList* list, int64_t low, int64_t high)
         if (clip.left >= clip.right || clip.top >= clip.bottom)
             continue;
         const PrTextureSource* image = drawImageOf(terminal, placement.image);
-        // The image holds its pixels in memory, so its texture is an upload. The drawing waits for that upload.
+        // The image holds its pixels in memory, so its texture is an upload. A drawing made before the upload arrives
+        // lacks the image and is not kept.
         PrTextureRegion region{};
         PrTextureCache* textures = terminal->kit != nullptr ? terminal->kit->textures : nullptr;
         if (image == nullptr)
             continue;
-        if (textures == nullptr ||
-                prTextureCacheWait(textures, image, prTextureCacheAskEncoded(0), &region) != PrTextureCacheState_Ready) {
-            complete = false;
+        PrTextureCacheState state = PrTextureCacheState_Pending;
+        if (textures != nullptr)
+            state = prDrawListRealize(list, textures, image, prTextureCacheAskEncoded(0), &region);
+        complete = complete && state == PrTextureCacheState_Ready;
+        if (state != PrTextureCacheState_Ready && state != PrTextureCacheState_Partial)
             continue;
-        }
         PrRect destination{
             left + placement.offset.x * cell.x, top + placement.offset.y * cell.y,
             left + (placement.offset.x + placement.extent.x) * cell.x,

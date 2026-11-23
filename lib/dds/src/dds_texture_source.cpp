@@ -294,8 +294,11 @@ bool formatSupportsType(const PrTextureFormat*, PrStringView type) {
     return type == "image/vnd.ms-dds";
 }
 
+// A DDS file is opened once every byte has arrived.
 PrStatus formatCreate(const PrTextureFormat*, const PrBlobSource* bytes, const PrBlob* blob,
-        const PrTextureLimits* limits, const PrTextureSource* PR_NULLABLE* PR_NONNULL out) {
+        const PrTextureLimits* limits, bool partial, const PrTextureSource* PR_NULLABLE* PR_NONNULL out) {
+    if (partial)
+        return PrStatus_Truncated;
     return sourceCreate(bytes, blob, *limits, out);
 }
 
@@ -307,19 +310,6 @@ PrTextureFormat gFormat = {.supportsTypeFn = formatSupportsType, .createFn = for
 } // namespace pr_impl
 
 using namespace pr_impl;
-
-PrStatus prDdsTextureSourceOpen(const PrBlobSource* bytes, const PrTextureLimits* PR_NULLABLE limits,
-        const PrTextureSource* PR_NULLABLE* PR_NONNULL out) {
-    *out = nullptr;
-    PrBlob* blob = nullptr;
-    PrStatus status = prBlobSourceRead(bytes, prBlobRangeWhole(), &blob);
-    if (status != PrStatus_Ok)
-        return status;
-    PrTextureLimits bounds = limits != nullptr ? *limits : prTextureLimitsDefault();
-    status = sourceCreate(bytes, blob, bounds, out);
-    prBlobRelease(blob);
-    return status;
-}
 
 PrTextureFormat* prDdsTextureFormatCreate(void) {
     return &gFormat;

@@ -2810,7 +2810,7 @@ def check_homes(report, headers, sources, texts):
 TAGS = {
     "lib/core": ("Adler32", "Ascii", "Base64", "Blob", "ByteView", "Condition", "Core", "Crash", "Crc32", "DateTime",
                  "DVec2", "Environment", "F32", "F64", "Fail", "File", "Float16", "Hash", "IVec2", "Mem", "Memory",
-                 "Mutex", "Pixel", "Pixels", "Random", "RawString", "Resource", "Sha1", "Status", "String",
+                 "Mutex", "Notifier", "Pixel", "Pixels", "Random", "RawString", "Resource", "Sha1", "Status", "String",
                  "TextBuffer", "Thread", "Time", "U64", "UVec2", "Utf8", "Vec2", "Vec3", "Vmem", "Xxh64"),
     "lib/geom": ("Affine2", "Affine4", "Corner", "DAffine2", "DMatrix3", "DMatrix4", "IRect", "Matrix3", "Matrix4",
                  "Rect"),

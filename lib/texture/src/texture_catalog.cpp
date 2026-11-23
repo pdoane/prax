@@ -39,7 +39,8 @@ struct CatalogEntry {
 };
 
 // An open in flight: the entry of the name that it opens, and the bytes that it reads. `bytes` is null if the open
-// reads the file at the name.
+// reads the file at the name. The job holds a reference to the names, so that an open that completes after the catalog
+// is destroyed, as one of bytes that arrive later does, finds them.
 struct CatalogJob {
     struct TextureCatalogNames* names;
     CatalogEntry* entry;
@@ -52,10 +53,12 @@ struct TextureCatalogNames {
     Atomic<uint32_t> references;
     PrTextureCatalogDesc desc;
     PrMutex lock;
-    PrCondition settled;                // signaled when an open leaves flight
+    PrCondition settled;                // signaled when `running` falls
     RawArray<CatalogEntry*> entries;
     HashIndex index;                    // index of `entries` by name
-    uint32_t inFlight;
+    uint32_t inFlight;                  // the opens that have not completed
+    uint32_t running;                   // the threads that are starting an open or calling the host about one
+    bool destroyed;                     // the catalog is destroyed: an open that has not started is cancelled
     uint64_t trims;
 };
 
@@ -115,20 +118,15 @@ void sourceReleased(void* PR_NULLABLE context, const PrTextureSource* source) {
     releaseNames(names);
 }
 
-// Opens the source of the job and gives it to the entry of the job.
-void run(void* PR_NULLABLE context) {
+// Gives the source that the job opened to the entry of the job. It runs on the thread that completed the open.
+void opened(void* PR_NULLABLE context, PrStatus status, const PrTextureSource* PR_NULLABLE source) {
     CatalogJob* job = static_cast<CatalogJob*>(context);
     TextureCatalogNames& names = *job->names;
     CatalogEntry* entry = job->entry;
-    const PrBlobSource* bytes = job->bytes;
-    if (bytes == nullptr)
-        bytes = prBlobSourceCreateFile(nameOf(*entry));
-    const PrTextureSource* source = nullptr;
-    PrStatus status = prTextureFormatSetRead(names.desc.formats, bytes, nameOf(*entry), &names.desc.limits, &source);
-    prBlobSourceRelease(bytes);
     prMemoryFree(job);
 
     prMutexLock(&names.lock);
+    // A destroy forgets the names that are opening, so nothing names their sources.
     bool asked = false;
     const PrTextureSource* unnamed = nullptr;
     if (entry->forgotten) {
@@ -149,16 +147,53 @@ void run(void* PR_NULLABLE context) {
             entry->status = status;
         }
     }
-    // The callback runs before the open leaves flight, so that it finishes before the catalog can be destroyed.
-    if (asked && names.desc.opened != nullptr) {
+    // The host is called while the call counts as running, so that a destroy waits for it to return. A destroyed
+    // catalog calls the host no more.
+    if (asked && names.desc.opened != nullptr && !names.destroyed) {
+        ++names.running;
         prMutexUnlock(&names.lock);
         names.desc.opened(names.desc.openedContext);
         prMutexLock(&names.lock);
+        --names.running;
+        prConditionBroadcast(&names.settled);
     }
     --names.inFlight;
-    prConditionBroadcast(&names.settled);
     prMutexUnlock(&names.lock);
     prTextureSourceRelease(unnamed);
+    releaseNames(&names);
+}
+
+// Starts opening the source of the job. The open completes later if its bytes are still arriving (opened).
+void run(void* PR_NULLABLE context) {
+    CatalogJob* job = static_cast<CatalogJob*>(context);
+    TextureCatalogNames& names = *job->names;
+    // An open that a destroy finds before it starts, as one that waits in the pool's queue, is cancelled when the pool
+    // takes it, so that the destroy waits only for the opens that are running.
+    prMutexLock(&names.lock);
+    if (names.destroyed) {
+        PR_ASSERT(job->entry->forgotten);
+        freeEntry(job->entry);
+        --names.inFlight;
+        prMutexUnlock(&names.lock);
+        prBlobSourceRelease(job->bytes);
+        prMemoryFree(job);
+        releaseNames(&names);
+        return;
+    }
+    ++names.running;
+    prMutexUnlock(&names.lock);
+    const PrBlobSource* bytes = job->bytes;
+    // The open retains the bytes, so the job's reference goes after the call.
+    if (bytes == nullptr)
+        bytes = prBlobSourceCreateFile(nameOf(*job->entry));
+    PrStringView name = nameOf(*job->entry);
+    // The open may complete during the call, which frees the job.
+    prTextureFormatSetOpen(names.desc.formats, bytes, name, &names.desc.limits, opened, job);
+    prBlobSourceRelease(bytes);
+    prMutexLock(&names.lock);
+    --names.running;
+    prConditionBroadcast(&names.settled);
+    prMutexUnlock(&names.lock);
 }
 
 // Returns the state of `name`, and stores its source at `*out` with a reference for the caller. If the names do not
@@ -209,6 +244,7 @@ PrTextureCatalogState sourceOf(TextureCatalogNames& names, PrStringView name, co
     names.entries.push(entry);
     ++names.inFlight;
     CatalogJob* job = allocZeroed<CatalogJob>();
+    names.references.fetchAdd(1);
     job->names = &names;
     job->entry = entry;
     if (bytes != nullptr) {
@@ -251,7 +287,19 @@ void prTextureCatalogDestroy(PrTextureCatalog* PR_NULLABLE catalog) {
     if (catalog == nullptr)
         return;
     prMutexLock(&catalog->lock);
-    while (catalog->inFlight != 0)
+    // Opens that have not started are cancelled as the pool takes them, and the destroy waits only for those that are
+    // starting or calling the host. An open that waits for its bytes completes when they arrive, and its job holds the
+    // names until then. The names that are opening are forgotten first, so that an open that completes or is cancelled
+    // meanwhile frees its entry.
+    catalog->destroyed = true;
+    for (uint32_t at = catalog->entries.count; at-- > 0;) {
+        CatalogEntry* entry = catalog->entries.data[at];
+        if (entry->state == PrTextureCatalogState_Pending) {
+            removeAt(*catalog, at);
+            entry->forgotten = true;
+        }
+    }
+    while (catalog->running != 0)
         prConditionWait(&catalog->settled, &catalog->lock);
     // The failed entries are freed with the catalog. A live source keeps its name and its reference to the names until
     // it is released.
@@ -282,29 +330,12 @@ PrTextureCatalogState prTextureCatalogSourceFromBytes(PrTextureCatalog* catalog,
     return sourceOf(*catalog, name, bytes, out);
 }
 
-PrTextureCatalogState prTextureCatalogWait(PrTextureCatalog* catalog, PrStringView path,
-        const PrTextureSource* PR_NULLABLE* PR_NONNULL out) {
-    PrTextureCatalogState state = sourceOf(*catalog, path, nullptr, out);
-    while (state == PrTextureCatalogState_Pending) {
-        uint32_t hash = hashOf(path);
-        prMutexLock(&catalog->lock);
-        for (;;) {
-            uint32_t at = findName(*catalog, hash, path);
-            if (at == kHashMissing || catalog->entries.data[at]->state != PrTextureCatalogState_Pending)
-                break;
-            prConditionWait(&catalog->settled, &catalog->lock);
-        }
-        prMutexUnlock(&catalog->lock);
-        state = sourceOf(*catalog, path, nullptr, out);
-    }
-    return state;
-}
-
-void prTextureCatalogWaitAll(PrTextureCatalog* catalog) {
-    prMutexLock(&catalog->lock);
-    while (catalog->inFlight != 0)
-        prConditionWait(&catalog->settled, &catalog->lock);
-    prMutexUnlock(&catalog->lock);
+uint32_t prTextureCatalogOpening(const PrTextureCatalog* catalog) {
+    PrMutex* lock = const_cast<PrMutex*>(&catalog->lock);
+    prMutexLock(lock);
+    uint32_t opening = catalog->inFlight;
+    prMutexUnlock(lock);
+    return opening;
 }
 
 PrStatus prTextureCatalogStatus(PrTextureCatalog* catalog, PrStringView name) {

@@ -17,6 +17,7 @@
 #include "pr/geom.h"
 #include "pr/path.h"
 #include "pr/path_polyline.h"
+#include "pr/texture_cache.h"
 #include "pr/vec.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -39,6 +40,31 @@ void prDrawListHold(PrDrawList* list, void (*PR_NONNULL release)(void* PR_NULLAB
 // Holds a reference to `source` until the list is emptied or freed. A producer calls this for the source of each
 // texture region that a command draws, so that the texture cache keeps the region. The list must not be frozen.
 void prDrawListHoldSource(PrDrawList* list, const PrTextureSource* source);
+
+// An ask of a texture cache that a list's drawing lacks or approximates: the list leaves out the source's texture or
+// draws a smaller version of it, because the texture had not arrived when the list was recorded.
+typedef struct PrDrawAwaited {
+    const PrTextureSource* source;
+    PrTextureCacheAsk ask;
+} PrDrawAwaited;
+
+// Notes that the list's drawing of `source` lacks the texture that `ask` names, or approximates it, and holds a
+// reference to the source until the list is emptied or freed. A producer that asks a cache as it records calls this for
+// each ask that is not Ready, so that the list's holder learns that a later recording draws more. A list that embeds
+// this one, or names it as a source, awaits what this one does. The list must not be frozen.
+void prDrawListAwait(PrDrawList* list, const PrTextureSource* source, PrTextureCacheAsk ask);
+
+// Return the number of asks that the list's drawing awaits, and the ask at `index`. A holder that keeps the list asks
+// for them again in each frame, so that a trim does not cancel their realizations, and records the list again when the
+// cache reports an arrival.
+uint32_t prDrawListAwaitedCount(const PrDrawList* list);
+PrDrawAwaited prDrawListAwaited(const PrDrawList* list, uint32_t index);
+
+// Asks `cache` for `source` as prTextureCacheRealize does, and notes the answer in the list: the list holds the source
+// of a Ready or Partial region (prDrawListHoldSource), and awaits a Pending or Partial one (prDrawListAwait). Returns
+// the state, and writes the region for Ready and Partial. The list must not be frozen.
+PrTextureCacheState prDrawListRealize(PrDrawList* list, PrTextureCache* cache, const PrTextureSource* source,
+    PrTextureCacheAsk ask, PrTextureRegion* out);
 
 // Empties the list and keeps the storage. The list must not be frozen.
 void prDrawListClear(PrDrawList* list);

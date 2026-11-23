@@ -901,25 +901,24 @@ void stageImport(AppState& state, PrPixelView pixels) {
         state.import.message = "The clipboard holds no image.";
         return;
     }
-    // The clipboard's pixels become invalid when the call returns, so the import keeps a copy. The import encodes the
-    // copy when the user confirms it.
+    // The clipboard's pixels become invalid when the call returns, so the import keeps a copy, which it shows and
+    // encodes when the user confirms it.
     const PrTextureSource* image = prTextureSourceCreateCopy(pixels, PrPixelFormat_Rgba8, PrTextureAlpha_Straight);
     prTextureSourceRelease(state.import.image);
     state.import.image = image;
+    size_t row = size_t(pixels.extent.x) * 4;
+    state.import.pixels.resize(uint32_t(row * pixels.extent.y));
+    for (uint32_t y = 0; y < pixels.extent.y; ++y)
+        prMemCopy(state.import.pixels.data() + y * row, pixels.data + y * pixels.stride, row);
+    state.import.extent = pixels.extent;
     state.import.message.clear();
 }
 
 bool confirmImport(AppState& state) {
     if (state.import.image == nullptr)
         return false;
-    PrUVec2 extent = prTextureSourceDesc(state.import.image)->extent;
-    Array<uint8_t> rgba(size_t(extent.x) * extent.y * 4);
-    PrPixels read{rgba.data(), size_t(extent.x) * 4, extent};
-    PrPixelView pixels = prPixelsView(read);
-    if (!imageReadRgba8(state.import.image, PrTextureAlpha_Straight, read)) {
-        state.import.message = "The image could not be read.";
-        return false;
-    }
+    PrUVec2 extent = state.import.extent;
+    PrPixelView pixels{state.import.pixels.data(), size_t(extent.x) * 4, extent};
     size_t size = 0;
     prImageCodecSetEncode(state.codec, "image/png", pixels, nullptr, 0, &size);
     Array<uint8_t> png(static_cast<uint32_t>(size));

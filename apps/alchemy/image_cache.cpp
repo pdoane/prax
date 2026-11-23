@@ -76,23 +76,4 @@ const PrTextureSource* PR_NULLABLE imageDecode(const PrImageCodecSet* codec, con
     return image;
 }
 
-bool imageReadRgba8(const PrTextureSource* image, PrTextureAlpha alpha, PrPixels out) {
-    PrTextureConvertDesc convert = prTextureConvertDescDefault(PrGpuFormat_Rgba8);
-    if (prTextureSourceDesc(image)->alpha != PrTextureAlpha_None)
-        convert.alpha = alpha;
-    const PrTextureSource* chain = prTextureSourceCreateConvert(image, &convert);
-    PrTextureReadDesc first{.levelCount = 1, .layerCount = 1};
-    PrTextureRead* read = prTextureReadCreate(chain, &first);
-    prTextureReadWait(read);
-    bool ok = prTextureReadStatus(read) == PrStatus_Ok;
-    if (ok) {
-        size_t row = size_t(out.extent.x) * 4;
-        for (uint32_t y = 0; y < out.extent.y; ++y)
-            prMemCopy(out.data + y * out.stride, prTextureReadStorage(read) + y * row, row);
-    }
-    prTextureReadDestroy(read);
-    prTextureSourceRelease(chain);
-    return ok;
-}
-
 } // namespace alchemy

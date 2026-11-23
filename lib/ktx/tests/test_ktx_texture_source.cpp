@@ -8,6 +8,7 @@
 #include "pr/texture.h"
 
 #include "ktx/tests/ktx_fixture.h"
+#include "tools/harness/texture_await.h"
 
 #include "tools/harness/test.h"
 
@@ -74,10 +75,20 @@ struct CountedBytes {
     }
 };
 
+// Opens `bytes` with a set of the KTX format alone, without a codec.
+PrStatus openKtx(const PrBlobSource* bytes, const PrTextureLimits* PR_NULLABLE limits,
+        const PrTextureSource* PR_NULLABLE* PR_NONNULL out) {
+    PrTextureFormat* format = prKtxTextureFormatCreate(nullptr);
+    PrTextureFormatSet* set = prTextureFormatSetCreate(&format, 1);
+    PrStatus status = textureOpenAwait(set, bytes, "texture.ktx2", limits, out);
+    prTextureFormatSetDestroy(set);
+    return status;
+}
+
 // Returns a source of the KTX 2.0 file that `bytes` provides.
 const PrTextureSource* sourceOf(const PrBlobSource* bytes) {
     const PrTextureSource* source = nullptr;
-    REQUIRE(prKtxTextureSourceOpen(bytes, nullptr, nullptr, &source) == PrStatus_Ok);
+    REQUIRE(openKtx(bytes, nullptr, &source) == PrStatus_Ok);
     return source;
 }
 
@@ -93,8 +104,7 @@ bool produces(const PrTextureSource* source, PrGpuFormat format) {
 PrStatus readAll(const PrTextureSource* source, Array<uint8_t>* out) {
     PrTextureReadDesc desc = prTextureReadDescAll(prTextureSourceDesc(source));
     PrTextureRead* read = prTextureReadCreate(source, &desc);
-    prTextureReadWait(read);
-    PrStatus status = prTextureReadStatus(read);
+    PrStatus status = textureReadAwait(read);
     out->clear();
     if (status == PrStatus_Ok)
         out->append(PrByteView{prTextureReadStorage(read), prTextureReadSize(prTextureSourceDesc(source), &desc)});
@@ -135,7 +145,6 @@ PrGpuFormat answered(const PrTextureSource* source, const PrTextureNeed& need) {
 
 } // namespace pr_impl
 
-using namespace harness;
 using namespace pr_impl;
 
 TEST_SUITE_BEGIN("ktx");
@@ -293,10 +302,10 @@ TEST_CASE("a KTX file past the limits' extent on one side is refused, and one at
     CountedBytes bytes(ktxFile(37, PrUVec2{5, 4}, 1, texels, &size));
     PrTextureLimits limits{.extent = 4};
     const PrTextureSource* source = nullptr;
-    CHECK(prKtxTextureSourceOpen(bytes.source, nullptr, &limits, &source) == PrStatus_Limit);
+    CHECK(openKtx(bytes.source, &limits, &source) == PrStatus_Limit);
     CHECK(source == nullptr);
     limits.extent = 5;
-    REQUIRE(prKtxTextureSourceOpen(bytes.source, nullptr, &limits, &source) == PrStatus_Ok);
+    REQUIRE(openKtx(bytes.source, &limits, &source) == PrStatus_Ok);
     Array<uint8_t> read;
     CHECK(readAll(source, &read) == PrStatus_Ok);
     prTextureSourceRelease(source);

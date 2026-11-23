@@ -7,6 +7,7 @@
 #include "pr/float.h"
 #include "pr/mem.h"
 #include "pr/memory.h"
+#include "pr/raw_array.h"
 
 namespace pr_impl {
 namespace {
@@ -438,8 +439,9 @@ bool decodeBlock(Jpeg& jpeg, Scan& scan, Component& component, BitReader& reader
 }
 
 // Decodes the entropy-coded data of one scan. A single component walks its own blocks row by row. Several components
-// walk the interleaved MCUs (T.81 A.2).
-bool decodeScanData(Jpeg& jpeg, Scan& scan, BitReader& reader) {
+// walk the interleaved MCUs (T.81 A.2). Decodes the units of a scan. Returns Truncated if the bytes end inside the
+// scan, with the blocks before that decoded.
+PrStatus decodeScanData(Jpeg& jpeg, Scan& scan, BitReader& reader) {
     for (uint32_t index = 0; index < scan.count; ++index) {
         scan.components[index]->dcPrediction = 0;
     }
@@ -458,7 +460,10 @@ bool decodeScanData(Jpeg& jpeg, Scan& scan, BitReader& reader) {
             if (single) {
                 Component& component = *scan.components[0];
                 if (!decodeBlock(jpeg, scan, component, reader, blockAt(component, unitRow, unitColumn))) {
-                    return false;
+                    return reader.at + 1 >= reader.size ? PrStatus_Truncated : PrStatus_InvalidData;
+                }
+                if (reader.at + 1 >= reader.size && reader.usedPadding) {
+                    return PrStatus_Truncated;
                 }
                 continue;
             }
@@ -468,15 +473,18 @@ bool decodeScanData(Jpeg& jpeg, Scan& scan, BitReader& reader) {
                     for (uint32_t column = 0; column < component.h; ++column) {
                         int16_t* block = blockAt(component, unitRow * component.v + row, unitColumn * component.h + column);
                         if (!decodeBlock(jpeg, scan, component, reader, block)) {
-                            return false;
+                            return reader.at + 1 >= reader.size ? PrStatus_Truncated : PrStatus_InvalidData;
                         }
                     }
                 }
             }
+            if (reader.at + 1 >= reader.size && reader.usedPadding) {
+                return PrStatus_Truncated;
+            }
         }
         if (unit < total) {
             if (!readRestart(reader)) {
-                return false;
+                return reader.at + 1 >= reader.size ? PrStatus_Truncated : PrStatus_InvalidData;
             }
             for (uint32_t index = 0; index < scan.count; ++index) {
                 scan.components[index]->dcPrediction = 0;
@@ -484,7 +492,9 @@ bool decodeScanData(Jpeg& jpeg, Scan& scan, BitReader& reader) {
             scan.eobRun = 0;
         }
     }
-    return !reader.usedPadding;
+    if (reader.usedPadding)
+        return reader.at + 1 >= reader.size ? PrStatus_Truncated : PrStatus_InvalidData;
+    return PrStatus_Ok;
 }
 
 // The fixed-point constants of the inverse transform, with thirteen fractional bits (T.81 A.3.3, computed as a
@@ -682,14 +692,16 @@ uint32_t componentBlockSize(uint32_t blockSize, uint32_t factor, uint32_t larges
     return size < 8 ? size : 8;
 }
 
-void transformComponent(const Jpeg& jpeg, Component& component) {
+// Transforms the rows of blocks of the component from `firstRow` to before `endRow`, or every row.
+void transformComponent(const Jpeg& jpeg, Component& component, uint32_t firstRow = 0, uint32_t endRow = ~0u) {
     const uint32_t width = component.blockWidth;
     const uint32_t height = component.blockHeight;
     const size_t stride = size_t(component.blocksPerLineForMcu) * width;
     const bool full = width == 8 && height == 8;
     const ReducedBasis across(full ? 0 : width);
     const ReducedBasis down(full ? 0 : height);
-    for (uint32_t row = 0; row < component.blocksPerColumnForMcu; ++row) {
+    const uint32_t end = endRow < component.blocksPerColumnForMcu ? endRow : component.blocksPerColumnForMcu;
+    for (uint32_t row = firstRow; row < end; ++row) {
         for (uint32_t column = 0; column < component.blocksPerLineForMcu; ++column) {
             const int16_t* block = blockAt(component, row, column);
             uint8_t* out = component.samples + size_t(row) * height * stride + size_t(column) * width;
@@ -796,8 +808,9 @@ bool componentsAreRgb(const Jpeg& jpeg) {
     return jpeg.components[0].id == 'R' && jpeg.components[1].id == 'G' && jpeg.components[2].id == 'B';
 }
 
-// Writes canonical native rows, upsampling each component to full resolution.
-void writePixels(const Jpeg& jpeg, uint8_t* pixels) {
+// Writes canonical native rows from `firstRow` to before `endRow`, or every row, upsampling each component to full
+// resolution.
+void writePixels(const Jpeg& jpeg, uint8_t* pixels, uint32_t firstRow = 0, uint32_t endRow = ~0u) {
     size_t rowSize = size_t(jpeg.outWidth) + 8;
     uint8_t* storage = static_cast<uint8_t*>(prMemoryAlloc(rowSize * jpeg.componentCount));
     uint8_t* rows[kMaxComponents] = {};
@@ -807,7 +820,8 @@ void writePixels(const Jpeg& jpeg, uint8_t* pixels) {
     const bool rgb = jpeg.componentCount == 3 && componentsAreRgb(jpeg);
     const bool ycck = jpeg.componentCount == 4 && jpeg.adobeTransform == 2;
     const bool inverted = jpeg.componentCount == 4 && jpeg.adobeTransform >= 0;
-    for (uint32_t y = 0; y < jpeg.outHeight; ++y) {
+    const uint32_t end = endRow < jpeg.outHeight ? endRow : jpeg.outHeight;
+    for (uint32_t y = firstRow; y < end; ++y) {
         for (uint32_t index = 0; index < jpeg.componentCount; ++index) {
             upsampleRow(jpeg.components[index], jpeg, y, rows[index]);
         }
@@ -1099,9 +1113,13 @@ uint32_t profileChunks(PrByteView bytes, PrByteView chunks[PR_NONNULL kMaxProfil
     return total != 0 && seen == total ? total : 0;
 }
 
-bool decode(Jpeg& jpeg, const uint8_t* bytes, size_t size, uint8_t* pixels, size_t pixelsSize) {
+// Decodes the JPEG in `bytes` into `pixels`. Returns Truncated for bytes that end inside a scan or before the end of
+// the image: the scans that they hold are decoded, and the blocks that no scan reached have no coefficients. Bytes that
+// end before the first scan's data decode nothing, and are InvalidData.
+PrStatus decode(Jpeg& jpeg, const uint8_t* bytes, size_t size, uint8_t* pixels, size_t pixelsSize) {
     size_t at = 2;
     bool scanned = false;
+    bool truncated = true;
     while (at + 1 < size) {
         if (bytes[at] != 0xFF) {
             at += 1;
@@ -1116,24 +1134,28 @@ bool decode(Jpeg& jpeg, const uint8_t* bytes, size_t size, uint8_t* pixels, size
         const uint8_t marker = bytes[at + 1];
         at += 2;
         if (marker == 0xD9) {
+            truncated = false;
             break;
         }
         if (!hasSegment(marker)) {
             continue;
         }
         if (at + 2 > size) {
-            return false;
+            break;
         }
         const uint32_t length = prMemReadBeU16(bytes + at);
-        if (length < 2 || size_t(length) > size - at) {
-            return false;
+        if (length < 2) {
+            return PrStatus_InvalidData;
+        }
+        if (size_t(length) > size - at) {
+            break;
         }
         const uint8_t* segment = bytes + at + 2;
         const uint32_t segmentSize = length - 2;
         at += length;
         if (marker == 0xC0 || marker == 0xC1 || marker == 0xC2) {
             if (!readFrame(jpeg, segment, segmentSize, marker)) {
-                return false;
+                return PrStatus_InvalidData;
             }
             jpeg.outWidth = scaled(jpeg.width, jpeg.blockSize);
             jpeg.outHeight = scaled(jpeg.height, jpeg.blockSize);
@@ -1144,19 +1166,19 @@ bool decode(Jpeg& jpeg, const uint8_t* bytes, size_t size, uint8_t* pixels, size
             }
             if (uint64_t(jpeg.outWidth) * jpeg.outHeight * jpeg.componentCount != uint64_t(pixelsSize) ||
                     !allocatePlanes(jpeg)) {
-                return false;
+                return PrStatus_InvalidData;
             }
         } else if (marker == 0xDB) {
             if (!readQuantTables(jpeg, segment, segmentSize)) {
-                return false;
+                return PrStatus_InvalidData;
             }
         } else if (marker == 0xC4) {
             if (!readHuffTables(jpeg, segment, segmentSize)) {
-                return false;
+                return PrStatus_InvalidData;
             }
         } else if (marker == 0xDD) {
             if (segmentSize < 2) {
-                return false;
+                return PrStatus_InvalidData;
             }
             jpeg.restartInterval = prMemReadBeU16(segment);
         } else if (marker == 0xEE) {
@@ -1164,31 +1186,36 @@ bool decode(Jpeg& jpeg, const uint8_t* bytes, size_t size, uint8_t* pixels, size
         } else if (marker == 0xDA) {
             Scan scan = {};
             if (!readScan(jpeg, scan, segment, segmentSize)) {
-                return false;
+                return PrStatus_InvalidData;
             }
             BitReader reader = {};
             reader.bytes = bytes;
             reader.size = size;
             reader.at = at;
-            if (!decodeScanData(jpeg, scan, reader)) {
-                return false;
+            const PrStatus status = decodeScanData(jpeg, scan, reader);
+            if (status == PrStatus_InvalidData) {
+                return PrStatus_InvalidData;
             }
+            // A scan that the bytes cut before its data decodes nothing.
+            scanned = scanned || status == PrStatus_Ok || reader.at > at;
             at = reader.at;
-            scanned = true;
+            if (status == PrStatus_Truncated) {
+                break;
+            }
         } else if (marker >= 0xC3 && marker <= 0xCF) {
             // The frame types other than Huffman-coded sequential and progressive: lossless, hierarchical and
             // arithmetic coding.
-            return false;
+            return PrStatus_InvalidData;
         }
     }
     if (!jpeg.frame || !scanned) {
-        return false;
+        return PrStatus_InvalidData;
     }
     for (uint32_t index = 0; index < jpeg.componentCount; ++index) {
         transformComponent(jpeg, jpeg.components[index]);
     }
     writePixels(jpeg, pixels);
-    return true;
+    return truncated ? PrStatus_Truncated : PrStatus_Ok;
 }
 
 // Reads the density and the Exif data from the application segments of the JPEG in `bytes`, before its first scan. A
@@ -1327,6 +1354,297 @@ PrStatus inspect(const uint8_t* bytes, size_t size, const PrJpegLimits& limits, 
     return end && scan ? PrStatus_Ok : PrStatus_Truncated;
 }
 
+// The state of a JPEG whose bytes are appended (prJpegDecoderCreateStream). Each segment is read once it has arrived
+// whole. A scan decodes unit by unit as its data arrives: before a unit, the stream keeps what the unit changes, and a
+// unit whose data has not all arrived is undone and tried again once the bytes have grown by as many as it read. A unit
+// is therefore read a few times at most, and the coefficients of the frame accumulate across its scans.
+struct JpegStream {
+    RawArray<uint8_t> bytes;
+    PrJpegLimits limits;
+    uint64_t held;
+    size_t walked;                      // the offset of the next marker that the walk has not passed
+    bool described;
+    bool ended;
+    bool scanned;                       // a unit of a scan has decoded
+    PrStatus failed;
+    uint64_t work;
+    Jpeg jpeg;
+
+    // The scan that is arriving.
+    bool scanning;
+    Scan scan;
+    BitReader reader;
+    uint32_t unit;
+    uint32_t units;
+    uint32_t unitsWide;
+    size_t retryAt;                     // the count of bytes at which a unit that did not arrive whole is tried again
+
+    // The rows of MCUs that units changed since the last read, which a read transforms again.
+    uint32_t dirtyFrom;
+    uint32_t dirtyTo;
+    uint8_t* PR_NULLABLE exif;
+};
+
+// What a unit changes, kept before the unit decodes so that a unit whose data has not all arrived is undone.
+struct UnitState {
+    BitReader reader;
+    int32_t predictions[kMaxComponents];
+    uint32_t eobRun;
+    int16_t block[kBlockSamples];       // the block of a refinement scan, which adds to what it holds
+};
+
+// Returns the blocks of `unit` of the scan, and writes them to `blocks`: one block of a scan of one component, or the
+// blocks of every component of an MCU.
+uint32_t unitBlocks(const Jpeg& jpeg, Scan& scan, uint32_t unit, uint32_t unitsWide, int16_t** blocks,
+        Component** components) {
+    const uint32_t unitRow = unit / unitsWide;
+    const uint32_t unitColumn = unit % unitsWide;
+    if (scan.count == 1) {
+        blocks[0] = blockAt(*scan.components[0], unitRow, unitColumn);
+        components[0] = scan.components[0];
+        return 1;
+    }
+    (void)jpeg;
+    uint32_t count = 0;
+    for (uint32_t index = 0; index < scan.count; ++index) {
+        Component& component = *scan.components[index];
+        for (uint32_t row = 0; row < component.v; ++row) {
+            for (uint32_t column = 0; column < component.h; ++column) {
+                blocks[count] = blockAt(component, unitRow * component.v + row, unitColumn * component.h + column);
+                components[count] = &component;
+                ++count;
+            }
+        }
+    }
+    return count;
+}
+
+// Returns the row of MCUs that `unit` of the scan is in.
+uint32_t unitMcuRow(const Scan& scan, uint32_t unit, uint32_t unitsWide) {
+    return scan.count == 1 ? unit / unitsWide / scan.components[0]->v : unit / unitsWide;
+}
+
+// Decodes the units of the arriving scan whose data has arrived. Returns Ok when the scan is decoded or waits for
+// bytes, and InvalidData for data that does not decode.
+PrStatus streamUnits(JpegStream& s) {
+    Jpeg& jpeg = s.jpeg;
+    Scan& scan = s.scan;
+    s.reader.bytes = s.bytes.data;
+    s.reader.size = s.bytes.count;
+    const uint32_t interval = jpeg.restartInterval != 0 ? jpeg.restartInterval : s.units;
+    while (s.unit < s.units) {
+        if (s.bytes.count < s.retryAt && !s.ended)
+            return PrStatus_Ok;
+        const size_t start = s.reader.at;
+        if (s.unit != 0 && s.unit % interval == 0) {
+            BitReader kept = s.reader;
+            if (!readRestart(s.reader)) {
+                if (s.reader.at + 1 >= s.reader.size || kept.at + 1 >= s.reader.size) {
+                    s.reader = kept;
+                    if (s.ended) {
+                        s.scanning = false;
+                        return PrStatus_Ok;
+                    }
+                    s.retryAt = s.bytes.count + 1;
+                    return PrStatus_Ok;
+                }
+                return PrStatus_InvalidData;
+            }
+            for (uint32_t index = 0; index < scan.count; ++index)
+                scan.components[index]->dcPrediction = 0;
+            scan.eobRun = 0;
+        }
+        // The zero bits that a peek past the bytes that had arrived added to the reader are not data: they go, so that
+        // the reader reads the bytes that arrived since.
+        if (s.reader.marker && s.reader.zeroBits != 0 && !s.reader.usedPadding && s.reader.at + 1 >= s.reader.size &&
+                !s.ended) {
+            s.reader.buffer >>= s.reader.zeroBits;
+            s.reader.count -= s.reader.zeroBits;
+            s.reader.zeroBits = 0;
+            s.reader.marker = false;
+        }
+        int16_t* blocks[kMaxComponents * 16];
+        Component* components[kMaxComponents * 16];
+        const uint32_t count = unitBlocks(jpeg, scan, s.unit, s.unitsWide, blocks, components);
+        UnitState kept{.reader = s.reader, .eobRun = scan.eobRun};
+        for (uint32_t index = 0; index < scan.count; ++index)
+            kept.predictions[index] = scan.components[index]->dcPrediction;
+        const bool refining = jpeg.progressive && scan.approximationHigh != 0 && scan.spectralStart != 0;
+        if (refining)
+            prMemCopy(kept.block, blocks[0], sizeof(kept.block));
+        // A unit of a first scan sets the coefficients of its band, which start at zero.
+        if (!jpeg.progressive || (scan.approximationHigh == 0 && scan.spectralStart != 0)) {
+            for (uint32_t b = 0; b < count; ++b) {
+                for (uint32_t k = scan.spectralStart; k <= scan.spectralEnd; ++k)
+                    blocks[b][kZigZag[k]] = 0;
+            }
+        }
+        s.work += count * kBlockSamples / 8;
+        bool decoded = true;
+        for (uint32_t b = 0; b < count && decoded; ++b)
+            decoded = decodeBlock(jpeg, scan, *components[b], s.reader, blocks[b]);
+        const bool ranOut = s.reader.at + 1 >= s.reader.size && (s.reader.usedPadding || !decoded);
+        s.work += s.reader.at - start;
+        if (ranOut && !s.ended) {
+            // The unit's data has not all arrived: it is undone, and tried again once the bytes have grown as much.
+            s.reader = kept.reader;
+            scan.eobRun = kept.eobRun;
+            for (uint32_t index = 0; index < scan.count; ++index)
+                scan.components[index]->dcPrediction = kept.predictions[index];
+            if (refining)
+                prMemCopy(blocks[0], kept.block, sizeof(kept.block));
+            s.retryAt = s.bytes.count + (s.bytes.count - start) + 1;
+            return PrStatus_Ok;
+        }
+        if (!decoded || (s.reader.usedPadding && !ranOut))
+            return PrStatus_InvalidData;
+        const uint32_t row = unitMcuRow(scan, s.unit, s.unitsWide);
+        s.dirtyFrom = row < s.dirtyFrom ? row : s.dirtyFrom;
+        s.dirtyTo = row + 1 > s.dirtyTo ? row + 1 : s.dirtyTo;
+        // The first unit's read transforms every row once, so that the rows that no unit has reached show the mid gray
+        // of blocks without coefficients, as a file cut short does.
+        if (!s.scanned) {
+            s.dirtyFrom = 0;
+            s.dirtyTo = s.jpeg.mcusPerColumn;
+        }
+        s.scanned = true;
+        ++s.unit;
+        if (ranOut)
+            break;
+    }
+    s.scanning = false;
+    return PrStatus_Ok;
+}
+
+// Copies the profile and the Exif data of the segments before the first scan out of the stream's bytes, which move as
+// they grow, and fills the info as prJpegDecoderCreate does. `prefix` is the offset of the first scan's marker.
+PrStatus describeJpeg(JpegStream& s, PrJpegInfo* info, uint8_t* PR_NULLABLE* PR_NONNULL profile, size_t prefix) {
+    PrStatus status = inspect(s.bytes.data, prefix, s.limits, s.held, info);
+    if (status != PrStatus_Ok && status != PrStatus_Truncated)
+        return status;
+    PrByteView chunks[kMaxProfileChunks + 1];
+    uint32_t count = profileChunks(PrByteView{s.bytes.data, prefix}, chunks);
+    if (count != 0) {
+        size_t size = 0;
+        for (uint32_t i = 1; i <= count; ++i)
+            size += chunks[i].size;
+        *profile = static_cast<uint8_t*>(prMemoryAlloc(size));
+        size_t at = 0;
+        for (uint32_t i = 1; i <= count; ++i) {
+            prMemCopy(*profile + at, chunks[i].data, chunks[i].size);
+            at += chunks[i].size;
+        }
+        info->profile = PrByteView{*profile, size};
+    }
+    if (info->exif.size != 0) {
+        s.exif = static_cast<uint8_t*>(prMemoryAlloc(info->exif.size));
+        prMemCopy(s.exif, info->exif.data, info->exif.size);
+        info->exif = PrByteView{s.exif, info->exif.size};
+    }
+    s.described = true;
+    return PrStatus_Ok;
+}
+// Walks the stream's bytes from where the last walk stopped: reads each segment that has arrived whole, and decodes the
+// units of the scan that is arriving. Each byte is walked once, apart from the units that are tried again. `info`,
+// `profile`, `scratch` and `pixelsSize` are the decoder's, which the first scan's header fills.
+PrStatus walkJpeg(JpegStream& s, PrJpegInfo* info, uint8_t* PR_NULLABLE* PR_NONNULL profile,
+        uint8_t* PR_NULLABLE* PR_NONNULL scratch, size_t* pixelsSize) {
+    Jpeg& jpeg = s.jpeg;
+    for (;;) {
+        if (s.scanning) {
+            PrStatus status = streamUnits(s);
+            if (status != PrStatus_Ok || s.scanning)
+                return status;
+            s.walked = s.reader.at;
+            continue;
+        }
+        const uint8_t* bytes = s.bytes.data;
+        const size_t size = s.bytes.count;
+        if (s.walked == 0) {
+            if (size < 2)
+                return PrStatus_Ok;
+            if (!prJpegHasSignature(PrByteView{bytes, size}))
+                return PrStatus_NotSupported;
+            s.walked = 2;
+        }
+        // The bytes before a marker are fill, and a run of 0xFF is one marker's prefix.
+        while (s.walked < size && bytes[s.walked] != 0xFF)
+            ++s.walked;
+        while (s.walked + 1 < size && bytes[s.walked + 1] == 0xFF)
+            ++s.walked;
+        if (s.walked + 1 >= size)
+            return PrStatus_Ok;
+        const uint8_t marker = bytes[s.walked + 1];
+        if (marker == 0xD9) {
+            s.ended = true;
+            s.walked += 2;
+            return PrStatus_Ok;
+        }
+        if (!hasSegment(marker)) {
+            s.walked += 2;
+            continue;
+        }
+        if (size - s.walked < 4)
+            return PrStatus_Ok;
+        const uint32_t length = prMemReadBeU16(bytes + s.walked + 2);
+        if (length < 2)
+            return PrStatus_InvalidData;
+        if (size - s.walked - 2 < length)
+            return PrStatus_Ok;
+        const uint8_t* segment = bytes + s.walked + 4;
+        const uint32_t segmentSize = length - 2;
+        s.work += length + 2;
+        if (marker == 0xC0 || marker == 0xC1 || marker == 0xC2) {
+            if (!readFrame(jpeg, segment, segmentSize, marker))
+                return PrStatus_InvalidData;
+            jpeg.outWidth = jpeg.width;
+            jpeg.outHeight = jpeg.height;
+            for (uint32_t index = 0; index < jpeg.componentCount; ++index) {
+                jpeg.components[index].blockWidth = 8;
+                jpeg.components[index].blockHeight = 8;
+            }
+            if (uint64_t(jpeg.width) * jpeg.height > s.limits.pixels || !allocatePlanes(jpeg))
+                return PrStatus_Limit;
+        } else if (marker == 0xDB) {
+            if (!readQuantTables(jpeg, segment, segmentSize))
+                return PrStatus_InvalidData;
+        } else if (marker == 0xC4) {
+            if (!readHuffTables(jpeg, segment, segmentSize))
+                return PrStatus_InvalidData;
+        } else if (marker == 0xDD) {
+            if (segmentSize < 2)
+                return PrStatus_InvalidData;
+            jpeg.restartInterval = prMemReadBeU16(segment);
+        } else if (marker == 0xEE) {
+            readAdobe(jpeg, segment, segmentSize);
+        } else if (marker == 0xDA) {
+            if (!s.described) {
+                PrStatus status = describeJpeg(s, info, profile, s.walked);
+                if (status != PrStatus_Ok)
+                    return status;
+                *pixelsSize = size_t(info->extent.x) * info->components * info->extent.y;
+                *scratch = static_cast<uint8_t*>(prMemoryAllocZeroed(*pixelsSize));
+            }
+            s.scan = Scan{};
+            if (!readScan(jpeg, s.scan, segment, segmentSize))
+                return PrStatus_InvalidData;
+            for (uint32_t index = 0; index < s.scan.count; ++index)
+                s.scan.components[index]->dcPrediction = 0;
+            const bool single = s.scan.count == 1;
+            s.unitsWide = single ? s.scan.components[0]->blocksPerLine : jpeg.mcusPerLine;
+            const uint32_t unitsHigh = single ? s.scan.components[0]->blocksPerColumn : jpeg.mcusPerColumn;
+            s.units = s.unitsWide * unitsHigh;
+            s.unit = 0;
+            s.retryAt = 0;
+            s.reader = BitReader{.at = s.walked + 2 + length};
+            s.scanning = true;
+        } else if (marker >= 0xC3 && marker <= 0xCF) {
+            // The frame types other than Huffman-coded sequential and progressive.
+            return PrStatus_NotSupported;
+        }
+        s.walked += 2 + length;
+    }
+}
 } // namespace
 
 // A JPEG image open for reading. The scratch pixels hold the decoded image, tightly packed, before it is copied out.
@@ -1336,6 +1654,7 @@ struct JpegDecoder {
     uint8_t* scratch;
     size_t pixelsSize;                  // the size of the image at its full extent, which the scratch holds
     uint8_t* PR_NULLABLE profile;       // the joined chunks of an ICC profile that is in more than one segment
+    JpegStream* PR_NULLABLE stream;     // the state of a decoder whose bytes are appended
 };
 
 } // namespace pr_impl
@@ -1402,6 +1721,15 @@ PrStatus prJpegDecoderCreate(PrByteView bytes, const PrJpegLimits* PR_NULLABLE l
 void prJpegDecoderDestroy(PrJpegDecoder* PR_NULLABLE decoder) {
     if (decoder == nullptr)
         return;
+    if (JpegStream* stream = decoder->stream) {
+        for (Component& component : stream->jpeg.components) {
+            prMemoryFree(component.coefficients);
+            prMemoryFree(component.samples);
+        }
+        stream->bytes.reset();
+        prMemoryFree(stream->exif);
+        prMemoryFree(stream);
+    }
     prMemoryFree(decoder->scratch);
     prMemoryFree(decoder->profile);
     prMemoryFree(decoder);
@@ -1417,23 +1745,86 @@ PrUVec2 prJpegReducedExtent(PrUVec2 extent, uint32_t reduction) {
     return PrUVec2{scaled(extent.x, blockSize), scaled(extent.y, blockSize)};
 }
 
+PrStatus prJpegDecoderCreateStream(const PrJpegLimits* PR_NULLABLE limits, uint64_t held,
+        PrJpegDecoder* PR_NULLABLE* PR_NONNULL out) {
+    PrJpegDecoder* decoder = allocZeroed<PrJpegDecoder>();
+    JpegStream* stream = allocZeroed<JpegStream>();
+    stream->limits = limits != nullptr ? *limits : prJpegLimitsDefault();
+    stream->held = held + sizeof(PrJpegDecoder) + sizeof(JpegStream);
+    stream->jpeg.adobeTransform = -1;
+    stream->jpeg.blockSize = 8;
+    stream->dirtyFrom = ~0u;
+    decoder->stream = stream;
+    *out = decoder;
+    return PrStatus_Ok;
+}
+
+PrStatus prJpegDecoderAppend(PrJpegDecoder* decoder, PrByteView bytes, bool end) {
+    JpegStream& s = *decoder->stream;
+    if (s.failed != PrStatus_Ok)
+        return s.failed;
+    if (s.bytes.count + bytes.size > s.limits.workingBytes) {
+        s.failed = PrStatus_Limit;
+        return s.failed;
+    }
+    if (bytes.size != 0)
+        s.bytes.append(bytes.data, uint32_t(bytes.size));
+    s.work += bytes.size;
+    // Bytes that end leave no unit waiting: the last one decodes as far as they go.
+    if (end && !s.ended) {
+        s.ended = true;
+        s.retryAt = 0;
+    }
+    s.failed = walkJpeg(s, &decoder->info, &decoder->profile, &decoder->scratch, &decoder->pixelsSize);
+    if (s.failed != PrStatus_Ok)
+        return s.failed;
+    return s.ended && !s.scanning ? PrStatus_Ok : PrStatus_Truncated;
+}
+
+uint64_t prJpegDecoderWork(const PrJpegDecoder* decoder) {
+    return decoder->stream != nullptr ? decoder->stream->work : 0;
+}
+
 PrStatus prJpegDecoderRead(PrJpegDecoder* decoder, uint32_t reduction, PrPixels output) {
     PR_ASSERT(reduction < kPrJpegReductionCount);
     const PrUVec2 extent = prJpegReducedExtent(decoder->info.extent, reduction);
     const size_t rowBytes = size_t(extent.x) * decoder->info.components;
     PR_ASSERT(output.extent.x == extent.x && output.extent.y == extent.y);
     PR_ASSERT(output.stride >= rowBytes);
+    if (JpegStream* s = decoder->stream) {
+        // A stream reads at its full extent. The rows of MCUs that changed since the last read transform again, with a
+        // row beside them, which their upsampling reads.
+        if (reduction != 0 || !s->scanned)
+            return PrStatus_InvalidData;
+        Jpeg& jpeg = s->jpeg;
+        if (s->dirtyFrom < s->dirtyTo) {
+            const uint32_t from = s->dirtyFrom > 0 ? s->dirtyFrom - 1 : 0;
+            const uint32_t to = s->dirtyTo + 1;
+            for (uint32_t index = 0; index < jpeg.componentCount; ++index) {
+                Component& component = jpeg.components[index];
+                transformComponent(jpeg, component, from * component.v, to * component.v);
+            }
+            const uint32_t mcuHeight = jpeg.maxV * 8;
+            writePixels(jpeg, decoder->scratch, from * mcuHeight, to * mcuHeight);
+            s->work += uint64_t(to - from) * mcuHeight * jpeg.width * jpeg.componentCount;
+            s->dirtyFrom = ~0u;
+            s->dirtyTo = 0;
+        }
+        for (uint32_t row = 0; row < output.extent.y; ++row)
+            prMemCopy(output.data + size_t(row) * output.stride, decoder->scratch + size_t(row) * rowBytes, rowBytes);
+        return s->ended && !s->scanning ? PrStatus_Ok : PrStatus_Truncated;
+    }
     Jpeg jpeg = {};
     jpeg.adobeTransform = -1;
     jpeg.blockSize = 8u >> reduction;
-    const bool ok = decode(jpeg, decoder->bytes.data, decoder->bytes.size, decoder->scratch, rowBytes * extent.y);
+    const PrStatus status = decode(jpeg, decoder->bytes.data, decoder->bytes.size, decoder->scratch, rowBytes * extent.y);
     for (Component& component : jpeg.components) {
         prMemoryFree(component.coefficients);
         prMemoryFree(component.samples);
     }
-    if (!ok)
+    if (status == PrStatus_InvalidData)
         return PrStatus_InvalidData;
     for (uint32_t row = 0; row < output.extent.y; ++row)
         prMemCopy(output.data + size_t(row) * output.stride, decoder->scratch + size_t(row) * rowBytes, rowBytes);
-    return PrStatus_Ok;
+    return status;
 }

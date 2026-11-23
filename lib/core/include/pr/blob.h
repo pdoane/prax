@@ -9,6 +9,7 @@
 
 #include "pr/base.h"
 #include "pr/byte_view.h"
+#include "pr/notifier.h"
 #include "pr/status.h"
 #include "pr/string_view.h"
 
@@ -60,6 +61,13 @@ PrBlob* prBlobSlice(PrBlob* blob, uint64_t offset, uint64_t size);
 // That may be the calling thread, during the call: a source of bytes in memory completes at once, and a source of the
 // network completes later. The caller learns of the completion from a callback, by polling, or by waiting. Waiting
 // blocks the thread. In a program that suspends (JSPI), it suspends the program instead.
+//
+// Arriving bytes. The bytes of a resource may still be arriving, as from the network or from a host that feeds them
+// (PrBlobFeed). Such a source says how many bytes from the start have arrived and whether they are complete or failed
+// (prBlobSourceProgress), and notifies its notifier as that changes. A read of it completes once its range has arrived,
+// or the bytes end or fail, so a consumer that wants every byte reads it as it reads any source. A consumer that shows
+// what it can while the bytes arrive reads the bytes that have arrived, which completes at once, and reads again as
+// more arrive. The bytes that have arrived never change, and stay readable if the rest fail.
 
 // A provider of a resource's bytes.
 typedef struct PrBlobSource PrBlobSource;
@@ -90,12 +98,28 @@ typedef void (*PrBlobSourceStartFn)(void* PR_NULLABLE context, PrBlobRead* read)
 // Called with the source's `context` when the last reference to the source is released, on the releasing thread.
 typedef void (*PrBlobSourceReleaseFn)(void* PR_NULLABLE context);
 
+// What has arrived of a resource's bytes.
+typedef struct PrBlobProgress {
+    uint64_t available;                     // bytes from the start that a read returns without waiting
+    PrStatus status;                        // Ok, or why the bytes stopped arriving
+    bool complete;                          // no more bytes arrive: every byte is there, or the bytes failed
+} PrBlobProgress;
+
+// Returns what has arrived of the bytes. It is called with the source's `context`, on any thread.
+typedef PrBlobProgress (*PrBlobSourceProgressFn)(void* PR_NULLABLE context);
+
 // What a source is created with.
 typedef struct PrBlobSourceDesc {
     PrBlobSourceStartFn start;
     PrBlobSourceReleaseFn PR_NULLABLE release;
     void* PR_NULLABLE context;              // valid until `release` is called with it
     uint64_t size;                          // of the resource in bytes, or kPrBlobSizeUnknown
+
+    // For bytes that are still arriving: the function that says what has arrived, and the notifier that the provider
+    // notifies after more bytes arrive and after they end or fail. The source retains the notifier. Both are null for a
+    // resource whose bytes are all there.
+    PrBlobSourceProgressFn PR_NULLABLE progress;
+    PrNotifier* PR_NULLABLE notifier;
 } PrBlobSourceDesc;
 
 // Creates a source. The caller holds the one reference.
@@ -119,6 +143,14 @@ void prBlobSourceRelease(const PrBlobSource* PR_NULLABLE source);
 
 // Returns the size of the resource in bytes, or kPrBlobSizeUnknown if the provider does not know it.
 uint64_t prBlobSourceSize(const PrBlobSource* source);
+
+// Returns what has arrived of the source's bytes. A source whose bytes are all there is complete, with its size
+// available.
+PrBlobProgress prBlobSourceProgress(const PrBlobSource* source);
+
+// Returns the notifier of a source whose bytes are still arriving, which is notified as its progress changes, or null
+// for a source whose bytes are all there. It is valid while the source is.
+PrNotifier* PR_NULLABLE prBlobSourceNotifier(const PrBlobSource* source);
 
 // What a read asks for. The bytes of `range` go to `storage`, or to a blob if `storage` is null. Storage holds as many
 // bytes as the range's size, so a read into storage needs a range of known size. `done` is called when the read
@@ -173,6 +205,40 @@ uint8_t* PR_NULLABLE prBlobReadStorage(const PrBlobRead* read);
 //
 // The read's `done` callback runs during the call. A read must be completed exactly once.
 void prBlobReadComplete(PrBlobRead* read, PrStatus status, PrBlob* PR_NULLABLE bytes, uint64_t byteCount);
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Feeds
+//
+// A feed is the provider of a resource whose bytes a host hands over as they arrive: it appends each piece, and then
+// ends the bytes or fails them. One thread at a time writes to a feed, which asserts it; any thread may read its
+// source. The feed's source holds every byte that was appended, for as long as it lives, and serves reads of them as a
+// source of arriving bytes does. A host that fetches a resource appends the body as it is read (pr/fetch.h), ends it at
+// the fetch's End and fails it at Fail.
+
+// The provider of a resource whose bytes a host appends.
+typedef struct PrBlobFeed PrBlobFeed;
+
+// Creates a feed of a resource of `size` bytes, or of kPrBlobSizeUnknown.
+PrBlobFeed* prBlobFeedCreate(uint64_t size);
+
+// Stops feeding: a feed whose bytes have not ended fails with Lost. Its source stays valid, with the bytes that were
+// appended.
+void prBlobFeedDestroy(PrBlobFeed* PR_NULLABLE feed);
+
+// Returns the source of the feed's bytes, which is valid while the feed is. A consumer retains it to keep it longer.
+const PrBlobSource* prBlobFeedSource(const PrBlobFeed* feed);
+
+// Appends `bytes` to the resource, completes the reads that they satisfy, and notifies the source's notifier. Bytes
+// appended after the end or a failure are ignored.
+void prBlobFeedAppend(PrBlobFeed* feed, PrByteView bytes);
+
+// Ends the bytes: the resource is what was appended. Completes the reads that wait, with the bytes that their ranges
+// cover, and notifies.
+void prBlobFeedEnd(PrBlobFeed* feed);
+
+// Fails the bytes with `status`, which is not Ok. Completes the reads that wait with `status`, and notifies. A later
+// read of bytes that had arrived still reads them, and a read past them fails.
+void prBlobFeedFail(PrBlobFeed* feed, PrStatus status);
 
 #if defined(__cplusplus)
 }

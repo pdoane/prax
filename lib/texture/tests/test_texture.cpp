@@ -8,7 +8,11 @@
 #include "pr/texture.h"
 #include "pr/texture_backend.h"
 
+#include "tools/harness/texture_await.h"
+
 #include "tools/harness/test.h"
+
+using namespace harness;
 
 namespace pr_impl {
 
@@ -77,8 +81,7 @@ struct Bits {
 PrStatus readAll(const PrTextureSource* source, Array<uint8_t>* out) {
     PrTextureReadDesc desc = prTextureReadDescAll(prTextureSourceDesc(source));
     PrTextureRead* read = prTextureReadCreate(source, &desc);
-    prTextureReadWait(read);
-    PrStatus status = prTextureReadStatus(read);
+    PrStatus status = textureReadAwait(read);
     out->clear();
     if (status == PrStatus_Ok)
         out->append(PrByteView{prTextureReadStorage(read), prTextureReadSize(prTextureSourceDesc(source), &desc)});
@@ -116,7 +119,7 @@ struct FakeFormat {
     static bool supportsType(const PrTextureFormat*, PrStringView type) { return type == "image/png"; }
 
     static PrStatus create(const PrTextureFormat* record, const PrBlobSource*, const PrBlob*, const PrTextureLimits*,
-            const PrTextureSource* PR_NULLABLE* PR_NONNULL out) {
+            bool, const PrTextureSource* PR_NULLABLE* PR_NONNULL out) {
         const FakeFormat* format = static_cast<const Record*>(record)->fake;
         ++format->opened;
         *out = format->status == PrStatus_Ok ? format->bits.source(PrGpuFormat_Rgba8, {1, 1}) : nullptr;
@@ -140,7 +143,6 @@ constexpr uint8_t kPngSignature[8] = {0x89, 'P', 'N', 'G', 0x0d, 0x0a, 0x1a, 0x0
 
 } // namespace pr_impl
 
-using namespace harness;
 using namespace pr_impl;
 
 TEST_SUITE_BEGIN("texture");
@@ -466,7 +468,7 @@ TEST_CASE("a format set opens bytes with the first format of their media type th
     PrBlobSource* bytes = prBlobSourceCreateBlob(blob);
     prBlobRelease(blob);
     const PrTextureSource* source = nullptr;
-    CHECK(prTextureFormatSetRead(opener, bytes, "a.png", nullptr, &source) == PrStatus_InvalidData);
+    CHECK(textureOpenAwait(opener, bytes, "a.png", nullptr, &source) == PrStatus_InvalidData);
     CHECK(source == nullptr);
     CHECK(first.opened == 1);
     CHECK(second.opened == 1);
@@ -477,7 +479,7 @@ TEST_CASE("a format set opens bytes with the first format of their media type th
     blob = prBlobCopy(PrByteView{text, 4});
     bytes = prBlobSourceCreateBlob(blob);
     prBlobRelease(blob);
-    CHECK(prTextureFormatSetRead(opener, bytes, "a.txt", nullptr, &source) == PrStatus_NotSupported);
+    CHECK(textureOpenAwait(opener, bytes, "a.txt", nullptr, &source) == PrStatus_NotSupported);
     prBlobSourceRelease(bytes);
     prTextureFormatSetDestroy(opener);
 

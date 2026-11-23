@@ -5,11 +5,13 @@
 #include "pr/mem.h"
 #include "pr/psd.h"
 
-#include "psd/tests/psd_fixture.h"
+#include "tools/harness/psd_document.h"
 
 #include "tools/harness/test.h"
 
 extern "C" int prTestPsdCApi(void);
+
+using namespace harness;
 
 namespace pr_impl {
 

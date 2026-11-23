@@ -161,16 +161,17 @@ void drawPdf(PdfSource& pdf, PrDrawList* list, float width, float height, float 
             continue;
         PrRect placed{box.left + at.x, box.top + at.y, box.right + at.x, box.bottom + at.y};
         PrUVec2 extent = prTextureSourceDesc(pdf.rasters[i])->extent;
+        // A later draw may release the raster while a pane still renders this list, so the list holds it, and awaits a
+        // texture that has not arrived.
         PrTextureRegion region{};
-        if (pdf.textures == nullptr ||
-                prTextureCacheWait(pdf.textures, pdf.rasters[i], prTextureCacheAskEncoded(0), &region) !=
-                PrTextureCacheState_Ready)
+        PrTextureCacheState state = PrTextureCacheState_Pending;
+        if (pdf.textures != nullptr)
+            state = prDrawListRealize(list, pdf.textures, pdf.rasters[i], prTextureCacheAskEncoded(0), &region);
+        if (state != PrTextureCacheState_Ready && state != PrTextureCacheState_Partial)
             continue;
         PrDrawSource source = prDrawSourceRegion(&region, PrRect{0, 0, float(extent.x), float(extent.y)}, 0);
         PrDrawBrush brush = prDrawBrushImage(source, placed, PrDrawSampling_Linear);
         prDrawListRect(list, placed, {.brush = &brush});
-        // A later draw may release the raster while a pane still renders this list, so the list holds it.
-        prDrawListHoldSource(list, pdf.rasters[i]);
     }
 }
 

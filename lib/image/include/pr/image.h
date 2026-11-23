@@ -224,6 +224,26 @@ PrStatus prImageDecoderOpen(PrImageDecoder* decoder, PrImageSource source, const
 // Closes the open image, if any.
 void prImageDecoderClose(PrImageDecoder* decoder);
 
+// Streams. An image whose bytes arrive in pieces opens as a stream: the caller appends each piece, and the decoder
+// decodes what the pieces complete. A codec that streams keeps its state from one piece to the next, so the work of all
+// the pieces is proportional to the file and its pixels, however the bytes are divided: PNG inflates and unfilters the
+// rows as they arrive, JPEG decodes the units of each scan as their data arrives, and GIF expands the codes of the
+// frame that is arriving. Any other codec keeps the bytes until they end, and then opens them whole.
+
+// Closes the open image, if any, and opens a stream within `limits`, or the defaults if they are null. Its info is zero
+// until the appended bytes describe the image.
+PrStatus prImageDecoderOpenStream(PrImageDecoder* decoder, const PrImageLimits* PR_NULLABLE limits);
+
+// Appends the next bytes of the stream's image. `end` says that no bytes follow. Returns Truncated while the image is
+// not whole, which the reads also say, Ok once it is, NotSupported if no codec recognizes the first bytes, and the
+// failures of prImageDecoderOpen, which the stream keeps. Once the info has an extent, the reads read what has arrived:
+// the frames that have begun, each as far as it has arrived, with Truncated for one that has not arrived whole.
+PrStatus prImageDecoderAppend(PrImageDecoder* decoder, PrByteView bytes, bool end);
+
+// Returns the work that a stream's appends and reads have done, as its codec counts it: the bytes that they read, and
+// the samples that they produced. A caller measures that the work is proportional to the file and its pixels with it.
+uint64_t prImageDecoderWork(const PrImageDecoder* decoder);
+
 // The functions below read the open image.
 
 // Returns information about the open image. The view of its ICC profile stays valid until the image is closed.
@@ -257,6 +277,12 @@ PrStatus prImageDecoderReadLevel(PrImageDecoder* decoder, uint32_t frame, uint32
 
 // Returns the extent of `preview` of the open image, which it must have.
 PrUVec2 prImageDecoderPreviewExtent(const PrImageDecoder* decoder, uint32_t preview);
+
+// Returns true if `preview` of the open image is a picture that the file embeds before the image's data, such as the
+// thumbnail of a JPEG's Exif data or of a PSD's resources, which reads from the bytes that hold it alone. A preview
+// that the image's data reduces to, as a JPEG's decodes at a quarter and an eighth are, is not embedded. A consumer of
+// bytes that are still arriving reads an embedded preview from the bytes that have arrived.
+bool prImageDecoderPreviewEmbedded(const PrImageDecoder* decoder, uint32_t preview);
 
 // Decodes `preview` into `output`, which must have the image's format and the preview's extent. Returns OutOfRange if
 // the image has no such preview. After a failure, the pixels are unspecified.

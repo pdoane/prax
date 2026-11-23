@@ -113,21 +113,53 @@ struct CacheHolders {
     uint32_t entries;
 };
 
-// The time, in seconds of the cache's clock, for which a source plays after the last ask for it.
+// The time, in seconds of the cache's clock, for which a source plays on a timeline after the last ask for it there,
+// and the number of trims that must pass too. A consumer that records on another thread asks less often than the host's
+// frames end, so one frame without an ask is not enough.
 constexpr double kPlayedFor = 1;
+constexpr uint64_t kPlayedTrims = 2;
 
-// A source that changes over time and that a consumer has asked for within the last kPlayedFor seconds. `current` is
-// the picture that the source shows at the cache's time. `shown` is the last picture that an ask was answered with
-// whole, which asks are answered with until `current` has arrived, however many pictures the source shows meanwhile.
-// The player holds a reference to each. `serial` is the source's serial of `current`, and `next` the time at which the
-// source shows another picture, or zero.
+// The id of the timeline on which prTextureCacheRealize shows a source whose picture changes when it notifies: one that
+// stays at its start. No timeline that prTextureTimelineCreate makes has it.
+constexpr uint64_t kStillTimeline = ~uint64_t(0);
+
+struct CacheShow;
+
+// What a source showed on one timeline at the last ask that asked the source, and when that changes. `current` is that
+// picture. `shown` is the last picture that an ask was answered with whole, which asks are answered with until
+// `current` has arrived, however many pictures the source shows meanwhile. The player holds a reference to each.
 struct CachePlayer {
-    const PrTextureSource* source;
+    CacheShow* show;
+    uint64_t timeline;                  // the id of the timeline, or zero for the cache's own
+    double started;                     // for the cache's own timeline, the cache's time at its first ask
     const PrTextureSource* PR_NULLABLE current;
+    uint64_t serial;                    // the source's serial of `current`
+    bool complete;                      // false if `current` is an approximation
+    PrStatus status;
+    double askedTime;                   // the timeline's time at which the source was last asked
+    double next;                        // the timeline's time at which the source shows another picture
+    bool notifies;                      // the source notifies when it shows another picture
+    uint64_t notices;                   // the count of the source's notifier before the source was last asked
     const PrTextureSource* PR_NULLABLE shown;
-    uint64_t serial;
-    double next;
-    double askedAt;                     // the cache's time at the last ask for the source
+    uint64_t shownSerial;
+    bool shownComplete;
+    double deadline;                    // the cache's time at which `next` comes, or infinity
+    double askedAt;                     // the cache's time at the last ask
+    uint64_t askedTrim;                 // the value of `trims` at the last ask
+    CachePlayer* PR_NULLABLE newer;     // neighbors in the list of players by their last ask
+    CachePlayer* PR_NULLABLE older;
+    CachePlayer* PR_NULLABLE nextTimed; // neighbors in the list of players whose deadline is finite
+    CachePlayer* PR_NULLABLE prevTimed;
+    bool timed;                         // in that list
+};
+
+// A source that the cache plays, with its player on each timeline that asks for it. A notification of the source's
+// notifier reports an arrival, so that the consumers ask again.
+struct CacheShow {
+    const PrTextureSource* source;      // the show holds a reference
+    uint64_t observer;                  // of the source's notifier, or zero
+    RawArray<CachePlayer*> players;
+    uint32_t at;                        // its position in the cache's `shows`
 };
 
 struct TextureCache;
@@ -171,11 +203,16 @@ struct TextureCache {
     uint64_t realizations;
     Atomic<uint64_t> arrivals;      // number of realizations that have arrived; a consumer reads it without the lock
     bool srgbViews;                 // true if the device views textures through their other sRGB form
+    bool stopping;                  // a destroy or a change of device is under way: a job that has not run is cancelled
 
-    // The sources that the cache plays, indexed by source id, and the time of the host's frame, once the host has set
-    // one.
-    RawArray<CachePlayer> players;
-    HashIndex playerIndex;
+    // The sources that the cache plays, indexed by source id. Their players are in a list by their last ask, oldest
+    // first for a trim, and the players whose pictures change at a time are in a list of their own, which the host's
+    // frames walk. `time` is the time of the host's frame, and `timed` says that the host has set one.
+    RawArray<CacheShow*> shows;
+    HashIndex showIndex;
+    CachePlayer* PR_NULLABLE newestPlayer;
+    CachePlayer* PR_NULLABLE oldestPlayer;
+    CachePlayer* PR_NULLABLE timedPlayers;
     double time;
     bool timed;
 };
@@ -224,6 +261,11 @@ uint32_t versionFor(const PrTextureSource* source, uint32_t detail) {
             return i;
     }
     return count;
+}
+
+// Returns true if a preview of `source` has the detail of `ask`, so that the ask reads the preview.
+bool previewServes(const PrTextureSource* source, const PrTextureCacheAsk& ask) {
+    return versionFor(source, ask.detail) < prTextureSourcePreviewCount(source);
 }
 
 // Returns the source of version `version` of `source`.
@@ -1103,7 +1145,8 @@ void finish(CacheJob* job, PrStatus status, PrTexture texture) {
     }
     --c.inFlight;
     RawArray<CacheJob*> next;
-    pump(c, &next);
+    if (!c.stopping)
+        pump(c, &next);
     prConditionBroadcast(&c.settled);
     prMutexUnlock(&c.lock);
     launch(c, &next);
@@ -1111,6 +1154,25 @@ void finish(CacheJob* job, PrStatus status, PrTexture texture) {
 
 void run(void* PR_NULLABLE context) {
     CacheJob* job = static_cast<CacheJob*>(context);
+    // A job that a destroy or a change of device finds before it runs is cancelled when it is taken off the pool's
+    // queue, so that the stop waits only for the realizations that are running.
+    TextureCache& c = *job->cache;
+    prMutexLock(&c.lock);
+    if (c.stopping) {
+        CacheEntry* entry = job->entry;
+        entry->started = false;
+        entry->state = PrTextureCacheState_Failed;
+        entry->status = PrStatus_Lost;
+        enlist(c, entry, CacheList_Failed, true);
+        ++c.cancelled;
+        --c.inFlight;
+        prTextureSourceRelease(job->chain);
+        prMemoryFree(job);
+        prConditionBroadcast(&c.settled);
+        prMutexUnlock(&c.lock);
+        return;
+    }
+    prMutexUnlock(&c.lock);
     if (job->packed) {
         // The texels of the slot are read into the page in the way that a source is read into a texture of its own.
         PrTextureReadDesc read{
@@ -1135,43 +1197,112 @@ void run(void* PR_NULLABLE context) {
         }, job);
 }
 
-// Blocks until every realization has arrived or failed. That covers the realizations in flight and the waiting ones.
-// The waiting ones start as those in flight make room.
-void waitAll(TextureCache& c) {
-    prMutexLock(&c.lock);
-    while (c.inFlight != 0 || c.queue.count != 0)
-        prConditionWait(&c.settled, &c.lock);
-    prMutexUnlock(&c.lock);
-}
-
-// Cancels the realizations that wait to start, and blocks until none is in flight. Returns with the lock held.
+// Cancels the realizations that wait to start, in the cache's queue or in the pool's, and waits until none is running.
+// A job in the pool's queue is cancelled when the pool takes it (run), so the stop waits only for the realizations that
+// are running. Returns with the lock held, and the cache stopping until the caller clears it.
 void stopAll(TextureCache& c) {
     prMutexLock(&c.lock);
-    while (c.queue.count != 0)
+    c.stopping = true;
+    while (c.queue.count != 0) {
         removeEntry(c, c.queue.data[c.queue.count - 1]);
+        ++c.cancelled;
+    }
     while (c.inFlight != 0)
         prConditionWait(&c.settled, &c.lock);
 }
 
-// Frees every entry and every page. No realization waits or is in flight. Stops playing the source at `at`, and
-// releases the pictures that the player holds.
-void stopPlayer(TextureCache& c, uint32_t at) {
-    CachePlayer player = c.players.data[at];
-    uint32_t last = c.players.count - 1;
-    c.playerIndex.erase(KeyIndex::hashOf(prTextureSourceId(player.source)), at);
-    if (at != last) {
-        c.playerIndex.relocate(KeyIndex::hashOf(prTextureSourceId(c.players.data[last].source)), last, at);
-        c.players.data[at] = c.players.data[last];
+// Adds the player to the list of players whose deadline is finite, or removes it, as `timed` says.
+void listTimed(TextureCache& c, CachePlayer* player, bool timed) {
+    if (player->timed == timed)
+        return;
+    player->timed = timed;
+    if (timed) {
+        player->prevTimed = nullptr;
+        player->nextTimed = c.timedPlayers;
+        if (c.timedPlayers != nullptr)
+            c.timedPlayers->prevTimed = player;
+        c.timedPlayers = player;
+        return;
     }
-    c.players.count = last;
-    prTextureSourceRelease(player.shown);
-    prTextureSourceRelease(player.current);
-    prTextureSourceRelease(player.source);
+    if (player->prevTimed != nullptr)
+        player->prevTimed->nextTimed = player->nextTimed;
+    else
+        c.timedPlayers = player->nextTimed;
+    if (player->nextTimed != nullptr)
+        player->nextTimed->prevTimed = player->prevTimed;
+    player->nextTimed = nullptr;
+    player->prevTimed = nullptr;
 }
 
-void freeAll(TextureCache& c) {
-    while (c.players.count != 0)
-        stopPlayer(c, c.players.count - 1);
+// Removes the player from the list of players by their last ask.
+void unlistPlayer(TextureCache& c, CachePlayer* player) {
+    if (player->newer != nullptr)
+        player->newer->older = player->older;
+    else if (c.newestPlayer == player)
+        c.newestPlayer = player->older;
+    if (player->older != nullptr)
+        player->older->newer = player->newer;
+    else if (c.oldestPlayer == player)
+        c.oldestPlayer = player->newer;
+    player->newer = nullptr;
+    player->older = nullptr;
+}
+
+// Records an ask of the player: it becomes the newest in the list of players by their last ask.
+void touchPlayer(TextureCache& c, CachePlayer* player) {
+    player->askedAt = c.time;
+    player->askedTrim = c.trims;
+    if (c.newestPlayer == player)
+        return;
+    unlistPlayer(c, player);
+    player->older = c.newestPlayer;
+    if (c.newestPlayer != nullptr)
+        c.newestPlayer->newer = player;
+    c.newestPlayer = player;
+    if (c.oldestPlayer == nullptr)
+        c.oldestPlayer = player;
+}
+
+// Stops playing a source on the player's timeline, and releases the pictures that the player holds. A show without
+// players stops observing its source and releases it.
+void stopPlayer(TextureCache& c, CachePlayer* player) {
+    unlistPlayer(c, player);
+    listTimed(c, player, false);
+    prTextureSourceRelease(player->shown);
+    prTextureSourceRelease(player->current);
+    CacheShow* show = player->show;
+    for (uint32_t i = 0; i < show->players.count; ++i) {
+        if (show->players.data[i] == player) {
+            show->players.data[i] = show->players.data[show->players.count - 1];
+            show->players.count -= 1;
+            break;
+        }
+    }
+    prMemoryFree(player);
+    if (show->players.count != 0)
+        return;
+    if (show->observer != 0)
+        prNotifierUnobserve(prTextureSourceNotifier(show->source), show->observer);
+    uint64_t id = prTextureSourceId(show->source);
+    uint32_t last = c.shows.count - 1;
+    c.showIndex.erase(KeyIndex::hashOf(id), show->at);
+    if (show->at != last) {
+        CacheShow* moved = c.shows.data[last];
+        c.showIndex.relocate(KeyIndex::hashOf(prTextureSourceId(moved->source)), last, show->at);
+        c.shows.data[show->at] = moved;
+        moved->at = show->at;
+    }
+    c.shows.count = last;
+    show->players.reset();
+    prTextureSourceRelease(show->source);
+    prMemoryFree(show);
+}
+
+// Frees every entry and every page, and if `players` is set, stops playing every source. No realization waits or is in
+// flight.
+void freeAll(TextureCache& c, bool players) {
+    while (players && c.oldestPlayer != nullptr)
+        stopPlayer(c, c.oldestPlayer);
     while (c.entries.count != 0)
         removeEntry(c, c.entries.data[c.entries.count - 1]);
     for (CachePage* page : c.pages.span()) {
@@ -1283,70 +1414,144 @@ PrTextureCacheState answer(TextureCache& c, const PrTextureSource* source, PrTex
     return state;
 }
 
-// Returns the position of the player of `source`, which is created if the cache does not play the source yet.
-uint32_t playerOf(TextureCache& c, const PrTextureSource* source) {
+// Reports an arrival for a source that notified that it shows another picture. It is the observer of the notifier of
+// each source that the cache plays, and takes no lock of the cache.
+void noticed(void* PR_NULLABLE context) {
+    TextureCache& c = *static_cast<TextureCache*>(context);
+    c.arrivals.fetchAdd(1);
+    if (c.desc.arrived != nullptr)
+        c.desc.arrived(c.desc.arrivedContext);
+}
+
+// Returns the show of `source`, which is created if the cache does not play the source yet.
+CacheShow* showOf(TextureCache& c, const PrTextureSource* source) {
     uint64_t id = prTextureSourceId(source);
-    uint32_t at = c.playerIndex.find(KeyIndex::hashOf(id), [&](uint32_t i) {
-        return prTextureSourceId(c.players.data[i].source) == id;
+    uint32_t at = c.showIndex.find(KeyIndex::hashOf(id), [&](uint32_t i) {
+        return prTextureSourceId(c.shows.data[i]->source) == id;
     });
     if (at != kHashMissing)
-        return at;
+        return c.shows.data[at];
+    CacheShow* show = allocZeroed<CacheShow>();
     prTextureSourceRetain(source);
-    c.playerIndex.insert(KeyIndex::hashOf(id), c.players.count);
-    c.players.push(CachePlayer{.source = source});
-    return c.players.count - 1;
+    show->source = source;
+    show->at = c.shows.count;
+    PrNotifier* notifier = prTextureSourceNotifier(source);
+    if (notifier != nullptr)
+        show->observer = prNotifierObserve(notifier, noticed, &c);
+    c.showIndex.insert(KeyIndex::hashOf(id), c.shows.count);
+    c.shows.push(show);
+    return show;
 }
 
-// Asks the player's source what it shows at the cache's time, if the time of its next picture has come. A new picture
-// becomes the player's current one.
-void advance(TextureCache& c, CachePlayer& player) {
-    if (player.current != nullptr && (player.next == 0 || c.time < player.next))
+// Returns the player of the show on the timeline `timeline`, which is created if the timeline has none yet.
+CachePlayer* playerOf(TextureCache& c, CacheShow& show, uint64_t timeline) {
+    for (CachePlayer* player : show.players.span()) {
+        if (player->timeline == timeline)
+            return player;
+    }
+    CachePlayer* player = allocZeroed<CachePlayer>();
+    *player = CachePlayer{.show = &show, .timeline = timeline, .started = c.time, .deadline = kPrF64Infinity};
+    show.players.push(player);
+    return player;
+}
+
+// Returns the picture of serial `serial` that a player of the show holds, or null. Timelines that show the same picture
+// of a source share it, and so share its texture.
+const PrTextureSource* PR_NULLABLE pictureOf(const CacheShow& show, uint64_t serial) {
+    for (const CachePlayer* player : show.players.span()) {
+        if (player->current != nullptr && player->serial == serial)
+            return player->current;
+        if (player->shown != nullptr && player->shownSerial == serial)
+            return player->shown;
+    }
+    return nullptr;
+}
+
+// Asks the player's source what it shows at `time` on the player's timeline, if the last answer may have changed: the
+// time has reached the time that the answer gave, the time is before the time of the answer, or the source has notified
+// since. A new picture becomes the player's current one.
+void refresh(CachePlayer& player, double time) {
+    const PrTextureSource* source = player.show->source;
+    PrNotifier* notifier = prTextureSourceNotifier(source);
+    // The count is read before the source is asked, so that a notification during the ask asks again.
+    uint64_t notices = notifier != nullptr ? prNotifierCount(notifier) : 0;
+    bool due = player.current == nullptr || time < player.askedTime || time >= player.next ||
+        (player.notifies && notices != player.notices);
+    if (!due)
         return;
-    PrTextureFrame frame{};
-    prTextureSourceFrameAt(player.source, c.time, &frame);
-    player.next = frame.next;
-    if (player.current != nullptr && frame.serial == player.serial) {
-        prTextureSourceRelease(frame.source);
+    PrTextureShow shown{};
+    prTextureSourceShow(source, time, &shown);
+    player.askedTime = time;
+    player.next = shown.next;
+    player.notifies = shown.notifies;
+    player.notices = notices;
+    player.status = shown.status;
+    // The same picture may become complete, as when the bytes that it shows stop arriving.
+    if (player.current != nullptr && shown.serial == player.serial) {
+        prTextureSourceRelease(shown.picture);
+        player.complete = shown.complete;
+        if (player.shown == player.current)
+            player.shownComplete = shown.complete;
         return;
     }
+    const PrTextureSource* same = pictureOf(*player.show, shown.serial);
+    if (same != nullptr) {
+        prTextureSourceRelease(shown.picture);
+        prTextureSourceRetain(same);
+        shown.picture = same;
+    }
     prTextureSourceRelease(player.current);
-    player.current = frame.source;
-    player.serial = frame.serial;
+    player.current = shown.picture;
+    player.serial = shown.serial;
+    player.complete = shown.complete;
 }
 
-// Answers an ask for a source that changes over time: the region of the picture that the source shows at the cache's
-// time. While that picture is being realized, the answer is the last picture that an ask was answered with, and before
-// any, the source's own first picture. Writes the source of the answer's region to `*picture`, with a reference for the
-// caller, or null if the answer has no region. Called with the lock held.
+// Answers an ask for a source whose picture changes, on `timeline` or on the cache's own timeline: the region of the
+// picture that the source shows at the cache's time there. While that picture is being realized, the answer is the last
+// picture that the timeline was answered with whole. A picture that is not complete is answered as Partial. Writes the
+// source of the answer's region to `*picture`, with a reference for the caller, or null if the answer has no region.
+// Called with the lock held.
 PrTextureCacheState play(TextureCache& c, const PrTextureSource* source, const PrTextureCacheAsk& ask,
-        PrTextureRegion* out, const PrTextureSource* PR_NULLABLE* PR_NONNULL picture) {
-    // The player is read by position after each call that may add an entry. No call here adds a player.
-    uint32_t at = playerOf(c, source);
-    c.players.data[at].askedAt = c.time;
-    advance(c, c.players.data[at]);
-    const PrTextureSource* current = c.players.data[at].current;
+        const PrTextureTimeline* PR_NULLABLE timeline, PrTextureRegion* out,
+        const PrTextureSource* PR_NULLABLE* PR_NONNULL picture) {
+    CacheShow* show = showOf(c, source);
+    CachePlayer* player = playerOf(c, *show, timeline != nullptr ? timeline->id : 0);
+    touchPlayer(c, player);
+    double time = timeline != nullptr ? prTextureTimelineAt(timeline, c.time) : c.time - player->started;
+    refresh(*player, time);
+    double deadline = kPrF64Infinity;
+    if (player->next != kPrF64Infinity)
+        deadline =
+            timeline != nullptr ? prTextureTimelineHostTime(timeline, player->next) : player->started + player->next;
+    player->deadline = deadline;
+    listTimed(c, player, deadline != kPrF64Infinity);
+
+    const PrTextureSource* current = player->current;
     const PrTextureSource* answered = current;
+    bool complete = player->complete;
     PrTextureCacheState state = answer(c, current, ask, current != source, out);
     if (state == PrTextureCacheState_Ready) {
-        CachePlayer& player = c.players.data[at];
-        if (player.shown != current) {
+        if (player->shown != current) {
             prTextureSourceRetain(current);
-            prTextureSourceRelease(player.shown);
-            player.shown = current;
+            prTextureSourceRelease(player->shown);
+            player->shown = current;
         }
-    } else {
-        const PrTextureSource* last = c.players.data[at].shown != nullptr ? c.players.data[at].shown : source;
+        player->shownSerial = player->serial;
+        player->shownComplete = complete;
+    } else if (player->shown != nullptr && player->shown != current) {
+        const PrTextureSource* last = player->shown;
         PrTextureRegion earlier{};
-        PrTextureCacheState had = PrTextureCacheState_Pending;
-        if (last != current)
-            had = answer(c, last, ask, last != source, &earlier);
+        PrTextureCacheState had = answer(c, last, ask, last != source, &earlier);
         bool better = had == PrTextureCacheState_Partial && state != PrTextureCacheState_Partial;
         if (had == PrTextureCacheState_Ready || better) {
             *out = earlier;
             state = had;
             answered = last;
+            complete = player->shownComplete;
         }
     }
+    if (state == PrTextureCacheState_Ready && !complete)
+        state = PrTextureCacheState_Partial;
     if (state == PrTextureCacheState_Ready || state == PrTextureCacheState_Partial) {
         prTextureSourceRetain(answered);
         *picture = answered;
@@ -1387,7 +1592,7 @@ void prTextureCacheDestroy(PrTextureCache* PR_NULLABLE cache) {
     if (cache == nullptr)
         return;
     stopAll(*cache);
-    freeAll(*cache);
+    freeAll(*cache, true);
     prMutexUnlock(&cache->lock);
     cache->entries.reset();
     cache->index.reset();
@@ -1395,8 +1600,8 @@ void prTextureCacheDestroy(PrTextureCache* PR_NULLABLE cache) {
     cache->holderIndex.reset();
     cache->queue.reset();
     cache->pages.reset();
-    cache->players.reset();
-    cache->playerIndex.reset();
+    cache->shows.reset();
+    cache->showIndex.reset();
     prMutexReset(&cache->lock);
     prConditionReset(&cache->settled);
     prMemoryFree(cache);
@@ -1408,7 +1613,9 @@ PrGpuDevice* prTextureCacheDevice(const PrTextureCache* cache) {
 
 void prTextureCacheSetDevice(PrTextureCache* cache, PrGpuDevice* PR_NULLABLE device) {
     stopAll(*cache);
-    freeAll(*cache);
+    // The players hold sources, not textures, so they keep what they learned of the sources that they play.
+    freeAll(*cache, false);
+    cache->stopping = false;
     cache->desc.device = device;
     cache->srgbViews = device != nullptr && viewsSrgb(device);
     ++cache->generation;
@@ -1425,10 +1632,10 @@ void prTextureCacheSetTime(PrTextureCache* cache, double time) {
     c.time = time;
     c.timed = true;
     // A source whose next picture is due is asked what it shows when a consumer next asks for it. The arrival makes the
-    // consumers that keep drawings ask.
+    // consumers that keep drawings ask. Only players whose pictures change at a time are walked.
     bool due = false;
-    for (const CachePlayer& player : c.players.span())
-        due = due || (player.next != 0 && time >= player.next);
+    for (const CachePlayer* player = c.timedPlayers; player != nullptr && !due; player = player->nextTimed)
+        due = time >= player->deadline;
     if (due)
         c.arrivals.fetchAdd(1);
     prMutexUnlock(&c.lock);
@@ -1438,9 +1645,9 @@ double prTextureCacheNextFrame(const PrTextureCache* cache) {
     PrMutex* lock = const_cast<PrMutex*>(&cache->lock);
     prMutexLock(lock);
     double next = 0;
-    for (const CachePlayer& player : cache->players.span()) {
-        if (player.next != 0 && (next == 0 || player.next < next))
-            next = player.next;
+    for (const CachePlayer* player = cache->timedPlayers; player != nullptr; player = player->nextTimed) {
+        if (next == 0 || player->deadline < next)
+            next = player->deadline;
     }
     prMutexUnlock(lock);
     return next;
@@ -1459,7 +1666,19 @@ PrTextureCacheState prTextureCacheRealize(PrTextureCache* cache, const PrTexture
     if (c.desc.device == nullptr)
         return PrTextureCacheState_Pending;
     prMutexLock(&c.lock);
-    PrTextureCacheState state = answer(c, source, ask, false, out);
+    PrTextureCacheState state = PrTextureCacheState_Pending;
+    if (prTextureSourceChanges(source) && prTextureSourceNotifier(source) != nullptr && !previewServes(source, ask)) {
+        // A source whose picture changes as it is told, such as an image whose bytes are arriving, has an own picture
+        // that may not be readable yet. The ask shows what it shows at the start of a timeline that stays there. A
+        // preview that has the detail, such as a thumbnail that arrived before the image, is read as a still source's.
+        const PrTextureTimeline still{.id = kStillTimeline};
+        const PrTextureSource* picture = nullptr;
+        state = play(c, source, ask, &still, out, &picture);
+        prTextureSourceRelease(picture);
+        out->playing = false;
+    } else {
+        state = answer(c, source, ask, false, out);
+    }
     RawArray<CacheJob*> jobs;
     pump(c, &jobs);
     bool ran = jobs.count != 0 && c.desc.tasks == nullptr;
@@ -1472,7 +1691,8 @@ PrTextureCacheState prTextureCacheRealize(PrTextureCache* cache, const PrTexture
 }
 
 PrTextureCacheState prTextureCachePlay(PrTextureCache* cache, const PrTextureSource* source, PrTextureCacheAsk ask,
-        PrTextureRegion* out, const PrTextureSource* PR_NULLABLE* PR_NONNULL picture) {
+        const PrTextureTimeline* PR_NULLABLE timeline, PrTextureRegion* out,
+        const PrTextureSource* PR_NULLABLE* PR_NONNULL picture) {
     PR_ASSERT(ask.alpha == PrTextureAlpha_Straight || ask.alpha == PrTextureAlpha_Premultiplied);
     TextureCache& c = *cache;
     *out = PrTextureRegion{};
@@ -1481,8 +1701,8 @@ PrTextureCacheState prTextureCachePlay(PrTextureCache* cache, const PrTextureSou
         return PrTextureCacheState_Pending;
     prMutexLock(&c.lock);
     PrTextureCacheState state;
-    if (c.timed && prTextureSourcePlays(source)) {
-        state = play(c, source, ask, out, picture);
+    if (prTextureSourceChanges(source) && !(prTextureSourceNotifier(source) != nullptr && previewServes(source, ask))) {
+        state = play(c, source, ask, timeline, out, picture);
     } else {
         state = answer(c, source, ask, false, out);
         if (state == PrTextureCacheState_Ready || state == PrTextureCacheState_Partial) {
@@ -1498,7 +1718,7 @@ PrTextureCacheState prTextureCachePlay(PrTextureCache* cache, const PrTextureSou
     // Without a pool, the realizations ran in the call, so the ask's answer has changed.
     if (ran) {
         prTextureSourceRelease(*picture);
-        return prTextureCachePlay(cache, source, ask, out, picture);
+        return prTextureCachePlay(cache, source, ask, timeline, out, picture);
     }
     return state;
 }
@@ -1507,6 +1727,8 @@ PrTextureCacheState prTextureCacheWait(PrTextureCache* cache, const PrTextureSou
         PrTextureRegion* out) {
     PR_ASSERT(cache->desc.device != nullptr);
     ask.priority = PrTextureCachePriority_High;
+    if (prTextureSourceNotifier(source) != nullptr)
+        return prTextureCacheRealize(cache, source, ask, out);
     uint32_t need = versionFor(source, ask.detail);
     uint64_t key = keyOf(*cache, source, askFor(source, ask, need), need);
     for (;;) {
@@ -1529,12 +1751,16 @@ PrStatus prTextureCacheStatus(PrTextureCache* cache, const PrTextureSource* sour
     prMutexLock(&cache->lock);
     const CacheEntry* entry = entryOf(*cache, keyOf(*cache, source, askFor(source, ask, need), need));
     PrStatus status = entry != nullptr && entry->state == PrTextureCacheState_Failed ? entry->status : PrStatus_Ok;
+    uint64_t id = prTextureSourceId(source);
+    uint32_t at = cache->showIndex.find(KeyIndex::hashOf(id), [&](uint32_t i) {
+        return prTextureSourceId(cache->shows.data[i]->source) == id;
+    });
+    for (const CachePlayer* player : at != kHashMissing ? cache->shows.data[at]->players.span() : Span<CachePlayer*>()) {
+        if (status == PrStatus_Ok)
+            status = player->status;
+    }
     prMutexUnlock(&cache->lock);
     return status;
-}
-
-void prTextureCacheWaitAll(PrTextureCache* cache) {
-    waitAll(*cache);
 }
 
 void prTextureCacheTrim(PrTextureCache* cache) {
@@ -1567,11 +1793,15 @@ void prTextureCacheTrim(PrTextureCache* cache) {
             break;
         enlist(c, entry, isHeld(c, *entry) ? CacheList_Held : CacheList_Recent, isHeld(c, *entry));
     }
-    // A source that no consumer has asked for in the last second of the cache's time stops playing. A consumer that
-    // records on another thread asks less often than the host's frames end, so one frame without an ask is not enough.
-    for (uint32_t at = c.players.count; at-- > 0;) {
-        if (c.time - c.players.data[at].askedAt > kPlayedFor)
-            stopPlayer(c, at);
+    // A source that no consumer has asked for on a timeline for kPlayedTrims trims and, once the host sets times, for
+    // kPlayedFor seconds stops playing there. The players are walked from the one asked for longest ago, and the walk
+    // ends at the first that is still playing.
+    while (c.oldestPlayer != nullptr) {
+        const CachePlayer& player = *c.oldestPlayer;
+        bool idle = c.trims - player.askedTrim >= kPlayedTrims && (!c.timed || c.time - player.askedAt > kPlayedFor);
+        if (!idle)
+            break;
+        stopPlayer(c, c.oldestPlayer);
     }
     // A picture of such a source is not asked for again once the source shows another. Its texture goes as soon as no
     // drawing holds its source, whatever the budget. A picture that a drawing still holds is checked again later.

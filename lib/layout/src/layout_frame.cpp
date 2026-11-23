@@ -667,7 +667,8 @@ void prLayoutTreeFrameSetContent(PrLayoutTree* tree, PrLayoutNode replaced, cons
         (content->kind != PrLayoutContentKind_Path || samePath(was.path, content->path));
     if (same && content->kind == PrLayoutContentKind_Image)
         same = was.image == content->image && was.limit == content->limit && was.rendering == content->rendering &&
-            was.priority == content->priority && was.upright == content->upright && was.still == content->still;
+            was.priority == content->priority && was.upright == content->upright && was.still == content->still &&
+            prTextureTimelineEqual(&was.timeline, &content->timeline);
     if (!same)
         prLayoutNodeSetContent(tree, replaced, content);
 }

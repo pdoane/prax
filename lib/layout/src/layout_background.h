@@ -22,6 +22,7 @@ struct LayoutTextureAsk {
     const PrTextureSource* image;       // the tree's textures hold a reference
     PrTextureCacheAsk ask;
     bool plays;                         // the ask plays an image that changes over time
+    PrTextureTimeline timeline;         // the timeline that it plays on, or a zero id for the cache's own
 };
 
 // The textures that a tree's paints draw images from: its host's cache (prLayoutTreeSetTextures), and the asks that the
@@ -140,7 +141,15 @@ bool layoutBackgroundPaintLayer(LayoutTextures* PR_NULLABLE textures, const Layo
 // that shows. The caller makes the list that draws the region hold it (prDrawListHoldSource), and releases its own
 // reference. It is null if the function returns false.
 bool layoutTextureOf(LayoutTextures* PR_NULLABLE textures, const PrTextureSource* image, PrTextureCacheAsk ask,
-    bool plays, PrTextureRegion* out, const PrTextureSource* PR_NULLABLE* PR_NONNULL held);
+    bool plays, const PrTextureTimeline* PR_NULLABLE timeline, PrTextureRegion* out,
+    const PrTextureSource* PR_NULLABLE* PR_NONNULL held);
+
+// Returns the cache's count of arrivals, which a caller reads before a painter draws, or zero without a cache.
+uint64_t layoutTexturesArrivals(const LayoutTextures* PR_NULLABLE textures);
+
+// Waits for each ask that a painter's drawing awaits (prDrawListAwaited), as for an image whose texture has not
+// arrived. `arrivals` is the cache's count before the painter drew. Returns true if the drawing awaits nothing.
+bool layoutTexturesAwait(LayoutTextures* PR_NULLABLE textures, const PrDrawList* drawing, uint64_t arrivals);
 
 // Returns true if the tree's recordings are stale: the cache moved to another device, or a texture arrived while a
 // recording waited for one. Otherwise makes each waiting ask again, because a trim of the cache cancels a queued

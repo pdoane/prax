@@ -50,10 +50,11 @@ typedef struct PrLottieOptions {
     // The texture cache that image assets are drawn from. It must be on the device of the renderer that draws the
     // frames, and it must outlive the animation. Without a cache, images draw nothing.
     //
-    // The animation asks the cache for each asset when it loads. A frame waits for any texture that has not arrived by
-    // then, because a frame of an animation is drawn whole. The list that receives a frame holds the images that it
-    // draws. A caller that keeps the list draws the frame again after the cache moves to another device
-    // (prTextureCacheGeneration).
+    // The animation asks the cache for each asset when it loads. A frame leaves out an image whose texture has not
+    // arrived, or draws a smaller version of it, and the list that receives the frame awaits it (prDrawListAwaited), so
+    // that a caller that keeps the list draws the frame again when the cache reports an arrival. The list holds the
+    // images that it draws. A caller that keeps the list also draws the frame again after the cache moves to another
+    // device (prTextureCacheGeneration).
     PrTextureCache* PR_NULLABLE textures;
     PrLottieLoadFn PR_NULLABLE load;        // loads the files that assets name; without it, nothing loads
     void* PR_NULLABLE loadContext;

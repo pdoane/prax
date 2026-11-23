@@ -364,6 +364,11 @@ typedef struct PrLayoutContent {
     // play it (prTextureCachePlay).
     bool still;
 
+    // Image: the timeline that an image whose picture changes plays on, which the client owns, as a widget or a
+    // document does to pause or seek it. A zero id plays the image on the texture cache's own timeline of it. Content
+    // set again with the timeline as it is now, after a pause or a seek, is drawn again.
+    PrTextureTimeline timeline;
+
     // Image: true if the image is shown with its orientation applied (PrTextureDesc::orientation), and false if it is
     // shown as its stored texels.
     bool upright;

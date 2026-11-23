@@ -15,15 +15,23 @@
 // the detail. If that version has not arrived and a smaller one has, the ask returns the smaller one
 // (PrTextureCacheState_Partial).
 //
+// Playing. A source whose picture changes (prTextureSourceShow) plays on a timeline that the consumer names
+// (prTextureCachePlay). The cache asks the source what it shows only when the answer may have changed: when the
+// timeline reaches the time that the last answer gave, or when the source notifies its notifier. A source that said
+// that its picture never changes costs an ask no call into it. Each picture is a still source that the cache realizes
+// as any other, and two timelines that show the same picture of a source share its texture. A picture that the source
+// shows as an approximation, such as the rows of an image that have arrived, is answered as Partial, as a smaller
+// version is.
+//
 // Order. Realizations wait in a queue. The cache keeps at most as many in flight as its task pool is wide. It starts
 // the waiting realization with the highest priority first. Among equal priorities, it starts the one asked for in the
 // latest frame, and then the smaller version. A trim cancels each waiting realization that no ask of the last frame
 // asked for (prTextureCacheTrim). A consumer that scrolls past many images therefore reads only the ones that it still
 // shows.
 //
-// Threads. Any thread may ask, wait and trim. Realizations run on the task pool that the host gave the cache. Without a
-// pool, a realization runs inside the ask that starts it, on the asking thread. The cache calls the host's `arrived`
-// function when a realization that an ask was waiting for arrives or fails, so that the host draws again.
+// Threads. Any thread may ask and trim. Realizations run on the task pool that the host gave the cache. Without a pool,
+// a realization runs inside the ask that starts it, on the asking thread. The cache calls the host's `arrived` function
+// when a realization that an ask was waiting for arrives or fails, so that the host draws again.
 //
 // Lifetime. The cache keeps a region while anything else holds its source, because a drawing that keeps the source may
 // still draw the region. If only the cache holds the source, a trim may evict the region once the cache's textures
@@ -34,7 +42,8 @@
 //
 // Device loss. The host moves the cache to a new device (prTextureCacheSetDevice). Each source is realized again there
 // when a consumer next asks for it. The bits come from the source, so the texture of a file comes from the file. The
-// cache keeps no copy of a texture in memory.
+// cache keeps no copy of a texture in memory. What the cache learned of the sources that it plays stays, so a source
+// shows the same picture on the new device.
 
 #pragma once
 
@@ -102,7 +111,11 @@ PrTextureCacheAsk prTextureCacheAskEncoded(PrTextureCacheFlags flags);
 // The answer to an ask.
 enum {
     PrTextureCacheState_Ready,      // the region holds a version with the detail that the ask needs
-    PrTextureCacheState_Partial,    // the needed version has not arrived, and the region holds a smaller one
+
+    // The region holds an approximation, and the cache reports an arrival when a better one comes: the needed version
+    // has not arrived and the region holds a smaller one, or the source shows a picture that is not complete.
+    PrTextureCacheState_Partial,
+
     PrTextureCacheState_Pending,    // no version of the source has arrived
     PrTextureCacheState_Failed,     // the source did not read or upload. The cache does not try again.
 };
@@ -116,8 +129,9 @@ enum {
 };
 typedef uint8_t PrTextureCachePack;
 
-// Called with the host's context when a realization that an ask was waiting for arrives or fails. It runs on the thread
-// that completed the realization. It must not call the cache.
+// Called with the host's context when a realization that an ask was waiting for arrives or fails, and when a source
+// that the cache plays notifies that it shows another picture. It runs on the thread that completed the realization or
+// notified. It must not call the cache.
 typedef void (*PrTextureCacheArrivedFn)(void* PR_NULLABLE context);
 
 // What a cache is created with.
@@ -139,34 +153,35 @@ PrTextureCacheDesc prTextureCacheDescDefault(PrGpuDevice* PR_NULLABLE device);
 // Creates a cache.
 PrTextureCache* prTextureCacheCreate(const PrTextureCacheDesc* desc);
 
-// Frees the cache and its textures. Cancels the waiting realizations first, and blocks until those in flight complete.
+// Frees the cache and its textures. Cancels the realizations that have not started, in the cache's queue or in its
+// pool's, and waits for those that are running.
 void prTextureCacheDestroy(PrTextureCache* PR_NULLABLE cache);
 
 // Returns the device that the cache realizes on, or null while it has none.
 PrGpuDevice* PR_NULLABLE prTextureCacheDevice(const PrTextureCache* cache);
 
-// Moves the cache to `device`, as after the old device is lost. Cancels the waiting realizations, blocks until those in
-// flight complete, and frees every texture on the old device. Each source is realized again on `device` when it is next
-// asked for. Failures are forgotten too. Every region that the cache returned becomes invalid, and the cache's
-// generation advances. No other thread may ask during the call.
+// Moves the cache to `device`, as after the old device is lost. Cancels the realizations that have not started, as a
+// destroy does, waits for those that are running, and frees every texture on the old device. Each source is realized
+// again on `device` when it is next asked for. Failures are forgotten too. Every region that the cache returned becomes
+// invalid, and the cache's generation advances. No other thread may ask during the call.
 //
 // A null `device` leaves the cache without a device, for the time between the loss of one device and the creation of
 // the next. The host may then free the old device. A cache without a device answers every ask with Pending and starts
-// nothing, and prTextureCacheWait must not be called.
+// nothing.
 void prTextureCacheSetDevice(PrTextureCache* cache, PrGpuDevice* PR_NULLABLE device);
 
 // Returns the number of times that the cache has moved to another device. A host that keeps drawings of regions records
 // the generation when it draws them. If the generation has changed, the regions are invalid, and the host draws again.
 uint64_t prTextureCacheGeneration(const PrTextureCache* cache);
 
-// Sets the time of the frame that the host draws, in seconds on the host's clock. The cache plays the sources that
-// change over time (PrTextureSourceDesc::frame), such as animated images, on this clock (prTextureCachePlay). The cache
-// reports an arrival when a source that it plays shows another picture, so that the host draws again. A cache whose
-// time was never set plays nothing.
+// Sets the time of the frame that the host draws, in seconds on the host's clock, which the timelines of the sources
+// that the cache plays are on (prTextureCachePlay). The cache reports an arrival when the time reaches the time at
+// which a source that it plays shows another picture, so that the host draws again. A cache whose time was never set is
+// at time zero.
 void prTextureCacheSetTime(PrTextureCache* cache, double time);
 
-// Returns the earliest time at which a source that the cache plays shows another picture, or zero if there is none. The
-// host draws a frame at that time.
+// Returns the earliest time on the host's clock at which a source that the cache plays shows another picture, or zero
+// if there is none. The host draws a frame at that time. A source that changes only when it notifies adds no time.
 double prTextureCacheNextFrame(const PrTextureCache* cache);
 
 // Returns the number of realizations that have arrived since the cache was created. A consumer that kept a drawing made
@@ -182,36 +197,47 @@ uint64_t prTextureCacheArrivals(const PrTextureCache* cache);
 // a trim may evict the region once a frame passes without an ask for it.
 //
 // A consumer that draws a Partial region asks again after the cache reports an arrival.
+//
+// A source whose picture changes when it notifies, such as an image whose bytes are arriving, may not have its own
+// picture yet. The ask answers with what the source shows at the start of a timeline (prTextureCachePlay), Partial
+// until that is complete, and no realization waits for bytes.
 PrTextureCacheState prTextureCacheRealize(PrTextureCache* cache, const PrTextureSource* source,
     PrTextureCacheAsk ask, PrTextureRegion* out);
 
-// Asks as prTextureCacheRealize does, and plays a source that changes over time: the answer is the region of the
-// picture that the source shows at the cache's time, marked as playing. While that picture is being realized, the
-// answer is the last picture that was answered with. A still source, and any source in a cache without a time, is
-// answered as prTextureCacheRealize answers it.
+// Asks as prTextureCacheRealize does, and plays a source whose picture changes: the answer is the region of the picture
+// that the source shows at the time of `timeline` at the cache's time, marked as playing. While that picture is being
+// realized, the answer is the last picture that this timeline was answered with whole. A still source is answered as
+// prTextureCacheRealize answers it.
+//
+// A null `timeline` is the cache's own timeline for the source, which starts at the cache's time of the first ask that
+// plays the source on it and plays at rate one. Consumers that keep no timeline of their own share it. The cache reads
+// `*timeline` during the call. A consumer that pauses or seeks its timeline asks again with the timeline as it is now.
 //
 // `*picture` is the source whose texture the region is: the picture that shows, or `source` itself. The caller holds a
 // reference to it. A consumer that keeps a drawing of the region keeps the picture for as long, as a draw list does
 // (prDrawListHoldSource), so that the cache keeps the texture, and then releases its own reference. `*picture` is null
 // if the answer has no region.
 //
-// A source plays while consumers ask for it, and for a second of the cache's time after the last ask.
-// prTextureCacheRealize does not play: it answers with a source's first picture, which is what a row of thumbnails
+// A source plays on a timeline while consumers ask for it there, and for a second of the cache's time after the last
+// ask. prTextureCacheRealize does not play: it answers with the source's own picture, which is what a row of thumbnails
 // shows.
 PrTextureCacheState prTextureCachePlay(PrTextureCache* cache, const PrTextureSource* source, PrTextureCacheAsk ask,
-    PrTextureRegion* out, const PrTextureSource* PR_NULLABLE* PR_NONNULL picture);
+    const PrTextureTimeline* PR_NULLABLE timeline, PrTextureRegion* out, const PrTextureSource* PR_NULLABLE* PR_NONNULL picture);
 
 // Asks as prTextureCacheRealize does, at High priority, and blocks the calling thread until the version that the ask
-// needs arrives or fails. Returns Ready or Failed.
+// needs arrives or fails. Returns Ready or Failed. It serves lib/canvas alone, whose drawImage a script reads back in
+// the same turn; a rolling draw list of the canvas's bitmap, replayed by the CPU renderer, is to replace the wait.
+// Every other consumer asks, draws what there is, and draws again when the cache reports an arrival. A source whose
+// picture changes when it notifies is answered at once, as prTextureCacheRealize answers it, since its bytes may never
+// complete.
 PrTextureCacheState prTextureCacheWait(PrTextureCache* cache, const PrTextureSource* source, PrTextureCacheAsk ask,
     PrTextureRegion* out);
 
 // Returns why `source` failed for `ask`: the status of the read or the upload, or NotSupported if the device samples no
-// format that the source produces. Returns Ok if the source has not failed or the cache does not have it.
+// format that the source produces. For a source that the cache plays, it is also the failure that stopped its picture
+// changing (PrTextureShow::status), as for bytes that stopped arriving, while the cache shows its last picture. Returns
+// Ok if the source has not failed or the cache does not have it.
 PrStatus prTextureCacheStatus(PrTextureCache* cache, const PrTextureSource* source, PrTextureCacheAsk ask);
-
-// Blocks until every realization that is waiting or in flight has arrived or failed.
-void prTextureCacheWaitAll(PrTextureCache* cache);
 
 // Marks the end of a frame. An entry is idle if no ask since the last trim asked for it.
 //

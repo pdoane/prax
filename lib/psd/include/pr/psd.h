@@ -96,7 +96,10 @@ typedef struct PrPsdDecoder PrPsdDecoder;
 // sections that break the format, and for a depth that the mode does not have. Returns NotSupported for the
 // Multichannel mode, for a merged image compressed with ZIP, and for a document whose version information says that it
 // has no real merged image, as one saved without maximized compatibility does: its composite is blank. Returns Limit
-// past the limits. `*out` is the decoder if the status is Ok, and null otherwise.
+// past the limits. Returns Truncated, with a decoder, for bytes that end after the image resources and the start of the
+// layer information but before the merged image's data, as a document whose bytes are still arriving does: the info
+// describes the document, its thumbnail among it, and a read clears the pixels and returns Truncated. `*out` is the
+// decoder if the status is Ok or Truncated, and null otherwise.
 PrStatus prPsdDecoderCreate(PrByteView bytes, const PrPsdLimits* PR_NULLABLE limits, uint64_t held,
     PrPsdDecoder* PR_NULLABLE* PR_NONNULL out);
 

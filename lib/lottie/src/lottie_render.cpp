@@ -277,9 +277,11 @@ void drawContent(LottieRender& r, const LottieLayer& layer, double frame) {
                 break;
             const LottieImage& image = a.images.data[layer.comp];
             PrTextureRegion region{};
-            if (image.image == nullptr || a.textures == nullptr ||
-                    prTextureCacheWait(a.textures, image.image, prTextureCacheAskEncoded(0), &region) !=
-                    PrTextureCacheState_Ready)
+            // A texture that has not arrived draws nothing, or a smaller version, and the list awaits it.
+            if (image.image == nullptr || a.textures == nullptr)
+                break;
+            PrTextureCacheState state = prDrawListRealize(r.list, a.textures, image.image, prTextureCacheAskEncoded(0), &region);
+            if (state != PrTextureCacheState_Ready && state != PrTextureCacheState_Partial)
                 break;
             // An image whose size differs from its asset's size covers the asset's size, centered and clipped to it.
             const PrTextureDesc& desc = *prTextureSourceDesc(image.image);
@@ -296,8 +298,6 @@ void drawContent(LottieRender& r, const LottieLayer& layer, double frame) {
             prDrawListPushClipRect(r.list, PrRect{0, 0, image.width, image.height}, PrDrawEdges_Antialiased);
             prDrawListRect(r.list, placed, {.brush = &brush});
             prDrawListPopClip(r.list);
-            // The texture cache keeps the region while the list that draws it holds the image.
-            prDrawListHoldSource(r.list, image.image);
             break;
         }
         case LottieLayerKind_Precomp: {

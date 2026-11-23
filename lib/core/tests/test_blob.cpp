@@ -179,4 +179,123 @@ TEST_CASE("a ranged read through nested range sources reads the matching bytes o
     prBlobSourceRelease(archive);
 }
 
+TEST_CASE("a feed serves the bytes that have arrived, and reads that wait for more complete as they arrive") {
+    PrBlobFeed* feed = prBlobFeedCreate(kPrBlobSizeUnknown);
+    const PrBlobSource* source = prBlobFeedSource(feed);
+    REQUIRE(prBlobSourceNotifier(source) != nullptr);
+    PrBlobProgress progress = prBlobSourceProgress(source);
+    CHECK(progress.available == 0);
+    CHECK(!progress.complete);
+
+    prBlobFeedAppend(feed, prStringBytes("arri"));
+    uint64_t notified = prNotifierCount(prBlobSourceNotifier(source));
+    CHECK(notified == 1);
+    CHECK(prBlobSourceProgress(source).available == 4);
+
+    // A read of what has arrived completes at once.
+    PrBlob* first = nullptr;
+    REQUIRE(prBlobSourceRead(source, PrBlobRange{0, 4}, &first) == PrStatus_Ok);
+    CHECK(contentsOf(first) == "arri");
+
+    // A read past what has arrived waits for it, and a read of the whole resource waits for the end.
+    PrBlobReadDesc part = prBlobReadDescDefault();
+    part.range = PrBlobRange{2, 4};
+    PrBlobRead* partRead = prBlobReadCreate(source, &part);
+    PrBlobReadDesc whole = prBlobReadDescDefault();
+    PrBlobRead* wholeRead = prBlobReadCreate(source, &whole);
+    CHECK(!prBlobReadIsDone(partRead));
+    CHECK(!prBlobReadIsDone(wholeRead));
+
+    // Bytes that grow the storage leave the blobs of earlier reads as they were.
+    String more;
+    more.append("ving");
+    for (uint32_t i = 0; i < 5000; ++i)
+        more.append("!");
+    prBlobFeedAppend(feed, prStringBytes(more));
+    REQUIRE(prBlobReadIsDone(partRead));
+    CHECK(contentsOf(prBlobReadBlob(partRead)) == "rivi");
+    CHECK(!prBlobReadIsDone(wholeRead));
+    CHECK(contentsOf(first) == "arri");
+    prBlobRelease(first);
+
+    prBlobFeedEnd(feed);
+    REQUIRE(prBlobReadIsDone(wholeRead));
+    CHECK(prBlobReadStatus(wholeRead) == PrStatus_Ok);
+    CHECK(prBlobReadByteCount(wholeRead) == 5008);
+    progress = prBlobSourceProgress(source);
+    CHECK(progress.complete);
+    CHECK(progress.status == PrStatus_Ok);
+    CHECK(progress.available == 5008);
+    CHECK(prNotifierCount(prBlobSourceNotifier(source)) == 3);
+    prBlobReadDestroy(partRead);
+    prBlobReadDestroy(wholeRead);
+
+    // Bytes after the end are ignored.
+    prBlobFeedAppend(feed, prStringBytes("late"));
+    CHECK(prBlobSourceProgress(source).available == 5008);
+    prBlobFeedDestroy(feed);
+}
+
+TEST_CASE("a feed that fails fails the reads that wait for more, and keeps the bytes that arrived readable") {
+    PrBlobFeed* feed = prBlobFeedCreate(16);
+    const PrBlobSource* source = prBlobFeedSource(feed);
+    prBlobSourceRetain(source);
+    prBlobFeedAppend(feed, prStringBytes("half"));
+    PrBlobReadDesc whole = prBlobReadDescDefault();
+    PrBlobRead* waiting = prBlobReadCreate(source, &whole);
+    CHECK(!prBlobReadIsDone(waiting));
+    prBlobFeedFail(feed, PrStatus_Io);
+    REQUIRE(prBlobReadIsDone(waiting));
+    CHECK(prBlobReadStatus(waiting) == PrStatus_Io);
+    prBlobReadDestroy(waiting);
+    PrBlobProgress progress = prBlobSourceProgress(source);
+    CHECK(progress.complete);
+    CHECK(progress.status == PrStatus_Io);
+    CHECK(progress.available == 4);
+    PrBlob* blob = nullptr;
+    REQUIRE(prBlobSourceRead(source, PrBlobRange{0, 4}, &blob) == PrStatus_Ok);
+    CHECK(contentsOf(blob) == "half");
+    prBlobRelease(blob);
+    CHECK(prBlobSourceRead(source, PrBlobRange{0, 5}, &blob) == PrStatus_Io);
+    prBlobFeedDestroy(feed);
+    prBlobSourceRelease(source);
+}
+
+TEST_CASE("a feed that is destroyed before its end fails with Lost, and its source outlives it") {
+    PrBlobFeed* feed = prBlobFeedCreate(kPrBlobSizeUnknown);
+    const PrBlobSource* source = prBlobFeedSource(feed);
+    prBlobSourceRetain(source);
+    PrBlobReadDesc whole = prBlobReadDescDefault();
+    PrBlobRead* waiting = prBlobReadCreate(source, &whole);
+    prBlobFeedDestroy(feed);
+    REQUIRE(prBlobReadIsDone(waiting));
+    CHECK(prBlobReadStatus(waiting) == PrStatus_Lost);
+    prBlobReadDestroy(waiting);
+    CHECK(prBlobSourceProgress(source).status == PrStatus_Lost);
+    prBlobSourceRelease(source);
+}
+
+TEST_CASE("a range of a feed arrives as the feed does") {
+    PrBlobFeed* feed = prBlobFeedCreate(kPrBlobSizeUnknown);
+    PrBlobSource* range = prBlobSourceCreateRange(prBlobFeedSource(feed), PrBlobRange{2, 4});
+    CHECK(prBlobSourceNotifier(range) == prBlobSourceNotifier(prBlobFeedSource(feed)));
+    prBlobFeedAppend(feed, prStringBytes("abc"));
+    PrBlobProgress progress = prBlobSourceProgress(range);
+    CHECK(progress.available == 1);
+    CHECK(!progress.complete);
+    prBlobFeedAppend(feed, prStringBytes("defgh"));
+    progress = prBlobSourceProgress(range);
+    CHECK(progress.available == 4);
+    CHECK(progress.complete);
+    // A source whose bytes are all there is complete.
+    PrBlobSource* memory = prBlobSourceCreateBlob(prBlobCopy(prStringBytes("all")));
+    CHECK(prBlobSourceNotifier(memory) == nullptr);
+    progress = prBlobSourceProgress(memory);
+    CHECK(progress.complete);
+    CHECK(progress.available == 3);
+    prBlobSourceRelease(memory);
+    prBlobSourceRelease(range);
+    prBlobFeedDestroy(feed);
+}
+
 TEST_SUITE_END();

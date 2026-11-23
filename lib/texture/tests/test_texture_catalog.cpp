@@ -10,7 +10,11 @@
 #include "pr/texture_catalog.h"
 #include "pr/thread.h"
 
+#include "tools/harness/texture_await.h"
+
 #include "tools/harness/test.h"
+
+using namespace harness;
 
 namespace pr_impl {
 
@@ -28,7 +32,7 @@ struct CountingFormat {
     };
 
     static PrStatus create(const PrTextureFormat* record, const PrBlobSource*, const PrBlob*, const PrTextureLimits*,
-            const PrTextureSource* PR_NULLABLE* PR_NONNULL out) {
+            bool, const PrTextureSource* PR_NULLABLE* PR_NONNULL out) {
         ++static_cast<const Record*>(record)->counting->opened;
         PrTextureSourceDesc desc{
             .texture = prTextureDesc2d(PrGpuFormat_Rgba8, PrUVec2{1, 1}, PrTextureAlpha_None),
@@ -194,7 +198,7 @@ TEST_CASE("a catalog opens a source on its pool, tells the host, and holds the s
     CHECK(prTextureCatalogSourceFromBytes(catalog, "a", png, &source) == PrTextureCatalogState_Pending);
     CHECK(prTextureCatalogSourceFromBytes(catalog, "a", png, &source) == PrTextureCatalogState_Pending);
     bytes.complete();
-    prTextureCatalogWaitAll(catalog);
+    CHECK(textureCatalogSettle(catalog));
     CHECK(opened.load() == 1);
     // The catalog held the source for the ask that takes it. It no longer holds the source.
     REQUIRE(prTextureCatalogSourceFromBytes(catalog, "a", png, &source) == PrTextureCatalogState_Ready);
@@ -206,7 +210,7 @@ TEST_CASE("a catalog opens a source on its pool, tells the host, and holds the s
     CHECK(prTextureCatalogSourceFromBytes(catalog, "b", png, &source) == PrTextureCatalogState_Pending);
     prTextureCatalogTrim(catalog);
     bytes.complete();
-    prTextureCatalogWaitAll(catalog);
+    CHECK(textureCatalogSettle(catalog));
     CHECK(prTextureCatalogNameCount(catalog) == 1);
     prTextureCatalogTrim(catalog);
     CHECK(prTextureCatalogNameCount(catalog) == 0);
@@ -219,3 +223,49 @@ TEST_CASE("a catalog opens a source on its pool, tells the host, and holds the s
 }
 
 TEST_SUITE_END();
+
+TEST_CASE("destroying a catalog runs none of the opens that wait in the pool's queue" *
+        doctest::skip(!prThreadSupported())) {
+    CountingFormat format;
+    PrTextureFormatSet* formats = format.set();
+    PrTaskPool* pool = prTaskPoolCreate(PrTaskPoolBackend_Default, 1);
+    PrTextureCatalogDesc desc = prTextureCatalogDescDefault(formats);
+    desc.tasks = pool;
+    PrTextureCatalog* catalog = prTextureCatalogCreate(&desc);
+    // The first open's bytes take a while to read on the pool's one thread, and the opens of the other names wait in
+    // the pool's queue behind it. Each of their reads counts.
+    struct Slow {
+        static void start(void* PR_NULLABLE, PrBlobRead* read) {
+            prThreadSleep(30);
+            prBlobReadComplete(read, PrStatus_Ok, prBlobCopy(PrByteView{kPngSignature, sizeof(kPngSignature)}), 0);
+        }
+    };
+    PrBlobSourceDesc slowDesc{.start = Slow::start, .size = sizeof(kPngSignature)};
+    PrBlobSource* slow = prBlobSourceCreate(&slowDesc);
+    Atomic<uint32_t> reads;
+    reads.store(0);
+    PrBlobSourceDesc countedDesc{
+        .start = [](void* PR_NULLABLE context, PrBlobRead* read) {
+            static_cast<Atomic<uint32_t>*>(context)->fetchAdd(1);
+            prBlobReadComplete(read, PrStatus_Ok, prBlobCopy(PrByteView{kPngSignature, sizeof(kPngSignature)}), 0);
+        },
+        .context = &reads,
+        .size = sizeof(kPngSignature),
+    };
+    PrBlobSource* counted = prBlobSourceCreate(&countedDesc);
+    const PrTextureSource* source = nullptr;
+    CHECK(prTextureCatalogSourceFromBytes(catalog, "slow", slow, &source) == PrTextureCatalogState_Pending);
+    for (uint32_t i = 0; i < 40; ++i) {
+        char name[8] = {'n', char('0' + i / 10), char('0' + i % 10)};
+        CHECK(prTextureCatalogSourceFromBytes(catalog, PrStringView{name, 3}, counted, &source) ==
+            PrTextureCatalogState_Pending);
+    }
+    prTextureCatalogDestroy(catalog);
+    // The queued opens are cancelled as the pool takes them, without reading.
+    prTaskPoolDestroy(pool);
+    CHECK(reads.load() == 0);
+    CHECK(format.opened <= 1);
+    prBlobSourceRelease(slow);
+    prBlobSourceRelease(counted);
+    prTextureFormatSetDestroy(formats);
+}

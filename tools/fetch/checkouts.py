@@ -266,6 +266,9 @@ CLDR_COMMIT = "acd6d88ae493633240e19a87a721076a8a75c310"
 COMMONMARK_SPEC_COMMIT = "9103e341a973013013bb1a80e13567007c5cef6f"
 CMARK_GFM_COMMIT = "587a12bb54d95ac37241377e6ddc93ea0e45439b"
 PRINCE_SAMPLES_COMMIT = "ebf33b86eaacff2df6acd2e3babcba11dd875b82"
+# The Khronos glTF sample assets at a commit, from which the incremental example takes two screenshots.
+GLTF_SAMPLE_ASSETS = ("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/"
+                      "8f492390ddc7a2ae221a1369ef560589cf8c70fb/")
 # The licensed directories of prince-samples, each with the documents of it that Prince prints and the viewer lists.
 PRINCE_SAMPLES = {
     "campaign": ("letter.html",),
@@ -688,6 +691,21 @@ CHECKOUTS = {
     "videos": lambda: [Files("videos", [
         ("cat.mp4", "https://archive.org/download/the-table-and-the-kitten/The%20Table%20And%20The%20Kitten.mp4"),
     ])],
+    # The pictures that the incremental example streams (examples/incremental), each some tens of kilobytes with detail
+    # to watch arrive: a baseline JPEG photograph of clouds from prince-samples' magic8 sample (CC BY 4.0, YesLogic), a
+    # progressive JPEG screenshot of the Khronos glTF sample DragonDispersion, and an animated GIF screenshot of the
+    # sample MorphStressTest (each CC BY 4.0, as their LICENSE.md files say). The example encodes its PNGs from the
+    # first. Each is pinned to its commit and its digest.
+    "incremental": lambda: [Files("incremental", [
+        ("baseline.jpg", "https://raw.githubusercontent.com/yeslogic/prince-samples/%s/magic8/blue-sky-m.jpg"
+         % PRINCE_SAMPLES_COMMIT),
+        ("progressive.jpg", GLTF_SAMPLE_ASSETS + "Models/DragonDispersion/screenshot/thin-vs-thick.jpg"),
+        ("wave.gif", GLTF_SAMPLE_ASSETS + "Models/MorphStressTest/screenshot/Anim_TheWave.gif"),
+    ], digests={
+        "baseline.jpg": "b1dbe43f2e879d25ce845c73f0cbe7b1ab2060a545d3c3ee67f428119f70e319",
+        "progressive.jpg": "4985ccc1a827822e57e716019b291adf8ec46fc797b2a59acd716a95fcb87d1c",
+        "wave.gif": "7c3b073cd0cbc7f5cf1a479b8871b349eb8252dd9409c8b77cce415f7fa53b41",
+    })],
     # The named character references, which html-parsing provides as one JSON file.
     "entities": lambda: [Files("html", [("entities.json", "https://html.spec.whatwg.org/entities.json")])],
     # The Encoding Standard's encodings, with their labels, and its indexes, for the charset generator.

@@ -32,12 +32,12 @@ constexpr PrColor kWhite{1, 1, 1, 1};
 PrTextShaper* textShaper = nullptr;
 PrTextureCache* textureCache = nullptr;
 
-// Returns a source of `rect` of the image's texels. The texels come from the image's texture in the scenes' cache. A
-// scene waits for the texture, because a scene is drawn whole. Without a texture, the source draws nothing.
+// Returns a source of `rect` of the image's texels. The texels come from the image's texture in the scenes' cache,
+// which has no pool, so an image of pixels in memory realizes in the ask. Without a texture, the source draws nothing.
 PrDrawSource imageSource(const PrTextureSource* image, PrRect rect) {
     PrTextureRegion region{};
-    if (textureCache == nullptr ||
-            prTextureCacheWait(textureCache, image, prTextureCacheAskEncoded(0), &region) != PrTextureCacheState_Ready)
+    if (textureCache == nullptr || prTextureCacheRealize(textureCache, image, prTextureCacheAskEncoded(0), &region) !=
+            PrTextureCacheState_Ready)
         return PrDrawSource{};
     return prDrawSourceRegion(&region, rect, 0);
 }

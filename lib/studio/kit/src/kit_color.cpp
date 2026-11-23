@@ -26,7 +26,9 @@ namespace {
 // The keys of the retained state of this file's widgets.
 enum : uint64_t {
     ColorStateKey_Picker = KitStateKey_Color,
+    ColorStateKey_Sampled,
 };
+typedef uint64_t ColorStateKey;
 
 // The side of a picker's plane, the width of a strip beside it and the gap between them, the side of the plane's marker
 // and the height of a strip's, in px. The picker is as wide as the plane and its two strips.
@@ -543,9 +545,20 @@ struct Sampled {
 // line along the edge of the gamut. If the gamut is wider than sRGB, a dashed line marks where sRGB ends inside it. The
 // image holds half floats, so that colors past sRGB reach a target that shows them.
 //
-// Returns true if the image was drawn. Returns false if the kit has no texture cache or the image's texture did not
-// arrive. The drawing then lacks the image, and the caller must not keep it.
-bool drawSampled(PrKit& kit, PrDrawList* list, PrVec2 extent, Sampled plane, PrColorSpace gamut) {
+// The image of a perceptual plane, kept on the plane's node across rounds so that a later round finds its texture.
+struct SampledImage {
+    uint64_t key;                               // what the image shows
+    const PrTextureSource* PR_NULLABLE image;
+};
+
+// Returns the image of the plane that `node` shows for `key`, made again if it showed something else.
+const PrTextureSource* sampledImage(PrKit& kit, PrLayoutNode node, uint64_t key, Sampled plane, PrColorSpace gamut) {
+    SampledImage& kept = *static_cast<SampledImage*>(prUiStateWithDestroy(kit.ui, node, &kKitOwner,
+        ColorStateKey_Sampled, sizeof(SampledImage), [](void* state) {
+            prTextureSourceRelease(static_cast<SampledImage*>(state)->image);
+        }));
+    if (kept.image != nullptr && kept.key == key)
+        return kept.image;
     RawArray<PrFloat16> pixels;
     pixels.resize(kSamples * kSamples * 4);
     for (uint32_t y = 0; y < kSamples; ++y) {
@@ -562,23 +575,36 @@ bool drawSampled(PrKit& kit, PrDrawList* list, PrVec2 extent, Sampled plane, PrC
             texel[3] = prFloat16FromFloat(1);
         }
     }
-    const PrTextureSource* image = prTextureSourceCreateCopy(
+    prTextureSourceRelease(kept.image);
+    kept.image = prTextureSourceCreateCopy(
         PrPixelView{reinterpret_cast<const uint8_t*>(pixels.data), kSamples * 8, {kSamples, kSamples}},
         PrPixelFormat_RgbaF16, PrTextureAlpha_Straight);
+    kept.key = key;
+    pixels.reset();
+    return kept.image;
+}
+
+// Draws a perceptual plane over `extent` for the node `node`, which keeps its image (sampledImage): the image of its
+// samples, each the nearest color that `gamut` holds, and a line along the edge of the gamut. If the gamut is wider
+// than sRGB, a dashed line marks where sRGB ends inside it. The image holds half floats, so that colors past sRGB reach
+// a target that shows them.
+//
+// Returns true if the image was drawn whole. Returns false if the kit has no texture cache or the image's texture has
+// not arrived. The drawing then lacks the image, and the caller does not keep it, so a later round draws again.
+bool drawSampled(PrKit& kit, PrLayoutNode node, uint64_t key, PrDrawList* list, PrVec2 extent, Sampled plane,
+        PrColorSpace gamut) {
+    const PrTextureSource* image = sampledImage(kit, node, key, plane, gamut);
     PrRect rect{0, 0, extent.x, extent.y};
-    // The plane's drawing is kept, so the drawing waits for the image's texture. The drawing holds the image while it
-    // draws the image's region.
     PrTextureRegion region{};
-    bool drawn = kit.textures != nullptr &&
-        prTextureCacheWait(kit.textures, image, prTextureCacheAskEncoded(0), &region) == PrTextureCacheState_Ready;
-    if (drawn) {
+    PrTextureCacheState state = PrTextureCacheState_Pending;
+    if (kit.textures != nullptr)
+        state = prDrawListRealize(list, kit.textures, image, prTextureCacheAskEncoded(0), &region);
+    bool drawn = state == PrTextureCacheState_Ready;
+    if (state == PrTextureCacheState_Ready || state == PrTextureCacheState_Partial) {
         PrDrawBrush brush = prDrawBrushImage(prDrawSourceRegion(&region, PrRect{0, 0, float(kSamples), float(kSamples)}, 0),
             rect, PrDrawSampling_Linear);
         prDrawListRect(list, rect, {.brush = &brush});
-        prDrawListHoldSource(list, image);
     }
-    prTextureSourceRelease(image);
-    pixels.reset();
     // An edge is where each column, walked up, first leaves a gamut.
     auto edge = [&](PrColorSpace space, const PrDrawStroke& stroke) {
         RawArray<PrVec2> points;
@@ -704,7 +730,7 @@ void planeRow(PrKit& kit, PrLayoutNode node, PickerState& s, PrColor* color, boo
         key = regionKey(kit, key);
     setDrawing(kit, plane.fill, planeExtent, key, &s.drawn[0], [&](PrDrawList* list) {
         if (perceptual)
-            return drawSampled(kit, list, planeExtent, Sampled{.skyline = false, .hue = hue}, s.gamut);
+            return drawSampled(kit, plane.fill, key, list, planeExtent, Sampled{.skyline = false, .hue = hue}, s.gamut);
         PrRect rect{0, 0, planeExtent.x, planeExtent.y};
         fillGradient(list, rect, PrVec2{0, 0}, PrVec2{planeExtent.x, 0}, PrColor{1, 1, 1, 1}, srgbOfHsv(hue, 100, 100, 1));
         fillGradient(list, rect, PrVec2{0, 0}, PrVec2{0, planeExtent.y}, PrColor{0, 0, 0, 0}, PrColor{0, 0, 0, 1});
@@ -755,8 +781,10 @@ void rampPlane(PrKit& kit, PrLayoutNode node, PickerState& s) {
         s.rampChroma = (1 - plane.at.y) * kMaxChroma;
     }
     PrVec2 extent{kPickerWidth - 2, kPlaneSize - 2};
-    setDrawing(kit, plane.fill, extent, regionKey(kit, 0x5c71 | uint64_t(s.gamut) << 16), &s.drawn[0],
-        [&](PrDrawList* list) { return drawSampled(kit, list, extent, Sampled{.skyline = true}, s.gamut); });
+    uint64_t key = regionKey(kit, 0x5c71 | uint64_t(s.gamut) << 16);
+    setDrawing(kit, plane.fill, extent, key, &s.drawn[0], [&](PrDrawList* list) {
+        return drawSampled(kit, plane.fill, key, list, extent, Sampled{.skyline = true}, s.gamut);
+    });
     marker(kit, plane.node, s.rampHue / 360, 1 - s.rampChroma / kMaxChroma, false);
 }
 

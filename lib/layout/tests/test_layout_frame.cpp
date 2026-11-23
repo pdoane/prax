@@ -1,3 +1,4 @@
+#include "pr/draw_list.h"
 #include "pr/layout_frame.h"
 #include "pr/layout_query.h"
 #include "pr/layout_scene.h"
@@ -655,4 +656,33 @@ TEST_CASE("a frame keeps a node's children around a part that it creates again, 
     CHECK(shape(f.tree) == "[heading [[a] [] [c]]]");
     CHECK(prLayoutTreeStats(f.tree).frameNodesGone == 2);
     CHECK(verified(f.tree));
+}
+
+TEST_CASE("a replaced node that a frame continues keeps its content until the frame sets it, and a new one has none") {
+    Fixture f;
+    uint32_t box = f.style(block());
+    PrDrawList* list = prDrawListCreate();
+    prDrawListFreeze(list);
+    prLayoutTreeBeginFrame(f.tree);
+    PrLayoutNode root = prLayoutTreeFrameElement(f.tree, kPrLayoutNodeNone, 0, box);
+    f.root = root;
+    PrLayoutNode pane = prLayoutTreeFrameReplaced(f.tree, root, 0, box);
+    CHECK(prLayoutNodeContent(f.tree, pane).kind == PrLayoutContentKind_None);
+    PrLayoutContent content{.kind = PrLayoutContentKind_DrawList};
+    content.list = list;
+    prLayoutTreeFrameSetContent(f.tree, pane, &content);
+    layOut(f);
+
+    // The next frame continues the node without setting its content, which stays.
+    prLayoutTreeBeginFrame(f.tree);
+    root = prLayoutTreeFrameElement(f.tree, kPrLayoutNodeNone, 0, box);
+    PrLayoutNode again = prLayoutTreeFrameReplaced(f.tree, root, 0, box);
+    CHECK(again == pane);
+    CHECK(prLayoutNodeContent(f.tree, again).kind == PrLayoutContentKind_DrawList);
+    // Setting no content clears it.
+    PrLayoutContent none{};
+    prLayoutTreeFrameSetContent(f.tree, again, &none);
+    CHECK(prLayoutNodeContent(f.tree, again).kind == PrLayoutContentKind_None);
+    layOut(f);
+    prDrawListRelease(list);
 }

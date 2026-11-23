@@ -209,7 +209,9 @@ struct ModelSurvey {
 // last paste found if it found no image.
 struct ImportPrompt {
     bool open = false;
-    const PrTextureSource* PR_NULLABLE image = nullptr;
+    const PrTextureSource* PR_NULLABLE image = nullptr;    // shows `pixels`
+    Array<uint8_t> pixels;                                 // Rgba8 with straight alpha, rows of `extent.x` texels
+    PrUVec2 extent{};
     String message;
 };
 

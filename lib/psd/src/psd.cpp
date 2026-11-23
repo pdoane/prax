@@ -181,8 +181,22 @@ PrStatus readDocument(PrByteView bytes, Document* doc, PrPsdInfo* info) {
     PrByteView colorData{};
     PrByteView resources{};
     PrByteView layers{};
-    if (!section(4, &colorData) || !section(4, &resources) || !section(doc->psb ? 8 : 4, &layers))
+    if (!section(4, &colorData) || !section(4, &resources))
         return PrStatus_InvalidData;
+    // Bytes that end inside the layer and mask information, as a document still arriving does, have the image resources
+    // whole. They describe the document once they hold the start of the layer information, which says whether the
+    // merged image has transparency.
+    const size_t layersAt = pos;
+    const size_t layersLengthBytes = doc->psb ? 8 : 4;
+    const bool cut = !section(uint32_t(layersLengthBytes), &layers);
+    if (cut) {
+        if (bytes.size - layersAt < layersLengthBytes)
+            return PrStatus_InvalidData;
+        const uint64_t length = doc->psb ? prMemReadBeU64(bytes.data + layersAt) : prMemReadBeU32(bytes.data + layersAt);
+        layers = PrByteView{bytes.data + layersAt + layersLengthBytes, bytes.size - layersAt - layersLengthBytes};
+        if (layers.size < (doc->psb ? 8u : 4u) + 2 && layers.size < length)
+            return PrStatus_InvalidData;
+    }
     if (mode == PrPsdMode_Indexed) {
         if (colorData.size < 768)
             return PrStatus_InvalidData;
@@ -201,12 +215,17 @@ PrStatus readDocument(PrByteView bytes, Document* doc, PrPsdInfo* info) {
     }
     info->alpha = transparency && doc->storedChannels > doc->storedColors;
 
-    if (bytes.size - pos < 2)
-        return PrStatus_InvalidData;
-    doc->compression = prMemReadBeU16(bytes.data + pos);
-    doc->dataAt = pos + 2;
-    if (doc->compression != kCompressionRaw && doc->compression != kCompressionPackBits)
-        return doc->compression <= 3 ? PrStatus_NotSupported : PrStatus_InvalidData;
+    // Before the merged image's data has begun, the document has no rows: a read clears them.
+    const bool before = cut || bytes.size - pos < 2;
+    if (before) {
+        doc->compression = kCompressionRaw;
+        doc->dataAt = bytes.size;
+    } else {
+        doc->compression = prMemReadBeU16(bytes.data + pos);
+        doc->dataAt = pos + 2;
+        if (doc->compression != kCompressionRaw && doc->compression != kCompressionPackBits)
+            return doc->compression <= 3 ? PrStatus_NotSupported : PrStatus_InvalidData;
+    }
 
     const uint32_t colorChannels = info->colors == PrPsdColors_Gray ? 1 : info->colors == PrPsdColors_Cmyk ? 4 : 3;
     info->channels = uint8_t(colorChannels + (info->alpha ? 1 : 0));
@@ -215,7 +234,7 @@ PrStatus readDocument(PrByteView bytes, Document* doc, PrPsdInfo* info) {
         info->sample = PrPsdSample_F32;
     doc->readChannels = doc->storedColors + (info->alpha ? 1 : 0);
     doc->rowBytes = (uint64_t(info->extent.x) * depth + 7) / 8;
-    return PrStatus_Ok;
+    return before ? PrStatus_Truncated : PrStatus_Ok;
 }
 
 uint32_t sampleBytes(PrPsdSample sample) {
@@ -381,7 +400,7 @@ PrStatus prPsdDecoderCreate(PrByteView bytes, const PrPsdLimits* PR_NULLABLE lim
     Document doc{};
     PrPsdInfo info{};
     PrStatus status = readDocument(bytes, &doc, &info);
-    if (status != PrStatus_Ok)
+    if (status != PrStatus_Ok && status != PrStatus_Truncated)
         return status;
     const uint64_t pixels = uint64_t(info.extent.x) * info.extent.y;
     // A read holds one unpacked row of one channel.
@@ -395,7 +414,7 @@ PrStatus prPsdDecoderCreate(PrByteView bytes, const PrPsdLimits* PR_NULLABLE lim
     decoder->info = info;
     decoder->row = static_cast<uint8_t*>(prMemoryAlloc(size_t(doc.rowBytes)));
     *out = decoder;
-    return PrStatus_Ok;
+    return status;
 }
 
 void prPsdDecoderDestroy(PrPsdDecoder* PR_NULLABLE decoder) {

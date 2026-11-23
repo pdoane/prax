@@ -7,7 +7,11 @@
 #include "pr/texture.h"
 #include "pr/texture_cache.h"
 
+#include "tools/harness/texture_await.h"
+
 #include "tools/harness/test.h"
+
+using namespace harness;
 
 namespace pr_impl {
 
@@ -156,14 +160,14 @@ TEST_CASE("a realization that arrives later calls the host's arrived function on
     CHECK(prTextureCacheRealize(cache, source, prTextureCacheAskEncoded(0), &region) == PrTextureCacheState_Ready);
     CHECK(texels.reads == 1);
 
-    // On a pool, a waiter blocks until the realization arrives.
+    // On a pool, the realization arrives later, and a later ask finds it.
     PrTaskPool* pool = prTaskPoolCreate(PrTaskPoolBackend_Default, 1);
     PrTextureCacheDesc pooled = prTextureCacheDescDefault(device);
     pooled.tasks = pool;
     PrTextureCache* onPool = prTextureCacheCreate(&pooled);
     texels.deferred = false;
     PrTextureRegion waited{};
-    CHECK(prTextureCacheWait(onPool, source, prTextureCacheAskEncoded(0), &waited) == PrTextureCacheState_Ready);
+    CHECK(textureCacheAwait(onPool, source, prTextureCacheAskEncoded(0), &waited) == PrTextureCacheState_Ready);
     CHECK(prMemEquals(texelAt(device, waited.texture.texture, {1, 1}), green, 4));
     prTextureCacheDestroy(onPool);
     prTaskPoolDestroy(pool);
@@ -350,3 +354,48 @@ TEST_CASE("an ask for encoded values gets a texture that a sampler reads without
 }
 
 TEST_SUITE_END();
+
+TEST_CASE("destroying a cache runs none of the realizations that wait, in its queue or in its pool's" *
+        doctest::skip(!prThreadSupported())) {
+    PrGpuDevice* device = prGpuMemoryCreate(nullptr);
+    PrTaskPool* pool = prTaskPoolCreate(PrTaskPoolBackend_Default, 1);
+    PrTextureCacheDesc desc = prTextureCacheDescDefault(device);
+    desc.tasks = pool;
+    PrTextureCache* cache = prTextureCacheCreate(&desc);
+    // The first source's read takes a while on the pool's one thread. Sources asked for at High priority wait in the
+    // pool's queue behind it, and the others in the cache's queue. Each of their reads counts.
+    struct Counted {
+        Atomic<uint32_t> reads;
+        static void read(void* PR_NULLABLE context, PrTextureRead* read) {
+            static_cast<Counted*>(context)->reads.fetchAdd(1);
+            prTextureReadComplete(read, PrStatus_Ok);
+        }
+        static void slow(void* PR_NULLABLE, PrTextureRead* read) {
+            prThreadSleep(30);
+            prTextureReadComplete(read, PrStatus_Ok);
+        }
+    };
+    Counted counted;
+    counted.reads.store(0);
+    const PrTextureDesc texture = prTextureDesc2d(PrGpuFormat_Rgba8, PrUVec2{2, 2}, PrTextureAlpha_None);
+    PrTextureSourceDesc slowDesc{.texture = texture, .read = Counted::slow};
+    const PrTextureSource* slow = prTextureSourceCreate(&slowDesc);
+    PrTextureCacheAsk high = prTextureCacheAskEncoded(0);
+    high.priority = PrTextureCachePriority_High;
+    PrTextureRegion region{};
+    CHECK(prTextureCacheRealize(cache, slow, high, &region) == PrTextureCacheState_Pending);
+    Array<const PrTextureSource*> sources;
+    for (uint32_t i = 0; i < 40; ++i) {
+        PrTextureSourceDesc countedDesc{.texture = texture, .read = Counted::read, .context = &counted};
+        sources.push(prTextureSourceCreate(&countedDesc));
+        PrTextureCacheAsk ask = i % 2 == 0 ? high : prTextureCacheAskEncoded(0);
+        CHECK(prTextureCacheRealize(cache, sources.last(), ask, &region) == PrTextureCacheState_Pending);
+    }
+    prTextureCacheDestroy(cache);
+    prTaskPoolDestroy(pool);
+    CHECK(counted.reads.load() == 0);
+    for (const PrTextureSource* source : sources)
+        prTextureSourceRelease(source);
+    prTextureSourceRelease(slow);
+    prGpuDeviceDestroy(device);
+}

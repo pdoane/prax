@@ -470,6 +470,34 @@ TEST_CASE("a list holds a texture source until it is emptied or freed") {
     prTextureSourceRelease(image);
 }
 
+TEST_CASE("a list awaits the textures that it was recorded without, and so does a list that embeds it") {
+    const uint8_t texel[4] = {255, 255, 255, 255};
+    const PrTextureSource* image =
+        prTextureSourceCreateCopy(PrPixelView{texel, 4, {1, 1}}, PrPixelFormat_Rgba8, PrTextureAlpha_None);
+    // A cache without a device answers every ask with Pending.
+    PrTextureCacheDesc desc = prTextureCacheDescDefault(nullptr);
+    PrTextureCache* cache = prTextureCacheCreate(&desc);
+    PrDrawList* inner = prDrawListCreate();
+    PrTextureRegion region{};
+    PrTextureCacheAsk ask = prTextureCacheAskEncoded(0);
+    CHECK(prDrawListRealize(inner, cache, image, ask, &region) == PrTextureCacheState_Pending);
+    prDrawListRect(inner, PrRect{0, 0, 4, 4}, {.color = PrColor{1, 0, 0, 1}});
+    REQUIRE(prDrawListAwaitedCount(inner) == 1);
+    CHECK(prDrawListAwaited(inner, 0).source == image);
+    CHECK(prTextureSourceReferences(image) == 2);
+    PrDrawList* outer = prDrawListCreate();
+    prDrawListEmbed(outer, inner, PrDVec2{0, 0});
+    REQUIRE(prDrawListAwaitedCount(outer) == 1);
+    CHECK(prDrawListAwaited(outer, 0).source == image);
+    prDrawListRelease(inner);
+    prDrawListClear(outer);
+    CHECK(prDrawListAwaitedCount(outer) == 0);
+    CHECK(prTextureSourceReferences(image) == 1);
+    prDrawListRelease(outer);
+    prTextureCacheDestroy(cache);
+    prTextureSourceRelease(image);
+}
+
 TEST_CASE("the draw source of a texture region draws the rect of the region within the host's texture") {
     // A slot of a shared page, of 2 by 1 texels at (40, 8).
     PrTextureRegion region{

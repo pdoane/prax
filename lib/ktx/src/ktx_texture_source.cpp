@@ -288,8 +288,11 @@ bool formatSupportsType(const PrTextureFormat*, PrStringView type) {
     return type == "image/ktx2";
 }
 
+// A KTX file is opened once every byte has arrived.
 PrStatus formatCreate(const PrTextureFormat* format, const PrBlobSource* bytes, const PrBlob* blob,
-        const PrTextureLimits* limits, const PrTextureSource* PR_NULLABLE* PR_NONNULL out) {
+        const PrTextureLimits* limits, bool partial, const PrTextureSource* PR_NULLABLE* PR_NONNULL out) {
+    if (partial)
+        return PrStatus_Truncated;
     return sourceCreate(bytes, blob, static_cast<const KtxFormat*>(format)->codec, *limits, out);
 }
 
@@ -298,19 +301,6 @@ PrStatus formatCreate(const PrTextureFormat* format, const PrBlobSource* bytes, 
 } // namespace pr_impl
 
 using namespace pr_impl;
-
-PrStatus prKtxTextureSourceOpen(const PrBlobSource* bytes, const PrCompressCodecSet* PR_NULLABLE codec,
-        const PrTextureLimits* PR_NULLABLE limits, const PrTextureSource* PR_NULLABLE* PR_NONNULL out) {
-    *out = nullptr;
-    PrBlob* blob = nullptr;
-    PrStatus status = prBlobSourceRead(bytes, prBlobRangeWhole(), &blob);
-    if (status != PrStatus_Ok)
-        return status;
-    PrTextureLimits bounds = limits != nullptr ? *limits : prTextureLimitsDefault();
-    status = sourceCreate(bytes, blob, codec, bounds, out);
-    prBlobRelease(blob);
-    return status;
-}
 
 PrTextureFormat* prKtxTextureFormatCreate(const PrCompressCodecSet* PR_NULLABLE codec) {
     KtxFormat* format = allocZeroed<KtxFormat>();

@@ -52,6 +52,28 @@ typedef struct PrGifDecoder PrGifDecoder;
 PrStatus prGifDecoderCreate(PrByteView bytes, const PrGifLimits* PR_NULLABLE limits, uint64_t held,
     PrGifDecoder* PR_NULLABLE* PR_NONNULL out);
 
+// Creates a decoder of a GIF whose bytes arrive in pieces, which the caller appends (prGifDecoderAppend), within
+// `limits`, or the defaults if they are null. `held` is as for prGifDecoderCreate. The decoder keeps the bytes that are
+// appended. Its info is zero until the screen's descriptor and global table arrive.
+PrStatus prGifDecoderCreateStream(const PrGifLimits* PR_NULLABLE limits, uint64_t held,
+    PrGifDecoder* PR_NULLABLE* PR_NONNULL out);
+
+// Appends the next bytes of the file to a decoder that prGifDecoderCreateStream created, and decodes what they
+// complete: each byte is walked once, and the codes of the frame that is arriving expand and draw onto the screen as
+// they arrive, so the work of all the appends is proportional to the file and the pixels, however the bytes are
+// divided. Returns Ok once the trailer has arrived, Truncated before, and InvalidData or Limit, which the decoder
+// keeps.
+//
+// The info counts the frames that have begun. prGifDecoderRead reads the frame that is arriving as far as it has
+// arrived, and a frame before it whole.
+PrStatus prGifDecoderAppend(PrGifDecoder* decoder, PrByteView bytes);
+
+// Returns the work that a decoder of appended bytes has done: the bytes that its appends read, the codes that they
+// expanded, and the pixels of the frames that its reads composed. A read of a frame before the arriving one continues
+// from the frame that the last read composed, so reading the frames in order composes each once. A caller measures that
+// the work is proportional to the file and to the frames read with it.
+uint64_t prGifDecoderWork(const PrGifDecoder* decoder);
+
 // Frees the decoder and what it holds.
 void prGifDecoderDestroy(PrGifDecoder* PR_NULLABLE decoder);
 
@@ -63,7 +85,8 @@ uint32_t prGifDecoderFrameDuration(const PrGifDecoder* decoder, uint32_t frame);
 
 // Decodes `frame`, which the image has, into `output`, of the screen's extent, composed over the frames before it from
 // a transparent screen. Composing the frames in order continues the composition, and any other order restarts it.
-// Returns InvalidData for a frame that does not decode.
+// Returns InvalidData for a frame that does not decode, and Truncated for a frame whose data the bytes cut short, whose
+// pixels past the data are left as the frames before it left them.
 PrStatus prGifDecoderRead(PrGifDecoder* decoder, uint32_t frame, PrPixels output);
 
 #if defined(__cplusplus)

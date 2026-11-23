@@ -172,13 +172,14 @@ struct TrackFlex {
     }
 };
 
-// A segment: a bordered share of its track, which centers its icon and label.
+// A segment: a bordered share of its track, which centers its icon and label. A share is never narrower than the
+// segment's content and padding, so that a label keeps its room when the track is as wide as its content.
 struct SegmentBox {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Box;
     void make(const PrKit&, PrLayoutBoxStyle& box) const {
         box.display = PrLayoutDisplay_Flex;
         box.boxSizing = PrLayoutBoxSizing_BorderBox;
-        box.minWidth = prLayoutLengthPx(0);
+        box.minWidth = prLayoutLengthAuto();
         kitSetPadding(box, prKitEdgesXY(0, kPrKitSpace5));
         kitSetBorderWidth(box, 1);
     }

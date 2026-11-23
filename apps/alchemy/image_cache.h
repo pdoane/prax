@@ -49,10 +49,6 @@ void imageCachePump(ImageCache* cache);
 // The caller releases it.
 const PrTextureSource* PR_NULLABLE imageDecode(const PrImageCodecSet* codec, const void* bytes, size_t size);
 
-// Reads the first level of the image as Rgba8 into `out`. `out` must have the image's extent. The pixels have `alpha`,
-// or are opaque if the image is opaque. Returns false if the image cannot be read.
-bool imageReadRgba8(const PrTextureSource* image, PrTextureAlpha alpha, PrPixels out);
-
 } // namespace alchemy
 
 PR_ASSUME_NONNULL_END

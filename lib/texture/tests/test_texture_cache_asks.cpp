@@ -10,6 +10,7 @@
 #include "pr/texture_cache.h"
 
 #include "tools/harness/harness_gpu.h"
+#include "tools/harness/texture_await.h"
 
 #include "tools/harness/test.h"
 
@@ -126,7 +127,7 @@ PrTextureCacheAsk askOf(PrTextureValues values, PrTextureChannelFlags channels =
 PrGpuTextureDesc realized(PrTextureCache* cache, const PrTextureSource* source, PrTextureCacheAsk ask,
         PrTextureRegion* out = nullptr) {
     PrTextureRegion region{};
-    REQUIRE(prTextureCacheWait(cache, source, ask, &region) == PrTextureCacheState_Ready);
+    REQUIRE(textureCacheAwait(cache, source, ask, &region) == PrTextureCacheState_Ready);
     if (out != nullptr)
         *out = region;
     return prGpuTextureDesc(prTextureCacheDevice(cache), region.texture.texture);

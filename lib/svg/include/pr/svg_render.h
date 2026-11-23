@@ -80,9 +80,10 @@ typedef struct PrSvgDrawOptions {
 
     // The texture cache that raster images are drawn from, or null. The cache must be on the device of the renderer
     // that draws the tree's drawings, and it must outlive the drawings. Without a cache, raster images draw nothing. A
-    // drawing waits for the textures of its raster images, because the drawing of an SVG is kept. The list that
-    // receives a drawing holds the rasters that the drawing draws. A caller that keeps the list must draw the tree
-    // again after the cache moves to another device (prTextureCacheGeneration).
+    // raster whose texture has not arrived draws nothing, or a smaller version of it, and the list that receives the
+    // drawing awaits it (prDrawListAwaited): a caller that keeps the list draws the tree again when the cache reports
+    // an arrival. The list holds the rasters that the drawing draws. A caller that keeps the list must also draw the
+    // tree again after the cache moves to another device (prTextureCacheGeneration).
     PrTextureCache* PR_NULLABLE textures;
 
     // The document prefers a dark color scheme, and a light one otherwise. Its media queries and the colors that depend

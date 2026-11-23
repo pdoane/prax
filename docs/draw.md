@@ -83,9 +83,13 @@ in the host's texture cache, or a texture that the host owns, such as the color 
   larger than that version, or while the full image has not arrived. `prDrawSourceRegion` takes a rect in the texels of
   the image's source and scales the rect to the version that the region holds. The drawing is therefore the same for
   every version.
-- **An image that has not arrived draws nothing.** The producer leaves the command out. The cache calls the host's
-  `arrived` function when the image arrives, and the host records and draws again. A render that must be complete, such
-  as a capture or a test, waits for its images (`prTextureCacheWait`).
+- **An image that has not arrived draws nothing.** The producer leaves the command out, or draws a smaller version,
+  and the list awaits the image (`prDrawListRealize`, `prDrawListAwaited`). The cache calls the host's `arrived`
+  function when the image arrives, and the host records and draws again. A holder that keeps a list asks again for
+  what it awaits in each frame. The libraries never wait for an image. A render that must be complete, such as a
+  capture or a test, drives the cache until its images arrive (tools/harness/texture_await.h). The one consumer that
+  waits is a canvas, whose drawImage a script reads back in the same turn (`prTextureCacheWait`), until a rolling draw
+  list of its bitmap replaces the wait.
 - **A list holds the sources of its images** (`prDrawListHoldSource`). The cache keeps a region while anything holds the
   region's source, so a list that the host keeps can be drawn again.
 - **The host keeps a texture that it owns alive and unchanged** until the frames that draw the texture are done

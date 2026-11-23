@@ -14,7 +14,8 @@ PR_ASSUME_NONNULL_BEGIN
 extern "C" {
 #endif
 
-// Creates a source of the DDS texture in `bytes`. The source retains `bytes` and reads them again for each read.
+// A format set opens a DDS texture with the format of prDdsTextureFormatCreate (prTextureFormatSetOpen). Its source
+// retains the bytes and reads them again for each read.
 //
 // A file of blocks gives a source of those blocks, and a file of pixels in a format that lib/gpu has, swizzled or not,
 // gives a source of those pixels as stored. Any other file gives a source of the pixels that it decodes to: Rgba8 for
@@ -29,12 +30,9 @@ extern "C" {
 // A file that ends before its texels still opens, because its headers describe the whole texture. Reads of the missing
 // levels fail.
 //
-// Returns the failure of reading the bytes, Limit if a side, the depth or the layers of the texture are past `limits`,
-// or a failure of prDdsTextureCreate other than Truncated. A null `limits` means the defaults. On failure, `*out` is
-// null.
-PrStatus prDdsTextureSourceOpen(const PrBlobSource* bytes, const PrTextureLimits* PR_NULLABLE limits,
-    const PrTextureSource* PR_NULLABLE* PR_NONNULL out);
-
+// The open fails with Limit if a side, the depth or the layers of the texture are past the open's limits, or with a
+// failure of prDdsTextureCreate other than Truncated.
+//
 // Creates a format for a texture format set (prTextureFormatSetCreate). It reads the media type image/vnd.ms-dds.
 PrTextureFormat* prDdsTextureFormatCreate(void);
 

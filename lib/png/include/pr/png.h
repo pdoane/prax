@@ -87,6 +87,29 @@ typedef struct PrPngDecoder PrPngDecoder;
 PrStatus prPngDecoderCreate(PrByteView bytes, const PrCompressCodecSet* compress, const PrPngLimits* PR_NULLABLE limits,
     uint64_t held, PrPngDecoder* PR_NULLABLE* PR_NONNULL out);
 
+// Creates a decoder of a PNG whose bytes arrive in pieces, which the caller appends (prPngDecoderAppend), within
+// `limits`, or the defaults if they are null. `held` is as for prPngDecoderCreate. The decoder keeps the bytes that are
+// appended. Its info is zero until the bytes reach the image data, and then describes the image.
+PrStatus prPngDecoderCreateStream(const PrCompressCodecSet* compress, const PrPngLimits* PR_NULLABLE limits,
+    uint64_t held, PrPngDecoder* PR_NULLABLE* PR_NONNULL out);
+
+// Appends the next bytes of the file to a decoder that prPngDecoderCreateStream created, and decodes what they
+// complete: each byte is walked once, and the image data inflates and unfilters into the image's rows as it arrives, so
+// the work of all the appends is proportional to the file and the pixels, however the bytes are divided. Returns Ok
+// once the file has ended, Truncated while it has not, and the failures of prPngDecoderCreate, which the decoder keeps.
+//
+// prPngDecoderRead then reads what has arrived: the rows of the still image, filled into blocks for an interlaced one,
+// and the frames of an animation that have begun, which the info counts. The data of the frame that is arriving
+// inflates as it arrives, as a still image's does, and the frame reads as the frames before it with its rows that have
+// arrived composed over them.
+PrStatus prPngDecoderAppend(PrPngDecoder* decoder, PrByteView bytes);
+
+// Returns the work that a decoder of appended bytes has done: the bytes that its appends read, inflated and unfiltered,
+// and the pixels of the frames that its reads decoded. A read of a whole frame continues from the frame that the last
+// read composed, so reading the frames in order decodes each once. A caller measures that the work is proportional to
+// the file and to the frames read with it.
+uint64_t prPngDecoderWork(const PrPngDecoder* decoder);
+
 // Frees the decoder and what it holds.
 void prPngDecoderDestroy(PrPngDecoder* PR_NULLABLE decoder);
 
@@ -99,13 +122,26 @@ uint32_t prPngDecoderFrameDuration(const PrPngDecoder* decoder, uint32_t frame);
 // Decodes `frame`, which the image has, into `output`, of the image's extent. An animated PNG's frames are composed
 // over the frames before them, from a transparent canvas: composing them in order continues the composition, and any
 // other order restarts it. Returns InvalidData for a frame that does not decode.
+//
+// A still image whose bytes end before its data does decodes the rows that they hold and returns Truncated. The rest is
+// zero, except that an interlaced image fills each block of the passes that it holds from the pixel that stands for it,
+// so that it shows the whole picture coarsely.
 PrStatus prPngDecoderRead(PrPngDecoder* decoder, uint32_t frame, PrPixels output);
+
+// Options of an encoding.
+enum {
+    // The image is stored in the seven passes of Adam7 interlacing (png 8.2), so that a decoder of the first bytes
+    // shows the whole picture coarsely before it shows it whole.
+    PrPngEncodeFlag_Interlaced = 1u << 0,
+};
+typedef uint8_t PrPngEncodeFlags;
 
 // Encodes `rgba8`, top-down straight-alpha 8-bit RGBA of nonzero size, as a PNG. Each row is filtered, and the rows are
 // compressed as zlib by `compress`, or stored if it encodes no zlib. Writes up to `capacity` bytes to `out`, and
 // returns the size of the whole encoding. `out` may be null if `capacity` is zero. Each call compresses the image
 // again.
-size_t prPngEncode(PrPixelView rgba8, const PrCompressCodecSet* compress, uint8_t* PR_NULLABLE out, size_t capacity);
+size_t prPngEncode(PrPixelView rgba8, PrPngEncodeFlags flags, const PrCompressCodecSet* compress,
+    uint8_t* PR_NULLABLE out, size_t capacity);
 
 #if defined(__cplusplus)
 }

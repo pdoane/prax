@@ -185,6 +185,7 @@ struct LayoutReplaced {
     PrLayoutImageRendering rendering; // Image
     PrTextureCachePriority priority;  // Image: PrLayoutContent::priority
     bool still;                       // Image: PrLayoutContent::still
+    PrTextureTimeline timeline;       // Image: PrLayoutContent::timeline
     bool upright;                     // Image: PrLayoutContent::upright
     uint64_t embed;                   // Embed: its id
     uint64_t revision;                // PrLayoutContent::revision

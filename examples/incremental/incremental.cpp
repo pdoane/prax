@@ -1,34 +1,53 @@
 // The incremental example: a document that arrives in pieces, as a language model's answer or a slow network delivers
 // it, rendered as it arrives, beside Studio Kit's controls for the stream.
 //
-// Three samples stream in their own way. The Markdown answer is a text/markdown document, loaded as it arrives
+// Eight samples stream in their own way. The Markdown answer is a text/markdown document, loaded as it arrives
 // (prHtmlPageBeginLoad): its final blocks keep their nodes, and the blocks after them are built again from each piece.
 // The chat is an HTML page whose messages are Markdown, each streamed into its own element (pr/html_markdown.h) as the
 // answer to a question arrives. The HTML page is a text/html document, loaded as it arrives. A Markdown document of the
 // same pieces runs beside a Markdown sample and reports what each piece changed (prMarkdownTakeChanges), which the
-// status line shows.
+// status line shows. The five images are fed to a blob feed (PrBlobFeed) and opened as their bytes arrive
+// (prTextureFormatSetOpen), as the texture cache shows each revision of the source: the baseline JPEG and the PNG
+// arrive row by row, the progressive JPEG shows the whole picture sharpening scan by scan, the interlaced PNG shows it
+// in blocks that refine pass by pass, and the animated GIF plays the frames that have arrived. The pictures are a
+// photograph, a render and an animation of some tens of kilobytes, which `./dev.sh fetch incremental` fetches, and the
+// PNGs are encoded from the photograph. A build without them streams small stand-ins of the repository. Choosing an
+// image sets the rate at which it arrives in a few seconds.
+//
+// The arguments `--sample <markdown|chat|html|baseline-jpeg|progressive-jpeg|png|interlaced-png|gif>` and `--rate
+// <bytes a second>` choose the sample and the rate that the example starts with, and `--size <width>x<height>` the
+// window's size. `--capture <prefix>` writes a frame of the window to <prefix>_<n>.png every `--every` seconds, one
+// second by default, while the sample streams, and once more after it ends, and then quits.
 //
 // The page runs on the window's thread. Before each frame, the stream delivers the pieces that its rate allows, the
 // page runs its due tasks, and the view records the page into a draw list (prHtmlViewPaint) for the pane that the last
 // frame laid out. The pane is a replaced element whose painter embeds that list.
 
 #include "pr/app.h"
+#include "pr/array.h"
 #include "pr/assert.h"
+#include "pr/atomic.h"
+#include "pr/blob.h"
 #include "pr/compress_select.h"
 #include "pr/count_of.h"
 #include "pr/css_view.h"
 #include "pr/dom.h"
 #include "pr/draw_list.h"
+#include "pr/file.h"
 #include "pr/float.h"
+#include "pr/float_convert.h"
 #include "pr/font_bundle.h"
+#include "pr/hash.h"
 #include "pr/html.h"
 #include "pr/html_markdown.h"
 #include "pr/html_page.h"
 #include "pr/html_view.h"
 #include "pr/image_select.h"
+#include "pr/image_texture_source.h"
 #include "pr/kit_box.h"
 #include "pr/kit_button.h"
 #include "pr/kit_choice.h"
+#include "pr/kit_image.h"
 #include "pr/kit_input.h"
 #include "pr/kit_panel.h"
 #include "pr/kit_text.h"
@@ -36,11 +55,14 @@
 #include "pr/layout_unit.h"
 #include "pr/markdown.h"
 #include "pr/min_max.h"
+#include "pr/png.h"
 #include "pr/print.h"
+#include "pr/resource.h"
 #include "pr/string.h"
 #include "pr/studio_app.h"
 #include "pr/text.h"
 #include "pr/text_font.h"
+#include "pr/texture.h"
 #include "pr/time.h"
 
 namespace {
@@ -54,11 +76,33 @@ enum {
     Sample_Markdown,
     Sample_Chat,
     Sample_Html,
+    Sample_BaselineJpeg,
+    Sample_ProgressiveJpeg,
+    Sample_Png,
+    Sample_InterlacedPng,
+    Sample_Gif,
     Sample_Count,
 };
 typedef uint32_t Sample;
 
-constexpr const char* kSampleLabels[Sample_Count] = {"Markdown answer", "Markdown chat", "HTML page"};
+constexpr const char* kSampleLabels[Sample_Count] = {
+    "Markdown answer", "Markdown chat", "HTML page", "Baseline JPEG", "Progressive JPEG", "PNG", "Interlaced PNG",
+    "Animated GIF",
+};
+
+// The names of the samples as the arguments give them, and the names of the image samples' files, whose extensions help
+// to classify them.
+constexpr const char* kSampleNames[Sample_Count] = {
+    "markdown", "chat", "html", "baseline-jpeg", "progressive-jpeg", "png", "interlaced-png", "gif",
+};
+constexpr const char* kImageNames[Sample_Count] = {
+    "", "", "", "baseline.jpg", "progressive.jpg", "clouds.png", "clouds-interlaced.png", "wave.gif",
+};
+
+// Returns true if the sample is an image, which is fed to a blob feed rather than to the page.
+bool isImage(Sample sample) {
+    return sample >= Sample_BaselineJpeg;
+}
 
 // An answer such as a language model writes. The links' references are defined at the end, so each link resolves only
 // once its definition's line arrives, and the footnotes list follows the answer once their references arrive.
@@ -377,7 +421,14 @@ constexpr const char* kChatPage = R"(<!DOCTYPE html>
 
 // The rate and the size of the pieces, which the controls set, and their ranges.
 constexpr double kMinRate = 20;
-constexpr double kMaxRate = 20000;
+constexpr double kMaxRate = 100000;
+
+// The rate that choosing a document sample sets, in bytes a second: about a language model's pace. The three documents
+// are of similar lengths, so one rate suits them.
+constexpr float kDocumentRate = 120;
+
+// The seconds that an image sample takes to arrive at the rate that choosing it sets.
+constexpr double kImageSeconds = 8;
 constexpr double kMinChunk = 1;
 constexpr double kMaxChunk = 256;
 
@@ -391,7 +442,7 @@ constexpr double kTaskBudget = 8;
 // reported.
 struct Stream {
     Sample sample = Sample_Markdown;
-    float rate = 120;               // bytes a second, about a language model's pace
+    float rate = kDocumentRate;     // bytes a second
     float chunk = 6;                // bytes a piece
     bool paused = false;
 
@@ -410,6 +461,14 @@ struct Stream {
     PrDomElement* element = nullptr; // the chat's message's element
     PrHtmlMarkdownStream* markdownStream = nullptr;
 
+    // An image sample: the formats that open it, the bytes of each image, the feed that the pieces go to, and the
+    // source once the bytes describe it, or why it did not open.
+    const PrTextureFormatSet* formats = nullptr;
+    String images[Sample_Count];
+    PrBlobFeed* feed = nullptr;
+    const PrTextureSource* image = nullptr;
+    PrStatus imageStatus = PrStatus_Ok;
+
     // The Markdown of the same pieces, and what its last piece changed.
     PrMarkdown* mirror = nullptr;
     PrMarkdownChange lastChange{};
@@ -425,6 +484,113 @@ struct Stream {
     PrAppDisplay display = prAppDisplayDefault();
     PrAppUserPreferences preferences = prAppUserPreferencesDefault();
 };
+
+// Returns the rate at which `bytes` arrive in kImageSeconds.
+float imageRate(const String& bytes) {
+    return float(min(max(double(bytes.count()) / kImageSeconds, kMinRate), kMaxRate));
+}
+
+// Returns the rate at which `sample` starts when it is chosen.
+float rateOf(const Stream& s, Sample sample) {
+    return isImage(sample) ? imageRate(s.images[sample]) : kDocumentRate;
+}
+
+// Returns the bytes of the program's resource `name`.
+String resource(PrStringView name) {
+    String bytes;
+    PrBlob* blob = prResourceOpen(name);
+    if (blob != nullptr)
+        bytes.append(prStringFromBytes(prBlobBytes(blob)));
+    prBlobRelease(blob);
+    return bytes;
+}
+
+// Returns the bytes of the resource `name`, or of `fallback` if the program was built without it, as before `./dev.sh
+// fetch incremental` fetches the larger pictures.
+String resourceOr(PrStringView name, PrStringView fallback) {
+    String bytes = resource(name);
+    return bytes.count() != 0 ? bytes : resource(fallback);
+}
+
+// Returns a PNG of rings of color over a gradient, interlaced if `interlaced` is set, whose bytes compress little, so
+// that it streams for a while at the slow rates.
+String ringsPng(const PrCompressCodecSet* compress, bool interlaced) {
+    constexpr uint32_t kWidth = 480;
+    constexpr uint32_t kHeight = 320;
+    String pixels;
+    for (uint32_t y = 0; y < kHeight; ++y) {
+        for (uint32_t x = 0; x < kWidth; ++x) {
+            float dx = float(x) - kWidth * 0.5f;
+            float dy = float(y) - kHeight * 0.5f;
+            uint32_t ring = uint32_t(prF32Sqrt(dx * dx + dy * dy) / 12);
+            // A little noise in each pixel keeps the encoding large enough to watch.
+            uint32_t noise = (x * 2654435761u ^ y * 40503u) >> 27;
+            char texel[4] = {
+                char(uint8_t(x * 255 / kWidth + noise)), char(uint8_t(ring % 2 == 0 ? 220 : 60 + noise)),
+                char(uint8_t(y * 255 / kHeight)), char(255),
+            };
+            pixels.append(PrStringView{texel, 4});
+        }
+    }
+    PrPixelView view{reinterpret_cast<const uint8_t*>(pixels.data()), kWidth * 4, {kWidth, kHeight}};
+    const PrPngEncodeFlags flags = interlaced ? PrPngEncodeFlag_Interlaced : 0;
+    Array<uint8_t> encoded(uint32_t(prPngEncode(view, flags, compress, nullptr, 0)));
+    prPngEncode(view, flags, compress, encoded.data(), encoded.count());
+    String file;
+    file.append(prStringFromBytes(PrByteView{encoded.data(), encoded.count()}));
+    return file;
+}
+
+// Returns a PNG of the photograph in `jpeg`, reduced to `width` pixels across, interlaced if `interlaced` is set, or
+// the rings if the photograph does not decode. A photograph's pixels compress little, so the PNG is large enough to
+// watch.
+String photoPng(const PrCompressCodecSet* compress, const PrImageCodecSet* images, const String& jpeg, bool interlaced) {
+    constexpr uint32_t kWidth = 400;
+    PrImageDecoder* decoder = prImageDecoderCreate(images);
+    PrImageSource source{};
+    source.memory = PrByteView{reinterpret_cast<const uint8_t*>(jpeg.data()), jpeg.count()};
+    Array<uint8_t> full;
+    PrUVec2 extent{};
+    if (jpeg.count() != 0 && prImageDecoderOpen(decoder, source, nullptr) == PrStatus_Ok) {
+        extent = prImageDecoderInfo(decoder)->extent;
+        full.resize(extent.x * extent.y * 4);
+        PrPixels into{full.data(), size_t(extent.x) * 4, extent};
+        if (prImageDecoderReadRgba8(decoder, 0, PrImageAlpha_Straight, PrImageOrientation_Identity, into) !=
+                PrStatus_Ok)
+            extent = PrUVec2{};
+    }
+    prImageDecoderDestroy(decoder);
+    if (extent.x < kWidth)
+        return ringsPng(compress, interlaced);
+    // Each pixel of the reduction is the mean of the block of the photograph's pixels that it covers.
+    const uint32_t height = extent.y * kWidth / extent.x;
+    Array<uint8_t> reduced(kWidth * height * 4);
+    for (uint32_t y = 0; y < height; ++y) {
+        for (uint32_t x = 0; x < kWidth; ++x) {
+            const uint32_t x0 = x * extent.x / kWidth;
+            const uint32_t x1 = max((x + 1) * extent.x / kWidth, x0 + 1);
+            const uint32_t y0 = y * extent.y / height;
+            const uint32_t y1 = max((y + 1) * extent.y / height, y0 + 1);
+            uint32_t sums[4] = {};
+            for (uint32_t sy = y0; sy < y1; ++sy) {
+                for (uint32_t sx = x0; sx < x1; ++sx) {
+                    for (uint32_t c = 0; c < 4; ++c)
+                        sums[c] += full[(sy * extent.x + sx) * 4 + c];
+                }
+            }
+            const uint32_t count = (x1 - x0) * (y1 - y0);
+            for (uint32_t c = 0; c < 4; ++c)
+                reduced[(y * kWidth + x) * 4 + c] = uint8_t(sums[c] / count);
+        }
+    }
+    PrPixelView view{reduced.data(), kWidth * 4, {kWidth, height}};
+    const PrPngEncodeFlags flags = interlaced ? PrPngEncodeFlag_Interlaced : 0;
+    Array<uint8_t> encoded(uint32_t(prPngEncode(view, flags, compress, nullptr, 0)));
+    prPngEncode(view, flags, compress, encoded.data(), encoded.count());
+    String file;
+    file.append(prStringFromBytes(PrByteView{encoded.data(), encoded.count()}));
+    return file;
+}
 
 // The page's clock: a monotonic clock in milliseconds.
 double now(void* PR_NULLABLE) {
@@ -466,6 +632,12 @@ void startMessage(Stream& s) {
 
 // Frees what the stream made, and makes the sample's page again from its start.
 void closeStream(Stream& s) {
+    // A feed that has not ended fails, which completes an open that waits for its header.
+    prBlobFeedDestroy(s.feed);
+    s.feed = nullptr;
+    prTextureSourceRelease(s.image);
+    s.image = nullptr;
+    s.imageStatus = PrStatus_Ok;
     prHtmlMarkdownStreamDestroy(s.markdownStream);
     s.markdownStream = nullptr;
     if (s.element != nullptr)
@@ -500,7 +672,7 @@ void restart(Stream& s) {
     s.follow = true;
     s.scrollBy = 0;
     PrMarkdownOptions options = s.sample == Sample_Chat ? chatOptions() : prMarkdownOptionsDefault();
-    if (s.sample != Sample_Html)
+    if (s.sample != Sample_Html && !isImage(s.sample))
         s.mirror = prMarkdownCreate(&options);
     switch (s.sample) {
         case Sample_Markdown: {
@@ -520,6 +692,18 @@ void restart(Stream& s) {
             PrHtmlResponseHeaders headers{.contentType = "text/html; charset=utf-8"};
             prHtmlPageBeginLoad(s.page, "about:page.html", &headers);
             s.text = kPage;
+            break;
+        }
+        default: {
+            s.text = s.images[s.sample];
+            s.feed = prBlobFeedCreate(s.text.count());
+            // The open completes when a piece describes the image, on this thread, inside the append.
+            prTextureFormatSetOpen(s.formats, prBlobFeedSource(s.feed), kImageNames[s.sample], nullptr,
+                [](void* PR_NULLABLE context, PrStatus status, const PrTextureSource* PR_NULLABLE source) {
+                    Stream& opened = *static_cast<Stream*>(context);
+                    opened.image = source;
+                    opened.imageStatus = status;
+                }, &s);
             break;
         }
     }
@@ -555,6 +739,9 @@ void deliverPiece(Stream& s, size_t size) {
         case Sample_Html:
             prHtmlPageAppendLoad(s.page, piece);
             break;
+        default:
+            prBlobFeedAppend(s.feed, prStringBytes(piece));
+            break;
         case Sample_Chat:
             if (s.markdownStream != nullptr)
                 prHtmlMarkdownStreamAppend(s.markdownStream, piece);
@@ -572,6 +759,10 @@ void deliverPiece(Stream& s, size_t size) {
     if (s.mirror != nullptr) {
         prMarkdownEnd(s.mirror);
         noteChanges(s);
+    }
+    if (isImage(s.sample)) {
+        prBlobFeedEnd(s.feed);
+        return;
     }
     if (s.sample != Sample_Chat) {
         prHtmlPageEndLoad(s.page);
@@ -663,6 +854,16 @@ String statusOf(const Stream& s) {
     else if (finished(s))
         state = ", done";
     String status = format("{} of {} bytes in {} pieces{}", s.delivered, s.text.count(), s.pieces, state);
+    if (isImage(s.sample) && s.image == nullptr)
+        formatTo(status, s.imageStatus == PrStatus_Ok ? ".  Waiting for the header" : ".  It did not open: {}",
+            prStatusName(s.imageStatus));
+    if (s.image != nullptr) {
+        PrTextureShow show{};
+        prTextureSourceShow(s.image, 0, &show);
+        PrUVec2 extent = prTextureSourceDesc(s.image)->extent;
+        formatTo(status, ".  {}x{}, {}", extent.x, extent.y, show.complete ? "complete" : "a revision of the bytes so far");
+        prTextureSourceRelease(show.picture);
+    }
     if (s.mirror != nullptr) {
         formatTo(status, ".  Markdown: {} blocks, {} final; the last change replaced {} blocks at {} with {}; {} blocks "
             "built in all", prMarkdownBlockCount(s.mirror), prMarkdownFinalCount(s.mirror), s.lastChange.removedCount,
@@ -671,32 +872,45 @@ String statusOf(const Stream& s) {
     return status;
 }
 
-// Declares the round: a bar of the stream's controls, the pane that shows the page, and the status line.
+// Adds a group of the samples from `first` to before `end`, after a label, to `row`. Choosing another sample restarts
+// the stream with it.
+void sampleGroup(PrKit* kit, PrLayoutNode row, Stream& s, PrStringView label, Sample first, Sample end) {
+    PrKitBoxStyle group{.direction = PrKitDirection_Row, .align = PrKitAlign_Center, .gap = 8};
+    PrLayoutNode box = prKitBox(kit, row, {}, group);
+    PrKitTextStyle meta{.role = PrKitTextRole_Meta, .tone = PrKitTone_Secondary, .wrap = PrKitWrap_Nowrap};
+    prKitLabel(kit, box, {.text = label}, meta);
+    PrLayoutNode samples = prKitSegmented(kit, box, {}, {});
+    for (Sample sample = first; sample < end; ++sample) {
+        PrKitChoice choice{.label = kSampleLabels[sample], .selected = s.sample == sample};
+        if (prKitActivated(kit, prKitSegment(kit, samples, choice)) && s.sample != sample) {
+            s.sample = sample;
+            // Each sample starts at a rate of its own: a document at a reading pace, and an image over a few seconds.
+            // The slider changes it until the next choice.
+            s.rate = rateOf(s, sample);
+            restart(s);
+        }
+    }
+}
+
+// Declares the round: a bar of the stream's controls over a row of the samples, the pane that shows the page or the
+// image, and the status line. Each row wraps where the window is too narrow for it.
 void buildApp(void* context, PrKit* kit, PrLayoutNode root) {
     Stream& s = *static_cast<Stream*>(context);
     PrLayoutTree* tree = kit->tree;
     PrKitPanelStyle header{
-        .box = {
-            .direction = PrKitDirection_Row,
-            .align = PrKitAlign_Center,
-            .gap = 14,
-            .padding = prKitEdgesXY(10, 14),
-        },
+        .box = {.direction = PrKitDirection_Column, .gap = 10, .padding = prKitEdgesXY(10, 14)},
         .background = PrKitBackground_Hud,
         .rules = PrKitRuleFlag_Bottom,
     };
-    PrLayoutNode bar = prKitPanel(kit, root, {}, header);
-    PrKitTextStyle title{.role = PrKitTextRole_Heading};
-    prKitLabel(kit, bar, {.text = "Incremental"}, title);
-
-    PrLayoutNode samples = prKitSegmented(kit, bar, {}, {});
-    for (Sample sample = 0; sample < Sample_Count; ++sample) {
-        PrKitChoice choice{.label = kSampleLabels[sample], .selected = s.sample == sample};
-        if (prKitActivated(kit, prKitSegment(kit, samples, choice)) && s.sample != sample) {
-            s.sample = sample;
-            restart(s);
-        }
-    }
+    PrLayoutNode panel = prKitPanel(kit, root, {}, header);
+    PrKitBoxStyle row{.direction = PrKitDirection_Row, .align = PrKitAlign_Center, .wrap = true, .gap = 14};
+    PrLayoutNode bar = prKitBox(kit, panel, {}, row);
+    PrLayoutNode samples = prKitBox(kit, panel, {}, row);
+    PrKitTextStyle title{.role = PrKitTextRole_Heading, .wrap = PrKitWrap_Nowrap};
+    PrLayoutNode heading = prKitLabel(kit, bar, {.text = "Incremental"}, title);
+    prKitPlace(kit, heading, {.flex = PrKitFlex_Fixed});
+    sampleGroup(kit, samples, s, "Documents", Sample_Markdown, Sample_BaselineJpeg);
+    sampleGroup(kit, samples, s, "Images", Sample_BaselineJpeg, Sample_Count);
     PrKitButtonStyle small{.size = PrKitControlSize_Sm};
     if (prKitActivated(kit, prKitButton(kit, bar, {.text = s.paused ? "Play" : "Pause"}, small)))
         s.paused = !s.paused;
@@ -725,19 +939,31 @@ void buildApp(void* context, PrKit* kit, PrLayoutNode root) {
     prKitPlace(kit, chunk, slider);
     PrLayoutNode progress = prKitProgress(
         kit, bar, {.value = s.text.isEmpty() ? 0.0f : float(s.delivered) / float(s.text.count())});
-    prKitPlace(kit, progress, {.flex = PrKitFlex_Grow});
+    prKitPlace(kit, progress, {.minWidth = prKitPx(120), .flex = PrKitFlex_Grow});
 
-    // The pane is a replaced element that fills the room under the bar, and its painter embeds the page.
-    PrLayoutNode pane = prLayoutTreeFrameReplaced(tree, root, 0, 0);
-    prKitPlace(kit, pane, {.flex = PrKitFlex_Fill});
-    if (s.recorded != nullptr) {
-        PrLayoutContent content{.kind = PrLayoutContentKind_Painter};
-        content.painter = PrLayoutPainter{
-            .context = s.recorded,
-            .paint = paintPage,
-            .retain = retainPage,
-            .release = releasePage,
-        };
+    // The pane is a replaced element that fills the room under the bar, and its painter embeds the page. An image
+    // sample shows the image there instead, in an image widget of its own key, as large as fits, once its header has
+    // arrived. A replaced element keeps its content from one round to the next until a round sets it, so the pane sets
+    // it every round, to nothing while it has nothing to show: a sample that starts again shows nothing of the last.
+    PrLayoutNode pane{};
+    if (isImage(s.sample) && s.image != nullptr) {
+        pane = prKitImage(kit, root, {.key = prHashString("image", 0), .image = s.image}, {
+            .fit = PrKitImageFit_Contain,
+            .place = {.flex = PrKitFlex_Fill},
+        });
+    } else {
+        pane = prLayoutTreeFrameReplaced(tree, root, 0, 0);
+        prKitPlace(kit, pane, {.flex = PrKitFlex_Fill});
+        PrLayoutContent content{};
+        if (s.recorded != nullptr && !isImage(s.sample)) {
+            content.kind = PrLayoutContentKind_Painter;
+            content.painter = PrLayoutPainter{
+                .context = s.recorded,
+                .paint = paintPage,
+                .retain = retainPage,
+                .release = releasePage,
+            };
+        }
         prLayoutTreeFrameSetContent(tree, pane, &content);
     }
     PrRect bounds = prLayoutRectToPx(prLayoutNodeBounds(tree, pane, PrLayoutCoordinates_Viewport));
@@ -757,10 +983,22 @@ void buildApp(void* context, PrKit* kit, PrLayoutNode root) {
 // ---------------------------------------------------------------------------------------------------------------------
 // The window
 
-// The example in Studio's window: the stream, and where the pointer last moved, in logical pixels.
+// The example in Studio's window: the stream, and where the pointer last moved, in logical pixels. A run that captures
+// frames keeps the prefix of their files, the seconds between them, the codecs that encode them, and how far it is.
 struct Example {
     Stream stream;
     PrVec2 pointer{};
+    String capture;
+    double every = 1;
+    PrUVec2 size{1280, 860};            // of the window, in logical pixels
+    bool rateGiven = false;             // the arguments chose the rate, which an image sample's then keeps
+    const PrImageCodecSet* images = nullptr;
+    double elapsed = 0;
+    double nextCapture = 0;
+    uint32_t captures = 0;
+    bool last = false;                  // the capture that is asked for is the one after the stream ended
+    Atomic<bool> capturing;
+    Atomic<bool> done;
 };
 
 Example& exampleOf(void* context) {
@@ -777,12 +1015,47 @@ bool open(void* context, PrStudioWindow* window) {
     return true;
 }
 
-// Delivers the pieces of the stream that its rate allows before the frame's rounds read the page.
-void beginFrame(void* context, PrStudioWindow*, const PrAppFrame* f) {
+// Writes the frame that the window captured to the next file of the capture. Called on the GPU device's thread.
+void writeCapture(void* PR_NULLABLE context, PrPixelView rgba) {
+    Example& e = exampleOf(context);
+    String path = format("{}_{:02}.png", e.capture, e.captures);
+    size_t size = 0;
+    bool written = false;
+    if (rgba.data != nullptr) {
+        prImageCodecSetEncode(e.images, "image/png", rgba, nullptr, 0, &size);
+        Array<uint8_t> png;
+        png.resize(uint32_t(size));
+        written = prImageCodecSetEncode(e.images, "image/png", rgba, png.data(), png.count(), &size) == PrStatus_Ok &&
+            prFileWrite(path, PrByteView{png.data(), size});
+    }
+    if (!written)
+        printError("incremental: cannot write {}\n", path);
+    ++e.captures;
+    if (e.last)
+        e.done.store(true);
+    e.capturing.store(false);
+}
+
+// Delivers the pieces of the stream that its rate allows before the frame's rounds read the page, and asks for the
+// captures that are due.
+void beginFrame(void* context, PrStudioWindow* window, const PrAppFrame* f) {
     Example& e = exampleOf(context);
     e.stream.display = f->display;
     e.stream.preferences = f->preferences;
     advance(e.stream, f->delta);
+    if (e.capture.isEmpty())
+        return;
+    if (e.done.load()) {
+        prAppStop(prStudioWindowApp(window));
+        return;
+    }
+    e.elapsed += f->delta;
+    if (e.capturing.load() || e.last || e.elapsed < e.nextCapture)
+        return;
+    e.last = finished(e.stream);
+    e.nextCapture += e.every;
+    e.capturing.store(true);
+    prStudioWindowCapture(window, writeCapture, &e);
 }
 
 // Takes Escape, which quits, and the wheel over the pane, which scrolls the page and stops it following the end when it
@@ -807,18 +1080,72 @@ bool event(void* context, PrStudioWindow* window, const PrAppEvent* ev) {
     return true;
 }
 
-// A stream that is delivering, or a page that has tasks, needs the next frame.
+// A stream that is delivering, a page that has tasks, or a run that captures needs the next frame.
 bool laidOut(void* context, PrStudioWindow*) {
-    const Stream& s = exampleOf(context).stream;
+    const Example& e = exampleOf(context);
+    const Stream& s = e.stream;
     bool streaming = !s.paused && !finished(s);
-    return streaming || prDomAgentNextTaskDelay(prHtmlPageAgent(s.page)) >= 0;
+    return streaming || !e.capture.isEmpty() || prDomAgentNextTaskDelay(prHtmlPageAgent(s.page)) >= 0;
+}
+
+// Reads the sample, the rate and the capture that the arguments choose into `example`. Returns false for an argument
+// that it does not know.
+bool readArguments(int argc, char** argv, Example* example) {
+    Stream* stream = &example->stream;
+    for (int i = 1; i + 1 < argc; i += 2) {
+        PrStringView name = argv[i];
+        PrStringView value = argv[i + 1];
+        if (name == "--rate" || name == "--every") {
+            double number = 0;
+            if (prF64ParsePrefix(value, &number) != value.size || number <= 0)
+                return false;
+            if (name == "--rate") {
+                stream->rate = float(min(max(number, kMinRate), kMaxRate));
+                example->rateGiven = true;
+            } else {
+                example->every = number;
+            }
+            continue;
+        }
+        if (name == "--size") {
+            double width = 0;
+            double height = 0;
+            size_t at = prF64ParsePrefix(value, &width);
+            if (at == 0 || at >= value.size || value.data[at] != 'x' ||
+                    prF64ParsePrefix(PrStringView{value.data + at + 1, value.size - at - 1}, &height) == 0)
+                return false;
+            example->size = PrUVec2{uint32_t(width), uint32_t(height)};
+            continue;
+        }
+        if (name == "--capture") {
+            example->capture = value;
+            continue;
+        }
+        if (name != "--sample")
+            return false;
+        bool found = false;
+        for (Sample sample = 0; sample < Sample_Count; ++sample) {
+            if (value == kSampleNames[sample]) {
+                stream->sample = sample;
+                found = true;
+            }
+        }
+        if (!found)
+            return false;
+    }
+    return argc % 2 == 1;
 }
 
 } // namespace
 
-int main() {
+int main(int argc, char** argv) {
     prCrashHandler();
     static Example e;
+    if (!readArguments(argc, argv, &e)) {
+        printError("usage: incremental [--sample markdown|chat|html|baseline-jpeg|progressive-jpeg|png|interlaced-png|gif] [--rate <bytes a second>] "
+            "[--size <width>x<height>] [--capture <prefix> [--every <seconds>]]\n");
+        return 2;
+    }
     PrFontSet* fonts = prFontSetCreate(nullptr);
     const PrFontBundle bundles[] = {PrFontBundle_Complete};
     if (prFontBundleInstall(fonts, bundles, uint32_t(countOf(bundles))) == 0) {
@@ -828,7 +1155,7 @@ int main() {
     }
     PrStudioWindowDesc desc{
         .title = "Prax Incremental",
-        .extent = {1280, 860},
+        .extent = e.size,
         .open = open,
         .palette = [](void*, PrStudioWindow*, const PrAppUserPreferences*, PrKitPalette* palette) {
             *palette = prKitPaletteStudio(PrKitThemeVariant_Dark);
@@ -849,8 +1176,24 @@ int main() {
     // The program decodes every format that Prax has.
     PrCompressCodecSet* compress = prCompressCodecSetCreateDefault();
     PrImageCodecSet* images = compress != nullptr ? prImageCodecSetCreateDefault(compress) : nullptr;
+    PrTextureFormatSet* formats = nullptr;
+    if (images != nullptr) {
+        PrTextureFormat* format = prImageTextureFormatCreate(images, PrImageTextureColor_Srgb);
+        formats = prTextureFormatSetCreate(&format, 1);
+        e.stream.formats = formats;
+        e.images = images;
+        e.stream.images[Sample_BaselineJpeg] = resourceOr("incremental/baseline.jpg", "incremental/small/baseline.jpg");
+        e.stream.images[Sample_ProgressiveJpeg] =
+            resourceOr("incremental/progressive.jpg", "incremental/small/progressive.jpg");
+        e.stream.images[Sample_Png] = photoPng(compress, images, e.stream.images[Sample_BaselineJpeg], false);
+        e.stream.images[Sample_InterlacedPng] = photoPng(compress, images, e.stream.images[Sample_BaselineJpeg], true);
+        e.stream.images[Sample_Gif] = resourceOr("incremental/wave.gif", "incremental/small/cycle.gif");
+        if (!e.rateGiven)
+            e.stream.rate = rateOf(e.stream, e.stream.sample);
+    }
     PrStudioAppDesc app{.fonts = fonts, .compress = compress, .images = images, .window = &desc};
     PrStatus status = prStudioAppRun(&app);
+    prTextureFormatSetDestroy(formats);
     prImageCodecSetDestroy(images);
     prCompressCodecSetDestroy(compress);
     prFontSetDestroy(fonts);

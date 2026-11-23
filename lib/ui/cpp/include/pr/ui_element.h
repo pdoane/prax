@@ -794,6 +794,8 @@ struct UiEdit {
 // `limit` is the brightest color that it paints, as a multiple of SDR white, or zero for no limit. `priority` says how
 // soon its texture is needed. `upright` shows the picture as its orientation says, instead of as its texels are stored.
 // `still` shows the first picture of an image that changes over time, such as an animated GIF, and does not play it.
+// `timeline` is the timeline that such an image plays on, which the builder's owner keeps to pause or seek it, or a
+// zero id for the texture cache's own timeline of the image.
 //
 // If the element shows fewer texels than the picture has, it draws a preview of the picture. It also draws a preview
 // while the picture loads (PrTextureCacheAsk::detail).
@@ -804,6 +806,7 @@ struct UiImage {
     PrTextureCachePriority priority = PrTextureCachePriority_Normal;
     bool upright = true;
     bool still = false;
+    PrTextureTimeline timeline{};
 };
 
 // What builders draw with, which outlives them: the fonts that they set text in, the families of a font set by UiFamily

@@ -6,6 +6,7 @@
 #include "pr/assert.h"
 #include "pr/image_backend.h"
 #include "pr/mem.h"
+#include "pr/raw_array.h"
 
 #include "image/src/convert.h"
 
@@ -31,6 +32,14 @@ struct ImageDecoder {
     uint8_t* PR_NULLABLE prefix;
     size_t prefixSize;
     size_t prefixCapacity;
+
+    // A stream of appended bytes (prImageDecoderOpenStream): the bytes kept until a codec recognizes them, and all of
+    // them for a codec that decodes only whole files, the codec, and whether the image has been described.
+    bool streaming;
+    bool streamDescribed;
+    PrStatus streamStatus;
+    RawArray<uint8_t> streamBytes;
+    const PrImageCodec* PR_NULLABLE streamCodec;
 };
 
 bool usable(PrStatus status) {
@@ -343,6 +352,93 @@ void prImageDecoderClose(PrImageDecoder* decoder) {
     decoder->reader = nullptr;
     decoder->info = PrImageInfo{};
     decoder->prefixSize = 0;
+    decoder->streaming = false;
+    decoder->streamDescribed = false;
+    decoder->streamStatus = PrStatus_Ok;
+    decoder->streamBytes.reset();
+    decoder->streamCodec = nullptr;
+}
+
+PrStatus prImageDecoderOpenStream(PrImageDecoder* decoder, const PrImageLimits* PR_NULLABLE limits) {
+    prImageDecoderClose(decoder);
+    decoder->limits = limits != nullptr ? *limits : prImageLimitsDefault();
+    decoder->streaming = true;
+    decoder->streamStatus = PrStatus_Truncated;
+    return PrStatus_Ok;
+}
+
+PrStatus prImageDecoderAppend(PrImageDecoder* decoder, PrByteView bytes, bool end) {
+    ImageDecoder& d = *decoder;
+    PR_ASSERT(d.streaming);
+    if (d.streamStatus != PrStatus_Truncated)
+        return d.streamStatus;
+    if (d.streamBytes.count + bytes.size > d.limits.inputBytes) {
+        d.streamStatus = PrStatus_Limit;
+        return d.streamStatus;
+    }
+    PrByteView appended = bytes;
+    // The first bytes are kept until they are enough for a codec to recognize, or are all that there are.
+    if (d.streamCodec == nullptr) {
+        if (bytes.size != 0)
+            d.streamBytes.append(bytes.data, uint32_t(bytes.size));
+        if (d.streamBytes.count < d.set->headerBytes && !end)
+            return d.streamStatus;
+        for (uint32_t i = 0; i < d.set->count && d.streamCodec == nullptr; ++i) {
+            if (d.set->codecs[i]->recognizeFn(d.set->codecs[i], PrByteView{d.streamBytes.data, d.streamBytes.count}))
+                d.streamCodec = d.set->codecs[i];
+        }
+        if (d.streamCodec == nullptr) {
+            d.streamStatus = PrStatus_NotSupported;
+            return d.streamStatus;
+        }
+        if (d.streamCodec->streamOpenFn != nullptr) {
+            PrStatus status = d.streamCodec->streamOpenFn(d.streamCodec, &d.limits, &d.reader);
+            if (status != PrStatus_Ok) {
+                d.streamStatus = status;
+                return status;
+            }
+            appended = PrByteView{d.streamBytes.data, d.streamBytes.count};
+        }
+    } else if (d.reader == nullptr && bytes.size != 0) {
+        d.streamBytes.append(bytes.data, uint32_t(bytes.size));
+    }
+    PrStatus status = PrStatus_Truncated;
+    if (d.reader != nullptr && d.reader->appendFn != nullptr) {
+        PrImageInfo info = d.info;
+        status = d.reader->appendFn(d.reader, appended, end, &info);
+        if (appended.data == d.streamBytes.data)
+            d.streamBytes.reset();
+        if (usable(status) && info.extent.x != 0) {
+            // A reader that reports no levels or faces has one of each.
+            info.levelCount = info.levelCount != 0 ? info.levelCount : 1;
+            info.levelColumns = info.levelColumns != 0 ? info.levelColumns : 1;
+            info.faceCount = info.faceCount != 0 ? info.faceCount : 1;
+            if (!d.streamDescribed && validateInfo(info, d.limits, false) != PrStatus_Ok)
+                status = PrStatus_Limit;
+            d.info = info;
+            d.streamDescribed = true;
+        }
+    } else if (end) {
+        // A codec that decodes only whole files opens the stream's bytes once they are all there.
+        d.source = PrImageSource{};
+        d.source.memory = PrByteView{d.streamBytes.data, d.streamBytes.count};
+        status = d.streamCodec->decoderOpenFn(d.streamCodec, d.set, &d.source, &d.limits, &d.reader, &d.info);
+        if (usable(status) && d.reader != nullptr) {
+            d.info.levelCount = d.info.levelCount != 0 ? d.info.levelCount : 1;
+            d.info.levelColumns = d.info.levelColumns != 0 ? d.info.levelColumns : 1;
+            d.info.faceCount = d.info.faceCount != 0 ? d.info.faceCount : 1;
+            d.streamDescribed = true;
+        }
+    }
+    if (!usable(status) || status == PrStatus_Ok || end)
+        d.streamStatus = status;
+    return status;
+}
+
+uint64_t prImageDecoderWork(const PrImageDecoder* decoder) {
+    if (decoder->reader != nullptr && decoder->reader->workFn != nullptr)
+        return decoder->reader->workFn(decoder->reader);
+    return decoder->streamBytes.count;
 }
 
 const PrImageInfo* prImageDecoderInfo(const PrImageDecoder* decoder) {
@@ -386,6 +482,11 @@ PrStatus prImageDecoderReadLevel(PrImageDecoder* decoder, uint32_t frame, uint32
 PrUVec2 prImageDecoderPreviewExtent(const PrImageDecoder* decoder, uint32_t preview) {
     PR_ASSERT(decoder->reader != nullptr && preview < decoder->info.previewCount);
     return decoder->reader->previewExtentFn(decoder->reader, preview);
+}
+
+bool prImageDecoderPreviewEmbedded(const PrImageDecoder* decoder, uint32_t preview) {
+    PR_ASSERT(decoder->reader != nullptr && preview < decoder->info.previewCount);
+    return decoder->reader->previewEmbeddedFn != nullptr && decoder->reader->previewEmbeddedFn(decoder->reader, preview);
 }
 
 PrStatus prImageDecoderReadPreview(PrImageDecoder* decoder, uint32_t preview, PrPixels output) {

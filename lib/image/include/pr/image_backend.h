@@ -30,6 +30,16 @@ struct PrImageReader {
     // (PrImageInfo::previewCount).
     PrUVec2 (*PR_NULLABLE previewExtentFn)(const PrImageReader* reader, uint32_t preview);
     PrStatus (*PR_NULLABLE readPreviewFn)(PrImageReader* reader, uint32_t preview, PrPixels output);
+
+    // Implements prImageDecoderPreviewEmbedded. Without it, no preview is embedded.
+    bool (*PR_NULLABLE previewEmbeddedFn)(const PrImageReader* reader, uint32_t preview);
+
+    // For a reader of appended bytes, which a codec's `streamOpenFn` created: `appendFn` implements
+    // prImageDecoderAppend. It decodes what `bytes` complete, without reading again what earlier appends read, and
+    // writes the info to `*info` once the bytes describe the image, and again as more frames arrive. `workFn`
+    // implements prImageDecoderWork.
+    PrStatus (*PR_NULLABLE appendFn)(PrImageReader* reader, PrByteView bytes, bool end, PrImageInfo* info);
+    uint64_t (*PR_NULLABLE workFn)(const PrImageReader* reader);
 };
 
 // The functions of a codec's backend, at the start of its state. A null `destroyFn` means that there is nothing to
@@ -50,6 +60,11 @@ struct PrImageCodec {
         const PrImageLimits* limits, PrImageReader* PR_NULLABLE* PR_NONNULL out, PrImageInfo* info);
     PrStatus (*PR_NULLABLE encodeFn)(const PrImageCodec* codec, PrStringView type, PrPixelView pixels,
         uint8_t* PR_NULLABLE out, size_t capacity, size_t* size);
+
+    // Creates a reader of an image whose bytes are appended (prImageDecoderOpenStream), or is null for a codec that
+    // decodes only whole files, whose streams prImageDecoderAppend keeps until they end.
+    PrStatus (*PR_NULLABLE streamOpenFn)(const PrImageCodec* codec, const PrImageLimits* limits,
+        PrImageReader* PR_NULLABLE* PR_NONNULL out);
 };
 
 #if defined(__cplusplus)

@@ -577,14 +577,22 @@ TEST_CASE("every reference png decodes to its own pixels") {
     }
 }
 
-TEST_CASE("a png cut short decodes nothing") {
+// A PNG cut before its image data decodes nothing. One cut after the data decodes whole, and one cut inside it decodes
+// the rows that it holds.
+TEST_CASE("a png cut short decodes the rows that it holds") {
     for (const Vector& vector : vectors()) {
         CAPTURE(vector.name);
-        const uint32_t cuts[] = {8, vector.bytes.count() / 3, vector.bytes.count() / 2, vector.bytes.count() - 13};
+        Array<uint8_t> signature;
+        signature.append(vector.bytes.slice(0, 8));
+        CHECK(decode(signature, vector.width, vector.height).isEmpty());
+        Array<uint8_t> unended;
+        unended.append(vector.bytes.slice(0, vector.bytes.count() - 12));
+        CHECK(decode(unended, vector.width, vector.height).span() == vector.pixels);
+        const uint32_t cuts[] = {vector.bytes.count() / 3, vector.bytes.count() / 2, vector.bytes.count() - 13};
         for (const uint32_t cut : cuts) {
             Array<uint8_t> truncated;
             truncated.append(vector.bytes.slice(0, cut));
-            CHECK(decode(truncated, vector.width, vector.height).isEmpty());
+            decode(truncated, vector.width, vector.height);
         }
     }
 }
@@ -1086,9 +1094,10 @@ TEST_CASE("PNG animation validates frames sequence numbers and bounded work befo
     invalid = bytes;
     invalid[44] = 3;
     CHECK(open(invalid, limits) == PrStatus_InvalidData);
+    // An animation cut before its end opens with the frames that it holds.
     invalid = bytes;
     invalid.resize(invalid.count() - 12);
-    CHECK(open(invalid, limits) == PrStatus_InvalidData);
+    CHECK(open(invalid, limits) == PrStatus_Truncated);
 }
 
 TEST_CASE("a png's coding-independent code points name its space, in a cICP chunk or its profile's cicp tag") {

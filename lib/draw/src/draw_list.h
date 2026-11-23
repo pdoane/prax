@@ -35,6 +35,7 @@ struct DrawRecording {
     RawArray<const PrDrawFilter*> filters;
     RawArray<const PrTextureSource*> sources;
     RawArray<DrawHeld> held;
+    RawArray<PrDrawAwaited> awaited;         // each holds a reference to its source
 };
 
 // A recording of draw commands.

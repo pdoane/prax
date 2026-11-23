@@ -1773,7 +1773,9 @@ struct Painter : LayoutWalkVisitor {
         ask.priority = n.priority;
         ask.detail = uint32_t(prF32Ceil(prF32Max(prF32Max(shown.x, shown.y), 1)));
         PrTextureRegion region{};
-        if (!layoutTextureOf(tree->textures, n.image, ask, !n.still, &region, picture))
+        PrTextureTimeline timeline = n.timeline;
+        const PrTextureTimeline* plays = n.timeline.id != 0 ? &timeline : nullptr;
+        if (!layoutTextureOf(tree->textures, n.image, ask, !n.still, plays, &region, picture))
             return false;
         bool minified = smooth && region.levelCount > 1;
         PrDrawSampling sampling = PrDrawSampling_Nearest;
@@ -1789,8 +1791,9 @@ struct Painter : LayoutWalkVisitor {
     }
 
     // Returns what the painter of the replaced box `node` draws at `extent`, with a reference the caller holds. The
-    // node caches the drawing for one extent. A fresh recording draws again and bypasses the cache. The roots that the
-    // painter draws are noted as the node's (LayoutTree::rootReaders).
+    // node caches the drawing for one extent, unless the drawing awaits textures (prDrawListAwaited), which the tree
+    // then waits for as it waits for an image's. A fresh recording draws again and bypasses the cache. The roots that
+    // the painter draws are noted as the node's (LayoutTree::rootReaders).
     PrDrawList* painted(LayoutNodeIndex node, const LayoutReplaced& n, PrLayoutVec extent) {
         bool cached = subs != RecordSubs_Fresh;
         if (cached && n.content != nullptr && n.painted == extent) {
@@ -1804,10 +1807,15 @@ struct Painter : LayoutWalkVisitor {
                 readers.erase(i);
         }
         tree->painting = node;
+        uint64_t arrivals = layoutTexturesArrivals(tree->textures);
         n.painter.paint(n.painter.context, prLayoutVecToPx(extent), drawing);
         tree->painting = kPrLayoutNodeNone;
         prDrawListFreeze(drawing);
-        if (cached) {
+        bool whole = layoutTexturesAwait(tree->textures, drawing, arrivals);
+        if (cached && !whole) {
+            prDrawListRelease(n.content);
+            n.content = nullptr;
+        } else if (cached) {
             prDrawListRelease(n.content);
             prDrawListRetain(drawing);
             n.content = drawing;

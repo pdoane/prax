@@ -31,8 +31,10 @@ enum {
 };
 typedef uint8_t PrImageTextureColor;
 
-// Creates a source that decodes the image in `bytes` with `codec`. `codec` must outlive the source. The source retains
-// `bytes`. Each read reads the bytes again and decodes them with a decoder of its own.
+// Creates a source that decodes the image in `bytes` with `codec`. `codec` must outlive the source. The source keeps a
+// copy of `bytes`, and each read decodes it with a decoder of its own. A format set opens an image of a blob source the
+// same way, with the format of prImageTextureFormatCreate (prTextureFormatSetOpen): that source retains the blob source
+// and reads its bytes again for each read.
 //
 // The texture is the image's first frame. For a cube, it is the cube's faces and layers. The description states the
 // image's alpha and its stored orientation. The texture has the image's mip levels if each is half the size of the one
@@ -53,10 +55,6 @@ typedef uint8_t PrImageTextureColor;
 // image or its layers are past `limits`, or InvalidData if the image does not open. An image within `limits` opens
 // whatever its size in bytes: the limits that the codec checks follow from the extent. A null `limits` means the
 // defaults. On failure, `*out` is null.
-PrStatus prImageTextureSourceOpen(const PrBlobSource* bytes, const PrImageCodecSet* codec,
-    const PrTextureLimits* PR_NULLABLE limits, PrImageTextureColor color, const PrTextureSource* PR_NULLABLE* PR_NONNULL out);
-
-// Opens a source as prImageTextureSourceOpen does. The source keeps a copy of `bytes`.
 PrStatus prImageTextureSourceOpenBytes(PrByteView bytes, const PrImageCodecSet* codec,
     const PrTextureLimits* PR_NULLABLE limits, PrImageTextureColor color, const PrTextureSource* PR_NULLABLE* PR_NONNULL out);
 

@@ -1,5 +1,8 @@
 #include "pr/array.h"
+#include "pr/blob.h"
 #include "pr/jpeg.h"
+#include "pr/mem.h"
+#include "pr/resource.h"
 #include "pr/string.h"
 
 #include "tools/harness/test.h"
@@ -151,4 +154,51 @@ TEST_CASE("an ICC profile split across APP2 segments is joined in chunk order, a
     CHECK(profileOf(withChunks(missing, 2)).isEmpty());
     const Chunk differing[] = {{1, 2, "a"}, {2, 3, "b"}};
     CHECK(profileOf(withChunks(differing, 2)).isEmpty());
+}
+
+TEST_CASE("a jpeg appended in pieces of any size decodes as it arrives, with work proportional to the file") {
+    const char* kNames[2] = {"jpeg/baseline.jpg", "jpeg/progressive.jpg"};
+    for (const char* name : kNames) {
+        CAPTURE(name);
+        PrBlob* blob = prResourceOpen(name);
+        REQUIRE(blob != nullptr);
+        const PrByteView file = prBlobBytes(blob);
+        PrJpegDecoder* whole = nullptr;
+        REQUIRE(prJpegDecoderCreate(file, nullptr, file.size, &whole) == PrStatus_Ok);
+        const PrUVec2 extent = prJpegDecoderInfo(whole)->extent;
+        const uint32_t components = prJpegDecoderInfo(whole)->components;
+        const size_t rowBytes = size_t(extent.x) * components;
+        Array<uint8_t> expected(uint32_t(rowBytes * extent.y));
+        REQUIRE(prJpegDecoderRead(whole, 0, PrPixels{expected.data(), rowBytes, extent}) == PrStatus_Ok);
+        const uint32_t kPieces[3] = {1, 6, 4096};
+        for (uint32_t piece : kPieces) {
+            CAPTURE(piece);
+            PrJpegDecoder* decoder = nullptr;
+            REQUIRE(prJpegDecoderCreateStream(nullptr, 0, &decoder) == PrStatus_Ok);
+            Array<uint8_t> out(expected.count());
+            bool partial = false;
+            PrStatus status = PrStatus_Truncated;
+            for (size_t at = 0; at < file.size; at += piece) {
+                size_t size = file.size - at < piece ? file.size - at : piece;
+                status = prJpegDecoderAppend(decoder, PrByteView{file.data + at, size}, at + size == file.size);
+                REQUIRE((status == PrStatus_Ok || status == PrStatus_Truncated));
+                // Two thirds of the way, the picture shows, and is not yet the whole picture.
+                if (at < file.size * 2 / 3 && at + size >= file.size * 2 / 3 && at + size < file.size) {
+                    REQUIRE(prJpegDecoderRead(decoder, 0, PrPixels{out.data(), rowBytes, extent}) ==
+                        PrStatus_Truncated);
+                    partial = !prMemEquals(out.data(), expected.data(), expected.count());
+                }
+            }
+            CHECK(status == PrStatus_Ok);
+            CHECK((partial || piece >= file.size / 3));
+            REQUIRE(prJpegDecoderRead(decoder, 0, PrPixels{out.data(), rowBytes, extent}) == PrStatus_Ok);
+            CHECK(prMemEquals(out.data(), expected.data(), expected.count()));
+            // The bytes are read a few times at most, and each read transforms the rows that changed. The reads here
+            // are two, so the samples count twice.
+            CHECK(prJpegDecoderWork(decoder) <= uint64_t(file.size) * 16 + uint64_t(expected.count()) * 4);
+            prJpegDecoderDestroy(decoder);
+        }
+        prJpegDecoderDestroy(whole);
+        prBlobRelease(blob);
+    }
 }

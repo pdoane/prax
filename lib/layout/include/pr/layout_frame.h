@@ -36,9 +36,12 @@ bool prLayoutTreeIsInFrame(const PrLayoutTree* tree);
 // kPrLayoutNodeNone. Every root that a frame creates is a root of the tree that it commits, which a layout may lay out
 // (prLayoutTreeLayout), and a root of the committed tree that the frame does not create again is erased. The node is an
 // element styled by record `style`, a text node of `text` styled by its parent's record, a replaced element styled by
-// `style` with no natural dimensions and no content, a semi-replaced element, or a line break. `key` is the node's
-// identity, or 0 if its position among its siblings identifies it. A nonzero key is unique in the tree
-// (prLayoutNodeSetKey). Returns the handle of the committed node that it continues, or of a new node.
+// `style`, a semi-replaced element, or a line break. A replaced element that the frame makes has no natural dimensions
+// and no content. One that it continues keeps the natural dimensions and the content that it had, until the frame sets
+// them (prLayoutTreeFrameSetContent), so a client that keeps a node under one key for different content sets the
+// content each frame. `key` is the node's identity, or 0 if its position among its siblings identifies it. A nonzero
+// key is unique in the tree (prLayoutNodeSetKey). Returns the handle of the committed node that it continues, or of a
+// new node.
 PrLayoutNode prLayoutTreeFrameElement(PrLayoutTree* tree, PrLayoutNode parent, uint64_t key, PrLayoutStyleIndex style);
 PrLayoutNode prLayoutTreeFrameText(PrLayoutTree* tree, PrLayoutNode parent, uint64_t key, PrStringView text);
 PrLayoutNode prLayoutTreeFrameReplaced(PrLayoutTree* tree, PrLayoutNode parent, uint64_t key, PrLayoutStyleIndex style);

@@ -91,6 +91,11 @@ PrUVec2 previewExtent(const PrImageReader* reader, uint32_t preview) {
     return static_cast<const JpegReader*>(reader)->previews[preview].extent;
 }
 
+// The thumbnail is embedded, and the reductions are decodes of the image's data.
+bool previewEmbedded(const PrImageReader* reader, uint32_t preview) {
+    return static_cast<const JpegReader*>(reader)->previews[preview].reduction == 0;
+}
+
 PrStatus readPreview(PrImageReader* reader, uint32_t preview, PrPixels output) {
     JpegReader* jpeg = static_cast<JpegReader*>(reader);
     uint32_t reduction = jpeg->previews[preview].reduction;
@@ -110,6 +115,76 @@ bool supportsType(const PrImageCodec*, PrStringView type) {
 
 bool recognize(const PrImageCodec*, PrByteView prefix) {
     return prJpegHasSignature(prefix);
+}
+
+// Returns the image interface's info of the JPEG of `jpegInfo`, without previews.
+PrImageInfo infoOf(const PrJpegInfo& jpegInfo) {
+    ImageMetadata exif{};
+    if (jpegInfo.exif.size != 0)
+        imageReadExif(jpegInfo.exif.data, jpegInfo.exif.size, &exif);
+    // The Exif data gives the resolution before the JFIF density does.
+    PrVec2 pixelsPerMeter = jpegInfo.pixelsPerMeter;
+    if (exif.pixelsPerMeterX != 0)
+        pixelsPerMeter = PrVec2{exif.pixelsPerMeterX, exif.pixelsPerMeterY};
+    PrColorModel model = PrColorModel_Rgb;
+    if (jpegInfo.components == 1)
+        model = PrColorModel_Gray;
+    else if (jpegInfo.components == 4)
+        model = PrColorModel_Cmyk;
+    return PrImageInfo{
+        .extent = jpegInfo.extent,
+        .format = PrImageFormat{
+            .model = model,
+            .sample = PrImageSample_U8,
+            .alpha = PrImageAlpha_None,
+            .color = colorOf(jpegInfo),
+        },
+        .orientation = exif.orientation,
+        .pixelsPerMeter = pixelsPerMeter,
+        .frameCount = 1,
+        .playCount = 1,
+        .workingBytes = jpegInfo.workingBytes,
+        .exif = jpegInfo.exif,
+    };
+}
+
+PrStatus append(PrImageReader* reader, PrByteView bytes, bool end, PrImageInfo* info) {
+    JpegReader* jpeg = static_cast<JpegReader*>(reader);
+    PrStatus status = prJpegDecoderAppend(jpeg->jpeg, bytes, end);
+    if (prJpegDecoderInfo(jpeg->jpeg)->extent.x != 0)
+        *info = infoOf(*prJpegDecoderInfo(jpeg->jpeg));
+    if (status == PrStatus_Ok)
+        jpeg->openStatus = PrStatus_Ok;
+    return status;
+}
+
+uint64_t work(const PrImageReader* reader) {
+    return prJpegDecoderWork(static_cast<const JpegReader*>(reader)->jpeg);
+}
+
+// A reader of appended bytes reads the image at its full extent, and has no previews.
+PrStatus streamOpen(const PrImageCodec*, const PrImageLimits* limits, PrImageReader* PR_NULLABLE* PR_NONNULL out) {
+    const PrJpegLimits jpegLimits{
+        .pixels = limits->pixels,
+        .workingBytes = limits->workingBytes,
+        .outputBytes = limits->outputBytes,
+        .work = limits->work,
+        .metadataBytes = limits->metadataBytes,
+    };
+    PrJpegDecoder* jpeg = nullptr;
+    PrStatus status = prJpegDecoderCreateStream(&jpegLimits, sizeof(JpegReader), &jpeg);
+    if (status != PrStatus_Ok)
+        return status;
+    JpegReader* reader = allocZeroed<JpegReader>();
+    reader->closeFn = close;
+    reader->frameInfoFn = frameInfo;
+    reader->readFn = read;
+    reader->appendFn = append;
+    reader->workFn = work;
+    reader->jpeg = jpeg;
+    reader->openStatus = PrStatus_Truncated;
+    *out = reader;
+    return PrStatus_Ok;
 }
 
 PrStatus open(const PrImageCodec*, const PrImageCodecSet*, const PrImageSource* source, const PrImageLimits* limits,
@@ -137,36 +212,14 @@ PrStatus open(const PrImageCodec*, const PrImageCodecSet*, const PrImageSource* 
     ImageMetadata exif{};
     if (jpegInfo.exif.size != 0)
         imageReadExif(jpegInfo.exif.data, jpegInfo.exif.size, &exif);
-    // The Exif data gives the resolution before the JFIF density does.
-    PrVec2 pixelsPerMeter = jpegInfo.pixelsPerMeter;
-    if (exif.pixelsPerMeterX != 0)
-        pixelsPerMeter = PrVec2{exif.pixelsPerMeterX, exif.pixelsPerMeterY};
-    PrColorModel model = PrColorModel_Rgb;
-    if (jpegInfo.components == 1)
-        model = PrColorModel_Gray;
-    else if (jpegInfo.components == 4)
-        model = PrColorModel_Cmyk;
-    *info = PrImageInfo{
-        .extent = jpegInfo.extent,
-        .format = PrImageFormat{
-            .model = model,
-            .sample = PrImageSample_U8,
-            .alpha = PrImageAlpha_None,
-            .color = colorOf(jpegInfo),
-        },
-        .orientation = exif.orientation,
-        .pixelsPerMeter = pixelsPerMeter,
-        .frameCount = 1,
-        .playCount = 1,
-        .workingBytes = jpegInfo.workingBytes,
-        .exif = jpegInfo.exif,
-    };
+    *info = infoOf(jpegInfo);
     JpegReader* reader = allocZeroed<JpegReader>();
     reader->closeFn = close;
     reader->frameInfoFn = frameInfo;
     reader->readFn = read;
     reader->previewExtentFn = previewExtent;
     reader->readPreviewFn = readPreview;
+    reader->previewEmbeddedFn = previewEmbedded;
     // Each reduction, starting at a quarter, is a preview if it makes the image smaller than the previous reduction
     // does. A small image reaches its least extent before an eighth.
     PrUVec2 above = prJpegReducedExtent(jpegInfo.extent, kFirstPreviewReduction - 1);
@@ -202,6 +255,7 @@ PrImageCodec gCodec = {
     .supportsTypeFn = supportsType,
     .recognizeFn = recognize,
     .decoderOpenFn = open,
+    .streamOpenFn = streamOpen,
 };
 
 } // namespace

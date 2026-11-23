@@ -12,6 +12,7 @@ pr_library(core INCLUDE include
     src/integer.cpp
     src/memory.cpp
     src/mutex.cpp
+    src/notifier.cpp
     src/pixels.cpp
     src/random.cpp
     src/status.cpp
@@ -224,6 +225,7 @@ if (PR_DEVELOP)
         tests/test_float16.cpp
         tests/test_hash.cpp
         tests/test_integer.cpp
+        tests/test_notifier.cpp
         tests/test_pixels.cpp
         tests/test_platform.cpp
         tests/test_environment.cpp

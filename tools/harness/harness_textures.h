@@ -9,6 +9,8 @@
 #include "pr/gpu_memory.h"
 #include "pr/texture_cache.h"
 
+#include "tools/harness/texture_await.h"
+
 PR_ASSUME_NONNULL_BEGIN
 
 namespace harness {
@@ -39,7 +41,7 @@ inline PrTextureCache* harnessMemoryTextures() {
 inline PrDrawSource harnessImageSource(PrTextureCache* textures, const PrTextureSource* image, PrRect rect,
         PrTextureCacheFlags flags = 0) {
     PrTextureRegion region{};
-    if (prTextureCacheWait(textures, image, prTextureCacheAskEncoded(flags), &region) != PrTextureCacheState_Ready)
+    if (textureCacheAwait(textures, image, prTextureCacheAskEncoded(flags), &region) != PrTextureCacheState_Ready)
         return PrDrawSource{};
     return prDrawSourceRegion(&region, rect, 0);
 }

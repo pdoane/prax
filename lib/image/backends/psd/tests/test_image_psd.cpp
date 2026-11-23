@@ -1,9 +1,9 @@
 // The built-in codec's Photoshop documents: what lib/psd's adapter reports of them, and their JPEG thumbnail as a
 // preview.
 
-#include "psd/tests/psd_fixture.h"
 #include "tools/harness/image_test.h"
 #include "tools/harness/jpeg_vectors.h"
+#include "tools/harness/psd_document.h"
 
 #include "tools/harness/test.h"
 

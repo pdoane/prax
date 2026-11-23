@@ -67,6 +67,11 @@ PrUVec2 previewExtent(const PrImageReader* reader, uint32_t) {
     return prImageDecoderInfo(static_cast<const PsdReader*>(reader)->thumbnail)->extent;
 }
 
+// The one preview is the thumbnail of the document's resources.
+bool previewEmbedded(const PrImageReader*, uint32_t) {
+    return true;
+}
+
 // Decodes the thumbnail in its own format and converts it to the document's.
 PrStatus readPreview(PrImageReader* reader, uint32_t, PrPixels output) {
     PsdReader* psd = static_cast<PsdReader*>(reader);
@@ -175,13 +180,15 @@ PrStatus open(const PrImageCodec*, const PrImageCodecSet* set, const PrImageSour
     if (thumbnail != nullptr) {
         reader->previewExtentFn = previewExtent;
         reader->readPreviewFn = readPreview;
+        reader->previewEmbeddedFn = previewEmbedded;
     }
     reader->bytes = bytes;
     reader->psd = psd;
     reader->thumbnail = thumbnail;
     reader->format = format;
     *out = reader;
-    return PrStatus_Ok;
+    // A document that ends before its merged image opens, so that its thumbnail reads.
+    return status;
 }
 
 // The codec has no state, so one serves every call and nothing is destroyed.

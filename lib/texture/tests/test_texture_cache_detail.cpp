@@ -12,7 +12,11 @@
 #include "pr/texture_cache.h"
 #include "pr/thread.h"
 
+#include "tools/harness/texture_await.h"
+
 #include "tools/harness/test.h"
+
+using namespace harness;
 
 namespace pr_impl {
 
@@ -232,7 +236,7 @@ TEST_CASE("a cache with a pool reads a source's smallest preview first, so that 
     Versions v;
     PrTextureRegion region{};
     CHECK(prTextureCacheRealize(cache, v.source, askOf(0), &region) == PrTextureCacheState_Pending);
-    prTextureCacheWaitAll(cache);
+    CHECK(textureCacheSettle(cache));
     // The pool is one thread wide, so the two realizations ran in the order that the cache started them.
     REQUIRE(v.log.count() == 2);
     CHECK(v.log.at(0) == 0);
@@ -291,13 +295,13 @@ TEST_CASE("waiting realizations start by priority, then by the frame that asked,
 
     // The place that the blocker frees goes to the normal one, and then to the low one.
     blocker.complete();
-    prTextureCacheWaitAll(cache);
+    CHECK(textureCacheSettle(cache));
     REQUIRE(log.count() == 4);
     CHECK(log.at(2) == 2);
     CHECK(log.at(3) == 1);
     // The cancelled one was never read. A later ask queues it again.
     CHECK(prTextureCacheRealize(cache, sources[3], askOf(0), &region) == PrTextureCacheState_Pending);
-    prTextureCacheWaitAll(cache);
+    CHECK(textureCacheSettle(cache));
     CHECK(log.count() == 5);
     CHECK(prTextureCacheRealize(cache, sources[3], askOf(0), &region) == PrTextureCacheState_Ready);
 

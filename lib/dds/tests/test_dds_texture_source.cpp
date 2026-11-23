@@ -8,8 +8,11 @@
 #include "pr/texture.h"
 
 #include "dds/tests/dds_fixture.h"
+#include "tools/harness/texture_await.h"
 
 #include "tools/harness/test.h"
+
+using namespace harness;
 
 namespace pr_impl {
 
@@ -34,17 +37,26 @@ struct FileBytes {
     }
 };
 
+// Opens `bytes` with a set of the DDS format alone.
+PrStatus openDds(const PrBlobSource* bytes, const PrTextureLimits* PR_NULLABLE limits,
+        const PrTextureSource* PR_NULLABLE* PR_NONNULL out) {
+    PrTextureFormat* format = prDdsTextureFormatCreate();
+    PrTextureFormatSet* set = prTextureFormatSetCreate(&format, 1);
+    PrStatus status = textureOpenAwait(set, bytes, "texture.dds", limits, out);
+    prTextureFormatSetDestroy(set);
+    return status;
+}
+
 const PrTextureSource* sourceOf(const PrBlobSource* bytes) {
     const PrTextureSource* source = nullptr;
-    REQUIRE(prDdsTextureSourceOpen(bytes, nullptr, &source) == PrStatus_Ok);
+    REQUIRE(openDds(bytes, nullptr, &source) == PrStatus_Ok);
     return source;
 }
 
 PrStatus readAll(const PrTextureSource* source, Array<uint8_t>* out) {
     PrTextureReadDesc desc = prTextureReadDescAll(prTextureSourceDesc(source));
     PrTextureRead* read = prTextureReadCreate(source, &desc);
-    prTextureReadWait(read);
-    PrStatus status = prTextureReadStatus(read);
+    PrStatus status = textureReadAwait(read);
     out->clear();
     if (status == PrStatus_Ok)
         out->append(PrByteView{prTextureReadStorage(read), prTextureReadSize(prTextureSourceDesc(source), &desc)});
@@ -183,7 +195,7 @@ TEST_CASE("the DDS texture format reads image/vnd.ms-dds through a format set") 
     CHECK(prTextureFormatSetSupportsType(set, "image/vnd.ms-dds"));
     FileBytes bytes(ddsFile(DdsLayout{.levels = 2, .dxgi = 71}, whiteBc1Levels()));
     const PrTextureSource* source = nullptr;
-    REQUIRE(prTextureFormatSetRead(set, bytes.source, "white.dds", nullptr, &source) == PrStatus_Ok);
+    REQUIRE(textureOpenAwait(set, bytes.source, "white.dds", nullptr, &source) == PrStatus_Ok);
     CHECK(prTextureSourceDesc(source)->format == PrGpuFormat_Bc1);
     prTextureSourceRelease(source);
     prTextureFormatSetDestroy(set);
@@ -194,10 +206,10 @@ TEST_CASE("a DDS past the limits' extent on one side is refused, and one at the 
     FileBytes bytes(ddsFile(DdsLayout{.width = 8, .height = 4, .dxgi = 28}, texels));
     PrTextureLimits limits{.extent = 7};
     const PrTextureSource* source = nullptr;
-    CHECK(prDdsTextureSourceOpen(bytes.source, &limits, &source) == PrStatus_Limit);
+    CHECK(openDds(bytes.source, &limits, &source) == PrStatus_Limit);
     CHECK(source == nullptr);
     limits.extent = 8;
-    REQUIRE(prDdsTextureSourceOpen(bytes.source, &limits, &source) == PrStatus_Ok);
+    REQUIRE(openDds(bytes.source, &limits, &source) == PrStatus_Ok);
     Array<uint8_t> read;
     CHECK(readAll(source, &read) == PrStatus_Ok);
     prTextureSourceRelease(source);
@@ -205,7 +217,7 @@ TEST_CASE("a DDS past the limits' extent on one side is refused, and one at the 
     Array<uint8_t> voxels(2 * 2 * 3);
     FileBytes volume(ddsFile(DdsLayout{.width = 2, .height = 2, .depth = 3, .dxgi = 61, .dimension = 4}, voxels));
     limits.extent = 2;
-    CHECK(prDdsTextureSourceOpen(volume.source, &limits, &source) == PrStatus_Limit);
+    CHECK(openDds(volume.source, &limits, &source) == PrStatus_Limit);
 }
 
 TEST_CASE("a DDS source answers with its blocks if the consumer samples them, and with pixels otherwise") {

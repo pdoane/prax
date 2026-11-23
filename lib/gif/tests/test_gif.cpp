@@ -1,6 +1,8 @@
 #include "pr/gif.h"
 #include "pr/mem.h"
 
+#include "tools/harness/animated_gif.h"
+
 #include "tools/harness/test.h"
 
 extern "C" int prTestGifCApi(void);
@@ -29,6 +31,7 @@ constexpr uint8_t kGlobalTable87aScreen0[] = {
 
 } // namespace pr_impl
 
+using namespace harness;
 using namespace pr_impl;
 
 TEST_CASE("a still image decodes to its screen as RGBA") {
@@ -64,4 +67,63 @@ TEST_CASE("bytes without the signature are not a GIF, a file without its trailer
 
 TEST_CASE("the public header compiles as C") {
     CHECK(prTestGifCApi() == 0);
+}
+
+TEST_CASE("a gif appended in pieces of any size draws its frames as they arrive, with work proportional to the file") {
+    Array<uint8_t> gif = animatedGif(5, 10, true);
+    PrGifDecoder* whole = nullptr;
+    REQUIRE(prGifDecoderCreate(PrByteView{gif.data(), gif.count()}, nullptr, gif.count(), &whole) == PrStatus_Ok);
+    const uint32_t kPieces[3] = {1, 6, 4096};
+    for (uint32_t piece : kPieces) {
+        CAPTURE(piece);
+        PrGifDecoder* decoder = nullptr;
+        REQUIRE(prGifDecoderCreateStream(nullptr, 0, &decoder) == PrStatus_Ok);
+        uint32_t framesSeen = 0;
+        PrStatus status = PrStatus_Truncated;
+        for (uint32_t at = 0; at < gif.count(); at += piece) {
+            uint32_t size = gif.count() - at < piece ? gif.count() - at : piece;
+            status = prGifDecoderAppend(decoder, PrByteView{gif.data() + at, size});
+            REQUIRE((status == PrStatus_Ok || status == PrStatus_Truncated));
+            // The frames that have begun only grow.
+            CHECK(prGifDecoderInfo(decoder)->frameCount >= framesSeen);
+            framesSeen = prGifDecoderInfo(decoder)->frameCount;
+        }
+        CHECK(status == PrStatus_Ok);
+        REQUIRE(framesSeen == 5);
+        // Every frame reads as the decode of the whole file gives it, in any order.
+        const uint32_t kOrder[5] = {4, 0, 2, 1, 3};
+        for (uint32_t frame : kOrder) {
+            uint8_t streamed[4 * 2 * 4] = {};
+            uint8_t expected[4 * 2 * 4] = {};
+            REQUIRE(prGifDecoderRead(decoder, frame, PrPixels{streamed, 16, {4, 2}}) == PrStatus_Ok);
+            REQUIRE(prGifDecoderRead(whole, frame, PrPixels{expected, 16, {4, 2}}) == PrStatus_Ok);
+            CHECK(prMemEquals(streamed, expected, sizeof(expected)));
+        }
+        CHECK(prGifDecoderWork(decoder) <= uint64_t(gif.count()) * 3 + 5 * 8 * 2);
+        prGifDecoderDestroy(decoder);
+    }
+    prGifDecoderDestroy(whole);
+}
+
+TEST_CASE("playing the frames of an arriving gif in order composes each frame once") {
+    const uint32_t kFrames = 60;
+    Array<uint8_t> gif = animatedGif(kFrames, 10, true);
+    PrGifDecoder* decoder = nullptr;
+    REQUIRE(prGifDecoderCreateStream(nullptr, 0, &decoder) == PrStatus_Ok);
+    // The bytes arrive in small pieces. After each piece, a player shows the next frame if a frame after it has begun,
+    // so the frames play in order while more arrive.
+    uint32_t shown = 0;
+    for (uint32_t at = 0; at < gif.count(); at += 7) {
+        uint32_t size = gif.count() - at < 7 ? gif.count() - at : 7;
+        prGifDecoderAppend(decoder, PrByteView{gif.data() + at, size});
+        while (shown + 1 < prGifDecoderInfo(decoder)->frameCount) {
+            uint8_t pixels[4 * 2 * 4] = {};
+            CHECK(prGifDecoderRead(decoder, shown, PrPixels{pixels, 16, {4, 2}}) == PrStatus_Truncated);
+            ++shown;
+        }
+    }
+    CHECK(shown == kFrames - 1);
+    // Each of the frames that played was composed once: 8 pixels each, beside the work of the bytes.
+    CHECK(prGifDecoderWork(decoder) <= uint64_t(gif.count()) * 3 + uint64_t(shown) * 8);
+    prGifDecoderDestroy(decoder);
 }

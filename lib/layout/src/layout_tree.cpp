@@ -2005,6 +2005,7 @@ void prLayoutNodeSetContent(PrLayoutTree* tree, PrLayoutNode replaced, const PrL
     r.rendering = image != nullptr ? content->rendering : PrLayoutImageRendering_Auto;
     r.priority = image != nullptr ? content->priority : PrTextureCachePriority(PrTextureCachePriority_Normal);
     r.still = image != nullptr && content->still;
+    r.timeline = image != nullptr ? content->timeline : PrTextureTimeline{};
     r.upright = image != nullptr && content->upright;
     prDrawListRelease(r.content);
     r.contentKind = content->kind;
@@ -2041,6 +2042,7 @@ PrLayoutContent prLayoutNodeContent(const PrLayoutTree* tree, PrLayoutNode repla
         content.rendering = n.rendering;
         content.priority = n.priority;
         content.still = n.still;
+        content.timeline = n.timeline;
         content.upright = n.upright;
     } else if (n.contentKind == PrLayoutContentKind_Path) {
         content.path = n.path;

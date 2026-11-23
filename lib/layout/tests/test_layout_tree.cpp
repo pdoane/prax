@@ -1722,6 +1722,64 @@ TEST_CASE("a paint leaves out an image whose texture is pending, and is recorded
     prTextureCacheDestroy(cache);
 }
 
+TEST_CASE("a painter whose drawing awaits a texture is painted again once the texture arrives") {
+    Fixture f;
+    PrTextureCache* cache = harnessTextureCacheCreate(harnessMemoryDevice());
+    prLayoutTreeSetTextures(f.tree, cache);
+    LaterImage later;
+    const PrTextureSource* image = later.source({4, 4});
+    PrLayoutNode root = f.element(kPrLayoutNodeNone, block());
+    PrLayoutBoxStyle box = block();
+    box.width = prLayoutLengthPx(4);
+    box.height = prLayoutLengthPx(4);
+    PrLayoutNode node = replaced(f, root, box, prLayoutNaturalSizeNone());
+    // The painter draws the image from the cache, as an SVG's raster is drawn, and counts its calls.
+    struct Painter {
+        PrTextureCache* cache;
+        const PrTextureSource* image;
+        uint32_t calls = 0;
+    } painter{cache, image};
+    PrLayoutContent content{};
+    content.kind = PrLayoutContentKind_Painter;
+    content.painter.paint = [](void* PR_NULLABLE context, PrVec2 extent, PrDrawList* list) {
+        Painter& p = *static_cast<Painter*>(context);
+        ++p.calls;
+        PrTextureRegion region{};
+        PrTextureCacheState state = prDrawListRealize(list, p.cache, p.image, prTextureCacheAskEncoded(0), &region);
+        if (state != PrTextureCacheState_Ready && state != PrTextureCacheState_Partial)
+            return;
+        PrRect rect{0, 0, extent.x, extent.y};
+        PrDrawBrush brush = prDrawBrushImage(prDrawSourceRegion(&region, PrRect{0, 0, 4, 4}, 0), rect,
+            PrDrawSampling_Nearest);
+        prDrawListRect(list, rect, {.brush = &brush});
+    };
+    content.painter.context = &painter;
+    prLayoutNodeSetContent(f.tree, node, &content);
+    f.layout(px(8, 8));
+
+    Array<uint8_t> pixels = renderPaint(f.tree, 8, 8);
+    CHECK(painter.calls == 1);
+    CHECK(prLayoutTreePaintsPending(f.tree));
+    CHECK(pixel(pixels, 8, 1, 1) == "0 0 0 0");
+    // A paint before the texture arrives keeps the recording, so the painter is not called.
+    pixels = renderPaint(f.tree, 8, 8);
+    CHECK(painter.calls == 1);
+    CHECK(prLayoutTreePaintsPending(f.tree));
+
+    later.arrive();
+    CHECK(prLayoutTreeTexturesStale(f.tree));
+    pixels = renderPaint(f.tree, 8, 8);
+    CHECK(painter.calls == 2);
+    CHECK(!prLayoutTreePaintsPending(f.tree));
+    CHECK(pixel(pixels, 8, 1, 1) == "255 0 0 255");
+    // The whole drawing is kept.
+    renderPaint(f.tree, 8, 8);
+    CHECK(painter.calls == 2);
+    prLayoutTreeSetTextures(f.tree, nullptr);
+    prTextureSourceRelease(image);
+    prTextureCacheDestroy(cache);
+}
+
 TEST_CASE("a tree without a texture cache draws no image, and its paint is not pending") {
     Fixture f;
     const uint8_t texels[4] = {255, 0, 0, 255};

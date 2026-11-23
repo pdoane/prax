@@ -16,6 +16,13 @@
 //
 // A source may have previews, which are smaller versions of its picture that read faster (prTextureSourcePreview).
 //
+// Change. A source's description and its own reads never change. A source whose picture changes, such as an animated
+// image or an image whose bytes are still arriving, says what it shows (prTextureSourceShow): a picture, which is a
+// still source, and when the source shows another. The answer is a function of a time on a timeline that the consumer
+// owns, and of what the source has, such as the bytes that have arrived. The source keeps no time of its own, so any
+// number of consumers may show it at once, each on its own timeline. A picture changes at a time on the timeline, when
+// the source notifies its notifier, or never.
+//
 // Threads. A source is immutable. Any number of threads may read it at once. A read completes on the thread of its
 // innermost provider. Format sets are immutable too.
 
@@ -25,7 +32,9 @@
 #include "pr/blob.h"
 #include "pr/byte_view.h"
 #include "pr/color.h"
+#include "pr/float.h"
 #include "pr/gpu.h"
+#include "pr/notifier.h"
 #include "pr/pixels.h"
 #include "pr/status.h"
 #include "pr/string_view.h"
@@ -176,6 +185,41 @@ PrGpuFormat prTextureNeedSampledFormat(const PrTextureNeed* need, PrGpuFormat fo
 bool prTextureNeedTakesBlocks(const PrTextureNeed* need, PrGpuFormat format, PrTextureAlpha alpha, PrUVec2 extent);
 
 // ---------------------------------------------------------------------------------------------------------------------
+// Timelines
+
+// A timeline on which a consumer shows sources whose pictures change (prTextureSourceShow). A consumer owns it, as a
+// value: a document, a view or a widget. Its time is in seconds. It was `time` at the host's time `hostTime`, and runs
+// from there at `rate`, which is zero for a paused timeline and positive for a playing one. Seeking and pausing set the
+// three again. `id` names the timeline to the consumer that keeps what it learned on it, such as the texture cache
+// (prTextureCachePlay). Copies of a timeline are the same timeline. Zero names no timeline.
+typedef struct PrTextureTimeline {
+    uint64_t id;
+    double hostTime;
+    double time;
+    double rate;
+} PrTextureTimeline;
+
+// Returns a timeline that is at time zero at `hostTime` and plays, with an id that no other timeline of the process
+// has.
+PrTextureTimeline prTextureTimelineCreate(double hostTime);
+
+// Returns the timeline's time at the host's time `hostTime`.
+double prTextureTimelineAt(const PrTextureTimeline* timeline, double hostTime);
+
+// Returns the host's time at which the timeline reaches `time`, or kPrF64Infinity if it is paused before it.
+double prTextureTimelineHostTime(const PrTextureTimeline* timeline, double time);
+
+// Moves the timeline to `time` at the host's time `hostTime`, at its rate.
+void prTextureTimelineSeek(PrTextureTimeline* timeline, double hostTime, double time);
+
+// Sets the rate from the host's time `hostTime` on, keeping the time that the timeline has then. Zero pauses it, and
+// one plays it.
+void prTextureTimelineSetRate(PrTextureTimeline* timeline, double hostTime, double rate);
+
+// Returns true if `a` and `b` are the same timeline, at the same time and rate.
+bool prTextureTimelineEqual(const PrTextureTimeline* a, const PrTextureTimeline* b);
+
+// ---------------------------------------------------------------------------------------------------------------------
 // Sources
 
 // Produces a texture's bits on demand. A source is immutable and reference counted.
@@ -211,25 +255,39 @@ typedef void (*PrTextureSourceReleaseFn)(void* PR_NULLABLE context);
 // The largest number of previews that a source has.
 enum { kPrTextureSourceMaxPreviews = 16 };
 
-// What a source that changes over time shows at one time: an animation's frame, or a video's.
+// What a source whose picture changes shows at one time on a timeline, and when that changes: an animation's frame, a
+// revision of an image whose bytes are arriving, or a video's frame.
 //
-// `source` is the picture, a still source with the description of the source that it is a picture of. The caller holds
-// a reference to it. `serial` names the picture among the pictures of its source: two answers with the same serial are
-// the same picture. `next` is the time at which the source shows another picture, on the clock of the times that the
-// source is asked with, or zero if it shows this picture from then on.
-typedef struct PrTextureFrame {
-    const PrTextureSource* source;
+// `picture` is a still source with the description of the source that it is a picture of, or null for the source
+// itself. The caller holds a reference to it. `serial` names the picture among the source's pictures: two answers with
+// the same serial show the same picture, whatever the time or the timeline that they were asked at.
+//
+// The source shows another picture at `next`, a time on the same timeline, unless it is kPrF64Infinity, and when it
+// notifies its notifier, if `notifies` is set. Both may hold at once, as for a video whose frame at a time is not
+// decoded yet: the answer is the latest frame that is, and the source notifies when the wanted one is. A source that
+// says neither shows this picture from then on, and a consumer does not ask again.
+//
+// `complete` is false for an approximation of a picture that the source will show better, such as the rows of an image
+// that have arrived. `status` is Ok, or the failure that stopped the picture from changing, such as bytes that stopped
+// arriving. The picture is then the last that the source could show.
+typedef struct PrTextureShow {
+    const PrTextureSource* PR_NULLABLE picture;
     uint64_t serial;
     double next;
-} PrTextureFrame;
+    bool notifies;
+    bool complete;
+    PrStatus status;
+} PrTextureShow;
 
-// Writes what a source shows at `time`, in seconds on the caller's clock, to `*out`. A null `out->source` stands for
-// the source itself, which is the first picture of an animation. The provider keeps what it needs between calls, such
-// as the time at which an animation began. Any thread may call it.
+// Writes what a source shows at `time`, in seconds since the start of a timeline, to `*out`. The answer depends on the
+// time and on what the source has, and on nothing that a consumer did before: the source keeps no time of its own. Any
+// thread may call it. `*out` arrives as the answer of the source itself, complete, with serial zero, that never
+// changes, and the provider sets what differs.
 //
 // Pictures that are read in order read fastest: a format that stores a picture as its difference from the one before
-// composes them as it goes.
-typedef void (*PrTextureSourceFrameFn)(void* PR_NULLABLE context, double time, PrTextureFrame* out);
+// composes them as it goes. It keeps that work per reader, so that consumers at different times do not slow each other
+// more than their own reads cost.
+typedef void (*PrTextureSourceShowFn)(void* PR_NULLABLE context, double time, PrTextureShow* out);
 
 // How a source's provider serves reads.
 enum {
@@ -267,10 +325,15 @@ typedef struct PrTextureSourceDesc {
     const PrTextureSource* PR_NONNULL const* PR_NULLABLE previews;
     uint32_t previewCount;
 
-    // The function that says what the source shows at a time, for a source whose picture changes: an animated image, or
-    // a video. It is null for a still source. The source's own description and reads are those of its first picture,
-    // which is what a consumer that does not play it shows.
-    PrTextureSourceFrameFn PR_NULLABLE frame;
+    // The function that says what the source shows at a time, for a source whose picture changes: an animated image, an
+    // image whose bytes are arriving, or a video. It is null for a still source. The source's own description is that
+    // of every picture. Its own reads are those of the picture that a consumer that does not play it shows: an
+    // animation's first frame, or the image of all of the bytes.
+    PrTextureSourceShowFn PR_NULLABLE show;
+
+    // The notifier that the provider notifies when the source shows another picture than its last answer said, or null
+    // for a source whose pictures change only at times. The source retains it.
+    PrNotifier* PR_NULLABLE notifier;
 
     PrTextureSourceReleaseFn PR_NULLABLE release;
     void* PR_NULLABLE context;
@@ -314,12 +377,16 @@ uint64_t prTextureSourceId(const PrTextureSource* source);
 uint32_t prTextureSourcePreviewCount(const PrTextureSource* source);
 const PrTextureSource* prTextureSourcePreview(const PrTextureSource* source, uint32_t index);
 
-// Returns true if the source's picture changes over time (PrTextureSourceDesc::frame).
-bool prTextureSourcePlays(const PrTextureSource* source);
+// Returns true if the source's picture changes (PrTextureSourceDesc::show).
+bool prTextureSourceChanges(const PrTextureSource* source);
 
-// Writes what the source shows at `time` to `*out` (PrTextureSourceFrameFn). `out->source` is never null: it is the
-// source itself for the first picture, and for a still source. The caller releases it.
-void prTextureSourceFrameAt(const PrTextureSource* source, double time, PrTextureFrame* out);
+// Returns the notifier that the source notifies when its picture changes, or null. It is valid while the source is.
+PrNotifier* PR_NULLABLE prTextureSourceNotifier(const PrTextureSource* source);
+
+// Writes what the source shows at `time` on a timeline to `*out` (PrTextureSourceShowFn). `out->picture` is never null:
+// it is the source itself for its own picture. The caller releases it. A still source shows itself, complete, at every
+// time, with serial zero, and never changes.
+void prTextureSourceShow(const PrTextureSource* source, double time, PrTextureShow* out);
 
 // Creates a source of the same texture in `format` and writes it to `*out`. If `format` is the source's own format, the
 // result is the source itself, with a new reference. Otherwise the format's library creates a source that decodes or
@@ -389,9 +456,6 @@ PrTextureRead* prTextureReadCreate(const PrTextureSource* source, const PrTextur
 
 // Returns true if the read has completed. Any thread may call it.
 bool prTextureReadIsDone(const PrTextureRead* read);
-
-// Blocks the calling thread until the read completes.
-void prTextureReadWait(PrTextureRead* read);
 
 // Returns the status of a completed read: Ok, or the provider's failure.
 PrStatus prTextureReadStatus(const PrTextureRead* read);
@@ -526,15 +590,16 @@ typedef void (*PrTextureOpenFn)(void* PR_NULLABLE context, PrStatus status, cons
 // (pr/mime_sniff.h). The first format in the set that reads the media type makes the source. If a format returns
 // NotSupported for the bytes, the next format tries. The source retains `bytes` and reads them again for each read.
 //
+// Bytes that are still arriving open as soon as their first bytes describe the texture: the set tries the bytes that
+// have arrived each time they have doubled, and every byte once they are complete (PrTextureFormat::createFn). A source
+// that opens before its bytes are complete shows the picture of the bytes so far, and changes as more arrive
+// (prTextureSourceShow). The open completes on the thread that delivered the bytes.
+//
 // A null `limits` means the defaults. The status is the failure of reading the bytes, NotSupported if no format opens
-// them, Limit if the texture is past the limits, or InvalidData if the bytes do not parse.
+// them, Limit if the texture is past the limits, or InvalidData if the bytes do not parse, as for bytes that end before
+// they describe a texture.
 void prTextureFormatSetOpen(const PrTextureFormatSet* set, const PrBlobSource* bytes, PrStringView name,
     const PrTextureLimits* PR_NULLABLE limits, PrTextureOpenFn done, void* PR_NULLABLE context);
-
-// Opens a source as prTextureFormatSetOpen does, and blocks the calling thread until the bytes are read. Returns the
-// same status. On failure, `*out` is null.
-PrStatus prTextureFormatSetRead(const PrTextureFormatSet* set, const PrBlobSource* bytes, PrStringView name,
-    const PrTextureLimits* PR_NULLABLE limits, const PrTextureSource* PR_NULLABLE* PR_NONNULL out);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Textures
@@ -560,8 +625,9 @@ typedef struct PrTextureRegion {
     PrRect rect;                // in texels of the texture
     PrUVec2 source;             // the extent of the source's first level, or zero if the rect is in the source's texels
 
-    // True if the region is of a picture of a source that plays (prTextureCachePlay). A later ask may answer with
-    // another picture, so a consumer that keeps a drawing of the region asks again when the cache reports an arrival.
+    // True if the region is of a picture of a source whose picture changes, which the cache plays (prTextureCachePlay).
+    // A later ask may answer with another picture, so a consumer that keeps a drawing of the region asks again when the
+    // cache reports an arrival.
     bool playing;
 } PrTextureRegion;
 
@@ -599,11 +665,6 @@ typedef void (*PrTextureUploadFn)(void* PR_NULLABLE context, PrStatus status, Pr
 // prGpuTextureCreate, or Lost if the device is lost before the texture is filled.
 void prTextureUpload(PrGpuDevice* device, const PrTextureSource* source, PrTextureUploadFlags flags, PrStringView name,
     PrTextureUploadFn done, void* PR_NULLABLE context);
-
-// Uploads `source` as prTextureUpload does, and blocks the calling thread until the texture is filled. Returns the same
-// status. On failure, `*out` is zero.
-PrStatus prTextureUploadRead(PrGpuDevice* device, const PrTextureSource* source, PrTextureUploadFlags flags,
-    PrStringView name, PrTexture* out);
 
 // Returns the size in bytes of the GPU texture that prTextureUpload creates for `desc` with `flags` on `device`. The
 // size covers every level of every layer, including levels that the device makes.

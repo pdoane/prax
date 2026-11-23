@@ -48,7 +48,7 @@ typedef struct PrKitChoice {
 } PrKitChoice;
 
 // Creates a segmented control, or a segment under one. The control is an outlined track, and its segments share its
-// width equally. Left and Right move between segments.
+// width equally, each at least as wide as its label and padding. Left and Right move between segments.
 PrLayoutNode prKitSegmented(PrKit* kit, PrLayoutNode parent, PrKitChoices choices, PrKitChoiceStyle style);
 PrLayoutNode prKitSegment(PrKit* kit, PrLayoutNode segmented, PrKitChoice choice);
 

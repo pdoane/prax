@@ -108,21 +108,16 @@ PrVec2 ellipseRadii(PrVec2 viewport, const SvgEllipseShape& s) {
     return radiiOf(viewport, s.rx, s.ry, s.rxAuto, s.ryAuto);
 }
 
-// Writes the region of the raster's texture. The drawing waits for the texture, because the drawing of an SVG is kept.
-// Returns false if the raster has no texture.
-bool rasterRegion(const SvgDrawer& d, const PrTextureSource* raster, PrTextureRegion* out) {
-    *out = PrTextureRegion{};
-    return d.tree->textures != nullptr &&
-        prTextureCacheWait(d.tree->textures, raster, prTextureCacheAskEncoded(0), out) == PrTextureCacheState_Ready;
-}
-
 // Writes a brush that shows the raster upright, placed and repeated as `tiles` specifies. `list` is the list that the
-// brush is drawn on. `list` holds the raster, so that the texture cache keeps the region while the list may draw it.
-// Returns false if the raster has no texture.
+// brush is drawn on. `list` holds the raster, so that the texture cache keeps the region while the list may draw it,
+// and awaits a texture that has not arrived (prDrawListRealize). Returns false if the raster has no texture yet.
 bool rasterBrush(const SvgDrawer& d, const PrTextureSource* raster, const PrDrawTiles& tiles, PrDrawSampling sampling,
         PrDrawList* list, PrDrawBrush* out) {
     PrTextureRegion region{};
-    if (!rasterRegion(d, raster, &region))
+    if (d.tree->textures == nullptr)
+        return false;
+    PrTextureCacheState state = prDrawListRealize(list, d.tree->textures, raster, prTextureCacheAskEncoded(0), &region);
+    if (state != PrTextureCacheState_Ready && state != PrTextureCacheState_Partial)
         return false;
     const PrTextureDesc& desc = *prTextureSourceDesc(raster);
     PrUVec2 texels = prTextureDescDisplayedExtent(&desc);
@@ -131,7 +126,6 @@ bool rasterBrush(const SvgDrawer& d, const PrTextureSource* raster, const PrDraw
     out->image.tiles = tiles;
     // The orientation applies to the finished tiles, because it swaps the axes that repeat.
     prDrawBrushImageUpright(out, desc.orientation, region.rect);
-    prDrawListHoldSource(list, raster);
     return true;
 }
 

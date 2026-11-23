@@ -30,6 +30,7 @@
 #include "html/src/html_page.h"
 #include "html/tests/support/html_test_fetch.h"
 #include "tools/harness/harness_textures.h"
+#include "tools/harness/texture_await.h"
 
 #include "tools/harness/test.h"
 
@@ -1880,7 +1881,7 @@ TEST_CASE("the load event of an img fires after its decode finishes on the cache
         PrTimePerf start = prTimePerfNow();
         while (loaded.realized < 0 && prTimePerfMilliseconds(start, prTimePerfNow()) < 10000) {
             if (!page.runNextTask()) {
-                prTextureCacheWaitAll(textures);
+                textureCacheSettle(textures);
                 prDomAgentWait(prHtmlPageAgent(page.page), 10);
             }
         }

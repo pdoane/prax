@@ -647,7 +647,9 @@ void flush(CanvasContext* c) {
     c->snapshot = nullptr;
 }
 
-// Draws what the context recorded into the bitmap, and brings the pixels up to date with it. This waits for the device.
+// Draws what the context recorded into the bitmap, and brings the pixels up to date with it. This waits for the device,
+// which a program on the web cannot do; a rolling draw list of the bitmap, reset by a full clear or fill and replayed
+// by the CPU renderer for a readback, is to replace the wait.
 void readPixels(CanvasContext* c) {
     flush(c);
     if (c->pixelsCurrent || c->bitmap == nullptr)
@@ -864,9 +866,11 @@ bool gradientBrush(const CanvasGradient& g, PrDAffine2 transform, PrDrawBrush* o
     return true;
 }
 
-// Writes the region of the image's texture. The context waits for the texture, because its bitmap keeps what it draws.
-// The pending list holds the image, so that the texture cache keeps the region while the list may draw it. Returns
-// false if the image has no texture.
+// Writes the region of the image's texture. The context waits for the texture, because its bitmap keeps what it draws
+// and a script reads the bitmap back in the same turn; a rolling draw list of the bitmap, replayed by the CPU renderer,
+// is to replace the wait. An image whose bytes are still arriving is not fully decodable, so it draws nothing
+// (html/canvas.html#check-the-usability-of-the-image-argument). The pending list holds the image, so that the texture
+// cache keeps the region while the list may draw it. Returns false if the image has no texture.
 bool regionOf(const CanvasContext* c, const PrTextureSource* image, PrTextureRegion* out) {
     if (c->textures == nullptr ||
             prTextureCacheWait(c->textures, image, prTextureCacheAskEncoded(0), out) != PrTextureCacheState_Ready)

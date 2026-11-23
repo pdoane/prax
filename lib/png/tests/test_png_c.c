@@ -11,7 +11,7 @@ int prTestPngCApi(void) {
     PrCompressCodec* deflate = prCompressDeflateCreate();
     PrCompressCodecSet* compress = prCompressCodecSetCreate(&deflate, 1);
     uint8_t file[128];
-    size_t size = prPngEncode(view, compress, file, sizeof(file));
+    size_t size = prPngEncode(view, 0, compress, file, sizeof(file));
     PrPngDecoder* decoder = NULL;
     PrByteView bytes = {file, size};
     int result = size > sizeof(file) || prPngDecoderCreate(bytes, compress, NULL, size, &decoder) != PrStatus_Ok;

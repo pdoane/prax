@@ -13,7 +13,12 @@
 // (prTextureCatalogTrim). A source stays valid after its catalog is destroyed.
 //
 // Threads. Any thread may ask. The catalog opens sources on the task pool that the host gave it. Without a pool, an
-// open runs in the ask that starts it, on the asking thread, and blocks it while the bytes are read.
+// open starts in the ask that starts it, on the asking thread, and blocks it while bytes that are all there are read.
+//
+// Arriving bytes. A resource whose bytes are still arriving (prBlobSourceProgress), as from a feed, opens as soon as
+// its first bytes describe the texture (prTextureFormatSetOpen), and its source then shows the picture of the bytes so
+// far. Until then its name is Pending, and the open completes on the thread that delivers the bytes. The open stays in
+// flight until the bytes describe a texture, end or fail.
 
 #pragma once
 
@@ -60,7 +65,9 @@ PrTextureCatalogDesc prTextureCatalogDescDefault(const PrTextureFormatSet* forma
 // Creates a catalog as `desc` describes.
 PrTextureCatalog* prTextureCatalogCreate(const PrTextureCatalogDesc* desc);
 
-// Waits for the opens in flight, and frees the catalog. Its sources stay valid.
+// Frees the catalog. Its sources stay valid. Opens that have not started are cancelled, and the call waits only for
+// opens that are starting or calling the host. An open that waits for bytes that are still arriving completes when they
+// do, without a name, and its source goes to no one.
 void prTextureCatalogDestroy(PrTextureCatalog* PR_NULLABLE catalog);
 
 // Returns the state of the source of the file at `path`, and starts opening it if the catalog does not name it. Writes
@@ -75,13 +82,8 @@ PrTextureCatalogState prTextureCatalogSource(PrTextureCatalog* catalog, PrString
 PrTextureCatalogState prTextureCatalogSourceFromBytes(PrTextureCatalog* catalog, PrStringView name,
     const PrBlobSource* bytes, const PrTextureSource* PR_NULLABLE* PR_NONNULL out);
 
-// Asks for the file at `path` as prTextureCatalogSource does, and blocks the calling thread until its source opens or
-// fails.
-PrTextureCatalogState prTextureCatalogWait(PrTextureCatalog* catalog, PrStringView path,
-    const PrTextureSource* PR_NULLABLE* PR_NONNULL out);
-
-// Blocks until no open is in flight.
-void prTextureCatalogWaitAll(PrTextureCatalog* catalog);
+// Returns the number of opens in flight.
+uint32_t prTextureCatalogOpening(const PrTextureCatalog* catalog);
 
 // Returns why the source named `name` failed to open: the status of reading its bytes, NotSupported if no format opens
 // them, Limit for a texture past the limits, and InvalidData for one that does not parse. Returns Ok for a name that

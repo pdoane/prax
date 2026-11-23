@@ -10,6 +10,7 @@
 #include "pr/mem.h"
 #include "pr/memory.h"
 #include "pr/mime_sniff.h"
+#include "pr/mutex.h"
 #include "pr/raw_array.h"
 #include "pr/texture_backend.h"
 #include "pr/thread.h"
@@ -22,6 +23,9 @@ namespace {
 
 // The id of the next source.
 Atomic<uint64_t> gNextSourceId;
+
+// The last id given to a timeline.
+Atomic<uint64_t> gNextTimelineId;
 
 // A read: its request, its storage, and its completion state.
 struct TextureRead {
@@ -37,8 +41,6 @@ struct TextureRead {
 
     Atomic<bool> done;
     PrStatus status;
-    PrMutex lock;
-    PrCondition completed;
 };
 
 // The formats of a set, in the order that the set tries them.
@@ -47,7 +49,8 @@ struct TextureFormatSet {
 };
 
 // A texture being opened: the set, the bytes, the name of the bytes, the limits, and the caller's callback. The open
-// retains the bytes.
+// retains the bytes. An open of bytes that are still arriving observes their notifier, and `lock` guards what it has
+// tried: the bytes of its last attempt, and whether it has finished.
 struct TextureOpen {
     const TextureFormatSet* set;
     const PrBlobSource* bytes;
@@ -56,11 +59,15 @@ struct TextureOpen {
     PrTextureLimits limits;
     PrTextureOpenFn done;
     void* PR_NULLABLE context;
+    PrMutex lock;
+    uint64_t observer;
+    uint64_t tried;
+    bool finished;
 };
 
-// Returns a source of `blob`, which holds the bytes of `open`. The source comes from the first format of the set that
-// reads the media type of the blob and does not refuse the blob.
-PrStatus textureOpen(const TextureOpen& open, PrBlob* blob, const PrTextureSource* PR_NULLABLE* PR_NONNULL out) {
+// Returns a source of `blob`, which holds the bytes of `open`, or the first of them if `partial` is set. The source
+// comes from the first format of the set that reads the media type of the blob and does not refuse the blob.
+PrStatus textureOpen(const TextureOpen& open, PrBlob* blob, bool partial, const PrTextureSource* PR_NULLABLE* PR_NONNULL out) {
     PrByteView all = prBlobBytes(blob);
     PrByteView prefix{all.data, all.size < kPrMimeSniffBytes ? all.size : size_t(kPrMimeSniffBytes)};
     PrStringView type = prMimeFormatInfo(prMimeSniff(prefix, PrStringView{open.name, open.nameSize})).type;
@@ -69,45 +76,12 @@ PrStatus textureOpen(const TextureOpen& open, PrBlob* blob, const PrTextureSourc
         const PrTextureFormat* format = open.set->formats.data[i];
         if (!format->supportsTypeFn(format, type))
             continue;
-        status = format->createFn(format, open.bytes, blob, &open.limits, out);
+        status = format->createFn(format, open.bytes, blob, &open.limits, partial, out);
         if (status != PrStatus_NotSupported)
             break;
     }
     return status;
 }
-
-// Lets the calling thread wait for a call that completes on any thread.
-struct TextureWait {
-    PrMutex lock;
-    PrCondition completed;
-    bool done;
-    PrStatus status;
-    const void* PR_NULLABLE result;
-
-    void init() {
-        prMutexInit(&lock);
-        prConditionInit(&completed);
-    }
-
-    void complete(PrStatus value, const void* PR_NULLABLE made) {
-        prMutexLock(&lock);
-        status = value;
-        result = made;
-        done = true;
-        prConditionBroadcast(&completed);
-        prMutexUnlock(&lock);
-    }
-
-    // Waits for the completion, then frees the state of the wait.
-    void wait() {
-        prMutexLock(&lock);
-        while (!done)
-            prConditionWait(&completed, &lock);
-        prMutexUnlock(&lock);
-        prMutexReset(&lock);
-        prConditionReset(&completed);
-    }
-};
 
 // Returns true if the device can generate the mip levels of a texture of `format`. The device must filter the format
 // and render to it.
@@ -927,6 +901,48 @@ void tilesRelease(void* PR_NULLABLE context) {
     prMemoryFree(source);
 }
 
+// Frees the open and passes its result to its caller. An open of arriving bytes stops observing them first.
+void finishOpen(TextureOpen* open, PrStatus status, const PrTextureSource* PR_NULLABLE source) {
+    if (open->observer != 0)
+        prNotifierUnobserve(prBlobSourceNotifier(open->bytes), open->observer);
+    prBlobSourceRelease(open->bytes);
+    prMutexReset(&open->lock);
+    PrTextureOpenFn opened = open->done;
+    void* context = open->context;
+    prMemoryFree(open);
+    opened(context, status, status == PrStatus_Ok ? source : nullptr);
+}
+
+// Tries the bytes of an open of arriving bytes that have arrived: once they have doubled since the last try, and every
+// byte once they are complete. Each try reads the bytes from the start, so the tries cost about twice the bytes in all.
+// Finishes the open when a try makes a source, or when the bytes are complete.
+void tryArrived(void* PR_NULLABLE context) {
+    TextureOpen* open = static_cast<TextureOpen*>(context);
+    prMutexLock(&open->lock);
+    PrBlobProgress progress = prBlobSourceProgress(open->bytes);
+    bool due = progress.complete || (progress.available != 0 && progress.available >= open->tried * 2);
+    if (open->finished || !due) {
+        prMutexUnlock(&open->lock);
+        return;
+    }
+    open->tried = progress.available;
+    PrStatus status = progress.status;
+    const PrTextureSource* source = nullptr;
+    if (status == PrStatus_Ok) {
+        PrBlob* blob = nullptr;
+        PrBlobRange range{0, progress.complete ? kPrBlobSizeUnknown : progress.available};
+        status = prBlobSourceRead(open->bytes, range, &blob);
+        if (status == PrStatus_Ok)
+            status = textureOpen(*open, blob, !progress.complete, &source);
+        prBlobRelease(blob);
+    }
+    open->finished = progress.complete || status == PrStatus_Ok;
+    bool finished = open->finished;
+    prMutexUnlock(&open->lock);
+    if (finished)
+        finishOpen(open, status, source);
+}
+
 } // namespace
 
 } // namespace pr_impl
@@ -1009,6 +1025,38 @@ bool prTextureNeedTakesBlocks(const PrTextureNeed* need, PrGpuFormat format, PrT
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
+// Timelines
+
+PrTextureTimeline prTextureTimelineCreate(double hostTime) {
+    return PrTextureTimeline{.id = gNextTimelineId.fetchAdd(1) + 1, .hostTime = hostTime, .rate = 1};
+}
+
+double prTextureTimelineAt(const PrTextureTimeline* timeline, double hostTime) {
+    return timeline->time + (hostTime - timeline->hostTime) * timeline->rate;
+}
+
+double prTextureTimelineHostTime(const PrTextureTimeline* timeline, double time) {
+    if (timeline->rate <= 0)
+        return time <= timeline->time ? timeline->hostTime : kPrF64Infinity;
+    return timeline->hostTime + (time - timeline->time) / timeline->rate;
+}
+
+void prTextureTimelineSeek(PrTextureTimeline* timeline, double hostTime, double time) {
+    timeline->hostTime = hostTime;
+    timeline->time = time;
+}
+
+void prTextureTimelineSetRate(PrTextureTimeline* timeline, double hostTime, double rate) {
+    timeline->time = prTextureTimelineAt(timeline, hostTime);
+    timeline->hostTime = hostTime;
+    timeline->rate = rate;
+}
+
+bool prTextureTimelineEqual(const PrTextureTimeline* a, const PrTextureTimeline* b) {
+    return a->id == b->id && a->hostTime == b->hostTime && a->time == b->time && a->rate == b->rate;
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
 // Sources
 
 const PrTextureSource* prTextureSourceCreate(const PrTextureSourceDesc* desc) {
@@ -1025,6 +1073,8 @@ const PrTextureSource* prTextureSourceCreate(const PrTextureSourceDesc* desc) {
         source->previews[i] = desc->previews[i];
     }
     source->desc.previews = nullptr;
+    if (desc->notifier != nullptr)
+        prNotifierRetain(desc->notifier);
     return source;
 }
 
@@ -1089,8 +1139,10 @@ void prTextureSourceRelease(const PrTextureSource* PR_NULLABLE source) {
         held->released(held->releasedContext, held);
     for (uint32_t i = 0; i < held->desc.previewCount; ++i)
         prTextureSourceRelease(held->previews[i]);
+    PrNotifier* notifier = held->desc.notifier;
     if (held->desc.release != nullptr)
         held->desc.release(held->desc.context);
+    prNotifierRelease(notifier);
     prMemoryFree(held);
 }
 
@@ -1115,17 +1167,21 @@ const PrTextureSource* prTextureSourcePreview(const PrTextureSource* source, uin
     return source->previews[index];
 }
 
-bool prTextureSourcePlays(const PrTextureSource* source) {
-    return source->desc.frame != nullptr;
+bool prTextureSourceChanges(const PrTextureSource* source) {
+    return source->desc.show != nullptr;
 }
 
-void prTextureSourceFrameAt(const PrTextureSource* source, double time, PrTextureFrame* out) {
-    *out = PrTextureFrame{};
-    if (source->desc.frame != nullptr)
-        source->desc.frame(source->desc.context, time, out);
-    if (out->source == nullptr) {
+PrNotifier* PR_NULLABLE prTextureSourceNotifier(const PrTextureSource* source) {
+    return source->desc.notifier;
+}
+
+void prTextureSourceShow(const PrTextureSource* source, double time, PrTextureShow* out) {
+    *out = PrTextureShow{.next = kPrF64Infinity, .complete = true};
+    if (source->desc.show != nullptr)
+        source->desc.show(source->desc.context, time, out);
+    if (out->picture == nullptr) {
         prTextureSourceRetain(source);
-        out->source = source;
+        out->picture = source;
     }
 }
 
@@ -1211,23 +1267,12 @@ PrTextureRead* prTextureReadCreate(const PrTextureSource* source, const PrTextur
         read->ownsStorage = true;
     }
     read->done.store(false);
-    prMutexInit(&read->lock);
-    prConditionInit(&read->completed);
     source->desc.read(source->desc.context, read);
     return read;
 }
 
 bool prTextureReadIsDone(const PrTextureRead* read) {
     return read->done.load();
-}
-
-void prTextureReadWait(PrTextureRead* read) {
-    if (read->done.load())
-        return;
-    prMutexLock(&read->lock);
-    while (!read->done.load())
-        prConditionWait(&read->completed, &read->lock);
-    prMutexUnlock(&read->lock);
 }
 
 PrStatus prTextureReadStatus(const PrTextureRead* read) {
@@ -1242,15 +1287,10 @@ uint8_t* PR_NULLABLE prTextureReadStorage(const PrTextureRead* read) {
 void prTextureReadDestroy(PrTextureRead* PR_NULLABLE read) {
     if (read == nullptr)
         return;
-    // A provider may still hold the lock while it wakes the waiters.
-    prMutexLock(&read->lock);
     PR_ASSERT(read->done.load());
-    prMutexUnlock(&read->lock);
     if (read->ownsStorage)
         prMemoryFree(read->desc.storage);
     prTextureSourceRelease(read->source);
-    prMutexReset(&read->lock);
-    prConditionReset(&read->completed);
     prMemoryFree(read);
 }
 
@@ -1277,13 +1317,10 @@ void prTextureReadComplete(PrTextureRead* read, PrStatus status) {
         read->ownsStorage = false;
     }
     read->status = status;
-    // The callback may destroy the read. The waiters are therefore woken first, under the lock that the destroy takes.
+    // Once the read is done, a caller that polls it may destroy it, so the callback is read first.
     PrTextureReadDoneFn done = read->desc.done;
     void* context = read->desc.context;
-    prMutexLock(&read->lock);
     read->done.store(true);
-    prConditionBroadcast(&read->completed);
-    prMutexUnlock(&read->lock);
     if (done != nullptr)
         done(context, read);
 }
@@ -1462,37 +1499,28 @@ void prTextureFormatSetOpen(const PrTextureFormatSet* set, const PrBlobSource* b
         .done = done,
         .context = context,
     };
+    prMutexInit(&open->lock);
     if (name.size != 0)
         prMemCopy(open->name, name.data, name.size);
+    // Bytes that are still arriving are tried as they arrive.
+    PrNotifier* arriving = prBlobSourceNotifier(bytes);
+    if (arriving != nullptr && !prBlobSourceProgress(bytes).complete) {
+        open->observer = prNotifierObserve(arriving, tryArrived, open);
+        tryArrived(open);
+        return;
+    }
     PrBlobReadDesc read = prBlobReadDescDefault();
     read.done = [](void* PR_NULLABLE held, PrBlobRead* read) {
         TextureOpen* open = static_cast<TextureOpen*>(held);
         PrStatus status = prBlobReadStatus(read);
         const PrTextureSource* source = nullptr;
         if (status == PrStatus_Ok)
-            status = textureOpen(*open, prBlobReadBlob(read), &source);
+            status = textureOpen(*open, prBlobReadBlob(read), false, &source);
         prBlobReadDestroy(read);
-        prBlobSourceRelease(open->bytes);
-        PrTextureOpenFn opened = open->done;
-        void* context = open->context;
-        prMemoryFree(open);
-        opened(context, status, status == PrStatus_Ok ? source : nullptr);
+        finishOpen(open, status, source);
     };
     read.context = open;
     prBlobReadCreate(bytes, &read);
-}
-
-PrStatus prTextureFormatSetRead(const PrTextureFormatSet* set, const PrBlobSource* bytes, PrStringView name,
-        const PrTextureLimits* PR_NULLABLE limits, const PrTextureSource* PR_NULLABLE* PR_NONNULL out) {
-    TextureWait wait{};
-    wait.init();
-    prTextureFormatSetOpen(set, bytes, name, limits,
-        [](void* PR_NULLABLE held, PrStatus status, const PrTextureSource* PR_NULLABLE source) {
-            static_cast<TextureWait*>(held)->complete(status, source);
-        }, &wait);
-    wait.wait();
-    *out = static_cast<const PrTextureSource*>(wait.result);
-    return wait.status;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1563,25 +1591,6 @@ void prTextureUpload(PrGpuDevice* device, const PrTextureSource* source, PrTextu
     };
     read.context = upload;
     prTextureReadCreate(source, &read);
-}
-
-PrStatus prTextureUploadRead(PrGpuDevice* device, const PrTextureSource* source, PrTextureUploadFlags flags,
-        PrStringView name, PrTexture* out) {
-    TextureWait wait{};
-    wait.init();
-    PrTexture made{};
-    struct Held {
-        TextureWait* wait;
-        PrTexture* made;
-    } held{&wait, &made};
-    prTextureUpload(device, source, flags, name, [](void* PR_NULLABLE context, PrStatus status, PrTexture texture) {
-        Held* h = static_cast<Held*>(context);
-        *h->made = texture;
-        h->wait->complete(status, nullptr);
-    }, &held);
-    wait.wait();
-    *out = made;
-    return wait.status;
 }
 
 uint64_t prTextureUploadSize(const PrGpuDevice* device, const PrTextureDesc* desc, PrTextureUploadFlags flags) {

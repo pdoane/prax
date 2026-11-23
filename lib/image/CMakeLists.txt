@@ -87,9 +87,13 @@ if (PR_DEVELOP)
         backends/tiff/tests/test_image_tiff.cpp
         backends/webp/tests/test_image_webp.cpp
     )
-    target_sources(image_tests PRIVATE tests/test_image_texture_source.cpp)
+    target_sources(image_tests PRIVATE tests/test_image_texture_source.cpp tests/test_image_texture_stream.cpp)
+    # A progressive JPEG that the stream tests feed in pieces.
+    pr_resources(image_tests
+        ${PROJECT_SOURCE_DIR}/suites/prax/workloads/support/cat.jpg@stream/progressive.jpg
+        ${PROJECT_SOURCE_DIR}/suites/prax/html-04-the-elements-of-html/support/flag-exif-144dpi.jpg@stream/baseline.jpg)
     target_link_libraries(image_tests PRIVATE harness_codecs prax::color prax::compress prax::compress_select
-                                              prax::gpu prax::image_select prax::texture)
+                                              prax::gpu prax::image_select prax::png prax::texture)
     if (PR_IMAGE_IMAGEIO)
         target_sources(image_tests PRIVATE backends/imageio/tests/test_image_imageio.cpp)
         target_link_libraries(image_tests PRIVATE "-framework ImageIO" "-framework CoreGraphics"

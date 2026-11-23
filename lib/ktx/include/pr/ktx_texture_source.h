@@ -15,9 +15,9 @@ PR_ASSUME_NONNULL_BEGIN
 extern "C" {
 #endif
 
-// Creates a source of the KTX 2.0 texture in `bytes`. The source retains `bytes` and reads them again for each read.
-// Supercompressed levels are inflated with `codec`, which must outlive the source. Without a codec, such a file is
-// NotSupported.
+// A format set opens a KTX 2.0 texture with the format of prKtxTextureFormatCreate (prTextureFormatSetOpen). Its source
+// retains the bytes and reads them again for each read. Supercompressed levels are inflated with the format's codec.
+// Without a codec, such a file is NotSupported.
 //
 // A file of blocks gives a source of those blocks. A file of pixels, or of one of Basis Universal's formats, gives a
 // source of pixels: Rgba8 for 8-bit and 16-bit samples, and Rgba32F for floats. The source can also produce other
@@ -35,11 +35,9 @@ extern "C" {
 // A file that ends before its level data still opens, because the bytes before the levels describe the whole texture
 // (prKtxInfoBytes). Reads of the missing levels fail.
 //
-// Returns the failure of reading the bytes, Limit if the texture is past `limits`, or a failure of prKtxTextureCreate
-// other than Truncated. A null `limits` means the defaults. On failure, `*out` is null.
-PrStatus prKtxTextureSourceOpen(const PrBlobSource* bytes, const PrCompressCodecSet* PR_NULLABLE codec,
-    const PrTextureLimits* PR_NULLABLE limits, const PrTextureSource* PR_NULLABLE* PR_NONNULL out);
-
+// The open fails with Limit if the texture is past the open's limits, or with a failure of prKtxTextureCreate other
+// than Truncated.
+//
 // Creates a format for a texture format set (prTextureFormatSetCreate). It reads the media type image/ktx2. Its sources
 // inflate supercompressed levels with `codec`, which must outlive them.
 PrTextureFormat* prKtxTextureFormatCreate(const PrCompressCodecSet* PR_NULLABLE codec);

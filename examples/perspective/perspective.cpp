@@ -195,11 +195,11 @@ void paintPicture(void* context, PrVec2 size, PrDrawList* list) {
     Panels& p = *static_cast<Panels*>(context);
     if (p.picture == nullptr)
         return;
-    // The painter's drawing is kept, so the painter waits for the picture's texture. A drawing without the picture must
-    // not be kept, so the next round requests another drawing.
+    // The painter's drawing is kept, so a drawing without the picture's texture must not be kept: the next round
+    // requests another drawing.
     PrTextureRegion region{};
     if (p.textures == nullptr ||
-            prTextureCacheWait(p.textures, p.picture, prTextureCacheAskEncoded(PrTextureCacheFlag_Levels), &region) !=
+            prTextureCacheRealize(p.textures, p.picture, prTextureCacheAskEncoded(PrTextureCacheFlag_Levels), &region) !=
             PrTextureCacheState_Ready) {
         p.pictureMissed = true;
         return;

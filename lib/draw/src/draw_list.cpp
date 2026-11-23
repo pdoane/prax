@@ -40,6 +40,8 @@ void clearRecording(DrawRecording& r) {
         prTextureSourceRelease(r.sources.data[i]);
     for (uint32_t i = 0; i < r.held.count; ++i)
         r.held.data[i].release(r.held.data[i].context);
+    for (uint32_t i = 0; i < r.awaited.count; ++i)
+        prTextureSourceRelease(r.awaited.data[i].source);
     r.commands.clear();
     r.side.clear();
     r.paths.clear();
@@ -48,6 +50,7 @@ void clearRecording(DrawRecording& r) {
     r.filters.clear();
     r.sources.clear();
     r.held.clear();
+    r.awaited.clear();
 }
 
 void resetRecording(DrawRecording& r) {
@@ -60,6 +63,7 @@ void resetRecording(DrawRecording& r) {
     r.filters.reset();
     r.sources.reset();
     r.held.reset();
+    r.awaited.reset();
 }
 
 const PrPath* holdPath(DrawRecording& r, const PrPath* path) {
@@ -80,6 +84,12 @@ void holdList(DrawRecording& r, const PrDrawList* list) {
     PR_ASSERT(list->frozen);
     drawListRetain(list);
     r.lists.push(list);
+    // What the other list awaits, this one awaits too. The other list is frozen, so its asks are final.
+    const RawArray<PrDrawAwaited>& awaited = list->recording.awaited;
+    for (uint32_t i = 0; i < awaited.count; ++i) {
+        prTextureSourceRetain(awaited.data[i].source);
+        r.awaited.push(awaited.data[i]);
+    }
 }
 
 void holdFilter(DrawRecording& r, const PrDrawFilter* filter) {
@@ -872,6 +882,31 @@ void prDrawListHoldSource(PrDrawList* list, const PrTextureSource* source) {
     PR_ASSERT(!list->frozen);
     prTextureSourceRetain(source);
     list->recording.sources.push(source);
+}
+
+void prDrawListAwait(PrDrawList* list, const PrTextureSource* source, PrTextureCacheAsk ask) {
+    PR_ASSERT(!list->frozen);
+    prTextureSourceRetain(source);
+    list->recording.awaited.push(PrDrawAwaited{source, ask});
+}
+
+uint32_t prDrawListAwaitedCount(const PrDrawList* list) {
+    return list->recording.awaited.count;
+}
+
+PrDrawAwaited prDrawListAwaited(const PrDrawList* list, uint32_t index) {
+    PR_ASSERT(index < list->recording.awaited.count);
+    return list->recording.awaited.data[index];
+}
+
+PrTextureCacheState prDrawListRealize(PrDrawList* list, PrTextureCache* cache, const PrTextureSource* source,
+        PrTextureCacheAsk ask, PrTextureRegion* out) {
+    PrTextureCacheState state = prTextureCacheRealize(cache, source, ask, out);
+    if (state == PrTextureCacheState_Ready || state == PrTextureCacheState_Partial)
+        prDrawListHoldSource(list, source);
+    if (state == PrTextureCacheState_Pending || state == PrTextureCacheState_Partial)
+        prDrawListAwait(list, source, ask);
+    return state;
 }
 
 void prDrawListClear(PrDrawList* list) {

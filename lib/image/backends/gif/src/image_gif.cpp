@@ -55,6 +55,63 @@ bool recognize(const PrImageCodec*, PrByteView prefix) {
     return prGifHasSignature(prefix);
 }
 
+// Returns the image interface's info of the GIF of `gifInfo`.
+PrImageInfo infoOf(const PrGifInfo& gifInfo) {
+    return PrImageInfo{
+        .extent = gifInfo.extent,
+        .format = PrImageFormat{
+            .model = PrColorModel_Rgb,
+            .sample = PrImageSample_U8,
+            .alpha = PrImageAlpha_Straight,
+            .color = PrImageColor{.encoding = PrImageColorEncoding_Named, .space = PrColorSpace_Srgb},
+        },
+        .frameCount = gifInfo.frameCount != 0 ? gifInfo.frameCount : 1,
+        .playCount = gifInfo.playCount,
+        .workingBytes = gifInfo.workingBytes,
+    };
+}
+
+PrStatus append(PrImageReader* reader, PrByteView bytes, bool, PrImageInfo* info) {
+    GifReader* gif = static_cast<GifReader*>(reader);
+    PrStatus status = prGifDecoderAppend(gif->gif, bytes);
+    const PrGifInfo& gifInfo = *prGifDecoderInfo(gif->gif);
+    gif->hasFrames = gifInfo.frameCount != 0;
+    if (gifInfo.extent.x != 0 && gif->hasFrames)
+        *info = infoOf(gifInfo);
+    if (status == PrStatus_Ok)
+        gif->openStatus = PrStatus_Ok;
+    return status;
+}
+
+uint64_t work(const PrImageReader* reader) {
+    return prGifDecoderWork(static_cast<const GifReader*>(reader)->gif);
+}
+
+PrStatus streamOpen(const PrImageCodec*, const PrImageLimits* limits, PrImageReader* PR_NULLABLE* PR_NONNULL out) {
+    const PrGifLimits gifLimits{
+        .pixels = limits->pixels,
+        .workingBytes = limits->workingBytes,
+        .outputBytes = limits->outputBytes,
+        .work = limits->work,
+        .frames = limits->frames,
+        .metadataBytes = limits->metadataBytes,
+    };
+    PrGifDecoder* gif = nullptr;
+    PrStatus status = prGifDecoderCreateStream(&gifLimits, sizeof(GifReader), &gif);
+    if (status != PrStatus_Ok)
+        return status;
+    GifReader* reader = allocZeroed<GifReader>();
+    reader->closeFn = close;
+    reader->frameInfoFn = frameInfo;
+    reader->readFn = read;
+    reader->appendFn = append;
+    reader->workFn = work;
+    reader->gif = gif;
+    reader->openStatus = PrStatus_Truncated;
+    *out = reader;
+    return PrStatus_Ok;
+}
+
 PrStatus open(const PrImageCodec*, const PrImageCodecSet*, const PrImageSource* source, const PrImageLimits* limits,
         PrImageReader* PR_NULLABLE* PR_NONNULL out, PrImageInfo* info) {
     *out = nullptr;
@@ -78,18 +135,7 @@ PrStatus open(const PrImageCodec*, const PrImageCodecSet*, const PrImageSource* 
         return status;
     }
     const PrGifInfo& gifInfo = *prGifDecoderInfo(gif);
-    *info = PrImageInfo{
-        .extent = gifInfo.extent,
-        .format = PrImageFormat{
-            .model = PrColorModel_Rgb,
-            .sample = PrImageSample_U8,
-            .alpha = PrImageAlpha_Straight,
-            .color = PrImageColor{.encoding = PrImageColorEncoding_Named, .space = PrColorSpace_Srgb},
-        },
-        .frameCount = gifInfo.frameCount != 0 ? gifInfo.frameCount : 1,
-        .playCount = gifInfo.playCount,
-        .workingBytes = gifInfo.workingBytes,
-    };
+    *info = infoOf(gifInfo);
     GifReader* reader = allocZeroed<GifReader>();
     reader->closeFn = close;
     reader->frameInfoFn = frameInfo;
@@ -108,6 +154,7 @@ PrImageCodec gCodec = {
     .supportsTypeFn = supportsType,
     .recognizeFn = recognize,
     .decoderOpenFn = open,
+    .streamOpenFn = streamOpen,
 };
 
 } // namespace

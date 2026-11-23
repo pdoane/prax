@@ -204,7 +204,17 @@ pr_example(incremental
 target_link_libraries(incremental PRIVATE prax::compress_select prax::image_select prax::studio_app prax::font_bundle
                                           prax::app
                                           prax::studio_kit prax::draw prax::layout
-                                          prax::text prax::html prax::dom prax::css prax::markdown prax::core_cpp)
+                                          prax::text prax::html prax::dom prax::css prax::markdown prax::core_cpp
+                                          prax::image prax::png prax::texture)
+# The pictures that the example streams, which ./dev.sh fetch incremental fetches into third_party/incremental, and the
+# small ones of the repository that stand in for them until then.
+pr_resources(incremental
+    ${PROJECT_SOURCE_DIR}/third_party/incremental/baseline.jpg@incremental/baseline.jpg
+    ${PROJECT_SOURCE_DIR}/third_party/incremental/progressive.jpg@incremental/progressive.jpg
+    ${PROJECT_SOURCE_DIR}/third_party/incremental/wave.gif@incremental/wave.gif
+    ${PROJECT_SOURCE_DIR}/suites/prax/workloads/support/landscape.jpg@incremental/small/progressive.jpg
+    ${PROJECT_SOURCE_DIR}/suites/prax/html-04-the-elements-of-html/support/flag-exif-144dpi.jpg@incremental/small/baseline.jpg
+    ${PROJECT_SOURCE_DIR}/suites/prax/svg2-03-rendering-model/support/cycle.gif@incremental/small/cycle.gif)
 
 # The word guess game: six guesses at a hidden five-letter word, built with lib/ui's elements (pr/ui_element.h) in the
 # system's fonts, or on the web in a font that it packages. Its rules are a library of their own, which the game and

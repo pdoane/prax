@@ -70,12 +70,37 @@ enum { kPrJpegReductionCount = 4 };
 // Returns the extent of an image of `extent` decoded at `reduction`.
 PrUVec2 prJpegReducedExtent(PrUVec2 extent, uint32_t reduction);
 
+// Creates a decoder of a JPEG whose bytes arrive in pieces, which the caller appends (prJpegDecoderAppend), within
+// `limits`, or the defaults if they are null. `held` is as for prJpegDecoderCreate. The decoder keeps the bytes that
+// are appended. Its info is zero until the first scan's header arrives. It reads at the full extent only.
+PrStatus prJpegDecoderCreateStream(const PrJpegLimits* PR_NULLABLE limits, uint64_t held,
+    PrJpegDecoder* PR_NULLABLE* PR_NONNULL out);
+
+// Appends the next bytes of the file to a decoder that prJpegDecoderCreateStream created, and decodes what they
+// complete. `end` says that no bytes follow. Each segment is read once it has arrived, and a scan decodes unit by unit
+// as its data arrives. A unit whose data has not all arrived is undone and tried again once the bytes have grown by as
+// many as it read, so a unit is read a few times at most, and the work of all the appends is proportional to the file
+// and the pixels, however the bytes are divided. Returns Ok once the image has ended, Truncated before, and the
+// failures of prJpegDecoderCreate, which the decoder keeps.
+//
+// prJpegDecoderRead then reads the coefficients that have arrived, transforming again only the rows of blocks that
+// changed since the last read: a sequential image's rows so far, and a progressive one's whole picture at the precision
+// of its scans so far.
+PrStatus prJpegDecoderAppend(PrJpegDecoder* decoder, PrByteView bytes, bool end);
+
+// Returns the work that the appends to a decoder of appended bytes and its reads have done: the bytes that they read,
+// the coefficients that they set, and the samples that reads transformed. A caller measures that the work is
+// proportional to the file and the pixels with it.
+uint64_t prJpegDecoderWork(const PrJpegDecoder* decoder);
+
 // Decodes the image at `reduction` into `output`, which has the extent that prJpegReducedExtent returns.
 //
 // A reduced decode transforms only the lowest frequencies of each block, at the block's reduced size (T.81 A.3.3). At
 // an eighth, it takes only the block's average, so the decode costs little more than the entropy decoding.
 //
-// Returns InvalidData if the image does not decode.
+// Returns InvalidData if the image does not decode. Bytes that end inside a scan or after it, before the image ends,
+// decode the scans that they hold and return Truncated: a sequential image has the rows of blocks that they reach and
+// mid gray below, and a progressive one has every block at the precision of its scans so far.
 PrStatus prJpegDecoderRead(PrJpegDecoder* decoder, uint32_t reduction, PrPixels output);
 
 #if defined(__cplusplus)

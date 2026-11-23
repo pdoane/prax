@@ -181,9 +181,10 @@ PrTextureCache* PR_NULLABLE drawingTextures() {
 PrDrawSource imageSource(const PrTextureSource* image, PrRect rect, PrDrawSampling sampling) {
     PrTextureCacheFlags flags = PrTextureCacheFlags(
         (sampling & PrDrawSamplingFlag_Kind) == PrDrawSampling_Mipmap ? PrTextureCacheFlag_Levels : 0);
+    // The window's cache has no pool, so an image of pixels in memory realizes in the ask.
     PrTextureRegion realized{};
     if (currentTextures == nullptr ||
-            prTextureCacheWait(currentTextures, image, prTextureCacheAskEncoded(flags), &realized) !=
+            prTextureCacheRealize(currentTextures, image, prTextureCacheAskEncoded(flags), &realized) !=
             PrTextureCacheState_Ready)
         return PrDrawSource{};
     return prDrawSourceRegion(&realized, rect, 0);

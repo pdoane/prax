@@ -9,6 +9,7 @@
 
 #include "texture/tests/kTestTextureComputeShaders.h"
 #include "tools/harness/harness_gpu.h"
+#include "tools/harness/texture_await.h"
 
 #include "tools/harness/test.h"
 
@@ -136,7 +137,7 @@ TEST_CASE("a source that a compute shader fills is realized on the GPU, and agai
 
     // lib/draw's ask, for encoded color, gets the texture that the shader wrote. The cache made it for compute writes.
     PrTextureRegion region{};
-    REQUIRE(prTextureCacheWait(cache, source, prTextureCacheAskEncoded(0), &region) == PrTextureCacheState_Ready);
+    REQUIRE(textureCacheAwait(cache, source, prTextureCacheAskEncoded(0), &region) == PrTextureCacheState_Ready);
     CHECK(checker.fills == 1);
     CHECK(region.extent == PrUVec2{64, 64});
     PrGpuTextureDesc made = prGpuTextureDesc(device, region.texture.texture);
@@ -154,7 +155,7 @@ TEST_CASE("a source that a compute shader fills is realized on the GPU, and agai
     PrGpuDevice* next = computeDevice(backend);
     REQUIRE(next != nullptr);
     prTextureCacheSetDevice(cache, next);
-    REQUIRE(prTextureCacheWait(cache, source, prTextureCacheAskEncoded(0), &region) == PrTextureCacheState_Ready);
+    REQUIRE(textureCacheAwait(cache, source, prTextureCacheAskEncoded(0), &region) == PrTextureCacheState_Ready);
     CHECK(checker.fills == 2);
     CHECK(texelAt(next, region, PrIVec2{0, 0}) == 255);
     CHECK(texelAt(next, region, PrIVec2{16, 0}) == 0);

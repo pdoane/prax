@@ -57,6 +57,7 @@ struct Frame {
     uint8_t transparentIndex;
     bool transparent;
     bool interlaced;
+    bool truncated;     // the bytes end inside the frame's data
 };
 
 // The LZW code stream, read low bit first out of a chain of sub-blocks.
@@ -180,6 +181,9 @@ bool readFrames(const uint8_t* bytes, size_t size, Screen& screen, uint32_t limi
         frame.data = at;
         at += 1;
         if (!skipSubBlocks(bytes, size, at)) {
+            // A frame whose data the bytes cut short is decoded as far as the data goes.
+            frame.truncated = true;
+            frames.push(frame);
             return false;
         }
         frames.push(frame);
@@ -504,10 +508,12 @@ PrStatus inspect(const uint8_t* bytes, size_t size, const PrGifLimits& limits, u
         if (at >= size)
             break;
         ++at;
-        if (!skipBlocks(bytes, size, &at))
-            break;
+        // A frame whose data the bytes cut short counts: it decodes as far as its data goes.
+        bool whole = skipBlocks(bytes, size, &at);
         if (++frames > limits.frames)
             return PrStatus_Limit;
+        if (!whole)
+            break;
     }
     info->frameCount = frames;
     info->playCount = playCount;
@@ -540,7 +546,9 @@ struct GifAnimation {
     uint8_t* previous;      // the snapshot that a restore-to-previous disposal restores; null until needed
     uint8_t* indices;       // one frame's palette indices
     size_t pixelsSize;
+    size_t indicesSize;
     uint32_t at;            // the frame that `pixels` holds, or kNoFrame
+    uint64_t work;          // the pixels of the frames that reads composed
 };
 
 void closeAnimation(GifAnimation* PR_NULLABLE animation) {
@@ -575,6 +583,7 @@ GifAnimation* PR_NULLABLE openAnimation(PrByteView bytes) {
     animation->pixels = static_cast<uint8_t*>(prMemoryAlloc(animation->pixelsSize));
     const size_t widest = widestFrame(animation->frames);
     animation->indices = widest == 0 ? nullptr : static_cast<uint8_t*>(prMemoryAlloc(widest));
+    animation->indicesSize = widest;
     animation->tables = lzwTables();
     return animation;
 }
@@ -610,17 +619,358 @@ bool composeFrame(GifAnimation& animation, uint32_t frame) {
             return false;
         }
         drawFrame(current, animation.indices, written, animation.screen, animation.pixels);
+        animation.work += count;
         animation.at = next;
     }
     return true;
 }
 
+// The state of a GIF whose bytes are appended. Each byte is walked once: the blocks as they complete, and the coded
+// data of the frame that is arriving, which expands into palette indices and draws onto the screen as its codes arrive.
+// `pixels` is the screen with the frames before the arriving one composed and that frame drawn as far as it has
+// arrived. A frame's palette is kept as an offset into `bytes`, which move as they grow, or SIZE_MAX for the global
+// one.
+struct GifStream {
+    RawArray<uint8_t> bytes;
+    PrGifLimits limits;
+    size_t walked;                      // the offset of the next block that the walk has not passed
+    bool screened;                      // the header and the global table have arrived
+    bool ended;                         // the trailer has arrived
+    PrStatus failed;
+    uint64_t work;
+    Screen screen;
+    size_t screenPalette;               // the offset of the global table
+    RawArray<Frame> frames;
+    RawArray<size_t> palettes;          // the offset of each frame's table, or SIZE_MAX for the global one
+    Frame control;                      // the graphic control of the next frame
+    uint8_t* PR_NULLABLE pixels;
+    uint8_t* PR_NULLABLE previous;      // the screen that a frame disposed to the previous restores
+
+    // The frame that is arriving: its codes as far as they have arrived, the dictionary, and where its next pixel goes.
+    bool coding;                        // the frame's coded data is arriving
+    Bits in;
+    LzwTables tables;
+    uint32_t minCodeSize;
+    uint32_t next;
+    uint32_t width;
+    uint32_t previousCode;
+    uint8_t previousFirst;
+    size_t written;
+    uint32_t row;
+    uint32_t pass;
+    uint32_t target;                    // the row of the frame that `row` stands for, in an interlaced frame
+};
+
+// Draws `value`, the next index of the arriving frame, onto the screen, and moves to the pixel after it.
+void streamPixel(GifStream& s, uint8_t value) {
+    const Frame& frame = s.frames.data[s.frames.count - 1];
+    const uint32_t column = uint32_t(s.written % frame.width);
+    const uint32_t screenX = frame.left + column;
+    const uint32_t screenY = frame.top + s.target;
+    if (screenY < s.screen.height && screenX < s.screen.width && !(frame.transparent && value ==
+            frame.transparentIndex) && value < frame.paletteCount) {
+        const size_t paletteAt = s.palettes.data[s.frames.count - 1];
+        const uint8_t* palette = s.bytes.data + (paletteAt == SIZE_MAX ? s.screenPalette : paletteAt);
+        const uint8_t* entry = palette + size_t(value) * 3;
+        uint8_t* out = s.pixels + (size_t(screenY) * s.screen.width + screenX) * 4;
+        out[0] = entry[0];
+        out[1] = entry[1];
+        out[2] = entry[2];
+        out[3] = 0xFF;
+    }
+    ++s.written;
+    if (column + 1 < frame.width)
+        return;
+    ++s.row;
+    if (!frame.interlaced) {
+        s.target = s.row;
+        return;
+    }
+    s.target += kPassStep[s.pass];
+    while (s.target >= frame.height && s.pass + 1 < kPassCount) {
+        s.pass += 1;
+        s.target = kPassOrigin[s.pass];
+    }
+}
+
+// What a read of the arriving frame's coded data found.
+enum : uint8_t {
+    StreamRead_Got,         // the bits that it asked for
+    StreamRead_Waiting,     // the bytes end before them; the bits read so far stay in the reader
+    StreamRead_End,         // the terminator of the frame's data
+};
+typedef uint8_t StreamRead;
+
+// Reads the next byte of the arriving frame's coded data, moving from one sub-block to the next as they arrive.
+StreamRead streamByte(Bits& in, uint8_t* out) {
+    while (in.remaining == 0) {
+        if (in.at >= in.size)
+            return StreamRead_Waiting;
+        in.remaining = in.bytes[in.at++];
+        if (in.remaining == 0)
+            return StreamRead_End;
+    }
+    if (in.at >= in.size)
+        return StreamRead_Waiting;
+    *out = in.bytes[in.at++];
+    in.remaining -= 1;
+    return StreamRead_Got;
+}
+
+// Reads the next `width` bits of the arriving frame's coded data into `*out`.
+StreamRead streamCode(Bits& in, uint32_t width, uint32_t* out) {
+    while (in.count < width) {
+        uint8_t byte = 0;
+        StreamRead read = streamByte(in, &byte);
+        if (read != StreamRead_Got)
+            return read;
+        in.bits |= uint32_t(byte) << in.count;
+        in.count += 8;
+    }
+    *out = in.bits & ((1u << width) - 1);
+    in.bits >>= width;
+    in.count -= width;
+    return StreamRead_Got;
+}
+
+// Expands the codes of the arriving frame that have arrived, and draws their pixels. Returns InvalidData for a code
+// that the dictionary cannot hold. Stops at the terminator of the frame's data, or where the bytes end, from where the
+// next append continues.
+PrStatus streamCodes(GifStream& s) {
+    const Frame& frame = s.frames.data[s.frames.count - 1];
+    const size_t count = size_t(frame.width) * frame.height;
+    s.in.bytes = s.bytes.data;
+    s.in.size = s.bytes.count;
+    const uint32_t clear = 1u << s.minCodeSize;
+    const uint32_t end = clear + 1;
+    for (;;) {
+        const size_t before = s.in.at;
+        uint32_t code = 0;
+        StreamRead read = streamCode(s.in, s.width, &code);
+        s.work += s.in.at - before;
+        if (read == StreamRead_End) {
+            s.coding = false;
+            return PrStatus_Ok;
+        }
+        if (read == StreamRead_Waiting)
+            return PrStatus_Ok;
+        if (code == clear) {
+            s.next = clear + 2;
+            s.width = s.minCodeSize + 1;
+            s.previousCode = kNoCode;
+            continue;
+        }
+        if (code == end || s.written >= count) {
+            // The rest of the frame's sub-blocks are skipped as they arrive (skipRest).
+            s.width = 0;
+            return PrStatus_Ok;
+        }
+        if (code > s.next || (code == s.next && s.previousCode == kNoCode))
+            return PrStatus_InvalidData;
+        uint32_t top = 0;
+        uint32_t walk = code;
+        if (code == s.next) {
+            s.tables.stack[top++] = s.previousFirst;
+            walk = s.previousCode;
+        }
+        while (walk >= clear + 2) {
+            if (top >= kMaxCodes)
+                return PrStatus_InvalidData;
+            s.tables.stack[top++] = s.tables.suffix[walk];
+            walk = s.tables.prefix[walk];
+        }
+        if (walk >= clear)
+            return PrStatus_InvalidData;
+        s.tables.stack[top++] = uint8_t(walk);
+        const uint8_t first = uint8_t(walk);
+        while (top > 0 && s.written < count)
+            streamPixel(s, s.tables.stack[--top]);
+        s.work += 1;
+        if (s.previousCode != kNoCode && s.next < kMaxCodes) {
+            s.tables.prefix[s.next] = uint16_t(s.previousCode);
+            s.tables.suffix[s.next] = first;
+            s.next += 1;
+            if (s.next == (1u << s.width) && s.width < kCodeMaxBits)
+                s.width += 1;
+        }
+        s.previousCode = code;
+        s.previousFirst = first;
+    }
+}
+
+// Skips the sub-blocks of the arriving frame after its codes end, as they arrive.
+bool skipRest(GifStream& s) {
+    while (s.in.at < s.bytes.count) {
+        if (s.in.remaining != 0) {
+            const size_t step = s.bytes.count - s.in.at < s.in.remaining ? s.bytes.count - s.in.at : s.in.remaining;
+            s.in.at += step;
+            s.in.remaining -= uint32_t(step);
+            continue;
+        }
+        const uint32_t length = s.bytes.data[s.in.at++];
+        if (length == 0) {
+            s.coding = false;
+            return true;
+        }
+        s.in.remaining = length;
+    }
+    return false;
+}
+
+// Starts the frame whose image descriptor the stream has just read: disposes of the frame before it as that frame asks,
+// keeps the screen if this one is disposed to the previous, and readies the dictionary.
+void startFrame(GifStream& s, size_t data) {
+    if (s.frames.count > 1) {
+        const Frame& done = s.frames.data[s.frames.count - 2];
+        if (done.disposal == GifDisposal_Background)
+            clearFrame(done, s.screen, s.pixels);
+        else if (done.disposal == GifDisposal_Previous && s.previous != nullptr)
+            prMemCopy(s.pixels, s.previous, size_t(s.screen.width) * s.screen.height * 4);
+    }
+    const Frame& frame = s.frames.data[s.frames.count - 1];
+    if (frame.disposal == GifDisposal_Previous) {
+        const size_t size = size_t(s.screen.width) * s.screen.height * 4;
+        if (s.previous == nullptr)
+            s.previous = static_cast<uint8_t*>(prMemoryAlloc(size));
+        prMemCopy(s.previous, s.pixels, size);
+    }
+    s.coding = true;
+    s.minCodeSize = s.bytes.data[data];
+    s.in = Bits{.at = data + 1};
+    s.next = (1u << s.minCodeSize) + 2;
+    s.width = s.minCodeSize + 1;
+    s.previousCode = kNoCode;
+    s.written = 0;
+    s.row = 0;
+    s.pass = 0;
+    s.target = 0;
+}
+
+// Walks the stream's bytes from where the last walk stopped. Each byte is walked once.
+PrStatus walkGif(GifStream& s) {
+    const uint8_t* bytes = s.bytes.data;
+    const size_t size = s.bytes.count;
+    if (!s.screened) {
+        if (size < 13)
+            return PrStatus_Ok;
+        if (!prGifHasSignature({bytes, size}))
+            return PrStatus_NotSupported;
+        const uint8_t packed = bytes[10];
+        const size_t tableBytes = (packed & 0x80) != 0 ? size_t(2u << (packed & 7)) * 3 : 0;
+        if (size < 13 + tableBytes)
+            return PrStatus_Ok;
+        if (!readScreen(bytes, size, s.screen))
+            return PrStatus_InvalidData;
+        const uint64_t area = uint64_t(s.screen.width) * s.screen.height;
+        if (area > s.limits.pixels || area * 4 > s.limits.outputBytes)
+            return PrStatus_Limit;
+        s.screenPalette = 13;
+        s.walked = s.screen.blocks;
+        s.pixels = static_cast<uint8_t*>(prMemoryAllocZeroed(size_t(area) * 4));
+        s.tables = lzwTables();
+        s.control = Frame{};
+        s.control.delayMs = delayOf(0);
+        s.screened = true;
+        s.work += s.walked;
+    }
+    while (!s.ended) {
+        if (s.coding) {
+            PrStatus status = s.width != 0 ? streamCodes(s) : PrStatus_Ok;
+            if (status != PrStatus_Ok)
+                return status;
+            if (s.coding && s.width == 0 && !skipRest(s))
+                return PrStatus_Ok;
+            if (s.coding)
+                return PrStatus_Ok;
+            s.frames.data[s.frames.count - 1].truncated = false;
+            s.walked = s.in.at;
+            continue;
+        }
+        if (s.walked >= size)
+            return PrStatus_Ok;
+        const uint8_t block = bytes[s.walked];
+        if (block == 0x3B) {
+            s.ended = true;
+            s.walked += 1;
+            return PrStatus_Ok;
+        }
+        if (block == 0x21) {
+            // An extension is passed once all of its sub-blocks have arrived.
+            size_t at = s.walked + 2;
+            if (at > size || !skipSubBlocks(bytes, size, at))
+                return PrStatus_Ok;
+            const uint8_t label = bytes[s.walked + 1];
+            const uint8_t* data = bytes + s.walked + 2;
+            const size_t length = at - s.walked - 2;
+            if (label == 0xFF && length >= 16 && data[0] == 11 && prMemEquals(data + 1, "NETSCAPE2.0", 11) &&
+                    data[12] == 3 && data[13] == 1) {
+                const uint32_t repeats = prMemReadLeU16(data + 14);
+                s.screen.loops = repeats == 0 ? 0 : repeats + 1;
+            }
+            if (label == 0xF9 && length >= 6 && data[0] == 4) {
+                s.control.disposal = (data[1] >> 2) & 7;
+                s.control.transparent = (data[1] & 1) != 0;
+                s.control.delayMs = delayOf(prMemReadLeU16(data + 2));
+                s.control.transparentIndex = data[4];
+            }
+            s.work += at - s.walked;
+            s.walked = at;
+            continue;
+        }
+        if (block != 0x2C)
+            return PrStatus_InvalidData;
+        // An image descriptor is passed once it, its local table and its code size have arrived.
+        if (size - s.walked < 10)
+            return PrStatus_Ok;
+        const uint8_t packed = bytes[s.walked + 9];
+        const size_t tableBytes = (packed & 0x80) != 0 ? size_t(2u << (packed & 7)) * 3 : 0;
+        if (size - s.walked < 11 + tableBytes)
+            return PrStatus_Ok;
+        Frame frame = s.control;
+        frame.left = prMemReadLeU16(bytes + s.walked + 1);
+        frame.top = prMemReadLeU16(bytes + s.walked + 3);
+        frame.width = prMemReadLeU16(bytes + s.walked + 5);
+        frame.height = prMemReadLeU16(bytes + s.walked + 7);
+        frame.interlaced = (packed & 0x40) != 0;
+        frame.paletteCount = tableBytes != 0 ? 2u << (packed & 7) : s.screen.paletteCount;
+        frame.data = s.walked + 10 + tableBytes;
+        frame.truncated = true;
+        if (frame.width == 0 || frame.height == 0 || s.frames.count >= s.limits.frames)
+            return PrStatus_InvalidData;
+        if (bytes[frame.data] < 1 || bytes[frame.data] + 1u > kCodeMaxBits)
+            return PrStatus_InvalidData;
+        s.frames.push(frame);
+        s.palettes.push(tableBytes != 0 ? s.walked + 10 : SIZE_MAX);
+        s.work += 11 + tableBytes;
+        startFrame(s, frame.data);
+        s.control = Frame{};
+        s.control.delayMs = delayOf(0);
+    }
+    return PrStatus_Ok;
+}
+
+void streamClose(GifStream* PR_NULLABLE s) {
+    if (s == nullptr)
+        return;
+    s->bytes.reset();
+    s->frames.reset();
+    s->palettes.reset();
+    prMemoryFree(s->tables.prefix);
+    prMemoryFree(s->tables.suffix);
+    prMemoryFree(s->tables.stack);
+    prMemoryFree(s->pixels);
+    prMemoryFree(s->previous);
+    prMemoryFree(s);
+}
+
 } // namespace
 
-// A GIF image open for reading. The animation is null for a file that holds no whole frame.
+// A GIF image open for reading. The animation is null for a file that holds no whole frame. A decoder of appended bytes
+// has a stream, and an animation over the stream's bytes for the frames before the arriving one.
 struct GifDecoder {
     PrGifInfo info;
     GifAnimation* PR_NULLABLE animation;
+    GifStream* PR_NULLABLE stream;
 };
 
 } // namespace pr_impl
@@ -668,9 +1018,51 @@ PrStatus prGifDecoderCreate(PrByteView bytes, const PrGifLimits* PR_NULLABLE lim
     return status;
 }
 
+PrStatus prGifDecoderCreateStream(const PrGifLimits* PR_NULLABLE limits, uint64_t held,
+        PrGifDecoder* PR_NULLABLE* PR_NONNULL out) {
+    const PrGifLimits budget = limits != nullptr ? *limits : prGifLimitsDefault();
+    PrGifDecoder* decoder = allocZeroed<PrGifDecoder>();
+    GifStream* stream = allocZeroed<GifStream>();
+    stream->limits = budget;
+    decoder->stream = stream;
+    decoder->info.workingBytes = held + sizeof(PrGifDecoder) + sizeof(GifStream);
+    *out = decoder;
+    return PrStatus_Ok;
+}
+
+PrStatus prGifDecoderAppend(PrGifDecoder* decoder, PrByteView bytes) {
+    GifStream& s = *decoder->stream;
+    if (s.failed != PrStatus_Ok)
+        return s.failed;
+    if (s.ended)
+        return PrStatus_Ok;
+    if (s.bytes.count + bytes.size > s.limits.workingBytes) {
+        s.failed = PrStatus_Limit;
+        return s.failed;
+    }
+    if (bytes.size != 0)
+        s.bytes.append(bytes.data, uint32_t(bytes.size));
+    s.work += bytes.size;
+    s.failed = walkGif(s);
+    if (s.failed != PrStatus_Ok)
+        return s.failed;
+    if (s.screened) {
+        decoder->info.extent = PrUVec2{s.screen.width, s.screen.height};
+        decoder->info.frameCount = s.frames.count;
+        decoder->info.playCount = s.screen.loops;
+    }
+    return s.ended ? PrStatus_Ok : PrStatus_Truncated;
+}
+
+uint64_t prGifDecoderWork(const PrGifDecoder* decoder) {
+    uint64_t work = decoder->stream != nullptr ? decoder->stream->work : 0;
+    return work + (decoder->animation != nullptr ? decoder->animation->work : 0);
+}
+
 void prGifDecoderDestroy(PrGifDecoder* PR_NULLABLE decoder) {
     if (decoder == nullptr)
         return;
+    streamClose(decoder->stream);
     closeAnimation(decoder->animation);
     prMemoryFree(decoder);
 }
@@ -680,6 +1072,8 @@ const PrGifInfo* prGifDecoderInfo(const PrGifDecoder* decoder) {
 }
 
 uint32_t prGifDecoderFrameDuration(const PrGifDecoder* decoder, uint32_t frame) {
+    if (const GifStream* stream = decoder->stream)
+        return frame < stream->frames.count ? stream->frames.data[frame].delayMs : 0;
     const GifAnimation* animation = decoder->animation;
     return animation != nullptr && frame < animation->frames.count ? animation->frames.data[frame].delayMs : 0;
 }
@@ -687,6 +1081,47 @@ uint32_t prGifDecoderFrameDuration(const PrGifDecoder* decoder, uint32_t frame) 
 PrStatus prGifDecoderRead(PrGifDecoder* decoder, uint32_t frame, PrPixels output) {
     PR_ASSERT(frame < decoder->info.frameCount);
     PR_ASSERT(output.extent.x == decoder->info.extent.x && output.extent.y == decoder->info.extent.y);
+    if (GifStream* s = decoder->stream) {
+        const size_t rowBytes = size_t(output.extent.x) * 4;
+        // The arriving frame is the stream's screen. A frame before it composes from the stream's bytes as they are.
+        if (frame + 1 == s->frames.count) {
+            for (uint32_t row = 0; row < output.extent.y; ++row)
+                prMemCopy(output.data + size_t(row) * output.stride, s->pixels + size_t(row) * rowBytes, rowBytes);
+            return s->frames.data[frame].truncated || !s->ended ? PrStatus_Truncated : PrStatus_Ok;
+        }
+        if (decoder->animation == nullptr) {
+            GifAnimation* animation = allocZeroed<GifAnimation>();
+            animation->screen = s->screen;
+            animation->at = kNoFrame;
+            animation->pixelsSize = size_t(s->screen.width) * s->screen.height * 4;
+            animation->pixels = static_cast<uint8_t*>(prMemoryAlloc(animation->pixelsSize));
+            animation->tables = lzwTables();
+            decoder->animation = animation;
+        }
+        // The frames view the stream's bytes as they are now, which move as they grow. The screen keeps what it
+        // composed, so a read of a later frame continues from the last one read.
+        GifAnimation& animation = *decoder->animation;
+        animation.bytes = s->bytes.data;
+        animation.size = s->bytes.count;
+        animation.screen.palette = s->bytes.data + s->screenPalette;
+        animation.frames.clear();
+        for (uint32_t i = 0; i + 1 < s->frames.count; ++i) {
+            Frame whole = s->frames.data[i];
+            whole.palette = s->bytes.data + (s->palettes.data[i] == SIZE_MAX ? s->screenPalette : s->palettes.data[i]);
+            animation.frames.push(whole);
+        }
+        const size_t widest = widestFrame(animation.frames);
+        if (widest > animation.indicesSize) {
+            prMemoryFree(animation.indices);
+            animation.indices = static_cast<uint8_t*>(prMemoryAlloc(widest));
+            animation.indicesSize = widest;
+        }
+        if (!composeFrame(animation, frame))
+            return PrStatus_InvalidData;
+        for (uint32_t row = 0; row < output.extent.y; ++row)
+            prMemCopy(output.data + size_t(row) * output.stride, animation.pixels + size_t(row) * rowBytes, rowBytes);
+        return s->ended ? PrStatus_Ok : PrStatus_Truncated;
+    }
     GifAnimation* animation = decoder->animation;
     if (animation == nullptr || !composeFrame(*animation, frame))
         return PrStatus_InvalidData;
@@ -694,5 +1129,5 @@ PrStatus prGifDecoderRead(PrGifDecoder* decoder, uint32_t frame, PrPixels output
     PR_ASSERT(output.stride >= rowBytes);
     for (uint32_t row = 0; row < output.extent.y; ++row)
         prMemCopy(output.data + size_t(row) * output.stride, animation->pixels + size_t(row) * rowBytes, rowBytes);
-    return PrStatus_Ok;
+    return animation->frames.data[frame].truncated ? PrStatus_Truncated : PrStatus_Ok;
 }

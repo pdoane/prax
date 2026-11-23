@@ -12,8 +12,11 @@
 #include "pr/texture.h"
 
 #include "tools/harness/animated_gif.h"
+#include "tools/harness/texture_await.h"
 
 #include "tools/harness/test.h"
+
+using namespace harness;
 
 namespace pr_impl {
 
@@ -163,17 +166,21 @@ float halfAt(const Array<uint8_t>& texels, uint32_t index) {
     return prFloat16ToFloat(h);
 }
 
-// Creates a source of the image that `bytes` provides, or returns the failure.
-PrStatus sourceOf(const Codecs& codecs, const PrBlobSource* bytes, const PrTextureSource* PR_NULLABLE* PR_NONNULL out) {
-    return prImageTextureSourceOpen(bytes, codecs.images, nullptr, PrImageTextureColor_Stored, out);
+// Creates a source of the image that `bytes` provides with Stored color, within `limits`, or returns the failure.
+PrStatus sourceOf(const Codecs& codecs, const PrBlobSource* bytes, const PrTextureSource* PR_NULLABLE* PR_NONNULL out,
+        const PrTextureLimits* PR_NULLABLE limits = nullptr) {
+    PrTextureFormat* format = prImageTextureFormatCreate(codecs.images, PrImageTextureColor_Stored);
+    PrTextureFormatSet* set = prTextureFormatSetCreate(&format, 1);
+    PrStatus status = textureOpenAwait(set, bytes, "", limits, out);
+    prTextureFormatSetDestroy(set);
+    return status;
 }
 
 // Reads every level and layer of `source` into `out`. Returns the status of the read.
 PrStatus readAll(const PrTextureSource* source, Array<uint8_t>* out) {
     PrTextureReadDesc desc = prTextureReadDescAll(prTextureSourceDesc(source));
     PrTextureRead* read = prTextureReadCreate(source, &desc);
-    prTextureReadWait(read);
-    PrStatus status = prTextureReadStatus(read);
+    PrStatus status = textureReadAwait(read);
     out->clear();
     if (status == PrStatus_Ok)
         out->append(PrByteView{prTextureReadStorage(read), prTextureReadSize(prTextureSourceDesc(source), &desc)});
@@ -185,7 +192,6 @@ PrStatus readAll(const PrTextureSource* source, Array<uint8_t>* out) {
 
 } // namespace pr_impl
 
-using namespace harness;
 using namespace pr_impl;
 
 TEST_SUITE_BEGIN("image");
@@ -258,15 +264,12 @@ TEST_CASE("an image over the limits is refused from its header when it opens, be
     const uint8_t clear[16] = {};
     CountedBytes small(codecs.png({2, 2}, clear));
     PrTextureLimits limits{.extent = 1};
-    CHECK(prImageTextureSourceOpen(small.source, codecs.images, &limits, PrImageTextureColor_Stored, &source) ==
-        PrStatus_Limit);
+    CHECK(sourceOf(codecs, small.source, &source, &limits) == PrStatus_Limit);
     limits.extent = 2;
-    REQUIRE(prImageTextureSourceOpen(small.source, codecs.images, &limits, PrImageTextureColor_Stored, &source) ==
-        PrStatus_Ok);
+    REQUIRE(sourceOf(codecs, small.source, &source, &limits) == PrStatus_Ok);
     prTextureSourceRelease(source);
     CountedBytes row(codecs.png({3, 1}, clear));
-    CHECK(prImageTextureSourceOpen(row.source, codecs.images, &limits, PrImageTextureColor_Stored, &source) ==
-        PrStatus_Limit);
+    CHECK(sourceOf(codecs, row.source, &source, &limits) == PrStatus_Limit);
 }
 
 TEST_CASE("a float image decodes to floats with its stored values, whatever chromaticities it states") {
@@ -319,7 +322,7 @@ TEST_CASE("an image source reports the orientation stored in its file, and a tex
     PrTextureFormat* format = prImageTextureFormatCreate(codecs.images, PrImageTextureColor_Stored);
     PrTextureFormatSet* opener = prTextureFormatSetCreate(&format, 1);
     CHECK(prTextureFormatSetSupportsType(opener, "image/png"));
-    REQUIRE(prTextureFormatSetRead(opener, png.source, "", nullptr, &source) == PrStatus_Ok);
+    REQUIRE(textureOpenAwait(opener, png.source, "", nullptr, &source) == PrStatus_Ok);
     CHECK(prTextureSourceDesc(source)->extent == PrUVec2{1, 1});
     prTextureSourceRelease(source);
     prTextureFormatSetDestroy(opener);
@@ -333,45 +336,77 @@ TEST_CASE("an animated image is a source that changes over time: its frames show
     const PrTextureSource* source = nullptr;
     REQUIRE(prImageTextureSourceOpenBytes(PrByteView{gif.data(), gif.count()}, codecs.images, nullptr,
         PrImageTextureColor_Srgb, &source) == PrStatus_Ok);
-    CHECK(prTextureSourcePlays(source));
+    CHECK(prTextureSourceChanges(source));
+    CHECK(prTextureSourceNotifier(source) == nullptr);
     CHECK(prTextureSourceDesc(source)->extent == PrUVec2{4, 2});
-    // The animation begins at the time of the first ask. The source itself is the first frame, which is red.
-    PrTextureFrame first{};
-    prTextureSourceFrameAt(source, 10, &first);
-    CHECK(first.source == source);
-    CHECK(first.next == doctest::Approx(10.5));
+    // The animation starts at time zero of the timeline. The source itself is the first frame, which is red.
+    PrTextureShow first{};
+    prTextureSourceShow(source, 0, &first);
+    CHECK(first.picture == source);
+    CHECK(first.next == doctest::Approx(0.5));
+    CHECK(first.complete);
+    CHECK(!first.notifies);
     Array<uint8_t> texels;
-    REQUIRE(readAll(first.source, &texels) == PrStatus_Ok);
+    REQUIRE(readAll(first.picture, &texels) == PrStatus_Ok);
     CHECK(texels[0] == 255);
     CHECK(texels[1] == 0);
     // Half a second later the second frame shows, a still source with the same description. It is green.
-    PrTextureFrame second{};
-    prTextureSourceFrameAt(source, 10.6, &second);
-    CHECK(second.source != source);
+    PrTextureShow second{};
+    prTextureSourceShow(source, 0.6, &second);
+    CHECK(second.picture != source);
     CHECK(second.serial != first.serial);
-    CHECK(!prTextureSourcePlays(second.source));
-    CHECK(prTextureSourceDesc(second.source)->extent == PrUVec2{4, 2});
-    CHECK(second.next == doctest::Approx(11.0));
-    REQUIRE(readAll(second.source, &texels) == PrStatus_Ok);
+    CHECK(!prTextureSourceChanges(second.picture));
+    CHECK(prTextureSourceDesc(second.picture)->extent == PrUVec2{4, 2});
+    CHECK(second.next == doctest::Approx(1.0));
+    REQUIRE(readAll(second.picture, &texels) == PrStatus_Ok);
     CHECK(texels[0] == 0);
     CHECK(texels[1] == 255);
     // The frames read in order, and a frame reads again after a later one.
-    PrTextureFrame third{};
-    prTextureSourceFrameAt(source, 11.2, &third);
-    REQUIRE(readAll(third.source, &texels) == PrStatus_Ok);
+    PrTextureShow third{};
+    prTextureSourceShow(source, 1.2, &third);
+    REQUIRE(readAll(third.picture, &texels) == PrStatus_Ok);
     CHECK(texels[2] == 255);
-    REQUIRE(readAll(second.source, &texels) == PrStatus_Ok);
+    REQUIRE(readAll(second.picture, &texels) == PrStatus_Ok);
     CHECK(texels[1] == 255);
-    // After the last frame, the first shows again.
-    PrTextureFrame again{};
-    prTextureSourceFrameAt(source, 11.6, &again);
-    CHECK(again.source == source);
+    // After the last frame, the first shows again. The answer is the same whenever it is asked.
+    PrTextureShow again{};
+    prTextureSourceShow(source, 1.6, &again);
+    CHECK(again.picture == source);
     CHECK(again.serial == first.serial);
-    CHECK(again.next == doctest::Approx(12.0));
-    prTextureSourceRelease(again.source);
-    prTextureSourceRelease(third.source);
-    prTextureSourceRelease(second.source);
-    prTextureSourceRelease(first.source);
+    CHECK(again.next == doctest::Approx(2.0));
+    PrTextureShow repeated{};
+    prTextureSourceShow(source, 0.6, &repeated);
+    CHECK(repeated.serial == second.serial);
+    CHECK(repeated.next == second.next);
+    prTextureSourceRelease(repeated.picture);
+    prTextureSourceRelease(again.picture);
+    prTextureSourceRelease(third.picture);
+    prTextureSourceRelease(second.picture);
+    prTextureSourceRelease(first.picture);
+    prTextureSourceRelease(source);
+}
+
+TEST_CASE("frames read at two playback positions in turn each read as the frame they are") {
+    Codecs codecs;
+    Array<uint8_t> gif = animatedGif(3, 50, true);
+    const PrTextureSource* source = nullptr;
+    REQUIRE(prImageTextureSourceOpenBytes(PrByteView{gif.data(), gif.count()}, codecs.images, nullptr,
+        PrImageTextureColor_Srgb, &source) == PrStatus_Ok);
+    PrTextureShow second{};
+    PrTextureShow third{};
+    prTextureSourceShow(source, 0.6, &second);
+    prTextureSourceShow(source, 1.2, &third);
+    Array<uint8_t> texels;
+    for (uint32_t round = 0; round < 6; ++round) {
+        REQUIRE(readAll(third.picture, &texels) == PrStatus_Ok);
+        CHECK(texels[2] == 255);
+        CHECK(texels[1] == 0);
+        REQUIRE(readAll(second.picture, &texels) == PrStatus_Ok);
+        CHECK(texels[1] == 255);
+        CHECK(texels[2] == 0);
+    }
+    prTextureSourceRelease(third.picture);
+    prTextureSourceRelease(second.picture);
     prTextureSourceRelease(source);
 }
 
@@ -382,29 +417,30 @@ TEST_CASE("an animation that plays once stays on its last frame, a frame too sho
     const PrTextureSource* source = nullptr;
     REQUIRE(prImageTextureSourceOpenBytes(PrByteView{once.data(), once.count()}, codecs.images, nullptr,
         PrImageTextureColor_Srgb, &source) == PrStatus_Ok);
-    PrTextureFrame frame{};
-    prTextureSourceFrameAt(source, 5, &frame);
-    CHECK(frame.next == doctest::Approx(5.1));
-    prTextureSourceRelease(frame.source);
-    prTextureSourceFrameAt(source, 5.15, &frame);
-    CHECK(frame.source != source);
-    CHECK(frame.next == doctest::Approx(5.2));
+    PrTextureShow frame{};
+    prTextureSourceShow(source, 0, &frame);
+    CHECK(frame.next == doctest::Approx(0.1));
+    prTextureSourceRelease(frame.picture);
+    prTextureSourceShow(source, 0.15, &frame);
+    CHECK(frame.picture != source);
+    CHECK(frame.next == doctest::Approx(0.2));
     uint64_t last = frame.serial;
-    prTextureSourceRelease(frame.source);
+    prTextureSourceRelease(frame.picture);
     // Once the frames have played, the last one stays, and nothing follows it.
-    prTextureSourceFrameAt(source, 9, &frame);
+    prTextureSourceShow(source, 4, &frame);
     CHECK(frame.serial == last);
-    CHECK(frame.next == 0);
-    prTextureSourceRelease(frame.source);
+    CHECK(frame.next == kPrF64Infinity);
+    CHECK(!frame.notifies);
+    prTextureSourceRelease(frame.picture);
     prTextureSourceRelease(source);
 
     Array<uint8_t> still = animatedGif(1, 50, true);
     REQUIRE(prImageTextureSourceOpenBytes(PrByteView{still.data(), still.count()}, codecs.images, nullptr,
         PrImageTextureColor_Srgb, &source) == PrStatus_Ok);
-    CHECK(!prTextureSourcePlays(source));
-    prTextureSourceFrameAt(source, 1, &frame);
-    CHECK(frame.source == source);
-    CHECK(frame.next == 0);
-    prTextureSourceRelease(frame.source);
+    CHECK(!prTextureSourceChanges(source));
+    prTextureSourceShow(source, 1, &frame);
+    CHECK(frame.picture == source);
+    CHECK(frame.next == kPrF64Infinity);
+    prTextureSourceRelease(frame.picture);
     prTextureSourceRelease(source);
 }
