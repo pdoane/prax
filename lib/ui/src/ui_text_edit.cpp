@@ -444,7 +444,8 @@ struct TextEditor {
         }
     }
 
-    // Claims the keys that the edit takes, so that they come to it before any node that holds it.
+    // Claims the keys that the edit takes, so that they come to the edit before any node that holds it. These are the
+    // keys that move the caret and edit, and the keys that type text.
     void claim() {
         static const PrAppKey kMoves[] = {
             PrAppKey_Left, PrAppKey_Right, PrAppKey_Home, PrAppKey_End,
@@ -484,6 +485,15 @@ struct TextEditor {
         for (PrAppKey key : kCommands) {
             prUiKeyPressed(ui, desc.control, key, PrAppModifierFlag_Super);
             prUiKeyPressed(ui, desc.control, key, PrAppModifierFlag_Control);
+        }
+        // The keys that type text belong to the edit, alone and with Shift. A binding of a bare letter around the edit,
+        // such as an application's shortcut of one key, therefore does not run while the user types. A letter key is
+        // its uppercase letter. Only a binding that captures its key takes the key ahead of the edit.
+        for (PrAppKey key = ' '; key <= '~'; ++key) {
+            if (key >= 'a' && key <= 'z')
+                continue;
+            prUiKeyPressed(ui, desc.control, key, 0);
+            prUiKeyPressed(ui, desc.control, key, PrAppModifierFlag_Shift);
         }
     }
 

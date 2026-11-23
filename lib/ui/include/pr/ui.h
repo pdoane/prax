@@ -181,6 +181,13 @@ uint64_t prUiLayoutKey(const PrUi* ui, PrLayoutNode parent, PrUiKey key);
 // pointer from reaching nodes beneath it. The nodes created under a disabled node are disabled too, so a container
 // disables what it holds. A transparent node lets the pointer pass through to nodes beneath it. A subtree-transparent
 // node does the same for itself and all of its descendants.
+//
+// A press focuses the innermost node under the pointer that takes focus from a press. That is a Focusable node or a
+// PressFocus node. If there is none, the press clears focus.
+//
+// A PressFocus node is a region that owns keys once the user presses in it, such as a panel whose bindings apply while
+// focus is within it (tabindex=-1 in HTML). A press inside it that lands on nothing focusable focuses it. prUiSetFocus
+// can focus it too. Tab traversal skips it.
 enum {
     PrUiFlag_Pressable = 1u << 0,           // receives presses and clicks, and captures the pointer while pressed
     PrUiFlag_Focusable = 1u << 1,           // receives focus from a primary press or from Tab traversal
@@ -190,8 +197,9 @@ enum {
     PrUiFlag_FocusScope = 1u << 5,          // Tab traversal wraps within this node's subtree
     PrUiFlag_Transparent = 1u << 6,
     PrUiFlag_SubtreeTransparent = 1u << 7,
+    PrUiFlag_PressFocus = 1u << 8,          // receives focus from a press within it, and not from Tab traversal
 };
-typedef uint8_t PrUiFlags;
+typedef uint16_t PrUiFlags;
 
 // Sets the input flags of a node created in the current round. Flags do not carry over between rounds: a node has no
 // flags until the round that creates it sets them. A node created under a disabled node takes PrUiFlag_Disabled as
@@ -254,9 +262,9 @@ typedef struct PrUiPortalDesc {
 } PrUiPortalDesc;
 
 // Creates the round's portal of `key`, which must be unique among the context's portals, with input `flags`, and
-// returns the node that holds its content. The node is as large as its content at the last layout, and the context
-// places it. A portal whose flags are transparent lets the pointer through its viewport too. Call during a build. A
-// portal lasts while every round creates it.
+// returns the node that holds its content. The node is as large as its content, and the context places it by the extent
+// that the round's layout gives it, in the same frame. A portal whose flags are transparent lets the pointer through
+// its viewport too. Call during a build. A portal lasts while every round creates it.
 PrLayoutNode prUiPortal(PrUi* ui, PrUiKey key, const PrUiPortalDesc* desc, PrUiFlags flags);
 
 // Returns the viewport that shows `node` in the committed tree, or the main viewport for a node that it does not show.
@@ -393,6 +401,11 @@ bool prUiClicked(const PrUi* ui, PrLayoutNode node, uint8_t button);
 // started it.
 PrAppModifierFlags prUiPressModifiers(const PrUi* ui, uint8_t button);
 
+// Returns the modifiers that were held at the latest pointer or key event. Caps Lock is not included, because it is a
+// lock. A press or a release of a modifier key updates the result, so a drag can react to a modifier that changes while
+// the pointer rests.
+PrAppModifierFlags prUiModifiers(const PrUi* ui);
+
 // Returns the number of presses in the sequence that the most recent press of `button` ends: 1 for a single press, 2
 // for the second press of a double press, and so on. A press continues the sequence if the application reports a
 // multi-click (PrAppPointerEvent::clicks) and it lands on the node that captured the press before it.
@@ -525,6 +538,11 @@ bool prUiKeyPressed(PrUi* ui, PrLayoutNode node, PrAppKey key, PrAppModifierFlag
 // node and its ancestors, that captured the key, before any node claims it. An application captures the few keys that
 // it reserves for itself, which then work even inside a text field that would claim them.
 bool prUiKeyCaptured(PrUi* ui, PrLayoutNode node, PrAppKey key, PrAppModifierFlags modifiers);
+
+// Returns true if the key press that the current round routed to a claim or a capture is a repeat of a held key
+// (PrAppKeyboardEvent::repeat). A repeat is routed as its press was. A binding that runs once for each press therefore
+// receives the repeats and ignores them, and they reach no other node.
+bool prUiKeyRepeated(const PrUi* ui);
 
 // The input events routed to a node in the current round, in order. Pointer events go to the node that captured the
 // pointer, or otherwise to the node under the pointer, with their positions in px of the viewport of the press or of

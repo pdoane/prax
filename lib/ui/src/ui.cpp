@@ -85,6 +85,7 @@ enum : uint8_t {
     UiGlobal_Payload,
     UiGlobal_Pointer,
     UiGlobal_Press,
+    UiGlobal_Modifiers,
     UiGlobal_Count,
 };
 typedef uint8_t UiGlobal;
@@ -452,6 +453,8 @@ struct Ui {
     bool lastCarried;
     bool lastHasPointer;
     PrVec2 lastPointer;
+    PrAppModifierFlags modifiers;   // as the latest pointer or key event held them
+    PrAppModifierFlags lastModifiers;
     uint32_t globalRounds[UiGlobal_Count]; // the round that first saw each global value's latest change
     RawArray<UiMotion> motions;
     UiButton buttons[kUiButtons];
@@ -495,9 +498,14 @@ struct Ui {
                                        // them
     UiClaim keyed;                     // the claim that received this round's key press; its node is none if there is
                                        // none
+    bool keyedRepeat;                  // the key press of `keyed` repeats a held key
     PrLayoutNode focus;
     PrLayoutNode focusRequest;
     bool focusRequested;
+
+    // Set if focus moved when a round ended. The next round then holds its keys back until its build has claimed the
+    // keys of the node that now has focus. The keys route in the round after that.
+    bool focusSettling;
 
     // The node that key presses start at while nothing is focused, as the current round set it, and as the previous
     // round did, which routes this round's keys. None is the root.
@@ -841,6 +849,13 @@ void deliver(Ui* ui, PrLayoutNode node, const PrAppEvent& event) {
     }
 }
 
+// Returns true if an event of `kind` goes to the focus: a key, text, or a change of a composition.
+bool isKeyboard(PrAppEventKind kind) {
+    return kind == PrAppEventKind_KeyDown || kind == PrAppEventKind_KeyUp || kind == PrAppEventKind_Text ||
+        kind == PrAppEventKind_Paste || kind == PrAppEventKind_CompositionUpdate ||
+        kind == PrAppEventKind_CompositionEnd;
+}
+
 // Returns true if an event of this kind changes the answers to a round's queries, so that a second such event in the
 // same round would be lost.
 bool isTransition(PrAppEventKind kind) {
@@ -1086,6 +1101,7 @@ void routeKey(Ui* ui, const PrAppEvent& e) {
     }
     if (captured != nullptr) {
         ui->keyed = *captured;
+        ui->keyedRepeat = e.keyboard.repeat;
         deliver(ui, captured->node, e);
         return;
     }
@@ -1094,6 +1110,7 @@ void routeKey(Ui* ui, const PrAppEvent& e) {
             continue;
         if (const UiClaim* c = claimOf(ui, at, e, false)) {
             ui->keyed = *c;
+            ui->keyedRepeat = e.keyboard.repeat;
             deliver(ui, at, e);
             return;
         }
@@ -1134,8 +1151,35 @@ PrAppEvent atPress(const Ui* ui, const UiButton& b, PrUiViewport viewport, const
     return moved;
 }
 
+// Returns the modifier flag of a modifier key, or zero for another key.
+PrAppModifierFlags modifierOf(PrAppKey key) {
+    switch (key) {
+        case PrAppKey_Shift: return PrAppModifierFlag_Shift;
+        case PrAppKey_Control: return PrAppModifierFlag_Control;
+        case PrAppKey_Alt: return PrAppModifierFlag_Alt;
+        case PrAppKey_Meta: return PrAppModifierFlag_Super;
+        default: return 0;
+    }
+}
+
+// Takes the modifiers that a pointer or key event holds. A platform may report the press or release of a modifier key
+// without the change to the modifiers, so the flag of the key follows the key.
+void trackModifiers(Ui* ui, const PrAppEvent& e) {
+    bool keyboard = e.kind == PrAppEventKind_KeyDown || e.kind == PrAppEventKind_KeyUp;
+    PrVec2 position{};
+    if (!keyboard && e.kind != PrAppEventKind_Scroll && !prAppEventPosition(&e, &position))
+        return;
+    PrAppModifierFlags held = PrAppModifierFlags(e.modifiers & ~PrAppModifierFlag_CapsLock);
+    if (keyboard) {
+        PrAppModifierFlags own = modifierOf(e.keyboard.key);
+        held = e.kind == PrAppEventKind_KeyDown ? PrAppModifierFlags(held | own) : PrAppModifierFlags(held & ~own);
+    }
+    ui->modifiers = held;
+}
+
 // Routes one event from `viewport` against the committed tree.
 void route(Ui* ui, PrUiViewport viewport, const PrAppEvent& raw) {
+    trackModifiers(ui, raw);
     // The event that reaches the node under the pointer has its position in px of the viewport that shows the pointer.
     PrAppEvent e = raw;
     PrVec2 position{};
@@ -1201,7 +1245,7 @@ void route(Ui* ui, PrUiViewport viewport, const PrAppEvent& raw) {
                 .dragging = target != kPrLayoutNodeNone,
             };
             if (e.pointer.button == 0)
-                ui->focus = innermost(ui, ui->hovered, PrUiFlag_Focusable);
+                ui->focus = innermost(ui, ui->hovered, PrUiFlag_Focusable | PrUiFlag_PressFocus);
             deliver(ui, target != kPrLayoutNodeNone ? target : ui->hovered, e);
             break;
         }
@@ -1497,6 +1541,10 @@ void stampGlobals(Ui* ui) {
         changed(UiGlobal_Payload);
         ui->lastCarried = ui->payload.carried;
     }
+    if (ui->lastModifiers != ui->modifiers) {
+        changed(UiGlobal_Modifiers);
+        ui->lastModifiers = ui->modifiers;
+    }
     if (ui->lastHasPointer != ui->hasPointer || !prMemEquals(&ui->lastPointer, &ui->pointer, sizeof ui->pointer)) {
         changed(UiGlobal_Pointer);
         ui->lastHasPointer = ui->hasPointer;
@@ -1728,14 +1776,16 @@ PrLayoutBoxStyle placedBox(PrVec2 at) {
     return box;
 }
 
-// Gives the portal's node the record that places it at `at`, if it has no such record yet.
-void placePortal(Ui* ui, UiPortal& s, PrVec2 at) {
+// Gives the node of the portal the record that places it at `at`, if the node has no such record yet. Returns true if
+// the record changed.
+bool placePortal(Ui* ui, UiPortal& s, PrVec2 at) {
     if (s.style != 0 && s.at.x == at.x && s.at.y == at.y)
-        return;
+        return false;
     if (s.style != 0)
         prLayoutStyleRelease(ui->tree, s.style);
     s.style = boxedStyle(ui, 0, placedBox(at));
     s.at = at;
+    return true;
 }
 
 // Returns the record of the element that covers the parent of the portal, a modal Dialog in the overlay: the desc's
@@ -1881,6 +1931,7 @@ void beginRound(Ui* ui, uint32_t index, const PrUiFrameDesc* desc) {
     ui->transitioned = false;
     ui->measured.clear();
     ui->keyed = UiClaim{};
+    ui->keyedRepeat = false;
     ui->keyActivated = kPrLayoutNodeNone;
     ui->dropped = kPrLayoutNodeNone;
     releaseRetained(ui);
@@ -1955,8 +2006,13 @@ void buildTitleBarRegions(Ui* ui) {
 void routeQueue(Ui* ui) {
     if (ui->built == 0)
         return;
+    bool settling = ui->focusSettling;
+    ui->focusSettling = false;
     while (ui->consumed < ui->queue.count) {
         const UiQueued& queued = ui->queue.data[ui->consumed];
+        // While focus settles, the keys and the events that follow them wait for the next round, in order.
+        if (settling && isKeyboard(queued.event.kind))
+            break;
         bool transition = isTransition(queued.event.kind);
         if (transition && ui->transitioned)
             break;
@@ -1982,12 +2038,17 @@ void endRound(Ui* ui) {
         const UiSlot* s = findSlot(ui, node);
         return s != nullptr && s->flagsRound == ui->roundId && (s->flags & flag) != 0 && (s->flags & PrUiFlag_Disabled) == 0;
     };
+    PrLayoutNode focused = ui->focus;
     if (ui->focusRequested) {
-        ui->focus = declaredTaking(ui->focusRequest, PrUiFlag_Focusable) ? ui->focusRequest : kPrLayoutNodeNone;
+        // A request focuses any node that a press focuses. Tab traversal focuses only a Focusable node.
+        bool takes = declaredTaking(ui->focusRequest, PrUiFlag_Focusable | PrUiFlag_PressFocus);
+        ui->focus = takes ? ui->focusRequest : kPrLayoutNodeNone;
         ui->focusRequested = false;
     }
-    if (!declaredTaking(ui->focus, PrUiFlag_Focusable))
+    if (!declaredTaking(ui->focus, PrUiFlag_Focusable | PrUiFlag_PressFocus))
         ui->focus = kPrLayoutNodeNone;
+    // The build of the round claimed keys for the focus that it saw, so keys wait for a build that sees the new focus.
+    ui->focusSettling = ui->focus != focused;
     for (uint32_t b = 0; b < kUiButtons; ++b) {
         UiButton& button = ui->buttons[b];
         if (button.capture != kPrLayoutNodeNone && !declaredTaking(button.capture, PrUiFlag_Pressable)) {
@@ -2089,11 +2150,21 @@ void layoutRound(Ui* ui, PrLayoutVec extent) {
             ui->roots.push(PrLayoutRoot{s.root, portalExtent});
     }
     prLayoutTreeLayout(ui->tree, ui->roots.data, ui->roots.count);
+    // Each portal in the overlay goes where its extent puts it, against the bounds of the main root, which the overlay
+    // fills. A portal that moves is laid out again. That layout places the portal and nothing else.
+    PrRect area = prLayoutRectToPx(prLayoutNodeBounds(ui->tree, viewport.node, PrLayoutCoordinates_Viewport));
+    bool moved = false;
     for (uint32_t i = 0; i < ui->portals.count; ++i) {
         UiPortal& s = ui->portals.data[i];
         PrRect bounds = prLayoutRectToPx(prLayoutNodeBounds(ui->tree, s.node, PrLayoutCoordinates_Layout));
         s.extent = PrVec2{bounds.right - bounds.left, bounds.bottom - bounds.top};
+        if (s.root == kPrLayoutNodeNone && placePortal(ui, s, portalPlace(s, area))) {
+            prLayoutNodeSetStyle(ui->tree, s.node, s.style);
+            moved = true;
+        }
     }
+    if (moved)
+        prLayoutTreeLayout(ui->tree, ui->roots.data, ui->roots.count);
 }
 
 // Returns the extent of `node` in the tree's latest layout.
@@ -2619,11 +2690,11 @@ PrLayoutNode prUiPortal(PrUi* ui, PrUiKey key, const PrUiPortalDesc* desc, PrUiF
         PrLayoutNode cover = prLayoutTreeFrameElement(tree, overlay, prHashMixKeys(key, kUiPortalCoverKey), coverOf(ui, s));
         setFlags(ui, cover, 0);
     }
-    // A portal that has not been laid out yet has no extent to place by, so it requests the frame that places it.
-    if (s.extent.x <= 0 && s.extent.y <= 0)
-        prUiRequestFrame(ui);
-    PrRect area = prLayoutRectToPx(prLayoutNodeBounds(tree, overlay, PrLayoutCoordinates_Viewport));
-    placePortal(ui, s, portalPlace(s, area));
+    // The portal goes where its last extent placed it. The layout of the round places it again by the extent that it
+    // gives (layoutRound). A portal that no layout has measured goes at the origin of the overlay, where it has the
+    // most room to take its extent.
+    PrVec2 at = s.extent.x > 0 || s.extent.y > 0 ? s.at : PrVec2{};
+    placePortal(ui, s, at);
     s.node = prUiElement(ui, overlay, key, s.style, flags);
     return s.node;
 }
@@ -2824,6 +2895,11 @@ PrAppModifierFlags prUiPressModifiers(const PrUi* ui, uint8_t button) {
     return button < kUiButtons ? ui->buttons[button].modifiers : PrAppModifierFlags(0);
 }
 
+PrAppModifierFlags prUiModifiers(const PrUi* ui) {
+    trackGlobal(ui, UiGlobal_Modifiers);
+    return ui->modifiers;
+}
+
 uint32_t prUiPressCount(const PrUi* ui, uint8_t button) {
     trackGlobal(ui, UiGlobal_Press);
     return button < kUiButtons ? ui->buttons[button].presses : 0;
@@ -2970,6 +3046,11 @@ bool prUiKeyCaptured(PrUi* ui, PrLayoutNode node, PrAppKey key, PrAppModifierFla
     ui->claims.push(UiClaim{node, key, modifiers, true});
     return ui->keyed.node == node && node != kPrLayoutNodeNone && ui->keyed.key == key &&
         ui->keyed.modifiers == modifiers && ui->keyed.capture;
+}
+
+bool prUiKeyRepeated(const PrUi* ui) {
+    PR_ASSERT(ui->building);
+    return ui->keyed.node != kPrLayoutNodeNone && ui->keyedRepeat;
 }
 
 PrUiEvents prUiEvents(const PrUi* ui, PrLayoutNode node) {

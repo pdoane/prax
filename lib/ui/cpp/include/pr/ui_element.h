@@ -32,15 +32,20 @@
 #include "pr/layout_value.h"
 #include "pr/path.h"
 #include "pr/raw_array.h"
+#include "pr/span.h"
 #include "pr/string_view.h"
+#include "pr/texture.h"
+#include "pr/texture_cache.h"
 #include "pr/type_traits.h"
 #include "pr/ui.h"
+#include "pr/ui_text_edit.h"
 
 PR_ASSUME_NONNULL_BEGIN
 
 namespace pr {
 
 class UiBuilder;
+struct UiEdit;
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Values
@@ -125,6 +130,8 @@ enum : uint8_t {
     UiOpCode_ShadowColor,
     UiOpCode_OutlineWidth,
     UiOpCode_OutlineColor,
+    UiOpCode_ObjectFit,
+    UiOpCode_ObjectPosition,
     UiOpCode_OverflowX,
     UiOpCode_OverflowY,
     UiOpCode_Opacity,
@@ -401,9 +408,36 @@ public:
     UiElement& overflowXScroll() { return overflow(PrLayoutOverflow_Scroll, PrLayoutOverflow_Hidden); }
     UiElement& overflowYScroll() { return overflow(PrLayoutOverflow_Hidden, PrLayoutOverflow_Scroll); }
 
-    // An element that takes room but draws nothing, and an element that the pointer passes through.
+    // `invisible` makes an element that takes room and draws nothing. `pointerEventsNone` makes an element that the
+    // pointer passes through, and its descendants inherit that. `pointerEventsAuto` makes an element inside one of
+    // those take the pointer again.
     UiElement& invisible() { return set(uiOpValue(UiOpCode_Visibility, PrLayoutVisibility_Hidden)); }
     UiElement& pointerEventsNone() { return set(uiOpValue(UiOpCode_PointerEvents, PrLayoutPointerEvents_None)); }
+    UiElement& pointerEventsAuto() { return set(uiOpValue(UiOpCode_PointerEvents, PrLayoutPointerEvents_Auto)); }
+
+    // ---- Replaced content
+
+    // How the content of a replaced element, such as an image or a path, fits its content box, as CSS's object-fit
+    // does. Fill stretches the content over the box. Contain shows all of it, as large as fits. Cover covers the box.
+    // None shows it at its natural size. ScaleDown is Contain, but never larger than the natural size. The default is
+    // Fill.
+    UiElement& objectFill() { return set(uiOpValue(UiOpCode_ObjectFit, PrLayoutObjectFit_Fill)); }
+    UiElement& objectContain() { return set(uiOpValue(UiOpCode_ObjectFit, PrLayoutObjectFit_Contain)); }
+    UiElement& objectCover() { return set(uiOpValue(UiOpCode_ObjectFit, PrLayoutObjectFit_Cover)); }
+    UiElement& objectNone() { return set(uiOpValue(UiOpCode_ObjectFit, PrLayoutObjectFit_None)); }
+    UiElement& objectScaleDown() { return set(uiOpValue(UiOpCode_ObjectFit, PrLayoutObjectFit_ScaleDown)); }
+
+    // Where the fitted content sits in the space that its fit leaves or crops, as CSS's object-position does. The
+    // position is a length from the left and a length from the top. A percentage is a fraction of that space. The
+    // default is the center.
+    UiElement& objectPosition(UiLength x, UiLength y) {
+        return set(UiOp{.code = UiOpCode_ObjectPosition, .a = x.value.bits, .b = y.value.bits});
+    }
+    UiElement& objectCenter() { return objectPosition(uiPct(50), uiPct(50)); }
+    UiElement& objectTop() { return objectPosition(uiPct(50), uiPct(0)); }
+    UiElement& objectBottom() { return objectPosition(uiPct(50), uiPct(100)); }
+    UiElement& objectLeft() { return objectPosition(uiPct(0), uiPct(50)); }
+    UiElement& objectRight() { return objectPosition(uiPct(100), uiPct(50)); }
 
     // ---- Transforms
 
@@ -511,6 +545,11 @@ public:
     // Input that the element takes. A disabled element and everything created under it take none.
     UiElement& pressable() { return addFlags(PrUiFlag_Pressable); }
     UiElement& focusable() { return addFlags(PrUiFlag_Focusable); }
+
+    // Makes the element a region that takes focus from a press inside it, unless the press lands on something focusable
+    // inside it. Tab traversal skips the element (PrUiFlag_PressFocus). A panel whose keys apply while focus is within
+    // it uses this.
+    UiElement& pressFocus() { return addFlags(PrUiFlag_PressFocus); }
     UiElement& disabled(bool on = true) { return on ? addFlags(PrUiFlag_Disabled) : *this; }
     UiElement& cursor(PrAppCursor cursor) {
         prUiSetCursor(ui(), node_, cursor);
@@ -529,6 +568,93 @@ public:
     // press.
     bool hovered() const { return prUiIsHovered(ui(), node_); }
     bool pressed() const { return prUiIsPressed(ui(), node_, 0); }
+
+    // Returns true once the pointer has rested over the element or its descendants for `seconds`. A tooltip waits this
+    // way before it shows. While the element waits, it requests the frame at which the wait ends.
+    bool hoveredFor(double seconds) const;
+
+    // Returns true while the element holds a drag of `button`, and in the round that ends the drag. Writes the drag's
+    // state to `out` (prUiDrag). The element takes presses.
+    bool dragged(PrUiDrag* out, uint8_t button = 0, float threshold = 3) {
+        addFlags(PrUiFlag_Pressable);
+        return prUiDrag(ui(), node_, button, threshold, out);
+    }
+
+    // Returns true if wheel deltas reached the element in the round, and writes their sum in px to `out`. The element
+    // takes the wheel, so the scroll containers around it do not scroll. A canvas that zooms or pans uses this.
+    bool wheel(PrVec2* out) {
+        addFlags(PrUiFlag_Wheel);
+        return prUiWheel(ui(), node_, out);
+    }
+
+    // Returns true if a press of `button` that the element captured ended over the element in the round. Writes the
+    // number of presses in the sequence to `count`. A double click writes 2.
+    bool clickedWith(uint8_t button, uint32_t* PR_NULLABLE count = nullptr) {
+        addFlags(PrUiFlag_Pressable);
+        if (!prUiClicked(ui(), node_, button))
+            return false;
+        if (count != nullptr)
+            *count = prUiPressCount(ui(), button);
+        return true;
+    }
+
+    // Returns true if a press of `key` with exactly `modifiers` was routed to the element in the round. The element
+    // claims the key (prUiKeyPressed). If `repeats` is set, the repeats of a held key also return true. A repeat that
+    // does not count is still routed to the element, and to no other node.
+    bool keyPressed(PrAppKey key, PrAppModifierFlags modifiers = 0, bool repeats = false) {
+        return prUiKeyPressed(ui(), node_, key, modifiers) && (repeats || !prUiKeyRepeated(ui()));
+    }
+
+    // Returns true as keyPressed does, for a key that the element captures (prUiKeyCaptured). A captured key reaches
+    // the element before every claim on the focus path. A dialog uses this to take keys that its text field would
+    // otherwise take.
+    bool keyCaptured(PrAppKey key, PrAppModifierFlags modifiers = 0, bool repeats = false) {
+        return prUiKeyCaptured(ui(), node_, key, modifiers) && (repeats || !prUiKeyRepeated(ui()));
+    }
+
+    // Gives the element focus, which it takes.
+    UiElement& takeFocus() {
+        addFlags(PrUiFlag_Focusable);
+        prUiSetFocus(ui(), node_);
+        return *this;
+    }
+
+    // Returns true if the element has focus, or holds the node that has it.
+    bool focused() const { return prUiIsFocused(ui(), node_); }
+    bool focusWithin() const { return prUiIsFocusWithin(ui(), node_); }
+
+    // Makes the element a text input that edits the text of `edit`. The text follows any content that the element
+    // already has. Returns true if the round's input changed the text, and writes the new text to `changed`
+    // (prUiTextEdit).
+    //
+    // The element takes focus and presses. It keeps the spaces of its text, as an input does. The text is on one line
+    // unless the edit is multiline. The element shows the text cursor unless it is disabled, and a later cursor() call
+    // replaces that cursor.
+    //
+    // Like text(), this call ends the element's chain. The element's style is complete, and its text node inherits the
+    // element's text properties.
+    bool edit(const UiEdit& edit, PrStringView* changed);
+
+    // Returns true if the round dismisses the popup whose content this element is (UiBuilder::popup). `from` is the
+    // element that the popup floats from. Escape dismisses the popup, and the element and `from` both claim it. A press
+    // of any button outside both also dismisses it.
+    //
+    // A popup that no element anchors, such as a context menu at the pointer, passes no `from`. A press outside the
+    // popup then dismisses it.
+    //
+    // The caller keeps whether the popup is open, and closes it when this returns true.
+    bool dismissed(PrLayoutNode from);
+
+    // Writes the element's extent at the last layout, in px, and returns true. Returns false before the first layout.
+    // The round depends on the extent along `axes` (prUiExtent).
+    bool extent(PrVec2* out, PrUiAxisFlags axes = PrUiAxisFlag_Both) const { return prUiExtent(ui(), node_, axes, out); }
+
+    // Writes the pointer's position in the element's own coordinates, through its transforms, and returns true. Returns
+    // false before the first pointer event, or if the point does not reach the element's plane.
+    bool pointer(PrVec2* out) const {
+        PrVec2 point{};
+        return prUiPointer(ui(), nullptr, &point) && prUiLocalPoint(ui(), node_, point, out);
+    }
 
 private:
     PrUi* ui() const;
@@ -634,16 +760,48 @@ inline constexpr char kUiStateOwner = 0;
 // ---------------------------------------------------------------------------------------------------------------------
 // Builders
 
-// A path that an element draws: the path in the space of its view box, its color, and the width of its stroke in the
-// view box's units, with its joins and caps, or zero to fill it by `rule` (PrLayoutPath).
+// One part of an element's paths: path data in the syntax of an SVG path's `d` attribute, and the stroke width in the
+// view box's units. A width of zero fills the path.
+struct UiPathPart {
+    PrStringView data;
+    float strokeWidth = 0;
+};
+
+// The paths that an element draws, such as an icon made of several strokes and fills. The parts paint in order, in one
+// color, in the space of the view box. The joins and caps apply to the parts that stroke, and the fill rule applies to
+// the parts that fill (PrLayoutPath).
 struct UiPath {
-    const PrPath* path;
+    Span<const UiPathPart> parts;
     PrVec2 viewBox;
     PrColor color;
-    float strokeWidth = 0;
     PrPathJoin join = PrPathJoin_Round;
     PrPathCap cap = PrPathCap_Round;
     PrPathFillRule rule = PrPathFillRule_NonZero;
+};
+
+// What a text input edits (UiElement::edit). `value` is the text, which the caller holds and passes in every round.
+// `selection` and `caret` are the colors of the selection's background and of the caret. `flags` say how the input
+// treats its text. `kind` is the kind of text, which chooses the on-screen keyboard (PrUiTextEditDesc).
+struct UiEdit {
+    PrStringView value;
+    PrColor selection = PrColor{0.28f, 0.58f, 1, 0.45f};
+    PrColor caret = PrColor{1, 1, 1, 1};
+    PrUiTextEditFlags flags = 0;
+    PrAppTextInputKind kind = PrAppTextInputKind_Text;
+};
+
+// An image that an element draws (PrLayoutContent). `rendering` says how the picture is sampled when it is scaled.
+// `limit` is the brightest color that it paints, as a multiple of SDR white, or zero for no limit. `priority` says how
+// soon its texture is needed. `upright` shows the picture as its orientation says, instead of as its texels are stored.
+//
+// If the element shows fewer texels than the picture has, it draws a preview of the picture. It also draws a preview
+// while the picture loads (PrTextureCacheAsk::detail).
+struct UiImage {
+    const PrTextureSource* source;
+    PrLayoutImageRendering rendering = PrLayoutImageRendering_Auto;
+    float limit = 0;
+    PrTextureCachePriority priority = PrTextureCachePriority_Normal;
+    bool upright = true;
 };
 
 // What builders draw with, which outlives them: the fonts that they set text in, the families of a font set by UiFamily
@@ -706,10 +864,40 @@ public:
     // box whose content the caller sets (prLayoutTreeFrameSetContent).
     UiElement replaced(PrLayoutNode parent, PrUiKey key = 0);
 
-    // Creates a replaced element under `parent` that draws `path` (PrLayoutPath), keyed by `key` among the parent's
-    // children if it is not zero. Its natural size is the path's view box in px, and its style sizes it as any
-    // element's does: `.size(14)` draws the path scaled to 14 px.
+    // Creates a replaced element under `parent` that draws the parts of `path` (PrLayoutPath). The builder's resources
+    // parse each part's path data once (UiResources::path), so the builder must have resources. A nonzero `key`
+    // identifies the element among the parent's children.
+    //
+    // The element's natural size is the view box in px. Its style sizes it as it sizes any element: `.size(14)` draws
+    // the paths scaled to 14 px.
     UiElement path(PrLayoutNode parent, const UiPath& path, PrUiKey key = 0);
+
+    // Creates a replaced element under `parent` that draws `image`. A nonzero `key` identifies the element among the
+    // parent's children. The element retains the image while it shows it.
+    //
+    // The element's natural size is the size of the displayed image in px. Its style sizes and fits it as it does any
+    // element: `.size(96).objectCover()` fills a square of 96 px.
+    UiElement image(PrLayoutNode parent, const UiImage& image, PrUiKey key = 0);
+
+    // Creates the round's popup. `key` identifies it among the context's portals. The popup floats over the window from
+    // the viewport of `from`, placed against the anchor of `placement`, which is in px of that viewport (prUiPortal). A
+    // menu or a popover is a popup.
+    //
+    // Returns the element that holds the popup's content, for the build to style and fill. The element is as large as
+    // its content. The content takes focus when the popup opens, so the keys that it claims reach it. A press inside
+    // the popup keeps focus there.
+    //
+    // A popup lasts while every round creates it. The caller keeps whether it is open, and closes it when the popup
+    // reports that the round dismissed it (UiElement::dismissed).
+    UiElement popup(PrLayoutNode from, PrUiKey key, const PrAppPopupPlacement& placement);
+
+    // Creates the round's tooltip. `key` identifies it among the context's portals. The tooltip is a popup below
+    // `anchor`, centered on it. It flips above the anchor or slides along it where the display ends. The pointer passes
+    // through the tooltip, and the tooltip never takes focus.
+    //
+    // Returns the element that holds the tooltip's content, for the build to style and fill. A tooltip lasts while
+    // every round creates it. A build creates it while UiElement::hoveredFor returns true for its anchor.
+    UiElement tooltip(PrLayoutNode anchor, PrUiKey key);
 
     // Creates the root of a memo of `inputs` under `parent`, keyed by `key` among the parent's children if it is not
     // zero, and keeps its subtree or builds it (Memos). Returns the root, or for a build that returns a result, the

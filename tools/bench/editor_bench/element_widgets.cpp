@@ -53,12 +53,11 @@ bool menuItem(UiBuilder& ui, PrLayoutNode card, PrStringView text, PrStringView 
 // Look
 
 UiElement icon(UiBuilder& ui, PrLayoutNode parent, PrStudioIconKind which, float size, PrColor color) {
-    UiPath path{
-        .path = ui.resources()->path(prStudioIconPathData(which)),
-        .viewBox = PrVec2{kPrStudioIconGrid, kPrStudioIconGrid},
-        .color = color,
+    UiPathPart part{
+        .data = prStudioIconPathData(which),
         .strokeWidth = prStudioIconIsFilled(which) ? 0 : kPrStudioIconStrokeWidth,
     };
+    UiPath path{.parts = Span(&part, 1), .viewBox = PrVec2{kPrStudioIconGrid, kPrStudioIconGrid}, .color = color};
     return ui.path(parent, path).size(size).shrink0();
 }
 

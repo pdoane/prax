@@ -19,7 +19,9 @@
 // the ends of the text. Up and Down move between lines, and with Command to the ends of the text. Shift extends the
 // selection with each of them. Backspace and Delete remove the selection, or the grapheme cluster or, with Option or
 // Control, the word beside the caret. Command or Control with A selects the whole text, and with X, C and V cuts,
-// copies and pastes through the window's clipboard (prUiSetWindow).
+// copies and pastes through the window's clipboard (prUiSetWindow). The keys that type text belong to the focused edit,
+// alone and with Shift. A shortcut of one key that a node around the edit claims therefore does not run while the user
+// types. A key that a node captures (prUiKeyCaptured) still goes to that node first.
 
 #pragma once
 

@@ -182,6 +182,35 @@ TEST_CASE("an element's hover block applies while the pointer is over it, and cl
     CHECK(clicks == 1);
 }
 
+TEST_CASE("the pointer passes through an element with no pointer events, except a descendant that takes pointer events again") {
+    ElementFixture f;
+    int under = 0;
+    int passed = 0;
+    int taken = 0;
+    f.build = [&] {
+        UiElement back = f.builder.div(f.root).absolute().left(0).top(0).w(200).h(50);
+        UiElement layer = f.builder.div(f.root).absolute().left(0).top(0).w(200).h(50).flexRow().pointerEventsNone();
+        UiElement through = f.builder.div(layer).size(50);
+        UiElement button = f.builder.div(layer).size(50).pointerEventsAuto();
+        if (back.clicked())
+            ++under;
+        if (through.clicked())
+            ++passed;
+        if (button.clicked())
+            ++taken;
+    };
+    f.frame();
+    f.down(10, 10);
+    f.up(10, 10);
+    f.frame();
+    f.down(60, 10);
+    f.up(60, 10);
+    f.frame();
+    CHECK(under == 1);
+    CHECK(passed == 0);
+    CHECK(taken == 1);
+}
+
 TEST_CASE("a hover shortcut applies its property while the pointer is over the element") {
     ElementFixture f;
     PrLayoutNode button = kPrLayoutNodeNone;
@@ -447,23 +476,228 @@ TEST_CASE("a memo may be a struct local to the function that memoizes part of it
     CHECK(width(f.bounds(prLayoutNodeFirstChild(f.tree, node))) == 60);
 }
 
-TEST_CASE("a path element draws a path that its resources parse once, sized by its style over its view box") {
+TEST_CASE("a path element draws its parts, each parsed once by the resources, scaled from the view box to the styled size") {
     UiFixture f;
     UiResources resources(nullptr);
     UiBuilder builder{{.ui = f.ui, .resources = &resources}};
     PrLayoutNode icon = kPrLayoutNodeNone;
     const PrPath* path = resources.path("M2 2L22 22");
     CHECK(resources.path("M2 2L22 22") == path);
+    // A stroke, and a fill above it.
+    const UiPathPart parts[] = {{"M2 2L22 22", 2}, {"M10 2H14V6Z"}};
     f.build = [&] {
-        UiPath drawn{.path = path, .viewBox = PrVec2{24, 24}, .color = PrColor{1, 0, 0, 1}, .strokeWidth = 2};
+        UiPath drawn{.parts = parts, .viewBox = PrVec2{24, 24}, .color = PrColor{1, 0, 0, 1}};
         icon = builder.path(f.root, drawn).size(14);
     };
     f.frame();
     PrLayoutContent content = prLayoutNodeContent(f.tree, icon);
     REQUIRE(content.kind == PrLayoutContentKind_Path);
-    REQUIRE(content.path.partCount == 1);
+    REQUIRE(content.path.partCount == 2);
     CHECK(prPathId(content.path.parts[0].path) == prPathId(path));
     CHECK(content.path.parts[0].strokeWidth == 2);
+    CHECK(prPathId(content.path.parts[1].path) == prPathId(resources.path("M10 2H14V6Z")));
+    CHECK(content.path.parts[1].strokeWidth == 0);
     PrRect bounds = prLayoutRectToPx(prLayoutNodeBounds(f.tree, icon, PrLayoutCoordinates_Viewport));
     CHECK(width(bounds) == 14);
+}
+
+TEST_CASE("an image element draws its picture at its natural size, or fitted and placed as its style says") {
+    ElementFixture f;
+    uint8_t texels[8 * 4 * 4] = {};
+    const PrTextureSource* picture =
+        prTextureSourceCreateCopy(PrPixelView{texels, 8 * 4, {8, 4}}, PrPixelFormat_Rgba8, PrTextureAlpha_None);
+    PrLayoutNode natural = kPrLayoutNodeNone;
+    PrLayoutNode fitted = kPrLayoutNodeNone;
+    f.build = [&] {
+        PrLayoutNode column = f.builder.div(f.root).flexCol().itemsStart();
+        natural = f.builder.image(column, {.source = picture});
+        fitted = f.builder.image(column, {.source = picture, .rendering = PrLayoutImageRendering_Pixelated})
+            .size(40).objectContain().objectLeft();
+    };
+    f.frame();
+    PrLayoutContent content = prLayoutNodeContent(f.tree, natural);
+    REQUIRE(content.kind == PrLayoutContentKind_Image);
+    CHECK(content.image == picture);
+    CHECK(content.upright);
+    CHECK(width(f.bounds(natural)) == 8);
+    CHECK(prLayoutNodeContent(f.tree, fitted).rendering == PrLayoutImageRendering_Pixelated);
+    CHECK(width(f.bounds(fitted)) == 40);
+    PrLayoutDecorationStyle decoration = f.decoration(fitted);
+    CHECK(decoration.objectFit == PrLayoutObjectFit_Contain);
+    CHECK(decoration.objectPositionX.bits == prLayoutLengthPercent(0).bits);
+    CHECK(decoration.objectPositionY.bits == prLayoutLengthPercent(50).bits);
+    prTextureSourceRelease(picture);
+}
+
+TEST_CASE("a text-editing element takes focus, takes the typed text, and reports the new text") {
+    ElementFixture f;
+    String value;
+    PrLayoutNode field = kPrLayoutNodeNone;
+    bool focus = false;
+    f.build = [&] {
+        UiElement input = f.builder.div(f.root).w(200).h(30);
+        if (focus)
+            input.takeFocus();
+        field = input;
+        PrStringView changed{};
+        if (input.edit({.value = value}, &changed))
+            value = changed;
+    };
+    f.frame();
+    focus = true;
+    f.frame();
+    focus = false;
+    CHECK(prUiIsFocused(f.ui, field));
+    f.text("c");
+    f.frame();
+    CHECK(value == "c");
+    f.text("at");
+    f.frame();
+    CHECK(value == "cat");
+    // The pointer over the input shows the text cursor.
+    f.move(20, 10);
+    f.frame();
+    CHECK(prUiOutput(f.ui).cursor == PrAppCursor_Text);
+}
+
+TEST_CASE("a focused text input keeps the keys that type text, and an ancestor takes the other keys and the keys it "
+        "captures") {
+    ElementFixture f;
+    String value;
+    bool focus = false;
+    Array<String> seen;
+    f.build = [&] {
+        UiElement page(&f.builder, f.root);
+        if (page.keyPressed('I'))
+            seen.push("I");
+        if (page.keyPressed('I', PrAppModifierFlag_Control))
+            seen.push("Ctrl I");
+        if (page.keyCaptured(PrAppKey_Escape))
+            seen.push("Escape");
+        UiElement input = f.builder.div(page).w(200).h(30);
+        if (focus)
+            input.takeFocus();
+        PrStringView changed{};
+        if (input.edit({.value = value}, &changed))
+            value = changed;
+    };
+    f.frame();
+    // With nothing focused, the page's claim takes the bare letter.
+    f.key('I');
+    f.frame();
+    CHECK(seen == Array<String>({"I"}));
+    focus = true;
+    f.frame();
+    focus = false;
+    seen.clear();
+    // Keys that come as soon as the input takes focus wait for the claims of the input. The input takes the letter. The
+    // page takes the chord and the key that it captures.
+    f.key('I');
+    f.key('I', PrAppModifierFlag_Shift);
+    f.key('I', PrAppModifierFlag_Control);
+    f.key(PrAppKey_Escape);
+    f.frame(1.0 / 60, 16);
+    CHECK(seen == Array<String>({"Ctrl I", "Escape"}));
+}
+
+TEST_CASE("a tooltip shows below its anchor once the pointer rests on the anchor, takes no focus, and lets presses "
+        "through") {
+    ElementFixture f;
+    PrLayoutNode tip = kPrLayoutNodeNone;
+    PrLayoutNode under = kPrLayoutNodeNone;
+    f.build = [&] {
+        under = f.builder.div(f.root).absolute().left(0).top(30).w(200).h(40).pressFocus();
+        UiElement button = f.builder.div(f.root).absolute().left(40).top(10).w(40).h(20).pressFocus();
+        tip = kPrLayoutNodeNone;
+        if (button.hoveredFor(0.5))
+            tip = f.builder.tooltip(button, 3).w(60).h(16);
+    };
+    f.frame();
+    f.move(50, 15);
+    f.frame(0.1);
+    CHECK(tip == kPrLayoutNodeNone);
+    // The wait asks for the frame that ends it.
+    CHECK(prUiOutput(f.ui).frameTime == doctest::Approx(f.time + 0.5));
+    // The frame that creates the tooltip places it by the extent that its layout gives it.
+    f.frame(0.5);
+    REQUIRE(tip != kPrLayoutNodeNone);
+    CHECK(prUiOutput(f.ui).frameTime == 0);
+    PrRect placed = f.bounds(tip);
+    CHECK(placed.left == 30);
+    CHECK(placed.top == 36);
+    CHECK_FALSE(prUiIsFocusWithin(f.ui, tip));
+    // A press where the tooltip floats reaches what is under it.
+    f.press(50, 40);
+    f.frame();
+    CHECK(prUiIsFocusWithin(f.ui, under));
+}
+
+TEST_CASE("a popup with no anchor element is dismissed by a press anywhere outside the popup") {
+    ElementFixture f;
+    bool open = true;
+    f.build = [&] {
+        UiElement area = f.builder.div(f.root).w(400).h(400);
+        if (!open)
+            return;
+        PrAppPopupPlacement placement{.anchor = PrRect{20, 30, 20, 30}, .side = PrAppPopupSide_Below};
+        UiElement menu = f.builder.popup(area, 7, placement);
+        menu.w(120).h(60);
+        if (menu.dismissed(kPrLayoutNodeNone))
+            open = false;
+    };
+    f.frame();
+    f.frame();
+    // A press within the popup keeps it open. A press on the area that it floats over closes it.
+    f.press(40, 50);
+    f.frame();
+    CHECK(open);
+    f.press(300, 300);
+    f.frame();
+    CHECK_FALSE(open);
+}
+
+TEST_CASE("a popup floats against its anchor, takes focus when it opens, and is dismissed by Escape or a press outside") {
+    ElementFixture f;
+    bool open = true;
+    uint32_t opened = 0;
+    PrLayoutNode content = kPrLayoutNodeNone;
+    f.build = [&] {
+        UiElement from = f.builder.div(f.root).w(100).h(40);
+        content = kPrLayoutNodeNone;
+        if (!open)
+            return;
+        PrAppPopupPlacement placement{
+            .anchor = PrRect{20, 30, 20, 30},
+            .side = PrAppPopupSide_Below,
+            .align = PrAppPopupAlign_Start,
+        };
+        UiElement popup = f.builder.popup(from, 7, placement);
+        popup.w(120).h(60);
+        content = popup;
+        if (popup.dismissed(from)) {
+            open = false;
+            opened += 1;
+        }
+    };
+    f.frame();
+    f.frame();
+    PrRect placed = f.bounds(content);
+    CHECK(placed.left == 20);
+    CHECK(placed.top == 30);
+    CHECK(width(placed) == 120);
+    CHECK(prUiIsFocusWithin(f.ui, content));
+    // Escape reaches the popup, which has focus, and dismisses it.
+    f.key(PrAppKey_Escape);
+    f.frame();
+    CHECK_FALSE(open);
+    // When the popup opens again, it takes focus again. A press outside the popup and outside the node of its anchor
+    // dismisses it.
+    open = true;
+    f.frame();
+    f.frame();
+    CHECK(prUiIsFocusWithin(f.ui, content));
+    f.press(300, 300);
+    f.frame();
+    CHECK_FALSE(open);
+    CHECK(opened == 2);
 }

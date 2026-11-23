@@ -6,6 +6,7 @@
 #include "pr/assert.h"
 #include "pr/float.h"
 #include "pr/layout_animation.h"
+#include "pr/layout_query.h"
 #include "pr/layout_unit.h"
 #include "pr/mem.h"
 #include "pr/path_data.h"
@@ -68,6 +69,10 @@ struct UiBuilder::State {
     // empties them.
     RawArray<Closed> closed;
     RawArray<UiOp> closedOps;
+
+    // Scratch for the parts of the path element that the builder is creating. The layout tree copies the parts when the
+    // builder sets the element's content, so the array is reused for the next path.
+    RawArray<PrLayoutPathPart> pathParts;
 
     // The builder, the roots of the memos being built, innermost last, and the root of the memo that it built last.
     UiBuilder* self;
@@ -402,6 +407,12 @@ PrLayoutStyleIndex recordOf(UiBuilder::State& b, const Inherited& inherited) {
                 decorationSet = true;
                 break;
             case UiOpCode_OutlineColor: decoration.outlineColor = colorOf(op); break;
+            case UiOpCode_ObjectFit: decoration.objectFit = PrLayoutObjectFit(op.a); decorationSet = true; break;
+            case UiOpCode_ObjectPosition:
+                decoration.objectPositionX = PrLayoutLength{op.a};
+                decoration.objectPositionY = PrLayoutLength{op.b};
+                decorationSet = true;
+                break;
             case UiOpCode_OverflowX: box.overflowX = PrLayoutOverflow(op.a); break;
             case UiOpCode_OverflowY: box.overflowY = PrLayoutOverflow(op.a); break;
             case UiOpCode_Opacity: effect.opacity = floatOf(op); effectSet = true; break;
@@ -644,6 +655,52 @@ UiElement& UiElement::text(PrStringView text) {
     return *this;
 }
 
+bool UiElement::edit(const UiEdit& edit, PrStringView* changed) {
+    addFlags(PrUiFlag_Focusable | PrUiFlag_Pressable);
+    // The text keeps its spaces, as the text of an input does. The space that the edit shows after empty text then
+    // holds the line of the caret, and an edit of one line does not wrap.
+    whitespacePre();
+    if ((edit.flags & PrUiTextEditFlag_Multiline) == 0)
+        whitespaceNowrap();
+    if (!prUiIsDisabled(ui(), node_))
+        cursor(PrAppCursor_Text);
+    PrUiTextEditDesc desc{
+        .control = node_,
+        .parent = node_,
+        .value = edit.value,
+        .flags = edit.flags,
+        .inputKind = edit.kind,
+        .selection = prColor16FromColor(edit.selection),
+        .caret = prColor16FromColor(edit.caret),
+    };
+    prUiTextEdit(ui(), &desc);
+    return prUiTextEditChanged(ui(), node_, changed);
+}
+
+bool UiElement::hoveredFor(double seconds) const {
+    PrUi* context = ui();
+    if (!prUiIsHovered(context, node_))
+        return false;
+    double rested = prUiHoverSeconds(context, node_);
+    if (rested >= seconds)
+        return true;
+    prUiRequestFrameAt(context, prUiCurrentRound(context)->time + (seconds - rested));
+    return false;
+}
+
+bool UiElement::dismissed(PrLayoutNode from) {
+    PrUi* context = ui();
+    bool escape = prUiKeyPressed(context, node_, PrAppKey_Escape, 0);
+    if (from != kPrLayoutNodeNone)
+        escape = prUiKeyPressed(context, from, PrAppKey_Escape, 0) || escape;
+    bool outside = false;
+    for (uint8_t button = 0; button < 3 && !outside; ++button) {
+        outside = prUiPressedOutside(context, node_, button) &&
+            (from == kPrLayoutNodeNone || prUiPressedOutside(context, from, button));
+    }
+    return escape || outside;
+}
+
 UiElement& UiElement::overflow(PrLayoutOverflow x, PrLayoutOverflow y) {
     if (x == PrLayoutOverflow_Scroll || y == PrLayoutOverflow_Scroll)
         addFlags(PrUiFlag_Scrollable);
@@ -680,6 +737,7 @@ UiBuilder::~UiBuilder() {
     b->closed.reset();
     b->closedOps.reset();
     b->memos.reset();
+    b->pathParts.reset();
     prMemoryFree(b);
 }
 
@@ -708,13 +766,17 @@ UiElement UiBuilder::path(PrLayoutNode parent, const UiPath& path, PrUiKey key) 
         .ratio = path.viewBox.y > 0 ? path.viewBox.x / path.viewBox.y : 0,
     };
     prLayoutTreeFrameSetNaturalSize(tree, element, natural);
-    // The tree copies the part when the content is set.
-    PrLayoutPathPart part{.path = path.path, .strokeWidth = path.strokeWidth};
+    UiResources* resources = state_->resources;
+    PR_ASSERT(resources != nullptr);
+    RawArray<PrLayoutPathPart>& parts = state_->pathParts;
+    parts.clear();
+    for (const UiPathPart& part : path.parts)
+        parts.push(PrLayoutPathPart{.path = resources->path(part.data), .strokeWidth = part.strokeWidth});
     PrLayoutContent content{};
     content.kind = PrLayoutContentKind_Path;
     content.path = PrLayoutPath{
-        .parts = &part,
-        .partCount = 1,
+        .parts = parts.data,
+        .partCount = parts.count,
         .viewBox = path.viewBox,
         .color = prColor16FromColor(path.color),
         .rule = path.rule,
@@ -723,6 +785,63 @@ UiElement UiBuilder::path(PrLayoutNode parent, const UiPath& path, PrUiKey key) 
     };
     prLayoutTreeFrameSetContent(tree, element, &content);
     return element;
+}
+
+UiElement UiBuilder::image(PrLayoutNode parent, const UiImage& image, PrUiKey key) {
+    UiElement element = replaced(parent, key);
+    PrLayoutTree* tree = state_->tree;
+    const PrTextureDesc* desc = prTextureSourceDesc(image.source);
+    PrUVec2 extent = image.upright ? prTextureDescDisplayedExtent(desc) : desc->extent;
+    PrLayoutNaturalSize natural{
+        .width = prLayoutUnitFromPx(float(extent.x)),
+        .height = prLayoutUnitFromPx(float(extent.y)),
+        .ratio = extent.y != 0 ? float(extent.x) / float(extent.y) : 0,
+    };
+    prLayoutTreeFrameSetNaturalSize(tree, element, natural);
+    PrLayoutContent content{};
+    content.kind = PrLayoutContentKind_Image;
+    content.image = image.source;
+    content.limit = image.limit;
+    content.rendering = image.rendering;
+    content.priority = image.priority;
+    content.upright = image.upright;
+    prLayoutTreeFrameSetContent(tree, element, &content);
+    return element;
+}
+
+UiElement UiBuilder::popup(PrLayoutNode from, PrUiKey key, const PrAppPopupPlacement& placement) {
+    State& b = *state_;
+    closeOpen(b);
+    PrUiPortalDesc desc{.kind = PrUiPortalKind_Popup, .parent = prUiNodeViewport(b.ui, from), .placement = placement};
+    PrLayoutNode portal = prUiPortal(b.ui, key, &desc, 0);
+    UiElement content = openElement(*this, b, portal, 0, UiKind_Div);
+    // The popup takes focus when it opens. The keys that it claims, such as Escape, then reach it whatever had focus
+    // before.
+    content.pressFocus();
+    uint8_t& opened = state<uint8_t>(portal);
+    if (opened == 0) {
+        opened = 1;
+        content.takeFocus();
+    }
+    return content;
+}
+
+UiElement UiBuilder::tooltip(PrLayoutNode anchor, PrUiKey key) {
+    State& b = *state_;
+    closeOpen(b);
+    PrUiPortalDesc desc{
+        .kind = PrUiPortalKind_Popup,
+        .parent = prUiNodeViewport(b.ui, anchor),
+        .placement = {
+            .anchor = prLayoutRectToPx(prLayoutNodeBounds(prUiTree(b.ui), anchor, PrLayoutCoordinates_Viewport)),
+            .side = PrAppPopupSide_Below,
+            .align = PrAppPopupAlign_Center,
+            .adjust = PrAppPopupAdjustFlag_Flip | PrAppPopupAdjustFlag_Slide,
+            .offset = PrVec2{0, 6},
+        },
+    };
+    PrLayoutNode portal = prUiPortal(b.ui, key, &desc, PrUiFlag_Transparent | PrUiFlag_SubtreeTransparent);
+    return openElement(*this, b, portal, 0, UiKind_Div);
 }
 
 UiBuilder& UiBuilder::memoBegin(void* PR_NULLABLE context, PrLayoutNode root) {

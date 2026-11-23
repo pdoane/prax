@@ -585,6 +585,33 @@ TEST_CASE("a click reports the modifiers its press was made with") {
     CHECK(seen == PrAppModifierFlag_Shift);
 }
 
+TEST_CASE("the held modifiers follow the flags of pointer events and the press and release of a modifier key") {
+    UiFixture f;
+    PrAppModifierFlags seen = 0;
+    f.build = [&] { seen = prUiModifiers(f.ui); };
+    f.frame();
+    CHECK(seen == 0);
+    // A platform may report the press of Shift itself without the flag. Shift is still held. Caps Lock is not a
+    // modifier.
+    f.push(PrAppEvent{.kind = PrAppEventKind_KeyDown, .keyboard = {.key = PrAppKey_Shift}});
+    f.frame();
+    CHECK(seen == PrAppModifierFlag_Shift);
+    f.push(PrAppEvent{
+        .kind = PrAppEventKind_PointerMove,
+        .modifiers = PrAppModifierFlag_Shift | PrAppModifierFlag_Control | PrAppModifierFlag_CapsLock,
+        .pointer = {.position = PrVec2{10, 10}},
+    });
+    f.frame();
+    CHECK(seen == (PrAppModifierFlag_Shift | PrAppModifierFlag_Control));
+    f.push(PrAppEvent{
+        .kind = PrAppEventKind_KeyUp,
+        .modifiers = PrAppModifierFlag_Shift | PrAppModifierFlag_Control,
+        .keyboard = {.key = PrAppKey_Shift},
+    });
+    f.frame();
+    CHECK(seen == PrAppModifierFlag_Control);
+}
+
 TEST_CASE("a multi-click that the application reports counts on the node that it began on") {
     UiFixture f;
     f.build = [&] {
@@ -668,6 +695,42 @@ TEST_CASE("the cursor is the request nearest the pointer's node") {
     f.move(600, 500);
     f.frame();
     CHECK(prUiOutput(f.ui).cursor == PrAppCursor_Arrow);
+}
+
+TEST_CASE("a press in a press-focus region focuses the region unless a focusable node inside takes the press, and Tab "
+        "skips the region") {
+    UiFixture f;
+    PrLayoutNode region = kPrLayoutNodeNone;
+    PrLayoutNode field = kPrLayoutNodeNone;
+    PrLayoutNode other = kPrLayoutNodeNone;
+    f.build = [&] {
+        // A region with a field in it, and a field outside it.
+        region = f.box(f.root, 0, 0, 200, 200, PrUiFlag_PressFocus);
+        field = f.box(region, 10, 10, 100, 40, PrUiFlag_Focusable | PrUiFlag_Pressable);
+        other = f.box(f.root, 300, 0, 100, 40, PrUiFlag_Focusable | PrUiFlag_Pressable);
+    };
+    f.frame();
+    // A press on the empty space of the region focuses the region. A press on its field focuses the field.
+    f.press(150, 150);
+    f.frame();
+    CHECK(prUiFocus(f.ui) == region);
+    f.press(20, 20);
+    f.frame();
+    CHECK(prUiFocus(f.ui) == field);
+    // Tab steps between the fields and passes the region by.
+    f.key(PrAppKey_Tab);
+    f.frame();
+    CHECK(prUiFocus(f.ui) == other);
+    f.key(PrAppKey_Tab);
+    f.frame();
+    CHECK(prUiFocus(f.ui) == field);
+    // A request focuses the region, and a press outside it clears focus.
+    prUiSetFocus(f.ui, region);
+    f.frame();
+    CHECK(prUiFocus(f.ui) == region);
+    f.press(500, 500);
+    f.frame();
+    CHECK(prUiFocus(f.ui) == kPrLayoutNodeNone);
 }
 
 TEST_CASE("a primary press focuses the innermost focusable node, and Tab steps through the tree's order") {
@@ -764,6 +827,27 @@ TEST_CASE("a key press goes to the nearest claim on the focused node's ancestors
     f.key('F', PrAppModifierFlag_Super | PrAppModifierFlag_Shift);
     f.frame(1.0 / 60, 16);
     CHECK(seen == Array<String>({"root save", "field escape", "panel find", "root save"}));
+}
+
+TEST_CASE("the repeats of a held key route to the claim that took the press, and report that they are repeats") {
+    UiFixture f;
+    PrLayoutNode panel = kPrLayoutNodeNone;
+    Array<String> seen;
+    f.build = [&] {
+        panel = f.box(f.root, 0, 0, 400, 400, PrUiFlag_Focusable | PrUiFlag_Pressable);
+        if (prUiKeyPressed(f.ui, panel, PrAppKey_Right, 0))
+            seen.push(prUiKeyRepeated(f.ui) ? "repeat" : "press");
+        if (prUiKeyPressed(f.ui, f.root, PrAppKey_Right, 0))
+            seen.push("root");
+    };
+    f.frame();
+    f.press(20, 20);
+    f.push(PrAppEvent{.kind = PrAppEventKind_KeyDown, .keyboard = {.key = PrAppKey_Right}});
+    f.push(PrAppEvent{.kind = PrAppEventKind_KeyDown, .keyboard = {.key = PrAppKey_Right, .repeat = true}});
+    f.push(PrAppEvent{.kind = PrAppEventKind_KeyUp, .keyboard = {.key = PrAppKey_Right}});
+    f.frame(1.0 / 60, 16);
+    // The repeat goes to the claim that took the press, and to no claim further out.
+    CHECK(seen == Array<String>({"press", "repeat"}));
 }
 
 TEST_CASE("caps lock takes no part in routing a key press to claims, focus traversal and activation") {

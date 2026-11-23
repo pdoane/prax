@@ -12,7 +12,7 @@ target_link_libraries(pr_ui PUBLIC prax::app prax::color prax::layout prax::text
 pr_library(ui_cpp INCLUDE cpp/include
     cpp/src/ui_element.cpp
 )
-target_link_libraries(pr_ui_cpp PUBLIC prax::ui prax::app prax::color prax::font prax::layout prax::path
+target_link_libraries(pr_ui_cpp PUBLIC prax::ui prax::app prax::color prax::font prax::layout prax::path prax::texture
                                         prax::core_cpp
     PRIVATE prax::text)
 
