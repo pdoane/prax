@@ -3616,6 +3616,45 @@ TEST_CASE("at a ratio that is not whole, edges snap to target pixels and borders
     CHECK(prLayoutNodeBorderWidth(f.tree, measured, PrRectSide_Left) == kLayoutUnitZero);
 }
 
+TEST_CASE("at a fractional pixel ratio, a 1px border with square or round corners shows on every side at any offset") {
+    // A box with a black 1px border around white is placed at each multiple of 1/24 px, and painted at a pixel ratio of
+    // 1.5. At every offset, the row of target pixels at the middle of each side is black.
+    for (uint32_t round = 0; round < 2; ++round) {
+        for (uint32_t step = 0; step < 48; ++step) {
+            Fixture f;
+            prLayoutTreeSetTargetPixelRatio(f.tree, 1.5f);
+            PrLayoutNode root = f.element(kPrLayoutNodeNone, block());
+            float offset = 10 + float(step) / 24;
+            PrLayoutBoxStyle bordered = placedAt(offset, offset, 20, 12);
+            PrLayoutDecorationStyle decoration = background(PrColor{1, 1, 1, 1});
+            for (uint32_t side = 0; side < PrRectSide_Count; ++side) {
+                bordered.border[side] = prLayoutUnitFromPx(1);
+                decoration.borderStyle[side] = PrDrawBorderStyle_Solid;
+                decoration.borderColor[side] = prColor16FromColor(PrColor{0, 0, 0, 1});
+            }
+            for (PrLayoutLength& radius : decoration.radii)
+                radius = prLayoutLengthPx(round != 0 ? 4.0f : 0.0f);
+            f.element(root, bordered, &decoration);
+            f.layout(px(40, 40));
+            Array<uint8_t> pixels = renderAt(f.tree, 60, 60, 1.5f);
+            CAPTURE(round);
+            CAPTURE(offset);
+            // The border box is 22px by 14px, with its top left at `offset`. The middle of its top side is 11px across,
+            // and the middle of its left side is 7px down. Both are away from the corners.
+            uint32_t across = uint32_t((offset + 11) * 1.5f);
+            uint32_t down = uint32_t((offset + 7) * 1.5f);
+            uint32_t top = 0;
+            while (top < 60 && pixel(pixels, 60, across, top) == kClear)
+                ++top;
+            CHECK(pixel(pixels, 60, across, top) == kBlack);
+            uint32_t left = 0;
+            while (left < 60 && pixel(pixels, 60, left, down) == kClear)
+                ++left;
+            CHECK(pixel(pixels, 60, left, down) == kBlack);
+        }
+    }
+}
+
 TEST_CASE("text's baseline lands on a whole target pixel, and its glyphs keep their place along the line") {
     Fixture f;
     PrLayoutNode root = f.element(kPrLayoutNodeNone, block());

@@ -71,6 +71,15 @@ bool sameRect(PrRect a, PrRect b) {
     return a.left == b.left && a.top == b.top && a.right == b.right && a.bottom == b.bottom;
 }
 
+// Returns `width` rounded to a whole number of target pixels, and to at least one target pixel if `width` is positive.
+// `scale` is the number of target pixels per unit along the axis of `width`. The result is in units.
+float snapWidth(float width, double scale) {
+    if (width <= 0 || scale <= 0)
+        return width;
+    double pixels = roundHalfUp(double(width) * scale);
+    return float((pixels < 1 ? 1 : pixels) / scale);
+}
+
 PrRect snapRect(const PrDAffine2& s, Alignment a, PrRect r, PrDrawSnapFlags axes) {
     if ((axes & PrDrawSnapFlag_X) != 0) {
         r.left = float(snapX(s, a, double(r.left)));
@@ -160,7 +169,7 @@ const PrDrawCommand* prDrawTransformSnap(const PrDrawTransform* transform, const
     bool moved = false;
     PrRect rect{};
     PrRect outer{};
-    PrRect inner{};
+    float widths[PrRectSide_Count] = {};
     switch (command->kind) {
         case PrDrawCommandKind_Rect:
         case PrDrawCommandKind_PushClipRect:
@@ -173,17 +182,22 @@ const PrDrawCommand* prDrawTransformSnap(const PrDrawTransform* transform, const
             moved = !sameRect(rect, command->cornerRect->rect);
             break;
         case PrDrawCommandKind_Border: {
-            // Each side is as wide as its snapped outer and inner edges leave it.
+            // The outer edges snap, and each side keeps its width from its edge in whole target pixels, so that a side
+            // as wide as a target pixel stays one wherever the border lands. An inner edge snapped on its own could
+            // round to the same target pixel as its outer edge, and leave the side no width.
             const PrDrawBorder& b = *command->border;
-            PrRect exact = b.shape.rect;
-            PrRect within{
-                exact.left + b.sides[PrRectSide_Left].width, exact.top + b.sides[PrRectSide_Top].width,
-                exact.right - b.sides[PrRectSide_Right].width,
-                exact.bottom - b.sides[PrRectSide_Bottom].width,
-            };
-            outer = snapRect(s, a, exact, axes);
-            inner = snapRect(s, a, within, axes);
-            moved = !sameRect(outer, exact) || !sameRect(inner, within);
+            outer = snapRect(s, a, b.shape.rect, axes);
+            moved = !sameRect(outer, b.shape.rect);
+            double scaleX = prF64Abs(a == Alignment_Straight ? s.a : s.b);
+            double scaleY = prF64Abs(a == Alignment_Straight ? s.d : s.c);
+            for (uint32_t side = 0; side < PrRectSide_Count; ++side) {
+                bool horizontal = side == PrRectSide_Left || side == PrRectSide_Right;
+                float width = b.sides[side].width;
+                if ((axes & (horizontal ? PrDrawSnapFlag_X : PrDrawSnapFlag_Y)) != 0)
+                    width = snapWidth(width, horizontal ? scaleX : scaleY);
+                widths[side] = width;
+                moved = moved || width != b.sides[side].width;
+            }
             break;
         }
         default:
@@ -233,10 +247,8 @@ const PrDrawCommand* prDrawTransformSnap(const PrDrawTransform* transform, const
         default:
             storage->border = *command->border;
             storage->border.shape.rect = outer;
-            storage->border.sides[PrRectSide_Top].width = inner.top - outer.top;
-            storage->border.sides[PrRectSide_Right].width = outer.right - inner.right;
-            storage->border.sides[PrRectSide_Bottom].width = outer.bottom - inner.bottom;
-            storage->border.sides[PrRectSide_Left].width = inner.left - outer.left;
+            for (uint32_t side = 0; side < PrRectSide_Count; ++side)
+                storage->border.sides[side].width = widths[side];
             c.border = &storage->border;
             break;
     }

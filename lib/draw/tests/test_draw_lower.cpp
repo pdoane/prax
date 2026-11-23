@@ -766,6 +766,39 @@ TEST_CASE("a wide shadow blurs at a lower resolution, close to the full blur, wh
     prPathRasterizerDestroy(rasterizer);
 }
 
+TEST_CASE("the outer edges of a snapped border round to target pixels, and each side is whole target pixels wide") {
+    // At 1.5 target pixels per unit, an outer edge at 11 lands at 16.5 and rounds to 17. A side of 0.66666 units is
+    // just under one target pixel wide, like a 1px border after layout. Its inner edge would land at 17.4999 and round
+    // to 17 too, so the side keeps a width of one target pixel instead. A side of 2 units is 3 target pixels, and a
+    // side of 0.1 units is one target pixel.
+    PrDrawBorder border{};
+    border.shape.rect = PrRect{11, 11, 31, 25};
+    const float widths[PrRectSide_Count] = {0.66666f, 2, 0.1f, 0};
+    for (uint32_t side = 0; side < PrRectSide_Count; ++side) {
+        border.sides[side].width = widths[side];
+        border.sides[side].style = PrDrawBorderStyle_Solid;
+        border.sides[side].color = prColor16FromColor(PrColor{1, 1, 1, 1});
+    }
+    PrDrawList* list = prDrawListCreate();
+    prDrawListBorder(list, &border, {.edges = PrDrawEdges_Snapped});
+    PrDrawTransform transform = prDrawTransformFromAffine2(prAffine2Scale(PrVec2{1.5f, 1.5f}));
+    PrDrawSnapped storage{};
+    const PrDrawCommand* recorded = nullptr;
+    for (uint32_t i = 0; i < prDrawListCommandCount(list); ++i) {
+        if (prDrawListCommands(list)[i].kind == PrDrawCommandKind_Border)
+            recorded = &prDrawListCommands(list)[i];
+    }
+    REQUIRE(recorded != nullptr);
+    const PrDrawBorder& played = *prDrawTransformSnap(&transform, recorded, &storage)->border;
+    CHECK(near(played.shape.rect.top * 1.5f, 17));
+    CHECK(near(played.shape.rect.left * 1.5f, 17));
+    CHECK(near(played.sides[PrRectSide_Top].width * 1.5f, 1));
+    CHECK(near(played.sides[PrRectSide_Right].width * 1.5f, 3));
+    CHECK(near(played.sides[PrRectSide_Bottom].width * 1.5f, 1));
+    CHECK(played.sides[PrRectSide_Left].width == 0);
+    prDrawListRelease(list);
+}
+
 TEST_CASE("snapped edges round to target pixels where they land, apart from a transform pushed apart") {
     // At 1.5 target pixels per unit, 0.3 lands at 0.45 and rounds to 0, and 10.3 lands at 15.45 and rounds to 15.
     PrDrawList* list = prDrawListCreate();
