@@ -131,6 +131,31 @@ TEST_CASE("a closed contour joins its ends and takes no caps") {
     prPathDestroy(square);
 }
 
+TEST_CASE("a stroke wider than its closed contour covers the contour's inside") {
+    // The inner edge of a 32 wide stroke of a 16 wide square lies past the square's far side, and the outline still
+    // covers all that lies within half the width of the square's sides.
+    const PrVec2 squarePoints[] = {{24, 24}, {40, 24}, {40, 40}, {24, 40}};
+    PrPath* square = polyline(squarePoints, true);
+    CHECK(strokedArea(square, style(32)) == doctest::Approx(48 * 48).epsilon(0.001));
+    prPathDestroy(square);
+}
+
+TEST_CASE("a closed contour that returns to its start within rounding joins there as one that closes at once") {
+    // A float's step at 30 is wider than any fixed bound that small coordinates would take.
+    PrVec2 start{29.8f, 29.9f};
+    PrVec2 returned{29.8f, prF32NextAfter(29.9f, 30.0f)};
+    const PrVec2 roundedPoints[] = {start, {26.8f, 19.6f}, {23.8f, 19.6f}, {20.8f, 29.9f}, returned};
+    const PrVec2 exactPoints[] = {start, {26.8f, 19.6f}, {23.8f, 19.6f}, {20.8f, 29.9f}};
+    PrPath* rounded = polyline(roundedPoints, true);
+    PrPath* exact = polyline(exactPoints, true);
+    PrPathStroke stroke = style(4, PrPathJoin_Miter);
+    stroke.miterLimit = 5;
+    CHECK(strokedArea(rounded, stroke) == doctest::Approx(strokedArea(exact, stroke)).epsilon(0.0001));
+    CHECK(strokedContours(rounded, stroke) == strokedContours(exact, stroke));
+    prPathDestroy(rounded);
+    prPathDestroy(exact);
+}
+
 TEST_CASE("dashes cut the line from the offset into the pattern") {
     const PrVec2 linePoints[] = {{10, 10}, {27, 10}};
     PrPath* line = polyline(linePoints);

@@ -226,13 +226,24 @@ const PrDomAttr* PR_NULLABLE nextAttribute(const PrDomAttr* attribute) {
 // element do (mathml-core/#the-a-element).
 bool isHyperlinkElement(const PrDomElement* element) {
     return domIsHtml(element, PrDomTag_A) || domIsHtml(element, PrDomTag_Area) ||
-        (element->space == PrDomNamespace_MathMl && element->tag == PrDomTag_A);
+        ((element->space == PrDomNamespace_MathMl || element->space == PrDomNamespace_Svg) &&
+            element->tag == PrDomTag_A);
 }
 
-// Returns the URL of a hyperlink, its href attribute parsed against the document base URL, or null if the element has
-// no href attribute or it does not parse (html/#reinitialise-url). The caller destroys the URL.
-PrUrl* PR_NULLABLE hyperlinkUrl(const PrDomElement* element) {
+// Returns the href of a hyperlink. An SVG a element takes xlink:href if it has no href (SVG2/linking.html#AElement).
+PrStringView hyperlinkHref(const PrDomElement* element) {
     PrStringView href = domAttributeValue(element, "href");
+    if (href.data == nullptr && element->space == PrDomNamespace_Svg) {
+        if (const PrDomAttr* xlink = domAttribute(element, PrDomNamespace_XLink, "href"))
+            href = prRawStringView(&xlink->value);
+    }
+    return href;
+}
+
+// Returns the URL of a hyperlink, its href parsed against the document base URL, or null if the element has no href or
+// it does not parse (html/#reinitialise-url). The caller destroys the URL.
+PrUrl* PR_NULLABLE hyperlinkUrl(const PrDomElement* element) {
+    PrStringView href = hyperlinkHref(element);
     if (href.data == nullptr)
         return nullptr;
     PrUrl* url = nullptr;
@@ -1012,7 +1023,15 @@ void prHtmlImageElementDecode(PrHtmlImageElement* element, const PrHtmlPromise* 
     htmlImageWaitDecode(window, element, promise);
 }
 
-bool prHtmlImageElementImageSource(PrHtmlImageElement* element, PrCanvasImageSource* out) {
+bool prHtmlOrSvgImageElementIs(const PrDomElement* element) {
+    return domIsHtml(element, PrDomTag_Img) || (element->space == PrDomNamespace_Svg && element->tag == PrDomTag_Image);
+}
+
+PrDomImageState prHtmlOrSvgImageElementState(const PrDomElement* element) {
+    return element->state != nullptr ? element->state->image : PrDomImageState_Unavailable;
+}
+
+bool prHtmlOrSvgImageElementImageSource(PrDomElement* element, PrCanvasImageSource* out) {
     *out = PrCanvasImageSource{};
     const DomElementState* state = element->state;
     if (state == nullptr || state->image != PrDomImageState_CompletelyAvailable || state->picture == nullptr)
@@ -1021,7 +1040,7 @@ bool prHtmlImageElementImageSource(PrHtmlImageElement* element, PrCanvasImageSou
     *out = PrCanvasImageSource{
         .image = state->picture,
         .extent = PrVec2{float(state->naturalWidth), float(state->naturalHeight)},
-        .originClean = true,
+        .originClean = !state->imageCrossOrigin,
     };
     return true;
 }
@@ -1093,7 +1112,7 @@ PrRawString prHtmlHyperlinkComponent(const PrDomElement* element, PrUrlComponent
     PR_ASSERT(isHyperlinkElement(element));
     PrUrl* url = hyperlinkUrl(element);
     if (url == nullptr) {
-        PrStringView href = domAttributeValue(element, "href");
+        PrStringView href = hyperlinkHref(element);
         if (component == PrUrlComponent_Href && href.data != nullptr)
             return prRawStringCopy(href);
         return component == PrUrlComponent_Protocol ? prRawStringExternal(":") : prRawStringEmpty();
@@ -1424,10 +1443,6 @@ bool prHtmlScriptElementSupports(PrStringView type) {
 
 PrHtmlStyleElement* PR_NULLABLE prHtmlStyleElementQuery(PrDomEventTarget* PR_NULLABLE object) {
     return htmlElementQuery<PrHtmlStyleElement>(object, PrDomTag_Style);
-}
-
-PrCssStyleSheet* PR_NULLABLE prHtmlStyleElementSheet(PrHtmlStyleElement* element) {
-    return cssElementSheet(element);
 }
 
 PrHtmlTemplateElement* PR_NULLABLE prHtmlTemplateElementQuery(PrDomEventTarget* PR_NULLABLE object) {

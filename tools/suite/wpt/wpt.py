@@ -9,11 +9,11 @@ registration order, where <file> is the page's path in the checkout. A crashtest
 loads without the shell failing.
 
 A reftest is one case. It is rendered if the test and each of its references can be rendered at WPT's 800 by 600: an
-HTML or XHTML page loads in the shell, and a static SVG document is rendered by the reftest harness
-(tools/suite/reftest.cpp). If every page of a reftest is HTML or XHTML, one run of the shell renders the test and its
-references once they settle, and compares them (--reference). Otherwise the shell captures each page as a PNG
-(--screenshot), and the reftest harness compares them. A print reftest, which WPT's manifest finds by its name
-(is_print), is rendered if each of its documents is HTML or XHTML. The shell prints the test and its references, from
+HTML, XHTML or SVG document loads in the shell, as a browser loads it, with its scripts, style sheets and fonts. Where
+the shell serves, one run of it renders the test and its references once they are ready, and compares them
+(--reference). Otherwise the shell captures each page as a PNG (--screenshot), and the reftest harness
+(tools/suite/reftest.cpp) compares them. A print reftest, which WPT's manifest finds by its name (is_print), is
+rendered if each of its documents is HTML or XHTML. The shell prints the test and its references, from
 the page box of WPT's print reftests, and renders each page that the test's reftest-pages metas select as an image of
 its own (pr_shell --print). Two documents then render the same if they have as many pages and each page renders the
 same as the page in the same place, each within the fuzzy ranges (web-platform-tests docs, "Print Reftests"). A
@@ -34,7 +34,8 @@ vendor files (tools/suite/wpt): the reporter, a testdriver that drives clicks, k
 page's view as a host's input, and a fetch() of the checkout's resources.
 
 A plain run takes every test of the suite except those that a person runs, which wptrunner leaves out too
-(is_manual). --module takes a whole module, and --all takes every test. --match takes the tests that it names,
+(is_manual). --module takes the tests of a plain run that are in the modules that it names, and --all takes every
+test. --match takes the tests that it names,
 and names each of their assertions that does not pass, as --failures does. A plain run and a run of modules leave out
 each page that tests a feature that tools/suite/wpt/web_features.txt does not rule as built by the engine. The
 WEB_FEATURES.yml files of the checkout map pages to features. --left-out lists every page that a plain run of any suite
@@ -45,7 +46,7 @@ record it. A recorded case is one in which the engine follows the spec and the c
 subtests counts as one test unless the errata excuse it. --raw counts as WPT does: a test counts only if it passes.
 
 --verify checks the engine's incremental rendering as the pages run. The shell compares each page's render with a full
-recomputation after every rendering update and once the page settles (pr_shell --verify). The pages whose render
+recomputation after every rendering update and once the run ends (pr_shell --verify). The pages whose render
 failed a check are listed after the table, each with its first difference. They are counted separately from the
 results, which the checks do not change, so a plain run with --verify writes the same scoreboard as a run without it.
 
@@ -57,8 +58,9 @@ positions fall on halves and quarters of a pixel. A run at another ratio leaves 
 renders on one, instead of the cpu renderer, where a reftest's test and references are drawn by the same renderer. A run
 on it leaves the scoreboard alone.
 
-A plain run of the default build's shell writes its suite's table in suites/wpt/scoreboard.md. The table gives each
-module's files that are complete or excused, its tests passed and its pass rate, and the total. The scoreboard is
+A plain run of the default build's shell writes its suite's table in suites/wpt/scoreboard.md, and a run of modules
+writes those modules' rows of it, whose selection is a plain run's. The table gives each module's files that are
+complete or excused, its tests passed and its pass rate, and the total, which is the sum of the rows. The scoreboard is
 committed with the change that alters it, so its diff shows what a change did: a rate that fell, and whether the
 passing tests or the counted tests changed it.
 
@@ -476,8 +478,8 @@ def format_scoreboard(boards):
     text = ["# WPT scoreboard", "",
             "What a plain run of each suite of tools/suite/wpt/wpt.py passes: of each module, the files "
             "complete",
-            "or excused, the tests passed, and the rate. A plain run writes its suite's table; the "
-            "diff", "of a change to it is what the change did.", ""]
+            "or excused, the tests passed, and the rate. A plain run writes its suite's table, and a run of "
+            "modules", "their rows; the diff of a change to it is what the change did.", ""]
     for suite in sorted(boards):
         rows = [(module, boards[suite][module]) for module in sorted(boards[suite])
                 if module != corpus.TOTAL]
@@ -488,55 +490,42 @@ def format_scoreboard(boards):
     return "\n".join(text)
 
 
-def record_scoreboard(suite, table):
-    """Writes `table`, by module and TOTAL, as the suite's table of the scoreboard."""
+def in_modules(module, patterns):
+    """Returns true if a run of the modules `patterns` (--module) selects the module `module`."""
+    return any(fnmatch.fnmatchcase(module, pattern) or fnmatch.fnmatchcase(module.split("/")[0], pattern)
+               for pattern in patterns)
+
+
+def total_of(rows):
+    """Returns the Score that sums the Scores `rows`."""
+    sums = [0, 0, 0, 0]
+    for row in rows:
+        for i, cell in enumerate((row.files, row.tests)):
+            done, count = cell.split("/")
+            sums[2 * i] += int(done)
+            sums[2 * i + 1] += int(count)
+    return Score("%d/%d" % (sums[0], sums[1]), "%d/%d" % (sums[2], sums[3]), corpus.pass_rate(sums[2], sums[3]))
+
+
+def record_scoreboard(suite, table, modules=()):
+    """Writes `table`, by module, as the suite's table of the scoreboard, with its total. A run of the modules
+    `modules` replaces the rows of those modules and keeps the others."""
     boards = {}
     if os.path.exists(SCOREBOARD_FILE):
         with open(SCOREBOARD_FILE, encoding="utf-8") as f:
             boards = parse_scoreboard(f.read())
-    boards[suite] = table
+    rows = {module: row for module, row in table.items() if module != corpus.TOTAL}
+    if modules:
+        kept = {module: row for module, row in boards.get(suite, {}).items()
+                if module != corpus.TOTAL and not in_modules(module, modules)}
+        rows = {**kept, **rows}
+    rows[corpus.TOTAL] = total_of(rows.values())
+    boards[suite] = rows
     with open(SCOREBOARD_FILE, "w", encoding="utf-8", newline="\n") as f:
         f.write(format_scoreboard(boards))
 
 
 ERRATA = DATA.errata
-
-
-def read_fuzzy_overrides(path):
-    """Returns the fuzzy overrides that a file records, for each test by name. An entry is its overrides, one per line,
-    each a test's name and a fuzzy meta's content, then its reason on indented lines. The entries are sorted by their
-    first line, and a test has one override for each reference that it keys, as metas do."""
-    overrides = {}
-    if not os.path.exists(path):
-        return overrides
-    heads = []
-    pending = 0
-    reasoned = False
-    with open(path, encoding="utf-8") as f:
-        for number, line in enumerate(f, 1):
-            line = line.rstrip()
-            if not line or line.startswith("#"):
-                continue
-            if line[0].isspace():
-                if pending == 0:
-                    sys.exit("%s:%d: a sentence with no override before it" % (path, number))
-                reasoned = True
-                continue
-            if reasoned:
-                pending = 0
-                reasoned = False
-            if pending == 0:
-                if heads and line < heads[-1]:
-                    sys.exit("%s:%d: an entry out of order; they are sorted by their first line" % (path, number))
-                heads.append(line)
-            pending += 1
-            fields = line.split()
-            if len(fields) != 2:
-                sys.exit("%s:%d: an override is a test and a fuzzy meta's content" % (path, number))
-            overrides.setdefault(fields[0], []).append(fields[1])
-    if pending and not reasoned:
-        sys.exit("%s: an override with no sentence after it" % path)
-    return overrides
 
 
 # The pages left out until the engine has what they need, by name, with the need and the reason. The file uses the
@@ -555,10 +544,10 @@ PAGES = (".html", ".htm", ".xht", ".xhtml", ".svg")
 SCRIPTS = (".any.js", ".window.js")
 NOT_TESTS = {"support", "resources", "tools", "reference"}
 
-# The extensions of the documents that the reftest harness renders and of the pages that the shell captures for it,
-# and the viewport that WPT renders a reftest in, which is the one that the shell captures.
-RENDERED = (".svg",)
-CAPTURED = (".html", ".htm", ".xht", ".xhtml")
+# The extensions of the pages that the shell captures, and the viewport that WPT renders a reftest in, which is the one
+# that the shell captures.
+CAPTURED = (".html", ".htm", ".xht", ".xhtml", ".svg")
+PRINTED = (".html", ".htm", ".xht", ".xhtml")
 REFTEST_SIZE = "800x600"
 
 # The page box that WPT prints a print reftest's documents on before their @page rules apply, in CSS pixels at 96 per
@@ -725,37 +714,14 @@ def fuzzy_ranges(path, contents):
             href = parts[0].strip().split("?")[0].split("#")[0]
             base = WPT if href.startswith("/") else os.path.dirname(path)
             key = os.path.normpath(os.path.join(base, href.lstrip("/")))
-        named = {}
-        positional = []
-        for part in parts[-1].split(";"):
-            name, _, value = part.rpartition("=")
-            low, _, high = value.strip().partition("-")
-            bounds = (int(low), int(high or low))
-            if name.strip():
-                named[name.strip()] = bounds
-            else:
-                positional.append(bounds)
-        ranges = [named[n] if n in named else positional.pop(0) for n in ("maxDifference", "totalPixels")]
-        keyed[key] = (ranges[0], ranges[1])
+        keyed[key] = corpus.fuzzy_content_ranges(parts[-1])
     return keyed
 
 
-def within(allowed, difference, pixels):
-    """Returns true if a reference's difference from the test is within the fuzzy ranges `allowed`, as wptrunner judges
-    it: no difference at all, a range that starts at zero for a measure that is zero, or both measures in range."""
-    (low, high), (fewest, most) = allowed
-    if allowed == ((0, 0), (0, 0)):
-        return difference == 0 and pixels == 0
-    return ((pixels == 0 and fewest == 0) or (difference == 0 and low == 0)
-            or (low <= difference <= high and fewest <= pixels <= most))
-
-
 def drawable(path, printed=False):
-    """Returns true if a reftest's document can be rendered: a page that the shell captures, or a static document that
-    the reftest harness renders. A document of a print reftest is `printed`, which only the shell does."""
-    if path.endswith(CAPTURED):
-        return True
-    return not printed and path.endswith(RENDERED) and not reftest.DYNAMIC.search(page_text(path))
+    """Returns true if a reftest's document can be rendered: a page that the shell captures, and for a print reftest,
+    `printed`, a page that the shell prints."""
+    return path.endswith(PRINTED if printed else CAPTURED)
 
 
 def renderable(path):
@@ -833,15 +799,15 @@ def comparisons(path):
 
 def compare_reftest(shell, path):
     """Returns the answer for each of the reftest's comparisons, in the form that the reftest harness gives, or for a
-    print reftest in the form that pr_shell --print gives. If every document is a page that the shell captures, one run
-    of the shell renders and compares them, as it always does for a print reftest. Otherwise the shell captures each
-    page as a PNG, and the reftest harness renders each static document and compares them."""
+    print reftest in the form that pr_shell --print gives. A shell that serves renders and compares the documents in one
+    run, as it always does for a print reftest. Otherwise the shell captures each document as a PNG, and the reftest
+    harness compares them."""
     pairs = comparisons(path)
     if is_print(path):
         return compare_pages(shell, pairs, page_ranges(path))
-    if all(d.endswith(CAPTURED) for pair in pairs for d in pair) and SHELLS.serves(shell):
+    if SHELLS.serves(shell):
         return compare_pages(shell, pairs)
-    return compare_documents(shell, pairs)
+    return compare_captures(shell, pairs)
 
 
 def compare_pages(shell, pairs, printed=None):
@@ -879,21 +845,20 @@ def compare_pages(shell, pairs, printed=None):
     return [dict(answers[pair], status="") for pair in pairs]
 
 
-def compare_documents(shell, pairs):
-    """Returns compare_reftest's answers for the comparisons `pairs`, some of whose documents are static."""
+def compare_captures(shell, pairs):
+    """Returns compare_reftest's answers for the comparisons `pairs`, from the shell's capture of each document."""
     with tempfile.TemporaryDirectory(prefix="wpt-reftest-") as directory:
         captured = {}
         for index, document in enumerate(dict.fromkeys(d for pair in pairs for d in pair)):
-            if document.endswith(CAPTURED):
-                png = os.path.join(directory, "%d.png" % index)
-                captured[document] = (png, capture(shell, document, png))
+            png = os.path.join(directory, "%d.png" % index)
+            captured[document] = (png, capture(shell, document, png))
         slots = []
         cases = []
         for left, right in pairs:
-            failure = next((captured[d][1] for d in (left, right) if d in captured and captured[d][1]), "")
+            failure = next((captured[d][1] for d in (left, right) if captured[d][1]), "")
             slots.append({"status": failure} if failure else None)
             if not failure:
-                source, reference = (captured[d][0] if d in captured else d for d in (left, right))
+                source, reference = (captured[d][0] for d in (left, right))
                 cases.append(reftest.Case(os.path.relpath(left, WPT), source, reference, REFTEST_SIZE))
         given = iter(reftest.run(reftest.HARNESS, cases, WRITE, 1, text=TEXT))
         return [slot if slot is not None else next(given) for slot in slots]
@@ -904,18 +869,18 @@ def same(allowed, answer):
     `allowed`. A printed document renders the same as another if they have as many pages and each page is within the
     ranges of the page in the same place (wptrunner's check_pass)."""
     if "pageCounts" not in answer:
-        return within(allowed, answer["maxDifference"], answer["differingPixels"])
+        return corpus.within_fuzzy(allowed, answer["maxDifference"], answer["differingPixels"])
     count, other = answer["pageCounts"]
-    return count == other and all(within(allowed, page["maxDifference"], page["differingPixels"])
+    return count == other and all(corpus.within_fuzzy(allowed, page["maxDifference"], page["differingPixels"])
                                   for page in answer["pages"])
 
 
 def reftest_outcome(path, answers):
-    """Returns whether the reftest passes, fails, or matches only by drawing nothing, from the harness's answer for
-    each of its comparisons, as wptrunner walks them. The test passes if it matches one of its match references, within
-    its fuzzy ranges, and that reference then differs from the first mismatch reference, which differs from the test,
-    as each later mismatch reference does. Of these, only a comparison of the test with its own reference uses the
-    test's fuzzy ranges. With no match reference, the test must differ from every mismatch reference."""
+    """Returns whether the reftest passes or fails, from the harness's answer for each of its comparisons, as wptrunner
+    walks them. The test passes if it matches one of its match references, within its fuzzy ranges, and that reference
+    then differs from the first mismatch reference, which differs from the test, as each later mismatch reference does.
+    Of these, only a comparison of the test with its own reference uses the test's fuzzy ranges. With no match
+    reference, the test must differ from every mismatch reference."""
     if any(a["status"] != "" or not ("maxDifference" in a or "pageCounts" in a) for a in answers):
         return "fail"
     refs = references(path)
@@ -937,9 +902,7 @@ def reftest_outcome(path, answers):
         tail = not mismatches or (differs(next(chained)) and differs(mismatches[0][1]) and later)
         if same(fuzzy(path, ref), answer) and tail:
             passing.append(answer)
-    if not passing:
-        return "fail"
-    return "blank" if all(a.get("blank") for a in passing) else "pass"
+    return "pass" if passing else "fail"
 
 
 def discover(root, directories):
@@ -1027,7 +990,7 @@ def select(root, directories, modules=(), all_tests=False, match=None, needs=Non
         if not corpus.holds(name, match) and not corpus.holds(page_of(name), match):
             continue
         need = None
-        if default and is_manual(path):
+        if pruned and is_manual(path):
             need = "manual"
         if need is None and pruned:
             need = unbuilt(pages, ruled, name)
@@ -1263,7 +1226,7 @@ def main():
         SETUP.extend(["--pixel-ratio", "%g" % args.pixel_ratio])
     if args.renderer != "cpu":
         SETUP.extend(["--renderer", args.renderer])
-    FUZZY_OVERRIDES = read_fuzzy_overrides(FUZZY_FILE)
+    FUZZY_OVERRIDES = corpus.read_fuzzy_overrides(FUZZY_FILE)
     # A run that names tests wants their answers.
     args.failures = args.failures or bool(args.match)
 
@@ -1308,7 +1271,6 @@ def main():
         corpus.require(reftest.HARNESS, "%s-wpt" % args.suite)
     progress = Progress(sum(kind != REFTEST or name in rendered for _, name, kind in found))
     out = progress.write
-    blank_reftests = collections.Counter()
     durations = read_durations()
     took = {}
     # The slowest tests run first, by their last run. A test that has not run is assumed to take the typical time.
@@ -1331,15 +1293,6 @@ def main():
             if answers is not None:
                 seen.add(name)
                 outcome = reftest_outcome(path, answers)
-                if outcome == "blank":
-                    blank_reftests[module] += 1
-                    modules[module].update(files=1, completed=1, excused=0, tests=1, passed=0)
-                    records[name] = {"complete": True, "reftest": outcome, "harness": None}
-                    first_failure.setdefault(module, name + ": draws nothing, as its reference")
-                    if args.verbose or args.failures:
-                        out("%s   0/1   reftest, drawing nothing as its reference does"
-                            % name.ljust(width))
-                    continue
                 passed = outcome == "pass"
                 recorded = name in ERRATA
                 if passed and recorded:
@@ -1419,11 +1372,8 @@ def main():
     progress.clear()
     rows = []
     total = sum(modules.values(), collections.Counter())
-    for module in sorted(modules.keys() | reftests.keys() | blank_reftests.keys()):
+    for module in sorted(modules.keys() | reftests.keys()):
         notes = "%d reftests not rendered" % reftests[module] if reftests[module] else ""
-        if blank_reftests[module]:
-            notes = ((notes + "; ") if notes else "") + (
-                "%d reftests drawing nothing as their reference does" % blank_reftests[module])
         if modules[module]["excused"]:
             notes = ("%d file(s) excused by ERRATA" % modules[module]["excused"]
                      + ("; " + notes if notes else ""))
@@ -1472,15 +1422,13 @@ def main():
         print("\n%d page(s) whose render failed a check" % len(verify_failures))
         for page in sorted(verify_failures):
             print("  %s\n      %s" % (page, verify_failures[page]))
-    # Only a plain run of the default build writes the scoreboard, because the scoreboard measures that run's selection
-    # under that build's deadlines.
-    plain = not (args.match or args.module or args.all or args.raw or TEXT or args.renderer != "cpu"
+    # Only a plain run of the default build, or of some of its modules, writes the scoreboard, because the scoreboard
+    # measures that run's selection under that build's deadlines.
+    plain = not (args.match or args.all or args.raw or TEXT or args.renderer != "cpu"
                  or (args.pixel_ratio is not None and args.pixel_ratio != 1))
     if plain and os.path.abspath(args.binary) == corpus.binary("pr_shell", corpus.DEFAULT):
-        total = sum(modules.values(), collections.Counter())
         table = {module: score(counts) for module, counts in modules.items() if counts["files"]}
-        table[corpus.TOTAL] = score(total)
-        record_scoreboard(args.suite, table)
+        record_scoreboard(args.suite, table, args.module)
         print("\nThe scoreboard is written to %s." % os.path.relpath(SCOREBOARD_FILE, corpus.ROOT))
     return 0
 

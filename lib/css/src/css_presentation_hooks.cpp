@@ -74,6 +74,9 @@ constexpr CssPresentationHooks kCssHooks = {
     .effectChanged = [](void* context, const PrDomElement* element) {
         cssPresentationEffectChanged(presentationOf(context), element);
     },
+    .attributesAnimated = [](void* context, PrDomElement* element) {
+        cssPresentationAttributesAnimated(presentationOf(context), element);
+    },
 };
 
 // Returns the presentation of the node's document, if the node is in the document.

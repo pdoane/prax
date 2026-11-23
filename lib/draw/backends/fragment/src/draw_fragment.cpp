@@ -999,10 +999,10 @@ bool drawnStroke(const Walk& w, const PrDrawStroke* stroke, bool antialias, PrDr
     if (!(scale > 0))
         return false;
     *out = *stroke;
-    float device = out->nonScaling ? out->shape.width : out->shape.width * scale;
+    float device = out->shape.width * scale;
     if (antialias && device < 1) {
         *ink = fadedInk(*ink, device);
-        out->shape.width = out->nonScaling ? 1 : out->shape.width / device;
+        out->shape.width /= device;
     }
     return true;
 }
@@ -1366,10 +1366,7 @@ bool strokeRingOf(const Walk& w, const PrDrawCommand& c, StrokeRing* out) {
     float scale = prAffine2MaxScale(shape.toDevice);
     if (!(scale > 0))
         return false;
-    bool device = stroke.nonScaling;
-    if (device && !prAffine2IsSimilarity(shape.toDevice))
-        return false;
-    float width = stroke.nonScaling ? s.width / scale : s.width;
+    float width = s.width;
     out->fade = 1;
     if (width * scale < 1) {
         out->fade = width * scale;
@@ -1403,10 +1400,9 @@ bool lineShapeOf(const Walk& w, const PrDrawCommand& c, LocalShape* out, float* 
     out->toDevice = prAffine2Concat(prAffine2Concat(prAffine2Rotate(prF32Atan2(d.y, d.x)),
         prAffine2Translate(c.line.start)), x.affine);
     float scale = prAffine2MaxScale(out->toDevice);
-    bool device = c.stroke->nonScaling;
-    if (!(scale > 0) || (device && !prAffine2IsSimilarity(out->toDevice)))
+    if (!(scale > 0))
         return false;
-    float width = c.stroke->nonScaling ? s.width / scale : s.width;
+    float width = s.width;
     *fade = 1;
     if (width * scale < 1) {
         *fade = width * scale;
@@ -1539,7 +1535,7 @@ bool mapStroke(Walk& w, const PrDrawCommand& c, StrokeMapping* out) {
     prPathClear(f->shape);
     prDrawShapePath(&c, f->shape);
     const PrPathPolyline& centerline = land(w, f->shape, kSparseTolerance, PrPathFlattening_Inside, f->centerline);
-    float scale = stroke.nonScaling ? 1 : prAffine2MaxScale(x.affine);
+    float scale = prAffine2MaxScale(x.affine);
     FragmentMap m{};
     m.mapping = stroke.mapping;
     m.width = stroke.shape.width * scale;
@@ -2686,10 +2682,11 @@ uint32_t filterNode(Walk& w, FilterRun& run, const PrDrawFilterNode& node, PrIRe
         case PrDrawFilterKind_Lighting: {
             const PrDrawFilterLighting& l = node.lighting;
             FragmentFilter step = stepOf(FragmentFilterOp_Lighting, flags);
-            float scale = prF32Sqrt(sx * sy);
             PrVec2 at = prAffine2MapPoint(run.transform.affine, PrVec2{l.light.position.x, l.light.position.y});
             PrVec2 target = prAffine2MapPoint(run.transform.affine, PrVec2{l.light.pointsAt.x, l.light.pointsAt.y});
-            float values[19] = {
+            // The last two are the pixels per unit of the group's space on each axis, by which the surface's slope and
+            // the light's vectors are per unit, as the CPU backend takes them.
+            float values[20] = {
                 float(l.kind),
                 l.surfaceScale,
                 l.constant,
@@ -2702,15 +2699,16 @@ uint32_t filterNode(Walk& w, FilterRun& run, const PrDrawFilterNode& node, PrIRe
                 l.light.elevation,
                 at.x,
                 at.y,
-                l.light.position.z * scale,
+                l.light.position.z,
                 target.x,
                 target.y,
-                l.light.pointsAt.z * scale,
+                l.light.pointsAt.z,
                 l.light.spotExponent,
                 l.light.coneAngle > 0 ? prF32Cos(l.light.coneAngle) : -1,
-                scale,
+                sx,
+                sy,
             };
-            addData(w, step, values, 19);
+            addData(w, step, values, 20);
             return filterStep(w, run, region, step, in(0));
         }
         default:

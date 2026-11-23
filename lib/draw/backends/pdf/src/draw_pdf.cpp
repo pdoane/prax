@@ -2589,7 +2589,6 @@ PrDrawWriter* prDrawPdfCreate(const PrDrawWriterOptions* PR_NULLABLE options) {
     DrawSharedWriterOps ops{
         .context = p,
         .knockout = true,
-        .nonScalingStrokes = false,
         .gradient = pdfGradient,
         .blendMode = pdfBlendMode,
         .fill = pdfFill,

@@ -3,8 +3,9 @@
 
 A suite here is a corpus of documents, each beside the image that it should render as:
 
-- resvg: the resvg test suite (third_party/resvg-tests), each test against the PNG beside it. The exception is the
-  tests whose title marks undefined behavior, "(UB)", whose PNG says so instead of drawing what the test should.
+- resvg: the resvg test suite (third_party/resvg/crates/resvg/tests), each test against the PNG beside it. The
+  exception is the tests whose title marks undefined behavior, "(UB)", whose PNG says so instead of drawing what the
+  test should.
 - lottie-web, skottie and rlottie: the animations of a Lottie player's own tests (third_party/lottie), each against the
   player that the corpus was written for: lottie-web's SVG renderer and Skottie, each in a page of tools/suite/lottie in
   the system's browser (lottie_reference), and rlottie (rlottie_reference). Each animation is compared at four whole
@@ -72,7 +73,7 @@ def read(path):
 
 
 def resvg_cases():
-    root = os.path.join(THIRD_PARTY, "resvg-tests", "tests")
+    root = os.path.join(THIRD_PARTY, "resvg", "crates", "resvg", "tests", "tests")
     if not os.path.isdir(root):
         sys.exit("resvg corpus missing; run ./dev.sh fetch resvg_tests")
     cases = []
@@ -450,6 +451,7 @@ def main():
 
     modules = {}
     failing = []
+    unneeded = []
     recorded_cases = 0
     # Each entry that the run reaches, and whether any of its cases fails.
     entries = {}
@@ -457,6 +459,17 @@ def main():
     for case, answer in zip(cases, run(args.binary, cases, args.write, max(1, args.jobs),
                                    data.optional("render.txt"), corpus.text_backends(args))):
         ok = within(answer, suite.limits)
+        # A fuzzy override judges the case by its ranges in place of the suite's limits, as WPT's metas judge a reftest.
+        override = data.fuzzy.get(case.key, data.fuzzy.get(corpus.file_of(case.key)))
+        if override is not None:
+            if ok:
+                unneeded.append(case.key)
+            # A shift judges by the measure that lets the drawing move by a pixel (countShiftedDifferences).
+            shifted = corpus.fuzzy_shift(override[0]) != 0
+            largest = "shiftedMaxDifference" if shifted else "maxDifference"
+            pixels = "shiftedDifferingPixels" if shifted else "differingPixels"
+            ok = (answer["status"] == "" and largest in answer and corpus.within_fuzzy(
+                corpus.fuzzy_content_ranges(override[0]), answer[largest], answer[pixels]))
         outcomes[case.key] = 1 if ok else 0
         entry = case.key if case.key in data.errata else corpus.file_of(case.key)
         recorded = entry in data.errata
@@ -485,10 +498,13 @@ def main():
     corpus.outcomes(args, outcomes)
     if args.failures:
         for case, answer in failing:
-            print("  %s  changed %.4f, content %.4f, mae %.3f%s" % (
-                case.key, answer.get("changed", 1), answer.get("content", 1),
-                answer.get("mae", 255), "  " + answer["status"] if answer["status"] else ""))
+            print("  %s  changed %.4f, content %.4f, mae %.3f, maxDifference %d, differingPixels %d, shifted %d/%d%s" % (
+                case.key, answer.get("changed", 1), answer.get("content", 1), answer.get("mae", 255),
+                answer.get("maxDifference", 255), answer.get("differingPixels", -1),
+                answer.get("shiftedMaxDifference", 255), answer.get("shiftedDifferingPixels", -1),
+                "  " + answer["status"] if answer["status"] else ""))
     stale = ["%s passes; drop its entry" % key for key, fails in sorted(entries.items()) if not fails]
+    stale += ["%s passes within the suite's limits; drop its fuzzy override" % key for key in unneeded]
     if args.match is None:
         stale += ["%s names no case (%s)" % (key, kind) for kind, key in data.stale({c.key for c in every})]
     for line in stale:

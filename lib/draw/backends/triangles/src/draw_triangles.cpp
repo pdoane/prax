@@ -1092,10 +1092,10 @@ void strokePath(Walk& w, const PrPath* shape, const PrDrawStroke* stroke, bool a
     if (!(scale > 0))
         return;
     PrDrawStroke s = *stroke;
-    float device = s.nonScaling ? s.shape.width : s.shape.width * scale;
+    float device = s.shape.width * scale;
     if (antialias && device < 1) {
         paint.alpha *= device;
-        s.shape.width = s.nonScaling ? 1 : s.shape.width / device;
+        s.shape.width /= device;
     }
     prPathPolylineClear(&t->fill);
     prPathPolylineClear(&t->aligned);
@@ -1270,7 +1270,7 @@ bool mapStroke(Walk& w, const PrDrawCommand& c) {
     prDrawShapePath(&c, t->shape);
     prPathPolylineClear(&t->centerline);
     prPathFlatten(t->shape, x.affine, kTolerance, PrPathFlattening_Inside, &t->centerline);
-    float scale = stroke.nonScaling ? 1 : prAffine2MaxScale(x.affine);
+    float scale = prAffine2MaxScale(x.affine);
     // A stroke narrower than a pixel is drawn a pixel wide.
     m.reach = prDrawStrokeReach(&stroke) * prF32Max(stroke.shape.width * scale, 1) + kFringe;
     const PrPathPolyline& centerline = t->centerline;

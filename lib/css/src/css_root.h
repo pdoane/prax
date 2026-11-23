@@ -49,6 +49,11 @@ struct CssElementStyle {
     CssInlineStyle* PR_NULLABLE inlineStyle;        // created on first use
     CssDeclarationBlock* PR_NULLABLE hints;         // presentational hints (css_hints.h), or null for none
     bool hintsBuilt;                                // true if `hints` reflects the attributes that it reads
+
+    // The declarations of the element's animated attributes, as SVG's animation elements set them, or null for none
+    // (cssElementAnimatedStyle).
+    CssDeclarationBlock* PR_NULLABLE animated;
+
     CssGivenHints* PR_NULLABLE given;               // hints that the element gives other elements (css_hints.h)
 
     // The computed styles of the element and its pseudo-elements, by CssComputedDeclarations::pseudo, each created on
@@ -77,6 +82,21 @@ struct CssElementStyle {
 
 // Returns the element's style data, creating it on first use.
 CssElementStyle* cssElementStyle(PrDomElement* element);
+
+// Makes sure that the DOM tells the document's subscribers when the element is freed (DomDocumentHooks::
+// elementDestroyed), for a subscriber that keeps state for the element outside its style data.
+void cssElementFollow(PrDomElement* element);
+
+// Return the declarations of the element's animated attributes, creating an empty block on first use, or drop them.
+// They are author declarations that follow the element's style attribute in the cascade. They hold the values that
+// SVG's animation elements give presentation attributes (svg-animations/#TargetAttributes). The caller that changes
+// them restyles the element (cssElementAnimated), and so does dropping them.
+CssDeclarationBlock* cssElementAnimatedStyle(PrDomElement* element);
+void cssElementDropAnimatedStyle(PrDomElement* element);
+
+// Records that an animated attribute value of the element changed, other than its declarations. The presentation
+// restyles the element and rebuilds the box that its attributes give.
+void cssElementAnimated(PrDomElement* element);
 
 // Frees the element's style data, and the sheet that the element owns.
 void cssElementStyleDestroy(CssElementStyle* PR_NULLABLE style);
@@ -110,6 +130,10 @@ struct CssPresentationHooks {
     // An effect that targets the element or one of its pseudo-elements changed: its keyframes, its timing, its
     // animation or its playback. The element is styled again, which computes the effect's keyframes for it.
     void (*effectChanged)(void* presentation, const PrDomElement* element);
+
+    // An animated value of the element's attributes changed (cssElementAnimated). The element is styled again, and the
+    // box that its attributes give is rebuilt.
+    void (*attributesAnimated)(void* presentation, PrDomElement* element);
 };
 
 // The CSS state of a document or a shadow root, created on first use.

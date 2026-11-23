@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>An SVG image's color scheme</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage.pr-medium { width: 150px; }
+  .pr-medium + figcaption { max-width: 150px; }
+  .scheme-pair { display: flex; gap: 10px; }
+  .scheme-background { width: 40px; height: 40px; background-image: url(support/scheme-square.svg); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color Adjustment 1 · 2.1 Opting Into a Preferred Color Scheme</div>
+  <h1>An SVG image's color scheme</h1>
+  <p class=pr-lede><q>In embedded documents (such as an iframe or an SVG img), the embedding element's element color
+  scheme is used as the embedded document's preferred color scheme (treated as a normal color scheme preference),
+  rather than the user's preference.</q> <span class=pr-cite>
+  <a href="https://drafts.csswg.org/css-color-adjust-1/#color-scheme-page">CSS Color Adjustment 1 §2.1</a></span></p>
+</header>
+
+<section>
+  <h2>Each element that shows the image gives it a scheme</h2>
+  <p>The same image is shown by an <code>img</code>, then as a <code>background-image</code>. Its own style sheet
+  fills its square orange under <code>(prefers-color-scheme: dark)</code>, and blue otherwise. Each stage gives its
+  scheme to both, whatever the user's preference.</p>
+  <figure>
+    <div class="pr-stage pr-medium scheme-pair" style="color-scheme: light"><img src=support/scheme-square.svg><div class=scheme-background></div></div>
+    <figcaption><code>color-scheme: light</code>: two blue squares.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium scheme-pair" style="color-scheme: dark"><img src=support/scheme-square.svg><div class=scheme-background></div></div>
+    <figcaption><code>color-scheme: dark</code>: two orange squares. <span class=pr-flag>Safari</span> Two blue
+    squares, as if the image preferred light.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

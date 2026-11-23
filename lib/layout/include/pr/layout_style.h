@@ -930,12 +930,24 @@ typedef float (*PrLayoutMeasureFn)(void* PR_NULLABLE context, float inlineSize);
 // containing block, as a block does, and an auto block size is what `measure` gives for the used inline size. Content
 // that measures differently at the same inline size has a new revision (PrLayoutContent::revision), which lays the
 // element out again.
+//
+// A painter whose drawing changes over time, as an animated image's does, has `revision`, which returns a number that
+// changes whenever the painter would draw something else at the same extent. The tree compares it between paints
+// (prLayoutTreeRepaintPainters) and draws again what the painter drew. It is called on the thread that owns the tree,
+// between jobs. Null for a painter whose drawing changes only when the client sets its content again.
+//
+// A painter that draws differently at each size, as an image laid out at the size it is drawn at does, has `place`.
+// Each layout of a replaced box whose content it draws calls it with the extent that the content will be drawn at, in
+// pixels, on the thread that lays the tree out, before any paint of that layout. Null for a painter that has nothing to
+// prepare.
 typedef struct PrLayoutPainter {
     void* PR_NULLABLE context;
     PrLayoutPaintFn paint;
     PrLayoutMeasureFn PR_NULLABLE measure;
     void (*PR_NULLABLE retain)(void* PR_NULLABLE context);
     void (*PR_NULLABLE release)(void* PR_NULLABLE context);
+    uint64_t (*PR_NULLABLE revision)(void* PR_NULLABLE context);
+    void (*PR_NULLABLE place)(void* PR_NULLABLE context, PrVec2 extent);
 } PrLayoutPainter;
 
 // Adds or releases a reference to the painter's context, if the painter shares it.

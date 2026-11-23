@@ -2,6 +2,7 @@
 
 #include "tools/suite/suite_render.h"
 
+#include "pr/array.h"
 #include "pr/file.h"
 #include "pr/font_set.h"
 #include "pr/string_ops.h"
@@ -46,8 +47,9 @@ PrFontSystem* PR_NULLABLE systemFonts() {
     return system;
 }
 
-// Reads a line of settings into `fonts` and `background`.
-bool readLine(PrFontSet* fonts, PrColor* background, PrStringView line, PrStringView root) {
+// Reads a line of settings into `out`.
+bool readLine(SuiteRender* out, PrStringView line, PrStringView root) {
+    PrFontSet* fonts = out->fonts;
     for (size_t i = 0; i < line.size; ++i)
         if (line.data[i] == '#')
             line.size = i;
@@ -56,6 +58,13 @@ bool readLine(PrFontSet* fonts, PrColor* background, PrStringView line, PrString
         return true;
     if (line == "system") {
         prFontSetSetSystem(fonts, systemFonts());
+        return true;
+    }
+    if (line == "fallback") {
+        Array<PrFontFallbackFamily> families;
+        for (uint32_t i = 0; i < prFontSetFamilyCount(fonts); ++i)
+            families.push(PrFontFallbackFamily{.family = prFontSetFamily(fonts, i)});
+        prFontSetSetFallbackFamilies(fonts, families.data(), families.count());
         return true;
     }
     PrStringView setting;
@@ -100,14 +109,18 @@ bool readLine(PrFontSet* fonts, PrColor* background, PrStringView line, PrString
         return true;
     }
     if (setting == "background" && value == "white") {
-        *background = PrColor{1, 1, 1, 1};
+        out->background = PrColor{1, 1, 1, 1};
+        return true;
+    }
+    if (setting == "svg" && value == "image") {
+        out->svgImage = true;
         return true;
     }
     return false;
 }
 
-// Reads the settings file at `path` into `fonts` and `background`.
-bool readFile(PrFontSet* fonts, PrColor* background, PrStringView path, PrStringView root) {
+// Reads the settings file at `path` into `out`.
+bool readFile(SuiteRender* out, PrStringView path, PrStringView root) {
     PrBlob* blob = prFileOpen(path);
     if (blob == nullptr)
         return false;
@@ -118,7 +131,7 @@ bool readFile(PrFontSet* fonts, PrColor* background, PrStringView path, PrString
     for (size_t i = 0; i <= mapping.size; ++i) {
         if (i < mapping.size && data[i] != '\n')
             continue;
-        ok = readLine(fonts, background, PrStringView{data + start, i - start}, root) && ok;
+        ok = readLine(out, PrStringView{data + start, i - start}, root) && ok;
         start = i + 1;
     }
     prBlobRelease(blob);
@@ -130,12 +143,13 @@ bool readFile(PrFontSet* fonts, PrColor* background, PrStringView path, PrString
 bool suiteRenderRead(SuiteRender* out, PrStringView path, PrStringView root) {
     suiteRenderReset(out);
     out->fonts = prFontSetCreate(nullptr);
-    return readFile(out->fonts, &out->background, path, root);
+    return readFile(out, path, root);
 }
 
 bool suiteRenderReadFonts(PrFontSet* fonts, PrStringView path, PrStringView root) {
-    PrColor background{};
-    return readFile(fonts, &background, path, root);
+    SuiteRender render{};
+    render.fonts = fonts;
+    return readFile(&render, path, root);
 }
 
 void suiteRenderReset(SuiteRender* render) {

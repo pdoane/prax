@@ -227,7 +227,7 @@ WEBREF_COMMIT = "5216c7c2066f47b7f80c9620e56827f20d4c8283"
 WPT_COMMIT = "269bca0dd35c303639f3c9cf1d8bcb3d911bdb60"
 CSSPARSER_COMMIT = "d128a90e1203fc4afb959420d6dc5e24f77a3191"
 HTML5LIB_COMMIT = "224991ec10db04f056a89eed8b0bd8695fd2950e"
-RESVG_TESTS_COMMIT = "d8e064337faf01bc5a9579187a56dbdbe3eacc72"
+RESVG_COMMIT = "5bdbae64eefadc4bf0caa56dcf91702037929086"
 GOOGLE_FONTS_COMMIT = "23e54b51ddffbc7713c583748e3bd86f62b1fa4a"
 COLOR_FONTS_COMMIT = "0046ea4c3b69e9fbbe464c2594816894e3aa5e4b"
 # The CSS Working Group's drafts: the color profile that their CMYK examples are computed with, and the sources that
@@ -540,10 +540,10 @@ CHECKOUTS = {
     # html5lib/html5lib-tests
     "html5lib": lambda: [Git("html5lib", "https://github.com/html5lib/html5lib-tests.git", HTML5LIB_COMMIT,
                              "tokenizer", "encoding")],
-    # The resvg test suite: each test is an SVG beside the PNG it should render as. Also the fonts and resources the
-    # tests read.
-    "resvg_tests": lambda: [Git("resvg-tests", "https://github.com/linebender/resvg-test-suite.git",
-                                RESVG_TESTS_COMMIT, "tests", "fonts", "resources")],
+    # The resvg test suite, which resvg keeps in its own repository: each test is an SVG beside the PNG it should
+    # render as. Also the fonts and resources the tests read.
+    "resvg_tests": lambda: [Git("resvg", "https://github.com/linebender/resvg.git", RESVG_COMMIT,
+                                "crates/resvg/tests/tests", "crates/resvg/tests/fonts", "crates/resvg/tests/resources")],
     # lottie-web, the player that the web plays Lottie with. Its SVG renderer is the reference of the lottie-web suite
     # (tools/suite/lottie/player.html). This is its full build, including expressions.
     "lottie_web": lambda: [Files("lottie-web", [("lottie.min.js", NPM + "lottie-web@%s/build/player/lottie.min.js"

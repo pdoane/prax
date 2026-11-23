@@ -61,3 +61,15 @@ TEST_CASE("a document that is not well-formed keeps what came before the error")
     prDomDocumentRelease(document);
 }
 
+TEST_CASE("the bytes of an XML resource decode from the charset that their declaration names") {
+    // A word in windows-1251.
+    const char source[] = "<?xml version='1.0' encoding='windows-1251'?><a>\xcf\xf0\xe8\xe2\xe5\xf2</a>";
+    PrByteView bytes{reinterpret_cast<const uint8_t*>(source), sizeof(source) - 1};
+    PrDomDocument* document = prDomParseXmlBytes(bytes, "application/xml", nullptr);
+    CHECK(textOf(prDomDocumentCharacterSet(document)) == "windows-1251");
+    PrDomElement* a = prDomDocumentElement(document);
+    REQUIRE(a != nullptr);
+    CHECK(take(prDomNodeTextContent(prDomElementAsNode(a))) == "\xd0\x9f\xd1\x80\xd0\xb8\xd0\xb2\xd0\xb5\xd1\x82");
+    prDomDocumentRelease(document);
+}
+

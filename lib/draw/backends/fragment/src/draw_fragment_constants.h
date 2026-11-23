@@ -224,8 +224,9 @@ enum : uint32_t {
 
     // Light on the surface that the first input's alpha gives. `data` holds the PrDrawLightingKind, the surface scale,
     // the constant, the exponent, the color (3), the PrDrawLightKind, the azimuth, the elevation, the position (3) and
-    // the point that it aims at (3) in the target's pixels, the spot exponent, the cosine of the cone's angle (-1 for
-    // no cone), and the scale from the group's space to the target's pixels.
+    // the point that it aims at (3), each in the target's pixels and a depth in units of the group's space, the spot
+    // exponent, the cosine of the cone's angle (-1 for no cone), and the target's pixels per unit of the group's space
+    // along x and along y.
     FragmentFilterOp_Lighting,
 
     // The first input mixed toward the second by t = clamp((a - values[0]) / (values[1] - values[0]), 0, 1), where a is

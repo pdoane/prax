@@ -16,6 +16,7 @@
 #include "pr/raw_array.h"
 #include "pr/string_ops.h"
 #include "pr/svg.h"
+#include "pr/svg_element.h"
 #include "pr/svg_render.h"
 
 namespace pr_impl {

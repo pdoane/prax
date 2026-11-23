@@ -144,6 +144,15 @@ HANDLER_TYPES = {
     "onwebkittransitionend": "webkitTransitionEnd",
 }
 
+# The event handlers of an interface whose event type is not their name without "on": the interface, the namespace and
+# tags of the elements that have it, and each handler's type. SVG's animation elements fire beginEvent, endEvent and
+# repeatEvent, which their onbegin, onend and onrepeat handle (svg-animations/#InterfaceSVGAnimationElement).
+INTERFACE_HANDLER_TYPES = [
+    ("SVGAnimationElement", "PrDomNamespace_Svg",
+     ["PrDomTag_Animate", "PrDomTag_AnimateMotion", "PrDomTag_AnimateTransform", "PrDomTag_Set"],
+     {"onbegin": "beginEvent", "onend": "endEvent", "onrepeat": "repeatEvent"}),
+]
+
 HANDLER_BANNER = gen_common.banner(__file__, gen_common.WEBREF_SOURCE, gen_common.webref_url("idl"),
                                    "the hand-written tables in gen_dom.py")
 
@@ -436,11 +445,41 @@ def emit_handler_header(path):
     body.append("\n// The type of the events that `handler` handles. It is the handler's name after \"on\", "
                 "except for the\n// legacy handlers whose type HTML spells differently.\n"
                 "PrStringView domEventHandlerType(PrDomEventHandler handler);\n")
+    body.append("\n// The type of the events that `handler` handles on `target`, whose interface may give its handlers types of "
+                "their own, as SVGAnimationElement's onend handles endEvent.\n"
+                "PrStringView domEventHandlerTypeFor(const PrDomEventTarget* target, PrDomEventHandler handler);\n")
+    body.append("\n// Returns true if the interface of `element` declares `handler` itself, rather than through a mixin, which "
+                "gives it a content attribute (html/#event-handler-content-attributes).\n"
+                "bool domElementHasEventHandler(const PrDomElement* element, PrDomEventHandler handler);\n")
     body.append("\n// The mixins that declare `handler`.\n"
                 "DomEventHandlerMixins domEventHandlerMixins(PrDomEventHandler handler);\n")
     body.append("\n// The event handler named `name`, or PrDomEventHandler_Count for a name that no "
                 "interface declares.\nPrDomEventHandler domEventHandlerFromName(PrStringView name);\n")
     write(path, namespaced(head, body))
+
+
+def emit_interface_types():
+    """Returns domEventHandlerTypeFor, which gives the handlers of INTERFACE_HANDLER_TYPES their interfaces' types."""
+    out = ["\nPrStringView domEventHandlerTypeFor(const PrDomEventTarget* target, PrDomEventHandler handler) {\n",
+           "    const PrDomNode* node = domNodeFromTarget(const_cast<PrDomEventTarget*>(target));\n",
+           "    const PrDomElement* element = node != nullptr && node->type == PrDomNodeType_Element ?\n"
+           "        static_cast<const PrDomElement*>(node) : nullptr;\n"]
+    for interface, space, tags, types in INTERFACE_HANDLER_TYPES:
+        out.append("    // %s\n" % interface)
+        out.append("    if (element != nullptr && element->space == %s && (%s)) {\n"
+                   % (space, " || ".join("element->tag == %s" % tag for tag in tags)))
+        for name, kind in sorted(types.items()):
+            out.append("        if (handler == PrDomEventHandler_%s)\n            return \"%s\";\n" % (name, kind))
+        out.append("    }\n")
+    out.append("    return domEventHandlerType(handler);\n}\n")
+    out.append("\nbool domElementHasEventHandler(const PrDomElement* element, PrDomEventHandler handler) {\n")
+    for interface, space, tags, types in INTERFACE_HANDLER_TYPES:
+        out.append("    // %s\n" % interface)
+        out.append("    if (element->space == %s && (%s) &&\n            (%s))\n        return true;\n"
+                   % (space, " || ".join("element->tag == %s" % tag for tag in tags),
+                      " || ".join("handler == PrDomEventHandler_%s" % name for name in sorted(types))))
+    out.append("    return false;\n}\n")
+    return "".join(out)
 
 
 def emit_handler_source(path, handlers):
@@ -450,12 +489,13 @@ def emit_handler_source(path, handlers):
     lookup = name_table.NameTable("kDomEventHandlerName", names, lower=False)
     mixins = [" | ".join(sorted(handlers[name])) or "0" for name in names]
     head = [HANDLER_BANNER, '\n#include "dom/src/dom_event_handler.h"\n',
-            '\n#include "pr/name_table.h"\n']
+            '\n#include "pr/name_table.h"\n', '\n#include "dom/src/dom_node.h"\n']
     body = ["namespace {\n", blob.tables(), lookup.tables(),
             table("constexpr DomEventHandlerMixins kDomEventHandlerMixins[]", mixins, 1, names),
             "\n} // namespace\n",
             "\nPrStringView domEventHandlerType(PrDomEventHandler handler) {\n    return %s;\n}\n"
             % blob.view("handler"),
+            emit_interface_types(),
             "\nDomEventHandlerMixins domEventHandlerMixins(PrDomEventHandler handler) {\n"
             "    return kDomEventHandlerMixins[handler];\n}\n",
             "\nPrDomEventHandler domEventHandlerFromName(PrStringView name) {\n"

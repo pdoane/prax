@@ -14,6 +14,8 @@
 #include "css/src/css_presentation_hooks.h"
 #include "css/src/css_root.h"
 #include "dom/src/dom_flat.h"
+#include "dom/src/dom_use.h"
+#include "svg/src/svg_animate.h"
 #include "svg/src/svg_cascade.h"
 #include "svg/src/svg_document.h"
 #include "svg/src/svg_draw.h"
@@ -102,8 +104,9 @@ const CssComputedStyle* PR_NULLABLE cascadePseudoStyleUnder(void* PR_NULLABLE co
 }
 
 // Writes the image that an image or feImage element of a presented document shows: the image of its current request,
-// which its browsing context loads (domEmbeds).
-bool loadedImage(void* PR_NULLABLE, const PrDomElement* element, PrStringView, SvgPicture* out) {
+// which its browsing context loads (domEmbeds), in the color scheme that the element uses in the presentation that
+// `context` points to.
+bool loadedImage(void* PR_NULLABLE context, const PrDomElement* element, PrStringView, PrVec2 size, SvgPicture* out) {
     const DomElementState* state = element->state;
     if (state == nullptr || state->image != PrDomImageState_CompletelyAvailable)
         return false;
@@ -112,7 +115,13 @@ bool loadedImage(void* PR_NULLABLE, const PrDomElement* element, PrStringView, S
         out->raster = state->picture;
         return true;
     }
-    const SvgImage* svg = svgImageOfPainter(state->vector);
+    const PrCssPresentation* presentation = static_cast<const PrCssPresentation*>(context);
+    DomImageEnvironment environment{
+        .dark = cssPresentationUsesDarkScheme(presentation, element),
+        .size = size,
+        .media = element->document->media,
+    };
+    const SvgImage* svg = svgImageOfPainter(domImageVariantsPainter(state->variants, environment));
     if (svg == nullptr)
         return false;
     svgImageRetain(svg);
@@ -132,7 +141,7 @@ void drawPresentationRoot(void* PR_NULLABLE context, PrLayoutNode root, PrDrawLi
 
 // Writes the image that an image element of a document that has no presentation names, as the host's loader in the
 // options that `context` points to loads it.
-bool hostImage(void* PR_NULLABLE context, const PrDomElement* element, PrStringView url, SvgPicture* out) {
+bool hostImage(void* PR_NULLABLE context, const PrDomElement* element, PrStringView url, PrVec2, SvgPicture* out) {
     const PrSvgDrawOptions* options = static_cast<const PrSvgDrawOptions*>(context);
     PrSvgLoadedImage loaded{};
     if (options->loadImage == nullptr ||
@@ -164,8 +173,7 @@ PrSvgNaturalSize naturalSizeOf(const PrDomElement* svg, const CssComputedStyle* 
     PrRect viewBox{};
     if (size.width > 0 && size.height > 0)
         size.ratio = size.width / size.height;
-    else if (svgParseViewBox(svgAttribute(svg, "viewBox"), &viewBox) && viewBox.right > viewBox.left &&
-            viewBox.bottom > viewBox.top)
+    else if (svgAttributeViewBox(svg, &viewBox) && viewBox.right > viewBox.left && viewBox.bottom > viewBox.top)
         size.ratio = prRectWidth(viewBox) / prRectHeight(viewBox);
     return size;
 }
@@ -199,7 +207,7 @@ SvgBuild buildOf(const SvgContent* content, PrSvgDrawOptions* options) {
     options->textures = presentation->textures;
     return SvgBuild{
         .source = {presentationStyle, presentationStyleUnder, presentationPseudoStyleUnder, presentation},
-        .images = {loadedImage, nullptr},
+        .images = {loadedImage, presentation},
         .foreign = {presentationForeignRoot, presentation},
         .environment = cssPresentationColorEnvironment(presentation),
         .options = options,
@@ -271,16 +279,6 @@ bool contentClientRect(const void*, const PrDomElement* element, PrDomRect* out)
 }
 
 // Returns natural dimensions in layout's units.
-PrLayoutNaturalSize layoutNaturalOf(PrSvgNaturalSize natural) {
-    PrLayoutNaturalSize size = prLayoutNaturalSizeNone();
-    if (natural.width >= 0)
-        size.width = prLayoutUnitFromPx(natural.width);
-    if (natural.height >= 0)
-        size.height = prLayoutUnitFromPx(natural.height);
-    size.ratio = natural.ratio;
-    return size;
-}
-
 bool contentVerify(void* content, PrRawString* report) {
     SvgContent* own = static_cast<SvgContent*>(content);
     // Changes noted since the last update are the next update's to bring in.
@@ -377,7 +375,7 @@ SvgBuild referencesBuildOf(const SvgReferences* references, PrSvgDrawOptions* op
     options->textures = presentation->textures;
     return SvgBuild{
         .source = {presentationStyle, presentationStyleUnder, presentationPseudoStyleUnder, presentation},
-        .images = {loadedImage, nullptr},
+        .images = {loadedImage, presentation},
         .foreign = {presentationForeignRoot, presentation},
         .environment = cssPresentationColorEnvironment(presentation),
         .options = options,
@@ -634,9 +632,10 @@ void drawStatic(const PrDomElement* element, SvgRoot root, PrVec2 viewport,
         const PrSvgDrawOptions* PR_NULLABLE options, PrDrawList* list) {
     PrSvgDrawOptions own = options != nullptr ? *options : prSvgDrawOptionsDefault();
     SvgCascade cascade{};
-    svgCascadeInit(&cascade, const_cast<PrDomDocument*>(element->document), own, viewport);
+    svgCascadeInit(&cascade, const_cast<PrDomDocument*>(element->document), own, viewport, nullptr);
     CssColorEnvironment environment = kCssDefaultColorEnvironment;
     environment.headroom = own.headroom;
+    environment.prefersDark = own.prefersDark;
     SvgBuild build{
         .source = {cascadeStyle, cascadeStyleUnder, cascadePseudoStyleUnder, &cascade},
         .images = hostImages(&own),
@@ -655,6 +654,71 @@ void drawStatic(const PrDomElement* element, SvgRoot root, PrVec2 viewport,
 // shown: what the viewport units of its styles and the percentages of its text are of
 // (css-images-3/#default-object-size).
 constexpr PrVec2 kDefaultObjectSize{300, 150};
+
+// Returns the natural size that a document without a presentation draws its outermost svg element at.
+PrVec2 naturalViewport(const PrDomElement* outermost) {
+    PrSvgNaturalSize natural = prSvgElementNaturalSize(static_cast<const PrSvgElement*>(outermost));
+    return PrVec2{
+        natural.width > 0 ? natural.width : kDefaultObjectSize.x,
+        natural.height > 0 ? natural.height : kDefaultObjectSize.y,
+    };
+}
+
+// Returns the outermost svg element around `element`, across the shadow trees of use elements, or null for none.
+const PrDomElement* PR_NULLABLE outermostOf(const PrDomElement* element) {
+    const PrDomElement* outermost = nullptr;
+    for (const PrDomNode* n = element; n != nullptr; n = domShadowIncludingParent(n)) {
+        if (domNodeShadowRoot(n) != nullptr)
+            continue;
+        const PrDomElement* e = domElementFromNode(n);
+        if (e == nullptr || e->space != PrDomNamespace_Svg)
+            break;
+        if (e->tag == PrDomTag_Svg)
+            outermost = e;
+    }
+    return outermost;
+}
+
+// Finds the node of `element` in the tree that the presentation drew, bringing it up to date first if `flush`.
+bool queryDrawn(SvgQuery* query, PrCssPresentation* presentation, const PrDomElement* element, bool flush) {
+    if (flush)
+        cssPresentationFlush(presentation);
+    // Finds the nearest outermost svg element around the element whose content holds a node of the element.
+    for (const PrDomNode* n = element; n != nullptr; n = domShadowIncludingParent(n)) {
+        const PrDomElement* e = domElementFromNode(n);
+        const CssPresentationSvg* svg = e != nullptr ? cssPresentationSvgOf(presentation, e) : nullptr;
+        SvgContent* content = svg != nullptr ? static_cast<SvgContent*>(svg->content) : nullptr;
+        SvgNodeIndex node = content != nullptr ? svgTreeNodeFromElement(&content->tree, element) : kSvgNodeNone;
+        if (node != kSvgNodeNone) {
+            query->tree = &content->tree;
+            query->node = node;
+            query->outermost = e;
+            query->viewport = content->extent;
+            query->presentation = presentation;
+            return true;
+        }
+    }
+    return false;
+}
+
+// Writes to `out` the viewport that the nearest ancestor of `element` that the presentation draws gives its children.
+// Returns false if no ancestor is drawn.
+bool drawnAncestorContent(PrCssPresentation* presentation, const PrDomElement* element, PrVec2* out) {
+    for (const PrDomNode* n = domShadowIncludingParent(element); n != nullptr; n = domShadowIncludingParent(n)) {
+        const PrDomElement* ancestor = domElementFromNode(n);
+        if (ancestor == nullptr || ancestor->space != PrDomNamespace_Svg)
+            continue;
+        SvgQuery query{.node = kSvgNodeNone};
+        SvgPlace place{};
+        bool drawn = queryDrawn(&query, presentation, ancestor, false) && svgQueryPlace(query, &place);
+        svgQueryEnd(&query);
+        if (drawn) {
+            *out = place.content;
+            return true;
+        }
+    }
+    return false;
+}
 
 } // namespace
 
@@ -707,7 +771,7 @@ bool svgPresentationUpdate(PrCssPresentation* presentation) {
         }
         // The natural size comes first, since the box's extent falls back on it before the box is laid out.
         const CssComputedStyle* style = cssPresentationStyle(presentation, svg->element);
-        cssPresentationSvgSetNatural(presentation, svg, layoutNaturalOf(naturalSizeOf(svg->element, style)));
+        cssPresentationSvgSetNatural(presentation, svg, svgLayoutNaturalSize(naturalSizeOf(svg->element, style)));
         SvgContent* content = static_cast<SvgContent*>(svg->content);
         if (!svg->stale && !contentPending(content))
             continue;
@@ -726,44 +790,155 @@ void svgContentImageChanged(PrDomElement* element) {
         note(state, element, SvgChange_Image, PrStringView{});
 }
 
-bool svgQueryBegin(SvgQuery* query, const PrDomElement* element) {
-    *query = SvgQuery{.node = kSvgNodeNone};
-    PrCssPresentation* presentation = domIsConnected(element) ? cssPresentationOf(element->document) : nullptr;
-    if (presentation != nullptr) {
-        cssPresentationFlush(presentation);
-        // The content of the nearest outermost svg element around the element that holds a node of it.
-        for (const PrDomNode* n = element; n != nullptr; n = n->parent) {
-            const PrDomElement* e = domElementFromNode(n);
-            const CssPresentationSvg* svg = e != nullptr ? cssPresentationSvgOf(presentation, e) : nullptr;
-            SvgContent* content = svg != nullptr ? static_cast<SvgContent*>(svg->content) : nullptr;
-            SvgNodeIndex node = content != nullptr ? svgTreeNodeFromElement(&content->tree, element) : kSvgNodeNone;
-            if (node != kSvgNodeNone) {
-                query->tree = &content->tree;
-                query->node = node;
-                query->outermost = e;
-                query->viewport = content->extent;
-                query->presentation = presentation;
-                return true;
-            }
-        }
-        return false;
+void svgContentAttributeAnimated(PrDomElement* element, PrStringView name) {
+    SvgPresentation* state = domIsConnected(element) ? presentationState(element->document) : nullptr;
+    if (state == nullptr)
+        return;
+    note(state, element, SvgChange_Attribute, name);
+    RawArray<PrDomNode*> instances;
+    domUseInstancesOf(element, &instances);
+    for (uint32_t i = 0; i < instances.count; ++i) {
+        if (const PrDomElement* instance = domElementFromNode(instances.data[i]))
+            note(state, instance, SvgChange_Attribute, name);
     }
-    // A document that has no presentation draws its outermost svg element at its natural size.
-    const PrDomElement* outermost = nullptr;
-    for (const PrDomElement* e = element; e != nullptr && e->space == PrDomNamespace_Svg;
-            e = domElementFromNode(e->parent)) {
-        if (e->tag == PrDomTag_Svg)
-            outermost = e;
-    }
-    if (outermost == nullptr)
+    instances.reset();
+}
+
+bool svgIsOutermostSvg(const PrDomElement* element) {
+    if (element->space != PrDomNamespace_Svg || element->tag != PrDomTag_Svg)
         return false;
-    PrSvgNaturalSize natural = prSvgElementNaturalSize(static_cast<const PrSvgElement*>(outermost));
+    PrDomElement* own = const_cast<PrDomElement*>(element);
+    return prSvgElementOwnerSvgElement(static_cast<PrSvgElement*>(own)) == nullptr;
+}
+
+bool svgIsMagnified(const PrDomElement* element) {
+    return element->state != nullptr && element->state->svgZoom != 0 && svgIsOutermostSvg(element);
+}
+
+void svgContentMagnified(PrDomElement* element) {
+    SvgPresentation* state = domIsConnected(element) ? presentationState(element->document) : nullptr;
+    if (state != nullptr)
+        note(state, element, SvgChange_Attribute, "currentScale");
+}
+
+const PrSvgImage* svgImageCreate(PrSvgElement* svg, PrStringView fragment, const PrSvgDrawOptions* PR_NULLABLE options,
+        const CssMediaEnvironment* PR_NULLABLE base) {
+    PrSvgDrawOptions own = options != nullptr ? *options : prSvgDrawOptionsDefault();
+    PrSvgImage* picture = allocZeroed<PrSvgImage>();
+    picture->references.storeRelaxed(1);
+    // The root's own view, which the fragment may replace in part. The root's viewport clips, whatever its overflow, as
+    // nothing outside the image is drawn.
+    SvgRootView& view = picture->view;
+    view.hasViewBox = svgAttributeViewBox(svg, &view.viewBox);
+    svgParseAspect(svgAttribute(svg, "preserveAspectRatio"), &view.aspect);
+    view.clips = true;
+    // The element that the fragment names is the document's target while the image is built, which :target matches.
+    PrDomDocument* document = const_cast<PrDomDocument*>(svg->document);
+    const PrDomElement* target = svgImageView(fragment, svg, &view);
+    PrDomElement* savedTarget = document->target;
+    document->target = const_cast<PrDomElement*>(target);
+    // The image shows its animations at the time that the fragment names, or at their start
+    // (SVG2/linking.html#LinksIntoSVG).
+    svgAnimationsSeek(svg, svgImageTimes(fragment).start);
+    // An active view gives the ratio of an image that its width and height do not give one.
+    PrSvgNaturalSize natural = prSvgElementNaturalSize(svg);
+    bool sized = natural.width > 0 && natural.height > 0;
+    if (!sized && view.hasViewBox && view.viewBox.right > view.viewBox.left && view.viewBox.bottom > view.viewBox.top)
+        natural.ratio = prRectWidth(view.viewBox) / prRectHeight(view.viewBox);
+    picture->natural = natural;
     PrVec2 viewport{
         natural.width > 0 ? natural.width : kDefaultObjectSize.x,
         natural.height > 0 ? natural.height : kDefaultObjectSize.y,
     };
+    if (own.viewport.x > 0)
+        viewport.x = own.viewport.x;
+    if (own.viewport.y > 0)
+        viewport.y = own.viewport.y;
+    SvgCascade cascade{};
+    svgCascadeInit(&cascade, document, own, viewport, base);
+    CssColorEnvironment environment = kCssDefaultColorEnvironment;
+    environment.headroom = base != nullptr ? base->headroom : own.headroom;
+    environment.prefersDark = own.prefersDark;
+    bool colorsReadScheme = false;
+    environment.readsOutside = &colorsReadScheme;
+    SvgBuild build{
+        .source = {cascadeStyle, cascadeStyleUnder, cascadePseudoStyleUnder, &cascade},
+        .images = hostImages(&own),
+        .environment = environment,
+        .options = &own,
+        .viewport = viewport,
+    };
+    svgTreeBuild(&picture->tree, svg, SvgRoot_Image, build);
+    const CssComputedStyle* style = svgCascadeStyle(&cascade, svg);
+    if (style != nullptr) {
+        // The root's background propagates to the canvas, which is the whole image
+        // (css-backgrounds-3/#root-background).
+        picture->background = svgStyleColor(style, PrCssProperty_BackgroundColor, environment);
+        PrCssKeyword overflow = svgStyleKeyword(style, PrCssProperty_OverflowX);
+        picture->overflows = overflow == PrCssKeyword_Visible || overflow == PrCssKeyword_Auto;
+    }
+    if (!view.hasViewBox && natural.width > 0 && natural.height > 0)
+        picture->synthesizedViewBox = PrVec2{natural.width, natural.height};
+    if (colorsReadScheme || cssMediaReadsHas(cascade.reads, PrCssDescriptor_MediaPrefersColorScheme))
+        picture->environmentRead |= PrSvgEnvironmentFlag_ColorScheme;
+    // A query of aspect-ratio or orientation reads the width and the height.
+    if (cascade.scratch.readsViewport || cssMediaReadsHas(cascade.reads, PrCssDescriptor_MediaWidth) ||
+            cssMediaReadsHas(cascade.reads, PrCssDescriptor_MediaHeight))
+        picture->environmentRead |= PrSvgEnvironmentFlag_Size;
+    picture->media = cascade.media;
+    picture->media.reads = nullptr;
+    picture->mediaReads = cascade.reads;
+    picture->dark = own.prefersDark;
+    picture->viewport = viewport;
+    document->target = savedTarget;
+    svgTreeDetach(&picture->tree);
+    svgCascadeReset(&cascade);
+    return picture;
+}
+
+bool svgImageServes(const PrSvgImage* image, const CssMediaEnvironment* PR_NULLABLE base, bool dark, PrVec2 size) {
+    PrVec2 viewport{
+        image->natural.width > 0 ? image->natural.width : kDefaultObjectSize.x,
+        image->natural.height > 0 ? image->natural.height : kDefaultObjectSize.y,
+    };
+    if (size.x > 0)
+        viewport.x = size.x;
+    if (size.y > 0)
+        viewport.y = size.y;
+    if ((image->environmentRead & PrSvgEnvironmentFlag_ColorScheme) != 0 && dark != image->dark)
+        return false;
+    if ((image->environmentRead & PrSvgEnvironmentFlag_Size) != 0 &&
+            (viewport.x != image->viewport.x || viewport.y != image->viewport.y))
+        return false;
     PrSvgDrawOptions options = prSvgDrawOptionsDefault();
-    svgCascadeInit(&query->cascade, const_cast<PrDomDocument*>(element->document), options, viewport);
+    options.prefersDark = dark;
+    CssMediaEnvironment media{};
+    svgCascadeMediaOf(base, options, viewport, &media);
+    return cssMediaReadsAgree(image->mediaReads, image->media, media);
+}
+
+PrLayoutNaturalSize svgLayoutNaturalSize(PrSvgNaturalSize natural) {
+    PrLayoutNaturalSize size = prLayoutNaturalSizeNone();
+    if (natural.width >= 0)
+        size.width = prLayoutUnitFromPxRound(natural.width);
+    if (natural.height >= 0)
+        size.height = prLayoutUnitFromPxRound(natural.height);
+    size.ratio = natural.ratio;
+    return size;
+}
+
+bool svgQueryBegin(SvgQuery* query, const PrDomElement* element) {
+    *query = SvgQuery{.node = kSvgNodeNone};
+    PrCssPresentation* presentation = domIsConnected(element) ? cssPresentationOf(element->document) : nullptr;
+    if (presentation != nullptr)
+        return queryDrawn(query, presentation, element, true);
+    // A document that has no presentation draws its outermost svg element at its natural size.
+    const PrDomElement* outermost = outermostOf(element);
+    if (outermost == nullptr)
+        return false;
+    PrVec2 viewport = naturalViewport(outermost);
+    PrSvgDrawOptions options = prSvgDrawOptionsDefault();
+    svgCascadeInit(&query->cascade, const_cast<PrDomDocument*>(element->document), options, viewport, nullptr);
     SvgBuild build{
         .source = {cascadeStyle, cascadeStyleUnder, cascadePseudoStyleUnder, &query->cascade},
         .images = hostImages(&options),
@@ -772,6 +947,30 @@ bool svgQueryBegin(SvgQuery* query, const PrDomElement* element) {
         .viewport = viewport,
     };
     svgTreeBuild(&query->own, outermost, SvgRoot_Outermost, build);
+    query->owned = true;
+    query->outermost = outermost;
+    query->viewport = viewport;
+    query->node = svgTreeNodeFromElement(&query->own, element);
+    query->tree = query->node != kSvgNodeNone ? &query->own : nullptr;
+    return query->tree != nullptr;
+}
+
+bool svgQueryBeginGeometry(SvgQuery* query, const PrDomElement* element) {
+    if (svgQueryBegin(query, element))
+        return true;
+    svgQueryEnd(query);
+    const PrDomElement* outermost = outermostOf(element);
+    PrVec2 viewport = outermost != nullptr ? naturalViewport(outermost) : kDefaultObjectSize;
+    PrSvgDrawOptions options = prSvgDrawOptionsDefault();
+    svgCascadeInit(&query->cascade, const_cast<PrDomDocument*>(element->document), options, viewport, nullptr);
+    SvgBuild build{
+        .source = {cascadeStyle, cascadeStyleUnder, cascadePseudoStyleUnder, &query->cascade},
+        .images = hostImages(&options),
+        .environment = kCssDefaultColorEnvironment,
+        .options = &options,
+        .viewport = viewport,
+    };
+    svgTreeBuild(&query->own, element, SvgRoot_Geometry, build);
     query->owned = true;
     query->outermost = outermost;
     query->viewport = viewport;
@@ -792,19 +991,50 @@ bool svgQueryPlace(const SvgQuery& query, SvgPlace* out) {
     return query.tree != nullptr && svgNodePlace(query.tree, query.viewport, query.node, out);
 }
 
+bool svgElementUsedSize(const PrDomElement* element, PrVec2* out) {
+    bool sized = element->space == PrDomNamespace_Svg && (element->tag == PrDomTag_Rect ||
+        element->tag == PrDomTag_Image || element->tag == PrDomTag_ForeignObject);
+    SvgQuery query{};
+    SvgPlace place{};
+    PrRect rect{};
+    sized = sized && svgQueryBegin(&query, element) && svgQueryPlace(query, &place) &&
+        svgPlacedRect(place.viewport, query.tree->nodes.data[query.node], &rect);
+    svgQueryEnd(&query);
+    if (sized)
+        *out = PrVec2{rect.right - rect.left, rect.bottom - rect.top};
+    return sized;
+}
+
 bool svgQueryToClient(const SvgQuery& query, PrDVec2* points, uint32_t count) {
     if (query.presentation == nullptr || query.outermost == nullptr)
         return false;
     return cssPresentationMapFromContent(query.presentation, query.outermost, points, count);
 }
 
-bool svgElementLengthBasis(const PrDomElement* element, SvgLengthBasis* out) {
-    *out = SvgLengthBasis{.fontSize = float(kCssMediumFontSize)};
+bool svgElementLengthBasis(const PrDomElement* element, SvgLengthContext* out) {
+    *out = SvgLengthContext{.fontSize = float(kCssMediumFontSize)};
     SvgQuery query{};
     SvgPlace place{};
     bool found = svgQueryBegin(&query, element) && svgQueryPlace(query, &place);
-    if (found)
+    if (found) {
         out->viewport = place.viewport;
+    } else {
+        // An element that is not drawn, in a symbol or under display: none, takes its percentages from the viewport
+        // that it would be drawn in: the one that its nearest drawn ancestor gives its children.
+        for (const PrDomNode* n = domShadowIncludingParent(element); n != nullptr; n = domShadowIncludingParent(n)) {
+            const PrDomElement* ancestor = domElementFromNode(n);
+            if (ancestor == nullptr || ancestor->space != PrDomNamespace_Svg)
+                continue;
+            SvgQuery outer{};
+            SvgPlace at{};
+            bool drawn = svgQueryBegin(&outer, ancestor) && svgQueryPlace(outer, &at);
+            svgQueryEnd(&outer);
+            if (drawn) {
+                out->viewport = at.content;
+                break;
+            }
+        }
+    }
     PrCssPresentation* presentation = cssPresentationOf(element->document);
     const CssComputedStyle* computed = nullptr;
     if (query.owned)
@@ -815,6 +1045,25 @@ bool svgElementLengthBasis(const PrDomElement* element, SvgLengthBasis* out) {
         out->fontSize = float(cssStyleFontSize(computed));
     svgQueryEnd(&query);
     return found;
+}
+
+void svgElementLengthBasisAsDrawn(const PrDomElement* element, SvgLengthContext* out) {
+    *out = SvgLengthContext{.fontSize = float(kCssMediumFontSize)};
+    PrCssPresentation* presentation = domIsConnected(element) ? cssPresentationOf(element->document) : nullptr;
+    SvgQuery query{.node = kSvgNodeNone};
+    SvgPlace place{};
+    if (presentation != nullptr && queryDrawn(&query, presentation, element, false) && svgQueryPlace(query, &place)) {
+        out->viewport = place.viewport;
+    } else if (presentation != nullptr && drawnAncestorContent(presentation, element, &out->viewport)) {
+        // An element that is not drawn, in a symbol or under display: none, takes its percentages from the viewport
+        // that it would be drawn in: the one that its nearest drawn ancestor gives its children.
+    } else if (const PrDomElement* outermost = outermostOf(element)) {
+        out->viewport = naturalViewport(outermost);
+    }
+    const CssComputedStyle* computed = presentation != nullptr ? cssPresentationStyle(presentation, element) : nullptr;
+    if (computed != nullptr)
+        out->fontSize = float(cssStyleFontSize(computed));
+    svgQueryEnd(&query);
 }
 
 bool svgForeignToClient(const PrDomElement* foreignObject, PrDVec2* points, uint32_t count) {
@@ -898,63 +1147,14 @@ void prSvgElementDrawBox(PrSvgElement* svg, PrVec2 extent, const PrSvgDrawOption
 PrSvgNaturalSize prSvgElementNaturalSize(const PrSvgElement* svg) {
     SvgCascade cascade{};
     PrSvgDrawOptions options = prSvgDrawOptionsDefault();
-    svgCascadeInit(&cascade, const_cast<PrDomDocument*>(svg->document), options, PrVec2{0, 0});
+    svgCascadeInit(&cascade, const_cast<PrDomDocument*>(svg->document), options, PrVec2{0, 0}, nullptr);
     PrSvgNaturalSize size = naturalSizeOf(svg, svgCascadeStyle(&cascade, svg));
     svgCascadeReset(&cascade);
     return size;
 }
 
 const PrSvgImage* prSvgImageCreate(PrSvgElement* svg, PrStringView fragment, const PrSvgDrawOptions* PR_NULLABLE options) {
-    PrSvgDrawOptions own = options != nullptr ? *options : prSvgDrawOptionsDefault();
-    PrSvgImage* picture = allocZeroed<PrSvgImage>();
-    picture->references.storeRelaxed(1);
-    // The root's own view, which the fragment may replace in part. The root's viewport clips, whatever its overflow, as
-    // nothing outside the image is drawn.
-    SvgRootView& view = picture->view;
-    view.hasViewBox = svgParseViewBox(svgAttribute(svg, "viewBox"), &view.viewBox);
-    svgParseAspect(svgAttribute(svg, "preserveAspectRatio"), &view.aspect);
-    view.clips = true;
-    // The element that the fragment names is the document's target while the image is built, which :target matches.
-    PrDomDocument* document = const_cast<PrDomDocument*>(svg->document);
-    const PrDomElement* target = svgImageView(fragment, svg, &view);
-    PrDomElement* savedTarget = document->target;
-    document->target = const_cast<PrDomElement*>(target);
-    // An active view gives the ratio of an image that its width and height do not give one.
-    PrSvgNaturalSize natural = prSvgElementNaturalSize(svg);
-    bool sized = natural.width > 0 && natural.height > 0;
-    if (!sized && view.hasViewBox && view.viewBox.right > view.viewBox.left && view.viewBox.bottom > view.viewBox.top)
-        natural.ratio = prRectWidth(view.viewBox) / prRectHeight(view.viewBox);
-    picture->natural = natural;
-    PrVec2 viewport{
-        natural.width > 0 ? natural.width : kDefaultObjectSize.x,
-        natural.height > 0 ? natural.height : kDefaultObjectSize.y,
-    };
-    SvgCascade cascade{};
-    svgCascadeInit(&cascade, document, own, viewport);
-    CssColorEnvironment environment = kCssDefaultColorEnvironment;
-    environment.headroom = own.headroom;
-    SvgBuild build{
-        .source = {cascadeStyle, cascadeStyleUnder, cascadePseudoStyleUnder, &cascade},
-        .images = hostImages(&own),
-        .environment = environment,
-        .options = &own,
-        .viewport = viewport,
-    };
-    svgTreeBuild(&picture->tree, svg, SvgRoot_Image, build);
-    const CssComputedStyle* style = svgCascadeStyle(&cascade, svg);
-    if (style != nullptr) {
-        // The root's background propagates to the canvas, which is the whole image
-        // (css-backgrounds-3/#root-background).
-        picture->background = svgStyleColor(style, PrCssProperty_BackgroundColor, environment);
-        PrCssKeyword overflow = svgStyleKeyword(style, PrCssProperty_OverflowX);
-        picture->overflows = overflow == PrCssKeyword_Visible || overflow == PrCssKeyword_Auto;
-    }
-    if (!view.hasViewBox && natural.width > 0 && natural.height > 0)
-        picture->scaledFrom = PrVec2{natural.width, natural.height};
-    document->target = savedTarget;
-    svgTreeDetach(&picture->tree);
-    svgCascadeReset(&cascade);
-    return picture;
+    return svgImageCreate(svg, fragment, options, nullptr);
 }
 
 void prSvgImageRetain(const PrSvgImage* image) {
@@ -963,6 +1163,10 @@ void prSvgImageRetain(const PrSvgImage* image) {
 
 void prSvgImageRelease(const PrSvgImage* PR_NULLABLE image) {
     svgImageRelease(image);
+}
+
+PrSvgEnvironmentFlags prSvgImageEnvironmentRead(const PrSvgImage* image) {
+    return image->environmentRead;
 }
 
 PrSvgNaturalSize prSvgImageNaturalSize(const PrSvgImage* image) {

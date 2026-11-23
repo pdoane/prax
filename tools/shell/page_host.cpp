@@ -67,6 +67,33 @@ using namespace pr;
 
 namespace page_host {
 
+// The capture's wait until setCaptureWait gives another: WPT's reftest protocol, as wptrunner's test-wait.js runs it
+// once the page has loaded. It runs as the body of a function called with the page's URL and stopRun.
+constexpr const char* kReftestWait = R"js(
+const root = document.documentElement;
+let observer = null;
+function paints() {
+    requestAnimationFrame(() => requestAnimationFrame(ready));
+}
+function ready() {
+    if (root && root.classList.contains("reftest-wait")) {
+        if (observer === null) {
+            observer = new MutationObserver(paints);
+            observer.observe(root, {attributes: true});
+            root.dispatchEvent(new Event("TestRendered", {bubbles: true}));
+        }
+        return;
+    }
+    if (observer !== null)
+        observer.disconnect();
+    stopRun();
+}
+if (document.fonts)
+    document.fonts.ready.then(paints);
+else
+    paints();
+)js";
+
 // A resource of a captured page (addCapture): its file, or empty if the capture omitted it, and the Content-Type that
 // it was served with, if known.
 struct CapturedResource {
@@ -129,8 +156,8 @@ struct HostState {
     std::map<std::string, CapturedResource> captured;   // by serialized URL (addCapture)
     std::vector<std::string> preludes;
 
-    // The script that waits for a captured page to be ready (setCaptureWait), or empty.
-    std::string captureWait;
+    // The script that waits for a captured page to be ready (setCaptureWait).
+    std::string captureWait = kReftestWait;
 
     // The virtual clock that the pages run on, in milliseconds, which advances only when they wait. Each run starts it
     // at kVirtualStart. `now` points to it if the clock is virtual, and is null if the pages run on the system's clock.
@@ -164,7 +191,7 @@ struct HostState {
     bool woken = false;
     uint64_t posts = 0;         // the number of tasks posted to the agent so far, under `wakeLock`
 
-    // True while settle waits for fetches that a rendering update started after every page stopped the run.
+    // True while run waits for fetches that a rendering update started after every page stopped the run.
     bool awaitingRender = false;
 
     std::vector<std::unique_ptr<Page>> pages;   // every page, including the pages of iframes
@@ -512,7 +539,7 @@ void loadedHtml(void* context, PrHtmlPage* htmlPage, PrStatus status) {
     // A captured page runs the capture's wait once it has loaded, which stops the run (stopRun()) once the page is
     // ready.
     const std::string& wait = run->host->captureWait;
-    if (run->capture == Capture_Wait && !wait.empty() && run->ok && run->ctx != nullptr) {
+    if (run->capture == Capture_Wait && run->ok && run->ctx != nullptr) {
         std::string waiter = "(function () {\n" + wait + "\n}).call(window, location.href, stopRun);";
         run->ok = prJsHtmlEngineRun(run->ctx, waiter, "capture-wait", 1, 1) && run->ok;
     }
@@ -1141,7 +1168,7 @@ void PageHost::advance(double until) {
             waitForWake(s, -1);
             continue;
         }
-        if (delay < 0 || *s.now + delay > until) {
+        if (delay < 0 || (delay > 0 && *s.now + delay > until)) {
             if (*s.now >= until)
                 return;
             moveClock(s, until - *s.now);
@@ -1294,14 +1321,14 @@ PrHtmlPage* PR_NULLABLE PageHost::htmlPage(const Page* page) {
     return page->htmlPage;
 }
 
-Settled PageHost::settle(double timeout) {
+RunEnd PageHost::run(double timeout) {
     HostState& s = *state_;
     double deadline = timeout >= 0 ? prTimeMonotonicMilliseconds() + timeout : -1;
     for (;;) {
         if (deadline >= 0 && prTimeMonotonicMilliseconds() >= deadline)
-            return Settled_TimedOut;
+            return RunEnd_TimedOut;
         if (!prJsHtmlEngineCheckpoint(s.engine))
-            return Settled_Failed;
+            return RunEnd_Failed;
         runNetwork(s);
         // A run stops once each page that it loaded is done, whatever an iframe or a page's own work waits for.
         bool requested = false;
@@ -1324,11 +1351,12 @@ Settled PageHost::settle(double timeout) {
             waitForWake(s, deadline);
             continue;
         }
-        // Pages in which only animations want frames have settled, once their presentations fetch nothing more.
+        // Pages in which only animations want frames have nothing left to run, once their presentations fetch nothing
+        // more.
         if (done || prDomAgentIsIdle(s.agent) || delay < 0) {
             bool started = false;
             if (!renderFetches(s, &started))
-                return Settled_Idle;
+                return RunEnd_Done;
             s.awaitingRender = started;
             continue;
         }
@@ -1341,7 +1369,7 @@ Settled PageHost::settle(double timeout) {
                 continue;
             }
             if (!waitMilliseconds(s, delay))
-                return Settled_Failed;
+                return RunEnd_Failed;
         }
         prDomAgentRun(s.agent, 0);
     }
@@ -1375,29 +1403,10 @@ bool PageHost::finished(const Page* page) {
     PrDomElement* root = prDomDocumentElement(prHtmlWindowDocument(prHtmlPageWindow(page->htmlPage)));
     if (root == nullptr)
         return true;
-    PrDomTokenList* classes = prDomTokenListCreate(root, "class");
+    PrDomTokenList* classes = prDomTokenListCreate(root, "class", nullptr);
     bool waiting = prDomTokenListContains(classes, "reftest-wait");
     prDomTokenListDestroy(classes);
     return !waiting;
-}
-
-bool PageHost::signalRendered(PrVec2 viewport) {
-    bool fired = false;
-    for (const std::unique_ptr<Page>& page : state_->pages) {
-        if (finished(page.get()))
-            continue;
-        PrDrawList* list = prDrawListCreate();
-        paint(page.get(), Media_Screen, viewport, prAppDisplayDefault(), state_->preferences, list);
-        prDrawListRelease(list);
-        PrDomElement* root = prDomDocumentElement(prHtmlWindowDocument(prHtmlPageWindow(page->htmlPage)));
-        PrDomEventInit init = prDomEventInitDefault();
-        init.bubbles = true;
-        PrDomEvent* event = prDomEventCreate("TestRendered", &init);
-        prDomEventTargetDispatchEvent(prDomNodeAsEventTarget(prDomElementAsNode(root)), event, nullptr);
-        prDomEventRelease(event);
-        fired = true;
-    }
-    return fired;
 }
 
 bool PageHost::paint(Page* page, Media media, PrVec2 viewport, const PrAppDisplay& display,

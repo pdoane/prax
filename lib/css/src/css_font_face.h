@@ -111,10 +111,11 @@ void cssFontFaceLoad(PrCssFontFace* face, PrDomDocument* document);
 
 // Describes the face in the terms of a font set (pr/font_set.h). Writes its family into `family`, and into `out` its
 // ranges of weight, width and slope and the derivation that its size-adjust and metric overrides make
-// (css-fonts-4/#font-face-rule). Appends the code point ranges that its unicode-range descriptor names to `ranges`. An
-// auto range matches as normal. Returns false for a face with no family.
+// (css-fonts-4/#font-face-rule). Appends the code point ranges that its unicode-range descriptor names to `ranges`, and
+// the axis values of its font-variation-settings descriptor to `variations`, which the derivation then names. An auto
+// range matches as normal. Returns false for a face with no family.
 bool cssFontFaceDescribe(const PrCssFontFace* face, PrRawString* family, PrFontFaceDescriptor* out,
-    RawArray<PrFontCodePointRange>* ranges);
+    RawArray<PrFontCodePointRange>* ranges, RawArray<PrFontVariation>* variations);
 
 // Returns the CSS-connected face of an @font-face rule, and creates the face on the first request.
 PrCssFontFace* cssFontFaceOfRule(PrCssRule* rule);

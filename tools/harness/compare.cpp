@@ -297,6 +297,46 @@ PixelDifference countDifferences(const uint8_t* reference, const uint8_t* render
     return d;
 }
 
+PixelDifference countShiftedDifferences(const uint8_t* reference, const uint8_t* rendered, uint32_t width,
+        uint32_t height, size_t stride) {
+    Image a = onWhite(reference, width, height, stride);
+    Image b = onWhite(rendered, width, height, stride);
+    // How far channel `c` of pixel (x, y) of `from` lies outside the range of that channel over the pixels of `over`
+    // within one pixel.
+    auto outside = [&](const Image& from, const Image& over, uint32_t x, uint32_t y, uint32_t c) {
+        uint32_t lowest = 255;
+        uint32_t highest = 0;
+        for (uint32_t ny = y > 0 ? y - 1 : 0; ny <= y + 1 && ny < height; ++ny) {
+            for (uint32_t nx = x > 0 ? x - 1 : 0; nx <= x + 1 && nx < width; ++nx) {
+                uint32_t v = over.values[(size_t(ny) * width + nx) * 4 + c];
+                lowest = v < lowest ? v : lowest;
+                highest = v > highest ? v : highest;
+            }
+        }
+        uint32_t v = from.values[(size_t(y) * width + x) * 4 + c];
+        return v < lowest ? lowest - v : v > highest ? v - highest : 0;
+    };
+    PixelDifference d{};
+    for (uint32_t y = 0; y < height; ++y) {
+        for (uint32_t x = 0; x < width; ++x) {
+            uint32_t largest = 0;
+            for (uint32_t c = 0; c < 3; ++c) {
+                uint32_t there = outside(b, a, x, y, c);
+                uint32_t back = outside(a, b, x, y, c);
+                largest = there > largest ? there : largest;
+                largest = back > largest ? back : largest;
+            }
+            if (largest == 0)
+                continue;
+            d.maxDifference = largest > d.maxDifference ? largest : d.maxDifference;
+            ++d.differingPixels;
+        }
+    }
+    imageFree(a);
+    imageFree(b);
+    return d;
+}
+
 bool imageDrawsAnything(const uint8_t* rgba, uint32_t width, uint32_t height, size_t stride) {
     for (uint32_t y = 0; y < height; ++y) {
         const uint8_t* row = rgba + size_t(y) * stride;

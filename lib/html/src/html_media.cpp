@@ -11,6 +11,7 @@
 #include "pr/time.h"
 #include "pr/url.h"
 
+#include "css/src/css_media.h"
 #include "css/src/css_presentation_hooks.h"
 #include "dom/src/dom_element_state.h"
 #include "html/src/html_image.h"
@@ -662,17 +663,20 @@ void fetchCandidate(HtmlMedia* media, const PrUrl* url, PrDomElement* PR_NULLABL
     prRawStringReset(&request);
 }
 
-// Tries the source children from `from` onward, in order. Fetches the first child whose type the engine may play and
-// whose src parses, and fires error at each child before it that does not qualify. If no child is left, waits for
-// another child.
+// Tries the source children from `from` onward, in order. Fetches the first child whose type the engine may play, whose
+// media matches the environment and whose src parses, and fires error at each child before it that does not qualify. If
+// no child is left, waits for another child.
 void trySources(HtmlMedia* media, const PrDomNode* PR_NULLABLE from) {
     for (const PrDomNode* child = from; child != nullptr; child = child->next) {
         PrDomElement* source = domElementFromNode(const_cast<PrDomNode*>(child));
         if (!domIsHtml(source, PrDomTag_Source))
             continue;
         const PrDomAttr* type = domAttribute(source, PrDomNamespace_None, "type");
+        const PrDomAttr* query = domAttribute(source, PrDomNamespace_None, "media");
         PrUrl* url;
         if (type != nullptr && htmlCanPlayType(media->window, prRawStringView(&type->value)) == PrHtmlCanPlay_No)
+            url = nullptr;
+        else if (query != nullptr && !cssMediaQueryMatches(prRawStringView(&query->value), &media->window->media))
             url = nullptr;
         else
             url = candidateUrl(media, domAttributeValue(source, "src"));
@@ -689,6 +693,7 @@ void trySources(HtmlMedia* media, const PrDomNode* PR_NULLABLE from) {
     }
     // html/#concept-media-load-algorithm: waiting for another source child.
     media->networkState = PrHtmlMediaNetworkState_NoSource;
+    media->awaitingSource = true;
     updateFlags(media);
 }
 
@@ -1006,8 +1011,23 @@ void htmlMediaChanged(PrDomElement* element, PrStringView attribute) {
     }
 }
 
+void htmlMediaSourceInserted(PrDomElement* element, PrDomElement* source) {
+    HtmlMedia* media = htmlMediaRunning(element);
+    if (media == nullptr)
+        return;
+    if (media->networkState == PrHtmlMediaNetworkState_Empty) {
+        if (domAttribute(element, PrDomNamespace_None, "src") == nullptr)
+            resourceSelection(media);
+    } else if (media->awaitingSource) {
+        media->awaitingSource = false;
+        media->networkState = PrHtmlMediaNetworkState_Loading;
+        trySources(media, source);
+    }
+}
+
 void htmlMediaLoad(HtmlMedia* media) {
     ++media->load;
+    media->awaitingSource = false;
     // html/#media-element-load-algorithm: the load drops the last resource, and sets the show poster flag.
     closeResource(media);
     media->showPoster = true;

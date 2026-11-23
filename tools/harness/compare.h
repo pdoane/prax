@@ -45,6 +45,14 @@ struct PixelDifference {
 PixelDifference countDifferences(const uint8_t* reference, const uint8_t* rendered, uint32_t width, uint32_t height,
     size_t stride);
 
+// Measures how two images differ where the drawing may move by up to a pixel, as two renderers place the same edge a
+// fraction of a pixel apart. Each pixel of each image, composited on white, is compared with the range of each channel
+// over the other image's pixels within one pixel of it, which holds every value that an edge moved by less than a pixel
+// covers it with. A channel differs by how far it lies outside that range, and a pixel by its largest such difference
+// in either image. The images use the same layout as for compareImages.
+PixelDifference countShiftedDifferences(const uint8_t* reference, const uint8_t* rendered, uint32_t width,
+    uint32_t height, size_t stride);
+
 // Returns true if any pixel of the image differs from white once composited on it, by more than the rounding of a
 // render on white. The image is laid out as for compareImages. A reftest whose reference draws nothing tests nothing.
 bool imageDrawsAnything(const uint8_t* rgba, uint32_t width, uint32_t height, size_t stride);

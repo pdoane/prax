@@ -10,24 +10,23 @@
 // disk in the directory, where it outlives the run, as a browser's does. Each implies --network. --virtual-time runs
 // the pages on a virtual clock that advances only when they wait (PageHost::useVirtualTime).
 //
-// --screenshot writes the next page's rendering as a PNG once every page has settled, as WPT's reftests capture it: in
-// the viewport, on white, with lib/draw's cpu renderer, or the renderer that --renderer names, on the platform's device
-// for a renderer that renders on one. --reference, which may repeat, names a page that the next page is compared with,
-// as a reftest compares them. Once every page has settled, each page is rendered as a screenshot is, and a line
-// `REFTEST <json>` on stdout gives, for each reference in order, the figures of tools/suite/reftest.cpp's answer: the
-// largest channel difference, the number of pixels that differ, and whether the reference draws anything. --write
-// <stem>, before the next page, writes what its screenshot and comparisons render, as tools/suite/reftest.py names a
-// case's: the page at `<stem>.png`, each reference at `<stem>-ref.png` and its difference at `<stem>-diff.png`,
-// numbered from the second reference on, as in `<stem>-ref2.png`. --viewport WxH sets the viewport that screenshots and
-// --verify lay the pages out in. It is 800x600 by default, the size that a window starts with and that WPT's reftests
-// are captured in. The pages of suites/prax are laid out for 600x800. --pixel-ratio sets the target pixels per CSS
-// pixel that pages render at and that screenshots and comparisons are taken at, 1 by default. A screenshot covers the
-// viewport in target pixels, rounded up. A page whose root element still has the class `reftest-wait` once the pages
-// settle is rendered and sent TestRendered, the event of WPT's reftest protocol that says the page has rendered, and
-// the pages settle again. When a screenshot or comparison is taken, a page whose root still has the class has not
-// finished, which fails the run. --capture-wait <script> runs a script in each page that is captured once it has
-// loaded, which calls stopRun() once the page is ready (PageHost::setCaptureWait), as WPT's test-wait.js waits for a
-// reftest's screenshot.
+// --screenshot writes the next page's rendering as a PNG once the run ends (PageHost::run), as WPT's reftests capture
+// it: in the viewport, on white, with lib/draw's cpu renderer, or the renderer that --renderer names, on the platform's
+// device for a renderer that renders on one. --reference, which may repeat, names a page that the next page is compared
+// with, as a reftest compares them. Once the run ends, each page is rendered as a screenshot is, and a line `REFTEST
+// <json>` on stdout gives, for each reference in order, the figures of tools/suite/reftest.cpp's answer: the largest
+// channel difference and the number of pixels that differ. --write <stem>, before the next page, writes what its
+// screenshot and comparisons render, as tools/suite/reftest.py names a case's: the page at `<stem>.png`, each reference
+// at `<stem>-ref.png` and its difference at `<stem>-diff.png`, numbered from the second reference on, as in
+// `<stem>-ref2.png`. --viewport WxH sets the viewport that screenshots and --verify lay the pages out in. It is 800x600
+// by default, the size that a window starts with and that WPT's reftests are captured in. The pages of suites/prax are
+// laid out for 600x800. --pixel-ratio sets the target pixels per CSS pixel that pages render at and that screenshots
+// and comparisons are taken at, 1 by default. A screenshot covers the viewport in target pixels, rounded up. A page
+// that is captured, or compared with references, waits until it is ready to be captured, as WPT's reftest protocol has
+// it wait: until its fonts are ready, it has rendered, and its root element no longer has the class `reftest-wait`
+// (PageHost::setCaptureWait). When a screenshot or comparison is taken, a page whose root still has the class has not
+// finished, which fails the run. --capture-wait <script> runs that script in each page that is captured in place of the
+// protocol, once the page has loaded, and it calls stopRun() once the page is ready, as wptrunner's test-wait.js does.
 //
 // --print, before the next page, renders the page and its references printed, as WPT's print reftests capture them
 // (web-platform-tests docs, "Print Reftests"): each page of the printed document is rendered as its own image, of its
@@ -35,13 +34,13 @@
 // the extension, and --write names the renders of a later page the same way, as in `<stem>-page2-ref.png`. --pages
 // <ranges>, before the next page or reference, keeps only the pages of that document that the ranges name, numbered
 // from 1, in the form of WPT's reftest-pages meta, as in `-2,4,6-`. The comparison of a printed page with a reference
-// is a line `REFTEST <json>` that gives both documents' numbers of pages ("pageCounts"), whether the reference draws
-// anything on any page ("blank"), and, if the numbers match, the figures of each pair of pages in order ("pages"). Two
-// pages of different extents are compared over the extent that they share, from their top left.
+// is a line `REFTEST <json>` that gives both documents' numbers of pages ("pageCounts"), and, if the numbers match, the
+// figures of each pair of pages in order ("pages"). Two pages of different extents are compared over the extent that
+// they share, from their top left.
 //
-// --pdf and --svg write the next page as a document of PDF or SVG (pr/draw_writer.h) once every page has settled: the
-// page printed for print media, as the pages of the page boxes that its @page rules give. --snapshot, before the next
-// page, writes it instead as it renders in the viewport, as one page of the viewport's size. A PDF is tagged with the
+// --pdf and --svg write the next page as a document of PDF or SVG (pr/draw_writer.h) once the run ends: the page
+// printed for print media, as the pages of the page boxes that its @page rules give. --snapshot, before the next page,
+// writes it instead as it renders in the viewport, as one page of the viewport's size. A PDF is tagged with the
 // document's structure (pr/html_structure.h), and its streams are compressed. An SVG of several pages is a file for
 // each page (PageHost::documentFiles).
 //
@@ -75,13 +74,13 @@
 //
 // --serve serves runs read from stdin in one process, which saves a process start for each run (serve).
 //
-// --timings reports on stderr how long each phase of a run took: loading the pages until they settle, and, for each
+// --timings reports on stderr how long each phase of a run took: loading the pages until the run ends, and, for each
 // document written, its pagination, the paint of its pages, its structure, the writer, and the file's write.
 //
 // --verify checks each page's presentation against a full recomputation (prCssPresentationVerify) after every rendering
-// update and once the pages settle, and writes each page's first failure to stderr as "<page>: presentation verify:
-// ...". It checks the layout of each printed document's pages (prLayoutTreeVerify), which includes that no line crosses
-// a page's edge, and writes a failure as "<page>: print verify: ...". A failure does not change the exit status, so a
+// update and once the run ends, and writes each page's first failure to stderr as "<page>: presentation verify: ...".
+// It checks the layout of each printed document's pages (prLayoutTreeVerify), which includes that no line crosses a
+// page's edge, and writes a failure as "<page>: print verify: ...". A failure does not change the exit status, so a
 // runner reads the pages' own results as it would without --verify.
 
 #include "pr/assert.h"
@@ -350,8 +349,8 @@ bool writePng(const Render& render, Page* page, const std::string& path) {
     return ok;
 }
 
-// What is asked of a page loaded with --html once the pages settle: a screenshot, the references that it is compared
-// with, the stem of the renders to write (--write), and the documents to write.
+// What is asked of a page loaded with --html once the run ends: a screenshot, the references that it is compared with,
+// the stem of the renders to write (--write), and the documents to write.
 struct Request {
     Page* page;
     std::string screenshot;         // empty for none
@@ -426,11 +425,9 @@ bool answerPrinted(PageHost& host, const Request& request, const PrLayoutPageBox
                 &expected))
             return false;
         std::string number = r == 0 ? "" : std::to_string(r + 1);
-        bool blank = true;
         std::string figures;
         for (size_t i = 0; i < expected.size(); ++i) {
             const Render& want = expected[i];
-            blank = blank && !imageDrawsAnything(want.rgba.data(), want.width, want.height, size_t(want.width) * 4);
             if (!request.write.empty() && !writePng(want, reference, pageFile(request.write, i + 1, "-ref" + number + ".png")))
                 return false;
             if (expected.size() != rendered.size())
@@ -452,8 +449,8 @@ bool answerPrinted(PageHost& host, const Request& request, const PrLayoutPageBox
             figures += (i == 0 ? "" : ",") + std::string("{\"maxDifference\":") + std::to_string(d.maxDifference) +
                 ",\"differingPixels\":" + std::to_string(d.differingPixels) + "}";
         }
-        printf("REFTEST {\"pageCounts\":[%zu,%zu],\"blank\":%s,\"pages\":[%s]}\n", rendered.size(), expected.size(),
-            blank ? "true" : "false", figures.c_str());
+        printf("REFTEST {\"pageCounts\":[%zu,%zu],\"pages\":[%s]}\n", rendered.size(), expected.size(),
+            figures.c_str());
     }
     return true;
 }
@@ -497,15 +494,14 @@ bool answer(PageHost& host, const Request& request, PrVec2 viewport, const PrLay
                 return false;
         }
         PixelDifference d = countDifferences(expected.rgba.data(), render.rgba.data(), render.width, render.height, stride);
-        bool blank = !imageDrawsAnything(expected.rgba.data(), expected.width, expected.height, stride);
-        printf("REFTEST {\"maxDifference\":%u,\"differingPixels\":%llu,\"blank\":%s}\n", d.maxDifference,
-            static_cast<unsigned long long>(d.differingPixels), blank ? "true" : "false");
+        printf("REFTEST {\"maxDifference\":%u,\"differingPixels\":%llu}\n", d.maxDifference,
+            static_cast<unsigned long long>(d.differingPixels));
     }
     return true;
 }
 
 // What the arguments of one run ask for: the settings that apply to the whole process, and the pages, with what is
-// asked of each once they settle.
+// asked of each once the run ends.
 struct Run {
     bool ok = true;
     bool verify = false;
@@ -761,19 +757,17 @@ constexpr int kTimedOut = 124;
 // page fails or cannot be answered, or kTimedOut.
 int finish(PageHost& host, Run& run, Renderers& renderers) {
     if (run.ok) {
-        page_host::Settled settled = host.settle(run.timeout);
-        // A page that still waits once it has rendered hears so, and settles again.
-        if (settled == page_host::Settled_Idle && host.signalRendered(run.viewport))
-            settled = host.settle(run.timeout);
-        if (settled == page_host::Settled_TimedOut) {
-            fprintf(stderr, "the pages did not settle in %g ms\n", run.timeout);
-            // What the pages reached is still answered, because a page that never settles has no other record of it.
+        page_host::RunEnd end = host.run(run.timeout);
+        if (end == page_host::RunEnd_TimedOut) {
+            fprintf(stderr, "the pages did not end the run in %g ms\n", run.timeout);
+            // What the pages reached is still answered, because a page that never ends the run has no other record of
+            // it.
             host.stopWaiting();
             for (const Request& request : run.requests)
                 answer(host, request, run.viewport, run.pageBox, run.pixelRatio, run.renderer, renderers);
             return kTimedOut;
         }
-        run.ok = settled == page_host::Settled_Idle;
+        run.ok = end == page_host::RunEnd_Done;
         if (run.timings)
             fprintf(stderr, "load: %.0f ms\n", prTimePerfMilliseconds(run.started, prTimePerfNow()));
         // A page's load fails once its failure arrives.

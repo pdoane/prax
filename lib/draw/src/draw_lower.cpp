@@ -86,9 +86,8 @@ void strokeInto(const PrDrawStroke* stroke, const PrPath* geometry, PrAffine2 tr
     if (prPathVerbCount(geometry) == 0)
         return;
     PrPathStroke shape = stroke->shape;
-    bool device = stroke->nonScaling;
     shape.width *= widthFactor;
-    if (device || prAffine2IsSimilarity(transform)) {
+    if (prAffine2IsSimilarity(transform)) {
         // Strokes in device space, with lengths scaled by the transform's scale, and the direction of a contour of zero
         // length mapped with the geometry.
         PrPath* mapped = prPathCreate();
@@ -99,14 +98,12 @@ void strokeInto(const PrDrawStroke* stroke, const PrPath* geometry, PrAffine2 tr
             transform.b * direction.x + transform.d * direction.y,
         };
         RawArray<float> dashes;
-        if (!device) {
-            float scale = prAffine2MaxScale(transform);
-            shape.width *= scale;
-            shape.dashOffset *= scale;
-            for (uint32_t i = 0; i < shape.dashCount; ++i)
-                dashes.push(shape.dashes[i] * scale);
-            shape.dashes = dashes.data;
-        }
+        float scale = prAffine2MaxScale(transform);
+        shape.width *= scale;
+        shape.dashOffset *= scale;
+        for (uint32_t i = 0; i < shape.dashCount; ++i)
+            dashes.push(shape.dashes[i] * scale);
+        shape.dashes = dashes.data;
         prPathStrokeOutline(mapped, &shape, tolerance, out);
         dashes.reset();
         prPathDestroy(mapped);
@@ -140,10 +137,6 @@ void lowerStroke(const PrPath* path, const PrDrawStroke* stroke, PrAffine2 trans
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Gradients
-
-float dot(PrVec2 a, PrVec2 b) {
-    return a.x * b.x + a.y * b.y;
-}
 
 // Returns true if a color's hue is powerless, such as for a gray.
 bool huePowerless(PrColorSpace space, const double c[3]) {
@@ -367,10 +360,6 @@ struct Border {
     Track track;
 };
 
-float cross(PrVec2 a, PrVec2 b) {
-    return a.x * b.y - a.y * b.x;
-}
-
 float length(PrVec2 a) {
     return prF32Sqrt(a.x * a.x + a.y * a.y);
 }
@@ -395,7 +384,7 @@ float crossing(const PrCornerPlacement& p, PrVec2 from, PrVec2 toward) {
     PrVec2 direction = toward - from;
     if (!(p.radiusBefore > 0 && p.radiusAfter > 0) || length(direction) == 0)
         return 0.5f;
-    auto side = [&](float t) { return cross(direction, curvePoint(p, t) - from); };
+    auto side = [&](float t) { return prVec2Cross(direction, curvePoint(p, t) - from); };
     float low = 0;
     float high = 1;
     float lowSide = side(low);
@@ -594,8 +583,8 @@ void wedgePoints(const Border& b, uint32_t side, RawArray<PrVec2>& out) {
     PrVec2 u1 = length(d1) > 0 ? d1 * (1 / length(d1)) : PrVec2{0, 0};
     out.push(q0 - u0 * far);
     out.push(q1 - u1 * far);
-    float denominator = cross(u0, u1);
-    float s = denominator != 0 ? cross(q1 - q0, u1) / denominator : -1;
+    float denominator = prVec2Cross(u0, u1);
+    float s = denominator != 0 ? prVec2Cross(q1 - q0, u1) / denominator : -1;
     if (s > 0) {
         out.push(q0 + u0 * s);
     } else {
@@ -620,7 +609,7 @@ void addWedge(Border& b, uint32_t side, PrPathPolyline* polyline) {
     points.reset();
 }
 
-// Keeps the part of the convex polygon where dot(normal, p - at) >= 0, using `scratch`.
+// Keeps the part of the convex polygon where prVec2Dot(normal, p - at) >= 0, using `scratch`.
 void clipPolygon(RawArray<PrVec2>& polygon, PrVec2 at, PrVec2 normal, RawArray<PrVec2>& scratch) {
     scratch.clear();
     for (uint32_t i = 0; i < polygon.count; ++i) {
@@ -1007,10 +996,10 @@ bool prDrawGradientParameter(const PrDrawBrush* brush, PrVec2 point, float* t) {
     switch (brush->kind) {
         case PrDrawBrushKind_Linear: {
             PrVec2 d = brush->linear.end - brush->linear.start;
-            float length = dot(d, d);
+            float length = prVec2Dot(d, d);
             if (!(length > 0))
                 return false;
-            *t = dot(point - brush->linear.start, d) / length;
+            *t = prVec2Dot(point - brush->linear.start, d) / length;
             return true;
         }
         case PrDrawBrushKind_Radial: {
@@ -1020,12 +1009,12 @@ bool prDrawGradientParameter(const PrDrawBrush* brush, PrVec2 point, float* t) {
             PrVec2 cd = brush->radial.end - focal;
             float dr = brush->radial.endRadius - r0;
             PrVec2 pd = point - focal;
-            float a = dot(cd, cd) - dr * dr;
-            float b = dot(pd, cd) + r0 * dr;
-            float c = dot(pd, pd) - r0 * r0;
-            if (dot(cd, cd) == 0 && dr == 0)
+            float a = prVec2Dot(cd, cd) - dr * dr;
+            float b = prVec2Dot(pd, cd) + r0 * dr;
+            float c = prVec2Dot(pd, pd) - r0 * r0;
+            if (prVec2Dot(cd, cd) == 0 && dr == 0)
                 return false;
-            if (prF32Abs(a) < 1e-6f * prF32Max(dot(cd, cd), dr * dr)) {
+            if (prF32Abs(a) < 1e-6f * prF32Max(prVec2Dot(cd, cd), dr * dr)) {
                 if (b == 0)
                     return false;
                 float root = c / (2 * b);

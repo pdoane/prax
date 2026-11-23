@@ -148,9 +148,10 @@ A failure is a defect wherever it lies, and is cut down to a test before it is f
 
 `tools/suite/reftest.cpp` renders with the cpu backend and reports both WPT's measure and ThorVG's
 (`tools/harness/compare.h`). WPT's reftests run in every `*-wpt` suite. `pr_shell --screenshot` captures an HTML or
-XHTML page once it settles, as WPT captures one, and the harness renders SVG documents itself and compares the two. A
-page that still has `reftest-wait` once it settles is rendered and sent `TestRendered`, the event of WPT's reftest
-protocol that says the page has rendered, and settles again.
+XHTML page once it is ready, as WPT captures one, and the harness renders SVG documents itself and compares the two. A
+page is ready by WPT's reftest protocol, which a script in the page runs on its own events: its fonts are ready, it has
+rendered two frames, and its root has no `reftest-wait`, which a page that has it is sent `TestRendered` to remove
+(`PageHost::setCaptureWait`). Nothing waits for a page's timers or animations to run out, as no browser does.
 The WPT runner fetches the checkout's pages from WPT's own server, wptserve, with its headers, substitutions and
 handlers, as wptrunner serves them to a browser (`tools/suite/wpt/wpt_serve.py`). pr_shell knows nothing of WPT: the
 runner hands it the options that a browser under wptrunner is started with, host rules that point WPT's hosts at the
@@ -161,7 +162,7 @@ page, such as Prax's, loads at its file: URL. Pages have WPT's Ahem font install
 The `font-coverage` suite checks that the bundles cover each language's exemplar characters. Ahem, whether
 installed or loaded by `@font-face`, is drawn without antialiasing, as reftests built on it expect (`prFontIsAliased`).
 A page's `@font-face` faces load when its text asks for them in a rendering update, and `document.fonts.ready` waits for
-them, so a page settles with its fonts loaded. The end of a load lays the document out, and the faces that its text asks
+them, so a page is ready with its fonts loaded. The end of a load lays the document out, and the faces that its text asks
 for then delay its load event, so a test that measures at load measures them. A reftest passes if it matches any of its
 match references and none of its mismatch references. A print reftest (web-platform-tests docs, "Print Reftests") and
 its references are printed (`pr_shell --print`). They start from the page box that WPT's protocol gives a document, 5 by

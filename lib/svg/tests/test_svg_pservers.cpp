@@ -134,15 +134,18 @@ TEST_CASE("a pattern of no width or height, or with no content, paints nothing, 
         "</pattern><rect width='100' height='100' fill='url(#p) red'/>")) .commands.isEmpty());
 }
 
-TEST_CASE("a radial gradient whose start circle holds its end circle paints nothing, not even its fallback") {
+TEST_CASE("a radial gradient whose start circle holds or reaches past its end circle paints the cone, as Canvas does") {
     const char* stops = "<stop offset='0' stop-color='orange'/><stop offset='1' stop-color='blue'/></radialGradient>";
-    CHECK(Drawing(svgDocument(format("<radialGradient id='g' fr='0.2' r='0.1'>{}"
-        "<rect width='100' height='100' fill='url(#g) red'/>", stops))) .commands.isEmpty());
-    CHECK(Drawing(svgDocument(format("<radialGradient id='g' fx='0.6' fr='0.25' r='0.1'>{}"
-        "<rect width='100' height='100' fill='url(#g) red'/>", stops))) .commands.isEmpty());
-    // A start circle that reaches past the end circle without holding it draws the cone that both touch.
-    CHECK(Drawing(svgDocument(format("<radialGradient id='g' fx='0.75' fr='0.2' r='0.1'>{}"
-        "<rect width='100' height='100' fill='url(#g) red'/>", stops))) .commands.count() == 1);
+    const char* const kGradients[] = {
+        "<radialGradient id='g' fr='0.2' r='0.1'>",
+        "<radialGradient id='g' fx='0.6' fr='0.25' r='0.1'>", "<radialGradient id='g' fx='0.75' fr='0.2' r='0.1'>",
+    };
+    for (const char* gradient : kGradients) {
+        CAPTURE(gradient);
+        Drawing drawing(svgDocument(format("{}{}<rect width='100' height='100' fill='url(#g) red'/>", gradient, stops)));
+        REQUIRE(drawing.commands.count() == 1);
+        CHECK(drawing.commands[0].brushed);
+    }
 }
 
 TEST_CASE("a paint server in objectBoundingBox units on a bounding box of no height paints the fallback") {
@@ -298,4 +301,52 @@ TEST_CASE("color-interpolation linearRGB composites an element onto what lies be
     Drawing group(svgDocument(format("{}<g opacity='0.5' color-interpolation='linearRGB'>"
         "<rect width='10' height='10' fill='white'/></g>", black)), PrVec2{10, 10});
     CHECK(group.pixel(5, 5) == "188 188 188");
+}
+
+TEST_CASE("a paint server's transform-origin is in the view box, in the space that its transform applies in") {
+    // A gradient in user space turns about the middle of the 100 by 100 viewport.
+    Drawing user(svgDocument("<linearGradient id='g' gradientUnits='userSpaceOnUse' gradientTransform='scale(2)' "
+        "transform-origin='center'><stop stop-color='blue'/><stop offset='1'/></linearGradient>"
+        "<rect width='100' height='100' fill='url(#g)'/>"));
+    REQUIRE(user.fills().count() == 1);
+    REQUIRE(user.fills()[0]->brush != nullptr);
+    PrVec2 corner = prAffine2MapPoint(user.fills()[0]->brush->transform, PrVec2{0, 0});
+    CHECK(near(corner.x, -50));
+    CHECK(near(corner.y, -50));
+    // In objectBoundingBox units, the origin's lengths are fractions of the box, and SVG writes them as numbers alone.
+    Drawing box(svgDocument("<radialGradient id='g' gradientTransform='scale(2)' transform-origin='0.5 0.5'>"
+        "<stop stop-color='blue'/><stop offset='1'/></radialGradient><rect x='20' y='10' width='40' height='20' fill='url(#g)'/>"));
+    REQUIRE(box.fills().count() == 1);
+    REQUIRE(box.fills()[0]->brush != nullptr);
+    PrVec2 middle = prAffine2MapPoint(box.fills()[0]->brush->transform, PrVec2{0.5f, 0.5f});
+    CHECK(near(middle.x, 40));
+    CHECK(near(middle.y, 20));
+    // A pattern's tiles lie in user space, where its transform turns them about the viewport's middle.
+    Drawing pattern(svgDocument("<pattern id='p' width='10' height='10' patternUnits='userSpaceOnUse' "
+        "patternTransform='scale(2)' transform-origin='center'><rect width='5' height='5'/></pattern>"
+        "<rect width='100' height='100' fill='url(#p)'/>"));
+    PrVec2 tile = prAffine2MapPoint(tileBrush(pattern)->transform, PrVec2{0, 0});
+    CHECK(near(tile.x, -50));
+    CHECK(near(tile.y, -50));
+}
+
+TEST_CASE("a clipPath's transform-origin is in the view box of what it clips") {
+    Drawing drawing(svgDocument("<clipPath id='c' transform='scale(2)' transform-origin='center'>"
+        "<rect x='40' y='40' width='20' height='20'/></clipPath>"
+        "<rect width='100' height='100' fill='#0000ff' clip-path='url(#c)'/>"));
+    CHECK(drawing.pixel(35, 35) == "0 0 255");
+    CHECK(drawing.pixel(25, 25) == "255 255 255");
+}
+
+TEST_CASE("a stop's offset is a number or a percentage, and any other value is zero") {
+    Drawing drawing(svgDocument("<linearGradient id='g'><stop offset='5mm' stop-color='blue'/><stop offset='50%' "
+        "stop-color='red'/><stop offset='1' stop-color='lime'/></linearGradient>"
+        "<rect width='100' height='100' fill='url(#g)'/>"));
+    REQUIRE(drawing.fills().count() == 1);
+    const PrDrawBrush* brush = drawing.fills()[0]->brush;
+    REQUIRE(brush != nullptr);
+    REQUIRE(brush->stopCount == 3);
+    CHECK(brush->stops[0].offset == 0);
+    CHECK(brush->stops[1].offset == doctest::Approx(0.5));
+    CHECK(brush->stops[2].offset == 1);
 }

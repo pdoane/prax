@@ -126,6 +126,11 @@ typedef struct PrTextRun {
 // Aegean, Ugaritic or Phoenician script. Word spacing follows it, and justification between words stretches it.
 bool prTextIsWordSeparator(uint32_t codePoint);
 
+// Returns true if letter spacing follows a grapheme cluster that starts with `codePoint`. A letter that joins its
+// neighbors, as in a cursive script, takes none, so that spacing does not pull its connections apart, and neither does
+// a default ignorable code point.
+bool prTextTakesLetterSpacing(uint32_t codePoint);
+
 // What a style asks of the shaping of its text: its capital and position forms, its kerning, the forms that may be
 // synthesized, and font features. The features apply in order, after the font's own. A feature set is immutable and
 // reference counted. A producer without a set shapes with the defaults: kerning as the font gives it, no capital or

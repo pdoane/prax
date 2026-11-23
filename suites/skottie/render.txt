@@ -3,10 +3,10 @@
 # reads no system fonts. They are static faces, so that both choose a face by its style rather than an instance of a
 # variable font. Every family that an animation names falls back to them.
 background white
-font third_party/resvg-tests/fonts/NotoSans-Regular.ttf
-font third_party/resvg-tests/fonts/NotoSans-Italic.ttf
-font third_party/resvg-tests/fonts/NotoSans-Thin.ttf
-font third_party/resvg-tests/fonts/NotoSans-Light.ttf
-font third_party/resvg-tests/fonts/NotoSans-Bold.ttf
-font third_party/resvg-tests/fonts/NotoSans-Black.ttf
+font third_party/resvg/crates/resvg/tests/fonts/NotoSans-Regular.ttf
+font third_party/resvg/crates/resvg/tests/fonts/NotoSans-Italic.ttf
+font third_party/resvg/crates/resvg/tests/fonts/NotoSans-Thin.ttf
+font third_party/resvg/crates/resvg/tests/fonts/NotoSans-Light.ttf
+font third_party/resvg/crates/resvg/tests/fonts/NotoSans-Bold.ttf
+font third_party/resvg/crates/resvg/tests/fonts/NotoSans-Black.ttf
 default Noto Sans

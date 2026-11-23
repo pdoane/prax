@@ -120,6 +120,7 @@ enum {
     PrDomEventKind_Toggle,             // html/#toggleevent
     PrDomEventKind_Command,            // html/#commandevent
     PrDomEventKind_Progress,           // xhr/#progressevent
+    PrDomEventKind_Time,               // svg-animations/#InterfaceTimeEvent
     PrDomEventKind_Count,
 };
 typedef uint8_t PrDomEventKind;
@@ -1441,9 +1442,17 @@ void prDomNodeListDestroy(PrDomNodeList* PR_NULLABLE list);
 // back. A call that changes the set returns Syntax for an empty token, and InvalidData for a token that contains ASCII
 // whitespace. It then changes nothing. A token list holds a reference to its element.
 
+// The supported tokens of an attribute (dom/#concept-supported-tokens), in ASCII lowercase.
+typedef struct PrDomTokenSet {
+    const PrStringView* PR_NULLABLE tokens;
+    uint32_t count;
+} PrDomTokenSet;
+
 // Creates the token list of the element's attribute in no namespace whose local name is `name`, as the element's
-// classList (dom/#dom-element-classlist) is the list of its class attribute. The caller destroys the list.
-PrDomTokenList* prDomTokenListCreate(PrDomElement* element, PrStringView name);
+// classList (dom/#dom-element-classlist) is the list of its class attribute. `supported` is the attribute's supported
+// tokens, which outlive the list, or null if the attribute defines none. The caller destroys the list.
+PrDomTokenList* prDomTokenListCreate(PrDomElement* element, PrStringView name,
+    const PrDomTokenSet* PR_NULLABLE supported);
 
 // Writes whether `token` is a supported token of the attribute, ASCII case-insensitively, to `out`
 // (dom/#dom-domtokenlist-supports). Returns WrongType if the attribute defines no supported tokens.

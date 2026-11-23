@@ -23,6 +23,14 @@ typedef uint8_t DomEventHandlerMixins;
 // whose type HTML spells differently.
 PrStringView domEventHandlerType(PrDomEventHandler handler);
 
+// Returns the type of the events that `handler` handles on `target`. An interface may give its handlers types of their
+// own: SVGAnimationElement's onend handles endEvent.
+PrStringView domEventHandlerTypeFor(const PrDomEventTarget* target, PrDomEventHandler handler);
+
+// Returns true if the interface of `element` declares `handler` itself rather than through a mixin. Such a handler has
+// a content attribute (html/#event-handler-content-attributes).
+bool domElementHasEventHandler(const PrDomElement* element, PrDomEventHandler handler);
+
 // The mixins that declare `handler`.
 DomEventHandlerMixins domEventHandlerMixins(PrDomEventHandler handler);
 

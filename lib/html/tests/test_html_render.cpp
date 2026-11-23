@@ -1507,6 +1507,52 @@ TEST_CASE("line-height is of the element's own font size, a calculation computes
     CHECK(verified(page.presentation));
 }
 
+TEST_CASE("a calculation computes clamped to the range of the value it stands for") {
+    // padding takes <length-percentage [0,∞]>, and font-weight <number [1,1000]>. A grid line takes an integer that is
+    // either negative or positive, so a calculation keeps the value it resolves to there.
+    Page page("<style>body { font: 16px Arimo } #grid { display: grid }</style>"
+        "<div id=pad style='padding-left: calc(10px - 1em); padding-right: calc(-5%)'>x</div>"
+        "<div id=weight style='font-weight: calc(2000)'>x</div>"
+        "<div id=grid><div id=line style='grid-column: calc(3 - sign(1em))'>x</div></div>");
+    CHECK(resolved(page, "pad", PrCssProperty_PaddingLeft) == "0px");
+    CHECK(resolved(page, "pad", PrCssProperty_PaddingRight) == "0px");
+    CHECK(resolved(page, "weight", PrCssProperty_FontWeight) == "1000");
+    CHECK(resolved(page, "line", PrCssProperty_GridColumnStart) == "2");
+    CHECK(verified(page.presentation));
+}
+
+TEST_CASE("a calculation of lengths computes to the number or percentage that it resolves to") {
+    Page page("<style>body { font: 16px Arimo }</style>"
+        "<div id=adjust style='font-size-adjust: calc(sign(20px - 1em) * 0.5)'>x</div>"
+        "<div id=mix style='font-palette: palette-mix(in srgb, dark calc(10% * sign(1em - 1px)), light)'>x</div>"
+        "<div id=index style='z-index: calc(2.6)'>x</div>");
+    CHECK(resolved(page, "adjust", PrCssProperty_FontSizeAdjust) == "0.5");
+    CHECK(resolved(page, "mix", PrCssProperty_FontPalette) == "palette-mix(in srgb, dark 10%, light 90%)");
+    CHECK(resolved(page, "index", PrCssProperty_ZIndex) == "3");
+    CHECK(verified(page.presentation));
+}
+
+TEST_CASE("font-size-adjust sets the used font size of text, and leaves the computed font size alone") {
+    Page page("<div id=zero style='font: 20px Arimo; font-size-adjust: 0'>x</div>"
+        "<div id=none style='font: 20px Arimo'>x</div>");
+    CHECK(prTextFontStyle(page.textFont("zero")).size == 0);
+    CHECK(prTextFontStyle(page.textFont("none")).size == 20);
+    CHECK(resolved(page, "zero", PrCssProperty_FontSize) == "20px");
+}
+
+TEST_CASE("a computed url() is absolute, and a url of a fragment alone stays local") {
+    Page page("<base href='http://example.com/dir/'><div id=image style='background-image: url(a.png)'>x</div>"
+        "<div id=local style='clip-path: url(#c)'>x</div>");
+    CHECK(resolved(page, "image", PrCssProperty_BackgroundImage) == R"(url("http://example.com/dir/a.png"))");
+    CHECK(resolved(page, "local", PrCssProperty_ClipPath) == R"(url("#c"))");
+}
+
+TEST_CASE("font-variant and white-space serialize from their longhands in a computed style") {
+    Page page("<div id=caps style='font-variant: small-caps'>x</div><div id=pre style='white-space: pre'>x</div>");
+    CHECK(resolved(page, "caps", PrCssProperty_FontVariant) == "small-caps");
+    CHECK(resolved(page, "pre", PrCssProperty_WhiteSpace) == "pre");
+}
+
 TEST_CASE("lh and rlh are of the computed line height, the parent's in font-size and line-height, and zero is one") {
     Page page("<style>html { font: 16px/25px Arimo } body { font: 20px/40px Arimo }</style>"
         "<div style='line-height: 30px'><div id=px style='height: 2lh'></div>"
@@ -3748,6 +3794,54 @@ TEST_CASE("a host that observes its animations through events alone runs the fra
     // them.
     CHECK(all.frames > 1000);
     CHECK(observed.frames < 20);
+}
+
+TEST_CASE("an animation event ahead wakes a frame at its time, though nothing animates until then") {
+    // An SVG animation that begins later, as an event's begin with a delay does, is all that wants a frame, in either
+    // mode of a host. The frames between run nothing.
+    const PrHtmlAnimationFrames kModes[] = {PrHtmlAnimationFrames_All, PrHtmlAnimationFrames_Observed};
+    for (PrHtmlAnimationFrames frames : kModes) {
+        CAPTURE(int(frames));
+        Page fonts("");
+        struct Host {
+            SteppedClock clock;
+            uint32_t frames = 0;
+        } stepped;
+        PrHtmlHost host = prHtmlHostDefault();
+        host.context = &stepped;
+        host.now = [](void* PR_NULLABLE c) { return static_cast<Host*>(c)->clock.now; };
+        host.rendered = [](void* PR_NULLABLE c, PrHtmlPage*) { ++static_cast<Host*>(c)->frames; };
+        host.font = fonts.defaultFont;
+        host.shaper = fonts.shaper;
+        host.animationFrames = frames;
+        PrHtmlPage* page = prHtmlPageCreate(&host);
+        REQUIRE(prHtmlPageLoad(page, "<svg><rect id=r width=10 height=10 fill=blue>"
+            "<set attributeName=fill to=lime begin=2s fill=freeze /></rect></svg>", "about:blank", nullptr) ==
+            PrStatus_Ok);
+        PrDomElement* rect = prDomNodeGetElementById(prDomDocumentAsNode(prHtmlWindowDocument(prHtmlPageWindow(page))), "r");
+        REQUIRE(rect != nullptr);
+        PrDomAgent* agent = prHtmlPageAgent(page);
+        auto fill = [&] {
+            PrCssDeclarationName name = prCssDeclarationNameFromProperty(PrCssProperty_Fill);
+            PrCssStyleProperties* computed = prCssElementComputedStyle(rect, "");
+            PrRawString read =
+                prCssStyleDeclarationGetPropertyValue(prCssStylePropertiesAsCssStyleDeclaration(computed), &name);
+            String value(prRawStringView(&read));
+            prRawStringReset(&read);
+            return value;
+        };
+        for (uint32_t step = 0; step < 10000 && stepped.clock.now < 3000; ++step) {
+            double delay = prDomAgentNextTaskDelay(agent);
+            if (delay < 0)
+                break;
+            stepped.clock.now += delay;
+            prDomAgentRunTask(agent);
+        }
+        CHECK(stepped.clock.now >= 2000);
+        CHECK(fill() == "rgb(0, 255, 0)");
+        CHECK(stepped.frames < 20);
+        prHtmlPageDestroy(page);
+    }
 }
 
 TEST_CASE("a click on a link to a fragment scrolls to the element it names, which matches :target") {

@@ -112,6 +112,10 @@ void domAgentSetWake(PrDomAgent* agent, PrDomAgentWakeFn PR_NULLABLE wake, void*
 void domAgentAddHook(RawArray<DomAgentTask>* hooks, PrDomAgentHookFn fn, void* PR_NULLABLE context);
 void domAgentRemoveHook(RawArray<DomAgentTask>* hooks, PrDomAgentHookFn fn, void* PR_NULLABLE context);
 
+// Performs a microtask checkpoint (html/#perform-a-microtask-checkpoint): calls the agent's checkpoints, as a run does
+// after each task, and as the HTML parser does before a script that it meets.
+void domAgentCheckpoint(PrDomAgent* agent);
+
 // Run, wait for, wake and stop the agent's event loop. prDomAgentRun, prDomAgentWait, prDomAgentWake and prDomAgentStop
 // describe their contracts.
 bool domAgentRun(PrDomAgent* agent, double milliseconds);

@@ -419,14 +419,6 @@ TEST_CASE("an aligned stroke is twice the width cut to the shape's inside or out
     prPathPolylineClear(&region);
     prDrawLowerStroke(square, &stroke, doubled, 0.01f, &fill, &aligned, &region);
     CHECK(areaOf(fill) == doctest::Approx(88 * 88 - 72 * 72).epsilon(0.002));
-    // A non-scaling stroke keeps its width in target pixels, whatever the transform.
-    stroke.shape.width = 1;
-    stroke.nonScaling = true;
-    prPathPolylineClear(&fill);
-    prPathPolylineClear(&aligned);
-    prPathPolylineClear(&region);
-    prDrawLowerStroke(square, &stroke, doubled, 0.01f, &fill, &aligned, &region);
-    CHECK(areaOf(fill) == doctest::Approx(81 * 81 - 79 * 79).epsilon(0.002));
     prPathDestroy(square);
     prPathPolylineReset(&fill);
     prPathPolylineReset(&aligned);

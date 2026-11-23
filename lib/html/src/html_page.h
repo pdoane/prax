@@ -31,6 +31,8 @@ namespace pr_impl {
 struct HtmlMarkdownBuilder;
 struct PreparedScript;
 struct SvgPresentation;
+struct HtmlSvgImage;
+struct HtmlSvgImageVariants;
 
 // A header of a request or a response that a fetch keeps.
 struct HtmlFetchHeader {
@@ -145,6 +147,8 @@ struct HtmlDocumentLoad {
 // without its fragment, and its bytes.
 struct HtmlAvailableImage {
     PrRawString url;
+    DomCorsSettings cors;           // the CORS mode of the request
+    bool crossOrigin;               // the response is CORS-cross-origin (html/#cors-cross-origin)
     PrBlob* bytes;                  // the response's body, which the list retains
 };
 
@@ -189,23 +193,12 @@ struct HtmlElementEvent {
     bool error;
 };
 
-// What an SVG image uses to load the images that it references. `images` are the codecs that decode them. `textures` is
-// the cache that realizes them.
-struct HtmlSvgImageLoader {
-    const PrImageCodecSet* PR_NULLABLE images;
-    PrTextureCache* PR_NULLABLE textures;
-};
-
 // A browsing context (html/#browsing-context), which hosts a window.
 struct HtmlPage {
     PrHtmlWindow* window;       // the window of its active document (html/#nav-window)
     HtmlParser parser;          // the parse that an HTML load runs
     DomXmlBuilder xml;          // the parse that an XML load runs, whose parser is null outside one
     PrHtmlHost host;
-
-    // The loader for the SVG images that the page shows. It holds the host's codecs and the window's textures. Both
-    // outlive the builds of the SVG images (loadSecureImage).
-    HtmlSvgImageLoader svgImages;
 
     DomDocumentHost documentHost;                 // the host through which the window's document fetches and queues
                                                   // tasks
@@ -312,6 +305,12 @@ struct HtmlPage {
 
     // The browsing contexts of its iframes, current and discarded. The context owns them.
     RawArray<PrHtmlPage* PR_NONNULL> children;
+
+    // The animated SVG images that its documents show, each with a reference (html_svg_image.h).
+    RawArray<HtmlSvgImage* PR_NONNULL> svgImages;
+
+    // The SVG images that its documents show, whose variants it builds, each with a reference (html_svg_image.h).
+    RawArray<HtmlSvgImageVariants* PR_NONNULL> svgImageVariants;
 
     PrCssPresentation* PR_NULLABLE presentation;    // the window document's presentation, if the host gives fonts
     SvgPresentation* PR_NULLABLE svg;               // what lib/svg keeps for the presentation

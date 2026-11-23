@@ -513,10 +513,22 @@ void prHtmlImageElementSetHeight(PrHtmlImageElement* element, uint32_t value);
 // after the image's dimensions were read, the image becomes broken and fires an error event (PrHtmlHost::textures).
 void prHtmlImageElementDecode(PrHtmlImageElement* element, const PrHtmlPromise* promise);
 
+// ---------------------------------------------------------------------------------------------------------------------
+// HTMLOrSVGImageElement (html/#htmlorsvgimageelement)
+//
+// An img element or an SVG image element, whose image the browsing context of its document loads.
+
+// Returns true if `element` is an img element or an SVG image element.
+bool prHtmlOrSvgImageElementIs(const PrDomElement* element);
+
+// Returns the state of the element's current request (html/#current-request).
+PrDomImageState prHtmlOrSvgImageElementState(const PrDomElement* element);
+
 // Writes the image of the current request, as its orientation displays it, as a source that a canvas context draws
-// (html/#canvasimagesource), with one reference to the image for the caller. Returns false, and writes no image, if the
-// request has no decoded image, as for an image that is not completely available.
-bool prHtmlImageElementImageSource(PrHtmlImageElement* element, PrCanvasImageSource* out);
+// (html/#canvasimagesource), with one reference to the image for the caller. The source is not origin-clean if the
+// image is CORS-cross-origin. Returns false, and writes no image, if the request has no decoded image, as for an image
+// that is not completely available.
+bool prHtmlOrSvgImageElementImageSource(PrDomElement* element, PrCanvasImageSource* out);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // HTMLCanvasElement : HTMLElement (html)
@@ -588,8 +600,9 @@ PrHtmlAnchorElement* PR_NULLABLE prHtmlAnchorElementQuery(PrDomEventTarget* PR_N
 PrHtmlAreaElement* PR_NULLABLE prHtmlAreaElementQuery(PrDomEventTarget* PR_NULLABLE object);
 
 // Returns a component of the URL of a hyperlink, which is an HTML a or area element
-// (html/#api-for-a-and-area-elements), or a MathML a element, which has the same members (mathml-core/#the-a-element).
-// The URL is the element's href attribute parsed against the document base URL. If the attribute does not parse,
+// (html/#api-for-a-and-area-elements), or a MathML or SVG a element, which have the same members
+// (mathml-core/#the-a-element, SVG2/linking.html#InterfaceSVGAElement). The URL is the element's href attribute, or an
+// SVG a element's xlink:href if it has no href, parsed against the document base URL. If the attribute does not parse,
 // `PrUrlComponent_Href` is the attribute's value, or the empty string if there is no attribute,
 // `PrUrlComponent_Protocol` is ":", and every other component is the empty string.
 PrRawString prHtmlHyperlinkComponent(const PrDomElement* element, PrUrlComponent component);
@@ -911,9 +924,6 @@ PR_HANDLE_UPCAST(HtmlStyleElement, DomEventTarget, EventTarget)
 
 // Returns `object` as an HTMLStyleElement, or null if it is not one.
 PrHtmlStyleElement* PR_NULLABLE prHtmlStyleElementQuery(PrDomEventTarget* PR_NULLABLE object);
-
-// Returns the style sheet that the element's text defines, or null if it has none.
-PrCssStyleSheet* PR_NULLABLE prHtmlStyleElementSheet(PrHtmlStyleElement* element);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // HTMLTemplateElement : HTMLElement (html)

@@ -1,0 +1,60 @@
+# Fuzzy ranges that judge a case in place of the suite's limits, in the form of a fuzzy meta's content (web-platform-tests
+# docs, "Fuzzy Matching"). An entry is a line of the case and its ranges for each case it covers, then the indented
+# reason: why the engine's render differs from the reference by more than the limits allow, and why that is not an
+# error. The references are resvg's renders, so a difference here is between two renderers that both conform. An entry
+# whose content starts with shift=1 is measured with the drawing free to move by up to a pixel
+# (countShiftedDifferences), which tolerates an edge that the renderers place a fraction of a pixel apart, and only that.
+
+filters/feTile/simple-case.svg shift=1;maxDifference=0-1;totalPixels=0-2900
+filters/feTile/with-subregion-1.svg shift=1;maxDifference=0-1;totalPixels=0-660
+filters/feTile/with-subregion-2.svg shift=1;maxDifference=0-1;totalPixels=0-660
+filters/feTile/with-subregion-3.svg shift=1;maxDifference=0-1;totalPixels=0-660
+    An feOffset of 5 user units moves its input by 7.5 target pixels at this scale. The engine moves it by exactly that,
+    so each tile's offset flood covers its first row and column by half and its corner by a quarter. The reference
+    moves it by whole pixels and covers them fully. No specification says how an offset meets the pixel grid.
+
+filters/filter-functions/two-urls.svg maxDifference=0-56;totalPixels=0-31000
+filters/filter/everything-via-xlink-href.svg maxDifference=0-52;totalPixels=0-14000
+filters/filter/in-to-invalid-2.svg maxDifference=0-52;totalPixels=0-16500
+filters/filter/region-with-stroke.svg maxDifference=0-48;totalPixels=0-39000
+filters/filter/some-attributes-via-xlink-href.svg maxDifference=0-52;totalPixels=0-14000
+filters/filter/with-region-and-filterUnits=userSpaceOnUse.svg maxDifference=0-52;totalPixels=0-9500
+filters/filter/with-region.svg maxDifference=0-52;totalPixels=0-9500
+    filter-effects-1/#feGaussianBlurElement lets a large deviation be approximated by three box blurs, and both
+    renderers do, with different boxes, so their falloffs differ wherever a blur fades. The difference is largest where
+    the filter region clips the input: a step's blur is about half covered at the edge, and the engine's render gives
+    alpha 136 a pixel inside it, where the Gaussian gives 136 and the reference 79.
+
+paint-servers/pattern/patternContentUnits=objectBoundingBox.svg shift=1;maxDifference=0-2;totalPixels=0-870
+paint-servers/pattern/patternUnits=userSpaceOnUse-with-percent.svg shift=1;maxDifference=0-16;totalPixels=0-870
+paint-servers/pattern/with-x-and-y.svg shift=1;maxDifference=0-16;totalPixels=0-790
+    A pattern tile that starts between pixels is drawn snapped to whole pixels, and the two renderers snap it in
+    opposite directions, so a one-pixel column or row at each tile's edge differs. Neither covers the edge pixel by the
+    fraction that the tile does, and no specification says how a tile meets the pixel grid.
+
+painting/shape-rendering/on-horizontal-line.svg shift=1;maxDifference=0-1;totalPixels=0-330
+    The crisp lines are 1.5 target pixels thick and span rows 144.0 to 145.5, so the second row's center lies on the
+    bottom edge. The engine's aliased fill takes a center on a top edge and leaves one on a bottom edge, as the usual
+    fill convention does, and covers one row. The reference covers both. Crisp edges ask only for edges on whole pixels
+    (SVG2/painting.html#ShapeRenderingProperty), and a tie may round either way.
+
+structure/transform-origin/on-text-path.svg shift=1;maxDifference=0-42;totalPixels=0-350
+text/textPath/closed-path.svg shift=1;maxDifference=0-62;totalPixels=0-400
+text/textPath/m-A-path.svg shift=1;maxDifference=0-42;totalPixels=0-350
+text/textPath/m-L-Z-path.svg shift=1;maxDifference=0-36;totalPixels=0-640
+text/textPath/method=stretch.svg shift=1;maxDifference=0-255;totalPixels=0-760
+text/textPath/with-underline.svg shift=1;maxDifference=0-132;totalPixels=0-400
+text/textPath/writing-mode=tb.svg shift=1;maxDifference=0-88;totalPixels=0-390
+    Each glyph on a curved path is placed and turned at its own point of the path, which the renderers find within a
+    fraction of a pixel of each other, and a turned glyph's edges cover their pixels by different fractions as it moves.
+    No glyph differs by more than that. On m-A-path, the engine's render differs from Chrome's in 1181 pixels and from
+    Firefox's in 971, and the reference differs from them in 1416 and 1216: the browsers are closer to the engine than
+    to the reference. The underline along the path lies 0.6 pixels lower than the reference's, and the doubled-back
+    stroke of the M L Z path meets itself in partly covered pixels, which the engine's rasterizer covers by its area
+    once. A stretched glyph is bent onto the path by a warp that each renderer approximates in its own way, so a few
+    pixels of its outline differ by more than a shift.
+
+text/letter-spacing/mixed-scripts.svg maxDifference=0-255;totalPixels=0-2600
+    The middle-anchored line is drawn 2 pixels left of the reference. The browsers spread over 3 pixels about the
+    engine: Chrome sets the line 1 pixel right of it and Firefox 2 pixels left. Each glyph, and each gap between them,
+    matches the reference to the pixel, so only where the line's middle falls differs.

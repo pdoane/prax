@@ -217,6 +217,11 @@ TEST_CASE("a point is in a path by its fill rule, and curves count as they bend"
     CHECK_FALSE(prPathContains(path, PrVec2{50, 50}, PrPathFillRule_EvenOdd));
     CHECK(prPathContains(path, PrVec2{10, 50}, PrPathFillRule_EvenOdd));
     CHECK_FALSE(prPathContains(path, PrVec2{150, 50}, PrPathFillRule_NonZero));
+    // Points on the boundary are inside: an edge and a corner of the outer square, and an edge of the hole.
+    CHECK(prPathContains(path, PrVec2{100, 50}, PrPathFillRule_NonZero));
+    CHECK(prPathContains(path, PrVec2{100, 100}, PrPathFillRule_NonZero));
+    CHECK(prPathContains(path, PrVec2{25, 50}, PrPathFillRule_EvenOdd));
+    CHECK_FALSE(prPathContains(path, PrVec2{100.1f, 50}, PrPathFillRule_NonZero));
     prPathDestroy(path);
     PrPath* circle = prPathCreate();
     prPathAddEllipse(circle, PrVec2{50, 50}, PrVec2{50, 50}, 0);

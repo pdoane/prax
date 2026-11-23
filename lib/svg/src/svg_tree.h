@@ -24,6 +24,7 @@
 #include "pr/path.h"
 #include "pr/raw_array.h"
 #include "pr/string_view.h"
+#include "pr/svg_attribute.h"
 #include "pr/svg_render.h"
 #include "pr/text_buffer.h"
 
@@ -93,7 +94,7 @@ struct SvgPaints {
     // shape's dashes are measured, or below zero for none.
     float pathLength;
 
-    SvgLayer order[3];          // the layers in the order that paint-order paints them
+    SvgPaintLayer order[3];          // the layers in the order that paint-order paints them
 };
 
 // A vertex of a shape's equivalent path, where a vertex marker is placed (SVG2/painting.html#VertexMarkerProperties).
@@ -153,7 +154,7 @@ struct SvgLineShape {
 struct SvgViewportShape {
     SvgLengthPercentage x, y, width, height;
     PrRect viewBox;             // used if `hasViewBox` is set
-    SvgAspect aspect;
+    PrSvgPreserveAspectRatio aspect = kSvgAspectDefault;
     bool hasViewBox;
     bool clips;                 // overflow other than visible clips the content to the viewport
     bool fills;                 // the viewport is the whole of the parent's, as an outermost svg element's box is
@@ -170,6 +171,11 @@ struct SvgViewportShape {
     // The size of the viewport in user units, as far as the build could tell it without the size that the tree is drawn
     // at. Text built in the viewport resolves its percentages against it.
     PrVec2 userExtent;
+
+    // The magnification and panning transform of an outermost svg element, which places the content inside the viewport
+    // after its viewBox (SVG2/struct.html#__svg__SVGSVGElement__currentScale).
+    float zoom = 1;
+    PrVec2 pan;
 };
 
 // An image that an image element shows: a raster image, or an SVG image, which is drawn as a vector. The holder holds a
@@ -185,8 +191,9 @@ struct SvgImageShape {
     SvgLengthPercentage x, y, width, height;
     bool widthAuto, heightAuto;
     SvgSizeLimits limits;
-    bool clips;                 // overflow other than visible clips the image to the positioning rectangle
-    SvgAspect aspect;           // preserveAspectRatio
+    bool clips;                                          // overflow other than visible clips the image to the
+                                                         // positioning rectangle
+    PrSvgPreserveAspectRatio aspect = kSvgAspectDefault; // preserveAspectRatio
     PrLayoutObjectFit fit;
     SvgLengthPercentage position[2]; // object-position: offsets of the object in the room that the rectangle leaves it
     PrDrawSampling sampling;         // how a raster image is resampled, as image-rendering asks
@@ -339,7 +346,9 @@ struct SvgGradient {
     bool hasFy;
     PrDrawExtend extend;
     PrColorSpace space;         // the space that the stops mix in, which the gradient's color-interpolation gives
-    PrAffine2 transform;        // gradientTransform
+
+    // The gradientTransform.
+    SvgOriginTransform transform = kSvgOriginTransformIdentity;
 
     SvgLengthPercentage x1, y1, x2, y2;        // linear
     SvgLengthPercentage cx, cy, r, fx, fy, fr; // radial
@@ -349,31 +358,27 @@ struct SvgGradient {
     uint32_t stopCount;
 };
 
-// How a marker is turned at its vertex (SVG2/painting.html#OrientAttribute).
-enum {
-    SvgOrient_Angle,
-    SvgOrient_Auto,             // along the path
-    SvgOrient_AutoStartReverse, // along the path, and against it at the start
-};
-typedef uint8_t SvgOrient;
-
 // A marker (SVG2/painting.html#MarkerElement): the viewport that its content is fitted to, how the viewport is placed
 // at a vertex, and the content.
 struct SvgMarker {
     SvgLengthPercentage width;  // markerWidth
     SvgLengthPercentage height; // markerHeight
     PrRect viewBox;             // used if `hasViewBox` is set
-    SvgAspect aspect;
+    PrSvgPreserveAspectRatio aspect = kSvgAspectDefault;
     bool hasViewBox;
     bool clips;                 // overflow other than visible clips the content to the viewport
     bool strokeUnits;           // markerUnits is strokeWidth, which scales the marker by the shape's stroke width
-    SvgOrient orient;
+    PrSvgOrient orient;         // how it is turned at its vertex (SVG2/painting.html#OrientAttribute)
     float angle;                // Angle: the turn from the shape's positive x-axis, in radians
 
     // The point of the content that is placed at the vertex, in the content's user space. A percentage is of the
-    // viewBox's width or height, or of the viewport's without a viewBox.
+    // viewport of the element that the marker is drawn on, which content relies on, though w3c/svgwg#64 resolved to
+    // make it of the viewBox. A keyword is a percentage of the viewBox's width or height, or of the marker's viewport's
+    // without a viewBox (SVG2/painting.html#MarkerElementRefXAttribute).
     SvgLengthPercentage refX;
     SvgLengthPercentage refY;
+    bool refXKeyword;
+    bool refYKeyword;
 
     // A group of the marker's children, which no node holds, or kSvgNodeNone. The children inherit from the marker
     // element, not from the shape that the marker is drawn on.
@@ -387,10 +392,12 @@ struct SvgPattern {
     bool userSpace;             // patternUnits is userSpaceOnUse
     bool contentBoundingBox;    // patternContentUnits is objectBoundingBox, which a viewBox overrides
     bool hasViewBox;
-    SvgAspect aspect;
+    PrSvgPreserveAspectRatio aspect = kSvgAspectDefault;
     PrRect viewBox;             // used if `hasViewBox` is set
     SvgLengthPercentage x, y, width, height;
-    PrAffine2 transform;        // patternTransform, the transform property of the pattern that gives it
+
+    // The patternTransform, the transform property of the pattern that gives it.
+    SvgOriginTransform transform = kSvgOriginTransformIdentity;
 
     // A group of the content, which no node holds, or kSvgNodeNone. The content inherits from the pattern that the
     // paint references, not from what it paints, and is clipped to the tile.
@@ -404,7 +411,7 @@ struct SvgClipPath {
 
     // The clipPath's transform, which maps the content, in the bounding box's units if it takes them, into the user
     // space of what it clips.
-    PrAffine2 transform;
+    SvgOriginTransform transform = kSvgOriginTransformIdentity;
 
     // A group of the children that contribute to the clip path, which no node holds, or kSvgNodeNone for a clipPath
     // with no style. The group takes the clipPath's own clip-path, which the children's silhouettes are clipped to, and
@@ -551,9 +558,9 @@ struct SvgPrimitive {
 
         // Image: an image, or an element of the filter's content group, drawn as a use element draws it.
         struct {
-            SvgPicture picture;         // the primitive holds a reference
-            SvgNodeIndex node;          // kSvgNodeNone for an image
-            SvgAspect aspect;           // preserveAspectRatio
+            SvgPicture picture;                                  // the primitive holds a reference
+            SvgNodeIndex node;                                   // kSvgNodeNone for an image
+            PrSvgPreserveAspectRatio aspect = kSvgAspectDefault; // preserveAspectRatio
             PrDrawSampling sampling;
         } image;
 
@@ -629,6 +636,7 @@ struct SvgResource {
 struct SvgReference {
     PrRawString id;                            // the null string for the root of another document
     PrRawString document;                      // the other document's absolute URL, or the null string for none
+    DomCorsSettings cors;                      // the CORS settings that fetch the other document
     const PrDomElement* PR_NULLABLE target;    // the reference holds a reference to it
 
     // The root of the tree whose IDs the ID names an element of: the document, or a shadow root
@@ -705,9 +713,11 @@ struct SvgStyleSource {
 // loader.
 struct SvgImageSource {
     // Writes the image that `url`, the href of the image element `element`, names to `out`, with a reference for the
-    // caller. Returns false if no image is available: the reference loads nothing, or has not loaded yet. A load that
-    // completes is a change at the element (SvgChange_Image).
-    bool (*PR_NULLABLE load)(void* PR_NULLABLE context, const PrDomElement* element, PrStringView url, SvgPicture* out);
+    // caller. `size` is the size that the element lays the image out at, or zero if it is not known. Returns false if
+    // no image is available: the reference loads nothing, or has not loaded yet. A load that completes is a change at
+    // the element (SvgChange_Image).
+    bool (*PR_NULLABLE load)(void* PR_NULLABLE context, const PrDomElement* element, PrStringView url, PrVec2 size,
+        SvgPicture* out);
     void* PR_NULLABLE context;
 };
 
@@ -738,8 +748,9 @@ enum {
     SvgRoot_Box,                // an outermost svg element whose content box is the viewport, as CSS sizes it, and
                                 // whose box applies its opacity and effects
     SvgRoot_Image,              // the outermost svg element of an SVG image, whose size is the viewport, and which
-                                // applies its own opacity and effects, since no box does
+                                // applies its own transform, opacity and effects, since no box does
     SvgRoot_InPlace,            // any element, drawn in the user space of its parent
+    SvgRoot_Geometry,           // any element in its parent's user space, displayed or not, to measure its geometry
 };
 typedef uint8_t SvgRoot;
 
@@ -870,6 +881,9 @@ struct SvgBuilder {
     // that is its element's own.
     SvgNodeIndex owner;
     SvgResourceIndex ownerResource;
+
+    // The element to build even if it is not displayed, for SvgRoot_Geometry, or null.
+    const PrDomElement* PR_NULLABLE shown;
 };
 
 // Returns true if the node that the build adds for an element is the element's own: the element is in the document, not
@@ -889,6 +903,10 @@ SvgPaints svgBuildPaints(SvgBuilder& b, const CssComputedStyle* style, const PrD
 // Reads the clip path, the mask layers, the filters and the blending that `style` gives the node at `index`, with the
 // elements that their URLs name in the node's document resolved.
 void svgBuildEffects(SvgBuilder& b, SvgNodeIndex index, const CssComputedStyle* style);
+
+// Reads the transform that `style` gives the node at `index`, whose transform is the identity and has no style. A
+// transform that its reference box decides keeps its style, which drawing resolves (SvgNode::transformStyle).
+void svgBuildTransform(SvgBuilder& b, SvgNodeIndex index, const CssComputedStyle* style);
 
 // Adds a group that no node holds, for the content of the resource whose element is `e`, and returns its index.
 SvgNodeIndex svgBuildContentGroup(SvgBuilder& b, const PrDomElement* e);
@@ -916,9 +934,11 @@ void svgMarkerVertices(const PrPathDataCommand* PR_NULLABLE commands, uint32_t c
 // Returns the element that `url` names, or null, and records the reference for what the build is building. A fragment
 // names an element of the tree of `from`, or of its document if the tree is a shadow tree that has no element of that
 // ID. A URL of another document names an element of that document by its fragment, or its root without one, once the
-// document has loaded (SVG2/linking.html#processingURL). `content` is true if what is built reads the element's
-// subtree, and not only which element the URL names.
-const PrDomElement* PR_NULLABLE svgBuildReference(SvgBuilder& b, const PrDomElement* from, PrStringView url, bool content);
+// document has loaded (SVG2/linking.html#processingURL). That document is fetched with `cors`: Anonymous for a
+// reference from a style property, and NoCors for any other (SVG2/linking.html#processingURL-fetch). `content` is true
+// if what is built reads the element's subtree, and not only which element the URL names.
+const PrDomElement* PR_NULLABLE svgBuildReference(SvgBuilder& b, const PrDomElement* from, PrStringView url,
+    DomCorsSettings cors, bool content);
 
 // Returns the computed style of `e`, as svgBuildElement styles an element of the document and svgBuildInstanceChildren
 // an element of a shadow tree that inherits from `parent`. An element of another document, which a reference names, is
@@ -940,17 +960,44 @@ const PrDomElement* PR_NULLABLE svgBuildHref(SvgBuilder& b, const PrDomElement* 
 // if `text` is not a length.
 bool svgParseLength(PrStringView text, const CssComputedStyle* PR_NULLABLE style, SvgLengthPercentage* out);
 
+// Returns a length in the units that the renderer resolves: a percentage, or user units, with font-relative units of
+// the style's font, or of the initial font size without a style.
+SvgLengthPercentage svgLengthOf(PrSvgLength length, const CssComputedStyle* PR_NULLABLE style);
+
 // Builds the children of `element` as the elements of a shadow tree, which inherit from `style`, under `parent`.
 void svgBuildInstanceChildren(SvgBuilder& b, const PrDomElement* element, const CssComputedStyle* style, SvgNodeIndex parent);
 
-// Returns the length of an attribute, such as a line's x1 or a gradient's cx, in the units that SVG gives it: a number
-// in user units, a length with a CSS unit, or a percentage. A font-relative unit is of the style's font. Returns
-// `fallback` if the attribute is missing or does not parse.
+// The values of attributes as the renderer reads them: what the animations compose, taken as it is, or else the
+// element's own text, parsed. A font-relative unit is of the style's font.
+//
+// svgAttributeLengthOf reads a length, such as a line's x1 or a gradient's cx, in the units that SVG gives it: a number
+// in user units, a length with a CSS unit, or a percentage, and returns false if the attribute is missing or does not
+// parse. svgAttributeLength returns `fallback` for such an attribute. svgAttributeLengths reads a list of lengths, and
+// svgAttributeNumbers a list of numbers, each returning false if the attribute is missing or an item does not parse.
+// svgAttributeViewBox reads a viewBox, and returns false if it is missing or not one.
+bool svgAttributeLengthOf(const PrDomElement* element, PrStringView name, const CssComputedStyle* PR_NULLABLE style,
+    SvgLengthPercentage* out);
 SvgLengthPercentage svgAttributeLength(const PrDomElement* element, PrStringView name, SvgLengthPercentage fallback,
     const CssComputedStyle* PR_NULLABLE style);
+bool svgAttributeLengths(const PrDomElement* element, PrStringView name, const CssComputedStyle* PR_NULLABLE style,
+    RawArray<SvgLengthPercentage>* out);
+bool svgAttributeNumbers(const PrDomElement* element, PrStringView name, RawArray<float>* out);
+bool svgAttributeViewBox(const PrDomElement* element, PrRect* out);
 
-// Returns the element's attribute `name` in no namespace, without surrounding white space, or the null view.
+// Return the value of an enumeration, as of pr/svg_attribute.h, and of a boolean, that the element reads the attribute
+// as: what the animations give it, or else its own, or else its initial value. An enumeration of an attribute that the
+// element does not read as one is 0, and such a boolean is false.
+uint8_t svgAttributeEnumeration(const PrDomElement* element, PrSvgAttribute attribute);
+bool svgAttributeBoolean(const PrDomElement* element, PrSvgAttribute attribute);
+
+// Returns the element's attribute `name` in no namespace, without surrounding white space, or the null view: the value
+// that animations give it, or else its own (svgAnimatedAttribute). svgBaseAttribute returns its own.
 PrStringView svgAttribute(const PrDomElement* element, PrStringView name);
+PrStringView svgBaseAttribute(const PrDomElement* element, PrStringView name);
+
+// Returns true if the element's conditional processing attributes are satisfied
+// (SVG2/struct.html#ConditionalProcessing).
+bool svgConditionsHold(const PrDomElement* element);
 
 // Reads the limits that a style's min-width, max-width, min-height and max-height put on a size.
 SvgSizeLimits svgStyleSizeLimits(const CssComputedStyle* style);
@@ -961,8 +1008,10 @@ PrVec2 svgLimitExtent(const SvgSizeLimits& limits, PrVec2 extent, PrVec2 viewpor
 // Returns true if `element` is in the SVG namespace and has `tag`.
 bool svgIs(const PrDomElement* element, PrDomTag tag);
 
-// Returns the element's href or xlink:href, or the null view if it has neither.
+// Returns the element's href or xlink:href, or the null view if it has neither: the value that animations give it, or
+// else its own. svgBaseHref returns its own.
 PrStringView svgHref(const PrDomElement* element);
+PrStringView svgBaseHref(const PrDomElement* element);
 
 // Returns the URL of the image that an image or feImage element shows, as its href gives it, or the null view if it
 // shows none: if it has no href, or if it is an feImage whose href references an element of its document

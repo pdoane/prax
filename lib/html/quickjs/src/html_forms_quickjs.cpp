@@ -109,9 +109,9 @@ JSValue fixedType(JSContext* ctx, JSValueConst object) {
 // The members of a submit button that override its form's (html/#form-submission-attributes).
 #define PR_SUBMITTER_ATTRIBUTES                                                                    \
     PR_JS_GET_SET("formAction", formActionUrl<"formaction">, jsSetReflectString<"formaction">),    \
-        PR_REFLECT_ENUMERATED("formEnctype", "formenctype", &kFormEnctype),                        \
-        PR_REFLECT_ENUMERATED("formMethod", "formmethod", &kFormMethod),                           \
-        PR_REFLECT_BOOL("formNoValidate", "formnovalidate"), PR_REFLECT_STRING("formTarget", "formtarget")
+        PR_JS_DOM_REFLECT_ENUMERATED("formEnctype", "formenctype", &kFormEnctype),                        \
+        PR_JS_DOM_REFLECT_ENUMERATED("formMethod", "formmethod", &kFormMethod),                           \
+        PR_JS_DOM_REFLECT_BOOL("formNoValidate", "formnovalidate"), PR_JS_DOM_REFLECT_STRING("formTarget", "formtarget")
 
 // ---------------------------------------------------------------------------------------------------------------------
 // RadioNodeList (html/#radionodelist) and HTMLFormControlsCollection (html/#htmlformcontrolscollection)
@@ -488,7 +488,7 @@ JSValue outputFor(JSContext* ctx, JSValueConst outputObject) {
     if (output == nullptr)
         return JS_EXCEPTION;
     return jsSameObject(ctx, outputObject, "htmlFor", [&] {
-        PrDomTokenList* list = prDomTokenListCreate(prHtmlOutputElementAsElement(output), "for");
+        PrDomTokenList* list = prDomTokenListCreate(prHtmlOutputElementAsElement(output), "for", nullptr);
         JSValue object = jsWrapAs(ctx, prJsDomTokenListClass, outputObject, list, true);
         if (JS_IsException(object))
             prDomTokenListDestroy(list);
@@ -780,16 +780,16 @@ JSValue eventSource(JSContext* ctx, JSValueConst eventObject, int magic) {
 
 constexpr JSCFunctionListEntry kFormElementProto[] = {
     PR_JS_TAG("HTMLFormElement"),
-    PR_REFLECT_STRING("acceptCharset", "accept-charset"),
+    PR_JS_DOM_REFLECT_STRING("acceptCharset", "accept-charset"),
     PR_JS_GET_SET("action", formActionUrl<"action">, jsSetReflectString<"action">),
-    PR_REFLECT_ENUMERATED("autocomplete", "autocomplete", &kAutocomplete),
-    PR_REFLECT_ENUMERATED("enctype", "enctype", &kEnctype),
-    PR_REFLECT_ENUMERATED("encoding", "enctype", &kEnctype),
-    PR_REFLECT_ENUMERATED("method", "method", &kMethod),
-    PR_REFLECT_STRING("name", "name"),
-    PR_REFLECT_BOOL("noValidate", "novalidate"),
-    PR_REFLECT_STRING("target", "target"),
-    PR_REFLECT_STRING("rel", "rel"),
+    PR_JS_DOM_REFLECT_ENUMERATED("autocomplete", "autocomplete", &kAutocomplete),
+    PR_JS_DOM_REFLECT_ENUMERATED("enctype", "enctype", &kEnctype),
+    PR_JS_DOM_REFLECT_ENUMERATED("encoding", "enctype", &kEnctype),
+    PR_JS_DOM_REFLECT_ENUMERATED("method", "method", &kMethod),
+    PR_JS_DOM_REFLECT_STRING("name", "name"),
+    PR_JS_DOM_REFLECT_BOOL("noValidate", "novalidate"),
+    PR_JS_DOM_REFLECT_STRING("target", "target"),
+    PR_JS_DOM_REFLECT_STRING("rel", "rel"),
     PR_JS_GET_SET("relList", formRelList, (jsPutForwards<"relList", "value">)),
     PR_JS_GET("elements", formElements),
     PR_JS_GET("length", formLengthGetter),
@@ -993,14 +993,14 @@ JSValue textControlSetRangeText(JSContext* ctx, JSValueConst elementObject, int 
 constexpr JSCFunctionListEntry kInputElementProto[] = {
     PR_JS_TAG("HTMLInputElement"),
     PR_TEXT_CONTROL_SELECTION,
-    PR_REFLECT_STRING("accept", "accept"),
-    PR_REFLECT_BOOL("alpha", "alpha"),
-    PR_REFLECT_STRING("alt", "alt"),
-    PR_REFLECT_BOOL("defaultChecked", "checked"),
+    PR_JS_DOM_REFLECT_STRING("accept", "accept"),
+    PR_JS_DOM_REFLECT_BOOL("alpha", "alpha"),
+    PR_JS_DOM_REFLECT_STRING("alt", "alt"),
+    PR_JS_DOM_REFLECT_BOOL("defaultChecked", "checked"),
     PR_JS_GET_SET("checked", (jsBoolGetter<&htmlInputElementClass, prHtmlInputElementChecked>), setInputChecked),
-    PR_REFLECT_ENUMERATED("colorSpace", "colorspace", &kColorSpace),
-    PR_REFLECT_STRING("dirName", "dirname"),
-    PR_REFLECT_BOOL("disabled", "disabled"),
+    PR_JS_DOM_REFLECT_ENUMERATED("colorSpace", "colorspace", &kColorSpace),
+    PR_JS_DOM_REFLECT_STRING("dirName", "dirname"),
+    PR_JS_DOM_REFLECT_BOOL("disabled", "disabled"),
     PR_FORM_ASSOCIATED,
     PR_JS_GET_SET("files", inputFiles, setInputFiles),
     PR_SUBMITTER_ATTRIBUTES,
@@ -1009,21 +1009,21 @@ constexpr JSCFunctionListEntry kInputElementProto[] = {
     PR_JS_GET_SET("indeterminate", (jsBoolGetter<&htmlInputElementClass, prHtmlInputElementIndeterminate>),
         setInputIndeterminate),
     PR_JS_GET("list", inputList),
-    PR_REFLECT_STRING("max", "max"),
+    PR_JS_DOM_REFLECT_STRING("max", "max"),
     PR_REFLECT_INTEGER("maxLength", "maxlength", PrHtmlReflectedInteger_NonNegative, -1),
-    PR_REFLECT_STRING("min", "min"),
+    PR_JS_DOM_REFLECT_STRING("min", "min"),
     PR_REFLECT_INTEGER("minLength", "minlength", PrHtmlReflectedInteger_NonNegative, -1),
-    PR_REFLECT_BOOL("multiple", "multiple"),
-    PR_REFLECT_STRING("name", "name"),
-    PR_REFLECT_STRING("pattern", "pattern"),
-    PR_REFLECT_STRING("placeholder", "placeholder"),
-    PR_REFLECT_BOOL("readOnly", "readonly"),
-    PR_REFLECT_BOOL("required", "required"),
+    PR_JS_DOM_REFLECT_BOOL("multiple", "multiple"),
+    PR_JS_DOM_REFLECT_STRING("name", "name"),
+    PR_JS_DOM_REFLECT_STRING("pattern", "pattern"),
+    PR_JS_DOM_REFLECT_STRING("placeholder", "placeholder"),
+    PR_JS_DOM_REFLECT_BOOL("readOnly", "readonly"),
+    PR_JS_DOM_REFLECT_BOOL("required", "required"),
     PR_REFLECT_INTEGER("size", "size", PrHtmlReflectedInteger_Positive, 20),
     PR_REFLECT_URL("src", "src"),
-    PR_REFLECT_STRING("step", "step"),
+    PR_JS_DOM_REFLECT_STRING("step", "step"),
     PR_JS_GET_SET("type", inputType, jsSetReflectString<"type">),
-    PR_REFLECT_STRING("defaultValue", "value"),
+    PR_JS_DOM_REFLECT_STRING("defaultValue", "value"),
     PR_JS_GET_SET("value", (jsStringGetter<&htmlInputElementClass, prHtmlInputElementValue>), setInputValue),
     PR_JS_GET_SET("valueAsDate", inputValueAsDate, setInputValueAsDate),
     PR_JS_GET_SET("valueAsNumber", inputValueAsNumber, setInputValueAsNumber),
@@ -1032,18 +1032,18 @@ constexpr JSCFunctionListEntry kInputElementProto[] = {
     PR_JS_MAGIC("stepUp", 0, inputStep, 0),
     PR_JS_MAGIC("stepDown", 0, inputStep, 1),
     PR_LABELABLE,
-    PR_REFLECT_STRING("align", "align"),
-    PR_REFLECT_STRING("useMap", "usemap"),
+    PR_JS_DOM_REFLECT_STRING("align", "align"),
+    PR_JS_DOM_REFLECT_STRING("useMap", "usemap"),
 };
 
 constexpr JSCFunctionListEntry kButtonElementProto[] = {
     PR_JS_TAG("HTMLButtonElement"),
-    PR_REFLECT_BOOL("disabled", "disabled"),
+    PR_JS_DOM_REFLECT_BOOL("disabled", "disabled"),
     PR_FORM_ASSOCIATED,
     PR_SUBMITTER_ATTRIBUTES,
-    PR_REFLECT_STRING("name", "name"),
+    PR_JS_DOM_REFLECT_STRING("name", "name"),
     PR_JS_GET_SET("type", buttonType, jsSetReflectString<"type">),
-    PR_REFLECT_STRING("value", "value"),
+    PR_JS_DOM_REFLECT_STRING("value", "value"),
     PR_LABELABLE,
 };
 
@@ -1051,17 +1051,17 @@ constexpr JSCFunctionListEntry kTextAreaElementProto[] = {
     PR_JS_TAG("HTMLTextAreaElement"),
     PR_TEXT_CONTROL_SELECTION,
     PR_REFLECT_INTEGER("cols", "cols", PrHtmlReflectedInteger_Positive, 20),
-    PR_REFLECT_STRING("dirName", "dirname"),
-    PR_REFLECT_BOOL("disabled", "disabled"),
+    PR_JS_DOM_REFLECT_STRING("dirName", "dirname"),
+    PR_JS_DOM_REFLECT_BOOL("disabled", "disabled"),
     PR_FORM_ASSOCIATED,
     PR_REFLECT_INTEGER("maxLength", "maxlength", PrHtmlReflectedInteger_NonNegative, -1),
     PR_REFLECT_INTEGER("minLength", "minlength", PrHtmlReflectedInteger_NonNegative, -1),
-    PR_REFLECT_STRING("name", "name"),
-    PR_REFLECT_STRING("placeholder", "placeholder"),
-    PR_REFLECT_BOOL("readOnly", "readonly"),
-    PR_REFLECT_BOOL("required", "required"),
+    PR_JS_DOM_REFLECT_STRING("name", "name"),
+    PR_JS_DOM_REFLECT_STRING("placeholder", "placeholder"),
+    PR_JS_DOM_REFLECT_BOOL("readOnly", "readonly"),
+    PR_JS_DOM_REFLECT_BOOL("required", "required"),
     PR_REFLECT_INTEGER("rows", "rows", PrHtmlReflectedInteger_Positive, 2),
-    PR_REFLECT_STRING("wrap", "wrap"),
+    PR_JS_DOM_REFLECT_STRING("wrap", "wrap"),
     PR_JS_GET("type", fixedType<"textarea">),
     PR_JS_GET_SET("defaultValue", (jsStringGetter<&htmlTextAreaElementClass, prHtmlTextAreaElementDefaultValue>),
         (jsStringSetter<&htmlTextAreaElementClass, prHtmlTextAreaElementSetDefaultValue>)),
@@ -1074,9 +1074,9 @@ constexpr JSCFunctionListEntry kTextAreaElementProto[] = {
 
 constexpr JSCFunctionListEntry kFieldSetElementProto[] = {
     PR_JS_TAG("HTMLFieldSetElement"),
-    PR_REFLECT_BOOL("disabled", "disabled"),
+    PR_JS_DOM_REFLECT_BOOL("disabled", "disabled"),
     PR_FORM_ASSOCIATED,
-    PR_REFLECT_STRING("name", "name"),
+    PR_JS_DOM_REFLECT_STRING("name", "name"),
     PR_JS_GET("type", fixedType<"fieldset">),
     PR_JS_GET("elements", fieldSetElements),
 };
@@ -1084,13 +1084,13 @@ constexpr JSCFunctionListEntry kFieldSetElementProto[] = {
 constexpr JSCFunctionListEntry kLegendElementProto[] = {
     PR_JS_TAG("HTMLLegendElement"),
     PR_FORM_ASSOCIATED,
-    PR_REFLECT_STRING("align", "align"),
+    PR_JS_DOM_REFLECT_STRING("align", "align"),
 };
 
 constexpr JSCFunctionListEntry kLabelElementProto[] = {
     PR_JS_TAG("HTMLLabelElement"),
     PR_JS_GET("form", labelForm),
-    PR_REFLECT_STRING("htmlFor", "for"),
+    PR_JS_DOM_REFLECT_STRING("htmlFor", "for"),
     PR_JS_GET("control", labelControl),
 };
 
@@ -1098,7 +1098,7 @@ constexpr JSCFunctionListEntry kOutputElementProto[] = {
     PR_JS_TAG("HTMLOutputElement"),
     PR_JS_GET_SET("htmlFor", outputFor, (jsPutForwards<"htmlFor", "value">)),
     PR_FORM_ASSOCIATED,
-    PR_REFLECT_STRING("name", "name"),
+    PR_JS_DOM_REFLECT_STRING("name", "name"),
     PR_JS_GET("type", fixedType<"output">),
     PR_JS_GET_SET("defaultValue", (jsStringGetter<&htmlOutputElementClass, prHtmlOutputElementDefaultValue>),
         (jsStringSetter<&htmlOutputElementClass, prHtmlOutputElementSetDefaultValue>)),
@@ -1129,8 +1129,8 @@ constexpr JSCFunctionListEntry kMeterElementProto[] = {
 
 constexpr JSCFunctionListEntry kDetailsElementProto[] = {
     PR_JS_TAG("HTMLDetailsElement"),
-    PR_REFLECT_STRING("name", "name"),
-    PR_REFLECT_BOOL("open", "open"),
+    PR_JS_DOM_REFLECT_STRING("name", "name"),
+    PR_JS_DOM_REFLECT_BOOL("open", "open"),
 };
 
 constexpr JSCFunctionListEntry kFormDataProto[] = {

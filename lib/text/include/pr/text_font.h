@@ -36,6 +36,11 @@ typedef struct PrTextFontDesc {
     uint32_t familyCount;
     PrFontStyle style;
     PrLocale locale;                            // the language of the text, which fallback reads; zero for none
+
+    // Values for the axes that they name, which every matched font takes after the values that matching gives it. A
+    // later value for an axis wins over an earlier one.
+    const PrFontVariation* PR_NULLABLE variations;
+    uint32_t variationCount;
 } PrTextFontDesc;
 
 // The match index that means no font, for a text font that has no face with a font.

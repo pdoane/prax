@@ -67,7 +67,7 @@ void processHandler(void* PR_NULLABLE context, PrDomEvent* handle) {
     PrDomEventHandlerCallback callback = {};
     for (uint32_t i = 0; listeners != nullptr && i < listeners->handlers.count; ++i) {
         const DomEventHandlerEntry& handler = listeners->handlers.data[i];
-        if (handler.listening && domEventHandlerType(handler.handler) == prRawStringView(&event->type)) {
+        if (handler.listening && domEventHandlerTypeFor(target, handler.handler) == prRawStringView(&event->type)) {
             callback = domEventHandler(target, handler.handler);
             break;
         }
@@ -116,7 +116,7 @@ void activate(PrDomEventTarget* target, DomEventHandlerEntry* entry) {
     if (entry->listening)
         return;
     PrDomEventListener listener = handlerListener(target);
-    domListenerAdd(target, domEventHandlerType(entry->handler), &listener, nullptr);
+    domListenerAdd(target, domEventHandlerTypeFor(target, entry->handler), &listener, nullptr);
     entry->listening = true;
 }
 
@@ -661,7 +661,7 @@ void domSetEventHandler(PrDomEventTarget* target, PrDomEventHandler handler,
         releaseHandler(entry);
         if (entry->listening) {
             PrDomEventListener listener = handlerListener(target);
-            domListenerRemove(target, domEventHandlerType(handler), &listener, false);
+            domListenerRemove(target, domEventHandlerTypeFor(target, handler), &listener, false);
         }
         entry->listening = false;
         return;

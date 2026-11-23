@@ -106,6 +106,7 @@ struct CanvasPattern {
     const PrTextureSource* image;               // the pattern holds a reference
     PrVec2 extent;                              // the image's extent in CSS pixels
     PrCanvasRepetition repetition;
+    bool originClean;                           // the image is origin-clean (html/#concept-canvas-origin-clean)
     PrDAffine2 transform;
 };
 
@@ -1291,6 +1292,7 @@ PrCanvasPattern* prCanvasPatternCreate(const PrCanvasImageSource* source, PrCanv
     pattern->image = source->image;
     pattern->extent = source->extent;
     pattern->repetition = repetition;
+    pattern->originClean = source->originClean;
     pattern->transform = prDAffine2Identity();
     return pattern;
 }
@@ -1630,6 +1632,8 @@ void prCanvasSetStylePattern(PrCanvas* canvas, PrCanvasStyleRole role, PrCanvasP
     CanvasStyleValue* style = &canvas->state.styles[role];
     styleReset(style);
     *style = CanvasStyleValue{.kind = PrCanvasStyleKind_Pattern, .pattern = pattern};
+    if (!pattern->originClean)
+        canvas->originClean = false;
 }
 
 PrDVec2 prCanvasShadowOffset(const PrCanvas* canvas) {
@@ -1780,16 +1784,17 @@ void prCanvasDrawFocusRing(PrCanvas* canvas, const PrCanvasPath2D* PR_NULLABLE p
     PrPath* shape = userPath(canvas, path);
     if (shape == nullptr)
         return;
-    // The ring is a dark outline two pixels wide, with no shadow, global alpha or operator.
+    // The ring is a dark outline two of the bitmap's pixels wide, with no shadow, global alpha or operator. The path is
+    // mapped to the bitmap and stroked there, so the transform does not scale the ring.
     PrDrawStroke stroke = prDrawStrokeDefault();
     stroke.shape.width = 2;
-    stroke.nonScaling = true;
     PrDrawPaint paint{.color = PrColor{0.0625f, 0.0625f, 0.0625f, 1}, .stroke = &stroke};
     if (canvas->pixels != nullptr) {
+        PrPath* mapped = prPathCreate();
+        prPathAddPath(mapped, shape, prAffine2FromDAffine2(canvas->state.transform));
         syncClips(canvas);
-        prDrawListPushTransformDAffine2(canvas->pending, canvas->state.transform);
-        prDrawListPath(canvas->pending, shape, PrPathFillRule_NonZero, paint);
-        prDrawListPopTransform(canvas->pending);
+        prDrawListPath(canvas->pending, mapped, PrPathFillRule_NonZero, paint);
+        prPathDestroy(mapped);
         canvas->recorded = true;
         touched(canvas);
     }

@@ -286,71 +286,6 @@ constexpr uint32_t kPaintBatch = 64;
 // costs one entry.
 constexpr uint32_t kPaintSubVisits = 32;
 
-// Returns the transform from the natural space of a replaced box's content, in pixels, to the space of its content box
-// `box`, and sets `drawn` to the size that the natural space is drawn at, rounded to units. The transform fits the
-// content to the box as `decoration` specifies (css-images-3/#the-object-fit, css-images-3/#the-object-position). The
-// natural space has the content's natural size, and the box's size along an axis that has no natural size.
-PrAffine2 fitContent(const LayoutStyles* styles, const PrLayoutDecorationStyle& decoration, PrLayoutNaturalSize natural,
-        PrLayoutRect box, PrLayoutVec* drawn) {
-    double boxWidth = double(layoutRectWidth(box).raw);
-    double boxHeight = double(layoutRectHeight(box).raw);
-    bool hasWidth = natural.width.raw >= 0;
-    bool hasHeight = natural.height.raw >= 0;
-    double width = hasWidth ? double(natural.width.raw) : boxWidth;
-    double height = hasHeight ? double(natural.height.raw) : boxHeight;
-    double ratio = hasWidth && hasHeight && height > 0 ? width / height : double(natural.ratio);
-    // The size at which the content is drawn: the box's size, the largest size at the ratio that fits in the box, the
-    // smallest size at the ratio that covers it, or the size of the natural space.
-    auto atRatio = [&](bool cover, double* w, double* h) {
-        *w = boxWidth;
-        *h = boxHeight;
-        if (ratio <= 0 || boxHeight <= 0)
-            return;
-        if ((boxWidth / boxHeight > ratio) != cover)
-            *w = boxHeight * ratio;
-        else
-            *h = boxWidth / ratio;
-    };
-    double drawnWidth = boxWidth;
-    double drawnHeight = boxHeight;
-    switch (decoration.objectFit) {
-        case PrLayoutObjectFit_Contain:
-            atRatio(false, &drawnWidth, &drawnHeight);
-            break;
-        case PrLayoutObjectFit_Cover:
-            atRatio(true, &drawnWidth, &drawnHeight);
-            break;
-        case PrLayoutObjectFit_None:
-            drawnWidth = width;
-            drawnHeight = height;
-            break;
-        case PrLayoutObjectFit_ScaleDown:
-            atRatio(false, &drawnWidth, &drawnHeight);
-            if (width <= drawnWidth && height <= drawnHeight) {
-                drawnWidth = width;
-                drawnHeight = height;
-            }
-            break;
-        default:
-            break;
-    }
-    // Position percentages refer to the room that the drawn size leaves.
-    PrLayoutUnit roomX = prLayoutUnitClamped(int64_t(boxWidth - drawnWidth));
-    PrLayoutUnit roomY = prLayoutUnitClamped(int64_t(boxHeight - drawnHeight));
-    PrLayoutVec at{
-        box.left + layoutResolve(styles, decoration.objectPositionX, roomX),
-        box.top + layoutResolve(styles, decoration.objectPositionY, roomY),
-    };
-    float scaleX = width > 0 ? float(drawnWidth / width) : 1;
-    float scaleY = height > 0 ? float(drawnHeight / height) : 1;
-    PrVec2 offset = prLayoutVecToPx(at);
-    *drawn = PrLayoutVec{
-        prLayoutUnitClamped(int64_t(prF64Round(drawnWidth))),
-        prLayoutUnitClamped(int64_t(prF64Round(drawnHeight))),
-    };
-    return PrAffine2{scaleX, 0, 0, scaleY, offset.x, offset.y};
-}
-
 // How a recording uses the cache of subtree recordings.
 enum {
     RecordSubs_Cached,              // embeds the valid cached recordings and caches those it makes
@@ -1896,7 +1831,7 @@ struct Painter : LayoutWalkVisitor {
         PrLayoutStyleIndex style = layoutTreeNode(tree, fragment->node).style;
         PrLayoutRect box = layoutRectMoved(fragment->replaced.content, at - origin);
         PrLayoutVec fitted{};
-        PrAffine2 placed = fitContent(styles, layoutDecorationStyle(styles, style), n.natural, box, &fitted);
+        PrAffine2 placed = layoutFitContent(styles, layoutDecorationStyle(styles, style), n.natural, box, &fitted);
         // The natural space, the box's size along an axis that has no natural size.
         PrLayoutVec space{
             n.natural.width.raw >= 0 ? n.natural.width : layoutRectWidth(box),
@@ -1906,15 +1841,19 @@ struct Painter : LayoutWalkVisitor {
         uint64_t key = markKey(fragment->node);
         if (key != 0)
             prDrawListPushMark(into, key);
-        // The content is clipped to the curves of the content box's corners (css-backgrounds-3/#corner-clipping).
+        // The content is clipped to the content box, and to the curves of its corners
+        // (css-backgrounds-3/#corner-clipping), unless the box's overflow is visible on both axes. On a replaced box,
+        // any other value clips (css-overflow-4/#overflow-control).
+        const PrLayoutBoxStyle& boxStyle = layoutBoxStyle(styles, style);
+        bool clips = boxStyle.overflowX != PrLayoutOverflow_Visible || boxStyle.overflowY != PrLayoutOverflow_Visible;
         const PrLayoutDecorationStyle& decoration = layoutDecorationStyle(styles, style);
-        if (layoutHasCorners(decoration)) {
+        if (clips && layoutHasCorners(decoration)) {
             PrRect border = prLayoutRectToPx(layoutRectAt(at - origin, fragment->extent));
             LayoutBackgroundBoxes boxes{.boxes = {border, border, prLayoutRectToPx(box)}};
             layoutBackgroundRound(boxes, layoutBorderShape(styles, decoration, border),
                 1u << PrLayoutBackgroundBox_ContentBox);
             prDrawListPushClipCornerRect(into, boxes.shapes[PrLayoutBackgroundBox_ContentBox], PrDrawEdges_Snapped);
-        } else {
+        } else if (clips) {
             prDrawListPushClipRect(into, prLayoutRectToPx(box), PrDrawEdges_Snapped);
         }
         if (n.contentKind == PrLayoutContentKind_Image) {
@@ -1978,7 +1917,8 @@ struct Painter : LayoutWalkVisitor {
             prDrawListPopTransform(into);
             prDrawListRelease(content);
         }
-        prDrawListPopClip(into);
+        if (clips)
+            prDrawListPopClip(into);
         if (key != 0)
             prDrawListPopMark(into);
         recorded();
@@ -2844,6 +2784,67 @@ uint32_t layoutPaintVerify(LayoutTree* tree) {
     }
     tree->stats = stats;
     return differs;
+}
+
+PrAffine2 layoutFitContent(const LayoutStyles* styles, const PrLayoutDecorationStyle& decoration, PrLayoutNaturalSize natural,
+        PrLayoutRect box, PrLayoutVec* drawn) {
+    double boxWidth = double(layoutRectWidth(box).raw);
+    double boxHeight = double(layoutRectHeight(box).raw);
+    bool hasWidth = natural.width.raw >= 0;
+    bool hasHeight = natural.height.raw >= 0;
+    double width = hasWidth ? double(natural.width.raw) : boxWidth;
+    double height = hasHeight ? double(natural.height.raw) : boxHeight;
+    double ratio = hasWidth && hasHeight && height > 0 ? width / height : double(natural.ratio);
+    // The size at which the content is drawn: the box's size, the largest size at the ratio that fits in the box, the
+    // smallest size at the ratio that covers it, or the size of the natural space.
+    auto atRatio = [&](bool cover, double* w, double* h) {
+        *w = boxWidth;
+        *h = boxHeight;
+        if (ratio <= 0 || boxHeight <= 0)
+            return;
+        if ((boxWidth / boxHeight > ratio) != cover)
+            *w = boxHeight * ratio;
+        else
+            *h = boxWidth / ratio;
+    };
+    double drawnWidth = boxWidth;
+    double drawnHeight = boxHeight;
+    switch (decoration.objectFit) {
+        case PrLayoutObjectFit_Contain:
+            atRatio(false, &drawnWidth, &drawnHeight);
+            break;
+        case PrLayoutObjectFit_Cover:
+            atRatio(true, &drawnWidth, &drawnHeight);
+            break;
+        case PrLayoutObjectFit_None:
+            drawnWidth = width;
+            drawnHeight = height;
+            break;
+        case PrLayoutObjectFit_ScaleDown:
+            atRatio(false, &drawnWidth, &drawnHeight);
+            if (width <= drawnWidth && height <= drawnHeight) {
+                drawnWidth = width;
+                drawnHeight = height;
+            }
+            break;
+        default:
+            break;
+    }
+    // Position percentages refer to the room that the drawn size leaves.
+    PrLayoutUnit roomX = prLayoutUnitClamped(int64_t(boxWidth - drawnWidth));
+    PrLayoutUnit roomY = prLayoutUnitClamped(int64_t(boxHeight - drawnHeight));
+    PrLayoutVec at{
+        box.left + layoutResolve(styles, decoration.objectPositionX, roomX),
+        box.top + layoutResolve(styles, decoration.objectPositionY, roomY),
+    };
+    float scaleX = width > 0 ? float(drawnWidth / width) : 1;
+    float scaleY = height > 0 ? float(drawnHeight / height) : 1;
+    PrVec2 offset = prLayoutVecToPx(at);
+    *drawn = PrLayoutVec{
+        prLayoutUnitClamped(int64_t(prF64Round(drawnWidth))),
+        prLayoutUnitClamped(int64_t(prF64Round(drawnHeight))),
+    };
+    return PrAffine2{scaleX, 0, 0, scaleY, offset.x, offset.y};
 }
 
 } // namespace pr_impl

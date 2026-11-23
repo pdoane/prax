@@ -709,7 +709,10 @@ TEST_CASE("baselines come from BASE, and the rest are related to them") {
     CHECK(m.ideographicOver == doctest::Approx(-m.ascent));
     CHECK(m.centralBaseline == doctest::Approx((m.descent - m.ascent) / 2));
     CHECK((m.fromFont & PrFontMetricFlag_Vertical) == 0);
-    CHECK(m.mathBaseline < 0.0f);
+    // Its hanging baseline is 0.8 of its ascent, and its mathematical baseline half of it.
+    CHECK((m.fromFont & (PrFontMetricFlag_Hanging | PrFontMetricFlag_Math)) == 0);
+    CHECK(m.hangingBaseline == doctest::Approx(-m.ascent * 0.8f));
+    CHECK(m.mathBaseline == doctest::Approx(-m.ascent / 2));
     prFontRelease(font);
 }
 

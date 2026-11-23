@@ -33,6 +33,28 @@ using namespace pr_impl;
 // ---------------------------------------------------------------------------------------------------------------------
 // The clipPath element
 
+TEST_CASE("a mask that leads back to the mask being drawn is ignored, and the mask that holds it applies alone") {
+    // The masks reference each other. The rect's mask, the top half, applies, and the left half's mask, in a cycle with
+    // it, does not apply to it.
+    Drawing drawing(svgDocument("<mask id='left' mask='url(#top)'><rect width='50' height='100' fill='white'/></mask>"
+        "<mask id='top' mask='url(#left)'><rect width='100' height='50' fill='white'/></mask>"
+        "<rect width='100' height='100' fill='#0000ff' mask='url(#top)'/>"));
+    CHECK(drawing.pixel(25, 25) == kBlue);
+    CHECK(drawing.pixel(75, 25) == kBlue);
+    CHECK(drawing.pixel(75, 75) == kWhite);
+}
+
+TEST_CASE("a mask on an element of a mask's content applies, and the cycle it leads to is cut where it closes") {
+    // The outer mask's rect, the top half, is masked by the inner mask, the left half, whose own mask leads back to the
+    // outer mask being drawn. The inner mask applies, without its own mask, so the rect shows the top left quarter.
+    Drawing drawing(svgDocument("<mask id='outer'><rect width='100' height='50' fill='white' mask='url(#inner)'/></mask>"
+        "<mask id='inner' mask='url(#outer)'><rect width='50' height='100' fill='white'/></mask>"
+        "<rect width='100' height='100' fill='#0000ff' mask='url(#outer)'/>"));
+    CHECK(drawing.pixel(25, 25) == kBlue);
+    CHECK(drawing.pixel(75, 25) == kWhite);
+    CHECK(drawing.pixel(25, 75) == kWhite);
+}
+
 TEST_CASE("a clipPath of one shape is a clip of the list, in the user space of the element it clips") {
     Drawing drawing(svgDocument("<clipPath id='c'><rect x='10' y='20' width='30' height='40'/></clipPath>"
         "<g transform='translate(5 5)'><rect width='100' height='100' fill='#0000ff' clip-path='url(#c)'/></g>"));

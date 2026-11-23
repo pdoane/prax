@@ -665,8 +665,7 @@ bool setPaint(Walk& w, const PrDrawBrush* PR_NULLABLE brush, PrColor color, PrRe
 // plainly, with one cap for every end, and with a cap and a join that the context has.
 bool strokesNatively(const PrDrawStroke& stroke) {
     const PrPathStroke& s = stroke.shape;
-    if (stroke.nonScaling || stroke.mapping != PrDrawStrokeMapping_Plain || s.profile != nullptr ||
-            stroke.align != PrDrawStrokeAlign_Center)
+    if (stroke.mapping != PrDrawStrokeMapping_Plain || s.profile != nullptr || stroke.align != PrDrawStrokeAlign_Center)
         return false;
     if (s.join != PrPathJoin_Miter && s.join != PrPathJoin_Round && s.join != PrPathJoin_Bevel)
         return false;

@@ -17,7 +17,7 @@ namespace pr_impl {
 // attributes and style: the view that a fragment names, or an image element's (SVG2/embedded.html#ImageElement).
 struct SvgRootView {
     PrRect viewBox;             // used if `hasViewBox` is set
-    SvgAspect aspect;
+    PrSvgPreserveAspectRatio aspect = kSvgAspectDefault;
     bool hasViewBox;
     bool clips;                 // the content is clipped to the viewport
 
@@ -169,6 +169,11 @@ float svgPercentBase(const SvgDrawer& d, SvgAxis axis);
 // context element, in its user space and onto its bounding box. Returns false if the paint paints nothing.
 bool svgPaintFor(const SvgDrawer& d, const SvgPaint& paint, float opacity, PrRect box, PrDrawPaint* base, PrDrawBrush* brush);
 
+// Strokes `geometry` with `paint`, and measures the stroke in the space that the tree is drawn in. A non-scaling stroke
+// is measured there (SVG2/painting.html#NonScalingStroke). `geometry` and the paint's brush, `brush`, are in the user
+// space.
+void svgStrokeInHost(const SvgDrawer& d, const PrPath* geometry, PrDrawPaint paint, PrDrawBrush* brush);
+
 // Writes the stroke that `paints` strokes with, its lengths resolved, to `out`. `dashes` holds kSvgMaxDashes floats,
 // which `out` refers to. `length` is the length of the geometry in user units, which the paints' path-length scales the
 // dashes by, or below zero for geometry that path-length does not apply to. Returns false if the paints stroke nothing.
@@ -222,34 +227,46 @@ bool svgClipShapePath(SvgDrawer& d, SvgNodeIndex index, const SvgEffects& effect
 // Returns an image element's positioning rectangle in a viewport of `viewport` (SVG2/embedded.html#Placement).
 PrRect svgImageRect(PrVec2 viewport, const SvgImageShape& image);
 
+// Writes the rectangle that a rect, image or foreignObject node's x, y, width and height give it in a viewport of
+// `viewport` to `out`, and returns true. Returns false for a node of any other kind.
+bool svgPlacedRect(PrVec2 viewport, const SvgNode& node, PrRect* out);
+
 // Paints the shape that `draw` records, with the fill if `fills` is set, the stroke, and the markers that `markers`
 // draws, in the order of the paints' paint-order. A drawing of silhouettes records the fill alone, opaque. `box` is the
 // shape's geometry bounds, which a bounding-box paint server maps onto. `length` is the length of the geometry, as
-// svgStrokeFor takes it. `draw` records the shape with the paint it is given.
-template <typename Draw, typename Markers>
+// svgStrokeFor takes it. `draw` records the shape with the paint it is given. `outline` appends the shape's outline in
+// its user space to a path. A non-scaling stroke strokes that outline.
+template <typename Draw, typename Outline, typename Markers>
 void svgPaintShape(const SvgDrawer& d, const SvgPaints& paints, bool fills, PrRect box, float length, Draw draw,
-        Markers markers) {
+        Outline outline, Markers markers) {
     PrDrawEdges edges = paints.crisp ? PrDrawEdges_Aliased : PrDrawEdges_Antialiased;
     if (d.silhouette) {
         if (fills)
             draw(PrDrawPaint{.color = prColor16FromColor(PrColor{1, 1, 1, 1}), .edges = edges});
         return;
     }
-    for (SvgLayer layer : paints.order) {
+    for (SvgPaintLayer layer : paints.order) {
         PrDrawBrush brush{};
-        if (layer == SvgLayer_Fill) {
+        if (layer == SvgPaintLayer_Fill) {
             PrDrawPaint fill{.edges = edges};
             if (fills && svgPaintFor(d, paints.fill, paints.fillOpacity, box, &fill, &brush))
                 draw(fill);
-        } else if (layer == SvgLayer_Stroke) {
+        } else if (layer == SvgPaintLayer_Stroke) {
             float dashes[kSvgMaxDashes];
             PrDrawStroke stroke{};
-            PrDrawPaint outline{.edges = edges};
-            if (svgStrokeFor(d, paints, length, dashes, &stroke) &&
-                    svgPaintFor(d, paints.stroke, paints.strokeOpacity, box, &outline, &brush)) {
-                outline.stroke = &stroke;
-                draw(outline);
+            PrDrawPaint paint{.edges = edges};
+            if (!svgStrokeFor(d, paints, length, dashes, &stroke) ||
+                    !svgPaintFor(d, paints.stroke, paints.strokeOpacity, box, &paint, &brush))
+                continue;
+            paint.stroke = &stroke;
+            if (!paints.nonScaling) {
+                draw(paint);
+                continue;
             }
+            PrPath* geometry = prPathCreate();
+            outline(geometry);
+            svgStrokeInHost(d, geometry, paint, &brush);
+            prPathDestroy(geometry);
         } else {
             markers();
         }

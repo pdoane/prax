@@ -94,11 +94,9 @@ inline PrDrawStroke strokeOf(float width, PrPathJoin join = PrPathJoin_Miter, Pr
     return stroke;
 }
 
-// Returns a stroke one target pixel wide, regardless of the transform.
+// Returns a stroke one unit wide, for guides.
 inline PrDrawStroke hairlineStroke() {
-    PrDrawStroke stroke = strokeOf(1);
-    stroke.nonScaling = true;
-    return stroke;
+    return strokeOf(1);
 }
 
 // A drawing's cells laid out in a grid over it. Each cell is a rectangle to draw one case into, above a band for its

@@ -692,24 +692,7 @@ bool paintLayer(LayoutTextures* PR_NULLABLE textures, const LayoutCompounds* com
     PrVec2 extent{area.right - area.left, area.bottom - area.top};
     if (isEmpty(painted) || !(extent.x > 0) || !(extent.y > 0))
         return false;
-    PrVec2 size = imageSize(compounds, layer, extent);
-    // Round scales the image so that whole copies fill the area. If only one axis rounds and the other is auto, the
-    // other keeps the image's ratio.
-    bool roundX = layer.repeatX == PrLayoutBackgroundRepeat_Round && size.x > 0;
-    bool roundY = layer.repeatY == PrLayoutBackgroundRepeat_Round && size.y > 0;
-    bool lengths = layer.size == PrLayoutBackgroundSize_Lengths;
-    if (roundX) {
-        float rounded = extent.x / roundCopies(extent.x, size.x);
-        if (!roundY && lengths && layoutLengthIsAuto(layer.sizeY))
-            size.y *= rounded / size.x;
-        size.x = rounded;
-    }
-    if (roundY) {
-        float rounded = extent.y / roundCopies(extent.y, size.y);
-        if (!roundX && lengths && layoutLengthIsAuto(layer.sizeX))
-            size.x *= rounded / size.y;
-        size.y = rounded;
-    }
+    PrVec2 size = layoutBackgroundTileSize(compounds, layer, extent);
     if (!(size.x > 0) || !(size.y > 0))
         return false;
     TileAxis x = placeAxis(compounds, layer.repeatX, layer.positionX, area.left, extent.x, size.x);
@@ -909,6 +892,28 @@ void layoutBackgroundRound(LayoutBackgroundBoxes& boxes, const PrCornerRect& bor
         bool same = insets[0] == 0 && insets[1] == 0 && insets[2] == 0 && insets[3] == 0;
         boxes.shapes[b] = same ? border : prCornerRectInset(border, insets);
     }
+}
+
+PrVec2 layoutBackgroundTileSize(const LayoutCompounds* compounds, const PrLayoutBackgroundLayer& layer, PrVec2 area) {
+    PrVec2 size = imageSize(compounds, layer, area);
+    // Round scales the image so that whole copies fill the area. If only one axis rounds and the other is auto, the
+    // other keeps the image's ratio.
+    bool roundX = layer.repeatX == PrLayoutBackgroundRepeat_Round && size.x > 0;
+    bool roundY = layer.repeatY == PrLayoutBackgroundRepeat_Round && size.y > 0;
+    bool lengths = layer.size == PrLayoutBackgroundSize_Lengths;
+    if (roundX) {
+        float rounded = area.x / roundCopies(area.x, size.x);
+        if (!roundY && lengths && layoutLengthIsAuto(layer.sizeY))
+            size.y *= rounded / size.x;
+        size.x = rounded;
+    }
+    if (roundY) {
+        float rounded = area.y / roundCopies(area.y, size.y);
+        if (!roundX && lengths && layoutLengthIsAuto(layer.sizeX))
+            size.x *= rounded / size.y;
+        size.y = rounded;
+    }
+    return size;
 }
 
 bool layoutBackgroundPaintLayer(LayoutTextures* PR_NULLABLE textures, const LayoutCompounds* compounds,

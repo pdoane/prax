@@ -106,7 +106,6 @@ struct DrawSharedWriterOps {
 
     // What the format draws natively. A walk rasterizes what the format does not draw.
     bool knockout;                          // knockout groups
-    bool nonScalingStrokes;                 // strokes measured in page px whatever the transform
     bool (*gradient)(void* PR_NULLABLE context, const PrDrawBrush* brush);
     bool (*blendMode)(void* PR_NULLABLE context, PrDrawBlendMode blendMode);
 

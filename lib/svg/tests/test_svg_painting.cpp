@@ -109,9 +109,14 @@ TEST_CASE("an odd number of dashes repeats, and a negative dash makes the list i
 }
 
 TEST_CASE("vector-effect non-scaling-stroke strokes in the host's space") {
-    Drawing drawing(svgDocument("<line x2='10' stroke='black' vector-effect='non-scaling-stroke'/>"));
+    // The line is mapped into the space that the tree is drawn in, and its stroke keeps its width there.
+    Drawing drawing(svgDocument("<g transform='scale(2)'><line x2='10' stroke='black' stroke-width='3' "
+        "vector-effect='non-scaling-stroke'/></g>"));
     REQUIRE(drawing.strokes().count() == 1);
-    CHECK(drawing.strokes()[0]->nonScaling);
+    const Drawn* stroke = drawing.strokes()[0];
+    CHECK(near(scaleOf(stroke->transform), 1));
+    CHECK(near(stroke->stroke.width, 3));
+    CHECK(near(stroke->bounds, PrRect{0, 0, 20, 0}));
 }
 
 TEST_CASE("shape-rendering crispEdges paints aliased edges") {
@@ -310,6 +315,23 @@ TEST_CASE("a marker paints with its shape's paint as context paint, and does not
         CHECK(circle->color.r == 1.0f);
         CHECK(circle->color.g == 0.0f);
     }
+}
+
+TEST_CASE("a marker's refX percentage is of the viewport of the shape it is drawn on, and a keyword of its viewBox") {
+    // The viewBox of 40 draws the content at half size. 50% of the document's viewport of 100 is 50 in the content's
+    // units, so the rect, 40 wide, moves 25 to the left of the vertex at 60. The keyword center is half the viewBox:
+    // 20, which moves the rect 10 to the left.
+    auto marker = [](const char* refX) {
+        return svgDocument(format("<marker id='m' viewBox='0 0 40 40' markerWidth='20' markerHeight='20' "
+            "markerUnits='userSpaceOnUse' refX='{}' refY='0' overflow='visible'>"
+            "<rect width='40' height='40' fill='#0000ff'/></marker><path d='M 60 50 H 90' marker-start='url(#m)'/>", refX));
+    };
+    Drawing percentage(marker("50%"));
+    CHECK(percentage.pixel(40, 55) == "0 0 255");
+    CHECK(percentage.pixel(57, 55) == "255 255 255");
+    Drawing keyword(marker("center"));
+    CHECK(keyword.pixel(52, 55) == "0 0 255");
+    CHECK(keyword.pixel(45, 55) == "255 255 255");
 }
 
 TEST_CASE("markers that draw each other nest to a bounded depth") {

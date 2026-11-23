@@ -120,7 +120,7 @@ struct WrapperTable {
 };
 
 // The maximum number of classifiers that jsAddClassifier adds to one class.
-constexpr uint32_t kMaxClassifiers = 4;
+constexpr uint32_t kMaxClassifiers = 8;
 
 // The maximum depth of a class hierarchy, counting its root.
 constexpr uint32_t kClassMaxDepth = 8;

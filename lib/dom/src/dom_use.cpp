@@ -10,6 +10,7 @@
 
 #include "dom/src/dom_element_state.h"
 #include "dom/src/dom_node_leaves.h"
+#include "dom/src/dom_range.h"
 #include "dom/src/dom_resource.h"
 
 namespace pr_impl {
@@ -60,8 +61,14 @@ bool isUse(const PrDomElement* element) {
     return element->space == PrDomNamespace_Svg && element->tag == PrDomTag_Use;
 }
 
-// Returns the use's href, or its xlink:href if it has none, or the null view.
+// Returns the href that the use's animations give it. Without one, returns its href, or its xlink:href if it has no
+// href, or else the null view.
 PrStringView hrefOf(const PrDomElement* use) {
+    if (use->document->animatedHref != nullptr) {
+        PrStringView animated = use->document->animatedHref(use);
+        if (animated.data != nullptr)
+            return prStringTrim(animated);
+    }
     const PrDomAttr* href = domAttribute(use, PrDomNamespace_None, "href");
     if (href == nullptr)
         href = domAttribute(use, PrDomNamespace_XLink, "href");
@@ -75,8 +82,11 @@ const PrDomElement* PR_NULLABLE targetOf(const PrDomElement* use, uint32_t* PR_N
     PrStringView href = hrefOf(use);
     DomReference reference{};
     bool split = href.data != nullptr && domReferenceSplit(use->document, href, &reference);
-    if (named != nullptr)
-        *named = hashOfId(split && reference.fragment.data != nullptr ? reference.fragment : PrStringView{});
+    if (named != nullptr) {
+        PrRawString id = domFragmentDecode(split ? reference.fragment : PrStringView{});
+        *named = hashOfId(split && reference.fragment.data != nullptr ? prRawStringView(&id) : PrStringView{});
+        prRawStringReset(&id);
+    }
     const PrDomElement* target = split ? domReferenceTarget(use->document, reference) : nullptr;
     prRawStringReset(&reference.url);
     return target;
@@ -112,13 +122,25 @@ struct Sync {
 
 void syncUse(Sync& s, PrDomElement* use, const PrDomElement* PR_NULLABLE target);
 
-// Makes `node` take the attributes of `original`, in place.
+// Makes `node` take the attributes of `original`, in place. The instance of an element of another document takes its
+// href and xlink:href made absolute against the base URL of that document, since the instance resolves URLs against its
+// own document's (SVG2/struct.html#UseShadowTree).
 void syncAttributes(PrDomElement* node, const PrDomElement* original) {
+    bool foreign = original->document != node->document;
     for (const PrDomAttr* a = original->firstAttribute; a != nullptr; a = static_cast<const PrDomAttr*>(a->next)) {
         const PrDomAttr* own = domAttribute(node, a->space, prRawStringView(&a->name));
         PrStringView value = prRawStringView(&a->value);
+        PrRawString absolute = prRawStringNull();
+        bool href = (a->space == PrDomNamespace_None || a->space == PrDomNamespace_XLink) && prRawStringView(&a->name) == "href";
+        PrUrl* url = nullptr;
+        if (foreign && href && domDocumentParseUrl(original->document, value, &url) == PrStatus_Ok) {
+            absolute = prUrlSerialize(url, PrUrlSerialization_Whole);
+            value = prRawStringView(&absolute);
+        }
+        prUrlDestroy(url);
         if (own == nullptr || !(prRawStringView(&own->value) == value))
             domSetAttributeNs(node, a->space, domAttributePrefix(a), prRawStringView(&a->name), value);
+        prRawStringReset(&absolute);
     }
     for (PrDomAttr* a = node->firstAttribute; a != nullptr;) {
         PrDomAttr* next = static_cast<PrDomAttr*>(a->next);
@@ -306,6 +328,21 @@ PrDomNode* PR_NULLABLE domNodeUseOriginal(const PrDomNode* node) {
     return const_cast<PrDomNode*>(original);
 }
 
+void domUseInstancesOf(const PrDomNode* original, RawArray<PrDomNode*>* out) {
+    const DomUses* uses = original->document->uses;
+    for (uint32_t i = 0; uses != nullptr && i < uses->records.count; ++i) {
+        const DomUseRecord& record = uses->records.data[i];
+        if (record.use == nullptr || record.target == nullptr || !domIsInclusiveAncestor(record.target, original))
+            continue;
+        const PrDomShadowRoot* shadow = domShadowRootOfHost(record.use);
+        const PrDomNode* top = shadow != nullptr ? shadow : nullptr;
+        for (PrDomNode* n = top != nullptr ? top->first : nullptr; n != nullptr; n = domNodeNext(top, n)) {
+            if (domNodeUseOriginal(n) == original)
+                out->push(n);
+        }
+    }
+}
+
 void domUseConnectionChanged(PrDomElement* element) {
     if (!isUse(element) || domInUseShadowTree(element))
         return;
@@ -374,8 +411,10 @@ void domUsesResolveAll(PrDomDocument* document) {
     DomUses* uses = document->uses;
     if (uses == nullptr)
         return;
-    for (uint32_t i = 0; i < uses->records.count; ++i)
+    for (uint32_t i = 0; i < uses->records.count; ++i) {
         uses->records.data[i].resolve = true;
+        uses->records.data[i].stale = true;
+    }
     uses->stale = true;
 }
 

@@ -265,6 +265,7 @@ void releaseNode(PrDomNode* node) {
                 prRawStringReset(&element->state->imageUrl);
                 prTextureSourceRelease(element->state->picture);
                 prLayoutPainterRelease(element->state->vector);
+                domImageVariantsRelease(element->state->variants);
                 if (DomSlot* slot = element->state->slot) {
                     slot->assigned.reset();
                     slot->manual.reset();
@@ -700,6 +701,8 @@ void transferDocument(PrDomDocument* document, PrDomNode* node, uint32_t* moved)
             document->options = true;
         if (domIsHtml(element, PrDomTag_Details))
             document->details = true;
+        if (domIsSvgAnimation(element))
+            document->animations = true;
         domControlAdopted(element, from);
         for (PrDomAttr* attribute = element->firstAttribute; attribute != nullptr;
                 attribute = static_cast<PrDomAttr*>(attribute->next)) {
@@ -1152,11 +1155,12 @@ void eventHandlerAttributeChanged(PrDomElement* element, DomNamespaceId space, P
     PrDomEventHandler handler = domEventHandlerFromName(name);
     if (handler == PrDomEventHandler_Count)
         return;
-    // Only a handler of GlobalEventHandlers has a content attribute, except that on a body or frameset element a
-    // handler of WindowEventHandlers has one too.
+    // A handler of GlobalEventHandlers has a content attribute, and so does one that the element's interface declares
+    // itself, and on a body or frameset element a handler of WindowEventHandlers.
     DomEventHandlerMixins mixins = domEventHandlerMixins(handler);
     bool body = element->tag == PrDomTag_Body || element->tag == PrDomTag_Frameset;
-    if ((mixins & DomEventHandlerMixin_Global) == 0 && !(body && (mixins & DomEventHandlerMixin_Window) != 0))
+    if ((mixins & DomEventHandlerMixin_Global) == 0 && !(body && (mixins & DomEventHandlerMixin_Window) != 0) &&
+            !domElementHasEventHandler(element, handler))
         return;
     PrDomEventTarget* target = domEventHandlerTarget(element, handler);
     if (target == nullptr)
@@ -1212,10 +1216,11 @@ void attributeChanged(PrDomElement* element, DomNamespaceId space, PrStringView 
         PrStringView oldValue, const PrRawString* PR_NULLABLE value) {
     ++element->document->treeVersion;
     PrStringView newValue = value != nullptr ? prRawStringView(value) : PrStringView{};
-    domNotifyAttributeChanged(element, space, name, oldValue, newValue);
-    domUsesAttributeChanged(element, space, name);
+    // The classes change before the document's followers hear of the change, which may give the element others.
     if (space == PrDomNamespace_None && name == "class")
         setClasses(element, newValue);
+    domNotifyAttributeChanged(element, space, name, oldValue, newValue);
+    domUsesAttributeChanged(element, space, name);
     if (space == PrDomNamespace_None && name == "id") {
         PrStringView id = newValue;
         if (id.size != 0)
@@ -1629,6 +1634,8 @@ PrDomElement* domElementCreate(PrDomDocument* document, DomNamespaceId space, Pr
         document->options = true;
     if (space == PrDomNamespace_Html && tag == PrDomTag_Details)
         document->details = true;
+    if (domIsSvgAnimation(element))
+        document->animations = true;
     domControlCreated(element);
     if (space == PrDomNamespace_Html && tag == PrDomTag_Template)
         domElementState(element)->contents = makeOwned<PrDomDocumentFragment>(domDocumentTemplateDocument(document), element);
@@ -2772,6 +2779,10 @@ void domNormalize(PrDomNode* node) {
 
 PrStatus domValidateInsertion(const PrDomNode* parent, const PrDomNode* node, const PrDomNode* PR_NULLABLE child) {
     return validateInsertion(parent, node, child, false);
+}
+
+void domElementSetClasses(PrDomElement* element, PrStringView text) {
+    setClasses(element, text.data != nullptr ? text : domAttributeValue(element, "class"));
 }
 
 } // namespace pr_impl

@@ -4,6 +4,7 @@
 # css-color-adjust-1/#preferred 2 Preferred Color Schemes: no page; it defines color schemes, which 2.1 to 2.4 show
 css-color-adjust-1/#color-scheme-page 2.1 Opting Into a Preferred Color Scheme
     page-color-scheme.html
+    svg-image-color-scheme.html
 css-color-adjust-1/#color-scheme-prop 2.2 Overriding the Page Color Scheme: the color-scheme property
     color-scheme.html
 css-color-adjust-1/#color-scheme-resolution 2.3 Resolving Color Schemes

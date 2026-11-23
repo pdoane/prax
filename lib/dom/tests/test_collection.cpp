@@ -75,7 +75,7 @@ TEST_CASE("a token list reads a value short enough to be held inline, and toggle
     PrDomDocument* document = domDocumentCreate(DomDocumentKind_Html);
     PrDomElement* element = domElementCreate(document, PrDomNamespace_Html, PrDomTag_Div, "");
     domSetAttribute(element, PrDomNamespace_None, "class", "a b");
-    PrDomTokenList* list = prDomTokenListCreate(element, "class");
+    PrDomTokenList* list = prDomTokenListCreate(element, "class", nullptr);
     bool on = false;
     const bool yes = true;
     const bool no = false;

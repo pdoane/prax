@@ -11,7 +11,7 @@
 #include "pr/layout_tree.h"
 #include "pr/status.h"
 #include "pr/string_view.h"
-#include "pr/svg.h"
+#include "pr/svg_element.h"
 #include "pr/text.h"
 #include "pr/texture_cache.h"
 #include "pr/vec.h"
@@ -84,6 +84,15 @@ typedef struct PrSvgDrawOptions {
     // receives a drawing holds the rasters that the drawing draws. A caller that keeps the list must draw the tree
     // again after the cache moves to another device (prTextureCacheGeneration).
     PrTextureCache* PR_NULLABLE textures;
+
+    // The document prefers a dark color scheme, and a light one otherwise. Its media queries and the colors that depend
+    // on the scheme read it. An image's document prefers the color scheme of the element that embeds it
+    // (css-color-adjust-1/#page-color-scheme).
+    bool prefersDark;
+
+    // The size that an image is laid out at, which its viewport-relative lengths and its media queries of size read. On
+    // an axis of zero, the image takes its natural size, or else the default object size.
+    PrVec2 viewport;
 } PrSvgDrawOptions;
 
 // Returns options with no services, no custom properties, and the initial value of the color property.
@@ -128,6 +137,18 @@ const PrSvgImage* prSvgImageCreate(PrSvgElement* svg, PrStringView fragment, con
 // Adds or releases a reference. The last release frees the image.
 void prSvgImageRetain(const PrSvgImage* image);
 void prSvgImageRelease(const PrSvgImage* PR_NULLABLE image);
+
+// The parts of an image's environment (PrSvgDrawOptions) that its document can read.
+enum {
+    PrSvgEnvironmentFlag_ColorScheme = 1 << 0,  // the color scheme that it prefers
+    PrSvgEnvironmentFlag_Size = 1 << 1,         // the size that it is laid out at (PrSvgDrawOptions::viewport)
+};
+typedef uint8_t PrSvgEnvironmentFlags;
+
+// Returns the parts of its environment that the image read as it was built: through a media query, or through a color
+// that depends on the scheme, such as light-dark(). An image built in an environment that differs only in parts that it
+// did not read draws the same.
+PrSvgEnvironmentFlags prSvgImageEnvironmentRead(const PrSvgImage* image);
 
 // Returns the natural dimensions of the image's root (prSvgElementNaturalSize).
 PrSvgNaturalSize prSvgImageNaturalSize(const PrSvgImage* image);

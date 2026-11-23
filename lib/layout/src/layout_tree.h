@@ -225,6 +225,12 @@ struct LayoutRootReader {
     LayoutNodeIndex root;
 };
 
+// The revision of a painter that the tree holds, as prLayoutTreeRepaintPainters last saw it.
+struct LayoutPainterRevision {
+    void* PR_NULLABLE context;
+    uint64_t revision;
+};
+
 // A layout tree.
 struct LayoutTree {
     LayoutStyles* styles;           // owned by the tree
@@ -324,6 +330,22 @@ struct LayoutTree {
     mutable RawArray<LayoutRootReader> rootReaders;
     mutable LayoutNodeIndex painting;
 
+    // The painters with revisions that the tree holds, as prLayoutTreeRepaintPainters last saw them or as they were
+    // when the tree was given them. `revisedPainters` is set once the tree is given such a painter, and until then
+    // prLayoutTreeRepaintPainters looks at nothing. `canvasRepainted` is set if a background painter that changed may
+    // be the root's, so that the next scene draws the canvas again instead of reusing the last one.
+    RawArray<LayoutPainterRevision> painterRevisions;
+    bool revisedPainters;
+    bool canvasRepainted;
+
+    // The replaced nodes whose painters are told the extent that their content is placed at (PrLayoutPainter::place).
+    // `placesBackgrounds` is set once the tree is given a background layer whose painter is told its tile size, and
+    // until then no background is looked at. `placePending` is set while a painter that the tree was given has not been
+    // told its size. A layout that lays out nothing places only then, since the places of the others have not changed.
+    RawArray<LayoutNodeIndex> placing;
+    bool placesBackgrounds;
+    bool placePending;
+
     LayoutAnchoring anchoring;
 
     // The last paint's scene, which the tree holds a reference to, and the viewport's fragment that it painted. A paint
@@ -352,6 +374,14 @@ void layoutTreeSetKey(LayoutTree* tree, LayoutNodeIndex index, uint64_t key);
 // recording that holds it draws it again. A paint that has begun marks a node as of the paint before it, which leaves
 // the recordings that it makes current at the next paint.
 void layoutTreeRepaintContent(LayoutTree* tree, LayoutNodeIndex replaced, uint32_t paints);
+
+// Notes that the tree is given the image of `layer`, so that prLayoutTreeRepaintPainters looks for painters with
+// revisions once it is given one (LayoutTree::revisedPainters).
+void layoutTreeNotePainter(LayoutTree* tree, const PrLayoutBackgroundLayer& layer);
+
+// Notes that the tree is given `painter`, as layoutTreeNotePainter does. A painter with a revision that the tree has
+// not seen has its revision recorded now, so that a change before the next prLayoutTreeRepaintPainters draws it again.
+void layoutTreeNoteRevision(LayoutTree* tree, const PrLayoutPainter& painter);
 
 // Returns true if the node is a root that the last layout laid out other than the viewport's (LayoutTree::roots).
 bool layoutTreeIsLaidOutRoot(const LayoutTree* tree, LayoutNodeIndex index);

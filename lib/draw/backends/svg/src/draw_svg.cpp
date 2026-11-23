@@ -263,8 +263,6 @@ void strokeAttributes(PrTextBuffer& out, const PrDrawStroke* stroke) {
         if (shape.dashOffset != 0)
             numberAttribute(out, "stroke-dashoffset", double(shape.dashOffset));
     }
-    if (stroke->nonScaling)
-        prTextBufferAppend(&out, " vector-effect=\"non-scaling-stroke\"");
 }
 
 bool svgGradient(void* PR_NULLABLE context, const PrDrawBrush* brush) {
@@ -566,7 +564,6 @@ PrDrawWriter* prDrawSvgCreate(const PrDrawWriterOptions* PR_NULLABLE options) {
     DrawSharedWriterOps ops{
         .context = s,
         .knockout = false,
-        .nonScalingStrokes = true,
         .gradient = svgGradient,
         .blendMode = svgBlendMode,
         .fill = svgFill,

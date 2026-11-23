@@ -923,6 +923,113 @@ PrLayoutNode createStyled(LayoutTree* t, PrLayoutNode parent, PrLayoutStyleIndex
     return layoutNodeName(t, node);
 }
 
+// Calls `visit` with each painter with a revision that the tree holds: the content of its replaced nodes, and the
+// images of the background, mask and mask border layers that its styles intern.
+template <typename Visit>
+void eachRevisedPainter(const LayoutTree* tree, Visit visit) {
+    auto image = [&](const PrLayoutBackgroundLayer& layer) {
+        if (layer.kind == PrLayoutImageKind_Painter && layer.painter.revision != nullptr)
+            visit(layer.painter);
+    };
+    for (uint32_t i = 0; i < tree->replaced.count; ++i) {
+        const LayoutReplaced& r = tree->replaced.data[i];
+        if (r.contentKind == PrLayoutContentKind_Painter && r.painter.revision != nullptr)
+            visit(r.painter);
+    }
+    const LayoutBackgrounds& backgrounds = tree->styles->backgrounds;
+    for (uint32_t i = 0; i < backgrounds.entries.count; ++i) {
+        const LayoutBackground& b = backgrounds.entries.data[i];
+        for (uint32_t l = 0; b.layers != nullptr && l < b.count; ++l)
+            image(b.layers[l]);
+    }
+    const LayoutEffectTable& masks = tree->styles->effectLists.tables[LayoutEffectKind_Mask];
+    for (uint32_t i = 0; i < masks.entries.count; ++i) {
+        const LayoutEffectEntry& e = masks.entries.data[i];
+        if (!e.live)
+            continue;
+        for (uint32_t l = 0; l < e.mask.layerCount; ++l)
+            image(e.mask.layers[l].image);
+        image(e.mask.border.image);
+    }
+}
+
+// Returns true if one of `count` layers paints with a painter whose context is in `changed`.
+bool paintsChanged(const PrLayoutBackgroundLayer* PR_NULLABLE layers, uint32_t count, const RawArray<void*>& changed) {
+    for (uint32_t i = 0; i < count; ++i) {
+        if (layers[i].kind != PrLayoutImageKind_Painter)
+            continue;
+        for (void* context : changed.span()) {
+            if (layers[i].painter.context == context)
+                return true;
+        }
+    }
+    return false;
+}
+
+// Tells the painter of each replaced node the extent that its content is placed at, as the content box fits it
+// (PrLayoutPainter::place), and forgets the nodes that no longer draw with a painter.
+void placePainters(LayoutTree* t) {
+    t->placePending = false;
+    for (uint32_t i = t->placing.count; i-- > 0;) {
+        LayoutNodeIndex index = t->placing.data[i];
+        bool painted = index < t->nodes.count && t->nodes.data[index].live &&
+            layoutReplaced(t, index).contentKind == PrLayoutContentKind_Painter &&
+            layoutReplaced(t, index).painter.place != nullptr;
+        if (!painted) {
+            t->placing.erase(i);
+            continue;
+        }
+        const LayoutFragment* fragment = layoutCachePlaced(t->cache, index);
+        if (fragment == nullptr || fragment->kind != LayoutFragmentKind_Replaced)
+            continue;
+        const LayoutReplaced& n = layoutReplaced(t, index);
+        PrLayoutVec fitted{};
+        layoutFitContent(t->styles, layoutDecorationStyle(t->styles, t->nodes.data[index].style), n.natural,
+            fragment->replaced.content, &fitted);
+        n.painter.place(n.painter.context, prLayoutVecToPx(fitted));
+    }
+    if (!t->placesBackgrounds)
+        return;
+    // Each background layer whose painter is placed is told the size of its tile, in its box's first fragment. A layer
+    // fixed to the viewport is sized in the viewport.
+    const LayoutStyles* styles = t->styles;
+    for (LayoutNodeIndex index = 0; index < t->nodes.count; ++index) {
+        if (!t->nodes.data[index].live)
+            continue;
+        PrLayoutStyleIndex style = t->nodes.data[index].style;
+        if (style == kPrLayoutStyleNone)
+            continue;
+        const PrLayoutDecorationStyle& decoration = layoutDecorationStyle(styles, style);
+        const LayoutBackground& layers = layoutBackgroundAt(&styles->backgrounds, decoration.backgroundLayers);
+        bool placed = false;
+        for (uint32_t i = 0; i < layers.count && !placed; ++i) {
+            placed = layers.layers[i].kind == PrLayoutImageKind_Painter && layers.layers[i].painter.place != nullptr;
+        }
+        if (!placed)
+            continue;
+        const LayoutFragment* fragment = layoutCachePlaced(t->cache, index);
+        if (fragment == nullptr)
+            continue;
+        PrVec2 extent = prLayoutVecToPx(fragment->extent);
+        LayoutBackgroundBoxes boxes =
+            layoutBackgroundBoxes(styles, fragment, layoutBoxStyle(styles, style), PrRect{0, 0, extent.x, extent.y});
+        for (uint32_t i = 0; i < layers.count; ++i) {
+            const PrLayoutBackgroundLayer& layer = layers.layers[i];
+            if (layer.kind != PrLayoutImageKind_Painter || layer.painter.place == nullptr)
+                continue;
+            PrRect area = boxes.boxes[layer.origin];
+            PrVec2 room{area.right - area.left, area.bottom - area.top};
+            if (layer.attachment == PrLayoutBackgroundAttachment_Fixed)
+                room = prLayoutVecToPx(t->viewport);
+            if (!(room.x > 0) || !(room.y > 0))
+                continue;
+            PrVec2 size = layoutBackgroundTileSize(&styles->compounds, layer, room);
+            if (size.x > 0 && size.y > 0)
+                layer.painter.place(layer.painter.context, size);
+        }
+    }
+}
+
 } // namespace
 
 LayoutNodeIndex layoutTreeCreateNode(LayoutTree* tree, PrLayoutNodeKind kind) {
@@ -1231,6 +1338,25 @@ void layoutTreeRepaintContent(LayoutTree* tree, LayoutNodeIndex replaced, uint32
     }
 }
 
+void layoutTreeNotePainter(LayoutTree* tree, const PrLayoutBackgroundLayer& layer) {
+    if (layer.kind != PrLayoutImageKind_Painter)
+        return;
+    layoutTreeNoteRevision(tree, layer.painter);
+    tree->placesBackgrounds = tree->placesBackgrounds || layer.painter.place != nullptr;
+    tree->placePending = tree->placePending || layer.painter.place != nullptr;
+}
+
+void layoutTreeNoteRevision(LayoutTree* tree, const PrLayoutPainter& painter) {
+    if (painter.revision == nullptr)
+        return;
+    tree->revisedPainters = true;
+    for (const LayoutPainterRevision& seen : tree->painterRevisions.span()) {
+        if (seen.context == painter.context)
+            return;
+    }
+    tree->painterRevisions.push(LayoutPainterRevision{painter.context, painter.revision(painter.context)});
+}
+
 bool layoutTreeIsLaidOutRoot(const LayoutTree* tree, LayoutNodeIndex index) {
     for (uint32_t i = 0; i < tree->roots.count; ++i) {
         if (tree->roots.data[i].node == index)
@@ -1456,6 +1582,7 @@ void prLayoutTreeDestroy(PrLayoutTree* PR_NULLABLE tree) {
     t->pageMargins.reset();
     t->runningPages.reset();
     t->rootReaders.reset();
+    t->painterRevisions.reset();
     layoutAnchoringReset(t->anchoring);
     layoutCacheReset(t->cache);
     for (uint32_t i = 0; i < t->shapings.count; ++i)
@@ -1870,6 +1997,10 @@ void prLayoutNodeSetContent(PrLayoutTree* tree, PrLayoutNode replaced, const PrL
     prLayoutPainterRetain(painter);
     prLayoutPainterRelease(r.painter);
     r.painter = painter;
+    layoutTreeNoteRevision(t, painter);
+    if (painter.place != nullptr && t->placing.find(index) == kArrayMissing)
+        t->placing.push(index);
+    t->placePending = t->placePending || painter.place != nullptr;
     r.limit = image != nullptr ? content->limit : 0;
     r.rendering = image != nullptr ? content->rendering : PrLayoutImageRendering_Auto;
     r.priority = image != nullptr ? content->priority : PrTextureCachePriority(PrTextureCachePriority_Normal);
@@ -1927,6 +2058,81 @@ void prLayoutNodeInvalidateContent(PrLayoutTree* tree, PrLayoutNode replaced) {
     r.content = nullptr;
     nodeAt(t, index).paintChanged = t->paint.paints;
     markPainted(t, index, false);
+}
+
+bool prLayoutTreeRepaintPainters(PrLayoutTree* tree) {
+    LayoutTree* t = tree;
+    if (!t->revisedPainters)
+        return false;
+    // The revisions now, one for each painter, and the painters whose revision moved since the last call. A painter
+    // that the tree was given since the last call was drawn at its current revision.
+    RawArray<LayoutPainterRevision> now;
+    RawArray<void*> changed;
+    eachRevisedPainter(t, [&](const PrLayoutPainter& painter) {
+        for (const LayoutPainterRevision& seen : now.span()) {
+            if (seen.context == painter.context)
+                return;
+        }
+        uint64_t revision = painter.revision(painter.context);
+        now.push(LayoutPainterRevision{painter.context, revision});
+        for (const LayoutPainterRevision& was : t->painterRevisions.span()) {
+            if (was.context == painter.context && was.revision != revision)
+                changed.push(painter.context);
+        }
+    });
+    t->painterRevisions.reset();
+    t->painterRevisions = now;
+    if (changed.count == 0) {
+        changed.reset();
+        return false;
+    }
+    const LayoutStyles* styles = t->styles;
+    auto contains = [&](void* PR_NULLABLE context) {
+        for (void* c : changed.span()) {
+            if (c == context)
+                return true;
+        }
+        return false;
+    };
+    for (uint32_t i = 0; i < t->nodes.count; ++i) {
+        LayoutTreeNode& n = t->nodes.data[i];
+        if (!n.live)
+            continue;
+        if (n.kind == PrLayoutNodeKind_Replaced) {
+            LayoutReplaced& r = t->replaced.data[n.replaced];
+            if (r.contentKind == PrLayoutContentKind_Painter && contains(r.painter.context)) {
+                prDrawListRelease(r.content);
+                r.content = nullptr;
+                n.paintChanged = t->paint.paints;
+                markPainted(t, i, false);
+            }
+        }
+        if (n.kind == PrLayoutNodeKind_Text || n.style == kPrLayoutStyleNone)
+            continue;
+        const LayoutBackground& background =
+            layoutBackgroundAt(&styles->backgrounds, layoutDecorationStyle(styles, n.style).backgroundLayers);
+        if (paintsChanged(background.layers, background.count, changed)) {
+            t->nodes.data[i].paintChanged = t->paint.paints;
+            markPainted(t, i, false);
+            // The root's background paints the canvas, which the scene draws apart from the boxes.
+            t->canvasRepainted = true;
+        }
+        PrLayoutMaskIndex mask = layoutCompositingStyle(styles, n.style).mask;
+        if (mask != kPrLayoutMaskNone) {
+            const PrLayoutMask& m = layoutEffectAt(&styles->effectLists, LayoutEffectKind_Mask, mask).mask;
+            bool masked = paintsChanged(&m.border.image, 1, changed);
+            for (uint32_t l = 0; l < m.layerCount && !masked; ++l)
+                masked = paintsChanged(&m.layers[l].image, 1, changed);
+            // A mask applies around the recording of a box with a layer of its own, as an effect does.
+            if (masked) {
+                markPainted(t, i, true);
+                t->pendingPaint |= LayoutInputFlag_Effects;
+                ++t->effects;
+            }
+        }
+    }
+    changed.reset();
+    return true;
 }
 
 void prLayoutNodeSetScroll(PrLayoutTree* tree, PrLayoutNode element, PrLayoutVec offset) {
@@ -2009,6 +2215,8 @@ void prLayoutTreeLayout(PrLayoutTree* tree, const PrLayoutRoot* roots, uint32_t 
         clean = t->roots.data[i].fragment != nullptr && nodeAt(t, t->roots.data[i].node).dirty == 0;
     if (clean) {
         layoutAnchoringIdle(t);
+        if (t->placePending)
+            placePainters(t);
         return;
     }
     layoutAnchoringChoose(t);
@@ -2074,6 +2282,7 @@ void prLayoutTreeLayout(PrLayoutTree* tree, const PrLayoutRoot* roots, uint32_t 
     bool resized = extent != t->viewport;
     t->viewport = extent;
     layoutAnchoringAdjust(t, resized);
+    placePainters(t);
 }
 
 PrLayoutTreeStats prLayoutTreeStats(const PrLayoutTree* tree) {

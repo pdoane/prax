@@ -115,8 +115,6 @@ void appendPaintState(PrRawString* out, const PrDrawCommand& command) {
                 appendNumbers(out, point, 3);
             }
         }
-        if (command.stroke->nonScaling)
-            appendText(out, " non-scaling");
         appendText(out, kAlign[command.stroke->align]);
         appendText(out, kMapping[command.stroke->mapping]);
     }

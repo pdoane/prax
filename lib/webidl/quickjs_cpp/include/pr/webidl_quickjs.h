@@ -261,6 +261,12 @@ struct JsClassDefinition {
     const JSCFunctionListEntry* PR_NULLABLE unforgeable;
     int unforgeableCount;
 
+    // The names of the [Unscopable] members of the interface and the mixins that it includes, which its prototype's
+    // @@unscopables names (webidl/#Unscopable), so that a `with` statement over an object skips them, as an event
+    // handler's scope does.
+    const char* PR_NONNULL const* PR_NULLABLE unscopables;
+    int unscopableCount;
+
     JsWrapped* PR_NULLABLE wrapped;
     const JsCollection* PR_NULLABLE collection;   // the members of a setlike or maplike class
 

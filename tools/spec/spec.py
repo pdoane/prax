@@ -3,10 +3,11 @@
 third_party/specs and searched there.
 
 A plan cites the drafts in force, and reads them instead of a summary of them. A name is the short name of a CSS
-Working Group draft (css-break-4, css2, cssom-view-1), whose source is the Overview.bs in its directory of
-w3c/csswg-drafts; of an FXTF draft (css-masking-1, filter-effects-1, compositing-2), whose source is the same in
-w3c/fxtf-drafts; of a WHATWG standard (html, dom), whose source is in its own repository; or svg2-<chapter> for a
-chapter of SVG 2 (svg2-styling, svg2-painting), whose source is that chapter's file in w3c/svgwg; or of a W3C
+Working Group draft (css-break-4, css2, cssom-view-1), or of a draft that the FXTF began and the CSS Working Group
+now keeps (css-masking-1, filter-effects-1, compositing-2), whose source is the Overview.bs in its directory of
+w3c/csswg-drafts; of a WHATWG standard (html, dom), whose source is in its own repository; or svg2-<chapter> for a
+chapter of SVG 2 (svg2-styling, svg2-painting), whose source is that chapter's file in w3c/svgwg; of an SVG module
+that w3c/svgwg holds beside SVG 2 (svg-animations); or of a W3C
 specification in a repository of its own (uievents, uievents-key, pointerevents, mathml-core, mathml4), whose source
 is its Bikeshed file, or the HTML that ReSpec publishes from, with its includes inlined, where the repository keeps no
 Bikeshed source. The source is text as its editors write it, so a match is shown with its section's heading and its
@@ -46,13 +47,12 @@ W3C = {"uievents": "main/index.bs", "uievents-key": "gh-pages/index.html", "uiev
 W3C_REPOSITORIES = {"intersection-observer": "IntersectionObserver", "file-api": "FileAPI",
                     "media-source-2": "media-source", "mathml4": "mathml"}
 
-# The drafts of the FXTF, which w3c/fxtf-drafts holds rather than w3c/csswg-drafts.
-FXTF = {"compositing-1", "compositing-2", "css-masking-1", "css-masking-2", "filter-effects-1", "filter-effects-2",
-        "geometry-1", "motion-1"}
-
 # The prefix of an SVG 2 chapter's name: svg2-styling is master/styling.bs, or master/styling.html for a chapter that
 # is not yet in Bikeshed.
 SVG2 = "svg2-"
+
+# The SVG modules that w3c/svgwg holds beside SVG 2, each with the path of its source in the repository.
+SVGWG = {"svg-animations": "specs/animations/master/Overview.html"}
 
 RAW = "https://raw.githubusercontent.com/"
 
@@ -63,11 +63,12 @@ def urls_of(name):
         return [RAW + "whatwg/%s/main/%s" % (name, WHATWG[name] or name + ".bs")]
     if name in W3C:
         return [RAW + "w3c/%s/%s" % (W3C_REPOSITORIES.get(name, name), W3C[name])]
+    if name in SVGWG:
+        return [RAW + "w3c/svgwg/main/" + SVGWG[name]]
     if name.startswith(SVG2):
         chapter = name[len(SVG2):]
         return [RAW + "w3c/svgwg/main/master/%s.%s" % (chapter, kind) for kind in ("bs", "html")]
-    group = "fxtf-drafts" if name in FXTF else "csswg-drafts"
-    return [RAW + "w3c/%s/main/%s/Overview.bs" % (group, name)]
+    return [RAW + "w3c/csswg-drafts/main/%s/Overview.bs" % name]
 
 
 def fetch(name, refresh):
@@ -75,7 +76,7 @@ def fetch(name, refresh):
     if not re.fullmatch(r"[a-z0-9-]+", name):
         sys.exit("%s is not a draft's short name" % name)
     os.makedirs(SPECS, exist_ok=True)
-    html = name == "html" or W3C.get(name, "").endswith(".html")
+    html = name == "html" or W3C.get(name, "").endswith(".html") or SVGWG.get(name, "").endswith(".html")
     path = os.path.join(SPECS, name + (".html" if html else ".bs"))
     if refresh or not os.path.exists(path):
         errors = []

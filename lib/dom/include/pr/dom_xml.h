@@ -5,6 +5,7 @@
 #pragma once
 
 #include "pr/base.h"
+#include "pr/byte_view.h"
 #include "pr/dom.h"
 #include "pr/string_view.h"
 #include "pr/xml.h"
@@ -19,6 +20,11 @@ extern "C" {
 // the document's one reference. If the source is not well-formed, the document holds the content before the error. A
 // non-null `error` then describes the error and its position.
 PrDomDocument* prDomParseXml(PrStringView source, PrStringView contentType, PrXmlError* PR_NULLABLE error);
+
+// Parses the bytes of an XML resource, as prDomParseXml does, after decoding them from the charset of their byte order
+// mark, or else the one that their encoding declaration names (XML's EncodingDecl), or else UTF-8 (encoding/#decode).
+// The document's charset is the one that decoded them.
+PrDomDocument* prDomParseXmlBytes(PrByteView bytes, PrStringView contentType, PrXmlError* PR_NULLABLE error);
 
 #if defined(__cplusplus)
 }

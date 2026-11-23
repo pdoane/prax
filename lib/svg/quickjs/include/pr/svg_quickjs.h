@@ -5,6 +5,7 @@
 #pragma once
 
 #include "pr/svg.h"
+#include "pr/svg_element.h"
 
 #include "quickjs.h"
 
@@ -37,9 +38,6 @@ extern JSClassID prJsSvgAnimateElementClass;
 extern JSClassID prJsSvgSetElementClass;
 extern JSClassID prJsSvgAnimateMotionElementClass;
 extern JSClassID prJsSvgAnimateTransformElementClass;
-extern JSClassID prJsSvgLengthClass;
-extern JSClassID prJsSvgAnimatedLengthClass;
-extern JSClassID prJsSvgAnimatedStringClass;
 
 #if defined(__cplusplus)
 }

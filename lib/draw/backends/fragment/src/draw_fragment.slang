@@ -1608,11 +1608,14 @@ float4 lighting(Inputs inputs, uint d, int2 p) {
     uint kind = uint(frameFilterData[d + 7]);
     int x = p.x;
     int y = p.y;
-    float nx = -surface / 4
+    // Pixels per unit of the group's space. Vectors are along the pixels' axes and measured in units of the group's
+    // space, so that the light's angles hold where the pixels' scale differs between the axes.
+    float2 scale = float2(frameFilterData[d + 18], frameFilterData[d + 19]);
+    float nx = -surface * scale.x / 4
                * ((edgeAlpha(inputs, x + 1, y - 1) + 2 * edgeAlpha(inputs, x + 1, y) + edgeAlpha(inputs, x + 1, y + 1))
                   - (edgeAlpha(inputs, x - 1, y - 1) + 2 * edgeAlpha(inputs, x - 1, y)
                      + edgeAlpha(inputs, x - 1, y + 1)));
-    float ny = -surface / 4
+    float ny = -surface * scale.y / 4
                * ((edgeAlpha(inputs, x - 1, y + 1) + 2 * edgeAlpha(inputs, x, y + 1) + edgeAlpha(inputs, x + 1, y + 1))
                   - (edgeAlpha(inputs, x - 1, y - 1) + 2 * edgeAlpha(inputs, x, y - 1)
                      + edgeAlpha(inputs, x + 1, y - 1)));
@@ -1621,18 +1624,18 @@ float4 lighting(Inputs inputs, uint d, int2 p) {
     float py = float(y);
     float3 light = float3(frameFilterData[d + 10], frameFilterData[d + 11], frameFilterData[d + 12]);
     float3 aim = float3(frameFilterData[d + 13], frameFilterData[d + 14], frameFilterData[d + 15]);
-    float z = surface * edgeAlpha(inputs, x, y) * frameFilterData[d + 18];
+    float z = surface * edgeAlpha(inputs, x, y);
     float3 l;
     if (kind == PrDrawLightKind_Distant) {
         float azimuth = frameFilterData[d + 8];
         float elevation = frameFilterData[d + 9];
         l = float3(cos(azimuth) * cos(elevation), sin(azimuth) * cos(elevation), sin(elevation));
     } else {
-        l = light - float3(px, py, z);
+        l = float3((light.xy - float2(px, py)) / scale, light.z - z);
         float span = sqrt(dot(l, l));
         l = span > 0 ? l / span : (float3)0;
         if (kind == PrDrawLightKind_Spot) {
-            float3 spot = aim - light;
+            float3 spot = float3((aim.xy - light.xy) / scale, aim.z - light.z);
             spot /= sqrt(dot(spot, spot));
             float along = -dot(l, spot);
             float factor = along < frameFilterData[d + 17] ? 0 : pow(max(along, 0.0), frameFilterData[d + 16]);

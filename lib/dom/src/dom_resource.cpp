@@ -8,6 +8,7 @@
 #include "pr/raw_array.h"
 #include "pr/string_ops.h"
 #include "pr/url.h"
+#include "pr/url_percent.h"
 
 #include "dom/src/dom_hooks.h"
 #include "dom/src/dom_use.h"
@@ -23,9 +24,10 @@ enum {
 };
 typedef uint8_t DomResourceState;
 
-// A resource document, by the URL that named it.
+// A resource document, by the URL that named it and the CORS settings that fetch it.
 struct DomResource {
     PrRawString url;                       // absolute, without a fragment
+    DomCorsSettings cors;
     DomResourceState state;
     PrDomDocument* PR_NULLABLE document; // Loaded: the parsed document, which the resources hold a reference to
 };
@@ -68,7 +70,7 @@ void fetched(void* PR_NULLABLE data, const DomFetchResult* result) {
     ResourceFetch* fetch = static_cast<ResourceFetch*>(data);
     DomResource& resource = fetch->document->resources->documents.data[fetch->index];
     resource.state = DomResourceState_Failed;
-    if (domFetchIsOk(result) && domFetchText(result).size != 0) {
+    if (domFetchIsOk(result) && !result->opaque && domFetchText(result).size != 0) {
         PrRawString decoded{};
         PrCharset charset = PrCharset_None;
         PrStringView text = domXmlDecode(domFetchText(result), PrCharset_None, &decoded, &charset);
@@ -90,6 +92,15 @@ void fetchedAndDropped(void* PR_NULLABLE data, const DomFetchResult* result) {
     dropFetch(data);
 }
 
+// Returns true if `url`, an absolute URL, has the origin of `document`.
+bool sameOrigin(const PrDomDocument* document, PrStringView url) {
+    PrUrl* parsed = nullptr;
+    bool same = document->url != nullptr && prUrlCreate(url, nullptr, PrCharset_Utf8, &parsed) == PrStatus_Ok &&
+        prUrlHasSameOrigin(document->url, parsed);
+    prUrlDestroy(parsed);
+    return same;
+}
+
 // Starts the load of the resource at `index`.
 void load(PrDomDocument* document, uint32_t index) {
     DomResources* resources = document->resources;
@@ -105,12 +116,8 @@ void load(PrDomDocument* document, uint32_t index) {
             prDomDocumentRetain(resource.document);
         return;
     }
-    PrUrl* url = nullptr;
-    bool allowed = document->url != nullptr &&
-        prUrlCreate(prRawStringView(&resource.url), nullptr, PrCharset_Utf8, &url) == PrStatus_Ok &&
-        prUrlHasSameOrigin(document->url, url);
-    prUrlDestroy(url);
-    if (!allowed) {
+    // A fetch without CORS from another origin gives an opaque response, which nothing reads.
+    if (resource.cors == DomCorsSettings_NoCors && !sameOrigin(document, prRawStringView(&resource.url))) {
         resource.state = DomResourceState_Failed;
         return;
     }
@@ -120,14 +127,21 @@ void load(PrDomDocument* document, uint32_t index) {
     fetch->index = index;
     // The URL is copied, since a result that arrives during the call may grow the list that holds it.
     PrRawString request = prRawStringClone(&resource.url);
-    DomFetchRequest asked{
-        prRawStringView(&request), DomFetchDestination_Image, DomCorsSettings_NoCors, DomFetchInitiator_Css,
-    };
+    DomFetchRequest asked{prRawStringView(&request), DomFetchDestination_Image, resource.cors, DomFetchInitiator_Css};
     host->fetch(host->context, &asked, fetchedAndDropped, fetch, dropFetch);
     prRawStringReset(&request);
 }
 
 } // namespace
+
+PrRawString domFragmentDecode(PrStringView fragment) {
+    PrRawString decoded = prRawStringCopy(fragment);
+    PrStringView view = prRawStringView(&decoded);
+    size_t size = prUrlPercentDecode(view, const_cast<char*>(view.data), view.size);
+    PrRawString result = prRawStringCopy(PrStringView{view.data, size});
+    prRawStringReset(&decoded);
+    return result;
+}
 
 bool domReferenceSplit(const PrDomDocument* document, PrStringView reference, DomReference* out) {
     *out = DomReference{};
@@ -162,15 +176,20 @@ bool domReferenceSplit(const PrDomDocument* document, PrStringView reference, Do
     return true;
 }
 
-PrDomDocument* PR_NULLABLE domResourceDocument(PrDomDocument* document, PrStringView url) {
+PrDomDocument* PR_NULLABLE domResourceDocument(PrDomDocument* document, PrStringView url, DomCorsSettings cors) {
+    // A fetch of the document's own origin requests and reads the same with CORS or without, so the two share a
+    // document.
+    if (cors != DomCorsSettings_NoCors && sameOrigin(document, url))
+        cors = DomCorsSettings_NoCors;
     DomResources* resources = resourcesOf(document);
     for (uint32_t i = 0; i < resources->documents.count; ++i) {
         const DomResource& resource = resources->documents.data[i];
-        if (prRawStringView(&resource.url) == url)
+        if (prRawStringView(&resource.url) == url && resource.cors == cors)
             return resource.state == DomResourceState_Loaded ? resource.document : nullptr;
     }
     uint32_t index = resources->documents.count;
-    resources->documents.push(DomResource{.url = prRawStringCopy(url), .state = DomResourceState_Loading});
+    resources->documents.push(
+        DomResource{.url = prRawStringCopy(url), .cors = cors, .state = DomResourceState_Loading});
     load(document, index);
     const DomResource& resource = resources->documents.data[index];
     return resource.state == DomResourceState_Loaded ? resource.document : nullptr;
@@ -179,7 +198,7 @@ PrDomDocument* PR_NULLABLE domResourceDocument(PrDomDocument* document, PrString
 const PrDomElement* PR_NULLABLE domReferenceTarget(PrDomDocument* document, const DomReference& reference) {
     PrDomDocument* in = document;
     if (reference.external) {
-        in = domResourceDocument(document, prRawStringView(&reference.url));
+        in = domResourceDocument(document, prRawStringView(&reference.url), reference.cors);
         if (in == nullptr)
             return nullptr;
         if (reference.fragment.data == nullptr)
@@ -187,7 +206,10 @@ const PrDomElement* PR_NULLABLE domReferenceTarget(PrDomDocument* document, cons
     }
     if (reference.fragment.size == 0)
         return nullptr;
-    return domElementById(in, reference.fragment);
+    PrRawString id = domFragmentDecode(reference.fragment);
+    const PrDomElement* target = domElementById(in, prRawStringView(&id));
+    prRawStringReset(&id);
+    return target;
 }
 
 void domResourcesSetLoader(PrDomDocument* document, DomResourceLoadFn PR_NULLABLE load, void* PR_NULLABLE context) {

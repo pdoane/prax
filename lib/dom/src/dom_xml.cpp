@@ -51,12 +51,13 @@ PrStatus startElement(void* context, PrXmlParser* parser, const PrXmlName* name,
     return PrStatus_Ok;
 }
 
-// Runs the steps for closing an element: updates the sheet of a style element, and runs a script
-// (html/#parsing-xhtml-documents).
+// Runs the steps for closing an element: updates the sheet of a style element, reports the element parsed, and runs a
+// script (html/#parsing-xhtml-documents).
 PrStatus endElement(void* context, PrXmlParser* parser, const PrXmlName*) {
     Builder* b = static_cast<Builder*>(context);
     PrDomElement* element = b->open.data[--b->open.count];
     domNotifyStyleBlockUpdate(element, DomInsertedBy_Parser);
+    domNotifyElementParsed(element);
     PrStatus status = PrStatus_Ok;
     if (isScript(element) && b->scripting.run != nullptr && !prXmlParserIsInEntity(parser)) {
         PrXmlPosition at = prXmlParserContentStart(parser);
@@ -174,5 +175,15 @@ PrDomDocument* prDomParseXml(PrStringView source, PrStringView contentType, PrXm
     domXmlParse(document, source, {}, nullptr, &found);
     if (error != nullptr)
         *error = found;
+    return document;
+}
+
+PrDomDocument* prDomParseXmlBytes(PrByteView bytes, PrStringView contentType, PrXmlError* PR_NULLABLE error) {
+    PrRawString decoded{};
+    PrCharset charset = PrCharset_None;
+    PrStringView source{reinterpret_cast<const char*>(bytes.data), bytes.size};
+    PrDomDocument* document = prDomParseXml(domXmlDecode(source, PrCharset_None, &decoded, &charset), contentType, error);
+    prRawStringReset(&decoded);
+    document->charset = charset;
     return document;
 }

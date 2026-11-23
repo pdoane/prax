@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include "pr/raw_array.h"
 #include "pr/string_view.h"
 
 #include "dom/src/dom_node.h"
@@ -27,12 +28,17 @@ bool domInUseShadowTree(const PrDomNode* node);
 // for one whose use no longer references what it was instanced from.
 PrDomNode* PR_NULLABLE domNodeUseOriginal(const PrDomNode* node);
 
+// Appends to `out` the instances of `original` in the shadow trees of the document's use elements: the nodes whose
+// original it is (domNodeUseOriginal).
+void domUseInstancesOf(const PrDomNode* original, RawArray<PrDomNode*>* out);
+
 // Notes that a use element was connected or disconnected. A use in another use's shadow tree is synchronized with its
 // host, and is not a use of its own.
 void domUseConnectionChanged(PrDomElement* element);
 
 // Note the mutations of a document that may reach its uses: an attribute of `element` in `space` named `name`, a child
-// inserted into or removed from `parent`, and the data of `node`. Each does nothing in a document without uses, and for
+// inserted into or removed from `parent`, and the data of `node`. A change to the href that animations give a use
+// (PrDomDocument::animatedHref) is noted as a change of its href. Each does nothing in a document without uses, and for
 // the mutations of a synchronization.
 void domUsesAttributeChanged(PrDomElement* element, DomNamespaceId space, PrStringView name);
 void domUsesChildrenChanged(PrDomNode* parent, const PrDomNode* child);
@@ -44,7 +50,7 @@ void domUsesIdChanged(PrDomNode* root, PrStringView id);
 void domUsesMoved(PrDomNode* node);
 
 // Notes that what every use of the document references may have changed, such as when a document that a use references
-// loads.
+// loads. That includes the uses in their shadow trees, so every shadow tree is synchronized again.
 void domUsesResolveAll(PrDomDocument* document);
 
 // Brings the shadow trees of the document's stale uses up to date with what they reference.

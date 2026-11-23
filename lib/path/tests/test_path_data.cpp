@@ -3,6 +3,7 @@
 #include "pr/path.h"
 #include "pr/path_data.h"
 #include "pr/string.h"
+#include "pr/string_ops.h"
 
 #include "tools/harness/test.h"
 
@@ -168,6 +169,39 @@ TEST_CASE("path data written from commands reads back as the same commands") {
     prPathDataWrite(commands, count, &text);
     CHECK(prRawStringView(&text) == "M 0.1 -0.0025 A 1 2 3 1 0 4 5");
     prRawStringReset(&text);
+}
+
+TEST_CASE("normalized path data is absolute movetos, lines, cubic curves and closepaths") {
+    PrPathDataCommand commands[8];
+    uint32_t count = prPathDataParse("m 0 0 h 10 Q 20 0 20 10 A 10 10 0 0 1 10 20 z", commands, 8);
+    PrPathDataCommand normalized[8];
+    uint32_t written = prPathDataNormalize(commands, count, normalized, 8);
+    REQUIRE(written == 5);
+    PrRawString text = prRawStringNull();
+    prPathDataWrite(normalized, 3, &text);
+    // The quadratic curve is raised to its cubic.
+    CHECK(prRawStringView(&text) == "M 0 0 L 10 0 C 16.666666 0 20 3.3333335 20 10");
+    // The arc that starts at the current point needs no line to it. Its cubic comes from a sine and a cosine, whose
+    // last bit differs between math libraries.
+    CHECK(normalized[3].letter == 'C');
+    const float arc[] = {20, 15.522848f, 15.522847f, 20, 10, 20};
+    for (uint32_t i = 0; i < 6; ++i)
+        CHECK(normalized[3].arguments[i] == doctest::Approx(arc[i]).epsilon(1e-6));
+    CHECK(normalized[4].letter == 'Z');
+    // Without room, the count is still the whole.
+    CHECK(prPathDataNormalize(commands, count, nullptr, 0) == written);
+    prRawStringReset(&text);
+}
+
+TEST_CASE("the segment at a length is the first command whose path reaches past it") {
+    PrPathDataCommand commands[4];
+    uint32_t count = prPathDataParse("M 0 0 L 10 0 L 10 10 L 0 10", commands, 4);
+    CHECK(prPathDataSegmentAtLength(commands, count, -5) == 0);
+    CHECK(prPathDataSegmentAtLength(commands, count, 5) == 1);
+    CHECK(prPathDataSegmentAtLength(commands, count, 15) == 2);
+    CHECK(prPathDataSegmentAtLength(commands, count, 25) == 3);
+    CHECK(prPathDataSegmentAtLength(commands, count, 100) == 3);
+    CHECK(prPathDataSegmentAtLength(nullptr, 0, 0) == UINT32_MAX);
 }
 
 TEST_CASE("a cache gives the same path for the same data, parsed once, and another path for other data") {

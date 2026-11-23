@@ -7,6 +7,9 @@
 #include "pr/number_list.h"
 #include "pr/string_ops.h"
 
+#include "svg/src/svg_attribute.h"
+#include "svg/src/svg_types.h"
+
 namespace pr_impl {
 
 namespace {
@@ -30,128 +33,66 @@ bool svgParseViewBox(PrStringView text, PrRect* out) {
     return true;
 }
 
-bool svgParseAspect(PrStringView text, SvgAspect* out) {
-    *out = SvgAspect{};
-    size_t pos = 0;
-    skipSpace(text, &pos);
-    auto word = [&](PrStringView expected) {
-        if (pos + expected.size > text.size || PrStringView{text.data + pos, expected.size} != expected)
+bool svgParseAspect(PrStringView text, PrSvgPreserveAspectRatio* out) {
+    *out = kSvgAspectDefault;
+    PrStringView words[4] = {};
+    uint32_t count = 0;
+    size_t at = 0;
+    while (text.data != nullptr && at < text.size) {
+        skipSpace(text, &at);
+        size_t start = at;
+        while (at < text.size && !prAsciiIsSpace(text.data[at]))
+            ++at;
+        if (at == start)
+            break;
+        if (count == 4)
             return false;
-        pos += expected.size;
-        return true;
-    };
-    SvgAspect aspect;
-    if (word("none")) {
-        aspect.x = aspect.y = SvgAlign_None;
-    } else {
-        SvgAlign x = SvgAlign_None;
-        if (word("xMin"))
-            x = SvgAlign_Min;
-        else if (word("xMid"))
-            x = SvgAlign_Mid;
-        else if (word("xMax"))
-            x = SvgAlign_Max;
-        else
-            return false;
-        SvgAlign y = SvgAlign_None;
-        if (word("YMin"))
-            y = SvgAlign_Min;
-        else if (word("YMid"))
-            y = SvgAlign_Mid;
-        else if (word("YMax"))
-            y = SvgAlign_Max;
-        else
-            return false;
-        aspect.x = x;
-        aspect.y = y;
+        words[count++] = PrStringView{text.data + start, at - start};
     }
-    skipSpace(text, &pos);
-    if (word("slice"))
-        aspect.slice = true;
-    else
-        word("meet");
-    skipSpace(text, &pos);
-    if (pos != text.size)
+    uint32_t first = count != 0 && words[0] == "defer" ? 1 : 0;
+    if (first >= count || count - first > 2)
         return false;
-    *out = aspect;
+    PrSvgPreserveAspectRatio read = {svgKeywordValue(SvgKeywords_Align, words[first]), PrSvgMeetOrSlice_Meet};
+    if (first + 1 < count)
+        read.meetOrSlice = svgKeywordValue(SvgKeywords_MeetOrSlice, words[first + 1]);
+    if (read.align == 0 || read.meetOrSlice == 0)
+        return false;
+    *out = read;
     return true;
 }
 
-PrAffine2 svgViewBoxTransform(PrRect viewBox, SvgAspect aspect, float width, float height) {
+PrAffine2 svgViewBoxTransform(PrRect viewBox, PrSvgPreserveAspectRatio aspect, float width, float height) {
     float vw = prRectWidth(viewBox);
     float vh = prRectHeight(viewBox);
     if (vw <= 0 || vh <= 0)
         return prAffine2Identity();
     float sx = width / vw;
     float sy = height / vh;
-    if (aspect.x != SvgAlign_None) {
-        float s = aspect.slice ? prF32Max(sx, sy) : prF32Min(sx, sy);
+    if (aspect.align != PrSvgAlign_None) {
+        float s = aspect.meetOrSlice == PrSvgMeetOrSlice_Slice ? prF32Max(sx, sy) : prF32Min(sx, sy);
         sx = sy = s;
     }
-    float tx = -viewBox.left * sx;
-    float ty = -viewBox.top * sy;
-    auto shift = [](SvgAlign align, float room) {
-        return align == SvgAlign_Mid ? room / 2 : align == SvgAlign_Max ? room : 0;
-    };
-    tx += shift(aspect.x, width - vw * sx);
-    ty += shift(aspect.y, height - vh * sy);
+    // The alignments from xMinYMin are x's min, mid and max for each of y's; none places at the minimum.
+    uint32_t index = aspect.align > PrSvgAlign_None ? uint32_t(aspect.align - PrSvgAlign_XMinYMin) : 0;
+    float tx = -viewBox.left * sx + float(index % 3) * (width - vw * sx) / 2;
+    float ty = -viewBox.top * sy + float(index / 3) * (height - vh * sy) / 2;
     return PrAffine2{sx, 0, 0, sy, tx, ty};
 }
 
 bool svgParseTransform(PrStringView text, PrAffine2* out) {
+    RawArray<PrSvgTransform> list;
+    bool ok = svgParseTransformList(text, &list) && list.count != 0;
     PrAffine2 transform = prAffine2Identity();
-    size_t pos = 0;
-    bool any = false;
-    for (;;) {
-        while (pos < text.size && (prAsciiIsSpace(text.data[pos]) || text.data[pos] == ','))
-            ++pos;
-        if (pos == text.size)
-            break;
-        size_t name = pos;
-        while (pos < text.size && ((text.data[pos] | 0x20) >= 'a' && (text.data[pos] | 0x20) <= 'z'))
-            ++pos;
-        PrStringView function{text.data + name, pos - name};
-        while (pos < text.size && prAsciiIsSpace(text.data[pos]))
-            ++pos;
-        if (pos == text.size || text.data[pos] != '(')
-            return false;
-        ++pos;
-        float n[6] = {};
-        uint32_t count = 0;
-        for (;;) {
-            while (pos < text.size && (prAsciiIsSpace(text.data[pos]) || (count != 0 && text.data[pos] == ',')))
-                ++pos;
-            if (pos < text.size && text.data[pos] == ')')
-                break;
-            if (count == 6 || !numberListRead(text, &pos, &n[count]))
-                return false;
-            ++count;
-        }
-        ++pos;
-        constexpr float kRadians = kPrF32Pi / 180;
-        PrAffine2 f{};
-        if (function == "matrix" && count == 6)
-            f = PrAffine2{n[0], n[1], n[2], n[3], n[4], n[5]};
-        else if (function == "translate" && (count == 1 || count == 2))
-            f = prAffine2Translate(PrVec2{n[0], count == 2 ? n[1] : 0});
-        else if (function == "scale" && (count == 1 || count == 2))
-            f = prAffine2Scale(PrVec2{n[0], count == 2 ? n[1] : n[0]});
-        else if (function == "rotate" && (count == 1 || count == 3))
-            f = prAffine2Concat(prAffine2Concat(prAffine2Translate(PrVec2{-n[1], -n[2]}),
-                prAffine2Rotate(n[0] * kRadians)), prAffine2Translate(PrVec2{n[1], n[2]}));
-        else if (function == "skewX" && count == 1)
-            f = PrAffine2{1, 0, prF32Tan(n[0] * kRadians), 1, 0, 0};
-        else if (function == "skewY" && count == 1)
-            f = PrAffine2{1, prF32Tan(n[0] * kRadians), 0, 1, 0, 0};
-        else
-            return false;
+    for (uint32_t i = 0; ok && i < list.count; ++i) {
+        PrDomMatrix m = prSvgTransformMatrix(&list.data[i]);
+        PrAffine2 f{float(m.m[0]), float(m.m[1]), float(m.m[4]), float(m.m[5]), float(m.m[12]), float(m.m[13])};
         // The function applies inside the ones before it.
         transform = prAffine2Concat(f, transform);
-        any = true;
     }
-    if (any)
+    list.reset();
+    if (ok)
         *out = transform;
-    return any;
+    return ok;
 }
 
 bool svgParseNumbers(PrStringView text, RawArray<float>* out) {

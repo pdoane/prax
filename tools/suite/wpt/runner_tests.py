@@ -324,9 +324,10 @@ class GateTests(unittest.TestCase):
         found = [(result.path, result.path, wpt.TESTHARNESS)]
         debug = corpus.binary("pr_shell", corpus.DEFAULT)
         other = corpus.binary("pr_shell", os.path.join(corpus.ROOT, "build-asan"))
-        for argv, recorded in ((["wpt.py", "--binary", debug], True),
-                               (["wpt.py", "--binary", debug, "--match", "css-a"], False),
-                               (["wpt.py", "--binary", other], False)):
+        for argv, recorded in ((["wpt.py", "--binary", debug], []),
+                               (["wpt.py", "--binary", debug, "--module", "css-*"], ["css-*"]),
+                               (["wpt.py", "--binary", debug, "--match", "css-a"], None),
+                               (["wpt.py", "--binary", other], None)):
             with patch.object(wpt, "run", return_value=result), \
                  patch.object(wpt, "select", return_value=(found, {})), \
                  patch.object(corpus, "require"), \
@@ -334,11 +335,23 @@ class GateTests(unittest.TestCase):
                  patch.object(wpt, "record_scoreboard") as record, \
                  patch("sys.argv", argv), redirect_stdout(io.StringIO()):
                 wpt.main()
-            if recorded:
-                record.assert_called_once_with("css", {"css-a": wpt.Score("1/1", "9/10", 90.0),
-                                                       corpus.TOTAL: wpt.Score("1/1", "9/10", 90.0)})
+            if recorded is not None:
+                record.assert_called_once_with("css", {"css-a": wpt.Score("1/1", "9/10", 90.0)}, recorded)
             else:
                 record.assert_not_called()
+
+    def test_a_run_of_modules_replaces_their_rows_and_sums_the_total(self):
+        with open(wpt.SCOREBOARD_FILE, "w", encoding="utf-8") as f:
+            f.write(wpt.format_scoreboard({"css": {"css-a": wpt.Score("1/2", "3/10", 30.0),
+                                                   "css-a/deep": wpt.Score("1/1", "1/1", 100.0),
+                                                   "css-b": wpt.Score("2/2", "5/10", 50.0),
+                                                   corpus.TOTAL: wpt.Score("4/5", "9/21", 42.8)}}))
+        wpt.record_scoreboard("css", {"css-a": wpt.Score("2/2", "8/10", 80.0)}, ["css-a"])
+        with open(wpt.SCOREBOARD_FILE, encoding="utf-8") as f:
+            board = wpt.parse_scoreboard(f.read())["css"]
+        self.assertEqual(board, {"css-a": wpt.Score("2/2", "8/10", 80.0),
+                                 "css-b": wpt.Score("2/2", "5/10", 50.0),
+                                 corpus.TOTAL: wpt.Score("4/4", "13/20", 65.0)})
 
 
 class ReftestTests(unittest.TestCase):
@@ -440,9 +453,9 @@ class ReftestTests(unittest.TestCase):
             self.assertEqual(wpt.fuzzy(path, os.path.join(directory, "a.html")), ((1, 2), (3, 4)))
             self.assertEqual(wpt.fuzzy(path, os.path.join(directory, "b.html")), ((5, 5), (6, 7)))
         # A measure of zero passes a range that starts at zero, as wptrunner judges it.
-        self.assertTrue(wpt.within(((0, 4), (10, 20)), 0, 3))
-        self.assertFalse(wpt.within(((1, 4), (10, 20)), 2, 3))
-        self.assertFalse(wpt.within(((0, 0), (0, 0)), 1, 1))
+        self.assertTrue(corpus.within_fuzzy(((0, 4), (10, 20)), 0, 3))
+        self.assertFalse(corpus.within_fuzzy(((1, 4), (10, 20)), 2, 3))
+        self.assertFalse(corpus.within_fuzzy(((0, 0), (0, 0)), 1, 1))
 
     # Two pages of print, each a square, the first green, that a forced break separates.
     PAGES = '<div style="break-after: page">' + SQUARE % "green" + '</div>' + SQUARE

@@ -1280,10 +1280,10 @@ JSValue linkSheet(JSContext* ctx, JSValueConst elementObject) {
 // HTMLStyleElement (html/#htmlstyleelement)
 
 JSValue sheet(JSContext* ctx, JSValueConst elementObject) {
-    PrHtmlStyleElement* element = jsThis<PrHtmlStyleElement>(ctx, elementObject, htmlStyleElementClass);
+    PrDomElement* element = jsThis<PrDomElement>(ctx, elementObject, htmlStyleElementClass);
     if (element == nullptr)
         return JS_EXCEPTION;
-    return jsWrap(ctx, prJsCssStyleSheetClass, elementObject, prHtmlStyleElementSheet(element), false);
+    return jsWrap(ctx, prJsCssStyleSheetClass, elementObject, prCssElementSheet(element), false);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -3457,7 +3457,7 @@ constexpr JSCFunctionListEntry kShadowRootProto[] = {
     PR_JS_GET("dataset", dataset),                                                                 \
         PR_JS_GET_SET("tabIndex", (jsNumberGetter<&prJsDomElementClass, prHtmlTabIndex>),              \
                       setTabIndex),                                                                \
-        PR_REFLECT_BOOL("autofocus", "autofocus"),                                         \
+        PR_JS_DOM_REFLECT_BOOL("autofocus", "autofocus"),                                         \
         PR_JS_METHOD("focus", 0, elementFocus), PR_JS_METHOD("blur", 0, elementBlur),              \
         PR_JS_DOM_GLOBAL_EVENT_HANDLER_MEMBERS
 
@@ -3468,16 +3468,16 @@ constexpr JSCFunctionListEntry kElementProto[] = {
     PR_JS_GET_SET("contentEditable", contentEditable, setContentEditable),
     PR_JS_GET("isContentEditable", isContentEditable),
     PR_JS_GET_SET("draggable", draggable, setDraggable),
-    PR_REFLECT_BOOL("inert", "inert"),
-    PR_REFLECT_STRING("accessKey", "accesskey"),
-    PR_REFLECT_STRING("enterKeyHint", "enterkeyhint"),
-    PR_REFLECT_STRING("inputMode", "inputmode"),
+    PR_JS_DOM_REFLECT_BOOL("inert", "inert"),
+    PR_JS_DOM_REFLECT_STRING("accessKey", "accesskey"),
+    PR_JS_DOM_REFLECT_STRING("enterKeyHint", "enterkeyhint"),
+    PR_JS_DOM_REFLECT_STRING("inputMode", "inputmode"),
     // html/#dom-innertext, whose setter treats null as the empty string.
     PR_JS_GET_SET("innerText", (jsStringGetter<&htmlElementClass, prHtmlElementInnerText>),
         (jsStringSetter<&htmlElementClass, prHtmlElementSetInnerText, true>)),
     PR_JS_GET_SET("outerText", (jsStringGetter<&htmlElementClass, prHtmlElementInnerText>), setOuterText),
-    PR_REFLECT_STRING("title", "title"),
-    PR_REFLECT_STRING("lang", "lang"),
+    PR_JS_DOM_REFLECT_STRING("title", "title"),
+    PR_JS_DOM_REFLECT_STRING("lang", "lang"),
     PR_JS_GET_SET("dir", dir, setDir),
     PR_JS_GET_SET("hidden", hidden, setHidden),
     PR_JS_GET("offsetParent", offsetParent),
@@ -3506,11 +3506,11 @@ constexpr JSCFunctionListEntry kDialogElementProto[] = {
 constexpr JSCFunctionListEntry kIFrameElementProto[] = {
     PR_JS_TAG("HTMLIFrameElement"),
     PR_REFLECT_URL("src", "src"),
-    PR_REFLECT_STRING("srcdoc", "srcdoc"),
-    PR_REFLECT_STRING("name", "name"),
+    PR_JS_DOM_REFLECT_STRING("srcdoc", "srcdoc"),
+    PR_JS_DOM_REFLECT_STRING("name", "name"),
     PR_JS_GET_SET("sandbox", iframeSandbox, (jsPutForwards<"sandbox", "value">)),
-    PR_REFLECT_STRING("width", "width"),
-    PR_REFLECT_STRING("height", "height"),
+    PR_JS_DOM_REFLECT_STRING("width", "width"),
+    PR_JS_DOM_REFLECT_STRING("height", "height"),
     PR_JS_GET("contentWindow", jsHtmlContentWindowGetter<&htmlIFrameElementClass>),
     PR_JS_GET("contentDocument", jsHtmlContentDocumentGetter<&htmlIFrameElementClass>),
     PR_JS_METHOD("getSVGDocument", 0, jsHtmlSvgDocumentMethod<&htmlIFrameElementClass>),
@@ -3519,10 +3519,10 @@ constexpr JSCFunctionListEntry kIFrameElementProto[] = {
 constexpr JSCFunctionListEntry kImageElementProto[] = {
     PR_JS_TAG("HTMLImageElement"),
     PR_JS_MAGIC_GET_SET("crossOrigin", mediaEnumerated, setMediaEnumerated, 0),
-    PR_REFLECT_STRING("alt", "alt"),
+    PR_JS_DOM_REFLECT_STRING("alt", "alt"),
     PR_REFLECT_URL("src", "src"),
-    PR_REFLECT_STRING("srcset", "srcset"),
-    PR_REFLECT_STRING("sizes", "sizes"),
+    PR_JS_DOM_REFLECT_STRING("srcset", "srcset"),
+    PR_JS_DOM_REFLECT_STRING("sizes", "sizes"),
     PR_JS_GET_SET("width", (jsNumberGetter<&htmlImageElementClass, prHtmlImageElementWidth>),
         (jsUint32Setter<&htmlImageElementClass, prHtmlImageElementSetWidth>)),
     PR_JS_GET_SET("height", (jsNumberGetter<&htmlImageElementClass, prHtmlImageElementHeight>),
@@ -3545,37 +3545,45 @@ constexpr JSCFunctionListEntry kCanvasElementProto[] = {
 #define PR_HYPERLINK(name, component)                                                               \
     PR_JS_MAGIC_GET_SET(name, hyperlinkComponent, setHyperlinkComponent, component)
 
-// The attributes of HTMLHyperlinkElementUtils, which an a and an area element share.
-#define PR_HYPERLINK_UTILS                                                                          \
-    PR_HYPERLINK("href", PrUrlComponent_Href), PR_JS_MAGIC_GET("origin", hyperlinkComponent, PrUrlComponent_Origin), \
+// The attributes of HTMLHyperlinkElementUtils for the components of the URL.
+#define PR_HYPERLINK_COMPONENTS                                                                     \
+    PR_JS_MAGIC_GET("origin", hyperlinkComponent, PrUrlComponent_Origin),                           \
         PR_HYPERLINK("protocol", PrUrlComponent_Protocol), PR_HYPERLINK("username", PrUrlComponent_Username),       \
         PR_HYPERLINK("password", PrUrlComponent_Password), PR_HYPERLINK("host", PrUrlComponent_Host),               \
         PR_HYPERLINK("hostname", PrUrlComponent_Hostname), PR_HYPERLINK("port", PrUrlComponent_Port),               \
         PR_HYPERLINK("pathname", PrUrlComponent_Pathname), PR_HYPERLINK("search", PrUrlComponent_Search),           \
-        PR_HYPERLINK("hash", PrUrlComponent_Hash), PR_JS_METHOD("toString", 0, hyperlinkToString)
+        PR_HYPERLINK("hash", PrUrlComponent_Hash)
+
+// The members of HTMLHyperlinkElementUtils, which an a and an area element share.
+#define PR_HYPERLINK_UTILS                                                                          \
+    PR_HYPERLINK("href", PrUrlComponent_Href), PR_HYPERLINK_COMPONENTS, PR_JS_METHOD("toString", 0, hyperlinkToString)
 
 // The members that HTML adds to MathML's a element, which are its target and HyperlinkElementUtils
 // (mathml-core/#the-a-element).
 constexpr JSCFunctionListEntry kMathMlAnchorElementProto[] = {
-    PR_REFLECT_STRING("target", "target"),
+    PR_JS_DOM_REFLECT_STRING("target", "target"),
     PR_HYPERLINK_UTILS,
 };
+
+// The members of HyperlinkElementUtils that SVG's a element takes (SVG2/linking.html#InterfaceSVGAElement). Its href is
+// SVGURIReference's SVGAnimatedString, so the mixin's href and its stringifier are left out.
+constexpr JSCFunctionListEntry kSvgAnchorElementProto[] = {PR_HYPERLINK_COMPONENTS};
 
 constexpr JSCFunctionListEntry kAnchorElementProto[] = {
     PR_JS_TAG("HTMLAnchorElement"),
     PR_JS_GET_SET("relList", relList, (jsPutForwards<"relList", "value">)),
-    PR_REFLECT_STRING("charset", "charset"),
-    PR_REFLECT_STRING("coords", "coords"),
-    PR_REFLECT_STRING("name", "name"),
-    PR_REFLECT_STRING("rev", "rev"),
-    PR_REFLECT_STRING("shape", "shape"),
-    PR_REFLECT_STRING("target", "target"),
-    PR_REFLECT_STRING("download", "download"),
-    PR_REFLECT_STRING("ping", "ping"),
-    PR_REFLECT_STRING("rel", "rel"),
-    PR_REFLECT_STRING("hreflang", "hreflang"),
-    PR_REFLECT_STRING("type", "type"),
-    PR_REFLECT_STRING("referrerPolicy", "referrerpolicy"),
+    PR_JS_DOM_REFLECT_STRING("charset", "charset"),
+    PR_JS_DOM_REFLECT_STRING("coords", "coords"),
+    PR_JS_DOM_REFLECT_STRING("name", "name"),
+    PR_JS_DOM_REFLECT_STRING("rev", "rev"),
+    PR_JS_DOM_REFLECT_STRING("shape", "shape"),
+    PR_JS_DOM_REFLECT_STRING("target", "target"),
+    PR_JS_DOM_REFLECT_STRING("download", "download"),
+    PR_JS_DOM_REFLECT_STRING("ping", "ping"),
+    PR_JS_DOM_REFLECT_STRING("rel", "rel"),
+    PR_JS_DOM_REFLECT_STRING("hreflang", "hreflang"),
+    PR_JS_DOM_REFLECT_STRING("type", "type"),
+    PR_JS_DOM_REFLECT_REFERRER_POLICY("referrerPolicy", "referrerpolicy"),
     PR_JS_GET_SET("text", (jsStringGetter<&prJsDomNodeClass, prDomNodeTextContent>),
         (jsStringSetter<&prJsDomNodeClass, prDomNodeSetTextContent, true>)),
     PR_HYPERLINK_UTILS,
@@ -3584,41 +3592,41 @@ constexpr JSCFunctionListEntry kAnchorElementProto[] = {
 constexpr JSCFunctionListEntry kAreaElementProto[] = {
     PR_JS_TAG("HTMLAreaElement"),
     PR_JS_GET_SET("relList", relList, (jsPutForwards<"relList", "value">)),
-    PR_REFLECT_BOOL("noHref", "nohref"),
-    PR_REFLECT_STRING("alt", "alt"),
-    PR_REFLECT_STRING("coords", "coords"),
-    PR_REFLECT_STRING("shape", "shape"),
-    PR_REFLECT_STRING("target", "target"),
-    PR_REFLECT_STRING("download", "download"),
-    PR_REFLECT_STRING("ping", "ping"),
-    PR_REFLECT_STRING("rel", "rel"),
-    PR_REFLECT_STRING("referrerPolicy", "referrerpolicy"),
+    PR_JS_DOM_REFLECT_BOOL("noHref", "nohref"),
+    PR_JS_DOM_REFLECT_STRING("alt", "alt"),
+    PR_JS_DOM_REFLECT_STRING("coords", "coords"),
+    PR_JS_DOM_REFLECT_STRING("shape", "shape"),
+    PR_JS_DOM_REFLECT_STRING("target", "target"),
+    PR_JS_DOM_REFLECT_STRING("download", "download"),
+    PR_JS_DOM_REFLECT_STRING("ping", "ping"),
+    PR_JS_DOM_REFLECT_STRING("rel", "rel"),
+    PR_JS_DOM_REFLECT_REFERRER_POLICY("referrerPolicy", "referrerpolicy"),
     PR_HYPERLINK_UTILS,
 };
 
 constexpr JSCFunctionListEntry kBaseElementProto[] = {
     PR_JS_TAG("HTMLBaseElement"),
     PR_JS_GET_SET("href", baseHref, jsSetReflectString<"href">),
-    PR_REFLECT_STRING("target", "target"),
+    PR_JS_DOM_REFLECT_STRING("target", "target"),
 };
 
 constexpr JSCFunctionListEntry kLinkElementProto[] = {
     PR_JS_TAG("HTMLLinkElement"),
     PR_JS_MAGIC_GET_SET("crossOrigin", mediaEnumerated, setMediaEnumerated, 0),
     PR_JS_GET_SET("relList", relList, (jsPutForwards<"relList", "value">)),
-    PR_REFLECT_STRING("charset", "charset"),
-    PR_REFLECT_STRING("rev", "rev"),
-    PR_REFLECT_STRING("target", "target"),
+    PR_JS_DOM_REFLECT_STRING("charset", "charset"),
+    PR_JS_DOM_REFLECT_STRING("rev", "rev"),
+    PR_JS_DOM_REFLECT_STRING("target", "target"),
     PR_REFLECT_URL("href", "href"),
-    PR_REFLECT_STRING("rel", "rel"),
-    PR_REFLECT_STRING("media", "media"),
-    PR_REFLECT_STRING("hreflang", "hreflang"),
-    PR_REFLECT_STRING("type", "type"),
-    PR_REFLECT_STRING("integrity", "integrity"),
-    PR_REFLECT_STRING("imageSrcset", "imagesrcset"),
-    PR_REFLECT_STRING("imageSizes", "imagesizes"),
-    PR_REFLECT_STRING("referrerPolicy", "referrerpolicy"),
-    PR_REFLECT_BOOL("disabled", "disabled"),
+    PR_JS_DOM_REFLECT_STRING("rel", "rel"),
+    PR_JS_DOM_REFLECT_STRING("media", "media"),
+    PR_JS_DOM_REFLECT_STRING("hreflang", "hreflang"),
+    PR_JS_DOM_REFLECT_STRING("type", "type"),
+    PR_JS_DOM_REFLECT_STRING("integrity", "integrity"),
+    PR_JS_DOM_REFLECT_STRING("imageSrcset", "imagesrcset"),
+    PR_JS_DOM_REFLECT_STRING("imageSizes", "imagesizes"),
+    PR_JS_DOM_REFLECT_REFERRER_POLICY("referrerPolicy", "referrerpolicy"),
+    PR_JS_DOM_REFLECT_BOOL("disabled", "disabled"),
     PR_JS_GET("sheet", linkSheet),
 };
 
@@ -3628,19 +3636,19 @@ constexpr JSCFunctionListEntry kPictureElementProto[] = {PR_JS_TAG("HTMLPictureE
 constexpr JSCFunctionListEntry kSourceElementProto[] = {
     PR_JS_TAG("HTMLSourceElement"),
     PR_REFLECT_URL("src", "src"),
-    PR_REFLECT_STRING("type", "type"),
-    PR_REFLECT_STRING("srcset", "srcset"),
-    PR_REFLECT_STRING("sizes", "sizes"),
-    PR_REFLECT_STRING("media", "media"),
+    PR_JS_DOM_REFLECT_STRING("type", "type"),
+    PR_JS_DOM_REFLECT_STRING("srcset", "srcset"),
+    PR_JS_DOM_REFLECT_STRING("sizes", "sizes"),
+    PR_JS_DOM_REFLECT_STRING("media", "media"),
 };
 
 constexpr JSCFunctionListEntry kMetaElementProto[] = {
     PR_JS_TAG("HTMLMetaElement"),
-    PR_REFLECT_STRING("name", "name"),
-    PR_REFLECT_STRING("httpEquiv", "http-equiv"),
-    PR_REFLECT_STRING("content", "content"),
-    PR_REFLECT_STRING("media", "media"),
-    PR_REFLECT_STRING("scheme", "scheme"),
+    PR_JS_DOM_REFLECT_STRING("name", "name"),
+    PR_JS_DOM_REFLECT_STRING("httpEquiv", "http-equiv"),
+    PR_JS_DOM_REFLECT_STRING("content", "content"),
+    PR_JS_DOM_REFLECT_STRING("media", "media"),
+    PR_JS_DOM_REFLECT_STRING("scheme", "scheme"),
 };
 
 constexpr JSCFunctionListEntry kMediaElementProto[] = {
@@ -3667,14 +3675,14 @@ constexpr JSCFunctionListEntry kMediaElementProto[] = {
     PR_JS_MAGIC_GET("played", mediaRanges, PrHtmlMediaRanges_Played),
     PR_JS_MAGIC_GET("seekable", mediaRanges, PrHtmlMediaRanges_Seekable),
     PR_JS_MAGIC_GET("ended", mediaFlag, 2),
-    PR_REFLECT_BOOL("autoplay", "autoplay"),
-    PR_REFLECT_BOOL("loop", "loop"),
+    PR_JS_DOM_REFLECT_BOOL("autoplay", "autoplay"),
+    PR_JS_DOM_REFLECT_BOOL("loop", "loop"),
     PR_JS_METHOD("play", 0, mediaPlay),
     PR_JS_METHOD("pause", 0, mediaPause),
-    PR_REFLECT_BOOL("controls", "controls"),
+    PR_JS_DOM_REFLECT_BOOL("controls", "controls"),
     PR_JS_MAGIC_GET_SET("volume", mediaNumber, setMediaNumber, 4),
     PR_JS_MAGIC_GET_SET("muted", mediaFlag, setMediaFlag, 3),
-    PR_REFLECT_BOOL("defaultMuted", "muted"),
+    PR_JS_DOM_REFLECT_BOOL("defaultMuted", "muted"),
     PR_JS_MAGIC_GET_SET("loading", mediaEnumerated, setMediaEnumerated, 2),
     PR_JS_MAGIC_GET("textTracks", mediaTracks, PrHtmlTrackKind_Text),
     PR_JS_MAGIC_GET("audioTracks", mediaTracks, PrHtmlTrackKind_Audio),
@@ -3737,7 +3745,7 @@ constexpr JSCFunctionListEntry kVideoElementProto[] = {
     PR_JS_MAGIC_GET("videoWidth", videoSize, 0),
     PR_JS_MAGIC_GET("videoHeight", videoSize, 1),
     PR_REFLECT_URL("poster", "poster"),
-    PR_REFLECT_BOOL("playsInline", "playsinline"),
+    PR_JS_DOM_REFLECT_BOOL("playsInline", "playsinline"),
 };
 
 constexpr JSCFunctionListEntry kMediaErrorProto[] = {
@@ -3764,7 +3772,7 @@ constexpr JSCFunctionListEntry kAudioElementProto[] = {PR_JS_TAG("HTMLAudioEleme
 
 constexpr JSCFunctionListEntry kSlotElementProto[] = {
     PR_JS_TAG("HTMLSlotElement"),
-    PR_REFLECT_STRING("name", "name"),
+    PR_JS_DOM_REFLECT_STRING("name", "name"),
     PR_JS_MAGIC("assignedNodes", 0, slotAssigned, 0),
     PR_JS_MAGIC("assignedElements", 0, slotAssigned, 1),
     PR_JS_METHOD("assign", 0, slotAssign),
@@ -3774,15 +3782,15 @@ constexpr JSCFunctionListEntry kScriptElementProto[] = {
     PR_JS_TAG("HTMLScriptElement"),
     PR_JS_MAGIC_GET_SET("crossOrigin", mediaEnumerated, setMediaEnumerated, 0),
     PR_REFLECT_URL("src", "src"),
-    PR_REFLECT_STRING("type", "type"),
-    PR_REFLECT_BOOL("noModule", "nomodule"),
+    PR_JS_DOM_REFLECT_STRING("type", "type"),
+    PR_JS_DOM_REFLECT_BOOL("noModule", "nomodule"),
     PR_JS_GET_SET("async", (jsBoolGetter<&htmlScriptElementClass, prHtmlScriptElementAsync>), setScriptAsync),
-    PR_REFLECT_BOOL("defer", "defer"),
-    PR_REFLECT_STRING("charset", "charset"),
-    PR_REFLECT_STRING("integrity", "integrity"),
-    PR_REFLECT_STRING("referrerPolicy", "referrerpolicy"),
-    PR_REFLECT_STRING("event", "event"),
-    PR_REFLECT_STRING("htmlFor", "for"),
+    PR_JS_DOM_REFLECT_BOOL("defer", "defer"),
+    PR_JS_DOM_REFLECT_STRING("charset", "charset"),
+    PR_JS_DOM_REFLECT_STRING("integrity", "integrity"),
+    PR_JS_DOM_REFLECT_REFERRER_POLICY("referrerPolicy", "referrerpolicy"),
+    PR_JS_DOM_REFLECT_STRING("event", "event"),
+    PR_JS_DOM_REFLECT_STRING("htmlFor", "for"),
     PR_JS_GET_SET("text", (jsStringGetter<&htmlScriptElementClass, prHtmlScriptElementText>),
         (jsStringSetter<&htmlScriptElementClass, prHtmlScriptElementSetText>)),
 };
@@ -3795,9 +3803,9 @@ constexpr JSCFunctionListEntry kTemplateElementProto[] = {
     PR_JS_TAG("HTMLTemplateElement"),
     PR_JS_GET("content", content),
     PR_JS_MAGIC_GET_SET("shadowRootMode", shadowRootMode, setAttributeString, 0),
-    PR_REFLECT_BOOL("shadowRootDelegatesFocus", "shadowrootdelegatesfocus"),
-    PR_REFLECT_BOOL("shadowRootClonable", "shadowrootclonable"),
-    PR_REFLECT_BOOL("shadowRootSerializable", "shadowrootserializable"),
+    PR_JS_DOM_REFLECT_BOOL("shadowRootDelegatesFocus", "shadowrootdelegatesfocus"),
+    PR_JS_DOM_REFLECT_BOOL("shadowRootClonable", "shadowrootclonable"),
+    PR_JS_DOM_REFLECT_BOOL("shadowRootSerializable", "shadowrootserializable"),
     PR_JS_MAGIC_GET_SET("shadowRootSlotAssignment", shadowRootSlotAssignment, setAttributeString, 1),
 };
 
@@ -4304,6 +4312,14 @@ void jsHtmlBind(JSContext* ctx) {
         JS_FreeValue(ctx, proto);
     }
     JS_FreeValue(ctx, mathMlAnchor);
+    // The members of SVG's a element that HTML's hyperlinks share, if the realm binds SVG.
+    JSValue svgAnchor = JS_GetPropertyStr(ctx, global, "SVGAElement");
+    if (JS_IsObject(svgAnchor)) {
+        JSValue proto = JS_GetPropertyStr(ctx, svgAnchor, "prototype");
+        JS_SetPropertyFunctionList(ctx, proto, kSvgAnchorElementProto, int(countOf(kSvgAnchorElementProto)));
+        JS_FreeValue(ctx, proto);
+    }
+    JS_FreeValue(ctx, svgAnchor);
     // HTMLOrSVGElement's members, on the elements of the foreign modules that the realm binds.
     constexpr const char* kForeign[] = {"SVGElement", "MathMLElement"};
     for (const char* foreign : kForeign) {

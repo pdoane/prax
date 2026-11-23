@@ -9,6 +9,8 @@
 #include "pr/hash_index.h"
 #include "pr/memory.h"
 #include "pr/number_list.h"
+#include "pr/path.h"
+#include "pr/path_measure.h"
 #include "pr/raw_array.h"
 #include "pr/raw_string.h"
 #include "pr/string_ops.h"
@@ -469,6 +471,97 @@ void prPathDataMakeAbsolute(PrPathDataCommand* PR_NULLABLE commands, uint32_t co
         if (upper == 'M')
             start = current;
     }
+}
+
+uint32_t prPathDataNormalize(const PrPathDataCommand* PR_NULLABLE commands, uint32_t count,
+        PrPathDataCommand* PR_NULLABLE out, uint32_t capacity) {
+    if (count == 0)
+        return 0;
+    // The path that the commands describe holds only movetos, lines, quadratic and cubic curves, and closepaths, whose
+    // points are absolute. A quadratic curve is raised to the cubic curve that draws it.
+    PrPath* path = prPathCreate();
+    prPathAppendCommands(path, commands, count);
+    const PrPathVerb* verbs = prPathVerbs(path);
+    const PrVec2* points = prPathPoints(path);
+    uint32_t written = 0;
+    uint32_t at = 0;
+    PrVec2 current{0, 0};
+    // Writes a command of `letter` whose arguments are the `n` points at `list`.
+    auto emit = [&](char letter, const PrVec2* PR_NULLABLE list, uint32_t n) {
+        if (written < capacity && out != nullptr) {
+            PrPathDataCommand& command = out[written];
+            command = PrPathDataCommand{.letter = letter};
+            for (uint32_t i = 0; i < n; ++i) {
+                command.arguments[2 * i] = list[i].x;
+                command.arguments[2 * i + 1] = list[i].y;
+            }
+        }
+        ++written;
+    };
+    for (uint32_t i = 0; i < prPathVerbCount(path); ++i) {
+        switch (verbs[i]) {
+            case PrPathVerb_Move:
+                current = points[at++];
+                emit('M', &current, 1);
+                break;
+            case PrPathVerb_Line:
+                current = points[at++];
+                emit('L', &current, 1);
+                break;
+            case PrPathVerb_Quad: {
+                PrVec2 control = points[at];
+                PrVec2 end = points[at + 1];
+                at += 2;
+                PrVec2 cubic[3] = {
+                    {current.x + (control.x - current.x) * 2 / 3, current.y + (control.y - current.y) * 2 / 3},
+                    {end.x + (control.x - end.x) * 2 / 3, end.y + (control.y - end.y) * 2 / 3},
+                    end,
+                };
+                emit('C', cubic, 3);
+                current = end;
+                break;
+            }
+            case PrPathVerb_Cubic:
+                emit('C', points + at, 3);
+                current = points[at + 2];
+                at += 3;
+                break;
+            case PrPathVerb_Close:
+                emit('Z', nullptr, 0);
+                break;
+            default:
+                break;
+        }
+    }
+    prPathDestroy(path);
+    return written;
+}
+
+uint32_t prPathDataSegmentAtLength(const PrPathDataCommand* PR_NULLABLE commands, uint32_t count, float distance) {
+    if (count == 0)
+        return UINT32_MAX;
+    // The lengths of the paths of the commands' prefixes only grow, so the command is the first whose prefix is longer
+    // than the distance. A length is measured to within a thousandth of a unit.
+    PrPathMeasure* measure = prPathMeasureCreate();
+    auto lengthTo = [&](uint32_t end) {
+        PrPath* path = prPathCreate();
+        prPathAppendCommands(path, commands, end);
+        prPathMeasureSetPath(measure, path, prAffine2Identity(), 0.001f);
+        float length = prPathMeasureLength(measure);
+        prPathDestroy(path);
+        return length;
+    };
+    uint32_t low = 0;
+    uint32_t high = count - 1;
+    while (low < high) {
+        uint32_t middle = low + (high - low) / 2;
+        if (lengthTo(middle + 1) > distance)
+            high = middle;
+        else
+            low = middle + 1;
+    }
+    prPathMeasureDestroy(measure);
+    return low;
 }
 
 void prPathDataWrite(const PrPathDataCommand* PR_NULLABLE commands, uint32_t count, PrRawString* out) {

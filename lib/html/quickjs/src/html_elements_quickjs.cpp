@@ -559,158 +559,158 @@ constexpr JsReflectedKeywords kScopeKeywords = {kScopeStates, uint32_t(countOf(k
 
 constexpr JSCFunctionListEntry kBodyProto[] = {
     PR_JS_TAG("HTMLBodyElement"),
-    PR_REFLECT_STRING("text", "text"),
-    PR_REFLECT_STRING("link", "link"),
-    PR_REFLECT_STRING("vLink", "vlink"),
-    PR_REFLECT_STRING("aLink", "alink"),
-    PR_REFLECT_STRING("bgColor", "bgcolor"),
-    PR_REFLECT_STRING("background", "background"),
+    PR_JS_DOM_REFLECT_STRING("text", "text"),
+    PR_JS_DOM_REFLECT_STRING("link", "link"),
+    PR_JS_DOM_REFLECT_STRING("vLink", "vlink"),
+    PR_JS_DOM_REFLECT_STRING("aLink", "alink"),
+    PR_JS_DOM_REFLECT_STRING("bgColor", "bgcolor"),
+    PR_JS_DOM_REFLECT_STRING("background", "background"),
     PR_JS_DOM_WINDOW_EVENT_HANDLER_MEMBERS
 };
 
-constexpr JSCFunctionListEntry kBrProto[] = {PR_JS_TAG("HTMLBRElement"), PR_REFLECT_STRING("clear", "clear")};
+constexpr JSCFunctionListEntry kBrProto[] = {PR_JS_TAG("HTMLBRElement"), PR_JS_DOM_REFLECT_STRING("clear", "clear")};
 
-constexpr JSCFunctionListEntry kDataProto[] = {PR_JS_TAG("HTMLDataElement"), PR_REFLECT_STRING("value", "value")};
+constexpr JSCFunctionListEntry kDataProto[] = {PR_JS_TAG("HTMLDataElement"), PR_JS_DOM_REFLECT_STRING("value", "value")};
 
 constexpr JSCFunctionListEntry kDataListProto[] = {
     PR_JS_TAG("HTMLDataListElement"),
     PR_JS_GET("options", dataListOptions),
 };
 
-constexpr JSCFunctionListEntry kDivProto[] = {PR_JS_TAG("HTMLDivElement"), PR_REFLECT_STRING("align", "align")};
+constexpr JSCFunctionListEntry kDivProto[] = {PR_JS_TAG("HTMLDivElement"), PR_JS_DOM_REFLECT_STRING("align", "align")};
 
-constexpr JSCFunctionListEntry kDListProto[] = {PR_JS_TAG("HTMLDListElement"), PR_REFLECT_BOOL("compact", "compact")};
+constexpr JSCFunctionListEntry kDListProto[] = {PR_JS_TAG("HTMLDListElement"), PR_JS_DOM_REFLECT_BOOL("compact", "compact")};
 
 constexpr JSCFunctionListEntry kEmbedProto[] = {
     PR_JS_TAG("HTMLEmbedElement"),
     PR_REFLECT_URL("src", "src"),
-    PR_REFLECT_STRING("type", "type"),
-    PR_REFLECT_STRING("width", "width"),
-    PR_REFLECT_STRING("height", "height"),
-    PR_REFLECT_STRING("align", "align"),
-    PR_REFLECT_STRING("name", "name"),
+    PR_JS_DOM_REFLECT_STRING("type", "type"),
+    PR_JS_DOM_REFLECT_STRING("width", "width"),
+    PR_JS_DOM_REFLECT_STRING("height", "height"),
+    PR_JS_DOM_REFLECT_STRING("align", "align"),
+    PR_JS_DOM_REFLECT_STRING("name", "name"),
     PR_JS_METHOD("getSVGDocument", 0, jsHtmlSvgDocumentMethod<&htmlEmbedElementClass>),
 };
 
 constexpr JSCFunctionListEntry kFontProto[] = {
     PR_JS_TAG("HTMLFontElement"),
-    PR_REFLECT_STRING("color", "color"),
-    PR_REFLECT_STRING("face", "face"),
-    PR_REFLECT_STRING("size", "size"),
+    PR_JS_DOM_REFLECT_STRING("color", "color"),
+    PR_JS_DOM_REFLECT_STRING("face", "face"),
+    PR_JS_DOM_REFLECT_STRING("size", "size"),
 };
 
 constexpr JSCFunctionListEntry kFrameProto[] = {
     PR_JS_TAG("HTMLFrameElement"),
-    PR_REFLECT_STRING("name", "name"),
-    PR_REFLECT_STRING("scrolling", "scrolling"),
+    PR_JS_DOM_REFLECT_STRING("name", "name"),
+    PR_JS_DOM_REFLECT_STRING("scrolling", "scrolling"),
     PR_REFLECT_URL("src", "src"),
-    PR_REFLECT_STRING("frameBorder", "frameborder"),
+    PR_JS_DOM_REFLECT_STRING("frameBorder", "frameborder"),
     PR_REFLECT_URL("longDesc", "longdesc"),
-    PR_REFLECT_BOOL("noResize", "noresize"),
-    PR_REFLECT_STRING("marginHeight", "marginheight"),
-    PR_REFLECT_STRING("marginWidth", "marginwidth"),
+    PR_JS_DOM_REFLECT_BOOL("noResize", "noresize"),
+    PR_JS_DOM_REFLECT_STRING("marginHeight", "marginheight"),
+    PR_JS_DOM_REFLECT_STRING("marginWidth", "marginwidth"),
 };
 
 constexpr JSCFunctionListEntry kFrameSetProto[] = {
     PR_JS_TAG("HTMLFrameSetElement"),
-    PR_REFLECT_STRING("cols", "cols"),
-    PR_REFLECT_STRING("rows", "rows"),
+    PR_JS_DOM_REFLECT_STRING("cols", "cols"),
+    PR_JS_DOM_REFLECT_STRING("rows", "rows"),
     PR_JS_DOM_WINDOW_EVENT_HANDLER_MEMBERS
 };
 
 constexpr JSCFunctionListEntry kHeadProto[] = {PR_JS_TAG("HTMLHeadElement")};
 
-constexpr JSCFunctionListEntry kHeadingProto[] = {PR_JS_TAG("HTMLHeadingElement"), PR_REFLECT_STRING("align", "align")};
+constexpr JSCFunctionListEntry kHeadingProto[] = {PR_JS_TAG("HTMLHeadingElement"), PR_JS_DOM_REFLECT_STRING("align", "align")};
 
 constexpr JSCFunctionListEntry kHrProto[] = {
     PR_JS_TAG("HTMLHRElement"),
-    PR_REFLECT_STRING("align", "align"),
-    PR_REFLECT_STRING("color", "color"),
-    PR_REFLECT_BOOL("noShade", "noshade"),
-    PR_REFLECT_STRING("size", "size"),
-    PR_REFLECT_STRING("width", "width"),
+    PR_JS_DOM_REFLECT_STRING("align", "align"),
+    PR_JS_DOM_REFLECT_STRING("color", "color"),
+    PR_JS_DOM_REFLECT_BOOL("noShade", "noshade"),
+    PR_JS_DOM_REFLECT_STRING("size", "size"),
+    PR_JS_DOM_REFLECT_STRING("width", "width"),
 };
 
-constexpr JSCFunctionListEntry kHtmlProto[] = {PR_JS_TAG("HTMLHtmlElement"), PR_REFLECT_STRING("version", "version")};
+constexpr JSCFunctionListEntry kHtmlProto[] = {PR_JS_TAG("HTMLHtmlElement"), PR_JS_DOM_REFLECT_STRING("version", "version")};
 
 constexpr JSCFunctionListEntry kLiProto[] = {
     PR_JS_TAG("HTMLLIElement"),
     PR_REFLECT_INTEGER("value", "value", PrHtmlReflectedInteger_Long, 0),
-    PR_REFLECT_STRING("type", "type"),
+    PR_JS_DOM_REFLECT_STRING("type", "type"),
 };
 
 constexpr JSCFunctionListEntry kMapProto[] = {
     PR_JS_TAG("HTMLMapElement"),
-    PR_REFLECT_STRING("name", "name"),
+    PR_JS_DOM_REFLECT_STRING("name", "name"),
     PR_JS_GET("areas", mapAreas),
 };
 
 constexpr JSCFunctionListEntry kMarqueeProto[] = {
     PR_JS_TAG("HTMLMarqueeElement"),
-    PR_REFLECT_STRING("behavior", "behavior"),
-    PR_REFLECT_STRING("bgColor", "bgcolor"),
-    PR_REFLECT_STRING("direction", "direction"),
-    PR_REFLECT_STRING("height", "height"),
+    PR_JS_DOM_REFLECT_STRING("behavior", "behavior"),
+    PR_JS_DOM_REFLECT_STRING("bgColor", "bgcolor"),
+    PR_JS_DOM_REFLECT_STRING("direction", "direction"),
+    PR_JS_DOM_REFLECT_STRING("height", "height"),
     PR_REFLECT_INTEGER("hspace", "hspace", PrHtmlReflectedInteger_Unsigned, 0),
     PR_REFLECT_INTEGER("loop", "loop", PrHtmlReflectedInteger_Long, -1),
     PR_REFLECT_INTEGER("scrollAmount", "scrollamount", PrHtmlReflectedInteger_Unsigned, 6),
     PR_REFLECT_INTEGER("scrollDelay", "scrolldelay", PrHtmlReflectedInteger_Unsigned, 85),
-    PR_REFLECT_BOOL("trueSpeed", "truespeed"),
+    PR_JS_DOM_REFLECT_BOOL("trueSpeed", "truespeed"),
     PR_REFLECT_INTEGER("vspace", "vspace", PrHtmlReflectedInteger_Unsigned, 0),
-    PR_REFLECT_STRING("width", "width"),
+    PR_JS_DOM_REFLECT_STRING("width", "width"),
 };
 
-constexpr JSCFunctionListEntry kMenuProto[] = {PR_JS_TAG("HTMLMenuElement"), PR_REFLECT_BOOL("compact", "compact")};
+constexpr JSCFunctionListEntry kMenuProto[] = {PR_JS_TAG("HTMLMenuElement"), PR_JS_DOM_REFLECT_BOOL("compact", "compact")};
 
 constexpr JSCFunctionListEntry kModProto[] = {
     PR_JS_TAG("HTMLModElement"),
     PR_REFLECT_URL("cite", "cite"),
-    PR_REFLECT_STRING("dateTime", "datetime"),
+    PR_JS_DOM_REFLECT_STRING("dateTime", "datetime"),
 };
 
 constexpr JSCFunctionListEntry kObjectProto[] = {
     PR_JS_TAG("HTMLObjectElement"),
     PR_REFLECT_URL("data", "data"),
-    PR_REFLECT_STRING("type", "type"),
-    PR_REFLECT_STRING("name", "name"),
-    PR_REFLECT_STRING("useMap", "usemap"),
-    PR_REFLECT_STRING("width", "width"),
-    PR_REFLECT_STRING("height", "height"),
+    PR_JS_DOM_REFLECT_STRING("type", "type"),
+    PR_JS_DOM_REFLECT_STRING("name", "name"),
+    PR_JS_DOM_REFLECT_STRING("useMap", "usemap"),
+    PR_JS_DOM_REFLECT_STRING("width", "width"),
+    PR_JS_DOM_REFLECT_STRING("height", "height"),
     PR_JS_GET("contentDocument", jsHtmlContentDocumentGetter<&htmlObjectElementClass>),
     PR_JS_GET("contentWindow", jsHtmlContentWindowGetter<&htmlObjectElementClass>),
     PR_JS_METHOD("getSVGDocument", 0, jsHtmlSvgDocumentMethod<&htmlObjectElementClass>),
-    PR_REFLECT_STRING("align", "align"),
-    PR_REFLECT_STRING("archive", "archive"),
-    PR_REFLECT_STRING("code", "code"),
-    PR_REFLECT_BOOL("declare", "declare"),
+    PR_JS_DOM_REFLECT_STRING("align", "align"),
+    PR_JS_DOM_REFLECT_STRING("archive", "archive"),
+    PR_JS_DOM_REFLECT_STRING("code", "code"),
+    PR_JS_DOM_REFLECT_BOOL("declare", "declare"),
     PR_REFLECT_INTEGER("hspace", "hspace", PrHtmlReflectedInteger_Unsigned, 0),
-    PR_REFLECT_STRING("standby", "standby"),
+    PR_JS_DOM_REFLECT_STRING("standby", "standby"),
     PR_REFLECT_INTEGER("vspace", "vspace", PrHtmlReflectedInteger_Unsigned, 0),
     PR_REFLECT_URL("codeBase", "codebase"),
-    PR_REFLECT_STRING("codeType", "codetype"),
-    PR_REFLECT_STRING("border", "border"),
+    PR_JS_DOM_REFLECT_STRING("codeType", "codetype"),
+    PR_JS_DOM_REFLECT_STRING("border", "border"),
 };
 
 constexpr JSCFunctionListEntry kOListProto[] = {
     PR_JS_TAG("HTMLOListElement"),
-    PR_REFLECT_BOOL("reversed", "reversed"),
+    PR_JS_DOM_REFLECT_BOOL("reversed", "reversed"),
     PR_REFLECT_INTEGER("start", "start", PrHtmlReflectedInteger_Long, 1),
-    PR_REFLECT_STRING("type", "type"),
-    PR_REFLECT_BOOL("compact", "compact"),
+    PR_JS_DOM_REFLECT_STRING("type", "type"),
+    PR_JS_DOM_REFLECT_BOOL("compact", "compact"),
 };
 
 constexpr JSCFunctionListEntry kOptGroupProto[] = {
     PR_JS_TAG("HTMLOptGroupElement"),
-    PR_REFLECT_BOOL("disabled", "disabled"),
-    PR_REFLECT_STRING("label", "label"),
+    PR_JS_DOM_REFLECT_BOOL("disabled", "disabled"),
+    PR_JS_DOM_REFLECT_STRING("label", "label"),
 };
 
 constexpr JSCFunctionListEntry kOptionProto[] = {
     PR_JS_TAG("HTMLOptionElement"),
-    PR_REFLECT_BOOL("disabled", "disabled"),
+    PR_JS_DOM_REFLECT_BOOL("disabled", "disabled"),
     PR_JS_GET("form", optionForm),
     PR_JS_GET_SET("label", optionString<prHtmlOptionElementLabel>, jsSetReflectString<"label">),
-    PR_REFLECT_BOOL("defaultSelected", "selected"),
+    PR_JS_DOM_REFLECT_BOOL("defaultSelected", "selected"),
     PR_JS_GET_SET("selected", optionSelected, setOptionSelected),
     PR_JS_GET_SET("value", optionString<prHtmlOptionElementValue>, jsSetReflectString<"value">),
     PR_JS_GET_SET("text", optionString<prHtmlOptionElementText>, setOptionText),
@@ -719,15 +719,15 @@ constexpr JSCFunctionListEntry kOptionProto[] = {
 
 constexpr JSCFunctionListEntry kParagraphProto[] = {
     PR_JS_TAG("HTMLParagraphElement"),
-    PR_REFLECT_STRING("align", "align"),
+    PR_JS_DOM_REFLECT_STRING("align", "align"),
 };
 
 constexpr JSCFunctionListEntry kParamProto[] = {
     PR_JS_TAG("HTMLParamElement"),
-    PR_REFLECT_STRING("name", "name"),
-    PR_REFLECT_STRING("value", "value"),
-    PR_REFLECT_STRING("type", "type"),
-    PR_REFLECT_STRING("valueType", "valuetype"),
+    PR_JS_DOM_REFLECT_STRING("name", "name"),
+    PR_JS_DOM_REFLECT_STRING("value", "value"),
+    PR_JS_DOM_REFLECT_STRING("type", "type"),
+    PR_JS_DOM_REFLECT_STRING("valueType", "valuetype"),
 };
 
 constexpr JSCFunctionListEntry kPreProto[] = {
@@ -739,11 +739,11 @@ constexpr JSCFunctionListEntry kQuoteProto[] = {PR_JS_TAG("HTMLQuoteElement"), P
 
 constexpr JSCFunctionListEntry kSelectProto[] = {
     PR_JS_TAG("HTMLSelectElement"),
-    PR_REFLECT_STRING("autocomplete", "autocomplete"),
-    PR_REFLECT_BOOL("disabled", "disabled"),
-    PR_REFLECT_BOOL("multiple", "multiple"),
-    PR_REFLECT_STRING("name", "name"),
-    PR_REFLECT_BOOL("required", "required"),
+    PR_JS_DOM_REFLECT_STRING("autocomplete", "autocomplete"),
+    PR_JS_DOM_REFLECT_BOOL("disabled", "disabled"),
+    PR_JS_DOM_REFLECT_BOOL("multiple", "multiple"),
+    PR_JS_DOM_REFLECT_STRING("name", "name"),
+    PR_JS_DOM_REFLECT_BOOL("required", "required"),
     PR_REFLECT_INTEGER("size", "size", PrHtmlReflectedInteger_Unsigned, 0),
     PR_JS_GET("type", selectType),
     PR_JS_GET("options", selectOptions),
@@ -761,36 +761,36 @@ constexpr JSCFunctionListEntry kSpanProto[] = {PR_JS_TAG("HTMLSpanElement")};
 
 constexpr JSCFunctionListEntry kTableCaptionProto[] = {
     PR_JS_TAG("HTMLTableCaptionElement"),
-    PR_REFLECT_STRING("align", "align"),
+    PR_JS_DOM_REFLECT_STRING("align", "align"),
 };
 
 constexpr JSCFunctionListEntry kTableCellProto[] = {
     PR_JS_TAG("HTMLTableCellElement"),
     PR_JS_GET_SET("colSpan", cellColSpan, (jsSetReflectInteger<"colspan", PrHtmlReflectedInteger_Unsigned, 1>)),
     PR_JS_GET_SET("rowSpan", cellRowSpan, (jsSetReflectInteger<"rowspan", PrHtmlReflectedInteger_Unsigned, 1>)),
-    PR_REFLECT_STRING("headers", "headers"),
+    PR_JS_DOM_REFLECT_STRING("headers", "headers"),
     PR_JS_GET("cellIndex", cellIndex),
-    PR_REFLECT_ENUMERATED("scope", "scope", &kScopeKeywords),
-    PR_REFLECT_STRING("abbr", "abbr"),
-    PR_REFLECT_STRING("axis", "axis"),
-    PR_REFLECT_STRING("align", "align"),
-    PR_REFLECT_STRING("ch", "char"),
-    PR_REFLECT_STRING("chOff", "charoff"),
-    PR_REFLECT_BOOL("noWrap", "nowrap"),
-    PR_REFLECT_STRING("vAlign", "valign"),
-    PR_REFLECT_STRING("width", "width"),
-    PR_REFLECT_STRING("height", "height"),
-    PR_REFLECT_STRING("bgColor", "bgcolor"),
+    PR_JS_DOM_REFLECT_ENUMERATED("scope", "scope", &kScopeKeywords),
+    PR_JS_DOM_REFLECT_STRING("abbr", "abbr"),
+    PR_JS_DOM_REFLECT_STRING("axis", "axis"),
+    PR_JS_DOM_REFLECT_STRING("align", "align"),
+    PR_JS_DOM_REFLECT_STRING("ch", "char"),
+    PR_JS_DOM_REFLECT_STRING("chOff", "charoff"),
+    PR_JS_DOM_REFLECT_BOOL("noWrap", "nowrap"),
+    PR_JS_DOM_REFLECT_STRING("vAlign", "valign"),
+    PR_JS_DOM_REFLECT_STRING("width", "width"),
+    PR_JS_DOM_REFLECT_STRING("height", "height"),
+    PR_JS_DOM_REFLECT_STRING("bgColor", "bgcolor"),
 };
 
 constexpr JSCFunctionListEntry kTableColProto[] = {
     PR_JS_TAG("HTMLTableColElement"),
     PR_REFLECT_INTEGER("span", "span", PrHtmlReflectedInteger_Unsigned, 1),
-    PR_REFLECT_STRING("align", "align"),
-    PR_REFLECT_STRING("ch", "char"),
-    PR_REFLECT_STRING("chOff", "charoff"),
-    PR_REFLECT_STRING("vAlign", "valign"),
-    PR_REFLECT_STRING("width", "width"),
+    PR_JS_DOM_REFLECT_STRING("align", "align"),
+    PR_JS_DOM_REFLECT_STRING("ch", "char"),
+    PR_JS_DOM_REFLECT_STRING("chOff", "charoff"),
+    PR_JS_DOM_REFLECT_STRING("vAlign", "valign"),
+    PR_JS_DOM_REFLECT_STRING("width", "width"),
 };
 
 constexpr JSCFunctionListEntry kTableProto[] = {
@@ -809,15 +809,15 @@ constexpr JSCFunctionListEntry kTableProto[] = {
     PR_JS_GET("rows", tableRows),
     PR_JS_METHOD("insertRow", 0, (insertInto<PrHtmlTableElement, &htmlTableElementClass, prHtmlTableElementInsertRow>)),
     PR_JS_METHOD("deleteRow", 1, (deleteFrom<PrHtmlTableElement, &htmlTableElementClass, prHtmlTableElementDeleteRow>)),
-    PR_REFLECT_STRING("align", "align"),
-    PR_REFLECT_STRING("border", "border"),
-    PR_REFLECT_STRING("frame", "frame"),
-    PR_REFLECT_STRING("rules", "rules"),
-    PR_REFLECT_STRING("summary", "summary"),
-    PR_REFLECT_STRING("width", "width"),
-    PR_REFLECT_STRING("bgColor", "bgcolor"),
-    PR_REFLECT_STRING("cellPadding", "cellpadding"),
-    PR_REFLECT_STRING("cellSpacing", "cellspacing"),
+    PR_JS_DOM_REFLECT_STRING("align", "align"),
+    PR_JS_DOM_REFLECT_STRING("border", "border"),
+    PR_JS_DOM_REFLECT_STRING("frame", "frame"),
+    PR_JS_DOM_REFLECT_STRING("rules", "rules"),
+    PR_JS_DOM_REFLECT_STRING("summary", "summary"),
+    PR_JS_DOM_REFLECT_STRING("width", "width"),
+    PR_JS_DOM_REFLECT_STRING("bgColor", "bgcolor"),
+    PR_JS_DOM_REFLECT_STRING("cellPadding", "cellpadding"),
+    PR_JS_DOM_REFLECT_STRING("cellSpacing", "cellspacing"),
 };
 
 constexpr JSCFunctionListEntry kTableRowProto[] = {
@@ -829,11 +829,11 @@ constexpr JSCFunctionListEntry kTableRowProto[] = {
         (insertInto<PrHtmlTableRowElement, &htmlTableRowElementClass, prHtmlTableRowElementInsertCell>)),
     PR_JS_METHOD("deleteCell", 1,
         (deleteFrom<PrHtmlTableRowElement, &htmlTableRowElementClass, prHtmlTableRowElementDeleteCell>)),
-    PR_REFLECT_STRING("align", "align"),
-    PR_REFLECT_STRING("ch", "char"),
-    PR_REFLECT_STRING("chOff", "charoff"),
-    PR_REFLECT_STRING("vAlign", "valign"),
-    PR_REFLECT_STRING("bgColor", "bgcolor"),
+    PR_JS_DOM_REFLECT_STRING("align", "align"),
+    PR_JS_DOM_REFLECT_STRING("ch", "char"),
+    PR_JS_DOM_REFLECT_STRING("chOff", "charoff"),
+    PR_JS_DOM_REFLECT_STRING("vAlign", "valign"),
+    PR_JS_DOM_REFLECT_STRING("bgColor", "bgcolor"),
 };
 
 constexpr JSCFunctionListEntry kTableSectionProto[] = {
@@ -843,13 +843,13 @@ constexpr JSCFunctionListEntry kTableSectionProto[] = {
         (insertInto<PrHtmlTableSectionElement, &htmlTableSectionElementClass, prHtmlTableSectionElementInsertRow>)),
     PR_JS_METHOD("deleteRow", 1,
         (deleteFrom<PrHtmlTableSectionElement, &htmlTableSectionElementClass, prHtmlTableSectionElementDeleteRow>)),
-    PR_REFLECT_STRING("align", "align"),
-    PR_REFLECT_STRING("ch", "char"),
-    PR_REFLECT_STRING("chOff", "charoff"),
-    PR_REFLECT_STRING("vAlign", "valign"),
+    PR_JS_DOM_REFLECT_STRING("align", "align"),
+    PR_JS_DOM_REFLECT_STRING("ch", "char"),
+    PR_JS_DOM_REFLECT_STRING("chOff", "charoff"),
+    PR_JS_DOM_REFLECT_STRING("vAlign", "valign"),
 };
 
-constexpr JSCFunctionListEntry kTimeProto[] = {PR_JS_TAG("HTMLTimeElement"), PR_REFLECT_STRING("dateTime", "datetime")};
+constexpr JSCFunctionListEntry kTimeProto[] = {PR_JS_TAG("HTMLTimeElement"), PR_JS_DOM_REFLECT_STRING("dateTime", "datetime")};
 
 constexpr JSCFunctionListEntry kTitleProto[] = {
     PR_JS_TAG("HTMLTitleElement"),
@@ -859,15 +859,15 @@ constexpr JSCFunctionListEntry kTitleProto[] = {
 constexpr JSCFunctionListEntry kTrackProto[] = {
     PR_JS_TAG("HTMLTrackElement"),
     PR_REFLECT_URL("src", "src"),
-    PR_REFLECT_STRING("srclang", "srclang"),
-    PR_REFLECT_STRING("label", "label"),
-    PR_REFLECT_BOOL("default", "default"),
+    PR_JS_DOM_REFLECT_STRING("srclang", "srclang"),
+    PR_JS_DOM_REFLECT_STRING("label", "label"),
+    PR_JS_DOM_REFLECT_BOOL("default", "default"),
 };
 
 constexpr JSCFunctionListEntry kUListProto[] = {
     PR_JS_TAG("HTMLUListElement"),
-    PR_REFLECT_BOOL("compact", "compact"),
-    PR_REFLECT_STRING("type", "type"),
+    PR_JS_DOM_REFLECT_BOOL("compact", "compact"),
+    PR_JS_DOM_REFLECT_STRING("type", "type"),
 };
 
 constexpr JSCFunctionListEntry kUnknownProto[] = {PR_JS_TAG("HTMLUnknownElement")};

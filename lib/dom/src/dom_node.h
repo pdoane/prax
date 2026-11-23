@@ -33,7 +33,7 @@ static_assert(sizeof(DomText) == 128);
 static_assert(sizeof(DomComment) == 128);
 static_assert(sizeof(DomProcessingInstruction) == 160);
 static_assert(sizeof(DomDocumentType) == 192);
-static_assert(sizeof(DomDocument) == 640);
+static_assert(sizeof(DomDocument) == 648);
 #endif
 
 // Returns the fragment that a template element holds (html/#the-template-element), or null for any other element.
@@ -592,6 +592,15 @@ inline bool domIsHtml(const PrDomElement* PR_NULLABLE element, PrDomTag tag) {
     return element != nullptr && element->space == PrDomNamespace_Html && element->tag == tag;
 }
 
+// Returns true if the element is an SVG animation element: animate, set, animateMotion or animateTransform
+// (svg-animations/#TermAnimationElement).
+inline bool domIsSvgAnimation(const PrDomElement* PR_NULLABLE element) {
+    if (element == nullptr || element->space != PrDomNamespace_Svg)
+        return false;
+    return element->tag == PrDomTag_Animate || element->tag == PrDomTag_Set || element->tag == PrDomTag_AnimateMotion ||
+        element->tag == PrDomTag_AnimateTransform;
+}
+
 // Returns the node's parent, or its host if it is a shadow root (dom/#concept-shadow-including-descendant).
 inline const PrDomNode* PR_NULLABLE domShadowIncludingParent(const PrDomNode* node) {
     if (const PrDomShadowRoot* shadow = domNodeShadowRoot(node))
@@ -611,6 +620,12 @@ inline bool domShadowIncludingContains(const PrDomNode* ancestor, const PrDomNod
     }
     return false;
 }
+
+// Gives the element the classes in `text` in place of those of its class attribute, as SVG's animations of class do
+// (svg-animations/#TargetAttributes). The null view gives it the attribute's classes again. Selectors match the classes
+// that it is given, and its class attribute keeps its value. A change to the attribute gives the element the
+// attribute's classes, and the document's followers are told after.
+void domElementSetClasses(PrDomElement* element, PrStringView text);
 
 } // namespace pr_impl
 

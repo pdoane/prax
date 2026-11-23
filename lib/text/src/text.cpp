@@ -196,10 +196,7 @@ void spacingOf(const PrTextRun& run, PrStringView text, const PrTextGlyph* glyph
             continue;
         if (last != UINT32_MAX) {
             prUtf8Decode(text, start, &codePoint);
-            PrUnicodeJoiningType joining = prUnicodeJoiningType(codePoint);
-            bool joins = joining != PrUnicodeJoiningType_NonJoining && joining != PrUnicodeJoiningType_Transparent;
-            bool ignorable = (prUnicodeFlags(codePoint) & PrUnicodeFlag_DefaultIgnorable) != 0;
-            out[last] += words + (joins || ignorable ? 0 : run.letterSpacing);
+            out[last] += words + (prTextTakesLetterSpacing(codePoint) ? run.letterSpacing : 0);
         }
         start = end;
         words = 0;
@@ -557,6 +554,12 @@ struct PrTextFeatureSet {
 bool prTextIsWordSeparator(uint32_t codePoint) {
     return codePoint == 0x20 || codePoint == 0xA0 || codePoint == 0x1361 || codePoint == 0x10100 ||
         codePoint == 0x10101 || codePoint == 0x1039F || codePoint == 0x1091F;
+}
+
+bool prTextTakesLetterSpacing(uint32_t codePoint) {
+    PrUnicodeJoiningType joining = prUnicodeJoiningType(codePoint);
+    bool joins = joining != PrUnicodeJoiningType_NonJoining && joining != PrUnicodeJoiningType_Transparent;
+    return !joins && (prUnicodeFlags(codePoint) & PrUnicodeFlag_DefaultIgnorable) == 0;
 }
 
 PrTextFeatureSet* prTextFeatureSetCreate(const PrTextFeatureSetDesc* desc) {

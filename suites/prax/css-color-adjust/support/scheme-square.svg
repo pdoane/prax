@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40">
+  <style>
+    rect { fill: #3c6fd6 }
+    @media (prefers-color-scheme: dark) { rect { fill: #d68a3c } }
+  </style>
+  <rect width="40" height="40"/>
+</svg>

@@ -163,17 +163,17 @@ SvgPaintStyle svgStylePaint(const CssComputedStyle* style, PrCssProperty propert
     return paint;
 }
 
-void svgStylePaintOrder(const CssComputedStyle* style, SvgLayer* order) {
+void svgStylePaintOrder(const CssComputedStyle* style, SvgPaintLayer* order) {
     // The computed value lists the first layers, and the rest follow in the normal order.
     CssValueRun run = cssComputedValue(style, PrCssProperty_PaintOrder);
     uint32_t count = 0;
     bool given[3] = {};
     for (uint32_t i = 0; i < run.count && count < 3; i += run.values[i].next) {
-        SvgLayer layer = SvgLayer_Fill;
+        SvgPaintLayer layer = SvgPaintLayer_Fill;
         if (cssValueIsKeyword(&run.values[i], PrCssKeyword_Stroke))
-            layer = SvgLayer_Stroke;
+            layer = SvgPaintLayer_Stroke;
         else if (cssValueIsKeyword(&run.values[i], PrCssKeyword_Markers))
-            layer = SvgLayer_Markers;
+            layer = SvgPaintLayer_Markers;
         else if (!cssValueIsKeyword(&run.values[i], PrCssKeyword_Fill))
             continue;
         if (given[layer])
@@ -181,7 +181,7 @@ void svgStylePaintOrder(const CssComputedStyle* style, SvgLayer* order) {
         given[layer] = true;
         order[count++] = layer;
     }
-    for (SvgLayer layer = SvgLayer_Fill; layer <= SvgLayer_Markers; ++layer) {
+    for (SvgPaintLayer layer = SvgPaintLayer_Fill; layer <= SvgPaintLayer_Markers; ++layer) {
         if (!given[layer])
             order[count++] = layer;
     }
@@ -330,6 +330,25 @@ PrAffine2 svgTransformMatrix(const SvgTransformStyle& transform, PrRect box) {
         box.top + svgLengthResolve(transform.origin[1], extent.y),
     };
     return prAffine2Concat(prAffine2Concat(prAffine2Translate(-origin), functions), prAffine2Translate(origin));
+}
+
+SvgOriginTransform svgOriginTransform(const SvgTransformStyle& transform) {
+    if (!transform.any)
+        return kSvgOriginTransformIdentity;
+    SvgTransformStyle lengths = transform;
+    lengths.origin[0].percent = 0;
+    lengths.origin[1].percent = 0;
+    return SvgOriginTransform{
+        .matrix = svgTransformMatrix(lengths, PrRect{}),
+        .originFraction = {transform.origin[0].percent / 100, transform.origin[1].percent / 100},
+    };
+}
+
+PrAffine2 svgOriginTransformMatrix(const SvgOriginTransform& transform, PrVec2 viewport) {
+    PrVec2 origin{transform.originFraction.x * viewport.x, transform.originFraction.y * viewport.y};
+    if (origin.x == 0 && origin.y == 0)
+        return transform.matrix;
+    return prAffine2Concat(prAffine2Concat(prAffine2Translate(-origin), transform.matrix), prAffine2Translate(origin));
 }
 
 void svgStylePosition(const CssComputedStyle* style, PrCssProperty property, SvgLengthPercentage* out) {

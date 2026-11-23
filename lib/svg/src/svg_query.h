@@ -5,7 +5,9 @@
 
 #pragma once
 
+#include "pr/path_polyline.h"
 #include "pr/svg.h"
+#include "pr/svg_element.h"
 
 #include "css/src/css_presentation_svg.h"
 #include "svg/src/svg_draw.h"
@@ -22,6 +24,16 @@ namespace pr_impl {
 uint32_t svgTreeHitTest(const SvgTree* tree, PrVec2 viewport, const SvgRootView* PR_NULLABLE view, PrVec2 point,
     CssPresentationSvgHit* PR_NULLABLE out, uint32_t capacity);
 
+// Appends to `out` the area over which the node `index` is hit, in the tree drawn in a viewport of `viewport`, in the
+// space that the tree is drawn in (SVG2/interact.html#PointerEventsProp). The rules are svgTreeHitTest's, over an area
+// instead of at a point: a shape covers its fill, its stroke or its bounding box as its pointer-events says, a text
+// node the cells of the characters of `element`, and an image or a foreignObject its positioning rectangle. The clip
+// paths of the node and of its ancestors, and the viewports that clip it, cut the area. A container covers none of its
+// own. `element` is the text content element whose characters a text node covers, and is not read for other nodes. The
+// area's contours are filled by the nonzero rule. Appends nothing for a node that is not in the tree's drawing.
+void svgNodeHitArea(const SvgTree* tree, PrVec2 viewport, SvgNodeIndex index, const PrDomElement* element,
+    PrPathPolyline* out);
+
 // Returns true if `point` is inside the clip path of the clipPath `index`, which clips an element whose object bounding
 // box is `box`, with percentages of `viewport`. The point and the box are in the element's user space. The clip path is
 // the union of its children's silhouettes, each clipped by its own clip-path, and the clipPath's own clip-path clips
@@ -37,11 +49,13 @@ struct SvgPlace {
     PrAffine2 ctm;
 
     PrVec2 viewport;            // the viewport that the node's own percentages are of
+    PrVec2 content;             // the viewport that its children's percentages are of, which a viewport node sets
 };
 
 // Writes where the node `index` is drawn in the tree drawn in a viewport of `viewport` to `out`. A node's user space is
-// the space inside its transform, and for a node that establishes a viewport, the space of its content. Returns false
-// if the node is not drawn, as inside a viewport of no area.
+// the space inside its transform, and for a node that establishes a viewport, the space of its content. A viewport of
+// no area draws nothing, but places what is inside it at its corner, which keeps its geometry. Returns false if the
+// node is not in the tree's drawing.
 bool svgNodePlace(const SvgTree* tree, PrVec2 viewport, SvgNodeIndex index, SvgPlace* out);
 
 // Returns the bounding box of the node `index` and its descendants in its user space, as `options` asks: the object
@@ -55,11 +69,13 @@ PrRect svgNodeBox(const SvgTree* tree, const SvgPlace& place, SvgNodeIndex index
 bool svgShapeFillContains(const SvgTree* tree, const SvgPlace& place, SvgNodeIndex index, PrVec2 point);
 bool svgShapeStrokeContains(const SvgTree* tree, const SvgPlace& place, SvgNodeIndex index, PrVec2 point);
 
-// Returns the length of the equivalent path of a shape node in user units, and the point at `distance` along it,
-// clamped to its ends (SVG2/types.html#__svg__SVGGeometryElement__getPointAtLength). `place` is where the node is
-// drawn.
+// Returns the length of the equivalent path of a shape node in user units. `place` is where the node is drawn.
 float svgShapeTotalLength(const SvgTree* tree, const SvgPlace& place, SvgNodeIndex index);
-PrVec2 svgShapePointAtLength(const SvgTree* tree, const SvgPlace& place, SvgNodeIndex index, float distance);
+
+// Writes the point at `distance` along the equivalent path of a shape node, clamped to its ends, to `out`
+// (SVG2/types.html#__svg__SVGGeometryElement__getPointAtLength). If the path is empty, writes the origin and returns
+// false. `place` is where the node is drawn.
+bool svgShapePointAtLength(const SvgTree* tree, const SvgPlace& place, SvgNodeIndex index, float distance, PrVec2* out);
 
 } // namespace pr_impl
 

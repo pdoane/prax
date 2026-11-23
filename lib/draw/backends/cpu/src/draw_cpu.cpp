@@ -628,7 +628,7 @@ bool measureStroke(Renderer& r, const PrDrawCommand& c, StrokeMap* out) {
     prPathPolylineClear(&r.landed);
     prPathFlatten(r.shape, x.affine, kTolerance, PrPathFlattening_Inside, &r.landed);
     const PrDrawStroke& stroke = *c.stroke;
-    float scale = stroke.nonScaling ? 1 : prAffine2MaxScale(x.affine);
+    float scale = prAffine2MaxScale(x.affine);
     out->scale = scale;
     out->reach = prDrawStrokeReach(&stroke) * stroke.shape.width * scale;
     out->measure = prPathMeasureCreate();

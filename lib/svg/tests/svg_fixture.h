@@ -46,7 +46,6 @@ struct Drawn {
     // The stroke, if the command strokes, with its dashes copied.
     bool stroked;
     PrPathStroke stroke;
-    bool nonScaling;
     Array<float> dashes;
 
     PrPathFillRule rule;                      // Path
@@ -198,7 +197,6 @@ struct Drawing {
             if (c.stroke != nullptr) {
                 d.stroked = true;
                 d.stroke = c.stroke->shape;
-                d.nonScaling = c.stroke->nonScaling;
                 for (uint32_t k = 0; k < d.stroke.dashCount; ++k)
                     d.dashes.push(d.stroke.dashes[k]);
                 d.stroke.dashes = nullptr;

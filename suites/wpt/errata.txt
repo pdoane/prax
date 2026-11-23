@@ -46,6 +46,13 @@ css/css-display/run-in/run-in-listitem-between-001.xht
     with no content lays out a line for its marker: an empty item is one line tall in Chrome, Firefox
     and Safari, and each draws both markers. The file predates markers that browsers draw this way.
 
+css/css-fonts/animations/font-palette-interpolation.html:112-113
+    These cases expect a computed palette-mix() to keep the default interpolation method, as in
+    "palette-mix(in oklab, normal, light)". css-fonts-4 gives palette-mix() no serialization of its own, and the
+    engine serializes it as css-color-5/#serial-color-mix serializes color-mix(), which leaves out "in oklab". The
+    corpus agrees elsewhere: css/css-fonts/parsing/palette-mix-computed.html expects the computed value of
+    palette-mix(in oklab, light 30%, dark) to be "palette-mix(light 30%, dark 70%)".
+
 css/css-fonts/parsing/font-synthesis-valid.html:3,7,10,14-16,18,20,22
     css-fonts-4/#propdef-font-synthesis gives the shorthand the value `none | [ weight || style
     || small-caps || position]`, which holds no oblique-only: that is a value of
@@ -91,6 +98,13 @@ css/css-overflow/parsing/scroll-buttons-valid.html:29-36
     css-overflow-5/#scroll-buttons: "The :disabled pseudo-class can apply to ::scroll-button()",
     and nothing allows :enabled there; selectors-4/#pseudo-element-states: "Combinations that
     are not explicitly allowed are invalid selectors."
+
+css/css-shapes/animation/shape-outside-path-interpolation.html:346-357
+    css-shapes-1/#interpolating-shape: the result of interpolating two path() values "must represent the same list of
+    path data commands, with each command having its numerical components interpolated". A path()'s computed value is
+    as specified. Relative commands therefore stay relative. The engine keeps them relative in shape-outside, and
+    WebKit and Firefox keep them relative in clip-path. Chrome alone rewrites them as absolute commands, which these
+    cases expect.
 
 css/css-syntax/non-ascii-codepoints.html
     A missing comma makes `[0x203f, 0x2040] [0x2070, 0x218f]` an index expression, so the range
@@ -188,3 +202,79 @@ mathml/presentation-markup/scripts/underover-parameters-4.tentative.html:2-5
     that TeX's rule is to align the baselines and that its rule is a simplification for arbitrary overscripts.
     In underover-parameters-4, the accents are breves, which MathML 4 makes accents by the dictionary where the
     attribute is absent; every other expectation of those cases holds.
+
+svg/animations/svgboolean-animation-1.html:0
+    svg-animations/#CalcModeAttribute: an attribute that does not interpolate, such as a boolean, ignores calcMode
+    and is animated discretely; svg-animations/#KeyTimesAttribute: a discrete value is set at its key time and used
+    until the next; and a discrete from-to animation takes the from value for the first half of the simple duration
+    and the to value for the remainder (svg-animations/#AnimFuncValues). So at 2s of a 4s from-to animation,
+    preserveAlpha is the to value, true, where the case expects false. Firefox gives true. Chrome and Safari give
+    false for the boolean, yet the to value for a calcMode="discrete" number at the same time.
+
+svg/idlharness.window.js:600-612
+    These cases test two interfaces of use-element shadow trees that the SVG WG has removed. On 2026-10-20 the WG
+    resolved to "Remove SVGUseElementShadowRoot interface" (w3.org/2026/10/20-svg-minutes.html, w3c/svgwg#1214), and
+    w3c/svgwg#1215 removed it from the draft. On 2018-05-21 the WG resolved to "Remove ShadowAnimation from SVG 2.0,
+    keep in 2.1" (w3.org/2018/05/21-svg-minutes.html). The draft still defines ShadowAnimation because that edit was
+    never made. ShadowAnimation also assumes script can reach a use element's shadow tree, and the same 2018 minutes
+    resolved to "use closed shadow DOM". The 2026-11-10 minutes keep the tree closed. Chrome, WebKit and Firefox
+    define neither interface, and each returns null for a use element's shadowRoot.
+
+svg/painting/parsing/stroke-linejoin-valid.svg:1
+    This case expects stroke-linejoin to take miter-clip, which SVG 2 listed. fill-stroke-3/#stroke-linejoin now
+    defines the property as [ crop | arcs | miter ] || [ bevel | round | fallback ], which has no miter-clip. Chrome,
+    WebKit and Firefox reject miter-clip, as the engine does.
+
+svg/text/inheritance.svg:2-5
+svg/text/parsing/shape-inside-invalid.svg:3
+svg/text/parsing/shape-inside-valid.svg:5
+svg/text/parsing/shape-subtract-valid.svg:0-5
+    These cases test an SVG 2 draft that no longer stands. On 2026-03-05 the SVG WG resolved to "Drop text wrapping
+    in CSS shapes for SVG2" (w3c/svgwg#1067). w3c/svgwg#1097 then removed shape-inside, shape-subtract, shape-margin
+    and shape-padding from SVG 2's text chapter. Its reason was that they "were postponed to a future CSS Shapes level
+    in 2012 and never implemented by any browser". web-platform-tests/wpt#65468 removes these tests. No draft defines
+    shape-subtract now. css-shapes-2 defines shape-inside as auto | outside-shape | [ <basic-shape> || shape-box ] |
+    <image> | display. That grammar accepts inset() and rejects a list of shapes and URLs. Chrome, WebKit and Firefox
+    parse neither property. The engine parses shape-inside by css-shapes-2, does not compute it, and has no
+    shape-subtract.
+
+svg/text/reftests/text-inline-size-001.svg
+svg/text/reftests/text-inline-size-002.svg
+svg/text/reftests/text-inline-size-003.svg
+svg/text/reftests/text-inline-size-005.svg
+svg/text/reftests/text-inline-size-006.svg
+svg/text/reftests/text-inline-size-007.svg
+svg/text/reftests/text-inline-size-101.svg
+svg/text/reftests/text-inline-size-201.svg
+svg/text/reftests/text-multiline-001.svg
+svg/text/reftests/text-multiline-002.svg
+svg/text/reftests/text-multiline-003.svg
+    These references set FreeSans, from fonts/FreeSans.woff beside them or a local font. The corpus has no such
+    file there, upstream included, so each page falls back to another font, whose line height and advances the
+    references do not assume. With svg/import/woffs/FreeSans.woff loaded in its place, the engine's lines break and
+    space as the references place them, with two differences that follow from the references' own markup. A
+    reference writes each line as a tspan, and the white space between them collapses into a space at the end of the
+    line, which text-anchor then counts. A wrapped line ends without that space (css-text-3/#white-space-phase-2), so
+    its middle- and end-anchored lines sit half a space and a space apart from the references'. In
+    text-inline-size-007, the third line with "Ut" measures 324.5 of FreeSans at 16px against an inline-size of 320,
+    so "Ut" starts the next line, where the reference keeps it. Chrome, Edge, Firefox and Safari fail every one of
+    these pages on wpt.fyi.
+
+svg/types/scripted/SVGGraphicsElement.svg:1-2
+    These cases call getCTM and getScreenCTM on an element that is not in the document and expect a matrix.
+    SVG2/types.html#__svg__SVGGraphicsElement__getCTM and #__svg__SVGGraphicsElement__getScreenCTM begin "If the
+    current element is not in the document, then return null", which the engine does. Chrome, Firefox and Safari
+    return the identity.
+
+svg/types/scripted/SVGList-parse-invalid-clears-items.html:2
+    This case expects points="0,0 100,0 INVALID" to give no points. SVG2/shapes.html#DataTypePoints keeps the points
+    before an error, so the list holds two, and the shape draws them, as resvg's
+    shapes/polyline/stop-processing-on-invalid-data.svg expects. Chrome, Firefox and Safari give no points.
+
+svg/types/scripted/SVGRect-negative-dimensions.html:0-3
+svg/types/scripted/SVGRect.html:2
+    These cases expect SVG 1.1's SVGRect, whose float attributes reject NaN and Infinity. SVG 2 makes the rect that
+    createSVGRect returns a DOMRect (SVG2/struct.html#__svg__SVGSVGElement__createSVGRect), and geometry-1 declares
+    SVGRect a [LegacyWindowAlias] of DOMRect, whose attributes are unrestricted doubles. The engine follows them, as
+    does WPT's own interfaces/geometry.idl, which css/geometry/idlharness.any.js checks. Chrome, Firefox and Safari keep
+    a separate SVGRect, as they keep SVGPoint and SVGMatrix.

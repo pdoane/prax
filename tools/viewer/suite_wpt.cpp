@@ -2,6 +2,9 @@
 // WPT's manifest treats as a reftest, whose document and references can each be rendered. An HTML or XHTML page is
 // drawable unless it is for print, and an SVG document is drawable unless it is dynamic. Each is compared with its
 // first reference.
+//
+// The SVG 1.1 suite, which WPT imports into svg/import as tests that a person runs, has no references: each document is
+// compared with the browser, and its description is the pass criteria that it states.
 
 #include "tools/viewer/suite_wpt.h"
 
@@ -168,36 +171,20 @@ std::vector<Ref> references(const fs::path& test, const std::string& text, std::
     return found;
 }
 
+// Returns true if the document is a page that the shell captures, as wpt.py's CAPTURED: HTML, XHTML or SVG.
 bool captured(const fs::path& path) {
     std::string extension = path.extension().string();
-    return extension == ".html" || extension == ".htm" || extension == ".xht" || extension == ".xhtml";
+    return extension == ".html" || extension == ".htm" || extension == ".xht" || extension == ".xhtml" || extension == ".svg";
 }
 
-// Returns true if the SVG document is more than a still image, as reftest.py's DYNAMIC determines: it scripts,
-// animates, handles events or plays media, or its reftest waits or prints.
-bool dynamic(std::string_view lower) {
-    if (lower.find("reftest-wait") != std::string_view::npos || lower.find("reftest-print") != std::string_view::npos)
-        return true;
-    bool found = false;
-    eachTag(lower, [&](const Tag& tag) {
-        for (std::string_view name : {"script", "handler", "listener", "set", "audio", "video", "animation", "discard"})
-            found = found || tag.name == name;
-        found = found || tag.name.starts_with("animate");
-    });
-    return found;
-}
-
-// Returns true if the document can be rendered: a page that the shell captures and that is not for print, or a static
-// SVG document.
-bool drawable(const fs::path& path, const std::string& text, std::string_view lower) {
-    if (captured(path))
-        return !path.stem().string().ends_with("-print") && text.find("reftest-print") == std::string::npos;
-    return path.extension() == ".svg" && !dynamic(lower);
+// Returns true if the document can be rendered: a page that the shell captures and that is not for print.
+bool drawable(const fs::path& path, const std::string& text) {
+    return captured(path) && !path.stem().string().ends_with("-print") &&
+        text.find("reftest-print") == std::string::npos;
 }
 
 bool drawable(const fs::path& path) {
-    std::string text = pageText(path);
-    return drawable(path, text, folded(text));
+    return drawable(path, pageText(path));
 }
 
 // Returns true for the directories that hold no tests (WPT's manifest rules).
@@ -217,8 +204,7 @@ std::vector<Document> wpt() {
                 it.disable_recursion_pending();
             continue;
         }
-        fs::path extension = it->path().extension();
-        if (captured(it->path()) || extension == ".svg")
+        if (captured(it->path()))
             pages.push_back(it->path());
     }
     std::sort(pages.begin(), pages.end());
@@ -243,7 +229,7 @@ std::vector<Document> wpt() {
         if (!declaresReference(lower))
             continue;
         std::vector<Ref> refs = references(test, text, lower);
-        if (refs.empty() || !drawable(test, text, lower))
+        if (refs.empty() || !drawable(test, text))
             continue;
         bool all = true;
         for (const Ref& ref : refs)
@@ -261,12 +247,68 @@ std::vector<Document> wpt() {
     return documents;
 }
 
+// Returns the text of the SVG 1.1 test's pass criteria, without its markup and with its white space collapsed, or empty
+// if it states none.
+std::string passCriteria(const std::string& text) {
+    size_t start = text.find("<d:passCriteria");
+    size_t open = start != std::string::npos ? text.find('>', start) : std::string::npos;
+    size_t end = open != std::string::npos ? text.find("</d:passCriteria>", open) : std::string::npos;
+    if (end == std::string::npos)
+        return {};
+    std::string out;
+    bool tag = false;
+    bool gap = false;
+    for (size_t i = open + 1; i < end; ++i) {
+        char c = text[i];
+        if (c == '<' || c == '>') {
+            tag = c == '<';
+            gap = true;
+        } else if (!tag && space(c)) {
+            gap = true;
+        } else if (!tag) {
+            if (gap && !out.empty())
+                out += ' ';
+            out += c;
+            gap = false;
+        }
+    }
+    return out;
+}
+
+// Returns the SVG 1.1 suite's tests, each named as the suite names it and listed under its chapter, the first word of
+// its name.
+std::vector<Document> svg11() {
+    fs::path root = checkout() / "svg" / "import";
+    std::vector<fs::path> tests;
+    std::error_code error;
+    for (fs::directory_iterator it(root, error), end; it != end; it.increment(error)) {
+        if (error)
+            break;
+        if (it->is_regular_file() && it->path().extension() == ".svg")
+            tests.push_back(it->path());
+    }
+    std::sort(tests.begin(), tests.end());
+    std::vector<Document> documents;
+    for (const fs::path& test : tests) {
+        std::string name = test.stem().string();
+        if (name.ends_with("-manual"))
+            name.resize(name.size() - 7);
+        std::string criteria = passCriteria(pageText(test));
+        Document d{name, criteria.empty() ? "SVG 1.1 test, against the browser" : criteria, fileSource(test)};
+        d.folders = {name.substr(0, name.find('-'))};
+        documents.push_back(std::move(d));
+    }
+    return documents;
+}
+
 } // namespace
 
 std::vector<Collection> wptCollections() {
     std::vector<Collection> collections;
-    if (fs::exists(checkout()) && wptServed())
+    if (fs::exists(checkout()) && wptServed()) {
         collections.push_back(Collection{"WPT", 800, 600, wpt});
+        collections.push_back(Collection{"SVG 1.1", 480, 360, svg11});
+    }
     return collections;
 }
 

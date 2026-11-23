@@ -9,6 +9,7 @@
 #include "pr/string_view.h"
 #include "pr/svg_render.h"
 
+#include "css/src/css_media.h"
 #include "svg/src/svg_draw.h"
 #include "svg/src/svg_tree.h"
 
@@ -30,9 +31,18 @@ struct SvgImage {
 
     bool overflows;             // the root's overflow is visible, which an image element does not clip to its viewport
 
-    // The size that the content is drawn at and then scaled from, for an image with a width and a height but no
-    // viewBox, which scales as if its viewBox were its natural size; zero for any other.
-    PrVec2 scaledFrom;
+    // The viewBox that the image synthesizes from its natural size, for an image with a width and a height but no
+    // viewBox of its own; zero for any other.
+    PrVec2 synthesizedViewBox;
+
+    PrSvgEnvironmentFlags environmentRead;      // the parts of its environment that its build read
+
+    // What the build was made in, which svgImageServes compares: the environment that its media queries read, the
+    // features that they read of it, the color scheme that it preferred, and the viewport that it was laid out in.
+    CssMediaEnvironment media;
+    CssMediaReads mediaReads;
+    bool dark;
+    PrVec2 viewport;
 };
 
 // Writes the view that `fragment`, the fragment of a URL without its `#`, names in the document of the outermost svg
@@ -40,6 +50,37 @@ struct SvgImage {
 // (SVG2/linking.html#SVGFragmentIdentifiers). svgView() and a media fragment's xywh give a viewBox, svgView() a
 // preserveAspectRatio, and the ID of a view element its attributes. Any other fragment leaves the view as it is.
 const PrDomElement* PR_NULLABLE svgImageView(PrStringView fragment, const PrDomElement* root, SvgRootView* view);
+
+// The size of an SVG image without a natural size (css-images-3/#default-object-size).
+constexpr PrVec2 kSvgImageDefaultSize{300, 150};
+
+// The span of time that an SVG image shows its animations over, in seconds.
+struct SvgImageTimes {
+    double start;
+    double end;                 // infinite if the animations play on
+};
+
+// Returns the span of time that `fragment`, the fragment of a URL without its `#`, shows the image's animations over:
+// that of its media fragment's temporal dimension (Media Fragments URI 1.0, 4.2.1), or from zero on for none.
+SvgImageTimes svgImageTimes(PrStringView fragment);
+
+// How the drawing of an SVG image that a presentation lays out is placed in the size that the image is shown at: the
+// viewport that the root is laid out in, and either stretched to the size or fitted into it as `aspect` says.
+struct SvgImageFit {
+    PrVec2 layout;
+    PrSvgPreserveAspectRatio aspect;
+    bool stretch;
+};
+
+// Makes the outermost svg element `root` of an SVG image's own document show the view that `fragment` names
+// (svgImageView) when a presentation lays it out in the viewport of the fit that it returns: writes the view's viewBox
+// and transform to the root's attributes, and fills the viewport with the viewBox, which the fit then places. With
+// `rendering`, the image shows as an image element shows it (svgImageDrawRendering): its preserveAspectRatio is none,
+// and a width and a height without a viewBox act as one. The document runs no script, which would see the attributes.
+SvgImageFit svgImageApplyView(PrDomElement* root, PrStringView fragment, bool rendering);
+
+// Returns the transform from the viewport of `fit` to the rectangle from the origin to `extent`.
+PrAffine2 svgImageFitTransform(const SvgImageFit& fit, PrVec2 extent);
 
 // Draws the image over the rectangle from the origin to `extent`, as CSS shows an image: its view placed in that size.
 void svgImageDraw(const SvgImage* image, PrVec2 extent, PrDrawList* list);

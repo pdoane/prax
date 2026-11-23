@@ -3,30 +3,85 @@
 # indented reason: what the sources say and why the corpus loses. A case that the engine has yet to build is a failure,
 # not an erratum. A case that starts agreeing is reported so its entry can be removed.
 
+filters/enable-background/accumulate-with-new.svg
 filters/enable-background/accumulate.svg
+filters/enable-background/filter-on-shape.svg
+filters/enable-background/inherit.svg
 filters/enable-background/new-with-invalid-region-1.svg
 filters/enable-background/new-with-invalid-region-2.svg
 filters/enable-background/new-with-invalid-region-3.svg
 filters/enable-background/new-with-region.svg
+filters/enable-background/new.svg
+filters/enable-background/shapes-after-filter.svg
 filters/enable-background/stop-on-the-first-new-1.svg
 filters/enable-background/stop-on-the-first-new-2.svg
+filters/enable-background/with-clip-path.svg
+filters/enable-background/with-filter-on-the-same-element.svg
 filters/enable-background/with-filter.svg
+filters/enable-background/with-opacity-1.svg
+filters/enable-background/with-opacity-2.svg
 filters/enable-background/with-opacity-3.svg
 filters/enable-background/with-opacity-4.svg
 filters/enable-background/with-transform.svg
+filters/filter/in=BackgroundAlpha-with-enable-background.svg
+filters/filter/in=BackgroundAlpha.svg
+filters/filter/in=BackgroundImage-with-enable-background.svg
     filter-effects-1 drops SVG 1.1's enable-background (filter-effects-1/#AccessBackgroundImage) and defines
     BackgroundImage as the backdrop of the current isolation group, which the outermost svg element and a group with
-    opacity are (SVG2/render.html#ParentCompositing, compositing-1/#csscompositingrules_SVG). The references treat the
-    backdrop as empty unless enable-background is new, as SVG 1.1 did. Chrome and Safari read BackgroundImage as
-    SourceGraphic, and Firefox ignores the filter, so no browser draws the references either.
+    opacity are (SVG2/render.html#ParentCompositing, compositing-1/#csscompositingrules_SVG). The browsers disagree:
+    Chrome and Safari read BackgroundImage as SourceGraphic, and Firefox ignores the filter. w3c/csswg-drafts#13384 asks
+    whether to drop the input, unresolved, so the specification's text stands. The references read it as SourceGraphic,
+    as Chrome and Safari do.
 
 filters/feConvolveMatrix/divisor=0.svg
     "If the specified divisor is 0 then the default value will be used instead", the kernel's sum
     (filter-effects-1/#feConvolveMatrixElement). The reference treats it as an error and draws nothing, as SVG 1.1 did.
 
-filters/feGaussianBlur/huge-stdDeviation.svg
-    A deviation of 1000 spreads the rectangle so thin that it nearly vanishes, and Chrome, Safari and Firefox draw at
-    most a faint tint. The reference limits the deviation.
+filters/feDiffuseLighting/complex-transform.svg
+filters/feDiffuseLighting/lighting-color=inherit.svg
+filters/feDiffuseLighting/linearRGB-color-interpolation.svg
+filters/feDiffuseLighting/multiple-light-sources.svg
+filters/feDiffuseLighting/single-light-source-with-comment.svg
+filters/feDiffuseLighting/single-light-source-with-desc.svg
+filters/feDiffuseLighting/single-light-source-with-invalid-child.svg
+filters/feDiffuseLighting/single-light-source-with-title-and-desc.svg
+filters/feDiffuseLighting/single-light-source-with-title.svg
+filters/feDiffuseLighting/single-light-source.svg
+filters/feDiffuseLighting/surfaceScale=-10.svg
+    Without a kernelUnitLength, the surface's slope is taken over "one pixel in the intermediate image", which is
+    "potentially not scalable" (filter-effects-1/#feDiffuseLightingElement). The engine takes it per unit of user space,
+    so that the light falls the same at any scale, as Chrome and Firefox do at any zoom. The references take it per
+    pixel of their 1.5x render, as Safari does, so their relief is flatter.
+
+filters/feFlood/partial-subregion.svg
+    A primitive's subregion clips its result, so the flood fills only its subregion, which the offset then moves
+    (filter-effects-1/#FilterPrimitiveSubRegion). Chrome, Safari and Firefox draw the small square. The reference floods
+    the whole filter region.
+
+filters/feImage/self-recursive.svg
+    The filter's feImage draws the rect that the filter applies to, whose own reference to the filter, inside the
+    image, closes a cycle. That reference is circular and in error, and a filter reference in error ignores the whole
+    filter list, as one to no filter element does (filter-effects-1/#FilterProperty). The working group resolved that a
+    circular dependency is removed while the resource still applies (w3c/fxtf-drafts#130). So the filter applies to the
+    rect, and its image is the rect unfiltered, moved by the subregion's origin. Safari and Firefox draw nothing, and
+    Chrome draws a fragment. The reference removes the rect's filter altogether.
+
+filters/fePointLight/primitiveUnits=objectBoundingBox.svg
+filters/feSpotLight/primitiveUnits=objectBoundingBox.svg
+    A light source's position in objectBoundingBox units is a fraction of the bounding box, and Chrome, Safari and
+    Firefox light the surface as the engine does. The references draw it unlit.
+
+filters/feSpotLight/complex-transform.svg
+    A light source's coordinates and its cone are in the user space of the filtered element
+    (filter-effects-1/#feSpotLightElement), which the rect's skew and rotation then map. Computed exactly in that
+    space and mapped to the render, the cone's edge crosses rows 100 to 180 at columns 150, 158, 165, 171 and 174, and
+    the engine draws it at 150, 158, 165, 171 and 175. Chrome, Firefox and the reference put it 6 or 7 columns to the
+    left, as if the cone were measured in a space that the transform distorts.
+
+filters/filter-functions/hue-rotate-function-45.svg
+    A presentation attribute takes a number where its grammar takes an angle (svg2-draft/types.html#presentation-attribute-css-value),
+    so hue-rotate(45) in the filter attribute turns hues by 45 degrees. Chrome, Safari, Firefox and the reference take
+    the unitless angle as invalid, and draw the rect unfiltered.
 
 filters/filter/invalid-FuncIRI.svg
 filters/filter-functions/one-invalid-url-in-list.svg
@@ -35,15 +90,104 @@ filters/filter-functions/one-invalid-url-in-list.svg
     Safari and Firefox ignore the list that holds one too. The references draw nothing for the first, and apply the
     rest of the list for the second, as Chrome does.
 
-paint-servers/radialGradient/fr=0.7.svg
-    A start circle that fully overlaps the end circle draws no gradient, and the area stays untouched
-    (SVG2/pservers.html#RadialGradientNotes), as Chrome draws it. The reference paints the cone of Canvas's
-    gradient, as Safari and Firefox do.
+filters/filter/on-a-thin-rect.svg
+    The filter region of a thin rect is a fraction of its bounding box, wide enough for the blur, and Chrome and Firefox
+    draw the blurred line. The reference draws almost nothing.
 
+masking/clipPath/circle-shorthand-with-stroke-box.svg
+masking/clipPath/circle-shorthand-with-view-box.svg
+masking/clipPath/circle-shorthand.svg
+    clip-path takes a basic shape with an optional reference box (css-masking-1/#the-clip-path), and Chrome, Safari and
+    Firefox clip to the circle in each box. The references draw the elements unclipped.
+
+masking/mask/color-interpolation=linearRGB.svg
+    Chrome, Safari and Firefox all compute the mask's luminance from sRGB values whatever the mask's
+    color-interpolation, and draw the masked rect as the engine does. The reference converts to linearRGB first, which
+    makes it darker.
+
+masking/mask/recursive-on-inherited-marker.svg
+painting/marker/recursive-via-mask.svg
+    The mask's content draws a marker whose rect the mask masks. The reference that closes the cycle as it is drawn
+    is circular and removed, and the resource still applies (w3c/fxtf-drafts#130). Inside the mask, the rect's mask
+    closes it, so the mask holds the rect unmasked, as Chrome and Safari draw it. On the line outside the mask, the
+    rect's mask applies, and inside that mask the marker closes the cycle and is not drawn. The mask then covers only
+    its stroke, which does not reach the marker, so the marker is hidden, as Firefox draws it. Chrome, Safari and the
+    reference draw the marker on the line with its rect unmasked, though no cycle is open where it is drawn.
+
+painting/context/with-gradient-on-text-decoration-in-use.svg
+text/text-decoration/all-types-inline.svg
+text/text-decoration/all-types-nested.svg
+text/text-decoration/indirect-with-multiple-colors.svg
+text/text-decoration/style-resolving-4.svg
+text/text-rendering/with-underline.svg
+    An underline and a line-through lie where the font places them (css-text-decor-4/#underline-auto), and OpenType's
+    post and OS/2 tables give the top of each line, not its center. Firefox draws them there. Chrome draws a line twice
+    the font's thickness, Safari centers it on the font's position, and the references center it too, half a line's
+    thickness higher. The cases differ in nothing else: drawing the lines centered passes each of them.
+
+painting/display/none-on-tref.svg
+text/tref/link-to-a-complex-text.svg
+text/tref/link-to-a-non-text-element.svg
+text/tref/link-to-text.svg
+text/tref/position-attributes.svg
+text/tref/style-attributes.svg
+text/tref/with-a-title-child.svg
+text/tref/with-text.svg
+text/tref/xml-space.svg
+    SVG 2 removed the tref element (SVG2/changes.html), so it is an unknown element in a text element and adds no
+    text. Chrome and Firefox draw no text for it, and the red text that each case covers with it shows. Safari still
+    draws the referenced text, as the references do.
+
+painting/fill/hsl-120-200percent-25percent.svg
+    hsl() clamps only a negative saturation (css-color-4/#the-hsl-notation), so 200% gives a color outside sRGB, whose
+    green is 191 once displayed. Safari draws it so. Chrome, Firefox and the reference clamp the saturation to 100%,
+    and draw green 128.
+
+painting/fill/invalid-FuncIRI-with-a-currentColor-fallback.svg
+painting/fill/invalid-FuncIRI-with-a-fallback-color.svg
+    The URL names a gradient with no stops, which paints nothing (SVG2/pservers.html#GradientStops). The fallback
+    applies only to a URL that names no paint server, so the rect is not filled. Chrome, Safari and Firefox draw
+    nothing. The references fill it with the fallback.
+
+painting/fill/rgba-0-127-0-50percent.svg
+    rgba() takes a percentage for its alpha (css-color-4/#rgb-functions), and Chrome, Safari and Firefox fill with
+    half-transparent green. The reference fills with black, as if the color were invalid.
+
+painting/marker/orient=auto-on-M-L-Z.svg
+    The first and last vertex of a closed subpath are not the ends of an open subpath, so their markers turn half way
+    between the closing segment's direction and the first segment's (SVG2/painting.html#RenderingMarkers). Here those
+    point opposite ways, and both markers point down the page. Firefox draws them so, and Chrome turns the start marker
+    so. The reference turns the start marker along the first segment and the end marker along the closing segment, as
+    for an open subpath.
+
+painting/marker/recursive-via-pattern.svg
+    The pattern's content draws a marker whose rect the pattern fills. The reference that closes the cycle as it is
+    drawn is circular and in error (w3c/fxtf-drafts#130). Inside the pattern, the rect's fill closes it and paints
+    nothing, so each tile shows the rect's stroke, as Chrome and Firefox draw it. On the line outside the pattern, the
+    rect's fill applies, and inside the pattern the marker closes the cycle and is not drawn, so the marker is filled
+    with the pattern, as Safari and Firefox draw it. The reference drops the marker from the pattern's content.
+
+painting/mix-blend-mode/saturation.svg
+    The saturation blend gives the backdrop's hue and luminosity the source's saturation
+    (compositing-1/#blendingsaturation). On the green backdrop, a source of saturation 0.5 or more gives the same green,
+    so where the gradient's yellow is that saturated, the rect blends to pure green. Chrome and Firefox draw it so, to
+    the pixel. Safari and the reference lighten the green there.
+
+painting/overflow/auto-on-marker.svg
+structure/svg/nested-svg-with-overflow-auto.svg
+    overflow: auto clips a marker and an svg that is not the document's root, as hidden does. Firefox clips them, and
+    Chrome does since November 2026 (w3c/svgwg#1072, where this is the proposed resolution). The references follow SVG
+    1.1, where auto shows the overflow as visible does.
+
+shapes/rect/ch-values.svg
 shapes/rect/ic-values.svg
 shapes/rect/lh-values.svg
+shapes/rect/q-values.svg
+shapes/rect/rem-values.svg
 shapes/rect/rlh-values.svg
 shapes/rect/vi-and-vb-values.svg
+shapes/rect/vmin-and-vmax-values.svg
+shapes/rect/vw-and-vh-values.svg
     SVG 2 parses a presentation attribute as a value of its property, a CSS length with any of CSS's units
     (svg2-draft/types.html#presentation-attribute-css-value), and Safari 27, Firefox 160 and Chrome 158 agree on em,
     ex, ch, rem, lh, vw and the rest in attributes (w3c/svgwg#1216, resolved October 2026). The references draw nothing,
@@ -56,9 +200,70 @@ structure/style/non-presentational-attribute.svg
     the rect has no height and draws nothing.
 
 structure/svg/negative-size.svg
-    A negative width or height attribute is invalid as a value of the property, so it declares nothing and the root's
-    width and height are auto, 100% of the viewport (svg2-draft/geometry.html, w3c/svgwg#1202, resolved October 2026).
-    The browsers draw the content. The reference draws nothing, as SVG 1.1's error processing does.
+structure/svg/no-size.svg
+structure/svg/zero-size.svg
+    The root has no viewBox, and a width or height that is missing, zero or negative gives the image no size to scale
+    from, so the image draws the content at its own units from the top left of its box (SVG2/coords.html#SizingSVGInCSS,
+    css-images-3/#default-sizing). In an img of 250 by 250, Chrome and Firefox draw all three that way, and Safari
+    draws the first two. The references draw nothing or scale the content to fill the image. resvg's own harness skips
+    these cases as invalid input (crates/resvg/tests/gen-tests.py).
+
+structure/svg/not-UTF-8-encoding.svg
+    The encoding declaration names windows-1251, which decodes the document (encoding/#decode), and the text is set in
+    the corpus's Noto Sans. Its advances make the string 352 pixels wide at the case's 60 pixels, and the engine's
+    glyphs span 342. The reference's span 317, so it was set in another font. resvg's own harness skips the case
+    (crates/resvg/tests/gen-tests.py).
+
+structure/switch/non-SVG-child.svg
+    A switch renders its first direct child whose conditions hold (SVG2/struct.html#SwitchElement), and the unknown
+    element first holds them, so the switch renders it, which draws nothing. Chrome and Safari draw nothing. Firefox and
+    the reference skip the unknown element and draw the green rect.
+
+structure/symbol/with-transform.svg
+    SVG 2 lets a symbol take a transform (SVG2/struct.html#SymbolNotes), which its instance applies. Chrome and Firefox
+    skew the rect. Safari and the reference, which follow SVG 1.1, draw it unskewed.
+
+text/alignment-baseline/hanging-on-vertical.svg
+    alignment-baseline applies to SVG's text content elements (css-inline-3/#propdef-alignment-baseline), the text
+    element among them, so the text's hanging baseline is placed at x. Chrome draws it so, to the pixel. Firefox and the
+    reference center the glyphs on x, as if the property did not apply to the text element.
+
+text/baseline-shift/inheritance-1.svg
+text/baseline-shift/inheritance-3.svg
+text/baseline-shift/inheritance-4.svg
+text/baseline-shift/inheritance-5.svg
+    baseline-shift applies to SVG's text content elements (css-inline-3/#propdef-baseline-shift), the text element among
+    them (SVG2/intro.html#TermTextContentElement), so a text element's own shift moves all of its text. Chrome draws it
+    so. Safari shifts only the text that is not in a tspan, and Firefox and the references shift none of it.
+
+text/color-font/mixed-text-rtl.svg
+text/direction/rtl.svg
+    The start that text-anchor names is the side on which the text's direction starts (css-writing-modes-4/#direction),
+    the right for direction="rtl", so the text ends at x. With the Arabic set in Amiri, the corpus's font that the suite
+    falls back to, Chrome and Firefox set the rtl.svg line to end at x, as the engine does. The references start the
+    text at x and run it off the image.
+
+text/font-size/em-on-the-root-element.svg
+text/font-size/ex-on-the-root-element.svg
+text/font-size/named-value-without-a-parent.svg
+text/font-size/named-value.svg
+text/font-size/percent-value-without-a-parent.svg
+    The initial font-size is medium, 16px (css-fonts-4/#absolute-size-mapping), which the root's relative sizes and the
+    keywords scale from. Chrome, Safari and Firefox set the text at those sizes. The references take 12px as medium.
+
+text/font-weight/650.svg
+    Font matching takes a weight above 500 to the nearest heavier face (css-fonts-4/#font-style-matching), so 650 sets
+    the text in bold. Chrome, Safari and Firefox set it bold. The reference sets it in the regular face.
+
+text/glyph-orientation-vertical/simple-case.svg
+    Support for the obsolete glyph-orientation-vertical is optional, and a UA that supports it aliases 0 to
+    text-orientation: upright (css-writing-modes-4/#glyph-orientation). The engine supports it, as Safari does, and sets
+    the letters upright a vertical advance apart. Chrome, Firefox and the reference ignore it and set them sideways.
+
+text/kerning/0.svg
+    SVG 2 removed the kerning property (SVG2/changes.html), so kerning="0" declares nothing and both texts are kerned
+    alike, the second covering the first. Chrome, Safari and Firefox draw them so. The reference turns kerning off for
+    the second.
 
 text/letter-spacing/5percent.svg
 text/word-spacing/5percent.svg
@@ -66,10 +271,49 @@ text/word-spacing/5percent.svg
     Chrome, Safari and Firefox all space 40px text by 4px a letter at 10%. The references take it as a percentage of the
     viewport's width.
 
+text/textLength/on-text-and-tspan.svg
+    Each tspan fits its own textLength first, and then the text spreads all of its characters to its textLength, from
+    the left of its characters to their right. Its tspans start chunks of their own, whose positions apply after
+    textLength (SVG2/text.html#TextLayoutAlgorithm), so each line starts at its x and widens by the spacing from its first
+    character on. Chrome, Safari and Firefox each draw the case differently, and every one draws both lines. The
+    reference, as Safari does, ignores the text's textLength.
+
+text/textPath/invalid-textPath-in-the-middle.svg
+    A textPath that names no path is in error, and its text is not rendered (SVG2/text.html#TextPathElement). The text
+    after it then starts where that path would have ended, which there is no path to give, so it is not rendered either.
+    Chrome and Firefox draw only the text before it. Safari and the reference draw the text after it too.
+
+text/textPath/mixed-children-1.svg
+text/textPath/mixed-children-2.svg
+text/textPath/very-long-text.svg
+    Text after a textPath, without a position of its own, starts at the end of the path (SVG2/text.html#TextLayoutAlgorithm),
+    and Chrome draws it there. Safari and the references continue it from the last glyph on the path, and Firefox
+    draws none of it.
+
+text/textPath/side=right.svg
+    side="right" places the text on the other side of the path, which it follows backward
+    (svg2-draft/text.html#TextPathElementSideAttribute), and Firefox draws it so. Chrome and Safari ignore the attribute,
+    as the reference does.
+
+text/tspan/mixed-font-size.svg
+text/tspan/text-shaping-across-multiple-tspan-2.svg
+    A font's kerning pairs apply within text set in that font at one size. The "T" before the larger "ex", and the bold
+    "V", which Noto Sans Bold sets, between regular "A"s, are each in another font or size than their neighbors, so no
+    pair kerns across them. Chrome and Firefox set both texts as the engine does, to the pixel, with the corpus's bold
+    face. The references kern across the change.
+
 text/tspan/mixed-xml-space-1.svg
 text/tspan/mixed-xml-space-2.svg
-text/tspan/mixed-xml-space-3.svg
     SVG 2 processes white space by CSS's rules (svg2-draft/text.html#TextWhiteSpace), with xml:space="preserve" as
     white-space-collapse: preserve-spaces. A collapsible space is removed only after another collapsible space or at the
     start or end of a line (css-text-4/#white-space-phase-1), so the first of a run of collapsible spaces next to
     preserved ones stays, and Chrome keeps it. The references strip it, as SVG 1.1's xml:space="default" did.
+
+text/unicode-bidi/bidi-override.svg
+    unicode-bidi: bidi-override orders the characters in the element's direction, overriding their own
+    (css-writing-modes-4/#unicode-bidi), and Chrome, Safari and Firefox draw the text reversed. The reference ignores
+    the override.
+
+text/writing-mode/japanese-with-tb.svg
+    Chrome and Firefox set the two characters exactly where the engine does, each ink edge on the same pixel. The
+    reference sets them 2 pixels lower.

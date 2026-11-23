@@ -22,13 +22,13 @@
 namespace pr_impl {
 namespace {
 
-// Writes the tabindex attribute to `out`, clamped to the range of an int32_t. Returns false if the attribute does not
-// parse as an integer.
+// Writes the tabindex attribute to `out`. Returns false if the attribute does not parse as an integer in the range of a
+// long, which leaves the element its default (html/#dom-tabindex).
 bool tabIndexAttribute(const PrDomElement* element, int32_t* out) {
     int64_t value = 0;
-    if (!domParseInteger(domAttributeValue(element, "tabindex"), &value))
+    if (!domParseInteger(domAttributeValue(element, "tabindex"), &value) || value < INT32_MIN || value > INT32_MAX)
         return false;
-    *out = int32_t(value < INT32_MIN ? INT32_MIN : value > INT32_MAX ? INT32_MAX : value);
+    *out = int32_t(value);
     return true;
 }
 

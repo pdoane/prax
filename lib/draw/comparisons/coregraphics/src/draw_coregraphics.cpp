@@ -614,8 +614,7 @@ void setStroke(Renderer& r, const PrPathStroke& stroke) {
     CGContextSetLineDash(r.context, CGFloat(stroke.dashOffset), r.dashes.data, r.dashes.count);
 }
 
-// Fills or strokes `r.shape`, in the command's space, with its paint. A non-scaling stroke is measured in target
-// pixels.
+// Fills or strokes `r.shape`, in the command's space, with its paint.
 void drawShapePath(Renderer& r, const PrDrawCommand& c, PrRect bounds) {
     addPath(r.context, r.shape);
     if (c.stroke == nullptr) {
@@ -627,9 +626,6 @@ void drawShapePath(Renderer& r, const PrDrawCommand& c, PrRect bounds) {
         return;
     }
     CGContextSaveGState(r.context);
-    CGAffineTransform entered = CGAffineTransformIdentity;
-    if (c.stroke->nonScaling)
-        entered = enterTarget(r);
     setStroke(r, c.stroke->shape);
     if (c.brush == nullptr) {
         CGFloat components[4] = {
@@ -641,8 +637,6 @@ void drawShapePath(Renderer& r, const PrDrawCommand& c, PrRect bounds) {
         CGContextStrokePath(r.context);
     } else {
         CGContextReplacePathWithStrokedPath(r.context);
-        if (c.stroke->nonScaling)
-            leaveTarget(r, entered);
         fillCurrentPath(r, PrPathFillRule_NonZero, c.brush, c.color, bounds);
     }
     CGContextRestoreGState(r.context);

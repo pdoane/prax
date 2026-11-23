@@ -20,6 +20,7 @@
 #include "pr/string_ops.h"
 #include "pr/string_trim.h"
 #include "pr/svg.h"
+#include "pr/svg_element.h"
 #include "pr/svg_render.h"
 #include "pr/text_buffer.h"
 #include "pr/text_font.h"
@@ -48,6 +49,7 @@
 #include "html/src/html_markdown.h"
 #include "html/src/html_media.h"
 #include "html/src/html_parser.h"
+#include "html/src/html_svg_image.h"
 #include "html/src/html_window.h"
 #include "html/src/html_xml.h"
 #include "svg/src/svg_render.h"
@@ -1158,6 +1160,10 @@ PrStatus prepareScriptAt(PrHtmlPage* page, PrDomElement* element, uint32_t line,
 // The HTML parser's scripting hook. The script text starts at the parser's script start.
 PrStatus prepareScript(void* context, PrDomElement* element) {
     PrHtmlPage* page = static_cast<PrHtmlPage*>(context);
+    // The parser performs a microtask checkpoint before a script that it meets, unless a script runs
+    // (html/#scriptEndTag).
+    if (!page->runningScript)
+        domAgentCheckpoint(page->window->agent);
     htmlInputPosition(htmlInputText(&page->parser.tokenizer), &page->locationAt, page->parser.scriptStart, &page->line,
         &page->column);
     return prepareScriptAt(page, element, page->line, page->column);
@@ -1530,9 +1536,10 @@ void attachFrame(PrHtmlPage* page, PrDomElement* element, PrStringView source, P
     if (child->presentation != nullptr)
         child->presentation->embedding = PrCssPresentationEmbedding_Frame;
     page->children.push(child);
-    window->frames.push(HtmlFrame{element, child->window});
+    window->frames.push(HtmlFrame{.container = element, .window = child->window});
     frameViewport(child, element);
     domElementState(element)->embed = htmlPageEmbed(child);
+    domElementState(element)->embedNatural = prLayoutNaturalSizeNone();
     if (domIsConnected(element))
         cssPresentationElementContentChanged(element);
     prHtmlPageLoad(child, source, url, &headers);
@@ -1657,74 +1664,9 @@ void frameChanged(PrHtmlPage* page, PrDomElement* element) {
     prUrlDestroy(resolved);
 }
 
-const PrSvgImage* PR_NULLABLE svgImageOf(PrStringView bytes, PrStringView fragment, HtmlSvgImageLoader* loader);
-
-// Loads an image that an SVG image names (PrSvgLoadImageFn), with the loader that `context` points to. An SVG image is
-// processed in secure static mode (svg-integration/#secure-static-mode), which loads no external resource, so only a
-// data: URL, which holds its own bytes, loads.
-bool loadSecureImage(void* PR_NULLABLE context, PrDomDocument* from, PrStringView url, PrSvgLoadedImage* out) {
-    (void)from;
-    HtmlSvgImageLoader* loader = static_cast<HtmlSvgImageLoader*>(context);
-    const PrImageCodecSet* codec = loader->images;
-    PrRawString body{};
-    PrRawString type{};
-    if (prUrlProcessData(url, &body, &type) == PrStatus_Ok) {
-        PrStringView bytes = prRawStringView(&body);
-        if (htmlImageIsSvg(bytes)) {
-            out->svg = svgImageOf(bytes, domUrlFragment(url), loader);
-        } else if (codec != nullptr) {
-            prImageTextureSourceOpenBytes(prStringBytes(bytes), codec, nullptr, PrImageTextureColor_Srgb, &out->raster);
-        }
-    }
-    prRawStringReset(&body);
-    prRawStringReset(&type);
-    return out->raster != nullptr || out->svg != nullptr;
-}
-
-// Returns the SVG image `bytes`, named by a URL whose fragment is `fragment`, with a reference for the caller, or null
-// if the bytes do not parse as an SVG document. The image is its own document, which loads only the images of data:
-// URLs, with `loader`.
-const PrSvgImage* PR_NULLABLE svgImageOf(PrStringView bytes, PrStringView fragment, HtmlSvgImageLoader* loader) {
-    PrRawString decoded = {};
-    PrCharset charset = PrCharset_None;
-    PrDomDocument* document = prDomParseXml(domXmlDecode(bytes, PrCharset_None, &decoded, &charset), "image/svg+xml", nullptr);
-    prCssEnable(document);
-    prSvgEnable(document);
-    prRawStringReset(&decoded);
-    document->charset = charset;
-    PrDomElement* root = prDomDocumentElement(document);
-    PrSvgElement* svg = root != nullptr ? prSvgElementQuery(prDomElementAsEventTarget(root)) : nullptr;
-    PrSvgDrawOptions options = prSvgDrawOptionsDefault();
-    options.loadImage = loadSecureImage;
-    options.loadContext = loader;
-    options.textures = loader->textures;
-    const PrSvgImage* image = svg != nullptr ? prSvgImageCreate(svg, fragment, &options) : nullptr;
-    prDomDocumentRelease(document);
-    return image;
-}
-
-// Returns a painter of the SVG image `bytes`, which draws at whatever size the image is shown, with a reference for the
-// caller, and writes its natural dimensions. `fragment` is the fragment of the URL that named the image. Returns a
-// painter with no paint function if the bytes do not parse as an SVG document.
-PrLayoutPainter svgPainter(PrHtmlPage* page, PrStringView bytes, PrStringView fragment, PrLayoutNaturalSize* natural) {
-    page->svgImages = HtmlSvgImageLoader{.images = page->host.images, .textures = page->window->textures};
-    const PrSvgImage* image = svgImageOf(bytes, fragment, &page->svgImages);
-    if (image == nullptr)
-        return PrLayoutPainter{};
-    PrSvgNaturalSize size = prSvgImageNaturalSize(image);
-    *natural = prLayoutNaturalSizeNone();
-    if (size.width >= 0)
-        natural->width = prLayoutUnitFromPx(size.width);
-    if (size.height >= 0)
-        natural->height = prLayoutUnitFromPx(size.height);
-    natural->ratio = size.ratio;
-    // The painter holds the image's only reference.
-    return prSvgImagePainter(image);
-}
-
 // Decodes an image that a style or an SVG image element names (DomDocumentHost::decodeImage). An SVG image is drawn
 // here, and the host decodes any other image.
-bool decodeImage(void* PR_NULLABLE context, PrByteView bytes, PrStringView fragment, DomDecodedImage* out) {
+bool decodeImage(void* PR_NULLABLE context, PrByteView bytes, PrStringView url, DomDecodedImage* out) {
     PrHtmlPage* page = static_cast<PrHtmlPage*>(context);
     PrStringView text = prStringFromBytes(bytes);
     *out = DomDecodedImage{};
@@ -1733,7 +1675,7 @@ bool decodeImage(void* PR_NULLABLE context, PrByteView bytes, PrStringView fragm
     if (!htmlImageSize(text, &width, &height))
         return false;
     if (htmlImageIsSvg(text)) {
-        out->vector = svgPainter(page, text, fragment, &out->natural);
+        out->variants = htmlSvgImageVariants(page, text, url, false, &out->natural);
     } else if (page->host.images != nullptr && prImageTextureSourceOpenBytes(bytes, page->host.images, nullptr,
             PrImageTextureColor_Srgb, &out->image) == PrStatus_Ok) {
         // The natural size is the size of the image as its orientation displays it. For some orientations, that swaps
@@ -1743,7 +1685,7 @@ bool decodeImage(void* PR_NULLABLE context, PrByteView bytes, PrStringView fragm
         out->natural.width = prLayoutUnitFromPx(float(extent.x));
         out->natural.height = prLayoutUnitFromPx(float(extent.y));
     }
-    return out->image != nullptr || out->vector.paint != nullptr;
+    return out->image != nullptr || out->variants.painter != nullptr;
 }
 
 // Divides the natural size of the current request by its pixel density
@@ -1790,12 +1732,13 @@ bool showImage(PrHtmlPage* page, PrDomElement* element, PrStringView bytes) {
     DomElementState* state = element->state;
     prTextureSourceRelease(state->picture);
     state->picture = nullptr;
-    prLayoutPainterRelease(state->vector);
-    state->vector = PrLayoutPainter{};
+    domImageVariantsRelease(state->variants);
+    state->variants = DomImageVariants{};
     bool decodes = true;
     if (state->image == PrDomImageState_CompletelyAvailable && htmlImageIsSvg(bytes)) {
-        PrStringView fragment = domUrlFragment(prRawStringView(&state->imageUrl));
-        state->vector = svgPainter(page, bytes, fragment, &state->vectorNatural);
+        bool rendering = element->space == PrDomNamespace_Svg;
+        state->variants = htmlSvgImageVariants(page, bytes, prRawStringView(&state->imageUrl), rendering,
+            &state->vectorNatural);
     } else if (state->image == PrDomImageState_CompletelyAvailable && page->host.images != nullptr) {
         decodes = prImageTextureSourceOpenBytes(prStringBytes(bytes), page->host.images, nullptr,
             PrImageTextureColor_Srgb, &state->picture) == PrStatus_Ok;
@@ -1933,10 +1876,11 @@ void queueImageEvent(PrHtmlPage* page, PrDomElement* element, bool error) {
 // Receives the result of fetching an image's source: sets its natural size and image if it decodes, and queues its load
 // or error event. Returns the image that the context's document fetched at `url`, without its fragment, or null if it
 // fetched none.
-const HtmlAvailableImage* PR_NULLABLE availableImage(const PrHtmlPage* page, PrStringView url) {
+const HtmlAvailableImage* PR_NULLABLE availableImage(const PrHtmlPage* page, PrStringView url, DomCorsSettings cors) {
     for (uint32_t i = 0; i < page->availableImages.count; ++i) {
-        if (prRawStringView(&page->availableImages.data[i].url) == url)
-            return &page->availableImages.data[i];
+        const HtmlAvailableImage& image = page->availableImages.data[i];
+        if (prRawStringView(&image.url) == url && image.cors == cors)
+            return &image;
     }
     return nullptr;
 }
@@ -1959,13 +1903,21 @@ void imageFetched(void* PR_NULLABLE data, const DomFetchResult* result) {
         correctForDensity(state);
         PrStringView url = prRawStringView(&fetch->url);
         PrStringView request = prStringSlice(url, 0, prStringFindByte(url, '#'));
-        if (loaded && availableImage(fetch->page, request) == nullptr) {
+        DomCorsSettings cors = corsOf(fetch->element);
+        if (loaded && availableImage(fetch->page, request, cors) == nullptr) {
             prBlobRetain(result->body);
-            HtmlAvailableImage available = {prRawStringCopy(request), result->body};
+            HtmlAvailableImage available = {
+                .url = prRawStringCopy(request),
+                .cors = cors,
+                .crossOrigin = result->opaque,
+                .bytes = result->body,
+            };
             fetch->page->availableImages.push(available);
         }
-        if (loaded)
+        if (loaded) {
             state->image = PrDomImageState_CompletelyAvailable;
+            state->imageCrossOrigin = result->opaque;
+        }
         // An image that does not decode is broken (html/#img-error), whether or not its dimensions were read, because
         // no part of it can show.
         if (!showImage(fetch->page, fetch->element, loaded ? domFetchText(result) : PrStringView{})) {
@@ -1991,6 +1943,7 @@ void updateImage(PrHtmlPage* page, PrDomElement* element, PrStringView source, d
     state->density = density;
     prRawStringReset(&state->imageUrl);
     state->image = PrDomImageState_Broken;
+    state->imageCrossOrigin = false;
     state->naturalWidth = 0;
     state->naturalHeight = 0;
     showImage(page, element, PrStringView{});
@@ -2004,11 +1957,12 @@ void updateImage(PrHtmlPage* page, PrDomElement* element, PrStringView source, d
     if (domDocumentParseUrl(element->document, source, &url) == PrStatus_Ok) {
         state->imageUrl = prUrlSerialize(url, PrUrlSerialization_Whole);
         PrRawString request = prUrlSerialize(url, PrUrlSerialization_ExcludeFragment);
-        if (const HtmlAvailableImage* available = availableImage(page, prRawStringView(&request))) {
+        if (const HtmlAvailableImage* available = availableImage(page, prRawStringView(&request), corsOf(element))) {
             PrStringView bytes = prStringFromBytes(prBlobBytes(available->bytes));
             htmlImageSize(bytes, &state->naturalWidth, &state->naturalHeight);
             correctForDensity(state);
             state->image = PrDomImageState_CompletelyAvailable;
+            state->imageCrossOrigin = available->crossOrigin;
             bool decodes = showImage(page, element, bytes);
             if (!decodes)
                 breakImage(element);
@@ -2058,11 +2012,10 @@ void sourceChanged(PrHtmlPage* page, PrDomNode* parent, PrDomNode* PR_NULLABLE n
     }
 }
 
-// Loads the image that an SVG image or feImage element shows, while it is connected (SVG2/embedded.html#ImageElement).
-// The element loads once for each URL that it names in turn, so that moving it within its document loads nothing again.
+// Loads the image that an SVG image or feImage element shows (SVG2/embedded.html#ImageElement). An element loads
+// whether or not it is connected, as an img element does (html/#update-the-image-data). It loads once for each URL that
+// it names in turn, so that moving it loads nothing again.
 void updateSvgImage(PrHtmlPage* page, PrDomElement* element) {
-    if (!domIsConnected(element))
-        return;
     PrStringView source = svgImageSource(element);
     PrUrl* url = nullptr;
     if (source.size != 0 && domDocumentParseUrl(element->document, source, &url) == PrStatus_Ok) {
@@ -2170,13 +2123,16 @@ void activate(void* PR_NULLABLE context, PrDomElement* element, PrDomEvent* even
 
 // Handles a change to embedded content that the browsing context of its document loads. An image updates when its
 // source changes, and once when it is first connected, if the parser created it. An SVG image or feImage updates when
-// its href changes and when it is connected.
+// its href or crossorigin attribute changes, and when it is connected.
 void embedChanged(void* PR_NULLABLE context, PrDomElement* element, PrStringView attribute) {
     PrHtmlPage* page = static_cast<PrHtmlPage*>(context);
     bool connection = attribute.data == nullptr;
     if (element->space == PrDomNamespace_Svg) {
+        // A change of the CORS settings changes the request, as it does an img's (html/#relevant-mutations).
         if (connection || attribute == "href")
             updateSvgImage(page, element);
+        else if (attribute == "crossorigin")
+            updateImage(page, element, svgImageSource(element));
         return;
     }
     bool fresh = element->state == nullptr || element->state->generation == 0;
@@ -2214,12 +2170,20 @@ void embedChanged(void* PR_NULLABLE context, PrDomElement* element, PrStringView
                 updateImageSource(page, element);
             return;
         }
-        case PrDomTag_Source:
+        case PrDomTag_Source: {
+            // A source of a media element is a candidate of its resource selection (html/#the-source-element).
+            PrDomElement* parent = domElementFromNode(element->parent);
+            bool media = parent != nullptr && (domIsHtml(parent, PrDomTag_Audio) || domIsHtml(parent, PrDomTag_Video));
+            if (connection && media) {
+                htmlMediaSourceInserted(parent, element);
+                return;
+            }
             // A source of a picture offers the images of the img elements after it (html/#reacting-to-dom-mutations).
             if (element->parent != nullptr &&
                     (connection || attribute == "srcset" || attribute == "sizes" || attribute == "media" || attribute == "type"))
                 sourceChanged(page, element->parent, element->next);
             return;
+        }
         case PrDomTag_Input:
             if (connection ? fresh && domElementIsImageButton(element) : attribute == "src" || attribute == "type") {
                 if (domElementIsImageButton(element))
@@ -2326,6 +2290,7 @@ void setReadiness(PrDomDocument* document, DomReadiness readiness) {
         return;
     document->readiness = readiness;
     cssFontsReadinessChanged(document);
+    domNotifyReadinessChanged(document);
     domEventFire(document, "readystatechange");
 }
 
@@ -3702,6 +3667,43 @@ PrStatus startNavigation(PrHtmlPage* page, PrStringView url, PrStringView origin
     return PrStatus_Ok;
 }
 
+// Gives each object and embed element of the document the natural dimensions of the SVG document that it shows
+// (SVG2/coords.html#SizingSVGInCSS). An SVG document is one whose root is an svg element. Other content has no natural
+// dimensions, and takes the default object size. The SVG document can change at any time, so its dimensions are read
+// again before a layout that follows a change to it. The content's presentation hears of every change to the document,
+// and holds it until its own update, which follows this one. The presentation hears of each element whose dimensions
+// change.
+void sizeEmbeddedSvgs(PrDomDocument* document) {
+    PrHtmlWindow* window = static_cast<PrHtmlWindow*>(document->global);
+    if (window == nullptr)
+        return;
+    for (uint32_t i = 0; i < window->frames.count; ++i) {
+        HtmlFrame& frame = window->frames.data[i];
+        PrDomElement* container = frame.container;
+        if (!domIsHtml(container, PrDomTag_Object) && !domIsHtml(container, PrDomTag_Embed))
+            continue;
+        PrDomDocument* content = frame.window->document;
+        PrHtmlPage* page = content != nullptr ? htmlDocumentPage(content) : nullptr;
+        const PrCssPresentation* presented = page != nullptr ? page->presentation : nullptr;
+        bool known = presented != nullptr && presented->document == content;
+        if (known && !presented->changed && frame.sized == content && frame.sizedVersion == presented->version)
+            continue;
+        frame.sized = known ? content : nullptr;
+        frame.sizedVersion = known ? presented->version : 0;
+        PrDomElement* root = content != nullptr ? prDomDocumentElement(content) : nullptr;
+        PrSvgElement* svg = nullptr;
+        if (root != nullptr && root->space == PrDomNamespace_Svg && root->tag == PrDomTag_Svg)
+            svg = prSvgElementQuery(prDomElementAsEventTarget(root));
+        PrLayoutNaturalSize natural = svg != nullptr ? htmlSvgNaturalSize(svg) : prLayoutNaturalSizeNone();
+        DomElementState* state = domElementState(container);
+        PrLayoutNaturalSize& held = state->embedNatural;
+        if (natural.width == held.width && natural.height == held.height && natural.ratio == held.ratio)
+            continue;
+        held = natural;
+        cssPresentationElementContentChanged(container);
+    }
+}
+
 } // namespace
 
 PrStatus htmlDocumentOpen(PrDomDocument* document) {
@@ -3881,6 +3883,7 @@ void htmlPageFollowFrameScheme(PrHtmlPage* parent, PrHtmlPage* page) {
 }
 
 void htmlPresentationPrepareJob(PrCssPresentation* presentation, PrLayoutVec extent) {
+    sizeEmbeddedSvgs(presentation->document);
     cssPresentationPrepareJob(presentation, extent);
     if (!cssPresentationSvgIdle(presentation) && svgPresentationUpdate(presentation)) {
         cssPresentationPrepareJob(presentation, extent);
@@ -3889,6 +3892,7 @@ void htmlPresentationPrepareJob(PrCssPresentation* presentation, PrLayoutVec ext
 }
 
 bool htmlPresentationUpdate(PrCssPresentation* presentation, PrLayoutVec extent, PrLayoutVec viewport) {
+    sizeEmbeddedSvgs(presentation->document);
     cssPresentationUpdateBoxes(presentation, extent);
     // The boxes that name a reference whose source changed take it again before the layout.
     if (!cssPresentationSvgIdle(presentation) && svgPresentationUpdate(presentation)) {
@@ -4053,6 +4057,7 @@ void prHtmlPageDestroy(PrHtmlPage* PR_NULLABLE page) {
         prHtmlPageDestroy(page->children.data[i]);
     page->children.reset();
     page->window->frames.reset();
+    htmlSvgImagesReset(page);
     prTextBufferReset(&page->streamInput);
     dropDocumentLoad(page);
     dropFetches(page);

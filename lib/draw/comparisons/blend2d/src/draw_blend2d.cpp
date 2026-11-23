@@ -662,8 +662,7 @@ BLStrokeCap capOf(PrPathCap cap) {
     }
 }
 
-// Fills or strokes `r.shape`, in the command's space, with its paint. A non-scaling stroke is measured in device
-// pixels.
+// Fills or strokes `r.shape`, in the command's space, with its paint.
 void drawShapePath(Renderer& r, const PrDrawCommand& c, PrRect bounds) {
     if (c.stroke == nullptr) {
         fillShape(r, Shape{r.shape, nullptr}, c.rule, c.brush, c.color, bounds);
@@ -679,8 +678,7 @@ void drawShapePath(Renderer& r, const PrDrawCommand& c, PrRect bounds) {
     bl_context_set_stroke_join(ctx, joinOf(stroke.join));
     bl_context_set_stroke_cap(ctx, BL_STROKE_CAP_POSITION_START, capOf(stroke.startCap));
     bl_context_set_stroke_cap(ctx, BL_STROKE_CAP_POSITION_END, capOf(stroke.endCap));
-    bl_context_set_stroke_transform_order(ctx,
-        c.stroke->nonScaling ? BL_STROKE_TRANSFORM_ORDER_BEFORE : BL_STROKE_TRANSFORM_ORDER_AFTER);
+    bl_context_set_stroke_transform_order(ctx, BL_STROKE_TRANSFORM_ORDER_AFTER);
     pathOf(r, r.shape);
     BLPoint origin{0, 0};
     bl_context_stroke_path_d(ctx, &origin, &r.path);

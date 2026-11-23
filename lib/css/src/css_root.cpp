@@ -8,6 +8,7 @@
 #include "css/src/css_object.h"
 #include "css/src/css_parser.h"
 #include "css/src/css_selector_match.h"
+#include "dom/src/dom_use.h"
 
 namespace pr_impl {
 
@@ -15,6 +16,42 @@ CssElementStyle* cssElementStyle(PrDomElement* element) {
     if (element->style == nullptr)
         element->style = allocZeroed<CssElementStyle>();
     return element->style;
+}
+
+void cssElementFollow(PrDomElement* element) {
+    cssElementStyle(element);
+}
+
+CssDeclarationBlock* cssElementAnimatedStyle(PrDomElement* element) {
+    CssElementStyle* style = cssElementStyle(element);
+    if (style->animated == nullptr)
+        style->animated = allocZeroed<CssDeclarationBlock>();
+    return style->animated;
+}
+
+void cssElementDropAnimatedStyle(PrDomElement* element) {
+    CssElementStyle* style = element->style;
+    if (style == nullptr || style->animated == nullptr)
+        return;
+    cssDeclarationBlockReset(style->animated);
+    prMemoryFree(style->animated);
+    style->animated = nullptr;
+    cssElementAnimated(element);
+}
+
+void cssElementAnimated(PrDomElement* element) {
+    CssRoot* root = cssDocumentRoot(element->document);
+    if (root->presentationHooks == nullptr || root->presentationHooks->attributesAnimated == nullptr)
+        return;
+    root->presentationHooks->attributesAnimated(root->presentation, element);
+    // The instances of the element in use elements' shadow trees have its animated attributes too.
+    RawArray<PrDomNode*> instances;
+    domUseInstancesOf(element, &instances);
+    for (uint32_t i = 0; i < instances.count; ++i) {
+        if (PrDomElement* instance = domElementFromNode(instances.data[i]))
+            root->presentationHooks->attributesAnimated(root->presentation, instance);
+    }
+    instances.reset();
 }
 
 void cssElementStyleDestroy(CssElementStyle* PR_NULLABLE style) {
@@ -25,6 +62,10 @@ void cssElementStyleDestroy(CssElementStyle* PR_NULLABLE style) {
         prMemoryFree(style->inlineStyle);
     }
     cssHintsDestroy(style);
+    if (style->animated != nullptr) {
+        cssDeclarationBlockReset(style->animated);
+        prMemoryFree(style->animated);
+    }
     for (CssComputedDeclarations* computed : style->computed) {
         if (computed != nullptr) {
             cssDeclarationBlockReset(&computed->block);

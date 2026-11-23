@@ -882,7 +882,9 @@ const PrLayoutScene* layoutScene(LayoutTree* tree) {
             scene->canvasBorder = layoutRectAt(root.offset, root.fragment->extent);
             scene->canvasViewport = viewport->extent;
             const LayoutScene* previous = tree->scene;
-            if (previous != nullptr && previous->canvasBorder == scene->canvasBorder &&
+            bool canvasRepainted = tree->canvasRepainted;
+            tree->canvasRepainted = false;
+            if (!canvasRepainted && previous != nullptr && previous->canvasBorder == scene->canvasBorder &&
                     previous->canvas == scene->canvas && previous->canvasLayersHash == scene->canvasLayersHash &&
                     previous->canvasViewport == scene->canvasViewport &&
                     prMemEquals(&previous->canvasDecoration, &scene->canvasDecoration, sizeof(PrLayoutDecorationStyle))) {

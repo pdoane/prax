@@ -30,7 +30,7 @@ struct Styled {
         document = prDomParseXml(source, "image/svg+xml", nullptr);
         prCssEnable(document);
         prSvgEnable(document);
-        svgCascadeInit(&cascade, document, prSvgDrawOptionsDefault(), PrVec2{100, 100});
+        svgCascadeInit(&cascade, document, prSvgDrawOptionsDefault(), PrVec2{100, 100}, nullptr);
     }
 
     ~Styled() {
@@ -56,14 +56,15 @@ TEST_CASE("a viewBox maps into the viewport as preserveAspectRatio says") {
     PrRect box{};
     REQUIRE(svgParseViewBox("0 0 100 50", &box));
     CHECK_FALSE(svgParseViewBox("0 0 -1 5", &box));
-    SvgAspect aspect;
+    PrSvgPreserveAspectRatio aspect{};
     REQUIRE(svgParseAspect("xMinYMax slice", &aspect));
-    CHECK(aspect.slice);
+    CHECK(aspect.align == PrSvgAlign_XMinYMax);
+    CHECK(aspect.meetOrSlice == PrSvgMeetOrSlice_Slice);
     PrRect viewBox{0, 0, 100, 50};
-    SvgAspect meet;
+    PrSvgPreserveAspectRatio meet = kSvgAspectDefault;
     PrAffine2 t = svgViewBoxTransform(viewBox, meet, 200, 200);
     CHECK(near(prAffine2MapPoint(t, PrVec2{0, 0}), PrVec2{0, 50}));
-    SvgAspect none;
+    PrSvgPreserveAspectRatio none{};
     REQUIRE(svgParseAspect("none", &none));
     t = svgViewBoxTransform(viewBox, none, 200, 200);
     CHECK(near(prAffine2MapPoint(t, PrVec2{100, 50}), PrVec2{200, 200}));

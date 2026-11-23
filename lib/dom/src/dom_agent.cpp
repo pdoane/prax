@@ -188,15 +188,19 @@ void domAgentRemoveHook(RawArray<DomAgentTask>* hooks, PrDomAgentHookFn fn, void
     }
 }
 
+void domAgentCheckpoint(PrDomAgent* agent) {
+    // A checkpoint may remove itself or another, so each is called by its position as the array stands.
+    for (uint32_t i = 0; i < agent->checkpoints.count; ++i)
+        agent->checkpoints.data[i].fn(agent->checkpoints.data[i].context);
+}
+
 bool domAgentRun(PrDomAgent* agent, double milliseconds) {
     PR_ASSERT(!agent->runningTask);
     double deadline = prTimeMonotonicMilliseconds() + milliseconds;
     bool ran = false;
     while (domAgentNextTaskDelay(agent) == 0 && runNextTask(agent)) {
         ran = true;
-        // A checkpoint may remove itself or another, so each is called by its position as the array stands.
-        for (uint32_t i = 0; i < agent->checkpoints.count; ++i)
-            agent->checkpoints.data[i].fn(agent->checkpoints.data[i].context);
+        domAgentCheckpoint(agent);
         if (prTimeMonotonicMilliseconds() >= deadline)
             break;
     }

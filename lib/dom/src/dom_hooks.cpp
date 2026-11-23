@@ -41,6 +41,8 @@ void updateFollowers(PrDomDocument* document) {
             document->followers[DomHook_MetaChanged] |= bit;
         if (hooks->resourceLoaded != nullptr)
             document->followers[DomHook_ResourceLoaded] |= bit;
+        if (hooks->readinessChanged != nullptr)
+            document->followers[DomHook_ReadinessChanged] |= bit;
         if (hooks->colorValue != nullptr)
             document->followers[DomHook_ColorValue] |= bit;
         if (hooks->styleBlockUpdate != nullptr)
@@ -49,6 +51,8 @@ void updateFollowers(PrDomDocument* document) {
             document->followers[DomHook_LinkUpdate] |= bit;
         if (hooks->instructionInserted != nullptr)
             document->followers[DomHook_InstructionInserted] |= bit;
+        if (hooks->elementParsed != nullptr)
+            document->followers[DomHook_ElementParsed] |= bit;
         if (hooks->ownerAttributeChanged != nullptr)
             document->followers[DomHook_OwnerAttributeChanged] |= bit;
         if (hooks->instructionRemoving != nullptr)

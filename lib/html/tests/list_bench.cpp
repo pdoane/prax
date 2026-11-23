@@ -104,7 +104,7 @@ const Case kCases[] = {
         "list restyle without counters",
         [](Work* w) {
             bool on = false;
-            PrDomTokenList* classes = prDomTokenListCreate(w->middle, "class");
+            PrDomTokenList* classes = prDomTokenListCreate(w->middle, "class", nullptr);
             prDomTokenListToggle(classes, "marked", nullptr, &on);
             prDomTokenListDestroy(classes);
         },

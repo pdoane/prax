@@ -4,3 +4,32 @@
 
 css/css-color/at-color-profile-001.html
     @color-profile: no engine ships it, and its colors would wait on profiles that load.
+
+svg/styling/css-linked-parameters/css-linked-parameters-precedence-1.html
+svg/styling/css-linked-parameters/css-linked-parameters-precedence-2.html
+svg/styling/css-linked-parameters/img-with-linked-parameters-1.html
+svg/styling/css-linked-parameters/img-with-linked-parameters-2.html
+svg/styling/css-linked-parameters/img-with-url-fragment-identifiers-1.html
+svg/styling/css-linked-parameters/img-with-url-fragment-identifiers-2.html
+svg/styling/css-linked-parameters/img-with-url-function-1.html
+svg/styling/css-linked-parameters/img-with-url-function-2.html
+svg/styling/css-linked-parameters/link-parameters-background-image.html
+svg/styling/css-linked-parameters/link-parameters-basic.html
+svg/styling/css-linked-parameters/link-parameters-duplicate-name.html
+svg/styling/css-linked-parameters/link-parameters-dynamic.html
+svg/styling/css-linked-parameters/link-parameters-fallback.html
+svg/styling/css-linked-parameters/link-parameters-geometry.html
+svg/styling/css-linked-parameters/link-parameters-none.html
+svg/styling/css-linked-parameters/link-parameters-per-container.html
+    CSS Linked Parameters (css-link-params-1): no engine ships link-parameters, param() or the url() modifier
+    that passes parameters into an SVG image. The engine may build it once a browser does.
+
+svg/styling/svg-filter-render-cross-origin-frame-in-cross-origin-frame.tentative.sub.https.html
+svg/styling/svg-filter-render-cross-origin-frame-in-same-origin-frame.tentative.https.html
+svg/styling/svg-filter-render-cross-origin-frame.tentative.sub.https.html
+svg/styling/svg-filter-render-cross-origin-navigation-in-srcdoc-frame.tentative.sub.https.html
+svg/styling/svg-filter-render-same-origin-frame-in-cross-origin-frame.tentative.sub.https.html
+svg/styling/svg-filter-render-same-origin-frame-reload-as-sandbox.tentative.https.html
+svg/styling/svg-filter-render-sandbox-frame.tentative.https.html
+    SVG filters on cross-origin and sandboxed frames: no specification defines this restriction, and the
+    proposal behind these tentative pages has not settled which frames it covers.

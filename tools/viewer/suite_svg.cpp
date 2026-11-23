@@ -47,18 +47,25 @@ bool undefinedBehavior(const std::string& text) {
         text.substr(title, end - title).find("(UB)") != std::string::npos;
 }
 
+// Returns the directory of resvg's tests, fonts and resources, as resvg's repository holds them.
+fs::path resvgRoot() {
+    return fs::path(kThirdParty) / "resvg" / "crates" / "resvg" / "tests";
+}
+
 // Returns resvg's tests, each against its PNG.
 std::vector<Document> resvg() {
     std::vector<Document> documents;
-    fs::path root = fs::path(kThirdParty) / "resvg-tests" / "tests";
+    fs::path root = resvgRoot() / "tests";
     for (const fs::path& svg : filesUnder(root, ".svg")) {
         fs::path png = svg;
         png.replace_extension(".png");
         if (!fs::exists(png) || undefinedBehavior(readFile(svg)))
             continue;
+        // Each test shows as an image, as its runner draws it (suites/resvg/render.txt), with its text in the suite's
+        // fonts.
         Document d{
             fs::relative(svg, root).string(), "the resvg test suite, against its PNG",
-            fileSource(svg, settingsOf("resvg")),
+            Source{.path = imagePage(svg), .settings = settingsOf("resvg")},
         };
         d.references.push_back(Reference{"Corpus", fileSource(png)});
         documents.push_back(std::move(d));
@@ -70,7 +77,7 @@ std::vector<Document> resvg() {
 
 std::vector<Collection> svgCollections() {
     std::vector<Collection> collections;
-    if (fs::exists(fs::path(kThirdParty) / "resvg-tests"))
+    if (fs::exists(resvgRoot()))
         collections.push_back(Collection{"resvg", 500, 500, resvg});
     return collections;
 }

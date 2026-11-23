@@ -95,18 +95,13 @@ double sourceSizeOf(const CssTokenArray* tokens, uint32_t index, const HtmlImage
             break;
     }
     double scale = cssUnitCategory(unit) == CssUnitCategory_Length ? cssUnitScale(unit) : 0;
-    return scale != 0 ? number * scale : -1;
+    return scale != 0 ? cssUnitToCanonical(number, unit) : -1;
 }
 
 // Returns true if the media query list `query` matches the environment, as a source element's media attribute or a
 // sizes attribute's condition asks. Every query matches where no environment evaluates it.
 bool matches(PrStringView query, const HtmlImageEnvironment& environment) {
-    if (environment.media == nullptr)
-        return true;
-    PrCssMediaQueryList* list = cssMediaQueryListCreate(environment.media, query);
-    bool matched = prCssMediaQueryListMatches(list);
-    cssMediaQueryListRelease(list);
-    return matched;
+    return environment.media == nullptr || cssMediaQueryMatches(query, environment.media);
 }
 
 // Returns true if the environment decodes images of the MIME type `type`, as a source element's type must say

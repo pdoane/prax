@@ -33,5 +33,16 @@ class ScoreboardTests(unittest.TestCase):
         self.assertTrue(text.endswith("| **total** |   4/5 |   80.0% |\n"))
 
 
+class FuzzyTests(unittest.TestCase):
+    def test_a_shift_is_read_beside_the_ranges_which_ignore_it(self):
+        self.assertEqual(corpus.fuzzy_shift("shift=1;maxDifference=0-2;totalPixels=0-90"), 1)
+        self.assertEqual(corpus.fuzzy_content_ranges("shift=1;maxDifference=0-2;totalPixels=0-90"), ((0, 2), (0, 90)))
+        self.assertEqual(corpus.fuzzy_shift("maxDifference=0-2;totalPixels=0-90"), 0)
+
+    def test_a_shift_other_than_a_pixel_is_refused(self):
+        with self.assertRaises(SystemExit):
+            corpus.fuzzy_shift("shift=2;maxDifference=0-2;totalPixels=0-90")
+
+
 if __name__ == "__main__":
     unittest.main()

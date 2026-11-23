@@ -247,8 +247,9 @@ int main(int argc, char** argv) {
     std::string url;
     if (!host.addCapture(argv[at], &url, argv[at + 1]))
         return 1;
-    Page* page = host.load(url);
-    if (page == nullptr || host.settle() == page_host::Settled_Failed)
+    // The changes start once the page is ready, as a reftest is captured.
+    Page* page = host.load(url, page_host::Capture_Wait);
+    if (page == nullptr || host.run() == page_host::RunEnd_Failed)
         return 1;
     PrHtmlPage* htmlPage = PageHost::htmlPage(page);
     PrCssPresentation* presentation = htmlPage != nullptr ? prHtmlPagePresentation(htmlPage) : nullptr;
@@ -308,7 +309,7 @@ int main(int argc, char** argv) {
         }
         PrDomNode* node = prDomElementAsNode(element);
         // Turns each class off, then on again.
-        PrDomTokenList* classes = prDomTokenListCreate(element, "class");
+        PrDomTokenList* classes = prDomTokenListCreate(element, "class", nullptr);
         uint32_t count = prDomTokenListLength(classes);
         for (uint32_t c = 0; c < count && c < 4; ++c) {
             // Removing the token rewrites the attribute that the item views.

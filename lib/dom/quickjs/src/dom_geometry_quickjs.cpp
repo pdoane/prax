@@ -30,17 +30,48 @@ JSClassID domRectClass;
 JSClassID domQuadClass;
 JSClassID domRectListClass;
 
+// The classes of the DOMPoints, DOMRects and DOMMatrices whose values another module holds (PrJsDomReflection,
+// PrJsDomMatrixReflection).
+JSClassID reflectedPointClass;
+JSClassID reflectedRectClass;
+JSClassID reflectedMatrixClass;
+
 // Returns the class that a constructor or static creates: DOMMatrixReadOnly for magic 0, and DOMMatrix for 1.
 JSClassID classOf(int magic) {
     return magic == 0 ? prJsDomMatrixReadOnlyClass : prJsDomMatrixClass;
 }
 
-PrDomMatrix* PR_NULLABLE readOnlyOf(JSContext* ctx, JSValueConst object) {
-    return jsValueOf<PrDomMatrix>(ctx, object, prJsDomMatrixReadOnlyClass, "DOMMatrixReadOnly");
+// Returns the handle of `object` if it is a reflecting DOMMatrix, with its matrix read from the module that holds it,
+// and null otherwise.
+PrJsDomReflectedMatrix* PR_NULLABLE reflectedMatrixOf(JSContext* ctx, JSValueConst object) {
+    if (JS_GetClassID(object) != reflectedMatrixClass)
+        return nullptr;
+    PrJsDomReflectedMatrix* handle =
+        static_cast<PrJsDomReflectedMatrix*>(jsHandleIn(ctx, object, reflectedMatrixClass));
+    if (handle != nullptr)
+        handle->reflection->read(handle, &handle->matrix);
+    return handle;
 }
 
+// Return the matrix of a DOMMatrixReadOnly, or of a DOMMatrix, or null with a TypeError thrown for any other value.
+PrDomMatrix* PR_NULLABLE readOnlyOf(JSContext* ctx, JSValueConst object) {
+    if (PrJsDomReflectedMatrix* handle = reflectedMatrixOf(ctx, object))
+        return &handle->matrix;
+    return jsValueOf<PrDomMatrix>(ctx, object, prJsDomMatrixReadOnlyClass, "DOMMatrixReadOnly");
+}
 PrDomMatrix* PR_NULLABLE mutableOf(JSContext* ctx, JSValueConst object) {
+    if (PrJsDomReflectedMatrix* handle = reflectedMatrixOf(ctx, object))
+        return &handle->matrix;
     return jsValueOf<PrDomMatrix>(ctx, object, prJsDomMatrixClass, "DOMMatrix");
+}
+
+// Writes the matrix of `object` back to the module that holds it, if it reflects one. Returns false if that threw.
+bool commit(JSContext* ctx, JSValueConst object) {
+    if (JS_GetClassID(object) != reflectedMatrixClass)
+        return true;
+    PrJsDomReflectedMatrix* handle =
+        static_cast<PrJsDomReflectedMatrix*>(jsHandleIn(ctx, object, reflectedMatrixClass));
+    return handle == nullptr || handle->reflection->write(ctx, handle, &handle->matrix);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -257,6 +288,8 @@ JSValue applyToSelf(JSContext* ctx, JSValueConst matrix, int argc, JSValueConst*
     if (mutableOf(ctx, matrix) == nullptr || !kOperations[magic].read(ctx, argc, argv, &arguments))
         return JS_EXCEPTION;
     kOperations[magic].apply(mutableOf(ctx, matrix), &arguments);
+    if (!commit(ctx, matrix))
+        return JS_EXCEPTION;
     return JS_DupValue(ctx, matrix);
 }
 
@@ -325,7 +358,7 @@ JSValue elementSet(JSContext* ctx, JSValueConst matrix, JSValueConst input, int 
     if (mutableOf(ctx, matrix) == nullptr || JS_ToFloat64(ctx, &value, input) < 0)
         return JS_EXCEPTION;
     prDomMatrixSetElement(mutableOf(ctx, matrix), uint32_t(magic), value);
-    return JS_UNDEFINED;
+    return commit(ctx, matrix) ? JS_UNDEFINED : JS_EXCEPTION;
 }
 
 JSValue is2DGet(JSContext* ctx, JSValueConst matrixObject) {
@@ -379,8 +412,60 @@ JSClassID pointClassOf(int magic) {
     return magic == 0 ? domPointReadOnlyClass : domPointClass;
 }
 
-PrDomPoint* PR_NULLABLE pointOf(JSContext* ctx, JSValueConst object) {
-    return jsValueOf<PrDomPoint>(ctx, object, domPointReadOnlyClass, "DOMPointReadOnly");
+// Writes the value of `object`, a DOMPointReadOnly or DOMRectReadOnly of class `base`, to `out`. The object may hold
+// the value or reflect it. Returns false and throws a TypeError naming `expected` for any other value.
+template <typename T>
+bool valueRead(JSContext* ctx, JSValueConst object, JSClassID base, JSClassID reflected, const char* expected, T* out) {
+    void* handle = jsValueOf<void>(ctx, object, base, expected);
+    if (handle == nullptr)
+        return false;
+    if (JS_GetClassID(object) == reflected) {
+        double values[4];
+        static_cast<PrJsDomReflected*>(handle)->reflection->read(handle, values);
+        for (uint32_t i = 0; i < 4; ++i)
+            (&out->x)[i] = values[i];
+    } else {
+        *out = *static_cast<T*>(handle);
+    }
+    return true;
+}
+
+// Sets member `index` of `object`, a DOMPoint or DOMRect of class `base`. The object may hold its value or reflect it.
+// Returns false if the call threw an exception.
+template <typename T>
+bool valueSet(JSContext* ctx, JSValueConst object, JSClassID base, JSClassID reflected, const char* expected,
+        uint32_t index, double value) {
+    void* handle = jsValueOf<void>(ctx, object, base, expected);
+    if (handle == nullptr)
+        return false;
+    if (JS_GetClassID(object) != reflected) {
+        (&static_cast<T*>(handle)->x)[index] = value;
+        return true;
+    }
+    const PrJsDomReflection* reflection = static_cast<PrJsDomReflected*>(handle)->reflection;
+    double values[4];
+    reflection->read(handle, values);
+    values[index] = value;
+    return reflection->write(ctx, handle, values);
+}
+
+// Finalizes a reflecting object, releasing its handle.
+void reflectedFinalizer(JSRuntime* runtime, JSValue object) {
+    jsFinalize<PrJsDomReflected>(runtime, object, JS_GetClassID(object),
+        [](PrJsDomReflected* handle) { handle->reflection->release(handle); });
+}
+void reflectedMatrixFinalizer(JSRuntime* runtime, JSValue object) {
+    jsFinalize<PrJsDomReflectedMatrix>(runtime, object, reflectedMatrixClass,
+        [](PrJsDomReflectedMatrix* handle) { handle->reflection->release(handle); });
+}
+
+// Returns the object of class `id` that reflects `handle`.
+JSValue reflecting(JSContext* ctx, JSClassID id, JSValueConst owner, PrJsDomReflected* handle) {
+    return jsWrap(ctx, id, owner, handle, false, handle->reflection->retain);
+}
+
+bool pointOf(JSContext* ctx, JSValueConst object, PrDomPoint* out) {
+    return valueRead(ctx, object, domPointReadOnlyClass, reflectedPointClass, "DOMPointReadOnly", out);
 }
 
 // geometry-1/#dom-dompointreadonly-dompointreadonly
@@ -403,25 +488,26 @@ JSValue fromPoint(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv, in
 
 // Implements x, y, z and w, selected by their offset in PrDomPoint.
 JSValue pointGet(JSContext* ctx, JSValueConst pointObject, int magic) {
-    PrDomPoint* point = pointOf(ctx, pointObject);
-    return point != nullptr ? JS_NewFloat64(ctx, (&point->x)[magic]) : JS_EXCEPTION;
+    PrDomPoint point;
+    return pointOf(ctx, pointObject, &point) ? JS_NewFloat64(ctx, (&point.x)[magic]) : JS_EXCEPTION;
 }
 
 JSValue pointSet(JSContext* ctx, JSValueConst pointObject, JSValueConst input, int magic) {
-    PrDomPoint* point = jsValueOf<PrDomPoint>(ctx, pointObject, domPointClass, "DOMPoint");
     double value = 0;
-    if (point == nullptr || JS_ToFloat64(ctx, &value, input) < 0)
+    if (jsValueOf<void>(ctx, pointObject, domPointClass, "DOMPoint") == nullptr || JS_ToFloat64(ctx, &value, input) < 0)
         return JS_EXCEPTION;
-    (&point->x)[magic] = value;
+    if (!valueSet<PrDomPoint>(ctx, pointObject, domPointClass, reflectedPointClass, "DOMPoint", uint32_t(magic), value))
+        return JS_EXCEPTION;
     return JS_UNDEFINED;
 }
 
 // geometry-1/#dom-dompointreadonly-matrixtransform
 JSValue matrixTransform(JSContext* ctx, JSValueConst point, int argc, JSValueConst* argv) {
     PrDomMatrix matrix;
-    if (pointOf(ctx, point) == nullptr || !matrixFromInit(ctx, argc > 0 ? argv[0] : JS_UNDEFINED, &matrix))
+    PrDomPoint held;
+    if (!pointOf(ctx, point, &held) || !matrixFromInit(ctx, argc > 0 ? argv[0] : JS_UNDEFINED, &matrix))
         return JS_EXCEPTION;
-    return jsNewValue(ctx, domPointClass, prDomPointMatrixTransform(pointOf(ctx, point), &matrix));
+    return jsNewValue(ctx, domPointClass, prDomPointMatrixTransform(&held, &matrix));
 }
 
 // geometry-1/#dom-dommatrixreadonly-transformpoint
@@ -433,9 +519,10 @@ JSValue transformPoint(JSContext* ctx, JSValueConst matrix, int argc, JSValueCon
 }
 
 JSValue pointToJson(JSContext* ctx, JSValueConst pointObject, int, JSValueConst*) {
-    PrDomPoint* point = pointOf(ctx, pointObject);
-    if (point == nullptr)
+    PrDomPoint held;
+    if (!pointOf(ctx, pointObject, &held))
         return JS_EXCEPTION;
+    const PrDomPoint* point = &held;
     JSValue result = JS_NewObject(ctx);
     JS_SetPropertyStr(ctx, result, "x", JS_NewFloat64(ctx, point->x));
     JS_SetPropertyStr(ctx, result, "y", JS_NewFloat64(ctx, point->y));
@@ -463,8 +550,8 @@ JSClassID rectClassOf(int magic) {
     return magic == 0 ? domRectReadOnlyClass : domRectClass;
 }
 
-PrDomRect* PR_NULLABLE rectOf(JSContext* ctx, JSValueConst object) {
-    return jsValueOf<PrDomRect>(ctx, object, domRectReadOnlyClass, "DOMRectReadOnly");
+bool rectOf(JSContext* ctx, JSValueConst object, PrDomRect* out) {
+    return valueRead(ctx, object, domRectReadOnlyClass, reflectedRectClass, "DOMRectReadOnly", out);
 }
 
 // geometry-1/#dom-domrectreadonly-domrectreadonly
@@ -487,16 +574,16 @@ JSValue fromRect(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv, int
 
 // Implements x, y, width and height, selected by their offset in PrDomRect.
 JSValue rectGet(JSContext* ctx, JSValueConst rectObject, int magic) {
-    PrDomRect* rect = rectOf(ctx, rectObject);
-    return rect != nullptr ? JS_NewFloat64(ctx, (&rect->x)[magic]) : JS_EXCEPTION;
+    PrDomRect rect;
+    return rectOf(ctx, rectObject, &rect) ? JS_NewFloat64(ctx, (&rect.x)[magic]) : JS_EXCEPTION;
 }
 
 JSValue rectSet(JSContext* ctx, JSValueConst rectObject, JSValueConst input, int magic) {
-    PrDomRect* rect = jsValueOf<PrDomRect>(ctx, rectObject, domRectClass, "DOMRect");
     double value = 0;
-    if (rect == nullptr || JS_ToFloat64(ctx, &value, input) < 0)
+    if (jsValueOf<void>(ctx, rectObject, domRectClass, "DOMRect") == nullptr || JS_ToFloat64(ctx, &value, input) < 0)
         return JS_EXCEPTION;
-    (&rect->x)[magic] = value;
+    if (!valueSet<PrDomRect>(ctx, rectObject, domRectClass, reflectedRectClass, "DOMRect", uint32_t(magic), value))
+        return JS_EXCEPTION;
     return JS_UNDEFINED;
 }
 
@@ -504,14 +591,15 @@ JSValue rectSet(JSContext* ctx, JSValueConst rectObject, JSValueConst input, int
 constexpr double (*kEdges[])(const PrDomRect*) = {prDomRectTop, prDomRectRight, prDomRectBottom, prDomRectLeft};
 
 JSValue edgeGet(JSContext* ctx, JSValueConst rectObject, int magic) {
-    PrDomRect* rect = rectOf(ctx, rectObject);
-    return rect != nullptr ? JS_NewFloat64(ctx, kEdges[magic](rect)) : JS_EXCEPTION;
+    PrDomRect rect;
+    return rectOf(ctx, rectObject, &rect) ? JS_NewFloat64(ctx, kEdges[magic](&rect)) : JS_EXCEPTION;
 }
 
 JSValue rectToJson(JSContext* ctx, JSValueConst rectObject, int, JSValueConst*) {
-    PrDomRect* rect = rectOf(ctx, rectObject);
-    if (rect == nullptr)
+    PrDomRect held;
+    if (!rectOf(ctx, rectObject, &held))
         return JS_EXCEPTION;
+    const PrDomRect* rect = &held;
     JSValue result = JS_NewObject(ctx);
     JS_SetPropertyStr(ctx, result, "x", JS_NewFloat64(ctx, rect->x));
     JS_SetPropertyStr(ctx, result, "y", JS_NewFloat64(ctx, rect->y));
@@ -821,6 +909,14 @@ constexpr JSCFunctionListEntry kDomRectListProto[] = {
 #undef PR_METHOD
 #undef PR_SELF_METHOD
 
+// Gives the global object `name` as another name of the interface object `constructor` ([LegacyWindowAlias]).
+void windowAlias(JSContext* ctx, JSValueConst constructor, const char* name) {
+    JSValue global = JS_GetGlobalObject(ctx);
+    JS_DefinePropertyValueStr(ctx, global, name, JS_DupValue(ctx, constructor),
+        JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
+    JS_FreeValue(ctx, global);
+}
+
 } // namespace
 
 } // namespace pr_impl
@@ -857,12 +953,8 @@ void prJsDomGeometryBind(JSContext* ctx) {
         .base = &prJsDomMatrixReadOnlyClass,
     });
     // geometry-1/#dommatrix: [LegacyWindowAlias=(SVGMatrix, WebKitCSSMatrix)]
-    JSValue global = JS_GetGlobalObject(ctx);
-    constexpr const char* kAliases[] = {"SVGMatrix", "WebKitCSSMatrix"};
-    for (const char* alias : kAliases)
-        JS_DefinePropertyValueStr(ctx, global, alias, JS_DupValue(ctx, matrix),
-            JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
-    JS_FreeValue(ctx, global);
+    windowAlias(ctx, matrix, "SVGMatrix");
+    windowAlias(ctx, matrix, "WebKitCSSMatrix");
     JS_FreeValue(ctx, matrix);
 
     const JsClassDefinition kClasses[] = {
@@ -934,8 +1026,52 @@ void prJsDomGeometryBind(JSContext* ctx) {
             .iterable = true,
         },
     };
-    for (const JsClassDefinition& definition : kClasses)
+    for (const JsClassDefinition& definition : kClasses) {
+        JSValue constructor = jsDefineClass(ctx, definition);
+        // geometry-1/#dompoint: [LegacyWindowAlias=SVGPoint], geometry-1/#domrect: [LegacyWindowAlias=SVGRect], and
+        // geometry-1/#dommatrix: [LegacyWindowAlias=(SVGMatrix,WebKitCSSMatrix)]
+        if (definition.id == &domPointClass) {
+            windowAlias(ctx, constructor, "SVGPoint");
+        } else if (definition.id == &domRectClass) {
+            windowAlias(ctx, constructor, "SVGRect");
+        } else if (definition.id == &prJsDomMatrixClass) {
+            windowAlias(ctx, constructor, "SVGMatrix");
+            windowAlias(ctx, constructor, "WebKitCSSMatrix");
+        }
+        JS_FreeValue(ctx, constructor);
+    }
+    // To script, a reflecting object is a DOMPoint, DOMRect or DOMMatrix. Its class has no name on the global object,
+    // and it shares the prototype of the class that it reflects as.
+    const JsClassDefinition kReflected[] = {
+        {
+            .name = "DOMPoint",
+            .id = &reflectedPointClass,
+            .finalizer = reflectedFinalizer,
+            .mark = jsValueMark,
+            .base = &domPointClass,
+            .unexposed = true,
+        },
+        {
+            .name = "DOMRect",
+            .id = &reflectedRectClass,
+            .finalizer = reflectedFinalizer,
+            .mark = jsValueMark,
+            .base = &domRectClass,
+            .unexposed = true,
+        },
+        {
+            .name = "DOMMatrix",
+            .id = &reflectedMatrixClass,
+            .finalizer = reflectedMatrixFinalizer,
+            .mark = jsValueMark,
+            .base = &prJsDomMatrixClass,
+            .unexposed = true,
+        },
+    };
+    for (const JsClassDefinition& definition : kReflected) {
         JS_FreeValue(ctx, jsDefineClass(ctx, definition));
+        JS_SetClassProto(ctx, *definition.id, JS_GetClassProto(ctx, *definition.base));
+    }
 }
 
 PrDomMatrix* PR_NULLABLE prJsDomMatrixFromValue(JSContext* ctx, JSValueConst value) {
@@ -999,6 +1135,37 @@ JSValue prJsDomRectNew(JSContext* ctx, PrDomRect rect) {
 
 JSValue prJsDomRectReadOnlyNew(JSContext* ctx, PrDomRect rect) {
     return jsNewValue(ctx, domRectReadOnlyClass, rect);
+}
+
+bool prJsDomRectRead(JSContext* ctx, JSValueConst value, PrDomRect* out) {
+    return valueRead(ctx, value, domRectClass, reflectedRectClass, "DOMRect", out);
+}
+
+PrJsDomReflected* PR_NULLABLE prJsDomReflectedFromValue(JSContext* ctx, JSValueConst value) {
+    JSClassID id = JS_GetClassID(value);
+    if (id != reflectedPointClass && id != reflectedRectClass)
+        return nullptr;
+    return static_cast<PrJsDomReflected*>(jsHandleIn(ctx, value, id));
+}
+
+bool prJsDomPointRead(JSContext* ctx, JSValueConst value, PrDomPoint* out) {
+    return valueRead(ctx, value, domPointClass, reflectedPointClass, "DOMPoint", out);
+}
+
+JSValue prJsDomPointReflecting(JSContext* ctx, JSValueConst owner, PrJsDomReflected* handle) {
+    return reflecting(ctx, reflectedPointClass, owner, handle);
+}
+
+JSValue prJsDomRectReflecting(JSContext* ctx, JSValueConst owner, PrJsDomReflected* handle) {
+    return reflecting(ctx, reflectedRectClass, owner, handle);
+}
+
+JSValue prJsDomMatrixReflecting(JSContext* ctx, JSValueConst owner, PrJsDomReflectedMatrix* handle) {
+    return jsWrap(ctx, reflectedMatrixClass, owner, handle, false, handle->reflection->retain);
+}
+
+bool prJsDomMatrixCommit(JSContext* ctx, JSValueConst value) {
+    return commit(ctx, value);
 }
 
 JSValue prJsDomRectListNew(JSContext* ctx, const PrDomRect* PR_NULLABLE rects, uint32_t count) {

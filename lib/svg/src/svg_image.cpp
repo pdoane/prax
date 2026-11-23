@@ -34,7 +34,7 @@ void applySvgView(PrStringView specification, SvgRootView* view) {
         PrStringView aspect = argumentsOf(part, "preserveAspectRatio");
         PrStringView transform = argumentsOf(part, "transform");
         PrRect box{};
-        SvgAspect parsed;
+        PrSvgPreserveAspectRatio parsed = kSvgAspectDefault;
         PrAffine2 matrix{};
         if (viewBox.data != nullptr && svgParseViewBox(viewBox, &box)) {
             view->viewBox = box;
@@ -129,6 +129,98 @@ void applyMediaFragment(PrStringView fragment, PrRect image, bool hasImage, SvgR
     }
 }
 
+// Parses a time of a media fragment's temporal dimension in normal play time (Media Fragments URI 1.0, 4.2.1): seconds
+// with an optional fraction, or minutes and seconds, or hours, minutes and seconds, separated by colons, whose minutes
+// and seconds are two digits below 60. Returns false if `text` is not one.
+bool parseNptTime(PrStringView text, double* out) {
+    double parts[3] = {};
+    uint32_t count = 0;
+    double fraction = 0;
+    double scale = 0;
+    uint32_t digits = 0;
+    uint32_t firstDigits = 0;
+    for (size_t i = 0; i <= text.size; ++i) {
+        char c = i < text.size ? text.data[i] : ':';
+        if (c >= '0' && c <= '9' && scale == 0) {
+            parts[count] = parts[count] * 10 + (c - '0');
+            ++digits;
+        } else if (c >= '0' && c <= '9') {
+            fraction += (c - '0') * scale;
+            scale /= 10;
+        } else if (c == '.' && scale == 0 && digits != 0) {
+            scale = 0.1;
+        } else if (c == ':' && digits != 0 && (scale == 0 || i == text.size)) {
+            // A field after the first is two digits below 60.
+            if (count != 0 && (digits != 2 || parts[count] >= 60))
+                return false;
+            if (count == 0)
+                firstDigits = digits;
+            if (++count == 3 && i < text.size)
+                return false;
+            digits = 0;
+        } else {
+            return false;
+        }
+    }
+    // Seconds alone are any number of digits, and so are hours; the minutes of minutes and seconds are two.
+    if (count == 2 && (firstDigits != 2 || parts[0] >= 60))
+        return false;
+    double seconds = 0;
+    for (uint32_t i = 0; i < count; ++i)
+        seconds = seconds * 60 + parts[i];
+    *out = seconds + fraction;
+    return true;
+}
+
+// Writes the start and the end of a media fragment's temporal dimension, `t=` in normal play time with its optional
+// `npt:` prefix, as in `t=npt:3,3.01` or `t=,5` (Media Fragments URI 1.0, 4.2.1), in seconds: zero and infinity if
+// `text` gives none. The last valid dimension applies. A start that is not before the end is not valid.
+void mediaFragmentRange(PrStringView text, SvgImageTimes* out) {
+    *out = SvgImageTimes{0, kPrF64Infinity};
+    for (size_t at = 0; at <= text.size;) {
+        size_t end = at + prStringFindByte(prStringFrom(text, at), '&');
+        PrStringView pair = prStringSlice(text, at, end - at);
+        at = end + 1;
+        if (pair.size < 2 || prStringSlice(pair, 0, 2) != "t=")
+            continue;
+        PrStringView value = prStringFrom(pair, 2);
+        if (value.size >= 4 && prStringSlice(value, 0, 4) == "npt:")
+            value = prStringFrom(value, 4);
+        size_t comma = prStringFindByte(value, ',');
+        PrStringView first = prStringSlice(value, 0, comma);
+        PrStringView last = comma < value.size ? prStringFrom(value, comma + 1) : PrStringView{};
+        double from = 0;
+        double to = kPrF64Infinity;
+        if (first.size != 0 && !parseNptTime(first, &from))
+            continue;
+        if (comma < value.size && !parseNptTime(last, &to))
+            continue;
+        if ((first.size == 0 && comma >= value.size) || from >= to)
+            continue;
+        *out = SvgImageTimes{from, to};
+    }
+}
+
+// Sets the attribute of `element` named `name` to the numbers of `values`, separated by spaces, as `prefix(...)` if
+// `prefix` is given.
+void setNumbers(PrDomElement* element, PrStringView name, const float* values, uint32_t count, PrStringView prefix = {}) {
+    PrTextBuffer text = {};
+    if (prefix.size != 0) {
+        prTextBufferAppend(&text, prefix);
+        prTextBufferAppendChar(&text, '(');
+    }
+    for (uint32_t i = 0; i < count; ++i) {
+        char number[kPrF64TextMaxBytes];
+        if (i != 0)
+            prTextBufferAppendChar(&text, ' ');
+        prTextBufferAppend(&text, PrStringView{number, prF32Format(values[i], number)});
+    }
+    if (prefix.size != 0)
+        prTextBufferAppendChar(&text, ')');
+    prDomElementSetAttribute(element, name, PrStringView{text.data, text.size});
+    prTextBufferReset(&text);
+}
+
 // Returns the end of the call to svgView() at the start of `text`, after its closing parenthesis, or zero if `text`
 // does not start with a whole call.
 size_t svgViewEnd(PrStringView text) {
@@ -148,15 +240,16 @@ size_t svgViewEnd(PrStringView text) {
 void imageDraw(const SvgImage* image, PrVec2 extent, PrDrawList* list) {
     if (image->background.a > 0)
         prDrawListRect(list, PrRect{0, 0, extent.x, extent.y}, {.color = image->background});
-    SvgDrawHost host{.view = &image->view};
-    if (image->scaledFrom.x <= 0 || image->scaledFrom.y <= 0) {
-        svgTreeDraw(&image->tree, extent, &host, list);
-        return;
+    // A root with a width and a height but no viewBox takes them as its viewBox (w3c/svgwg#249), which stretches them
+    // to the extent. The root's transform then applies in the extent's space, as it does with a viewBox of its own.
+    SvgRootView view = image->view;
+    if (image->synthesizedViewBox.x > 0 && image->synthesizedViewBox.y > 0) {
+        view.viewBox = PrRect{0, 0, image->synthesizedViewBox.x, image->synthesizedViewBox.y};
+        view.hasViewBox = true;
+        view.aspect = PrSvgPreserveAspectRatio{PrSvgAlign_None, PrSvgMeetOrSlice_Meet};
     }
-    PrVec2 scale{extent.x / image->scaledFrom.x, extent.y / image->scaledFrom.y};
-    prDrawListPushTransformAffine2(list, prAffine2Scale(scale));
-    svgTreeDraw(&image->tree, image->scaledFrom, &host, list);
-    prDrawListPopTransform(list);
+    SvgDrawHost host{.view = &view};
+    svgTreeDraw(&image->tree, extent, &host, list);
 }
 
 // The functions of an image's painter, whose context is the image.
@@ -198,11 +291,11 @@ const PrDomElement* PR_NULLABLE svgImageView(PrStringView fragment, const PrDomE
         target = svgFindById(root->document, text);
         if (target != nullptr && svgIs(target, PrDomTag_View)) {
             PrRect box{};
-            if (svgParseViewBox(svgAttribute(target, "viewBox"), &box)) {
+            if (svgAttributeViewBox(target, &box)) {
                 view->viewBox = box;
                 view->hasViewBox = true;
             }
-            SvgAspect aspect;
+            PrSvgPreserveAspectRatio aspect = kSvgAspectDefault;
             if (svgParseAspect(svgAttribute(target, "preserveAspectRatio"), &aspect))
                 view->aspect = aspect;
         }
@@ -211,13 +304,71 @@ const PrDomElement* PR_NULLABLE svgImageView(PrStringView fragment, const PrDomE
     return target;
 }
 
+SvgImageTimes svgImageTimes(PrStringView fragment) {
+    SvgImageTimes times{0, kPrF64Infinity};
+    if (fragment.size == 0)
+        return times;
+    PrTextBuffer decoded = {};
+    prTextBufferReserve(&decoded, uint32_t(fragment.size));
+    size_t size = prUrlPercentDecode(fragment, decoded.data, fragment.size);
+    mediaFragmentRange(PrStringView{decoded.data, size}, &times);
+    prTextBufferReset(&decoded);
+    return times;
+}
+
+SvgImageFit svgImageApplyView(PrDomElement* root, PrStringView fragment, bool rendering) {
+    SvgRootView view{};
+    view.hasViewBox = svgAttributeViewBox(root, &view.viewBox);
+    svgParseAspect(svgAttribute(root, "preserveAspectRatio"), &view.aspect);
+    // The natural size is the root's own, whatever view the fragment names.
+    PrSvgNaturalSize natural = prSvgElementNaturalSize(static_cast<const PrSvgElement*>(root));
+    svgImageView(fragment, root, &view);
+    if (rendering)
+        view.aspect = PrSvgPreserveAspectRatio{PrSvgAlign_None, PrSvgMeetOrSlice_Meet};
+    bool sized = natural.width > 0 && natural.height > 0;
+    PrVec2 target = sized ? PrVec2{natural.width, natural.height} : kSvgImageDefaultSize;
+    SvgImageFit fit{target, view.aspect, true};
+    bool boxed = view.hasViewBox && prRectWidth(view.viewBox) > 0 && prRectHeight(view.viewBox) > 0;
+    if (boxed) {
+        // The root fills a viewport of its viewBox's ratio, as large as fits the natural size, which the painter fits
+        // into the size the image is shown at as the viewBox would be.
+        PrVec2 box{prRectWidth(view.viewBox), prRectHeight(view.viewBox)};
+        float scale = prF32Min(target.x / box.x, target.y / box.y);
+        fit = SvgImageFit{PrVec2{box.x * scale, box.y * scale}, view.aspect, false};
+        float numbers[] = {view.viewBox.left, view.viewBox.top, box.x, box.y};
+        setNumbers(root, "viewBox", numbers, 4);
+        prDomElementSetAttribute(root, "width", "100%");
+        prDomElementSetAttribute(root, "height", "100%");
+    } else if (rendering && sized) {
+        // A root with a width and a height but no viewBox takes them as its viewBox (w3c/svgwg#249).
+        float numbers[] = {0, 0, natural.width, natural.height};
+        setNumbers(root, "viewBox", numbers, 4);
+    }
+    // The painter places the drawing as the view's preserveAspectRatio says, so the root's own fills its viewport.
+    prDomElementSetAttribute(root, "preserveAspectRatio", "none");
+    if (view.hasTransform) {
+        const PrAffine2& m = view.transform;
+        float numbers[] = {m.a, m.b, m.c, m.d, m.e, m.f};
+        setNumbers(root, "transform", numbers, 6, "matrix");
+    }
+    return fit;
+}
+
+PrAffine2 svgImageFitTransform(const SvgImageFit& fit, PrVec2 extent) {
+    if (fit.layout.x <= 0 || fit.layout.y <= 0)
+        return prAffine2Identity();
+    if (fit.stretch || fit.aspect.align <= PrSvgAlign_None)
+        return PrAffine2{extent.x / fit.layout.x, 0, 0, extent.y / fit.layout.y, 0, 0};
+    return svgViewBoxTransform(PrRect{0, 0, fit.layout.x, fit.layout.y}, fit.aspect, extent.x, extent.y);
+}
+
 void svgImageDraw(const SvgImage* image, PrVec2 extent, PrDrawList* list) {
     imageDraw(image, extent, list);
 }
 
 void svgImageDrawRendering(const SvgImage* image, PrRect area, PrDrawList* list) {
     SvgRootView view = image->view;
-    view.aspect = SvgAspect{.x = SvgAlign_None, .y = SvgAlign_None};
+    view.aspect = PrSvgPreserveAspectRatio{PrSvgAlign_None, PrSvgMeetOrSlice_Meet};
     view.clips = !image->overflows;
     if (!view.hasViewBox && image->natural.width > 0 && image->natural.height > 0) {
         view.viewBox = PrRect{0, 0, image->natural.width, image->natural.height};

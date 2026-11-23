@@ -147,12 +147,12 @@ inline bool domFetchIsOk(const DomFetchResult* result) {
 typedef void (*DomFetchFn)(void* PR_NULLABLE data, const DomFetchResult* result);
 
 // An image that a document's browsing context decodes for a style (DomDocumentHost::decodeImage). One of `image` and
-// `vector` is set.
+// `variants` is set.
 struct DomDecodedImage {
     // The decoded image. The source states the orientation that displays it (PrTextureDesc::orientation).
     const PrTextureSource* PR_NULLABLE image;
 
-    PrLayoutPainter vector;                     // an SVG image, which draws at the size it is shown; or no paint
+    DomImageVariants variants;                  // an SVG image, which draws in the environment of each element
     PrLayoutNaturalSize natural;                // as the image's orientation displays it
 };
 
@@ -171,12 +171,12 @@ struct DomDocumentHost {
     // The codec that decompresses the compressed fonts that the document loads, or null for none.
     const PrCompressCodecSet* PR_NULLABLE compress;
 
-    // Decodes the image `bytes`, which a style names, into what draws it: a decoded image, or an SVG image's painter,
-    // with a reference for the caller in either case. `fragment` is the fragment of the URL that named the image,
-    // without its `#`, or the null view, which an SVG image takes its view from. Writes its natural dimensions, which
-    // an SVG image may lack. Returns false if the bytes are not an image that the browsing context decodes. Null if the
-    // browsing context decodes no images.
-    bool (*PR_NULLABLE decodeImage)(void* PR_NULLABLE context, PrByteView bytes, PrStringView fragment, DomDecodedImage* out);
+    // Decodes the image `bytes`, which a style names, into what draws it: a decoded image, or an SVG image's variants,
+    // with a reference for the caller in either case. `url` is the absolute URL that named the image, whose fragment an
+    // SVG image takes its view and the span of its animations from. Writes its natural dimensions, which an SVG image
+    // may lack. Returns false if the bytes are not an image that the browsing context decodes. Null if the browsing
+    // context decodes no images.
+    bool (*PR_NULLABLE decodeImage)(void* PR_NULLABLE context, PrByteView bytes, PrStringView url, DomDecodedImage* out);
 
     // Brings the document's presentation up to date, as a read of its layout needs: its styles and boxes, the content
     // that the browsing context draws in them, such as that of svg elements, and their layout. Null if the
@@ -273,7 +273,7 @@ struct DomDocumentSubscriber {
 constexpr uint32_t kDomDocumentSubscribers = 6;
 
 // The number of entries of DomDocumentHooks (DomHook_Count).
-constexpr uint32_t kDomDocumentHooks = 22;
+constexpr uint32_t kDomDocumentHooks = 24;
 
 // A document (dom/#interface-document).
 struct DomDocument : PrDomNode {
@@ -327,6 +327,10 @@ struct DomDocument : PrDomNode {
     DomMutationObservers* PR_NULLABLE observers;       // created by the first registration
     DomSlots* PR_NULLABLE slots;                       // created by the first shadow root
     DomUses* PR_NULLABLE uses;                         // created by the first connected use element (dom_use.h)
+
+    // Returns the href that animations give a use element, which it references in place of its own, or the null view
+    // (dom_use.h). Null while no animations follow the document.
+    PrStringView (*PR_NULLABLE animatedHref)(const PrDomElement* use);
     DomResources* PR_NULLABLE resources;               // created by the first reference to another document
                                                        // (dom_resource.h)
     PrDomRange* PR_NULLABLE ranges;                    // live ranges (dom/#concept-live-range), kept current by the
@@ -387,6 +391,10 @@ struct DomDocument : PrDomNode {
     // True if the document has created an HTML details element. From then on, insertions into its trees run the details
     // elements' insertion steps (html/#the-details-element).
     bool details;
+
+    // True if the document has created an SVG animation element: animate, set, animateMotion or animateTransform. From
+    // then on, insertions into its trees look for them (svg_animate.h).
+    bool animations;
 
     DomQuirks quirks;
     uint8_t referrerPolicy;     // referrer-policy/#referrer-policies, by the values of PrFetchReferrerPolicy

@@ -110,7 +110,10 @@ struct TextFont {
     uint64_t stamp;                     // the latest change that the order may depend on, as of its match
 
     RawArray<const PrFont*> table;         // the fonts answered with, by answer; each holds a reference
+    RawArray<const PrFont*> bases;         // the fonts of the order that they were made from, by answer; each holds one
     uint64_t revision;
+
+    RawArray<PrFontVariation> variations;  // which each font answered with takes, after the values of its face
 
     // The questions answered since the table was last emptied.
     KeyIndex choices;
@@ -500,18 +503,27 @@ uint32_t answerOf(TextFont& t, uint32_t at) {
     const PrFont* font = fontAt(t.order, at);
     if (font == nullptr)
         return kPrTextMatchNone;
-    for (uint32_t i = 0; i < t.table.count; ++i) {
-        if (t.table.data[i] == font)
+    for (uint32_t i = 0; i < t.bases.count; ++i) {
+        if (t.bases.data[i] == font)
             return i;
     }
     prFontRetain(font);
-    t.table.push(font);
+    t.bases.push(font);
+    if (t.variations.count != 0) {
+        PrFontDerivation derivation = prFontDerivationDefault();
+        derivation.variations = t.variations.data;
+        derivation.variationCount = t.variations.count;
+        t.table.push(prFontCreateDerived(font, &derivation));
+    } else {
+        prFontRetain(font);
+        t.table.push(font);
+    }
     return t.table.count - 1;
 }
 
-// Returns the font of the answer in the table, or null for kPrTextMatchNone.
+// Returns the font of the order that the answer in the table came from, or null for kPrTextMatchNone.
 const PrFont* PR_NULLABLE tableFont(const TextFont& t, uint32_t answer) {
-    return answer != kPrTextMatchNone ? t.table.data[answer] : nullptr;
+    return answer != kPrTextMatchNone ? t.bases.data[answer] : nullptr;
 }
 
 uint64_t keyOf(uint32_t codePoint, PrScript script) {
@@ -540,9 +552,12 @@ bool recordFits(TextFont& t, size_t bytes) {
 
 // Releases the fonts of the table and forgets every question, because the answers change.
 void forgetAnswers(TextFont& t) {
-    for (uint32_t i = 0; i < t.table.count; ++i)
+    for (uint32_t i = 0; i < t.table.count; ++i) {
         prFontRelease(t.table.data[i]);
+        prFontRelease(t.bases.data[i]);
+    }
     t.table.clear();
+    t.bases.clear();
     t.choices.clear();
     t.chosen.clear();
     t.clusterIndex.clear();
@@ -600,6 +615,8 @@ PrTextFont* prTextFontCreate(const PrTextFontDesc* desc) {
     t->locale = desc->locale;
     t->revision = 1;
     t->match = prFontMatchCreate();
+    if (desc->variationCount != 0)
+        t->variations.append(desc->variations, desc->variationCount);
     for (uint32_t i = 0; i < desc->familyCount; ++i)
         t->listedNames.push(prRawStringCopy(desc->families[i].name));
     for (uint32_t i = 0; i < desc->familyCount; ++i)
@@ -622,6 +639,8 @@ void prTextFontRelease(PrTextFont* PR_NULLABLE font) {
     stringsReset(&font->listedNames);
     font->listed.reset();
     font->table.reset();
+    font->bases.reset();
+    font->variations.reset();
     font->choices.reset();
     font->chosen.reset();
     font->clusterIndex.reset();

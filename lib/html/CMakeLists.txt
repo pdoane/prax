@@ -22,6 +22,7 @@ pr_library(html INCLUDE include
     src/html_serialize.cpp
     src/html_storage.cpp
     src/html_structure.cpp
+    src/html_svg_image.cpp
     src/html_table.cpp
     src/html_tokenizer.cpp
     src/html_media.cpp
@@ -86,7 +87,7 @@ if (PR_DEVELOP)
                                              prax::image prax::compress
                                              prax::draw prax::dom prax::font prax::layout
                                              prax::markdown html_test_fetch prax::task prax::locale
-                                             prax::net prax::fetch)
+                                             prax::net prax::fetch prax::svg)
     target_compile_definitions(html_tests PRIVATE
         PR_FONTS_DIR="${PR_TEST_FONTS_DIR}"
         PR_HTML5LIB_DIR="${PR_TEST_HTML5LIB_DIR}"

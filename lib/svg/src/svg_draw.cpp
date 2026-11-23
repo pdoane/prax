@@ -170,8 +170,8 @@ PrVec2 defaultSizeOf(PrSvgNaturalSize natural) {
 
 // Returns an image element's positioning rectangle (SVG2/embedded.html#Placement). A width or a height that is auto is
 // sized from the natural dimensions of what the image shows, by the default sizing algorithm with the other dimension
-// as a constraint. The min and max sizes limit a dimension that is given before the other is sized from it, and limit
-// the result.
+// as a constraint. An auto dimension of an image that shows nothing is zero. The min and max sizes limit a dimension
+// that is given before the other is sized from it, and limit the result.
 PrRect imageRectOf(PrVec2 viewport, const SvgImageShape& image) {
     PrVec2 origin{resolveIn(viewport, image.x, SvgAxis_X), resolveIn(viewport, image.y, SvgAxis_Y)};
     PrVec2 size = svgLimitExtent(image.limits, PrVec2{
@@ -180,7 +180,8 @@ PrRect imageRectOf(PrVec2 viewport, const SvgImageShape& image) {
     }, viewport);
     if (image.widthAuto || image.heightAuto) {
         PrSvgNaturalSize natural = naturalOf(image.picture);
-        PrVec2 fallback = defaultSizeOf(natural);
+        bool shows = image.picture.raster != nullptr || image.picture.svg != nullptr;
+        PrVec2 fallback = shows ? defaultSizeOf(natural) : PrVec2{0, 0};
         if (image.widthAuto && image.heightAuto)
             size = fallback;
         else if (image.widthAuto)
@@ -282,6 +283,8 @@ bool placeViewport(const SvgDrawer& d, const SvgViewportShape& v, PrRect* area, 
     if (v.hasViewBox && (!(v.viewBox.right > v.viewBox.left) || !(v.viewBox.bottom > v.viewBox.top)))
         return false;
     *place = prAffine2Translate(PrVec2{area->left, area->top});
+    if (v.zoom != 1 || v.pan.x != 0 || v.pan.y != 0)
+        *place = prAffine2Concat(prAffine2Concat(prAffine2Scale(PrVec2{v.zoom, v.zoom}), prAffine2Translate(v.pan)), *place);
     if (v.hasViewBox)
         *place = prAffine2Concat(svgViewBoxTransform(v.viewBox, v.aspect, width, height), *place);
     if (v.hasRefX || v.hasRefY) {
@@ -305,6 +308,16 @@ PrVec2 contentExtent(const SvgViewportShape& v, PrRect area) {
 }
 
 PrRect strokeGeometryBounds(const SvgDrawer& d, const SvgNode& node);
+
+// Returns true if the node's geometry is rendered. A rect, circle, ellipse, image or foreignObject of no width or no
+// height is not, and has no bounds (SVG2/shapes.html#RectElement, SVG2/shapes.html#EllipseElement, svgwg issue 1018).
+bool rendersGeometry(const SvgDrawer& d, const SvgNode& node) {
+    if (node.kind != SvgNodeKind_Rect && node.kind != SvgNodeKind_Ellipse && node.kind != SvgNodeKind_Image &&
+            node.kind != SvgNodeKind_ForeignObject)
+        return true;
+    PrRect rect = geometryBounds(d, node);
+    return rect.right > rect.left && rect.bottom > rect.top;
+}
 
 // Returns true if the node has geometry of its own, whose bounds count toward a container's even if they have no area,
 // as a horizontal line's do (SVG2/coords.html#BoundingBoxes).
@@ -360,7 +373,7 @@ bool nodeBounds(SvgDrawer& d, SvgNodeIndex index, SvgBoundsFlags parts, PrRect* 
     const SvgNode& node = d.tree->nodes.data[index];
     PrRect bounds{};
     bool any = false;
-    if (hasGeometry(node)) {
+    if (hasGeometry(node) && rendersGeometry(d, node)) {
         bool stroke = (parts & SvgBoundsFlag_Stroke) != 0;
         join(&bounds, &any, stroke ? strokeGeometryBounds(d, node) : geometryBounds(d, node));
         if ((parts & SvgBoundsFlag_Markers) != 0)
@@ -438,16 +451,16 @@ bool placeMarker(const SvgDrawer& d, SvgResourceIndex index, SvgVertex vertex, f
     if (m.hasViewBox && (!(m.viewBox.right > m.viewBox.left) || !(m.viewBox.bottom > m.viewBox.top)))
         return false;
     float angle = m.angle;
-    if (m.orient != SvgOrient_Angle)
-        angle = vertex.angle + (m.orient == SvgOrient_AutoStartReverse && start ? kPrF32Pi : 0);
+    if (m.orient != PrSvgOrient_Angle)
+        angle = vertex.angle + (m.orient == PrSvgOrient_AutoStartReverse && start ? kPrF32Pi : 0);
     float scale = m.strokeUnits ? strokeWidth : 1;
     *fit = m.hasViewBox ? svgViewBoxTransform(m.viewBox, m.aspect, width, height) : prAffine2Identity();
     *extent = m.hasViewBox ? PrVec2{prRectWidth(m.viewBox), prRectHeight(m.viewBox)} : PrVec2{width, height};
     *viewport = PrVec2{width, height};
     // The reference point, in the content's user space, maps to a point of the viewport, which is placed at the vertex.
     PrVec2 reference = prAffine2MapPoint(*fit, PrVec2{
-        svgLengthResolve(m.refX, extent->x),
-        svgLengthResolve(m.refY, extent->y),
+        m.refXKeyword ? svgLengthResolve(m.refX, extent->x) : resolve(d, m.refX, SvgAxis_X),
+        m.refYKeyword ? svgLengthResolve(m.refY, extent->y) : resolve(d, m.refY, SvgAxis_Y),
     });
     *place = prAffine2Concat(prAffine2Translate(-reference), prAffine2Scale(PrVec2{scale, scale}));
     *place = prAffine2Concat(prAffine2Concat(*place, prAffine2Rotate(angle)), prAffine2Translate(vertex.point));
@@ -504,13 +517,6 @@ void markerVerticesOf(const SvgDrawer& d, const SvgNode& node, MarkerVertices* o
         RawArray<PrPathDataCommand> commands;
         svgShapeCommands(node, d.viewport, &commands);
         svgMarkerVertices(commands.data, commands.count, &out->found);
-        // A rect's or an ellipse's path ends with a closepath of no length, after the command that returns to the
-        // start. Its markers are not placed by counting commands: the last vertex is the first, once
-        // (SVG2/shapes.html#Introduction, SVG2/painting.html#VertexMarkerProperties). The closepath's vertex stays,
-        // with the direction of a closed subpath's end.
-        bool closed = commands.count != 0 && commands.data[commands.count - 1].letter == 'Z';
-        if (closed && out->found.count >= 2)
-            out->found.erase(out->found.count - 2);
         commands.reset();
         out->vertices = out->found.data;
         out->count = out->found.count;
@@ -608,7 +614,7 @@ void drawRect(SvgDrawer& d, const SvgNode& node) {
             prDrawListCornerRect(d.list, shape, paint);
         else
             prDrawListRect(d.list, rect, paint);
-    }, [&] { drawMarkers(d, node, rect); });
+    }, [&](PrPath* out) { svgShapePath(d, node, out); }, [&] { drawMarkers(d, node, rect); });
 }
 
 void drawEllipse(SvgDrawer& d, const SvgNode& node) {
@@ -625,7 +631,8 @@ void drawEllipse(SvgDrawer& d, const SvgNode& node) {
         prPathDestroy(outline);
     }
     svgPaintShape(d, node.paints, true, box, length,
-        [&](PrDrawPaint paint) { prDrawListEllipse(d.list, center, radii, 0, paint); }, [&] { drawMarkers(d, node, box); });
+        [&](PrDrawPaint paint) { prDrawListEllipse(d.list, center, radii, 0, paint); },
+        [&](PrPath* out) { svgShapePath(d, node, out); }, [&] { drawMarkers(d, node, box); });
 }
 
 void drawLine(SvgDrawer& d, const SvgNode& node) {
@@ -634,14 +641,15 @@ void drawLine(SvgDrawer& d, const SvgNode& node) {
     PrRect box = geometryBounds(d, node);
     float length = prF32Sqrt((to.x - from.x) * (to.x - from.x) + (to.y - from.y) * (to.y - from.y));
     svgPaintShape(d, node.paints, false, box, length, [&](PrDrawPaint paint) { prDrawListLine(d.list, from, to, paint); },
-        [&] { drawMarkers(d, node, box); });
+        [&](PrPath* out) { svgShapePath(d, node, out); }, [&] { drawMarkers(d, node, box); });
 }
 
 void drawPath(SvgDrawer& d, const SvgNode& node) {
     float length = node.paints.pathLength >= 0 ? lengthOf(node.path.path) : -1;
     svgPaintShape(d, node.paints, true, node.path.bounds, length, [&](PrDrawPaint paint) {
         prDrawListPath(d.list, node.path.path, d.silhouette ? node.clipRule : node.fillRule, paint);
-    }, [&] { drawMarkers(d, node, node.path.bounds); });
+    }, [&](PrPath* out) { prPathAddPath(out, node.path.path, prAffine2Identity()); },
+        [&] { drawMarkers(d, node, node.path.bounds); });
 }
 
 // Returns the concrete object rectangle of an image in its positioning rectangle `box`: the object sized by object-fit
@@ -882,16 +890,62 @@ PrAffine2 unitOnto(PrRect box) {
         prAffine2Translate(PrVec2{box.left, box.top}));
 }
 
+// Returns true if the clipPath or mask `index`, through the clip paths and masks of its own element, leads back to an
+// effect whose content is being drawn, following at most `hops` references.
+bool leadsBack(const SvgDrawer& d, SvgResourceIndex index, uint32_t hops) {
+    for (uint32_t i = 0; i < d.effectDepth; ++i) {
+        if (d.effects[i] == index)
+            return true;
+    }
+    if (hops == 0)
+        return false;
+    const SvgResource& resource = d.tree->resources.data[index];
+    SvgNodeIndex content = kSvgNodeNone;
+    if (resource.kind == SvgResourceKind_ClipPath)
+        content = resource.clipPath.content;
+    else if (resource.kind == SvgResourceKind_Mask)
+        content = resource.mask.content;
+    if (content == kSvgNodeNone || d.tree->nodes.data[content].effects == kArrayMissing)
+        return false;
+    const SvgEffects& own = d.tree->effects.data[d.tree->nodes.data[content].effects];
+    if (own.clip == SvgClipKind_Url && own.clipPath != kSvgResourceNone && leadsBack(d, own.clipPath, hops - 1))
+        return true;
+    for (uint32_t i = 0; i < own.layers.count; ++i) {
+        const SvgMaskLayer& layer = own.layers.data[i];
+        if (layer.kind == SvgMaskLayerKind_Mask && layer.mask != kSvgResourceNone && leadsBack(d, layer.mask, hops - 1))
+            return true;
+    }
+    return false;
+}
+
 // Returns true if a clipPath, a mask or a filter cannot apply where it is drawn: inside its own content, or too deep in
 // others'. Such a reference is in error, and is ignored.
 bool effectCycles(const SvgDrawer& d, SvgResourceIndex index) {
     if (d.effectDepth == kSvgMaxEffectDepth)
         return true;
-    for (uint32_t i = 0; i < d.effectDepth; ++i) {
-        if (d.effects[i] == index)
-            return true;
-    }
+    return leadsBack(d, index, 0);
+}
+
+// Returns true if the node `index` is the group of the content of the effect drawn innermost, which carries that
+// clipPath's or mask's own clip-path and mask.
+bool holdsOwnEffects(const SvgDrawer& d, SvgNodeIndex index) {
+    if (d.effectDepth == 0 || index == kSvgNodeNone)
+        return false;
+    const SvgResource& effect = d.tree->resources.data[d.effects[d.effectDepth - 1]];
+    if (effect.kind == SvgResourceKind_Mask)
+        return index == effect.mask.content;
+    if (effect.kind == SvgResourceKind_ClipPath)
+        return index == effect.clipPath.content;
     return false;
+}
+
+// Returns true if the reference from the node `from` to the mask `index` is in error where it is drawn, and is ignored.
+// That is so if effectCycles says so, or if the reference is an effect's own mask and the mask's own references lead
+// back to an effect being drawn. A cycle of masks' own references is cut where it leaves the mask through which the
+// drawing entered the cycle. A cycle through an element of a mask's content is cut where it closes. Either way, the
+// masks still apply (w3c/fxtf-drafts#130).
+bool maskReferenceCycles(const SvgDrawer& d, SvgNodeIndex from, SvgResourceIndex index) {
+    return effectCycles(d, index) || (holdsOwnEffects(d, from) && leadsBack(d, index, kSvgMaxEffectDepth));
 }
 
 // Returns a drawer that records the content of the clipPath, mask or filter `index` into `list`, in the drawer's user
@@ -971,7 +1025,8 @@ bool pushClipPath(SvgDrawer& d, SvgResourceIndex index, PrRect box, Masked* out)
     if (clip.boundingBox && prRectIsEmpty(box))
         return false;
     // The clipPath's transform maps the content, in the bounding box's units if it takes them, into user space.
-    PrAffine2 space = prAffine2Concat(clip.boundingBox ? unitOnto(box) : prAffine2Identity(), clip.transform);
+    PrAffine2 space = prAffine2Concat(clip.boundingBox ? unitOnto(box) : prAffine2Identity(),
+        svgOriginTransformMatrix(clip.transform, d.viewport));
     PrPath* outline = prPathCreate();
     PrPathFillRule rule = PrPathFillRule_NonZero;
     if (clipOutline(d, clip.content, space, outline, &rule)) {
@@ -1005,7 +1060,7 @@ bool pushClipPath(SvgDrawer& d, SvgResourceIndex index, PrRect box, Masked* out)
 
 // Pushes the clip path that the masking of the node `index` gives around its content (css-masking-1/#the-clip-path): a
 // basic shape in its reference box, the reference box itself, or a clipPath. A reference to a clipPath that is drawing
-// its own content is ignored. Returns false if the clip path clips everything away.
+// its own content is ignored, which cuts a cycle where it closes. Returns false if the clip path clips everything away.
 bool pushClip(SvgDrawer& d, SvgNodeIndex index, const SvgEffects& masking, Masked* out) {
     switch (masking.clip) {
         case SvgClipKind_Url:
@@ -1053,10 +1108,11 @@ enum {
 };
 typedef uint8_t LayerResult;
 
-// Draws the content of the mask element `index`, for an element whose object bounding box is `box`, into a list of its
-// own (css-masking-1/#MaskElement). The content is clipped to the mask's region.
-LayerResult maskElementLayer(SvgDrawer& d, SvgResourceIndex index, PrRect box, LayerMask* out) {
-    if (effectCycles(d, index))
+// Draws the content of the mask element `index`, for the node `from`, or kSvgNodeNone for an element outside SVG
+// content, whose object bounding box is `box`, into a list of its own (css-masking-1/#MaskElement). The content is
+// clipped to the mask's region.
+LayerResult maskElementLayer(SvgDrawer& d, SvgNodeIndex from, SvgResourceIndex index, PrRect box, LayerMask* out) {
+    if (maskReferenceCycles(d, from, index))
         return LayerResult_Ignored;
     const SvgMask& m = d.tree->resources.data[index].mask;
     out->mode = m.mode;
@@ -1304,7 +1360,7 @@ bool maskOf(SvgDrawer& d, SvgNodeIndex index, const SvgEffects& masking, Masked*
         LayerMask drawn{.mode = PrDrawMaskMode_Alpha, .space = PrColorSpace_Srgb};
         LayerResult result = LayerResult_Drawn;
         if (layer.kind == SvgMaskLayerKind_Mask)
-            result = maskElementLayer(d, layer.mask, box, &drawn);
+            result = maskElementLayer(d, index, layer.mask, box, &drawn);
         else if (layer.kind == SvgMaskLayerKind_Image || layer.kind == SvgMaskLayerKind_Gradient)
             result = imageLayer(d, index, masking, i, &drawn);
         else if (layer.kind == SvgMaskLayerKind_Error)
@@ -1503,7 +1559,9 @@ void drawWithEffects(SvgDrawer& d, SvgNodeIndex index) {
 
 void drawNode(SvgDrawer& d, SvgNodeIndex index) {
     const SvgNode& node = d.tree->nodes.data[index];
-    PrAffine2 transform = transformOf(d, node);
+    // The view's transform takes the place of the root's own (drawViewport).
+    bool replaced = index == 0 && d.host.view != nullptr && d.host.view->hasTransform;
+    PrAffine2 transform = replaced ? prAffine2Identity() : transformOf(d, node);
     bool transformed = !prAffine2IsIdentity(transform);
     PrAffine2 outer = d.space;
     if (transformed)
@@ -1558,12 +1616,10 @@ bool gradientPaint(const SvgDrawer& d, const SvgGradient& g, float opacity, PrRe
             base->color = last;
             return true;
         }
-        // A start circle that holds the end circle draws no gradient (SVG2/pservers.html#RadialGradientNotes), though
-        // the cone of Canvas's gradient that both circles touch would cover it.
+        // A start circle that contains the end circle draws Canvas's gradient: the cone that touches both circles. SVG
+        // 2 says that it draws nothing (SVG2/pservers.html#RadialGradientNotes). That sentence is in the section that
+        // aligned SVG 1.1's focal point with Canvas, so the engine follows the section's intent.
         float focalRadius = gradientCoordinate(d, g, g.fr, SvgAxis_Other);
-        PrVec2 apart = center - focal;
-        if (focalRadius >= radius + prF32Sqrt(apart.x * apart.x + apart.y * apart.y))
-            return false;
         b = prDrawBrushRadial(focal, focalRadius, center, radius, stops, g.stopCount);
     }
     // A gradient in objectBoundingBox units maps onto `box`, which SVG decides, rather than onto the bounds of the
@@ -1574,11 +1630,12 @@ bool gradientPaint(const SvgDrawer& d, const SvgGradient& g, float opacity, PrRe
     // SVG mixes a gradient's stops with their alpha apart, so that a stop toward transparent black mixes toward black
     // (SVG2/pservers.html#StopColorProperty).
     b.interpolationAlpha = PrDrawAlpha_Straight;
-    b.transform = g.transform;
+    PrAffine2 transform = svgOriginTransformMatrix(g.transform, d.viewport);
+    b.transform = transform;
     if (!g.userSpace) {
         PrAffine2 unit = prAffine2Concat(prAffine2Scale(PrVec2{prRectWidth(box), prRectHeight(box)}),
             prAffine2Translate(PrVec2{box.left, box.top}));
-        b.transform = prAffine2Concat(g.transform, unit);
+        b.transform = prAffine2Concat(transform, unit);
     }
     b.opacity = opacity;
     *brush = b;
@@ -1658,7 +1715,7 @@ bool patternPaint(const SvgDrawer& d, SvgResourceIndex index, float opacity, PrR
     // The tiles lie in user space, and the pattern's transform then applies there. SVG 2 has the transform apply inside
     // the bounding box's units, which would shear the tiles of a box that is not square while the content in user units
     // stays square.
-    PrAffine2 tile = prAffine2Concat(prAffine2Translate(at), p.transform);
+    PrAffine2 tile = prAffine2Concat(prAffine2Translate(at), svgOriginTransformMatrix(p.transform, d.viewport));
     PrDrawList* list = tileOf(d, index, content, prAffine2Concat(tile, d.space), extent);
     PrRect rect{0, 0, extent.x, extent.y};
     PrDrawBrush b = prDrawBrushImage(prDrawSourceList(list, rect), rect, PrDrawSampling_Linear);
@@ -1674,9 +1731,10 @@ bool patternPaint(const SvgDrawer& d, SvgResourceIndex index, float opacity, PrR
 // Returns true if a paint server's transform cannot be inverted, which displays nothing of it
 // (css-transforms-1/#transform-function-lists).
 bool collapses(const SvgResource& server) {
-    PrAffine2 transform = server.kind == SvgResourceKind_Pattern ? server.pattern.transform : server.gradient.transform;
+    const SvgOriginTransform& transform =
+        server.kind == SvgResourceKind_Pattern ? server.pattern.transform : server.gradient.transform;
     PrAffine2 inverse{};
-    return !prAffine2Invert(transform, &inverse);
+    return !prAffine2Invert(transform.matrix, &inverse);
 }
 
 // Returns true if a paint server maps a part of itself onto the bounding box of what it paints.
@@ -1774,7 +1832,7 @@ bool svgDrawClipCoverage(const SvgTree* tree, SvgResourceIndex index, PrRect box
     SvgDrawer inner = effectDrawer(d, index, list);
     inner.silhouette = true;
     PrAffine2 outer = pushTransform(inner, prAffine2Concat(clip.boundingBox ? unitOnto(box) : prAffine2Identity(),
-        clip.transform));
+        svgOriginTransformMatrix(clip.transform, viewport)));
     drawNode(inner, clip.content);
     popTransform(inner, outer);
     prPathDestroy(d.scratch);
@@ -1796,7 +1854,7 @@ bool svgDrawMaskContent(const SvgTree* tree, SvgResourceIndex index, PrRect box,
         .tiles = &tiles,
     };
     LayerMask layer{.mode = PrDrawMaskMode_Luminance, .space = PrColorSpace_Srgb};
-    LayerResult result = maskElementLayer(d, index, box, &layer);
+    LayerResult result = maskElementLayer(d, kSvgNodeNone, index, box, &layer);
     if (layer.list != nullptr) {
         prDrawListEmbed(list, layer.list, PrDVec2{0, 0});
         prDrawListRelease(layer.list);
@@ -1909,6 +1967,20 @@ bool svgPaintFor(const SvgDrawer& d, const SvgPaint& paint, float opacity, PrRec
     return true;
 }
 
+void svgStrokeInHost(const SvgDrawer& d, const PrPath* geometry, PrDrawPaint paint, PrDrawBrush* brush) {
+    PrAffine2 fromTree{};
+    if (!prAffine2Invert(d.space, &fromTree))
+        return;
+    PrPath* mapped = prPathCreate();
+    prPathAddPath(mapped, geometry, d.space);
+    if (paint.brush != nullptr)
+        brush->transform = prAffine2Concat(brush->transform, d.space);
+    prDrawListPushTransformAffine2(d.list, fromTree);
+    prDrawListPath(d.list, mapped, PrPathFillRule_NonZero, paint);
+    prDrawListPopTransform(d.list);
+    prPathDestroy(mapped);
+}
+
 bool svgStrokeFor(const SvgDrawer& d, const SvgPaints& paints, float length, float* dashes, PrDrawStroke* out) {
     return paints.stroke.kind != SvgPaintKind_None && svgStrokeShapeFor(d, paints, length, dashes, out);
 }
@@ -1928,7 +2000,6 @@ bool svgStrokeShapeFor(const SvgDrawer& d, const SvgPaints& paints, float length
     stroke.shape.startCap = style.cap;
     stroke.shape.endCap = style.cap;
     stroke.shape.dashCap = style.cap;
-    stroke.nonScaling = paints.nonScaling;
     // The dashes and their offset are measured in the author's length of the geometry: they scale by the geometry's
     // length over path-length (SVG2/paths.html#PathLengthAttribute). A path-length of zero scales by infinity, which
     // leaves a zero at zero and takes any other length past the end of the geometry.
@@ -2029,6 +2100,15 @@ bool svgClipShapePath(SvgDrawer& d, SvgNodeIndex index, const SvgEffects& effect
 
 PrRect svgImageRect(PrVec2 viewport, const SvgImageShape& image) {
     return imageRectOf(viewport, image);
+}
+
+bool svgPlacedRect(PrVec2 viewport, const SvgNode& node, PrRect* out) {
+    switch (node.kind) {
+        case SvgNodeKind_Rect: *out = rectOf(viewport, node.rect); return true;
+        case SvgNodeKind_Image: *out = imageRectOf(viewport, node.image); return true;
+        case SvgNodeKind_ForeignObject: *out = foreignRectOf(viewport, node.foreign); return true;
+        default: return false;
+    }
 }
 
 } // namespace pr_impl

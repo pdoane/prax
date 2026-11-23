@@ -110,15 +110,15 @@ SvgPaintStyle svgStylePaint(const CssComputedStyle* style, PrCssProperty propert
 
 // The painting operations of a shape or text, which paint-order orders (SVG2/painting.html#PaintOrder).
 enum {
-    SvgLayer_Fill,
-    SvgLayer_Stroke,
-    SvgLayer_Markers,
+    SvgPaintLayer_Fill,
+    SvgPaintLayer_Stroke,
+    SvgPaintLayer_Markers,
 };
-typedef uint8_t SvgLayer;
+typedef uint8_t SvgPaintLayer;
 
 // Writes the three layers to `order`, which holds three, in the order that the style's computed paint-order paints
 // them.
-void svgStylePaintOrder(const CssComputedStyle* style, SvgLayer* order);
+void svgStylePaintOrder(const CssComputedStyle* style, SvgPaintLayer* order);
 
 // Returns the URL that the computed value of `property`, such as marker-start, references, or the null view for none.
 // The view is valid while the style lives.
@@ -209,6 +209,23 @@ bool svgStyleTransforms3d(const CssComputedStyle* style);
 
 // Returns the matrix of `transform` for a reference box of `box`, with the origin as transform-origin places it.
 PrAffine2 svgTransformMatrix(const SvgTransformStyle& transform, PrRect box);
+
+// The transform of a paint server or a clipPath, whose reference box is the view box of what it applies to
+// (css-transforms-1/#valdef-transform-box-view-box), so the percentages of its origin resolve where it is drawn.
+struct SvgOriginTransform {
+    PrAffine2 matrix;           // the transform about the origin's lengths, without its percentages
+    PrVec2 originFraction;      // the percentages of the origin, as fractions of the view box's width and height
+};
+
+// The identity transform.
+constexpr SvgOriginTransform kSvgOriginTransformIdentity{{1, 0, 0, 1, 0, 0}, {0, 0}};
+
+// Returns the transform of `transform`, whose reference box is the view box. A percentage of the transform functions
+// resolves against an empty box.
+SvgOriginTransform svgOriginTransform(const SvgTransformStyle& transform);
+
+// Returns the matrix of `transform` in a view box of `viewport`.
+PrAffine2 svgOriginTransformMatrix(const SvgOriginTransform& transform, PrVec2 viewport);
 
 // Writes the two offsets of a computed <position>, such as object-position, to `out`: x, then y. A percentage is of the
 // space that the position places in along its axis, and an offset from the right or the bottom is measured back from

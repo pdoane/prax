@@ -277,6 +277,12 @@ TEST_CASE("right-to-left text is set in visual order and anchored at its start o
     PrRect bounds = renderedPath(svgOf("<text font-family='Squares' font-size='10' x='20' y='20' direction='rtl'"
         " unicode-bidi='bidi-override'>ab</text>"), &paths);
     CHECK(near(bounds, PrRect{12, 19, 16, 20}));
+    // The chunk aligns about its first character in logical order, `a`, at x plus its dx: 24. The cells of `a` and `b`
+    // lie from -1 to 4 and from 2 to 5 of their pen with their shifts of 4 and 10, so the chunk's right edge, 5, moves
+    // to 24. Each glyph draws the first unit of its cell.
+    bounds = renderedPath(svgOf("<text font-family='Squares' font-size='10' x='20' y='20' dx='4 6' direction='rtl'"
+        " unicode-bidi='bidi-override'>ab</text>"), &paths);
+    CHECK(near(bounds, PrRect{18, 19, 22, 20}));
 }
 
 TEST_CASE("a textArea breaks its text into lines a font size apart that fit its width") {
@@ -326,10 +332,59 @@ TEST_CASE("a baseline of the font aligns with the pen, and baseline-shift moves 
     PrRect central = renderedPath(
         svgOf("<text font-family='Squares' font-size='10' y='20' dominant-baseline='central'>a</text>"), &paths);
     CHECK(near(central, PrRect{0, 24, 1, 25}));
+    // SVG 1.1's text-before-edge, which SVG 2 keeps, puts the top of the em on the pen.
+    PrRect before = renderedPath(
+        svgOf("<text font-family='Squares' font-size='10' y='20' dominant-baseline='text-before-edge'>a</text>"), &paths);
+    CHECK(near(before, PrRect{0, 29, 1, 30}));
     // An element shifted down by a percentage of its font size, inside an element shifted up by a length.
     PrRect shifted = renderedPath(svgOf("<text font-family='Squares' font-size='10' y='20'><tspan baseline-shift='5'>"
         "<tspan baseline-shift='-20%'>a</tspan></tspan></text>"), &paths);
     CHECK(near(shifted, PrRect{0, 16, 1, 17}));
+}
+
+TEST_CASE("text shapes across the elements that change nothing that shaping reads, and each paints its own glyphs") {
+    PrFontSet* set = prFontSetCreate(nullptr);
+    PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
+    const PrFont* font = nullptr;
+    REQUIRE(prFontCreate(openFile(PR_FONTS_DIR "/NotoSans[wdth,wght].ttf"), 0, nullptr, &font) == PrStatus_Ok);
+    prFontSetAdd(set, &descriptor, font);
+    prFontRelease(font);
+    PrSvgDrawOptions options{};
+    options.fonts = set;
+    options.shaper = prTextKbCreate();
+    // Returns the x of each glyph that `body` draws, and the number of glyph runs that draw them.
+    auto positions = [&](const char* body, uint32_t* runs) {
+        String source = format("<svg xmlns='http://www.w3.org/2000/svg'><text font-family='Noto Sans' "
+            "font-size='40' x='10' y='50'>{}</text></svg>", body);
+        PrDomDocument* document = parse(source);
+        PrDrawList* list = prDrawListCreate();
+        prSvgElementDraw(rootOf(document), PrVec2{200, 100}, &options, list);
+        Array<float> xs;
+        *runs = 0;
+        const PrDrawCommand* commands = prDrawListCommands(list);
+        for (uint32_t i = 0; i < prDrawListCommandCount(list); ++i) {
+            if (commands[i].kind != PrDrawCommandKind_Glyphs)
+                continue;
+            ++*runs;
+            for (uint32_t g = 0; g < commands[i].glyphs->glyphCount; ++g)
+                xs.push(commands[i].glyphs->glyphs[g].position.x);
+        }
+        prDrawListRelease(list);
+        prDomDocumentRelease(document);
+        return xs;
+    };
+    uint32_t whole = 0;
+    uint32_t parts = 0;
+    Array<float> kerned = positions("AVA", &whole);
+    Array<float> split = positions("A<tspan fill='red'>V</tspan>A", &parts);
+    REQUIRE(kerned.count() == 3);
+    REQUIRE(split.count() == 3);
+    CHECK(whole == 1);
+    CHECK(parts == 3);
+    for (uint32_t i = 0; i < 3; ++i)
+        CHECK(split[i] == doctest::Approx(kerned[i]));
+    prTextShaperDestroy(options.shaper);
+    prFontSetDestroy(set);
 }
 
 TEST_CASE("text in the host's fonts is shaped, and a generic family is the set's alias") {
@@ -364,6 +419,48 @@ TEST_CASE("text in the host's fonts is shaped, and a generic family is the set's
     prFontSetDestroy(set);
 }
 
+TEST_CASE("characters of different text chunks do not join") {
+    PrFontSet* set = prFontSetCreate(nullptr);
+    PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
+    const PrFont* font = nullptr;
+    REQUIRE(prFontCreate(openFile(PR_FONTS_DIR "/NotoSansArabic[wdth,wght].ttf"), 0, nullptr, &font) == PrStatus_Ok);
+    prFontSetAdd(set, &descriptor, font);
+    prFontRelease(font);
+    PrSvgDrawOptions options{};
+    options.fonts = set;
+    // Returns the glyphs that `content` draws, in the order of the draw list.
+    auto glyphsOf = [&](const char* content) {
+        String source = format("<svg xmlns='http://www.w3.org/2000/svg'><text font-family='Noto Sans Arabic'"
+            " font-size='20' x='10' y='30'>{}</text></svg>", content);
+        PrDomDocument* document = parse(source);
+        PrDrawList* list = prDrawListCreate();
+        prSvgElementDraw(rootOf(document), PrVec2{100, 100}, &options, list);
+        Array<uint32_t> ids;
+        const PrDrawCommand* commands = prDrawListCommands(list);
+        for (uint32_t i = 0; i < prDrawListCommandCount(list); ++i) {
+            if (commands[i].kind != PrDrawCommandKind_Glyphs)
+                continue;
+            for (uint32_t g = 0; g < commands[i].glyphs->glyphCount; ++g)
+                ids.push(commands[i].glyphs->glyphs[g].id);
+        }
+        prDrawListRelease(list);
+        prDomDocumentRelease(document);
+        return ids;
+    };
+    // Two behs in one chunk join, as an initial and a final form. The x of the second starts a chunk, and each is then
+    // the isolated form. The font draws a beh as the same body with a dot of each form, so each beh is two glyphs.
+    options.shaper = prTextShaperCreate(PrTextShaperBackend_Default);
+    REQUIRE(options.shaper != nullptr);
+    Array<uint32_t> joined = glyphsOf("بب");
+    Array<uint32_t> apart = glyphsOf("ب<tspan x='60'>ب</tspan>");
+    REQUIRE(joined.count() == 4);
+    REQUIRE(apart.count() == 4);
+    CHECK(joined[1] != joined[3]);
+    CHECK(apart[1] == apart[3]);
+    prTextShaperDestroy(options.shaper);
+    prFontSetDestroy(set);
+}
+
 // ---------------------------------------------------------------------------------------------------------------------
 // SVGTextContentElement
 
@@ -374,7 +471,7 @@ TEST_CASE("a text content element counts its addressable characters and their ad
         "<tspan id='s'>b</tspan>ab</text>"));
     PrSvgElement* text = byId(document, "t");
     PrSvgElement* tspan = byId(document, "s");
-    CHECK(prSvgElementInterface(text) == PrSvgInterface_TextContent);
+    CHECK(prSvgElementInterface(text) == PrSvgInterface_Text);
     CHECK(prSvgTextContentElementGetNumberOfChars(text) == 5);
     CHECK(prSvgTextContentElementGetComputedTextLength(text) == doctest::Approx(5 + 2.5 + 3 + 5 + 3));
     CHECK(prSvgTextContentElementGetNumberOfChars(tspan) == 1);
@@ -384,6 +481,15 @@ TEST_CASE("a text content element counts its addressable characters and their ad
     CHECK(length == doctest::Approx(2.5 + 3));
     CHECK(prSvgTextContentElementGetSubStringLength(text, 5, 1, &length) == PrStatus_OutOfRange);
     prDomDocumentRelease(document);
+}
+
+TEST_CASE("letter-spacing spaces Latin letters, and not the letters of a cursive script, which join") {
+    auto length = [](const char* attributes, const char* content) {
+        SquaresText text(format("<text id='t' font-family='Squares' font-size='10' {}>{}</text>", attributes, content));
+        return prSvgTextContentElementGetComputedTextLength(text.text);
+    };
+    CHECK(length("letter-spacing='3'", "ab") == doctest::Approx(length("", "ab") + 6));
+    CHECK(length("letter-spacing='3'", "بعض") == doctest::Approx(length("", "بعض")));
 }
 
 TEST_CASE("a character's positions, extent and rotation are its glyph's") {
@@ -530,6 +636,78 @@ TEST_CASE("a textPath follows a path, the path attribute before href") {
     CHECK(text.at(0).x == doctest::Approx(10));
     CHECK(text.at(0).y == doctest::Approx(50));
     CHECK(text.at(1).x == doctest::Approx(15));
+}
+
+TEST_CASE("dy shifts the characters after it in logical order, though right-to-left text places them first") {
+    // The second chunk is set right to left, so its last character is placed first, and dy on its first still moves it.
+    SquaresText text("<text id='t' x='10' y='50' font-family='Squares' font-size='10'>aa<tspan x='10' dy='20' "
+        "direction='rtl' unicode-bidi='bidi-override'>aa</tspan></text>");
+    CHECK(text.at(1).y == doctest::Approx(50));
+    CHECK(text.at(2).y == doctest::Approx(70));
+    CHECK(text.at(3).y == doctest::Approx(70));
+}
+
+TEST_CASE("a decoration on a textPath turns with each glyph along the path") {
+    // The path runs down, so the underline under the glyph runs down too, rather than across its advance of 5.
+    uint32_t paths = 0;
+    PrRect bounds = renderedPath(svgOf("<text font-family='Squares' font-size='10' text-decoration='underline'>"
+        "<textPath path='M 50 20 V 80'>a</textPath></text>"), &paths);
+    REQUIRE(paths == 2);
+    CHECK(prRectWidth(bounds) < 3);
+    CHECK(prRectHeight(bounds) == doctest::Approx(5).epsilon(0.05));
+}
+
+TEST_CASE("textLength spreads an element over its chunks, and each chunk keeps the position of its start") {
+    // The lines both span 0 to 10, so the four characters spread by 30 each, from each line's own x.
+    SquaresText text("<text id='t' font-family='Squares' font-size='10' textLength='100'><tspan x='0' y='10'>aa"
+        "</tspan><tspan x='0' y='30'>aa</tspan></text>");
+    CHECK(text.at(1).x == doctest::Approx(35));
+    CHECK(text.at(2).x == doctest::Approx(0));
+    CHECK(text.at(3).x == doctest::Approx(35));
+}
+
+TEST_CASE("a rotate list that does not parse rotates nothing") {
+    SquaresText text("<text id='t' font-family='Squares' font-size='10' rotate='5mm'>aa</text>");
+    CHECK(rotationOf(text, 0) == 0);
+    CHECK(rotationOf(text, 1) == 0);
+}
+
+TEST_CASE("a tspan whose conditions fail sets none of its text") {
+    SquaresText text("<text id='t' font-family='Squares' font-size='10'>a<tspan systemLanguage='ru'>aa</tspan>"
+        "<tspan systemLanguage='en'>a</tspan></text>");
+    CHECK(text.count() == 2);
+}
+
+TEST_CASE("a textPath has no position lists, and one inside another sets none of its text") {
+    SquaresText positioned("<text id='t' font-family='Squares' font-size='10'><textPath path='M 0 50 H 100' x='30' "
+        "dx='5'>a</textPath></text>");
+    CHECK(positioned.at(0).x == doctest::Approx(0));
+    SquaresText nested("<text id='t' font-family='Squares' font-size='10'><textPath path='M 0 50 H 100'>a"
+        "<textPath path='M 0 80 H 100'>a</textPath></textPath></text>");
+    CHECK(nested.count() == 1);
+}
+
+TEST_CASE("text follows a small path as closely as a large one") {
+    // A quarter of the unit circle, which a transform could enlarge a hundredfold. Its middle is at 45 degrees.
+    SquaresText text("<text id='t' font-family='Squares' font-size='0.001'><textPath path='M 1 0 A 1 1 0 0 1 0 1' "
+        "startOffset='0.785398'>a</textPath></text>");
+    CHECK(text.at(0).x == doctest::Approx(0.70711).epsilon(0.001));
+    CHECK(text.at(0).y == doctest::Approx(0.70711).epsilon(0.001));
+}
+
+TEST_CASE("a textPath right after another starts at the start of its own path") {
+    SquaresText text("<text id='t' font-family='Squares' font-size='10'><textPath path='M 0 50 H 100'>a</textPath>"
+        "<textPath path='M 0 80 H 100'>a</textPath></text>");
+    CHECK(text.at(1).x == doctest::Approx(0));
+    CHECK(text.at(1).y == doctest::Approx(80));
+}
+
+TEST_CASE("a textPath follows its path under the path's transform, about the path's transform-origin") {
+    // Half a turn about the middle of the 300 by 150 viewport, 150, 75, runs the path leftward from 300, 70.
+    SquaresText text("<path id='p' d='M 0 80 H 100' transform='rotate(180)' transform-origin='center'/>"
+        "<text id='t' font-family='Squares' font-size='10'><textPath href='#p'>a</textPath></text>");
+    CHECK(text.at(0).x == doctest::Approx(300));
+    CHECK(text.at(0).y == doctest::Approx(70));
 }
 
 TEST_CASE("a textPath follows a basic shape's equivalent path, which a rect starts at its top left") {

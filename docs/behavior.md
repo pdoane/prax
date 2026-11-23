@@ -29,6 +29,9 @@ engine. A decision is researched, judged, and discussed with the developer.
 - **Toward the specification if they disagree**, read together with its issues. The engine prefers the behavior that
   the specification and its resolutions point to, and that some implementation already ships, over the behavior that
   the other implementations keep.
+- **SVG leans toward the specification.** The browsers' SVG is old and uneven, and much of it predates SVG 2. For SVG,
+  the specification and the working group's resolutions decide, even where every browser does otherwise, unless content
+  clearly relies on what the browsers do.
 - **Performance counts.** A behavior that is complex or costly for little benefit may be skipped or simplified, with
   a stated justification. The engine serves an immediate-mode client as well as documents.
 - **Useful and cheap is in scope** if a specification defines it, even though no major implementation has it yet.

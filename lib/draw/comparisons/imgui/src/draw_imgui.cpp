@@ -141,7 +141,7 @@ void strokePath(Walk& w, const PrPath* path, PrAffine2 transform, const PrDrawSt
     float width = stroke->shape.width;
     if (!(width > 0))
         return;
-    float thickness = stroke->nonScaling ? width : width * prAffine2MaxScale(transform);
+    float thickness = width * prAffine2MaxScale(transform);
     prPathPolylineClear(&w.flat);
     prPathFlatten(path, transform, kTolerance, PrPathFlattening_Inside, &w.flat);
     eachContour(w, w.flat, [&](bool closed) {

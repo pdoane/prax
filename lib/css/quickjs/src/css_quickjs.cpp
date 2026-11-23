@@ -2714,6 +2714,8 @@ JSValue setMatrixValue(JSContext* ctx, JSValueConst object, int argc, JSValueCon
         return JS_EXCEPTION;
     if (prCssMatrixFromString(text.value(), prJsDomMatrixFromValue(ctx, object)) != PrStatus_Ok)
         return jsDomExceptionThrow(ctx, "SyntaxError");
+    if (!prJsDomMatrixCommit(ctx, object))
+        return JS_EXCEPTION;
     return JS_DupValue(ctx, object);
 }
 
@@ -3264,14 +3266,6 @@ constexpr JSCFunctionListEntry kViewDocumentMembers[] = {
     PR_JS_METHOD("elementsFromPoint", 2, elementsFromPoint),
 };
 
-// Adds `members` to the prototype of the class `id`, which another module defines.
-
-void addMembers(JSContext* ctx, JSClassID id, const JSCFunctionListEntry* members, int count) {
-    JSValue proto = JS_GetClassProto(ctx, id);
-    JS_SetPropertyFunctionList(ctx, proto, members, count);
-    JS_FreeValue(ctx, proto);
-}
-
 // Gives the event targets of CSS their classes.
 JSClassID classifyCssTarget(void* handle) {
     if (JSClassID animation = cssAnimationsTargetClass(handle))
@@ -3309,15 +3303,15 @@ void prJsCssBind(JSContext* ctx) {
     }
     const JSClassID parents[] = {prJsDomDocumentClass, prJsDomDocumentFragmentClass, prJsDomElementClass};
     for (JSClassID parent : parents)
-        addMembers(ctx, parent, kParentNodeMembers, int(countOf(kParentNodeMembers)));
-    addMembers(ctx, prJsDomElementClass, kElementMembers, int(countOf(kElementMembers)));
-    addMembers(ctx, prJsDomDocumentClass, kDocumentMembers, int(countOf(kDocumentMembers)));
-    addMembers(ctx, prJsDomShadowRootClass, kShadowRootMembers, int(countOf(kShadowRootMembers)));
-    addMembers(ctx, prJsDomMatrixReadOnlyClass, kMatrixReadOnlyMembers, int(countOf(kMatrixReadOnlyMembers)));
-    addMembers(ctx, prJsDomMatrixClass, kMatrixMembers, int(countOf(kMatrixMembers)));
+        jsAddMembers(ctx, parent, kParentNodeMembers);
+    jsAddMembers(ctx, prJsDomElementClass, kElementMembers);
+    jsAddMembers(ctx, prJsDomDocumentClass, kDocumentMembers);
+    jsAddMembers(ctx, prJsDomShadowRootClass, kShadowRootMembers);
+    jsAddMembers(ctx, prJsDomMatrixReadOnlyClass, kMatrixReadOnlyMembers);
+    jsAddMembers(ctx, prJsDomMatrixClass, kMatrixMembers);
     prJsDomSetMatrixParser(JS_GetRuntime(ctx), &kMatrixParser);
-    addMembers(ctx, prJsDomElementClass, kViewElementMembers, int(countOf(kViewElementMembers)));
-    addMembers(ctx, prJsDomDocumentClass, kViewDocumentMembers, int(countOf(kViewDocumentMembers)));
+    jsAddMembers(ctx, prJsDomElementClass, kViewElementMembers);
+    jsAddMembers(ctx, prJsDomDocumentClass, kViewDocumentMembers);
 
     JSRuntime* runtime = JS_GetRuntime(ctx);
     jsAddClassifier(runtime, cssRuleClass, classifyRule);

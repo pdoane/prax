@@ -6,6 +6,8 @@
 
 #include "pr/name_table.h"
 
+#include "dom/src/dom_node.h"
+
 PR_ASSUME_NONNULL_BEGIN
 
 namespace pr_impl {
@@ -562,6 +564,30 @@ constexpr DomEventHandlerMixins kDomEventHandlerMixins[] = {
 
 PrStringView domEventHandlerType(PrDomEventHandler handler) {
     return nameAt(kDomEventHandlerTypeBlob, kDomEventHandlerTypeAt, handler);
+}
+
+PrStringView domEventHandlerTypeFor(const PrDomEventTarget* target, PrDomEventHandler handler) {
+    const PrDomNode* node = domNodeFromTarget(const_cast<PrDomEventTarget*>(target));
+    const PrDomElement* element = node != nullptr && node->type == PrDomNodeType_Element ?
+        static_cast<const PrDomElement*>(node) : nullptr;
+    // SVGAnimationElement
+    if (element != nullptr && element->space == PrDomNamespace_Svg && (element->tag == PrDomTag_Animate || element->tag == PrDomTag_AnimateMotion || element->tag == PrDomTag_AnimateTransform || element->tag == PrDomTag_Set)) {
+        if (handler == PrDomEventHandler_onbegin)
+            return "beginEvent";
+        if (handler == PrDomEventHandler_onend)
+            return "endEvent";
+        if (handler == PrDomEventHandler_onrepeat)
+            return "repeatEvent";
+    }
+    return domEventHandlerType(handler);
+}
+
+bool domElementHasEventHandler(const PrDomElement* element, PrDomEventHandler handler) {
+    // SVGAnimationElement
+    if (element->space == PrDomNamespace_Svg && (element->tag == PrDomTag_Animate || element->tag == PrDomTag_AnimateMotion || element->tag == PrDomTag_AnimateTransform || element->tag == PrDomTag_Set) &&
+            (handler == PrDomEventHandler_onbegin || handler == PrDomEventHandler_onend || handler == PrDomEventHandler_onrepeat))
+        return true;
+    return false;
 }
 
 DomEventHandlerMixins domEventHandlerMixins(PrDomEventHandler handler) {

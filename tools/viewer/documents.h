@@ -176,10 +176,12 @@ std::vector<Reference> referencesOf(const Document& document);
 bool print(const Reference& reference);
 
 // Loads the source with its own shaper, of the kind that `text` names, which sets its text, and with its fonts hinted
-// as `text` says. A source that the engine prints (prints) renders for `media`, and any other ignores it. The source is
-// presented by `renderer`, or by a renderer in memory if `renderer` is null. Its images realize in `textures`, a cache
-// on that renderer's device. Both must outlive the source. A source that does not load draws nothing.
-std::shared_ptr<Loaded> load(const Source& source, TextBackends text, page_host::Media media,
+// as `text` says. A source that the engine prints (prints) renders for `media`, and any other ignores it. A page's time
+// zero is the start of its load, as the window shows it, or with `ready`, the time at which it is ready to be captured,
+// as a render takes it (loadHtml). The source is presented by `renderer`, or by a renderer in memory if `renderer` is
+// null. Its images realize in `textures`, a cache on that renderer's device. Both must outlive the source. A source
+// that does not load draws nothing.
+std::shared_ptr<Loaded> load(const Source& source, TextBackends text, page_host::Media media, bool ready,
     PrDrawRenderer* PR_NULLABLE renderer, PrTextureCache* PR_NULLABLE textures);
 
 // Brings the source to `time` in seconds, and returns its frame at that time, as its format numbers frames. Returns a

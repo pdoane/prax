@@ -58,6 +58,13 @@ using namespace pr_impl;
 // ---------------------------------------------------------------------------------------------------------------------
 // Symbols
 
+TEST_CASE("an outermost svg element whose conditions fail renders nothing") {
+    Drawing failing("<svg xmlns='http://www.w3.org/2000/svg' systemLanguage='ru'><rect width='10' height='10'/></svg>");
+    CHECK(failing.commands.isEmpty());
+    Drawing holding("<svg xmlns='http://www.w3.org/2000/svg' systemLanguage='en'><rect width='10' height='10'/></svg>");
+    CHECK(holding.fills().count() == 1);
+}
+
 TEST_CASE("a symbol's x, y, width and height attributes place its instance") {
     Drawing drawing(svgDocument("<symbol id='s' x='80' y='20' width='60' height='30' viewBox='0 0 20 10'>"
         "<rect width='20' height='10'/></symbol><use href='#s'/>"), PrVec2{160, 60});
@@ -211,6 +218,15 @@ TEST_CASE("non-scaling-size keeps the host's scale at the origin that the CTM gi
     CHECK(near(drawing.fills()[0]->bounds, PrRect{45, 30, 65, 40}));
 }
 
+TEST_CASE("a text element's transform turns about its transform-origin, in the view box") {
+    // The glyph is a square of the em, from 10, 40 to 20, 50, which half a turn about 50, 50 takes to 80, 50.
+    Drawing drawing(svgDocument("<defs><font horiz-adv-x='1000'><font-face font-family='Square' units-per-em='1000'/>"
+        "<glyph unicode='a' d='M0 0h1000v1000z'/></font></defs><text x='10' y='50' font-family='Square' "
+        "font-size='10' transform='rotate(180)' transform-origin='center'>a</text>"));
+    REQUIRE(drawing.fills().count() == 1);
+    CHECK(near(drawing.fills()[0]->bounds, PrRect{80, 50, 90, 60}, 1e-3f));
+}
+
 TEST_CASE("non-rotation drops the rotation and keeps the scale") {
     Drawing drawing(svgDocument("<g transform='translate(40 30) rotate(90) scale(2)'>"
         "<rect width='20' height='10' vector-effect='non-rotation'/></g>"), PrVec2{160, 60});
@@ -246,6 +262,6 @@ TEST_CASE("vector-effect lists its keywords in any order, and non-scaling-stroke
     Drawing drawing(svgDocument("<g transform='scale(2)'><rect width='10' height='10' fill='none' stroke='black' "
         "vector-effect='non-scaling-size non-scaling-stroke'/></g>"));
     REQUIRE(drawing.strokes().count() == 1);
-    CHECK(drawing.strokes()[0]->nonScaling);
+    CHECK(near(scaleOf(drawing.strokes()[0]->transform), 1));
     CHECK(near(drawing.strokes()[0]->bounds, PrRect{0, 0, 10, 10}));
 }

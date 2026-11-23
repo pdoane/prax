@@ -58,7 +58,8 @@ void prPathClose(PrPath* path);
 
 // Appends the arc of the ellipse around `center` with `radii`, rotated by `rotation`, from `startAngle` through
 // `sweep`. Angles are radians clockwise from +x when y points down, measured before the rotation. If a contour is open,
-// a line joins its current point to the start of the arc. Otherwise a contour starts there.
+// a line joins its current point to the start of the arc, unless the arc starts at the current point to within a
+// rounding error of its size. Otherwise a contour starts there.
 void prPathEllipticArcTo(PrPath* path, PrVec2 center, PrVec2 radii, float rotation, float startAngle, float sweep);
 
 // Appends a closed contour of `rect` or `shape`, clockwise when y points down. An empty rectangle adds nothing. The
@@ -107,8 +108,9 @@ PrRect prPathBounds(const PrPath* path);
 // Returns the bounds of the curves themselves, at their extremes instead of at their control points.
 PrRect prPathTightBounds(const PrPath* path);
 
-// Returns true if `point` is inside the area that the path fills by `rule`, with its curves flattened to within a
-// hundredth of a unit. Each contour counts as closed.
+// Returns true if `point` is inside the area that the path fills by `rule`, or on its boundary. Curves are flattened to
+// within a hundredth of a unit, and a point within that distance of an edge is on the boundary. Each contour counts as
+// closed.
 bool prPathContains(const PrPath* path, PrVec2 point, PrPathFillRule rule);
 
 // The placement of the lines that flatten a curve.

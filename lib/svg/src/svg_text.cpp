@@ -13,6 +13,7 @@
 
 #include "pr/alloc.h"
 #include "pr/ascii.h"
+#include "pr/draw_glyph.h"
 #include "pr/float.h"
 #include "pr/locale_common.h"
 #include "pr/mem.h"
@@ -87,6 +88,9 @@ namespace {
 // How far a text path's flattened curves may lie from the curves, in user units.
 constexpr float kTextPathTolerance = 0.05f;
 
+// The largest tolerance for a path, as a fraction of its larger side.
+constexpr float kTextPathRelativeTolerance = 1e-4f;
+
 // The most decorations that a span holds. An element that would add one more adds none.
 constexpr uint32_t kMaxDecorations = 4;
 
@@ -158,6 +162,9 @@ struct TextStyle {
     float fontWeight;
     float fontWidth;
     PrFontSlope fontSlope;
+    uint32_t firstVariation;            // a range of Layout::variations, from font-variation-settings
+    uint32_t variationCount;
+    bool opticalSizing;                 // font-optical-sizing is auto
     Anchor textAnchor;
     SvgLengthPercentage letterSpacing;            // normal is zero
     SvgLengthPercentage wordSpacing;
@@ -210,6 +217,11 @@ struct Char {
     float y;
     float dx;
     float dy;
+
+    // The sum of the dx and dy of the character and those before it in logical order, since the last x and the last y
+    // (SVG2/text.html#TextLayoutAlgorithm). It moves the character's glyphs, whatever order they are placed in.
+    PrVec2 shift;
+
     float rotate;           // degrees, NaN if none
     uint8_t level;          // the bidirectional embedding level
     PrScript script;        // with Common and Inherited resolved from their neighbors
@@ -238,6 +250,19 @@ struct Font {
     bool operator==(const Font& other) const { return svg == other.svg && host == other.host; }
 };
 
+// A run of glyphs that text-anchor aligns as one (SVG2/text.html#TextAnchoringProperties), which starts at a character
+// with a position of its own.
+struct Chunk {
+    // Where the chunk's first character in logical order is set along the line, with its own shift, which text-anchor
+    // aligns the chunk about.
+    float origin;
+
+    // True if the first character has a position of its own along the line, which textLength does not move. A chunk
+    // that starts at a position across the line alone moves along it with the characters before it
+    // (SVG2/text.html#TextLayoutAlgorithm, "Adjust positions: x, y").
+    bool pinned;
+};
+
 struct Glyph {
     uint32_t id;
     PrVec2 position;
@@ -256,6 +281,7 @@ struct Glyph {
     bool hidden;            // off the end of its text path
     bool upright;           // turned back a quarter turn against the line, so that it stands upright on a vertical one
     bool onPath;            // placed on a text path, in the space of the page rather than of its line
+    float pathTurn;         // on a text path: degrees that the path turns the glyph's line, about its pen
     float align;            // the part of the pen's shift that aligns the run's baseline (Run::align)
 
     // The text path whose method="stretch" bends the glyph's outline onto it, or kArrayMissing. Such a glyph keeps its
@@ -307,10 +333,15 @@ struct Layout {
     RawArray<TextSpan> spans;
     RawArray<Family> families;
     PrTextBuffer familyNames = {};
+    RawArray<PrFontVariation> variations;   // the spans' font-variation-settings (TextStyle::firstVariation)
     RawArray<Char> chars;
     RawArray<Positioned> positioned;
     RawArray<Run> runs;
     RawArray<Glyph> glyphs;
+
+    // By chunk (Glyph::chunk).
+    RawArray<Chunk> chunks;
+
     RawArray<float> values;
     RawArray<SvgRunGlyph> svgGlyphs;
     RawArray<PrTextFeatureSet*> featureSets; // what the spans' font properties ask of shaping (TextStyle::features)
@@ -334,13 +365,11 @@ struct Layout {
     const SvgFont* PR_NULLABLE kernFont;
     uint32_t kernGlyph;
 
+    PrVec2 shifted;                     // the shift (Char::shift) that the pen holds
+
     SvgText* out;
     SvgNodeIndex node;                  // the text's node, which glyphs' content goes under
 };
-
-bool isSpace(uint32_t c) {
-    return c == ' ' || c == '\t' || c == '\n' || c == '\r';
-}
 
 // Returns the quarter turn from the frame of vertical text to the page, and back
 // (css-writing-modes-4/#logical-to-physical).
@@ -490,6 +519,10 @@ TextStyle textStyleOf(Layout& t, const PrDomElement* e, const CssComputedStyle* 
     if (features != nullptr)
         t.featureSets.push(features);
     s.features = features;
+    s.firstVariation = t.variations.count;
+    cssFontVariations(style, &t.variations);
+    s.variationCount = t.variations.count - s.firstVariation;
+    s.opticalSizing = cssStyleOpticalSizing(style);
     // A decoration is painted with the fill and stroke of the element that declares it
     // (SVG11/text.html#TextDecorationProperties).
     addDecoration(s, svgStyleLines(style), s.paints);
@@ -622,6 +655,16 @@ void collect(Layout& t, const PrDomElement* element, uint32_t span) {
         }
         if (e == nullptr || !(svgIs(e, PrDomTag_Tspan) || svgIs(e, PrDomTag_A) || svgIs(e, PrDomTag_TextPath)))
             continue;
+        // An element whose conditions fail sets none of its text (SVG2/struct.html#ConditionalProcessing).
+        if (!svgConditionsHold(e))
+            continue;
+        // A textPath inside another sets none of its text, as text follows one path at a time.
+        bool nested = false;
+        for (uint32_t s = span; svgIs(e, PrDomTag_TextPath) && s != kArrayMissing; s = t.spans.data[s].parent)
+            nested =
+                nested || (t.spans.data[s].element != nullptr && svgIs(t.spans.data[s].element, PrDomTag_TextPath));
+        if (nested)
+            continue;
         const CssComputedStyle* style = styleOf(t, e, t.spans.data[span].computed);
         if (style == nullptr)
             continue;
@@ -671,26 +714,20 @@ float percentBase(const Layout& t, SvgAxis axis) {
 // Resolves a list of lengths against the axis, into `t.values`.
 void lengthList(Layout& t, const PrDomElement* e, PrStringView name, SvgAxis axis, const CssComputedStyle* style) {
     t.values.clear();
-    PrStringView list = svgAttribute(e, name);
-    size_t start = 0;
-    for (size_t i = 0; i <= list.size; ++i) {
-        if (i < list.size && list.data[i] != ',' && !isSpace(uint8_t(list.data[i])))
-            continue;
-        if (i > start) {
-            SvgLengthPercentage length{};
-            if (!svgParseLength(PrStringView{list.data + start, i - start}, style, &length))
-                return;
-            t.values.push(svgLengthResolve(length, percentBase(t, axis)));
-        }
-        start = i + 1;
-    }
+    RawArray<SvgLengthPercentage> lengths;
+    svgAttributeLengths(e, name, style, &lengths);
+    for (uint32_t i = 0; i < lengths.count; ++i)
+        t.values.push(svgLengthResolve(lengths.data[i], percentBase(t, axis)));
+    lengths.reset();
 }
 
 // Gives each character the positions that the lists of its elements specify. The list of an inner element overrides the
-// list of an outer one.
+// list of an outer one. A textPath has no position lists, only a textLength (SVG2/text.html#TextPathElement).
 void applyPositions(Layout& t) {
     for (uint32_t p = 0; p < t.positioned.count; ++p) {
         const Positioned& at = t.positioned.data[p];
+        if (svgIs(at.element, PrDomTag_TextPath))
+            continue;
         const CssComputedStyle* style = t.spans.data[at.span].computed;
         // The lists address the element's addressable characters.
         auto each = [&](PrStringView name, SvgAxis axis, float Char::*field) {
@@ -708,9 +745,9 @@ void applyPositions(Layout& t) {
         each("dx", SvgAxis_X, &Char::dx);
         each("dy", SvgAxis_Y, &Char::dy);
         // The last rotation continues to the element's characters beyond the list
-        // (SVG11/text.html#TSpanElementRotateAttribute).
-        t.values.clear();
-        svgParseNumbers(svgAttribute(at.element, "rotate"), &t.values);
+        // (SVG11/text.html#TSpanElementRotateAttribute). A list that does not parse rotates nothing.
+        if (!svgAttributeNumbers(at.element, "rotate", &t.values))
+            t.values.clear();
         for (uint32_t i = at.start, n = 0; i < at.end && t.values.count != 0; ++i) {
             if (t.chars.data[i].unaddressable)
                 continue;
@@ -811,7 +848,10 @@ PrTextFont* PR_NULLABLE hostFonts(Layout& t, const TextSpan& span) {
     float values[] = {style.fontWeight, style.fontWidth, style.fontSize};
     append(values, sizeof(values));
     append(&style.fontSlope, sizeof(style.fontSlope));
+    append(&style.opticalSizing, sizeof(style.opticalSizing));
     append(&span.locale, sizeof(span.locale));
+    const PrFontVariation* variations = t.variations.data + style.firstVariation;
+    append(variations, style.variationCount * sizeof(PrFontVariation));
     SvgTextFonts& fonts = fontsOf(t);
     for (uint32_t i = 0; i < fonts.hosts.count; ++i) {
         const SvgHostFont& host = fonts.hosts.data[i];
@@ -833,12 +873,16 @@ PrTextFont* PR_NULLABLE hostFonts(Layout& t, const TextSpan& span) {
     font.width = style.fontWidth;
     font.slope = style.fontSlope;
     font.size = style.fontSize;
+    if (!style.opticalSizing)
+        font.flags = PrFontStyleFlags(font.flags & ~PrFontStyleFlag_OpticalSizing);
     PrTextFontDesc desc{
         .set = options.fonts,
         .families = families.data,
         .familyCount = families.count,
         .style = font,
         .locale = span.locale,
+        .variations = variations,
+        .variationCount = style.variationCount,
     };
     PrTextFont* text = prTextFontCreate(&desc);
     families.reset();
@@ -903,17 +947,37 @@ bool isAbsolute(const Char& c) {
     return !prF32IsNan(c.x) || !prF32IsNan(c.y);
 }
 
-// Moves the pen by the character's relative position. An absolute position is applied when the character's chunk
-// starts.
-void placeChar(const Char& c, PrVec2* pen) {
-    pen->x += c.dx;
-    pen->y += c.dy;
+// Moves the pen to the character's shift from the shift that it holds. An absolute position is applied when the
+// character's chunk starts.
+void placeChar(Layout& t, const Char& c, PrVec2* pen) {
+    pen->x += c.shift.x - t.shifted.x;
+    pen->y += c.shift.y - t.shifted.y;
+    t.shifted = c.shift;
+}
+
+// Sums each character's shift from the dx and dy of the characters, in logical order. An x or a y starts the sum of its
+// axis again.
+void shiftChars(Layout& t) {
+    PrVec2 shift{0, 0};
+    for (uint32_t i = 0; i < t.chars.count; ++i) {
+        Char& c = t.chars.data[i];
+        if (!prF32IsNan(c.x))
+            shift.x = 0;
+        if (!prF32IsNan(c.y))
+            shift.y = 0;
+        shift.x += c.dx;
+        shift.y += c.dy;
+        c.shift = shift;
+    }
 }
 
 // Returns the spacing after a character: letter-spacing, plus word-spacing after a space. A percentage is of the font
-// size (css-text-4/#letter-spacing-property).
+// size (css-text-4/#letter-spacing-property). A letter of a cursive script takes no letter-spacing, which would break
+// its connections (css-text-3/#cursive-tracking).
 float spacingAfter(const Layout& t, const Char& c, const TextStyle& style) {
-    float spacing = svgLengthResolve(style.letterSpacing, style.fontSize);
+    uint32_t codePoint = 0;
+    prUtf8Decode(PrStringView{t.text.data, t.text.count}, c.offset, &codePoint);
+    float spacing = prTextTakesLetterSpacing(codePoint) ? svgLengthResolve(style.letterSpacing, style.fontSize) : 0;
     if (c.length == 1 && t.text.data[c.offset] == ' ')
         spacing += svgLengthResolve(style.wordSpacing, style.fontSize);
     return spacing;
@@ -945,7 +1009,7 @@ void setSvgRun(Layout& t, Run& run, PrVec2* pen, uint32_t chunk) {
     for (uint32_t k = 0; k < t.svgGlyphs.count; ++k) {
         const SvgRunGlyph& g = t.svgGlyphs.data[reversed ? t.svgGlyphs.count - 1 - k : k];
         const Char& c = t.chars.data[g.character];
-        placeChar(c, pen);
+        placeChar(t, c, pen);
         if (previous != kArrayMissing)
             pen->x -= svgFontKerning(font, previous, g.id) * scale;
         previous = run.upright ? kArrayMissing : g.id;
@@ -977,8 +1041,10 @@ void setSvgRun(Layout& t, Run& run, PrVec2* pen, uint32_t chunk) {
     t.kernGlyph = previous;
 }
 
-// Sets a run in a host font as the shaper shapes it, with the surrounding text as context.
-void setHostRun(Layout& t, Run& run, PrVec2* pen, uint32_t chunk) {
+// Sets a run in a host font as the shaper shapes it, with the surrounding text of its chunk, the bytes of the text from
+// `contextStart` to `contextEnd`, as context. Shaping does not join or ligate characters of different chunks
+// (SVG2/text.html#TermTextChunk).
+void setHostRun(Layout& t, Run& run, PrVec2* pen, uint32_t chunk, uint32_t contextStart, uint32_t contextEnd) {
     const TextSpan& span = t.spans.data[t.chars.data[run.firstChar].span];
     float size = span.style.fontSize;
     uint32_t start = t.chars.data[run.firstChar].offset;
@@ -990,8 +1056,8 @@ void setHostRun(Layout& t, Run& run, PrVec2* pen, uint32_t chunk) {
     PrTextRun shaped{};
     shaped.font = run.font.host;
     shaped.text = PrStringView{t.text.data + start, end - start};
-    shaped.before = PrStringView{t.text.data, start};
-    shaped.after = PrStringView{t.text.data + end, t.text.count - end};
+    shaped.before = PrStringView{t.text.data + contextStart, start - contextStart};
+    shaped.after = PrStringView{t.text.data + end, contextEnd - end};
     bool reversed = (t.chars.data[run.firstChar].level & 1) != 0;
     shaped.direction = reversed ? PrTextDirection_Rtl : PrTextDirection_Ltr;
     shaped.locale = span.locale;
@@ -1019,7 +1085,7 @@ void setHostRun(Layout& t, Run& run, PrVec2* pen, uint32_t chunk) {
                 break;
             if (placed != kArrayMissing)
                 pen->x += spacingAfter(t, t.chars.data[placed], span.style);
-            placeChar(t.chars.data[ci], pen);
+            placeChar(t, t.chars.data[ci], pen);
             placed = ci;
         }
         if (placed == kArrayMissing)
@@ -1062,8 +1128,7 @@ void fitLengths(Layout& t) {
     for (uint32_t p = t.positioned.count; p-- > 0;) {
         const Positioned& at = t.positioned.data[p];
         SvgLengthPercentage length{};
-        PrStringView text = svgAttribute(at.element, "textLength");
-        if (text.data == nullptr || !svgParseLength(text, t.spans.data[at.span].computed, &length) ||
+        if (!svgAttributeLengthOf(at.element, "textLength", t.spans.data[at.span].computed, &length) ||
                 length.px < 0 || length.percent < 0)
             continue;
         // No adjustment is made to an element that holds a forced line break (SVG2/text.html#TextLayoutAlgorithm).
@@ -1090,27 +1155,42 @@ void fitLengths(Layout& t) {
         if (first == kArrayMissing || !(right > left))
             continue;
         float delta = target - (right - left);
-        bool stretch = svgAttribute(at.element, "lengthAdjust") == "spacingAndGlyphs";
+        bool stretch =
+            svgAttributeEnumeration(at.element, PrSvgAttribute_LengthAdjust) == PrSvgLengthAdjust_SpacingAndGlyphs;
         uint32_t count = end - first;
+        // The spacing accumulates along the element, but a pinned chunk keeps the position of its start, which is
+        // applied after textLength (SVG2/text.html#TextLayoutAlgorithm). It takes the spacing from its first glyph on.
+        // A chunk that is not pinned moves with its first glyph, so that text-anchor aligns it where textLength set it.
+        auto spacing = [&](uint32_t g) { return count > 1 ? delta * float(g - first) / float(count - 1) : 0.0f; };
+        float k = target / (right - left);
+        float chunkStart = 0;
         for (uint32_t g = first; g < end; ++g) {
             Glyph& glyph = t.glyphs.data[g];
+            Chunk& chunk = t.chunks.data[glyph.chunk];
+            bool starts = g != first && glyph.chunk != t.glyphs.data[g - 1].chunk;
             if (stretch) {
                 // The glyph stretches about its pen, and so does its offset from the pen.
-                float k = target / (right - left);
+                if (starts && !chunk.pinned)
+                    chunk.origin = left + (chunk.origin - left) * k;
                 glyph.position.x = left + (glyph.position.x - left) * k;
                 glyph.pen.x = left + (glyph.pen.x - left) * k;
                 glyph.advance *= k;
                 glyph.stretch *= k;
-            } else if (count > 1) {
-                float by = delta * float(g - first) / float(count - 1);
+            } else {
+                if (starts && chunk.pinned)
+                    chunkStart = spacing(g);
+                float by = spacing(g) - chunkStart;
+                if (starts && !chunk.pinned)
+                    chunk.origin += by;
                 glyph.position.x += by;
                 glyph.pen.x += by;
             }
         }
+        float after = stretch ? delta : delta - chunkStart;
         uint32_t chunk = t.glyphs.data[end - 1].chunk;
         for (uint32_t g = end; g < t.glyphs.count && t.glyphs.data[g].chunk == chunk; ++g) {
-            t.glyphs.data[g].position.x += delta;
-            t.glyphs.data[g].pen.x += delta;
+            t.glyphs.data[g].position.x += after;
+            t.glyphs.data[g].pen.x += after;
         }
     }
 }
@@ -1134,7 +1214,12 @@ PrPath* PR_NULLABLE textPathOf(Layout& t, const PrDomElement* element, float* pa
         if (shape.kind != SvgNodeKind_Path)
             svgShapeCommands(shape, t.b->viewport, &commands);
         prPathAppendCommands(path, commands.data, commands.count);
-        prPathTransform(path, svgTransformMatrix(svgStyleTransform(style), PrRect{}));
+        // The transform's reference box is the view box, or the path's own bounds for a box of its geometry.
+        SvgTransformStyle transform = svgStyleTransform(style);
+        bool geometry = transform.box == PrCssKeyword_FillBox || transform.box == PrCssKeyword_StrokeBox ||
+            transform.box == PrCssKeyword_ContentBox || transform.box == PrCssKeyword_BorderBox;
+        PrRect box = geometry ? prPathTightBounds(path) : PrRect{0, 0, t.b->viewport.x, t.b->viewport.y};
+        prPathTransform(path, svgTransformMatrix(transform, box));
         if (!svgStyleIs(style, PrCssProperty_PathLength, PrCssKeyword_None))
             *pathLength = prF32Max(svgStyleLength(style, PrCssProperty_PathLength).px, 0);
     }
@@ -1158,24 +1243,26 @@ void measurePaths(Layout& t) {
         PrPath* path = textPathOf(t, p.element, &pathLength);
         if (path != nullptr) {
             p.measure = prPathMeasureCreate();
-            prPathMeasureSetPath(p.measure, path, prAffine2Identity(), kTextPathTolerance);
+            // The tolerance shrinks with a path small enough that a transform enlarges it.
+            PrRect bounds = prPathBounds(path);
+            float size = prF32Max(prRectWidth(bounds), prRectHeight(bounds));
+            float tolerance = prF32Min(kTextPathTolerance, size * kTextPathRelativeTolerance);
+            prPathMeasureSetPath(p.measure, path, prAffine2Identity(), prF32Max(tolerance, 1e-6f));
             prPathDestroy(path);
             p.length = prPathMeasureLength(p.measure);
             p.closed = prPathMeasureContourCount(p.measure) == 1 && prPathMeasureContour(p.measure, 0).closed;
         }
-        p.right = svgAttribute(p.element, "side") == "right";
-        p.stretch = svgAttribute(p.element, "method") == "stretch";
+        p.right = svgAttributeEnumeration(p.element, PrSvgAttribute_Side) == PrSvgTextPathSide_Right;
+        p.stretch = svgAttributeEnumeration(p.element, PrSvgAttribute_Method) == PrSvgTextPathMethod_Stretch;
         // startOffset is a length, a percentage of the path's length, or a number in the units of the target's
         // pathLength (SVG2/paths.html#PathLengthAttribute).
         SvgLengthPercentage offset{};
-        PrStringView text = svgAttribute(p.element, "startOffset");
         const CssComputedStyle* style = t.spans.data[0].computed;
         for (uint32_t s = 0; s < t.spans.count; ++s) {
             if (t.spans.data[s].element == p.element)
                 style = t.spans.data[s].computed;
         }
-        if (text.data != nullptr)
-            svgParseLength(text, style, &offset);
+        svgAttributeLengthOf(p.element, "startOffset", style, &offset);
         if (pathLength > 0)
             offset.px *= p.length / pathLength;
         p.offset = svgLengthResolve(offset, p.length);
@@ -1188,7 +1275,11 @@ void measurePaths(Layout& t) {
             first.x = prF32IsNan(first.x) ? 0 : first.x;
             first.y = 0;
         }
-        if (p.end < t.chars.count && p.measure != nullptr && !isAbsolute(t.chars.data[p.end])) {
+        // Text that starts another textPath starts at the start of that path instead.
+        bool another = false;
+        for (uint32_t q = 0; q < t.paths.count; ++q)
+            another = another || (q != i && t.paths.data[q].start == p.end && p.end < t.paths.data[q].end);
+        if (p.end < t.chars.count && p.measure != nullptr && !isAbsolute(t.chars.data[p.end]) && !another) {
             float at = p.right ? 0 : p.length;
             if (p.closed)
                 at = p.offset - prF32Floor(p.offset / p.length) * p.length;
@@ -1264,7 +1355,8 @@ void followPaths(Layout& t) {
             float angle = prF32Atan2(onPath.b, onPath.a) * (180 / kPrF32Pi);
             PrVec2 onPage = prAffine2MapPoint(onPath, origin);
             glyph.position = t.vertical ? prAffine2MapPoint(fromPageOf(t), onPage) : onPage;
-            glyph.rotate += t.vertical ? angle - 90 : angle;
+            glyph.pathTurn = t.vertical ? angle - 90 : angle;
+            glyph.rotate += glyph.pathTurn;
         }
     }
 }
@@ -1444,8 +1536,10 @@ void anchorChunks(Layout& t) {
         // The start of text-anchor is the side on which the text's direction starts. Vertical text starts at the top.
         if (t.spans.data[0].style.rightToLeft && !t.vertical && anchor != Anchor_Middle)
             anchor = anchor == Anchor_Start ? Anchor_End : Anchor_Start;
-        float shift = anchor == Anchor_Middle ? -(right - left) / 2 : anchor == Anchor_End ? -(right - left) : 0;
-        shift += t.glyphs.data[g].pen.x - left;
+        // The chunk's extent, with every character's shift, is aligned about where its first character in logical order
+        // is set (SVG2/text.html#TextLayoutAlgorithm).
+        float anchored = anchor == Anchor_Middle ? (left + right) / 2 : anchor == Anchor_End ? right : left;
+        float shift = t.chunks.data[chunk].origin - anchored;
         for (uint32_t i = g; i < end; ++i) {
             t.glyphs.data[i].position.x += shift;
             t.glyphs.data[i].pen.x += shift;
@@ -1524,10 +1618,9 @@ float runAlign(const Layout& t, const Run& run) {
     return align;
 }
 
-// Returns how far down the run's glyphs move from the pen: the baseline-shift of each enclosing element, with sub and
-// super at the subscript and superscript positions of the run's font.
-float runShift(const Layout& t, const Run& run) {
-    uint32_t index = t.chars.data[run.firstChar].span;
+// Returns how far down the glyphs of the span `index` set in `font` move from the pen: the baseline-shift of each
+// enclosing element, with sub and super at the subscript and superscript positions of the font.
+float shiftOf(const Layout& t, uint32_t index, const Font& font) {
     float shift = 0;
     for (; index != kArrayMissing; index = t.spans.data[index].parent) {
         const TextStyle& style = t.spans.data[index].style;
@@ -1537,13 +1630,45 @@ float runShift(const Layout& t, const Run& run) {
         }
         bool sub = style.shiftKind == Shift_Sub;
         float position = sub ? 0.2f : -0.33f;
-        if (run.font.host != nullptr) {
-            PrFontMetrics m = prFontMetrics(run.font.host);
+        if (font.host != nullptr) {
+            PrFontMetrics m = prFontMetrics(font.host);
             position = sub ? m.subscriptPosition : m.superscriptPosition;
         }
         shift += position * style.fontSize;
     }
     return shift;
+}
+
+// Returns how far down the run's glyphs move from the pen: the baseline-shift of each enclosing element, with sub and
+// super at the subscript and superscript positions of the run's font.
+float runShift(const Layout& t, const Run& run) {
+    return shiftOf(t, t.chars.data[run.firstChar].span, run.font);
+}
+
+// Returns true if a run set in `font` may hold the characters of the spans `a` and `b` together: nothing that shaping,
+// spacing or the baseline reads differs between them, so text shapes across the boundary between their elements as it
+// would within one (css-text-3/#boundary-shaping). What they paint may still differ, which recording reads per glyph.
+bool shapesWith(const Layout& t, uint32_t a, uint32_t b, const Font& font) {
+    if (a == b)
+        return true;
+    const TextSpan& x = t.spans.data[a];
+    const TextSpan& y = t.spans.data[b];
+    const TextStyle& s = x.style;
+    const TextStyle& u = y.style;
+    auto sameLength = [](SvgLengthPercentage p, SvgLengthPercentage q) { return p.px == q.px && p.percent == q.percent; };
+    if (s.fontSize != u.fontSize || s.fontWeight != u.fontWeight || s.fontWidth != u.fontWidth ||
+            s.fontSlope != u.fontSlope || s.opticalSizing != u.opticalSizing || s.features != u.features ||
+            !sameLength(s.letterSpacing, u.letterSpacing) || !sameLength(s.wordSpacing, u.wordSpacing) ||
+            s.dominantBaseline != u.dominantBaseline || s.alignmentBaseline != u.alignmentBaseline ||
+            x.locale != y.locale || x.language != y.language || s.variationCount != u.variationCount)
+        return false;
+    for (uint32_t i = 0; i < s.variationCount; ++i) {
+        const PrFontVariation& p = t.variations.data[s.firstVariation + i];
+        const PrFontVariation& q = t.variations.data[u.firstVariation + i];
+        if (p.tag != q.tag || p.value != q.value)
+            return false;
+    }
+    return shiftOf(t, a, font) == shiftOf(t, b, font);
 }
 
 // Returns a glyph's own transform about its origin: scaled, stretched horizontally, then rotated.
@@ -1623,10 +1748,24 @@ void recordDecorations(Layout& t, const Run& run, SvgLineFlags lines) {
                     ++g;
                     continue;
                 }
+                // A glyph on a text path has its piece of the line under it, turned with it about its pen.
+                const Glyph& on = t.glyphs.data[g];
+                if (on.onPath) {
+                    PrRect piece{0, center - thickness / 2, on.advance, center + thickness / 2};
+                    PrAffine2 place = prAffine2Concat(prAffine2Rotate(on.pathTurn * (kPrF32Pi / 180)),
+                        prAffine2Translate(on.pen));
+                    PrPath* rect = prPathCreate();
+                    prPathAddRect(rect, piece);
+                    prPathAddPath(path, rect, place);
+                    prPathDestroy(rect);
+                    ++g;
+                    continue;
+                }
                 float y = t.glyphs.data[g].pen.y;
                 float left = t.glyphs.data[g].pen.x;
                 float right = left;
-                for (; g < run.endGlyph && t.glyphs.data[g].pen.y == y && !t.glyphs.data[g].hidden; ++g)
+                for (; g < run.endGlyph && t.glyphs.data[g].pen.y == y && !t.glyphs.data[g].hidden &&
+                        !t.glyphs.data[g].onPath; ++g)
                     right = t.glyphs.data[g].pen.x + t.glyphs.data[g].advance;
                 prPathAddRect(path, PrRect{left, y + center - thickness / 2, right, y + center + thickness / 2});
             }
@@ -1745,10 +1884,12 @@ void layoutReset(Layout& t) {
     t.spans.reset();
     t.families.reset();
     prTextBufferReset(&t.familyNames);
+    t.variations.reset();
     t.chars.reset();
     t.positioned.reset();
     t.runs.reset();
     t.glyphs.reset();
+    t.chunks.reset();
     t.values.reset();
     t.svgGlyphs.reset();
     for (uint32_t i = 0; i < t.featureSets.count; ++i)
@@ -1859,8 +2000,8 @@ void beginLayout(Layout& t, const PrDomElement* text, const CssComputedStyle* st
     dropRemoved(t);
 }
 
-// Splits the characters into runs of one element, font, level and script. Each character that starts a chunk also
-// starts a run. A grapheme cluster is set in the font of its first character.
+// Splits the characters into runs of one font, level and script, whose elements shape alike (shapesWith). Each
+// character that starts a chunk also starts a run. A grapheme cluster is set in the font of its first character.
 void buildRuns(Layout& t) {
     t.runs.clear();
     Font font{};
@@ -1878,7 +2019,8 @@ void buildRuns(Layout& t) {
         }
         const Char* head = t.runs.count != 0 ? &t.chars.data[t.runs.last().firstChar] : nullptr;
         const Char* previous = i != 0 ? &t.chars.data[i - 1] : nullptr;
-        if (head == nullptr || isAbsolute(c) || !(next == font) || head->span != c.span || head->level != c.level ||
+        if (head == nullptr || isAbsolute(c) || !(next == font) || !shapesWith(t, head->span, c.span, next) ||
+                head->level != c.level ||
                 head->script != c.script || head->upright != c.upright || c.forced || previous->forced)
             t.runs.push(Run{.firstChar = i, .endChar = i, .font = next, .upright = c.upright});
         t.runs.last().endChar = i + 1;
@@ -1889,7 +2031,10 @@ void buildRuns(Layout& t) {
 // Sets each chunk from its start, with its runs in visual order, and hides the glyphs of hidden characters.
 void placeRuns(Layout& t) {
     t.glyphs.clear();
+    t.chunks.clear();
     t.kernFont = nullptr;
+    shiftChars(t);
+    t.shifted = PrVec2{0, 0};
     PrVec2 pen{0, 0};
     uint32_t chunk = 0;
     for (uint32_t r0 = 0; r0 < t.runs.count; ++chunk) {
@@ -1899,12 +2044,20 @@ void placeRuns(Layout& t) {
         const Char& head = t.chars.data[t.runs.data[r0].firstChar];
         // A chunk starts at a position of its own, so its first glyph kerns against nothing before it.
         t.kernFont = nullptr;
-        if (!prF32IsNan(head.x))
+        if (!prF32IsNan(head.x)) {
             pen.x = head.x;
-        if (!prF32IsNan(head.y))
+            t.shifted.x = 0;
+        }
+        if (!prF32IsNan(head.y)) {
             pen.y = head.y;
+            t.shifted.y = 0;
+        }
+        t.chunks.push(Chunk{.origin = pen.x + head.shift.x - t.shifted.x, .pinned = !prF32IsNan(head.x)});
         uint32_t first = t.runs.data[r0].firstChar;
         uint32_t count = t.runs.data[r1 - 1].endChar - first;
+        const Char& tail = t.chars.data[first + count - 1];
+        uint32_t contextStart = head.offset;
+        uint32_t contextEnd = tail.offset + tail.length;
         t.levels.clear();
         for (uint32_t i = 0; i < count; ++i)
             t.levels.push(t.chars.data[first + i].level);
@@ -1928,10 +2081,10 @@ void placeRuns(Layout& t) {
             if (run.font.svg != nullptr) {
                 setSvgRun(t, run, &pen, chunk);
             } else if (run.font.host != nullptr) {
-                setHostRun(t, run, &pen, chunk);
+                setHostRun(t, run, &pen, chunk, contextStart, contextEnd);
             } else {
                 for (uint32_t c = run.firstChar; c < run.endChar; ++c)
-                    placeChar(t.chars.data[c], &pen);
+                    placeChar(t, t.chars.data[c], &pen);
             }
             run.endGlyph = t.glyphs.count;
             run.align = runAlign(t, run);
@@ -1975,14 +2128,24 @@ PrRect textBounds(const Layout& t) {
     return box.left <= box.right ? box : PrRect{};
 }
 
-// Records what draws the laid-out text: decorations and glyphs, run by run.
+// Records what draws the laid-out text: decorations and glyphs, run by run. A run that holds the text of several
+// elements is recorded in parts, each the glyphs of one element, which paint and decorate as that element says.
 void record(Layout& t) {
-    // Underlines and overlines go under the text, and line-throughs over it (css-text-decor-3/#painting-order).
     for (uint32_t i = 0; i < t.runs.count; ++i) {
         const Run& run = t.runs.data[i];
-        recordDecorations(t, run, SvgLineFlag_Underline | SvgLineFlag_Overline);
-        recordRun(t, run);
-        recordDecorations(t, run, SvgLineFlag_LineThrough);
+        for (uint32_t g = run.firstGlyph; g < run.endGlyph;) {
+            uint32_t span = t.chars.data[t.glyphs.data[g].character].span;
+            Run part = run;
+            part.firstGlyph = g;
+            part.firstChar = t.glyphs.data[g].character;
+            while (g < run.endGlyph && t.chars.data[t.glyphs.data[g].character].span == span)
+                ++g;
+            part.endGlyph = g;
+            // Underlines and overlines go under the text, and line-throughs over it (css-text-decor-3/#painting-order).
+            recordDecorations(t, part, SvgLineFlag_Underline | SvgLineFlag_Overline);
+            recordRun(t, part);
+            recordDecorations(t, part, SvgLineFlag_LineThrough);
+        }
     }
 }
 
@@ -2457,12 +2620,14 @@ void overflowLines(Layout& t, const CssComputedStyle* style, float inlineSize, c
         if (run.font.svg == nullptr && run.font.host == nullptr)
             continue;
         PrVec2 pen{0, prF32IsNan(head.y) ? 0 : head.y};
+        // The ellipsis has no shift of its own, and is measured from no shift.
+        t.shifted = PrVec2{0, 0};
         run.firstGlyph = t.glyphs.count;
         t.kernFont = nullptr;
         if (run.font.svg != nullptr)
             setSvgRun(t, run, &pen, 0);
         else
-            setHostRun(t, run, &pen, 0);
+            setHostRun(t, run, &pen, 0, c.offset, c.offset + c.length);
         run.endGlyph = t.glyphs.count;
         float width = pen.x;
         float limit = rtl ? left + width : right - width;
@@ -2659,8 +2824,7 @@ SvgNodeIndex svgBuildText(SvgBuilder& b, const PrDomElement* element, const CssC
         .pointerEvents = svgStylePointerEvents(style),
         .element = element,
     };
-    SvgTransformStyle transform = svgStyleTransform(style);
-    own.transform = svgTransformMatrix(transform, PrRect{});
+    own.transform = prAffine2Identity();
     own.transformStyle = kArrayMissing;
     // The text paints its pieces, each with the paints of its element.
     own.paints = SvgPaints{
@@ -2672,6 +2836,7 @@ SvgNodeIndex svgBuildText(SvgBuilder& b, const PrDomElement* element, const CssC
     own.effects = kArrayMissing;
     own.text = allocZeroed<SvgText>();
     SvgNodeIndex node = svgBuildNode(b, own, parent, svgBuildsOwn(b, instance));
+    svgBuildTransform(b, node, style);
     svgBuildEffects(b, node, style);
     Layout t{};
     t.b = &b;
@@ -2694,7 +2859,8 @@ void svgDrawText(SvgDrawer& d, const SvgNode& node) {
         const SvgTextPiece& piece = text->pieces.data[i];
         if (piece.path != nullptr) {
             svgPaintShape(d, piece.paints, true, text->bounds, -1,
-                [&](PrDrawPaint paint) { prDrawListPath(d.list, piece.path, piece.rule, paint); }, [] {});
+                [&](PrDrawPaint paint) { prDrawListPath(d.list, piece.path, piece.rule, paint); },
+                [&](PrPath* out) { prPathAddPath(out, piece.path, prAffine2Identity()); }, [] {});
             continue;
         }
         PrFontGlyphRun glyphs{};
@@ -2704,7 +2870,10 @@ void svgDrawText(SvgDrawer& d, const SvgNode& node) {
         glyphs.glyphCount = piece.glyphCount;
         glyphs.transforms = piece.transformed ? text->transforms.data + piece.firstGlyph : nullptr;
         svgPaintShape(d, piece.paints, true, text->bounds, -1,
-            [&](PrDrawPaint paint) { prDrawListGlyphs(d.list, &glyphs, PrVec2{}, paint); }, [] {});
+            [&](PrDrawPaint paint) { prDrawListGlyphs(d.list, &glyphs, PrVec2{}, paint); }, [&](PrPath* out) {
+                for (uint32_t k = 0; k < glyphs.glyphCount; ++k)
+                    prDrawGlyphPath(&glyphs, k, nullptr, out);
+            }, [] {});
     }
     if (text->clipped)
         prDrawListPopClip(d.list);

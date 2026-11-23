@@ -626,11 +626,11 @@ Usability imageSourceOf(JSContext* ctx, JSValueConst value, PrCanvasImageSource*
     *out = PrCanvasImageSource{};
     PrDomElement* element = jsHandleAs<PrDomElement>(ctx, value, prJsDomElementClass);
     PrDomEventTarget* target = element != nullptr ? prDomElementAsEventTarget(element) : nullptr;
-    if (PrHtmlImageElement* image = prHtmlImageElementQuery(target)) {
-        PrDomImageState state = prHtmlImageElementState(image);
+    if (element != nullptr && prHtmlOrSvgImageElementIs(element)) {
+        PrDomImageState state = prHtmlOrSvgImageElementState(element);
         if (state == PrDomImageState_Broken)
             return Usability_Broken;
-        if (state != PrDomImageState_CompletelyAvailable || !prHtmlImageElementImageSource(image, out))
+        if (state != PrDomImageState_CompletelyAvailable || !prHtmlOrSvgImageElementImageSource(element, out))
             return Usability_Bad;
         if (out->extent.x == 0 || out->extent.y == 0) {
             prTextureSourceRelease(out->image);

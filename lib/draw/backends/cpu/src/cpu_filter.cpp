@@ -588,32 +588,37 @@ void displace(const Evaluation& e, const PrDrawFilterNode& node, const Image& in
 void light(const Evaluation& e, const PrDrawFilterNode& node, const Image& in, Image& out) {
     const PrDrawFilterLighting& l = node.lighting;
     const PrAffine2& m = e.inputs->transform;
-    float scale = prF32Sqrt(e.scaleX * e.scaleY);
     float surface = l.surfaceScale;
     auto alphaAt = [&](int32_t x, int32_t y) {
         x = x < 0 ? 0 : x >= int32_t(e.width) ? int32_t(e.width) - 1 : x;
         y = y < 0 ? 0 : y >= int32_t(e.height) ? int32_t(e.height) - 1 : y;
         return in.data[(size_t(y) * e.width + uint32_t(x)) * 4 + 3];
     };
-    // The light's position and target in pixels, with their depth scaled in the same way as lengths.
+    // The light's position in pixels. Vectors are along the pixels' axes and measured in units of the group's space, so
+    // that the light's angles hold where the pixels' scale differs between the axes.
     float lx = m.a * l.light.position.x + m.e - float(e.layer->box.left);
     float ly = m.d * l.light.position.y + m.f - float(e.layer->box.top);
-    float lz = l.light.position.z * scale;
+    float lz = l.light.position.z;
     float tx = m.a * l.light.pointsAt.x + m.e - float(e.layer->box.left);
     float ty = m.d * l.light.pointsAt.y + m.f - float(e.layer->box.top);
-    float tz = l.light.pointsAt.z * scale;
-    float sLength = prF32Sqrt((tx - lx) * (tx - lx) + (ty - ly) * (ty - ly) + (tz - lz) * (tz - lz));
-    float spot[3] = {(tx - lx) / sLength, (ty - ly) / sLength, (tz - lz) / sLength};
+    float spot[3] = {(tx - lx) / e.scaleX, (ty - ly) / e.scaleY, l.light.pointsAt.z - lz};
+    float sLength = prF32Sqrt(spot[0] * spot[0] + spot[1] * spot[1] + spot[2] * spot[2]);
+    for (float& c : spot)
+        c /= sLength;
     float coneCos = l.light.coneAngle > 0 ? prF32Cos(l.light.coneAngle) : -1;
+    // The surface's slope is per unit of the group's space, whatever the pixels' size, so that the light falls the same
+    // at any scale.
+    float slopeX = surface * e.scaleX / 4;
+    float slopeY = surface * e.scaleY / 4;
     for (int32_t y = 0; y < int32_t(e.height); ++y) {
         for (int32_t x = 0; x < int32_t(e.width); ++x) {
-            float nx = -surface / 4 * ((alphaAt(x + 1, y - 1) + 2 * alphaAt(x + 1, y) + alphaAt(x + 1, y + 1)) -
+            float nx = -slopeX * ((alphaAt(x + 1, y - 1) + 2 * alphaAt(x + 1, y) + alphaAt(x + 1, y + 1)) -
                 (alphaAt(x - 1, y - 1) + 2 * alphaAt(x - 1, y) + alphaAt(x - 1, y + 1)));
-            float ny = -surface / 4 * ((alphaAt(x - 1, y + 1) + 2 * alphaAt(x, y + 1) + alphaAt(x + 1, y + 1)) -
+            float ny = -slopeY * ((alphaAt(x - 1, y + 1) + 2 * alphaAt(x, y + 1) + alphaAt(x + 1, y + 1)) -
                 (alphaAt(x - 1, y - 1) + 2 * alphaAt(x, y - 1) + alphaAt(x + 1, y - 1)));
             float nLength = prF32Sqrt(nx * nx + ny * ny + 1);
             float n[3] = {nx / nLength, ny / nLength, 1 / nLength};
-            float z = surface * alphaAt(x, y) * scale;
+            float z = surface * alphaAt(x, y);
             float lv[3];
             PrColor lightColor = l.color;
             float color[3] = {lightColor.r, lightColor.g, lightColor.b};
@@ -622,8 +627,8 @@ void light(const Evaluation& e, const PrDrawFilterNode& node, const Image& in, I
                 lv[1] = prF32Sin(l.light.azimuth) * prF32Cos(l.light.elevation);
                 lv[2] = prF32Sin(l.light.elevation);
             } else {
-                lv[0] = lx - float(x);
-                lv[1] = ly - float(y);
+                lv[0] = (lx - float(x)) / e.scaleX;
+                lv[1] = (ly - float(y)) / e.scaleY;
                 lv[2] = lz - z;
                 float length = prF32Sqrt(lv[0] * lv[0] + lv[1] * lv[1] + lv[2] * lv[2]);
                 for (float& c : lv)

@@ -116,6 +116,11 @@ void layoutBackgroundDrawGradient(const LayoutCompounds* PR_NULLABLE compounds, 
 // mask of PrLayoutBackgroundBox bits, are given their shapes, since insetting a shape costs more than its use.
 void layoutBackgroundRound(LayoutBackgroundBoxes& boxes, const PrCornerRect& border, uint32_t used);
 
+// Returns the size of a tile of the background layer `layer` in a positioning area of `area`
+// (css-backgrounds-3/#background-size), after round repetition fits whole copies to the area. An axis of zero or less
+// draws nothing.
+PrVec2 layoutBackgroundTileSize(const LayoutCompounds* compounds, const PrLayoutBackgroundLayer& layer, PrVec2 area);
+
 // Records the background layer `layer`. It is sized and placed in the box that its origin names, and painted within the
 // box that its clip names, with its blend mode and operator. An image is drawn from `textures`, and a layer whose image
 // has not arrived draws nothing. Returns true if anything was recorded.

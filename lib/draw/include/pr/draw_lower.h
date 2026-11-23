@@ -44,8 +44,7 @@ float prDrawStrokeReach(const PrDrawStroke* stroke);
 // contours, mapped and flattened. `fill` gets the open contours, stroked centered. The stroke of the closed contours is
 // `aligned` cut to the nonzero interior of `region` for an inside stroke, or to its exterior for an outside stroke.
 //
-// Curves and round parts flatten to within `tolerance` target pixels. Width, dashes and caps scale with the transform
-// unless the stroke is non-scaling.
+// Curves and round parts flatten to within `tolerance` target pixels. Width, dashes and caps scale with the transform.
 void prDrawLowerStroke(const PrPath* path, const PrDrawStroke* stroke, PrAffine2 transform, float tolerance,
     PrPathPolyline* fill, PrPathPolyline* aligned, PrPathPolyline* region);
 

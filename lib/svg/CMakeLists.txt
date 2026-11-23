@@ -1,21 +1,26 @@
 # SVG: its elements, rendering them into draw lists, and the glyph decoder that draws a font's SVG documents.
 pr_library(svg INCLUDE include
     src/svg.cpp
+    src/svg_animate.cpp
+    src/svg_animate_names.cpp
+    src/svg_animate_value.cpp
+    src/svg_attribute.cpp
     src/svg_cascade.cpp
     src/svg_document.cpp
+    src/svg_element.cpp
     src/svg_draw.cpp
     src/svg_filter.cpp
     src/svg_font.cpp
     src/svg_glyph.cpp
     src/svg_hints.cpp
     src/svg_image.cpp
-    src/svg_length.cpp
     src/svg_parse.cpp
     src/svg_query.cpp
     src/svg_render.cpp
     src/svg_style.cpp
     src/svg_text.cpp
     src/svg_tree.cpp
+    src/svg_types.cpp
 )
 target_link_libraries(pr_svg PUBLIC prax::texture prax::dom prax::css  prax::draw prax::text prax::font prax::layout
                                     prax::color prax::compress prax::image
@@ -24,14 +29,16 @@ target_link_libraries(pr_svg PUBLIC prax::texture prax::dom prax::css  prax::dra
 if (PR_JS)
     pr_library(svg_quickjs INCLUDE quickjs/include
         quickjs/src/svg_quickjs.cpp
+        quickjs/src/svg_types_quickjs.cpp
     )
     target_link_libraries(pr_svg_quickjs PUBLIC prax::svg prax::quickjs prax::css_quickjs prax::dom_quickjs PRIVATE
-                                         prax::core_quickjs_cpp prax::webidl_quickjs_cpp)
+                                         prax::core_quickjs_cpp prax::webidl_quickjs_cpp prax::path)
 endif()
 
 if (PR_DEVELOP)
     pr_module_tests(svg
         tests/test_svg.cpp
+        tests/test_svg_animation.cpp
         tests/test_svg_embedded.cpp
         tests/test_svg_painting.cpp
         tests/test_svg_parse.cpp

@@ -659,7 +659,7 @@ void cssFontFaceLoad(PrCssFontFace* face, PrDomDocument* document) {
 }
 
 bool cssFontFaceDescribe(const PrCssFontFace* face, PrRawString* family, PrFontFaceDescriptor* out,
-        RawArray<PrFontCodePointRange>* ranges) {
+        RawArray<PrFontCodePointRange>* ranges, RawArray<PrFontVariation>* variations) {
     *family = faceFamily(face);
     if (prRawStringIsNull(family))
         return false;
@@ -747,6 +747,9 @@ bool cssFontFaceDescribe(const PrCssFontFace* face, PrRawString* family, PrFontF
     CssValueRun size = valueOf(PrCssDescriptor_FontFaceSizeAdjust);
     if (size.count == 1 && size.values[0].kind == PrCssValueKind_Percentage && size.values[0].number > 0)
         d.derivation.sizeAdjust = float(size.values[0].number / 100);
+    cssFontVariationsOf(valueOf(PrCssDescriptor_FontFaceFontVariationSettings), variations);
+    d.derivation.variations = variations->data;
+    d.derivation.variationCount = variations->count;
     *out = d;
     return true;
 }

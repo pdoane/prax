@@ -1493,6 +1493,38 @@ TEST_CASE("a feature set gives a run its forms, kerning, synthesis and features,
     prTextFeatureSetRelease(equal);
 }
 
+TEST_CASE("a text font's variations set the axes of every font that it matches, over the values of matching") {
+    const SetFace faces[] = {{"NotoSans[wdth,wght].ttf", "Sans"}};
+    PrFontSet* set = setOf(faces);
+    PrFontFamily family = prFontFamilyFromName("Sans");
+    // A later value for an axis wins, and wins over the weight that matching gives the instance.
+    const PrFontVariation variations[] = {{PR_FONT_TAG('w', 'g', 'h', 't'), 300}, {PR_FONT_TAG('w', 'g', 'h', 't'), 830}};
+    PrFontStyle style = prFontStyleDefault();
+    style.weight = 400;
+    PrTextFontDesc desc{
+        .set = set,
+        .families = &family,
+        .familyCount = 1,
+        .style = style,
+        .variations = variations,
+        .variationCount = 2,
+    };
+    PrTextFont* varied = prTextFontCreate(&desc);
+    uint32_t match = prTextFontMatch(varied, "A", PrScript_Latn);
+    REQUIRE(match != kPrTextMatchNone);
+    const PrFont* font = prTextFontMatchedFont(varied, match);
+    float weight = 0;
+    for (uint32_t i = 0; i < prFontAxisCount(font); ++i) {
+        if (prFontAxis(font, i).tag == PR_FONT_TAG('w', 'g', 'h', 't'))
+            weight = prFontAxisValue(font, i);
+    }
+    CHECK(weight == doctest::Approx(830));
+    // The same character matches the same font again.
+    CHECK(prTextFontMatch(varied, "B", PrScript_Latn) == match);
+    prTextFontRelease(varied);
+    prFontSetDestroy(set);
+}
+
 TEST_CASE("a text font measures the advance of a code point in the face that sets it, along or down the line") {
     const SetFace faces[] = {{"Ahem.ttf", "Ahem"}, {"NotoSans[wdth,wght].ttf", "Sans"}};
     PrFontSet* set = setOf(faces);

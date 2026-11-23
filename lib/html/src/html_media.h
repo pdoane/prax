@@ -69,6 +69,7 @@ struct HtmlMedia {
     bool autoplaying;                    // html/#can-autoplay-flag
     bool preservesPitch;
     bool loadedData;                     // true once loadeddata has fired, until the next load
+    bool awaitingSource;                 // the resource selection waits for another source child, until the next load
 
     // What a video element shows. `frame` is the decoded frame as a host texture on the device of the window's texture
     // cache, and `frameSerial` is its serial (PrMediaFrame::serial). `frameGeneration` is the generation of the cache
@@ -121,6 +122,11 @@ void htmlMediaShow(PrHtmlWindow* window);
 // Handles a change to a media element: its connection, if `attribute` is the null view, or a change of that attribute
 // (html/#location-of-the-media-resource, html/#playing-the-media-resource).
 void htmlMediaChanged(PrDomElement* element, PrStringView attribute);
+
+// Handles the insertion of a source element as a child of a media element (html/#the-source-element): it starts the
+// resource selection of an element that has neither a resource nor a src attribute, or offers the next candidate to a
+// resource selection that waits for one.
+void htmlMediaSourceInserted(PrDomElement* element, PrDomElement* source);
 
 // The algorithms of the public API (PrHtmlMediaElement), for an element that a window runs.
 void htmlMediaLoad(HtmlMedia* media);

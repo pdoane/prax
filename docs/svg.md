@@ -218,9 +218,10 @@ and builds a path from commands.
   a reference in error, and patterns nest at most `kSvgMaxPatternDepth` deep.
 - **Gradient stops** mix with their color and alpha apart (SVG2/pservers.html#StopColorProperty), so a stop toward
   `transparent` mixes toward black.
-- **A radial gradient whose start circle holds its end circle** paints nothing (SVG2/pservers.html#RadialGradientNotes),
-  not even the fallback, where Canvas's gradient would paint the cone that both circles touch. SVG 2 says so plainly,
-  and the cone covers what an author placed the circles to leave bare.
+- **A radial gradient whose start circle contains its end circle** paints Canvas's gradient: the cone that touches
+  both circles. SVG 2 says that it paints nothing (SVG2/pservers.html#RadialGradientNotes). That sentence is in the
+  section that aligned SVG 1.1's focal point with Canvas, so the engine follows the section's intent, Canvas's
+  gradient.
 - **color-interpolation** linearRGB mixes a gradient's stops in linear light, by the value on the gradient that the
   paint references. On an element that paints, and on a group with opacity, it composites the element onto what lies
   beneath in linear light (SVG2/painting.html#ColorInterpolation), which draws the element in a group that reads its
@@ -305,6 +306,10 @@ node that establishes a viewport applies its effects in its content's user space
   exponent outside [1, 128] (SVG11/filters.html#feSpecularLightingSpecularExponentAttribute), and feTurbulence with a
   negative base frequency are transparent black. A spot light's negative specularExponent is its initial value, 1, and
   a limitingConeAngle of zero lights nothing.
+- **Lighting's surface slope** is per unit of user space, as if kernelUnitLength were one unit, so the light falls the
+  same way at any scale. Without a kernelUnitLength, filter-effects-1/#feDiffuseLightingElement takes the slope per
+  pixel of the intermediate image, and calls the result potentially not scalable. A render at a higher resolution would
+  then show a flatter relief.
 - **Tainting** (filter-effects-1/#tainted-filter-primitives). Every source is tainted, as are a flood or lighting color
   that reads currentcolor, an feImage of an element, and a primitive that reads a tainted input. feDisplacementMap
   with a tainted map passes its input through (filter-effects-1/#fedisplacemnentmap-restrictions).
@@ -427,12 +432,80 @@ for the query at the svg element's natural size. A tspan or a textPath is measur
   transform as it is drawn, as cssom-view-1/#dom-element-getclientrects names "the bounding box of the element as
   defined by the SVG specification".
 - **Interfaces.** Each shape has its own interface, SVGRectElement through SVGPolygonElement, under
-  SVGGeometryElement, with the lengths that it reflects.
-- **The SVG DOM's lengths** (`pr/svg_length.h`) reflect the length attributes of each element's interface. A missing or
-  invalid attribute reflects its initial value. A length resolves percentages against its element's viewport along the
-  attribute's direction and font-relative units against its element's font. A length in a unit that SVGLength has no
-  constant for, such as Q, is of the unknown type, as SVG 2 says. With no animation running, an animated value is the
-  base value, read only.
+  SVGGeometryElement.
 
 Suites: `svg-wpt`, the SVG render corpora ([testing.md](testing.md)), and `suites/prax`'s SVG 2 chapters. The
 invalidation check over real pages checks every tree against a fresh build after each change.
+
+## Typed attributes (`pr/svg_attribute.h`, `pr/svg_types.h`)
+
+An element reads some of its attributes as values: a rect's width as a length, a text's x as a list of lengths, a
+marker's orient as a keyword or an angle. The C API reads and writes them by attribute (`PrSvgAttribute`, a generated
+enum) as plain values: `PrSvgLength`, `PrSvgAngle`, `PrSvgTransform`, `PrSvgPreserveAspectRatio`, numbers, pairs of
+them, typed enumerations, and arrays for lists.
+
+- **What an element reads an attribute as is lib/svg's to know.** A table that `tools/gen/gen_svg.py` holds by hand
+  names, for each element and attribute, the type, the value of a missing or invalid attribute, the axis of a length's
+  percentages, the keywords of an enumeration, and the range of its valid values (`svg_attribute.h`). SVG's
+  renderer, its animations and its DOM read the same facts.
+- **A read never fails on the attribute's text.** A missing attribute, or one that does not parse, reads as its initial
+  value, and a list that does not parse is empty. A read of an attribute that the element does not read as that type
+  returns false, and a write returns WrongType.
+- **Base and animated.** The base value is the element's own, and the animated value what the animations give it.
+- **Enumerations are typed and numbered** as the interfaces' constants number them, so that the binding passes them
+  through.
+- **Units are CSS's** (`PrCssUnit`), as SVG 2 takes its lengths and angles from CSS. A number alone is
+  PrCssUnit_Number: user units for a length, and degrees for an angle. The binding maps units to SVGLength's and
+  SVGAngle's types by a table, and a unit that no constant names, such as Q or turn, is of the unknown type.
+
+## The SVG DOM (`pr/svg_element.h`, the binding)
+
+Every element of SVG 2, Filter Effects, CSS Masking and SVG Animations has its own interface (`PrSvgInterface`).
+`pr/svg_element.h` holds the operations that the engine does: measuring, hit testing, text queries and the time
+containers. The SVG DOM's types are the binding's, built on the typed attributes:
+
+- **The binding names what each member reflects**: its attribute, and for a member such as stdDeviationX, which number
+  of a pair it is, as HTML's binding names each member's content attribute.
+- **Values are views.** An SVGAnimatedLength, the SVGLength of its baseVal and the items of a list read and write their
+  element's typed attribute. A detached value, as createSVGLength makes, holds its own. An animated value is read only.
+- **Lists keep their items' objects.** A list of numbers, lengths or transforms gives the same object for a position
+  until the item leaves the list. The list synchronizes with its attribute before each call, and the objects of items
+  that the attribute no longer has are detached with their last values (types.html#TermSynchronizeList). A detached
+  item that is inserted becomes the list's object for it, and an item of a list is copied in. An item holds a counted
+  reference to its list, and the list's pointer back is not counted.
+- **Geometry reflects.** A point of a list, the rect of a viewBox and the matrix of a transform are a DOMPoint, a
+  DOMRect and a DOMMatrix that read and write the value that they reflect. Each is one object for as long as it lives.
+
+## Animation (`svg_animate.h`)
+
+SVG's animation elements, animate, set, animateTransform and animateMotion, run on the document's timeline, beside its
+CSS animations (`CssAnimationDriver`).
+
+- **Time containers.** Each outermost svg element times the animations inside it. Its time starts at the first update of
+  the document's animations after it appears, and a script pauses and seeks it. A seek samples at once.
+- **Finding the elements.** A change that adds or changes an animation element finds the animation elements again in a
+  microtask, which the parser performs before a script that it meets, so that the listeners of event values listen
+  before a script dispatches their events. The first sample after it times what it found.
+- **Intervals.** An element's begin and end lists resolve against offsets, the intervals of syncbases, events, repeats
+  and the times that script adds. A sample walks every element's intervals to its container's time and repeats until
+  the dependencies settle, which bounds a cycle. A seek back through an interval runs it again.
+- **Values are read once.** An animation reads its values into a function (`svg_animate_value.h`) when its element is
+  found, and again only when the element changes. A value keeps its units, which resolve against the target as values
+  combine. A function whose values depend on more than their units, as currentcolor does, is read again for each
+  sample. The target's own value is read once, until its attribute changes.
+- **Values** compose per attribute in the order of their begin times, then in document order. A sample's values are
+  values, not text: the typed reads of `pr/svg_types.h` and the renderer's lengths take them as they are, and a value
+  is written as text only for a reader that takes text. An attribute that is a presentation attribute reaches the
+  target's style as declarations that follow its style attribute in the cascade (`cssElementAnimatedStyle`), so a
+  rule's normal declaration does not override it. An animateMotion's transform comes before the target's own, and
+  follows the equivalent path of a path or basic shape that its mpath references. A presentation attribute's inherit
+  is the value of the target's parent, and a length may be a math function, which the target's viewport resolves.
+- **Classes.** An animation of class gives the target the classes that selectors match (`domElementSetClasses`), and its
+  class attribute keeps its value.
+- **Instances.** An instance in a use element's shadow tree has its original's animated values, in its style and as the
+  renderer reads them (SVG2/struct.html#UseAnimations).
+- **Events.** beginEvent, endEvent and repeatEvent are TimeEvents, queued as the samples cross them and sent after the
+  CSS animations' events, which onbegin, onend and onrepeat handle. A seek queues no repeat events. The next event
+  that the document's timeline waits for is a begin, an end or a repeat of a finite number of them, so a page whose
+  animations repeat indefinitely is idle once they have begun.
+- An svg element that a parser adds fires load once its children are parsed.

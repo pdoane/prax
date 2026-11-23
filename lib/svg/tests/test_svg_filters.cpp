@@ -148,15 +148,29 @@ TEST_CASE("a primitive in error passes its input through, or draws transparent b
     CHECK(blur.pixel(19, 50) == kWhite);
 }
 
-TEST_CASE("feImage draws an element moved by its subregion's origin, and a filter inside its own image hides") {
+TEST_CASE("a spot light's cone keeps its angle in user space where the transform scales the axes differently") {
+    // The light is 50 units above the rect's center and aims straight down, so its 30° cone lights the rect to 50 tan
+    // 30° = 28.9 units from the center on each axis: rows 21 to 79. The transform stretches x alone.
+    Drawing drawing(svgDocument("<filter id='f' color-interpolation-filters='sRGB'><feDiffuseLighting>"
+        "<feSpotLight x='25' y='50' z='50' pointsAtX='25' pointsAtY='50' limitingConeAngle='30'/>"
+        "</feDiffuseLighting></filter><rect width='50' height='100' fill='black' filter='url(#f)' transform='scale(2 1)'/>"));
+    CHECK(drawing.pixel(50, 50) != "0 0 0");
+    CHECK(drawing.pixel(50, 25) != "0 0 0");
+    CHECK(drawing.pixel(50, 15) == "0 0 0");
+    CHECK(drawing.pixel(50, 85) == "0 0 0");
+}
+
+TEST_CASE("feImage draws an element moved by its subregion's origin, and draws an element in its own filter unfiltered") {
     Drawing image(filtered("<rect id='dot' width='10' height='10' fill='green'/>"
         "<filter id='f' filterUnits='userSpaceOnUse' x='50' y='50' width='50' height='50'>"
         "<feImage href='#dot'/></filter>", "filter='url(#f)'"));
     CHECK(image.pixel(55, 55) == kGreen);
     CHECK(image.pixel(65, 55) == kWhite);
+    // The image's copy of the rect references the filter that draws it, which is circular: the filter list is ignored
+    // there, so the filter shows the rect as it is.
     Drawing selfReferencing(svgDocument("<filter id='f'><feImage href='#r'/></filter>"
         "<rect id='r' x='20' y='20' width='60' height='60' fill='green' filter='url(#f)'/>"));
-    CHECK(selfReferencing.pixel(50, 50) == kWhite);
+    CHECK(selfReferencing.pixel(50, 50) == kGreen);
 }
 
 TEST_CASE("FillPaint is the element's fill over the whole filter region") {

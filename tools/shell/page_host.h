@@ -1,5 +1,10 @@
 // A host for HTML pages: loads them through lib/html's host callbacks, runs their scripts with the engine's JavaScript
-// APIs until they settle, and paints their rendering.
+// APIs, and paints their rendering.
+//
+// A host runs its pages either until a time (advance), as a viewer that shows them does, or until they end the run
+// (run). A page ends the run by calling stopRun() once it is done. A page that is loaded to be captured is done once it
+// is ready to be captured, which a script that waits on the page's own events decides (Capture_Wait), so that a capture
+// never depends on how long the page's timers or animations would keep it busy.
 //
 // A page loads by URL: its page navigates to it through the host's fetcher, as a browser loads a document. A path loads
 // at its file: URL. Unless the host uses sockets (useNetwork), the pages' network runs on the host's thread before each
@@ -53,18 +58,17 @@ struct HostState;
 // Whether a page is loaded to be captured, as a reftest or its reference.
 enum {
     Capture_None,
-    Capture_Wait,       // the page runs the capture's wait (setCaptureWait), which stops the run (stopRun())
+    Capture_Wait,       // the page runs the capture's wait once it has loaded (setCaptureWait), which stops the run
 };
 typedef uint8_t Capture;
 
-// How a host's settle ended.
+// How a host's run ended (PageHost::run).
 enum {
-    Settled_Idle,       // nothing was left to run, only a page's animations wanted frames, or every page that load
-                        // loaded stopped the run
-    Settled_TimedOut,   // the timeout passed first
-    Settled_Failed,     // a job failed outside any page
+    RunEnd_Done,        // every page that load loaded stopped the run, or nothing was left that could run
+    RunEnd_TimedOut,    // the timeout passed first
+    RunEnd_Failed,      // a job failed outside any page
 };
-typedef uint8_t Settled;
+typedef uint8_t RunEnd;
 
 // The media type that a page renders for (mediaqueries-4/#media-types).
 enum {
@@ -202,6 +206,11 @@ public:
     // Runs the script file `script` in each page loaded with Capture_Wait once it has loaded, as the body of a function
     // called on the window with the page's URL and the function that stops the run (stopRun()). The script stops the
     // run once the page is ready to be captured. Returns false, saying why on stderr, if the file cannot be read.
+    //
+    // Until this is called, the wait is WPT's reftest protocol, as wptrunner's test-wait.js runs it: once the
+    // document's fonts are ready, the page has two animation frames to render, and then it is ready unless its root
+    // element has the class `reftest-wait`. A page that has the class is sent TestRendered at its root, the event that
+    // tells it that it has rendered, and is ready two frames after the class goes.
     bool setCaptureWait(const std::filesystem::path& script);
 
     // Returns the context that runs scripts outside any page, with the shell's functions: print(), readFile(path),
@@ -214,8 +223,8 @@ public:
     bool runFile(const char* path);
 
     // Starts loading the page at `location`, an absolute URL or a path, which loads at its file: URL. The page loads as
-    // the host runs its tasks (settle). Returns null, saying why on stderr, if a path names no file. A page that fails
-    // to load is returned, and pageOk reports the failure once it arrives.
+    // the host runs its tasks (run, advance). Returns null, saying why on stderr, if a path names no file. A page that
+    // fails to load is returned, and pageOk reports the failure once it arrives.
     Page* PR_NULLABLE load(const std::string& location, Capture capture = Capture_None);
 
     // Returns true if the page has loaded and run without an error so far.
@@ -228,10 +237,12 @@ public:
     // Returns the browsing context that the page runs in, or null once it is destroyed.
     static PrHtmlPage* PR_NULLABLE htmlPage(const Page* page);
 
-    // Runs the pages' due jobs, tasks and timers until none is left, only a page's animations want frames, or every
-    // page that load loaded has stopped the run (stopRun()). With a `timeout` of zero or more, it stops once that many
+    // Runs the pages until every page that load loaded has stopped the run (stopRun()), or until nothing is left that
+    // could run: no job, task or timer, no animation event ahead, and no fetch that a rendering update would start. A
+    // page loaded with Capture_Wait stops the run once it is ready to be captured, and one that never becomes ready
+    // ends the run once nothing could make it so. With a `timeout` of zero or more, it stops once that many
     // milliseconds of the system's time have passed.
-    Settled settle(double timeout = -1);
+    RunEnd run(double timeout = -1);
 
     // Sends the page a host's input through the view that presents it, at once, and runs the jobs that it queues. The
     // page's layout is brought up to date first, as a browser does before it hit tests an event. A position is in the
@@ -249,11 +260,6 @@ public:
     // Returns true if the page is done in the sense that a reftest uses: its root element no longer has the class
     // `reftest-wait`.
     static bool finished(const Page* page);
-
-    // Renders each page that has not finished in a viewport of `viewport` CSS pixels, and fires TestRendered at its
-    // root element. TestRendered is the event of WPT's reftest protocol that tells a waiting page it has rendered, so
-    // that it can go on to its final state. Returns true if it fired at any page. The pages then need to settle again.
-    bool signalRendered(PrVec2 viewport);
 
     // Paints the page into `list`, in CSS pixels, as a viewport of `viewport` CSS pixels shows it in `media`, on
     // `display` for a user with `preferences`. Returns false if the page has no rendering.

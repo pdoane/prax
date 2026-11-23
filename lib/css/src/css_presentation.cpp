@@ -113,7 +113,7 @@ bool calcNodes(CssValueRun run, uint32_t index, RawArray<PrLayoutCalcNode>& out)
             return leaf(PrLayoutCalcLeaf_Percent, value->number);
         case PrCssValueKind_Dimension: {
             double scale = cssUnitCategory(value->unit) == CssUnitCategory_Length ? cssUnitScale(value->unit) : 0;
-            return scale != 0 && leaf(PrLayoutCalcLeaf_Px, value->number * scale);
+            return scale != 0 && leaf(PrLayoutCalcLeaf_Px, cssUnitToCanonical(value->number, value->unit));
         }
         case PrCssValueKind_Keyword:
             return cssValueKeyword(value) == PrCssKeyword_None && leaf(PrLayoutCalcLeaf_None, 0);
@@ -1056,23 +1056,25 @@ void appendKey(RawArray<char>& key, const void* bytes, size_t size) {
     key.append(static_cast<const char*>(bytes), uint32_t(size));
 }
 
-// Returns the text font of `fonts`, in the font set `set`, that a computed style sets its text in. `fonts` makes one
-// text font for each family list, style and locale.
-PrTextFont* textFontIn(PrFontSet* set, CssPresentationTextFonts& fonts, const CssComputedStyle* style) {
+// Returns the text font of `fonts`, in the font set `set`, that a computed style sets its text in, at `size` px.
+// `fonts` makes one text font for each family list, style, size and locale.
+PrTextFont* textFontIn(PrFontSet* set, CssPresentationTextFonts& fonts, const CssComputedStyle* style, double size) {
     cssFontFamilies(cssComputedValue(style, PrCssProperty_FontFamily), &fonts.families, &fonts.familyViews);
     PrFontStyle font = prFontStyleDefault();
     font.weight = float(cssStyleFontWeight(style));
     font.width = float(cssStyleFontWidth(style));
     setSlope(font, cssComputedValue(style, PrCssProperty_FontStyle));
+    if (!cssStyleOpticalSizing(style))
+        font.flags = PrFontStyleFlags(font.flags & ~PrFontStyleFlag_OpticalSizing);
     // The size is in whole layout units, which is how layout measures every length.
-    font.size = prLayoutUnitToPx(prLayoutUnitFromPxDouble(cssStyleFontSize(style)));
+    font.size = prLayoutUnitToPx(prLayoutUnitFromPxDouble(size));
     RawArray<char>& key = fonts.key;
     key.clear();
     for (uint32_t i = 0; i < fonts.familyViews.count; ++i) {
         const PrFontFamily& family = fonts.familyViews.data[i];
-        uint32_t size = uint32_t(family.name.size);
+        uint32_t length = uint32_t(family.name.size);
         appendKey(key, &family.generic, sizeof(family.generic));
-        appendKey(key, &size, sizeof(size));
+        appendKey(key, &length, sizeof(length));
         appendKey(key, family.name.data, family.name.size);
     }
     float values[] = {font.weight, font.width, font.obliqueAngle, font.size};
@@ -1080,6 +1082,9 @@ PrTextFont* textFontIn(PrFontSet* set, CssPresentationTextFonts& fonts, const Cs
     appendKey(key, &font.slope, sizeof(font.slope));
     appendKey(key, &font.flags, sizeof(font.flags));
     appendKey(key, &style->locale, sizeof(style->locale));
+    fonts.variations.clear();
+    cssFontVariations(style, &fonts.variations);
+    appendKey(key, fonts.variations.data, fonts.variations.count * sizeof(PrFontVariation));
     uint32_t hash = uint32_t(prHashBytes(key.data, key.count, 0x7e3a91c5b2d4f608ull));
     uint32_t found = fonts.index.find(hash, [&](uint32_t at) {
         const CssPresentationTextFont& entry = fonts.fonts.data[at];
@@ -1093,6 +1098,8 @@ PrTextFont* textFontIn(PrFontSet* set, CssPresentationTextFonts& fonts, const Cs
         .familyCount = fonts.familyViews.count,
         .style = font,
         .locale = style->locale,
+        .variations = fonts.variations.data,
+        .variationCount = fonts.variations.count,
     };
     CssPresentationTextFont entry{fonts.keys.count, key.count, prTextFontCreate(&desc)};
     fonts.keys.append(key.span());
@@ -1111,12 +1118,52 @@ void textFontsReset(CssPresentationTextFonts& fonts) {
     fonts.key.reset();
     prTextBufferReset(&fonts.families);
     fonts.familyViews.reset();
+    fonts.variations.reset();
 }
 
-// Returns the text font, in the document's fonts, that a computed style sets its text in, so that equal fonts are one
-// text font and project to one font group.
+bool measureFont(void* PR_NULLABLE data, const CssComputedStyle* style, CssFontMetric metric, bool upright, double* ems);
+
+// Returns the used font size of a computed style (css-fonts-5/#font-size-adjust-prop). A font-size-adjust number scales
+// the computed size so that the font's metric, the x-height unless the value names another, is that number of ems. The
+// metric is measured in the first available font. A font that cannot measure it, and from-font, keep the computed size,
+// as does none.
+double usedFontSize(PrCssPresentation* r, const CssComputedStyle* style) {
+    double size = cssStyleFontSize(style);
+    CssValueRun adjust = cssComputedValue(style, PrCssProperty_FontSizeAdjust);
+    CssFontMetric metric = CssFontMetric_Ex;
+    bool upright = false;
+    double number = -1;
+    for (uint32_t i = 0; i < adjust.count; i += adjust.values[i].next) {
+        const CssValueNode& value = adjust.values[i];
+        if (value.kind == PrCssValueKind_Number || value.kind == PrCssValueKind_Integer) {
+            number = value.number;
+            continue;
+        }
+        switch (value.kind == PrCssValueKind_Keyword ? cssValueKeyword(&value) : PrCssKeyword_Count) {
+            case PrCssKeyword_CapHeight: metric = CssFontMetric_Cap; break;
+            case PrCssKeyword_ChWidth: metric = CssFontMetric_Ch; break;
+            case PrCssKeyword_IcWidth: metric = CssFontMetric_Ic; break;
+            case PrCssKeyword_IcHeight:
+                metric = CssFontMetric_Ic;
+                upright = true;
+                break;
+            default: break;
+        }
+    }
+    if (number < 0)
+        return size;
+    if (number == 0)
+        return 0;
+    double ems = 0;
+    if (!measureFont(r, style, metric, upright, &ems) || !(ems > 0))
+        return size;
+    return size * number / ems;
+}
+
+// Returns the text font, in the document's fonts, that a computed style sets its text in at its used font size, so that
+// equal fonts are one text font and project to one font group.
 PrTextFont* textFontOf(PrCssPresentation* r, const CssComputedStyle* style) {
-    return textFontIn(r->fonts, r->textFonts, style);
+    return textFontIn(r->fonts, r->textFonts, style, usedFontSize(r, style));
 }
 
 // Measures a metric of the font that `style` sets, for the cascade (CssFontMeasure), in the presentation's measuring
@@ -1128,7 +1175,7 @@ bool measureFont(void* PR_NULLABLE data, const CssComputedStyle* style, CssFontM
     PrCssPresentation* r = static_cast<PrCssPresentation*>(data);
     prMutexLock(&r->measuring);
     r->readsMetrics = true;
-    PrTextFont* font = textFontIn(r->fonts, r->measured, style);
+    PrTextFont* font = textFontIn(r->fonts, r->measured, style, cssStyleFontSize(style));
     prTextFontUpdate(font);
     bool found = false;
     if (metric == CssFontMetric_ScriptPercentScaleDown || metric == CssFontMetric_ScriptScriptPercentScaleDown) {
@@ -1503,12 +1550,21 @@ CssPresentationImageDrawing imageDrawingOf(const PrCssPresentation* r, const Css
     bool reads = false;
     rangeCapOf(r, style, &drawing.limit, &reads);
     switch (cssComputedFirstKeyword(style, PrCssProperty_ImageRendering)) {
-        case PrCssKeyword_CrispEdges: drawing.rendering = PrLayoutImageRendering_CrispEdges; break;
+        // optimizeSpeed is a deprecated value that behaves as crisp-edges (css-images-3/#the-image-rendering).
+        case PrCssKeyword_CrispEdges:
+        case PrCssKeyword_Optimizespeed: drawing.rendering = PrLayoutImageRendering_CrispEdges; break;
         case PrCssKeyword_Pixelated: drawing.rendering = PrLayoutImageRendering_Pixelated; break;
         default: break;
     }
     drawing.oriented = cssComputedFirstKeyword(style, PrCssProperty_ImageOrientation) != PrCssKeyword_None;
+    drawing.dark = cssUsesDarkScheme(style, cssPresentationColorEnvironment(r));
     return drawing;
+}
+
+// Returns the environment that an SVG image of an element draws in: the color scheme that `drawing` gives, and the
+// document's media environment (DomImageEnvironment).
+DomImageEnvironment imageEnvironmentOf(const PrCssPresentation* r, CssPresentationImageDrawing drawing) {
+    return DomImageEnvironment{.dark = drawing.dark, .media = r->document->media};
 }
 
 // Returns the natural size of an image as an element shows it. `size` is the size of `image` as its orientation
@@ -1553,10 +1609,10 @@ void imageFetched(void* PR_NULLABLE data, const DomFetchResult* result) {
     DomDecodedImage decoded{};
     PrByteView bytes = prStringBytes(domFetchText(result));
     if (result->status == PrStatus_Ok && host != nullptr && host->decodeImage != nullptr &&
-            host->decodeImage(host->context, bytes, domUrlFragment(prRawStringView(&image.url)), &decoded)) {
+            host->decodeImage(host->context, bytes, prRawStringView(&image.url), &decoded)) {
         image.state = CssPresentationImageState_Loaded;
         image.image = decoded.image;
-        image.vector = decoded.vector;
+        image.variants = decoded.variants;
         image.natural = decoded.natural;
     }
     for (uint32_t i = 0; i < image.waiting.count; ++i) {
@@ -1792,7 +1848,7 @@ void releaseImageSources(PrCssPresentation* r) {
 // Sets the image of `layer` from the image that the url() `reference` names. Returns false if the image has not loaded
 // or failed to load. A box that names an image that is loading projects again when it loads.
 bool loadedImageOf(PrCssPresentation* r, PrStringView reference, CssPresentationImageDrawing drawing,
-        PrLayoutBackgroundLayer& layer) {
+        PrLayoutBackgroundLayer& layer, bool* PR_NULLABLE readsOutside) {
     CssPresentationImage* loaded = imageOf(r, reference);
     if (loaded != nullptr && loaded->state == CssPresentationImageState_Loading && r->projecting != nullptr)
         loaded->waiting.push(r->projecting);
@@ -1806,7 +1862,10 @@ bool loadedImageOf(PrCssPresentation* r, PrStringView reference, CssPresentation
         layer.upright = drawing.oriented;
     } else {
         layer.kind = PrLayoutImageKind_Painter;
-        layer.painter = loaded->vector;
+        layer.painter = domImageVariantsPainter(loaded->variants, imageEnvironmentOf(r, drawing));
+        // Which variant draws depends on the document's media environment, which is outside the style.
+        if (readsOutside != nullptr)
+            *readsOutside = true;
     }
     return true;
 }
@@ -1835,7 +1894,8 @@ bool filteredImageOf(PrCssPresentation* r, CssValueRun image, const ColorTarget&
     CssValueRun input = runBetween(image, 1, comma);
     bool shown;
     if (input.count != 0 && input.values[0].kind == PrCssValueKind_String)
-        shown = loadedImageOf(r, cssValueText(input, input.values), drawing, layer);
+        shown = loadedImageOf(r, cssValueText(input, input.values), drawing, layer,
+            target.context.environment.readsOutside);
     else
         shown = imageLayerOf(r, input, target, drawing, layer);
     if (!shown)
@@ -1856,7 +1916,7 @@ bool imageLayerOf(PrCssPresentation* r, CssValueRun image, const ColorTarget& ta
         CssPresentationImageDrawing drawing, PrLayoutBackgroundLayer& layer) {
     PrStringView reference{};
     if (image.count != 0 && urlOf(image, &reference))
-        return loadedImageOf(r, reference, drawing, layer);
+        return loadedImageOf(r, reference, drawing, layer, target.context.environment.readsOutside);
     if (cssIsGradient(image)) {
         layer.kind = PrLayoutImageKind_Gradient;
         gradientOf(r, image, 0, target, r->backgroundStops, &layer.gradient);
@@ -3045,13 +3105,13 @@ uint64_t embedOf(const PrDomElement* element) {
 
 // Returns the natural dimensions of a replaced element's resource, oriented as `oriented` says: those that its markup
 // gives it, or else its image's once the image is completely available. An image that is not completely available has
-// nothing to show, and its natural width and height are 0. Embedded content has no natural dimensions, and takes the
-// default object size.
+// nothing to show, and its natural width and height are 0. Embedded content has the dimensions that the browsing
+// context gives it (DomElementState::embedNatural).
 PrLayoutNaturalSize naturalOf(PrCssPresentation* r, const PrDomElement* element, bool oriented) {
     const DomElementState* state = element->state;
     PrLayoutNaturalSize size = prLayoutNaturalSizeNone();
     if (embedOf(element) != 0)
-        return size;
+        return state->embedNatural;
     CssBoxTraits traits = cssBoxTraits(element);
     if ((traits.flags & CssBoxTraitFlag_Sized) != 0)
         return traits.natural;
@@ -3061,7 +3121,7 @@ PrLayoutNaturalSize naturalOf(PrCssPresentation* r, const PrDomElement* element,
     }
     bool available = state != nullptr && state->image == PrDomImageState_CompletelyAvailable;
     // An SVG image's natural dimensions are its own, and it may lack them.
-    if (available && state->vector.paint != nullptr)
+    if (available && state->variants.painter != nullptr)
         return state->vectorNatural;
     size.width = available ? prLayoutUnitFromPxDouble(state->naturalWidth) : PrLayoutUnit{0};
     size.height = available ? prLayoutUnitFromPxDouble(state->naturalHeight) : PrLayoutUnit{0};
@@ -3175,6 +3235,9 @@ void applyContent(PrCssPresentation* r, const PrDomElement* element, PrLayoutNod
         content.upright = drawing.oriented;
         content.limit = drawing.limit;
         content.rendering = drawing.rendering;
+    } else if (element->state != nullptr && element->state->variants.painter != nullptr) {
+        content.kind = PrLayoutContentKind_Painter;
+        content.painter = domImageVariantsPainter(element->state->variants, imageEnvironmentOf(r, drawing));
     } else if (element->state != nullptr && element->state->vector.paint != nullptr) {
         content.kind = PrLayoutContentKind_Painter;
         content.painter = element->state->vector;
@@ -3860,6 +3923,18 @@ bool hasClass(PrStringView value, PrStringView name) {
     bool found = false;
     eachClass(value, [&](PrStringView token) { found = found || token == name; });
     return found;
+}
+
+// Invalidates the classes that are in one value of a class attribute and not the other.
+void invalidateClasses(PrCssPresentation* presentation, PrDomElement* element, PrStringView oldValue, PrStringView value) {
+    eachClass(oldValue, [&](PrStringView token) {
+        if (!hasClass(value, token))
+            invalidate(presentation, element, cssFeatureHash(CssFeature_Class, token));
+    });
+    eachClass(value, [&](PrStringView token) {
+        if (!hasClass(oldValue, token))
+            invalidate(presentation, element, cssFeatureHash(CssFeature_Class, token));
+    });
 }
 
 // Returns true if a style read whether `parent` has children (:empty). A parent with no entry is assumed to have been
@@ -5081,7 +5156,7 @@ void applyGenerated(PrCssPresentation* r, CssPresentationEntry& entry) {
                 content.rendering = drawing.rendering;
             } else {
                 content.kind = PrLayoutContentKind_Painter;
-                content.painter = loaded->vector;
+                content.painter = domImageVariantsPainter(loaded->variants, imageEnvironmentOf(r, drawing));
             }
             prLayoutNodeSetContent(r->tree, image, &content);
         });
@@ -5845,6 +5920,57 @@ bool writeResolvedColor(PrTextBuffer* out, CssValueRun computed, const CssColorC
     return true;
 }
 
+// Returns the index of the text node of the URL that the value at `index` of `run` names: a url token, or the string of
+// url() or src(). Returns kArrayMissing for any other value.
+uint32_t urlTextAt(CssValueRun run, uint32_t index) {
+    const CssValueNode* value = &run.values[index];
+    if (value->kind == PrCssValueKind_Url)
+        return index;
+    bool function = value->kind == PrCssValueKind_Function &&
+        (cssValueKeyword(value) == PrCssKeyword_Url || cssValueKeyword(value) == PrCssKeyword_Src);
+    if (function && value->next > 1 && value[1].kind == PrCssValueKind_String)
+        return index + 1;
+    return kArrayMissing;
+}
+
+// Serializes a computed value with each URL in it made absolute, against the document's base URL, which the engine
+// resolves every URL of a style against (css-values-4/#relative-urls). A URL of a fragment alone is a local URL and
+// stays as written (css-values-4/#local-urls), as does one that does not parse.
+void serializeAbsoluteUrls(PrTextBuffer* out, PrCssPresentation* r, CssValueRun computed) {
+    bool urls = false;
+    for (uint32_t i = 0; i < computed.count && !urls; ++i)
+        urls = urlTextAt(computed, i) != kArrayMissing;
+    if (!urls) {
+        cssSerializeValues(out, computed);
+        return;
+    }
+    CssValuePool pool{};
+    CssValueSpan span = cssValuePoolAddRun(&pool, computed);
+    PrUrl* base = domDocumentBaseUrl(r->document);
+    for (uint32_t i = span.start; i < span.start + span.count; ++i) {
+        CssValueRun run = cssValuePoolRun(&pool, span);
+        uint32_t at = urlTextAt(run, i - span.start);
+        if (at == kArrayMissing)
+            continue;
+        PrStringView reference = cssValueText(run, &run.values[at]);
+        PrUrl* parsed = nullptr;
+        if (reference.size != 0 && reference.data[0] != '#' &&
+                prUrlCreate(reference, base, PrCharset_Utf8, &parsed) == PrStatus_Ok) {
+            PrRawString absolute = prUrlSerialize(parsed, PrUrlSerialization_Whole);
+            PrStringView view = prRawStringView(&absolute);
+            uint32_t start = cssValuePoolAddText(&pool, view);
+            CssValueNode& node = pool.values.data[span.start + at];
+            node.text.start = start;
+            node.text.length = uint32_t(view.size);
+            prRawStringReset(&absolute);
+        }
+        prUrlDestroy(parsed);
+    }
+    prUrlDestroy(base);
+    cssSerializeValues(out, cssValuePoolRun(&pool, span));
+    cssValuePoolReset(&pool);
+}
+
 // Serializes the resolved value of `property` (cssom-1/#resolved-values). For width and height, this is the used value
 // if the element generates a box that those properties apply to, which is every box except an inline box
 // (CSS2/#the-width-property). For transform-origin and perspective-origin, it is the used offset in pixels from the
@@ -5855,10 +5981,12 @@ bool writeResolvedColor(PrTextBuffer* out, CssValueRun computed, const CssColorC
 // the same way. For a margin or padding, it is the used length if the computed value is a percentage or a calculation.
 // For grid-template-columns and grid-template-rows, it is the used track list of a grid container. For line-height, it
 // is the used length, a number times the font size, or normal. For transform, it is the matrix that the list composes
-// to over the reference box, which is empty if the element generates no box that is not an inline box. For every other
-// property, it is the computed value.
+// to over the reference box, which is empty if the element generates no box that is not an inline box. An element that
+// its namespace sizes without a box, as SVG's rect is, resolves its width and height to the size that its namespace
+// uses (CssBoxProvider::usedSize). For every other property, it is the computed value. `element` is null for a
+// pseudo-element.
 void serializeResolved(PrTextBuffer* out, PrCssPresentation* r, const CssComputedStyle* style, PrCssProperty property,
-        PrLayoutNode node) {
+        PrLayoutNode node, const PrDomElement* PR_NULLABLE element) {
     for (uint32_t side = 0; side < PrRectSide_Count; ++side) {
         if (property == kBorderWidths[side] && !borderStyled(style, side)) {
             prTextBufferAppend(out, "0px");
@@ -5969,6 +6097,18 @@ void serializeResolved(PrTextBuffer* out, PrCssPresentation* r, const CssCompute
             return;
         }
     }
+    bool sizes = property == PrCssProperty_Width || property == PrCssProperty_Height;
+    const CssRoot* root = element != nullptr ? element->document->style : nullptr;
+    const CssBoxProvider* provider = nullptr;
+    if (root != nullptr && element->space < kCssProviderNamespaces)
+        provider = root->boxProviders[element->space];
+    PrVec2 namespaceSize{};
+    if (sizes && !hasBox && provider != nullptr && provider->usedSize != nullptr &&
+            provider->usedSize(element, &namespaceSize)) {
+        cssSerializeNumber(out, double(property == PrCssProperty_Width ? namespaceSize.x : namespaceSize.y));
+        prTextBufferAppend(out, "px");
+        return;
+    }
     if (resolvesFromLayout(property) && hasBox && !gridTracks && side == PrRectSide_Count) {
         PrLayoutStyle record = prLayoutStyleRecord(r->tree, prLayoutNodeStyle(r->tree, node));
         PrLayoutBoxStyle box = prLayoutBoxStyleRecord(r->tree, record.groups[PrLayoutGroup_Box]);
@@ -6020,10 +6160,12 @@ void serializeResolved(PrTextBuffer* out, PrCssPresentation* r, const CssCompute
             return;
         out->size = start;
     }
-    // drop-shadow()'s currentcolor resolves to the element's color, as a color property's does.
+    // drop-shadow()'s currentcolor resolves to the element's color, as a color property's does, and so does the
+    // currentcolor of a paint, alone or as a paint server's fallback (css-color-4/#resolving-other-colors).
     bool filters = property == PrCssProperty_Filter || property == PrCssProperty_BackdropFilter;
+    bool paint = property == PrCssProperty_Fill || property == PrCssProperty_Stroke;
     bool current = false;
-    for (uint32_t i = 0; filters && i < computed.count && !current; ++i)
+    for (uint32_t i = 0; (filters || paint) && i < computed.count && !current; ++i)
         current = cssValueIsKeyword(&computed.values[i], PrCssKeyword_Currentcolor);
     if (current) {
         PrColor srgb = cssStyleColor(style, colorEnvironmentOf(r, 0, nullptr));
@@ -6031,6 +6173,10 @@ void serializeResolved(PrTextBuffer* out, PrCssPresentation* r, const CssCompute
         PrColor8 resolved{channel(srgb.r), channel(srgb.g), channel(srgb.b), channel(srgb.a)};
         CssValuePool pool{};
         for (uint32_t i = 0; i < computed.count; i += computed.values[i].next) {
+            if (cssValueIsKeyword(&computed.values[i], PrCssKeyword_Currentcolor)) {
+                cssValuePoolAddColor(&pool, resolved);
+                continue;
+            }
             if (computed.values[i].kind != PrCssValueKind_Function) {
                 cssValuePoolAddRun(&pool, cssValueSubtree(computed, i));
                 continue;
@@ -6048,7 +6194,7 @@ void serializeResolved(PrTextBuffer* out, PrCssPresentation* r, const CssCompute
         cssValuePoolReset(&pool);
         return;
     }
-    cssSerializeValues(out, computed);
+    serializeAbsoluteUrls(out, r, computed);
 }
 
 // Returns true if a computed overflow is visible along both axes.
@@ -6505,6 +6651,8 @@ bool verifyElement(PrCssPresentation* r, PrDomElement* element, const CssCompute
             const PrTextureSource* picture = pictureOf(element);
             // The painter of an outermost svg element's content, or of an SVG image.
             PrLayoutPainter vector = element->state != nullptr ? element->state->vector : PrLayoutPainter{};
+            if (element->state != nullptr && element->state->variants.painter != nullptr)
+                vector = domImageVariantsPainter(element->state->variants, imageEnvironmentOf(r, drawing));
             bool painted = (domIsOuterSvg(element) && presentsSvg(r)) ||
                 (embedOf(element) == 0 && !(sized && picture != nullptr) && vector.paint != nullptr);
             if ((content.kind == PrLayoutContentKind_Embed) != (embedOf(element) != 0) ||
@@ -6727,10 +6875,11 @@ void syncFonts(PrCssPresentation* r) {
         PrRawString family = prRawStringNull();
         PrFontFaceDescriptor descriptor{};
         RawArray<PrFontCodePointRange> ranges;
+        RawArray<PrFontVariation> variations;
         bool described = false;
         if (index == kHashMissing) {
             cssFontFaceRetain(face);
-            described = cssFontFaceDescribe(face, &family, &descriptor, &ranges);
+            described = cssFontFaceDescribe(face, &family, &descriptor, &ranges, &variations);
             index = r->fontFaces.count;
             uint64_t key = ++r->nextFontFaceKey;
             r->fontFaces.push(CssPresentationFontFace{
@@ -6769,6 +6918,7 @@ void syncFonts(PrCssPresentation* r) {
         }
         prRawStringReset(&family);
         ranges.reset();
+        variations.reset();
     }
     if (added)
         prFontSetOrder(r->fonts, order.data, order.count);
@@ -6845,6 +6995,7 @@ bool restyle(PrCssPresentation* r, PrLayoutVec extent, RestyleReach reach) {
     domUsesSync(r->document);
     if (r->mediaStale && !r->restyleAll && cssRuleSetMediaChanged(&r->rules, r->document->media))
         r->restyleAll = true;
+    bool mediaChanged = r->mediaStale;
     r->mediaStale = false;
     // A new headroom or preferred scheme projects again the boxes whose records read state outside their styles, and
     // only those. New schemes for the page project every box again.
@@ -6856,7 +7007,8 @@ bool restyle(PrCssPresentation* r, PrLayoutVec extent, RestyleReach reach) {
         pageSchemes = cssPageSchemes(r->document);
     }
     bool everyBox = pageSchemes != r->pageSchemes;
-    bool outsideChanged = headroom != r->headroom || prefersDark != r->prefersDark;
+    // A change to the media environment may choose other variants of SVG images (DomImageVariants).
+    bool outsideChanged = headroom != r->headroom || prefersDark != r->prefersDark || mediaChanged;
     bool reproject = everyBox || (outsideChanged && r->readsOutside);
     r->headroom = headroom;
     r->prefersDark = prefersDark;
@@ -6865,6 +7017,14 @@ bool restyle(PrCssPresentation* r, PrLayoutVec extent, RestyleReach reach) {
     // schemes.
     if (outsideChanged || everyBox)
         svgInvalidate(r);
+    // The replaced elements that show SVG images take their content again, because the variant that draws them may
+    // change.
+    for (uint32_t i = 0; mediaChanged && i < r->entries.count; ++i) {
+        const CssPresentationEntry& entry = r->entries.data[i];
+        const PrDomElement* element = entry.node != nullptr ? domElementFromNode(entry.node) : nullptr;
+        if (element != nullptr && entry.boxed && element->state != nullptr && element->state->variants.painter != nullptr)
+            queueBox(r, i, CssPresentationBoxOp_Content);
+    }
     for (uint32_t i = 0; reproject && i < r->entries.count; ++i) {
         const CssPresentationEntry& entry = r->entries.data[i];
         if (entry.node != nullptr &&
@@ -7157,6 +7317,15 @@ void closeUpdate(PrCssPresentation* r) {
     r->accrued = PrCssPresentationStats{};
 }
 
+// Redraws, in the next scene, the content of each painter of the tree whose revision changed. The caller owns the tree.
+void repaintPainters(PrCssPresentation* r) {
+    if (!r->paintersStale)
+        return;
+    r->paintersStale = false;
+    if (prLayoutTreeRepaintPainters(r->tree))
+        r->sceneStale = true;
+}
+
 // Returns the used appearance of the elements that a sheet for `appearance` styles, or None for every element.
 CssAppearance appearanceOf(PrCssSheetAppearance appearance) {
     switch (appearance) {
@@ -7268,6 +7437,12 @@ void cssPresentationRemoving(PrCssPresentation* presentation, PrDomNode* node) {
     markChildren(presentation, node);
 }
 
+void cssPresentationClassesChanged(PrCssPresentation* presentation, PrDomElement* element, PrStringView oldValue,
+        PrStringView value) {
+    if (domIsConnected(element) && element->document == presentation->document && invalidates(presentation))
+        invalidateClasses(presentation, element, oldValue, value);
+}
+
 void cssPresentationAttributeChanged(PrCssPresentation* presentation, PrDomElement* element, DomNamespaceId space,
         PrStringView name, PrStringView oldValue, PrStringView value) {
     // HTML's attributes are in no namespace. An attribute in another namespace, such as xml:lang, reaches what reads
@@ -7335,15 +7510,7 @@ void cssPresentationAttributeChanged(PrCssPresentation* presentation, PrDomEleme
         }
     }
     if (name == "class") {
-        // Invalidate the classes that are in one value and not the other.
-        eachClass(oldValue, [&](PrStringView token) {
-            if (!hasClass(value, token))
-                invalidate(presentation, element, cssFeatureHash(CssFeature_Class, token));
-        });
-        eachClass(value, [&](PrStringView token) {
-            if (!hasClass(oldValue, token))
-                invalidate(presentation, element, cssFeatureHash(CssFeature_Class, token));
-        });
+        invalidateClasses(presentation, element, oldValue, value);
     } else if (name == "id" && oldValue != value) {
         if (oldValue.size != 0)
             invalidate(presentation, element, cssFeatureHash(CssFeature_Id, oldValue));
@@ -7512,6 +7679,7 @@ void cssPresentationUpdateBoxes(PrCssPresentation* presentation, PrLayoutVec ext
 
 bool cssPresentationUpdateLayout(PrCssPresentation* presentation, PrLayoutVec extent) {
     closeUpdate(presentation);
+    repaintPainters(presentation);
     // A viewport that lays out pages lays them out in their page boxes, so its extent changes no style or box. It still
     // places the pages across the viewport.
     if (!presentation->layoutStale && extent == presentation->laidOutIn) {
@@ -7704,7 +7872,7 @@ bool cssPresentationCreateImage(PrCssPresentation* presentation, PrLayoutNode bo
         content.rendering = drawing.rendering;
     } else {
         content.kind = PrLayoutContentKind_Painter;
-        content.painter = loaded->vector;
+        content.painter = domImageVariantsPainter(loaded->variants, imageEnvironmentOf(r, drawing));
     }
     prLayoutNodeSetContent(r->tree, image, &content);
     return true;
@@ -7742,6 +7910,15 @@ void cssPresentationEffectChanged(PrCssPresentation* presentation, const PrDomEl
     if (!domIsConnected(element) || element->document != presentation->document)
         return;
     mark(const_cast<PrDomElement*>(element), DomStyleFlag_Self);
+    presentation->changed = true;
+}
+
+void cssPresentationAttributesAnimated(PrCssPresentation* presentation, PrDomElement* element) {
+    if (!domIsConnected(element) || element->document != presentation->document)
+        return;
+    if (presentation->refined)
+        reprojectReach(presentation, element, CssBoxChange_Attributes);
+    mark(element, DomStyleFlag_Self);
     presentation->changed = true;
 }
 
@@ -7832,6 +8009,14 @@ void cssPresentationSendAnimationEvents(PrCssPresentation* presentation) {
         cssAnimateEventReset(&e);
     }
     events.reset();
+    // Then the events of the document's other animations.
+    RawArray<CssAnimationDriver> drivers;
+    drivers.append(cssAnimations(presentation->document).drivers.span());
+    for (uint32_t i = 0; i < drivers.count; ++i) {
+        if (drivers.data[i].hasEvents(drivers.data[i].context))
+            drivers.data[i].sendEvents(drivers.data[i].context);
+    }
+    drivers.reset();
 }
 
 const PrDomNode* PR_NULLABLE cssPresentationPseudoNode(const PrCssPresentation* presentation,
@@ -7848,8 +8033,12 @@ const PrDomNode* PR_NULLABLE cssPresentationPseudoNode(const PrCssPresentation* 
 }
 
 bool cssPresentationHasWork(const PrCssPresentation* presentation) {
+    const CssAnimations& animations = cssAnimations(presentation->document);
+    bool driven = false;
+    for (uint32_t i = 0; i < animations.drivers.count && !driven; ++i)
+        driven = animations.drivers.data[i].hasEvents(animations.drivers.data[i].context);
     return presentation->scrolled.count != 0 || presentation->anchorMoves.count != 0 ||
-        cssAnimations(presentation->document).events.count != 0 || presentation->changed ||
+        animations.events.count != 0 || driven || presentation->changed || presentation->paintersStale ||
         cssDocumentRoot(presentation->document)->fontsVersion != presentation->fontsVersion ||
         cssPresentationAwaitsFontRequests(presentation);
 }
@@ -7890,7 +8079,8 @@ void cssPresentationComputedBlock(PrCssPresentation* presentation, const PrDomEl
         for (uint32_t i = 0; i < order.count; ++i) {
             prTextBufferAppend(&text, cssPropertyName(order.properties[i]));
             prTextBufferAppend(&text, ": ");
-            serializeResolved(&text, presentation, style, order.properties[i], node);
+            serializeResolved(&text, presentation, style, order.properties[i], node,
+                pseudo == CssPseudo_None ? element : nullptr);
             prTextBufferAppend(&text, "; ");
         }
         cssCustomEach(style->custom, [&](const CssCustomRow& row) {
@@ -7933,8 +8123,34 @@ bool cssPresentationComputedValue(PrCssPresentation* presentation, const PrDomEl
         return true;
     const CssComputedStyle* style = targetStyle(presentation, at, pseudo);
     serializeResolved(out, presentation, style, property,
-        pseudo == CssPseudo_None ? presentation->entries.data[at].layoutNode : kPrLayoutNodeNone);
+        pseudo == CssPseudo_None ? presentation->entries.data[at].layoutNode : kPrLayoutNodeNone,
+        pseudo == CssPseudo_None ? element : nullptr);
     cssComputedStyleRelease(style);
+    return true;
+}
+
+bool cssPresentationUnitPx(PrCssPresentation* presentation, const PrDomElement* element, PrCssUnit unit, double* out) {
+    const CssComputedStyle* style = cssPresentationStyle(presentation, element);
+    if (style == nullptr)
+        return false;
+    CssFontMetrics metrics{.measure = &presentation->fontMeasure};
+    CssStyleContext context{
+        .font = cssStyleFontBases(style),
+        .root = presentation->rootFont,
+        .viewport = viewportOf(presentation),
+        .metrics = &metrics,
+    };
+    // Measure font metrics in the element's own font.
+    context.font.style = style;
+    return cssAbsoluteLength(1, unit, context, out);
+}
+
+bool cssPresentationStyledValue(PrCssPresentation* presentation, const PrDomElement* element, PrCssProperty property,
+        PrTextBuffer* out) {
+    const CssComputedStyle* style = cssPresentationStyle(presentation, element);
+    if (style == nullptr || cssStyleSlot(property).group == CssStyleGroup_Count)
+        return false;
+    serializeResolved(out, presentation, style, property, kPrLayoutNodeNone, nullptr);
     return true;
 }
 
@@ -7954,6 +8170,7 @@ bool cssPresentationComputedCustomValue(PrCssPresentation* presentation, const P
 
 void cssPresentationPrepareJob(PrCssPresentation* presentation, PrLayoutVec extent) {
     own(presentation);
+    repaintPainters(presentation);
     measureJob(presentation);
     restyle(presentation, extent, RestyleReach_Job);
     applyBoxes(presentation);
@@ -8124,7 +8341,7 @@ void prCssPresentationDestroy(PrCssPresentation* PR_NULLABLE presentation) {
         prRawStringReset(&r->images.data[i].url);
         r->images.data[i].waiting.reset();
         prTextureSourceRelease(r->images.data[i].image);
-        prLayoutPainterRelease(r->images.data[i].vector);
+        domImageVariantsRelease(r->images.data[i].variants);
     }
     r->images.reset();
     r->imageIndex.reset();
@@ -8157,7 +8374,7 @@ bool prCssPresentationIsCurrent(const PrCssPresentation* presentation) {
     // are not the document's to report. A texture that arrived for a paint that waits, or the next picture of an image
     // that plays, makes the paint stale.
     return !presentation->changed && !presentation->layoutStale && !presentation->sceneStale &&
-        !prLayoutTreeTexturesStale(presentation->tree) &&
+        !prLayoutTreeTexturesStale(presentation->tree) && !presentation->paintersStale &&
         viewportWheelEvents(presentation) == prLayoutTreeViewportWheelEvents(presentation->tree);
 }
 

@@ -58,6 +58,17 @@ void prPathDataVertices(const PrPathDataCommand* PR_NULLABLE commands, uint32_t 
 // path.
 void prPathDataMakeAbsolute(PrPathDataCommand* PR_NULLABLE commands, uint32_t count);
 
+// Writes `commands` as path data of the same path in four commands alone: absolute movetos, linetos and cubic curvetos,
+// and closepaths, M, L, C and Z. Cubic curves approximate an arc, and draw a quadratic curve exactly. Writes up to
+// `capacity` of them to `out` and returns their number.
+uint32_t prPathDataNormalize(const PrPathDataCommand* PR_NULLABLE commands, uint32_t count,
+    PrPathDataCommand* PR_NULLABLE out, uint32_t capacity);
+
+// Returns the index of the command whose segment holds the point `distance` along the path that `commands` describe:
+// the first whose end is past the distance, or the last if the distance is past the end. A negative distance is the
+// first command's. Returns UINT32_MAX for no commands.
+uint32_t prPathDataSegmentAtLength(const PrPathDataCommand* PR_NULLABLE commands, uint32_t count, float distance);
+
 // Appends `commands` to `out` as path data: each letter followed by its arguments, separated by spaces. A closepath is
 // written as Z. Each number is written with the fewest digits that parse back to it, and an arc's flag is written as 1
 // if it is above zero.

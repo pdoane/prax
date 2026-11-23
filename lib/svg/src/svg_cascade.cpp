@@ -48,7 +48,27 @@ uint64_t keyOf(const PrDomElement* element) {
 
 } // namespace
 
-void svgCascadeInit(SvgCascade* cascade, PrDomDocument* document, const PrSvgDrawOptions& options, PrVec2 viewport) {
+void svgCascadeMediaOf(const CssMediaEnvironment* PR_NULLABLE base, const PrSvgDrawOptions& options, PrVec2 viewport,
+        CssMediaEnvironment* out) {
+    if (base != nullptr)
+        *out = *base;
+    else
+        cssMediaEnvironmentInit(out, false);
+    out->reads = nullptr;
+    PrTextBuffer length{};
+    cssSerializeNumber(&length, double(viewport.x));
+    prTextBufferAppend(&length, "px");
+    cssMediaEnvironmentSet(out, PrCssDescriptor_MediaWidth, prTextBufferView(&length));
+    prTextBufferClear(&length);
+    cssSerializeNumber(&length, double(viewport.y));
+    prTextBufferAppend(&length, "px");
+    cssMediaEnvironmentSet(out, PrCssDescriptor_MediaHeight, prTextBufferView(&length));
+    prTextBufferReset(&length);
+    cssMediaEnvironmentSet(out, PrCssDescriptor_MediaPrefersColorScheme, options.prefersDark ? "dark" : "light");
+}
+
+void svgCascadeInit(SvgCascade* cascade, PrDomDocument* document, const PrSvgDrawOptions& options, PrVec2 viewport,
+        const CssMediaEnvironment* PR_NULLABLE base) {
     *cascade = SvgCascade{};
     cascade->document = document;
     // A document without a browsing context takes the documents that its references name from the host's loader. The
@@ -70,14 +90,20 @@ void svgCascadeInit(SvgCascade* cascade, PrDomDocument* document, const PrSvgDra
         cascade->userAgent.push(host);
         prTextBufferReset(&rule);
     }
+    const CssMediaEnvironment* media = document->media;
+    if (media == nullptr) {
+        svgCascadeMediaOf(base, options, viewport, &cascade->media);
+        cascade->media.reads = &cascade->reads;
+        media = &cascade->media;
+    }
     RawArray<CssParsedUserAgentSheet> userAgent;
     for (uint32_t i = 0; i < cascade->userAgent.count; ++i)
         userAgent.push(CssParsedUserAgentSheet{cascade->userAgent.data[i], 0, CssAppearance_None});
-    cssRuleSetBuildUserAgent(&cascade->userAgentRules, document, userAgent.data, userAgent.count, 0, document->media);
+    cssRuleSetBuildUserAgent(&cascade->userAgentRules, document, userAgent.data, userAgent.count, 0, media);
     userAgent.reset();
     PrCssStyleSheetList* sheets = cssDocumentStyleSheets(document);
     CssTreeSheets tree{document, 0, sheets->sheets.data, sheets->sheets.count};
-    cssRuleSetBuild(&cascade->rules, &cascade->userAgentRules, &tree, 1, document->media);
+    cssRuleSetBuild(&cascade->rules, &cascade->userAgentRules, &tree, 1, media);
 }
 
 void svgCascadeReset(SvgCascade* cascade) {

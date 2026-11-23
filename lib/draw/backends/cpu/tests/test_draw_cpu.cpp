@@ -86,10 +86,9 @@ String alphaRow(const Target& t, uint32_t y) {
     return text;
 }
 
-PrDrawStroke stroke(float width, bool nonScaling = false) {
+PrDrawStroke stroke(float width) {
     PrDrawStroke s = prDrawStrokeDefault();
     s.shape.width = width;
-    s.nonScaling = nonScaling;
     return s;
 }
 
@@ -279,35 +278,6 @@ TEST_CASE("a stroke covers its width along the shape") {
     CHECK(alphaRow(t, 0) == "255 255 255 255 255 255");
     CHECK(alphaRow(t, 1) == "255 255 255 255 255 255");
     CHECK(alphaRow(t, 2) == "255 255 0 0 255 255");
-    prDrawListRelease(list);
-}
-
-TEST_CASE("a non-scaling stroke of width one is one target pixel whatever the transform") {
-    Target t = target(8, 4);
-    PrDrawList* list = prDrawListCreate();
-    PrDrawStroke hairline = stroke(1, true);
-    prDrawListPushTransformAffine2(list, prAffine2Scale(PrVec2{4, 4}));
-    prDrawListLine(list, PrVec2{0.25f, 0.375f}, PrVec2{1.75f, 0.375f}, {.color = kBlack, .stroke = &hairline});
-    prDrawListPopTransform(list);
-    render(t, list);
-    CHECK(alphaRow(t, 0) == "0 0 0 0 0 0 0 0");
-    CHECK(alphaRow(t, 1) == "0 255 255 255 255 255 255 0");
-    CHECK(alphaRow(t, 2) == "0 0 0 0 0 0 0 0");
-    prDrawListRelease(list);
-}
-
-TEST_CASE("a non-scaling stroke keeps its width in target pixels") {
-    Target t = target(8, 8);
-    PrDrawList* list = prDrawListCreate();
-    PrDrawStroke two = stroke(2, true);
-    prDrawListPushTransformAffine2(list, prAffine2Scale(PrVec2{4, 4}));
-    prDrawListLine(list, PrVec2{0, 1}, PrVec2{2, 1}, {.color = kBlack, .stroke = &two});
-    prDrawListPopTransform(list);
-    render(t, list);
-    CHECK(alphaRow(t, 2) == "0 0 0 0 0 0 0 0");
-    CHECK(alphaRow(t, 3) == "255 255 255 255 255 255 255 255");
-    CHECK(alphaRow(t, 4) == "255 255 255 255 255 255 255 255");
-    CHECK(alphaRow(t, 5) == "0 0 0 0 0 0 0 0");
     prDrawListRelease(list);
 }
 
@@ -938,6 +908,45 @@ TEST_CASE("a blur reads past the region of its input by its edge mode") {
         CHECK(alphaAt(edge, 7) == 255);
         CHECK(alphaAt(edge, 12) == 255);
     }
+}
+
+TEST_CASE("lighting takes the surface's slope per unit of the group's space, so it falls the same at any scale") {
+    // A square blurred into a smooth hill, lit from the left. The hill's slope is the same in the group's space at any
+    // scale, and so is the light on it.
+    PrDrawFilterNode blur{};
+    blur.kind = PrDrawFilterKind_Blur;
+    blur.inputs[0] = PrDrawFilterInput_Source;
+    blur.blur.sigma = PrVec2{3, 3};
+    PrDrawFilterNode light{};
+    light.kind = PrDrawFilterKind_Lighting;
+    light.inputs[0] = 0;
+    light.lighting = PrDrawFilterLighting{
+        .kind = PrDrawLightingKind_Diffuse,
+        .surfaceScale = 3,
+        .constant = 1,
+        .color = prColor16FromColor(PrColor{1, 1, 1, 1}),
+        .light = PrDrawLight{.kind = PrDrawLightKind_Distant, .azimuth = kPrF32Pi, .elevation = kPrF32Pi / 4},
+    };
+    auto redAt = [&](float scale, float x, float y) {
+        uint32_t size = uint32_t(32 * scale);
+        Target t = target(size, size);
+        PrDrawList* list = prDrawListCreate();
+        prDrawListPushTransformAffine2(list, prAffine2Scale(PrVec2{scale, scale}));
+        const PrDrawFilterNode nodes[] = {blur, light};
+        drawFiltered(list, graphOf(nodes, PrRect{0, 0, 32, 32}), PrRect{8, 8, 24, 24}, kBlack);
+        prDrawListPopTransform(list);
+        render(t, list);
+        prDrawListRelease(list);
+        return int(t.bytes[uint32_t((size_t(y * scale) * size + size_t(x * scale)) * 4)]);
+    };
+    // The hill's left side faces the light, gently enough that a steeper slope would be brighter, and it is lit alike
+    // at both scales, brighter than the flat top. A slope per pixel would be a quarter as steep at four times the
+    // scale.
+    int once = redAt(1, 7.5f, 16.5f);
+    int fourTimes = redAt(4, 7.5f, 16.5f);
+    CHECK(once > redAt(1, 16.5f, 16.5f) + 30);
+    CHECK(fourTimes >= once - 8);
+    CHECK(fourTimes <= once + 8);
 }
 
 TEST_CASE("a displacement map reads its map in the node's space and moves its input unconverted") {

@@ -3,6 +3,7 @@
 #include "pr/dom.h"
 #include "pr/string.h"
 
+#include "css/src/css_font_face.h"
 #include "css/src/css_object.h"
 #include "css/tests/css_tests.h"
 
@@ -480,4 +481,24 @@ TEST_CASE("a highlight holds its ranges, and a registry names its highlights wit
     CHECK(prCssHighlightRegistryDelete(registry, "a"));
     CHECK_FALSE(prCssHighlightRegistryDelete(registry, "a"));
     prCssHighlightRelease(highlight);
+}
+
+TEST_CASE("a face's font-variation-settings descriptor sets the axes of its derivation, the last value of each first") {
+    PrStringView descriptors[PrCssFontFaceDescriptor_Count - 1] = {};
+    descriptors[PrCssFontFaceDescriptor_VariationSettings - 1] = "'slnt' -20, 'wght' 300";
+    PrCssFontFace* face = prCssFontFaceCreate("A", "url(a.ttf)", descriptors);
+    PrRawString family = prRawStringNull();
+    PrFontFaceDescriptor described{};
+    RawArray<PrFontCodePointRange> ranges;
+    RawArray<PrFontVariation> variations;
+    REQUIRE(cssFontFaceDescribe(face, &family, &described, &ranges, &variations));
+    REQUIRE(described.derivation.variationCount == 2);
+    CHECK(described.derivation.variations[0].tag == PR_FONT_TAG('s', 'l', 'n', 't'));
+    CHECK(described.derivation.variations[0].value == -20);
+    CHECK(described.derivation.variations[1].tag == PR_FONT_TAG('w', 'g', 'h', 't'));
+    CHECK(described.derivation.variations[1].value == 300);
+    prRawStringReset(&family);
+    ranges.reset();
+    variations.reset();
+    prCssFontFaceRelease(face);
 }

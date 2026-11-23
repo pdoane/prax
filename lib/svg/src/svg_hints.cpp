@@ -15,6 +15,7 @@
 #include "css/src/css_serialize.h"
 #include "dom/src/dom_flat.h"
 #include "dom/src/dom_node.h"
+#include "svg/src/svg_types.h"
 
 namespace pr_impl {
 namespace {
@@ -29,6 +30,41 @@ bool isBareNumber(PrStringView text) {
     return text.size != 0;
 }
 
+// Writes `value` to `out`, with each part that is a number alone written as a length in pixels, as SVG writes lengths.
+// Spaces and commas outside any function separate the parts. Returns false if no part is such a number.
+bool withPixels(PrStringView value, PrTextBuffer* out) {
+    bool changed = false;
+    uint32_t depth = 0;
+    for (size_t i = 0; i < value.size;) {
+        char c = value.data[i];
+        if (c == '(' || c == ')' || c == ',' || prAsciiIsSpace(c) || depth != 0) {
+            if (c == '(')
+                ++depth;
+            else if (c == ')' && depth != 0)
+                --depth;
+            prTextBufferAppendChar(out, c);
+            ++i;
+            continue;
+        }
+        size_t end = i;
+        while (end < value.size && value.data[end] != '(' && value.data[end] != ',' && !prAsciiIsSpace(value.data[end]))
+            ++end;
+        PrStringView part = prStringSlice(value, i, end - i);
+        double number = 0;
+        prTextBufferAppend(out, part);
+        if (end < value.size && value.data[end] == '(') {
+            i = end;
+            continue;
+        }
+        if (isBareNumber(part) && prF64ParsePrefix(part, &number)) {
+            prTextBufferAppend(out, "px");
+            changed = true;
+        }
+        i = end;
+    }
+    return changed;
+}
+
 // Returns true if the SVG element is one of `tags`.
 template <size_t N>
 bool isSvgTag(const PrDomElement* element, const PrDomTag (&tags)[N]) {
@@ -37,197 +73,6 @@ bool isSvgTag(const PrDomElement* element, const PrDomTag (&tags)[N]) {
             return true;
     }
     return false;
-}
-
-// Returns the property that the attribute `name` of an SVG element is a presentation attribute of, or
-// PrCssProperty_Count if it is none (SVG2/styling.html#PresentationAttributes). Every element has those of
-// kCssPropertyPresentation. The geometry properties have presentation attributes only on the elements that they size
-// (SVG2/geometry.html). The width and height of an inner svg element are not, since CSS does not lay it out
-// (w3c/svgwg#1057). The transform property is spelled patternTransform on a pattern and gradientTransform on a
-// gradient, and the path-length property is spelled pathLength on a path and the basic shapes
-// (SVG2/paths.html#PathLengthProperty). The fill of an animation element is its own attribute.
-PrCssProperty svgPresentationOf(const PrDomElement* element, PrStringView name) {
-    static constexpr PrDomTag kCentered[] = {PrDomTag_Circle, PrDomTag_Ellipse};
-    static constexpr PrDomTag kRounded[] = {PrDomTag_Ellipse, PrDomTag_Rect};
-    static constexpr PrDomTag kPlaced[] = {PrDomTag_ForeignObject, PrDomTag_Image, PrDomTag_Rect};
-    static constexpr PrDomTag kPositioned[] = {
-        PrDomTag_ForeignObject, PrDomTag_Image, PrDomTag_Rect, PrDomTag_Svg,
-        PrDomTag_Symbol,
-    };
-    static constexpr PrDomTag kGradients[] = {PrDomTag_LinearGradient, PrDomTag_RadialGradient};
-    static constexpr PrDomTag kAnimations[] = {
-        PrDomTag_Animate, PrDomTag_AnimateMotion, PrDomTag_AnimateTransform,
-        PrDomTag_Set,
-    };
-    static constexpr PrDomTag kShapes[] = {
-        PrDomTag_Circle, PrDomTag_Ellipse, PrDomTag_Line, PrDomTag_Path,
-        PrDomTag_Polygon, PrDomTag_Polyline, PrDomTag_Rect,
-    };
-    if (name == "transform" && element->tag != PrDomTag_Pattern && !isSvgTag(element, kGradients))
-        return PrCssProperty_Transform;
-    if (name == "transform")
-        return PrCssProperty_Count;
-    if (name == "patternTransform")
-        return element->tag == PrDomTag_Pattern ? PrCssProperty_Transform : PrCssProperty_Count;
-    if (name == "gradientTransform")
-        return isSvgTag(element, kGradients) ? PrCssProperty_Transform : PrCssProperty_Count;
-    if (name == "pathLength")
-        return isSvgTag(element, kShapes) ? PrCssProperty_PathLength : PrCssProperty_Count;
-    PrCssProperty property = cssPropertyFromText(name);
-    // Attribute names match case-sensitively.
-    if (property == PrCssProperty_Count || cssPropertyName(property) != name)
-        return PrCssProperty_Count;
-    switch (property) {
-        case PrCssProperty_Cx:
-        case PrCssProperty_Cy:
-            return isSvgTag(element, kCentered) ? property : PrCssProperty_Count;
-        case PrCssProperty_R:
-            return element->tag == PrDomTag_Circle ? property : PrCssProperty_Count;
-        case PrCssProperty_Rx:
-        case PrCssProperty_Ry:
-            return isSvgTag(element, kRounded) ? property : PrCssProperty_Count;
-        case PrCssProperty_X:
-        case PrCssProperty_Y:
-            return isSvgTag(element, kPositioned) ? property : PrCssProperty_Count;
-        case PrCssProperty_Width:
-        case PrCssProperty_Height:
-            return isSvgTag(element, kPlaced) || domIsOuterSvg(element) ? property : PrCssProperty_Count;
-        case PrCssProperty_D:
-            return element->tag == PrDomTag_Path ? property : PrCssProperty_Count;
-        case PrCssProperty_Fill:
-            return isSvgTag(element, kAnimations) ? PrCssProperty_Count : property;
-        default:
-            break;
-    }
-    return bitsetTest(kCssPropertyPresentation, property) ? property : PrCssProperty_Count;
-}
-
-// Returns true if `text` holds one declaration's value and nothing after it: no semicolon, `!` or brace outside a
-// string, a comment or a block. The hints are parsed as one declaration list, so such a character would end the
-// declaration, mark it important or start another one. As the value of a property, the text is invalid
-// (SVG2/styling.html#PresentationAttributes), and it declares nothing.
-bool isOneValue(PrStringView text) {
-    uint32_t depth = 0;
-    for (size_t i = 0; i < text.size; ++i) {
-        char c = text.data[i];
-        if (c == '\\') {
-            ++i;
-        } else if (c == '"' || c == '\'') {
-            for (++i; i < text.size && text.data[i] != c; ++i)
-                i += text.data[i] == '\\' ? 1 : 0;
-            if (i >= text.size)
-                return false;
-        } else if (c == '/' && i + 1 < text.size && text.data[i + 1] == '*') {
-            size_t end = i + 2;
-            while (end + 1 < text.size && !(text.data[end] == '*' && text.data[end + 1] == '/'))
-                ++end;
-            if (end + 1 >= text.size)
-                return false;
-            i = end + 1;
-        } else if (c == '(' || c == '[') {
-            ++depth;
-        } else if (c == ')' || c == ']') {
-            if (depth == 0)
-                return false;
-            --depth;
-        } else if (depth == 0 && (c == ';' || c == '!' || c == '{' || c == '}')) {
-            return false;
-        }
-    }
-    return depth == 0;
-}
-
-// Reads an SVG transform function's numbers (css-transforms-1/#svg-syntax), each after an optional comma except the
-// first, up to the closing parenthesis. Returns the count, or -1 if the arguments do not parse or number more than six.
-int32_t svgTransformArguments(PrStringView text, size_t* pos, double* out) {
-    int32_t count = 0;
-    for (;;) {
-        while (*pos < text.size && prAsciiIsSpace(text.data[*pos]))
-            ++*pos;
-        if (*pos < text.size && text.data[*pos] == ')') {
-            ++*pos;
-            return count;
-        }
-        if (count != 0 && *pos < text.size && text.data[*pos] == ',') {
-            ++*pos;
-            while (*pos < text.size && prAsciiIsSpace(text.data[*pos]))
-                ++*pos;
-        }
-        size_t start = *pos;
-        while (*pos < text.size && (prAsciiIsDigit(text.data[*pos]) || text.data[*pos] == '.' || text.data[*pos] == '-' ||
-                text.data[*pos] == '+' || text.data[*pos] == 'e' || text.data[*pos] == 'E'))
-            ++*pos;
-        PrStringView number = {text.data + start, *pos - start};
-        if (count == 6 || *pos == start || !prF64ParsePrefix(number, &out[count]))
-            return -1;
-        ++count;
-    }
-}
-
-// Appends the transform list of an SVG transform attribute as a CSS transform list (css-transforms-1/#svg-syntax). SVG
-// writes lengths and angles as numbers alone, separates functions and arguments with commas, and gives rotate() an
-// optional center, which becomes a translation to the center and back. Returns false, appending nothing that the caller
-// keeps, if the text is not in SVG's syntax.
-bool svgTransform(PrTextBuffer* out, PrStringView text) {
-    struct Function {
-        PrStringView name;
-        int32_t counts[2];      // the argument counts that the function takes
-    };
-    static constexpr Function kFunctions[] = {
-        {"matrix", {6, 6}}, {"translate", {1, 2}}, {"scale", {1, 2}}, {"rotate", {1, 3}},
-        {"skewX", {1, 1}}, {"skewY", {1, 1}},
-    };
-    size_t pos = 0;
-    bool any = false;
-    for (;;) {
-        while (pos < text.size && (prAsciiIsSpace(text.data[pos]) || text.data[pos] == ','))
-            ++pos;
-        if (pos == text.size)
-            return any;
-        size_t start = pos;
-        while (pos < text.size && prAsciiIsLetter(text.data[pos]))
-            ++pos;
-        PrStringView name{text.data + start, pos - start};
-        while (pos < text.size && prAsciiIsSpace(text.data[pos]))
-            ++pos;
-        if (pos == text.size || text.data[pos] != '(')
-            return false;
-        ++pos;
-        double n[6];
-        int32_t count = svgTransformArguments(text, &pos, n);
-        const Function* function = nullptr;
-        for (const Function& f : kFunctions)
-            function = f.name == name ? &f : function;
-        if (function == nullptr || (count != function->counts[0] && count != function->counts[1]))
-            return false;
-        if (any)
-            prTextBufferAppendChar(out, ' ');
-        any = true;
-        auto number = [&](double value, const char* unit) {
-            cssSerializeNumber(out, value);
-            prTextBufferAppend(out, unit);
-        };
-        if (name == "rotate" && count == 3) {
-            prTextBufferAppend(out, "translate(");
-            number(n[1], "px,");
-            number(n[2], "px) rotate(");
-            number(n[0], "deg) translate(");
-            number(-n[1], "px,");
-            number(-n[2], "px)");
-            continue;
-        }
-        bool angles = name == "rotate" || name == "skewX" || name == "skewY";
-        const char* unit = name == "translate" ? "px" : angles ? "deg" : "";
-        prTextBufferAppend(out, name);
-        prTextBufferAppendChar(out, '(');
-        for (int32_t i = 0; i < count; ++i) {
-            if (i != 0)
-                prTextBufferAppendChar(out, ',');
-            // A matrix's translation is a number in CSS as in SVG.
-            number(n[i], unit);
-        }
-        prTextBufferAppendChar(out, ')');
-    }
 }
 
 // Appends a filter declaration for a filter attribute's `value` if the value has bare numbers among the arguments of
@@ -311,38 +156,8 @@ void addSvg(PrTextBuffer* out, const PrDomElement* element) {
         if (attribute->space != PrDomNamespace_None)
             continue;
         PrCssProperty property = svgPresentationOf(element, prRawStringView(&attribute->name));
-        if (property == PrCssProperty_Count)
-            continue;
-        PrStringView value = stringTrimBy(prRawStringView(&attribute->value), prAsciiIsSpace);
-        if (property == PrCssProperty_D) {
-            prTextBufferAppend(out, "d:path(");
-            cssSerializeString(out, value);
-            prTextBufferAppend(out, ");");
-            continue;
-        }
-        if (value.size == 0 || !isOneValue(value))
-            continue;
-        if (property == PrCssProperty_PathLength) {
-            double number = 0;
-            if (isBareNumber(value) && prF64ParsePrefix(value, &number))
-                cssHintAddPixels(out, "path-length", number);
-            continue;
-        }
-        if (property == PrCssProperty_Transform) {
-            uint32_t mark = out->size;
-            prTextBufferAppend(out, "transform:");
-            if (svgTransform(out, value))
-                prTextBufferAppendChar(out, ';');
-            else
-                out->size = mark;
-            continue;
-        }
-        cssHintAdd(out, cssPropertyName(property), value);
-        double number = 0;
-        if (isBareNumber(value) && prF64ParsePrefix(value, &number))
-            cssHintAddPixels(out, cssPropertyName(property), number);
-        if (property == PrCssProperty_Filter)
-            addSvgFilter(out, value);
+        if (property != PrCssProperty_Count)
+            svgPresentationDeclare(out, property, prRawStringView(&attribute->value));
     }
 }
 
@@ -362,10 +177,188 @@ CssHintReach mapped(const PrDomElement* element, PrStringView name) {
 
 constexpr CssHintProvider kProvider = {.hasOwn = hasOwn, .own = addSvg, .mapped = mapped};
 
+// Returns true if `text` holds one declaration's value and nothing after it: no semicolon, `!` or brace outside a
+// string, a comment or a block. The hints are parsed as one declaration list, so such a character would end the
+// declaration, mark it important or start another one. As the value of a property, the text is invalid
+// (SVG2/styling.html#PresentationAttributes), and it declares nothing.
+bool isOneValue(PrStringView text) {
+    uint32_t depth = 0;
+    for (size_t i = 0; i < text.size; ++i) {
+        char c = text.data[i];
+        if (c == '\\') {
+            ++i;
+        } else if (c == '"' || c == '\'') {
+            for (++i; i < text.size && text.data[i] != c; ++i)
+                i += text.data[i] == '\\' ? 1 : 0;
+            if (i >= text.size)
+                return false;
+        } else if (c == '/' && i + 1 < text.size && text.data[i + 1] == '*') {
+            size_t end = i + 2;
+            while (end + 1 < text.size && !(text.data[end] == '*' && text.data[end + 1] == '/'))
+                ++end;
+            if (end + 1 >= text.size)
+                return false;
+            i = end + 1;
+        } else if (c == '(' || c == '[') {
+            ++depth;
+        } else if (c == ')' || c == ']') {
+            if (depth == 0)
+                return false;
+            --depth;
+        } else if (depth == 0 && (c == ';' || c == '!' || c == '{' || c == '}')) {
+            return false;
+        }
+    }
+    return depth == 0;
+}
+
+// Reads an SVG transform function's numbers (css-transforms-1/#svg-syntax), each after an optional comma except the
+// first, up to the closing parenthesis. Returns the count, or -1 if the arguments do not parse or number more than six.
 } // namespace
 
 const CssHintProvider* svgHints() {
     return &kProvider;
+}
+
+// Returns the property that the attribute `name` of an SVG element is a presentation attribute of, or
+// PrCssProperty_Count if it is none (SVG2/styling.html#PresentationAttributes). Every element has those of
+// kCssPropertyPresentation. The geometry properties have presentation attributes only on the elements that they size
+// (SVG2/geometry.html). The width and height of an inner svg element are not, since CSS does not lay it out
+// (w3c/svgwg#1057). The transform property is spelled patternTransform on a pattern and gradientTransform on a
+// gradient, and the path-length property is spelled pathLength on a path and the basic shapes
+// (SVG2/paths.html#PathLengthProperty). The fill of an animation element is its own attribute.
+PrCssProperty svgPresentationOf(const PrDomElement* element, PrStringView name) {
+    static constexpr PrDomTag kCentered[] = {PrDomTag_Circle, PrDomTag_Ellipse};
+    static constexpr PrDomTag kRounded[] = {PrDomTag_Ellipse, PrDomTag_Rect};
+    static constexpr PrDomTag kPlaced[] = {PrDomTag_ForeignObject, PrDomTag_Image, PrDomTag_Rect};
+    static constexpr PrDomTag kPositioned[] = {
+        PrDomTag_ForeignObject, PrDomTag_Image, PrDomTag_Rect, PrDomTag_Svg,
+        PrDomTag_Symbol, PrDomTag_Use,
+    };
+    static constexpr PrDomTag kGradients[] = {PrDomTag_LinearGradient, PrDomTag_RadialGradient};
+    static constexpr PrDomTag kAnimations[] = {
+        PrDomTag_Animate, PrDomTag_AnimateMotion, PrDomTag_AnimateTransform,
+        PrDomTag_Set,
+    };
+    static constexpr PrDomTag kShapes[] = {
+        PrDomTag_Circle, PrDomTag_Ellipse, PrDomTag_Line, PrDomTag_Path,
+        PrDomTag_Polygon, PrDomTag_Polyline, PrDomTag_Rect,
+    };
+    if (name == "transform" && element->tag != PrDomTag_Pattern && !isSvgTag(element, kGradients))
+        return PrCssProperty_Transform;
+    if (name == "transform")
+        return PrCssProperty_Count;
+    if (name == "patternTransform")
+        return element->tag == PrDomTag_Pattern ? PrCssProperty_Transform : PrCssProperty_Count;
+    if (name == "gradientTransform")
+        return isSvgTag(element, kGradients) ? PrCssProperty_Transform : PrCssProperty_Count;
+    if (name == "pathLength")
+        return isSvgTag(element, kShapes) ? PrCssProperty_PathLength : PrCssProperty_Count;
+    PrCssProperty property = cssPropertyFromText(name);
+    // Attribute names match case-sensitively.
+    if (property == PrCssProperty_Count || cssPropertyName(property) != name)
+        return PrCssProperty_Count;
+    switch (property) {
+        case PrCssProperty_Cx:
+        case PrCssProperty_Cy:
+            return isSvgTag(element, kCentered) ? property : PrCssProperty_Count;
+        case PrCssProperty_R:
+            return element->tag == PrDomTag_Circle ? property : PrCssProperty_Count;
+        case PrCssProperty_Rx:
+        case PrCssProperty_Ry:
+            return isSvgTag(element, kRounded) ? property : PrCssProperty_Count;
+        case PrCssProperty_X:
+        case PrCssProperty_Y:
+            return isSvgTag(element, kPositioned) ? property : PrCssProperty_Count;
+        case PrCssProperty_Width:
+        case PrCssProperty_Height:
+            return isSvgTag(element, kPlaced) || domIsOuterSvg(element) ? property : PrCssProperty_Count;
+        case PrCssProperty_D:
+            return element->tag == PrDomTag_Path ? property : PrCssProperty_Count;
+        case PrCssProperty_Fill:
+            return isSvgTag(element, kAnimations) ? PrCssProperty_Count : property;
+        default:
+            break;
+    }
+    return bitsetTest(kCssPropertyPresentation, property) ? property : PrCssProperty_Count;
+}
+
+// Appends the declaration of a presentation attribute, as a hint makes it.
+void svgPresentationDeclare(PrTextBuffer* out, PrCssProperty property, PrStringView text) {
+    PrStringView value = stringTrimBy(text, prAsciiIsSpace);
+    if (property == PrCssProperty_D) {
+        prTextBufferAppend(out, "d:path(");
+        cssSerializeString(out, value);
+        prTextBufferAppend(out, ");");
+        return;
+    }
+    if (value.size == 0 || !isOneValue(value))
+        return;
+    if (property == PrCssProperty_PathLength) {
+        double number = 0;
+        if (isBareNumber(value) && prF64ParsePrefix(value, &number))
+            cssHintAddPixels(out, "path-length", number);
+        return;
+    }
+    if (property == PrCssProperty_Transform) {
+        uint32_t mark = out->size;
+        prTextBufferAppend(out, "transform:");
+        if (svgTransformCss(out, value))
+            prTextBufferAppendChar(out, ';');
+        else
+            out->size = mark;
+        return;
+    }
+    cssHintAdd(out, cssPropertyName(property), value);
+    PrTextBuffer pixels = {};
+    if (withPixels(value, &pixels))
+        cssHintAdd(out, cssPropertyName(property), PrStringView{pixels.data, pixels.size});
+    prTextBufferReset(&pixels);
+    if (property == PrCssProperty_Filter)
+        addSvgFilter(out, value);
+}
+
+// Appends the transform list of an SVG transform attribute as a CSS transform list (css-transforms-1/#svg-syntax). SVG
+// writes lengths and angles as numbers alone, separates functions and arguments with commas, and gives rotate() an
+// optional center, which becomes a translation to the center and back. Returns false, appending nothing that the caller
+// keeps, if the text is not in SVG's syntax.
+bool svgTransformCss(PrTextBuffer* out, PrStringView text) {
+    RawArray<PrSvgTransform> list;
+    bool ok = svgParseTransformList(text, &list) && list.count != 0;
+    for (uint32_t i = 0; ok && i < list.count; ++i) {
+        const PrSvgTransform& f = list.data[i];
+        const float* n = f.values;
+        if (i != 0)
+            prTextBufferAppendChar(out, ' ');
+        auto number = [&](float value, const char* unit) {
+            cssSerializeNumber(out, double(value));
+            prTextBufferAppend(out, unit);
+        };
+        if (f.type == PrSvgTransformType_Rotate && (n[1] != 0 || n[2] != 0)) {
+            prTextBufferAppend(out, "translate(");
+            number(n[1], "px,");
+            number(n[2], "px) rotate(");
+            number(n[0], "deg) translate(");
+            number(-n[1], "px,");
+            number(-n[2], "px)");
+            continue;
+        }
+        static constexpr const char* kNames[] = {"", "matrix", "translate", "scale", "rotate", "skewX", "skewY"};
+        static constexpr uint32_t kCounts[] = {0, 6, 2, 2, 1, 1, 1};
+        bool angles = f.type >= PrSvgTransformType_Rotate;
+        const char* unit = f.type == PrSvgTransformType_Translate ? "px" : angles ? "deg" : "";
+        prTextBufferAppend(out, kNames[f.type]);
+        prTextBufferAppendChar(out, '(');
+        for (uint32_t k = 0; k < kCounts[f.type]; ++k) {
+            if (k != 0)
+                prTextBufferAppendChar(out, ',');
+            // A matrix's translation is a number in CSS as in SVG.
+            number(n[k], unit);
+        }
+        prTextBufferAppendChar(out, ')');
+    }
+    list.reset();
+    return ok;
 }
 
 } // namespace pr_impl

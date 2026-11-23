@@ -731,6 +731,52 @@ TEST_CASE("the fragment renderer runs filters as steps through layers") {
     });
 }
 
+TEST_CASE("the fragment renderer lights a surface as cpu does, under a transform that scales its axes differently") {
+    // Returns a lighting node of `kind`, cast by `light`, in white.
+    auto lighting = [](PrDrawLightingKind kind, PrDrawLight light) {
+        PrDrawFilterNode node = nodeOf(PrDrawFilterKind_Lighting);
+        node.lighting = PrDrawFilterLighting{
+            .kind = kind,
+            .surfaceScale = 4,
+            .constant = 1,
+            .specularExponent = 8,
+            .color = prColor16FromColor(PrColor{1, 1, 1, 1}),
+            .light = light,
+        };
+        return node;
+    };
+    onEachTier([&](PrGpuDevice* gpuDevice) {
+        Device device(gpuDevice, 128, 128);
+        PrDrawList* list = prDrawListCreate();
+        // A spot and a point light, in group spaces stretched twice as wide as they are tall, where a light's angles
+        // hold only if its vectors are measured in the group's units.
+        PrDrawLight spot{
+            .kind = PrDrawLightKind_Spot,
+            .position = PrVec3{16, 20, 30},
+            .pointsAt = PrVec3{16, 40, 0},
+            .spotExponent = 1,
+            .coneAngle = 0.5f,
+        };
+        PrDrawLight point{.kind = PrDrawLightKind_Point, .position = PrVec3{40, 16, 20}};
+        prDrawListPushTransformAffine2(list, prAffine2Scale(PrVec2{2, 1}));
+        pushFiltered(list, PrRect{0, 0, 32, 64}, filterOf(lighting(PrDrawLightingKind_Diffuse, spot)), false);
+        subject(list, PrRect{-8, 0, 56, 64});
+        prDrawListPopGroup(list);
+        pushFiltered(list, PrRect{32, 0, 64, 64}, filterOf(lighting(PrDrawLightingKind_Specular, point)), false);
+        subject(list, PrRect{24, 0, 88, 64});
+        prDrawListPopGroup(list);
+        prDrawListPopTransform(list);
+        PrDrawLight distant{.kind = PrDrawLightKind_Distant, .azimuth = 0.8f, .elevation = 0.6f};
+        pushFiltered(list, PrRect{0, 64, 128, 128}, filterOf(lighting(PrDrawLightingKind_Diffuse, distant)), false);
+        subject(list, PrRect{32, 64, 96, 128});
+        prDrawListPopGroup(list);
+        Array<uint8_t> drawn = device.render(list);
+        Array<uint8_t> expected = cpuRender(list, 128, 128);
+        CHECK(fractionDiffering(drawn, expected, 16) <= 0.01);
+        prDrawListRelease(list);
+    });
+}
+
 TEST_CASE("the fragment renderer reads past an input's region by its edge mode, and displaces by a map in its space, as cpu does") {
     onEachTier([&](PrGpuDevice* gpuDevice) {
         Device device(gpuDevice, 128, 64);

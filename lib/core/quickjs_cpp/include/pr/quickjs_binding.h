@@ -242,6 +242,15 @@ void jsEnqueueNative(JSContext* ctx, void (*run)(void* data), void* data);
 JSValue jsWrap(JSContext* ctx, JSClassID id, JSValueConst owner, void* PR_NULLABLE handle,
     bool ownsHandle, void (*PR_NULLABLE retain)(void*) = nullptr);
 
+// Adds `members` to the prototype of the class `id`, which another module defines, as a module that extends another's
+// interfaces does (a partial interface).
+template <size_t N>
+void jsAddMembers(JSContext* ctx, JSClassID id, const JSCFunctionListEntry (&members)[N]) {
+    JSValue proto = JS_GetClassProto(ctx, id);
+    JS_SetPropertyFunctionList(ctx, proto, members, int(N));
+    JS_FreeValue(ctx, proto);
+}
+
 // Reads or stores the value of the [SameObject] attribute `name` of `object`, an object of a bound class. The value is
 // undefined until stored. `object` keeps the value alive, and storing one makes `object` stateful.
 JSValue jsSameObject(JSContext* ctx, JSValueConst object, const char* name);

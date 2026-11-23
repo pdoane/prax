@@ -1087,6 +1087,8 @@ PrLayoutBackgroundLayer prLayoutBackgroundLayerDefault(void) {
 }
 
 PrLayoutBackgroundIndex prLayoutBackgroundIntern(PrLayoutTree* tree, const PrLayoutBackgroundLayer* layers, uint32_t count) {
+    for (uint32_t i = 0; i < count; ++i)
+        layoutTreeNotePainter(tree, layers[i]);
     return layoutBackgroundsIntern(&tree->styles->backgrounds, &tree->styles->compounds, layers, count);
 }
 
@@ -1186,6 +1188,9 @@ PrLayoutMaskBorder prLayoutMaskBorderDefault(void) {
 }
 
 PrLayoutMaskIndex prLayoutMaskIntern(PrLayoutTree* tree, const PrLayoutMask* mask) {
+    for (uint32_t i = 0; i < mask->layerCount; ++i)
+        layoutTreeNotePainter(tree, mask->layers[i].image);
+    layoutTreeNotePainter(tree, mask->border.image);
     return layoutEffectListsInternMask(&tree->styles->effectLists, &tree->styles->compounds, *mask);
 }
 

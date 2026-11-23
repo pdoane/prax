@@ -37,16 +37,29 @@ struct SvgCascade {
     CssStyleBuilder builder;
     CssCascadeScratch scratch;
     CssViewport viewport;               // what viewport-relative lengths resolve against
+
+    // The environment that the media queries read, for a document that has none of its own: a screen of the viewport's
+    // size that prefers the options' color scheme. It records the features that the queries read in `reads`.
+    CssMediaEnvironment media;
+    CssMediaReads reads;
+
     RawArray<SvgCascadeEntry> styles;
     KeyIndex index;                     // `styles` by the address of their elements
     CssFontBases rootFont;              // the root's font bases, known once the root is styled
 };
 
+// Writes to `out` the environment that the media queries of a document without one of its own read: `base`, or a screen
+// of no preferences if it is null, with a viewport of `viewport` and the color scheme of `options`.
+void svgCascadeMediaOf(const CssMediaEnvironment* PR_NULLABLE base, const PrSvgDrawOptions& options, PrVec2 viewport,
+    CssMediaEnvironment* out);
+
 // Prepares the cascade of `document`, with its sheets as they are now. The root inherits the host's color and custom
 // properties from `options`, and a document without a browsing context takes the documents that its references name
-// from the loader of `options` (dom_resource.h). Viewport-relative lengths are relative to `viewport`. The cascade
-// holds no reference to `document`, which must outlive it.
-void svgCascadeInit(SvgCascade* cascade, PrDomDocument* document, const PrSvgDrawOptions& options, PrVec2 viewport);
+// from the loader of `options` (dom_resource.h). Viewport-relative lengths are relative to `viewport`. A document
+// without a media environment of its own has its media queries read the environment that svgCascadeMediaOf gives. The
+// cascade holds no reference to `document`, which must outlive it.
+void svgCascadeInit(SvgCascade* cascade, PrDomDocument* document, const PrSvgDrawOptions& options, PrVec2 viewport,
+    const CssMediaEnvironment* PR_NULLABLE base);
 
 // Frees what the cascade holds.
 void svgCascadeReset(SvgCascade* cascade);

@@ -33,6 +33,9 @@ struct Path {
 // cubic on the ellipse.
 constexpr float kQuarterArc = 0.5522847498f;
 
+// How far an arc's start may lie from the current point, relative to its larger radius, and still be at it.
+constexpr float kArcJoinTolerance = 1e-5f;
+
 // The maximum distance of the cubics of a shaped corner from its curve, relative to its larger radius.
 constexpr float kCornerTolerance = 2e-4f;
 
@@ -360,9 +363,17 @@ void prPathEllipticArcTo(PrPath* path, PrVec2 center, PrVec2 radii, float rotati
     PrAffine2 transform = prAffine2Concat(prAffine2Concat(prAffine2Scale(radii), prAffine2Rotate(rotation)),
         prAffine2Translate(center));
     PrVec2 start = prAffine2MapPoint(transform, PrVec2{prF32Cos(startAngle), prF32Sin(startAngle)});
-    if (path->open)
+    // An arc that starts at the current point to within a rounding error of its size, as an arc of path data does,
+    // continues the contour without a line.
+    bool joined = false;
+    if (path->open && path->store->points.count != 0) {
+        PrVec2 current = path->store->points.data[path->store->points.count - 1];
+        float tolerance = prF32Max(prF32Abs(radii.x), prF32Abs(radii.y)) * kArcJoinTolerance;
+        joined = prF32Abs(current.x - start.x) <= tolerance && prF32Abs(current.y - start.y) <= tolerance;
+    }
+    if (path->open && !joined)
         prPathLineTo(path, start);
-    else
+    else if (!path->open)
         prPathMoveTo(path, start);
     if (!prF32IsFinite(sweep) || sweep == 0)
         return;
@@ -597,11 +608,13 @@ PrRect prPathTightBounds(const PrPath* path) {
 }
 
 bool prPathContains(const PrPath* path, PrVec2 point, PrPathFillRule rule) {
+    constexpr float kTolerance = 0.01f;
     PrRect bounds = prPathBounds(path);
-    if (!(point.x >= bounds.left && point.x <= bounds.right && point.y >= bounds.top && point.y <= bounds.bottom))
+    if (!(point.x >= bounds.left - kTolerance && point.x <= bounds.right + kTolerance &&
+            point.y >= bounds.top - kTolerance && point.y <= bounds.bottom + kTolerance))
         return false;
     PrPathPolyline lines{};
-    prPathFlatten(path, prAffine2Identity(), 0.01f, PrPathFlattening_Inside, &lines);
+    prPathFlatten(path, prAffine2Identity(), kTolerance, PrPathFlattening_Inside, &lines);
     // The winding number of the contours around the point: each edge that crosses the horizontal line through the point
     // to its right counts +1 upward and -1 downward.
     int32_t winding = 0;
@@ -611,6 +624,15 @@ bool prPathContains(const PrPath* path, PrVec2 point, PrPathFillRule rule) {
         for (uint32_t i = start; i < end; ++i) {
             PrVec2 a = lines.points[i];
             PrVec2 b = lines.points[i + 1 < end ? i + 1 : start];
+            // A point on an edge is inside.
+            PrVec2 edge = b - a;
+            float squared = prVec2Dot(edge, edge);
+            float t = squared > 0 ? prF32Clamp(prVec2Dot(point - a, edge) / squared, 0, 1) : 0;
+            PrVec2 away = point - (a + edge * t);
+            if (prVec2Dot(away, away) <= kTolerance * kTolerance) {
+                prPathPolylineReset(&lines);
+                return true;
+            }
             if ((a.y <= point.y) == (b.y <= point.y))
                 continue;
             float x = a.x + (point.y - a.y) * (b.x - a.x) / (b.y - a.y);

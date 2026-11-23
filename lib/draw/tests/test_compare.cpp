@@ -114,6 +114,30 @@ TEST_CASE("the corpora's comparison answers Pillow's figures and difference") {
         CHECK(diff[i] == kDifference[i]);
 }
 
+TEST_CASE("the shifted measure lets an edge move by part of a pixel, and counts what moves farther") {
+    // Black covers the first three columns of an 8 by 4 image. The render covers the fourth by half, as an edge moved
+    // by half a pixel does, and then also draws a dot in the last column.
+    constexpr uint32_t kW = 8;
+    constexpr uint32_t kH = 4;
+    uint8_t reference[kW * kH * 4] = {};
+    uint8_t moved[kW * kH * 4] = {};
+    for (uint32_t y = 0; y < kH; ++y) {
+        for (uint32_t x = 0; x < 3; ++x) {
+            reference[(y * kW + x) * 4 + 3] = 255;
+            moved[(y * kW + x) * 4 + 3] = 255;
+        }
+        moved[(y * kW + 3) * 4 + 3] = 128;
+    }
+    PixelDifference plain = countDifferences(reference, moved, kW, kH, kW * 4);
+    CHECK(plain.differingPixels == kH);
+    PixelDifference shifted = countShiftedDifferences(reference, moved, kW, kH, kW * 4);
+    CHECK(shifted.differingPixels == 0);
+    moved[(1 * kW + 7) * 4 + 3] = 255;
+    shifted = countShiftedDifferences(reference, moved, kW, kH, kW * 4);
+    CHECK(shifted.differingPixels == 1);
+    CHECK(shifted.maxDifference == 255);
+}
+
 TEST_CASE("an image compared with itself differs nowhere") {
     uint8_t diff[kWidth * kHeight * 4] = {};
     ImageDifference d = compareImages(kReference, kReference, kWidth, kHeight, kWidth * 4, ImageComparison{}, diff);

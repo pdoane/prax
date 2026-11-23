@@ -83,7 +83,7 @@ struct CssPresentationImage {
     // (PrTextureDesc::orientation) according to its image-orientation property. The presentation holds a reference.
     const PrTextureSource* PR_NULLABLE image;
 
-    PrLayoutPainter vector;                     // an SVG image, whose context the presentation holds a reference to
+    DomImageVariants variants;                  // an SVG image, whose variants the presentation holds a reference to
     PrLayoutNaturalSize natural;                // as the image's orientation displays it
 };
 
@@ -92,6 +92,7 @@ struct CssPresentationImageDrawing {
     float limit;                                // the cap under its dynamic-range-limit, or zero for none
     PrLayoutImageRendering rendering;           // the resampling that its image-rendering asks for
     bool oriented;                              // true if its image-orientation applies each image's orientation
+    bool dark;                                  // its used color scheme is dark, which an SVG image's document prefers
 
     bool operator==(const CssPresentationImageDrawing&) const = default;
 };
@@ -388,6 +389,7 @@ struct CssPresentationTextFonts {
     RawArray<char> key;             // scratch: a key being looked up
     PrTextBuffer families = {};     // scratch: names of a font's families
     RawArray<PrFontFamily> familyViews;
+    RawArray<PrFontVariation> variations;   // scratch: a font's font-variation-settings
 };
 
 // A face of the document's fonts that the presentation's font set holds, with a key that the presentation issues and
@@ -487,6 +489,7 @@ struct CssPresentation {
     bool layoutStale;                        // an update changed styles or boxes that no layout has laid out since
     PrLayoutVec laidOutIn;                   // the viewport that the last layout laid the tree out in
     bool sceneStale;                         // a layout on the caller's thread changed what the last scene shows
+    bool paintersStale;                      // a painter of the tree may have a new revision (PrLayoutPainter)
     bool readsViewport;                      // a computed style resolved a length relative to the viewport's extent
     bool readsOutside;                       // an entry's readsOutside is set
     const PrDomNode* PR_NULLABLE projecting; // the node whose record is being projected, which an image waits on
@@ -617,6 +620,12 @@ inline void cssPresentationChanged(CssPresentation* presentation) {
     presentation->restyleAll = true;
 }
 
+// Records that the content of a painter in the presentation's tree may have changed, as an animated image's does. The
+// next update redraws the content of each painter whose revision changed (prLayoutTreeRepaintPainters).
+inline void cssPresentationPaintersChanged(CssPresentation* presentation) {
+    presentation->paintersStale = true;
+}
+
 // Records that the document's meta elements changed, which can change the page's supported color schemes.
 inline void cssPresentationMetaChanged(CssPresentation* presentation) {
     presentation->changed = true;
@@ -640,10 +649,13 @@ void cssPresentationRuleChanged(PrCssPresentation* presentation, const CssRuleDa
 void cssPresentationResourceLoaded(PrCssPresentation* presentation);
 
 // Notify the presentation of changes to its document. Each function is called for a node that is connected. An
-// attribute change is reported with the old value and the new value, each the null view for none. A state change names
-// the pseudo-classes whose state changed.
+// attribute change is reported with the old value and the new value, each the null view for none, and so is a change to
+// an element's classes that no attribute made (domElementSetClasses). A state change names the pseudo-classes whose
+// state changed.
 void cssPresentationInserted(PrCssPresentation* presentation, PrDomNode* node);
 void cssPresentationRemoving(PrCssPresentation* presentation, PrDomNode* node);
+void cssPresentationClassesChanged(PrCssPresentation* presentation, PrDomElement* element, PrStringView oldValue,
+    PrStringView value);
 void cssPresentationAttributeChanged(PrCssPresentation* presentation, PrDomElement* element, DomNamespaceId space,
     PrStringView name, PrStringView oldValue, PrStringView value);
 void cssPresentationDataChanged(PrCssPresentation* presentation, PrDomNode* node);
@@ -785,6 +797,9 @@ const CssComputedStyle* PR_NULLABLE cssPresentationStyleCurrent(PrCssPresentatio
 // changed (CssPresentationHooks::effectChanged).
 void cssPresentationEffectChanged(PrCssPresentation* presentation, const PrDomElement* element);
 
+// Restyles the element, whose animated attributes changed, and projects its box again (cssElementAnimated).
+void cssPresentationAttributesAnimated(PrCssPresentation* presentation, PrDomElement* element);
+
 // Samples the effects of the element, or of its pseudo-element `pseudo`, again at the next update.
 void cssPresentationAnimateTarget(PrCssPresentation* presentation, const PrDomElement* element, CssPseudo pseudo);
 
@@ -847,6 +862,17 @@ void cssPresentationComputedBlock(PrCssPresentation* presentation, const PrDomEl
 // property that the engine does not render, or an element that it did not style.
 bool cssPresentationComputedValue(PrCssPresentation* presentation, const PrDomElement* element, CssPseudo pseudo,
     PrCssProperty property, PrTextBuffer* out);
+
+// Writes the size in px of one `unit`, a length unit, for `element` to `out`. A font-relative unit resolves against the
+// element's font or the root's, and a viewport unit against the presentation's viewport. Returns false if the
+// presentation has not styled the element, or if an element's style cannot resolve the unit, such as a container unit.
+bool cssPresentationUnitPx(PrCssPresentation* presentation, const PrDomElement* element, PrCssUnit unit, double* out);
+
+// Serializes the resolved value of the longhand `property` of the element as the presentation last styled it, without
+// updating it, for a reader inside the presentation's update. A used value that the layout gives is the computed value.
+// Returns false, writing nothing, for an element that the presentation did not style.
+bool cssPresentationStyledValue(PrCssPresentation* presentation, const PrDomElement* element, PrCssProperty property,
+    PrTextBuffer* out);
 
 // Serializes the computed value of the custom property `name` of the element, or of its pseudo-element `pseudo`, to
 // `out`, after updating the presentation's styles. The result matches the declaration of the property in

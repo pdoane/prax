@@ -391,6 +391,13 @@ PrLayoutContent prLayoutNodeContent(const PrLayoutTree* tree, PrLayoutNode repla
 // when state the painter reads has changed.
 void prLayoutNodeInvalidateContent(PrLayoutTree* tree, PrLayoutNode replaced);
 
+// Draws again, at the next paint, what the tree draws with each painter whose revision changed since the last call
+// (PrLayoutPainter::revision): the replaced elements whose content it is, the boxes whose background, mask or mask
+// border layers it paints, and the canvas if the root's background is among them. Returns true if anything is to be
+// drawn again. A tree that holds no painter with a revision returns false at once. A client that runs painters whose
+// revisions change calls this before each job.
+bool prLayoutTreeRepaintPainters(PrLayoutTree* tree);
+
 // ---------------------------------------------------------------------------------------------------------------------
 // Scrolling
 

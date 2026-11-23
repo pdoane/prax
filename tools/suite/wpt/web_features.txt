@@ -682,5 +682,6 @@ css-color-5/#custom-color                        cut
 css-color-5/#device-cmyk                         build
 css-color-hdr-1/#hdr-color-function              build
 css-color-hdr-1/#predefined-HDR                  build
+css-link-params-1/#setting                       cut
 css-color-adjust-1/#forced                       open
 svg2/paths.html#PathLengthProperty               build

@@ -4,6 +4,7 @@
 
 #include "svg/src/svg_filter.h"
 
+#include "pr/count_of.h"
 #include "pr/float.h"
 #include "pr/mem.h"
 #include "pr/memory.h"
@@ -134,9 +135,7 @@ bool isPrimitive(const PrDomElement* e) {
 // Parses the attribute `name` as a list of numbers into `numbers`. Returns false if the attribute is missing or a
 // number does not parse.
 bool numbersOf(const PrDomElement* e, PrStringView name, RawArray<float>* numbers) {
-    PrStringView text = svgAttribute(e, name);
-    numbers->clear();
-    return text.data != nullptr && svgParseNumbers(text, numbers);
+    return svgAttributeNumbers(e, name, numbers);
 }
 
 // Returns the number that the attribute `name` gives, or `fallback` if it is missing or is not one number.
@@ -207,77 +206,58 @@ PrColor floodOf(SvgBuilder& b, const CssComputedStyle* PR_NULLABLE style) {
     return color;
 }
 
-// Returns the edge mode that an edgeMode attribute names, or `fallback` for a missing or unknown value.
-PrImageEdgeMode edgeOf(const PrDomElement* e, PrImageEdgeMode fallback) {
-    PrStringView value = svgAttribute(e, "edgeMode");
-    if (value == "none")
-        return PrImageEdgeMode_None;
-    if (value == "duplicate")
-        return PrImageEdgeMode_Duplicate;
-    if (value == "wrap")
-        return PrImageEdgeMode_Wrap;
-    if (value == "mirror")
-        return PrImageEdgeMode_Mirror;
-    return fallback;
-}
-
-// Returns the channel that a channel selector names, A for a missing or unknown value.
-PrDrawChannel channelOf(PrStringView value) {
-    if (value == "R")
-        return PrDrawChannel_R;
-    if (value == "G")
-        return PrDrawChannel_G;
-    if (value == "B")
-        return PrDrawChannel_B;
-    return PrDrawChannel_A;
-}
-
-// Writes the blend mode that feBlend's mode names to `out` (compositing-1/#ltblendmodegt). Returns false for an unknown
-// mode.
-bool blendOf(PrStringView mode, PrDrawBlendMode* out) {
-    struct Mode {
-        const char* name;
-        PrDrawBlendMode mode;
-    };
-    static const Mode kModes[] = {
-        {"normal", PrDrawBlendMode_Normal},          {"multiply", PrDrawBlendMode_Multiply},
-        {"screen", PrDrawBlendMode_Screen},          {"overlay", PrDrawBlendMode_Overlay},
-        {"darken", PrDrawBlendMode_Darken},          {"lighten", PrDrawBlendMode_Lighten},
-        {"color-dodge", PrDrawBlendMode_ColorDodge}, {"color-burn", PrDrawBlendMode_ColorBurn},
-        {"hard-light", PrDrawBlendMode_HardLight},   {"soft-light", PrDrawBlendMode_SoftLight},
-        {"difference", PrDrawBlendMode_Difference},  {"exclusion", PrDrawBlendMode_Exclusion},
-        {"hue", PrDrawBlendMode_Hue},                {"saturation", PrDrawBlendMode_Saturation},
-        {"color", PrDrawBlendMode_Color},            {"luminosity", PrDrawBlendMode_Luminosity},
-    };
-    for (const Mode& m : kModes) {
-        if (mode == m.name) {
-            *out = m.mode;
-            return true;
-        }
+// Returns the edge mode of a primitive's edgeMode, whose initial value is the primitive's.
+PrImageEdgeMode edgeOf(const PrDomElement* e) {
+    switch (svgAttributeEnumeration(e, PrSvgAttribute_EdgeMode)) {
+        case PrSvgEdgeMode_Duplicate: return PrImageEdgeMode_Duplicate;
+        case PrSvgEdgeMode_Wrap: return PrImageEdgeMode_Wrap;
+        case PrSvgEdgeMode_Mirror: return PrImageEdgeMode_Mirror;
+        default: return PrImageEdgeMode_None;
     }
-    return false;
+}
+
+// Returns the channel of a channel selector.
+PrDrawChannel channelOf(const PrDomElement* e, PrSvgAttribute attribute) {
+    switch (svgAttributeEnumeration(e, attribute)) {
+        case PrSvgChannel_R: return PrDrawChannel_R;
+        case PrSvgChannel_G: return PrDrawChannel_G;
+        case PrSvgChannel_B: return PrDrawChannel_B;
+        default: return PrDrawChannel_A;
+    }
+}
+
+// Returns the blend mode of feBlend's mode (compositing-1/#ltblendmodegt).
+PrDrawBlendMode blendOf(PrSvgBlendMode mode) {
+    static constexpr PrDrawBlendMode kModes[] = {
+        PrDrawBlendMode_Normal, PrDrawBlendMode_Normal, PrDrawBlendMode_Multiply, PrDrawBlendMode_Screen,
+        PrDrawBlendMode_Darken, PrDrawBlendMode_Lighten, PrDrawBlendMode_Overlay, PrDrawBlendMode_ColorDodge,
+        PrDrawBlendMode_ColorBurn, PrDrawBlendMode_HardLight, PrDrawBlendMode_SoftLight, PrDrawBlendMode_Difference,
+        PrDrawBlendMode_Exclusion, PrDrawBlendMode_Hue, PrDrawBlendMode_Saturation, PrDrawBlendMode_Color,
+        PrDrawBlendMode_Luminosity,
+    };
+    return mode < countOf(kModes) ? kModes[mode] : PrDrawBlendMode_Normal;
 }
 
 // Reads a feColorMatrix (filter-effects-1/#feColorMatrixElement). A list of values of the wrong length for the type
 // makes the primitive pass its input through.
 void readColorMatrix(FilterParts& parts, const PrDomElement* e, SvgPrimitive* p) {
-    PrStringView type = svgAttribute(e, "type");
+    PrSvgColorMatrixType type = svgAttributeEnumeration(e, PrSvgAttribute_Type);
     bool given = svgAttribute(e, "values").data != nullptr;
     bool parsed = given && numbersOf(e, "values", &parts.scratch);
     uint32_t count = parsed ? parts.scratch.count : 0;
     const float* values = parts.scratch.data;
     p->kind = SvgPrimitiveKind_ColorMatrix;
-    if (type == "saturate") {
+    if (type == PrSvgColorMatrixType_Saturate) {
         if (given && count != 1)
             p->kind = SvgPrimitiveKind_PassThrough;
         else
             p->matrix = prDrawColorMatrixSaturate(given ? values[0] : 1);
-    } else if (type == "hueRotate") {
+    } else if (type == PrSvgColorMatrixType_HueRotate) {
         if (given && count != 1)
             p->kind = SvgPrimitiveKind_PassThrough;
         else
             p->matrix = prDrawColorMatrixHueRotate(given ? values[0] * kPrF32Pi / 180 : 0);
-    } else if (type == "luminanceToAlpha") {
+    } else if (type == PrSvgColorMatrixType_LuminanceToAlpha) {
         p->matrix = prDrawColorMatrixLuminanceToAlpha();
     } else if (!given) {
         p->kind = SvgPrimitiveKind_PassThrough;
@@ -308,15 +288,13 @@ void readTransfer(FilterParts& parts, const PrDomElement* e, SvgPrimitive* p) {
             default: continue;
         }
         SvgTransfer t{.kind = PrDrawTransferKind_Identity};
-        PrStringView type = svgAttribute(f, "type");
-        if (type == "table")
-            t.kind = PrDrawTransferKind_Table;
-        else if (type == "discrete")
-            t.kind = PrDrawTransferKind_Discrete;
-        else if (type == "linear")
-            t.kind = PrDrawTransferKind_Linear;
-        else if (type == "gamma")
-            t.kind = PrDrawTransferKind_Gamma;
+        switch (svgAttributeEnumeration(f, PrSvgAttribute_Type)) {
+            case PrSvgTransferType_Table: t.kind = PrDrawTransferKind_Table; break;
+            case PrSvgTransferType_Discrete: t.kind = PrDrawTransferKind_Discrete; break;
+            case PrSvgTransferType_Linear: t.kind = PrDrawTransferKind_Linear; break;
+            case PrSvgTransferType_Gamma: t.kind = PrDrawTransferKind_Gamma; break;
+            default: break;
+        }
         t.slope = numberOf(parts, f, "slope", 1);
         t.intercept = numberOf(parts, f, "intercept", 0);
         t.amplitude = numberOf(parts, f, "amplitude", 1);
@@ -335,8 +313,8 @@ void readTransfer(FilterParts& parts, const PrDomElement* e, SvgPrimitive* p) {
 
 // Reads a feComposite (filter-effects-1/#feCompositeElement). An unknown operator is over.
 void readComposite(FilterParts& parts, const PrDomElement* e, SvgPrimitive* p) {
-    PrStringView op = svgAttribute(e, "operator");
-    if (op == "arithmetic") {
+    PrSvgCompositeOperator op = svgAttributeEnumeration(e, PrSvgAttribute_Operator);
+    if (op == PrSvgCompositeOperator_Arithmetic) {
         p->kind = SvgPrimitiveKind_Arithmetic;
         p->k[0] = numberOf(parts, e, "k1", 0);
         p->k[1] = numberOf(parts, e, "k2", 0);
@@ -345,18 +323,14 @@ void readComposite(FilterParts& parts, const PrDomElement* e, SvgPrimitive* p) {
         return;
     }
     p->kind = SvgPrimitiveKind_Composite;
-    if (op == "in")
-        p->composite = PrDrawComposite_SourceIn;
-    else if (op == "out")
-        p->composite = PrDrawComposite_SourceOut;
-    else if (op == "atop")
-        p->composite = PrDrawComposite_SourceAtop;
-    else if (op == "xor")
-        p->composite = PrDrawComposite_Xor;
-    else if (op == "lighter")
-        p->composite = PrDrawComposite_PlusLighter;
-    else
-        p->composite = PrDrawComposite_SourceOver;
+    switch (op) {
+        case PrSvgCompositeOperator_In: p->composite = PrDrawComposite_SourceIn; break;
+        case PrSvgCompositeOperator_Out: p->composite = PrDrawComposite_SourceOut; break;
+        case PrSvgCompositeOperator_Atop: p->composite = PrDrawComposite_SourceAtop; break;
+        case PrSvgCompositeOperator_Xor: p->composite = PrDrawComposite_Xor; break;
+        case PrSvgCompositeOperator_Lighter: p->composite = PrDrawComposite_PlusLighter; break;
+        default: p->composite = PrDrawComposite_SourceOver; break;
+    }
 }
 
 // Reads a feConvolveMatrix (filter-effects-1/#feConvolveMatrixElement). An order that is not positive, a kernel of the
@@ -388,8 +362,8 @@ void readConvolve(FilterParts& parts, const PrDomElement* e, SvgPrimitive* p) {
     p->convolve.first = first;
     p->convolve.divisor = numberOf(parts, e, "divisor", 0);
     p->convolve.bias = numberOf(parts, e, "bias", 0);
-    p->convolve.edge = edgeOf(e, PrImageEdgeMode_Duplicate);
-    p->convolve.preserveAlpha = svgAttribute(e, "preserveAlpha") == "true";
+    p->convolve.edge = edgeOf(e);
+    p->convolve.preserveAlpha = svgAttributeBoolean(e, PrSvgAttribute_PreserveAlpha);
 }
 
 // Reads a feDiffuseLighting or feSpecularLighting and its light source, its first child that is one
@@ -459,14 +433,14 @@ void readTurbulence(FilterParts& parts, const PrDomElement* e, SvgPrimitive* p) 
     }
     float octaves = numberOf(parts, e, "numOctaves", 1);
     p->kind = SvgPrimitiveKind_Turbulence;
-    bool fractal = svgAttribute(e, "type") == "fractalNoise";
+    bool fractal = svgAttributeEnumeration(e, PrSvgAttribute_Type) == PrSvgTurbulenceType_FractalNoise;
     p->turbulence = PrDrawFilterTurbulence{
         .baseFrequency = frequency,
         .octaves = octaves > 0 ? uint32_t(prF32Min(octaves, float(kPrDrawTurbulenceMaxOctaves))) : 0,
         // The seed is truncated toward zero.
         .seed = truncated(numberOf(parts, e, "seed", 0)),
         .kind = PrDrawTurbulenceKind(fractal ? PrDrawTurbulenceKind_FractalNoise : PrDrawTurbulenceKind_Turbulence),
-        .stitch = svgAttribute(e, "stitchTiles") == "stitch",
+        .stitch = svgAttributeEnumeration(e, PrSvgAttribute_StitchTiles) == PrSvgStitchTiles_Stitch,
     };
 }
 
@@ -477,7 +451,7 @@ void readImage(SvgBuilder& b, SvgResourceIndex index, const PrDomElement* e, con
     p->kind = SvgPrimitiveKind_Image;
     p->image.node = kSvgNodeNone;
     p->image.picture = SvgPicture{};
-    p->image.aspect = SvgAspect{};
+    p->image.aspect = kSvgAspectDefault;
     svgParseAspect(svgAttribute(e, "preserveAspectRatio"), &p->image.aspect);
     p->image.sampling = PrDrawSampling_Linear;
     if (style != nullptr) {
@@ -490,7 +464,7 @@ void readImage(SvgBuilder& b, SvgResourceIndex index, const PrDomElement* e, con
     if (href.size == 0)
         return;
     if (href.data[0] == '#') {
-        const PrDomElement* target = svgBuildReference(b, e, href, true);
+        const PrDomElement* target = svgBuildReference(b, e, href, DomCorsSettings_NoCors, true);
         if (target == nullptr)
             return;
         if (b.tree->resources.data[index].filter.content == kSvgNodeNone) {
@@ -502,7 +476,7 @@ void readImage(SvgBuilder& b, SvgResourceIndex index, const PrDomElement* e, con
     }
     const SvgImageSource& images = b.build->images;
     if (images.load != nullptr)
-        images.load(images.context, e, href, &p->image.picture);
+        images.load(images.context, e, href, PrVec2{}, &p->image.picture);
 }
 
 // Reads one primitive into `p`, whose common attributes are read.
@@ -513,8 +487,7 @@ void readPrimitive(SvgBuilder& b, SvgResourceIndex index, FilterParts& parts, co
     switch (e->tag) {
         case PrDomTag_FeBlend:
             p->kind = SvgPrimitiveKind_Blend;
-            p->blend = PrDrawBlendMode_Normal;
-            blendOf(svgAttribute(e, "mode"), &p->blend);
+            p->blend = blendOf(svgAttributeEnumeration(e, PrSvgAttribute_Mode));
             break;
         case PrDomTag_FeColorMatrix: readColorMatrix(parts, e, p); break;
         case PrDomTag_FeComponentTransfer: readTransfer(parts, e, p); break;
@@ -525,8 +498,8 @@ void readPrimitive(SvgBuilder& b, SvgResourceIndex index, FilterParts& parts, co
         case PrDomTag_FeDisplacementMap:
             p->kind = SvgPrimitiveKind_DisplacementMap;
             p->displacement.scale = numberOf(parts, e, "scale", 0);
-            p->displacement.x = channelOf(svgAttribute(e, "xChannelSelector"));
-            p->displacement.y = channelOf(svgAttribute(e, "yChannelSelector"));
+            p->displacement.x = channelOf(e, PrSvgAttribute_XChannelSelector);
+            p->displacement.y = channelOf(e, PrSvgAttribute_YChannelSelector);
             break;
         case PrDomTag_FeDropShadow: {
             // A negative deviation is zero on its axis.
@@ -550,7 +523,7 @@ void readPrimitive(SvgBuilder& b, SvgResourceIndex index, FilterParts& parts, co
                 sigma = PrVec2{0, 0};
             p->kind = SvgPrimitiveKind_GaussianBlur;
             p->blur.sigma = PrVec2{prF32Max(sigma.x, 0), prF32Max(sigma.y, 0)};
-            p->blur.edge = edgeOf(e, PrImageEdgeMode_None);
+            p->blur.edge = edgeOf(e);
             break;
         }
         case PrDomTag_FeImage: readImage(b, index, e, style, p); break;
@@ -573,8 +546,9 @@ void readPrimitive(SvgBuilder& b, SvgResourceIndex index, FilterParts& parts, co
             if (given == Pair_Error || radius.x < 0 || radius.y < 0 || (radius.x == 0 && radius.y == 0))
                 p->kind = SvgPrimitiveKind_PassThrough;
             p->morphology.radius = radius;
-            p->morphology.op =
-                svgAttribute(e, "operator") == "dilate" ? PrDrawMorphologyOp_Dilate : PrDrawMorphologyOp_Erode;
+            p->morphology.op = PrDrawMorphologyOp_Erode;
+            if (svgAttributeEnumeration(e, PrSvgAttribute_Operator) == PrSvgMorphologyOperator_Dilate)
+                p->morphology.op = PrDrawMorphologyOp_Dilate;
             break;
         }
         case PrDomTag_FeOffset:
@@ -590,8 +564,7 @@ void readPrimitive(SvgBuilder& b, SvgResourceIndex index, FilterParts& parts, co
 // Reads the attribute `name` of a primitive's subregion into `out`, and returns `flag` if it is given and parses.
 SvgSubregionFlags subregionOf(const PrDomElement* e, PrStringView name, const CssComputedStyle* PR_NULLABLE style,
         SvgSubregionFlags flag, SvgLengthPercentage* out) {
-    PrStringView text = svgAttribute(e, name);
-    return text.data != nullptr && svgParseLength(text, style, out) ? flag : 0;
+    return svgAttributeLengthOf(e, name, style, out) ? flag : 0;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1035,8 +1008,9 @@ void svgBuildFilter(SvgBuilder& b, SvgResourceIndex index, const PrDomElement* e
     };
     const CssComputedStyle* style = svgBuildStyle(b, e);
     SvgFilter f{.content = kSvgNodeNone};
-    f.userSpace = svgAttribute(with("filterUnits"), "filterUnits") == "userSpaceOnUse";
-    f.primitiveBoundingBox = svgAttribute(with("primitiveUnits"), "primitiveUnits") == "objectBoundingBox";
+    f.userSpace = svgAttributeEnumeration(with("filterUnits"), PrSvgAttribute_FilterUnits) == PrSvgUnits_UserSpaceOnUse;
+    f.primitiveBoundingBox =
+        svgAttributeEnumeration(with("primitiveUnits"), PrSvgAttribute_PrimitiveUnits) == PrSvgUnits_ObjectBoundingBox;
     f.x = svgAttributeLength(with("x"), "x", SvgLengthPercentage{0, -10}, style);
     f.y = svgAttributeLength(with("y"), "y", SvgLengthPercentage{0, -10}, style);
     f.width = svgAttributeLength(with("width"), "width", SvgLengthPercentage{0, 120}, style);
@@ -1181,8 +1155,7 @@ bool svgFilterSame(const SvgFilter& a, const SvgFilter& b) {
             case SvgPrimitiveKind_Image:
                 same = p.image.picture.raster == q.image.picture.raster && p.image.picture.svg == q.image.picture.svg &&
                     (p.image.node == kSvgNodeNone) == (q.image.node == kSvgNodeNone) &&
-                    p.image.aspect.x == q.image.aspect.x && p.image.aspect.y == q.image.aspect.y &&
-                    p.image.aspect.slice == q.image.aspect.slice && p.image.sampling == q.image.sampling;
+                    svgSameAspect(p.image.aspect, q.image.aspect) && p.image.sampling == q.image.sampling;
                 break;
             case SvgPrimitiveKind_Merge:
                 same = p.merge.count == q.merge.count;
@@ -1232,12 +1205,12 @@ SvgFiltered svgFilterFromNode(SvgDrawer& d, SvgNodeIndex index, SvgFilterGraph* 
     const SvgEffects& effects = d.tree->effects.data[node.effects];
     if (effects.filters.count == 0)
         return SvgFiltered_None;
-    // A filter element that applies inside its own feImage content, or nested too deep, is in error, and hides the
-    // element.
+    // A filter element that applies inside its own feImage content, or nested too deep, is in error, which ignores the
+    // whole list, as a reference to no filter element does (filter-effects-1/#FilterProperty).
     for (uint32_t i = 0; i < effects.filters.count; ++i) {
         SvgResourceIndex filter = effects.filters.data[i].filter;
         if (effects.filters.data[i].function.filter.kind == PrLayoutFilterKind_Source && svgEffectCycles(d, filter))
-            return SvgFiltered_Hidden;
+            return SvgFiltered_None;
     }
     PrRect box = svgEffectBounds(d, index, 0);
     PrDrawFilterBuilder* builder = prDrawFilterBuilderCreate();

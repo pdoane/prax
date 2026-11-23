@@ -262,14 +262,13 @@ void widths(PrDrawList* list, float width, float height, double) {
         PrVec2 end{origin.x + radius * prF32Cos(angle), origin.y + radius * prF32Sin(angle)};
         prDrawListLine(list, origin, end, {.color = kInk, .stroke = &stroke});
     }
-    // The same widths under a scale of 3, measured in target pixels where they do not scale.
+    // A width of 2 under a scale of 3, which scales it.
     prDrawListPushTransformAffine2(list,
         prAffine2Concat(prAffine2Scale(PrVec2{3, 3}), prAffine2Translate(PrVec2{width * 0.46f, 30})));
+    PrDrawStroke scaled = strokeOf(2);
     for (uint32_t i = 0; i < 4; ++i) {
-        PrDrawStroke stroke = strokeOf(2);
-        stroke.nonScaling = i % 2 == 1;
         float y = 6 + float(i) * 6;
-        prDrawListLine(list, PrVec2{0, y}, PrVec2{20, y}, {.color = i % 2 == 1 ? kRed : kInk, .stroke = &stroke});
+        prDrawListLine(list, PrVec2{0, y}, PrVec2{20, y}, {.color = kInk, .stroke = &scaled});
     }
     prDrawListPopTransform(list);
     // A stroke under a non-uniform scale is stroked in its own space and stretched.
@@ -279,7 +278,7 @@ void widths(PrDrawList* list, float width, float height, double) {
     prDrawListEllipse(list, PrVec2{10, 40}, PrVec2{8, 30}, 0, {.color = kBlue, .stroke = &stretched});
     prDrawListPopTransform(list);
     float x = width * 0.46f;
-    caption(PrRect{x - 60, 110, x + 180, 128}, "width 2 at 3x: ink, and red non-scaling");
+    caption(PrRect{x - 60, 110, x + 180, 128}, "width 2 at 3x");
     caption(PrRect{x - 60, 234, x + 180, 252}, "stroked under a 4x1 scale");
     caption(PrRect{origin.x - radius, height - 24, origin.x + radius, height - 6}, "widths 0.1 to 13, fanned");
 }

@@ -8,11 +8,11 @@
 // render, the reference and their difference, each `-` for nowhere; and, optionally, when an animation is rendered: a
 // time in seconds for an SVG document, and a frame, counted from the in point, for a Lottie animation.
 //
-// The cpu backend renders a document according to its type. lib/svg renders an SVG. lib/lottie renders a Lottie
-// animation (`.json`, or a dotLottie archive's first animation) over the settings' background, fitted to the size as
-// its players fit it. Its text is set in the settings' fonts, or in the system's without settings. A PNG is a render
-// made elsewhere, such as a page that pr_shell captured (--screenshot), and must have the requested size. A type that
-// the engine does not render returns NotSupported.
+// The cpu backend renders a document according to its type. lib/svg renders an SVG, as a standalone document or as an
+// image if the settings say so. lib/lottie renders a Lottie animation (`.json`, or a dotLottie archive's first
+// animation) over the settings' background, fitted to the size as its players fit it. Its text is set in the settings'
+// fonts, or in the system's without settings. A PNG is a render made elsewhere, such as a page that pr_shell captured
+// (--screenshot), and must have the requested size. A type that the engine does not render returns NotSupported.
 //
 // The answer holds the status; the image corpora's figures (draw/tests/compare.h); WPT's figures, which are the largest
 // channel difference and the number of pixels that differ; whether the reference draws anything at all; and the number
@@ -111,7 +111,9 @@ struct Documents {
         PrTextBuffer source = {};
         if (!harnessReadFile(&source, path.c_str()))
             return nullptr;
-        PrDomDocument* document = prDomParseXml(prTextBufferView(&source), "image/svg+xml", nullptr);
+        PrStringView bytes = prTextBufferView(&source);
+        PrByteView view{reinterpret_cast<const uint8_t*>(bytes.data), bytes.size};
+        PrDomDocument* document = prDomParseXmlBytes(view, "image/svg+xml", nullptr);
         prSvgEnable(document);
         prTextBufferReset(&source);
         loaded.emplace_back(document, path);
@@ -119,14 +121,16 @@ struct Documents {
     }
 };
 
-// What loads the images that a document names: its codecs, and the documents whose paths references in them resolve
-// against. An SVG image is in secure static mode, whose own images load only from data: URLs, so its loader has no
-// documents.
+// What loads the images that a document names: its codecs, the documents whose paths references in them resolve
+// against, and the fonts and the shaper that an SVG image sets its text with, the document's own. An SVG image is in
+// secure static mode, whose own images load only from data: URLs, so its loader has no documents.
 struct Images {
     const PrCompressCodecSet* compressCodec;
     const PrImageCodecSet* imageCodec;
     Documents* PR_NULLABLE documents;
     PrTextureCache* textures;           // the cache on the renderer's device that realizes the images
+    PrFontSet* PR_NULLABLE fonts;
+    PrTextShaper* PR_NULLABLE shaper;
 };
 
 // Replaces `bytes` with what they decompress to, if they are gzip, as an svgz file is. Returns false if they do not
@@ -160,15 +164,18 @@ bool decodeImage(const Images& images, std::string bytes, PrStringView fragment,
     PrStringView text{bytes.data(), bytes.size()};
     PrStringView head = prStringSlice(text, 0, text.size < 512 ? text.size : 512);
     if (prStringContains(head, "<svg")) {
-        PrDomDocument* document = prDomParseXml(text, "image/svg+xml", nullptr);
+        PrByteView view{reinterpret_cast<const uint8_t*>(text.data), text.size};
+        PrDomDocument* document = prDomParseXmlBytes(view, "image/svg+xml", nullptr);
         if (document == nullptr)
             return false;
         prSvgEnable(document);
         PrDomElement* root = prDomDocumentElement(document);
         PrSvgElement* svg = root != nullptr ? prSvgElementQuery(prDomElementAsEventTarget(root)) : nullptr;
-        Images secure{images.compressCodec, images.imageCodec, nullptr};
+        Images secure{images.compressCodec, images.imageCodec, nullptr, images.textures, images.fonts, images.shaper};
         PrSvgDrawOptions options = prSvgDrawOptionsDefault();
         options.textures = images.textures;
+        options.fonts = images.fonts;
+        options.shaper = images.shaper;
         options.loadImage = loadImage;
         options.loadContext = &secure;
         if (svg != nullptr)
@@ -348,7 +355,7 @@ PrStatus render(PrDrawRenderer* renderer, const PrCompressCodecSet* compressCode
     PrSvgElement* svg = root != nullptr ? prSvgElementQuery(prDomElementAsEventTarget(root)) : nullptr;
     PrStatus status = PrStatus_NotSupported;
     PrDrawList* list = prDrawListCreate();
-    Images images{compressCodec, imageCodec, &documents, textures};
+    Images images{compressCodec, imageCodec, &documents, textures, suite.fonts, shaper};
     PrSvgDrawOptions options{};
     options.textures = textures;
     options.fonts = suite.fonts;
@@ -356,7 +363,14 @@ PrStatus render(PrDrawRenderer* renderer, const PrCompressCodecSet* compressCode
     options.load = loadReferenced;
     options.loadImage = loadImage;
     options.loadContext = &images;
-    if (svg != nullptr) {
+    if (svg != nullptr && suite.svgImage) {
+        // The image loads the files beside the document too, which secure static mode would not, because the suite's
+        // cases show their images as a standalone document does.
+        const PrSvgImage* image = prSvgImageCreate(svg, {}, &options);
+        prSvgImageDraw(image, PrVec2{float(width), float(height)}, list);
+        prSvgImageRelease(image);
+        status = PrStatus_Ok;
+    } else if (svg != nullptr) {
         prSvgElementDraw(svg, PrVec2{float(width), float(height)}, &options, list);
         status = PrStatus_Ok;
     }
@@ -472,8 +486,10 @@ int main(int argc, char** argv) {
                 reference.height, stride);
             writeFigure(&out, "maxDifference", double(p.maxDifference));
             writeFigure(&out, "differingPixels", double(p.differingPixels));
-            bool drawn = imageDrawsAnything(reference.rgba.data(), reference.width, reference.height, stride);
-            prTextBufferAppend(&out, drawn ? ",\"blank\":false" : ",\"blank\":true");
+            PixelDifference shifted = countShiftedDifferences(reference.rgba.data(), rendered.data(), reference.width,
+                reference.height, stride);
+            writeFigure(&out, "shiftedMaxDifference", double(shifted.maxDifference));
+            writeFigure(&out, "shiftedDifferingPixels", double(shifted.differingPixels));
             if (paths[3] != "-")
                 writePng(paths[3], rendered, reference.width, reference.height);
             if (paths[5] != "-")

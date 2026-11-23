@@ -24,15 +24,17 @@ namespace viewer {
 
 namespace fs = std::filesystem;
 
-// A page in its own host, on a virtual clock that the viewer's clock drives. `origin` is the clock's time once the page
-// settled, in milliseconds, which is time zero of the viewer's clock.
+// A page in its own host, on a virtual clock that the viewer's clock drives. `origin` is the clock's time at time zero
+// of the viewer's clock, in milliseconds: once the page has started to load, or once it is ready if `ready`.
 struct HtmlSource {
-    HtmlSource(fs::path path, std::string location, page_host::Media media, PrTextShaper* shaper) :
-            path(std::move(path)), location(std::move(location)), media(media), host(shaper, nullptr, nullptr) {}
+    HtmlSource(fs::path path, std::string location, page_host::Media media, bool ready, PrTextShaper* shaper) :
+            path(std::move(path)), location(std::move(location)), media(media), ready(ready),
+            host(shaper, nullptr, nullptr) {}
 
     fs::path path;
     std::string location;       // the URL or path that the page loads from
     page_host::Media media;
+    bool ready;
     page_host::PageHost host;
     page_host::Page* PR_NULLABLE page = nullptr;
     double origin = 0;
@@ -42,18 +44,23 @@ namespace {
 
 constexpr const char* kThirdParty = PR_THIRD_PARTY_DIR;
 
-// How long a page runs before the viewer stops waiting for it to settle, in milliseconds of the system's time. WPT's
+// How long a page runs before the viewer stops waiting for it to be ready, in milliseconds of the system's time. WPT's
 // runner gives a page the same time before it times out.
-constexpr double kSettleTimeout = 10000;
+constexpr double kReadyTimeout = 10000;
 
-// Loads the page into the host and runs it until it settles.
+// Starts loading the page into the host, and with `ready`, runs it until it is ready to be captured. The page runs
+// WPT's reftest protocol either way (Capture_Wait), so that a reftest that waits to hear that it has rendered goes on
+// to its final state as the clock runs.
 bool start(HtmlSource& html) {
-    html.page = html.host.load(html.location);
+    html.page = html.host.load(html.location, page_host::Capture_Wait);
     if (html.page == nullptr)
         return false;
-    html.host.settle(kSettleTimeout);
-    if (!page_host::PageHost::finished(html.page))
-        std::fprintf(stderr, "%s: reftest-wait was not removed\n", html.path.string().c_str());
+    if (html.ready) {
+        if (html.host.run(kReadyTimeout) == page_host::RunEnd_TimedOut)
+            std::fprintf(stderr, "%s: was not ready in %g ms\n", html.path.string().c_str(), kReadyTimeout);
+        if (!page_host::PageHost::finished(html.page))
+            std::fprintf(stderr, "%s: reftest-wait was not removed\n", html.path.string().c_str());
+    }
     html.origin = html.host.time();
     return true;
 }
@@ -142,8 +149,9 @@ std::string htmlBrowserUrl(const fs::path& path, const std::string& query) {
 }
 
 std::shared_ptr<HtmlSource> loadHtml(const fs::path& path, const std::string& query, const fs::path& settings,
-        const fs::path& capture, bool scripts, page_host::Media media, PrTextShaper* shaper, PrFontHinting hinting,
-        PrFontHinter* PR_NULLABLE hinter, PrDrawRenderer* PR_NULLABLE renderer, PrTextureCache* PR_NULLABLE textures) {
+        const fs::path& capture, bool scripts, page_host::Media media, bool ready, PrTextShaper* shaper,
+        PrFontHinting hinting, PrFontHinter* PR_NULLABLE hinter, PrDrawRenderer* PR_NULLABLE renderer,
+        PrTextureCache* PR_NULLABLE textures) {
     std::string wpt = wptUrlOf(path, query);
     std::string thirdParty = thirdPartyUrlOf(path, query);
     std::string location = path.string();
@@ -153,7 +161,7 @@ std::shared_ptr<HtmlSource> loadHtml(const fs::path& path, const std::string& qu
         location = thirdParty;
     else if (!query.empty())
         location = fileUrl(path) + querySuffix(query);
-    std::shared_ptr<HtmlSource> html = std::make_shared<HtmlSource>(path, location, media, shaper);
+    std::shared_ptr<HtmlSource> html = std::make_shared<HtmlSource>(path, location, media, ready, shaper);
     if (!settings.empty())
         suite::suiteRenderReadFonts(html->host.fonts(), settings.string(),
             fs::path(kThirdParty).parent_path().string());
@@ -243,11 +251,11 @@ bool printHtml(const fs::path& path, const fs::path& capture, bool scripts, cons
         return false;
     if (!scripts)
         host.disableScripts();
-    page_host::Page* page = host.load(path.string());
+    page_host::Page* page = host.load(path.string(), page_host::Capture_Wait);
     if (page == nullptr)
         return false;
-    if (host.settle(kSettleTimeout) == page_host::Settled_TimedOut) {
-        std::fprintf(stderr, "%s: did not settle in %g ms\n", path.string().c_str(), kSettleTimeout);
+    if (host.run(kReadyTimeout) == page_host::RunEnd_TimedOut) {
+        std::fprintf(stderr, "%s: was not ready in %g ms\n", path.string().c_str(), kReadyTimeout);
         host.stopWaiting();
     }
     if (!page_host::PageHost::pageOk(page))

@@ -314,6 +314,13 @@ void layoutPaintForget(LayoutTree* tree, LayoutNodeIndex node);
 // recording differs, or kPrLayoutNodeNone.
 uint32_t layoutPaintVerify(LayoutTree* tree);
 
+// Returns the transform from the natural space of a replaced box's content, in pixels, to the space of its content box
+// `box`, and sets `drawn` to the size that the natural space is drawn at, rounded to units. The transform fits the
+// content to the box as `decoration` specifies (css-images-3/#the-object-fit, css-images-3/#the-object-position). The
+// natural space has the content's natural size, and the box's size along an axis that has no natural size.
+PrAffine2 layoutFitContent(const LayoutStyles* styles, const PrLayoutDecorationStyle& decoration,
+    PrLayoutNaturalSize natural, PrLayoutRect box, PrLayoutVec* drawn);
+
 } // namespace pr_impl
 
 PR_ASSUME_NONNULL_END

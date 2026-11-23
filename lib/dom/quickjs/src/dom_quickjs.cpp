@@ -2345,7 +2345,7 @@ JSValue classList(JSContext* ctx, JSValueConst elementObject) {
     if (element == nullptr)
         return JS_EXCEPTION;
     return jsSameObject(ctx, elementObject, "classList", [&] {
-        return ownedToJs(ctx, prJsDomTokenListClass, elementObject, prDomTokenListCreate(element, "class"),
+        return ownedToJs(ctx, prJsDomTokenListClass, elementObject, prDomTokenListCreate(element, "class", nullptr),
             prDomTokenListDestroy);
     });
 }
@@ -3132,6 +3132,15 @@ JSValue namedItem(JSContext* ctx, JSValueConst collectionObject, int argc, JSVal
     PR_JS_MAGIC("replaceWith", 0, nodesMethod, NodesMethod_ReplaceWith),           \
     PR_JS_METHOD("remove", 0, removeMethod)
 
+// The [Unscopable] members of each interface, with those of the ParentNode and ChildNode mixins that it includes.
+#define PR_PARENT_NODE_UNSCOPABLES "prepend", "append", "replaceChildren"
+#define PR_CHILD_NODE_UNSCOPABLES "before", "after", "replaceWith", "remove"
+constexpr const char* kParentNodeUnscopables[] = {PR_PARENT_NODE_UNSCOPABLES};
+constexpr const char* kChildNodeUnscopables[] = {PR_CHILD_NODE_UNSCOPABLES};
+constexpr const char* kElementUnscopables[] = {PR_PARENT_NODE_UNSCOPABLES, PR_CHILD_NODE_UNSCOPABLES, "slot"};
+#undef PR_PARENT_NODE_UNSCOPABLES
+#undef PR_CHILD_NODE_UNSCOPABLES
+
 // The members of the NonDocumentTypeChildNode mixin, which Element and CharacterData include.
 #define PR_NON_DOCUMENT_TYPE_CHILD_NODE                                   \
     PR_JS_GET("previousElementSibling",                                      \
@@ -3713,16 +3722,22 @@ constexpr JsClassDefinition kClasses[] = {
         PR_JS_CLASS("Document", prJsDomDocumentClass, documentFinalizer, kDocumentProto),
         .constructor = documentConstruct,
         .base = &prJsDomNodeClass,
+        .unscopables = kParentNodeUnscopables,
+        .unscopableCount = int(countOf(kParentNodeUnscopables)),
     },
     {
         PR_JS_CLASS("DocumentType", domDocumentTypeClass, jsViewFinalizer<&domDocumentTypeClass>, kDocumentTypeProto),
         .base = &prJsDomNodeClass,
+        .unscopables = kChildNodeUnscopables,
+        .unscopableCount = int(countOf(kChildNodeUnscopables)),
     },
     {
         PR_JS_CLASS("DocumentFragment", prJsDomDocumentFragmentClass,
             jsViewFinalizer<&prJsDomDocumentFragmentClass>, kDocumentFragmentProto),
         .constructor = fragmentConstruct,
         .base = &prJsDomNodeClass,
+        .unscopables = kParentNodeUnscopables,
+        .unscopableCount = int(countOf(kParentNodeUnscopables)),
     },
     {
         PR_JS_CLASS("ShadowRoot", prJsDomShadowRootClass, jsViewFinalizer<&prJsDomShadowRootClass>, kShadowRootProto),
@@ -3731,6 +3746,8 @@ constexpr JsClassDefinition kClasses[] = {
     {
         PR_JS_CLASS("Element", prJsDomElementClass, jsViewFinalizer<&prJsDomElementClass>, kElementProto),
         .base = &prJsDomNodeClass,
+        .unscopables = kElementUnscopables,
+        .unscopableCount = int(countOf(kElementUnscopables)),
     },
     {PR_JS_CLASS("Attr", domAttrClass, jsViewFinalizer<&domAttrClass>, kAttrProto), .base = &prJsDomNodeClass},
     {
@@ -3742,6 +3759,8 @@ constexpr JsClassDefinition kClasses[] = {
         PR_JS_CLASS("CharacterData", prJsDomCharacterDataClass, jsViewFinalizer<&prJsDomCharacterDataClass>,
             kCharacterDataProto),
         .base = &prJsDomNodeClass,
+        .unscopables = kChildNodeUnscopables,
+        .unscopableCount = int(countOf(kChildNodeUnscopables)),
     },
     {
         PR_JS_CLASS("Text", prJsDomTextClass, jsViewFinalizer<&prJsDomTextClass>, kTextProto),

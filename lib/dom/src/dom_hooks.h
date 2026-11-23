@@ -70,6 +70,10 @@ struct DomDocumentHooks {
     // A resource of the document loaded (dom_resource.h).
     void (*PR_NULLABLE resourceLoaded)(void* PR_NULLABLE context, PrDomDocument* document);
 
+    // The document's readiness changed (html/#current-document-readiness). It becomes complete before its window's load
+    // event fires.
+    void (*PR_NULLABLE readinessChanged)(void* PR_NULLABLE context, PrDomDocument* document);
+
     // Appends a color input's value after the steps of html/#update-a-color-well-control-color, given `text`, the value
     // or value attribute that the steps start from. The first subscriber that has it gives the value.
     void (*PR_NULLABLE colorValue)(void* PR_NULLABLE context, const PrDomElement* input, PrStringView text,
@@ -82,6 +86,10 @@ struct DomDocumentHooks {
     void (*PR_NULLABLE styleBlockUpdate)(void* PR_NULLABLE context, PrDomElement* element, DomInsertedBy by);
     void (*PR_NULLABLE linkUpdate)(void* PR_NULLABLE context, PrDomElement* element, DomInsertedBy by);
     void (*PR_NULLABLE instructionInserted)(void* PR_NULLABLE context, PrDomNode* node);
+
+    // A parser finished an element that it created: it parsed the element's children, up to the element's end tag or to
+    // whatever closed the element instead. Reported once for each such element, after its children.
+    void (*PR_NULLABLE elementParsed)(void* PR_NULLABLE context, PrDomElement* element);
 
     // An attribute in no namespace of an owner of a sheet changed: of an HTML or SVG style element, or of an HTML link
     // element. `value` is the null view for a removal. It follows attributeChanged.
@@ -96,8 +104,9 @@ struct DomDocumentHooks {
     void (*PR_NULLABLE documentCreated)(void* PR_NULLABLE context, PrDomDocument* created);
 
     // The element, shadow root or document is being freed. Each frees the state that the subscriber keeps for it. An
-    // element or shadow root is reported only if it has style data (DomElement::style, DomShadowRoot::style), the only
-    // state that subscribers keep for one.
+    // element or shadow root is reported only if it has style data (DomElement::style, DomShadowRoot::style), which is
+    // where a subscriber keeps its state for one, or which it creates to be told of the free (cssElementFollow), so
+    // that freeing the many elements that no subscriber keeps state for costs nothing.
     void (*PR_NULLABLE elementDestroyed)(void* PR_NULLABLE context, PrDomElement* element);
     void (*PR_NULLABLE shadowRootDestroyed)(void* PR_NULLABLE context, PrDomShadowRoot* shadow);
     void (*PR_NULLABLE documentDestroyed)(void* PR_NULLABLE context, PrDomDocument* document);
@@ -119,10 +128,12 @@ enum : uint8_t {
     DomHook_LanguageChanged,
     DomHook_MetaChanged,
     DomHook_ResourceLoaded,
+    DomHook_ReadinessChanged,
     DomHook_ColorValue,
     DomHook_StyleBlockUpdate,
     DomHook_LinkUpdate,
     DomHook_InstructionInserted,
+    DomHook_ElementParsed,
     DomHook_OwnerAttributeChanged,
     DomHook_InstructionRemoving,
     DomHook_DocumentCreated,
@@ -282,6 +293,15 @@ inline void domNotifyResourceLoaded(PrDomDocument* document) {
     });
 }
 
+// Reports that the document's readiness changed.
+inline void domNotifyReadinessChanged(PrDomDocument* document) {
+    if (document->followers[DomHook_ReadinessChanged] == 0)
+        return;
+    domEachFollower(document, DomHook_ReadinessChanged, [&](const DomDocumentHooks& hooks, void* PR_NULLABLE context) {
+        hooks.readinessChanged(context, document);
+    });
+}
+
 // Appends a color input's value: the one that the first subscriber that gives one gives. A document whose subscribers
 // give none has no colors to parse, and a color input keeps its value as given.
 inline void domNotifyColorValue(const PrDomElement* input, PrStringView text, PrTextBuffer* out) {
@@ -301,6 +321,15 @@ inline void domNotifyStyleBlockUpdate(PrDomElement* element, DomInsertedBy by = 
         return;
     domEachFollower(element->document, DomHook_StyleBlockUpdate, [&](const DomDocumentHooks& hooks, void* PR_NULLABLE context) {
         hooks.styleBlockUpdate(context, element, by);
+    });
+}
+
+// Reports that a parser finished the element (DomDocumentHooks::elementParsed).
+inline void domNotifyElementParsed(PrDomElement* element) {
+    if (element->document->followers[DomHook_ElementParsed] == 0)
+        return;
+    domEachFollower(element->document, DomHook_ElementParsed, [&](const DomDocumentHooks& hooks, void* PR_NULLABLE context) {
+        hooks.elementParsed(context, element);
     });
 }
 

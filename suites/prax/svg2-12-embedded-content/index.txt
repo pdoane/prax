@@ -15,6 +15,7 @@ SVG2/embedded.html#ImageElement 12.3 The ‘image’ element
     image-preserve-aspect-ratio.html
     image-svg-aspect-ratio.html
     image-svg-root.html
+    image-svg-viewport.html
     image-object-fit.html
     image-overflow.html
     image-separate-document.html

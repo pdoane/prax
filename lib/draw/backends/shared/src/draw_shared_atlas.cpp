@@ -90,9 +90,8 @@ struct Key {
     PrPathCap startCap;
     PrPathCap endCap;
     PrPathCap dashCap;
-    uint8_t nonScaling;
     PrDrawStrokeAlign align;
-    uint8_t _pad[6];
+    uint8_t _pad[7];
 };
 PR_NO_PADDING_END
 
@@ -467,9 +466,8 @@ bool prDrawAtlasPath(PrDrawAtlas* atlas, const PrPath* path, PrPathFillRule rule
         return false;
     float reach = 0;
     if (stroke != nullptr) {
-        reach = prPathStrokeReach(&stroke->shape) * (stroke->align == PrDrawStrokeAlign_Center ? 1 : 2);
-        if (!stroke->nonScaling)
-            reach *= prF32Max(transform.a, transform.d);
+        reach = prPathStrokeReach(&stroke->shape) * (stroke->align == PrDrawStrokeAlign_Center ? 1 : 2) *
+            prF32Max(transform.a, transform.d);
     }
     float width = (bounds.right - bounds.left) * transform.a + 2 * reach;
     float height = (bounds.bottom - bounds.top) * transform.d + 2 * reach;
@@ -498,7 +496,6 @@ bool prDrawAtlasPath(PrDrawAtlas* atlas, const PrPath* path, PrPathFillRule rule
         key.startCap = shape.startCap;
         key.endCap = shape.endCap;
         key.dashCap = shape.dashCap;
-        key.nonScaling = stroke->nonScaling ? 1 : 0;
         key.align = stroke->align;
     } else {
         key.kind = EntryKind_Fill;

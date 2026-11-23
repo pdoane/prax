@@ -17,7 +17,7 @@ namespace pr_impl {
 
 namespace {
 
-// Points closer than this are treated as one point.
+// Lengths and curvatures below this are zero. Points are compared by pathSamePoint.
 constexpr float kCoincident = 1e-6f;
 
 // The maximum number of cells along each axis of the grid.
@@ -61,7 +61,7 @@ float distanceBetween(PrVec2 a, PrVec2 b) {
 
 void addPoint(PathMeasure& m, PrVec2 p) {
     Contour& c = m.contours.last();
-    if (c.count != 0 && distanceBetween(m.points.last(), p) < kCoincident)
+    if (c.count != 0 && pathSamePoint(m.points.last(), p))
         return;
     m.points.push(p);
     ++c.count;
@@ -72,8 +72,7 @@ void endContour(PathMeasure& m, bool closed) {
     if (m.contours.count == 0)
         return;
     Contour& c = m.contours.last();
-    if (closed && c.count > 1 &&
-            distanceBetween(m.points.data[c.first], m.points.data[c.first + c.count - 1]) < kCoincident) {
+    if (closed && c.count > 1 && pathSamePoint(m.points.data[c.first], m.points.data[c.first + c.count - 1])) {
         --c.count;
         m.points.pop();
     }

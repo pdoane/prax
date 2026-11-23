@@ -10,8 +10,8 @@ USAGE = {
     tools/gen/gen_float.py""",
 }
 
-GENERATORS = ("brotli", "charset", "css", "dom", "html", "url", "webidl", "unicode", "locale", "mathml", "float", "webp",
-              "gpu")
+GENERATORS = ("brotli", "charset", "css", "dom", "html", "url", "webidl", "unicode", "locale", "mathml", "svg", "float",
+              "webp", "gpu")
 
 # The checkouts that the generators read, and the generators that compute their tables and read none.
 SOURCES = ("webref", "entities", "encodings", "unicode", "cldr", "rfcs", "drafts", "mathml", "publicsuffix")

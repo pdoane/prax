@@ -148,8 +148,7 @@ PrDomNode* cachedStyle(Work* work) {
 }
 
 PrCssRuleList* cachedRules(Work* work) {
-    PrHtmlStyleElement* style = prHtmlStyleElementQuery(prDomNodeAsEventTarget(work->style));
-    return prCssStyleSheetCssRules(prHtmlStyleElementSheet(style));
+    return prCssStyleSheetCssRules(prCssElementSheet(prDomElementQuery(prDomNodeAsEventTarget(work->style))));
 }
 
 // Gives a color that it does not have to the large stylesheet's rule `index`, which is a style rule, or to the first

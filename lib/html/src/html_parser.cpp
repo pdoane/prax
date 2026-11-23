@@ -13,6 +13,7 @@
 #include "dom/src/dom_control.h"
 #include "dom/src/dom_custom.h"
 #include "dom/src/dom_element_state.h"
+#include "dom/src/dom_hooks.h"
 #include "dom/src/dom_select.h"
 #include "dom/src/dom_use.h"
 #include "html/src/html_adjust.h"
@@ -336,7 +337,8 @@ void replaceHeld(RawArray<PrDomElement* PR_NULLABLE>* list, uint32_t index, PrDo
 // Pops the stack of open elements down to `count` elements. A popped option that is its select's selected option is
 // cloned into the select's selectedcontent (html/#maybe-clone-an-option-into-selectedcontent). A popped SVG style
 // element updates its style block, which the parser held back while it added the element's text
-// (SVG2/styling.html#StyleElement): an HTML style element's end tag updates its own in the text insertion mode.
+// (SVG2/styling.html#StyleElement): an HTML style element's end tag updates its own in the text insertion mode. Every
+// popped element is reported parsed (domNotifyElementParsed).
 void truncateOpen(HtmlParser* p, uint32_t count) {
     while (p->open.count > count) {
         PrDomElement* element = p->open.data[--p->open.count];
@@ -344,6 +346,7 @@ void truncateOpen(HtmlParser* p, uint32_t count) {
             domOptionPopped(element);
         if (element->space == PrDomNamespace_Svg && element->tag == PrDomTag_Style)
             cssStyleBlockUpdate(element, DomInsertedBy_Parser);
+        domNotifyElementParsed(element);
         domNodeRelease(element);
     }
 }

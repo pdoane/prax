@@ -6,6 +6,7 @@
   <a id=link href="#target"><circle id=circle cx=80 cy=20 r=5 /></a>
   <use id=use href="#rect" />
   <rect id=handler width=1 height=1 onclick="window.handled = evt.type + ' ' + event.type" />
+  <polyline id=polyline points="1,2 3,4" />
   <script id=svgScript>window.ranInline = (window.ranInline || 0) + 1;</script>
 </svg>
 <p id=target>target</p>
@@ -73,7 +74,8 @@ check(x.baseVal.unitType === SVGLength.SVG_LENGTHTYPE_PERCENTAGE && x.baseVal.va
       "a percentage");
 check(x.baseVal.value === 10 && x.baseVal.valueAsString === "10%", "a percentage of the viewBox's width");
 x.baseVal.value = 12;
-check($("rect").getAttribute("x") === "12" && x.animVal.value === 12, "setting the base value writes the attribute");
+check($("rect").getAttribute("x") === "12%" && x.animVal.value === 12,
+      "setting the base value writes the attribute, in its unit");
 throws("NoModificationAllowedError", () => { x.animVal.value = 1; }, "an animated value is read only");
 throws("SyntaxError", () => { x.baseVal.valueAsString = "nonsense"; }, "a string that is not a length");
 throws("NotSupportedError", () => x.baseVal.newValueSpecifiedUnits(0, 1), "an unknown unit type");
@@ -82,6 +84,19 @@ check($("rect").getAttribute("x") === "12%", "converting keeps the value in user
 check($("root").width.baseVal.value === 200, "an svg's width");
 const detached = $("root").createSVGLength();
 check(detached instanceof SVGLength && detached.value === 0, "createSVGLength");
+
+// A CSS function is a length of unknown unit, whose value is 0 and whose text is kept.
+$("rect").setAttribute("height", "var(--h)");
+const height = $("rect").height.baseVal;
+check(height.unitType === SVGLength.SVG_LENGTHTYPE_UNKNOWN && height.value === 0, "var() has no unit");
+check(height.valueAsString === "var(--h)", "var() keeps its text");
+throws("NotSupportedError", () => height.convertToSpecifiedUnits(SVGLength.SVG_LENGTHTYPE_PX),
+       "var() does not convert");
+height.value = 10;
+check($("rect").getAttribute("height") === "10", "setting the value of var() writes a number");
+detached.valueAsString = "calc(1px + 2px)";
+check(detached.unitType === SVGLength.SVG_LENGTHTYPE_UNKNOWN && detached.valueAsString === "calc(1px + 2px)",
+      "a detached length keeps a CSS function");
 check($("circle").x === undefined && $("circle").r.baseVal.value === 5, "a shape has its own lengths");
 
 // SVGAnimatedString.
@@ -91,12 +106,34 @@ check($("use").getAttribute("href") === "#circle", "setting an href writes the a
 
 // Links and focus.
 check($("link").matches(":link") && $("link").tabIndex === 0, "an a element with an href is a link");
+const remote = document.createElementNS("http://www.w3.org/2000/svg", "a");
+remote.setAttributeNS("http://www.w3.org/1999/xlink", "xlink:href", "http://example.com:8080/path");
+check(remote.protocol === "http:" && remote.port === "8080" && remote.href instanceof SVGAnimatedString,
+      "an SVG a element has the URL components of a hyperlink, from xlink:href without an href");
 $("rect").focus();
 check(document.activeElement === $("rect"), "a rect with a tabindex takes the focus");
 
 // An SVG element's event handler names its event evt as well as event.
 $("handler").dispatchEvent(new MouseEvent("click"));
 check(window.handled === "click click", "an SVG event handler names evt: " + window.handled);
+
+// Point list items are DOMPoints, and a viewBox is a DOMRect. Both reflect their attributes.
+const points = $("polyline").points;
+const first = points.getItem(0);
+check(first === points[0] && first instanceof DOMPoint, "a point list keeps its items' identity");
+first.x = 7;
+check($("polyline").getAttribute("points") === "7,2 3,4", "setting a held point writes the attribute");
+$("polyline").setAttribute("points", "5,6 7,8");
+check(first.x === 5 && points.getItem(0) === first, "a held point reads the attribute's new value");
+const made = $("root").createSVGPoint();
+check(points.appendItem(made) === made, "a created point is the item that a list appends");
+throws("NoModificationAllowedError", () => { $("polyline").animatedPoints.getItem(0).x = 1; },
+       "an animated point is read only");
+const viewBox = $("root").viewBox.baseVal;
+check(viewBox === $("root").viewBox.baseVal && viewBox.width === 100, "a viewBox's rect is the same object");
+viewBox.width = 50;
+check($("root").getAttribute("viewBox") === "0 0 50 50", "setting the viewBox's rect writes the attribute");
+viewBox.width = 100;
 
 print("svg dom tests passed");
 </script>

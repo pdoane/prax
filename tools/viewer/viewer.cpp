@@ -231,7 +231,7 @@ int renderAll(const char* directory, const Collection& documents, const char* wh
         // Each renderer configuration renders a load of its own, presented where its renderer renders.
         auto recordFor = [&](uint32_t config) {
             std::shared_ptr<Loaded> loaded =
-                load(document.source, text, media, configs[config].renderer, configs[config].textures);
+                load(document.source, text, media, true, configs[config].renderer, configs[config].textures);
             record(list, *loaded, size.x, size.y, pixelRatio, time);
             return loaded;
         };
@@ -933,7 +933,7 @@ Opened& shownDocument(Viewer& v) {
             bool drawn = reference.url.empty() && !printed;
             std::shared_ptr<Loaded> loaded;
             if (drawn)
-                loaded = load(reference.source, TextBackends{}, page_host::Media_Screen, nullptr,
+                loaded = load(reference.source, TextBackends{}, page_host::Media_Screen, false, nullptr,
                     v.configs[kReferenceConfig].textures);
             v.open->loaded.push_back(std::move(loaded));
             v.open->prints.push_back(printed ? v.printer->ask(reference) : nullptr);
@@ -961,7 +961,7 @@ std::shared_ptr<Loaded> paneDocument(Viewer& v, Opened& document, uint32_t index
     page_host::Media media = paneMedia(choice, listed.source);
     if (pane.loaded == nullptr || pane.text != choice.text || pane.config != choice.config || pane.media != media) {
         pane = PaneLoad{
-            choice.text, choice.config, media, load(listed.source, choice.text, media,
+            choice.text, choice.config, media, load(listed.source, choice.text, media, false,
                 v.configs[choice.config].renderer, v.configs[choice.config].textures),
         };
         // A load opens at the top of the document, and the other pane follows it there.

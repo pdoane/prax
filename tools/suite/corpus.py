@@ -44,6 +44,86 @@ MATCH_HELP = ("run only the cases whose key matches this glob, as tests16:* or t
 SHOWN = 20
 
 
+def read_fuzzy_overrides(path):
+    """Returns the fuzzy overrides that a file records, for each case by key, or none if there is no file. An entry is
+    its overrides, one per line, each a case's key and a fuzzy meta's content (web-platform-tests docs, "Fuzzy
+    Matching"), then its reason on indented lines. The entries are sorted by their first line, and a case has one
+    override for each reference that it keys, as metas do."""
+    overrides = {}
+    if not os.path.exists(path):
+        return overrides
+    heads = []
+    pending = 0
+    reasoned = False
+    with open(path, encoding="utf-8") as f:
+        for number, line in enumerate(f, 1):
+            line = line.rstrip()
+            if not line or line.startswith("#"):
+                continue
+            if line[0].isspace():
+                if pending == 0:
+                    sys.exit("%s:%d: a sentence with no override before it" % (path, number))
+                reasoned = True
+                continue
+            if reasoned:
+                pending = 0
+                reasoned = False
+            if pending == 0:
+                if heads and line < heads[-1]:
+                    sys.exit("%s:%d: an entry out of order; they are sorted by their first line" % (path, number))
+                heads.append(line)
+            pending += 1
+            fields = line.split()
+            if len(fields) != 2:
+                sys.exit("%s:%d: an override is a test and a fuzzy meta's content" % (path, number))
+            overrides.setdefault(fields[0], []).append(fields[1])
+    if pending and not reasoned:
+        sys.exit("%s: an override with no sentence after it" % path)
+    return overrides
+
+
+def fuzzy_content_ranges(content):
+    """Returns the ranges that a fuzzy meta's content gives, without any reference's URL that keys it, as
+    ((lowest, highest) largest channel difference, (fewest, most) differing pixels). A range's values may be named, or
+    given in that order."""
+    named = {}
+    positional = []
+    for part in content.split(";"):
+        name, _, value = part.rpartition("=")
+        low, _, high = value.strip().partition("-")
+        bounds = (int(low), int(high or low))
+        if name.strip():
+            named[name.strip()] = bounds
+        else:
+            positional.append(bounds)
+    ranges = [named[n] if n in named else positional.pop(0) for n in ("maxDifference", "totalPixels")]
+    return (ranges[0], ranges[1])
+
+
+def fuzzy_shift(content):
+    """Returns how far, in pixels, an override's content lets the drawing move before a pixel differs: its `shift`,
+    which is 0 or 1 and 0 if absent. An override with a shift is judged by the harness's shifted measure, which compares
+    each pixel with the other image's pixels within that distance. WPT's metas have no shift."""
+    for part in content.split(";"):
+        name, _, value = part.partition("=")
+        if name.strip() == "shift":
+            shift = int(value)
+            if shift not in (0, 1):
+                sys.exit("a fuzzy override's shift is 0 or 1, not %d" % shift)
+            return shift
+    return 0
+
+
+def within_fuzzy(allowed, difference, pixels):
+    """Returns true if a reference's difference from the test is within the fuzzy ranges `allowed`, as wptrunner judges
+    it: no difference at all, a range that starts at zero for a measure that is zero, or both measures in range."""
+    (low, high), (fewest, most) = allowed
+    if allowed == ((0, 0), (0, 0)):
+        return difference == 0 and pixels == 0
+    return ((pixels == 0 and fewest == 0) or (difference == 0 and low == 0)
+            or (low <= difference <= high and fewest <= pixels <= most))
+
+
 def read_errata(path):
     """Returns the cases that an errata file records, each key with the sentence that settles it, or none if there is no
     file. An entry is its keys, one per line at the start of the line, then its sentence on indented lines. A key is a
@@ -141,8 +221,9 @@ class Data:
       that takes the interpreter past the deadline, or its result may vary for a reason that the engine does not
       control. The reason says which.
     - scoreboard.md: what a plain run of the default build passes. The run writes it, and its diff is what a change did.
-    - fuzzy.txt and render.txt, in a suite that compares renders: the tolerances that override a case's own, and the
-      fonts and settings that the suite renders with.
+    - fuzzy.txt and render.txt, in a suite that compares renders: the fuzzy ranges that judge a case in place of the
+      suite's own limits, each with why the engine's render differs from the reference and why that is not an error
+      (read_fuzzy_overrides), and the fonts and settings that the suite renders with.
 
     The errata, cut, deferred and skip lists are in the errata's form (read_errata), and a list that would be empty is
     absent. A key of a list names a case, or a file, which covers every case of the file. A plain run leaves out the
@@ -155,6 +236,7 @@ class Data:
         self.cut = read_errata(self.path("cut.txt"))
         self.deferred = read_errata(self.path("deferred.txt"))
         self.skip = read_errata(self.path("skip.txt"))
+        self.fuzzy = read_fuzzy_overrides(self.path("fuzzy.txt"))
 
     def path(self, name):
         """Returns the path of one of the suite's files."""
@@ -185,7 +267,8 @@ class Data:
         """Returns each entry of the lists that names neither a case of `keys` nor the file of one, with its list."""
         files = {file_of(key) for key in keys}
         return [(name, key) for name, entries in (("errata", self.errata), ("cut", self.cut),
-                                                  ("deferred", self.deferred), ("skip", self.skip))
+                                                  ("deferred", self.deferred), ("skip", self.skip),
+                                                  ("fuzzy", self.fuzzy))
                 for key in sorted(entries) if key not in keys and key not in files]
 
     def write_scoreboard(self, rows, notes=()):

@@ -199,11 +199,11 @@ std::shared_ptr<Loaded> loadPrinted(const fs::path& path, PrDrawWriterBackend fo
         PrTextureCache* PR_NULLABLE textures) {
     if (format == PrDrawWriterBackend_Svg) {
         Source pages{.path = pagesPage(page_host::PageHost::documentFiles(path))};
-        return load(pages, TextBackends{}, page_host::Media_Print, nullptr, textures);
+        return load(pages, TextBackends{}, page_host::Media_Print, false, nullptr, textures);
     }
     if (!pdfDrawn())
         return nullptr;
-    return load(Source{.type = SourceType_Pdf, .path = path}, TextBackends{}, page_host::Media_Screen, nullptr, textures);
+    return load(Source{.type = SourceType_Pdf, .path = path}, TextBackends{}, page_host::Media_Screen, false, nullptr, textures);
 }
 
 std::vector<Reference> referencesOf(const Document& document) {
@@ -239,7 +239,7 @@ bool print(const Reference& reference) {
     return true;
 }
 
-std::shared_ptr<Loaded> load(const Source& source, TextBackends text, page_host::Media media,
+std::shared_ptr<Loaded> load(const Source& source, TextBackends text, page_host::Media media, bool ready,
         PrDrawRenderer* PR_NULLABLE renderer, PrTextureCache* PR_NULLABLE textures) {
     std::shared_ptr<Loaded> loaded = std::make_shared<Loaded>();
     loaded->source = source;
@@ -248,7 +248,7 @@ std::shared_ptr<Loaded> load(const Source& source, TextBackends text, page_host:
     switch (source.type) {
         case SourceType_Page:
             loaded->html = loadHtml(source.path, source.query, source.settings, source.capture, source.scripts, media,
-                textShaper, text.hinting, hinterOf(text.hinting), renderer, textures);
+                ready, textShaper, text.hinting, hinterOf(text.hinting), renderer, textures);
             break;
         case SourceType_Lottie:
             loaded->lottie = loadLottie(source.path, source.settings, textShaper, text.hinting, hinterOf(text.hinting), textures);

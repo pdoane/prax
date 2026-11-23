@@ -555,6 +555,15 @@ void defineIteratorAlias(JSContext* ctx, JSValueConst proto, const char* name) {
         JS_PROP_CONFIGURABLE | JS_PROP_WRITABLE);
 }
 
+// Defines @@unscopables on `proto`: an object with no prototype that has each name as a true property, so that a `with`
+// statement skips them (webidl/#interface-prototype-object).
+void defineUnscopables(JSContext* ctx, JSValueConst proto, const char* const* names, int count) {
+    JSValue unscopables = JS_NewObjectProto(ctx, JS_NULL);
+    for (int i = 0; i < count; ++i)
+        JS_DefinePropertyValueStr(ctx, unscopables, names[i], JS_TRUE, JS_PROP_C_W_E);
+    JS_DefinePropertyValue(ctx, proto, JS_ATOM_Symbol_unscopables, unscopables, JS_PROP_CONFIGURABLE);
+}
+
 // Defines the members on the prototype of a setlike or maplike class. Each is a function that calls `member` of the
 // realm's Set or Map prototype.
 void defineCollection(JSContext* ctx, JSValueConst proto, JSClassID id, const JsCollection& collection) {
@@ -1156,6 +1165,8 @@ JSValue jsDefineClass(JSContext* ctx, const JsClassDefinition& definition) {
         defineCollection(ctx, proto, id, *definition.collection);
     if (definition.iterator != nullptr)
         defineIteratorAlias(ctx, proto, definition.iterator);
+    if (definition.unscopables != nullptr)
+        defineUnscopables(ctx, proto, definition.unscopables, definition.unscopableCount);
     JSCFunctionType construct;
     construct.constructor_magic = constructInScope;
     JSValue constructor = JS_NewCFunction2(ctx, construct.generic, definition.name,

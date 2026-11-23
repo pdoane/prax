@@ -1697,21 +1697,15 @@ constexpr JsClassDefinition kClasses[] = {
     },
 };
 
-void addMembers(JSContext* ctx, JSClassID id, const JSCFunctionListEntry* members, int count) {
-    JSValue proto = JS_GetClassProto(ctx, id);
-    JS_SetPropertyFunctionList(ctx, proto, members, count);
-    JS_FreeValue(ctx, proto);
-}
-
 } // namespace
 
 void cssAnimationsBind(JSContext* ctx) {
     for (const JsClassDefinition& definition : kClasses)
         JS_FreeValue(ctx, jsDefineClass(ctx, definition));
-    addMembers(ctx, prJsDomElementClass, kElementMembers, int(countOf(kElementMembers)));
-    addMembers(ctx, prJsDomDocumentClass, kDocumentMembers, int(countOf(kDocumentMembers)));
+    jsAddMembers(ctx, prJsDomElementClass, kElementMembers);
+    jsAddMembers(ctx, prJsDomDocumentClass, kDocumentMembers);
     // DocumentOrShadowRoot's getAnimations.
-    addMembers(ctx, prJsDomShadowRootClass, kShadowRootMembers, int(countOf(kShadowRootMembers)));
+    jsAddMembers(ctx, prJsDomShadowRootClass, kShadowRootMembers);
 }
 
 JSClassID cssAnimationsTargetClass(void* target) {

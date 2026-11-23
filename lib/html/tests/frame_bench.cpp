@@ -115,7 +115,7 @@ void frame(Work* w) {
 
 void toggle(PrDomElement* element, PrStringView token) {
     bool on = false;
-    PrDomTokenList* classes = prDomTokenListCreate(element, "class");
+    PrDomTokenList* classes = prDomTokenListCreate(element, "class", nullptr);
     prDomTokenListToggle(classes, token, nullptr, &on);
     prDomTokenListDestroy(classes);
 }

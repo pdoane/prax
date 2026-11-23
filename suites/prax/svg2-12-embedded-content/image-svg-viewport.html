@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>image: the SVG's viewport</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg, img { display: block; }
+  .half { width: 120px; height: 40px; }
+  .half-background { width: 120px; height: 40px; background-image: url(support/half-viewport.svg); }
+  .outlined { outline: 1px dashed GrayText; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 12.3 The ‘image’ element</div>
+  <h1>image: the SVG's viewport</h1>
+  <p class=pr-lede><q>When the referenced image is an SVG, the image-rendering rectangle defines the SVG viewport used
+  for rendering that SVG.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/embedded.html#ImageElement">SVG
+  2 §12.3</a></span> The image is an SVG with no size of its own, whose rect is <code>50vw</code> by <code>50vh</code>:
+  half of its viewport on each axis.</p>
+</header>
+
+<section>
+  <h2>Viewport-relative lengths are of the rectangle the image is drawn in</h2>
+  <p>The image is drawn 120 by 40, outlined dashed grey, so its viewport is 120 by 40 and its rect 60 by 20, wherever
+  it is shown.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="140" height="60"><image href="support/half-viewport.svg" x="10" y="10" width="120" height="40" /><rect x="10.5" y="10.5" width="119" height="39" class=pr-ghost /></svg></div>
+    <figcaption>An SVG <code>image</code>: a rect 60 by 20 at its top left.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><img class="half outlined" src="support/half-viewport.svg"></div>
+    <figcaption>An <code>img</code>: a rect 60 by 20 at its top left.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="half-background outlined"></div></div>
+    <figcaption>A <code>background-image</code>: a rect 60 by 20 at its top left.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

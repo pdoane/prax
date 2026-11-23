@@ -144,7 +144,7 @@ bool strokesEqual(const PrDrawStroke& a, const PrDrawStroke& b) {
     const PrPathStroke& y = b.shape;
     uint32_t dashes = x.dashes != nullptr ? x.dashCount : 0;
     uint32_t profile = x.profile != nullptr ? x.profileCount : 0;
-    return a.nonScaling == b.nonScaling && a.align == b.align && a.mapping == b.mapping && x.width == y.width &&
+    return a.align == b.align && a.mapping == b.mapping && x.width == y.width &&
         x.miterLimit == y.miterLimit && x.dashOffset == y.dashOffset && x.join == y.join &&
         x.startCap == y.startCap && x.endCap == y.endCap && x.dashCap == y.dashCap &&
         x.zeroLengthDirection.x == y.zeroLengthDirection.x && x.zeroLengthDirection.y == y.zeroLengthDirection.y &&
@@ -269,12 +269,9 @@ PrRect mapBounds(PrAffine2 t, PrRect r) {
     return prAffine2MapRect(t, r);
 }
 
-// Computes how far a stroke may extend past its geometry. The reach is in the stroke's own space, or in target pixels
-// if the stroke is measured in target pixels.
-void strokeReach(const PrDrawStroke* stroke, float* local, float* device) {
-    float reach = prDrawStrokeReach(stroke) * stroke->shape.width;
-    *local = stroke->nonScaling ? 0 : reach;
-    *device = stroke->nonScaling ? reach : 0;
+// Returns how far a stroke may extend past its geometry, in the stroke's space.
+float strokeReach(const PrDrawStroke* stroke) {
+    return prDrawStrokeReach(stroke) * stroke->shape.width;
 }
 
 // Returns the area that a glyph run may cover: each glyph's outline and its cell, which color layers may reach. Returns
@@ -383,11 +380,8 @@ PrRect commandsBounds(const PrDrawCommand* commands, uint32_t count) {
                 break;
             case PrDrawCommandKind_Glyphs:
                 local = glyphRunBounds(c.glyphs);
-                if (c.stroke != nullptr) {
-                    float reach = 0;
-                    strokeReach(c.stroke, &reach, &device);
-                    local = outset(local, reach);
-                }
+                if (c.stroke != nullptr)
+                    local = outset(local, strokeReach(c.stroke));
                 break;
             case PrDrawCommandKind_PushTransformAffine2:
                 transforms.push(prDAffine2Concat(c.affine, transforms.last()));
@@ -504,11 +498,8 @@ PrRect commandsBounds(const PrDrawCommand* commands, uint32_t count) {
                     default:
                         break;
                 }
-                if (c.stroke != nullptr) {
-                    float reach = 0;
-                    strokeReach(c.stroke, &reach, &device);
-                    local = outset(local, reach);
-                }
+                if (c.stroke != nullptr)
+                    local = outset(local, strokeReach(c.stroke));
                 break;
             }
         }

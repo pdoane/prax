@@ -36,7 +36,7 @@ if (PR_JS)
         quickjs/src/dom_geometry_quickjs.cpp
         quickjs/src/dom_quickjs.cpp
     )
-    target_link_libraries(pr_dom_quickjs PUBLIC prax::dom prax::quickjs PRIVATE prax::core_quickjs_cpp
+    target_link_libraries(pr_dom_quickjs PUBLIC prax::dom prax::quickjs prax::core_quickjs_cpp
                                          prax::webidl_quickjs_cpp)
 endif()
 
@@ -60,6 +60,7 @@ if (PR_DEVELOP)
     if (PR_JS)
         pr_module_tests(dom_quickjs
             quickjs/tests/test_exception_quickjs.cpp
+            quickjs/tests/test_unscopables_quickjs.cpp
         )
         target_link_libraries(dom_quickjs_tests PRIVATE prax::css_quickjs prax::core_quickjs_cpp prax::webidl_quickjs_cpp)
         pr_add_test(dom_js_callbacks COMMAND pr_shell --html ${CMAKE_CURRENT_SOURCE_DIR}/tests/callback.html)

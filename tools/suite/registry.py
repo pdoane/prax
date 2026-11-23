@@ -56,7 +56,7 @@ SUITES = [
           ("pr_shell", "reftest")),
     # The font bundles' coverage of each common language's exemplar characters, as CLDR gives them.
     Suite("font-coverage", ("cldr",), ("cldr/common/main",), ("tools.suite.font_coverage",), ()),
-    reftest("resvg", ("resvg_tests", "fonts"), ("resvg-tests/tests",)),
+    reftest("resvg", ("resvg_tests", "fonts"), ("resvg/crates/resvg/tests/tests",)),
     reftest("lottie-web", ("lottie_corpora", "lottie_web"), ("lottie-web/version",), ("reftest", "lottie_reference")),
     reftest("skottie", ("lottie_corpora", "canvaskit", "resvg_tests"), ("canvaskit/version",),
             ("reftest", "lottie_reference")),

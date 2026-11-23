@@ -2042,8 +2042,14 @@ void prDomNodeListDestroy(PrDomNodeList* PR_NULLABLE list) {
 // ---------------------------------------------------------------------------------------------------------------------
 // DOMTokenList
 
-PrDomTokenList* prDomTokenListCreate(PrDomElement* element, PrStringView name) {
-    return domTokenListCreate(element, name);
+PrDomTokenList* prDomTokenListCreate(PrDomElement* element, PrStringView name,
+        const PrDomTokenSet* PR_NULLABLE supported) {
+    PrDomTokenList* list = domTokenListCreate(element, name);
+    if (supported != nullptr) {
+        list->supported = supported->tokens;
+        list->supportedCount = supported->count;
+    }
+    return list;
 }
 
 PrStatus prDomTokenListSupports(const PrDomTokenList* list, PrStringView token, bool* out) {

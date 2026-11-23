@@ -6,7 +6,7 @@
 #include "pr/string.h"
 #include "pr/string_ops.h"
 #include "pr/svg.h"
-#include "pr/svg_length.h"
+#include "pr/svg_types.h"
 
 #include "tools/harness/test.h"
 
@@ -123,12 +123,15 @@ TEST_CASE("getBBox's markers option adds the bounds of the markers' content, pla
 
 TEST_CASE("a use element's bounding box holds its x and y, and its CTM leaves them out") {
     Document d("<defs><rect id='r' x='5' y='5' width='20' height='10'/>"
-        "<clipPath id='c'><rect width='40' height='100'/></clipPath></defs>"
-        "<use id='u' href='#r' x='60' y='10' transform='scale(2 1)' clip-path='url(#c)'/>");
+        "<clipPath id='c'><rect width='40' height='100'/></clipPath>"
+        "<clipPath id='half'><rect width='15' height='100'/></clipPath></defs>"
+        "<use id='u' href='#r' x='60' y='10' transform='scale(2 1)' clip-path='url(#c)'/>"
+        "<use id='cut' href='#r' x='60' y='10' clip-path='url(#half)'/>");
     PrSvgElement* use = d.byId("u");
     checkRect(prSvgGraphicsElementGetBBox(use, nullptr), 65, 15, 20, 10);
-    // The clip path is in the space that x and y move, where it holds the whole instance.
+    // The clip path is in the space that x and y move, where it holds the whole instance, or cuts it.
     checkRect(boxOf(use, PrSvgBoundingBoxOptions{.fill = true, .clipped = true}), 65, 15, 20, 10);
+    checkRect(boxOf(d.byId("cut"), PrSvgBoundingBoxOptions{.fill = true, .clipped = true}), 65, 15, 10, 10);
     PrDomMatrix m = prDomMatrixIdentity();
     REQUIRE(prSvgGraphicsElementGetCtm(use, &m));
     CHECK(m.m[0] == doctest::Approx(2));
@@ -176,25 +179,57 @@ TEST_CASE("isPointInStroke takes the stroke's dashes, and isPointInFill the inte
     CHECK(inside);
 }
 
+TEST_CASE("getIntersectionList finds what pointer events hit in the rectangle, cut by clips, and use elements") {
+    Document d("<clipPath id='lower'><rect y='50' width='200' height='50'/></clipPath>"
+        "<g id='group'><rect id='box' width='40' height='40'/><circle id='round' cx='100' cy='20' r='20'/>"
+        "<rect id='clipped' width='200' height='100' clip-path='url(#lower)'/></g>"
+        "<rect id='ghost' width='40' height='40' pointer-events='none'/>"
+        "<defs><circle id='dot' r='5'/></defs><use id='use' href='#dot' x='150' y='20'/>");
+    PrSvgElement* svg = prSvgElementQuery(prDomElementAsEventTarget(prDomDocumentElement(d.document)));
+    auto ids = [&](double x, double y, double width, double height, bool enclosure) {
+        PrDomNodeList* list = prDomNodeListCreate();
+        prSvgSvgElementGetHitList(svg, PrDomRect{x, y, width, height}, nullptr, enclosure, list);
+        String text;
+        for (uint32_t i = 0; i < prDomNodeListLength(list); ++i) {
+            PrDomElement* element = prDomElementQuery(prDomNodeAsEventTarget(prDomNodeListNodeAt(list, i)));
+            text.append(format("{}{}", i != 0 ? " " : "", textOf(prDomElementId(element))));
+        }
+        prDomNodeListDestroy(list);
+        return text;
+    };
+    // The corner of the circle's bounding box holds none of the circle, and the clip leaves nothing above y = 50.
+    CHECK(ids(30, 0, 52, 4, false) == "box");
+    CHECK(ids(0, 0, 200, 49, false) == "box round use");
+    CHECK(ids(0, 0, 200, 60, false) == "box round clipped use");
+    CHECK(ids(0, 0, 121, 41, true) == "box round");
+    // A container intersects if every graphics element that it holds does.
+    CHECK_FALSE(prSvgSvgElementCheckHit(svg, d.byId("group"), PrDomRect{0, 0, 200, 40}, false));
+    CHECK(prSvgSvgElementCheckHit(svg, d.byId("group"), PrDomRect{0, 0, 200, 60}, false));
+    CHECK(prSvgSvgElementCheckHit(svg, d.byId("round"), PrDomRect{90, 10, 4, 4}, false));
+    CHECK_FALSE(prSvgSvgElementCheckHit(svg, d.byId("ghost"), PrDomRect{0, 0, 200, 100}, false));
+}
+
 TEST_CASE("a geometry element measures the length of its equivalent path and the point along it") {
     Document d("<circle id='circle' cx='50' cy='50' r='20'/><line id='line' x1='0' y1='10' x2='100' y2='10'/>"
-        "<rect id='gone' width='5' height='5' display='none'/>");
-    float length = 0;
-    REQUIRE(prSvgGeometryElementGetTotalLength(d.byId("circle"), &length) == PrStatus_Ok);
-    CHECK(length == doctest::Approx(2 * 3.14159265 * 20).epsilon(0.001));
+        "<rect id='gone' width='5' height='5' display='none'/><rect id='empty'/>");
+    CHECK(prSvgGeometryElementTotalLength(d.byId("circle")) == doctest::Approx(2 * 3.14159265 * 20).epsilon(0.001));
     PrDomPoint point{};
     REQUIRE(prSvgGeometryElementGetPointAtLength(d.byId("line"), 30, &point) == PrStatus_Ok);
     CHECK(point.x == doctest::Approx(30));
     CHECK(point.y == doctest::Approx(10));
     REQUIRE(prSvgGeometryElementGetPointAtLength(d.byId("line"), 500, &point) == PrStatus_Ok);
     CHECK(point.x == doctest::Approx(100));
-    CHECK(prSvgGeometryElementGetTotalLength(d.byId("gone"), &length) == PrStatus_InvalidState);
+    // A shape that is not displayed is measured as if it were drawn. An empty path has a length of 0, and no point
+    // along it.
+    CHECK(prSvgGeometryElementTotalLength(d.byId("gone")) == doctest::Approx(20));
+    CHECK(prSvgGeometryElementTotalLength(d.byId("empty")) == 0);
+    CHECK(prSvgGeometryElementGetPointAtLength(d.byId("empty"), 0, &point) == PrStatus_InvalidState);
 }
 
 TEST_CASE("each element has the interface that its tag names") {
     Document d("<g id='g'/><rect id='rect'/><a id='a'/><use id='use'/><switch id='switch'/><symbol id='symbol'/>"
         "<script id='script'/><view id='view'/><animate id='animate'/><set id='set'/><text id='text'/><desc id='desc'/>");
-    CHECK(prSvgElementInterface(d.byId("g")) == PrSvgInterface_Graphics);
+    CHECK(prSvgElementInterface(d.byId("g")) == PrSvgInterface_G);
     CHECK(prSvgElementInterface(d.byId("rect")) == PrSvgInterface_Rect);
     CHECK(prSvgInterfaceIsGeometry(PrSvgInterface_Rect));
     CHECK(prSvgInterfaceIsGeometry(PrSvgInterface_Polygon));
@@ -207,87 +242,181 @@ TEST_CASE("each element has the interface that its tag names") {
     CHECK(prSvgElementInterface(d.byId("view")) == PrSvgInterface_View);
     CHECK(prSvgElementInterface(d.byId("animate")) == PrSvgInterface_Animate);
     CHECK(prSvgElementInterface(d.byId("set")) == PrSvgInterface_Set);
-    CHECK(prSvgElementInterface(d.byId("text")) == PrSvgInterface_TextContent);
-    CHECK(prSvgElementInterface(d.byId("desc")) == PrSvgInterface_Element);
+    CHECK(prSvgElementInterface(d.byId("text")) == PrSvgInterface_Text);
+    CHECK(prSvgElementInterface(d.byId("desc")) == PrSvgInterface_Desc);
 }
 
-TEST_CASE("a length reflects its attribute: its unit, its value in user units, and its string") {
+TEST_CASE("a length of an element that is not drawn resolves against the viewport that it would be drawn in") {
+    // The inner svg's content is 80 by 40, which the rects in its symbol and its hidden group take their percentages
+    // of.
+    Document d("<svg width='80' height='40'><symbol width='10' height='10'><rect id='kept' width='50%'/></symbol>"
+        "<g display='none'><rect id='hidden' height='50%'/></g></svg>");
+    PrSvgLength length{};
+    REQUIRE(prSvgElementGetLength(d.byId("kept"), PrSvgAttribute_Width, PrSvgLayer_Base, &length));
+    CHECK(prSvgLengthResolve(length, prSvgElementLengthBasis(d.byId("kept"), PrSvgAttribute_Width)) ==
+        doctest::Approx(40));
+    REQUIRE(prSvgElementGetLength(d.byId("hidden"), PrSvgAttribute_Height, PrSvgLayer_Base, &length));
+    CHECK(prSvgLengthResolve(length, prSvgElementLengthBasis(d.byId("hidden"), PrSvgAttribute_Height)) ==
+        doctest::Approx(20));
+}
+
+TEST_CASE("an element reads a length attribute as a number of a unit, which resolves against its viewport and font") {
     Document d("<rect id='r' x='10%' width='2em' height='3mm' style='font-size: 20px'/><svg id='inner' width='50%' height='10'/>");
-    PrSvgAnimatedLength* x = prSvgAnimatedLengthCreate(d.byId("r"), "x");
-    PrSvgAnimatedLength* width = prSvgAnimatedLengthCreate(d.byId("r"), "width");
-    REQUIRE(x != nullptr);
-    REQUIRE(width != nullptr);
-    CHECK(prSvgAnimatedLengthCreate(d.byId("r"), "cx") == nullptr);
-    PrSvgLength* xBase = prSvgAnimatedLengthBaseVal(x);
-    CHECK(prSvgLengthUnitType(xBase) == PrSvgLengthType_Percentage);
-    CHECK(prSvgLengthValueInSpecifiedUnits(xBase) == doctest::Approx(10));
-    CHECK(prSvgLengthValue(xBase) == doctest::Approx(20));
-    CHECK(stringOf(prSvgLengthValueAsString(xBase)) == "10%");
-    PrSvgLength* widthBase = prSvgAnimatedLengthBaseVal(width);
-    CHECK(prSvgLengthUnitType(widthBase) == PrSvgLengthType_Ems);
-    CHECK(prSvgLengthValue(widthBase) == doctest::Approx(40));
-    PrSvgAnimatedLength* inner = prSvgAnimatedLengthCreate(d.byId("inner"), "width");
-    PrSvgLength* innerBase = prSvgAnimatedLengthBaseVal(inner);
-    CHECK(prSvgLengthValue(innerBase) == doctest::Approx(100));
-    prSvgLengthDestroy(innerBase);
-    prSvgAnimatedLengthDestroy(inner);
-    prSvgLengthDestroy(widthBase);
-    prSvgLengthDestroy(xBase);
-    prSvgAnimatedLengthDestroy(width);
-    prSvgAnimatedLengthDestroy(x);
+    PrSvgElement* rect = d.byId("r");
+    PrSvgLength x{};
+    REQUIRE(prSvgElementGetLength(rect, PrSvgAttribute_X, PrSvgLayer_Base, &x));
+    CHECK(x.unit == PrCssUnit_Percent);
+    CHECK(x.value == doctest::Approx(10));
+    CHECK(prSvgLengthResolve(x, prSvgElementLengthBasis(rect, PrSvgAttribute_X)) == doctest::Approx(20));
+    CHECK(stringOf(prSvgLengthSerialize(x)) == "10%");
+    PrSvgLength width{};
+    REQUIRE(prSvgElementGetLength(rect, PrSvgAttribute_Width, PrSvgLayer_Base, &width));
+    CHECK(width.unit == PrCssUnit_Em);
+    CHECK(prSvgLengthResolve(width, prSvgElementLengthBasis(rect, PrSvgAttribute_Width)) == doctest::Approx(40));
+    PrSvgLength inner{};
+    REQUIRE(prSvgElementGetLength(d.byId("inner"), PrSvgAttribute_Width, PrSvgLayer_Base, &inner));
+    CHECK(prSvgLengthResolve(inner, prSvgElementLengthBasis(d.byId("inner"), PrSvgAttribute_Width)) ==
+        doctest::Approx(100));
+
+    // A rect has no cx, and its x is not a list.
+    PrSvgLength none{};
+    CHECK_FALSE(prSvgElementGetLength(rect, PrSvgAttribute_Cx, PrSvgLayer_Base, &none));
+    CHECK(prSvgElementAttributeType(rect, PrSvgAttribute_X) == PrSvgValueType_Length);
+    CHECK(prSvgElementGetLengthList(rect, PrSvgAttribute_X, PrSvgLayer_Base, nullptr, 0) == 0);
 }
 
-TEST_CASE("setting a length writes its attribute again, and its animated value is read only") {
-    Document d("<rect id='r' x='10'/><circle id='c'/>");
-    PrSvgAnimatedLength* x = prSvgAnimatedLengthCreate(d.byId("r"), "x");
-    PrSvgLength* base = prSvgAnimatedLengthBaseVal(x);
-    PrSvgLength* animated = prSvgAnimatedLengthAnimVal(x);
-    CHECK(prSvgLengthSetValue(base, 25) == PrStatus_Ok);
+TEST_CASE("setting a length writes its attribute, and a missing or negative size reads as its initial value") {
+    Document d("<rect id='r' x='10' width='-5'/><circle id='c'/>");
+    PrSvgElement* rect = d.byId("r");
+    CHECK(prSvgElementSetLength(rect, PrSvgAttribute_X, PrSvgLength{25, PrCssUnit_Number}) == PrStatus_Ok);
     CHECK(d.attribute("r", "x") == "25");
-    CHECK(prSvgLengthValue(animated) == doctest::Approx(25));
-    CHECK(prSvgLengthSetValue(animated, 1) == PrStatus_ReadOnly);
-    CHECK(prSvgLengthConvertToSpecifiedUnits(base, PrSvgLengthType_In) == PrStatus_Ok);
-    CHECK(prSvgLengthUnitType(base) == PrSvgLengthType_In);
-    CHECK(prSvgLengthValue(base) == doctest::Approx(25));
-    CHECK(prSvgLengthNewValueSpecifiedUnits(base, PrSvgLengthType_Pc, 2) == PrStatus_Ok);
+    PrSvgLength animated{};
+    REQUIRE(prSvgElementGetLength(rect, PrSvgAttribute_X, PrSvgLayer_Animated, &animated));
+    CHECK(animated.value == doctest::Approx(25));
+    PrSvgLength inches = prSvgLengthConvert(animated, PrCssUnit_In, prSvgLengthBasisDefault());
+    CHECK(inches.unit == PrCssUnit_In);
+    CHECK(prSvgLengthResolve(inches, prSvgLengthBasisDefault()) == doctest::Approx(25));
+    CHECK(prSvgElementSetLength(rect, PrSvgAttribute_X, PrSvgLength{2, PrCssUnit_Pc}) == PrStatus_Ok);
     CHECK(d.attribute("r", "x") == "2pc");
-    CHECK(prSvgLengthNewValueSpecifiedUnits(base, PrSvgLengthType_Unknown, 2) == PrStatus_NotSupported);
-    CHECK(prSvgLengthSetValueAsString(base, "nonsense") == PrStatus_Syntax);
-    CHECK(prSvgLengthSetValueAsString(base, "4q") == PrStatus_Ok);
-    CHECK(prSvgLengthUnitType(base) == PrSvgLengthType_Unknown);
-    CHECK(prSvgLengthValueInSpecifiedUnits(base) == doctest::Approx(0));
-    prSvgLengthDestroy(animated);
-    prSvgLengthDestroy(base);
-    prSvgAnimatedLengthDestroy(x);
+    CHECK(prSvgElementSetLength(rect, PrSvgAttribute_X, PrSvgLength{2, PrCssUnit_Deg}) == PrStatus_InvalidData);
+    CHECK(prSvgElementSetLength(rect, PrSvgAttribute_Points, PrSvgLength{2, PrCssUnit_Px}) == PrStatus_WrongType);
+    PrSvgLength width{};
+    REQUIRE(prSvgElementGetLength(rect, PrSvgAttribute_Width, PrSvgLayer_Base, &width));
+    CHECK(width.value == doctest::Approx(0));
+    PrSvgLength radius{};
+    REQUIRE(prSvgElementGetLength(d.byId("c"), PrSvgAttribute_R, PrSvgLayer_Base, &radius));
+    CHECK(radius.unit == PrCssUnit_Number);
+    CHECK(radius.value == doctest::Approx(0));
 
-    // A missing attribute reflects its initial value.
-    PrSvgAnimatedLength* r = prSvgAnimatedLengthCreate(d.byId("c"), "r");
-    PrSvgLength* radius = prSvgAnimatedLengthBaseVal(r);
-    CHECK(prSvgLengthUnitType(radius) == PrSvgLengthType_Number);
-    CHECK(prSvgLengthValue(radius) == doctest::Approx(0));
-    prSvgLengthDestroy(radius);
-    prSvgAnimatedLengthDestroy(r);
+    PrSvgLength parsed{};
+    CHECK_FALSE(prSvgLengthParse("nonsense", &parsed));
+    REQUIRE(prSvgLengthParse("4q", &parsed));
+    CHECK(parsed.unit == PrCssUnit_Q);
+    CHECK(stringOf(prSvgLengthSerialize(parsed)) == "4q");
 }
 
-TEST_CASE("a detached length holds its own value, with percentages of 100") {
-    PrSvgLength* length = prSvgLengthCreate();
-    CHECK(prSvgLengthUnitType(length) == PrSvgLengthType_Number);
-    CHECK(prSvgLengthNewValueSpecifiedUnits(length, PrSvgLengthType_Percentage, 30) == PrStatus_Ok);
-    CHECK(prSvgLengthValue(length) == doctest::Approx(30));
-    CHECK(stringOf(prSvgLengthValueAsString(length)) == "30%");
-    prSvgLengthDestroy(length);
+TEST_CASE("an enumeration reads as its keyword's value, and an unknown keyword as its initial value") {
+    Document d("<linearGradient id='g' gradientUnits='userSpaceOnUse' spreadMethod='bogus'/>"
+        "<marker id='m' orient='auto-start-reverse'/><marker id='n' orient='45deg'/>");
+    uint8_t value = 0;
+    REQUIRE(prSvgElementGetEnumeration(d.byId("g"), PrSvgAttribute_GradientUnits, PrSvgLayer_Base, &value));
+    CHECK(value == PrSvgUnits_UserSpaceOnUse);
+    REQUIRE(prSvgElementGetEnumeration(d.byId("g"), PrSvgAttribute_SpreadMethod, PrSvgLayer_Base, &value));
+    CHECK(value == PrSvgSpreadMethod_Pad);
+    CHECK(prSvgElementSetEnumeration(d.byId("g"), PrSvgAttribute_SpreadMethod, PrSvgSpreadMethod_Repeat) ==
+        PrStatus_Ok);
+    CHECK(d.attribute("g", "spreadMethod") == "repeat");
+    CHECK(prSvgElementSetEnumeration(d.byId("g"), PrSvgAttribute_SpreadMethod, 9) == PrStatus_InvalidData);
+
+    // A marker's orient is a keyword or an angle.
+    REQUIRE(prSvgElementGetEnumeration(d.byId("m"), PrSvgAttribute_Orient, PrSvgLayer_Base, &value));
+    CHECK(value == PrSvgOrient_AutoStartReverse);
+    REQUIRE(prSvgElementGetEnumeration(d.byId("n"), PrSvgAttribute_Orient, PrSvgLayer_Base, &value));
+    CHECK(value == PrSvgOrient_Angle);
+    PrSvgAngle angle{};
+    REQUIRE(prSvgElementGetAngle(d.byId("n"), PrSvgAttribute_Orient, PrSvgLayer_Base, &angle));
+    CHECK(angle.unit == PrCssUnit_Deg);
+    CHECK(prSvgAngleDegrees(angle) == doctest::Approx(45));
+    CHECK(prSvgElementSetEnumeration(d.byId("m"), PrSvgAttribute_Orient, PrSvgOrient_Angle) == PrStatus_Ok);
+    CHECK(d.attribute("m", "orient") == "0");
 }
 
-TEST_CASE("an href reflects the href without a namespace before XLink's, and sets the one without") {
+TEST_CASE("a value outside an attribute's range reads as its initial value, and a string reads as its text") {
+    // order's integers are greater than zero once truncated, and an error in either reads the whole pair as 3 3.
+    Document d("<filter><feConvolveMatrix id='half' order='2.7'/><feConvolveMatrix id='zero' order='0.5'/>"
+        "<feConvolveMatrix id='one' order='4 -2'/></filter>"
+        "<path id='p' d='M0 0h10'/><text><textPath id='t' href='#p' side='right'>x</textPath></text><g id='g' class=' a  b '/>");
+    int32_t pair[2] = {};
+    REQUIRE(prSvgElementGetIntegerPair(d.byId("half"), PrSvgAttribute_Order, PrSvgLayer_Base, pair));
+    CHECK((pair[0] == 2 && pair[1] == 2));
+    REQUIRE(prSvgElementGetIntegerPair(d.byId("zero"), PrSvgAttribute_Order, PrSvgLayer_Base, pair));
+    CHECK((pair[0] == 3 && pair[1] == 3));
+    REQUIRE(prSvgElementGetIntegerPair(d.byId("one"), PrSvgAttribute_Order, PrSvgLayer_Base, pair));
+    CHECK((pair[0] == 3 && pair[1] == 3));
+    uint8_t side = 0;
+    REQUIRE(prSvgElementGetEnumeration(d.byId("t"), PrSvgAttribute_Side, PrSvgLayer_Base, &side));
+    CHECK(side == PrSvgTextPathSide_Right);
+    CHECK(textOf(prSvgElementGetString(d.byId("g"), PrSvgAttribute_Class, PrSvgLayer_Base)) == " a  b ");
+    CHECK(textOf(prSvgElementGetString(d.byId("g"), PrSvgAttribute_Class, PrSvgLayer_Animated)) == " a  b ");
+}
+
+TEST_CASE("a pair reads its second number as its first where it has one, and writes one where they are equal") {
+    Document d("<filter><feGaussianBlur id='b' stdDeviation='2'/><feConvolveMatrix id='c' order='3 5'/></filter>");
+    float pair[2] = {};
+    REQUIRE(prSvgElementGetNumberPair(d.byId("b"), PrSvgAttribute_StdDeviation, PrSvgLayer_Base, pair));
+    CHECK(pair[0] == doctest::Approx(2));
+    CHECK(pair[1] == doctest::Approx(2));
+    int32_t order[2] = {};
+    REQUIRE(prSvgElementGetIntegerPair(d.byId("c"), PrSvgAttribute_Order, PrSvgLayer_Base, order));
+    CHECK(order[0] == 3);
+    CHECK(order[1] == 5);
+    CHECK(prSvgElementSetNumberPair(d.byId("b"), PrSvgAttribute_StdDeviation, 4, 4) == PrStatus_Ok);
+    CHECK(d.attribute("b", "stdDeviation") == "4");
+    CHECK(prSvgElementSetNumberPair(d.byId("b"), PrSvgAttribute_StdDeviation, 4, 1.5f) == PrStatus_Ok);
+    CHECK(d.attribute("b", "stdDeviation") == "4 1.5");
+}
+
+TEST_CASE("a list reads as its items, a list that does not parse is empty, and a write replaces the attribute") {
+    Document d("<text id='t' x='1 2em 3%' rotate='bad'/><polygon id='p' points='0,0 10,5'/>"
+        "<g id='g' transform='translate(5) rotate(90 1 2)' systemLanguage='en, fr'/>");
+    PrSvgLength lengths[4] = {};
+    REQUIRE(prSvgElementGetLengthList(d.byId("t"), PrSvgAttribute_X, PrSvgLayer_Base, lengths, 4) == 3);
+    CHECK(lengths[1].unit == PrCssUnit_Em);
+    CHECK(lengths[2].unit == PrCssUnit_Percent);
+    CHECK(prSvgElementGetNumberList(d.byId("t"), PrSvgAttribute_Rotate, PrSvgLayer_Base, nullptr, 0) == 0);
+    PrDomPoint points[2] = {};
+    REQUIRE(prSvgElementGetPointList(d.byId("p"), PrSvgAttribute_Points, PrSvgLayer_Base, points, 2) == 2);
+    CHECK(points[1].x == doctest::Approx(10));
+    CHECK(points[1].y == doctest::Approx(5));
+    PrSvgTransform transforms[2] = {};
+    REQUIRE(prSvgElementGetTransformList(d.byId("g"), PrSvgAttribute_Transform, PrSvgLayer_Base, transforms, 2) == 2);
+    CHECK(transforms[0].type == PrSvgTransformType_Translate);
+    CHECK(transforms[0].values[1] == doctest::Approx(0));
+    CHECK(transforms[1].type == PrSvgTransformType_Rotate);
+    CHECK(prSvgTransformAngle(&transforms[1]) == doctest::Approx(90));
+    PrDomMatrix rotation = prSvgTransformMatrix(&transforms[1]);
+    CHECK(rotation.m[12] == doctest::Approx(3));
+    CHECK(rotation.m[13] == doctest::Approx(1));
+    PrStringView languages[2] = {};
+    REQUIRE(prSvgElementGetStringList(d.byId("g"), PrSvgAttribute_SystemLanguage, languages, 2) == 2);
+    CHECK(textOf(languages[1]) == "fr");
+
+    float numbers[] = {1, 2.5f};
+    CHECK(prSvgElementSetNumberList(d.byId("t"), PrSvgAttribute_Rotate, numbers, 2) == PrStatus_Ok);
+    CHECK(d.attribute("t", "rotate") == "1 2.5");
+    PrSvgTransform scale = {.type = PrSvgTransformType_Scale, .values = {2, 3}};
+    CHECK(prSvgElementSetTransformList(d.byId("g"), PrSvgAttribute_Transform, &scale, 1) == PrStatus_Ok);
+    CHECK(d.attribute("g", "transform") == "scale(2 3)");
+}
+
+TEST_CASE("an href reads the href without a namespace before XLink's, and sets the one that it reads") {
     Document d("<a id='both' href='#one' xlink:href='#two'/><use id='xlink' xlink:href='#three'/><rect id='r'/>");
-    PrSvgAnimatedString* both = prSvgAnimatedStringCreate(d.byId("both"), "href");
-    PrSvgAnimatedString* xlink = prSvgAnimatedStringCreate(d.byId("xlink"), "href");
-    CHECK(prSvgAnimatedStringCreate(d.byId("r"), "href") == nullptr);
-    CHECK(textOf(prSvgAnimatedStringBaseVal(both)) == "#one");
-    CHECK(textOf(prSvgAnimatedStringBaseVal(xlink)) == "#three");
-    prSvgAnimatedStringSetBaseVal(xlink, "#four");
-    CHECK(d.attribute("xlink", "href") == "#four");
-    CHECK(textOf(prSvgAnimatedStringBaseVal(xlink)) == "#four");
-    prSvgAnimatedStringDestroy(xlink);
-    prSvgAnimatedStringDestroy(both);
+    CHECK(textOf(prSvgElementGetString(d.byId("both"), PrSvgAttribute_Href, PrSvgLayer_Base)) == "#one");
+    CHECK(textOf(prSvgElementGetString(d.byId("xlink"), PrSvgAttribute_Href, PrSvgLayer_Base)) == "#three");
+    CHECK(prSvgElementGetString(d.byId("r"), PrSvgAttribute_Href, PrSvgLayer_Base).data == nullptr);
+    CHECK(prSvgElementSetString(d.byId("xlink"), PrSvgAttribute_Href, "#four") == PrStatus_Ok);
+    CHECK(d.attribute("xlink", "href").isEmpty());
+    CHECK(prSvgElementSetString(d.byId("both"), PrSvgAttribute_Href, "#five") == PrStatus_Ok);
+    CHECK(d.attribute("both", "href") == "#five");
+    CHECK(textOf(prSvgElementGetString(d.byId("xlink"), PrSvgAttribute_Href, PrSvgLayer_Base)) == "#four");
 }

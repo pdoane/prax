@@ -156,7 +156,7 @@ PrCssStyleSheet* addStyle(Work* work, PrStringView text);
 
 void toggle(PrDomElement* element, PrStringView token) {
     bool on = false;
-    PrDomTokenList* classes = prDomTokenListCreate(element, "class");
+    PrDomTokenList* classes = prDomTokenListCreate(element, "class", nullptr);
     prDomTokenListToggle(classes, token, nullptr, &on);
     prDomTokenListDestroy(classes);
 }
@@ -297,7 +297,7 @@ PrCssStyleSheet* addStyle(Work* work, PrStringView text) {
     prDomNodeSetTextContent(prDomElementAsNode(style), text);
     prDomNodeAppendChild(prDomElementAsNode(prDomDocumentHead(work->document)), prDomElementAsNode(style));
     prDomNodeRelease(prDomElementAsNode(style));
-    return prHtmlStyleElementSheet(prHtmlStyleElementQuery(prDomNodeAsEventTarget(prDomElementAsNode(style))));
+    return prCssElementSheet(style);
 }
 
 } // namespace

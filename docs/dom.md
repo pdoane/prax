@@ -14,9 +14,22 @@
 
 ## Web interfaces in C
 
-The C API follows Web IDL closely on purpose, so that a web developer finds each interface and member where they
-expect it. It is written by hand, not generated, and departs from IDL where C does better: an enumeration in place of
-a closed set of strings, and a `PrStringView` in place of a copied string if the bytes outlive the call.
+The C API is not a projection of Web IDL. JavaScript is optional, and a C program manipulates documents through the C
+API alone, written as C is written. The specs name things, so a web developer finds each interface and operation
+under the name they expect, but C decides the shape:
+
+- **Values, not objects.** A value that IDL models as an object, such as a length, an angle or a list, is a struct or
+  an array that the caller owns. Wrapper objects that exist for script's object identity, such as SVG's animated
+  values and the live items of its lists, belong to the binding, which builds them on the C API.
+- **Enumerations, not strings.** A closed set of keywords is a typed enum, and a set of names that the engine knows,
+  such as element tags and SVG's attributes, is a generated enum. An enum takes the values of the IDL's constants when
+  they are dense, so that the binding passes them through, and otherwise its own, which the binding maps by a table.
+- **What only script needs stays in the binding**: legacy initializers, and members whose lifetime rules follow from
+  garbage collection.
+- The binding is written by hand, and against the C API, so that another engine's binding could be written against it
+  too.
+- A `PrStringView` replaces a copied string if the bytes outlive the call.
+
 `pr/css_view.h` is the CSSOM View module (element geometry and scrolling), which is unrelated to the HTML view that
 presents a document.
 

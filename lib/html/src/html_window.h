@@ -111,6 +111,11 @@ constexpr uint32_t kHtmlSandboxTokenCount = uint32_t(countOf(kHtmlSandboxTokens)
 struct HtmlFrame {
     PrDomElement* container;
     PrHtmlWindow* window;
+
+    // The content document whose natural dimensions the container last took, and the version of its presentation then
+    // (PrCssPresentation::version). Dimensions read from the same document at the same version are the same.
+    const PrDomDocument* PR_NULLABLE sized;
+    uint64_t sizedVersion;
 };
 
 // A request for an idle callback (requestidlecallback/#the-requestidlecallback-method).
@@ -240,6 +245,10 @@ struct HtmlWindow : DomCountedTarget {
     // (html/#has-been-revealed).
     bool revealing;
 
+    // True for the window of an animated SVG image, whose rendering updates the page that shows the image runs
+    // (html_svg_image.h), rather than its own event loop.
+    bool driven;
+
     bool streaming;            // true while its document's input is still arriving and its parser is still running
 };
 
@@ -287,6 +296,12 @@ double htmlWindowNow(const PrHtmlWindow* window);
 
 // Returns the time of the window's last rendering opportunity, on the same clock as htmlWindowNow.
 double htmlWindowFrameTime(const PrHtmlWindow* window);
+
+// Returns true if the window's next rendering opportunity would update the rendering, whether or not its event loop
+// runs its updates (PrHtmlWindow::driven), and runs a rendering update at `now` on its clock
+// (html/#update-the-rendering).
+bool htmlWindowWantsFrame(const PrHtmlWindow* window);
+void htmlWindowRunFrame(PrHtmlWindow* window, double now);
 
 // Queues `run` with `data` in a task. `drop` frees `data` if the task is cleared before it runs. If `delaysLoad` is
 // set, the document's load event waits for the task.

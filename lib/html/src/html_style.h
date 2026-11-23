@@ -191,6 +191,8 @@ constexpr char kHtmlStyle[] = "@namespace \"http://www.w3.org/1999/xhtml\";\n"
     "meter, progress { appearance: auto; }\n"
     // html/#embedded-content-rendering-rules, html/#images-3
     "iframe { border: 2px inset; }\n"
+    // Replaced elements clip their content by default, as css-overflow-4/#overflow-control recommends.
+    "img, video, canvas, iframe, embed, object { overflow: clip; }\n"
     "video { object-fit: contain; }\n"
     "audio:not([controls]) { display: none !important; }\n"
     "img:is([sizes=\"auto\" i], [sizes^=\"auto,\" i]) { contain: size !important; contain-intrinsic-size: 300px 150px; }\n"

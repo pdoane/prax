@@ -30,6 +30,7 @@
 #include "html/src/html_media.h"
 #include "html/src/html_media_source.h"
 #include "html/src/html_page.h"
+#include "html/src/html_svg_image.h"
 
 namespace pr_impl {
 
@@ -103,16 +104,34 @@ PrCssPresentation* PR_NULLABLE presentationOf(const PrHtmlWindow* window) {
     return presentation != nullptr ? presentation : nullptr;
 }
 
+// Returns true if a rendering update has steps to run for the window's document that a script observes: a top-level
+// document's autofocus candidates to flush, or resize or intersection observations to compute for the first time.
+bool awaitsRenderingSteps(const PrHtmlWindow* window) {
+    PrDomDocument* document = window->document;
+    return document != nullptr && ((window->parent == nullptr && htmlFocusHasAutofocus(document)) ||
+        prCssDocumentResizeObservationsPending(document) || prCssDocumentIntersectionObservationsPending(document));
+}
+
+// Returns true if a frame that runs every animation frame (PrHtmlAnimationFrames_All) would show nothing new: no
+// animation runs, and no canvas, video, animated image or rendering step wants a frame.
+bool showsNothingNew(const PrHtmlWindow* window, PrCssPresentation* presentation) {
+    const PrHtmlPage* page = window->document != nullptr ? htmlDocumentPage(window->document) : nullptr;
+    return !prCssPresentationIsAnimating(presentation) && window->canvases.count == 0 && !htmlMediaWantsFrame(window) &&
+        !awaitsRenderingSteps(window) && (page == nullptr || !htmlSvgImagesWantFrame(page));
+}
+
 // Returns the number of frame intervals from the last frame to the next rendering opportunity that runs a frame. This
-// is normally one, the next opportunity. Suppose that the window runs only the frames that are observed
-// (PrHtmlAnimationFrames_Observed), and a frame would change nothing but the styles that animations animate. Then it is
-// the number to the last opportunity at or before the next animation event or timer, on the same grid, so that the
-// frame that runs then sees the same state that it would have seen otherwise.
+// is normally one, the next opportunity. Suppose that a frame would change nothing but the styles that animations
+// animate, and either the window runs only the frames that are observed (PrHtmlAnimationFrames_Observed) or a frame
+// would show nothing new (showsNothingNew), as when only an animation event ahead wants one. Then it is the number to
+// the last opportunity at or before the next animation event or timer, on the same grid, so that the frame that runs
+// then sees the same state that it would have seen otherwise.
 double framesToDue(const PrHtmlWindow* window) {
     PrCssPresentation* presentation = presentationOf(window);
-    if (window->animationFrames != PrHtmlAnimationFrames_Observed || window->frameRequests.count != 0 ||
-            window->revealing || window->taskHead != window->tasks.count || presentation == nullptr ||
-            cssPresentationHasWork(presentation))
+    if (window->frameRequests.count != 0 || window->revealing || window->taskHead != window->tasks.count ||
+            presentation == nullptr || cssPresentationHasWork(presentation))
+        return 1;
+    if (window->animationFrames != PrHtmlAnimationFrames_Observed && !showsNothingNew(window, presentation))
         return 1;
     double event = cssAnimateNextEventTime(presentation->document);
     double target = event >= 0 ? window->timeOrigin + event : -1;
@@ -131,25 +150,27 @@ double frameDue(const PrHtmlWindow* window) {
     return frames > 1 ? window->lastFrame + frames * kHtmlFrameInterval : nextFrame(window);
 }
 
-// Returns true if a rendering update has steps to run for the window's document that a script observes: a top-level
-// document's autofocus candidates to flush, or resize or intersection observations to compute for the first time.
-bool awaitsRenderingSteps(const PrHtmlWindow* window) {
-    PrDomDocument* document = window->document;
-    return document != nullptr && ((window->parent == nullptr && htmlFocusHasAutofocus(document)) ||
-        prCssDocumentResizeObservationsPending(document) || prCssDocumentIntersectionObservationsPending(document));
-}
-
 // Returns true if the next rendering opportunity updates the rendering. It does if there are frame requests, if the
 // document is to be revealed, if it awaits the steps of a rendering update (awaitsRenderingSteps), if its animations
-// are running, if scroll or animation events are due, if a canvas or a video shows a picture that is out of date, or if
-// its styles changed.
-bool wantsFrame(const PrHtmlWindow* window) {
+// are running or have an event ahead, such as an SVG animation's begin, if scroll or animation events are due, if a
+// canvas or a video shows a picture that is out of date, if an animated SVG image that it shows wants an update, or if
+// its styles changed. An opportunity before an animation event ahead may run no frame (framesToDue).
+bool rendersNext(const PrHtmlWindow* window) {
     if (htmlWindowRenderBlocked(window))
         return false;
     PrCssPresentation* presentation = presentationOf(window);
+    const PrHtmlPage* page = window->document != nullptr ? htmlDocumentPage(window->document) : nullptr;
     return window->frameRequests.count != 0 || window->revealing || window->canvases.count != 0 ||
-        htmlImagesWantFrame(window) || htmlMediaWantsFrame(window) || awaitsRenderingSteps(window) || (presentation != nullptr &&
-            (prCssPresentationIsAnimating(presentation) || cssPresentationHasWork(presentation)));
+        htmlImagesWantFrame(window) || htmlMediaWantsFrame(window) || awaitsRenderingSteps(window) ||
+        (page != nullptr && htmlSvgImagesWantFrame(page)) || (presentation != nullptr &&
+            (prCssPresentationIsAnimating(presentation) || cssPresentationHasWork(presentation) ||
+                cssAnimateNextEventTime(presentation->document) >= 0));
+}
+
+// Returns true if the window's event loop runs a rendering update at its next rendering opportunity. A driven window's
+// loop runs none.
+bool wantsFrame(const PrHtmlWindow* window) {
+    return !window->driven && rendersNext(window);
 }
 
 // Implements html/#reveal: the first rendering update of a document notifies its window that the document is revealed.
@@ -211,6 +232,12 @@ void runFrame(PrHtmlWindow* window, double now) {
     updateScreenOrientation(window);
     if (PrCssPresentation* presentation = presentationOf(window))
         cssPresentationRunScrollSteps(presentation);
+    // The animated images that the document shows run their updates, and their painters draw again if they changed.
+    PrHtmlPage* page = window->document != nullptr ? htmlDocumentPage(window->document) : nullptr;
+    if (page != nullptr && htmlSvgImagesFrame(page, now)) {
+        if (PrCssPresentation* presentation = presentationOf(window))
+            cssPresentationPaintersChanged(presentation);
+    }
     double time = htmlWindowFrameTime(window);
     // web-animations-1/#update-animations-and-send-events: the document's animations move to the frame's time, and fire
     // the events for what that changed.
@@ -625,6 +652,14 @@ double htmlWindowNow(const PrHtmlWindow* window) {
 
 double htmlWindowFrameTime(const PrHtmlWindow* window) {
     return coarsen(window->lastFrame - window->timeOrigin);
+}
+
+bool htmlWindowWantsFrame(const PrHtmlWindow* window) {
+    return rendersNext(window);
+}
+
+void htmlWindowRunFrame(PrHtmlWindow* window, double now) {
+    runFrame(window, now);
 }
 
 void htmlWindowQueueTask(PrHtmlWindow* window, void (*run)(void* data), void* data,

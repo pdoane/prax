@@ -57,6 +57,43 @@ enum {
 };
 typedef uint8_t DomMediaFlags;
 
+// The environment that an image draws in, which the document of an SVG image reads. `dark` is the color scheme of the
+// element that embeds the image, which the image's document prefers (css-color-adjust-1/#page-color-scheme). `size` is
+// the size that the image is laid out at, if the embedding knows it when it asks, and zero otherwise. `media` is the
+// media environment of the embedding document, whose display and user preferences the image's media queries read, or
+// null for a screen with no preferences.
+struct DomImageEnvironment {
+    bool dark;
+    PrVec2 size;
+    const CssMediaEnvironment* PR_NULLABLE media;
+};
+
+// An image that draws differently in each environment, such as an SVG image. `painter` returns the painter that draws
+// the image in `environment`. The painter is made on the agent's thread the first time that an environment asks for it,
+// and later calls for the same environment return it. The variants hold each painter. `retain` and `release` count
+// references to the variants. An image without variants has a null `painter`.
+struct DomImageVariants {
+    void* PR_NULLABLE context;
+    PrLayoutPainter (*PR_NULLABLE painter)(void* PR_NULLABLE context, DomImageEnvironment environment);
+    void (*PR_NULLABLE retain)(void* PR_NULLABLE context);
+    void (*PR_NULLABLE release)(void* PR_NULLABLE context);
+};
+
+// Returns the painter of `variants` in `environment`, or no painter if there are no variants. The variants hold it.
+inline PrLayoutPainter domImageVariantsPainter(const DomImageVariants& variants, DomImageEnvironment environment) {
+    return variants.painter != nullptr ? variants.painter(variants.context, environment) : PrLayoutPainter{};
+}
+
+// Adds or releases a reference to `variants`, if there are variants.
+inline void domImageVariantsRetain(const DomImageVariants& variants) {
+    if (variants.retain != nullptr)
+        variants.retain(variants.context);
+}
+inline void domImageVariantsRelease(const DomImageVariants& variants) {
+    if (variants.release != nullptr)
+        variants.release(variants.context);
+}
+
 // State that only some elements have, created on first use.
 struct DomElementState {
     PrDomShadowRoot* PR_NULLABLE shadowRoot; // shadow root that the element hosts (dom/#concept-element-shadow-root)
@@ -72,6 +109,7 @@ struct DomElementState {
 
     PrDomImageState image;                // state of an image's current request (html/#current-request)
     PrRawString imageUrl;                 // URL of the current request, or the null string for none
+    bool imageCrossOrigin;                // the current request's image is CORS-cross-origin (html/#cors-cross-origin)
     DomSlot* PR_NULLABLE slot;            // state of a slot (dom/#concept-slot), created on first assignment
     DomCustomElement* PR_NULLABLE custom; // custom element data, created on first use
     DomControl* PR_NULLABLE control;      // state of a form-associated element (dom_control.h)
@@ -90,13 +128,24 @@ struct DomElementState {
     // property.
     const PrTextureSource* PR_NULLABLE picture;
 
-    // What draws the element's content at the size shown, in place of `picture`: an SVG image of the current request,
-    // or a canvas's bitmap; and the revision of what it draws (PrLayoutContent::revision).
+    // What draws a canvas's bitmap at the size shown, in place of `picture`, and the revision of what it draws
+    // (PrLayoutContent::revision).
     PrLayoutPainter vector;
     uint64_t vectorRevision;
-    PrLayoutNaturalSize vectorNatural;                  // the SVG image's natural dimensions
+
+    // An SVG image of the current request, in place of `picture`, drawn in the environment of the element, and its
+    // natural dimensions.
+    DomImageVariants variants;
+    PrLayoutNaturalSize vectorNatural;
     uint64_t embed;                                     // embedded content that an iframe shows
                                                         // (PrLayoutContentKind_Embed), or zero
+    PrLayoutNaturalSize embedNatural;                   // the natural dimensions of that content, while there is some
+
+    // An svg element's magnification and panning transform, which applies while it is an outermost svg element
+    // (SVG2/struct.html#__svg__SVGSVGElement__currentScale): its scale, or 0 for a scale of 1, and its translation.
+    float svgZoom;
+    PrVec2 svgPan;
+
     DomMediaFlags media;                                // playback state of an HTML media element
     void* PR_NULLABLE embedded;                         // data that the module running the content keeps for it
     void (*PR_NULLABLE forgetEmbedded)(void* embedded); // called when the element is freed

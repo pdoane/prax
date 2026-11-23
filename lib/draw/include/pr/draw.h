@@ -383,15 +383,15 @@ enum {
 };
 typedef uint8_t PrDrawStrokeMapping;
 
-// A stroke: its shape, and how it is measured, placed and painted. A width of zero or less strokes nothing.
+// A stroke: its shape, and how it is placed and painted. The stroke is measured in the space of the command that it
+// strokes, so the command's transforms scale it. A width of zero or less strokes nothing.
 typedef struct PrDrawStroke {
     PrPathStroke shape;
-    bool nonScaling;            // width, dashes and caps are in target pixels
     PrDrawStrokeAlign align;    // ignored for open contours, which stroke centered
     PrDrawStrokeMapping mapping;
 } PrDrawStroke;
 
-// Returns a centered, scaling stroke with Plain mapping and the shape that prPathStrokeDefault returns.
+// Returns a centered stroke with Plain mapping and the shape that prPathStrokeDefault returns.
 PrDrawStroke prDrawStrokeDefault(void);
 
 // ---------------------------------------------------------------------------------------------------------------------

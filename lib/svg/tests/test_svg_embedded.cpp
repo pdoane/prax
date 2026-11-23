@@ -21,9 +21,13 @@ namespace {
 
 // The images that the tests' documents reference. `flag.png` is a 40 by 20 raster. `turned.png` is a raster that its
 // orientation transposes. SVG documents are found by name. The fragment of a name selects the SVG image that it names.
+// The SVG images prefer a dark color scheme if `dark` is set, and are laid out at `viewport`, or at their natural size
+// where it is zero.
 struct Images {
     Map<String, String> svgs;
     uint32_t loads = 0;
+    bool dark = false;
+    PrVec2 viewport{};
 };
 
 bool loadImage(void* PR_NULLABLE context, PrDomDocument* from, PrStringView url, PrSvgLoadedImage* out) {
@@ -61,6 +65,8 @@ bool loadImage(void* PR_NULLABLE context, PrDomDocument* from, PrStringView url,
     options.loadImage = loadImage;
     options.loadContext = context;
     options.textures = harnessMemoryTextures();
+    options.prefersDark = images->dark;
+    options.viewport = images->viewport;
     out->svg = root != nullptr ? prSvgImageCreate(root, fragment, &options) : nullptr;
     prDomDocumentRelease(document);
     return out->svg != nullptr;
@@ -112,6 +118,20 @@ TEST_CASE("preserveAspectRatio fits a raster's ratio into the positioning rectan
     CHECK(near(only(e, format("{}preserveAspectRatio='xMinYMin meet'/>", image)), PrRect{20, 10, 100, 50}));
     CHECK(near(only(e, format("{}preserveAspectRatio='none'/>", image)), PrRect{20, 10, 140, 50}));
     CHECK(near(only(e, format("{}preserveAspectRatio='xMidYMid slice'/>", image)), PrRect{20, 0, 140, 60}));
+}
+
+TEST_CASE("image-rendering's legacy optimizeSpeed resamples a raster as crisp-edges does, and optimizeQuality smoothly") {
+    Embedded e;
+    const char* image = "<image href='flag.png' width='120' height='60' ";
+    Drawing speed(svgDocument(format("{}image-rendering='optimizeSpeed'/>", image)), PrVec2{160, 60}, &e.options);
+    REQUIRE(speed.commands.count() == 1);
+    REQUIRE(speed.commands[0].brushed);
+    CHECK(speed.commands[0].brush->image.sampling == PrDrawSampling_Nearest);
+    Drawing quality(svgDocument(format("{}style='image-rendering: optimizeQuality'/>", image)), PrVec2{160, 60},
+        &e.options);
+    REQUIRE(quality.commands.count() == 1);
+    REQUIRE(quality.commands[0].brushed);
+    CHECK(quality.commands[0].brush->image.sampling == PrDrawSampling_Linear);
 }
 
 // The outermost svg element clips its content to its viewport, which is one clip around any command.
@@ -224,6 +244,29 @@ TEST_CASE("a fragment names a view of an SVG image, or leaves the whole document
     CHECK(near(e.drawn(format("<image href='flag.svg#orange{}", place))[1], PrRect{80, 10, 120, 30}));
 }
 
+TEST_CASE("an SVG image shows its animations at the start of its fragment's temporal dimension") {
+    Embedded e;
+    e.images.svgs["grow.svg"] = "<svg xmlns='http://www.w3.org/2000/svg' width='40' height='20' viewBox='0 0 40 20'>"
+        "<rect width='10' height='20'><set attributeName='width' to='40' begin='3s' dur='1s'/></rect></svg>";
+    auto width = [&](PrStringView fragment) {
+        PrRect bounds = only(e, format("<image href='grow.svg{}' width='40' height='20'/>", fragment));
+        return prRectWidth(bounds);
+    };
+    CHECK(width("") == doctest::Approx(10));
+    CHECK(width("#t=3") == doctest::Approx(40));
+    CHECK(width("#t=npt:3,3.01") == doctest::Approx(40));
+    CHECK(width("#t=00:03.5") == doctest::Approx(40));
+    CHECK(width("#t=0:00:03") == doctest::Approx(40));
+    CHECK(width("#t=4") == doctest::Approx(10));
+    CHECK(width("#t=,3") == doctest::Approx(10));
+    // The last valid dimension applies, and one whose start is not before its end, or whose minutes are not two digits
+    // below 60, is not valid.
+    CHECK(width("#t=3&amp;t=x") == doctest::Approx(40));
+    CHECK(width("#t=3,2") == doctest::Approx(10));
+    CHECK(width("#t=0:03") == doctest::Approx(10));
+    CHECK(width("#t=60:03") == doctest::Approx(10));
+}
+
 TEST_CASE("svgView's transform() moves the view about its center, after its viewBox") {
     Embedded e;
     const char* place = "' x='40' y='10' width='80' height='40' preserveAspectRatio='none'/>";
@@ -231,6 +274,20 @@ TEST_CASE("svgView's transform() moves the view about its center, after its view
     CHECK(near(e.drawn(format("<image href='flag.svg#svgView(transform(scale(2))){}", place))[0], PrRect{0, -10, 80, 30}));
     CHECK(near(e.drawn(format("<image href='flag.svg#svgView(viewBox(0,0,20,10);transform(translate(10))){}",
         place))[0], PrRect{50, 10, 130, 50}));
+}
+
+TEST_CASE("an SVG image's root applies its own transform, which svgView's transform() replaces") {
+    Embedded e;
+    e.images.svgs["moved.svg"] = "<svg xmlns='http://www.w3.org/2000/svg' width='40' height='20' viewBox='0 0 40 20' "
+        "transform='translate(10)'><rect width='20' height='10'/></svg>";
+    e.images.svgs["unboxed.svg"] = "<svg xmlns='http://www.w3.org/2000/svg' width='40' height='20' "
+        "transform='translate(10)'><rect width='20' height='10'/></svg>";
+    const char* place = "' x='40' y='10' width='80' height='40'/>";
+    // The transform applies in the space of the image's viewport, outside the viewBox that doubles the content, with or
+    // without a viewBox of the root's own.
+    CHECK(near(only(e, format("<image href='moved.svg{}", place)), PrRect{50, 10, 90, 30}));
+    CHECK(near(only(e, format("<image href='unboxed.svg{}", place)), PrRect{50, 10, 90, 30}));
+    CHECK(near(only(e, format("<image href='moved.svg#svgView(transform(translate(5))){}", place)), PrRect{45, 10, 85, 30}));
 }
 
 TEST_CASE("the element that an SVG image's fragment names matches :target") {
@@ -266,6 +323,58 @@ TEST_CASE("a mask image with a transposing orientation repeats along the axes of
     CHECK(shown(84, 35));
     CHECK(masked(4, 60));
     CHECK(masked(24, 60));
+}
+
+TEST_CASE("an SVG image's media queries and light-dark() read the color scheme that its document prefers") {
+    Embedded e;
+    e.images.svgs["scheme.svg"] = "<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'>"
+        "<style>#query { fill: #ff0000 } @media (prefers-color-scheme: dark) { #query { fill: #0000ff } }</style>"
+        "<rect id='query' width='10' height='20'/>"
+        "<rect x='10' width='10' height='20' style='color-scheme: light dark; fill: light-dark(#00ff00, #ffffff)'/>"
+        "</svg>";
+    for (int pass = 0; pass < 2; ++pass) {
+        bool dark = pass == 1;
+        e.images.dark = dark;
+        Drawing drawing(svgDocument("<image href='scheme.svg' width='20' height='20'/>"), PrVec2{160, 60}, &e.options);
+        REQUIRE(drawing.commands.count() == 2);
+        CHECK(drawing.commands[0].color.r == doctest::Approx(dark ? 0 : 1));
+        CHECK(drawing.commands[0].color.b == doctest::Approx(dark ? 1 : 0));
+        CHECK(drawing.commands[1].color.r == doctest::Approx(dark ? 1 : 0));
+        CHECK(drawing.commands[1].color.g == doctest::Approx(1));
+    }
+}
+
+TEST_CASE("an SVG image reports the color scheme as read only if a query or a color read it") {
+    auto read = [](const char* body, PrSvgEnvironmentFlags flag = PrSvgEnvironmentFlag_ColorScheme) {
+        String markup = format("<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'>{}</svg>", body);
+        PrDomDocument* document = prDomParseXml(markup, "image/svg+xml", nullptr);
+        prCssEnable(document);
+        prSvgEnable(document);
+        PrSvgElement* root = prSvgElementQuery(prDomElementAsEventTarget(prDomDocumentElement(document)));
+        const PrSvgImage* image = prSvgImageCreate(root, "", nullptr);
+        PrSvgEnvironmentFlags flags = prSvgImageEnvironmentRead(image);
+        prSvgImageRelease(image);
+        prDomDocumentRelease(document);
+        return (flags & flag) != 0;
+    };
+    CHECK_FALSE(read("<rect width='20' height='20' fill='green'/>"));
+    CHECK_FALSE(read("<style>@media (min-width: 10px) { rect { fill: green } }</style><rect width='20' height='20'/>"));
+    CHECK(read("<style>@media (prefers-color-scheme: dark) { rect { fill: green } }</style>"
+        "<rect width='20' height='20'/>"));
+    CHECK(read("<rect width='20' height='20' style='color-scheme: light dark; fill: light-dark(green, blue)'/>"));
+    // The size is read by a viewport-relative length or a query of the width, the height or what they give.
+    constexpr PrSvgEnvironmentFlags size = PrSvgEnvironmentFlag_Size;
+    CHECK_FALSE(read("<rect width='20' height='20'/>", size));
+    CHECK_FALSE(read("<rect width='50%' height='50%'/>", size));
+    CHECK(read("<rect width='50vw' height='20'/>", size));
+    CHECK(read("<style>@media (orientation: portrait) { rect { fill: green } }</style><rect width='20' height='20'/>", size));
+}
+
+TEST_CASE("an SVG image laid out at a size resolves its viewport-relative lengths against it") {
+    Embedded e;
+    e.images.svgs["units.svg"] = "<svg xmlns='http://www.w3.org/2000/svg'><rect width='50vw' height='25vh'/></svg>";
+    e.images.viewport = PrVec2{120, 40};
+    CHECK(near(only(e, "<image href='units.svg' width='120' height='40'/>"), PrRect{0, 0, 60, 10}));
 }
 
 TEST_CASE("an image that does not load draws nothing, and its href names an image only") {

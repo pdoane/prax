@@ -30,14 +30,13 @@ PrRect unionOf(PrRect a, PrRect b) {
 }
 
 // Returns true if a stroke has a form that a format draws natively (DrawSharedWriterOps::stroke).
-bool strokeIsNative(const DrawSharedWalker& w, const PrDrawStroke* stroke) {
+bool strokeIsNative(const PrDrawStroke* stroke) {
     const PrPathStroke& s = stroke->shape;
     bool dashed = s.dashes != nullptr && s.dashCount != 0;
     bool joins = s.join == PrPathJoin_Miter || s.join == PrPathJoin_Round || s.join == PrPathJoin_Bevel;
     bool caps = s.startCap == s.endCap && s.startCap != PrPathCap_Triangle && (!dashed || s.dashCap == s.startCap);
     return stroke->align == PrDrawStrokeAlign_Center && stroke->mapping == PrDrawStrokeMapping_Plain &&
-        (s.profile == nullptr || s.profileCount == 0) && joins && caps &&
-        (!stroke->nonScaling || w.ops.nonScalingStrokes);
+        (s.profile == nullptr || s.profileCount == 0) && joins && caps;
 }
 
 // Returns true if every glyph of the run is an outline: none has color layers, an image or an SVG document.
@@ -167,8 +166,7 @@ PrRect pageBounds(const PrDrawCommand& c, const PrDrawTransform& t) {
         return kEmpty;
     if (c.stroke != nullptr) {
         float reach = prDrawStrokeReach(c.stroke) * c.stroke->shape.width;
-        if (!c.stroke->nonScaling)
-            local = PrRect{local.left - reach, local.top - reach, local.right + reach, local.bottom + reach};
+        local = PrRect{local.left - reach, local.top - reach, local.right + reach, local.bottom + reach};
     }
     return prAffine2MapRect(t.affine, local);
 }
@@ -313,7 +311,7 @@ bool drawPainting(DrawSharedWalker& w, const PrDrawCommand& command, const PrDra
                 w.ops.fill(w.ops.context, w.path, c.rule, t.affine, &paint);
                 return true;
             }
-            if (strokeIsNative(w, c.stroke)) {
+            if (strokeIsNative(c.stroke)) {
                 DrawSharedPaint paint;
                 if (!paintOf(w, c, t, t.affine, &paint))
                     return false;
@@ -360,7 +358,7 @@ bool drawPainting(DrawSharedWalker& w, const PrDrawCommand& command, const PrDra
         case PrDrawCommandKind_Glyphs: {
             if (c.brush != nullptr && c.brush->kind == PrDrawBrushKind_Image)
                 return false;
-            if (c.stroke != nullptr && !strokeIsNative(w, c.stroke))
+            if (c.stroke != nullptr && !strokeIsNative(c.stroke))
                 return false;
             if (!glyphsAreOutlines(c.glyphs))
                 return false;

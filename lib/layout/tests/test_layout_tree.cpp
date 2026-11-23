@@ -2239,6 +2239,67 @@ TEST_CASE("a painter draws a replaced box's content for its content box's size, 
     CHECK(verified(f.tree));
 }
 
+TEST_CASE("a painter whose revision changes draws again where the tree draws it, and nowhere else") {
+    Fixture f;
+    PrLayoutNode root = f.element(kPrLayoutNodeNone, block());
+    // It fills what it is given green at even revisions and blue at odd ones, and counts its calls.
+    struct Animated {
+        uint64_t revision = 0;
+        uint32_t calls = 0;
+    } animated;
+    PrLayoutPainter painter{};
+    painter.context = &animated;
+    painter.paint = [](void* PR_NULLABLE context, PrVec2 extent, PrDrawList* list) {
+        Animated* a = static_cast<Animated*>(context);
+        ++a->calls;
+        PrColor color = a->revision % 2 == 0 ? PrColor{0, 1, 0, 1} : PrColor{0, 0, 1, 1};
+        prDrawListRect(list, PrRect{0, 0, extent.x, extent.y}, {.color = color});
+    };
+    painter.revision = [](void* PR_NULLABLE context) { return static_cast<Animated*>(context)->revision; };
+    PrLayoutBoxStyle box = block();
+    box.width = prLayoutLengthPx(20);
+    box.height = prLayoutLengthPx(20);
+    PrLayoutNode image = replaced(f, root, box, prLayoutNaturalSizeNone());
+    PrLayoutContent content{};
+    content.kind = PrLayoutContentKind_Painter;
+    content.painter = painter;
+    prLayoutNodeSetContent(f.tree, image, &content);
+    PrLayoutBackgroundLayer layer = prLayoutBackgroundLayerDefault();
+    layer.kind = PrLayoutImageKind_Painter;
+    layer.painter = painter;
+    PrLayoutDecorationStyle decoration = prLayoutDecorationStyleDefault();
+    decoration.backgroundLayers = prLayoutBackgroundIntern(f.tree, &layer, 1);
+    f.element(root, box, &decoration);
+    PrLayoutDecorationStyle red = prLayoutDecorationStyleDefault();
+    red.background = PR_COLOR16(1, 0, 0, 1);
+    f.element(root, box, &red);
+    f.layout(px(20, 60));
+    Array<uint8_t> pixels = render(f.tree, 20, 60);
+    CHECK(pixel(pixels, 20, 10, 10) == "0 255 0 255");
+    CHECK(pixel(pixels, 20, 10, 30) == "0 255 0 255");
+    uint32_t calls = animated.calls;
+
+    // The tree notes the revisions that it draws at, and draws nothing again until one changes.
+    CHECK_FALSE(prLayoutTreeRepaintPainters(f.tree));
+    CHECK_FALSE(prLayoutTreeRepaintPainters(f.tree));
+    f.layout(px(20, 60));
+    render(f.tree, 20, 60);
+    CHECK(animated.calls == calls);
+
+    // A new revision redraws both boxes that show the painter, and lays out nothing.
+    animated.revision = 1;
+    CHECK(prLayoutTreeRepaintPainters(f.tree));
+    f.layout(px(20, 60));
+    CHECK(prLayoutTreeStats(f.tree).blocksLaidOut == 0);
+    pixels = render(f.tree, 20, 60);
+    CHECK(animated.calls == calls + 2);
+    CHECK(pixel(pixels, 20, 10, 10) == "0 0 255 255");
+    CHECK(pixel(pixels, 20, 10, 30) == "0 0 255 255");
+    CHECK(pixel(pixels, 20, 10, 50) == "255 0 0 255");
+    CHECK_FALSE(prLayoutTreeRepaintPainters(f.tree));
+    CHECK(verified(f.tree));
+}
+
 TEST_CASE("text decoration lines cross the text of a box and its inline content, but not an atomic inline's") {
     Fixture f;
     PrLayoutNode root = f.element(kPrLayoutNodeNone, block());

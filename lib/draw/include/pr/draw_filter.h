@@ -210,7 +210,8 @@ typedef struct PrDrawFilterDisplacement {
     PrDrawChannel y;
 } PrDrawFilterDisplacement;
 
-// A Lighting node's surface and its light.
+// A Lighting node's surface and its light. The surface's slope is measured per unit of the group's space, as its height
+// is, so the node draws the same at any scale.
 typedef struct PrDrawFilterLighting {
     PrDrawLightingKind kind;
     float surfaceScale;

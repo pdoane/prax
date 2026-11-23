@@ -19,6 +19,7 @@
 #include "pr/layout_tree.h"
 #include "pr/mem.h"
 #include "pr/string_ops.h"
+#include "pr/svg_element.h"
 #include "pr/text_harfbuzz.h"
 #include "pr/texture.h"
 #include "pr/time.h"
@@ -270,6 +271,21 @@ struct ViewedSvg : Viewed {
     void set(const char* id, const char* name, const char* value) { prDomElementSetAttribute(byId(id), name, value); }
 
     PrDomNode* node(const char* id) { return prDomElementAsNode(byId(id)); }
+
+    // Runs the page's event loop for `milliseconds` of its clock, which runs its rendering updates, and brings the view
+    // up to date.
+    void run(double milliseconds) {
+        for (double until = now + milliseconds; now < until && runNextTask();) {
+        }
+        update();
+    }
+
+    // Seeks the time of the svg element with `id` to `seconds`, and runs the page until its animations have sampled
+    // there. An svg's time begins at its document's first rendering update, which takes a seek made before it.
+    void seek(const char* id, float seconds) {
+        prSvgSvgElementSetCurrentTime(prSvgElementQuery(prDomElementAsEventTarget(byId(id))), seconds);
+        run(50);
+    }
 };
 
 // Two svg elements whose text is set in the SVG fonts Used and Other, and a font that no text reads.
@@ -1645,6 +1661,54 @@ TEST_CASE("a scroll the compositor made hovers what comes under a pointer that h
     CHECK(page.matches("b", ":hover"));
 }
 
+TEST_CASE("a pointer's move fires mousemove, and its entry and exit the boundary events in order") {
+    Viewed page("<style>body { margin: 0 } div { height: 50px } #inner { height: 20px }</style>"
+        "<div id=outer><div id=inner></div></div><div id=other></div>");
+    prHtmlViewUpdate(page.view);
+    page.settle();
+    Array<String> log;
+    PrDomEventListener listener{
+        [](void* context, PrDomEvent* event) {
+            PrStringView type = prDomEventType(event);
+            PrDomEventTarget* current = prDomEventCurrentTarget(event);
+            PrDomElement* element = prDomElementQuery(current);
+            PrStringView id = element != nullptr ? prDomElementGetAttribute(element, "id") : PrStringView{"?"};
+            static_cast<Array<String>*>(context)->push(format("{}@{}", type, id));
+        },
+        &log,
+        1,
+        nullptr,
+        nullptr,
+    };
+    const char* const kIds[] = {"outer", "inner", "other"};
+    const char* const kTypes[] = {"mouseover", "mouseout", "mouseenter", "mouseleave", "mousemove"};
+    for (const char* id : kIds) {
+        for (const char* type : kTypes)
+            prDomEventTargetAddEventListener(prDomElementAsEventTarget(page.byId(id)), type, &listener, nullptr);
+    }
+    auto moveTo = [&](float x, float y) {
+        log.clear();
+        PrAppEvent move{.kind = PrAppEventKind_PointerMove, .pointer = {.position = PrVec2{x, y}}};
+        prHtmlViewEvent(page.view, &move, 0);
+        prHtmlViewUpdate(page.view);
+        page.settle();
+        String joined;
+        for (const String& entry : log) {
+            joined.append(entry);
+            joined.append(' ');
+        }
+        return joined;
+    };
+    // mouseover bubbles from inner to outer, and mouseenter goes to each element entered, outermost first.
+    CHECK(moveTo(10, 10) == "mouseover@inner mouseover@outer mouseenter@outer mouseenter@inner mousemove@inner "
+        "mousemove@outer ");
+    // A move within the element fires mousemove alone.
+    CHECK(moveTo(12, 10) == "mousemove@inner mousemove@outer ");
+    // Leaving inner for its parent leaves inner alone.
+    CHECK(moveTo(10, 30) == "mouseout@inner mouseout@outer mouseleave@inner mouseover@outer mousemove@outer ");
+    CHECK(moveTo(10, 70) == "mouseout@outer mouseleave@outer mouseover@other mouseenter@other mousemove@other ");
+}
+
 TEST_CASE("a pointer that moves while the layout thread lays out hovers as the view next updates") {
     Viewed page("<style>body { margin: 0 } div { height: 50px }</style><div id=a></div><div id=b></div>");
     prHtmlViewUpdate(page.view);
@@ -2342,6 +2406,77 @@ TEST_CASE("a change within an svg element builds again only the nodes of its SVG
     CHECK(rgbAt(page.paint(), 5, 25) == 0x00ff00);
 }
 
+TEST_CASE("an animated attribute that is not a CSS property draws again, in the element and its use instances") {
+    ViewedSvg page("<svg id=s width=40 height=40><polygon id=p points='0,0 10,0 10,10 0,10' fill=blue>"
+        "<set attributeName=points to='0,0 20,0 20,10 0,10' begin=1s fill=freeze /></polygon>"
+        "<use href='#p' y=20 /></svg>");
+    CHECK(rgbAt(page.paint(), 15, 5) == 0);
+    CHECK(rgbAt(page.paint(), 15, 25) == 0);
+
+    page.seek("s", 2);
+    Array<uint8_t> pixels = page.paint();
+    CHECK(rgbAt(pixels, 15, 5) == 0x0000ff);
+    CHECK(rgbAt(pixels, 15, 25) == 0x0000ff);
+}
+
+TEST_CASE("an event at a use's instance begins the animations that listen at its original, its use and their ancestors") {
+    ViewedSvg page("<svg id=s width=200 height=40><defs><rect id=r width=10 height=10 fill=red>"
+        "<set attributeName=fill begin=mouseover end=mouseout to=blue /></rect></defs><g id=g><use id=u href='#r' /></g>"
+        "<rect id=byUse x=20 width=10 height=10 fill=red><set attributeName=fill begin=u.mouseover to=blue /></rect>"
+        "<rect id=byGroup x=40 width=10 height=10 fill=red><set attributeName=fill begin=g.mouseover to=blue />"
+        "</rect></svg>");
+    CHECK(rgbAt(page.paint(), 5, 5) == 0xff0000);
+    // The move fires its events as the view updates, and the next rendering update samples the animations.
+    auto moveTo = [&](PrVec2 point) {
+        PrAppEvent move{.kind = PrAppEventKind_PointerMove, .pointer = {.position = point}};
+        prHtmlViewEvent(page.view, &move, 0);
+        page.update();
+        page.run(50);
+    };
+    moveTo(PrVec2{5, 5});
+    Array<uint8_t> pixels = page.paint();
+    CHECK(rgbAt(pixels, 5, 5) == 0x0000ff);
+    CHECK(rgbAt(pixels, 25, 5) == 0x0000ff);
+    CHECK(rgbAt(pixels, 45, 5) == 0x0000ff);
+
+    // The pointer leaving the instance ends the animation at the original.
+    moveTo(PrVec2{100, 30});
+    CHECK(rgbAt(page.paint(), 5, 5) == 0xff0000);
+}
+
+TEST_CASE("an animation to inherit, sampled as its document loads before any style, reads the parent's once known") {
+    ViewedSvg page("<svg id=s width=40 height=40><g fill=blue><rect width=10 height=10 fill=red>"
+        "<animate attributeName=fill from=red to=inherit dur=2s fill=freeze /></rect></g></svg>");
+    page.seek("s", 3);
+    CHECK(rgbAt(page.paint(), 5, 5) == 0x0000ff);
+}
+
+TEST_CASE("an animated attribute of a resource draws again what the resource paints") {
+    ViewedSvg page("<svg id=s width=40 height=40><clipPath id=c clipPathUnits=objectBoundingBox>"
+        "<rect width=1 height=1 /><set attributeName=clipPathUnits to=userSpaceOnUse begin=1s /></clipPath>"
+        "<rect width=10 height=10 fill=blue clip-path='url(#c)' /></svg>");
+    CHECK(rgbAt(page.paint(), 5, 5) == 0x0000ff);
+
+    // In user space, the clip path's rect is a pixel, which clips the shape away from where it was.
+    page.seek("s", 2);
+    CHECK(rgbAt(page.paint(), 5, 5) == 0);
+}
+
+TEST_CASE("a use instances what its animated href names, which an attributeName of xlink:href animates") {
+    // HTML's parser declares no prefix, and xlink is XLink's.
+    ViewedSvg page("<svg id=s width=40 height=40><defs><rect id=a width=10 height=10 fill=red />"
+        "<rect id=b width=10 height=10 fill=blue /></defs><use xlink:href='#a'>"
+        "<set attributeName=xlink:href to='#b' begin=1s dur=1s /></use></svg>");
+    CHECK(rgbAt(page.paint(), 5, 5) == 0xff0000);
+
+    page.seek("s", 1.5f);
+    CHECK(rgbAt(page.paint(), 5, 5) == 0x0000ff);
+
+    // Once the interval ends, the use instances its own href's element again.
+    page.seek("s", 3);
+    CHECK(rgbAt(page.paint(), 5, 5) == 0xff0000);
+}
+
 TEST_CASE("a foreignObject's content is laid out in its positioning rectangle and drawn there, as it changes") {
     ViewedSvg page("<svg width=40 height=40><rect width=40 height=10 fill=blue />"
         "<foreignObject id=f x=10 y=10 width=20 height=20><div id=d style='height: 10px; background: red'></div>"
@@ -2477,6 +2612,22 @@ TEST_CASE("an SVG image element draws the image that it names once the image has
     }
     prImageCodecSetDestroy(images);
     prCompressCodecSetDestroy(compress);
+}
+
+TEST_CASE("font-variation-settings computes each axis once, at its last value, in the order of the tags") {
+    Viewed page("<p id=p style=\"font-variation-settings: 'wght' 100, 'wdth' 200, 'wght' calc(100 + 200)\">text</p>"
+        "<p id=q style='font-optical-sizing: none'>text</p>");
+    prHtmlViewUpdate(page.view);
+    auto resolved = [&](const char* id, PrCssProperty property) {
+        PrCssDeclarationName name = prCssDeclarationNameFromProperty(property);
+        PrRawString read = prCssStyleDeclarationGetPropertyValue(
+            prCssStylePropertiesAsCssStyleDeclaration(prCssElementComputedStyle(page.byId(id), "")), &name);
+        String value(prRawStringView(&read));
+        prRawStringReset(&read);
+        return value;
+    };
+    CHECK(resolved("p", PrCssProperty_FontVariationSettings) == "\"wdth\" 200, \"wght\" 300");
+    CHECK(resolved("q", PrCssProperty_FontOpticalSizing) == "none");
 }
 
 TEST_CASE("an imported sheet applies in the layer that it names, unless its supports() condition fails") {
@@ -2818,6 +2969,100 @@ TEST_CASE("an img of an SVG image is sized by its root's width and height and dr
     CHECK(redAt(drawn, 35, 15) == 255);
     CHECK(drawn[(uint32_t(25) * 40 + 35) * 4 + 3] == 0);
     CHECK(verified(prHtmlPagePresentation(page.page)));
+}
+
+TEST_CASE("an SVG image's document prefers the color scheme of the element that shows it") {
+    // The same image under a light and a dark color scheme, as an img and as a background, draws in each. The image's
+    // markup is percent-encoded, as its </style> would otherwise end the page's style element.
+    const char* image = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E"
+        "%3Cstyle%3Erect { fill: %23ff0000 } @media (prefers-color-scheme: dark) { rect { fill: %230000ff } }"
+        "%3C/style%3E%3Crect width='20' height='20'/%3E%3C/svg%3E";
+    String markup = format("<style>body {{ margin: 0 }} img, div > div {{ display: block; width: 10px; height: 10px }} "
+        "div > div {{ background-image: url(\"{0}\") }}</style>"
+        "<div style='color-scheme: light'><img src=\"{0}\"><div></div></div>"
+        "<div style='color-scheme: dark'><img src=\"{0}\"><div></div></div>", image);
+    Viewed page(markup);
+    prHtmlViewUpdate(page.view);
+    page.settle();
+    Array<uint8_t> pixels = page.paint();
+    CHECK(rgbAt(pixels, 5, 5) == 0xff0000);
+    CHECK(rgbAt(pixels, 5, 15) == 0xff0000);
+    CHECK(rgbAt(pixels, 5, 25) == 0x0000ff);
+    CHECK(rgbAt(pixels, 5, 35) == 0x0000ff);
+}
+
+TEST_CASE("an SVG image that reads no color scheme has one variant for both") {
+    const char* plain = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E"
+        "%3Crect width='20' height='20' fill='green'/%3E%3C/svg%3E";
+    const char* scheme = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E"
+        "%3Crect width='20' height='20' style='color-scheme: light dark; fill: light-dark(green, blue)'/%3E%3C/svg%3E";
+    Viewed page(format("<img id=plain src=\"{}\"><img id=scheme src=\"{}\">", plain, scheme));
+    prHtmlViewUpdate(page.view);
+    page.settle();
+    auto same = [&](const char* id) {
+        const DomImageVariants& variants = page.byId(id)->state->variants;
+        REQUIRE(variants.painter != nullptr);
+        PrLayoutPainter light = domImageVariantsPainter(variants, {.dark = false});
+        PrLayoutPainter dark = domImageVariantsPainter(variants, {.dark = true});
+        return light.context == dark.context;
+    };
+    CHECK(same("plain"));
+    CHECK_FALSE(same("scheme"));
+}
+
+TEST_CASE("an SVG image that reads its size is laid out at the size it is drawn at, as an img and a background") {
+    // The image has no natural size and draws a rect of half its viewport. Layout places the img's content at 40 by 20,
+    // and the background's tile at its box's 40 by 20, and the update that paints builds the image at that size before
+    // it draws, so each rect is 20 by 10, not half of the default 300 by 150.
+    const char* image = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='50vw' "
+        "height='50vh' fill='%2300ff00'/%3E%3C/svg%3E";
+    String markup = format("<style>body {{ margin: 0 }} img, div {{ display: block; width: 40px; height: 20px }} "
+        "div {{ background-image: url(\"{0}\") }}</style><img src=\"{0}\"><div></div>", image);
+    Viewed page(markup);
+    prHtmlViewUpdate(page.view);
+    page.settle();
+    Array<uint8_t> drawn = page.paint();
+    CHECK(rgbAt(drawn, 5, 5) == 0x00ff00);
+    CHECK(rgbAt(drawn, 30, 15) == 0);
+    CHECK(rgbAt(drawn, 5, 25) == 0x00ff00);
+    CHECK(rgbAt(drawn, 30, 35) == 0);
+}
+
+TEST_CASE("an SVG image's media queries read the user preferences of the page that shows it, as they change") {
+    // The image and the background follow the page's preference for reduced motion, which its media query reads.
+    const char* image = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E"
+        "%3Cstyle%3Erect { fill: %23ff0000 } @media (prefers-reduced-motion: reduce) { rect { fill: %2300ff00 } }"
+        "%3C/style%3E%3Crect width='20' height='20'/%3E%3C/svg%3E";
+    String markup = format("<style>body {{ margin: 0 }} img, div {{ display: block; width: 20px; height: 20px }} "
+        "div {{ background-image: url(\"{0}\") }}</style><img src=\"{0}\"><div></div>", image);
+    Viewed page(markup);
+    prHtmlViewUpdate(page.view);
+    page.settle();
+    Array<uint8_t> before = page.paint();
+    CHECK(rgbAt(before, 5, 5) == 0xff0000);
+    CHECK(rgbAt(before, 5, 25) == 0xff0000);
+    PrAppUserPreferences preferences = prAppUserPreferencesDefault();
+    preferences.reducedMotion = true;
+    prHtmlPageSetUserPreferences(page.page, &preferences);
+    prHtmlViewUpdate(page.view);
+    Array<uint8_t> after = page.paint();
+    CHECK(rgbAt(after, 5, 5) == 0x00ff00);
+    CHECK(rgbAt(after, 5, 25) == 0x00ff00);
+}
+
+TEST_CASE("an SVG image sets its text in the fonts of the page that shows it") {
+    Viewed page("<style>body { margin: 0 } img { display: block }</style><img src=\"data:image/svg+xml,<svg "
+        "xmlns='http://www.w3.org/2000/svg' width='40' height='40'><text y='36' font-size='40' "
+        "fill='red'>H</text></svg>\">");
+    page.fetcher.settle(prHtmlPageAgent(page.page));
+    PrDrawList* list = prDrawListCreate();
+    prHtmlViewPaint(page.view, list);
+    Array<uint8_t> drawn = presentation(list);
+    prDrawListRelease(list);
+    uint32_t painted = 0;
+    for (uint32_t i = 0; i < drawn.count(); i += 4)
+        painted += drawn[i + 3] != 0 ? 1 : 0;
+    CHECK(painted > 100);
 }
 
 TEST_CASE("an SVG image without a width or a height draws at the size it is shown, as an img and as a background") {

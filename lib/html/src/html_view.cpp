@@ -98,12 +98,14 @@ struct HtmlView {
 
     // The pointer's state: its position as the document last saw it, the element that it hovers, and the element that
     // the main button was pressed on, each in the innermost document that the pointer is over. The view holds the
-    // pressed element.
+    // hovered and the pressed elements.
     PrVec2 pointer;
     bool pointed;                   // true once the pointer has been over the view
     bool cursorStale;               // true if a committed scene may have changed the cursor under the pointer
     double cursorTested;            // when the hit test for the last such scene ran
     bool hoverDue;                  // true if the pointer moved, or the document scrolled under it, since last hovering
+    bool moved;                     // true if the pointer moved since last hovering, which reports it with mousemove
+    PrAppEvent lastMove;            // the last move of the pointer, without its text
     PrDomElement* PR_NULLABLE hovered;
     PrDomElement* PR_NULLABLE pressed;
     uint16_t buttons;               // the buttons held, as bits of MouseEvent's buttons
@@ -602,16 +604,32 @@ PrAppCursor cursorOf(const ViewHit& hit) {
     }
 }
 
-// Hovers the element under the pointer, and takes the cursor there.
+bool fireMouse(HtmlView* v, PrStringView type, PrDomElement* element, PrVec2 point, const PrAppEvent* event,
+    PrDomElement* PR_NULLABLE related = nullptr);
+void fireBoundaries(HtmlView* v, PrDomElement* PR_NULLABLE from, PrDomElement* PR_NULLABLE to, PrVec2 point);
+
+// Hovers the element under the pointer, and takes the cursor there. The pointer's entry and exit fire their boundary
+// events, and its move a mousemove, one for the moves since the last hover, as a browser coalesces them into a frame
+// (pointerevents4/#mouse-event-order).
 void hover(HtmlView* v) {
     v->hoverDue = false;
+    bool moved = v->moved;
+    v->moved = false;
     ViewHit hit = hitAt(v, v->pointer);
     v->cursor = cursorOf(hit);
     PrDomElement* element = hit.element;
-    if (element == v->hovered)
-        return;
-    v->hovered = element;
-    designate(v, element, prHtmlDocumentSetHover);
+    if (element != v->hovered) {
+        PrDomElement* left = v->hovered;
+        v->hovered = element;
+        if (element != nullptr)
+            prDomNodeRetain(prDomElementAsNode(element));
+        designate(v, element, prHtmlDocumentSetHover);
+        fireBoundaries(v, left, element, hit.point);
+        if (left != nullptr)
+            prDomNodeRelease(prDomElementAsNode(left));
+    }
+    if (moved && element != nullptr && domIsConnected(element))
+        fireMouse(v, "mousemove", element, hit.point, &v->lastMove);
 }
 
 // Scrolls as a user's scroll by `delta` does from the box of `element`: in its document, then from the frame that holds
@@ -708,9 +726,17 @@ void notifyActivation(const PrDomElement* element) {
 
 // Fires a MouseEvent of `type` at `element` for the pointer's action, at `point` in the viewport of the element's
 // document.
-bool fireMouse(HtmlView* v, PrStringView type, PrDomElement* element, PrVec2 point, const PrAppEvent* event) {
+bool fireMouse(HtmlView* v, PrStringView type, PrDomElement* element, PrVec2 point, const PrAppEvent* event,
+        PrDomElement* PR_NULLABLE related) {
     PrDomMouseEventInit init = prDomMouseEventInitDefault();
     init.ui = inputInit(element, true);
+    // mouseenter and mouseleave neither bubble nor cross shadow boundaries, and cannot be canceled.
+    if (type == "mouseenter" || type == "mouseleave") {
+        init.ui.event.bubbles = false;
+        init.ui.event.cancelable = false;
+        init.ui.event.composed = false;
+    }
+    init.relatedTarget = related != nullptr ? prDomNodeAsEventTarget(prDomElementAsNode(related)) : nullptr;
     init.ui.detail = (type == "mousedown" || type == "mouseup") && v->presses != 0 ? int32_t(v->presses) : 1;
     init.screenX = double(event->pointer.position.x);
     init.screenY = double(event->pointer.position.y);
@@ -723,6 +749,49 @@ bool fireMouse(HtmlView* v, PrStringView type, PrDomElement* element, PrVec2 poi
     bool proceed = dispatchTrusted(prDomNodeAsEventTarget(prDomElementAsNode(element)), prDomMouseEventAsEvent(mouse));
     prDomEventRelease(prDomMouseEventAsEvent(mouse));
     return proceed;
+}
+
+// Returns true if `ancestor` is a shadow-including inclusive ancestor of `node`.
+bool includesShadow(const PrDomNode* ancestor, const PrDomNode* node) {
+    for (const PrDomNode* at = node; at != nullptr; at = domShadowIncludingParent(at)) {
+        if (at == ancestor)
+            return true;
+    }
+    return false;
+}
+
+// Fires the boundary events of the pointer's move from `from` to `to`, either of which may be null
+// (pointerevents4/#mouse-event-order): mouseout at the element left, and mouseleave at it and each of its
+// shadow-including ancestors that does not hold the element entered, innermost first; then mouseover at the element
+// entered, and mouseenter at each of its ancestors that does not hold the element left, outermost first. An element
+// that left the document hears nothing.
+void fireBoundaries(HtmlView* v, PrDomElement* PR_NULLABLE from, PrDomElement* PR_NULLABLE to, PrVec2 point) {
+    const PrAppEvent* event = &v->lastMove;
+    if (from != nullptr && domIsConnected(from)) {
+        fireMouse(v, "mouseout", from, point, event, to);
+        for (PrDomNode* at = prDomElementAsNode(from); at != nullptr; at = domShadowIncludingParent(at)) {
+            PrDomElement* element = domElementFromNode(at);
+            if (to != nullptr && includesShadow(at, prDomElementAsNode(to)))
+                break;
+            if (element != nullptr)
+                fireMouse(v, "mouseleave", element, point, event, to);
+        }
+    }
+    if (to == nullptr || !domIsConnected(to))
+        return;
+    fireMouse(v, "mouseover", to, point, event, from);
+    RawArray<PrDomElement*> entered;
+    for (PrDomNode* at = prDomElementAsNode(to); at != nullptr; at = domShadowIncludingParent(at)) {
+        if (from != nullptr && includesShadow(at, prDomElementAsNode(from)))
+            break;
+        if (PrDomElement* element = domElementFromNode(at))
+            entered.push(element);
+    }
+    for (uint32_t i = entered.count; i > 0; --i) {
+        if (domIsConnected(entered.data[i - 1]))
+            fireMouse(v, "mouseenter", entered.data[i - 1], point, event, from);
+    }
+    entered.reset();
 }
 
 // Fires a synthetic click at `element`, as a key activates it (html/#fire-a-synthetic-pointer-event). The click runs
@@ -1670,6 +1739,8 @@ void prHtmlViewDestroy(PrHtmlView* PR_NULLABLE view) {
     release(view);
     releaseSpaced(view);
     endWheel(view);
+    if (view->hovered != nullptr)
+        prDomNodeRelease(prDomElementAsNode(view->hovered));
     for (uint32_t i = 0; i < view->frames.count && view->compositor != nullptr; ++i)
         prLayoutCompositorRemove(view->compositor, view->frames.data[i].embed);
     view->tracks.reset();
@@ -1998,6 +2069,9 @@ PrHtmlViewEventResult prHtmlViewEvent(PrHtmlView* view, const PrAppEvent* event,
             view->pointer = event->pointer.position;
             view->pointed = true;
             view->hoverDue = true;
+            view->moved = true;
+            view->lastMove = *event;
+            prAppEventSetText(&view->lastMove, PrStringView{nullptr, 0});
             // A drag from a press in an editable text control extends its selection.
             if ((view->buttons & buttonBit(0)) != 0 && view->pressed != nullptr &&
                     htmlTextControlIsEditable(view->pressed))

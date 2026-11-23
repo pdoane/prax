@@ -116,7 +116,6 @@ TEST_CASE("strokes, dashes, points and paths are copied as they are when recorde
     PrDrawStroke dashed = stroke(1);
     dashed.shape.dashes = dashes;
     dashed.shape.dashCount = 2;
-    dashed.nonScaling = true;
     PrVec2 points[] = {{0, 0}, {10, 0}, {10, 10}};
     prDrawListPolylineContour(list, points, 3, PrDrawContour_Open, PrPathFillRule_NonZero, {.color = kRed, .stroke = &dashed});
     PrPath* path = prPathCreate();
@@ -131,8 +130,7 @@ TEST_CASE("strokes, dashes, points and paths are copied as they are when recorde
     for (int i = 0; i < 300; ++i)
         prDrawListPolylineContour(list, points, 3, PrDrawContour_Closed, PrPathFillRule_NonZero, {.color = kRed});
     String text = dump(list);
-    CHECK(firstLines(text, 2) ==
-        "polyline open 0 0 10 0 10 10 stroke 1 4 0 miter butt butt butt dashes 3 1 non-scaling color 1 0 0 1\n"
+    CHECK(firstLines(text, 2) == "polyline open 0 0 10 0 10 10 stroke 1 4 0 miter butt butt butt dashes 3 1 color 1 0 0 1\n"
         "path M 0 0 Q 5 10 10 0 Z evenodd color 1 0 0 1\n");
     prDrawListRelease(list);
     prDrawListRelease(nullptr);

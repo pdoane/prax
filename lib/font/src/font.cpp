@@ -292,13 +292,12 @@ void readMetrics(Font* font) {
     };
     float alphabetic = 0;
     baseline('r', 'o', 'm', 'n', &alphabetic);
+    // A hanging baseline that BASE does not give is 0.8 of the ascent, and a mathematical one half of it.
     float hanging = 0;
     if (baseline('h', 'a', 'n', 'g', &hanging))
         m.fromFont |= PrFontMetricFlag_Hanging;
-    else if (boxOf(font, 0x0915, &bottom, &top))
-        hanging = top;
     else
-        hanging = em * 0.6f;
+        hanging = ascent * 0.8f;
     float under = 0;
     float over = 0;
     bool hasUnder = baseline('i', 'd', 'e', 'o', &under);
@@ -329,10 +328,8 @@ void readMetrics(Font* font) {
     float math = 0;
     if (baseline('m', 'a', 't', 'h', &math))
         m.fromFont |= PrFontMetricFlag_Math;
-    else if (boxOf(font, 0x2212, &bottom, &top) || boxOf(font, '+', &bottom, &top))
-        math = (bottom + top) / 2;
     else
-        math = xHeight / 2;
+        math = ascent / 2;
 
     // Converts to ems, with y down, scaled. Overrides are already in ems.
     float k = font->sizeAdjust / em;

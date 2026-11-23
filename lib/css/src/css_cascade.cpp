@@ -3348,6 +3348,15 @@ const CssComputedStyle* cssCascadeStyle(const CssRuleSet* set, CssStyleBuilder* 
     // that another element gives are shared, so a style that applies them alone may be cached.
     const CssElementStyle* elementStyle = input.element->style;
     const CssDeclarationBlock* hints = own && elementStyle != nullptr && elementStyle->hintsBuilt ? elementStyle->hints : nullptr;
+    // The animated attributes follow the style attribute (cssElementAnimatedStyle).
+    const CssDeclarationBlock* animated = own && elementStyle != nullptr ? elementStyle->animated : nullptr;
+    // An instance in a use element's shadow tree has its original's animated attributes
+    // (SVG2/struct.html#UseAnimations).
+    if (own && animated == nullptr && input.element->space == PrDomNamespace_Svg && domInUseShadowTree(input.element)) {
+        const PrDomElement* original = domElementFromNode(domNodeUseOriginal(input.element));
+        if (original != nullptr && original->style != nullptr)
+            animated = original->style->animated;
+    }
     uint64_t sharedId = 0;
     const CssDeclarationBlock* shared = own ? cssSharedHints(input.element, &sharedId) : nullptr;
     // An element's used appearance follows from its entries and its kind of widget, and a pseudo-element's from what
@@ -3368,7 +3377,8 @@ const CssComputedStyle* cssCascadeStyle(const CssRuleSet* set, CssStyleBuilder* 
         attributes = attributes || entry.attributes;
         conditions |= entry.appearance != CssAppearance_None ? 1u << entry.appearance : 0;
     }
-    bool cacheable = !input.fresh && !input.userAgentOnly && inlineStyle == nullptr && hints == nullptr && !attributes;
+    bool cacheable = !input.fresh && !input.userAgentOnly && inlineStyle == nullptr && hints == nullptr &&
+        animated == nullptr && !attributes;
     CssCascadeMemo* memo = cacheable ? input.memo : nullptr;
     if (input.memo != nullptr && memo == nullptr)
         cssCascadeMemoClear(input.memo);
@@ -3443,6 +3453,8 @@ const CssComputedStyle* cssCascadeStyle(const CssRuleSet* set, CssStyleBuilder* 
             applyOrigin(s, set, blocks, CssOrigin_Author, false);
             if (inlineStyle != nullptr)
                 apply(s, inlineStyle, false, attached);
+            if (animated != nullptr)
+                apply(s, animated, false, attached);
             applyOrigin(s, set, blocks, CssOrigin_Author, true);
             if (inlineStyle != nullptr)
                 apply(s, inlineStyle, true, attached);

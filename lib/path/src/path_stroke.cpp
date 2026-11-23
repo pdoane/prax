@@ -18,7 +18,7 @@ namespace pr_impl {
 
 namespace {
 
-// Points closer than this are treated as one point.
+// Lengths and curvatures below this are zero. Points are compared by pathSamePoint.
 constexpr float kCoincident = 1e-6f;
 
 // Directions whose cross product is below this do not turn.
@@ -60,16 +60,8 @@ struct Stroker {
     RawArray<PrVec2> loop;
 };
 
-float dot(PrVec2 a, PrVec2 b) {
-    return a.x * b.x + a.y * b.y;
-}
-
-float cross(PrVec2 a, PrVec2 b) {
-    return a.x * b.y - a.y * b.x;
-}
-
 float length(PrVec2 a) {
-    return prF32Sqrt(dot(a, a));
+    return prF32Sqrt(prVec2Dot(a, a));
 }
 
 PrVec2 unit(PrVec2 a) {
@@ -85,14 +77,14 @@ PrVec2 leftNormal(PrVec2 direction) {
 // Returns the signed curvature at a point at which the derivative is `d` and the second derivative is `dd`.
 float curvature(PrVec2 d, PrVec2 dd) {
     float l = length(d);
-    return l > kCoincident ? cross(d, dd) / (l * l * l) : 0;
+    return l > kCoincident ? prVec2Cross(d, dd) / (l * l * l) : 0;
 }
 
 // Returns the angle between two directions, from 0 to π.
 float angleBetween(PrVec2 a, PrVec2 b) {
     if (length(a) < kCoincident || length(b) < kCoincident)
         return 0;
-    return prF32Abs(prF32Atan2(cross(a, b), dot(a, b)));
+    return prF32Abs(prF32Atan2(prVec2Cross(a, b), prVec2Dot(a, b)));
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -129,7 +121,7 @@ uint32_t arcSteps(float radius, float angle, float tolerance) {
 }
 
 void push(Stroker& s, PrVec2 point) {
-    if (s.loop.count != 0 && length(point - s.loop.last()) < kCoincident)
+    if (s.loop.count != 0 && pathSamePoint(point, s.loop.last()))
         return;
     s.loop.push(point);
 }
@@ -149,11 +141,11 @@ void pushArc(Stroker& s, PrVec2 center, PrVec2 from, float angle) {
 // Emits the loop as a closed contour, if it encloses any area.
 void emit(Stroker& s) {
     RawArray<PrVec2>& p = s.loop;
-    if (p.count > 1 && length(p.last() - p.data[0]) < kCoincident)
+    if (p.count > 1 && pathSamePoint(p.last(), p.data[0]))
         p.pop();
     float area = 0;
     for (uint32_t i = 0; i < p.count; ++i)
-        area += cross(p.data[i], p.data[(i + 1) % p.count]);
+        area += prVec2Cross(p.data[i], p.data[(i + 1) % p.count]);
     if (p.count >= 3 && area != 0) {
         prPathPolylineMoveTo(s.out, p.data[0]);
         for (uint32_t i = 1; i < p.count; ++i)
@@ -206,10 +198,10 @@ bool arcsMeet(PrVec2 vertex, PrVec2 bisector, PrVec2 from, PrVec2 direction, flo
     PrVec2 candidates[2];
     uint32_t count = 0;
     if (lineIn && lineOut) {
-        float denominator = cross(direction, leaving);
+        float denominator = prVec2Cross(direction, leaving);
         if (prF32Abs(denominator) < kParallel)
             return false;
-        float t = cross(to - from, leaving) / denominator;
+        float t = prVec2Cross(to - from, leaving) / denominator;
         candidates[count++] = from + direction * t;
     } else if (lineIn || lineOut) {
         PrVec2 point = lineIn ? from : to;
@@ -217,8 +209,8 @@ bool arcsMeet(PrVec2 vertex, PrVec2 bisector, PrVec2 from, PrVec2 direction, flo
         PrVec2 center = lineIn ? centerOut : centerIn;
         float radius = lineIn ? radiusOut : radiusIn;
         PrVec2 offset = point - center;
-        float b = dot(offset, along);
-        float c = dot(offset, offset) - radius * radius;
+        float b = prVec2Dot(offset, along);
+        float c = prVec2Dot(offset, offset) - radius * radius;
         float discriminant = b * b - c;
         if (discriminant < 0)
             return false;
@@ -241,7 +233,7 @@ bool arcsMeet(PrVec2 vertex, PrVec2 bisector, PrVec2 from, PrVec2 direction, flo
     for (uint32_t i = 0; i < count; ++i) {
         PrVec2 offset = candidates[i] - vertex;
         float reach = length(offset);
-        if (dot(offset, bisector) > 0 && reach < best) {
+        if (prVec2Dot(offset, bisector) > 0 && reach < best) {
             best = reach;
             *meet = candidates[i];
         }
@@ -256,13 +248,26 @@ void pushExtension(Stroker& s, PrVec2 center, bool line, PrVec2 from, PrVec2 dir
         return;
     PrVec2 a = from - center;
     PrVec2 b = to - center;
-    float angle = prF32Atan2(cross(a, b), dot(a, b));
-    float turning = cross(a, direction);
+    float angle = prF32Atan2(prVec2Cross(a, b), prVec2Dot(a, b));
+    float turning = prVec2Cross(a, direction);
     if (turning > 0 && angle < 0)
         angle += 2 * kPrF32Pi;
     else if (turning < 0 && angle > 0)
         angle -= 2 * kPrF32Pi;
     pushArc(s, center, from, angle);
+}
+
+// Writes the point at which the offsets of a turn's inner side cross, at half width `w` on the left of the direction of
+// travel, arriving in `in` and leaving in `out`. Returns false if that point does not lie on both segments, so that the
+// inner side folds through the vertex.
+bool innerCrossing(PrVec2 p, PrVec2 in, PrVec2 out, float w, float lengthIn, float lengthOut, PrVec2* crossing) {
+    PrVec2 nIn = leftNormal(in);
+    PrVec2 nOut = leftNormal(out);
+    float along = prVec2Dot(in, out);
+    *crossing = p + (nIn + nOut) * (w / (1 + along));
+    float back = -prVec2Dot(*crossing - (p + nIn * w), in);
+    float ahead = prVec2Dot(*crossing - (p + nOut * w), out);
+    return 1 + along > 0 && back >= 0 && back <= lengthIn && ahead >= 0 && ahead <= lengthOut;
 }
 
 // Adds the points that one side of an outline adds at a vertex, arriving in `in` and leaving in `out`, at half width
@@ -273,21 +278,19 @@ void pushJoin(Stroker& s, PrVec2 p, PrVec2 in, PrVec2 out, float w, bool corner,
     PrVec2 nOut = leftNormal(out);
     PrVec2 a = p + nIn * w;
     PrVec2 b = p + nOut * w;
-    float turn = cross(in, out);
-    float along = dot(in, out);
+    float turn = prVec2Cross(in, out);
+    float along = prVec2Dot(in, out);
     if (prF32Abs(turn) <= kParallel && along > 0) {
         push(s, a);
         push(s, b);
         return;
     }
-    if (dot(out, nIn) > kParallel) {
+    if (prVec2Dot(out, nIn) > kParallel) {
         // The inner side is the point at which the two offsets cross, if that point lies on both segments. Otherwise,
         // it is a fold through the vertex, which the nonzero fill covers. The crossing is checked by its position along
         // each segment, because near a reversal the terms used to find it are tiny and it can land anywhere.
-        PrVec2 crossing = p + (nIn + nOut) * (w / (1 + along));
-        float back = -dot(crossing - a, in);
-        float ahead = dot(crossing - b, out);
-        if (1 + along > 0 && back >= 0 && back <= lengthIn && ahead >= 0 && ahead <= lengthOut) {
+        PrVec2 crossing{};
+        if (innerCrossing(p, in, out, w, lengthIn, lengthOut, &crossing)) {
             push(s, crossing);
         } else {
             push(s, a);
@@ -299,7 +302,7 @@ void pushJoin(Stroker& s, PrVec2 p, PrVec2 in, PrVec2 out, float w, bool corner,
     PrPathJoin kind = corner ? s.style->join : PrPathJoin_Round;
     PrVec2 sum = nIn + nOut;
     PrVec2 bisector = length(sum) > kParallel ? unit(sum) : in;
-    float cosHalf = dot(bisector, nIn);
+    float cosHalf = prVec2Dot(bisector, nIn);
     float limit = s.style->miterLimit * w;
     // The tip of the miter lies along the bisector, at the length that the limit measures. Near a reversal, the sum of
     // the offsets and the turn are both tiny, and a tip computed from their ratio can land far beyond the point that
@@ -339,8 +342,8 @@ void pushJoin(Stroker& s, PrVec2 p, PrVec2 in, PrVec2 out, float w, bool corner,
                 push(s, tip);
             } else if (limit > w * cosHalf) {
                 float step = limit - w * cosHalf;
-                float inReach = dot(in, bisector);
-                float outReach = -dot(out, bisector);
+                float inReach = prVec2Dot(in, bisector);
+                float outReach = -prVec2Dot(out, bisector);
                 if (inReach > kParallel && outReach > kParallel) {
                     push(s, a + in * (step / inReach));
                     push(s, b - out * (step / outReach));
@@ -394,16 +397,113 @@ void strokeOpen(Stroker& s, const Vertex* v, uint32_t n, PrVec2 direction, PrPat
     emit(s);
 }
 
-// Strokes two loops around a closed run of at least two vertices, one per side.
-void strokeClosed(Stroker& s, const Vertex* v, uint32_t n) {
+// Emits the loop as a closed contour that winds positively, if it encloses any area.
+void emitPositive(Stroker& s) {
+    RawArray<PrVec2>& p = s.loop;
+    float area = 0;
+    for (uint32_t i = 0; i < p.count; ++i)
+        area += prVec2Cross(p.data[i], p.data[(i + 1) % p.count]);
+    for (uint32_t i = 0, j = p.count != 0 ? p.count - 1 : 0; area < 0 && i < j; ++i, --j) {
+        PrVec2 swap = p.data[i];
+        p.data[i] = p.data[j];
+        p.data[j] = swap;
+    }
+    emit(s);
+}
+
+// Strokes a closed run of at least two vertices as pieces that wind alike, so that the nonzero fill covers their union:
+// a quadrilateral along each segment, and on each side of each vertex, a wedge from the vertex through the side's join.
+// This holds where a stroke is wider than its contour, whose inner sides fold over each other.
+void strokeClosedPieces(Stroker& s, const Vertex* v, uint32_t n) {
     for (uint32_t i = 0; i < n; ++i) {
+        const Vertex& a = v[i];
+        const Vertex& b = v[(i + 1) % n];
+        PrVec2 normal = leftNormal(segmentDirection(a, b));
+        push(s, a.point + normal * a.left);
+        push(s, b.point + normal * b.left);
+        push(s, b.point - normal * b.right);
+        push(s, a.point - normal * a.right);
+        emitPositive(s);
+    }
+    for (uint32_t i = 0; i < n; ++i) {
+        const Vertex& before = v[(i + n - 1) % n];
+        const Vertex& after = v[(i + 1) % n];
+        push(s, v[i].point);
+        pushJoin(s, v[i].point, segmentDirection(before, v[i]), segmentDirection(v[i], after),
+            v[i].left, v[i].corner, v[i].curveIn, v[i].curveOut, segmentLength(before, v[i]), segmentLength(v[i], after));
+        emitPositive(s);
+        push(s, v[i].point);
+        pushJoin(s, v[i].point, segmentDirection(after, v[i]), segmentDirection(v[i], before),
+            v[i].right, v[i].corner, -v[i].curveOut, -v[i].curveIn, segmentLength(v[i], after), segmentLength(before, v[i]));
+        emitPositive(s);
+    }
+}
+
+// Returns true if one side of a closed run's outline would not bound the stroke. That is so if the offsets of the
+// segments between inner turns run against their segments over the run as a whole, as they do once the stroke is wider
+// than the run. A turn whose inner side folds through its vertex, and an offset that runs back along a short segment,
+// still bound the stroke, since the nonzero fill covers the fold. `left` selects the side.
+bool sideInverts(const Vertex* v, uint32_t n, bool left) {
+    // The point of each vertex's inner turn, or NaN for a vertex where the side is outside the turn or folds.
+    RawArray<PrVec2> inner;
+    for (uint32_t i = 0; i < n; ++i) {
+        const Vertex& before = v[(i + n - 1) % n];
+        const Vertex& after = v[(i + 1) % n];
+        PrVec2 in = segmentDirection(before, v[i]);
+        PrVec2 out = segmentDirection(v[i], after);
+        float lengthIn = segmentLength(before, v[i]);
+        float lengthOut = segmentLength(v[i], after);
+        float w = v[i].left;
+        if (!left) {
+            PrVec2 reversed = in * -1;
+            in = out * -1;
+            out = reversed;
+            float swap = lengthIn;
+            lengthIn = lengthOut;
+            lengthOut = swap;
+            w = v[i].right;
+        }
+        bool turns = prF32Abs(prVec2Cross(in, out)) > kParallel || prVec2Dot(in, out) <= 0;
+        PrVec2 point{kPrF32Nan, kPrF32Nan};
+        PrVec2 crossing{};
+        if (turns && prVec2Dot(out, leftNormal(in)) > kParallel &&
+                innerCrossing(v[i].point, in, out, w, lengthIn, lengthOut, &crossing))
+            point = crossing;
+        inner.push(point);
+    }
+    // How far the offsets between inner turns travel along their segments, in all.
+    float forward = 0;
+    bool measured = false;
+    for (uint32_t i = 0; i < n; ++i) {
+        PrVec2 a = inner.data[i];
+        PrVec2 b = inner.data[(i + 1) % n];
+        if (!prF32IsNan(a.x) && !prF32IsNan(b.x)) {
+            forward += prVec2Dot(b - a, segmentDirection(v[i], v[(i + 1) % n]));
+            measured = true;
+        }
+    }
+    inner.reset();
+    return measured && forward < 0;
+}
+
+// Strokes two loops around a closed run of at least two vertices, one per side. A side that would not bound the stroke
+// (sideInverts) would wind against the other side's loop and cancel the run's inside, which a stroke that wide covers.
+// The other side's loop alone bounds the stroke then. A run whose sides both invert is stroked as pieces.
+void strokeClosed(Stroker& s, const Vertex* v, uint32_t n) {
+    bool leftInverts = sideInverts(v, n, true);
+    bool rightInverts = sideInverts(v, n, false);
+    if (leftInverts && rightInverts) {
+        strokeClosedPieces(s, v, n);
+        return;
+    }
+    for (uint32_t i = 0; i < n && !leftInverts; ++i) {
         const Vertex& before = v[(i + n - 1) % n];
         const Vertex& after = v[(i + 1) % n];
         pushJoin(s, v[i].point, segmentDirection(before, v[i]), segmentDirection(v[i], after),
             v[i].left, v[i].corner, v[i].curveIn, v[i].curveOut, segmentLength(before, v[i]), segmentLength(v[i], after));
     }
     emit(s);
-    for (uint32_t k = 0; k < n; ++k) {
+    for (uint32_t k = 0; k < n && !rightInverts; ++k) {
         uint32_t i = n - 1 - k;
         const Vertex& before = v[(i + n - 1) % n];
         const Vertex& after = v[(i + 1) % n];
@@ -419,7 +519,7 @@ void strokeClosed(Stroker& s, const Vertex* v, uint32_t n) {
 void appendVertex(RawArray<Vertex>& vertices, const Vertex& vertex) {
     if (vertices.count != 0) {
         Vertex& last = vertices.last();
-        if (length(vertex.point - last.point) < kCoincident) {
+        if (pathSamePoint(vertex.point, last.point)) {
             last.corner = last.corner || vertex.corner;
             last.curveIn = vertex.curveIn;
             return;
@@ -603,7 +703,7 @@ void dashContour(Stroker& s, bool closed, float total) {
 
 void strokeContour(Stroker& s, bool closed) {
     RawArray<Vertex>& v = s.contour;
-    if (closed && v.count > 1 && length(v.last().point - v.data[0].point) < kCoincident) {
+    if (closed && v.count > 1 && pathSamePoint(v.last().point, v.data[0].point)) {
         v.data[0].curveIn = v.last().curveIn;
         v.data[0].corner = true;
         v.pop();
@@ -708,13 +808,13 @@ void prPathStrokeOutline(const PrPath* path, const PrPathStroke* stroke, float t
                 PrVec2 leg2 = p3 - p2;
                 uint32_t count = pathCubicLineCount(current, p1, p2, p3, tolerance);
                 uint32_t turned = turnCount(s, angleBetween(leg0, leg1) + angleBetween(leg1, leg2) +
-                    (length(leg1) < kCoincident ? angleBetween(leg0, leg2) : 0));
+                    (pathSamePoint(p1, p2) ? angleBetween(leg0, leg2) : 0));
                 pathFlattenCubicLines(current, p1, p2, p3, count > turned ? count : turned, s.curve);
                 // The first and second derivatives at each end, in thirds and sixths.
                 PrVec2 startSecond = current - p1 * 2 + p2;
                 PrVec2 endSecond = p1 - p2 * 2 + p3;
-                PrVec2 startTangent = length(leg0) > kCoincident ? leg0 : p2 - current;
-                PrVec2 endTangent = length(leg2) > kCoincident ? leg2 : p3 - p1;
+                PrVec2 startTangent = !pathSamePoint(p1, current) ? leg0 : p2 - current;
+                PrVec2 endTangent = !pathSamePoint(p3, p2) ? leg2 : p3 - p1;
                 addCurve(s, curvature(startTangent * 3, startSecond * 6), curvature(endTangent * 3, endSecond * 6));
                 current = p3;
                 next += 3;

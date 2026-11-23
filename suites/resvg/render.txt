@@ -1,22 +1,30 @@
-# How the suite renders (tools/suite/suite_render.h). It uses the fonts that resvg's own
-# harness uses, from the corpus, with the families that harness assigns to the generic ones.
-font third_party/resvg-tests/fonts/Amiri-Regular.ttf
-font third_party/resvg-tests/fonts/MPLUS1p-Regular.ttf
-font third_party/resvg-tests/fonts/NotoColorEmoji.ttf
-font third_party/resvg-tests/fonts/NotoEmoji-Regular.ttf
-font third_party/resvg-tests/fonts/NotoMono-Regular.ttf
-font third_party/resvg-tests/fonts/NotoSans-Black.ttf
-font third_party/resvg-tests/fonts/NotoSans-Bold.ttf
-font third_party/resvg-tests/fonts/NotoSans-ExtraCondensed.ttf
-font third_party/resvg-tests/fonts/NotoSans-Italic.ttf
-font third_party/resvg-tests/fonts/NotoSans-Light.ttf
-font third_party/resvg-tests/fonts/NotoSans-Regular.ttf
-font third_party/resvg-tests/fonts/NotoSans-Thin.ttf
-font third_party/resvg-tests/fonts/NotoSansDevanagari-Regular.ttf
-font third_party/resvg-tests/fonts/NotoSerif-Regular.ttf
-font third_party/resvg-tests/fonts/SedgwickAveDisplay-Regular.ttf
-font third_party/resvg-tests/fonts/SourceSansPro-Regular.ttf
-font third_party/resvg-tests/fonts/Yellowtail-Regular.ttf
+# How the suite renders (tools/suite/suite_render.h). It uses the fonts that resvg's own harness loads, every font
+# file of the corpus's in the order of their names, with the families that harness assigns to the generic ones. It
+# draws each case as an image of the reference's size, as that harness scales the document to its width.
+svg image
+font third_party/resvg/crates/resvg/tests/fonts/Amiri-Regular.ttf
+font third_party/resvg/crates/resvg/tests/fonts/CFF-and-SBIX.otf
+font third_party/resvg/crates/resvg/tests/fonts/MPLUS1p-Regular.ttf
+font third_party/resvg/crates/resvg/tests/fonts/NotoColorEmojiCBDT.subset.ttf
+font third_party/resvg/crates/resvg/tests/fonts/NotoColorEmojiCOLR.subset.ttf
+font third_party/resvg/crates/resvg/tests/fonts/NotoMono-Regular.ttf
+font third_party/resvg/crates/resvg/tests/fonts/NotoSans-Black.ttf
+font third_party/resvg/crates/resvg/tests/fonts/NotoSans-Bold.ttf
+font third_party/resvg/crates/resvg/tests/fonts/NotoSans-Italic.ttf
+font third_party/resvg/crates/resvg/tests/fonts/NotoSans-Light.ttf
+font third_party/resvg/crates/resvg/tests/fonts/NotoSans-Regular.ttf
+font third_party/resvg/crates/resvg/tests/fonts/NotoSans-Thin.ttf
+font third_party/resvg/crates/resvg/tests/fonts/NotoSansDevanagari-Regular.ttf
+font third_party/resvg/crates/resvg/tests/fonts/NotoSansMalayalam-Regular.ttf
+font third_party/resvg/crates/resvg/tests/fonts/NotoSerif-Regular.ttf
+font third_party/resvg/crates/resvg/tests/fonts/NotoZnamennyMusicalNotation-Regular.ttf
+font third_party/resvg/crates/resvg/tests/fonts/RobotoFlex.subset.ttf
+font third_party/resvg/crates/resvg/tests/fonts/SedgwickAveDisplay-Regular.ttf
+font third_party/resvg/crates/resvg/tests/fonts/SourceSansPro-Regular.ttf
+font third_party/resvg/crates/resvg/tests/fonts/TwitterColorEmoji.subset.ttf
+font third_party/resvg/crates/resvg/tests/fonts/Yellowtail-Regular.ttf
+# Text that its families do not serve falls back to any of the fonts, in the same order, as that harness's does.
+fallback
 alias serif = Noto Serif
 alias sans-serif = Noto Sans
 alias cursive = Yellowtail

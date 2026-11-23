@@ -4,8 +4,10 @@
 // A document fetches each such document once, by its URL without a fragment, and keeps it. A fetched document is parsed
 // in secure static mode (SVG2/linking.html#processingURL-parsing). It has no browsing context, so it fetches nothing
 // and runs no script. Nothing changes it once it is parsed. A document with a browsing context fetches through its
-// host, and only from its own origin, since no reference that reaches here is made with CORS. A document without a
-// browsing context takes the documents that a loader gives, such as when a harness draws a document from files.
+// host. A reference from a style property fetches with CORS, and any other reference without it
+// (SVG2/linking.html#processingURL-fetch). A response to a fetch without CORS from another origin is opaque, so such a
+// reference reaches only documents of the document's own origin. A document without a browsing context takes the
+// documents that a loader gives, such as when a harness draws a document from files.
 
 #pragma once
 
@@ -24,6 +26,10 @@ inline PrStringView domUrlFragment(PrStringView url) {
     return hash < url.size ? prStringSlice(url, hash + 1, url.size - hash - 1) : PrStringView{};
 }
 
+// Returns the ID that `fragment`, a URL's fragment without its `#`, names: the fragment percent-decoded
+// (html/#find-a-potential-indicated-element). The caller releases it with prRawStringReset.
+PrRawString domFragmentDecode(PrStringView fragment);
+
 struct DomResources;
 
 // Loads the document that `url` names, for a document without a browsing context. `url` is a reference in `from`
@@ -37,6 +43,7 @@ struct DomReference {
     bool external;              // the URL names a document other than the one that holds the reference
     PrRawString url;            // External: the other document's URL without its fragment, absolute if it resolves
     PrStringView fragment;      // the fragment without its `#`, a view into the reference, or the null view if none
+    DomCorsSettings cors;       // External: the CORS settings that the other document is fetched with
 };
 
 // Splits `reference`, a URL as written in `document`, into the document that it names and its fragment
@@ -46,11 +53,12 @@ struct DomReference {
 // is empty. The caller releases `out->url` with prRawStringReset.
 bool domReferenceSplit(const PrDomDocument* document, PrStringView reference, DomReference* out);
 
-// Returns the resource document that `url`, an absolute URL without a fragment, names for `document`. Returns null
-// until the document has loaded, and if it fails to load. The first call for a URL starts its load: a fetch through the
-// document's host, or the loader that domResourcesSetLoader gave. Once a fetch completes, the document's uses resolve
-// their references again, and its presentation hears that what IDs name may have changed.
-PrDomDocument* PR_NULLABLE domResourceDocument(PrDomDocument* document, PrStringView url);
+// Returns the resource document that `url`, an absolute URL without a fragment, names for `document` when fetched with
+// `cors`. Returns null until the document has loaded, and if it fails to load. The first call for a URL and CORS
+// settings starts its load: a fetch through the document's host, or the loader that domResourcesSetLoader gave. Once a
+// fetch completes, the document's uses resolve their references again, and its presentation hears that what IDs name
+// may have changed.
+PrDomDocument* PR_NULLABLE domResourceDocument(PrDomDocument* document, PrStringView url, DomCorsSettings cors);
 
 // Returns the element that a reference split by domReferenceSplit names in `document`: the element of the fragment's ID
 // in the document that the reference names, or that document's root element without a fragment
