@@ -5,6 +5,8 @@
 #include "pr/assert.h"
 #include "pr/count_of.h"
 #if defined(PR_IMAGE_HAS_BUILTIN)
+#include "pr/image_bmp.h"
+#include "pr/image_dds.h"
 #include "pr/image_emjc.h"
 #include "pr/image_exr.h"
 #include "pr/image_gif.h"
@@ -13,6 +15,9 @@
 #include "pr/image_jpeg.h"
 #include "pr/image_ktx.h"
 #include "pr/image_png.h"
+#include "pr/image_psd.h"
+#include "pr/image_qoi.h"
+#include "pr/image_tga.h"
 #include "pr/image_tiff.h"
 #include "pr/image_webp.h"
 #endif
@@ -49,6 +54,11 @@ enum {
     ImageKind_Exr,
     ImageKind_Ktx,
     ImageKind_Emjc,
+    ImageKind_Qoi,
+    ImageKind_Tga,
+    ImageKind_Bmp,
+    ImageKind_Dds,
+    ImageKind_Psd,
 };
 typedef uint8_t ImageKind;
 
@@ -59,7 +69,8 @@ struct ImageSelectFormat {
     PrBackendInterface interface;
 };
 
-// The formats, in the order that a set of every format holds them. ImageIO does not decode KTX 2.0 or EMJC.
+// The formats, in the order that a set of every format holds them. Targa has no signature, so it is last, after every
+// format that a signature identifies. ImageIO does not decode KTX 2.0, EMJC or QOI.
 constexpr ImageSelectFormat kFormats[] = {
     {"image/png", ImageKind_Png, {.name = "image_png", .names = kNames, .count = 3, .built = kWithImageio}},
     {"image/jpeg", ImageKind_Jpeg, {.name = "image_jpeg", .names = kNames, .count = 3, .built = kWithImageio}},
@@ -71,6 +82,15 @@ constexpr ImageSelectFormat kFormats[] = {
     {"image/x-exr", ImageKind_Exr, {.name = "image_exr", .names = kNames, .count = 3, .built = kWithImageio}},
     {"image/ktx2", ImageKind_Ktx, {.name = "image_ktx", .names = kNames, .count = 3, .built = kBuiltin}},
     {"image/x-emjc", ImageKind_Emjc, {.name = "image_emjc", .names = kNames, .count = 3, .built = kBuiltin}},
+    {"image/qoi", ImageKind_Qoi, {.name = "image_qoi", .names = kNames, .count = 3, .built = kBuiltin}},
+    {"image/bmp", ImageKind_Bmp, {.name = "image_bmp", .names = kNames, .count = 3, .built = kWithImageio}},
+    {"image/vnd.ms-dds", ImageKind_Dds, {.name = "image_dds", .names = kNames, .count = 3, .built = kWithImageio}},
+    {
+        "image/vnd.adobe.photoshop",
+        ImageKind_Psd,
+        {.name = "image_psd", .names = kNames, .count = 3, .built = kWithImageio},
+    },
+    {"image/x-tga", ImageKind_Tga, {.name = "image_tga", .names = kNames, .count = 3, .built = kWithImageio}},
 };
 
 const ImageSelectFormat* PR_NULLABLE formatOf(PrStringView type) {
@@ -94,6 +114,11 @@ PrImageCodec* PR_NULLABLE createBuiltin(ImageKind kind, const PrCompressCodecSet
         case ImageKind_Exr: return prImageExrCreate(compress);
         case ImageKind_Ktx: return prImageKtxCreate(compress);
         case ImageKind_Emjc: return prImageEmjcCreate(compress);
+        case ImageKind_Qoi: return prImageQoiCreate();
+        case ImageKind_Tga: return prImageTgaCreate();
+        case ImageKind_Bmp: return prImageBmpCreate();
+        case ImageKind_Dds: return prImageDdsCreate();
+        case ImageKind_Psd: return prImagePsdCreate();
     }
     PR_ASSERT(false && "a format of kFormats");
     return nullptr;

@@ -16,7 +16,7 @@ target_link_libraries(pr_texture PUBLIC prax::core prax::color prax::gpu prax::t
 pr_library(texture_select INCLUDE select/include
     select/src/texture_select.cpp
 )
-target_link_libraries(pr_texture_select PUBLIC prax::compress prax::image prax::texture PRIVATE prax::ktx)
+target_link_libraries(pr_texture_select PUBLIC prax::compress prax::image prax::texture PRIVATE prax::dds prax::ktx)
 
 if (PR_DEVELOP)
     pr_module_tests(texture

@@ -1,0 +1,38 @@
+# The cases of the bmpsuite suite whose answers differ from what the suite expects of a file, each with why. An entry is
+# its keys, then its sentence on indented lines, and the entries are sorted by their first key.
+
+g/rgb16-565.bmp
+g/rgb16-565pal.bmp
+g/rgb16.bmp
+g/rgb16bfdef.bmp
+q/rgb16-3103.bmp
+q/rgb16faketrns.bmp
+q/rgb32-111110.bmp
+q/rgb32-7187.bmp
+q/rgba16-5551.bmp
+q/rgba32-1010102.bmp
+q/rgba32-61754.bmp
+q/rgba32-81284.bmp
+    Microsoft specifies no conversion of a bit field to 8 bits, and lib/bmp widens a field by replicating its bits and
+    narrows it to its high bits. BMP Suite's references scale each field to the nearest of 255 steps, which it calls
+    proper scaling (bmpsuite.html, at q/rgb16-231.bmp), and the two differ by one at some values.
+
+q/pal1huffmsb.bmp
+    Modified Huffman 1D compression of OS/2's version 2 header, which lib/bmp says is NotSupported.
+
+q/pal8os2-hs.bmp
+    An OS/2 version 2 header that asks for halftoning, a compression that lib/bmp says is NotSupported.
+
+q/rgb24jpeg.bmp
+q/rgb24png.bmp
+    A DIB that embeds a JPEG or a PNG image, which lib/bmp says is NotSupported.
+
+q/rgb24prof2.bmp
+    Its embedded profile describes the pixels; the reference is the picture converted to sRGB, and the comparison
+    reads the pixels as stored.
+
+q/rgb24rle24.bmp
+    RLE24, OS/2's 24-bit run-length encoding, which lib/bmp says is NotSupported.
+
+q/rgba64.bmp
+    64-bit pixels of fixed-point linear channels, which lib/bmp says are NotSupported.

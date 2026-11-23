@@ -38,6 +38,7 @@ constexpr PrMimeFormatInfo kFormats[] = { // by PrMimeFormat
     {"pvr", "image/x-pvr", PrMimeKind_Image, false},
     {"emjc", "image/x-emjc", PrMimeKind_Image, false},
     {"pnm", "image/x-portable-anymap", PrMimeKind_Image, false},
+    {"tga", "image/x-tga", PrMimeKind_Image, false},
     {"svg", "image/svg+xml", PrMimeKind_Image, true},
     {"ttf", "font/ttf", PrMimeKind_Font, false},
     {"otf", "font/otf", PrMimeKind_Font, false},
@@ -243,6 +244,7 @@ constexpr NamedFormat kBinaryExtensions[] = {
     {"hdr", PrMimeFormat_Hdr},
     {"exr", PrMimeFormat_Exr},
     {"psd", PrMimeFormat_Psd},
+    {"psb", PrMimeFormat_Psd},
     {"avif", PrMimeFormat_Avif},
     {"heic", PrMimeFormat_Heif},
     {"heif", PrMimeFormat_Heif},
@@ -256,6 +258,10 @@ constexpr NamedFormat kBinaryExtensions[] = {
     {"pbm", PrMimeFormat_Pnm},
     {"pgm", PrMimeFormat_Pnm},
     {"ppm", PrMimeFormat_Pnm},
+    {"tga", PrMimeFormat_Tga},
+    {"icb", PrMimeFormat_Tga},
+    {"vda", PrMimeFormat_Tga},
+    {"vst", PrMimeFormat_Tga},
     {"ttf", PrMimeFormat_Ttf},
     {"otf", PrMimeFormat_Otf},
     {"ttc", PrMimeFormat_Ttc},
@@ -533,7 +539,8 @@ bool isBmp(PrByteView bytes) {
     if (bytes.size < 18 || !startsWith(bytes, 0, "BM") || prMemReadLeU32(bytes.data + 6) != 0)
         return false;
     uint32_t header = prMemReadLeU32(bytes.data + 14);
-    return header == 12 || header == 40 || header == 52 || header == 56 || header == 64 || header == 108 || header == 124;
+    return header == 12 || header == 16 || header == 40 || header == 52 || header == 56 || header == 64 ||
+        header == 108 || header == 124;
 }
 
 // Returns true if the bytes begin as an icon or cursor directory with at least one image, and each entry of the
@@ -586,6 +593,36 @@ bool isPe(PrByteView bytes) {
 bool isPnm(PrByteView bytes) {
     return bytes.size >= 3 && bytes.data[0] == 'P' && bytes.data[1] >= '1' && bytes.data[1] <= '7' &&
         prAsciiIsSpace(char(bytes.data[2]));
+}
+
+// Returns true if the bytes begin with a Targa header that the format allows: an image type of the specification, a
+// color map where the type needs one and its fields zero otherwise, a pixel depth that the type stores, an extent, and
+// the reserved bits of the image descriptor clear (Truevision TGA File Format Specification 2.0, "Header").
+bool isTgaHeader(PrByteView bytes) {
+    if (bytes.size < 18)
+        return false;
+    const uint8_t* h = bytes.data;
+    uint8_t mapType = h[1];
+    uint8_t type = h[2];
+    uint8_t base = type >= 9 ? uint8_t(type - 8) : type;
+    uint8_t entryBits = h[7];
+    uint8_t depth = h[16];
+    bool colorBits = depth == 15 || depth == 16 || depth == 24 || depth == 32;
+    bool entryColor = entryBits == 15 || entryBits == 16 || entryBits == 24 || entryBits == 32;
+    if (!((type >= 1 && type <= 3) || (type >= 9 && type <= 11)) || mapType > 1 || prMemReadLeU16(h + 12) == 0 ||
+            prMemReadLeU16(h + 14) == 0 || (h[17] & 0xc0) != 0)
+        return false;
+    if (mapType == 1 ? prMemReadLeU16(h + 5) == 0 || !entryColor : prMemReadLeU16(h + 3) != 0 || prMemReadLeU16(h + 5) != 0)
+        return false;
+    if (base == 1)
+        return mapType == 1 && (depth == 8 || depth == 16);
+    return base == 2 ? colorBits : depth == 8 || depth == 16;
+}
+
+// Returns true if `whole`, the whole resource, ends with the footer of TGA 2.0.
+bool hasTgaFooter(PrByteView whole) {
+    constexpr PrStringView kFooter{"TRUEVISION-XFILE.\0", 18};
+    return whole.size >= 18 + 26 && prMemEquals(whole.data + whole.size - kFooter.size, kFooter.data, kFooter.size);
 }
 
 // Returns true if the bytes are text: UTF-8 without the bytes that mimesniff counts as binary data
@@ -782,6 +819,7 @@ PrMimeFormat formatOfName(PrStringView name) {
 using namespace pr_impl;
 
 PrMimeFormat prMimeSniff(PrByteView bytes, PrStringView name) {
+    const PrByteView whole = bytes;
     if (bytes.size > kPrMimeSniffBytes)
         bytes.size = kPrMimeSniffBytes;
     // Empty bytes are empty text, which the name refines as it does any text.
@@ -825,6 +863,8 @@ PrMimeFormat prMimeSniff(PrByteView bytes, PrStringView name) {
         return PrMimeFormat_Mp3;
     if (isPnm(bytes))
         return PrMimeFormat_Pnm;
+    if (isTgaHeader(bytes) && (hasTgaFooter(whole) || prMimeFormatOfFileName(name) == PrMimeFormat_Tga))
+        return PrMimeFormat_Tga;
     if (!isText(bytes))
         return PrMimeFormat_None;
     PrMimeFormat declared = sniffShebang(textOf(bytes));

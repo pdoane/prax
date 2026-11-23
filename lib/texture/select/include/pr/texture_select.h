@@ -1,6 +1,6 @@
 // The selector for lib/texture's formats. It creates a set of every texture format that Prax has. Programs and
 // composition libraries link it. A program that wants only some formats creates them itself (prKtxTextureFormatCreate,
-// prImageTextureFormatCreate), builds its own set, and links only those formats.
+// prDdsTextureFormatCreate, prImageTextureFormatCreate), builds its own set, and links only those formats.
 
 #pragma once
 
@@ -16,8 +16,8 @@ PR_ASSUME_NONNULL_BEGIN
 extern "C" {
 #endif
 
-// Creates a set of two formats: KTX 2.0, and then every image that `images` decodes. KTX 2.0 comes first because an
-// image codec set may also decode a KTX 2.0 file's pixels, which loses its blocks. KTX 2.0 sources inflate with
+// Creates a set of three formats: KTX 2.0, DDS, and then every image that `images` decodes. The texture containers come
+// first because an image codec set may also decode their pixels, which loses their blocks. KTX 2.0 sources inflate with
 // `compress`. Image sources treat color as `color` says (prImageTextureFormatCreate). A null `images` leaves the image
 // format out. Both codec sets must outlive the set's sources.
 PrTextureFormatSet* prTextureFormatSetCreateDefault(const PrCompressCodecSet* PR_NULLABLE compress,

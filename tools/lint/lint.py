@@ -3329,7 +3329,7 @@ def check_module_dependencies(report):
 
 
 # The format libraries. Each holds the API of one format (docs/conventions.md, "Formats").
-FORMAT_LIBRARIES = ("basis", "bc", "etc2", "exr", "hdr", "ktx", "lz4", "webp", "zstd")
+FORMAT_LIBRARIES = ("basis", "bc", "bmp", "dds", "etc2", "exr", "hdr", "ktx", "lz4", "psd", "qoi", "tga", "webp", "zstd")
 
 # The interfaces that read formats. Their backends adapt the format libraries.
 FORMAT_INTERFACES = ("compress", "image", "texture")

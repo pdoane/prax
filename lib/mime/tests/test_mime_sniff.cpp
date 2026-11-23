@@ -1,5 +1,6 @@
 #include "pr/mime_sniff.h"
 #include "pr/string.h"
+#include "pr/string_ops.h"
 
 #include "tools/harness/test.h"
 
@@ -60,6 +61,23 @@ TEST_CASE("signatures identify images") {
     CHECK(sniffed(ftyp("heic")) == "heif");
     CHECK(sniffed("<svg xmlns=\"http://www.w3.org/2000/svg\"/>") == "svg");
     CHECK(sniffed("<?xml version=\"1.0\"?>\n<!-- drawn -->\n<!DOCTYPE svg>\n<svg>") == "svg");
+}
+
+TEST_CASE("a targa header is a targa by its name or its footer") {
+    const String header({"\0\0\x02\0\0\0\0\0\0\0\0\0\x02\0\x02\0\x18\0", 18});
+    String file = header;
+    file.append(12, '\x7f');
+    CHECK(sniffed(file, "sky.TGA") == "tga");
+    CHECK(sniffed(file) == "data");
+    String footed = file;
+    footed.append(8, '\0');
+    footed.append({"TRUEVISION-XFILE.\0", 18});
+    CHECK(sniffed(footed) == "tga");
+    // A header that the format does not allow is no Targa, whatever the name.
+    String bad({"\0\0\x04", 3});
+    bad.append(prStringFrom(file, 3));
+    CHECK(sniffed(bad, "sky.tga") == "data");
+    CHECK(prMimeFormatOfFileName("sky.tga") == PrMimeFormat_Tga);
 }
 
 TEST_CASE("signatures identify fonts, archives and compressed streams") {

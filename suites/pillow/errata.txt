@@ -1,0 +1,41 @@
+# The cases of the pillow suite whose answers differ from what the suite expects of a file, each with why. An entry is
+# its keys, then its sentence on indented lines, and the entries are sorted by their first key.
+
+bc5s.dds
+    Signed BC5 decodes to values in [-1, 1], which an Rgba8 read clamps at zero; Pillow's reference stores each signed
+    byte plus 128.
+
+bc6h.dds
+bc6h_sf.dds
+    Pillow converts BC6H's floats to 8 bits by truncation, and the read of the floats rounds to the nearest, so the two
+    differ by one; lib/bc's halves equal the reference unpacker's (tools/suite/bc).
+
+bgr15.dds
+    Pillow widens a 5-bit channel by scaling it by 255 over 31 and dropping the fraction. lib/dds converts it as a
+    Direct3D UNORM value, to the nearest of 255 steps, which differs from that by one at some values.
+
+cross_scan_line_truncated.tga
+    Truncated on purpose: lib/tga decodes the pixels that it holds and says Truncated.
+
+p_8.tga
+    A header alone, of a color map of 8-bit entries, which Targa does not define, so no codec recognizes it.
+
+palette.dds
+    Palette indices, which lib/dds says are NotSupported.
+
+timeout-041dd17dfde800360a47a172269df127af138c6b.dds
+timeout-52d106579505547091ef69b58341351a37c23e31.dds
+timeout-755a4d204f4208e3597ac3391edebee196462bd0.dds
+timeout-c60a3d7314213624607bfb3e38d551a8b24a7435.dds
+    A malformed file from a fuzzer, which lib/dds refuses.
+
+unimplemented_dxgi_format.dds
+unsupported_bitcount.dds
+    Its texels end before its levels do, so lib/dds decodes what it holds and says Truncated.
+
+unimplemented_pfflags.dds
+zero_mask_totals.dds
+    A legacy pixel format of no channels, which lib/dds says is InvalidData.
+
+unimplemented_pixel_format.dds
+    A FourCC that names no format of DDS, which lib/dds says is NotSupported.

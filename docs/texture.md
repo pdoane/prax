@@ -18,17 +18,17 @@ explains what the parts are for and how they fit together.
 lib/core (PrBlobSource)   lib/color   lib/gpu   lib/mime   lib/task
           \                   |          |        /           /
            +------------- lib/texture ---+-------+-----------+
-                          /        \
-          lib/ktx (with lib/basis)   lib/image         lib/draw, lib/layout, lib/ui, Studio
-          KTX 2.0's format           the format of     ask the cache for what they sample
-                                     every image codec
+                    /         |          \
+   lib/ktx (with lib/basis)   lib/dds      lib/image         lib/draw, lib/layout, lib/ui, Studio
+   KTX 2.0's format           DDS's        the format of     ask the cache for what they sample
+                              format       every image codec
 ```
 
-- **The containers of GPU textures share the block formats.** `lib/ktx` describes and decodes its blocks with
-  `lib/bc` and `lib/etc2`, which depend on no GPU interface.
-- **Only a format's library reaches the format.** `lib/ktx` makes the sources of KTX 2.0 files, and `lib/image` makes
-  the sources of every image that an image codec decodes. `lib/texture` includes no format's header (`lint.py`,
-  `format-dependency`).
+- **The containers of GPU textures share the block formats.** `lib/ktx` and `lib/dds` describe and decode their
+  blocks with `lib/bc` and `lib/etc2`, which depend on no GPU interface.
+- **Only a format's library reaches the format.** `lib/ktx` makes the sources of KTX 2.0 files, `lib/dds` those of DDS
+  files, and `lib/image` makes the sources of every image that an image codec decodes. `lib/texture` includes no
+  format's header (`lint.py`, `format-dependency`).
 - **A library that loads textures takes a format set.** The program builds the set from the formats that it wants
   (`prTextureFormatSetCreate`), or takes the selector's set of every format (`prTextureFormatSetCreateDefault`).
 - **A library that draws takes a cache.** It asks the cache for a source's texture each time it draws the source. It

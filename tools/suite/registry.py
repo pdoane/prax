@@ -81,6 +81,12 @@ SUITES = [
     Suite("prax-decoders", (), (), ("tools.suite.prax.decoders",), ("decoder_check",)),
     # Our shapes: lib/path's fills and combinations over random polygons and curves (suites/prax-paths).
     Suite("prax-paths", (), (), ("tools.suite.prax.paths",), ("path_check",)),
+    # Jason Summers's BMP Suite, decoded by lib/image beside the PNGs of its pictures.
+    Suite("bmpsuite", ("bmpsuite",), ("bmpsuite/archive.digest",), ("tools.suite.bmpsuite",), ("decode_compare",)),
+    # Pillow's Targa and DDS test images, decoded by lib/image beside the PNGs of their pictures.
+    Suite("pillow", ("pillow_images",), ("pillow/.git",), ("tools.suite.pillow",), ("decode_compare",)),
+    # The QOI format's reference images, decoded by lib/image beside their PNGs.
+    Suite("qoi", ("qoi_test_images",), ("qoi-test-images/archive.digest",), ("tools.suite.qoi",), ("decode_compare",)),
     # esctest needs termios, and a Windows pseudoconsole would rewrite the sequences that it tests.
     Suite("esctest", ("esctest",), ("esctest2/esctest",), ("tools.suite.esctest",), ("vterm_esctest",),
           "esctest runs on a POSIX pseudoterminal" if sys.platform == "win32" else None),

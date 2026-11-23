@@ -1,9 +1,9 @@
 // Image codecs and the sets that a program builds of them: decoding images, encoding them, and how their pixels are
 // represented.
 //
-// A codec reads the formats of its backend, and each backend has its own constructor (pr/image_png.h, pr/image_jpeg.h,
-// pr/image_gif.h, pr/image_ico.h, pr/image_tiff.h, pr/image_emjc.h). A program puts the codecs that it wants in a set,
-// and a library that decodes or encodes images takes the set from its caller.
+// A codec reads the formats of its backend, and each backend has its own constructor, such as pr/image_png.h's. A
+// program puts the codecs that it wants in a set, or takes the selector's set of every format (pr/image_select.h), and
+// a library that decodes or encodes images takes the set from its caller.
 //
 // A codec and a set may be used from any number of threads at once. A decoder is used by one thread at a time.
 

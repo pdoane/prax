@@ -486,8 +486,8 @@ const PrTextureSource* PR_NULLABLE prTextureSourceCreateTiles(const PrTextureTil
 //
 // A format makes sources from the encoded bytes of one file format. It is a backend of this library
 // (pr/texture_backend.h), and it lives in the library of its file format. lib/ktx makes the format of KTX 2.0
-// (pr/ktx_texture_source.h). lib/image makes the format of every image that an image codec set decodes
-// (pr/image_texture_source.h).
+// (pr/ktx_texture_source.h), and lib/dds the format of DDS (pr/dds_texture_source.h). lib/image makes the format of
+// every image that an image codec set decodes (pr/image_texture_source.h).
 //
 // A program builds a set of the formats that it wants, or takes the selector's set of every format
 // (pr/texture_select.h). It gives the set to the libraries that load textures, so those libraries depend on no file

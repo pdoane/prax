@@ -126,10 +126,11 @@ class Captures:
 
 
 class Zip:
-    """The `names` of a ZIP archive at `url`, whose SHA-256 is `digest`, extracted into `directory`. The archive is
-    fetched only while a file is missing, and kept nowhere."""
+    """The `names` of a ZIP archive at `url`, whose SHA-256 is `digest`, extracted into `directory`, or every file of
+    the archive at its path if `names` is None. The archive is fetched only while a file is missing, and kept nowhere.
+    A whole archive's extraction is stamped with its digest, which says that every file is there."""
 
-    def __init__(self, directory, url, digest, names):
+    def __init__(self, directory, url, digest, names=None):
         self.directory = directory
         self.url = url
         self.digest = digest
@@ -137,7 +138,11 @@ class Zip:
 
     def fetch(self):
         directory = os.path.join(THIRD_PARTY, self.directory)
-        if all(os.path.exists(os.path.join(directory, name)) for name in self.names):
+        stamp = os.path.join(directory, "archive.digest")
+        if self.names is None:
+            if os.path.exists(stamp) and open(stamp).read().strip() == self.digest:
+                return
+        elif all(os.path.exists(os.path.join(directory, name)) for name in self.names):
             return
         print("fetching %s" % self.directory, flush=True)
         os.makedirs(directory, exist_ok=True)
@@ -145,6 +150,11 @@ class Zip:
         download(self.url, archive, self.digest)
         try:
             with zipfile.ZipFile(archive) as files:
+                if self.names is None:
+                    files.extractall(directory)
+                    with open(stamp, "w") as out:
+                        out.write(self.digest + "\n")
+                    return
                 for name in self.names:
                     with files.open(name) as source, open(os.path.join(directory, name), "wb") as out:
                         shutil.copyfileobj(source, out)
@@ -285,6 +295,15 @@ LIBWEBP_TEST_DATA_COMMIT = "06ddd96e276c2c638a72d39d3c0f340afd61978c"
 # The OpenEXR project's test images: every layout, channel type and compression of the file format, and invalid and
 # truncated files, which the exr suite decodes with lib/image and with OpenEXR.
 OPENEXR_IMAGES_COMMIT = "e38ffb0790f62f05a6f083a6fa4cac150b3b7452"
+# Jason Summers's BMP Suite: BMP files of each header version, depth, compression and color space, in the good, the
+# questionable and the bad directories, and a PNG of each file's picture, which the bmpsuite suite decodes with
+# lib/image. The release archive holds the files that the suite's generator writes, and its digest pins it.
+BMPSUITE_DIGEST = "f1b1f18c4f310b76bf317378e64f25b84f875a3d0976fab33ff10befdb35d13f"
+# Pillow's test images, of which the pillow suite reads the Targa and DDS files and the PNG beside each that holds its
+# pixels.
+PILLOW_COMMIT = "4728e8ab35421715499c829a46a0fea93ce33c5f"
+# The QOI reference images: each image as QOI and as PNG, which the bmpsuite suite decodes with lib/image.
+QOI_TEST_IMAGES_DIGEST = "bd557fb208222478d9eefcae59fb473d10e047fd7a8885fcff48861f86599165"
 # The files of the Silesia corpus.
 SILESIA_FILES = ("dickens", "mozilla", "mr", "nci", "ooffice", "osdb", "reymont", "samba", "sao", "webster", "xml",
                  "x-ray")
@@ -708,6 +727,16 @@ CHECKOUTS = {
     # webmproject/libwebp-test-data: the corpus of the webp suite (tools/suite/webp.py).
     "libwebp_test_data": lambda: [Git("libwebp-test-data", "https://github.com/webmproject/libwebp-test-data.git",
                                       LIBWEBP_TEST_DATA_COMMIT)],
+    # jsummers/bmpsuite: the corpus of the bmpsuite suite (tools/suite/bmpsuite.py).
+    "bmpsuite": lambda: [Zip("bmpsuite", "https://entropymine.com/jason/bmpsuite/releases/bmpsuite-2.8.zip",
+                             BMPSUITE_DIGEST)],
+    # python-pillow/Pillow's test images: the corpus of the pillow suite (tools/suite/pillow.py).
+    "pillow_images": lambda: [Git("pillow", "https://github.com/python-pillow/Pillow.git", PILLOW_COMMIT,
+                                  "Tests/images")],
+    # The QOI format's reference images: each image as QOI and as PNG, the corpus of the qoi suite
+    # (tools/suite/qoi.py). The archive has no versions, so its digest pins it.
+    "qoi_test_images": lambda: [Zip("qoi-test-images", "https://qoiformat.org/qoi_test_images.zip",
+                                    QOI_TEST_IMAGES_DIGEST)],
     # AcademySoftwareFoundation/openexr-images: the corpus of the exr suite (tools/suite/exr.py).
     "openexr_images": lambda: [Git("openexr-images", "https://github.com/AcademySoftwareFoundation/openexr-images.git",
                                    OPENEXR_IMAGES_COMMIT)],

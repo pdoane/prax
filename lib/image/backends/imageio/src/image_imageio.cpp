@@ -38,6 +38,9 @@ constexpr ImageioType kTypes[] = {
     {"image/avif", "public.avif"},
     {"image/vnd.radiance", "public.radiance"},
     {"image/x-exr", "com.ilm.openexr-image"},
+    {"image/x-tga", "com.truevision.tga-image"},
+    {"image/vnd.ms-dds", "com.microsoft.dds"},
+    {"image/vnd.adobe.photoshop", "com.adobe.photoshop-image"},
 };
 
 // The bytes from the start of an image from which ImageIO tells its format.

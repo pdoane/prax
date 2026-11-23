@@ -19,6 +19,8 @@ target_sources(pr_image PRIVATE
 
 # Prax's own codecs, one for each format, which the build includes together.
 pr_backend(image builtin INCLUDE backends/png/include SOURCES
+    backends/bmp/src/image_bmp.cpp
+    backends/dds/src/image_dds.cpp
     backends/emjc/src/image_emjc.cpp
     backends/exr/src/image_exr.cpp
     backends/gif/src/image_gif.cpp
@@ -27,10 +29,15 @@ pr_backend(image builtin INCLUDE backends/png/include SOURCES
     backends/jpeg/src/image_jpeg.cpp
     backends/ktx/src/image_ktx.cpp
     backends/png/src/image_png.cpp
+    backends/psd/src/image_psd.cpp
+    backends/qoi/src/image_qoi.cpp
+    backends/tga/src/image_tga.cpp
     backends/tiff/src/image_tiff.cpp
     backends/webp/src/image_webp.cpp
 )
 if (PR_IMAGE_BUILTIN)
+    pr_headers(pr_image PUBLIC backends/bmp/include)
+    pr_headers(pr_image PUBLIC backends/dds/include)
     pr_headers(pr_image PUBLIC backends/emjc/include)
     pr_headers(pr_image PUBLIC backends/exr/include)
     pr_headers(pr_image PUBLIC backends/gif/include)
@@ -38,10 +45,13 @@ if (PR_IMAGE_BUILTIN)
     pr_headers(pr_image PUBLIC backends/ico/include)
     pr_headers(pr_image PUBLIC backends/jpeg/include)
     pr_headers(pr_image PUBLIC backends/ktx/include)
+    pr_headers(pr_image PUBLIC backends/psd/include)
+    pr_headers(pr_image PUBLIC backends/qoi/include)
+    pr_headers(pr_image PUBLIC backends/tga/include)
     pr_headers(pr_image PUBLIC backends/tiff/include)
     pr_headers(pr_image PUBLIC backends/webp/include)
-    target_link_libraries(pr_image PRIVATE prax::emjc prax::exr prax::gif prax::hdr prax::ico prax::jpeg prax::ktx
-                                           prax::png prax::tiff prax::webp)
+    target_link_libraries(pr_image PRIVATE prax::bmp prax::dds prax::emjc prax::exr prax::gif prax::hdr prax::ico
+                                           prax::jpeg prax::ktx prax::png prax::psd prax::qoi prax::tga prax::tiff prax::webp)
 endif()
 
 # The codec of Apple's ImageIO, which a program chooses over Prax's own for a format.
@@ -61,6 +71,8 @@ if (PR_DEVELOP)
         tests/test_image_c.c
         backends/shared/tests/test_image_codecs.cpp
         backends/shared/tests/test_image_codecs_c.c
+        backends/bmp/tests/test_image_bmp.cpp
+        backends/dds/tests/test_image_dds.cpp
         backends/emjc/tests/test_image_emjc.cpp
         backends/exr/tests/test_image_exr.cpp
         backends/gif/tests/test_image_gif.cpp
@@ -69,6 +81,9 @@ if (PR_DEVELOP)
         backends/jpeg/tests/test_image_jpeg.cpp
         backends/ktx/tests/test_image_ktx.cpp
         backends/png/tests/test_image_png.cpp
+        backends/psd/tests/test_image_psd.cpp
+        backends/qoi/tests/test_image_qoi.cpp
+        backends/tga/tests/test_image_tga.cpp
         backends/tiff/tests/test_image_tiff.cpp
         backends/webp/tests/test_image_webp.cpp
     )

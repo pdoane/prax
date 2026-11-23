@@ -23,6 +23,7 @@ add_subdirectory(etc2)
 add_subdirectory(webp)
 add_subdirectory(exr)
 add_subdirectory(prax)
+add_subdirectory(decode_compare)
 # FreeType is in the build when a font backend or the font tests need it.
 if (TARGET freetype)
     add_subdirectory(font)

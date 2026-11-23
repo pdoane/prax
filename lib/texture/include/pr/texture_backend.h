@@ -1,5 +1,5 @@
 // The interface that a texture format implements (pr/texture.h). Only the library of a file format includes this
-// header. lib/ktx and lib/image do.
+// header. lib/ktx, lib/dds and lib/image do.
 
 #pragma once
 

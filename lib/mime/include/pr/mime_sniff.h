@@ -47,6 +47,7 @@ enum {
     PrMimeFormat_Pvr,
     PrMimeFormat_Emjc,
     PrMimeFormat_Pnm,
+    PrMimeFormat_Tga,
     PrMimeFormat_Svg,
 
     // Fonts
@@ -192,6 +193,9 @@ enum { kPrMimeSniffBytes = 4096 };
 // whole file name, such as `Makefile`, or else by its extension, without regard to ASCII case, such as `.tsx`. So a PHP
 // page that begins with a doctype is PHP, and Markdown that begins with an HTML comment is Markdown. A name never
 // overrides a signature, and text that neither its content nor its name identifies is Text.
+//
+// A Targa image has no signature. Binary bytes are Targa if they begin with a header that the format allows, and either
+// the name has a Targa extension or the bytes are the whole resource and end with the TGA 2.0 footer.
 PrMimeFormat prMimeSniff(PrByteView bytes, PrStringView name);
 
 // Returns the names and kind of `format`.
