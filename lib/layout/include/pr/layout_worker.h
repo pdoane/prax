@@ -23,9 +23,9 @@ extern "C" {
 // A thread that runs jobs in turn.
 typedef struct PrLayoutWorker PrLayoutWorker;
 
-// Called when a worker finishes the last job posted to it, at the point when waiting for the worker would not block. It
-// is called on the worker's thread, or on the caller's thread in a build without threads. It must call no function of
-// the worker.
+// Called when a worker finishes the last job posted to it, on the worker's thread, or on the caller's thread in a build
+// without threads. A wait for the worker returns once the function has returned, so a caller that waited has been
+// notified. It must call no function of the worker, and must not wait for a thread that waits for the worker.
 typedef void (*PrLayoutWorkerDoneFn)(void* PR_NULLABLE context);
 
 // Starts a worker's thread, which waits for jobs.

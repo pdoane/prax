@@ -40,6 +40,7 @@ struct LayoutWorker {
     PrLayoutWorkerDoneFn PR_NULLABLE done;
     void* PR_NULLABLE doneContext;
     bool running;                   // true if a posted job has not finished
+    bool notifying;                 // true while the worker calls the done function of the jobs that finished
     bool ending;
 };
 
@@ -89,22 +90,25 @@ void serve(void* PR_NULLABLE context) {
         w->jobs.clear();
         w->next = 0;
         w->running = false;
-        prConditionBroadcast(&w->changed);
-        // The caller may post the next jobs as soon as it is notified, and posting waits for the lock.
+        // The done function runs before a wait returns, so a caller that waited has been notified. The caller may post
+        // the next jobs as soon as it is notified, and posting takes the lock, so the function runs without it.
         PrLayoutWorkerDoneFn done = w->done;
         void* doneContext = w->doneContext;
         if (done != nullptr) {
+            w->notifying = true;
             prMutexUnlock(&w->mutex);
             done(doneContext);
             prMutexLock(&w->mutex);
+            w->notifying = false;
         }
+        prConditionBroadcast(&w->changed);
     }
     prMutexUnlock(&w->mutex);
 }
 
 // Waits for the posted jobs, with the lock held.
 void waitLocked(LayoutWorker* w) {
-    while (w->running)
+    while (w->running || w->notifying)
         prConditionWait(&w->changed, &w->mutex);
 }
 
@@ -176,7 +180,7 @@ void prLayoutWorkerWait(PrLayoutWorker* worker) {
 
 bool prLayoutWorkerIsBusy(const PrLayoutWorker* worker) {
     prMutexLock(&worker->mutex);
-    bool running = worker->running;
+    bool running = worker->running || worker->notifying;
     prMutexUnlock(&worker->mutex);
     return running;
 }
