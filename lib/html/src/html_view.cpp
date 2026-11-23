@@ -126,6 +126,11 @@ struct HtmlView {
     PrLayoutTextAffinity caretAffinity;
     PrRect textInput;
     bool hasTextInput;
+
+    // The layout tree and the node of the focused element that takes text input. The tree shows that node as edited
+    // (prLayoutTreeSetEdited).
+    PrLayoutTree* PR_NULLABLE editedTree;
+    PrLayoutNode editedNode;
     bool caretCollapsed;            // true if the control has a caret rather than a selection
     bool caretShown;                // true if the caret stands in the on part of its blink
     bool caretHidden;               // true if the host keeps the caret out of renders
@@ -1539,6 +1544,25 @@ bool caretBlinksOn(const HtmlView* v) {
 // Shows the selection and the caret of the focused editable text control, and clears those of the last one.
 void showTextControl(HtmlView* v) {
     PrDomElement* target = keyTarget(v);
+    // The focused element is edited only if it takes text input and, for a text control, is editable.
+    PrDomElement* focused = target != nullptr ? target->document->focused : nullptr;
+    bool isControl =
+        focused != nullptr && (domIsHtml(focused, PrDomTag_Input) || domIsHtml(focused, PrDomTag_Textarea));
+    if (focused != nullptr && (!htmlTakesTextInput(focused) || (isControl && !htmlTextControlIsEditable(focused))))
+        focused = nullptr;
+    PrCssPresentation* focusedShown = focused != nullptr ? presentationOfDocument(v, focused->document) : nullptr;
+    PrLayoutTree* editedTree = nullptr;
+    PrLayoutNode edited = kPrLayoutNodeNone;
+    if (focusedShown != nullptr) {
+        editedTree = prCssPresentationTree(focusedShown);
+        edited = prCssPresentationLayoutNode(focusedShown, prDomElementAsNode(focused));
+    }
+    if (v->editedTree != nullptr && (v->editedTree != editedTree || v->editedNode != edited))
+        prLayoutTreeSetEdited(v->editedTree, kPrLayoutNodeNone);
+    v->editedTree = edited != kPrLayoutNodeNone ? editedTree : nullptr;
+    v->editedNode = edited;
+    if (v->editedTree != nullptr)
+        prLayoutTreeSetEdited(v->editedTree, edited);
     bool editing = target != nullptr && target == target->document->focused && htmlTextControlIsEditable(target);
     PrCssPresentation* shown = editing ? presentationOfDocument(v, target->document) : nullptr;
     PrLayoutNode node = shown != nullptr ? prCssPresentationFieldText(shown, target) : kPrLayoutNodeNone;

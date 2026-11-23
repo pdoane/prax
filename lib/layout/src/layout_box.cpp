@@ -539,10 +539,11 @@ LayoutStyleTraits layoutStyleTraitsFromIndex(const LayoutStyles* styles, PrLayou
         multiColumn = columns && (blockContainer || box.display == PrLayoutDisplay_TableCell ||
             box.display == PrLayoutDisplay_TableCaption);
     }
+    bool vertical = layoutTableAt(styles->font, record.groups[PrLayoutGroup_Font]).writingMode !=
+        PrLayoutWritingMode_HorizontalTb;
     return LayoutStyleTraits{
         .childKind = layoutChildKindFromStyle(PrLayoutNodeKind_Element, &box, positioned),
-        .vertical = layoutTableAt(styles->font, record.groups[PrLayoutGroup_Font]).writingMode !=
-            PrLayoutWritingMode_HorizontalTb,
+        .vertical = vertical,
         .positioned = positioned,
         .mayPaintWhole = moved || layered || box.zIndexed,
         .mayStack = box.position == PrLayoutPosition_Fixed || box.position == PrLayoutPosition_Sticky || box.zIndexed ||
@@ -556,6 +557,7 @@ LayoutStyleTraits layoutStyleTraitsFromIndex(const LayoutStyles* styles, PrLayou
         .wholeTablePart = (moved || layered || box.zIndexed) && (layoutDisplayIsRowGroup(box.display) ||
             box.display == PrLayoutDisplay_TableRow || box.display == PrLayoutDisplay_TableCell),
         .multiColumn = multiColumn,
+        .ellipsis = box.textOverflow == PrLayoutTextOverflow_Ellipsis && box.overflowX != PrLayoutOverflow_Visible && !vertical,
     };
 }
 

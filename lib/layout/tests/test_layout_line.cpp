@@ -1,3 +1,6 @@
+#include "pr/draw_commands.h"
+#include "pr/draw_list.h"
+#include "pr/font.h"
 #include "pr/layout_query.h"
 #include "pr/layout_style.h"
 #include "pr/layout_tree.h"
@@ -1197,4 +1200,114 @@ TEST_CASE("lines may break before and after an atomic inline, but beside GL, WJ 
             CHECK(tops[1] == doctest::Approx(tops[0]));
         }
     }
+}
+
+TEST_CASE("text-overflow: ellipsis ends a line that overflows its clipping box with an ellipsis that fits in the box") {
+    // A painted glyph: its font, its id, and where its run puts it along the line, in px from the stage's left.
+    struct Painted {
+        const PrFont* font;
+        uint16_t id;
+        float x;
+    };
+    // Collects the glyphs of `list` and of the lists that it embeds, in order. A scroll container paints into an
+    // embedded list.
+    struct Collect {
+        static void into(const PrDrawList* list, float dx, Array<Painted>& out) {
+            const PrDrawCommand* commands = prDrawListCommands(list);
+            float moved = dx;
+            for (uint32_t i = 0; i < prDrawListCommandCount(list); ++i) {
+                const PrDrawCommand& c = commands[i];
+                if (c.kind == PrDrawCommandKind_PushTransformAffine2)
+                    moved += float(c.affine.e);
+                else if (c.kind == PrDrawCommandKind_PopTransform)
+                    moved = dx;
+                else if (c.kind == PrDrawCommandKind_Embed)
+                    into(c.embed.list, moved, out);
+                if (c.kind != PrDrawCommandKind_Glyphs)
+                    continue;
+                for (uint32_t g = 0; g < c.glyphs->glyphCount; ++g)
+                    out.push(Painted{c.glyphs->font, c.glyphs->glyphs[g].id, moved + c.glyphs->glyphs[g].position.x});
+            }
+        }
+    };
+    auto paint = [](Stage& s) {
+        PrDrawList* list = prDrawListCreate();
+        prLayoutTreePaint(s.f.tree, list);
+        Array<Painted> out;
+        Collect::into(list, 0, out);
+        prDrawListRelease(list);
+        return out;
+    };
+    // Lays out `text` on one line, in a box that is as wide as the stage and clips its overflow. The box's
+    // text-overflow is `overflow`. Returns the text.
+    auto lineOf = [](Stage& s, PrLayoutTextOverflow overflow, const char* text) {
+        PrLayoutBoxStyle box = clipping(block());
+        box.textOverflow = overflow;
+        PrLayoutFontStyle nowrap = s.style;
+        nowrap.textWrapMode = PrLayoutTextWrapMode_Nowrap;
+        PrLayoutNode clip = s.add(s.stage, box, &nowrap);
+        PrLayoutNode node = s.text(clip, text);
+        s.layout();
+        return node;
+    };
+    Stage s(Width{100, false});
+    PrLayoutNode text = lineOf(s, PrLayoutTextOverflow_Ellipsis, "Hello wonderful world");
+    Array<Painted> glyphs = paint(s);
+    REQUIRE(glyphs.count() > 1);
+    const Painted& last = glyphs.last();
+    uint16_t ellipsis = prFontCodePointGlyph(last.font, 0x2026);
+    REQUIRE(ellipsis != 0);
+    CHECK(last.id == ellipsis);
+    // The text up to the ellipsis is fewer glyphs than the text, and the ellipsis ends within the box.
+    CHECK(glyphs.count() < 21);
+    float stageLeft = s.f.bounds(s.stage).left;
+    CHECK(last.x - stageLeft + prFontGlyphAdvance(last.font, ellipsis, 20) <= 100.5f);
+
+    // Clip shows the text as it is, and text that fits needs no ellipsis.
+    Stage clipped(Width{100, false});
+    PrLayoutNode clippedText = lineOf(clipped, PrLayoutTextOverflow_Clip, "Hello wonderful world");
+    Array<Painted> all = paint(clipped);
+    CHECK(all.count() == 21);
+    CHECK(all.last().id != ellipsis);
+
+    // The ellipsis affects painting only. The text keeps the geometry that it has without the ellipsis, and a hit on
+    // the ellipsis reaches the text that the ellipsis replaces.
+    PrRect with = s.f.bounds(text);
+    PrRect without = clipped.f.bounds(clippedText);
+    CHECK(with.left == without.left);
+    CHECK(with.right == without.right);
+    CHECK(with.right - stageLeft > 100);
+    PrRect line = s.f.bounds(s.stage);
+    CHECK(s.f.hit(PrVec2{last.x + 1, (line.top + line.bottom) / 2}) == text);
+
+    // While the box is scrolled along its line, or is edited, its line shows all of its text, clipped.
+    PrLayoutNode box = prLayoutNodeParent(s.f.tree, text);
+    prLayoutNodeSetScroll(s.f.tree, box, prLayoutVecFromPx(PrVec2{10, 0}));
+    s.layout();
+    Array<Painted> scrolled = paint(s);
+    CHECK(scrolled.count() == 21);
+    CHECK(scrolled.last().id != ellipsis);
+    prLayoutNodeSetScroll(s.f.tree, box, prLayoutVecFromPx(PrVec2{0, 0}));
+    s.layout();
+    CHECK(paint(s).last().id == ellipsis);
+    prLayoutTreeSetEdited(s.f.tree, box);
+    s.layout();
+    Array<Painted> edited = paint(s);
+    CHECK(edited.count() == 21);
+    prLayoutTreeSetEdited(s.f.tree, kPrLayoutNodeNone);
+    s.layout();
+    CHECK(paint(s).last().id == ellipsis);
+
+    // The first grapheme of a line stays, clipped, even if the ellipsis has no room after it.
+    Stage narrow(Width{4, false});
+    lineOf(narrow, PrLayoutTextOverflow_Ellipsis, "Hello");
+    Array<Painted> first = paint(narrow);
+    REQUIRE(first.count() == 2);
+    CHECK(first[0].id != ellipsis);
+    CHECK(first[1].id == ellipsis);
+    Stage fits(Width{100, false});
+    lineOf(fits, PrLayoutTextOverflow_Ellipsis, "Hi");
+    Array<Painted> few = paint(fits);
+    CHECK(few.count() == 2);
+    CHECK(few.last().id != ellipsis);
 }

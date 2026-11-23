@@ -11,6 +11,11 @@ PR_ASSUME_NONNULL_BEGIN
 
 namespace pr_impl {
 
+// Returns true if the element takes text input from the keyboard. Such an element is an input whose type accepts typed
+// text, a textarea, or an editing host. If a press moves focus to such an element, the focus is visible
+// (selectors-4/#the-focus-visible-pseudo).
+bool htmlTakesTextInput(const PrDomElement* element);
+
 // Returns true if the element is a focusable area (html/#focusable-area). With a presentation, the element must be
 // rendered and interactive (cssPresentationIsInteractive), which brings the presentation's styles up to date. Without a
 // presentation, an element counts as rendered unless it or an ancestor has the hidden or the inert attribute.

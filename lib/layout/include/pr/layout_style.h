@@ -323,6 +323,15 @@ enum {
 };
 typedef uint8_t PrLayoutWheelEvents;
 
+// What a block container shows at the end of a line that overflows it (css-overflow-4/#text-overflow). It applies if
+// the container clips its overflow in the inline axis. The content is clipped, or an ellipsis replaces the content that
+// does not fit.
+enum {
+    PrLayoutTextOverflow_Clip,
+    PrLayoutTextOverflow_Ellipsis,
+};
+typedef uint8_t PrLayoutTextOverflow;
+
 PR_NO_PADDING_BEGIN
 // The color of text, whether a box is visible, whether an empty table cell paints, whether a box takes the pointer, and
 // whether a wheel over it waits. A group's colors are extended sRGB with straight alpha, as draw lists carry them, in
@@ -583,7 +592,10 @@ typedef struct PrLayoutBoxStyle {
     // It has size containment in its block axis, so that its content does not size it there and it does not break in a
     // fragmentation context (css-contain-2/#containment-size, css-break-4/#monolithic).
     uint8_t containBlock : 1;
-    uint8_t _pad2 : 3;
+
+    // What shows at the end of a line that overflows a block container whose overflow clips in the inline axis.
+    PrLayoutTextOverflow textOverflow : 1;
+    uint8_t _pad2 : 2;
 
     uint16_t intrinsicCharacters;
 } PrLayoutBoxStyle;

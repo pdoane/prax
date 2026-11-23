@@ -709,6 +709,19 @@ PrLayoutOverflow overflowOf(CssValueRun run) {
     }
 }
 
+// Returns what a block container shows at the end side of a line that overflows. text-overflow has one or two values,
+// and the last value applies to the end side.
+PrLayoutTextOverflow textOverflowOf(CssValueRun run) {
+    uint32_t last = run.count;
+    for (uint32_t at = 0; at < run.count; at += run.values[at].next)
+        last = at;
+    if (last == run.count || run.values[last].kind != PrCssValueKind_Keyword)
+        return PrLayoutTextOverflow_Clip;
+    if (cssValueKeyword(&run.values[last]) == PrCssKeyword_Ellipsis)
+        return PrLayoutTextOverflow_Ellipsis;
+    return PrLayoutTextOverflow_Clip;
+}
+
 PrLayoutOverscroll overscrollOf(CssValueRun run) {
     switch (cssValueRunFirstKeyword(run)) {
         case PrCssKeyword_Contain:
@@ -2627,6 +2640,7 @@ PrLayoutStyleIndex project(PrCssPresentation* r, const CssComputedStyle* style, 
         box.overflowY = PrLayoutOverflow_Visible;
     }
     // The root's own overscroll behavior is the viewport's, whichever element's overflow the viewport takes.
+    box.textOverflow = textOverflowOf(cssComputedValue(style, PrCssProperty_TextOverflow));
     box.overscrollX = overscrollOf(cssComputedValue(style, PrCssProperty_OverscrollBehaviorX));
     box.overscrollY = overscrollOf(cssComputedValue(style, PrCssProperty_OverscrollBehaviorY));
     // Layout reads whether the box has a transform. Only compositing reads its matrix. Most elements have no transform,

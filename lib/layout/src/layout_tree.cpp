@@ -770,6 +770,10 @@ bool sameText(const LayoutFragment* x, const LayoutFragment* y, LayoutNodeIndex 
         mismatch(out, node, "the text run's size, glyph count, font count or font range count");
         return false;
     }
+    if (a.drawn != b.drawn) {
+        mismatch(out, node, "the number of glyphs that the text run draws before an ellipsis");
+        return false;
+    }
     const PrFont* const* fa = layoutFragmentTextFonts(x);
     const PrFont* const* fb = layoutFragmentTextFonts(y);
     for (uint32_t i = 0; i < a.fontCount; ++i) {
@@ -1322,10 +1326,17 @@ void layoutTreeSetCarets(LayoutTree* tree, const PrLayoutCaret* PR_NULLABLE care
     }
     if (same)
         return;
-    // The recordings of the text that a caret leaves and of the text that it comes to change.
+    // The recording of the text that a caret leaves changes, and so does the recording of the text that a caret enters.
+    // The recording of a block container whose lines end with an ellipsis changes too, because a caret in the container
+    // hides the ellipsis (layoutEllipsisShows).
     auto mark = [&](PrLayoutNode node) {
-        if (prLayoutNodeIsValid(static_cast<PrLayoutTree*>(tree), node))
-            markPainted(tree, layoutNodeIndex(tree, node), false);
+        if (!prLayoutNodeIsValid(static_cast<PrLayoutTree*>(tree), node))
+            return;
+        LayoutNodeIndex index = layoutNodeIndex(tree, node);
+        markPainted(tree, index, false);
+        LayoutNodeIndex block = layoutTextContainer(tree, index);
+        if (block != kPrLayoutNodeNone && layoutStyleTraits(tree->styles, nodeAt(tree, block).style).ellipsis)
+            markPainted(tree, block, false);
     };
     for (uint32_t i = 0; i < kept.carets.count; ++i)
         mark(kept.carets.data[i].position.node);
@@ -1362,6 +1373,23 @@ uint32_t layoutNodeLineStyle(const LayoutTree* tree, LayoutNodeIndex node) {
     if (styled != kPrLayoutNodeNone && (n.kind != PrLayoutNodeKind_Text || styled != node))
         line = layoutFirstLineStyle(tree, styled);
     return line != kPrLayoutStyleNone ? line : layoutNodeStyle(tree, node);
+}
+
+LayoutNodeIndex layoutTextContainer(const LayoutTree* tree, LayoutNodeIndex node) {
+    LayoutNodeIndex at = layoutTreeNode(tree, node).parent;
+    while (at != kPrLayoutNodeNone &&
+            layoutBoxStyle(tree->styles, layoutTreeNode(tree, at).style).display == PrLayoutDisplay_Inline)
+        at = layoutTreeNode(tree, at).parent;
+    return at;
+}
+
+PrLayoutStyleIndex layoutEllipsisStyle(const LayoutTree* tree, const LayoutFragment* fragment) {
+    LayoutNodeIndex block = layoutTextContainer(tree, fragment->node);
+    if (block == kPrLayoutNodeNone)
+        return layoutFragmentStyle(tree, fragment);
+    if ((fragment->flags & LayoutFragmentFlag_FirstLine) != 0)
+        return layoutNodeLineStyle(tree, block);
+    return layoutNodeStyle(tree, block);
 }
 
 } // namespace pr_impl
@@ -1721,6 +1749,38 @@ bool prLayoutTreeCaretsHidden(const PrLayoutTree* tree) {
     return tree->carets.hidden;
 }
 
+void prLayoutTreeSetEdited(PrLayoutTree* tree, PrLayoutNode element) {
+    LayoutTree* t = tree;
+    if (t->edited == element)
+        return;
+    // The block containers whose lines end with an ellipsis show their lines differently, both in the element that was
+    // edited before the call and in the element that is edited after it.
+    auto mark = [&](PrLayoutNode node) {
+        if (!prLayoutNodeIsValid(tree, node))
+            return;
+        LayoutNodeIndex root = layoutNodeIndex(t, node);
+        for (LayoutNodeIndex at = root; at != kPrLayoutNodeNone;) {
+            const LayoutTreeNode& n = nodeAt(t, at);
+            if (layoutKindIsElement(n.kind) && layoutStyleTraits(t->styles, n.style).ellipsis)
+                markPainted(t, at, false);
+            if (n.first != kPrLayoutNodeNone && layoutKindIsElement(n.kind)) {
+                at = n.first;
+                continue;
+            }
+            while (at != root && nodeAt(t, at).next == kPrLayoutNodeNone)
+                at = nodeAt(t, at).parent;
+            at = at == root ? kPrLayoutNodeNone : nodeAt(t, at).next;
+        }
+    };
+    mark(t->edited);
+    t->edited = element;
+    mark(element);
+}
+
+PrLayoutNode prLayoutTreeEdited(const PrLayoutTree* tree) {
+    return tree->edited;
+}
+
 void prLayoutNodeSetRendered(PrLayoutTree* tree, PrLayoutNode node, PrLayoutRenderedFlags flags) {
     tree->nodes.data[layoutNodeIndex(tree, node)].rendered = flags;
 }
@@ -1850,7 +1910,13 @@ void prLayoutNodeSetScroll(PrLayoutTree* tree, PrLayoutNode element, PrLayoutVec
         t->viewportScroll = offset;
     } else {
         PR_ASSERT(layoutKindIsElement(nodeAt(t, index).kind));
-        nodeAt(t, index).scroll = offset;
+        LayoutTreeNode& n = nodeAt(t, index);
+        // The ellipsis at the end of a block container's lines shows only while the container is not scrolled along its
+        // lines (layoutEllipsisShows).
+        if ((n.scroll.x == kLayoutUnitZero) != (offset.x == kLayoutUnitZero) &&
+                layoutStyleTraits(t->styles, n.style).ellipsis)
+            markPainted(t, index, false);
+        n.scroll = offset;
     }
     layoutAnchoringScrolled(t, index, offset);
 }

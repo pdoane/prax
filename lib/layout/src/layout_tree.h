@@ -306,6 +306,7 @@ struct LayoutTree {
     RawArray<LayoutHighlights> highlights;
     HashIndex highlightIndex;
     LayoutTreeCarets carets;
+    PrLayoutNode edited;                  // the element that the user edits (prLayoutTreeSetEdited)
 
     LayoutScratch* PR_NULLABLE scratch;   // memory that layouts reuse, created by the first layout
 
@@ -475,13 +476,21 @@ PrLayoutStyleIndex layoutFirstLineStyle(const LayoutTree* tree, LayoutNodeIndex 
 // that line. Otherwise it is the node's record (layoutNodeStyle).
 uint32_t layoutNodeLineStyle(const LayoutTree* tree, LayoutNodeIndex node);
 
+// Returns the block container of the lines of the text `node`: the first box around it that is not an inline box.
+LayoutNodeIndex layoutTextContainer(const LayoutTree* tree, LayoutNodeIndex node);
+
 // Returns the record that a fragment's node paints in: its record for the first formatted line if the fragment is on
-// that line (LayoutFragmentFlag_FirstLine), and its own otherwise.
+// that line (LayoutFragmentFlag_FirstLine), and its own otherwise. An ellipsis paints in the record of its block
+// container instead. Paint asks for that record with layoutEllipsisStyle.
 inline PrLayoutStyleIndex layoutFragmentStyle(const LayoutTree* tree, const LayoutFragment* fragment) {
     if ((fragment->flags & LayoutFragmentFlag_FirstLine) != 0)
         return layoutNodeLineStyle(tree, fragment->node);
     return layoutNodeStyle(tree, fragment->node);
 }
+
+// Returns the record that the ellipsis `fragment` paints in. It is the record of the ellipsis's block container, or
+// that container's record for the first formatted line if the ellipsis is on that line (css-overflow-4/#text-overflow).
+PrLayoutStyleIndex layoutEllipsisStyle(const LayoutTree* tree, const LayoutFragment* fragment);
 
 } // namespace pr_impl
 

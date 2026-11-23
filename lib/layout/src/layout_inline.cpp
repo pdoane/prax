@@ -5,9 +5,11 @@
 
 #include "pr/alloc.h"
 #include "pr/float.h"
+#include "pr/font.h"
 #include "pr/mem.h"
 #include "pr/search.h"
 #include "pr/sort.h"
+#include "pr/unicode_grapheme.h"
 #include "pr/utf8.h"
 
 #include "layout/src/layout_bidi.h"
@@ -1019,6 +1021,7 @@ struct LinePlace {
     PrLayoutUnit size;
     PrLayoutUnit indent;
     PrLayoutTextAlign align;
+    uint32_t container;     // the block container of the line
 };
 
 // Resolves the levels of the bytes [start, end) of the line, in a paragraph at level `paragraph`, into `lineLevels` of
@@ -1219,6 +1222,155 @@ void treeOrder(const LayoutStyles* styles, LayoutInlineFrame& f, uint32_t mark, 
         closing->part.closes = box.close != kNoItem;
         closing->part.enclosed = f.leafStart.data[box.end] - f.contentStart.data[b];
     }
+}
+
+// The ellipsis that ends a line, if the line's content overflows a box whose text-overflow is ellipsis
+// (css-overflow-4/#text-overflow). `shown` is true if the line has an ellipsis. The ellipsis replaces the line's
+// content from the byte `cut`, which is `at` px along the line from its start. `font`, `metrics` and `size` are the
+// face that draws the ellipsis. The ellipsis is one glyph of U+2026, or three periods if the face has no such glyph. It
+// is drawn as `glyph` repeated `glyphCount` times, and each glyph advances `glyphAdvance` px. `advance` is how far the
+// whole ellipsis advances, in px.
+struct LineEllipsis {
+    bool shown;
+    uint32_t cut;
+    float at;
+    const PrFont* PR_NULLABLE font;
+    LayoutFaceMetrics metrics;
+    float size;
+    uint16_t glyph;
+    uint32_t glyphCount;
+    float glyphAdvance;
+    float advance;
+};
+
+// Returns the ellipsis of the line from `from` to `end`. The caller has checked that the lines of the block container
+// may have an ellipsis (LayoutStyleTraits::ellipsis). The ellipsis shows if the line's content overflows the room of
+// `place`. It replaces the content from the last grapheme boundary that leaves room for the ellipsis. It never replaces
+// the line's first grapheme, which is clipped instead, or an atomic inline that starts the line.
+LineEllipsis ellipsisOf(LayoutState& state, const LayoutInlineFrame& f, const LayoutInlineShaping& t,
+        uint32_t from, uint32_t end, const LinePlace& place) {
+    LineEllipsis e{};
+    PrLayoutStyleIndex container = layoutTreeNode(state.tree, place.container).style;
+    uint32_t drawn = end;
+    while (drawn > from && (t.spaces.data[drawn - 1] & PrTextSpaceFlag_Collapsible) != 0)
+        --drawn;
+    if (drawn == from)
+        return e;
+    const float* position = f.position.data;
+    float room = prLayoutUnitToPx(place.size - place.indent);
+    if (position[drawn] - position[from] <= room)
+        return e;
+    const LayoutFontFaces& faces = layoutFontFaces(state.styles, container);
+    if (faces.font == nullptr || faces.firstFace == kLayoutFaceNone)
+        return e;
+    e.font = layoutFaceFont(faces, faces.firstFace);
+    e.metrics = faces.first;
+    e.size = prLayoutUnitToPx(faces.size);
+    e.glyph = prFontCodePointGlyph(e.font, 0x2026);
+    e.glyphCount = 1;
+    if (e.glyph == 0) {
+        e.glyph = prFontCodePointGlyph(e.font, '.');
+        e.glyphCount = 3;
+    }
+    e.glyphAdvance = prFontGlyphAdvance(e.font, e.glyph, e.size);
+    e.advance = e.glyphAdvance * float(e.glyphCount);
+    PrStringView text{t.text.data, t.text.count};
+    uint32_t first = uint32_t(prUnicodeGraphemeNext(text, from));
+    uint32_t cut = first < drawn ? first : drawn;
+    for (uint32_t b = cut; b < drawn;) {
+        uint32_t next = uint32_t(prUnicodeGraphemeNext(text, b));
+        next = next < drawn ? next : drawn;
+        if (position[next] - position[from] + e.advance > room)
+            break;
+        cut = next;
+        b = next;
+    }
+    e.cut = cut;
+    e.at = position[cut] - position[from];
+    e.shown = true;
+    return e;
+}
+
+// Hides the content of the line that the ellipsis `e` replaces, among the children from index `mark` on. That content
+// is the glyphs that start past the start of the ellipsis, and the atomic inlines and the parts of inline boxes that
+// start past it. The hidden content keeps its place. Then makes the text fragment of the ellipsis at its place. The
+// glyphs of the ellipsis sit on the root baseline, in the first face of the block container. The fragment's node is the
+// text that the ellipsis replaces, so a hit on the ellipsis reaches that text. The fragment's style is the block
+// container's. A line that shows no text has no ellipsis. Returns true if it made the ellipsis.
+bool placeEllipsis(LayoutState& state, const LayoutInlineFrame& f, const LayoutInlineShaping& t,
+        const LineEllipsis& e, uint32_t container, uint32_t mark, LayoutMode mode) {
+    RawArray<LayoutLogicalChild>& children = state.scratch->children;
+    float at = e.at - 0.01f;
+    for (uint32_t i = mark; i < children.count; ++i) {
+        // The line made its text fragments and the parts of its inline boxes, and no other fragment shares them yet, so
+        // they can be changed. An atomic inline is shared with its cache and stays unchanged. The walk over the line's
+        // fragments skips an elided atomic inline by its place on the line.
+        const LayoutLogicalChild& child = children.data[i];
+        if (child.fragment->kind != LayoutFragmentKind_Text && child.fragment->kind != LayoutFragmentKind_Inline)
+            continue;
+        LayoutFragment* c = const_cast<LayoutFragment*>(child.fragment);
+        float x = prLayoutUnitToPx(child.offset.inlineOffset);
+        if (c->kind == LayoutFragmentKind_Text) {
+            uint32_t drawn = 0;
+            while (drawn < c->text.glyphCount && x + c->text.glyphs[drawn].position.x < at)
+                ++drawn;
+            c->text.drawn = drawn;
+        } else if (x >= at) {
+            c->flags |= LayoutFragmentFlag_Elided;
+        }
+    }
+    // The text that the ellipsis replaces is the last text item on the line that starts at or before the cut, or the
+    // line's first text item if none does.
+    const LayoutLineItem* target = nullptr;
+    for (uint32_t i = 0; i < f.line.items.count; ++i) {
+        const LayoutLineItem& on = f.line.items.data[i];
+        if (t.items.data[on.item].kind != LayoutInlineItemKind_Text || on.to <= on.from)
+            continue;
+        if (target == nullptr || on.from <= e.cut)
+            target = &on;
+    }
+    if (target == nullptr)
+        return false;
+    const LayoutInlineItem& item = t.items.data[target->item];
+    PrLayoutStyleIndex style = layoutTreeNode(state.tree, container).style;
+    PrLayoutAlignmentBaseline dominant = layoutDominantBaseline(layoutFontStyle(state.styles, style));
+    PrLayoutUnit offset = layoutFaceBaseline(e.metrics, dominant);
+    PrLayoutUnit lo = -e.metrics.ascent - offset;
+    PrLayoutUnit hi = e.metrics.descent - offset;
+    float across = prLayoutUnitToPx(-offset - lo);
+    const PrFont* fonts[] = {e.font};
+    LayoutFragmentFontRange range{0, e.glyphCount, 1};
+    LayoutFragment* text = layoutFragmentCreateText(item.node, e.size, fonts, 1, &range, 1, e.glyphCount, 1);
+    ++state.stats->textFragmentsMade;
+    state.stats->textFragmentBytes += layoutFragmentTextBytes(1, 1, e.glyphCount, 1);
+    text->turn = turnOf(mode, false);
+    text->flags |= LayoutFragmentFlag_Ellipsing;
+    if (t.lined)
+        text->flags |= LayoutFragmentFlag_FirstLine;
+    uint32_t cut = e.cut > item.start ? (e.cut < item.end ? e.cut : item.end) : item.start;
+    uint32_t source = sourceEnd(state, t, item, cut);
+    text->text.end = source;
+    for (uint32_t k = 0; k < e.glyphCount; ++k)
+        text->text.glyphs[k] = PrFontGlyph{e.glyph, PrVec2{e.glyphAdvance * float(k), across}};
+    layoutFragmentTextStops(text)[0] = LayoutCaretStop{source, 0};
+    text->text.stopCount = 1;
+    PrLayoutUnit advance = prLayoutUnitFromPxCeil(e.advance);
+    text->extent = layoutPhysicalSize(mode, LayoutLogicalSize{advance, hi - lo});
+    children.push(LayoutLogicalChild{text, LayoutLogicalOffset{prLayoutUnitFromPx(e.at), lo}});
+    return true;
+}
+
+// Ends the line from `from` to `end` with an ellipsis (ellipsisOf, placeEllipsis), and returns true if it did. The
+// caller passes a line whose content overflows its room and whose children start at index `mark`. The line gets an
+// ellipsis only if the lines of its block container may have one and its text has no bidi. The function is called only
+// for a line that overflows, and it is not inlined. A line that fits therefore never reads the container's style for
+// the ellipsis, and pays for none of this work.
+PR_NOINLINE bool ellipsize(LayoutState& state, const LayoutInlineFrame& f, const LayoutInlineShaping& t, uint32_t from,
+        uint32_t end, const LinePlace& place, uint32_t mark, LayoutMode mode) {
+    if (t.bidi || !layoutStyleTraits(state.styles, layoutTreeNode(state.tree, place.container).style).ellipsis)
+        return false;
+    LineEllipsis e = ellipsisOf(state, f, t, from, end, place);
+    return e.shown && placeEllipsis(state, f, t, e, place.container, mark, mode);
 }
 
 // Appends the line from `at` to `end` to the children being built, and advances `at` past it. The children of the line
@@ -1653,6 +1805,10 @@ LineBuilt buildLine(LayoutState& state, LayoutInlineFrame& f, const LayoutInline
         }
     }
 
+    // If a line overflows a box whose text-overflow is ellipsis, the line keeps its content. The ellipsis shows in
+    // place of the content that does not fit before it.
+    bool ellipsed = used > room && !phantom && ellipsize(state, f, t, line.from.byte, end, place, mark, space.mode);
+
     // The content goes where the alignment puts it from its start edge, past the indent. The white space that hangs
     // goes past its end, which is on the right in an ltr paragraph and on the left in an rtl paragraph, where L1 put
     // it.
@@ -1696,6 +1852,8 @@ LineBuilt buildLine(LayoutState& state, LayoutInlineFrame& f, const LayoutInline
     LayoutLogicalSize size{place.size, blockSize};
     state.stats->lineChildrenMade += children.count - mark;
     LayoutFragment* fragment = layoutFragmentBuild(children, mark, LayoutFragmentKind_Line, kPrLayoutNodeNone, frame, size);
+    if (ellipsed)
+        fragment->flags |= LayoutFragmentFlag_Ellipsis;
     layoutFragmentSetOverflow(state.tree, fragment);
     for (uint32_t i = anchorsBefore; i < f.floats.anchors.count; ++i)
         f.floats.anchors.data[i].line = children.count;
@@ -2057,7 +2215,7 @@ LayoutInlineResult layoutLines(LayoutState& state, LayoutInlineFrame& f, const L
             layoutInlineStartFromLeft(bfc.containing, space.mode.direction, fit.span.left, lineSize), fit.y - bfc.top,
         };
         bool lastLike = isFinal(lt, segment, at.byte, fit.end) || endsForced(lt, fit.end);
-        LinePlace place{lineAt, lineSize, lineIndent, lastLike ? lastAlignOf(font) : font.textAlign};
+        LinePlace place{lineAt, lineSize, lineIndent, lastLike ? lastAlignOf(font) : font.textAlign, container};
         LineBuilt built = buildLine(state, lf, lt, at, fit.end, lineStrut, place, space, !content);
         PrLayoutUnit blockSize = built.extent.above + built.extent.below;
         if (!built.phantom) {

@@ -166,19 +166,6 @@ void focusUpdate(PrDomDocument* document, PrDomElement* PR_NULLABLE old, PrDomEl
     }
 }
 
-// Returns true if the element takes text input from the keyboard: an input of a type that is typed into, a textarea, or
-// an editing host. Focus that a press moves to such an element shows (selectors-4/#the-focus-visible-pseudo).
-bool takesTextInput(const PrDomElement* element) {
-    if (domIsHtml(element, PrDomTag_Textarea))
-        return true;
-    if (domIsHtml(element, PrDomTag_Input)) {
-        PrDomInputType type = domInputType(domAttributeValue(element, "type"));
-        return type >= PrDomInputType_Text && type <= PrDomInputType_Number;
-    }
-    DomContentEditable editable = domContentEditable(domAttributeValue(element, "contenteditable"));
-    return editable == DomContentEditable_True || editable == DomContentEditable_PlaintextOnly;
-}
-
 // Returns true if the element owns a focus navigation scope (html/#focus-navigation-scope-owner): a shadow host or a
 // slot. The trigger of a showing popover is not one yet.
 bool isScopeOwner(const PrDomElement* element) {
@@ -520,6 +507,17 @@ void dropCandidate(PrDomElement* element) {
 
 } // namespace
 
+bool htmlTakesTextInput(const PrDomElement* element) {
+    if (domIsHtml(element, PrDomTag_Textarea))
+        return true;
+    if (domIsHtml(element, PrDomTag_Input)) {
+        PrDomInputType type = domInputType(domAttributeValue(element, "type"));
+        return type >= PrDomInputType_Text && type <= PrDomInputType_Number;
+    }
+    DomContentEditable editable = domContentEditable(domAttributeValue(element, "contenteditable"));
+    return editable == DomContentEditable_True || editable == DomContentEditable_PlaintextOnly;
+}
+
 bool htmlFocusable(const PrDomElement* element) {
     if (!domIsConnected(element))
         return false;
@@ -583,11 +581,11 @@ bool htmlFocus(PrDomElement* element, HtmlFocusIndication indication) {
             visible = false;
             break;
         case HtmlFocusIndication_Script:
-            visible = takesTextInput(target) ||
+            visible = htmlTakesTextInput(target) ||
                 (!document->pressInput && (document->focused == nullptr || document->focusVisible));
             break;
         case HtmlFocusIndication_Press:
-            visible = takesTextInput(target);
+            visible = htmlTakesTextInput(target);
             break;
     }
     // The iframes around the document take the focus in the documents that hold them, outermost first

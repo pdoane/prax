@@ -121,6 +121,10 @@ struct LayoutStyleTraits {
     bool wholeTablePart;
 
     bool multiColumn;               // true if a box of the record is a multi-column container (css-multicol-1)
+
+    // True if the box's text-overflow is ellipsis, its overflow clips in the horizontal axis, and its lines are
+    // horizontal. The lines of such a box may end with an ellipsis (css-overflow-4/#text-overflow).
+    bool ellipsis;
 };
 
 // The interned style records and groups of a tree, and the faces and metrics that layout caches for their fonts.

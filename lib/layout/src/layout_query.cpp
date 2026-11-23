@@ -140,7 +140,7 @@ struct HitTester : LayoutWalkVisitor {
     }
 
     // A break has no extent along its line, and only gives a caret a place.
-    void text(const LayoutFragment* fragment, PrLayoutVec offset, bool visible) {
+    void text(const LayoutFragment* fragment, PrLayoutVec offset, bool visible, uint32_t) {
         if ((fragment->flags & LayoutFragmentFlag_Break) == 0)
             test(fragment->node, layoutRectAt(offset, fragment->extent), visible);
     }
@@ -413,10 +413,10 @@ void eachText(LayoutNodeIndex node, const LayoutFragment* container, LayoutPiece
 }
 
 // Appends the line rectangles of the text `node`, in content order and in its block container's content. A break has no
-// extent along its line, and only gives a caret a place.
+// extent along its line, and only gives a caret a place. An ellipsis is not part of the text, so it adds no rectangle.
 void textBoxes(LayoutNodeIndex node, const LayoutFragment* container, LayoutPieceAt at, RawArray<PrLayoutRect>& out) {
     eachText(node, container, at, [&](const PlacedText& piece) {
-        if ((piece.fragment->flags & LayoutFragmentFlag_Break) == 0)
+        if ((piece.fragment->flags & (LayoutFragmentFlag_Break | LayoutFragmentFlag_Ellipsing)) == 0)
             out.push(layoutRectAt(piece.offset, piece.fragment->extent));
     });
 }

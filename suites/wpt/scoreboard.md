@@ -84,7 +84,7 @@ of a change to it is what the change did.
 | css/css-motion-path              |         1/1 |           1/1 |  100.0% |
 | css/css-multicol                 |     717/717 |     1636/2228 |   73.4% |
 | css/css-nesting                  |       47/47 |       105/149 |   70.4% |
-| css/css-overflow                 |     685/686 |      754/1488 |   50.6% |
+| css/css-overflow                 |     685/686 |      760/1488 |   51.0% |
 | css/css-overscroll-behavior      |       11/12 |         78/96 |   81.2% |
 | css/css-page                     |     258/258 |       239/385 |   62.0% |
 | css/css-parser-api               |         1/1 |          5/71 |    7.0% |
@@ -133,7 +133,7 @@ of a change to it is what the change did.
 | web-animations/interfaces        |       45/47 |        80/834 |    9.5% |
 | web-animations/responsive        |       40/46 |         0/105 |    0.0% |
 | web-animations/timing-model      |       25/34 |         2/402 |    0.4% |
-| **total**                        | 32146/32468 | 154169/209314 |   73.6% |
+| **total**                        | 32146/32468 | 154175/209314 |   73.6% |
 
 ## dom
 

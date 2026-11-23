@@ -264,6 +264,12 @@ uint32_t prLayoutTreeCarets(const PrLayoutTree* tree, PrLayoutCaret* PR_NULLABLE
 void prLayoutTreeSetCaretsHidden(PrLayoutTree* tree, bool hidden);
 bool prLayoutTreeCaretsHidden(const PrLayoutTree* tree);
 
+// Set and return the element that the user is editing, or kPrLayoutNodeNone. While an element is edited, the block
+// containers inside it clip the content at the end of their lines and show no ellipsis
+// (css-overflow-4/#ellipsis-interaction). They do the same while they hold a caret.
+void prLayoutTreeSetEdited(PrLayoutTree* tree, PrLayoutNode element);
+PrLayoutNode prLayoutTreeEdited(const PrLayoutTree* tree);
+
 // ---------------------------------------------------------------------------------------------------------------------
 // Keys
 

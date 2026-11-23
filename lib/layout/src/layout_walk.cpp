@@ -139,6 +139,29 @@ PrDMatrix3 layoutBoxPlane(const LayoutTree* tree, const LayoutFragment* fragment
     return layoutPlaneHomography(map, offset);
 }
 
+bool layoutEllipsisShows(const LayoutTree* tree, LayoutNodeIndex node) {
+    LayoutNodeIndex block = layoutTextContainer(tree, node);
+    if (block == kPrLayoutNodeNone)
+        return true;
+    if (layoutTreeNode(tree, block).scroll.x != kLayoutUnitZero)
+        return false;
+    if (prLayoutNodeIsValid(static_cast<const PrLayoutTree*>(tree), tree->edited)) {
+        LayoutNodeIndex edited = layoutNodeIndex(tree, tree->edited);
+        for (LayoutNodeIndex at = block; at != kPrLayoutNodeNone; at = layoutTreeNode(tree, at).parent) {
+            if (at == edited)
+                return false;
+        }
+    }
+    const RawArray<PrLayoutCaret>& carets = tree->carets.carets;
+    for (uint32_t i = 0; i < carets.count; ++i) {
+        PrLayoutNode caret = carets.data[i].position.node;
+        if (prLayoutNodeIsValid(static_cast<const PrLayoutTree*>(tree), caret) &&
+                layoutTextContainer(tree, layoutNodeIndex(tree, caret)) == block)
+            return false;
+    }
+    return true;
+}
+
 bool layoutFragmentPaintsWhole(const LayoutTree* tree, const LayoutFragment* fragment) {
     return fragment->node != kPrLayoutNodeNone && fragment->kind != LayoutFragmentKind_Around &&
         layoutPaintsWholeAs(tree, fragment->node, layoutTreeNode(tree, fragment->node).style);

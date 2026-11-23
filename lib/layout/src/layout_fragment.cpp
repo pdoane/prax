@@ -161,9 +161,11 @@ LayoutFragment* layoutFragmentCreateText(LayoutNodeIndex node, float size, const
     fragment->node = node;
     fragment->text.size = size;
     fragment->text.glyphCount = glyphCount;
-    fragment->text.fontCount = fontCount;
-    fragment->text.rangeCount = rangeCount;
+    PR_ASSERT(fontCount <= 0xffff && rangeCount <= 0xffff);
+    fragment->text.fontCount = uint16_t(fontCount);
+    fragment->text.rangeCount = uint16_t(rangeCount);
     fragment->text.stopCount = stopCount;
+    fragment->text.drawn = glyphCount;
     const PrFont** ownFonts = const_cast<const PrFont**>(layoutFragmentTextFonts(fragment));
     for (uint32_t i = 0; i < fontCount; ++i) {
         PR_ASSERT(i == 0 || fonts[i] != fonts[i - 1]);

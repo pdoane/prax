@@ -104,6 +104,14 @@ PrDMatrix3 layoutPlaneHomography(const PrDMatrix4& map, PrLayoutVec offset);
 // `*hidden` to true if the box hides its back and shows it.
 PrDMatrix3 layoutBoxPlane(const LayoutTree* tree, const LayoutFragment* fragment, PrLayoutVec offset, bool* PR_NULLABLE hidden);
 
+// Returns true if the ellipsis whose node is the text `node` shows. The ellipsis does not show while the user interacts
+// with the block container of its line, and the line's content is clipped instead
+// (css-overflow-4/#ellipsis-interaction). The user interacts with the container while it is scrolled along its lines,
+// which shows more of their content (css-overflow-4/#ellipsis-scrolling). The user also interacts with the container
+// while it is edited: while it holds a caret, or while it is in the element that the user edits
+// (prLayoutTreeSetEdited). The tree repaints the container when any of these states changes.
+bool layoutEllipsisShows(const LayoutTree* tree, LayoutNodeIndex node);
+
 // Returns true if the box `fragment` paints whole, from its stacking context's list (layoutPaintsWholeAs).
 bool layoutFragmentPaintsWhole(const LayoutTree* tree, const LayoutFragment* fragment);
 
@@ -180,9 +188,9 @@ struct LayoutWalkVisitor {
     // beneath the block, and again in the inlines phase, among the inline box's parts on lines in content order.
     void around(const LayoutFragment*, PrLayoutRect, bool, LayoutPhase) {}
 
-    // Called for a replaced box's content and for a text run.
+    // Called for the content of a replaced box, and for a text run. Only the first `drawn` glyphs of the run paint.
     void replaced(const LayoutFragment*, PrLayoutVec, bool) {}
-    void text(const LayoutFragment*, PrLayoutVec, bool) {}
+    void text(const LayoutFragment*, PrLayoutVec, bool, uint32_t) {}
 
     // Called for a table at `at` in the blocks phase (LayoutFragmentFlag_Table). gridBackgrounds is called before the
     // table's parts, for the backgrounds of its tracks and track groups behind its cells. gridBorders is called after
@@ -440,15 +448,27 @@ struct LayoutWalk {
     // Visits a line's inline content from child `first` to `end`, except for the atomic inlines and inline boxes that
     // paint whole, whose own phases visit their parts and content on the line.
     void lineRange(const LayoutFragment* line, PrLayoutVec offset, uint32_t first, uint32_t end) {
+        // The content that a line's ellipsis replaces does not paint. That content is the glyphs of text past the
+        // ellipsis, each atomic inline that starts at or past the ellipsis along the line, and the parts of inline
+        // boxes that the ellipsis marks (LayoutFragmentFlag_Elided). If the ellipsis does not show, all of the line
+        // paints.
+        bool ellipsis = (line->flags & LayoutFragmentFlag_Ellipsis) != 0 && ellipsisShows(line);
+        PrLayoutUnit elided = ellipsis ? line->children[line->childCount - 1].offset.x : PrLayoutUnit{kLayoutUnitMax};
         for (uint32_t i = first; i < end; ++i) {
             const LayoutChild& child = line->children[i];
             const LayoutFragment* c = child.fragment;
             PrLayoutVec at = offset + child.offset;
             if (layoutFragmentIsPoint(c))
                 continue;
+            if (ellipsis && ((c->kind == LayoutFragmentKind_Inline && (c->flags & LayoutFragmentFlag_Elided) != 0) ||
+                    ((c->kind == LayoutFragmentKind_Box || c->kind == LayoutFragmentKind_Replaced) && child.offset.x >= elided)))
+                continue;
             bool visible = isVisible(c->node);
             if (c->kind == LayoutFragmentKind_Text) {
-                visitor.text(c, at, visible);
+                if (ellipsis)
+                    visitor.text(c, at, visible, c->text.drawn);
+                else if ((c->flags & LayoutFragmentFlag_Ellipsing) == 0)
+                    visitor.text(c, at, visible, c->text.glyphCount);
                 continue;
             }
             if (c->kind == LayoutFragmentKind_Inline) {
@@ -471,6 +491,14 @@ struct LayoutWalk {
             if (c->kind == LayoutFragmentKind_Replaced)
                 visitor.replaced(c, at, visible);
         }
+    }
+
+    // Returns true if the ellipsis that ends `line` shows. While the user interacts with the line's block container,
+    // the line's content is clipped instead (css-overflow-4/#ellipsis-interaction). The user interacts with the
+    // container while it is scrolled along its lines, which shows more of their content
+    // (css-overflow-4/#ellipsis-scrolling), and while it holds a caret for editing.
+    PR_NOINLINE bool ellipsisShows(const LayoutFragment* line) {
+        return layoutEllipsisShows(tree, line->children[line->childCount - 1].fragment->node);
     }
 
     // Visits the floats anchored on a line from child `first` to `end` that do not paint whole, each as if it made a

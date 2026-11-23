@@ -2123,7 +2123,15 @@ struct Painter : LayoutWalkVisitor {
         }
     }
 
-    void text(const LayoutFragment* fragment, PrLayoutVec at, bool visible) {
+    // Returns the record that the text `fragment` paints its glyphs in. An ellipsis paints in the record of its block
+    // container (layoutEllipsisStyle).
+    PrLayoutStyleIndex textStyle(const LayoutFragment* fragment) const {
+        if ((fragment->flags & LayoutFragmentFlag_Ellipsing) != 0)
+            return layoutEllipsisStyle(tree, fragment);
+        return layoutFragmentStyle(tree, fragment);
+    }
+
+    void text(const LayoutFragment* fragment, PrLayoutVec at, bool visible, uint32_t drawn) {
         ++visits;
         repainted(fragment->node);
         const LayoutFragmentText& text = fragment->text;
@@ -2131,17 +2139,17 @@ struct Painter : LayoutWalkVisitor {
             return;
         const LayoutHighlights* highlights = layoutTextHighlights(tree, fragment->node);
         if (highlights != nullptr) {
-            marked(fragment, at, highlights);
+            marked(fragment, at, highlights, drawn);
             caretSlots(fragment, at);
             return;
         }
-        if (text.glyphCount == 0) {
+        if (text.glyphCount == 0 || drawn == 0) {
             caretSlots(fragment, at);
             return;
         }
         decorate(fragment, at, true);
         PrVec2 offset = prLayoutVecToPx(at - origin);
-        PrColor16 color = layoutColorStyle(styles, layoutFragmentStyle(tree, fragment)).color;
+        PrColor16 color = layoutColorStyle(styles, textStyle(fragment)).color;
         // The glyphs are placed from the fragment's corner, in the frame of a horizontal line that a turn rotates by a
         // quarter turn about that corner, or by the run's origin if they are not turned. A pushed translation carries
         // the fragment's position in the block axis and snaps it to a target pixel, which puts the baseline there too,
@@ -2169,7 +2177,7 @@ struct Painter : LayoutWalkVisitor {
         PrDrawList* into = nullptr;     // the batch being recorded into, with the frame pushed
         uint32_t own = 0;               // the commands of the fragment in that batch
         uint32_t start = 0;
-        for (uint32_t i = 0; i < text.rangeCount; ++i) {
+        for (uint32_t i = 0; i < text.rangeCount && start < drawn; ++i) {
             if (into == nullptr) {
                 into = out();
                 own = 0;
@@ -2181,7 +2189,7 @@ struct Painter : LayoutWalkVisitor {
             run.font = fonts[ranges[i].font];
             run.size = text.size * ranges[i].scale;
             run.glyphs = text.glyphs + start;
-            run.glyphCount = ranges[i].glyphEnd - start;
+            run.glyphCount = (ranges[i].glyphEnd < drawn ? ranges[i].glyphEnd : drawn) - start;
             if (key != 0)
                 runTextOf(fragment, start, &run);
             prDrawListGlyphs(into, &run, pen, {.color = color});
@@ -2211,10 +2219,10 @@ struct Painter : LayoutWalkVisitor {
 
     // Records a text fragment that has highlights, in one batch: the backgrounds of its highlights, then its glyphs,
     // clipped to each stretch along its line that one color paints (css-pseudo-4/#highlight-painting).
-    void marked(const LayoutFragment* fragment, PrLayoutVec at, const LayoutHighlights* highlights) {
+    void marked(const LayoutFragment* fragment, PrLayoutVec at, const LayoutHighlights* highlights, uint32_t drawn) {
         const LayoutFragmentText& text = fragment->text;
         PrLayoutVec offset = at - origin;
-        PrColor16 base = layoutColorStyle(styles, layoutFragmentStyle(tree, fragment)).color;
+        PrColor16 base = layoutColorStyle(styles, textStyle(fragment)).color;
         float length = layoutTextLength(tree, fragment);
         uint32_t start = layoutTextStart(fragment);
         uint32_t before = commands;
@@ -2288,7 +2296,7 @@ struct Painter : LayoutWalkVisitor {
                 prDrawListPushClipRect(into, clip, PrDrawEdges_Aliased);
                 record();
             }
-            glyphs(into, fragment, offset, color);
+            glyphs(into, fragment, offset, color, drawn);
             if (!whole) {
                 prDrawListPopClip(into);
                 record();
@@ -2334,7 +2342,7 @@ struct Painter : LayoutWalkVisitor {
 
     // Records the glyphs of a text fragment at `offset` from the origin in `color`, one command for each of its font
     // ranges, as text does.
-    void glyphs(PrDrawList* into, const LayoutFragment* fragment, PrLayoutVec offset, PrColor16 color) {
+    void glyphs(PrDrawList* into, const LayoutFragment* fragment, PrLayoutVec offset, PrColor16 color, uint32_t drawn) {
         const LayoutFragmentText& text = fragment->text;
         PrVec2 at = prLayoutVecToPx(offset);
         bool turned = fragment->turn != LayoutTextTurn_None;
@@ -2360,12 +2368,12 @@ struct Painter : LayoutWalkVisitor {
             prDrawListPushMark(into, key);
         }
         uint32_t start = 0;
-        for (uint32_t i = 0; i < text.rangeCount; ++i) {
+        for (uint32_t i = 0; i < text.rangeCount && start < drawn; ++i) {
             PrFontGlyphRun run{};
             run.font = fonts[ranges[i].font];
             run.size = text.size * ranges[i].scale;
             run.glyphs = text.glyphs + start;
-            run.glyphCount = ranges[i].glyphEnd - start;
+            run.glyphCount = (ranges[i].glyphEnd < drawn ? ranges[i].glyphEnd : drawn) - start;
             if (key != 0)
                 runTextOf(fragment, start, &run);
             prDrawListGlyphs(into, &run, pen, {.color = color});

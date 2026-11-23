@@ -119,6 +119,22 @@ enum {
     // Text: white space that hangs at the end of its line (css-text-3/#hanging). It reaches no scrollable overflow,
     // because a hanging glyph is not part of the line's content (css-text-3/#white-space-phase-2).
     LayoutFragmentFlag_Hangs = 1 << 15,
+
+    // The flags for the ellipsis of text-overflow (css-overflow-4/#text-overflow) reuse the bits of flags that apply to
+    // other kinds of fragment.
+
+    // Line: text-overflow ends the line with an ellipsis. The ellipsis is the line's last child. It replaces the line's
+    // content from the point where the ellipsis starts along the line. The replaced content keeps its place and does
+    // not paint. It consists of the glyphs of text past the start of the ellipsis (LayoutFragmentText::drawn), the
+    // parts of inline boxes that start at or past it (Elided), and the atomic inlines that start at or past it.
+    LayoutFragmentFlag_Ellipsis = LayoutFragmentFlag_Break,
+
+    // Inline: a part of an inline box that starts at or past the ellipsis of its line. The part does not paint.
+    LayoutFragmentFlag_Elided = LayoutFragmentFlag_Reversed,
+
+    // Text: the fragment is the ellipsis that ends its line. It takes the style of the line's block container. Its node
+    // is the text that the ellipsis replaces, so a hit on the ellipsis reaches that text.
+    LayoutFragmentFlag_Ellipsing = LayoutFragmentFlag_Page,
 };
 typedef uint16_t LayoutFragmentFlags;
 
@@ -259,14 +275,19 @@ struct LayoutCaretStop {
 // the order of the text, or against it in a reversed fragment. The fragment holds the bytes of its node's text from its
 // first stop's offset in the order of the text up to `end`. A cluster reaches along the line to the next stop, and the
 // last to the fragment's advance.
+//
+// On a line that text-overflow ends with an ellipsis (css-overflow-4/#text-overflow), the glyphs past the ellipsis keep
+// their places and do not paint. Only the first `drawn` glyphs paint, in the order they are placed. Any other fragment
+// paints all of its glyphs.
 struct LayoutFragmentText {
     PrFontGlyph* PR_NULLABLE glyphs;
     float size;
     uint32_t glyphCount;
-    uint32_t fontCount;
-    uint32_t rangeCount;
+    uint16_t fontCount;
+    uint16_t rangeCount;
     uint32_t stopCount;
     uint32_t end;
+    uint32_t drawn;
 };
 
 // The data of a Replaced fragment: its content box, from the top left of its border box.
