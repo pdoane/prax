@@ -1537,6 +1537,132 @@ TEST_CASE("an image's content covers its natural size, which object-fit and obje
     CHECK(verified(f.tree));
 }
 
+TEST_CASE("an image drawn smaller than its texels is minified from its mip levels, unless it is pixelated") {
+    Fixture f;
+    // A checkerboard of black and white texels, 9 by 9, whose middle texel is white.
+    uint8_t texels[9 * 9 * 4];
+    for (uint32_t i = 0; i < 9 * 9; ++i) {
+        uint8_t value = (i % 9 + i / 9) % 2 == 0 ? 255 : 0;
+        texels[i * 4] = texels[i * 4 + 1] = texels[i * 4 + 2] = value;
+        texels[i * 4 + 3] = 255;
+    }
+    const PrTextureSource* image =
+        prTextureSourceCreateCopy(PrPixelView{texels, 9 * 4, {9, 9}}, PrPixelFormat_Rgba8, PrTextureAlpha_None);
+    PrLayoutNode root = f.element(kPrLayoutNodeNone, block());
+    PrLayoutBoxStyle box = block();
+    box.width = prLayoutLengthPx(1);
+    box.height = prLayoutLengthPx(1);
+    PrLayoutNode smooth = replaced(f, root, box, natural(9, 9));
+    PrLayoutNode crisp = replaced(f, root, box, natural(9, 9));
+    PrLayoutContent content{};
+    content.kind = PrLayoutContentKind_Image;
+    content.image = image;
+    prLayoutNodeSetContent(f.tree, smooth, &content);
+    content.rendering = PrLayoutImageRendering_Pixelated;
+    prLayoutNodeSetContent(f.tree, crisp, &content);
+    prTextureSourceRelease(image);
+    f.layout(px(4, 4));
+    Array<uint8_t> pixels = render(f.tree, 4, 4);
+    // The one pixel of the box covers every texel. The mip levels average the texels to a gray, whereas the nearest
+    // texel is white.
+    uint8_t averaged = pixels[0];
+    CHECK(averaged > 40);
+    CHECK(averaged < 215);
+    CHECK(pixel(pixels, 4, 0, 1) == "255 255 255 255");
+    CHECK(verified(f.tree));
+}
+
+TEST_CASE("a background image drawn smaller than its texels is minified as a replaced image of that size is") {
+    Fixture f;
+    // A checkerboard of black and white texels, 9 by 9, whose middle texel is white.
+    uint8_t texels[9 * 9 * 4];
+    for (uint32_t i = 0; i < 9 * 9; ++i) {
+        uint8_t value = (i % 9 + i / 9) % 2 == 0 ? 255 : 0;
+        texels[i * 4] = texels[i * 4 + 1] = texels[i * 4 + 2] = value;
+        texels[i * 4 + 3] = 255;
+    }
+    const PrTextureSource* image =
+        prTextureSourceCreateCopy(PrPixelView{texels, 9 * 4, {9, 9}}, PrPixelFormat_Rgba8, PrTextureAlpha_None);
+    // Row 0: a replaced image and a background, each 1px. Row 1: a pixelated background of 1px.
+    PrLayoutNode root = f.element(kPrLayoutNodeNone, block());
+    PrLayoutBoxStyle box = block();
+    box.width = prLayoutLengthPx(1);
+    box.height = prLayoutLengthPx(1);
+    PrLayoutNode shown = replaced(f, root, box, natural(9, 9));
+    PrLayoutContent content{};
+    content.kind = PrLayoutContentKind_Image;
+    content.image = image;
+    prLayoutNodeSetContent(f.tree, shown, &content);
+    PrLayoutBackgroundLayer layer = prLayoutBackgroundLayerDefault();
+    layer.kind = PrLayoutImageKind_Image;
+    layer.image = image;
+    layer.natural = natural(9, 9);
+    layer.sizeX = prLayoutLengthPx(1);
+    layer.sizeY = prLayoutLengthPx(1);
+    backgroundBox(f, root, 1, 1, &layer, 1);
+    layer.rendering = PrLayoutImageRendering_Pixelated;
+    backgroundBox(f, root, 1, 1, &layer, 1);
+    prTextureSourceRelease(image);
+    f.layout(px(4, 4));
+    Array<uint8_t> pixels = render(f.tree, 4, 4);
+    // The mip levels average the texels to a gray, the same for the image and the background, whereas the nearest texel
+    // is white.
+    uint8_t averaged = pixels[0];
+    CHECK(averaged > 40);
+    CHECK(averaged < 215);
+    CHECK(pixel(pixels, 4, 0, 1) == pixel(pixels, 4, 0, 0));
+    CHECK(pixel(pixels, 4, 0, 2) == "255 255 255 255");
+    CHECK(verified(f.tree));
+}
+
+TEST_CASE("an image is drawn from the preview that has enough texels for the size of its box") {
+    Fixture f;
+    // A white picture of 64 texels a side, with a red preview of 8, so that a pixel tells which one was drawn.
+    uint8_t red[8 * 8 * 4];
+    for (uint32_t i = 0; i < 8 * 8; ++i) {
+        red[i * 4] = red[i * 4 + 3] = 255;
+        red[i * 4 + 1] = red[i * 4 + 2] = 0;
+    }
+    const PrTextureSource* preview =
+        prTextureSourceCreateCopy(PrPixelView{red, 8 * 4, {8, 8}}, PrPixelFormat_Rgba8, PrTextureAlpha_None);
+    PrTextureSourceDesc whole{
+        .texture = prTextureDesc2d(PrGpuFormat_Rgba8, PrUVec2{64, 64}, PrTextureAlpha_None),
+        .read = [](void* PR_NULLABLE, PrTextureRead* read) {
+            prMemFill(prTextureReadStorage(read), 255, 64 * 64 * 4);
+            prTextureReadComplete(read, PrStatus_Ok);
+        },
+        .previews = &preview,
+        .previewCount = 1,
+    };
+    const PrTextureSource* image = prTextureSourceCreate(&whole);
+    prTextureSourceRelease(preview);
+    PrLayoutNode root = f.element(kPrLayoutNodeNone, block());
+    PrLayoutBoxStyle small = block();
+    small.width = prLayoutLengthPx(8);
+    small.height = prLayoutLengthPx(8);
+    PrLayoutBoxStyle large = block();
+    large.width = prLayoutLengthPx(32);
+    large.height = prLayoutLengthPx(32);
+    PrLayoutNode thumbnail = replaced(f, root, small, natural(64, 64));
+    PrLayoutNode view = replaced(f, root, large, natural(64, 64));
+    PrLayoutContent content{};
+    content.kind = PrLayoutContentKind_Image;
+    content.image = image;
+    prLayoutNodeSetContent(f.tree, thumbnail, &content);
+    content.priority = PrTextureCachePriority_High;
+    prLayoutNodeSetContent(f.tree, view, &content);
+    CHECK(prLayoutNodeContent(f.tree, view).priority == PrTextureCachePriority_High);
+    prTextureSourceRelease(image);
+    f.layout(px(40, 40));
+    Array<uint8_t> pixels = render(f.tree, 40, 40);
+    // The box of 8 px shows the preview, over its whole extent, and the box of 32 px shows the picture.
+    CHECK(pixel(pixels, 40, 0, 0) == "255 0 0 255");
+    CHECK(pixel(pixels, 40, 7, 7) == "255 0 0 255");
+    CHECK(pixel(pixels, 40, 0, 8) == "255 255 255 255");
+    CHECK(pixel(pixels, 40, 31, 39) == "255 255 255 255");
+    CHECK(verified(f.tree));
+}
+
 TEST_CASE("a paint leaves out an image whose texture is pending, and is recorded again only once the texture arrives") {
     Fixture f;
     PrTextureCache* cache = harnessTextureCacheCreate(harnessMemoryDevice());

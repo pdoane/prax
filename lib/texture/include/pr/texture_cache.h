@@ -57,6 +57,10 @@ enum {
     // detail is zero. Otherwise the texture has the levels of its source. PrTextureRegion::levelCount tells the
     // consumer what it got. A texture with made levels is a texture of its own, not a slot in a page, and it also
     // serves asks without the flag.
+    //
+    // The source is read once for both. If the cache holds the version without levels when an ask needs them, the ask
+    // submits the work that makes them from that texture on the device, and is Ready. The consumer records the draws
+    // that sample the texture after the ask, and the device runs them after that work.
     PrTextureCacheFlag_Levels = 1u << 0,
 };
 typedef uint8_t PrTextureCacheFlags;
@@ -123,7 +127,7 @@ typedef uint8_t PrTextureCacheState;
 
 // Whether the cache packs small sources into shared pages.
 enum {
-    PrTextureCachePack_Auto,        // on a device that draws through a GPU, and not on a memory device
+    PrTextureCachePack_Auto,        // on a device that draws through a GPU without bindless
     PrTextureCachePack_Never,
     PrTextureCachePack_Always,      // every source that fits a page
 };

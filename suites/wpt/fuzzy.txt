@@ -3,6 +3,13 @@
 # indented reason: why the engine's render differs from the reference by more than the test allows, and why that is not
 # an error. An override holds for every backend and pixel ratio.
 
+css/css-backgrounds/subpixel-repeat-no-repeat-mix.html maxDifference=0-24;totalPixels=0-40
+    The test draws a 146-by-1 image in tiles of 116.8 by 0.8 px, and the reference in tiles of 117 by 1 px, so both
+    minify it and sample its mip levels. Mipmap sampling is anisotropic, and its level comes from the footprint's minor
+    axis: the test's footprint is minified along both axes and blends in the second level, while the reference's is
+    minified along one and keeps the first. A column and a row of 20 pixels beside the image's edge differ, by up to
+    23 levels. A renderer that does not minify from mip levels, or that picks one level for both footprints, draws them
+    equal.
 css/css-images/gradient/gradient-longer-hue-lch-001.html maxDifference=0-1;totalPixels=0-80
 css/css-images/gradient/gradient-longer-hue-lch-002.html maxDifference=0-1;totalPixels=0-80
 css/css-images/gradient/gradient-longer-hue-lch-006.html maxDifference=0-1;totalPixels=0-80

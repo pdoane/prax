@@ -104,13 +104,14 @@ TEST_CASE("a cache without an executor realizes a source during the first ask fo
     CHECK(prTextureCacheRealize(cache, source, prTextureCacheAskEncoded(0), &again) == PrTextureCacheState_Ready);
     CHECK(again.texture.texture.id == region.texture.texture.id);
     CHECK(texels.reads == 1);
-    // Every level is a texture of its own.
+    // Every level is a texture of its own, which the device makes from the texture that the cache holds. The source is
+    // not read again.
     PrTextureRegion levels{};
     REQUIRE(prTextureCacheRealize(cache, source, prTextureCacheAskEncoded(PrTextureCacheFlag_Levels), &levels) ==
         PrTextureCacheState_Ready);
     CHECK(levels.texture.texture.id != region.texture.texture.id);
     CHECK(prGpuTextureDesc(device, levels.texture.texture).levels == 2);
-    CHECK(texels.reads == 2);
+    CHECK(texels.reads == 1);
     // The device made the second level from the first.
     PrGpuTexture second{};
     REQUIRE(prGpuTextureCreateView(device, levels.texture.texture, PrGpuTextureViewDesc{

@@ -28,6 +28,7 @@ struct LayoutTextureAsk {
 // The tree keeps such a recording until the cache reports an arrival (layoutTexturesRefresh).
 struct LayoutTextures {
     PrTextureCache* PR_NULLABLE cache;
+    float pixelRatio;                   // the tree's target pixels per px, which sets the detail that an image needs
     uint64_t generation;                // the generation of the cache that the tree's recordings drew from
     uint64_t arrivals;                  // the cache's count of arrivals before the first ask in `waiting` was made
     RawArray<LayoutTextureAsk> waiting; // the pending asks, each listed once
@@ -149,8 +150,14 @@ void layoutImageTakeFilters(PrLayoutBackgroundLayer& image, PrLayoutFilter* PR_N
 // An image is drawn from `textures`. If its texture has not arrived, the source is not valid (prDrawSourceIsValid), and
 // the caller records nothing with it. `into` is the list that the caller records the source into. It must not be
 // frozen. If the source is a region of a texture, `into` holds a reference to the image.
+//
+// An image is asked for at the detail that `size` shows in target pixels. `sampling` receives the sampling that draws
+// the source over `size`: from mip levels if the image is smooth and the cache made its levels, which it does where the
+// image is minified (PrTextureCacheFlag_Levels), and otherwise as the layer's rendering says. An image drawn at the
+// size of a replaced element's image therefore samples as that image does.
 PrDrawSource layoutImageSource(LayoutTextures* PR_NULLABLE textures, const LayoutCompounds* PR_NULLABLE compounds,
-    const PrLayoutBackgroundLayer& layer, PrVec2 size, PrDrawList* into, PrDrawList* PR_NULLABLE* PR_NONNULL drawn);
+    const PrLayoutBackgroundLayer& layer, PrVec2 size, PrDrawList* into, PrDrawList* PR_NULLABLE* PR_NONNULL drawn,
+    PrDrawSampling* sampling);
 
 // Returns true if one of `count` layers composites onto the layers below it otherwise than normally and source-over, so
 // that the background is an isolated group (compositing-1/#background-blend-mode).

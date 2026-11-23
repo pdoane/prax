@@ -191,9 +191,11 @@ A realization that has started is not cancelled. Its read runs to completion.
   region. A producer that records a region into a draw list makes the list hold the source ([draw.md](draw.md)).
 - **The cache has a budget for all of its textures.** While it is over budget, a trim evicts textures that no frame
   asked for and whose sources only the cache holds, least recently asked first.
-- **Small sources share pages.** A source of 8 bits a channel, at most 256 texels on a side, with one level, goes into
-  a slot of a shared page on a device that draws through a GPU. This saves a binding and a draw call for each. A
-  memory device reads texels in place, so the cache does not pack there.
+- **Small sources share pages where textures bind to slots.** A source of 8 bits a channel, at most 256 texels on a
+  side, with one level, goes into a slot of a shared page on a device that draws through a GPU without bindless. This
+  saves a binding and a draw call for each. A device with bindless reaches every texture by handle, so the cache does
+  not pack there, and every source keeps hardware sampling and its mip levels. A memory device reads texels in place,
+  so the cache does not pack there either.
 
 ### Cost
 

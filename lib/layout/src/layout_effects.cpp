@@ -655,7 +655,9 @@ bool drawBorder(LayoutTextures* textures, const LayoutCompounds* compounds, cons
     slices.center = b.fill;
     PrDrawList* drawn = nullptr;
     out->list = prDrawListCreate();
-    PrDrawSource source = layoutImageSource(textures, compounds, b.image, natural, out->list, &drawn);
+    // The nine slices scale each piece on its own, so they sample linearly whatever the whole would.
+    PrDrawSampling whole = PrDrawSampling_Linear;
+    PrDrawSource source = layoutImageSource(textures, compounds, b.image, natural, out->list, &drawn, &whole);
     if (!prDrawSourceIsValid(source)) {
         // A border whose image has nothing to draw masks nothing, as a border without an image does.
         prDrawListRelease(drawn);

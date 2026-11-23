@@ -549,27 +549,41 @@ PrDrawSampling samplingOf(const PrLayoutBackgroundLayer& layer) {
     return PrDrawSampling_Nearest;
 }
 
-// Returns the source of a layer's image drawn at `size`, before its filter list. A list that the source reads may be
-// written to `drawn`, which the caller releases. For an Image layer, the list that draws the region of the texture
-// holds a reference to the image (prDrawListHoldSource). That list is `into` if the returned source is a region, and
-// the list written to `drawn` otherwise.
+// Returns the source of a layer's image drawn at `size`, before its filter list, and writes the sampling that draws it
+// to `sampling`. A list that the source reads may be written to `drawn`, which the caller releases. For an Image layer,
+// the list that draws the region of the texture holds a reference to the image (prDrawListHoldSource). That list is
+// `into` if the returned source is a region, and the list written to `drawn` otherwise.
+//
+// An image is asked for at the detail that `size` shows in target pixels, as a replaced element's image is, so a large
+// image drawn small realizes a preview of about that size. A smooth image asks for mip levels, which the cache makes
+// where `size` minifies it (PrTextureCacheFlag_Levels), and is sampled from them if it has them, as a replaced
+// element's image is.
 PrDrawSource unfilteredSource(LayoutTextures* PR_NULLABLE textures, const LayoutCompounds* PR_NULLABLE compounds,
-        const PrLayoutBackgroundLayer& layer, PrVec2 size, PrDrawList* into, PrDrawList* PR_NULLABLE* PR_NONNULL drawn) {
+        const PrLayoutBackgroundLayer& layer, PrVec2 size, PrDrawList* into, PrDrawList* PR_NULLABLE* PR_NONNULL drawn,
+        PrDrawSampling* sampling) {
     PrRect own{0, 0, size.x, size.y};
+    *sampling = samplingOf(layer);
     switch (layer.kind) {
         case PrLayoutImageKind_Image: {
             // An image whose texture has not arrived draws nothing.
-            PrTextureRegion region{};
-            if (!layoutTextureOf(textures, layer.image, prTextureCacheAskEncoded(0), &region))
-                return PrDrawSource{};
             const PrTextureDesc& desc = *prTextureSourceDesc(layer.image);
             PrUVec2 texels = desc.extent;
+            float ratio = textures != nullptr && textures->pixelRatio > 0 ? textures->pixelRatio : 1;
+            PrVec2 shownPixels{size.x * ratio, size.y * ratio};
+            bool smooth = layer.rendering == PrLayoutImageRendering_Auto;
+            PrTextureCacheAsk ask = prTextureCacheAskEncoded(smooth ? PrTextureCacheFlag_Levels : 0);
+            ask.detail = uint32_t(prF32Ceil(prF32Max(prF32Max(shownPixels.x, shownPixels.y), 1)));
+            PrTextureRegion region{};
+            if (!layoutTextureOf(textures, layer.image, ask, &region))
+                return PrDrawSource{};
             if (!layer.upright || desc.orientation == 0) {
+                if (smooth && region.levelCount > 1)
+                    *sampling = PrDrawSampling_Mipmap;
                 prDrawListHoldSource(into, layer.image);
                 return prDrawSourceRegion(&region, PrRect{0, 0, float(texels.x), float(texels.y)}, 0);
             }
             // If the orientation turns or mirrors the image, the image is drawn upright into a list of its displayed
-            // size. Every use of the source reads that list.
+            // size, at one texel to the px. Every use of the source reads that list.
             PrUVec2 shown = prTextureDescDisplayedExtent(&desc);
             PrRect displayed{0, 0, float(shown.x), float(shown.y)};
             PrDrawBrush brush = prDrawBrushImage(prDrawSourceRegion(&region, displayed, desc.orientation), displayed,
@@ -716,12 +730,12 @@ bool paintLayer(LayoutTextures* PR_NULLABLE textures, const LayoutCompounds* com
         return true;
     }
     PrDrawList* drawn = nullptr;
-    PrDrawSource source = layoutImageSource(textures, compounds, layer, size, list, &drawn);
+    PrDrawSampling sampling = PrDrawSampling_Linear;
+    PrDrawSource source = layoutImageSource(textures, compounds, layer, size, list, &drawn, &sampling);
     if (!prDrawSourceIsValid(source)) {
         prDrawListRelease(drawn);
         return false;
     }
-    PrDrawSampling sampling = samplingOf(layer);
     PrDrawBrush brush = prDrawBrushImage(source, tile, sampling);
     brush.image.tiles.spacing = PrVec2{x.spacing, y.spacing};
     // An axis that does not repeat pads its edge texels, so that a pixel that the tile's edge covers in part samples
@@ -964,14 +978,17 @@ void layoutImageTakeFilters(PrLayoutBackgroundLayer& image, PrLayoutFilter* PR_N
 }
 
 PrDrawSource layoutImageSource(LayoutTextures* PR_NULLABLE textures, const LayoutCompounds* PR_NULLABLE compounds,
-        const PrLayoutBackgroundLayer& layer, PrVec2 size, PrDrawList* into, PrDrawList* PR_NULLABLE* PR_NONNULL drawn) {
+        const PrLayoutBackgroundLayer& layer, PrVec2 size, PrDrawList* into, PrDrawList* PR_NULLABLE* PR_NONNULL drawn,
+        PrDrawSampling* sampling) {
     *drawn = nullptr;
     if (layer.filterCount == 0)
-        return unfilteredSource(textures, compounds, layer, size, into, drawn);
-    // The filtered list draws the unfiltered source. If that source is a region of a texture, the filtered list holds
-    // the image.
+        return unfilteredSource(textures, compounds, layer, size, into, drawn, sampling);
+    // The filtered list draws the unfiltered source at `size`. If that source is a region of a texture, the filtered
+    // list holds the image. The filtered list covers `size` itself, so it is sampled as the layer's rendering says.
     PrDrawList* filtered = prDrawListCreate();
-    PrDrawSource source = unfilteredSource(textures, compounds, layer, size, filtered, drawn);
+    PrDrawSampling inner = PrDrawSampling_Linear;
+    PrDrawSource source = unfilteredSource(textures, compounds, layer, size, filtered, drawn, &inner);
+    *sampling = samplingOf(layer);
     if (!prDrawSourceIsValid(source)) {
         prDrawListRelease(filtered);
         prDrawListRelease(*drawn);
@@ -985,7 +1002,7 @@ PrDrawSource layoutImageSource(LayoutTextures* PR_NULLABLE textures, const Layou
         group.bounds = own;
         group.filter = filter;
         prDrawListPushGroup(filtered, &group);
-        PrDrawBrush brush = prDrawBrushImage(source, own, samplingOf(layer));
+        PrDrawBrush brush = prDrawBrushImage(source, own, inner);
         brush.image.tiles.x = PrDrawExtend_Pad;
         brush.image.tiles.y = PrDrawExtend_Pad;
         brush.image.tiles.flags = PrDrawTileFlag_Clamped;

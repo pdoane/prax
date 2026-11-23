@@ -1820,18 +1820,31 @@ struct Painter : LayoutWalkVisitor {
         }
     }
 
-    // Writes the brush that draws a replaced box's image over `covered`: all of what it shows, upright if the content
-    // says so, at the content's limit and resampled as its rendering says. Returns false if the image's texture has not
-    // arrived.
+    // Writes the brush that draws the image of a replaced box over `covered`. The brush draws all of what the image
+    // shows, upright if the content says so, at the content's limit, and resampled as the content's rendering says. The
+    // image is asked for at the detail that `covered` shows in target pixels, so a large image in a small box realizes
+    // a preview of about the box's size. If the rendering is Auto, the image is minified from mip levels if the cache
+    // made them. Returns false if no texture of the image has arrived. The caller holds the image on the list that it
+    // records the brush into.
     bool imageBrush(const LayoutReplaced& n, PrRect covered, PrDrawBrush* out) const {
-        PrTextureRegion region{};
-        if (!layoutTextureOf(tree->textures, n.image, prTextureCacheAskEncoded(0), &region))
-            return false;
         const PrTextureDesc& desc = *prTextureSourceDesc(n.image);
         PrUVec2 texels = n.upright ? prTextureDescDisplayedExtent(&desc) : desc.extent;
+        float ratio = tree->styles->targetPixelRatio > 0 ? tree->styles->targetPixelRatio : 1;
+        PrVec2 shown{(covered.right - covered.left) * ratio, (covered.bottom - covered.top) * ratio};
+        // The cache decides whether the image needs mip levels at this size (PrTextureCacheFlag_Levels).
+        bool smooth = n.rendering == PrLayoutImageRendering_Auto;
+        PrTextureCacheAsk ask = prTextureCacheAskEncoded(smooth ? PrTextureCacheFlag_Levels : 0);
+        ask.priority = n.priority;
+        ask.detail = uint32_t(prF32Ceil(prF32Max(prF32Max(shown.x, shown.y), 1)));
+        PrTextureRegion region{};
+        if (!layoutTextureOf(tree->textures, n.image, ask, &region))
+            return false;
+        bool minified = smooth && region.levelCount > 1;
+        PrDrawSampling sampling = PrDrawSampling_Nearest;
+        if (n.rendering == PrLayoutImageRendering_Auto)
+            sampling = minified ? PrDrawSampling_Mipmap : PrDrawSampling_Linear;
         PrDrawBrush brush = prDrawBrushImage(prDrawSourceRegion(&region, PrRect{0, 0, float(texels.x), float(texels.y)},
-            n.upright ? desc.orientation : PrTextureOrientationFlags(0)), covered,
-            n.rendering == PrLayoutImageRendering_Auto ? PrDrawSampling_Linear : PrDrawSampling_Nearest);
+            n.upright ? desc.orientation : PrTextureOrientationFlags(0)), covered, sampling);
         brush.image.limit = n.limit;
         if (n.upright)
             prDrawBrushImageUpright(&brush, desc.orientation, region.rect);

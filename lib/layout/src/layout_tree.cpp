@@ -1372,6 +1372,7 @@ PrLayoutTree* prLayoutTreeCreate(const PrLayoutTreeDesc* desc) {
     PrLayoutTree* tree = allocZeroed<PrLayoutTree>();
     tree->styles = layoutStylesCreate(desc->font, desc->shaper, desc->targetPixelRatio);
     tree->textures = allocZeroed<LayoutTextures>();
+    tree->textures->pixelRatio = desc->targetPixelRatio;
     tree->nodes.emplace() = LayoutTreeNode{};
     layoutCacheInit(tree->cache);
     return tree;
@@ -1438,6 +1439,7 @@ void prLayoutTreeSetTargetPixelRatio(PrLayoutTree* tree, float ratio) {
     if (ratio != tree->styles->targetPixelRatio)
         tree->pendingPaint |= LayoutInputFlag_Paint;
     layoutStylesSetTargetPixelRatio(tree->styles, ratio);
+    tree->textures->pixelRatio = ratio;
 }
 
 float prLayoutTreeTargetPixelRatio(const PrLayoutTree* tree) {

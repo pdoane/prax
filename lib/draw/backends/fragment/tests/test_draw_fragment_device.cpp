@@ -2372,9 +2372,10 @@ TEST_CASE("a frame draws more distinct images than one draw can bind, from the p
             Array<uint8_t> drawn = device.render(list);
             Array<uint8_t> expected = cpuRender(cpuList, 128, 128);
             CHECK(fractionDiffering(drawn, expected, 2) <= 0.002);
-            // A GPU device packs small images by default, on either tier, so that a page's draws bind one texture for
-            // them all.
-            bool packed = pack != PrTextureCachePack_Never;
+            // A device of slots packs small images by default, so that a page's draws bind one texture for them all. A
+            // device with bindless reaches each texture by handle, and packs only when asked to.
+            bool bindless = (prGpuDeviceInfo(gpuDevice).features & PrGpuFeatureFlag_Bindless) != 0;
+            bool packed = pack == PrTextureCachePack_Always || (pack == PrTextureCachePack_Auto && !bindless);
             PrTextureCacheInfo info = prTextureCacheInfo(textures);
             CHECK(info.slots == (packed ? count : 0));
             CHECK(info.textures == (packed ? 0 : count));

@@ -592,11 +592,13 @@ bool viewsSrgb(const PrGpuDevice* device) {
         PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_SrgbViews);
 }
 
-// Returns true if the cache packs sources on its device by default. It packs on any device that draws through a GPU, on
-// either binding tier. A texture of its own costs a renderer a bind, and costs a draw if the renderer batches by
-// texture. A memory device reads texels in place, so a page would only add a copy.
+// Returns true if the cache packs sources on its device by default: on a device that draws through a GPU and binds
+// textures to slots. There a texture of its own costs a renderer a bind, and a draw where the renderer batches by
+// texture. A device with bindless reaches every texture by handle, so a page would only take hardware sampling and mip
+// levels from its slots. A memory device reads texels in place, so a page would only add a copy.
 bool packsByDefault(const TextureCache& c) {
-    return !prGpuDeviceHasNative(c.desc.device, PrGpuNativeKind_Pixels);
+    return !prGpuDeviceHasNative(c.desc.device, PrGpuNativeKind_Pixels) &&
+        (prGpuDeviceInfo(c.desc.device).features & PrGpuFeatureFlag_Bindless) == 0;
 }
 
 // Returns true if a page can hold the pixels of `chain` for an ask with `flags`.
@@ -1226,6 +1228,58 @@ void freeAll(TextureCache& c) {
     c.pages.clear();
 }
 
+// Settles `entry`, a waiting realization of every level of a version, from `plain`, the same version without levels in
+// a texture of its own, and returns true. The device copies the first level and makes the others from it, in commands
+// of their own that the call submits. An ask comes from the recording of a draw list, which the device runs later, so
+// the levels are made before any draw samples them, and nothing waits for the entry. Returns false, leaving the entry
+// waiting, if the device cannot make the levels. Called with the lock held.
+bool levelsFrom(TextureCache& c, CacheEntry* entry, const CacheEntry& plain) {
+    PrGpuDevice* device = c.desc.device;
+    PrGpuTexture from = plain.region.texture.texture;
+    PrGpuTextureDesc desc = prGpuTextureDesc(device, from);
+    desc.levels = prGpuMipLevels(PrUVec2{desc.extent.width, desc.extent.height});
+    desc.usage |= PrGpuTextureUsageFlag_RenderTarget;
+    desc.name = "texture cache";
+    PrGpuTexture texture{};
+    if (!prGpuDeviceSupportsFormat(device, desc.format, desc.usage) || !prGpuFormatFilters(desc.format) ||
+            prGpuTextureCreate(device, &desc, &texture) != PrStatus_Ok)
+        return false;
+    PrGpuTexture view{};
+    if (plain.plain.id != 0 && prGpuTextureCreateView(device, texture,
+            PrGpuTextureViewDesc{.kind = desc.kind, .format = prGpuFormatPlain(desc.format)}, &view) != PrStatus_Ok) {
+        prGpuTextureRelease(device, texture);
+        return false;
+    }
+    PrGpuCommands* commands = nullptr;
+    if (!prGpuCommandsBegin(device, nullptr, &commands)) {
+        prGpuTextureRelease(device, view);
+        prGpuTextureRelease(device, texture);
+        return false;
+    }
+    // Every texture of the cache rests in the accesses of shader reads.
+    PrGpuSubresources all{};
+    PrGpuSubresources first{.levels = 1};
+    prGpuCommandsTextureBarrier(commands, from, all, PrGpuAccessFlag_ShaderRead, PrGpuAccessFlag_CopyRead);
+    prGpuCommandsTextureBarrier(commands, texture, first, PrGpuAccessFlag_Discard, PrGpuAccessFlag_CopyWrite);
+    PrGpuTextureRegion whole{.extent = {desc.extent.width, desc.extent.height, 1}};
+    prGpuCommandsCopyTexture(commands, from, &whole, texture, &whole);
+    prGpuCommandsTextureBarrier(commands, from, all, PrGpuAccessFlag_CopyRead, PrGpuAccessFlag_ShaderRead);
+    prGpuCommandsGenerateMipmaps(commands, texture, PrGpuAccessFlag_CopyWrite);
+    prGpuCommandsSubmit(commands);
+    queueRemove(c, entry);
+    entry->state = PrTextureCacheState_Ready;
+    entry->region = plain.region;
+    entry->region.texture.texture = texture;
+    entry->region.levelCount = desc.levels;
+    entry->plain = view;
+    entry->bytes = prTextureUploadSize(device, prTextureSourceDesc(versionOf(entry->source, entry->version)),
+        PrTextureUploadFlag_MakesLevels);
+    c.bytes += entry->bytes;
+    ++c.textures;
+    enlist(c, entry, CacheList_Recent, true);
+    return true;
+}
+
 } // namespace
 
 } // namespace pr_impl
@@ -1318,6 +1372,17 @@ PrTextureCacheState prTextureCacheRealize(PrTextureCache* cache, const PrTexture
         }
     }
     CacheEntry* entry = waitingEntry(c, source, ask, need);
+    // An ask for levels of a version that the cache holds without them makes them from that texture at once.
+    if (entry->state == PrTextureCacheState_Pending && !entry->started && (entry->ask.flags & PrTextureCacheFlag_Levels) != 0) {
+        const CacheEntry* plain = entryOf(c, siblingOf(entry->key));
+        if (plain != nullptr && plain->state == PrTextureCacheState_Ready && plain->page == 0 &&
+                plain->region.levelCount == 1 && levelsFrom(c, entry, *plain)) {
+            touch(c, entry);
+            *out = regionFor(*entry, ask);
+            prMutexUnlock(&c.lock);
+            return PrTextureCacheState_Ready;
+        }
+    }
     PrTextureCacheState state = entry->state;
     if (state == PrTextureCacheState_Pending) {
         entry->asked = true;

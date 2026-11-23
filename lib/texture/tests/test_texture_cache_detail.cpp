@@ -439,6 +439,38 @@ TEST_CASE("for an ask that samples mip levels, the cache makes the levels only i
     prGpuDeviceDestroy(device);
 }
 
+TEST_CASE("an ask that minifies a version held without levels gets them made from that texture, and reads no source" *
+        doctest::skip(!prThreadSupported())) {
+    PrGpuDevice* device = prGpuMemoryCreate(nullptr);
+    PrTaskPool* pool = prTaskPoolCreate(PrTaskPoolBackend_Default, 1);
+    PrTextureCache* cache = cacheOn(device, pool);
+    Versions v;
+    // The preview of 256 is realized for an ask that shows all of it, so it has one level.
+    PrTextureCacheAsk ask = askOf(256);
+    ask.flags = PrTextureCacheFlag_Levels;
+    PrTextureRegion region{};
+    REQUIRE(prTextureCacheWait(cache, v.source, ask, &region) == PrTextureCacheState_Ready);
+    REQUIRE(region.levelCount == 1);
+    uint32_t reads = v.log.count();
+    uint64_t realizations = prTextureCacheInfo(cache).realizations;
+    // An ask that shows 200 texels of it needs its levels. They are made at once, so the ask is Ready even with a pool.
+    ask.detail = 200;
+    REQUIRE(prTextureCacheRealize(cache, v.source, ask, &region) == PrTextureCacheState_Ready);
+    CHECK(region.extent == PrUVec2{256, 256});
+    CHECK(region.levelCount == 9);
+    CHECK(firstByte(device, region) == 2);
+    CHECK(v.log.count() == reads);
+    CHECK(prTextureCacheInfo(cache).realizations == realizations);
+    // The texture with levels serves the asks that show all of the preview too.
+    ask.detail = 256;
+    PrTextureRegion whole{};
+    REQUIRE(prTextureCacheRealize(cache, v.source, ask, &whole) == PrTextureCacheState_Ready);
+    CHECK(whole.levelCount == 9);
+    prTextureCacheDestroy(cache);
+    prTaskPoolDestroy(pool);
+    prGpuDeviceDestroy(device);
+}
+
 TEST_CASE("a trim over the budget evicts the least recently asked textures first, and keeps those with held sources") {
     PrGpuDevice* device = prGpuMemoryCreate(nullptr);
     PrTextureCacheDesc desc = prTextureCacheDescDefault(device);
