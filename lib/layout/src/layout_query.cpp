@@ -976,6 +976,12 @@ bool layoutNodeLaidOut(const LayoutTree* tree, LayoutNodeIndex node) {
     return laidOut(tree, node);
 }
 
+bool layoutNodeIsScrollContainer(const LayoutTree* tree, LayoutNodeIndex node) {
+    const LayoutTreeNode& n = layoutTreeNode(tree, node);
+    return n.parent != kPrLayoutNodeNone && layoutKindIsElement(n.kind) &&
+        layoutIsScrollContainer(layoutBoxStyle(tree->styles, n.style));
+}
+
 const LayoutFragment* PR_NULLABLE layoutCaretFragment(const LayoutTree* tree, LayoutNodeIndex node, uint32_t offset,
         PrLayoutTextAffinity affinity) {
     Mapping m{.transform = prDAffine2Identity()};
@@ -1691,8 +1697,7 @@ bool prLayoutNodeScrollInfo(PrLayoutTree* tree, PrLayoutNode element, PrLayoutSc
     PrLayoutUnit width = fragment->extent.x - box.border[PrRectSide_Left] - box.border[PrRectSide_Right];
     PrLayoutUnit height = fragment->extent.y - box.border[PrRectSide_Top] - box.border[PrRectSide_Bottom];
     info.portExtent = PrLayoutVec{layoutUnitMax(kLayoutUnitZero, width), layoutUnitMax(kLayoutUnitZero, height)};
-    // A replaced element's content is not scrolled (css-overflow-3/#overflow-control).
-    info.scrollContainer = n.parent != kPrLayoutNodeNone && layoutKindIsElement(n.kind) && layoutIsScrollContainer(box);
+    info.scrollContainer = layoutNodeIsScrollContainer(t, index);
     if (info.scrollContainer) {
         info.content = layoutScrollContent(fragment, box);
         info.range = layoutScrollRange(info.portExtent, info.content);

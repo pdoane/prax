@@ -53,6 +53,10 @@ struct LayoutQueries {
 // root that the layout laid out.
 bool layoutNodeLaidOut(const LayoutTree* tree, LayoutNodeIndex node);
 
+// Returns true if the box of the live node `node` is a scroll container: an element other than a root, styled as one
+// (layoutIsScrollContainer). The content of a replaced element is not scrolled (css-overflow-3/#overflow-control).
+bool layoutNodeIsScrollContainer(const LayoutTree* tree, LayoutNodeIndex node);
+
 // Returns the text fragment of the text `node` in the last layout that a caret before `offset` stands in, where
 // `affinity` places it (prLayoutNodeTextCaret), or null if the layout drew none of the node's text.
 const LayoutFragment* PR_NULLABLE layoutCaretFragment(const LayoutTree* tree, LayoutNodeIndex node, uint32_t offset,

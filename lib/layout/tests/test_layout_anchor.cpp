@@ -156,6 +156,27 @@ TEST_CASE("overflow-anchor: none on the container or on the anchor's subtree kee
     CHECK(prLayoutUnitToPx(prLayoutNodeScroll(f.tree, s).y) == 150);
 }
 
+TEST_CASE("a scrolled box that stops scrolling and loses a child has no anchor at the next layout") {
+    Fixture f;
+    PrLayoutNode root = f.element(kPrLayoutNodeNone, block());
+    PrLayoutBoxStyle scroller = block(200);
+    scroller.overflowY = PrLayoutOverflow_Scroll;
+    PrLayoutNode s = f.element(root, scroller);
+    Array<PrLayoutNode> b;
+    for (uint32_t i = 0; i < 10; ++i)
+        b.push(f.element(s, block(100)));
+    f.layout(px(100, 400));
+    prLayoutNodeSetScroll(f.tree, s, px(0, 250));
+    f.layout(px(100, 400));
+    // The box is no scroll container now, and the fragments of the last layout still name the erased child.
+    prLayoutNodeSetStyle(f.tree, s, f.style(block(200)));
+    prLayoutTreeErase(f.tree, b[3]);
+    f.layout(px(100, 400));
+    CHECK(taken(f.tree).isEmpty());
+    CHECK(f.bounds(b[4]).top == doctest::Approx(300));
+    CHECK(verified(f.tree));
+}
+
 TEST_CASE("a change of size on the path from the anchor to its container suppresses the adjustment, in the same viewport") {
     Fixture f;
     PrLayoutNode root = f.element(kPrLayoutNodeNone, block());

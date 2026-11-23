@@ -81,10 +81,14 @@ struct Container {
 
 // Measures `container` as of the last layout. Returns false if it is not a laid-out scroll container.
 bool measure(LayoutTree* tree, PrLayoutNode container, Container* out) {
+    LayoutNodeIndex index = layoutNodeIndex(tree, container);
+    // The tree may have changed since the last layout. The scroll info of a scroll container reads only its own
+    // fragment. That of any other box measures the fragments of its children, whose nodes may have been erased since.
+    if (index != kPrLayoutNodeNone && !layoutNodeIsScrollContainer(tree, index))
+        return false;
     PrLayoutScrollInfo info{};
     if (!prLayoutNodeScrollInfo(static_cast<PrLayoutTree*>(tree), container, &info) || !info.scrollContainer)
         return false;
-    LayoutNodeIndex index = layoutNodeIndex(tree, container);
     PrLayoutVec port{};
     if (index != kPrLayoutNodeNone) {
         if (!layoutNodeLaidOut(tree, index))
