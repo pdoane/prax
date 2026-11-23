@@ -131,6 +131,10 @@ constexpr float kBottom[3] = {0.20f, 0.09f, 0.24f};
 
 // The example's state: the panels' values, which panel is in front, and what the panels' painters draw with.
 struct Panels {
+    // The picture, and the codecs that its source decodes with whenever the cache reads it. The codecs outlive the
+    // picture.
+    PrCompressCodecSet* PR_NULLABLE compress = nullptr;
+    PrImageCodecSet* PR_NULLABLE images = nullptr;
     const PrTextureSource* picture = nullptr;
     PrTextureCache* PR_NULLABLE textures = nullptr; // the cache on the window's device that realizes the picture
 
@@ -361,21 +365,23 @@ bool openPanels(Panels& p) {
     PrBlob* picture = prResourceOpen("picture.png");
     if (picture == nullptr)
         return false;
-    PrCompressCodecSet* compress = prCompressCodecSetCreateDefault();
-    PrImageCodecSet* images = prImageCodecSetCreateDefault(compress);
+    p.compress = prCompressCodecSetCreateDefault();
+    p.images = prImageCodecSetCreateDefault(p.compress);
     bool read =
-        prImageTextureSourceOpenBytes(prBlobBytes(picture), images, nullptr, PrImageTextureColor_Srgb, &p.picture) ==
+        prImageTextureSourceOpenBytes(prBlobBytes(picture), p.images, nullptr, PrImageTextureColor_Srgb, &p.picture) ==
         PrStatus_Ok;
-    prImageCodecSetDestroy(images);
-    prCompressCodecSetDestroy(compress);
     prBlobRelease(picture);
     return read;
 }
 
 void closePanels(Panels& p) {
     prTextureSourceRelease(p.picture);
+    prImageCodecSetDestroy(p.images);
+    prCompressCodecSetDestroy(p.compress);
     prDrawFilterRelease(p.frosted);
     p.picture = nullptr;
+    p.images = nullptr;
+    p.compress = nullptr;
     p.frosted = nullptr;
 }
 

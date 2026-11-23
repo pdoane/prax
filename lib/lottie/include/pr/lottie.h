@@ -43,7 +43,9 @@ typedef bool (*PrLottieLoadFn)(void* PR_NULLABLE context, PrStringView path, PrB
 
 // The host services that reading uses.
 typedef struct PrLottieOptions {
-    const PrImageCodecSet* PR_NULLABLE codec;        // decodes image assets; without it, no images draw
+    // The codec that decodes image assets, whenever the cache reads them, so it must outlive the animation. Without a
+    // codec, no images draw.
+    const PrImageCodecSet* PR_NULLABLE codec;
 
     // The texture cache that image assets are drawn from. It must be on the device of the renderer that draws the
     // frames, and it must outlive the animation. Without a cache, images draw nothing.

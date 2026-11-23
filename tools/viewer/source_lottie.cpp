@@ -62,11 +62,17 @@ struct LottieSource {
     // Without settings, a set over the system's fonts that hints them as the source asks, which outlives the animation.
     PrFontSet* PR_NULLABLE system = nullptr;
 
+    // The codecs that the animation's images decode with whenever the cache reads them, which outlive the animation.
+    PrCompressCodecSet* PR_NULLABLE compressCodec = nullptr;
+    PrImageCodecSet* PR_NULLABLE imageCodec = nullptr;
+
     LottieSource() = default;
     LottieSource(const LottieSource&) = delete;
     LottieSource& operator=(const LottieSource&) = delete;
     ~LottieSource() {
         prLottieAnimationDestroy(animation);
+        prImageCodecSetDestroy(imageCodec);
+        prCompressCodecSetDestroy(compressCodec);
         suiteRenderReset(&render);
         prFontSetDestroy(system);
     }
@@ -76,14 +82,14 @@ std::shared_ptr<LottieSource> loadLottie(const fs::path& path, const fs::path& s
         PrFontHinting hinting, PrFontHinter* PR_NULLABLE hinter, PrTextureCache* PR_NULLABLE textures) {
     std::string json = readFile(path);
     Beside beside{path.parent_path(), {}};
-    PrCompressCodecSet* compressCodec = prCompressCodecSetCreateDefault();
-    PrImageCodecSet* imageCodec = prImageCodecSetCreateDefault(compressCodec);
+    std::shared_ptr<LottieSource> lottie = std::make_shared<LottieSource>();
+    lottie->compressCodec = prCompressCodecSetCreateDefault();
+    lottie->imageCodec = prImageCodecSetCreateDefault(lottie->compressCodec);
     PrLottieOptions options{};
-    options.codec = imageCodec;
+    options.codec = lottie->imageCodec;
     options.textures = textures;
     options.load = loadBeside;
     options.loadContext = &beside;
-    std::shared_ptr<LottieSource> lottie = std::make_shared<LottieSource>();
     if (!settings.empty())
         suiteRenderRead(&lottie->render, settings.string(), fs::path(kThirdParty).parent_path().string());
     if (lottie->render.fonts == nullptr)
@@ -93,8 +99,6 @@ std::shared_ptr<LottieSource> loadLottie(const fs::path& path, const fs::path& s
     options.fonts = fonts;
     options.shaper = shaper;
     prLottieAnimationCreate(json, &options, &lottie->animation);
-    prImageCodecSetDestroy(imageCodec);
-    prCompressCodecSetDestroy(compressCodec);
     return lottie->animation != nullptr ? lottie : nullptr;
 }
 
