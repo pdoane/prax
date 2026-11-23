@@ -76,6 +76,10 @@ bool cssMatchQuery(const CssMatcher* m, CssTokenSpan span, CssValueDef productio
 // color.
 const PrCssKeyword* PR_NULLABLE cssMatchRelativeComponents(const CssMatcher* m);
 
+// Folds the color-mix() or palette-mix() at `at`, the last value of `pool`, into the form that a match gives it
+// (css-color-5/#serial-color-mix). A computed value folds a mix again once its percentages resolve.
+void cssMixFold(CssValuePool* pool, uint32_t at);
+
 } // namespace pr_impl
 
 PR_ASSUME_NONNULL_END

@@ -34,6 +34,7 @@ PR_CRT_IMPORT double __cdecl log2(double x);
 PR_CRT_IMPORT float __cdecl exp2f(float x);
 PR_CRT_IMPORT double __cdecl floor(double x);
 PR_CRT_IMPORT double __cdecl round(double x);
+PR_CRT_IMPORT double __cdecl trunc(double x);
 PR_CRT_IMPORT double __cdecl hypot(double x, double y);
 PR_CRT_IMPORT double __cdecl erf(double x);
 PR_CRT_IMPORT double __cdecl nextafter(double x, double y);
@@ -65,6 +66,10 @@ PR_CONSTANT double kPrF64E = 2.71828182845904523536;
 PR_CONSTANT float kPrF32Max = 3.40282346638528859812e38f;
 PR_CONSTANT float kPrF32Pi = 3.14159265358979323846f;
 PR_CONSTANT float kPrF32Sqrt2 = 1.41421356237309504880f;
+
+// 2^53: every integer of smaller magnitude has an exact double, and every double of this magnitude or more is an
+// integer.
+PR_CONSTANT double kPrF64MaxExactInteger = 9007199254740992.0;
 
 // Infinity and NaN. C under MSVC has no builtins for them, so it folds them from an overflowing product, as the C
 // library's own headers do.
@@ -128,6 +133,11 @@ PR_CONSTEXPR double prF64Max(double a, double b) {
     return b > a ? b : a;
 }
 
+// Returns `value` clamped to [`low`, `high`]. NaN stays NaN.
+PR_CONSTEXPR double prF64Clamp(double value, double low, double high) {
+    return value < low ? low : value > high ? high : value;
+}
+
 // Wrappers for the C library's IEEE-754 functions. They return the C library's results for zeros, infinities and NaN.
 static inline double prF64Sin(double value) {
     return PR_MATH_BUILTIN(sin)(value);
@@ -189,6 +199,9 @@ static inline double prF64Ceil(double value) {
 }
 static inline double prF64Round(double value) {
     return PR_MATH_BUILTIN(round)(value);
+}
+static inline double prF64Trunc(double value) {
+    return PR_MATH_BUILTIN(trunc)(value);
 }
 static inline double prF64Fmod(double x, double y) {
     return PR_MATH_BUILTIN(fmod)(x, y);

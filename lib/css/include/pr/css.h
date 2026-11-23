@@ -403,6 +403,10 @@ PrDomNode* PR_NULLABLE prCssStyleSheetOwnerNode(PrCssStyleSheet* sheet);
 // Returns the sheet whose @import rule imports this sheet, or null.
 PrCssStyleSheet* PR_NULLABLE prCssStyleSheetParentStyleSheet(PrCssStyleSheet* sheet);
 
+// Returns the style sheet of `element`, an HTML or SVG style element or an HTML link element, as LinkStyle.sheet gives
+// it (cssom-1/#dom-linkstyle-sheet), or null if it has none.
+PrCssStyleSheet* PR_NULLABLE prCssElementSheet(const PrDomElement* element);
+
 // Returns the value of the owner element's title attribute, or the empty string if the element has none. A constructed
 // sheet's title is the null view.
 PrStringView prCssStyleSheetTitle(const PrCssStyleSheet* sheet);
@@ -1682,11 +1686,13 @@ PrStatus prCssValueParseColor(PrStringView text, PrCssValue* out);
 // A used color (css-color-4/#resolving-color-values): its space, its components in the units that PrColorSpace gives,
 // and its alpha in [0, 1]. A legacy color is an sRGB color that serializes with rgb()
 // (css-color-4/#legacy-color-syntax), as a named color, a hex color, and rgb(), hsl() and hwb() do. `missing` has a bit
-// for each missing component, alpha's last (css-color-4/#missing-color-component).
+// for each missing component, alpha's last (css-color-4/#missing-color-component). `readsElement` is set if part of the
+// color comes from the element it was resolved for: currentcolor, a system color or light-dark().
 typedef struct PrCssUsedColor {
     PrColorSpace space;
     bool legacy;
     uint8_t missing;
+    bool readsElement;
     double components[3];
     double alpha;
 } PrCssUsedColor;

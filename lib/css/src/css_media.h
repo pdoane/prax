@@ -38,6 +38,17 @@ struct CssMediaValue {
 // The number of media features, which are the descriptors from kCssDescriptorMediaFirst up to kCssDescriptorMediaEnd.
 constexpr uint32_t kCssMediaFeatureCount = kCssDescriptorMediaEnd - kCssDescriptorMediaFirst;
 
+// The media features that queries read, a bit for each, indexed from kCssDescriptorMediaFirst.
+struct CssMediaReads {
+    uint64_t bits[(kCssMediaFeatureCount + 63) / 64];
+};
+
+// Returns true if a query read `feature`.
+inline bool cssMediaReadsHas(const CssMediaReads& reads, PrCssDescriptor feature) {
+    uint32_t at = uint32_t(feature - kCssDescriptorMediaFirst);
+    return (reads.bits[at / 64] >> (at % 64) & 1) != 0;
+}
+
 // The environment that media queries are evaluated against (mediaqueries-5/#media).
 struct CssMediaEnvironment {
     PrCssKeyword type;        // the media type (mediaqueries-5/#media-types): screen or print
@@ -60,7 +71,14 @@ struct CssMediaEnvironment {
     // A script's override of each user preference (mediaqueries-5/#auto-pref), which a query sees instead of the
     // feature's value. The keyword is PrCssKeyword_Unknown for a feature with no override.
     CssMediaValue overrides[kCssMediaFeatureCount];
+
+    // The set that records the features that queries read, or null to record none. A feature computed from others, such
+    // as aspect-ratio, records the features that it reads.
+    CssMediaReads* PR_NULLABLE reads;
 };
+
+// Returns true if every feature in `reads` has the same value in `a` and in `b`, as a query sees it.
+bool cssMediaReadsAgree(const CssMediaReads& reads, const CssMediaEnvironment& a, const CssMediaEnvironment& b);
 
 // Initializes a screen with an 800 by 600 viewport at one dot per px, a fine pointer that hovers, sRGB at 8 bits per
 // component, and no preferences. Its scripting (mediaqueries-5/#scripting) is enabled if `scripting` is set, and none
@@ -108,6 +126,10 @@ void cssMediaEnvironmentSetType(CssMediaEnvironment* environment, PrCssMediaType
 // Returns true if the list is empty or one of its queries is true in the environment. An unknown query counts as false
 // (mediaqueries-5/#evaluating).
 bool cssMediaListMatches(const CssMediaQueries* list, const CssMediaEnvironment* environment);
+
+// Returns true if the media query list in `query` matches the environment, as a media attribute asks
+// (html/#matches-the-environment). Each entry that is not a media query counts as `not all`.
+bool cssMediaQueryMatches(PrStringView query, const CssMediaEnvironment* environment);
 
 // Returns the environment that the sheet's media queries are evaluated against: the environment of its document, or
 // null for a sheet in no document.

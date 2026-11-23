@@ -205,7 +205,7 @@ extern const CssGrammarIndex kCssPseudoClassGrammarRoot[CssPseudoClass_Count] = 
     0,     // CssPseudoClass_HasFn
     0,     // CssPseudoClass_HasSlotted
     0,     // CssPseudoClass_Heading
-    6148,  // CssPseudoClass_HeadingFn
+    6152,  // CssPseudoClass_HeadingFn
     0,     // CssPseudoClass_HighValue
     0,     // CssPseudoClass_Host
     0,     // CssPseudoClass_HostFn
@@ -261,7 +261,7 @@ extern const CssGrammarIndex kCssPseudoClassGrammarRoot[CssPseudoClass_Count] = 
     0,     // CssPseudoClass_SnappedY
     0,     // CssPseudoClass_Stalled
     0,     // CssPseudoClass_StartOfPage
-    3434,  // CssPseudoClass_StateFn
+    3437,  // CssPseudoClass_StateFn
     0,     // CssPseudoClass_Target
     0,     // CssPseudoClass_TargetAfter
     0,     // CssPseudoClass_TargetBefore
@@ -390,7 +390,7 @@ extern const uint64_t kCssPseudoElementFunction[bitsetWords(CssPseudoElement_Cou
 extern const CssGrammarIndex kCssPseudoElementGrammarRoot[CssPseudoElement_Count] = {
     0,     // CssPseudoElement_None
     0,     // CssPseudoElement_After
-    6149,  // CssPseudoElement_AttrFn
+    6153,  // CssPseudoElement_AttrFn
     0,     // CssPseudoElement_Backdrop
     0,     // CssPseudoElement_Before
     0,     // CssPseudoElement_Checkmark
@@ -409,15 +409,15 @@ extern const CssGrammarIndex kCssPseudoElementGrammarRoot[CssPseudoElement_Count
     0,     // CssPseudoElement_FirstLetter
     0,     // CssPseudoElement_FirstLine
     0,     // CssPseudoElement_GrammarError
-    2786,  // CssPseudoElement_HighlightFn
+    2789,  // CssPseudoElement_HighlightFn
     0,     // CssPseudoElement_Marker
     0,     // CssPseudoElement_NthFragmentFn
-    6150,  // CssPseudoElement_PartFn
-    6151,  // CssPseudoElement_PickerFn
+    6154,  // CssPseudoElement_PartFn
+    6155,  // CssPseudoElement_PickerFn
     0,     // CssPseudoElement_PickerIcon
     0,     // CssPseudoElement_Placeholder
     0,     // CssPseudoElement_RevealIcon
-    6152,  // CssPseudoElement_ScrollButtonFn
+    6156,  // CssPseudoElement_ScrollButtonFn
     0,     // CssPseudoElement_ScrollMarker
     0,     // CssPseudoElement_ScrollMarkerGroup
     0,     // CssPseudoElement_SearchText

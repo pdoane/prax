@@ -35,8 +35,10 @@ void cssEachCounterItem(CssValueRun run, Fn fn) {
         bool reversed = item->kind == PrCssValueKind_Function;
         PrStringView name = cssValueText(run, reversed ? item + 1 : item);
         i += item->next;
-        bool given = i < run.count && run.values[i].kind == PrCssValueKind_Integer;
-        double number = given ? run.values[i].number : 0;
+        // A calculation of lengths computes to a number, which rounds to the counter's integer.
+        bool given = i < run.count &&
+            (run.values[i].kind == PrCssValueKind_Integer || run.values[i].kind == PrCssValueKind_Number);
+        double number = given ? prF64Round(run.values[i].number) : 0;
         if (given)
             ++i;
         int32_t value = number < INT32_MIN ? INT32_MIN : number > INT32_MAX ? INT32_MAX : int32_t(number);

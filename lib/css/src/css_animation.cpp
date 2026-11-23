@@ -98,9 +98,12 @@ double combinedNumber(PrCssProperty property, const CssValueNode& value, double 
         number = 0;
     // An <opacity-value> computes clamped to [0, 1], which its grammar does not say.
     if (isOpacityValue(property))
-        number = number < 0 ? 0 : number > 1 ? 1 : number;
+        number = prF64Clamp(number, 0, 1);
     if (property == PrCssProperty_FontWeight)
-        number = number < 1 ? 1 : number > 1000 ? 1000 : number;
+        number = prF64Clamp(number, 1, 1000);
+    // An axis value is a float.
+    if (property == PrCssProperty_FontVariationSettings)
+        number = prF64Clamp(number, -double(kPrF32Max), double(kPrF32Max));
     return number;
 }
 
@@ -382,7 +385,7 @@ bool individualOf(PrCssProperty property, CssValueRun run, Individual* out) {
                     if (!ok)
                         return false;
                 } else if (n->kind == PrCssValueKind_Dimension && cssUnitCategory(n->unit) == CssUnitCategory_Length) {
-                    out->v[k] = n->number * cssUnitScale(n->unit);
+                    out->v[k] = cssUnitToCanonical(n->number, n->unit);
                 } else if ((n->kind == PrCssValueKind_Number || n->kind == PrCssValueKind_Integer) && n->number == 0) {
                     out->v[k] = 0;
                 } else {
@@ -409,7 +412,7 @@ bool individualOf(PrCssProperty property, CssValueRun run, Individual* out) {
             const CssValueNode* angle = nodes[count - 1];
             if (angle->kind != PrCssValueKind_Dimension || cssUnitCategory(angle->unit) != CssUnitCategory_Angle)
                 return false;
-            out->v[3] = angle->number * cssUnitScale(angle->unit) * kPrF64Pi / 180;
+            out->v[3] = cssUnitToCanonical(angle->number, angle->unit) * kPrF64Pi / 180;
             if (count == 2 && nodes[0]->kind == PrCssValueKind_Keyword) {
                 PrCssKeyword axis = cssValueKeyword(nodes[0]);
                 out->v[0] = axis == PrCssKeyword_X ? 1 : 0;
@@ -657,7 +660,7 @@ bool transformArgument(CssValueRun run, uint32_t index, TransformArgument* out) 
             return true;
         case PrCssValueKind_Dimension:
             if (cssUnitCategory(a->unit) == CssUnitCategory_Angle) {
-                out->value = a->number * cssUnitScale(a->unit) * kPrF64Pi / 180;
+                out->value = cssUnitToCanonical(a->number, a->unit) * kPrF64Pi / 180;
                 return true;
             }
             return cssResolveLength(run, index, 0, &out->value);
@@ -1236,13 +1239,13 @@ void addWithoutCommas(CssValuePool* out, CssValueRun run) {
 // of a computed value (addCombined).
 bool reshapes(PrCssProperty property) {
     return takesSides(property) || takesPair(property) || property == PrCssProperty_Clip ||
-        property == PrCssProperty_ClipPath;
+        cssTakesBasicShape(property);
 }
 
-// Returns true if `run` is a clip-path whose circle or ellipse is sized by an extent keyword, which combines only
+// Returns true if `run` holds a circle() or ellipse() whose radius is an extent keyword. Such a shape animates only
 // discretely.
 bool hasKeywordRadius(PrCssProperty property, CssValueRun run) {
-    if (property != PrCssProperty_ClipPath)
+    if (!cssTakesBasicShape(property))
         return false;
     for (uint32_t i = 0; i < run.count; i += run.values[i].next) {
         const CssValueNode* value = &run.values[i];
@@ -1255,6 +1258,20 @@ bool hasKeywordRadius(PrCssProperty property, CssValueRun run) {
     return false;
 }
 
+// Appends a basic shape's value in the form that combining reads. An inset() has all of its insets and radii. A value
+// that names no box gets the property's default box, so that it interpolates with the same shape in that box.
+void addFullBasicShape(CssValuePool* out, PrCssProperty property, CssValueRun run) {
+    bool shape = false;
+    bool box = false;
+    for (uint32_t i = 0; i < run.count; i += run.values[i].next) {
+        shape = shape || run.values[i].kind == PrCssValueKind_Function;
+        box = box || cssIsShapeBox(run.values[i]);
+    }
+    addClipPathInsets(out, run, true);
+    if (shape && !box)
+        cssValuePoolAdd(out, cssKeywordValue(cssDefaultShapeBox(property)));
+}
+
 // Returns `run` in the form that combining reads. If that form differs from `run`, writes it to `scratch`. The form has
 // a value for each side of a property that takesSides, no commas in a clip, every inset and radius of a clip path's
 // inset(), and both radii of a corner.
@@ -1263,8 +1280,8 @@ CssValueRun normalized(PrCssProperty property, CssValueRun run, CssValuePool* sc
         addFourSides(scratch, run);
     else if (property == PrCssProperty_Clip)
         addWithoutCommas(scratch, run);
-    else if (property == PrCssProperty_ClipPath)
-        addClipPathInsets(scratch, run, true);
+    else if (cssTakesBasicShape(property))
+        addFullBasicShape(scratch, property, run);
     else if (takesPair(property))
         addBothOfPair(scratch, run);
     else
@@ -1284,12 +1301,20 @@ void addCombined(CssValuePool* out, PrCssProperty property, CssValueRun run) {
         addFewestOfPair(out, run);
         return;
     }
-    if (property != PrCssProperty_ClipPath) {
+    if (!cssTakesBasicShape(property)) {
         cssValuePoolAddRun(out, run);
         return;
     }
     CssValueSpan span{out->values.count, 0};
     addClipPathInsets(out, run, false);
+    // Leave out the default box, as the computed value does.
+    uint32_t last = span.start;
+    for (uint32_t i = span.start; i < out->values.count; i += out->values.data[i].next)
+        last = i;
+    const CssValueNode& end = out->values.data[last];
+    bool shaped = last != span.start;
+    if (shaped && cssIsShapeBox(end) && cssValueKeyword(&end) == cssDefaultShapeBox(property))
+        out->values.count = last;
     span.count = out->values.count - span.start;
     for (uint32_t i = span.start; i < span.start + span.count; i += out->values.data[i].next) {
         const CssValueNode& value = out->values.data[i];
@@ -2140,6 +2165,31 @@ void combine(CssValuePool* out, PrCssProperty property, CssValueRun underlying, 
     cssValuePoolReset(&mixed);
 }
 
+// Appends the font-palette `progress` of the way from `from` to `to` (css-fonts-4/#font-palette-prop). Between the two,
+// it is palette-mix() of both, in the form of a computed value. At either end, and beyond, it is that end's palette,
+// since a mix takes percentages from 0% to 100%.
+void addPaletteBetween(CssValuePool* out, CssValueRun from, CssValueRun to, double progress) {
+    if (progress <= 0 || cssValueRunEquals(from, to)) {
+        cssValuePoolAddRun(out, from);
+        return;
+    }
+    if (progress >= 1) {
+        cssValuePoolAddRun(out, to);
+        return;
+    }
+    uint32_t function = cssValuePoolAdd(out, cssFunctionValue(PrCssKeyword_PaletteMix));
+    cssValuePoolAddRun(out, from);
+    // Equal shares of 100% are left out of a computed mix.
+    bool even = progress == 0.5;
+    if (!even)
+        cssValuePoolAdd(out, cssNumberValue(PrCssValueKind_Percentage, PrCssUnit_Number, (1 - progress) * 100));
+    cssValuePoolAdd(out, cssLiteralValue(','));
+    cssValuePoolAddRun(out, to);
+    if (!even)
+        cssValuePoolAdd(out, cssNumberValue(PrCssValueKind_Percentage, PrCssUnit_Number, progress * 100));
+    out->values.data[function].next = out->values.count - function;
+}
+
 // Gives `pool` the length that text-decoration-inset's auto stands for in a font of `fontSize` px, and points `a` or
 // `b` at it, if one of them is auto and the other is not (w3c/csswg-drafts#13036). Auto with auto stays auto.
 void insetAutoAsLength(PrCssProperty property, CssValueRun* a, CssValueRun* b, double fontSize, CssValuePool* pool) {
@@ -2154,6 +2204,9 @@ void insetAutoAsLength(PrCssProperty property, CssValueRun* a, CssValueRun* b, d
 }
 
 bool interpolableValues(PrCssProperty property, CssValueRun from, CssValueRun to, const CssColorContext& colors) {
+    // Any two palettes interpolate, through palette-mix().
+    if (property == PrCssProperty_FontPalette)
+        return !cssValueRunEquals(from, to);
     if (isFilterList(property))
         return !cssValueRunEquals(from, to) && addFiltersBetween(nullptr, from, to, 0, colors);
     if (isImageList(property))
@@ -2179,6 +2232,10 @@ void interpolateValues(CssValuePool* out, PrCssProperty property, CssValueRun fr
         const CssColorContext& colors) {
     if (cssIsCornerShape(property)) {
         cssCornerShapeInterpolate(out, from, to, progress);
+        return;
+    }
+    if (property == PrCssProperty_FontPalette) {
+        addPaletteBetween(out, from, to, progress);
         return;
     }
     if (isFilterList(property)) {

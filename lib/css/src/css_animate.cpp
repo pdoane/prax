@@ -1203,6 +1203,18 @@ void cssAnimateUpdate(PrCssPresentation* presentation, double time) {
         prCssAnimationRelease(list.data[i]);
     list.reset();
     cssAnimationUnlistIdle(a);
+    // A driver may add or remove drivers while it updates. An added driver first updates in the next update. A driver
+    // removed before its turn does not update.
+    RawArray<CssAnimationDriver> drivers;
+    drivers.append(a.drivers.span());
+    for (uint32_t i = 0; i < drivers.count; ++i) {
+        bool registered = false;
+        for (uint32_t j = 0; j < a.drivers.count && !registered; ++j)
+            registered = a.drivers.data[j].context == drivers.data[i].context;
+        if (registered)
+            drivers.data[i].update(drivers.data[i].context, time);
+    }
+    drivers.reset();
 }
 
 void cssAnimateRendered(PrCssPresentation* presentation) {
@@ -1270,6 +1282,10 @@ bool cssAnimateHaveEventsAhead(PrDomDocument* document) {
         if (timing.phase == PrLayoutEffectPhase_Before || prF64IsFinite(timing.endTime))
             return true;
     }
+    for (uint32_t i = 0; i < a.drivers.count; ++i) {
+        if (a.drivers.data[i].nextEventTime(a.drivers.data[i].context, a.time) >= 0)
+            return true;
+    }
     return false;
 }
 
@@ -1306,6 +1322,12 @@ double cssAnimateNextEventTime(PrDomDocument* document) {
             ahead(at(t.delay + boundary * t.duration));
         }
     }
+    for (uint32_t i = 0; i < a.drivers.count; ++i) {
+        double at = a.drivers.data[i].nextEventTime(a.drivers.data[i].context, time);
+        if (at == time)
+            return time;
+        ahead(at);
+    }
     return next;
 }
 
@@ -1318,6 +1340,10 @@ bool cssAnimateIsAnimating(PrDomDocument* document) {
             return true;
         if (animation->effect != nullptr && prLayoutPlaybackMoves(&animation->playback) &&
                 prCssAnimationPlayState(animation) == PrCssPlayState_Running)
+            return true;
+    }
+    for (uint32_t i = 0; i < a.drivers.count; ++i) {
+        if (a.drivers.data[i].animating(a.drivers.data[i].context))
             return true;
     }
     return false;

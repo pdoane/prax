@@ -192,6 +192,25 @@ struct CssAnimatedTarget {
     RawArray<PrCssKeyframeEffect* PR_NONNULL> effects;
 };
 
+// A driver of a document's animations other than its CSS animations and Web Animations, such as SVG's animation
+// elements. The document's timeline drives it. Each update of the timeline updates the driver after the timeline's own
+// animations, and the presentation sends the driver's events after theirs. Each function takes `context`.
+struct CssAnimationDriver {
+    void* PR_NULLABLE context;
+    void (*update)(void* PR_NULLABLE context, double time);    // to the timeline's time, in milliseconds
+
+    // Returns the time on the timeline, in milliseconds, at which its next event or change of interval is due, the
+    // current time if one is due now, or -1 if none is ahead (cssAnimateNextEventTime).
+    double (*nextEventTime)(void* PR_NULLABLE context, double time);
+
+    // Returns true if what it animates changes as the timeline advances.
+    bool (*animating)(void* PR_NULLABLE context);
+
+    // Returns true if events wait for sendEvents, which dispatches them.
+    bool (*hasEvents)(void* PR_NULLABLE context);
+    void (*sendEvents)(void* PR_NULLABLE context);
+};
+
 // A document's animations.
 struct CssAnimations {
     double time;                         // the document timeline's current time, in milliseconds
@@ -206,6 +225,7 @@ struct CssAnimations {
 
     RawArray<PrCssAnimation* PR_NONNULL> list;
     RawArray<CssAnimateEvent> events;
+    RawArray<CssAnimationDriver> drivers;
     bool recordsEvents;             // a window updates the rendering and dispatches the events
     PrCssAnimationCallback callback;
 
@@ -223,6 +243,10 @@ struct CssAnimations {
 
 // Returns the document's animations.
 CssAnimations& cssAnimations(PrDomDocument* document);
+
+// Adds a driver of the document's animations, or removes the driver whose context is `context`.
+void cssAnimationDriverAdd(PrDomDocument* document, const CssAnimationDriver& driver);
+void cssAnimationDriverRemove(PrDomDocument* document, void* PR_NULLABLE context);
 
 // Frees the document's animations as the document is destroyed. The list is empty by then.
 void cssAnimationsReset(CssAnimations* animations);

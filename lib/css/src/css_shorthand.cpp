@@ -451,7 +451,7 @@ bool expandGlyphOrientationVertical(const Expansion* e, Items value) {
     PrCssKeyword orientation = PrCssKeyword_Mixed;
     if (sole->kind != PrCssValueKind_Keyword) {
         double degrees =
-            sole->kind == PrCssValueKind_Dimension ? sole->number * cssUnitScale(sole->unit) : sole->number;
+            sole->kind == PrCssValueKind_Dimension ? cssUnitToCanonical(sole->number, sole->unit) : sole->number;
         orientation = degrees < 45 ? PrCssKeyword_Upright : PrCssKeyword_Sideways;
     }
     setKeyword(e, 0, orientation);

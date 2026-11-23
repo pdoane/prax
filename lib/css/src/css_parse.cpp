@@ -12,6 +12,7 @@
 #include "css/src/css_grid.h"
 #include "css/src/css_match.h"
 #include "css/src/css_parse_terminal.h"
+#include "css/src/css_style.h"
 
 namespace pr_impl {
 
@@ -300,6 +301,35 @@ void foldProperty(PrCssProperty property, CssValuePool* pool, uint32_t first) {
                     cssValuePoolAdd(pool, cssNumberValue(PrCssValueKind_Dimension, PrCssUnit_Px, 0));
             }
             break;
+        case PrCssProperty_PaintOrder:
+            // A paint-order is written in its shortest form (cssPaintOrderForm).
+            if (!cssValueIsKeyword(&pool->values.data[first], PrCssKeyword_Normal)) {
+                PrCssKeyword order[3] = {};
+                uint32_t written = cssPaintOrderForm(cssValuePoolRun(pool, span), order);
+                pool->values.count = first;
+                for (uint32_t i = 0; i < written; ++i)
+                    cssValuePoolAdd(pool, cssKeywordValue(order[i]));
+            }
+            break;
+        case PrCssProperty_StrokeDasharray: {
+            // A dash array's values are separated by commas, however they were written
+            // (SVG2/painting.html#StrokeDasharrayProperty), as its computed value is.
+            if (cssValueIsKeyword(&pool->values.data[first], PrCssKeyword_None))
+                break;
+            CssValuePool dashes{};
+            CssValueRun run = cssValuePoolRun(pool, span);
+            for (uint32_t i = 0; i < run.count; i += run.values[i].next) {
+                if (run.values[i].kind == PrCssValueKind_Literal)
+                    continue;
+                if (dashes.values.count != 0)
+                    cssValuePoolAdd(&dashes, cssLiteralValue(','));
+                cssValuePoolAddRun(&dashes, cssValueSubtree(run, i));
+            }
+            pool->values.count = first;
+            cssValuePoolAddRun(pool, cssValuePoolRun(&dashes, CssValueSpan{0, dashes.values.count}));
+            cssValuePoolReset(&dashes);
+            break;
+        }
         case PrCssProperty_FontStyle:
             // `oblique 0deg` is `normal`, as csswg-drafts#11430 resolved.
             if (span.count == 2 && cssValueIsKeyword(&pool->values.data[first], PrCssKeyword_Oblique) &&

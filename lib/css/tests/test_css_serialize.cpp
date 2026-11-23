@@ -39,20 +39,22 @@ String tokens(PrStringView source) {
 
 using namespace pr_impl;
 
-TEST_CASE("a number is the shortest decimal that reads back as itself") {
+TEST_CASE("a number is rounded to 6 decimals, and written in its shortest decimal") {
     CHECK(number(0.0) == "0");
     CHECK(number(-0.0) == "0");
     CHECK(number(1.0) == "1");
     CHECK(number(-1.5) == "-1.5");
     CHECK(number(0.1) == "0.1");
-    CHECK(number(1.0 / 3.0) == "0.3333333333333333");
+    CHECK(number(1.0 / 3.0) == "0.333333");
+    CHECK(number(2540 * 96 / 25.4) == "9600");
     CHECK(number(1000000.0) == "1000000");
     CHECK(number(123456789012345.0) == "123456789012345");
+    // A number that rounds to zero has no sign.
+    CHECK(number(-1e-7) == "0");
 }
 
 TEST_CASE("positional notation runs from 1e-6 to 1e21") {
     CHECK(number(1e-6) == "0.000001");
-    CHECK(number(1e-7) == "1e-7");
     CHECK(number(1e20) == "100000000000000000000");
     CHECK(number(1e21) == "1e+21");
 }

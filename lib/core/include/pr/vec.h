@@ -111,6 +111,17 @@ PrVec2 prVec2Normalize(PrVec2 vector);
 }
 #endif
 
+// Returns the dot product of `a` and `b`.
+static inline float prVec2Dot(PrVec2 a, PrVec2 b) {
+    return a.x * b.x + a.y * b.y;
+}
+
+// Returns the z component of the cross product of `a` and `b`. It is positive if `b` turns from `a` toward the positive
+// y-axis.
+static inline float prVec2Cross(PrVec2 a, PrVec2 b) {
+    return a.x * b.y - a.y * b.x;
+}
+
 // Returns the point `t` of the way from `a` to `b`: `a` at 0 and `b` at 1.
 static inline PrVec2 prVec2Lerp(PrVec2 a, PrVec2 b, float t) {
     return PR_LITERAL(PrVec2){a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t};

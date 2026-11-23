@@ -48,6 +48,10 @@ CssUnitCategory cssUnitCategory(PrCssUnit unit);
 // unit with no fixed ratio to the canonical unit: a relative length, PrCssUnit_Number and PrCssUnit_Unknown.
 double cssUnitScale(PrCssUnit unit);
 
+// Returns `value` in `unit` converted to the canonical unit of its category, or 0 for a unit with no fixed ratio to it
+// (cssUnitScale). The result is exact where the value in the canonical unit can be represented exactly.
+double cssUnitToCanonical(double value, PrCssUnit unit);
+
 // Returns the canonical unit of a category (css-values-4/#canonical-unit), or PrCssUnit_Number for a category that has
 // none: numbers, percentages and unknown units.
 PrCssUnit cssUnitCanonical(CssUnitCategory category);

@@ -69,6 +69,10 @@ enum {
     CssValueAuxFlag_Implicit = 1 << 0,
 
     CssValueAuxFlag_MathCategory = 0x000f,    // math: the CssUnitCategory that its type resolves to
+
+    // math: the range that the calculation is clamped to (css-values-4/#calc-range), as an index into kCssGrammarRanges
+    // shifted left by 4, or CssGrammarRange_None.
+    CssValueAuxFlag_MathRange = 0x0ff0,
     CssValueAuxFlag_CalcOperator = 0x0003,    // calc: the PrCssCalc
 };
 typedef uint16_t CssValueAuxFlags;
@@ -198,6 +202,15 @@ inline bool cssValueColorLegacy(const CssValueNode* value) {
 // Returns a math value's category.
 inline CssUnitCategory cssValueMathCategory(const CssValueNode* value) {
     return CssUnitCategory(value->aux & CssValueAuxFlag_MathCategory);
+}
+
+// Get and set the range that a math value is clamped to, as an index into kCssGrammarRanges. CssGrammarRange_None means
+// that it is not clamped.
+inline uint8_t cssValueMathRange(const CssValueNode* value) {
+    return uint8_t((value->aux & CssValueAuxFlag_MathRange) >> 4);
+}
+inline void cssValueSetMathRange(CssValueNode* value, uint8_t range) {
+    value->aux = CssValueAuxFlags((value->aux & ~CssValueAuxFlag_MathRange) | (uint32_t(range) << 4));
 }
 
 // Returns the operator of a calc-operator node.

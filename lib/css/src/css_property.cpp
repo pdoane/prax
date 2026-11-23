@@ -1608,286 +1608,286 @@ extern const CssGrammarIndex kCssPropertyGrammarRoot[] = {
     820,   // direction
     823,   // display
     838,   // dominant-baseline
-    841,   // dynamic-range-limit
-    846,   // empty-cells
-    849,   // event-trigger
-    854,   // event-trigger-name
-    857,   // event-trigger-source
-    864,   // field-sizing
-    867,   // fill
-    868,   // fill-break
+    843,   // dynamic-range-limit
+    848,   // empty-cells
+    851,   // event-trigger
+    856,   // event-trigger-name
+    859,   // event-trigger-source
+    866,   // field-sizing
+    869,   // fill
+    870,   // fill-break
     4,     // fill-color
-    872,   // fill-image
-    873,   // fill-opacity
-    874,   // fill-origin
-    881,   // fill-position
+    874,   // fill-image
+    875,   // fill-opacity
+    876,   // fill-origin
+    883,   // fill-position
     211,   // fill-repeat
     543,   // fill-rule
     213,   // fill-size
     134,   // filter
-    882,   // flex
-    892,   // flex-basis
-    895,   // flex-direction
-    900,   // flex-flow
-    905,   // flex-grow
-    906,   // flex-line-count
-    905,   // flex-shrink
-    907,   // flex-wrap
-    914,   // float
-    929,   // float-defer
+    884,   // flex
+    894,   // flex-basis
+    897,   // flex-direction
+    902,   // flex-flow
+    907,   // flex-grow
+    908,   // flex-line-count
+    907,   // flex-shrink
+    909,   // flex-wrap
+    916,   // float
+    931,   // float-defer
     816,   // float-offset
-    933,   // float-reference
+    935,   // float-reference
     4,     // flood-color
-    873,   // flood-opacity
-    938,   // flow-from
-    941,   // flow-into
-    948,   // flow-tolerance
-    952,   // font
-    972,   // font-family
-    975,   // font-feature-settings
-    978,   // font-kerning
-    982,   // font-language-override
-    985,   // font-optical-sizing
-    988,   // font-palette
-    994,   // font-size
-    999,   // font-size-adjust
-    1011,  // font-style
-    1019,  // font-synthesis
-    985,   // font-synthesis-position
-    985,   // font-synthesis-small-caps
-    1026,  // font-synthesis-style
-    985,   // font-synthesis-weight
-    1030,  // font-variant
-    1084,  // font-variant-alternates
-    1100,  // font-variant-caps
-    1108,  // font-variant-east-asian
-    1114,  // font-variant-emoji
-    1119,  // font-variant-ligatures
-    1127,  // font-variant-numeric
-    1135,  // font-variant-position
-    1139,  // font-variation-settings
-    1144,  // font-weight
-    1148,  // font-width
-    1159,  // footnote-display
-    1163,  // footnote-policy
-    1167,  // forced-color-adjust
-    1171,  // frame-sizing
-    1177,  // gap
-    1180,  // glyph-orientation-vertical
-    1186,  // grid
-    1207,  // grid-area
-    1212,  // grid-auto-columns
-    1213,  // grid-auto-flow
-    1212,  // grid-auto-rows
-    1218,  // grid-column
-    1208,  // grid-column-end
-    1208,  // grid-column-start
-    1218,  // grid-row
-    1208,  // grid-row-end
-    1208,  // grid-row-start
-    1223,  // grid-template
-    1241,  // grid-template-areas
-    1244,  // grid-template-columns
-    1244,  // grid-template-rows
-    1251,  // hanging-punctuation
+    875,   // flood-opacity
+    940,   // flow-from
+    943,   // flow-into
+    950,   // flow-tolerance
+    954,   // font
+    974,   // font-family
+    977,   // font-feature-settings
+    980,   // font-kerning
+    984,   // font-language-override
+    987,   // font-optical-sizing
+    990,   // font-palette
+    996,   // font-size
+    1001,  // font-size-adjust
+    1013,  // font-style
+    1021,  // font-synthesis
+    987,   // font-synthesis-position
+    987,   // font-synthesis-small-caps
+    1028,  // font-synthesis-style
+    987,   // font-synthesis-weight
+    1032,  // font-variant
+    1086,  // font-variant-alternates
+    1102,  // font-variant-caps
+    1110,  // font-variant-east-asian
+    1116,  // font-variant-emoji
+    1121,  // font-variant-ligatures
+    1129,  // font-variant-numeric
+    1137,  // font-variant-position
+    1141,  // font-variation-settings
+    1146,  // font-weight
+    1150,  // font-width
+    1161,  // footnote-display
+    1165,  // footnote-policy
+    1169,  // forced-color-adjust
+    1173,  // frame-sizing
+    1179,  // gap
+    1182,  // glyph-orientation-vertical
+    1188,  // grid
+    1209,  // grid-area
+    1214,  // grid-auto-columns
+    1215,  // grid-auto-flow
+    1214,  // grid-auto-rows
+    1220,  // grid-column
+    1210,  // grid-column-end
+    1210,  // grid-column-start
+    1220,  // grid-row
+    1210,  // grid-row-end
+    1210,  // grid-row-start
+    1225,  // grid-template
+    1243,  // grid-template-areas
+    1246,  // grid-template-columns
+    1246,  // grid-template-rows
+    1253,  // hanging-punctuation
     229,   // height
-    1259,  // hyphenate-character
-    1262,  // hyphenate-limit-chars
-    1265,  // hyphenate-limit-last
-    1271,  // hyphenate-limit-lines
+    1261,  // hyphenate-character
+    1264,  // hyphenate-limit-chars
+    1267,  // hyphenate-limit-last
+    1273,  // hyphenate-limit-lines
     816,   // hyphenate-limit-zone
-    1274,  // hyphens
-    1278,  // image-animation
-    1283,  // image-orientation
-    1289,  // image-rendering
-    1295,  // image-resolution
-    1300,  // initial-letter
-    1310,  // initial-letter-align
-    1317,  // initial-letter-wrap
+    1276,  // hyphens
+    1280,  // image-animation
+    1285,  // image-orientation
+    1291,  // image-rendering
+    1299,  // image-resolution
+    1304,  // initial-letter
+    1314,  // initial-letter-align
+    1321,  // initial-letter-wrap
     229,   // inline-size
-    1323,  // inline-sizing
-    985,   // input-security
-    1326,  // inset
-    1327,  // inset-block
+    1327,  // inline-sizing
+    987,   // input-security
+    1330,  // inset
+    1331,  // inset-block
     426,   // inset-block-end
     426,   // inset-block-start
-    1327,  // inset-inline
+    1331,  // inset-inline
     426,   // inset-inline-end
     426,   // inset-inline-start
-    1328,  // interactivity
-    1331,  // interest-delay
-    1332,  // interest-delay-end
-    1332,  // interest-delay-start
-    1335,  // interpolate-size
-    1338,  // isolation
-    1339,  // justify-content
-    1348,  // justify-items
-    1365,  // justify-self
+    1332,  // interactivity
+    1335,  // interest-delay
+    1336,  // interest-delay-end
+    1336,  // interest-delay-start
+    1339,  // interpolate-size
+    1342,  // isolation
+    1343,  // justify-content
+    1352,  // justify-items
+    1369,  // justify-self
     426,   // left
-    1377,  // letter-spacing
+    1381,  // letter-spacing
     4,     // lighting-color
-    1380,  // line-break
-    1386,  // line-clamp
-    1393,  // line-fit-edge
-    1396,  // line-grid
-    1399,  // line-height
-    1403,  // line-height-step
-    1404,  // line-padding
-    1405,  // line-snap
-    1409,  // link-parameters
-    1412,  // list-style
-    1419,  // list-style-image
-    1422,  // list-style-position
-    1425,  // list-style-type
-    1429,  // margin
-    1430,  // margin-block
-    1431,  // margin-block-end
-    1431,  // margin-block-start
-    1432,  // margin-bottom
-    1435,  // margin-break
-    1430,  // margin-inline
-    1431,  // margin-inline-end
-    1431,  // margin-inline-start
-    1432,  // margin-left
-    1432,  // margin-right
-    1432,  // margin-top
-    1439,  // margin-trim
-    1445,  // marker
-    1447,  // marker-end
-    1447,  // marker-mid
-    1450,  // marker-side
-    1447,  // marker-start
-    1453,  // mask
-    1475,  // mask-border
-    1493,  // mask-border-mode
+    1384,  // line-break
+    1390,  // line-clamp
+    1397,  // line-fit-edge
+    1400,  // line-grid
+    1403,  // line-height
+    1407,  // line-height-step
+    1408,  // line-padding
+    1409,  // line-snap
+    1413,  // link-parameters
+    1416,  // list-style
+    1423,  // list-style-image
+    1426,  // list-style-position
+    1429,  // list-style-type
+    1433,  // margin
+    1434,  // margin-block
+    1435,  // margin-block-end
+    1435,  // margin-block-start
+    1436,  // margin-bottom
+    1439,  // margin-break
+    1434,  // margin-inline
+    1435,  // margin-inline-end
+    1435,  // margin-inline-start
+    1436,  // margin-left
+    1436,  // margin-right
+    1436,  // margin-top
+    1443,  // margin-trim
+    1449,  // marker
+    1451,  // marker-end
+    1451,  // marker-mid
+    1454,  // marker-side
+    1451,  // marker-start
+    1457,  // mask
+    1479,  // mask-border
+    1497,  // mask-border-mode
     336,   // mask-border-outset
     338,   // mask-border-repeat
     325,   // mask-border-slice
     322,   // mask-border-source
     330,   // mask-border-width
-    1496,  // mask-clip
-    1499,  // mask-composite
-    1500,  // mask-image
-    1501,  // mask-mode
-    1502,  // mask-origin
-    881,   // mask-position
+    1500,  // mask-clip
+    1503,  // mask-composite
+    1504,  // mask-image
+    1505,  // mask-mode
+    1506,  // mask-origin
+    883,   // mask-position
     211,   // mask-repeat
     213,   // mask-size
-    1493,  // mask-type
-    1503,  // math-depth
-    1508,  // math-shift
-    1508,  // math-style
-    1511,  // max-block-size
-    1511,  // max-height
-    1511,  // max-inline-size
+    1497,  // mask-type
+    1507,  // math-depth
+    1512,  // math-shift
+    1512,  // math-style
+    1515,  // max-block-size
+    1515,  // max-height
+    1515,  // max-inline-size
     1,     // max-lines
-    1514,  // max-size
-    1511,  // max-width
+    1518,  // max-size
+    1515,  // max-width
     229,   // min-block-size
     229,   // min-height
     229,   // min-inline-size
-    1517,  // min-intrinsic-sizing
-    1522,  // min-size
+    1521,  // min-intrinsic-sizing
+    1526,  // min-size
     229,   // min-width
-    1525,  // mix-blend-mode
-    1528,  // nav-down
-    1528,  // nav-left
-    1528,  // nav-right
-    1528,  // nav-up
-    1536,  // object-fit
-    1458,  // object-position
-    1544,  // object-view-box
-    1547,  // offset
-    1563,  // offset-anchor
+    1529,  // mix-blend-mode
+    1532,  // nav-down
+    1532,  // nav-left
+    1532,  // nav-right
+    1532,  // nav-up
+    1540,  // object-fit
+    1462,  // object-position
+    1548,  // object-view-box
+    1551,  // offset
+    1567,  // offset-anchor
     816,   // offset-distance
-    1566,  // offset-path
-    1571,  // offset-position
-    1575,  // offset-rotate
-    1580,  // opacity
-    1581,  // order
-    906,   // orphans
-    1582,  // outline
-    1589,  // outline-color
-    1404,  // outline-offset
-    1592,  // outline-style
+    1570,  // offset-path
+    1575,  // offset-position
+    1579,  // offset-rotate
+    1584,  // opacity
+    1585,  // order
+    908,   // orphans
+    1586,  // outline
+    1593,  // outline-color
+    1408,  // outline-offset
+    1596,  // outline-style
     7,     // outline-width
-    1595,  // overflow
-    985,   // overflow-anchor
-    1596,  // overflow-block
-    1602,  // overflow-clip-margin
-    1605,  // overflow-clip-margin-block
-    1605,  // overflow-clip-margin-block-end
-    1605,  // overflow-clip-margin-block-start
-    1605,  // overflow-clip-margin-bottom
-    1605,  // overflow-clip-margin-inline
-    1605,  // overflow-clip-margin-inline-end
-    1605,  // overflow-clip-margin-inline-start
-    1605,  // overflow-clip-margin-left
-    1605,  // overflow-clip-margin-right
-    1605,  // overflow-clip-margin-top
-    1596,  // overflow-inline
-    1608,  // overflow-wrap
-    1596,  // overflow-x
-    1596,  // overflow-y
-    1612,  // overlay
-    1615,  // overscroll-behavior
-    1620,  // overscroll-behavior-block
-    1620,  // overscroll-behavior-inline
-    1620,  // overscroll-behavior-x
-    1620,  // overscroll-behavior-y
-    1625,  // padding
-    1626,  // padding-block
-    1627,  // padding-block-end
-    1627,  // padding-block-start
-    1628,  // padding-bottom
-    1626,  // padding-inline
-    1627,  // padding-inline-end
-    1627,  // padding-inline-start
-    1628,  // padding-left
-    1628,  // padding-right
-    1628,  // padding-top
-    1629,  // page
-    1632,  // page-break-after
-    1632,  // page-break-before
-    1639,  // page-break-inside
-    1643,  // paint-order
+    1599,  // overflow
+    987,   // overflow-anchor
+    1600,  // overflow-block
+    1606,  // overflow-clip-margin
+    1609,  // overflow-clip-margin-block
+    1609,  // overflow-clip-margin-block-end
+    1609,  // overflow-clip-margin-block-start
+    1609,  // overflow-clip-margin-bottom
+    1609,  // overflow-clip-margin-inline
+    1609,  // overflow-clip-margin-inline-end
+    1609,  // overflow-clip-margin-inline-start
+    1609,  // overflow-clip-margin-left
+    1609,  // overflow-clip-margin-right
+    1609,  // overflow-clip-margin-top
+    1600,  // overflow-inline
+    1612,  // overflow-wrap
+    1600,  // overflow-x
+    1600,  // overflow-y
+    1616,  // overlay
+    1619,  // overscroll-behavior
+    1624,  // overscroll-behavior-block
+    1624,  // overscroll-behavior-inline
+    1624,  // overscroll-behavior-x
+    1624,  // overscroll-behavior-y
+    1629,  // padding
+    1630,  // padding-block
+    1631,  // padding-block-end
+    1631,  // padding-block-start
+    1632,  // padding-bottom
+    1630,  // padding-inline
+    1631,  // padding-inline-end
+    1631,  // padding-inline-start
+    1632,  // padding-left
+    1632,  // padding-right
+    1632,  // padding-top
+    1633,  // page
+    1636,  // page-break-after
+    1636,  // page-break-before
+    1643,  // page-break-inside
+    1647,  // paint-order
     254,   // path-length
-    1649,  // pause
-    1652,  // pause-after
-    1652,  // pause-before
+    1653,  // pause
+    1656,  // pause-after
+    1656,  // pause-before
     254,   // perspective
-    1458,  // perspective-origin
-    1660,  // place-content
-    1665,  // place-items
-    1670,  // place-self
-    1675,  // pointer-events
-    1687,  // pointer-timeline
-    1692,  // pointer-timeline-axis
-    1697,  // pointer-timeline-name
-    1700,  // position
-    1707,  // position-anchor
-    1713,  // position-area
-    1716,  // position-try
-    1721,  // position-try-fallbacks
-    1728,  // position-try-order
-    1731,  // position-visibility
-    1737,  // print-color-adjust
-    1740,  // quotes
-    1628,  // r
-    1747,  // reading-flow
-    1581,  // reading-order
-    1755,  // region-fragment
-    1758,  // resize
-    1765,  // rest
-    1652,  // rest-after
-    1652,  // rest-before
+    1462,  // perspective-origin
+    1664,  // place-content
+    1669,  // place-items
+    1674,  // place-self
+    1679,  // pointer-events
+    1691,  // pointer-timeline
+    1696,  // pointer-timeline-axis
+    1701,  // pointer-timeline-name
+    1704,  // position
+    1711,  // position-anchor
+    1717,  // position-area
+    1720,  // position-try
+    1725,  // position-try-fallbacks
+    1732,  // position-try-order
+    1735,  // position-visibility
+    1741,  // print-color-adjust
+    1744,  // quotes
+    1632,  // r
+    1751,  // reading-flow
+    1585,  // reading-order
+    1759,  // region-fragment
+    1762,  // resize
+    1769,  // rest
+    1656,  // rest-after
+    1656,  // rest-before
     426,   // right
-    1768,  // rotate
+    1772,  // rotate
     567,   // row-gap
-    1778,  // row-rule
+    1782,  // row-rule
     646,   // row-rule-break
     650,   // row-rule-color
-    1850,  // row-rule-inset
+    1854,  // row-rule-inset
     660,   // row-rule-inset-cap
     661,   // row-rule-inset-cap-end
     661,   // row-rule-inset-cap-start
@@ -1899,207 +1899,207 @@ extern const CssGrammarIndex kCssPropertyGrammarRoot[] = {
     663,   // row-rule-style
     666,   // row-rule-visibility-items
     671,   // row-rule-width
-    1857,  // ruby-align
-    1862,  // ruby-merge
-    1866,  // ruby-overhang
-    1869,  // ruby-position
-    1876,  // rule
-    1878,  // rule-break
-    1880,  // rule-color
-    1882,  // rule-inset
+    1861,  // ruby-align
+    1866,  // ruby-merge
+    1870,  // ruby-overhang
+    1873,  // ruby-position
+    1880,  // rule
+    1882,  // rule-break
+    1884,  // rule-color
+    1886,  // rule-inset
     654,   // rule-inset-cap
-    1884,  // rule-inset-end
+    1888,  // rule-inset-end
     658,   // rule-inset-junction
-    1886,  // rule-inset-start
-    1888,  // rule-overlap
-    1891,  // rule-style
-    1893,  // rule-visibility-items
-    1895,  // rule-width
-    1897,  // rx
-    1897,  // ry
-    1900,  // scale
-    985,   // scroll-axis-lock
-    1905,  // scroll-behavior
-    1908,  // scroll-initial-target
-    1911,  // scroll-margin
-    1912,  // scroll-margin-block
-    1404,  // scroll-margin-block-end
-    1404,  // scroll-margin-block-start
-    1404,  // scroll-margin-bottom
-    1912,  // scroll-margin-inline
-    1404,  // scroll-margin-inline-end
-    1404,  // scroll-margin-inline-start
-    1404,  // scroll-margin-left
-    1404,  // scroll-margin-right
-    1404,  // scroll-margin-top
-    1913,  // scroll-marker-group
-    1922,  // scroll-padding
-    1925,  // scroll-padding-block
-    1928,  // scroll-padding-block-end
-    1928,  // scroll-padding-block-start
-    1928,  // scroll-padding-bottom
-    1925,  // scroll-padding-inline
-    1928,  // scroll-padding-inline-end
-    1928,  // scroll-padding-inline-start
-    1928,  // scroll-padding-left
-    1928,  // scroll-padding-right
-    1928,  // scroll-padding-top
-    1931,  // scroll-snap-align
-    1936,  // scroll-snap-stop
-    1939,  // scroll-snap-type
-    1612,  // scroll-target-group
-    1952,  // scroll-timeline
-    1692,  // scroll-timeline-axis
-    1697,  // scroll-timeline-name
-    1957,  // scrollbar-color
-    1960,  // scrollbar-gutter
-    1965,  // scrollbar-width
-    1580,  // shape-image-threshold
-    1969,  // shape-inside
-    1628,  // shape-margin
-    1977,  // shape-outside
-    1628,  // shape-padding
-    1983,  // shape-rendering
-    1988,  // size
-    1991,  // slider-orientation
-    1997,  // spatial-navigation-action
-    2001,  // spatial-navigation-contain
-    2004,  // spatial-navigation-function
-    2007,  // speak
-    2011,  // speak-as
+    1890,  // rule-inset-start
+    1892,  // rule-overlap
+    1895,  // rule-style
+    1897,  // rule-visibility-items
+    1899,  // rule-width
+    1901,  // rx
+    1901,  // ry
+    1904,  // scale
+    987,   // scroll-axis-lock
+    1909,  // scroll-behavior
+    1912,  // scroll-initial-target
+    1915,  // scroll-margin
+    1916,  // scroll-margin-block
+    1408,  // scroll-margin-block-end
+    1408,  // scroll-margin-block-start
+    1408,  // scroll-margin-bottom
+    1916,  // scroll-margin-inline
+    1408,  // scroll-margin-inline-end
+    1408,  // scroll-margin-inline-start
+    1408,  // scroll-margin-left
+    1408,  // scroll-margin-right
+    1408,  // scroll-margin-top
+    1917,  // scroll-marker-group
+    1926,  // scroll-padding
+    1929,  // scroll-padding-block
+    1932,  // scroll-padding-block-end
+    1932,  // scroll-padding-block-start
+    1932,  // scroll-padding-bottom
+    1929,  // scroll-padding-inline
+    1932,  // scroll-padding-inline-end
+    1932,  // scroll-padding-inline-start
+    1932,  // scroll-padding-left
+    1932,  // scroll-padding-right
+    1932,  // scroll-padding-top
+    1935,  // scroll-snap-align
+    1940,  // scroll-snap-stop
+    1943,  // scroll-snap-type
+    1616,  // scroll-target-group
+    1956,  // scroll-timeline
+    1696,  // scroll-timeline-axis
+    1701,  // scroll-timeline-name
+    1961,  // scrollbar-color
+    1964,  // scrollbar-gutter
+    1969,  // scrollbar-width
+    1584,  // shape-image-threshold
+    1973,  // shape-inside
+    1632,  // shape-margin
+    1981,  // shape-outside
+    1632,  // shape-padding
+    1987,  // shape-rendering
+    1992,  // size
+    1995,  // slider-orientation
+    2001,  // spatial-navigation-action
+    2005,  // spatial-navigation-contain
+    2008,  // spatial-navigation-function
+    2011,  // speak
+    2015,  // speak-as
     4,     // stop-color
-    873,   // stop-opacity
-    2019,  // string-set
-    867,   // stroke
-    2024,  // stroke-align
-    2028,  // stroke-alignment
-    868,   // stroke-break
-    2032,  // stroke-color
-    2033,  // stroke-dash-corner
-    2036,  // stroke-dash-justify
-    2045,  // stroke-dashadjust
-    2054,  // stroke-dasharray
-    2033,  // stroke-dashcorner
-    2057,  // stroke-dashoffset
-    872,   // stroke-image
-    2060,  // stroke-linecap
-    2064,  // stroke-linejoin
-    2073,  // stroke-miterlimit
-    873,   // stroke-opacity
-    874,   // stroke-origin
-    881,   // stroke-position
+    875,   // stop-opacity
+    2023,  // string-set
+    869,   // stroke
+    2028,  // stroke-align
+    2032,  // stroke-alignment
+    870,   // stroke-break
+    2036,  // stroke-color
+    2037,  // stroke-dash-corner
+    2040,  // stroke-dash-justify
+    2049,  // stroke-dashadjust
+    2058,  // stroke-dasharray
+    2037,  // stroke-dashcorner
+    2061,  // stroke-dashoffset
+    874,   // stroke-image
+    2064,  // stroke-linecap
+    2068,  // stroke-linejoin
+    907,   // stroke-miterlimit
+    875,   // stroke-opacity
+    876,   // stroke-origin
+    883,   // stroke-position
     211,   // stroke-repeat
     213,   // stroke-size
-    2074,  // stroke-width
-    2077,  // tab-size
-    2080,  // table-layout
-    2083,  // text-align
-    2093,  // text-align-all
-    2102,  // text-align-last
-    2111,  // text-anchor
-    2115,  // text-autospace
-    2119,  // text-box
-    2126,  // text-box-edge
-    2129,  // text-box-trim
-    2134,  // text-combine-upright
-    2140,  // text-decoration
+    2077,  // stroke-width
+    2080,  // tab-size
+    2083,  // table-layout
+    2086,  // text-align
+    2096,  // text-align-all
+    2105,  // text-align-last
+    2114,  // text-anchor
+    2118,  // text-autospace
+    2122,  // text-box
+    2129,  // text-box-edge
+    2132,  // text-box-trim
+    2137,  // text-combine-upright
+    2143,  // text-decoration
     4,     // text-decoration-color
-    2149,  // text-decoration-inset
-    2152,  // text-decoration-line
-    1612,  // text-decoration-skip
-    2161,  // text-decoration-skip-box
-    2164,  // text-decoration-skip-ink
-    2168,  // text-decoration-skip-self
-    2176,  // text-decoration-skip-spaces
-    2182,  // text-decoration-style
-    2188,  // text-decoration-thickness
-    2193,  // text-emphasis
+    2152,  // text-decoration-inset
+    2155,  // text-decoration-line
+    1616,  // text-decoration-skip
+    2164,  // text-decoration-skip-box
+    2167,  // text-decoration-skip-ink
+    2171,  // text-decoration-skip-self
+    2179,  // text-decoration-skip-spaces
+    2185,  // text-decoration-style
+    2191,  // text-decoration-thickness
+    2196,  // text-emphasis
     4,     // text-emphasis-color
-    2198,  // text-emphasis-position
-    2205,  // text-emphasis-skip
-    2210,  // text-emphasis-style
-    2223,  // text-fit
-    2233,  // text-group-align
-    2240,  // text-indent
-    2244,  // text-justify
-    2252,  // text-orientation
-    2256,  // text-overflow
-    2262,  // text-rendering
-    2267,  // text-shadow
-    2270,  // text-size-adjust
-    2274,  // text-spacing
-    2280,  // text-spacing-trim
-    2283,  // text-transform
+    2201,  // text-emphasis-position
+    2208,  // text-emphasis-skip
+    2213,  // text-emphasis-style
+    2226,  // text-fit
+    2236,  // text-group-align
+    2243,  // text-indent
+    2247,  // text-justify
+    2255,  // text-orientation
+    2259,  // text-overflow
+    2265,  // text-rendering
+    2270,  // text-shadow
+    2273,  // text-size-adjust
+    2277,  // text-spacing
+    2283,  // text-spacing-trim
+    2286,  // text-transform
     426,   // text-underline-offset
-    2310,  // text-underline-position
-    2319,  // text-wrap
-    2324,  // text-wrap-mode
-    2327,  // text-wrap-style
-    2333,  // timeline-scope
-    2337,  // timeline-trigger
-    2346,  // timeline-trigger-activation-range
+    2313,  // text-underline-position
+    2322,  // text-wrap
+    2327,  // text-wrap-mode
+    2330,  // text-wrap-style
+    2336,  // timeline-scope
+    2340,  // timeline-trigger
+    2349,  // timeline-trigger-activation-range
     105,   // timeline-trigger-activation-range-end
     111,   // timeline-trigger-activation-range-start
-    2349,  // timeline-trigger-active-range
-    2352,  // timeline-trigger-active-range-end
-    2359,  // timeline-trigger-active-range-start
-    854,   // timeline-trigger-name
-    2366,  // timeline-trigger-source
+    2352,  // timeline-trigger-active-range
+    2355,  // timeline-trigger-active-range-end
+    2362,  // timeline-trigger-active-range-start
+    856,   // timeline-trigger-name
+    2369,  // timeline-trigger-source
     426,   // top
-    2373,  // touch-action
-    2387,  // transform
-    2390,  // transform-box
-    2396,  // transform-origin
-    2427,  // transform-style
-    2430,  // transition
-    2443,  // transition-behavior
-    2444,  // transition-delay
-    2445,  // transition-duration
-    2446,  // transition-property
+    2376,  // touch-action
+    2390,  // transform
+    2393,  // transform-box
+    2399,  // transform-origin
+    2430,  // transform-style
+    2433,  // transition
+    2446,  // transition-behavior
+    2447,  // transition-delay
+    2448,  // transition-duration
+    2449,  // transition-property
     118,   // transition-timing-function
-    2449,  // translate
-    2333,  // trigger-scope
-    2456,  // unicode-bidi
-    2463,  // user-select
-    2469,  // vector-effect
-    2476,  // vertical-align
-    2485,  // view-timeline
-    1692,  // view-timeline-axis
-    2493,  // view-timeline-inset
-    1697,  // view-timeline-name
+    2452,  // translate
+    2336,  // trigger-scope
+    2459,  // unicode-bidi
+    2466,  // user-select
+    2472,  // vector-effect
+    2479,  // vertical-align
+    2488,  // view-timeline
+    1696,  // view-timeline-axis
+    2496,  // view-timeline-inset
+    1701,  // view-timeline-name
     722,   // view-transition-class
-    2497,  // view-transition-group
-    2502,  // view-transition-name
-    2161,  // view-transition-scope
-    2505,  // visibility
-    2510,  // voice-balance
-    2517,  // voice-duration
-    2520,  // voice-family
-    2525,  // voice-pitch
-    2525,  // voice-range
-    2540,  // voice-rate
-    2549,  // voice-stress
-    2555,  // voice-volume
-    2565,  // white-space
-    2577,  // white-space-collapse
-    2584,  // white-space-trim
-    906,   // widows
+    2500,  // view-transition-group
+    2505,  // view-transition-name
+    2164,  // view-transition-scope
+    2508,  // visibility
+    2513,  // voice-balance
+    2520,  // voice-duration
+    2523,  // voice-family
+    2528,  // voice-pitch
+    2528,  // voice-range
+    2543,  // voice-rate
+    2552,  // voice-stress
+    2558,  // voice-volume
+    2568,  // white-space
+    2580,  // white-space-collapse
+    2587,  // white-space-trim
+    908,   // widows
     229,   // width
-    2590,  // will-change
-    2593,  // window-drag
-    2596,  // word-break
-    2603,  // word-space-transform
-    1377,  // word-spacing
-    2610,  // wrap-after
-    2610,  // wrap-before
-    2617,  // wrap-flow
-    2625,  // wrap-inside
-    2628,  // wrap-through
-    2631,  // writing-mode
+    2593,  // will-change
+    2596,  // window-drag
+    2599,  // word-break
+    2606,  // word-space-transform
+    1381,  // word-spacing
+    2613,  // wrap-after
+    2613,  // wrap-before
+    2620,  // wrap-flow
+    2628,  // wrap-inside
+    2631,  // wrap-through
+    2634,  // writing-mode
     816,   // x
     816,   // y
-    2643,  // z-index
-    2647,  // zoom
+    2646,  // z-index
+    2650,  // zoom
     0,     // -webkit-align-content
     0,     // -webkit-align-items
     0,     // -webkit-align-self
@@ -2442,8 +2442,8 @@ extern const uint64_t kCssPropertyNonNegative[bitsetWords(PrCssProperty_Count)] 
     // scroll-padding-left, scroll-padding-right, scroll-padding-top, shape-margin, shape-padding, size,
     // stroke-dasharray
     UINT64_C(0x0400015000ffe000),
-    // stroke-size, stroke-width, tab-size, text-combine-upright, text-size-adjust
-    UINT64_C(0x00000400000200e0),
+    // stroke-miterlimit, stroke-size, stroke-width, tab-size, text-combine-upright, text-size-adjust
+    UINT64_C(0x00000400000200e1),
     // transition-duration, voice-duration, voice-family, voice-rate, widows, width, zoom, -webkit-animation-duration,
     // -webkit-animation-iteration-count
     UINT64_C(0x1408001826000040),
@@ -5076,91 +5076,91 @@ extern const uint8_t kCssPropertyExcludedIdents[PrCssProperty_Count] = {
 };
 
 extern const CssKeywordForm kCssKeywordForms[] = {
-    { 0x02b4035404dfull, { PrCssKeyword_RepeatY, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // no-repeat repeat: repeat-y
-    { 0x035402b404dfull, { PrCssKeyword_RepeatX, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // repeat no-repeat: repeat-x
-    { 0x0065016704dfull, { PrCssKeyword_Flex, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // block flex: flex
+    { 0x02b4035504e0ull, { PrCssKeyword_RepeatY, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // no-repeat repeat: repeat-y
+    { 0x035502b404e0ull, { PrCssKeyword_RepeatX, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // repeat no-repeat: repeat-x
+    { 0x0065016704e0ull, { PrCssKeyword_Flex, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // block flex: flex
     { 0x006501730244ull, { PrCssKeyword_ListItem, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // block flow list-item: list-item
-    { 0x0065017304dfull, { PrCssKeyword_Block, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // block flow: block
+    { 0x0065017304e0ull, { PrCssKeyword_Block, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // block flow: block
     { 0x006501740244ull, { PrCssKeyword_FlowRoot, PrCssKeyword_ListItem, PrCssKeyword_Unknown } },  // block flow-root list-item: flow-root list-item
-    { 0x0065017404dfull, { PrCssKeyword_FlowRoot, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // block flow-root: flow-root
-    { 0x0065019804dfull, { PrCssKeyword_Grid, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // block grid: grid
-    { 0x0065024404dfull, { PrCssKeyword_ListItem, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // block list-item: list-item
-    { 0x0065043804dfull, { PrCssKeyword_Table, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // block table: table
-    { 0x0173024404dfull, { PrCssKeyword_ListItem, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // flow list-item: list-item
-    { 0x017304df04dfull, { PrCssKeyword_Block, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // flow: block
-    { 0x01db016704dfull, { PrCssKeyword_InlineFlex, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // inline flex: inline-flex
+    { 0x0065017404e0ull, { PrCssKeyword_FlowRoot, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // block flow-root: flow-root
+    { 0x0065019804e0ull, { PrCssKeyword_Grid, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // block grid: grid
+    { 0x0065024404e0ull, { PrCssKeyword_ListItem, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // block list-item: list-item
+    { 0x0065043904e0ull, { PrCssKeyword_Table, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // block table: table
+    { 0x0173024404e0ull, { PrCssKeyword_ListItem, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // flow list-item: list-item
+    { 0x017304e004e0ull, { PrCssKeyword_Block, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // flow: block
+    { 0x01db016704e0ull, { PrCssKeyword_InlineFlex, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // inline flex: inline-flex
     { 0x01db01730244ull, { PrCssKeyword_Inline, PrCssKeyword_ListItem, PrCssKeyword_Unknown } },  // inline flow list-item: inline list-item
-    { 0x01db017304dfull, { PrCssKeyword_Inline, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // inline flow: inline
-    { 0x01db017404dfull, { PrCssKeyword_InlineBlock, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // inline flow-root: inline-block
-    { 0x01db019804dfull, { PrCssKeyword_InlineGrid, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // inline grid: inline-grid
-    { 0x01db037e04dfull, { PrCssKeyword_Ruby, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // inline ruby: ruby
-    { 0x01db043804dfull, { PrCssKeyword_InlineTable, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // inline table: inline-table
-    { 0x038301730244ull, { PrCssKeyword_RunIn, PrCssKeyword_ListItem, PrCssKeyword_Unknown } },  // run-in flow list-item: run-in list-item
-    { 0x0383017304dfull, { PrCssKeyword_RunIn, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // run-in flow: run-in
-    { 0x0067006604dfull, { PrCssKeyword_Block, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // block-start block-end: block
-    { 0x02b4035404dfull, { PrCssKeyword_RepeatY, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // no-repeat repeat: repeat-y
-    { 0x035402b404dfull, { PrCssKeyword_RepeatX, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // repeat no-repeat: repeat-x
-    { 0x006603ed04dfull, { PrCssKeyword_BlockEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // block-end span-all: block-end
-    { 0x006703ed04dfull, { PrCssKeyword_BlockStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // block-start span-all: block-start
-    { 0x0095009504dfull, { PrCssKeyword_Center, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // center center: center
-    { 0x0095009504dfull, { PrCssKeyword_Center, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // center center: center
-    { 0x0095009504dfull, { PrCssKeyword_Center, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // center center: center
-    { 0x0095009504dfull, { PrCssKeyword_Center, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // center center: center
-    { 0x0095009504dfull, { PrCssKeyword_Center, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // center center: center
-    { 0x0137013704dfull, { PrCssKeyword_End, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // end end: end
-    { 0x021b03ed04dfull, { PrCssKeyword_Left, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // left span-all: left
-    { 0x036903ed04dfull, { PrCssKeyword_Right, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // right span-all: right
-    { 0x03a603ed04dfull, { PrCssKeyword_SelfBlockEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // self-block-end span-all: self-block-end
-    { 0x03a703ed04dfull, { PrCssKeyword_SelfBlockStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // self-block-start span-all: self-block-start
-    { 0x03a803a804dfull, { PrCssKeyword_SelfEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // self-end self-end: self-end
-    { 0x03ac03ac04dfull, { PrCssKeyword_SelfStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // self-start self-start: self-start
-    { 0x03ad03ed04dfull, { PrCssKeyword_SelfXEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // self-x-end span-all: self-x-end
-    { 0x03ae03ed04dfull, { PrCssKeyword_SelfXStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // self-x-start span-all: self-x-start
-    { 0x03ed007304dfull, { PrCssKeyword_Bottom, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all bottom: bottom
-    { 0x03ed01dd04dfull, { PrCssKeyword_InlineEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all inline-end: inline-end
-    { 0x03ed01e204dfull, { PrCssKeyword_InlineStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all inline-start: inline-start
-    { 0x03ed03aa04dfull, { PrCssKeyword_SelfInlineEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all self-inline-end: self-inline-end
-    { 0x03ed03ab04dfull, { PrCssKeyword_SelfInlineStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all self-inline-start: self-inline-start
-    { 0x03ed03af04dfull, { PrCssKeyword_SelfYEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all self-y-end: self-y-end
-    { 0x03ed03b004dfull, { PrCssKeyword_SelfYStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all self-y-start: self-y-start
-    { 0x03ed03ed04dfull, { PrCssKeyword_SpanAll, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-all: span-all
-    { 0x03ed03ed04dfull, { PrCssKeyword_SpanAll, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-all: span-all
-    { 0x03ed03ed04dfull, { PrCssKeyword_SpanAll, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-all: span-all
-    { 0x03ed03ed04dfull, { PrCssKeyword_SpanAll, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-all: span-all
-    { 0x03ed03ed04dfull, { PrCssKeyword_SpanAll, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-all: span-all
-    { 0x03ed03f004dfull, { PrCssKeyword_SpanBottom, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-bottom: span-bottom
-    { 0x03ed03f204dfull, { PrCssKeyword_SpanInlineEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-inline-end: span-inline-end
-    { 0x03ed03f304dfull, { PrCssKeyword_SpanInlineStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-inline-start: span-inline-start
-    { 0x03ed03f904dfull, { PrCssKeyword_SpanSelfInlineEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-self-inline-end: span-self-inline-end
-    { 0x03ed03fa04dfull, { PrCssKeyword_SpanSelfInlineStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-self-inline-start: span-self-inline-start
-    { 0x03ed03fe04dfull, { PrCssKeyword_SpanSelfYEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-self-y-end: span-self-y-end
-    { 0x03ed03ff04dfull, { PrCssKeyword_SpanSelfYStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-self-y-start: span-self-y-start
-    { 0x03ed040104dfull, { PrCssKeyword_SpanTop, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-top: span-top
-    { 0x03ed040404dfull, { PrCssKeyword_SpanYEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-y-end: span-y-end
-    { 0x03ed040504dfull, { PrCssKeyword_SpanYStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-y-start: span-y-start
-    { 0x03ed046004dfull, { PrCssKeyword_Top, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all top: top
-    { 0x03ed04c404dfull, { PrCssKeyword_YEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all y-end: y-end
-    { 0x03ed04c504dfull, { PrCssKeyword_YStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all y-start: y-start
-    { 0x03ee03ed04dfull, { PrCssKeyword_SpanBlockEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-block-end span-all: span-block-end
-    { 0x03ef03ed04dfull, { PrCssKeyword_SpanBlockStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-block-start span-all: span-block-start
-    { 0x03f103f104dfull, { PrCssKeyword_SpanEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-end span-end: span-end
-    { 0x03f403ed04dfull, { PrCssKeyword_SpanLeft, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-left span-all: span-left
-    { 0x03f503ed04dfull, { PrCssKeyword_SpanRight, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-right span-all: span-right
-    { 0x03f603ed04dfull, { PrCssKeyword_SpanSelfBlockEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-self-block-end span-all: span-self-block-end
-    { 0x03f703ed04dfull, { PrCssKeyword_SpanSelfBlockStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-self-block-start span-all: span-self-block-start
-    { 0x03f803f804dfull, { PrCssKeyword_SpanSelfEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-self-end span-self-end: span-self-end
-    { 0x03fb03fb04dfull, { PrCssKeyword_SpanSelfStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-self-start span-self-start: span-self-start
-    { 0x03fc03ed04dfull, { PrCssKeyword_SpanSelfXEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-self-x-end span-all: span-self-x-end
-    { 0x03fd03ed04dfull, { PrCssKeyword_SpanSelfXStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-self-x-start span-all: span-self-x-start
-    { 0x0400040004dfull, { PrCssKeyword_SpanStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-start span-start: span-start
-    { 0x040203ed04dfull, { PrCssKeyword_SpanXEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-x-end span-all: span-x-end
-    { 0x040303ed04dfull, { PrCssKeyword_SpanXStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-x-start span-all: span-x-start
-    { 0x0415041504dfull, { PrCssKeyword_Start, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // start start: start
-    { 0x04b003ed04dfull, { PrCssKeyword_XEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // x-end span-all: x-end
-    { 0x04b903ed04dfull, { PrCssKeyword_XStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // x-start span-all: x-start
-    { 0x01c401c404dfull, { PrCssKeyword_Ideographic, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // ideographic ideographic: ideographic
-    { 0x01c501c504dfull, { PrCssKeyword_IdeographicInk, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // ideographic-ink ideographic-ink: ideographic-ink
-    { 0x044c044c04dfull, { PrCssKeyword_Text, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // text text: text
+    { 0x01db017304e0ull, { PrCssKeyword_Inline, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // inline flow: inline
+    { 0x01db017404e0ull, { PrCssKeyword_InlineBlock, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // inline flow-root: inline-block
+    { 0x01db019804e0ull, { PrCssKeyword_InlineGrid, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // inline grid: inline-grid
+    { 0x01db037f04e0ull, { PrCssKeyword_Ruby, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // inline ruby: ruby
+    { 0x01db043904e0ull, { PrCssKeyword_InlineTable, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // inline table: inline-table
+    { 0x038401730244ull, { PrCssKeyword_RunIn, PrCssKeyword_ListItem, PrCssKeyword_Unknown } },  // run-in flow list-item: run-in list-item
+    { 0x0384017304e0ull, { PrCssKeyword_RunIn, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // run-in flow: run-in
+    { 0x0067006604e0ull, { PrCssKeyword_Block, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // block-start block-end: block
+    { 0x02b4035504e0ull, { PrCssKeyword_RepeatY, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // no-repeat repeat: repeat-y
+    { 0x035502b404e0ull, { PrCssKeyword_RepeatX, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // repeat no-repeat: repeat-x
+    { 0x006603ee04e0ull, { PrCssKeyword_BlockEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // block-end span-all: block-end
+    { 0x006703ee04e0ull, { PrCssKeyword_BlockStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // block-start span-all: block-start
+    { 0x0095009504e0ull, { PrCssKeyword_Center, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // center center: center
+    { 0x0095009504e0ull, { PrCssKeyword_Center, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // center center: center
+    { 0x0095009504e0ull, { PrCssKeyword_Center, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // center center: center
+    { 0x0095009504e0ull, { PrCssKeyword_Center, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // center center: center
+    { 0x0095009504e0ull, { PrCssKeyword_Center, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // center center: center
+    { 0x0137013704e0ull, { PrCssKeyword_End, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // end end: end
+    { 0x021b03ee04e0ull, { PrCssKeyword_Left, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // left span-all: left
+    { 0x036a03ee04e0ull, { PrCssKeyword_Right, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // right span-all: right
+    { 0x03a703ee04e0ull, { PrCssKeyword_SelfBlockEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // self-block-end span-all: self-block-end
+    { 0x03a803ee04e0ull, { PrCssKeyword_SelfBlockStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // self-block-start span-all: self-block-start
+    { 0x03a903a904e0ull, { PrCssKeyword_SelfEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // self-end self-end: self-end
+    { 0x03ad03ad04e0ull, { PrCssKeyword_SelfStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // self-start self-start: self-start
+    { 0x03ae03ee04e0ull, { PrCssKeyword_SelfXEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // self-x-end span-all: self-x-end
+    { 0x03af03ee04e0ull, { PrCssKeyword_SelfXStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // self-x-start span-all: self-x-start
+    { 0x03ee007304e0ull, { PrCssKeyword_Bottom, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all bottom: bottom
+    { 0x03ee01dd04e0ull, { PrCssKeyword_InlineEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all inline-end: inline-end
+    { 0x03ee01e204e0ull, { PrCssKeyword_InlineStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all inline-start: inline-start
+    { 0x03ee03ab04e0ull, { PrCssKeyword_SelfInlineEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all self-inline-end: self-inline-end
+    { 0x03ee03ac04e0ull, { PrCssKeyword_SelfInlineStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all self-inline-start: self-inline-start
+    { 0x03ee03b004e0ull, { PrCssKeyword_SelfYEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all self-y-end: self-y-end
+    { 0x03ee03b104e0ull, { PrCssKeyword_SelfYStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all self-y-start: self-y-start
+    { 0x03ee03ee04e0ull, { PrCssKeyword_SpanAll, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-all: span-all
+    { 0x03ee03ee04e0ull, { PrCssKeyword_SpanAll, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-all: span-all
+    { 0x03ee03ee04e0ull, { PrCssKeyword_SpanAll, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-all: span-all
+    { 0x03ee03ee04e0ull, { PrCssKeyword_SpanAll, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-all: span-all
+    { 0x03ee03ee04e0ull, { PrCssKeyword_SpanAll, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-all: span-all
+    { 0x03ee03f104e0ull, { PrCssKeyword_SpanBottom, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-bottom: span-bottom
+    { 0x03ee03f304e0ull, { PrCssKeyword_SpanInlineEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-inline-end: span-inline-end
+    { 0x03ee03f404e0ull, { PrCssKeyword_SpanInlineStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-inline-start: span-inline-start
+    { 0x03ee03fa04e0ull, { PrCssKeyword_SpanSelfInlineEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-self-inline-end: span-self-inline-end
+    { 0x03ee03fb04e0ull, { PrCssKeyword_SpanSelfInlineStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-self-inline-start: span-self-inline-start
+    { 0x03ee03ff04e0ull, { PrCssKeyword_SpanSelfYEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-self-y-end: span-self-y-end
+    { 0x03ee040004e0ull, { PrCssKeyword_SpanSelfYStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-self-y-start: span-self-y-start
+    { 0x03ee040204e0ull, { PrCssKeyword_SpanTop, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-top: span-top
+    { 0x03ee040504e0ull, { PrCssKeyword_SpanYEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-y-end: span-y-end
+    { 0x03ee040604e0ull, { PrCssKeyword_SpanYStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all span-y-start: span-y-start
+    { 0x03ee046104e0ull, { PrCssKeyword_Top, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all top: top
+    { 0x03ee04c504e0ull, { PrCssKeyword_YEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all y-end: y-end
+    { 0x03ee04c604e0ull, { PrCssKeyword_YStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-all y-start: y-start
+    { 0x03ef03ee04e0ull, { PrCssKeyword_SpanBlockEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-block-end span-all: span-block-end
+    { 0x03f003ee04e0ull, { PrCssKeyword_SpanBlockStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-block-start span-all: span-block-start
+    { 0x03f203f204e0ull, { PrCssKeyword_SpanEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-end span-end: span-end
+    { 0x03f503ee04e0ull, { PrCssKeyword_SpanLeft, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-left span-all: span-left
+    { 0x03f603ee04e0ull, { PrCssKeyword_SpanRight, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-right span-all: span-right
+    { 0x03f703ee04e0ull, { PrCssKeyword_SpanSelfBlockEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-self-block-end span-all: span-self-block-end
+    { 0x03f803ee04e0ull, { PrCssKeyword_SpanSelfBlockStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-self-block-start span-all: span-self-block-start
+    { 0x03f903f904e0ull, { PrCssKeyword_SpanSelfEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-self-end span-self-end: span-self-end
+    { 0x03fc03fc04e0ull, { PrCssKeyword_SpanSelfStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-self-start span-self-start: span-self-start
+    { 0x03fd03ee04e0ull, { PrCssKeyword_SpanSelfXEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-self-x-end span-all: span-self-x-end
+    { 0x03fe03ee04e0ull, { PrCssKeyword_SpanSelfXStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-self-x-start span-all: span-self-x-start
+    { 0x0401040104e0ull, { PrCssKeyword_SpanStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-start span-start: span-start
+    { 0x040303ee04e0ull, { PrCssKeyword_SpanXEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-x-end span-all: span-x-end
+    { 0x040403ee04e0ull, { PrCssKeyword_SpanXStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // span-x-start span-all: span-x-start
+    { 0x0416041604e0ull, { PrCssKeyword_Start, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // start start: start
+    { 0x04b103ee04e0ull, { PrCssKeyword_XEnd, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // x-end span-all: x-end
+    { 0x04ba03ee04e0ull, { PrCssKeyword_XStart, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // x-start span-all: x-start
+    { 0x01c401c404e0ull, { PrCssKeyword_Ideographic, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // ideographic ideographic: ideographic
+    { 0x01c501c504e0ull, { PrCssKeyword_IdeographicInk, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // ideographic-ink ideographic-ink: ideographic-ink
+    { 0x044d044d04e0ull, { PrCssKeyword_Text, PrCssKeyword_Unknown, PrCssKeyword_Unknown } },  // text text: text
 };
 
 extern const CssKeywordFormRun kCssPropertyKeywordForms[PrCssProperty_Count] = {

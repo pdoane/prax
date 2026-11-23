@@ -128,6 +128,12 @@ struct CssBoxProvider {
     // Returns true if a change to the element's attribute `name`, in no namespace, may change its traits.
     bool (*PR_NONNULL reads)(const PrDomElement* element, PrStringView name);
 
+    // Writes the used width and height, in px, of an element that the namespace sizes by its width and height
+    // properties without a box of its own, such as SVG's rect, image and foreignObject, and returns true. Returns false
+    // for an element that the namespace does not size or that does not render. Null for a namespace that sizes no such
+    // element.
+    bool (*PR_NULLABLE usedSize)(const PrDomElement* element, PrVec2* out);
+
     // Returns the text of a replaced element, given as its context, which its box does not hold
     // (PrLayoutContent::text). Null for a namespace whose replaced elements have none.
     PrRawString (*PR_NULLABLE replacedText)(void* PR_NULLABLE element);

@@ -1997,7 +1997,7 @@ TEST_CASE("border widths resolve snapped to whole target pixels, and one under a
     display.pixelRatio = 1.5f;
     prHtmlPageSetDisplay(htmlPage, &display);
     prHtmlPresentationUpdate(presentation, prLayoutVecFromPx(PrVec2{800, 600}));
-    CHECK(width("m", PrCssProperty_BorderTopWidth) == "2.6666666666666665px");
+    CHECK(width("m", PrCssProperty_BorderTopWidth) == "2.666667px");
     prHtmlPageDestroy(htmlPage);
 }
 

@@ -101,7 +101,7 @@ bool parseMargin(PrStringView text, CssIntersectionOffset out[4]) {
         // A length is a whole number of pixels, toward zero.
         if (ok) {
             double number = cssTokenNumber(&tokens, i);
-            double pixels = kind == CssTokenKind_Percentage ? 0 : number * cssUnitScale(unit);
+            double pixels = kind == CssTokenKind_Percentage ? 0 : cssUnitToCanonical(number, unit);
             if (kind == CssTokenKind_Percentage)
                 offsets[count++] = CssIntersectionOffset{number, true};
             else

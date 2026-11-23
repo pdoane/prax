@@ -24,9 +24,8 @@ bool absolute(CssValueRun run, uint32_t index, double* out) {
             *out = value->number;
             return true;
         case PrCssValueKind_Dimension: {
-            double scale = cssUnitScale(value->unit);
-            *out = value->number * scale;
-            return scale != 0;
+            *out = cssUnitToCanonical(value->number, value->unit);
+            return cssUnitScale(value->unit) != 0;
         }
         case PrCssValueKind_Math:
             return cssMathTo(run, index, PrCssUnit_Number, out) || cssMathTo(run, index, PrCssUnit_Px, out) ||

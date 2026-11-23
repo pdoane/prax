@@ -737,6 +737,10 @@ PrCssStyleSheet* PR_NULLABLE prCssStyleSheetParentStyleSheet(PrCssStyleSheet* sh
     return owner != nullptr ? owner->sheet : nullptr;
 }
 
+PrCssStyleSheet* PR_NULLABLE prCssElementSheet(const PrDomElement* element) {
+    return cssElementSheet(element);
+}
+
 PrStringView prCssStyleSheetTitle(const PrCssStyleSheet* sheet) {
     return prRawStringView(&sheet->title);
 }
@@ -2388,7 +2392,8 @@ PrStatus prCssParseColor(PrStringView text, const PrDomElement* PR_NULLABLE elem
     });
     CssValueRun run = cssValuePoolRun(&pool, CssValueSpan{0, pool.values.count});
     CssColorContext context{.current = PrColor{0, 0, 0, 1}};
-    if (parsed && element != nullptr && colorReadsElement(run)) {
+    bool reads = parsed && colorReadsElement(run);
+    if (reads && element != nullptr) {
         const CssRoot* documentStyle = element->document->style;
         if (domIsConnected(element) && documentStyle != nullptr && documentStyle->presentationHooks != nullptr)
             context = documentStyle->presentationHooks->colorContext(documentStyle->presentation, element);
@@ -2409,6 +2414,7 @@ PrStatus prCssParseColor(PrStringView text, const PrDomElement* PR_NULLABLE elem
         .space = color.space,
         .legacy = legacy,
         .missing = uint8_t(color.missing),
+        .readsElement = reads,
         .components = {color.c[0], color.c[1], color.c[2]},
         .alpha = color.alpha,
     };
@@ -2870,11 +2876,14 @@ PrStatus prCssMatrixToString(const PrDomMatrix* matrix, PrRawString* out) {
     }
     PrTextBuffer text = {};
     prTextBufferAppend(&text, matrix->is2D ? "matrix(" : "matrix3d(");
+    // Each element is written as ECMAScript's ToString writes a number, in full, rather than as CSS rounds one.
     uint32_t count = matrix->is2D ? 6 : 16;
     for (uint32_t i = 0; i < count; ++i) {
         if (i != 0)
             prTextBufferAppend(&text, ", ");
-        cssSerializeNumber(&text, matrix->m[matrix->is2D ? kDomMatrix2DIndices[i] : i]);
+        char number[kPrF64TextMaxBytes];
+        size_t length = prF64Format(matrix->m[matrix->is2D ? kDomMatrix2DIndices[i] : i], number);
+        prTextBufferAppend(&text, PrStringView{number, uint32_t(length)});
     }
     prTextBufferAppendChar(&text, ')');
     *out = prTextBufferTake(&text);

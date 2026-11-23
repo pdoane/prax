@@ -73,6 +73,11 @@ enum {
 
     // A reference to a production whose match is stored in a form that the production's prose defines.
     CssGrammarFlag_Folds = 1 << 3,
+
+    // A range that bounds a written number but not a calculation. The reference is an alternative of a | whose other
+    // alternatives take the same type with other ranges, as in <integer [-∞,-1]> | <integer [1,∞]>. A calculation
+    // matches before its value is known, so its range is the union of the ranges, and no single range clamps it.
+    CssGrammarFlag_RangeUnion = 1 << 4,
 };
 typedef uint8_t CssGrammarFlags;
 

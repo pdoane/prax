@@ -29,6 +29,10 @@ CssMediaValue* valueOf(CssMediaEnvironment* environment, PrCssDescriptor descrip
 
 // Returns the value that a query sees: the override of a preference if it has one, and otherwise the stored value.
 const CssMediaValue* valueOf(const CssMediaEnvironment* environment, PrCssDescriptor descriptor) {
+    if (CssMediaReads* reads = environment->reads) {
+        uint32_t at = uint32_t(descriptor - kCssDescriptorMediaFirst);
+        reads->bits[at / 64] |= uint64_t(1) << (at % 64);
+    }
     const CssMediaValue* overridden = &environment->overrides[descriptor - kCssDescriptorMediaFirst];
     if (overridden->keyword != PrCssKeyword_Unknown)
         return overridden;
@@ -127,7 +131,11 @@ bool calculate(CssValueRun run, uint32_t index, const CssMediaEnvironment* envir
             return true;
         case PrCssValueKind_Dimension: {
             double scale = cssUnitScale(value->unit);
-            if (scale == 0 && !relativeLength(environment, value->unit, &scale))
+            if (scale != 0) {
+                *out = cssUnitToCanonical(value->number, value->unit);
+                return true;
+            }
+            if (!relativeLength(environment, value->unit, &scale))
                 return false;
             *out = value->number * scale;
             return true;
@@ -433,11 +441,26 @@ Truth evaluateQuery(CssValueRun query, const CssMediaEnvironment* environment, R
 // ---------------------------------------------------------------------------------------------------------------------
 // Environments
 
+bool cssMediaReadsAgree(const CssMediaReads& reads, const CssMediaEnvironment& a, const CssMediaEnvironment& b) {
+    for (uint32_t at = 0; at < kCssMediaFeatureCount; ++at) {
+        if ((reads.bits[at / 64] >> (at % 64) & 1) == 0)
+            continue;
+        PrCssDescriptor feature = PrCssDescriptor(kCssDescriptorMediaFirst + at);
+        CssMediaValue x = *valueOf(&a, feature);
+        CssMediaValue y = *valueOf(&b, feature);
+        bool same = x.keyword == y.keyword && (x.number == y.number || (x.number != x.number && y.number != y.number));
+        if (!same)
+            return false;
+    }
+    return true;
+}
+
 void cssMediaEnvironmentInit(CssMediaEnvironment* environment, bool scripting) {
     environment->type = PrCssKeyword_Screen;
     environment->fontSize = 16;
     environment->headroom = 0;
     environment->pixelRatio = 1;
+    environment->reads = nullptr;
     for (CssMediaValue& value : environment->features)
         value = mediaNumber(kPrF64Nan);
     for (CssMediaValue& value : environment->overrides)
@@ -623,6 +646,14 @@ bool cssMediaListMatches(const CssMediaQueries* list, const CssMediaEnvironment*
     }
     stack.reset();
     return matches;
+}
+
+bool cssMediaQueryMatches(PrStringView query, const CssMediaEnvironment* environment) {
+    CssMediaQueries media{};
+    cssMediaListParse(&media, query);
+    bool matched = cssMediaListMatches(&media, environment);
+    cssValueListReset(&media.queries);
+    return matched;
 }
 
 const CssMediaEnvironment* PR_NULLABLE cssStyleSheetMedia(const PrCssStyleSheet* sheet) {

@@ -11,8 +11,9 @@ namespace {
 constexpr PrCssProperty kFontProperties[] = {
     PrCssProperty_FontFamily, PrCssProperty_MathStyle, PrCssProperty_MathDepth, PrCssProperty_MathShift,
     PrCssProperty_FontSize, PrCssProperty_FontStyle, PrCssProperty_FontWeight, PrCssProperty_FontWidth,
-    PrCssProperty_LineHeight, PrCssProperty_DominantBaseline, PrCssProperty_WritingMode, PrCssProperty_Direction,
-    PrCssProperty_TextOrientation, PrCssProperty_WhiteSpaceCollapse, PrCssProperty_TextWrapMode,
+    PrCssProperty_FontVariationSettings, PrCssProperty_FontOpticalSizing, PrCssProperty_LineHeight,
+    PrCssProperty_DominantBaseline, PrCssProperty_WritingMode, PrCssProperty_Direction, PrCssProperty_TextOrientation,
+    PrCssProperty_WhiteSpaceCollapse, PrCssProperty_TextWrapMode, PrCssProperty_TextWrapStyle,
     PrCssProperty_TextAlignAll, PrCssProperty_TextAlignLast, PrCssProperty_TextJustify, PrCssProperty_TextIndent,
     PrCssProperty_LetterSpacing, PrCssProperty_WordSpacing, PrCssProperty_TextTransform,
 };
@@ -39,7 +40,8 @@ constexpr PrCssProperty kBoxProperties[] = {
     PrCssProperty_OverscrollBehaviorX, PrCssProperty_OverscrollBehaviorY, PrCssProperty_Contain,
     PrCssProperty_ContentVisibility, PrCssProperty_ContainerType, PrCssProperty_BaselineSource,
     PrCssProperty_AlignmentBaseline, PrCssProperty_BaselineShift, PrCssProperty_UnicodeBidi, PrCssProperty_TableLayout,
-    PrCssProperty_InputSecurity,
+    PrCssProperty_InputSecurity, PrCssProperty_ShapeOutside, PrCssProperty_ShapeMargin,
+    PrCssProperty_ShapeImageThreshold, PrCssProperty_WhiteSpaceTrim,
 };
 
 constexpr PrCssProperty kFlexProperties[] = {
@@ -143,8 +145,10 @@ constexpr PrCssProperty kTableProperties[] = {
 constexpr PrCssProperty kTypographyProperties[] = {
     PrCssProperty_FontFeatureSettings, PrCssProperty_FontKerning, PrCssProperty_FontVariantLigatures,
     PrCssProperty_FontVariantCaps, PrCssProperty_FontVariantAlternates, PrCssProperty_FontVariantNumeric,
-    PrCssProperty_FontVariantEastAsian, PrCssProperty_FontVariantPosition, PrCssProperty_FontSynthesisSmallCaps,
-    PrCssProperty_FontSynthesisPosition, PrCssProperty_WordBreak, PrCssProperty_OverflowWrap, PrCssProperty_Orphans,
+    PrCssProperty_FontVariantEastAsian, PrCssProperty_FontVariantPosition, PrCssProperty_FontVariantEmoji,
+    PrCssProperty_FontSizeAdjust, PrCssProperty_FontSynthesisWeight, PrCssProperty_FontSynthesisStyle,
+    PrCssProperty_FontSynthesisSmallCaps, PrCssProperty_FontSynthesisPosition, PrCssProperty_FontPalette,
+    PrCssProperty_FontLanguageOverride, PrCssProperty_WordBreak, PrCssProperty_OverflowWrap, PrCssProperty_Orphans,
     PrCssProperty_Widows,
 };
 
@@ -170,9 +174,9 @@ constexpr PrCssProperty kFragmentationProperties[] = {
 } // namespace
 
 extern const CssStyleGroupProperties kCssStyleGroupProperties[CssStyleGroup_Count] = {
-    {kFontProperties, 22},           // Font
+    {kFontProperties, 25},           // Font
     {kColorProperties, 13},          // Color
-    {kBoxProperties, 46},            // Box
+    {kBoxProperties, 50},            // Box
     {kFlexProperties, 14},           // Flex
     {kDecorationProperties, 19},     // Decoration
     {kBackgroundProperties, 22},     // Background
@@ -184,7 +188,7 @@ extern const CssStyleGroupProperties kCssStyleGroupProperties[CssStyleGroup_Coun
     {kSvgProperties, 21},            // Svg
     {kSvgGeometryProperties, 16},    // SvgGeometry
     {kTableProperties, 4},           // Table
-    {kTypographyProperties, 14},     // Typography
+    {kTypographyProperties, 20},     // Typography
     {kGridProperties, 10},           // Grid
     {kFragmentationProperties, 15},  // Fragmentation
 };
@@ -451,9 +455,9 @@ extern const CssStyleSlot kCssStyleSlots[PrCssProperty_Count] = {
     {CssStyleGroup_SvgGeometry, 2},     // cx
     {CssStyleGroup_SvgGeometry, 3},     // cy
     {CssStyleGroup_SvgGeometry, 7},     // d
-    {CssStyleGroup_Font, 11},           // direction
+    {CssStyleGroup_Font, 13},           // direction
     {CssStyleGroup_Box, 0},             // display
-    {CssStyleGroup_Font, 9},            // dominant-baseline
+    {CssStyleGroup_Font, 11},           // dominant-baseline
     {CssStyleGroup_Color, 4},           // dynamic-range-limit
     {CssStyleGroup_Table, 3},           // empty-cells
     {CssStyleGroup_Count, 0},           // event-trigger
@@ -492,26 +496,26 @@ extern const CssStyleSlot kCssStyleSlots[PrCssProperty_Count] = {
     {CssStyleGroup_Font, 0},            // font-family
     {CssStyleGroup_Typography, 0},      // font-feature-settings
     {CssStyleGroup_Typography, 1},      // font-kerning
-    {CssStyleGroup_Count, 0},           // font-language-override
-    {CssStyleGroup_Count, 0},           // font-optical-sizing
-    {CssStyleGroup_Count, 0},           // font-palette
+    {CssStyleGroup_Typography, 15},     // font-language-override
+    {CssStyleGroup_Font, 9},            // font-optical-sizing
+    {CssStyleGroup_Typography, 14},     // font-palette
     {CssStyleGroup_Font, 4},            // font-size
-    {CssStyleGroup_Count, 0},           // font-size-adjust
+    {CssStyleGroup_Typography, 9},      // font-size-adjust
     {CssStyleGroup_Font, 5},            // font-style
     {CssStyleGroup_Count, 0},           // font-synthesis
-    {CssStyleGroup_Typography, 9},      // font-synthesis-position
-    {CssStyleGroup_Typography, 8},      // font-synthesis-small-caps
-    {CssStyleGroup_Count, 0},           // font-synthesis-style
-    {CssStyleGroup_Count, 0},           // font-synthesis-weight
+    {CssStyleGroup_Typography, 13},     // font-synthesis-position
+    {CssStyleGroup_Typography, 12},     // font-synthesis-small-caps
+    {CssStyleGroup_Typography, 11},     // font-synthesis-style
+    {CssStyleGroup_Typography, 10},     // font-synthesis-weight
     {CssStyleGroup_Count, 0},           // font-variant
     {CssStyleGroup_Typography, 4},      // font-variant-alternates
     {CssStyleGroup_Typography, 3},      // font-variant-caps
     {CssStyleGroup_Typography, 6},      // font-variant-east-asian
-    {CssStyleGroup_Count, 0},           // font-variant-emoji
+    {CssStyleGroup_Typography, 8},      // font-variant-emoji
     {CssStyleGroup_Typography, 2},      // font-variant-ligatures
     {CssStyleGroup_Typography, 5},      // font-variant-numeric
     {CssStyleGroup_Typography, 7},      // font-variant-position
-    {CssStyleGroup_Count, 0},           // font-variation-settings
+    {CssStyleGroup_Font, 8},            // font-variation-settings
     {CssStyleGroup_Font, 6},            // font-weight
     {CssStyleGroup_Font, 7},            // font-width
     {CssStyleGroup_Count, 0},           // footnote-display
@@ -570,13 +574,13 @@ extern const CssStyleSlot kCssStyleSlots[PrCssProperty_Count] = {
     {CssStyleGroup_Flex, 9},            // justify-items
     {CssStyleGroup_Flex, 10},           // justify-self
     {CssStyleGroup_Box, 7},             // left
-    {CssStyleGroup_Font, 19},           // letter-spacing
+    {CssStyleGroup_Font, 22},           // letter-spacing
     {CssStyleGroup_SvgGeometry, 14},    // lighting-color
     {CssStyleGroup_Count, 0},           // line-break
     {CssStyleGroup_Count, 0},           // line-clamp
     {CssStyleGroup_Count, 0},           // line-fit-edge
     {CssStyleGroup_Count, 0},           // line-grid
-    {CssStyleGroup_Font, 8},            // line-height
+    {CssStyleGroup_Font, 10},           // line-height
     {CssStyleGroup_Count, 0},           // line-height-step
     {CssStyleGroup_Count, 0},           // line-padding
     {CssStyleGroup_Count, 0},           // line-snap
@@ -651,7 +655,7 @@ extern const CssStyleSlot kCssStyleSlots[PrCssProperty_Count] = {
     {CssStyleGroup_Count, 0},           // offset-rotate
     {CssStyleGroup_Effect, 0},          // opacity
     {CssStyleGroup_Flex, 5},            // order
-    {CssStyleGroup_Typography, 12},     // orphans
+    {CssStyleGroup_Typography, 18},     // orphans
     {CssStyleGroup_Count, 0},           // outline
     {CssStyleGroup_Decoration, 10},     // outline-color
     {CssStyleGroup_Decoration, 13},     // outline-offset
@@ -672,7 +676,7 @@ extern const CssStyleSlot kCssStyleSlots[PrCssProperty_Count] = {
     {CssStyleGroup_Count, 0},           // overflow-clip-margin-right
     {CssStyleGroup_Count, 0},           // overflow-clip-margin-top
     {CssStyleGroup_Count, 0},           // overflow-inline
-    {CssStyleGroup_Typography, 11},     // overflow-wrap
+    {CssStyleGroup_Typography, 17},     // overflow-wrap
     {CssStyleGroup_Box, 31},            // overflow-x
     {CssStyleGroup_Box, 32},            // overflow-y
     {CssStyleGroup_Count, 0},           // overlay
@@ -800,10 +804,10 @@ extern const CssStyleSlot kCssStyleSlots[PrCssProperty_Count] = {
     {CssStyleGroup_Count, 0},           // scrollbar-color
     {CssStyleGroup_Count, 0},           // scrollbar-gutter
     {CssStyleGroup_Count, 0},           // scrollbar-width
-    {CssStyleGroup_Count, 0},           // shape-image-threshold
+    {CssStyleGroup_Box, 48},            // shape-image-threshold
     {CssStyleGroup_Count, 0},           // shape-inside
-    {CssStyleGroup_Count, 0},           // shape-margin
-    {CssStyleGroup_Count, 0},           // shape-outside
+    {CssStyleGroup_Box, 47},            // shape-margin
+    {CssStyleGroup_Box, 46},            // shape-outside
     {CssStyleGroup_Count, 0},           // shape-padding
     {CssStyleGroup_Svg, 18},            // shape-rendering
     {CssStyleGroup_Count, 0},           // size
@@ -840,8 +844,8 @@ extern const CssStyleSlot kCssStyleSlots[PrCssProperty_Count] = {
     {CssStyleGroup_Count, 0},           // tab-size
     {CssStyleGroup_Box, 44},            // table-layout
     {CssStyleGroup_Count, 0},           // text-align
-    {CssStyleGroup_Font, 15},           // text-align-all
-    {CssStyleGroup_Font, 16},           // text-align-last
+    {CssStyleGroup_Font, 18},           // text-align-all
+    {CssStyleGroup_Font, 19},           // text-align-last
     {CssStyleGroup_Svg, 20},            // text-anchor
     {CssStyleGroup_Count, 0},           // text-autospace
     {CssStyleGroup_Count, 0},           // text-box
@@ -866,21 +870,21 @@ extern const CssStyleSlot kCssStyleSlots[PrCssProperty_Count] = {
     {CssStyleGroup_Count, 0},           // text-emphasis-style
     {CssStyleGroup_Count, 0},           // text-fit
     {CssStyleGroup_Count, 0},           // text-group-align
-    {CssStyleGroup_Font, 18},           // text-indent
-    {CssStyleGroup_Font, 17},           // text-justify
-    {CssStyleGroup_Font, 12},           // text-orientation
+    {CssStyleGroup_Font, 21},           // text-indent
+    {CssStyleGroup_Font, 20},           // text-justify
+    {CssStyleGroup_Font, 14},           // text-orientation
     {CssStyleGroup_Box, 33},            // text-overflow
     {CssStyleGroup_Svg, 19},            // text-rendering
     {CssStyleGroup_Count, 0},           // text-shadow
     {CssStyleGroup_Count, 0},           // text-size-adjust
     {CssStyleGroup_Count, 0},           // text-spacing
     {CssStyleGroup_Count, 0},           // text-spacing-trim
-    {CssStyleGroup_Font, 21},           // text-transform
+    {CssStyleGroup_Font, 24},           // text-transform
     {CssStyleGroup_Color, 12},          // text-underline-offset
     {CssStyleGroup_Color, 11},          // text-underline-position
     {CssStyleGroup_Count, 0},           // text-wrap
-    {CssStyleGroup_Font, 14},           // text-wrap-mode
-    {CssStyleGroup_Count, 0},           // text-wrap-style
+    {CssStyleGroup_Font, 16},           // text-wrap-mode
+    {CssStyleGroup_Font, 17},           // text-wrap-style
     {CssStyleGroup_Count, 0},           // timeline-scope
     {CssStyleGroup_Count, 0},           // timeline-trigger
     {CssStyleGroup_Count, 0},           // timeline-trigger-activation-range
@@ -927,21 +931,21 @@ extern const CssStyleSlot kCssStyleSlots[PrCssProperty_Count] = {
     {CssStyleGroup_Count, 0},           // voice-stress
     {CssStyleGroup_Count, 0},           // voice-volume
     {CssStyleGroup_Count, 0},           // white-space
-    {CssStyleGroup_Font, 13},           // white-space-collapse
-    {CssStyleGroup_Count, 0},           // white-space-trim
-    {CssStyleGroup_Typography, 13},     // widows
+    {CssStyleGroup_Font, 15},           // white-space-collapse
+    {CssStyleGroup_Box, 49},            // white-space-trim
+    {CssStyleGroup_Typography, 19},     // widows
     {CssStyleGroup_Box, 9},             // width
     {CssStyleGroup_Effect, 2},          // will-change
     {CssStyleGroup_Count, 0},           // window-drag
-    {CssStyleGroup_Typography, 10},     // word-break
+    {CssStyleGroup_Typography, 16},     // word-break
     {CssStyleGroup_Count, 0},           // word-space-transform
-    {CssStyleGroup_Font, 20},           // word-spacing
+    {CssStyleGroup_Font, 23},           // word-spacing
     {CssStyleGroup_Count, 0},           // wrap-after
     {CssStyleGroup_Count, 0},           // wrap-before
     {CssStyleGroup_Count, 0},           // wrap-flow
     {CssStyleGroup_Count, 0},           // wrap-inside
     {CssStyleGroup_Count, 0},           // wrap-through
-    {CssStyleGroup_Font, 10},           // writing-mode
+    {CssStyleGroup_Font, 12},           // writing-mode
     {CssStyleGroup_SvgGeometry, 0},     // x
     {CssStyleGroup_SvgGeometry, 1},     // y
     {CssStyleGroup_Effect, 1},          // z-index

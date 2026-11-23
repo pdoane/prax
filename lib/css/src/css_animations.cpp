@@ -296,12 +296,27 @@ CssAnimations& cssAnimations(PrDomDocument* document) {
     return cssDocumentRoot(document)->animations;
 }
 
+void cssAnimationDriverAdd(PrDomDocument* document, const CssAnimationDriver& driver) {
+    cssAnimations(document).drivers.push(driver);
+}
+
+void cssAnimationDriverRemove(PrDomDocument* document, void* PR_NULLABLE context) {
+    RawArray<CssAnimationDriver>& drivers = cssAnimations(document).drivers;
+    for (uint32_t i = 0; i < drivers.count; ++i) {
+        if (drivers.data[i].context == context) {
+            drivers.erase(i);
+            return;
+        }
+    }
+}
+
 void cssAnimationsReset(CssAnimations* animations) {
     PR_ASSERT(animations->list.count == 0);
     animations->list.reset();
     for (uint32_t i = 0; i < animations->events.count; ++i)
         cssAnimateEventReset(&animations->events.data[i]);
     animations->events.reset();
+    animations->drivers.reset();
     if (animations->timeline != nullptr) {
         animations->timeline->document = nullptr;
         prCssTimelineRelease(animations->timeline);

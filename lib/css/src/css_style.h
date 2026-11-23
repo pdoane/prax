@@ -450,6 +450,17 @@ void cssFontFamilies(CssValueRun run, PrTextBuffer* names, RawArray<PrFontFamily
 // font-feature-settings. The functions of font-variant-alternates, which name @font-feature-values, ask for nothing.
 PrTextFeatureSet* PR_NULLABLE cssFontFeatureSet(const CssComputedStyle* style);
 
+// Appends the axis values of the style's font-variation-settings to `out`, in the order that it lists them
+// (css-fonts-4/#propdef-font-variation-settings). A later value for an axis wins over an earlier one.
+void cssFontVariations(const CssComputedStyle* style, RawArray<PrFontVariation>* out);
+
+// Returns true if the style's font-optical-sizing is auto, which sets a font's opsz axis to its size
+// (css-fonts-4/#propdef-font-optical-sizing).
+bool cssStyleOpticalSizing(const CssComputedStyle* style);
+
+// Appends the axis values of a font-variation-settings value, a property's or an @font-face descriptor's, to `out`.
+void cssFontVariationsOf(CssValueRun settings, RawArray<PrFontVariation>* out);
+
 // Returns how the style's text breaks within words: its word-break and overflow-wrap (css-text-4/#word-break-property,
 // css-text-4/#overflow-wrap-property).
 PrTextBreakStyle cssTextBreakStyle(const CssComputedStyle* style);
@@ -563,6 +574,32 @@ bool cssResolveColor(CssValueRun run, uint32_t index, const CssColorContext& con
 // Writes the length in px of the value at `index` of `run`. The value is a length, or a calculation of lengths and
 // percentages of `base`. Returns false for any other value.
 bool cssResolveLength(CssValueRun run, uint32_t index, double base, double* out);
+
+// Writes to `out` the layers in the order that a paint-order other than normal gives (SVG2/painting.html#PaintOrder):
+// the layers it names, then the others in the order fill, stroke, markers. Returns how many layers its shortest form
+// writes. That is all but the last, or only the first if the other two are in the normal order.
+uint32_t cssPaintOrderForm(CssValueRun value, PrCssKeyword out[PR_NONNULL 3]);
+
+// Writes the length in px of `number` in `unit`, which is a length unit. `context` resolves relative units. Returns
+// false for a unit that the context does not resolve, such as a container unit. A unit that it resolves may have a
+// scale of zero, such as `lh` on lines of no height.
+bool cssAbsoluteLength(double number, PrCssUnit unit, const CssStyleContext& context, double* out);
+
+// Returns true if `property` takes a <basic-shape> (css-shapes-1/#basic-shape-functions). These properties compute and
+// interpolate their shapes in the same way.
+inline bool cssTakesBasicShape(PrCssProperty property) {
+    return property == PrCssProperty_ClipPath || property == PrCssProperty_ShapeOutside;
+}
+
+// Returns the reference box of a basic shape of `property` if the value names no box. It is the margin box for
+// shape-outside (css-shapes-1/#shape-outside-property) and the border box for clip-path (css-masking-1/#the-clip-path).
+// A computed value leaves this box out.
+inline PrCssKeyword cssDefaultShapeBox(PrCssProperty property) {
+    return property == PrCssProperty_ShapeOutside ? PrCssKeyword_MarginBox : PrCssKeyword_BorderBox;
+}
+
+// Returns true if `value` is a <shape-box> or <geometry-box> keyword.
+bool cssIsShapeBox(const CssValueNode& value);
 
 } // namespace pr_impl
 

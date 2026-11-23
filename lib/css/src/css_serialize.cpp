@@ -766,6 +766,13 @@ void cssSerializeNumber(PrTextBuffer* out, double value) {
         value = kPrF64Max;
     else if (value < -kPrF64Max)
         value = -kPrF64Max;
+    // A number is rounded to 6 decimals (cssom-1/#serializing-css-values). A value too large to hold a millionth
+    // exactly is already rounded. A value that rounds to zero is written without a sign.
+    constexpr double kDecimals = 1e6;
+    if (prF64Abs(value) < kPrF64MaxExactInteger / kDecimals)
+        value = prF64Round(value * kDecimals) / kDecimals;
+    if (value == 0)
+        value = 0;
 
     char text[kPrF64TextMaxBytes];
     size_t length = prF64Format(value, text);

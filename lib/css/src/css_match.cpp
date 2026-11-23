@@ -734,9 +734,12 @@ bool resumeRepeat(CssMatcher* m, uint32_t index, uint32_t state) {
 
     // The bracketed range bounds the value of each repetition, if the value is a number. If a given number, rather than
     // a written one, is outside its range, it is wrapped in a calculation, which is clamped when used
-    // (css-typed-om-1/#create-an-internal-representation).
+    // (css-typed-om-1/#create-an-internal-representation). A calculation keeps the range, and its value is clamped to
+    // it once it computes (css-values-4/#calc-range).
     if (state == 0 && modifier->range != CssGrammarRange_None && f.done != 0 && m->pool->values.count > f.taken) {
-        const CssValueNode* last = &m->pool->values.data[f.taken];
+        CssValueNode* last = &m->pool->values.data[f.taken];
+        if (last->kind == PrCssValueKind_Math && (modifier->flags & CssGrammarFlag_RangeUnion) == 0)
+            cssValueSetMathRange(last, modifier->range);
         if (cssValueIsNumeric(last->kind) && !inRange(kCssGrammarRanges[modifier->range], last->number)) {
             bool given = m->ts->pos != 0 && cssTokenKind(m->ts->tokens, m->ts->pos - 1) == CssTokenKind_Value;
             if (!m->match->calculate || !given || m->pool->values.count != f.taken + 1)
@@ -2110,6 +2113,10 @@ const PrCssKeyword* PR_NULLABLE cssMatchRelativeComponents(const CssMatcher* m) 
         }
         return kCssColorComponents[prColorSpaceModel(space)];
     }
+}
+
+void cssMixFold(CssValuePool* pool, uint32_t at) {
+    foldMix(pool, at);
 }
 
 } // namespace pr_impl

@@ -23,9 +23,10 @@ struct CssSelectors;
 // ---------------------------------------------------------------------------------------------------------------------
 // Values
 
-// Appends the shortest digits that read back as `value` (cssom-1/#serializing-css-values). Exponents from
-// kPrF64PositionalMinExponent through kPrF64PositionalMaxExponent use positional notation, and others use `1e+30`
-// notation. NaN is written as 0, and an infinity as the largest finite number of its sign.
+// Appends `value` rounded to 6 decimals, in the shortest digits that read back as the rounded value
+// (cssom-1/#serializing-css-values). Exponents from kPrF64PositionalMinExponent through kPrF64PositionalMaxExponent use
+// positional notation, and others use `1e+30` notation. NaN is written as 0, and an infinity as the largest finite
+// number of its sign.
 void cssSerializeNumber(PrTextBuffer* out, double value);
 
 // Appends `text` as an identifier, escaped so that it tokenizes back to `text` (cssom-1/#serialize-an-identifier).

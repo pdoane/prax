@@ -46,7 +46,7 @@ the diff of a change to it is what the change did.
 | painting/fill                     |     53/58 |   91.3% |
 | painting/fill-opacity             |       8/8 |  100.0% |
 | painting/fill-rule                |       2/2 |  100.0% |
-| painting/image-rendering          |       1/3 |   33.3% |
+| painting/image-rendering          |       3/3 |  100.0% |
 | painting/isolation                |       2/2 |  100.0% |
 | painting/marker                   |     59/61 |   96.7% |
 | painting/mix-blend-mode           |     20/20 |  100.0% |
@@ -112,4 +112,4 @@ the diff of a change to it is what the change did.
 | text/unicode-bidi                 |       1/1 |  100.0% |
 | text/word-spacing                 |       6/6 |  100.0% |
 | text/writing-mode                 |     10/21 |   47.6% |
-| **total**                         | 1414/1622 |   87.1% |
+| **total**                         | 1416/1622 |   87.2% |

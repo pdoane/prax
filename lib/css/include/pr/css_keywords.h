@@ -746,6 +746,7 @@ enum {
     PrCssKeyword_OpenQuote,                    // open-quote
     PrCssKeyword_Opentype,                     // opentype
     PrCssKeyword_Optimizelegibility,           // optimizelegibility
+    PrCssKeyword_Optimizequality,              // optimizequality
     PrCssKeyword_Optimizespeed,                // optimizespeed
     PrCssKeyword_Optional,                     // optional
     PrCssKeyword_Or,                           // or

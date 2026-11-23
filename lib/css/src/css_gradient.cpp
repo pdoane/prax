@@ -17,7 +17,7 @@ float degreesOf(CssValueRun run, uint32_t index) {
     const CssValueNode* value = &run.values[index];
     double degrees = 0;
     if (value->kind == PrCssValueKind_Dimension && cssUnitCategory(value->unit) == CssUnitCategory_Angle)
-        degrees = value->number * cssUnitScale(value->unit);
+        degrees = cssUnitToCanonical(value->number, value->unit);
     else if (value->kind == PrCssValueKind_Math)
         cssMathTo(run, index, PrCssUnit_Deg, &degrees);
     return float(degrees);

@@ -250,28 +250,29 @@ CSS_UNITS = [
     ("cqb", "Length", None),
     ("cqmin", "Length", None),
     ("cqmax", "Length", None),
-    ("cm", "Length", 96 / 2.54),
-    ("mm", "Length", 96 / 25.4),
-    ("Q", "Length", 96 / 101.6),
-    ("in", "Length", 96),
-    ("pc", "Length", 16),
-    ("pt", "Length", 4 / 3),
-    ("px", "Length", 1),
-    ("deg", "Angle", 1),
-    ("grad", "Angle", 0.9),
-    ("rad", "Angle", 180 / math.pi),
-    ("turn", "Angle", 360),
-    ("s", "Time", 1),
-    ("ms", "Time", 0.001),
-    ("Hz", "Frequency", 1),
-    ("kHz", "Frequency", 1000),
-    ("dpi", "Resolution", 1 / 96),
-    ("dpcm", "Resolution", 2.54 / 96),
-    ("dppx", "Resolution", 1),
-    ("x", "Resolution", 1),
-    ("fr", "Flex", 1),
-    ("dB", "Decibel", 1),
-    ("st", "Semitones", 1),
+    ("cm", "Length", (9600, 254)),
+    ("mm", "Length", (960, 254)),
+    # css-values-4/#Q names the unit Q, and serializations write it lowercase, as they write every unit.
+    ("q", "Length", (240, 254)),
+    ("in", "Length", (96, 1)),
+    ("pc", "Length", (16, 1)),
+    ("pt", "Length", (4, 3)),
+    ("px", "Length", (1, 1)),
+    ("deg", "Angle", (1, 1)),
+    ("grad", "Angle", (9, 10)),
+    ("rad", "Angle", (180, "kPrF64Pi")),
+    ("turn", "Angle", (360, 1)),
+    ("s", "Time", (1, 1)),
+    ("ms", "Time", (1, 1000)),
+    ("Hz", "Frequency", (1, 1)),
+    ("kHz", "Frequency", (1000, 1)),
+    ("dpi", "Resolution", (1, 96)),
+    ("dpcm", "Resolution", (254, 9600)),
+    ("dppx", "Resolution", (1, 1)),
+    ("x", "Resolution", (1, 1)),
+    ("fr", "Flex", (1, 1)),
+    ("dB", "Decibel", (1, 1)),
+    ("st", "Semitones", (1, 1)),
 ]
 
 
@@ -363,6 +364,9 @@ PROPERTY_AMENDMENTS = {
     "rx": ("<length-percentage> | auto", "<length-percentage [0,∞]> | auto"),
     "ry": ("<length-percentage> | auto", "<length-percentage [0,∞]> | auto"),
     "stroke-width": ("<length-percentage> | <number>", "<number [0,∞]> | <length-percentage [0,∞]>"),
+    # fill-stroke-3/#stroke-miterlimit makes a value below 1 invalid. The engine rejects only a negative value, because
+    # content uses limits from 0 to 1, which the corpus tests as valid (svg/painting/parsing).
+    "stroke-miterlimit": ("<number>", "<number [0,∞]>"),
     # css-values-4/#lengths: a 0 that could be a <number> or a <length> parses as a <number>, which the alternatives
     # try first.
     "stroke-dashoffset": ("<length-percentage> | <number>", "<number> | <length-percentage>"),
@@ -383,6 +387,10 @@ PROPERTY_AMENDMENTS = {
     "alignment-baseline": ("baseline | <baseline-metric>",
                            "baseline | <baseline-metric> | text-before-edge | text-after-edge | before-edge "
                            "| after-edge"),
+    # svg2-text/text.html#DominantBaselineProperty: SVG 2 drops reset-size, use-script and no-change from SVG 1.1's
+    # values, but keeps text-before-edge and text-after-edge. Those align as text-top and text-bottom, as
+    # alignment-baseline's legacy values do.
+    "dominant-baseline": ("auto | <baseline-metric>", "auto | <baseline-metric> | text-before-edge | text-after-edge"),
     # css-writing-modes-4/#svg-writing-mode: SVG 1.1's values, which the cascade computes to horizontal-tb and
     # vertical-rl.
     # svg2-draft/interact.html#PointerEventsProperty: SVG's values, which css-ui-4/#pointer-events-control leaves to
@@ -390,6 +398,10 @@ PROPERTY_AMENDMENTS = {
     "pointer-events": ("auto | none",
                        "auto | bounding-box | visiblePainted | visibleFill | visibleStroke | visible | painted "
                        "| fill | stroke | all | none"),
+    # css-images-3/#the-image-rendering: "a user agent must accept [optimizeSpeed and optimizeQuality] as valid values
+    # but must treat them as having the same behavior as crisp-edges and smooth respectively".
+    "image-rendering": ("auto | smooth | high-quality | pixelated | crisp-edges",
+                        "auto | smooth | high-quality | pixelated | crisp-edges | optimizeSpeed | optimizeQuality"),
     # svg2-draft/coords.html#VectorEffectProperty: "These values can be enumerated. Thereby, the effect which has these
     # characteristics simultaneously can be specified", which the property's grammar of single keywords does not say.
     "vector-effect": ("none | non-scaling-stroke | non-scaling-size | non-rotation | fixed-position",
@@ -844,8 +856,10 @@ STYLE_GROUPS = [
         "",
         [
             "font-family", "math-style", "math-depth", "math-shift", "font-size", "font-style", "font-weight",
-            "font-width", "line-height", "dominant-baseline", "writing-mode", "direction", "text-orientation",
-            "white-space-collapse", "text-wrap-mode",
+            "font-width", "font-variation-settings", "font-optical-sizing", "line-height", "dominant-baseline",
+            "writing-mode", "direction",
+            "text-orientation",
+            "white-space-collapse", "text-wrap-mode", "text-wrap-style",
             "text-align-all", "text-align-last", "text-justify", "text-indent", "letter-spacing", "word-spacing",
             "text-transform",
         ]),
@@ -869,7 +883,8 @@ STYLE_GROUPS = [
             "padding-top", "padding-right", "padding-bottom", "padding-left", "overflow-x", "overflow-y",
             "text-overflow", "overflow-anchor", "overscroll-behavior-x", "overscroll-behavior-y", "contain",
             "content-visibility", "container-type", "baseline-source", "alignment-baseline", "baseline-shift",
-            "unicode-bidi", "table-layout", "input-security",
+            "unicode-bidi", "table-layout", "input-security", "shape-outside", "shape-margin", "shape-image-threshold",
+            "white-space-trim",
         ]),
     StyleGroup(
         "Flex", False, "read by layout: flex layout and box alignment",
@@ -977,7 +992,9 @@ STYLE_GROUPS = [
         [
             "font-feature-settings", "font-kerning", "font-variant-ligatures", "font-variant-caps",
             "font-variant-alternates", "font-variant-numeric", "font-variant-east-asian", "font-variant-position",
-            "font-synthesis-small-caps", "font-synthesis-position", "word-break", "overflow-wrap", "orphans", "widows",
+            "font-variant-emoji", "font-size-adjust", "font-synthesis-weight", "font-synthesis-style", "font-synthesis-small-caps",
+            "font-synthesis-position", "font-palette", "font-language-override", "word-break", "overflow-wrap", "orphans",
+            "widows",
         ]),
     StyleGroup(
         "Grid", False, "read by layout: a container's templates and an item's placement",
@@ -1022,15 +1039,13 @@ NOT_COMPUTED = {
     "corner-top-left", "corner-top-right", "cue-after", "cue-before", "event-trigger", "event-trigger-name",
     "event-trigger-source", "fill-break", "fill-color", "fill-image", "fill-origin", "fill-position", "fill-repeat",
     "fill-size", "flex-line-count", "float-defer", "float-offset", "float-reference", "flow-from", "flow-into",
-    "flow-tolerance", "font-language-override", "font-optical-sizing", "font-palette", "font-size-adjust",
-    "font-synthesis-style", "font-synthesis-weight", "font-variant-emoji", "font-variation-settings",
-    "footnote-display", "footnote-policy", "forced-color-adjust", "frame-sizing", "hanging-punctuation",
-    "hyphenate-character", "hyphenate-limit-chars", "hyphenate-limit-last", "hyphenate-limit-lines",
-    "hyphenate-limit-zone", "hyphens", "image-animation", "image-resolution", "initial-letter", "initial-letter-align",
-    "initial-letter-wrap", "inline-sizing", "interest-delay-end", "interest-delay-start", "interpolate-size",
-    "line-break", "line-clamp", "line-fit-edge", "line-grid", "line-height-step", "line-padding", "line-snap",
-    "link-parameters", "margin-break", "margin-trim", "marker-side", "max-lines", "min-intrinsic-sizing", "nav-down",
-    "nav-left", "nav-right", "nav-up", "object-view-box", "offset-anchor", "offset-distance", "offset-path",
+    "flow-tolerance", "footnote-display", "footnote-policy", "forced-color-adjust", "frame-sizing",
+    "hanging-punctuation", "hyphenate-character", "hyphenate-limit-chars", "hyphenate-limit-last",
+    "hyphenate-limit-lines", "hyphenate-limit-zone", "hyphens", "image-animation", "image-resolution", "initial-letter",
+    "initial-letter-align", "initial-letter-wrap", "inline-sizing", "interest-delay-end", "interest-delay-start",
+    "interpolate-size", "line-break", "line-clamp", "line-fit-edge", "line-grid", "line-height-step", "line-padding",
+    "line-snap", "link-parameters", "margin-break", "margin-trim", "marker-side", "max-lines", "min-intrinsic-sizing",
+    "nav-down", "nav-left", "nav-right", "nav-up", "object-view-box", "offset-anchor", "offset-distance", "offset-path",
     "offset-position", "offset-rotate", "overflow-clip-margin", "overflow-clip-margin-block",
     "overflow-clip-margin-bottom", "overflow-clip-margin-inline", "overflow-clip-margin-left",
     "overflow-clip-margin-right", "overflow-clip-margin-top", "overlay", "pause-after", "pause-before",
@@ -1043,24 +1058,22 @@ NOT_COMPUTED = {
     "scroll-initial-target", "scroll-margin-bottom", "scroll-margin-left", "scroll-margin-right", "scroll-margin-top",
     "scroll-marker-group", "scroll-padding-bottom", "scroll-padding-left", "scroll-padding-right", "scroll-padding-top",
     "scroll-snap-align", "scroll-snap-stop", "scroll-snap-type", "scroll-target-group", "scroll-timeline-axis",
-    "scroll-timeline-name", "scrollbar-color", "scrollbar-gutter", "scrollbar-width", "shape-image-threshold",
-    "shape-inside", "shape-margin", "shape-outside", "shape-padding", "slider-orientation", "spatial-navigation-action",
-    "spatial-navigation-contain", "spatial-navigation-function", "speak", "speak-as", "stroke-align",
-    "stroke-alignment", "stroke-break", "stroke-color", "stroke-dash-corner", "stroke-dash-justify",
-    "stroke-dashadjust", "stroke-dashcorner", "stroke-image", "stroke-origin", "stroke-position", "stroke-repeat",
-    "stroke-size", "tab-size", "text-autospace", "text-box-edge", "text-box-trim", "text-combine-upright",
-    "text-decoration-skip", "text-decoration-skip-box", "text-decoration-skip-ink",
+    "scroll-timeline-name", "scrollbar-color", "scrollbar-gutter", "scrollbar-width", "shape-inside", "shape-padding",
+    "slider-orientation", "spatial-navigation-action", "spatial-navigation-contain", "spatial-navigation-function",
+    "speak", "speak-as", "stroke-align", "stroke-alignment", "stroke-break", "stroke-color", "stroke-dash-corner",
+    "stroke-dash-justify", "stroke-dashadjust", "stroke-dashcorner", "stroke-image", "stroke-origin", "stroke-position",
+    "stroke-repeat", "stroke-size", "tab-size", "text-autospace", "text-box-edge", "text-box-trim",
+    "text-combine-upright", "text-decoration-skip", "text-decoration-skip-box", "text-decoration-skip-ink",
     "text-decoration-skip-self", "text-decoration-skip-spaces", "text-emphasis-color", "text-emphasis-position",
     "text-emphasis-skip", "text-emphasis-style", "text-fit", "text-group-align", "text-shadow", "text-size-adjust",
-    "text-spacing", "text-spacing-trim", "text-wrap-style",
-    "timeline-scope", "timeline-trigger", "timeline-trigger-activation-range", "timeline-trigger-activation-range-end",
-    "timeline-trigger-activation-range-start", "timeline-trigger-active-range", "timeline-trigger-active-range-end",
-    "timeline-trigger-active-range-start", "timeline-trigger-name", "timeline-trigger-source", "touch-action",
-    "transform-style", "trigger-scope", "view-timeline-axis", "view-timeline-inset", "view-timeline-name",
-    "view-transition-class", "view-transition-group", "view-transition-name", "view-transition-scope", "voice-balance",
-    "voice-duration", "voice-family", "voice-pitch", "voice-range", "voice-rate", "voice-stress", "voice-volume",
-    "white-space-trim", "window-drag", "word-space-transform", "wrap-after", "wrap-before", "wrap-flow", "wrap-inside",
-    "wrap-through", "zoom",
+    "text-spacing", "text-spacing-trim", "timeline-scope", "timeline-trigger", "timeline-trigger-activation-range",
+    "timeline-trigger-activation-range-end", "timeline-trigger-activation-range-start", "timeline-trigger-active-range",
+    "timeline-trigger-active-range-end", "timeline-trigger-active-range-start", "timeline-trigger-name",
+    "timeline-trigger-source", "touch-action", "transform-style", "trigger-scope", "view-timeline-axis",
+    "view-timeline-inset", "view-timeline-name", "view-transition-class", "view-transition-group",
+    "view-transition-name", "view-transition-scope", "voice-balance", "voice-duration", "voice-family", "voice-pitch",
+    "voice-range", "voice-rate", "voice-stress", "voice-volume", "window-drag", "word-space-transform", "wrap-after",
+    "wrap-before", "wrap-flow", "wrap-inside", "wrap-through", "zoom",
 }
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -3819,6 +3832,7 @@ class Grammars:
         self.omission_rows = []  # (node index, what it implies), in node order
         self.fractions = set()   # id() of each <percentage> that FRACTIONS names
         self.folded = set()      # id() of each reference to a production that FOLDED_PRODUCTIONS names
+        self.range_unions = set()  # id() of each ranged alternative that CssGrammarFlag_RangeUnion marks
         self.unicode_range_descriptors = set()  # descriptors whose value holds a unicode range
 
     def range_index(self, bounds):
@@ -3848,6 +3862,8 @@ class Grammars:
             flags.append("CssGrammarFlag_Required")
         if id(node) in self.folded:
             flags.append("CssGrammarFlag_Folds")
+        if id(node) in self.range_unions:
+            flags.append("CssGrammarFlag_RangeUnion")
         key = ("%d" % node.min,
                "kCssGrammarUnbounded" if node.max == INF else "%d" % node.max,
                " | ".join(flags) if flags else "0",
@@ -4738,6 +4754,16 @@ def compile_grammars(props, values, descs, pseudos, at_rules, shorthands, extra_
         if ("type", name) not in g.trees or not found:
             sys.exit("FOLDED_PRODUCTIONS: no grammar refers to %s" % name)
         g.folded |= {id(node) for node in found}
+    # The ranged alternatives of a | that take one type with different ranges (CssGrammarFlag_RangeUnion).
+    for _, _, _, tree in trees:
+        for node in walk(tree):
+            if node.type != "oneof":
+                continue
+            ranged = [child for child in node.children if child.type == "type" and child.range is not None]
+            for child in ranged:
+                if any(other is not child and normalize_ref(other.value) == normalize_ref(child.value)
+                       and other.range != child.range for other in ranged):
+                    g.range_unions.add(id(child))
     g.compute_first()
     g.compute_follow(trees)
     g.compute_nodes(trees)
@@ -5162,7 +5188,7 @@ def emit_unit_source(path):
     """Writes the tables behind css_unit.h, whose enum and prose stay written by hand."""
     names = [name for name, _, _ in CSS_UNITS]
     head = [BANNER,
-            '\n#include "css/src/css_unit.h"\n\n#include "pr/count_of.h"\n#include '
+            '\n#include "css/src/css_unit.h"\n\n#include "pr/count_of.h"\n#include "pr/float.h"\n#include '
             '"pr/name_table.h"\n']
 
     units = name_table.NameTable("kCssUnit", [name.lower() for name in names], lower=True)
@@ -5173,14 +5199,17 @@ def emit_unit_source(path):
             table("// The enum numbers the units the way the tables do.\nconstexpr PrCssUnit "
                   "kCssUnitOrder[]", [unit_member(n) for n in names], 6),
             table("constexpr PrStringView kCssUnitSpelling[]", [view(n) for n in names], 6),
-            table("constexpr double kCssUnitScale[]",
-                  ["%.17g" % scale if scale else "0" for _, _, scale in CSS_UNITS],
+            "\n// The size of one unit in the canonical unit of its category, as numerator / denominator. A conversion "
+            "multiplies by the numerator before it divides, so that a value with an exact result, such as 2540mm in px, "
+            "gets it.\nstruct UnitRatio {\n    double numerator;\n    double denominator;\n};\n",
+            table("constexpr UnitRatio kCssUnitScale[]",
+                  ["{%s, %s}" % scale if scale else "{0, 1}" for _, _, scale in CSS_UNITS],
                   comments=[unit_member(name) for name in names])]
     categories = ["Unknown", "Number",
                   "Percent"] + list(dict.fromkeys(category for _, category, _ in CSS_UNITS))
     canonical = {}
     for name, category, scale in CSS_UNITS:
-        if scale == 1 and category not in canonical:
+        if scale == (1, 1) and category not in canonical:
             canonical[category] = unit_member(name)
     body.append(table("constexpr PrCssUnit kCssUnitCanonical[]",
                       [canonical.get(category, "PrCssUnit_Number") for category in categories],
@@ -5207,7 +5236,12 @@ def emit_unit_source(path):
                 "PrCssUnit_Em];\n}\n")
     body.append("\ndouble cssUnitScale(PrCssUnit unit) {\n"
                 "    if (unit < PrCssUnit_Em || unit >= PrCssUnit_Unknown)\n        return 0;\n"
-                "    return kCssUnitScale[unit - PrCssUnit_Em];\n}\n")
+                "    const UnitRatio& ratio = kCssUnitScale[unit - PrCssUnit_Em];\n"
+                "    return ratio.numerator / ratio.denominator;\n}\n")
+    body.append("\ndouble cssUnitToCanonical(double value, PrCssUnit unit) {\n"
+                "    if (unit < PrCssUnit_Em || unit >= PrCssUnit_Unknown)\n        return 0;\n"
+                "    const UnitRatio& ratio = kCssUnitScale[unit - PrCssUnit_Em];\n"
+                "    return value * ratio.numerator / ratio.denominator;\n}\n")
     body.append("\nPrCssUnit cssUnitCanonical(CssUnitCategory category) {\n"
                 "    return kCssUnitCanonical[category];\n}\n")
     # The viewport-relative lengths are one run of the enum, from vw to dvmax.

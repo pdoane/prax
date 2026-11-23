@@ -25,6 +25,7 @@
 
 #include "css/src/css_color.h"
 #include "css/src/css_color_value.h"
+#include "css/src/css_match.h"
 #include "css/src/css_math.h"
 #include "css/src/css_path.h"
 #include "css/src/css_rule.h"
@@ -56,71 +57,17 @@ CssValueNode pxValue(double px) {
     return cssNumberValue(PrCssValueKind_Dimension, PrCssUnit_Px, px);
 }
 
-// Writes the length in px of `number` in `unit`, which is a length unit. `context` resolves relative units. Returns
-// false for a unit that the context does not resolve, such as a container unit. A unit that it resolves may have a
-// scale of zero, such as `lh` on lines of no height.
-bool absoluteLength(double number, PrCssUnit unit, const CssStyleContext& context, double* out) {
-    const CssFontBases& font = context.font;
-    const CssFontBases& root = context.root;
-    double vw = double(context.viewport.width) / 100;
-    double vh = double(context.viewport.height) / 100;
-    double scale = 0;
-    switch (unit) {
-        case PrCssUnit_Em: scale = font.em; break;
-        case PrCssUnit_Ex: scale = cssFontMetricPx(context, false, CssFontMetric_Ex); break;
-        case PrCssUnit_Cap: scale = cssFontMetricPx(context, false, CssFontMetric_Cap); break;
-        case PrCssUnit_Ch: scale = cssFontMetricPx(context, false, CssFontMetric_Ch); break;
-        case PrCssUnit_Ic: scale = cssFontMetricPx(context, false, CssFontMetric_Ic); break;
-        case PrCssUnit_Lh: scale = font.lh; break;
-        case PrCssUnit_Rem: scale = root.em; break;
-        case PrCssUnit_Rex: scale = cssFontMetricPx(context, true, CssFontMetric_Ex); break;
-        case PrCssUnit_Rcap: scale = cssFontMetricPx(context, true, CssFontMetric_Cap); break;
-        case PrCssUnit_Rch: scale = cssFontMetricPx(context, true, CssFontMetric_Ch); break;
-        case PrCssUnit_Ric: scale = cssFontMetricPx(context, true, CssFontMetric_Ic); break;
-        case PrCssUnit_Rlh: scale = root.lh; break;
-        case PrCssUnit_Vw:
-        case PrCssUnit_Svw:
-        case PrCssUnit_Lvw:
-        case PrCssUnit_Dvw:
-        case PrCssUnit_Vi:
-        case PrCssUnit_Svi:
-        case PrCssUnit_Lvi:
-        case PrCssUnit_Dvi: scale = vw; break;
-        case PrCssUnit_Vh:
-        case PrCssUnit_Svh:
-        case PrCssUnit_Lvh:
-        case PrCssUnit_Dvh:
-        case PrCssUnit_Vb:
-        case PrCssUnit_Svb:
-        case PrCssUnit_Lvb:
-        case PrCssUnit_Dvb: scale = vh; break;
-        case PrCssUnit_Vmin:
-        case PrCssUnit_Svmin:
-        case PrCssUnit_Lvmin:
-        case PrCssUnit_Dvmin: scale = prF64Min(vw, vh); break;
-        case PrCssUnit_Vmax:
-        case PrCssUnit_Svmax:
-        case PrCssUnit_Lvmax:
-        case PrCssUnit_Dvmax: scale = prF64Max(vw, vh); break;
-        default:
-            scale = cssUnitScale(unit);
-            // An absolute unit has a scale. Any other unit is one that the context does not resolve.
-            if (scale == 0 && number != 0)
-                return false;
-            break;
-    }
-    if (context.readsViewport != nullptr && cssUnitViewportRelative(unit))
-        *context.readsViewport = true;
-    bool fontRelative = unit == PrCssUnit_Em || unit == PrCssUnit_Ex || unit == PrCssUnit_Cap || unit == PrCssUnit_Ch ||
-        unit == PrCssUnit_Ic || unit == PrCssUnit_Lh;
-    if (context.readsFont != nullptr && fontRelative)
-        *context.readsFont = true;
-    *out = number * scale;
-    return true;
-}
-
 bool isLength(const CssValueNode* value) {
     return value->kind == PrCssValueKind_Dimension && cssUnitCategory(value->unit) == CssUnitCategory_Length;
+}
+
+// Returns `value` clamped to `range`.
+double clampTo(const CssGrammarRange& range, double value) {
+    if ((range.flags & CssGrammarRangeFlag_MinUnbounded) == 0)
+        value = prF64Max(value, range.min);
+    if ((range.flags & CssGrammarRangeFlag_MaxUnbounded) == 0)
+        value = prF64Min(value, range.max);
+    return value;
 }
 
 // Adds a copy of the values of `run` from `begin` to `end`, with their lengths in px. Each calculation that holds only
@@ -134,33 +81,57 @@ void addAbsoluteRange(CssValuePool* pool, CssValueRun run, uint32_t begin, uint3
             CssValuePool scratch{};
             CssValueSpan span = cssValuePoolAddRun(&scratch, cssValueSubtree(run, i));
             bool resolved = true;
+            bool lengths = false;
             for (uint32_t k = span.start; k < span.start + span.count; ++k) {
                 CssValueNode& leaf = scratch.values.data[k];
                 double px = 0;
                 if (isLength(&leaf)) {
-                    if (absoluteLength(leaf.number, leaf.unit, context, &px))
+                    lengths = true;
+                    if (cssAbsoluteLength(leaf.number, leaf.unit, context, &px))
                         leaf = pxValue(px);
                     else
                         resolved = false;
                 }
             }
-            // A calculation of a percentage alone folds into that percentage (css-values-4/#calc-serialize).
+            // Simplify the calculation again with its lengths in px, so that a function such as sign(1em - 20px)
+            // resolves. A calculation of lengths that resolves to a number or a percentage folds into that value
+            // (css-values-4/#calc-computed-value). A calculation of numbers alone keeps its parsed form, because a
+            // property that takes an <integer> rounds it when it reads it. A calculation of a percentage alone folds
+            // into the percentage (css-values-4/#calc-serialize).
+            CssValuePool simplified{};
+            CssMathScratch math{};
+            uint32_t first = cssValuePoolAddRun(&simplified, cssValuePoolRun(&scratch, span)).start;
+            CssMathSlot slot{.category = CssUnitCategory_Unknown, .percentages = CssUnitCategory_Unknown};
+            resolved = resolved && cssMathAdopt(&simplified, first, slot, &math);
+            CssValueRun folded = cssValuePoolRun(&simplified, CssValueSpan{first, simplified.values.count - first});
             double px = 0;
+            double number = 0;
             double percent = 0;
             CssValueRun copy = cssValuePoolRun(&scratch, span);
-            if (resolved && cssMathTo(copy, 0, PrCssUnit_Px, &px))
-                cssValuePoolAdd(pool, pxValue(px));
+            // A calculation that folds into one value is clamped to the range of its context
+            // (css-values-4/#calc-range).
+            const CssGrammarRange& range = kCssGrammarRanges[cssValueMathRange(value)];
+            if (resolved && cssMathTo(folded, 0, PrCssUnit_Px, &px))
+                cssValuePoolAdd(pool, pxValue(clampTo(range, px)));
+            else if (resolved && lengths && cssMathTo(folded, 0, PrCssUnit_Number, &number))
+                cssValuePoolAdd(pool, cssNumberValue(PrCssValueKind_Number, PrCssUnit_Number, clampTo(range, number)));
+            else if (resolved && lengths && cssMathTo(folded, 0, PrCssUnit_Percent, &percent))
+                cssValuePoolAdd(pool,
+                    cssNumberValue(PrCssValueKind_Percentage, PrCssUnit_Number, clampTo(range, percent)));
             else if (copy.count == 2 && copy.values[1].kind == PrCssValueKind_Percentage &&
                     cssMathTo(copy, 0, PrCssUnit_Percent, &percent))
-                cssValuePoolAdd(pool, cssNumberValue(PrCssValueKind_Percentage, PrCssUnit_Number, percent));
+                cssValuePoolAdd(pool,
+                    cssNumberValue(PrCssValueKind_Percentage, PrCssUnit_Number, clampTo(range, percent)));
             else
                 cssValuePoolAddRun(pool, copy);
+            cssMathScratchReset(&math);
+            cssValuePoolReset(&simplified);
             cssValuePoolReset(&scratch);
             i += value->next;
             continue;
         }
         double px = 0;
-        if (isLength(value) && absoluteLength(value->number, value->unit, context, &px)) {
+        if (isLength(value) && cssAbsoluteLength(value->number, value->unit, context, &px)) {
             cssValuePoolAdd(pool, pxValue(px));
             ++i;
             continue;
@@ -236,7 +207,7 @@ float computeFontWeight(CssValueRun run, const CssStyleContext& context) {
         return float(run.values[0].number);
     double number = 0;
     if (run.count != 0 && run.values[0].kind == PrCssValueKind_Math && cssMathTo(run, 0, PrCssUnit_Number, &number))
-        return float(number);
+        return float(clampTo(kCssGrammarRanges[cssValueMathRange(&run.values[0])], number));
     return parent;
 }
 
@@ -1629,13 +1600,21 @@ bool isCornerRadius(PrCssProperty property) {
         property == PrCssProperty_BorderBottomRightRadius || property == PrCssProperty_BorderBottomLeftRadius;
 }
 
-// Adds the computed value of a clip-path: its lengths absolute, and each basic shape as addShape computes it.
-void computeClipPath(CssValuePool* pool, CssValueRun specified, const CssStyleContext& context) {
+// Adds the computed value of a property that takes a basic shape (cssTakesBasicShape). Its lengths are absolute, and
+// addShape computes each basic shape. A shape's box is left out if it is the property's default box.
+void computeBasicShapes(CssValuePool* pool, PrCssProperty property, CssValueRun specified, const CssStyleContext& context) {
     CssValuePool absolute{};
     addAbsolute(&absolute, specified, context);
     CssValueRun run = cssValuePoolRun(&absolute, CssValueSpan{0, absolute.values.count});
+    bool shaped = false;
     for (uint32_t i = 0; i < run.count; i += run.values[i].next) {
         const CssValueNode* value = &run.values[i];
+        shaped = shaped || (value->kind == PrCssValueKind_Function && cssValueKeyword(value) != PrCssKeyword_Url);
+    }
+    for (uint32_t i = 0; i < run.count; i += run.values[i].next) {
+        const CssValueNode* value = &run.values[i];
+        if (shaped && cssIsShapeBox(*value) && cssValueKeyword(value) == cssDefaultShapeBox(property))
+            continue;
         bool shape = value->kind == PrCssValueKind_Function &&
             (cssValueKeyword(value) == PrCssKeyword_Inset || cssValueKeyword(value) == PrCssKeyword_Xywh ||
                 cssValueKeyword(value) == PrCssKeyword_Rect || cssValueKeyword(value) == PrCssKeyword_Circle ||
@@ -1646,6 +1625,46 @@ void computeClipPath(CssValuePool* pool, CssValueRun specified, const CssStyleCo
             cssValuePoolAddRun(pool, cssValueSubtree(run, i));
     }
     cssValuePoolReset(&absolute);
+}
+
+// Appends the computed font-size-adjust (css-fonts-5/#font-size-adjust-prop). from-font computes to the ratio of the
+// metric to the font size in the element's first available font, so that descendants inherit the number. A calculation
+// computes to its number, which is not negative. The metric keyword is left out if it is ex-height, the default.
+void computeFontSizeAdjust(CssValuePool* pool, CssValueRun specified, const CssStyleContext& context) {
+    bool fromFont = false;
+    CssFontMetric metric = CssFontMetric_Ex;
+    PrCssKeyword named = PrCssKeyword_ExHeight;
+    for (uint32_t i = 0; i < specified.count; i += specified.values[i].next) {
+        const CssValueNode& value = specified.values[i];
+        if (value.kind != PrCssValueKind_Keyword)
+            continue;
+        switch (cssValueKeyword(&value)) {
+            case PrCssKeyword_FromFont: fromFont = true; break;
+            case PrCssKeyword_CapHeight: metric = CssFontMetric_Cap; named = PrCssKeyword_CapHeight; break;
+            case PrCssKeyword_ChWidth: metric = CssFontMetric_Ch; named = PrCssKeyword_ChWidth; break;
+            case PrCssKeyword_IcWidth: metric = CssFontMetric_Ic; named = PrCssKeyword_IcWidth; break;
+            case PrCssKeyword_IcHeight: metric = CssFontMetric_Ic; named = PrCssKeyword_IcHeight; break;
+            default: break;
+        }
+    }
+    if (!fromFont || !(context.font.em > 0)) {
+        CssValuePool absolute{};
+        addAbsolute(&absolute, specified, context);
+        CssValueRun run = cssValuePoolRun(&absolute, CssValueSpan{0, absolute.values.count});
+        for (uint32_t i = 0; i < run.count; i += run.values[i].next) {
+            double number = 0;
+            if (run.values[i].kind == PrCssValueKind_Math && cssMathTo(run, i, PrCssUnit_Number, &number))
+                cssValuePoolAdd(pool, cssNumberValue(PrCssValueKind_Number, PrCssUnit_Number, prF64Max(number, 0)));
+            else
+                cssValuePoolAddRun(pool, cssValueSubtree(run, i));
+        }
+        cssValuePoolReset(&absolute);
+        return;
+    }
+    if (named != PrCssKeyword_ExHeight)
+        cssValuePoolAdd(pool, cssKeywordValue(named));
+    double ratio = cssFontMetricPx(context, false, metric) / context.font.em;
+    cssValuePoolAdd(pool, cssNumberValue(PrCssValueKind_Number, PrCssUnit_Number, ratio));
 }
 
 // Adds the computed value of a <filter-value-list> (filter-effects-1/#computed-values-of-filter-functions). Each filter
@@ -1798,7 +1817,8 @@ void computeSvgLengths(CssValuePool* pool, PrCssProperty property, CssValueRun s
 bool hasFilterImage(PrCssProperty property, CssValueRun specified) {
     bool images = property == PrCssProperty_BackgroundImage || property == PrCssProperty_MaskImage ||
         property == PrCssProperty_ListStyleImage || property == PrCssProperty_BorderImageSource ||
-        property == PrCssProperty_MaskBorderSource || property == PrCssProperty_Content;
+        property == PrCssProperty_MaskBorderSource || property == PrCssProperty_Content ||
+        property == PrCssProperty_ShapeOutside;
     for (uint32_t i = 0; images && i < specified.count; i += specified.values[i].next) {
         if (cssValueIsFunction(&specified.values[i], PrCssKeyword_Filter))
             return true;
@@ -1829,34 +1849,70 @@ void computeImages(CssValuePool* pool, CssValueRun specified, const CssStyleCont
     }
 }
 
-// Adds the computed paint-order (SVG2/painting.html#PaintOrder): the layers in the order given, each one not given
-// after them in the order fill, stroke, markers. It is written as the fewest keywords that imply that order, which is
-// the order without its last keyword, and without the one before it as well if it follows the normal order.
+// Adds the computed paint-order (SVG2/painting.html#PaintOrder) in its shortest form (cssPaintOrderForm).
 void computePaintOrder(CssValuePool* pool, CssValueRun specified) {
     PrCssKeyword order[3] = {};
-    uint32_t count = 0;
-    for (uint32_t i = 0; i < specified.count && count < 3; i += specified.values[i].next) {
-        if (specified.values[i].kind == PrCssValueKind_Keyword)
-            order[count++] = cssValueKeyword(&specified.values[i]);
-    }
-    constexpr PrCssKeyword kNormal[] = {PrCssKeyword_Fill, PrCssKeyword_Stroke, PrCssKeyword_Markers};
-    for (PrCssKeyword layer : kNormal) {
-        bool given = false;
-        for (uint32_t i = 0; i < count; ++i)
-            given = given || order[i] == layer;
-        if (!given)
-            order[count++] = layer;
-    }
-    // The last layer is implied by the first two, and the second by the first if the second and third are in the normal
-    // order.
-    uint32_t written = 2;
-    auto rank = [&](PrCssKeyword layer) {
-        return layer == PrCssKeyword_Fill ? 0 : layer == PrCssKeyword_Stroke ? 1 : 2;
-    };
-    if (rank(order[1]) < rank(order[2]))
-        written = 1;
+    uint32_t written = cssPaintOrderForm(specified, order);
     for (uint32_t i = 0; i < written; ++i)
         cssValuePoolAdd(pool, cssKeywordValue(order[i]));
+}
+
+// Adds the computed font-variation-settings (css-fonts-4/#propdef-font-variation-settings). Each axis appears once,
+// with the last value that `absolute` gives it, in the order of the tags. `absolute` is the specified value with its
+// numbers resolved. Two lists of the same axes then have the same shape, and they interpolate value by value.
+void computeFontVariationSettings(CssValuePool* pool, CssValueRun absolute) {
+    struct Setting {
+        PrStringView tag;
+        uint32_t value;             // the index of the setting's number in `absolute`
+    };
+    RawArray<Setting> settings;
+    for (uint32_t i = 0; i < absolute.count; i += absolute.values[i].next) {
+        const CssValueNode* value = &absolute.values[i];
+        uint32_t next = i + value->next;
+        if (value->kind != PrCssValueKind_String || next >= absolute.count)
+            continue;
+        PrStringView tag = cssValueText(absolute, value);
+        uint32_t at = 0;
+        while (at < settings.count && settings.data[at].tag != tag)
+            ++at;
+        if (at == settings.count)
+            settings.push(Setting{tag, next});
+        else
+            settings.data[at].value = next;
+    }
+    if (settings.count == 0) {
+        cssValuePoolAddRun(pool, absolute);
+        settings.reset();
+        return;
+    }
+    // Insertion sort, as a list names few axes.
+    for (uint32_t i = 1; i < settings.count; ++i) {
+        Setting setting = settings.data[i];
+        uint32_t j = i;
+        for (; j > 0 && prStringCompare(settings.data[j - 1].tag, setting.tag) > 0; --j)
+            settings.data[j] = settings.data[j - 1];
+        settings.data[j] = setting;
+    }
+    for (uint32_t i = 0; i < settings.count; ++i) {
+        if (i != 0)
+            cssValuePoolAdd(pool, cssLiteralValue(','));
+        CssValueNode tag{};
+        tag.kind = PrCssValueKind_String;
+        tag.next = 1;
+        tag.text.length = uint32_t(settings.data[i].tag.size);
+        tag.text.start = cssValuePoolAddText(pool, settings.data[i].tag);
+        cssValuePoolAdd(pool, tag);
+        // A value is a number in the range of a float, with any calculation resolved.
+        double number = 0;
+        uint32_t at = settings.data[i].value;
+        if (absolute.values[at].kind == PrCssValueKind_Math)
+            cssMathTo(absolute, at, PrCssUnit_Number, &number);
+        else
+            number = absolute.values[at].number;
+        number = prF64Clamp(number, -double(kPrF32Max), double(kPrF32Max));
+        cssValuePoolAdd(pool, cssNumberValue(PrCssValueKind_Number, PrCssUnit_Number, number));
+    }
+    settings.reset();
 }
 
 // Adds the computed value of a <paint> (SVG2/painting.html#SpecifyingPaint): as specified, with each color absolute as
@@ -2494,8 +2550,16 @@ void cssStyleComputeValue(CssValuePool* pool, PrCssProperty property, CssValueRu
         computeFilter(pool, specified, context);
     } else if (keyword == PrCssKeyword_Count && hasFilterImage(property, specified)) {
         computeImages(pool, specified, context);
-    } else if (property == PrCssProperty_ClipPath && keyword == PrCssKeyword_Count) {
-        computeClipPath(pool, specified, context);
+    } else if (property == PrCssProperty_FontSizeAdjust && keyword != PrCssKeyword_None) {
+        computeFontSizeAdjust(pool, specified, context);
+    } else if (property == PrCssProperty_FontPalette && keyword == PrCssKeyword_Count) {
+        // A mix whose percentages are calculations folds again once they resolve.
+        uint32_t start = pool->values.count;
+        addAbsolute(pool, specified, context);
+        if (pool->values.count > start && cssValueIsFunction(&pool->values.data[start], PrCssKeyword_PaletteMix))
+            cssMixFold(pool, start);
+    } else if (cssTakesBasicShape(property) && keyword == PrCssKeyword_Count) {
+        computeBasicShapes(pool, property, specified, context);
     } else if (isCornerRadius(property) && keyword == PrCssKeyword_Count) {
         // A horizontal and a vertical radius, which serialize as one if they are equal
         // (css-backgrounds-3/#border-radius).
@@ -2515,6 +2579,11 @@ void cssStyleComputeValue(CssValuePool* pool, PrCssProperty property, CssValueRu
         cssValuePoolReset(&absolute);
     } else if (property == PrCssProperty_PaintOrder && keyword == PrCssKeyword_Count) {
         computePaintOrder(pool, specified);
+    } else if (property == PrCssProperty_FontVariationSettings && keyword == PrCssKeyword_Count) {
+        CssValuePool absolute{};
+        addAbsolute(&absolute, specified, context);
+        computeFontVariationSettings(pool, cssValuePoolRun(&absolute, CssValueSpan{0, absolute.values.count}));
+        cssValuePoolReset(&absolute);
     } else if (property == PrCssProperty_D && keyword == PrCssKeyword_Count) {
         // A path computes in absolute coordinates, so that paths of the same commands written relatively and absolutely
         // are of one shape, which interpolates (SVG2/paths.html#PathDataAnimation).
@@ -2531,7 +2600,7 @@ void cssStyleComputeInitial(CssValuePool* pool, PrCssProperty property, const Cs
 }
 
 bool cssStyleLengthPx(double number, PrCssUnit unit, const CssStyleContext& context, double* out) {
-    return absoluteLength(number, unit, context, out);
+    return cssAbsoluteLength(number, unit, context, out);
 }
 
 void cssStyleAddValue(CssStyleBuilder* builder, CssValueRun computed) {
@@ -2697,6 +2766,33 @@ PrTextFeatureSet* PR_NULLABLE cssFontFeatureSet(const CssComputedStyle* style) {
     PrTextFeatureSet* set = defaults ? nullptr : prTextFeatureSetCreate(&desc);
     features.reset();
     return set;
+}
+
+void cssFontVariations(const CssComputedStyle* style, RawArray<PrFontVariation>* out) {
+    cssFontVariationsOf(cssComputedValue(style, PrCssProperty_FontVariationSettings), out);
+}
+
+bool cssStyleOpticalSizing(const CssComputedStyle* style) {
+    return keywordOfRun(cssComputedValue(style, PrCssProperty_FontOpticalSizing)) != PrCssKeyword_None;
+}
+
+void cssFontVariationsOf(CssValueRun settings, RawArray<PrFontVariation>* out) {
+    for (uint32_t i = 0; i < settings.count; i += settings.values[i].next) {
+        const CssValueNode* value = &settings.values[i];
+        if (value->kind != PrCssValueKind_String)
+            continue;
+        PrStringView tag = cssValueText(settings, value);
+        uint32_t next = i + value->next;
+        if (tag.size != 4 || next >= settings.count)
+            continue;
+        const CssValueNode* setting = &settings.values[next];
+        if (setting->kind != PrCssValueKind_Integer && setting->kind != PrCssValueKind_Number)
+            continue;
+        out->push(PrFontVariation{
+            .tag = PR_FONT_TAG(uint8_t(tag.data[0]), uint8_t(tag.data[1]), uint8_t(tag.data[2]), uint8_t(tag.data[3])),
+            .value = float(setting->number),
+        });
+    }
 }
 
 PrTextBreakStyle cssTextBreakStyle(const CssComputedStyle* style) {
@@ -2948,10 +3044,9 @@ bool cssResolveLength(CssValueRun run, uint32_t index, double base, double* out)
         return true;
     }
     if (isLength(value)) {
-        double scale = cssUnitScale(value->unit);
-        if (scale == 0)
+        if (cssUnitScale(value->unit) == 0)
             return false;
-        *out = value->number * scale;
+        *out = cssUnitToCanonical(value->number, value->unit);
         return true;
     }
     if (value->kind != PrCssValueKind_Math)
@@ -2979,6 +3074,105 @@ bool cssResolveLength(CssValueRun run, uint32_t index, double base, double* out)
     cssValuePoolReset(&pool);
     *out = total;
     return summed;
+}
+
+uint32_t cssPaintOrderForm(CssValueRun value, PrCssKeyword out[3]) {
+    uint32_t count = 0;
+    for (uint32_t i = 0; i < value.count && count < 3; i += value.values[i].next) {
+        if (value.values[i].kind == PrCssValueKind_Keyword)
+            out[count++] = cssValueKeyword(&value.values[i]);
+    }
+    constexpr PrCssKeyword kNormal[] = {PrCssKeyword_Fill, PrCssKeyword_Stroke, PrCssKeyword_Markers};
+    for (PrCssKeyword layer : kNormal) {
+        bool given = false;
+        for (uint32_t i = 0; i < count; ++i)
+            given = given || out[i] == layer;
+        if (!given)
+            out[count++] = layer;
+    }
+    // The last layer is implied by the first two, and the second by the first if the second and third are in the normal
+    // order.
+    auto rank = [](PrCssKeyword layer) { return layer == PrCssKeyword_Fill ? 0 : layer == PrCssKeyword_Stroke ? 1 : 2; };
+    return rank(out[1]) < rank(out[2]) ? 1 : 2;
+}
+
+bool cssAbsoluteLength(double number, PrCssUnit unit, const CssStyleContext& context, double* out) {
+    const CssFontBases& font = context.font;
+    const CssFontBases& root = context.root;
+    double vw = double(context.viewport.width) / 100;
+    double vh = double(context.viewport.height) / 100;
+    double scale = 0;
+    bool absolute = false;
+    switch (unit) {
+        case PrCssUnit_Em: scale = font.em; break;
+        case PrCssUnit_Ex: scale = cssFontMetricPx(context, false, CssFontMetric_Ex); break;
+        case PrCssUnit_Cap: scale = cssFontMetricPx(context, false, CssFontMetric_Cap); break;
+        case PrCssUnit_Ch: scale = cssFontMetricPx(context, false, CssFontMetric_Ch); break;
+        case PrCssUnit_Ic: scale = cssFontMetricPx(context, false, CssFontMetric_Ic); break;
+        case PrCssUnit_Lh: scale = font.lh; break;
+        case PrCssUnit_Rem: scale = root.em; break;
+        case PrCssUnit_Rex: scale = cssFontMetricPx(context, true, CssFontMetric_Ex); break;
+        case PrCssUnit_Rcap: scale = cssFontMetricPx(context, true, CssFontMetric_Cap); break;
+        case PrCssUnit_Rch: scale = cssFontMetricPx(context, true, CssFontMetric_Ch); break;
+        case PrCssUnit_Ric: scale = cssFontMetricPx(context, true, CssFontMetric_Ic); break;
+        case PrCssUnit_Rlh: scale = root.lh; break;
+        case PrCssUnit_Vw:
+        case PrCssUnit_Svw:
+        case PrCssUnit_Lvw:
+        case PrCssUnit_Dvw:
+        case PrCssUnit_Vi:
+        case PrCssUnit_Svi:
+        case PrCssUnit_Lvi:
+        case PrCssUnit_Dvi: scale = vw; break;
+        case PrCssUnit_Vh:
+        case PrCssUnit_Svh:
+        case PrCssUnit_Lvh:
+        case PrCssUnit_Dvh:
+        case PrCssUnit_Vb:
+        case PrCssUnit_Svb:
+        case PrCssUnit_Lvb:
+        case PrCssUnit_Dvb: scale = vh; break;
+        case PrCssUnit_Vmin:
+        case PrCssUnit_Svmin:
+        case PrCssUnit_Lvmin:
+        case PrCssUnit_Dvmin: scale = prF64Min(vw, vh); break;
+        case PrCssUnit_Vmax:
+        case PrCssUnit_Svmax:
+        case PrCssUnit_Lvmax:
+        case PrCssUnit_Dvmax: scale = prF64Max(vw, vh); break;
+        default:
+            scale = cssUnitScale(unit);
+            // An absolute unit has a scale. The context cannot resolve any other unit.
+            if (scale == 0 && number != 0)
+                return false;
+            absolute = true;
+            break;
+    }
+    if (context.readsViewport != nullptr && cssUnitViewportRelative(unit))
+        *context.readsViewport = true;
+    bool fontRelative = unit == PrCssUnit_Em || unit == PrCssUnit_Ex || unit == PrCssUnit_Cap || unit == PrCssUnit_Ch ||
+        unit == PrCssUnit_Ic || unit == PrCssUnit_Lh;
+    if (context.readsFont != nullptr && fontRelative)
+        *context.readsFont = true;
+    *out = absolute ? cssUnitToCanonical(number, unit) : number * scale;
+    return true;
+}
+
+bool cssIsShapeBox(const CssValueNode& value) {
+    if (value.kind != PrCssValueKind_Keyword)
+        return false;
+    switch (cssValueKeyword(&value)) {
+        case PrCssKeyword_ContentBox:
+        case PrCssKeyword_PaddingBox:
+        case PrCssKeyword_BorderBox:
+        case PrCssKeyword_MarginBox:
+        case PrCssKeyword_FillBox:
+        case PrCssKeyword_StrokeBox:
+        case PrCssKeyword_ViewBox:
+            return true;
+        default:
+            return false;
+    }
 }
 
 } // namespace pr_impl

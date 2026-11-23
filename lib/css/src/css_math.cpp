@@ -696,10 +696,9 @@ bool unitEquals(const CssValueNode& a, const CssValueNode& b) {
 void canonicalize(CssValueNode* value) {
     if (value->kind != PrCssValueKind_Dimension)
         return;
-    double scale = cssUnitScale(value->unit);
-    if (scale == 0)
+    if (cssUnitScale(value->unit) == 0)
         return;
-    value->number *= scale;
+    value->number = cssUnitToCanonical(value->number, value->unit);
     value->unit = cssUnitCanonical(cssUnitCategory(value->unit));
 }
 

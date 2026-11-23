@@ -4,6 +4,7 @@
 #include "css/src/css_unit.h"
 
 #include "pr/count_of.h"
+#include "pr/float.h"
 #include "pr/name_table.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -136,77 +137,84 @@ constexpr PrStringView kCssUnitSpelling[] = {
     {"vb", 2}, {"svb", 3}, {"lvb", 3}, {"dvb", 3}, {"vmin", 4}, {"svmin", 5},
     {"lvmin", 5}, {"dvmin", 5}, {"vmax", 4}, {"svmax", 5}, {"lvmax", 5}, {"dvmax", 5},
     {"cqw", 3}, {"cqh", 3}, {"cqi", 3}, {"cqb", 3}, {"cqmin", 5}, {"cqmax", 5},
-    {"cm", 2}, {"mm", 2}, {"Q", 1}, {"in", 2}, {"pc", 2}, {"pt", 2},
+    {"cm", 2}, {"mm", 2}, {"q", 1}, {"in", 2}, {"pc", 2}, {"pt", 2},
     {"px", 2}, {"deg", 3}, {"grad", 4}, {"rad", 3}, {"turn", 4}, {"s", 1},
     {"ms", 2}, {"Hz", 2}, {"kHz", 3}, {"dpi", 3}, {"dpcm", 4}, {"dppx", 4},
     {"x", 1}, {"fr", 2}, {"dB", 2}, {"st", 2},
 };
 
-constexpr double kCssUnitScale[] = {
-    0,                     // PrCssUnit_Em
-    0,                     // PrCssUnit_Rem
-    0,                     // PrCssUnit_Ex
-    0,                     // PrCssUnit_Rex
-    0,                     // PrCssUnit_Cap
-    0,                     // PrCssUnit_Rcap
-    0,                     // PrCssUnit_Ch
-    0,                     // PrCssUnit_Rch
-    0,                     // PrCssUnit_Ic
-    0,                     // PrCssUnit_Ric
-    0,                     // PrCssUnit_Lh
-    0,                     // PrCssUnit_Rlh
-    0,                     // PrCssUnit_Vw
-    0,                     // PrCssUnit_Svw
-    0,                     // PrCssUnit_Lvw
-    0,                     // PrCssUnit_Dvw
-    0,                     // PrCssUnit_Vh
-    0,                     // PrCssUnit_Svh
-    0,                     // PrCssUnit_Lvh
-    0,                     // PrCssUnit_Dvh
-    0,                     // PrCssUnit_Vi
-    0,                     // PrCssUnit_Svi
-    0,                     // PrCssUnit_Lvi
-    0,                     // PrCssUnit_Dvi
-    0,                     // PrCssUnit_Vb
-    0,                     // PrCssUnit_Svb
-    0,                     // PrCssUnit_Lvb
-    0,                     // PrCssUnit_Dvb
-    0,                     // PrCssUnit_Vmin
-    0,                     // PrCssUnit_Svmin
-    0,                     // PrCssUnit_Lvmin
-    0,                     // PrCssUnit_Dvmin
-    0,                     // PrCssUnit_Vmax
-    0,                     // PrCssUnit_Svmax
-    0,                     // PrCssUnit_Lvmax
-    0,                     // PrCssUnit_Dvmax
-    0,                     // PrCssUnit_Cqw
-    0,                     // PrCssUnit_Cqh
-    0,                     // PrCssUnit_Cqi
-    0,                     // PrCssUnit_Cqb
-    0,                     // PrCssUnit_Cqmin
-    0,                     // PrCssUnit_Cqmax
-    37.795275590551178,    // PrCssUnit_Cm
-    3.7795275590551185,    // PrCssUnit_Mm
-    0.94488188976377963,   // PrCssUnit_Q
-    96,                    // PrCssUnit_In
-    16,                    // PrCssUnit_Pc
-    1.3333333333333333,    // PrCssUnit_Pt
-    1,                     // PrCssUnit_Px
-    1,                     // PrCssUnit_Deg
-    0.90000000000000002,   // PrCssUnit_Grad
-    57.295779513082323,    // PrCssUnit_Rad
-    360,                   // PrCssUnit_Turn
-    1,                     // PrCssUnit_S
-    0.001,                 // PrCssUnit_Ms
-    1,                     // PrCssUnit_Hz
-    1000,                  // PrCssUnit_KHz
-    0.010416666666666666,  // PrCssUnit_Dpi
-    0.026458333333333334,  // PrCssUnit_Dpcm
-    1,                     // PrCssUnit_Dppx
-    1,                     // PrCssUnit_X
-    1,                     // PrCssUnit_Fr
-    1,                     // PrCssUnit_DB
-    1,                     // PrCssUnit_St
+// The size of one unit in the canonical unit of its category, as numerator / denominator. A conversion multiplies by
+// the numerator before it divides, so that a value with an exact result, such as 2540mm in px, gets it.
+struct UnitRatio {
+    double numerator;
+    double denominator;
+};
+
+constexpr UnitRatio kCssUnitScale[] = {
+    {0, 1},           // PrCssUnit_Em
+    {0, 1},           // PrCssUnit_Rem
+    {0, 1},           // PrCssUnit_Ex
+    {0, 1},           // PrCssUnit_Rex
+    {0, 1},           // PrCssUnit_Cap
+    {0, 1},           // PrCssUnit_Rcap
+    {0, 1},           // PrCssUnit_Ch
+    {0, 1},           // PrCssUnit_Rch
+    {0, 1},           // PrCssUnit_Ic
+    {0, 1},           // PrCssUnit_Ric
+    {0, 1},           // PrCssUnit_Lh
+    {0, 1},           // PrCssUnit_Rlh
+    {0, 1},           // PrCssUnit_Vw
+    {0, 1},           // PrCssUnit_Svw
+    {0, 1},           // PrCssUnit_Lvw
+    {0, 1},           // PrCssUnit_Dvw
+    {0, 1},           // PrCssUnit_Vh
+    {0, 1},           // PrCssUnit_Svh
+    {0, 1},           // PrCssUnit_Lvh
+    {0, 1},           // PrCssUnit_Dvh
+    {0, 1},           // PrCssUnit_Vi
+    {0, 1},           // PrCssUnit_Svi
+    {0, 1},           // PrCssUnit_Lvi
+    {0, 1},           // PrCssUnit_Dvi
+    {0, 1},           // PrCssUnit_Vb
+    {0, 1},           // PrCssUnit_Svb
+    {0, 1},           // PrCssUnit_Lvb
+    {0, 1},           // PrCssUnit_Dvb
+    {0, 1},           // PrCssUnit_Vmin
+    {0, 1},           // PrCssUnit_Svmin
+    {0, 1},           // PrCssUnit_Lvmin
+    {0, 1},           // PrCssUnit_Dvmin
+    {0, 1},           // PrCssUnit_Vmax
+    {0, 1},           // PrCssUnit_Svmax
+    {0, 1},           // PrCssUnit_Lvmax
+    {0, 1},           // PrCssUnit_Dvmax
+    {0, 1},           // PrCssUnit_Cqw
+    {0, 1},           // PrCssUnit_Cqh
+    {0, 1},           // PrCssUnit_Cqi
+    {0, 1},           // PrCssUnit_Cqb
+    {0, 1},           // PrCssUnit_Cqmin
+    {0, 1},           // PrCssUnit_Cqmax
+    {9600, 254},      // PrCssUnit_Cm
+    {960, 254},       // PrCssUnit_Mm
+    {240, 254},       // PrCssUnit_Q
+    {96, 1},          // PrCssUnit_In
+    {16, 1},          // PrCssUnit_Pc
+    {4, 3},           // PrCssUnit_Pt
+    {1, 1},           // PrCssUnit_Px
+    {1, 1},           // PrCssUnit_Deg
+    {9, 10},          // PrCssUnit_Grad
+    {180, kPrF64Pi},  // PrCssUnit_Rad
+    {360, 1},         // PrCssUnit_Turn
+    {1, 1},           // PrCssUnit_S
+    {1, 1000},        // PrCssUnit_Ms
+    {1, 1},           // PrCssUnit_Hz
+    {1000, 1},        // PrCssUnit_KHz
+    {1, 96},          // PrCssUnit_Dpi
+    {254, 9600},      // PrCssUnit_Dpcm
+    {1, 1},           // PrCssUnit_Dppx
+    {1, 1},           // PrCssUnit_X
+    {1, 1},           // PrCssUnit_Fr
+    {1, 1},           // PrCssUnit_DB
+    {1, 1},           // PrCssUnit_St
 };
 
 constexpr PrCssUnit kCssUnitCanonical[] = {
@@ -262,7 +270,15 @@ CssUnitCategory cssUnitCategory(PrCssUnit unit) {
 double cssUnitScale(PrCssUnit unit) {
     if (unit < PrCssUnit_Em || unit >= PrCssUnit_Unknown)
         return 0;
-    return kCssUnitScale[unit - PrCssUnit_Em];
+    const UnitRatio& ratio = kCssUnitScale[unit - PrCssUnit_Em];
+    return ratio.numerator / ratio.denominator;
+}
+
+double cssUnitToCanonical(double value, PrCssUnit unit) {
+    if (unit < PrCssUnit_Em || unit >= PrCssUnit_Unknown)
+        return 0;
+    const UnitRatio& ratio = kCssUnitScale[unit - PrCssUnit_Em];
+    return value * ratio.numerator / ratio.denominator;
 }
 
 PrCssUnit cssUnitCanonical(CssUnitCategory category) {

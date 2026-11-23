@@ -87,7 +87,7 @@ double cssColorChannelValue(const CssValueNode* value, const CssColorChannelSynt
     if (value->kind == PrCssValueKind_Percentage)
         number = value->number * channel.percent;
     else if (value->kind == PrCssValueKind_Dimension)
-        number = value->number * cssUnitScale(value->unit);
+        number = cssUnitToCanonical(value->number, value->unit);
     else
         number = value->number * channel.number;
     if (channel.hue)
