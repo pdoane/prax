@@ -44,8 +44,10 @@ struct Session {
     PrTls* tls;
     PrTlsSessionDesc desc;
     bool overTransport;         // true to connect TCP first, and run the session over it
-    PrTlsSessionInfo info;
-    String protocol;
+    PrTlsSessionInfo info;      // what the session reported when it ended, or when it opened if it has not ended
+    String openProtocol;        // the protocol that the session reported when it opened
+    String protocol;            // the protocol that it reported when it ended
+    uint32_t inspections;
 };
 
 PrStatus openSession(void* PR_NULLABLE context, PrNet* net, PrNetStreamFn event, void* eventContext,
@@ -76,6 +78,8 @@ void inspect(void* PR_NULLABLE context, PrNetStream* stream) {
     Session* session = static_cast<Session*>(context);
     session->info = prTlsSessionInfo(reinterpret_cast<PrTlsSession*>(stream));
     session->protocol.assign(session->info.protocol.isNull() ? PrStringView("") : session->info.protocol);
+    if (session->inspections++ == 0)
+        session->openProtocol = session->protocol;
 }
 
 const PrStringView kProtocols[] = {"h2", "http/1.1"};
@@ -169,6 +173,8 @@ TEST_CASE("tls: a session negotiates TLS 1.3 and ALPN, carries bytes, and ends a
         CHECK(netProbeEventCount(&probe, PrNetStreamEvent_End) == 1);
         CHECK(netProbeEventCount(&probe, PrNetStreamEvent_Fail) == 0);
         CHECK(session.info.version == PrTlsVersion_Tls13);
+        // The protocol that the handshake chose holds from the session's open to its end.
+        CHECK(session.openProtocol == "http/1.1");
         CHECK(session.protocol == "http/1.1");
         CHECK(session.info.failure == PrTlsFailure_None);
         netProbeReset(&probe);

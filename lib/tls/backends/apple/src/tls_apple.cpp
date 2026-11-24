@@ -233,6 +233,10 @@ void run(void* PR_NULLABLE context) {
     if (!session->dead && session->state != SessionState_Failed) {
         switch (delivery->kind) {
             case DeliveryKind_Ready:
+                // The session takes its version and protocol from the handshake that opened it. A later report that the
+                // connection is ready changes nothing.
+                if (session->state != SessionState_Handshaking)
+                    break;
                 session->state = SessionState_Open;
                 session->version = delivery->version;
                 session->protocol = delivery->protocol;
