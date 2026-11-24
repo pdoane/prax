@@ -543,25 +543,30 @@ TEST_CASE("a graph reports and ignores a texture, a buffer or a pass of an earli
 TEST_CASE("a graph's memory is aligned, apart, and reused by the next frame") {
     onEachBackend([](Fixture& f) {
         PrGpuGraph* graph = createGraph(f, PrGpuGraphPriority_Barriers);
-        const size_t sizes[] = {1, 0, 24, 100000, 16};
+        // The fourth is larger than any page of the frame's storage. It has a block of its own, which the next frame
+        // frees instead of reusing.
+        const size_t kLarge = 100000;
+        const size_t sizes[] = {1, 0, 24, kLarge, 16};
         uint8_t* first[5] = {};
         for (uint32_t frame = 0; frame < 2; ++frame) {
             prGpuGraphBegin(graph);
+            uint8_t* allocated[5] = {};
             for (uint32_t i = 0; i < 5; ++i) {
                 uint8_t* bytes = static_cast<uint8_t*>(prGpuGraphAlloc(graph, sizes[i]));
                 REQUIRE(bytes != nullptr);
                 CHECK(uintptr_t(bytes) % 16 == 0);
                 for (size_t at = 0; at < sizes[i]; ++at)
                     bytes[at] = uint8_t(i + 1);
+                allocated[i] = bytes;
                 if (frame == 0)
                     first[i] = bytes;
-                else
+                else if (sizes[i] != kLarge)
                     CHECK(bytes == first[i]);
             }
             bool intact = true;
             for (uint32_t i = 0; i < 5; ++i) {
                 for (size_t at = 0; at < sizes[i]; ++at)
-                    intact = intact && first[i][at] == uint8_t(i + 1);
+                    intact = intact && allocated[i][at] == uint8_t(i + 1);
             }
             CHECK(intact);
         }

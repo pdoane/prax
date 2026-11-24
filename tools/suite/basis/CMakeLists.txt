@@ -13,6 +13,9 @@ pr_third_party(basis_reference)
 # The reference uses exceptions, run-time type information and the standard library. The engine's own targets build
 # without them.
 target_compile_options(basis_reference PRIVATE $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-fexceptions -frtti>)
+# The reference encoder converts floats that are not numbers to integers as it tries selectors, which the undefined
+# behavior sanitizer stops at. The tests compare with the reference as it is released, so the check is off for it.
+target_compile_options(basis_reference PRIVATE $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-fno-sanitize=float-cast-overflow>)
 
 # The tests decode textures with lib/basis, through lib/ktx, and compare the results with the reference transcoder's.
 # The inputs are the KTX 2.0 textures of Khronos's sample assets and textures that the reference encoder writes.
