@@ -125,7 +125,7 @@ their rows; the diff of a change to it is what the change did.
 | css/motion                       |     148/148 |     4810/5061 |   95.0% |
 | css/printing                     |       31/31 |         20/31 |   64.5% |
 | css/selectors                    |     518/527 |     5780/6069 |   95.2% |
-| resize-observer                  |       36/39 |       104/135 |   77.0% |
+| resize-observer                  |       36/39 |       118/135 |   87.4% |
 | web-animations                   |         1/1 |       164/218 |   75.2% |
 | web-animations/animation-model   |       34/34 |     2195/2792 |   78.6% |
 | web-animations/animation-trigger |         3/3 |           0/3 |    0.0% |
@@ -133,7 +133,7 @@ their rows; the diff of a change to it is what the change did.
 | web-animations/interfaces        |       46/47 |       702/868 |   80.8% |
 | web-animations/responsive        |       46/46 |        91/105 |   86.6% |
 | web-animations/timing-model      |       30/34 |       378/404 |   93.5% |
-| **total**                        | 32299/32476 | 176086/213994 |   82.2% |
+| **total**                        | 32299/32476 | 176100/213994 |   82.2% |
 
 ## dom
 
@@ -218,7 +218,7 @@ their rows; the diff of a change to it is what the change did.
 | focus                                               |     17/43 |         10/51 |   19.6% |
 | gif                                                 |       1/1 |           0/1 |    0.0% |
 | html-ruby-extensions                                |     84/84 |          4/84 |    4.7% |
-| html/browsers                                       |   569/770 |      736/2352 |   31.2% |
+| html/browsers                                       |   568/770 |      792/2349 |   33.7% |
 | html/canvas                                         | 2651/2876 |     1769/5247 |   33.7% |
 | html/dom                                            |   343/353 |   61538/66723 |   92.2% |
 | html/editing                                        |   126/254 |       527/846 |   62.2% |
@@ -232,10 +232,10 @@ their rows; the diff of a change to it is what the change did.
 | html/scripting                                      |       3/3 |           1/4 |   25.0% |
 | html/select                                         |       1/1 |           1/1 |  100.0% |
 | html/semantics                                      | 2549/2913 |   10863/20292 |   53.5% |
-| html/syntax                                         |   249/250 |     6683/6914 |   96.6% |
+| html/syntax                                         |   249/250 |     6684/6914 |   96.6% |
 | html/the-xhtml-syntax                               |     15/15 |   21368/25609 |   83.4% |
 | html/user-activation                                |     14/21 |         32/46 |   69.5% |
-| html/webappapis                                     |   300/329 |     2251/2881 |   78.1% |
+| html/webappapis                                     |   300/329 |     2254/2881 |   78.2% |
 | inert                                               |     25/29 |        53/112 |   47.3% |
 | png                                                 |       4/4 |           3/4 |   75.0% |
 | png/apng                                            |     29/29 |         10/29 |   34.4% |
@@ -264,7 +264,7 @@ their rows; the diff of a change to it is what the change did.
 | workers/multi-globals                               |       1/1 |           0/1 |    0.0% |
 | workers/same-site-cookies                           |       6/6 |           0/6 |    0.0% |
 | workers/semantics                                   |     23/29 |          0/32 |    0.0% |
-| **total**                                           | 8411/9539 | 128725/157357 |   81.8% |
+| **total**                                           | 8410/9539 | 128785/157354 |   81.8% |
 
 ## infrastructure
 
@@ -314,7 +314,7 @@ their rows; the diff of a change to it is what the change did.
 | FileAPI/file                       |     15/15 |      97/207 |   46.8% |
 | FileAPI/filelist-section           |       1/1 |         0/7 |    0.0% |
 | FileAPI/reading-data-section       |     14/14 |       46/51 |   90.1% |
-| FileAPI/url                        |     11/13 |       41/59 |   69.4% |
+| FileAPI/url                        |     11/13 |       42/59 |   71.1% |
 | beacon                             |       6/6 |       34/64 |   53.1% |
 | beacon/headers                     |     10/10 |       23/24 |   95.8% |
 | cors                               |     26/26 |     259/414 |   62.5% |
@@ -365,7 +365,7 @@ their rows; the diff of a change to it is what the change did.
 | websockets/security                |       4/4 |         2/4 |   50.0% |
 | websockets/stream                  |     21/21 |       0/159 |    0.0% |
 | websockets/unload-a-document       |     11/11 |        0/11 |    0.0% |
-| **total**                          | 2353/2581 | 10694/18660 |   57.3% |
+| **total**                          | 2353/2581 | 10695/18660 |   57.3% |
 
 ## performance
 

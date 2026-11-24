@@ -13,6 +13,7 @@
 
 #include "css/src/css_presentation.h"
 #include "css/src/css_presentation_hooks.h"
+#include "css/src/css_presentation_svg.h"
 #include "css/src/css_root.h"
 #include "dom/src/dom_flat.h"
 #include "dom/src/dom_node.h"
@@ -43,14 +44,47 @@ PrCssResizeObserverSize logical(double width, double height, bool vertical) {
     return vertical ? PrCssResizeObserverSize{height, width} : PrCssResizeObserverSize{width, height};
 }
 
+// Returns the record of the outermost svg element whose content draws `element`, an SVG element without a box, or null
+// if no svg element with a box draws it.
+const CssPresentationSvg* PR_NULLABLE drawingSvg(const PrCssPresentation* presentation, const PrDomElement* element) {
+    const PrDomElement* outermost = nullptr;
+    for (const PrDomElement* at = element; at != nullptr && at->space == PrDomNamespace_Svg;
+            at = domElementFromNode(at->parent)) {
+        if (at->tag == PrDomTag_Svg)
+            outermost = at;
+    }
+    return outermost != nullptr ? cssPresentationSvgOf(presentation, outermost) : nullptr;
+}
+
+// Returns the sizes of an SVG element without a box, which are those of its bounding box, whatever the observed box
+// (resize-observer-1/#calculate-box-size), and its content rectangle, the bounding box's size at the origin.
+BoxSizes measureSvg(const CssPresentationSvg& svg, const PrDomElement* element, double pixelRatio) {
+    BoxSizes sizes{};
+    if (svg.functions == nullptr || svg.content == nullptr)
+        return sizes;
+    PrDomRect box = svg.functions->boundingBox(svg.content, element);
+    sizes.border = PrCssResizeObserverSize{box.width, box.height};
+    sizes.content = sizes.border;
+    sizes.devicePixelContent = PrCssResizeObserverSize{
+        prF64Round(box.width * pixelRatio),
+        prF64Round(box.height * pixelRatio),
+    };
+    sizes.contentRect = PrDomRect{0, 0, box.width, box.height};
+    return sizes;
+}
+
 // Returns the sizes of the element's boxes in the presentation's last layout (resize-observer-1/#calculate-box-size),
-// with `pixelRatio` device pixels per CSS pixel. An element without a box, and an inline box, which has no single
-// content box, measure zero.
+// with `pixelRatio` device pixels per CSS pixel. An SVG element without a box measures its bounding box. Any other
+// element without a box, and an inline box, which has no single content box, measure zero.
 BoxSizes measure(PrCssPresentation* PR_NULLABLE presentation, const PrDomElement* element, double pixelRatio) {
     BoxSizes sizes{};
     PrLayoutNode node = presentation != nullptr ? cssPresentationBox(presentation, element) : kPrLayoutNodeNone;
-    if (node == kPrLayoutNodeNone)
-        return sizes;
+    if (node == kPrLayoutNodeNone) {
+        if (presentation == nullptr || element->space != PrDomNamespace_Svg)
+            return sizes;
+        const CssPresentationSvg* svg = drawingSvg(presentation, element);
+        return svg != nullptr ? measureSvg(*svg, element, pixelRatio) : sizes;
+    }
     PrLayoutTree* tree = cssPresentationOwnTree(presentation);
     PrLayoutStyle record = prLayoutStyleRecord(tree, prLayoutNodeStyle(tree, node));
     PrLayoutBoxStyle box = prLayoutBoxStyleRecord(tree, record.groups[PrLayoutGroup_Box]);

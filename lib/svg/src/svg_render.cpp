@@ -278,6 +278,10 @@ bool contentClientRect(const void*, const PrDomElement* element, PrDomRect* out)
     return found;
 }
 
+PrDomRect contentBoundingBox(const void*, const PrDomElement* element) {
+    return prSvgGraphicsElementGetBBox(static_cast<PrSvgElement*>(const_cast<PrDomElement*>(element)), nullptr);
+}
+
 // Returns natural dimensions in layout's units.
 bool contentVerify(void* content, PrRawString* report) {
     SvgContent* own = static_cast<SvgContent*>(content);
@@ -303,6 +307,7 @@ constexpr CssPresentationSvgContentFunctions kContentFunctions = {
     .paint = contentPaint,
     .hitTest = contentHitTest,
     .clientRect = contentClientRect,
+    .boundingBox = contentBoundingBox,
     .foreignToClient = contentForeignToClient,
     .verify = contentVerify,
     .release = contentRelease,

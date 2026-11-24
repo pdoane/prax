@@ -45,7 +45,8 @@ namespace pr_impl {
 namespace {
 
 // A message that a window posted, and the origin that its target's document must have, or the null string for any
-// origin.
+// origin. It holds a reference to its target and its source, which a navigation may replace and a collection free
+// before its task runs.
 struct PostedMessage {
     PrHtmlWindow* target;
     PrHtmlWindow* source;
@@ -56,6 +57,8 @@ struct PostedMessage {
 
 void dropMessage(void* data) {
     PostedMessage* posted = static_cast<PostedMessage*>(data);
+    domEventTargetRelease(prHtmlWindowAsEventTarget(posted->target));
+    domEventTargetRelease(prHtmlWindowAsEventTarget(posted->source));
     htmlMessageReset(&posted->message);
     prRawStringReset(&posted->sourceOrigin);
     prRawStringReset(&posted->targetOrigin);
@@ -76,6 +79,25 @@ void deliverMessage(void* data) {
         posted->sourceOrigin = prRawStringNull();
     }
     dropMessage(posted);
+}
+
+// Returns true if `value` and ":" parse as a scheme from the scheme start state (url/#scheme-start-state), which
+// removes tabs and newlines first: what precedes the first colon is an ASCII letter and then letters, digits, "+", "-"
+// and ".".
+bool isSchemeValue(PrStringView value) {
+    uint32_t length = 0;
+    for (uint32_t i = 0; i < value.size; ++i) {
+        char c = value.data[i];
+        if (c == '\t' || c == '\n' || c == '\r')
+            continue;
+        if (c == ':')
+            break;
+        bool letter = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+        if (!letter && (length == 0 || !((c >= '0' && c <= '9') || c == '+' || c == '-' || c == '.')))
+            return false;
+        ++length;
+    }
+    return length != 0;
 }
 
 // html/#merge-with-the-next-text-node: if `node` and its next sibling are Text nodes, moves the sibling's data to the
@@ -514,6 +536,7 @@ PrStatus prHtmlWindowSendBeacon(PrHtmlWindow* window, PrStringView url, PrByteVi
         .credentials = PrFetchCredentials_Include,
         .redirect = PrFetchRedirect_Follow,
         .initiator = PrFetchInitiator_Beacon,
+        .keepalive = true,
     };
     PrFetchResponseFn ignore = [](void* PR_NULLABLE, const PrFetchResponse*) {};
     status = prHtmlPageFetch(page, &request, ignore, nullptr);
@@ -1704,6 +1727,8 @@ PrStatus prHtmlWindowPostMessage(PrHtmlWindow* window, PrHtmlWindow* source, PrS
     }
     PostedMessage* posted = allocZeroed<PostedMessage>();
     *posted = PostedMessage{window, source, HtmlMessage{.data = prRawStringCopy(serialized)}, htmlWindowOrigin(source), origin};
+    domEventTargetRetain(prHtmlWindowAsEventTarget(window));
+    domEventTargetRetain(prHtmlWindowAsEventTarget(source));
     for (uint32_t i = 0; i < portCount; ++i)
         posted->message.ports.push(ports[i]);
     htmlWindowQueueTask(window, deliverMessage, posted, dropMessage);
@@ -1747,7 +1772,19 @@ PrStatus prHtmlWindowSetLocation(PrHtmlWindow* window, PrHtmlWindow* source, PrU
         // URL's own setter removes the fragment. A lone # sets an empty fragment.
         if (component == PrUrlComponent_Hash && value.size == 0)
             value = "#";
+        // html/#dom-location-protocol: a value that is not a scheme, as `value` and ":" parse from the scheme start
+        // state, throws.
+        if (component == PrUrlComponent_Protocol && !isSchemeValue(value)) {
+            prUrlDestroy(copy);
+            return PrStatus_Syntax;
+        }
         prUrlSetComponent(copy, component, value);
+        // html/#dom-location-protocol: a URL whose scheme is not HTTP(S) navigates nowhere.
+        PrStringView scheme = prUrlScheme(copy);
+        if (component == PrUrlComponent_Protocol && scheme != "http" && scheme != "https") {
+            prUrlDestroy(copy);
+            return PrStatus_Ok;
+        }
     }
     // html/#dom-location-hash: a fragment that the URL has already navigates nowhere. A URL without a fragment has the
     // empty one there.

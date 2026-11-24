@@ -344,6 +344,10 @@ typedef struct PrFetchClientRequest {
     // client's own.
     PrFetchReferrerPolicy referrerPolicy;
     PrStringView referrer;
+
+    // True if the request outlives its client (fetch/#request-keepalive-flag), as a beacon does: the client going away
+    // stops waiting for the response, which is then Lost, without cancelling the request.
+    bool keepalive;
 } PrFetchClientRequest;
 
 // ---------------------------------------------------------------------------------------------------------------------

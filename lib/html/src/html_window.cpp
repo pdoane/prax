@@ -24,6 +24,7 @@
 #include "dom/src/dom_element_state.h"
 #include "dom/src/dom_event.h"
 #include "html/src/html_canvas.h"
+#include "html/src/html_document.h"
 #include "html/src/html_focus.h"
 #include "html/src/html_interface.h"
 #include "html/src/html_link.h"
@@ -125,11 +126,12 @@ bool showsNothingNew(const PrHtmlWindow* window, PrCssPresentation* presentation
 // animate, and either the window runs only the frames that are observed (PrHtmlAnimationFrames_Observed) or a frame
 // would show nothing new (showsNothingNew), as when only an animation event ahead wants one. Then it is the number to
 // the last opportunity at or before the next animation event or timer, on the same grid, so that the frame that runs
-// then sees the same state that it would have seen otherwise.
+// then sees the same state that it would have seen otherwise. A frame whose rendering steps deliver observations
+// (awaitsRenderingSteps) runs the page's callbacks, so it is never put off.
 double framesToDue(const PrHtmlWindow* window) {
     PrCssPresentation* presentation = presentationOf(window);
     if (window->frameRequests.count != 0 || window->revealing || window->taskHead != window->tasks.count ||
-            presentation == nullptr || cssPresentationHasWork(presentation))
+            presentation == nullptr || cssPresentationHasWork(presentation) || awaitsRenderingSteps(window))
         return 1;
     if (window->animationFrames != PrHtmlAnimationFrames_Observed && !showsNothingNew(window, presentation))
         return 1;
@@ -481,6 +483,8 @@ void setTarget(PrDomDocument* document, PrDomElement* PR_NULLABLE element) {
 // Frees a window once its last reference is released (DomCountedTarget::destroy).
 void freeWindow(DomCountedTarget* target) {
     PrHtmlWindow* window = static_cast<PrHtmlWindow*>(target);
+    if (window->document != nullptr && htmlDocumentFormerWindow(window->document) == window)
+        htmlDocumentSetFormerWindow(window->document, nullptr);
     domNodeRelease(window->document);
     window->timers.reset();
     window->tasks.reset();
@@ -489,6 +493,7 @@ void freeWindow(DomCountedTarget* target) {
     window->canvases.reset();
     window->mediaElements.reset();
     window->frames.reset();
+    domEventTargetRelease(window->parent);
     prMemoryFree(window);
 }
 

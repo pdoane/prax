@@ -152,7 +152,7 @@ struct HtmlWindow : DomCountedTarget {
     PrDomAgent* agent;                        // the agent whose event loop runs the window (html/#relevant-agent)
     CssMediaEnvironment media;                // the environment that its document's media queries are evaluated against
     PrHtmlPreferenceObject preferences[PrHtmlPreference_Count];
-    PrHtmlWindow* PR_NULLABLE parent;         // the window whose document holds the iframe of this window
+    PrHtmlWindow* PR_NULLABLE parent;         // the window whose document holds the iframe of this window, held
     HtmlSandboxFlags sandbox;                 // its document's active sandboxing flag set
     PrRawString domain;                       // the domain of the origin it is the source of, or null
     PrDomElement* PR_NULLABLE currentScript;  // the current script of its document (html/#dom-document-currentscript)

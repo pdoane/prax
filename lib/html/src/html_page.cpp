@@ -349,7 +349,8 @@ void dropFetch(void* data) {
     fetch->dropped = true;
     bool posted = fetch->posted;
     prMutexUnlock(&fetch->lock);
-    if (!posted)
+    // A keepalive request runs to its end, and the loop then releases the agent's reference (finishOnLoop).
+    if (!posted && !fetch->keepalive)
         prNetPost(prFetchNetworkNet(fetch->fetcher), cancelOnLoop, fetch);
 }
 
@@ -383,11 +384,15 @@ void finishOnLoop(HtmlFetch* fetch, PrStatus status) {
     endOnLoop(fetch);
     fetch->status = status;
     prMutexLock(&fetch->lock);
-    if (!fetch->dropped) {
+    bool dropped = fetch->dropped;
+    if (!dropped) {
         fetch->posted = true;
         prDomAgentPost(fetch->agent, fetchArrived, fetch);
     }
     prMutexUnlock(&fetch->lock);
+    // A dropped keepalive request was not cancelled, so the agent's reference comes back here.
+    if (dropped && fetch->keepalive)
+        releaseFetch(fetch);
     releaseFetch(fetch);
 }
 
@@ -524,7 +529,8 @@ void beginOnLoop(void* PR_NULLABLE data) {
     prMutexLock(&fetch->lock);
     bool dropped = fetch->dropped;
     prMutexUnlock(&fetch->lock);
-    if (dropped)
+    // A dropped fetch is left to its cancel task, except a keepalive request, which is sent all the same.
+    if (dropped && !fetch->keepalive)
         return;
     RawArray<PrFetchHeader> headers;
     for (uint32_t i = 0; i < fetch->requestHeaders.count; ++i) {
@@ -1104,6 +1110,13 @@ PrStatus prepareScriptAt(PrHtmlPage* page, PrDomElement* element, uint32_t line,
         return PrStatus_Ok;
     }
     domScriptSetFlags(element, flags | DomScriptFlag_Started);
+    // A script that this context's parser made, but that script moved into another document before the parser finished
+    // it, has started there and never runs, even if it moves back (html/#prepare-the-script-element, intended
+    // document).
+    if (element->document != page->window->document) {
+        prRawStringReset(&text);
+        return PrStatus_Ok;
+    }
     bool forceAsync = (flags & DomScriptFlag_NotForceAsync) == 0;
     if ((kind == PrHtmlScriptKind_Classic && domAttributeValue(element, "nomodule").data != nullptr) ||
             (kind == PrHtmlScriptKind_Module && page->host.parseModule == nullptr)) {
@@ -1318,6 +1331,8 @@ void discardDocument(PrHtmlPage* page) {
     svgPresentationDestroy(page->svg);
     page->svg = nullptr;
     document->media = nullptr;
+    if (document->global != nullptr)
+        htmlDocumentSetFormerWindow(document, document->global);
     document->global = nullptr;
     document->host = nullptr;
     document->customElements = nullptr;
@@ -1456,15 +1471,48 @@ void frameViewport(PrHtmlPage* child, const PrDomElement* element) {
 }
 
 // Discards the page's browsing context and those nested in it (html/#destroy-a-child-navigable): their tasks no longer
-// run and their media stops. Each page lives on until its parent is destroyed.
+// run and their media stops. Its parent destroys the page in a task of its own (reapDiscarded).
 void discardPage(PrHtmlPage* page) {
+    page->discarded = true;
     domAgentRemoveGlobal(page->window->agent, page);
     htmlMediaReset(page->window);
     for (uint32_t i = 0; i < page->children.count; ++i)
         discardPage(page->children.data[i]);
 }
 
-// Releases the frame that the element holds, if any, and discards the browsing context that it held.
+// Returns true if the page or a page nested in it is in the midst of work that its destruction would pull from under
+// it: a load, a parse or a parser-blocking script.
+bool pageBusy(const PrHtmlPage* page) {
+    if (page->loading || page->parsing || page->runningScript)
+        return true;
+    for (uint32_t i = 0; i < page->children.count; ++i) {
+        if (pageBusy(page->children.data[i]))
+            return true;
+    }
+    return false;
+}
+
+// Destroys the page's discarded children, each with the pages nested in it. The windows and documents that script still
+// holds outlive them, closed. A child that is busy (pageBusy) waits for the next discard.
+void reapDiscarded(void* data) {
+    PrHtmlPage* page = static_cast<PrHtmlPage*>(data);
+    page->reapQueued = false;
+    for (uint32_t i = page->children.count; i-- > 0;) {
+        PrHtmlPage* child = page->children.data[i];
+        if (!child->discarded || pageBusy(child))
+            continue;
+        page->children.erase(i);
+        prHtmlPageDestroy(child);
+    }
+}
+
+// A queued reap that a window's tasks dropped, as its page's destruction does, is no longer queued.
+void reapDropped(void* data) {
+    static_cast<PrHtmlPage*>(data)->reapQueued = false;
+}
+
+// Releases the frame that the element holds, if any, and discards the browsing context that it held, which a task then
+// destroys. A frame's script may be what removed the frame, so the context outlives that task.
 void dropFrame(PrHtmlPage* page, PrDomElement* element) {
     PrHtmlWindow* window = page->window;
     for (uint32_t i = 0; i < window->frames.count; ++i) {
@@ -1474,6 +1522,10 @@ void dropFrame(PrHtmlPage* page, PrDomElement* element) {
             PrHtmlPage* child = page->children.data[k];
             if (child->window == window->frames.data[i].window)
                 discardPage(child);
+        }
+        if (!page->reapQueued) {
+            page->reapQueued = true;
+            htmlWindowQueueTask(window, reapDiscarded, page, reapDropped);
         }
         window->frames.erase(i);
         // A load that waited for the frame's document no longer does.
@@ -1543,6 +1595,7 @@ void attachFrame(PrHtmlPage* page, PrDomElement* element, PrStringView source, P
         childHost.sessionStorage = page->host.sessionStorage;
     PrHtmlPage* child = prHtmlPageCreate(&childHost);
     child->window->parent = window;
+    domEventTargetRetain(window);
     child->window->sandbox = sandbox;
     child->initialBlank = kind == FrameDocument_InitialBlank;
     child->targetName = prRawStringCopy(domAttributeValue(element, "name"));
@@ -1576,6 +1629,17 @@ PrStringView referrerPolicyOfFetch(const PrHtmlPage* page) {
     return fetch != nullptr ? prRawStringView(&fetch->responseReferrerPolicy) : PrStringView{nullptr, 0};
 }
 
+// Replaces the initial about:blank of the iframe that `fetch` navigates with the document of `source` at `url`, as a
+// navigation of the iframe's browsing context would, with the sandbox that the navigation began with
+// (html/#determining-the-creation-sandboxing-flags).
+void commitFrame(EmbedFetch* fetch, PrStringView source, PrStringView url, const PrHtmlResponseHeaders& headers) {
+    PrHtmlWindow* initial = htmlFrameWindow(fetch->element);
+    HtmlSandboxFlags sandbox = initial != nullptr ? initial->sandbox : 0;
+    dropFrame(fetch->page, fetch->element);
+    attachFrame(fetch->page, fetch->element, source, url, headers, FrameDocument_Navigated,
+        initial != nullptr ? &sandbox : nullptr);
+}
+
 void frameFetched(void* PR_NULLABLE data, const DomFetchResult* result) {
     EmbedFetch* fetch = static_cast<EmbedFetch*>(data);
     if (isCurrent(fetch) && inWindow(fetch->page, fetch->element)) {
@@ -1585,16 +1649,20 @@ void frameFetched(void* PR_NULLABLE data, const DomFetchResult* result) {
             headers = PrHtmlResponseHeaders{
                 result->contentType, result->contentLanguage, referrerPolicyOfFetch(fetch->page),
             };
-        // The document replaces the initial about:blank, as a navigation of the iframe's browsing context would, with
-        // the sandbox that the navigation began with (html/#determining-the-creation-sandboxing-flags).
-        PrHtmlWindow* initial = htmlFrameWindow(fetch->element);
-        HtmlSandboxFlags sandbox = initial != nullptr ? initial->sandbox : 0;
-        dropFrame(fetch->page, fetch->element);
         PrRawString url = embedResponseUrl(fetch, result);
-        attachFrame(fetch->page, fetch->element, loaded ? domFetchText(result) : "", prRawStringView(&url), headers,
-            FrameDocument_Navigated, initial != nullptr ? &sandbox : nullptr);
+        commitFrame(fetch, loaded ? domFetchText(result) : "", prRawStringView(&url), headers);
         prRawStringReset(&url);
     }
+    dropEmbedFetch(fetch);
+}
+
+// Navigates an iframe to the about:blank that its src names after its insertion. The navigation completes in a task of
+// its own, as every navigation but the initial insertion's does (html/#navigate), so a load handler that sets src to
+// about:blank again does not run again inside itself.
+void frameBlankTask(void* data) {
+    EmbedFetch* fetch = static_cast<EmbedFetch*>(data);
+    if (isCurrent(fetch) && inWindow(fetch->page, fetch->element))
+        commitFrame(fetch, "", prRawStringView(&fetch->url), PrHtmlResponseHeaders{});
     dropEmbedFetch(fetch);
 }
 
@@ -1663,9 +1731,10 @@ void frameChanged(PrHtmlPage* page, PrDomElement* element) {
         prRawStringReset(&href);
         domEventFire(element, "load");
     } else if (parsed && isBlank(resolved)) {
-        PrRawString href = prUrlSerialize(resolved, PrUrlSerialization_Whole);
-        attachFrame(page, element, "", prRawStringView(&href), PrHtmlResponseHeaders{});
-        prRawStringReset(&href);
+        attachFrame(page, element, "", "about:blank", PrHtmlResponseHeaders{}, FrameDocument_InitialBlank);
+        page->children.data[page->children.count - 1]->awaitingSource = true;
+        EmbedFetch* blank = newEmbedFetch(page, element, prUrlSerialize(resolved, PrUrlSerialization_Whole));
+        htmlWindowQueueTask(page->window, frameBlankTask, blank, dropEmbedFetch);
     } else if (parsed && !loadsItself(page, resolved)) {
         attachFrame(page, element, "", "about:blank", PrHtmlResponseHeaders{}, FrameDocument_InitialBlank);
         page->children.data[page->children.count - 1]->awaitingSource = true;
@@ -2577,6 +2646,8 @@ void replaceWindow(PrHtmlPage* page) {
     window->agent = closed->agent;
     window->history = closed->history;
     window->parent = closed->parent;
+    if (window->parent != nullptr)
+        domEventTargetRetain(window->parent);
     window->sandbox = closed->sandbox;
     window->media = closed->media;
     for (CssMediaValue& value : window->media.overrides)
@@ -2629,6 +2700,7 @@ PrStatus beginDocument(PrHtmlPage* page, PrStringView url, const PrHtmlResponseH
         dropModules(page);
         dropElementEvents(page);
         closeWindow(page);
+        htmlDocumentSetReplaced(page->window->document);
         discardDocument(page);
         replaceWindow(page);
         newDocument(page);
@@ -3728,8 +3800,20 @@ PrStatus htmlDocumentOpen(PrDomDocument* document) {
     if (!takesDynamicMarkup(document))
         return PrStatus_InvalidState;
     PrHtmlPage* page = htmlDocumentPage(document);
+    // A document that no browsing context shows, as one that its browsing context left or one that script made, is
+    // opened as any other, with a parser that runs no scripts.
+    if (page == nullptr) {
+        eraseListeners(document);
+        // The window whose document this still is loses its listeners too.
+        PrDomEventTarget* window = htmlDocumentFormerWindow(document);
+        if (window != nullptr && static_cast<PrHtmlWindow*>(window)->document == document)
+            domListenersErase(static_cast<PrHtmlWindow*>(window));
+        domReplaceAll(document, nullptr);
+        htmlDocumentParser(document, true);
+        return PrStatus_Ok;
+    }
     // html/#document-open-steps: does nothing while the parser runs a script or parses a load.
-    if (page == nullptr || page->runningScript || (page->parsing && !page->scriptCreated))
+    if (page->runningScript || (page->parsing && !page->scriptCreated))
         return PrStatus_Ok;
     if (page->scriptCreated)
         htmlParserReset(&page->parser);
@@ -3755,8 +3839,21 @@ PrStatus htmlDocumentWrite(PrDomDocument* document, PrStringView text) {
     if (!takesDynamicMarkup(document))
         return PrStatus_InvalidState;
     PrHtmlPage* page = htmlDocumentPage(document);
-    if (page == nullptr)
+    if (page == nullptr) {
+        // A document that its browsing context replaced with another is no longer active, and takes no writes; a
+        // document that never had a browsing context, or whose context is gone, takes them in a parser of its own.
+        if (htmlDocumentReplaced(document))
+            return PrStatus_Ok;
+        // If the insertion point is undefined, the document is opened anew (html/#document-write-steps).
+        HtmlParser* parser = htmlDocumentParser(document);
+        if (parser == nullptr) {
+            htmlDocumentOpen(document);
+            parser = htmlDocumentParser(document);
+        }
+        if (parser != nullptr)
+            htmlParserAppend(parser, text);
         return PrStatus_Ok;
+    }
     // html/#document-write-steps: a script that the parser runs writes at the parser's read position.
     if (page->runningScript) {
         htmlParserWrite(&page->parser, text);
@@ -3777,7 +3874,15 @@ PrStatus htmlDocumentClose(PrDomDocument* document) {
     if (!takesDynamicMarkup(document))
         return PrStatus_InvalidState;
     PrHtmlPage* page = htmlDocumentPage(document);
-    if (page == nullptr || !page->scriptCreated)
+    if (page == nullptr) {
+        // The parse runs to the end of its input, which leaves the insertion point undefined.
+        if (HtmlParser* parser = htmlDocumentParser(document)) {
+            htmlParserClose(parser);
+            htmlDocumentEndParser(document);
+        }
+        return PrStatus_Ok;
+    }
+    if (!page->scriptCreated)
         return PrStatus_Ok;
     // A script that the parser runs closes the input, and the parse ends when control returns to the parser.
     if (page->runningScript) {
@@ -4253,6 +4358,7 @@ PrStatus prHtmlPageFetch(PrHtmlPage* page, const PrFetchClientRequest* request, 
     HtmlFetch* fetch = createFetch(page, prRawStringView(&url), DomFetchDestination_Empty, settings);
     prRawStringReset(&url);
     fetch->initiator = request->initiator;
+    fetch->keepalive = request->keepalive;
     if (request->referrerPolicy != PrFetchReferrerPolicy_Default)
         fetch->referrerPolicy = request->referrerPolicy;
     if (request->referrer.data != nullptr) {

@@ -96,6 +96,11 @@ struct CssPresentationSvgContentFunctions {
     // (cssom-view-1/#dom-element-getclientrects). Returns false if the content does not draw the element.
     bool (*PR_NONNULL clientRect)(const void* content, const PrDomElement* element, PrDomRect* out);
 
+    // Returns the bounding box of `element`, an element of the content, in its own user space
+    // (SVG2/coords.html#BoundingBoxes), as getBBox() measures it, or an empty rectangle if the content does not draw
+    // the element.
+    PrDomRect (*PR_NONNULL boundingBox)(const void* content, const PrDomElement* element);
+
     // Maps `count` points in place from the containing block of the content of `foreignObject`, an element of the
     // content, to viewport coordinates, through the foreignObject's place in the content and every transform around it.
     // Returns false if the content does not draw the foreignObject.

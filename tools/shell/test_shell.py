@@ -586,6 +586,86 @@ class HtmlHostTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(result.stdout.splitlines(), ["stands true", "waited", "timer true"])
 
+    def test_a_frame_navigated_to_about_blank_loads_in_a_task_of_its_own(self):
+        # A load handler that navigates its iframe to about:blank again is not run again inside itself.
+        with tempfile.TemporaryDirectory() as directory:
+            result = self.run_page(Path(directory),
+                                   "<!doctype html><script>let loads = 0, depth = 0;\n"
+                                   "const iframe = document.createElement('iframe');\n"
+                                   "iframe.onload = () => {\n"
+                                   "  print('load', ++loads, 'depth', ++depth);\n"
+                                   "  if (loads < 3) iframe.src = 'about:blank';\n"
+                                   "  --depth;\n"
+                                   "};\n"
+                                   "document.documentElement.appendChild(iframe);\n"
+                                   "print('appended');</script>")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout.splitlines(),
+                             ["load 1 depth 1", "appended", "load 2 depth 1", "load 3 depth 1"])
+
+    def test_what_script_holds_of_a_discarded_frame_stays_usable_after_the_frame_is_destroyed(self):
+        # Each navigation and the removal discard a frame's browsing context, which a later task destroys, while the
+        # window, document, nodes and functions that script holds of it live on, closed.
+        with tempfile.TemporaryDirectory() as directory:
+            result = self.run_page(Path(directory),
+                                   "<!doctype html><script>const held = [];\n"
+                                   "const iframe = document.createElement('iframe');\n"
+                                   "iframe.onload = () => {\n"
+                                   "  const w = iframe.contentWindow;\n"
+                                   "  const d = iframe.contentDocument;\n"
+                                   "  w.f = () => d.body ? d.body.childNodes.length : -1;\n"
+                                   "  held.push({w, d, f: w.f, div: d.createElement('div')});\n"
+                                   "  if (held.length < 20) setTimeout(() => iframe.src = 'about:blank', 0);\n"
+                                   "  else setTimeout(() => { iframe.remove(); setTimeout(check, 0); }, 0);\n"
+                                   "};\n"
+                                   "function check() {\n"
+                                   "  let used = 0;\n"
+                                   "  for (const h of held) {\n"
+                                   "    h.div.textContent = 'x';\n"
+                                   "    h.d.documentElement && h.d.documentElement.appendChild(h.div);\n"
+                                   "    used += typeof h.f() == 'number' && h.w.closed !== undefined ? 1 : 0;\n"
+                                   "  }\n"
+                                   "  print('used', used);\n"
+                                   "}\n"
+                                   "document.documentElement.appendChild(iframe);</script>")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout.splitlines(), ["used 20"])
+
+    def test_messages_and_frames_outlive_the_windows_that_navigations_replace(self):
+        # Each load navigates the page while its frames navigate themselves and post to it, so that messages wait on
+        # windows that navigations replace and frames outlive their parents' windows, until a collection frees them.
+        with tempfile.TemporaryDirectory() as directory:
+            frame = ("<script>onmessage = () => { for (let i = 0; i < 20; ++i) location.href = location.href; "
+                     "parent.postMessage('x', '*'); }</script>")
+            result = self.run_page(Path(directory),
+                                   "<!doctype html><iframe src=\"data:text/html,%s\"></iframe><iframe srcdoc=\"%s\">"
+                                   "</iframe><script>\n"
+                                   "const load = Number(location.search.slice(1));\n"
+                                   "for (let i = 0; i < 20 && load < 8; ++i) location.href = '?' + (load + 1);\n"
+                                   "onload = () => {\n"
+                                   "  frames[0].postMessage('go', '*');\n  frames[1].postMessage('go', '*');\n"
+                                   "  if (load == 8) print('loaded', load);\n"
+                                   "};</script>" % (frame, frame))
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout.splitlines(), ["loaded 8"])
+
+    def test_a_resize_observer_measures_an_svg_element_by_its_bounding_box(self):
+        # An SVG element without a CSS box is observed at its bounding box, and a change to its geometry is delivered
+        # by the next rendering update.
+        with tempfile.TemporaryDirectory() as directory:
+            result = self.run_page(Path(directory),
+                                   "<!doctype html><svg width=100 height=100><circle cx=10 cy=10 r=5 /></svg><script>\n"
+                                   "const circle = document.querySelector('circle');\n"
+                                   "let step = 0;\n"
+                                   "new ResizeObserver(entries => {\n"
+                                   "  const e = entries[0];\n"
+                                   "  print(performance.now(), e.contentRect.width, e.borderBoxSize[0].inlineSize);\n"
+                                   "  if (step++ == 0) requestAnimationFrame(() => circle.setAttribute('r', 10));\n"
+                                   "}).observe(circle);\n"
+                                   "</script>", "--virtual-time", "--timeout", "10000")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout.splitlines(), ["16.6 10 10", "33.3 20 20"])
+
     def test_a_page_exits_with_a_performance_observer_still_registered(self):
         with tempfile.TemporaryDirectory() as directory:
             result = self.run_page(Path(directory),

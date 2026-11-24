@@ -1,6 +1,8 @@
 #include "html/src/html_document.h"
 
+#include "pr/alloc.h"
 #include "pr/mathml.h"
+#include "pr/memory.h"
 
 #include "dom/src/dom_hooks.h"
 #include "dom/src/dom_node.h"
@@ -8,9 +10,26 @@
 #include "html/src/html_forms.h"
 #include "html/src/html_hints.h"
 #include "html/src/html_link.h"
+#include "html/src/html_parser.h"
 
 namespace pr_impl {
 namespace {
+
+// What HTML keeps for a document that it follows: the script-created parser of a document that no browsing context
+// shows, while one is active (htmlDocumentParser).
+struct HtmlDocumentState {
+    HtmlParser* PR_NULLABLE parser;
+    PrDomEventTarget* PR_NULLABLE formerWindow;     // not held (htmlDocumentFormerWindow)
+    bool replaced;                                  // htmlDocumentReplaced
+};
+
+void freeParser(HtmlDocumentState* state) {
+    if (state->parser == nullptr)
+        return;
+    htmlParserReset(state->parser);
+    prMemoryFree(state->parser);
+    state->parser = nullptr;
+}
 
 constexpr DomDocumentHooks kHooks = {
     .inserted = [](void*, PrDomNode* node) { htmlDetailsInserted(node); },
@@ -25,13 +44,26 @@ constexpr DomDocumentHooks kHooks = {
     .ownerAttributeChanged =
         [](void*, PrDomElement* element, PrStringView name, PrStringView) { htmlLinkAttributeChanged(element, name); },
     .documentCreated = [](void*, PrDomDocument* created) { htmlEnable(created); },
+    .documentDestroyed = [](void* context, PrDomDocument*) {
+        HtmlDocumentState* state = static_cast<HtmlDocumentState*>(context);
+        freeParser(state);
+        prMemoryFree(state);
+    },
 };
+
+HtmlDocumentState* PR_NULLABLE stateOf(const PrDomDocument* document) {
+    const DomDocumentSubscriber* subscriber = domDocumentSubscriber(document, &kHooks);
+    return subscriber != nullptr ? static_cast<HtmlDocumentState*>(subscriber->context) : nullptr;
+}
 
 } // namespace
 
 void htmlEnable(PrDomDocument* document) {
-    if (!domDocumentSubscribe(document, &kHooks, nullptr))
+    HtmlDocumentState* state = allocZeroed<HtmlDocumentState>();
+    if (!domDocumentSubscribe(document, &kHooks, state)) {
+        prMemoryFree(state);
         return;
+    }
     cssHintsProvide(document, PrDomNamespace_Html, htmlHints());
     cssBoxesProvide(document, PrDomNamespace_Html, htmlBoxes());
     // HTML holds MathML content (html/#mathml).
@@ -41,6 +73,42 @@ void htmlEnable(PrDomDocument* document) {
         if (PrDomElement* element = domElementFromNode(node))
             htmlLinkUpdate(element, DomInsertedBy_Parser);
     }
+}
+
+HtmlParser* PR_NULLABLE htmlDocumentParser(PrDomDocument* document, bool start) {
+    HtmlDocumentState* state = stateOf(document);
+    if (state == nullptr || !start)
+        return state != nullptr ? state->parser : nullptr;
+    freeParser(state);
+    state->parser = allocZeroed<HtmlParser>();
+    htmlParserInit(state->parser, document, HtmlParseFlag_DeclarativeShadowRoots);
+    htmlParserOpen(state->parser);
+    return state->parser;
+}
+
+void htmlDocumentEndParser(PrDomDocument* document) {
+    if (HtmlDocumentState* state = stateOf(document))
+        freeParser(state);
+}
+
+PrDomEventTarget* PR_NULLABLE htmlDocumentFormerWindow(const PrDomDocument* document) {
+    const HtmlDocumentState* state = stateOf(document);
+    return state != nullptr ? state->formerWindow : nullptr;
+}
+
+void htmlDocumentSetFormerWindow(PrDomDocument* document, PrDomEventTarget* PR_NULLABLE window) {
+    if (HtmlDocumentState* state = stateOf(document))
+        state->formerWindow = window;
+}
+
+bool htmlDocumentReplaced(const PrDomDocument* document) {
+    const HtmlDocumentState* state = stateOf(document);
+    return state != nullptr && state->replaced;
+}
+
+void htmlDocumentSetReplaced(PrDomDocument* document) {
+    if (HtmlDocumentState* state = stateOf(document))
+        state->replaced = true;
 }
 
 } // namespace pr_impl

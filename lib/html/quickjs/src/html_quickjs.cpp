@@ -324,9 +324,11 @@ void freeContext(JsHtmlRealm* realm) {
     realm->ctx = nullptr;
 }
 
-// Frees the realm's scripts and its context, which the runtime's destruction requires.
+// Frees the realm's scripts and its context, which the runtime's destruction requires, unless its close freed them. The
+// callbacks still in flight for the realm then read it as a realm whose engine is gone.
 void freeScripts(JsHtmlRealm* realm) {
-    freeContext(realm);
+    if (realm->ctx != nullptr)
+        freeContext(realm);
     realm->engine = nullptr;
 }
 
@@ -966,8 +968,13 @@ void closed(void* context, PrHtmlPage* page) {
     realm->page = nullptr;
     realm->closed = true;
     PrHtmlHost host = realm->host;
+    // A closed realm runs no more of its own scripts, so its context goes with it, or every frame a document ever
+    // discarded would keep its realm until the engine goes. The objects that other realms hold keep what of the context
+    // they need. The engine keeps the realm's record until it is destroyed.
     if (realm->engine == nullptr)
         prMemoryFree(realm);
+    else
+        freeScripts(realm);
     if (host.closed != nullptr)
         host.closed(host.context, page);
 }

@@ -100,6 +100,7 @@ struct HtmlFetch {
     PrMutex lock;
     bool dropped;               // true once the browsing context no longer waits for the fetch
     bool posted;                // true once the loop posted the fetch to the agent
+    bool keepalive;             // a drop leaves the request running to its end (PrFetchClientRequest::keepalive)
     Atomic<uint32_t> references;
 };
 
@@ -304,8 +305,11 @@ struct HtmlPage {
     // The options that a Markdown document is parsed with, which its content type's variant chooses.
     PrMarkdownOptions markdownOptions;
 
-    // The browsing contexts of its iframes, current and discarded. The context owns them.
+    // The browsing contexts of its iframes, current and discarded. The context owns them, and destroys a discarded one
+    // in a task of its own once nothing of the discarded context runs (reapDiscarded).
     RawArray<PrHtmlPage* PR_NONNULL> children;
+    bool discarded;               // its container discarded it (html/#destroy-a-child-navigable)
+    bool reapQueued;              // a task that destroys its discarded children is queued
 
     // The animated SVG images that its documents show, each with a reference (html_svg_image.h).
     RawArray<HtmlSvgImage* PR_NONNULL> svgImages;
