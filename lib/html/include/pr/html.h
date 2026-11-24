@@ -333,6 +333,10 @@ void prHtmlElementSetDraggable(PrHtmlElement* element, bool value);
 // (html/#dom-a-rellist). The caller destroys the list.
 PrDomTokenList* prHtmlElementRelList(PrHtmlElement* element);
 
+// Creates the token list of the blocking attribute of a link, script or style element (html/#blocking-attribute), whose
+// supported token is render. The caller destroys the list.
+PrDomTokenList* prHtmlElementBlocking(PrHtmlElement* element);
+
 // Returns the element that the element's offsets are measured from (cssom-view-1/#dom-htmlelement-offsetparent). This
 // is its nearest positioned ancestor, or the body. Returns null if the element generates no box, is the root or the
 // body, or is fixed.

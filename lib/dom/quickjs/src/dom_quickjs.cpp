@@ -1526,6 +1526,7 @@ JSValue documentConstruct(JSContext* ctx, JSValueConst newTarget, int, JSValueCo
 enum {
     DocumentMethod_GetElementsByTagName,
     DocumentMethod_GetElementsByClassName,
+    DocumentMethod_GetElementsByName,
     DocumentMethod_CreateElement,
     DocumentMethod_CreateTextNode,
     DocumentMethod_CreateComment,
@@ -1547,6 +1548,9 @@ JSValue documentMethod(JSContext* ctx, JSValueConst documentObject, int argc, JS
             return ownedToJs(ctx, prJsDomHtmlCollectionClass, documentObject,
                 prDomHtmlCollectionCreateByClassName(prDomDocumentAsNode(document), text.value()),
                 prDomHtmlCollectionDestroy);
+        case DocumentMethod_GetElementsByName:
+            return ownedToJs(ctx, prJsDomNodeListClass, documentObject,
+                prDomNodeListCreateByName(document, text.value()), prDomNodeListDestroy);
         case DocumentMethod_CreateElement: {
             PrDomElement* element = nullptr;
             PrStatus status = prDomElementCreate(document, text.value(), nullptr, &element);
@@ -3336,6 +3340,7 @@ constexpr JSCFunctionListEntry kDocumentProto[] = {
     PR_JS_GET("documentElement", (jsObjectGetter<&prJsDomDocumentClass, prDomDocumentElement, &prJsDomElementClass>)),
     PR_JS_MAGIC("getElementsByTagName", 1, documentMethod, DocumentMethod_GetElementsByTagName),
     PR_JS_MAGIC("getElementsByClassName", 1, documentMethod, DocumentMethod_GetElementsByClassName),
+    PR_JS_MAGIC("getElementsByName", 1, documentMethod, DocumentMethod_GetElementsByName),
     PR_JS_MAGIC("createElement", 1, documentMethod, DocumentMethod_CreateElement),
     PR_JS_METHOD("createElementNS", 2, createElementNs),
     PR_JS_METHOD("importNode", 1, importNode),

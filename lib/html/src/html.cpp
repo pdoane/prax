@@ -766,12 +766,21 @@ void prHtmlElementSetDraggable(PrHtmlElement* element, bool value) {
 
 PrDomTokenList* prHtmlElementRelList(PrHtmlElement* element) {
     // The keywords that the engine acts on, which is what feature detection asks about (html/#linkTypes).
-    static constexpr PrStringView kLinkTokens[] = {"alternate", "icon", "preload", "stylesheet"};
+    static constexpr PrStringView kLinkTokens[] = {"alternate", "expect", "icon", "preload", "stylesheet"};
     static constexpr PrStringView kHyperlinkTokens[] = {"noopener", "noreferrer", "opener"};
     PrDomTokenList* list = domTokenListCreate(element, "rel");
     bool link = domIsHtml(element, PrDomTag_Link);
     list->supported = link ? kLinkTokens : kHyperlinkTokens;
     list->supportedCount = uint32_t(link ? countOf(kLinkTokens) : countOf(kHyperlinkTokens));
+    return list;
+}
+
+PrDomTokenList* prHtmlElementBlocking(PrHtmlElement* element) {
+    // The tokens that a blocking attribute may hold (html/#possible-blocking-token).
+    static constexpr PrStringView kBlockingTokens[] = {"render"};
+    PrDomTokenList* list = domTokenListCreate(element, "blocking");
+    list->supported = kBlockingTokens;
+    list->supportedCount = uint32_t(countOf(kBlockingTokens));
     return list;
 }
 

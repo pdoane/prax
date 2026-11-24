@@ -1252,6 +1252,20 @@ JSValue relList(JSContext* ctx, JSValueConst elementObject) {
     });
 }
 
+// blocking, the same DOMTokenList of the blocking attribute at each read (html/#dom-link-blocking).
+JSValue blocking(JSContext* ctx, JSValueConst elementObject) {
+    PrHtmlElement* element = jsThis<PrHtmlElement>(ctx, elementObject, htmlElementClass);
+    if (element == nullptr)
+        return JS_EXCEPTION;
+    return jsSameObject(ctx, elementObject, "blocking", [&] {
+        PrDomTokenList* list = prHtmlElementBlocking(element);
+        JSValue object = jsWrapAs(ctx, prJsDomTokenListClass, elementObject, list, true);
+        if (JS_IsException(object))
+            prDomTokenListDestroy(list);
+        return object;
+    });
+}
+
 // sandbox, the same DOMTokenList of the sandbox attribute at each read.
 JSValue iframeSandbox(JSContext* ctx, JSValueConst elementObject) {
     PrHtmlIFrameElement* element = jsThis<PrHtmlIFrameElement>(ctx, elementObject, htmlIFrameElementClass);
@@ -3614,6 +3628,7 @@ constexpr JSCFunctionListEntry kLinkElementProto[] = {
     PR_JS_TAG("HTMLLinkElement"),
     PR_JS_MAGIC_GET_SET("crossOrigin", mediaEnumerated, setMediaEnumerated, 0),
     PR_JS_GET_SET("relList", relList, (jsPutForwards<"relList", "value">)),
+    PR_JS_GET_SET("blocking", blocking, (jsPutForwards<"blocking", "value">)),
     PR_JS_DOM_REFLECT_STRING("charset", "charset"),
     PR_JS_DOM_REFLECT_STRING("rev", "rev"),
     PR_JS_DOM_REFLECT_STRING("target", "target"),
@@ -3781,6 +3796,7 @@ constexpr JSCFunctionListEntry kSlotElementProto[] = {
 constexpr JSCFunctionListEntry kScriptElementProto[] = {
     PR_JS_TAG("HTMLScriptElement"),
     PR_JS_MAGIC_GET_SET("crossOrigin", mediaEnumerated, setMediaEnumerated, 0),
+    PR_JS_GET_SET("blocking", blocking, (jsPutForwards<"blocking", "value">)),
     PR_REFLECT_URL("src", "src"),
     PR_JS_DOM_REFLECT_STRING("type", "type"),
     PR_JS_DOM_REFLECT_BOOL("noModule", "nomodule"),
@@ -3797,7 +3813,11 @@ constexpr JSCFunctionListEntry kScriptElementProto[] = {
 
 constexpr JSCFunctionListEntry kScriptElementStatics[] = {PR_JS_METHOD("supports", 1, scriptSupports)};
 
-constexpr JSCFunctionListEntry kStyleElementProto[] = {PR_JS_TAG("HTMLStyleElement"), PR_JS_GET("sheet", sheet)};
+constexpr JSCFunctionListEntry kStyleElementProto[] = {
+    PR_JS_TAG("HTMLStyleElement"),
+    PR_JS_GET("sheet", sheet),
+    PR_JS_GET_SET("blocking", blocking, (jsPutForwards<"blocking", "value">)),
+};
 
 constexpr JSCFunctionListEntry kTemplateElementProto[] = {
     PR_JS_TAG("HTMLTemplateElement"),

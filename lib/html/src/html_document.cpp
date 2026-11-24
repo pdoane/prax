@@ -11,6 +11,7 @@
 #include "html/src/html_hints.h"
 #include "html/src/html_link.h"
 #include "html/src/html_parser.h"
+#include "html/src/html_render_blocking.h"
 
 namespace pr_impl {
 namespace {
@@ -21,7 +22,16 @@ struct HtmlDocumentState {
     HtmlParser* PR_NULLABLE parser;
     PrDomEventTarget* PR_NULLABLE formerWindow;     // not held (htmlDocumentFormerWindow)
     bool replaced;                                  // htmlDocumentReplaced
+
+    // The elements in the document's render-blocking element set (htmlDocumentCountRenderBlocking). The mechanism's
+    // hooks (kBlockingHooks) follow the document from when the set first has one, so that they cost nothing in a
+    // document that never blocks rendering, as almost none does.
+    uint32_t renderBlocking;
 };
+
+bool blocksRendering(void* context) {
+    return static_cast<const HtmlDocumentState*>(context)->renderBlocking != 0;
+}
 
 void freeParser(HtmlDocumentState* state) {
     if (state->parser == nullptr)
@@ -31,12 +41,44 @@ void freeParser(HtmlDocumentState* state) {
     state->parser = nullptr;
 }
 
+// The hooks of a document's render-blocking element set (html/#render-blocking-element-set), which follow a document
+// from when the set first holds an element (htmlDocumentCountRenderBlocking): its elements stop blocking as they leave
+// the document or lose what made them block, and the internal resource links are processed again as the document
+// changes, while the set holds any.
+constexpr DomDocumentHooks kBlockingHooks = {
+    .inserted = [](void* context, PrDomNode* node) {
+        if (blocksRendering(context))
+            htmlRenderBlockingInserted(node);
+    },
+    .removing = [](void* context, PrDomNode* node) {
+        if (blocksRendering(context))
+            htmlRenderBlockingRemoving(node);
+    },
+    .attributeChanged = [](void* context, PrDomElement* element, DomNamespaceId space, PrStringView name,
+        PrStringView, PrStringView) {
+            if (blocksRendering(context))
+                htmlRenderBlockingAttributeChanged(element, space, name);
+        },
+    .readinessChanged = [](void* context, PrDomDocument* document) {
+        if (blocksRendering(context))
+            htmlProcessInternalResourceLinks(document);
+    },
+    .elementParsed = [](void* context, PrDomElement* element) {
+        if (blocksRendering(context))
+            htmlProcessInternalResourceLinks(element->document);
+    },
+};
+
 constexpr DomDocumentHooks kHooks = {
     .inserted = [](void*, PrDomNode* node) { htmlDetailsInserted(node); },
-    .attributeChanged = [](void*, PrDomElement* element, DomNamespaceId space, PrStringView name, PrStringView oldValue,
-        PrStringView value) {
+    .attributeChanged = [](void* context, PrDomElement* element, DomNamespaceId space, PrStringView name,
+        PrStringView oldValue, PrStringView value) {
             if (space == PrDomNamespace_None && domIsHtml(element, PrDomTag_Details))
                 htmlDetailsAttributeChanged(element, name, oldValue.data != nullptr, value.data != nullptr);
+            // A link's own attributes can make it block rendering. While the set holds any element, kBlockingHooks
+            // follows every change.
+            if (domIsHtml(element, PrDomTag_Link) && !blocksRendering(context))
+                htmlRenderBlockingAttributeChanged(element, space, name);
         },
     .colorValue =
         [](void*, const PrDomElement* input, PrStringView text, PrTextBuffer* out) { htmlColorWellValue(input, text, out); },
@@ -99,6 +141,22 @@ PrDomEventTarget* PR_NULLABLE htmlDocumentFormerWindow(const PrDomDocument* docu
 void htmlDocumentSetFormerWindow(PrDomDocument* document, PrDomEventTarget* PR_NULLABLE window) {
     if (HtmlDocumentState* state = stateOf(document))
         state->formerWindow = window;
+}
+
+void htmlDocumentCountRenderBlocking(PrDomDocument* document, int32_t change) {
+    HtmlDocumentState* state = stateOf(document);
+    if (state == nullptr)
+        return;
+    state->renderBlocking = uint32_t(int32_t(state->renderBlocking) + change);
+    // The set's hooks follow the document once it first blocks rendering, and stay, since a subscriber that leaves
+    // during a change would leave the hooks that the change is calling.
+    if (state->renderBlocking != 0 && domDocumentSubscriber(document, &kBlockingHooks) == nullptr)
+        domDocumentSubscribe(document, &kBlockingHooks, state);
+}
+
+bool htmlDocumentHasRenderBlocking(const PrDomDocument* document) {
+    const HtmlDocumentState* state = stateOf(document);
+    return state != nullptr && state->renderBlocking != 0;
 }
 
 bool htmlDocumentReplaced(const PrDomDocument* document) {

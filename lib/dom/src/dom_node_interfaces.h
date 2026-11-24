@@ -268,9 +268,9 @@ struct DomDocumentSubscriber {
     void* PR_NULLABLE context;
 };
 
-// The number of subscribers that a document has room for: CSS, HTML, SVG, MathML, the document's presentation, and what
-// SVG draws in the presentation.
-constexpr uint32_t kDomDocumentSubscribers = 6;
+// The number of subscribers that a document has room for: CSS, HTML, HTML's render-blocking element set, SVG, MathML,
+// the document's presentation, and what SVG draws in the presentation.
+constexpr uint32_t kDomDocumentSubscribers = 7;
 
 // The number of entries of DomDocumentHooks (DomHook_Count).
 constexpr uint32_t kDomDocumentHooks = 24;

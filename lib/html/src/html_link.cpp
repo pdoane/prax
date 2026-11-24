@@ -9,6 +9,7 @@
 #include "css/src/css_owner.h"
 #include "css/src/css_root.h"
 #include "dom/src/dom_node.h"
+#include "html/src/html_render_blocking.h"
 
 namespace pr_impl {
 namespace {
@@ -129,10 +130,14 @@ void preload(PrDomElement* element, const DomDocumentHost* host) {
 } // namespace
 
 bool htmlRelHolds(const PrDomElement* element, PrStringView keyword) {
-    const PrDomAttr* rel = domAttribute(element, PrDomNamespace_None, "rel");
-    if (rel == nullptr)
+    return htmlTokensHold(element, "rel", keyword);
+}
+
+bool htmlTokensHold(const PrDomElement* element, PrStringView attribute, PrStringView keyword) {
+    const PrDomAttr* tokens = domAttribute(element, PrDomNamespace_None, attribute);
+    if (tokens == nullptr)
         return false;
-    PrStringView text = prRawStringView(&rel->value);
+    PrStringView text = prRawStringView(&tokens->value);
     size_t at = 0;
     while (at < text.size) {
         while (at < text.size && prAsciiIsSpace(text.data[at]))
@@ -149,6 +154,9 @@ bool htmlRelHolds(const PrDomElement* element, PrStringView keyword) {
 void htmlLinkUpdate(PrDomElement* element, DomInsertedBy by) {
     if (!domIsHtml(element, PrDomTag_Link))
         return;
+    // An expect link processes its internal resource link once it is connected and whenever what names its resource
+    // changes (html/#link-type-expect).
+    htmlProcessInternalResourceLink(element);
     PrDomDocument* document = element->document;
     // Fetching the sheet again, or not fetching it at all, drops the event that the last fetch queued, and the results
     // that it has yet to deliver.

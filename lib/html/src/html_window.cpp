@@ -31,6 +31,7 @@
 #include "html/src/html_media.h"
 #include "html/src/html_media_source.h"
 #include "html/src/html_page.h"
+#include "html/src/html_render_blocking.h"
 #include "html/src/html_svg_image.h"
 
 namespace pr_impl {
@@ -493,6 +494,7 @@ void freeWindow(DomCountedTarget* target) {
     window->canvases.reset();
     window->mediaElements.reset();
     window->frames.reset();
+    htmlRenderBlockingReset(window);
     domEventTargetRelease(window->parent);
     prMemoryFree(window);
 }
@@ -609,11 +611,13 @@ void htmlWindowRunAfterTimeout(PrHtmlWindow* window, const PrHtmlTimerHandler* h
 
 bool htmlWindowRenderBlocked(const PrHtmlWindow* window) {
     // html/#allows-adding-render-blocking-elements holds for an HTML document whose body element is null, and
-    // html/#render-blocking-element-set holds the sheets that its parser added there.
+    // html/#render-blocking-element-set holds the sheets that its parser added there and the elements that block
+    // rendering of their own (html_render_blocking.h).
     PrDomDocument* document = window->document;
     if (document == nullptr || document->kind != DomDocumentKind_Html)
         return false;
-    return (window->streaming && domDocumentBody(document) == nullptr) || cssDocumentBlocksRendering(document);
+    return (window->streaming && domDocumentBody(document) == nullptr) || window->renderBlocking.count != 0 ||
+        cssDocumentBlocksRendering(document);
 }
 
 double htmlWindowClock(const PrHtmlWindow* window) {
@@ -1048,6 +1052,20 @@ PrDomElement* PR_NULLABLE htmlWindowNamedObject(PrHtmlWindow* window, PrStringVi
     return nullptr;
 }
 
+PrDomElement* PR_NULLABLE htmlIndicatedElement(PrDomDocument* document, PrStringView fragment, bool* top) {
+    PrDomElement* indicated = fragment.size != 0 ? potentialIndicated(document, fragment) : nullptr;
+    *top = fragment.size == 0;
+    if (indicated == nullptr && !*top) {
+        PrTextBuffer decoded{};
+        prTextBufferReserve(&decoded, uint32_t(fragment.size));
+        decoded.size = uint32_t(prUrlPercentDecode(fragment, decoded.data, fragment.size));
+        indicated = potentialIndicated(document, prTextBufferView(&decoded));
+        *top = indicated == nullptr && prAsciiEqualsFold(prTextBufferView(&decoded), "top");
+        prTextBufferReset(&decoded);
+    }
+    return indicated;
+}
+
 void htmlWindowScrollToFragment(PrHtmlWindow* window) {
     PrDomDocument* document = window->document;
     PrStringView written = prUrlFragment(document->url);
@@ -1057,16 +1075,8 @@ void htmlWindowScrollToFragment(PrHtmlWindow* window) {
     }
     // The indicated part (html/#select-the-indicated-part) is an element that the fragment names, as written or
     // decoded, or the top of the document for an empty fragment or "top".
-    PrDomElement* indicated = written.size != 0 ? potentialIndicated(document, written) : nullptr;
-    bool top = written.size == 0;
-    if (indicated == nullptr && !top) {
-        PrTextBuffer decoded{};
-        prTextBufferReserve(&decoded, uint32_t(written.size));
-        decoded.size = uint32_t(prUrlPercentDecode(written, decoded.data, written.size));
-        indicated = potentialIndicated(document, prTextBufferView(&decoded));
-        top = indicated == nullptr && prAsciiEqualsFold(prTextBufferView(&decoded), "top");
-        prTextBufferReset(&decoded);
-    }
+    bool top = false;
+    PrDomElement* indicated = htmlIndicatedElement(document, written, &top);
     setTarget(document, indicated);
     if (indicated != nullptr) {
         PrCssScrollIntoViewOptions options = prCssScrollIntoViewOptionsDefault();

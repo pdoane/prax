@@ -108,6 +108,10 @@ enum {
     // (html/#radionodelist), and the img elements of the form with that name or ID (html/#dom-form-nameditem).
     DomNodeListFilter_Radio,
     DomNodeListFilter_FormImages,
+
+    // The HTML elements of the list's node's tree whose name attribute is `name`
+    // (html/#dom-document-getelementsbyname).
+    DomNodeListFilter_Name,
 };
 typedef uint8_t DomNodeListFilter;
 

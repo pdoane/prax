@@ -157,6 +157,10 @@ struct HtmlWindow : DomCountedTarget {
     PrRawString domain;                       // the domain of the origin it is the source of, or null
     PrDomElement* PR_NULLABLE currentScript;  // the current script of its document (html/#dom-document-currentscript)
     RawArray<HtmlFrame> frames;               // the iframes of its document, each with its current window
+
+    // The elements that block its document's rendering (html/#render-blocking-element-set), each held
+    // (html_render_blocking.h).
+    RawArray<PrDomElement* PR_NONNULL> renderBlocking;
     RawArray<HtmlMedia*> mediaElements;       // the media elements of its document, which it runs
 
     // The host's services for the document's canvases. The renderer presents the document, and its device holds the
@@ -405,6 +409,11 @@ PrHtmlWindow* PR_NULLABLE htmlWindowFrameInTreeOrder(const PrHtmlWindow* window,
 // Such an element has the id `name`, or is an HTML embed, form, img or object element whose name attribute is `name`.
 // Returns null for an empty `name`.
 PrDomElement* PR_NULLABLE htmlWindowNamedObject(PrHtmlWindow* window, PrStringView name);
+
+// Returns the element of the document that `fragment`, a URL's fragment without its `#`, indicates
+// (html/#select-the-indicated-part): one that it names as written, or else percent-decoded. Returns null where it names
+// none, and sets `top` if the part is then the top of the document instead, for an empty fragment or "top".
+PrDomElement* PR_NULLABLE htmlIndicatedElement(PrDomDocument* document, PrStringView fragment, bool* top);
 
 // Scrolls to the part of the window's document that its URL's fragment indicates, which becomes the document's target
 // element (html/#scroll-to-the-fragment-identifier).

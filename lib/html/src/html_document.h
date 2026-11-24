@@ -32,6 +32,11 @@ void htmlDocumentEndParser(PrDomDocument* document);
 PrDomEventTarget* PR_NULLABLE htmlDocumentFormerWindow(const PrDomDocument* document);
 void htmlDocumentSetFormerWindow(PrDomDocument* document, PrDomEventTarget* PR_NULLABLE window);
 
+// Adds `change` to the number of the document's elements in its render-blocking element set (html_render_blocking.h),
+// which HTML's hooks read to skip the mechanism while there are none.
+void htmlDocumentCountRenderBlocking(PrDomDocument* document, int32_t change);
+bool htmlDocumentHasRenderBlocking(const PrDomDocument* document);
+
 // Whether a navigation of the document's browsing context replaced the document with another, and notes that it did.
 bool htmlDocumentReplaced(const PrDomDocument* document);
 void htmlDocumentSetReplaced(PrDomDocument* document);

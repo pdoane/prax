@@ -1428,6 +1428,10 @@ void prDomHtmlCollectionDestroy(PrDomHtmlCollection* PR_NULLABLE collection);
 PrDomNodeList* prDomNodeListCreate(void);
 PrDomNodeList* prDomNodeListCreateChildNodes(PrDomNode* parent);
 
+// Creates the live list of the HTML elements of the document whose name attribute is `name`, in tree order
+// (html/#dom-document-getelementsbyname). The caller destroys the list.
+PrDomNodeList* prDomNodeListCreateByName(PrDomDocument* document, PrStringView name);
+
 // Return the node at `index` or null past the end, and the number of nodes.
 PrDomNode* PR_NULLABLE prDomNodeListNodeAt(PrDomNodeList* list, uint32_t index);
 uint32_t prDomNodeListLength(const PrDomNodeList* list);

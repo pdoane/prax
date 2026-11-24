@@ -275,6 +275,12 @@ PrDomNode* PR_NULLABLE nextListNode(const PrDomNodeList* list, PrDomNode* PR_NUL
                         !(domIsHtml(element, PrDomTag_Input) && domElementInputType(element) == PrDomInputType_Image))
                     return element;
                 break;
+            case DomNodeListFilter_Name: {
+                PrStringView value = domAttributeValue(element, "name");
+                if (element->space == PrDomNamespace_Html && value.data != nullptr && value == name)
+                    return element;
+                break;
+            }
             default:
                 if (named && domIsHtml(element, PrDomTag_Img) && domFormOwner(element) == owner)
                     return element;

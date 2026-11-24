@@ -172,9 +172,9 @@ their rows; the diff of a change to it is what the change did.
 | shadow-dom/declarative           |     46/57 |      136/7791 |    1.7% |
 | shadow-dom/focus                 |     40/40 |       100/112 |   89.2% |
 | shadow-dom/focus-navigation      |     45/45 |         43/89 |   48.3% |
-| shadow-dom/leaktests             |       4/4 |         10/16 |   62.5% |
+| shadow-dom/leaktests             |       4/4 |         11/16 |   68.7% |
 | shadow-dom/reference-target      |     14/15 |         1/635 |    0.1% |
-| shadow-dom/untriaged             |     59/59 |       241/256 |   94.1% |
+| shadow-dom/untriaged             |     59/59 |       242/256 |   94.5% |
 | uievents                         |       4/4 |       154/174 |   88.5% |
 | uievents/click                   |       3/7 |           3/7 |   42.8% |
 | uievents/constructors            |       2/2 |         21/21 |  100.0% |
@@ -188,7 +188,7 @@ their rows; the diff of a change to it is what the change did.
 | uievents/textInput               |       5/7 |          7/22 |   31.8% |
 | webidl                           |       2/2 |       167/192 |   86.9% |
 | webidl/ecmascript-binding        |     42/43 |       238/314 |   75.7% |
-| **total**                        | 1671/1878 | 100193/115935 |   86.4% |
+| **total**                        | 1671/1878 | 100195/115935 |   86.4% |
 
 ## encoding
 
@@ -220,7 +220,7 @@ their rows; the diff of a change to it is what the change did.
 | html-ruby-extensions                                |     84/84 |          4/84 |    4.7% |
 | html/browsers                                       |   568/770 |      792/2349 |   33.7% |
 | html/canvas                                         | 2651/2876 |     1769/5247 |   33.7% |
-| html/dom                                            |   343/353 |   61538/66723 |   92.2% |
+| html/dom                                            |   343/353 |   61624/66723 |   92.3% |
 | html/editing                                        |   126/254 |       527/846 |   62.2% |
 | html/embedded-content                               |       1/1 |           0/2 |    0.0% |
 | html/infrastructure                                 |   123/148 |      822/1135 |   72.4% |
@@ -231,7 +231,7 @@ their rows; the diff of a change to it is what the change did.
 | html/rendering                                      |   487/490 |   10938/11508 |   95.0% |
 | html/scripting                                      |       3/3 |           1/4 |   25.0% |
 | html/select                                         |       1/1 |           1/1 |  100.0% |
-| html/semantics                                      | 2549/2913 |   10863/20292 |   53.5% |
+| html/semantics                                      | 2543/2913 |   10870/20239 |   53.7% |
 | html/syntax                                         |   249/250 |     6684/6914 |   96.6% |
 | html/the-xhtml-syntax                               |     15/15 |   21368/25609 |   83.4% |
 | html/user-activation                                |     14/21 |         32/46 |   69.5% |
@@ -264,7 +264,7 @@ their rows; the diff of a change to it is what the change did.
 | workers/multi-globals                               |       1/1 |           0/1 |    0.0% |
 | workers/same-site-cookies                           |       6/6 |           0/6 |    0.0% |
 | workers/semantics                                   |     23/29 |          0/32 |    0.0% |
-| **total**                                           | 8410/9539 | 128785/157354 |   81.8% |
+| **total**                                           | 8404/9539 | 128878/157301 |   81.9% |
 
 ## infrastructure
 
@@ -374,12 +374,12 @@ their rows; the diff of a change to it is what the change did.
 | hr-time                        |   13/13 |     42/52 |   80.7% |
 | navigation-timing              |   56/58 |   398/451 |   88.2% |
 | performance-timeline           |   36/38 |   104/117 |   88.8% |
-| resource-timing                |  86/101 |   650/940 |   69.1% |
+| resource-timing                |  85/101 |   650/936 |   69.4% |
 | resource-timing/initiator-type |   14/16 |     27/44 |   61.3% |
 | resource-timing/tentative      |   19/31 |      0/62 |    0.0% |
 | server-timing                  |     8/9 |   421/444 |   94.8% |
 | user-timing                    |   36/36 |   625/629 |   99.3% |
-| **total**                      | 268/302 | 2267/2739 |   82.7% |
+| **total**                      | 267/302 | 2267/2735 |   82.8% |
 
 ## svg
 
@@ -431,6 +431,6 @@ their rows; the diff of a change to it is what the change did.
 
 | Module       |   Files |    Tests | Passing |
 |--------------|--------:|---------:|--------:|
-| xhr          | 299/335 | 798/1430 |   55.8% |
+| xhr          | 299/335 | 799/1430 |   55.8% |
 | xhr/formdata |   18/18 |    63/81 |   77.7% |
-| **total**    | 317/353 | 861/1511 |   56.9% |
+| **total**    | 317/353 | 862/1511 |   57.0% |

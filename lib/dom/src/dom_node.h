@@ -33,7 +33,7 @@ static_assert(sizeof(DomText) == 128);
 static_assert(sizeof(DomComment) == 128);
 static_assert(sizeof(DomProcessingInstruction) == 160);
 static_assert(sizeof(DomDocumentType) == 192);
-static_assert(sizeof(DomDocument) == 648);
+static_assert(sizeof(DomDocument) == 664);
 #endif
 
 // Returns the fragment that a template element holds (html/#the-template-element), or null for any other element.

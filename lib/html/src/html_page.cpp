@@ -49,6 +49,7 @@
 #include "html/src/html_markdown.h"
 #include "html/src/html_media.h"
 #include "html/src/html_parser.h"
+#include "html/src/html_render_blocking.h"
 #include "html/src/html_svg_image.h"
 #include "html/src/html_window.h"
 #include "html/src/html_xml.h"
@@ -709,6 +710,8 @@ void fetchHost(void* PR_NULLABLE context, const DomFetchRequest* request, DomFet
 // Frees the script, or leaves it to the fetch that refers to it, which frees it when the fetch is answered.
 void releaseScript(PreparedScript* script) {
     script->released = true;
+    // A script that will not run no longer blocks rendering.
+    htmlUnblockRendering(script->element);
     if (script->fetching)
         return;
     domNodeUnhold(script->element);
@@ -937,6 +940,7 @@ void dropModules(PrHtmlPage* page) {
 
 // html/#execute-the-script-element
 PrStatus executeScript(PrHtmlPage* page, const PreparedScript* prepared) {
+    htmlUnblockRendering(prepared->element);
     bool module = prepared->kind == PrHtmlScriptKind_Module;
     bool failed = prRawStringIsNull(&prepared->source);
     if (module)
@@ -1133,6 +1137,10 @@ PrStatus prepareScriptAt(PrHtmlPage* page, PrDomElement* element, uint32_t line,
         .line = 1,
         .column = 1,
     };
+    // An external script, or an inline module, whose blocking holds render blocks rendering until it runs
+    // (html/#prepare-the-script-element).
+    if ((script->external || kind == PrHtmlScriptKind_Module) && htmlPotentiallyRenderBlocking(element))
+        htmlBlockRendering(element);
     PrUrl* base = domDocumentBaseUrl(page->window->document);
     if (script->external) {
         fetchScript(page, script, src, base);
@@ -2618,6 +2626,7 @@ void closeWindow(PrHtmlPage* page) {
     htmlWindowClearTasks(window);
     htmlMediaReset(window);
     htmlCanvasReset(window);
+    htmlRenderBlockingReset(window);
     domListenersDestroy(window->listeners);
     window->listeners = nullptr;
     for (PrHtmlPreferenceObject& preference : window->preferences) {

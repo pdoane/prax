@@ -19,6 +19,10 @@ namespace pr_impl {
 // case-insensitively (html/#linkTypes).
 bool htmlRelHolds(const PrDomElement* element, PrStringView keyword);
 
+// Returns true if the element's attribute `attribute` in no namespace, a set of space-separated tokens, holds the
+// keyword `keyword`, ASCII case-insensitively, as rel and blocking do.
+bool htmlTokensHold(const PrDomElement* element, PrStringView attribute, PrStringView keyword);
+
 // Updates an HTML link element's sheet or preload (html/#link-type-stylesheet, html/#link-type-preload). If the element
 // is a stylesheet link connected in a document with a host, fetches its sheet and the sheets that it imports. Once they
 // arrive, gives the element the sheet and fires load or error at it. Does nothing for any other element.

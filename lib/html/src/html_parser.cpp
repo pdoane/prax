@@ -797,7 +797,9 @@ PrDomElement* insertElement(Tree* t, DomNamespaceId space, PrDomTag tag, PrStrin
             (!domIsListed(element) || domAttributeValue(element, "form").data == nullptr) &&
             domNodeRoot(parent) == domNodeRoot(form))
         domFormAssociateParserInserted(element, form);
+    t->p->inserting = true;
     insertAt(parent, element, before);
+    t->p->inserting = false;
     // A constructed element is held until its tree holds its object.
     if (constructed)
         domNodeUnhold(element);

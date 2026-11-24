@@ -2027,6 +2027,10 @@ PrDomNodeList* prDomNodeListCreateChildNodes(PrDomNode* parent) {
     return domNodeListCreate(parent);
 }
 
+PrDomNodeList* prDomNodeListCreateByName(PrDomDocument* document, PrStringView name) {
+    return domNodeListCreateFiltered(document, DomNodeListFilter_Name, name);
+}
+
 PrDomNode* PR_NULLABLE prDomNodeListNodeAt(PrDomNodeList* list, uint32_t index) {
     return domNodeListItem(list, index);
 }

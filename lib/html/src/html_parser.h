@@ -127,6 +127,11 @@ struct HtmlParser {
 
     bool pendingText;                           // true if `pending` holds a character other than ASCII whitespace
 
+    // True while the parser inserts an element that it is about to push onto the stack of open elements, so that the
+    // steps that follow an insertion tell it from an insertion by script
+    // (html/#insert-an-element-at-the-adjusted-insertion-location).
+    bool inserting;
+
     // True if a script stopped the parse until the script runs (html/#pending-parsing-blocking-script). Input appended
     // in the meantime waits.
     bool paused;

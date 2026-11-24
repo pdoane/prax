@@ -19,6 +19,7 @@ pr_library(html INCLUDE include
     src/html_link.cpp
     src/html_markdown.cpp
     src/html_parser.cpp
+    src/html_render_blocking.cpp
     src/html_serialize.cpp
     src/html_storage.cpp
     src/html_structure.cpp
