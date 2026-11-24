@@ -6,13 +6,15 @@ of the bundles other than Last Resort, whose glyphs mark what is missing. The fo
 into font_bundle in its directory, the build that the runners use (tools/suite/corpus.py), which fetches every bundle
 unless PR_FONT_BUNDLES names fewer. ./dev.sh suite font-coverage fetches CLDR and runs it.
 
-Usage: python3 -m tools.suite.font_coverage [unittest's arguments]
+A case is a language, keyed by its subtag, which passes if every one of its exemplar characters has a glyph.
+
+Usage: python3 -m tools.suite.font_coverage [--match GLOB] [--failures] [--json FILE] [--against FILE]
 """
 
 import os
 import re
 import struct
-import unittest
+import sys
 
 import tools
 from tools.suite import corpus
@@ -88,25 +90,32 @@ def exemplars(language):
     return {c for c in found if not (0x200B <= c <= 0x200F or 0xFE00 <= c <= 0xFE0F)}
 
 
-class FontBundleTests(unittest.TestCase):
-    def test_every_language_has_its_exemplar_characters_served(self):
-        self.assertTrue(os.path.isdir(BUNDLE), "no font bundles in %s; the build fetches them" % BUNDLE)
-        self.assertTrue(os.path.isdir(CLDR), "no CLDR; ./dev.sh fetch cldr fetches it")
-        served = set()
-        for name in sorted(os.listdir(BUNDLE)):
-            if name.endswith((".ttf", ".otf")) and not name.startswith("LastResort"):
-                served |= code_points(os.path.join(BUNDLE, name))
-        checked = 0
-        for language in languages():
-            characters = exemplars(language)
-            if characters is None:
-                continue
-            checked += 1
-            missing = sorted(c for c in characters if c not in served)
-            with self.subTest(language=language):
-                self.assertEqual([], ["U+%04X" % c for c in missing])
-        self.assertGreater(checked, 40)
+def main():
+    args = corpus.arguments(None, CLDR).parse_args()
+    if not os.path.isdir(BUNDLE):
+        sys.exit("no font bundles in %s; the build fetches them" % BUNDLE)
+    if not os.path.isdir(args.tests):
+        sys.exit("no CLDR; ./dev.sh fetch cldr fetches it")
+    data = corpus.Data("font-coverage")
+    # A language that CLDR gives no exemplar characters has nothing to check.
+    found = [(language, exemplars(language)) for language in languages()]
+    found = [(language, characters) for language, characters in found if characters is not None]
+    if len(found) < 40:
+        sys.exit("CLDR gives exemplar characters for %d of the languages; it has more" % len(found))
+    chosen = [(language, characters) for language, characters in found if data.runs(language, args.match)]
+    if args.list:
+        return corpus.listing([("languages", chosen)])
+    served = set()
+    for name in sorted(os.listdir(BUNDLE)):
+        if name.endswith((".ttf", ".otf")) and not name.startswith("LastResort"):
+            served |= code_points(os.path.join(BUNDLE, name))
+    results = corpus.Results(args, data, keys={language for language, _ in found})
+    for language, characters in chosen:
+        missing = sorted(c for c in characters if c not in served)
+        results.case(language, int(not missing), part="languages",
+                     detail="no glyph for " + " ".join("U+%04X" % c for c in missing) if missing else "")
+    return results.finish()
 
 
 if __name__ == "__main__":
-    unittest.main()
+    sys.exit(main())

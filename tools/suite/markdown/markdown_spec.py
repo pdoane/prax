@@ -136,52 +136,22 @@ def main():
                       for case in cases)
     results = corpus.answers([args.binary], frames, len(cases))
 
-    passed = recorded = 0
-    failures = []
-    outcomes = {}
-    parts = {}
+    outcome = corpus.Results(args, suite, keys=keys)
     for case, result in zip(cases, results):
-        key, part = case.key, case.part
         streamed = result.get("streamed", True)
         if case.pattern:
             slow = result["millis"] > PATHOLOGICAL_MILLIS * corpus.SLOWDOWN
             agrees = case.pattern.search(result["html"]) is not None and not slow
+            matched = "matches" if case.pattern.search(result["html"]) else "does not match"
+            detail = "%s took %d ms, and its HTML %s the pattern" % (case.title, result["millis"], matched)
+            lines = ()
         else:
             # An example whose HTML is <IGNORE> tests only that the parse finishes.
             agrees = (case.html == IGNORE or result["html"] == case.html) and streamed
-        outcomes[key] = int(agrees)
-        reason = suite.recorded(key)
-        tally = parts.setdefault(part, [0, 0])
-        tally[1] += 1
-        if agrees:
-            passed += 1
-            tally[0] += 1
-            if reason is not None:
-                failures.append(key)
-                print("%s agrees now; drop its erratum" % key)
-        elif reason is not None:
-            recorded += 1
-            tally[0] += 1
-            if args.verbose:
-                print("%s\n    %s" % (key, reason))
-        elif case.pattern:
-            failures.append(key)
-            print("%s (%s) took %d ms; its HTML %s the pattern" % (key, case.title, result["millis"],
-                  "matches" if case.pattern.search(result["html"]) else "does not match"))
-        else:
-            failures.append(key)
-            print("%s (%s)%s" % (key, part, "" if streamed else " streams differently"))
-            print("  markdown %r" % case.markdown)
-            print("  expected %r" % case.html)
-            print("  got      %r" % result["html"])
-    print("%d/%d agree; %d recorded; %d disagree" % (passed, len(cases), recorded, len(failures)))
-    corpus.outcomes(args, outcomes)
-    if corpus.writes_scoreboard(args):
-        suite.write_scoreboard([(part, tally[0], tally[1]) for part, tally in parts.items()])
-    stale = [] if args.match else suite.stale(keys)
-    for kind, key in stale:
-        print("%s names no case (%s)" % (key, kind))
-    return int(bool(failures or stale))
+            detail = case.part + ("" if streamed else ", which streams differently")
+            lines = ["markdown %r" % case.markdown, "expected %r" % case.html, "got      %r" % result["html"]]
+        outcome.case(case.key, int(agrees), detail=detail, lines=lines, part=case.part)
+    return outcome.finish()
 
 
 if __name__ == "__main__":

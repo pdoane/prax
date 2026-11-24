@@ -5,5 +5,5 @@ the diff of a change to it is what the change did.
 
 | Part      |   Cases | Passing |
 |-----------|--------:|--------:|
-| skottie   | 256/736 |   34.7% |
-| **total** | 256/736 |   34.7% |
+| skottie   | 252/736 |   34.2% |
+| **total** | 252/736 |   34.2% |

@@ -138,18 +138,14 @@ def main():
         return corpus.listing([(part, files) for part, files in chosen])
     corpus.require(args.binary, "exr")
 
-    rows = []
-    outcomes = {}
-    failures = 0
+    outcome = corpus.Results(args, suite, keys=set(keys))
     totals = {"files": 0, "compared": 0, "outside": 0, "refused": 0, "deep": 0}
     compressions = {}
     for part, files in chosen:
-        passed = 0
         for key, path in files:
             result = answer(args.binary, path)
-            ok = passes(result)
-            reason = suite.recorded(key)
-            outcomes[key] = 1 if ok else 0
+            outcome.case(key, int(passes(result)), status="CRASH" if result["status"] == "Crash" else corpus.OK,
+                         detail=json.dumps(result), part=part)
             totals["files"] += 1
             totals["compared"] += result["compared"]
             totals["outside"] += result["outside"]
@@ -158,23 +154,6 @@ def main():
             if result["status"] == "":
                 for compression in result["compressions"]:
                     compressions[compression] = compressions.get(compression, 0) + 1
-            if ok:
-                passed += 1
-                if reason is not None:
-                    failures += 1
-                    print("%s passes now; drop its erratum" % key)
-            elif reason is not None:
-                passed += 1
-                if args.verbose:
-                    print("%s\n    %s" % (key, reason))
-            else:
-                failures += 1
-                print("%s  %s" % (key, json.dumps(result)))
-            if args.match:
-                print("%s  %s" % (key, json.dumps(result)))
-        if files:
-            rows.append((part, passed, len(files)))
-            print("%s  %d/%d" % (part, passed, len(files)))
 
     decoded = ", ".join("%s %d" % (name, compressions[name]) for name in COMPRESSIONS if name in compressions)
     notes = ["Of the %d files, %d are refused by both decoders, and %d hold deep data alone, which lib/exr does not"
@@ -182,15 +161,7 @@ def main():
              "read. %d samples are compared, and %d of data windows outside their display windows are not. The parts"
              % (totals["compared"], totals["outside"]),
              "that decode are, by compression: %s." % decoded]
-    print("\n".join(notes))
-    print("\n%d/%d pass or are recorded; %d fail" % (sum(r[1] for r in rows), sum(r[2] for r in rows), failures))
-    corpus.outcomes(args, outcomes)
-    if corpus.writes_scoreboard(args):
-        suite.write_scoreboard(rows, notes)
-    stale = [] if args.match else suite.stale(set(keys))
-    for kind, key in stale:
-        print("%s names no case (%s)" % (key, kind))
-    return int(bool(failures or stale))
+    return outcome.finish(notes=notes)
 
 
 if __name__ == "__main__":

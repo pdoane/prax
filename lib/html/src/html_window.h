@@ -123,7 +123,8 @@ struct HtmlIdleRequest {
     PrHtmlIdleRequestCallback callback;
     uint32_t handle;
     int32_t timer;      // the timer of the request's timeout, or zero if it has none
-    bool endless;       // true if an idle callback made the request, which a loop of callbacks can repeat forever
+    uint32_t depth;     // how many idle callbacks in a row led to the request, each making the next one's request
+    bool endless;       // true if so many led to it that the loop of callbacks may repeat forever (kIdleEndlessDepth)
 };
 
 // An image whose decode the window waits for. The window holds `element` (domNodeHold). `generation` and `url` identify
@@ -232,6 +233,7 @@ struct HtmlWindow : DomCountedTarget {
     uint32_t nextIdleHandle;
     double idleDeadline;       // the end of the current idle period, on the clock
     bool runningIdle;          // true during an idle callback
+    uint32_t runningIdleDepth; // the depth of the request whose callback runs (HtmlIdleRequest::depth)
 
     bool runningTask;          // true while a task or a timer's handler is on the stack
 

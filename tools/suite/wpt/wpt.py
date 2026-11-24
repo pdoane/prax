@@ -6,7 +6,11 @@ are found as WPT's manifest finds them. They are every page except those in a su
 references that a reftest compares against. They also include every .any.js and .window.js file, which runs in a page
 made for it, as WPT's server makes one. A testharness page's cases are its subtests, keyed "<file>:<index>" in
 registration order, where <file> is the page's path in the checkout. A crashtest is one case, which passes if the page
-loads without the shell failing.
+loads and becomes ready, as wptrunner waits for it (its root without the class test-wait), without the shell failing.
+
+A page runs on a virtual clock (pr_shell --virtual-time) under the shell's own deadline, and a shell that takes more
+memory than SHELL_MEMORY_LIMIT is killed (MemoryGuard), so that a page fails on its own rather than slow or starve the
+run's other pages.
 
 A reftest is one case. It is rendered if the test and each of its references can be rendered at WPT's 800 by 600: an
 HTML, XHTML or SVG document loads in the shell, as a browser loads it, with its scripts, style sheets and fonts. Where
@@ -131,6 +135,9 @@ SUPPORT = os.path.join(corpus.ROOT, "tools", "suite", "wpt")
 DATA = corpus.Data("wpt")
 TIMEOUT = 10 * corpus.SLOWDOWN  # seconds; the runner enforces the deadline that report.js leaves to it
 LONG_TIMEOUT = 60 * corpus.SLOWDOWN  # seconds, for a test that marks itself long (wptrunner's long_timeout)
+# The most resident memory that a shell may hold, in megabytes, before the runner kills it (MemoryGuard). A page that
+# passes it fails, as one that passes its deadline does.
+SHELL_MEMORY_LIMIT = 2048
 
 # Matches a test's mark that it takes WPT's long timeout: a page's <meta name=timeout content=long>, or a script's
 # `// META: timeout=long` comment (WPT's manifest, tools/manifest/sourcefile.py).
@@ -167,7 +174,7 @@ def server():
         if SERVER is None:
             SCRATCH_DIRECTORY = tempfile.mkdtemp(prefix="wpt-scratch-")
             SHELL_DIRECTORY = tempfile.mkdtemp(prefix="wpt-shell-")
-            SERVER = wpt_serve.Server(WPT, {SCRATCH_PATH: SCRATCH_DIRECTORY})
+            SERVER = wpt_serve.Server(WPT, {SCRATCH_PATH: SCRATCH_DIRECTORY}, clocked=True)
             atexit.register(stop_server)
         return SERVER
 
@@ -179,15 +186,15 @@ def stop_server():
         shutil.rmtree(SHELL_DIRECTORY, ignore_errors=True)
 
 
-def capture_wait():
-    """Returns the script that the shell runs in a page that it captures (pr_shell --capture-wait): wptrunner's wait for
-    a reftest's screenshot, with its class name filled in."""
+def capture_wait(classname="reftest-wait"):
+    """Returns the script that the shell runs in a page that it waits for (pr_shell --capture-wait): wptrunner's wait,
+    with its class name filled in, reftest-wait for a reftest's screenshot and test-wait for a crashtest."""
     server()
-    path = os.path.join(SHELL_DIRECTORY, "test-wait.js")
+    path = os.path.join(SHELL_DIRECTORY, classname + ".js")
     with server_lock:
         if not os.path.exists(path):
             with open(TEST_WAIT, encoding="utf-8") as f:
-                source = f.read().replace("%(classname)s", "reftest-wait")
+                source = f.read().replace("%(classname)s", classname)
             with open(path, "w", encoding="utf-8", newline="\n") as f:
                 f.write(source)
     return path
@@ -265,6 +272,19 @@ FUZZY_OVERRIDES = {}
 # and its own process. The runner's deadline is then a backstop for a page whose script never returns to the shell.
 TIMED_OUT = 124
 BACKSTOP = 5 * corpus.SLOWDOWN  # seconds past TIMEOUT
+# What a run that the runner stopped at its backstop says of the system's time deciding it (corpus.TIMING).
+BACKSTOPPED = "the runner stopped the shell at its backstop"
+
+# The status of a run whose shell the runner killed for its memory (MemoryGuard), and Shells.ask's answers for a served
+# run that passed the backstop or its memory limit.
+OVER_MEMORY = 137
+TIMED_OUT_ANSWER = "timed out"
+OVER_MEMORY_ANSWER = "over memory"
+
+
+def over_memory():
+    """Returns what a run that the runner killed for its memory says of it."""
+    return "pr_shell passed its memory limit of %d MB and was killed" % SHELL_MEMORY_LIMIT
 
 # Matches what a shell writes on stderr if a page's render fails a check under --verify.
 VERIFY_FAILURE = re.compile(r"^(.*): render verify: (.*)$", re.M)
@@ -274,11 +294,90 @@ verify_failures = {}
 verify_lock = threading.Lock()
 
 
+def resident_memory(pids):
+    """Returns the resident memory of each process of `pids` that is still running, in bytes, by pid."""
+    if not pids:
+        return {}
+    if sys.platform == "win32":
+        import ctypes
+        from ctypes import wintypes
+
+        class Counters(ctypes.Structure):
+            _fields_ = [("cb", wintypes.DWORD), ("faults", wintypes.DWORD)] + [
+                (name, ctypes.c_size_t) for name in ("peak_working_set", "working_set", "peak_paged_pool",
+                                                     "paged_pool", "peak_nonpaged_pool", "nonpaged_pool",
+                                                     "pagefile", "peak_pagefile")]
+        sizes = {}
+        for pid in pids:
+            handle = ctypes.windll.kernel32.OpenProcess(0x1000, False, pid)  # PROCESS_QUERY_LIMITED_INFORMATION
+            if not handle:
+                continue
+            counters = Counters(cb=ctypes.sizeof(Counters))
+            if ctypes.windll.psapi.GetProcessMemoryInfo(handle, ctypes.byref(counters), counters.cb):
+                sizes[pid] = counters.working_set
+            ctypes.windll.kernel32.CloseHandle(handle)
+        return sizes
+    listed = subprocess.run(["ps", "-o", "pid=,rss=", "-p", ",".join(str(pid) for pid in pids)],
+                            capture_output=True, text=True).stdout
+    sizes = {}
+    for line in listed.splitlines():
+        fields = line.split()
+        if len(fields) == 2 and fields[0].isdigit() and fields[1].isdigit():
+            sizes[int(fields[0])] = int(fields[1]) * 1024
+    return sizes
+
+
+class MemoryGuard:
+    """Kills a shell whose resident memory passes SHELL_MEMORY_LIMIT, so that a page that takes memory without end fails
+    on its own instead of exhausting the machine that every other job of the run shares. The limit is the same on every
+    machine, so that a page's result does not depend on the machine that runs it."""
+
+    INTERVAL = 0.25  # seconds between looks at the shells' memory
+
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.processes = {}  # the processes watched, by pid
+        self.killed = set()  # the pids of the processes killed for their memory
+        self.thread = None
+
+    def start(self):
+        if self.thread is None:
+            self.thread = threading.Thread(target=self.watch_all, daemon=True)
+            self.thread.start()
+
+    def watch(self, process):
+        with self.lock:
+            self.processes[process.pid] = process
+
+    def forget(self, process):
+        """Stops watching `process`, and returns true if the guard killed it."""
+        with self.lock:
+            self.processes.pop(process.pid, None)
+            return process.pid in self.killed
+
+    def watch_all(self):
+        while True:
+            time.sleep(self.INTERVAL)
+            with self.lock:
+                watched = dict(self.processes)
+            limit = SHELL_MEMORY_LIMIT * 1024 * 1024
+            for pid, size in resident_memory(list(watched)).items():
+                if size > limit and watched[pid].poll() is None:
+                    with self.lock:
+                        self.killed.add(pid)
+                    watched[pid].kill()
+
+
+MEMORY = MemoryGuard()
+
+
 class Shells:
     """The shells that run pages, one for each thread of the pool. Each shell serves one run of pages after another in
     one process (pr_shell --serve), which saves a process start on every page. A shell that predates serving runs each
-    page in its own process. A served run that crashes or passes the deadline is run again in its own process, as
-    without serving, and its shell is replaced, so that the run's result is the same as in its own process."""
+    page in its own process. A served run that crashes is run again in its own process, as without serving, and its
+    shell is replaced, so that the run's result is the same as in its own process. A served run that passes the
+    runner's deadline times out, and one whose shell passes its memory limit (MemoryGuard) fails, each without a run
+    again, which would only take as long again or as much memory again."""
 
     def __init__(self):
         self.local = threading.local()
@@ -296,30 +395,53 @@ class Shells:
 
     def setup(self, binary):
         """Returns the options for every run of the shell: WPT's server reached over the network (network_options), the
-        fonts that WPT requires a browser to have installed, wptrunner's wait for a screenshot, a virtual clock, and the
-        deadline if the shell accepts one, which a shell that serves does."""
+        fonts that WPT requires a browser to have installed, wptrunner's wait for a screenshot, a virtual clock that the
+        server's sleeps move (wpt_serve.Control), and the deadline if the shell accepts one, which a shell that serves
+        does."""
         return (network_options() + ["--font", os.path.join(WPT, "fonts", "Ahem.ttf"), "--capture-wait", capture_wait(),
-                                     "--virtual-time"] + SETUP
+                                     "--virtual-time", "--server-control", str(server().control)] + SETUP
                 + (["--timeout", "%d" % (TIMEOUT * 1000)] if self.serves(binary) else []))
 
     def run(self, binary, args, timeout):
         """Returns the result of running the shell with its setup and `args`, as subprocess.run returns it with text
-        output. Raises subprocess.TimeoutExpired as subprocess.run does."""
+        output. Raises subprocess.TimeoutExpired as subprocess.run does. A shell killed for its memory exits with
+        OVER_MEMORY, and says so on the first line of its stderr."""
         command = [binary] + self.setup(binary) + args
-        # The shell writes UTF-8, whatever the platform's default encoding is.
-        own_process = dict(capture_output=True, encoding="utf-8", errors="replace")
         if not self.serves(binary):
-            return subprocess.run(command, timeout=timeout, **own_process)
+            return self.own_process(command, timeout)
         timeout += BACKSTOP
         answer = self.ask(binary, args, timeout)
+        if answer is TIMED_OUT_ANSWER:
+            raise subprocess.TimeoutExpired(command, timeout, output="", stderr="")
+        if answer is OVER_MEMORY_ANSWER:
+            return subprocess.CompletedProcess(command, OVER_MEMORY, "", over_memory())
         if answer is None:
-            return subprocess.run(command, timeout=timeout, **own_process)
+            return self.own_process(command, timeout)
         status, out, err = answer
         return subprocess.CompletedProcess(command, status, out, err)
 
+    @staticmethod
+    def own_process(command, timeout):
+        """Returns the result of running `command` in a process of its own, as Shells.run returns it."""
+        # The shell writes UTF-8, whatever the platform's default encoding is.
+        process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding="utf-8",
+                                   errors="replace")
+        MEMORY.watch(process)
+        try:
+            out, err = process.communicate(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            out, err = process.communicate()
+            MEMORY.forget(process)
+            raise subprocess.TimeoutExpired(command, timeout, output=out, stderr=err) from None
+        if MEMORY.forget(process):
+            return subprocess.CompletedProcess(command, OVER_MEMORY, out, over_memory() + "\n" + err)
+        return subprocess.CompletedProcess(command, process.returncode, out, err)
+
     def ask(self, binary, args, timeout):
-        """Returns the status, stdout and stderr of a served run, or None if its shell crashed or passed the deadline.
-        In that case the shell is replaced."""
+        """Returns the status, stdout and stderr of a served run, or TIMED_OUT_ANSWER if it passed the deadline,
+        OVER_MEMORY_ANSWER if its shell passed its memory limit, or None if its shell crashed. In each of those cases
+        the shell is replaced."""
         shells = self.local.__dict__.setdefault("shells", {})
         shell = shells.get(binary)
         if shell is None or shell.poll() is not None:
@@ -330,6 +452,7 @@ class Shells:
             shell.pump = threading.Thread(target=self.pump, args=(shell,), daemon=True)
             shell.pump.start()
             shells[binary] = shell
+            MEMORY.watch(shell)
             with self.lock:
                 self.started.append(shell)
         data = "\n".join(args).encode()
@@ -341,7 +464,7 @@ class Shells:
             status, written, failed = (int(field) for field in head.split())
             out = self.read(shell, written, deadline)
             err = self.read(shell, failed, deadline)
-        except (OSError, ValueError, TimeoutError):
+        except (OSError, ValueError, TimeoutError) as error:
             shell.kill()
             shell.wait()
             shell.pump.join()
@@ -350,7 +473,9 @@ class Shells:
             shells.pop(binary, None)
             with self.lock:
                 self.started.remove(shell)
-            return None
+            if MEMORY.forget(shell):
+                return OVER_MEMORY_ANSWER
+            return TIMED_OUT_ANSWER if isinstance(error, TimeoutError) else None
         return (status, out.decode("utf-8", errors="replace"),
                 err.decode("utf-8", errors="replace"))
 
@@ -392,6 +517,7 @@ class Shells:
 
     def close(self):
         for shell in self.started:
+            MEMORY.forget(shell)
             if shell.poll() is None:
                 shell.stdin.close()
                 try:
@@ -771,13 +897,16 @@ def failure_of(stderr, returncode, last=True):
     return "process exited %d" % returncode
 
 
-def capture(shell, path, png):
-    """Captures the page at `path` in the shell, as a PNG at `png`. Returns the failure, or the empty string."""
+def capture(shell, path, png, timing):
+    """Captures the page at `path` in the shell, as a PNG at `png`. Returns the failure, or the empty string, and adds
+    to `timing` what says that timing decided the capture (corpus.timing_of)."""
     try:
         process = SHELLS.run(shell, ["--screenshot", png, "--html", url_of(path)], TIMEOUT)
     except subprocess.TimeoutExpired:
+        timing.append(BACKSTOPPED)
         return "TIMEOUT"
     note_verify(process.stderr)
+    timing += corpus.timing_of(process.stderr)
     if process.returncode == TIMED_OUT:
         return "TIMEOUT"
     if process.returncode != 0 or not os.path.exists(png):
@@ -830,28 +959,30 @@ def compare_pages(shell, pairs, printed=None):
     try:
         process = SHELLS.run(shell, args, TIMEOUT)
     except subprocess.TimeoutExpired:
-        return [{"status": "TIMEOUT"} for _ in pairs]
+        return [{"status": "TIMEOUT", "timing": [BACKSTOPPED]} for _ in pairs]
     note_verify(process.stderr)
+    timing = corpus.timing_of(process.stderr)
     if process.returncode == TIMED_OUT:
-        return [{"status": "TIMEOUT"} for _ in pairs]
+        return [{"status": "TIMEOUT", "timing": timing} for _ in pairs]
     found = [json.loads(line[len("REFTEST "):]) for line in process.stdout.splitlines()
              if line.startswith("REFTEST ")]
     if process.returncode != 0 or len(found) != len(pairs):
         failure = "ERROR: " + failure_of(process.stderr, process.returncode)
-        return [{"status": failure} for _ in pairs]
+        return [{"status": failure, "timing": timing} for _ in pairs]
     # The shell answers each page's references in turn, in the order of the pages.
     order = [pair for left in dict.fromkeys(left for left, _ in pairs) for pair in pairs if pair[0] == left]
     answers = dict(zip(order, found))
-    return [dict(answers[pair], status="") for pair in pairs]
+    return [dict(answers[pair], status="", timing=timing) for pair in pairs]
 
 
 def compare_captures(shell, pairs):
     """Returns compare_reftest's answers for the comparisons `pairs`, from the shell's capture of each document."""
     with tempfile.TemporaryDirectory(prefix="wpt-reftest-") as directory:
         captured = {}
+        timing = []
         for index, document in enumerate(dict.fromkeys(d for pair in pairs for d in pair)):
             png = os.path.join(directory, "%d.png" % index)
-            captured[document] = (png, capture(shell, document, png))
+            captured[document] = (png, capture(shell, document, png, timing))
         slots = []
         cases = []
         for left, right in pairs:
@@ -861,7 +992,7 @@ def compare_captures(shell, pairs):
                 source, reference = (captured[d][0] for d in (left, right))
                 cases.append(reftest.Case(os.path.relpath(left, WPT), source, reference, REFTEST_SIZE))
         given = iter(reftest.run(reftest.HARNESS, cases, WRITE, 1, text=TEXT))
-        return [slot if slot is not None else next(given) for slot in slots]
+        return [dict(slot if slot is not None else next(given), timing=timing) for slot in slots]
 
 
 def same(allowed, answer):
@@ -1031,6 +1162,7 @@ class Test:
         self.result_indices = []  # registration order, independent of completion order
         self.harness = None    # harness or host failure, separate from subtest failures
         self.complete = False
+        self.timing = []       # what says that the system's time decided the run (corpus.timing_of)
 
 
 def run(shell, test):
@@ -1058,6 +1190,7 @@ def run_page(shell, test, url):
         output, error = process.stdout, process.stderr
         returncode = process.returncode
         note_verify(error)
+        test.timing = corpus.timing_of(error)
         if returncode == TIMED_OUT:
             test.harness = "TIMEOUT"
             returncode = None
@@ -1065,6 +1198,7 @@ def run_page(shell, test, url):
         test.harness = "TIMEOUT"
         output = text_of(expired.stdout)
         error = text_of(expired.stderr)
+        test.timing = [BACKSTOPPED]
 
     results = {}
     # A report is one line. JSON leaves U+2028 and the other separators that splitlines() breaks at unescaped in its
@@ -1105,13 +1239,17 @@ XML_ERROR = ": XML Parsing Error: "
 
 
 def crash(shell, test):
-    """Runs a crashtest, which passes if the page loads and the shell exits without failing. A document that is not
-    well-formed fails a run of the shell, but it loads as its parse error, which is all that a crashtest asks of it."""
+    """Runs a crashtest, which passes if the page loads and the shell exits without failing. The page is done once it
+    has loaded and rendered and its root no longer has the class test-wait, as wptrunner waits for a crashtest, whatever
+    timers or animations it leaves running. A document that is not well-formed fails a run of the shell, but it loads as
+    its parse error, which is all that a crashtest asks of it."""
     try:
         # A crashtest may load testharness.js, which reports through the vendor reporter as a testharness page does,
         # instead of waiting out its own timeout.
-        process = SHELLS.run(shell, deadline_options(test) + ["--html", url_of(test.path)], test.timeout)
+        process = SHELLS.run(shell, deadline_options(test) + ["--capture-wait", capture_wait("test-wait"), "--wait",
+                                                              "--html", url_of(test.path)], test.timeout)
         note_verify(process.stderr)
+        test.timing = corpus.timing_of(process.stderr)
         diagnostics = process.stderr.strip().splitlines()
         if process.returncode == TIMED_OUT:
             test.harness = "TIMEOUT"
@@ -1119,6 +1257,7 @@ def crash(shell, test):
             test.harness = "CRASH: " + failure_of(process.stderr, process.returncode, last=False)
     except subprocess.TimeoutExpired:
         test.harness = "TIMEOUT"
+        test.timing = [BACKSTOPPED]
     test.complete = test.harness is None
     test.result_indices = [0]
     test.results = [("PASS" if test.complete else "FAIL", "loads without crashing", test.harness)]
@@ -1179,6 +1318,73 @@ def passed_tests(record):
     return sum(1 for status, _, _ in record.get("tests") or [] if status == "PASS")
 
 
+def message_of(failure):
+    """Returns what a failure says without the status that leads it, as "TIMEOUT" or "FAIL: message" has, since a
+    case's line gives the status (corpus.case_line)."""
+    word, colon, message = failure.partition(": ")
+    if word.isupper() and (colon or word == failure):
+        return message
+    return failure
+
+
+def status_of(record):
+    """Returns how a file ended: OK if it completed, and otherwise the status that its harness or its render gave, as
+    TIMEOUT or ERROR, without the message."""
+    if record["complete"]:
+        return "OK"
+    return (record["harness"] or "INCOMPLETE").split(":")[0]
+
+
+# How many times a run that says timing decided it runs again (corpus.timing_of).
+TIMING_TRIES = 2
+
+
+def listed_timing(name):
+    """Returns true if timing.txt lists the page, or its file: a page that we expect to pass but whose result depends on
+    timing."""
+    return DATA.timing.get(name, DATA.timing.get(page_of(name))) is not None
+
+
+def timing_of_result(result):
+    """Returns what a test's result says of timing deciding it: a Test's, or a reftest's answers'."""
+    if isinstance(result, Test):
+        return result.timing
+    return [line for answer in result for line in answer.get("timing", ())]
+
+
+def timed_detail(detail, result):
+    """Returns a case's detail, with what says that timing decided its first run (corpus.timing_of)."""
+    timing = list(dict.fromkeys(timing_of_result(result)))
+    if not timing:
+        return detail
+    return "%s%stiming: %s" % (detail, "; " if detail else "", "; ".join(timing))
+
+
+def narrow(test, name, match):
+    """Returns `test` with only the subtests that `match` selects (corpus.selected)."""
+    chosen = [at for at, index in enumerate(test.result_indices)
+              if corpus.selected("%s:%d" % (name, index), match)]
+    test.result_indices = [test.result_indices[at] for at in chosen]
+    test.results = [test.results[at] for at in chosen]
+    return test
+
+
+def test_try(test, recorded):
+    """Returns a testharness or crash test's run as an outcome that Results compare: (passed, count, status), as the
+    run's line counts them. A file that registers nothing counts as one test, unless the errata excuse it (`recorded`)
+    and it did not finish."""
+    finished = test.complete and test.harness is None
+    count = len(test.results) or int(finished or not recorded)
+    passed = sum(status == "PASS" for status, _, _ in test.results)
+    return passed, count, "OK" if finished else (test.harness or "INCOMPLETE").split(":")[0]
+
+
+def reftest_try(path, answers):
+    """Returns a reftest's run as an outcome that Results compare: (passed, count, status)."""
+    failure = next((a["status"] for a in answers if a["status"]), "")
+    return int(reftest_outcome(path, answers) == "pass"), 1, failure.split(":")[0] if failure else "OK"
+
+
 def rate(counts):
     """Returns the percentage of the tests in `counts` that passed."""
     return 100.0 * counts["passed"] / counts["tests"] if counts["tests"] else 100.0
@@ -1189,8 +1395,6 @@ def main():
     ap = corpus.arguments(SHELL, WPT)
     ap.add_argument("suite", nargs="?", default="css", choices=sorted(SUITES),
                     help="the suite to run (default: css)")
-    ap.add_argument("--failures", action="store_true",
-                    help="name every assertion that did not pass, and why")
     ap.add_argument("--first-errors", action="store_true",
                     help="print a separate table with the first file or test failure per module")
     ap.add_argument("--write", metavar="DIR",
@@ -1227,8 +1431,6 @@ def main():
     if args.renderer != "cpu":
         SETUP.extend(["--renderer", args.renderer])
     FUZZY_OVERRIDES = corpus.read_fuzzy_overrides(FUZZY_FILE)
-    # A run that names tests wants their answers.
-    args.failures = args.failures or bool(args.match)
 
     for path, entries in ((DEFERRED_FILE, DEFERRED), (CUT_FILE, CUT), (SKIP_FILE, SKIP)):
         missing = [name for name in sorted(entries) if not os.path.exists(os.path.join(args.tests, name))]
@@ -1259,11 +1461,11 @@ def main():
         return 0
 
     corpus.require(args.binary, "%s-wpt" % args.suite)
+    MEMORY.start()
     records = {}
     modules = collections.defaultdict(collections.Counter)
     first_failure = {}
     reftests = collections.Counter()
-    looked = []
     seen = set()
     # The reftests that are rendered. They run in the same pool as every other test.
     rendered = {name for path, name, kind in found if kind == REFTEST and renderable(path)}
@@ -1271,98 +1473,128 @@ def main():
         corpus.require(reftest.HARNESS, "%s-wpt" % args.suite)
     progress = Progress(sum(kind != REFTEST or name in rendered for _, name, kind in found))
     out = progress.write
+    # A file is a case, whose tests are counted, and which ended as its harness says. The errata record where WPT is
+    # wrong, and the failures that they do not record are counted in the scoreboard.
+    results = corpus.Results(args, DATA, requires_errata=False, width=width, out=out)
     durations = read_durations()
     took = {}
     # The slowest tests run first, by their last run. A test that has not run is assumed to take the typical time.
     typical = sorted(durations.values())[len(durations) // 2] if durations else 0
     order = sorted(found, key=lambda entry: -durations.get(entry[1], typical))
+    def attempt(path, name, kind):
+        if kind == REFTEST:
+            return compare_reftest(args.binary, path)
+        return (run if kind == TESTHARNESS else crash)(args.binary, Test(path, name[len(page_of(name)):]))
+
+    run_order = [(path, name, kind) for path, name, kind in order if kind != REFTEST or name in rendered]
+    first = {}
     with concurrent.futures.ThreadPoolExecutor(args.jobs) as pool:
         running = {}
-        for path, name, kind in order:
-            if kind == REFTEST and name not in rendered:
-                continue
-            if kind == REFTEST:
-                running[name] = pool.submit(timed, took, name, compare_reftest, args.binary, path)
-            else:
-                running[name] = pool.submit(timed, took, name, run if kind == TESTHARNESS else crash,
-                                            args.binary, Test(path, name[len(page_of(name)):]))
+        for path, name, kind in run_order:
+            running[name] = pool.submit(timed, took, name, attempt, path, name, kind)
             running[name].add_done_callback(lambda _, name=name: progress.finished(name))
-        for path, name, kind in found:
-            module = module_of(name)
-            answers = running[name].result() if kind == REFTEST and name in running else None
-            if answers is not None:
-                seen.add(name)
-                outcome = reftest_outcome(path, answers)
-                passed = outcome == "pass"
-                recorded = name in ERRATA
-                if passed and recorded:
-                    looked.append((name, "agrees now; drop the entry"))
-                ok = int(passed or (recorded and not args.raw))
-                failure = next((a["status"] for a in answers if a["status"]), "")
-                modules[module].update(files=1, completed=not failure, excused=0, tests=1, passed=ok)
-                records[name] = {"complete": not failure, "reftest": outcome, "harness": failure or None}
-                if not passed:
-                    first_failure.setdefault(module, name + ": " + (failure or "reftest does not match"))
-                if args.verbose or (args.failures and not passed):
-                    out(("%s %3d/%-3d reftest %s" % (name.ljust(width), ok, 1, failure)).rstrip())
-                continue
+        first = {name: future.result() for name, future in running.items()}
+    # A page that we expect to pass but whose result depends on timing (timing.txt), and whose run says that timing
+    # decided it (corpus.timing_of), runs again, with fewer at once so that load decides less, until a run says nothing
+    # of timing or the tries run out, and counts its best try (corpus.Results.case). Any other page's result is the
+    # result of its one run: the clock that it runs on decides nothing by load, so a page that reaches the deadline on
+    # the system's clock waits for what never comes, and another try would only take as long again.
+    tries = collections.defaultdict(list)
+    timed_out = [entry for entry in run_order
+                 if listed_timing(entry[1]) and timing_of_result(first[entry[1]])]
+    jobs = args.jobs
+    for _ in range(TIMING_TRIES):
+        if not timed_out:
+            break
+        jobs = max(1, jobs // 4)
+        with concurrent.futures.ThreadPoolExecutor(jobs) as pool:
+            again = {entry[1]: pool.submit(attempt, *entry) for entry in timed_out}
+            for name, future in again.items():
+                tries[name].append(future.result())
+        timed_out = [entry for entry in timed_out if timing_of_result(tries[entry[1]][-1])]
+    # A case that we expect to pass but whose result depends on timing is recorded as its best try.
+    kinds = {name: (path, kind) for path, name, kind in run_order}
+    for name in tries:
+        path, kind = kinds[name]
+
+        def outcome(result):
             if kind == REFTEST:
-                reftests[module] += 1
-                seen.add(name)
-                if args.verbose:
-                    out("%s   -/-   reftest, not rendered" % name.ljust(width))
-                continue
-            test = running[name].result()
-            chosen = [at for at, index in enumerate(test.result_indices)
-                      if corpus.selected("%s:%d" % (name, index), args.match)]
-            test.result_indices = [test.result_indices[at] for at in chosen]
-            test.results = [test.results[at] for at in chosen]
+                passed, count, status = reftest_try(path, result)
+            else:
+                passed, count, status = test_try(narrow(result, name, args.match), False)
+            return status == "OK", passed / count if count else 1.0
 
-            keys = ["%s:%d" % (name, i) for i in test.result_indices]
-            seen.update([name] + keys)
-            ok = 0
-            for key, (status, _, _) in zip(keys, test.results):
-                recorded = key in ERRATA
-                if status == "PASS" and recorded:
-                    looked.append((key, "agrees now; drop the entry"))
-                ok += status == "PASS" or (recorded and not args.raw)
-            finished = test.complete and test.harness is None
-            excused = not finished and name in ERRATA and not args.raw
-            if finished and name in ERRATA:
-                looked.append((name, "completes now; drop the entry"))
-            # A file that registered nothing counts as one test, which passes if it finished.
-            count = len(test.results)
-            if count == 0 and not excused:
-                count = 1
-                ok = int(finished)
-            modules[module].update(files=1, completed=finished, excused=excused, tests=count,
-                                   passed=ok)
-            records[name] = {"complete": finished, "excused": excused, "harness": test.harness,
-                             "tests": test.results}
-
-            failure = summary(test, name, args.raw)
-            if failure:
-                first_failure.setdefault(module, name + ": " + failure)
-
+        first[name] = max([first[name]] + tries[name], key=outcome)
+    for path, name, kind in found:
+        module = module_of(name)
+        answers = first.get(name) if kind == REFTEST else None
+        if answers is not None:
+            seen.add(name)
+            outcome = reftest_outcome(path, answers)
+            passed = outcome == "pass"
+            recorded = name in ERRATA
+            if passed and recorded:
+                results.look("%s agrees now; drop the entry" % name)
+            ok = int(passed or (recorded and not args.raw))
+            failure = next((a["status"] for a in answers if a["status"]), "")
+            modules[module].update(files=1, completed=not failure, excused=0, tests=1, passed=ok)
+            records[name] = {"complete": not failure, "reftest": outcome, "harness": failure or None}
+            if not passed:
+                first_failure.setdefault(module, name + ": " + (failure or "reftest does not match"))
+            results.case(name, int(passed), status=status_of(records[name]), part=module, excused=ok - int(passed),
+                         detail=timed_detail(message_of(failure) if failure else "" if passed else
+                                             "reftest does not match", answers),
+                         lines=["recorded: " + ERRATA[name]] if recorded and args.verbose else [],
+                         tries=[reftest_try(path, tried) for tried in tries[name]])
+            continue
+        if kind == REFTEST:
+            reftests[module] += 1
+            seen.add(name)
             if args.verbose:
-                for key in [name] + keys:
-                    if key in ERRATA:
-                        out("%s\n    %s" % (key, ERRATA[key]))
+                out("%s   -/-   NOTRUN: reftest not rendered" % name.ljust(width))
+            continue
+        test = narrow(first[name], name, args.match)
 
-            known = sum(1 for k in ERRATA
-                        if k == name
-                        or (k.startswith(name + ":") and corpus.selected(k, args.match)))
+        keys = ["%s:%d" % (name, i) for i in test.result_indices]
+        seen.update([name] + keys)
+        ok = 0
+        for key, (status, _, _) in zip(keys, test.results):
+            recorded = key in ERRATA
+            if status == "PASS" and recorded:
+                results.look("%s agrees now; drop the entry" % key)
+            ok += status == "PASS" or (recorded and not args.raw)
+        finished = test.complete and test.harness is None
+        excused = not finished and name in ERRATA and not args.raw
+        if finished and name in ERRATA:
+            results.look("%s completes now; drop the entry" % name)
+        # A file that registered nothing counts as one test, which passes if it finished.
+        count = len(test.results)
+        if count == 0 and not excused:
+            count = 1
+            ok = int(finished)
+        modules[module].update(files=1, completed=finished, excused=excused, tests=count,
+                               passed=ok)
+        records[name] = {"complete": finished, "excused": excused, "harness": test.harness,
+                         "tests": test.results}
 
-            if args.verbose or args.failures:
-                out(("%s %3d/%-3d %s" % (name.ljust(width), ok, count,
-                                          summary(test, name, args.raw)
-                                          or ("(%d recorded)" % known if known else ""))).rstrip())
-            if args.failures:
-                for index, (status, subtest, message) in zip(test.result_indices, test.results):
-                    if status != "PASS":
-                        out("    %-7s %-5s %s" % (status, ":%d" % index, subtest))
-                        if message:
-                            out("                  %s" % message)
+        failure = summary(test, name, args.raw)
+        if failure:
+            first_failure.setdefault(module, name + ": " + failure)
+
+        # Below the file's line, each subtest that did not pass, and with --verbose each entry that excuses one.
+        lines = []
+        for index, (status, subtest, message) in zip(test.result_indices, test.results):
+            if status != "PASS":
+                lines.append("%-7s %-5s %s" % (status, ":%d" % index, subtest))
+                if message:
+                    lines.append("              %s" % message)
+        if args.verbose:
+            lines += ["recorded: %s: %s" % (key, ERRATA[key]) for key in [name] + keys if key in ERRATA]
+        raw = passed_tests(records[name])
+        results.case(name, raw, count, status=status_of(records[name]), part=module, excused=ok - raw,
+                     detail=timed_detail(message_of(failure), test), lines=lines,
+                     tries=[test_try(narrow(tried, name, args.match), name in ERRATA and not args.raw)
+                            for tried in tries[name]])
 
     SHELLS.close()
     if SHELLS.stuck:
@@ -1405,19 +1637,14 @@ def main():
         print("\n%s  First error" % "Module".ljust(column))
         for module in sorted(first_failure):
             print("%s  %s" % (module.ljust(column), first_failure[module]))
-    # A file is a case, whose tests are counted.
-    corpus.outcomes(args, {name: passed_tests(records[name]) for _, name, _ in found if name in records})
     # A key that names no case cannot be told apart from a key whose case this run left out, so it is reported only by a
     # run that took every test of its directories.
     whole = args.all or not (args.match or args.module or left)
     if whole:
-        looked += [(key, "names no case") for key in ERRATA
-                   if key not in seen
-                   and any(corpus.names(key.split(":")[0], top) for top in directories)]
-    if looked:
-        print("\n%d to look at:" % len(looked))
-        for key, why in looked:
-            print("  %-44s %s" % (key, why))
+        for key in ERRATA:
+            if key not in seen and any(corpus.names(key.split(":")[0], top) for top in directories):
+                results.look("%s names no case" % key)
+    status = results.finish(table=False)
     if args.verify:
         print("\n%d page(s) whose render failed a check" % len(verify_failures))
         for page in sorted(verify_failures):
@@ -1430,7 +1657,7 @@ def main():
         table = {module: score(counts) for module, counts in modules.items() if counts["files"]}
         record_scoreboard(args.suite, table, args.module)
         print("\nThe scoreboard is written to %s." % os.path.relpath(SCOREBOARD_FILE, corpus.ROOT))
-    return 0
+    return status
 
 if __name__ == "__main__":
     # A failure's message quotes what a page wrote, which the console's own encoding may not hold.

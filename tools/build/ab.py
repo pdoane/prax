@@ -1,6 +1,7 @@
 """The base of an A/B comparison, which `./dev.sh suite --ab` and `./dev.sh bench ab` share: a commit, or a directory
 of sources (a worktree, or a copy of the tree made before a change, for a base that is not a commit). The base's
-harnesses are built in Release from its own sources, beside this checkout's third_party.
+harnesses are built from its own sources, beside this checkout's third_party, as the build that they compare with is:
+the suites' build, with its assertions, for a suite, and Release for the benchmarks.
 """
 
 import filecmp
@@ -141,13 +142,14 @@ class Base:
             return commit_sources(self.sha)
         return sync(self.directory, ["/third_party", "/build*", "/.git", "/perf", "/_cache"])
 
-    def harnesses(self, targets):
-        """Returns the directory that holds the base's harnesses `targets`, in Release, and the targets that the base's
-        build does not have, such as a harness that a later commit added or that needs a tool the base's build did not
-        find. A commit's harnesses are kept by commit, so they are built once; the targets it lacks are kept beside
+    def harnesses(self, targets, mode):
+        """Returns the directory that holds the base's harnesses `targets`, built as the build `mode` (build.MODES) is,
+        so that they compare with the working tree's harnesses of that build, and the targets that the base's build does
+        not have, such as a harness that a later commit added or that needs a tool the base's build did not find. A
+        commit's harnesses are kept by commit and build, so they are built once; the targets it lacks are kept beside
         them, in `absent-targets`. A directory's files can change, so its harnesses are built each time, and only what
         differs is rebuilt. Each harness comes with its resources, which it reads from <harness>.resources beside it."""
-        bin = os.path.join(build.AB, "bin", self.sha or "directory")
+        bin = os.path.join(build.AB, "bin", mode.name, self.sha or "directory")
         absent_file = os.path.join(bin, "absent-targets")
         # The list of absent targets is written last, once every harness and its resources are in place, so a
         # directory without it was left partway and is built again.
@@ -156,8 +158,9 @@ class Base:
                 absent = set(f.read().split())
             if all(target in absent or os.path.exists(dev.executable(bin, target)) for target in targets):
                 return bin, sorted(absent & set(targets))
-        directory = os.path.join(build.AB, "build")
-        build.configure(self.sources(), directory, "Release", out=sys.stderr)
+        directory = os.path.join(build.AB, "build-" + mode.name)
+        build.configure(self.sources(), directory, mode.build_type, mode.flags, out=sys.stderr,
+                        entries=mode.cache_entries())
         present = build.build_targets(directory)
         built = [target for target in targets if target in present]
         if built:
@@ -179,17 +182,18 @@ class Base:
             f.write("\n".join(absent))
         return bin, absent
 
-    def compile(self, directory, build_type, targets, log=None):
-        """Builds `targets` of the base's sources into `directory`, of `build_type`. With `log`, the build writes to
-        that file and says only where it failed."""
+    def compile(self, directory, mode, targets, log=None):
+        """Builds `targets` of the base's sources into `directory`, as the build `mode` (build.MODES) is. With `log`,
+        the build writes to that file and says only where it failed."""
         sources = self.sources()
         command = ["cmake", "--build", directory] + [part for target in targets for part in ("--target", target)]
+        settings = dict(build_type=mode.build_type, flags=mode.flags, entries=mode.cache_entries())
         if log is None:
-            build.configure(sources, directory, build_type, out=sys.stderr)
+            build.configure(sources, directory, out=sys.stderr, **settings)
             dev.run(command, stdout=sys.stderr)
             return
         with open(log, "w") as out:
-            build.configure(sources, directory, build_type, out=out)
+            build.configure(sources, directory, out=out, **settings)
             status = dev.run(command, check=False, stdout=out, stderr=out)
         if status != 0:
             with open(log) as f:

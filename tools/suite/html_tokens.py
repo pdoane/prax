@@ -105,12 +105,13 @@ def found(got):
     return (coalesced(got["tokens"]), got["errors"])
 
 
-def show(case, why, got, cut):
-    print("  %-22s %-42s %s" % (case.key, case.label[:42], why))
-    print("      state %s   input %s" % (case.state, json.dumps(case.input)[:cut]))
-    if got is not None:
-        print("      ours  %s" % json.dumps(found(got))[:cut])
-        print("      suite %s" % json.dumps((case.tokens, case.errors))[:cut])
+def show(case, got, cut):
+    """Returns the lines that tell how a case differs: what it tests, its state and input, and our tokens beside the
+    suite's."""
+    return [case.label,
+            "state %s   input %s" % (case.state, json.dumps(case.input)[:cut]),
+            "ours  %s" % json.dumps(found(got))[:cut],
+            "suite %s" % json.dumps((case.tokens, case.errors))[:cut]]
 
 
 def main():

@@ -2,9 +2,10 @@
 
 A runner reads its own corpus and compares its own result shapes, but the mechanism around that is shared. A case has
 a key, and `--match` runs the subset whose keys match. A harness answers a batch of framed cases with one line of JSON
-for each case. Every case either agrees or is recorded in the suite's errata, and a result that differs is printed
-beside the expected result. The corpus, the comparison and the printing of one case belong to the runner that owns the
-corpus. What the engine decides about the cases, and the scores, are the suite's data (Data).
+for each case. The corpus, the comparison and the lines that tell how a case differs belong to the runner that owns the
+corpus. Everything else that a run reports, the same in every suite, belongs to its Results: each case's line, the
+errata's account, the rows and the scoreboard, the outcomes that --json writes and --against compares, and what is to
+be looked at. What the engine decides about the cases, and the scores, are the suite's data (Data).
 """
 
 import argparse
@@ -30,6 +31,15 @@ SLOWDOWN = float(os.environ.get("PR_SLOWDOWN", "1"))
 
 # The suffix of an executable's file name.
 EXECUTABLE = ".exe" if os.name == "nt" else ""
+
+
+def shown_path(path):
+    """Returns `path` as a run shows it: relative to the checkout, or absolute where no relative path reaches it, as
+    on another drive."""
+    try:
+        return os.path.relpath(path, ROOT)
+    except ValueError:
+        return os.path.abspath(path)
 
 
 def binary(name, build=BUILD):
@@ -224,10 +234,13 @@ class Data:
     - fuzzy.txt and render.txt, in a suite that compares renders: the fuzzy ranges that judge a case in place of the
       suite's own limits, each with why the engine's render differs from the reference and why that is not an error
       (read_fuzzy_overrides), and the fonts and settings that the suite renders with.
+    - timing.txt: the cases that we expect to pass but whose result depends on timing, each with why. A run that takes
+      such a case's result on more than one try counts the best of them (Results.case), where a case that is not listed
+      and whose tries differ fails the run.
 
-    The errata, cut, deferred and skip lists are in the errata's form (read_errata), and a list that would be empty is
-    absent. A key of a list names a case, or a file, which covers every case of the file. A plain run leaves out the
-    cut, deferred and skipped cases, and a run narrowed by --match runs them as any other."""
+    The errata, cut, deferred, skip and timing lists are in the errata's form (read_errata), and a list that would be
+    empty is absent. A key of a list names a case, or a file, which covers every case of the file. A plain run leaves
+    out the cut, deferred and skipped cases, and a run narrowed by --match runs them as any other."""
 
     def __init__(self, name):
         self.name = name
@@ -236,6 +249,7 @@ class Data:
         self.cut = read_errata(self.path("cut.txt"))
         self.deferred = read_errata(self.path("deferred.txt"))
         self.skip = read_errata(self.path("skip.txt"))
+        self.timing = read_errata(self.path("timing.txt"))
         self.fuzzy = read_fuzzy_overrides(self.path("fuzzy.txt"))
 
     def path(self, name):
@@ -268,6 +282,7 @@ class Data:
         files = {file_of(key) for key in keys}
         return [(name, key) for name, entries in (("errata", self.errata), ("cut", self.cut),
                                                   ("deferred", self.deferred), ("skip", self.skip),
+                                                  ("timing", self.timing),
                                                   ("fuzzy", self.fuzzy))
                 for key in sorted(entries) if key not in keys and key not in files]
 
@@ -312,7 +327,8 @@ def arguments(binary, tests):
     ap.add_argument("--binary", default=binary, help="the harness the cases run through")
     ap.add_argument("--tests", default=tests, help="the corpus")
     ap.add_argument("--match", metavar="GLOB", help=MATCH_HELP)
-    ap.add_argument("--verbose", action="store_true", help="print every recorded difference")
+    ap.add_argument("--verbose", action="store_true", help="print every case, and each entry that excuses one")
+    ap.add_argument("--failures", action="store_true", help="print every case that fails, and how")
     ap.add_argument("--list", action="store_true", help="count the corpus and run nothing")
     ap.add_argument("--shaper", choices=["default", "harfbuzz", "kb", "coretext", "simple"],
                     help="the shaper the harness sets text with, lib/text's default unless named; a run with one "
@@ -395,31 +411,42 @@ def answers(command, framed, count):
     return [json.loads(line) for line in lines]
 
 
-def outcomes(args, passed):
-    """Writes the run's outcomes, `passed`, the number of tests that each case passed by its key, if --json asks. A
-    case is one test, unless the runner counts the tests of a file as WPT does. If --against names another run's
-    outcomes, prints each case that passes more or fewer tests than there, and how many tests the run gained and lost.
-    The two runs are taken to have selected the same cases."""
+def outcomes(args, passed, statuses=None):
+    """Writes the run's outcomes, if --json asks: `passed`, the number of tests that each case passed by its key, and
+    `statuses`, if the runner gives them, how each case ended, by its key, such as OK, or TIMEOUT for a file whose
+    harness never finished. A case is one test, unless the runner counts the tests of a file as WPT does. Each case is
+    written as its number, or as {"passed": number, "status": status} where it has a status. If --against names
+    another run's outcomes, prints each case that passes more or fewer tests than there, and how many tests the run
+    gained and lost, then each case whose status changed, which a case can do without its passes changing. The two runs
+    are taken to have selected the same cases."""
+    statuses = statuses or {}
     if args.json:
+        written = {key: {"passed": count, "status": statuses[key]} if key in statuses else count
+                   for key, count in passed.items()}
         with open(args.json, "w", encoding="utf-8", newline="\n") as f:
-            json.dump(passed, f, indent=1, sort_keys=True)
+            json.dump(written, f, indent=1, sort_keys=True)
             f.write("\n")
     if not args.against:
         return
     with open(args.against, encoding="utf-8") as f:
         base = json.load(f)
+    base_passed = {key: value["passed"] if isinstance(value, dict) else value for key, value in base.items()}
+    base_statuses = {key: value["status"] for key, value in base.items() if isinstance(value, dict)}
     changed = []
-    for key in sorted(set(base) | set(passed)):
-        was, now = base.get(key), passed.get(key)
+    for key in sorted(set(base_passed) | set(passed)):
+        was, now = base_passed.get(key), passed.get(key)
         if was != now:
             changed.append((key, was, now))
     lost = [c for c in changed if (c[2] or 0) < (c[1] or 0)]
     gained = [c for c in changed if (c[2] or 0) > (c[1] or 0)]
     moved = [c for c in changed if c not in lost and c not in gained]
-    print("\nAgainst %s: %d case(s) lost %d test(s), %d case(s) gained %d test(s)"
-          % (os.path.relpath(args.against, ROOT), len(lost), sum((w or 0) - (n or 0) for _, w, n in lost),
-             len(gained), sum((n or 0) - (w or 0) for _, w, n in gained)))
-    for title, rows in (("lost", lost), ("gained", gained), ("moved", moved)):
+    # A base that recorded no statuses, as a runner from before statuses writes, compares by passes alone.
+    restatused = [(key, base_statuses[key], statuses[key]) for key in sorted(set(base_statuses) & set(statuses))
+                  if base_statuses[key] != statuses[key]]
+    print("\nAgainst %s: %d case(s) lost %d test(s), %d case(s) gained %d test(s), %d case(s) changed status"
+          % (shown_path(args.against), len(lost), sum((w or 0) - (n or 0) for _, w, n in lost),
+             len(gained), sum((n or 0) - (w or 0) for _, w, n in gained), len(restatused)))
+    for title, rows in (("lost", lost), ("gained", gained), ("moved", moved), ("status", restatused)):
         for key, was, now in rows:
             print("  %-7s %s  %s -> %s" % (title, key, "-" if was is None else was, "-" if now is None else now))
 
@@ -447,90 +474,178 @@ def check_cases(args, data, parts, batch=1):
         with concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count() or 4) as pool:
             return [got for part in pool.map(run, range(0, len(chosen), batch)) for got in part]
 
-    def show(case, why, got, cut):
+    def show(_, got, cut):
         detail = got["detail"] if got else ""
         if cut is not None and len(detail) > cut:
             detail = detail[:cut] + "..."
-        print("  %s  %s%s" % (case.key.ljust(width), why, "\n      " + detail if detail else ""))
+        return [detail] if detail else []
 
     return compare(parts, args, data, width, answer, lambda case, got: got["ok"], show)
 
 
-def report_parts(args, data, parts):
-    """Prints a row for each part of a run, from (name, agreed, recorded, count). A row shows the cases that count,
-    which are those that agree and those that the errata record, out of the part's cases, and their rate. Writes the
-    parts as the suite's scoreboard if the run is a plain run of the default build."""
-    column = max(len(name) for name, _, _, _ in parts)
-    counts = ["%d/%d" % (agreed + known, count) for _, agreed, known, count in parts]
-    width = max(len(text) for text in counts)
-    for (name, agreed, known, count), text in zip(parts, counts):
-        print("%s  %s  %5.1f%%%s" % (name.ljust(column), text.rjust(width), pass_rate(agreed + known, count),
-                                     "   (%d recorded)" % known if known else ""))
-    if writes_scoreboard(args):
-        data.write_scoreboard([(name, agreed + known, count) for name, agreed, known, count in parts])
+# What starts each line that a harness writes on stderr to say that the system's time decided some of a run, as a
+# deadline on the system's clock does (tools/shell/page_host.cpp). A runner runs such a case again, with fewer at once,
+# and its Results compare the tries (Results.case).
+TIMING = "timing: "
+
+
+def timing_of(stderr):
+    """Returns what a harness's stderr says of the system's time deciding the run, a line for each time, without the
+    prefix (TIMING)."""
+    return [line[len(TIMING):] for line in (stderr or "").splitlines() if line.startswith(TIMING)]
+
+
+# How a case's run ended, whatever it passed: it ran to its end, which is OK, or the reason that it did not, in a word,
+# as TIMEOUT, CRASH or ERROR, as the runner's harness tells it.
+OK = "OK"
+
+
+def case_line(key, passed, count, status=OK, detail="", width=0):
+    """Returns the line that reports a case, the same in every suite: its key, the tests that it passed of its tests,
+    and how it ended, followed by what went wrong. A case that ran to its end is PASS, or FAIL if it failed a test, and
+    any other case is its status."""
+    word = status if status != OK else "FAIL" if passed < count else "PASS"
+    return ("%s  %3d/%-3d  %s%s" % (key.ljust(width), passed, count, word, ": " + detail if detail else "")).rstrip()
+
+
+class Results:
+    """The cases of a run, as every runner reports them. The runner owns its corpus, its harness and what agreeing
+    means, and gives each case to the run's results (case): its key, the tests that it passed of its tests, which are
+    one unless the runner counts a file's tests as WPT does, its status, and what went wrong, in a line and in lines
+    below it. The results keep the rest, the same for every suite:
+
+    - The errata's account. An entry for a case, or for its file, excuses each test that the case fails, and the tests
+      that pass or are excused count. A case that passes despite its entry, and an entry that names no case of `keys`,
+      are to be looked at. In a suite that `requires_errata`, a case that fails without an entry is too; a suite whose
+      errata record only where the corpus is wrong, such as WPT, counts its failures in its scoreboard instead.
+    - The output. --verbose prints every case's line, and --failures, or --match, every failing case's line with its
+      lines below. Each failing case to look at is listed at the end, the first SHOWN unless the run is narrowed.
+    - The run's rows, by part of the suite, and its scoreboard, which a plain run of the default build writes.
+    - The run's outcomes, each case's passes and status, which --json writes and --against compares (outcomes).
+
+    The run fails if anything is to be looked at."""
+
+    def __init__(self, args, data, keys=None, requires_errata=True, width=0, out=print):
+        self.out = out           # prints a case's lines, as a runner that shows its progress prints around it
+        self.args = args
+        self.data = data
+        self.keys = keys
+        self.requires_errata = requires_errata
+        self.width = width
+        self.passed = {}
+        self.statuses = {}
+        self.parts = {}          # by part, in the order first met: [tests that count, tests, cases recorded]
+        self.failing = []        # (line, lines) of each case that fails without an entry, in a suite that requires one
+        self.problems = []       # what else is to be looked at
+        self.left = 0            # the cases that the run was asked for and leaves out, as cut, deferred or skipped
+        self.failed = 0          # the cases that failed a test or did not run to their end
+        self.shown = bool(args.verbose or getattr(args, "failures", False) or args.match)
+
+    def case(self, key, passed, count=1, status=OK, detail="", lines=(), part="", excused=None, label="", tries=()):
+        """Records a case and returns the tests of it that count: those that it passed and those whose failure the
+        errata excuse. An entry for the case or its file excuses every test that it fails, unless `excused` gives the
+        number, for a runner whose entries excuse some of a case's tests, as WPT's entries for subtests do; that runner
+        looks at its own entries (look).
+
+        `tries` are the outcomes, each (passed, count, status), of the case's runs after the first, which a runner makes
+        when timing may have decided the first (timing). If they differ from the first, a case that timing.txt lists
+        counts the best of them, and any other case is to be looked at, since its result is not the engine's alone."""
+        if tries and any(tried != (passed, count, status) for tried in tries):
+            outcomes = [(passed, count, status)] + list(tries)
+            if self.data.timing.get(key, self.data.timing.get(file_of(key))) is not None:
+                passed, count, status = max(outcomes, key=lambda o: (o[2] == OK, o[0] / o[1] if o[1] else 1.0))
+            else:
+                self.problems.append("%s differs between runs (%s); fix it, or list it in timing.txt with why"
+                                     % (key, ", ".join("%d/%d %s" % outcome for outcome in outcomes)))
+        failed = passed < count or status != OK
+        self.failed += 1 if failed else 0
+        reason = None
+        if excused is None:
+            reason = self.data.recorded(key)
+            excused = count - passed if failed and reason is not None else 0
+            if reason is not None and not failed:
+                self.problems.append("%s agrees now; drop its entry" % key)
+        self.passed[key] = passed
+        self.statuses[key] = status
+        tally = self.parts.setdefault(part, [0, 0, 0])
+        tally[0] += passed + excused
+        tally[1] += count
+        tally[2] += 1 if excused else 0
+        line = case_line(key, passed, count, status, detail, self.width)
+        if self.args.verbose or (failed and self.shown):
+            self.out(line)
+            for text in ([label] if label and self.args.verbose else []) + list(lines):
+                self.out("    " + text)
+            if reason is not None and excused and self.args.verbose:
+                self.out("    recorded: " + reason)
+        if failed and not excused and self.requires_errata:
+            self.failing.append((line, list(lines)))
+        return passed + excused
+
+    def look(self, text):
+        """Adds something to be looked at, which fails the run."""
+        self.problems.append(text)
+
+    def finish(self, rows=None, notes=(), table=True):
+        """Ends the run: prints its rows and a summary, writes its scoreboard and its outcomes, and lists what is to be
+        looked at. `rows`, a list of (part, tests that count, tests), replaces the rows of the parts that the cases
+        named, and `notes` follow them on the scoreboard. A runner with a table of its own passes `table` false, and
+        prints and records its rows itself. Returns the run's exit status."""
+        args = self.args
+        if table:
+            if rows is None:
+                rows = [(name, counted, count) for name, (counted, count, _) in self.parts.items()]
+            column = max(len(name) for name, _, _ in rows) if rows else 0
+            counts = ["%d/%d" % (counted, count) for _, counted, count in rows]
+            width = max(len(text) for text in counts) if counts else 0
+            for (name, counted, count), text in zip(rows, counts):
+                recorded = self.parts.get(name, [0, 0, 0])[2]
+                print("%s  %s  %5.1f%%%s" % (name.ljust(column), text.rjust(width), pass_rate(counted, count),
+                                             "   (%d recorded)" % recorded if recorded else ""))
+            for note in notes:
+                print(note)
+            if writes_scoreboard(args):
+                self.data.write_scoreboard(rows, notes)
+        recorded = sum(tally[2] for tally in self.parts.values())
+        print("\n%d cases: %d pass, %d fail and are recorded in the errata, %d fail without an entry%s"
+              % (len(self.passed), len(self.passed) - self.failed, recorded, self.failed - recorded,
+                 ", %d left out as cut, deferred or skipped" % self.left if self.left else ""))
+        outcomes(args, self.passed, self.statuses)
+        if self.failing and not self.shown:
+            print("\n%d failing without an entry in the errata:" % len(self.failing))
+            for line, lines in self.failing[:SHOWN]:
+                print("  " + line)
+                for text in lines:
+                    print("      " + text)
+            if len(self.failing) > SHOWN:
+                print("  ... and %d more; --failures prints each" % (len(self.failing) - SHOWN))
+        # A narrowed run cannot tell an entry that names no case from one whose case it left out.
+        if self.keys is not None and not args.match:
+            self.problems += ["%s names no case (%s)" % (key, kind) for kind, key in self.data.stale(self.keys)]
+        if self.problems:
+            print("\n%d to look at:" % len(self.problems))
+            for problem in self.problems:
+                print("  " + problem)
+        return int(bool(self.failing or self.problems))
 
 
 def compare(files, args, data, width, answer, agrees, show):
-    """Runs the cases of `files`, a list of (name, cases), that the run was asked for, with the suite's `data`. Prints
-    a row per file and a total, writes the scoreboard if the run is a plain run of the default build, and returns the
-    exit status. A case counts if it agrees or the errata record it.
-
-    A case has a `key` and a `label`. A verbose run prints the label beside a recorded case. `answer(name, batch)`
-    returns the harness's answer to each case of the batch. `agrees(case, got)` returns true if an answer is right.
-    `show(case, why, got, cut)` prints a case to look at, with `got` None if there is no answer worth printing. `width`
-    is the width of the key's column in that output.
-
-    Three things need a look, and any of them fails the run: a case that disagrees and has no entry, an entry whose case
-    agrees, and an entry that names no case."""
-    failures = []
-    totals = []
-    keys = set()
-    passed = {}
-    left = 0
+    """Runs the cases of `files`, a list of (name, cases), that the run was asked for, with the suite's `data`, and
+    returns the run's exit status (Results). A case has a `key` and a `label`, which a verbose run prints.
+    `answer(name, batch)` returns the harness's answer to each case of the batch, `agrees(case, got)` returns true if an
+    answer is right, and `show(case, got, cut)` returns the lines that tell how a case that does not agree differs,
+    each cut at `cut` characters if it is not None. `width` is the width of the key's column."""
+    results = Results(args, data, keys={case.key for _, cases in files for case in cases}, width=width)
+    cut = clip(args.match)
     for name, cases in files:
-        keys.update(case.key for case in cases)
         batch = [case for case in cases if data.runs(case.key, args.match)]
-        left += sum(1 for case in cases if selected(case.key, args.match)) - len(batch)
+        results.left += sum(1 for case in cases if selected(case.key, args.match)) - len(batch)
         if not batch:
             continue
-
-        agreed = 0
-        known = 0
         for case, got in zip(batch, answer(name, batch)):
-            reason = data.recorded(case.key)
-            passed[case.key] = 1 if agrees(case, got) else 0
-            if passed[case.key]:
-                agreed += 1
-                if reason is not None:
-                    failures.append((case, "agrees now; drop the entry", None))
-            elif reason is None:
-                failures.append((case, "differs, and the corpus is not recorded as wrong", got))
-            else:
-                known += 1
-                if args.verbose:
-                    print("%s\n    %s" % (" ".join(filter(None, (case.key, case.label))), reason))
-        totals.append((name, agreed, known, len(batch)))
-
-    if not totals:
+            ok = agrees(case, got)
+            results.case(case.key, int(ok), lines=() if ok else show(case, got, cut), part=name,
+                         label=case.label or "")
+    if not results.parts:
         sys.exit("no cases matched %s" % args.match)
-
-    report_parts(args, data, totals)
-    agreed = sum(t[1] for t in totals)
-    recorded = sum(t[2] for t in totals)
-    count = sum(t[3] for t in totals)
-    print("\n%d cases, %d agreeing, %d recorded as the corpus getting it wrong%s"
-          % (count, agreed, recorded, ", %d left out as cut or deferred" % left if left else ""))
-    outcomes(args, passed)
-
-    # A narrowed run cannot tell a key that names no case from a key whose case it left out.
-    stale = [] if args.match else data.stale(keys)
-    if not failures and not stale:
-        return 0
-
-    print("\n%d to look at:" % (len(failures) + len(stale)))
-    for kind, key in stale:
-        print("  %s names no case (%s)" % (key.ljust(width), kind))
-    cut = clip(args.match)
-    for case, why, got in failures if args.match else failures[:SHOWN]:
-        show(case, why, got, cut)
-    return 1
+    return results.finish()

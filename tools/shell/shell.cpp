@@ -8,7 +8,9 @@
 // order. --resolve <host> <address> resolves a host, or each subdomain of `*.<name>`, to an address, as a hosts file
 // does, and --ca <pem> trusts a certificate authority besides the system's. --cache <directory> keeps the HTTP cache on
 // disk in the directory, where it outlives the run, as a browser's does. Each implies --network. --virtual-time runs
-// the pages on a virtual clock that advances only when they wait (PageHost::useVirtualTime).
+// the pages on a virtual clock that advances only when they wait (PageHost::useVirtualTime). --server-control <port>
+// asks the control of a server on the loopback at the port whether the pages' requests sleep on purpose, so that the
+// virtual clock moves for those sleeps alone (PageHost::setServerControl).
 //
 // --screenshot writes the next page's rendering as a PNG once the run ends (PageHost::run), as WPT's reftests capture
 // it: in the viewport, on white, with lib/draw's cpu renderer, or the renderer that --renderer names, on the platform's
@@ -27,6 +29,9 @@
 // (PageHost::setCaptureWait). When a screenshot or comparison is taken, a page whose root still has the class has not
 // finished, which fails the run. --capture-wait <script> runs that script in each page that is captured in place of the
 // protocol, once the page has loaded, and it calls stopRun() once the page is ready, as wptrunner's test-wait.js does.
+// In a run served with --serve, a run's --capture-wait holds for that run alone. --wait, before a page, has it wait
+// until it is ready as a captured page does, and captures nothing, as WPT's crashtests wait. A page that waits and
+// never becomes ready ends the run as its timeout does.
 //
 // --print, before the next page, renders the page and its references printed, as WPT's print reftests capture them
 // (web-platform-tests docs, "Print Reftests"): each page of the printed document is rendered as its own image, of its
@@ -68,9 +73,11 @@
 // PrDomAgentOptions::restyleThreads describes: 0, the default, means one thread per core, and 1 means the event loop's
 // thread alone. It must come before any page.
 //
-// --timeout stops waiting for the pages once that many milliseconds of the system's time have passed. The run then
-// exits with status 124, as a run stopped by its deadline does, without answering what is asked of the pages. What the
-// pages wrote is kept, which a run killed at its deadline may lose.
+// --timeout stops the pages once that many milliseconds of the system's time have passed since it, interrupting a
+// script that runs then, or, with --virtual-time, once they would wait on the virtual clock past a multiple of that
+// many milliseconds, as pages that wait on timers without end do (PageHost::setTimeout). The run then exits with status
+// 124, as a run stopped by its deadline does, and answers what is asked of the pages as they stand. What the pages
+// wrote is kept, which a run killed at its deadline may lose.
 //
 // --serve serves runs read from stdin in one process, which saves a process start for each run (serve).
 //
@@ -360,6 +367,7 @@ struct Request {
     std::string svg;                // empty for none
     Media media;
     bool timings;                   // true if the run reports how long each phase of the document's writing took
+    bool wait;                      // true if the page must be ready, as a captured page is, by the run's end (--wait)
 
     // Whether the page and its references are rendered printed (--print), and the pages of each that are rendered then,
     // or no ranges for all of them.
@@ -520,6 +528,7 @@ struct Run {
     std::string svg;
     Media media = page_host::Media_Print;
     bool print = false;             // true if the next page is rendered printed (--print)
+    bool wait = false;              // true if the next page waits until it is ready, as a captured page does (--wait)
 
     // The pages that --pages selects of the next document named, and of each reference named since the last page, or no
     // ranges for all of them.
@@ -585,7 +594,7 @@ void parse(PageHost& host, const std::vector<std::string>& args, Run& run, Rende
             option == "--timeout" || option == "--restyle-threads" || option == "--shaper" || option == "--media" ||
             option == "--audio" || option == "--audio-write" || option == "--hinting" || option == "--ca" ||
             option == "--capture-wait" || option == "--cache" || option == "--pdf" || option == "--svg" ||
-            option == "--pages" || option == "--page-size" || option == "--page-margin";
+            option == "--server-control" || option == "--pages" || option == "--page-size" || option == "--page-margin";
         if ((takesOne && i + 1 >= args.size()) || (takesTwo && i + 2 >= args.size())) {
             fprintf(stderr, "%s needs %s\n", option.c_str(), takesTwo ? "two arguments" : "an argument");
             run.ok = false;
@@ -614,6 +623,8 @@ void parse(PageHost& host, const std::vector<std::string>& args, Run& run, Rende
             run.timings = true;
         } else if (option == "--print") {
             run.print = true;
+        } else if (option == "--wait") {
+            run.wait = true;
         } else if (!takesOne) {
             run.ok = host.runFile(option.c_str());
         } else {
@@ -670,11 +681,21 @@ void parse(PageHost& host, const std::vector<std::string>& args, Run& run, Rende
                     fprintf(stderr, "--restyle-threads takes a count of threads\n");
                 else
                     host.setRestyleThreads(uint32_t(threads));
+            } else if (option == "--server-control") {
+                char* end = nullptr;
+                unsigned long port = strtoul(value.c_str(), &end, 10);
+                run.ok = end != value.c_str() && *end == '\0' && port != 0 && port <= 65535;
+                if (!run.ok)
+                    fprintf(stderr, "--server-control takes a port\n");
+                else if (!(run.ok = host.setServerControl(uint16_t(port))))
+                    fprintf(stderr, "--server-control: no control answers at port %lu\n", port);
             } else if (option == "--timeout") {
                 char* end = nullptr;
                 run.timeout = strtod(value.c_str(), &end);
                 run.ok = end != value.c_str() && *end == '\0' && run.timeout >= 0;
-                if (!run.ok)
+                if (run.ok)
+                    host.setTimeout(run.timeout);
+                else
                     fprintf(stderr, "--timeout takes milliseconds\n");
             } else if (option == "--viewport") {
                 unsigned width = 0;
@@ -714,7 +735,7 @@ void parse(PageHost& host, const std::vector<std::string>& args, Run& run, Rende
                 // A page that is captured, or compared with references, waits until it is ready, as a reftest does.
                 page_host::Capture capture = page_host::Capture_None;
                 if (!run.screenshot.empty() || !run.references.empty() || !run.write.empty() || !run.pdf.empty() ||
-                        !run.svg.empty() || run.print)
+                        !run.svg.empty() || run.print || run.wait)
                     capture = page_host::Capture_Wait;
                 Request request{
                     .page = run.ok ? host.load(page, capture) : nullptr,
@@ -724,6 +745,7 @@ void parse(PageHost& host, const std::vector<std::string>& args, Run& run, Rende
                     .svg = run.svg,
                     .media = run.media,
                     .timings = run.timings,
+                    .wait = run.wait,
                     .print = run.print,
                     .pages = run.pages,
                     .referencePages = run.referencePages,
@@ -741,6 +763,7 @@ void parse(PageHost& host, const std::vector<std::string>& args, Run& run, Rende
                 run.write.clear();
                 run.pdf.clear();
                 run.svg.clear();
+                run.wait = false;
                 run.media = page_host::Media_Print;
                 run.print = false;
                 run.pages.clear();
@@ -757,7 +780,8 @@ constexpr int kTimedOut = 124;
 // page fails or cannot be answered, or kTimedOut.
 int finish(PageHost& host, Run& run, Renderers& renderers) {
     if (run.ok) {
-        page_host::RunEnd end = host.run(run.timeout);
+        // The deadline started with --timeout, so that it covers the pages' load too.
+        page_host::RunEnd end = host.run();
         if (end == page_host::RunEnd_TimedOut) {
             fprintf(stderr, "the pages did not end the run in %g ms\n", run.timeout);
             // What the pages reached is still answered, because a page that never ends the run has no other record of
@@ -775,6 +799,14 @@ int finish(PageHost& host, Run& run, Renderers& renderers) {
             run.ok = run.ok && PageHost::pageOk(request.page);
             for (const Page* reference : request.references)
                 run.ok = run.ok && PageHost::pageOk(reference);
+        }
+        // A page that waits and never becomes ready ends as a page that passes its deadline does, since nothing that is
+        // left could make it ready.
+        for (const Request& request : run.requests) {
+            if (run.ok && request.wait && !PageHost::stopped(request.page)) {
+                fprintf(stderr, "%s: the page never became ready\n", PageHost::pageName(request.page).c_str());
+                return kTimedOut;
+            }
         }
     }
     if (run.verify)
@@ -796,6 +828,8 @@ int serve(PageHost& host, const Run& settings, Renderers& renderers) {
     if (capture == nullptr)
         return 1;
     HarnessCase request = {};
+    // A run's --capture-wait holds for that run alone.
+    const std::string captureWait = host.captureWaitSource();
     while (harnessReadCase(&request)) {
         Run run;
         run.verify = settings.verify;
@@ -815,6 +849,8 @@ int serve(PageHost& host, const Run& settings, Renderers& renderers) {
         }
         harnessCaptureBegin(capture);
         host.reset();
+        host.setCaptureWaitSource(captureWait);
+        host.setTimeout(run.timeout);
         host.setViewport(run.viewport);
         parse(host, args, run, renderers);
         int status = run.ok ? finish(host, run, renderers) : 1;
@@ -836,10 +872,10 @@ int main(int argc, char** argv) {
     harnessStreamsBinary();
     if (argc < 2) {
         fprintf(stderr, "usage: pr_shell [--network] [--resolve <host> <address>]... [--ca <pem>]... [--cache <directory>] "
-            "[--prelude <script>] [--font <file>] [--capture-wait <script>] [--virtual-time] [--verify] [--no-scripts] [--dark] "
+            "[--prelude <script>] [--font <file>] [--capture-wait <script>] [--virtual-time] [--server-control <port>] [--verify] [--no-scripts] [--dark] "
             "[--viewport WxH] [--pixel-ratio <target pixels per px>] [--renderer <name>] [--page-size WxH] "
             "[--page-margin <px>] [--timeout <ms>] [--restyle-threads <n>] [--shaper <name>] [--hinting none|light|full] "
-            "[--media <name>] [--serve] [--timings] <script | [--print] [--screenshot <png>] [[--pages <ranges>] "
+            "[--media <name>] [--serve] [--timings] <script | [--print] [--wait] [--screenshot <png>] [[--pages <ranges>] "
             "--reference <page>]... [--write <stem>] [--pdf <pdf>] [--svg <svg>] [--pages <ranges>] "
             "--html <url | page.html | capture.json>>...\n");
         return 2;

@@ -3,6 +3,7 @@
 import hashlib
 import os
 import sys
+import time
 
 from tools import dev
 from tools.build import ab
@@ -19,20 +20,27 @@ USAGE = {
 ./dev.sh suite <name> --ab [--base REF | --base-dir DIR] [args...]
     a suite's run, with each case that passes more or fewer tests than at the base: REF, which is HEAD with changes in
     the tree and HEAD^ without, or the sources in DIR. A commit's harnesses are built once, and its results are kept
-    by commit, so a base commit runs once""",
+    by commit, so a base commit runs once
+Each run says how long it took, and an A/B run how long the base's run took, when the base runs.""",
 }
 
 
-def run(suite, args, env, cwd=dev.ROOT, check=True, out=None):
-    """Runs the suite's runner with `args`, from `cwd`, with the harnesses of the build that `env` names."""
+def run(suite, args, env, cwd=dev.ROOT, check=True, out=None, label=None):
+    """Runs the suite's runner with `args`, from `cwd`, with the harnesses of the build that `env` names, and then says
+    how long the run took, as `label` names it, the suite's name by default."""
     command = [sys.executable, "-m", suite.runner[0], *suite.runner[1:], *args]
-    return dev.run(command, cwd=cwd, env=env, check=check, stdout=out, stderr=out)
+    started = time.monotonic()
+    try:
+        return dev.run(command, cwd=cwd, env=env, check=check, stdout=out, stderr=out)
+    finally:
+        print("--- %s took %.0f s" % (label or suite.name, time.monotonic() - started), flush=True)
 
 
-def compare(suite, args, env):
-    """The working tree's run of the suite, with each case that passes more or fewer tests than the base's. The base
-    runs with every harness of the suite built from the base, and with the base's runner. A base commit's results are
-    kept by commit and by selection, which a run's other arguments may narrow, so the base runs once."""
+def compare(suite, args, mode):
+    """The working tree's run of the suite on the build `mode`, with each case that passes more or fewer tests than the
+    base's. The base runs with every harness of the suite built from the base as `mode` is, assertions and all, and
+    with the base's runner. A base commit's results are kept by commit, build and selection, which a run's other
+    arguments may narrow, so the base runs once."""
     ref = directory = None
     rest = []
     arguments = iter(args)
@@ -45,9 +53,10 @@ def compare(suite, args, env):
             rest.append(argument)
     base = ab.Base(ref, directory)
     selection = hashlib.sha1(" ".join(rest).encode()).hexdigest()[:12]
-    results = os.path.join(builds.AB, "suites", base.sha or "directory", "%s-%s.json" % (suite.name, selection))
+    results = os.path.join(builds.AB, "suites", mode.name, base.sha or "directory",
+                           "%s-%s.json" % (suite.name, selection))
     if base.directory or not os.path.exists(results):
-        harnesses, absent = base.harnesses(suite.harnesses)
+        harnesses, absent = base.harnesses(suite.harnesses, mode)
         if absent:
             dev.fail("the base's build has no %s, which the suite runs" % ", ".join(absent))
         runner = base.runner()
@@ -58,19 +67,20 @@ def compare(suite, args, env):
         # so that a base whose results look wrong can be read.
         partial = results + ".partial"
         with open(results + ".log", "w") as log:
-            run(suite, ["--json", partial, *rest], {"PR_BUILD": harnesses}, cwd=runner, check=False, out=log)
+            run(suite, ["--json", partial, *rest], dict(mode.environment(), PR_BUILD=harnesses), cwd=runner,
+                check=False, out=log, label="%s at %s" % (suite.name, base.label))
         if not os.path.exists(partial):
             with open(results + ".log") as log:
                 print("".join(log.readlines()[-20:]), end="")
             dev.fail("the base's run of %s wrote no results" % suite.name)
         os.replace(partial, results)
-    run(suite, ["--against", results, *rest], env)
+    run(suite, ["--against", results, *rest], mode.environment())
 
 
 def suite(argv):
     dev.usage(argv, USAGE["suite"])
-    mode = argv.pop(0) if argv[:1] in (["debug"], ["asan"]) else None
-    env = builds.build(mode).environment()
+    mode = builds.build(argv.pop(0) if argv[:1] in (["debug"], ["asan"]) else None)
+    env = mode.environment()
     if not argv:
         # Every suite runs, whichever fail, and the run fails after them if any did.
         failed = []
@@ -94,6 +104,6 @@ def suite(argv):
     args = argv[1:]
     checkouts.fetch(*chosen.checkouts)
     if "--ab" in args:
-        compare(chosen, [arg for arg in args if arg != "--ab"], env)
+        compare(chosen, [arg for arg in args if arg != "--ab"], mode)
     else:
         run(chosen, args, env)

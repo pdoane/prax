@@ -10,6 +10,7 @@ import struct
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 import zlib
 
@@ -456,6 +457,20 @@ class HtmlHostTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(result.stdout.splitlines(), ["second", "first"])
 
+    def test_pages_that_fetch_without_end_while_the_clock_stands_end_as_a_deadline_ends_them(self):
+        # Each fetch follows the last at once, so the virtual clock never moves, and the run ends at a count of fetches
+        # rather than at the deadline on the system's clock.
+        with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / "pages").mkdir()
+            (Path(directory) / "pages" / "empty.txt").write_text("")
+            start = time.monotonic()
+            result = self.run_page(Path(directory),
+                                   "<!doctype html><script>function poll() { fetch('empty.txt').then(poll); }\n"
+                                   "poll();</script>", "--virtual-time", "--timeout", "60000")
+            self.assertEqual(result.returncode, 124, result.stderr)
+            self.assertIn("fetches while the virtual clock stood", result.stderr)
+            self.assertLess(time.monotonic() - start, 10)
+
     def test_a_javascript_url_decodes_invalid_utf8_as_replacement_characters(self):
         with tempfile.TemporaryDirectory() as directory:
             result = self.run_page(Path(directory),
@@ -529,6 +544,47 @@ class HtmlHostTests(unittest.TestCase):
                                    "port2.postMessage(1);\n"
                                    "print('running');</script>", "--timeout", "300")
             self.assertEqual(result.stdout.splitlines(), ["running"])
+
+    def test_the_timeout_interrupts_a_script_that_never_returns(self):
+        with tempfile.TemporaryDirectory() as directory:
+            started = time.monotonic()
+            result = self.run_page(Path(directory), "<!doctype html><script>print('running'); for (;;) {}</script>",
+                                   "--timeout", "300")
+            self.assertEqual(result.returncode, 124, result.stderr)
+            self.assertEqual(result.stdout.splitlines(), ["running"])
+            self.assertLess(time.monotonic() - started, 5)
+
+    def test_the_timeout_ends_a_virtual_clock_that_would_pass_it(self):
+        # A page that polls for what never comes, as a test that waits on a condition does, stops once its wait would
+        # take the virtual clock past a multiple of its deadline of ten seconds, without spending ten seconds of the
+        # system's.
+        with tempfile.TemporaryDirectory() as directory:
+            started = time.monotonic()
+            result = self.run_page(Path(directory),
+                                   "<!doctype html><script>let ticks = 0;\n"
+                                   "function poll() {\n"
+                                   "  if (++ticks % 10 == 0) print(performance.now());\n"
+                                   "  setTimeout(poll, 100);\n"
+                                   "}\n"
+                                   "poll();</script>", "--virtual-time", "--timeout", "10000")
+            self.assertEqual(result.returncode, 124, result.stderr)
+            times = [float(line) for line in result.stdout.splitlines()]
+            self.assertTrue(times and 10000 < max(times) <= 100000, times)
+            self.assertLess(time.monotonic() - started, 5)
+
+    def test_a_virtual_clock_moves_for_a_task_that_waits_for_it(self):
+        # A script that loops until time has passed ends, and the timer that falls due meanwhile runs after it, while a
+        # task that reads the clock a few times sees it stand.
+        with tempfile.TemporaryDirectory() as directory:
+            result = self.run_page(Path(directory),
+                                   "<!doctype html><script>\n"
+                                   "setTimeout(() => print('timer', performance.now() >= 50), 20);\n"
+                                   "const start = performance.now();\n"
+                                   "print('stands', performance.now() == start);\n"
+                                   "while (performance.now() - start < 50) {}\n"
+                                   "print('waited');</script>", "--virtual-time", "--timeout", "10000")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout.splitlines(), ["stands true", "waited", "timer true"])
 
     def test_a_page_exits_with_a_performance_observer_still_registered(self):
         with tempfile.TemporaryDirectory() as directory:

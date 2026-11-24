@@ -104,18 +104,14 @@ def main():
         return corpus.listing([(part, files) for part, files in chosen])
     corpus.require(args.binary, "webp")
 
-    rows = []
-    outcomes = {}
-    failures = 0
+    outcome = corpus.Results(args, suite, keys=set(keys))
     totals = {"files": 0, "frames": 0, "bytes": 0, "planes": 0, "hidden": 0, "refused": 0}
     spent = {"prax": 0.0, "libwebp": 0.0}
     for part, files in chosen:
         results = answers(args.binary, [path for _, path in files], args.time)
-        passed = 0
         for (key, _), result in zip(files, results):
-            ok = passes(result)
-            reason = suite.recorded(key)
-            outcomes[key] = 1 if ok else 0
+            outcome.case(key, int(passes(result)), status="CRASH" if result["status"] == "Crash" else corpus.OK,
+                         detail=json.dumps(result), part=part)
             totals["files"] += 1
             totals["frames"] += result["frames"]
             totals["bytes"] += result["bytes"]
@@ -127,41 +123,16 @@ def main():
                     spent[name] += result["time"][name]
                 print("%s  lib/webp %.3f ms, libwebp %.3f ms" % (key, result["time"]["prax"],
                                                                   result["time"]["libwebp"]))
-            if ok:
-                passed += 1
-                if reason is not None:
-                    failures += 1
-                    print("%s passes now; drop its erratum" % key)
-            elif reason is not None:
-                passed += 1
-                if args.verbose:
-                    print("%s\n    %s" % (key, reason))
-            else:
-                failures += 1
-                print("%s  %s" % (key, json.dumps(result)))
-            if args.match:
-                print("%s  %s" % (key, json.dumps(result)))
-        if files:
-            rows.append((part, passed, len(files)))
-            print("%s  %d/%d" % (part, passed, len(files)))
 
-    notes = ["Of the %d files, %d decode to %d frames, whose %d bytes of Rgba8 are compared, and %d are refused by both" %
+    notes =["Of the %d files, %d decode to %d frames, whose %d bytes of Rgba8 are compared, and %d are refused by both" %
              (totals["files"], totals["files"] - totals["refused"], totals["frames"], totals["bytes"],
               totals["refused"]),
              "decoders. %d still lossy images' planes are compared. Of the images that say they have no alpha, %d" %
              (totals["planes"], totals["hidden"]),
              "pixels decode to alpha other than opaque in libwebp, which lib/webp takes as opaque."]
-    print("\n".join(notes))
     if args.time:
         print("In all: lib/webp %.1f ms, libwebp %.1f ms" % (spent["prax"], spent["libwebp"]))
-    print("\n%d/%d pass or are recorded; %d fail" % (sum(r[1] for r in rows), sum(r[2] for r in rows), failures))
-    corpus.outcomes(args, outcomes)
-    if corpus.writes_scoreboard(args):
-        suite.write_scoreboard(rows, notes)
-    stale = [] if args.match else suite.stale(set(keys))
-    for kind, key in stale:
-        print("%s names no case (%s)" % (key, kind))
-    return int(bool(failures or stale))
+    return outcome.finish(notes=notes)
 
 
 if __name__ == "__main__":

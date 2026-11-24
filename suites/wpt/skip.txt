@@ -15,7 +15,19 @@ dom/nodes/NodeList-static-length-getter-tampered-indexOf-3.html
     a JIT's benchmark: each reads a NodeList's items about a hundred million times, to check that a JIT's cached
     length sees a tampered getter. The interpreter takes most of the deadline, and passes when it finishes.
 
+fetch/api/crashtests/huge-fetch.any.js
+    a denial of service: the server sends an 8 GB body, which a run moves through the loopback and the fetch holds
+    until it fails, to show that a browser survives a body that it does not read.
+
+html/select/options-length-too-large.html
+html/semantics/tabular-data/processing-model-1/span-limits.html
+    a denial of service at the limits that guard against it: a select grown to 100,000 options, and tables whose cells
+    span 65,534 rows and more, which take a run seconds of DOM work and layout to check a clamp.
+
 html/semantics/embedded-content/the-img-element/list-of-available-images-does-not-coalesce-in-flight-requests.sub.tentative.html
     a result that varies between runs: the test usually fails and occasionally passes. whatwg/html#7005 is open on
     whether an in-flight image request enters the list of available images, and the test says itself that no browser
     keeps two requests for the same image apart, as it expects.
+
+media-source/mediasource-appendbuffer-quota-exceeded.html
+    a denial of service: it appends media until the source buffer's quota refuses more, so its cost is the quota.

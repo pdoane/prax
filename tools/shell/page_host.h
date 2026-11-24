@@ -153,8 +153,16 @@ public:
     // Runs the pages on a virtual clock, in milliseconds, which starts at the same time in every run and advances only
     // when the pages wait. A wait for a timer or a frame takes no time, and the animation frames that nothing observes
     // are skipped (PrHtmlAnimationFrames_Observed). Without this call, pages run on the system's clock. The clock
-    // stands while a fetch waits for the network.
+    // stands while a fetch waits for the network, unless a server's control says that the request waits on purpose
+    // (setServerControl).
     void useVirtualTime();
+
+    // Asks the control of a server on the loopback, at `port`, what the requests of the pages' connections to it do, so
+    // that the virtual clock (useVirtualTime) moves while each request that the pages wait for sleeps on purpose, by as
+    // long as the sleep asks, and wakes a sleep once the clock reaches its end. What the pages do then depends on the
+    // server's sleeps and not on how long the server takes (tools/suite/wpt/wpt_serve.py, Control). Returns false if
+    // the platform cannot find the pages' connections.
+    bool setServerControl(uint16_t port);
 
     // Renders `output`, a memory output that its host paces (PrAudioMemoryPace_Host), in step with the virtual clock:
     // each time the clock moves, the output renders the frames up to it, on the host's thread. So what the pages play
@@ -213,6 +221,10 @@ public:
     // tells it that it has rendered, and is ready two frames after the class goes.
     bool setCaptureWait(const std::filesystem::path& script);
 
+    // The source of the capture's wait (setCaptureWait), which a host that serves runs restores for each run.
+    const std::string& captureWaitSource() const;
+    void setCaptureWaitSource(const std::string& source);
+
     // Returns the context that runs scripts outside any page, with the shell's functions: print(), readFile(path),
     // counters(), loadResource(url), stopRun() and sendInput(events). A page's context has them too, and sendInput
     // sends a page input through the view that presents it.
@@ -240,9 +252,16 @@ public:
     // Runs the pages until every page that load loaded has stopped the run (stopRun()), or until nothing is left that
     // could run: no job, task or timer, no animation event ahead, and no fetch that a rendering update would start. A
     // page loaded with Capture_Wait stops the run once it is ready to be captured, and one that never becomes ready
-    // ends the run once nothing could make it so. With a `timeout` of zero or more, it stops once that many
-    // milliseconds of the system's time have passed.
+    // ends the run once nothing could make it so. With a `timeout` of zero or more, it starts the run's deadline
+    // (setTimeout) first; otherwise the deadline that setTimeout started holds, if any.
     RunEnd run(double timeout = -1);
+
+    // Starts the deadline of the run, `timeout` milliseconds from now, or ends it if `timeout` is negative. Past the
+    // deadline the pages stop: once that many milliseconds of the system's time have passed, interrupting a script that
+    // is running then, even as the pages load, or once they would wait on a virtual clock (useVirtualTime) past a
+    // multiple of that many milliseconds from where it stands now, as pages that wait on timers without end do. A run
+    // that ends there ends RunEnd_TimedOut. The deadline ends with the run (reset).
+    void setTimeout(double timeout);
 
     // Sends the page a host's input through the view that presents it, at once, and runs the jobs that it queues. The
     // page's layout is brought up to date first, as a browser does before it hit tests an event. A position is in the
@@ -260,6 +279,9 @@ public:
     // Returns true if the page is done in the sense that a reftest uses: its root element no longer has the class
     // `reftest-wait`.
     static bool finished(const Page* page);
+
+    // Returns true if the page stopped the run (stopRun()), as a page loaded with Capture_Wait does once it is ready.
+    static bool stopped(const Page* page);
 
     // Paints the page into `list`, in CSS pixels, as a viewport of `viewport` CSS pixels shows it in `media`, on
     // `display` for a user with `preferences`. Returns false if the page has no rendering.

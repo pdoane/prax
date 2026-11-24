@@ -116,14 +116,13 @@ def answer(binary, batch):
     return corpus.answers([binary], framed, len(batch))
 
 
-def show(case, why, got, cut):
-    print("  %-24s %s   scripting %s" % (case.key, why, case.scripting))
-    print("      input    %s" % json.dumps(case.data)[:cut])
+def show(case, got, cut):
+    """Returns the lines that tell how a case differs: its input and context, and our document beside the corpus's."""
+    lines = ["scripting %s" % case.scripting, "input    %s" % json.dumps(case.data)[:cut]]
     if case.context is not None:
-        print("      context  %s" % case.context)
-    if got is not None:
-        print("      ours   %s" % json.dumps(got["document"])[:cut])
-        print("      corpus %s" % json.dumps(case.document)[:cut])
+        lines.append("context  %s" % case.context)
+    return lines + ["ours     %s" % json.dumps(got["document"])[:cut],
+                    "corpus   %s" % json.dumps(case.document)[:cut]]
 
 
 def main():

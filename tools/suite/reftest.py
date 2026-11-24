@@ -430,7 +430,6 @@ def within(answer, limits):
 def main():
     ap = corpus.arguments(HARNESS, None)
     ap.add_argument("suite", choices=list(SUITES), help="which suite to run")
-    ap.add_argument("--failures", action="store_true", help="list every case that fails")
     ap.add_argument("--write", metavar="DIR", help="write each render, its reference and their difference here")
     ap.add_argument("--jobs", type=int, default=os.cpu_count() or 4,
                     help="how many harnesses run at once")
@@ -449,13 +448,11 @@ def main():
     if suite.capture is not None:
         suite.capture(cases, args.jobs)
 
-    modules = {}
-    failing = []
-    unneeded = []
-    recorded_cases = 0
-    # Each entry that the run reaches, and whether any of its cases fails.
+    # The suite's failures are counted, as a scoreboard counts them, and its errata record where the reference is wrong.
+    # An entry names a case or a file, and is stale once every case that it covers passes.
+    results = corpus.Results(args, data, keys={c.key for c in every}, requires_errata=False)
+    results.left = left
     entries = {}
-    outcomes = {}
     for case, answer in zip(cases, run(args.binary, cases, args.write, max(1, args.jobs),
                                    data.optional("render.txt"), corpus.text_backends(args))):
         ok = within(answer, suite.limits)
@@ -463,56 +460,28 @@ def main():
         override = data.fuzzy.get(case.key, data.fuzzy.get(corpus.file_of(case.key)))
         if override is not None:
             if ok:
-                unneeded.append(case.key)
+                results.look("%s passes within the suite's limits; drop its fuzzy override" % case.key)
             # A shift judges by the measure that lets the drawing move by a pixel (countShiftedDifferences).
             shifted = corpus.fuzzy_shift(override[0]) != 0
             largest = "shiftedMaxDifference" if shifted else "maxDifference"
             pixels = "shiftedDifferingPixels" if shifted else "differingPixels"
             ok = (answer["status"] == "" and largest in answer and corpus.within_fuzzy(
                 corpus.fuzzy_content_ranges(override[0]), answer[largest], answer[pixels]))
-        outcomes[case.key] = 1 if ok else 0
         entry = case.key if case.key in data.errata else corpus.file_of(case.key)
         recorded = entry in data.errata
         if recorded:
             entries[entry] = entries.get(entry, False) or not ok
-            recorded_cases += 1
-        counts = modules.setdefault(suite.module_of(case.key), [0, 0])
-        counts[0] += 1 if ok or recorded else 0
-        counts[1] += 1
-        if not ok and not recorded:
-            failing.append((case, answer))
-
-    rows = [(name, *counts) for name, counts in sorted(modules.items())]
-    total = ("TOTAL", sum(c[0] for c in modules.values()), sum(c[1] for c in modules.values()))
-    width = max(len(name) for name, _, _ in rows + [total])
-    for name, passed, count in rows + [total]:
-        print("%s  %5d/%d" % (name.ljust(width), passed, count))
-    print("\n%d of %d cases pass, %d of them recorded in the errata%s."
-          % (total[1], total[2], recorded_cases, "; %d left out as cut or deferred" % left if left else ""))
-    statuses = {}
-    for _, answer in failing:
-        if answer["status"]:
-            statuses[answer["status"]] = statuses.get(answer["status"], 0) + 1
-    for status, count in sorted(statuses.items()):
-        print("%d cases answered %s" % (count, status))
-    corpus.outcomes(args, outcomes)
-    if args.failures:
-        for case, answer in failing:
-            print("  %s  changed %.4f, content %.4f, mae %.3f, maxDifference %d, differingPixels %d, shifted %d/%d%s" % (
-                case.key, answer.get("changed", 1), answer.get("content", 1), answer.get("mae", 255),
-                answer.get("maxDifference", 255), answer.get("differingPixels", -1),
-                answer.get("shiftedMaxDifference", 255), answer.get("shiftedDifferingPixels", -1),
-                "  " + answer["status"] if answer["status"] else ""))
-    stale = ["%s passes; drop its entry" % key for key, fails in sorted(entries.items()) if not fails]
-    stale += ["%s passes within the suite's limits; drop its fuzzy override" % key for key in unneeded]
-    if args.match is None:
-        stale += ["%s names no case (%s)" % (key, kind) for kind, key in data.stale({c.key for c in every})]
-    for line in stale:
-        print("stale: " + line)
-    if corpus.writes_scoreboard(args):
-        data.write_scoreboard(rows)
-    return 1 if stale else 0
-
+        detail = ("changed %.4f, content %.4f, mae %.3f, maxDifference %d, differingPixels %d, shifted %d/%d" % (
+            answer.get("changed", 1), answer.get("content", 1), answer.get("mae", 255),
+            answer.get("maxDifference", 255), answer.get("differingPixels", -1),
+            answer.get("shiftedMaxDifference", 255), answer.get("shiftedDifferingPixels", -1)))
+        results.case(case.key, int(ok), status=answer["status"].upper() if answer["status"] else corpus.OK,
+                     detail=detail, part=suite.module_of(case.key), excused=int(recorded and not ok))
+    for entry, fails in sorted(entries.items()):
+        if not fails:
+            results.look("%s passes; drop its entry" % entry)
+    rows = [(name, counted, count) for name, (counted, count, _) in sorted(results.parts.items())]
+    return results.finish(rows=rows)
 
 if __name__ == "__main__":
     sys.exit(main())

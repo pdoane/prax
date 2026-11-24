@@ -133,7 +133,7 @@ def compare(args):
     fetch(names)
     build(harnesses(names))
     base = ab.Base(ref, directory)
-    base_bin, absent = base.harnesses(harnesses(names))
+    base_bin, absent = base.harnesses(harnesses(names), builds.MODES["release"])
     # A benchmark whose harness the base's build does not have, such as one that a later commit added, has nothing to
     # compare with.
     compared = []
@@ -254,7 +254,7 @@ def profile(argv):
     if ref:
         base = ab.Base(ref)
         directory = os.path.join(builds.AB, "profile")
-        base.compile(directory, "RelWithDebInfo", [harness], log=os.path.join(builds.AB, "profile.log"))
+        base.compile(directory, builds.MODES["default"], [harness], log=os.path.join(builds.AB, "profile.log"))
         base_binary = ["--base-binary", dev.executable(directory, harness)]
     dev.python("tools.bench.profile", "--binary", dev.executable(builds.DEFAULT, harness), *base_binary, *options,
                "--", *args)

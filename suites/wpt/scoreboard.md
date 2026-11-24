@@ -47,9 +47,9 @@ their rows; the diff of a change to it is what the change did.
 | css/CSS2/zindex                  |       31/31 |         31/31 |  100.0% |
 | css/CSS2/zorder                  |         1/1 |           0/1 |    0.0% |
 | css/WOFF2                        |     298/298 |       298/298 |  100.0% |
-| css/compositing                  |       81/81 |       212/233 |   90.9% |
+| css/compositing                  |       80/81 |       211/233 |   90.5% |
 | css/css-align                    |     296/296 |     4044/5364 |   75.3% |
-| css/css-anchor-position          |     521/526 |   10380/13918 |   74.5% |
+| css/css-anchor-position          |     520/526 |   10379/13918 |   74.5% |
 | css/css-animations               |     206/207 |     1195/1509 |   79.1% |
 | css/css-backgrounds              |     858/859 |     6363/6946 |   91.6% |
 | css/css-borders                  |     181/181 |     1424/1670 |   85.2% |
@@ -60,15 +60,15 @@ their rows; the diff of a change to it is what the change did.
 | css/css-color-adjust             |       36/36 |       169/191 |   88.4% |
 | css/css-color-hdr                |         4/4 |        66/116 |   56.8% |
 | css/css-conditional              |     466/467 |     2482/3459 |   71.7% |
-| css/css-contain                  |     572/583 |       605/973 |   62.1% |
+| css/css-contain                  |     571/583 |       604/973 |   62.0% |
 | css/css-content                  |       78/78 |       286/322 |   88.8% |
 | css/css-counter-styles           |     259/259 |       399/402 |   99.2% |
 | css/css-display                  |     249/249 |       551/776 |   71.0% |
 | css/css-easing                   |       14/14 |       104/158 |   65.8% |
 | css/css-env                      |       11/11 |         12/53 |   22.6% |
 | css/css-flexbox                  |   1412/1412 |     5366/5794 |   92.6% |
-| css/css-font-loading             |       32/32 |       180/249 |   72.2% |
-| css/css-fonts                    |     557/558 |     8457/9046 |   93.4% |
+| css/css-font-loading             |       31/32 |       179/249 |   71.8% |
+| css/css-fonts                    |     558/558 |     8457/9046 |   93.4% |
 | css/css-forced-color-adjust      |         4/4 |          9/14 |   64.2% |
 | css/css-forms                    |       23/23 |         64/81 |   79.0% |
 | css/css-gaps                     |     549/549 |     3646/4622 |   78.8% |
@@ -79,7 +79,7 @@ their rows; the diff of a change to it is what the change did.
 | css/css-inline                   |     251/251 |      727/1047 |   69.4% |
 | css/css-lists                    |     224/224 |     1056/1159 |   91.1% |
 | css/css-logical                  |       91/92 |     1192/1371 |   86.9% |
-| css/css-masking                  |     552/559 |     6377/6855 |   93.0% |
+| css/css-masking                  |     553/559 |     6377/6855 |   93.0% |
 | css/css-mixins                   |       55/55 |       173/603 |   28.6% |
 | css/css-motion-path              |         1/1 |           1/1 |  100.0% |
 | css/css-multicol                 |     717/717 |     1896/2228 |   85.0% |
@@ -88,11 +88,11 @@ their rows; the diff of a change to it is what the change did.
 | css/css-overscroll-behavior      |       11/12 |         84/96 |   87.5% |
 | css/css-page                     |     258/258 |       239/385 |   62.0% |
 | css/css-parser-api               |         1/1 |          5/71 |    7.0% |
-| css/css-position                 |     377/388 |     1657/1770 |   93.6% |
+| css/css-position                 |     376/388 |     1656/1770 |   93.5% |
 | css/css-properties-values-api    |     123/123 |      691/1393 |   49.6% |
 | css/css-pseudo                   |     339/342 |      739/1126 |   65.6% |
 | css/css-ruby                     |     178/178 |       118/247 |   47.7% |
-| css/css-scroll-anchoring         |       78/78 |         89/98 |   90.8% |
+| css/css-scroll-anchoring         |       77/78 |         88/98 |   89.7% |
 | css/css-scroll-snap              |     180/197 |       366/838 |   43.6% |
 | css/css-scrollbars               |       57/57 |        64/115 |   55.6% |
 | css/css-shadow                   |     203/203 |       335/480 |   69.7% |
@@ -105,12 +105,12 @@ their rows; the diff of a change to it is what the change did.
 | css/css-text                     |   1866/1877 |     4657/6185 |   75.2% |
 | css/css-text-decor               |     365/365 |     1404/1693 |   82.9% |
 | css/css-transforms               |     912/922 |     5593/6326 |   88.4% |
-| css/css-transitions              |     142/142 |     3183/3453 |   92.1% |
+| css/css-transitions              |     141/142 |     3183/3453 |   92.1% |
 | css/css-typed-om                 |     370/372 |    9289/12919 |   71.9% |
 | css/css-ui                       |   1076/1076 |     2741/2899 |   94.5% |
 | css/css-values                   |     512/512 |    5733/10374 |   55.2% |
 | css/css-variables                |     249/249 |       584/774 |   75.4% |
-| css/css-view-transitions         |     454/494 |     1195/1753 |   68.1% |
+| css/css-view-transitions         |     435/494 |     1176/1753 |   67.0% |
 | css/css-viewport                 |     135/137 |       525/700 |   75.0% |
 | css/css-will-change              |       53/53 |       186/221 |   84.1% |
 | css/css-writing-modes            |   1234/1234 |     1294/1555 |   83.2% |
@@ -121,19 +121,19 @@ their rows; the diff of a change to it is what the change did.
 | css/fill-stroke                  |       11/11 |       374/410 |   91.2% |
 | css/filter-effects               |     389/392 |     3149/3308 |   95.1% |
 | css/geometry                     |       28/28 |     1172/1203 |   97.4% |
-| css/mediaqueries                 |       94/94 |       444/478 |   92.8% |
+| css/mediaqueries                 |       94/94 |       443/478 |   92.6% |
 | css/motion                       |     148/148 |     4810/5061 |   95.0% |
 | css/printing                     |       31/31 |         20/31 |   64.5% |
 | css/selectors                    |     518/527 |     5780/6069 |   95.2% |
-| resize-observer                  |       37/39 |       105/135 |   77.7% |
+| resize-observer                  |       36/39 |       104/135 |   77.0% |
 | web-animations                   |         1/1 |       164/218 |   75.2% |
 | web-animations/animation-model   |       34/34 |     2195/2792 |   78.6% |
 | web-animations/animation-trigger |         3/3 |           0/3 |    0.0% |
 | web-animations/crashtests        |       39/39 |         39/39 |  100.0% |
 | web-animations/interfaces        |       46/47 |       702/868 |   80.8% |
 | web-animations/responsive        |       46/46 |        91/105 |   86.6% |
-| web-animations/timing-model      |       29/34 |       373/400 |   93.2% |
-| **total**                        | 32323/32476 | 176108/213990 |   82.2% |
+| web-animations/timing-model      |       30/34 |       378/404 |   93.5% |
+| **total**                        | 32299/32476 | 176086/213994 |   82.2% |
 
 ## dom
 
@@ -145,7 +145,7 @@ their rows; the diff of a change to it is what the change did.
 | dom/crashtests                   |       4/4 |           4/4 |  100.0% |
 | dom/events                       |   194/202 |       609/840 |   72.5% |
 | dom/lists                        |       5/5 |       187/189 |   98.9% |
-| dom/nodes                        |   400/404 |   14581/15295 |   95.3% |
+| dom/nodes                        |   396/404 |   14577/15295 |   95.3% |
 | dom/ranges                       |     72/72 |   44512/44706 |   99.5% |
 | dom/traversal                    |     18/18 |     1600/1608 |   99.5% |
 | domparsing                       |     46/46 |       259/597 |   43.3% |
@@ -164,11 +164,11 @@ their rows; the diff of a change to it is what the change did.
 | selection/bidi                   |       3/3 |         18/92 |   19.5% |
 | selection/caret                  |       7/7 |         13/31 |   41.9% |
 | selection/contenteditable        |     12/12 |        18/252 |    7.1% |
-| selection/crashtests             |     35/35 |         35/35 |  100.0% |
+| selection/crashtests             |     34/35 |         34/35 |   97.1% |
 | selection/shadow-dom             |     23/23 |        81/120 |   67.5% |
 | selection/textcontrols           |       7/9 |         27/75 |   36.0% |
 | shadow-dom                       |    98/100 |       675/788 |   85.6% |
-| shadow-dom/crashtests            |     25/25 |         25/25 |  100.0% |
+| shadow-dom/crashtests            |     24/25 |         24/25 |   96.0% |
 | shadow-dom/declarative           |     46/57 |      136/7791 |    1.7% |
 | shadow-dom/focus                 |     40/40 |       100/112 |   89.2% |
 | shadow-dom/focus-navigation      |     45/45 |         43/89 |   48.3% |
@@ -188,7 +188,7 @@ their rows; the diff of a change to it is what the change did.
 | uievents/textInput               |       5/7 |          7/22 |   31.8% |
 | webidl                           |       2/2 |       167/192 |   86.9% |
 | webidl/ecmascript-binding        |     42/43 |       238/314 |   75.7% |
-| **total**                        | 1677/1878 | 100199/115935 |   86.4% |
+| **total**                        | 1671/1878 | 100193/115935 |   86.4% |
 
 ## encoding
 
@@ -199,8 +199,8 @@ their rows; the diff of a change to it is what the change did.
 | encoding/legacy-mb-korean   |  227/435 | 213752/213960 |   99.9% |
 | encoding/legacy-mb-schinese |      4/4 |       660/660 |  100.0% |
 | encoding/legacy-mb-tchinese |  126/283 | 119248/119405 |   99.8% |
-| encoding/streams            |    12/14 |         1/113 |    0.8% |
-| **total**                   | 683/1268 | 589641/590432 |   99.8% |
+| encoding/streams            |    11/14 |         0/113 |    0.0% |
+| **total**                   | 682/1268 | 589640/590432 |   99.8% |
 
 ## html
 
@@ -218,9 +218,9 @@ their rows; the diff of a change to it is what the change did.
 | focus                                               |     17/43 |         10/51 |   19.6% |
 | gif                                                 |       1/1 |           0/1 |    0.0% |
 | html-ruby-extensions                                |     84/84 |          4/84 |    4.7% |
-| html/browsers                                       |   568/770 |      732/2347 |   31.1% |
-| html/canvas                                         | 2652/2876 |     1770/5247 |   33.7% |
-| html/dom                                            |   346/353 |   61546/66758 |   92.1% |
+| html/browsers                                       |   569/770 |      736/2352 |   31.2% |
+| html/canvas                                         | 2651/2876 |     1769/5247 |   33.7% |
+| html/dom                                            |   343/353 |   61538/66723 |   92.2% |
 | html/editing                                        |   126/254 |       527/846 |   62.2% |
 | html/embedded-content                               |       1/1 |           0/2 |    0.0% |
 | html/infrastructure                                 |   123/148 |      822/1135 |   72.4% |
@@ -228,14 +228,14 @@ their rows; the diff of a change to it is what the change did.
 | html/links                                          |       6/7 |           4/7 |   57.1% |
 | html/meta                                           |       0/1 |           0/1 |    0.0% |
 | html/obsolete                                       |     20/20 |         48/60 |   80.0% |
-| html/rendering                                      |   488/490 |   10938/11508 |   95.0% |
+| html/rendering                                      |   487/490 |   10938/11508 |   95.0% |
 | html/scripting                                      |       3/3 |           1/4 |   25.0% |
-| html/select                                         |       2/2 |           5/6 |   83.3% |
-| html/semantics                                      | 2555/2914 |   10867/20298 |   53.5% |
+| html/select                                         |       1/1 |           1/1 |  100.0% |
+| html/semantics                                      | 2549/2913 |   10863/20292 |   53.5% |
 | html/syntax                                         |   249/250 |     6683/6914 |   96.6% |
 | html/the-xhtml-syntax                               |     15/15 |   21368/25609 |   83.4% |
 | html/user-activation                                |     14/21 |         32/46 |   69.5% |
-| html/webappapis                                     |   298/329 |     2250/2881 |   78.0% |
+| html/webappapis                                     |   300/329 |     2251/2881 |   78.1% |
 | inert                                               |     25/29 |        53/112 |   47.3% |
 | png                                                 |       4/4 |           3/4 |   75.0% |
 | png/apng                                            |     29/29 |         10/29 |   34.4% |
@@ -246,7 +246,7 @@ their rows; the diff of a change to it is what the change did.
 | quirks/historical                                   |       2/2 |           2/2 |  100.0% |
 | quirks/text-decoration-doesnt-propagate-into-tables |       2/2 |           1/2 |   50.0% |
 | quirks/unitless-length                              |       6/6 |     4638/4819 |   96.2% |
-| requestidlecallback                                 |     18/20 |         48/57 |   84.2% |
+| requestidlecallback                                 |     19/20 |         50/58 |   86.2% |
 | webmessaging                                        |     43/47 |         56/64 |   87.5% |
 | webmessaging/broadcastchannel                       |      7/12 |          0/45 |    0.0% |
 | webmessaging/message-channels                       |     11/14 |         13/23 |   56.5% |
@@ -264,7 +264,7 @@ their rows; the diff of a change to it is what the change did.
 | workers/multi-globals                               |       1/1 |           0/1 |    0.0% |
 | workers/same-site-cookies                           |       6/6 |           0/6 |    0.0% |
 | workers/semantics                                   |     23/29 |          0/32 |    0.0% |
-| **total**                                           | 8419/9541 | 128735/157397 |   81.7% |
+| **total**                                           | 8411/9539 | 128725/157357 |   81.8% |
 
 ## infrastructure
 
@@ -290,107 +290,107 @@ their rows; the diff of a change to it is what the change did.
 |----------------------------|--------:|----------:|--------:|
 | mathml                     |     1/1 |     88/89 |   98.8% |
 | mathml/crashtests          | 114/114 |   114/114 |  100.0% |
-| mathml/presentation-markup | 305/305 | 1007/1047 |   96.1% |
-| mathml/relations           | 174/176 | 2067/2456 |   84.1% |
-| **total**                  | 594/596 | 3276/3706 |   88.3% |
+| mathml/presentation-markup | 305/305 | 1009/1047 |   96.3% |
+| mathml/relations           | 174/176 | 2194/2456 |   89.3% |
+| **total**                  | 594/596 | 3405/3706 |   91.8% |
 
 ## media-source
 
 | Module                         | Files |   Tests | Passing |
 |--------------------------------|------:|--------:|--------:|
-| media-source                   | 63/73 | 361/465 |   77.6% |
+| media-source                   | 62/72 | 361/464 |   77.8% |
 | media-source/dedicated-worker  |   4/7 |    1/58 |    1.7% |
 | media-source/mse-for-webcodecs |   0/3 |     0/3 |    0.0% |
-| **total**                      | 67/83 | 362/526 |   68.8% |
+| **total**                      | 66/82 | 362/525 |   68.9% |
 
 ## networking
 
-| Module                             |     Files |      Tests | Passing |
-|------------------------------------|----------:|-----------:|--------:|
-| FileAPI                            |       6/6 |    173/204 |   84.8% |
-| FileAPI/BlobURL                    |       5/5 |       0/18 |    0.0% |
-| FileAPI/FileReader                 |       2/2 |        1/2 |   50.0% |
-| FileAPI/blob                       |     16/16 |    298/323 |   92.2% |
-| FileAPI/file                       |     15/15 |     97/207 |   46.8% |
-| FileAPI/filelist-section           |       1/1 |        0/7 |    0.0% |
-| FileAPI/reading-data-section       |     14/14 |      46/51 |   90.1% |
-| FileAPI/url                        |     11/13 |      41/59 |   69.4% |
-| beacon                             |       6/6 |      34/64 |   53.1% |
-| beacon/headers                     |     10/10 |      23/24 |   95.8% |
-| cors                               |     26/26 |    258/414 |   62.3% |
-| fetch/api                          |   180/194 |  1905/2583 |   73.7% |
-| fetch/compression-dictionary       |     26/31 |      8/103 |    7.7% |
-| fetch/connection-pool              |       0/1 |        0/8 |    0.0% |
-| fetch/content-disposition          |       2/2 |        8/8 |  100.0% |
-| fetch/content-encoding             |     13/13 |       7/36 |   19.4% |
-| fetch/content-length               |       4/4 |      26/40 |   65.0% |
-| fetch/content-type                 |       4/4 |     31/154 |   20.1% |
-| fetch/corb                         |     19/22 |      30/85 |   35.2% |
-| fetch/cross-origin-resource-policy |       9/9 |      27/48 |   56.2% |
-| fetch/data-urls                    |       3/3 |    120/161 |   74.5% |
-| fetch/h1-parsing                   |     20/20 |     93/234 |   39.7% |
-| fetch/http-cache                   |     14/15 |    104/143 |   72.7% |
-| fetch/images                       |       1/1 |        0/1 |    0.0% |
-| fetch/metadata                     |     58/87 |   337/1675 |   20.1% |
-| fetch/nosniff                      |       6/6 |      32/65 |   49.2% |
-| fetch/orb                          |     10/14 |     80/147 |   54.4% |
-| fetch/origin                       |       0/1 |        2/2 |  100.0% |
-| fetch/range                        |      8/10 |       9/57 |   15.7% |
-| fetch/redirect-navigate            |       1/2 |      0/121 |    0.0% |
-| fetch/redirects                    |       2/2 |        3/7 |   42.8% |
-| fetch/security                     |      8/10 |      37/79 |   46.8% |
-| fetch/stale-while-revalidate       |       4/6 |        0/6 |    0.0% |
-| referrer-policy/4K                 |   108/108 |    280/416 |   67.3% |
-| referrer-policy/4K+1               |   108/108 |    280/416 |   67.3% |
-| referrer-policy/4K-1               |   108/108 |    280/416 |   67.3% |
-| referrer-policy/css-integration    |     25/25 |      32/72 |   44.4% |
-| referrer-policy/gen                | 1001/1001 |  4686/7042 |   66.5% |
-| referrer-policy/generic            |     37/42 |     15/105 |   14.2% |
-| streams                            |       2/3 |      4/231 |    1.7% |
-| streams/piping                     |     15/16 |      3/194 |    1.5% |
-| streams/readable-byte-streams      |     11/12 |      6/235 |    2.5% |
-| streams/readable-streams           |     25/26 |     21/371 |    5.6% |
-| streams/transferable               |      9/12 |       1/78 |    1.2% |
-| streams/transform-streams          |     12/12 |      0/134 |    0.0% |
-| streams/writable-streams           |     16/16 |      0/196 |    0.0% |
-| websockets                         |    62/200 |      2/556 |    0.3% |
-| websockets/binary                  |     12/12 |       0/12 |    0.0% |
-| websockets/closing-handshake       |       9/9 |        0/9 |    0.0% |
-| websockets/constructor             |     61/61 |      0/566 |    0.0% |
-| websockets/cookies                 |     17/21 |       0/21 |    0.0% |
-| websockets/interfaces              |   160/165 |      0/262 |    0.0% |
-| websockets/keeping-connection-open |       3/3 |        0/3 |    0.0% |
-| websockets/multi-globals           |       2/2 |        0/3 |    0.0% |
-| websockets/opening-handshake       |     13/13 |       0/13 |    0.0% |
-| websockets/security                |       4/4 |        2/4 |   50.0% |
-| websockets/stream                  |     21/21 |      0/159 |    0.0% |
-| websockets/unload-a-document       |     11/11 |       0/11 |    0.0% |
-| **total**                          | 2356/2582 | 9442/18661 |   50.5% |
+| Module                             |     Files |       Tests | Passing |
+|------------------------------------|----------:|------------:|--------:|
+| FileAPI                            |       6/6 |     173/204 |   84.8% |
+| FileAPI/BlobURL                    |       5/5 |        0/18 |    0.0% |
+| FileAPI/FileReader                 |       2/2 |         1/2 |   50.0% |
+| FileAPI/blob                       |     16/16 |     298/323 |   92.2% |
+| FileAPI/file                       |     15/15 |      97/207 |   46.8% |
+| FileAPI/filelist-section           |       1/1 |         0/7 |    0.0% |
+| FileAPI/reading-data-section       |     14/14 |       46/51 |   90.1% |
+| FileAPI/url                        |     11/13 |       41/59 |   69.4% |
+| beacon                             |       6/6 |       34/64 |   53.1% |
+| beacon/headers                     |     10/10 |       23/24 |   95.8% |
+| cors                               |     26/26 |     259/414 |   62.5% |
+| fetch/api                          |   180/193 |   1906/2582 |   73.8% |
+| fetch/compression-dictionary       |     26/31 |       8/103 |    7.7% |
+| fetch/connection-pool              |       0/1 |         0/8 |    0.0% |
+| fetch/content-disposition          |       2/2 |         8/8 |  100.0% |
+| fetch/content-encoding             |     13/13 |        9/36 |   25.0% |
+| fetch/content-length               |       4/4 |       26/40 |   65.0% |
+| fetch/content-type                 |       4/4 |      31/154 |   20.1% |
+| fetch/corb                         |     19/22 |       31/85 |   36.4% |
+| fetch/cross-origin-resource-policy |       9/9 |       27/48 |   56.2% |
+| fetch/data-urls                    |       3/3 |     120/161 |   74.5% |
+| fetch/h1-parsing                   |     20/20 |      93/234 |   39.7% |
+| fetch/http-cache                   |     14/15 |     104/143 |   72.7% |
+| fetch/images                       |       1/1 |         1/1 |  100.0% |
+| fetch/metadata                     |     61/87 |    354/1675 |   21.1% |
+| fetch/nosniff                      |       6/6 |       32/65 |   49.2% |
+| fetch/orb                          |     10/14 |      80/147 |   54.4% |
+| fetch/origin                       |       0/1 |         2/2 |  100.0% |
+| fetch/range                        |      8/10 |        9/57 |   15.7% |
+| fetch/redirect-navigate            |       1/2 |       0/121 |    0.0% |
+| fetch/redirects                    |       2/2 |         3/7 |   42.8% |
+| fetch/security                     |      8/10 |       38/79 |   48.1% |
+| fetch/stale-while-revalidate       |       4/6 |         0/6 |    0.0% |
+| referrer-policy/4K                 |   108/108 |     344/416 |   82.6% |
+| referrer-policy/4K+1               |   108/108 |     344/416 |   82.6% |
+| referrer-policy/4K-1               |   108/108 |     344/416 |   82.6% |
+| referrer-policy/css-integration    |     25/25 |       32/72 |   44.4% |
+| referrer-policy/gen                | 1001/1001 |   5722/7042 |   81.2% |
+| referrer-policy/generic            |     37/42 |      21/105 |   20.0% |
+| streams                            |       2/3 |       4/231 |    1.7% |
+| streams/piping                     |     14/16 |       2/194 |    1.0% |
+| streams/readable-byte-streams      |     10/12 |       5/235 |    2.1% |
+| streams/readable-streams           |     22/26 |      18/371 |    4.8% |
+| streams/transferable               |      8/12 |        0/78 |    0.0% |
+| streams/transform-streams          |     12/12 |       0/134 |    0.0% |
+| streams/writable-streams           |     16/16 |       0/196 |    0.0% |
+| websockets                         |    62/200 |       2/556 |    0.3% |
+| websockets/binary                  |     12/12 |        0/12 |    0.0% |
+| websockets/closing-handshake       |       9/9 |         0/9 |    0.0% |
+| websockets/constructor             |     61/61 |       0/566 |    0.0% |
+| websockets/cookies                 |     17/21 |        0/21 |    0.0% |
+| websockets/interfaces              |   160/165 |       0/262 |    0.0% |
+| websockets/keeping-connection-open |       3/3 |         0/3 |    0.0% |
+| websockets/multi-globals           |       2/2 |         0/3 |    0.0% |
+| websockets/opening-handshake       |     13/13 |        0/13 |    0.0% |
+| websockets/security                |       4/4 |         2/4 |   50.0% |
+| websockets/stream                  |     21/21 |       0/159 |    0.0% |
+| websockets/unload-a-document       |     11/11 |        0/11 |    0.0% |
+| **total**                          | 2353/2581 | 10694/18660 |   57.3% |
 
 ## performance
 
 | Module                         |   Files |     Tests | Passing |
 |--------------------------------|--------:|----------:|--------:|
-| hr-time                        |   13/13 |     41/52 |   78.8% |
-| navigation-timing              |   55/58 |   395/449 |   87.9% |
-| performance-timeline           |   34/38 |   101/116 |   87.0% |
-| resource-timing                |  83/101 |   637/920 |   69.2% |
+| hr-time                        |   13/13 |     42/52 |   80.7% |
+| navigation-timing              |   56/58 |   398/451 |   88.2% |
+| performance-timeline           |   36/38 |   104/117 |   88.8% |
+| resource-timing                |  86/101 |   650/940 |   69.1% |
 | resource-timing/initiator-type |   14/16 |     27/44 |   61.3% |
 | resource-timing/tentative      |   19/31 |      0/62 |    0.0% |
-| server-timing                  |     7/9 |   420/443 |   94.8% |
+| server-timing                  |     8/9 |   421/444 |   94.8% |
 | user-timing                    |   36/36 |   625/629 |   99.3% |
-| **total**                      | 261/302 | 2246/2715 |   82.7% |
+| **total**                      | 268/302 | 2267/2739 |   82.7% |
 
 ## svg
 
 | Module                 |     Files |     Tests | Passing |
 |------------------------|----------:|----------:|--------:|
 | svg                    |       3/3 | 1749/1749 |  100.0% |
-| svg/animations         |   319/319 |   363/364 |   99.7% |
+| svg/animations         |   319/319 |   364/364 |  100.0% |
 | svg/as-image           |       2/2 |       2/2 |  100.0% |
 | svg/coordinate-systems |     26/26 |     70/72 |   97.2% |
 | svg/crashtests         |     22/22 |     22/22 |  100.0% |
-| svg/embedded           |     27/27 |     25/31 |   80.6% |
+| svg/embedded           |     27/27 |     24/31 |   77.4% |
 | svg/extensibility      |     25/25 |     27/28 |   96.4% |
 | svg/fonts              |       4/4 |       3/4 |   75.0% |
 | svg/geometry           |     86/86 |   632/634 |   99.6% |
@@ -424,13 +424,13 @@ their rows; the diff of a change to it is what the change did.
 | Module                 |   Files |    Tests | Passing |
 |------------------------|--------:|---------:|--------:|
 | webaudio               |     2/2 |  15/1173 |    1.2% |
-| webaudio/the-audio-api | 302/350 | 706/1774 |   39.7% |
-| **total**              | 304/352 | 721/2947 |   24.4% |
+| webaudio/the-audio-api | 301/350 | 705/1774 |   39.7% |
+| **total**              | 303/352 | 720/2947 |   24.4% |
 
 ## xhr
 
 | Module       |   Files |    Tests | Passing |
 |--------------|--------:|---------:|--------:|
-| xhr          | 292/335 | 783/1424 |   54.9% |
+| xhr          | 299/335 | 798/1430 |   55.8% |
 | xhr/formdata |   18/18 |    63/81 |   77.7% |
-| **total**    | 310/353 | 846/1505 |   56.2% |
+| **total**    | 317/353 | 861/1511 |   56.9% |

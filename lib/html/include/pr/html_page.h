@@ -359,6 +359,14 @@ bool prHtmlPageIsNavigating(const PrHtmlPage* page);
 // of its navigation's document (prHtmlPageNavigate).
 bool prHtmlPageIsFetching(const PrHtmlPage* page);
 
+// Returns the number of fetches that the page waits for (prHtmlPageIsFetching), counting its navigation's document as
+// one.
+uint32_t prHtmlPageFetchCount(const PrHtmlPage* page);
+
+// Returns the number of fetches that the page and the pages of its frames have started, as their scripts and documents
+// asked for resources, whether or not they were answered. It only grows.
+uint64_t prHtmlPageFetchesStarted(const PrHtmlPage* page);
+
 // Returns true if the Window's document is render-blocked (html/#render-blocked). Its first rendering waits until the
 // parser reaches its body, past any sheets that its head adds, and until the sheets that its parser added there arrive.
 // Its rendering is not updated in the meantime, and a host paints nothing of it.

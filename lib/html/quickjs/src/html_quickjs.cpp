@@ -814,16 +814,31 @@ PrStatus settle(void* context, PrHtmlPage* page) {
             jsReportException(realm->ctx);
             return PrStatus_InvalidState;
         }
+        const PrJsHtmlEngineDesc& desc = realm->engine->desc;
         if (delay != 0) {
-            const PrJsHtmlEngineDesc& desc = realm->engine->desc;
-            if (desc.wait != nullptr)
-                desc.wait(desc.context, delay);
-            else
+            if (desc.wait != nullptr) {
+                if (!desc.wait(desc.context, delay))
+                    return PrStatus_Limit;
+            } else
                 prThreadSleep(fetching ? 1 : delay);
         }
         // A load that ends in a task, as a streamed load does, waits for its modules as a task that spins the event
         // loop waits.
-        prDomAgentSpinTask(agent);
+        if (prDomAgentSpinTask(agent) || delay != 0)
+            continue;
+        // What is due cannot run inside this task, as a rendering update or a task of a window whose load waits here
+        // cannot, so only the network can move the evaluation on.
+        if (!fetching) {
+            JS_ThrowInternalError(realm->ctx, "module evaluation is pending on work that cannot run while its document loads");
+            jsReportException(realm->ctx);
+            return PrStatus_InvalidState;
+        }
+        if (desc.wait != nullptr) {
+            if (!desc.wait(desc.context, -1))
+                return PrStatus_Limit;
+        } else {
+            prThreadSleep(1);
+        }
     }
     return realm->host.settle != nullptr ? realm->host.settle(realm->host.context, page) : PrStatus_Ok;
 }

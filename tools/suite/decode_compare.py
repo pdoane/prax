@@ -75,47 +75,16 @@ def run(name, parts, fetch):
         return corpus.listing([(part, cases) for part, cases in chosen])
     corpus.require(args.binary, name)
 
-    keys = [case.key for _, cases in parts for case in cases]
-    rows = []
-    outcomes = {}
-    failures = 0
+    results = corpus.Results(args, suite, keys={case.key for _, cases in parts for case in cases})
     refused = 0
     compared = 0
     for part, cases in chosen:
-        results = answers(args.binary, cases)
-        passed = 0
-        for case, result in zip(cases, results):
-            ok = passes(case, result)
-            reason = suite.recorded(case.key)
-            outcomes[case.key] = 1 if ok else 0
+        for case, result in zip(cases, answers(args.binary, cases)):
             refused += 1 if result["status"] not in ("", "Truncated") else 0
             compared += 1 if case.references and result["status"] == "" else 0
-            if ok:
-                passed += 1
-                if reason is not None:
-                    failures += 1
-                    print("%s passes now; drop its erratum" % case.key)
-            elif reason is not None:
-                passed += 1
-                if args.verbose:
-                    print("%s\n    %s" % (case.key, reason))
-            else:
-                failures += 1
-                print("%s  %s" % (case.key, json.dumps(result)))
-            if args.match:
-                print("%s  %s" % (case.key, json.dumps(result)))
-        if cases:
-            rows.append((part, passed, len(cases)))
-            print("%s  %d/%d" % (part, passed, len(cases)))
-
-    total = sum(r[2] for r in rows)
-    notes = ["Of the %d files, %d decode beside a reference and %d are refused." % (total, compared, refused)]
-    print("\n".join(notes))
-    print("\n%d/%d pass or are recorded; %d fail" % (sum(r[1] for r in rows), total, failures))
-    corpus.outcomes(args, outcomes)
-    if corpus.writes_scoreboard(args):
-        suite.write_scoreboard(rows, notes)
-    stale = [] if args.match else suite.stale(set(keys))
-    for kind, key in stale:
-        print("%s names no case (%s)" % (key, kind))
-    return int(bool(failures or stale))
+            crashed = result["status"] == "Crash"
+            results.case(case.key, int(passes(case, result)), status="CRASH" if crashed else corpus.OK,
+                         detail=json.dumps(result), part=part)
+    total = len(results.passed)
+    return results.finish(notes=["Of the %d files, %d decode beside a reference and %d are refused."
+                                 % (total, compared, refused)])

@@ -25,7 +25,6 @@ Usage: python3 -m tools.suite.esctest [--binary PATH] [--tests DIR] [--match GLO
                                       [--against FILE]
 """
 
-import argparse
 import json
 import os
 import re
@@ -170,33 +169,20 @@ def run(binary, tests, names):
     return found
 
 
-def show(case, lines, cut):
-    """Prints a failing case. With `cut`, prints one line with what esctest raised, cut to that length. Otherwise
-    prints the case's whole log."""
+def show(lines, cut):
+    """Returns what a failing case tells: the last line of its log that names what esctest raised, cut at `cut` if it
+    is not None, and its whole log, which a narrowed run prints, when `cut` is None."""
     # Python's tracebacks mark the expression that raised on a line of its own, which adds nothing to the line above.
     # esctest prefixes the traceback of a known bug of xterm.
     shown = [re.sub(r"^(KNOWN BUG|EXPECTED FAILURE \(MISSING OPTION\)): ", "", line) for line in lines]
     shown = [line for line in shown if line.strip() and line.strip().strip("~^") != ""]
-    if cut is not None:
-        raised = [line for line in shown if re.match(r"^[\w.]+(Error|Exception|Failure|Test|BadResponse)\b", line)]
-        print("  %s  %s" % (case.key, (raised[-1] if raised else shown[-1] if shown else "")[:cut]))
-        return
-    print("  " + case.key)
-    for line in shown:
-        print("      " + line)
+    raised = [line for line in shown if re.match(r"^[\w.]+(Error|Exception|Failure|Test|BadResponse)\b", line)]
+    detail = raised[-1] if raised else shown[-1] if shown else ""
+    return (detail[:cut] if cut is not None else detail), (shown if cut is None else [])
 
 
 def main():
-    ap = argparse.ArgumentParser()
-    corpus.outcome_arguments(ap)
-    ap.add_argument("--binary", default=corpus.binary("vterm_esctest"), help="the harness the cases run through")
-    ap.add_argument("--tests", default=TESTS, help="esctest's directory")
-    ap.add_argument("--match", metavar="GLOB",
-                    help="run only the cases whose key matches this glob, as CUPTests/test_CUP_*; a glob that names a "
-                         "class runs its cases, as CUPTests")
-    ap.add_argument("--verbose", action="store_true", help="print every recorded difference")
-    ap.add_argument("--list", action="store_true", help="count the corpus and run nothing")
-    args = ap.parse_args()
+    args = corpus.arguments(corpus.binary("vterm_esctest"), TESTS).parse_args()
 
     if not os.path.exists(os.path.join(args.tests, "esctest.py")):
         sys.exit("no esctest under %s; run ./dev.sh fetch esctest" % args.tests)
@@ -206,71 +192,32 @@ def main():
 
     corpus.require(args.binary, "esctest")
     data = corpus.Data("esctest")
-    keys = {case.key for _, part in parts for case in part}
     selected = [case for _, part in parts for case in part if data.runs(case.key, args.match)]
     chosen = {case.key for case in selected}
-    left = sum(1 for _, part in parts for case in part if corpus.selected(case.key, args.match)) - len(selected)
     if not selected:
         sys.exit("no cases matched %s" % args.match)
     found = run(args.binary, args.tests, [case.name for case in selected])
 
-    rows = []
-    passed = {}
-    failing = []
-    problems = []
+    # esctest's failures are counted, as a scoreboard counts them, and its errata record where esctest is wrong.
+    results = corpus.Results(args, data, keys={case.key for _, part in parts for case in part},
+                             requires_errata=False)
+    results.left = sum(1 for _, part in parts for case in part if corpus.selected(case.key, args.match)) - len(selected)
+    cut = corpus.clip(args.match)
     skipped = 0
     for name, part in parts:
-        agreed = count = known = 0
         for case in part:
             if case.key not in chosen:
                 continue
             outcome, lines = found.get(case.name, ("fail", ["no outcome"]))
+            # A case that esctest does not try is not counted.
             if outcome == "skip":
                 skipped += 1
                 continue
-            count += 1
-            reason = data.recorded(case.key)
-            passed[case.key] = 1 if outcome == "pass" else 0
-            if outcome == "pass":
-                agreed += 1
-                if reason is not None:
-                    problems.append("%s passes; drop its entry from the errata" % case.key)
-            elif reason is not None:
-                known += 1
-                if args.verbose:
-                    print("%s\n    %s" % (case.key, reason))
-            else:
-                failing.append((case, lines))
-        if count:
-            rows.append((name, agreed, known, count))
-
-    corpus.report_parts(args, data, rows)
-    agreed = sum(row[1] for row in rows)
-    recorded = sum(row[2] for row in rows)
-    count = sum(row[3] for row in rows)
-    print("\n%d cases, %d passing, %d recorded as esctest getting it wrong, %d failing%s%s"
-          % (count, agreed, recorded, len(failing), ", %d not tried" % skipped if skipped else "",
-             ", %d left out as cut, deferred or skipped" % left if left else ""))
-    corpus.outcomes(args, passed)
-
-    if failing:
-        print("\nfailing:")
-        cut = corpus.clip(args.match)
-        for case, lines in failing if args.match else failing[:corpus.SHOWN]:
-            show(case, lines, cut)
-        if not args.match and len(failing) > corpus.SHOWN:
-            print("  ... and %d more; --match narrows the run and prints each failure's log" %
-                  (len(failing) - corpus.SHOWN))
-
-    stale = [] if args.match else data.stale(keys)
-    problems += ["%s names no case (%s)" % (key, kind) for kind, key in stale]
-    if not problems:
-        return 0
-    print("\n%d to look at:" % len(problems))
-    for problem in problems:
-        print("  " + problem)
-    return 1
-
+            detail, log = show(lines, cut) if outcome != "pass" else ("", [])
+            results.case(case.key, int(outcome == "pass"), detail=detail, lines=log, part=name)
+    if skipped:
+        print("%d cases not tried" % skipped)
+    return results.finish()
 
 if __name__ == "__main__":
     sys.exit(main())

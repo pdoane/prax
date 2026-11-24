@@ -63,11 +63,11 @@ def answer(binary, suite, batch):
     return corpus.answers([binary, suite], framed, len(batch))
 
 
-def show(case, why, got, cut):
-    print("  %-26s %-42s %s" % (case.key, json.dumps(case.text)[:42], why))
-    if got is not None:
-        print("      ours  %s" % json.dumps(got)[:cut])
-        print("      suite %s" % json.dumps(case.want)[:cut])
+def show(case, got, cut):
+    """Returns the lines that tell how a case differs: its input, and our answer beside the suite's."""
+    return ["input %s" % json.dumps(case.text)[:cut],
+            "ours  %s" % json.dumps(got)[:cut],
+            "suite %s" % json.dumps(case.want)[:cut]]
 
 
 def main():

@@ -212,6 +212,7 @@ struct HtmlPage {
     // (PrHtmlHost::loaded), or Ok.
     PrStatus navigationFailure;
     uint32_t delayingFetches;         // the number of those fetches that its document's load event waits for
+    uint64_t fetchesStarted;          // the number of fetches that it has started (prHtmlPageFetchesStarted)
 
     // html/#list-of-scripts-that-will-execute-when-the-document-has-finished-parsing
     RawArray<PreparedScript* PR_NONNULL> deferred;

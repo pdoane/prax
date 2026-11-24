@@ -304,6 +304,11 @@ constexpr uint32_t kMaxQueuedRun = 16;
 // The longest idle period (requestidlecallback/#start-an-idle-period-algorithm), in milliseconds.
 constexpr double kIdleMaxPeriod = 50;
 
+// How many idle callbacks in a row, each requesting the next, make a loop that may never end, which the window does not
+// wait for (htmlWindowIsIdle). A callback runs in the idle period after its request, so the loop has run for at least
+// this many periods by then, while a chain of a few callbacks runs to its end.
+constexpr uint32_t kIdleEndlessDepth = 10;
+
 // A request's timeout, which a timer of the window runs.
 struct IdleTimeout {
     PrHtmlWindow* window;
@@ -328,9 +333,12 @@ bool takeIdleRequest(RawArray<HtmlIdleRequest>* list, uint32_t handle, HtmlIdleR
 
 void invokeIdle(PrHtmlWindow* window, const HtmlIdleRequest& request, double deadline, bool didTimeout) {
     bool running = window->runningIdle;
+    uint32_t depth = window->runningIdleDepth;
     window->runningIdle = true;
+    window->runningIdleDepth = request.depth;
     request.callback.invoke(request.callback.context, deadline, didTimeout);
     window->runningIdle = running;
+    window->runningIdleDepth = depth;
     release(request.callback);
 }
 
@@ -346,12 +354,21 @@ void idleTimedOut(void* PR_NULLABLE context) {
     }
 }
 
-// Runs an idle callback, if the event loop has nothing else to do. An idle period starts if none is running or the
-// current one has run out of requests, and takes the requests made so far. Returns false if no callback ran.
+// Returns the time at which an idle callback can run next: now, while the idle period has callbacks left, or else when
+// the period ends and the next one starts with the requests made since. A callback that requests another runs it in the
+// next period, not in its own (requestidlecallback/#start-an-idle-period-algorithm).
+double idleDue(const PrHtmlWindow* window, double now) {
+    return window->idleRunnable.count == 0 && now < window->idleDeadline ? window->idleDeadline : now;
+}
+
+// Runs an idle callback, if the event loop has nothing else to do. An idle period starts once the last one has ended,
+// and takes the requests made so far. Returns false if no callback ran.
 bool runIdle(PrHtmlWindow* window, double now) {
     if (window->idleRunnable.count == 0 && window->idleRequests.count == 0)
         return false;
-    if (window->idleRunnable.count == 0 || now >= window->idleDeadline) {
+    if (idleDue(window, now) > now)
+        return false;
+    if (now >= window->idleDeadline) {
         window->idleDeadline = idleCap(window, now + kIdleMaxPeriod);
         for (uint32_t i = 0; i < window->idleRequests.count; ++i)
             window->idleRunnable.push(window->idleRequests.data[i]);
@@ -780,7 +797,14 @@ uint32_t htmlWindowRequestIdleCallback(PrHtmlWindow* window, const PrHtmlIdleReq
     uint32_t handle = ++window->nextIdleHandle;
     if (callback->retain != nullptr)
         callback->retain(callback->context);
-    HtmlIdleRequest request{.callback = *callback, .handle = handle, .timer = 0, .endless = window->runningIdle};
+    uint32_t depth = window->runningIdle ? window->runningIdleDepth + 1 : 0;
+    HtmlIdleRequest request{
+        .callback = *callback,
+        .handle = handle,
+        .timer = 0,
+        .depth = depth,
+        .endless = depth >= kIdleEndlessDepth,
+    };
     if (timeout > 0) {
         IdleTimeout* context = allocZeroed<IdleTimeout>();
         *context = IdleTimeout{window, handle};
@@ -815,7 +839,9 @@ double htmlWindowIdleTimeRemaining(const PrHtmlWindow* window, double deadline) 
         double toFrame = (window->lastFrame - now) + framesToDue(window) * kHtmlFrameInterval;
         remaining = toFrame < remaining ? toFrame : remaining;
     }
-    return remaining > 0 ? remaining : 0;
+    // The time left is coarsened as the window's times are, which also drops what the sum of a period's start, or of a
+    // timer's, and its length leaves past the length as it rounds.
+    return remaining > 0 ? coarsen(remaining) : 0;
 }
 
 uint32_t htmlWindowRequestAnimationFrame(PrHtmlWindow* window, const PrHtmlFrameRequestCallback* callback) {
@@ -903,17 +929,24 @@ bool htmlWindowIsFullyActive(const PrHtmlWindow* window) {
 }
 
 double htmlWindowNextTaskDelay(const PrHtmlWindow* window) {
-    if (window->taskHead != window->tasks.count || window->idleRequests.count != 0 || window->idleRunnable.count != 0)
+    if (window->taskHead != window->tasks.count)
+        return 0;
+    double now = htmlWindowClock(window);
+    bool idle = window->idleRequests.count != 0 || window->idleRunnable.count != 0;
+    double idleAt = idle ? idleDue(window, now) : -1;
+    if (idle && idleAt <= now)
         return 0;
     uint32_t index = nextTimerIndex(window);
     bool frame = wantsFrame(window);
-    if (index == window->timers.count && !frame)
+    if (index == window->timers.count && !frame && !idle)
         return -1;
-    double frameAt = frameDue(window);
-    double due = index != window->timers.count ? window->timers.data[index].deadline : frameAt;
-    if (frame && frameAt < due)
-        due = frameAt;
-    double delay = due - htmlWindowClock(window);
+    // The soonest of the next idle period, timer and frame, of those that there are.
+    double due = idle ? idleAt : -1;
+    if (index != window->timers.count && (due < 0 || window->timers.data[index].deadline < due))
+        due = window->timers.data[index].deadline;
+    if (frame && (due < 0 || frameDue(window) < due))
+        due = frameDue(window);
+    double delay = due - now;
     return delay > 0 ? delay : 0;
 }
 

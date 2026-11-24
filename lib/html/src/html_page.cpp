@@ -399,11 +399,21 @@ bool needsOkStatus(DomFetchDestination destination) {
         destination == DomFetchDestination_Font;
 }
 
-void readBody(HtmlFetch* fetch, PrFetch* handle) {
+// The most bytes of a response's body that a fetch holds. The body is held whole until the response ends, so a larger
+// one fails the fetch as a network error rather than grow without bound.
+constexpr uint32_t kMaxBodyBytes = 1u << 30;
+
+// Appends what the response's body has ready to the fetch's. Returns false, and appends nothing more, once the body
+// would pass kMaxBodyBytes.
+bool readBody(HtmlFetch* fetch, PrFetch* handle) {
     uint8_t chunk[16 * 1024];
     for (size_t got = prFetchRead(handle, chunk, sizeof(chunk)); got != 0; got =
-            prFetchRead(handle, chunk, sizeof(chunk)))
+            prFetchRead(handle, chunk, sizeof(chunk))) {
+        if (got > kMaxBodyBytes - fetch->body.count)
+            return false;
         fetch->body.append(chunk, uint32_t(got));
+    }
+    return true;
 }
 
 // Returns the values of the response's headers named `name` joined by commas, or the null string for none.
@@ -459,10 +469,17 @@ void fetchEvent(void* PR_NULLABLE context, PrFetch* handle, PrFetchEvent event) 
             break;
         }
         case PrFetchEvent_Readable:
-            readBody(fetch, handle);
+            if (!readBody(fetch, handle)) {
+                fetch->timing = prFetchTiming(handle);
+                finishOnLoop(fetch, PrStatus_Limit);
+            }
             break;
         case PrFetchEvent_End: {
-            readBody(fetch, handle);
+            if (!readBody(fetch, handle)) {
+                fetch->timing = prFetchTiming(handle);
+                finishOnLoop(fetch, PrStatus_Limit);
+                break;
+            }
             fetch->responseStatus = prFetchStatus(handle);
             fetch->timing = prFetchTiming(handle);
             bool ok = prFetchIsOkStatus(fetch->responseStatus);
@@ -587,6 +604,7 @@ HtmlFetch* createFetch(PrHtmlPage* page, PrStringView url, DomFetchDestination d
     fetch->page = page;
     fetch->next = page->fetches;
     page->fetches = fetch;
+    ++page->fetchesStarted;
     if (settings.delaysLoad)
         ++page->delayingFetches;
     fetch->destination = destination;
@@ -4308,6 +4326,20 @@ bool prHtmlPageIsFetching(const PrHtmlPage* page) {
             return true;
     }
     return false;
+}
+
+uint32_t prHtmlPageFetchCount(const PrHtmlPage* page) {
+    uint32_t count = page->documentLoad != nullptr ? 1 : 0;
+    for (const HtmlFetch* fetch = page->fetches; fetch != nullptr; fetch = fetch->next)
+        count += fetch->answered ? 0 : 1;
+    return count;
+}
+
+uint64_t prHtmlPageFetchesStarted(const PrHtmlPage* page) {
+    uint64_t count = page->fetchesStarted;
+    for (uint32_t i = 0; i < page->children.count; ++i)
+        count += prHtmlPageFetchesStarted(page->children.data[i]);
+    return count;
 }
 
 bool prHtmlPageIsRenderBlocked(PrHtmlPage* page) {

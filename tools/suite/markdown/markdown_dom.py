@@ -43,40 +43,12 @@ def main():
               for _, _, names, markdown, _ in cases]
     results = corpus.answers([args.binary], b"".join(frames), len(cases))
 
-    passed = recorded = 0
-    failures = []
-    outcomes = {}
-    parts = {}
+    outcome = corpus.Results(args, suite, keys=keys)
     for (key, part, _, markdown, html), result in zip(cases, results):
-        agrees = result["whole"] and result["streamed"] and result["element"]
-        outcomes[key] = int(agrees)
-        reason = suite.recorded(key)
-        tally = parts.setdefault(part, [0, 0])
-        tally[1] += 1
-        if agrees:
-            passed += 1
-            tally[0] += 1
-            if reason is not None:
-                failures.append(key)
-                print("%s agrees now; drop its erratum" % key)
-        elif reason is not None:
-            recorded += 1
-            tally[0] += 1
-            if args.verbose:
-                print("%s\n    %s" % (key, reason))
-        else:
-            failures.append(key)
-            ways = [way for way in ("whole", "streamed", "element") if not result[way]]
-            print("%s differs %s" % (key, ", ".join(ways)))
-            print("  markdown %r" % markdown)
-    print("%d/%d agree; %d recorded; %d disagree" % (passed, len(cases), recorded, len(failures)))
-    corpus.outcomes(args, outcomes)
-    if corpus.writes_scoreboard(args):
-        suite.write_scoreboard([(part, tally[0], tally[1]) for part, tally in parts.items()])
-    stale = [] if args.match else suite.stale(keys)
-    for kind, key in stale:
-        print("%s names no case (%s)" % (key, kind))
-    return int(bool(failures or stale))
+        ways = [way for way in ("whole", "streamed", "element") if not result[way]]
+        outcome.case(key, int(not ways), detail="differs " + ", ".join(ways) if ways else "",
+                     lines=["markdown %r" % markdown], part=part)
+    return outcome.finish()
 
 
 if __name__ == "__main__":

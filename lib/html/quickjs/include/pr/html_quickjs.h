@@ -38,8 +38,10 @@ typedef struct PrJsHtmlEngineDesc {
 
     // Waits for what a module's evaluation waits on before its document can finish loading: `delay` milliseconds for a
     // timer, or, while the browsing context fetches, until a task is posted to the agent (prDomAgentPost). The delay is
-    // negative if no timer is due. Null sleeps for a timer, and polls for a fetch every millisecond.
-    void (*PR_NULLABLE wait)(void* PR_NULLABLE context, double delay);
+    // negative if no timer is due. Returns false if the host stops waiting, as one that has passed its deadline does,
+    // which leaves the evaluation pending and its document unfinished. Null sleeps for a timer, and polls for a fetch
+    // every millisecond.
+    bool (*PR_NULLABLE wait)(void* PR_NULLABLE context, double delay);
 } PrJsHtmlEngineDesc;
 
 // Whether a browsing context, and each of its iframes, runs scripts.

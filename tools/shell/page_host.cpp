@@ -48,6 +48,7 @@
 #include "pr/xhr_quickjs.h"
 
 #include "tools/harness/harness.h"
+#include "tools/shell/server_control.h"
 
 #include "quickjs.h"
 
@@ -159,10 +160,38 @@ struct HostState {
     // The script that waits for a captured page to be ready (setCaptureWait).
     std::string captureWait = kReftestWait;
 
-    // The virtual clock that the pages run on, in milliseconds, which advances only when they wait. Each run starts it
-    // at kVirtualStart. `now` points to it if the clock is virtual, and is null if the pages run on the system's clock.
+    // The virtual clock that the pages run on, in milliseconds, which advances only when they wait, or when a task
+    // waits for it (virtualNow). Each run starts it at kVirtualStart. `now` points to it if the clock is virtual, and
+    // is null if the pages run on the system's clock.
     double virtualTime = 0;
     double* PR_NULLABLE now = nullptr;
+
+    // The reads of the virtual clock since the task began or the clock last waited, and the system's monotonic time of
+    // the last read once a task is taken to wait for the clock, or a negative number before (virtualNow).
+    uint32_t clockReads = 0;
+    double busySince = -1;
+
+    // The server's control (PageHost::setServerControl), and the sleeps of its requests that the run has seen, each
+    // with the virtual time at which it ends, and those that the run woke (serverSleeps).
+    uint16_t controlPort = 0;
+    ServerControl control;
+    std::map<uint64_t, double> sleepEnds;
+    std::set<uint64_t> wokenSleeps;
+    double controlPoll = 1;     // how long the loop waits before it asks the control again (kControlPollFirst)
+
+    // The fetches that the pages had started when the virtual clock last moved (kStallFetches).
+    uint64_t fetchesAtMove = 0;
+
+    // The deadline of the run in progress (PageHost::run), on the system's monotonic clock and on the virtual clock,
+    // each negative for none.
+    double deadline = -1;
+    double virtualDeadline = -1;
+
+    // How long the virtual clock may still move for the server's sleeps before the run stops, in milliseconds, or a
+    // negative number for no bound (PageHost::setTimeout). A browser waits for a server in the system's time, so its
+    // timeout bounds the time that it waits on servers; the clock's jumps to the next timer cost nothing in a browser,
+    // and the virtual deadline bounds them apart.
+    double sleepBudget = -1;
 
     // The memory output that renders in step with the virtual clock (paceAudio), or null.
     PrAudioOutput* PR_NULLABLE pacedAudio = nullptr;
@@ -218,6 +247,7 @@ struct Page {
     PrHtmlPage* htmlPage = nullptr;  // null once destroyed
     bool ok = true;
     bool finished = false;      // the page said it is done (stopRun), and nothing that it waits for matters
+    uint32_t commits = 0;       // the documents that it has committed (committedHtml)
     bool requested = false;     // loaded by PageHost::load, rather than an iframe's
     bool verifyFailed = false;  // the page's presentation failed a check (PageHost::verifyRendering)
     Capture capture = Capture_None;
@@ -274,16 +304,41 @@ bool runFile(JSContext* ctx, const char* path, bool window = false) {
     return ok;
 }
 
-// The virtual time that a document's commit takes, in milliseconds, which puts its scripts after its time origin.
+// The virtual time that a page's first document's commit takes, in milliseconds, which puts its scripts after its time
+// origin.
 constexpr double kCommitDuration = 1;
+
+// The virtual time that the commit of a document that replaces one that the page committed takes, in milliseconds: a
+// frame's interval, as a browser takes at least that to replace a document and present the new one. A page that
+// navigates again from each load then moves the clock as it would move in a browser, instead of loading thousands of
+// documents before a timer that a browser would reach after a few hundred.
+constexpr double kNavigationDuration = 1000.0 / 60;
 
 // The virtual clock's time when a run starts, in milliseconds. It is the same in every run, so that the times that
 // pages read, and the order of the timers and frames that fall due together, never depend on when the run started: the
 // sum of a time and a delay rounds by the time's magnitude.
 constexpr double kVirtualStart = 0;
 
-// Advances the virtual clock by `delay` milliseconds.
+// How many times a run's timeout the virtual clock may move before the run stops (PageHost::setTimeout). A page that
+// waits past it on the virtual clock waits on timers without end, as a page that polls for what never comes does. The
+// bound is a multiple of the timeout because the clock jumps to the next timer where nothing asks for a frame, and the
+// engine may not ask for one where a browser would have rendered sooner, so a page's virtual time can run ahead of the
+// time that it takes in a browser. Moving the clock costs little, so the margin costs a run little.
+constexpr double kVirtualTimeoutScale = 10;
+
+// Advances the virtual clock by `delay` milliseconds. Returns the number of fetches that the pages have started
+// (prHtmlPageFetchesStarted).
+uint64_t fetchesStarted(const HostState& s) {
+    uint64_t count = 0;
+    for (const std::unique_ptr<Page>& page : s.pages) {
+        if (page->htmlPage != nullptr)
+            count += prHtmlPageFetchesStarted(page->htmlPage);
+    }
+    return count;
+}
+
 void moveClock(HostState& host, double delay) {
+    host.fetchesAtMove = fetchesStarted(host);
     *host.now += delay;
     host.movedAt = prTimeMonotonicMilliseconds();
     if (host.pacedAudio != nullptr)
@@ -291,12 +346,32 @@ void moveClock(HostState& host, double delay) {
 }
 
 void committedHtml(void* context, PrHtmlPage*) {
-    moveClock(*static_cast<Page*>(context)->host, kCommitDuration);
+    Page* page = static_cast<Page*>(context);
+    moveClock(*page->host, page->commits++ == 0 ? kCommitDuration : kNavigationDuration);
 }
 
-// Returns the virtual clock's time.
+// The reads of the virtual clock in one task past which the task is taken to wait for the clock to move, as a script
+// that loops until some time has passed does. A task that reads the clock a few times sees it stand.
+constexpr uint32_t kBusyClockReads = 10000;
+
+// Returns the virtual clock's time. A task that waits for the clock to move would wait forever on a clock that moves
+// only between tasks, so past kBusyClockReads reads in a task, the clock moves with the system's time, as the loop's
+// time passes in a browser. The system's time then shows only in the times that such a task reads.
 double virtualNow(void* context) {
-    return *static_cast<Page*>(context)->host->now;
+    HostState& host = *static_cast<Page*>(context)->host;
+    if (++host.clockReads > kBusyClockReads) {
+        double system = prTimeMonotonicMilliseconds();
+        if (host.busySince >= 0)
+            moveClock(host, system - host.busySince);
+        host.busySince = system;
+    }
+    return *host.now;
+}
+
+// Starts counting the reads of the virtual clock again (virtualNow), as a task begins or the clock waits.
+void resetClockReads(HostState& host) {
+    host.clockReads = 0;
+    host.busySince = -1;
 }
 
 // Returns the wall clock's time on a virtual clock (HostState::wallStart).
@@ -328,6 +403,7 @@ bool waitMilliseconds(HostState& host, double delay) {
     if (host.now == nullptr)
         return sleepMilliseconds(delay);
     moveClock(host, delay);
+    resetClockReads(host);
     return true;
 }
 
@@ -445,22 +521,120 @@ bool fetching(const HostState& s) {
     return false;
 }
 
+// What starts each line on stderr that says that the system's time decided some of what the pages did: the deadline on
+// the system's clock. A runner re-runs such a run to tell whether its result holds (tools/suite/corpus.py, timing).
+constexpr const char* kTimingPrefix = "timing: ";
+
+// How many fetches the pages may start while the virtual clock stands before the run ends as a deadline ends it. Each
+// fetch stands the clock until it is answered, so pages that fetch without end, as a script that polls a server for a
+// result that never comes does, would otherwise wait for the deadline on the system's clock. The count, unlike that
+// deadline, is the same in every run.
+constexpr uint64_t kStallFetches = 1000;
+
+// How long the loop waits, in milliseconds of the system's time, before it asks a server's control again while the
+// pages wait for the server and the server has not said that each of their requests sleeps: the first wait, which
+// doubles after each answer that moves nothing, up to the last. How long the loop takes to see a sleep changes when the
+// clock moves in the system's time, and not where it moves to.
+constexpr double kControlPollFirst = 1;
+constexpr double kControlPollLast = 16;
+
+// Returns the number of fetches that the pages wait for (prHtmlPageFetchCount).
+uint32_t fetchCount(const HostState& s) {
+    uint32_t count = 0;
+    for (const std::unique_ptr<Page>& page : s.pages) {
+        if (page->htmlPage != nullptr)
+            count += prHtmlPageFetchCount(page->htmlPage);
+    }
+    return count;
+}
+
+// Asks the server's control (PageHost::setServerControl) whether each request that the pages wait for sleeps on
+// purpose. If so, returns true with the virtual time at which the first of the sleeps ends: a sleep ends as long after
+// the virtual time at which the loop first saw it as it asked to sleep. The clock stands while the server handles any
+// request otherwise, as it does for a request that the server has not received or whose response is on its way, which
+// the fetches that the server does not list are. A sleep that the loop woke and that the server still lists is on its
+// way to its response.
+bool serverSleeps(HostState& s, double* end) {
+    ServerRequests requests;
+    if (!s.control.ask(&requests) || requests.busy != 0 || requests.sleeps.size() < fetchCount(s))
+        return false;
+    *end = -1;
+    for (const ServerSleep& sleep : requests.sleeps) {
+        auto [found, added] = s.sleepEnds.try_emplace(sleep.id, *s.now + sleep.milliseconds);
+        if (s.wokenSleeps.count(sleep.id) != 0)
+            return false;
+        *end = *end < 0 ? found->second : std::min(*end, found->second);
+    }
+    return *end >= 0;
+}
+
+// Wakes each sleep of the server's requests that the pages wait for, at once, which a paint that waits for its own
+// fetches does once the run is over: the clock no longer moves, and a response that the server delays on purpose
+// arrives as it would once the delay passed.
+void wakeServerSleeps(HostState& s) {
+    ServerRequests requests;
+    if (!s.control.connected() || !s.control.ask(&requests))
+        return;
+    for (const ServerSleep& sleep : requests.sleeps) {
+        if (s.wokenSleeps.insert(sleep.id).second)
+            s.control.wake(sleep.id);
+    }
+}
+
+// Says on stderr that the run passed its deadline on the system's clock, with what the pages waited for then: the
+// fetches in flight, and what the server's control said of them.
+void reportDeadline(HostState& s) {
+    std::string waits = std::to_string(fetchCount(s)) + " fetches in flight";
+    ServerRequests requests;
+    if (s.control.connected() && s.control.ask(&requests)) {
+        waits += ", of which the server handles " + std::to_string(requests.busy) + " and sleeps on " +
+            std::to_string(requests.sleeps.size());
+        for (const std::string& target : requests.busyTargets)
+            waits += "; handles " + target;
+        for (const ServerSleep& sleep : requests.sleeps)
+            waits += "; sleeps on " + sleep.target;
+    }
+    fprintf(stderr, "%stheir run passed its deadline on the system's clock, at %.0f ms on the virtual clock, with %s\n",
+        kTimingPrefix, s.now != nullptr ? *s.now - kVirtualStart : 0.0, waits.c_str());
+}
+
+// Wakes each sleep that the loop has seen whose end the virtual clock has reached, or each of them if `all`. Returns
+// true if it woke one.
+bool wakeSleeps(HostState& s, bool all) {
+    bool woke = false;
+    for (const auto& [id, end] : s.sleepEnds) {
+        if ((all || end <= *s.now) && s.wokenSleeps.insert(id).second) {
+            s.control.wake(id);
+            woke = true;
+        }
+    }
+    return woke;
+}
+
 // Returns true if the pages wait for a server to answer: the network's loop runs apart from the host's thread, and a
-// fetch is in flight. The virtual clock stands while they wait, so that a server answers before any timer is due.
+// fetch is in flight. The virtual clock stands while they wait, so that a server answers before any timer is due,
+// unless the server says that it sleeps on purpose (serverSleeps).
 bool waitsForNetwork(const HostState& s) {
     return !s.nullNet && fetching(s);
 }
 
 // The engine's wait for what a module waits on: the network while a page fetches, with the pages' clock standing, and
-// otherwise a timer, on the pages' clock. A network that runs on the host's thread answers as it runs.
-void waitForModule(void* context, double delay) {
+// otherwise a timer, on the pages' clock. A network that runs on the host's thread answers as it runs. The wait stops
+// once it would pass the run's deadline (PageHost::run), on the system's clock or the virtual one.
+bool waitForModule(void* context, double delay) {
     HostState& s = *static_cast<HostState*>(context);
-    if (!fetching(s))
+    if (!fetching(s)) {
+        if (delay < 0)
+            return true;
+        if (s.now != nullptr && s.virtualDeadline >= 0 && *s.now + delay > s.virtualDeadline)
+            return false;
         waitMilliseconds(s, delay);
-    else if (s.nullNet)
+    } else if (s.nullNet) {
         runNetwork(s);
-    else
-        waitForWake(s, -1);
+    } else {
+        waitForWake(s, s.deadline);
+    }
+    return s.deadline < 0 || prTimeMonotonicMilliseconds() < s.deadline;
 }
 
 // Returns the path's segments, each percent-encoded as a URL's path segment, each after a '/'. A Windows drive, such as
@@ -850,7 +1024,15 @@ void realmOpened(void* context, JSContext* ctx, PrHtmlPage* PR_NULLABLE htmlPage
 }
 
 // Starts what pages run on: the script runtime, the event loop, and the clock. The pages' dates start at the system's
-// time, as pages expect. The network outlives the run.
+// time, as pages expect. The network outlives the run. Interrupts the pages' scripts once the system's clock passes the
+// run's deadline (PageHost::setTimeout), so that a script that never returns to the event loop, or work that scripts
+// start without end, cannot keep the run past it. QuickJS asks every so many operations, and throws an uncatchable
+// error out of the running script once it answers true.
+int interruptPastDeadline(JSContext*, void* opaque) {
+    const HostState& s = *static_cast<const HostState*>(opaque);
+    return s.deadline >= 0 && prTimeMonotonicMilliseconds() >= s.deadline ? 1 : 0;
+}
+
 void startRun(HostState& s) {
     PrJsHtmlBind* const binds[] = {prJsSvgBind, prJsMathMlBind, prJsUrlBind, prJsCharsetBind, prJsXhrBind};
     PrJsHtmlEngineDesc engine = {
@@ -862,6 +1044,10 @@ void startRun(HostState& s) {
         .wait = waitForModule,
     };
     s.engine = prJsHtmlEngineCreate(&engine);
+    JS_SetInterruptHandler(JS_GetRuntime(prJsHtmlEngineContext(s.engine)), interruptPastDeadline, &s);
+    s.deadline = -1;
+    s.virtualDeadline = -1;
+    s.sleepBudget = -1;
     uint32_t threads = s.restyleThreads != 0 ? s.restyleThreads : prThreadHardwareCount();
     if (threads > 1)
         s.workers = prTaskPoolCreate(PrTaskPoolBackend_Default, threads - 1);
@@ -871,6 +1057,15 @@ void startRun(HostState& s) {
     s.agent = prDomAgentCreate(&options);
     prDomAgentSetWake(s.agent, wakeHost, &s);
     s.virtualTime = kVirtualStart;
+    resetClockReads(s);
+    // The sleeps of the last run's requests end, whatever they wait for, so that the server does not hold them.
+    if (s.now != nullptr)
+        wakeSleeps(s, true);
+    s.sleepEnds.clear();
+    s.wokenSleeps.clear();
+    s.fetchesAtMove = 0;
+    if (s.controlPort != 0 && !s.control.connected())
+        s.control.connect(s.controlPort);
     // The last run's pages are gone, and with them the sources that ran the output, so its clock may start over.
     if (s.pacedAudio != nullptr)
         prAudioMemoryAdvance(s.pacedAudio, s.virtualTime);
@@ -1138,7 +1333,17 @@ void PageHost::setPageGap(float gap) {
 }
 
 void PageHost::useVirtualTime() {
-    state_->now = &state_->virtualTime;
+    HostState& s = *state_;
+    s.now = &s.virtualTime;
+    // A deadline that started before holds on the virtual clock from here, for what is left of it.
+    if (s.deadline >= 0)
+        s.virtualDeadline = s.virtualTime + kVirtualTimeoutScale * std::max(s.deadline - prTimeMonotonicMilliseconds(), 0.0);
+}
+
+bool PageHost::setServerControl(uint16_t port) {
+    HostState& s = *state_;
+    s.controlPort = port;
+    return s.control.connect(port);
 }
 
 void PageHost::paceAudio(PrAudioOutput* output) {
@@ -1223,6 +1428,14 @@ bool PageHost::setCaptureWait(const std::filesystem::path& script) {
         fprintf(stderr, "cannot read %s\n", script.string().c_str());
     prTextBufferReset(&text);
     return ok;
+}
+
+const std::string& PageHost::captureWaitSource() const {
+    return state_->captureWait;
+}
+
+void PageHost::setCaptureWaitSource(const std::string& source) {
+    state_->captureWait = source;
 }
 
 JSContext* PageHost::scriptContext() {
@@ -1321,15 +1534,46 @@ PrHtmlPage* PR_NULLABLE PageHost::htmlPage(const Page* page) {
     return page->htmlPage;
 }
 
+void PageHost::setTimeout(double timeout) {
+    HostState& s = *state_;
+    s.deadline = timeout >= 0 ? prTimeMonotonicMilliseconds() + timeout : -1;
+    s.virtualDeadline = timeout >= 0 && s.now != nullptr ? *s.now + kVirtualTimeoutScale * timeout : -1;
+    s.sleepBudget = timeout;
+}
+
 RunEnd PageHost::run(double timeout) {
     HostState& s = *state_;
-    double deadline = timeout >= 0 ? prTimeMonotonicMilliseconds() + timeout : -1;
+    if (timeout >= 0)
+        setTimeout(timeout);
+    const double deadline = s.deadline;
+    const double virtualDeadline = s.virtualDeadline;
     for (;;) {
-        if (deadline >= 0 && prTimeMonotonicMilliseconds() >= deadline)
+        // Each turn runs one task, one rendering update or one wait, so the reads of the clock count from here.
+        resetClockReads(s);
+        // The deadline on the system's clock ends a run at a point that depends on how fast the machine is, so the run
+        // says so (timing). The virtual clock's deadline does not.
+        if (deadline >= 0 && prTimeMonotonicMilliseconds() >= deadline) {
+            reportDeadline(s);
             return RunEnd_TimedOut;
-        if (!prJsHtmlEngineCheckpoint(s.engine))
-            return RunEnd_Failed;
+        }
+        // A job that the deadline interrupted ends the run as the deadline does.
+        if (!prJsHtmlEngineCheckpoint(s.engine)) {
+            if (deadline < 0 || prTimeMonotonicMilliseconds() < deadline)
+                return RunEnd_Failed;
+            reportDeadline(s);
+            return RunEnd_TimedOut;
+        }
         runNetwork(s);
+        // Pages that fetch again and again while the clock stands for each fetch make no progress on the virtual clock,
+        // as a script that polls a server for what never comes does, and end as its deadline would end them. A frame's
+        // page that goes takes the count of its fetches with it, so the count can fall.
+        uint64_t fetched = fetchesStarted(s);
+        s.fetchesAtMove = std::min(s.fetchesAtMove, fetched);
+        if (s.now != nullptr && fetched - s.fetchesAtMove > kStallFetches) {
+            fprintf(stderr, "the pages started %llu fetches while the virtual clock stood\n",
+                (unsigned long long)(fetched - s.fetchesAtMove));
+            return RunEnd_TimedOut;
+        }
         // A run stops once each page that it loaded is done, whatever an iframe or a page's own work waits for.
         bool requested = false;
         bool finished = true;
@@ -1345,10 +1589,38 @@ RunEnd PageHost::run(double timeout) {
         // clock stands, unless every page is done and the fetch is not one that a rendering update started.
         double delay = prDomAgentNextTaskDelay(s.agent);
         bool network = waitsForNetwork(s);
-        if (!network)
+        if (!network) {
             s.awaitingRender = false;
+            s.controlPoll = kControlPollFirst;
+        }
         if (delay != 0 && network && (!done || s.awaitingRender)) {
-            waitForWake(s, deadline);
+            // A server whose requests each sleep on purpose moves the clock, up to the next timer or the end of the
+            // first sleep, whichever is sooner, as the time would pass in a browser. How long the server takes to
+            // answer otherwise moves nothing, so what the pages do depends on what the server does and not on load.
+            double end = -1;
+            if (s.now != nullptr && s.control.connected() && serverSleeps(s, &end)) {
+                double step = std::max(delay > 0 ? std::min(delay, end - *s.now) : end - *s.now, 0.0);
+                if (virtualDeadline >= 0 && *s.now + step > virtualDeadline)
+                    return RunEnd_TimedOut;
+                if (s.sleepBudget >= 0) {
+                    if (step > s.sleepBudget) {
+                        fprintf(stderr, "the pages waited on the server's sleeps for longer than their timeout\n");
+                        return RunEnd_TimedOut;
+                    }
+                    s.sleepBudget -= step;
+                }
+                moveClock(s, step);
+                if (wakeSleeps(s, false) || step > 0) {
+                    s.controlPoll = kControlPollFirst;
+                    continue;
+                }
+            }
+            double poll = -1;
+            if (s.control.connected()) {
+                poll = prTimeMonotonicMilliseconds() + s.controlPoll;
+                s.controlPoll = std::min(s.controlPoll * 2, kControlPollLast);
+            }
+            waitForWake(s, deadline < 0 ? poll : poll < 0 ? deadline : std::min(poll, deadline));
             continue;
         }
         // Pages in which only animations want frames have nothing left to run, once their presentations fetch nothing
@@ -1368,6 +1640,8 @@ RunEnd PageHost::run(double timeout) {
                 s.awaitingRender = started;
                 continue;
             }
+            if (virtualDeadline >= 0 && *s.now + delay > virtualDeadline)
+                return RunEnd_TimedOut;
             if (!waitMilliseconds(s, delay))
                 return RunEnd_Failed;
         }
@@ -1395,6 +1669,10 @@ void PageHost::setInteractive(Page* page, PrAppWindow* window) {
         return;
     prHtmlViewSetWindow(viewOf(page), window);
     prHtmlViewSetCaretHidden(viewOf(page), false);
+}
+
+bool PageHost::stopped(const Page* page) {
+    return page->finished;
 }
 
 bool PageHost::finished(const Page* page) {
@@ -1589,7 +1867,11 @@ void PageHost::prepareWithFetches(PrHtmlView* view, void (*prepare)(PrHtmlView* 
             runNetwork(s);
             while (prDomAgentNextTaskDelay(s.agent) == 0 && prDomAgentRun(s.agent, 0))
                 ran = true;
-            if (!waitsForNetwork(s) || !waitForWake(s, deadline))
+            if (!waitsForNetwork(s))
+                break;
+            wakeServerSleeps(s);
+            double poll = s.control.connected() ? prTimeMonotonicMilliseconds() + kControlPollLast : deadline;
+            if (!waitForWake(s, std::min(poll, deadline)) && prTimeMonotonicMilliseconds() >= deadline)
                 break;
         }
         if (!ran)

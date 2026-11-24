@@ -57,6 +57,40 @@ class RunnerTests(unittest.TestCase):
         # A run that waited for the runner's deadline would end there, however fast the machine.
         self.assertLess(time.monotonic() - start, wpt.TIMEOUT)
 
+    def test_a_servers_sleep_moves_the_clock_by_its_length(self):
+        # The server waits a second before the script's body. The page's clock moves by that second, and a timer due
+        # within it runs first, however long the server takes, and the run does not wait out the second.
+        start = time.monotonic()
+        result = self.run_page('''
+            async_test(t => {
+                const began = performance.now();
+                const order = [];
+                setTimeout(() => order.push("timer"), 500);
+                const script = document.createElement("script");
+                script.src = "/common/blank.html?pipe=trickle(d1)";
+                script.onload = script.onerror = t.step_func_done(() => {
+                    order.push("response");
+                    assert_array_equals(order, ["timer", "response"]);
+                    const took = performance.now() - began;
+                    assert_greater_than_equal(took, 1000);
+                    assert_less_than(took, 1100);
+                });
+                document.head.append(script);
+            }, "slow");
+        ''')
+        self.assertEqual([(status, message) for status, _, message in result.results], [("PASS", "")])
+        self.assertEqual(result.timing, [])
+        self.assertLess(time.monotonic() - start, 1)
+
+    def test_runner_fails_a_page_that_takes_memory_without_end(self):
+        wpt.MEMORY.start()
+        start = time.monotonic()
+        with patch.object(wpt, "SHELL_MEMORY_LIMIT", 512):
+            result = self.run_page('const kept = []; for (;;) kept.push(new Array(1 << 20).fill(1));')
+        self.assertEqual(result.harness, "ERROR: pr_shell passed its memory limit of 512 MB and was killed")
+        # The page fails once it passes the limit, not at the deadline, and is not run again.
+        self.assertLess(time.monotonic() - start, wpt.TIMEOUT)
+
     def test_runner_times_out_a_stalled_script(self):
         with patch.object(wpt, "TIMEOUT", 0.1):
             result = self.run_page('while (true) {}')
@@ -382,7 +416,7 @@ class ReftestTests(unittest.TestCase):
             "differs.html": '<link rel="match" href="ref.html">' + self.SQUARE % "red",
             "mismatch.html": '<link rel="mismatch" href="ref.html">' + self.SQUARE % "blue",
         }, ["match.html", "differs.html", "mismatch.html"])
-        self.assertRegex(output, r"css-a/differs.html\s+0/1\s+reftest\n")
+        self.assertRegex(output, r"css-a/differs.html\s+0/1\s+FAIL: reftest does not match\n")
         self.assertRegex(output, r"css-a\s+3/3\s+2/3")
 
     def test_a_page_passes_by_matching_any_of_its_match_references(self):
@@ -396,8 +430,8 @@ class ReftestTests(unittest.TestCase):
             "unlike.html": '<link rel="match" href="green.html"><link rel="mismatch" href="red.html">'
                            + self.SQUARE % "red",
         }, ["either.html", "neither.html", "unlike.html"])
-        self.assertRegex(output, r"css-a/neither.html\s+0/1\s+reftest\n")
-        self.assertRegex(output, r"css-a/unlike.html\s+0/1\s+reftest\n")
+        self.assertRegex(output, r"css-a/neither.html\s+0/1\s+FAIL: reftest does not match\n")
+        self.assertRegex(output, r"css-a/unlike.html\s+0/1\s+FAIL: reftest does not match\n")
         self.assertRegex(output, r"css-a\s+3/3\s+1/3")
 
     def test_a_page_passes_within_its_fuzzy_ranges_as_wptrunner_measures_them(self):
@@ -415,8 +449,8 @@ class ReftestTests(unittest.TestCase):
         }, ["fuzzy.html", "beyond.html", "keyed.html", "blue.html"])
         # A meta keyed by another reference does not apply. A difference of one level in blue alone has no luma, so
         # wptrunner counts no pixel as differing.
-        self.assertRegex(output, r"css-a/beyond.html\s+0/1\s+reftest\n")
-        self.assertRegex(output, r"css-a/keyed.html\s+0/1\s+reftest\n")
+        self.assertRegex(output, r"css-a/beyond.html\s+0/1\s+FAIL: reftest does not match\n")
+        self.assertRegex(output, r"css-a/keyed.html\s+0/1\s+FAIL: reftest does not match\n")
         self.assertRegex(output, r"css-a\s+4/4\s+2/4")
 
     def test_mismatch_references_chain_after_a_match_reference_without_the_tests_fuzzy_ranges(self):
@@ -432,7 +466,7 @@ class ReftestTests(unittest.TestCase):
         }, ["chained.html", "equal.html"])
         # The mismatch reference is within the test's fuzzy ranges, but wptrunner compares it with the match reference
         # and the test without them. One that equals the match reference fails.
-        self.assertRegex(output, r"css-a/equal.html\s+0/1\s+reftest\n")
+        self.assertRegex(output, r"css-a/equal.html\s+0/1\s+FAIL: reftest does not match\n")
         self.assertRegex(output, r"css-a\s+2/2\s+1/2")
 
     def test_a_fuzzy_override_replaces_the_tests_ranges(self):
@@ -468,8 +502,8 @@ class ReftestTests(unittest.TestCase):
             "second-print.html": '<link rel="match" href="ref.html">' + self.PAGES % "red",
             "unlike-print.html": '<link rel="mismatch" href="ref.html">' + self.SQUARE % "green",
         }, ["same-print.html", "fewer-print.html", "second-print.html", "unlike-print.html"])
-        self.assertRegex(output, r"css-a/fewer-print.html\s+0/1\s+reftest\n")
-        self.assertRegex(output, r"css-a/second-print.html\s+0/1\s+reftest\n")
+        self.assertRegex(output, r"css-a/fewer-print.html\s+0/1\s+FAIL: reftest does not match\n")
+        self.assertRegex(output, r"css-a/second-print.html\s+0/1\s+FAIL: reftest does not match\n")
         self.assertRegex(output, r"css-a\s+4/4\s+2/4")
 
     def test_a_print_reftest_compares_the_pages_that_its_reftest_pages_metas_select(self):
@@ -484,7 +518,7 @@ class ReftestTests(unittest.TestCase):
                                 '<link rel="match" href="pages.html">' + flush + self.SQUARE % "red",
             "all-print.html": '<link rel="match" href="ref.html">' + flush + self.PAGES % "red",
         }, ["own-print.html", "keyed-print.html", "all-print.html"])
-        self.assertRegex(output, r"css-a/all-print.html\s+0/1\s+reftest\n")
+        self.assertRegex(output, r"css-a/all-print.html\s+0/1\s+FAIL: reftest does not match\n")
         self.assertRegex(output, r"css-a\s+3/3\s+2/3")
 
     def test_a_print_reftest_is_printed_on_the_page_box_of_wpts_protocol(self):

@@ -2,7 +2,7 @@
 if (PR_JS)
     # Local HTML pages and WPT's, fetched as a browser fetches them, run and rendered: what pr_shell and the viewer
     # host pages with.
-    add_library(page_host STATIC page_host.cpp)
+    add_library(page_host STATIC page_host.cpp server_control.cpp)
     target_include_directories(page_host PUBLIC ${PROJECT_SOURCE_DIR})
     pr_font_bundle_resources(page_host Standard14 Complete)
     target_link_libraries(page_host PUBLIC prax::compress_select prax::image_select prax::texture prax::app prax::audio

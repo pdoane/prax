@@ -15,6 +15,12 @@ one line `WPT-SERVE <json>` with its ports once they are known, and runs until i
 wptserve needs a Python that still has http.server.CGIHTTPRequestHandler, which 3.15 removed, so the server runs in
 the newest Python on the path that has it (PYTHONS), or else in the Python that runs this module if it has it, for a
 path that names Python without its version. It writes no bytecode, since the checkout is shared.
+
+A server started with `clocked` has a control (Control), in a process of its own, which its server processes tell what
+each request does, and whose port is the server's `control`. A request's sleep, as a pipe's or a handler's, then waits
+until the client wakes it, and a client on a virtual clock (pr_shell --server-control) moves its clock for the sleep by
+as long as the sleep asks, and for nothing else that the server does, so that what a page does depends on what the
+server does on purpose and not on how long it takes.
 """
 
 import http.server
@@ -52,19 +58,25 @@ def python():
 class Server:
     """A running server: its process and its ports by scheme, as wptserve's config gives them."""
 
-    def __init__(self, checkout, aliases=None, log=subprocess.DEVNULL):
+    def __init__(self, checkout, aliases=None, log=subprocess.DEVNULL, clocked=False):
         interpreter = python()
         if interpreter is None:
             sys.exit("WPT's server needs one of %s on the path, or a Python before 3.15 to run the tools"
                      % ", ".join(PYTHONS))
         environment = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
+        environment.pop(CONTROL_ENVIRONMENT, None)
+        if clocked:
+            environment[CONTROL_ENVIRONMENT] = ""
         command = [interpreter, os.path.abspath(__file__), checkout, json.dumps(aliases or {})]
         self.process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=log, text=True,
                                         env=environment)
         self.ports = None
+        self.control = None
         for line in self.process.stdout:
             if line.startswith(MARKER):
-                self.ports = json.loads(line[len(MARKER):])["ports"]
+                found = json.loads(line[len(MARKER):])
+                self.ports = found["ports"]
+                self.control = found.get("control")
                 break
         if self.ports is None:
             self.stop()
@@ -129,17 +141,160 @@ def serve_responses_whole():
 
     handlers.FileHandler.get_data = get_data
     write = response.Response.write
+    from wptserve import server
+    send_response = server.BaseWebTestRequestHandler.send_response
+
+    def send_own_response(self, *args, **kwargs):
+        # wptserve writes its own status lines through its response's writer, so a status line sent here is one that
+        # a handler wrote itself, with its head and body.
+        self.prax_own_head = True
+        return send_response(self, *args, **kwargs)
 
     def write_whole(self):
+        # A handler that wrote its own head wrote its whole response, whose body has no length and ends when the
+        # connection closes, which wptserve's response after it would otherwise hold open.
+        handler = self.writer._handler
+        if getattr(handler, "prax_own_head", False):
+            handler.prax_own_head = False
+            handler.close_connection = True
+            return
         # Content of strings alone is known before it is written. Content with a function or a file streams, as the
-        # handler asks. Only the response that wptserve writes whole is joined: a handler that writes its own head
-        # streams what follows it, and its response goes without a length.
+        # handler asks.
         content = self.content
         if isinstance(content, (list, tuple)) and all(isinstance(item, (bytes, str)) for item in content):
             self.content = b"".join(item.encode(self.encoding) if isinstance(item, str) else item for item in content)
         write(self)
 
+    server.BaseWebTestRequestHandler.send_response = send_own_response
     response.Response.write = write_whole
+
+
+# The environment variable that gives each of the server's processes the port of the control (Control), when the
+# server's sleeps wait for the clocks of its clients.
+CONTROL_ENVIRONMENT = "PRAX_WPT_CONTROL"
+
+# How long a sleep waits, in seconds, for a client to wake it, past any page's deadline, so that a sleep of a request
+# whose client has gone ends.
+UNWOKEN = 120
+
+
+class Control:
+    """Where the server's requests say what they do, and where a client asks, so that the client's clock moves for a
+    request only while the request waits on purpose, as a handler or a pipe sleeps, and by as long as the sleep asks.
+
+    A request begins and ends (`begin <port> <target>`, `end <port>`, by its client's port), and a sleep of the request
+    (`sleep <port> <seconds>`) waits until a client wakes it (`wake <id>`) or UNWOKEN passes. A client asks after its
+    connections (`ask <port>...`), and the answer is a line for each request of them that the server handles:
+    `<port> busy <target>`, or `<port> sleep <id> <seconds> <target>`, after a line with their number. A request
+    reports over a connection that it holds from its beginning to its end, without answers, apart from a sleep's
+    wake."""
+
+    def __init__(self):
+        import socketserver
+        import threading
+        self.lock = threading.Lock()
+        self.requests = {}     # by client port: None while busy, or the sleep (id, seconds, event)
+        self.paths = {}        # by client port: the request's target, which the answers to asks name
+        self.ids = 0
+        control = self
+
+        class Handler(socketserver.StreamRequestHandler):
+            def handle(self):
+                for line in self.rfile:
+                    reply = control.command(line.decode().split())
+                    if reply is not None:
+                        self.wfile.write(reply.encode())
+                        self.wfile.flush()
+
+        socketserver.ThreadingTCPServer.daemon_threads = True
+        self.server = socketserver.ThreadingTCPServer(("127.0.0.1", 0), Handler)
+        self.port = self.server.server_address[1]
+        threading.Thread(target=self.server.serve_forever, daemon=True).start()
+
+    def command(self, words):
+        import threading
+        kind, arguments = words[0], words[1:]
+        if kind == "begin":
+            with self.lock:
+                self.requests[int(arguments[0])] = None
+                self.paths[int(arguments[0])] = arguments[1] if len(arguments) > 1 else "?"
+        elif kind == "end":
+            with self.lock:
+                self.requests.pop(int(arguments[0]), None)
+                self.paths.pop(int(arguments[0]), None)
+        elif kind == "sleep":
+            port, seconds = int(arguments[0]), float(arguments[1])
+            woken = threading.Event()
+            with self.lock:
+                self.ids += 1
+                self.requests[port] = (self.ids, seconds, woken)
+            woken.wait(UNWOKEN)
+            with self.lock:
+                if port in self.requests:
+                    self.requests[port] = None
+            return "woken\n"
+        elif kind == "wake":
+            wanted = int(arguments[0])
+            with self.lock:
+                for state in self.requests.values():
+                    if state is not None and state[0] == wanted:
+                        state[2].set()
+        elif kind == "ask":
+            with self.lock:
+                found = [(port, self.requests[port], self.paths.get(port, "?")) for port in map(int, arguments)
+                         if port in self.requests]
+            lines = ["%d busy %s" % (port, path) if state is None else
+                     "%d sleep %d %r %s" % (port, state[0], state[1], path) for port, state, path in found]
+            return "".join(line + "\n" for line in [str(len(lines))] + lines)
+        return None
+
+
+def report_requests():
+    """Makes a server's process tell the control (Control) when each request begins, ends and sleeps, if the server
+    has one. A sleep of a request then waits for its client to wake it."""
+    port = os.environ.get(CONTROL_ENVIRONMENT)
+    if not port:
+        return
+    import threading
+    import time as clock
+    from wptserve import server
+    local = threading.local()
+    sleep = clock.sleep
+    # The connections to the control that no request holds. A request holds one from its beginning to its end, so that
+    # the control reads what it says in order, and the connections outlive the threads that the server starts for its
+    # clients' connections, which would otherwise each make one.
+    idle = []
+    lock = threading.Lock()
+
+    def say(line):
+        local.control.sendall(line.encode())
+
+    def handle(self, request_line_is_valid):
+        with lock:
+            held = idle.pop() if idle else None
+        if held is None:
+            control = socket.create_connection(("127.0.0.1", int(port)))
+            held = (control, control.makefile("rb"))
+        local.control, local.replies = held
+        local.port = self.client_address[1]
+        say("begin %d %s\n" % (local.port, self.path.split()[0] if self.path.split() else "?"))
+        try:
+            handled(self, request_line_is_valid)
+        finally:
+            say("end %d\n" % local.port)
+            local.port = None
+            with lock:
+                idle.append(held)
+
+    def sleep_for(seconds):
+        if getattr(local, "port", None) is None or seconds <= 0:
+            return sleep(seconds)
+        say("sleep %d %r\n" % (local.port, float(seconds)))
+        local.replies.readline()
+
+    handled = server.BaseWebTestRequestHandler.finish_handling_h1
+    server.BaseWebTestRequestHandler.finish_handling_h1 = handle
+    clock.sleep = sleep_for
 
 
 def main():
@@ -149,6 +304,15 @@ def main():
     from tools import localpaths  # noqa: F401
     from tools.serve import serve
     serve_responses_whole()
+    # The control runs in a process of its own, apart from the stash's and the servers' work, which its clients' asks
+    # would otherwise slow.
+    control = None
+    if os.environ.get(CONTROL_ENVIRONMENT) == "":
+        control = subprocess.Popen([sys.executable, os.path.abspath(__file__), "--control"], stdin=subprocess.PIPE,
+                                   stdout=subprocess.PIPE, text=True)
+        control.port = int(control.stdout.readline())
+        os.environ[CONTROL_ENVIRONMENT] = str(control.port)
+    report_requests()
     from wptserve import stash
     import multiprocessing
     import uuid
@@ -167,7 +331,8 @@ def main():
             mp_context = multiprocessing.get_context("spawn")
             with stash.StashServer((config.server_host, serve.get_port("")), authkey=str(uuid.uuid4())):
                 servers = serve.start(logger, config, routes, mp_context, None, h2=False)
-                print(MARKER + json.dumps({"ports": dict(config.ports)}), flush=True)
+                print(MARKER + json.dumps({"ports": dict(config.ports), "control": control and control.port}),
+                      flush=True)
                 sys.stdin.read()
                 for server in serve.iter_servers(servers):
                     server.request_shutdown()
@@ -175,6 +340,9 @@ def main():
                     server.wait(timeout=1)
     finally:
         os.unlink(overrides)
+        if control is not None:
+            control.stdin.close()
+            control.wait()
 
 
 def around():
@@ -187,10 +355,20 @@ def around():
         server.stop()
 
 
+def run_control():
+    """Runs the control (Control), which prints its port, until its stdin ends."""
+    control = Control()
+    print(control.port, flush=True)
+    sys.stdin.read()
+
+
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "--around":
         sys.exit(around())
+    if len(sys.argv) > 1 and sys.argv[1] == "--control":
+        sys.exit(run_control())
     main()
 elif __name__ == "__mp_main__":
     # A server process that multiprocessing spawned, with the path of the process that spawned it.
     serve_responses_whole()
+    report_requests()
