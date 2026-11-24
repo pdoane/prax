@@ -51,7 +51,7 @@ of a change to it is what the change did.
 | css/css-align                    |     296/296 |     4036/5364 |   75.2% |
 | css/css-anchor-position          |     521/526 |   10380/13918 |   74.5% |
 | css/css-animations               |     206/207 |     1189/1509 |   78.7% |
-| css/css-backgrounds              |     858/859 |     6339/6946 |   91.2% |
+| css/css-backgrounds              |     858/859 |     6343/6946 |   91.3% |
 | css/css-borders                  |     181/181 |     1421/1670 |   85.0% |
 | css/css-box                      |     148/148 |      959/1132 |   84.7% |
 | css/css-break                    |   1250/1250 |      996/1915 |   52.0% |
@@ -59,14 +59,14 @@ of a change to it is what the change did.
 | css/css-color                    |     376/376 |   11597/12968 |   89.4% |
 | css/css-color-adjust             |       36/36 |       169/191 |   88.4% |
 | css/css-color-hdr                |         4/4 |        65/116 |   56.0% |
-| css/css-conditional              |     466/467 |     2482/3459 |   71.7% |
-| css/css-contain                  |     570/583 |       635/973 |   65.2% |
+| css/css-conditional              |     466/467 |     2480/3459 |   71.6% |
+| css/css-contain                  |     570/583 |       590/973 |   60.6% |
 | css/css-content                  |       78/78 |       284/322 |   88.1% |
 | css/css-counter-styles           |     259/259 |       399/402 |   99.2% |
 | css/css-display                  |     249/249 |       550/776 |   70.8% |
 | css/css-easing                   |       14/14 |       103/158 |   65.1% |
 | css/css-env                      |       11/11 |         12/53 |   22.6% |
-| css/css-flexbox                  |   1412/1412 |     5350/5794 |   92.3% |
+| css/css-flexbox                  |   1412/1412 |     5346/5794 |   92.2% |
 | css/css-font-loading             |       32/32 |       180/249 |   72.2% |
 | css/css-fonts                    |     557/558 |     7989/9046 |   88.3% |
 | css/css-forced-color-adjust      |         4/4 |          9/14 |   64.2% |
@@ -98,7 +98,7 @@ of a change to it is what the change did.
 | css/css-shadow                   |     202/203 |       335/480 |   69.7% |
 | css/css-shapes                   |     382/382 |     5100/7752 |   65.7% |
 | css/css-size-adjust              |         5/5 |       207/215 |   96.2% |
-| css/css-sizing                   |     761/762 |     5881/6549 |   89.7% |
+| css/css-sizing                   |     761/762 |     5816/6549 |   88.8% |
 | css/css-style-attr               |       16/16 |         14/16 |   87.5% |
 | css/css-syntax                   |       50/50 |       376/446 |   84.3% |
 | css/css-tables                   |     340/340 |      940/1113 |   84.4% |
@@ -113,7 +113,7 @@ of a change to it is what the change did.
 | css/css-view-transitions         |     454/494 |     1195/1753 |   68.1% |
 | css/css-viewport                 |     135/137 |       510/690 |   73.9% |
 | css/css-will-change              |       53/53 |       186/221 |   84.1% |
-| css/css-writing-modes            |   1234/1234 |     1296/1555 |   83.3% |
+| css/css-writing-modes            |   1234/1234 |     1294/1555 |   83.2% |
 | css/css-zoom                     |         1/1 |           1/1 |  100.0% |
 | css/cssom                        |     283/283 |     3474/4403 |   78.9% |
 | css/cssom-view                   |     235/237 |     1376/2578 |   53.3% |
@@ -132,8 +132,8 @@ of a change to it is what the change did.
 | web-animations/crashtests        |       39/39 |         39/39 |  100.0% |
 | web-animations/interfaces        |       46/47 |       702/868 |   80.8% |
 | web-animations/responsive        |       46/46 |        81/105 |   77.1% |
-| web-animations/timing-model      |       29/34 |       373/400 |   93.2% |
-| **total**                        | 32310/32468 | 171841/213956 |   80.3% |
+| web-animations/timing-model      |       29/34 |       372/400 |   93.0% |
+| **total**                        | 32310/32468 | 171726/213956 |   80.2% |
 
 ## dom
 
@@ -143,16 +143,16 @@ of a change to it is what the change did.
 | dom/abort                        |       9/9 |         40/40 |  100.0% |
 | dom/collections                  |     12/12 |         50/56 |   89.2% |
 | dom/crashtests                   |       4/4 |           4/4 |  100.0% |
-| dom/events                       |   195/202 |       579/843 |   68.6% |
-| dom/lists                        |       5/5 |       185/189 |   97.8% |
-| dom/nodes                        |   400/404 |   14574/15295 |   95.2% |
+| dom/events                       |   194/202 |       609/840 |   72.5% |
+| dom/lists                        |       5/5 |       186/189 |   98.4% |
+| dom/nodes                        |   400/404 |   14575/15295 |   95.2% |
 | dom/ranges                       |     72/72 |   44512/44706 |   99.5% |
 | dom/traversal                    |     18/18 |     1600/1608 |   99.5% |
 | domparsing                       |     46/46 |       257/597 |   43.0% |
 | domparsing/tentative             |     25/36 |       42/1104 |    3.8% |
 | input-events                     |     32/34 |      118/3248 |    3.6% |
 | intersection-observer            |   110/113 |       284/347 |   81.8% |
-| pointerevents                    |    98/228 |       194/671 |   28.9% |
+| pointerevents                    |    98/228 |       195/667 |   29.2% |
 | pointerevents/bugs               |       1/2 |           0/2 |    0.0% |
 | pointerevents/compat             |     10/15 |          6/52 |   11.5% |
 | pointerevents/crashtests         |       1/1 |           1/1 |  100.0% |
@@ -169,7 +169,7 @@ of a change to it is what the change did.
 | selection/textcontrols           |       7/9 |         27/75 |   36.0% |
 | shadow-dom                       |    98/100 |       673/788 |   85.4% |
 | shadow-dom/crashtests            |     25/25 |         25/25 |  100.0% |
-| shadow-dom/declarative           |     25/57 |      135/7790 |    1.7% |
+| shadow-dom/declarative           |     46/57 |      136/7791 |    1.7% |
 | shadow-dom/focus                 |     39/40 |        99/111 |   89.1% |
 | shadow-dom/focus-navigation      |     45/45 |         43/89 |   48.3% |
 | shadow-dom/leaktests             |       4/4 |         10/16 |   62.5% |
@@ -187,8 +187,8 @@ of a change to it is what the change did.
 | uievents/order-of-events         |     11/16 |          9/17 |   52.9% |
 | uievents/textInput               |       5/7 |          7/22 |   31.8% |
 | webidl                           |       2/2 |       167/192 |   86.9% |
-| webidl/ecmascript-binding        |     42/43 |       227/314 |   72.2% |
-| **total**                        | 1653/1878 | 100105/115940 |   86.3% |
+| webidl/ecmascript-binding        |     42/43 |       237/314 |   75.4% |
+| **total**                        | 1673/1878 | 100149/115934 |   86.3% |
 
 ## encoding
 
