@@ -19,9 +19,9 @@ namespace pr_impl {
 // The input stream (html/#preprocessing-the-input-stream)
 
 // The tokenizer's copy of the stream that html/#tokenization tokenizes, so that a position in the copy is a position in
-// the stream. The copy is UTF-8, with U+FFFD for each ill-formed sequence (encoding/#utf-8-decoder) and with carriage
-// returns rewritten. A surrogate code point is stored as the three bytes that UTF-8 would encode it with, and
-// html/#parse-errors reports it as surrogate-in-input-stream.
+// the stream. The stream is text: a document's bytes decoded (encoding/#decode), or a string from script, which may
+// hold a lone surrogate. The copy has U+FFFD for each ill-formed sequence and carriage returns rewritten, and
+// html/#parse-errors reports a surrogate as surrogate-in-input-stream.
 //
 // A token refers to bytes of the copy by offset. An insertion at the read point moves nothing before that point, so an
 // offset stays valid across an insertion.
@@ -146,9 +146,8 @@ struct HtmlTokenizer {
     bool cut;
 };
 
-// Tokenizes `source`, replacing the tokenizer's previous input. `source` may be any bytes, and an ill-formed UTF-8
-// sequence in it is read as U+FFFD. Errors are appended to `errors`, which the caller owns and which must outlive the
-// tokenizing.
+// Tokenizes `source`, replacing the tokenizer's previous input. An ill-formed sequence in `source` is read as U+FFFD.
+// Errors are appended to `errors`, which the caller owns and which must outlive the tokenizing.
 void htmlTokenizerStart(HtmlTokenizer* tokenizer, PrStringView source, RawArray<HtmlError>* errors);
 
 // Reads the next token. At the end of the input, and at every call after it, the token is HtmlTokenKind_Eof. A
@@ -162,8 +161,7 @@ bool htmlTokenizerNext(HtmlTokenizer* tokenizer);
 // null view for a state that no end tag ends.
 void htmlTokenizerSetState(HtmlTokenizer* tokenizer, HtmlState state, PrStringView tag);
 
-// Inserts `text` at the tokenizer's read position, for document.write() (html/#document.write()). Like the source,
-// `text` may be any bytes.
+// Inserts `text` at the tokenizer's read position, for document.write() (html/#document.write()).
 void htmlTokenizerInsert(HtmlTokenizer* tokenizer, PrStringView text);
 
 // Appends `text` to the end of the input, which must be open.

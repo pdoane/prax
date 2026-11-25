@@ -799,7 +799,7 @@ JSValue rectified(JSContext* ctx, JSValueConst value, Rectify rectify) {
         return newUnit(ctx, number, PrCssUnit_Number);
     }
     if (rectify == Rectify_Keywordish && JS_IsString(value)) {
-        StringArgument text = {ctx};
+        StringArgument text = {.ctx = ctx, .usv = true};
         if (!text.read(value))
             return JS_EXCEPTION;
         return newKeyword(ctx, text.value());
@@ -1237,7 +1237,7 @@ bool serializeSegments(Serializer* s, JSValueConst value, const TypedObject* obj
     return eachChild(s->ctx, value, object, [&](JSValueConst child) {
         if (!JS_IsString(child))
             return serializeTree(s, child, false, false);
-        StringArgument text = {s->ctx};
+        StringArgument text = {.ctx = s->ctx, .usv = true};
         if (!text.read(child))
             return false;
         prTextBufferAppend(s->out, text.value());
@@ -1782,7 +1782,7 @@ struct PropertyArgument {
 
     // The call's scope holds the name.
     bool read(JSContext* ctx, JSValueConst input) {
-        StringArgument text = {ctx};
+        StringArgument text = {.ctx = ctx, .usv = true};
         if (!text.read(input))
             return false;
         if (prCssPropertyNameFromText(text.value(), &name)) {
@@ -1797,7 +1797,7 @@ struct PropertyArgument {
 // Implements parse and parseAll, selected by the magic.
 JSValue parse(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv, int magic) {
     PropertyArgument property = {};
-    StringArgument text = {ctx};
+    StringArgument text = {.ctx = ctx, .usv = true};
     if (!jsArgCount(ctx, argc, 2) || !property.read(ctx, argv[0]) || !text.read(argv[1]))
         return JS_EXCEPTION;
     Tree value = heldTree(ctx);
@@ -1817,7 +1817,7 @@ JSValue parse(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv, int ma
 // unparsed value or null.
 template <TypedKind Kind>
 JSValue textConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSValueConst* argv) {
-    StringArgument text = {ctx};
+    StringArgument text = {.ctx = ctx, .usv = true};
     if (!jsArgCount(ctx, argc, 1) || !text.read(argv[0]))
         return JS_EXCEPTION;
     TypedObject fields = typedFields(Kind);
@@ -1841,7 +1841,7 @@ JSValue textGet(JSContext* ctx, JSValueConst typedObject) {
 // Sets a keyword's value, or a variable reference's name.
 JSValue textSet(JSContext* ctx, JSValueConst typedObject, JSValueConst input) {
     TypedObject* object = typedOf(typedObject);
-    StringArgument text = {ctx};
+    StringArgument text = {.ctx = ctx, .usv = true};
     if (object == nullptr)
         return JS_ThrowTypeError(ctx, "Illegal invocation");
     if (!text.read(input))
@@ -2119,7 +2119,7 @@ JSValue equals(JSContext* ctx, JSValueConst object, int argc, JSValueConst* argv
 
 // Reads a unit's name. Throws a SyntaxError if it names no unit (css-typed-om-1/#cssnumericvalue-create-a-type).
 bool unitArgument(JSContext* ctx, JSValueConst value, PrCssUnit* out) {
-    StringArgument name = {ctx};
+    StringArgument name = {.ctx = ctx, .usv = true};
     if (!name.read(value))
         return false;
     if (!prCssUnitFromName(name.value(), out)) {
@@ -2198,7 +2198,7 @@ JSValue type(JSContext* ctx, JSValueConst jsObject, int, JSValueConst*) {
 }
 
 JSValue parseNumeric(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv) {
-    StringArgument text = {ctx};
+    StringArgument text = {.ctx = ctx, .usv = true};
     if (!jsArgCount(ctx, argc, 1) || !text.read(argv[0]))
         return JS_EXCEPTION;
     Tree value = heldTree(ctx);
@@ -2214,7 +2214,7 @@ JSValue parseNumeric(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv)
 
 JSValue unitConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSValueConst* argv) {
     double number = 0;
-    StringArgument name = {ctx};
+    StringArgument name = {.ctx = ctx, .usv = true};
     if (!jsArgCount(ctx, argc, 2) || JS_ToFloat64(ctx, &number, argv[0]) < 0 || !name.read(argv[1]))
         return JS_EXCEPTION;
     if (!prF64IsFinite(number))
@@ -2657,7 +2657,7 @@ JSValue colorSet(JSContext* ctx, JSValueConst channelsObject, JSValueConst input
 // css-typed-om-1/#dom-csscolorvalue-parse, which returns a color value. A color keyword that names no channels becomes
 // a keyword, and a color that is not absolute becomes a CSSStyleValue.
 JSValue parseColor(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv) {
-    StringArgument text = {ctx};
+    StringArgument text = {.ctx = ctx, .usv = true};
     if (!jsArgCount(ctx, argc, 1) || !text.read(argv[0]))
         return JS_EXCEPTION;
     Tree value = heldTree(ctx);
@@ -2784,7 +2784,7 @@ JSValue mapSet(JSContext* ctx, JSValueConst mapObject, int argc, JSValueConst* a
                 return JS_EXCEPTION;
             continue;
         }
-        StringArgument text = {ctx};
+        StringArgument text = {.ctx = ctx, .usv = true};
         if (!text.read(argv[i]))
             return JS_EXCEPTION;
         Tree parsed = heldTree(ctx);

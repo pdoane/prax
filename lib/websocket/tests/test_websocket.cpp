@@ -232,10 +232,10 @@ TEST_CASE("the server's close reports its code and reason") {
     reset(&fixture);
 }
 
-TEST_CASE("a failed handshake, a broken frame or an abrupt end closes without a clean close") {
+TEST_CASE("a failed handshake, a broken frame, text that is not UTF-8 or an abrupt end closes without a clean close") {
     Fixture fixture{};
     REQUIRE(open(&fixture));
-    const char* const paths[] = {"/reject", "/bad-accept", "/bad-frame", "/abort"};
+    const char* const paths[] = {"/reject", "/bad-accept", "/bad-frame", "/bad-text", "/abort"};
     for (const char* path : paths) {
         CAPTURE(path);
         Probe probe{.closeAfter = 100};
@@ -244,7 +244,9 @@ TEST_CASE("a failed handshake, a broken frame or an abrupt end closes without a 
         CHECK(probe.close.code == 1006);
         CHECK(probe.close.error != PrNetError_None);
         bool opened = !probe.events.isEmpty() && probe.events[0] == PrWebSocketEvent_Open;
-        CHECK(opened == (PrStringView(path) == "/bad-frame" || PrStringView(path) == "/abort"));
+        CHECK(opened == (PrStringView(path) == "/bad-frame" || PrStringView(path) == "/bad-text" ||
+            PrStringView(path) == "/abort"));
+        CHECK(probe.received.isEmpty());
     }
     Probe refused{.closeAfter = 100};
     // At 127.0.0.1 alone, where localhost would be refused at ::1 too, which takes Windows two seconds an address.

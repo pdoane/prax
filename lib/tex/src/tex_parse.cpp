@@ -91,14 +91,14 @@ Token lexToken(PrStringView text, uint32_t* at, bool inArena) {
             }
             if (*at < text.size) {
                 uint32_t codePoint = 0;
-                *at += prUtf8Decode(text, *at, &codePoint);
+                *at += prWtf8Decode(text, *at, &codePoint);
             }
             token.size = *at - token.start;
             token.sourceEnd = *at;
             return token;
         }
         uint32_t codePoint = 0;
-        *at += prUtf8Decode(text, *at, &codePoint);
+        *at += prWtf8Decode(text, *at, &codePoint);
         token.kind = TokenKind_Character;
         token.size = *at - token.start;
         token.sourceEnd = *at;
@@ -222,7 +222,7 @@ uint32_t tokenCodePoint(const Parser* p, const Token& token) {
     uint32_t codePoint = 0;
     PrStringView text = tokenText(p, token);
     if (text.size != 0)
-        prUtf8Decode(text, 0, &codePoint);
+        prWtf8Decode(text, 0, &codePoint);
     return codePoint;
 }
 
@@ -1223,7 +1223,7 @@ TexNodeIndex makeSymbol(Parser* p, const TexEntry& entry, const Context& context
         case TexEntryKind_Letter:
         case TexEntryKind_Upright: {
             uint32_t codePoint = 0;
-            uint32_t size = text.size != 0 ? prUtf8Decode(text, 0, &codePoint) : 0;
+            uint32_t size = text.size != 0 ? prWtf8Decode(text, 0, &codePoint) : 0;
             if (size != text.size || size == 0)
                 return makeToken(p, TexElement_Mi, text, TexClass_Ord, context);
             TexFont font = context.font;
@@ -1588,7 +1588,7 @@ uint32_t parseCharacterCode(PrStringView text) {
     size_t i = 0;
     if (text.size >= 2 && text.data[0] == '`') {
         uint32_t codePoint = 0;
-        prUtf8Decode(text, text.data[1] == '\\' && text.size > 2 ? 2 : 1, &codePoint);
+        prWtf8Decode(text, text.data[1] == '\\' && text.size > 2 ? 2 : 1, &codePoint);
         return codePoint;
     }
     if (text.size != 0 && text.data[0] == '"') {
@@ -2606,7 +2606,7 @@ TexNodeIndex parseCommand(Parser* p, const Context& context, const Token& token,
             if (node.element == TexElement_Mo || node.element == TexElement_Mi) {
                 PrStringView text = texNodeText(p->tree, atom);
                 uint32_t codePoint = 0;
-                uint32_t size = text.size != 0 ? prUtf8Decode(text, 0, &codePoint) : 0;
+                uint32_t size = text.size != 0 ? prWtf8Decode(text, 0, &codePoint) : 0;
                 uint32_t negated = size == text.size ? texNegate(codePoint) : 0;
                 if (negated != 0) {
                     char utf8[kPrUtf8MaxBytes];

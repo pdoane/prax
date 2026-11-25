@@ -143,7 +143,7 @@ uint32_t codePointBefore(const Subject& s, size_t end) {
     while (start > 0 && (uint8_t(s.text.data[start]) & 0xc0) == 0x80)
         --start;
     uint32_t codePoint = 0;
-    prUtf8Decode(prStringSlice(s.text, start, end - start), 0, &codePoint);
+    prWtf8Decode(prStringSlice(s.text, start, end - start), 0, &codePoint);
     return codePoint;
 }
 
@@ -152,7 +152,7 @@ uint32_t codePointAt(const Subject& s, size_t start) {
     if (start >= s.text.size)
         return '\n';
     uint32_t codePoint = 0;
-    prUtf8Decode(s.text, start, &codePoint);
+    prWtf8Decode(s.text, start, &codePoint);
     return codePoint;
 }
 
@@ -895,7 +895,7 @@ bool isHostCharacter(PrStringView text, size_t index) {
     if ((lead & 0xc0) == 0x80)
         return false;
     uint32_t codePoint = 0;
-    prUtf8Decode(text, index, &codePoint);
+    prWtf8Decode(text, index, &codePoint);
     if (codePoint == kPrUtf8Replacement && lead >= 0x80 && lead != 0xef)
         return false;
     if (codePoint < 0x80)

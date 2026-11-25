@@ -1319,9 +1319,20 @@ size_t prCharsetEncodeMaxSize(const PrCharsetEncoder* encoder, size_t size) {
 size_t prCharsetEncode(PrCharsetEncoder* encoder, PrStringView text, PrCharsetInput input, char* out, size_t* outSize,
         uint32_t* outUnencoded) {
     *outUnencoded = kPrCharsetUnencodedNone;
+    // An encoder takes scalar values, so a lone surrogate is U+FFFD (encoding/#encode).
     if (encoder->charset == PrCharset_Utf8) {
-        prMemCopy(out, text.data, text.size);
-        *outSize = text.size;
+        size_t size = 0;
+        if (prUtf8Validate(text) == text.size) {
+            prMemCopy(out, text.data, text.size);
+            size = text.size;
+        } else {
+            for (size_t at = 0; at < text.size;) {
+                uint32_t codePoint = 0;
+                at += prWtf8DecodeScalar(text, at, &codePoint);
+                size += prUtf8Encode(codePoint, out + size);
+            }
+        }
+        *outSize = size;
         return text.size;
     }
     CharsetBytes b = {out, 0};
@@ -1339,7 +1350,7 @@ size_t prCharsetEncode(PrCharsetEncoder* encoder, PrStringView text, PrCharsetIn
                 break;
         }
         uint32_t codePoint = 0;
-        at += prUtf8Decode(text, at, &codePoint);
+        at += prWtf8DecodeScalar(text, at, &codePoint);
         uint32_t error = 0;
         if (!encodeOne(encoder, codePoint, &b, &error)) {
             *outUnencoded = error;

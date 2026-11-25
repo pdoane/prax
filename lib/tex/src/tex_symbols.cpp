@@ -462,7 +462,7 @@ uint32_t singleCodePoint(const char* PR_NULLABLE text) {
     if (view.size == 0)
         return 0;
     uint32_t codePoint = 0;
-    uint32_t size = prUtf8Decode(view, 0, &codePoint);
+    uint32_t size = prWtf8Decode(view, 0, &codePoint);
     return size == view.size ? codePoint : 0;
 }
 
@@ -613,7 +613,7 @@ uint32_t contentOf(PrStringView content, uint32_t out[PR_NONNULL kMaxContent], u
     *count = 0;
     for (size_t at = 0; at < content.size && units <= 2;) {
         uint32_t codePoint = 0;
-        at += prUtf8Decode(content, at, &codePoint);
+        at += prWtf8Decode(content, at, &codePoint);
         units += codePoint > 0xffff ? 2 : 1;
         if (*count < kMaxContent)
             out[(*count)++] = codePoint;

@@ -18,7 +18,7 @@ uint32_t contentOf(PrStringView content, uint32_t out[PR_NONNULL kMaxContent], u
     *count = 0;
     for (size_t at = 0; at < content.size && units <= 2;) {
         uint32_t codePoint = 0;
-        at += prUtf8Decode(content, at, &codePoint);
+        at += prWtf8Decode(content, at, &codePoint);
         units += codePoint > 0xffff ? 2 : 1;
         if (*count < kMaxContent)
             out[(*count)++] = codePoint;
@@ -131,7 +131,7 @@ bool mathMlOperator(const PrDomElement* element, const MathMlFlow& flow, MathMlO
         PrStringView content = prRawStringView(&text);
         out->category = categoryOf(content, out->form, !out->explicitForm);
         uint32_t codePoint = 0;
-        if (content.size != 0 && prUtf8Decode(content, 0, &codePoint) == content.size)
+        if (content.size != 0 && prWtf8Decode(content, 0, &codePoint) == content.size)
             out->codePoint = codePoint;
     }
     prRawStringReset(&text);

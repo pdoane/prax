@@ -10,6 +10,8 @@
 #include "pr/float.h"
 #include "pr/memory.h"
 #include "pr/string_ops.h"
+#include "pr/text_buffer.h"
+#include "pr/utf8_views.h"
 
 #include "dom/src/dom_attribute.h"
 #include "dom/src/dom_hooks.h"
@@ -415,7 +417,11 @@ void domEntryListRelease(DomEntryList* PR_NULLABLE list) {
 }
 
 void domEntryListAppend(DomEntryList* list, PrStringView name, PrStringView value) {
-    list->entries.push(DomEntry{prRawStringCopy(name), prRawStringCopy(value)});
+    Utf8Views<2> scalars;
+    PrRawString nameCopy = prRawStringCopy(scalars.of(name));
+    PrRawString valueCopy = prRawStringCopy(scalars.of(value));
+    list->entries.push(DomEntry{nameCopy, valueCopy});
+    scalars.reset();
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

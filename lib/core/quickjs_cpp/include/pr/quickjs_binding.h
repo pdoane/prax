@@ -59,15 +59,18 @@ struct JsWrapperExtra {
     uint32_t pins;                      // how many times its handle is pinned
 };
 
-// A string read from a JS value, as UTF-8 with every unpaired surrogate replaced by U+FFFD.
+// A string read from a JS value, as Web IDL converts it: to a DOMString, which is WTF-8 that keeps each lone surrogate,
+// or to a USVString, which is UTF-8 that replaces each with U+FFFD.
 struct JsString {
     const char* PR_NULLABLE text;
-    char* PR_NULLABLE scalar;   // the replaced copy, if there was a surrogate
+    char* PR_NULLABLE replaced;   // the USVString's copy, if `text` has a lone surrogate
     size_t size;
 };
 
-// Converts `input` to a string. Returns false, with an exception pending, if it does not convert.
+// Converts `input` to a DOMString (jsStringRead) or a USVString (jsStringReadUsv). Returns false, with an exception
+// pending, if it does not convert.
 bool jsStringRead(JSContext* ctx, JSValueConst input, JsString* out);
+bool jsStringReadUsv(JSContext* ctx, JSValueConst input, JsString* out);
 
 // Frees the string and empties it.
 void jsStringReset(JSContext* ctx, JsString* string);
@@ -139,19 +142,21 @@ struct JsCallScoped<Function> {
     }
 };
 
-// Converts `input` to a string, which the call's scope holds. Returns false, with an exception pending, if it does not
-// convert.
+// Converts `input` to a DOMString (jsReadString) or a USVString (jsReadUsvString), which the call's scope holds.
+// Returns false, with an exception pending, if it does not convert.
 bool jsReadString(JSContext* ctx, JSValueConst input, PrStringView* out);
+bool jsReadUsvString(JSContext* ctx, JSValueConst input, PrStringView* out);
 
-// A string argument, whose text the call's scope holds.
+// A string argument, whose text the call's scope holds: a DOMString, or a USVString if `usv`.
 struct StringArgument {
     JSContext* ctx;
     PrStringView fallback = "";   // the value of an argument that was never read
     PrStringView text = PrStringView{};
     bool given = false;
+    bool usv = false;
 
     bool read(JSValueConst input) {
-        given = jsReadString(ctx, input, &text);
+        given = usv ? jsReadUsvString(ctx, input, &text) : jsReadString(ctx, input, &text);
         return given;
     }
     // Reads `input`, unless it is null, which keeps the fallback ([LegacyNullToEmptyString] and nullable strings).

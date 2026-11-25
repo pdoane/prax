@@ -92,9 +92,9 @@ typedef struct PrTextFeature {
 // split by a change of color stays joined. Backends differ in how much context they read.
 typedef struct PrTextRun {
     const PrFont* font;
-    PrStringView text;                          // UTF-8
-    PrStringView before;                        // the text before the run, UTF-8
-    PrStringView after;                         // the text after the run, UTF-8
+    PrStringView text;
+    PrStringView before;                        // the text before the run
+    PrStringView after;                         // the text after the run
     PrTextDirection direction;                  // shaped right to left if Rtl; a vertical run is shaped down
     PrTextAxis axis;
 

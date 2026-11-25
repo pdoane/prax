@@ -75,6 +75,23 @@ TEST_CASE("escapes unescape, and a lone surrogate is a replacement") {
     prJsonDestroy(d);
 }
 
+TEST_CASE("text that is not UTF-8 is not JSON") {
+    PrJson* d = prJsonCreate();
+    CHECK(parse("[\"\xC3\xA9\xF0\x9F\x98\x80\"]", d));
+    CHECK_FALSE(parse("[\"a\xC3\"]", d));
+    CHECK_FALSE(parse("[\"a\xFF\"]", d));
+    CHECK_FALSE(parse("[\"a\xED\xA0\x80\"]", d));
+    CHECK_FALSE(parse("[\"a\xC0\xAF\"]", d));
+    prJsonDestroy(d);
+}
+
+TEST_CASE("a lone surrogate is written as its escape, so the JSON is UTF-8") {
+    PrJsonWriter* w = prJsonWriterCreate();
+    prJsonWriterString(w, "a\xED\xA0\x80" "b\xF0\x9F\x98\x80");
+    CHECK(prJsonWriterText(w) == "\"a\\ud800b\xF0\x9F\x98\x80\"");
+    prJsonWriterDestroy(w);
+}
+
 TEST_CASE("what is not JSON fails where it stops") {
     PrJson* d = prJsonCreate();
     size_t at = 0;

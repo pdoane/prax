@@ -104,7 +104,7 @@ bool unicodeNames(PrStringView list, const SvgGlyph& glyph) {
     if (list.data == nullptr || glyph.unicode.size == 0)
         return false;
     uint32_t codePoint = 0;
-    size_t length = prUtf8Decode(glyph.unicode, 0, &codePoint);
+    size_t length = prWtf8Decode(glyph.unicode, 0, &codePoint);
     bool single = length == glyph.unicode.size;
     return anyItem(list, [&](PrStringView item) {
         PrFontCodePointRange range{};
@@ -382,7 +382,7 @@ uint32_t svgFontMatch(const SvgFont& font, PrStringView text, size_t pos, PrStri
         return i;
     }
     uint32_t codePoint = 0;
-    *length = prUtf8Decode(text, pos, &codePoint);
+    *length = prWtf8Decode(text, pos, &codePoint);
     return kSvgMissingGlyph;
 }
 

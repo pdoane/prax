@@ -64,7 +64,7 @@ JSValue jsSetReflectInteger(JSContext* ctx, JSValueConst elementObject, JSValueC
 }
 
 // The members of a prototype that reflect the content attribute `attribute` in the IDL attribute `name`.
-#define PR_REFLECT_URL(name, attribute) PR_JS_GET_SET(name, jsReflectUrl<attribute>, jsSetReflectString<attribute>)
+#define PR_REFLECT_URL(name, attribute) PR_JS_GET_SET(name, jsReflectUrl<attribute>, (jsSetReflectString<attribute, true>))
 #define PR_REFLECT_INTEGER(name, attribute, kind, fallback)                                        \
     PR_JS_GET_SET(name, (jsReflectInteger<attribute, kind, fallback>),                             \
                   (jsSetReflectInteger<attribute, kind, fallback>))

@@ -45,7 +45,7 @@ PrStatus prAppWindowCreate(PrApp* app, const PrAppWindowDesc* desc, PrAppWindow*
     PR_ASSERT((desc->parent != nullptr) ==
         (desc->role == PrAppWindowRole_Dialog || desc->role == PrAppWindowRole_Popup));
     PR_ASSERT(!desc->modal || desc->role == PrAppWindowRole_Dialog);
-    PR_ASSERT(prUtf8Validate(desc->title) == desc->title.size);
+    PR_ASSERT(prWtf8Validate(desc->title) == desc->title.size);
     // Only a Desktop application has windows for its popups, dialogs and overlays.
     if (desc->role != PrAppWindowRole_Normal && prAppWindowModel(app) != PrAppWindowModel_Desktop)
         return PrStatus_NotSupported;
@@ -73,7 +73,7 @@ void prAppWindowRequestUnpacedFrame(PrAppWindow* window) {
 }
 
 void prAppWindowSetTitle(PrAppWindow* window, PrStringView title) {
-    PR_ASSERT(prUtf8Validate(title) == title.size);
+    PR_ASSERT(prWtf8Validate(title) == title.size);
     window->setTitleFn(window, title);
 }
 
@@ -211,7 +211,7 @@ void prAppWindowSetProgress(PrAppWindow* window, PrAppProgressState state, float
 }
 
 void prAppWindowSetDocument(PrAppWindow* window, PrStringView path, bool edited) {
-    PR_ASSERT(prUtf8Validate(path) == path.size);
+    PR_ASSERT(prWtf8Validate(path) == path.size);
     if (window->setDocumentFn != nullptr)
         window->setDocumentFn(window, path, edited);
 }
@@ -222,7 +222,7 @@ PrStatus prAppWindowSurface(const PrAppWindow* window, PrSurface* out) {
 
 void prAppWindowDragStart(PrAppWindow* window, const PrAppDragDesc* desc) {
     PR_ASSERT((desc->content.forms & PrAppDataFormFlag_Text) == 0 ||
-        prUtf8Validate(desc->content.text) == desc->content.text.size);
+        prWtf8Validate(desc->content.text) == desc->content.text.size);
     PR_ASSERT(desc->promises != nullptr || desc->promiseCount == 0);
     window->dragStartFn(window, desc);
 }

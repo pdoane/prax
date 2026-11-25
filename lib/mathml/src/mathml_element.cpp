@@ -285,7 +285,7 @@ uint32_t mathMlTokenCodePoint(const PrDomElement* element) {
         return 0;
     PrStringView view = prRawStringView(&text);
     uint32_t codePoint = 0;
-    uint32_t length = view.size != 0 ? prUtf8Decode(view, 0, &codePoint) : 0;
+    uint32_t length = view.size != 0 ? prWtf8Decode(view, 0, &codePoint) : 0;
     if (length != view.size)
         codePoint = 0;
     prRawStringReset(&text);

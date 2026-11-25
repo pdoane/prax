@@ -1015,8 +1015,8 @@ using namespace pr_impl;
     event.input.text = prRawStringView(&utf8);
     if (selection.location != NSNotFound)
         event.input.selection = PrAppTextRange{
-            appKitUtf8Length(text, selection.location),
-            appKitUtf8Length(text, selection.location + selection.length),
+            appKitWtf8Length(text, selection.location),
+            appKitWtf8Length(text, selection.location + selection.length),
         };
     [self deliver:event];
     prRawStringReset(&utf8);

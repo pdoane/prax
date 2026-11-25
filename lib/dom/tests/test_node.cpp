@@ -904,13 +904,25 @@ TEST_CASE("character data is edited in UTF-16 code units") {
     CHECK(prDomCharacterDataSubstringData(data, 1, 2, &part) == PrStatus_Ok);
     CHECK(taken(part) == "\xF0\x9F\x98\x80");
     CHECK(prDomCharacterDataSubstringData(data, 2, 1, &part) == PrStatus_Ok);
-    CHECK(taken(part) == "\xEF\xBF\xBD");
+    CHECK(taken(part) == "\xED\xB8\x80");   // the low surrogate of U+1F600, as script sees it
     CHECK(prDomCharacterDataSubstringData(data, 6, 1, &part) == PrStatus_OutOfRange);
     CHECK(prDomCharacterDataInsertData(data, 5, "d") == PrStatus_Ok);
     CHECK(prDomCharacterDataDeleteData(data, 0, 1) == PrStatus_Ok);
     CHECK(prDomCharacterDataReplaceData(data, 2, 1, "X") == PrStatus_Ok);
     prDomCharacterDataAppendData(data, "!");
     CHECK(textOf(prDomCharacterDataData(data)) == "\xF0\x9F\x98\x80Xcd!");
+    domNodeRelease(document);
+}
+
+TEST_CASE("an edit that splits a surrogate pair leaves lone surrogates, which join when they meet again") {
+    PrDomDocument* document = domDocumentCreate(DomDocumentKind_Html);
+    PrDomCharacterData* data = domTextCreate(document, "\xF0\x9F\x98\x80");
+    CHECK(prDomCharacterDataInsertData(data, 1, "x") == PrStatus_Ok);
+    CHECK(textOf(prDomCharacterDataData(data)) == "\xED\xA0\xBDx\xED\xB8\x80");
+    CHECK(prDomCharacterDataLength(data) == 3);
+    CHECK(prDomCharacterDataDeleteData(data, 1, 1) == PrStatus_Ok);
+    CHECK(textOf(prDomCharacterDataData(data)) == "\xF0\x9F\x98\x80");
+    CHECK(prDomCharacterDataLength(data) == 2);
     domNodeRelease(document);
 }
 
@@ -960,4 +972,13 @@ TEST_CASE("a processing instruction's target is an XML name and its data holds n
     CHECK(prDomProcessingInstructionCreate(handle, "1x", "a", &instruction) == PrStatus_InvalidData);
     CHECK(prDomProcessingInstructionCreate(handle, "x", "a?>b", &instruction) == PrStatus_InvalidData);
     domNodeRelease(document);
+}
+
+TEST_CASE("a custom element name is a PCENChar run with a hyphen, and a lone surrogate is none") {
+    CHECK(prDomIsValidCustomElementName("my-element"));
+    CHECK(prDomIsValidCustomElementName("x-\xC3\xA9"));
+    CHECK(prDomIsValidCustomElementName("x-\xF0\x9F\x98\x80"));
+    CHECK(!prDomIsValidCustomElementName("myelement"));
+    CHECK(!prDomIsValidCustomElementName("font-face"));
+    CHECK(!prDomIsValidCustomElementName("x-\xED\xA0\x80"));
 }

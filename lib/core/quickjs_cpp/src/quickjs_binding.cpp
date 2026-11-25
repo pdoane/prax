@@ -6,6 +6,7 @@
 #include "pr/mem.h"
 #include "pr/memory.h"
 #include "pr/quickjs_callback.h"
+#include "pr/utf8.h"
 
 namespace pr {
 namespace {
@@ -27,30 +28,39 @@ constexpr JSMallocFunctions kJsAllocator = {
 // set. quickjs.h does not document this. jsIndexAtomsTagged checks it.
 constexpr JSAtom kAtomTaggedInt = 1u << 31;
 
-// Returns true if the three bytes at `at` are the CESU-8 form of a surrogate. QuickJS writes an unpaired surrogate in
-// that form.
-bool isSurrogate(const char* text, size_t at) {
-    return uint8_t(text[at]) == 0xed && (uint8_t(text[at + 1]) & 0xe0) == 0xa0;
+// Holds `string` in the call's scope, and returns its view.
+PrStringView holdString(JSContext* ctx, JsString string) {
+    JsHeld held = {};
+    held.kind = JsHeldKind_CString;
+    held.cstring = string.text;
+    jsHold(ctx, held);
+    if (string.replaced != nullptr) {
+        held.kind = JsHeldKind_Bytes;
+        held.bytes = string.replaced;
+        jsHold(ctx, held);
+    }
+    return jsStringView(&string);
 }
 
-// Returns a copy of `text` with every unpaired surrogate replaced by U+FFFD, or null if it has none.
-char* PR_NULLABLE scalarize(const char* text, size_t size) {
-    size_t at = 0;
-    while (at + 2 < size && !isSurrogate(text, at))
-        ++at;
-    if (at + 2 >= size)
+// Returns a copy of `text`, which QuickJS writes as WTF-8, with each lone surrogate replaced by U+FFFD, or null if it
+// has none. A surrogate's three bytes and U+FFFD's are as long, so the copy is as long as `text`.
+char* PR_NULLABLE replaceSurrogates(const char* text, size_t size) {
+    // QuickJS writes well-formed WTF-8, so a surrogate is the only sequence to replace: 0xed and a second byte of 0xa0
+    // or above, where Hangul's 0xed has a lower one.
+    const char* found = prMemFind(text, char(0xed), size);
+    while (found != nullptr && (found + 1 == text + size || uint8_t(found[1]) < 0xa0))
+        found = prMemFind(found + 1, char(0xed), size_t(text + size - found - 1));
+    if (found == nullptr)
         return nullptr;
-
+    PrStringView view{text, size};
     char* copy = static_cast<char*>(prMemoryAlloc(size));
-    prMemCopy(copy, text, size);
-    for (size_t i = at; i + 2 < size; ++i) {
-        if (isSurrogate(copy, i)) {
-            copy[i] = char(0xef);
-            copy[i + 1] = char(0xbf);
-            copy[i + 2] = char(0xbd);
-            i += 2;
-        }
+    size_t written = 0;
+    for (size_t at = 0; at < size;) {
+        uint32_t codePoint = 0;
+        at += prWtf8DecodeScalar(view, at, &codePoint);
+        written += prUtf8Encode(codePoint, copy + written);
     }
+    PR_ASSERT(written == size);
     return copy;
 }
 
@@ -387,21 +397,26 @@ JsWrapperExtra* PR_NULLABLE extraOf(JsWrapper* wrapper, bool make) {
 } // namespace
 
 bool jsStringRead(JSContext* ctx, JSValueConst input, JsString* out) {
+    *out = {};
     out->text = JS_ToCStringLen(ctx, &out->size, input);
-    if (out->text == nullptr)
+    return out->text != nullptr;
+}
+
+bool jsStringReadUsv(JSContext* ctx, JSValueConst input, JsString* out) {
+    if (!jsStringRead(ctx, input, out))
         return false;
-    out->scalar = scalarize(out->text, out->size);
+    out->replaced = replaceSurrogates(out->text, out->size);
     return true;
 }
 
 void jsStringReset(JSContext* ctx, JsString* string) {
-    prMemoryFree(string->scalar);
+    prMemoryFree(string->replaced);
     JS_FreeCString(ctx, string->text);
     *string = {};
 }
 
 PrStringView jsStringView(const JsString* string) {
-    const char* data = string->scalar != nullptr ? string->scalar : string->text;
+    const char* data = string->replaced != nullptr ? string->replaced : string->text;
     return PrStringView{data != nullptr ? data : "", string->size};
 }
 
@@ -466,16 +481,15 @@ bool jsReadString(JSContext* ctx, JSValueConst input, PrStringView* out) {
     JsString string = {};
     if (!jsStringRead(ctx, input, &string))
         return false;
-    JsHeld held = {};
-    held.kind = JsHeldKind_CString;
-    held.cstring = string.text;
-    jsHold(ctx, held);
-    if (string.scalar != nullptr) {
-        held.kind = JsHeldKind_Bytes;
-        held.bytes = string.scalar;
-        jsHold(ctx, held);
-    }
-    *out = jsStringView(&string);
+    *out = holdString(ctx, string);
+    return true;
+}
+
+bool jsReadUsvString(JSContext* ctx, JSValueConst input, PrStringView* out) {
+    JsString string = {};
+    if (!jsStringReadUsv(ctx, input, &string))
+        return false;
+    *out = holdString(ctx, string);
     return true;
 }
 

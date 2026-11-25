@@ -21,11 +21,11 @@ enum {
 };
 typedef uint8_t PrUnicodeNormalForm;
 
-// Returns `text` in `form`. `text` is UTF-8 that may be ill-formed, and each ill-formed sequence becomes U+FFFD. The
-// caller releases the result with prRawStringReset.
+// Returns `text` in `form`. `text` may be ill-formed: each ill-formed sequence becomes U+FFFD. A lone surrogate, which
+// no normalization changes, stays itself. The caller releases the result with prRawStringReset.
 PrRawString prUnicodeNormalize(PrStringView text, PrUnicodeNormalForm form);
 
-// Returns true if `text` is well-formed UTF-8 that is in `form`.
+// Returns true if `text` is well-formed and in `form`.
 bool prUnicodeIsNormalized(PrStringView text, PrUnicodeNormalForm form);
 
 #if defined(__cplusplus)

@@ -125,7 +125,7 @@ void toUtf16(CtBackend* c, PrStringView text) {
     size_t at = 0;
     while (at < text.size) {
         uint32_t codePoint = 0;
-        uint32_t length = prUtf8Decode(text, at, &codePoint);
+        uint32_t length = prWtf8Decode(text, at, &codePoint);
         if (codePoint >= 0x10000) {
             codePoint -= 0x10000;
             c->utf16.push(UniChar(0xd800 + (codePoint >> 10)));

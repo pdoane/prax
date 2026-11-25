@@ -108,7 +108,7 @@ JSValue fixedType(JSContext* ctx, JSValueConst object) {
 
 // The members of a submit button that override its form's (html/#form-submission-attributes).
 #define PR_SUBMITTER_ATTRIBUTES                                                                    \
-    PR_JS_GET_SET("formAction", formActionUrl<"formaction">, jsSetReflectString<"formaction">),    \
+    PR_JS_GET_SET("formAction", formActionUrl<"formaction">, (jsSetReflectString<"formaction", true>)),    \
         PR_JS_DOM_REFLECT_ENUMERATED("formEnctype", "formenctype", &kFormEnctype),                        \
         PR_JS_DOM_REFLECT_ENUMERATED("formMethod", "formmethod", &kFormMethod),                           \
         PR_JS_DOM_REFLECT_BOOL("formNoValidate", "formnovalidate"), PR_JS_DOM_REFLECT_STRING("formTarget", "formtarget")
@@ -781,7 +781,7 @@ JSValue eventSource(JSContext* ctx, JSValueConst eventObject, int magic) {
 constexpr JSCFunctionListEntry kFormElementProto[] = {
     PR_JS_TAG("HTMLFormElement"),
     PR_JS_DOM_REFLECT_STRING("acceptCharset", "accept-charset"),
-    PR_JS_GET_SET("action", formActionUrl<"action">, jsSetReflectString<"action">),
+    PR_JS_GET_SET("action", formActionUrl<"action">, (jsSetReflectString<"action", true>)),
     PR_JS_DOM_REFLECT_ENUMERATED("autocomplete", "autocomplete", &kAutocomplete),
     PR_JS_DOM_REFLECT_ENUMERATED("enctype", "enctype", &kEnctype),
     PR_JS_DOM_REFLECT_ENUMERATED("encoding", "enctype", &kEnctype),

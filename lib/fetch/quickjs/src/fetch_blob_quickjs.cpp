@@ -107,7 +107,7 @@ bool appendPart(JSContext* ctx, JSValueConst part, BlobInit* init, PrTextBuffer*
         return true;
     }
     PrStringView text;
-    if (!jsReadString(ctx, part, &text))
+    if (!jsReadUsvString(ctx, part, &text))
         return false;
     if (init->nativeEndings) {
         PrRawString converted = prFetchBlobConvertLineEndings(text);
@@ -173,7 +173,7 @@ JSValue fileConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSValueC
         return JS_EXCEPTION;
     BlobInit init{};
     PrStringView name;
-    bool ok = jsReadString(ctx, argv[1], &name) && readBag(ctx, argc > 2 ? argv[2] : JS_UNDEFINED, true, &init) &&
+    bool ok = jsReadUsvString(ctx, argv[1], &name) && readBag(ctx, argc > 2 ? argv[2] : JS_UNDEFINED, true, &init) &&
         readParts(ctx, argv[0], &init, &init.bytes);
     if (!ok) {
         prTextBufferReset(&init.bytes);

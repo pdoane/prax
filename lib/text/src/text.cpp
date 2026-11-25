@@ -71,8 +71,8 @@ PrTextGlyphBuffer& scratchOf(PrTextGlyphBuffer& g) {
     return *g.scratch;
 }
 
-bool isUtf8(PrStringView text) {
-    return text.size == 0 || prUtf8Validate(text) == text.size;
+bool isWtf8(PrStringView text) {
+    return text.size == 0 || prWtf8Validate(text) == text.size;
 }
 
 bool isSpace(uint32_t codePoint) {
@@ -172,7 +172,7 @@ void spacingOf(const PrTextRun& run, PrStringView text, const PrTextGlyph* glyph
     float words = 0;
     for (size_t grapheme = 0; grapheme < text.size;) {
         uint32_t codePoint = 0;
-        prUtf8Decode(text, grapheme, &codePoint);
+        prWtf8Decode(text, grapheme, &codePoint);
         if (prTextIsWordSeparator(codePoint))
             words += run.wordSpacing;
         size_t end = prUnicodeGraphemeNext(text, grapheme);
@@ -184,7 +184,7 @@ void spacingOf(const PrTextRun& run, PrStringView text, const PrTextGlyph* glyph
             // default ignorable code point that draws nothing has its glyph removed, so it takes no spacing.
             uint32_t glyph = uint32_t(order.data[rightToLeft ? at : past - 1]);
             uint32_t drawn = 0;
-            prUtf8Decode(text, clusterAt(at), &drawn);
+            prWtf8Decode(text, clusterAt(at), &drawn);
             bool removed = (prUnicodeFlags(drawn) & PrUnicodeFlag_DefaultIgnorable) != 0 &&
                 glyphs[glyph].advance.x == 0 && glyphs[glyph].advance.y == 0;
             if (!removed)
@@ -195,7 +195,7 @@ void spacingOf(const PrTextRun& run, PrStringView text, const PrTextGlyph* glyph
         if (end < text.size && (at == count || clusterAt(at) != end))
             continue;
         if (last != UINT32_MAX) {
-            prUtf8Decode(text, start, &codePoint);
+            prWtf8Decode(text, start, &codePoint);
             out[last] += words + (prTextTakesLetterSpacing(codePoint) ? run.letterSpacing : 0);
         }
         start = end;
@@ -232,7 +232,7 @@ bool fontGives(PrTextShaper* shaper, const PrTextRun& run, uint32_t tag, bool ev
     bool all = true;
     for (uint32_t i = 0; i < s.glyphs.count; ++i) {
         uint32_t codePoint = 0;
-        prUtf8Decode(run.text, s.glyphs.data[i].cluster, &codePoint);
+        prWtf8Decode(run.text, s.glyphs.data[i].cluster, &codePoint);
         if (isSpace(codePoint))
             continue;
         bool differs = s.glyphs.data[i].id != g.probe.data[i];
@@ -275,12 +275,12 @@ PrStatus shapePiece(PrTextShaper* shaper, const PrTextRun& run, uint32_t start, 
     g.origin.clear();
     for (size_t at = start; at < end;) {
         uint32_t codePoint = 0;
-        uint32_t length = prUtf8Decode(run.text, at, &codePoint);
+        uint32_t length = prWtf8Decode(run.text, at, &codePoint);
         uint32_t mapped[3] = {codePoint, 0, 0};
         uint32_t count = upper ? prUnicodeUppercase(codePoint, mapped) : 1;
         for (uint32_t i = 0; i < count; ++i) {
             char bytes[kPrUtf8MaxBytes];
-            uint32_t written = prUtf8Encode(mapped[i], bytes);
+            uint32_t written = prWtf8Encode(mapped[i], bytes);
             for (uint32_t k = 0; k < written; ++k) {
                 g.piece.push(bytes[k]);
                 g.origin.push(uint32_t(at));
@@ -336,12 +336,12 @@ PrStatus shapeSynthesizedCaps(PrTextShaper* shaper, const PrTextRun& run, float 
     size_t at = 0;
     while (at < run.text.size && status == PrStatus_Ok) {
         uint32_t codePoint = 0;
-        prUtf8Decode(run.text, at, &codePoint);
+        prWtf8Decode(run.text, at, &codePoint);
         CaseForm form = caseFormOf(run.caps, codePoint);
         size_t end = at;
         while (end < run.text.size) {
             uint32_t next = 0;
-            uint32_t length = prUtf8Decode(run.text, end, &next);
+            uint32_t length = prWtf8Decode(run.text, end, &next);
             CaseForm nextForm = caseFormOf(run.caps, next);
             if (nextForm.upper != form.upper || nextForm.scaled != form.scaled)
                 break;
@@ -498,7 +498,7 @@ PrStatus shapeRun(PrTextShaper* shaper, const PrTextRun* run, PrTextGlyphBuffer&
         const PrTextGlyph& glyph = g.glyphs.data[i];
         uint32_t codePoint = 0;
         if (glyph.cluster < run->text.size)
-            prUtf8Decode(run->text, glyph.cluster, &codePoint);
+            prWtf8Decode(run->text, glyph.cluster, &codePoint);
         bool ignorable = (prUnicodeFlags(codePoint) & PrUnicodeFlag_DefaultIgnorable) != 0 && glyph.advance.x == 0 &&
             glyph.advance.y == 0;
         if (!ignorable) {
@@ -532,7 +532,7 @@ PrStatus shapeRun(PrTextShaper* shaper, const PrTextRun* run, PrTextGlyphBuffer&
 PrScript startingScript(PrStringView text) {
     for (size_t at = 0; at < text.size;) {
         uint32_t codePoint = 0;
-        at += prUtf8Decode(text, at, &codePoint);
+        at += prWtf8Decode(text, at, &codePoint);
         PrScript script = prUnicodeScript(codePoint);
         if (script != PrScript_Zyyy && script != PrScript_Zinh && script != PrScript_Zzzz)
             return script;
@@ -658,7 +658,7 @@ void prTextShaperDestroy(PrTextShaper* PR_NULLABLE shaper) {
 }
 
 PrStatus prTextShaperShape(PrTextShaper* shaper, const PrTextRun* run, PrTextGlyphBuffer* out) {
-    PR_ASSERT(isUtf8(run->text) && isUtf8(run->before) && isUtf8(run->after));
+    PR_ASSERT(isWtf8(run->text) && isWtf8(run->before) && isWtf8(run->after));
     out->glyphs.clear();
     PrTextRun resolved = *run;
     if (resolved.script == PrScript_Zzzz)

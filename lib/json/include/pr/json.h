@@ -43,9 +43,9 @@ PrJson* prJsonCreate(void);
 void prJsonDestroy(PrJson* PR_NULLABLE document);
 
 // Reads the JSON in `text` into the document, replacing what it held and keeping its storage. `text` is UTF-8 with an
-// optional byte order mark. An escaped lone surrogate reads as U+FFFD. Returns false if the text is not JSON or nests
-// deeper than kPrJsonMaxDepth, leaves the document empty, and writes to `*errorAt` the byte offset where reading
-// stopped.
+// optional byte order mark, and text that is not well-formed UTF-8 is not JSON. An escaped lone surrogate reads as
+// U+FFFD. Returns false if the text is not JSON or nests deeper than kPrJsonMaxDepth, leaves the document empty, and
+// writes to `*errorAt` the byte offset where reading stopped.
 bool prJsonParse(PrJson* document, PrStringView text, size_t* PR_NULLABLE errorAt);
 
 // Returns the number of values in the document, at any depth. An empty document has none.
@@ -108,9 +108,9 @@ void prJsonWriterEndObject(PrJsonWriter* writer);
 void prJsonWriterKey(PrJsonWriter* writer, PrStringView key);
 
 // Append a value: an array's next element, the value of the member whose key was appended last, or the document's root.
-// A string escapes the quote, the backslash and the control characters, and replaces ill-formed UTF-8 with U+FFFD. A
-// number is written in its shortest form that reads back to the same double, and a NaN or an infinity, which JSON
-// cannot represent, as null.
+// A string escapes the quote, the backslash, the control characters and each lone surrogate, as JSON.stringify does,
+// and replaces an ill-formed sequence with U+FFFD. A number is written in its shortest form that reads back to the same
+// double, and a NaN or an infinity, which JSON cannot represent, as null.
 void prJsonWriterString(PrJsonWriter* writer, PrStringView value);
 void prJsonWriterNumber(PrJsonWriter* writer, double value);
 void prJsonWriterBool(PrJsonWriter* writer, bool value);

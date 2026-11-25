@@ -145,7 +145,7 @@ void prTextBreaksTailor(const PrTextBreakDesc* desc, PrUnicodeLineBreak* breaks,
 bool prTextFirstLetter(PrStringView text, size_t* start, size_t* end) {
     auto classAt = [&](size_t at) {
         uint32_t codePoint = 0;
-        prUtf8Decode(text, at, &codePoint);
+        prWtf8Decode(text, at, &codePoint);
         return letterClassOf(codePoint);
     };
     size_t at = 0;

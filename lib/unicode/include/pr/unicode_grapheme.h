@@ -37,7 +37,8 @@ PrUnicodeGraphemeState prUnicodeGraphemeStateBegin(uint32_t codePoint);
 bool prUnicodeGraphemeStatePush(PrUnicodeGraphemeState* state, uint32_t codePoint);
 
 // The byte offset where the grapheme cluster that starts at byte `at` of `text` ends, which is where the next cluster
-// starts. `text.size` for the last cluster. `at` is a boundary: zero, or a value that an earlier call returned.
+// starts. A lone surrogate is a cluster of its own. `text.size` for the last cluster. `at` is a boundary: zero, or a
+// value that an earlier call returned.
 size_t prUnicodeGraphemeNext(PrStringView text, size_t at);
 
 // The byte offset where the word segment that starts at byte `at` of `text` ends, by the word boundaries of the same

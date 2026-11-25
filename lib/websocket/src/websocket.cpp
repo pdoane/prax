@@ -4,6 +4,8 @@
 
 #include "pr/ascii.h"
 #include "pr/assert.h"
+#include "pr/string_ops.h"
+#include "pr/utf8.h"
 #include "pr/websocket_backend.h"
 
 #if defined(PR_WEBSOCKET_HAS_BUILTIN)
@@ -120,12 +122,13 @@ size_t prWebSocketBufferedAmount(const PrWebSocket* socket) {
 
 PrStatus prWebSocketSend(PrWebSocket* socket, PrWebSocketMessageKind kind, PrByteView data) {
     PR_ASSERT(data.data != nullptr || data.size == 0);
+    PR_ASSERT(kind != PrWebSocketMessageKind_Text || prUtf8Validate(prStringFromBytes(data)) == data.size);
     return socket->sendFn(socket, kind, data);
 }
 
 void prWebSocketClose(PrWebSocket* socket, uint16_t code, PrStringView reason) {
     PR_ASSERT(code == 1000 || (code >= 3000 && code <= 4999));
-    PR_ASSERT(reason.size <= 123);
+    PR_ASSERT(reason.size <= 123 && prUtf8Validate(reason) == reason.size);
     socket->closeFn(socket, code, reason);
 }
 

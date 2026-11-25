@@ -133,7 +133,7 @@ bool prXmlParserIsInEntity(const PrXmlParser* parser);
 bool prXmlIsNameStartChar(uint32_t c);
 bool prXmlIsNameChar(uint32_t c);
 
-// Returns true if `name` matches XML's Name production.
+// Returns true if `name` matches XML's Name production. A name with a lone surrogate does not match.
 bool prXmlIsName(PrStringView name);
 
 // Finds the charset that the start of a document's bytes gives it, apart from a byte order mark, as Appendix F of XML

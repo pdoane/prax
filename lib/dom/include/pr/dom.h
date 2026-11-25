@@ -1890,7 +1890,8 @@ typedef struct PrDomCustomElementRegistry {
     void (*PR_NONNULL queueMicrotask)(void* PR_NULLABLE context, void (*PR_NONNULL run)(void* data), void* data);
 } PrDomCustomElementRegistry;
 
-// Returns true if `name` is a valid custom element name (html/#valid-custom-element-name).
+// Returns true if `name` is a valid custom element name (html/#valid-custom-element-name). A name with a lone surrogate
+// is not valid.
 bool prDomIsValidCustomElementName(PrStringView name);
 
 // Sets the registry that defines the document's custom elements, or clears it if `registry` is null. The document keeps

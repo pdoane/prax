@@ -20,7 +20,7 @@ PR_ASSUME_NONNULL_BEGIN
 namespace pr_impl {
 
 // A DOMString attribute, which is the content attribute, or the empty string without one. Its setter sets the content
-// attribute.
+// attribute, to a USVString if `Usv` (PR_JS_DOM_REFLECT_USV_STRING).
 template <JsLiteral Name>
 JSValue jsReflectString(JSContext* ctx, JSValueConst elementObject) {
     PrDomElement* element = jsThis<PrDomElement>(ctx, elementObject, prJsDomElementClass);
@@ -29,10 +29,10 @@ JSValue jsReflectString(JSContext* ctx, JSValueConst elementObject) {
     PrStringView value = prDomElementGetAttribute(element, Name.text);
     return value.data != nullptr ? jsNewStringView(ctx, value) : jsFixedString(ctx, "");
 }
-template <JsLiteral Name>
+template <JsLiteral Name, bool Usv = false>
 JSValue jsSetReflectString(JSContext* ctx, JSValueConst elementObject, JSValueConst input) {
     PrDomElement* element = jsThis<PrDomElement>(ctx, elementObject, prJsDomElementClass);
-    StringArgument value = {ctx};
+    StringArgument value = {.ctx = ctx, .usv = Usv};
     if (element == nullptr || !value.read(input))
         return JS_EXCEPTION;
     PrStatus status = prDomElementSetAttribute(element, Name.text, value.value());
@@ -141,6 +141,8 @@ JSValue jsReflectTokenList(JSContext* ctx, JSValueConst elementObject) {
 // The members of a prototype that reflect the content attribute `attribute` in the IDL attribute `name`.
 #define PR_JS_DOM_REFLECT_STRING(name, attribute)                                                         \
     PR_JS_GET_SET(name, jsReflectString<attribute>, jsSetReflectString<attribute>)
+#define PR_JS_DOM_REFLECT_USV_STRING(name, attribute)                                                     \
+    PR_JS_GET_SET(name, jsReflectString<attribute>, (jsSetReflectString<attribute, true>))
 #define PR_JS_DOM_REFLECT_BOOL(name, attribute)                                                           \
     PR_JS_GET_SET(name, jsReflectBool<attribute>, jsSetReflectBool<attribute>)
 #define PR_JS_DOM_REFLECT_ENUMERATED(name, attribute, keywords)                                           \

@@ -1545,7 +1545,7 @@ void gpuMetalDeviceOpen(GpuMetalDevice* d, id<MTLDevice> device, GpuMetalDeviceF
     [d->residency addAllocation:d->samplerHeap];
     [d->residency commit];
     // The name's UTF-8 lives no longer than the autorelease pool, so the device keeps a copy.
-    uint32_t size = prAppleNSStringToUtf8(device.name, d->adapter, uint32_t(sizeof(d->adapter) - 1));
+    uint32_t size = prAppleNSStringToWtf8(device.name, d->adapter, uint32_t(sizeof(d->adapter) - 1));
     if (size == 0 || size >= sizeof(d->adapter))
         prMemCopy(d->adapter, "Metal", sizeof("Metal"));
     else

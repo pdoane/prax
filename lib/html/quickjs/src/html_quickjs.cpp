@@ -866,9 +866,11 @@ bool evaluate(void* context, PrHtmlPage*, PrStringView source, PrRawString* out)
     prTextBufferReset(&text);
     if (JS_IsException(result))
         jsReportException(ctx);
-    // No binding's call is running, so the string is read and freed here rather than held for a call.
+    // No binding's call is running, so the string is read and freed here rather than held for a call. A javascript:
+    // URL's string becomes the body of a response, encoded as UTF-8, so a lone surrogate is U+FFFD
+    // (html/#evaluate-a-javascript:-url).
     JsString value = {};
-    bool isString = JS_IsString(result) && jsStringRead(ctx, result, &value);
+    bool isString = JS_IsString(result) && jsStringReadUsv(ctx, result, &value);
     if (isString) {
         *out = prRawStringCopy(jsStringView(&value));
         jsStringReset(ctx, &value);

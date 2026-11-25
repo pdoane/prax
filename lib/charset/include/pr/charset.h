@@ -126,13 +126,13 @@ PrCharsetEncoder prCharsetEncoderMake(PrCharset charset);
 // Returns the most bytes that encoding the next `size` bytes of text can write.
 size_t prCharsetEncodeMaxSize(const PrCharsetEncoder* encoder, size_t size);
 
-// Encodes `text`, the next part of the input, which is UTF-8 that holds scalar values, as far as the first code point
-// that the charset has no bytes for (encoding/#encode-or-fail). Writes the bytes to `out`, which holds at least
-// prCharsetEncodeMaxSize bytes, and sets `*outSize` to their number. Returns the number of bytes of `text` read, which
-// include the code point that stopped the encode, and sets `*outUnencoded` to that code point, or to
-// kPrCharsetUnencodedNone. A caller that writes the code point in some other form, as URL percent-encoding does, then
-// encodes the rest of the text with the same encoder. Once a final part has encoded whole, the encoder is in its first
-// state again, with the bytes that this takes written.
+// Encodes `text`, the next part of the input, as far as the first code point that the charset has no bytes for
+// (encoding/#encode-or-fail). An encoder reads `text` as scalar values, so it encodes a lone surrogate as U+FFFD.
+// Writes the bytes to `out`, which holds at least prCharsetEncodeMaxSize bytes, and sets `*outSize` to their number.
+// Returns the number of bytes of `text` read, which include the code point that stopped the encode, and sets
+// `*outUnencoded` to that code point, or to kPrCharsetUnencodedNone. A caller that writes the code point in some other
+// form, as URL percent-encoding does, then encodes the rest of the text with the same encoder. Once a final part has
+// encoded whole, the encoder is in its first state again, with the bytes that this takes written.
 size_t prCharsetEncode(PrCharsetEncoder* encoder, PrStringView text, PrCharsetInput input, char* out, size_t* outSize,
     uint32_t* outUnencoded);
 

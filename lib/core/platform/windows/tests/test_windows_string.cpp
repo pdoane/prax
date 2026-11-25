@@ -21,13 +21,22 @@ TEST_CASE("UTF-8 widens to UTF-16 and narrows back") {
     utf8.reset();
 }
 
-TEST_CASE("an ill-formed string does not convert") {
+TEST_CASE("ill-formed text does not widen") {
     CHECK(prWindowsWiden("\xff", nullptr, 0) == kPrWindowsStringInvalid);
     CHECK(prWindowsWidenCopy("\xff", nullptr) == nullptr);
+}
+
+TEST_CASE("a lone surrogate narrows to WTF-8, and widens back") {
     const wchar_t lone[] = {L'a', wchar_t(0xd800), L'b'};
-    CHECK(prWindowsNarrow(lone, 3, nullptr, 0) == kPrWindowsStringInvalid);
     PrRawString narrowed = prWindowsNarrowToRawString(lone, 3);
-    CHECK(prRawStringIsNull(&narrowed));
+    CHECK(PrStringView(prRawStringView(&narrowed)) == "a\xed\xa0\x80" "b");
+    uint32_t count = 0;
+    wchar_t* wide = prWindowsWidenCopy(prRawStringView(&narrowed), &count);
+    REQUIRE(wide != nullptr);
+    CHECK(count == 3);
+    CHECK(wide[1] == wchar_t(0xd800));
+    prMemoryFree(wide);
+    prRawStringReset(&narrowed);
 }
 
 TEST_CASE("a widened copy is NUL-terminated and counts its units") {

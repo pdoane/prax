@@ -254,6 +254,12 @@ if (PR_DEVELOP)
     if (UNIX)
         target_sources(core_tests PRIVATE platform/posix/tests/test_posix_string.cpp)
     endif()
+    if (EMSCRIPTEN)
+        target_sources(core_tests PRIVATE platform/web/tests/test_web_string.cpp)
+        set(test_web_string ${CMAKE_CURRENT_SOURCE_DIR}/platform/web/tests/test_web_string.js)
+        target_link_options(core_tests PRIVATE "SHELL:--js-library ${test_web_string}")
+        set_property(TARGET core_tests APPEND PROPERTY LINK_DEPENDS ${test_web_string})
+    endif()
 
     pr_module_tests(core_cpp
         cpp/tests/test_raw_array.cpp

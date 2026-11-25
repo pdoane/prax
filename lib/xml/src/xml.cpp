@@ -79,11 +79,36 @@ bool isChar(uint32_t c) {
         (c >= 0xe000 && c <= 0xfffd) || (c >= 0x10000 && c <= 0x10ffff);
 }
 
-// Returns the code point at the parser's position, and writes its size in bytes to `*size`.
+// Returns the code point at the parser's position, and writes its size in bytes to `*size`. The input is well-formed,
+// since the parse reads only the source's valid prefix.
 uint32_t peek(const Parser* p, uint32_t* size) {
     uint32_t c = 0;
-    *size = prUtf8DecodeScalar(p->input, p->at, &c);
+    *size = prUtf8Decode(p->input, p->at, &c);
     return c;
+}
+
+// Returns true if the input has ended, and no character that is not XML's Char cuts it short. A parse that stops at
+// such a character waits for more input there, and fails once it has read what came before it.
+bool ended(const Parser* p) {
+    return p->inputEnded && !p->invalid;
+}
+
+// Takes the source's bytes that have arrived since the last check, and extends its valid prefix by each character that
+// they complete, up to the first that is not well-formed UTF-8 or not XML's Char.
+void checkSource(Parser* p) {
+    const uint8_t* bytes = reinterpret_cast<const uint8_t*>(p->source.data);
+    while (!p->invalid && p->decoded < p->source.size) {
+        uint32_t codePoint = 0;
+        PrUtf8Step step = prUtf8DecoderPush(&p->decoder, bytes[p->decoded], &codePoint);
+        if (step == PrUtf8Step_Continue) {
+            ++p->decoded;
+        } else if (step == PrUtf8Step_CodePoint && isChar(codePoint)) {
+            p->valid = ++p->decoded;
+        } else {
+            p->invalid = true;
+        }
+    }
+    p->input = prStringHead(prTextBufferView(&p->source), p->valid);
 }
 
 // Reads a Name and moves the parser past it.
@@ -664,7 +689,7 @@ bool doctypeDeclaration(Parser* p) {
 
 // Returns true if more input may follow the text being read: the parser reads the source, and its end has not arrived.
 bool waits(const Parser* p) {
-    return p->depth == 0 && !p->inputEnded;
+    return p->depth == 0 && !ended(p);
 }
 
 // Returns true if `text` is shorter than `literal` and is its start, so that the text that follows decides whether
@@ -865,7 +890,7 @@ bool doctypeArrived(const Parser* p, size_t start) {
 // however its input is divided. A look errs toward waiting: it may wait for bytes past the piece's end, but it never
 // lets the parser reach the end of the input inside a piece.
 bool arrived(Parser* p) {
-    if (p->inputEnded)
+    if (ended(p))
         return true;
     PrStringView tail = rest(p);
     constexpr PrStringView kOpeners[] = {"</", "<!--", "<![CDATA[", "<!DOCTYPE", "<?"};
@@ -893,7 +918,7 @@ bool arrived(Parser* p) {
 // Returns true if the input decides how the document starts: whether with a byte order mark, and whether with an XML
 // declaration, and if so, the whole of that declaration.
 bool startArrived(const Parser* p) {
-    if (p->inputEnded)
+    if (ended(p))
         return true;
     PrStringView source = rest(p);
     if (startsPart(source, kByteOrderMark))
@@ -935,7 +960,7 @@ void finish(Parser* p) {
 }
 
 // Parses as much of the input as has arrived, until the handler pauses the parse or the parse ends.
-void run(Parser* p) {
+void parse(Parser* p) {
     if (!p->started) {
         if (!startArrived(p))
             return;
@@ -943,7 +968,9 @@ void run(Parser* p) {
         if (startsWith(p, kByteOrderMark)) {
             prMemMove(p->source.data, p->source.data + kByteOrderMark.size, p->source.size - kByteOrderMark.size);
             p->source.size -= uint32_t(kByteOrderMark.size);
-            p->input = prTextBufferView(&p->source);
+            p->decoded -= kByteOrderMark.size;
+            p->valid -= kByteOrderMark.size;
+            p->input = prStringHead(prTextBufferView(&p->source), p->valid);
         }
         p->started = true;
         if (!xmlDeclaration(p))
@@ -957,8 +984,18 @@ void run(Parser* p) {
         if (!contentPiece(p, p->open.count))
             return;
     }
-    if (p->status == PrStatus_Ok && !p->paused && p->inputEnded)
+    if (p->status == PrStatus_Ok && !p->paused && ended(p))
         finish(p);
+}
+
+void run(Parser* p) {
+    parse(p);
+    // A parse that has read what it can before a character that XML does not allow fails at that character.
+    if (p->status == PrStatus_Ok && !p->paused && p->invalid) {
+        p->status = PrStatus_Syntax;
+        p->message = "a character that XML does not allow";
+        p->errorAt = p->valid;
+    }
 }
 
 // Returns the charset that a document's bytes give it (prXmlDeclaredCharset), from as many of them as have arrived.
@@ -1054,12 +1091,14 @@ void prXmlParserAppend(PrXmlParser* parser, PrStringView text) {
     }
     prTextBufferAppend(&parser->source, prStringFrom(text, start));
     parser->carriageReturn = text.data[text.size - 1] == '\r';
-    parser->input = prTextBufferView(&parser->source);
+    checkSource(parser);
 }
 
 void prXmlParserEnd(PrXmlParser* parser) {
     PR_ASSERT(!parser->running && !parser->inputEnded);
     parser->inputEnded = true;
+    // The source cannot end in the middle of a character.
+    parser->invalid = parser->invalid || prUtf8DecoderIsInSequence(&parser->decoder);
 }
 
 PrStatus prXmlParserRun(PrXmlParser* parser) {
@@ -1125,7 +1164,8 @@ bool prXmlIsName(PrStringView name) {
         return false;
     for (size_t offset = 0; offset < name.size;) {
         uint32_t c = 0;
-        uint32_t size = prUtf8DecodeScalar(name, offset, &c);
+        // A name may come from a DOMString, whose lone surrogate is no name character.
+        uint32_t size = prWtf8Decode(name, offset, &c);
         if (!(offset == 0 ? prXmlIsNameStartChar(c) : prXmlIsNameChar(c)))
             return false;
         offset += size;

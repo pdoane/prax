@@ -26,7 +26,7 @@ size_t decodeBefore(PrStringView text, size_t end, uint32_t* codePoint) {
     size_t start = end - 1;
     while (start > 0 && end - start < kPrUtf8MaxBytes && (uint8_t(text.data[start]) & 0xc0) == 0x80)
         --start;
-    prUtf8Decode(text, start, codePoint);
+    prWtf8Decode(text, start, codePoint);
     return start;
 }
 
@@ -48,7 +48,7 @@ bool isFinalSigma(PrStringView text, size_t at, size_t end) {
         return false;
     for (size_t i = end; i < text.size;) {
         uint32_t c = 0;
-        i += prUtf8Decode(text, i, &c);
+        i += prWtf8Decode(text, i, &c);
         PrUnicodeFlags flags = prUnicodeFlags(c);
         if ((flags & PrUnicodeFlag_CaseIgnorable) == 0)
             return (flags & PrUnicodeFlag_Cased) == 0;
@@ -75,7 +75,7 @@ bool isAfter(PrStringView text, size_t at, bool soft) {
 bool isBefore(PrStringView text, size_t end, bool dot) {
     for (size_t i = end; i < text.size;) {
         uint32_t c = 0;
-        i += prUtf8Decode(text, i, &c);
+        i += prWtf8Decode(text, i, &c);
         if (dot ? c == 0x0307 : prUnicodeCombiningClass(c) == kClassAbove)
             return true;
         if (endsContext(c))
@@ -134,7 +134,7 @@ using namespace pr_impl;
 uint32_t prUnicodeMapCase(PrStringView text, size_t at, PrUnicodeCase target, PrLanguage language,
         uint32_t out[kPrUnicodeCaseMaxCodePoints]) {
     uint32_t codePoint = 0;
-    size_t end = at + prUtf8Decode(text, at, &codePoint);
+    size_t end = at + prWtf8Decode(text, at, &codePoint);
     uint32_t count = kUntailored;
     if (language == PrLanguage_Lt)
         count = lithuanian(text, at, end, codePoint, target, out);

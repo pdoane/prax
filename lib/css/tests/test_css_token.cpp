@@ -274,6 +274,7 @@ TEST_CASE("preprocessing settles what a byte spells") {
     CHECK(value(CssTestSource{"a\r\nb"}, 1) == "\n");
     CHECK(value(CssTestSource{PrStringView{"a\0b", 3}}, 0) == "a\xef\xbf\xbd" "b");
     CHECK(value(CssTestSource{"a\x80" "b"}, 0) == "a\xef\xbf\xbd" "b");
+    CHECK(value(CssTestSource{"a\xed\xa0\x80" "b"}, 0) == "a\xef\xbf\xbd" "b");   // one U+FFFD for a lone surrogate
 }
 
 TEST_CASE("a value longer than the buffer says how much it needed") {

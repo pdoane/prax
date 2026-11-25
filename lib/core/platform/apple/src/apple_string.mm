@@ -1,8 +1,9 @@
-// The conversions between UTF-8 and the strings of Apple's frameworks, and between paths and file URLs.
+// The conversions between text and the strings of Apple's frameworks, and between paths and file URLs.
 
 #include "pr/apple_string.h"
 
 #include "pr/memory.h"
+#include "pr/utf8.h"
 
 #include "core/src/raw_string.h"
 
@@ -10,32 +11,44 @@
 
 using namespace pr_impl;
 
+// A string's characters are UTF-16 code units (UniChar), which convert to and from WTF-8 whole.
+static_assert(sizeof(UniChar) == sizeof(uint16_t));
+
 CFStringRef PR_NULLABLE prAppleStringCreate(PrStringView text) {
-    return CFStringCreateWithBytes(nullptr, reinterpret_cast<const UInt8*>(text.data), CFIndex(text.size),
-        kCFStringEncodingUTF8, false);
+    uint32_t count = prWtf8ToUtf16(text, nullptr, 0);
+    if (count == kPrWtf8Invalid)
+        return nullptr;
+    UniChar* units = static_cast<UniChar*>(prMemoryAlloc((size_t(count) + 1) * sizeof(UniChar)));
+    prWtf8ToUtf16(text, units, count);
+    CFStringRef string = CFStringCreateWithCharacters(nullptr, units, CFIndex(count));
+    prMemoryFree(units);
+    return string;
 }
 
-uint32_t prAppleStringToUtf8(CFStringRef string, char* PR_NULLABLE out, uint32_t capacity) {
+uint32_t prAppleStringToWtf8(CFStringRef string, char* PR_NULLABLE out, uint32_t capacity) {
     CFIndex length = CFStringGetLength(string);
-    CFRange all = CFRangeMake(0, length);
-    // A lone surrogate does not convert, so a conversion that stops short of the end is of an ill-formed string.
-    CFIndex size = 0;
-    if (CFStringGetBytes(string, all, kCFStringEncodingUTF8, 0, false, nullptr, 0, &size) != length ||
-            size >= CFIndex(kPrAppleStringInvalid))
+    if (length >= CFIndex(kPrAppleStringInvalid))
         return kPrAppleStringInvalid;
-    if (out != nullptr && capacity >= uint32_t(size))
-        CFStringGetBytes(string, all, kCFStringEncodingUTF8, 0, false, reinterpret_cast<UInt8*>(out), size, nullptr);
-    return uint32_t(size);
+    const UniChar* units = CFStringGetCharactersPtr(string);
+    UniChar* copy = nullptr;
+    if (units == nullptr && length != 0) {
+        copy = static_cast<UniChar*>(prMemoryAlloc(size_t(length) * sizeof(UniChar)));
+        CFStringGetCharacters(string, CFRangeMake(0, length), copy);
+        units = copy;
+    }
+    uint32_t size = prWtf8FromUtf16(units, uint32_t(length), out, capacity);
+    prMemoryFree(copy);
+    return size == kPrWtf8Invalid ? kPrAppleStringInvalid : size;
 }
 
 PrRawString prAppleStringToRawString(CFStringRef string) {
-    uint32_t size = prAppleStringToUtf8(string, nullptr, 0);
+    uint32_t size = prAppleStringToWtf8(string, nullptr, 0);
     if (size == kPrAppleStringInvalid)
         return prRawStringNull();
     if (size == 0)
         return prRawStringEmpty();
     char* data = static_cast<char*>(prMemoryAlloc(size));
-    prAppleStringToUtf8(string, data, size);
+    prAppleStringToWtf8(string, data, size);
     return rawStringAdopt(data, size, size);
 }
 
@@ -59,8 +72,8 @@ NSString* PR_NULLABLE prAppleNSString(PrStringView text) {
     return CFBridgingRelease(prAppleStringCreate(text));
 }
 
-uint32_t prAppleNSStringToUtf8(NSString* string, char* PR_NULLABLE out, uint32_t capacity) {
-    return prAppleStringToUtf8((__bridge CFStringRef)string, out, capacity);
+uint32_t prAppleNSStringToWtf8(NSString* string, char* PR_NULLABLE out, uint32_t capacity) {
+    return prAppleStringToWtf8((__bridge CFStringRef)string, out, capacity);
 }
 
 PrRawString prAppleNSStringToRawString(NSString* string) {

@@ -45,7 +45,7 @@ bool next(CodePoints* it, uint32_t* codePoint) {
     if (it->escaped)
         return cssValueNext(it->text, &it->pos, codePoint);
 
-    uint32_t width = prUtf8DecodeScalar(it->text, it->pos, codePoint);
+    uint32_t width = cssDecode(it->text, it->pos, codePoint);
     it->pos += width;
     return width != 0;
 }
@@ -82,10 +82,17 @@ bool isIdentSafe(uint32_t codePoint) {
     return codePoint >= 0x80 || (kCssByte.of[codePoint] & CssByteFlag_Ident) != 0;
 }
 
-// Returns true if `text` already equals what serializing it as a name would write, which holds if every byte is an
-// ASCII ident code point. A backslash starts an escape. A null and the two bytes that preprocessing rewrites are not
-// ident code points. A byte above ASCII needs decoding. So text that passes is also its own value, whether it is a
-// token's bytes or a resolved value.
+// Returns true if the bytes of `text` above ASCII serialize as themselves: if it has none (`wide` is false), or if it
+// is well-formed UTF-8. A code point above ASCII needs no escape, and a lone surrogate, which preprocessing replaces,
+// is not well-formed UTF-8.
+bool wideIsPlain(PrStringView text, bool wide) {
+    return !wide || prUtf8Validate(text) == text.size;
+}
+
+// Returns true if `text` already equals what serializing it as a name would write, which holds if every code point is
+// an ident code point that needs no escape: an ASCII one, or one above ASCII in well-formed UTF-8. A backslash starts
+// an escape. A null and the two bytes that preprocessing rewrites are not ident code points. So text that passes is
+// also its own value, whether it is a token's bytes or a resolved value.
 bool isPlainName(PrStringView text, bool firstPosition) {
     if (text.size == 0)
         return false;
@@ -97,24 +104,35 @@ bool isPlainName(PrStringView text, bool firstPosition) {
             return false;
     }
 
+    // A byte above ASCII fails the table's test, as one to decode, and the text then needs validating.
+    bool wide = false;
     for (uint32_t i = 0; i < text.size; ++i) {
-        CssByteFlags bits = kCssByte.of[uint8_t(text.data[i])];
-        if ((bits & (CssByteFlag_Ident | CssByteFlag_Decode)) != CssByteFlag_Ident)
-            return false;
-    }
-    return true;
-}
-
-// Returns true if `text`, as a string's interior, already equals what serializing it would write. The bytes that need
-// escaping in a string are also the bytes that would need decoding.
-bool isPlainString(PrStringView text) {
-    for (uint32_t i = 0; i < text.size; ++i) {
-        char c = text.data[i];
-        if ((kCssByte.of[uint8_t(c)] & (CssByteFlag_Decode | CssByteFlag_Control)) != 0 || c == '"' || c == '\\') {
-            return false;
+        uint8_t byte = uint8_t(text.data[i]);
+        if ((kCssByte.of[byte] & (CssByteFlag_Ident | CssByteFlag_Decode)) != CssByteFlag_Ident) {
+            if (byte < 0x80)
+                return false;
+            wide = true;
         }
     }
-    return true;
+    return wideIsPlain(text, wide);
+}
+
+// Returns true if `text`, as a string's interior, already equals what serializing it would write. Below ASCII, the
+// bytes that need escaping in a string are also the bytes that would need decoding, and above it, well-formed UTF-8
+// writes itself.
+bool isPlainString(PrStringView text) {
+    // A byte above ASCII fails the table's test, as one to decode, and the text then needs validating.
+    bool wide = false;
+    for (uint32_t i = 0; i < text.size; ++i) {
+        char c = text.data[i];
+        uint8_t byte = uint8_t(c);
+        if ((kCssByte.of[byte] & (CssByteFlag_Decode | CssByteFlag_Control)) != 0 || c == '"' || c == '\\') {
+            if (byte < 0x80)
+                return false;
+            wide = true;
+        }
+    }
+    return wideIsPlain(text, wide);
 }
 
 // Writes an identifier, escaped so that it tokenizes back to `value` (cssom-1/#serialize-an-identifier).

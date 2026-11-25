@@ -24,7 +24,7 @@ void paragraphLevels(const LayoutInlineShaping& t, LayoutShapingScratch& s, cons
     s.bidiLevels.clear();
     for (uint32_t at = paragraph.start; at < paragraph.end;) {
         uint32_t codePoint = 0;
-        uint32_t size = prUtf8Decode(text, at, &codePoint);
+        uint32_t size = prWtf8Decode(text, at, &codePoint);
         s.classes.push(prUnicodeBidiClass(codePoint));
         s.bidiLevels.push(t.info.levels[at]);
         at += size;
@@ -33,7 +33,7 @@ void paragraphLevels(const LayoutInlineShaping& t, LayoutShapingScratch& s, cons
     s.lineLevels.resize(paragraph.end - paragraph.start);
     for (uint32_t at = paragraph.start, code = 0; at < paragraph.end; ++code) {
         uint32_t codePoint = 0;
-        uint32_t size = prUtf8Decode(text, at, &codePoint);
+        uint32_t size = prWtf8Decode(text, at, &codePoint);
         for (uint32_t b = at; b < at + size; ++b)
             s.lineLevels.data[b - paragraph.start] = s.bidiLevels.data[code];
         at += size;

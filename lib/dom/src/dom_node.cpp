@@ -1068,38 +1068,54 @@ PrStatus nodesIntoNode(PrDomDocument* document, const PrDomNodeOrString* PR_NULL
     return PrStatus_Ok;
 }
 
+// Appends `text`, well-formed WTF-8, joining a low surrogate that it starts with to a high one that `out` ends with.
+void appendJoined(PrTextBuffer* out, PrStringView text) {
+    uint32_t codePoint = 0;
+    uint32_t size = prWtf8Decode(text, 0, &codePoint);
+    if (codePoint >= 0xdc00 && codePoint <= 0xdfff) {
+        prTextBufferAppendWtf8CodePoint(out, codePoint);
+        text = prStringFrom(text, size);
+    }
+    prTextBufferAppend(out, text);
+}
+
 // Appends the code units of `data` for which `keep` returns true, and inserts `insert` before the unit `at`, or at the
-// end. A code point is kept whole only if both its units are kept.
+// end. A code point outside the BMP whose two units are not both kept leaves the kept half as a lone surrogate. A high
+// surrogate followed by a low one, as an edit can bring them together, becomes their pair.
 template <typename Keep>
 void copyUnits(PrTextBuffer* out, PrStringView data, Keep keep, PrStringView insert = {}, uint32_t at = UINT32_MAX) {
     uint32_t unit = 0;
     bool inserted = insert.data == nullptr;
     for (size_t offset = 0; offset < data.size;) {
         uint32_t codePoint = 0;
-        uint32_t size = prUtf8Decode(data, offset, &codePoint);
+        uint32_t size = prWtf8Decode(data, offset, &codePoint);
         uint32_t units = codePoint > 0xffff ? 2 : 1;
         bool whole = keep(unit) && (units == 1 || keep(unit + 1)) && (units == 1 || at != unit + 1);
         if (!inserted && at == unit) {
-            prTextBufferAppend(out, insert);
+            appendJoined(out, insert);
             inserted = true;
         }
-        if (whole) {
+        if (whole && codePoint >= 0xdc00 && codePoint <= 0xdfff) {
+            // A lone low surrogate joins a high one that the text so far ends with.
+            prTextBufferAppendWtf8CodePoint(out, codePoint);
+        } else if (whole) {
             prTextBufferAppend(out, PrStringView{data.data + offset, size});
         } else {
+            uint32_t halves[2] = {0xd800 + ((codePoint - 0x10000) >> 10), 0xdc00 + ((codePoint - 0x10000) & 0x3ff)};
             for (uint32_t half = 0; half < units; ++half) {
                 if (!inserted && at == unit + half) {
-                    prTextBufferAppend(out, insert);
+                    appendJoined(out, insert);
                     inserted = true;
                 }
                 if (keep(unit + half))
-                    prTextBufferAppendCodePoint(out, kPrUtf8Replacement);
+                    prTextBufferAppendWtf8CodePoint(out, units == 2 ? halves[half] : codePoint);
             }
         }
         unit += units;
         offset += size;
     }
     if (!inserted)
-        prTextBufferAppend(out, insert);
+        appendJoined(out, insert);
 }
 
 // dom/#valid-shadow-host-name
@@ -1278,7 +1294,7 @@ uint32_t utf16Length(PrStringView text) {
     uint32_t units = 0;
     for (size_t at = 0; at < text.size;) {
         uint32_t c = 0;
-        at += prUtf8Decode(text, at, &c);
+        at += prWtf8Decode(text, at, &c);
         units += c >= 0x10000 ? 2 : 1;
     }
     return units;

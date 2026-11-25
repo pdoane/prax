@@ -79,8 +79,8 @@ typedef uint8_t PrUnicodeBidiStrong;
 // The strong type of `codePoint`.
 PrUnicodeBidiStrong prUnicodeBidiStrong(uint32_t codePoint);
 
-// The strong type of the first code point in `text` that has one, or PrUnicodeBidiStrong_None if none does. `text` is
-// UTF-8 that may be ill-formed.
+// The strong type of the first code point in `text` that has one, or PrUnicodeBidiStrong_None if none does. `text` may
+// be ill-formed.
 PrUnicodeBidiStrong prUnicodeBidiFirstStrong(PrStringView text);
 
 // The level of a character that X9 removes: an embedding, override or pop directional format, or a boundary neutral.

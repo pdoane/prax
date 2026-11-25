@@ -132,7 +132,7 @@ uint32_t prTextEstimatorLineCount(PrTextEstimator* estimator, PrStringView text,
         if (codePoint < 0x80)
             at += 1;
         else
-            at += prUtf8Decode(text, at, &codePoint);
+            at += prWtf8Decode(text, at, &codePoint);
         bool space = codePoint == ' ' || codePoint == '\t';
         float advance = advanceOf(e, codePoint);
         if (codePoint == '\t' && tabStop > 0)

@@ -7,6 +7,7 @@
 #include "pr/raw_array.h"
 #include "pr/string_view.h"
 #include "pr/text_buffer.h"
+#include "pr/utf8.h"
 #include "pr/xml.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -44,7 +45,15 @@ struct XmlParser {
     bool carriageReturn;        // true if the last text appended ended in a carriage return
     bool inputEnded;
 
-    PrStringView input;         // the text being read: the source, or an entity's replacement
+    // The source's characters as they arrive: the decoder of the sequence in progress, where the bytes that it has not
+    // taken start, and the length of the source's prefix whose characters are each XML's Char. If `invalid`, the
+    // character after that prefix is not, and the parse reads no further.
+    PrUtf8Decoder decoder;
+    size_t decoded;
+    size_t valid;
+    bool invalid;
+
+    PrStringView input;         // the text being read: the source's valid prefix, or an entity's replacement
     size_t at;
     size_t reference;           // the source offset of the outermost reference being expanded
     uint32_t depth;             // how many entities are expanding

@@ -605,7 +605,7 @@ void appendText(Layout& t, PrStringView data, uint32_t span) {
     Collapse collapse = t.spans.data[span].style.collapse;
     for (size_t pos = 0; pos < data.size;) {
         uint32_t c = 0;
-        pos += prUtf8Decode(data, pos, &c);
+        pos += prWtf8Decode(data, pos, &c);
         bool segment = c == '\n' || c == '\r';
         if (c == '\r' && pos < data.size && data.data[pos] == '\n')
             ++pos;
@@ -907,7 +907,7 @@ bool rangesCover(const PrFontCodePointRange* PR_NULLABLE ranges, uint32_t count,
 Font fontFor(Layout& t, const Char& c, const TextSpan& span, PrStringView cluster) {
     PrStringView text{t.text.data, t.text.count};
     uint32_t codePoint = 0;
-    prUtf8Decode(text, c.offset, &codePoint);
+    prWtf8Decode(text, c.offset, &codePoint);
     Font first{};
     SvgDocumentFonts* documentFonts = t.documentFonts;
     for (uint32_t f = 0; f < span.style.familyCount; ++f) {
@@ -976,7 +976,7 @@ void shiftChars(Layout& t) {
 // its connections (css-text-3/#cursive-tracking).
 float spacingAfter(const Layout& t, const Char& c, const TextStyle& style) {
     uint32_t codePoint = 0;
-    prUtf8Decode(PrStringView{t.text.data, t.text.count}, c.offset, &codePoint);
+    prWtf8Decode(PrStringView{t.text.data, t.text.count}, c.offset, &codePoint);
     float spacing = prTextTakesLetterSpacing(codePoint) ? svgLengthResolve(style.letterSpacing, style.fontSize) : 0;
     if (c.length == 1 && t.text.data[c.offset] == ' ')
         spacing += svgLengthResolve(style.wordSpacing, style.fontSize);
@@ -1394,7 +1394,7 @@ void arabicForms(Layout& t) {
     PrStringView text{t.text.data, t.text.count};
     auto type = [&](uint32_t i) {
         uint32_t codePoint = 0;
-        prUtf8Decode(text, t.chars.data[i].offset, &codePoint);
+        prWtf8Decode(text, t.chars.data[i].offset, &codePoint);
         return prUnicodeJoiningType(codePoint);
     };
     for (uint32_t i = 0; i < t.chars.count; ++i) {
@@ -2157,7 +2157,7 @@ void recordCharacters(Layout& t) {
     for (uint32_t i = 0; i < t.chars.count; ++i) {
         const Char& c = t.chars.data[i];
         uint32_t codePoint = 0;
-        prUtf8Decode(text, c.offset, &codePoint);
+        prWtf8Decode(text, c.offset, &codePoint);
         SvgTextCharacter character{};
         character.units = c.unaddressable ? 0 : codePoint > 0xffff ? 2 : 1;
         character.hidden = true;
@@ -2271,7 +2271,7 @@ void breakLines(Layout& t, const RawArray<float>& advances, float width, RawArra
     for (uint32_t i = 0; i < count; ++i) {
         const Char& c = t.chars.data[i];
         uint32_t codePoint = 0;
-        prUtf8Decode(text, c.offset, &codePoint);
+        prWtf8Decode(text, c.offset, &codePoint);
         t.codePoints.push(codePoint);
         ends.push(c.offset + c.length);
         PrTextBreakStyle style = t.spans.data[c.span].style.breaks;

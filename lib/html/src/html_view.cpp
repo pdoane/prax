@@ -1328,7 +1328,7 @@ PrHtmlViewEventResult typed(HtmlView* v, const PrAppEvent* event) {
     bool proceed = true;
     for (size_t at = 0; at < event->input.text.size;) {
         uint32_t codePoint = 0;
-        uint32_t length = prUtf8DecodeScalar(event->input.text, at, &codePoint);
+        uint32_t length = prWtf8Decode(event->input.text, at, &codePoint);
         if (codePoint >= 0x20 && codePoint != 0x7f)
             proceed = fireKeypress(v, target, PrStringView{event->input.text.data + at, length}, codePoint) && proceed;
         at += length;

@@ -97,10 +97,12 @@ Core also provides helpers for one platform under `lib/core/platform/<platform>`
 platform only. A helper serves any code that calls that platform's own API, such as the backends of every library for
 that platform, and binds no group. A helper is not a backend: what it does has no other implementation to choose, so a
 library that includes it depends on core and on nothing that a program could replace. Its header and functions are
-named for the platform: `pr/windows_string.h` converts between UTF-8 and the UTF-16 of Windows' wide-character
-functions, `pr/apple_string.h` between UTF-8 and the CFString and NSString of Apple's frameworks and between paths and
+named for the platform: `pr/windows_string.h` converts between text and the UTF-16 of Windows' wide-character
+functions, `pr/apple_string.h` between text and the CFString and NSString of Apple's frameworks and between paths and
 file URLs, `pr/posix_string.h` makes the NUL-terminated strings of the C functions of POSIX on the Unix-like targets,
 which include Apple's and the web, and on the web `prWebString`, of `web_string.js`, makes a page's string of a view
-that a JavaScript library receives as its pointer and its size. A helper's header is C, as core's are, and may add C++
-and Objective-C forms for those languages' callers. A helper calls the platform for what the platform does, as these
-call its own conversions, rather than reimplementing it.
+that a JavaScript library receives as its pointer and its size, and `prWebNewString` the text of a page's string. A
+helper's header is C, as core's are, and may add C++ and Objective-C forms for those languages' callers. A helper calls
+the platform for what the platform does rather than reimplementing it, unless the platform's form refuses what the
+program's text holds: the platforms' conversions of UTF-16 refuse a lone surrogate, so the string helpers convert with
+core's own (`prWtf8FromUtf16`, `prWtf8ToUtf16`).

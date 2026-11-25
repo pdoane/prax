@@ -14,9 +14,9 @@ size_t __cdecl strlen(const char* text);
 
 PR_ASSUME_NONNULL_BEGIN
 
-// A view of text. The text is well-formed UTF-8 unless the declaration that takes or returns the view says otherwise.
-// It holds only Unicode scalar values, so no surrogates, and may contain U+0000. It need not be NUL terminated. The
-// storage must stay valid while the view is used.
+// A view of text. The text is well-formed WTF-8 unless the declaration that takes or returns the view says otherwise
+// (pr/utf8.h): UTF-8 that may also hold lone surrogates, as a JavaScript string or a DOMString may. It may contain
+// U+0000, and need not be NUL terminated. The storage must stay valid while the view is used.
 //
 // A null `data` with a zero `size` is the null view. Any other `data` with a zero `size` is the empty string.
 //

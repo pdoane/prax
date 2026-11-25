@@ -651,7 +651,7 @@ uint32_t mathMlFencedSeparator(const PrDomElement* element, uint32_t index) {
     uint32_t count = 0;
     for (size_t at = 0; at < value.size;) {
         uint32_t codePoint = 0;
-        at += prUtf8Decode(value, at, &codePoint);
+        at += prWtf8Decode(value, at, &codePoint);
         if (codePoint < 0x80 && prAsciiIsSpace(char(codePoint)))
             continue;
         found = codePoint;
@@ -771,7 +771,7 @@ MathMlStack mathMlStack(const PrDomElement* element) {
     out.decimalCharacter = '.';
     PrStringView decimal = valueOf(element, "decimalcharacter");
     uint32_t codePoint = 0;
-    if (decimal.size != 0 && prUtf8Decode(decimal, 0, &codePoint) == decimal.size)
+    if (decimal.size != 0 && prWtf8Decode(decimal, 0, &codePoint) == decimal.size)
         out.decimalCharacter = codePoint;
     return out;
 }

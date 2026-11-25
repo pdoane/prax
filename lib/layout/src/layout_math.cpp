@@ -488,7 +488,7 @@ uint32_t firstCodePoint(const LayoutTree* tree, LayoutNodeIndex node) {
     PrStringView text = layoutNodeText(tree, node);
     for (size_t at = 0; at < text.size;) {
         uint32_t codePoint = 0;
-        uint32_t length = prUtf8Decode(text, at, &codePoint);
+        uint32_t length = prWtf8Decode(text, at, &codePoint);
         if (length == 0)
             return 0;
         if (codePoint != ' ' && codePoint != '\t' && codePoint != '\n' && codePoint != '\r')
@@ -1532,7 +1532,7 @@ void collectGlyphs(const LayoutTree* tree, const LayoutFragment* f, float x, Raw
         PrStringView value = layoutNodeText(tree, f->node);
         for (size_t at = 0; at < value.size;) {
             uint32_t codePoint = 0;
-            uint32_t length = prUtf8Decode(value, at, &codePoint);
+            uint32_t length = prWtf8Decode(value, at, &codePoint);
             if (length == 0)
                 break;
             at += length;

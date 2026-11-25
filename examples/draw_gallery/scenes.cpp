@@ -1409,7 +1409,7 @@ void readRuby(PrStringView text, Array<Character>& characters, Array<Reading>& r
     uint32_t marked = UINT32_MAX;
     for (size_t at = 0; at < text.size;) {
         uint32_t c = 0;
-        uint32_t length = prUtf8Decode(text, at, &c);
+        uint32_t length = prWtf8Decode(text, at, &c);
         if (c == U'｜') {
             marked = characters.count();
         } else if (c == U'《') {

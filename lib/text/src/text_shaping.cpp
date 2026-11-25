@@ -199,7 +199,7 @@ void findBreaks(TextShaping& t, PrStringView text, const PrTextShapingDesc& d, T
     s.codeEnds.clear();
     for (size_t at = 0; at < text.size;) {
         uint32_t codePoint = 0;
-        at += prUtf8Decode(text, at, &codePoint);
+        at += prWtf8Decode(text, at, &codePoint);
         s.codePoints.push(codePoint);
         s.codeEnds.push(uint32_t(at));
     }
@@ -254,7 +254,7 @@ void findWordBreaks(const TextShaping& t, PrStringView text, uint32_t start, uin
     s.ends.clear();
     for (size_t at = 0; at < word.size;) {
         uint32_t codePoint = 0;
-        at += prUtf8Decode(word, at, &codePoint);
+        at += prWtf8Decode(word, at, &codePoint);
         s.codePoints.push(codePoint);
         s.ends.push(uint32_t(at));
     }

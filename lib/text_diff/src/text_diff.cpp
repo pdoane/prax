@@ -43,7 +43,7 @@ void keyCharacters(PrStringView line, RawArray<uint64_t>& keys, RawArray<uint32_
     offsets.clear();
     for (size_t at = 0; at < line.size;) {
         uint32_t codePoint = 0;
-        uint32_t size = prUtf8Decode(line, at, &codePoint);
+        uint32_t size = prWtf8Decode(line, at, &codePoint);
         uint64_t key = uint64_t(size) << 32;
         for (uint32_t i = 0; i < size; ++i)
             key |= uint64_t(uint8_t(line.data[at + i])) << (8 * i);

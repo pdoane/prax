@@ -204,7 +204,7 @@ PrLayoutMathPadding paddingOf(const MathMlLength& length, const LengthBases& bas
 // none if `content` is empty.
 PrLayoutMathFence fenceOf(PrStringView content, MathMlForm form, bool fence, const LengthBases& bases) {
     PrLayoutMathFence out{};
-    if (content.size == 0 || prUtf8Decode(content, 0, &out.codePoint) == 0)
+    if (content.size == 0 || prWtf8Decode(content, 0, &out.codePoint) == 0)
         return PrLayoutMathFence{};
     MathMlCategoryValues values = mathMlCategoryValues(mathMlOperatorCategory(content, form));
     MathMlOperator op{.lspace = values.lspace, .rspace = values.rspace};
@@ -287,7 +287,7 @@ void breakOf(const PrDomElement* source, int32_t penalty, const LengthBases& bas
     // linebreakmultchar is drawn for an invisible times at a break. Its default is the invisible times itself.
     uint32_t multChar = 0;
     PrStringView mult = stringTrimBy(breaking.multChar, prAsciiIsSpace);
-    if (mult.size != 0 && prUtf8Decode(mult, 0, &multChar) != 0 && multChar != 0x2062)
+    if (mult.size != 0 && prWtf8Decode(mult, 0, &multChar) != 0 && multChar != 0x2062)
         math->breakChar = multChar;
 }
 

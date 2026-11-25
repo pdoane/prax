@@ -6,8 +6,8 @@
 // match and groups `(?:...)` that do not, the anchors `^` and `$`, the quantifiers `*`, `+`, `?`, `{n}`, `{n,}` and
 // `{n,m}`, each followed by `?` to prefer fewer repetitions, the classes `\d`, `\D`, `\w`, `\W`, `\s` and `\S`, and the
 // escapes `\n`, `\t`, `\r`, `\f`, `\v`, `\0` and of a punctuation character. `^` and `$` match at the ends of the text,
-// and `.` matches any code point but a line feed. Patterns and texts are UTF-8, a match steps by code points, and
-// offsets count bytes.
+// and `.` matches any code point but a line feed. A lone surrogate is a code point like any other, a match steps by
+// code points, and offsets count bytes.
 //
 // A regex is immutable once made, so threads may match with it at once.
 

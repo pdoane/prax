@@ -47,7 +47,7 @@ PrRawString uiKitTextOf(NSString* PR_NULLABLE string) {
 }
 
 uint32_t uiKitUtf8Length(NSString* string, NSUInteger units) {
-    uint32_t size = prAppleNSStringToUtf8([string substringToIndex:MIN(units, string.length)], nullptr, 0);
+    uint32_t size = prAppleNSStringToWtf8([string substringToIndex:MIN(units, string.length)], nullptr, 0);
     return size != kPrAppleStringInvalid ? size : 0;
 }
 

@@ -13,6 +13,7 @@
 #include "pr/svg.h"
 #include "pr/text_buffer.h"
 #include "pr/url.h"
+#include "pr/utf8_views.h"
 
 #include "css/src/css_hints.h"
 #include "css/src/css_presentation_hooks.h"
@@ -344,9 +345,13 @@ PrDomDocument* prHtmlDomParserParseFromString(PrDomDocument* PR_NULLABLE creator
     prSvgEnable(document);
     htmlEnable(document);
     document->contentType = prRawStringExternal(kXmlTypes[type - PrHtmlDomParserSupportedType_TextXml]);
+    // The XML parser reads Unicode characters, so each lone surrogate of the string becomes U+FFFD before it reads
+    // them.
+    Utf8Views<1> scalars;
     PrXmlError error = {};
-    if (domXmlParse(document, source, {}, htmlXhtmlEntities(), &error) == PrStatus_Syntax)
+    if (domXmlParse(document, scalars.of(source), {}, htmlXhtmlEntities(), &error) == PrStatus_Syntax)
         htmlShowXmlError(document, error);
+    scalars.reset();
     return document;
 }
 

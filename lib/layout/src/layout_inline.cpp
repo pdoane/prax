@@ -657,7 +657,7 @@ uint32_t sourceEnd(const LayoutState& state, const LayoutInlineShaping& t, const
     uint32_t last = t.sources.data[to - 1];
     PrStringView text = layoutNodeText(state.tree, item.node);
     uint32_t codePoint = 0;
-    return last + uint32_t(prUtf8Decode(text, last, &codePoint));
+    return last + uint32_t(prWtf8Decode(text, last, &codePoint));
 }
 
 // Places the preserved segment break `leaf`, of the item styled by `style`, as a text fragment at `x` along a line in
@@ -1033,7 +1033,7 @@ void lineLevels(LayoutInlineFrame& f, const LayoutInlineShaping& t, uint32_t sta
     f.lineCodeLevels.clear();
     for (uint32_t at = start; at < end;) {
         uint32_t codePoint = 0;
-        uint32_t size = uint32_t(prUtf8Decode(text, at, &codePoint));
+        uint32_t size = uint32_t(prWtf8Decode(text, at, &codePoint));
         f.lineClasses.push(prUnicodeBidiClass(codePoint));
         f.lineCodeLevels.push(t.info.levels[at]);
         at += size;
@@ -1043,7 +1043,7 @@ void lineLevels(LayoutInlineFrame& f, const LayoutInlineShaping& t, uint32_t sta
     uint32_t k = 0;
     for (uint32_t at = start; at < end; ++k) {
         uint32_t codePoint = 0;
-        uint32_t size = prUtf8Decode(text, at, &codePoint);
+        uint32_t size = prWtf8Decode(text, at, &codePoint);
         for (uint32_t b = at; b < at + size; ++b)
             f.lineLevels.data[b - start] = f.lineCodeLevels.data[k];
         at += size;

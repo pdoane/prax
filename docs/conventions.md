@@ -188,8 +188,14 @@ says what they must contain.
   container such as `std::string` converts to a view implicitly, and views compare with `==`. A view of a whole literal
   is written as the literal, with no length beside it, and is computed at compile time (`lint.py`, `literal-view`). C
   spells the view with `PR_SV(text)`, which evaluates `text` twice. `{nullptr, 0}` is the null view, which is distinct
-  from the empty view, and zeroed storage is a null string. All text is `char`, in UTF-8 unless a comment says
-  otherwise. Binary data is `uint8_t`.
+  from the empty view, and zeroed storage is a null string. All text is `char`, and binary data is `uint8_t`.
+- **Encodings.** Text is WTF-8 unless its declaration says otherwise (`pr/utf8.h`). WTF-8 is UTF-8 that may also hold
+  lone surrogates, as JavaScript strings and DOMStrings can, so every UTF-8 string is WTF-8. Code that only reads text
+  decodes it as WTF-8 and needs no conversion. Bytes from outside the program, such as a file or a network message, are
+  checked or decoded as their format specifies, and a format that specifies UTF-8 treats a surrogate's bytes as ill
+  formed. A function whose specification requires scalar values handles lone surrogates as that specification says, so
+  that its callers need not: a function that takes a USVString replaces each with U+FFFD, and a JSON writer escapes
+  each.
 - **Closed sets are enums**, and open sets are strings. A parameter that selects a behavior is an enum, never a
   `bool`. Flags that combine with a type's values, such as `PrLayoutAlignmentFlag_Safe` with an alignment, are members
   of the same enum. A combination is then a constant of one type and needs no cast.

@@ -13,14 +13,14 @@ namespace pr_impl {
 
 namespace {
 
-bool isUtf8(PrStringView text) {
-    return prUtf8Validate(text) == text.size;
+bool isText(PrStringView text) {
+    return prWtf8Validate(text) == text.size;
 }
 
 // Checks the content's arrays and text, as each form that it names holds them.
 void checkContent(const PrAppDataContent& content) {
-    PR_ASSERT((content.forms & PrAppDataFormFlag_Text) == 0 || isUtf8(content.text));
-    PR_ASSERT((content.forms & PrAppDataFormFlag_Html) == 0 || isUtf8(content.html));
+    PR_ASSERT((content.forms & PrAppDataFormFlag_Text) == 0 || isText(content.text));
+    PR_ASSERT((content.forms & PrAppDataFormFlag_Html) == 0 || isText(content.html));
     PR_ASSERT(content.urls != nullptr || content.urlCount == 0);
     PR_ASSERT(content.paths != nullptr || content.pathCount == 0);
     PR_ASSERT(content.custom != nullptr || content.customCount == 0);

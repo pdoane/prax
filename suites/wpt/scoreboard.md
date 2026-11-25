@@ -145,7 +145,7 @@ their rows; the diff of a change to it is what the change did.
 | dom/crashtests                   |       4/4 |           4/4 |  100.0% |
 | dom/events                       |   194/202 |       609/840 |   72.5% |
 | dom/lists                        |       5/5 |       187/189 |   98.9% |
-| dom/nodes                        |   396/404 |   14577/15295 |   95.3% |
+| dom/nodes                        |   396/404 |   14587/15295 |   95.3% |
 | dom/ranges                       |     72/72 |   44512/44706 |   99.5% |
 | dom/traversal                    |     18/18 |     1600/1608 |   99.5% |
 | domparsing                       |     46/46 |       259/597 |   43.3% |
@@ -188,7 +188,7 @@ their rows; the diff of a change to it is what the change did.
 | uievents/textInput               |       5/7 |          7/22 |   31.8% |
 | webidl                           |       2/2 |       167/192 |   86.9% |
 | webidl/ecmascript-binding        |     42/43 |       238/314 |   75.7% |
-| **total**                        | 1671/1878 | 100195/115935 |   86.4% |
+| **total**                        | 1671/1878 | 100205/115935 |   86.4% |
 
 ## encoding
 
@@ -254,7 +254,7 @@ their rows; the diff of a change to it is what the change did.
 | webmessaging/with-options                           |       9/9 |           9/9 |  100.0% |
 | webmessaging/with-ports                             |     23/24 |         37/39 |   94.8% |
 | webmessaging/without-ports                          |     25/27 |         38/41 |   92.6% |
-| webstorage                                          |     38/54 |     1231/1285 |   95.7% |
+| webstorage                                          |     38/54 |     1243/1285 |   96.7% |
 | workers                                             |    89/112 |        23/226 |   10.1% |
 | workers/baseurl                                     |       3/7 |           0/7 |    0.0% |
 | workers/constructors                                |     31/32 |          1/59 |    1.6% |
@@ -264,7 +264,7 @@ their rows; the diff of a change to it is what the change did.
 | workers/multi-globals                               |       1/1 |           0/1 |    0.0% |
 | workers/same-site-cookies                           |       6/6 |           0/6 |    0.0% |
 | workers/semantics                                   |     23/29 |          0/32 |    0.0% |
-| **total**                                           | 8404/9539 | 128878/157301 |   81.9% |
+| **total**                                           | 8404/9539 | 128890/157301 |   81.9% |
 
 ## infrastructure
 

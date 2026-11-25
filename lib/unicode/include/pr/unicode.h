@@ -198,11 +198,11 @@ typedef uint8_t PrUnicodeCase;
 // The most code points that the case mapping of one code point gives.
 enum { kPrUnicodeCaseMaxCodePoints = 3 };
 
-// Writes the full case mapping to `target` of the code point at byte `at` of `text`, UTF-8, to `out`, and returns its
-// length in code points, which is zero if the mapping removes the code point. The mapping is the default case
-// conversion with the conditional mappings of SpecialCasing.txt: Final_Sigma for every language, and the tailorings of
-// `language` for Lithuanian, Turkish and Azerbaijani. The rest of `text` is the context that the conditions read.
-// Titlecase maps only the code point itself; the caller decides which code point starts a word.
+// Writes the full case mapping to `target` of the code point at byte `at` of `text` to `out`, and returns its length in
+// code points, which is zero if the mapping removes the code point. The mapping is the default case conversion with the
+// conditional mappings of SpecialCasing.txt: Final_Sigma for every language, and the tailorings of `language` for
+// Lithuanian, Turkish and Azerbaijani. The rest of `text` is the context that the conditions read. Titlecase maps only
+// the code point itself; the caller decides which code point starts a word.
 uint32_t prUnicodeMapCase(PrStringView text, size_t at, PrUnicodeCase target, PrLanguage language,
     uint32_t out[PR_NONNULL kPrUnicodeCaseMaxCodePoints]);
 

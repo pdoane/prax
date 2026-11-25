@@ -210,7 +210,7 @@ PrStatus shapeAcross(KbBackend* kb, void* faceState, void* fontState, const PrTe
     size_t at = 0;
     while (at < run->text.size) {
         uint32_t codePoint = 0;
-        uint32_t length = prUtf8Decode(run->text, at, &codePoint);
+        uint32_t length = prWtf8Decode(run->text, at, &codePoint);
         kbts_PushGlyph(&kb->storage, &face->kb, int(codePoint), configAt(kb, run, config, uint32_t(at)), int(at));
         at += length;
     }
@@ -241,7 +241,7 @@ PrStatus shapeAcross(KbBackend* kb, void* faceState, void* fontState, const PrTe
 bool ignorableAt(PrStringView text, uint32_t at) {
     uint32_t codePoint = 0;
     if (at < text.size)
-        prUtf8Decode(text, at, &codePoint);
+        prWtf8Decode(text, at, &codePoint);
     return (prUnicodeFlags(codePoint) & PrUnicodeFlag_DefaultIgnorable) != 0;
 }
 

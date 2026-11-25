@@ -1,42 +1,26 @@
-// The conversions between UTF-8 and the UTF-16 of Windows' wide-character functions.
+// The conversions between text and the UTF-16 of Windows' wide-character functions.
 
 #include "pr/windows_string.h"
 
 #include "pr/memory.h"
 #include "pr/raw_array.h"
+#include "pr/utf8.h"
 
 #include "core/src/raw_string.h"
 
-#define NOMINMAX
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-
 using namespace pr_impl;
 
+// Windows' wide characters are UTF-16 code units, which convert to and from WTF-8 whole.
+static_assert(sizeof(wchar_t) == sizeof(uint16_t));
+
 uint32_t prWindowsWiden(PrStringView text, wchar_t* PR_NULLABLE out, uint32_t capacity) {
-    if (text.size == 0)
-        return 0;
-    if (text.size > size_t(INT32_MAX))
-        return kPrWindowsStringInvalid;
-    int count = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, text.data, int(text.size), nullptr, 0);
-    if (count == 0)
-        return kPrWindowsStringInvalid;
-    if (out != nullptr && capacity >= uint32_t(count))
-        MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, text.data, int(text.size), out, count);
-    return uint32_t(count);
+    uint32_t count = prWtf8ToUtf16(text, reinterpret_cast<uint16_t*>(out), capacity);
+    return count == kPrWtf8Invalid ? kPrWindowsStringInvalid : count;
 }
 
 uint32_t prWindowsNarrow(const wchar_t* PR_NULLABLE units, uint32_t count, char* PR_NULLABLE out, uint32_t capacity) {
-    if (count == 0 || units == nullptr)
-        return 0;
-    if (count > uint32_t(INT32_MAX))
-        return kPrWindowsStringInvalid;
-    int size = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, units, int(count), nullptr, 0, nullptr, nullptr);
-    if (size == 0)
-        return kPrWindowsStringInvalid;
-    if (out != nullptr && capacity >= uint32_t(size))
-        WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, units, int(count), out, size, nullptr, nullptr);
-    return uint32_t(size);
+    uint32_t size = prWtf8FromUtf16(reinterpret_cast<const uint16_t*>(units), units != nullptr ? count : 0, out, capacity);
+    return size == kPrWtf8Invalid ? kPrWindowsStringInvalid : size;
 }
 
 wchar_t* PR_NULLABLE prWindowsWidenCopy(PrStringView text, uint32_t* PR_NULLABLE outCount) {

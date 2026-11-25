@@ -515,9 +515,8 @@ PrRawString domElementTagName(const PrDomElement* element);
 // Returns the length of the node's data in UTF-16 code units (dom/#interface-characterdata).
 uint32_t domCharacterDataLength(const PrDomCharacterData* node);
 
-// The data are UTF-8, and offsets and counts into them are in UTF-16 code units, which are the units that script uses.
-// A code unit range that splits a code point outside the BMP keeps each half that it holds as U+FFFD, because UTF-8 has
-// no lone surrogate.
+// Offsets and counts into the data are in UTF-16 code units, which are the units that script uses. A code unit range
+// that splits a code point outside the BMP keeps each half that it holds as a lone surrogate.
 
 // Writes `count` code units of the data from `offset`, or as many as there are (dom/#concept-cd-substring). Returns
 // OutOfRange if `offset` is past the data's length.

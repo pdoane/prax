@@ -13,7 +13,7 @@ namespace {
 // selecting Japanese or Chinese expects the run. A dictionary could divide these runs further. Returns zero for others.
 PrScript runScript(PrStringView text, uint32_t at) {
     uint32_t codePoint = 0;
-    prUtf8Decode(text, at, &codePoint);
+    prWtf8Decode(text, at, &codePoint);
     PrScript script = prUnicodeScript(codePoint);
     return script == PrScript_Hani || script == PrScript_Hira ? script : PrScript(0);
 }
@@ -31,7 +31,7 @@ uint32_t segmentEnd(PrStringView text, uint32_t at) {
 // or punctuation alone.
 bool isWord(PrStringView text, uint32_t at) {
     uint32_t codePoint = 0;
-    prUtf8Decode(text, at, &codePoint);
+    prWtf8Decode(text, at, &codePoint);
     switch (prUnicodeGeneralCategory(codePoint)) {
         case PrUnicodeGeneralCategory_UppercaseLetter:
         case PrUnicodeGeneralCategory_LowercaseLetter:
@@ -120,7 +120,7 @@ uint32_t prTextEditBackspaceStart(PrStringView text, uint32_t at) {
     uint32_t last = cluster;
     for (uint32_t b = cluster; b < at;) {
         uint32_t codePoint = 0;
-        size_t size = prUtf8Decode(text, b, &codePoint);
+        size_t size = prWtf8Decode(text, b, &codePoint);
         if (bindsCluster(codePoint))
             return cluster;
         last = b;

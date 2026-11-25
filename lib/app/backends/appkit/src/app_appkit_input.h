@@ -35,7 +35,7 @@ PrAppKey appKitKeyOfCharacter(NSEvent* event);
 bool appKitIsDead(NSEvent* event);
 
 // Returns the length in UTF-8 of the first `units` UTF-16 units of `string`, or zero if they are ill-formed.
-uint32_t appKitUtf8Length(NSString* string, NSUInteger units);
+uint32_t appKitWtf8Length(NSString* string, NSUInteger units);
 
 // Returns `text` as an NSString, or the empty string if it is not UTF-8.
 NSString* appKitStringOf(PrStringView text);

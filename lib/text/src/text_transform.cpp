@@ -47,7 +47,7 @@ bool previous(PrStringView text, size_t* end, uint32_t* codePoint) {
         size_t start = *end - 1;
         while (start > 0 && *end - start < kPrUtf8MaxBytes && (uint8_t(text.data[start]) & 0xc0) == 0x80)
             --start;
-        prUtf8Decode(text, start, codePoint);
+        prWtf8Decode(text, start, codePoint);
         *end = start;
         if (!isPassedOver(*codePoint))
             return true;
@@ -70,7 +70,7 @@ bool beginsWord(PrStringView text, size_t at) {
 bool isSingle(const PrTextTransformRun* run, size_t at) {
     for (size_t i = run->start; i < run->end;) {
         uint32_t codePoint = 0;
-        uint32_t length = prUtf8Decode(run->text, i, &codePoint);
+        uint32_t length = prWtf8Decode(run->text, i, &codePoint);
         if (i != at && codePoint != ' ' && codePoint != '\t' && codePoint != '\n')
             return false;
         i += length;
@@ -87,7 +87,7 @@ using namespace pr_impl;
 uint32_t prTextTransformAt(const PrTextTransformRun* run, size_t at, uint32_t out[kPrTextTransformMaxCodePoints]) {
     PR_ASSERT(at >= run->start && at < run->end);
     uint32_t codePoint = 0;
-    prUtf8Decode(run->text, at, &codePoint);
+    prWtf8Decode(run->text, at, &codePoint);
     out[0] = codePoint;
     uint32_t count = 1;
     PrLanguage language = prLocaleLanguage(run->locale);

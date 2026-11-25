@@ -484,7 +484,7 @@ bool extractBody(JSContext* ctx, JSValueConst init, ExtractedBody* out) {
         prRawStringReset(&serialized);
         return true;
     }
-    if (!jsReadString(ctx, init, &text))
+    if (!jsReadUsvString(ctx, init, &text))
         return false;
     *out = ExtractedBody{prStringBytes(text), "text/plain;charset=UTF-8"};
     return true;

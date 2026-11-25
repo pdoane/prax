@@ -303,7 +303,7 @@ bool process(PrStringView domain, PrUnicodeIdnaFlags flags, RawArray<uint32_t>* 
     RawArray<uint32_t> mapped{};
     for (size_t at = 0; at < domain.size;) {
         uint32_t codePoint;
-        at += prUtf8Decode(domain, at, &codePoint);
+        at += prWtf8Decode(domain, at, &codePoint);
         UnicodeIdnaMapping mapping = unicodeIdnaMapping(codePoint);
         bool transitional = (flags & PrUnicodeIdnaFlag_Transitional) != 0;
         switch (mapping.status) {

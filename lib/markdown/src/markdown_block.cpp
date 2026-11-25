@@ -1236,7 +1236,7 @@ void appendSlug(PrStringView text, RawArray<char>* out) {
     size_t index = 0;
     while (index < text.size) {
         uint32_t codePoint = 0;
-        index += prUtf8Decode(text, index, &codePoint);
+        index += prWtf8Decode(text, index, &codePoint);
         uint32_t lower[3];
         uint32_t count = prUnicodeLowercase(codePoint, lower);
         for (uint32_t i = 0; i < count; ++i) {

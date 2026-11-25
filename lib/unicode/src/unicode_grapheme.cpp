@@ -88,7 +88,7 @@ bool isNewline(PrUnicodeWordBreak b) {
 PrUnicodeWordBreak wordClassAfter(PrStringView text, size_t at) {
     while (at < text.size) {
         uint32_t codePoint = 0;
-        at += prUtf8Decode(text, at, &codePoint);
+        at += prWtf8Decode(text, at, &codePoint);
         PrUnicodeWordBreak b = prUnicodeWordBreak(codePoint);
         if (!isIgnored(b))
             return b;
@@ -163,11 +163,11 @@ size_t prUnicodeGraphemeNext(PrStringView text, size_t at) {
     if (at >= text.size)
         return text.size;
     uint32_t codePoint = 0;
-    at += prUtf8Decode(text, at, &codePoint);
+    at += prWtf8Decode(text, at, &codePoint);
     PrUnicodeGraphemeState state = prUnicodeGraphemeStateBegin(codePoint);
     while (at < text.size) {
         uint32_t next = 0;
-        uint32_t length = prUtf8Decode(text, at, &next);
+        uint32_t length = prWtf8Decode(text, at, &next);
         if (!prUnicodeGraphemeStatePush(&state, next))
             break;
         at += length;
@@ -179,7 +179,7 @@ size_t prUnicodeWordNext(PrStringView text, size_t at) {
     if (at >= text.size)
         return text.size;
     uint32_t codePoint = 0;
-    at += prUtf8Decode(text, at, &codePoint);
+    at += prWtf8Decode(text, at, &codePoint);
     PrUnicodeWordBreak raw = prUnicodeWordBreak(codePoint);
     if (raw == PrUnicodeWordBreak_CR && at < text.size && text.data[at] == '\n')
         return at + 1;                                              // WB3
@@ -190,7 +190,7 @@ size_t prUnicodeWordNext(PrStringView text, size_t at) {
     uint32_t regional = raw == PrUnicodeWordBreak_RegionalIndicator ? 1 : 0;
     while (at < text.size) {
         uint32_t next = 0;
-        uint32_t length = prUtf8Decode(text, at, &next);
+        uint32_t length = prWtf8Decode(text, at, &next);
         PrUnicodeWordBreak b = prUnicodeWordBreak(next);
         if (isNewline(b))
             break;                                                  // WB3b

@@ -183,7 +183,7 @@ bool containsFold(PrStringView text, PrStringView needle) {
 
 void appendCodePoint(RawArray<char>* out, uint32_t codePoint) {
     char bytes[kPrUtf8MaxBytes];
-    out->append(bytes, prUtf8Encode(codePoint, bytes));
+    out->append(bytes, prWtf8Encode(codePoint, bytes));
 }
 
 } // namespace
@@ -557,7 +557,7 @@ bool markdownAppendNormalizedLabel(PrStringView label, RawArray<char>* out) {
     size_t index = 0;
     while (index < label.size) {
         uint32_t codePoint = 0;
-        index += prUtf8Decode(label, index, &codePoint);
+        index += prWtf8Decode(label, index, &codePoint);
         if (markdownIsWhitespace(codePoint)) {
             space = out->count != mark;
             continue;

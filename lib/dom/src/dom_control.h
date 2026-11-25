@@ -88,7 +88,8 @@ DomEntryList* domEntryListCreate();
 void domEntryListRetain(DomEntryList* list);
 void domEntryListRelease(DomEntryList* PR_NULLABLE list);
 
-// Appends an entry to the list.
+// Appends an entry to the list, its name and value as scalar values, a lone surrogate as U+FFFD
+// (html/#create-an-entry).
 void domEntryListAppend(DomEntryList* list, PrStringView name, PrStringView value);
 
 // ---------------------------------------------------------------------------------------------------------------------

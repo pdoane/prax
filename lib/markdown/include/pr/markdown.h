@@ -99,10 +99,10 @@ void prMarkdownDestroy(PrMarkdown* PR_NULLABLE document);
 // client that keeps state from earlier walks starts over.
 void prMarkdownClear(PrMarkdown* document);
 
-// Appends `text` to the source, or ends the source. The source must be open. Text is UTF-8, and a piece may end
-// anywhere, including inside a code point or between the CR and LF of a line ending. A last line without its line
-// ending is parsed as it arrives if it is text, and waits for its line ending if the rest of the line can still change
-// what it shows, as "[" may start a link reference definition or "--" a setext underline.
+// Appends `text` to the source, or ends the source. The source must be open. A piece of text may end anywhere,
+// including inside a code point or between the CR and LF of a line ending. A last line without its line ending is
+// parsed as it arrives if it is text, and waits for its line ending if the rest of the line can still change what it
+// shows, as "[" may start a link reference definition or "--" a setext underline.
 void prMarkdownAppend(PrMarkdown* document, PrStringView text);
 void prMarkdownEnd(PrMarkdown* document);
 

@@ -66,7 +66,7 @@ bool isRealScript(PrScript script) {
 PrScript clusterScript(PrStringView cluster) {
     for (size_t at = 0; at < cluster.size;) {
         uint32_t codePoint = 0;
-        at += prUtf8Decode(cluster, at, &codePoint);
+        at += prWtf8Decode(cluster, at, &codePoint);
         PrScript script = prUnicodeScript(codePoint);
         if (isRealScript(script))
             return script;
@@ -115,7 +115,7 @@ void resolveScripts(TextItems& t, PrStringView whole, uint32_t start, uint32_t e
             uint32_t codePoint = 0;
             uint32_t key = 0;
             PrUnicodeBidiBracket bracket = PrUnicodeBidiBracket_None;
-            if (prUtf8Decode(cluster, 0, &codePoint) == cluster.size)
+            if (prWtf8Decode(cluster, 0, &codePoint) == cluster.size)
                 bracket = prUnicodeBidiBracket(codePoint, &key);
             script = current == PrScript_Zzzz ? PrScript_Zyyy : current;
             if (bracket == PrUnicodeBidiBracket_Open) {
@@ -145,7 +145,7 @@ void orient(TextItems& t, PrStringView whole, const PrTextPiece& piece) {
     for (uint32_t at = piece.start; at < piece.end;) {
         uint32_t next = clusterEnd(text, at);
         uint32_t codePoint = 0;
-        prUtf8Decode(text, at, &codePoint);
+        prWtf8Decode(text, at, &codePoint);
         bool upright = prTextIsUpright(piece.orientation, codePoint, t.scripts.data[at]);
         for (uint32_t b = at; b < next; ++b)
             t.upright.data[b] = upright;
@@ -181,7 +181,7 @@ bool mayTurnRight(const TextItems& t, PrStringView whole, uint32_t start, uint32
             continue;
         }
         uint32_t codePoint = 0;
-        uint32_t size = uint32_t(prUtf8Decode(text, at, &codePoint));
+        uint32_t size = uint32_t(prWtf8Decode(text, at, &codePoint));
         PrUnicodeBidiClass c = prUnicodeBidiClass(codePoint);
         if (!t.upright.data[at] &&
                 (c == PrUnicodeBidiClass_R || c == PrUnicodeBidiClass_AL || c == PrUnicodeBidiClass_RLE ||
@@ -363,7 +363,7 @@ bool resolveLevels(TextItems& t, const PrTextItemizeDesc& d) {
             case PrTextPieceKind_Text:
                 for (uint32_t at = piece.start; at < piece.end;) {
                     uint32_t codePoint = 0;
-                    uint32_t size = uint32_t(prUtf8Decode(d.text, at, &codePoint));
+                    uint32_t size = uint32_t(prWtf8Decode(d.text, at, &codePoint));
                     if (codePoint == '\n')
                         r.separator(at, codePoint, size);
                     else
@@ -397,7 +397,7 @@ bool resolveLevels(TextItems& t, const PrTextItemizeDesc& d) {
             case PrTextPieceKind_Break:
                 if (piece.end > piece.start) {
                     uint32_t codePoint = 0;
-                    uint32_t size = uint32_t(prUtf8Decode(d.text, piece.start, &codePoint));
+                    uint32_t size = uint32_t(prWtf8Decode(d.text, piece.start, &codePoint));
                     r.separator(piece.start, codePoint, size);
                 } else {
                     // A paragraph ends with no separator, and the elements open across it open again after it.

@@ -1168,7 +1168,7 @@ uint32_t countClick(WebWindow* window, uint8_t button, PrVec2 position, double t
 // letters. A key that types any other character is the key at its position on a US layout.
 PrAppKey keyOf(PrStringView key, PrAppKeyCode code) {
     uint32_t codePoint = 0;
-    if (key.size != 0 && prUtf8Decode(key, 0, &codePoint) == key.size) {
+    if (key.size != 0 && prWtf8Decode(key, 0, &codePoint) == key.size) {
         if (codePoint < 128)
             return PrAppKey(codePoint >= 'a' && codePoint <= 'z' ? codePoint - 'a' + 'A' : codePoint);
         PrStringView name = prAppKeyCodeName(code);
@@ -1206,7 +1206,7 @@ bool key(int type, const EmscriptenKeyboardEvent* e, void* context) {
     };
     // A key's text is its key value if that is one character, and the key is not pressed with Control or Command.
     uint32_t codePoint = 0;
-    bool types = value.size != 0 && prUtf8Decode(value, 0, &codePoint) == value.size && !e->ctrlKey && !e->metaKey;
+    bool types = value.size != 0 && prWtf8Decode(value, 0, &codePoint) == value.size && !e->ctrlKey && !e->metaKey;
     if (types)
         event.keyboard.text = value;
     WebWindow* window = keyboardWindow(app);

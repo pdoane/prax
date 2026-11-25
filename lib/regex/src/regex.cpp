@@ -142,7 +142,7 @@ struct Parser {
 
     uint32_t decodeRune() {
         uint32_t rune = 0;
-        at += prUtf8Decode(pattern, at, &rune);
+        at += prWtf8Decode(pattern, at, &rune);
         return rune;
     }
 
@@ -699,7 +699,7 @@ struct Matcher {
         uint32_t size = uint32_t(text.size);
         for (;;) {
             uint32_t rune = 0;
-            uint32_t width = offset < size ? prUtf8Decode(text, offset, &rune) : 0;
+            uint32_t width = offset < size ? prWtf8Decode(text, offset, &rune) : 0;
             uint32_t after = offset + width;
             next->steps.clear();
             next->slots.clear();

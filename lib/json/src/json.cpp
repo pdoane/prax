@@ -130,8 +130,8 @@ bool string(Reader& r) {
     uint32_t offset = uint32_t(text.count);
     while (true) {
         size_t run = r.at;
-        while (r.at < r.size && r.text[r.at] != '"' && r.text[r.at] != '\\' &&
-                uint8_t(r.text[r.at]) >= 0x20 && uint8_t(r.text[r.at]) < 0x80)
+        // The text is UTF-8 (prJsonParse checks it), so its bytes copy as they are.
+        while (r.at < r.size && r.text[r.at] != '"' && r.text[r.at] != '\\' && uint8_t(r.text[r.at]) >= 0x20)
             ++r.at;
         text.append(r.text + run, uint32_t(r.at - run));
         if (r.at >= r.size)
@@ -143,12 +143,6 @@ bool string(Reader& r) {
         }
         if (uint8_t(c) < 0x20)
             return false;
-        if (c != '\\') {
-            uint32_t codePoint = 0;
-            r.at += prUtf8DecodeScalar(PrStringView{r.text, r.size}, r.at, &codePoint);
-            appendCodePoint(text, codePoint);
-            continue;
-        }
         if (++r.at >= r.size)
             return false;
         char escape = r.text[r.at++];
@@ -366,9 +360,18 @@ void quote(JsonWriter* w, PrStringView value) {
             break;
         uint8_t c = uint8_t(value.data[i]);
         if (c >= 0x80) {
+            // JSON text is UTF-8, so a lone surrogate is written as its escape, as JSON.stringify writes it.
             uint32_t codePoint = 0;
-            i += prUtf8DecodeScalar(value, i, &codePoint);
-            prTextBufferAppendCodePoint(out, codePoint);
+            i += prWtf8Decode(value, i, &codePoint);
+            if (codePoint >= 0xd800 && codePoint <= 0xdfff) {
+                prTextBufferAppend(out, "\\u");
+                for (uint32_t shift = 16; shift != 0;) {
+                    shift -= 4;
+                    prTextBufferAppendChar(out, kHex[codePoint >> shift & 0xf]);
+                }
+            } else {
+                prTextBufferAppendCodePoint(out, codePoint);
+            }
             continue;
         }
         ++i;
@@ -428,10 +431,17 @@ void prJsonDestroy(PrJson* PR_NULLABLE document) {
 bool prJsonParse(PrJson* document, PrStringView text, size_t* PR_NULLABLE errorAt) {
     document->values.clear();
     document->text.clear();
-    Reader r{text.data, text.size, 0, document};
+    // JSON text is UTF-8 (RFC 8259, 8.1). The read sees only the well-formed prefix, and fails at its end if it gets
+    // that far.
+    size_t valid = prUtf8Validate(text);
+    Reader r{text.data, valid, 0, document};
     if (prStringStartsWith(text, "\xEF\xBB\xBF"))
         r.at = 3;
     bool ok = text.size > 0 && read(r);
+    if (ok && valid < text.size) {
+        ok = false;
+        r.at = valid;
+    }
     if (!ok) {
         document->values.clear();
         document->text.clear();

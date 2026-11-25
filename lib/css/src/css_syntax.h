@@ -245,6 +245,19 @@ double cssTokenNumber(const CssTokenArray* tokens, uint32_t index);
 // Returns the bytes of the unit of the dimension token at `index`: its text without the number.
 PrStringView cssTokenUnitText(const CssTokenArray* tokens, uint32_t index);
 
+// Decodes the code point at `offset` in `text` as preprocessing leaves it: U+FFFD for a null or a surrogate
+// (css-syntax-3/#input-preprocessing). Returns its width.
+inline uint32_t cssDecode(PrStringView text, size_t offset, uint32_t* codePoint) {
+    if (offset < text.size && uint8_t(text.data[offset] - 1) < 0x7f) {
+        *codePoint = uint8_t(text.data[offset]);
+        return 1;
+    }
+    uint32_t width = prWtf8DecodeScalar(text, offset, codePoint);
+    if (width != 0 && *codePoint == 0)
+        *codePoint = kPrUtf8Replacement;
+    return width;
+}
+
 // Returns the code point of the delim token at `index`.
 inline uint32_t cssTokenDelim(const CssTokenArray* tokens, uint32_t index) {
     uint32_t start = tokens->starts.data[index];
@@ -252,7 +265,7 @@ inline uint32_t cssTokenDelim(const CssTokenArray* tokens, uint32_t index) {
     if (lead < 0x80)
         return lead;
     uint32_t codePoint = 0;
-    prUtf8DecodeScalar(tokens->source, start, &codePoint);
+    cssDecode(tokens->source, start, &codePoint);
     return codePoint;
 }
 

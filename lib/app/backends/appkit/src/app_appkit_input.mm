@@ -257,8 +257,8 @@ bool appKitIsDead(NSEvent* event) {
     return plain.length != 0 && [plain characterAtIndex:0] >= 32;
 }
 
-uint32_t appKitUtf8Length(NSString* string, NSUInteger units) {
-    uint32_t size = prAppleNSStringToUtf8([string substringToIndex:MIN(units, string.length)], nullptr, 0);
+uint32_t appKitWtf8Length(NSString* string, NSUInteger units) {
+    uint32_t size = prAppleNSStringToWtf8([string substringToIndex:MIN(units, string.length)], nullptr, 0);
     return size != kPrAppleStringInvalid ? size : 0;
 }
 

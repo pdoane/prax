@@ -1319,7 +1319,7 @@ constexpr uint32_t kErrorSlot = 0;
 
 JSValue errorEventConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSValueConst* argv) {
     StringArgument type = {ctx};
-    StringArgument filename = {ctx};
+    StringArgument filename = {.ctx = ctx, .usv = true};
     StringArgument message = {ctx};
     PrHtmlErrorEventInit init = prHtmlErrorEventInitDefault();
     JSValueConst dictionary = argc > 1 ? argv[1] : JS_UNDEFINED;
@@ -1433,7 +1433,7 @@ typedef uint8_t MessageSlot;
 JSValue messageConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSValueConst* argv) {
     StringArgument type = {ctx};
     StringArgument lastEventId = {ctx, ""};
-    StringArgument origin = {ctx, ""};
+    StringArgument origin = {.ctx = ctx, .fallback = "", .usv = true};
     PrHtmlMessageEventInit init = prHtmlMessageEventInitDefault();
     bool present = false;
     JSValueConst dictionary = argc > 1 ? argv[1] : JS_UNDEFINED;
@@ -1805,7 +1805,7 @@ JSValue btoa(JSContext* ctx, JSValueConst object, int argc, JSValueConst* argv) 
     PrTextBuffer bytes = {};
     for (size_t at = 0; at < text.size;) {
         uint32_t codePoint = 0;
-        at += prUtf8Decode(text, at, &codePoint);
+        at += prWtf8Decode(text, at, &codePoint);
         if (codePoint > 0xFF) {
             prTextBufferReset(&bytes);
             return jsDomExceptionThrow(ctx, "InvalidCharacterError");
@@ -2599,7 +2599,7 @@ JSValue documentCookie(JSContext* ctx, JSValueConst object) {
 }
 
 JSValue setDocumentCookie(JSContext* ctx, JSValueConst object, JSValueConst input) {
-    StringArgument value = {ctx};
+    StringArgument value = {.ctx = ctx, .usv = true};
     if (jsThis<PrDomDocument>(ctx, object, prJsDomDocumentClass) == nullptr || !value.read(input))
         return JS_EXCEPTION;
     return JS_UNDEFINED;
@@ -2915,8 +2915,8 @@ JSValue popStateState(JSContext* ctx, JSValueConst eventObject) {
 // HashChangeEventInit, after EventInit: newURL and oldURL.
 JSValue hashChangeConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSValueConst* argv) {
     StringArgument type = {ctx};
-    StringArgument newUrl = {ctx, ""};
-    StringArgument oldUrl = {ctx, ""};
+    StringArgument newUrl = {.ctx = ctx, .fallback = "", .usv = true};
+    StringArgument oldUrl = {.ctx = ctx, .fallback = "", .usv = true};
     PrDomEventInit init = prDomEventInitDefault();
     bool present = false;
     JSValueConst dictionary = argc > 1 ? argv[1] : JS_UNDEFINED;
@@ -3535,7 +3535,7 @@ constexpr JSCFunctionListEntry kImageElementProto[] = {
     PR_JS_MAGIC_GET_SET("crossOrigin", mediaEnumerated, setMediaEnumerated, 0),
     PR_JS_DOM_REFLECT_STRING("alt", "alt"),
     PR_REFLECT_URL("src", "src"),
-    PR_JS_DOM_REFLECT_STRING("srcset", "srcset"),
+    PR_JS_DOM_REFLECT_USV_STRING("srcset", "srcset"),
     PR_JS_DOM_REFLECT_STRING("sizes", "sizes"),
     PR_JS_GET_SET("width", (jsNumberGetter<&htmlImageElementClass, prHtmlImageElementWidth>),
         (jsUint32Setter<&htmlImageElementClass, prHtmlImageElementSetWidth>)),
@@ -3593,7 +3593,7 @@ constexpr JSCFunctionListEntry kAnchorElementProto[] = {
     PR_JS_DOM_REFLECT_STRING("shape", "shape"),
     PR_JS_DOM_REFLECT_STRING("target", "target"),
     PR_JS_DOM_REFLECT_STRING("download", "download"),
-    PR_JS_DOM_REFLECT_STRING("ping", "ping"),
+    PR_JS_DOM_REFLECT_USV_STRING("ping", "ping"),
     PR_JS_DOM_REFLECT_STRING("rel", "rel"),
     PR_JS_DOM_REFLECT_STRING("hreflang", "hreflang"),
     PR_JS_DOM_REFLECT_STRING("type", "type"),
@@ -3612,7 +3612,7 @@ constexpr JSCFunctionListEntry kAreaElementProto[] = {
     PR_JS_DOM_REFLECT_STRING("shape", "shape"),
     PR_JS_DOM_REFLECT_STRING("target", "target"),
     PR_JS_DOM_REFLECT_STRING("download", "download"),
-    PR_JS_DOM_REFLECT_STRING("ping", "ping"),
+    PR_JS_DOM_REFLECT_USV_STRING("ping", "ping"),
     PR_JS_DOM_REFLECT_STRING("rel", "rel"),
     PR_JS_DOM_REFLECT_REFERRER_POLICY("referrerPolicy", "referrerpolicy"),
     PR_HYPERLINK_UTILS,
@@ -3620,7 +3620,7 @@ constexpr JSCFunctionListEntry kAreaElementProto[] = {
 
 constexpr JSCFunctionListEntry kBaseElementProto[] = {
     PR_JS_TAG("HTMLBaseElement"),
-    PR_JS_GET_SET("href", baseHref, jsSetReflectString<"href">),
+    PR_JS_GET_SET("href", baseHref, (jsSetReflectString<"href", true>)),
     PR_JS_DOM_REFLECT_STRING("target", "target"),
 };
 
@@ -3638,7 +3638,7 @@ constexpr JSCFunctionListEntry kLinkElementProto[] = {
     PR_JS_DOM_REFLECT_STRING("hreflang", "hreflang"),
     PR_JS_DOM_REFLECT_STRING("type", "type"),
     PR_JS_DOM_REFLECT_STRING("integrity", "integrity"),
-    PR_JS_DOM_REFLECT_STRING("imageSrcset", "imagesrcset"),
+    PR_JS_DOM_REFLECT_USV_STRING("imageSrcset", "imagesrcset"),
     PR_JS_DOM_REFLECT_STRING("imageSizes", "imagesizes"),
     PR_JS_DOM_REFLECT_REFERRER_POLICY("referrerPolicy", "referrerpolicy"),
     PR_JS_DOM_REFLECT_BOOL("disabled", "disabled"),
@@ -3652,7 +3652,7 @@ constexpr JSCFunctionListEntry kSourceElementProto[] = {
     PR_JS_TAG("HTMLSourceElement"),
     PR_REFLECT_URL("src", "src"),
     PR_JS_DOM_REFLECT_STRING("type", "type"),
-    PR_JS_DOM_REFLECT_STRING("srcset", "srcset"),
+    PR_JS_DOM_REFLECT_USV_STRING("srcset", "srcset"),
     PR_JS_DOM_REFLECT_STRING("sizes", "sizes"),
     PR_JS_DOM_REFLECT_STRING("media", "media"),
 };

@@ -184,6 +184,15 @@ TEST_CASE("a document that is not well-formed is an error where it goes wrong") 
     CHECK(parse("") == "error 1:1 the document has no document element");
 }
 
+TEST_CASE("a character that XML's Char excludes, or a sequence that is not UTF-8, is an error where it is") {
+    CHECK(parse("<a>x\x01y</a>") == "error 1:5 a character that XML does not allow");
+    CHECK(parse(PrStringView{"<a>x\0y</a>", 11}) == "error 1:5 a character that XML does not allow");
+    CHECK(parse("<a>x\xC3</a>") == "error 1:5 a character that XML does not allow");
+    CHECK(parse("<a>x\xED\xA0\x80</a>") == "error 1:5 a character that XML does not allow");
+    CHECK(parse("<a>x\xEF\xBF\xBE</a>") == "error 1:5 a character that XML does not allow");
+    CHECK(parse("<a>x\xC3") == "error 1:5 a character that XML does not allow");
+}
+
 TEST_CASE("a handler can find a document wrong, or stop its parse") {
     PrXmlHandler refusing = {.startElement = refuseStart};
     PrXmlError error = {};
@@ -212,6 +221,9 @@ TEST_CASE("a document whose input arrives in pieces parses as it does whole, whe
         "<a>&amp</a>",
         "<a x='1",
         "<a>",
+        "<a>x\x01y</a>",
+        "<a>\xC3\xA9\xC3</a>",
+        "<a>\xED\xA0\x80</a>",
         "",
     };
     for (PrStringView document : documents) {
@@ -293,4 +305,5 @@ TEST_CASE("names follow XML's Name production") {
     CHECK(!prXmlIsName("1a"));
     CHECK(!prXmlIsName("a b"));
     CHECK(!prXmlIsName("-a"));
+    CHECK(!prXmlIsName("a\xED\xA0\x80"));   // a lone surrogate, as a DOMString may hold one
 }

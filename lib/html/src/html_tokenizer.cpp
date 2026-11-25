@@ -53,13 +53,12 @@ uint32_t normalizeNewlines(char* out, PrStringView text) {
     return uint32_t(write - out);
 }
 
-// Returns `text` as the input stream holds it, with U+FFFD in place of each ill-formed sequence
-// (encoding/#utf-8-decoder). Text that needs no replacement is returned unchanged. Otherwise the result is written to
-// `repaired`.
+// Returns `text` as the input stream holds it, WTF-8 with U+FFFD in place of each ill-formed sequence. Text that needs
+// no replacement is returned unchanged. Otherwise the result is written to `repaired`.
 PrStringView wellFormed(PrStringView text, PrTextBuffer* repaired) {
-    if (prUtf8Validate(text) == text.size)
+    if (prWtf8Validate(text) == text.size)
         return text;
-    prTextBufferAppendUtf8(repaired, text);
+    prTextBufferAppendWtf8(repaired, text);
     return prTextBufferView(repaired);
 }
 
@@ -262,7 +261,7 @@ void errorAt(HtmlTokenizer* t, HtmlErrorCode code, uint32_t offset) {
 // returns its width. A byte is reported once, however many times a state reads it.
 uint32_t check(HtmlTokenizer* t, uint32_t offset) {
     uint32_t codePoint = 0;
-    uint32_t width = prUtf8Decode(htmlInputText(t), offset, &codePoint);
+    uint32_t width = prWtf8Decode(htmlInputText(t), offset, &codePoint);
     if (offset < t->checked)
         return width;
 
@@ -1767,7 +1766,7 @@ void htmlInputPosition(PrStringView text, uint32_t* at, uint32_t to, uint32_t* l
         }
 
         uint32_t codePoint = 0;
-        i += prUtf8Decode(text, i, &codePoint);
+        i += prWtf8Decode(text, i, &codePoint);
         *column += codePoint >= 0x10000 ? 2 : 1;
     }
     *at = i;

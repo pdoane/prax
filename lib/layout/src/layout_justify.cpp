@@ -91,7 +91,7 @@ PR_NOINLINE void layoutJustifyFind(LayoutState& state, LayoutJustifier& justifie
                 continue;
             }
             uint32_t codePoint = 0;
-            prUtf8Decode(text, b, &codePoint);
+            prWtf8Decode(text, b, &codePoint);
             if (previous && b >= from) {
                 while (g < it.glyphEnd && t.info.glyphs[g].cluster < b)
                     ++g;

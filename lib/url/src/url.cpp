@@ -10,6 +10,7 @@
 #include "pr/string_ops.h"
 #include "pr/text_buffer.h"
 #include "pr/utf8.h"
+#include "pr/utf8_views.h"
 
 #include "url/src/url_percent.h"
 #include "url/src/url_public_suffix.h"
@@ -39,8 +40,8 @@ bool lessUtf16(PrStringView a, PrStringView b) {
     while (i < a.size && j < b.size) {
         uint32_t x;
         uint32_t y;
-        i += prUtf8Decode(a, i, &x);
-        j += prUtf8Decode(b, j, &y);
+        i += prWtf8Decode(a, i, &x);
+        j += prWtf8Decode(b, j, &y);
         if (x != y)
             return utf16Order(x) < utf16Order(y);
     }
@@ -143,9 +144,15 @@ void setHash(PrUrl* url, PrStringView value) {
 
 using namespace pr_impl;
 
+// Each function that takes text reads it as a USVString, as the URL Standard does, so each lone surrogate becomes
+// U+FFFD (Utf8Views).
+
 PrStatus prUrlCreate(PrStringView input, const PrUrl* PR_NULLABLE base, PrCharset charset,
         PrUrl* PR_NULLABLE* PR_NONNULL out) {
-    return urlParse(input, base, prCharsetOutput(charset), out);
+    Utf8Views<1> scalars;
+    PrStatus status = urlParse(scalars.of(input), base, prCharsetOutput(charset), out);
+    scalars.reset();
+    return status;
 }
 
 PrUrl* prUrlClone(const PrUrl* url) {
@@ -174,7 +181,10 @@ bool prUrlHasSameOrigin(const PrUrl* url, const PrUrl* other) {
 }
 
 PrStatus prUrlHostParse(PrStringView input, PrRawString* out) {
-    return urlHostParse(input, out);
+    Utf8Views<1> scalars;
+    PrStatus status = urlHostParse(scalars.of(input), out);
+    scalars.reset();
+    return status;
 }
 
 PrStringView prUrlHostPublicSuffix(PrStringView host) {
@@ -317,20 +327,24 @@ PrRawString prUrlComponent(const PrUrl* url, PrUrlComponent component) {
 }
 
 PrStatus prUrlSetComponent(PrUrl* url, PrUrlComponent component, PrStringView value) {
+    Utf8Views<1> scalars;
+    PrStringView valueUtf8 = scalars.of(value);
+    PrStatus status = PrStatus_Ok;
     switch (component) {
-        case PrUrlComponent_Href: return setHref(url, value);
-        case PrUrlComponent_Origin: return PrStatus_ReadOnly;
-        case PrUrlComponent_Protocol: setProtocol(url, value); break;
-        case PrUrlComponent_Username: setCredential(url, &url->username, value); break;
-        case PrUrlComponent_Password: setCredential(url, &url->password, value); break;
-        case PrUrlComponent_Host: setHost(url, value); break;
-        case PrUrlComponent_Hostname: setHostname(url, value); break;
-        case PrUrlComponent_Port: setPort(url, value); break;
-        case PrUrlComponent_Pathname: setPathname(url, value); break;
-        case PrUrlComponent_Search: setSearch(url, value); break;
-        default: setHash(url, value); break;
+        case PrUrlComponent_Href: status = setHref(url, valueUtf8); break;
+        case PrUrlComponent_Origin: status = PrStatus_ReadOnly; break;
+        case PrUrlComponent_Protocol: setProtocol(url, valueUtf8); break;
+        case PrUrlComponent_Username: setCredential(url, &url->username, valueUtf8); break;
+        case PrUrlComponent_Password: setCredential(url, &url->password, valueUtf8); break;
+        case PrUrlComponent_Host: setHost(url, valueUtf8); break;
+        case PrUrlComponent_Hostname: setHostname(url, valueUtf8); break;
+        case PrUrlComponent_Port: setPort(url, valueUtf8); break;
+        case PrUrlComponent_Pathname: setPathname(url, valueUtf8); break;
+        case PrUrlComponent_Search: setSearch(url, valueUtf8); break;
+        default: setHash(url, valueUtf8); break;
     }
-    return PrStatus_Ok;
+    scalars.reset();
+    return status;
 }
 
 PrUrlSearchParams* prUrlSearchParams(PrUrl* url) {
@@ -352,7 +366,9 @@ void prUrlSearchParamsDestroy(PrUrlSearchParams* PR_NULLABLE params) {
 }
 
 void prUrlSearchParamsParse(PrUrlSearchParams* params, PrStringView input) {
-    urlSearchParamsParse(params, input);
+    Utf8Views<1> scalars;
+    urlSearchParamsParse(params, scalars.of(input));
+    scalars.reset();
     urlSearchParamsUpdate(params);
 }
 
@@ -375,42 +391,61 @@ PrStringView prUrlSearchParamsValueAt(const PrUrlSearchParams* params, uint32_t 
 }
 
 PrStringView prUrlSearchParamsGet(const PrUrlSearchParams* params, PrStringView name) {
-    for (uint32_t i = 0; i < params->pairs.count; ++i) {
-        if (matches(&params->pairs.data[i], name, PrStringView{}))
-            return prRawStringView(&params->pairs.data[i].value);
+    Utf8Views<1> scalars;
+    PrStringView nameUtf8 = scalars.of(name);
+    PrStringView valueUtf8 = {};
+    bool found = false;
+    for (uint32_t i = 0; i < params->pairs.count && !found; ++i) {
+        found = matches(&params->pairs.data[i], nameUtf8, PrStringView{});
+        if (found)
+            valueUtf8 = prRawStringView(&params->pairs.data[i].value);
     }
-    return PrStringView{};
+    scalars.reset();
+    return valueUtf8;
 }
 
 bool prUrlSearchParamsHas(const PrUrlSearchParams* params, PrStringView name, PrStringView value) {
-    for (uint32_t i = 0; i < params->pairs.count; ++i) {
-        if (matches(&params->pairs.data[i], name, value))
-            return true;
-    }
-    return false;
+    Utf8Views<2> scalars;
+    PrStringView nameUtf8 = scalars.of(name);
+    PrStringView valueUtf8 = scalars.of(value);
+    bool found = false;
+    for (uint32_t i = 0; i < params->pairs.count && !found; ++i)
+        found = matches(&params->pairs.data[i], nameUtf8, valueUtf8);
+    scalars.reset();
+    return found;
 }
 
 void prUrlSearchParamsAppend(PrUrlSearchParams* params, PrStringView name, PrStringView value) {
-    appendPair(params, name, value);
+    Utf8Views<2> scalars;
+    PrStringView nameUtf8 = scalars.of(name);
+    appendPair(params, nameUtf8, scalars.of(value));
+    scalars.reset();
     urlSearchParamsUpdate(params);
 }
 
 void prUrlSearchParamsDelete(PrUrlSearchParams* params, PrStringView name, PrStringView value) {
+    Utf8Views<2> scalars;
+    PrStringView nameUtf8 = scalars.of(name);
+    PrStringView valueUtf8 = scalars.of(value);
     for (uint32_t i = params->pairs.count; i != 0; --i) {
-        if (matches(&params->pairs.data[i - 1], name, value))
+        if (matches(&params->pairs.data[i - 1], nameUtf8, valueUtf8))
             erasePair(params, i - 1);
     }
+    scalars.reset();
     urlSearchParamsUpdate(params);
 }
 
 void prUrlSearchParamsSet(PrUrlSearchParams* params, PrStringView name, PrStringView value) {
+    Utf8Views<2> scalars;
+    PrStringView nameUtf8 = scalars.of(name);
+    PrStringView valueUtf8 = scalars.of(value);
     bool found = false;
     for (uint32_t i = 0; i < params->pairs.count;) {
         UrlPair* pair = &params->pairs.data[i];
-        if (!matches(pair, name, PrStringView{})) {
+        if (!matches(pair, nameUtf8, PrStringView{})) {
             ++i;
         } else if (!found) {
-            prRawStringReplace(&pair->value, value);
+            prRawStringReplace(&pair->value, valueUtf8);
             found = true;
             ++i;
         } else {
@@ -418,7 +453,8 @@ void prUrlSearchParamsSet(PrUrlSearchParams* params, PrStringView name, PrString
         }
     }
     if (!found)
-        appendPair(params, name, value);
+        appendPair(params, nameUtf8, valueUtf8);
+    scalars.reset();
     urlSearchParamsUpdate(params);
 }
 

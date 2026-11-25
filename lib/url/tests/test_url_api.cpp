@@ -145,3 +145,14 @@ TEST_CASE("a host parses as a special URL's host does") {
     CHECK(prUrlHostParse("exa mple.com", &failed) == PrStatus_Syntax);
     CHECK(prRawStringIsNull(&failed));
 }
+
+TEST_CASE("a lone surrogate in text that the URL API takes is U+FFFD, as in a USVString") {
+    PrUrl* url = parse("https://example.org/a\xED\xA0\x80?q=\xED\xA0\x80");
+    CHECK(text(prUrlPath(url)) == "/a%EF%BF%BD");
+    CHECK(text(prUrlQuery(url)) == "q=%EF%BF%BD");
+    PrUrlSearchParams* params = prUrlSearchParams(url);
+    CHECK(text(prUrlSearchParamsGet(params, "q")) == "\xEF\xBF\xBD");
+    prUrlSearchParamsAppend(params, "\xED\xB0\x80", "x");
+    CHECK(prUrlSearchParamsHas(params, "\xEF\xBF\xBD", PrStringView{}));
+    prUrlDestroy(url);
+}

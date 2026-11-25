@@ -193,7 +193,7 @@ uint32_t printRun(VtermParser* parser, PrStringView text, size_t* at) {
                     continue;
                 }
             }
-            i += prUtf8DecodeScalar(text, i, &parser->printed[count++]);
+            i += prUtf8Decode(text, i, &parser->printed[count++]);
             continue;
         }
         uint32_t codePoint = kPrUtf8Replacement;

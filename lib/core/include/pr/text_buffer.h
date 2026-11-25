@@ -29,9 +29,24 @@ typedef struct PrTextBuffer {
 // capacity, so building text one append at a time copies each byte once, amortized.
 void prTextBufferReserve(PrTextBuffer* buffer, uint32_t size);
 
-// Appends `text`, and replaces each maximal subpart of an ill-formed sequence with kPrUtf8Replacement. The maximal
-// subparts are those that prUtf8Decode consumes.
+// Appends `text`, bytes read as UTF-8, and replaces each maximal subpart of an ill-formed sequence, as prUtf8Decode
+// consumes it, with kPrUtf8Replacement, so that what it appends is UTF-8. A surrogate's three bytes are ill formed
+// here.
 void prTextBufferAppendUtf8(PrTextBuffer* buffer, PrStringView text);
+
+// Returns `text` as UTF-8: `text` itself if it holds no lone surrogate or ill-formed sequence, and otherwise its code
+// points as prWtf8DecodeScalar reads them, written to `scratch`, which this clears. A lone surrogate becomes
+// kPrUtf8Replacement, as converting a DOMString to a USVString does.
+PrStringView prTextBufferUtf8FromWtf8(PrTextBuffer* scratch, PrStringView text);
+
+// Appends `text` to text that is WTF-8, and replaces each maximal subpart of an ill-formed sequence with
+// kPrUtf8Replacement, so that the buffer stays WTF-8. A lone surrogate stays itself, and a surrogate pair written as
+// its two surrogates, here or across the buffer's end and `text`'s start, becomes the four bytes of its pair.
+void prTextBufferAppendWtf8(PrTextBuffer* buffer, PrStringView text);
+
+// Appends `codePoint` to text that is WTF-8, encoded by prWtf8Encode. A low surrogate after a high surrogate joins it:
+// the two become the four bytes of their pair, as WTF-8 requires.
+void prTextBufferAppendWtf8CodePoint(PrTextBuffer* buffer, uint32_t codePoint);
 
 // Frees the storage and leaves the buffer empty.
 void prTextBufferReset(PrTextBuffer* buffer);

@@ -273,7 +273,7 @@ PrScript declaredScript(PrStringView cluster, PrScript script) {
         return script;
     for (size_t at = 0; at < cluster.size;) {
         uint32_t codePoint = 0;
-        at += prUtf8Decode(cluster, at, &codePoint);
+        at += prWtf8Decode(cluster, at, &codePoint);
         PrScript scripts[kPrUnicodeMaxScriptExtensions];
         uint32_t count = prUnicodeScriptExtensions(codePoint, scripts);
         for (uint32_t i = 0; i < count; ++i) {
@@ -300,7 +300,7 @@ FallbackReach fallbackReach(PrStringView cluster) {
     FallbackReach reach = FallbackReach_All;
     for (size_t at = 0; at < cluster.size;) {
         uint32_t codePoint = 0;
-        at += prUtf8Decode(cluster, at, &codePoint);
+        at += prWtf8Decode(cluster, at, &codePoint);
         if (codePoint < 0x20 || (codePoint >= 0x7F && codePoint <= 0x9F))
             return FallbackReach_None;
         if (prUnicodeGeneralCategory(codePoint) == PrUnicodeGeneralCategory_PrivateUse)
@@ -337,7 +337,7 @@ bool holdsSequence(PrStringView cluster) {
     uint32_t previous = 0;
     for (size_t at = 0; at < cluster.size;) {
         uint32_t codePoint = 0;
-        at += prUtf8Decode(cluster, at, &codePoint);
+        at += prWtf8Decode(cluster, at, &codePoint);
         if (selectsGlyph(previous, codePoint))
             return true;
         previous = codePoint;
@@ -355,7 +355,7 @@ bool covers(const PrFontFace& face, PrStringView cluster, Coverage coverage) {
     uint32_t previous = 0;
     for (size_t at = 0; at < cluster.size;) {
         uint32_t codePoint = 0;
-        at += prUtf8Decode(cluster, at, &codePoint);
+        at += prWtf8Decode(cluster, at, &codePoint);
         if (selectsGlyph(previous, codePoint) &&
                 prFontVariationSequenceGlyph(face.font, previous, codePoint).mapping == PrFontSequenceMapping_None)
             return false;
@@ -467,7 +467,7 @@ uint32_t firstFace(TextFont& t, Order& o) {
 // face that maps only its characters.
 uint32_t chooseFace(TextFont& t, Order& o, PrStringView cluster, PrScript script) {
     uint32_t first = 0;
-    prUtf8Decode(cluster, 0, &first);
+    prWtf8Decode(cluster, 0, &first);
     bool emoji = prTextClusterIsEmoji(cluster);
     uint32_t face = kPrTextMatchNone;
     if (holdsSequence(cluster)) {
@@ -664,7 +664,7 @@ PrLocale prTextFontLocale(const PrTextFont* font) {
 
 uint32_t prTextFontMatch(PrTextFont* font, PrStringView cluster, PrScript script) {
     uint32_t first = 0;
-    size_t firstSize = prUtf8Decode(cluster, 0, &first);
+    size_t firstSize = prWtf8Decode(cluster, 0, &first);
     if (firstSize == cluster.size) {
         uint64_t key = keyOf(first, script);
         uint32_t at = font->choices.find(key, [&](uint32_t i) { return font->chosen.data[i].key; });
@@ -750,7 +750,7 @@ uint64_t prTextFontRevision(const PrTextFont* font) {
 bool prTextFaceServesCluster(const PrFontFace* face, PrStringView cluster) {
     for (size_t at = 0; at < cluster.size;) {
         uint32_t codePoint = 0;
-        at += prUtf8Decode(cluster, at, &codePoint);
+        at += prWtf8Decode(cluster, at, &codePoint);
         if (!isIgnorable(codePoint) && !prFontFaceServes(face, codePoint))
             return false;
     }
@@ -759,11 +759,11 @@ bool prTextFaceServesCluster(const PrFontFace* face, PrStringView cluster) {
 
 bool prTextClusterIsEmoji(PrStringView cluster) {
     uint32_t first = 0;
-    prUtf8Decode(cluster, 0, &first);
+    prWtf8Decode(cluster, 0, &first);
     bool emoji = (prUnicodeFlags(first) & PrUnicodeFlag_EmojiPresentation) != 0;
     for (size_t at = 0; at < cluster.size;) {
         uint32_t codePoint = 0;
-        at += prUtf8Decode(cluster, at, &codePoint);
+        at += prWtf8Decode(cluster, at, &codePoint);
         if (codePoint == 0xfe0f)
             emoji = true;
         else if (codePoint == 0xfe0e)

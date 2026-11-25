@@ -335,7 +335,8 @@ PrHtmlDetailsElement* PR_NULLABLE prHtmlDetailsElementQuery(PrDomEventTarget* PR
 // FormData (xhr)
 //
 // A list of entries, each a name and a string value (xhr/#interface-formdata). A FormData is reference counted, and a
-// FormDataEvent holds one. A File entry waits for the File API.
+// FormDataEvent holds one. A File entry waits for the File API. Its functions read the names and values that they take
+// as USVStrings, so each lone surrogate becomes U+FFFD.
 
 // Creates a FormData with one reference for the caller (xhr/#dom-formdata). Without a form, its entry list is empty.
 // With one, the list is the form's entry list (html/#constructing-the-form-data-set) with `submitter`, which fires

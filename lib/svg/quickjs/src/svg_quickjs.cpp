@@ -1010,7 +1010,7 @@ constexpr JSCFunctionListEntry kAElementProto[] = {
     PR_JS_TAG("SVGAElement"),
     PR_SVG_STRING(target),
     PR_JS_DOM_REFLECT_STRING("download", "download"),
-    PR_JS_DOM_REFLECT_STRING("ping", "ping"),
+    PR_JS_DOM_REFLECT_USV_STRING("ping", "ping"),
     PR_JS_DOM_REFLECT_STRING("rel", "rel"),
     PR_JS_DOM_REFLECT_SUPPORTED_TOKEN_LIST("relList", "rel", &kJsHyperlinkRel),
     PR_JS_DOM_REFLECT_STRING("hreflang", "hreflang"),

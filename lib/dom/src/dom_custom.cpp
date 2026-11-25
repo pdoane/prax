@@ -245,7 +245,7 @@ bool domIsValidCustomElementName(PrStringView name) {
     }
     for (size_t at = 0; at < name.size;) {
         uint32_t c = 0;
-        uint32_t length = prUtf8Decode(name, at, &c);
+        uint32_t length = prWtf8Decode(name, at, &c);
         if (length == 0 || !isPcenChar(c))
             return false;
         at += length;

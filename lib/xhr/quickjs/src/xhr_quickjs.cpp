@@ -226,7 +226,7 @@ JSValue xhrSend(JSContext* ctx, JSValueConst requestObject, int argc, JSValueCon
     JSValueConst body = argc > 0 ? argv[0] : JS_UNDEFINED;
     PrByteView bytes{nullptr, 0};
     PrStringView contentType{nullptr, 0};
-    StringArgument text = {ctx};
+    StringArgument text = {.ctx = ctx, .usv = true};
     PrRawString form = prRawStringNull();
     const uint8_t* data = nullptr;
     size_t size = 0;

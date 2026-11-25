@@ -405,8 +405,8 @@ void textString(PrTextBuffer& out, PrStringView text) {
     prTextBufferAppend(&out, "FEFF");
     for (size_t at = 0; at < text.size;) {
         uint32_t c = 0;
-        uint32_t size = prUtf8DecodeScalar(text, at, &c);
-        at += size != 0 ? size : 1;
+        // A text string is UTF-16 of scalar values.
+        at += prWtf8DecodeScalar(text, at, &c);
         if (c >= 0x10000) {
             c -= 0x10000;
             drawSharedAppendHex(out, 0xD800 + (c >> 10), 2);
@@ -1611,8 +1611,7 @@ void writeFont(PdfWriter& p, PdfFont& f) {
         PrStringView text{f.unicode.data + f.unicodeStart.data[g], f.unicodeSize.data[g]};
         for (size_t at = 0; at < text.size;) {
             uint32_t c = 0;
-            uint32_t size = prUtf8DecodeScalar(text, at, &c);
-            at += size != 0 ? size : 1;
+            at += prWtf8DecodeScalar(text, at, &c);
             if (c >= 0x10000) {
                 c -= 0x10000;
                 drawSharedAppendHex(entries, 0xD800 + (c >> 10), 2);

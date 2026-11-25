@@ -14,17 +14,17 @@ namespace {
 
 // Returns the UTF-8 of `string`, converted by measuring and then filling.
 String utf8Of(CFStringRef string) {
-    uint32_t size = prAppleStringToUtf8(string, nullptr, 0);
+    uint32_t size = prAppleStringToWtf8(string, nullptr, 0);
     REQUIRE(size != kPrAppleStringInvalid);
     RawArray<char> bytes;
     bytes.resize(size);
-    CHECK(prAppleStringToUtf8(string, bytes.data, size) == size);
+    CHECK(prAppleStringToWtf8(string, bytes.data, size) == size);
     String text(PrStringView{bytes.data, size});
     bytes.reset();
     return text;
 }
 
-// A string with a lone surrogate, which is not well-formed UTF-16.
+// A string with a lone surrogate, which is not well-formed UTF-16 but is a string.
 NSString* loneSurrogate() {
     const unichar units[] = {'a', 0xd800, 'b'};
     return [NSString stringWithCharacters:units length:3];
@@ -50,41 +50,43 @@ TEST_CASE("UTF-8 converts to a CoreFoundation string and back") {
 TEST_CASE("the empty string converts both ways") {
     CFStringRef string = prAppleStringCreate("");
     REQUIRE(string != nullptr);
-    CHECK(prAppleStringToUtf8(string, nullptr, 0) == 0);
+    CHECK(prAppleStringToWtf8(string, nullptr, 0) == 0);
     PrRawString raw = prAppleStringToRawString(string);
     CHECK(!prRawStringIsNull(&raw));
     CHECK(prRawStringIsEmpty(&raw));
     CFRelease(string);
 }
 
-TEST_CASE("text that is not UTF-8 makes no string") {
+TEST_CASE("ill-formed text makes no string") {
     CHECK(prAppleStringCreate("\xff") == nullptr);
-    CHECK(prAppleStringCreate("\xed\xa0\x80") == nullptr);
+    CHECK(prAppleStringCreate("\xed\xa0\xbd\xed\xb8\x80") == nullptr);   // a pair written as its two surrogates
     CHECK((prAppleNSString("\xff") == nil));
 }
 
-TEST_CASE("a conversion to UTF-8 writes nothing to a capacity that does not hold it all") {
+TEST_CASE("a conversion to text writes nothing to a capacity that does not hold it all") {
     CFStringRef string = prAppleStringCreate("abc");
     REQUIRE(string != nullptr);
     char out[3] = {'x', 'x', 'x'};
-    CHECK(prAppleStringToUtf8(string, out, 2) == 3);
+    CHECK(prAppleStringToWtf8(string, out, 2) == 3);
     CHECK(out[0] == 'x');
     CFRelease(string);
 }
 
-TEST_CASE("a string with a lone surrogate does not convert to UTF-8") {
+TEST_CASE("a string with a lone surrogate converts to WTF-8, and back") {
     NSString* string = loneSurrogate();
-    CHECK(prAppleStringToUtf8((__bridge CFStringRef)string, nullptr, 0) == kPrAppleStringInvalid);
-    CHECK(prAppleNSStringToUtf8(string, nullptr, 0) == kPrAppleStringInvalid);
+    CHECK(prAppleNSStringToWtf8(string, nullptr, 0) == 5);
     PrRawString raw = prAppleNSStringToRawString(string);
-    CHECK(prRawStringIsNull(&raw));
+    CHECK(PrStringView(prRawStringView(&raw)) == "a\xed\xa0\x80" "b");
+    NSString* back = prAppleNSString(prRawStringView(&raw));
+    CHECK([back isEqualToString:string]);
+    prRawStringReset(&raw);
 }
 
 TEST_CASE("UTF-8 converts to an NSString and back") {
     NSString* string = prAppleNSString("caf\xc3\xa9");
     REQUIRE((string != nil));
     CHECK([string isEqualToString:@"café"]);
-    CHECK(prAppleNSStringToUtf8(string, nullptr, 0) == 5);
+    CHECK(prAppleNSStringToWtf8(string, nullptr, 0) == 5);
     String raw = String::adopt(prAppleNSStringToRawString(string));
     CHECK(raw == "caf\xc3\xa9");
 }

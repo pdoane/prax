@@ -478,13 +478,13 @@ struct Character {
 Character characterAt(const PrTextRun* run, size_t at) {
     uint32_t codePoint = 0;
     Character c{};
-    c.length = prUtf8Decode(run->text, at, &codePoint);
+    c.length = prWtf8Decode(run->text, at, &codePoint);
     c.glyph = prFontCodePointGlyph(run->font, codePoint);
     c.shown = (prUnicodeFlags(codePoint) & PrUnicodeFlag_DefaultIgnorable) == 0;
     if (!c.shown || at + c.length >= run->text.size)
         return c;
     uint32_t selector = 0;
-    uint32_t length = prUtf8Decode(run->text, at + c.length, &selector);
+    uint32_t length = prWtf8Decode(run->text, at + c.length, &selector);
     if ((prUnicodeFlags(selector) & PrUnicodeFlag_VariationSelector) == 0)
         return c;
     c.length += length;

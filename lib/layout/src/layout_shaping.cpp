@@ -394,7 +394,7 @@ void transformText(const LayoutState& state, LayoutInlineShaping& t) {
             copyTo(item.start);
             for (size_t at = run.start; at < run.end;) {
                 uint32_t codePoint = 0;
-                uint32_t length = prUtf8Decode(context, at, &codePoint);
+                uint32_t length = prWtf8Decode(context, at, &codePoint);
                 uint32_t mapped[kPrTextTransformMaxCodePoints];
                 uint32_t count = prTextTransformAt(&run, at, mapped);
                 if (count == 1 && mapped[0] == codePoint) {
@@ -404,7 +404,7 @@ void transformText(const LayoutState& state, LayoutInlineShaping& t) {
                         moved.data[copied + k] = t.text.count;
                     for (uint32_t k = 0; k < count; ++k) {
                         char bytes[kPrUtf8MaxBytes];
-                        uint32_t written = prUtf8Encode(mapped[k], bytes);
+                        uint32_t written = prWtf8Encode(mapped[k], bytes);
                         t.text.append(bytes, written);
                         for (uint32_t b = 0; b < written; ++b) {
                             t.spaces.push(0);

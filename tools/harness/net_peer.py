@@ -392,7 +392,8 @@ def serve_websocket(connection):
     /echo echoes each message. /close closes with code 4000 and the reason "bye" at once. /fragmented sends a text
     message in three fragments with a ping between them, and then a binary message of 70000 bytes. /abort ends the
     connection without a Close frame. /reject answers 403, /bad-accept answers 101 with a wrong Sec-WebSocket-Accept,
-    and /bad-frame sends a frame with a reserved bit set."""
+    /bad-frame sends a frame with a reserved bit set, and /bad-text sends a text message that is not UTF-8: it holds a
+    surrogate's three bytes."""
     head = b""
     while b"\r\n\r\n" not in head:
         chunk = connection.recv(4096)
@@ -432,6 +433,9 @@ def serve_websocket(connection):
             ws_echo(connection)
         elif path == "/bad-frame":
             connection.sendall(bytes([0xC1, 0]))
+            ws_await_close(connection)
+        elif path == "/bad-text":
+            connection.sendall(ws_frame(0x1, b"a\xed\xa0\x80"))
             ws_await_close(connection)
         # /abort, and any other path, ends the connection here.
     except (EOFError, ValueError):

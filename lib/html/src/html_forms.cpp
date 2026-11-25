@@ -16,6 +16,7 @@
 #include "pr/text_buffer.h"
 #include "pr/text_edit.h"
 #include "pr/url.h"
+#include "pr/utf8_views.h"
 
 #include "dom/src/dom_attribute.h"
 #include "dom/src/dom_collection.h"
@@ -1157,50 +1158,53 @@ void prHtmlFormDataAppend(PrHtmlFormData* formData, PrStringView name, PrStringV
 }
 
 void prHtmlFormDataDelete(PrHtmlFormData* formData, PrStringView name) {
+    Utf8Views<1> scalars;
+    PrStringView nameUtf8 = scalars.of(name);
     for (uint32_t i = formData->entries.count; i-- != 0;) {
         DomEntry& entry = formData->entries.data[i];
-        if (prRawStringView(&entry.name) == name) {
+        if (prRawStringView(&entry.name) == nameUtf8) {
             prRawStringReset(&entry.name);
             prRawStringReset(&entry.value);
             formData->entries.erase(i);
         }
     }
+    scalars.reset();
 }
 
 PrStringView prHtmlFormDataGet(const PrHtmlFormData* formData, PrStringView name) {
-    for (uint32_t i = 0; i < formData->entries.count; ++i) {
-        if (prRawStringView(&formData->entries.data[i].name) == name)
-            return prRawStringView(&formData->entries.data[i].value);
-    }
-    return {};
+    PrStringView value = {};
+    uint32_t count = prHtmlFormDataGetAll(formData, name, &value, 1);
+    return count != 0 ? value : PrStringView{};
 }
 
 uint32_t prHtmlFormDataGetAll(const PrHtmlFormData* formData, PrStringView name, PrStringView* PR_NULLABLE items,
         uint32_t capacity) {
+    Utf8Views<1> scalars;
+    PrStringView nameUtf8 = scalars.of(name);
     uint32_t count = 0;
     for (uint32_t i = 0; i < formData->entries.count; ++i) {
-        if (prRawStringView(&formData->entries.data[i].name) != name)
+        if (prRawStringView(&formData->entries.data[i].name) != nameUtf8)
             continue;
         if (items != nullptr && count < capacity)
             items[count] = prRawStringView(&formData->entries.data[i].value);
         ++count;
     }
+    scalars.reset();
     return count;
 }
 
 bool prHtmlFormDataHas(const PrHtmlFormData* formData, PrStringView name) {
-    for (uint32_t i = 0; i < formData->entries.count; ++i) {
-        if (prRawStringView(&formData->entries.data[i].name) == name)
-            return true;
-    }
-    return false;
+    return prHtmlFormDataGetAll(formData, name, nullptr, 0) != 0;
 }
 
 void prHtmlFormDataSet(PrHtmlFormData* formData, PrStringView name, PrStringView value) {
+    Utf8Views<2> scalars;
+    PrStringView nameUtf8 = scalars.of(name);
+    PrStringView valueUtf8 = scalars.of(value);
     uint32_t first = formData->entries.count;
     for (uint32_t i = formData->entries.count; i-- != 0;) {
         DomEntry& entry = formData->entries.data[i];
-        if (prRawStringView(&entry.name) != name)
+        if (prRawStringView(&entry.name) != nameUtf8)
             continue;
         if (first != formData->entries.count) {
             prRawStringReset(&formData->entries.data[first].name);
@@ -1210,9 +1214,10 @@ void prHtmlFormDataSet(PrHtmlFormData* formData, PrStringView name, PrStringView
         first = i;
     }
     if (first == formData->entries.count)
-        domEntryListAppend(formData, name, value);
+        domEntryListAppend(formData, nameUtf8, valueUtf8);
     else
-        prRawStringReplace(&formData->entries.data[first].value, value);
+        prRawStringReplace(&formData->entries.data[first].value, valueUtf8);
+    scalars.reset();
 }
 
 uint32_t prHtmlFormDataCount(const PrHtmlFormData* formData) {

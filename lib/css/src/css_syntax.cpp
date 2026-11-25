@@ -126,9 +126,9 @@ uint32_t at(const Source* s, uint32_t pos) {
     return pos < s->size ? uint8_t(s->text[pos]) : kEnd;
 }
 
-// Writes the code point at `pos` to `codePoint`, and returns its width.
+// Writes the code point at `pos` to `codePoint`, as preprocessing leaves it, and returns its width.
 uint32_t decodeAt(const Source* s, uint32_t pos, uint32_t* codePoint) {
-    return prUtf8DecodeScalar(PrStringView{s->text, s->size}, pos, codePoint);
+    return cssDecode(PrStringView{s->text, s->size}, pos, codePoint);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

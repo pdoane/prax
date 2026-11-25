@@ -119,6 +119,12 @@ TEST_CASE("charsets without an encoder encode as UTF-8") {
     CHECK(prCharsetOutput(PrCharset_ShiftJis) == PrCharset_ShiftJis);
 }
 
+TEST_CASE("an encoder takes scalar values, so a lone surrogate encodes as U+FFFD") {
+    CHECK(encoded(PrCharset_Utf8, "a\xED\xA0\x80" "b") == "a\xEF\xBF\xBD" "b");
+    CHECK(encoded(PrCharset_Utf8, "\xED\xA0\xBD\xED\xB8\x80") == "\xF0\x9F\x98\x80");
+    CHECK(encoded(PrCharset_ShiftJis, "a\xED\xA0\x80" "b") == "a&#65533;b");
+}
+
 TEST_CASE("a byte order mark names its charset") {
     CHECK(prCharsetSniffBom("\xEF\xBB\xBFx") == PrCharset_Utf8);
     CHECK(prCharsetSniffBom("\xFE\xFF") == PrCharset_Utf16Be);

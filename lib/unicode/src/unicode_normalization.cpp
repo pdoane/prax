@@ -112,7 +112,7 @@ void compose(RawArray<uint32_t>* text) {
 void appendDecoded(RawArray<uint32_t>* out, PrStringView text) {
     for (size_t at = 0; at < text.size;) {
         uint32_t codePoint;
-        at += prUtf8Decode(text, at, &codePoint);
+        at += prWtf8Decode(text, at, &codePoint);
         out->push(codePoint);
     }
 }
@@ -155,13 +155,13 @@ PrRawString prUnicodeNormalize(PrStringView text, PrUnicodeNormalForm form) {
     unicodeNormalize(&codePoints, form);
     PrTextBuffer out = {};
     for (uint32_t i = 0; i < codePoints.count; ++i)
-        prTextBufferAppendCodePoint(&out, codePoints.data[i]);
+        prTextBufferAppendWtf8CodePoint(&out, codePoints.data[i]);
     codePoints.reset();
     return prTextBufferTake(&out);
 }
 
 bool prUnicodeIsNormalized(PrStringView text, PrUnicodeNormalForm form) {
-    if (prUtf8Validate(text) != text.size)
+    if (prWtf8Validate(text) != text.size)
         return false;
     RawArray<uint32_t> codePoints{};
     appendDecoded(&codePoints, text);

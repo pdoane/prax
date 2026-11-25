@@ -190,7 +190,8 @@ struct InitArgument {
     }
 
     // webidl/#js-record: the enumerable string-keyed properties. A later duplicate replaces the value of an earlier
-    // one.
+    // one. A key is a USVString when the duplicates are found, so keys that differ only in their lone surrogates are
+    // one key.
     bool readRecord(JSContext* ctx, JSValueConst input) {
         JSPropertyEnum* properties = nullptr;
         uint32_t count = 0;
@@ -200,10 +201,10 @@ struct InitArgument {
         for (uint32_t i = 0; ok && i < count; ++i) {
             Pair pair = {};
             JSValue key = JS_AtomToValue(ctx, properties[i].atom);
-            ok = jsReadString(ctx, key, &pair.name);
+            ok = jsReadUsvString(ctx, key, &pair.name);
             JS_FreeValue(ctx, key);
             JSValue value = ok ? JS_GetProperty(ctx, input, properties[i].atom) : JS_UNDEFINED;
-            ok = ok && !JS_IsException(value) && jsReadString(ctx, value, &pair.value);
+            ok = ok && !JS_IsException(value) && jsReadUsvString(ctx, value, &pair.value);
             JS_FreeValue(ctx, value);
             uint32_t found = 0;
             while (ok && found < pairs.count && pairs.data[found].name != pair.name)

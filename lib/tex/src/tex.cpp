@@ -92,7 +92,7 @@ void addOperatorAttributes(Writer* w, const TexNode& node, PrStringView text, Co
         // operator in a row or an inline-axis operator in <munder>, <mover> or <munderover>.
         uint32_t codePoint = 0;
         if (text.size != 0)
-            prUtf8Decode(text, 0, &codePoint);
+            prWtf8Decode(text, 0, &codePoint);
         bool inline_ = texIsInlineAxis(codePoint);
         bool stretches = !inline_ || (node.flags & TexNodeFlag_UnderOver);
         if (node.stretchy == TexTri_True || stretches)

@@ -462,7 +462,7 @@ PrUnicodeBidiStrong prUnicodeBidiFirstStrong(PrStringView text) {
             continue;
         }
         uint32_t codePoint = 0;
-        at += prUtf8Decode(text, at, &codePoint);
+        at += prWtf8Decode(text, at, &codePoint);
         PrUnicodeBidiStrong strong = prUnicodeBidiStrong(codePoint);
         if (strong != PrUnicodeBidiStrong_None)
             return strong;

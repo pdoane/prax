@@ -6,6 +6,9 @@
 //
 // Each web interface has a section of its own, which holds its members. A value that a declaration holds is a sequence
 // of node trees (PrCssValue) rather than a graph of objects.
+//
+// Parsing reads a null or a lone surrogate in CSS text as U+FFFD, as preprocessing does
+// (css-syntax-3/#input-preprocessing).
 
 #pragma once
 

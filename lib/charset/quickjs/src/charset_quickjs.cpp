@@ -130,7 +130,7 @@ JSValue encoderEncodingGet(JSContext* ctx, JSValueConst object) {
 
 // encoding/#dom-textencoder-encode. The string reads as a USVString, which is UTF-8 already.
 JSValue encodeMethod(JSContext* ctx, JSValueConst object, int argc, JSValueConst* argv) {
-    StringArgument input = {ctx};
+    StringArgument input = {.ctx = ctx, .usv = true};
     if (!isEncoder(ctx, object) || (jsArgGiven(argc, argv, 0) && !input.read(argv[0])))
         return JS_EXCEPTION;
     PrStringView text = input.value();
@@ -157,13 +157,16 @@ JSValue encodeIntoMethod(JSContext* ctx, JSValueConst object, int argc, JSValueC
     PrStringView text = source.value();
     uint64_t read = 0;
     size_t written = 0;
+    // The source is a USVString, so a lone surrogate is U+FFFD.
     for (size_t at = 0; at < text.size && destination != nullptr;) {
         uint32_t codePoint = 0;
-        uint32_t width = prUtf8Decode(text, at, &codePoint);
-        if (written + width > length)
+        uint32_t width = prWtf8DecodeScalar(text, at, &codePoint);
+        char bytes[kPrUtf8MaxBytes];
+        uint32_t size = prUtf8Encode(codePoint, bytes);
+        if (written + size > length)
             break;
-        prMemCopy(destination + offset + written, text.data + at, width);
-        written += width;
+        prMemCopy(destination + offset + written, bytes, size);
+        written += size;
         at += width;
         read += codePoint > 0xffff ? 2 : 1;
     }
