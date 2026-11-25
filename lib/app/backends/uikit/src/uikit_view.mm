@@ -351,6 +351,7 @@ using namespace pr_impl;
     // A composition ends with the text that it edits, as the user canceled it.
     if (!editing && _marked != nil)
         [self endComposition:@""];
+    BOOL starts = editing && !self.editing;
     self.editing = editing;
     self.inputKind = kind;
     switch (kind) {
@@ -364,6 +365,11 @@ using namespace pr_impl;
     }
     self.returnKeyType = kind == PrAppTextInputKind_Search ? UIReturnKeySearch : UIReturnKeyDefault;
     self.secureTextEntry = kind == PrAppTextInputKind_Password;
+    // The keyboard rises by the view becoming the first responder afresh, so that the system presents it whole, as for
+    // a text field. Swapped in for the empty input view in place, its panel slides up empty and its keys come after.
+    // The view resigns through super, so that the keys that are down stay down.
+    if (starts && self.isFirstResponder)
+        [super resignFirstResponder];
     if (self.isFirstResponder)
         [self reloadInputViews];
     else if (self.window != nil)
