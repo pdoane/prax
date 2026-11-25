@@ -125,7 +125,7 @@ void layoutStackingInserted(LayoutTree* tree, LayoutNodeIndex node);
 // Marks every list stale, because a change of the root makes and unmakes stacking contexts.
 void layoutStackingStaleAll(LayoutTree* tree);
 
-// Frees the list of `node`, which is being freed.
+// Frees the list of `node` if one is held: the node is being freed, or is no longer a stacking context.
 void layoutStackingForget(LayoutTree* tree, LayoutNodeIndex node);
 
 // Frees the lists.

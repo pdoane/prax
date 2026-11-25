@@ -1232,6 +1232,10 @@ void layoutTreeChangeStyle(LayoutTree* tree, LayoutNodeIndex index, PrLayoutStyl
     layoutStyleRetain(tree->styles, style);
     layoutStyleRelease(tree->styles, was);
     setStyle(tree, index, style);
+    // A box that stops being a stacking context gives up its own list, which no box then keeps current. Rejoining its
+    // context's list drops it too, but a box that leads to no box that paints whole is not listed, and rejoins none.
+    if (contextBefore && !contextAfter)
+        layoutStackingForget(tree, index);
     // Whether the box is out of flow, or generates a box at all, ends the runs of text around it in a flex or grid
     // container, and the container's font is the font of its anonymous items.
     if (n.parent != kPrLayoutNodeNone &&

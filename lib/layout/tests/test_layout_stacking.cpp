@@ -1348,6 +1348,37 @@ TEST_CASE("changes of what makes a stacking context, and of what is laid out, ag
     }
 }
 
+TEST_CASE("a box that stops being a stacking context with nothing in it that paints whole gives up its own list") {
+    // P, relative at 0, is a stacking context that holds nothing. At auto it paints whole at level 0 as before, and is
+    // in no list but the stage's: no box moves, but the list that P held while a context must not outlive it. An
+    // absolute A that then joins P is in the stage's list, and when P is at 0 again, P's list holds A.
+    Stage s(100);
+    PrLayoutEffectStyle zero = level(0);
+    PrLayoutNode p = s.add(s.stage, zIndexed(positioned(sized(block(), 100, 40))), &zero);
+    s.layout();
+    render(s.f.tree, 400, 400);
+    CHECK(s.hit(10, 10) == p);
+    s.set(p, positioned(sized(block(), 100, 40)));
+    s.layout();
+    render(s.f.tree, 400, 400);
+    CHECK(verified(s.f.tree));
+    PrLayoutNode a = s.add(p, absolute(0, 0, 50, 20));
+    s.layout();
+    render(s.f.tree, 400, 400);
+    CHECK(verified(s.f.tree));
+    CHECK(s.hit(10, 10) == a);
+    s.set(p, zIndexed(positioned(sized(block(), 100, 40))), &zero);
+    s.layout();
+    render(s.f.tree, 400, 400);
+    CHECK(verified(s.f.tree));
+    CHECK(s.hit(10, 10) == a);
+    // Erasing A takes it out of P's list, which holds it.
+    prLayoutTreeErase(s.f.tree, a);
+    s.layout();
+    CHECK(verified(s.f.tree));
+    CHECK(s.hit(10, 10) == p);
+}
+
 TEST_CASE("an atomic inline that paints whole paints its own decoration, at auto, -1, 1 and of opacity") {
     for (int kind = 0; kind < 4; ++kind) {
         CAPTURE(kind);
